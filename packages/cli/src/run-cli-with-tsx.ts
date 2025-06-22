@@ -1,0 +1,2 @@
+import "tsx";
+import "./cli";

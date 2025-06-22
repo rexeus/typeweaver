@@ -1,0 +1,45 @@
+{
+  "name": "@rexeus/typeweaver-core",
+  "version": "0.0.0",
+  "description": "Core package for api definition with typescript and zod using the typeweaver framework. Generation with: @rexeus/typeweaver",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
+  "scripts": {
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "build": "pkgroll --clean-dist",
+    "prepack": "npm run build",
+    "preversion": "npm run build"
+  },
+  "keywords": [
+    "api",
+    "spec",
+    "definition",
+    "typescript",
+    "zod",
+    "generator",
+    "typeweaver"
+  ],
+  "author": "Dennis Wentzien <dw@rexeus.com>",
+  "license": "ISC",
+  "devDependencies": {
+    "axios": "^1.9.0",
+    "hono": "^4.8.0",
+    "zod": "^3.25.4"
+  },
+  "peerDependencies": {
+    "axios": "^1.9.0",
+    "hono": "^4.8.0",
+    "zod": "^3.24.4"
+  },
+  "dependencies": {
+    "@types/aws-lambda": "^8.10.149",
+    "case": "^1.6.3"
+  }
+}

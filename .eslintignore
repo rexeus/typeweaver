@@ -1,0 +1,16 @@
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+
+# Test outputs
+coverage
+*.log
+
+# Generated files
+packages/cli/test/output/
+
+# Config files
+*.config.js
+*.config.ts

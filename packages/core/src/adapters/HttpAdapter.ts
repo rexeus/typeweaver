@@ -1,0 +1,29 @@
+import type { IHttpRequest, IHttpResponse } from "../definition";
+
+/**
+ * Abstract base class for HTTP adapters.
+ *
+ * Provides a common interface for converting between different HTTP request/response
+ * formats and the framework-agnostic IHttpRequest/IHttpResponse types.
+ */
+export abstract class HttpAdapter<TRequest = any, TResponse = any> {
+  /**
+   * Converts a framework-specific request to an IHttpRequest.
+   *
+   * @param request - The framework-specific request object
+   * @param context - Optional additional context needed for conversion
+   * @returns Promise resolving to an IHttpRequest
+   */
+  public abstract toRequest(
+    request: TRequest,
+    context?: any
+  ): Promise<IHttpRequest>;
+
+  /**
+   * Converts an IHttpResponse to a framework-specific response.
+   *
+   * @param response - The IHttpResponse to convert
+   * @returns The framework-specific response object
+   */
+  public abstract toResponse(response: IHttpResponse): TResponse;
+}

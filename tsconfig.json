@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    /* Module Resolution Options */
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "verbatimModuleSyntax": true,
+
+    /* Target and Output */
+    "target": "ESNext",
+    "lib": ["ESNext"],
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "noEmit": false,
+
+    /* Project Settings */
+    "allowJs": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+
+    /* Experimental Features */
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    /* Strictness */
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "strictBindCallApply": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictPropertyInitialization": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "allowUnreachableCode": false,
+    "useUnknownInCatchVariables": true,
+
+    /* Other Options */
+    "moduleDetection": "force"
+  }
+}

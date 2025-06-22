@@ -1,0 +1,38 @@
+import { HttpResponse, HttpStatusCode } from "<%= coreDir %>";
+
+<% if (headerTsType) { %>
+    export type I<%= pascalCaseName %>ResponseHeader = <%- headerTsType %>;
+<% } %>
+
+<% if (bodyTsType) { %>
+    export type I<%= pascalCaseName %>ResponseBody = <%- bodyTsType %>;
+<% } %>
+
+export type I<%= pascalCaseName %>Response = {
+statusCode: HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>
+<%= sharedResponse.header ? `header: I${pascalCaseName}ResponseHeader;` : "" %>
+<%= sharedResponse.body ? `body: I${pascalCaseName}ResponseBody;` : "" %>
+};
+
+export class <%= pascalCaseName %>Response extends HttpResponse<
+<%= sharedResponse.header ? `I${pascalCaseName}ResponseHeader` : 'undefined' %>,
+<%= sharedResponse.body ? `I${pascalCaseName}ResponseBody` : 'undefined' %>
+> implements I<%= pascalCaseName %>Response {
+public override readonly statusCode: HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>;
+
+public constructor(response: I<%= pascalCaseName %>Response) {
+    super(
+        response.statusCode,
+        <%= sharedResponse.header ? `response.header` : 'undefined' %>,
+        <%= sharedResponse.body ? `response.body` : 'undefined' %>,
+    );
+
+    if (response.statusCode !== HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>) {
+        throw new Error(`Invalid status code: '${response.statusCode}' for <%= pascalCaseName %>Response`);
+    }
+
+    this.statusCode = response.statusCode;
+}
+}
+
+

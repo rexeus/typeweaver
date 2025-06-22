@@ -1,0 +1,78 @@
+import { HttpResponse, HttpStatusCode } from "<%= coreDir %>";
+<% for(const sharedResponse of sharedResponses) { %>
+import type { I<%= sharedResponse.name %>Response, <%= sharedResponse.name %>Response } from "<%= sharedResponse.path %>";
+<% } %>
+
+<% for (const ownResponse of ownResponses) { %>
+    <% if (ownResponse.header) { %>
+        export type I<%= ownResponse.name %>ResponseHeader = <%- ownResponse.header %>;
+    <% } %>
+
+    <% if (ownResponse.body) { %>
+        export type I<%= ownResponse.name %>ResponseBody = <%- ownResponse.body %>;
+    <% } %>
+
+
+    export type I<%= ownResponse.name %>Response =  {
+            statusCode: HttpStatusCode.<%= ownResponse.statusCodeKey %>
+            <%= ownResponse.header ? `header: I${ownResponse.name}ResponseHeader;` : "" %>
+            <%= ownResponse.body ? `body: I${ownResponse.name}ResponseBody;` : "" %>
+            };
+
+    export class <%= ownResponse.name %>Response extends HttpResponse<
+            <%= ownResponse.header ? `I${ownResponse.name}ResponseHeader` : 'undefined' %>,
+            <%= ownResponse.body ? `I${ownResponse.name}ResponseBody` : 'undefined' %>,
+            > implements I<%= ownResponse.name %>Response {
+        public override readonly statusCode: HttpStatusCode.<%= ownResponse.statusCodeKey %>;
+
+        public constructor(response: I<%= ownResponse.name %>Response) {
+            super(
+                response.statusCode,
+                <%= ownResponse.header ? `response.header` : 'undefined' %>,
+                <%= ownResponse.body ? `response.body` : 'undefined' %>,
+            );
+
+            if(response.statusCode !== HttpStatusCode.<%= ownResponse.statusCodeKey %>) {
+                throw new Error(`Invalid status code: '${response.statusCode}' for <%= ownResponse.name %>Response`);
+            }
+
+            this.statusCode = response.statusCode;
+        }
+    }
+<% } %>
+
+<%
+// Identify success responses (status codes 200-299)
+const successResponses = ownResponses.filter(response => response.statusCode >= 200 && response.statusCode < 300);
+const errorResponses = ownResponses.filter(response => response.statusCode < 200 || response.statusCode >= 300);
+%>
+
+<% if (successResponses.length > 0) { %>
+export type I<%= pascalCaseOperationId %>SuccessResponses =<% if (successResponses.length === 1) { %> I<%= successResponses[0].name %>Response;<% } else { %>
+<% for (const [index, successResponse] of successResponses.entries()) { %>
+<% if (index === 0) { %>    I<%= successResponse.name %>Response<% } else { %>
+    | I<%= successResponse.name %>Response<% } %>
+<% } %>;<% } %>
+
+export type <%= pascalCaseOperationId %>SuccessResponses =<% if (successResponses.length === 1) { %> <%= successResponses[0].name %>Response;<% } else { %>
+<% for (const [index, successResponse] of successResponses.entries()) { %>
+<% if (index === 0) { %>    <%= successResponse.name %>Response<% } else { %>
+    | <%= successResponse.name %>Response<% } %>
+<% } %>;<% } %>
+<% } %>
+
+export type I<%= pascalCaseOperationId %>Response =
+<% for (const ownResponse of ownResponses) { %>
+    | I<%= ownResponse.name %>Response
+<% } %>
+<% for (const sharedResponse of sharedResponses) { %>
+    | I<%= sharedResponse.name %>Response
+<% } %>;
+
+export type <%= pascalCaseOperationId %>Response =
+<% for (const ownResponse of ownResponses) { %>
+    | <%= ownResponse.name %>Response
+<% } %>
+<% for (const sharedResponse of sharedResponses) { %>
+    | <%= sharedResponse.name %>Response
+<% } %>;

@@ -1,0 +1,21 @@
+# IDE
+.claude
+.vscode
+.idea
+
+CLAUDE.md
+
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+
+# Temporary files
+tmp/
+
+# OS files
+.DS_Store
+
+# Package files
+*.tgz

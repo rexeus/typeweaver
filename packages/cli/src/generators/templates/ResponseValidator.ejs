@@ -1,0 +1,140 @@
+import definition from "<%= sourcePath %>";
+import {
+    type IHttpResponse,
+    type SafeResponseValidationResult,
+    ResponseValidator,
+    ResponseValidationError,
+    InvalidResponseStatusCodeError,
+    assert,
+} from "<%= coreDir %>";
+import {
+type <%= pascalCaseOperationId %>Response,
+<% for (const ownResponse of ownResponses) { %>
+    type I<%= ownResponse.name %>Response,
+    <%= ownResponse.name %>Response,
+<% } %>
+} from "<%= responseFile %>";
+<% for (const sharedResponse of sharedResponses) { %>
+    import {
+        type I<%= sharedResponse.name %>Response,
+        <%= sharedResponse.name %>Response,
+    } from "<%= sharedResponse.importPath %>";
+<% } %>
+
+export class <%= pascalCaseOperationId %>ResponseValidator extends ResponseValidator {
+    public safeValidate(response: IHttpResponse): SafeResponseValidationResult<<%= pascalCaseOperationId %>Response> {
+        const error = new ResponseValidationError(response.statusCode);
+        const validationResult = this.validateAgainstDefinedResponses(response, error);
+
+        if (error.hasIssues() && !validationResult.validResponseName) {
+            return {
+              isValid: false,
+              error,
+            };
+        }
+
+        let data: <%= pascalCaseOperationId %>Response;
+        switch (response.statusCode) {
+            <% for (const statusCode of allStatusCodes) { %>
+                case <%= statusCode.statusCode %>: {
+                    <%
+                        for (const response of [...ownResponses, ...sharedResponses]) {
+                            if (response.statusCode === statusCode.statusCode) {
+                    %>
+                        if (validationResult.validResponseName === "<%= response.name %>") {
+                            data = new <%= response.name %>Response(validationResult.validatedResponse as unknown as I<%= response.name %>Response);
+                            break;
+                        }
+                    <% } } %>
+                    throw new Error("Could not find a response for status code '<%= statusCode.statusCode %>'");
+                }
+            <% } %>
+
+            default: {
+                throw new InvalidResponseStatusCodeError(response);
+            }
+        }
+
+        return {
+            isValid: true,
+            data,
+        };
+    }
+
+    public validate(response: IHttpResponse): <%= pascalCaseOperationId %>Response {
+        const result = this.safeValidate(response);
+    
+        if (!result.isValid) {
+          throw result.error;
+        }
+    
+        return result.data;
+    }
+
+    private validateAgainstDefinedResponses(response: IHttpResponse, error: ResponseValidationError): { validResponseName?: string; validatedResponse?: IHttpResponse } {
+        const validatedResponse: IHttpResponse = {
+            statusCode: response.statusCode,
+            header: undefined,
+            body: undefined,
+        };
+
+        <% for (const statusCode of allStatusCodes) { %>
+            if (response.statusCode === <%= statusCode.statusCode %>) {
+            <%
+            for (const response of [...ownResponses, ...sharedResponses]) {
+            if (response.statusCode === statusCode.statusCode) {
+            %>
+                const is<%= response.name %>Response = this.validate<%= response.name %>Response(response, validatedResponse, error);
+                if (is<%= response.name %>Response) {
+                    return { validResponseName: "<%= response.name %>", validatedResponse };
+                }
+            <% } } %>
+            }
+
+        <% } %>
+
+        return {};
+    }
+
+    <% for (const response of [...ownResponses, ...sharedResponses]) { %>
+    private validate<%= response.name %>Response(response: IHttpResponse, validatedResponse: IHttpResponse, error: ResponseValidationError): boolean {
+        let isValid = true;
+
+        <% if(response.hasBody) { %>
+            assert(
+                definition.responses[<%= response.index %>] 
+                && "body" in definition.responses[<%= response.index %>] 
+                && definition.responses[<%= response.index %>].body,
+                "'<%= response.name %>ResponseBody' has to be defined in the definition"
+            );
+            const validateBodyResult = definition.responses[<%= response.index %>].body.safeParse(response.body);
+
+            if (!validateBodyResult.success) {
+                error.addBodyIssues(validateBodyResult.error.issues);
+                isValid = false;
+            } else {
+                validatedResponse.body = validateBodyResult.data;
+            }
+        <% } %>
+
+        <% if(response.hasHeader) { %>
+            assert(
+                definition.responses[<%= response.index %>] 
+                && "header" in definition.responses[<%= response.index %>] 
+                && definition.responses[<%= response.index %>].header,
+                "'<%= response.name %>ResponseHeader' has to be defined in the definition"
+            );
+            const validateHeaderResult = definition.responses[<%= response.index %>].header.safeParse(response.header);
+
+            if (!validateHeaderResult.success) {
+                error.addHeaderIssues(validateHeaderResult.error.issues);
+                isValid = false;
+            } else {
+                validatedResponse.header = validateHeaderResult.data;
+            }
+        <% } %>
+
+        return isValid;
+    }
+    <% } %>
+}

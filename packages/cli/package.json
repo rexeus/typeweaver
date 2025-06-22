@@ -1,0 +1,60 @@
+{
+  "name": "@rexeus/typeweaver",
+  "version": "0.0.0",
+  "description": "Typeweaver framework for api specification with typescript and zod. ",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
+  "bin": {
+    "typeweaver": "dist/run-cli-with-tsx.js"
+  },
+  "scripts": {
+    "cli": "tsx src/cli.ts",
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit --project tsconfig.test.json",
+    "build": "pkgroll --clean-dist && cp -r ./src/generators/templates ./dist/templates",
+    "prepack": "npm run build",
+    "preversion": "npm run build",
+    "test:bundle": "pnpm run build && node dist/run-cli-with-tsx.js generate --output tmp --input test/definition",
+    "test:generate": "tsx src/cli.ts generate --output test/output --input test/definition"
+  },
+  "keywords": [
+    "api",
+    "spec",
+    "definition",
+    "typescript",
+    "zod",
+    "generator",
+    "typeweaver"
+  ],
+  "author": "Dennis Wentzien <dw@rexeus.com>",
+  "license": "ISC",
+  "devDependencies": {
+    "@middy/core": "^6.3.0",
+    "@rexeus/typeweaver-core": "workspace:*",
+    "@types/aws-lambda": "^8.10.149",
+    "axios": "^1.9.0",
+    "hono": "^4.6.20",
+    "zod": "^3.25.28"
+  },
+  "peerDependencies": {
+    "@middy/core": "^6.2.3",
+    "@rexeus/typeweaver-core": "*",
+    "@types/aws-lambda": "^8.10.149",
+    "axios": "^1.9.0",
+    "hono": "^4.6.20",
+    "zod": "^3.24.4"
+  },
+  "dependencies": {
+    "@types/ejs": "^3.1.5",
+    "case": "^1.6.3",
+    "commander": "^14.0.0",
+    "ejs": "^3.1.10",
+    "tsx": "^4.19.4"
+  }
+}

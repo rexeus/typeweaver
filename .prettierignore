@@ -1,0 +1,19 @@
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+
+# Lock files
+pnpm-lock.yaml
+
+# Test outputs
+coverage
+*.log
+
+# Temporary files
+tmp/
+.DS_Store
+
+# Generated files
+packages/cli/test/output/
