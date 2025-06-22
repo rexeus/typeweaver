@@ -15,7 +15,7 @@ support.
 ## Installation
 
 ```bash
-npm install @thetechdance/api-definition
+npm install @rexeus/typeweaver-core
 ```
 
 **Peer Dependencies:**
@@ -33,7 +33,7 @@ npm install zod@^3.24.4 axios
 
 ```typescript
 import { z } from "zod/v4";
-import { HttpOperationDefinition, HttpStatusCode, HttpMethod } from "@thetechdance/api-definition";
+import { HttpOperationDefinition, HttpStatusCode, HttpMethod } from "@rexeus/typeweaver-core";
 import { accountSchema } from "./accountSchema";
 import { sharedResponses } from "../shared/sharedResponses";
 import { defaultResponseHeader } from "../shared/defaultResponseHeader";
@@ -70,10 +70,10 @@ export default new HttpOperationDefinition({
 
 ```typescript
 // AWS Lambda
-import { AwsLambdaHandler, AwsLambdaRoute } from "@thetechdance/api-definition";
+import { AwsLambdaHandler, AwsLambdaRoute } from "@rexeus/typeweaver-core";
 
 // Hono
-import { HonoHandler, HonoRoute } from "@thetechdance/api-definition";
+import { HonoHandler, HonoRoute } from "@rexeus/typeweaver-core";
 ```
 
 ## Architecture
