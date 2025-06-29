@@ -1,16 +1,10 @@
 {
-  "name": "@rexeus/typeweaver-core",
+  "name": "@rexeus/typeweaver-aws-cdk",
   "version": "0.0.0",
-  "description": "Core TypeScript and Zod utilities for TypeWeaver API framework",
+  "description": "AWS CDK constructs and deployment utilities for TypeWeaver APIs",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    }
-  },
   "files": [
     "dist",
     "package.json",
@@ -19,7 +13,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "build": "pkgroll --clean-dist",
+    "build": "pkgroll --clean-dist && cp -r ./src/templates ./dist/templates",
     "prepack": "npm run build",
     "preversion": "npm run build"
   },
@@ -37,24 +31,18 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rexeus/typeweaver.git",
-    "directory": "packages/core"
+    "directory": "packages/aws-cdk"
   },
   "bugs": {
     "url": "https://github.com/rexeus/typeweaver/issues"
   },
   "homepage": "https://github.com/rexeus/typeweaver#readme",
-  "devDependencies": {
-    "axios": "^1.9.0",
-    "hono": "^4.8.0",
-    "zod": "^3.25.28"
-  },
   "peerDependencies": {
-    "axios": "^1.9.0",
-    "hono": "^4.8.0",
-    "zod": "^3.25.0"
+    "@rexeus/typeweaver-core": "*",
+    "@rexeus/typeweaver-gen": "*"
   },
-  "dependencies": {
-    "@types/aws-lambda": "^8.10.149",
-    "case": "^1.6.3"
+  "devDependencies": {
+    "@rexeus/typeweaver-core": "workspace:*",
+    "@rexeus/typeweaver-gen": "workspace:*"
   }
 }

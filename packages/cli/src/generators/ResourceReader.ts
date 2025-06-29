@@ -5,7 +5,8 @@ import type {
   ExtendedResponseDefinition,
   OperationResource,
   SharedResponseResource,
-} from "./Resource";
+  GetResourcesResult,
+} from "@rexeus/typeweaver-gen";
 import { Generator } from "./Generator";
 import {
   type HttpMethod,
@@ -22,11 +23,6 @@ import {
 } from "@rexeus/typeweaver-core";
 import { InvalidSharedDirError } from "./errors/InvalidSharedDirError";
 import { InvalidSharedResponseDefinitionError } from "./errors/InvalidSharedResponseDefinitionError";
-
-export type GetResourcesResult = {
-  entityResources: EntityResources;
-  sharedResponseResources: SharedResponseResource[];
-};
 
 export class ResourceReader {
   public static async getResources(): Promise<GetResourcesResult> {

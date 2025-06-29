@@ -1,4 +1,4 @@
-# @rexeus/typeweaver
+# @rexeus/typeweaver-core
 
 A TypeScript library for defining type-safe HTTP APIs with runtime validation and code generation
 support.
@@ -21,7 +21,7 @@ npm install @rexeus/typeweaver-core
 **Peer Dependencies:**
 
 ```bash
-npm install zod@^3.24.4 axios
+npm install zod@^3.25.0 axios@^1.9.0 hono@^4.8.0
 ```
 
 > **Important:** This library requires Zod v4 features and imports from `"zod/v4"`. Make sure you
@@ -73,7 +73,7 @@ export default new HttpOperationDefinition({
 import { AwsLambdaHandler, AwsLambdaRoute } from "@rexeus/typeweaver-core";
 
 // Hono
-import { HonoHandler, HonoRoute } from "@rexeus/typeweaver-core";
+import { HonoHttpRequestHandler, HonoHttpRoute } from "@rexeus/typeweaver-core";
 ```
 
 ## Architecture
@@ -106,3 +106,57 @@ Route matching uses preprocessing and caching for O(n) performance.
 ### Framework Agnostic
 
 Core definitions work with any execution context via adapter pattern.
+
+## Framework Adapters
+
+TypeWeaver Core includes adapters for various runtime environments:
+
+### AWS Lambda Adapters
+
+```typescript
+import { 
+  createAwsLambdaHandler,
+  createAwsApiGatewayV1Handler,
+  createAwsApiGatewayV2Handler,
+  createAwsLambdaFunctionUrlHandler,
+  createAwsAlbHandler
+} from "@rexeus/typeweaver-core";
+```
+
+### Hono Integration
+
+```typescript
+import { 
+  createHonoHttpApiHandler,
+  HonoHttpRouter 
+} from "@rexeus/typeweaver-core";
+```
+
+### Generic HTTP Adapters
+
+```typescript
+import { 
+  HttpAdapter,
+  FetchApiAdapter 
+} from "@rexeus/typeweaver-core";
+```
+
+## Validation System
+
+Comprehensive request and response validation with structured error handling:
+
+```typescript
+import { 
+  RequestValidator,
+  ResponseValidator,
+  RequestValidationError,
+  ResponseValidationError 
+} from "@rexeus/typeweaver-core";
+
+const validator = new RequestValidator(operationDefinition);
+const result = validator.safeValidate(request);
+
+if (!result.isValid) {
+  console.error(result.error.issues);
+}
+```

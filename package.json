@@ -19,12 +19,29 @@
   ],
   "author": "Dennis Wentzien <dw@rexeus.com>",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rexeus/typeweaver.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rexeus/typeweaver/issues"
+  },
+  "homepage": "https://github.com/rexeus/typeweaver#readme",
   "packageManager": "pnpm@10.12.1",
   "devDependencies": {
     "@changesets/cli": "^2.29.5",
+    "@types/ejs": "^3.1.5",
     "@types/node": "^22.15.30",
-    "pkgroll": "^2.12.2",
+    "pkgroll": "^2.13.1",
     "prettier": "^3.5.3",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "zod": "^3.25.67"
+  },
+  "dependencies": {
+    "case": "^1.6.3",
+    "ejs": "^3.1.10"
+  },
+  "peerDependencies": {
+    "zod": "^3.25.67"
   }
 }
