@@ -13,7 +13,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "build": "pkgroll --clean-dist && cp -r ./src/templates ./dist/templates",
+    "build": "pkgroll --clean-dist && cp -r ./src/templates ./dist/templates && cp -r ./src/lib ./dist/lib",
     "prepack": "npm run build",
     "preversion": "npm run build"
   },

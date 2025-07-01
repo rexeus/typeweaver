@@ -1,9 +1,6 @@
 import definition from "../../definition/account/RegisterAccountDefinition";
-import {
-  RequestCommand,
-  HttpMethod,
-  type IHttpResponse,
-} from "@rexeus/typeweaver-core";
+import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import { RequestCommand } from "../lib/clients";
 import { RegisterAccountResponseValidator } from "./RegisterAccountResponseValidator";
 import {
   type RegisterAccountResponse,

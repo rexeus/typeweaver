@@ -70,6 +70,12 @@ importers:
       '@rexeus/typeweaver-types':
         specifier: workspace:*
         version: link:../types
+      axios:
+        specifier: ^1.9.0
+        version: 1.10.0
+      case:
+        specifier: ^1.6.3
+        version: 1.6.3
 
   packages/clients:
     devDependencies:
@@ -79,6 +85,12 @@ importers:
       '@rexeus/typeweaver-gen':
         specifier: workspace:*
         version: link:../gen
+      axios:
+        specifier: ^1.9.0
+        version: 1.10.0
+      case:
+        specifier: ^1.6.3
+        version: 1.6.3
 
   packages/core:
     dependencies:

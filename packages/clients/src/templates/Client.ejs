@@ -1,4 +1,4 @@
-import { ApiClient, type ApiClientProps } from "<%= coreDir %>";
+import { ApiClient, type ApiClientProps } from "../lib/clients";
 <% for (const operation of operations) { %>
 import { <%= operation.operationId %>RequestCommand, type Successful<%= operation.operationId %>Response } from "<%= operation.requestFile %>";
 <% } %>

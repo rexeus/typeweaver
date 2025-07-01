@@ -1,9 +1,6 @@
 import definition from "../../definition/funnel/ListFunnelDefinition";
-import {
-  RequestCommand,
-  HttpMethod,
-  type IHttpResponse,
-} from "@rexeus/typeweaver-core";
+import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import { RequestCommand } from "../lib/clients";
 import { ListFunnelResponseValidator } from "./ListFunnelResponseValidator";
 import {
   type ListFunnelResponse,

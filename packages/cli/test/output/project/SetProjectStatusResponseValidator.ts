@@ -1,12 +1,12 @@
 import definition from "../../definition/project/SetProjectStatusDefinition";
+import { type IHttpResponse } from "@rexeus/typeweaver-core";
 import {
-  type IHttpResponse,
   type SafeResponseValidationResult,
   ResponseValidator,
   ResponseValidationError,
   InvalidResponseStatusCodeError,
   assert,
-} from "@rexeus/typeweaver-core";
+} from "../lib/types";
 import {
   type SetProjectStatusResponse,
   type ISetProjectStatusSuccessResponse,

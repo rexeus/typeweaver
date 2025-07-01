@@ -1,10 +1,10 @@
 import definition from "../../definition/funnel/GetFunnelDefinition";
+import { type IHttpRequest } from "@rexeus/typeweaver-core";
 import {
-  type IHttpRequest,
   type SafeRequestValidationResult,
   RequestValidator,
   RequestValidationError,
-} from "@rexeus/typeweaver-core";
+} from "../lib/types";
 import type { IGetFunnelRequest } from "./GetFunnelRequest";
 
 export class GetFunnelRequestValidator extends RequestValidator {

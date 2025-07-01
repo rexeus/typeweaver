@@ -6,7 +6,8 @@
     "typecheck": "pnpm -r typecheck",
     "build": "pnpm -r build",
     "format": "prettier --write .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:gen": "pnpm -r test:gen"
   },
   "keywords": [
     "api",

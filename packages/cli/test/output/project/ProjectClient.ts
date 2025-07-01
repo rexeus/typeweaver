@@ -1,4 +1,4 @@
-import { ApiClient, type ApiClientProps } from "@rexeus/typeweaver-core";
+import { ApiClient, type ApiClientProps } from "../lib/clients";
 
 import {
   CreateProjectRequestCommand,

@@ -1,10 +1,10 @@
 import definition from "../../definition/ad/GetAdDefinition";
+import { type IHttpRequest } from "@rexeus/typeweaver-core";
 import {
-  type IHttpRequest,
   type SafeRequestValidationResult,
   RequestValidator,
   RequestValidationError,
-} from "@rexeus/typeweaver-core";
+} from "../lib/types";
 import type { IGetAdRequest } from "./GetAdRequest";
 
 export class GetAdRequestValidator extends RequestValidator {

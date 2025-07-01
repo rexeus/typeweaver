@@ -1,9 +1,6 @@
 import definition from "../../definition/auth/LogoutDefinition";
-import {
-  RequestCommand,
-  HttpMethod,
-  type IHttpResponse,
-} from "@rexeus/typeweaver-core";
+import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import { RequestCommand } from "../lib/clients";
 import { LogoutResponseValidator } from "./LogoutResponseValidator";
 import { type LogoutResponse, LogoutSuccessResponse } from "./LogoutResponse";
 

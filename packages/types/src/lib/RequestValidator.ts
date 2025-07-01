@@ -1,0 +1,58 @@
+import type { IHttpRequest } from "@rexeus/typeweaver-core";
+import type { SafeRequestValidationResult } from "./SafeRequestValidationResult";
+
+/**
+ * Interface for HTTP request validators.
+ */
+export type IRequestValidator = {
+  /**
+   * Validates a request and returns a result object.
+   * Does not throw errors.
+   */
+  safeValidate(
+    request: IHttpRequest
+  ): SafeRequestValidationResult<IHttpRequest>;
+  /**
+   * Validates a request and returns the validated request.
+   * @throws {RequestValidationError} If validation fails
+   */
+  validate(request: IHttpRequest): IHttpRequest;
+};
+
+/**
+ * Abstract base class for HTTP request validation.
+ *
+ * This class provides the foundation for request validators that:
+ * - Validate headers, body, query parameters, and path parameters
+ * - Support both safe (non-throwing) and unsafe (throwing) validation
+ * - Integrate with Zod schemas for runtime validation
+ * - Provide detailed error information for debugging
+ *
+ * Implementations should validate all request components and either:
+ * - Return validated data (for `validate`)
+ * - Return success/error result (for `safeValidate`)
+ */
+export abstract class RequestValidator implements IRequestValidator {
+  public constructor() {
+    //
+  }
+
+  /**
+   * Validates a request without throwing errors.
+   *
+   * @param request - The HTTP request to validate
+   * @returns A result object containing either the validated request or error details
+   */
+  public abstract safeValidate(
+    request: IHttpRequest
+  ): SafeRequestValidationResult<IHttpRequest>;
+
+  /**
+   * Validates a request and throws if validation fails.
+   *
+   * @param request - The HTTP request to validate
+   * @returns The validated request with proper typing
+   * @throws {RequestValidationError} If any part of the request fails validation
+   */
+  public abstract validate(request: IHttpRequest): IHttpRequest;
+}

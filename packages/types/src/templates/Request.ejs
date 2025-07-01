@@ -1,5 +1,6 @@
 import definition from "<%= sourcePath %>";
-import { RequestCommand, HttpMethod, type IHttpResponse } from "<%= coreDir %>";
+import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import { RequestCommand } from "../lib/clients";
 import { <%= pascalCaseOperationId %>ResponseValidator } from "<%= responseValidationFile %>";
 import {
     type <%= pascalCaseOperationId %>Response,

@@ -1,9 +1,6 @@
 import definition from "../../definition/ad/ListAdDefinition";
-import {
-  RequestCommand,
-  HttpMethod,
-  type IHttpResponse,
-} from "@rexeus/typeweaver-core";
+import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import { RequestCommand } from "../lib/clients";
 import { ListAdResponseValidator } from "./ListAdResponseValidator";
 import { type ListAdResponse, ListAdSuccessResponse } from "./ListAdResponse";
 

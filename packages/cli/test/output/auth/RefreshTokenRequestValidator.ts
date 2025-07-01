@@ -1,10 +1,10 @@
 import definition from "../../definition/auth/RefreshTokenDefinition";
+import { type IHttpRequest } from "@rexeus/typeweaver-core";
 import {
-  type IHttpRequest,
   type SafeRequestValidationResult,
   RequestValidator,
   RequestValidationError,
-} from "@rexeus/typeweaver-core";
+} from "../lib/types";
 import type { IRefreshTokenRequest } from "./RefreshTokenRequest";
 
 export class RefreshTokenRequestValidator extends RequestValidator {

@@ -1,12 +1,12 @@
 import definition from "../../definition/ad/ListAdDefinition";
+import { type IHttpResponse } from "@rexeus/typeweaver-core";
 import {
-  type IHttpResponse,
   type SafeResponseValidationResult,
   ResponseValidator,
   ResponseValidationError,
   InvalidResponseStatusCodeError,
   assert,
-} from "@rexeus/typeweaver-core";
+} from "../lib/types";
 import {
   type ListAdResponse,
   type IListAdSuccessResponse,

@@ -1,8 +1,8 @@
+import { HttpMethod } from "@rexeus/typeweaver-core";
 import {
   type AwsHttpApiGatewayRoute,
   AwsHttpApiGatewayRouter,
-  HttpMethod,
-} from "@rexeus/typeweaver-core";
+} from "../lib/aws-cdk";
 
 export class ProjectHttpApiRouter extends AwsHttpApiGatewayRouter {
   private routes: AwsHttpApiGatewayRoute[] = [

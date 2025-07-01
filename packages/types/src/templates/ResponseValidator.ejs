@@ -1,12 +1,12 @@
 import definition from "<%= sourcePath %>";
+import { type IHttpResponse } from "@rexeus/typeweaver-core";
 import {
-    type IHttpResponse,
     type SafeResponseValidationResult,
     ResponseValidator,
     ResponseValidationError,
     InvalidResponseStatusCodeError,
     assert,
-} from "<%= coreDir %>";
+} from "../lib/types";
 import {
 type <%= pascalCaseOperationId %>Response,
 <% for (const ownResponse of ownResponses) { %>

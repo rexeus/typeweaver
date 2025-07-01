@@ -1,10 +1,10 @@
 import definition from "../../definition/auth/LogoutDefinition";
+import { type IHttpRequest } from "@rexeus/typeweaver-core";
 import {
-  type IHttpRequest,
   type SafeRequestValidationResult,
   RequestValidator,
   RequestValidationError,
-} from "@rexeus/typeweaver-core";
+} from "../lib/types";
 import type { ILogoutRequest } from "./LogoutRequest";
 
 export class LogoutRequestValidator extends RequestValidator {

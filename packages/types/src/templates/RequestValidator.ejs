@@ -1,10 +1,10 @@
 import definition from "<%= sourcePath %>";
+import { type IHttpRequest } from "@rexeus/typeweaver-core";
 import {
-  type IHttpRequest,
   type SafeRequestValidationResult,
   RequestValidator,
   RequestValidationError,
-} from "<%= corePath %>";
+} from "../lib/types";
 import type { I<%= pascalCaseOperationId %>Request } from "<%= requestFile %>";
 
 export class <%= pascalCaseOperationId %>RequestValidator extends RequestValidator {

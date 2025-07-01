@@ -21,7 +21,7 @@
     "prepack": "npm run build",
     "preversion": "npm run build",
     "test:bundle": "pnpm run build && node dist/run-cli-with-tsx.js generate --output test/output --input test/definition --plugins clients,aws-cdk",
-    "test:generate": "tsx src/cli.ts generate --output test/output --input test/definition --plugins clients,aws-cdk"
+    "test:gen": "tsx src/cli.ts generate --output test/output --input test/definition --plugins clients,aws-cdk"
   },
   "keywords": [
     "api",
@@ -48,7 +48,9 @@
     "@rexeus/typeweaver-gen": "workspace:*",
     "@rexeus/typeweaver-types": "workspace:*",
     "@rexeus/typeweaver-clients": "workspace:*",
-    "@rexeus/typeweaver-aws-cdk": "workspace:*"
+    "@rexeus/typeweaver-aws-cdk": "workspace:*",
+    "axios": "^1.9.0",
+    "case": "^1.6.3"
   },
   "peerDependencies": {
     "@rexeus/typeweaver-core": "*",

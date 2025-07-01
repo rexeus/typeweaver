@@ -1,9 +1,6 @@
 import definition from "../../definition/project/ListProjectDefinition";
-import {
-  RequestCommand,
-  HttpMethod,
-  type IHttpResponse,
-} from "@rexeus/typeweaver-core";
+import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import { RequestCommand } from "../lib/clients";
 import { ListProjectResponseValidator } from "./ListProjectResponseValidator";
 import {
   type ListProjectResponse,
