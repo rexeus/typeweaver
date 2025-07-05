@@ -97,7 +97,8 @@ program
     // If no plugins specified, Generator will use defaults
 
     // Run generation
-    return Generator.generate(resolvedInputDir, resolvedOutputDir, finalConfig);
+    const generator = new Generator();
+    return generator.generate(resolvedInputDir, resolvedOutputDir, finalConfig);
   });
 
 // Add future commands placeholder

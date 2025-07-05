@@ -1,12 +1,15 @@
 import path from "path";
-import { Generator } from "./Generator";
 import fs from "fs";
 import ejs from "ejs";
 import type { GeneratorContext } from "@rexeus/typeweaver-gen";
 
 export class IndexFileGenerator {
-  public static generate(context: GeneratorContext): void {
-    const templateFilePath = path.join(Generator.templateDir, "Index.ejs");
+  public constructor(private readonly templateDir: string) {
+    //
+  }
+
+  public generate(context: GeneratorContext): void {
+    const templateFilePath = path.join(this.templateDir, "Index.ejs");
     const template = fs.readFileSync(templateFilePath, "utf8");
 
     const indexPaths: Set<string> = new Set();
@@ -18,6 +21,6 @@ export class IndexFileGenerator {
       indexPaths: Array.from(indexPaths).sort(),
     });
 
-    fs.writeFileSync(path.join(Generator.outputDir, "index.ts"), content);
+    fs.writeFileSync(path.join(context.outputDir, "index.ts"), content);
   }
 }

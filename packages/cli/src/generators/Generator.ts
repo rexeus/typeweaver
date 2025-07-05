@@ -8,10 +8,10 @@ import {
   PluginRegistry,
   type PluginConfig,
   type TypeWeaverConfig,
-  type TypeWeaverPlugin,
 } from "@rexeus/typeweaver-gen";
-import TypesPlugin from "@rexeus/typeweaver-types";
 import { IndexFileGenerator } from "./IndexFileGenerator";
+import { PluginLoader } from "./PluginLoader";
+import TypesPlugin from "@rexeus/typeweaver-types";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -20,32 +20,48 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * Uses a plugin-based architecture for extensible code generation
  */
 export class Generator {
-  public static outputDir: string;
-  public static sourceDir: string;
-  public static sharedSourceDir: string;
-  public static sharedOutputDir: string;
+  public readonly coreDir = "@rexeus/typeweaver-core";
+  public readonly templateDir = path.join(__dirname, "templates");
 
-  public static readonly coreDir = "@rexeus/typeweaver-core";
-  public static readonly templateDir = path.join(__dirname, "templates");
+  private readonly registry: PluginRegistry;
+  private readonly contextBuilder: PluginContextBuilder;
+  private readonly pluginLoader: PluginLoader;
+  private readonly indexFileGenerator: IndexFileGenerator;
+  private resourceReader: ResourceReader | null = null;
+  private prettier: Prettier | null = null;
 
-  private static registry = new PluginRegistry();
-  private static contextBuilder = new PluginContextBuilder();
+  private outputDir: string = "";
+  private sourceDir: string = "";
+  private sharedSourceDir: string = "";
+  private sharedOutputDir: string = "";
+
+  public constructor(
+    registry?: PluginRegistry,
+    contextBuilder?: PluginContextBuilder,
+    pluginLoader?: PluginLoader,
+    indexFileGenerator?: IndexFileGenerator,
+    requiredPlugins: [TypesPlugin] = [new TypesPlugin()]
+  ) {
+    this.registry = registry ?? new PluginRegistry();
+    this.contextBuilder = contextBuilder ?? new PluginContextBuilder();
+    this.pluginLoader =
+      pluginLoader ?? new PluginLoader(this.registry, requiredPlugins);
+    this.indexFileGenerator =
+      indexFileGenerator ?? new IndexFileGenerator(this.templateDir);
+  }
 
   /**
    * Generate code using the plugin system
    */
-  public static async generate(
+  public async generate(
     definitionDir: string,
     outputDir: string,
     config?: TypeWeaverConfig
   ): Promise<void> {
     console.info("Starting generation...");
 
-    // Set directories
-    this.outputDir = outputDir;
-    this.sourceDir = definitionDir;
-    this.sharedSourceDir = path.join(definitionDir, "shared");
-    this.sharedOutputDir = path.join(outputDir, "shared");
+    // Initialize directories
+    this.initializeDirectories(definitionDir, outputDir);
 
     // Clean output if requested
     if (config?.clean ?? true) {
@@ -58,17 +74,22 @@ export class Generator {
     fs.mkdirSync(this.sharedOutputDir, { recursive: true });
 
     // Load and register plugins
-    await this.loadPlugins(config);
+    await this.pluginLoader.loadPlugins(config);
 
-    // Set static properties for ResourceReader (temporary compatibility)
-    Generator.sourceDir = this.sourceDir;
-    Generator.sharedSourceDir = this.sharedSourceDir;
-    Generator.outputDir = this.outputDir;
-    Generator.sharedOutputDir = this.sharedOutputDir;
+    // Create ResourceReader instance
+    this.resourceReader = new ResourceReader({
+      sourceDir: this.sourceDir,
+      outputDir: this.outputDir,
+      sharedSourceDir: this.sharedSourceDir,
+      sharedOutputDir: this.sharedOutputDir,
+    });
+
+    // Create Prettier instance
+    this.prettier = new Prettier(this.outputDir);
 
     // Read resources
     console.info("Reading definitions...");
-    let resources = await ResourceReader.getResources();
+    let resources = await this.resourceReader.getResources();
 
     // Create contexts
     const pluginContext = this.contextBuilder.createPluginContext({
@@ -112,7 +133,7 @@ export class Generator {
       }
     }
 
-    IndexFileGenerator.generate(generatorContext);
+    this.indexFileGenerator.generate(generatorContext);
 
     // Finalize plugins
     console.info("Finalizing plugins...");
@@ -124,7 +145,7 @@ export class Generator {
 
     // Format code if requested
     if (config?.prettier ?? true) {
-      await Prettier.formatCode();
+      await this.prettier.formatCode();
     }
 
     console.info("Generation complete!");
@@ -133,42 +154,13 @@ export class Generator {
     );
   }
 
-  static async loadPlugins(config?: TypeWeaverConfig) {
-    // types is an always required plugin
-    this.registry.register(new TypesPlugin());
-
-    if (!config || !config.plugins) {
-      return;
-    }
-
-    for (const plugin of config.plugins) {
-      if (typeof plugin === "string") {
-        const possiblePluginPaths = [
-          `@rexeus/typeweaver-${plugin}`,
-          `@rexeus/${plugin}`,
-          plugin,
-        ];
-
-        let twPlugin: TypeWeaverPlugin | undefined = undefined;
-        for (const possiblePath of possiblePluginPaths) {
-          try {
-            const pluginPackage = await import(possiblePath);
-            if (pluginPackage.default) {
-              twPlugin = new pluginPackage.default();
-              break;
-            }
-          } catch {
-            //
-          }
-        }
-
-        if (twPlugin) {
-          this.registry.register(twPlugin);
-          continue;
-        } else {
-          console.warn(`Plugin '${plugin}' not found. Skipping registration.`);
-        }
-      }
-    }
+  private initializeDirectories(
+    definitionDir: string,
+    outputDir: string
+  ): void {
+    this.sourceDir = definitionDir;
+    this.outputDir = outputDir;
+    this.sharedSourceDir = path.join(definitionDir, "shared");
+    this.sharedOutputDir = path.join(outputDir, "shared");
   }
 }
