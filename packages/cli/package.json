@@ -20,8 +20,8 @@
     "build": "pkgroll --clean-dist && cp -r ./src/generators/templates ./dist/templates",
     "prepack": "npm run build",
     "preversion": "npm run build",
-    "test:bundle": "pnpm run build && node dist/run-cli-with-tsx.js generate --output test/output --input test/definition --plugins clients,aws-cdk",
-    "test:gen": "tsx src/cli.ts generate --output test/output --input test/definition --plugins clients,aws-cdk"
+    "test:bundle": "pnpm run build && node dist/run-cli-with-tsx.js generate --output test/output --input test/definition --plugins clients,aws-cdk,hono",
+    "test:gen": "tsx src/cli.ts generate --output test/output --input test/definition --plugins clients,aws-cdk,hono"
   },
   "keywords": [
     "api",
@@ -49,15 +49,18 @@
     "@rexeus/typeweaver-types": "workspace:*",
     "@rexeus/typeweaver-clients": "workspace:*",
     "@rexeus/typeweaver-aws-cdk": "workspace:*",
+    "@rexeus/typeweaver-hono": "workspace:*",
     "axios": "^1.9.0",
-    "case": "^1.6.3"
+    "case": "^1.6.3",
+    "hono": "^4.6.14"
   },
   "peerDependencies": {
     "@rexeus/typeweaver-core": "*",
     "@rexeus/typeweaver-gen": "*",
     "@rexeus/typeweaver-types": "*",
     "@rexeus/typeweaver-clients": "*",
-    "@rexeus/typeweaver-aws-cdk": "*"
+    "@rexeus/typeweaver-aws-cdk": "*",
+    "@rexeus/typeweaver-hono": "*"
   },
   "dependencies": {
     "commander": "^14.0.0",

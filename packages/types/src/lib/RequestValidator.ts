@@ -1,23 +1,8 @@
-import type { IHttpRequest } from "@rexeus/typeweaver-core";
-import type { SafeRequestValidationResult } from "./SafeRequestValidationResult";
-
-/**
- * Interface for HTTP request validators.
- */
-export type IRequestValidator = {
-  /**
-   * Validates a request and returns a result object.
-   * Does not throw errors.
-   */
-  safeValidate(
-    request: IHttpRequest
-  ): SafeRequestValidationResult<IHttpRequest>;
-  /**
-   * Validates a request and returns the validated request.
-   * @throws {RequestValidationError} If validation fails
-   */
-  validate(request: IHttpRequest): IHttpRequest;
-};
+import type {
+  IHttpRequest,
+  IRequestValidator,
+  SafeRequestValidationResult,
+} from "@rexeus/typeweaver-core";
 
 /**
  * Abstract base class for HTTP request validation.

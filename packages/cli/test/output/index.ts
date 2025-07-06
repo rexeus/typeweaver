@@ -1,5 +1,7 @@
 export * from "./account/AccountClient";
 
+export * from "./account/AccountHono";
+
 export * from "./account/AccountHttpApiRouter";
 
 export * from "./account/RegisterAccountRequest";
@@ -11,6 +13,8 @@ export * from "./account/RegisterAccountResponse";
 export * from "./account/RegisterAccountResponseValidator";
 
 export * from "./ad/AdClient";
+
+export * from "./ad/AdHono";
 
 export * from "./ad/AdHttpApiRouter";
 
@@ -40,6 +44,8 @@ export * from "./auth/AccessTokenResponseValidator";
 
 export * from "./auth/AuthClient";
 
+export * from "./auth/AuthHono";
+
 export * from "./auth/AuthHttpApiRouter";
 
 export * from "./auth/LogoutRequest";
@@ -59,6 +65,8 @@ export * from "./auth/RefreshTokenResponse";
 export * from "./auth/RefreshTokenResponseValidator";
 
 export * from "./funnel/FunnelClient";
+
+export * from "./funnel/FunnelHono";
 
 export * from "./funnel/FunnelHttpApiRouter";
 
@@ -111,6 +119,8 @@ export * from "./project/ListProjectResponse";
 export * from "./project/ListProjectResponseValidator";
 
 export * from "./project/ProjectClient";
+
+export * from "./project/ProjectHono";
 
 export * from "./project/ProjectHttpApiRouter";
 

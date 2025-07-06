@@ -1,10 +1,10 @@
 import definition from "../../definition/account/RegisterAccountDefinition";
-import { type IHttpRequest } from "@rexeus/typeweaver-core";
 import {
+  type IHttpRequest,
   type SafeRequestValidationResult,
-  RequestValidator,
   RequestValidationError,
-} from "../lib/types";
+} from "@rexeus/typeweaver-core";
+import { RequestValidator } from "../lib/types";
 import type { IRegisterAccountRequest } from "./RegisterAccountRequest";
 
 export class RegisterAccountRequestValidator extends RequestValidator {

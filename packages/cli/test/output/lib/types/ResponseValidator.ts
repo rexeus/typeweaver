@@ -1,5 +1,8 @@
-import type { SafeResponseValidationResult } from "./SafeResponseValidationResult";
-import type { IHttpResponse } from "@rexeus/typeweaver-core";
+import type {
+  IHttpResponse,
+  IResponseValidator,
+  SafeResponseValidationResult,
+} from "@rexeus/typeweaver-core";
 
 /**
  * Abstract base class for HTTP response validation.
@@ -13,7 +16,7 @@ import type { IHttpResponse } from "@rexeus/typeweaver-core";
  * Response validators are typically used in API clients to ensure
  * responses match the expected format before processing.
  */
-export abstract class ResponseValidator {
+export abstract class ResponseValidator implements IResponseValidator {
   /**
    * Validates a response without throwing errors.
    *

@@ -11,11 +11,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default class TypesPlugin extends BasePlugin {
   public name = "types";
-  public override generate(context: GeneratorContext): Promise<void> | void {
+
+  public override generate(context: GeneratorContext): void {
     // Copy lib files to lib/types/ from dist folder
     const libDir = path.join(__dirname, "lib");
-    this.copyLibFiles(context, libDir, "types");
-    
+    this.copyLibFiles(context, libDir, this.name);
+
     SharedResponseGenerator.generate(context);
     RequestGenerator.generate(context);
     RequestValidationGenerator.generate(context);

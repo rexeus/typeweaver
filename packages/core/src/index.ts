@@ -9,3 +9,7 @@ export * from "./HttpOperationDefinition";
 export * from "./HttpRequestDefinition";
 export * from "./HttpResponseDefinition";
 export * from "./HttpStatusCode";
+export * from "./RequestValidationError";
+export * from "./RequestValidator";
+export * from "./ResponseValidationError";
+export * from "./ResponseValidator";

@@ -1,9 +1,11 @@
 import definition from "<%= sourcePath %>";
-import { type IHttpResponse } from "@rexeus/typeweaver-core";
-import {
+import { 
+    type IHttpResponse,
     type SafeResponseValidationResult,
+    ResponseValidationError
+} from "@rexeus/typeweaver-core";
+import {
     ResponseValidator,
-    ResponseValidationError,
     InvalidResponseStatusCodeError,
     assert,
 } from "../lib/types";

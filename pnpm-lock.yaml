@@ -67,6 +67,9 @@ importers:
       '@rexeus/typeweaver-gen':
         specifier: workspace:*
         version: link:../gen
+      '@rexeus/typeweaver-hono':
+        specifier: workspace:*
+        version: link:../hono
       '@rexeus/typeweaver-types':
         specifier: workspace:*
         version: link:../types
@@ -76,6 +79,9 @@ importers:
       case:
         specifier: ^1.6.3
         version: 1.6.3
+      hono:
+        specifier: ^4.6.14
+        version: 4.8.2
 
   packages/clients:
     devDependencies:
@@ -116,6 +122,22 @@ importers:
       '@rexeus/typeweaver-core':
         specifier: workspace:*
         version: link:../core
+
+  packages/hono:
+    dependencies:
+      case:
+        specifier: ^1.6.3
+        version: 1.6.3
+      hono:
+        specifier: ^4.0.0
+        version: 4.8.2
+    devDependencies:
+      '@rexeus/typeweaver-core':
+        specifier: workspace:*
+        version: link:../core
+      '@rexeus/typeweaver-gen':
+        specifier: workspace:*
+        version: link:../gen
 
   packages/types:
     dependencies:

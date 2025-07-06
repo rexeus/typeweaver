@@ -1,10 +1,10 @@
 import definition from "../../definition/project/ListProjectDefinition";
-import { type IHttpRequest } from "@rexeus/typeweaver-core";
 import {
+  type IHttpRequest,
   type SafeRequestValidationResult,
-  RequestValidator,
   RequestValidationError,
-} from "../lib/types";
+} from "@rexeus/typeweaver-core";
+import { RequestValidator } from "../lib/types";
 import type { IListProjectRequest } from "./ListProjectRequest";
 
 export class ListProjectRequestValidator extends RequestValidator {

@@ -1,0 +1,51 @@
+{
+  "name": "@rexeus/typeweaver-hono",
+  "version": "0.0.0",
+  "description": "Hono router generator plugin for TypeWeaver",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "build": "pkgroll --clean-dist && cp -r ./src/templates ./dist/templates && cp -r ./src/lib ./dist/lib",
+    "prepack": "npm run build",
+    "preversion": "npm run build"
+  },
+  "keywords": [
+    "typeweaver",
+    "plugin",
+    "hono",
+    "router",
+    "api",
+    "http"
+  ],
+  "author": "Dennis Wentzien <dennis@rexeus.com>",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rexeus/typeweaver.git",
+    "directory": "packages/hono"
+  },
+  "bugs": {
+    "url": "https://github.com/rexeus/typeweaver/issues"
+  },
+  "homepage": "https://github.com/rexeus/typeweaver#readme",
+  "peerDependencies": {
+    "@rexeus/typeweaver-core": "*",
+    "@rexeus/typeweaver-gen": "*"
+  },
+  "devDependencies": {
+    "@rexeus/typeweaver-core": "workspace:*",
+    "@rexeus/typeweaver-gen": "workspace:*"
+  },
+  "dependencies": {
+    "case": "^1.6.3",
+    "hono": "^4.0.0"
+  }
+}

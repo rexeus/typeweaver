@@ -1,5 +1,5 @@
 import type { z } from "zod/v4";
-import { HttpStatusCode } from "@rexeus/typeweaver-core";
+import type { HttpStatusCode } from "./HttpStatusCode";
 
 export type ResponseValidationErrorInput = {
   headerIssues?: z.core.$ZodRawIssue[];

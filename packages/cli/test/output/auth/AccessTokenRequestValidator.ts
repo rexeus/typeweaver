@@ -1,10 +1,10 @@
 import definition from "../../definition/auth/AccessTokenDefinition";
-import { type IHttpRequest } from "@rexeus/typeweaver-core";
 import {
+  type IHttpRequest,
   type SafeRequestValidationResult,
-  RequestValidator,
   RequestValidationError,
-} from "../lib/types";
+} from "@rexeus/typeweaver-core";
+import { RequestValidator } from "../lib/types";
 import type { IAccessTokenRequest } from "./AccessTokenRequest";
 
 export class AccessTokenRequestValidator extends RequestValidator {
