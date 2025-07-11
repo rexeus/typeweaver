@@ -30,40 +30,46 @@ import type {
   ValidationErrorResponse,
 } from "../shared/ValidationErrorResponse";
 
-export type IRegisterAccountSuccessResponseHeader = {
+export type ICreateTodoSuccessResponseHeader = {
   "Content-Type": "application/json";
 };
 
-export type IRegisterAccountSuccessResponseBody = {
+export type ICreateTodoSuccessResponseBody = {
   id: string;
-  email: string;
+  accountId: string;
+  title: string;
+  description?: string | undefined;
+  status: "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED";
+  dueDate?: string | undefined;
+  tags?: string[] | undefined;
+  priority?: ("LOW" | "MEDIUM" | "HIGH") | undefined;
   createdAt: string;
   modifiedAt: string;
   createdBy: string;
   modifiedBy: string;
 };
 
-export type IRegisterAccountSuccessResponse = {
-  statusCode: HttpStatusCode.OK;
-  header: IRegisterAccountSuccessResponseHeader;
-  body: IRegisterAccountSuccessResponseBody;
+export type ICreateTodoSuccessResponse = {
+  statusCode: HttpStatusCode.CREATED;
+  header: ICreateTodoSuccessResponseHeader;
+  body: ICreateTodoSuccessResponseBody;
 };
 
-export class RegisterAccountSuccessResponse
+export class CreateTodoSuccessResponse
   extends HttpResponse<
-    IRegisterAccountSuccessResponseHeader,
-    IRegisterAccountSuccessResponseBody
+    ICreateTodoSuccessResponseHeader,
+    ICreateTodoSuccessResponseBody
   >
-  implements IRegisterAccountSuccessResponse
+  implements ICreateTodoSuccessResponse
 {
-  public override readonly statusCode: HttpStatusCode.OK;
+  public override readonly statusCode: HttpStatusCode.CREATED;
 
-  public constructor(response: IRegisterAccountSuccessResponse) {
+  public constructor(response: ICreateTodoSuccessResponse) {
     super(response.statusCode, response.header, response.body);
 
-    if (response.statusCode !== HttpStatusCode.OK) {
+    if (response.statusCode !== HttpStatusCode.CREATED) {
       throw new Error(
-        `Invalid status code: '${response.statusCode}' for RegisterAccountSuccessResponse`,
+        `Invalid status code: '${response.statusCode}' for CreateTodoSuccessResponse`,
       );
     }
 
@@ -71,12 +77,12 @@ export class RegisterAccountSuccessResponse
   }
 }
 
-export type IRegisterAccountSuccessResponses = IRegisterAccountSuccessResponse;
+export type ICreateTodoSuccessResponses = ICreateTodoSuccessResponse;
 
-export type RegisterAccountSuccessResponses = RegisterAccountSuccessResponse;
+export type CreateTodoSuccessResponses = CreateTodoSuccessResponse;
 
-export type IRegisterAccountResponse =
-  | IRegisterAccountSuccessResponse
+export type ICreateTodoResponse =
+  | ICreateTodoSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
   | ITooManyRequestsErrorResponse
@@ -84,8 +90,8 @@ export type IRegisterAccountResponse =
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse;
 
-export type RegisterAccountResponse =
-  | RegisterAccountSuccessResponse
+export type CreateTodoResponse =
+  | CreateTodoSuccessResponse
   | ForbiddenErrorResponse
   | InternalServerErrorResponse
   | TooManyRequestsErrorResponse

@@ -30,40 +30,49 @@ import type {
   ValidationErrorResponse,
 } from "../shared/ValidationErrorResponse";
 
-export type IRegisterAccountSuccessResponseHeader = {
+export type IListTodosSuccessResponseHeader = {
   "Content-Type": "application/json";
 };
 
-export type IRegisterAccountSuccessResponseBody = {
-  id: string;
-  email: string;
-  createdAt: string;
-  modifiedAt: string;
-  createdBy: string;
-  modifiedBy: string;
+export type IListTodosSuccessResponseBody = {
+  results: {
+    id: string;
+    accountId: string;
+    title: string;
+    description?: string | undefined;
+    status: "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED";
+    dueDate?: string | undefined;
+    tags?: string[] | undefined;
+    priority?: ("LOW" | "MEDIUM" | "HIGH") | undefined;
+    createdAt: string;
+    modifiedAt: string;
+    createdBy: string;
+    modifiedBy: string;
+  }[];
+  nextToken?: string | undefined;
 };
 
-export type IRegisterAccountSuccessResponse = {
+export type IListTodosSuccessResponse = {
   statusCode: HttpStatusCode.OK;
-  header: IRegisterAccountSuccessResponseHeader;
-  body: IRegisterAccountSuccessResponseBody;
+  header: IListTodosSuccessResponseHeader;
+  body: IListTodosSuccessResponseBody;
 };
 
-export class RegisterAccountSuccessResponse
+export class ListTodosSuccessResponse
   extends HttpResponse<
-    IRegisterAccountSuccessResponseHeader,
-    IRegisterAccountSuccessResponseBody
+    IListTodosSuccessResponseHeader,
+    IListTodosSuccessResponseBody
   >
-  implements IRegisterAccountSuccessResponse
+  implements IListTodosSuccessResponse
 {
   public override readonly statusCode: HttpStatusCode.OK;
 
-  public constructor(response: IRegisterAccountSuccessResponse) {
+  public constructor(response: IListTodosSuccessResponse) {
     super(response.statusCode, response.header, response.body);
 
     if (response.statusCode !== HttpStatusCode.OK) {
       throw new Error(
-        `Invalid status code: '${response.statusCode}' for RegisterAccountSuccessResponse`,
+        `Invalid status code: '${response.statusCode}' for ListTodosSuccessResponse`,
       );
     }
 
@@ -71,12 +80,12 @@ export class RegisterAccountSuccessResponse
   }
 }
 
-export type IRegisterAccountSuccessResponses = IRegisterAccountSuccessResponse;
+export type IListTodosSuccessResponses = IListTodosSuccessResponse;
 
-export type RegisterAccountSuccessResponses = RegisterAccountSuccessResponse;
+export type ListTodosSuccessResponses = ListTodosSuccessResponse;
 
-export type IRegisterAccountResponse =
-  | IRegisterAccountSuccessResponse
+export type IListTodosResponse =
+  | IListTodosSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
   | ITooManyRequestsErrorResponse
@@ -84,8 +93,8 @@ export type IRegisterAccountResponse =
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse;
 
-export type RegisterAccountResponse =
-  | RegisterAccountSuccessResponse
+export type ListTodosResponse =
+  | ListTodosSuccessResponse
   | ForbiddenErrorResponse
   | InternalServerErrorResponse
   | TooManyRequestsErrorResponse

@@ -5,10 +5,6 @@ import type { IAccessTokenRequest } from "./AccessTokenRequest";
 import { AccessTokenRequestValidator } from "./AccessTokenRequestValidator";
 import type { AccessTokenResponse } from "./AccessTokenResponse";
 
-import type { ILogoutRequest } from "./LogoutRequest";
-import { LogoutRequestValidator } from "./LogoutRequestValidator";
-import type { LogoutResponse } from "./LogoutResponse";
-
 import type { IRefreshTokenRequest } from "./RefreshTokenRequest";
 import { RefreshTokenRequestValidator } from "./RefreshTokenRequestValidator";
 import type { RefreshTokenResponse } from "./RefreshTokenResponse";
@@ -18,8 +14,6 @@ export type AuthApiHandler = {
     IAccessTokenRequest,
     AccessTokenResponse
   >;
-
-  handleLogoutRequest: HonoRequestHandler<ILogoutRequest, LogoutResponse>;
 
   handleRefreshTokenRequest: HonoRequestHandler<
     IRefreshTokenRequest,
@@ -39,14 +33,6 @@ export class AuthHono extends TypeweaverHono<AuthApiHandler> {
         context,
         new AccessTokenRequestValidator(),
         this.requestHandlers.handleAccessTokenRequest,
-      ),
-    );
-
-    this.post("/auth/logout", async (context: Context) =>
-      this.handleRequest(
-        context,
-        new LogoutRequestValidator(),
-        this.requestHandlers.handleLogoutRequest,
       ),
     );
 

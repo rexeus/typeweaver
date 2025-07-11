@@ -1,6 +1,11 @@
 import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 
 import type {
+  ITodoNotFoundErrorResponse,
+  TodoNotFoundErrorResponse,
+} from "../shared/TodoNotFoundErrorResponse";
+
+import type {
   IForbiddenErrorResponse,
   ForbiddenErrorResponse,
 } from "../shared/ForbiddenErrorResponse";
@@ -30,40 +35,46 @@ import type {
   ValidationErrorResponse,
 } from "../shared/ValidationErrorResponse";
 
-export type IRegisterAccountSuccessResponseHeader = {
+export type IGetTodoSuccessResponseHeader = {
   "Content-Type": "application/json";
 };
 
-export type IRegisterAccountSuccessResponseBody = {
+export type IGetTodoSuccessResponseBody = {
   id: string;
-  email: string;
+  accountId: string;
+  title: string;
+  description?: string | undefined;
+  status: "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED";
+  dueDate?: string | undefined;
+  tags?: string[] | undefined;
+  priority?: ("LOW" | "MEDIUM" | "HIGH") | undefined;
   createdAt: string;
   modifiedAt: string;
   createdBy: string;
   modifiedBy: string;
 };
 
-export type IRegisterAccountSuccessResponse = {
+export type IGetTodoSuccessResponse = {
   statusCode: HttpStatusCode.OK;
-  header: IRegisterAccountSuccessResponseHeader;
-  body: IRegisterAccountSuccessResponseBody;
+  header: IGetTodoSuccessResponseHeader;
+  body: IGetTodoSuccessResponseBody;
 };
 
-export class RegisterAccountSuccessResponse
+export class GetTodoSuccessResponse
   extends HttpResponse<
-    IRegisterAccountSuccessResponseHeader,
-    IRegisterAccountSuccessResponseBody
+    IGetTodoSuccessResponseHeader,
+    IGetTodoSuccessResponseBody
   >
-  implements IRegisterAccountSuccessResponse
+  implements IGetTodoSuccessResponse
 {
   public override readonly statusCode: HttpStatusCode.OK;
 
-  public constructor(response: IRegisterAccountSuccessResponse) {
+  public constructor(response: IGetTodoSuccessResponse) {
     super(response.statusCode, response.header, response.body);
 
     if (response.statusCode !== HttpStatusCode.OK) {
       throw new Error(
-        `Invalid status code: '${response.statusCode}' for RegisterAccountSuccessResponse`,
+        `Invalid status code: '${response.statusCode}' for GetTodoSuccessResponse`,
       );
     }
 
@@ -71,12 +82,13 @@ export class RegisterAccountSuccessResponse
   }
 }
 
-export type IRegisterAccountSuccessResponses = IRegisterAccountSuccessResponse;
+export type IGetTodoSuccessResponses = IGetTodoSuccessResponse;
 
-export type RegisterAccountSuccessResponses = RegisterAccountSuccessResponse;
+export type GetTodoSuccessResponses = GetTodoSuccessResponse;
 
-export type IRegisterAccountResponse =
-  | IRegisterAccountSuccessResponse
+export type IGetTodoResponse =
+  | IGetTodoSuccessResponse
+  | ITodoNotFoundErrorResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
   | ITooManyRequestsErrorResponse
@@ -84,8 +96,9 @@ export type IRegisterAccountResponse =
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse;
 
-export type RegisterAccountResponse =
-  | RegisterAccountSuccessResponse
+export type GetTodoResponse =
+  | GetTodoSuccessResponse
+  | TodoNotFoundErrorResponse
   | ForbiddenErrorResponse
   | InternalServerErrorResponse
   | TooManyRequestsErrorResponse

@@ -1,6 +1,16 @@
 import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 
 import type {
+  ITodoNotFoundErrorResponse,
+  TodoNotFoundErrorResponse,
+} from "../shared/TodoNotFoundErrorResponse";
+
+import type {
+  ITodoNotChangeableErrorResponse,
+  TodoNotChangeableErrorResponse,
+} from "../shared/TodoNotChangeableErrorResponse";
+
+import type {
   IForbiddenErrorResponse,
   ForbiddenErrorResponse,
 } from "../shared/ForbiddenErrorResponse";
@@ -30,40 +40,46 @@ import type {
   ValidationErrorResponse,
 } from "../shared/ValidationErrorResponse";
 
-export type IRegisterAccountSuccessResponseHeader = {
+export type IUpdateTodoSuccessResponseHeader = {
   "Content-Type": "application/json";
 };
 
-export type IRegisterAccountSuccessResponseBody = {
+export type IUpdateTodoSuccessResponseBody = {
   id: string;
-  email: string;
+  accountId: string;
+  title: string;
+  description?: string | undefined;
+  status: "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED";
+  dueDate?: string | undefined;
+  tags?: string[] | undefined;
+  priority?: ("LOW" | "MEDIUM" | "HIGH") | undefined;
   createdAt: string;
   modifiedAt: string;
   createdBy: string;
   modifiedBy: string;
 };
 
-export type IRegisterAccountSuccessResponse = {
+export type IUpdateTodoSuccessResponse = {
   statusCode: HttpStatusCode.OK;
-  header: IRegisterAccountSuccessResponseHeader;
-  body: IRegisterAccountSuccessResponseBody;
+  header: IUpdateTodoSuccessResponseHeader;
+  body: IUpdateTodoSuccessResponseBody;
 };
 
-export class RegisterAccountSuccessResponse
+export class UpdateTodoSuccessResponse
   extends HttpResponse<
-    IRegisterAccountSuccessResponseHeader,
-    IRegisterAccountSuccessResponseBody
+    IUpdateTodoSuccessResponseHeader,
+    IUpdateTodoSuccessResponseBody
   >
-  implements IRegisterAccountSuccessResponse
+  implements IUpdateTodoSuccessResponse
 {
   public override readonly statusCode: HttpStatusCode.OK;
 
-  public constructor(response: IRegisterAccountSuccessResponse) {
+  public constructor(response: IUpdateTodoSuccessResponse) {
     super(response.statusCode, response.header, response.body);
 
     if (response.statusCode !== HttpStatusCode.OK) {
       throw new Error(
-        `Invalid status code: '${response.statusCode}' for RegisterAccountSuccessResponse`,
+        `Invalid status code: '${response.statusCode}' for UpdateTodoSuccessResponse`,
       );
     }
 
@@ -71,12 +87,14 @@ export class RegisterAccountSuccessResponse
   }
 }
 
-export type IRegisterAccountSuccessResponses = IRegisterAccountSuccessResponse;
+export type IUpdateTodoSuccessResponses = IUpdateTodoSuccessResponse;
 
-export type RegisterAccountSuccessResponses = RegisterAccountSuccessResponse;
+export type UpdateTodoSuccessResponses = UpdateTodoSuccessResponse;
 
-export type IRegisterAccountResponse =
-  | IRegisterAccountSuccessResponse
+export type IUpdateTodoResponse =
+  | IUpdateTodoSuccessResponse
+  | ITodoNotFoundErrorResponse
+  | ITodoNotChangeableErrorResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
   | ITooManyRequestsErrorResponse
@@ -84,8 +102,10 @@ export type IRegisterAccountResponse =
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse;
 
-export type RegisterAccountResponse =
-  | RegisterAccountSuccessResponse
+export type UpdateTodoResponse =
+  | UpdateTodoSuccessResponse
+  | TodoNotFoundErrorResponse
+  | TodoNotChangeableErrorResponse
   | ForbiddenErrorResponse
   | InternalServerErrorResponse
   | TooManyRequestsErrorResponse

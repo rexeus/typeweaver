@@ -4,16 +4,21 @@ import {
   AwsHttpApiGatewayRouter,
 } from "../lib/aws-cdk";
 
-export class AuthHttpApiRouter extends AwsHttpApiGatewayRouter {
+export class TodoHttpApiRouter extends AwsHttpApiGatewayRouter {
   private routes: AwsHttpApiGatewayRoute[] = [
     {
-      path: "/auth/access-token",
-      methods: [HttpMethod.POST],
+      path: "/todos",
+      methods: [HttpMethod.POST, HttpMethod.GET],
     },
 
     {
-      path: "/auth/refresh-token",
-      methods: [HttpMethod.POST],
+      path: "/todos/{todoId}",
+      methods: [HttpMethod.DELETE, HttpMethod.GET, HttpMethod.PATCH],
+    },
+
+    {
+      path: "/todos/{todoId}/status",
+      methods: [HttpMethod.PUT],
     },
   ];
 

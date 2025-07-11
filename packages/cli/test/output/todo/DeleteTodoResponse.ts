@@ -1,6 +1,11 @@
 import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 
 import type {
+  ITodoNotFoundErrorResponse,
+  TodoNotFoundErrorResponse,
+} from "../shared/TodoNotFoundErrorResponse";
+
+import type {
   IForbiddenErrorResponse,
   ForbiddenErrorResponse,
 } from "../shared/ForbiddenErrorResponse";
@@ -30,40 +35,27 @@ import type {
   ValidationErrorResponse,
 } from "../shared/ValidationErrorResponse";
 
-export type IRegisterAccountSuccessResponseHeader = {
+export type IDeleteTodoSuccessResponseHeader = {
   "Content-Type": "application/json";
 };
 
-export type IRegisterAccountSuccessResponseBody = {
-  id: string;
-  email: string;
-  createdAt: string;
-  modifiedAt: string;
-  createdBy: string;
-  modifiedBy: string;
+export type IDeleteTodoSuccessResponse = {
+  statusCode: HttpStatusCode.NO_CONTENT;
+  header: IDeleteTodoSuccessResponseHeader;
 };
 
-export type IRegisterAccountSuccessResponse = {
-  statusCode: HttpStatusCode.OK;
-  header: IRegisterAccountSuccessResponseHeader;
-  body: IRegisterAccountSuccessResponseBody;
-};
-
-export class RegisterAccountSuccessResponse
-  extends HttpResponse<
-    IRegisterAccountSuccessResponseHeader,
-    IRegisterAccountSuccessResponseBody
-  >
-  implements IRegisterAccountSuccessResponse
+export class DeleteTodoSuccessResponse
+  extends HttpResponse<IDeleteTodoSuccessResponseHeader, undefined>
+  implements IDeleteTodoSuccessResponse
 {
-  public override readonly statusCode: HttpStatusCode.OK;
+  public override readonly statusCode: HttpStatusCode.NO_CONTENT;
 
-  public constructor(response: IRegisterAccountSuccessResponse) {
-    super(response.statusCode, response.header, response.body);
+  public constructor(response: IDeleteTodoSuccessResponse) {
+    super(response.statusCode, response.header, undefined);
 
-    if (response.statusCode !== HttpStatusCode.OK) {
+    if (response.statusCode !== HttpStatusCode.NO_CONTENT) {
       throw new Error(
-        `Invalid status code: '${response.statusCode}' for RegisterAccountSuccessResponse`,
+        `Invalid status code: '${response.statusCode}' for DeleteTodoSuccessResponse`,
       );
     }
 
@@ -71,12 +63,13 @@ export class RegisterAccountSuccessResponse
   }
 }
 
-export type IRegisterAccountSuccessResponses = IRegisterAccountSuccessResponse;
+export type IDeleteTodoSuccessResponses = IDeleteTodoSuccessResponse;
 
-export type RegisterAccountSuccessResponses = RegisterAccountSuccessResponse;
+export type DeleteTodoSuccessResponses = DeleteTodoSuccessResponse;
 
-export type IRegisterAccountResponse =
-  | IRegisterAccountSuccessResponse
+export type IDeleteTodoResponse =
+  | IDeleteTodoSuccessResponse
+  | ITodoNotFoundErrorResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
   | ITooManyRequestsErrorResponse
@@ -84,8 +77,9 @@ export type IRegisterAccountResponse =
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse;
 
-export type RegisterAccountResponse =
-  | RegisterAccountSuccessResponse
+export type DeleteTodoResponse =
+  | DeleteTodoSuccessResponse
+  | TodoNotFoundErrorResponse
   | ForbiddenErrorResponse
   | InternalServerErrorResponse
   | TooManyRequestsErrorResponse
