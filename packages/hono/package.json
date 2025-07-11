@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-hono",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Hono router generator plugin for TypeWeaver",
   "type": "module",
   "main": "dist/index.js",

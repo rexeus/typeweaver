@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-gen",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Code generation engine and utilities for TypeWeaver plugins",
   "type": "module",
   "main": "dist/index.js",
