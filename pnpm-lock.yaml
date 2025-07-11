@@ -40,10 +40,10 @@ importers:
   packages/aws-cdk:
     devDependencies:
       '@rexeus/typeweaver-core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@rexeus/typeweaver-gen':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../gen
 
   packages/cli:
@@ -56,22 +56,22 @@ importers:
         version: 4.20.3
     devDependencies:
       '@rexeus/typeweaver-aws-cdk':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../aws-cdk
       '@rexeus/typeweaver-clients':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../clients
       '@rexeus/typeweaver-core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@rexeus/typeweaver-gen':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../gen
       '@rexeus/typeweaver-hono':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../hono
       '@rexeus/typeweaver-types':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../types
       axios:
         specifier: ^1.9.0
@@ -86,10 +86,10 @@ importers:
   packages/clients:
     devDependencies:
       '@rexeus/typeweaver-core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@rexeus/typeweaver-gen':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../gen
       axios:
         specifier: ^1.9.0
@@ -120,7 +120,7 @@ importers:
   packages/gen:
     devDependencies:
       '@rexeus/typeweaver-core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
 
   packages/hono:
@@ -133,10 +133,10 @@ importers:
         version: 4.8.2
     devDependencies:
       '@rexeus/typeweaver-core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@rexeus/typeweaver-gen':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../gen
 
   packages/types:
@@ -146,10 +146,10 @@ importers:
         version: 5.8.3
     devDependencies:
       '@rexeus/typeweaver-core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@rexeus/typeweaver-gen':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../gen
 
 packages:

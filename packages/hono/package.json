@@ -5,6 +5,12 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "files": [
     "dist",
     "package.json",
@@ -37,12 +43,12 @@
   },
   "homepage": "https://github.com/rexeus/typeweaver#readme",
   "peerDependencies": {
-    "@rexeus/typeweaver-core": "*",
-    "@rexeus/typeweaver-gen": "*"
+    "@rexeus/typeweaver-core": "workspace:^",
+    "@rexeus/typeweaver-gen": "workspace:^"
   },
   "devDependencies": {
-    "@rexeus/typeweaver-core": "workspace:*",
-    "@rexeus/typeweaver-gen": "workspace:*"
+    "@rexeus/typeweaver-core": "workspace:^",
+    "@rexeus/typeweaver-gen": "workspace:^"
   },
   "dependencies": {
     "case": "^1.6.3",

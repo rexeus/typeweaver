@@ -5,14 +5,20 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "bin": {
+    "typeweaver": "./dist/run-cli-with-tsx.js"
+  },
   "files": [
     "dist",
     "package.json",
     "README.md"
   ],
-  "bin": {
-    "typeweaver": "dist/run-cli-with-tsx.js"
-  },
   "scripts": {
     "cli": "tsx src/cli.ts",
     "typecheck": "tsc --noEmit --project tsconfig.test.json",
@@ -44,23 +50,23 @@
   },
   "homepage": "https://github.com/rexeus/typeweaver#readme",
   "devDependencies": {
-    "@rexeus/typeweaver-core": "workspace:*",
-    "@rexeus/typeweaver-gen": "workspace:*",
-    "@rexeus/typeweaver-types": "workspace:*",
-    "@rexeus/typeweaver-clients": "workspace:*",
-    "@rexeus/typeweaver-aws-cdk": "workspace:*",
-    "@rexeus/typeweaver-hono": "workspace:*",
+    "@rexeus/typeweaver-core": "workspace:^",
+    "@rexeus/typeweaver-gen": "workspace:^",
+    "@rexeus/typeweaver-types": "workspace:^",
+    "@rexeus/typeweaver-clients": "workspace:^",
+    "@rexeus/typeweaver-aws-cdk": "workspace:^",
+    "@rexeus/typeweaver-hono": "workspace:^",
     "axios": "^1.9.0",
     "case": "^1.6.3",
     "hono": "^4.6.14"
   },
   "peerDependencies": {
-    "@rexeus/typeweaver-core": "*",
-    "@rexeus/typeweaver-gen": "*",
-    "@rexeus/typeweaver-types": "*",
-    "@rexeus/typeweaver-clients": "*",
-    "@rexeus/typeweaver-aws-cdk": "*",
-    "@rexeus/typeweaver-hono": "*"
+    "@rexeus/typeweaver-core": "workspace:^",
+    "@rexeus/typeweaver-gen": "workspace:^",
+    "@rexeus/typeweaver-types": "workspace:^",
+    "@rexeus/typeweaver-clients": "workspace:^",
+    "@rexeus/typeweaver-aws-cdk": "workspace:^",
+    "@rexeus/typeweaver-hono": "workspace:^"
   },
   "dependencies": {
     "commander": "^14.0.0",
