@@ -7,7 +7,8 @@
     "build": "pnpm -r build",
     "format": "prettier --write .",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "test:gen": "pnpm -r test:gen"
+    "test:gen": "pnpm -r test:gen",
+    "ci:publish": "pnpm publish -r"
   },
   "keywords": [
     "api",
