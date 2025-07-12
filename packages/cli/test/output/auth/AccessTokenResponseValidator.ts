@@ -2,11 +2,13 @@ import definition from "../../definition/auth/AccessTokenDefinition";
 import {
   type IHttpResponse,
   type SafeResponseValidationResult,
-  ResponseValidator,
   ResponseValidationError,
+} from "@rexeus/typeweaver-core";
+import {
+  ResponseValidator,
   InvalidResponseStatusCodeError,
   assert,
-} from "@rexeus/typeweaver-core";
+} from "../lib/types";
 import {
   type AccessTokenResponse,
   type IAccessTokenSuccessResponse,

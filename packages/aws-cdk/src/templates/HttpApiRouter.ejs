@@ -1,0 +1,24 @@
+import { HttpMethod } from "<%= coreDir %>";
+import {
+  type AwsHttpApiGatewayRoute,
+  AwsHttpApiGatewayRouter,
+} from "../lib/aws-cdk";
+
+export class <%= pascalCaseEntityName %>HttpApiRouter extends AwsHttpApiGatewayRouter {
+  private routes: AwsHttpApiGatewayRoute[] = [
+<% for(const [path, methods] of Object.entries(routes)) { %>
+    {
+      path: "<%= path %>",
+      methods: [<% for(const method of methods) { %>HttpMethod.<%= method %>,<% } %>],
+    },
+<% } %>
+  ];
+
+  public constructor() {
+    super();
+  }
+
+  public getRoutes(): AwsHttpApiGatewayRoute[] {
+    return this.routes;
+  }
+}

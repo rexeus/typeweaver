@@ -1,2 +1,54 @@
+# TypeScript source files
 *.ts
 !*.d.ts
+
+# Build configuration
+tsconfig.json
+tsconfig.test.json
+*.tsbuildinfo
+
+# Source directories
+src/
+
+# Test files and directories
+test/
+tests/
+*.test.ts
+*.spec.ts
+
+# Build artifacts
+*.map
+
+# Development configuration
+.prettierrc
+
+# Internal documentation
+CLAUDE.md
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Package managers
+node_modules/
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# Environment files
+.env*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Coverage reports
+coverage/
+.nyc_output/

@@ -1,18 +1,24 @@
 {
   "name": "@rexeus/typeweaver-core",
-  "version": "0.0.0",
-  "description": "Core package for api definition with typescript and zod using the typeweaver framework. Generation with: @rexeus/typeweaver",
+  "version": "0.0.2",
+  "description": "Core TypeScript and Zod utilities for TypeWeaver API framework",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "files": [
     "dist",
     "package.json",
     "README.md"
   ],
   "scripts": {
-    "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
     "build": "pkgroll --clean-dist",
     "prepack": "npm run build",
     "preversion": "npm run build"
@@ -28,15 +34,24 @@
   ],
   "author": "Dennis Wentzien <dw@rexeus.com>",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rexeus/typeweaver.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/rexeus/typeweaver/issues"
+  },
+  "homepage": "https://github.com/rexeus/typeweaver#readme",
   "devDependencies": {
     "axios": "^1.9.0",
     "hono": "^4.8.0",
-    "zod": "^3.25.4"
+    "zod": "^3.25.28"
   },
   "peerDependencies": {
     "axios": "^1.9.0",
     "hono": "^4.8.0",
-    "zod": "^3.24.4"
+    "zod": "^3.25.0"
   },
   "dependencies": {
     "@types/aws-lambda": "^8.10.149",

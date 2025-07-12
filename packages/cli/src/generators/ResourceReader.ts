@@ -5,8 +5,8 @@ import type {
   ExtendedResponseDefinition,
   OperationResource,
   SharedResponseResource,
-} from "./Resource";
-import { Generator } from "./Generator";
+  GetResourcesResult,
+} from "@rexeus/typeweaver-gen";
 import {
   type HttpMethod,
   HttpOperationDefinition,
@@ -23,14 +23,20 @@ import {
 import { InvalidSharedDirError } from "./errors/InvalidSharedDirError";
 import { InvalidSharedResponseDefinitionError } from "./errors/InvalidSharedResponseDefinitionError";
 
-export type GetResourcesResult = {
-  entityResources: EntityResources;
-  sharedResponseResources: SharedResponseResource[];
+export type ResourceReaderConfig = {
+  readonly sourceDir: string;
+  readonly outputDir: string;
+  readonly sharedSourceDir: string;
+  readonly sharedOutputDir: string;
 };
 
 export class ResourceReader {
-  public static async getResources(): Promise<GetResourcesResult> {
-    const contents = fs.readdirSync(Generator.sourceDir, {
+  public constructor(private readonly config: ResourceReaderConfig) {
+    //
+  }
+
+  public async getResources(): Promise<GetResourcesResult> {
+    const contents = fs.readdirSync(this.config.sourceDir, {
       withFileTypes: true,
     });
 
@@ -66,7 +72,7 @@ export class ResourceReader {
       }
 
       const entityName = content.name;
-      const entitySourceDir = path.join(Generator.sourceDir, entityName);
+      const entitySourceDir = path.join(this.config.sourceDir, entityName);
 
       const operationResources = await this.getEntityOperationResources(
         entitySourceDir,
@@ -83,10 +89,10 @@ export class ResourceReader {
     return result;
   }
 
-  private static async getSharedResponseResources(): Promise<
+  private async getSharedResponseResources(): Promise<
     SharedResponseResource[]
   > {
-    const sharedContents = fs.readdirSync(Generator.sharedSourceDir, {
+    const sharedContents = fs.readdirSync(this.config.sharedSourceDir, {
       withFileTypes: true,
     });
 
@@ -99,7 +105,7 @@ export class ResourceReader {
       }
 
       const sourceFileName = content.name;
-      const sourceFile = path.join(Generator.sharedSourceDir, sourceFileName);
+      const sourceFile = path.join(this.config.sharedSourceDir, sourceFileName);
       const definition = (await import(sourceFile)) as {
         default: HttpResponseDefinition<
           string,
@@ -128,20 +134,20 @@ export class ResourceReader {
       if (!definition.default.isShared) {
         throw new InvalidSharedResponseDefinitionError(
           sourceFileName,
-          Generator.sharedSourceDir,
+          this.config.sharedSourceDir,
           sourceFile,
           "'isShared' property is not set to 'true'"
         );
       }
 
-      const outputDir = Generator.sharedOutputDir;
+      const outputDir = this.config.sharedOutputDir;
       const outputFileName = `${definition.default.name}Response.ts`;
       const outputFile = path.join(outputDir, outputFileName);
 
       sharedResponseResources.push({
         ...definition.default,
         isShared: true,
-        sourceDir: Generator.sharedSourceDir,
+        sourceDir: this.config.sharedSourceDir,
         sourceFile: sourceFile,
         sourceFileName,
         outputFile,
@@ -153,7 +159,7 @@ export class ResourceReader {
     return sharedResponseResources;
   }
 
-  private static async getEntityOperationResources(
+  private async getEntityOperationResources(
     sourceDir: string,
     entityName: string
   ): Promise<OperationResource[]> {
@@ -222,7 +228,7 @@ export class ResourceReader {
         >,
         IHttpResponseDefinition[]
       >;
-      const outputDir = path.join(Generator.outputDir, entityName);
+      const outputDir = path.join(this.config.outputDir, entityName);
       const outputRequestFileName = `${operationId}Request.ts`;
       const outputRequestFile = path.join(outputDir, outputRequestFileName);
       const outputResponseFileName = `${operationId}Response.ts`;

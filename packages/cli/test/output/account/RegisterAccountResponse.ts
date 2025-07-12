@@ -39,56 +39,8 @@ export type IRegisterAccountSuccessResponseBody = {
   email: string;
   createdAt: string;
   modifiedAt: string;
-  createdBy:
-    | {
-        type: "ACCOUNT";
-        accountId: string;
-        cause: string;
-      }
-    | {
-        type: "USER";
-        userId: string;
-        cause: string;
-      }
-    | {
-        type: "SERVICE";
-        serviceCode: string;
-        cause: string;
-      }
-    | {
-        type: "UNKNOWN";
-        cause: string;
-      }
-    | {
-        type: "SYSTEM";
-        componentCode: string;
-        cause: string;
-      };
-  modifiedBy:
-    | {
-        type: "ACCOUNT";
-        accountId: string;
-        cause: string;
-      }
-    | {
-        type: "USER";
-        userId: string;
-        cause: string;
-      }
-    | {
-        type: "SERVICE";
-        serviceCode: string;
-        cause: string;
-      }
-    | {
-        type: "UNKNOWN";
-        cause: string;
-      }
-    | {
-        type: "SYSTEM";
-        componentCode: string;
-        cause: string;
-      };
+  createdBy: string;
+  modifiedBy: string;
 };
 
 export type IRegisterAccountSuccessResponse = {

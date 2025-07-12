@@ -1,14 +1,9 @@
-import { ApiClient, type ApiClientProps } from "@rexeus/typeweaver-core";
+import { ApiClient, type ApiClientProps } from "../lib/clients";
 
 import {
   AccessTokenRequestCommand,
   type SuccessfulAccessTokenResponse,
 } from "./AccessTokenRequest";
-
-import {
-  LogoutRequestCommand,
-  type SuccessfulLogoutResponse,
-} from "./LogoutRequest";
 
 import {
   RefreshTokenRequestCommand,
@@ -17,12 +12,10 @@ import {
 
 export type AuthRequestCommands =
   | AccessTokenRequestCommand
-  | LogoutRequestCommand
   | RefreshTokenRequestCommand;
 
 export type SuccessfulAuthResponses =
   | SuccessfulAccessTokenResponse
-  | SuccessfulLogoutResponse
   | SuccessfulRefreshTokenResponse;
 
 export class AuthClient extends ApiClient {
@@ -35,10 +28,6 @@ export class AuthClient extends ApiClient {
   ): Promise<SuccessfulAccessTokenResponse>;
 
   public async send(
-    command: LogoutRequestCommand,
-  ): Promise<SuccessfulLogoutResponse>;
-
-  public async send(
     command: RefreshTokenRequestCommand,
   ): Promise<SuccessfulRefreshTokenResponse>;
 
@@ -49,10 +38,6 @@ export class AuthClient extends ApiClient {
 
     switch (true) {
       case command instanceof AccessTokenRequestCommand: {
-        return command.processResponse(response);
-      }
-
-      case command instanceof LogoutRequestCommand: {
         return command.processResponse(response);
       }
 

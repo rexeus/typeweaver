@@ -1,0 +1,93 @@
+import definition from "<%= sourcePath %>";
+import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import { RequestCommand } from "../lib/clients";
+import { <%= pascalCaseOperationId %>ResponseValidator } from "<%= responseValidationFile %>";
+import {
+    type <%= pascalCaseOperationId %>Response,
+    <% for (const ownResponse of [...ownSuccessResponses, ...ownErrorResponses]) { %>
+        <%= ownResponse.name %>Response,
+    <% } %>
+} from "<%= responseFile %>";
+<% for (const sharedResponse of [...sharedSuccessResponses, ...sharedErrorResponses]) { %>
+    import { <%= sharedResponse.name %>Response } from "<%= sharedResponse.path %>";
+<% } %>
+
+<% if (headerTsType) { %>
+export type I<%= pascalCaseOperationId %>RequestHeader = <%- headerTsType %>
+<% } %>
+
+<% if (paramTsType) { %>
+export type I<%= pascalCaseOperationId %>RequestParam = <%- paramTsType %>
+<% } %>
+
+<% if (queryTsType) { %>
+export type I<%= pascalCaseOperationId %>RequestQuery = <%- queryTsType %>
+<% } %>
+
+<% if (bodyTsType) { %>
+export type I<%= pascalCaseOperationId %>RequestBody = <%- bodyTsType %>
+<% } %>
+
+export type I<%= pascalCaseOperationId %>Request = {
+    path: string;
+    method: HttpMethod.<%= method %>;
+    <%= headerTsType ? `header: I${pascalCaseOperationId}RequestHeader;` : "" %>
+    <%= paramTsType ? `param: I${pascalCaseOperationId}RequestParam;` : "" %>
+    <%= queryTsType ? `query: I${pascalCaseOperationId}RequestQuery;` : "" %>
+    <%= bodyTsType ? `body: I${pascalCaseOperationId}RequestBody;` : "" %>
+};
+
+<% if (!hasSuccessResponses) { %>
+    export type Successful<%= pascalCaseOperationId %>Response = never;
+<% } else if (!hasErrorResponses) { %>
+    export type Successful<%= pascalCaseOperationId %>Response = <%= pascalCaseOperationId %>Response;
+<% } else { %>
+    export type Successful<%= pascalCaseOperationId %>Response = Exclude<<%= pascalCaseOperationId %>Response, <%= [...ownErrorResponses, ...sharedErrorResponses].map(({ name }) => `${name}Response`).join(" | ") %>
+    >;
+<% } %>
+
+export class <%= pascalCaseOperationId %>RequestCommand extends RequestCommand implements I<%= pascalCaseOperationId %>Request {
+    public override readonly method = definition.method as HttpMethod.<%= method %>;
+    public override readonly path = definition.path;
+
+    public <%= headerTsType ? `override` : `declare` %> readonly header: <%= headerTsType ? `I${pascalCaseOperationId}RequestHeader` : `undefined` %>;
+    public  <%= paramTsType ? `override` : `declare` %> readonly param: <%= paramTsType ? `I${pascalCaseOperationId}RequestParam` : `undefined` %>;
+    public <%= queryTsType ? `override` : `declare` %> readonly query: <%= queryTsType ? `I${pascalCaseOperationId}RequestQuery` : `undefined` %>;
+    public <%= bodyTsType ? `override` : `declare` %> readonly body: <%= bodyTsType ? `I${pascalCaseOperationId}RequestBody` : `undefined` %>;
+
+    private readonly responseValidator: <%= pascalCaseOperationId %>ResponseValidator;
+
+    public constructor(input: Omit<I<%= pascalCaseOperationId %>Request, "method" | "path">) {
+        super();
+
+        <% if (headerTsType) { %>
+        this.header = input.header;
+        <% } %>
+
+        <% if (paramTsType) { %>
+        this.param = input.param;
+        <% } %>
+
+        <% if (queryTsType) { %>
+        this.query = input.query;
+        <% } %>
+
+        <% if (bodyTsType) { %>
+        this.body = input.body;
+        <% } %>
+
+        this.responseValidator = new <%= pascalCaseOperationId %>ResponseValidator();
+    }
+
+    public processResponse(response: IHttpResponse): Successful<%= pascalCaseOperationId %>Response {
+        const result = this.responseValidator.validate(response);
+
+        <% for (const successResponse of [...ownSuccessResponses, ...sharedSuccessResponses]) { %>
+            if (result instanceof <%= successResponse.name %>Response) {
+                return result;
+            }
+        <% } %>
+
+        throw result;
+    }
+}

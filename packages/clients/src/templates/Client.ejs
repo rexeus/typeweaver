@@ -1,0 +1,39 @@
+import { ApiClient, type ApiClientProps } from "../lib/clients";
+<% for (const operation of operations) { %>
+import { <%= operation.operationId %>RequestCommand, type Successful<%= operation.operationId %>Response } from "<%= operation.requestFile %>";
+<% } %>
+
+export type <%= pascalCaseEntityName %>RequestCommands =
+<% for (const operation of operations) { %>
+    | <%= operation.operationId %>RequestCommand
+<% } %>;
+
+export type Successful<%= pascalCaseEntityName %>Responses =
+<% for (const operation of operations) { %>
+    | Successful<%= operation.operationId %>Response
+<% } %>;
+
+
+export class <%= pascalCaseEntityName %>Client extends ApiClient {
+    public constructor(props: ApiClientProps) {
+        super(props);
+    }
+
+    <% for (const operation of operations) { %>
+    public async send(command: <%= operation.operationId %>RequestCommand): Promise<Successful<%= operation.operationId %>Response>;
+    <% } %>
+    public async send(command: <%= pascalCaseEntityName %>RequestCommands): Promise<Successful<%= pascalCaseEntityName %>Responses> {
+        const response = await this.execute(command);
+
+        switch (true) {
+        <% for (const operation of operations) { %>
+            case command instanceof <%= operation.operationId %>RequestCommand: {
+                return command.processResponse(response);
+            }
+        <% } %>
+            default: {
+                throw new Error("Command is not supported");
+            }
+        }
+    }
+}
