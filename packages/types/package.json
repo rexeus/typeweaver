@@ -52,7 +52,7 @@
     "@rexeus/typeweaver-gen": "workspace:^"
   },
   "dependencies": {
-    "typescript": "^5.8.3",
-    "@rexeus/typeweaver-zod-to-ts": "workspace:^"
+    "@rexeus/typeweaver-zod-to-ts": "workspace:^",
+    "case": "^1.6.3"
   }
 }

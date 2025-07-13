@@ -4,6 +4,7 @@
   "description": "AWS CDK constructs and deployment utilities for TypeWeaver APIs",
   "type": "module",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -49,5 +50,8 @@
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^"
+  },
+  "dependencies": {
+    "case": "^1.6.3"
   }
 }
