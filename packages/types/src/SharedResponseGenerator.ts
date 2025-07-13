@@ -6,7 +6,7 @@ import type {
   SharedResponseResource,
 } from "@rexeus/typeweaver-gen";
 import { fileURLToPath } from "url";
-import { TsTypeNode, TsTypePrinter } from "./zod-to-ts-type";
+import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -45,7 +45,10 @@ export class SharedResponseGenerator {
       sharedResponse,
     });
 
-    const relativePath = path.relative(context.outputDir, sharedResponse.outputFile);
+    const relativePath = path.relative(
+      context.outputDir,
+      sharedResponse.outputFile
+    );
     context.writeFile(relativePath, content);
   }
 }

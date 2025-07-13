@@ -141,6 +141,9 @@ importers:
 
   packages/types:
     dependencies:
+      '@rexeus/typeweaver-zod-to-ts':
+        specifier: workspace:^
+        version: link:../zod-to-ts
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
@@ -151,6 +154,16 @@ importers:
       '@rexeus/typeweaver-gen':
         specifier: workspace:^
         version: link:../gen
+
+  packages/zod-to-ts:
+    dependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+    devDependencies:
+      zod:
+        specifier: ^3.25.67
+        version: 3.25.67
 
 packages:
 

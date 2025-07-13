@@ -1,6 +1,6 @@
 import path from "path";
 import Case from "case";
-import { TsTypeNode, TsTypePrinter } from "./zod-to-ts-type";
+import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
 import {
   type GeneratorContext,
   type OperationResource,
@@ -142,7 +142,10 @@ export class RequestGenerator {
         ownSuccessResponses.length > 0 || sharedSuccessResponses.length > 0,
     });
 
-    const relativePath = path.relative(context.outputDir, operationResource.outputRequestFile);
+    const relativePath = path.relative(
+      context.outputDir,
+      operationResource.outputRequestFile
+    );
     context.writeFile(relativePath, content);
   }
 }

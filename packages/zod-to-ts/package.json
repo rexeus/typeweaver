@@ -1,7 +1,7 @@
 {
-  "name": "@rexeus/typeweaver-types",
+  "name": "@rexeus/typeweaver-zod-to-ts",
   "version": "0.0.2",
-  "description": "TypeScript type and Zod validator generators for TypeWeaver APIs",
+  "description": "Generates TypeScript types from Zod schemas, used by TypeWeaver framework",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -19,16 +19,15 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "build": "pkgroll --clean-dist && cp -r ./src/templates ./dist/templates && cp -r ./src/lib ./dist/lib",
+    "build": "pkgroll --clean-dist",
     "prepack": "npm run build",
     "preversion": "npm run build"
   },
   "keywords": [
-    "api",
-    "spec",
-    "definition",
-    "typescript",
     "zod",
+    "typescript",
+    "type",
+    "conversion",
     "generator",
     "typeweaver"
   ],
@@ -37,22 +36,19 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rexeus/typeweaver.git",
-    "directory": "packages/types"
+    "directory": "packages/zod-to-ts"
   },
   "bugs": {
     "url": "https://github.com/rexeus/typeweaver/issues"
   },
   "homepage": "https://github.com/rexeus/typeweaver#readme",
+  "dependencies": {
+    "typescript": "^5.8.3"
+  },
   "peerDependencies": {
-    "@rexeus/typeweaver-core": "workspace:^",
-    "@rexeus/typeweaver-gen": "workspace:^"
+    "zod": "^3.25.67"
   },
   "devDependencies": {
-    "@rexeus/typeweaver-core": "workspace:^",
-    "@rexeus/typeweaver-gen": "workspace:^"
-  },
-  "dependencies": {
-    "typescript": "^5.8.3",
-    "@rexeus/typeweaver-zod-to-ts": "workspace:^"
+    "zod": "^3.25.67"
   }
 }
