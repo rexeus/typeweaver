@@ -1,5 +1,15 @@
 # @rexeus/typeweaver-aws-cdk
 
+## 0.0.3
+
+### Patch Changes
+
+- 7324748: Fix issue when single plugins are used. There were dependencies between the plugins which
+  now have been resolved.
+- Updated dependencies [7324748]
+  - @rexeus/typeweaver-core@0.0.3
+  - @rexeus/typeweaver-gen@0.0.3
+
 ## 0.0.2
 
 ### Patch Changes
