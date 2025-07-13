@@ -1,0 +1,38 @@
+import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+
+export type IUnprocessableEntityErrorResponseHeader = {
+  "Content-Type": "application/json";
+};
+
+export type IUnprocessableEntityErrorResponseBody = {
+  message: "Unprocessable entity";
+  code: "UNPROCESSABLE_ENTITY_ERROR";
+};
+
+export type IUnprocessableEntityErrorResponse = {
+  statusCode: HttpStatusCode.UNPROCESSABLE_ENTITY;
+  header: IUnprocessableEntityErrorResponseHeader;
+  body: IUnprocessableEntityErrorResponseBody;
+};
+
+export class UnprocessableEntityErrorResponse
+  extends HttpResponse<
+    IUnprocessableEntityErrorResponseHeader,
+    IUnprocessableEntityErrorResponseBody
+  >
+  implements IUnprocessableEntityErrorResponse
+{
+  public override readonly statusCode: HttpStatusCode.UNPROCESSABLE_ENTITY;
+
+  public constructor(response: IUnprocessableEntityErrorResponse) {
+    super(response.statusCode, response.header, response.body);
+
+    if (response.statusCode !== HttpStatusCode.UNPROCESSABLE_ENTITY) {
+      throw new Error(
+        `Invalid status code: '${response.statusCode}' for UnprocessableEntityErrorResponse`,
+      );
+    }
+
+    this.statusCode = response.statusCode;
+  }
+}
