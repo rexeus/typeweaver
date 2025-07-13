@@ -1,14 +1,10 @@
 import { ApiClient, type ApiClientProps } from "../lib/clients";
 
-import {
-  AccessTokenRequestCommand,
-  type SuccessfulAccessTokenResponse,
-} from "./AccessTokenRequest";
+import { AccessTokenRequestCommand } from "./AccessTokenRequestCommand";
+import type { SuccessfulAccessTokenResponse } from "./AccessTokenRequest";
 
-import {
-  RefreshTokenRequestCommand,
-  type SuccessfulRefreshTokenResponse,
-} from "./RefreshTokenRequest";
+import { RefreshTokenRequestCommand } from "./RefreshTokenRequestCommand";
+import type { SuccessfulRefreshTokenResponse } from "./RefreshTokenRequest";
 
 export type AuthRequestCommands =
   | AccessTokenRequestCommand

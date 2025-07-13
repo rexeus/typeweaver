@@ -1,9 +1,7 @@
 import { ApiClient, type ApiClientProps } from "../lib/clients";
 
-import {
-  RegisterAccountRequestCommand,
-  type SuccessfulRegisterAccountResponse,
-} from "./RegisterAccountRequest";
+import { RegisterAccountRequestCommand } from "./RegisterAccountRequestCommand";
+import type { SuccessfulRegisterAccountResponse } from "./RegisterAccountRequest";
 
 export type AccountRequestCommands = RegisterAccountRequestCommand;
 

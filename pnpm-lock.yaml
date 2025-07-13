@@ -85,6 +85,9 @@ importers:
 
   packages/clients:
     dependencies:
+      '@rexeus/typeweaver-zod-to-ts':
+        specifier: workspace:^
+        version: link:../zod-to-ts
       case:
         specifier: ^1.6.3
         version: 1.6.3

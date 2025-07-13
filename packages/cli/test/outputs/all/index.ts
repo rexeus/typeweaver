@@ -6,6 +6,8 @@ export * from "./account/AccountHttpApiRouter";
 
 export * from "./account/RegisterAccountRequest";
 
+export * from "./account/RegisterAccountRequestCommand";
+
 export * from "./account/RegisterAccountRequestValidator";
 
 export * from "./account/RegisterAccountResponse";
@@ -13,6 +15,8 @@ export * from "./account/RegisterAccountResponse";
 export * from "./account/RegisterAccountResponseValidator";
 
 export * from "./auth/AccessTokenRequest";
+
+export * from "./auth/AccessTokenRequestCommand";
 
 export * from "./auth/AccessTokenRequestValidator";
 
@@ -27,6 +31,8 @@ export * from "./auth/AuthHono";
 export * from "./auth/AuthHttpApiRouter";
 
 export * from "./auth/RefreshTokenRequest";
+
+export * from "./auth/RefreshTokenRequestCommand";
 
 export * from "./auth/RefreshTokenRequestValidator";
 
@@ -60,6 +66,8 @@ export * from "./shared/ValidationErrorResponse";
 
 export * from "./todo/CreateTodoRequest";
 
+export * from "./todo/CreateTodoRequestCommand";
+
 export * from "./todo/CreateTodoRequestValidator";
 
 export * from "./todo/CreateTodoResponse";
@@ -67,6 +75,8 @@ export * from "./todo/CreateTodoResponse";
 export * from "./todo/CreateTodoResponseValidator";
 
 export * from "./todo/DeleteTodoRequest";
+
+export * from "./todo/DeleteTodoRequestCommand";
 
 export * from "./todo/DeleteTodoRequestValidator";
 
@@ -76,6 +86,8 @@ export * from "./todo/DeleteTodoResponseValidator";
 
 export * from "./todo/GetTodoRequest";
 
+export * from "./todo/GetTodoRequestCommand";
+
 export * from "./todo/GetTodoRequestValidator";
 
 export * from "./todo/GetTodoResponse";
@@ -83,6 +95,8 @@ export * from "./todo/GetTodoResponse";
 export * from "./todo/GetTodoResponseValidator";
 
 export * from "./todo/ListTodosRequest";
+
+export * from "./todo/ListTodosRequestCommand";
 
 export * from "./todo/ListTodosRequestValidator";
 
@@ -98,6 +112,8 @@ export * from "./todo/TodoHttpApiRouter";
 
 export * from "./todo/UpdateTodoRequest";
 
+export * from "./todo/UpdateTodoRequestCommand";
+
 export * from "./todo/UpdateTodoRequestValidator";
 
 export * from "./todo/UpdateTodoResponse";
@@ -105,6 +121,8 @@ export * from "./todo/UpdateTodoResponse";
 export * from "./todo/UpdateTodoResponseValidator";
 
 export * from "./todo/UpdateTodoStatusRequest";
+
+export * from "./todo/UpdateTodoStatusRequestCommand";
 
 export * from "./todo/UpdateTodoStatusRequestValidator";
 

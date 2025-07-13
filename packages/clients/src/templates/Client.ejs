@@ -1,6 +1,7 @@
 import { ApiClient, type ApiClientProps } from "../lib/clients";
 <% for (const operation of operations) { %>
-import { <%= operation.operationId %>RequestCommand, type Successful<%= operation.operationId %>Response } from "<%= operation.requestFile %>";
+import { <%= operation.operationId %>RequestCommand } from "./<%= operation.operationId %>RequestCommand";
+import type { Successful<%= operation.operationId %>Response } from "<%= operation.requestFile %>";
 <% } %>
 
 export type <%= pascalCaseEntityName %>RequestCommands =

@@ -54,6 +54,7 @@
     "axios": "^1.9.0"
   },
   "dependencies": {
+    "@rexeus/typeweaver-zod-to-ts": "workspace:^",
     "case": "^1.6.3"
   }
 }
