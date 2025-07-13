@@ -44,12 +44,15 @@
   },
   "homepage": "https://github.com/rexeus/typeweaver#readme",
   "peerDependencies": {
-    "axios": "^1.7.0"
+    "@rexeus/typeweaver-core": "workspace:^",
+    "@rexeus/typeweaver-gen": "workspace:^",
+    "axios": "^1.7.0",
+    "case": "^1.6.3"
   },
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "case": "^1.6.3",
-    "axios": "^1.9.0"
+    "axios": "^1.9.0",
+    "case": "^1.6.3"
   }
 }

@@ -98,24 +98,7 @@ importers:
         specifier: ^1.6.3
         version: 1.6.3
 
-  packages/core:
-    dependencies:
-      '@types/aws-lambda':
-        specifier: ^8.10.149
-        version: 8.10.150
-      case:
-        specifier: ^1.6.3
-        version: 1.6.3
-    devDependencies:
-      axios:
-        specifier: ^1.9.0
-        version: 1.10.0
-      hono:
-        specifier: ^4.8.0
-        version: 4.8.2
-      zod:
-        specifier: ^3.25.28
-        version: 3.25.67
+  packages/core: {}
 
   packages/gen:
     devDependencies:
@@ -124,13 +107,6 @@ importers:
         version: link:../core
 
   packages/hono:
-    dependencies:
-      case:
-        specifier: ^1.6.3
-        version: 1.6.3
-      hono:
-        specifier: ^4.0.0
-        version: 4.8.2
     devDependencies:
       '@rexeus/typeweaver-core':
         specifier: workspace:^
@@ -138,6 +114,12 @@ importers:
       '@rexeus/typeweaver-gen':
         specifier: workspace:^
         version: link:../gen
+      case:
+        specifier: ^1.6.3
+        version: 1.6.3
+      hono:
+        specifier: ^4.0.0
+        version: 4.8.2
 
   packages/types:
     dependencies:
@@ -559,9 +541,6 @@ packages:
     resolution: {integrity: sha512-Q2Mgwt+D8hd5FIPUuPDsvPR7Bguza6yTkJxspDGkZj7tBRn2y4KSWYuIXpftFSjBra76TbKerCV7rgFPQrn+wQ==}
     cpu: [x64]
     os: [win32]
-
-  '@types/aws-lambda@8.10.150':
-    resolution: {integrity: sha512-AX+AbjH/rH5ezX1fbK8onC/a+HyQHo7QGmvoxAE42n22OsciAxvZoZNEr22tbXs8WfP1nIsBjKDpgPm3HjOZbA==}
 
   '@types/ejs@3.1.5':
     resolution: {integrity: sha512-nv+GSx77ZtXiJzwKdsASqi+YQ5Z7vwHsTP0JY2SiQgjGckkBRKZnk8nIM+7oUZ1VCtuTz0+By4qVR7fqzp/Dfg==}
@@ -1509,8 +1488,6 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.44.0':
     optional: true
-
-  '@types/aws-lambda@8.10.150': {}
 
   '@types/ejs@3.1.5': {}
 
