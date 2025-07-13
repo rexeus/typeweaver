@@ -48,5 +48,8 @@
   },
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^"
+  },
+  "dependencies": {
+    "ejs": "^3.1.10"
   }
 }

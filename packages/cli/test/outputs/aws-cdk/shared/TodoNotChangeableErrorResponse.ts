@@ -1,0 +1,45 @@
+import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+
+export type ITodoNotChangeableErrorResponseHeader = {
+  "Content-Type": "application/json";
+};
+
+export type ITodoNotChangeableErrorResponseBody = {
+  message: "Todo in current status cannot be changed";
+  code: "TODO_NOT_CHANGEABLE_ERROR";
+  context: {
+    todoId: string;
+    currentStatus: "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED";
+  };
+  expectedValues: {
+    allowedStatuses: ("TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED")[];
+  };
+};
+
+export type ITodoNotChangeableErrorResponse = {
+  statusCode: HttpStatusCode.CONFLICT;
+  header: ITodoNotChangeableErrorResponseHeader;
+  body: ITodoNotChangeableErrorResponseBody;
+};
+
+export class TodoNotChangeableErrorResponse
+  extends HttpResponse<
+    ITodoNotChangeableErrorResponseHeader,
+    ITodoNotChangeableErrorResponseBody
+  >
+  implements ITodoNotChangeableErrorResponse
+{
+  public override readonly statusCode: HttpStatusCode.CONFLICT;
+
+  public constructor(response: ITodoNotChangeableErrorResponse) {
+    super(response.statusCode, response.header, response.body);
+
+    if (response.statusCode !== HttpStatusCode.CONFLICT) {
+      throw new Error(
+        `Invalid status code: '${response.statusCode}' for TodoNotChangeableErrorResponse`,
+      );
+    }
+
+    this.statusCode = response.statusCode;
+  }
+}

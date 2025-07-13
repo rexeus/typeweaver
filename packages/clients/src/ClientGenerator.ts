@@ -5,17 +5,28 @@ import type {
   OperationResource,
 } from "@rexeus/typeweaver-gen";
 import { fileURLToPath } from "url";
+import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export class ClientGenerator {
   public static generate(context: GeneratorContext): void {
-    const templateFilePath = path.join(__dirname, "templates", "Client.ejs");
+    const clientTemplatePath = path.join(__dirname, "templates", "Client.ejs");
+    const commandTemplatePath = path.join(
+      __dirname,
+      "templates",
+      "RequestCommand.ejs"
+    );
 
     for (const [, operationResources] of Object.entries(
       context.resources.entityResources
     )) {
-      this.writeClient(templateFilePath, operationResources, context);
+      this.writeClient(clientTemplatePath, operationResources, context);
+      this.writeRequestCommands(
+        commandTemplatePath,
+        operationResources,
+        context
+      );
     }
   }
 
@@ -69,6 +80,107 @@ export class ClientGenerator {
       `${pascalCaseEntityName}Client.ts`
     );
     const relativePath = path.relative(context.outputDir, outputClientFile);
+    context.writeFile(relativePath, content);
+  }
+
+  private static writeRequestCommands(
+    templateFilePath: string,
+    operationResources: OperationResource[],
+    context: GeneratorContext
+  ): void {
+    for (const operationResource of operationResources) {
+      this.writeRequestCommand(templateFilePath, operationResource, context);
+    }
+  }
+
+  private static writeRequestCommand(
+    templateFilePath: string,
+    operationResource: OperationResource,
+    context: GeneratorContext
+  ): void {
+    const {
+      definition,
+      sourceDir,
+      sourceFile,
+      outputDir,
+      outputResponseFileName,
+      outputResponseValidationFileName,
+      outputRequestFileName,
+    } = operationResource;
+
+    const { operationId, method, request, responses } = definition;
+    const pascalCaseOperationId = Case.pascal(operationId);
+
+    // Get response information
+    const allResponses = responses;
+    const ownSuccessResponses = allResponses.filter(
+      r => r.statusCode >= 200 && r.statusCode < 300 && !r.isShared
+    );
+    const ownErrorResponses = allResponses.filter(
+      r => (r.statusCode < 200 || r.statusCode >= 300) && !r.isShared
+    );
+    const sharedSuccessResponses = allResponses.filter(
+      r => r.statusCode >= 200 && r.statusCode < 300 && r.isShared
+    );
+    const sharedErrorResponses = allResponses.filter(
+      r => (r.statusCode < 200 || r.statusCode >= 300) && r.isShared
+    );
+
+    // Build request type information
+    const headerTsType = request.header
+      ? TsTypePrinter.print(TsTypeNode.fromZod(request.header))
+      : undefined;
+    const paramTsType = request.param
+      ? TsTypePrinter.print(TsTypeNode.fromZod(request.param))
+      : undefined;
+    const queryTsType = request.query
+      ? TsTypePrinter.print(TsTypeNode.fromZod(request.query))
+      : undefined;
+    const bodyTsType = request.body
+      ? TsTypePrinter.print(TsTypeNode.fromZod(request.body))
+      : undefined;
+
+    // Helper function to determine response import path
+    const successResponseImportPath = (response: {
+      name: string;
+      isShared?: boolean;
+      path?: string;
+    }) => {
+      if (response.isShared && response.path) {
+        return response.path;
+      }
+      return `./${path.basename(outputResponseFileName, ".ts")}`;
+    };
+
+    // Build relative paths
+    const requestFile = `./${path.basename(outputRequestFileName, ".ts")}`;
+    const responseValidatorFile = `./${path.basename(outputResponseValidationFileName, ".ts")}`;
+    const sourcePath = path.join(sourceDir, path.basename(sourceFile, ".ts"));
+    const relativeSourcePath = path.relative(outputDir, sourcePath);
+
+    const content = context.renderTemplate(templateFilePath, {
+      sourcePath: relativeSourcePath,
+      operationId,
+      pascalCaseOperationId,
+      method,
+      headerTsType,
+      paramTsType,
+      queryTsType,
+      bodyTsType,
+      ownSuccessResponses,
+      ownErrorResponses,
+      sharedSuccessResponses,
+      sharedErrorResponses,
+      requestFile,
+      responseValidatorFile,
+      successResponseImportPath,
+    });
+
+    const outputCommandFile = path.join(
+      outputDir,
+      `${pascalCaseOperationId}RequestCommand.ts`
+    );
+    const relativePath = path.relative(context.outputDir, outputCommandFile);
     context.writeFile(relativePath, content);
   }
 }

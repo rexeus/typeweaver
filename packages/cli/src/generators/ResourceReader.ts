@@ -1,7 +1,6 @@
 import path from "path";
 import fs from "fs";
 import type {
-  EntityResources,
   ExtendedResponseDefinition,
   OperationResource,
   SharedResponseResource,

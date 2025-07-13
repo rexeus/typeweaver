@@ -7,13 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      case:
-        specifier: ^1.6.3
-        version: 1.6.3
-      ejs:
-        specifier: ^3.1.10
-        version: 3.1.10
     devDependencies:
       '@changesets/cli':
         specifier: ^2.29.5
@@ -38,6 +31,10 @@ importers:
         version: 3.25.67
 
   packages/aws-cdk:
+    dependencies:
+      case:
+        specifier: ^1.6.3
+        version: 1.6.3
     devDependencies:
       '@rexeus/typeweaver-core':
         specifier: workspace:^
@@ -51,6 +48,9 @@ importers:
       commander:
         specifier: ^14.0.0
         version: 14.0.0
+      ejs:
+        specifier: ^3.1.10
+        version: 3.1.10
       tsx:
         specifier: ^4.19.4
         version: 4.20.3
@@ -84,6 +84,13 @@ importers:
         version: 4.8.2
 
   packages/clients:
+    dependencies:
+      '@rexeus/typeweaver-zod-to-ts':
+        specifier: workspace:^
+        version: link:../zod-to-ts
+      case:
+        specifier: ^1.6.3
+        version: 1.6.3
     devDependencies:
       '@rexeus/typeweaver-core':
         specifier: workspace:^
@@ -94,30 +101,18 @@ importers:
       axios:
         specifier: ^1.9.0
         version: 1.10.0
-      case:
-        specifier: ^1.6.3
-        version: 1.6.3
 
   packages/core:
-    dependencies:
-      '@types/aws-lambda':
-        specifier: ^8.10.149
-        version: 8.10.150
-      case:
-        specifier: ^1.6.3
-        version: 1.6.3
     devDependencies:
-      axios:
-        specifier: ^1.9.0
-        version: 1.10.0
-      hono:
-        specifier: ^4.8.0
-        version: 4.8.2
       zod:
-        specifier: ^3.25.28
+        specifier: ^3.25.67
         version: 3.25.67
 
   packages/gen:
+    dependencies:
+      ejs:
+        specifier: ^3.1.10
+        version: 3.1.10
     devDependencies:
       '@rexeus/typeweaver-core':
         specifier: workspace:^
@@ -128,9 +123,25 @@ importers:
       case:
         specifier: ^1.6.3
         version: 1.6.3
+    devDependencies:
+      '@rexeus/typeweaver-core':
+        specifier: workspace:^
+        version: link:../core
+      '@rexeus/typeweaver-gen':
+        specifier: workspace:^
+        version: link:../gen
       hono:
         specifier: ^4.0.0
         version: 4.8.2
+
+  packages/types:
+    dependencies:
+      '@rexeus/typeweaver-zod-to-ts':
+        specifier: workspace:^
+        version: link:../zod-to-ts
+      case:
+        specifier: ^1.6.3
+        version: 1.6.3
     devDependencies:
       '@rexeus/typeweaver-core':
         specifier: workspace:^
@@ -139,18 +150,15 @@ importers:
         specifier: workspace:^
         version: link:../gen
 
-  packages/types:
+  packages/zod-to-ts:
     dependencies:
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
     devDependencies:
-      '@rexeus/typeweaver-core':
-        specifier: workspace:^
-        version: link:../core
-      '@rexeus/typeweaver-gen':
-        specifier: workspace:^
-        version: link:../gen
+      zod:
+        specifier: ^3.25.67
+        version: 3.25.67
 
 packages:
 
@@ -546,9 +554,6 @@ packages:
     resolution: {integrity: sha512-Q2Mgwt+D8hd5FIPUuPDsvPR7Bguza6yTkJxspDGkZj7tBRn2y4KSWYuIXpftFSjBra76TbKerCV7rgFPQrn+wQ==}
     cpu: [x64]
     os: [win32]
-
-  '@types/aws-lambda@8.10.150':
-    resolution: {integrity: sha512-AX+AbjH/rH5ezX1fbK8onC/a+HyQHo7QGmvoxAE42n22OsciAxvZoZNEr22tbXs8WfP1nIsBjKDpgPm3HjOZbA==}
 
   '@types/ejs@3.1.5':
     resolution: {integrity: sha512-nv+GSx77ZtXiJzwKdsASqi+YQ5Z7vwHsTP0JY2SiQgjGckkBRKZnk8nIM+7oUZ1VCtuTz0+By4qVR7fqzp/Dfg==}
@@ -1496,8 +1501,6 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.44.0':
     optional: true
-
-  '@types/aws-lambda@8.10.150': {}
 
   '@types/ejs@3.1.5': {}
 

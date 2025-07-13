@@ -1,0 +1,90 @@
+import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+
+import type {
+  IForbiddenErrorResponse,
+  ForbiddenErrorResponse,
+} from "../shared/ForbiddenErrorResponse";
+
+import type {
+  IInternalServerErrorResponse,
+  InternalServerErrorResponse,
+} from "../shared/InternalServerErrorResponse";
+
+import type {
+  ITooManyRequestsErrorResponse,
+  TooManyRequestsErrorResponse,
+} from "../shared/TooManyRequestsErrorResponse";
+
+import type {
+  IUnauthorizedErrorResponse,
+  UnauthorizedErrorResponse,
+} from "../shared/UnauthorizedErrorResponse";
+
+import type {
+  IUnsupportedMediaTypeErrorResponse,
+  UnsupportedMediaTypeErrorResponse,
+} from "../shared/UnsupportedMediaTypeErrorResponse";
+
+import type {
+  IValidationErrorResponse,
+  ValidationErrorResponse,
+} from "../shared/ValidationErrorResponse";
+
+export type IAccessTokenSuccessResponseHeader = {
+  "Content-Type": "application/json";
+};
+
+export type IAccessTokenSuccessResponseBody = {
+  accessToken: string;
+  refreshToken: string;
+};
+
+export type IAccessTokenSuccessResponse = {
+  statusCode: HttpStatusCode.OK;
+  header: IAccessTokenSuccessResponseHeader;
+  body: IAccessTokenSuccessResponseBody;
+};
+
+export class AccessTokenSuccessResponse
+  extends HttpResponse<
+    IAccessTokenSuccessResponseHeader,
+    IAccessTokenSuccessResponseBody
+  >
+  implements IAccessTokenSuccessResponse
+{
+  public override readonly statusCode: HttpStatusCode.OK;
+
+  public constructor(response: IAccessTokenSuccessResponse) {
+    super(response.statusCode, response.header, response.body);
+
+    if (response.statusCode !== HttpStatusCode.OK) {
+      throw new Error(
+        `Invalid status code: '${response.statusCode}' for AccessTokenSuccessResponse`,
+      );
+    }
+
+    this.statusCode = response.statusCode;
+  }
+}
+
+export type IAccessTokenSuccessResponses = IAccessTokenSuccessResponse;
+
+export type AccessTokenSuccessResponses = AccessTokenSuccessResponse;
+
+export type IAccessTokenResponse =
+  | IAccessTokenSuccessResponse
+  | IForbiddenErrorResponse
+  | IInternalServerErrorResponse
+  | ITooManyRequestsErrorResponse
+  | IUnauthorizedErrorResponse
+  | IUnsupportedMediaTypeErrorResponse
+  | IValidationErrorResponse;
+
+export type AccessTokenResponse =
+  | AccessTokenSuccessResponse
+  | ForbiddenErrorResponse
+  | InternalServerErrorResponse
+  | TooManyRequestsErrorResponse
+  | UnauthorizedErrorResponse
+  | UnsupportedMediaTypeErrorResponse
+  | ValidationErrorResponse;

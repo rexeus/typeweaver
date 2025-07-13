@@ -1,0 +1,35 @@
+import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+
+export type INotFoundErrorResponseHeader = {
+  "Content-Type": "application/json";
+};
+
+export type INotFoundErrorResponseBody = {
+  message: "Resource not found";
+  code: "NOT_FOUND_ERROR";
+};
+
+export type INotFoundErrorResponse = {
+  statusCode: HttpStatusCode.NOT_FOUND;
+  header: INotFoundErrorResponseHeader;
+  body: INotFoundErrorResponseBody;
+};
+
+export class NotFoundErrorResponse
+  extends HttpResponse<INotFoundErrorResponseHeader, INotFoundErrorResponseBody>
+  implements INotFoundErrorResponse
+{
+  public override readonly statusCode: HttpStatusCode.NOT_FOUND;
+
+  public constructor(response: INotFoundErrorResponse) {
+    super(response.statusCode, response.header, response.body);
+
+    if (response.statusCode !== HttpStatusCode.NOT_FOUND) {
+      throw new Error(
+        `Invalid status code: '${response.statusCode}' for NotFoundErrorResponse`,
+      );
+    }
+
+    this.statusCode = response.statusCode;
+  }
+}
