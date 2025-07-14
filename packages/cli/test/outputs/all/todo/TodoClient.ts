@@ -6,33 +6,33 @@ import type { SuccessfulCreateTodoResponse } from "./CreateTodoRequest";
 import { DeleteTodoRequestCommand } from "./DeleteTodoRequestCommand";
 import type { SuccessfulDeleteTodoResponse } from "./DeleteTodoRequest";
 
-import { GetTodoRequestCommand } from "./GetTodoRequestCommand";
-import type { SuccessfulGetTodoResponse } from "./GetTodoRequest";
-
-import { ListTodosRequestCommand } from "./ListTodosRequestCommand";
-import type { SuccessfulListTodosResponse } from "./ListTodosRequest";
-
 import { UpdateTodoRequestCommand } from "./UpdateTodoRequestCommand";
 import type { SuccessfulUpdateTodoResponse } from "./UpdateTodoRequest";
 
 import { UpdateTodoStatusRequestCommand } from "./UpdateTodoStatusRequestCommand";
 import type { SuccessfulUpdateTodoStatusResponse } from "./UpdateTodoStatusRequest";
 
+import { GetTodoRequestCommand } from "./GetTodoRequestCommand";
+import type { SuccessfulGetTodoResponse } from "./GetTodoRequest";
+
+import { ListTodosRequestCommand } from "./ListTodosRequestCommand";
+import type { SuccessfulListTodosResponse } from "./ListTodosRequest";
+
 export type TodoRequestCommands =
   | CreateTodoRequestCommand
   | DeleteTodoRequestCommand
-  | GetTodoRequestCommand
-  | ListTodosRequestCommand
   | UpdateTodoRequestCommand
-  | UpdateTodoStatusRequestCommand;
+  | UpdateTodoStatusRequestCommand
+  | GetTodoRequestCommand
+  | ListTodosRequestCommand;
 
 export type SuccessfulTodoResponses =
   | SuccessfulCreateTodoResponse
   | SuccessfulDeleteTodoResponse
-  | SuccessfulGetTodoResponse
-  | SuccessfulListTodosResponse
   | SuccessfulUpdateTodoResponse
-  | SuccessfulUpdateTodoStatusResponse;
+  | SuccessfulUpdateTodoStatusResponse
+  | SuccessfulGetTodoResponse
+  | SuccessfulListTodosResponse;
 
 export class TodoClient extends ApiClient {
   public constructor(props: ApiClientProps) {
@@ -48,20 +48,20 @@ export class TodoClient extends ApiClient {
   ): Promise<SuccessfulDeleteTodoResponse>;
 
   public async send(
-    command: GetTodoRequestCommand,
-  ): Promise<SuccessfulGetTodoResponse>;
-
-  public async send(
-    command: ListTodosRequestCommand,
-  ): Promise<SuccessfulListTodosResponse>;
-
-  public async send(
     command: UpdateTodoRequestCommand,
   ): Promise<SuccessfulUpdateTodoResponse>;
 
   public async send(
     command: UpdateTodoStatusRequestCommand,
   ): Promise<SuccessfulUpdateTodoStatusResponse>;
+
+  public async send(
+    command: GetTodoRequestCommand,
+  ): Promise<SuccessfulGetTodoResponse>;
+
+  public async send(
+    command: ListTodosRequestCommand,
+  ): Promise<SuccessfulListTodosResponse>;
 
   public async send(
     command: TodoRequestCommands,
@@ -77,19 +77,19 @@ export class TodoClient extends ApiClient {
         return command.processResponse(response);
       }
 
-      case command instanceof GetTodoRequestCommand: {
-        return command.processResponse(response);
-      }
-
-      case command instanceof ListTodosRequestCommand: {
-        return command.processResponse(response);
-      }
-
       case command instanceof UpdateTodoRequestCommand: {
         return command.processResponse(response);
       }
 
       case command instanceof UpdateTodoStatusRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      case command instanceof GetTodoRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      case command instanceof ListTodosRequestCommand: {
         return command.processResponse(response);
       }
 

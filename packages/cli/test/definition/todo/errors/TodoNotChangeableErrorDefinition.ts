@@ -1,6 +1,6 @@
 import z from "zod/v4";
-import ConflictErrorDefinition from "../shared/ConflictErrorDefinition";
-import { todoStatus } from "./todoSchema";
+import ConflictErrorDefinition from "../../shared/ConflictErrorDefinition";
+import { todoStatus } from "../todoSchema";
 
 export default ConflictErrorDefinition.extend({
   name: "TodoNotChangeableError",

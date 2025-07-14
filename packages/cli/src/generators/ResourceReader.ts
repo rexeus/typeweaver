@@ -109,23 +109,31 @@ export class ResourceReader {
     return result;
   }
 
+  private scanDirectoryRecursively(dir: string): string[] {
+    const files: string[] = [];
+    const contents = fs.readdirSync(dir, { withFileTypes: true });
+    
+    for (const content of contents) {
+      const fullPath = path.join(dir, content.name);
+      if (content.isDirectory()) {
+        // Recursively scan subdirectories
+        files.push(...this.scanDirectoryRecursively(fullPath));
+      } else if (content.isFile() && content.name.endsWith('.ts')) {
+        files.push(fullPath);
+      }
+    }
+    
+    return files;
+  }
+
   private async getSharedResponseResources(): Promise<
     SharedResponseResource[]
   > {
-    const sharedContents = fs.readdirSync(this.config.sharedSourceDir, {
-      withFileTypes: true,
-    });
-
+    const files = this.scanDirectoryRecursively(this.config.sharedSourceDir);
     const sharedResponseResources: SharedResponseResource[] = [];
 
-    for (const content of sharedContents) {
-      if (!content.isFile()) {
-        console.info(`Skipping '${content.name}' in shared directory as it is not a file`);
-        continue;
-      }
-
-      const sourceFileName = content.name;
-      const sourceFile = path.join(this.config.sharedSourceDir, sourceFileName);
+    for (const sourceFile of files) {
+      const sourceFileName = path.basename(sourceFile);
       const definition = (await import(sourceFile)) as {
         default: HttpResponseDefinition<
           string,
@@ -183,20 +191,11 @@ export class ResourceReader {
     sourceDir: string,
     entityName: string
   ): Promise<OperationResource[]> {
-    const contents = fs.readdirSync(sourceDir, {
-      withFileTypes: true,
-    });
-
+    const files = this.scanDirectoryRecursively(sourceDir);
     const definitions: OperationResource[] = [];
 
-    for (const content of contents) {
-      if (!content.isFile()) {
-        console.info(`Skipping '${content.name}' as it is not a file`);
-        continue;
-      }
-
-      const sourceFileName = content.name;
-      const sourceFile = path.join(sourceDir, sourceFileName);
+    for (const sourceFile of files) {
+      const sourceFileName = path.basename(sourceFile);
       const definition = (await import(sourceFile)) as {
         default: HttpOperationDefinition<
           string,
@@ -315,16 +314,11 @@ export class ResourceReader {
     sourceDir: string,
     entityName: string
   ): Promise<EntityResponseResource[]> {
-    const contents = fs.readdirSync(sourceDir, { withFileTypes: true });
+    const files = this.scanDirectoryRecursively(sourceDir);
     const responseResources: EntityResponseResource[] = [];
 
-    for (const content of contents) {
-      if (!content.isFile()) {
-        continue;
-      }
-
-      const sourceFileName = content.name;
-      const sourceFile = path.join(sourceDir, sourceFileName);
+    for (const sourceFile of files) {
+      const sourceFileName = path.basename(sourceFile);
       const definition = (await import(sourceFile)) as {
         default: HttpResponseDefinition<
           string,

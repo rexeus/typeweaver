@@ -13,7 +13,7 @@ export class TodoHttpApiRouter extends AwsHttpApiGatewayRouter {
 
     {
       path: "/todos/{todoId}",
-      methods: [HttpMethod.DELETE, HttpMethod.GET, HttpMethod.PATCH],
+      methods: [HttpMethod.DELETE, HttpMethod.PATCH, HttpMethod.GET],
     },
 
     {
