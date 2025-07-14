@@ -1,0 +1,38 @@
+import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+
+export type ITooManyRequestsErrorResponseHeader = {
+  "Content-Type": "application/json";
+};
+
+export type ITooManyRequestsErrorResponseBody = {
+  message: "Too many requests";
+  code: "TOO_MANY_REQUESTS_ERROR";
+};
+
+export type ITooManyRequestsErrorResponse = {
+  statusCode: HttpStatusCode.TOO_MANY_REQUESTS;
+  header: ITooManyRequestsErrorResponseHeader;
+  body: ITooManyRequestsErrorResponseBody;
+};
+
+export class TooManyRequestsErrorResponse
+  extends HttpResponse<
+    ITooManyRequestsErrorResponseHeader,
+    ITooManyRequestsErrorResponseBody
+  >
+  implements ITooManyRequestsErrorResponse
+{
+  public override readonly statusCode: HttpStatusCode.TOO_MANY_REQUESTS;
+
+  public constructor(response: ITooManyRequestsErrorResponse) {
+    super(response.statusCode, response.header, response.body);
+
+    if (response.statusCode !== HttpStatusCode.TOO_MANY_REQUESTS) {
+      throw new Error(
+        `Invalid status code: '${response.statusCode}' for TooManyRequestsErrorResponse`,
+      );
+    }
+
+    this.statusCode = response.statusCode;
+  }
+}

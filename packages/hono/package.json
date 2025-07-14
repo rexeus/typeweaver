@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-hono",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Hono router generator plugin for TypeWeaver",
   "type": "module",
   "main": "dist/index.js",
@@ -44,14 +44,15 @@
   "homepage": "https://github.com/rexeus/typeweaver#readme",
   "peerDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
-    "@rexeus/typeweaver-gen": "workspace:^"
+    "@rexeus/typeweaver-gen": "workspace:^",
+    "hono": "^4.0.0"
   },
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
-    "@rexeus/typeweaver-gen": "workspace:^"
+    "@rexeus/typeweaver-gen": "workspace:^",
+    "hono": "^4.0.0"
   },
   "dependencies": {
-    "case": "^1.6.3",
-    "hono": "^4.0.0"
+    "case": "^1.6.3"
   }
 }

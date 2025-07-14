@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-clients",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "HTTP client generator for TypeWeaver API framework",
   "type": "module",
   "main": "dist/index.js",
@@ -44,12 +44,17 @@
   },
   "homepage": "https://github.com/rexeus/typeweaver#readme",
   "peerDependencies": {
+    "@rexeus/typeweaver-core": "workspace:^",
+    "@rexeus/typeweaver-gen": "workspace:^",
     "axios": "^1.7.0"
   },
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "case": "^1.6.3",
     "axios": "^1.9.0"
+  },
+  "dependencies": {
+    "@rexeus/typeweaver-zod-to-ts": "workspace:^",
+    "case": "^1.6.3"
   }
 }

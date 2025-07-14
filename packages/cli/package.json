@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Command-line interface for the TypeWeaver API framework",
   "type": "module",
   "main": "dist/index.js",
@@ -26,8 +26,13 @@
     "build": "pkgroll --clean-dist && cp -r ./src/generators/templates ./dist/templates",
     "prepack": "npm run build",
     "preversion": "npm run build",
-    "test:bundle": "pnpm run build && node dist/run-cli-with-tsx.js generate --output test/output --input test/definition --plugins clients,aws-cdk,hono --shared test/definition/shared",
-    "test:gen": "tsx src/cli.ts generate --output test/output --input test/definition --plugins clients,aws-cdk,hono --shared test/definition/shared"
+    "test:bundle": "pnpm run build && node dist/run-cli-with-tsx.js generate --output test/output --input test/definition --plugins clients,aws-cdk,hono",
+    "test:gen": "pnpm run test:gen:types && pnpm run test:gen:clients && pnpm run test:gen:aws-cdk && pnpm run test:gen:hono && pnpm run test:gen:all",
+    "test:gen:types": "tsx src/cli.ts generate --output test/outputs/types --input test/definition",
+    "test:gen:clients": "tsx src/cli.ts generate --output test/outputs/clients --input test/definition --plugins clients",
+    "test:gen:aws-cdk": "tsx src/cli.ts generate --output test/outputs/aws-cdk --input test/definition --plugins aws-cdk",
+    "test:gen:hono": "tsx src/cli.ts generate --output test/outputs/hono --input test/definition --plugins hono",
+    "test:gen:all": "tsx src/cli.ts generate --output test/outputs/all --input test/definition --plugins clients,aws-cdk,hono"
   },
   "keywords": [
     "api",
@@ -66,10 +71,14 @@
     "@rexeus/typeweaver-types": "workspace:^",
     "@rexeus/typeweaver-clients": "workspace:^",
     "@rexeus/typeweaver-aws-cdk": "workspace:^",
-    "@rexeus/typeweaver-hono": "workspace:^"
+    "@rexeus/typeweaver-hono": "workspace:^",
+    "axios": "^1.9.0",
+    "case": "^1.6.3",
+    "hono": "^4.6.14"
   },
   "dependencies": {
     "commander": "^14.0.0",
+    "ejs": "^3.1.10",
     "tsx": "^4.19.4"
   }
 }

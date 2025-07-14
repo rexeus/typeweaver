@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-core",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Core TypeScript and Zod utilities for TypeWeaver API framework",
   "type": "module",
   "main": "dist/index.js",
@@ -43,18 +43,10 @@
     "url": "https://github.com/rexeus/typeweaver/issues"
   },
   "homepage": "https://github.com/rexeus/typeweaver#readme",
-  "devDependencies": {
-    "axios": "^1.9.0",
-    "hono": "^4.8.0",
-    "zod": "^3.25.28"
-  },
   "peerDependencies": {
-    "axios": "^1.9.0",
-    "hono": "^4.8.0",
-    "zod": "^3.25.0"
+    "zod": "^3.25.67"
   },
-  "dependencies": {
-    "@types/aws-lambda": "^8.10.149",
-    "case": "^1.6.3"
+  "devDependencies": {
+    "zod": "^3.25.67"
   }
 }

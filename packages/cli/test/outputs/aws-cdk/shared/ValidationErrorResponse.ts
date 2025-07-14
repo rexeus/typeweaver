@@ -1,0 +1,44 @@
+import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+
+export type IValidationErrorResponseHeader = {
+  "Content-Type": "application/json";
+};
+
+export type IValidationErrorResponseBody = {
+  message: "Request is invalid";
+  code: "VALIDATION_ERROR";
+  issues: {
+    body?: any[] | undefined;
+    query?: any[] | undefined;
+    param?: any[] | undefined;
+    header?: any[] | undefined;
+  };
+};
+
+export type IValidationErrorResponse = {
+  statusCode: HttpStatusCode.BAD_REQUEST;
+  header: IValidationErrorResponseHeader;
+  body: IValidationErrorResponseBody;
+};
+
+export class ValidationErrorResponse
+  extends HttpResponse<
+    IValidationErrorResponseHeader,
+    IValidationErrorResponseBody
+  >
+  implements IValidationErrorResponse
+{
+  public override readonly statusCode: HttpStatusCode.BAD_REQUEST;
+
+  public constructor(response: IValidationErrorResponse) {
+    super(response.statusCode, response.header, response.body);
+
+    if (response.statusCode !== HttpStatusCode.BAD_REQUEST) {
+      throw new Error(
+        `Invalid status code: '${response.statusCode}' for ValidationErrorResponse`,
+      );
+    }
+
+    this.statusCode = response.statusCode;
+  }
+}

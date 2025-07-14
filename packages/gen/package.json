@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-gen",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Code generation engine and utilities for TypeWeaver plugins",
   "type": "module",
   "main": "dist/index.js",
@@ -48,5 +48,8 @@
   },
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^"
+  },
+  "dependencies": {
+    "ejs": "^3.1.10"
   }
 }

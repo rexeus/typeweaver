@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-types",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "TypeScript type and Zod validator generators for TypeWeaver APIs",
   "type": "module",
   "main": "dist/index.js",
@@ -52,6 +52,7 @@
     "@rexeus/typeweaver-gen": "workspace:^"
   },
   "dependencies": {
-    "typescript": "^5.8.3"
+    "@rexeus/typeweaver-zod-to-ts": "workspace:^",
+    "case": "^1.6.3"
   }
 }

@@ -1,0 +1,54 @@
+{
+  "name": "@rexeus/typeweaver-zod-to-ts",
+  "version": "0.0.3",
+  "description": "Generates TypeScript types from Zod schemas, used by TypeWeaver framework",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "build": "pkgroll --clean-dist",
+    "prepack": "npm run build",
+    "preversion": "npm run build"
+  },
+  "keywords": [
+    "zod",
+    "typescript",
+    "type",
+    "conversion",
+    "generator",
+    "typeweaver"
+  ],
+  "author": "Dennis Wentzien <dw@rexeus.com>",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rexeus/typeweaver.git",
+    "directory": "packages/zod-to-ts"
+  },
+  "bugs": {
+    "url": "https://github.com/rexeus/typeweaver/issues"
+  },
+  "homepage": "https://github.com/rexeus/typeweaver#readme",
+  "dependencies": {
+    "typescript": "^5.8.3"
+  },
+  "peerDependencies": {
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "zod": "^3.25.67"
+  }
+}

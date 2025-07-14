@@ -1,7 +1,7 @@
 import path from "path";
 import Case from "case";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { TsTypeNode, TsTypePrinter } from "./zod-to-ts-type";
+import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
 import {
   type GeneratorContext,
   type OperationResource,

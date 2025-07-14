@@ -1,7 +1,4 @@
-import definition from "<%= sourcePath %>";
-import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
-import { RequestCommand } from "../lib/clients";
-import { <%= pascalCaseOperationId %>ResponseValidator } from "<%= responseValidationFile %>";
+import { HttpMethod } from "@rexeus/typeweaver-core";
 import {
     type <%= pascalCaseOperationId %>Response,
     <% for (const ownResponse of [...ownSuccessResponses, ...ownErrorResponses]) { %>
@@ -45,49 +42,3 @@ export type I<%= pascalCaseOperationId %>Request = {
     export type Successful<%= pascalCaseOperationId %>Response = Exclude<<%= pascalCaseOperationId %>Response, <%= [...ownErrorResponses, ...sharedErrorResponses].map(({ name }) => `${name}Response`).join(" | ") %>
     >;
 <% } %>
-
-export class <%= pascalCaseOperationId %>RequestCommand extends RequestCommand implements I<%= pascalCaseOperationId %>Request {
-    public override readonly method = definition.method as HttpMethod.<%= method %>;
-    public override readonly path = definition.path;
-
-    public <%= headerTsType ? `override` : `declare` %> readonly header: <%= headerTsType ? `I${pascalCaseOperationId}RequestHeader` : `undefined` %>;
-    public  <%= paramTsType ? `override` : `declare` %> readonly param: <%= paramTsType ? `I${pascalCaseOperationId}RequestParam` : `undefined` %>;
-    public <%= queryTsType ? `override` : `declare` %> readonly query: <%= queryTsType ? `I${pascalCaseOperationId}RequestQuery` : `undefined` %>;
-    public <%= bodyTsType ? `override` : `declare` %> readonly body: <%= bodyTsType ? `I${pascalCaseOperationId}RequestBody` : `undefined` %>;
-
-    private readonly responseValidator: <%= pascalCaseOperationId %>ResponseValidator;
-
-    public constructor(input: Omit<I<%= pascalCaseOperationId %>Request, "method" | "path">) {
-        super();
-
-        <% if (headerTsType) { %>
-        this.header = input.header;
-        <% } %>
-
-        <% if (paramTsType) { %>
-        this.param = input.param;
-        <% } %>
-
-        <% if (queryTsType) { %>
-        this.query = input.query;
-        <% } %>
-
-        <% if (bodyTsType) { %>
-        this.body = input.body;
-        <% } %>
-
-        this.responseValidator = new <%= pascalCaseOperationId %>ResponseValidator();
-    }
-
-    public processResponse(response: IHttpResponse): Successful<%= pascalCaseOperationId %>Response {
-        const result = this.responseValidator.validate(response);
-
-        <% for (const successResponse of [...ownSuccessResponses, ...sharedSuccessResponses]) { %>
-            if (result instanceof <%= successResponse.name %>Response) {
-                return result;
-            }
-        <% } %>
-
-        throw result;
-    }
-}
