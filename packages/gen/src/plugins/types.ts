@@ -94,6 +94,7 @@ export interface PluginRegistration {
 export interface TypeWeaverConfig {
   input: string;
   output: string;
+  shared?: string;
   plugins?: Array<string | [string, PluginConfig]>;
   prettier?: boolean;
   clean?: boolean;

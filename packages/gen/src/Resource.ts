@@ -34,7 +34,10 @@ export type OperationResource = {
   outputClientFileName: string;
 };
 
-export type EntityResources = Record<EntityName, OperationResource[]>;
+export type EntityResources = Record<EntityName, {
+  operations: OperationResource[];
+  responses: EntityResponseResource[];
+}>;
 
 export type SharedResponseResource = IHttpResponseDefinition & {
   isShared: true;
@@ -44,4 +47,14 @@ export type SharedResponseResource = IHttpResponseDefinition & {
   outputFile: string;
   outputFileName: string;
   outputDir: string;
+};
+
+export type EntityResponseResource = IHttpResponseDefinition & {
+  sourceDir: string;
+  sourceFile: string;
+  sourceFileName: string;
+  outputFile: string;
+  outputFileName: string;
+  outputDir: string;
+  entityName: EntityName;
 };

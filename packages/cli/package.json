@@ -28,11 +28,11 @@
     "preversion": "npm run build",
     "test:bundle": "pnpm run build && node dist/run-cli-with-tsx.js generate --output test/output --input test/definition --plugins clients,aws-cdk,hono",
     "test:gen": "pnpm run test:gen:types && pnpm run test:gen:clients && pnpm run test:gen:aws-cdk && pnpm run test:gen:hono && pnpm run test:gen:all",
-    "test:gen:types": "tsx src/cli.ts generate --output test/outputs/types --input test/definition",
-    "test:gen:clients": "tsx src/cli.ts generate --output test/outputs/clients --input test/definition --plugins clients",
-    "test:gen:aws-cdk": "tsx src/cli.ts generate --output test/outputs/aws-cdk --input test/definition --plugins aws-cdk",
-    "test:gen:hono": "tsx src/cli.ts generate --output test/outputs/hono --input test/definition --plugins hono",
-    "test:gen:all": "tsx src/cli.ts generate --output test/outputs/all --input test/definition --plugins clients,aws-cdk,hono"
+    "test:gen:types": "tsx src/cli.ts generate --output test/outputs/types --input test/definition --shared test/definition/shared",
+    "test:gen:clients": "tsx src/cli.ts generate --output test/outputs/clients --input test/definition --plugins clients --shared test/definition/shared",
+    "test:gen:aws-cdk": "tsx src/cli.ts generate --output test/outputs/aws-cdk --input test/definition --plugins aws-cdk --shared test/definition/shared",
+    "test:gen:hono": "tsx src/cli.ts generate --output test/outputs/hono --input test/definition --plugins hono --shared test/definition/shared",
+    "test:gen:all": "tsx src/cli.ts generate --output test/outputs/all --input test/definition --plugins clients,aws-cdk,hono --shared test/definition/shared"
   },
   "keywords": [
     "api",

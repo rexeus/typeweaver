@@ -4,9 +4,9 @@ import {
   UpdateTodoSuccessResponse,
 } from "./UpdateTodoResponse";
 
-import { TodoNotFoundErrorResponse } from "../shared/TodoNotFoundErrorResponse";
+import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 
-import { TodoNotChangeableErrorResponse } from "../shared/TodoNotChangeableErrorResponse";
+import { TodoNotChangeableErrorResponse } from "./TodoNotChangeableErrorResponse";
 
 import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 

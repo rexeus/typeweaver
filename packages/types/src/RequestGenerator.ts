@@ -14,10 +14,10 @@ export class RequestGenerator {
   public static generate(context: GeneratorContext): void {
     const templateFilePath = path.join(__dirname, "templates", "Request.ejs");
 
-    for (const [, operationResources] of Object.entries(
+    for (const [, entityResource] of Object.entries(
       context.resources.entityResources
     )) {
-      for (const definition of operationResources) {
+      for (const definition of entityResource.operations) {
         this.writeRequestType(templateFilePath, definition, context);
       }
     }
@@ -75,23 +75,37 @@ export class RequestGenerator {
       const { statusCode, name, isShared } = response;
 
       if (isShared) {
-        const sharedResponse = context.resources.sharedResponseResources.find(
-          resource => {
-            return resource.name === name;
-          }
+        // First check in global shared resources
+        let sharedResponse = context.resources.sharedResponseResources.find(
+          resource => resource.name === name
         );
+        
+        let responsePath: string;
+        
+        // If not found globally, check in entity-specific responses
         if (!sharedResponse) {
-          throw new Error(
-            `Shared response '${response.name}' not found in shared resources`
+          const entityResponses = context.resources.entityResources[operationResource.entityName]?.responses;
+          const entityResponse = entityResponses?.find(r => r.name === name);
+          if (entityResponse) {
+            responsePath = Path.relative(
+              outputDir,
+              `${entityResponse.outputDir}/${path.basename(entityResponse.outputFileName, ".ts")}`
+            );
+          } else {
+            throw new Error(
+              `Shared response '${response.name}' not found in shared or entity resources`
+            );
+          }
+        } else {
+          responsePath = Path.relative(
+            outputDir,
+            `${sharedResponse.outputDir}/${path.basename(sharedResponse.outputFileName, ".ts")}`
           );
         }
 
         const assembledResponse = {
           name,
-          path: Path.relative(
-            outputDir,
-            `${sharedResponse.outputDir}/${path.basename(sharedResponse.outputFileName, ".ts")}`
-          ),
+          path: responsePath,
         };
 
         if (statusCode >= 200 && statusCode < 300) {

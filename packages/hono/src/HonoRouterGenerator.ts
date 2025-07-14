@@ -8,10 +8,10 @@ export class HonoRouterGenerator {
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
     const templateFile = path.join(__dirname, "templates", "HonoRouter.ejs");
 
-    for (const [entityName, operationResources] of Object.entries(
+    for (const [entityName, entityResource] of Object.entries(
       context.resources.entityResources
     )) {
-      this.writeHonoRouter(entityName, templateFile, operationResources, context);
+      this.writeHonoRouter(entityName, templateFile, entityResource.operations, context);
     }
   }
 

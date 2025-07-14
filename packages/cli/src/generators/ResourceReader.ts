@@ -5,6 +5,7 @@ import type {
   OperationResource,
   SharedResponseResource,
   GetResourcesResult,
+  EntityResponseResource,
 } from "@rexeus/typeweaver-gen";
 import {
   type HttpMethod,
@@ -44,67 +45,95 @@ export class ResourceReader {
       sharedResponseResources: [],
     };
 
-    const sharedDefinitions = contents.find(
-      content => content.name === "shared"
-    );
-    if (sharedDefinitions) {
-      if (!sharedDefinitions.isDirectory()) {
-        throw new InvalidSharedDirError("'shared' is a file, not a directory");
+    // Check if shared directory exists
+    if (fs.existsSync(this.config.sharedSourceDir)) {
+      const sharedStats = fs.statSync(this.config.sharedSourceDir);
+      if (!sharedStats.isDirectory()) {
+        throw new InvalidSharedDirError(`'${this.config.sharedSourceDir}' is a file, not a directory`);
       }
 
       result.sharedResponseResources = await this.getSharedResponseResources();
 
       console.info(
-        `Found '${result.sharedResponseResources.length}' shared responses`
+        `Found '${result.sharedResponseResources.length}' shared responses in '${this.config.sharedSourceDir}'`
       );
     } else {
-      console.info("No 'shared' directory found");
+      console.info(`No shared directory found at '${this.config.sharedSourceDir}'`);
     }
 
+    const normalizedSharedPath = path.resolve(this.config.sharedSourceDir);
+    
     for (const content of contents) {
       if (!content.isDirectory()) {
         console.info(`Skipping '${content.name}' as it is not a directory`);
         continue;
       }
-      if (content.name === "shared") {
+      
+      const entityName = content.name;
+      const entitySourceDir = path.resolve(this.config.sourceDir, entityName);
+      
+      // Skip the shared directory if it's inside the source directory
+      // Check if this directory is the shared directory or contains it
+      if (entitySourceDir === normalizedSharedPath || 
+          normalizedSharedPath.startsWith(entitySourceDir + path.sep)) {
+        console.info(`Skipping '${content.name}' as it is or contains the shared directory`);
         continue;
       }
-
-      const entityName = content.name;
-      const entitySourceDir = path.join(this.config.sourceDir, entityName);
 
       const operationResources = await this.getEntityOperationResources(
         entitySourceDir,
         entityName
       );
+      
+      const responseResources = await this.getEntityResponseResources(
+        entitySourceDir,
+        entityName
+      );
 
-      result.entityResources[entityName] = operationResources;
+      result.entityResources[entityName] = {
+        operations: operationResources,
+        responses: responseResources
+      };
 
       console.info(
         `Found '${operationResources.length}' operation definitions for entity '${entityName}'`
       );
+      
+      if (responseResources.length > 0) {
+        console.info(
+          `Found '${responseResources.length}' response definitions for entity '${entityName}'`
+        );
+      }
     }
 
     return result;
   }
 
+  private scanDirectoryRecursively(dir: string): string[] {
+    const files: string[] = [];
+    const contents = fs.readdirSync(dir, { withFileTypes: true });
+    
+    for (const content of contents) {
+      const fullPath = path.join(dir, content.name);
+      if (content.isDirectory()) {
+        // Recursively scan subdirectories
+        files.push(...this.scanDirectoryRecursively(fullPath));
+      } else if (content.isFile() && content.name.endsWith('.ts')) {
+        files.push(fullPath);
+      }
+    }
+    
+    return files;
+  }
+
   private async getSharedResponseResources(): Promise<
     SharedResponseResource[]
   > {
-    const sharedContents = fs.readdirSync(this.config.sharedSourceDir, {
-      withFileTypes: true,
-    });
-
+    const files = this.scanDirectoryRecursively(this.config.sharedSourceDir);
     const sharedResponseResources: SharedResponseResource[] = [];
 
-    for (const content of sharedContents) {
-      if (!content.isFile()) {
-        console.info(`Skipping '${content.name}' as it is not a file`);
-        continue;
-      }
-
-      const sourceFileName = content.name;
-      const sourceFile = path.join(this.config.sharedSourceDir, sourceFileName);
+    for (const sourceFile of files) {
+      const sourceFileName = path.basename(sourceFile);
       const definition = (await import(sourceFile)) as {
         default: HttpResponseDefinition<
           string,
@@ -162,20 +191,11 @@ export class ResourceReader {
     sourceDir: string,
     entityName: string
   ): Promise<OperationResource[]> {
-    const contents = fs.readdirSync(sourceDir, {
-      withFileTypes: true,
-    });
-
+    const files = this.scanDirectoryRecursively(sourceDir);
     const definitions: OperationResource[] = [];
 
-    for (const content of contents) {
-      if (!content.isFile()) {
-        console.info(`Skipping '${content.name}' as it is not a file`);
-        continue;
-      }
-
-      const sourceFileName = content.name;
-      const sourceFile = path.join(sourceDir, sourceFileName);
+    for (const sourceFile of files) {
+      const sourceFileName = path.basename(sourceFile);
       const definition = (await import(sourceFile)) as {
         default: HttpOperationDefinition<
           string,
@@ -288,5 +308,54 @@ export class ResourceReader {
     }
 
     return definitions;
+  }
+
+  private async getEntityResponseResources(
+    sourceDir: string,
+    entityName: string
+  ): Promise<EntityResponseResource[]> {
+    const files = this.scanDirectoryRecursively(sourceDir);
+    const responseResources: EntityResponseResource[] = [];
+
+    for (const sourceFile of files) {
+      const sourceFileName = path.basename(sourceFile);
+      const definition = (await import(sourceFile)) as {
+        default: HttpResponseDefinition<
+          string,
+          HttpStatusCode,
+          string,
+          HttpHeaderSchema | undefined,
+          HttpBodySchema | undefined,
+          boolean
+        >;
+      };
+
+      if (!definition.default) {
+        continue;
+      }
+
+      if (!(definition.default instanceof HttpResponseDefinition)) {
+        continue;
+      }
+
+      // Don't skip responses marked as shared - they belong to this entity
+      // Entity-specific responses can still extend from shared definitions
+
+      const outputFileName = `${definition.default.name}Response.ts`;
+      const outputFile = path.join(this.config.outputDir, entityName, outputFileName);
+
+      responseResources.push({
+        ...definition.default,
+        sourceDir,
+        sourceFile,
+        sourceFileName,
+        outputFile,
+        outputFileName,
+        outputDir: path.join(this.config.outputDir, entityName),
+        entityName,
+      });
+    }
+
+    return responseResources;
   }
 }

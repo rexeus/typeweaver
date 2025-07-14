@@ -17,10 +17,10 @@ export class RequestValidationGenerator {
       "RequestValidator.ejs"
     );
 
-    for (const [, operationResources] of Object.entries(
+    for (const [, entityResource] of Object.entries(
       context.resources.entityResources
     )) {
-      for (const definition of operationResources) {
+      for (const definition of entityResource.operations) {
         this.writeRequestValidator(templateFilePath, definition, context);
       }
     }

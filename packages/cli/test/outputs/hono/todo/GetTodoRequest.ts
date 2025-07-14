@@ -4,7 +4,7 @@ import {
   GetTodoSuccessResponse,
 } from "./GetTodoResponse";
 
-import { TodoNotFoundErrorResponse } from "../shared/TodoNotFoundErrorResponse";
+import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 
 import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 

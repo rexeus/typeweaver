@@ -1,4 +1,4 @@
-import NotFoundErrorDefinition from "./NotFoundErrorDefinition";
+import NotFoundErrorDefinition from "../../shared/NotFoundErrorDefinition";
 import { z } from "zod/v4";
 
 export default NotFoundErrorDefinition.extend({
