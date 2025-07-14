@@ -8,6 +8,7 @@ import type { TypeWeaverConfig } from "@rexeus/typeweaver-gen";
 type CommandOptions = CommanderOptions & {
   input?: string;
   output?: string;
+  shared?: string;
   config?: string;
   plugins?: string;
   prettier?: boolean;
@@ -27,6 +28,7 @@ program
   .description("Generate types, validators, and clients from API definitions")
   .option("-i, --input <inputDir>", "path to definition directory")
   .option("-o, --output <outputDir>", "output directory for generated files")
+  .option("-s, --shared <path>", "path to shared definitions directory")
   .option("-c, --config <configFile>", "path to configuration file")
   .option("-p, --plugins <plugins>", "comma-separated list of plugins to use")
   .option("--prettier", "format generated code with Prettier (default: true)")
@@ -57,6 +59,7 @@ program
     // Override with CLI options
     const inputDir = options.input ?? config.input;
     const outputDir = options.output ?? config.output;
+    const sharedDir = options.shared ?? config.shared;
 
     // Validate required options
     if (!inputDir) {
@@ -77,11 +80,17 @@ program
     const resolvedOutputDir = path.isAbsolute(outputDir)
       ? outputDir
       : path.join(execDir, outputDir);
+    const resolvedSharedDir = sharedDir
+      ? path.isAbsolute(sharedDir)
+        ? sharedDir
+        : path.join(execDir, sharedDir)
+      : undefined;
 
     // Build final configuration
     const finalConfig: TypeWeaverConfig = {
       input: resolvedInputDir,
       output: resolvedOutputDir,
+      shared: resolvedSharedDir,
       prettier: options.prettier ?? config.prettier ?? true,
       clean: options.clean ?? config.clean ?? true,
     };

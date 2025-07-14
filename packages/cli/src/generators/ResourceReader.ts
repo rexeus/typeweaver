@@ -1,7 +1,6 @@
 import path from "path";
 import fs from "fs";
 import type {
-  EntityResources,
   ExtendedResponseDefinition,
   OperationResource,
   SharedResponseResource,
@@ -45,34 +44,40 @@ export class ResourceReader {
       sharedResponseResources: [],
     };
 
-    const sharedDefinitions = contents.find(
-      content => content.name === "shared"
-    );
-    if (sharedDefinitions) {
-      if (!sharedDefinitions.isDirectory()) {
-        throw new InvalidSharedDirError("'shared' is a file, not a directory");
+    // Check if shared directory exists
+    if (fs.existsSync(this.config.sharedSourceDir)) {
+      const sharedStats = fs.statSync(this.config.sharedSourceDir);
+      if (!sharedStats.isDirectory()) {
+        throw new InvalidSharedDirError(`'${this.config.sharedSourceDir}' is a file, not a directory`);
       }
 
       result.sharedResponseResources = await this.getSharedResponseResources();
 
       console.info(
-        `Found '${result.sharedResponseResources.length}' shared responses`
+        `Found '${result.sharedResponseResources.length}' shared responses in '${this.config.sharedSourceDir}'`
       );
     } else {
-      console.info("No 'shared' directory found");
+      console.info(`No shared directory found at '${this.config.sharedSourceDir}'`);
     }
 
+    const normalizedSharedPath = path.resolve(this.config.sharedSourceDir);
+    
     for (const content of contents) {
       if (!content.isDirectory()) {
         console.info(`Skipping '${content.name}' as it is not a directory`);
         continue;
       }
-      if (content.name === "shared") {
+      
+      const entityName = content.name;
+      const entitySourceDir = path.resolve(this.config.sourceDir, entityName);
+      
+      // Skip the shared directory if it's inside the source directory
+      // Check if this directory is the shared directory or contains it
+      if (entitySourceDir === normalizedSharedPath || 
+          normalizedSharedPath.startsWith(entitySourceDir + path.sep)) {
+        console.info(`Skipping '${content.name}' as it is or contains the shared directory`);
         continue;
       }
-
-      const entityName = content.name;
-      const entitySourceDir = path.join(this.config.sourceDir, entityName);
 
       const operationResources = await this.getEntityOperationResources(
         entitySourceDir,
@@ -100,7 +105,7 @@ export class ResourceReader {
 
     for (const content of sharedContents) {
       if (!content.isFile()) {
-        console.info(`Skipping '${content.name}' as it is not a file`);
+        console.info(`Skipping '${content.name}' in shared directory as it is not a file`);
         continue;
       }
 

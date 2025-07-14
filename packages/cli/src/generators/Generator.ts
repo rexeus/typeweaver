@@ -61,7 +61,7 @@ export class Generator {
     console.info("Starting generation...");
 
     // Initialize directories
-    this.initializeDirectories(definitionDir, outputDir);
+    this.initializeDirectories(definitionDir, outputDir, config?.shared);
 
     // Clean output if requested
     if (config?.clean ?? true) {
@@ -156,11 +156,12 @@ export class Generator {
 
   private initializeDirectories(
     definitionDir: string,
-    outputDir: string
+    outputDir: string,
+    sharedDir?: string
   ): void {
     this.sourceDir = definitionDir;
     this.outputDir = outputDir;
-    this.sharedSourceDir = path.join(definitionDir, "shared");
+    this.sharedSourceDir = sharedDir ?? path.join(definitionDir, "shared");
     this.sharedOutputDir = path.join(outputDir, "shared");
   }
 }
