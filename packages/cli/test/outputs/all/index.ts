@@ -48,12 +48,6 @@ export * from "./shared/InternalServerErrorResponse";
 
 export * from "./shared/NotFoundErrorResponse";
 
-export * from "./shared/TodoNotChangeableErrorResponse";
-
-export * from "./shared/TodoNotFoundErrorResponse";
-
-export * from "./shared/TodoStatusTransitionInvalidErrorResponse";
-
 export * from "./shared/TooManyRequestsErrorResponse";
 
 export * from "./shared/UnauthorizedErrorResponse";
@@ -109,6 +103,12 @@ export * from "./todo/TodoClient";
 export * from "./todo/TodoHono";
 
 export * from "./todo/TodoHttpApiRouter";
+
+export * from "./todo/TodoNotChangeableErrorResponse";
+
+export * from "./todo/TodoNotFoundErrorResponse";
+
+export * from "./todo/TodoStatusTransitionInvalidErrorResponse";
 
 export * from "./todo/UpdateTodoRequest";
 

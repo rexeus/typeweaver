@@ -4,7 +4,7 @@ import {
   DeleteTodoSuccessResponse,
 } from "./DeleteTodoResponse";
 
-import { TodoNotFoundErrorResponse } from "../shared/TodoNotFoundErrorResponse";
+import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 
 import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 

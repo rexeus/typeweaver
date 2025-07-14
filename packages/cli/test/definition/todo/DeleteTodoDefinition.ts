@@ -5,7 +5,7 @@ import {
 } from "@rexeus/typeweaver-core";
 import { z } from "zod/v4";
 import { sharedResponses } from "../shared/sharedResponses";
-import TodoNotFoundErrorDefinition from "../shared/TodoNotFoundErrorDefinition";
+import TodoNotFoundErrorDefinition from "./TodoNotFoundErrorDefinition";
 import { defaultResponseHeader } from "../shared/defaultResponseHeader";
 import { defaultRequestHeadersWithoutPayload } from "../shared/defaultRequestHeader";
 

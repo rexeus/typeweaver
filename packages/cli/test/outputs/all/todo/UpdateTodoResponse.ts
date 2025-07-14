@@ -3,12 +3,12 @@ import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 import type {
   ITodoNotFoundErrorResponse,
   TodoNotFoundErrorResponse,
-} from "../shared/TodoNotFoundErrorResponse";
+} from "./TodoNotFoundErrorResponse";
 
 import type {
   ITodoNotChangeableErrorResponse,
   TodoNotChangeableErrorResponse,
-} from "../shared/TodoNotChangeableErrorResponse";
+} from "./TodoNotChangeableErrorResponse";
 
 import type {
   IForbiddenErrorResponse,

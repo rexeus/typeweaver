@@ -18,7 +18,7 @@ import {
 import {
   type ITodoNotFoundErrorResponse,
   TodoNotFoundErrorResponse,
-} from "../shared/TodoNotFoundErrorResponse";
+} from "./TodoNotFoundErrorResponse";
 
 import {
   type IForbiddenErrorResponse,

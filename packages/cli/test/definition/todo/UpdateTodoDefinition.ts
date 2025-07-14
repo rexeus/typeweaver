@@ -6,10 +6,10 @@ import {
 import { z } from "zod/v4";
 import { todoSchema } from "./todoSchema";
 import { sharedResponses } from "../shared/sharedResponses";
-import TodoNotFoundErrorDefinition from "../shared/TodoNotFoundErrorDefinition";
+import TodoNotFoundErrorDefinition from "./TodoNotFoundErrorDefinition";
 import { defaultResponseHeader } from "../shared/defaultResponseHeader";
 import { defaultRequestHeadersWithPayload } from "../shared/defaultRequestHeader";
-import TodoNotChangeableErrorDefinition from "../shared/TodoNotChangeableErrorDefinition";
+import TodoNotChangeableErrorDefinition from "./TodoNotChangeableErrorDefinition";
 
 export default new HttpOperationDefinition({
   operationId: "UpdateTodo",

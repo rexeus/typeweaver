@@ -18,17 +18,17 @@ import {
 import {
   type ITodoNotFoundErrorResponse,
   TodoNotFoundErrorResponse,
-} from "../shared/TodoNotFoundErrorResponse";
+} from "./TodoNotFoundErrorResponse";
 
 import {
   type ITodoStatusTransitionInvalidErrorResponse,
   TodoStatusTransitionInvalidErrorResponse,
-} from "../shared/TodoStatusTransitionInvalidErrorResponse";
+} from "./TodoStatusTransitionInvalidErrorResponse";
 
 import {
   type ITodoNotChangeableErrorResponse,
   TodoNotChangeableErrorResponse,
-} from "../shared/TodoNotChangeableErrorResponse";
+} from "./TodoNotChangeableErrorResponse";
 
 import {
   type IForbiddenErrorResponse,

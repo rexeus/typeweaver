@@ -4,11 +4,11 @@ import {
   UpdateTodoStatusSuccessResponse,
 } from "./UpdateTodoStatusResponse";
 
-import { TodoNotFoundErrorResponse } from "../shared/TodoNotFoundErrorResponse";
+import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 
-import { TodoStatusTransitionInvalidErrorResponse } from "../shared/TodoStatusTransitionInvalidErrorResponse";
+import { TodoStatusTransitionInvalidErrorResponse } from "./TodoStatusTransitionInvalidErrorResponse";
 
-import { TodoNotChangeableErrorResponse } from "../shared/TodoNotChangeableErrorResponse";
+import { TodoNotChangeableErrorResponse } from "./TodoNotChangeableErrorResponse";
 
 import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 

@@ -13,10 +13,10 @@ export class HttpApiRouterGenerator {
   public static generate(context: GeneratorContext): void {
     const templateFile = path.join(__dirname, "templates", "HttpApiRouter.ejs");
 
-    for (const [entityName, operationResources] of Object.entries(
+    for (const [entityName, entityResource] of Object.entries(
       context.resources.entityResources
     )) {
-      this.writeHttpApiRoutes(entityName, templateFile, operationResources, context);
+      this.writeHttpApiRoutes(entityName, templateFile, entityResource.operations, context);
     }
   }
 

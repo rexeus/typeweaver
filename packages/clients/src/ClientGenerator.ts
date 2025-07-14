@@ -18,13 +18,13 @@ export class ClientGenerator {
       "RequestCommand.ejs"
     );
 
-    for (const [, operationResources] of Object.entries(
+    for (const [, entityResource] of Object.entries(
       context.resources.entityResources
     )) {
-      this.writeClient(clientTemplatePath, operationResources, context);
+      this.writeClient(clientTemplatePath, entityResource.operations, context);
       this.writeRequestCommands(
         commandTemplatePath,
-        operationResources,
+        entityResource.operations,
         context
       );
     }

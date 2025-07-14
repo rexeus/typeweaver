@@ -18,10 +18,10 @@ export class ResponseValidationGenerator {
       "ResponseValidator.ejs"
     );
 
-    for (const [, operationResources] of Object.entries(
+    for (const [, entityResource] of Object.entries(
       context.resources.entityResources
     )) {
-      for (const operationResource of operationResources) {
+      for (const operationResource of entityResource.operations) {
         this.writeResponseValidator(templateFilePath, operationResource, context);
       }
     }
@@ -79,23 +79,37 @@ export class ResponseValidationGenerator {
       }
 
       if (isShared) {
-        const sharedResponse = context.resources.sharedResponseResources.find(
-          resource => {
-            return resource.name === name;
-          }
+        // First check in global shared resources
+        let sharedResponse = context.resources.sharedResponseResources.find(
+          resource => resource.name === name
         );
+        
+        let importPath: string;
+        
+        // If not found globally, check in entity-specific responses
         if (!sharedResponse) {
-          throw new Error(
-            `Shared response '${response.name}' not found in shared resources`
+          const entityResponses = context.resources.entityResources[resource.entityName]?.responses;
+          const entityResponse = entityResponses?.find(r => r.name === name);
+          if (entityResponse) {
+            importPath = Path.relative(
+              outputDir,
+              `${entityResponse.outputDir}/${path.basename(entityResponse.outputFileName, ".ts")}`
+            );
+          } else {
+            throw new Error(
+              `Shared response '${response.name}' not found in shared or entity resources`
+            );
+          }
+        } else {
+          importPath = Path.relative(
+            outputDir,
+            `${sharedResponse.outputDir}/${path.basename(sharedResponse.outputFileName, ".ts")}`
           );
         }
 
         sharedResponses.push({
           name,
-          importPath: Path.relative(
-            outputDir,
-            `${sharedResponse.outputDir}/${path.basename(sharedResponse.outputFileName, ".ts")}`
-          ),
+          importPath,
           hasBody: !!body,
           hasHeader: !!header,
           statusCode,

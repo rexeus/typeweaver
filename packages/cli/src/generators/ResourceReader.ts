@@ -5,6 +5,7 @@ import type {
   OperationResource,
   SharedResponseResource,
   GetResourcesResult,
+  EntityResponseResource,
 } from "@rexeus/typeweaver-gen";
 import {
   type HttpMethod,
@@ -83,12 +84,26 @@ export class ResourceReader {
         entitySourceDir,
         entityName
       );
+      
+      const responseResources = await this.getEntityResponseResources(
+        entitySourceDir,
+        entityName
+      );
 
-      result.entityResources[entityName] = operationResources;
+      result.entityResources[entityName] = {
+        operations: operationResources,
+        responses: responseResources
+      };
 
       console.info(
         `Found '${operationResources.length}' operation definitions for entity '${entityName}'`
       );
+      
+      if (responseResources.length > 0) {
+        console.info(
+          `Found '${responseResources.length}' response definitions for entity '${entityName}'`
+        );
+      }
     }
 
     return result;
@@ -294,5 +309,59 @@ export class ResourceReader {
     }
 
     return definitions;
+  }
+
+  private async getEntityResponseResources(
+    sourceDir: string,
+    entityName: string
+  ): Promise<EntityResponseResource[]> {
+    const contents = fs.readdirSync(sourceDir, { withFileTypes: true });
+    const responseResources: EntityResponseResource[] = [];
+
+    for (const content of contents) {
+      if (!content.isFile()) {
+        continue;
+      }
+
+      const sourceFileName = content.name;
+      const sourceFile = path.join(sourceDir, sourceFileName);
+      const definition = (await import(sourceFile)) as {
+        default: HttpResponseDefinition<
+          string,
+          HttpStatusCode,
+          string,
+          HttpHeaderSchema | undefined,
+          HttpBodySchema | undefined,
+          boolean
+        >;
+      };
+
+      if (!definition.default) {
+        continue;
+      }
+
+      if (!(definition.default instanceof HttpResponseDefinition)) {
+        continue;
+      }
+
+      // Don't skip responses marked as shared - they belong to this entity
+      // Entity-specific responses can still extend from shared definitions
+
+      const outputFileName = `${definition.default.name}Response.ts`;
+      const outputFile = path.join(this.config.outputDir, entityName, outputFileName);
+
+      responseResources.push({
+        ...definition.default,
+        sourceDir,
+        sourceFile,
+        sourceFileName,
+        outputFile,
+        outputFileName,
+        outputDir: path.join(this.config.outputDir, entityName),
+        entityName,
+      });
+    }
+
+    return responseResources;
   }
 }

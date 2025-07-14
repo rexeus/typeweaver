@@ -7,10 +7,10 @@ import { todoSchema } from "./todoSchema";
 import { z } from "zod/v4";
 import { defaultResponseHeader } from "../shared/defaultResponseHeader";
 import { sharedResponses } from "../shared/sharedResponses";
-import TodoNotFoundErrorDefinition from "../shared/TodoNotFoundErrorDefinition";
-import TodoStatusTransitionInvalidErrorDefinition from "../shared/TodoStatusTransitionInvalidErrorDefinition";
+import TodoNotFoundErrorDefinition from "./TodoNotFoundErrorDefinition";
+import TodoStatusTransitionInvalidErrorDefinition from "./TodoStatusTransitionInvalidErrorDefinition";
 import { defaultRequestHeadersWithPayload } from "../shared/defaultRequestHeader";
-import TodoNotChangeableErrorDefinition from "../shared/TodoNotChangeableErrorDefinition";
+import TodoNotChangeableErrorDefinition from "./TodoNotChangeableErrorDefinition";
 
 export default new HttpOperationDefinition({
   operationId: "UpdateTodoStatus",
