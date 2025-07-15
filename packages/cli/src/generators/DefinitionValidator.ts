@@ -101,8 +101,9 @@ export class DefinitionValidator {
     // Validate path parameters
     this.validatePathParameters(operation, sourceFile);
 
-    // Check for duplicate routes
-    const routeKey = `${operation.method} ${operation.path}`;
+    // Check for duplicate routes with normalized path
+    const normalizedPath = this.normalizePath(operation.path);
+    const routeKey = `${operation.method} ${normalizedPath}`;
     const existingRoute = this.state.routes.get(routeKey);
     if (existingRoute) {
       throw new DuplicateRouteError(
@@ -200,19 +201,31 @@ export class DefinitionValidator {
   ): void {
     // Extract path parameters from the path
     const pathParamMatches = operation.path.matchAll(/:([a-zA-Z0-9_]+)/g);
-    const pathParams = new Set<string>();
+    const pathParamsSet = new Set<string>();
+    
     for (const match of pathParamMatches) {
-      pathParams.add(match[1]);
+      const paramName = match[1];
+      
+      // Check for duplicate parameter names within the path
+      if (pathParamsSet.has(paramName)) {
+        throw new InvalidPathParameterError(
+          operation.operationId,
+          operation.path,
+          `Duplicate parameter name '${paramName}' in path`,
+          sourceFile
+        );
+      }
+      pathParamsSet.add(paramName);
     }
 
     // Get param schema if it exists
     const paramSchema = operation.request?.param;
     
-    if (pathParams.size > 0 && !paramSchema) {
+    if (pathParamsSet.size > 0 && !paramSchema) {
       throw new InvalidPathParameterError(
         operation.operationId,
         operation.path,
-        `Path contains parameters [${Array.from(pathParams).join(", ")}] but request.param is not defined`,
+        `Path contains parameters [${Array.from(pathParamsSet).join(", ")}] but request.param is not defined`,
         sourceFile
       );
     }
@@ -232,7 +245,7 @@ export class DefinitionValidator {
       const paramKeys = new Set(Object.keys(paramShape));
 
       // Check that all path params are defined in the schema
-      for (const pathParam of pathParams) {
+      for (const pathParam of pathParamsSet) {
         if (!paramKeys.has(pathParam)) {
           throw new InvalidPathParameterError(
             operation.operationId,
@@ -245,7 +258,7 @@ export class DefinitionValidator {
 
       // Check that all schema params exist in the path
       for (const paramKey of paramKeys) {
-        if (!pathParams.has(paramKey)) {
+        if (!pathParamsSet.has(paramKey)) {
           throw new InvalidPathParameterError(
             operation.operationId,
             operation.path,
@@ -255,6 +268,14 @@ export class DefinitionValidator {
         }
       }
     }
+  }
+
+  private normalizePath(path: string): string {
+    // Replace all :paramName patterns with position-based placeholders
+    let paramIndex = 1;
+    return path.replace(/:([a-zA-Z0-9_]+)/g, () => {
+      return `:param${paramIndex++}`;
+    });
   }
 
   public getState(): ValidationState {
