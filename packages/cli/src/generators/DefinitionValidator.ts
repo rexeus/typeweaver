@@ -6,47 +6,72 @@ import {
   type IHttpResponseDefinition,
 } from "@rexeus/typeweaver-core";
 import { z } from "zod/v4";
-import { DuplicateOperationIdError } from "./errors/DuplicateOperationIdError";
-import { DuplicateResponseNameError } from "./errors/DuplicateResponseNameError";
 import { InvalidPathParameterError } from "./errors/InvalidPathParameterError";
 import { MissingRequiredFieldError } from "./errors/MissingRequiredFieldError";
 import { InvalidHttpMethodError } from "./errors/InvalidHttpMethodError";
 import { EmptyResponseArrayError } from "./errors/EmptyResponseArrayError";
-import { DuplicateRouteError } from "./errors/DuplicateRouteError";
+import { InvalidStatusCodeError } from "./errors/InvalidStatusCodeError";
+import { InvalidSchemaError } from "./errors/InvalidSchemaError";
+import { InvalidSchemaShapeError } from "./errors/InvalidSchemaShapeError";
+import { DefinitionRegistry } from "./DefinitionRegistry";
 
-export type ValidationState = {
-  operationIds: Map<string, string>; // operationId -> file path
-  responseNames: Map<string, string>; // response name -> file path
-  routes: Map<string, { operationId: string; file: string }>; // "METHOD /path" -> { operationId, file }
-};
+// Type aliases for better readability
+type AnyHttpOperation = HttpOperationDefinition<any, any, any, any, any, any, any, any, any, any>;
+type AnyHttpResponse = IHttpResponseDefinition | HttpResponseDefinition<any, any, any, any, any, any>;
 
 export class DefinitionValidator {
-  private readonly state: ValidationState;
+  private readonly registry: DefinitionRegistry;
 
-  public constructor(state?: ValidationState) {
-    this.state = state ?? {
-      operationIds: new Map(),
-      responseNames: new Map(),
-      routes: new Map(),
-    };
+  public constructor(registry?: DefinitionRegistry) {
+    this.registry = registry ?? new DefinitionRegistry();
   }
 
   public validateOperation(
-    operation: HttpOperationDefinition<any, any, any, any, any, any, any, any, any, any>,
+    operation: AnyHttpOperation,
     sourceFile: string
   ): void {
-    // Check for duplicate operation ID
-    const existingFile = this.state.operationIds.get(operation.operationId);
-    if (existingFile) {
-      throw new DuplicateOperationIdError(
-        operation.operationId,
-        existingFile,
-        sourceFile
-      );
-    }
-    this.state.operationIds.set(operation.operationId, sourceFile);
+    // Register and check for duplicates
+    this.registry.registerOperation(operation, sourceFile);
 
     // Validate required fields
+    this.validateOperationRequiredFields(operation, sourceFile);
+
+    // Validate HTTP method
+    this.validateHttpMethod(operation, sourceFile);
+
+    // Validate request schemas
+    if (operation.request) {
+      this.validateRequestSchemas(operation, sourceFile);
+    }
+
+    // Validate responses
+    this.validateOperationResponses(operation, sourceFile);
+
+    // Validate path parameters
+    this.validatePathParameters(operation, sourceFile);
+  }
+
+  public validateResponse(
+    response: AnyHttpResponse,
+    sourceFile: string
+  ): void {
+    // Register and check for duplicates
+    this.registry.registerResponse(response, sourceFile);
+
+    // Validate required fields
+    this.validateResponseRequiredFields(response, sourceFile);
+
+    // Validate status code
+    this.validateStatusCode(response, sourceFile);
+
+    // Validate schemas
+    this.validateResponseSchemas(response, sourceFile);
+  }
+
+  private validateOperationRequiredFields(
+    operation: AnyHttpOperation,
+    sourceFile: string
+  ): void {
     if (!operation.operationId) {
       throw new MissingRequiredFieldError(
         "operation",
@@ -82,8 +107,12 @@ export class DefinitionValidator {
         sourceFile
       );
     }
+  }
 
-    // Validate HTTP method
+  private validateHttpMethod(
+    operation: AnyHttpOperation,
+    sourceFile: string
+  ): void {
     const validMethods = Object.values(HttpMethod);
     if (!validMethods.includes(operation.method)) {
       throw new InvalidHttpMethodError(
@@ -92,33 +121,62 @@ export class DefinitionValidator {
         sourceFile
       );
     }
+  }
 
-    // Validate responses array
-    if (!operation.responses || operation.responses.length === 0) {
-      throw new EmptyResponseArrayError(operation.operationId, sourceFile);
-    }
+  private validateRequestSchemas(
+    operation: AnyHttpOperation,
+    sourceFile: string
+  ): void {
+    const request = operation.request!;
 
-    // Validate path parameters
-    this.validatePathParameters(operation, sourceFile);
-
-    // Check for duplicate routes with normalized path
-    const normalizedPath = this.normalizePath(operation.path);
-    const routeKey = `${operation.method} ${normalizedPath}`;
-    const existingRoute = this.state.routes.get(routeKey);
-    if (existingRoute) {
-      throw new DuplicateRouteError(
-        operation.path,
-        operation.method,
-        existingRoute.operationId,
-        existingRoute.file,
+    if (request.header) {
+      this.validateSchema(
+        request.header,
+        "header",
         operation.operationId,
+        "request",
         sourceFile
       );
     }
-    this.state.routes.set(routeKey, {
-      operationId: operation.operationId,
-      file: sourceFile,
-    });
+
+    if (request.query) {
+      this.validateSchema(
+        request.query,
+        "query",
+        operation.operationId,
+        "request",
+        sourceFile
+      );
+    }
+
+    if (request.body) {
+      this.validateSchema(
+        request.body,
+        "body",
+        operation.operationId,
+        "request",
+        sourceFile
+      );
+    }
+
+    if (request.param) {
+      this.validateSchema(
+        request.param,
+        "param",
+        operation.operationId,
+        "request",
+        sourceFile
+      );
+    }
+  }
+
+  private validateOperationResponses(
+    operation: AnyHttpOperation,
+    sourceFile: string
+  ): void {
+    if (!operation.responses || operation.responses.length === 0) {
+      throw new EmptyResponseArrayError(operation.operationId, sourceFile);
+    }
 
     // Validate responses within the operation
     for (const response of operation.responses) {
@@ -130,22 +188,10 @@ export class DefinitionValidator {
     }
   }
 
-  public validateResponse(
-    response: IHttpResponseDefinition | HttpResponseDefinition<any, any, any, any, any, any>,
+  private validateResponseRequiredFields(
+    response: AnyHttpResponse,
     sourceFile: string
   ): void {
-    // Check for duplicate response name
-    const existingFile = this.state.responseNames.get(response.name);
-    if (existingFile) {
-      throw new DuplicateResponseNameError(
-        response.name,
-        existingFile,
-        sourceFile
-      );
-    }
-    this.state.responseNames.set(response.name, sourceFile);
-
-    // Validate required fields
     if (!response.name) {
       throw new MissingRequiredFieldError(
         "response",
@@ -172,31 +218,93 @@ export class DefinitionValidator {
         sourceFile
       );
     }
+  }
 
-    // Validate status code
+  private validateStatusCode(
+    response: AnyHttpResponse,
+    sourceFile: string
+  ): void {
     const validStatusCodes = Object.values(HttpStatusCode);
     if (!validStatusCodes.includes(response.statusCode)) {
-      throw new Error(
-        `Invalid status code '${response.statusCode}' in response '${response.name}' at ${sourceFile}`
+      throw new InvalidStatusCodeError(
+        response.statusCode,
+        response.name,
+        sourceFile
+      );
+    }
+  }
+
+  private validateResponseSchemas(
+    response: AnyHttpResponse,
+    sourceFile: string
+  ): void {
+    if (response.header) {
+      this.validateSchema(
+        response.header,
+        "header",
+        response.name,
+        "response",
+        sourceFile
       );
     }
 
-    // Validate schemas if present
-    if (response.header && !(response.header instanceof z.ZodType)) {
-      throw new Error(
-        `Invalid header schema in response '${response.name}' at ${sourceFile}. Must be a Zod schema.`
+    if (response.body) {
+      this.validateSchema(
+        response.body,
+        "body",
+        response.name,
+        "response",
+        sourceFile
+      );
+    }
+  }
+
+  private validateSchema(
+    schema: any,
+    schemaType: "header" | "body" | "param" | "query",
+    definitionName: string,
+    context: "request" | "response",
+    sourceFile: string
+  ): void {
+    // For body schemas, any ZodType is valid
+    if (schemaType === "body") {
+      if (!(schema instanceof z.ZodType)) {
+        throw new InvalidSchemaError(
+          schemaType,
+          definitionName,
+          context,
+          sourceFile
+        );
+      }
+      return;
+    }
+
+    // For header, query, and param schemas, must be ZodObject
+    if (!(schema instanceof z.ZodObject)) {
+      throw new InvalidSchemaError(
+        schemaType,
+        definitionName,
+        context,
+        sourceFile
       );
     }
 
-    if (response.body && !(response.body instanceof z.ZodType)) {
-      throw new Error(
-        `Invalid body schema in response '${response.name}' at ${sourceFile}. Must be a Zod schema.`
+    // Validate the shape based on schema type
+    if (schemaType === "param") {
+      this.validateParamShape(schema, definitionName, sourceFile);
+    } else {
+      this.validateHeaderOrQueryShape(
+        schema,
+        schemaType as "header" | "query",
+        definitionName,
+        context,
+        sourceFile
       );
     }
   }
 
   private validatePathParameters(
-    operation: HttpOperationDefinition<any, any, any, any, any, any, any, any, any, any>,
+    operation: AnyHttpOperation,
     sourceFile: string
   ): void {
     // Extract path parameters from the path
@@ -230,17 +338,7 @@ export class DefinitionValidator {
       );
     }
 
-    if (paramSchema) {
-      // Validate that param schema is a Zod object
-      if (!(paramSchema instanceof z.ZodObject)) {
-        throw new InvalidPathParameterError(
-          operation.operationId,
-          operation.path,
-          "request.param must be a Zod object schema",
-          sourceFile
-        );
-      }
-
+    if (paramSchema && paramSchema instanceof z.ZodObject) {
       const paramShape = paramSchema.shape;
       const paramKeys = new Set(Object.keys(paramShape));
 
@@ -270,15 +368,145 @@ export class DefinitionValidator {
     }
   }
 
-  private normalizePath(path: string): string {
-    // Replace all :paramName patterns with position-based placeholders
-    let paramIndex = 1;
-    return path.replace(/:([a-zA-Z0-9_]+)/g, () => {
-      return `:param${paramIndex++}`;
-    });
+  private validateHeaderOrQueryShape(
+    schema: z.ZodObject<any>,
+    schemaType: "header" | "query",
+    definitionName: string,
+    context: "request" | "response",
+    sourceFile: string
+  ): void {
+    const shape = schema.shape;
+    
+    for (const [propName, propSchema] of Object.entries(shape)) {
+      if (!this.isValidHeaderOrQueryValue(propSchema)) {
+        const typeName = this.getZodTypeName(propSchema);
+        throw new InvalidSchemaShapeError(
+          schemaType,
+          definitionName,
+          context,
+          propName,
+          typeName,
+          sourceFile
+        );
+      }
+    }
   }
 
-  public getState(): ValidationState {
-    return this.state;
+  private validateParamShape(
+    schema: z.ZodObject<any>,
+    operationId: string,
+    sourceFile: string
+  ): void {
+    const shape = schema.shape;
+    
+    for (const [propName, propSchema] of Object.entries(shape)) {
+      if (!this.isValidParamValue(propSchema)) {
+        const typeName = this.getZodTypeName(propSchema);
+        throw new InvalidSchemaShapeError(
+          "param",
+          operationId,
+          "request",
+          propName,
+          typeName,
+          sourceFile
+        );
+      }
+    }
+  }
+
+  private isValidHeaderOrQueryValue(schema: any): boolean {
+    // Check if it's a base string type
+    if (this.isStringBasedType(schema)) {
+      return true;
+    }
+    
+    // Check if it's an optional of a valid type
+    if (schema instanceof z.ZodOptional) {
+      return this.isValidHeaderOrQueryValue(schema.unwrap());
+    }
+    
+    // Check if it's an array of valid types
+    if (schema instanceof z.ZodArray) {
+      return this.isStringBasedType(schema.element);
+    }
+    
+    return false;
+  }
+
+  private isValidParamValue(schema: any): boolean {
+    // Check if it's a base string type
+    if (this.isStringBasedType(schema)) {
+      return true;
+    }
+    
+    // Check if it's an optional of a valid type
+    if (schema instanceof z.ZodOptional) {
+      return this.isStringBasedType(schema.unwrap());
+    }
+    
+    // No arrays allowed for params
+    return false;
+  }
+
+  private isStringBasedType(schema: any): boolean {
+    // Check if it's a string or string format (email, uuid, ulid, etc.)
+    if (schema instanceof z.ZodString) {
+      return true;
+    }
+    
+    // Check if it's a string literal
+    if (schema instanceof z.ZodLiteral && typeof schema.value === "string") {
+      return true;
+    }
+    
+    // Check if it's an enum (which contains string values)
+    if (schema instanceof z.ZodEnum) {
+      return true;
+    }
+    
+    // Check for string format validators like ULID, UUID, Email, etc.
+    // These are subclasses of ZodString but might have different constructor names
+    const typeName = schema.constructor.name;
+    const stringFormatTypes = [
+      "ZodULID", "ZodUUID", "ZodEmail", "ZodURL", "ZodCUID", "ZodCUID2",
+      "ZodNanoID", "ZodBase64", "ZodBase64URL", "ZodEmoji", "ZodIPv4", "ZodIPv6",
+      "ZodCIDRv4", "ZodCIDRv6", "ZodGUID"
+    ];
+    
+    if (stringFormatTypes.includes(typeName)) {
+      return true;
+    }
+    
+    // Check if it has a string-like type in the internal structure
+    if (schema._def && schema._def.typeName && schema._def.typeName.includes("String")) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  private getZodTypeName(schema: any): string {
+    // Return the constructor name directly for more specific type names
+    const typeName = schema.constructor.name;
+    
+    // For optional and array types, show the inner type
+    if (schema instanceof z.ZodOptional) {
+      return `ZodOptional<${this.getZodTypeName(schema.unwrap())}>`;
+    }
+    if (schema instanceof z.ZodArray) {
+      return `ZodArray<${this.getZodTypeName(schema.element)}>`;
+    }
+    
+    // For literals, show the value type
+    if (schema instanceof z.ZodLiteral) {
+      return `ZodLiteral<${typeof schema.value}>`;
+    }
+    
+    // Return the type name (e.g., ZodString, ZodULID, ZodEmail, etc.)
+    return typeName;
+  }
+
+  public getRegistry(): DefinitionRegistry {
+    return this.registry;
   }
 }
