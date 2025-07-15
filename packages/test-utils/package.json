@@ -1,0 +1,29 @@
+{
+  "name": "@rexeus/test-utils",
+  "description": "Test utils for TypeWeaver packages",
+  "type": "module",
+  "main": "dist/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "test-project:gen": "pnpm exec typeweaver generate --output src/test-project/output --input src/test-project/definition --plugins clients,aws-cdk,hono --shared src/test-project/definition/shared"
+  },
+  "keywords": [
+    "typeweaver",
+    "test",
+    "utils"
+  ],
+  "devDependencies": {
+    "@rexeus/typeweaver": "workspace:^",
+    "@rexeus/typeweaver-core": "workspace:^",
+    "@rexeus/typeweaver-gen": "workspace:^",
+    "@rexeus/typeweaver-types": "workspace:^",
+    "@rexeus/typeweaver-clients": "workspace:^",
+    "@rexeus/typeweaver-aws-cdk": "workspace:^",
+    "@rexeus/typeweaver-hono": "workspace:^",
+    "axios": "^1.9.0",
+    "case": "^1.6.3",
+    "hono": "^4.6.14",
+    "zod": "^3.25.67"
+  }
+}
