@@ -22,6 +22,7 @@ import {
 } from "@rexeus/typeweaver-core";
 import { InvalidSharedDirError } from "./errors/InvalidSharedDirError";
 import { InvalidSharedResponseDefinitionError } from "./errors/InvalidSharedResponseDefinitionError";
+import { DefinitionValidator } from "./DefinitionValidator";
 
 export type ResourceReaderConfig = {
   readonly sourceDir: string;
@@ -45,6 +46,8 @@ export class ResourceReader {
       sharedResponseResources: [],
     };
 
+    const validator = new DefinitionValidator();
+
     // Check if shared directory exists
     if (fs.existsSync(this.config.sharedSourceDir)) {
       const sharedStats = fs.statSync(this.config.sharedSourceDir);
@@ -52,7 +55,7 @@ export class ResourceReader {
         throw new InvalidSharedDirError(`'${this.config.sharedSourceDir}' is a file, not a directory`);
       }
 
-      result.sharedResponseResources = await this.getSharedResponseResources();
+      result.sharedResponseResources = await this.getSharedResponseResources(validator);
 
       console.info(
         `Found '${result.sharedResponseResources.length}' shared responses in '${this.config.sharedSourceDir}'`
@@ -82,12 +85,14 @@ export class ResourceReader {
 
       const operationResources = await this.getEntityOperationResources(
         entitySourceDir,
-        entityName
+        entityName,
+        validator
       );
       
       const responseResources = await this.getEntityResponseResources(
         entitySourceDir,
-        entityName
+        entityName,
+        validator
       );
 
       result.entityResources[entityName] = {
@@ -126,9 +131,9 @@ export class ResourceReader {
     return files;
   }
 
-  private async getSharedResponseResources(): Promise<
-    SharedResponseResource[]
-  > {
+  private async getSharedResponseResources(
+    validator: DefinitionValidator
+  ): Promise<SharedResponseResource[]> {
     const files = this.scanDirectoryRecursively(this.config.sharedSourceDir);
     const sharedResponseResources: SharedResponseResource[] = [];
 
@@ -168,6 +173,9 @@ export class ResourceReader {
         );
       }
 
+      // Validate the response definition
+      validator.validateResponse(definition.default, sourceFile);
+
       const outputDir = this.config.sharedOutputDir;
       const outputFileName = `${definition.default.name}Response.ts`;
       const outputFile = path.join(outputDir, outputFileName);
@@ -189,7 +197,8 @@ export class ResourceReader {
 
   private async getEntityOperationResources(
     sourceDir: string,
-    entityName: string
+    entityName: string,
+    validator: DefinitionValidator
   ): Promise<OperationResource[]> {
     const files = this.scanDirectoryRecursively(sourceDir);
     const definitions: OperationResource[] = [];
@@ -229,6 +238,9 @@ export class ResourceReader {
         );
         continue;
       }
+
+      // Validate the operation definition
+      validator.validateOperation(definition.default, sourceFile);
 
       const { operationId } = definition.default as HttpOperationDefinition<
         string,
@@ -312,7 +324,8 @@ export class ResourceReader {
 
   private async getEntityResponseResources(
     sourceDir: string,
-    entityName: string
+    entityName: string,
+    validator: DefinitionValidator
   ): Promise<EntityResponseResource[]> {
     const files = this.scanDirectoryRecursively(sourceDir);
     const responseResources: EntityResponseResource[] = [];
@@ -340,6 +353,9 @@ export class ResourceReader {
 
       // Don't skip responses marked as shared - they belong to this entity
       // Entity-specific responses can still extend from shared definitions
+
+      // Validate the response definition
+      validator.validateResponse(definition.default, sourceFile);
 
       const outputFileName = `${definition.default.name}Response.ts`;
       const outputFile = path.join(this.config.outputDir, entityName, outputFileName);
