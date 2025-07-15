@@ -1,4 +1,4 @@
-import definition from "../../../definition/todo/UpdateTodoStatusDefinition";
+import definition from "../../../definition/todo/mutations/UpdateTodoStatusDefinition";
 import {
   type IHttpRequest,
   type SafeRequestValidationResult,

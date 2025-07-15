@@ -155,7 +155,8 @@ export class ClientGenerator {
     // Build relative paths
     const requestFile = `./${path.basename(outputRequestFileName, ".ts")}`;
     const responseValidatorFile = `./${path.basename(outputResponseValidationFileName, ".ts")}`;
-    const sourcePath = path.join(sourceDir, path.basename(sourceFile, ".ts"));
+    const relativeSourceFile = path.relative(sourceDir, sourceFile);
+    const sourcePath = path.join(sourceDir, relativeSourceFile.replace(/\.ts$/, ""));
     const relativeSourcePath = path.relative(outputDir, sourcePath);
 
     const content = context.renderTemplate(templateFilePath, {

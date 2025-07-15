@@ -135,7 +135,7 @@ export class ResponseValidationGenerator {
       responseFile: `./${path.basename(outputResponseFileName, ".ts")}`,
       sourcePath: Path.relative(
         outputDir,
-        `${sourceDir}/${path.basename(sourceFile, ".ts")}`
+        `${sourceDir}/${path.relative(sourceDir, sourceFile).replace(/\.ts$/, "")}`
       ),
       sharedResponses,
       ownResponses,

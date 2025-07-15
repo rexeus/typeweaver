@@ -123,7 +123,7 @@ export class ResponseGenerator {
       ),
       sourcePath: Path.relative(
         outputDir,
-        `${sourceDir}/${path.basename(sourceFile, ".ts")}`
+        `${sourceDir}/${path.relative(sourceDir, sourceFile).replace(/\.ts$/, "")}`
       ),
     });
 

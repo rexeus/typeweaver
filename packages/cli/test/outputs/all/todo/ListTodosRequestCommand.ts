@@ -1,4 +1,4 @@
-import definition from "../../../definition/todo/ListTodosDefinition";
+import definition from "../../../definition/todo/queries/ListTodosDefinition";
 import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
 import { ListTodosResponseValidator } from "./ListTodosResponseValidator";

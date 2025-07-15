@@ -53,7 +53,7 @@ export class RequestGenerator {
     const pascalCaseOperationId = Case.pascal(operationId);
     const sourcePath = Path.relative(
       outputDir,
-      `${operationResource.sourceDir}/${path.basename(operationResource.sourceFile, ".ts")}`
+      `${operationResource.sourceDir}/${path.relative(operationResource.sourceDir, operationResource.sourceFile).replace(/\.ts$/, "")}`
     );
 
     const ownSuccessResponses: {

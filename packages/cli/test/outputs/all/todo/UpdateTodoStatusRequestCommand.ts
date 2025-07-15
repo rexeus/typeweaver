@@ -1,4 +1,4 @@
-import definition from "../../../definition/todo/UpdateTodoStatusDefinition";
+import definition from "../../../definition/todo/mutations/UpdateTodoStatusDefinition";
 import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
 import { UpdateTodoStatusResponseValidator } from "./UpdateTodoStatusResponseValidator";
