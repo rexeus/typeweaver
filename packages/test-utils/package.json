@@ -1,6 +1,7 @@
 {
-  "name": "@rexeus/test-utils",
+  "name": "test-utils",
   "description": "Test utils for TypeWeaver packages",
+  "private": true,
   "type": "module",
   "main": "dist/index.ts",
   "scripts": {
@@ -14,6 +15,7 @@
     "utils"
   ],
   "devDependencies": {
+    "@hono/node-server": "^1.14.0",
     "@rexeus/typeweaver": "workspace:^",
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
