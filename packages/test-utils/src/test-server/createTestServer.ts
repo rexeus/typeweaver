@@ -1,7 +1,5 @@
 import { Hono } from "hono";
-import { TodoHono } from "../test-project/output/todo/TodoHono";
-import { AuthHono } from "../test-project/output/auth/AuthHono";
-import { AccountHono } from "../test-project/output/account/AccountHono";
+import { TodoHono, AuthHono, AccountHono } from "..";
 import { TodoHandlers } from "./handlers/TodoHandlers";
 import { AuthHandlers } from "./handlers/AuthHandlers";
 import { AccountHandlers } from "./handlers/AccountApiHandler";

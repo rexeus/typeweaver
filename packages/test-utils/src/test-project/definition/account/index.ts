@@ -1,2 +1,2 @@
-export * from './RegisterAccountDefinition';
-export * from './accountSchema';
+export * from "./RegisterAccountDefinition";
+export * from "./accountSchema";

@@ -1,3 +1,3 @@
-export * from "./test-project/definition";
-export * from "./test-project/output";
+export * from "./test-project";
 export * from "./test-server";
+export * from "./data";

@@ -1,2 +1,2 @@
-export * from './AccessTokenDefinition';
-export * from './RefreshTokenDefinition';
+export * from "./AccessTokenDefinition";
+export * from "./RefreshTokenDefinition";

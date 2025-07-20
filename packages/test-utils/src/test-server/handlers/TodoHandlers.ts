@@ -21,14 +21,16 @@ import {
   type ListTodosResponse,
 } from "../..";
 import { faker } from "@faker-js/faker";
-import { createTodo } from "../utils/data";
+import { createTodoOutput } from "../..";
 
 export class TodoHandlers implements TodoApiHandler {
   public constructor(private readonly throwError?: Error | HttpResponse) {
     //
   }
 
-  public async handleCreateTodoRequest(request: ICreateTodoRequest): Promise<CreateTodoResponse> {
+  public async handleCreateTodoRequest(
+    request: ICreateTodoRequest
+  ): Promise<CreateTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
@@ -60,7 +62,9 @@ export class TodoHandlers implements TodoApiHandler {
     });
   }
 
-  public async handleDeleteTodoRequest(request: IDeleteTodoRequest): Promise<DeleteTodoResponse> {
+  public async handleDeleteTodoRequest(
+    request: IDeleteTodoRequest
+  ): Promise<DeleteTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
@@ -73,7 +77,9 @@ export class TodoHandlers implements TodoApiHandler {
     });
   }
 
-  public async handleUpdateTodoRequest(request: IUpdateTodoRequest): Promise<UpdateTodoResponse> {
+  public async handleUpdateTodoRequest(
+    request: IUpdateTodoRequest
+  ): Promise<UpdateTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
@@ -98,7 +104,9 @@ export class TodoHandlers implements TodoApiHandler {
         status: "TODO",
         dueDate: request.body.dueDate ?? faker.date.future().toISOString(),
         tags: request.body.tags ?? [faker.lorem.word(), faker.lorem.word()],
-        priority: request.body.priority ?? faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"]),
+        priority:
+          request.body.priority ??
+          faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"]),
         createdAt,
         modifiedAt,
         createdBy,
@@ -107,7 +115,9 @@ export class TodoHandlers implements TodoApiHandler {
     });
   }
 
-  public async handleUpdateTodoStatusRequest(request: IUpdateTodoStatusRequest): Promise<UpdateTodoStatusResponse> {
+  public async handleUpdateTodoStatusRequest(
+    request: IUpdateTodoStatusRequest
+  ): Promise<UpdateTodoStatusResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
@@ -119,15 +129,17 @@ export class TodoHandlers implements TodoApiHandler {
       header: {
         "Content-Type": "application/json",
       },
-      body: createTodo({ 
-        id: todoId, 
+      body: createTodoOutput({
+        id: todoId,
         status: request.body.value,
         modifiedAt: new Date().toISOString(),
       }),
     });
   }
 
-  public async handleGetTodoRequest(request: IGetTodoRequest): Promise<GetTodoResponse> {
+  public async handleGetTodoRequest(
+    request: IGetTodoRequest
+  ): Promise<GetTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
@@ -139,16 +151,18 @@ export class TodoHandlers implements TodoApiHandler {
       header: {
         "Content-Type": "application/json",
       },
-      body: createTodo({ id: todoId }),
+      body: createTodoOutput({ id: todoId }),
     });
   }
 
-  public async handleListTodosRequest(request: IListTodosRequest): Promise<ListTodosResponse> {
+  public async handleListTodosRequest(
+    request: IListTodosRequest
+  ): Promise<ListTodosResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
 
-    const results = Array.from({ length: 10 }, () => createTodo());
+    const results = Array.from({ length: 10 }, () => createTodoOutput());
 
     return new ListTodosSuccessResponse({
       statusCode: HttpStatusCode.OK,
