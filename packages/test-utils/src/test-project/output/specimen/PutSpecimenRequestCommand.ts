@@ -1,0 +1,55 @@
+import definition from "../../definition/specimen/PutSpecimenDefinition";
+import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import { RequestCommand } from "../lib/clients";
+import { PutSpecimenResponseValidator } from "./PutSpecimenResponseValidator";
+import type {
+  IPutSpecimenRequest,
+  IPutSpecimenRequestHeader,
+  IPutSpecimenRequestParam,
+  IPutSpecimenRequestQuery,
+  IPutSpecimenRequestBody,
+  SuccessfulPutSpecimenResponse,
+} from "./PutSpecimenRequest";
+
+import { PutSpecimenSuccessResponse } from "./PutSpecimenResponse";
+
+export class PutSpecimenRequestCommand
+  extends RequestCommand
+  implements IPutSpecimenRequest
+{
+  public override readonly method = definition.method as HttpMethod.PUT;
+  public override readonly path = definition.path;
+
+  public override readonly header: IPutSpecimenRequestHeader;
+  public override readonly param: IPutSpecimenRequestParam;
+  public override readonly query: IPutSpecimenRequestQuery;
+  public override readonly body: IPutSpecimenRequestBody;
+
+  private readonly responseValidator: PutSpecimenResponseValidator;
+
+  public constructor(input: Omit<IPutSpecimenRequest, "method" | "path">) {
+    super();
+
+    this.header = input.header;
+
+    this.param = input.param;
+
+    this.query = input.query;
+
+    this.body = input.body;
+
+    this.responseValidator = new PutSpecimenResponseValidator();
+  }
+
+  public processResponse(
+    response: IHttpResponse,
+  ): SuccessfulPutSpecimenResponse {
+    const result = this.responseValidator.validate(response);
+
+    if (result instanceof PutSpecimenSuccessResponse) {
+      return result;
+    }
+
+    throw result;
+  }
+}

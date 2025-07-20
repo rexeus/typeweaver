@@ -16,8 +16,21 @@ import { InvalidSchemaShapeError } from "./errors/InvalidSchemaShapeError";
 import { DefinitionRegistry } from "./DefinitionRegistry";
 
 // Type aliases for better readability
-type AnyHttpOperation = HttpOperationDefinition<any, any, any, any, any, any, any, any, any, any>;
-type AnyHttpResponse = IHttpResponseDefinition | HttpResponseDefinition<any, any, any, any, any, any>;
+type AnyHttpOperation = HttpOperationDefinition<
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any
+>;
+type AnyHttpResponse =
+  | IHttpResponseDefinition
+  | HttpResponseDefinition<any, any, any, any, any, any>;
 
 export class DefinitionValidator {
   private readonly registry: DefinitionRegistry;
@@ -51,10 +64,7 @@ export class DefinitionValidator {
     this.validatePathParameters(operation, sourceFile);
   }
 
-  public validateResponse(
-    response: AnyHttpResponse,
-    sourceFile: string
-  ): void {
+  public validateResponse(response: AnyHttpResponse, sourceFile: string): void {
     // Register and check for duplicates
     this.registry.registerResponse(response, sourceFile);
 
@@ -310,10 +320,10 @@ export class DefinitionValidator {
     // Extract path parameters from the path
     const pathParamMatches = operation.path.matchAll(/:([a-zA-Z0-9_]+)/g);
     const pathParamsSet = new Set<string>();
-    
+
     for (const match of pathParamMatches) {
       const paramName = match[1];
-      
+
       // Check for duplicate parameter names within the path
       if (pathParamsSet.has(paramName)) {
         throw new InvalidPathParameterError(
@@ -328,7 +338,7 @@ export class DefinitionValidator {
 
     // Get param schema if it exists
     const paramSchema = operation.request?.param;
-    
+
     if (pathParamsSet.size > 0 && !paramSchema) {
       throw new InvalidPathParameterError(
         operation.operationId,
@@ -376,7 +386,7 @@ export class DefinitionValidator {
     sourceFile: string
   ): void {
     const shape = schema.shape;
-    
+
     for (const [propName, propSchema] of Object.entries(shape)) {
       if (!this.isValidHeaderOrQueryValue(propSchema)) {
         const typeName = this.getZodTypeName(propSchema);
@@ -398,7 +408,7 @@ export class DefinitionValidator {
     sourceFile: string
   ): void {
     const shape = schema.shape;
-    
+
     for (const [propName, propSchema] of Object.entries(shape)) {
       if (!this.isValidParamValue(propSchema)) {
         const typeName = this.getZodTypeName(propSchema);
@@ -419,17 +429,17 @@ export class DefinitionValidator {
     if (this.isStringBasedType(schema)) {
       return true;
     }
-    
+
     // Check if it's an optional of a valid type
     if (schema instanceof z.ZodOptional) {
       return this.isValidHeaderOrQueryValue(schema.unwrap());
     }
-    
+
     // Check if it's an array of valid types
     if (schema instanceof z.ZodArray) {
       return this.isStringBasedType(schema.element);
     }
-    
+
     return false;
   }
 
@@ -438,12 +448,12 @@ export class DefinitionValidator {
     if (this.isStringBasedType(schema)) {
       return true;
     }
-    
+
     // Check if it's an optional of a valid type
     if (schema instanceof z.ZodOptional) {
       return this.isStringBasedType(schema.unwrap());
     }
-    
+
     // No arrays allowed for params
     return false;
   }
@@ -453,42 +463,70 @@ export class DefinitionValidator {
     if (schema instanceof z.ZodString) {
       return true;
     }
-    
+
     // Check if it's a string literal
     if (schema instanceof z.ZodLiteral && typeof schema.value === "string") {
       return true;
     }
-    
+
     // Check if it's an enum (which contains string values)
     if (schema instanceof z.ZodEnum) {
       return true;
     }
-    
+
     // Check for string format validators like ULID, UUID, Email, etc.
     // These are subclasses of ZodString but might have different constructor names
     const typeName = schema.constructor.name;
     const stringFormatTypes = [
-      "ZodULID", "ZodUUID", "ZodEmail", "ZodURL", "ZodCUID", "ZodCUID2",
-      "ZodNanoID", "ZodBase64", "ZodBase64URL", "ZodEmoji", "ZodIPv4", "ZodIPv6",
-      "ZodCIDRv4", "ZodCIDRv6", "ZodGUID"
+      "ZodULID",
+      "ZodUUID",
+      "ZodUUIDv4",
+      "ZodUUIDv7",
+      "ZodUUIDv8",
+      "ZodEmail",
+      "ZodURL",
+      "ZodCUID",
+      "ZodCUID2",
+      "ZodNanoID",
+      "ZodBase64",
+      "ZodBase64URL",
+      "ZodEmoji",
+      "ZodIPv4",
+      "ZodIPv6",
+      "ZodCIDRv4",
+      "ZodCIDRv6",
+      "ZodE164",
+      "ZodJWT",
+      "ZodASCII",
+      "ZodUTF8",
+      "ZodLowercase",
+      "ZodGUID",
+      "ZodISODate",
+      "ZodISOTime",
+      "ZodISODateTime",
+      "ZodISODuration",
     ];
-    
+
     if (stringFormatTypes.includes(typeName)) {
       return true;
     }
-    
+
     // Check if it has a string-like type in the internal structure
-    if (schema._def && schema._def.typeName && schema._def.typeName.includes("String")) {
+    if (
+      schema._def &&
+      schema._def.typeName &&
+      schema._def.typeName.includes("String")
+    ) {
       return true;
     }
-    
+
     return false;
   }
 
   private getZodTypeName(schema: any): string {
     // Return the constructor name directly for more specific type names
     const typeName = schema.constructor.name;
-    
+
     // For optional and array types, show the inner type
     if (schema instanceof z.ZodOptional) {
       return `ZodOptional<${this.getZodTypeName(schema.unwrap())}>`;
@@ -496,12 +534,12 @@ export class DefinitionValidator {
     if (schema instanceof z.ZodArray) {
       return `ZodArray<${this.getZodTypeName(schema.element)}>`;
     }
-    
+
     // For literals, show the value type
     if (schema instanceof z.ZodLiteral) {
       return `ZodLiteral<${typeof schema.value}>`;
     }
-    
+
     // Return the type name (e.g., ZodString, ZodULID, ZodEmail, etc.)
     return typeName;
   }
