@@ -7,7 +7,6 @@ import { defaultResponseHeader } from "./defaultResponseHeader";
 
 export default new HttpResponseDefinition({
   statusCode: HttpStatusCode.UNPROCESSABLE_ENTITY,
-  isShared: true,
   name: "UnprocessableEntityError",
   description: "Unprocessable entity error",
   header: defaultResponseHeader,

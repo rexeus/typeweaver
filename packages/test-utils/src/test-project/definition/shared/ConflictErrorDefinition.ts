@@ -14,5 +14,4 @@ export default new HttpResponseDefinition({
   header: defaultResponseHeader,
   statusCode: HttpStatusCode.CONFLICT,
   description: "Conflicted request",
-  isShared: true,
 });

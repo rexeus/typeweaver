@@ -9,7 +9,6 @@ export default new HttpResponseDefinition({
   name: "ValidationError",
   description: "Validation error",
   statusCode: HttpStatusCode.BAD_REQUEST,
-  isShared: true,
   header: defaultResponseHeader,
   body: z.object({
     message: z.literal("Request is invalid"),
