@@ -9,7 +9,6 @@ export default new HttpResponseDefinition({
   name: "UnauthorizedError",
   description: "Unauthorized request",
   statusCode: HttpStatusCode.UNAUTHORIZED,
-  isShared: true,
   header: defaultResponseHeader,
   body: z.object({
     message: z.literal("Unauthorized request"),

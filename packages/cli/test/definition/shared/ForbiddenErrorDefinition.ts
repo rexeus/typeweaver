@@ -14,5 +14,4 @@ export default new HttpResponseDefinition({
   header: defaultResponseHeader,
   statusCode: HttpStatusCode.FORBIDDEN,
   description: "Forbidden request",
-  isShared: true,
 });

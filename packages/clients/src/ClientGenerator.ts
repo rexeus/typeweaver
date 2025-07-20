@@ -114,16 +114,16 @@ export class ClientGenerator {
     // Get response information
     const allResponses = responses;
     const ownSuccessResponses = allResponses.filter(
-      r => r.statusCode >= 200 && r.statusCode < 300 && !r.isShared
+      r => r.statusCode >= 200 && r.statusCode < 300 && !r.isReference
     );
     const ownErrorResponses = allResponses.filter(
-      r => (r.statusCode < 200 || r.statusCode >= 300) && !r.isShared
+      r => (r.statusCode < 200 || r.statusCode >= 300) && !r.isReference
     );
     const sharedSuccessResponses = allResponses.filter(
-      r => r.statusCode >= 200 && r.statusCode < 300 && r.isShared
+      r => r.statusCode >= 200 && r.statusCode < 300 && r.isReference
     );
     const sharedErrorResponses = allResponses.filter(
-      r => (r.statusCode < 200 || r.statusCode >= 300) && r.isShared
+      r => (r.statusCode < 200 || r.statusCode >= 300) && r.isReference
     );
 
     // Build request type information
@@ -143,10 +143,10 @@ export class ClientGenerator {
     // Helper function to determine response import path
     const successResponseImportPath = (response: {
       name: string;
-      isShared?: boolean;
+      isReference?: boolean;
       path?: string;
     }) => {
-      if (response.isShared && response.path) {
+      if (response.isReference && response.path) {
         return response.path;
       }
       return `./${path.basename(outputResponseFileName, ".ts")}`;
@@ -156,7 +156,10 @@ export class ClientGenerator {
     const requestFile = `./${path.basename(outputRequestFileName, ".ts")}`;
     const responseValidatorFile = `./${path.basename(outputResponseValidationFileName, ".ts")}`;
     const relativeSourceFile = path.relative(sourceDir, sourceFile);
-    const sourcePath = path.join(sourceDir, relativeSourceFile.replace(/\.ts$/, ""));
+    const sourcePath = path.join(
+      sourceDir,
+      relativeSourceFile.replace(/\.ts$/, "")
+    );
     const relativeSourcePath = path.relative(outputDir, sourcePath);
 
     const content = context.renderTemplate(templateFilePath, {

@@ -22,7 +22,11 @@ export class ResponseValidationGenerator {
       context.resources.entityResources
     )) {
       for (const operationResource of entityResource.operations) {
-        this.writeResponseValidator(templateFilePath, operationResource, context);
+        this.writeResponseValidator(
+          templateFilePath,
+          operationResource,
+          context
+        );
       }
     }
   }
@@ -64,7 +68,7 @@ export class ResponseValidationGenerator {
     }[] = [];
 
     for (const response of responses) {
-      const { statusCode, name, isShared, body, header, statusCodeName } =
+      const { statusCode, name, isReference, body, header, statusCodeName } =
         response;
       const index = responses.indexOf(response);
 
@@ -78,17 +82,18 @@ export class ResponseValidationGenerator {
         });
       }
 
-      if (isShared) {
+      if (isReference) {
         // First check in global shared resources
         let sharedResponse = context.resources.sharedResponseResources.find(
           resource => resource.name === name
         );
-        
+
         let importPath: string;
-        
+
         // If not found globally, check in entity-specific responses
         if (!sharedResponse) {
-          const entityResponses = context.resources.entityResources[resource.entityName]?.responses;
+          const entityResponses =
+            context.resources.entityResources[resource.entityName]?.responses;
           const entityResponse = entityResponses?.find(r => r.name === name);
           if (entityResponse) {
             importPath = Path.relative(
@@ -142,7 +147,10 @@ export class ResponseValidationGenerator {
       allStatusCodes,
     });
 
-    const relativePath = path.relative(context.outputDir, outputResponseValidationFile);
+    const relativePath = path.relative(
+      context.outputDir,
+      outputResponseValidationFile
+    );
     context.writeFile(relativePath, content);
   }
 }

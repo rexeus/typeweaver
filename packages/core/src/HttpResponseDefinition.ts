@@ -9,14 +9,12 @@ export type IHttpResponseDefinition<
   TDescription extends string = string,
   THeader extends HttpHeaderSchema | undefined = HttpHeaderSchema | undefined,
   TBody extends HttpBodySchema | undefined = HttpBodySchema | undefined,
-  TIsShared extends boolean = boolean,
 > = {
   name: TName;
   statusCode: TStatusCode;
   description: TDescription;
   header?: THeader;
   body?: TBody;
-  isShared?: TIsShared;
 };
 
 export type IExtendHttpResponseDefinition<
@@ -25,26 +23,11 @@ export type IExtendHttpResponseDefinition<
   TDescription extends string,
   THeader extends HttpHeaderSchema | undefined,
   TBody extends HttpBodySchema | undefined,
-  TIsShared extends boolean,
 > = Partial<
-  IHttpResponseDefinition<
-    TName,
-    TStatusCode,
-    TDescription,
-    THeader,
-    TBody,
-    TIsShared
-  >
+  IHttpResponseDefinition<TName, TStatusCode, TDescription, THeader, TBody>
 > &
   Pick<
-    IHttpResponseDefinition<
-      TName,
-      TStatusCode,
-      TDescription,
-      THeader,
-      TBody,
-      TIsShared
-    >,
+    IHttpResponseDefinition<TName, TStatusCode, TDescription, THeader, TBody>,
     "name"
   >;
 
@@ -61,7 +44,6 @@ export class HttpResponseDefinition<
   public description: TDescription;
   public header?: THeader;
   public body?: TBody;
-  public isShared?: TIsShared;
 
   public constructor(
     private definition: IHttpResponseDefinition<
@@ -69,8 +51,7 @@ export class HttpResponseDefinition<
       TStatusCode,
       TDescription,
       THeader,
-      TBody,
-      TIsShared
+      TBody
     >
   ) {
     this.name = definition.name;
@@ -78,7 +59,6 @@ export class HttpResponseDefinition<
     this.description = definition.description;
     this.header = definition.header;
     this.body = definition.body;
-    this.isShared = definition.isShared;
   }
 
   public extend<
@@ -94,8 +74,7 @@ export class HttpResponseDefinition<
       EStatusCode,
       EDescription,
       EHeader,
-      EBody,
-      EIsShared
+      EBody
     >
   ): HttpResponseDefinition<
     EName,
@@ -157,14 +136,12 @@ export class HttpResponseDefinition<
       EStatusCode,
       EDescription,
       MergedHeader,
-      MergedBody,
-      EIsShared
+      MergedBody
     > = {
       ...this.definition,
       name: definition.name as EName,
       statusCode: (definition.statusCode ?? this.statusCode) as EStatusCode,
       description: (definition.description ?? this.description) as EDescription,
-      isShared: (definition.isShared ?? this.isShared) as EIsShared,
       header: mergedHeader,
       body: mergedBody,
     };

@@ -7,7 +7,6 @@ import { defaultResponseHeader } from "./defaultResponseHeader";
 
 export default new HttpResponseDefinition({
   statusCode: HttpStatusCode.NOT_FOUND,
-  isShared: true,
   name: "NotFoundError",
   description: "Resource not found",
   header: defaultResponseHeader,

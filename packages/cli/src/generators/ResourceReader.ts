@@ -52,58 +52,68 @@ export class ResourceReader {
     if (fs.existsSync(this.config.sharedSourceDir)) {
       const sharedStats = fs.statSync(this.config.sharedSourceDir);
       if (!sharedStats.isDirectory()) {
-        throw new InvalidSharedDirError(`'${this.config.sharedSourceDir}' is a file, not a directory`);
+        throw new InvalidSharedDirError(
+          `'${this.config.sharedSourceDir}' is a file, not a directory`
+        );
       }
 
-      result.sharedResponseResources = await this.getSharedResponseResources(validator);
+      result.sharedResponseResources =
+        await this.getSharedResponseResources(validator);
 
       console.info(
         `Found '${result.sharedResponseResources.length}' shared responses in '${this.config.sharedSourceDir}'`
       );
     } else {
-      console.info(`No shared directory found at '${this.config.sharedSourceDir}'`);
+      console.info(
+        `No shared directory found at '${this.config.sharedSourceDir}'`
+      );
     }
 
     const normalizedSharedPath = path.resolve(this.config.sharedSourceDir);
-    
+
     for (const content of contents) {
       if (!content.isDirectory()) {
         console.info(`Skipping '${content.name}' as it is not a directory`);
         continue;
       }
-      
+
       const entityName = content.name;
       const entitySourceDir = path.resolve(this.config.sourceDir, entityName);
-      
+
       // Skip the shared directory if it's inside the source directory
       // Check if this directory is the shared directory or contains it
-      if (entitySourceDir === normalizedSharedPath || 
-          normalizedSharedPath.startsWith(entitySourceDir + path.sep)) {
-        console.info(`Skipping '${content.name}' as it is or contains the shared directory`);
+      if (
+        entitySourceDir === normalizedSharedPath ||
+        normalizedSharedPath.startsWith(entitySourceDir + path.sep)
+      ) {
+        console.info(
+          `Skipping '${content.name}' as it is or contains the shared directory`
+        );
         continue;
       }
 
-      const operationResources = await this.getEntityOperationResources(
-        entitySourceDir,
-        entityName,
-        validator
-      );
-      
       const responseResources = await this.getEntityResponseResources(
         entitySourceDir,
         entityName,
         validator
       );
 
+      const operationResources = await this.getEntityOperationResources(
+        entitySourceDir,
+        entityName,
+        validator,
+        [...result.sharedResponseResources, ...responseResources]
+      );
+
       result.entityResources[entityName] = {
         operations: operationResources,
-        responses: responseResources
+        responses: responseResources,
       };
 
       console.info(
         `Found '${operationResources.length}' operation definitions for entity '${entityName}'`
       );
-      
+
       if (responseResources.length > 0) {
         console.info(
           `Found '${responseResources.length}' response definitions for entity '${entityName}'`
@@ -117,17 +127,17 @@ export class ResourceReader {
   private scanDirectoryRecursively(dir: string): string[] {
     const files: string[] = [];
     const contents = fs.readdirSync(dir, { withFileTypes: true });
-    
+
     for (const content of contents) {
       const fullPath = path.join(dir, content.name);
       if (content.isDirectory()) {
         // Recursively scan subdirectories
         files.push(...this.scanDirectoryRecursively(fullPath));
-      } else if (content.isFile() && content.name.endsWith('.ts')) {
+      } else if (content.isFile() && content.name.endsWith(".ts")) {
         files.push(fullPath);
       }
     }
-    
+
     return files;
   }
 
@@ -164,15 +174,6 @@ export class ResourceReader {
         continue;
       }
 
-      if (!definition.default.isShared) {
-        throw new InvalidSharedResponseDefinitionError(
-          sourceFileName,
-          this.config.sharedSourceDir,
-          sourceFile,
-          "'isShared' property is not set to 'true'"
-        );
-      }
-
       // Validate the response definition
       validator.validateResponse(definition.default, sourceFile);
 
@@ -182,7 +183,6 @@ export class ResourceReader {
 
       sharedResponseResources.push({
         ...definition.default,
-        isShared: true,
         sourceDir: this.config.sharedSourceDir,
         sourceFile: sourceFile,
         sourceFileName,
@@ -198,7 +198,8 @@ export class ResourceReader {
   private async getEntityOperationResources(
     sourceDir: string,
     entityName: string,
-    validator: DefinitionValidator
+    validator: DefinitionValidator,
+    referencedResponses: Array<SharedResponseResource | EntityResponseResource>
   ): Promise<OperationResource[]> {
     const files = this.scanDirectoryRecursively(sourceDir);
     const definitions: OperationResource[] = [];
@@ -306,14 +307,29 @@ export class ResourceReader {
       }
 
       for (const response of definition.default.responses) {
-        const extendedResponse: ExtendedResponseDefinition = {
-          ...response,
-          statusCodeName:
-            HttpStatusCodeNameMap[
-              response.statusCode as unknown as HttpStatusCode
-            ],
-        };
-        operationResource.definition.responses.push(extendedResponse);
+        if (referencedResponses.some(ref => ref.name === response.name)) {
+          // This is a reference to an existing response - don't generate types locally
+          const referencedResponse: ExtendedResponseDefinition = {
+            ...response,
+            statusCodeName:
+              HttpStatusCodeNameMap[
+                response.statusCode as unknown as HttpStatusCode
+              ],
+            isReference: true,
+          };
+          operationResource.definition.responses.push(referencedResponse);
+        } else {
+          // This is a new operation-specific response - generate types locally
+          const extendedResponse: ExtendedResponseDefinition = {
+            ...response,
+            statusCodeName:
+              HttpStatusCodeNameMap[
+                response.statusCode as unknown as HttpStatusCode
+              ],
+            isReference: false,
+          };
+          operationResource.definition.responses.push(extendedResponse);
+        }
       }
 
       definitions.push(operationResource);
@@ -358,7 +374,11 @@ export class ResourceReader {
       validator.validateResponse(definition.default, sourceFile);
 
       const outputFileName = `${definition.default.name}Response.ts`;
-      const outputFile = path.join(this.config.outputDir, entityName, outputFileName);
+      const outputFile = path.join(
+        this.config.outputDir,
+        entityName,
+        outputFileName
+      );
 
       responseResources.push({
         ...definition.default,

@@ -10,6 +10,7 @@ export type GetResourcesResult = {
 
 export type ExtendedResponseDefinition = IHttpResponseDefinition & {
   statusCodeName: string;
+  isReference: boolean;
 };
 
 export type EntityName = string;
@@ -34,13 +35,15 @@ export type OperationResource = {
   outputClientFileName: string;
 };
 
-export type EntityResources = Record<EntityName, {
-  operations: OperationResource[];
-  responses: EntityResponseResource[];
-}>;
+export type EntityResources = Record<
+  EntityName,
+  {
+    operations: OperationResource[];
+    responses: EntityResponseResource[];
+  }
+>;
 
 export type SharedResponseResource = IHttpResponseDefinition & {
-  isShared: true;
   sourceDir: string;
   sourceFile: string;
   sourceFileName: string;

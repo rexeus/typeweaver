@@ -8,7 +8,6 @@ import { defaultResponseHeader } from "./defaultResponseHeader";
 export default new HttpResponseDefinition({
   name: "TooManyRequestsError",
   description: "Too many requests",
-  isShared: true,
   statusCode: HttpStatusCode.TOO_MANY_REQUESTS,
   header: defaultResponseHeader,
   body: z.object({

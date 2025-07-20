@@ -20,5 +20,4 @@ export default new HttpResponseDefinition({
   header: defaultResponseHeader,
   statusCode: HttpStatusCode.UNSUPPORTED_MEDIA_TYPE,
   description: "Unsupported media type",
-  isShared: true,
 });
