@@ -1,0 +1,68 @@
+import { HttpMethod } from "@rexeus/typeweaver-core";
+import {
+  type UpdateSubTodoResponse,
+  UpdateSubTodoSuccessResponse,
+} from "./UpdateSubTodoResponse";
+
+import { SubTodoNotFoundErrorResponse } from "./SubTodoNotFoundErrorResponse";
+
+import { SubTodoNotChangeableErrorResponse } from "./SubTodoNotChangeableErrorResponse";
+
+import { SubTodoStatusTransitionInvalidErrorResponse } from "./SubTodoStatusTransitionInvalidErrorResponse";
+
+import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
+
+import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
+
+import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
+
+import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
+
+import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
+
+import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
+
+import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
+
+export type IUpdateSubTodoRequestHeader = {
+  "Content-Type": "application/json";
+  Accept: "application/json";
+  Authorization: string;
+};
+
+export type IUpdateSubTodoRequestParam = {
+  todoId: string;
+  subtodoId: string;
+};
+
+export type IUpdateSubTodoRequestBody = {
+  title?: string | undefined;
+  description?: (string | undefined) | undefined;
+  status?: ("TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED") | undefined;
+  dueDate?: (string | undefined) | undefined;
+  tags?: (string[] | undefined) | undefined;
+  priority?: (("LOW" | "MEDIUM" | "HIGH") | undefined) | undefined;
+};
+
+export type IUpdateSubTodoRequest = {
+  path: string;
+  method: HttpMethod.PUT;
+  header: IUpdateSubTodoRequestHeader;
+  param: IUpdateSubTodoRequestParam;
+
+  body: IUpdateSubTodoRequestBody;
+};
+
+export type SuccessfulUpdateSubTodoResponse = Exclude<
+  UpdateSubTodoResponse,
+  | SubTodoNotFoundErrorResponse
+  | SubTodoNotChangeableErrorResponse
+  | SubTodoStatusTransitionInvalidErrorResponse
+  | TodoNotFoundErrorResponse
+  | ForbiddenErrorResponse
+  | InternalServerErrorResponse
+  | TooManyRequestsErrorResponse
+  | UnauthorizedErrorResponse
+  | UnsupportedMediaTypeErrorResponse
+  | ValidationErrorResponse
+>;

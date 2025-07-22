@@ -7,8 +7,18 @@ import {
 export class TodoHttpApiRouter extends AwsHttpApiGatewayRouter {
   private routes: AwsHttpApiGatewayRoute[] = [
     {
+      path: "/todos/{todoId}/subtodos",
+      methods: [HttpMethod.POST, HttpMethod.GET],
+    },
+
+    {
       path: "/todos",
       methods: [HttpMethod.POST, HttpMethod.GET],
+    },
+
+    {
+      path: "/todos/{todoId}/subtodos/{subtodoId}",
+      methods: [HttpMethod.DELETE, HttpMethod.PUT],
     },
 
     {
@@ -19,6 +29,16 @@ export class TodoHttpApiRouter extends AwsHttpApiGatewayRouter {
     {
       path: "/todos/{todoId}/status",
       methods: [HttpMethod.PUT],
+    },
+
+    {
+      path: "/todos/{todoId}/subtodos/query",
+      methods: [HttpMethod.POST],
+    },
+
+    {
+      path: "/todos/query",
+      methods: [HttpMethod.POST],
     },
   ];
 

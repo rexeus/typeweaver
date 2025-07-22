@@ -21,6 +21,7 @@ export default new HttpOperationDefinition({
     body: todoSchema
       .omit({
         id: true,
+        parentId: true,
         createdBy: true,
         createdAt: true,
         modifiedBy: true,

@@ -42,6 +42,7 @@ export type IGetTodoSuccessResponseHeader = {
 export type IGetTodoSuccessResponseBody = {
   id: string;
   accountId: string;
+  parentId?: string | undefined;
   title: string;
   description?: string | undefined;
   status: "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED";

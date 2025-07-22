@@ -3,19 +3,41 @@ import {
   HttpOperationDefinition,
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
+import { z } from "zod/v4";
 import { listResponseSchema } from "../../shared/schemas/listResponseSchema";
 import { todoSchema } from "../todoSchema";
 import { sharedResponses } from "../../shared/sharedResponses";
 import { defaultResponseHeader } from "../../shared/defaultResponseHeader";
 import { defaultRequestHeadersWithoutPayload } from "../../shared/defaultRequestHeader";
 
+const listTodosQuerySchema = z.object({
+  // Filtering parameters
+  status: z.enum(["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]).optional(),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
+  tags: z.array(z.string()).optional(),
+  
+  // Pagination parameters (query params are always strings)
+  limit: z.string().optional(),
+  nextToken: z.string().optional(),
+  
+  // Sorting parameters
+  sortBy: z.enum(["title", "dueDate", "priority", "createdAt", "modifiedAt"]).optional(),
+  sortOrder: z.enum(["asc", "desc"]).optional(),
+  
+  // Search and date parameters
+  search: z.string().optional(),
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
+});
+
 export default new HttpOperationDefinition({
   operationId: "ListTodos",
-  summary: "List todos",
+  summary: "List todos with filtering, pagination, and search",
   method: HttpMethod.GET,
   path: "/todos",
   request: {
     header: defaultRequestHeadersWithoutPayload,
+    query: listTodosQuerySchema,
   },
   responses: [
     {

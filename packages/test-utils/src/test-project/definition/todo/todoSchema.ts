@@ -6,6 +6,7 @@ export const todoStatus = z.enum(["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]);
 export const todoSchema = z.object({
   id: z.ulid(),
   accountId: z.ulid(),
+  parentId: z.ulid().optional(),
   title: z.string(),
   description: z.string().optional(),
   status: todoStatus,

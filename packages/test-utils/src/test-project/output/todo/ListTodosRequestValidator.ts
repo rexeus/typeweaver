@@ -31,6 +31,16 @@ export class ListTodosRequestValidator extends RequestValidator {
       }
     }
 
+    if (definition.request.query) {
+      const result = definition.request.query.safeParse(request.query);
+
+      if (!result.success) {
+        error.addQueryIssues(result.error.issues);
+      } else {
+        validatedRequest.query = result.data;
+      }
+    }
+
     if (error.hasIssues()) {
       return {
         isValid: false,

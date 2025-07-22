@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import { TodoHono, AuthHono, AccountHono, VariationHono } from "..";
+import { TodoHono, AuthHono, AccountHono, SpecimenHono } from "..";
 import { TodoHandlers } from "./handlers/TodoHandlers";
 import { AuthHandlers } from "./handlers/AuthHandlers";
 import { AccountHandlers } from "./handlers/AccountApiHandler";
-import { VariationHandlers } from "./handlers/VariationHandlers";
+import { SpecimenHandlers } from "./handlers/SpecimenHandlers";
 import { serve, type ServerType } from "@hono/node-server";
 
 export async function createTestServer(port: number): Promise<ServerType> {
@@ -12,12 +12,12 @@ export async function createTestServer(port: number): Promise<ServerType> {
   const todoRouter = new TodoHono(new TodoHandlers());
   const authRouter = new AuthHono(new AuthHandlers());
   const accountRouter = new AccountHono(new AccountHandlers());
-  const variationRouter = new VariationHono(new VariationHandlers());
+  const specimenRouter = new SpecimenHono(new SpecimenHandlers());
 
   app.route("/", authRouter);
   app.route("/", accountRouter);
   app.route("/", todoRouter);
-  app.route("/", variationRouter);
+  app.route("/", specimenRouter);
 
   return serve({
     fetch: app.fetch,

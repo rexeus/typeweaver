@@ -19,3 +19,8 @@ tmp/
 
 # Package files
 *.tgz
+
+# Test reports
+coverage/
+.nyc_output/
+.vitestcache/

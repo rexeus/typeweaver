@@ -6,6 +6,12 @@ import {
   UpdateTodoStatusSuccessResponse,
   GetTodoSuccessResponse,
   ListTodosSuccessResponse,
+  CreateSubTodoSuccessResponse,
+  DeleteSubTodoSuccessResponse,
+  UpdateSubTodoSuccessResponse,
+  ListSubTodosSuccessResponse,
+  QuerySubTodoSuccessResponse,
+  QueryTodoSuccessResponse,
   type TodoApiHandler,
   type ICreateTodoRequest,
   type CreateTodoResponse,
@@ -19,6 +25,18 @@ import {
   type GetTodoResponse,
   type IListTodosRequest,
   type ListTodosResponse,
+  type ICreateSubTodoRequest,
+  type CreateSubTodoResponse,
+  type IDeleteSubTodoRequest,
+  type DeleteSubTodoResponse,
+  type IUpdateSubTodoRequest,
+  type UpdateSubTodoResponse,
+  type IListSubTodosRequest,
+  type ListSubTodosResponse,
+  type IQuerySubTodoRequest,
+  type QuerySubTodoResponse,
+  type IQueryTodoRequest,
+  type QueryTodoResponse,
 } from "../..";
 import { faker } from "@faker-js/faker";
 import { createTodoOutput } from "../..";
@@ -35,30 +53,19 @@ export class TodoHandlers implements TodoApiHandler {
       throw this.throwError;
     }
 
-    const id = faker.string.uuid();
-    const accountId = faker.string.uuid();
-    const createdBy = faker.internet.username();
-    const isoDate = faker.date.recent().toISOString();
-
     return new CreateTodoSuccessResponse({
       statusCode: HttpStatusCode.CREATED,
       header: {
         "Content-Type": "application/json",
       },
-      body: {
-        id,
-        accountId,
+      body: createTodoOutput({
         title: request.body.title,
         description: request.body.description,
         status: "TODO",
         dueDate: request.body.dueDate,
         tags: request.body.tags,
         priority: request.body.priority,
-        createdAt: isoDate,
-        modifiedAt: isoDate,
-        createdBy,
-        modifiedBy: createdBy,
-      },
+      }),
     });
   }
 
@@ -85,33 +92,20 @@ export class TodoHandlers implements TodoApiHandler {
     }
 
     const { todoId } = request.param;
-    const accountId = faker.string.uuid();
-    const modifiedBy = faker.internet.username();
-    const createdBy = faker.internet.username();
-    const createdAt = faker.date.past().toISOString();
-    const modifiedAt = new Date().toISOString();
 
     return new UpdateTodoSuccessResponse({
       statusCode: HttpStatusCode.OK,
       header: {
         "Content-Type": "application/json",
       },
-      body: {
+      body: createTodoOutput({
         id: todoId,
-        accountId,
-        title: request.body.title ?? faker.lorem.sentence(),
-        description: request.body.description ?? faker.lorem.paragraph(),
-        status: "TODO",
-        dueDate: request.body.dueDate ?? faker.date.future().toISOString(),
-        tags: request.body.tags ?? [faker.lorem.word(), faker.lorem.word()],
-        priority:
-          request.body.priority ??
-          faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"]),
-        createdAt,
-        modifiedAt,
-        createdBy,
-        modifiedBy,
-      },
+        title: request.body.title,
+        description: request.body.description,
+        dueDate: request.body.dueDate,
+        tags: request.body.tags,
+        priority: request.body.priority,
+      }),
     });
   }
 
@@ -132,7 +126,6 @@ export class TodoHandlers implements TodoApiHandler {
       body: createTodoOutput({
         id: todoId,
         status: request.body.value,
-        modifiedAt: new Date().toISOString(),
       }),
     });
   }
@@ -171,6 +164,146 @@ export class TodoHandlers implements TodoApiHandler {
       },
       body: {
         results,
+        nextToken: faker.string.alphanumeric(20),
+      },
+    });
+  }
+
+  public async handleCreateSubTodoRequest(
+    request: ICreateSubTodoRequest
+  ): Promise<CreateSubTodoResponse> {
+    if (this.throwError) {
+      throw this.throwError;
+    }
+
+    const { todoId } = request.param;
+
+    return new CreateSubTodoSuccessResponse({
+      statusCode: HttpStatusCode.CREATED,
+      header: {
+        "Content-Type": "application/json",
+      },
+      body: createTodoOutput({
+        parentId: todoId,
+        title: request.body.title,
+        description: request.body.description,
+        status: "TODO",
+        dueDate: request.body.dueDate,
+        tags: request.body.tags,
+        priority: request.body.priority,
+      }),
+    });
+  }
+
+  public async handleDeleteSubTodoRequest(
+    request: IDeleteSubTodoRequest
+  ): Promise<DeleteSubTodoResponse> {
+    if (this.throwError) {
+      throw this.throwError;
+    }
+
+    return new DeleteSubTodoSuccessResponse({
+      statusCode: HttpStatusCode.OK,
+      header: {
+        "Content-Type": "application/json",
+      },
+      body: {
+        message: "SubTodo deleted successfully",
+      },
+    });
+  }
+
+  public async handleUpdateSubTodoRequest(
+    request: IUpdateSubTodoRequest
+  ): Promise<UpdateSubTodoResponse> {
+    if (this.throwError) {
+      throw this.throwError;
+    }
+
+    const { todoId, subtodoId } = request.param;
+
+    return new UpdateSubTodoSuccessResponse({
+      statusCode: HttpStatusCode.OK,
+      header: {
+        "Content-Type": "application/json",
+      },
+      body: createTodoOutput({
+        id: subtodoId,
+        parentId: todoId,
+        title: request.body.title,
+        description: request.body.description,
+        status: request.body.status,
+        dueDate: request.body.dueDate,
+        tags: request.body.tags,
+        priority: request.body.priority,
+      }),
+    });
+  }
+
+  public async handleListSubTodosRequest(
+    request: IListSubTodosRequest
+  ): Promise<ListSubTodosResponse> {
+    if (this.throwError) {
+      throw this.throwError;
+    }
+
+    const { todoId } = request.param;
+    const items = Array.from({ length: 5 }, () =>
+      createTodoOutput({ parentId: todoId })
+    );
+
+    return new ListSubTodosSuccessResponse({
+      statusCode: HttpStatusCode.OK,
+      header: {
+        "Content-Type": "application/json",
+      },
+      body: {
+        results: items,
+        nextToken: faker.string.alphanumeric(20),
+      },
+    });
+  }
+
+  public async handleQuerySubTodoRequest(
+    request: IQuerySubTodoRequest
+  ): Promise<QuerySubTodoResponse> {
+    if (this.throwError) {
+      throw this.throwError;
+    }
+
+    const { todoId } = request.param;
+    const items = Array.from({ length: 3 }, () =>
+      createTodoOutput({ parentId: todoId })
+    );
+
+    return new QuerySubTodoSuccessResponse({
+      statusCode: HttpStatusCode.OK,
+      header: {
+        "Content-Type": "application/json",
+      },
+      body: {
+        results: items,
+        nextToken: faker.string.alphanumeric(20),
+      },
+    });
+  }
+
+  public async handleQueryTodoRequest(
+    request: IQueryTodoRequest
+  ): Promise<QueryTodoResponse> {
+    if (this.throwError) {
+      throw this.throwError;
+    }
+
+    const items = Array.from({ length: 8 }, () => createTodoOutput());
+
+    return new QueryTodoSuccessResponse({
+      statusCode: HttpStatusCode.OK,
+      header: {
+        "Content-Type": "application/json",
+      },
+      body: {
+        results: items,
         nextToken: faker.string.alphanumeric(20),
       },
     });

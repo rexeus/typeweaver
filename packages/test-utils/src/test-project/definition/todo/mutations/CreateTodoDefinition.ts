@@ -16,6 +16,7 @@ export default new HttpOperationDefinition({
   request: {
     body: todoSchema.omit({
       id: true,
+      parentId: true,
       accountId: true,
       createdAt: true,
       createdBy: true,

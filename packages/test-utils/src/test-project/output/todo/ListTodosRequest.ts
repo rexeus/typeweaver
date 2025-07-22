@@ -21,10 +21,27 @@ export type IListTodosRequestHeader = {
   Authorization: string;
 };
 
+export type IListTodosRequestQuery = {
+  status?: ("TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED") | undefined;
+  priority?: ("LOW" | "MEDIUM" | "HIGH") | undefined;
+  tags?: string[] | undefined;
+  limit?: string | undefined;
+  nextToken?: string | undefined;
+  sortBy?:
+    | ("title" | "dueDate" | "priority" | "createdAt" | "modifiedAt")
+    | undefined;
+  sortOrder?: ("asc" | "desc") | undefined;
+  search?: string | undefined;
+  dateFrom?: string | undefined;
+  dateTo?: string | undefined;
+};
+
 export type IListTodosRequest = {
   path: string;
   method: HttpMethod.GET;
   header: IListTodosRequestHeader;
+
+  query: IListTodosRequestQuery;
 };
 
 export type SuccessfulListTodosResponse = Exclude<

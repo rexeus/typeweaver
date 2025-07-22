@@ -1,0 +1,44 @@
+import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+
+export type ISubTodoNotFoundErrorResponseHeader = {
+  "Content-Type": "application/json";
+};
+
+export type ISubTodoNotFoundErrorResponseBody = {
+  message: "SubTodo not found";
+  code: "SUBTODO_NOT_FOUND_ERROR";
+  context: {
+    todoId: string;
+  };
+  actualValues: {
+    subtodoId: string;
+  };
+};
+
+export type ISubTodoNotFoundErrorResponse = {
+  statusCode: HttpStatusCode.NOT_FOUND;
+  header: ISubTodoNotFoundErrorResponseHeader;
+  body: ISubTodoNotFoundErrorResponseBody;
+};
+
+export class SubTodoNotFoundErrorResponse
+  extends HttpResponse<
+    ISubTodoNotFoundErrorResponseHeader,
+    ISubTodoNotFoundErrorResponseBody
+  >
+  implements ISubTodoNotFoundErrorResponse
+{
+  public override readonly statusCode: HttpStatusCode.NOT_FOUND;
+
+  public constructor(response: ISubTodoNotFoundErrorResponse) {
+    super(response.statusCode, response.header, response.body);
+
+    if (response.statusCode !== HttpStatusCode.NOT_FOUND) {
+      throw new Error(
+        `Invalid status code: '${response.statusCode}' for SubTodoNotFoundErrorResponse`,
+      );
+    }
+
+    this.statusCode = response.statusCode;
+  }
+}

@@ -1,0 +1,129 @@
+import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+
+import type {
+  ISubTodoNotFoundErrorResponse,
+  SubTodoNotFoundErrorResponse,
+} from "./SubTodoNotFoundErrorResponse";
+
+import type {
+  ISubTodoNotChangeableErrorResponse,
+  SubTodoNotChangeableErrorResponse,
+} from "./SubTodoNotChangeableErrorResponse";
+
+import type {
+  ISubTodoStatusTransitionInvalidErrorResponse,
+  SubTodoStatusTransitionInvalidErrorResponse,
+} from "./SubTodoStatusTransitionInvalidErrorResponse";
+
+import type {
+  ITodoNotFoundErrorResponse,
+  TodoNotFoundErrorResponse,
+} from "./TodoNotFoundErrorResponse";
+
+import type {
+  IForbiddenErrorResponse,
+  ForbiddenErrorResponse,
+} from "../shared/ForbiddenErrorResponse";
+
+import type {
+  IInternalServerErrorResponse,
+  InternalServerErrorResponse,
+} from "../shared/InternalServerErrorResponse";
+
+import type {
+  ITooManyRequestsErrorResponse,
+  TooManyRequestsErrorResponse,
+} from "../shared/TooManyRequestsErrorResponse";
+
+import type {
+  IUnauthorizedErrorResponse,
+  UnauthorizedErrorResponse,
+} from "../shared/UnauthorizedErrorResponse";
+
+import type {
+  IUnsupportedMediaTypeErrorResponse,
+  UnsupportedMediaTypeErrorResponse,
+} from "../shared/UnsupportedMediaTypeErrorResponse";
+
+import type {
+  IValidationErrorResponse,
+  ValidationErrorResponse,
+} from "../shared/ValidationErrorResponse";
+
+export type IUpdateSubTodoSuccessResponseHeader = {
+  "Content-Type": "application/json";
+};
+
+export type IUpdateSubTodoSuccessResponseBody = {
+  id: string;
+  accountId: string;
+  parentId?: string | undefined;
+  title: string;
+  description?: string | undefined;
+  status: "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED";
+  dueDate?: string | undefined;
+  tags?: string[] | undefined;
+  priority?: ("LOW" | "MEDIUM" | "HIGH") | undefined;
+  createdAt: string;
+  modifiedAt: string;
+  createdBy: string;
+  modifiedBy: string;
+};
+
+export type IUpdateSubTodoSuccessResponse = {
+  statusCode: HttpStatusCode.OK;
+  header: IUpdateSubTodoSuccessResponseHeader;
+  body: IUpdateSubTodoSuccessResponseBody;
+};
+
+export class UpdateSubTodoSuccessResponse
+  extends HttpResponse<
+    IUpdateSubTodoSuccessResponseHeader,
+    IUpdateSubTodoSuccessResponseBody
+  >
+  implements IUpdateSubTodoSuccessResponse
+{
+  public override readonly statusCode: HttpStatusCode.OK;
+
+  public constructor(response: IUpdateSubTodoSuccessResponse) {
+    super(response.statusCode, response.header, response.body);
+
+    if (response.statusCode !== HttpStatusCode.OK) {
+      throw new Error(
+        `Invalid status code: '${response.statusCode}' for UpdateSubTodoSuccessResponse`,
+      );
+    }
+
+    this.statusCode = response.statusCode;
+  }
+}
+
+export type IUpdateSubTodoSuccessResponses = IUpdateSubTodoSuccessResponse;
+
+export type UpdateSubTodoSuccessResponses = UpdateSubTodoSuccessResponse;
+
+export type IUpdateSubTodoResponse =
+  | IUpdateSubTodoSuccessResponse
+  | ISubTodoNotFoundErrorResponse
+  | ISubTodoNotChangeableErrorResponse
+  | ISubTodoStatusTransitionInvalidErrorResponse
+  | ITodoNotFoundErrorResponse
+  | IForbiddenErrorResponse
+  | IInternalServerErrorResponse
+  | ITooManyRequestsErrorResponse
+  | IUnauthorizedErrorResponse
+  | IUnsupportedMediaTypeErrorResponse
+  | IValidationErrorResponse;
+
+export type UpdateSubTodoResponse =
+  | UpdateSubTodoSuccessResponse
+  | SubTodoNotFoundErrorResponse
+  | SubTodoNotChangeableErrorResponse
+  | SubTodoStatusTransitionInvalidErrorResponse
+  | TodoNotFoundErrorResponse
+  | ForbiddenErrorResponse
+  | InternalServerErrorResponse
+  | TooManyRequestsErrorResponse
+  | UnauthorizedErrorResponse
+  | UnsupportedMediaTypeErrorResponse
+  | ValidationErrorResponse;

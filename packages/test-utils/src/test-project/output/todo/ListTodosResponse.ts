@@ -38,6 +38,7 @@ export type IListTodosSuccessResponseBody = {
   results: {
     id: string;
     accountId: string;
+    parentId?: string | undefined;
     title: string;
     description?: string | undefined;
     status: "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED";

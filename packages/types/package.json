@@ -21,7 +21,9 @@
     "format": "prettier --write .",
     "build": "pkgroll --clean-dist && cp -r ./src/templates ./dist/templates && cp -r ./src/lib ./dist/lib",
     "prepack": "npm run build",
-    "preversion": "npm run build"
+    "preversion": "npm run build",
+    "test": "vitest --run --cache",
+    "test:coverage": "vitest --run --cache --coverage"
   },
   "keywords": [
     "api",
@@ -49,7 +51,8 @@
   },
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
-    "@rexeus/typeweaver-gen": "workspace:^"
+    "@rexeus/typeweaver-gen": "workspace:^",
+    "test-utils": "workspace:^"
   },
   "dependencies": {
     "@rexeus/typeweaver-zod-to-ts": "workspace:^",

@@ -1,19 +1,19 @@
 import { faker } from "@faker-js/faker";
 import { createData } from "./createData";
 import type {
-  IPutNonsenseVariationRequestBody,
-  IPutNonsenseVariationSuccessResponseBody,
+  IPutSpecimenRequestBody,
+  IPutSpecimenSuccessResponseBody,
 } from "..";
 
-export function createVariationInput(
-  input: Partial<IPutNonsenseVariationRequestBody> = {}
-): IPutNonsenseVariationRequestBody {
+export function createSpecimenInput(
+  input: Partial<IPutSpecimenRequestBody> = {}
+): IPutSpecimenRequestBody {
   const createdAt = faker.date.past().toISOString();
   const modifiedAt = faker.date.recent().toISOString();
   const createdBy = faker.internet.username();
   const modifiedBy = faker.internet.username();
 
-  const defaults: IPutNonsenseVariationRequestBody = {
+  const defaults: IPutSpecimenRequestBody = {
     // Basic types
     stringField: faker.lorem.word(),
     numberField: faker.number.int({ min: 1, max: 1000 }),
@@ -31,7 +31,12 @@ export function createVariationInput(
     // Special strings
     emailField: faker.internet.email(),
     uuidv4Field: faker.string.uuid(),
-    uuidv5Field: faker.string.uuid(),
+    ulidField: faker.string.alphanumeric(26),
+    uuidField: faker.string.uuid(),
+    emojiField: "😄",
+    nanoidField: faker.string.alphanumeric(21),
+    cuidField: faker.string.alphanumeric(24),
+    cuid2Field: faker.string.alphanumeric(24),
     uuidv7Field: faker.string.uuid(),
     ipv4Field: faker.internet.ipv4(),
     ipv6Field: faker.internet.ipv6(),
@@ -116,17 +121,17 @@ export function createVariationInput(
   return createData(defaults, input);
 }
 
-export function createVariationOutput(
-  input: Partial<IPutNonsenseVariationSuccessResponseBody> = {}
-): IPutNonsenseVariationSuccessResponseBody {
+export function createSpecimenOutput(
+  input: Partial<IPutSpecimenSuccessResponseBody> = {}
+): IPutSpecimenSuccessResponseBody {
   const createdAt = faker.date.past().toISOString();
   const modifiedAt = faker.date.recent().toISOString();
   const createdBy = faker.internet.username();
   const modifiedBy = faker.internet.username();
 
-  const defaults: IPutNonsenseVariationSuccessResponseBody = {
-    // Use the variation schema structure from the generated types
-    ...createVariationInput(),
+  const defaults: IPutSpecimenSuccessResponseBody = {
+    // Use the specimen schema structure from the generated types
+    ...createSpecimenInput(),
 
     // Metadata fields (if they exist in the generated schema)
     createdAt,

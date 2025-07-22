@@ -5,6 +5,7 @@ import { ListTodosResponseValidator } from "./ListTodosResponseValidator";
 import type {
   IListTodosRequest,
   IListTodosRequestHeader,
+  IListTodosRequestQuery,
   SuccessfulListTodosResponse,
 } from "./ListTodosRequest";
 
@@ -19,7 +20,7 @@ export class ListTodosRequestCommand
 
   public override readonly header: IListTodosRequestHeader;
   declare public readonly param: undefined;
-  declare public readonly query: undefined;
+  public override readonly query: IListTodosRequestQuery;
   declare public readonly body: undefined;
 
   private readonly responseValidator: ListTodosResponseValidator;
@@ -28,6 +29,8 @@ export class ListTodosRequestCommand
     super();
 
     this.header = input.header;
+
+    this.query = input.query;
 
     this.responseValidator = new ListTodosResponseValidator();
   }
