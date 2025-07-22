@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { metadataSchema } from "../shared/schemas/metadataSchema";
+import { metadataSchema } from "../shared";
 
 export const statusEnum = z.enum(["ACTIVE", "INACTIVE", "PENDING"]);
 

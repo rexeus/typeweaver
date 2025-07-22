@@ -3,15 +3,17 @@ import {
   HttpOperationDefinition,
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
+import {
+  defaultRequestHeadersWithPayload,
+  defaultResponseHeader,
+  sharedResponses,
+} from "../../shared";
 import { todoSchema } from "../todoSchema";
-import { sharedResponses } from "../../shared/sharedResponses";
-import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
-import SubTodoNotFoundErrorDefinition from "../errors/SubTodoNotFoundErrorDefinition";
 import SubTodoNotChangeableErrorDefinition from "../errors/SubTodoNotChangeableErrorDefinition";
+import SubTodoNotFoundErrorDefinition from "../errors/SubTodoNotFoundErrorDefinition";
 import SubTodoStatusTransitionInvalidErrorDefinition from "../errors/SubTodoStatusTransitionInvalidErrorDefinition";
+import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
 import { z } from "zod/v4";
-import { defaultResponseHeader } from "../../shared/defaultResponseHeader";
-import { defaultRequestHeadersWithPayload } from "../../shared/defaultRequestHeader";
 
 export default new HttpOperationDefinition({
   operationId: "UpdateSubTodo",

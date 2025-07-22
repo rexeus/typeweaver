@@ -3,14 +3,16 @@ import {
   HttpOperationDefinition,
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
+import {
+  defaultRequestHeadersWithPayload,
+  defaultResponseHeader,
+  sharedResponses,
+} from "../../shared";
 import { todoSchema } from "../todoSchema";
-import { z } from "zod/v4";
-import { defaultResponseHeader } from "../../shared/defaultResponseHeader";
-import { sharedResponses } from "../../shared/sharedResponses";
+import TodoNotChangeableErrorDefinition from "../errors/TodoNotChangeableErrorDefinition";
 import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
 import TodoStatusTransitionInvalidErrorDefinition from "../errors/TodoStatusTransitionInvalidErrorDefinition";
-import { defaultRequestHeadersWithPayload } from "../../shared/defaultRequestHeader";
-import TodoNotChangeableErrorDefinition from "../errors/TodoNotChangeableErrorDefinition";
+import { z } from "zod/v4";
 
 export default new HttpOperationDefinition({
   operationId: "UpdateTodoStatus",

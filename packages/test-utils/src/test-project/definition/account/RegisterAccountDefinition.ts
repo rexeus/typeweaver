@@ -5,9 +5,11 @@ import {
   HttpMethod,
 } from "@rexeus/typeweaver-core";
 import { accountSchema } from "./accountSchema";
-import { sharedResponses } from "../shared/sharedResponses";
-import { defaultResponseHeader } from "../shared/defaultResponseHeader";
-import { defaultRequestHeadersWithPayload } from "../shared/defaultRequestHeader";
+import { 
+  sharedResponses,
+  defaultResponseHeader,
+  defaultRequestHeadersWithPayload
+} from "../shared"; 
 
 export default new HttpOperationDefinition({
   operationId: "RegisterAccount",

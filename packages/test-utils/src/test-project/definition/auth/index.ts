@@ -1,2 +1,2 @@
-export * from "./AccessTokenDefinition";
-export * from "./RefreshTokenDefinition";
+export { default as AccessTokenDefinition } from "./AccessTokenDefinition";
+export { default as RefreshTokenDefinition } from "./RefreshTokenDefinition";

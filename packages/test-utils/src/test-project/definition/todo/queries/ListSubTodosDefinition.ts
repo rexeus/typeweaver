@@ -3,13 +3,15 @@ import {
   HttpOperationDefinition,
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
+import {
+  sharedResponses,
+  defaultResponseHeader,
+  defaultRequestHeadersWithoutPayload,
+  listResponseSchema,
+} from "../../shared";
 import { todoSchema } from "../todoSchema";
-import { sharedResponses } from "../../shared/sharedResponses";
 import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
 import { z } from "zod/v4";
-import { defaultResponseHeader } from "../../shared/defaultResponseHeader";
-import { defaultRequestHeadersWithoutPayload } from "../../shared/defaultRequestHeader";
-import { listResponseSchema } from "../../shared";
 
 const listSubTodosQuerySchema = z.object({
   limit: z.string().optional(),

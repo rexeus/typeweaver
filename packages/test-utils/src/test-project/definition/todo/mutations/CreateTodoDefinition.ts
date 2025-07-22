@@ -3,10 +3,12 @@ import {
   HttpOperationDefinition,
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
-import { todoSchema } from "../todoSchema";
-import { sharedResponses } from "../../shared/sharedResponses";
-import { defaultResponseHeader } from "../../shared/defaultResponseHeader";
-import { defaultRequestHeadersWithPayload } from "../../shared/defaultRequestHeader";
+import {
+  sharedResponses,
+  defaultResponseHeader,
+  defaultRequestHeadersWithPayload,
+} from "../../shared";
+import { todoSchema } from "../todoSchema"; 
 
 export default new HttpOperationDefinition({
   operationId: "CreateTodo",

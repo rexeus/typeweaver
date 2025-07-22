@@ -3,12 +3,12 @@ import {
   HttpOperationDefinition,
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
-import { sharedResponses } from "../shared/sharedResponses";
-import { z } from "zod/v4";
-import SpecimenNotFoundErrorDefinition from "./errors/SpecimenNotFoundErrorDefinition";
+import { sharedResponses } from "../shared";
 import { specimenSchema } from "./specimenSchema";
+import SpecimenNotFoundErrorDefinition from "./errors/SpecimenNotFoundErrorDefinition";
 import SpecimenConflictErrorDefinition from "./errors/SpecimenConflictErrorDefinition";
-import SpecimenUnprocessableEntityErrorDefinition from "./errors/SpecimenUnprocessableEntityErrorDefinition";
+import SpecimenUnprocessableEntityErrorDefinition from "./errors/SpecimenUnprocessableEntityErrorDefinition"; 
+import { z } from "zod/v4"; 
 
 export default new HttpOperationDefinition({
   operationId: "PutSpecimen",

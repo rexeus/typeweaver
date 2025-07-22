@@ -4,9 +4,11 @@ import {
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
 import { z } from "zod/v4";
-import { sharedResponses } from "../shared/sharedResponses";
-import { defaultResponseHeader } from "../shared/defaultResponseHeader";
-import { defaultRequestHeadersWithPayload } from "../shared/defaultRequestHeader";
+import { 
+  sharedResponses,
+  defaultResponseHeader,
+  defaultRequestHeadersWithPayload
+} from "../shared"; 
 
 export default new HttpOperationDefinition({
   operationId: "RefreshToken",
