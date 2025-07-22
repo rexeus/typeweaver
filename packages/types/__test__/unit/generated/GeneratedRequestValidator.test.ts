@@ -47,6 +47,28 @@ describe("GeneratedRequestValidator", () => {
       expect(result.error.hasIssues()).toBe(true);
       expect(result.error.bodyIssues).toHaveLength(1);
     });
+
+    test("should strip additional fields from request body", () => {
+      // Arrange
+      const validator = new CreateTodoRequestValidator();
+      const requestWithExtraFields = createTodoRequest({
+        body: {
+          title: "Valid title",
+          description: "Valid description", 
+          extraField: "should be stripped",
+          anotherExtraField: 123,
+        } as any,
+      });
+
+      // Act
+      const result = validator.safeValidate(requestWithExtraFields);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.body).not.toHaveProperty("extraField");
+      expect(result.data.body).not.toHaveProperty("anotherExtraField");
+    });
   });
 
   describe("Header Validation", () => {
@@ -81,6 +103,27 @@ describe("GeneratedRequestValidator", () => {
       assert(!result.isValid);
       expect(result.error.hasIssues()).toBe(true);
       expect(result.error.headerIssues).toHaveLength(1);
+    });
+
+    test("should strip additional fields from request headers", () => {
+      // Arrange
+      const validator = new CreateTodoRequestValidator();
+      const requestWithExtraHeaders = createTodoRequest({
+        header: {
+          Accept: "application/json",
+          "Extra-Header": "should be stripped",
+          "Another-Extra": "also stripped",
+        } as any,
+      });
+
+      // Act
+      const result = validator.safeValidate(requestWithExtraHeaders);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.header).not.toHaveProperty("Extra-Header");
+      expect(result.data.header).not.toHaveProperty("Another-Extra");
     });
   });
 
@@ -117,6 +160,27 @@ describe("GeneratedRequestValidator", () => {
       expect(result.error.hasIssues()).toBe(true);
       expect(result.error.pathParamIssues).toHaveLength(1);
     });
+
+    test("should strip additional fields from path parameters", () => {
+      // Arrange
+      const validator = new GetTodoRequestValidator();
+      const requestWithExtraParams = createGetTodoRequest({
+        param: {
+          todoId: "01234567890ABCDEFGHIJKLMNOP",
+          extraPathParam: "should be stripped",
+          anotherPathParam: 789,
+        } as any,
+      });
+
+      // Act
+      const result = validator.safeValidate(requestWithExtraParams);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.param).not.toHaveProperty("extraPathParam");
+      expect(result.data.param).not.toHaveProperty("anotherPathParam");
+    });
   });
 
   describe("Query Parameter Validation", () => {
@@ -151,6 +215,27 @@ describe("GeneratedRequestValidator", () => {
       assert(!result.isValid);
       expect(result.error.hasIssues()).toBe(true);
       expect(result.error.queryIssues).toHaveLength(1);
+    });
+
+    test("should strip additional fields from query parameters", () => {
+      // Arrange
+      const validator = new ListTodosRequestValidator();
+      const requestWithExtraQuery = createListTodosRequest({
+        query: {
+          status: "TODO",
+          extraParam: "should be stripped",
+          anotherParam: 456,
+        } as any,
+      });
+
+      // Act
+      const result = validator.safeValidate(requestWithExtraQuery);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.query).not.toHaveProperty("extraParam");
+      expect(result.data.query).not.toHaveProperty("anotherParam");
     });
   });
 
@@ -207,6 +292,40 @@ describe("GeneratedRequestValidator", () => {
       expect(result.error.pathParamIssues).toHaveLength(1);
       expect(result.error.queryIssues).toHaveLength(1);
       expect(result.error.bodyIssues).toHaveLength(1);
+    });
+
+    test("should strip additional fields from all request components", () => {
+      // Arrange
+      const validator = new QuerySubTodoRequestValidator();
+      const requestWithExtraFieldsEverywhere = createQuerySubTodoRequest({
+        header: {
+          Accept: "application/json",
+          "Extra-Header": "stripped",
+        } as any,
+        param: {
+          todoId: "01234567890ABCDEFGHIJKLMNOP",
+          extraParam: "stripped",
+        } as any,
+        query: {
+          sortBy: "createdAt",
+          extraQuery: "stripped",
+        } as any,
+        body: {
+          status: "TODO",
+          extraBody: "stripped",
+        } as any,
+      });
+
+      // Act
+      const result = validator.safeValidate(requestWithExtraFieldsEverywhere);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.header).not.toHaveProperty("Extra-Header");
+      expect(result.data.param).not.toHaveProperty("extraParam");  
+      expect(result.data.query).not.toHaveProperty("extraQuery");
+      expect(result.data.body).not.toHaveProperty("extraBody");
     });
   });
 
