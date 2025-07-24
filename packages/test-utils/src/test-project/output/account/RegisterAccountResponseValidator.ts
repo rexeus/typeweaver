@@ -64,7 +64,7 @@ export class RegisterAccountResponseValidator extends ResponseValidator {
 
     let data: RegisterAccountResponse;
     switch (response.statusCode) {
-      case 200: {
+      case 201: {
         if (validationResult.validResponseName === "RegisterAccountSuccess") {
           data = new RegisterAccountSuccessResponse(
             validationResult.validatedResponse as unknown as IRegisterAccountSuccessResponse,
@@ -72,7 +72,7 @@ export class RegisterAccountResponseValidator extends ResponseValidator {
           break;
         }
 
-        throw new Error("Could not find a response for status code '200'");
+        throw new Error("Could not find a response for status code '201'");
       }
 
       case 403: {
@@ -174,7 +174,7 @@ export class RegisterAccountResponseValidator extends ResponseValidator {
       body: undefined,
     };
 
-    if (response.statusCode === 200) {
+    if (response.statusCode === 201) {
       const isRegisterAccountSuccessResponse =
         this.validateRegisterAccountSuccessResponse(
           response,

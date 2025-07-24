@@ -1,11 +1,34 @@
+import { HttpMethod } from "@rexeus/typeweaver-core";
+import type { IHttpRequest } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createData } from "./createData";
+import { createData } from "../createData";
 import type {
   IPutSpecimenRequestBody,
-  IPutSpecimenSuccessResponseBody,
-} from "..";
+  IPutSpecimenRequestHeader,
+  IPutSpecimenRequestParam,
+  IPutSpecimenRequestQuery,
+} from "../..";
 
-export function createSpecimenInput(
+export function createPutSpecimenRequestHeaders(
+  input: Partial<IPutSpecimenRequestHeader> = {}
+): IPutSpecimenRequestHeader {
+  const defaults: IPutSpecimenRequestHeader = {
+    "X-Foo": faker.lorem.word(),
+    "X-Bar": faker.lorem.word(),
+    "X-Baz": "baz",
+    "X-Qux": faker.helpers.arrayElement(["qux1", "qux2"]),
+    "X-Quux": [faker.lorem.word(), faker.lorem.word()],
+    "X-UUID": faker.string.uuid(),
+    "X-JWT": faker.string.alphanumeric(20),
+    "X-URL": faker.internet.url(),
+    "X-Email": faker.internet.email(),
+    "X-Slugs": [faker.lorem.slug(), faker.lorem.slug()],
+  };
+
+  return createData(defaults, input);
+}
+
+export function createPutSpecimenRequestBody(
   input: Partial<IPutSpecimenRequestBody> = {}
 ): IPutSpecimenRequestBody {
   const createdAt = faker.date.past().toISOString();
@@ -14,7 +37,6 @@ export function createSpecimenInput(
   const modifiedBy = faker.internet.username();
 
   const defaults: IPutSpecimenRequestBody = {
-    // Basic types
     stringField: faker.lorem.word(),
     numberField: faker.number.int({ min: 1, max: 1000 }),
     booleanField: faker.datatype.boolean(),
@@ -28,7 +50,6 @@ export function createSpecimenInput(
     symbolField: Symbol(faker.lorem.word()),
     nanField: NaN,
 
-    // Special strings
     emailField: faker.internet.email(),
     uuidv4Field: faker.string.uuid(),
     ulidField: faker.string.alphanumeric(26),
@@ -54,12 +75,10 @@ export function createSpecimenInput(
     isoDurationField: "PT1H30M",
     isoTimeField: "14:30:00",
 
-    // Literal & Enum types
     literalField: "test",
     enumField: faker.helpers.arrayElement(["ACTIVE", "INACTIVE", "PENDING"]),
     templateLiteralField: `This is the current status ${faker.lorem.word()} is ${faker.helpers.arrayElement(["active", "inactive"])}`,
 
-    // Collection types
     arrayField: [faker.lorem.word(), faker.lorem.word(), faker.lorem.word()],
     tupleField: [
       faker.lorem.word(),
@@ -76,7 +95,6 @@ export function createSpecimenInput(
       [faker.lorem.word()]: faker.number.int(),
     },
 
-    // Object & Nesting
     objectField: {
       name: faker.person.fullName(),
       value: faker.number.int(),
@@ -87,13 +105,11 @@ export function createSpecimenInput(
       },
     },
 
-    // Modifier types
     optionalField: faker.lorem.word(),
     nullableField: faker.datatype.boolean() ? faker.lorem.word() : null,
     readonlyField: faker.lorem.word(),
     nonOptionalField: faker.lorem.word(),
 
-    // Advanced types
     unionField: faker.helpers.arrayElement([
       faker.lorem.word(),
       faker.number.int(),
@@ -102,7 +118,7 @@ export function createSpecimenInput(
       a: faker.lorem.word(),
       b: faker.number.int(),
     },
-    transformField: faker.lorem.word().toUpperCase(), // Will be transformed to lowercase
+    transformField: faker.lorem.word().toUpperCase(),
     defaultField: faker.lorem.word(),
     catchField: faker.lorem.word(),
     pipeField: faker.lorem.word(),
@@ -111,7 +127,6 @@ export function createSpecimenInput(
     fileField: new File(["content"], "test.txt", { type: "text/plain" }),
     customField: faker.lorem.word(),
 
-    // Metadata fields (required by generated type)
     createdAt,
     modifiedAt,
     createdBy,
@@ -121,24 +136,68 @@ export function createSpecimenInput(
   return createData(defaults, input);
 }
 
-export function createSpecimenOutput(
-  input: Partial<IPutSpecimenSuccessResponseBody> = {}
-): IPutSpecimenSuccessResponseBody {
-  const createdAt = faker.date.past().toISOString();
-  const modifiedAt = faker.date.recent().toISOString();
-  const createdBy = faker.internet.username();
-  const modifiedBy = faker.internet.username();
-
-  const defaults: IPutSpecimenSuccessResponseBody = {
-    // Use the specimen schema structure from the generated types
-    ...createSpecimenInput(),
-
-    // Metadata fields (if they exist in the generated schema)
-    createdAt,
-    modifiedAt,
-    createdBy,
-    modifiedBy,
+export function createPutSpecimenRequestParams(
+  input: Partial<IPutSpecimenRequestParam> = {}
+): IPutSpecimenRequestParam {
+  const defaults: IPutSpecimenRequestParam = {
+    specimenId: faker.string.fromCharacters("0123456789ABCDEFGHJKMNPQRSTVWXYZ", 26),
+    foo: faker.helpers.arrayElement(["foo1", "foo2"]),
+    bar: "bar",
+    uuid: faker.string.uuid(),
+    slug: faker.lorem.slug(),
   };
 
   return createData(defaults, input);
+}
+
+export function createPutSpecimenRequestQuery(
+  input: Partial<IPutSpecimenRequestQuery> = {}
+): IPutSpecimenRequestQuery {
+  const defaults: IPutSpecimenRequestQuery = {
+    foo: faker.lorem.word(),
+    bar: faker.lorem.word(),
+    baz: "baz",
+    qux: faker.helpers.arrayElement(["qux1", "qux2"]),
+    quux: [faker.lorem.word(), faker.lorem.word()],
+    email: faker.internet.email(),
+    numbers: [faker.number.int().toString(), faker.number.int().toString()],
+    ulid: faker.string.fromCharacters("0123456789ABCDEFGHJKMNPQRSTVWXYZ", 26),
+    urls: [faker.internet.url(), faker.internet.url()],
+  };
+
+  return createData(defaults, input);
+}
+
+type PutSpecimenRequestInput = {
+  method?: HttpMethod;
+  path?: string;
+  header?: Partial<IPutSpecimenRequestHeader>;
+  param?: Partial<IPutSpecimenRequestParam>;
+  query?: Partial<IPutSpecimenRequestQuery>;
+  body?: Partial<IPutSpecimenRequestBody>;
+};
+
+export function createPutSpecimenRequest(
+  input: PutSpecimenRequestInput = {}
+): IHttpRequest {
+  const param = input.param ? createPutSpecimenRequestParams(input.param) : createPutSpecimenRequestParams();
+  
+  const defaults: IHttpRequest = {
+    method: HttpMethod.PUT,
+    path: `/specimens/${param.specimenId}`,
+    header: createPutSpecimenRequestHeaders(),
+    param,
+    query: createPutSpecimenRequestQuery(),
+    body: createPutSpecimenRequestBody(),
+  };
+
+  const overrides: Partial<IHttpRequest> = {};
+  if (input.method !== undefined) overrides.method = input.method;
+  if (input.path !== undefined) overrides.path = input.path;
+  if (input.header !== undefined) overrides.header = createPutSpecimenRequestHeaders(input.header);
+  if (input.param !== undefined) overrides.param = createPutSpecimenRequestParams(input.param);
+  if (input.query !== undefined) overrides.query = createPutSpecimenRequestQuery(input.query);
+  if (input.body !== undefined) overrides.body = createPutSpecimenRequestBody(input.body);
+
+  return createData(defaults, overrides);
 }

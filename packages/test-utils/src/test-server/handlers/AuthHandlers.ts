@@ -1,4 +1,4 @@
-import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+import { HttpResponse } from "@rexeus/typeweaver-core";
 import {
   AccessTokenSuccessResponse,
   RefreshTokenSuccessResponse,
@@ -7,8 +7,9 @@ import {
   type AccessTokenResponse,
   type IRefreshTokenRequest,
   type RefreshTokenResponse,
+  createAccessTokenSuccessResponse,
+  createRefreshTokenSuccessResponse,
 } from "../..";
-import { faker } from "@faker-js/faker";
 
 export class AuthHandlers implements AuthApiHandler {
   public constructor(private readonly throwError?: Error | HttpResponse) {
@@ -16,46 +17,24 @@ export class AuthHandlers implements AuthApiHandler {
   }
 
   public async handleAccessTokenRequest(
-    request: IAccessTokenRequest
+    _request: IAccessTokenRequest
   ): Promise<AccessTokenResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
 
-    const accessToken = faker.string.alphanumeric(64);
-    const refreshToken = faker.string.alphanumeric(64);
-
-    return new AccessTokenSuccessResponse({
-      statusCode: HttpStatusCode.OK,
-      header: {
-        "Content-Type": "application/json",
-      },
-      body: {
-        accessToken,
-        refreshToken,
-      },
-    });
+    const response = createAccessTokenSuccessResponse();
+    return new AccessTokenSuccessResponse(response);
   }
 
   public async handleRefreshTokenRequest(
-    request: IRefreshTokenRequest
+    _request: IRefreshTokenRequest
   ): Promise<RefreshTokenResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
 
-    const accessToken = faker.string.alphanumeric(64);
-    const refreshToken = faker.string.alphanumeric(64);
-
-    return new RefreshTokenSuccessResponse({
-      statusCode: HttpStatusCode.OK,
-      header: {
-        "Content-Type": "application/json",
-      },
-      body: {
-        accessToken,
-        refreshToken,
-      },
-    });
+    const response = createRefreshTokenSuccessResponse();
+    return new RefreshTokenSuccessResponse(response);
   }
 }

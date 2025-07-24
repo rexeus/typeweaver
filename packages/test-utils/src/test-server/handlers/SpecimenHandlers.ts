@@ -1,10 +1,10 @@
-import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createSpecimenOutput, createSpecimenResponseHeaders } from "../..";
+import { HttpResponse } from "@rexeus/typeweaver-core";
 import {
   PutSpecimenSuccessResponse,
   type SpecimenApiHandler,
   type IPutSpecimenRequest,
   type PutSpecimenResponse,
+  createPutSpecimenSuccessResponse,
 } from "../..";
 
 export class SpecimenHandlers implements SpecimenApiHandler {
@@ -19,14 +19,10 @@ export class SpecimenHandlers implements SpecimenApiHandler {
       throw this.throwError;
     }
 
-    const modifiedAt = new Date().toISOString();
-    return new PutSpecimenSuccessResponse({
-      statusCode: HttpStatusCode.OK,
-      header: createSpecimenResponseHeaders(),
-      body: createSpecimenOutput({
-        ...request.body,
-        modifiedAt,
-      }),
+    const response = createPutSpecimenSuccessResponse({
+      body: request.body,
     });
+
+    return new PutSpecimenSuccessResponse(response);
   }
 }

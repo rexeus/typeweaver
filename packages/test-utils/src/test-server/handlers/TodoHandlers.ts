@@ -1,4 +1,4 @@
-import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+import { HttpResponse } from "@rexeus/typeweaver-core";
 import {
   CreateTodoSuccessResponse,
   DeleteTodoSuccessResponse,
@@ -37,9 +37,18 @@ import {
   type QuerySubTodoResponse,
   type IQueryTodoRequest,
   type QueryTodoResponse,
+  createCreateTodoSuccessResponse,
+  createDeleteTodoSuccessResponse,
+  createUpdateTodoSuccessResponse,
+  createUpdateTodoStatusSuccessResponse,
+  createGetTodoSuccessResponse,
+  createListTodosSuccessResponse,
+  createCreateSubTodoSuccessResponse,
+  createDeleteSubTodoSuccessResponse,
+  createUpdateSubTodoSuccessResponse,
+  createListSubTodosSuccessResponse,
+  createQuerySubTodoSuccessResponse,
 } from "../..";
-import { faker } from "@faker-js/faker";
-import { createTodoOutput } from "../..";
 
 export class TodoHandlers implements TodoApiHandler {
   public constructor(private readonly throwError?: Error | HttpResponse) {
@@ -53,20 +62,14 @@ export class TodoHandlers implements TodoApiHandler {
       throw this.throwError;
     }
 
-    return new CreateTodoSuccessResponse({
-      statusCode: HttpStatusCode.CREATED,
-      header: {
-        "Content-Type": "application/json",
-      },
-      body: createTodoOutput({
-        title: request.body.title,
-        description: request.body.description,
+    const response = createCreateTodoSuccessResponse({
+      body: {
+        ...request.body,
         status: "TODO",
-        dueDate: request.body.dueDate,
-        tags: request.body.tags,
-        priority: request.body.priority,
-      }),
+      },
     });
+
+    return new CreateTodoSuccessResponse(response);
   }
 
   public async handleDeleteTodoRequest(
@@ -76,12 +79,8 @@ export class TodoHandlers implements TodoApiHandler {
       throw this.throwError;
     }
 
-    return new DeleteTodoSuccessResponse({
-      statusCode: HttpStatusCode.NO_CONTENT,
-      header: {
-        "Content-Type": "application/json",
-      },
-    });
+    const response = createDeleteTodoSuccessResponse();
+    return new DeleteTodoSuccessResponse(response);
   }
 
   public async handleUpdateTodoRequest(
@@ -93,20 +92,14 @@ export class TodoHandlers implements TodoApiHandler {
 
     const { todoId } = request.param;
 
-    return new UpdateTodoSuccessResponse({
-      statusCode: HttpStatusCode.OK,
-      header: {
-        "Content-Type": "application/json",
-      },
-      body: createTodoOutput({
+    const response = createUpdateTodoSuccessResponse({
+      body: {
+        ...request.body,
         id: todoId,
-        title: request.body.title,
-        description: request.body.description,
-        dueDate: request.body.dueDate,
-        tags: request.body.tags,
-        priority: request.body.priority,
-      }),
+      },
     });
+
+    return new UpdateTodoSuccessResponse(response);
   }
 
   public async handleUpdateTodoStatusRequest(
@@ -118,16 +111,14 @@ export class TodoHandlers implements TodoApiHandler {
 
     const { todoId } = request.param;
 
-    return new UpdateTodoStatusSuccessResponse({
-      statusCode: HttpStatusCode.OK,
-      header: {
-        "Content-Type": "application/json",
-      },
-      body: createTodoOutput({
+    const response = createUpdateTodoStatusSuccessResponse({
+      body: {
         id: todoId,
         status: request.body.value,
-      }),
+      },
     });
+
+    return new UpdateTodoStatusSuccessResponse(response);
   }
 
   public async handleGetTodoRequest(
@@ -139,13 +130,11 @@ export class TodoHandlers implements TodoApiHandler {
 
     const { todoId } = request.param;
 
-    return new GetTodoSuccessResponse({
-      statusCode: HttpStatusCode.OK,
-      header: {
-        "Content-Type": "application/json",
-      },
-      body: createTodoOutput({ id: todoId }),
+    const response = createGetTodoSuccessResponse({
+      body: { id: todoId },
     });
+
+    return new GetTodoSuccessResponse(response);
   }
 
   public async handleListTodosRequest(
@@ -155,18 +144,8 @@ export class TodoHandlers implements TodoApiHandler {
       throw this.throwError;
     }
 
-    const results = Array.from({ length: 10 }, () => createTodoOutput());
-
-    return new ListTodosSuccessResponse({
-      statusCode: HttpStatusCode.OK,
-      header: {
-        "Content-Type": "application/json",
-      },
-      body: {
-        results,
-        nextToken: faker.string.alphanumeric(20),
-      },
-    });
+    const response = createListTodosSuccessResponse();
+    return new ListTodosSuccessResponse(response);
   }
 
   public async handleCreateSubTodoRequest(
@@ -178,21 +157,14 @@ export class TodoHandlers implements TodoApiHandler {
 
     const { todoId } = request.param;
 
-    return new CreateSubTodoSuccessResponse({
-      statusCode: HttpStatusCode.CREATED,
-      header: {
-        "Content-Type": "application/json",
-      },
-      body: createTodoOutput({
+    const response = createCreateSubTodoSuccessResponse({
+      body: {
+        ...request.body,
         parentId: todoId,
-        title: request.body.title,
-        description: request.body.description,
-        status: "TODO",
-        dueDate: request.body.dueDate,
-        tags: request.body.tags,
-        priority: request.body.priority,
-      }),
+      },
     });
+
+    return new CreateSubTodoSuccessResponse(response);
   }
 
   public async handleDeleteSubTodoRequest(
@@ -202,15 +174,9 @@ export class TodoHandlers implements TodoApiHandler {
       throw this.throwError;
     }
 
-    return new DeleteSubTodoSuccessResponse({
-      statusCode: HttpStatusCode.OK,
-      header: {
-        "Content-Type": "application/json",
-      },
-      body: {
-        message: "SubTodo deleted successfully",
-      },
-    });
+    const response = createDeleteSubTodoSuccessResponse();
+
+    return new DeleteSubTodoSuccessResponse(response);
   }
 
   public async handleUpdateSubTodoRequest(
@@ -222,90 +188,47 @@ export class TodoHandlers implements TodoApiHandler {
 
     const { todoId, subtodoId } = request.param;
 
-    return new UpdateSubTodoSuccessResponse({
-      statusCode: HttpStatusCode.OK,
-      header: {
-        "Content-Type": "application/json",
-      },
-      body: createTodoOutput({
+    const response = createUpdateSubTodoSuccessResponse({
+      body: {
+        ...request.body,
         id: subtodoId,
         parentId: todoId,
-        title: request.body.title,
-        description: request.body.description,
-        status: request.body.status,
-        dueDate: request.body.dueDate,
-        tags: request.body.tags,
-        priority: request.body.priority,
-      }),
+      },
     });
+
+    return new UpdateSubTodoSuccessResponse(response);
   }
 
   public async handleListSubTodosRequest(
-    request: IListSubTodosRequest
+    _request: IListSubTodosRequest
   ): Promise<ListSubTodosResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
 
-    const { todoId } = request.param;
-    const items = Array.from({ length: 5 }, () =>
-      createTodoOutput({ parentId: todoId })
-    );
-
-    return new ListSubTodosSuccessResponse({
-      statusCode: HttpStatusCode.OK,
-      header: {
-        "Content-Type": "application/json",
-      },
-      body: {
-        results: items,
-        nextToken: faker.string.alphanumeric(20),
-      },
-    });
+    const response = createListSubTodosSuccessResponse();
+    return new ListSubTodosSuccessResponse(response);
   }
 
   public async handleQuerySubTodoRequest(
-    request: IQuerySubTodoRequest
+    _request: IQuerySubTodoRequest
   ): Promise<QuerySubTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
 
-    const { todoId } = request.param;
-    const items = Array.from({ length: 3 }, () =>
-      createTodoOutput({ parentId: todoId })
-    );
-
-    return new QuerySubTodoSuccessResponse({
-      statusCode: HttpStatusCode.OK,
-      header: {
-        "Content-Type": "application/json",
-      },
-      body: {
-        results: items,
-        nextToken: faker.string.alphanumeric(20),
-      },
-    });
+    const response = createQuerySubTodoSuccessResponse();
+    return new QuerySubTodoSuccessResponse(response);
   }
 
   public async handleQueryTodoRequest(
-    request: IQueryTodoRequest
+    _request: IQueryTodoRequest
   ): Promise<QueryTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
 
-    const items = Array.from({ length: 8 }, () => createTodoOutput());
-
-    return new QueryTodoSuccessResponse({
-      statusCode: HttpStatusCode.OK,
-      header: {
-        "Content-Type": "application/json",
-      },
-      body: {
-        results: items,
-        nextToken: faker.string.alphanumeric(20),
-      },
-    });
+    const response = createListTodosSuccessResponse();
+    return new QueryTodoSuccessResponse(response);
   }
 }

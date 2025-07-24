@@ -1,7 +1,7 @@
 import { describe, test, expect } from "vitest";
 import { RequestValidationError } from "@rexeus/typeweaver-core";
 import {
-  createTodoRequest,
+  createCreateTodoRequest,
   createGetTodoRequest,
   createListTodosRequest,
   createQuerySubTodoRequest,
@@ -18,7 +18,7 @@ describe("GeneratedRequestValidator", () => {
     test("should validate correct body schema", () => {
       // Arrange
       const validator = new CreateTodoRequestValidator();
-      const validRequest = createTodoRequest();
+      const validRequest = createCreateTodoRequest();
 
       // Act
       const result = validator.safeValidate(validRequest);
@@ -32,7 +32,7 @@ describe("GeneratedRequestValidator", () => {
     test("should reject invalid body schema", () => {
       // Arrange
       const validator = new CreateTodoRequestValidator();
-      const invalidRequest = createTodoRequest({
+      const invalidRequest = createCreateTodoRequest({
         body: {
           title: 123 as any, // Should be a string
         },
@@ -51,10 +51,10 @@ describe("GeneratedRequestValidator", () => {
     test("should strip additional fields from request body", () => {
       // Arrange
       const validator = new CreateTodoRequestValidator();
-      const requestWithExtraFields = createTodoRequest({
+      const requestWithExtraFields = createCreateTodoRequest({
         body: {
           title: "Valid title",
-          description: "Valid description", 
+          description: "Valid description",
           extraField: "should be stripped",
           anotherExtraField: 123,
         } as any,
@@ -75,7 +75,7 @@ describe("GeneratedRequestValidator", () => {
     test("should validate correct headers", () => {
       // Arrange
       const validator = new CreateTodoRequestValidator();
-      const validRequest = createTodoRequest();
+      const validRequest = createCreateTodoRequest();
 
       // Act
       const result = validator.safeValidate(validRequest);
@@ -89,7 +89,7 @@ describe("GeneratedRequestValidator", () => {
     test("should reject invalid headers", () => {
       // Arrange
       const validator = new CreateTodoRequestValidator();
-      const invalidRequest = createTodoRequest({
+      const invalidRequest = createCreateTodoRequest({
         header: {
           Accept: "invalid/accept-type" as any, // Invalid Accept header
         },
@@ -108,7 +108,7 @@ describe("GeneratedRequestValidator", () => {
     test("should strip additional fields from request headers", () => {
       // Arrange
       const validator = new CreateTodoRequestValidator();
-      const requestWithExtraHeaders = createTodoRequest({
+      const requestWithExtraHeaders = createCreateTodoRequest({
         header: {
           Accept: "application/json",
           "Extra-Header": "should be stripped",
@@ -166,7 +166,7 @@ describe("GeneratedRequestValidator", () => {
       const validator = new GetTodoRequestValidator();
       const requestWithExtraParams = createGetTodoRequest({
         param: {
-          todoId: "01234567890ABCDEFGHIJKLMNOP",
+          todoId: "01K0W0Y49HZVW1QTN6RZJJY203",
           extraPathParam: "should be stripped",
           anotherPathParam: 789,
         } as any,
@@ -243,7 +243,7 @@ describe("GeneratedRequestValidator", () => {
     test("should accumulate multiple validation errors", () => {
       // Arrange
       const validator = new CreateTodoRequestValidator();
-      const invalidRequest = createTodoRequest({
+      const invalidRequest = createCreateTodoRequest({
         body: {
           title: 123 as any, // Invalid body
         },
@@ -303,7 +303,7 @@ describe("GeneratedRequestValidator", () => {
           "Extra-Header": "stripped",
         } as any,
         param: {
-          todoId: "01234567890ABCDEFGHIJKLMNOP",
+          todoId: "01K0W0ZJA0DQE5D3CB5MP2FGKT",
           extraParam: "stripped",
         } as any,
         query: {
@@ -323,7 +323,7 @@ describe("GeneratedRequestValidator", () => {
       expect(result.isValid).toBe(true);
       assert(result.isValid);
       expect(result.data.header).not.toHaveProperty("Extra-Header");
-      expect(result.data.param).not.toHaveProperty("extraParam");  
+      expect(result.data.param).not.toHaveProperty("extraParam");
       expect(result.data.query).not.toHaveProperty("extraQuery");
       expect(result.data.body).not.toHaveProperty("extraBody");
     });
@@ -333,7 +333,7 @@ describe("GeneratedRequestValidator", () => {
     test("both methods should return consistent results on success", () => {
       // Arrange
       const validator = new CreateTodoRequestValidator();
-      const validRequest = createTodoRequest();
+      const validRequest = createCreateTodoRequest();
 
       // Act
       const safeResult = validator.safeValidate(validRequest);
@@ -348,7 +348,7 @@ describe("GeneratedRequestValidator", () => {
     test("both methods should return consistent results on failure", () => {
       // Arrange
       const validator = new CreateTodoRequestValidator();
-      const invalidRequest = createTodoRequest({
+      const invalidRequest = createCreateTodoRequest({
         body: {
           title: 123 as any,
         },

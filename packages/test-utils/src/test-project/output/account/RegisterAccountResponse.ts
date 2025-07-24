@@ -44,7 +44,7 @@ export type IRegisterAccountSuccessResponseBody = {
 };
 
 export type IRegisterAccountSuccessResponse = {
-  statusCode: HttpStatusCode.OK;
+  statusCode: HttpStatusCode.CREATED;
   header: IRegisterAccountSuccessResponseHeader;
   body: IRegisterAccountSuccessResponseBody;
 };
@@ -56,12 +56,12 @@ export class RegisterAccountSuccessResponse
   >
   implements IRegisterAccountSuccessResponse
 {
-  public override readonly statusCode: HttpStatusCode.OK;
+  public override readonly statusCode: HttpStatusCode.CREATED;
 
   public constructor(response: IRegisterAccountSuccessResponse) {
     super(response.statusCode, response.header, response.body);
 
-    if (response.statusCode !== HttpStatusCode.OK) {
+    if (response.statusCode !== HttpStatusCode.CREATED) {
       throw new Error(
         `Invalid status code: '${response.statusCode}' for RegisterAccountSuccessResponse`,
       );

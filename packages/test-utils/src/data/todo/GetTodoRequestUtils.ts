@@ -1,18 +1,19 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import type { IHttpRequest } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createData } from "./createData";
+import { createData } from "../createData";
+import { createJwtToken } from "../createJwtToken";
 import type {
   IGetTodoRequestHeader,
   IGetTodoRequestParam,
-} from "..";
+} from "../..";
 
 export function createGetTodoRequestHeaders(
   input: Partial<IGetTodoRequestHeader> = {}
 ): IGetTodoRequestHeader {
   const defaults: IGetTodoRequestHeader = {
     "Accept": "application/json",
-    "Authorization": `Bearer ${faker.string.alphanumeric(20)}`,
+    "Authorization": `Bearer ${createJwtToken()}`,
   };
 
   return createData(defaults, input);
@@ -22,7 +23,7 @@ export function createGetTodoRequestParams(
   input: Partial<IGetTodoRequestParam> = {}
 ): IGetTodoRequestParam {
   const defaults: IGetTodoRequestParam = {
-    todoId: faker.string.fromCharacters("0123456789ABCDEFGHJKMNPQRSTVWXYZ", 26),
+    todoId: faker.string.ulid(),
   };
 
   return createData(defaults, input);

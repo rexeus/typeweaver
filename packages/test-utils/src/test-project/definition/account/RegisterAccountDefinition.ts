@@ -5,11 +5,11 @@ import {
   HttpMethod,
 } from "@rexeus/typeweaver-core";
 import { accountSchema } from "./accountSchema";
-import { 
+import {
   sharedResponses,
   defaultResponseHeader,
-  defaultRequestHeadersWithPayload
-} from "../shared"; 
+  defaultRequestHeadersWithPayload,
+} from "../shared";
 
 export default new HttpOperationDefinition({
   operationId: "RegisterAccount",
@@ -27,7 +27,7 @@ export default new HttpOperationDefinition({
   },
   responses: [
     {
-      statusCode: HttpStatusCode.OK,
+      statusCode: HttpStatusCode.CREATED,
       description: "Account created successfully",
       body: accountSchema,
       name: "RegisterAccountSuccess",
