@@ -209,7 +209,8 @@ export abstract class TypeweaverHono<
       },
     };
 
-    this.registerErrorHandler();
+    // FIXME: on error handler is not catching errors from handlers, only validation errors
+    // this.registerErrorHandler();
   }
 
   /**
@@ -233,37 +234,42 @@ export abstract class TypeweaverHono<
    * Processes errors in order: validation, HTTP response, unknown.
    */
   protected registerErrorHandler(): void {
-    this.onError(async (error, context) => {
-      // Handle validation errors
-      if (
-        error instanceof RequestValidationError &&
-        this.config.errorHandlers.validation
-      ) {
-        return this.adapter.toResponse(
-          await this.config.errorHandlers.validation(error, context),
-        );
-      }
+    this.onError(this.handleError.bind(this));
+  }
 
-      // Handle HTTP response errors
-      if (
-        error instanceof HttpResponse &&
-        this.config.errorHandlers.httpResponse
-      ) {
-        return this.adapter.toResponse(
-          await this.config.errorHandlers.httpResponse(error, context),
-        );
-      }
+  protected async handleError(
+    error: unknown,
+    context: Context,
+  ): Promise<Response> {
+    // Handle validation errors
+    if (
+      error instanceof RequestValidationError &&
+      this.config.errorHandlers.validation
+    ) {
+      return this.adapter.toResponse(
+        await this.config.errorHandlers.validation(error, context),
+      );
+    }
 
-      // Handle unknown errors
-      if (this.config.errorHandlers.unknown) {
-        return this.adapter.toResponse(
-          await this.config.errorHandlers.unknown(error, context),
-        );
-      }
+    // Handle HTTP response errors
+    if (
+      error instanceof HttpResponse &&
+      this.config.errorHandlers.httpResponse
+    ) {
+      return this.adapter.toResponse(
+        await this.config.errorHandlers.httpResponse(error, context),
+      );
+    }
 
-      // Default: re-throw
-      throw error;
-    });
+    // Handle unknown errors
+    if (this.config.errorHandlers.unknown) {
+      return this.adapter.toResponse(
+        await this.config.errorHandlers.unknown(error, context),
+      );
+    }
+
+    // Default: re-throw
+    throw error;
   }
 
   /**
@@ -282,14 +288,18 @@ export abstract class TypeweaverHono<
     validator: IRequestValidator,
     handler: HonoRequestHandler<TRequest, TResponse>,
   ): Promise<Response> {
-    const httpRequest = await this.adapter.toRequest(context);
+    try {
+      const httpRequest = await this.adapter.toRequest(context);
 
-    // Conditionally validate
-    const validatedRequest = this.config.validateRequests
-      ? (validator.validate(httpRequest) as TRequest)
-      : (httpRequest as TRequest);
+      // Conditionally validate
+      const validatedRequest = this.config.validateRequests
+        ? (validator.validate(httpRequest) as TRequest)
+        : (httpRequest as TRequest);
 
-    const httpResponse = await handler(validatedRequest, context);
-    return this.adapter.toResponse(httpResponse);
+      const httpResponse = await handler(validatedRequest, context);
+      return this.adapter.toResponse(httpResponse);
+    } catch (error) {
+      return this.handleError(error, context);
+    }
   }
 }

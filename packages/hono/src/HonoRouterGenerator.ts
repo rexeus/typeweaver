@@ -1,4 +1,8 @@
-import { type GeneratorContext, type OperationResource } from "@rexeus/typeweaver-gen";
+import { HttpMethod } from "@rexeus/typeweaver-core";
+import {
+  type GeneratorContext,
+  type OperationResource,
+} from "@rexeus/typeweaver-gen";
 import Case from "case";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,7 +15,12 @@ export class HonoRouterGenerator {
     for (const [entityName, entityResource] of Object.entries(
       context.resources.entityResources
     )) {
-      this.writeHonoRouter(entityName, templateFile, entityResource.operations, context);
+      this.writeHonoRouter(
+        entityName,
+        templateFile,
+        entityResource.operations,
+        context
+      );
     }
   }
 
@@ -25,7 +34,10 @@ export class HonoRouterGenerator {
     const outputDir = path.join(context.outputDir, entityName);
     const outputPath = path.join(outputDir, `${pascalCaseEntityName}Hono.ts`);
 
-    const operations = operationResources.map((resource) => this.createOperationData(resource));
+    const operations = operationResources
+      // Hono handles HEAD requests automatically, so we skip them
+      .filter(resource => resource.definition.method !== HttpMethod.HEAD)
+      .map(resource => this.createOperationData(resource));
 
     const content = context.renderTemplate(templateFile, {
       coreDir: path.relative(outputDir, context.outputDir),
