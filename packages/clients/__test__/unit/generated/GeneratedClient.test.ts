@@ -12,11 +12,17 @@ import {
   createUpdateTodoRequest,
   DeleteTodoRequestCommand,
   createDeleteTodoRequest,
+  HeadTodoRequestCommand,
+  createHeadTodoRequest,
+  OptionsTodoRequestCommand,
+  createOptionsTodoRequest,
   GetTodoSuccessResponse,
   CreateTodoSuccessResponse,
   PutTodoSuccessResponse,
   UpdateTodoSuccessResponse,
   DeleteTodoSuccessResponse,
+  HeadTodoSuccessResponse,
+  OptionsTodoSuccessResponse,
   ForbiddenErrorResponse,
   createTodoNotFoundErrorResponse,
   createTodoNotChangeableErrorResponse,
@@ -112,38 +118,33 @@ describe("Generated Client", () => {
       expect(response.statusCode).toBe(204);
     });
 
-    // TODO: Implement HEAD and OPTIONS tests after fixing method support
-    // test("should handle HEAD requests", async () => {
-    //   // Arrange
-    //   const requestData = createHeadTodoRequest();
-    //   const command = new HeadTodoRequestCommand({
-    //     header: requestData.header!,
-    //     param: requestData.param!,
-    //   });
+    test("should handle HEAD requests", async () => {
+      // Arrange
+      const requestData = createHeadTodoRequest();
+      const command = new HeadTodoRequestCommand(requestData);
 
-    //   // Act
-    //   const response = await todoClient.send(command);
+      // Act
+      const response = await todoClient.send(command);
 
-    //   // Assert
-    //   expect(response.statusCode).toBe(200);
-    //   expect(response.body).toBeUndefined();
-    // });
+      // Assert
+      expect(response).toBeInstanceOf(HeadTodoSuccessResponse);
+      expect(response.statusCode).toBe(200);
+      expect(response.body).toBeUndefined();
+    });
 
-    // test("should handle OPTIONS requests", async () => {
-    //   // Arrange
-    //   const requestData = createOptionsTodoRequest();
-    //   const command = new OptionsTodoRequestCommand({
-    //     header: requestData.header!,
-    //     param: requestData.param!,
-    //   });
+    test("should handle OPTIONS requests", async () => {
+      // Arrange
+      const requestData = createOptionsTodoRequest();
+      const command = new OptionsTodoRequestCommand(requestData);
 
-    //   // Act
-    //   const response = await todoClient.send(command);
+      // Act
+      const response = await todoClient.send(command);
 
-    //   // Assert
-    //   expect(response.statusCode).toBe(200);
-    //   expect(response.header.Allow).toBeDefined();
-    // });
+      // Assert
+      expect(response).toBeInstanceOf(OptionsTodoSuccessResponse);
+      expect(response.statusCode).toBe(200);
+      expect(response.header.Allow).toBeDefined();
+    });
   });
 
   describe("UpdateTodo Responses", () => {
