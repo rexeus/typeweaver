@@ -24,7 +24,7 @@ export class <%- pascalCaseEntityName %>Hono extends TypeweaverHono<<%- pascalCa
       this.handleRequest(
         context,
         new <%- operation.className %>RequestValidator(),
-        this.requestHandlers.<%- operation.handlerName %>
+        this.requestHandlers.<%- operation.handlerName %>.bind(this.requestHandlers)
       ));
 
 <% } %>

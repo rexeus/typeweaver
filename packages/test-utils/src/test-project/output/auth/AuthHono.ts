@@ -32,7 +32,9 @@ export class AuthHono extends TypeweaverHono<AuthApiHandler> {
       this.handleRequest(
         context,
         new AccessTokenRequestValidator(),
-        this.requestHandlers.handleAccessTokenRequest,
+        this.requestHandlers.handleAccessTokenRequest.bind(
+          this.requestHandlers,
+        ),
       ),
     );
 
@@ -40,7 +42,9 @@ export class AuthHono extends TypeweaverHono<AuthApiHandler> {
       this.handleRequest(
         context,
         new RefreshTokenRequestValidator(),
-        this.requestHandlers.handleRefreshTokenRequest,
+        this.requestHandlers.handleRefreshTokenRequest.bind(
+          this.requestHandlers,
+        ),
       ),
     );
   }

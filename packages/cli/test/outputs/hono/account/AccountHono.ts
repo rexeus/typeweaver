@@ -23,7 +23,9 @@ export class AccountHono extends TypeweaverHono<AccountApiHandler> {
       this.handleRequest(
         context,
         new RegisterAccountRequestValidator(),
-        this.requestHandlers.handleRegisterAccountRequest,
+        this.requestHandlers.handleRegisterAccountRequest.bind(
+          this.requestHandlers,
+        ),
       ),
     );
   }

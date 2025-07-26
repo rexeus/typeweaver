@@ -25,7 +25,9 @@ export class SpecimenHono extends TypeweaverHono<SpecimenApiHandler> {
         this.handleRequest(
           context,
           new PutSpecimenRequestValidator(),
-          this.requestHandlers.handlePutSpecimenRequest,
+          this.requestHandlers.handlePutSpecimenRequest.bind(
+            this.requestHandlers,
+          ),
         ),
     );
   }

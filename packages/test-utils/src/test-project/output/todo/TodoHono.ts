@@ -119,7 +119,9 @@ export class TodoHono extends TypeweaverHono<TodoApiHandler> {
       this.handleRequest(
         context,
         new CreateSubTodoRequestValidator(),
-        this.requestHandlers.handleCreateSubTodoRequest,
+        this.requestHandlers.handleCreateSubTodoRequest.bind(
+          this.requestHandlers,
+        ),
       ),
     );
 
@@ -127,7 +129,7 @@ export class TodoHono extends TypeweaverHono<TodoApiHandler> {
       this.handleRequest(
         context,
         new CreateTodoRequestValidator(),
-        this.requestHandlers.handleCreateTodoRequest,
+        this.requestHandlers.handleCreateTodoRequest.bind(this.requestHandlers),
       ),
     );
 
@@ -137,7 +139,9 @@ export class TodoHono extends TypeweaverHono<TodoApiHandler> {
         this.handleRequest(
           context,
           new DeleteSubTodoRequestValidator(),
-          this.requestHandlers.handleDeleteSubTodoRequest,
+          this.requestHandlers.handleDeleteSubTodoRequest.bind(
+            this.requestHandlers,
+          ),
         ),
     );
 
@@ -145,7 +149,7 @@ export class TodoHono extends TypeweaverHono<TodoApiHandler> {
       this.handleRequest(
         context,
         new DeleteTodoRequestValidator(),
-        this.requestHandlers.handleDeleteTodoRequest,
+        this.requestHandlers.handleDeleteTodoRequest.bind(this.requestHandlers),
       ),
     );
 
@@ -153,7 +157,9 @@ export class TodoHono extends TypeweaverHono<TodoApiHandler> {
       this.handleRequest(
         context,
         new UpdateSubTodoRequestValidator(),
-        this.requestHandlers.handleUpdateSubTodoRequest,
+        this.requestHandlers.handleUpdateSubTodoRequest.bind(
+          this.requestHandlers,
+        ),
       ),
     );
 
@@ -161,7 +167,7 @@ export class TodoHono extends TypeweaverHono<TodoApiHandler> {
       this.handleRequest(
         context,
         new UpdateTodoRequestValidator(),
-        this.requestHandlers.handleUpdateTodoRequest,
+        this.requestHandlers.handleUpdateTodoRequest.bind(this.requestHandlers),
       ),
     );
 
@@ -169,7 +175,9 @@ export class TodoHono extends TypeweaverHono<TodoApiHandler> {
       this.handleRequest(
         context,
         new UpdateTodoStatusRequestValidator(),
-        this.requestHandlers.handleUpdateTodoStatusRequest,
+        this.requestHandlers.handleUpdateTodoStatusRequest.bind(
+          this.requestHandlers,
+        ),
       ),
     );
 
@@ -177,7 +185,7 @@ export class TodoHono extends TypeweaverHono<TodoApiHandler> {
       this.handleRequest(
         context,
         new GetTodoRequestValidator(),
-        this.requestHandlers.handleGetTodoRequest,
+        this.requestHandlers.handleGetTodoRequest.bind(this.requestHandlers),
       ),
     );
 
@@ -185,7 +193,9 @@ export class TodoHono extends TypeweaverHono<TodoApiHandler> {
       this.handleRequest(
         context,
         new ListSubTodosRequestValidator(),
-        this.requestHandlers.handleListSubTodosRequest,
+        this.requestHandlers.handleListSubTodosRequest.bind(
+          this.requestHandlers,
+        ),
       ),
     );
 
@@ -193,7 +203,7 @@ export class TodoHono extends TypeweaverHono<TodoApiHandler> {
       this.handleRequest(
         context,
         new ListTodosRequestValidator(),
-        this.requestHandlers.handleListTodosRequest,
+        this.requestHandlers.handleListTodosRequest.bind(this.requestHandlers),
       ),
     );
 
@@ -201,7 +211,9 @@ export class TodoHono extends TypeweaverHono<TodoApiHandler> {
       this.handleRequest(
         context,
         new QuerySubTodoRequestValidator(),
-        this.requestHandlers.handleQuerySubTodoRequest,
+        this.requestHandlers.handleQuerySubTodoRequest.bind(
+          this.requestHandlers,
+        ),
       ),
     );
 
@@ -209,7 +221,7 @@ export class TodoHono extends TypeweaverHono<TodoApiHandler> {
       this.handleRequest(
         context,
         new QueryTodoRequestValidator(),
-        this.requestHandlers.handleQueryTodoRequest,
+        this.requestHandlers.handleQueryTodoRequest.bind(this.requestHandlers),
       ),
     );
   }
