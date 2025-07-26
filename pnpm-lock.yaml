@@ -104,6 +104,9 @@ importers:
         specifier: ^1.6.3
         version: 1.6.3
     devDependencies:
+      '@hono/node-server':
+        specifier: ^1.16.0
+        version: 1.16.0(hono@4.8.9)
       '@rexeus/typeweaver-core':
         specifier: workspace:^
         version: link:../core
@@ -113,6 +116,9 @@ importers:
       axios:
         specifier: ^1.9.0
         version: 1.10.0
+      test-utils:
+        specifier: workspace:^
+        version: link:../test-utils
 
   packages/core:
     devDependencies:
@@ -181,6 +187,9 @@ importers:
       deepmerge:
         specifier: ^4.3.1
         version: 4.3.1
+      get-port:
+        specifier: ^7.1.0
+        version: 7.1.0
       hono:
         specifier: ^4.6.14
         version: 4.8.2
@@ -1011,6 +1020,10 @@ packages:
     resolution: {integrity: sha512-9fSjSaos/fRIVIp+xSJlE6lfwhES7LNtKaCBIamHsjr2na1BiABJPo0mOjjz8GJDURarmCPGqaiVg5mfjb98CQ==}
     engines: {node: '>= 0.4'}
 
+  get-port@7.1.0:
+    resolution: {integrity: sha512-QB9NKEeDg3xxVwCCwJQ9+xycaz6pBB6iQ76wiWMl1927n0Kir6alPiP+yuiICLLU4jpMe08dXfpebuQppFA2zw==}
+    engines: {node: '>=16'}
+
   get-proto@1.0.1:
     resolution: {integrity: sha512-sTSfBjoXBp89JvIKIefqw7U2CCebsc74kiY6awiGogKtoSGbgjYE/G/+l9sF3MWFPNc9IcoOC4ODfKHfxFmp0g==}
     engines: {node: '>= 0.4'}
@@ -1055,6 +1068,10 @@ packages:
 
   hono@4.8.2:
     resolution: {integrity: sha512-hM+1RIn9PK1I6SiTNS6/y7O1mvg88awYLFEuEtoiMtRyT3SD2iu9pSFgbBXT3b1Ua4IwzvSTLvwO0SEhDxCi4w==}
+    engines: {node: '>=16.9.0'}
+
+  hono@4.8.9:
+    resolution: {integrity: sha512-ERIxkXMRhUxGV7nS/Af52+j2KL60B1eg+k6cPtgzrGughS+espS9KQ7QO0SMnevtmRlBfAcN0mf1jKtO6j/doA==}
     engines: {node: '>=16.9.0'}
 
   html-escaper@2.0.2:
@@ -1821,6 +1838,10 @@ snapshots:
     dependencies:
       hono: 4.8.2
 
+  '@hono/node-server@1.16.0(hono@4.8.9)':
+    dependencies:
+      hono: 4.8.9
+
   '@isaacs/cliui@8.0.2':
     dependencies:
       string-width: 5.1.2
@@ -2359,6 +2380,8 @@ snapshots:
       hasown: 2.0.2
       math-intrinsics: 1.1.0
 
+  get-port@7.1.0: {}
+
   get-proto@1.0.1:
     dependencies:
       dunder-proto: 1.0.1
@@ -2407,6 +2430,8 @@ snapshots:
       function-bind: 1.1.2
 
   hono@4.8.2: {}
+
+  hono@4.8.9: {}
 
   html-escaper@2.0.2: {}
 

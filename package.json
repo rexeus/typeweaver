@@ -6,7 +6,7 @@
     "typecheck": "pnpm -r typecheck",
     "build": "pnpm -r build",
     "format": "prettier --write .",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "pnpm -r test",
     "test:gen": "pnpm -r test:gen",
     "ci:publish": "pnpm publish -r"
   },
