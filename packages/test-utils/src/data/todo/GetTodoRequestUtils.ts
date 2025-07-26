@@ -4,6 +4,7 @@ import { faker } from "@faker-js/faker";
 import { createData } from "../createData";
 import { createJwtToken } from "../createJwtToken";
 import type {
+  IGetTodoRequest,
   IGetTodoRequestHeader,
   IGetTodoRequestParam,
 } from "../..";
@@ -12,8 +13,8 @@ export function createGetTodoRequestHeaders(
   input: Partial<IGetTodoRequestHeader> = {}
 ): IGetTodoRequestHeader {
   const defaults: IGetTodoRequestHeader = {
-    "Accept": "application/json",
-    "Authorization": `Bearer ${createJwtToken()}`,
+    Accept: "application/json",
+    Authorization: `Bearer ${createJwtToken()}`,
   };
 
   return createData(defaults, input);
@@ -38,12 +39,16 @@ type CreateGetTodoRequestInput = {
 
 export function createGetTodoRequest(
   input: CreateGetTodoRequestInput = {}
-): IHttpRequest {
-  const param = input.param ? createGetTodoRequestParams(input.param) : createGetTodoRequestParams();
-  
-  const header = input.header ? createGetTodoRequestHeaders(input.header) : createGetTodoRequestHeaders();
-  
-  const defaults: IHttpRequest = {
+): IGetTodoRequest {
+  const param = input.param
+    ? createGetTodoRequestParams(input.param)
+    : createGetTodoRequestParams();
+
+  const header = input.header
+    ? createGetTodoRequestHeaders(input.header)
+    : createGetTodoRequestHeaders();
+
+  const defaults: IGetTodoRequest = {
     method: HttpMethod.GET,
     path: `/todos/${param.todoId}`,
     header,
@@ -54,5 +59,5 @@ export function createGetTodoRequest(
   if (input.method !== undefined) overrides.method = input.method;
   if (input.path !== undefined) overrides.path = input.path;
 
-  return createData(defaults, overrides);
+  return createData(defaults, overrides as IGetTodoRequest);
 }
