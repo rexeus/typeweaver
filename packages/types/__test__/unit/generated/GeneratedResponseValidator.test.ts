@@ -19,7 +19,7 @@ import {
 } from "test-utils";
 import assert from "assert";
 
-describe("GeneratedResponseValidator", () => {
+describe("Generated ResponseValidator", () => {
   describe("Status Code Validation", () => {
     test("should validate correct status codes", () => {
       // Arrange
@@ -51,8 +51,12 @@ describe("GeneratedResponseValidator", () => {
       });
 
       // Act & Assert
-      expect(() => validator.safeValidate(invalidResponse)).toThrow("Invalid response status code");
-      expect(() => validator.validate(invalidResponse)).toThrow("Invalid response status code");
+      expect(() => validator.safeValidate(invalidResponse)).toThrow(
+        "Invalid response status code"
+      );
+      expect(() => validator.validate(invalidResponse)).toThrow(
+        "Invalid response status code"
+      );
     });
   });
 

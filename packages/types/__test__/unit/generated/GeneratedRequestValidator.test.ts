@@ -13,7 +13,7 @@ import {
 } from "test-utils";
 import assert from "assert";
 
-describe("GeneratedRequestValidator", () => {
+describe("Generated RequestValidator", () => {
   describe("Body Validation", () => {
     test("should validate correct body schema", () => {
       // Arrange
