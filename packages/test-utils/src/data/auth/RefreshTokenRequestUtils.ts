@@ -1,10 +1,10 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import type { IHttpRequest } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
 import type {
+  IRefreshTokenRequest,
   IRefreshTokenRequestBody,
   IRefreshTokenRequestHeader,
-} from "../..";
+} from "../..";;
 import { createData } from "../createData";
 import { createJwtToken } from "../createJwtToken";
 
@@ -30,7 +30,6 @@ export function createRefreshTokenRequestBody(
 }
 
 type RefreshTokenRequestInput = {
-  method?: HttpMethod;
   path?: string;
   header?: Partial<IRefreshTokenRequestHeader>;
   body?: Partial<IRefreshTokenRequestBody>;
@@ -38,21 +37,20 @@ type RefreshTokenRequestInput = {
 
 export function createRefreshTokenRequest(
   input: RefreshTokenRequestInput = {}
-): IHttpRequest {
-  const defaults: IHttpRequest = {
+): IRefreshTokenRequest {
+  const defaults: IRefreshTokenRequest = {
     method: HttpMethod.POST,
     path: "/auth/refresh-token",
     header: createRefreshTokenRequestHeaders(),
     body: createRefreshTokenRequestBody(),
   };
 
-  const overrides: Partial<IHttpRequest> = {};
-  if (input.method !== undefined) overrides.method = input.method;
+  const overrides: Partial<IRefreshTokenRequest> = {};
   if (input.path !== undefined) overrides.path = input.path;
   if (input.header !== undefined)
     overrides.header = createRefreshTokenRequestHeaders(input.header);
   if (input.body !== undefined)
     overrides.body = createRefreshTokenRequestBody(input.body);
 
-  return createData(defaults, overrides);
+  return createData(defaults, overrides as IRefreshTokenRequest);
 }

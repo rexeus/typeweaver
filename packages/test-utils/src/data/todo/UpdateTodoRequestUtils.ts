@@ -1,7 +1,7 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import type { IHttpRequest } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
 import type {
+  IUpdateTodoRequest,
   IUpdateTodoRequestHeader,
   IUpdateTodoRequestParam,
   IUpdateTodoRequestBody,
@@ -46,7 +46,6 @@ export function createUpdateTodoRequestBody(
 }
 
 type UpdateTodoRequestInput = {
-  method?: HttpMethod;
   path?: string;
   header?: Partial<IUpdateTodoRequestHeader>;
   param?: Partial<IUpdateTodoRequestParam>;
@@ -55,10 +54,10 @@ type UpdateTodoRequestInput = {
 
 export function createUpdateTodoRequest(
   input: UpdateTodoRequestInput = {}
-): IHttpRequest {
+): IUpdateTodoRequest {
   const param = input.param ? createUpdateTodoRequestParams(input.param) : createUpdateTodoRequestParams();
   
-  const defaults: IHttpRequest = {
+  const defaults: IUpdateTodoRequest = {
     method: HttpMethod.PATCH,
     path: `/todos/${param.todoId}`,
     header: createUpdateTodoRequestHeaders(),
@@ -66,8 +65,7 @@ export function createUpdateTodoRequest(
     body: createUpdateTodoRequestBody(),
   };
 
-  const overrides: Partial<IHttpRequest> = {};
-  if (input.method !== undefined) overrides.method = input.method;
+  const overrides: Partial<IUpdateTodoRequest> = {};
   if (input.path !== undefined) overrides.path = input.path;
   if (input.header !== undefined)
     overrides.header = createUpdateTodoRequestHeaders(input.header);
@@ -76,5 +74,5 @@ export function createUpdateTodoRequest(
   if (input.body !== undefined)
     overrides.body = createUpdateTodoRequestBody(input.body);
 
-  return createData(defaults, overrides);
+  return createData(defaults, overrides as IUpdateTodoRequest);
 }

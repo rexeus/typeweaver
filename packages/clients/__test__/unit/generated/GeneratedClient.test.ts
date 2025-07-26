@@ -4,7 +4,20 @@ import {
   createTestServer,
   GetTodoRequestCommand,
   createGetTodoRequest,
+  CreateTodoRequestCommand,
+  createCreateTodoRequest,
+  UpdateTodoStatusRequestCommand,
+  createUpdateTodoStatusRequest,
+  UpdateTodoRequestCommand,
+  createUpdateTodoRequest,
+  DeleteTodoRequestCommand,
+  createDeleteTodoRequest,
+  HeadTodoRequestCommand,
+  createHeadTodoRequest,
+  OptionsTodoRequestCommand,
+  createOptionsTodoRequest,
 } from "test-utils";
+import { HttpResponse } from "@rexeus/typeweaver-core";
 import type { ServerType } from "@hono/node-server";
 
 describe("Generated Client", () => {
@@ -35,70 +48,284 @@ describe("Generated Client", () => {
       expect(response.body.id).toBe(requestData.param!.todoId);
     });
 
-    //   test("should handle POST requests", () => {
-    //     // TODO: Implement POST request test
+    test("should handle POST requests", async () => {
+      // Arrange
+      const requestData = createCreateTodoRequest();
+      const command = new CreateTodoRequestCommand(requestData);
+
+      // Act
+      const response = await todoClient.send(command);
+
+      // Assert
+      expect(response.statusCode).toBe(201);
+      expect(response.body.title).toBe(requestData.body!.title);
+      expect(response.body.status).toBe("TODO");
+    });
+
+    test("should handle PUT requests", async () => {
+      // Arrange
+      const requestData = createUpdateTodoStatusRequest();
+      const command = new UpdateTodoStatusRequestCommand(requestData);
+
+      // Act
+      const response = await todoClient.send(command);
+
+      // Assert
+      expect(response.statusCode).toBe(200);
+      expect(response.body.id).toBe(requestData.param!.todoId);
+      expect(response.body.status).toBe(requestData.body!.value);
+    });
+
+    test("should handle PATCH requests", async () => {
+      // Arrange
+      const requestData = createUpdateTodoRequest();
+      const command = new UpdateTodoRequestCommand(requestData);
+
+      // Act
+      const response = await todoClient.send(command);
+
+      // Assert
+      expect(response.statusCode).toBe(200);
+      expect(response.body.id).toBe(requestData.param!.todoId);
+      expect(response.body.title).toBe(requestData.body!.title);
+    });
+
+    test("should handle DELETE requests", async () => {
+      // Arrange
+      const requestData = createDeleteTodoRequest();
+      const command = new DeleteTodoRequestCommand(requestData);
+
+      // Act
+      const response = await todoClient.send(command);
+
+      // Assert
+      expect(response.statusCode).toBe(204);
+    });
+
+    // TODO: Implement HEAD and OPTIONS tests after fixing method support
+    // test("should handle HEAD requests", async () => {
+    //   // Arrange
+    //   const requestData = createHeadTodoRequest();
+    //   const command = new HeadTodoRequestCommand({
+    //     header: requestData.header!,
+    //     param: requestData.param!,
     //   });
 
-    //   test("should handle PUT requests", () => {
-    //     // TODO: Implement PUT request test
-    //   });
+    //   // Act
+    //   const response = await todoClient.send(command);
 
-    //   test("should handle PATCH requests", () => {
-    //     // TODO: Implement PATCH request test
-    //   });
-
-    //   test("should handle DELETE requests", () => {
-    //     // TODO: Implement DELETE request test
-    //   });
-
-    //   test("should handle HEAD requests", () => {
-    //     // TODO: Implement HEAD request test (operation needs to be added)
-    //   });
-
-    //   test("should handle OPTIONS requests", () => {
-    //     // TODO: Implement OPTIONS request test (operation needs to be added)
-    //   });
+    //   // Assert
+    //   expect(response.statusCode).toBe(200);
+    //   expect(response.body).toBeUndefined();
     // });
 
-    // describe("Responses", () => {
-    //   test("should handle 201 responses", () => {
-    //     // TODO: Implement 201 Created response test using CreateTodo
+    // test("should handle OPTIONS requests", async () => {
+    //   // Arrange
+    //   const requestData = createOptionsTodoRequest();
+    //   const command = new OptionsTodoRequestCommand({
+    //     header: requestData.header!,
+    //     param: requestData.param!,
     //   });
 
-    //   test("should handle 401 responses", () => {
-    //     // TODO: Implement 401 Unauthorized response test
-    //   });
+    //   // Act
+    //   const response = await todoClient.send(command);
 
-    //   test("should handle 403 responses", () => {
-    //     // TODO: Implement 403 Forbidden response test
-    //   });
+    //   // Assert
+    //   expect(response.statusCode).toBe(200);
+    //   expect(response.header.Allow).toBeDefined();
+    // });
+  });
 
-    //   test("should handle 415 responses", () => {
-    //     // TODO: Implement 415 Unsupported Media Type response test
-    //   });
+  describe("Responses", () => {
+    test("should handle 201 responses", async () => {
+      // Arrange - 201 is the normal CreateTodo response
+      const requestData = createCreateTodoRequest();
+      const command = new CreateTodoRequestCommand(requestData);
 
-    //   test("should handle 422 responses", () => {
-    //     // TODO: Implement 422 Validation Error response test
-    //   });
+      // Act
+      const response = await todoClient.send(command);
 
-    //   test("should handle 429 responses", () => {
-    //     // TODO: Implement 429 Too Many Requests response test
-    //   });
+      // Assert
+      expect(response.statusCode).toBe(201);
+      expect(response.body.title).toBe(requestData.body!.title);
+    });
 
-    //   test("should handle 500 responses", () => {
-    //     // TODO: Implement 500 Internal Server Error response test
-    //   });
+    test("should handle 401 responses", async () => {
+      // Arrange - Use error injection to force 401
+      const errorServer = await createTestServer({
+        todoError: new HttpResponse(
+          401,
+          { "Content-Type": "application/json" },
+          { error: { code: "UNAUTHORIZED", message: "Invalid token" } }
+        ),
+      });
+      const errorClient = new TodoClient({ baseUrl: errorServer.baseUrl });
 
-    //   test("should handle responses with bodies not matching spec", () => {
-    //     // TODO: Implement test for expected status with invalid response body
-    //   });
+      try {
+        const requestData = createGetTodoRequest();
+        const command = new GetTodoRequestCommand(requestData);
 
-    //   test("should handle responses with headers not matching spec", () => {
-    //     // TODO: Implement test for response with unspecified headers
-    //   });
+        // Act & Assert
+        await expect(errorClient.send(command)).rejects.toThrow();
+      } finally {
+        errorServer.server.close();
+      }
+    });
 
-    //   test("should handle responses with status codes not matching spec", () => {
-    //     // TODO: Implement test for completely unexpected status code (e.g., 418)
-    //   });
+    test("should handle 403 responses", async () => {
+      // Arrange - Use error injection to force 403
+      const errorServer = await createTestServer({
+        todoError: new HttpResponse(
+          403,
+          { "Content-Type": "application/json" },
+          { error: { code: "FORBIDDEN", message: "Access denied" } }
+        ),
+      });
+      const errorClient = new TodoClient({ baseUrl: errorServer.baseUrl });
+
+      try {
+        const requestData = createGetTodoRequest();
+        const command = new GetTodoRequestCommand(requestData);
+
+        // Act & Assert
+        await expect(errorClient.send(command)).rejects.toThrow();
+      } finally {
+        errorServer.server.close();
+      }
+    });
+
+    test("should handle 415 responses", async () => {
+      // Arrange - Use error injection to force 415
+      const errorServer = await createTestServer({
+        todoError: new HttpResponse(
+          415,
+          { "Content-Type": "application/json" },
+          {
+            error: {
+              code: "UNSUPPORTED_MEDIA_TYPE",
+              message: "Content type not supported",
+            },
+          }
+        ),
+      });
+      const errorClient = new TodoClient({ baseUrl: errorServer.baseUrl });
+
+      try {
+        const requestData = createCreateTodoRequest();
+        const command = new CreateTodoRequestCommand(requestData);
+
+        // Act & Assert
+        await expect(errorClient.send(command)).rejects.toThrow();
+      } finally {
+        errorServer.server.close();
+      }
+    });
+
+    test("should handle 422 responses", async () => {
+      // Arrange - Use error injection to force 422
+      const errorServer = await createTestServer({
+        todoError: new HttpResponse(
+          422,
+          { "Content-Type": "application/json" },
+          {
+            error: { code: "VALIDATION_ERROR", message: "Invalid data" },
+          }
+        ),
+      });
+      const errorClient = new TodoClient({ baseUrl: errorServer.baseUrl });
+
+      try {
+        const requestData = createCreateTodoRequest();
+        const command = new CreateTodoRequestCommand(requestData);
+
+        // Act & Assert
+        await expect(errorClient.send(command)).rejects.toThrow();
+      } finally {
+        errorServer.server.close();
+      }
+    });
+
+    test("should handle 429 responses", async () => {
+      // Arrange - Use error injection to force 429
+      const errorServer = await createTestServer({
+        todoError: new HttpResponse(
+          429,
+          { "Content-Type": "application/json" },
+          {
+            error: {
+              code: "TOO_MANY_REQUESTS",
+              message: "Rate limit exceeded",
+            },
+          }
+        ),
+      });
+      const errorClient = new TodoClient({ baseUrl: errorServer.baseUrl });
+
+      try {
+        const requestData = createGetTodoRequest();
+        const command = new GetTodoRequestCommand(requestData);
+
+        // Act & Assert
+        await expect(errorClient.send(command)).rejects.toThrow();
+      } finally {
+        errorServer.server.close();
+      }
+    });
+
+    test("should handle 500 responses", async () => {
+      // Arrange - Use error injection to force 500
+      const errorServer = await createTestServer({
+        todoError: new HttpResponse(
+          500,
+          { "Content-Type": "application/json" },
+          {
+            error: { code: "INTERNAL_SERVER_ERROR", message: "Server error" },
+          }
+        ),
+      });
+      const errorClient = new TodoClient({ baseUrl: errorServer.baseUrl });
+
+      try {
+        const requestData = createGetTodoRequest();
+        const command = new GetTodoRequestCommand(requestData);
+
+        // Act & Assert
+        await expect(errorClient.send(command)).rejects.toThrow();
+      } finally {
+        errorServer.server.close();
+      }
+    });
+
+    test("should handle responses with bodies not matching spec", async () => {
+      // TODO: Implement test for expected status with invalid response body
+      // This would require modifying the test server to return malformed responses
+    });
+
+    test("should handle responses with headers not matching spec", async () => {
+      // TODO: Implement test for response with unspecified headers
+      // This would require modifying the test server to return unexpected headers
+    });
+
+    test("should handle responses with status codes not matching spec", async () => {
+      // Arrange - Use error injection to force completely unexpected status code
+      const errorServer = await createTestServer({
+        todoError: new HttpResponse(
+          418,
+          { "Content-Type": "application/json" },
+          { error: { code: "IM_A_TEAPOT", message: "I'm a teapot" } }
+        ),
+      });
+      const errorClient = new TodoClient({ baseUrl: errorServer.baseUrl });
+
+      try {
+        const requestData = createGetTodoRequest();
+        const command = new GetTodoRequestCommand(requestData);
+
+        // Act & Assert - Should throw due to unexpected status code
+        await expect(errorClient.send(command)).rejects.toThrow();
+      } finally {
+        errorServer.server.close();
+      }
+    });
   });
 });

@@ -1,10 +1,10 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import type { IHttpRequest } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
 import type {
+  IAccessTokenRequest,
   IAccessTokenRequestBody,
   IAccessTokenRequestHeader,
-} from "../..";
+} from "../..";;
 import { createData } from "../createData";
 
 export function createAccessTokenRequestHeaders(
@@ -30,7 +30,6 @@ export function createAccessTokenRequestBody(
 }
 
 type AccessTokenRequestInput = {
-  method?: HttpMethod;
   path?: string;
   header?: Partial<IAccessTokenRequestHeader>;
   body?: Partial<IAccessTokenRequestBody>;
@@ -38,21 +37,20 @@ type AccessTokenRequestInput = {
 
 export function createAccessTokenRequest(
   input: AccessTokenRequestInput = {}
-): IHttpRequest {
-  const defaults: IHttpRequest = {
+): IAccessTokenRequest {
+  const defaults: IAccessTokenRequest = {
     method: HttpMethod.POST,
     path: "/auth/access-token",
     header: createAccessTokenRequestHeaders(),
     body: createAccessTokenRequestBody(),
   };
 
-  const overrides: Partial<IHttpRequest> = {};
-  if (input.method !== undefined) overrides.method = input.method;
+  const overrides: Partial<IAccessTokenRequest> = {};
   if (input.path !== undefined) overrides.path = input.path;
   if (input.header !== undefined)
     overrides.header = createAccessTokenRequestHeaders(input.header);
   if (input.body !== undefined)
     overrides.body = createAccessTokenRequestBody(input.body);
 
-  return createData(defaults, overrides);
+  return createData(defaults, overrides as IAccessTokenRequest);
 }

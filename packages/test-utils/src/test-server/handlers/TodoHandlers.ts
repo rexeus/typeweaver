@@ -12,6 +12,8 @@ import {
   ListSubTodosSuccessResponse,
   QuerySubTodoSuccessResponse,
   QueryTodoSuccessResponse,
+  HeadTodoSuccessResponse,
+  OptionsTodoSuccessResponse,
   type TodoApiHandler,
   type ICreateTodoRequest,
   type CreateTodoResponse,
@@ -37,6 +39,10 @@ import {
   type QuerySubTodoResponse,
   type IQueryTodoRequest,
   type QueryTodoResponse,
+  type IHeadTodoRequest,
+  type HeadTodoResponse,
+  type IOptionsTodoRequest,
+  type OptionsTodoResponse,
   createCreateTodoSuccessResponse,
   createDeleteTodoSuccessResponse,
   createUpdateTodoSuccessResponse,
@@ -48,6 +54,8 @@ import {
   createUpdateSubTodoSuccessResponse,
   createListSubTodosSuccessResponse,
   createQuerySubTodoSuccessResponse,
+  createHeadTodoSuccessResponse,
+  createOptionsTodoSuccessResponse,
 } from "../..";
 
 export class TodoHandlers implements TodoApiHandler {
@@ -230,5 +238,31 @@ export class TodoHandlers implements TodoApiHandler {
 
     const response = createListTodosSuccessResponse();
     return new QueryTodoSuccessResponse(response);
+  }
+
+  public async handleHeadTodoRequest(
+    _request: IHeadTodoRequest
+  ): Promise<HeadTodoResponse> {
+    if (this.throwError) {
+      throw this.throwError;
+    }
+
+    const response = createHeadTodoSuccessResponse();
+    return new HeadTodoSuccessResponse(response);
+  }
+
+  public async handleOptionsTodoRequest(
+    _request: IOptionsTodoRequest
+  ): Promise<OptionsTodoResponse> {
+    if (this.throwError) {
+      throw this.throwError;
+    }
+
+    const response = createOptionsTodoSuccessResponse({
+      header: {
+        Allow: "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS",
+      },
+    });
+    return new OptionsTodoSuccessResponse(response);
   }
 }

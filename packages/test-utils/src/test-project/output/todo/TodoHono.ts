@@ -33,6 +33,10 @@ import type { IGetTodoRequest } from "./GetTodoRequest";
 import { GetTodoRequestValidator } from "./GetTodoRequestValidator";
 import type { GetTodoResponse } from "./GetTodoResponse";
 
+import type { IHeadTodoRequest } from "./HeadTodoRequest";
+import { HeadTodoRequestValidator } from "./HeadTodoRequestValidator";
+import type { HeadTodoResponse } from "./HeadTodoResponse";
+
 import type { IListSubTodosRequest } from "./ListSubTodosRequest";
 import { ListSubTodosRequestValidator } from "./ListSubTodosRequestValidator";
 import type { ListSubTodosResponse } from "./ListSubTodosResponse";
@@ -40,6 +44,10 @@ import type { ListSubTodosResponse } from "./ListSubTodosResponse";
 import type { IListTodosRequest } from "./ListTodosRequest";
 import { ListTodosRequestValidator } from "./ListTodosRequestValidator";
 import type { ListTodosResponse } from "./ListTodosResponse";
+
+import type { IOptionsTodoRequest } from "./OptionsTodoRequest";
+import { OptionsTodoRequestValidator } from "./OptionsTodoRequestValidator";
+import type { OptionsTodoResponse } from "./OptionsTodoResponse";
 
 import type { IQuerySubTodoRequest } from "./QuerySubTodoRequest";
 import { QuerySubTodoRequestValidator } from "./QuerySubTodoRequestValidator";
@@ -87,6 +95,8 @@ export type TodoApiHandler = {
 
   handleGetTodoRequest: HonoRequestHandler<IGetTodoRequest, GetTodoResponse>;
 
+  handleHeadTodoRequest: HonoRequestHandler<IHeadTodoRequest, HeadTodoResponse>;
+
   handleListSubTodosRequest: HonoRequestHandler<
     IListSubTodosRequest,
     ListSubTodosResponse
@@ -95,6 +105,11 @@ export type TodoApiHandler = {
   handleListTodosRequest: HonoRequestHandler<
     IListTodosRequest,
     ListTodosResponse
+  >;
+
+  handleOptionsTodoRequest: HonoRequestHandler<
+    IOptionsTodoRequest,
+    OptionsTodoResponse
   >;
 
   handleQuerySubTodoRequest: HonoRequestHandler<
@@ -189,6 +204,15 @@ export class TodoHono extends TypeweaverHono<TodoApiHandler> {
       ),
     );
 
+    // TODO: Fix HEAD method support in Hono
+    // this.head("/todos/:todoId", async (context: Context) =>
+    //   this.handleRequest(
+    //     context,
+    //     new HeadTodoRequestValidator(),
+    //     this.requestHandlers.handleHeadTodoRequest.bind(this.requestHandlers),
+    //   ),
+    // );
+
     this.get("/todos/:todoId/subtodos", async (context: Context) =>
       this.handleRequest(
         context,
@@ -206,6 +230,17 @@ export class TodoHono extends TypeweaverHono<TodoApiHandler> {
         this.requestHandlers.handleListTodosRequest.bind(this.requestHandlers),
       ),
     );
+
+    // TODO: Fix OPTIONS method support in Hono  
+    // this.options("/todos/:todoId", async (context: Context) =>
+    //   this.handleRequest(
+    //     context,
+    //     new OptionsTodoRequestValidator(),
+    //     this.requestHandlers.handleOptionsTodoRequest.bind(
+    //       this.requestHandlers,
+    //     ),
+    //   ),
+    // );
 
     this.post("/todos/:todoId/subtodos/query", async (context: Context) =>
       this.handleRequest(

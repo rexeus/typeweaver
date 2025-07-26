@@ -3,7 +3,7 @@ import type { IHttpRequest } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
 import { createData } from "../createData";
 import { createJwtToken } from "../createJwtToken";
-import type { ICreateTodoRequestBody, ICreateTodoRequestHeader } from "../..";
+import type { ICreateTodoRequest, ICreateTodoRequestBody, ICreateTodoRequestHeader } from "../..";
 
 export function createCreateTodoRequestHeaders(
   input: Partial<ICreateTodoRequestHeader> = {}
@@ -32,7 +32,6 @@ export function createCreateTodoRequestBody(
 }
 
 type CreateTodoRequestInput = {
-  method?: HttpMethod;
   path?: string;
   body?: Partial<ICreateTodoRequestBody>;
   header?: Partial<ICreateTodoRequestHeader>;
@@ -40,20 +39,19 @@ type CreateTodoRequestInput = {
 
 export function createCreateTodoRequest(
   input: CreateTodoRequestInput = {}
-): IHttpRequest {
-  const defaults: IHttpRequest = {
+): ICreateTodoRequest {
+  const defaults: ICreateTodoRequest = {
     method: HttpMethod.POST,
     path: "/todos",
     body: createCreateTodoRequestBody(),
     header: createCreateTodoRequestHeaders(),
   };
 
-  const overrides: Partial<IHttpRequest> = {};
-  if (input.method !== undefined) overrides.method = input.method;
+  const overrides: Partial<ICreateTodoRequest> = {};
   if (input.path !== undefined) overrides.path = input.path;
   if (input.body !== undefined) overrides.body = createCreateTodoRequestBody(input.body);
   if (input.header !== undefined)
     overrides.header = createCreateTodoRequestHeaders(input.header);
 
-  return createData(defaults, overrides);
+  return createData(defaults, overrides as ICreateTodoRequest);
 }

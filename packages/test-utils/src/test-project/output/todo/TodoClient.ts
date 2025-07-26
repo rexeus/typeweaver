@@ -24,11 +24,17 @@ import type { SuccessfulUpdateTodoStatusResponse } from "./UpdateTodoStatusReque
 import { GetTodoRequestCommand } from "./GetTodoRequestCommand";
 import type { SuccessfulGetTodoResponse } from "./GetTodoRequest";
 
+import { HeadTodoRequestCommand } from "./HeadTodoRequestCommand";
+import type { SuccessfulHeadTodoResponse } from "./HeadTodoRequest";
+
 import { ListSubTodosRequestCommand } from "./ListSubTodosRequestCommand";
 import type { SuccessfulListSubTodosResponse } from "./ListSubTodosRequest";
 
 import { ListTodosRequestCommand } from "./ListTodosRequestCommand";
 import type { SuccessfulListTodosResponse } from "./ListTodosRequest";
+
+import { OptionsTodoRequestCommand } from "./OptionsTodoRequestCommand";
+import type { SuccessfulOptionsTodoResponse } from "./OptionsTodoRequest";
 
 import { QuerySubTodoRequestCommand } from "./QuerySubTodoRequestCommand";
 import type { SuccessfulQuerySubTodoResponse } from "./QuerySubTodoRequest";
@@ -45,8 +51,10 @@ export type TodoRequestCommands =
   | UpdateTodoRequestCommand
   | UpdateTodoStatusRequestCommand
   | GetTodoRequestCommand
+  | HeadTodoRequestCommand
   | ListSubTodosRequestCommand
   | ListTodosRequestCommand
+  | OptionsTodoRequestCommand
   | QuerySubTodoRequestCommand
   | QueryTodoRequestCommand;
 
@@ -59,8 +67,10 @@ export type SuccessfulTodoResponses =
   | SuccessfulUpdateTodoResponse
   | SuccessfulUpdateTodoStatusResponse
   | SuccessfulGetTodoResponse
+  | SuccessfulHeadTodoResponse
   | SuccessfulListSubTodosResponse
   | SuccessfulListTodosResponse
+  | SuccessfulOptionsTodoResponse
   | SuccessfulQuerySubTodoResponse
   | SuccessfulQueryTodoResponse;
 
@@ -102,12 +112,20 @@ export class TodoClient extends ApiClient {
   ): Promise<SuccessfulGetTodoResponse>;
 
   public async send(
+    command: HeadTodoRequestCommand,
+  ): Promise<SuccessfulHeadTodoResponse>;
+
+  public async send(
     command: ListSubTodosRequestCommand,
   ): Promise<SuccessfulListSubTodosResponse>;
 
   public async send(
     command: ListTodosRequestCommand,
   ): Promise<SuccessfulListTodosResponse>;
+
+  public async send(
+    command: OptionsTodoRequestCommand,
+  ): Promise<SuccessfulOptionsTodoResponse>;
 
   public async send(
     command: QuerySubTodoRequestCommand,
@@ -155,11 +173,19 @@ export class TodoClient extends ApiClient {
         return command.processResponse(response);
       }
 
+      case command instanceof HeadTodoRequestCommand: {
+        return command.processResponse(response);
+      }
+
       case command instanceof ListSubTodosRequestCommand: {
         return command.processResponse(response);
       }
 
       case command instanceof ListTodosRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      case command instanceof OptionsTodoRequestCommand: {
         return command.processResponse(response);
       }
 

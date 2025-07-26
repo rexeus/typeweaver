@@ -2,6 +2,7 @@ import { HttpMethod } from "@rexeus/typeweaver-core";
 import type { IHttpRequest } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
 import type {
+  IDeleteTodoRequest,
   IDeleteTodoRequestHeader,
   IDeleteTodoRequestParam,
 } from "../..";
@@ -30,7 +31,6 @@ export function createDeleteTodoRequestParams(
 }
 
 type DeleteTodoRequestInput = {
-  method?: HttpMethod;
   path?: string;
   header?: Partial<IDeleteTodoRequestHeader>;
   param?: Partial<IDeleteTodoRequestParam>;
@@ -38,23 +38,22 @@ type DeleteTodoRequestInput = {
 
 export function createDeleteTodoRequest(
   input: DeleteTodoRequestInput = {}
-): IHttpRequest {
+): IDeleteTodoRequest {
   const param = input.param ? createDeleteTodoRequestParams(input.param) : createDeleteTodoRequestParams();
   
-  const defaults: IHttpRequest = {
+  const defaults: IDeleteTodoRequest = {
     method: HttpMethod.DELETE,
     path: `/todos/${param.todoId}`,
     header: createDeleteTodoRequestHeaders(),
     param,
   };
 
-  const overrides: Partial<IHttpRequest> = {};
-  if (input.method !== undefined) overrides.method = input.method;
+  const overrides: Partial<IDeleteTodoRequest> = {};
   if (input.path !== undefined) overrides.path = input.path;
   if (input.header !== undefined)
     overrides.header = createDeleteTodoRequestHeaders(input.header);
   if (input.param !== undefined)
     overrides.param = createDeleteTodoRequestParams(input.param);
 
-  return createData(defaults, overrides);
+  return createData(defaults, overrides as IDeleteTodoRequest);
 }

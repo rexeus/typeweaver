@@ -1,10 +1,10 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import type { IHttpRequest } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
 import type {
+  IRegisterAccountRequest,
   IRegisterAccountRequestBody,
   IRegisterAccountRequestHeader,
-} from "../..";
+} from "../..";;
 import { createData } from "../createData";
 
 export function createRegisterAccountRequestBody(
@@ -30,7 +30,6 @@ export function createRegisterAccountRequestHeaders(
 }
 
 type RegisterAccountRequestInput = {
-  method?: HttpMethod;
   path?: string;
   body?: Partial<IRegisterAccountRequestBody>;
   header?: Partial<IRegisterAccountRequestHeader>;
@@ -38,20 +37,19 @@ type RegisterAccountRequestInput = {
 
 export function createRegisterAccountRequest(
   input: RegisterAccountRequestInput = {}
-): IHttpRequest {
-  const defaults: IHttpRequest = {
+): IRegisterAccountRequest {
+  const defaults: IRegisterAccountRequest = {
     method: HttpMethod.POST,
     path: "/accounts",
     body: createRegisterAccountRequestBody(),
     header: createRegisterAccountRequestHeaders(),
   };
 
-  const overrides: Partial<IHttpRequest> = {};
-  if (input.method !== undefined) overrides.method = input.method;
+  const overrides: Partial<IRegisterAccountRequest> = {};
   if (input.path !== undefined) overrides.path = input.path;
   if (input.body !== undefined) overrides.body = createRegisterAccountRequestBody(input.body);
   if (input.header !== undefined)
     overrides.header = createRegisterAccountRequestHeaders(input.header);
 
-  return createData(defaults, overrides);
+  return createData(defaults, overrides as IRegisterAccountRequest);
 }

@@ -1,11 +1,11 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import type { IHttpRequest } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
 import type {
+  IUpdateTodoStatusRequest,
   IUpdateTodoStatusRequestHeader,
   IUpdateTodoStatusRequestParam,
   IUpdateTodoStatusRequestBody,
-} from "../..";
+} from "../..";;
 import { createData } from "../createData";
 import { createJwtToken } from "../createJwtToken";
 
@@ -42,7 +42,6 @@ export function createUpdateTodoStatusRequestBody(
 }
 
 type UpdateTodoStatusRequestInput = {
-  method?: HttpMethod;
   path?: string;
   header?: Partial<IUpdateTodoStatusRequestHeader>;
   param?: Partial<IUpdateTodoStatusRequestParam>;
@@ -51,10 +50,10 @@ type UpdateTodoStatusRequestInput = {
 
 export function createUpdateTodoStatusRequest(
   input: UpdateTodoStatusRequestInput = {}
-): IHttpRequest {
+): IUpdateTodoStatusRequest {
   const param = input.param ? createUpdateTodoStatusRequestParams(input.param) : createUpdateTodoStatusRequestParams();
   
-  const defaults: IHttpRequest = {
+  const defaults: IUpdateTodoStatusRequest = {
     method: HttpMethod.PUT,
     path: `/todos/${param.todoId}/status`,
     header: createUpdateTodoStatusRequestHeaders(),
@@ -62,8 +61,7 @@ export function createUpdateTodoStatusRequest(
     body: createUpdateTodoStatusRequestBody(),
   };
 
-  const overrides: Partial<IHttpRequest> = {};
-  if (input.method !== undefined) overrides.method = input.method;
+  const overrides: Partial<IUpdateTodoStatusRequest> = {};
   if (input.path !== undefined) overrides.path = input.path;
   if (input.header !== undefined)
     overrides.header = createUpdateTodoStatusRequestHeaders(input.header);
@@ -72,5 +70,5 @@ export function createUpdateTodoStatusRequest(
   if (input.body !== undefined)
     overrides.body = createUpdateTodoStatusRequestBody(input.body);
 
-  return createData(defaults, overrides);
+  return createData(defaults, overrides as IUpdateTodoStatusRequest);
 }

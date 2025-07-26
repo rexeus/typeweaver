@@ -1,9 +1,8 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import type { IHttpRequest } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
 import { createData } from "../createData";
 import { createJwtToken } from "../createJwtToken";
-import type { IListTodosRequestHeader, IListTodosRequestQuery } from "../..";
+import type { IListTodosRequest, IListTodosRequestHeader, IListTodosRequestQuery } from "../..";
 
 export function createListTodosRequestHeaders(
   input: Partial<IListTodosRequestHeader> = {}
@@ -47,7 +46,6 @@ export function createListTodosRequestQuery(
 }
 
 type CreateListTodosRequestInput = {
-  method?: HttpMethod;
   path?: string;
   header?: Partial<IListTodosRequestHeader>;
   query?: Partial<IListTodosRequestQuery>;
@@ -55,21 +53,20 @@ type CreateListTodosRequestInput = {
 
 export function createListTodosRequest(
   input: CreateListTodosRequestInput = {}
-): IHttpRequest {
-  const defaults: IHttpRequest = {
+): IListTodosRequest {
+  const defaults: IListTodosRequest = {
     method: HttpMethod.GET,
     path: "/todos",
     header: createListTodosRequestHeaders(),
     query: createListTodosRequestQuery(),
   };
 
-  const overrides: Partial<IHttpRequest> = {};
-  if (input.method !== undefined) overrides.method = input.method;
+  const overrides: Partial<IListTodosRequest> = {};
   if (input.path !== undefined) overrides.path = input.path;
   if (input.header !== undefined)
     overrides.header = createListTodosRequestHeaders(input.header);
   if (input.query !== undefined)
     overrides.query = createListTodosRequestQuery(input.query);
 
-  return createData(defaults, overrides);
+  return createData(defaults, overrides as IListTodosRequest);
 }

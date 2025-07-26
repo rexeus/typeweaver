@@ -130,6 +130,16 @@ export * from "./todo/GetTodoResponse";
 
 export * from "./todo/GetTodoResponseValidator";
 
+export * from "./todo/HeadTodoRequest";
+
+export * from "./todo/HeadTodoRequestCommand";
+
+export * from "./todo/HeadTodoRequestValidator";
+
+export * from "./todo/HeadTodoResponse";
+
+export * from "./todo/HeadTodoResponseValidator";
+
 export * from "./todo/ListSubTodosRequest";
 
 export * from "./todo/ListSubTodosRequestCommand";
@@ -149,6 +159,16 @@ export * from "./todo/ListTodosRequestValidator";
 export * from "./todo/ListTodosResponse";
 
 export * from "./todo/ListTodosResponseValidator";
+
+export * from "./todo/OptionsTodoRequest";
+
+export * from "./todo/OptionsTodoRequestCommand";
+
+export * from "./todo/OptionsTodoRequestValidator";
+
+export * from "./todo/OptionsTodoResponse";
+
+export * from "./todo/OptionsTodoResponseValidator";
 
 export * from "./todo/QuerySubTodoRequest";
 

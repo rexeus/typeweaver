@@ -1,0 +1,88 @@
+import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+
+import type {
+  ITodoNotFoundErrorResponse,
+  TodoNotFoundErrorResponse,
+} from "./TodoNotFoundErrorResponse";
+
+import type {
+  IForbiddenErrorResponse,
+  ForbiddenErrorResponse,
+} from "../shared/ForbiddenErrorResponse";
+
+import type {
+  IInternalServerErrorResponse,
+  InternalServerErrorResponse,
+} from "../shared/InternalServerErrorResponse";
+
+import type {
+  ITooManyRequestsErrorResponse,
+  TooManyRequestsErrorResponse,
+} from "../shared/TooManyRequestsErrorResponse";
+
+import type {
+  IUnauthorizedErrorResponse,
+  UnauthorizedErrorResponse,
+} from "../shared/UnauthorizedErrorResponse";
+
+import type {
+  IUnsupportedMediaTypeErrorResponse,
+  UnsupportedMediaTypeErrorResponse,
+} from "../shared/UnsupportedMediaTypeErrorResponse";
+
+import type {
+  IValidationErrorResponse,
+  ValidationErrorResponse,
+} from "../shared/ValidationErrorResponse";
+
+export type IHeadTodoSuccessResponseHeader = {
+  "Content-Type": "application/json";
+};
+
+export type IHeadTodoSuccessResponse = {
+  statusCode: HttpStatusCode.OK;
+  header: IHeadTodoSuccessResponseHeader;
+};
+
+export class HeadTodoSuccessResponse
+  extends HttpResponse<IHeadTodoSuccessResponseHeader, undefined>
+  implements IHeadTodoSuccessResponse
+{
+  public override readonly statusCode: HttpStatusCode.OK;
+
+  public constructor(response: IHeadTodoSuccessResponse) {
+    super(response.statusCode, response.header, undefined);
+
+    if (response.statusCode !== HttpStatusCode.OK) {
+      throw new Error(
+        `Invalid status code: '${response.statusCode}' for HeadTodoSuccessResponse`,
+      );
+    }
+
+    this.statusCode = response.statusCode;
+  }
+}
+
+export type IHeadTodoSuccessResponses = IHeadTodoSuccessResponse;
+
+export type HeadTodoSuccessResponses = HeadTodoSuccessResponse;
+
+export type IHeadTodoResponse =
+  | IHeadTodoSuccessResponse
+  | ITodoNotFoundErrorResponse
+  | IForbiddenErrorResponse
+  | IInternalServerErrorResponse
+  | ITooManyRequestsErrorResponse
+  | IUnauthorizedErrorResponse
+  | IUnsupportedMediaTypeErrorResponse
+  | IValidationErrorResponse;
+
+export type HeadTodoResponse =
+  | HeadTodoSuccessResponse
+  | TodoNotFoundErrorResponse
+  | ForbiddenErrorResponse
+  | InternalServerErrorResponse
+  | TooManyRequestsErrorResponse
+  | UnauthorizedErrorResponse
+  | UnsupportedMediaTypeErrorResponse
+  | ValidationErrorResponse;
