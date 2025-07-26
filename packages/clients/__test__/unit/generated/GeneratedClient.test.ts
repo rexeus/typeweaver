@@ -1,7 +1,5 @@
 import { describe, beforeEach, afterEach, test, expect } from "vitest";
 import {
-  TodoClient,
-  createTestServer,
   GetTodoRequestCommand,
   createGetTodoRequest,
   CreateTodoRequestCommand,
@@ -32,30 +30,22 @@ import {
   TodoNotChangeableErrorResponse,
   InternalServerErrorResponse,
 } from "test-utils";
-import type { ServerType } from "@hono/node-server";
+import { setupClientTest, runClientCleanup } from "./clientSetup";
 
 describe("Generated Client", () => {
-  let server: ServerType;
-  let todoClient: TodoClient;
-
-  beforeEach(async () => {
-    const testServer = await createTestServer();
-    server = testServer.server;
-    todoClient = new TodoClient({ baseUrl: testServer.baseUrl });
-  });
-
-  afterEach(() => {
-    server.close();
+  afterEach(async () => {
+    await runClientCleanup();
   });
 
   describe("HTTP Methods", () => {
     test("should handle GET requests", async () => {
       // Arrange
+      const { client } = await setupClientTest();
       const requestData = createGetTodoRequest();
       const command = new GetTodoRequestCommand(requestData);
 
       // Act
-      const response = await todoClient.send(command);
+      const response = await client.send(command);
 
       // Assert
       expect(response).toBeInstanceOf(GetTodoSuccessResponse);
@@ -65,11 +55,12 @@ describe("Generated Client", () => {
 
     test("should handle POST requests", async () => {
       // Arrange
+      const { client } = await setupClientTest();
       const requestData = createCreateTodoRequest();
       const command = new CreateTodoRequestCommand(requestData);
 
       // Act
-      const response = await todoClient.send(command);
+      const response = await client.send(command);
 
       // Assert
       expect(response).toBeInstanceOf(CreateTodoSuccessResponse);
@@ -79,11 +70,12 @@ describe("Generated Client", () => {
 
     test("should handle PUT requests", async () => {
       // Arrange
+      const { client } = await setupClientTest();
       const requestData = createPutTodoRequest();
       const command = new PutTodoRequestCommand(requestData);
 
       // Act
-      const response = await todoClient.send(command);
+      const response = await client.send(command);
 
       // Assert
       expect(response).toBeInstanceOf(PutTodoSuccessResponse);
@@ -93,11 +85,12 @@ describe("Generated Client", () => {
 
     test("should handle PATCH requests", async () => {
       // Arrange
+      const { client } = await setupClientTest();
       const requestData = createUpdateTodoRequest();
       const command = new UpdateTodoRequestCommand(requestData);
 
       // Act
-      const response = await todoClient.send(command);
+      const response = await client.send(command);
 
       // Assert
       expect(response).toBeInstanceOf(UpdateTodoSuccessResponse);
@@ -107,11 +100,12 @@ describe("Generated Client", () => {
 
     test("should handle DELETE requests", async () => {
       // Arrange
+      const { client } = await setupClientTest();
       const requestData = createDeleteTodoRequest();
       const command = new DeleteTodoRequestCommand(requestData);
 
       // Act
-      const response = await todoClient.send(command);
+      const response = await client.send(command);
 
       // Assert
       expect(response).toBeInstanceOf(DeleteTodoSuccessResponse);
@@ -120,11 +114,12 @@ describe("Generated Client", () => {
 
     test("should handle HEAD requests", async () => {
       // Arrange
+      const { client } = await setupClientTest();
       const requestData = createHeadTodoRequest();
       const command = new HeadTodoRequestCommand(requestData);
 
       // Act
-      const response = await todoClient.send(command);
+      const response = await client.send(command);
 
       // Assert
       expect(response).toBeInstanceOf(HeadTodoSuccessResponse);
@@ -134,11 +129,12 @@ describe("Generated Client", () => {
 
     test("should handle OPTIONS requests", async () => {
       // Arrange
+      const { client } = await setupClientTest();
       const requestData = createOptionsTodoRequest();
       const command = new OptionsTodoRequestCommand(requestData);
 
       // Act
-      const response = await todoClient.send(command);
+      const response = await client.send(command);
 
       // Assert
       expect(response).toBeInstanceOf(OptionsTodoSuccessResponse);
@@ -150,11 +146,12 @@ describe("Generated Client", () => {
   describe("UpdateTodo Responses", () => {
     test("should handle 200 responses", async () => {
       // Arrange
+      const { client } = await setupClientTest();
       const requestData = createUpdateTodoRequest();
       const command = new UpdateTodoRequestCommand(requestData);
 
       // Act
-      const response = await todoClient.send(command);
+      const response = await client.send(command);
 
       // Assert
       expect(response).toBeInstanceOf(UpdateTodoSuccessResponse);
@@ -163,82 +160,58 @@ describe("Generated Client", () => {
 
     test("should handle 404 responses", async () => {
       // Arrange
-      const server = await createTestServer({
+      const { client } = await setupClientTest({
         todoError: createTodoNotFoundErrorResponse(),
       });
-      const errorClient = new TodoClient({ baseUrl: server.baseUrl });
+      const requestData = createUpdateTodoRequest();
+      const command = new UpdateTodoRequestCommand(requestData);
 
-      try {
-        const requestData = createUpdateTodoRequest();
-        const command = new UpdateTodoRequestCommand(requestData);
-
-        // Act & Assert
-        await expect(errorClient.send(command)).rejects.toThrow(
-          TodoNotFoundErrorResponse
-        );
-      } finally {
-        server.server.close();
-      }
+      // Act & Assert
+      await expect(client.send(command)).rejects.toThrow(
+        TodoNotFoundErrorResponse
+      );
     });
 
     test("should handle TodoNotChangeable error responses", async () => {
       // Arrange
-      const errorServer = await createTestServer({
+      const { client } = await setupClientTest({
         todoError: createTodoNotChangeableErrorResponse(),
       });
-      const errorClient = new TodoClient({ baseUrl: errorServer.baseUrl });
+      const requestData = createUpdateTodoRequest();
+      const command = new UpdateTodoRequestCommand(requestData);
 
-      try {
-        const requestData = createUpdateTodoRequest();
-        const command = new UpdateTodoRequestCommand(requestData);
-
-        // Act & Assert
-        await expect(errorClient.send(command)).rejects.toThrow(
-          TodoNotChangeableErrorResponse
-        );
-      } finally {
-        errorServer.server.close();
-      }
+      // Act & Assert
+      await expect(client.send(command)).rejects.toThrow(
+        TodoNotChangeableErrorResponse
+      );
     });
 
     test("should handle Forbidden error responses", async () => {
       // Arrange
-      const errorServer = await createTestServer({
+      const { client } = await setupClientTest({
         todoError: createForbiddenErrorResponse(),
       });
-      const errorClient = new TodoClient({ baseUrl: errorServer.baseUrl });
+      const requestData = createUpdateTodoRequest();
+      const command = new UpdateTodoRequestCommand(requestData);
 
-      try {
-        const requestData = createUpdateTodoRequest();
-        const command = new UpdateTodoRequestCommand(requestData);
-
-        // Act & Assert
-        await expect(errorClient.send(command)).rejects.toThrow(
-          ForbiddenErrorResponse
-        );
-      } finally {
-        errorServer.server.close();
-      }
+      // Act & Assert
+      await expect(client.send(command)).rejects.toThrow(
+        ForbiddenErrorResponse
+      );
     });
 
     test("should handle InternalServer error responses", async () => {
       // Arrange
-      const errorServer = await createTestServer({
+      const { client } = await setupClientTest({
         todoError: createInternalServerErrorResponse(),
       });
-      const errorClient = new TodoClient({ baseUrl: errorServer.baseUrl });
+      const requestData = createUpdateTodoRequest();
+      const command = new UpdateTodoRequestCommand(requestData);
 
-      try {
-        const requestData = createUpdateTodoRequest();
-        const command = new UpdateTodoRequestCommand(requestData);
-
-        // Act & Assert
-        await expect(errorClient.send(command)).rejects.toThrow(
-          InternalServerErrorResponse
-        );
-      } finally {
-        errorServer.server.close();
-      }
+      // Act & Assert
+      await expect(client.send(command)).rejects.toThrow(
+        InternalServerErrorResponse
+      );
     });
   });
 });
