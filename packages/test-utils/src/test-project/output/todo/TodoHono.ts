@@ -33,10 +33,6 @@ import type { IGetTodoRequest } from "./GetTodoRequest";
 import { GetTodoRequestValidator } from "./GetTodoRequestValidator";
 import type { GetTodoResponse } from "./GetTodoResponse";
 
-import type { IHeadTodoRequest } from "./HeadTodoRequest";
-import { HeadTodoRequestValidator } from "./HeadTodoRequestValidator";
-import type { HeadTodoResponse } from "./HeadTodoResponse";
-
 import type { IListSubTodosRequest } from "./ListSubTodosRequest";
 import { ListSubTodosRequestValidator } from "./ListSubTodosRequestValidator";
 import type { ListSubTodosResponse } from "./ListSubTodosResponse";
@@ -94,8 +90,6 @@ export type TodoApiHandler = {
   >;
 
   handleGetTodoRequest: HonoRequestHandler<IGetTodoRequest, GetTodoResponse>;
-
-  handleHeadTodoRequest: HonoRequestHandler<IHeadTodoRequest, HeadTodoResponse>;
 
   handleListSubTodosRequest: HonoRequestHandler<
     IListSubTodosRequest,
@@ -204,15 +198,6 @@ export class TodoHono extends TypeweaverHono<TodoApiHandler> {
       ),
     );
 
-    // TODO: Fix HEAD method support in Hono
-    // this.head("/todos/:todoId", async (context: Context) =>
-    //   this.handleRequest(
-    //     context,
-    //     new HeadTodoRequestValidator(),
-    //     this.requestHandlers.handleHeadTodoRequest.bind(this.requestHandlers),
-    //   ),
-    // );
-
     this.get("/todos/:todoId/subtodos", async (context: Context) =>
       this.handleRequest(
         context,
@@ -231,16 +216,15 @@ export class TodoHono extends TypeweaverHono<TodoApiHandler> {
       ),
     );
 
-    // TODO: Fix OPTIONS method support in Hono  
-    // this.options("/todos/:todoId", async (context: Context) =>
-    //   this.handleRequest(
-    //     context,
-    //     new OptionsTodoRequestValidator(),
-    //     this.requestHandlers.handleOptionsTodoRequest.bind(
-    //       this.requestHandlers,
-    //     ),
-    //   ),
-    // );
+    this.options("/todos/:todoId", async (context: Context) =>
+      this.handleRequest(
+        context,
+        new OptionsTodoRequestValidator(),
+        this.requestHandlers.handleOptionsTodoRequest.bind(
+          this.requestHandlers,
+        ),
+      ),
+    );
 
     this.post("/todos/:todoId/subtodos/query", async (context: Context) =>
       this.handleRequest(

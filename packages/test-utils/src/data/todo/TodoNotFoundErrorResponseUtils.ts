@@ -7,6 +7,8 @@ import type {
   ITodoNotFoundErrorResponseHeader,
   ITodoNotFoundErrorResponseBody,
 } from "../..";
+import { TodoNotFoundErrorResponse } from "../..";
+
 type TodoNotFoundErrorResponseInput = {
   statusCode?: number;
   header?: Partial<ITodoNotFoundErrorResponseHeader>;
@@ -15,7 +17,7 @@ type TodoNotFoundErrorResponseInput = {
 
 export function createTodoNotFoundErrorResponse(
   input: TodoNotFoundErrorResponseInput = {}
-): ITodoNotFoundErrorResponse {
+): TodoNotFoundErrorResponse {
   const defaults: ITodoNotFoundErrorResponse = {
     statusCode: HttpStatusCode.NOT_FOUND,
     header: createErrorResponseHeaders<ITodoNotFoundErrorResponseHeader>(),
@@ -34,5 +36,6 @@ export function createTodoNotFoundErrorResponse(
     overrides.header = createErrorResponseHeaders(input.header);
   if (input.body !== undefined) overrides.body = createData(defaults.body, input.body);
 
-  return createData(defaults, overrides);
+  const responseData = createData(defaults, overrides);
+  return new TodoNotFoundErrorResponse(responseData);
 }

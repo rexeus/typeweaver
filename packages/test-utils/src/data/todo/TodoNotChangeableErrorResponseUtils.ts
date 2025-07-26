@@ -7,6 +7,8 @@ import type {
   ITodoNotChangeableErrorResponseHeader,
   ITodoNotChangeableErrorResponseBody,
 } from "../..";
+import { TodoNotChangeableErrorResponse } from "../..";
+
 type TodoNotChangeableErrorResponseInput = {
   statusCode?: number;
   header?: Partial<ITodoNotChangeableErrorResponseHeader>;
@@ -15,7 +17,7 @@ type TodoNotChangeableErrorResponseInput = {
 
 export function createTodoNotChangeableErrorResponse(
   input: TodoNotChangeableErrorResponseInput = {}
-): ITodoNotChangeableErrorResponse {
+): TodoNotChangeableErrorResponse {
   const defaults: ITodoNotChangeableErrorResponse = {
     statusCode: HttpStatusCode.CONFLICT,
     header: createErrorResponseHeaders<ITodoNotChangeableErrorResponseHeader>(),
@@ -38,5 +40,6 @@ export function createTodoNotChangeableErrorResponse(
     overrides.header = createErrorResponseHeaders(input.header);
   if (input.body !== undefined) overrides.body = createData(defaults.body, input.body);
 
-  return createData(defaults, overrides);
+  const responseData = createData(defaults, overrides);
+  return new TodoNotChangeableErrorResponse(responseData);
 }

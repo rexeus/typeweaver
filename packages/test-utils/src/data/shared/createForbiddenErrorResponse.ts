@@ -6,6 +6,8 @@ import type {
   IForbiddenErrorResponseHeader,
   IForbiddenErrorResponseBody,
 } from "../..";
+import { ForbiddenErrorResponse } from "../..";
+
 type ForbiddenErrorResponseInput = {
   statusCode?: number;
   header?: Partial<IForbiddenErrorResponseHeader>;
@@ -14,7 +16,7 @@ type ForbiddenErrorResponseInput = {
 
 export function createForbiddenErrorResponse(
   input: ForbiddenErrorResponseInput = {}
-): IForbiddenErrorResponse {
+): ForbiddenErrorResponse {
   const defaults: IForbiddenErrorResponse = {
     statusCode: HttpStatusCode.FORBIDDEN,
     header: createErrorResponseHeaders<IForbiddenErrorResponseHeader>(),
@@ -31,5 +33,6 @@ export function createForbiddenErrorResponse(
   if (input.body !== undefined)
     overrides.body = createData(defaults.body, input.body);
 
-  return createData(defaults, overrides);
+  const responseData = createData(defaults, overrides);
+  return new ForbiddenErrorResponse(responseData);
 }

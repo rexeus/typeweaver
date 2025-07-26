@@ -6,6 +6,8 @@ import type {
   IInternalServerErrorResponseHeader,
   IInternalServerErrorResponseBody,
 } from "../..";
+import { InternalServerErrorResponse } from "../..";
+
 type InternalServerErrorResponseInput = {
   statusCode?: number;
   header?: Partial<IInternalServerErrorResponseHeader>;
@@ -14,7 +16,7 @@ type InternalServerErrorResponseInput = {
 
 export function createInternalServerErrorResponse(
   input: InternalServerErrorResponseInput = {}
-): IInternalServerErrorResponse {
+): InternalServerErrorResponse {
   const defaults: IInternalServerErrorResponse = {
     statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
     header: createErrorResponseHeaders<IInternalServerErrorResponseHeader>(),
@@ -31,5 +33,6 @@ export function createInternalServerErrorResponse(
   if (input.body !== undefined)
     overrides.body = createData(defaults.body, input.body);
 
-  return createData(defaults, overrides);
+  const responseData = createData(defaults, overrides);
+  return new InternalServerErrorResponse(responseData);
 }
