@@ -1,5 +1,9 @@
 import type { Context } from "hono";
-import { TypeweaverHono, type HonoRequestHandler } from "../lib/hono";
+import {
+  TypeweaverHono,
+  type HonoRequestHandler,
+  type TypeweaverHonoOptions,
+} from "../lib/hono";
 
 import type { ICreateTodoRequest } from "./CreateTodoRequest";
 import { CreateTodoRequestValidator } from "./CreateTodoRequestValidator";
@@ -55,8 +59,8 @@ export type TodoApiHandler = {
 };
 
 export class TodoHono extends TypeweaverHono<TodoApiHandler> {
-  public constructor(handlers: TodoApiHandler) {
-    super({ requestHandlers: handlers });
+  public constructor(options: TypeweaverHonoOptions<TodoApiHandler>) {
+    super(options);
     this.setupRoutes();
   }
 

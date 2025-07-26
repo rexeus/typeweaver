@@ -1,5 +1,9 @@
 import type { Context } from "hono";
-import { TypeweaverHono, type HonoRequestHandler } from "../lib/hono";
+import {
+  TypeweaverHono,
+  type HonoRequestHandler,
+  type TypeweaverHonoOptions,
+} from "../lib/hono";
 
 import type { IPutSpecimenRequest } from "./PutSpecimenRequest";
 import { PutSpecimenRequestValidator } from "./PutSpecimenRequestValidator";
@@ -13,8 +17,8 @@ export type SpecimenApiHandler = {
 };
 
 export class SpecimenHono extends TypeweaverHono<SpecimenApiHandler> {
-  public constructor(handlers: SpecimenApiHandler) {
-    super({ requestHandlers: handlers });
+  public constructor(options: TypeweaverHonoOptions<SpecimenApiHandler>) {
+    super(options);
     this.setupRoutes();
   }
 

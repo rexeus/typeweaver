@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { TypeweaverHono, type HonoRequestHandler } from "<%- coreDir %>/lib/hono";
+import { TypeweaverHono, type HonoRequestHandler, type TypeweaverHonoOptions } from "<%- coreDir %>/lib/hono";
 <% for (const operation of operations) { %>
 import type { I<%- operation.className %>Request } from "./<%- operation.className %>Request";
 import { <%- operation.className %>RequestValidator } from "./<%- operation.className %>RequestValidator";
@@ -13,8 +13,8 @@ export type <%- pascalCaseEntityName %>ApiHandler = {
 };
 
 export class <%- pascalCaseEntityName %>Hono extends TypeweaverHono<<%- pascalCaseEntityName %>ApiHandler> {
-  public constructor(handlers: <%- pascalCaseEntityName %>ApiHandler) {
-    super({ requestHandlers: handlers });
+  public constructor(options: TypeweaverHonoOptions<<%- pascalCaseEntityName %>ApiHandler>) {
+    super(options);
     this.setupRoutes();
   }
 

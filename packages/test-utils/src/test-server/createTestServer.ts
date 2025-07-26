@@ -21,14 +21,18 @@ export async function createTestServer(handlerOptions?: {
 }): Promise<CreateTestServerResult> {
   const app = new Hono();
 
-  const todoRouter = new TodoHono(new TodoHandlers(handlerOptions?.todoError));
-  const authRouter = new AuthHono(new AuthHandlers(handlerOptions?.authError));
-  const accountRouter = new AccountHono(
-    new AccountHandlers(handlerOptions?.accountError)
-  );
-  const specimenRouter = new SpecimenHono(
-    new SpecimenHandlers(handlerOptions?.specimenError)
-  );
+  const todoRouter = new TodoHono({
+    requestHandlers: new TodoHandlers(handlerOptions?.todoError),
+  });
+  const authRouter = new AuthHono({
+    requestHandlers: new AuthHandlers(handlerOptions?.authError),
+  });
+  const accountRouter = new AccountHono({
+    requestHandlers: new AccountHandlers(handlerOptions?.accountError),
+  });
+  const specimenRouter = new SpecimenHono({
+    requestHandlers: new SpecimenHandlers(handlerOptions?.specimenError),
+  });
 
   app.route("/", authRouter);
   app.route("/", accountRouter);

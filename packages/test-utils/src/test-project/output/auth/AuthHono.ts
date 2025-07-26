@@ -1,5 +1,9 @@
 import type { Context } from "hono";
-import { TypeweaverHono, type HonoRequestHandler } from "../lib/hono";
+import {
+  TypeweaverHono,
+  type HonoRequestHandler,
+  type TypeweaverHonoOptions,
+} from "../lib/hono";
 
 import type { IAccessTokenRequest } from "./AccessTokenRequest";
 import { AccessTokenRequestValidator } from "./AccessTokenRequestValidator";
@@ -22,8 +26,8 @@ export type AuthApiHandler = {
 };
 
 export class AuthHono extends TypeweaverHono<AuthApiHandler> {
-  public constructor(handlers: AuthApiHandler) {
-    super({ requestHandlers: handlers });
+  public constructor(options: TypeweaverHonoOptions<AuthApiHandler>) {
+    super(options);
     this.setupRoutes();
   }
 
