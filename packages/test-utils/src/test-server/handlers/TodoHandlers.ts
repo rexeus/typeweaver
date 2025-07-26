@@ -2,6 +2,7 @@ import { HttpResponse } from "@rexeus/typeweaver-core";
 import {
   CreateTodoSuccessResponse,
   DeleteTodoSuccessResponse,
+  PutTodoSuccessResponse,
   UpdateTodoSuccessResponse,
   UpdateTodoStatusSuccessResponse,
   GetTodoSuccessResponse,
@@ -19,6 +20,8 @@ import {
   type CreateTodoResponse,
   type IDeleteTodoRequest,
   type DeleteTodoResponse,
+  type IPutTodoRequest,
+  type PutTodoResponse,
   type IUpdateTodoRequest,
   type UpdateTodoResponse,
   type IUpdateTodoStatusRequest,
@@ -45,6 +48,7 @@ import {
   type OptionsTodoResponse,
   createCreateTodoSuccessResponse,
   createDeleteTodoSuccessResponse,
+  createPutTodoSuccessResponse,
   createUpdateTodoSuccessResponse,
   createUpdateTodoStatusSuccessResponse,
   createGetTodoSuccessResponse,
@@ -89,6 +93,25 @@ export class TodoHandlers implements TodoApiHandler {
 
     const response = createDeleteTodoSuccessResponse();
     return new DeleteTodoSuccessResponse(response);
+  }
+
+  public async handlePutTodoRequest(
+    request: IPutTodoRequest
+  ): Promise<PutTodoResponse> {
+    if (this.throwError) {
+      throw this.throwError;
+    }
+
+    const { todoId } = request.param;
+
+    const response = createPutTodoSuccessResponse({
+      body: {
+        ...request.body,
+        id: todoId,
+      },
+    });
+
+    return new PutTodoSuccessResponse(response);
   }
 
   public async handleUpdateTodoRequest(

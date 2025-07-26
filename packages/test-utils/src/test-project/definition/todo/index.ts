@@ -9,6 +9,7 @@ export { default as CreateSubTodoDefinition } from "./mutations/CreateSubTodoDef
 export { default as CreateTodoDefinition } from "./mutations/CreateTodoDefinition";
 export { default as DeleteSubTodoDefinition } from "./mutations/DeleteSubTodoDefinition";
 export { default as DeleteTodoDefinition } from "./mutations/DeleteTodoDefinition";
+export { default as PutTodoDefinition } from "./mutations/PutTodoDefinition";
 export { default as UpdateSubTodoDefinition } from "./mutations/UpdateSubTodoDefinition";
 export { default as UpdateTodoDefinition } from "./mutations/UpdateTodoDefinition";
 export { default as UpdateTodoStatusDefinition } from "./mutations/UpdateTodoStatusDefinition";

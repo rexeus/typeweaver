@@ -6,12 +6,15 @@ import {
   createGetTodoRequest,
   CreateTodoRequestCommand,
   createCreateTodoRequest,
+  PutTodoRequestCommand,
+  createPutTodoRequest,
   UpdateTodoRequestCommand,
   createUpdateTodoRequest,
   DeleteTodoRequestCommand,
   createDeleteTodoRequest,
   GetTodoSuccessResponse,
   CreateTodoSuccessResponse,
+  PutTodoSuccessResponse,
   UpdateTodoSuccessResponse,
   DeleteTodoSuccessResponse,
   ForbiddenErrorResponse,
@@ -69,7 +72,17 @@ describe("Generated Client", () => {
     });
 
     test("should handle PUT requests", async () => {
-      // TODO: support todo put request
+      // Arrange
+      const requestData = createPutTodoRequest();
+      const command = new PutTodoRequestCommand(requestData);
+
+      // Act
+      const response = await todoClient.send(command);
+
+      // Assert
+      expect(response).toBeInstanceOf(PutTodoSuccessResponse);
+      expect(response.statusCode).toBe(200);
+      expect(response.body.id).toBe(requestData.param.todoId);
     });
 
     test("should handle PATCH requests", async () => {

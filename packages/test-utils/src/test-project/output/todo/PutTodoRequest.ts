@@ -1,0 +1,63 @@
+import { HttpMethod } from "@rexeus/typeweaver-core";
+import {
+  type PutTodoResponse,
+  PutTodoSuccessResponse,
+} from "./PutTodoResponse";
+
+import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
+
+import { TodoNotChangeableErrorResponse } from "./TodoNotChangeableErrorResponse";
+
+import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
+
+import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
+
+import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
+
+import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
+
+import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
+
+import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
+
+export type IPutTodoRequestHeader = {
+  "Content-Type": "application/json";
+  Accept: "application/json";
+  Authorization: string;
+};
+
+export type IPutTodoRequestParam = {
+  todoId: string;
+};
+
+export type IPutTodoRequestBody = {
+  accountId: string;
+  parentId?: string | undefined;
+  title: string;
+  description?: string | undefined;
+  status: "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED";
+  dueDate?: string | undefined;
+  tags?: string[] | undefined;
+  priority?: ("LOW" | "MEDIUM" | "HIGH") | undefined;
+};
+
+export type IPutTodoRequest = {
+  path: string;
+  method: HttpMethod.PUT;
+  header: IPutTodoRequestHeader;
+  param: IPutTodoRequestParam;
+
+  body: IPutTodoRequestBody;
+};
+
+export type SuccessfulPutTodoResponse = Exclude<
+  PutTodoResponse,
+  | TodoNotFoundErrorResponse
+  | TodoNotChangeableErrorResponse
+  | ForbiddenErrorResponse
+  | InternalServerErrorResponse
+  | TooManyRequestsErrorResponse
+  | UnauthorizedErrorResponse
+  | UnsupportedMediaTypeErrorResponse
+  | ValidationErrorResponse
+>;

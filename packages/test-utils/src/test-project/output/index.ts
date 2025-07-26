@@ -170,6 +170,16 @@ export * from "./todo/OptionsTodoResponse";
 
 export * from "./todo/OptionsTodoResponseValidator";
 
+export * from "./todo/PutTodoRequest";
+
+export * from "./todo/PutTodoRequestCommand";
+
+export * from "./todo/PutTodoRequestValidator";
+
+export * from "./todo/PutTodoResponse";
+
+export * from "./todo/PutTodoResponseValidator";
+
 export * from "./todo/QuerySubTodoRequest";
 
 export * from "./todo/QuerySubTodoRequestCommand";

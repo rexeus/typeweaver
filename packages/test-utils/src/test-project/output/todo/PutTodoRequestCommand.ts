@@ -1,0 +1,50 @@
+import definition from "../../definition/todo/mutations/PutTodoDefinition";
+import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import { RequestCommand } from "../lib/clients";
+import { PutTodoResponseValidator } from "./PutTodoResponseValidator";
+import type {
+  IPutTodoRequest,
+  IPutTodoRequestHeader,
+  IPutTodoRequestParam,
+  IPutTodoRequestBody,
+  SuccessfulPutTodoResponse,
+} from "./PutTodoRequest";
+
+import { PutTodoSuccessResponse } from "./PutTodoResponse";
+
+export class PutTodoRequestCommand
+  extends RequestCommand
+  implements IPutTodoRequest
+{
+  public override readonly method = definition.method as HttpMethod.PUT;
+  public override readonly path = definition.path;
+
+  public override readonly header: IPutTodoRequestHeader;
+  public override readonly param: IPutTodoRequestParam;
+  declare public readonly query: undefined;
+  public override readonly body: IPutTodoRequestBody;
+
+  private readonly responseValidator: PutTodoResponseValidator;
+
+  public constructor(input: Omit<IPutTodoRequest, "method" | "path">) {
+    super();
+
+    this.header = input.header;
+
+    this.param = input.param;
+
+    this.body = input.body;
+
+    this.responseValidator = new PutTodoResponseValidator();
+  }
+
+  public processResponse(response: IHttpResponse): SuccessfulPutTodoResponse {
+    const result = this.responseValidator.validate(response);
+
+    if (result instanceof PutTodoSuccessResponse) {
+      return result;
+    }
+
+    throw result;
+  }
+}

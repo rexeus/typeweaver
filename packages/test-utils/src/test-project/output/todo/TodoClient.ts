@@ -12,6 +12,9 @@ import type { SuccessfulDeleteSubTodoResponse } from "./DeleteSubTodoRequest";
 import { DeleteTodoRequestCommand } from "./DeleteTodoRequestCommand";
 import type { SuccessfulDeleteTodoResponse } from "./DeleteTodoRequest";
 
+import { PutTodoRequestCommand } from "./PutTodoRequestCommand";
+import type { SuccessfulPutTodoResponse } from "./PutTodoRequest";
+
 import { UpdateSubTodoRequestCommand } from "./UpdateSubTodoRequestCommand";
 import type { SuccessfulUpdateSubTodoResponse } from "./UpdateSubTodoRequest";
 
@@ -47,6 +50,7 @@ export type TodoRequestCommands =
   | CreateTodoRequestCommand
   | DeleteSubTodoRequestCommand
   | DeleteTodoRequestCommand
+  | PutTodoRequestCommand
   | UpdateSubTodoRequestCommand
   | UpdateTodoRequestCommand
   | UpdateTodoStatusRequestCommand
@@ -63,6 +67,7 @@ export type SuccessfulTodoResponses =
   | SuccessfulCreateTodoResponse
   | SuccessfulDeleteSubTodoResponse
   | SuccessfulDeleteTodoResponse
+  | SuccessfulPutTodoResponse
   | SuccessfulUpdateSubTodoResponse
   | SuccessfulUpdateTodoResponse
   | SuccessfulUpdateTodoStatusResponse
@@ -94,6 +99,10 @@ export class TodoClient extends ApiClient {
   public async send(
     command: DeleteTodoRequestCommand,
   ): Promise<SuccessfulDeleteTodoResponse>;
+
+  public async send(
+    command: PutTodoRequestCommand,
+  ): Promise<SuccessfulPutTodoResponse>;
 
   public async send(
     command: UpdateSubTodoRequestCommand,
@@ -154,6 +163,10 @@ export class TodoClient extends ApiClient {
       }
 
       case command instanceof DeleteTodoRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      case command instanceof PutTodoRequestCommand: {
         return command.processResponse(response);
       }
 

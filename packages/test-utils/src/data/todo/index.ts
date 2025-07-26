@@ -26,6 +26,8 @@ export * from "./TodoNotFoundErrorResponseUtils";
 export * from "./TodoStatusTransitionInvalidErrorResponseUtils";
 export * from "./UpdateSubTodoRequestUtils";
 export * from "./UpdateSubTodoResponseUtils";
+export * from "./PutTodoRequestUtils";
+export * from "./PutTodoResponseUtils";
 export * from "./UpdateTodoRequestUtils";
 export * from "./UpdateTodoResponseUtils";
 export * from "./UpdateTodoStatusRequestUtils";

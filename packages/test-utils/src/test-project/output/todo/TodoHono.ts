@@ -17,6 +17,10 @@ import type { IDeleteTodoRequest } from "./DeleteTodoRequest";
 import { DeleteTodoRequestValidator } from "./DeleteTodoRequestValidator";
 import type { DeleteTodoResponse } from "./DeleteTodoResponse";
 
+import type { IPutTodoRequest } from "./PutTodoRequest";
+import { PutTodoRequestValidator } from "./PutTodoRequestValidator";
+import type { PutTodoResponse } from "./PutTodoResponse";
+
 import type { IUpdateSubTodoRequest } from "./UpdateSubTodoRequest";
 import { UpdateSubTodoRequestValidator } from "./UpdateSubTodoRequestValidator";
 import type { UpdateSubTodoResponse } from "./UpdateSubTodoResponse";
@@ -73,6 +77,8 @@ export type TodoApiHandler = {
     IDeleteTodoRequest,
     DeleteTodoResponse
   >;
+
+  handlePutTodoRequest: HonoRequestHandler<IPutTodoRequest, PutTodoResponse>;
 
   handleUpdateSubTodoRequest: HonoRequestHandler<
     IUpdateSubTodoRequest,
@@ -159,6 +165,14 @@ export class TodoHono extends TypeweaverHono<TodoApiHandler> {
         context,
         new DeleteTodoRequestValidator(),
         this.requestHandlers.handleDeleteTodoRequest.bind(this.requestHandlers),
+      ),
+    );
+
+    this.put("/todos/:todoId", async (context: Context) =>
+      this.handleRequest(
+        context,
+        new PutTodoRequestValidator(),
+        this.requestHandlers.handlePutTodoRequest.bind(this.requestHandlers),
       ),
     );
 
