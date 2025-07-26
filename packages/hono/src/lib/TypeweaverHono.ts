@@ -237,6 +237,25 @@ export abstract class TypeweaverHono<
     this.onError(this.handleError.bind(this));
   }
 
+  /**
+   * Safely executes an error handler and returns null if it fails.
+   * This allows for graceful fallback to the next handler in the chain.
+   * 
+   * @param handlerFn - Function that executes the error handler
+   * @returns Response if successful, null if handler throws
+   */
+  private async safelyExecuteHandler(
+    handlerFn: () => Promise<IHttpResponse> | IHttpResponse
+  ): Promise<Response | null> {
+    try {
+      const response = await handlerFn();
+      return this.adapter.toResponse(response);
+    } catch {
+      // Handler execution failed, return null to continue to next handler
+      return null;
+    }
+  }
+
   protected async handleError(
     error: unknown,
     context: Context
@@ -246,9 +265,10 @@ export abstract class TypeweaverHono<
       error instanceof RequestValidationError &&
       this.config.errorHandlers.validation
     ) {
-      return this.adapter.toResponse(
-        await this.config.errorHandlers.validation(error, context)
+      const response = await this.safelyExecuteHandler(() =>
+        this.config.errorHandlers.validation!(error, context)
       );
+      if (response) return response;
     }
 
     // Handle HTTP response errors
@@ -256,16 +276,18 @@ export abstract class TypeweaverHono<
       error instanceof HttpResponse &&
       this.config.errorHandlers.httpResponse
     ) {
-      return this.adapter.toResponse(
-        await this.config.errorHandlers.httpResponse(error, context)
+      const response = await this.safelyExecuteHandler(() =>
+        this.config.errorHandlers.httpResponse!(error, context)
       );
+      if (response) return response;
     }
 
     // Handle unknown errors
     if (this.config.errorHandlers.unknown) {
-      return this.adapter.toResponse(
-        await this.config.errorHandlers.unknown(error, context)
+      const response = await this.safelyExecuteHandler(() =>
+        this.config.errorHandlers.unknown!(error, context)
       );
+      if (response) return response;
     }
 
     // Default: re-throw

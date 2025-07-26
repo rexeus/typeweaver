@@ -7,7 +7,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "test-project:gen": "pnpm exec typeweaver generate --output src/test-project/output --input src/test-project/definition --plugins clients,aws-cdk,hono --shared src/test-project/definition/shared"
+    "test-project:gen": "pnpm exec typeweaver generate --output src/test-project/output --input src/test-project/definition --plugins clients,aws-cdk,hono --shared src/test-project/definition/shared",
+    "test-gen": "pnpm run test-project:gen"
   },
   "keywords": [
     "typeweaver",
