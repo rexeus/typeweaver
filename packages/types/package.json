@@ -20,10 +20,9 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "build": "pkgroll --clean-dist && cp -r ./src/templates ./dist/templates && cp -r ./src/lib ./dist/lib",
+    "test": "vitest --run",
     "prepack": "npm run build",
-    "preversion": "npm run build",
-    "test": "vitest --run --cache",
-    "test:coverage": "vitest --run --cache --coverage"
+    "preversion": "npm run build"
   },
   "keywords": [
     "api",

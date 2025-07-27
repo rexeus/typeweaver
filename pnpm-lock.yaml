@@ -151,6 +151,9 @@ importers:
       hono:
         specifier: ^4.0.0
         version: 4.8.2
+      test-utils:
+        specifier: workspace:^
+        version: link:../test-utils
 
   packages/test-utils:
     devDependencies:
