@@ -14,7 +14,11 @@ export default new HttpOperationDefinition({
     param: z.object({
       todoId: z.ulid(),
     }),
-    header: defaultRequestHeadersWithoutPayload,
+    header: z.object({
+      ...defaultRequestHeadersWithoutPayload.shape,
+      "Access-Control-Request-Method": z.string().optional(),
+      "Access-Control-Request-Headers": z.array(z.string()).optional(),
+    }),
   },
   method: HttpMethod.OPTIONS,
   summary: "Get allowed methods for todo resource",
@@ -25,9 +29,11 @@ export default new HttpOperationDefinition({
       description: "Allowed methods for todo resource",
       statusCode: HttpStatusCode.OK,
       header: z.object({
-        Allow: z.string(),
-        "Access-Control-Allow-Methods": z.string().optional(),
-        "Access-Control-Allow-Headers": z.string().optional(),
+        Allow: z.array(z.string()),
+        "Access-Control-Allow-Origin": z.string().optional(),
+        "Access-Control-Allow-Methods": z.array(z.string()).optional(),
+        "Access-Control-Allow-Headers": z.array(z.string()).optional(),
+        "Access-Control-Max-Age": z.string().optional(),
       }),
     },
     TodoNotFoundErrorDefinition,

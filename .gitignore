@@ -4,6 +4,7 @@
 .idea
 
 CLAUDE.md
+GEMINI.md
 
 # Dependencies
 node_modules

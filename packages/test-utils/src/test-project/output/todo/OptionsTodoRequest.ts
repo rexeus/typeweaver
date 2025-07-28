@@ -21,6 +21,8 @@ import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
 export type IOptionsTodoRequestHeader = {
   Accept: "application/json";
   Authorization: string;
+  "Access-Control-Request-Method"?: string | undefined;
+  "Access-Control-Request-Headers"?: string[] | undefined;
 };
 
 export type IOptionsTodoRequestParam = {

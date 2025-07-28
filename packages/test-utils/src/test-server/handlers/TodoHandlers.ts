@@ -281,11 +281,7 @@ export class TodoHandlers implements TodoApiHandler {
       throw this.throwError;
     }
 
-    const response = createOptionsTodoSuccessResponse({
-      header: {
-        Allow: "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS",
-      },
-    });
+    const response = createOptionsTodoSuccessResponse();
     return new OptionsTodoSuccessResponse(response);
   }
 }

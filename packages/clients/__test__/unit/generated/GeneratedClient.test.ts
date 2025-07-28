@@ -161,7 +161,7 @@ describe("Generated Client", () => {
     test("should handle 404 responses", async () => {
       // Arrange
       const { client } = await setupClientTest({
-        todoError: createTodoNotFoundErrorResponse(),
+        throwTodoError: createTodoNotFoundErrorResponse(),
       });
       const requestData = createUpdateTodoRequest();
       const command = new UpdateTodoRequestCommand(requestData);
@@ -175,7 +175,7 @@ describe("Generated Client", () => {
     test("should handle TodoNotChangeable error responses", async () => {
       // Arrange
       const { client } = await setupClientTest({
-        todoError: createTodoNotChangeableErrorResponse(),
+        throwTodoError: createTodoNotChangeableErrorResponse(),
       });
       const requestData = createUpdateTodoRequest();
       const command = new UpdateTodoRequestCommand(requestData);
@@ -189,7 +189,7 @@ describe("Generated Client", () => {
     test("should handle Forbidden error responses", async () => {
       // Arrange
       const { client } = await setupClientTest({
-        todoError: createForbiddenErrorResponse(),
+        throwTodoError: createForbiddenErrorResponse(),
       });
       const requestData = createUpdateTodoRequest();
       const command = new UpdateTodoRequestCommand(requestData);
@@ -203,7 +203,7 @@ describe("Generated Client", () => {
     test("should handle InternalServer error responses", async () => {
       // Arrange
       const { client } = await setupClientTest({
-        todoError: createInternalServerErrorResponse(),
+        throwTodoError: createInternalServerErrorResponse(),
       });
       const requestData = createUpdateTodoRequest();
       const command = new UpdateTodoRequestCommand(requestData);

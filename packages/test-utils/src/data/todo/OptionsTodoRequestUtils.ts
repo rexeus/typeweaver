@@ -15,6 +15,8 @@ export function createOptionsTodoRequestHeaders(
   const defaults: IOptionsTodoRequestHeader = {
     Accept: "application/json",
     Authorization: `Bearer ${createJwtToken()}`,
+    "Access-Control-Request-Method": "POST",
+    "Access-Control-Request-Headers": ["Content-Type", "Authorization"],
   };
 
   return createData(defaults, input);

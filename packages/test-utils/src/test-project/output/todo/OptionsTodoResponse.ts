@@ -36,9 +36,11 @@ import type {
 } from "../shared/ValidationErrorResponse";
 
 export type IOptionsTodoSuccessResponseHeader = {
-  Allow: string;
-  "Access-Control-Allow-Methods"?: string | undefined;
-  "Access-Control-Allow-Headers"?: string | undefined;
+  Allow: string[];
+  "Access-Control-Allow-Origin"?: string | undefined;
+  "Access-Control-Allow-Methods"?: string[] | undefined;
+  "Access-Control-Allow-Headers"?: string[] | undefined;
+  "Access-Control-Max-Age"?: string | undefined;
 };
 
 export type IOptionsTodoSuccessResponse = {

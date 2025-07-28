@@ -142,15 +142,13 @@ export abstract class TypeweaverHono<
     validation: (error: RequestValidationError): IHttpResponse => ({
       statusCode: 400,
       body: {
-        error: {
-          code: "VALIDATION_ERROR",
-          message: error.message,
-          details: {
-            headers: error.headerIssues,
-            body: error.bodyIssues,
-            query: error.queryIssues,
-            params: error.pathParamIssues,
-          },
+        code: "VALIDATION_ERROR",
+        message: error.message,
+        issues: {
+          header: error.headerIssues,
+          body: error.bodyIssues,
+          query: error.queryIssues,
+          param: error.pathParamIssues,
         },
       },
     }),
@@ -160,10 +158,8 @@ export abstract class TypeweaverHono<
     unknown: (): IHttpResponse => ({
       statusCode: 500,
       body: {
-        error: {
-          code: "INTERNAL_SERVER_ERROR",
-          message: "An unexpected error occurred.",
-        },
+        code: "INTERNAL_SERVER_ERROR",
+        message: "An unexpected error occurred.",
       },
     }),
   };
