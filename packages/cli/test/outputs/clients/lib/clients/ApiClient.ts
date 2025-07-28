@@ -124,11 +124,15 @@ export abstract class ApiClient {
 
         const lowerCaseKey = key.toLowerCase();
         const headerCaseKey = Case.header(lowerCaseKey);
+        const values = Array.isArray(value)
+          ? value
+          : value.replace(" ", "").split(",");
+        const normalizedValue = values.length > 1 ? values : values[0];
 
         return {
           ...acc,
-          [headerCaseKey]: value,
-          [lowerCaseKey]: value,
+          [headerCaseKey]: normalizedValue,
+          [lowerCaseKey]: normalizedValue,
         };
       },
       {},

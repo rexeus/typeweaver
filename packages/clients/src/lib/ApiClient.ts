@@ -109,7 +109,9 @@ export abstract class ApiClient {
         throw new Error("Network error: Unknown error");
       }
 
-      throw new Error(`Network error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Network error: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -122,11 +124,15 @@ export abstract class ApiClient {
 
         const lowerCaseKey = key.toLowerCase();
         const headerCaseKey = Case.header(lowerCaseKey);
+        const values = Array.isArray(value)
+          ? value
+          : value.replace(" ", "").split(",");
+        const normalizedValue = values.length > 1 ? values : values[0];
 
         return {
           ...acc,
-          [headerCaseKey]: value,
-          [lowerCaseKey]: value,
+          [headerCaseKey]: normalizedValue,
+          [lowerCaseKey]: normalizedValue,
         };
       },
       {}
