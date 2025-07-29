@@ -205,7 +205,9 @@ export abstract class TypeweaverHono<
       },
     };
 
-    // FIXME: on error handler is not catching errors from handlers, only validation errors
+    // TODO: native onError handler of hono is currently not working in this context
+    // -> only validation errors were caught, other errors were not handled
+    // -> if this is fixed, the hono onError handler should be used instead of our try/catch logic
     // this.registerErrorHandler();
   }
 
