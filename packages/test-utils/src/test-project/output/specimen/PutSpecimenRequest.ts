@@ -1,8 +1,5 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import {
-  type PutSpecimenResponse,
-  PutSpecimenSuccessResponse,
-} from "./PutSpecimenResponse";
+import { type PutSpecimenResponse } from "./PutSpecimenResponse";
 
 import { SpecimenConflictErrorResponse } from "./SpecimenConflictErrorResponse";
 

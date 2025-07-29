@@ -5,6 +5,7 @@
   "scripts": {
     "typecheck": "pnpm -r typecheck",
     "build": "pnpm -r build",
+    "lint": "eslint .",
     "format": "prettier --write .",
     "test": "pnpm -r test",
     "test:gen": "pnpm -r test:gen",
@@ -32,13 +33,17 @@
   "packageManager": "pnpm@10.12.1",
   "devDependencies": {
     "@changesets/cli": "^2.29.5",
+    "@eslint/js": "^9.32.0",
     "@faker-js/faker": "^9.9.0",
     "@types/ejs": "^3.1.5",
     "@types/node": "^22.15.30",
     "@vitest/coverage-v8": "^3.2.4",
+    "eslint": "^9.32.0",
+    "eslint-config-prettier": "^10.1.8",
     "pkgroll": "^2.13.1",
     "prettier": "^3.5.3",
     "typescript": "^5.8.3",
+    "typescript-eslint": "^8.38.0",
     "vitest": "^3.2.4",
     "zod": "^3.25.67"
   },

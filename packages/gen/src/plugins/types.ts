@@ -8,7 +8,7 @@ export type PluginConfig = Record<string, unknown>;
 /**
  * Context provided to plugins during initialization and finalization
  */
-export interface PluginContext {
+export type PluginContext = {
   outputDir: string;
   inputDir: string;
   config: PluginConfig;
@@ -17,7 +17,7 @@ export interface PluginContext {
 /**
  * Context provided to plugins during generation
  */
-export interface GeneratorContext extends PluginContext {
+export type GeneratorContext = PluginContext & {
   resources: GetResourcesResult;
   templateDir: string;
   coreDir: string;
@@ -32,14 +32,14 @@ export interface GeneratorContext extends PluginContext {
 /**
  * Plugin metadata
  */
-export interface PluginMetadata {
+export type PluginMetadata = {
   name: string;
 }
 
 /**
  * TypeWeaver plugin interface
  */
-export interface TypeWeaverPlugin extends PluginMetadata {
+export type TypeWeaverPlugin = PluginMetadata & {
   /**
    * Initialize the plugin
    * Called before any generation happens
@@ -75,14 +75,14 @@ export type PluginConstructor = new (config?: PluginConfig) => TypeWeaverPlugin;
 /**
  * Plugin module export
  */
-export interface PluginModule {
+export type PluginModule = {
   default: PluginConstructor;
 }
 
 /**
  * Plugin registration entry
  */
-export interface PluginRegistration {
+export type PluginRegistration = {
   name: string;
   plugin: TypeWeaverPlugin;
   config?: PluginConfig;
@@ -91,11 +91,11 @@ export interface PluginRegistration {
 /**
  * TypeWeaver configuration
  */
-export interface TypeWeaverConfig {
+export type TypeWeaverConfig = {
   input: string;
   output: string;
   shared?: string;
-  plugins?: Array<string | [string, PluginConfig]>;
+  plugins?: (string | [string, PluginConfig])[];
   prettier?: boolean;
   clean?: boolean;
 }

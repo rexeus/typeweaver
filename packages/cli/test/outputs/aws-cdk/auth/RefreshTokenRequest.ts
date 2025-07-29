@@ -1,8 +1,5 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import {
-  type RefreshTokenResponse,
-  RefreshTokenSuccessResponse,
-} from "./RefreshTokenResponse";
+import { type RefreshTokenResponse } from "./RefreshTokenResponse";
 
 import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 

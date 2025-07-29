@@ -1,10 +1,9 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { faker } from "@faker-js/faker";
 import type {
   IRefreshTokenRequest,
   IRefreshTokenRequestBody,
   IRefreshTokenRequestHeader,
-} from "../..";;
+} from "../..";
 import { createData } from "../createData";
 import { createJwtToken } from "../createJwtToken";
 
@@ -13,7 +12,7 @@ export function createRefreshTokenRequestHeaders(
 ): IRefreshTokenRequestHeader {
   const defaults: IRefreshTokenRequestHeader = {
     "Content-Type": "application/json",
-    "Accept": "application/json",
+    Accept: "application/json",
   };
 
   return createData(defaults, input);

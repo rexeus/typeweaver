@@ -21,7 +21,6 @@ import {
   type IHttpResponseDefinition,
 } from "@rexeus/typeweaver-core";
 import { InvalidSharedDirError } from "./errors/InvalidSharedDirError";
-import { InvalidSharedResponseDefinitionError } from "./errors/InvalidSharedResponseDefinitionError";
 import { DefinitionValidator } from "./DefinitionValidator";
 
 export type ResourceReaderConfig = {
@@ -199,7 +198,7 @@ export class ResourceReader {
     sourceDir: string,
     entityName: string,
     validator: DefinitionValidator,
-    referencedResponses: Array<SharedResponseResource | EntityResponseResource>
+    referencedResponses: (SharedResponseResource | EntityResponseResource)[]
   ): Promise<OperationResource[]> {
     const files = this.scanDirectoryRecursively(sourceDir);
     const definitions: OperationResource[] = [];

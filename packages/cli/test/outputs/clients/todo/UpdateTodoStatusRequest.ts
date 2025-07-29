@@ -1,8 +1,5 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import {
-  type UpdateTodoStatusResponse,
-  UpdateTodoStatusSuccessResponse,
-} from "./UpdateTodoStatusResponse";
+import { type UpdateTodoStatusResponse } from "./UpdateTodoStatusResponse";
 
 import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 

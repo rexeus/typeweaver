@@ -216,7 +216,7 @@ export abstract class TypeweaverHono<
    * @param defaultHandler - Default handler to use when option is true
    * @returns Resolved handler function or undefined if disabled
    */
-  private resolveErrorHandler<T extends Function>(
+  private resolveErrorHandler<T extends (...args: any[]) => any>(
     option: T | boolean | undefined,
     defaultHandler: T
   ): T | undefined {

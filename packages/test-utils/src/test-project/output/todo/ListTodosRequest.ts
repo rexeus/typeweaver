@@ -1,8 +1,5 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import {
-  type ListTodosResponse,
-  ListTodosSuccessResponse,
-} from "./ListTodosResponse";
+import { type ListTodosResponse } from "./ListTodosResponse";
 
 import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 

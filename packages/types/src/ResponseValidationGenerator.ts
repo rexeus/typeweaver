@@ -84,7 +84,7 @@ export class ResponseValidationGenerator {
 
       if (isReference) {
         // First check in global shared resources
-        let sharedResponse = context.resources.sharedResponseResources.find(
+        const sharedResponse = context.resources.sharedResponseResources.find(
           resource => resource.name === name
         );
 

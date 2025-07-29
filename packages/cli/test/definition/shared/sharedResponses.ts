@@ -1,4 +1,3 @@
-import { HttpResponseDefinition } from "@rexeus/typeweaver-core";
 import ForbiddenErrorDefinition from "./ForbiddenErrorDefinition";
 import InternalServerErrorDefinition from "./InternalServerErrorDefinition";
 import TooManyRequestsErrorDefinition from "./TooManyRequestsErrorDefinition";

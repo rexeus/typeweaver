@@ -1,8 +1,5 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import {
-  type CreateTodoResponse,
-  CreateTodoSuccessResponse,
-} from "./CreateTodoResponse";
+import { type CreateTodoResponse } from "./CreateTodoResponse";
 
 import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 

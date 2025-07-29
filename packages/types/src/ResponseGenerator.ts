@@ -144,7 +144,7 @@ export class ResponseGenerator {
     resource: EntityResponseResource,
     context: GeneratorContext
   ): void {
-    const { name, body, header, statusCode, outputFile, outputDir } = resource;
+    const { name, body, header, outputFile } = resource;
     const pascalCaseName = Case.pascal(name);
 
     const headerTsType = header

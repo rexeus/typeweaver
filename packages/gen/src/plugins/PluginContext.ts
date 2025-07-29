@@ -8,7 +8,7 @@ import type { GetResourcesResult } from "../Resource";
  * Builder for plugin contexts
  */
 export class PluginContextBuilder {
-  private generatedFiles: Set<string> = new Set();
+  private generatedFiles = new Set<string>();
 
   /**
    * Create a basic plugin context

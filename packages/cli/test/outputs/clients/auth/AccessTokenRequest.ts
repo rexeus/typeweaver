@@ -1,8 +1,5 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import {
-  type AccessTokenResponse,
-  AccessTokenSuccessResponse,
-} from "./AccessTokenResponse";
+import { type AccessTokenResponse } from "./AccessTokenResponse";
 
 import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 

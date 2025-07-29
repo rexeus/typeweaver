@@ -1,5 +1,4 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { faker } from "@faker-js/faker";
 import { createData } from "../createData";
 import { createJwtToken } from "../createJwtToken";
 import type {

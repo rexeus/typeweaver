@@ -1,8 +1,5 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import {
-  type RegisterAccountResponse,
-  RegisterAccountSuccessResponse,
-} from "./RegisterAccountResponse";
+import { type RegisterAccountResponse } from "./RegisterAccountResponse";
 
 import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 

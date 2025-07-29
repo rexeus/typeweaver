@@ -1,8 +1,5 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import {
-  type HeadTodoResponse,
-  HeadTodoSuccessResponse,
-} from "./HeadTodoResponse";
+import { type HeadTodoResponse } from "./HeadTodoResponse";
 
 import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 
