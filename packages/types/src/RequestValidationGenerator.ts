@@ -55,7 +55,10 @@ export class RequestValidationGenerator {
       header,
     });
 
-    const relativePath = path.relative(context.outputDir, operationResource.outputRequestValidationFile);
+    const relativePath = path.relative(
+      context.outputDir,
+      operationResource.outputRequestValidationFile
+    );
     context.writeFile(relativePath, content);
   }
 }

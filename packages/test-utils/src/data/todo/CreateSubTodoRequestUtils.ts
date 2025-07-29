@@ -14,8 +14,8 @@ export function createCreateSubTodoRequestHeaders(
 ): ICreateSubTodoRequestHeader {
   const defaults: ICreateSubTodoRequestHeader = {
     "Content-Type": "application/json",
-    "Accept": "application/json",
-    "Authorization": `Bearer ${createJwtToken()}`,
+    Accept: "application/json",
+    Authorization: `Bearer ${createJwtToken()}`,
   };
 
   return createData(defaults, input);
@@ -37,9 +37,15 @@ export function createCreateSubTodoRequestBody(
   const defaults: ICreateSubTodoRequestBody = {
     title: faker.lorem.sentence(),
     description: faker.datatype.boolean() ? faker.lorem.paragraph() : undefined,
-    dueDate: faker.datatype.boolean() ? faker.date.future().toISOString() : undefined,
-    tags: faker.datatype.boolean() ? [faker.lorem.word(), faker.lorem.word()] : undefined,
-    priority: faker.datatype.boolean() ? faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const) : undefined,
+    dueDate: faker.datatype.boolean()
+      ? faker.date.future().toISOString()
+      : undefined,
+    tags: faker.datatype.boolean()
+      ? [faker.lorem.word(), faker.lorem.word()]
+      : undefined,
+    priority: faker.datatype.boolean()
+      ? faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const)
+      : undefined,
   };
 
   return createData(defaults, input);
@@ -56,8 +62,10 @@ type CreateSubTodoRequestInput = {
 export function createCreateSubTodoRequest(
   input: CreateSubTodoRequestInput = {}
 ): IHttpRequest {
-  const param = input.param ? createCreateSubTodoRequestParams(input.param) : createCreateSubTodoRequestParams();
-  
+  const param = input.param
+    ? createCreateSubTodoRequestParams(input.param)
+    : createCreateSubTodoRequestParams();
+
   const defaults: IHttpRequest = {
     method: HttpMethod.POST,
     path: `/todos/${param.todoId}/subtodos`,

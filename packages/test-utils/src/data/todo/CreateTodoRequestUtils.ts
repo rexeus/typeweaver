@@ -2,15 +2,19 @@ import { HttpMethod } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
 import { createData } from "../createData";
 import { createJwtToken } from "../createJwtToken";
-import type { ICreateTodoRequest, ICreateTodoRequestBody, ICreateTodoRequestHeader } from "../..";
+import type {
+  ICreateTodoRequest,
+  ICreateTodoRequestBody,
+  ICreateTodoRequestHeader,
+} from "../..";
 
 export function createCreateTodoRequestHeaders(
   input: Partial<ICreateTodoRequestHeader> = {}
 ): ICreateTodoRequestHeader {
   const defaults: ICreateTodoRequestHeader = {
     "Content-Type": "application/json",
-    "Accept": "application/json",
-    "Authorization": `Bearer ${createJwtToken()}`,
+    Accept: "application/json",
+    Authorization: `Bearer ${createJwtToken()}`,
   };
 
   return createData(defaults, input);
@@ -48,7 +52,8 @@ export function createCreateTodoRequest(
 
   const overrides: Partial<ICreateTodoRequest> = {};
   if (input.path !== undefined) overrides.path = input.path;
-  if (input.body !== undefined) overrides.body = createCreateTodoRequestBody(input.body);
+  if (input.body !== undefined)
+    overrides.body = createCreateTodoRequestBody(input.body);
   if (input.header !== undefined)
     overrides.header = createCreateTodoRequestHeaders(input.header);
 

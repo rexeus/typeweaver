@@ -20,11 +20,22 @@ export function createSubTodoNotChangeableErrorResponseHeaders(
 export function createSubTodoNotChangeableErrorResponseBody(
   input: Partial<ISubTodoNotChangeableErrorResponseBody> = {}
 ): ISubTodoNotChangeableErrorResponseBody {
-  const currentTodoStatus = faker.helpers.arrayElement(["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"] as const) as "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED";
-  const currentSubtodoStatus = faker.helpers.arrayElement(["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"] as const) as "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED";
+  const currentTodoStatus = faker.helpers.arrayElement([
+    "TODO",
+    "IN_PROGRESS",
+    "DONE",
+    "ARCHIVED",
+  ] as const) as "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED";
+  const currentSubtodoStatus = faker.helpers.arrayElement([
+    "TODO",
+    "IN_PROGRESS",
+    "DONE",
+    "ARCHIVED",
+  ] as const) as "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED";
 
   const defaults: ISubTodoNotChangeableErrorResponseBody = {
-    message: "SubTodo in current status or because of parent todo status cannot be changed",
+    message:
+      "SubTodo in current status or because of parent todo status cannot be changed",
     code: "SUBTODO_NOT_CHANGEABLE_ERROR",
     context: {
       todoId: faker.string.ulid(),
@@ -33,8 +44,14 @@ export function createSubTodoNotChangeableErrorResponseBody(
       currentSubtodoStatus,
     },
     expectedValues: {
-      allowedTodoStatuses: faker.helpers.arrayElements(["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"], { min: 1, max: 4 }) as ("TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED")[],
-      allowedSubtodoStatuses: faker.helpers.arrayElements(["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"], { min: 1, max: 4 }) as ("TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED")[],
+      allowedTodoStatuses: faker.helpers.arrayElements(
+        ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"],
+        { min: 1, max: 4 }
+      ) as ("TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED")[],
+      allowedSubtodoStatuses: faker.helpers.arrayElements(
+        ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"],
+        { min: 1, max: 4 }
+      ) as ("TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED")[],
     },
   };
 
@@ -59,7 +76,9 @@ export function createSubTodoNotChangeableErrorResponse(
   const overrides: Partial<ISubTodoNotChangeableErrorResponse> = {};
   if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
   if (input.header !== undefined)
-    overrides.header = createSubTodoNotChangeableErrorResponseHeaders(input.header);
+    overrides.header = createSubTodoNotChangeableErrorResponseHeaders(
+      input.header
+    );
   if (input.body !== undefined)
     overrides.body = createSubTodoNotChangeableErrorResponseBody(input.body);
 

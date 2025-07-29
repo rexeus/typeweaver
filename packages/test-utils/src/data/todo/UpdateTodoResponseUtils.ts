@@ -39,7 +39,8 @@ export function createUpdateTodoSuccessResponse(
   if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
   if (input.header !== undefined)
     overrides.header = createUpdateTodoSuccessResponseHeaders(input.header);
-  if (input.body !== undefined) overrides.body = createUpdateTodoSuccessResponseBody(input.body);
+  if (input.body !== undefined)
+    overrides.body = createUpdateTodoSuccessResponseBody(input.body);
 
   return createData(defaults, overrides);
 }

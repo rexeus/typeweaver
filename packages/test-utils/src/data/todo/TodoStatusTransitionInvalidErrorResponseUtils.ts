@@ -18,7 +18,8 @@ export function createTodoStatusTransitionInvalidErrorResponse(
 ): ITodoStatusTransitionInvalidErrorResponse {
   const defaults: ITodoStatusTransitionInvalidErrorResponse = {
     statusCode: HttpStatusCode.CONFLICT,
-    header: createErrorResponseHeaders<ITodoStatusTransitionInvalidErrorResponseHeader>(),
+    header:
+      createErrorResponseHeaders<ITodoStatusTransitionInvalidErrorResponseHeader>(),
     body: {
       message: "Todo status transition is conflicting with current status",
       code: "TODO_STATUS_TRANSITION_INVALID_ERROR",
@@ -39,7 +40,8 @@ export function createTodoStatusTransitionInvalidErrorResponse(
   if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
   if (input.header !== undefined)
     overrides.header = createErrorResponseHeaders(input.header);
-  if (input.body !== undefined) overrides.body = createData(defaults.body, input.body);
+  if (input.body !== undefined)
+    overrides.body = createData(defaults.body, input.body);
 
   return createData(defaults, overrides);
 }

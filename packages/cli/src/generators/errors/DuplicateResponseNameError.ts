@@ -6,8 +6,8 @@ export class DuplicateResponseNameError extends Error {
   ) {
     super(
       `Duplicate response name '${responseName}' found.\n` +
-      `  First defined in: \`${firstFile}\`\n` +
-      `  Duplicate found in: \`${duplicateFile}\``
+        `  First defined in: \`${firstFile}\`\n` +
+        `  Duplicate found in: \`${duplicateFile}\``
     );
   }
 }

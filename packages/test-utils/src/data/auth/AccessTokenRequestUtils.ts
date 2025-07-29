@@ -4,7 +4,7 @@ import type {
   IAccessTokenRequest,
   IAccessTokenRequestBody,
   IAccessTokenRequestHeader,
-} from "../..";;
+} from "../..";
 import { createData } from "../createData";
 
 export function createAccessTokenRequestHeaders(
@@ -12,7 +12,7 @@ export function createAccessTokenRequestHeaders(
 ): IAccessTokenRequestHeader {
   const defaults: IAccessTokenRequestHeader = {
     "Content-Type": "application/json",
-    "Accept": "application/json",
+    Accept: "application/json",
   };
 
   return createData(defaults, input);

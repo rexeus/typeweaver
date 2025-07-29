@@ -50,7 +50,9 @@ export function createRegisterAccountSuccessResponse(
   const overrides: Partial<IRegisterAccountSuccessResponse> = {};
   if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
   if (input.header !== undefined)
-    overrides.header = createRegisterAccountSuccessResponseHeaders(input.header);
+    overrides.header = createRegisterAccountSuccessResponseHeaders(
+      input.header
+    );
   if (input.body !== undefined)
     overrides.body = createRegisterAccountSuccessResponseBody(input.body);
 

@@ -16,4 +16,5 @@ tmp/
 .DS_Store
 
 # Generated files
-packages/cli/test/output/
+packages/cli/test/outputs/
+packages/test-utils/src/test-project/output/

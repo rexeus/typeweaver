@@ -35,7 +35,7 @@ export const specimenSchema = z.object({
   isoDateTimeField: z.iso.datetime(),
   isoDurationField: z.iso.duration(),
   isoTimeField: z.iso.time(),
-  
+
   // Additional formats (for broader compatibility)
   ulidField: z.ulid(),
   uuidField: z.uuid(),

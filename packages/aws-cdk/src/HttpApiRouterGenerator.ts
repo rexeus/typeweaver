@@ -16,7 +16,12 @@ export class HttpApiRouterGenerator {
     for (const [entityName, entityResource] of Object.entries(
       context.resources.entityResources
     )) {
-      this.writeHttpApiRoutes(entityName, templateFile, entityResource.operations, context);
+      this.writeHttpApiRoutes(
+        entityName,
+        templateFile,
+        entityResource.operations,
+        context
+      );
     }
   }
 

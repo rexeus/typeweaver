@@ -11,7 +11,7 @@ import {
 } from "../../shared";
 import { todoSchema } from "../todoSchema";
 import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
-import TodoNotChangeableErrorDefinition from "../errors/TodoNotChangeableErrorDefinition"; 
+import TodoNotChangeableErrorDefinition from "../errors/TodoNotChangeableErrorDefinition";
 
 export default new HttpOperationDefinition({
   operationId: "PutTodo",
@@ -20,14 +20,13 @@ export default new HttpOperationDefinition({
     param: z.object({
       todoId: z.ulid(),
     }),
-    body: todoSchema
-      .omit({
-        id: true,
-        createdBy: true,
-        createdAt: true,
-        modifiedBy: true,
-        modifiedAt: true,
-      }),
+    body: todoSchema.omit({
+      id: true,
+      createdBy: true,
+      createdAt: true,
+      modifiedBy: true,
+      modifiedAt: true,
+    }),
     header: defaultRequestHeadersWithPayload,
   },
   method: HttpMethod.PUT,

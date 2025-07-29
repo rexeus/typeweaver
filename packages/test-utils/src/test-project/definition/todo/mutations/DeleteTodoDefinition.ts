@@ -9,7 +9,7 @@ import {
   defaultResponseHeader,
   defaultRequestHeadersWithoutPayload,
 } from "../../shared";
-import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition"; 
+import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
 
 export default new HttpOperationDefinition({
   operationId: "DeleteTodo",

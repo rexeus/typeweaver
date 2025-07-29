@@ -60,8 +60,10 @@ export function createGetTodoSuccessResponse(
 
   const overrides: Partial<IGetTodoSuccessResponse> = {};
   if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined) overrides.header = createGetTodoSuccessResponseHeaders(input.header);
-  if (input.body !== undefined) overrides.body = createGetTodoSuccessResponseBody(input.body);
+  if (input.header !== undefined)
+    overrides.header = createGetTodoSuccessResponseHeaders(input.header);
+  if (input.body !== undefined)
+    overrides.body = createGetTodoSuccessResponseBody(input.body);
 
   return createData(defaults, overrides);
 }

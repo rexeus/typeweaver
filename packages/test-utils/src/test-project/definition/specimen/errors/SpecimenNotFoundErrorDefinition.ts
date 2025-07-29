@@ -13,11 +13,15 @@ export default new HttpResponseDefinition({
       requestedIds: z.array(z.uuid()),
       emails: z.array(z.email()).optional(),
       suggestions: z.array(z.string()),
-      alternatives: z.array(z.object({
-        id: z.uuid(),
-        similarity: z.number(),
-        available: z.boolean(),
-      })).optional(),
+      alternatives: z
+        .array(
+          z.object({
+            id: z.uuid(),
+            similarity: z.number(),
+            available: z.boolean(),
+          })
+        )
+        .optional(),
     }),
   }),
   header: z.object({

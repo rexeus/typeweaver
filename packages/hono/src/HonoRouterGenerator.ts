@@ -80,7 +80,7 @@ export class HonoRouterGenerator {
     for (let i = 0; i < aSegments.length; i++) {
       const aSegment = aSegments[i]!;
       const bSegment = bSegments[i]!;
-      
+
       const aIsParam = aSegment.startsWith(":");
       const bIsParam = bSegment.startsWith(":");
 

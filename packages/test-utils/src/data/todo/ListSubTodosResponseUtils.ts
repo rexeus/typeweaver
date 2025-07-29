@@ -24,17 +24,33 @@ export function createListSubTodosSuccessResponseBody(
   const results = Array.from({ length: resultsLength }, () => {
     const createdAt = faker.date.past().toISOString();
     const modifiedAt = faker.date.recent().toISOString();
-    
+
     return {
       id: faker.string.ulid(),
       accountId: faker.string.ulid(),
       parentId: faker.datatype.boolean() ? faker.string.ulid() : undefined,
       title: faker.lorem.sentence(),
-      description: faker.datatype.boolean() ? faker.lorem.paragraph() : undefined,
-      status: faker.helpers.arrayElement(["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"] as const) as "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED",
-      dueDate: faker.datatype.boolean() ? faker.date.future().toISOString() : undefined,
-      tags: faker.datatype.boolean() ? [faker.lorem.word(), faker.lorem.word()] : undefined,
-      priority: faker.datatype.boolean() ? faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const) as ("LOW" | "MEDIUM" | "HIGH") : undefined,
+      description: faker.datatype.boolean()
+        ? faker.lorem.paragraph()
+        : undefined,
+      status: faker.helpers.arrayElement([
+        "TODO",
+        "IN_PROGRESS",
+        "DONE",
+        "ARCHIVED",
+      ] as const) as "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED",
+      dueDate: faker.datatype.boolean()
+        ? faker.date.future().toISOString()
+        : undefined,
+      tags: faker.datatype.boolean()
+        ? [faker.lorem.word(), faker.lorem.word()]
+        : undefined,
+      priority: faker.datatype.boolean()
+        ? (faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const) as
+            | "LOW"
+            | "MEDIUM"
+            | "HIGH")
+        : undefined,
       createdAt,
       modifiedAt,
       createdBy: faker.internet.username(),
@@ -44,7 +60,9 @@ export function createListSubTodosSuccessResponseBody(
 
   const defaults: IListSubTodosSuccessResponseBody = {
     results,
-    nextToken: faker.datatype.boolean() ? faker.string.alphanumeric(32) : undefined,
+    nextToken: faker.datatype.boolean()
+      ? faker.string.alphanumeric(32)
+      : undefined,
   };
 
   return createData(defaults, input);

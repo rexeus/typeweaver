@@ -12,8 +12,8 @@ export function createDeleteSubTodoRequestHeaders(
   input: Partial<IDeleteSubTodoRequestHeader> = {}
 ): IDeleteSubTodoRequestHeader {
   const defaults: IDeleteSubTodoRequestHeader = {
-    "Accept": "application/json",
-    "Authorization": `Bearer ${createJwtToken()}`,
+    Accept: "application/json",
+    Authorization: `Bearer ${createJwtToken()}`,
   };
 
   return createData(defaults, input);
@@ -40,8 +40,10 @@ type DeleteSubTodoRequestInput = {
 export function createDeleteSubTodoRequest(
   input: DeleteSubTodoRequestInput = {}
 ): IHttpRequest {
-  const param = input.param ? createDeleteSubTodoRequestParams(input.param) : createDeleteSubTodoRequestParams();
-  
+  const param = input.param
+    ? createDeleteSubTodoRequestParams(input.param)
+    : createDeleteSubTodoRequestParams();
+
   const defaults: IHttpRequest = {
     method: HttpMethod.DELETE,
     path: `/todos/${param.todoId}/subtodos/${param.subtodoId}`,

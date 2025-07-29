@@ -39,7 +39,8 @@ export function createPutTodoSuccessResponse(
   if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
   if (input.header !== undefined)
     overrides.header = createPutTodoSuccessResponseHeaders(input.header);
-  if (input.body !== undefined) overrides.body = createPutTodoSuccessResponseBody(input.body);
+  if (input.body !== undefined)
+    overrides.body = createPutTodoSuccessResponseBody(input.body);
 
   return createData(defaults, overrides);
 }

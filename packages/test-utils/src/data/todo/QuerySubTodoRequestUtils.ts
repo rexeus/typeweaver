@@ -15,8 +15,8 @@ export function createQuerySubTodoRequestHeaders(
 ): IQuerySubTodoRequestHeader {
   const defaults: IQuerySubTodoRequestHeader = {
     "Content-Type": "application/json",
-    "Accept": "application/json",
-    "Authorization": `Bearer ${createJwtToken()}`,
+    Accept: "application/json",
+    Authorization: `Bearer ${createJwtToken()}`,
   };
 
   return createData(defaults, input);

@@ -140,7 +140,10 @@ export function createPutSpecimenRequestParams(
   input: Partial<IPutSpecimenRequestParam> = {}
 ): IPutSpecimenRequestParam {
   const defaults: IPutSpecimenRequestParam = {
-    specimenId: faker.string.fromCharacters("0123456789ABCDEFGHJKMNPQRSTVWXYZ", 26),
+    specimenId: faker.string.fromCharacters(
+      "0123456789ABCDEFGHJKMNPQRSTVWXYZ",
+      26
+    ),
     foo: faker.helpers.arrayElement(["foo1", "foo2"]),
     bar: "bar",
     uuid: faker.string.uuid(),
@@ -180,8 +183,10 @@ type PutSpecimenRequestInput = {
 export function createPutSpecimenRequest(
   input: PutSpecimenRequestInput = {}
 ): IHttpRequest {
-  const param = input.param ? createPutSpecimenRequestParams(input.param) : createPutSpecimenRequestParams();
-  
+  const param = input.param
+    ? createPutSpecimenRequestParams(input.param)
+    : createPutSpecimenRequestParams();
+
   const defaults: IHttpRequest = {
     method: HttpMethod.PUT,
     path: `/specimens/${param.specimenId}`,
@@ -194,10 +199,14 @@ export function createPutSpecimenRequest(
   const overrides: Partial<IHttpRequest> = {};
   if (input.method !== undefined) overrides.method = input.method;
   if (input.path !== undefined) overrides.path = input.path;
-  if (input.header !== undefined) overrides.header = createPutSpecimenRequestHeaders(input.header);
-  if (input.param !== undefined) overrides.param = createPutSpecimenRequestParams(input.param);
-  if (input.query !== undefined) overrides.query = createPutSpecimenRequestQuery(input.query);
-  if (input.body !== undefined) overrides.body = createPutSpecimenRequestBody(input.body);
+  if (input.header !== undefined)
+    overrides.header = createPutSpecimenRequestHeaders(input.header);
+  if (input.param !== undefined)
+    overrides.param = createPutSpecimenRequestParams(input.param);
+  if (input.query !== undefined)
+    overrides.query = createPutSpecimenRequestQuery(input.query);
+  if (input.body !== undefined)
+    overrides.body = createPutSpecimenRequestBody(input.body);
 
   return createData(defaults, overrides);
 }

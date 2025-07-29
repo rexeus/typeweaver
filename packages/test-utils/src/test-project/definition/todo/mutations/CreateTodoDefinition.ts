@@ -8,7 +8,7 @@ import {
   defaultResponseHeader,
   defaultRequestHeadersWithPayload,
 } from "../../shared";
-import { todoSchema } from "../todoSchema"; 
+import { todoSchema } from "../todoSchema";
 
 export default new HttpOperationDefinition({
   operationId: "CreateTodo",

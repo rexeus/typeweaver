@@ -12,7 +12,7 @@ export type PluginContext = {
   outputDir: string;
   inputDir: string;
   config: PluginConfig;
-}
+};
 
 /**
  * Context provided to plugins during generation
@@ -27,14 +27,14 @@ export type GeneratorContext = PluginContext & {
   renderTemplate: (templatePath: string, data: unknown) => string;
   addGeneratedFile: (relativePath: string) => void;
   getGeneratedFiles: () => string[];
-}
+};
 
 /**
  * Plugin metadata
  */
 export type PluginMetadata = {
   name: string;
-}
+};
 
 /**
  * TypeWeaver plugin interface
@@ -65,7 +65,7 @@ export type TypeWeaverPlugin = PluginMetadata & {
    * Called after all generation is complete
    */
   finalize?(context: PluginContext): Promise<void> | void;
-}
+};
 
 /**
  * Plugin constructor type
@@ -77,7 +77,7 @@ export type PluginConstructor = new (config?: PluginConfig) => TypeWeaverPlugin;
  */
 export type PluginModule = {
   default: PluginConstructor;
-}
+};
 
 /**
  * Plugin registration entry
@@ -86,7 +86,7 @@ export type PluginRegistration = {
   name: string;
   plugin: TypeWeaverPlugin;
   config?: PluginConfig;
-}
+};
 
 /**
  * TypeWeaver configuration
@@ -98,7 +98,7 @@ export type TypeWeaverConfig = {
   plugins?: (string | [string, PluginConfig])[];
   prettier?: boolean;
   clean?: boolean;
-}
+};
 
 /**
  * Plugin loading error

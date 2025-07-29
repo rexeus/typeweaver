@@ -34,7 +34,8 @@ export function createTodoNotFoundErrorResponse(
   if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
   if (input.header !== undefined)
     overrides.header = createErrorResponseHeaders(input.header);
-  if (input.body !== undefined) overrides.body = createData(defaults.body, input.body);
+  if (input.body !== undefined)
+    overrides.body = createData(defaults.body, input.body);
 
   const responseData = createData(defaults, overrides);
   return new TodoNotFoundErrorResponse(responseData);

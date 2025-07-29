@@ -2,14 +2,18 @@ import { HttpMethod } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
 import { createData } from "../createData";
 import { createJwtToken } from "../createJwtToken";
-import type { IListTodosRequest, IListTodosRequestHeader, IListTodosRequestQuery } from "../..";
+import type {
+  IListTodosRequest,
+  IListTodosRequestHeader,
+  IListTodosRequestQuery,
+} from "../..";
 
 export function createListTodosRequestHeaders(
   input: Partial<IListTodosRequestHeader> = {}
 ): IListTodosRequestHeader {
   const defaults: IListTodosRequestHeader = {
-    "Accept": "application/json",
-    "Authorization": `Bearer ${createJwtToken()}`,
+    Accept: "application/json",
+    Authorization: `Bearer ${createJwtToken()}`,
   };
 
   return createData(defaults, input);

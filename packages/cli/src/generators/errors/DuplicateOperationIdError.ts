@@ -6,8 +6,8 @@ export class DuplicateOperationIdError extends Error {
   ) {
     super(
       `Duplicate operation ID '${operationId}' found.\n` +
-      `  First defined in: \`${firstFile}\`\n` +
-      `  Duplicate found in: \`${duplicateFile}\``
+        `  First defined in: \`${firstFile}\`\n` +
+        `  Duplicate found in: \`${duplicateFile}\``
     );
   }
 }

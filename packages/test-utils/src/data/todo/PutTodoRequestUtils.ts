@@ -14,8 +14,8 @@ export function createPutTodoRequestHeaders(
 ): IPutTodoRequestHeader {
   const defaults: IPutTodoRequestHeader = {
     "Content-Type": "application/json",
-    "Accept": "application/json",
-    "Authorization": `Bearer ${createJwtToken()}`,
+    Accept: "application/json",
+    Authorization: `Bearer ${createJwtToken()}`,
   };
 
   return createData(defaults, input);
@@ -39,7 +39,12 @@ export function createPutTodoRequestBody(
     parentId: faker.string.ulid(),
     title: faker.lorem.sentence(),
     description: faker.lorem.paragraph(),
-    status: faker.helpers.arrayElement(["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"] as const),
+    status: faker.helpers.arrayElement([
+      "TODO",
+      "IN_PROGRESS",
+      "DONE",
+      "ARCHIVED",
+    ] as const),
     dueDate: faker.date.future().toISOString(),
     tags: [faker.lorem.word(), faker.lorem.word()],
     priority: faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const),
@@ -58,8 +63,10 @@ type PutTodoRequestInput = {
 export function createPutTodoRequest(
   input: PutTodoRequestInput = {}
 ): IPutTodoRequest {
-  const param = input.param ? createPutTodoRequestParams(input.param) : createPutTodoRequestParams();
-  
+  const param = input.param
+    ? createPutTodoRequestParams(input.param)
+    : createPutTodoRequestParams();
+
   const defaults: IPutTodoRequest = {
     method: HttpMethod.PUT,
     path: `/todos/${param.todoId}`,

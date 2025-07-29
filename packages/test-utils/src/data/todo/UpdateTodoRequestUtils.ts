@@ -14,8 +14,8 @@ export function createUpdateTodoRequestHeaders(
 ): IUpdateTodoRequestHeader {
   const defaults: IUpdateTodoRequestHeader = {
     "Content-Type": "application/json",
-    "Accept": "application/json",
-    "Authorization": `Bearer ${createJwtToken()}`,
+    Accept: "application/json",
+    Authorization: `Bearer ${createJwtToken()}`,
   };
 
   return createData(defaults, input);
@@ -55,8 +55,10 @@ type UpdateTodoRequestInput = {
 export function createUpdateTodoRequest(
   input: UpdateTodoRequestInput = {}
 ): IUpdateTodoRequest {
-  const param = input.param ? createUpdateTodoRequestParams(input.param) : createUpdateTodoRequestParams();
-  
+  const param = input.param
+    ? createUpdateTodoRequestParams(input.param)
+    : createUpdateTodoRequestParams();
+
   const defaults: IUpdateTodoRequest = {
     method: HttpMethod.PATCH,
     path: `/todos/${param.todoId}`,

@@ -14,8 +14,8 @@ export function createUpdateSubTodoRequestHeaders(
 ): IUpdateSubTodoRequestHeader {
   const defaults: IUpdateSubTodoRequestHeader = {
     "Content-Type": "application/json",
-    "Accept": "application/json",
-    "Authorization": `Bearer ${createJwtToken()}`,
+    Accept: "application/json",
+    Authorization: `Bearer ${createJwtToken()}`,
   };
 
   return createData(defaults, input);
@@ -38,10 +38,23 @@ export function createUpdateSubTodoRequestBody(
   const defaults: IUpdateSubTodoRequestBody = {
     title: faker.datatype.boolean() ? faker.lorem.sentence() : undefined,
     description: faker.datatype.boolean() ? faker.lorem.paragraph() : undefined,
-    status: faker.datatype.boolean() ? faker.helpers.arrayElement(["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"] as const) : undefined,
-    dueDate: faker.datatype.boolean() ? faker.date.future().toISOString() : undefined,
-    tags: faker.datatype.boolean() ? [faker.lorem.word(), faker.lorem.word()] : undefined,
-    priority: faker.datatype.boolean() ? faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const) : undefined,
+    status: faker.datatype.boolean()
+      ? faker.helpers.arrayElement([
+          "TODO",
+          "IN_PROGRESS",
+          "DONE",
+          "ARCHIVED",
+        ] as const)
+      : undefined,
+    dueDate: faker.datatype.boolean()
+      ? faker.date.future().toISOString()
+      : undefined,
+    tags: faker.datatype.boolean()
+      ? [faker.lorem.word(), faker.lorem.word()]
+      : undefined,
+    priority: faker.datatype.boolean()
+      ? faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const)
+      : undefined,
   };
 
   return createData(defaults, input);
@@ -58,8 +71,10 @@ type UpdateSubTodoRequestInput = {
 export function createUpdateSubTodoRequest(
   input: UpdateSubTodoRequestInput = {}
 ): IHttpRequest {
-  const param = input.param ? createUpdateSubTodoRequestParams(input.param) : createUpdateSubTodoRequestParams();
-  
+  const param = input.param
+    ? createUpdateSubTodoRequestParams(input.param)
+    : createUpdateSubTodoRequestParams();
+
   const defaults: IHttpRequest = {
     method: HttpMethod.PUT,
     path: `/todos/${param.todoId}/subtodos/${param.subtodoId}`,

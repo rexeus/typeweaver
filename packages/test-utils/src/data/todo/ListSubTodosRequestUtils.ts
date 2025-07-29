@@ -13,8 +13,8 @@ export function createListSubTodosRequestHeaders(
   input: Partial<IListSubTodosRequestHeader> = {}
 ): IListSubTodosRequestHeader {
   const defaults: IListSubTodosRequestHeader = {
-    "Accept": "application/json",
-    "Authorization": `Bearer ${createJwtToken()}`,
+    Accept: "application/json",
+    Authorization: `Bearer ${createJwtToken()}`,
   };
 
   return createData(defaults, input);
@@ -34,10 +34,24 @@ export function createListSubTodosRequestQuery(
   input: Partial<IListSubTodosRequestQuery> = {}
 ): IListSubTodosRequestQuery {
   const defaults: IListSubTodosRequestQuery = {
-    limit: faker.datatype.boolean() ? faker.number.int({ min: 1, max: 100 }).toString() : undefined,
-    nextToken: faker.datatype.boolean() ? faker.string.alphanumeric(32) : undefined,
-    sortBy: faker.datatype.boolean() ? faker.helpers.arrayElement(["title", "dueDate", "priority", "createdAt", "modifiedAt"]) : undefined,
-    sortOrder: faker.datatype.boolean() ? faker.helpers.arrayElement(["asc", "desc"]) : undefined,
+    limit: faker.datatype.boolean()
+      ? faker.number.int({ min: 1, max: 100 }).toString()
+      : undefined,
+    nextToken: faker.datatype.boolean()
+      ? faker.string.alphanumeric(32)
+      : undefined,
+    sortBy: faker.datatype.boolean()
+      ? faker.helpers.arrayElement([
+          "title",
+          "dueDate",
+          "priority",
+          "createdAt",
+          "modifiedAt",
+        ])
+      : undefined,
+    sortOrder: faker.datatype.boolean()
+      ? faker.helpers.arrayElement(["asc", "desc"])
+      : undefined,
   };
 
   return createData(defaults, input);
@@ -54,8 +68,10 @@ type ListSubTodosRequestInput = {
 export function createListSubTodosRequest(
   input: ListSubTodosRequestInput = {}
 ): IHttpRequest {
-  const param = input.param ? createListSubTodosRequestParams(input.param) : createListSubTodosRequestParams();
-  
+  const param = input.param
+    ? createListSubTodosRequestParams(input.param)
+    : createListSubTodosRequestParams();
+
   const defaults: IHttpRequest = {
     method: HttpMethod.GET,
     path: `/todos/${param.todoId}/subtodos`,

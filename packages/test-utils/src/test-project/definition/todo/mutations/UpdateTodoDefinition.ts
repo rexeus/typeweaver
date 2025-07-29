@@ -11,7 +11,7 @@ import {
 } from "../../shared";
 import { todoSchema } from "../todoSchema";
 import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
-import TodoNotChangeableErrorDefinition from "../errors/TodoNotChangeableErrorDefinition"; 
+import TodoNotChangeableErrorDefinition from "../errors/TodoNotChangeableErrorDefinition";
 
 export default new HttpOperationDefinition({
   operationId: "UpdateTodo",

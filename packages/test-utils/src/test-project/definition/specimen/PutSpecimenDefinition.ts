@@ -7,8 +7,8 @@ import { sharedResponses } from "../shared";
 import { specimenSchema } from "./specimenSchema";
 import SpecimenNotFoundErrorDefinition from "./errors/SpecimenNotFoundErrorDefinition";
 import SpecimenConflictErrorDefinition from "./errors/SpecimenConflictErrorDefinition";
-import SpecimenUnprocessableEntityErrorDefinition from "./errors/SpecimenUnprocessableEntityErrorDefinition"; 
-import { z } from "zod/v4"; 
+import SpecimenUnprocessableEntityErrorDefinition from "./errors/SpecimenUnprocessableEntityErrorDefinition";
+import { z } from "zod/v4";
 
 export default new HttpOperationDefinition({
   operationId: "PutSpecimen",

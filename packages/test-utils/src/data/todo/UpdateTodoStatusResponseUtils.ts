@@ -22,17 +22,28 @@ export function createUpdateTodoStatusSuccessResponseBody(
 ): IUpdateTodoStatusSuccessResponseBody {
   const createdAt = faker.date.past().toISOString();
   const modifiedAt = faker.date.recent().toISOString();
-  
+
   const defaults: IUpdateTodoStatusSuccessResponseBody = {
     id: faker.string.ulid(),
     accountId: faker.string.ulid(),
     parentId: faker.datatype.boolean() ? faker.string.ulid() : undefined,
     title: faker.lorem.sentence(),
     description: faker.datatype.boolean() ? faker.lorem.paragraph() : undefined,
-    status: faker.helpers.arrayElement(["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"] as const),
-    dueDate: faker.datatype.boolean() ? faker.date.future().toISOString() : undefined,
-    tags: faker.datatype.boolean() ? [faker.lorem.word(), faker.lorem.word()] : undefined,
-    priority: faker.datatype.boolean() ? faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const) : undefined,
+    status: faker.helpers.arrayElement([
+      "TODO",
+      "IN_PROGRESS",
+      "DONE",
+      "ARCHIVED",
+    ] as const),
+    dueDate: faker.datatype.boolean()
+      ? faker.date.future().toISOString()
+      : undefined,
+    tags: faker.datatype.boolean()
+      ? [faker.lorem.word(), faker.lorem.word()]
+      : undefined,
+    priority: faker.datatype.boolean()
+      ? faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const)
+      : undefined,
     createdAt,
     modifiedAt,
     createdBy: faker.internet.username(),
@@ -60,7 +71,9 @@ export function createUpdateTodoStatusSuccessResponse(
   const overrides: Partial<IUpdateTodoStatusSuccessResponse> = {};
   if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
   if (input.header !== undefined)
-    overrides.header = createUpdateTodoStatusSuccessResponseHeaders(input.header);
+    overrides.header = createUpdateTodoStatusSuccessResponseHeaders(
+      input.header
+    );
   if (input.body !== undefined)
     overrides.body = createUpdateTodoStatusSuccessResponseBody(input.body);
 

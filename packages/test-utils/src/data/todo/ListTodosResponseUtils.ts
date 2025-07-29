@@ -22,7 +22,10 @@ export function createListTodosSuccessResponse(
     statusCode: HttpStatusCode.OK,
     header: createCreateTodoSuccessResponseHeaders(),
     body: {
-      results: [createGetTodoSuccessResponseBody(), createGetTodoSuccessResponseBody()],
+      results: [
+        createGetTodoSuccessResponseBody(),
+        createGetTodoSuccessResponseBody(),
+      ],
       nextToken: faker.string.alphanumeric(32),
     },
   };

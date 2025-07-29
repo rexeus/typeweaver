@@ -4,11 +4,11 @@ import {
   HttpStatusCode,
   HttpMethod,
 } from "@rexeus/typeweaver-core";
-import { 
+import {
   sharedResponses,
   defaultResponseHeader,
-  defaultRequestHeadersWithPayload
-} from "../shared"; 
+  defaultRequestHeadersWithPayload,
+} from "../shared";
 
 export default new HttpOperationDefinition({
   operationId: "AccessToken",

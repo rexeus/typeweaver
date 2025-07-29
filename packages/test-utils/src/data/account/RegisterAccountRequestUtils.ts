@@ -4,7 +4,7 @@ import type {
   IRegisterAccountRequest,
   IRegisterAccountRequestBody,
   IRegisterAccountRequestHeader,
-} from "../..";;
+} from "../..";
 import { createData } from "../createData";
 
 export function createRegisterAccountRequestBody(
@@ -23,7 +23,7 @@ export function createRegisterAccountRequestHeaders(
 ): IRegisterAccountRequestHeader {
   const defaults: IRegisterAccountRequestHeader = {
     "Content-Type": "application/json",
-    "Accept": "application/json",
+    Accept: "application/json",
   };
 
   return createData(defaults, input);
@@ -47,7 +47,8 @@ export function createRegisterAccountRequest(
 
   const overrides: Partial<IRegisterAccountRequest> = {};
   if (input.path !== undefined) overrides.path = input.path;
-  if (input.body !== undefined) overrides.body = createRegisterAccountRequestBody(input.body);
+  if (input.body !== undefined)
+    overrides.body = createRegisterAccountRequestBody(input.body);
   if (input.header !== undefined)
     overrides.header = createRegisterAccountRequestHeaders(input.header);
 
