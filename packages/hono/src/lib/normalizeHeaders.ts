@@ -1,9 +1,7 @@
 import Case from "case";
 import type { IHttpHeader } from "@rexeus/typeweaver-core";
 
-export interface NormalizedHeaders {
-  [key: string]: string | string[];
-}
+export type NormalizedHeaders = Record<string, string | string[]>;
 
 export const normalizeHeaders = (
   headers: Record<string, string | string[] | undefined> | null

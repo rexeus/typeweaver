@@ -1,0 +1,218 @@
+import { ApiClient, type ApiClientProps } from "../lib/clients";
+
+import { CreateSubTodoRequestCommand } from "./CreateSubTodoRequestCommand";
+import type { SuccessfulCreateSubTodoResponse } from "./CreateSubTodoRequest";
+
+import { CreateTodoRequestCommand } from "./CreateTodoRequestCommand";
+import type { SuccessfulCreateTodoResponse } from "./CreateTodoRequest";
+
+import { DeleteSubTodoRequestCommand } from "./DeleteSubTodoRequestCommand";
+import type { SuccessfulDeleteSubTodoResponse } from "./DeleteSubTodoRequest";
+
+import { DeleteTodoRequestCommand } from "./DeleteTodoRequestCommand";
+import type { SuccessfulDeleteTodoResponse } from "./DeleteTodoRequest";
+
+import { PutTodoRequestCommand } from "./PutTodoRequestCommand";
+import type { SuccessfulPutTodoResponse } from "./PutTodoRequest";
+
+import { UpdateSubTodoRequestCommand } from "./UpdateSubTodoRequestCommand";
+import type { SuccessfulUpdateSubTodoResponse } from "./UpdateSubTodoRequest";
+
+import { UpdateTodoRequestCommand } from "./UpdateTodoRequestCommand";
+import type { SuccessfulUpdateTodoResponse } from "./UpdateTodoRequest";
+
+import { UpdateTodoStatusRequestCommand } from "./UpdateTodoStatusRequestCommand";
+import type { SuccessfulUpdateTodoStatusResponse } from "./UpdateTodoStatusRequest";
+
+import { GetTodoRequestCommand } from "./GetTodoRequestCommand";
+import type { SuccessfulGetTodoResponse } from "./GetTodoRequest";
+
+import { HeadTodoRequestCommand } from "./HeadTodoRequestCommand";
+import type { SuccessfulHeadTodoResponse } from "./HeadTodoRequest";
+
+import { ListSubTodosRequestCommand } from "./ListSubTodosRequestCommand";
+import type { SuccessfulListSubTodosResponse } from "./ListSubTodosRequest";
+
+import { ListTodosRequestCommand } from "./ListTodosRequestCommand";
+import type { SuccessfulListTodosResponse } from "./ListTodosRequest";
+
+import { OptionsTodoRequestCommand } from "./OptionsTodoRequestCommand";
+import type { SuccessfulOptionsTodoResponse } from "./OptionsTodoRequest";
+
+import { QuerySubTodoRequestCommand } from "./QuerySubTodoRequestCommand";
+import type { SuccessfulQuerySubTodoResponse } from "./QuerySubTodoRequest";
+
+import { QueryTodoRequestCommand } from "./QueryTodoRequestCommand";
+import type { SuccessfulQueryTodoResponse } from "./QueryTodoRequest";
+
+export type TodoRequestCommands =
+  | CreateSubTodoRequestCommand
+  | CreateTodoRequestCommand
+  | DeleteSubTodoRequestCommand
+  | DeleteTodoRequestCommand
+  | PutTodoRequestCommand
+  | UpdateSubTodoRequestCommand
+  | UpdateTodoRequestCommand
+  | UpdateTodoStatusRequestCommand
+  | GetTodoRequestCommand
+  | HeadTodoRequestCommand
+  | ListSubTodosRequestCommand
+  | ListTodosRequestCommand
+  | OptionsTodoRequestCommand
+  | QuerySubTodoRequestCommand
+  | QueryTodoRequestCommand;
+
+export type SuccessfulTodoResponses =
+  | SuccessfulCreateSubTodoResponse
+  | SuccessfulCreateTodoResponse
+  | SuccessfulDeleteSubTodoResponse
+  | SuccessfulDeleteTodoResponse
+  | SuccessfulPutTodoResponse
+  | SuccessfulUpdateSubTodoResponse
+  | SuccessfulUpdateTodoResponse
+  | SuccessfulUpdateTodoStatusResponse
+  | SuccessfulGetTodoResponse
+  | SuccessfulHeadTodoResponse
+  | SuccessfulListSubTodosResponse
+  | SuccessfulListTodosResponse
+  | SuccessfulOptionsTodoResponse
+  | SuccessfulQuerySubTodoResponse
+  | SuccessfulQueryTodoResponse;
+
+export class TodoClient extends ApiClient {
+  public constructor(props: ApiClientProps) {
+    super(props);
+  }
+
+  public async send(
+    command: CreateSubTodoRequestCommand,
+  ): Promise<SuccessfulCreateSubTodoResponse>;
+
+  public async send(
+    command: CreateTodoRequestCommand,
+  ): Promise<SuccessfulCreateTodoResponse>;
+
+  public async send(
+    command: DeleteSubTodoRequestCommand,
+  ): Promise<SuccessfulDeleteSubTodoResponse>;
+
+  public async send(
+    command: DeleteTodoRequestCommand,
+  ): Promise<SuccessfulDeleteTodoResponse>;
+
+  public async send(
+    command: PutTodoRequestCommand,
+  ): Promise<SuccessfulPutTodoResponse>;
+
+  public async send(
+    command: UpdateSubTodoRequestCommand,
+  ): Promise<SuccessfulUpdateSubTodoResponse>;
+
+  public async send(
+    command: UpdateTodoRequestCommand,
+  ): Promise<SuccessfulUpdateTodoResponse>;
+
+  public async send(
+    command: UpdateTodoStatusRequestCommand,
+  ): Promise<SuccessfulUpdateTodoStatusResponse>;
+
+  public async send(
+    command: GetTodoRequestCommand,
+  ): Promise<SuccessfulGetTodoResponse>;
+
+  public async send(
+    command: HeadTodoRequestCommand,
+  ): Promise<SuccessfulHeadTodoResponse>;
+
+  public async send(
+    command: ListSubTodosRequestCommand,
+  ): Promise<SuccessfulListSubTodosResponse>;
+
+  public async send(
+    command: ListTodosRequestCommand,
+  ): Promise<SuccessfulListTodosResponse>;
+
+  public async send(
+    command: OptionsTodoRequestCommand,
+  ): Promise<SuccessfulOptionsTodoResponse>;
+
+  public async send(
+    command: QuerySubTodoRequestCommand,
+  ): Promise<SuccessfulQuerySubTodoResponse>;
+
+  public async send(
+    command: QueryTodoRequestCommand,
+  ): Promise<SuccessfulQueryTodoResponse>;
+
+  public async send(
+    command: TodoRequestCommands,
+  ): Promise<SuccessfulTodoResponses> {
+    const response = await this.execute(command);
+
+    switch (true) {
+      case command instanceof CreateSubTodoRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      case command instanceof CreateTodoRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      case command instanceof DeleteSubTodoRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      case command instanceof DeleteTodoRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      case command instanceof PutTodoRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      case command instanceof UpdateSubTodoRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      case command instanceof UpdateTodoRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      case command instanceof UpdateTodoStatusRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      case command instanceof GetTodoRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      case command instanceof HeadTodoRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      case command instanceof ListSubTodosRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      case command instanceof ListTodosRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      case command instanceof OptionsTodoRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      case command instanceof QuerySubTodoRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      case command instanceof QueryTodoRequestCommand: {
+        return command.processResponse(response);
+      }
+
+      default: {
+        throw new Error("Command is not supported");
+      }
+    }
+  }
+}

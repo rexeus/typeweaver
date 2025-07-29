@@ -5,7 +5,7 @@ export class EmptyResponseArrayError extends Error {
   ) {
     super(
       `Operation '${operationId}' has no responses defined at \`${file}\`\n` +
-      `  Operations must have at least one response definition`
+        `  Operations must have at least one response definition`
     );
   }
 }

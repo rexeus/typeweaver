@@ -1,4 +1,4 @@
-import definition from "../../../definition/todo/DeleteTodoDefinition";
+import definition from "../../../definition/todo/mutations/DeleteTodoDefinition";
 import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
 import { DeleteTodoResponseValidator } from "./DeleteTodoResponseValidator";

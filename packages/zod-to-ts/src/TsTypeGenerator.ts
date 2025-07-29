@@ -168,31 +168,31 @@ export class TsTypeNode {
     return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
   }
 
-  private static fromZodString(zodString: $ZodString): TypeNode {
+  private static fromZodString(_zodString: $ZodString): TypeNode {
     return factory.createKeywordTypeNode(SyntaxKind.StringKeyword);
   }
 
-  private static fromZodNumber(zodNumber: $ZodNumber): TypeNode {
+  private static fromZodNumber(_zodNumber: $ZodNumber): TypeNode {
     return factory.createKeywordTypeNode(SyntaxKind.NumberKeyword);
   }
 
-  private static fromZodBigInt(zodBigInt: $ZodBigInt): TypeNode {
+  private static fromZodBigInt(_zodBigInt: $ZodBigInt): TypeNode {
     return factory.createKeywordTypeNode(SyntaxKind.BigIntKeyword);
   }
 
-  private static fromZodBoolean(zodBoolean: $ZodBoolean): TypeNode {
+  private static fromZodBoolean(_zodBoolean: $ZodBoolean): TypeNode {
     return factory.createKeywordTypeNode(SyntaxKind.BooleanKeyword);
   }
 
-  private static fromZodDate(zodDate: $ZodDate): TypeNode {
+  private static fromZodDate(_zodDate: $ZodDate): TypeNode {
     return factory.createTypeReferenceNode(factory.createIdentifier("Date"));
   }
 
-  private static fromZodSymbol(zodSymbol: $ZodSymbol): TypeNode {
+  private static fromZodSymbol(_zodSymbol: $ZodSymbol): TypeNode {
     return factory.createKeywordTypeNode(SyntaxKind.SymbolKeyword);
   }
 
-  private static fromZodUndefined(zodUndefined: $ZodUndefined): TypeNode {
+  private static fromZodUndefined(_zodUndefined: $ZodUndefined): TypeNode {
     return factory.createKeywordTypeNode(SyntaxKind.UndefinedKeyword);
   }
 
@@ -204,23 +204,23 @@ export class TsTypeNode {
     ]);
   }
 
-  private static fromZodNull(zodNull: $ZodNull): TypeNode {
+  private static fromZodNull(_zodNull: $ZodNull): TypeNode {
     return factory.createLiteralTypeNode(factory.createNull());
   }
 
-  private static fromZodAny(zodAny: $ZodAny): TypeNode {
+  private static fromZodAny(_zodAny: $ZodAny): TypeNode {
     return factory.createKeywordTypeNode(SyntaxKind.AnyKeyword);
   }
 
-  private static fromZodUnknown(zodUnknown: $ZodUnknown): TypeNode {
+  private static fromZodUnknown(_zodUnknown: $ZodUnknown): TypeNode {
     return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
   }
 
-  private static fromZodNever(zodNever: $ZodNever): TypeNode {
+  private static fromZodNever(_zodNever: $ZodNever): TypeNode {
     return factory.createKeywordTypeNode(SyntaxKind.NeverKeyword);
   }
 
-  private static fromZodVoid(zodVoid: $ZodVoid): TypeNode {
+  private static fromZodVoid(_zodVoid: $ZodVoid): TypeNode {
     return factory.createKeywordTypeNode(SyntaxKind.VoidKeyword);
   }
 
@@ -350,7 +350,7 @@ export class TsTypeNode {
     );
   }
 
-  private static fromZodLazy(zodLazy: $ZodLazy): TypeNode {
+  private static fromZodLazy(_zodLazy: $ZodLazy): TypeNode {
     // TODO: handle zodLazy
     return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
   }
@@ -367,7 +367,7 @@ export class TsTypeNode {
     const innerType = TsTypeNode.fromZod(zodDefault._zod.def.innerType);
 
     const filteredNodes: Node[] = [];
-    innerType.forEachChild((node) => {
+    innerType.forEachChild(node => {
       if (node.kind !== SyntaxKind.UndefinedKeyword) {
         filteredNodes.push(node);
       }
@@ -380,53 +380,55 @@ export class TsTypeNode {
   }
 
   private static fromZodTemplateLiteral(
-    zodTemplateLiteral: $ZodTemplateLiteral
+    _zodTemplateLiteral: $ZodTemplateLiteral
   ): TypeNode {
     // TODO: handle zodTemplateLiteral
     return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
   }
 
-  private static fromZodCustom(zodCustom: $ZodCustom): TypeNode {
+  private static fromZodCustom(_zodCustom: $ZodCustom): TypeNode {
     // TODO: handle zodCustom
     return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
   }
 
-  private static fromZodTransform(zodTransform: $ZodTransform): TypeNode {
+  private static fromZodTransform(_zodTransform: $ZodTransform): TypeNode {
     // TODO: handle zodTransform
     return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
   }
 
-  private static fromZodNonOptional(zodNonOptional: $ZodNonOptional): TypeNode {
+  private static fromZodNonOptional(
+    _zodNonOptional: $ZodNonOptional
+  ): TypeNode {
     // TODO: handle zodNonOptional
     return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
   }
 
-  private static fromZodReadonly(zodReadonly: $ZodReadonly): TypeNode {
+  private static fromZodReadonly(_zodReadonly: $ZodReadonly): TypeNode {
     // TODO: handle zodReadonly
     return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
   }
 
-  private static fromZodNaN(zodNaN: $ZodNaN): TypeNode {
+  private static fromZodNaN(_zodNaN: $ZodNaN): TypeNode {
     // TODO: handle zodNaN
     return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
   }
 
-  private static fromZodPipe(zodPipe: $ZodPipe): TypeNode {
+  private static fromZodPipe(_zodPipe: $ZodPipe): TypeNode {
     // TODO: handle zodPipe
     return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
   }
 
-  private static fromZodSuccess(zodSuccess: $ZodSuccess): TypeNode {
+  private static fromZodSuccess(_zodSuccess: $ZodSuccess): TypeNode {
     // TODO: handle zodSuccess
     return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
   }
 
-  private static fromZodCatch(zodCatch: $ZodCatch): TypeNode {
+  private static fromZodCatch(_zodCatch: $ZodCatch): TypeNode {
     // TODO: handle zodCatch
     return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
   }
 
-  private static fromZodFile(zodFile: $ZodFile): TypeNode {
+  private static fromZodFile(_zodFile: $ZodFile): TypeNode {
     // TODO: handle zodFile
     return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
   }

@@ -1,15 +1,15 @@
 export type PluginLoadError = {
   readonly pluginName: string;
-  readonly attempts: Array<{
+  readonly attempts: {
     readonly path: string;
     readonly error: string;
-  }>;
+  }[];
 };
 
 export class PluginLoadingFailure extends Error implements PluginLoadError {
   public constructor(
     public readonly pluginName: string,
-    public readonly attempts: Array<{ path: string; error: string }>
+    public readonly attempts: { path: string; error: string }[]
   ) {
     super(`Failed to load plugin '${pluginName}'`);
 

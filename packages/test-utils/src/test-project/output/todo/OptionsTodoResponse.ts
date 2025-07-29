@@ -1,0 +1,92 @@
+import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+
+import type {
+  ITodoNotFoundErrorResponse,
+  TodoNotFoundErrorResponse,
+} from "./TodoNotFoundErrorResponse";
+
+import type {
+  IForbiddenErrorResponse,
+  ForbiddenErrorResponse,
+} from "../shared/ForbiddenErrorResponse";
+
+import type {
+  IInternalServerErrorResponse,
+  InternalServerErrorResponse,
+} from "../shared/InternalServerErrorResponse";
+
+import type {
+  ITooManyRequestsErrorResponse,
+  TooManyRequestsErrorResponse,
+} from "../shared/TooManyRequestsErrorResponse";
+
+import type {
+  IUnauthorizedErrorResponse,
+  UnauthorizedErrorResponse,
+} from "../shared/UnauthorizedErrorResponse";
+
+import type {
+  IUnsupportedMediaTypeErrorResponse,
+  UnsupportedMediaTypeErrorResponse,
+} from "../shared/UnsupportedMediaTypeErrorResponse";
+
+import type {
+  IValidationErrorResponse,
+  ValidationErrorResponse,
+} from "../shared/ValidationErrorResponse";
+
+export type IOptionsTodoSuccessResponseHeader = {
+  Allow: string[];
+  "Access-Control-Allow-Origin"?: string | undefined;
+  "Access-Control-Allow-Methods"?: string[] | undefined;
+  "Access-Control-Allow-Headers"?: string[] | undefined;
+  "Access-Control-Max-Age"?: string | undefined;
+};
+
+export type IOptionsTodoSuccessResponse = {
+  statusCode: HttpStatusCode.OK;
+  header: IOptionsTodoSuccessResponseHeader;
+};
+
+export class OptionsTodoSuccessResponse
+  extends HttpResponse<IOptionsTodoSuccessResponseHeader, undefined>
+  implements IOptionsTodoSuccessResponse
+{
+  public override readonly statusCode: HttpStatusCode.OK;
+
+  public constructor(response: IOptionsTodoSuccessResponse) {
+    super(response.statusCode, response.header, undefined);
+
+    if (response.statusCode !== HttpStatusCode.OK) {
+      throw new Error(
+        `Invalid status code: '${response.statusCode}' for OptionsTodoSuccessResponse`,
+      );
+    }
+
+    this.statusCode = response.statusCode;
+  }
+}
+
+export type IOptionsTodoSuccessResponses = IOptionsTodoSuccessResponse;
+
+export type OptionsTodoSuccessResponses = OptionsTodoSuccessResponse;
+
+export type IOptionsTodoResponse =
+  | IOptionsTodoSuccessResponse
+  | ITodoNotFoundErrorResponse
+  | IForbiddenErrorResponse
+  | IInternalServerErrorResponse
+  | ITooManyRequestsErrorResponse
+  | IUnauthorizedErrorResponse
+  | IUnsupportedMediaTypeErrorResponse
+  | IValidationErrorResponse;
+
+export type OptionsTodoResponse =
+  | OptionsTodoSuccessResponse
+  | TodoNotFoundErrorResponse
+  | ForbiddenErrorResponse
+  | InternalServerErrorResponse
+  | TooManyRequestsErrorResponse
+  | UnauthorizedErrorResponse
+  | UnsupportedMediaTypeErrorResponse
+  | ValidationErrorResponse;

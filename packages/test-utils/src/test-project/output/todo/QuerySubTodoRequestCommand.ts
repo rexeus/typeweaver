@@ -1,0 +1,55 @@
+import definition from "../../definition/todo/queries/QuerySubTodoDefinition";
+import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import { RequestCommand } from "../lib/clients";
+import { QuerySubTodoResponseValidator } from "./QuerySubTodoResponseValidator";
+import type {
+  IQuerySubTodoRequest,
+  IQuerySubTodoRequestHeader,
+  IQuerySubTodoRequestParam,
+  IQuerySubTodoRequestQuery,
+  IQuerySubTodoRequestBody,
+  SuccessfulQuerySubTodoResponse,
+} from "./QuerySubTodoRequest";
+
+import { QuerySubTodoSuccessResponse } from "./QuerySubTodoResponse";
+
+export class QuerySubTodoRequestCommand
+  extends RequestCommand
+  implements IQuerySubTodoRequest
+{
+  public override readonly method = definition.method as HttpMethod.POST;
+  public override readonly path = definition.path;
+
+  public override readonly header: IQuerySubTodoRequestHeader;
+  public override readonly param: IQuerySubTodoRequestParam;
+  public override readonly query: IQuerySubTodoRequestQuery;
+  public override readonly body: IQuerySubTodoRequestBody;
+
+  private readonly responseValidator: QuerySubTodoResponseValidator;
+
+  public constructor(input: Omit<IQuerySubTodoRequest, "method" | "path">) {
+    super();
+
+    this.header = input.header;
+
+    this.param = input.param;
+
+    this.query = input.query;
+
+    this.body = input.body;
+
+    this.responseValidator = new QuerySubTodoResponseValidator();
+  }
+
+  public processResponse(
+    response: IHttpResponse,
+  ): SuccessfulQuerySubTodoResponse {
+    const result = this.responseValidator.validate(response);
+
+    if (result instanceof QuerySubTodoSuccessResponse) {
+      return result;
+    }
+
+    throw result;
+  }
+}

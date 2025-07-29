@@ -1,0 +1,52 @@
+import definition from "../../definition/todo/mutations/CreateSubTodoDefinition";
+import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import { RequestCommand } from "../lib/clients";
+import { CreateSubTodoResponseValidator } from "./CreateSubTodoResponseValidator";
+import type {
+  ICreateSubTodoRequest,
+  ICreateSubTodoRequestHeader,
+  ICreateSubTodoRequestParam,
+  ICreateSubTodoRequestBody,
+  SuccessfulCreateSubTodoResponse,
+} from "./CreateSubTodoRequest";
+
+import { CreateSubTodoSuccessResponse } from "./CreateSubTodoResponse";
+
+export class CreateSubTodoRequestCommand
+  extends RequestCommand
+  implements ICreateSubTodoRequest
+{
+  public override readonly method = definition.method as HttpMethod.POST;
+  public override readonly path = definition.path;
+
+  public override readonly header: ICreateSubTodoRequestHeader;
+  public override readonly param: ICreateSubTodoRequestParam;
+  declare public readonly query: undefined;
+  public override readonly body: ICreateSubTodoRequestBody;
+
+  private readonly responseValidator: CreateSubTodoResponseValidator;
+
+  public constructor(input: Omit<ICreateSubTodoRequest, "method" | "path">) {
+    super();
+
+    this.header = input.header;
+
+    this.param = input.param;
+
+    this.body = input.body;
+
+    this.responseValidator = new CreateSubTodoResponseValidator();
+  }
+
+  public processResponse(
+    response: IHttpResponse,
+  ): SuccessfulCreateSubTodoResponse {
+    const result = this.responseValidator.validate(response);
+
+    if (result instanceof CreateSubTodoSuccessResponse) {
+      return result;
+    }
+
+    throw result;
+  }
+}

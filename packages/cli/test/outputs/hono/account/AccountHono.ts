@@ -1,5 +1,9 @@
 import type { Context } from "hono";
-import { TypeweaverHono, type HonoRequestHandler } from "../lib/hono";
+import {
+  TypeweaverHono,
+  type HonoRequestHandler,
+  type TypeweaverHonoOptions,
+} from "../lib/hono";
 
 import type { IRegisterAccountRequest } from "./RegisterAccountRequest";
 import { RegisterAccountRequestValidator } from "./RegisterAccountRequestValidator";
@@ -13,8 +17,8 @@ export type AccountApiHandler = {
 };
 
 export class AccountHono extends TypeweaverHono<AccountApiHandler> {
-  public constructor(handlers: AccountApiHandler) {
-    super({ requestHandlers: handlers });
+  public constructor(options: TypeweaverHonoOptions<AccountApiHandler>) {
+    super(options);
     this.setupRoutes();
   }
 
@@ -23,7 +27,9 @@ export class AccountHono extends TypeweaverHono<AccountApiHandler> {
       this.handleRequest(
         context,
         new RegisterAccountRequestValidator(),
-        this.requestHandlers.handleRegisterAccountRequest,
+        this.requestHandlers.handleRegisterAccountRequest.bind(
+          this.requestHandlers,
+        ),
       ),
     );
   }

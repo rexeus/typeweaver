@@ -12,7 +12,7 @@ export class IndexFileGenerator {
     const templateFilePath = path.join(this.templateDir, "Index.ejs");
     const template = fs.readFileSync(templateFilePath, "utf8");
 
-    const indexPaths: Set<string> = new Set();
+    const indexPaths = new Set<string>();
     for (const generatedFile of context.getGeneratedFiles()) {
       indexPaths.add(`./${generatedFile.replace(/\.ts$/, "")}`);
     }

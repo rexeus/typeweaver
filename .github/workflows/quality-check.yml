@@ -1,0 +1,74 @@
+name: Quality Check
+on:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+env:
+  NODE_VERSION: "22"
+  PNPM_VERSION: "10.12.1"
+
+jobs:
+  quality-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for all branches
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: |
+          echo "::group::Building all packages"
+          pnpm run build
+          echo "::endgroup::"
+
+      - name: Rebuild symlinks after build
+        run: |
+          echo "::group::Recreating CLI binary symlinks"
+          pnpm install --frozen-lockfile
+          echo "::endgroup::"
+
+      - name: Generate all test projects
+        run: |
+          echo "::group::Generating all test projects"
+          pnpm run test:gen
+          echo "::endgroup::"
+
+      - name: Run typecheck
+        run: |
+          echo "::group::TypeScript type checking"
+          pnpm run typecheck
+          echo "::endgroup::"
+
+      - name: Run lint
+        run: |
+          echo "::group::ESLint checking"
+          pnpm run lint
+          echo "::endgroup::"
+
+      - name: Run tests
+        run: |
+          echo "::group::Running tests"
+          pnpm run test
+          echo "::endgroup::"

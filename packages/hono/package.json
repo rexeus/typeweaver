@@ -20,6 +20,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "build": "pkgroll --clean-dist && cp -r ./src/templates ./dist/templates && cp -r ./src/lib ./dist/lib",
+    "test": "vitest --run",
     "prepack": "npm run build",
     "preversion": "npm run build"
   },
@@ -31,7 +32,7 @@
     "api",
     "http"
   ],
-  "author": "Dennis Wentzien <dennis@rexeus.com>",
+  "author": "Dennis Wentzien <dw@rexeus.com>",
   "license": "ISC",
   "repository": {
     "type": "git",
@@ -50,7 +51,8 @@
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "hono": "^4.0.0"
+    "hono": "^4.0.0",
+    "test-utils": "workspace:^"
   },
   "dependencies": {
     "case": "^1.6.3"

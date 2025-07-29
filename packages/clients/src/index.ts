@@ -11,7 +11,7 @@ export default class ClientsPlugin extends BasePlugin {
     // Copy lib files to lib/clients/ from dist folder
     const libDir = path.join(__dirname, "lib");
     this.copyLibFiles(context, libDir, "clients");
-    
+
     ClientGenerator.generate(context);
   }
 }

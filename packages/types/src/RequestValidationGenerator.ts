@@ -42,7 +42,7 @@ export class RequestValidationGenerator {
       operationId,
       sourcePath: Path.relative(
         outputDir,
-        `${operationResource.sourceDir}/${path.basename(operationResource.sourceFile, ".ts")}`
+        `${operationResource.sourceDir}/${path.relative(operationResource.sourceDir, operationResource.sourceFile).replace(/\.ts$/, "")}`
       ),
       corePath: context.coreDir,
       requestFile: Path.relative(
@@ -55,7 +55,10 @@ export class RequestValidationGenerator {
       header,
     });
 
-    const relativePath = path.relative(context.outputDir, operationResource.outputRequestValidationFile);
+    const relativePath = path.relative(
+      context.outputDir,
+      operationResource.outputRequestValidationFile
+    );
     context.writeFile(relativePath, content);
   }
 }

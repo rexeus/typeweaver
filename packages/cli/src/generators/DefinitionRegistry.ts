@@ -18,7 +18,18 @@ export class DefinitionRegistry {
   private readonly routes = new Map<string, RouteInfo>();
 
   public registerOperation(
-    operation: HttpOperationDefinition<any, any, any, any, any, any, any, any, any, any>,
+    operation: HttpOperationDefinition<
+      any,
+      any,
+      any,
+      any,
+      any,
+      any,
+      any,
+      any,
+      any,
+      any
+    >,
     sourceFile: string
   ): void {
     // Check for duplicate operation ID
@@ -36,7 +47,7 @@ export class DefinitionRegistry {
     const normalizedPath = this.normalizePath(operation.path);
     const routeKey = `${operation.method} ${normalizedPath}`;
     const existingRoute = this.routes.get(routeKey);
-    
+
     if (existingRoute) {
       throw new DuplicateRouteError(
         operation.path,
@@ -47,7 +58,7 @@ export class DefinitionRegistry {
         sourceFile
       );
     }
-    
+
     this.routes.set(routeKey, {
       operationId: operation.operationId,
       file: sourceFile,
@@ -55,7 +66,9 @@ export class DefinitionRegistry {
   }
 
   public registerResponse(
-    response: IHttpResponseDefinition | HttpResponseDefinition<any, any, any, any, any, any>,
+    response:
+      | IHttpResponseDefinition
+      | HttpResponseDefinition<any, any, any, any, any, any>,
     sourceFile: string
   ): void {
     // Check for duplicate response name

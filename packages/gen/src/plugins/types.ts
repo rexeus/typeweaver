@@ -8,16 +8,16 @@ export type PluginConfig = Record<string, unknown>;
 /**
  * Context provided to plugins during initialization and finalization
  */
-export interface PluginContext {
+export type PluginContext = {
   outputDir: string;
   inputDir: string;
   config: PluginConfig;
-}
+};
 
 /**
  * Context provided to plugins during generation
  */
-export interface GeneratorContext extends PluginContext {
+export type GeneratorContext = PluginContext & {
   resources: GetResourcesResult;
   templateDir: string;
   coreDir: string;
@@ -27,19 +27,19 @@ export interface GeneratorContext extends PluginContext {
   renderTemplate: (templatePath: string, data: unknown) => string;
   addGeneratedFile: (relativePath: string) => void;
   getGeneratedFiles: () => string[];
-}
+};
 
 /**
  * Plugin metadata
  */
-export interface PluginMetadata {
+export type PluginMetadata = {
   name: string;
-}
+};
 
 /**
  * TypeWeaver plugin interface
  */
-export interface TypeWeaverPlugin extends PluginMetadata {
+export type TypeWeaverPlugin = PluginMetadata & {
   /**
    * Initialize the plugin
    * Called before any generation happens
@@ -65,7 +65,7 @@ export interface TypeWeaverPlugin extends PluginMetadata {
    * Called after all generation is complete
    */
   finalize?(context: PluginContext): Promise<void> | void;
-}
+};
 
 /**
  * Plugin constructor type
@@ -75,30 +75,30 @@ export type PluginConstructor = new (config?: PluginConfig) => TypeWeaverPlugin;
 /**
  * Plugin module export
  */
-export interface PluginModule {
+export type PluginModule = {
   default: PluginConstructor;
-}
+};
 
 /**
  * Plugin registration entry
  */
-export interface PluginRegistration {
+export type PluginRegistration = {
   name: string;
   plugin: TypeWeaverPlugin;
   config?: PluginConfig;
-}
+};
 
 /**
  * TypeWeaver configuration
  */
-export interface TypeWeaverConfig {
+export type TypeWeaverConfig = {
   input: string;
   output: string;
   shared?: string;
-  plugins?: Array<string | [string, PluginConfig]>;
+  plugins?: (string | [string, PluginConfig])[];
   prettier?: boolean;
   clean?: boolean;
-}
+};
 
 /**
  * Plugin loading error

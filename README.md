@@ -15,20 +15,21 @@ The generation is fully extensible through a plugin system.
 - **Single Source of Truth**: Define your API contract once, generate everything else
 - **End-to-End Type Safety**: From API definition to client usage, everything is fully typed
 - **Runtime Validation**: Automatic request/response validation using Zod schemas
-- **Framework Agnostic**: Plugin-based architecture with adapters for AWS Lambda, Hono, Express, and more
+- **Framework Agnostic**: Plugin-based architecture with adapters for AWS Lambda, Hono, Express, and
+  more
 
 ## Packages
 
 This monorepo contains six packages:
 
-| Package                                          | Description                                                           | Version                                                            |
-| ------------------------------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| [@rexeus/typeweaver](./packages/cli)             | CLI tool for generating type-safe API code                           | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver)            |
-| [@rexeus/typeweaver-core](./packages/core)       | Core TypeScript and Zod utilities for TypeWeaver API definitions    | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-core)       |
-| [@rexeus/typeweaver-gen](./packages/gen)         | Code generation engine and utilities for TypeWeaver plugins          | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-gen)        |
-| [@rexeus/typeweaver-types](./packages/types)     | TypeScript type and Zod validator generators for TypeWeaver APIs     | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-types)      |
-| [@rexeus/typeweaver-clients](./packages/clients) | HTTP client generators for TypeWeaver API specifications             | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients)    |
-| [@rexeus/typeweaver-aws-cdk](./packages/aws-cdk) | AWS CDK constructs and deployment utilities for TypeWeaver APIs      | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk)    |
+| Package                                          | Description                                                      | Version                                                         |
+| ------------------------------------------------ | ---------------------------------------------------------------- | --------------------------------------------------------------- |
+| [@rexeus/typeweaver](./packages/cli)             | CLI tool for generating type-safe API code                       | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver)         |
+| [@rexeus/typeweaver-core](./packages/core)       | Core TypeScript and Zod utilities for TypeWeaver API definitions | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-core)    |
+| [@rexeus/typeweaver-gen](./packages/gen)         | Code generation engine and utilities for TypeWeaver plugins      | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-gen)     |
+| [@rexeus/typeweaver-types](./packages/types)     | TypeScript type and Zod validator generators for TypeWeaver APIs | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-types)   |
+| [@rexeus/typeweaver-clients](./packages/clients) | HTTP client generators for TypeWeaver API specifications         | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients) |
+| [@rexeus/typeweaver-aws-cdk](./packages/aws-cdk) | AWS CDK constructs and deployment utilities for TypeWeaver APIs  | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
 
 ## Quick Start
 
@@ -166,13 +167,16 @@ if (validationResult.isValid) {
 
 ## Plugin System
 
-TypeWeaver uses a plugin-based architecture for extensible code generation. Configure which code to generate based on your needs.
+TypeWeaver uses a plugin-based architecture for extensible code generation. Configure which code to
+generate based on your needs.
 
 ### Built-in Plugins
 
-- **Types Plugin** (`@rexeus/typeweaver-types`) - TypeScript types and Zod validators (included by default)
+- **Types Plugin** (`@rexeus/typeweaver-types`) - TypeScript types and Zod validators (included by
+  default)
 - **Clients Plugin** (`@rexeus/typeweaver-clients`) - HTTP API client generation
-- **AWS CDK Plugin** (`@rexeus/typeweaver-aws-cdk`) - AWS CDK constructs and HTTP API Gateway routers
+- **AWS CDK Plugin** (`@rexeus/typeweaver-aws-cdk`) - AWS CDK constructs and HTTP API Gateway
+  routers
 
 ### Using Plugins
 
@@ -180,14 +184,11 @@ Create a `typeweaver.config.js` file:
 
 ```javascript
 export default {
-  input: './api/definitions',
-  output: './api/generated',
-  plugins: [
-    'clients',
-    'aws-cdk'
-  ],
+  input: "./api/definitions",
+  output: "./api/generated",
+  plugins: ["clients", "aws-cdk"],
   prettier: true,
-  clean: true
+  clean: true,
 };
 ```
 
@@ -200,12 +201,12 @@ npx typeweaver generate --config ./typeweaver.config.js
 ### Creating Custom Plugins
 
 ```typescript
-import { BasePlugin } from '@rexeus/typeweaver-gen';
+import { BasePlugin } from "@rexeus/typeweaver-gen";
 
 export class MyPlugin extends BasePlugin {
-  name = 'my-plugin';
-  version = '1.0.0';
-  
+  name = "my-plugin";
+  version = "1.0.0";
+
   async generate(context) {
     // Your generation logic
   }

@@ -1,11 +1,11 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import {
     type <%= pascalCaseOperationId %>Response,
-    <% for (const ownResponse of [...ownSuccessResponses, ...ownErrorResponses]) { %>
+    <% for (const ownResponse of ownErrorResponses) { %>
         <%= ownResponse.name %>Response,
     <% } %>
 } from "<%= responseFile %>";
-<% for (const sharedResponse of [...sharedSuccessResponses, ...sharedErrorResponses]) { %>
+<% for (const sharedResponse of sharedErrorResponses) { %>
     import { <%= sharedResponse.name %>Response } from "<%= sharedResponse.path %>";
 <% } %>
 

@@ -53,7 +53,7 @@ export class RequestGenerator {
     const pascalCaseOperationId = Case.pascal(operationId);
     const sourcePath = Path.relative(
       outputDir,
-      `${operationResource.sourceDir}/${path.basename(operationResource.sourceFile, ".ts")}`
+      `${operationResource.sourceDir}/${path.relative(operationResource.sourceDir, operationResource.sourceFile).replace(/\.ts$/, "")}`
     );
 
     const ownSuccessResponses: {
@@ -72,19 +72,21 @@ export class RequestGenerator {
     }[] = [];
 
     for (const response of responses) {
-      const { statusCode, name, isShared } = response;
+      const { statusCode, name, isReference } = response;
 
-      if (isShared) {
+      if (isReference) {
         // First check in global shared resources
-        let sharedResponse = context.resources.sharedResponseResources.find(
+        const sharedResponse = context.resources.sharedResponseResources.find(
           resource => resource.name === name
         );
-        
+
         let responsePath: string;
-        
+
         // If not found globally, check in entity-specific responses
         if (!sharedResponse) {
-          const entityResponses = context.resources.entityResources[operationResource.entityName]?.responses;
+          const entityResponses =
+            context.resources.entityResources[operationResource.entityName]
+              ?.responses;
           const entityResponse = entityResponses?.find(r => r.name === name);
           if (entityResponse) {
             responsePath = Path.relative(

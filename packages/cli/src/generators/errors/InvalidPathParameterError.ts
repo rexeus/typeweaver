@@ -7,8 +7,8 @@ export class InvalidPathParameterError extends Error {
   ) {
     super(
       `Invalid path parameters in operation '${operationId}' at \`${file}\`\n` +
-      `  Path: ${path}\n` +
-      `  Issue: ${issue}`
+        `  Path: ${path}\n` +
+        `  Issue: ${issue}`
     );
   }
 }

@@ -8,11 +8,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default class AwsCdkPlugin extends BasePlugin {
   public name = "aws-cdk";
   public override generate(context: GeneratorContext): Promise<void> | void {
-    
     // Copy lib files to lib/aws-cdk/ from dist folder
     const libDir = path.join(__dirname, "lib");
     this.copyLibFiles(context, libDir, "aws-cdk");
-    
+
     HttpApiRouterGenerator.generate(context);
   }
 }

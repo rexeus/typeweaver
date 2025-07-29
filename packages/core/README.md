@@ -114,31 +114,25 @@ TypeWeaver Core includes adapters for various runtime environments:
 ### AWS Lambda Adapters
 
 ```typescript
-import { 
+import {
   createAwsLambdaHandler,
   createAwsApiGatewayV1Handler,
   createAwsApiGatewayV2Handler,
   createAwsLambdaFunctionUrlHandler,
-  createAwsAlbHandler
+  createAwsAlbHandler,
 } from "@rexeus/typeweaver-core";
 ```
 
 ### Hono Integration
 
 ```typescript
-import { 
-  createHonoHttpApiHandler,
-  HonoHttpRouter 
-} from "@rexeus/typeweaver-core";
+import { createHonoHttpApiHandler, HonoHttpRouter } from "@rexeus/typeweaver-core";
 ```
 
 ### Generic HTTP Adapters
 
 ```typescript
-import { 
-  HttpAdapter,
-  FetchApiAdapter 
-} from "@rexeus/typeweaver-core";
+import { HttpAdapter, FetchApiAdapter } from "@rexeus/typeweaver-core";
 ```
 
 ## Validation System
@@ -146,11 +140,11 @@ import {
 Comprehensive request and response validation with structured error handling:
 
 ```typescript
-import { 
+import {
   RequestValidator,
   ResponseValidator,
   RequestValidationError,
-  ResponseValidationError 
+  ResponseValidationError,
 } from "@rexeus/typeweaver-core";
 
 const validator = new RequestValidator(operationDefinition);

@@ -1,0 +1,60 @@
+import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+
+export type ISpecimenUnprocessableEntityErrorResponseHeader = {
+  "X-Validation-ID": string;
+  "X-Field-Count": string;
+  "X-Error-Types": string[];
+  "X-Request-ID": string;
+  "X-Timestamp": string;
+};
+
+export type ISpecimenUnprocessableEntityErrorResponseBody = {
+  message: "Specimen data validation failed";
+  code: "SPECIMEN_UNPROCESSABLE_ENTITY_ERROR";
+  validationErrors: {
+    field: string;
+    value: string | number | boolean | null;
+    reason:
+      | "invalid_format"
+      | "required"
+      | "too_long"
+      | "too_short"
+      | "out_of_range";
+    expected?: (string | string[]) | undefined;
+    metadata?: Record<string, string | number> | undefined;
+  }[];
+  summary: {
+    totalErrors: number;
+    fieldCount: number;
+    timestamp: Date;
+    requestId: string;
+  };
+};
+
+export type ISpecimenUnprocessableEntityErrorResponse = {
+  statusCode: HttpStatusCode.UNPROCESSABLE_ENTITY;
+  header: ISpecimenUnprocessableEntityErrorResponseHeader;
+  body: ISpecimenUnprocessableEntityErrorResponseBody;
+};
+
+export class SpecimenUnprocessableEntityErrorResponse
+  extends HttpResponse<
+    ISpecimenUnprocessableEntityErrorResponseHeader,
+    ISpecimenUnprocessableEntityErrorResponseBody
+  >
+  implements ISpecimenUnprocessableEntityErrorResponse
+{
+  public override readonly statusCode: HttpStatusCode.UNPROCESSABLE_ENTITY;
+
+  public constructor(response: ISpecimenUnprocessableEntityErrorResponse) {
+    super(response.statusCode, response.header, response.body);
+
+    if (response.statusCode !== HttpStatusCode.UNPROCESSABLE_ENTITY) {
+      throw new Error(
+        `Invalid status code: '${response.statusCode}' for SpecimenUnprocessableEntityErrorResponse`,
+      );
+    }
+
+    this.statusCode = response.statusCode;
+  }
+}

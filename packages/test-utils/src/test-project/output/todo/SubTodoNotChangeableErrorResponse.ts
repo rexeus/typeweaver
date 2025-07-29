@@ -1,0 +1,48 @@
+import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+
+export type ISubTodoNotChangeableErrorResponseHeader = {
+  "Content-Type": "application/json";
+};
+
+export type ISubTodoNotChangeableErrorResponseBody = {
+  message: "SubTodo in current status or because of parent todo status cannot be changed";
+  code: "SUBTODO_NOT_CHANGEABLE_ERROR";
+  context: {
+    todoId: string;
+    subtodoId: string;
+    currentTodoStatus: "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED";
+    currentSubtodoStatus: "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED";
+  };
+  expectedValues: {
+    allowedTodoStatuses: ("TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED")[];
+    allowedSubtodoStatuses: ("TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED")[];
+  };
+};
+
+export type ISubTodoNotChangeableErrorResponse = {
+  statusCode: HttpStatusCode.CONFLICT;
+  header: ISubTodoNotChangeableErrorResponseHeader;
+  body: ISubTodoNotChangeableErrorResponseBody;
+};
+
+export class SubTodoNotChangeableErrorResponse
+  extends HttpResponse<
+    ISubTodoNotChangeableErrorResponseHeader,
+    ISubTodoNotChangeableErrorResponseBody
+  >
+  implements ISubTodoNotChangeableErrorResponse
+{
+  public override readonly statusCode: HttpStatusCode.CONFLICT;
+
+  public constructor(response: ISubTodoNotChangeableErrorResponse) {
+    super(response.statusCode, response.header, response.body);
+
+    if (response.statusCode !== HttpStatusCode.CONFLICT) {
+      throw new Error(
+        `Invalid status code: '${response.statusCode}' for SubTodoNotChangeableErrorResponse`,
+      );
+    }
+
+    this.statusCode = response.statusCode;
+  }
+}

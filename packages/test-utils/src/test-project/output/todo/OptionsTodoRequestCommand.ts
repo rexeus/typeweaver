@@ -1,0 +1,49 @@
+import definition from "../../definition/todo/queries/OptionsTodoDefinition";
+import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import { RequestCommand } from "../lib/clients";
+import { OptionsTodoResponseValidator } from "./OptionsTodoResponseValidator";
+import type {
+  IOptionsTodoRequest,
+  IOptionsTodoRequestHeader,
+  IOptionsTodoRequestParam,
+  SuccessfulOptionsTodoResponse,
+} from "./OptionsTodoRequest";
+
+import { OptionsTodoSuccessResponse } from "./OptionsTodoResponse";
+
+export class OptionsTodoRequestCommand
+  extends RequestCommand
+  implements IOptionsTodoRequest
+{
+  public override readonly method = definition.method as HttpMethod.OPTIONS;
+  public override readonly path = definition.path;
+
+  public override readonly header: IOptionsTodoRequestHeader;
+  public override readonly param: IOptionsTodoRequestParam;
+  declare public readonly query: undefined;
+  declare public readonly body: undefined;
+
+  private readonly responseValidator: OptionsTodoResponseValidator;
+
+  public constructor(input: Omit<IOptionsTodoRequest, "method" | "path">) {
+    super();
+
+    this.header = input.header;
+
+    this.param = input.param;
+
+    this.responseValidator = new OptionsTodoResponseValidator();
+  }
+
+  public processResponse(
+    response: IHttpResponse,
+  ): SuccessfulOptionsTodoResponse {
+    const result = this.responseValidator.validate(response);
+
+    if (result instanceof OptionsTodoSuccessResponse) {
+      return result;
+    }
+
+    throw result;
+  }
+}

@@ -1,0 +1,38 @@
+import type { Context } from "hono";
+import {
+  TypeweaverHono,
+  type HonoRequestHandler,
+  type TypeweaverHonoOptions,
+} from "../lib/hono";
+
+import type { IPutSpecimenRequest } from "./PutSpecimenRequest";
+import { PutSpecimenRequestValidator } from "./PutSpecimenRequestValidator";
+import type { PutSpecimenResponse } from "./PutSpecimenResponse";
+
+export type SpecimenApiHandler = {
+  handlePutSpecimenRequest: HonoRequestHandler<
+    IPutSpecimenRequest,
+    PutSpecimenResponse
+  >;
+};
+
+export class SpecimenHono extends TypeweaverHono<SpecimenApiHandler> {
+  public constructor(options: TypeweaverHonoOptions<SpecimenApiHandler>) {
+    super(options);
+    this.setupRoutes();
+  }
+
+  protected setupRoutes(): void {
+    this.put(
+      "/specimens/:specimenId/foo/:foo/bar/:bar/uuid/:uuid/slug/:slug",
+      async (context: Context) =>
+        this.handleRequest(
+          context,
+          new PutSpecimenRequestValidator(),
+          this.requestHandlers.handlePutSpecimenRequest.bind(
+            this.requestHandlers,
+          ),
+        ),
+    );
+  }
+}

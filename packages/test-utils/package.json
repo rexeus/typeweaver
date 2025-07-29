@@ -1,0 +1,34 @@
+{
+  "name": "test-utils",
+  "description": "Test utils for TypeWeaver packages",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "test-project:gen": "pnpm exec typeweaver generate --output src/test-project/output --input src/test-project/definition --plugins clients,aws-cdk,hono --shared src/test-project/definition/shared",
+    "test:gen": "pnpm run test-project:gen"
+  },
+  "keywords": [
+    "typeweaver",
+    "test",
+    "utils"
+  ],
+  "devDependencies": {
+    "@hono/node-server": "^1.14.0",
+    "@rexeus/typeweaver": "workspace:^",
+    "@rexeus/typeweaver-aws-cdk": "workspace:^",
+    "@rexeus/typeweaver-clients": "workspace:^",
+    "@rexeus/typeweaver-core": "workspace:^",
+    "@rexeus/typeweaver-gen": "workspace:^",
+    "@rexeus/typeweaver-hono": "workspace:^",
+    "@rexeus/typeweaver-types": "workspace:^",
+    "axios": "^1.9.0",
+    "case": "^1.6.3",
+    "deepmerge": "^4.3.1",
+    "get-port": "^7.1.0",
+    "hono": "^4.6.14",
+    "zod": "^3.25.67"
+  }
+}

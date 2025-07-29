@@ -15,7 +15,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export class ResponseGenerator {
   public static generate(context: GeneratorContext): void {
     const templateFile = path.join(__dirname, "templates", "Response.ejs");
-    const sharedResponseTemplateFile = path.join(__dirname, "templates", "SharedResponse.ejs");
+    const sharedResponseTemplateFile = path.join(
+      __dirname,
+      "templates",
+      "SharedResponse.ejs"
+    );
 
     for (const [, entityResource] of Object.entries(
       context.resources.entityResources
@@ -24,10 +28,14 @@ export class ResponseGenerator {
       for (const definition of entityResource.operations) {
         this.writeResponseType(templateFile, definition, context);
       }
-      
+
       // Generate entity-specific responses
       for (const responseResource of entityResource.responses) {
-        this.writeEntityResponseType(sharedResponseTemplateFile, responseResource, context);
+        this.writeEntityResponseType(
+          sharedResponseTemplateFile,
+          responseResource,
+          context
+        );
       }
     }
   }
@@ -60,43 +68,43 @@ export class ResponseGenerator {
     }[] = [];
 
     for (const response of responses) {
-      const { statusCode, name, isShared, body, header } = response;
+      const { statusCode, name, body, header, isReference } = response;
 
-      if (isShared) {
-        // First check in global shared resources
-        let sharedResponse = context.resources.sharedResponseResources.find(
+      if (isReference) {
+        // Check in global shared resources first
+        const sharedResponse = context.resources.sharedResponseResources.find(
           resource => resource.name === name
         );
-        
-        // If not found globally, check in entity-specific responses
-        if (!sharedResponse) {
-          const entityResponses = context.resources.entityResources[resource.entityName]?.responses;
+
+        if (sharedResponse) {
+          sharedResponses.push({
+            name,
+            path: Path.relative(
+              outputDir,
+              `${sharedResponse.outputDir}/${path.basename(sharedResponse.outputFileName, ".ts")}`
+            ),
+          });
+        } else {
+          // Check in entity-specific responses
+          const entityResponses =
+            context.resources.entityResources[resource.entityName]?.responses;
           const entityResponse = entityResponses?.find(r => r.name === name);
-          if (entityResponse) {
-            sharedResponses.push({
-              name,
-              path: Path.relative(
-                outputDir,
-                `${entityResponse.outputDir}/${path.basename(entityResponse.outputFileName, ".ts")}`
-              ),
-            });
-            continue;
+
+          if (!entityResponse) {
+            throw new Error(
+              `Response ${name} not found in shared or entity-specific responses`
+            );
           }
-        }
-        
-        if (!sharedResponse) {
-          throw new Error(
-            `Shared response '${response.name}' not found in shared or entity resources`
-          );
+
+          sharedResponses.push({
+            name,
+            path: Path.relative(
+              outputDir,
+              `${entityResponse.outputDir}/${path.basename(entityResponse.outputFileName, ".ts")}`
+            ),
+          });
         }
 
-        sharedResponses.push({
-          name,
-          path: Path.relative(
-            outputDir,
-            `${sharedResponse.outputDir}/${path.basename(sharedResponse.outputFileName, ".ts")}`
-          ),
-        });
         continue;
       }
 
@@ -123,7 +131,7 @@ export class ResponseGenerator {
       ),
       sourcePath: Path.relative(
         outputDir,
-        `${sourceDir}/${path.basename(sourceFile, ".ts")}`
+        `${sourceDir}/${path.relative(sourceDir, sourceFile).replace(/\.ts$/, "")}`
       ),
     });
 
@@ -136,16 +144,16 @@ export class ResponseGenerator {
     resource: EntityResponseResource,
     context: GeneratorContext
   ): void {
-    const { name, body, header, statusCode, outputFile, outputDir } = resource;
+    const { name, body, header, outputFile } = resource;
     const pascalCaseName = Case.pascal(name);
-    
+
     const headerTsType = header
       ? TsTypePrinter.print(TsTypeNode.fromZod(header))
       : undefined;
     const bodyTsType = body
       ? TsTypePrinter.print(TsTypeNode.fromZod(body))
       : undefined;
-    
+
     const content = context.renderTemplate(templateFile, {
       coreDir: context.coreDir,
       httpStatusCode: HttpStatusCode,

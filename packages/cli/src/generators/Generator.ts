@@ -30,10 +30,10 @@ export class Generator {
   private resourceReader: ResourceReader | null = null;
   private prettier: Prettier | null = null;
 
-  private outputDir: string = "";
-  private sourceDir: string = "";
-  private sharedSourceDir: string = "";
-  private sharedOutputDir: string = "";
+  private outputDir = "";
+  private sourceDir = "";
+  private sharedSourceDir = "";
+  private sharedOutputDir = "";
 
   public constructor(
     registry?: PluginRegistry,

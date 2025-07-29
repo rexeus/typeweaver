@@ -9,7 +9,7 @@ export class InvalidHttpMethodError extends Error {
     const validMethods = Object.values(HttpMethod).join(", ");
     super(
       `Invalid HTTP method '${method}' in operation '${operationId}' at \`${file}\`\n` +
-      `  Valid methods: ${validMethods}`
+        `  Valid methods: ${validMethods}`
     );
   }
 }

@@ -11,8 +11,8 @@ export class DuplicateRouteError extends Error {
   ) {
     super(
       `Duplicate route '${method} ${path}' found.\n` +
-      `  First defined by operation '${firstOperationId}' in: \`${firstFile}\`\n` +
-      `  Duplicate defined by operation '${duplicateOperationId}' in: \`${duplicateFile}\``
+        `  First defined by operation '${firstOperationId}' in: \`${firstFile}\`\n` +
+        `  Duplicate defined by operation '${duplicateOperationId}' in: \`${duplicateFile}\``
     );
   }
 }

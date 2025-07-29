@@ -9,7 +9,7 @@ export class InvalidStatusCodeError extends Error {
     const validStatusCodes = Object.values(HttpStatusCode).join(", ");
     super(
       `Invalid status code '${statusCode}' in response '${responseName}' at \`${file}\`\n` +
-      `  Valid status codes: ${validStatusCodes}`
+        `  Valid status codes: ${validStatusCodes}`
     );
   }
 }

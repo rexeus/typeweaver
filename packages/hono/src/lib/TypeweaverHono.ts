@@ -142,15 +142,13 @@ export abstract class TypeweaverHono<
     validation: (error: RequestValidationError): IHttpResponse => ({
       statusCode: 400,
       body: {
-        error: {
-          code: "VALIDATION_ERROR",
-          message: error.message,
-          details: {
-            headers: error.headerIssues,
-            body: error.bodyIssues,
-            query: error.queryIssues,
-            params: error.pathParamIssues,
-          },
+        code: "VALIDATION_ERROR",
+        message: error.message,
+        issues: {
+          header: error.headerIssues,
+          body: error.bodyIssues,
+          query: error.queryIssues,
+          param: error.pathParamIssues,
         },
       },
     }),
@@ -160,10 +158,8 @@ export abstract class TypeweaverHono<
     unknown: (): IHttpResponse => ({
       statusCode: 500,
       body: {
-        error: {
-          code: "INTERNAL_SERVER_ERROR",
-          message: "An unexpected error occurred.",
-        },
+        code: "INTERNAL_SERVER_ERROR",
+        message: "An unexpected error occurred.",
       },
     }),
   };
@@ -209,7 +205,10 @@ export abstract class TypeweaverHono<
       },
     };
 
-    this.registerErrorHandler();
+    // TODO: native onError handler of hono is currently not working in this context
+    // -> only validation errors were caught, other errors were not handled
+    // -> if this is fixed, the hono onError handler should be used instead of our try/catch logic
+    // this.registerErrorHandler();
   }
 
   /**
@@ -219,7 +218,7 @@ export abstract class TypeweaverHono<
    * @param defaultHandler - Default handler to use when option is true
    * @returns Resolved handler function or undefined if disabled
    */
-  private resolveErrorHandler<T extends Function>(
+  private resolveErrorHandler<T extends (...args: any[]) => any>(
     option: T | boolean | undefined,
     defaultHandler: T
   ): T | undefined {
@@ -233,37 +232,64 @@ export abstract class TypeweaverHono<
    * Processes errors in order: validation, HTTP response, unknown.
    */
   protected registerErrorHandler(): void {
-    this.onError(async (error, context) => {
-      // Handle validation errors
-      if (
-        error instanceof RequestValidationError &&
-        this.config.errorHandlers.validation
-      ) {
-        return this.adapter.toResponse(
-          await this.config.errorHandlers.validation(error, context)
-        );
-      }
+    this.onError(this.handleError.bind(this));
+  }
 
-      // Handle HTTP response errors
-      if (
-        error instanceof HttpResponse &&
-        this.config.errorHandlers.httpResponse
-      ) {
-        return this.adapter.toResponse(
-          await this.config.errorHandlers.httpResponse(error, context)
-        );
-      }
+  /**
+   * Safely executes an error handler and returns null if it fails.
+   * This allows for graceful fallback to the next handler in the chain.
+   *
+   * @param handlerFn - Function that executes the error handler
+   * @returns Response if successful, null if handler throws
+   */
+  private async safelyExecuteHandler(
+    handlerFn: () => Promise<IHttpResponse> | IHttpResponse
+  ): Promise<Response | null> {
+    try {
+      const response = await handlerFn();
+      return this.adapter.toResponse(response);
+    } catch {
+      // Handler execution failed, return null to continue to next handler
+      return null;
+    }
+  }
 
-      // Handle unknown errors
-      if (this.config.errorHandlers.unknown) {
-        return this.adapter.toResponse(
-          await this.config.errorHandlers.unknown(error, context)
-        );
-      }
+  protected async handleError(
+    error: unknown,
+    context: Context
+  ): Promise<Response> {
+    // Handle validation errors
+    if (
+      error instanceof RequestValidationError &&
+      this.config.errorHandlers.validation
+    ) {
+      const response = await this.safelyExecuteHandler(() =>
+        this.config.errorHandlers.validation!(error, context)
+      );
+      if (response) return response;
+    }
 
-      // Default: re-throw
-      throw error;
-    });
+    // Handle HTTP response errors
+    if (
+      error instanceof HttpResponse &&
+      this.config.errorHandlers.httpResponse
+    ) {
+      const response = await this.safelyExecuteHandler(() =>
+        this.config.errorHandlers.httpResponse!(error, context)
+      );
+      if (response) return response;
+    }
+
+    // Handle unknown errors
+    if (this.config.errorHandlers.unknown) {
+      const response = await this.safelyExecuteHandler(() =>
+        this.config.errorHandlers.unknown!(error, context)
+      );
+      if (response) return response;
+    }
+
+    // Default: re-throw
+    throw error;
   }
 
   /**
@@ -282,14 +308,18 @@ export abstract class TypeweaverHono<
     validator: IRequestValidator,
     handler: HonoRequestHandler<TRequest, TResponse>
   ): Promise<Response> {
-    const httpRequest = await this.adapter.toRequest(context);
+    try {
+      const httpRequest = await this.adapter.toRequest(context);
 
-    // Conditionally validate
-    const validatedRequest = this.config.validateRequests
-      ? (validator.validate(httpRequest) as TRequest)
-      : (httpRequest as TRequest);
+      // Conditionally validate
+      const validatedRequest = this.config.validateRequests
+        ? (validator.validate(httpRequest) as TRequest)
+        : (httpRequest as TRequest);
 
-    const httpResponse = await handler(validatedRequest, context);
-    return this.adapter.toResponse(httpResponse);
+      const httpResponse = await handler(validatedRequest, context);
+      return this.adapter.toResponse(httpResponse);
+    } catch (error) {
+      return this.handleError(error, context);
+    }
   }
 }

@@ -75,7 +75,7 @@ export class PluginLoader {
     pluginName: string
   ): Promise<LoadResult<PluginLoadResult, PluginLoadError>> {
     const possiblePaths = this.generatePluginPaths(pluginName);
-    const attempts: Array<{ path: string; error: string }> = [];
+    const attempts: { path: string; error: string }[] = [];
 
     for (const possiblePath of possiblePaths) {
       try {

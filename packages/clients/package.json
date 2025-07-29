@@ -20,6 +20,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "build": "pkgroll --clean-dist && cp -r ./src/templates ./dist/templates && cp -r ./src/lib ./dist/lib",
+    "test": "vitest --run",
     "prepack": "npm run build",
     "preversion": "npm run build"
   },
@@ -49,9 +50,11 @@
     "axios": "^1.7.0"
   },
   "devDependencies": {
+    "@hono/node-server": "^1.16.0",
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "axios": "^1.9.0"
+    "axios": "^1.9.0",
+    "test-utils": "workspace:^"
   },
   "dependencies": {
     "@rexeus/typeweaver-zod-to-ts": "workspace:^",

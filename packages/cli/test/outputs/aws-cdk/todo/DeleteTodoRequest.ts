@@ -1,8 +1,5 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import {
-  type DeleteTodoResponse,
-  DeleteTodoSuccessResponse,
-} from "./DeleteTodoResponse";
+import { type DeleteTodoResponse } from "./DeleteTodoResponse";
 
 import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 

@@ -1,0 +1,52 @@
+import definition from "../../definition/todo/mutations/UpdateSubTodoDefinition";
+import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import { RequestCommand } from "../lib/clients";
+import { UpdateSubTodoResponseValidator } from "./UpdateSubTodoResponseValidator";
+import type {
+  IUpdateSubTodoRequest,
+  IUpdateSubTodoRequestHeader,
+  IUpdateSubTodoRequestParam,
+  IUpdateSubTodoRequestBody,
+  SuccessfulUpdateSubTodoResponse,
+} from "./UpdateSubTodoRequest";
+
+import { UpdateSubTodoSuccessResponse } from "./UpdateSubTodoResponse";
+
+export class UpdateSubTodoRequestCommand
+  extends RequestCommand
+  implements IUpdateSubTodoRequest
+{
+  public override readonly method = definition.method as HttpMethod.PUT;
+  public override readonly path = definition.path;
+
+  public override readonly header: IUpdateSubTodoRequestHeader;
+  public override readonly param: IUpdateSubTodoRequestParam;
+  declare public readonly query: undefined;
+  public override readonly body: IUpdateSubTodoRequestBody;
+
+  private readonly responseValidator: UpdateSubTodoResponseValidator;
+
+  public constructor(input: Omit<IUpdateSubTodoRequest, "method" | "path">) {
+    super();
+
+    this.header = input.header;
+
+    this.param = input.param;
+
+    this.body = input.body;
+
+    this.responseValidator = new UpdateSubTodoResponseValidator();
+  }
+
+  public processResponse(
+    response: IHttpResponse,
+  ): SuccessfulUpdateSubTodoResponse {
+    const result = this.responseValidator.validate(response);
+
+    if (result instanceof UpdateSubTodoSuccessResponse) {
+      return result;
+    }
+
+    throw result;
+  }
+}

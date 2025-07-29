@@ -7,15 +7,15 @@ export class InvalidSchemaShapeError extends Error {
     public readonly invalidType: string,
     public readonly file: string
   ) {
-    const allowedTypes = 
-      schemaType === "param" 
+    const allowedTypes =
+      schemaType === "param"
         ? "string-based types (ZodString, ZodLiteral<string>, ZodEnum) or ZodOptional of these types"
         : "string-based types (ZodString, ZodLiteral<string>, ZodEnum), ZodOptional, or ZodArray of these types";
-    
+
     super(
       `Invalid ${schemaType} schema shape in ${context} '${definitionName}' at \`${file}\`\n` +
-      `  Property '${propertyName}' has invalid type: ${invalidType}\n` +
-      `  Allowed types: ${allowedTypes}`
+        `  Property '${propertyName}' has invalid type: ${invalidType}\n` +
+        `  Allowed types: ${allowedTypes}`
     );
   }
 }
