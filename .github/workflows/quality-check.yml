@@ -43,6 +43,12 @@ jobs:
           pnpm run build
           echo "::endgroup::"
 
+      - name: Rebuild symlinks after build
+        run: |
+          echo "::group::Recreating CLI binary symlinks"
+          pnpm install --frozen-lockfile
+          echo "::endgroup::"
+
       - name: Generate all test projects
         run: |
           echo "::group::Generating all test projects"
