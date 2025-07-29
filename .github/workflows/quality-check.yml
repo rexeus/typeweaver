@@ -70,5 +70,5 @@ jobs:
       - name: Run tests
         run: |
           echo "::group::Running tests"
-          pnpm run test:main-diffs
+          pnpm run test
           echo "::endgroup::"
