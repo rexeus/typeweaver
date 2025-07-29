@@ -17,13 +17,15 @@
   "files": [
     "dist",
     "package.json",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "cli": "tsx src/cli.ts",
     "typecheck": "tsc --noEmit --project tsconfig.test.json",
     "format": "prettier --write .",
-    "build": "pkgroll --clean-dist && cp -r ./src/generators/templates ./dist/templates",
+    "build": "pkgroll --clean-dist && cp -r ./src/generators/templates ./dist/templates && cp ../../LICENSE ../../NOTICE ./dist/",
     "prepack": "npm run build",
     "preversion": "npm run build",
     "test:bundle": "pnpm run build && node dist/run-cli-with-tsx.js generate --output test/output --input test/definition --plugins clients,aws-cdk,hono",
@@ -44,7 +46,7 @@
     "typeweaver"
   ],
   "author": "Dennis Wentzien <dw@rexeus.com>",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rexeus/typeweaver.git",
