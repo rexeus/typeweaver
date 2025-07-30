@@ -41,9 +41,8 @@ describe("Generated ResponseValidator", () => {
     test("should reject invalid status codes", () => {
       // Arrange
       const validator = new CreateTodoResponseValidator();
-      const invalidResponse = createCreateTodoSuccessResponse({
-        statusCode: 418 as any,
-      });
+      const response = createCreateTodoSuccessResponse();
+      const invalidResponse = { ...response, statusCode: 418 };
 
       // Act & Assert
       expect(() => validator.safeValidate(invalidResponse)).toThrow(

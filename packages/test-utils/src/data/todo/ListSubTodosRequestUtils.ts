@@ -1,61 +1,51 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import type { IHttpRequest } from "@rexeus/typeweaver-core";
+import type { IListSubTodosRequest } from "../..";
 import { faker } from "@faker-js/faker";
 import type {
   IListSubTodosRequestHeader,
   IListSubTodosRequestParam,
   IListSubTodosRequestQuery,
 } from "../..";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createRequest } from "../createRequest";
 import { createJwtToken } from "../createJwtToken";
 
-export function createListSubTodosRequestHeaders(
-  input: Partial<IListSubTodosRequestHeader> = {}
-): IListSubTodosRequestHeader {
-  const defaults: IListSubTodosRequestHeader = {
+export const createListSubTodosRequestHeaders =
+  createDataFactory<IListSubTodosRequestHeader>(() => ({
     Accept: "application/json",
     Authorization: `Bearer ${createJwtToken()}`,
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createListSubTodosRequestParams(
-  input: Partial<IListSubTodosRequestParam> = {}
-): IListSubTodosRequestParam {
-  const defaults: IListSubTodosRequestParam = {
+export const createListSubTodosRequestParams =
+  createDataFactory<IListSubTodosRequestParam>(() => ({
     todoId: faker.string.ulid(),
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createListSubTodosRequestQuery(
-  input: Partial<IListSubTodosRequestQuery> = {}
-): IListSubTodosRequestQuery {
-  const defaults: IListSubTodosRequestQuery = {
-    limit: faker.datatype.boolean()
-      ? faker.number.int({ min: 1, max: 100 }).toString()
-      : undefined,
-    nextToken: faker.datatype.boolean()
-      ? faker.string.alphanumeric(32)
-      : undefined,
-    sortBy: faker.datatype.boolean()
-      ? faker.helpers.arrayElement([
-          "title",
-          "dueDate",
-          "priority",
-          "createdAt",
-          "modifiedAt",
-        ])
-      : undefined,
-    sortOrder: faker.datatype.boolean()
-      ? faker.helpers.arrayElement(["asc", "desc"])
-      : undefined,
-  };
-
-  return createData(defaults, input);
-}
+export const createListSubTodosRequestQuery =
+  createDataFactory<IListSubTodosRequestQuery>(() => ({
+    limit: faker.helpers.arrayElement([
+      faker.number.int({ min: 1, max: 100 }).toString(),
+      undefined,
+    ]),
+    nextToken: faker.helpers.arrayElement([
+      faker.string.alphanumeric(32),
+      undefined,
+    ]),
+    sortBy: faker.helpers.arrayElement([
+      faker.helpers.arrayElement([
+        "title",
+        "dueDate",
+        "priority",
+        "createdAt",
+        "modifiedAt",
+      ]),
+      undefined,
+    ]),
+    sortOrder: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["asc", "desc"]),
+      undefined,
+    ]),
+  }));
 
 type ListSubTodosRequestInput = {
   method?: HttpMethod;
@@ -67,28 +57,31 @@ type ListSubTodosRequestInput = {
 
 export function createListSubTodosRequest(
   input: ListSubTodosRequestInput = {}
-): IHttpRequest {
+): IListSubTodosRequest {
+  // Generate param first for dynamic path building
   const param = input.param
     ? createListSubTodosRequestParams(input.param)
     : createListSubTodosRequestParams();
 
-  const defaults: IHttpRequest = {
-    method: HttpMethod.GET,
-    path: `/todos/${param.todoId}/subtodos`,
-    header: createListSubTodosRequestHeaders(),
-    param,
-    query: createListSubTodosRequestQuery(),
-  };
+  // If path is not explicitly provided, build it dynamically
+  const dynamicPath = input.path ?? `/todos/${param.todoId}/subtodos`;
 
-  const overrides: Partial<IHttpRequest> = {};
-  if (input.method !== undefined) overrides.method = input.method;
-  if (input.path !== undefined) overrides.path = input.path;
-  if (input.header !== undefined)
-    overrides.header = createListSubTodosRequestHeaders(input.header);
-  if (input.param !== undefined)
-    overrides.param = createListSubTodosRequestParams(input.param);
-  if (input.query !== undefined)
-    overrides.query = createListSubTodosRequestQuery(input.query);
-
-  return createData(defaults, overrides);
+  return createRequest<
+    IListSubTodosRequest,
+    never,
+    IListSubTodosRequestHeader,
+    IListSubTodosRequestParam,
+    IListSubTodosRequestQuery
+  >(
+    {
+      method: HttpMethod.GET,
+      path: dynamicPath,
+    },
+    {
+      header: createListSubTodosRequestHeaders,
+      param: () => param, // Use pre-generated param
+      query: createListSubTodosRequestQuery,
+    },
+    input
+  );
 }

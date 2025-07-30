@@ -1,6 +1,7 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createRequest } from "../createRequest";
 import { createJwtToken } from "../createJwtToken";
 import type {
   IListTodosRequest,
@@ -8,21 +9,14 @@ import type {
   IListTodosRequestQuery,
 } from "../..";
 
-export function createListTodosRequestHeaders(
-  input: Partial<IListTodosRequestHeader> = {}
-): IListTodosRequestHeader {
-  const defaults: IListTodosRequestHeader = {
+export const createListTodosRequestHeaders =
+  createDataFactory<IListTodosRequestHeader>(() => ({
     Accept: "application/json",
     Authorization: `Bearer ${createJwtToken()}`,
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createListTodosRequestQuery(
-  input: Partial<IListTodosRequestQuery> = {}
-): IListTodosRequestQuery {
-  const defaults: IListTodosRequestQuery = {
+export const createListTodosRequestQuery =
+  createDataFactory<IListTodosRequestQuery>(() => ({
     status: faker.helpers.arrayElement([
       "TODO",
       "IN_PROGRESS",
@@ -44,10 +38,7 @@ export function createListTodosRequestQuery(
     search: faker.lorem.word(),
     dateFrom: faker.date.past().toISOString().split("T")[0],
     dateTo: faker.date.future().toISOString().split("T")[0],
-  };
-
-  return createData(defaults, input);
-}
+  }));
 
 type CreateListTodosRequestInput = {
   path?: string;
@@ -58,19 +49,21 @@ type CreateListTodosRequestInput = {
 export function createListTodosRequest(
   input: CreateListTodosRequestInput = {}
 ): IListTodosRequest {
-  const defaults: IListTodosRequest = {
-    method: HttpMethod.GET,
-    path: "/todos",
-    header: createListTodosRequestHeaders(),
-    query: createListTodosRequestQuery(),
-  };
-
-  const overrides: Partial<IListTodosRequest> = {};
-  if (input.path !== undefined) overrides.path = input.path;
-  if (input.header !== undefined)
-    overrides.header = createListTodosRequestHeaders(input.header);
-  if (input.query !== undefined)
-    overrides.query = createListTodosRequestQuery(input.query);
-
-  return createData(defaults, overrides as IListTodosRequest);
+  return createRequest<
+    IListTodosRequest,
+    never,
+    IListTodosRequestHeader,
+    never,
+    IListTodosRequestQuery
+  >(
+    {
+      method: HttpMethod.GET,
+      path: "/todos",
+    },
+    {
+      header: createListTodosRequestHeaders,
+      query: createListTodosRequestQuery,
+    },
+    input
+  );
 }

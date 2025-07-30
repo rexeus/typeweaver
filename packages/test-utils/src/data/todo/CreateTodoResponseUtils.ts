@@ -7,30 +7,33 @@ import type {
   ICreateTodoSuccessResponseHeader,
   ICreateTodoSuccessResponseBody,
 } from "../..";
+import { CreateTodoSuccessResponse } from "../..";
 
-export const createCreateTodoSuccessResponseHeaders = createDataFactory<ICreateTodoSuccessResponseHeader>(() => ({
-  "Content-Type": "application/json",
-}));
+export const createCreateTodoSuccessResponseHeaders =
+  createDataFactory<ICreateTodoSuccessResponseHeader>(() => ({
+    "Content-Type": "application/json",
+  }));
 
-export const createCreateTodoSuccessResponseBody = createDataFactory<ICreateTodoSuccessResponseBody>(() => ({
-  id: faker.string.ulid(),
-  accountId: faker.string.ulid(),
-  title: faker.lorem.sentence(),
-  description: faker.lorem.paragraph(),
-  status: faker.helpers.arrayElement([
-    "TODO",
-    "IN_PROGRESS",
-    "DONE",
-    "ARCHIVED",
-  ] as const),
-  dueDate: faker.date.future().toISOString(),
-  tags: [faker.lorem.word(), faker.lorem.word()],
-  priority: faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const),
-  createdAt: faker.date.past().toISOString(),
-  modifiedAt: faker.date.recent().toISOString(),
-  createdBy: faker.internet.username(),
-  modifiedBy: faker.internet.username(),
-}));
+export const createCreateTodoSuccessResponseBody =
+  createDataFactory<ICreateTodoSuccessResponseBody>(() => ({
+    id: faker.string.ulid(),
+    accountId: faker.string.ulid(),
+    title: faker.lorem.sentence(),
+    description: faker.lorem.paragraph(),
+    status: faker.helpers.arrayElement([
+      "TODO",
+      "IN_PROGRESS",
+      "DONE",
+      "ARCHIVED",
+    ] as const),
+    dueDate: faker.date.future().toISOString(),
+    tags: [faker.lorem.word(), faker.lorem.word()],
+    priority: faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const),
+    createdAt: faker.date.past().toISOString(),
+    modifiedAt: faker.date.recent().toISOString(),
+    createdBy: faker.internet.username(),
+    modifiedBy: faker.internet.username(),
+  }));
 
 type CreateTodoSuccessResponseInput = {
   statusCode?: number;
@@ -40,8 +43,12 @@ type CreateTodoSuccessResponseInput = {
 
 export function createCreateTodoSuccessResponse(
   input: CreateTodoSuccessResponseInput = {}
-): ICreateTodoSuccessResponse {
-  return createResponse<ICreateTodoSuccessResponse, ICreateTodoSuccessResponseBody, ICreateTodoSuccessResponseHeader>(
+): CreateTodoSuccessResponse {
+  const responseData = createResponse<
+    ICreateTodoSuccessResponse,
+    ICreateTodoSuccessResponseBody,
+    ICreateTodoSuccessResponseHeader
+  >(
     {
       statusCode: HttpStatusCode.CREATED,
     },
@@ -51,4 +58,5 @@ export function createCreateTodoSuccessResponse(
     },
     input
   );
+  return new CreateTodoSuccessResponse(responseData);
 }

@@ -1,5 +1,6 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
 import { createErrorResponseHeaders } from "../createErrorResponseHeaders";
 import type {
   IInternalServerErrorResponse,
@@ -14,25 +15,28 @@ type InternalServerErrorResponseInput = {
   body?: Partial<IInternalServerErrorResponseBody>;
 };
 
+const createInternalServerErrorResponseBody =
+  createDataFactory<IInternalServerErrorResponseBody>(() => ({
+    message: "Internal server error occurred",
+    code: "INTERNAL_SERVER_ERROR",
+  }));
+
 export function createInternalServerErrorResponse(
   input: InternalServerErrorResponseInput = {}
 ): InternalServerErrorResponse {
-  const defaults: IInternalServerErrorResponse = {
-    statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
-    header: createErrorResponseHeaders<IInternalServerErrorResponseHeader>(),
-    body: {
-      message: "Internal server error occurred",
-      code: "INTERNAL_SERVER_ERROR",
+  const responseData = createResponse<
+    IInternalServerErrorResponse,
+    IInternalServerErrorResponseBody,
+    IInternalServerErrorResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
     },
-  };
-
-  const overrides: Partial<IInternalServerErrorResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createErrorResponseHeaders(input.header);
-  if (input.body !== undefined)
-    overrides.body = createData(defaults.body, input.body);
-
-  const responseData = createData(defaults, overrides);
+    {
+      body: createInternalServerErrorResponseBody,
+      header: createErrorResponseHeaders<IInternalServerErrorResponseHeader>(),
+    },
+    input
+  );
   return new InternalServerErrorResponse(responseData);
 }

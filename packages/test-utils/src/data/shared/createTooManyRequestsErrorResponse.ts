@@ -1,35 +1,42 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
 import { createErrorResponseHeaders } from "../createErrorResponseHeaders";
 import type {
   ITooManyRequestsErrorResponse,
   ITooManyRequestsErrorResponseHeader,
   ITooManyRequestsErrorResponseBody,
 } from "../..";
+import { TooManyRequestsErrorResponse } from "../..";
+
 type TooManyRequestsErrorResponseInput = {
   statusCode?: number;
   header?: Partial<ITooManyRequestsErrorResponseHeader>;
   body?: Partial<ITooManyRequestsErrorResponseBody>;
 };
 
+const createTooManyRequestsErrorResponseBody =
+  createDataFactory<ITooManyRequestsErrorResponseBody>(() => ({
+    message: "Too many requests",
+    code: "TOO_MANY_REQUESTS_ERROR",
+  }));
+
 export function createTooManyRequestsErrorResponse(
   input: TooManyRequestsErrorResponseInput = {}
-): ITooManyRequestsErrorResponse {
-  const defaults: ITooManyRequestsErrorResponse = {
-    statusCode: HttpStatusCode.TOO_MANY_REQUESTS,
-    header: createErrorResponseHeaders<ITooManyRequestsErrorResponseHeader>(),
-    body: {
-      message: "Too many requests",
-      code: "TOO_MANY_REQUESTS_ERROR",
+): TooManyRequestsErrorResponse {
+  const responseData = createResponse<
+    ITooManyRequestsErrorResponse,
+    ITooManyRequestsErrorResponseBody,
+    ITooManyRequestsErrorResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.TOO_MANY_REQUESTS,
     },
-  };
-
-  const overrides: Partial<ITooManyRequestsErrorResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createErrorResponseHeaders(input.header);
-  if (input.body !== undefined)
-    overrides.body = createData(defaults.body, input.body);
-
-  return createData(defaults, overrides);
+    {
+      body: createTooManyRequestsErrorResponseBody,
+      header: createErrorResponseHeaders<ITooManyRequestsErrorResponseHeader>(),
+    },
+    input
+  );
+  return new TooManyRequestsErrorResponse(responseData);
 }

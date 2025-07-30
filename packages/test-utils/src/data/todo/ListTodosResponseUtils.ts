@@ -1,6 +1,7 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
 import { createGetTodoSuccessResponseBody } from "./GetTodoResponseUtils";
 import { createCreateTodoSuccessResponseHeaders } from "./CreateTodoResponseUtils";
 import type {
@@ -8,6 +9,7 @@ import type {
   IListTodosSuccessResponseHeader,
   IListTodosSuccessResponseBody,
 } from "../..";
+import { ListTodosSuccessResponse } from "../..";
 
 type ListTodosSuccessResponseInput = {
   statusCode?: number;
@@ -15,28 +17,31 @@ type ListTodosSuccessResponseInput = {
   body?: Partial<IListTodosSuccessResponseBody>;
 };
 
+export const createListTodosSuccessResponseBody =
+  createDataFactory<IListTodosSuccessResponseBody>(() => ({
+    results: [
+      createGetTodoSuccessResponseBody(),
+      createGetTodoSuccessResponseBody(),
+    ],
+    nextToken: faker.string.alphanumeric(32),
+  }));
+
 export function createListTodosSuccessResponse(
   input: ListTodosSuccessResponseInput = {}
-): IListTodosSuccessResponse {
-  const defaults: IListTodosSuccessResponse = {
-    statusCode: HttpStatusCode.OK,
-    header: createCreateTodoSuccessResponseHeaders(),
-    body: {
-      results: [
-        createGetTodoSuccessResponseBody(),
-        createGetTodoSuccessResponseBody(),
-      ],
-      nextToken: faker.string.alphanumeric(32),
+): ListTodosSuccessResponse {
+  const responseData = createResponse<
+    IListTodosSuccessResponse,
+    IListTodosSuccessResponseBody,
+    IListTodosSuccessResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.OK,
     },
-  };
-
-  const overrides: Partial<IListTodosSuccessResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createCreateTodoSuccessResponseHeaders(input.header);
-  if (input.body !== undefined) {
-    overrides.body = createData(defaults.body, input.body);
-  }
-
-  return createData(defaults, overrides);
+    {
+      body: createListTodosSuccessResponseBody,
+      header: createCreateTodoSuccessResponseHeaders,
+    },
+    input
+  );
+  return new ListTodosSuccessResponse(responseData);
 }

@@ -1,47 +1,55 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
 import { createErrorResponseHeaders } from "../createErrorResponseHeaders";
 import type {
   ITodoStatusTransitionInvalidErrorResponse,
   ITodoStatusTransitionInvalidErrorResponseHeader,
   ITodoStatusTransitionInvalidErrorResponseBody,
 } from "../..";
+import { TodoStatusTransitionInvalidErrorResponse } from "../..";
 type TodoStatusTransitionInvalidErrorResponseInput = {
   statusCode?: number;
   header?: Partial<ITodoStatusTransitionInvalidErrorResponseHeader>;
   body?: Partial<ITodoStatusTransitionInvalidErrorResponseBody>;
 };
 
+const createTodoStatusTransitionInvalidErrorResponseHeaders =
+  createErrorResponseHeaders<ITodoStatusTransitionInvalidErrorResponseHeader>();
+
+const createTodoStatusTransitionInvalidErrorResponseBody =
+  createDataFactory<ITodoStatusTransitionInvalidErrorResponseBody>(() => ({
+    message: "Todo status transition is conflicting with current status",
+    code: "TODO_STATUS_TRANSITION_INVALID_ERROR",
+    context: {
+      todoId: faker.string.ulid(),
+      currentStatus: "DONE",
+    },
+    actualValues: {
+      requestedStatus: "TODO",
+    },
+    expectedValues: {
+      allowedStatuses: ["TODO", "IN_PROGRESS"],
+    },
+  }));
+
 export function createTodoStatusTransitionInvalidErrorResponse(
   input: TodoStatusTransitionInvalidErrorResponseInput = {}
-): ITodoStatusTransitionInvalidErrorResponse {
-  const defaults: ITodoStatusTransitionInvalidErrorResponse = {
-    statusCode: HttpStatusCode.CONFLICT,
-    header:
-      createErrorResponseHeaders<ITodoStatusTransitionInvalidErrorResponseHeader>(),
-    body: {
-      message: "Todo status transition is conflicting with current status",
-      code: "TODO_STATUS_TRANSITION_INVALID_ERROR",
-      context: {
-        todoId: faker.string.ulid(),
-        currentStatus: "DONE",
-      },
-      actualValues: {
-        requestedStatus: "TODO",
-      },
-      expectedValues: {
-        allowedStatuses: ["TODO", "IN_PROGRESS"],
-      },
+): TodoStatusTransitionInvalidErrorResponse {
+  const responseData = createResponse<
+    ITodoStatusTransitionInvalidErrorResponse,
+    ITodoStatusTransitionInvalidErrorResponseBody,
+    ITodoStatusTransitionInvalidErrorResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.CONFLICT,
     },
-  };
-
-  const overrides: Partial<ITodoStatusTransitionInvalidErrorResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createErrorResponseHeaders(input.header);
-  if (input.body !== undefined)
-    overrides.body = createData(defaults.body, input.body);
-
-  return createData(defaults, overrides);
+    {
+      body: createTodoStatusTransitionInvalidErrorResponseBody,
+      header: createTodoStatusTransitionInvalidErrorResponseHeaders,
+    },
+    input
+  );
+  return new TodoStatusTransitionInvalidErrorResponse(responseData);
 }

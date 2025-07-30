@@ -1,5 +1,5 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createData } from "../createData";
+import { createResponse } from "../createResponse";
 import { createGetTodoSuccessResponseBody } from "./GetTodoResponseUtils";
 import { createCreateTodoSuccessResponseHeaders } from "./CreateTodoResponseUtils";
 import type {
@@ -7,18 +7,7 @@ import type {
   IPutTodoSuccessResponseHeader,
   IPutTodoSuccessResponseBody,
 } from "../..";
-
-export function createPutTodoSuccessResponseHeaders(
-  input: Partial<IPutTodoSuccessResponseHeader> = {}
-): IPutTodoSuccessResponseHeader {
-  return createCreateTodoSuccessResponseHeaders(input);
-}
-
-export function createPutTodoSuccessResponseBody(
-  input: Partial<IPutTodoSuccessResponseBody> = {}
-): IPutTodoSuccessResponseBody {
-  return createGetTodoSuccessResponseBody(input);
-}
+import { PutTodoSuccessResponse } from "../..";
 
 type PutTodoSuccessResponseInput = {
   statusCode?: number;
@@ -28,19 +17,20 @@ type PutTodoSuccessResponseInput = {
 
 export function createPutTodoSuccessResponse(
   input: PutTodoSuccessResponseInput = {}
-): IPutTodoSuccessResponse {
-  const defaults: IPutTodoSuccessResponse = {
-    statusCode: HttpStatusCode.OK,
-    header: createPutTodoSuccessResponseHeaders(),
-    body: createPutTodoSuccessResponseBody(),
-  };
-
-  const overrides: Partial<IPutTodoSuccessResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createPutTodoSuccessResponseHeaders(input.header);
-  if (input.body !== undefined)
-    overrides.body = createPutTodoSuccessResponseBody(input.body);
-
-  return createData(defaults, overrides);
+): PutTodoSuccessResponse {
+  const responseData = createResponse<
+    IPutTodoSuccessResponse,
+    IPutTodoSuccessResponseBody,
+    IPutTodoSuccessResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.OK,
+    },
+    {
+      body: createGetTodoSuccessResponseBody,
+      header: createCreateTodoSuccessResponseHeaders,
+    },
+    input
+  );
+  return new PutTodoSuccessResponse(responseData);
 }

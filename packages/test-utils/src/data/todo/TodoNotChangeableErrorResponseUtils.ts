@@ -1,6 +1,7 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
 import { createErrorResponseHeaders } from "../createErrorResponseHeaders";
 import type {
   ITodoNotChangeableErrorResponse,
@@ -15,32 +16,38 @@ type TodoNotChangeableErrorResponseInput = {
   body?: Partial<ITodoNotChangeableErrorResponseBody>;
 };
 
+const createTodoNotChangeableErrorResponseHeaders =
+  createErrorResponseHeaders<ITodoNotChangeableErrorResponseHeader>();
+
+const createTodoNotChangeableErrorResponseBody =
+  createDataFactory<ITodoNotChangeableErrorResponseBody>(() => ({
+    message: "Todo in current status cannot be changed",
+    code: "TODO_NOT_CHANGEABLE_ERROR",
+    context: {
+      todoId: faker.string.ulid(),
+      currentStatus: "DONE",
+    },
+    expectedValues: {
+      allowedStatuses: ["TODO", "IN_PROGRESS"],
+    },
+  }));
+
 export function createTodoNotChangeableErrorResponse(
   input: TodoNotChangeableErrorResponseInput = {}
 ): TodoNotChangeableErrorResponse {
-  const defaults: ITodoNotChangeableErrorResponse = {
-    statusCode: HttpStatusCode.CONFLICT,
-    header: createErrorResponseHeaders<ITodoNotChangeableErrorResponseHeader>(),
-    body: {
-      message: "Todo in current status cannot be changed",
-      code: "TODO_NOT_CHANGEABLE_ERROR",
-      context: {
-        todoId: faker.string.ulid(),
-        currentStatus: "DONE",
-      },
-      expectedValues: {
-        allowedStatuses: ["TODO", "IN_PROGRESS"],
-      },
+  const responseData = createResponse<
+    ITodoNotChangeableErrorResponse,
+    ITodoNotChangeableErrorResponseBody,
+    ITodoNotChangeableErrorResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.CONFLICT,
     },
-  };
-
-  const overrides: Partial<ITodoNotChangeableErrorResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createErrorResponseHeaders(input.header);
-  if (input.body !== undefined)
-    overrides.body = createData(defaults.body, input.body);
-
-  const responseData = createData(defaults, overrides);
+    {
+      body: createTodoNotChangeableErrorResponseBody,
+      header: createTodoNotChangeableErrorResponseHeaders,
+    },
+    input
+  );
   return new TodoNotChangeableErrorResponse(responseData);
 }

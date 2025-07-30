@@ -1,11 +1,12 @@
-import { createData } from "./createData";
+import { createDataFactory } from "./createDataFactory";
 
 export function createErrorResponseHeaders<
   T extends { "Content-Type": "application/json" },
->(input: Partial<T> = {}): T {
-  const defaults = {
-    "Content-Type": "application/json" as const,
-  };
-
-  return createData(defaults as T, input);
+>(): (input?: Partial<T>) => T {
+  return createDataFactory<T>(
+    () =>
+      ({
+        "Content-Type": "application/json",
+      }) as T
+  );
 }

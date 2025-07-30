@@ -5,34 +5,26 @@ import type {
   ISpecimenNotFoundErrorResponseHeader,
   ISpecimenNotFoundErrorResponseBody,
 } from "../..";
-import { createData } from "../createData";
+import { SpecimenNotFoundErrorResponse } from "../..";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
 
-export function createSpecimenNotFoundErrorResponseHeaders(
-  input: Partial<ISpecimenNotFoundErrorResponseHeader> = {}
-): ISpecimenNotFoundErrorResponseHeader {
-  const defaults: ISpecimenNotFoundErrorResponseHeader = {
+export const createSpecimenNotFoundErrorResponseHeaders =
+  createDataFactory<ISpecimenNotFoundErrorResponseHeader>(() => ({
     "X-Search-ID": faker.string.ulid(),
     "X-Available": ["true"],
     "X-Count": "0",
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createSpecimenNotFoundErrorResponseBody(
-  input: Partial<ISpecimenNotFoundErrorResponseBody> = {}
-): ISpecimenNotFoundErrorResponseBody {
-  const defaults: ISpecimenNotFoundErrorResponseBody = {
+export const createSpecimenNotFoundErrorResponseBody =
+  createDataFactory<ISpecimenNotFoundErrorResponseBody>(() => ({
     message: "Specimen not found in the system",
     code: "SPECIMEN_NOT_FOUND_ERROR",
     searchCriteria: {
       requestedIds: [faker.string.ulid()],
       suggestions: ["alternative-1", "alternative-2"],
     },
-  };
-
-  return createData(defaults, input);
-}
+  }));
 
 type SpecimenNotFoundErrorResponseInput = {
   statusCode?: number;
@@ -42,19 +34,20 @@ type SpecimenNotFoundErrorResponseInput = {
 
 export function createSpecimenNotFoundErrorResponse(
   input: SpecimenNotFoundErrorResponseInput = {}
-): ISpecimenNotFoundErrorResponse {
-  const defaults: ISpecimenNotFoundErrorResponse = {
-    statusCode: HttpStatusCode.NOT_FOUND,
-    header: createSpecimenNotFoundErrorResponseHeaders(),
-    body: createSpecimenNotFoundErrorResponseBody(),
-  };
-
-  const overrides: Partial<ISpecimenNotFoundErrorResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createSpecimenNotFoundErrorResponseHeaders(input.header);
-  if (input.body !== undefined)
-    overrides.body = createSpecimenNotFoundErrorResponseBody(input.body);
-
-  return createData(defaults, overrides);
+): SpecimenNotFoundErrorResponse {
+  const responseData = createResponse<
+    ISpecimenNotFoundErrorResponse,
+    ISpecimenNotFoundErrorResponseBody,
+    ISpecimenNotFoundErrorResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.NOT_FOUND,
+    },
+    {
+      body: createSpecimenNotFoundErrorResponseBody,
+      header: createSpecimenNotFoundErrorResponseHeaders,
+    },
+    input
+  );
+  return new SpecimenNotFoundErrorResponse(responseData);
 }

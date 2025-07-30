@@ -1,7 +1,13 @@
 import { createData } from "./createData";
 import type { IHttpRequest } from "@rexeus/typeweaver-core";
 
-export function createRequest<TRequest extends IHttpRequest, TBody, THeader, TParam, TQuery>(
+export function createRequest<
+  TRequest extends IHttpRequest,
+  TBody,
+  THeader,
+  TParam,
+  TQuery,
+>(
   defaultRequest: Omit<TRequest, "body" | "header" | "param" | "query">,
   creators: {
     body?: (input?: Partial<TBody>) => TBody;
@@ -17,7 +23,9 @@ export function createRequest<TRequest extends IHttpRequest, TBody, THeader, TPa
     query?: Partial<TQuery>;
   } = {}
 ): TRequest {
-  const defaults: Partial<TRequest> = { ...defaultRequest } as Partial<TRequest>;
+  const defaults: Partial<TRequest> = {
+    ...defaultRequest,
+  } as Partial<TRequest>;
   if (creators.body) (defaults as any).body = creators.body();
   if (creators.header) (defaults as any).header = creators.header();
   if (creators.param) (defaults as any).param = creators.param();
@@ -25,10 +33,14 @@ export function createRequest<TRequest extends IHttpRequest, TBody, THeader, TPa
 
   const overrides: Partial<TRequest> = {};
   if (input.path !== undefined) (overrides as any).path = input.path;
-  if (input.body && creators.body) (overrides as any).body = creators.body(input.body);
-  if (input.header && creators.header) (overrides as any).header = creators.header(input.header);
-  if (input.param && creators.param) (overrides as any).param = creators.param(input.param);
-  if (input.query && creators.query) (overrides as any).query = creators.query(input.query);
+  if (input.body && creators.body)
+    (overrides as any).body = creators.body(input.body);
+  if (input.header && creators.header)
+    (overrides as any).header = creators.header(input.header);
+  if (input.param && creators.param)
+    (overrides as any).param = creators.param(input.param);
+  if (input.query && creators.query)
+    (overrides as any).query = creators.query(input.query);
 
   return createData(defaults as TRequest, overrides);
 }

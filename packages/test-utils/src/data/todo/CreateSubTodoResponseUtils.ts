@@ -5,53 +5,53 @@ import type {
   ICreateSubTodoSuccessResponseHeader,
   ICreateSubTodoSuccessResponse,
 } from "../..";
-import { createData } from "../createData";
+import { CreateSubTodoSuccessResponse } from "../..";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
 
-export function createCreateSubTodoSuccessResponseHeaders(
-  input: Partial<ICreateSubTodoSuccessResponseHeader> = {}
-): ICreateSubTodoSuccessResponseHeader {
-  const defaults: ICreateSubTodoSuccessResponseHeader = {
+export const createCreateSubTodoSuccessResponseHeaders =
+  createDataFactory<ICreateSubTodoSuccessResponseHeader>(() => ({
     "Content-Type": "application/json",
-  };
+  }));
 
-  return createData(defaults, input);
-}
+export const createCreateSubTodoSuccessResponseBody =
+  createDataFactory<ICreateSubTodoSuccessResponseBody>(() => {
+    const createdAt = faker.date.past().toISOString();
+    const modifiedAt = faker.date.recent().toISOString();
 
-export function createCreateSubTodoSuccessResponseBody(
-  input: Partial<ICreateSubTodoSuccessResponseBody> = {}
-): ICreateSubTodoSuccessResponseBody {
-  const createdAt = faker.date.past().toISOString();
-  const modifiedAt = faker.date.recent().toISOString();
-
-  const defaults: ICreateSubTodoSuccessResponseBody = {
-    id: faker.string.ulid(),
-    accountId: faker.string.ulid(),
-    parentId: faker.datatype.boolean() ? faker.string.ulid() : undefined,
-    title: faker.lorem.sentence(),
-    description: faker.datatype.boolean() ? faker.lorem.paragraph() : undefined,
-    status: faker.helpers.arrayElement([
-      "TODO",
-      "IN_PROGRESS",
-      "DONE",
-      "ARCHIVED",
-    ] as const),
-    dueDate: faker.datatype.boolean()
-      ? faker.date.future().toISOString()
-      : undefined,
-    tags: faker.datatype.boolean()
-      ? [faker.lorem.word(), faker.lorem.word()]
-      : undefined,
-    priority: faker.datatype.boolean()
-      ? faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const)
-      : undefined,
-    createdAt,
-    modifiedAt,
-    createdBy: faker.internet.username(),
-    modifiedBy: faker.internet.username(),
-  };
-
-  return createData(defaults, input);
-}
+    return {
+      id: faker.string.ulid(),
+      accountId: faker.string.ulid(),
+      parentId: faker.helpers.arrayElement([faker.string.ulid(), undefined]),
+      title: faker.lorem.sentence(),
+      description: faker.helpers.arrayElement([
+        faker.lorem.paragraph(),
+        undefined,
+      ]),
+      status: faker.helpers.arrayElement([
+        "TODO",
+        "IN_PROGRESS",
+        "DONE",
+        "ARCHIVED",
+      ] as const),
+      dueDate: faker.helpers.arrayElement([
+        faker.date.future().toISOString(),
+        undefined,
+      ]),
+      tags: faker.helpers.arrayElement([
+        [faker.lorem.word(), faker.lorem.word()] as string[],
+        undefined,
+      ]),
+      priority: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const),
+        undefined,
+      ]),
+      createdAt,
+      modifiedAt,
+      createdBy: faker.internet.username(),
+      modifiedBy: faker.internet.username(),
+    };
+  });
 
 type CreateSubTodoSuccessResponseInput = {
   statusCode?: number;
@@ -61,19 +61,20 @@ type CreateSubTodoSuccessResponseInput = {
 
 export function createCreateSubTodoSuccessResponse(
   input: CreateSubTodoSuccessResponseInput = {}
-): ICreateSubTodoSuccessResponse {
-  const defaults: ICreateSubTodoSuccessResponse = {
-    statusCode: HttpStatusCode.CREATED,
-    header: createCreateSubTodoSuccessResponseHeaders(),
-    body: createCreateSubTodoSuccessResponseBody(),
-  };
-
-  const overrides: Partial<ICreateSubTodoSuccessResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createCreateSubTodoSuccessResponseHeaders(input.header);
-  if (input.body !== undefined)
-    overrides.body = createCreateSubTodoSuccessResponseBody(input.body);
-
-  return createData(defaults, overrides);
+): CreateSubTodoSuccessResponse {
+  const responseData = createResponse<
+    ICreateSubTodoSuccessResponse,
+    ICreateSubTodoSuccessResponseBody,
+    ICreateSubTodoSuccessResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.CREATED,
+    },
+    {
+      body: createCreateSubTodoSuccessResponseBody,
+      header: createCreateSubTodoSuccessResponseHeaders,
+    },
+    input
+  );
+  return new CreateSubTodoSuccessResponse(responseData);
 }

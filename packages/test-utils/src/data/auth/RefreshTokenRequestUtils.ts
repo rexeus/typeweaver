@@ -4,29 +4,20 @@ import type {
   IRefreshTokenRequestBody,
   IRefreshTokenRequestHeader,
 } from "../..";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createRequest } from "../createRequest";
 import { createJwtToken } from "../createJwtToken";
 
-export function createRefreshTokenRequestHeaders(
-  input: Partial<IRefreshTokenRequestHeader> = {}
-): IRefreshTokenRequestHeader {
-  const defaults: IRefreshTokenRequestHeader = {
+export const createRefreshTokenRequestHeaders =
+  createDataFactory<IRefreshTokenRequestHeader>(() => ({
     "Content-Type": "application/json",
     Accept: "application/json",
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createRefreshTokenRequestBody(
-  input: Partial<IRefreshTokenRequestBody> = {}
-): IRefreshTokenRequestBody {
-  const defaults: IRefreshTokenRequestBody = {
+export const createRefreshTokenRequestBody =
+  createDataFactory<IRefreshTokenRequestBody>(() => ({
     refreshToken: createJwtToken(),
-  };
-
-  return createData(defaults, input);
-}
+  }));
 
 type RefreshTokenRequestInput = {
   path?: string;
@@ -37,19 +28,21 @@ type RefreshTokenRequestInput = {
 export function createRefreshTokenRequest(
   input: RefreshTokenRequestInput = {}
 ): IRefreshTokenRequest {
-  const defaults: IRefreshTokenRequest = {
-    method: HttpMethod.POST,
-    path: "/auth/refresh-token",
-    header: createRefreshTokenRequestHeaders(),
-    body: createRefreshTokenRequestBody(),
-  };
-
-  const overrides: Partial<IRefreshTokenRequest> = {};
-  if (input.path !== undefined) overrides.path = input.path;
-  if (input.header !== undefined)
-    overrides.header = createRefreshTokenRequestHeaders(input.header);
-  if (input.body !== undefined)
-    overrides.body = createRefreshTokenRequestBody(input.body);
-
-  return createData(defaults, overrides as IRefreshTokenRequest);
+  return createRequest<
+    IRefreshTokenRequest,
+    IRefreshTokenRequestBody,
+    IRefreshTokenRequestHeader,
+    never,
+    never
+  >(
+    {
+      method: HttpMethod.POST,
+      path: "/auth/refresh-token",
+    },
+    {
+      body: createRefreshTokenRequestBody,
+      header: createRefreshTokenRequestHeaders,
+    },
+    input
+  );
 }

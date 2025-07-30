@@ -1,7 +1,7 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import type { IHttpRequest } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createRequest } from "../createRequest";
 import { createJwtToken } from "../createJwtToken";
 import type {
   IHeadTodoRequest,
@@ -9,26 +9,16 @@ import type {
   IHeadTodoRequestParam,
 } from "../..";
 
-export function createHeadTodoRequestHeaders(
-  input: Partial<IHeadTodoRequestHeader> = {}
-): IHeadTodoRequestHeader {
-  const defaults: IHeadTodoRequestHeader = {
+export const createHeadTodoRequestHeaders =
+  createDataFactory<IHeadTodoRequestHeader>(() => ({
     Accept: "application/json",
     Authorization: `Bearer ${createJwtToken()}`,
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createHeadTodoRequestParams(
-  input: Partial<IHeadTodoRequestParam> = {}
-): IHeadTodoRequestParam {
-  const defaults: IHeadTodoRequestParam = {
+export const createHeadTodoRequestParams =
+  createDataFactory<IHeadTodoRequestParam>(() => ({
     todoId: faker.string.ulid(),
-  };
-
-  return createData(defaults, input);
-}
+  }));
 
 type CreateHeadTodoRequestInput = {
   method?: HttpMethod;
@@ -40,24 +30,29 @@ type CreateHeadTodoRequestInput = {
 export function createHeadTodoRequest(
   input: CreateHeadTodoRequestInput = {}
 ): IHeadTodoRequest {
+  // Generate param first for dynamic path building
   const param = input.param
     ? createHeadTodoRequestParams(input.param)
     : createHeadTodoRequestParams();
 
-  const header = input.header
-    ? createHeadTodoRequestHeaders(input.header)
-    : createHeadTodoRequestHeaders();
+  // If path is not explicitly provided, build it dynamically
+  const dynamicPath = input.path ?? `/todos/${param.todoId}`;
 
-  const defaults: IHeadTodoRequest = {
-    method: HttpMethod.HEAD,
-    path: `/todos/${param.todoId}`,
-    header,
-    param,
-  };
-
-  const overrides: Partial<IHttpRequest> = {};
-  if (input.method !== undefined) overrides.method = input.method;
-  if (input.path !== undefined) overrides.path = input.path;
-
-  return createData(defaults, overrides as IHeadTodoRequest);
+  return createRequest<
+    IHeadTodoRequest,
+    never,
+    IHeadTodoRequestHeader,
+    IHeadTodoRequestParam,
+    never
+  >(
+    {
+      method: HttpMethod.HEAD,
+      path: dynamicPath,
+    },
+    {
+      header: createHeadTodoRequestHeaders,
+      param: () => param, // Use pre-generated param
+    },
+    input
+  );
 }

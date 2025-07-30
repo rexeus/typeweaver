@@ -1,7 +1,7 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import type { IHttpRequest } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createRequest } from "../createRequest";
 import { createJwtToken } from "../createJwtToken";
 import type {
   IOptionsTodoRequest,
@@ -9,28 +9,18 @@ import type {
   IOptionsTodoRequestParam,
 } from "../..";
 
-export function createOptionsTodoRequestHeaders(
-  input: Partial<IOptionsTodoRequestHeader> = {}
-): IOptionsTodoRequestHeader {
-  const defaults: IOptionsTodoRequestHeader = {
+export const createOptionsTodoRequestHeaders =
+  createDataFactory<IOptionsTodoRequestHeader>(() => ({
     Accept: "application/json",
     Authorization: `Bearer ${createJwtToken()}`,
     "Access-Control-Request-Method": "POST",
     "Access-Control-Request-Headers": ["Content-Type", "Authorization"],
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createOptionsTodoRequestParams(
-  input: Partial<IOptionsTodoRequestParam> = {}
-): IOptionsTodoRequestParam {
-  const defaults: IOptionsTodoRequestParam = {
+export const createOptionsTodoRequestParams =
+  createDataFactory<IOptionsTodoRequestParam>(() => ({
     todoId: faker.string.ulid(),
-  };
-
-  return createData(defaults, input);
-}
+  }));
 
 type CreateOptionsTodoRequestInput = {
   method?: HttpMethod;
@@ -42,24 +32,29 @@ type CreateOptionsTodoRequestInput = {
 export function createOptionsTodoRequest(
   input: CreateOptionsTodoRequestInput = {}
 ): IOptionsTodoRequest {
+  // Generate param first for dynamic path building
   const param = input.param
     ? createOptionsTodoRequestParams(input.param)
     : createOptionsTodoRequestParams();
 
-  const header = input.header
-    ? createOptionsTodoRequestHeaders(input.header)
-    : createOptionsTodoRequestHeaders();
+  // If path is not explicitly provided, build it dynamically
+  const dynamicPath = input.path ?? `/todos/${param.todoId}`;
 
-  const defaults: IOptionsTodoRequest = {
-    method: HttpMethod.OPTIONS,
-    path: `/todos/${param.todoId}`,
-    header,
-    param,
-  };
-
-  const overrides: Partial<IHttpRequest> = {};
-  if (input.method !== undefined) overrides.method = input.method;
-  if (input.path !== undefined) overrides.path = input.path;
-
-  return createData(defaults, overrides as IOptionsTodoRequest);
+  return createRequest<
+    IOptionsTodoRequest,
+    never,
+    IOptionsTodoRequestHeader,
+    IOptionsTodoRequestParam,
+    never
+  >(
+    {
+      method: HttpMethod.OPTIONS,
+      path: dynamicPath,
+    },
+    {
+      header: createOptionsTodoRequestHeaders,
+      param: () => param, // Use pre-generated param
+    },
+    input
+  );
 }

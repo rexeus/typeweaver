@@ -1,18 +1,15 @@
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
 import type {
   IHeadTodoSuccessResponse,
   IHeadTodoSuccessResponseHeader,
 } from "../..";
+import { HeadTodoSuccessResponse } from "../..";
 
-export function createHeadTodoSuccessResponseHeaders(
-  input: Partial<IHeadTodoSuccessResponseHeader> = {}
-): IHeadTodoSuccessResponseHeader {
-  const defaults: IHeadTodoSuccessResponseHeader = {
+export const createHeadTodoSuccessResponseHeaders =
+  createDataFactory<IHeadTodoSuccessResponseHeader>(() => ({
     "Content-Type": "application/json",
-  };
-
-  return createData(defaults, input);
-}
+  }));
 
 type CreateHeadTodoSuccessResponseInput = {
   header?: Partial<IHeadTodoSuccessResponseHeader>;
@@ -20,15 +17,19 @@ type CreateHeadTodoSuccessResponseInput = {
 
 export function createHeadTodoSuccessResponse(
   input: CreateHeadTodoSuccessResponseInput = {}
-): IHeadTodoSuccessResponse {
-  const header = input.header
-    ? createHeadTodoSuccessResponseHeaders(input.header)
-    : createHeadTodoSuccessResponseHeaders();
-
-  const defaults: IHeadTodoSuccessResponse = {
-    statusCode: 200,
-    header,
-  };
-
-  return createData(defaults, input as IHeadTodoSuccessResponse);
+): HeadTodoSuccessResponse {
+  const responseData = createResponse<
+    IHeadTodoSuccessResponse,
+    never,
+    IHeadTodoSuccessResponseHeader
+  >(
+    {
+      statusCode: 200,
+    },
+    {
+      header: createHeadTodoSuccessResponseHeaders,
+    },
+    input
+  );
+  return new HeadTodoSuccessResponse(responseData);
 }

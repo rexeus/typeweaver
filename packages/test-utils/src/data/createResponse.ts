@@ -13,14 +13,19 @@ export function createResponse<TResponse extends IHttpResponse, TBody, THeader>(
     header?: Partial<THeader>;
   } = {}
 ): TResponse {
-  const defaults: Partial<TResponse> = { ...defaultResponse } as Partial<TResponse>;
+  const defaults: Partial<TResponse> = {
+    ...defaultResponse,
+  } as Partial<TResponse>;
   if (creators.body) (defaults as any).body = creators.body();
   if (creators.header) (defaults as any).header = creators.header();
 
   const overrides: Partial<TResponse> = {};
-  if (input.statusCode !== undefined) (overrides as any).statusCode = input.statusCode;
-  if (input.body && creators.body) (overrides as any).body = creators.body(input.body);
-  if (input.header && creators.header) (overrides as any).header = creators.header(input.header);
+  if (input.statusCode !== undefined)
+    (overrides as any).statusCode = input.statusCode;
+  if (input.body && creators.body)
+    (overrides as any).body = creators.body(input.body);
+  if (input.header && creators.header)
+    (overrides as any).header = creators.header(input.header);
 
   return createData(defaults as TResponse, overrides);
 }

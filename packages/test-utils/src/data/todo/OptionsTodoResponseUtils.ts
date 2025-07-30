@@ -1,13 +1,13 @@
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
 import type {
   IOptionsTodoSuccessResponse,
   IOptionsTodoSuccessResponseHeader,
 } from "../..";
+import { OptionsTodoSuccessResponse } from "../..";
 
-export function createOptionsTodoSuccessResponseHeaders(
-  input: Partial<IOptionsTodoSuccessResponseHeader> = {}
-): IOptionsTodoSuccessResponseHeader {
-  const defaults: IOptionsTodoSuccessResponseHeader = {
+export const createOptionsTodoSuccessResponseHeaders =
+  createDataFactory<IOptionsTodoSuccessResponseHeader>(() => ({
     Allow: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     "Access-Control-Allow-Headers": ["Content-Type", "Authorization"],
     "Access-Control-Allow-Methods": [
@@ -21,10 +21,7 @@ export function createOptionsTodoSuccessResponseHeaders(
     ],
     "Access-Control-Max-Age": "3600",
     "Access-Control-Allow-Origin": "*",
-  };
-
-  return createData(defaults, input);
-}
+  }));
 
 type CreateOptionsTodoSuccessResponseInput = {
   header?: Partial<IOptionsTodoSuccessResponseHeader>;
@@ -32,15 +29,19 @@ type CreateOptionsTodoSuccessResponseInput = {
 
 export function createOptionsTodoSuccessResponse(
   input: CreateOptionsTodoSuccessResponseInput = {}
-): IOptionsTodoSuccessResponse {
-  const header = input.header
-    ? createOptionsTodoSuccessResponseHeaders(input.header)
-    : createOptionsTodoSuccessResponseHeaders();
-
-  const defaults: IOptionsTodoSuccessResponse = {
-    statusCode: 200,
-    header,
-  };
-
-  return createData(defaults, input as IOptionsTodoSuccessResponse);
+): OptionsTodoSuccessResponse {
+  const responseData = createResponse<
+    IOptionsTodoSuccessResponse,
+    never,
+    IOptionsTodoSuccessResponseHeader
+  >(
+    {
+      statusCode: 200,
+    },
+    {
+      header: createOptionsTodoSuccessResponseHeaders,
+    },
+    input
+  );
+  return new OptionsTodoSuccessResponse(responseData);
 }

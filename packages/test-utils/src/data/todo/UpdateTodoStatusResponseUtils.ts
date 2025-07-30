@@ -5,53 +5,53 @@ import type {
   IUpdateTodoStatusSuccessResponseHeader,
   IUpdateTodoStatusSuccessResponse,
 } from "../..";
-import { createData } from "../createData";
+import { UpdateTodoStatusSuccessResponse } from "../..";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
 
-export function createUpdateTodoStatusSuccessResponseHeaders(
-  input: Partial<IUpdateTodoStatusSuccessResponseHeader> = {}
-): IUpdateTodoStatusSuccessResponseHeader {
-  const defaults: IUpdateTodoStatusSuccessResponseHeader = {
+export const createUpdateTodoStatusSuccessResponseHeaders =
+  createDataFactory<IUpdateTodoStatusSuccessResponseHeader>(() => ({
     "Content-Type": "application/json",
-  };
+  }));
 
-  return createData(defaults, input);
-}
+export const createUpdateTodoStatusSuccessResponseBody =
+  createDataFactory<IUpdateTodoStatusSuccessResponseBody>(() => {
+    const createdAt = faker.date.past().toISOString();
+    const modifiedAt = faker.date.recent().toISOString();
 
-export function createUpdateTodoStatusSuccessResponseBody(
-  input: Partial<IUpdateTodoStatusSuccessResponseBody> = {}
-): IUpdateTodoStatusSuccessResponseBody {
-  const createdAt = faker.date.past().toISOString();
-  const modifiedAt = faker.date.recent().toISOString();
-
-  const defaults: IUpdateTodoStatusSuccessResponseBody = {
-    id: faker.string.ulid(),
-    accountId: faker.string.ulid(),
-    parentId: faker.datatype.boolean() ? faker.string.ulid() : undefined,
-    title: faker.lorem.sentence(),
-    description: faker.datatype.boolean() ? faker.lorem.paragraph() : undefined,
-    status: faker.helpers.arrayElement([
-      "TODO",
-      "IN_PROGRESS",
-      "DONE",
-      "ARCHIVED",
-    ] as const),
-    dueDate: faker.datatype.boolean()
-      ? faker.date.future().toISOString()
-      : undefined,
-    tags: faker.datatype.boolean()
-      ? [faker.lorem.word(), faker.lorem.word()]
-      : undefined,
-    priority: faker.datatype.boolean()
-      ? faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const)
-      : undefined,
-    createdAt,
-    modifiedAt,
-    createdBy: faker.internet.username(),
-    modifiedBy: faker.internet.username(),
-  };
-
-  return createData(defaults, input);
-}
+    return {
+      id: faker.string.ulid(),
+      accountId: faker.string.ulid(),
+      parentId: faker.helpers.arrayElement([faker.string.ulid(), undefined]),
+      title: faker.lorem.sentence(),
+      description: faker.helpers.arrayElement([
+        faker.lorem.paragraph(),
+        undefined,
+      ]),
+      status: faker.helpers.arrayElement([
+        "TODO",
+        "IN_PROGRESS",
+        "DONE",
+        "ARCHIVED",
+      ] as const),
+      dueDate: faker.helpers.arrayElement([
+        faker.date.future().toISOString(),
+        undefined,
+      ]),
+      tags: faker.helpers.arrayElement([
+        [faker.lorem.word(), faker.lorem.word()] as string[],
+        undefined,
+      ]),
+      priority: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const),
+        undefined,
+      ]),
+      createdAt,
+      modifiedAt,
+      createdBy: faker.internet.username(),
+      modifiedBy: faker.internet.username(),
+    };
+  });
 
 type UpdateTodoStatusSuccessResponseInput = {
   statusCode?: number;
@@ -61,21 +61,20 @@ type UpdateTodoStatusSuccessResponseInput = {
 
 export function createUpdateTodoStatusSuccessResponse(
   input: UpdateTodoStatusSuccessResponseInput = {}
-): IUpdateTodoStatusSuccessResponse {
-  const defaults: IUpdateTodoStatusSuccessResponse = {
-    statusCode: HttpStatusCode.OK,
-    header: createUpdateTodoStatusSuccessResponseHeaders(),
-    body: createUpdateTodoStatusSuccessResponseBody(),
-  };
-
-  const overrides: Partial<IUpdateTodoStatusSuccessResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createUpdateTodoStatusSuccessResponseHeaders(
-      input.header
-    );
-  if (input.body !== undefined)
-    overrides.body = createUpdateTodoStatusSuccessResponseBody(input.body);
-
-  return createData(defaults, overrides);
+): UpdateTodoStatusSuccessResponse {
+  const responseData = createResponse<
+    IUpdateTodoStatusSuccessResponse,
+    IUpdateTodoStatusSuccessResponseBody,
+    IUpdateTodoStatusSuccessResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.OK,
+    },
+    {
+      body: createUpdateTodoStatusSuccessResponseBody,
+      header: createUpdateTodoStatusSuccessResponseHeaders,
+    },
+    input
+  );
+  return new UpdateTodoStatusSuccessResponse(responseData);
 }

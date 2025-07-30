@@ -1,35 +1,42 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
 import { createErrorResponseHeaders } from "../createErrorResponseHeaders";
 import type {
   IUnauthorizedErrorResponse,
   IUnauthorizedErrorResponseHeader,
   IUnauthorizedErrorResponseBody,
 } from "../..";
+import { UnauthorizedErrorResponse } from "../..";
+
 type UnauthorizedErrorResponseInput = {
   statusCode?: number;
   header?: Partial<IUnauthorizedErrorResponseHeader>;
   body?: Partial<IUnauthorizedErrorResponseBody>;
 };
 
+const createUnauthorizedErrorResponseBody =
+  createDataFactory<IUnauthorizedErrorResponseBody>(() => ({
+    message: "Unauthorized request",
+    code: "UNAUTHORIZED_ERROR",
+  }));
+
 export function createUnauthorizedErrorResponse(
   input: UnauthorizedErrorResponseInput = {}
-): IUnauthorizedErrorResponse {
-  const defaults: IUnauthorizedErrorResponse = {
-    statusCode: HttpStatusCode.UNAUTHORIZED,
-    header: createErrorResponseHeaders<IUnauthorizedErrorResponseHeader>(),
-    body: {
-      message: "Unauthorized request",
-      code: "UNAUTHORIZED_ERROR",
+): UnauthorizedErrorResponse {
+  const responseData = createResponse<
+    IUnauthorizedErrorResponse,
+    IUnauthorizedErrorResponseBody,
+    IUnauthorizedErrorResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.UNAUTHORIZED,
     },
-  };
-
-  const overrides: Partial<IUnauthorizedErrorResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createErrorResponseHeaders(input.header);
-  if (input.body !== undefined)
-    overrides.body = createData(defaults.body, input.body);
-
-  return createData(defaults, overrides);
+    {
+      body: createUnauthorizedErrorResponseBody,
+      header: createErrorResponseHeaders<IUnauthorizedErrorResponseHeader>(),
+    },
+    input
+  );
+  return new UnauthorizedErrorResponse(responseData);
 }
