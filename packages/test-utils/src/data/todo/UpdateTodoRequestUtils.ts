@@ -6,44 +6,30 @@ import type {
   IUpdateTodoRequestParam,
   IUpdateTodoRequestBody,
 } from "../..";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createRequest } from "../createRequest";
 import { createJwtToken } from "../createJwtToken";
 
-export function createUpdateTodoRequestHeaders(
-  input: Partial<IUpdateTodoRequestHeader> = {}
-): IUpdateTodoRequestHeader {
-  const defaults: IUpdateTodoRequestHeader = {
+export const createUpdateTodoRequestHeader =
+  createDataFactory<IUpdateTodoRequestHeader>(() => ({
     "Content-Type": "application/json",
     Accept: "application/json",
     Authorization: `Bearer ${createJwtToken()}`,
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createUpdateTodoRequestParams(
-  input: Partial<IUpdateTodoRequestParam> = {}
-): IUpdateTodoRequestParam {
-  const defaults: IUpdateTodoRequestParam = {
+export const createUpdateTodoRequestParam =
+  createDataFactory<IUpdateTodoRequestParam>(() => ({
     todoId: faker.string.ulid(),
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createUpdateTodoRequestBody(
-  input: Partial<IUpdateTodoRequestBody> = {}
-): IUpdateTodoRequestBody {
-  const defaults: IUpdateTodoRequestBody = {
+export const createUpdateTodoRequestBody =
+  createDataFactory<IUpdateTodoRequestBody>(() => ({
     title: faker.lorem.sentence(),
     description: faker.lorem.paragraph(),
     dueDate: faker.date.future().toISOString(),
     tags: [faker.lorem.word(), faker.lorem.word()],
     priority: faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const),
-  };
-
-  return createData(defaults, input);
-}
+  }));
 
 type UpdateTodoRequestInput = {
   path?: string;
@@ -55,26 +41,30 @@ type UpdateTodoRequestInput = {
 export function createUpdateTodoRequest(
   input: UpdateTodoRequestInput = {}
 ): IUpdateTodoRequest {
+  // Generate param first for dynamic path building
   const param = input.param
-    ? createUpdateTodoRequestParams(input.param)
-    : createUpdateTodoRequestParams();
+    ? createUpdateTodoRequestParam(input.param)
+    : createUpdateTodoRequestParam();
 
-  const defaults: IUpdateTodoRequest = {
-    method: HttpMethod.PATCH,
-    path: `/todos/${param.todoId}`,
-    header: createUpdateTodoRequestHeaders(),
-    param,
-    body: createUpdateTodoRequestBody(),
-  };
+  // If path is not explicitly provided, build it dynamically
+  const dynamicPath = input.path ?? `/todos/${param.todoId}`;
 
-  const overrides: Partial<IUpdateTodoRequest> = {};
-  if (input.path !== undefined) overrides.path = input.path;
-  if (input.header !== undefined)
-    overrides.header = createUpdateTodoRequestHeaders(input.header);
-  if (input.param !== undefined)
-    overrides.param = createUpdateTodoRequestParams(input.param);
-  if (input.body !== undefined)
-    overrides.body = createUpdateTodoRequestBody(input.body);
-
-  return createData(defaults, overrides as IUpdateTodoRequest);
+  return createRequest<
+    IUpdateTodoRequest,
+    IUpdateTodoRequestBody,
+    IUpdateTodoRequestHeader,
+    IUpdateTodoRequestParam,
+    never
+  >(
+    {
+      method: HttpMethod.PATCH,
+      path: dynamicPath,
+    },
+    {
+      body: createUpdateTodoRequestBody,
+      header: createUpdateTodoRequestHeader,
+      param: () => param, // Use pre-generated param
+    },
+    input
+  );
 }

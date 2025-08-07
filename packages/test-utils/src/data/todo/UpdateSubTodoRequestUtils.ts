@@ -1,64 +1,54 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import type { IHttpRequest } from "@rexeus/typeweaver-core";
+import type { IUpdateSubTodoRequest } from "../..";
 import { faker } from "@faker-js/faker";
 import type {
   IUpdateSubTodoRequestHeader,
   IUpdateSubTodoRequestParam,
   IUpdateSubTodoRequestBody,
 } from "../..";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createRequest } from "../createRequest";
 import { createJwtToken } from "../createJwtToken";
 
-export function createUpdateSubTodoRequestHeaders(
-  input: Partial<IUpdateSubTodoRequestHeader> = {}
-): IUpdateSubTodoRequestHeader {
-  const defaults: IUpdateSubTodoRequestHeader = {
+export const createUpdateSubTodoRequestHeader =
+  createDataFactory<IUpdateSubTodoRequestHeader>(() => ({
     "Content-Type": "application/json",
     Accept: "application/json",
     Authorization: `Bearer ${createJwtToken()}`,
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createUpdateSubTodoRequestParams(
-  input: Partial<IUpdateSubTodoRequestParam> = {}
-): IUpdateSubTodoRequestParam {
-  const defaults: IUpdateSubTodoRequestParam = {
+export const createUpdateSubTodoRequestParam =
+  createDataFactory<IUpdateSubTodoRequestParam>(() => ({
     todoId: faker.string.ulid(),
     subtodoId: faker.string.ulid(),
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createUpdateSubTodoRequestBody(
-  input: Partial<IUpdateSubTodoRequestBody> = {}
-): IUpdateSubTodoRequestBody {
-  const defaults: IUpdateSubTodoRequestBody = {
-    title: faker.datatype.boolean() ? faker.lorem.sentence() : undefined,
-    description: faker.datatype.boolean() ? faker.lorem.paragraph() : undefined,
-    status: faker.datatype.boolean()
-      ? faker.helpers.arrayElement([
-          "TODO",
-          "IN_PROGRESS",
-          "DONE",
-          "ARCHIVED",
-        ] as const)
-      : undefined,
-    dueDate: faker.datatype.boolean()
-      ? faker.date.future().toISOString()
-      : undefined,
-    tags: faker.datatype.boolean()
-      ? [faker.lorem.word(), faker.lorem.word()]
-      : undefined,
-    priority: faker.datatype.boolean()
-      ? faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const)
-      : undefined,
-  };
-
-  return createData(defaults, input);
-}
+export const createUpdateSubTodoRequestBody =
+  createDataFactory<IUpdateSubTodoRequestBody>(() => ({
+    title: faker.helpers.arrayElement([faker.lorem.sentence(), undefined]),
+    description: faker.helpers.arrayElement([faker.lorem.paragraph(), undefined]),
+    status: faker.helpers.arrayElement([
+      faker.helpers.arrayElement([
+        "TODO",
+        "IN_PROGRESS",
+        "DONE",
+        "ARCHIVED",
+      ] as const),
+      undefined,
+    ]),
+    dueDate: faker.helpers.arrayElement([
+      faker.date.future().toISOString(),
+      undefined,
+    ]),
+    tags: faker.helpers.arrayElement([
+      [faker.lorem.word(), faker.lorem.word()],
+      undefined,
+    ]),
+    priority: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const),
+      undefined,
+    ]),
+  }));
 
 type UpdateSubTodoRequestInput = {
   method?: HttpMethod;
@@ -70,28 +60,32 @@ type UpdateSubTodoRequestInput = {
 
 export function createUpdateSubTodoRequest(
   input: UpdateSubTodoRequestInput = {}
-): IHttpRequest {
+): IUpdateSubTodoRequest {
+  // Generate param first for dynamic path building
   const param = input.param
-    ? createUpdateSubTodoRequestParams(input.param)
-    : createUpdateSubTodoRequestParams();
+    ? createUpdateSubTodoRequestParam(input.param)
+    : createUpdateSubTodoRequestParam();
 
-  const defaults: IHttpRequest = {
-    method: HttpMethod.PUT,
-    path: `/todos/${param.todoId}/subtodos/${param.subtodoId}`,
-    header: createUpdateSubTodoRequestHeaders(),
-    param,
-    body: createUpdateSubTodoRequestBody(),
-  };
+  // If path is not explicitly provided, build it dynamically
+  const dynamicPath =
+    input.path ?? `/todos/${param.todoId}/subtodos/${param.subtodoId}`;
 
-  const overrides: Partial<IHttpRequest> = {};
-  if (input.method !== undefined) overrides.method = input.method;
-  if (input.path !== undefined) overrides.path = input.path;
-  if (input.header !== undefined)
-    overrides.header = createUpdateSubTodoRequestHeaders(input.header);
-  if (input.param !== undefined)
-    overrides.param = createUpdateSubTodoRequestParams(input.param);
-  if (input.body !== undefined)
-    overrides.body = createUpdateSubTodoRequestBody(input.body);
-
-  return createData(defaults, overrides);
+  return createRequest<
+    IUpdateSubTodoRequest,
+    IUpdateSubTodoRequestBody,
+    IUpdateSubTodoRequestHeader,
+    IUpdateSubTodoRequestParam,
+    never
+  >(
+    {
+      method: HttpMethod.PUT,
+      path: dynamicPath,
+    },
+    {
+      body: createUpdateSubTodoRequestBody,
+      header: createUpdateSubTodoRequestHeader,
+      param: () => param, // Use pre-generated param
+    },
+    input
+  );
 }
