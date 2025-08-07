@@ -116,27 +116,30 @@ export abstract class ApiClient {
   }
 
   private createResponse(response: AxiosResponse): IHttpResponse {
-    const header: IHttpHeader = Object.entries(response.headers).reduce(
-      (acc, [key, value]) => {
-        if (!value) {
-          return acc;
+    const header: IHttpHeader = {};
+    Object.entries(response.headers).forEach(([key, value]) => {
+      if (!value) return;
+
+      const lowerKey = key.toLowerCase();
+      const headerKey = Case.header(key);
+
+      const existing = header[key];
+      if (existing) {
+        if (Array.isArray(existing)) {
+          existing.push(value);
+          header[lowerKey] = existing;
+          header[headerKey] = existing;
+        } else {
+          header[key] = [existing, value];
+          header[lowerKey] = [existing, value];
+          header[headerKey] = [existing, value];
         }
-
-        const lowerCaseKey = key.toLowerCase();
-        const headerCaseKey = Case.header(lowerCaseKey);
-        const values = Array.isArray(value)
-          ? value
-          : value.replace(" ", "").split(",");
-        const normalizedValue = values.length > 1 ? values : values[0];
-
-        return {
-          ...acc,
-          [headerCaseKey]: normalizedValue,
-          [lowerCaseKey]: normalizedValue,
-        };
-      },
-      {}
-    );
+      } else {
+        header[key] = value;
+        header[lowerKey] = value;
+        header[headerKey] = value;
+      }
+    });
 
     return {
       body: response.data,

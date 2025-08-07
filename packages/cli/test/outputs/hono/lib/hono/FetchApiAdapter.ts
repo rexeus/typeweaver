@@ -79,11 +79,7 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
   }
 
   private extractHeaders(headers: Headers): IHttpHeader {
-    const result: Record<string, string | string[]> = {};
-    headers.forEach((value, key) => {
-      this.addMultiValue(result, key, value);
-    });
-    return normalizeHeaders(result);
+    return normalizeHeaders(headers);
   }
 
   private extractQueryParams(url: URL): IHttpQuery {
