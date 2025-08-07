@@ -3,6 +3,7 @@ import type {
   IResponseValidator,
   SafeResponseValidationResult,
 } from "@rexeus/typeweaver-core";
+import { $ZodArray, $ZodOptional, type $ZodShape } from "zod/v4/core";
 
 /**
  * Abstract base class for HTTP response validation.
@@ -36,4 +37,28 @@ export abstract class ResponseValidator implements IResponseValidator {
    * @throws {ResponseValidationError} If response structure fails validation
    */
   public abstract validate(response: IHttpResponse): IHttpResponse;
+
+  protected coerceHeaderToSchema(header: unknown, shape: $ZodShape): unknown {
+    if (typeof header !== "object" || header === null) {
+      return header;
+    }
+
+    const coercedHeader: Record<string, string | string[]> = {};
+    for (const [key, value] of Object.entries(header)) {
+      const zodType = shape[key];
+
+      if (
+        (zodType instanceof $ZodArray ||
+          (zodType instanceof $ZodOptional &&
+            zodType._zod.def.innerType instanceof $ZodArray)) &&
+        !Array.isArray(value)
+      ) {
+        coercedHeader[key] = [value];
+      } else {
+        coercedHeader[key] = value;
+      }
+    }
+
+    return coercedHeader;
+  }
 }

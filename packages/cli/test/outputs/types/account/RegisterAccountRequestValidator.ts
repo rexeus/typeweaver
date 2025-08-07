@@ -32,7 +32,11 @@ export class RegisterAccountRequestValidator extends RequestValidator {
     }
 
     if (definition.request.header) {
-      const result = definition.request.header.safeParse(request.header);
+      const coercedHeader = this.coerceHeaderToSchema(
+        request.header,
+        definition.request.header.shape,
+      );
+      const result = definition.request.header.safeParse(coercedHeader);
 
       if (!result.success) {
         error.addHeaderIssues(result.error.issues);

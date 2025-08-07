@@ -22,7 +22,11 @@ export class ListTodosRequestValidator extends RequestValidator {
     };
 
     if (definition.request.header) {
-      const result = definition.request.header.safeParse(request.header);
+      const coercedHeader = this.coerceHeaderToSchema(
+        request.header,
+        definition.request.header.shape,
+      );
+      const result = definition.request.header.safeParse(coercedHeader);
 
       if (!result.success) {
         error.addHeaderIssues(result.error.issues);
@@ -32,7 +36,11 @@ export class ListTodosRequestValidator extends RequestValidator {
     }
 
     if (definition.request.query) {
-      const result = definition.request.query.safeParse(request.query);
+      const coercedQuery = this.coerceQueryToSchema(
+        request.query,
+        definition.request.query.shape,
+      );
+      const result = definition.request.query.safeParse(coercedQuery);
 
       if (!result.success) {
         error.addQueryIssues(result.error.issues);

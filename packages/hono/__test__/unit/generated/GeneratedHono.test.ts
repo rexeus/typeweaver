@@ -19,9 +19,20 @@ function prepareRequestData(requestData: IHttpRequest): RequestInit {
       : requestData.body
         ? JSON.stringify(requestData.body)
         : undefined;
+
+  const headers: Headers = new Headers();
+  for (const [key, value] of Object.entries(requestData.header || {})) {
+    if (Array.isArray(value)) {
+      for (const v of value) {
+        headers.append(key, v);
+      }
+    } else {
+      headers.set(key, value);
+    }
+  }
   return {
     method: requestData.method,
-    headers: requestData.header,
+    headers,
     body,
   };
 }

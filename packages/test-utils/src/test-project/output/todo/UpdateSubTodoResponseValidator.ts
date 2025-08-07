@@ -403,9 +403,12 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         definition.responses[0].header,
       "'UpdateSubTodoSuccessResponseHeader' has to be defined in the definition",
     );
-    const validateHeaderResult = definition.responses[0].header.safeParse(
+    const coercedHeader = this.coerceHeaderToSchema(
       response.header,
+      definition.responses[0].header.shape,
     );
+    const validateHeaderResult =
+      definition.responses[0].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(validateHeaderResult.error.issues);
@@ -447,9 +450,12 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         definition.responses[1].header,
       "'SubTodoNotFoundErrorResponseHeader' has to be defined in the definition",
     );
-    const validateHeaderResult = definition.responses[1].header.safeParse(
+    const coercedHeader = this.coerceHeaderToSchema(
       response.header,
+      definition.responses[1].header.shape,
     );
+    const validateHeaderResult =
+      definition.responses[1].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(validateHeaderResult.error.issues);
@@ -491,9 +497,12 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         definition.responses[2].header,
       "'SubTodoNotChangeableErrorResponseHeader' has to be defined in the definition",
     );
-    const validateHeaderResult = definition.responses[2].header.safeParse(
+    const coercedHeader = this.coerceHeaderToSchema(
       response.header,
+      definition.responses[2].header.shape,
     );
+    const validateHeaderResult =
+      definition.responses[2].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(validateHeaderResult.error.issues);
@@ -535,9 +544,12 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         definition.responses[3].header,
       "'SubTodoStatusTransitionInvalidErrorResponseHeader' has to be defined in the definition",
     );
-    const validateHeaderResult = definition.responses[3].header.safeParse(
+    const coercedHeader = this.coerceHeaderToSchema(
       response.header,
+      definition.responses[3].header.shape,
     );
+    const validateHeaderResult =
+      definition.responses[3].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(validateHeaderResult.error.issues);
@@ -579,9 +591,12 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         definition.responses[4].header,
       "'TodoNotFoundErrorResponseHeader' has to be defined in the definition",
     );
-    const validateHeaderResult = definition.responses[4].header.safeParse(
+    const coercedHeader = this.coerceHeaderToSchema(
       response.header,
+      definition.responses[4].header.shape,
     );
+    const validateHeaderResult =
+      definition.responses[4].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(validateHeaderResult.error.issues);
@@ -623,9 +638,12 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         definition.responses[5].header,
       "'ForbiddenErrorResponseHeader' has to be defined in the definition",
     );
-    const validateHeaderResult = definition.responses[5].header.safeParse(
+    const coercedHeader = this.coerceHeaderToSchema(
       response.header,
+      definition.responses[5].header.shape,
     );
+    const validateHeaderResult =
+      definition.responses[5].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(validateHeaderResult.error.issues);
@@ -667,9 +685,12 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         definition.responses[6].header,
       "'InternalServerErrorResponseHeader' has to be defined in the definition",
     );
-    const validateHeaderResult = definition.responses[6].header.safeParse(
+    const coercedHeader = this.coerceHeaderToSchema(
       response.header,
+      definition.responses[6].header.shape,
     );
+    const validateHeaderResult =
+      definition.responses[6].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(validateHeaderResult.error.issues);
@@ -711,9 +732,12 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         definition.responses[7].header,
       "'TooManyRequestsErrorResponseHeader' has to be defined in the definition",
     );
-    const validateHeaderResult = definition.responses[7].header.safeParse(
+    const coercedHeader = this.coerceHeaderToSchema(
       response.header,
+      definition.responses[7].header.shape,
     );
+    const validateHeaderResult =
+      definition.responses[7].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(validateHeaderResult.error.issues);
@@ -755,9 +779,12 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         definition.responses[8].header,
       "'UnauthorizedErrorResponseHeader' has to be defined in the definition",
     );
-    const validateHeaderResult = definition.responses[8].header.safeParse(
+    const coercedHeader = this.coerceHeaderToSchema(
       response.header,
+      definition.responses[8].header.shape,
     );
+    const validateHeaderResult =
+      definition.responses[8].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(validateHeaderResult.error.issues);
@@ -799,9 +826,12 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         definition.responses[9].header,
       "'UnsupportedMediaTypeErrorResponseHeader' has to be defined in the definition",
     );
-    const validateHeaderResult = definition.responses[9].header.safeParse(
+    const coercedHeader = this.coerceHeaderToSchema(
       response.header,
+      definition.responses[9].header.shape,
     );
+    const validateHeaderResult =
+      definition.responses[9].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(validateHeaderResult.error.issues);
@@ -843,9 +873,12 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         definition.responses[10].header,
       "'ValidationErrorResponseHeader' has to be defined in the definition",
     );
-    const validateHeaderResult = definition.responses[10].header.safeParse(
+    const coercedHeader = this.coerceHeaderToSchema(
       response.header,
+      definition.responses[10].header.shape,
     );
+    const validateHeaderResult =
+      definition.responses[10].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(validateHeaderResult.error.issues);

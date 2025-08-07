@@ -126,7 +126,8 @@ export class <%= pascalCaseOperationId %>ResponseValidator extends ResponseValid
                 && definition.responses[<%= response.index %>].header,
                 "'<%= response.name %>ResponseHeader' has to be defined in the definition"
             );
-            const validateHeaderResult = definition.responses[<%= response.index %>].header.safeParse(response.header);
+            const coercedHeader = this.coerceHeaderToSchema(response.header, definition.responses[<%= response.index %>].header.shape);
+            const validateHeaderResult = definition.responses[<%= response.index %>].header.safeParse(coercedHeader);
 
             if (!validateHeaderResult.success) {
                 error.addHeaderIssues(validateHeaderResult.error.issues);
