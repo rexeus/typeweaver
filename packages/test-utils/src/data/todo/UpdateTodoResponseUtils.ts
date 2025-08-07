@@ -1,7 +1,7 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { createResponse } from "../createResponse";
 import { createGetTodoSuccessResponseBody } from "./GetTodoResponseUtils";
-import { createCreateTodoSuccessResponseHeaders } from "./CreateTodoResponseUtils";
+import { createCreateTodoSuccessResponseHeader } from "./CreateTodoResponseUtils";
 import type {
   IUpdateTodoSuccessResponse,
   IUpdateTodoSuccessResponseHeader,
@@ -28,7 +28,7 @@ export function createUpdateTodoSuccessResponse(
     },
     {
       body: createGetTodoSuccessResponseBody,
-      header: createCreateTodoSuccessResponseHeaders,
+      header: createCreateTodoSuccessResponseHeader,
     },
     input
   );

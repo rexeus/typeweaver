@@ -2,7 +2,7 @@ import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
-import { createErrorResponseHeaders } from "../createErrorResponseHeaders";
+import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import type {
   ITodoStatusTransitionInvalidErrorResponse,
   ITodoStatusTransitionInvalidErrorResponseHeader,
@@ -15,10 +15,10 @@ type TodoStatusTransitionInvalidErrorResponseInput = {
   body?: Partial<ITodoStatusTransitionInvalidErrorResponseBody>;
 };
 
-const createTodoStatusTransitionInvalidErrorResponseHeaders =
-  createErrorResponseHeaders<ITodoStatusTransitionInvalidErrorResponseHeader>();
+export const createTodoStatusTransitionInvalidErrorResponseHeader =
+  createErrorResponseHeader<ITodoStatusTransitionInvalidErrorResponseHeader>();
 
-const createTodoStatusTransitionInvalidErrorResponseBody =
+export const createTodoStatusTransitionInvalidErrorResponseBody =
   createDataFactory<ITodoStatusTransitionInvalidErrorResponseBody>(() => ({
     message: "Todo status transition is conflicting with current status",
     code: "TODO_STATUS_TRANSITION_INVALID_ERROR",
@@ -47,7 +47,7 @@ export function createTodoStatusTransitionInvalidErrorResponse(
     },
     {
       body: createTodoStatusTransitionInvalidErrorResponseBody,
-      header: createTodoStatusTransitionInvalidErrorResponseHeaders,
+      header: createTodoStatusTransitionInvalidErrorResponseHeader,
     },
     input
   );

@@ -6,7 +6,7 @@ import type {
 } from "../..";
 import { OptionsTodoSuccessResponse } from "../..";
 
-export const createOptionsTodoSuccessResponseHeaders =
+export const createOptionsTodoSuccessResponseHeader =
   createDataFactory<IOptionsTodoSuccessResponseHeader>(() => ({
     Allow: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     "Access-Control-Allow-Headers": ["Content-Type", "Authorization"],
@@ -39,7 +39,7 @@ export function createOptionsTodoSuccessResponse(
       statusCode: 200,
     },
     {
-      header: createOptionsTodoSuccessResponseHeaders,
+      header: createOptionsTodoSuccessResponseHeader,
     },
     input
   );

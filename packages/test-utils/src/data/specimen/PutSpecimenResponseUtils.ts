@@ -10,7 +10,7 @@ import type {
 } from "../..";
 import { PutSpecimenSuccessResponse } from "../..";
 
-export const createPutSpecimenSuccessResponseHeaders =
+export const createPutSpecimenSuccessResponseHeader =
   createDataFactory<IPutSpecimenSuccessResponseHeader>(() => ({
     "X-Foo": faker.lorem.word(),
     "X-Bar": faker.lorem.word(),
@@ -61,7 +61,7 @@ export function createPutSpecimenSuccessResponse(
     },
     {
       body: createPutSpecimenSuccessResponseBody,
-      header: createPutSpecimenSuccessResponseHeaders,
+      header: createPutSpecimenSuccessResponseHeader,
     },
     input
   );

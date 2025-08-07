@@ -9,7 +9,7 @@ import type {
 } from "../..";
 import { RefreshTokenSuccessResponse } from "../..";
 
-export const createRefreshTokenSuccessResponseHeaders =
+export const createRefreshTokenSuccessResponseHeader =
   createDataFactory<IRefreshTokenSuccessResponseHeader>(() => ({
     "Content-Type": "application/json",
   }));
@@ -39,7 +39,7 @@ export function createRefreshTokenSuccessResponse(
     },
     {
       body: createRefreshTokenSuccessResponseBody,
-      header: createRefreshTokenSuccessResponseHeaders,
+      header: createRefreshTokenSuccessResponseHeader,
     },
     input
   );

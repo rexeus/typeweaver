@@ -9,13 +9,13 @@ import { createDataFactory } from "../createDataFactory";
 import { createRequest } from "../createRequest";
 import { createJwtToken } from "../createJwtToken";
 
-export const createDeleteSubTodoRequestHeaders =
+export const createDeleteSubTodoRequestHeader =
   createDataFactory<IDeleteSubTodoRequestHeader>(() => ({
     Accept: "application/json",
     Authorization: `Bearer ${createJwtToken()}`,
   }));
 
-export const createDeleteSubTodoRequestParams =
+export const createDeleteSubTodoRequestParam =
   createDataFactory<IDeleteSubTodoRequestParam>(() => ({
     todoId: faker.string.ulid(),
     subtodoId: faker.string.ulid(),
@@ -33,8 +33,8 @@ export function createDeleteSubTodoRequest(
 ): IDeleteSubTodoRequest {
   // Generate param first for dynamic path building
   const param = input.param
-    ? createDeleteSubTodoRequestParams(input.param)
-    : createDeleteSubTodoRequestParams();
+    ? createDeleteSubTodoRequestParam(input.param)
+    : createDeleteSubTodoRequestParam();
 
   // If path is not explicitly provided, build it dynamically
   const dynamicPath =
@@ -52,7 +52,7 @@ export function createDeleteSubTodoRequest(
       path: dynamicPath,
     },
     {
-      header: createDeleteSubTodoRequestHeaders,
+      header: createDeleteSubTodoRequestHeader,
       param: () => param, // Use pre-generated param
     },
     input

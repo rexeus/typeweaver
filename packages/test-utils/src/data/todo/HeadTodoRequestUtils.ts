@@ -9,13 +9,13 @@ import type {
   IHeadTodoRequestParam,
 } from "../..";
 
-export const createHeadTodoRequestHeaders =
+export const createHeadTodoRequestHeader =
   createDataFactory<IHeadTodoRequestHeader>(() => ({
     Accept: "application/json",
     Authorization: `Bearer ${createJwtToken()}`,
   }));
 
-export const createHeadTodoRequestParams =
+export const createHeadTodoRequestParam =
   createDataFactory<IHeadTodoRequestParam>(() => ({
     todoId: faker.string.ulid(),
   }));
@@ -32,8 +32,8 @@ export function createHeadTodoRequest(
 ): IHeadTodoRequest {
   // Generate param first for dynamic path building
   const param = input.param
-    ? createHeadTodoRequestParams(input.param)
-    : createHeadTodoRequestParams();
+    ? createHeadTodoRequestParam(input.param)
+    : createHeadTodoRequestParam();
 
   // If path is not explicitly provided, build it dynamically
   const dynamicPath = input.path ?? `/todos/${param.todoId}`;
@@ -50,7 +50,7 @@ export function createHeadTodoRequest(
       path: dynamicPath,
     },
     {
-      header: createHeadTodoRequestHeaders,
+      header: createHeadTodoRequestHeader,
       param: () => param, // Use pre-generated param
     },
     input

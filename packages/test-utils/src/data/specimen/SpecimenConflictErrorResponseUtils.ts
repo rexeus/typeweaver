@@ -9,7 +9,7 @@ import { SpecimenConflictErrorResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 
-export const createSpecimenConflictErrorResponseHeaders =
+export const createSpecimenConflictErrorResponseHeader =
   createDataFactory<ISpecimenConflictErrorResponseHeader>(() => ({
     "X-Conflict-ID": faker.string.ulid(),
     "X-URLs": ["https://example.com/conflict"],
@@ -52,7 +52,7 @@ export function createSpecimenConflictErrorResponse(
     },
     {
       body: createSpecimenConflictErrorResponseBody,
-      header: createSpecimenConflictErrorResponseHeaders,
+      header: createSpecimenConflictErrorResponseHeader,
     },
     input
   );

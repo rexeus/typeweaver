@@ -9,18 +9,18 @@ import type {
   IGetTodoRequestParam,
 } from "../..";
 
-export const createGetTodoRequestHeaders =
+export const createGetTodoRequestHeader =
   createDataFactory<IGetTodoRequestHeader>(() => ({
     Accept: "application/json",
     Authorization: `Bearer ${createJwtToken()}`,
   }));
 
-export const createGetTodoRequestParams =
+export const createGetTodoRequestParam =
   createDataFactory<IGetTodoRequestParam>(() => ({
     todoId: faker.string.ulid(),
   }));
 
-type CreateGetTodoRequestInput = {
+type GetTodoRequestInput = {
   method?: HttpMethod;
   path?: string;
   header?: Partial<IGetTodoRequestHeader>;
@@ -28,12 +28,12 @@ type CreateGetTodoRequestInput = {
 };
 
 export function createGetTodoRequest(
-  input: CreateGetTodoRequestInput = {}
+  input: GetTodoRequestInput = {}
 ): IGetTodoRequest {
   // Generate param first for dynamic path building
   const param = input.param
-    ? createGetTodoRequestParams(input.param)
-    : createGetTodoRequestParams();
+    ? createGetTodoRequestParam(input.param)
+    : createGetTodoRequestParam();
 
   // If path is not explicitly provided, build it dynamically
   const dynamicPath = input.path ?? `/todos/${param.todoId}`;
@@ -50,7 +50,7 @@ export function createGetTodoRequest(
       path: dynamicPath,
     },
     {
-      header: createGetTodoRequestHeaders,
+      header: createGetTodoRequestHeader,
       param: () => param, // Use pre-generated param
     },
     input

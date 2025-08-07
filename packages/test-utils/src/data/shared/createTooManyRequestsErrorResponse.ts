@@ -1,7 +1,7 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
-import { createErrorResponseHeaders } from "../createErrorResponseHeaders";
+import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import type {
   ITooManyRequestsErrorResponse,
   ITooManyRequestsErrorResponseHeader,
@@ -34,7 +34,7 @@ export function createTooManyRequestsErrorResponse(
     },
     {
       body: createTooManyRequestsErrorResponseBody,
-      header: createErrorResponseHeaders<ITooManyRequestsErrorResponseHeader>(),
+      header: createErrorResponseHeader<ITooManyRequestsErrorResponseHeader>(),
     },
     input
   );

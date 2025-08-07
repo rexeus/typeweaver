@@ -11,7 +11,7 @@ import type {
   ICreateTodoRequestHeader,
 } from "../..";
 
-export const createCreateTodoRequestHeaders =
+export const createCreateTodoRequestHeader =
   createDataFactory<ICreateTodoRequestHeader>(() => ({
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -49,7 +49,7 @@ export function createCreateTodoRequest(
     },
     {
       body: createCreateTodoRequestBody,
-      header: createCreateTodoRequestHeaders,
+      header: createCreateTodoRequestHeader,
     },
     input
   );

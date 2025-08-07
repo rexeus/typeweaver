@@ -8,7 +8,7 @@ import type {
 import { createDataFactory } from "../createDataFactory";
 import { createRequest } from "../createRequest";
 
-export const createAccessTokenRequestHeaders =
+export const createAccessTokenRequestHeader =
   createDataFactory<IAccessTokenRequestHeader>(() => ({
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -42,7 +42,7 @@ export function createAccessTokenRequest(
     },
     {
       body: createAccessTokenRequestBody,
-      header: createAccessTokenRequestHeaders,
+      header: createAccessTokenRequestHeader,
     },
     input
   );

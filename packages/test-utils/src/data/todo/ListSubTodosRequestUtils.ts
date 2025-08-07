@@ -10,13 +10,13 @@ import { createDataFactory } from "../createDataFactory";
 import { createRequest } from "../createRequest";
 import { createJwtToken } from "../createJwtToken";
 
-export const createListSubTodosRequestHeaders =
+export const createListSubTodosRequestHeader =
   createDataFactory<IListSubTodosRequestHeader>(() => ({
     Accept: "application/json",
     Authorization: `Bearer ${createJwtToken()}`,
   }));
 
-export const createListSubTodosRequestParams =
+export const createListSubTodosRequestParam =
   createDataFactory<IListSubTodosRequestParam>(() => ({
     todoId: faker.string.ulid(),
   }));
@@ -60,8 +60,8 @@ export function createListSubTodosRequest(
 ): IListSubTodosRequest {
   // Generate param first for dynamic path building
   const param = input.param
-    ? createListSubTodosRequestParams(input.param)
-    : createListSubTodosRequestParams();
+    ? createListSubTodosRequestParam(input.param)
+    : createListSubTodosRequestParam();
 
   // If path is not explicitly provided, build it dynamically
   const dynamicPath = input.path ?? `/todos/${param.todoId}/subtodos`;
@@ -78,7 +78,7 @@ export function createListSubTodosRequest(
       path: dynamicPath,
     },
     {
-      header: createListSubTodosRequestHeaders,
+      header: createListSubTodosRequestHeader,
       param: () => param, // Use pre-generated param
       query: createListSubTodosRequestQuery,
     },

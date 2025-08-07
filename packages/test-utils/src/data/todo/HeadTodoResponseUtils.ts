@@ -6,7 +6,7 @@ import type {
 } from "../..";
 import { HeadTodoSuccessResponse } from "../..";
 
-export const createHeadTodoSuccessResponseHeaders =
+export const createHeadTodoSuccessResponseHeader =
   createDataFactory<IHeadTodoSuccessResponseHeader>(() => ({
     "Content-Type": "application/json",
   }));
@@ -27,7 +27,7 @@ export function createHeadTodoSuccessResponse(
       statusCode: 200,
     },
     {
-      header: createHeadTodoSuccessResponseHeaders,
+      header: createHeadTodoSuccessResponseHeader,
     },
     input
   );

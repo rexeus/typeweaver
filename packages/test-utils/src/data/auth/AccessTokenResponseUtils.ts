@@ -9,7 +9,7 @@ import type {
 } from "../..";
 import { AccessTokenSuccessResponse } from "../..";
 
-export const createAccessTokenSuccessResponseHeaders =
+export const createAccessTokenSuccessResponseHeader =
   createDataFactory<IAccessTokenSuccessResponseHeader>(() => ({
     "Content-Type": "application/json",
   }));
@@ -39,7 +39,7 @@ export function createAccessTokenSuccessResponse(
     },
     {
       body: createAccessTokenSuccessResponseBody,
-      header: createAccessTokenSuccessResponseHeaders,
+      header: createAccessTokenSuccessResponseHeader,
     },
     input
   );

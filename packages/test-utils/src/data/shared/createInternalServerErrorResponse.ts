@@ -1,7 +1,7 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
-import { createErrorResponseHeaders } from "../createErrorResponseHeaders";
+import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import type {
   IInternalServerErrorResponse,
   IInternalServerErrorResponseHeader,
@@ -34,7 +34,7 @@ export function createInternalServerErrorResponse(
     },
     {
       body: createInternalServerErrorResponseBody,
-      header: createErrorResponseHeaders<IInternalServerErrorResponseHeader>(),
+      header: createErrorResponseHeader<IInternalServerErrorResponseHeader>(),
     },
     input
   );

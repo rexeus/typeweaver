@@ -9,7 +9,7 @@ import type {
   IOptionsTodoRequestParam,
 } from "../..";
 
-export const createOptionsTodoRequestHeaders =
+export const createOptionsTodoRequestHeader =
   createDataFactory<IOptionsTodoRequestHeader>(() => ({
     Accept: "application/json",
     Authorization: `Bearer ${createJwtToken()}`,
@@ -17,7 +17,7 @@ export const createOptionsTodoRequestHeaders =
     "Access-Control-Request-Headers": ["Content-Type", "Authorization"],
   }));
 
-export const createOptionsTodoRequestParams =
+export const createOptionsTodoRequestParam =
   createDataFactory<IOptionsTodoRequestParam>(() => ({
     todoId: faker.string.ulid(),
   }));
@@ -34,8 +34,8 @@ export function createOptionsTodoRequest(
 ): IOptionsTodoRequest {
   // Generate param first for dynamic path building
   const param = input.param
-    ? createOptionsTodoRequestParams(input.param)
-    : createOptionsTodoRequestParams();
+    ? createOptionsTodoRequestParam(input.param)
+    : createOptionsTodoRequestParam();
 
   // If path is not explicitly provided, build it dynamically
   const dynamicPath = input.path ?? `/todos/${param.todoId}`;
@@ -52,7 +52,7 @@ export function createOptionsTodoRequest(
       path: dynamicPath,
     },
     {
-      header: createOptionsTodoRequestHeaders,
+      header: createOptionsTodoRequestHeader,
       param: () => param, // Use pre-generated param
     },
     input

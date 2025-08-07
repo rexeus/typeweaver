@@ -9,7 +9,7 @@ import { ListSubTodosSuccessResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 
-export const createListSubTodosSuccessResponseHeaders =
+export const createListSubTodosSuccessResponseHeader =
   createDataFactory<IListSubTodosSuccessResponseHeader>(() => ({
     "Content-Type": "application/json",
   }));
@@ -86,7 +86,7 @@ export function createListSubTodosSuccessResponse(
     },
     {
       body: createListSubTodosSuccessResponseBody,
-      header: createListSubTodosSuccessResponseHeaders,
+      header: createListSubTodosSuccessResponseHeader,
     },
     input
   );

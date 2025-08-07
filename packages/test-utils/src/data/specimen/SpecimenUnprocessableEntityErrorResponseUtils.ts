@@ -9,7 +9,7 @@ import { SpecimenUnprocessableEntityErrorResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 
-export const createSpecimenUnprocessableEntityErrorResponseHeaders =
+export const createSpecimenUnprocessableEntityErrorResponseHeader =
   createDataFactory<ISpecimenUnprocessableEntityErrorResponseHeader>(() => ({
     "X-Validation-ID": faker.string.uuid(),
     "X-Field-Count": faker.number.int({ min: 1, max: 10 }).toString(),
@@ -114,7 +114,7 @@ export function createSpecimenUnprocessableEntityErrorResponse(
     },
     {
       body: createSpecimenUnprocessableEntityErrorResponseBody,
-      header: createSpecimenUnprocessableEntityErrorResponseHeaders,
+      header: createSpecimenUnprocessableEntityErrorResponseHeader,
     },
     input
   );

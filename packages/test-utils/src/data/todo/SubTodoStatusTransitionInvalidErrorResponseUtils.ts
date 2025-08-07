@@ -9,7 +9,7 @@ import { SubTodoStatusTransitionInvalidErrorResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 
-export const createSubTodoStatusTransitionInvalidErrorResponseHeaders =
+export const createSubTodoStatusTransitionInvalidErrorResponseHeader =
   createDataFactory<ISubTodoStatusTransitionInvalidErrorResponseHeader>(() => ({
     "Content-Type": "application/json",
   }));
@@ -76,7 +76,7 @@ export function createSubTodoStatusTransitionInvalidErrorResponse(
     },
     {
       body: createSubTodoStatusTransitionInvalidErrorResponseBody,
-      header: createSubTodoStatusTransitionInvalidErrorResponseHeaders,
+      header: createSubTodoStatusTransitionInvalidErrorResponseHeader,
     },
     input
   );

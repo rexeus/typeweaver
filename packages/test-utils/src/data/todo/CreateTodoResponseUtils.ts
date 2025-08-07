@@ -9,7 +9,7 @@ import type {
 } from "../..";
 import { CreateTodoSuccessResponse } from "../..";
 
-export const createCreateTodoSuccessResponseHeaders =
+export const createCreateTodoSuccessResponseHeader =
   createDataFactory<ICreateTodoSuccessResponseHeader>(() => ({
     "Content-Type": "application/json",
   }));
@@ -54,7 +54,7 @@ export function createCreateTodoSuccessResponse(
     },
     {
       body: createCreateTodoSuccessResponseBody,
-      header: createCreateTodoSuccessResponseHeaders,
+      header: createCreateTodoSuccessResponseHeader,
     },
     input
   );

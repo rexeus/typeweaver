@@ -3,7 +3,6 @@ import { faker } from "@faker-js/faker";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 import { createGetTodoSuccessResponseBody } from "./GetTodoResponseUtils";
-import { createCreateTodoSuccessResponseHeaders } from "./CreateTodoResponseUtils";
 import type {
   IListTodosSuccessResponse,
   IListTodosSuccessResponseHeader,
@@ -16,6 +15,12 @@ type ListTodosSuccessResponseInput = {
   header?: Partial<IListTodosSuccessResponseHeader>;
   body?: Partial<IListTodosSuccessResponseBody>;
 };
+
+export const createListTodosSuccessResponseHeader =
+  createDataFactory<IListTodosSuccessResponseHeader>(() => ({
+    "Content-Type": "application/json",
+    "X-Total-Count": faker.number.int({ min: 1, max: 100 }).toString(),
+  }));
 
 export const createListTodosSuccessResponseBody =
   createDataFactory<IListTodosSuccessResponseBody>(() => ({
@@ -39,7 +44,7 @@ export function createListTodosSuccessResponse(
     },
     {
       body: createListTodosSuccessResponseBody,
-      header: createCreateTodoSuccessResponseHeaders,
+      header: createListTodosSuccessResponseHeader,
     },
     input
   );

@@ -1,7 +1,7 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
-import { createErrorResponseHeaders } from "../createErrorResponseHeaders";
+import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import type {
   IValidationErrorResponse,
   IValidationErrorResponseHeader,
@@ -46,7 +46,7 @@ export function createValidationErrorResponse(
     },
     {
       body: createValidationErrorResponseBody,
-      header: createErrorResponseHeaders<IValidationErrorResponseHeader>(),
+      header: createErrorResponseHeader<IValidationErrorResponseHeader>(),
     },
     input
   );

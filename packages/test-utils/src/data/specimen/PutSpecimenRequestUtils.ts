@@ -10,7 +10,7 @@ import type {
   IPutSpecimenRequestQuery,
 } from "../..";
 
-export const createPutSpecimenRequestHeaders =
+export const createPutSpecimenRequestHeader =
   createDataFactory<IPutSpecimenRequestHeader>(() => ({
     "X-Foo": faker.lorem.word(),
     "X-Bar": faker.lorem.word(),
@@ -133,7 +133,7 @@ export const createPutSpecimenRequestBody =
     };
   });
 
-export const createPutSpecimenRequestParams =
+export const createPutSpecimenRequestParam =
   createDataFactory<IPutSpecimenRequestParam>(() => ({
     specimenId: faker.string.fromCharacters(
       "0123456789ABCDEFGHJKMNPQRSTVWXYZ",
@@ -159,7 +159,6 @@ export const createPutSpecimenRequestQuery =
   }));
 
 type PutSpecimenRequestInput = {
-  method?: HttpMethod;
   path?: string;
   header?: Partial<IPutSpecimenRequestHeader>;
   param?: Partial<IPutSpecimenRequestParam>;
@@ -172,8 +171,8 @@ export function createPutSpecimenRequest(
 ): IPutSpecimenRequest {
   // Generate param first for dynamic path building
   const param = input.param
-    ? createPutSpecimenRequestParams(input.param)
-    : createPutSpecimenRequestParams();
+    ? createPutSpecimenRequestParam(input.param)
+    : createPutSpecimenRequestParam();
 
   // If path is not explicitly provided, build it dynamically
   const dynamicPath = input.path ?? `/specimens/${param.specimenId}`;
@@ -191,7 +190,7 @@ export function createPutSpecimenRequest(
     },
     {
       body: createPutSpecimenRequestBody,
-      header: createPutSpecimenRequestHeaders,
+      header: createPutSpecimenRequestHeader,
       param: () => param, // Use pre-generated param
       query: createPutSpecimenRequestQuery,
     },

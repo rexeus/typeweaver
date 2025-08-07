@@ -3,7 +3,7 @@ import { faker } from "@faker-js/faker";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 import { createGetTodoSuccessResponseBody } from "./GetTodoResponseUtils";
-import { createCreateTodoSuccessResponseHeaders } from "./CreateTodoResponseUtils";
+import { createCreateTodoSuccessResponseHeader } from "./CreateTodoResponseUtils";
 import type {
   IQueryTodoSuccessResponse,
   IQueryTodoSuccessResponseHeader,
@@ -46,7 +46,7 @@ export function createQueryTodoSuccessResponse(
     },
     {
       body: createQueryTodoSuccessResponseBody,
-      header: createCreateTodoSuccessResponseHeaders,
+      header: createCreateTodoSuccessResponseHeader,
     },
     input
   );

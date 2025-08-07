@@ -11,14 +11,14 @@ import type {
   IQuerySubTodoRequestBody,
 } from "../..";
 
-export const createQuerySubTodoRequestHeaders =
+export const createQuerySubTodoRequestHeader =
   createDataFactory<IQuerySubTodoRequestHeader>(() => ({
     "Content-Type": "application/json",
     Accept: "application/json",
     Authorization: `Bearer ${createJwtToken()}`,
   }));
 
-export const createQuerySubTodoRequestParams =
+export const createQuerySubTodoRequestParam =
   createDataFactory<IQuerySubTodoRequestParam>(() => ({
     todoId: faker.string.ulid(),
   }));
@@ -68,8 +68,8 @@ export function createQuerySubTodoRequest(
 ): IQuerySubTodoRequest {
   // Generate param first for dynamic path building
   const param = input.param
-    ? createQuerySubTodoRequestParams(input.param)
-    : createQuerySubTodoRequestParams();
+    ? createQuerySubTodoRequestParam(input.param)
+    : createQuerySubTodoRequestParam();
 
   // If path is not explicitly provided, build it dynamically
   const dynamicPath = input.path ?? `/todos/${param.todoId}/subtodos/query`;
@@ -87,7 +87,7 @@ export function createQuerySubTodoRequest(
     },
     {
       body: createQuerySubTodoRequestBody,
-      header: createQuerySubTodoRequestHeaders,
+      header: createQuerySubTodoRequestHeader,
       param: () => param, // Use pre-generated param
       query: createQuerySubTodoRequestQuery,
     },

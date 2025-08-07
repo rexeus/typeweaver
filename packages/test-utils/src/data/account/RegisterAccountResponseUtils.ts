@@ -9,7 +9,7 @@ import type {
 } from "../..";
 import { RegisterAccountSuccessResponse } from "../..";
 
-export const createRegisterAccountSuccessResponseHeaders =
+export const createRegisterAccountSuccessResponseHeader =
   createDataFactory<IRegisterAccountSuccessResponseHeader>(() => ({
     "Content-Type": "application/json",
   }));
@@ -43,7 +43,7 @@ export function createRegisterAccountSuccessResponse(
     },
     {
       body: createRegisterAccountSuccessResponseBody,
-      header: createRegisterAccountSuccessResponseHeaders,
+      header: createRegisterAccountSuccessResponseHeader,
     },
     input
   );

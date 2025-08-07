@@ -9,7 +9,7 @@ import { QuerySubTodoSuccessResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 
-export const createQuerySubTodoSuccessResponseHeaders =
+export const createQuerySubTodoSuccessResponseHeader =
   createDataFactory<IQuerySubTodoSuccessResponseHeader>(() => ({
     "Content-Type": "application/json",
   }));
@@ -86,7 +86,7 @@ export function createQuerySubTodoSuccessResponse(
     },
     {
       body: createQuerySubTodoSuccessResponseBody,
-      header: createQuerySubTodoSuccessResponseHeaders,
+      header: createQuerySubTodoSuccessResponseHeader,
     },
     input
   );

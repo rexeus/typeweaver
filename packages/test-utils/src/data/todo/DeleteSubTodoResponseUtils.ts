@@ -9,7 +9,7 @@ import { DeleteSubTodoSuccessResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 
-export const createDeleteSubTodoSuccessResponseHeaders =
+export const createDeleteSubTodoSuccessResponseHeader =
   createDataFactory<IDeleteSubTodoSuccessResponseHeader>(() => ({
     "Content-Type": "application/json",
   }));
@@ -38,7 +38,7 @@ export function createDeleteSubTodoSuccessResponse(
     },
     {
       body: createDeleteSubTodoSuccessResponseBody,
-      header: createDeleteSubTodoSuccessResponseHeaders,
+      header: createDeleteSubTodoSuccessResponseHeader,
     },
     input
   );

@@ -8,7 +8,7 @@ import { createDataFactory } from "../createDataFactory";
 import { createRequest } from "../createRequest";
 import { createJwtToken } from "../createJwtToken";
 
-export const createRefreshTokenRequestHeaders =
+export const createRefreshTokenRequestHeader =
   createDataFactory<IRefreshTokenRequestHeader>(() => ({
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -41,7 +41,7 @@ export function createRefreshTokenRequest(
     },
     {
       body: createRefreshTokenRequestBody,
-      header: createRefreshTokenRequestHeaders,
+      header: createRefreshTokenRequestHeader,
     },
     input
   );

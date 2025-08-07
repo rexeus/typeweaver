@@ -9,7 +9,7 @@ import type {
   IListTodosRequestQuery,
 } from "../..";
 
-export const createListTodosRequestHeaders =
+export const createListTodosRequestHeader =
   createDataFactory<IListTodosRequestHeader>(() => ({
     Accept: "application/json",
     Authorization: `Bearer ${createJwtToken()}`,
@@ -40,14 +40,14 @@ export const createListTodosRequestQuery =
     dateTo: faker.date.future().toISOString().split("T")[0],
   }));
 
-type CreateListTodosRequestInput = {
+type ListTodosRequestInput = {
   path?: string;
   header?: Partial<IListTodosRequestHeader>;
   query?: Partial<IListTodosRequestQuery>;
 };
 
 export function createListTodosRequest(
-  input: CreateListTodosRequestInput = {}
+  input: ListTodosRequestInput = {}
 ): IListTodosRequest {
   return createRequest<
     IListTodosRequest,
@@ -61,7 +61,7 @@ export function createListTodosRequest(
       path: "/todos",
     },
     {
-      header: createListTodosRequestHeaders,
+      header: createListTodosRequestHeader,
       query: createListTodosRequestQuery,
     },
     input

@@ -1,6 +1,6 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { createResponse } from "../createResponse";
-import { createCreateTodoSuccessResponseHeaders } from "./CreateTodoResponseUtils";
+import { createCreateTodoSuccessResponseHeader } from "./CreateTodoResponseUtils";
 import type {
   IDeleteTodoSuccessResponse,
   IDeleteTodoSuccessResponseHeader,
@@ -24,7 +24,7 @@ export function createDeleteTodoSuccessResponse(
       statusCode: HttpStatusCode.NO_CONTENT,
     },
     {
-      header: createCreateTodoSuccessResponseHeaders,
+      header: createCreateTodoSuccessResponseHeader,
     },
     input
   );

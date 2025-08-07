@@ -2,7 +2,7 @@ import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
-import { createErrorResponseHeaders } from "../createErrorResponseHeaders";
+import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import type {
   ITodoNotChangeableErrorResponse,
   ITodoNotChangeableErrorResponseHeader,
@@ -16,10 +16,10 @@ type TodoNotChangeableErrorResponseInput = {
   body?: Partial<ITodoNotChangeableErrorResponseBody>;
 };
 
-const createTodoNotChangeableErrorResponseHeaders =
-  createErrorResponseHeaders<ITodoNotChangeableErrorResponseHeader>();
+export const createTodoNotChangeableErrorResponseHeader =
+  createErrorResponseHeader<ITodoNotChangeableErrorResponseHeader>();
 
-const createTodoNotChangeableErrorResponseBody =
+export const createTodoNotChangeableErrorResponseBody =
   createDataFactory<ITodoNotChangeableErrorResponseBody>(() => ({
     message: "Todo in current status cannot be changed",
     code: "TODO_NOT_CHANGEABLE_ERROR",
@@ -45,7 +45,7 @@ export function createTodoNotChangeableErrorResponse(
     },
     {
       body: createTodoNotChangeableErrorResponseBody,
-      header: createTodoNotChangeableErrorResponseHeaders,
+      header: createTodoNotChangeableErrorResponseHeader,
     },
     input
   );

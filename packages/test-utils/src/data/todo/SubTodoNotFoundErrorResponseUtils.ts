@@ -2,7 +2,7 @@ import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
-import { createErrorResponseHeaders } from "../createErrorResponseHeaders";
+import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import type {
   ISubTodoNotFoundErrorResponse,
   ISubTodoNotFoundErrorResponseHeader,
@@ -15,10 +15,10 @@ type SubTodoNotFoundErrorResponseInput = {
   body?: Partial<ISubTodoNotFoundErrorResponseBody>;
 };
 
-const createSubTodoNotFoundErrorResponseHeaders =
-  createErrorResponseHeaders<ISubTodoNotFoundErrorResponseHeader>();
+export const createSubTodoNotFoundErrorResponseHeader =
+  createErrorResponseHeader<ISubTodoNotFoundErrorResponseHeader>();
 
-const createSubTodoNotFoundErrorResponseBody =
+export const createSubTodoNotFoundErrorResponseBody =
   createDataFactory<ISubTodoNotFoundErrorResponseBody>(() => ({
     message: "SubTodo not found",
     code: "SUBTODO_NOT_FOUND_ERROR",
@@ -43,7 +43,7 @@ export function createSubTodoNotFoundErrorResponse(
     },
     {
       body: createSubTodoNotFoundErrorResponseBody,
-      header: createSubTodoNotFoundErrorResponseHeaders,
+      header: createSubTodoNotFoundErrorResponseHeader,
     },
     input
   );

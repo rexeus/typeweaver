@@ -10,14 +10,14 @@ import { createDataFactory } from "../createDataFactory";
 import { createRequest } from "../createRequest";
 import { createJwtToken } from "../createJwtToken";
 
-export const createPutTodoRequestHeaders =
+export const createPutTodoRequestHeader =
   createDataFactory<IPutTodoRequestHeader>(() => ({
     "Content-Type": "application/json",
     Accept: "application/json",
     Authorization: `Bearer ${createJwtToken()}`,
   }));
 
-export const createPutTodoRequestParams =
+export const createPutTodoRequestParam =
   createDataFactory<IPutTodoRequestParam>(() => ({
     todoId: faker.string.ulid(),
   }));
@@ -52,8 +52,8 @@ export function createPutTodoRequest(
 ): IPutTodoRequest {
   // Generate param first for dynamic path building
   const param = input.param
-    ? createPutTodoRequestParams(input.param)
-    : createPutTodoRequestParams();
+    ? createPutTodoRequestParam(input.param)
+    : createPutTodoRequestParam();
 
   // If path is not explicitly provided, build it dynamically
   const dynamicPath = input.path ?? `/todos/${param.todoId}`;
@@ -71,7 +71,7 @@ export function createPutTodoRequest(
     },
     {
       body: createPutTodoRequestBody,
-      header: createPutTodoRequestHeaders,
+      header: createPutTodoRequestHeader,
       param: () => param, // Use pre-generated param
     },
     input

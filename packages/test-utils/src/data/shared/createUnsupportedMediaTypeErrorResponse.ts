@@ -2,7 +2,7 @@ import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
-import { createErrorResponseHeaders } from "../createErrorResponseHeaders";
+import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import type {
   IUnsupportedMediaTypeErrorResponse,
   IUnsupportedMediaTypeErrorResponseHeader,
@@ -47,7 +47,7 @@ export function createUnsupportedMediaTypeErrorResponse(
     {
       body: createUnsupportedMediaTypeErrorResponseBody,
       header:
-        createErrorResponseHeaders<IUnsupportedMediaTypeErrorResponseHeader>(),
+        createErrorResponseHeader<IUnsupportedMediaTypeErrorResponseHeader>(),
     },
     input
   );

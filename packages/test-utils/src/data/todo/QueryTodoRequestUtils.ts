@@ -10,7 +10,7 @@ import type {
   IQueryTodoRequestBody,
 } from "../..";
 
-export const createQueryTodoRequestHeaders =
+export const createQueryTodoRequestHeader =
   createDataFactory<IQueryTodoRequestHeader>(() => ({
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -104,7 +104,7 @@ export function createQueryTodoRequest(
     },
     {
       body: createQueryTodoRequestBody,
-      header: createQueryTodoRequestHeaders,
+      header: createQueryTodoRequestHeader,
       query: createQueryTodoRequestQuery,
     },
     input

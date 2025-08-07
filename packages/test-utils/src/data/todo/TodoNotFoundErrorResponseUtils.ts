@@ -2,7 +2,7 @@ import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
-import { createErrorResponseHeaders } from "../createErrorResponseHeaders";
+import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import type {
   ITodoNotFoundErrorResponse,
   ITodoNotFoundErrorResponseHeader,
@@ -16,10 +16,10 @@ type TodoNotFoundErrorResponseInput = {
   body?: Partial<ITodoNotFoundErrorResponseBody>;
 };
 
-const createTodoNotFoundErrorResponseHeaders =
-  createErrorResponseHeaders<ITodoNotFoundErrorResponseHeader>();
+export const createTodoNotFoundErrorResponseHeader =
+  createErrorResponseHeader<ITodoNotFoundErrorResponseHeader>();
 
-const createTodoNotFoundErrorResponseBody =
+export const createTodoNotFoundErrorResponseBody =
   createDataFactory<ITodoNotFoundErrorResponseBody>(() => ({
     message: "Todo not found",
     code: "TODO_NOT_FOUND_ERROR",
@@ -41,7 +41,7 @@ export function createTodoNotFoundErrorResponse(
     },
     {
       body: createTodoNotFoundErrorResponseBody,
-      header: createTodoNotFoundErrorResponseHeaders,
+      header: createTodoNotFoundErrorResponseHeader,
     },
     input
   );

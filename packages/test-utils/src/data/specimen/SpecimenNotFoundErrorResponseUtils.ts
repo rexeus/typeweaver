@@ -9,7 +9,7 @@ import { SpecimenNotFoundErrorResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 
-export const createSpecimenNotFoundErrorResponseHeaders =
+export const createSpecimenNotFoundErrorResponseHeader =
   createDataFactory<ISpecimenNotFoundErrorResponseHeader>(() => ({
     "X-Search-ID": faker.string.ulid(),
     "X-Available": ["true"],
@@ -45,7 +45,7 @@ export function createSpecimenNotFoundErrorResponse(
     },
     {
       body: createSpecimenNotFoundErrorResponseBody,
-      header: createSpecimenNotFoundErrorResponseHeaders,
+      header: createSpecimenNotFoundErrorResponseHeader,
     },
     input
   );

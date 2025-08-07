@@ -9,7 +9,7 @@ import { SubTodoNotChangeableErrorResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 
-export const createSubTodoNotChangeableErrorResponseHeaders =
+export const createSubTodoNotChangeableErrorResponseHeader =
   createDataFactory<ISubTodoNotChangeableErrorResponseHeader>(() => ({
     "Content-Type": "application/json",
   }));
@@ -71,7 +71,7 @@ export function createSubTodoNotChangeableErrorResponse(
     },
     {
       body: createSubTodoNotChangeableErrorResponseBody,
-      header: createSubTodoNotChangeableErrorResponseHeaders,
+      header: createSubTodoNotChangeableErrorResponseHeader,
     },
     input
   );

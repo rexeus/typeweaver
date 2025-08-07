@@ -9,7 +9,7 @@ import { UpdateSubTodoSuccessResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 
-export const createUpdateSubTodoSuccessResponseHeaders =
+export const createUpdateSubTodoSuccessResponseHeader =
   createDataFactory<IUpdateSubTodoSuccessResponseHeader>(() => ({
     "Content-Type": "application/json",
   }));
@@ -72,7 +72,7 @@ export function createUpdateSubTodoSuccessResponse(
     },
     {
       body: createUpdateSubTodoSuccessResponseBody,
-      header: createUpdateSubTodoSuccessResponseHeaders,
+      header: createUpdateSubTodoSuccessResponseHeader,
     },
     input
   );

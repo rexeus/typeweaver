@@ -1,7 +1,7 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
-import { createErrorResponseHeaders } from "../createErrorResponseHeaders";
+import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import type {
   INotFoundErrorResponse,
   INotFoundErrorResponseHeader,
@@ -34,7 +34,7 @@ export function createNotFoundErrorResponse(
     },
     {
       body: createNotFoundErrorResponseBody,
-      header: createErrorResponseHeaders<INotFoundErrorResponseHeader>(),
+      header: createErrorResponseHeader<INotFoundErrorResponseHeader>(),
     },
     input
   );

@@ -14,7 +14,7 @@ export const createRegisterAccountRequestBody =
     password: faker.internet.password(),
   }));
 
-export const createRegisterAccountRequestHeaders =
+export const createRegisterAccountRequestHeader =
   createDataFactory<IRegisterAccountRequestHeader>(() => ({
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -42,7 +42,7 @@ export function createRegisterAccountRequest(
     },
     {
       body: createRegisterAccountRequestBody,
-      header: createRegisterAccountRequestHeaders,
+      header: createRegisterAccountRequestHeader,
     },
     input
   );
