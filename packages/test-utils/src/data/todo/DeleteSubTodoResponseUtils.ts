@@ -5,27 +5,19 @@ import type {
   IDeleteSubTodoSuccessResponseHeader,
   IDeleteSubTodoSuccessResponse,
 } from "../..";
-import { createData } from "../createData";
+import { DeleteSubTodoSuccessResponse } from "../..";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
 
-export function createDeleteSubTodoSuccessResponseHeaders(
-  input: Partial<IDeleteSubTodoSuccessResponseHeader> = {}
-): IDeleteSubTodoSuccessResponseHeader {
-  const defaults: IDeleteSubTodoSuccessResponseHeader = {
+export const createDeleteSubTodoSuccessResponseHeader =
+  createDataFactory<IDeleteSubTodoSuccessResponseHeader>(() => ({
     "Content-Type": "application/json",
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createDeleteSubTodoSuccessResponseBody(
-  input: Partial<IDeleteSubTodoSuccessResponseBody> = {}
-): IDeleteSubTodoSuccessResponseBody {
-  const defaults: IDeleteSubTodoSuccessResponseBody = {
+export const createDeleteSubTodoSuccessResponseBody =
+  createDataFactory<IDeleteSubTodoSuccessResponseBody>(() => ({
     message: faker.lorem.sentence(),
-  };
-
-  return createData(defaults, input);
-}
+  }));
 
 type DeleteSubTodoSuccessResponseInput = {
   statusCode?: number;
@@ -35,19 +27,20 @@ type DeleteSubTodoSuccessResponseInput = {
 
 export function createDeleteSubTodoSuccessResponse(
   input: DeleteSubTodoSuccessResponseInput = {}
-): IDeleteSubTodoSuccessResponse {
-  const defaults: IDeleteSubTodoSuccessResponse = {
-    statusCode: HttpStatusCode.OK,
-    header: createDeleteSubTodoSuccessResponseHeaders(),
-    body: createDeleteSubTodoSuccessResponseBody(),
-  };
-
-  const overrides: Partial<IDeleteSubTodoSuccessResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createDeleteSubTodoSuccessResponseHeaders(input.header);
-  if (input.body !== undefined)
-    overrides.body = createDeleteSubTodoSuccessResponseBody(input.body);
-
-  return createData(defaults, overrides);
+): DeleteSubTodoSuccessResponse {
+  const responseData = createResponse<
+    IDeleteSubTodoSuccessResponse,
+    IDeleteSubTodoSuccessResponseBody,
+    IDeleteSubTodoSuccessResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.OK,
+    },
+    {
+      body: createDeleteSubTodoSuccessResponseBody,
+      header: createDeleteSubTodoSuccessResponseHeader,
+    },
+    input
+  );
+  return new DeleteSubTodoSuccessResponse(responseData);
 }

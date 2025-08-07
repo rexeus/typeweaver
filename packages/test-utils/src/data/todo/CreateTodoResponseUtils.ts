@@ -1,26 +1,21 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
 import type {
   ICreateTodoSuccessResponse,
   ICreateTodoSuccessResponseHeader,
   ICreateTodoSuccessResponseBody,
 } from "../..";
+import { CreateTodoSuccessResponse } from "../..";
 
-export function createCreateTodoSuccessResponseHeaders(
-  input: Partial<ICreateTodoSuccessResponseHeader> = {}
-): ICreateTodoSuccessResponseHeader {
-  const defaults: ICreateTodoSuccessResponseHeader = {
+export const createCreateTodoSuccessResponseHeader =
+  createDataFactory<ICreateTodoSuccessResponseHeader>(() => ({
     "Content-Type": "application/json",
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createCreateTodoSuccessResponseBody(
-  input: Partial<ICreateTodoSuccessResponseBody> = {}
-): ICreateTodoSuccessResponseBody {
-  const defaults: ICreateTodoSuccessResponseBody = {
+export const createCreateTodoSuccessResponseBody =
+  createDataFactory<ICreateTodoSuccessResponseBody>(() => ({
     id: faker.string.ulid(),
     accountId: faker.string.ulid(),
     title: faker.lorem.sentence(),
@@ -38,10 +33,7 @@ export function createCreateTodoSuccessResponseBody(
     modifiedAt: faker.date.recent().toISOString(),
     createdBy: faker.internet.username(),
     modifiedBy: faker.internet.username(),
-  };
-
-  return createData(defaults, input);
-}
+  }));
 
 type CreateTodoSuccessResponseInput = {
   statusCode?: number;
@@ -51,19 +43,20 @@ type CreateTodoSuccessResponseInput = {
 
 export function createCreateTodoSuccessResponse(
   input: CreateTodoSuccessResponseInput = {}
-): ICreateTodoSuccessResponse {
-  const defaults: ICreateTodoSuccessResponse = {
-    statusCode: HttpStatusCode.CREATED,
-    header: createCreateTodoSuccessResponseHeaders(),
-    body: createCreateTodoSuccessResponseBody(),
-  };
-
-  const overrides: Partial<ICreateTodoSuccessResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createCreateTodoSuccessResponseHeaders(input.header);
-  if (input.body !== undefined)
-    overrides.body = createCreateTodoSuccessResponseBody(input.body);
-
-  return createData(defaults, overrides);
+): CreateTodoSuccessResponse {
+  const responseData = createResponse<
+    ICreateTodoSuccessResponse,
+    ICreateTodoSuccessResponseBody,
+    ICreateTodoSuccessResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.CREATED,
+    },
+    {
+      body: createCreateTodoSuccessResponseBody,
+      header: createCreateTodoSuccessResponseHeader,
+    },
+    input
+  );
+  return new CreateTodoSuccessResponse(responseData);
 }

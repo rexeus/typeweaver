@@ -6,35 +6,24 @@ import type {
   IPutTodoRequestParam,
   IPutTodoRequestBody,
 } from "../..";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createRequest } from "../createRequest";
 import { createJwtToken } from "../createJwtToken";
 
-export function createPutTodoRequestHeaders(
-  input: Partial<IPutTodoRequestHeader> = {}
-): IPutTodoRequestHeader {
-  const defaults: IPutTodoRequestHeader = {
+export const createPutTodoRequestHeader =
+  createDataFactory<IPutTodoRequestHeader>(() => ({
     "Content-Type": "application/json",
     Accept: "application/json",
     Authorization: `Bearer ${createJwtToken()}`,
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createPutTodoRequestParams(
-  input: Partial<IPutTodoRequestParam> = {}
-): IPutTodoRequestParam {
-  const defaults: IPutTodoRequestParam = {
+export const createPutTodoRequestParam =
+  createDataFactory<IPutTodoRequestParam>(() => ({
     todoId: faker.string.ulid(),
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createPutTodoRequestBody(
-  input: Partial<IPutTodoRequestBody> = {}
-): IPutTodoRequestBody {
-  const defaults: IPutTodoRequestBody = {
+export const createPutTodoRequestBody = createDataFactory<IPutTodoRequestBody>(
+  () => ({
     accountId: faker.string.ulid(),
     parentId: faker.string.ulid(),
     title: faker.lorem.sentence(),
@@ -48,10 +37,8 @@ export function createPutTodoRequestBody(
     dueDate: faker.date.future().toISOString(),
     tags: [faker.lorem.word(), faker.lorem.word()],
     priority: faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const),
-  };
-
-  return createData(defaults, input);
-}
+  })
+);
 
 type PutTodoRequestInput = {
   path?: string;
@@ -63,26 +50,30 @@ type PutTodoRequestInput = {
 export function createPutTodoRequest(
   input: PutTodoRequestInput = {}
 ): IPutTodoRequest {
+  // Generate param first for dynamic path building
   const param = input.param
-    ? createPutTodoRequestParams(input.param)
-    : createPutTodoRequestParams();
+    ? createPutTodoRequestParam(input.param)
+    : createPutTodoRequestParam();
 
-  const defaults: IPutTodoRequest = {
-    method: HttpMethod.PUT,
-    path: `/todos/${param.todoId}`,
-    header: createPutTodoRequestHeaders(),
-    param,
-    body: createPutTodoRequestBody(),
-  };
+  // If path is not explicitly provided, build it dynamically
+  const dynamicPath = input.path ?? `/todos/${param.todoId}`;
 
-  const overrides: Partial<IPutTodoRequest> = {};
-  if (input.path !== undefined) overrides.path = input.path;
-  if (input.header !== undefined)
-    overrides.header = createPutTodoRequestHeaders(input.header);
-  if (input.param !== undefined)
-    overrides.param = createPutTodoRequestParams(input.param);
-  if (input.body !== undefined)
-    overrides.body = createPutTodoRequestBody(input.body);
-
-  return createData(defaults, overrides as IPutTodoRequest);
+  return createRequest<
+    IPutTodoRequest,
+    IPutTodoRequestBody,
+    IPutTodoRequestHeader,
+    IPutTodoRequestParam,
+    never
+  >(
+    {
+      method: HttpMethod.PUT,
+      path: dynamicPath,
+    },
+    {
+      body: createPutTodoRequestBody,
+      header: createPutTodoRequestHeader,
+      param: () => param, // Use pre-generated param
+    },
+    input
+  );
 }

@@ -1,34 +1,25 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import type { IHttpRequest } from "@rexeus/typeweaver-core";
+import type { IDeleteSubTodoRequest } from "../..";
 import { faker } from "@faker-js/faker";
 import type {
   IDeleteSubTodoRequestHeader,
   IDeleteSubTodoRequestParam,
 } from "../..";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createRequest } from "../createRequest";
 import { createJwtToken } from "../createJwtToken";
 
-export function createDeleteSubTodoRequestHeaders(
-  input: Partial<IDeleteSubTodoRequestHeader> = {}
-): IDeleteSubTodoRequestHeader {
-  const defaults: IDeleteSubTodoRequestHeader = {
+export const createDeleteSubTodoRequestHeader =
+  createDataFactory<IDeleteSubTodoRequestHeader>(() => ({
     Accept: "application/json",
     Authorization: `Bearer ${createJwtToken()}`,
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createDeleteSubTodoRequestParams(
-  input: Partial<IDeleteSubTodoRequestParam> = {}
-): IDeleteSubTodoRequestParam {
-  const defaults: IDeleteSubTodoRequestParam = {
+export const createDeleteSubTodoRequestParam =
+  createDataFactory<IDeleteSubTodoRequestParam>(() => ({
     todoId: faker.string.ulid(),
     subtodoId: faker.string.ulid(),
-  };
-
-  return createData(defaults, input);
-}
+  }));
 
 type DeleteSubTodoRequestInput = {
   method?: HttpMethod;
@@ -39,25 +30,31 @@ type DeleteSubTodoRequestInput = {
 
 export function createDeleteSubTodoRequest(
   input: DeleteSubTodoRequestInput = {}
-): IHttpRequest {
+): IDeleteSubTodoRequest {
+  // Generate param first for dynamic path building
   const param = input.param
-    ? createDeleteSubTodoRequestParams(input.param)
-    : createDeleteSubTodoRequestParams();
+    ? createDeleteSubTodoRequestParam(input.param)
+    : createDeleteSubTodoRequestParam();
 
-  const defaults: IHttpRequest = {
-    method: HttpMethod.DELETE,
-    path: `/todos/${param.todoId}/subtodos/${param.subtodoId}`,
-    header: createDeleteSubTodoRequestHeaders(),
-    param,
-  };
+  // If path is not explicitly provided, build it dynamically
+  const dynamicPath =
+    input.path ?? `/todos/${param.todoId}/subtodos/${param.subtodoId}`;
 
-  const overrides: Partial<IHttpRequest> = {};
-  if (input.method !== undefined) overrides.method = input.method;
-  if (input.path !== undefined) overrides.path = input.path;
-  if (input.header !== undefined)
-    overrides.header = createDeleteSubTodoRequestHeaders(input.header);
-  if (input.param !== undefined)
-    overrides.param = createDeleteSubTodoRequestParams(input.param);
-
-  return createData(defaults, overrides);
+  return createRequest<
+    IDeleteSubTodoRequest,
+    never,
+    IDeleteSubTodoRequestHeader,
+    IDeleteSubTodoRequestParam,
+    never
+  >(
+    {
+      method: HttpMethod.DELETE,
+      path: dynamicPath,
+    },
+    {
+      header: createDeleteSubTodoRequestHeader,
+      param: () => param, // Use pre-generated param
+    },
+    input
+  );
 }

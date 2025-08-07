@@ -1,17 +1,17 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
 import { createPutSpecimenRequestBody } from "./PutSpecimenRequestUtils";
 import type {
   IPutSpecimenSuccessResponseBody,
   IPutSpecimenSuccessResponseHeader,
   IPutSpecimenSuccessResponse,
 } from "../..";
+import { PutSpecimenSuccessResponse } from "../..";
 
-export function createPutSpecimenSuccessResponseHeaders(
-  input: Partial<IPutSpecimenSuccessResponseHeader> = {}
-): IPutSpecimenSuccessResponseHeader {
-  const defaults: IPutSpecimenSuccessResponseHeader = {
+export const createPutSpecimenSuccessResponseHeader =
+  createDataFactory<IPutSpecimenSuccessResponseHeader>(() => ({
     "X-Foo": faker.lorem.word(),
     "X-Bar": faker.lorem.word(),
     "X-Baz": "baz",
@@ -22,31 +22,25 @@ export function createPutSpecimenSuccessResponseHeaders(
     "X-URL": faker.internet.url(),
     "X-Email": faker.internet.email(),
     "X-Slugs": [faker.lorem.slug(), faker.lorem.slug()],
-  };
+  }));
 
-  return createData(defaults, input);
-}
+export const createPutSpecimenSuccessResponseBody =
+  createDataFactory<IPutSpecimenSuccessResponseBody>(() => {
+    const createdAt = faker.date.past().toISOString();
+    const modifiedAt = faker.date.recent().toISOString();
+    const createdBy = faker.internet.username();
+    const modifiedBy = faker.internet.username();
 
-export function createPutSpecimenSuccessResponseBody(
-  input: Partial<IPutSpecimenSuccessResponseBody> = {}
-): IPutSpecimenSuccessResponseBody {
-  const createdAt = faker.date.past().toISOString();
-  const modifiedAt = faker.date.recent().toISOString();
-  const createdBy = faker.internet.username();
-  const modifiedBy = faker.internet.username();
+    const baseSpecimen = createPutSpecimenRequestBody();
 
-  const baseSpecimen = createPutSpecimenRequestBody();
-
-  const defaults: IPutSpecimenSuccessResponseBody = {
-    ...baseSpecimen,
-    createdAt,
-    modifiedAt,
-    createdBy,
-    modifiedBy,
-  };
-
-  return createData(defaults, input);
-}
+    return {
+      ...baseSpecimen,
+      createdAt,
+      modifiedAt,
+      createdBy,
+      modifiedBy,
+    };
+  });
 
 type PutSpecimenSuccessResponseInput = {
   statusCode?: number;
@@ -56,19 +50,20 @@ type PutSpecimenSuccessResponseInput = {
 
 export function createPutSpecimenSuccessResponse(
   input: PutSpecimenSuccessResponseInput = {}
-): IPutSpecimenSuccessResponse {
-  const defaults: IPutSpecimenSuccessResponse = {
-    statusCode: HttpStatusCode.OK,
-    header: createPutSpecimenSuccessResponseHeaders(),
-    body: createPutSpecimenSuccessResponseBody(),
-  };
-
-  const overrides: Partial<IPutSpecimenSuccessResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createPutSpecimenSuccessResponseHeaders(input.header);
-  if (input.body !== undefined)
-    overrides.body = createPutSpecimenSuccessResponseBody(input.body);
-
-  return createData(defaults, overrides);
+): PutSpecimenSuccessResponse {
+  const responseData = createResponse<
+    IPutSpecimenSuccessResponse,
+    IPutSpecimenSuccessResponseBody,
+    IPutSpecimenSuccessResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.OK,
+    },
+    {
+      body: createPutSpecimenSuccessResponseBody,
+      header: createPutSpecimenSuccessResponseHeader,
+    },
+    input
+  );
+  return new PutSpecimenSuccessResponse(responseData);
 }

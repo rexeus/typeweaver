@@ -5,29 +5,20 @@ import type {
   IDeleteTodoRequestHeader,
   IDeleteTodoRequestParam,
 } from "../..";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createRequest } from "../createRequest";
 import { createJwtToken } from "../createJwtToken";
 
-export function createDeleteTodoRequestHeaders(
-  input: Partial<IDeleteTodoRequestHeader> = {}
-): IDeleteTodoRequestHeader {
-  const defaults: IDeleteTodoRequestHeader = {
+export const createDeleteTodoRequestHeader =
+  createDataFactory<IDeleteTodoRequestHeader>(() => ({
     Accept: "application/json",
     Authorization: `Bearer ${createJwtToken()}`,
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createDeleteTodoRequestParams(
-  input: Partial<IDeleteTodoRequestParam> = {}
-): IDeleteTodoRequestParam {
-  const defaults: IDeleteTodoRequestParam = {
+export const createDeleteTodoRequestParam =
+  createDataFactory<IDeleteTodoRequestParam>(() => ({
     todoId: faker.string.ulid(),
-  };
-
-  return createData(defaults, input);
-}
+  }));
 
 type DeleteTodoRequestInput = {
   path?: string;
@@ -38,23 +29,29 @@ type DeleteTodoRequestInput = {
 export function createDeleteTodoRequest(
   input: DeleteTodoRequestInput = {}
 ): IDeleteTodoRequest {
+  // Generate param first for dynamic path building
   const param = input.param
-    ? createDeleteTodoRequestParams(input.param)
-    : createDeleteTodoRequestParams();
+    ? createDeleteTodoRequestParam(input.param)
+    : createDeleteTodoRequestParam();
 
-  const defaults: IDeleteTodoRequest = {
-    method: HttpMethod.DELETE,
-    path: `/todos/${param.todoId}`,
-    header: createDeleteTodoRequestHeaders(),
-    param,
-  };
+  // If path is not explicitly provided, build it dynamically
+  const dynamicPath = input.path ?? `/todos/${param.todoId}`;
 
-  const overrides: Partial<IDeleteTodoRequest> = {};
-  if (input.path !== undefined) overrides.path = input.path;
-  if (input.header !== undefined)
-    overrides.header = createDeleteTodoRequestHeaders(input.header);
-  if (input.param !== undefined)
-    overrides.param = createDeleteTodoRequestParams(input.param);
-
-  return createData(defaults, overrides as IDeleteTodoRequest);
+  return createRequest<
+    IDeleteTodoRequest,
+    never,
+    IDeleteTodoRequestHeader,
+    IDeleteTodoRequestParam,
+    never
+  >(
+    {
+      method: HttpMethod.DELETE,
+      path: dynamicPath,
+    },
+    {
+      header: createDeleteTodoRequestHeader,
+      param: () => param, // Use pre-generated param
+    },
+    input
+  );
 }

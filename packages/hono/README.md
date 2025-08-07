@@ -58,4 +58,4 @@ new ProjectHono({
 
 ## License
 
-ISC © Dennis Wentzien 2025
+Apache 2.0 © Dennis Wentzien 2025
