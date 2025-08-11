@@ -7,10 +7,10 @@ import type {
 import { RequestCommand } from "./RequestCommand";
 import axios, {
   AxiosError,
+  type AxiosHeaderValue,
   type AxiosInstance,
   type AxiosResponse,
 } from "axios";
-import Case from "case";
 
 /**
  * Configuration options for ApiClient initialization.
@@ -118,27 +118,7 @@ export abstract class ApiClient {
   private createResponse(response: AxiosResponse): IHttpResponse {
     const header: IHttpHeader = {};
     Object.entries(response.headers).forEach(([key, value]) => {
-      if (!value) return;
-
-      const lowerKey = key.toLowerCase();
-      const headerKey = Case.header(key);
-
-      const existing = header[key];
-      if (existing) {
-        if (Array.isArray(existing)) {
-          existing.push(value);
-          header[lowerKey] = existing;
-          header[headerKey] = existing;
-        } else {
-          header[key] = [existing, value];
-          header[lowerKey] = [existing, value];
-          header[headerKey] = [existing, value];
-        }
-      } else {
-        header[key] = value;
-        header[lowerKey] = value;
-        header[headerKey] = value;
-      }
+      this.addMultiValue(header, key, String(value));
     });
 
     return {
@@ -186,13 +166,32 @@ export abstract class ApiClient {
 
   private createUrl(path: string, query?: IHttpQuery): string {
     const url = new URL(path, this.baseUrl);
-
     this.addQuery(url, query);
-
     return url.toString();
   }
 
   private createHeader(header: any): any {
     return header;
+  }
+
+  private addMultiValue(
+    record: Record<string, string | string[]>,
+    key: string,
+    value: AxiosHeaderValue
+  ): void {
+    const existing = record[key];
+    const preparedValue = Array.isArray(value)
+      ? value.map(String)
+      : [String(value)];
+    if (existing) {
+      if (Array.isArray(existing)) {
+        existing.push(...preparedValue);
+      } else {
+        record[key] = [existing, ...preparedValue];
+      }
+    } else {
+      record[key] =
+        preparedValue.length > 1 ? preparedValue : (preparedValue[0] as string);
+    }
   }
 }

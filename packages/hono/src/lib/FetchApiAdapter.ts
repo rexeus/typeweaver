@@ -7,7 +7,6 @@ import type {
   IHttpBody,
 } from "@rexeus/typeweaver-core";
 import { HttpAdapter } from "./HttpAdapter";
-import { normalizeHeaders } from "./normalizeHeaders";
 
 /**
  * Adapter for converting between Fetch API Request/Response objects
@@ -79,7 +78,13 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
   }
 
   private extractHeaders(headers: Headers): IHttpHeader {
-    return normalizeHeaders(headers);
+    if (!headers) return undefined;
+    const result: Record<string, string | string[]> = {};
+    headers.forEach((value, key) => {
+      if (!value) return;
+      this.addMultiValue(result, key, value);
+    });
+    return Object.keys(result).length > 0 ? result : undefined;
   }
 
   private extractQueryParams(url: URL): IHttpQuery {

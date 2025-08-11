@@ -3,7 +3,7 @@ import type {
   IRequestValidator,
   SafeRequestValidationResult,
 } from "@rexeus/typeweaver-core";
-import { $ZodArray, $ZodOptional, type $ZodShape } from "zod/v4/core";
+import { Validator } from "./Validator";
 
 /**
  * Abstract base class for HTTP request validation.
@@ -18,9 +18,12 @@ import { $ZodArray, $ZodOptional, type $ZodShape } from "zod/v4/core";
  * - Return validated data (for `validate`)
  * - Return success/error result (for `safeValidate`)
  */
-export abstract class RequestValidator implements IRequestValidator {
+export abstract class RequestValidator
+  extends Validator
+  implements IRequestValidator
+{
   public constructor() {
-    //
+    super();
   }
 
   /**
@@ -41,52 +44,4 @@ export abstract class RequestValidator implements IRequestValidator {
    * @throws {RequestValidationError} If any part of the request fails validation
    */
   public abstract validate(request: IHttpRequest): IHttpRequest;
-
-  protected coerceHeaderToSchema(header: unknown, shape: $ZodShape): unknown {
-    if (typeof header !== "object" || header === null) {
-      return header;
-    }
-
-    const coercedHeader: Record<string, string | string[]> = {};
-    for (const [key, value] of Object.entries(header)) {
-      const zodType = shape[key];
-
-      if (
-        (zodType instanceof $ZodArray ||
-          (zodType instanceof $ZodOptional &&
-            zodType._zod.def.innerType instanceof $ZodArray)) &&
-        !Array.isArray(value)
-      ) {
-        coercedHeader[key] = [value];
-      } else {
-        coercedHeader[key] = value;
-      }
-    }
-
-    return coercedHeader;
-  }
-
-  protected coerceQueryToSchema(query: unknown, shape: $ZodShape): unknown {
-    if (typeof query !== "object" || query === null) {
-      return query;
-    }
-
-    const coercedQuery: Record<string, string | string[]> = {};
-    for (const [key, value] of Object.entries(query)) {
-      const zodType = shape[key];
-
-      if (
-        (zodType instanceof $ZodArray ||
-          (zodType instanceof $ZodOptional &&
-            zodType._zod.def.innerType instanceof $ZodArray)) &&
-        !Array.isArray(value)
-      ) {
-        coercedQuery[key] = [value];
-      } else {
-        coercedQuery[key] = value;
-      }
-    }
-
-    return coercedQuery;
-  }
 }
