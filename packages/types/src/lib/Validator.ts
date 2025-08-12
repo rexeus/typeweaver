@@ -1,5 +1,7 @@
 import { $ZodArray, $ZodOptional, type $ZodShape } from "zod/v4/core";
 
+type SchemaInfo = { readonly originalKey: string; readonly isArray: boolean };
+
 /**
  * Abstract base class for HTTP validation.
  *
@@ -8,8 +10,17 @@ import { $ZodArray, $ZodOptional, type $ZodShape } from "zod/v4/core";
  * - Coerce objects to match schema expectations
  */
 export abstract class Validator {
+  private static readonly schemaCacheCaseSensitive = new WeakMap<
+    $ZodShape,
+    Map<string, SchemaInfo>
+  >();
+  private static readonly schemaCacheCaseInsensitive = new WeakMap<
+    $ZodShape,
+    Map<string, SchemaInfo>
+  >();
   /**
    * Analyzes a Zod schema shape to create an efficient lookup map.
+   * Results are cached using WeakMap for optimal performance.
    *
    * @param shape - The Zod schema shape to analyze
    * @param caseSensitive - Whether to preserve key casing (true) or normalize to lowercase (false)
@@ -18,11 +29,30 @@ export abstract class Validator {
   protected analyzeSchema(
     shape: $ZodShape,
     caseSensitive: boolean
-  ): Map<string, { originalKey: string; isArray: boolean }> {
-    const schemaMap = new Map<
-      string,
-      { originalKey: string; isArray: boolean }
-    >();
+  ): Map<string, SchemaInfo> {
+    const cache = caseSensitive
+      ? Validator.schemaCacheCaseSensitive
+      : Validator.schemaCacheCaseInsensitive;
+
+    const cached = cache.get(shape);
+    if (cached) {
+      return cached;
+    }
+
+    const schemaMap = this.buildSchemaMap(shape, caseSensitive);
+    cache.set(shape, schemaMap);
+    return schemaMap;
+  }
+
+  /**
+   * Builds a schema map by analyzing the Zod shape structure.
+   * Extracts type information for each field to support proper coercion.
+   */
+  private buildSchemaMap(
+    shape: $ZodShape,
+    caseSensitive: boolean
+  ): Map<string, SchemaInfo> {
+    const schemaMap = new Map<string, SchemaInfo>();
     for (const [key, zodType] of Object.entries(shape)) {
       if (!zodType) continue;
 
@@ -136,7 +166,7 @@ export abstract class Validator {
    */
   private mapToOriginalKeys(
     coerced: Record<string, string | string[]>,
-    schemaMap: Map<string, { originalKey: string; isArray: boolean }>
+    schemaMap: Map<string, SchemaInfo>
   ): Record<string, string | string[]> {
     const withOriginalKeys: Record<string, string | string[]> = {};
     for (const [key, value] of Object.entries(coerced)) {
