@@ -16,6 +16,8 @@ import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
 export type IRegisterAccountRequestHeader = {
   "Content-Type": "application/json";
   Accept: "application/json";
+  "X-Single-Value"?: string | undefined;
+  "X-Multi-Value"?: string[] | undefined;
 };
 
 export type IRegisterAccountRequestBody = {

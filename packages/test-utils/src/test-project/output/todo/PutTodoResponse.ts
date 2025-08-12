@@ -42,6 +42,8 @@ import type {
 
 export type IPutTodoSuccessResponseHeader = {
   "Content-Type": "application/json";
+  "X-Single-Value"?: string | undefined;
+  "X-Multi-Value"?: string[] | undefined;
 };
 
 export type IPutTodoSuccessResponseBody = {

@@ -37,6 +37,8 @@ import type {
 
 export type IDeleteTodoSuccessResponseHeader = {
   "Content-Type": "application/json";
+  "X-Single-Value"?: string | undefined;
+  "X-Multi-Value"?: string[] | undefined;
 };
 
 export type IDeleteTodoSuccessResponse = {

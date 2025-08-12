@@ -2,6 +2,8 @@ import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 
 export type IForbiddenErrorResponseHeader = {
   "Content-Type": "application/json";
+  "X-Single-Value"?: string | undefined;
+  "X-Multi-Value"?: string[] | undefined;
 };
 
 export type IForbiddenErrorResponseBody = {

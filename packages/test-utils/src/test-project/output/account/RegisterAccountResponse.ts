@@ -32,6 +32,8 @@ import type {
 
 export type IRegisterAccountSuccessResponseHeader = {
   "Content-Type": "application/json";
+  "X-Single-Value"?: string | undefined;
+  "X-Multi-Value"?: string[] | undefined;
 };
 
 export type IRegisterAccountSuccessResponseBody = {

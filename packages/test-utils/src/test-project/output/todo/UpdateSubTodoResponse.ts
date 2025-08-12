@@ -52,6 +52,8 @@ import type {
 
 export type IUpdateSubTodoSuccessResponseHeader = {
   "Content-Type": "application/json";
+  "X-Single-Value"?: string | undefined;
+  "X-Multi-Value"?: string[] | undefined;
 };
 
 export type IUpdateSubTodoSuccessResponseBody = {

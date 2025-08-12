@@ -24,6 +24,8 @@ export abstract class Validator {
       { originalKey: string; isArray: boolean }
     >();
     for (const [key, zodType] of Object.entries(shape)) {
+      if (!zodType) continue;
+
       const isArray =
         zodType instanceof $ZodArray ||
         (zodType instanceof $ZodOptional &&
@@ -57,21 +59,91 @@ export abstract class Validator {
     const coerced: Record<string, string | string[]> = {};
 
     for (const [key, value] of Object.entries(data)) {
-      const lookupKey = caseSensitive ? key : key.toLowerCase();
-      const schemaInfo = schemaMap.get(lookupKey);
+      const normalizedKey = caseSensitive ? key : key.toLowerCase();
+      const schemaInfo = schemaMap.get(normalizedKey);
 
       if (schemaInfo) {
-        const { originalKey, isArray } = schemaInfo;
-        if (isArray && !Array.isArray(value)) {
-          coerced[originalKey] = [value];
-        } else {
-          coerced[originalKey] = value;
-        }
+        this.mergeCoercedValue(
+          coerced,
+          normalizedKey,
+          value,
+          schemaInfo.isArray,
+        );
       }
       // Headers/params not in schema are ignored (strict validation)
     }
 
-    return coerced;
+    // If case-sensitive, return coerced object as is
+    if (caseSensitive) {
+      return coerced;
+    }
+
+    // If case-insensitive, map back to original keys from schema
+    return this.mapToOriginalKeys(coerced, schemaMap);
+  }
+
+  /**
+   * Merges a value into the coerced object, handling collisions when multiple
+   * values exist for the same key (e.g., duplicate headers with different casing).
+   * Preserves all values as arrays when collisions occur to prevent data loss.
+   */
+  private mergeCoercedValue(
+    coerced: Record<string, string | string[]>,
+    key: string,
+    value: unknown,
+    expectsArray: boolean,
+  ): void {
+    const existing = coerced[key];
+    const newValue = this.normalizeValue(value, expectsArray);
+
+    if (existing === undefined) {
+      coerced[key] = newValue;
+      return;
+    }
+
+    // Merge existing and new values
+    const existingArray = Array.isArray(existing) ? existing : [existing];
+    const newArray = Array.isArray(newValue) ? newValue : [newValue];
+    const merged = [...existingArray, ...newArray];
+
+    // If schema expects a single value but we have multiple, preserve as array
+    // to avoid data loss (validation will catch this later)
+    coerced[key] =
+      expectsArray || merged.length > 1 ? merged : (merged[0] as string);
+  }
+
+  /**
+   * Normalizes a value to match schema expectations.
+   * Wraps single values in arrays when schema expects array type,
+   * unwraps single-element arrays when schema expects string type.
+   */
+  private normalizeValue(
+    value: unknown,
+    expectsArray: boolean,
+  ): string | string[] | undefined {
+    if (expectsArray && !Array.isArray(value)) {
+      return [value as string];
+    }
+    if (!expectsArray && Array.isArray(value) && value.length === 1) {
+      return value[0];
+    }
+    return value as string | string[];
+  }
+
+  /**
+   * Maps normalized (lowercase) keys back to their original casing as defined in the schema.
+   * Used for case-insensitive matching where the output should preserve schema-defined casing.
+   */
+  private mapToOriginalKeys(
+    coerced: Record<string, string | string[]>,
+    schemaMap: Map<string, { originalKey: string; isArray: boolean }>,
+  ): Record<string, string | string[]> {
+    const withOriginalKeys: Record<string, string | string[]> = {};
+    for (const [key, value] of Object.entries(coerced)) {
+      const originalKey = schemaMap.get(key)?.originalKey ?? key;
+      withOriginalKeys[originalKey] = value;
+    }
+    return withOriginalKeys;
   }
 
   /**

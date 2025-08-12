@@ -2,6 +2,8 @@ import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 
 export type IConflictErrorResponseHeader = {
   "Content-Type": "application/json";
+  "X-Single-Value"?: string | undefined;
+  "X-Multi-Value"?: string[] | undefined;
 };
 
 export type IConflictErrorResponseBody = {

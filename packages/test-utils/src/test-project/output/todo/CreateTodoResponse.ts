@@ -32,6 +32,8 @@ import type {
 
 export type ICreateTodoSuccessResponseHeader = {
   "Content-Type": "application/json";
+  "X-Single-Value"?: string | undefined;
+  "X-Multi-Value"?: string[] | undefined;
 };
 
 export type ICreateTodoSuccessResponseBody = {

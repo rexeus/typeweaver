@@ -23,6 +23,8 @@ export type IUpdateTodoStatusRequestHeader = {
   "Content-Type": "application/json";
   Accept: "application/json";
   Authorization: string;
+  "X-Single-Value"?: string | undefined;
+  "X-Multi-Value"?: string[] | undefined;
 };
 
 export type IUpdateTodoStatusRequestParam = {

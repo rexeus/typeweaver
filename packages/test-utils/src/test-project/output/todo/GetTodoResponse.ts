@@ -37,6 +37,8 @@ import type {
 
 export type IGetTodoSuccessResponseHeader = {
   "Content-Type": "application/json";
+  "X-Single-Value"?: string | undefined;
+  "X-Multi-Value"?: string[] | undefined;
 };
 
 export type IGetTodoSuccessResponseBody = {
