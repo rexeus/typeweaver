@@ -120,7 +120,7 @@ export abstract class Validator {
   private normalizeValue(
     value: unknown,
     expectsArray: boolean
-  ): string | string[] | undefined {
+  ): string | string[] {
     if (expectsArray && !Array.isArray(value)) {
       return [value as string];
     }
