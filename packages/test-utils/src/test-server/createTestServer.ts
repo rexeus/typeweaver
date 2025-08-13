@@ -7,7 +7,7 @@ import { SpecimenHandlers } from "./handlers/SpecimenHandlers";
 import { serve, type ServerType } from "@hono/node-server";
 import { HttpResponse } from "@rexeus/typeweaver-core";
 import getPort, { portNumbers } from "get-port";
-import type { TypeweaverHonoOptions } from "src/test-project/output/lib/hono";
+import type { TypeweaverHonoOptions } from "../test-project/output/lib/hono";
 
 export type TestServerOptions = {
   readonly throwTodoError?: Error | HttpResponse;

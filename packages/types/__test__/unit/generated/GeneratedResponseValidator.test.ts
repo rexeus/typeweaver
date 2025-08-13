@@ -179,6 +179,73 @@ describe("Generated ResponseValidator", () => {
       expect(result.data.header).not.toHaveProperty("X-Custom-Header");
       expect(result.data.header).not.toHaveProperty("X-Another-Header");
     });
+
+    test("should coerce response header keys to match schema case-insensitively", () => {
+      // Arrange
+      const validator = new CreateTodoResponseValidator();
+      const responseWithMixedCaseHeaders = createCreateTodoSuccessResponse({
+        header: {
+          // @ts-expect-error Wrong casing for testing
+          "CONTENT-TYPE": "application/json",
+          "x-multi-value": ["my-value"],
+        },
+      });
+      // Remove the headers in correct casing to test coercion
+      delete (responseWithMixedCaseHeaders.header as any)["Content-Type"];
+      delete (responseWithMixedCaseHeaders.header as any)["X-Multi-Value"];
+
+      // Act
+      const result = validator.safeValidate(responseWithMixedCaseHeaders);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data).toBeInstanceOf(CreateTodoSuccessResponse);
+      assert(result.data instanceof CreateTodoSuccessResponse);
+      expect(result.data.header["Content-Type"]).toBe("application/json");
+      expect(result.data.header["X-Multi-Value"]).toEqual(["my-value"]);
+      expect(result.data.header).not.toHaveProperty("CONTENT-TYPE");
+      expect(result.data.header).not.toHaveProperty("x-multi-value");
+    });
+
+    test("should coerce single response header value to array when schema expects array", () => {
+      const validator = new CreateTodoResponseValidator();
+      const validResponse = createCreateTodoSuccessResponse({
+        header: {
+          "X-Multi-Value": "my-value" as any, // Schema expects array, provide single value
+        },
+      });
+
+      // Act
+      const result = validator.safeValidate(validResponse);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data).toBeInstanceOf(CreateTodoSuccessResponse);
+      assert(result.data instanceof CreateTodoSuccessResponse);
+      expect(result.data.header["X-Multi-Value"]).toEqual(["my-value"]);
+    });
+
+    test("should coerce array response header value to single when schema expects single", () => {
+      // Arrange
+      const validator = new CreateTodoResponseValidator();
+      const responseWithArrayHeaders = createCreateTodoSuccessResponse({
+        header: {
+          "Content-Type": ["application/json"] as any, // Schema expects single string, provide array
+        },
+      });
+
+      // Act
+      const result = validator.safeValidate(responseWithArrayHeaders);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data).toBeInstanceOf(CreateTodoSuccessResponse);
+      assert(result.data instanceof CreateTodoSuccessResponse);
+      expect(result.data.header["Content-Type"]).toBe("application/json");
+    });
   });
 
   describe("Operation Response Types", () => {
