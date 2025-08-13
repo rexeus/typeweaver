@@ -18,6 +18,8 @@ export * from "./ListTodosRequestUtils";
 export * from "./ListTodosResponseUtils";
 export * from "./QuerySubTodoRequestUtils";
 export * from "./QuerySubTodoResponseUtils";
+export * from "./QueryTodoRequestUtils";
+export * from "./QueryTodoResponseUtils";
 export * from "./SubTodoNotChangeableErrorResponseUtils";
 export * from "./SubTodoNotFoundErrorResponseUtils";
 export * from "./SubTodoStatusTransitionInvalidErrorResponseUtils";

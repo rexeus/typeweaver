@@ -1,32 +1,24 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
 import { createJwtToken } from "../createJwtToken";
 import type {
   IAccessTokenSuccessResponseBody,
   IAccessTokenSuccessResponseHeader,
   IAccessTokenSuccessResponse,
 } from "../..";
+import { AccessTokenSuccessResponse } from "../..";
 
-export function createAccessTokenSuccessResponseHeaders(
-  input: Partial<IAccessTokenSuccessResponseHeader> = {}
-): IAccessTokenSuccessResponseHeader {
-  const defaults: IAccessTokenSuccessResponseHeader = {
+export const createAccessTokenSuccessResponseHeader =
+  createDataFactory<IAccessTokenSuccessResponseHeader>(() => ({
     "Content-Type": "application/json",
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createAccessTokenSuccessResponseBody(
-  input: Partial<IAccessTokenSuccessResponseBody> = {}
-): IAccessTokenSuccessResponseBody {
-  const defaults: IAccessTokenSuccessResponseBody = {
+export const createAccessTokenSuccessResponseBody =
+  createDataFactory<IAccessTokenSuccessResponseBody>(() => ({
     accessToken: createJwtToken(),
     refreshToken: createJwtToken(),
-  };
-
-  return createData(defaults, input);
-}
+  }));
 
 type AccessTokenSuccessResponseInput = {
   statusCode?: number;
@@ -36,19 +28,20 @@ type AccessTokenSuccessResponseInput = {
 
 export function createAccessTokenSuccessResponse(
   input: AccessTokenSuccessResponseInput = {}
-): IAccessTokenSuccessResponse {
-  const defaults: IAccessTokenSuccessResponse = {
-    statusCode: HttpStatusCode.OK,
-    header: createAccessTokenSuccessResponseHeaders(),
-    body: createAccessTokenSuccessResponseBody(),
-  };
-
-  const overrides: Partial<IAccessTokenSuccessResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createAccessTokenSuccessResponseHeaders(input.header);
-  if (input.body !== undefined)
-    overrides.body = createAccessTokenSuccessResponseBody(input.body);
-
-  return createData(defaults, overrides);
+): AccessTokenSuccessResponse {
+  const responseData = createResponse<
+    IAccessTokenSuccessResponse,
+    IAccessTokenSuccessResponseBody,
+    IAccessTokenSuccessResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.OK,
+    },
+    {
+      body: createAccessTokenSuccessResponseBody,
+      header: createAccessTokenSuccessResponseHeader,
+    },
+    input
+  );
+  return new AccessTokenSuccessResponse(responseData);
 }

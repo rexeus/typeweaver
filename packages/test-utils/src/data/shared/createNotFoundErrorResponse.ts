@@ -1,35 +1,42 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createData } from "../createData";
-import { createErrorResponseHeaders } from "../createErrorResponseHeaders";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
+import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import type {
   INotFoundErrorResponse,
   INotFoundErrorResponseHeader,
   INotFoundErrorResponseBody,
 } from "../..";
+import { NotFoundErrorResponse } from "../..";
+
 type NotFoundErrorResponseInput = {
   statusCode?: number;
   header?: Partial<INotFoundErrorResponseHeader>;
   body?: Partial<INotFoundErrorResponseBody>;
 };
 
+const createNotFoundErrorResponseBody =
+  createDataFactory<INotFoundErrorResponseBody>(() => ({
+    message: "Resource not found",
+    code: "NOT_FOUND_ERROR",
+  }));
+
 export function createNotFoundErrorResponse(
   input: NotFoundErrorResponseInput = {}
-): INotFoundErrorResponse {
-  const defaults: INotFoundErrorResponse = {
-    statusCode: HttpStatusCode.NOT_FOUND,
-    header: createErrorResponseHeaders<INotFoundErrorResponseHeader>(),
-    body: {
-      message: "Resource not found",
-      code: "NOT_FOUND_ERROR",
+): NotFoundErrorResponse {
+  const responseData = createResponse<
+    INotFoundErrorResponse,
+    INotFoundErrorResponseBody,
+    INotFoundErrorResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.NOT_FOUND,
     },
-  };
-
-  const overrides: Partial<INotFoundErrorResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createErrorResponseHeaders(input.header);
-  if (input.body !== undefined)
-    overrides.body = createData(defaults.body, input.body);
-
-  return createData(defaults, overrides);
+    {
+      body: createNotFoundErrorResponseBody,
+      header: createErrorResponseHeader<INotFoundErrorResponseHeader>(),
+    },
+    input
+  );
+  return new NotFoundErrorResponse(responseData);
 }

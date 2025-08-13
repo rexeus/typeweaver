@@ -54,4 +54,4 @@ const typeString = TsTypePrinter.print(typeNode);
 
 ## License
 
-ISC
+Apache 2.0 © Dennis Wentzien 2025

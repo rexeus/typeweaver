@@ -1,35 +1,42 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createData } from "../createData";
-import { createErrorResponseHeaders } from "../createErrorResponseHeaders";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
+import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import type {
   IConflictErrorResponse,
   IConflictErrorResponseHeader,
   IConflictErrorResponseBody,
 } from "../..";
+import { ConflictErrorResponse } from "../..";
+
 type ConflictErrorResponseInput = {
   statusCode?: number;
   header?: Partial<IConflictErrorResponseHeader>;
   body?: Partial<IConflictErrorResponseBody>;
 };
 
+const createConflictErrorResponseBody =
+  createDataFactory<IConflictErrorResponseBody>(() => ({
+    message: "Conflicted request",
+    code: "CONFLICT_ERROR",
+  }));
+
 export function createConflictErrorResponse(
   input: ConflictErrorResponseInput = {}
-): IConflictErrorResponse {
-  const defaults: IConflictErrorResponse = {
-    statusCode: HttpStatusCode.CONFLICT,
-    header: createErrorResponseHeaders<IConflictErrorResponseHeader>(),
-    body: {
-      message: "Conflicted request",
-      code: "CONFLICT_ERROR",
+): ConflictErrorResponse {
+  const responseData = createResponse<
+    IConflictErrorResponse,
+    IConflictErrorResponseBody,
+    IConflictErrorResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.CONFLICT,
     },
-  };
-
-  const overrides: Partial<IConflictErrorResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createErrorResponseHeaders(input.header);
-  if (input.body !== undefined)
-    overrides.body = createData(defaults.body, input.body);
-
-  return createData(defaults, overrides);
+    {
+      body: createConflictErrorResponseBody,
+      header: createErrorResponseHeader<IConflictErrorResponseHeader>(),
+    },
+    input
+  );
+  return new ConflictErrorResponse(responseData);
 }

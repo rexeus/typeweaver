@@ -25,3 +25,6 @@ tmp/
 coverage/
 .nyc_output/
 .vitestcache/
+
+# Test gen outputs
+**/test/outputs/

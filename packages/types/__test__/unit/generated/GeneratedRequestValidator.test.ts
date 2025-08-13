@@ -125,6 +125,78 @@ describe("Generated RequestValidator", () => {
       expect(result.data.header).not.toHaveProperty("Extra-Header");
       expect(result.data.header).not.toHaveProperty("Another-Extra");
     });
+
+    test("should coerce header keys to match schema case-insensitively", () => {
+      // Arrange
+      const validator = new CreateTodoRequestValidator();
+      const requestWithMixedCaseHeaders = createCreateTodoRequest({
+        header: {
+          // @ts-expect-error Wrong case for testing
+          accept: "application/json" as any, // Should match schema's "Accept"
+          authorization: "Bearer token123" as any, // Should match schema's "Authorization"
+          "CONTENT-TYPE": "application/json" as any, // Should match schema's "Content-Type"
+        },
+      });
+      // Remove the headers in correct casing to test coercion
+      delete (requestWithMixedCaseHeaders.header as any)["Accept"];
+      delete (requestWithMixedCaseHeaders.header as any)["Authorization"];
+      delete (requestWithMixedCaseHeaders.header as any)["Content-Type"];
+
+      // Act
+      const result = validator.safeValidate(requestWithMixedCaseHeaders);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.header.Accept).toBe("application/json");
+      expect(result.data.header.Authorization).toBe("Bearer token123");
+      expect(result.data.header["Content-Type"]).toBe("application/json");
+      expect(result.data.header).not.toHaveProperty("accept");
+      expect(result.data.header).not.toHaveProperty("authorization");
+      expect(result.data.header).not.toHaveProperty("CONTENT-TYPE");
+    });
+
+    test("should coerce single header value to array when schema expects array", () => {
+      // Arrange
+      const validator = new CreateTodoRequestValidator();
+      const requestWithSingleEncoding = createCreateTodoRequest({
+        header: {
+          Accept: "application/json",
+          "X-Multi-Value": "my-value" as any, // Schema expects array, provide single value
+        },
+      });
+
+      // Act
+      const result = validator.safeValidate(requestWithSingleEncoding);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.header.Accept).toBe("application/json");
+      expect(result.data.header["X-Multi-Value"]).toEqual(["my-value"]);
+    });
+
+    test("should coerce array header value to single when schema expects single", () => {
+      // Arrange
+      const validator = new CreateTodoRequestValidator();
+      const requestWithArrayHeaders = createCreateTodoRequest({
+        header: {
+          Accept: ["application/json"] as any, // Schema expects single string, provide array
+          Authorization: ["Bearer token123"] as any, // Schema expects single string, provide array
+          "Content-Type": "application/json", // This should remain single
+        },
+      });
+
+      // Act
+      const result = validator.safeValidate(requestWithArrayHeaders);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.header.Accept).toBe("application/json");
+      expect(result.data.header.Authorization).toBe("Bearer token123");
+      expect(result.data.header["Content-Type"]).toBe("application/json");
+    });
   });
 
   describe("Path Parameter Validation", () => {
@@ -236,6 +308,68 @@ describe("Generated RequestValidator", () => {
       assert(result.isValid);
       expect(result.data.query).not.toHaveProperty("extraParam");
       expect(result.data.query).not.toHaveProperty("anotherParam");
+    });
+
+    test("should coerce single query value to array when schema expects array", () => {
+      // Arrange
+      const validator = new ListTodosRequestValidator();
+      const requestWithSingleValues = createListTodosRequest({
+        query: {
+          limit: "10",
+          tags: "personal" as any, // Schema expects array, provide single value
+        },
+      });
+
+      // Act
+      const result = validator.safeValidate(requestWithSingleValues);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.query?.tags).toEqual(["personal"]);
+      expect(result.data.query?.limit).toBe("10");
+    });
+
+    test("should coerce array query value to single when schema expects single", () => {
+      // Arrange
+      const validator = new ListTodosRequestValidator();
+      const requestWithArrayValues = createListTodosRequest({
+        query: {
+          tags: ["work", "urgent"] as any,
+          limit: ["10"] as any, // Schema expects single string, provide array
+        },
+      });
+
+      // Act
+      const result = validator.safeValidate(requestWithArrayValues);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.query?.limit).toBe("10");
+      expect(result.data.query?.tags).toEqual(["work", "urgent"]);
+    });
+
+    test("should preserve exact case for query parameter keys", () => {
+      // Arrange
+      const validator = new ListTodosRequestValidator();
+      const requestWithMixedCase = createListTodosRequest({
+        query: {
+          // @ts-expect-error Wrong case for testing
+          LIMIT: "20" as any, // Wrong case - should be stripped
+          sortBy: "priority", // Correct case - should be preserved
+        },
+      });
+
+      // Act
+      const result = validator.safeValidate(requestWithMixedCase);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.query).not.toHaveProperty("LIMIT");
+      expect(result.data.query?.sortBy).toEqual("priority");
+      expect(result.data.query.limit).toEqual(requestWithMixedCase.query.limit);
     });
   });
 

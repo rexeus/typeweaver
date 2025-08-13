@@ -1,16 +1,11 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createData } from "../createData";
-import { createCreateTodoSuccessResponseHeaders } from "./CreateTodoResponseUtils";
+import { createResponse } from "../createResponse";
+import { createCreateTodoSuccessResponseHeader } from "./CreateTodoResponseUtils";
 import type {
   IDeleteTodoSuccessResponse,
   IDeleteTodoSuccessResponseHeader,
 } from "../..";
-
-export function createDeleteTodoSuccessResponseHeaders(
-  input: Partial<IDeleteTodoSuccessResponseHeader> = {}
-): IDeleteTodoSuccessResponseHeader {
-  return createCreateTodoSuccessResponseHeaders(input);
-}
+import { DeleteTodoSuccessResponse } from "../..";
 
 type DeleteTodoSuccessResponseInput = {
   statusCode?: number;
@@ -19,16 +14,19 @@ type DeleteTodoSuccessResponseInput = {
 
 export function createDeleteTodoSuccessResponse(
   input: DeleteTodoSuccessResponseInput = {}
-): IDeleteTodoSuccessResponse {
-  const defaults: IDeleteTodoSuccessResponse = {
-    statusCode: HttpStatusCode.NO_CONTENT,
-    header: createDeleteTodoSuccessResponseHeaders(),
-  };
-
-  const overrides: Partial<IDeleteTodoSuccessResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createDeleteTodoSuccessResponseHeaders(input.header);
-
-  return createData(defaults, overrides);
+): DeleteTodoSuccessResponse {
+  const responseData = createResponse<
+    IDeleteTodoSuccessResponse,
+    never,
+    IDeleteTodoSuccessResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.NO_CONTENT,
+    },
+    {
+      header: createCreateTodoSuccessResponseHeader,
+    },
+    input
+  );
+  return new DeleteTodoSuccessResponse(responseData);
 }

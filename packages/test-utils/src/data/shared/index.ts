@@ -4,4 +4,6 @@ export * from "./createInternalServerErrorResponse";
 export * from "./createNotFoundErrorResponse";
 export * from "./createTooManyRequestsErrorResponse";
 export * from "./createUnauthorizedErrorResponse";
+export * from "./createUnprocessableEntityErrorResponse";
+export * from "./createUnsupportedMediaTypeErrorResponse";
 export * from "./createValidationErrorResponse";

@@ -5,68 +5,67 @@ import type {
   IQuerySubTodoSuccessResponseHeader,
   IQuerySubTodoSuccessResponse,
 } from "../..";
-import { createData } from "../createData";
+import { QuerySubTodoSuccessResponse } from "../..";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
 
-export function createQuerySubTodoSuccessResponseHeaders(
-  input: Partial<IQuerySubTodoSuccessResponseHeader> = {}
-): IQuerySubTodoSuccessResponseHeader {
-  const defaults: IQuerySubTodoSuccessResponseHeader = {
+export const createQuerySubTodoSuccessResponseHeader =
+  createDataFactory<IQuerySubTodoSuccessResponseHeader>(() => ({
     "Content-Type": "application/json",
-  };
+  }));
 
-  return createData(defaults, input);
-}
+export const createQuerySubTodoSuccessResponseBody =
+  createDataFactory<IQuerySubTodoSuccessResponseBody>(() => {
+    const resultsLength = faker.number.int({ min: 0, max: 5 });
+    const results = Array.from({ length: resultsLength }, () => {
+      const createdAt = faker.date.past().toISOString();
+      const modifiedAt = faker.date.recent().toISOString();
 
-export function createQuerySubTodoSuccessResponseBody(
-  input: Partial<IQuerySubTodoSuccessResponseBody> = {}
-): IQuerySubTodoSuccessResponseBody {
-  const resultsLength = faker.number.int({ min: 0, max: 5 });
-  const results = Array.from({ length: resultsLength }, () => {
-    const createdAt = faker.date.past().toISOString();
-    const modifiedAt = faker.date.recent().toISOString();
-
-    return {
-      id: faker.string.ulid(),
-      accountId: faker.string.ulid(),
-      parentId: faker.datatype.boolean() ? faker.string.ulid() : undefined,
-      title: faker.lorem.sentence(),
-      description: faker.datatype.boolean()
-        ? faker.lorem.paragraph()
-        : undefined,
-      status: faker.helpers.arrayElement([
-        "TODO",
-        "IN_PROGRESS",
-        "DONE",
-        "ARCHIVED",
-      ] as const) as "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED",
-      dueDate: faker.datatype.boolean()
-        ? faker.date.future().toISOString()
-        : undefined,
-      tags: faker.datatype.boolean()
-        ? [faker.lorem.word(), faker.lorem.word()]
-        : undefined,
-      priority: faker.datatype.boolean()
-        ? (faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const) as
+      return {
+        id: faker.string.ulid(),
+        accountId: faker.string.ulid(),
+        parentId: faker.helpers.arrayElement([faker.string.ulid(), undefined]),
+        title: faker.lorem.sentence(),
+        description: faker.helpers.arrayElement([
+          faker.lorem.paragraph(),
+          undefined,
+        ]),
+        status: faker.helpers.arrayElement([
+          "TODO",
+          "IN_PROGRESS",
+          "DONE",
+          "ARCHIVED",
+        ] as const) as "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED",
+        dueDate: faker.helpers.arrayElement([
+          faker.date.future().toISOString(),
+          undefined,
+        ]),
+        tags: faker.helpers.arrayElement([
+          [faker.lorem.word(), faker.lorem.word()] as string[],
+          undefined,
+        ]),
+        priority: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(["LOW", "MEDIUM", "HIGH"] as const) as
             | "LOW"
             | "MEDIUM"
-            | "HIGH")
-        : undefined,
-      createdAt,
-      modifiedAt,
-      createdBy: faker.internet.username(),
-      modifiedBy: faker.internet.username(),
+            | "HIGH",
+          undefined,
+        ]),
+        createdAt,
+        modifiedAt,
+        createdBy: faker.internet.username(),
+        modifiedBy: faker.internet.username(),
+      };
+    });
+
+    return {
+      results,
+      nextToken: faker.helpers.arrayElement([
+        faker.string.alphanumeric(32),
+        undefined,
+      ]),
     };
   });
-
-  const defaults: IQuerySubTodoSuccessResponseBody = {
-    results,
-    nextToken: faker.datatype.boolean()
-      ? faker.string.alphanumeric(32)
-      : undefined,
-  };
-
-  return createData(defaults, input);
-}
 
 type QuerySubTodoSuccessResponseInput = {
   statusCode?: number;
@@ -76,19 +75,20 @@ type QuerySubTodoSuccessResponseInput = {
 
 export function createQuerySubTodoSuccessResponse(
   input: QuerySubTodoSuccessResponseInput = {}
-): IQuerySubTodoSuccessResponse {
-  const defaults: IQuerySubTodoSuccessResponse = {
-    statusCode: HttpStatusCode.OK,
-    header: createQuerySubTodoSuccessResponseHeaders(),
-    body: createQuerySubTodoSuccessResponseBody(),
-  };
-
-  const overrides: Partial<IQuerySubTodoSuccessResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createQuerySubTodoSuccessResponseHeaders(input.header);
-  if (input.body !== undefined)
-    overrides.body = createQuerySubTodoSuccessResponseBody(input.body);
-
-  return createData(defaults, overrides);
+): QuerySubTodoSuccessResponse {
+  const responseData = createResponse<
+    IQuerySubTodoSuccessResponse,
+    IQuerySubTodoSuccessResponseBody,
+    IQuerySubTodoSuccessResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.OK,
+    },
+    {
+      body: createQuerySubTodoSuccessResponseBody,
+      header: createQuerySubTodoSuccessResponseHeader,
+    },
+    input
+  );
+  return new QuerySubTodoSuccessResponse(responseData);
 }

@@ -1,32 +1,24 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createData } from "../createData";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
 import { createJwtToken } from "../createJwtToken";
 import type {
   IRefreshTokenSuccessResponseBody,
   IRefreshTokenSuccessResponseHeader,
   IRefreshTokenSuccessResponse,
 } from "../..";
+import { RefreshTokenSuccessResponse } from "../..";
 
-export function createRefreshTokenSuccessResponseHeaders(
-  input: Partial<IRefreshTokenSuccessResponseHeader> = {}
-): IRefreshTokenSuccessResponseHeader {
-  const defaults: IRefreshTokenSuccessResponseHeader = {
+export const createRefreshTokenSuccessResponseHeader =
+  createDataFactory<IRefreshTokenSuccessResponseHeader>(() => ({
     "Content-Type": "application/json",
-  };
+  }));
 
-  return createData(defaults, input);
-}
-
-export function createRefreshTokenSuccessResponseBody(
-  input: Partial<IRefreshTokenSuccessResponseBody> = {}
-): IRefreshTokenSuccessResponseBody {
-  const defaults: IRefreshTokenSuccessResponseBody = {
+export const createRefreshTokenSuccessResponseBody =
+  createDataFactory<IRefreshTokenSuccessResponseBody>(() => ({
     accessToken: createJwtToken(),
     refreshToken: createJwtToken(),
-  };
-
-  return createData(defaults, input);
-}
+  }));
 
 type RefreshTokenSuccessResponseInput = {
   statusCode?: number;
@@ -36,19 +28,20 @@ type RefreshTokenSuccessResponseInput = {
 
 export function createRefreshTokenSuccessResponse(
   input: RefreshTokenSuccessResponseInput = {}
-): IRefreshTokenSuccessResponse {
-  const defaults: IRefreshTokenSuccessResponse = {
-    statusCode: HttpStatusCode.OK,
-    header: createRefreshTokenSuccessResponseHeaders(),
-    body: createRefreshTokenSuccessResponseBody(),
-  };
-
-  const overrides: Partial<IRefreshTokenSuccessResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createRefreshTokenSuccessResponseHeaders(input.header);
-  if (input.body !== undefined)
-    overrides.body = createRefreshTokenSuccessResponseBody(input.body);
-
-  return createData(defaults, overrides);
+): RefreshTokenSuccessResponse {
+  const responseData = createResponse<
+    IRefreshTokenSuccessResponse,
+    IRefreshTokenSuccessResponseBody,
+    IRefreshTokenSuccessResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.OK,
+    },
+    {
+      body: createRefreshTokenSuccessResponseBody,
+      header: createRefreshTokenSuccessResponseHeader,
+    },
+    input
+  );
+  return new RefreshTokenSuccessResponse(responseData);
 }

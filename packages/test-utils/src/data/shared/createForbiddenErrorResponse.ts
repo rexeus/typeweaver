@@ -1,6 +1,7 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createData } from "../createData";
-import { createErrorResponseHeaders } from "../createErrorResponseHeaders";
+import { createDataFactory } from "../createDataFactory";
+import { createResponse } from "../createResponse";
+import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import type {
   IForbiddenErrorResponse,
   IForbiddenErrorResponseHeader,
@@ -14,25 +15,28 @@ type ForbiddenErrorResponseInput = {
   body?: Partial<IForbiddenErrorResponseBody>;
 };
 
+const createForbiddenErrorResponseBody =
+  createDataFactory<IForbiddenErrorResponseBody>(() => ({
+    message: "Forbidden request",
+    code: "FORBIDDEN_ERROR",
+  }));
+
 export function createForbiddenErrorResponse(
   input: ForbiddenErrorResponseInput = {}
 ): ForbiddenErrorResponse {
-  const defaults: IForbiddenErrorResponse = {
-    statusCode: HttpStatusCode.FORBIDDEN,
-    header: createErrorResponseHeaders<IForbiddenErrorResponseHeader>(),
-    body: {
-      message: "Forbidden request",
-      code: "FORBIDDEN_ERROR",
+  const responseData = createResponse<
+    IForbiddenErrorResponse,
+    IForbiddenErrorResponseBody,
+    IForbiddenErrorResponseHeader
+  >(
+    {
+      statusCode: HttpStatusCode.FORBIDDEN,
     },
-  };
-
-  const overrides: Partial<IForbiddenErrorResponse> = {};
-  if (input.statusCode !== undefined) overrides.statusCode = input.statusCode;
-  if (input.header !== undefined)
-    overrides.header = createErrorResponseHeaders(input.header);
-  if (input.body !== undefined)
-    overrides.body = createData(defaults.body, input.body);
-
-  const responseData = createData(defaults, overrides);
+    {
+      body: createForbiddenErrorResponseBody,
+      header: createErrorResponseHeader<IForbiddenErrorResponseHeader>(),
+    },
+    input
+  );
   return new ForbiddenErrorResponse(responseData);
 }
