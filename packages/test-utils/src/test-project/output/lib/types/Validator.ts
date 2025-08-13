@@ -93,14 +93,14 @@ export abstract class Validator {
     }
 
     const schemaMap = this.analyzeSchema(shape, caseSensitive);
-    const coerced: Record<string, string | string[]> = {};
+    const coerced: Record<string, unknown | unknown[]> = {};
 
     for (const [key, value] of Object.entries(data)) {
       const normalizedKey = caseSensitive ? key : key.toLowerCase();
       const schemaInfo = schemaMap.get(normalizedKey);
 
       if (schemaInfo) {
-        this.mergeCoercedValue(
+        this.addValueToCoerced(
           coerced,
           normalizedKey,
           value,
@@ -120,18 +120,18 @@ export abstract class Validator {
   }
 
   /**
-   * Merges a value into the coerced object, handling collisions when multiple
+   * Adds a value to the coerced object, handling collisions when multiple
    * values exist for the same key (e.g., duplicate headers with different casing).
    * Preserves all values as arrays when collisions occur to prevent data loss.
    */
-  private mergeCoercedValue(
-    coerced: Record<string, string | string[]>,
+  private addValueToCoerced(
+    coerced: Record<string, unknown | unknown[]>,
     key: string,
     value: unknown,
     expectsArray: boolean,
   ): void {
     const existing = coerced[key];
-    const newValue = this.normalizeValue(value, expectsArray);
+    const newValue = this.coerceValueStructure(value, expectsArray);
 
     if (existing === undefined) {
       coerced[key] = newValue;
@@ -145,26 +145,25 @@ export abstract class Validator {
 
     // If schema expects a single value but we have multiple, preserve as array
     // to avoid data loss (validation will catch this later)
-    coerced[key] =
-      expectsArray || merged.length > 1 ? merged : (merged[0] as string);
+    coerced[key] = expectsArray || merged.length > 1 ? merged : merged[0];
   }
 
   /**
-   * Normalizes a value to match schema expectations.
+   * Coerces a value's structure to match schema expectations.
    * Wraps single values in arrays when schema expects array type,
-   * unwraps single-element arrays when schema expects string type.
+   * unwraps single-element arrays when schema expects single value.
    */
-  private normalizeValue(
+  private coerceValueStructure(
     value: unknown,
     expectsArray: boolean,
-  ): string | string[] {
+  ): unknown | unknown[] {
     if (expectsArray && !Array.isArray(value)) {
-      return [value as string];
+      return [value];
     }
     if (!expectsArray && Array.isArray(value) && value.length === 1) {
       return value[0];
     }
-    return value as string | string[];
+    return value;
   }
 
   /**
@@ -172,10 +171,10 @@ export abstract class Validator {
    * Used for case-insensitive matching where the output should preserve schema-defined casing.
    */
   private mapToOriginalKeys(
-    coerced: Record<string, string | string[]>,
+    coerced: Record<string, unknown | unknown[]>,
     schemaMap: Map<string, SchemaInfo>,
-  ): Record<string, string | string[]> {
-    const withOriginalKeys: Record<string, string | string[]> = {};
+  ): Record<string, unknown | unknown[]> {
+    const withOriginalKeys: Record<string, unknown | unknown[]> = {};
     for (const [key, value] of Object.entries(coerced)) {
       const originalKey = schemaMap.get(key)?.originalKey ?? key;
       withOriginalKeys[originalKey] = value;
