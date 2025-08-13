@@ -9,7 +9,11 @@ import type {
   IHttpResponse,
   IResponseValidator,
   SafeResponseValidationResult,
+  HttpHeaderSchema,
+  HttpBodySchema,
+  ResponseValidationError,
 } from "@rexeus/typeweaver-core";
+import type { ZodSafeParseResult } from "zod/v4";
 import { Validator } from "./Validator";
 
 /**
@@ -47,4 +51,70 @@ export abstract class ResponseValidator
    * @throws {ResponseValidationError} If response structure fails validation
    */
   public abstract validate(response: IHttpResponse): IHttpResponse;
+
+  /**
+   * Generic response validation method that validates header and body schemas.
+   * This method reduces code duplication across individual response validators.
+   *
+   * @param responseName - Name of the response type for error reporting
+   * @param headerSchema - Zod schema for header validation (optional)
+   * @param bodySchema - Zod schema for body validation (optional)
+   * @returns Function that validates response and returns result
+   */
+  protected validateResponseType<Response extends IHttpResponse>(
+    responseName: string,
+    headerSchema: HttpHeaderSchema | undefined,
+    bodySchema: HttpBodySchema | undefined,
+  ): (
+    response: IHttpResponse,
+    error: ResponseValidationError,
+  ) => SafeResponseValidationResult<Response> {
+    return (response, error) => {
+      let isValid = true;
+      const validatedResponse: IHttpResponse = {
+        statusCode: response.statusCode,
+        header: undefined,
+        body: undefined,
+      };
+
+      if (bodySchema) {
+        const validateBodyResult = bodySchema.safeParse(
+          response.body,
+        ) as unknown as ZodSafeParseResult<Response["body"]>;
+
+        if (!validateBodyResult.success) {
+          error.addBodyIssues(responseName, validateBodyResult.error.issues);
+          isValid = false;
+        } else {
+          validatedResponse.body = validateBodyResult.data;
+        }
+      }
+
+      if (headerSchema) {
+        const coercedHeader = this.coerceHeaderToSchema(
+          response.header,
+          headerSchema.shape,
+        );
+        const validateHeaderResult = headerSchema.safeParse(
+          coercedHeader,
+        ) as unknown as ZodSafeParseResult<Response["header"]>;
+
+        if (!validateHeaderResult.success) {
+          error.addHeaderIssues(
+            responseName,
+            validateHeaderResult.error.issues,
+          );
+          isValid = false;
+        } else {
+          validatedResponse.header = validateHeaderResult.data;
+        }
+      }
+
+      if (!isValid) {
+        return { isValid: false, error };
+      }
+
+      return { isValid: true, data: validatedResponse as Response };
+    };
+  }
 }

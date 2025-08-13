@@ -7,7 +7,12 @@
  */
 
 import definition from "../../definition/todo/mutations/PutTodoDefinition";
-import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import {
+  HttpMethod,
+  type IHttpResponse,
+  ResponseValidationError,
+  UnknownResponse,
+} from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
 import { PutTodoResponseValidator } from "./PutTodoResponseValidator";
 import type {
@@ -47,12 +52,24 @@ export class PutTodoRequestCommand
   }
 
   public processResponse(response: IHttpResponse): SuccessfulPutTodoResponse {
-    const result = this.responseValidator.validate(response);
+    try {
+      const result = this.responseValidator.validate(response);
 
-    if (result instanceof PutTodoSuccessResponse) {
-      return result;
+      if (result instanceof PutTodoSuccessResponse) {
+        return result;
+      }
+
+      throw result;
+    } catch (error) {
+      if (error instanceof ResponseValidationError) {
+        throw new UnknownResponse(
+          response.statusCode,
+          response.header,
+          response.body,
+          error,
+        );
+      }
+      throw error;
     }
-
-    throw result;
   }
 }

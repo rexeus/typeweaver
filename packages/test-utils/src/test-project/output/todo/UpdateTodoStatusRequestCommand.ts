@@ -7,7 +7,12 @@
  */
 
 import definition from "../../definition/todo/mutations/UpdateTodoStatusDefinition";
-import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import {
+  HttpMethod,
+  type IHttpResponse,
+  ResponseValidationError,
+  UnknownResponse,
+} from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
 import { UpdateTodoStatusResponseValidator } from "./UpdateTodoStatusResponseValidator";
 import type {
@@ -49,12 +54,24 @@ export class UpdateTodoStatusRequestCommand
   public processResponse(
     response: IHttpResponse,
   ): SuccessfulUpdateTodoStatusResponse {
-    const result = this.responseValidator.validate(response);
+    try {
+      const result = this.responseValidator.validate(response);
 
-    if (result instanceof UpdateTodoStatusSuccessResponse) {
-      return result;
+      if (result instanceof UpdateTodoStatusSuccessResponse) {
+        return result;
+      }
+
+      throw result;
+    } catch (error) {
+      if (error instanceof ResponseValidationError) {
+        throw new UnknownResponse(
+          response.statusCode,
+          response.header,
+          response.body,
+          error,
+        );
+      }
+      throw error;
     }
-
-    throw result;
   }
 }

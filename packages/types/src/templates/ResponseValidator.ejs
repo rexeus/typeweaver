@@ -7,6 +7,7 @@
  */
 
 import definition from "<%= sourcePath %>";
+import type { ZodSafeParseResult } from "zod/v4";
 import { 
     type IHttpResponse,
     type SafeResponseValidationResult,
@@ -14,8 +15,6 @@ import {
 } from "@rexeus/typeweaver-core";
 import {
     ResponseValidator,
-    InvalidResponseStatusCodeError,
-    assert,
 } from "../lib/types";
 import {
 type <%= pascalCaseOperationId %>Response,
@@ -33,42 +32,16 @@ type <%= pascalCaseOperationId %>Response,
 
 export class <%= pascalCaseOperationId %>ResponseValidator extends ResponseValidator {
     public safeValidate(response: IHttpResponse): SafeResponseValidationResult<<%= pascalCaseOperationId %>Response> {
-        const error = new ResponseValidationError(response.statusCode);
-        const validationResult = this.validateAgainstDefinedResponses(response, error);
+        const result = this.validateAgainstDefinedResponses(response);
 
-        if (error.hasIssues() && !validationResult.validResponseName) {
-            return {
-              isValid: false,
-              error,
-            };
+        if(!result.isValid && !result.error.hasResponseIssues()) {
+            result.error.addStatusCodeIssue([
+                <% const sortedStatusCodes = allStatusCodes.map(statusCode => statusCode.statusCode).sort() %>
+                <% for (const statusCode of sortedStatusCodes) { %><%= statusCode %>,<% } %>
+            ]);
         }
 
-        let data: <%= pascalCaseOperationId %>Response;
-        switch (response.statusCode) {
-            <% for (const statusCode of allStatusCodes) { %>
-                case <%= statusCode.statusCode %>: {
-                    <%
-                        for (const response of [...ownResponses, ...sharedResponses]) {
-                            if (response.statusCode === statusCode.statusCode) {
-                    %>
-                        if (validationResult.validResponseName === "<%= response.name %>") {
-                            data = new <%= response.name %>Response(validationResult.validatedResponse as unknown as I<%= response.name %>Response);
-                            break;
-                        }
-                    <% } } %>
-                    throw new Error("Could not find a response for status code '<%= statusCode.statusCode %>'");
-                }
-            <% } %>
-
-            default: {
-                throw new InvalidResponseStatusCodeError(response);
-            }
-        }
-
-        return {
-            isValid: true,
-            data,
-        };
+        return result;
     }
 
     public validate(response: IHttpResponse): <%= pascalCaseOperationId %>Response {
@@ -81,12 +54,8 @@ export class <%= pascalCaseOperationId %>ResponseValidator extends ResponseValid
         return result.data;
     }
 
-    private validateAgainstDefinedResponses(response: IHttpResponse, error: ResponseValidationError): { validResponseName?: string; validatedResponse?: IHttpResponse } {
-        const validatedResponse: IHttpResponse = {
-            statusCode: response.statusCode,
-            header: undefined,
-            body: undefined,
-        };
+    private validateAgainstDefinedResponses(response: IHttpResponse): SafeResponseValidationResult<<%= pascalCaseOperationId %>Response> {
+        const error = new ResponseValidationError(response.statusCode);
 
         <% for (const statusCode of allStatusCodes) { %>
             if (response.statusCode === <%= statusCode.statusCode %>) {
@@ -94,58 +63,34 @@ export class <%= pascalCaseOperationId %>ResponseValidator extends ResponseValid
             for (const response of [...ownResponses, ...sharedResponses]) {
             if (response.statusCode === statusCode.statusCode) {
             %>
-                const is<%= response.name %>Response = this.validate<%= response.name %>Response(response, validatedResponse, error);
-                if (is<%= response.name %>Response) {
-                    return { validResponseName: "<%= response.name %>", validatedResponse };
+                const validate<%= response.name %>ResponseResult = this.validate<%= response.name %>Response(response, error);
+                if (validate<%= response.name %>ResponseResult.isValid) {
+                    return validate<%= response.name %>ResponseResult;
                 }
             <% } } %>
             }
 
         <% } %>
 
-        return {};
+        return {
+            isValid: false,
+            error
+        };
     }
 
     <% for (const response of [...ownResponses, ...sharedResponses]) { %>
-    private validate<%= response.name %>Response(response: IHttpResponse, validatedResponse: IHttpResponse, error: ResponseValidationError): boolean {
-        let isValid = true;
+    private validate<%= response.name %>Response(response: IHttpResponse, error: ResponseValidationError): SafeResponseValidationResult<<%= response.name %>Response> {
+        const result = this.validateResponseType<<%= response.name %>Response>(
+            "<%= response.name.replace(/Response$/, '') %>",
+            <% if(response.hasHeader) { %>definition.responses[<%= response.index %>] && "header" in definition.responses[<%= response.index %>] ? definition.responses[<%= response.index %>]!.header : undefined<% } else { %>undefined<% } %>,
+            <% if(response.hasBody) { %>definition.responses[<%= response.index %>] && "body" in definition.responses[<%= response.index %>] ? definition.responses[<%= response.index %>]!.body : undefined<% } else { %>undefined<% } %>,
+        )(response, error);
 
-        <% if(response.hasBody) { %>
-            assert(
-                definition.responses[<%= response.index %>] 
-                && "body" in definition.responses[<%= response.index %>] 
-                && definition.responses[<%= response.index %>].body,
-                "'<%= response.name %>ResponseBody' has to be defined in the definition"
-            );
-            const validateBodyResult = definition.responses[<%= response.index %>].body.safeParse(response.body);
+        if (!result.isValid) {
+            return result;
+        }
 
-            if (!validateBodyResult.success) {
-                error.addBodyIssues(validateBodyResult.error.issues);
-                isValid = false;
-            } else {
-                validatedResponse.body = validateBodyResult.data;
-            }
-        <% } %>
-
-        <% if(response.hasHeader) { %>
-            assert(
-                definition.responses[<%= response.index %>] 
-                && "header" in definition.responses[<%= response.index %>] 
-                && definition.responses[<%= response.index %>].header,
-                "'<%= response.name %>ResponseHeader' has to be defined in the definition"
-            );
-            const coercedHeader = this.coerceHeaderToSchema(response.header, definition.responses[<%= response.index %>].header.shape);
-            const validateHeaderResult = definition.responses[<%= response.index %>].header.safeParse(coercedHeader);
-
-            if (!validateHeaderResult.success) {
-                error.addHeaderIssues(validateHeaderResult.error.issues);
-                isValid = false;
-            } else {
-                validatedResponse.header = validateHeaderResult.data;
-            }
-        <% } %>
-
-        return isValid;
+        return { isValid: true, data: new <%= response.name %>Response(result.data as I<%= response.name %>Response) };
     }
     <% } %>
 }

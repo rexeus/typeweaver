@@ -7,7 +7,12 @@
  */
 
 import definition from "../../definition/auth/RefreshTokenDefinition";
-import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import {
+  HttpMethod,
+  type IHttpResponse,
+  ResponseValidationError,
+  UnknownResponse,
+} from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
 import { RefreshTokenResponseValidator } from "./RefreshTokenResponseValidator";
 import type {
@@ -46,12 +51,24 @@ export class RefreshTokenRequestCommand
   public processResponse(
     response: IHttpResponse,
   ): SuccessfulRefreshTokenResponse {
-    const result = this.responseValidator.validate(response);
+    try {
+      const result = this.responseValidator.validate(response);
 
-    if (result instanceof RefreshTokenSuccessResponse) {
-      return result;
+      if (result instanceof RefreshTokenSuccessResponse) {
+        return result;
+      }
+
+      throw result;
+    } catch (error) {
+      if (error instanceof ResponseValidationError) {
+        throw new UnknownResponse(
+          response.statusCode,
+          response.header,
+          response.body,
+          error,
+        );
+      }
+      throw error;
     }
-
-    throw result;
   }
 }

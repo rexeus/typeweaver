@@ -7,16 +7,13 @@
  */
 
 import definition from "../../definition/todo/mutations/PutTodoDefinition";
+import type { ZodSafeParseResult } from "zod/v4";
 import {
   type IHttpResponse,
   type SafeResponseValidationResult,
   ResponseValidationError,
 } from "@rexeus/typeweaver-core";
-import {
-  ResponseValidator,
-  InvalidResponseStatusCodeError,
-  assert,
-} from "../lib/types";
+import { ResponseValidator } from "../lib/types";
 import {
   type PutTodoResponse,
   type IPutTodoSuccessResponse,
@@ -67,131 +64,15 @@ export class PutTodoResponseValidator extends ResponseValidator {
   public safeValidate(
     response: IHttpResponse,
   ): SafeResponseValidationResult<PutTodoResponse> {
-    const error = new ResponseValidationError(response.statusCode);
-    const validationResult = this.validateAgainstDefinedResponses(
-      response,
-      error,
-    );
+    const result = this.validateAgainstDefinedResponses(response);
 
-    if (error.hasIssues() && !validationResult.validResponseName) {
-      return {
-        isValid: false,
-        error,
-      };
+    if (!result.isValid && !result.error.hasResponseIssues()) {
+      result.error.addStatusCodeIssue([
+        200, 400, 401, 403, 404, 409, 415, 429, 500,
+      ]);
     }
 
-    let data: PutTodoResponse;
-    switch (response.statusCode) {
-      case 200: {
-        if (validationResult.validResponseName === "PutTodoSuccess") {
-          data = new PutTodoSuccessResponse(
-            validationResult.validatedResponse as unknown as IPutTodoSuccessResponse,
-          );
-          break;
-        }
-
-        throw new Error("Could not find a response for status code '200'");
-      }
-
-      case 404: {
-        if (validationResult.validResponseName === "TodoNotFoundError") {
-          data = new TodoNotFoundErrorResponse(
-            validationResult.validatedResponse as unknown as ITodoNotFoundErrorResponse,
-          );
-          break;
-        }
-
-        throw new Error("Could not find a response for status code '404'");
-      }
-
-      case 409: {
-        if (validationResult.validResponseName === "TodoNotChangeableError") {
-          data = new TodoNotChangeableErrorResponse(
-            validationResult.validatedResponse as unknown as ITodoNotChangeableErrorResponse,
-          );
-          break;
-        }
-
-        throw new Error("Could not find a response for status code '409'");
-      }
-
-      case 403: {
-        if (validationResult.validResponseName === "ForbiddenError") {
-          data = new ForbiddenErrorResponse(
-            validationResult.validatedResponse as unknown as IForbiddenErrorResponse,
-          );
-          break;
-        }
-
-        throw new Error("Could not find a response for status code '403'");
-      }
-
-      case 500: {
-        if (validationResult.validResponseName === "InternalServerError") {
-          data = new InternalServerErrorResponse(
-            validationResult.validatedResponse as unknown as IInternalServerErrorResponse,
-          );
-          break;
-        }
-
-        throw new Error("Could not find a response for status code '500'");
-      }
-
-      case 429: {
-        if (validationResult.validResponseName === "TooManyRequestsError") {
-          data = new TooManyRequestsErrorResponse(
-            validationResult.validatedResponse as unknown as ITooManyRequestsErrorResponse,
-          );
-          break;
-        }
-
-        throw new Error("Could not find a response for status code '429'");
-      }
-
-      case 401: {
-        if (validationResult.validResponseName === "UnauthorizedError") {
-          data = new UnauthorizedErrorResponse(
-            validationResult.validatedResponse as unknown as IUnauthorizedErrorResponse,
-          );
-          break;
-        }
-
-        throw new Error("Could not find a response for status code '401'");
-      }
-
-      case 415: {
-        if (
-          validationResult.validResponseName === "UnsupportedMediaTypeError"
-        ) {
-          data = new UnsupportedMediaTypeErrorResponse(
-            validationResult.validatedResponse as unknown as IUnsupportedMediaTypeErrorResponse,
-          );
-          break;
-        }
-
-        throw new Error("Could not find a response for status code '415'");
-      }
-
-      case 400: {
-        if (validationResult.validResponseName === "ValidationError") {
-          data = new ValidationErrorResponse(
-            validationResult.validatedResponse as unknown as IValidationErrorResponse,
-          );
-          break;
-        }
-
-        throw new Error("Could not find a response for status code '400'");
-      }
-
-      default: {
-        throw new InvalidResponseStatusCodeError(response);
-      }
-    }
-
-    return {
-      isValid: true,
-      data,
-    };
+    return result;
   }
 
   public validate(response: IHttpResponse): PutTodoResponse {
@@ -206,548 +87,314 @@ export class PutTodoResponseValidator extends ResponseValidator {
 
   private validateAgainstDefinedResponses(
     response: IHttpResponse,
-    error: ResponseValidationError,
-  ): { validResponseName?: string; validatedResponse?: IHttpResponse } {
-    const validatedResponse: IHttpResponse = {
-      statusCode: response.statusCode,
-      header: undefined,
-      body: undefined,
-    };
+  ): SafeResponseValidationResult<PutTodoResponse> {
+    const error = new ResponseValidationError(response.statusCode);
 
     if (response.statusCode === 200) {
-      const isPutTodoSuccessResponse = this.validatePutTodoSuccessResponse(
-        response,
-        validatedResponse,
-        error,
-      );
-      if (isPutTodoSuccessResponse) {
-        return { validResponseName: "PutTodoSuccess", validatedResponse };
+      const validatePutTodoSuccessResponseResult =
+        this.validatePutTodoSuccessResponse(response, error);
+      if (validatePutTodoSuccessResponseResult.isValid) {
+        return validatePutTodoSuccessResponseResult;
       }
     }
 
     if (response.statusCode === 404) {
-      const isTodoNotFoundErrorResponse =
-        this.validateTodoNotFoundErrorResponse(
-          response,
-          validatedResponse,
-          error,
-        );
-      if (isTodoNotFoundErrorResponse) {
-        return { validResponseName: "TodoNotFoundError", validatedResponse };
+      const validateTodoNotFoundErrorResponseResult =
+        this.validateTodoNotFoundErrorResponse(response, error);
+      if (validateTodoNotFoundErrorResponseResult.isValid) {
+        return validateTodoNotFoundErrorResponseResult;
       }
     }
 
     if (response.statusCode === 409) {
-      const isTodoNotChangeableErrorResponse =
-        this.validateTodoNotChangeableErrorResponse(
-          response,
-          validatedResponse,
-          error,
-        );
-      if (isTodoNotChangeableErrorResponse) {
-        return {
-          validResponseName: "TodoNotChangeableError",
-          validatedResponse,
-        };
+      const validateTodoNotChangeableErrorResponseResult =
+        this.validateTodoNotChangeableErrorResponse(response, error);
+      if (validateTodoNotChangeableErrorResponseResult.isValid) {
+        return validateTodoNotChangeableErrorResponseResult;
       }
     }
 
     if (response.statusCode === 403) {
-      const isForbiddenErrorResponse = this.validateForbiddenErrorResponse(
-        response,
-        validatedResponse,
-        error,
-      );
-      if (isForbiddenErrorResponse) {
-        return { validResponseName: "ForbiddenError", validatedResponse };
+      const validateForbiddenErrorResponseResult =
+        this.validateForbiddenErrorResponse(response, error);
+      if (validateForbiddenErrorResponseResult.isValid) {
+        return validateForbiddenErrorResponseResult;
       }
     }
 
     if (response.statusCode === 500) {
-      const isInternalServerErrorResponse =
-        this.validateInternalServerErrorResponse(
-          response,
-          validatedResponse,
-          error,
-        );
-      if (isInternalServerErrorResponse) {
-        return { validResponseName: "InternalServerError", validatedResponse };
+      const validateInternalServerErrorResponseResult =
+        this.validateInternalServerErrorResponse(response, error);
+      if (validateInternalServerErrorResponseResult.isValid) {
+        return validateInternalServerErrorResponseResult;
       }
     }
 
     if (response.statusCode === 429) {
-      const isTooManyRequestsErrorResponse =
-        this.validateTooManyRequestsErrorResponse(
-          response,
-          validatedResponse,
-          error,
-        );
-      if (isTooManyRequestsErrorResponse) {
-        return { validResponseName: "TooManyRequestsError", validatedResponse };
+      const validateTooManyRequestsErrorResponseResult =
+        this.validateTooManyRequestsErrorResponse(response, error);
+      if (validateTooManyRequestsErrorResponseResult.isValid) {
+        return validateTooManyRequestsErrorResponseResult;
       }
     }
 
     if (response.statusCode === 401) {
-      const isUnauthorizedErrorResponse =
-        this.validateUnauthorizedErrorResponse(
-          response,
-          validatedResponse,
-          error,
-        );
-      if (isUnauthorizedErrorResponse) {
-        return { validResponseName: "UnauthorizedError", validatedResponse };
+      const validateUnauthorizedErrorResponseResult =
+        this.validateUnauthorizedErrorResponse(response, error);
+      if (validateUnauthorizedErrorResponseResult.isValid) {
+        return validateUnauthorizedErrorResponseResult;
       }
     }
 
     if (response.statusCode === 415) {
-      const isUnsupportedMediaTypeErrorResponse =
-        this.validateUnsupportedMediaTypeErrorResponse(
-          response,
-          validatedResponse,
-          error,
-        );
-      if (isUnsupportedMediaTypeErrorResponse) {
-        return {
-          validResponseName: "UnsupportedMediaTypeError",
-          validatedResponse,
-        };
+      const validateUnsupportedMediaTypeErrorResponseResult =
+        this.validateUnsupportedMediaTypeErrorResponse(response, error);
+      if (validateUnsupportedMediaTypeErrorResponseResult.isValid) {
+        return validateUnsupportedMediaTypeErrorResponseResult;
       }
     }
 
     if (response.statusCode === 400) {
-      const isValidationErrorResponse = this.validateValidationErrorResponse(
-        response,
-        validatedResponse,
-        error,
-      );
-      if (isValidationErrorResponse) {
-        return { validResponseName: "ValidationError", validatedResponse };
+      const validateValidationErrorResponseResult =
+        this.validateValidationErrorResponse(response, error);
+      if (validateValidationErrorResponseResult.isValid) {
+        return validateValidationErrorResponseResult;
       }
     }
 
-    return {};
+    return {
+      isValid: false,
+      error,
+    };
   }
 
   private validatePutTodoSuccessResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
-    let isValid = true;
+  ): SafeResponseValidationResult<PutTodoSuccessResponse> {
+    const result = this.validateResponseType<PutTodoSuccessResponse>(
+      "PutTodoSuccess",
+      definition.responses[0] && "header" in definition.responses[0]
+        ? definition.responses[0]!.header
+        : undefined,
+      definition.responses[0] && "body" in definition.responses[0]
+        ? definition.responses[0]!.body
+        : undefined,
+    )(response, error);
 
-    assert(
-      definition.responses[0] &&
-        "body" in definition.responses[0] &&
-        definition.responses[0].body,
-      "'PutTodoSuccessResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[0].body.safeParse(
-      response.body,
-    );
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
+    if (!result.isValid) {
+      return result;
     }
 
-    assert(
-      definition.responses[0] &&
-        "header" in definition.responses[0] &&
-        definition.responses[0].header,
-      "'PutTodoSuccessResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[0].header.shape,
-    );
-    const validateHeaderResult =
-      definition.responses[0].header.safeParse(coercedHeader);
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    return isValid;
+    return {
+      isValid: true,
+      data: new PutTodoSuccessResponse(result.data as IPutTodoSuccessResponse),
+    };
   }
 
   private validateTodoNotFoundErrorResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
-    let isValid = true;
+  ): SafeResponseValidationResult<TodoNotFoundErrorResponse> {
+    const result = this.validateResponseType<TodoNotFoundErrorResponse>(
+      "TodoNotFoundError",
+      definition.responses[1] && "header" in definition.responses[1]
+        ? definition.responses[1]!.header
+        : undefined,
+      definition.responses[1] && "body" in definition.responses[1]
+        ? definition.responses[1]!.body
+        : undefined,
+    )(response, error);
 
-    assert(
-      definition.responses[1] &&
-        "body" in definition.responses[1] &&
-        definition.responses[1].body,
-      "'TodoNotFoundErrorResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[1].body.safeParse(
-      response.body,
-    );
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
+    if (!result.isValid) {
+      return result;
     }
 
-    assert(
-      definition.responses[1] &&
-        "header" in definition.responses[1] &&
-        definition.responses[1].header,
-      "'TodoNotFoundErrorResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[1].header.shape,
-    );
-    const validateHeaderResult =
-      definition.responses[1].header.safeParse(coercedHeader);
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    return isValid;
+    return {
+      isValid: true,
+      data: new TodoNotFoundErrorResponse(
+        result.data as ITodoNotFoundErrorResponse,
+      ),
+    };
   }
 
   private validateTodoNotChangeableErrorResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
-    let isValid = true;
+  ): SafeResponseValidationResult<TodoNotChangeableErrorResponse> {
+    const result = this.validateResponseType<TodoNotChangeableErrorResponse>(
+      "TodoNotChangeableError",
+      definition.responses[2] && "header" in definition.responses[2]
+        ? definition.responses[2]!.header
+        : undefined,
+      definition.responses[2] && "body" in definition.responses[2]
+        ? definition.responses[2]!.body
+        : undefined,
+    )(response, error);
 
-    assert(
-      definition.responses[2] &&
-        "body" in definition.responses[2] &&
-        definition.responses[2].body,
-      "'TodoNotChangeableErrorResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[2].body.safeParse(
-      response.body,
-    );
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
+    if (!result.isValid) {
+      return result;
     }
 
-    assert(
-      definition.responses[2] &&
-        "header" in definition.responses[2] &&
-        definition.responses[2].header,
-      "'TodoNotChangeableErrorResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[2].header.shape,
-    );
-    const validateHeaderResult =
-      definition.responses[2].header.safeParse(coercedHeader);
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    return isValid;
+    return {
+      isValid: true,
+      data: new TodoNotChangeableErrorResponse(
+        result.data as ITodoNotChangeableErrorResponse,
+      ),
+    };
   }
 
   private validateForbiddenErrorResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
-    let isValid = true;
+  ): SafeResponseValidationResult<ForbiddenErrorResponse> {
+    const result = this.validateResponseType<ForbiddenErrorResponse>(
+      "ForbiddenError",
+      definition.responses[3] && "header" in definition.responses[3]
+        ? definition.responses[3]!.header
+        : undefined,
+      definition.responses[3] && "body" in definition.responses[3]
+        ? definition.responses[3]!.body
+        : undefined,
+    )(response, error);
 
-    assert(
-      definition.responses[3] &&
-        "body" in definition.responses[3] &&
-        definition.responses[3].body,
-      "'ForbiddenErrorResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[3].body.safeParse(
-      response.body,
-    );
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
+    if (!result.isValid) {
+      return result;
     }
 
-    assert(
-      definition.responses[3] &&
-        "header" in definition.responses[3] &&
-        definition.responses[3].header,
-      "'ForbiddenErrorResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[3].header.shape,
-    );
-    const validateHeaderResult =
-      definition.responses[3].header.safeParse(coercedHeader);
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    return isValid;
+    return {
+      isValid: true,
+      data: new ForbiddenErrorResponse(result.data as IForbiddenErrorResponse),
+    };
   }
 
   private validateInternalServerErrorResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
-    let isValid = true;
+  ): SafeResponseValidationResult<InternalServerErrorResponse> {
+    const result = this.validateResponseType<InternalServerErrorResponse>(
+      "InternalServerError",
+      definition.responses[4] && "header" in definition.responses[4]
+        ? definition.responses[4]!.header
+        : undefined,
+      definition.responses[4] && "body" in definition.responses[4]
+        ? definition.responses[4]!.body
+        : undefined,
+    )(response, error);
 
-    assert(
-      definition.responses[4] &&
-        "body" in definition.responses[4] &&
-        definition.responses[4].body,
-      "'InternalServerErrorResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[4].body.safeParse(
-      response.body,
-    );
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
+    if (!result.isValid) {
+      return result;
     }
 
-    assert(
-      definition.responses[4] &&
-        "header" in definition.responses[4] &&
-        definition.responses[4].header,
-      "'InternalServerErrorResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[4].header.shape,
-    );
-    const validateHeaderResult =
-      definition.responses[4].header.safeParse(coercedHeader);
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    return isValid;
+    return {
+      isValid: true,
+      data: new InternalServerErrorResponse(
+        result.data as IInternalServerErrorResponse,
+      ),
+    };
   }
 
   private validateTooManyRequestsErrorResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
-    let isValid = true;
+  ): SafeResponseValidationResult<TooManyRequestsErrorResponse> {
+    const result = this.validateResponseType<TooManyRequestsErrorResponse>(
+      "TooManyRequestsError",
+      definition.responses[5] && "header" in definition.responses[5]
+        ? definition.responses[5]!.header
+        : undefined,
+      definition.responses[5] && "body" in definition.responses[5]
+        ? definition.responses[5]!.body
+        : undefined,
+    )(response, error);
 
-    assert(
-      definition.responses[5] &&
-        "body" in definition.responses[5] &&
-        definition.responses[5].body,
-      "'TooManyRequestsErrorResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[5].body.safeParse(
-      response.body,
-    );
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
+    if (!result.isValid) {
+      return result;
     }
 
-    assert(
-      definition.responses[5] &&
-        "header" in definition.responses[5] &&
-        definition.responses[5].header,
-      "'TooManyRequestsErrorResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[5].header.shape,
-    );
-    const validateHeaderResult =
-      definition.responses[5].header.safeParse(coercedHeader);
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    return isValid;
+    return {
+      isValid: true,
+      data: new TooManyRequestsErrorResponse(
+        result.data as ITooManyRequestsErrorResponse,
+      ),
+    };
   }
 
   private validateUnauthorizedErrorResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
-    let isValid = true;
+  ): SafeResponseValidationResult<UnauthorizedErrorResponse> {
+    const result = this.validateResponseType<UnauthorizedErrorResponse>(
+      "UnauthorizedError",
+      definition.responses[6] && "header" in definition.responses[6]
+        ? definition.responses[6]!.header
+        : undefined,
+      definition.responses[6] && "body" in definition.responses[6]
+        ? definition.responses[6]!.body
+        : undefined,
+    )(response, error);
 
-    assert(
-      definition.responses[6] &&
-        "body" in definition.responses[6] &&
-        definition.responses[6].body,
-      "'UnauthorizedErrorResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[6].body.safeParse(
-      response.body,
-    );
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
+    if (!result.isValid) {
+      return result;
     }
 
-    assert(
-      definition.responses[6] &&
-        "header" in definition.responses[6] &&
-        definition.responses[6].header,
-      "'UnauthorizedErrorResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[6].header.shape,
-    );
-    const validateHeaderResult =
-      definition.responses[6].header.safeParse(coercedHeader);
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    return isValid;
+    return {
+      isValid: true,
+      data: new UnauthorizedErrorResponse(
+        result.data as IUnauthorizedErrorResponse,
+      ),
+    };
   }
 
   private validateUnsupportedMediaTypeErrorResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
-    let isValid = true;
+  ): SafeResponseValidationResult<UnsupportedMediaTypeErrorResponse> {
+    const result = this.validateResponseType<UnsupportedMediaTypeErrorResponse>(
+      "UnsupportedMediaTypeError",
+      definition.responses[7] && "header" in definition.responses[7]
+        ? definition.responses[7]!.header
+        : undefined,
+      definition.responses[7] && "body" in definition.responses[7]
+        ? definition.responses[7]!.body
+        : undefined,
+    )(response, error);
 
-    assert(
-      definition.responses[7] &&
-        "body" in definition.responses[7] &&
-        definition.responses[7].body,
-      "'UnsupportedMediaTypeErrorResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[7].body.safeParse(
-      response.body,
-    );
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
+    if (!result.isValid) {
+      return result;
     }
 
-    assert(
-      definition.responses[7] &&
-        "header" in definition.responses[7] &&
-        definition.responses[7].header,
-      "'UnsupportedMediaTypeErrorResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[7].header.shape,
-    );
-    const validateHeaderResult =
-      definition.responses[7].header.safeParse(coercedHeader);
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    return isValid;
+    return {
+      isValid: true,
+      data: new UnsupportedMediaTypeErrorResponse(
+        result.data as IUnsupportedMediaTypeErrorResponse,
+      ),
+    };
   }
 
   private validateValidationErrorResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
-    let isValid = true;
+  ): SafeResponseValidationResult<ValidationErrorResponse> {
+    const result = this.validateResponseType<ValidationErrorResponse>(
+      "ValidationError",
+      definition.responses[8] && "header" in definition.responses[8]
+        ? definition.responses[8]!.header
+        : undefined,
+      definition.responses[8] && "body" in definition.responses[8]
+        ? definition.responses[8]!.body
+        : undefined,
+    )(response, error);
 
-    assert(
-      definition.responses[8] &&
-        "body" in definition.responses[8] &&
-        definition.responses[8].body,
-      "'ValidationErrorResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[8].body.safeParse(
-      response.body,
-    );
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
+    if (!result.isValid) {
+      return result;
     }
 
-    assert(
-      definition.responses[8] &&
-        "header" in definition.responses[8] &&
-        definition.responses[8].header,
-      "'ValidationErrorResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[8].header.shape,
-    );
-    const validateHeaderResult =
-      definition.responses[8].header.safeParse(coercedHeader);
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    return isValid;
+    return {
+      isValid: true,
+      data: new ValidationErrorResponse(
+        result.data as IValidationErrorResponse,
+      ),
+    };
   }
 }

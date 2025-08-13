@@ -2,13 +2,13 @@ import type { IHttpResponse } from "./HttpResponse";
 import type { ResponseValidationError } from "./ResponseValidationError";
 
 type ValidationSuccessResult<T> = {
-  isValid: true;
-  data: T;
+  readonly isValid: true;
+  readonly data: T;
 };
 
 type ValidationFailureResult = {
-  isValid: false;
-  error: ResponseValidationError;
+  readonly isValid: false;
+  readonly error: ResponseValidationError;
 };
 
 export type SafeResponseValidationResult<T> =

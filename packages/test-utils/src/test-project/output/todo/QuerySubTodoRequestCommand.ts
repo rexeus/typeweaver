@@ -7,7 +7,12 @@
  */
 
 import definition from "../../definition/todo/queries/QuerySubTodoDefinition";
-import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import {
+  HttpMethod,
+  type IHttpResponse,
+  ResponseValidationError,
+  UnknownResponse,
+} from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
 import { QuerySubTodoResponseValidator } from "./QuerySubTodoResponseValidator";
 import type {
@@ -52,12 +57,24 @@ export class QuerySubTodoRequestCommand
   public processResponse(
     response: IHttpResponse,
   ): SuccessfulQuerySubTodoResponse {
-    const result = this.responseValidator.validate(response);
+    try {
+      const result = this.responseValidator.validate(response);
 
-    if (result instanceof QuerySubTodoSuccessResponse) {
-      return result;
+      if (result instanceof QuerySubTodoSuccessResponse) {
+        return result;
+      }
+
+      throw result;
+    } catch (error) {
+      if (error instanceof ResponseValidationError) {
+        throw new UnknownResponse(
+          response.statusCode,
+          response.header,
+          response.body,
+          error,
+        );
+      }
+      throw error;
     }
-
-    throw result;
   }
 }
