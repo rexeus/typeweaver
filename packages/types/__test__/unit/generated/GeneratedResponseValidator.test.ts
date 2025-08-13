@@ -45,12 +45,19 @@ describe("Generated ResponseValidator", () => {
       const invalidResponse = { ...response, statusCode: 418 };
 
       // Act & Assert
-      expect(() => validator.safeValidate(invalidResponse)).toThrow(
-        "Invalid response status code"
+      const safeValidationResult = validator.safeValidate(invalidResponse);
+      expect(safeValidationResult.isValid).toBe(false);
+      assert(!safeValidationResult.isValid);
+      expect(safeValidationResult.error).toBeInstanceOf(
+        ResponseValidationError
       );
-      expect(() => validator.validate(invalidResponse)).toThrow(
-        "Invalid response status code"
+      expect(safeValidationResult.error.hasStatusCodeIssues()).toBe(true);
+      const validateError = captureError(() =>
+        validator.validate(invalidResponse)
       );
+      expect(validateError).toBeInstanceOf(ResponseValidationError);
+      assert(validateError instanceof ResponseValidationError);
+      expect(validateError.hasStatusCodeIssues()).toBe(true);
     });
   });
 
@@ -94,7 +101,9 @@ describe("Generated ResponseValidator", () => {
       assert(result.error instanceof ResponseValidationError);
       expect(result.error.hasIssues()).toBe(true);
       expect(result.error.issues).toHaveLength(1);
-      expect(result.error.getBodyIssues("CreateTodoSuccess")).toHaveLength(3);
+      expect(
+        result.error.getResponseBodyIssues("CreateTodoSuccess")
+      ).toHaveLength(3);
     });
 
     test("should strip additional fields from response body", () => {
@@ -157,7 +166,7 @@ describe("Generated ResponseValidator", () => {
       assert(invalidResult.error instanceof ResponseValidationError);
       expect(invalidResult.error.issues).toHaveLength(1);
       expect(
-        invalidResult.error.getHeaderIssues("CreateTodoSuccess")
+        invalidResult.error.getResponseHeaderIssues("CreateTodoSuccess")
       ).toHaveLength(1);
     });
 
@@ -346,8 +355,12 @@ describe("Generated ResponseValidator", () => {
       assert(result.error instanceof ResponseValidationError);
       expect(result.error.hasIssues()).toBe(true);
       expect(result.error.issues).toHaveLength(1);
-      expect(result.error.getHeaderIssues("CreateTodoSuccess")).toHaveLength(1);
-      expect(result.error.getBodyIssues("CreateTodoSuccess")).toHaveLength(2);
+      expect(
+        result.error.getResponseHeaderIssues("CreateTodoSuccess")
+      ).toHaveLength(1);
+      expect(
+        result.error.getResponseBodyIssues("CreateTodoSuccess")
+      ).toHaveLength(2);
     });
 
     test("should strip additional fields across all components", () => {

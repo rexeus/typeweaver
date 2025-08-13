@@ -7,220 +7,104 @@
  */
 
 import definition from "../../definition/todo/mutations/UpdateSubTodoDefinition";
+import type { ZodSafeParseResult } from "zod/v4";
 import {
   type IHttpResponse,
   type SafeResponseValidationResult,
   ResponseValidationError,
 } from "@rexeus/typeweaver-core";
-import {
-  ResponseValidator,
-  InvalidResponseStatusCodeError,
-  assert,
-} from "../lib/types";
+import { ResponseValidator, assert } from "../lib/types";
 import {
   type UpdateSubTodoResponse,
   type IUpdateSubTodoSuccessResponse,
   UpdateSubTodoSuccessResponse,
+  type IUpdateSubTodoSuccessResponseBody,
+  type IUpdateSubTodoSuccessResponseHeader,
 } from "./UpdateSubTodoResponse";
 
 import {
   type ISubTodoNotFoundErrorResponse,
   SubTodoNotFoundErrorResponse,
+  type ISubTodoNotFoundErrorResponseBody,
+  type ISubTodoNotFoundErrorResponseHeader,
 } from "./SubTodoNotFoundErrorResponse";
 
 import {
   type ISubTodoNotChangeableErrorResponse,
   SubTodoNotChangeableErrorResponse,
+  type ISubTodoNotChangeableErrorResponseBody,
+  type ISubTodoNotChangeableErrorResponseHeader,
 } from "./SubTodoNotChangeableErrorResponse";
 
 import {
   type ISubTodoStatusTransitionInvalidErrorResponse,
   SubTodoStatusTransitionInvalidErrorResponse,
+  type ISubTodoStatusTransitionInvalidErrorResponseBody,
+  type ISubTodoStatusTransitionInvalidErrorResponseHeader,
 } from "./SubTodoStatusTransitionInvalidErrorResponse";
 
 import {
   type ITodoNotFoundErrorResponse,
   TodoNotFoundErrorResponse,
+  type ITodoNotFoundErrorResponseBody,
+  type ITodoNotFoundErrorResponseHeader,
 } from "./TodoNotFoundErrorResponse";
 
 import {
   type IForbiddenErrorResponse,
   ForbiddenErrorResponse,
+  type IForbiddenErrorResponseBody,
+  type IForbiddenErrorResponseHeader,
 } from "../shared/ForbiddenErrorResponse";
 
 import {
   type IInternalServerErrorResponse,
   InternalServerErrorResponse,
+  type IInternalServerErrorResponseBody,
+  type IInternalServerErrorResponseHeader,
 } from "../shared/InternalServerErrorResponse";
 
 import {
   type ITooManyRequestsErrorResponse,
   TooManyRequestsErrorResponse,
+  type ITooManyRequestsErrorResponseBody,
+  type ITooManyRequestsErrorResponseHeader,
 } from "../shared/TooManyRequestsErrorResponse";
 
 import {
   type IUnauthorizedErrorResponse,
   UnauthorizedErrorResponse,
+  type IUnauthorizedErrorResponseBody,
+  type IUnauthorizedErrorResponseHeader,
 } from "../shared/UnauthorizedErrorResponse";
 
 import {
   type IUnsupportedMediaTypeErrorResponse,
   UnsupportedMediaTypeErrorResponse,
+  type IUnsupportedMediaTypeErrorResponseBody,
+  type IUnsupportedMediaTypeErrorResponseHeader,
 } from "../shared/UnsupportedMediaTypeErrorResponse";
 
 import {
   type IValidationErrorResponse,
   ValidationErrorResponse,
+  type IValidationErrorResponseBody,
+  type IValidationErrorResponseHeader,
 } from "../shared/ValidationErrorResponse";
 
 export class UpdateSubTodoResponseValidator extends ResponseValidator {
   public safeValidate(
     response: IHttpResponse,
   ): SafeResponseValidationResult<UpdateSubTodoResponse> {
-    const error = new ResponseValidationError(response.statusCode);
-    const validationResult = this.validateAgainstDefinedResponses(
-      response,
-      error,
-    );
+    const result = this.validateAgainstDefinedResponses(response);
 
-    if (error.hasIssues() && !validationResult.validResponseName) {
-      return {
-        isValid: false,
-        error,
-      };
+    if (!result.isValid && !result.error.hasResponseIssues()) {
+      result.error.addStatusCodeIssue([
+        200, 400, 401, 403, 404, 409, 415, 429, 500,
+      ]);
     }
 
-    let data: UpdateSubTodoResponse;
-    switch (response.statusCode) {
-      case 200: {
-        if (validationResult.validResponseName === "UpdateSubTodoSuccess") {
-          data = new UpdateSubTodoSuccessResponse(
-            validationResult.validatedResponse as unknown as IUpdateSubTodoSuccessResponse,
-          );
-          break;
-        }
-
-        throw new Error("Could not find a response for status code '200'");
-      }
-
-      case 404: {
-        if (validationResult.validResponseName === "SubTodoNotFoundError") {
-          data = new SubTodoNotFoundErrorResponse(
-            validationResult.validatedResponse as unknown as ISubTodoNotFoundErrorResponse,
-          );
-          break;
-        }
-
-        if (validationResult.validResponseName === "TodoNotFoundError") {
-          data = new TodoNotFoundErrorResponse(
-            validationResult.validatedResponse as unknown as ITodoNotFoundErrorResponse,
-          );
-          break;
-        }
-
-        throw new Error("Could not find a response for status code '404'");
-      }
-
-      case 409: {
-        if (
-          validationResult.validResponseName === "SubTodoNotChangeableError"
-        ) {
-          data = new SubTodoNotChangeableErrorResponse(
-            validationResult.validatedResponse as unknown as ISubTodoNotChangeableErrorResponse,
-          );
-          break;
-        }
-
-        if (
-          validationResult.validResponseName ===
-          "SubTodoStatusTransitionInvalidError"
-        ) {
-          data = new SubTodoStatusTransitionInvalidErrorResponse(
-            validationResult.validatedResponse as unknown as ISubTodoStatusTransitionInvalidErrorResponse,
-          );
-          break;
-        }
-
-        throw new Error("Could not find a response for status code '409'");
-      }
-
-      case 403: {
-        if (validationResult.validResponseName === "ForbiddenError") {
-          data = new ForbiddenErrorResponse(
-            validationResult.validatedResponse as unknown as IForbiddenErrorResponse,
-          );
-          break;
-        }
-
-        throw new Error("Could not find a response for status code '403'");
-      }
-
-      case 500: {
-        if (validationResult.validResponseName === "InternalServerError") {
-          data = new InternalServerErrorResponse(
-            validationResult.validatedResponse as unknown as IInternalServerErrorResponse,
-          );
-          break;
-        }
-
-        throw new Error("Could not find a response for status code '500'");
-      }
-
-      case 429: {
-        if (validationResult.validResponseName === "TooManyRequestsError") {
-          data = new TooManyRequestsErrorResponse(
-            validationResult.validatedResponse as unknown as ITooManyRequestsErrorResponse,
-          );
-          break;
-        }
-
-        throw new Error("Could not find a response for status code '429'");
-      }
-
-      case 401: {
-        if (validationResult.validResponseName === "UnauthorizedError") {
-          data = new UnauthorizedErrorResponse(
-            validationResult.validatedResponse as unknown as IUnauthorizedErrorResponse,
-          );
-          break;
-        }
-
-        throw new Error("Could not find a response for status code '401'");
-      }
-
-      case 415: {
-        if (
-          validationResult.validResponseName === "UnsupportedMediaTypeError"
-        ) {
-          data = new UnsupportedMediaTypeErrorResponse(
-            validationResult.validatedResponse as unknown as IUnsupportedMediaTypeErrorResponse,
-          );
-          break;
-        }
-
-        throw new Error("Could not find a response for status code '415'");
-      }
-
-      case 400: {
-        if (validationResult.validResponseName === "ValidationError") {
-          data = new ValidationErrorResponse(
-            validationResult.validatedResponse as unknown as IValidationErrorResponse,
-          );
-          break;
-        }
-
-        throw new Error("Could not find a response for status code '400'");
-      }
-
-      default: {
-        throw new InvalidResponseStatusCodeError(response);
-      }
-    }
-
-    return {
-      isValid: true,
-      data,
-    };
+    return result;
   }
 
   public validate(response: IHttpResponse): UpdateSubTodoResponse {
@@ -235,158 +119,112 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
 
   private validateAgainstDefinedResponses(
     response: IHttpResponse,
+  ): SafeResponseValidationResult<UpdateSubTodoResponse> {
+    const error = new ResponseValidationError(response.statusCode);
+
+    if (response.statusCode === 200) {
+      const validateUpdateSubTodoSuccessResponseResult =
+        this.validateUpdateSubTodoSuccessResponse(response, error);
+      if (validateUpdateSubTodoSuccessResponseResult.isValid) {
+        return validateUpdateSubTodoSuccessResponseResult;
+      }
+    }
+
+    if (response.statusCode === 404) {
+      const validateSubTodoNotFoundErrorResponseResult =
+        this.validateSubTodoNotFoundErrorResponse(response, error);
+      if (validateSubTodoNotFoundErrorResponseResult.isValid) {
+        return validateSubTodoNotFoundErrorResponseResult;
+      }
+
+      const validateTodoNotFoundErrorResponseResult =
+        this.validateTodoNotFoundErrorResponse(response, error);
+      if (validateTodoNotFoundErrorResponseResult.isValid) {
+        return validateTodoNotFoundErrorResponseResult;
+      }
+    }
+
+    if (response.statusCode === 409) {
+      const validateSubTodoNotChangeableErrorResponseResult =
+        this.validateSubTodoNotChangeableErrorResponse(response, error);
+      if (validateSubTodoNotChangeableErrorResponseResult.isValid) {
+        return validateSubTodoNotChangeableErrorResponseResult;
+      }
+
+      const validateSubTodoStatusTransitionInvalidErrorResponseResult =
+        this.validateSubTodoStatusTransitionInvalidErrorResponse(
+          response,
+          error,
+        );
+      if (validateSubTodoStatusTransitionInvalidErrorResponseResult.isValid) {
+        return validateSubTodoStatusTransitionInvalidErrorResponseResult;
+      }
+    }
+
+    if (response.statusCode === 403) {
+      const validateForbiddenErrorResponseResult =
+        this.validateForbiddenErrorResponse(response, error);
+      if (validateForbiddenErrorResponseResult.isValid) {
+        return validateForbiddenErrorResponseResult;
+      }
+    }
+
+    if (response.statusCode === 500) {
+      const validateInternalServerErrorResponseResult =
+        this.validateInternalServerErrorResponse(response, error);
+      if (validateInternalServerErrorResponseResult.isValid) {
+        return validateInternalServerErrorResponseResult;
+      }
+    }
+
+    if (response.statusCode === 429) {
+      const validateTooManyRequestsErrorResponseResult =
+        this.validateTooManyRequestsErrorResponse(response, error);
+      if (validateTooManyRequestsErrorResponseResult.isValid) {
+        return validateTooManyRequestsErrorResponseResult;
+      }
+    }
+
+    if (response.statusCode === 401) {
+      const validateUnauthorizedErrorResponseResult =
+        this.validateUnauthorizedErrorResponse(response, error);
+      if (validateUnauthorizedErrorResponseResult.isValid) {
+        return validateUnauthorizedErrorResponseResult;
+      }
+    }
+
+    if (response.statusCode === 415) {
+      const validateUnsupportedMediaTypeErrorResponseResult =
+        this.validateUnsupportedMediaTypeErrorResponse(response, error);
+      if (validateUnsupportedMediaTypeErrorResponseResult.isValid) {
+        return validateUnsupportedMediaTypeErrorResponseResult;
+      }
+    }
+
+    if (response.statusCode === 400) {
+      const validateValidationErrorResponseResult =
+        this.validateValidationErrorResponse(response, error);
+      if (validateValidationErrorResponseResult.isValid) {
+        return validateValidationErrorResponseResult;
+      }
+    }
+
+    return {
+      isValid: false,
+      error,
+    };
+  }
+
+  private validateUpdateSubTodoSuccessResponse(
+    response: IHttpResponse,
     error: ResponseValidationError,
-  ): { validResponseName?: string; validatedResponse?: IHttpResponse } {
+  ): SafeResponseValidationResult<UpdateSubTodoSuccessResponse> {
+    let isValid = true;
     const validatedResponse: IHttpResponse = {
       statusCode: response.statusCode,
       header: undefined,
       body: undefined,
     };
-
-    if (response.statusCode === 200) {
-      const isUpdateSubTodoSuccessResponse =
-        this.validateUpdateSubTodoSuccessResponse(
-          response,
-          validatedResponse,
-          error,
-        );
-      if (isUpdateSubTodoSuccessResponse) {
-        return { validResponseName: "UpdateSubTodoSuccess", validatedResponse };
-      }
-    }
-
-    if (response.statusCode === 404) {
-      const isSubTodoNotFoundErrorResponse =
-        this.validateSubTodoNotFoundErrorResponse(
-          response,
-          validatedResponse,
-          error,
-        );
-      if (isSubTodoNotFoundErrorResponse) {
-        return { validResponseName: "SubTodoNotFoundError", validatedResponse };
-      }
-
-      const isTodoNotFoundErrorResponse =
-        this.validateTodoNotFoundErrorResponse(
-          response,
-          validatedResponse,
-          error,
-        );
-      if (isTodoNotFoundErrorResponse) {
-        return { validResponseName: "TodoNotFoundError", validatedResponse };
-      }
-    }
-
-    if (response.statusCode === 409) {
-      const isSubTodoNotChangeableErrorResponse =
-        this.validateSubTodoNotChangeableErrorResponse(
-          response,
-          validatedResponse,
-          error,
-        );
-      if (isSubTodoNotChangeableErrorResponse) {
-        return {
-          validResponseName: "SubTodoNotChangeableError",
-          validatedResponse,
-        };
-      }
-
-      const isSubTodoStatusTransitionInvalidErrorResponse =
-        this.validateSubTodoStatusTransitionInvalidErrorResponse(
-          response,
-          validatedResponse,
-          error,
-        );
-      if (isSubTodoStatusTransitionInvalidErrorResponse) {
-        return {
-          validResponseName: "SubTodoStatusTransitionInvalidError",
-          validatedResponse,
-        };
-      }
-    }
-
-    if (response.statusCode === 403) {
-      const isForbiddenErrorResponse = this.validateForbiddenErrorResponse(
-        response,
-        validatedResponse,
-        error,
-      );
-      if (isForbiddenErrorResponse) {
-        return { validResponseName: "ForbiddenError", validatedResponse };
-      }
-    }
-
-    if (response.statusCode === 500) {
-      const isInternalServerErrorResponse =
-        this.validateInternalServerErrorResponse(
-          response,
-          validatedResponse,
-          error,
-        );
-      if (isInternalServerErrorResponse) {
-        return { validResponseName: "InternalServerError", validatedResponse };
-      }
-    }
-
-    if (response.statusCode === 429) {
-      const isTooManyRequestsErrorResponse =
-        this.validateTooManyRequestsErrorResponse(
-          response,
-          validatedResponse,
-          error,
-        );
-      if (isTooManyRequestsErrorResponse) {
-        return { validResponseName: "TooManyRequestsError", validatedResponse };
-      }
-    }
-
-    if (response.statusCode === 401) {
-      const isUnauthorizedErrorResponse =
-        this.validateUnauthorizedErrorResponse(
-          response,
-          validatedResponse,
-          error,
-        );
-      if (isUnauthorizedErrorResponse) {
-        return { validResponseName: "UnauthorizedError", validatedResponse };
-      }
-    }
-
-    if (response.statusCode === 415) {
-      const isUnsupportedMediaTypeErrorResponse =
-        this.validateUnsupportedMediaTypeErrorResponse(
-          response,
-          validatedResponse,
-          error,
-        );
-      if (isUnsupportedMediaTypeErrorResponse) {
-        return {
-          validResponseName: "UnsupportedMediaTypeError",
-          validatedResponse,
-        };
-      }
-    }
-
-    if (response.statusCode === 400) {
-      const isValidationErrorResponse = this.validateValidationErrorResponse(
-        response,
-        validatedResponse,
-        error,
-      );
-      if (isValidationErrorResponse) {
-        return { validResponseName: "ValidationError", validatedResponse };
-      }
-    }
-
-    return {};
-  }
-
-  private validateUpdateSubTodoSuccessResponse(
-    response: IHttpResponse,
-    validatedResponse: IHttpResponse,
-    error: ResponseValidationError,
-  ): boolean {
-    let isValid = true;
 
     assert(
       definition.responses[0] &&
@@ -396,7 +234,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     );
     const validateBodyResult = definition.responses[0].body.safeParse(
       response.body,
-    );
+    ) as unknown as ZodSafeParseResult<IUpdateSubTodoSuccessResponseBody>;
 
     if (!validateBodyResult.success) {
       error.addBodyIssues(
@@ -418,8 +256,9 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       response.header,
       definition.responses[0].header.shape,
     );
-    const validateHeaderResult =
-      definition.responses[0].header.safeParse(coercedHeader);
+    const validateHeaderResult = definition.responses[0].header.safeParse(
+      coercedHeader,
+    ) as unknown as ZodSafeParseResult<IUpdateSubTodoSuccessResponseHeader>;
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(
@@ -431,15 +270,28 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       validatedResponse.header = validateHeaderResult.data;
     }
 
-    return isValid;
+    if (!isValid) {
+      return { isValid: false, error };
+    }
+
+    return {
+      isValid: true,
+      data: new UpdateSubTodoSuccessResponse(
+        validatedResponse as IUpdateSubTodoSuccessResponse,
+      ),
+    };
   }
 
   private validateSubTodoNotFoundErrorResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
+  ): SafeResponseValidationResult<SubTodoNotFoundErrorResponse> {
     let isValid = true;
+    const validatedResponse: IHttpResponse = {
+      statusCode: response.statusCode,
+      header: undefined,
+      body: undefined,
+    };
 
     assert(
       definition.responses[1] &&
@@ -449,7 +301,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     );
     const validateBodyResult = definition.responses[1].body.safeParse(
       response.body,
-    );
+    ) as unknown as ZodSafeParseResult<ISubTodoNotFoundErrorResponseBody>;
 
     if (!validateBodyResult.success) {
       error.addBodyIssues(
@@ -471,8 +323,9 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       response.header,
       definition.responses[1].header.shape,
     );
-    const validateHeaderResult =
-      definition.responses[1].header.safeParse(coercedHeader);
+    const validateHeaderResult = definition.responses[1].header.safeParse(
+      coercedHeader,
+    ) as unknown as ZodSafeParseResult<ISubTodoNotFoundErrorResponseHeader>;
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(
@@ -484,15 +337,28 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       validatedResponse.header = validateHeaderResult.data;
     }
 
-    return isValid;
+    if (!isValid) {
+      return { isValid: false, error };
+    }
+
+    return {
+      isValid: true,
+      data: new SubTodoNotFoundErrorResponse(
+        validatedResponse as ISubTodoNotFoundErrorResponse,
+      ),
+    };
   }
 
   private validateSubTodoNotChangeableErrorResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
+  ): SafeResponseValidationResult<SubTodoNotChangeableErrorResponse> {
     let isValid = true;
+    const validatedResponse: IHttpResponse = {
+      statusCode: response.statusCode,
+      header: undefined,
+      body: undefined,
+    };
 
     assert(
       definition.responses[2] &&
@@ -502,7 +368,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     );
     const validateBodyResult = definition.responses[2].body.safeParse(
       response.body,
-    );
+    ) as unknown as ZodSafeParseResult<ISubTodoNotChangeableErrorResponseBody>;
 
     if (!validateBodyResult.success) {
       error.addBodyIssues(
@@ -524,8 +390,9 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       response.header,
       definition.responses[2].header.shape,
     );
-    const validateHeaderResult =
-      definition.responses[2].header.safeParse(coercedHeader);
+    const validateHeaderResult = definition.responses[2].header.safeParse(
+      coercedHeader,
+    ) as unknown as ZodSafeParseResult<ISubTodoNotChangeableErrorResponseHeader>;
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(
@@ -537,15 +404,28 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       validatedResponse.header = validateHeaderResult.data;
     }
 
-    return isValid;
+    if (!isValid) {
+      return { isValid: false, error };
+    }
+
+    return {
+      isValid: true,
+      data: new SubTodoNotChangeableErrorResponse(
+        validatedResponse as ISubTodoNotChangeableErrorResponse,
+      ),
+    };
   }
 
   private validateSubTodoStatusTransitionInvalidErrorResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
+  ): SafeResponseValidationResult<SubTodoStatusTransitionInvalidErrorResponse> {
     let isValid = true;
+    const validatedResponse: IHttpResponse = {
+      statusCode: response.statusCode,
+      header: undefined,
+      body: undefined,
+    };
 
     assert(
       definition.responses[3] &&
@@ -555,7 +435,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     );
     const validateBodyResult = definition.responses[3].body.safeParse(
       response.body,
-    );
+    ) as unknown as ZodSafeParseResult<ISubTodoStatusTransitionInvalidErrorResponseBody>;
 
     if (!validateBodyResult.success) {
       error.addBodyIssues(
@@ -577,8 +457,9 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       response.header,
       definition.responses[3].header.shape,
     );
-    const validateHeaderResult =
-      definition.responses[3].header.safeParse(coercedHeader);
+    const validateHeaderResult = definition.responses[3].header.safeParse(
+      coercedHeader,
+    ) as unknown as ZodSafeParseResult<ISubTodoStatusTransitionInvalidErrorResponseHeader>;
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(
@@ -590,15 +471,28 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       validatedResponse.header = validateHeaderResult.data;
     }
 
-    return isValid;
+    if (!isValid) {
+      return { isValid: false, error };
+    }
+
+    return {
+      isValid: true,
+      data: new SubTodoStatusTransitionInvalidErrorResponse(
+        validatedResponse as ISubTodoStatusTransitionInvalidErrorResponse,
+      ),
+    };
   }
 
   private validateTodoNotFoundErrorResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
+  ): SafeResponseValidationResult<TodoNotFoundErrorResponse> {
     let isValid = true;
+    const validatedResponse: IHttpResponse = {
+      statusCode: response.statusCode,
+      header: undefined,
+      body: undefined,
+    };
 
     assert(
       definition.responses[4] &&
@@ -608,7 +502,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     );
     const validateBodyResult = definition.responses[4].body.safeParse(
       response.body,
-    );
+    ) as unknown as ZodSafeParseResult<ITodoNotFoundErrorResponseBody>;
 
     if (!validateBodyResult.success) {
       error.addBodyIssues("TodoNotFoundError", validateBodyResult.error.issues);
@@ -627,8 +521,9 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       response.header,
       definition.responses[4].header.shape,
     );
-    const validateHeaderResult =
-      definition.responses[4].header.safeParse(coercedHeader);
+    const validateHeaderResult = definition.responses[4].header.safeParse(
+      coercedHeader,
+    ) as unknown as ZodSafeParseResult<ITodoNotFoundErrorResponseHeader>;
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(
@@ -640,15 +535,28 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       validatedResponse.header = validateHeaderResult.data;
     }
 
-    return isValid;
+    if (!isValid) {
+      return { isValid: false, error };
+    }
+
+    return {
+      isValid: true,
+      data: new TodoNotFoundErrorResponse(
+        validatedResponse as ITodoNotFoundErrorResponse,
+      ),
+    };
   }
 
   private validateForbiddenErrorResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
+  ): SafeResponseValidationResult<ForbiddenErrorResponse> {
     let isValid = true;
+    const validatedResponse: IHttpResponse = {
+      statusCode: response.statusCode,
+      header: undefined,
+      body: undefined,
+    };
 
     assert(
       definition.responses[5] &&
@@ -658,7 +566,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     );
     const validateBodyResult = definition.responses[5].body.safeParse(
       response.body,
-    );
+    ) as unknown as ZodSafeParseResult<IForbiddenErrorResponseBody>;
 
     if (!validateBodyResult.success) {
       error.addBodyIssues("ForbiddenError", validateBodyResult.error.issues);
@@ -677,8 +585,9 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       response.header,
       definition.responses[5].header.shape,
     );
-    const validateHeaderResult =
-      definition.responses[5].header.safeParse(coercedHeader);
+    const validateHeaderResult = definition.responses[5].header.safeParse(
+      coercedHeader,
+    ) as unknown as ZodSafeParseResult<IForbiddenErrorResponseHeader>;
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(
@@ -690,15 +599,28 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       validatedResponse.header = validateHeaderResult.data;
     }
 
-    return isValid;
+    if (!isValid) {
+      return { isValid: false, error };
+    }
+
+    return {
+      isValid: true,
+      data: new ForbiddenErrorResponse(
+        validatedResponse as IForbiddenErrorResponse,
+      ),
+    };
   }
 
   private validateInternalServerErrorResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
+  ): SafeResponseValidationResult<InternalServerErrorResponse> {
     let isValid = true;
+    const validatedResponse: IHttpResponse = {
+      statusCode: response.statusCode,
+      header: undefined,
+      body: undefined,
+    };
 
     assert(
       definition.responses[6] &&
@@ -708,7 +630,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     );
     const validateBodyResult = definition.responses[6].body.safeParse(
       response.body,
-    );
+    ) as unknown as ZodSafeParseResult<IInternalServerErrorResponseBody>;
 
     if (!validateBodyResult.success) {
       error.addBodyIssues(
@@ -730,8 +652,9 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       response.header,
       definition.responses[6].header.shape,
     );
-    const validateHeaderResult =
-      definition.responses[6].header.safeParse(coercedHeader);
+    const validateHeaderResult = definition.responses[6].header.safeParse(
+      coercedHeader,
+    ) as unknown as ZodSafeParseResult<IInternalServerErrorResponseHeader>;
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(
@@ -743,15 +666,28 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       validatedResponse.header = validateHeaderResult.data;
     }
 
-    return isValid;
+    if (!isValid) {
+      return { isValid: false, error };
+    }
+
+    return {
+      isValid: true,
+      data: new InternalServerErrorResponse(
+        validatedResponse as IInternalServerErrorResponse,
+      ),
+    };
   }
 
   private validateTooManyRequestsErrorResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
+  ): SafeResponseValidationResult<TooManyRequestsErrorResponse> {
     let isValid = true;
+    const validatedResponse: IHttpResponse = {
+      statusCode: response.statusCode,
+      header: undefined,
+      body: undefined,
+    };
 
     assert(
       definition.responses[7] &&
@@ -761,7 +697,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     );
     const validateBodyResult = definition.responses[7].body.safeParse(
       response.body,
-    );
+    ) as unknown as ZodSafeParseResult<ITooManyRequestsErrorResponseBody>;
 
     if (!validateBodyResult.success) {
       error.addBodyIssues(
@@ -783,8 +719,9 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       response.header,
       definition.responses[7].header.shape,
     );
-    const validateHeaderResult =
-      definition.responses[7].header.safeParse(coercedHeader);
+    const validateHeaderResult = definition.responses[7].header.safeParse(
+      coercedHeader,
+    ) as unknown as ZodSafeParseResult<ITooManyRequestsErrorResponseHeader>;
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(
@@ -796,15 +733,28 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       validatedResponse.header = validateHeaderResult.data;
     }
 
-    return isValid;
+    if (!isValid) {
+      return { isValid: false, error };
+    }
+
+    return {
+      isValid: true,
+      data: new TooManyRequestsErrorResponse(
+        validatedResponse as ITooManyRequestsErrorResponse,
+      ),
+    };
   }
 
   private validateUnauthorizedErrorResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
+  ): SafeResponseValidationResult<UnauthorizedErrorResponse> {
     let isValid = true;
+    const validatedResponse: IHttpResponse = {
+      statusCode: response.statusCode,
+      header: undefined,
+      body: undefined,
+    };
 
     assert(
       definition.responses[8] &&
@@ -814,7 +764,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     );
     const validateBodyResult = definition.responses[8].body.safeParse(
       response.body,
-    );
+    ) as unknown as ZodSafeParseResult<IUnauthorizedErrorResponseBody>;
 
     if (!validateBodyResult.success) {
       error.addBodyIssues("UnauthorizedError", validateBodyResult.error.issues);
@@ -833,8 +783,9 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       response.header,
       definition.responses[8].header.shape,
     );
-    const validateHeaderResult =
-      definition.responses[8].header.safeParse(coercedHeader);
+    const validateHeaderResult = definition.responses[8].header.safeParse(
+      coercedHeader,
+    ) as unknown as ZodSafeParseResult<IUnauthorizedErrorResponseHeader>;
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(
@@ -846,15 +797,28 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       validatedResponse.header = validateHeaderResult.data;
     }
 
-    return isValid;
+    if (!isValid) {
+      return { isValid: false, error };
+    }
+
+    return {
+      isValid: true,
+      data: new UnauthorizedErrorResponse(
+        validatedResponse as IUnauthorizedErrorResponse,
+      ),
+    };
   }
 
   private validateUnsupportedMediaTypeErrorResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
+  ): SafeResponseValidationResult<UnsupportedMediaTypeErrorResponse> {
     let isValid = true;
+    const validatedResponse: IHttpResponse = {
+      statusCode: response.statusCode,
+      header: undefined,
+      body: undefined,
+    };
 
     assert(
       definition.responses[9] &&
@@ -864,7 +828,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     );
     const validateBodyResult = definition.responses[9].body.safeParse(
       response.body,
-    );
+    ) as unknown as ZodSafeParseResult<IUnsupportedMediaTypeErrorResponseBody>;
 
     if (!validateBodyResult.success) {
       error.addBodyIssues(
@@ -886,8 +850,9 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       response.header,
       definition.responses[9].header.shape,
     );
-    const validateHeaderResult =
-      definition.responses[9].header.safeParse(coercedHeader);
+    const validateHeaderResult = definition.responses[9].header.safeParse(
+      coercedHeader,
+    ) as unknown as ZodSafeParseResult<IUnsupportedMediaTypeErrorResponseHeader>;
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(
@@ -899,15 +864,28 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       validatedResponse.header = validateHeaderResult.data;
     }
 
-    return isValid;
+    if (!isValid) {
+      return { isValid: false, error };
+    }
+
+    return {
+      isValid: true,
+      data: new UnsupportedMediaTypeErrorResponse(
+        validatedResponse as IUnsupportedMediaTypeErrorResponse,
+      ),
+    };
   }
 
   private validateValidationErrorResponse(
     response: IHttpResponse,
-    validatedResponse: IHttpResponse,
     error: ResponseValidationError,
-  ): boolean {
+  ): SafeResponseValidationResult<ValidationErrorResponse> {
     let isValid = true;
+    const validatedResponse: IHttpResponse = {
+      statusCode: response.statusCode,
+      header: undefined,
+      body: undefined,
+    };
 
     assert(
       definition.responses[10] &&
@@ -917,7 +895,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     );
     const validateBodyResult = definition.responses[10].body.safeParse(
       response.body,
-    );
+    ) as unknown as ZodSafeParseResult<IValidationErrorResponseBody>;
 
     if (!validateBodyResult.success) {
       error.addBodyIssues("ValidationError", validateBodyResult.error.issues);
@@ -936,8 +914,9 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       response.header,
       definition.responses[10].header.shape,
     );
-    const validateHeaderResult =
-      definition.responses[10].header.safeParse(coercedHeader);
+    const validateHeaderResult = definition.responses[10].header.safeParse(
+      coercedHeader,
+    ) as unknown as ZodSafeParseResult<IValidationErrorResponseHeader>;
 
     if (!validateHeaderResult.success) {
       error.addHeaderIssues(
@@ -949,6 +928,15 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       validatedResponse.header = validateHeaderResult.data;
     }
 
-    return isValid;
+    if (!isValid) {
+      return { isValid: false, error };
+    }
+
+    return {
+      isValid: true,
+      data: new ValidationErrorResponse(
+        validatedResponse as IValidationErrorResponse,
+      ),
+    };
   }
 }

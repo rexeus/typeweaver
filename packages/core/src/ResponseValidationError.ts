@@ -1,19 +1,28 @@
 import type { z } from "zod/v4";
 import type { HttpStatusCode } from "./HttpStatusCode";
 
-export type ResponseValidationIssue = {
-  readonly name: string;
+export type InvalidResponseIssue = {
+  readonly type: "INVALID_RESPONSE";
+  readonly responseName: string;
   readonly headerIssues: z.core.$ZodRawIssue[];
   readonly bodyIssues: z.core.$ZodRawIssue[];
 };
 
+export type InvalidStatusCodeIssue = {
+  readonly type: "INVALID_STATUS_CODE";
+  readonly invalidStatusCode: HttpStatusCode;
+  readonly expectedStatusCodes: HttpStatusCode[];
+};
+
+export type ValidationIssue = InvalidResponseIssue | InvalidStatusCodeIssue;
+
 export type ResponseValidationErrorInput = {
-  readonly responses?: ResponseValidationIssue[];
+  readonly issues?: ValidationIssue[];
 };
 
 export class ResponseValidationError extends Error {
   public override readonly message: string;
-  public readonly issues: ResponseValidationIssue[];
+  public readonly issues: ValidationIssue[];
 
   public constructor(
     public readonly statusCode: HttpStatusCode,
@@ -23,7 +32,7 @@ export class ResponseValidationError extends Error {
     super(message);
 
     this.message = message;
-    this.issues = input?.responses ?? [];
+    this.issues = input?.issues ?? [];
   }
 
   public addHeaderIssues(name: string, issues: z.core.$ZodRawIssue[]) {
@@ -43,10 +52,13 @@ export class ResponseValidationError extends Error {
       return;
     }
 
-    const issue = this.issues.find(i => i.name === name);
+    const issue = this.issues.find(
+      i => i.type === "INVALID_RESPONSE" && i.responseName === name
+    ) as InvalidResponseIssue;
     if (!issue) {
       this.issues.push({
-        name,
+        type: "INVALID_RESPONSE",
+        responseName: name,
         headerIssues,
         bodyIssues,
       });
@@ -61,27 +73,51 @@ export class ResponseValidationError extends Error {
     }
   }
 
-  public getHeaderIssues(name: string): z.core.$ZodRawIssue[] {
-    const issue = this.issues.find(i => i.name === name);
+  public addStatusCodeIssue(expectedStatusCodes: HttpStatusCode[]) {
+    const statusCodeIssue = this.issues.find(
+      i => i.type === "INVALID_STATUS_CODE"
+    );
+
+    if (statusCodeIssue) {
+      statusCodeIssue.expectedStatusCodes.push(...expectedStatusCodes);
+    } else {
+      this.issues.push({
+        type: "INVALID_STATUS_CODE",
+        invalidStatusCode: this.statusCode,
+        expectedStatusCodes,
+      });
+    }
+  }
+
+  public getResponseHeaderIssues(name: string): z.core.$ZodRawIssue[] {
+    const issue = this.issues.find(
+      i => i.type === "INVALID_RESPONSE" && i.responseName === name
+    ) as InvalidResponseIssue;
     return issue ? issue.headerIssues : [];
   }
 
-  public getBodyIssues(name: string): z.core.$ZodRawIssue[] {
-    const issue = this.issues.find(i => i.name === name);
+  public getResponseBodyIssues(name: string): z.core.$ZodRawIssue[] {
+    const issue = this.issues.find(
+      i => i.type === "INVALID_RESPONSE" && i.responseName === name
+    ) as InvalidResponseIssue;
     return issue ? issue.bodyIssues : [];
   }
 
-
-  public hasIssues(name?: string | undefined): boolean {
+  public hasResponseIssues(name?: string | undefined): boolean {
     if (name) {
       return this.issues.some(
         issue =>
-          issue.name === name &&
-          (issue.headerIssues.length > 0 || issue.bodyIssues.length > 0)
+          issue.type === "INVALID_RESPONSE" && issue.responseName === name
       );
     }
-    return this.issues.some(
-      issue => issue.headerIssues.length > 0 || issue.bodyIssues.length > 0
-    );
+    return this.issues.some(issue => issue.type === "INVALID_RESPONSE");
+  }
+
+  public hasStatusCodeIssues(): boolean {
+    return this.issues.some(issue => issue.type === "INVALID_STATUS_CODE");
+  }
+
+  public hasIssues(): boolean {
+    return this.issues.length > 0;
   }
 }
