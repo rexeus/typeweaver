@@ -13,76 +13,56 @@ import {
   type SafeResponseValidationResult,
   ResponseValidationError,
 } from "@rexeus/typeweaver-core";
-import { ResponseValidator, assert } from "../lib/types";
+import { ResponseValidator } from "../lib/types";
 import {
   type PutSpecimenResponse,
   type IPutSpecimenSuccessResponse,
   PutSpecimenSuccessResponse,
-  type IPutSpecimenSuccessResponseBody,
-  type IPutSpecimenSuccessResponseHeader,
 } from "./PutSpecimenResponse";
 
 import {
   type ISpecimenConflictErrorResponse,
   SpecimenConflictErrorResponse,
-  type ISpecimenConflictErrorResponseBody,
-  type ISpecimenConflictErrorResponseHeader,
 } from "./SpecimenConflictErrorResponse";
 
 import {
   type ISpecimenNotFoundErrorResponse,
   SpecimenNotFoundErrorResponse,
-  type ISpecimenNotFoundErrorResponseBody,
-  type ISpecimenNotFoundErrorResponseHeader,
 } from "./SpecimenNotFoundErrorResponse";
 
 import {
   type ISpecimenUnprocessableEntityErrorResponse,
   SpecimenUnprocessableEntityErrorResponse,
-  type ISpecimenUnprocessableEntityErrorResponseBody,
-  type ISpecimenUnprocessableEntityErrorResponseHeader,
 } from "./SpecimenUnprocessableEntityErrorResponse";
 
 import {
   type IForbiddenErrorResponse,
   ForbiddenErrorResponse,
-  type IForbiddenErrorResponseBody,
-  type IForbiddenErrorResponseHeader,
 } from "../shared/ForbiddenErrorResponse";
 
 import {
   type IInternalServerErrorResponse,
   InternalServerErrorResponse,
-  type IInternalServerErrorResponseBody,
-  type IInternalServerErrorResponseHeader,
 } from "../shared/InternalServerErrorResponse";
 
 import {
   type ITooManyRequestsErrorResponse,
   TooManyRequestsErrorResponse,
-  type ITooManyRequestsErrorResponseBody,
-  type ITooManyRequestsErrorResponseHeader,
 } from "../shared/TooManyRequestsErrorResponse";
 
 import {
   type IUnauthorizedErrorResponse,
   UnauthorizedErrorResponse,
-  type IUnauthorizedErrorResponseBody,
-  type IUnauthorizedErrorResponseHeader,
 } from "../shared/UnauthorizedErrorResponse";
 
 import {
   type IUnsupportedMediaTypeErrorResponse,
   UnsupportedMediaTypeErrorResponse,
-  type IUnsupportedMediaTypeErrorResponseBody,
-  type IUnsupportedMediaTypeErrorResponseHeader,
 } from "../shared/UnsupportedMediaTypeErrorResponse";
 
 import {
   type IValidationErrorResponse,
   ValidationErrorResponse,
-  type IValidationErrorResponseBody,
-  type IValidationErrorResponseHeader,
 } from "../shared/ValidationErrorResponse";
 
 export class PutSpecimenResponseValidator extends ResponseValidator {
@@ -205,65 +185,24 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<PutSpecimenSuccessResponse> {
-    let isValid = true;
-    const validatedResponse: IHttpResponse = {
-      statusCode: response.statusCode,
-      header: undefined,
-      body: undefined,
-    };
+    const result = this.validateResponseType<PutSpecimenSuccessResponse>(
+      "PutSpecimenSuccess",
+      definition.responses[0] && "header" in definition.responses[0]
+        ? definition.responses[0]!.header
+        : undefined,
+      definition.responses[0] && "body" in definition.responses[0]
+        ? definition.responses[0]!.body
+        : undefined,
+    )(response, error);
 
-    assert(
-      definition.responses[0] &&
-        "body" in definition.responses[0] &&
-        definition.responses[0].body,
-      "'PutSpecimenSuccessResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[0].body.safeParse(
-      response.body,
-    ) as unknown as ZodSafeParseResult<IPutSpecimenSuccessResponseBody>;
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues(
-        "PutSpecimenSuccess",
-        validateBodyResult.error.issues,
-      );
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
-    }
-
-    assert(
-      definition.responses[0] &&
-        "header" in definition.responses[0] &&
-        definition.responses[0].header,
-      "'PutSpecimenSuccessResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[0].header.shape,
-    );
-    const validateHeaderResult = definition.responses[0].header.safeParse(
-      coercedHeader,
-    ) as unknown as ZodSafeParseResult<IPutSpecimenSuccessResponseHeader>;
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(
-        "PutSpecimenSuccess",
-        validateHeaderResult.error.issues,
-      );
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    if (!isValid) {
-      return { isValid: false, error };
+    if (!result.isValid) {
+      return result;
     }
 
     return {
       isValid: true,
       data: new PutSpecimenSuccessResponse(
-        validatedResponse as IPutSpecimenSuccessResponse,
+        result.data as IPutSpecimenSuccessResponse,
       ),
     };
   }
@@ -272,65 +211,24 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<SpecimenConflictErrorResponse> {
-    let isValid = true;
-    const validatedResponse: IHttpResponse = {
-      statusCode: response.statusCode,
-      header: undefined,
-      body: undefined,
-    };
+    const result = this.validateResponseType<SpecimenConflictErrorResponse>(
+      "SpecimenConflictError",
+      definition.responses[1] && "header" in definition.responses[1]
+        ? definition.responses[1]!.header
+        : undefined,
+      definition.responses[1] && "body" in definition.responses[1]
+        ? definition.responses[1]!.body
+        : undefined,
+    )(response, error);
 
-    assert(
-      definition.responses[1] &&
-        "body" in definition.responses[1] &&
-        definition.responses[1].body,
-      "'SpecimenConflictErrorResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[1].body.safeParse(
-      response.body,
-    ) as unknown as ZodSafeParseResult<ISpecimenConflictErrorResponseBody>;
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues(
-        "SpecimenConflictError",
-        validateBodyResult.error.issues,
-      );
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
-    }
-
-    assert(
-      definition.responses[1] &&
-        "header" in definition.responses[1] &&
-        definition.responses[1].header,
-      "'SpecimenConflictErrorResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[1].header.shape,
-    );
-    const validateHeaderResult = definition.responses[1].header.safeParse(
-      coercedHeader,
-    ) as unknown as ZodSafeParseResult<ISpecimenConflictErrorResponseHeader>;
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(
-        "SpecimenConflictError",
-        validateHeaderResult.error.issues,
-      );
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    if (!isValid) {
-      return { isValid: false, error };
+    if (!result.isValid) {
+      return result;
     }
 
     return {
       isValid: true,
       data: new SpecimenConflictErrorResponse(
-        validatedResponse as ISpecimenConflictErrorResponse,
+        result.data as ISpecimenConflictErrorResponse,
       ),
     };
   }
@@ -339,65 +237,24 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<SpecimenNotFoundErrorResponse> {
-    let isValid = true;
-    const validatedResponse: IHttpResponse = {
-      statusCode: response.statusCode,
-      header: undefined,
-      body: undefined,
-    };
+    const result = this.validateResponseType<SpecimenNotFoundErrorResponse>(
+      "SpecimenNotFoundError",
+      definition.responses[2] && "header" in definition.responses[2]
+        ? definition.responses[2]!.header
+        : undefined,
+      definition.responses[2] && "body" in definition.responses[2]
+        ? definition.responses[2]!.body
+        : undefined,
+    )(response, error);
 
-    assert(
-      definition.responses[2] &&
-        "body" in definition.responses[2] &&
-        definition.responses[2].body,
-      "'SpecimenNotFoundErrorResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[2].body.safeParse(
-      response.body,
-    ) as unknown as ZodSafeParseResult<ISpecimenNotFoundErrorResponseBody>;
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues(
-        "SpecimenNotFoundError",
-        validateBodyResult.error.issues,
-      );
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
-    }
-
-    assert(
-      definition.responses[2] &&
-        "header" in definition.responses[2] &&
-        definition.responses[2].header,
-      "'SpecimenNotFoundErrorResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[2].header.shape,
-    );
-    const validateHeaderResult = definition.responses[2].header.safeParse(
-      coercedHeader,
-    ) as unknown as ZodSafeParseResult<ISpecimenNotFoundErrorResponseHeader>;
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(
-        "SpecimenNotFoundError",
-        validateHeaderResult.error.issues,
-      );
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    if (!isValid) {
-      return { isValid: false, error };
+    if (!result.isValid) {
+      return result;
     }
 
     return {
       isValid: true,
       data: new SpecimenNotFoundErrorResponse(
-        validatedResponse as ISpecimenNotFoundErrorResponse,
+        result.data as ISpecimenNotFoundErrorResponse,
       ),
     };
   }
@@ -406,65 +263,25 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<SpecimenUnprocessableEntityErrorResponse> {
-    let isValid = true;
-    const validatedResponse: IHttpResponse = {
-      statusCode: response.statusCode,
-      header: undefined,
-      body: undefined,
-    };
-
-    assert(
-      definition.responses[3] &&
-        "body" in definition.responses[3] &&
-        definition.responses[3].body,
-      "'SpecimenUnprocessableEntityErrorResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[3].body.safeParse(
-      response.body,
-    ) as unknown as ZodSafeParseResult<ISpecimenUnprocessableEntityErrorResponseBody>;
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues(
+    const result =
+      this.validateResponseType<SpecimenUnprocessableEntityErrorResponse>(
         "SpecimenUnprocessableEntityError",
-        validateBodyResult.error.issues,
-      );
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
-    }
+        definition.responses[3] && "header" in definition.responses[3]
+          ? definition.responses[3]!.header
+          : undefined,
+        definition.responses[3] && "body" in definition.responses[3]
+          ? definition.responses[3]!.body
+          : undefined,
+      )(response, error);
 
-    assert(
-      definition.responses[3] &&
-        "header" in definition.responses[3] &&
-        definition.responses[3].header,
-      "'SpecimenUnprocessableEntityErrorResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[3].header.shape,
-    );
-    const validateHeaderResult = definition.responses[3].header.safeParse(
-      coercedHeader,
-    ) as unknown as ZodSafeParseResult<ISpecimenUnprocessableEntityErrorResponseHeader>;
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(
-        "SpecimenUnprocessableEntityError",
-        validateHeaderResult.error.issues,
-      );
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    if (!isValid) {
-      return { isValid: false, error };
+    if (!result.isValid) {
+      return result;
     }
 
     return {
       isValid: true,
       data: new SpecimenUnprocessableEntityErrorResponse(
-        validatedResponse as ISpecimenUnprocessableEntityErrorResponse,
+        result.data as ISpecimenUnprocessableEntityErrorResponse,
       ),
     };
   }
@@ -473,63 +290,23 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<ForbiddenErrorResponse> {
-    let isValid = true;
-    const validatedResponse: IHttpResponse = {
-      statusCode: response.statusCode,
-      header: undefined,
-      body: undefined,
-    };
+    const result = this.validateResponseType<ForbiddenErrorResponse>(
+      "ForbiddenError",
+      definition.responses[4] && "header" in definition.responses[4]
+        ? definition.responses[4]!.header
+        : undefined,
+      definition.responses[4] && "body" in definition.responses[4]
+        ? definition.responses[4]!.body
+        : undefined,
+    )(response, error);
 
-    assert(
-      definition.responses[4] &&
-        "body" in definition.responses[4] &&
-        definition.responses[4].body,
-      "'ForbiddenErrorResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[4].body.safeParse(
-      response.body,
-    ) as unknown as ZodSafeParseResult<IForbiddenErrorResponseBody>;
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues("ForbiddenError", validateBodyResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
-    }
-
-    assert(
-      definition.responses[4] &&
-        "header" in definition.responses[4] &&
-        definition.responses[4].header,
-      "'ForbiddenErrorResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[4].header.shape,
-    );
-    const validateHeaderResult = definition.responses[4].header.safeParse(
-      coercedHeader,
-    ) as unknown as ZodSafeParseResult<IForbiddenErrorResponseHeader>;
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(
-        "ForbiddenError",
-        validateHeaderResult.error.issues,
-      );
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    if (!isValid) {
-      return { isValid: false, error };
+    if (!result.isValid) {
+      return result;
     }
 
     return {
       isValid: true,
-      data: new ForbiddenErrorResponse(
-        validatedResponse as IForbiddenErrorResponse,
-      ),
+      data: new ForbiddenErrorResponse(result.data as IForbiddenErrorResponse),
     };
   }
 
@@ -537,65 +314,24 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<InternalServerErrorResponse> {
-    let isValid = true;
-    const validatedResponse: IHttpResponse = {
-      statusCode: response.statusCode,
-      header: undefined,
-      body: undefined,
-    };
+    const result = this.validateResponseType<InternalServerErrorResponse>(
+      "InternalServerError",
+      definition.responses[5] && "header" in definition.responses[5]
+        ? definition.responses[5]!.header
+        : undefined,
+      definition.responses[5] && "body" in definition.responses[5]
+        ? definition.responses[5]!.body
+        : undefined,
+    )(response, error);
 
-    assert(
-      definition.responses[5] &&
-        "body" in definition.responses[5] &&
-        definition.responses[5].body,
-      "'InternalServerErrorResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[5].body.safeParse(
-      response.body,
-    ) as unknown as ZodSafeParseResult<IInternalServerErrorResponseBody>;
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues(
-        "InternalServerError",
-        validateBodyResult.error.issues,
-      );
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
-    }
-
-    assert(
-      definition.responses[5] &&
-        "header" in definition.responses[5] &&
-        definition.responses[5].header,
-      "'InternalServerErrorResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[5].header.shape,
-    );
-    const validateHeaderResult = definition.responses[5].header.safeParse(
-      coercedHeader,
-    ) as unknown as ZodSafeParseResult<IInternalServerErrorResponseHeader>;
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(
-        "InternalServerError",
-        validateHeaderResult.error.issues,
-      );
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    if (!isValid) {
-      return { isValid: false, error };
+    if (!result.isValid) {
+      return result;
     }
 
     return {
       isValid: true,
       data: new InternalServerErrorResponse(
-        validatedResponse as IInternalServerErrorResponse,
+        result.data as IInternalServerErrorResponse,
       ),
     };
   }
@@ -604,65 +340,24 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<TooManyRequestsErrorResponse> {
-    let isValid = true;
-    const validatedResponse: IHttpResponse = {
-      statusCode: response.statusCode,
-      header: undefined,
-      body: undefined,
-    };
+    const result = this.validateResponseType<TooManyRequestsErrorResponse>(
+      "TooManyRequestsError",
+      definition.responses[6] && "header" in definition.responses[6]
+        ? definition.responses[6]!.header
+        : undefined,
+      definition.responses[6] && "body" in definition.responses[6]
+        ? definition.responses[6]!.body
+        : undefined,
+    )(response, error);
 
-    assert(
-      definition.responses[6] &&
-        "body" in definition.responses[6] &&
-        definition.responses[6].body,
-      "'TooManyRequestsErrorResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[6].body.safeParse(
-      response.body,
-    ) as unknown as ZodSafeParseResult<ITooManyRequestsErrorResponseBody>;
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues(
-        "TooManyRequestsError",
-        validateBodyResult.error.issues,
-      );
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
-    }
-
-    assert(
-      definition.responses[6] &&
-        "header" in definition.responses[6] &&
-        definition.responses[6].header,
-      "'TooManyRequestsErrorResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[6].header.shape,
-    );
-    const validateHeaderResult = definition.responses[6].header.safeParse(
-      coercedHeader,
-    ) as unknown as ZodSafeParseResult<ITooManyRequestsErrorResponseHeader>;
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(
-        "TooManyRequestsError",
-        validateHeaderResult.error.issues,
-      );
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    if (!isValid) {
-      return { isValid: false, error };
+    if (!result.isValid) {
+      return result;
     }
 
     return {
       isValid: true,
       data: new TooManyRequestsErrorResponse(
-        validatedResponse as ITooManyRequestsErrorResponse,
+        result.data as ITooManyRequestsErrorResponse,
       ),
     };
   }
@@ -671,62 +366,24 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<UnauthorizedErrorResponse> {
-    let isValid = true;
-    const validatedResponse: IHttpResponse = {
-      statusCode: response.statusCode,
-      header: undefined,
-      body: undefined,
-    };
+    const result = this.validateResponseType<UnauthorizedErrorResponse>(
+      "UnauthorizedError",
+      definition.responses[7] && "header" in definition.responses[7]
+        ? definition.responses[7]!.header
+        : undefined,
+      definition.responses[7] && "body" in definition.responses[7]
+        ? definition.responses[7]!.body
+        : undefined,
+    )(response, error);
 
-    assert(
-      definition.responses[7] &&
-        "body" in definition.responses[7] &&
-        definition.responses[7].body,
-      "'UnauthorizedErrorResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[7].body.safeParse(
-      response.body,
-    ) as unknown as ZodSafeParseResult<IUnauthorizedErrorResponseBody>;
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues("UnauthorizedError", validateBodyResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
-    }
-
-    assert(
-      definition.responses[7] &&
-        "header" in definition.responses[7] &&
-        definition.responses[7].header,
-      "'UnauthorizedErrorResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[7].header.shape,
-    );
-    const validateHeaderResult = definition.responses[7].header.safeParse(
-      coercedHeader,
-    ) as unknown as ZodSafeParseResult<IUnauthorizedErrorResponseHeader>;
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(
-        "UnauthorizedError",
-        validateHeaderResult.error.issues,
-      );
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    if (!isValid) {
-      return { isValid: false, error };
+    if (!result.isValid) {
+      return result;
     }
 
     return {
       isValid: true,
       data: new UnauthorizedErrorResponse(
-        validatedResponse as IUnauthorizedErrorResponse,
+        result.data as IUnauthorizedErrorResponse,
       ),
     };
   }
@@ -735,65 +392,24 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<UnsupportedMediaTypeErrorResponse> {
-    let isValid = true;
-    const validatedResponse: IHttpResponse = {
-      statusCode: response.statusCode,
-      header: undefined,
-      body: undefined,
-    };
+    const result = this.validateResponseType<UnsupportedMediaTypeErrorResponse>(
+      "UnsupportedMediaTypeError",
+      definition.responses[8] && "header" in definition.responses[8]
+        ? definition.responses[8]!.header
+        : undefined,
+      definition.responses[8] && "body" in definition.responses[8]
+        ? definition.responses[8]!.body
+        : undefined,
+    )(response, error);
 
-    assert(
-      definition.responses[8] &&
-        "body" in definition.responses[8] &&
-        definition.responses[8].body,
-      "'UnsupportedMediaTypeErrorResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[8].body.safeParse(
-      response.body,
-    ) as unknown as ZodSafeParseResult<IUnsupportedMediaTypeErrorResponseBody>;
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues(
-        "UnsupportedMediaTypeError",
-        validateBodyResult.error.issues,
-      );
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
-    }
-
-    assert(
-      definition.responses[8] &&
-        "header" in definition.responses[8] &&
-        definition.responses[8].header,
-      "'UnsupportedMediaTypeErrorResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[8].header.shape,
-    );
-    const validateHeaderResult = definition.responses[8].header.safeParse(
-      coercedHeader,
-    ) as unknown as ZodSafeParseResult<IUnsupportedMediaTypeErrorResponseHeader>;
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(
-        "UnsupportedMediaTypeError",
-        validateHeaderResult.error.issues,
-      );
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    if (!isValid) {
-      return { isValid: false, error };
+    if (!result.isValid) {
+      return result;
     }
 
     return {
       isValid: true,
       data: new UnsupportedMediaTypeErrorResponse(
-        validatedResponse as IUnsupportedMediaTypeErrorResponse,
+        result.data as IUnsupportedMediaTypeErrorResponse,
       ),
     };
   }
@@ -802,62 +418,24 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<ValidationErrorResponse> {
-    let isValid = true;
-    const validatedResponse: IHttpResponse = {
-      statusCode: response.statusCode,
-      header: undefined,
-      body: undefined,
-    };
+    const result = this.validateResponseType<ValidationErrorResponse>(
+      "ValidationError",
+      definition.responses[9] && "header" in definition.responses[9]
+        ? definition.responses[9]!.header
+        : undefined,
+      definition.responses[9] && "body" in definition.responses[9]
+        ? definition.responses[9]!.body
+        : undefined,
+    )(response, error);
 
-    assert(
-      definition.responses[9] &&
-        "body" in definition.responses[9] &&
-        definition.responses[9].body,
-      "'ValidationErrorResponseBody' has to be defined in the definition",
-    );
-    const validateBodyResult = definition.responses[9].body.safeParse(
-      response.body,
-    ) as unknown as ZodSafeParseResult<IValidationErrorResponseBody>;
-
-    if (!validateBodyResult.success) {
-      error.addBodyIssues("ValidationError", validateBodyResult.error.issues);
-      isValid = false;
-    } else {
-      validatedResponse.body = validateBodyResult.data;
-    }
-
-    assert(
-      definition.responses[9] &&
-        "header" in definition.responses[9] &&
-        definition.responses[9].header,
-      "'ValidationErrorResponseHeader' has to be defined in the definition",
-    );
-    const coercedHeader = this.coerceHeaderToSchema(
-      response.header,
-      definition.responses[9].header.shape,
-    );
-    const validateHeaderResult = definition.responses[9].header.safeParse(
-      coercedHeader,
-    ) as unknown as ZodSafeParseResult<IValidationErrorResponseHeader>;
-
-    if (!validateHeaderResult.success) {
-      error.addHeaderIssues(
-        "ValidationError",
-        validateHeaderResult.error.issues,
-      );
-      isValid = false;
-    } else {
-      validatedResponse.header = validateHeaderResult.data;
-    }
-
-    if (!isValid) {
-      return { isValid: false, error };
+    if (!result.isValid) {
+      return result;
     }
 
     return {
       isValid: true,
       data: new ValidationErrorResponse(
-        validatedResponse as IValidationErrorResponse,
+        result.data as IValidationErrorResponse,
       ),
     };
   }

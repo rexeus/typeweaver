@@ -35,16 +35,16 @@ export class ResponseValidationError extends Error {
     this.issues = input?.issues ?? [];
   }
 
-  public addHeaderIssues(name: string, issues: z.core.$ZodRawIssue[]) {
-    this.addResponseIssues(name, issues);
+  public addHeaderIssues(responseName: string, issues: z.core.$ZodRawIssue[]) {
+    this.addResponseIssues(responseName, issues);
   }
 
-  public addBodyIssues(name: string, issues: z.core.$ZodRawIssue[]) {
-    this.addResponseIssues(name, [], issues);
+  public addBodyIssues(responseName: string, issues: z.core.$ZodRawIssue[]) {
+    this.addResponseIssues(responseName, [], issues);
   }
 
   public addResponseIssues(
-    name: string,
+    responseName: string,
     headerIssues: z.core.$ZodRawIssue[] = [],
     bodyIssues: z.core.$ZodRawIssue[] = []
   ) {
@@ -53,12 +53,12 @@ export class ResponseValidationError extends Error {
     }
 
     const issue = this.issues.find(
-      i => i.type === "INVALID_RESPONSE" && i.responseName === name
+      i => i.type === "INVALID_RESPONSE" && i.responseName === responseName
     ) as InvalidResponseIssue;
     if (!issue) {
       this.issues.push({
         type: "INVALID_RESPONSE",
-        responseName: name,
+        responseName: responseName,
         headerIssues,
         bodyIssues,
       });
@@ -89,25 +89,26 @@ export class ResponseValidationError extends Error {
     }
   }
 
-  public getResponseHeaderIssues(name: string): z.core.$ZodRawIssue[] {
+  public getResponseHeaderIssues(responseName: string): z.core.$ZodRawIssue[] {
     const issue = this.issues.find(
-      i => i.type === "INVALID_RESPONSE" && i.responseName === name
+      i => i.type === "INVALID_RESPONSE" && i.responseName === responseName
     ) as InvalidResponseIssue;
     return issue ? issue.headerIssues : [];
   }
 
-  public getResponseBodyIssues(name: string): z.core.$ZodRawIssue[] {
+  public getResponseBodyIssues(responseName: string): z.core.$ZodRawIssue[] {
     const issue = this.issues.find(
-      i => i.type === "INVALID_RESPONSE" && i.responseName === name
+      i => i.type === "INVALID_RESPONSE" && i.responseName === responseName
     ) as InvalidResponseIssue;
     return issue ? issue.bodyIssues : [];
   }
 
-  public hasResponseIssues(name?: string | undefined): boolean {
-    if (name) {
+  public hasResponseIssues(responseName?: string | undefined): boolean {
+    if (responseName) {
       return this.issues.some(
         issue =>
-          issue.type === "INVALID_RESPONSE" && issue.responseName === name
+          issue.type === "INVALID_RESPONSE" &&
+          issue.responseName === responseName
       );
     }
     return this.issues.some(issue => issue.type === "INVALID_RESPONSE");

@@ -15,27 +15,18 @@ import {
 } from "@rexeus/typeweaver-core";
 import {
     ResponseValidator,
-    assert,
 } from "../lib/types";
 import {
 type <%= pascalCaseOperationId %>Response,
 <% for (const ownResponse of ownResponses) { %>
     type I<%= ownResponse.name %>Response,
     <%= ownResponse.name %>Response,
-    <% if (ownResponse.hasBody) { %>
-    type I<%= ownResponse.name %>ResponseBody,<% } %>
-    <% if (ownResponse.hasHeader) { %>
-    type I<%= ownResponse.name %>ResponseHeader,<% } %>
 <% } %>
 } from "<%= responseFile %>";
 <% for (const sharedResponse of sharedResponses) { %>
     import {
         type I<%= sharedResponse.name %>Response,
         <%= sharedResponse.name %>Response,
-        <% if (sharedResponse.hasBody) { %>
-        type I<%= sharedResponse.name %>ResponseBody,<% } %>
-        <% if (sharedResponse.hasHeader) { %>
-        type I<%= sharedResponse.name %>ResponseHeader,<% } %>
     } from "<%= sharedResponse.importPath %>";
 <% } %>
 
@@ -89,53 +80,17 @@ export class <%= pascalCaseOperationId %>ResponseValidator extends ResponseValid
 
     <% for (const response of [...ownResponses, ...sharedResponses]) { %>
     private validate<%= response.name %>Response(response: IHttpResponse, error: ResponseValidationError): SafeResponseValidationResult<<%= response.name %>Response> {
-        let isValid = true;
-        const validatedResponse: IHttpResponse = {
-            statusCode: response.statusCode,
-            header: undefined,
-            body: undefined,
-        };
+        const result = this.validateResponseType<<%= response.name %>Response>(
+            "<%= response.name.replace(/Response$/, '') %>",
+            <% if(response.hasHeader) { %>definition.responses[<%= response.index %>] && "header" in definition.responses[<%= response.index %>] ? definition.responses[<%= response.index %>]!.header : undefined<% } else { %>undefined<% } %>,
+            <% if(response.hasBody) { %>definition.responses[<%= response.index %>] && "body" in definition.responses[<%= response.index %>] ? definition.responses[<%= response.index %>]!.body : undefined<% } else { %>undefined<% } %>,
+        )(response, error);
 
-        <% if(response.hasBody) { %>
-            assert(
-                definition.responses[<%= response.index %>] 
-                && "body" in definition.responses[<%= response.index %>] 
-                && definition.responses[<%= response.index %>].body,
-                "'<%= response.name %>ResponseBody' has to be defined in the definition"
-            );
-            const validateBodyResult = definition.responses[<%= response.index %>].body.safeParse(response.body) as unknown as ZodSafeParseResult<I<%= response.name %>ResponseBody>;
-
-            if (!validateBodyResult.success) {
-                error.addBodyIssues("<%= response.name.replace(/Response$/, '') %>", validateBodyResult.error.issues);
-                isValid = false;
-            } else {
-                validatedResponse.body = validateBodyResult.data;
-            }
-        <% } %>
-
-        <% if(response.hasHeader) { %>
-            assert(
-                definition.responses[<%= response.index %>] 
-                && "header" in definition.responses[<%= response.index %>] 
-                && definition.responses[<%= response.index %>].header,
-                "'<%= response.name %>ResponseHeader' has to be defined in the definition"
-            );
-            const coercedHeader = this.coerceHeaderToSchema(response.header, definition.responses[<%= response.index %>].header.shape);
-            const validateHeaderResult = definition.responses[<%= response.index %>].header.safeParse(coercedHeader) as unknown as ZodSafeParseResult<I<%= response.name %>ResponseHeader>;
-
-            if (!validateHeaderResult.success) {
-                error.addHeaderIssues("<%= response.name.replace(/Response$/, '') %>", validateHeaderResult.error.issues);
-                isValid = false;
-            } else {
-                validatedResponse.header = validateHeaderResult.data;
-            }
-        <% } %>
-
-        if (!isValid) {
-            return { isValid: false, error };
+        if (!result.isValid) {
+            return result;
         }
 
-        return { isValid: true, data: new <%= response.name %>Response(validatedResponse as I<%= response.name %>Response) };
+        return { isValid: true, data: new <%= response.name %>Response(result.data as I<%= response.name %>Response) };
     }
     <% } %>
 }
