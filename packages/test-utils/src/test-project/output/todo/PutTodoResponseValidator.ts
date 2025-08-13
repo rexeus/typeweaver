@@ -7,7 +7,6 @@
  */
 
 import definition from "../../definition/todo/mutations/PutTodoDefinition";
-import type { z } from "zod/v4";
 import {
   type IHttpResponse,
   type SafeResponseValidationResult,
