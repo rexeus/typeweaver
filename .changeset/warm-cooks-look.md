@@ -4,4 +4,4 @@
 "@rexeus/typeweaver-core": patch
 ---
 
-Improve client handling of UnkownResponses
+Improve client handling of UnknownResponses
