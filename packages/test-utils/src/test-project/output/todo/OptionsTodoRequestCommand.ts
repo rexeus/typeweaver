@@ -7,7 +7,12 @@
  */
 
 import definition from "../../definition/todo/queries/OptionsTodoDefinition";
-import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import {
+  HttpMethod,
+  type IHttpResponse,
+  ResponseValidationError,
+  UnknownResponse,
+} from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
 import { OptionsTodoResponseValidator } from "./OptionsTodoResponseValidator";
 import type {
@@ -46,12 +51,24 @@ export class OptionsTodoRequestCommand
   public processResponse(
     response: IHttpResponse,
   ): SuccessfulOptionsTodoResponse {
-    const result = this.responseValidator.validate(response);
+    try {
+      const result = this.responseValidator.validate(response);
 
-    if (result instanceof OptionsTodoSuccessResponse) {
-      return result;
+      if (result instanceof OptionsTodoSuccessResponse) {
+        return result;
+      }
+
+      throw result;
+    } catch (error) {
+      if (error instanceof ResponseValidationError) {
+        throw new UnknownResponse(
+          response.statusCode,
+          response.header,
+          response.body,
+          error,
+        );
+      }
+      throw error;
     }
-
-    throw result;
   }
 }

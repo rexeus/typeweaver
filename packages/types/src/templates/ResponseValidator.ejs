@@ -7,6 +7,7 @@
  */
 
 import definition from "<%= sourcePath %>";
+import type { z } from "zod/v4";
 import { 
     type IHttpResponse,
     type SafeResponseValidationResult,
@@ -120,7 +121,7 @@ export class <%= pascalCaseOperationId %>ResponseValidator extends ResponseValid
             const validateBodyResult = definition.responses[<%= response.index %>].body.safeParse(response.body);
 
             if (!validateBodyResult.success) {
-                error.addBodyIssues(validateBodyResult.error.issues);
+                error.addBodyIssues("<%= response.name %>", validateBodyResult.error.issues);
                 isValid = false;
             } else {
                 validatedResponse.body = validateBodyResult.data;
@@ -138,7 +139,7 @@ export class <%= pascalCaseOperationId %>ResponseValidator extends ResponseValid
             const validateHeaderResult = definition.responses[<%= response.index %>].header.safeParse(coercedHeader);
 
             if (!validateHeaderResult.success) {
-                error.addHeaderIssues(validateHeaderResult.error.issues);
+                error.addHeaderIssues("<%= response.name %>", validateHeaderResult.error.issues);
                 isValid = false;
             } else {
                 validatedResponse.header = validateHeaderResult.data;

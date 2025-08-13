@@ -13,3 +13,4 @@ export * from "./RequestValidationError";
 export * from "./RequestValidator";
 export * from "./ResponseValidationError";
 export * from "./ResponseValidator";
+export * from "./UnknownResponse";

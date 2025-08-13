@@ -7,7 +7,7 @@
  */
 
 import definition from "<%= sourcePath %>";
-import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import { HttpMethod, type IHttpResponse, ResponseValidationError, UnknownResponse } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
 import { <%= pascalCaseOperationId %>ResponseValidator } from "<%= responseValidatorFile %>";
 import type {
@@ -56,14 +56,26 @@ export class <%= pascalCaseOperationId %>RequestCommand extends RequestCommand i
     }
 
     public processResponse(response: IHttpResponse): Successful<%= pascalCaseOperationId %>Response {
-        const result = this.responseValidator.validate(response);
+        try {
+            const result = this.responseValidator.validate(response);
 
-        <% for (const successResponse of [...ownSuccessResponses, ...sharedSuccessResponses]) { %>
-            if (result instanceof <%= successResponse.name %>Response) {
-                return result;
+            <% for (const successResponse of [...ownSuccessResponses, ...sharedSuccessResponses]) { %>
+                if (result instanceof <%= successResponse.name %>Response) {
+                    return result;
+                }
+            <% } %>
+
+            throw result;
+        } catch (error) {
+            if (error instanceof ResponseValidationError) {
+                throw new UnknownResponse(
+                    response.statusCode,
+                    response.header,
+                    response.body,
+                    error
+                );
             }
-        <% } %>
-
-        throw result;
+            throw error;
+        }
     }
 }

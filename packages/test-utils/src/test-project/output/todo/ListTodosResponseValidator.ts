@@ -7,6 +7,7 @@
  */
 
 import definition from "../../definition/todo/queries/ListTodosDefinition";
+import type { z } from "zod/v4";
 import {
   type IHttpResponse,
   type SafeResponseValidationResult,
@@ -287,7 +288,7 @@ export class ListTodosResponseValidator extends ResponseValidator {
     );
 
     if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
+      error.addBodyIssues("ListTodosSuccess", validateBodyResult.error.issues);
       isValid = false;
     } else {
       validatedResponse.body = validateBodyResult.data;
@@ -307,7 +308,10 @@ export class ListTodosResponseValidator extends ResponseValidator {
       definition.responses[0].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
+      error.addHeaderIssues(
+        "ListTodosSuccess",
+        validateHeaderResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.header = validateHeaderResult.data;
@@ -334,7 +338,7 @@ export class ListTodosResponseValidator extends ResponseValidator {
     );
 
     if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
+      error.addBodyIssues("ForbiddenError", validateBodyResult.error.issues);
       isValid = false;
     } else {
       validatedResponse.body = validateBodyResult.data;
@@ -354,7 +358,10 @@ export class ListTodosResponseValidator extends ResponseValidator {
       definition.responses[1].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
+      error.addHeaderIssues(
+        "ForbiddenError",
+        validateHeaderResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.header = validateHeaderResult.data;
@@ -381,7 +388,10 @@ export class ListTodosResponseValidator extends ResponseValidator {
     );
 
     if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
+      error.addBodyIssues(
+        "InternalServerError",
+        validateBodyResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.body = validateBodyResult.data;
@@ -401,7 +411,10 @@ export class ListTodosResponseValidator extends ResponseValidator {
       definition.responses[2].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
+      error.addHeaderIssues(
+        "InternalServerError",
+        validateHeaderResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.header = validateHeaderResult.data;
@@ -428,7 +441,10 @@ export class ListTodosResponseValidator extends ResponseValidator {
     );
 
     if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
+      error.addBodyIssues(
+        "TooManyRequestsError",
+        validateBodyResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.body = validateBodyResult.data;
@@ -448,7 +464,10 @@ export class ListTodosResponseValidator extends ResponseValidator {
       definition.responses[3].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
+      error.addHeaderIssues(
+        "TooManyRequestsError",
+        validateHeaderResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.header = validateHeaderResult.data;
@@ -475,7 +494,7 @@ export class ListTodosResponseValidator extends ResponseValidator {
     );
 
     if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
+      error.addBodyIssues("UnauthorizedError", validateBodyResult.error.issues);
       isValid = false;
     } else {
       validatedResponse.body = validateBodyResult.data;
@@ -495,7 +514,10 @@ export class ListTodosResponseValidator extends ResponseValidator {
       definition.responses[4].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
+      error.addHeaderIssues(
+        "UnauthorizedError",
+        validateHeaderResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.header = validateHeaderResult.data;
@@ -522,7 +544,10 @@ export class ListTodosResponseValidator extends ResponseValidator {
     );
 
     if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
+      error.addBodyIssues(
+        "UnsupportedMediaTypeError",
+        validateBodyResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.body = validateBodyResult.data;
@@ -542,7 +567,10 @@ export class ListTodosResponseValidator extends ResponseValidator {
       definition.responses[5].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
+      error.addHeaderIssues(
+        "UnsupportedMediaTypeError",
+        validateHeaderResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.header = validateHeaderResult.data;
@@ -569,7 +597,7 @@ export class ListTodosResponseValidator extends ResponseValidator {
     );
 
     if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
+      error.addBodyIssues("ValidationError", validateBodyResult.error.issues);
       isValid = false;
     } else {
       validatedResponse.body = validateBodyResult.data;
@@ -589,7 +617,10 @@ export class ListTodosResponseValidator extends ResponseValidator {
       definition.responses[6].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
+      error.addHeaderIssues(
+        "ValidationError",
+        validateHeaderResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.header = validateHeaderResult.data;

@@ -7,7 +7,12 @@
  */
 
 import definition from "../../definition/todo/queries/HeadTodoDefinition";
-import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import {
+  HttpMethod,
+  type IHttpResponse,
+  ResponseValidationError,
+  UnknownResponse,
+} from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
 import { HeadTodoResponseValidator } from "./HeadTodoResponseValidator";
 import type {
@@ -44,12 +49,24 @@ export class HeadTodoRequestCommand
   }
 
   public processResponse(response: IHttpResponse): SuccessfulHeadTodoResponse {
-    const result = this.responseValidator.validate(response);
+    try {
+      const result = this.responseValidator.validate(response);
 
-    if (result instanceof HeadTodoSuccessResponse) {
-      return result;
+      if (result instanceof HeadTodoSuccessResponse) {
+        return result;
+      }
+
+      throw result;
+    } catch (error) {
+      if (error instanceof ResponseValidationError) {
+        throw new UnknownResponse(
+          response.statusCode,
+          response.header,
+          response.body,
+          error,
+        );
+      }
+      throw error;
     }
-
-    throw result;
   }
 }

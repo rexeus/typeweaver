@@ -1,15 +1,19 @@
 import type { z } from "zod/v4";
 import type { HttpStatusCode } from "./HttpStatusCode";
 
+export type ResponseValidationIssue = {
+  readonly name: string;
+  readonly headerIssues: z.core.$ZodRawIssue[];
+  readonly bodyIssues: z.core.$ZodRawIssue[];
+};
+
 export type ResponseValidationErrorInput = {
-  headerIssues?: z.core.$ZodRawIssue[];
-  bodyIssues?: z.core.$ZodRawIssue[];
+  readonly responses?: ResponseValidationIssue[];
 };
 
 export class ResponseValidationError extends Error {
   public override readonly message: string;
-  public readonly headerIssues: z.core.$ZodRawIssue[] = [];
-  public readonly bodyIssues: z.core.$ZodRawIssue[] = [];
+  public readonly issues: ResponseValidationIssue[];
 
   public constructor(
     public readonly statusCode: HttpStatusCode,
@@ -19,24 +23,65 @@ export class ResponseValidationError extends Error {
     super(message);
 
     this.message = message;
+    this.issues = input?.responses ?? [];
+  }
 
-    if (input?.headerIssues) {
-      this.headerIssues = input.headerIssues;
+  public addHeaderIssues(name: string, issues: z.core.$ZodRawIssue[]) {
+    this.addResponseIssues(name, issues);
+  }
+
+  public addBodyIssues(name: string, issues: z.core.$ZodRawIssue[]) {
+    this.addResponseIssues(name, [], issues);
+  }
+
+  public addResponseIssues(
+    name: string,
+    headerIssues: z.core.$ZodRawIssue[] = [],
+    bodyIssues: z.core.$ZodRawIssue[] = []
+  ) {
+    if (headerIssues.length === 0 && bodyIssues.length === 0) {
+      return;
     }
-    if (input?.bodyIssues) {
-      this.bodyIssues = input.bodyIssues;
+
+    const issue = this.issues.find(i => i.name === name);
+    if (!issue) {
+      this.issues.push({
+        name,
+        headerIssues,
+        bodyIssues,
+      });
+      return;
+    }
+
+    if (headerIssues.length > 0) {
+      issue.headerIssues.push(...headerIssues);
+    }
+    if (bodyIssues.length > 0) {
+      issue.bodyIssues.push(...bodyIssues);
     }
   }
 
-  public addHeaderIssues(issues: z.core.$ZodRawIssue[]) {
-    this.headerIssues.push(...issues);
+  public getHeaderIssues(name: string): z.core.$ZodRawIssue[] {
+    const issue = this.issues.find(i => i.name === name);
+    return issue ? issue.headerIssues : [];
   }
 
-  public addBodyIssues(issues: z.core.$ZodRawIssue[]) {
-    this.bodyIssues.push(...issues);
+  public getBodyIssues(name: string): z.core.$ZodRawIssue[] {
+    const issue = this.issues.find(i => i.name === name);
+    return issue ? issue.bodyIssues : [];
   }
 
-  public hasIssues(): boolean {
-    return this.headerIssues.length > 0 || this.bodyIssues.length > 0;
+
+  public hasIssues(name?: string | undefined): boolean {
+    if (name) {
+      return this.issues.some(
+        issue =>
+          issue.name === name &&
+          (issue.headerIssues.length > 0 || issue.bodyIssues.length > 0)
+      );
+    }
+    return this.issues.some(
+      issue => issue.headerIssues.length > 0 || issue.bodyIssues.length > 0
+    );
   }
 }

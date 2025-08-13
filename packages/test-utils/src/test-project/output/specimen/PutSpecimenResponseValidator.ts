@@ -7,6 +7,7 @@
  */
 
 import definition from "../../definition/specimen/PutSpecimenDefinition";
+import type { z } from "zod/v4";
 import {
   type IHttpResponse,
   type SafeResponseValidationResult,
@@ -384,7 +385,10 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     );
 
     if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
+      error.addBodyIssues(
+        "PutSpecimenSuccess",
+        validateBodyResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.body = validateBodyResult.data;
@@ -404,7 +408,10 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
       definition.responses[0].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
+      error.addHeaderIssues(
+        "PutSpecimenSuccess",
+        validateHeaderResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.header = validateHeaderResult.data;
@@ -431,7 +438,10 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     );
 
     if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
+      error.addBodyIssues(
+        "SpecimenConflictError",
+        validateBodyResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.body = validateBodyResult.data;
@@ -451,7 +461,10 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
       definition.responses[1].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
+      error.addHeaderIssues(
+        "SpecimenConflictError",
+        validateHeaderResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.header = validateHeaderResult.data;
@@ -478,7 +491,10 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     );
 
     if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
+      error.addBodyIssues(
+        "SpecimenNotFoundError",
+        validateBodyResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.body = validateBodyResult.data;
@@ -498,7 +514,10 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
       definition.responses[2].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
+      error.addHeaderIssues(
+        "SpecimenNotFoundError",
+        validateHeaderResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.header = validateHeaderResult.data;
@@ -525,7 +544,10 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     );
 
     if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
+      error.addBodyIssues(
+        "SpecimenUnprocessableEntityError",
+        validateBodyResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.body = validateBodyResult.data;
@@ -545,7 +567,10 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
       definition.responses[3].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
+      error.addHeaderIssues(
+        "SpecimenUnprocessableEntityError",
+        validateHeaderResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.header = validateHeaderResult.data;
@@ -572,7 +597,7 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     );
 
     if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
+      error.addBodyIssues("ForbiddenError", validateBodyResult.error.issues);
       isValid = false;
     } else {
       validatedResponse.body = validateBodyResult.data;
@@ -592,7 +617,10 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
       definition.responses[4].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
+      error.addHeaderIssues(
+        "ForbiddenError",
+        validateHeaderResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.header = validateHeaderResult.data;
@@ -619,7 +647,10 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     );
 
     if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
+      error.addBodyIssues(
+        "InternalServerError",
+        validateBodyResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.body = validateBodyResult.data;
@@ -639,7 +670,10 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
       definition.responses[5].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
+      error.addHeaderIssues(
+        "InternalServerError",
+        validateHeaderResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.header = validateHeaderResult.data;
@@ -666,7 +700,10 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     );
 
     if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
+      error.addBodyIssues(
+        "TooManyRequestsError",
+        validateBodyResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.body = validateBodyResult.data;
@@ -686,7 +723,10 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
       definition.responses[6].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
+      error.addHeaderIssues(
+        "TooManyRequestsError",
+        validateHeaderResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.header = validateHeaderResult.data;
@@ -713,7 +753,7 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     );
 
     if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
+      error.addBodyIssues("UnauthorizedError", validateBodyResult.error.issues);
       isValid = false;
     } else {
       validatedResponse.body = validateBodyResult.data;
@@ -733,7 +773,10 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
       definition.responses[7].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
+      error.addHeaderIssues(
+        "UnauthorizedError",
+        validateHeaderResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.header = validateHeaderResult.data;
@@ -760,7 +803,10 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     );
 
     if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
+      error.addBodyIssues(
+        "UnsupportedMediaTypeError",
+        validateBodyResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.body = validateBodyResult.data;
@@ -780,7 +826,10 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
       definition.responses[8].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
+      error.addHeaderIssues(
+        "UnsupportedMediaTypeError",
+        validateHeaderResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.header = validateHeaderResult.data;
@@ -807,7 +856,7 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
     );
 
     if (!validateBodyResult.success) {
-      error.addBodyIssues(validateBodyResult.error.issues);
+      error.addBodyIssues("ValidationError", validateBodyResult.error.issues);
       isValid = false;
     } else {
       validatedResponse.body = validateBodyResult.data;
@@ -827,7 +876,10 @@ export class PutSpecimenResponseValidator extends ResponseValidator {
       definition.responses[9].header.safeParse(coercedHeader);
 
     if (!validateHeaderResult.success) {
-      error.addHeaderIssues(validateHeaderResult.error.issues);
+      error.addHeaderIssues(
+        "ValidationError",
+        validateHeaderResult.error.issues,
+      );
       isValid = false;
     } else {
       validatedResponse.header = validateHeaderResult.data;
