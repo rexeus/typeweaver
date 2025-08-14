@@ -28,7 +28,7 @@ export class ResponseValidationError extends Error {
     public readonly statusCode: HttpStatusCode,
     input?: ResponseValidationErrorInput
   ) {
-    const message = `Invalid response for status code '${statusCode}'`;
+    const message = `Response validation failed for status code '${statusCode}'`;
     super(message);
 
     this.message = message;
