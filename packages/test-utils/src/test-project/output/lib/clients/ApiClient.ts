@@ -20,6 +20,11 @@ import axios, {
 } from "axios";
 
 /**
+ * Configuration options for handling unknown responses.
+ */
+export type UnknownResponseHandling = "throw" | "passthrough";
+
+/**
  * Configuration options for ApiClient initialization.
  */
 export type ApiClientProps = {
@@ -27,6 +32,10 @@ export type ApiClientProps = {
   axiosInstance?: AxiosInstance;
   /** Base URL for API requests. If not provided, must be set in axiosInstance */
   baseUrl?: string;
+  /** How to handle unknown responses. Defaults to "throw" */
+  unknownResponseHandling?: UnknownResponseHandling;
+  /** Predicate to determine if a status code represents success. Defaults to 2xx status codes */
+  isSuccessStatusCode?: (statusCode: number) => boolean;
 };
 
 /**
@@ -44,6 +53,10 @@ export abstract class ApiClient {
   public readonly axiosInstance: AxiosInstance;
   /** The base URL for all API requests */
   public readonly baseUrl: string;
+  /** How to handle unknown responses */
+  public readonly unknownResponseHandling: UnknownResponseHandling;
+  /** Predicate to determine if a status code represents success */
+  public readonly isSuccessStatusCode: (statusCode: number) => boolean;
 
   /**
    * Creates a new ApiClient instance.
@@ -60,6 +73,11 @@ export abstract class ApiClient {
         "Base URL must be provided either in axios instance or in constructor",
       );
     }
+
+    this.unknownResponseHandling = props.unknownResponseHandling ?? "throw";
+    this.isSuccessStatusCode =
+      props.isSuccessStatusCode ??
+      ((statusCode: number) => statusCode >= 200 && statusCode < 300);
   }
 
   /**

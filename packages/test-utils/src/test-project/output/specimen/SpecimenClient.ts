@@ -31,7 +31,10 @@ export class SpecimenClient extends ApiClient {
 
     switch (true) {
       case command instanceof PutSpecimenRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       default: {

@@ -13,7 +13,7 @@ import {
   ResponseValidationError,
   UnknownResponse,
 } from "@rexeus/typeweaver-core";
-import { RequestCommand } from "../lib/clients";
+import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
 import { PutTodoResponseValidator } from "./PutTodoResponseValidator";
 import type {
   IPutTodoRequest,
@@ -51,7 +51,10 @@ export class PutTodoRequestCommand
     this.responseValidator = new PutTodoResponseValidator();
   }
 
-  public processResponse(response: IHttpResponse): SuccessfulPutTodoResponse {
+  public processResponse(
+    response: IHttpResponse,
+    options: ProcessResponseOptions,
+  ): SuccessfulPutTodoResponse {
     try {
       const result = this.responseValidator.validate(response);
 
@@ -62,12 +65,21 @@ export class PutTodoRequestCommand
       throw result;
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        throw new UnknownResponse(
+        const unknownResponse = new UnknownResponse(
           response.statusCode,
           response.header,
           response.body,
           error,
         );
+
+        if (
+          options.unknownResponseHandling === "passthrough" &&
+          options.isSuccessStatusCode(response.statusCode)
+        ) {
+          return unknownResponse as any;
+        }
+
+        throw unknownResponse;
       }
       throw error;
     }

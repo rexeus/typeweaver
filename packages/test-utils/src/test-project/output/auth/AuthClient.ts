@@ -42,11 +42,17 @@ export class AuthClient extends ApiClient {
 
     switch (true) {
       case command instanceof AccessTokenRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       case command instanceof RefreshTokenRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       default: {

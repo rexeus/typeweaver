@@ -159,63 +159,108 @@ export class TodoClient extends ApiClient {
 
     switch (true) {
       case command instanceof CreateSubTodoRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       case command instanceof CreateTodoRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       case command instanceof DeleteSubTodoRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       case command instanceof DeleteTodoRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       case command instanceof PutTodoRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       case command instanceof UpdateSubTodoRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       case command instanceof UpdateTodoRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       case command instanceof UpdateTodoStatusRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       case command instanceof GetTodoRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       case command instanceof HeadTodoRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       case command instanceof ListSubTodosRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       case command instanceof ListTodosRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       case command instanceof OptionsTodoRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       case command instanceof QuerySubTodoRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       case command instanceof QueryTodoRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       default: {

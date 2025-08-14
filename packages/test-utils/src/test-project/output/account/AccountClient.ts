@@ -31,7 +31,10 @@ export class AccountClient extends ApiClient {
 
     switch (true) {
       case command instanceof RegisterAccountRequestCommand: {
-        return command.processResponse(response);
+        return command.processResponse(response, {
+          unknownResponseHandling: this.unknownResponseHandling,
+          isSuccessStatusCode: this.isSuccessStatusCode,
+        });
       }
 
       default: {

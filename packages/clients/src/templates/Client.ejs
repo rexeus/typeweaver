@@ -9,7 +9,9 @@
 import { ApiClient, type ApiClientProps } from "../lib/clients";
 <% for (const operation of operations) { %>
 import { <%= operation.operationId %>RequestCommand } from "./<%= operation.operationId %>RequestCommand";
-import type { Successful<%= operation.operationId %>Response } from "<%= operation.requestFile %>";
+import type { 
+    Successful<%= operation.operationId %>Response
+} from "<%= operation.requestFile %>";
 <% } %>
 
 export type <%= pascalCaseEntityName %>RequestCommands =
@@ -37,7 +39,10 @@ export class <%= pascalCaseEntityName %>Client extends ApiClient {
         switch (true) {
         <% for (const operation of operations) { %>
             case command instanceof <%= operation.operationId %>RequestCommand: {
-                return command.processResponse(response);
+                return command.processResponse(response, {
+                    unknownResponseHandling: this.unknownResponseHandling,
+                    isSuccessStatusCode: this.isSuccessStatusCode,
+                });
             }
         <% } %>
             default: {
