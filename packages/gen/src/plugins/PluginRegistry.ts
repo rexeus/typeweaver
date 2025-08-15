@@ -1,7 +1,7 @@
-import type { TypeWeaverPlugin, PluginRegistration } from "./types";
+import type { TypeweaverPlugin, PluginRegistration } from "./types";
 
 /**
- * Registry for managing TypeWeaver plugins
+ * Registry for managing typeweaver plugins
  */
 export class PluginRegistry {
   private plugins: Map<string, PluginRegistration>;
@@ -13,7 +13,7 @@ export class PluginRegistry {
   /**
    * Register a plugin
    */
-  public register(plugin: TypeWeaverPlugin, config?: unknown): void {
+  public register(plugin: TypeweaverPlugin, config?: unknown): void {
     if (this.plugins.has(plugin.name)) {
       console.info(
         `Skipping duplicate registration of required plugin: ${plugin.name}`

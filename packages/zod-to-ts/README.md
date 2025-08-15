@@ -5,7 +5,7 @@ Generates TypeScript types from Zod schemas.
 ## Overview
 
 This package provides utilities to transform Zod schemas into TypeScript type representations. It's
-used internally by TypeWeaver framework.
+used internally by typeweaver framework.
 
 ## Features
 

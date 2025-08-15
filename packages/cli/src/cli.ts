@@ -3,7 +3,7 @@ import { Command, type CommandOptions as CommanderOptions } from "commander";
 import packageJson from "../package.json";
 import path from "path";
 import { pathToFileURL } from "url";
-import type { TypeWeaverConfig } from "@rexeus/typeweaver-gen";
+import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 
 type CommandOptions = CommanderOptions & {
   input?: string;
@@ -36,7 +36,7 @@ program
   .option("--clean", "clean output directory before generation (default: true)")
   .option("--no-clean", "disable cleaning output directory")
   .action(async (options: CommandOptions) => {
-    let config: Partial<TypeWeaverConfig> = {};
+    let config: Partial<TypeweaverConfig> = {};
 
     // Load configuration file if provided
     if (options.config) {
@@ -87,7 +87,7 @@ program
       : undefined;
 
     // Build final configuration
-    const finalConfig: TypeWeaverConfig = {
+    const finalConfig: TypeweaverConfig = {
       input: resolvedInputDir,
       output: resolvedOutputDir,
       shared: resolvedSharedDir,
@@ -113,7 +113,7 @@ program
 // Add future commands placeholder
 program
   .command("init")
-  .description("Initialize a new TypeWeaver project (coming soon)")
+  .description("Initialize a new typeweaver project (coming soon)")
   .action(() => {
     console.log("The init command is coming soon!");
   });

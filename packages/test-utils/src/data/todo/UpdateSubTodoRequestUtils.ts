@@ -26,7 +26,10 @@ export const createUpdateSubTodoRequestParam =
 export const createUpdateSubTodoRequestBody =
   createDataFactory<IUpdateSubTodoRequestBody>(() => ({
     title: faker.helpers.arrayElement([faker.lorem.sentence(), undefined]),
-    description: faker.helpers.arrayElement([faker.lorem.paragraph(), undefined]),
+    description: faker.helpers.arrayElement([
+      faker.lorem.paragraph(),
+      undefined,
+    ]),
     status: faker.helpers.arrayElement([
       faker.helpers.arrayElement([
         "TODO",

@@ -1,10 +1,10 @@
 # @rexeus/typeweaver-clients
 
-HTTP client generators for TypeWeaver API specifications.
+HTTP client generators for typeweaver API specifications.
 
 ## Overview
 
-This plugin generates type-safe HTTP API clients from your TypeWeaver API definitions, providing
+This plugin generates type-safe HTTP API clients from your typeweaver API definitions, providing
 end-to-end type safety from API definition to client usage.
 
 ## Installation
@@ -255,7 +255,7 @@ try {
 
 ## Plugin Architecture
 
-This plugin extends the TypeWeaver plugin system:
+This plugin extends the typeweaver plugin system:
 
 ```typescript
 import { BasePlugin, type GeneratorContext } from "@rexeus/typeweaver-gen";
@@ -391,7 +391,7 @@ export class UserService {
 
 ### Common Issues
 
-**Import errors**: Ensure all TypeWeaver plugins are installed **Type errors**: Regenerate code
+**Import errors**: Ensure all typeweaver plugins are installed **Type errors**: Regenerate code
 after API definition changes **Runtime errors**: Check that server API matches generated client
 expectations
 

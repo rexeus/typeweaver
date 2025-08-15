@@ -1,6 +1,6 @@
 {
   "name": "test-utils",
-  "description": "Test utils for TypeWeaver packages",
+  "description": "Test utils for typeweaver packages",
   "private": true,
   "type": "module",
   "main": "src/index.ts",

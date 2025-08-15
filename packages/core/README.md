@@ -109,7 +109,7 @@ Core definitions work with any execution context via adapter pattern.
 
 ## Framework Adapters
 
-TypeWeaver Core includes adapters for various runtime environments:
+typeweaver Core includes adapters for various runtime environments:
 
 ### AWS Lambda Adapters
 

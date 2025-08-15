@@ -1,6 +1,6 @@
 import type {
-  TypeWeaverPlugin,
-  TypeWeaverConfig,
+  TypeweaverPlugin,
+  TypeweaverConfig,
   PluginRegistry,
 } from "@rexeus/typeweaver-gen";
 import TypesPlugin from "@rexeus/typeweaver-types";
@@ -12,7 +12,7 @@ import {
 export type PluginResolutionStrategy = "npm" | "local" | "scoped";
 
 export type PluginLoadResult = {
-  plugin: TypeWeaverPlugin;
+  plugin: TypeweaverPlugin;
   source: string;
 };
 
@@ -21,7 +21,7 @@ type LoadResult<T, E> =
   | { success: false; error: E };
 
 /**
- * Handles plugin discovery and loading for TypeWeaver
+ * Handles plugin discovery and loading for typeweaver
  */
 export class PluginLoader {
   public constructor(
@@ -35,7 +35,7 @@ export class PluginLoader {
   /**
    * Load all plugins from configuration
    */
-  public async loadPlugins(config?: TypeWeaverConfig): Promise<void> {
+  public async loadPlugins(config?: TypeweaverConfig): Promise<void> {
     for (const requiredPlugin of this.requiredPlugins) {
       this.registry.register(requiredPlugin);
     }

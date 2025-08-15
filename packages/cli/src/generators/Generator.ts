@@ -7,7 +7,7 @@ import {
   PluginContextBuilder,
   PluginRegistry,
   type PluginConfig,
-  type TypeWeaverConfig,
+  type TypeweaverConfig,
 } from "@rexeus/typeweaver-gen";
 import { IndexFileGenerator } from "./IndexFileGenerator";
 import { PluginLoader } from "./PluginLoader";
@@ -16,7 +16,7 @@ import TypesPlugin from "@rexeus/typeweaver-types";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
- * Main generator for TypeWeaver
+ * Main generator for typeweaver
  * Uses a plugin-based architecture for extensible code generation
  */
 export class Generator {
@@ -58,7 +58,7 @@ export class Generator {
   public async generate(
     definitionDir: string,
     outputDir: string,
-    config?: TypeWeaverConfig
+    config?: TypeweaverConfig
   ): Promise<void> {
     console.info("Starting generation...");
 

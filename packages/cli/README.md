@@ -1,6 +1,6 @@
 # @rexeus/typeweaver
 
-CLI tool for generating type-safe API code from TypeWeaver definitions.
+CLI tool for generating type-safe API code from typeweaver definitions.
 
 ## Installation
 
@@ -27,7 +27,7 @@ npx typeweaver generate --input ./api/definitions --output ./api/generated --plu
 
 ### What Gets Generated
 
-From your API definitions, TypeWeaver generates:
+From your API definitions, typeweaver generates:
 
 1. **Request Types & Commands** - Type-safe request interfaces and command classes
 2. **Response Types** - Typed response interfaces for all status codes
@@ -55,7 +55,10 @@ api/definitions/
     └── sharedResponses.ts
 ```
 
-**Important**: All definition files and their dependencies must be self-contained within the input directory. Generated code creates an immutable snapshot of your definitions, so any external imports (relative imports outside the input directory) will not work. NPM package imports continue to work normally.
+**Important**: All definition files and their dependencies must be self-contained within the input
+directory. Generated code creates an immutable snapshot of your definitions, so any external imports
+(relative imports outside the input directory) will not work. NPM package imports continue to work
+normally.
 
 ### Example Definition
 
@@ -88,7 +91,7 @@ export default new HttpOperationDefinition({
 
 ## Plugin System
 
-TypeWeaver supports a plugin-based architecture for extensible code generation. Available plugins:
+typeweaver supports a plugin-based architecture for extensible code generation. Available plugins:
 
 - **types** (default): TypeScript types and Zod validators
 - **clients**: HTTP API client generation

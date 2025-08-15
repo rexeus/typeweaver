@@ -1,6 +1,6 @@
 import type { GetResourcesResult } from "../Resource";
 import type {
-  TypeWeaverPlugin,
+  TypeweaverPlugin,
   PluginConfig,
   PluginContext,
   GeneratorContext,
@@ -9,10 +9,10 @@ import path from "path";
 import fs from "fs";
 
 /**
- * Base class for TypeWeaver plugins
+ * Base class for typeweaver plugins
  * Provides default implementations and common utilities
  */
-export abstract class BasePlugin implements TypeWeaverPlugin {
+export abstract class BasePlugin implements TypeweaverPlugin {
   abstract name: string;
   description?: string;
   author?: string;

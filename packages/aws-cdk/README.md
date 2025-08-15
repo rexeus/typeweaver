@@ -1,10 +1,10 @@
 # @rexeus/typeweaver-aws-cdk
 
-AWS CDK constructs and deployment utilities for TypeWeaver APIs.
+AWS CDK constructs and deployment utilities for typeweaver APIs.
 
 ## Overview
 
-This plugin generates AWS CDK constructs and HTTP API Gateway routers from your TypeWeaver API
+This plugin generates AWS CDK constructs and HTTP API Gateway routers from your typeweaver API
 definitions, making it easy to deploy type-safe APIs to AWS.
 
 ## Installation
@@ -83,7 +83,7 @@ export class ApiStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    const api = new HttpApi(this, "TypeWeaverApi");
+    const api = new HttpApi(this, "TypeweaverApi");
 
     // Add routes from generated routers
     Object.entries(UsersHttpApiRouter).forEach(([path, methods]) => {
@@ -160,7 +160,7 @@ export class ApiStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    const api = new HttpApi(this, "TypeWeaverApi");
+    const api = new HttpApi(this, "TypeweaverApi");
 
     // Create Lambda handler (your implementation)
     const usersHandler = new Function(this, "UsersHandler", {
@@ -197,9 +197,9 @@ cdk deploy
 
 ### Type Safety
 
-- **Generated types** - Work seamlessly with other TypeWeaver plugins
+- **Generated types** - Work seamlessly with other typeweaver plugins
 - **CDK integration** - Type-safe AWS CDK constructs
-- **Validation** - Runtime validation via TypeWeaver Core
+- **Validation** - Runtime validation via typeweaver Core
 
 ### Development Workflow
 
@@ -209,7 +209,7 @@ cdk deploy
 
 ## Plugin Architecture
 
-This plugin extends the TypeWeaver plugin system:
+This plugin extends the typeweaver plugin system:
 
 ```typescript
 import { BasePlugin, type GeneratorContext } from "@rexeus/typeweaver-gen";
@@ -228,7 +228,7 @@ export default class AwsCdkPlugin extends BasePlugin {
 ### CDK Integration
 
 - Use the generated routers as single source of truth for API routes
-- Combine with other TypeWeaver plugins for complete type safety
+- Combine with other typeweaver plugins for complete type safety
 - Version generated files in source control
 
 ### Deployment

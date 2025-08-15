@@ -1,7 +1,7 @@
 import type { GetResourcesResult } from "../Resource";
 
 /**
- * Configuration for a TypeWeaver plugin
+ * Configuration for a typeweaver plugin
  */
 export type PluginConfig = Record<string, unknown>;
 
@@ -37,9 +37,9 @@ export type PluginMetadata = {
 };
 
 /**
- * TypeWeaver plugin interface
+ * typeweaver plugin interface
  */
-export type TypeWeaverPlugin = PluginMetadata & {
+export type TypeweaverPlugin = PluginMetadata & {
   /**
    * Initialize the plugin
    * Called before any generation happens
@@ -70,7 +70,7 @@ export type TypeWeaverPlugin = PluginMetadata & {
 /**
  * Plugin constructor type
  */
-export type PluginConstructor = new (config?: PluginConfig) => TypeWeaverPlugin;
+export type PluginConstructor = new (config?: PluginConfig) => TypeweaverPlugin;
 
 /**
  * Plugin module export
@@ -84,14 +84,14 @@ export type PluginModule = {
  */
 export type PluginRegistration = {
   name: string;
-  plugin: TypeWeaverPlugin;
+  plugin: TypeweaverPlugin;
   config?: PluginConfig;
 };
 
 /**
- * TypeWeaver configuration
+ * typeweaver configuration
  */
-export type TypeWeaverConfig = {
+export type TypeweaverConfig = {
   input: string;
   output: string;
   shared?: string;
