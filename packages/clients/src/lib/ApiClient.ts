@@ -11,7 +11,7 @@ import type {
   IHttpHeader,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
-import { RequestCommand } from "./RequestCommand";
+import { RequestCommand, type ProcessResponseOptions } from "./RequestCommand";
 import axios, {
   AxiosError,
   type AxiosHeaderValue,
@@ -76,6 +76,19 @@ export abstract class ApiClient {
 
     this.unknownResponseHandling = props.unknownResponseHandling ?? "throw";
     this.isSuccessStatusCode = props.isSuccessStatusCode ?? ((statusCode: number) => statusCode >= 200 && statusCode < 300);
+  }
+
+  /**
+   * Gets the process response options for this client instance.
+   * 
+   * @returns The configuration options for processing responses
+   * @protected
+   */
+  protected get processResponseOptions(): ProcessResponseOptions {
+    return {
+      unknownResponseHandling: this.unknownResponseHandling,
+      isSuccessStatusCode: this.isSuccessStatusCode,
+    };
   }
 
   /**

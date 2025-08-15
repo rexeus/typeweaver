@@ -28,18 +28,6 @@ export class SpecimenClient extends ApiClient {
     command: SpecimenRequestCommands,
   ): Promise<SuccessfulSpecimenResponses> {
     const response = await this.execute(command);
-
-    switch (true) {
-      case command instanceof PutSpecimenRequestCommand: {
-        return command.processResponse(response, {
-          unknownResponseHandling: this.unknownResponseHandling,
-          isSuccessStatusCode: this.isSuccessStatusCode,
-        });
-      }
-
-      default: {
-        throw new Error("Command is not supported");
-      }
-    }
+    return command.processResponse(response, this.processResponseOptions);
   }
 }
