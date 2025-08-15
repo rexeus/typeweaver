@@ -1,7 +1,7 @@
 {
   "name": "@rexeus/typeweaver",
   "version": "0.0.3",
-  "description": "Command-line interface for the TypeWeaver API framework",
+  "description": "Command-line interface for the typeweaver API framework",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

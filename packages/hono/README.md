@@ -1,6 +1,6 @@
 # @rexeus/typeweaver-hono
 
-TypeWeaver plugin for generating type-safe Hono routers from HTTP operation definitions.
+typeweaver plugin for generating type-safe Hono routers from HTTP operation definitions.
 
 ## Overview
 

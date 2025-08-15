@@ -1,10 +1,10 @@
 # @rexeus/typeweaver-gen
 
-Code generation engine and utilities for TypeWeaver plugins.
+Code generation engine and utilities for typeweaver plugins.
 
 ## Overview
 
-This package provides the plugin architecture and utilities that power TypeWeaver's extensible code
+This package provides the plugin architecture and utilities that power typeweaver's extensible code
 generation system. It includes base classes, context utilities, and the plugin registry system.
 
 ## Installation
@@ -191,7 +191,7 @@ export class <%= pascalCaseEntityName %>Client extends ApiClient {
 ### Lifecycle Hooks
 
 ```typescript
-interface TypeWeaverPlugin {
+interface TypeweaverPlugin {
   /**
    * Initialize the plugin
    * Called before any generation happens
@@ -222,7 +222,7 @@ interface TypeWeaverPlugin {
 
 ## Built-in Plugins
 
-TypeWeaver includes several built-in plugins:
+typeweaver includes several built-in plugins:
 
 - **@rexeus/typeweaver-types** - TypeScript types and Zod validators
 - **@rexeus/typeweaver-clients** - HTTP API clients

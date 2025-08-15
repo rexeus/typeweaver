@@ -1,12 +1,12 @@
 # @rexeus/typeweaver-types
 
-TypeScript type and Zod validator generators for TypeWeaver APIs.
+TypeScript type and Zod validator generators for typeweaver APIs.
 
 ## Overview
 
-This plugin generates TypeScript types and Zod validators from your TypeWeaver API definitions,
+This plugin generates TypeScript types and Zod validators from your typeweaver API definitions,
 providing the foundation for type-safe API development. This is the core plugin that's included by
-default in TypeWeaver.
+default in typeweaver.
 
 ## Installation
 
@@ -396,7 +396,7 @@ export const InternalGetUserRequestSchema = GetUserRequestSchema.extend({
 
 ## Plugin Architecture
 
-This plugin extends the TypeWeaver plugin system:
+This plugin extends the typeweaver plugin system:
 
 ```typescript
 import { BasePlugin, type GeneratorContext } from "@rexeus/typeweaver-gen";
