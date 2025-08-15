@@ -13,7 +13,7 @@ import {
   ResponseValidationError,
   UnknownResponse,
 } from "@rexeus/typeweaver-core";
-import { RequestCommand } from "../lib/clients";
+import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
 import { DeleteSubTodoResponseValidator } from "./DeleteSubTodoResponseValidator";
 import type {
   IDeleteSubTodoRequest,
@@ -50,6 +50,7 @@ export class DeleteSubTodoRequestCommand
 
   public processResponse(
     response: IHttpResponse,
+    options: ProcessResponseOptions,
   ): SuccessfulDeleteSubTodoResponse {
     try {
       const result = this.responseValidator.validate(response);
@@ -61,12 +62,21 @@ export class DeleteSubTodoRequestCommand
       throw result;
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        throw new UnknownResponse(
+        const unknownResponse = new UnknownResponse(
           response.statusCode,
           response.header,
           response.body,
           error,
         );
+
+        if (
+          options.unknownResponseHandling === "passthrough" &&
+          options.isSuccessStatusCode(response.statusCode)
+        ) {
+          return unknownResponse as any;
+        }
+
+        throw unknownResponse;
       }
       throw error;
     }

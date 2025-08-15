@@ -1,12 +1,17 @@
 import { TodoClient, createTestServer } from "test-utils";
+import type { ApiClientProps } from "test-utils/src/test-project/output/lib/clients";
 
 const cleanupFunctions: (() => void | Promise<void>)[] = [];
 
 export async function setupClientTest(
-  config: Parameters<typeof createTestServer>[0] = {}
+  serverConfig: Parameters<typeof createTestServer>[0] = {},
+  clientConfig: ApiClientProps = {}
 ) {
-  const testServer = await createTestServer(config);
-  const client = new TodoClient({ baseUrl: testServer.baseUrl });
+  const testServer = await createTestServer(serverConfig);
+  const client = new TodoClient({
+    baseUrl: testServer.baseUrl,
+    ...clientConfig,
+  });
 
   // Auto-register cleanup function
   cleanupFunctions.push(() => {

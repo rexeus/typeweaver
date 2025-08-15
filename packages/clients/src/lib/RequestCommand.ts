@@ -15,6 +15,15 @@ import {
   type IHttpResponse,
   HttpResponse,
 } from "@rexeus/typeweaver-core";
+import type { UnknownResponseHandling } from "./ApiClient";
+
+/**
+ * Configuration options for processing HTTP responses.
+ */
+export type ProcessResponseOptions = {
+  readonly unknownResponseHandling: UnknownResponseHandling;
+  readonly isSuccessStatusCode: (statusCode: number) => boolean;
+};
 
 /**
  * Abstract base class for type-safe API request commands.
@@ -62,7 +71,11 @@ export abstract class RequestCommand<
    * - Error response handling
    *
    * @param response - The raw HTTP response from the server
+   * @param options - Configuration options for response processing
    * @returns The processed, type-safe response object
    */
-  public abstract processResponse(response: IHttpResponse): HttpResponse;
+  public abstract processResponse(
+    response: IHttpResponse, 
+    options: ProcessResponseOptions
+  ): HttpResponse;
 }

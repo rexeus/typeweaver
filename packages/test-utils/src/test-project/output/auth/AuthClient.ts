@@ -39,19 +39,6 @@ export class AuthClient extends ApiClient {
     command: AuthRequestCommands,
   ): Promise<SuccessfulAuthResponses> {
     const response = await this.execute(command);
-
-    switch (true) {
-      case command instanceof AccessTokenRequestCommand: {
-        return command.processResponse(response);
-      }
-
-      case command instanceof RefreshTokenRequestCommand: {
-        return command.processResponse(response);
-      }
-
-      default: {
-        throw new Error("Command is not supported");
-      }
-    }
+    return command.processResponse(response, this.processResponseOptions);
   }
 }

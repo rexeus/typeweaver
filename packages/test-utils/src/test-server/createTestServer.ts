@@ -5,15 +5,17 @@ import { AuthHandlers } from "./handlers/AuthHandlers";
 import { AccountHandlers } from "./handlers/AccountApiHandler";
 import { SpecimenHandlers } from "./handlers/SpecimenHandlers";
 import { serve, type ServerType } from "@hono/node-server";
-import { HttpResponse } from "@rexeus/typeweaver-core";
+import { HttpResponse, type IHttpResponse } from "@rexeus/typeweaver-core";
 import getPort, { portNumbers } from "get-port";
 import type { TypeweaverHonoOptions } from "../test-project/output/lib/hono";
+import { HonoAdapter } from "../test-project/output/lib/hono";
 
 export type TestServerOptions = {
   readonly throwTodoError?: Error | HttpResponse;
   readonly throwAuthError?: Error | HttpResponse;
   readonly throwAccountError?: Error | HttpResponse;
   readonly throwSpecimenError?: Error | HttpResponse;
+  readonly customResponses?: HttpResponse | IHttpResponse;
 } & Omit<TypeweaverHonoOptions<unknown>, "requestHandlers">;
 
 export type CreateTestServerResult = {
@@ -23,6 +25,15 @@ export type CreateTestServerResult = {
 
 export function createTestHono(options?: TestServerOptions): Hono {
   const app = new Hono();
+  const adapter = new HonoAdapter();
+
+  app.use("*", async (c, next) => {
+    if (options?.customResponses) {
+      return adapter.toResponse(options.customResponses);
+    }
+
+    return next();
+  });
 
   const todoRouter = new TodoHono({
     requestHandlers: new TodoHandlers(options?.throwTodoError),
