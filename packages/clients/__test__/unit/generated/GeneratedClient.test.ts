@@ -30,6 +30,7 @@ import {
   TodoNotChangeableErrorResponse,
   InternalServerErrorResponse,
 } from "test-utils";
+import { UnknownResponse, HttpResponse } from "@rexeus/typeweaver-core";
 import { setupClientTest, runClientCleanup } from "./clientSetup";
 
 describe("Generated Client", () => {
@@ -212,6 +213,102 @@ describe("Generated Client", () => {
       await expect(client.send(command)).rejects.toThrow(
         InternalServerErrorResponse
       );
+    });
+  });
+
+  describe("Unknown Response Handling", () => {
+    test("should throw UnknownResponse by default for unknown response body", async () => {
+      // Arrange
+      const { client } = await setupClientTest({
+        customResponses: new HttpResponse(
+          200,
+          { "Content-Type": "application/json" },
+          { unexpectedField: "unexpected value" }
+        ),
+      });
+      const requestData = createGetTodoRequest();
+      const command = new GetTodoRequestCommand(requestData);
+
+      // Act & Assert
+      await expect(client.send(command)).rejects.toThrow(UnknownResponse);
+    });
+
+    test("should pass through unknown success responses when configured", async () => {
+      // Arrange
+      const { client } = await setupClientTest(
+        {
+          customResponses: new HttpResponse(
+            200,
+            { "Content-Type": "application/json" },
+            { unexpectedField: "unexpected value" }
+          ),
+        },
+        { unknownResponseHandling: "passthrough" }
+      );
+
+      const requestData = createGetTodoRequest();
+      const command = new GetTodoRequestCommand(requestData);
+
+      // Act
+      const response = await client.send(command);
+
+      // Assert
+      expect(response).toBeInstanceOf(UnknownResponse);
+      expect(response.statusCode).toBe(200);
+      expect(response.body).toEqual({ unexpectedField: "unexpected value" });
+    });
+
+    test("should still throw for error responses even in passthrough mode", async () => {
+      // Arrange
+      const { client } = await setupClientTest(
+        {
+          customResponses: new HttpResponse(
+            400,
+            { "Content-Type": "application/json" },
+            { error: "Bad request with unknown structure" }
+          ),
+        },
+        { unknownResponseHandling: "passthrough" }
+      );
+
+      const requestData = createGetTodoRequest();
+      const command = new GetTodoRequestCommand(requestData);
+
+      // Act & Assert
+      await expect(client.send(command)).rejects.toThrow(UnknownResponse);
+    });
+
+    test("should respect custom isSuccessStatusCode predicate", async () => {
+      // Arrange
+      const { client } = await setupClientTest(
+        {
+          customResponses: new HttpResponse(
+            400,
+            { "Content-Type": "application/json" },
+            {
+              message: "Invalid request",
+            }
+          ),
+        },
+        {
+          unknownResponseHandling: "passthrough",
+          isSuccessStatusCode: statusCode =>
+            statusCode >= 200 && statusCode < 401,
+        }
+      );
+
+      const requestData = createGetTodoRequest();
+      const command = new GetTodoRequestCommand(requestData);
+
+      // Act
+      const response = await client.send(command);
+
+      // Assert
+      expect(response).toBeInstanceOf(UnknownResponse);
+      expect(response.statusCode).toBe(400);
+      expect(response.body).toEqual({
+        message: "Invalid request",
+      });
     });
   });
 });
