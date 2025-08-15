@@ -30,6 +30,8 @@ export class Generator {
   private resourceReader: ResourceReader | null = null;
   private prettier: Prettier | null = null;
 
+  private inputDir = "";
+  private sharedInputDir = "";
   private outputDir = "";
   private sourceDir = "";
   private sharedSourceDir = "";
@@ -72,6 +74,23 @@ export class Generator {
     // Create output directories
     fs.mkdirSync(this.outputDir, { recursive: true });
     fs.mkdirSync(this.sharedOutputDir, { recursive: true });
+
+    console.info(
+      `Copying definitions from '${this.inputDir}' to '${this.sourceDir}'...`
+    );
+    fs.cpSync(this.inputDir, this.sourceDir, {
+      recursive: true,
+      filter: src => {
+        return (
+          src.endsWith(".ts") ||
+          src.endsWith(".js") ||
+          src.endsWith(".json") ||
+          src.endsWith(".mjs") ||
+          src.endsWith(".cjs") ||
+          fs.statSync(src).isDirectory()
+        );
+      },
+    });
 
     // Load and register plugins
     await this.pluginLoader.loadPlugins(config);
@@ -159,9 +178,15 @@ export class Generator {
     outputDir: string,
     sharedDir?: string
   ): void {
-    this.sourceDir = definitionDir;
+    this.inputDir = definitionDir;
+    this.sharedInputDir = sharedDir ?? path.join(definitionDir, "shared");
     this.outputDir = outputDir;
-    this.sharedSourceDir = sharedDir ?? path.join(definitionDir, "shared");
     this.sharedOutputDir = path.join(outputDir, "shared");
+    this.sourceDir = path.join(this.outputDir, "definition");
+    const inputToSharedDirRelative = path.relative(
+      this.inputDir,
+      this.sharedInputDir
+    );
+    this.sharedSourceDir = path.join(this.sourceDir, inputToSharedDirRelative);
   }
 }

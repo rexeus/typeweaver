@@ -55,6 +55,8 @@ api/definitions/
     └── sharedResponses.ts
 ```
 
+**Important**: All definition files and their dependencies must be self-contained within the input directory. Generated code creates an immutable snapshot of your definitions, so any external imports (relative imports outside the input directory) will not work. NPM package imports continue to work normally.
+
 ### Example Definition
 
 ```typescript
