@@ -1,11 +1,12 @@
-import { BasePlugin, type GeneratorContext } from "@rexeus/typeweaver-gen";
-import { SharedResponseGenerator } from "./SharedResponseGenerator";
+import path from "path";
+import { fileURLToPath } from "url";
+import { BasePlugin } from "@rexeus/typeweaver-gen";
+import type { GeneratorContext } from "@rexeus/typeweaver-gen";
 import { RequestGenerator } from "./RequestGenerator";
 import { RequestValidationGenerator } from "./RequestValidationGenerator";
 import { ResponseGenerator } from "./ResponseGenerator";
 import { ResponseValidationGenerator } from "./ResponseValidationGenerator";
-import path from "path";
-import { fileURLToPath } from "url";
+import { SharedResponseGenerator } from "./SharedResponseGenerator";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

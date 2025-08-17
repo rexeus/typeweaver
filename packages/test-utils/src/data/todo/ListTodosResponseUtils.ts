@@ -1,14 +1,14 @@
-import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
+import { HttpStatusCode } from "@rexeus/typeweaver-core";
+import { ListTodosSuccessResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 import { createGetTodoSuccessResponseBody } from "./GetTodoResponseUtils";
 import type {
   IListTodosSuccessResponse,
-  IListTodosSuccessResponseHeader,
   IListTodosSuccessResponseBody,
+  IListTodosSuccessResponseHeader,
 } from "../..";
-import { ListTodosSuccessResponse } from "../..";
 
 type ListTodosSuccessResponseInput = {
   statusCode?: number;

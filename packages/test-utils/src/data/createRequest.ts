@@ -1,5 +1,5 @@
-import { createData } from "./createData";
 import type { IHttpRequest } from "@rexeus/typeweaver-core";
+import { createData } from "./createData";
 
 export function createRequest<
   TRequest extends IHttpRequest,

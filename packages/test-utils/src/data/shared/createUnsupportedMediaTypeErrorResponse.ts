@@ -1,14 +1,14 @@
-import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
+import { HttpStatusCode } from "@rexeus/typeweaver-core";
+import { UnsupportedMediaTypeErrorResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
-import { createResponse } from "../createResponse";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
+import { createResponse } from "../createResponse";
 import type {
   IUnsupportedMediaTypeErrorResponse,
-  IUnsupportedMediaTypeErrorResponseHeader,
   IUnsupportedMediaTypeErrorResponseBody,
+  IUnsupportedMediaTypeErrorResponseHeader,
 } from "../..";
-import { UnsupportedMediaTypeErrorResponse } from "../..";
 
 type UnsupportedMediaTypeErrorResponseInput = {
   statusCode?: number;

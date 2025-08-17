@@ -1,6 +1,6 @@
-import prettier from "prettier";
 import fs from "fs";
 import path from "path";
+import { format } from "prettier";
 
 export class Prettier {
   constructor(private readonly outputDir: string) {
@@ -17,7 +17,7 @@ export class Prettier {
       if (content.isFile()) {
         const filePath = path.join(targetDir, content.name);
         const unformatted = fs.readFileSync(filePath, "utf8");
-        const formatted = await prettier.format(unformatted, {
+        const formatted = await format(unformatted, {
           parser: "typescript",
         });
         fs.writeFileSync(filePath, formatted);

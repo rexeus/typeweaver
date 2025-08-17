@@ -1,5 +1,5 @@
-import { NotFoundErrorDefinition } from "../../shared";
 import { z } from "zod/v4";
+import { NotFoundErrorDefinition } from "../../shared";
 
 export default NotFoundErrorDefinition.extend({
   name: "TodoNotFoundError",

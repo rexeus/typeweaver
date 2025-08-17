@@ -1,14 +1,15 @@
-import { Hono } from "hono";
-import { TodoHono, AuthHono, AccountHono, SpecimenHono } from "..";
-import { TodoHandlers } from "./handlers/TodoHandlers";
-import { AuthHandlers } from "./handlers/AuthHandlers";
-import { AccountHandlers } from "./handlers/AccountApiHandler";
-import { SpecimenHandlers } from "./handlers/SpecimenHandlers";
-import { serve, type ServerType } from "@hono/node-server";
-import { HttpResponse, type IHttpResponse } from "@rexeus/typeweaver-core";
+import { serve } from "@hono/node-server";
+import { HttpResponse } from "@rexeus/typeweaver-core";
 import getPort, { portNumbers } from "get-port";
-import type { TypeweaverHonoOptions } from "../test-project/output/lib/hono";
+import { Hono } from "hono";
+import type { IHttpResponse } from "@rexeus/typeweaver-core";
+import { AccountHono, AuthHono, TodoHono } from "..";
 import { HonoAdapter } from "../test-project/output/lib/hono";
+import { AccountHandlers } from "./handlers/AccountApiHandler";
+import { AuthHandlers } from "./handlers/AuthHandlers";
+import { TodoHandlers } from "./handlers/TodoHandlers";
+import type { TypeweaverHonoOptions } from "../test-project/output/lib/hono";
+import type { ServerType } from "@hono/node-server";
 
 export type TestServerOptions = {
   readonly throwTodoError?: Error | HttpResponse;
@@ -47,15 +48,10 @@ export function createTestHono(options?: TestServerOptions): Hono {
     requestHandlers: new AccountHandlers(options?.throwAccountError),
     ...options,
   });
-  const specimenRouter = new SpecimenHono({
-    requestHandlers: new SpecimenHandlers(options?.throwSpecimenError),
-    ...options,
-  });
 
   app.route("/", authRouter);
   app.route("/", accountRouter);
   app.route("/", todoRouter);
-  app.route("/", specimenRouter);
 
   return app;
 }

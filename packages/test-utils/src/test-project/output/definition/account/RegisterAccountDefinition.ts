@@ -1,15 +1,15 @@
-import { z } from "zod/v4";
 import {
+  HttpMethod,
   HttpOperationDefinition,
   HttpStatusCode,
-  HttpMethod,
 } from "@rexeus/typeweaver-core";
-import { accountSchema } from "./accountSchema";
+import { z } from "zod/v4";
 import {
-  sharedResponses,
-  defaultResponseHeader,
   defaultRequestHeadersWithPayload,
+  defaultResponseHeader,
+  sharedResponses,
 } from "../shared";
+import { accountSchema } from "./accountSchema";
 
 export default new HttpOperationDefinition({
   operationId: "RegisterAccount",

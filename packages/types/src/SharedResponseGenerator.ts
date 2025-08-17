@@ -1,12 +1,12 @@
 import path from "path";
+import { fileURLToPath } from "url";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
+import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
 import Case from "case";
 import type {
   GeneratorContext,
   SharedResponseResource,
 } from "@rexeus/typeweaver-gen";
-import { fileURLToPath } from "url";
-import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

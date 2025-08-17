@@ -1,7 +1,7 @@
-import type { HttpStatusCode } from "./HttpStatusCode";
-import type { HttpHeaderSchema } from "./HttpHeader";
+import { z } from "zod/v4";
 import type { HttpBodySchema } from "./HttpBody";
-import z from "zod/v4";
+import type { HttpHeaderSchema } from "./HttpHeader";
+import type { HttpStatusCode } from "./HttpStatusCode";
 
 export type IHttpResponseDefinition<
   TName extends string = string,

@@ -1,12 +1,12 @@
+import fs from "fs";
+import path from "path";
 import type { GetResourcesResult } from "../Resource";
 import type {
-  TypeweaverPlugin,
+  GeneratorContext,
   PluginConfig,
   PluginContext,
-  GeneratorContext,
+  TypeweaverPlugin,
 } from "./types";
-import path from "path";
-import fs from "fs";
 
 /**
  * Base class for typeweaver plugins

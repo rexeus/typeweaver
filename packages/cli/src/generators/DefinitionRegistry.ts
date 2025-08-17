@@ -1,8 +1,8 @@
 import {
   HttpOperationDefinition,
   HttpResponseDefinition,
-  type IHttpResponseDefinition,
 } from "@rexeus/typeweaver-core";
+import type { IHttpResponseDefinition } from "@rexeus/typeweaver-core";
 import { DuplicateOperationIdError } from "./errors/DuplicateOperationIdError";
 import { DuplicateResponseNameError } from "./errors/DuplicateResponseNameError";
 import { DuplicateRouteError } from "./errors/DuplicateRouteError";

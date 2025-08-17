@@ -1,13 +1,11 @@
-import type {
-  TypeweaverPlugin,
-  TypeweaverConfig,
-  PluginRegistry,
-} from "@rexeus/typeweaver-gen";
 import TypesPlugin from "@rexeus/typeweaver-types";
-import {
-  PluginLoadingFailure,
-  type PluginLoadError,
-} from "./errors/PluginLoadingFailure";
+import type {
+  PluginRegistry,
+  TypeweaverConfig,
+  TypeweaverPlugin,
+} from "@rexeus/typeweaver-gen";
+import { PluginLoadingFailure } from "./errors/PluginLoadingFailure";
+import type { PluginLoadError } from "./errors/PluginLoadingFailure";
 
 export type PluginResolutionStrategy = "npm" | "local" | "scoped";
 

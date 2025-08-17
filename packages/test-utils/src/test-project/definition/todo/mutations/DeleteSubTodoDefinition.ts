@@ -3,6 +3,7 @@ import {
   HttpOperationDefinition,
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
+import { z } from "zod/v4";
 import {
   defaultRequestHeadersWithoutPayload,
   defaultResponseHeader,
@@ -10,7 +11,6 @@ import {
 } from "../../shared";
 import SubTodoNotFoundErrorDefinition from "../errors/SubTodoNotFoundErrorDefinition";
 import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
-import { z } from "zod/v4";
 
 export default new HttpOperationDefinition({
   operationId: "DeleteSubTodo",

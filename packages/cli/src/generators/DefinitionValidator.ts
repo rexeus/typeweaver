@@ -3,17 +3,17 @@ import {
   HttpOperationDefinition,
   HttpResponseDefinition,
   HttpStatusCode,
-  type IHttpResponseDefinition,
 } from "@rexeus/typeweaver-core";
 import { z } from "zod/v4";
-import { InvalidPathParameterError } from "./errors/InvalidPathParameterError";
-import { MissingRequiredFieldError } from "./errors/MissingRequiredFieldError";
-import { InvalidHttpMethodError } from "./errors/InvalidHttpMethodError";
+import type { IHttpResponseDefinition } from "@rexeus/typeweaver-core";
+import { DefinitionRegistry } from "./DefinitionRegistry";
 import { EmptyResponseArrayError } from "./errors/EmptyResponseArrayError";
-import { InvalidStatusCodeError } from "./errors/InvalidStatusCodeError";
+import { InvalidHttpMethodError } from "./errors/InvalidHttpMethodError";
+import { InvalidPathParameterError } from "./errors/InvalidPathParameterError";
 import { InvalidSchemaError } from "./errors/InvalidSchemaError";
 import { InvalidSchemaShapeError } from "./errors/InvalidSchemaShapeError";
-import { DefinitionRegistry } from "./DefinitionRegistry";
+import { InvalidStatusCodeError } from "./errors/InvalidStatusCodeError";
+import { MissingRequiredFieldError } from "./errors/MissingRequiredFieldError";
 
 // Type aliases for better readability
 type AnyHttpOperation = HttpOperationDefinition<

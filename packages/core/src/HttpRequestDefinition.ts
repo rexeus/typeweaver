@@ -1,5 +1,5 @@
-import type { HttpHeaderSchema } from "./HttpHeader";
 import type { HttpBodySchema } from "./HttpBody";
+import type { HttpHeaderSchema } from "./HttpHeader";
 import type { HttpParamSchema } from "./HttpParam";
 import type { HttpQuerySchema } from "./HttpQuery";
 

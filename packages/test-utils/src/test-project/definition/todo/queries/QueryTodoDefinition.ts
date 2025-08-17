@@ -3,14 +3,14 @@ import {
   HttpOperationDefinition,
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
+import { z } from "zod/v4";
 import {
+  defaultRequestHeadersWithPayload,
+  defaultResponseHeader,
   listResponseSchema,
   sharedResponses,
-  defaultResponseHeader,
-  defaultRequestHeadersWithPayload,
 } from "../../shared";
 import { todoSchema } from "../todoSchema";
-import { z } from "zod/v4";
 
 const queryTodoRequestBodySchema = z.object({
   searchText: z.string().optional(),

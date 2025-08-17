@@ -1,5 +1,5 @@
-import type { z } from "zod/v4";
 import type { HttpStatusCode } from "./HttpStatusCode";
+import type { z } from "zod/v4";
 
 export type InvalidResponseIssue = {
   readonly type: "INVALID_RESPONSE";

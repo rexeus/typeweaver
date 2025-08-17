@@ -1,11 +1,11 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
+import { DeleteTodoSuccessResponse } from "../..";
 import { createResponse } from "../createResponse";
 import { createCreateTodoSuccessResponseHeader } from "./CreateTodoResponseUtils";
 import type {
   IDeleteTodoSuccessResponse,
   IDeleteTodoSuccessResponseHeader,
 } from "../..";
-import { DeleteTodoSuccessResponse } from "../..";
 
 type DeleteTodoSuccessResponseInput = {
   statusCode?: number;

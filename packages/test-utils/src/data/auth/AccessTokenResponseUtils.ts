@@ -1,13 +1,13 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
+import { AccessTokenSuccessResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
-import { createResponse } from "../createResponse";
 import { createJwtToken } from "../createJwtToken";
+import { createResponse } from "../createResponse";
 import type {
+  IAccessTokenSuccessResponse,
   IAccessTokenSuccessResponseBody,
   IAccessTokenSuccessResponseHeader,
-  IAccessTokenSuccessResponse,
 } from "../..";
-import { AccessTokenSuccessResponse } from "../..";
 
 export const createAccessTokenSuccessResponseHeader =
   createDataFactory<IAccessTokenSuccessResponseHeader>(() => ({

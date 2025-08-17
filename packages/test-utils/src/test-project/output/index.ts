@@ -66,28 +66,6 @@ export * from "./shared/UnsupportedMediaTypeErrorResponse";
 
 export * from "./shared/ValidationErrorResponse";
 
-export * from "./specimen/PutSpecimenRequest";
-
-export * from "./specimen/PutSpecimenRequestCommand";
-
-export * from "./specimen/PutSpecimenRequestValidator";
-
-export * from "./specimen/PutSpecimenResponse";
-
-export * from "./specimen/PutSpecimenResponseValidator";
-
-export * from "./specimen/SpecimenClient";
-
-export * from "./specimen/SpecimenConflictErrorResponse";
-
-export * from "./specimen/SpecimenHono";
-
-export * from "./specimen/SpecimenHttpApiRouter";
-
-export * from "./specimen/SpecimenNotFoundErrorResponse";
-
-export * from "./specimen/SpecimenUnprocessableEntityErrorResponse";
-
 export * from "./todo/CreateSubTodoRequest";
 
 export * from "./todo/CreateSubTodoRequestCommand";

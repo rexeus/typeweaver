@@ -1,6 +1,6 @@
+import { z } from "zod/v4";
 import { ConflictErrorDefinition } from "../../shared";
 import { todoStatus } from "../todoSchema";
-import { z } from "zod/v4";
 
 export default ConflictErrorDefinition.extend({
   name: "SubTodoStatusTransitionInvalidError",

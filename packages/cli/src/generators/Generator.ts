@@ -1,17 +1,13 @@
-import { ResourceReader } from "./ResourceReader";
-import path from "path";
 import fs from "fs";
-import { Prettier } from "./Prettier";
+import path from "path";
 import { fileURLToPath } from "url";
-import {
-  PluginContextBuilder,
-  PluginRegistry,
-  type PluginConfig,
-  type TypeweaverConfig,
-} from "@rexeus/typeweaver-gen";
+import { PluginContextBuilder, PluginRegistry } from "@rexeus/typeweaver-gen";
+import TypesPlugin from "@rexeus/typeweaver-types";
+import type { PluginConfig, TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { IndexFileGenerator } from "./IndexFileGenerator";
 import { PluginLoader } from "./PluginLoader";
-import TypesPlugin from "@rexeus/typeweaver-types";
+import { Prettier } from "./Prettier";
+import { ResourceReader } from "./ResourceReader";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

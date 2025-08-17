@@ -1,10 +1,10 @@
+import { OptionsTodoSuccessResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 import type {
   IOptionsTodoSuccessResponse,
   IOptionsTodoSuccessResponseHeader,
 } from "../..";
-import { OptionsTodoSuccessResponse } from "../..";
 
 export const createOptionsTodoSuccessResponseHeader =
   createDataFactory<IOptionsTodoSuccessResponseHeader>(() => ({

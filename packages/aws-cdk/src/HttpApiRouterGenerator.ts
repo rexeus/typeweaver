@@ -1,11 +1,11 @@
 import path from "path";
-import type { HttpMethod } from "@rexeus/typeweaver-core";
+import { fileURLToPath } from "url";
 import Case from "case";
+import type { HttpMethod } from "@rexeus/typeweaver-core";
 import type {
   GeneratorContext,
   OperationResource,
 } from "@rexeus/typeweaver-gen";
-import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

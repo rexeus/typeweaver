@@ -1,8 +1,9 @@
-import { BasePlugin } from "./BasePlugin";
-import type { GeneratorContext } from "./types";
 import fs from "fs";
 import path from "path";
-import ejs from "ejs";
+import { render } from "ejs";
+import { BasePlugin } from "./BasePlugin";
+import type { GeneratorContext } from "./types";
+import type { Data } from "ejs";
 
 /**
  * Base class for template-based generator plugins
@@ -14,7 +15,7 @@ export abstract class BaseTemplatePlugin extends BasePlugin {
    */
   protected renderTemplate(templatePath: string, data: unknown): string {
     const template = fs.readFileSync(templatePath, "utf8");
-    return ejs.render(template, data as ejs.Data);
+    return render(template, data as Data);
   }
 
   /**

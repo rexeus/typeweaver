@@ -1,4 +1,4 @@
-import { TodoClient, createTestServer } from "test-utils";
+import { createTestServer, TodoClient } from "test-utils";
 import type { ApiClientProps } from "test-utils/src/test-project/output/lib/clients";
 
 const cleanupFunctions: (() => void | Promise<void>)[] = [];

@@ -1,3 +1,4 @@
+/* eslint-disable import/max-dependencies */
 export { default as ConflictErrorDefinition } from "./ConflictErrorDefinition";
 export { default as ForbiddenErrorDefinition } from "./ForbiddenErrorDefinition";
 export { default as InternalServerErrorDefinition } from "./InternalServerErrorDefinition";

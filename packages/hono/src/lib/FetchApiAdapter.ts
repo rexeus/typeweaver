@@ -7,11 +7,11 @@
 
 import type {
   HttpMethod,
-  IHttpRequest,
-  IHttpResponse,
+  IHttpBody,
   IHttpHeader,
   IHttpQuery,
-  IHttpBody,
+  IHttpRequest,
+  IHttpResponse,
 } from "@rexeus/typeweaver-core";
 import { HttpAdapter } from "./HttpAdapter";
 
