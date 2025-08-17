@@ -1,13 +1,13 @@
-import { HttpMethod } from "@rexeus/typeweaver-core";
-import type { IQueryTodoRequest } from "../..";
 import { faker } from "@faker-js/faker";
+import { HttpMethod } from "@rexeus/typeweaver-core";
 import { createDataFactory } from "../createDataFactory";
-import { createRequest } from "../createRequest";
 import { createJwtToken } from "../createJwtToken";
+import { createRequest } from "../createRequest";
 import type {
+  IQueryTodoRequest,
+  IQueryTodoRequestBody,
   IQueryTodoRequestHeader,
   IQueryTodoRequestQuery,
-  IQueryTodoRequestBody,
 } from "../..";
 
 export const createQueryTodoRequestHeader =

@@ -1,6 +1,7 @@
-import { describe, test, expect } from "vitest";
+import assert from "assert";
 import { RequestValidationError } from "@rexeus/typeweaver-core";
 import {
+  captureError,
   createCreateTodoRequest,
   createGetTodoRequest,
   createListTodosRequest,
@@ -9,9 +10,8 @@ import {
   GetTodoRequestValidator,
   ListTodosRequestValidator,
   QuerySubTodoRequestValidator,
-  captureError,
 } from "test-utils";
-import assert from "assert";
+import { describe, expect, test } from "vitest";
 
 describe("Generated RequestValidator", () => {
   describe("Body Validation", () => {

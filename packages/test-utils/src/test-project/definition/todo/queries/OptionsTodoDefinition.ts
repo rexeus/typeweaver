@@ -3,10 +3,10 @@ import {
   HttpOperationDefinition,
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
-import { sharedResponses } from "../../shared/sharedResponses";
-import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
 import { z } from "zod/v4";
 import { defaultRequestHeadersWithoutPayload } from "../../shared/defaultRequestHeader";
+import { sharedResponses } from "../../shared/sharedResponses";
+import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
 
 export default new HttpOperationDefinition({
   operationId: "OptionsTodo",

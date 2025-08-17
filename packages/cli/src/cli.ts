@@ -1,9 +1,10 @@
-import { Generator } from "./generators/Generator";
-import { Command, type CommandOptions as CommanderOptions } from "commander";
-import packageJson from "../package.json";
 import path from "path";
 import { pathToFileURL } from "url";
+import { Command } from "commander";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
+import packageJson from "../package.json";
+import { Generator } from "./generators/Generator";
+import type { CommandOptions as CommanderOptions } from "commander";
 
 type CommandOptions = CommanderOptions & {
   input?: string;

@@ -1,8 +1,8 @@
-import type { IHttpHeader } from "./HttpHeader";
-import type { IHttpParam } from "./HttpParam";
 import type { IHttpBody } from "./HttpBody";
-import type { IHttpQuery } from "./HttpQuery";
+import type { IHttpHeader } from "./HttpHeader";
 import type { HttpMethod } from "./HttpMethod";
+import type { IHttpParam } from "./HttpParam";
+import type { IHttpQuery } from "./HttpQuery";
 
 export type IHttpRequest<
   Header extends IHttpHeader = IHttpHeader,

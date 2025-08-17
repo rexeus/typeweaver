@@ -1,10 +1,10 @@
+import { HeadTodoSuccessResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 import type {
   IHeadTodoSuccessResponse,
   IHeadTodoSuccessResponseHeader,
 } from "../..";
-import { HeadTodoSuccessResponse } from "../..";
 
 export const createHeadTodoSuccessResponseHeader =
   createDataFactory<IHeadTodoSuccessResponseHeader>(() => ({

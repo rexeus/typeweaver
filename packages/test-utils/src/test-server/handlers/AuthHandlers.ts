@@ -1,14 +1,16 @@
 import { HttpResponse } from "@rexeus/typeweaver-core";
 import {
   AccessTokenSuccessResponse,
-  RefreshTokenSuccessResponse,
-  type AuthApiHandler,
-  type IAccessTokenRequest,
-  type AccessTokenResponse,
-  type IRefreshTokenRequest,
-  type RefreshTokenResponse,
   createAccessTokenSuccessResponse,
   createRefreshTokenSuccessResponse,
+  RefreshTokenSuccessResponse,
+} from "../..";
+import type {
+  AccessTokenResponse,
+  AuthApiHandler,
+  IAccessTokenRequest,
+  IRefreshTokenRequest,
+  RefreshTokenResponse,
 } from "../..";
 
 export class AuthHandlers implements AuthApiHandler {

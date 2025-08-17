@@ -6,15 +6,15 @@
  */
 
 import type {
+  HttpBodySchema,
+  HttpHeaderSchema,
   IHttpResponse,
   IResponseValidator,
-  SafeResponseValidationResult,
-  HttpHeaderSchema,
-  HttpBodySchema,
   ResponseValidationError,
+  SafeResponseValidationResult,
 } from "@rexeus/typeweaver-core";
-import type { ZodSafeParseResult } from "zod/v4";
 import { Validator } from "./Validator";
+import type { ZodSafeParseResult } from "zod/v4";
 
 /**
  * Abstract base class for HTTP response validation.

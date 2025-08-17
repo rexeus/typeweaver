@@ -1,6 +1,6 @@
-import path from "path";
 import fs from "fs";
-import ejs from "ejs";
+import path from "path";
+import { render } from "ejs";
 import type { GeneratorContext } from "@rexeus/typeweaver-gen";
 
 export class IndexFileGenerator {
@@ -17,7 +17,7 @@ export class IndexFileGenerator {
       indexPaths.add(`./${generatedFile.replace(/\.ts$/, "")}`);
     }
 
-    const content = ejs.render(template, {
+    const content = render(template, {
       indexPaths: Array.from(indexPaths).sort(),
     });
 

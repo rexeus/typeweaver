@@ -1,8 +1,9 @@
-import type { PluginContext, GeneratorContext, PluginConfig } from "./types";
 import fs from "fs";
 import path from "path";
-import ejs from "ejs";
+import { render } from "ejs";
+import type { GeneratorContext, PluginConfig, PluginContext } from "./types";
 import type { GetResourcesResult } from "../Resource";
+import type { Data } from "ejs";
 
 /**
  * Builder for plugin contexts
@@ -67,7 +68,7 @@ export class PluginContextBuilder {
           : path.join(params.templateDir, templatePath);
 
         const template = fs.readFileSync(fullTemplatePath, "utf8");
-        return ejs.render(template, data as ejs.Data);
+        return render(template, data as Data);
       },
 
       addGeneratedFile: (relativePath: string) => {

@@ -1,13 +1,13 @@
-import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import type {
-  IUpdateTodoStatusSuccessResponseBody,
-  IUpdateTodoStatusSuccessResponseHeader,
-  IUpdateTodoStatusSuccessResponse,
-} from "../..";
+import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { UpdateTodoStatusSuccessResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
+import type {
+  IUpdateTodoStatusSuccessResponse,
+  IUpdateTodoStatusSuccessResponseBody,
+  IUpdateTodoStatusSuccessResponseHeader,
+} from "../..";
 
 export const createUpdateTodoStatusSuccessResponseHeader =
   createDataFactory<IUpdateTodoStatusSuccessResponseHeader>(() => ({

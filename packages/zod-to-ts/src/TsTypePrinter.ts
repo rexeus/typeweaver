@@ -4,8 +4,8 @@ import {
   EmitHint,
   ScriptKind,
   ScriptTarget,
-  type TypeNode,
 } from "typescript";
+import type { TypeNode } from "typescript";
 
 export class TsTypePrinter {
   static print(tsType: TypeNode): string {

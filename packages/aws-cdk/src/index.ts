@@ -1,7 +1,8 @@
-import { BasePlugin, type GeneratorContext } from "@rexeus/typeweaver-gen";
-import { HttpApiRouterGenerator } from "./HttpApiRouterGenerator";
 import path from "path";
 import { fileURLToPath } from "url";
+import { BasePlugin } from "@rexeus/typeweaver-gen";
+import type { GeneratorContext } from "@rexeus/typeweaver-gen";
+import { HttpApiRouterGenerator } from "./HttpApiRouterGenerator";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

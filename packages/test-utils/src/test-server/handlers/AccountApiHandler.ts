@@ -1,10 +1,12 @@
 import { HttpResponse } from "@rexeus/typeweaver-core";
 import {
-  RegisterAccountSuccessResponse,
-  type AccountApiHandler,
-  type IRegisterAccountRequest,
-  type RegisterAccountResponse,
   createRegisterAccountSuccessResponse,
+  RegisterAccountSuccessResponse,
+} from "../..";
+import type {
+  AccountApiHandler,
+  IRegisterAccountRequest,
+  RegisterAccountResponse,
 } from "../..";
 
 export class AccountHandlers implements AccountApiHandler {

@@ -1,27 +1,29 @@
-import path from "path";
 import fs from "fs";
-import type {
-  ExtendedResponseDefinition,
-  OperationResource,
-  SharedResponseResource,
-  GetResourcesResult,
-  EntityResponseResource,
-} from "@rexeus/typeweaver-gen";
+import path from "path";
 import {
-  type HttpMethod,
   HttpOperationDefinition,
   HttpResponseDefinition,
   HttpStatusCode,
   HttpStatusCodeNameMap,
-  type HttpBodySchema,
-  type HttpHeaderSchema,
-  type HttpParamSchema,
-  type HttpQuerySchema,
-  type IHttpRequestDefinition,
-  type IHttpResponseDefinition,
 } from "@rexeus/typeweaver-core";
-import { InvalidSharedDirError } from "./errors/InvalidSharedDirError";
+import type {
+  HttpBodySchema,
+  HttpHeaderSchema,
+  HttpMethod,
+  HttpParamSchema,
+  HttpQuerySchema,
+  IHttpRequestDefinition,
+  IHttpResponseDefinition,
+} from "@rexeus/typeweaver-core";
+import type {
+  EntityResponseResource,
+  ExtendedResponseDefinition,
+  GetResourcesResult,
+  OperationResource,
+  SharedResponseResource,
+} from "@rexeus/typeweaver-gen";
 import { DefinitionValidator } from "./DefinitionValidator";
+import { InvalidSharedDirError } from "./errors/InvalidSharedDirError";
 
 export type ResourceReaderConfig = {
   readonly sourceDir: string;

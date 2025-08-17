@@ -1,5 +1,5 @@
-import { createData } from "./createData";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
+import { createData } from "./createData";
 
 export function createResponse<TResponse extends IHttpResponse, TBody, THeader>(
   defaultResponse: Omit<TResponse, "body" | "header">,

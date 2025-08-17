@@ -1,14 +1,14 @@
 import path from "path";
-import Case from "case";
-import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
-import {
-  type GeneratorContext,
-  type OperationResource,
-  type EntityResponseResource,
-  Path,
-} from "@rexeus/typeweaver-gen";
 import { fileURLToPath } from "url";
+import { HttpStatusCode } from "@rexeus/typeweaver-core";
+import { Path } from "@rexeus/typeweaver-gen";
+import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
+import Case from "case";
+import type {
+  EntityResponseResource,
+  GeneratorContext,
+  OperationResource,
+} from "@rexeus/typeweaver-gen";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

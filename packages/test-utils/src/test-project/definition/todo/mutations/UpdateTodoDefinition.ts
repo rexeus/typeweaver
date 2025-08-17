@@ -5,13 +5,13 @@ import {
 } from "@rexeus/typeweaver-core";
 import { z } from "zod/v4";
 import {
-  sharedResponses,
-  defaultResponseHeader,
   defaultRequestHeadersWithPayload,
+  defaultResponseHeader,
+  sharedResponses,
 } from "../../shared";
-import { todoSchema } from "../todoSchema";
-import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
 import TodoNotChangeableErrorDefinition from "../errors/TodoNotChangeableErrorDefinition";
+import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
+import { todoSchema } from "../todoSchema";
 
 export default new HttpOperationDefinition({
   operationId: "UpdateTodo",

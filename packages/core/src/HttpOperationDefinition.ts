@@ -1,10 +1,10 @@
 import { HttpMethod } from "./HttpMethod";
-import type { IHttpRequestDefinition } from "./HttpRequestDefinition";
-import type { IHttpResponseDefinition } from "./HttpResponseDefinition";
+import type { HttpBodySchema } from "./HttpBody";
 import type { HttpHeaderSchema } from "./HttpHeader";
 import type { HttpParamSchema } from "./HttpParam";
 import type { HttpQuerySchema } from "./HttpQuery";
-import type { HttpBodySchema } from "./HttpBody";
+import type { IHttpRequestDefinition } from "./HttpRequestDefinition";
+import type { IHttpResponseDefinition } from "./HttpResponseDefinition";
 
 /**
  * Interface for HTTP operation definitions.

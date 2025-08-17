@@ -1,4 +1,4 @@
-import type { TypeweaverPlugin, PluginRegistration } from "./types";
+import type { PluginRegistration, TypeweaverPlugin } from "./types";
 
 /**
  * Registry for managing typeweaver plugins

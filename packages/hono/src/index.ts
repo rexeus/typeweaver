@@ -1,7 +1,8 @@
-import { BasePlugin, type GeneratorContext } from "@rexeus/typeweaver-gen";
-import { HonoRouterGenerator } from "./HonoRouterGenerator";
-import { fileURLToPath } from "url";
 import path from "path";
+import { fileURLToPath } from "url";
+import { BasePlugin } from "@rexeus/typeweaver-gen";
+import type { GeneratorContext } from "@rexeus/typeweaver-gen";
+import { HonoRouterGenerator } from "./HonoRouterGenerator";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

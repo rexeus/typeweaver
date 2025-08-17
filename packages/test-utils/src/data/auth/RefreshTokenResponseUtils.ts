@@ -1,13 +1,13 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
+import { RefreshTokenSuccessResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
-import { createResponse } from "../createResponse";
 import { createJwtToken } from "../createJwtToken";
+import { createResponse } from "../createResponse";
 import type {
+  IRefreshTokenSuccessResponse,
   IRefreshTokenSuccessResponseBody,
   IRefreshTokenSuccessResponseHeader,
-  IRefreshTokenSuccessResponse,
 } from "../..";
-import { RefreshTokenSuccessResponse } from "../..";
 
 export const createRefreshTokenSuccessResponseHeader =
   createDataFactory<IRefreshTokenSuccessResponseHeader>(() => ({
