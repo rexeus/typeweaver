@@ -57,8 +57,8 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.3.0)(tsx@4.20.3)
       zod:
-        specifier: ^3.25.67
-        version: 3.25.67
+        specifier: ^4.0.17
+        version: 4.0.17
 
   packages/aws-cdk:
     dependencies:
@@ -113,8 +113,8 @@ importers:
         specifier: ^4.6.14
         version: 4.8.2
       zod:
-        specifier: ^3.25.67
-        version: 3.25.67
+        specifier: ^4.0.17
+        version: 4.0.17
 
   packages/clients:
     dependencies:
@@ -144,8 +144,8 @@ importers:
   packages/core:
     devDependencies:
       zod:
-        specifier: ^3.25.67
-        version: 3.25.67
+        specifier: ^4.0.17
+        version: 4.0.17
 
   packages/gen:
     dependencies:
@@ -218,8 +218,8 @@ importers:
         specifier: ^4.6.14
         version: 4.8.2
       zod:
-        specifier: ^3.25.67
-        version: 3.25.67
+        specifier: ^4.0.17
+        version: 4.0.17
 
   packages/types:
     dependencies:
@@ -247,8 +247,8 @@ importers:
         version: 5.8.3
     devDependencies:
       zod:
-        specifier: ^3.25.67
-        version: 3.25.67
+        specifier: ^4.0.17
+        version: 4.0.17
 
 packages:
 
@@ -2703,8 +2703,8 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
-  zod@3.25.67:
-    resolution: {integrity: sha512-idA2YXwpCdqUSKRCACDE6ItZD9TZzy3OZMtpfLoh6oPR47lipysRrJfjzMqFxQ3uJuUPyUeWe1r9vLH33xO/Qw==}
+  zod@4.0.17:
+    resolution: {integrity: sha512-1PHjlYRevNxxdy2JZ8JcNAw7rX8V9P1AKkP+x/xZfxB0K5FYfuV+Ug6P/6NVSR2jHQ+FzDDoDHS04nYUsOIyLQ==}
 
 snapshots:
 
@@ -5326,4 +5326,4 @@ snapshots:
 
   yocto-queue@0.1.0: {}
 
-  zod@3.25.67: {}
+  zod@4.0.17: {}
