@@ -1,39 +1,16 @@
-# typeweaver
+# 🧵✨ typeweaver
 
-Type-safe API framework with code generation for TypeScript
+[![npm version](https://img.shields.io/npm/v/@rexeus/typeweaver.svg)](https://www.npmjs.com/package/@rexeus/typeweaver)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 
-## Overview
+Typeweaver is a type-safe API framework built for API-first development with a focus on developer
+experience. Use typeweaver to specify your APIs in TypeScript and Zod, and generate clients,
+validators, routers, and more ✨
 
-typeweaver provides a complete solution for building type-safe APIs in TypeScript. Define your API
-contract once using Zod schemas, then automatically generate type-safe clients, validators, and
-server routers and other components like routes for AWS ApiGateway.
+---
 
-The generation is fully extensible through a plugin system.
-
-### Why typeweaver?
-
-- **Single Source of Truth**: Define your API contract once, generate everything else
-- **End-to-End Type Safety**: From API definition to client usage, everything is fully typed
-- **Runtime Validation**: Automatic request/response validation using Zod schemas
-- **Framework Agnostic**: Plugin-based architecture with adapters for AWS Lambda, Hono, Express, and
-  more
-
-## Packages
-
-This monorepo contains six packages:
-
-| Package                                          | Description                                                      | Version                                                         |
-| ------------------------------------------------ | ---------------------------------------------------------------- | --------------------------------------------------------------- |
-| [@rexeus/typeweaver](./packages/cli)             | CLI tool for generating type-safe API code                       | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver)         |
-| [@rexeus/typeweaver-core](./packages/core)       | Core TypeScript and Zod utilities for typeweaver API definitions | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-core)    |
-| [@rexeus/typeweaver-gen](./packages/gen)         | Code generation engine and utilities for typeweaver plugins      | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-gen)     |
-| [@rexeus/typeweaver-types](./packages/types)     | TypeScript type and Zod validator generators for typeweaver APIs | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-types)   |
-| [@rexeus/typeweaver-clients](./packages/clients) | HTTP client generators for typeweaver API specifications         | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients) |
-| [@rexeus/typeweaver-aws-cdk](./packages/aws-cdk) | AWS CDK constructs and deployment utilities for typeweaver APIs  | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
-
-## Quick Start
-
-### Installation
+## 📥 Installation
 
 ```bash
 # Install the CLI as a dev dependency
@@ -43,15 +20,73 @@ npm install -D @rexeus/typeweaver
 npm install @rexeus/typeweaver-core
 ```
 
+Now you are ready to start building your APIs! Check out [Quickstart](#-quickstart)
+
+---
+
+## 💡 Motivation
+
+OpenAPI is the standard for defining APIs, but I was never satisfied with the developer experience
+it provided. Writing YAMLs and JSON Schemas for huge projects felt cumbersome, and generators for
+TypeScript clients and servers often fell short.
+
+Meanwhile, Zod is sitting right there 👀. Writing schemas with it feels like a breeze—beautiful
+syntax, powerful utilities like pick, omit, merge etc, all built for TypeScript from ground up.
+
+So why not use Zod to define your API contracts?
+
+That's exactly what Typeweaver does. Define your APIs with Zod schemas and focus on what
+matters—designing great APIs and implementing business logic. The boilerplate? That's generated ✅.
+The type safety? It's real 🔒. The developer experience? Finally, it's what it should be 🚀.
+
+## 🎯 Why typeweaver?
+
+- 📝 **Define once, generate everything**: API contracts in Zod become clients, servers, validators,
+  and docs.
+- 🔒 **Real type safety**: From API definition to client usage, every request and response is fully
+  typed. No more `any` types sneaking in.
+- ✅ **Automatic validation**: Invalid requests never reach your code.
+- 🔌 **Bring your own framework**: Ready-made adapters for popular frameworks, extensible plugin
+  system for everything else.
+- 😊 **Finally, DX that doesn't suck**: One schema, no duplication, pure TypeScript.
+
+## 📦 Packages
+
+Typeweaver is modular by design. Install only what you need.
+
+### Foundational packages
+
+| Package                                      | Description                                      | Version                                                       |
+| -------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------- |
+| [@rexeus/typeweaver](./packages/cli)         | CLI tool for code generation                     | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver)       |
+| [@rexeus/typeweaver-core](./packages/core)   | Core types for API specification                 | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-core)  |
+| [@rexeus/typeweaver-gen](./packages/gen)     | Code generation engine and plugin system         | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-gen)   |
+| [@rexeus/typeweaver-types](./packages/types) | Plugin for request/response types and validation | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-types) |
+
+### Plugins
+
+| Package                                          | Description                           | Version                                                         |
+| ------------------------------------------------ | ------------------------------------- | --------------------------------------------------------------- |
+| [@rexeus/typeweaver-clients](./packages/clients) | HTTP client generators using Axios    | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients) |
+| [@rexeus/typeweaver-hono](./packages/hono)       | Plugin for Hono routers               | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)    |
+| [@rexeus/typeweaver-aws-cdk](./packages/aws-cdk) | AWS CDK constructs for API Gateway V2 | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
+
+More plugins are planned. Want to build your own? Check out the plugin system
+[Plugin system](./packages/gen).
+
+---
+
+## 🚀 Quickstart
+
 ### Basic Usage
 
 1. **Define your API contract:**
 
 ```typescript
-// api/definitions/users/GetUserDefinition.ts
+// api/definition/user/GetUserDefinition.ts
 import { HttpOperationDefinition, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { z } from "zod/v4";
-import UserNotFoundErrorDefinition from "../shared/UserNotFoundErrorDefinition";
+import UserNotFoundErrorDefinition from "./errors/UserNotFoundErrorDefinition";
 import { sharedResponses } from "../shared/sharedResponses";
 
 export default new HttpOperationDefinition({
@@ -76,16 +111,16 @@ export default new HttpOperationDefinition({
         email: z.email(),
       }),
     },
-    UserNotFoundErrorDefinition,
-    ...sharedResponses, // Could be used for common errors: 401, 403, 429, 500, etc.
+    UserNotFoundErrorDefinition, // Error response
+    ...sharedResponses, // Reuse common errors across operations
   ],
 });
 ```
 
-**Define custom error responses (in shared directory):**
+**2. Define custom error responses:**
 
 ```typescript
-// api/definitions/shared/UserNotFoundErrorDefinition.ts
+// api/definition/user/errors/UserNotFoundErrorDefinition.ts
 import { HttpResponseDefinition, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { z } from "zod/v4";
 import NotFoundErrorDefinition from "./NotFoundErrorDefinition";
@@ -103,13 +138,13 @@ export default NotFoundErrorDefinition.extend({
 });
 ```
 
-2. **Generate the code:**
+3. **Generate the code:**
 
 ```bash
-npx typeweaver generate --input ./api/definition --output ./api/generated
+npx typeweaver generate --input ./api/definition --output ./api/generated --plugins clients,hono
 ```
 
-3. **Use the generated type-safe client:**
+4. **Use the generated type-safe client:**
 
 ```typescript
 import {
@@ -130,20 +165,18 @@ const getUserRequestCommand = new GetUserRequestCommand({
 });
 
 try {
-  // Fully typed request and response!
+  // Fully typed request and response
   const result = await client.send(getUserRequestCommand);
-  console.log(result.body.name); // Type-safe access to user name
+  console.log(result.body.name);
 } catch (error) {
-  // Errors are also fully typed!
+  // Errors are also fully typed
   if (error instanceof UserNotFoundErrorResponse) {
     console.error(`User ${error.body.actualValues.userId} not found`);
   }
-
-  // ...
 }
 ```
 
-4. **Validate requests:**
+5. **Validate requests:**
 
 ```typescript
 import { GetUserRequestValidator } from "./api/generated";
@@ -157,68 +190,22 @@ const validationResult = validator.safeValidate({
 });
 
 if (validationResult.isValid) {
-  // Request is valid with typed data
+  // Valid request, of course typed!
   console.log(validationResult.data.param.userId);
 } else {
-  // Handle validation errors
-  console.error(validationResult.error.issues);
+  // Handle validation errors with detailed information about each issue
+  console.error("Header issues", validationResult.error.headerIssues);
+  console.error("Param issues", validationResult.error.paramIssues);
+  // etc.
 }
 ```
 
-## Plugin System
-
-typeweaver uses a plugin-based architecture for extensible code generation. Configure which code to
-generate based on your needs.
-
-### Built-in Plugins
-
-- **Types Plugin** (`@rexeus/typeweaver-types`) - TypeScript types and Zod validators (included by
-  default)
-- **Clients Plugin** (`@rexeus/typeweaver-clients`) - HTTP API client generation
-- **AWS CDK Plugin** (`@rexeus/typeweaver-aws-cdk`) - AWS CDK constructs and HTTP API Gateway
-  routers
-
-### Using Plugins
-
-Create a `typeweaver.config.js` file:
-
-```javascript
-export default {
-  input: "./api/definitions",
-  output: "./api/generated",
-  plugins: ["clients", "aws-cdk"],
-  prettier: true,
-  clean: true,
-};
-```
-
-Then generate with:
-
-```bash
-npx typeweaver generate --config ./typeweaver.config.js
-```
-
-### Creating Custom Plugins
+6. **Serve your API:**
 
 ```typescript
-import { BasePlugin } from "@rexeus/typeweaver-gen";
-
-export class MyPlugin extends BasePlugin {
-  name = "my-plugin";
-  version = "1.0.0";
-
-  async generate(context) {
-    // Your generation logic
-  }
-}
+TODO;
 ```
 
-See the [plugin documentation](./packages/gen/README.md) for more details.
+## License
 
-## Acknowledgments
-
-Built with:
-
-- [TypeScript](https://github.com/microsoft/TypeScript) - For type safety
-- [Zod](https://github.com/colinhacks/zod) - For runtime validation
-- [Hono](https://github.com/honojs/hono) - For lightweight web framework
+Apache 2.0 © Dennis Wentzien 2025
