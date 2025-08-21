@@ -20,7 +20,7 @@ npm install -D @rexeus/typeweaver
 npm install @rexeus/typeweaver-core
 ```
 
-Now you are ready to start building your APIs! Check out [Quickstart](#-quickstart)
+Now you are ready to start building! Check out [Quickstart](#-Quickstart)
 
 ---
 
@@ -193,7 +193,7 @@ try {
 
 <!-- TODO: add correct link -->
 
-&rarr; That's it! Start building your API. [Get started](./packages/cli/README.md#get-started)
+&rarr; That's it! Start building your API. [Get started](./packages/cli/README.md#-Get-Started)
 
 ---
 
