@@ -1,483 +1,209 @@
-# @rexeus/typeweaver-types
+# 🧵✨ @rexeus/typeweaver-types
 
-TypeScript type and Zod validator generators for typeweaver APIs.
+[![npm version](https://img.shields.io/npm/v/@rexeus/typeweaver-types.svg)](https://www.npmjs.com/package/@rexeus/typeweaver-types)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 
-## Overview
+Typeweaver is a type-safe HTTP API framework built for API-first development with a focus on
+developer experience. Use typeweaver to specify your HTTP APIs in TypeScript and Zod, and generate
+clients, validators, routers, and more ✨
+
+## 📝 Types Plugin
 
 This plugin generates TypeScript types and Zod validators from your typeweaver API definitions,
 providing the foundation for type-safe API development. This is the core plugin that's included by
-default in typeweaver.
+default in every typeweaver generation.
 
-## Installation
+---
 
-```bash
-npm install @rexeus/typeweaver-types
-```
-
-**Peer Dependencies:**
+## 📥 Installation
 
 ```bash
-npm install @rexeus/typeweaver-core @rexeus/typeweaver-gen
+# Install the CLI as a dev dependency
+# Types plugin will be automatically included
+npm install -D @rexeus/typeweaver
+
+# Install the runtime as a dependency
+npm install @rexeus/typeweaver-core
 ```
 
-## Usage
+## 💡 Usage
 
 This plugin is included by default and doesn't need to be explicitly specified:
 
 ```bash
-npx typeweaver generate --input ./api/definitions --output ./api/generated
+# Generate with clients + types plugins
+npx typeweaver generate --input ./api/definition --output ./api/generated --plugins clients
 ```
 
-You can also explicitly include it with other plugins:
+More details on how to use the [CLI](../cli/README.md#️-cli).
 
-```bash
-npx typeweaver generate --input ./api/definitions --output ./api/generated --plugins types,clients,aws-cdk
-```
+## 📂 Generated Output
 
-## Generated Output
+For each operation (e.g., `CreateTodo`), the plugin generates four main files:
 
-This plugin generates comprehensive TypeScript types and validators for each API operation.
+- `<OperationId>Request.ts`
+- `<OperationId>Response.ts`
+- `<OperationId>RequestValidator.ts`
+- `<OperationId>ResponseValidator.ts`
 
-### Generated Files per Operation
+These files contain the necessary types and validators for requests and responses. All of these
+provided types and classes are exported.
 
-For each operation (e.g., `GetUser`), the plugin generates:
+### 📨 Request Types
 
-1. **Request Types** (`GetUserRequest.ts`)
-2. **Response Types** (`GetUserResponse.ts`)
-3. **Request Validators** (`GetUserRequestValidator.ts`)
-4. **Response Validators** (`GetUserResponseValidator.ts`)
+All request-related types for an operation are defined in one file: `<OperationId>Request.ts`, e.g.
+`CreateTodoRequest.ts`. This file contains:
 
-### Shared Response Types
+- **`I<OperationId>RequestHeader`** - Type of request headers, if defined, e.g.
+  `ICreateTodoRequestHeader`
+- **`I<OperationId>RequestPath`** - Type for path parameters, if defined, e.g.
+  `ICreateTodoRequestPath`
+- **`I<OperationId>RequestQuery`** - Type for query parameters, if defined, e.g.
+  `ICreateTodoRequestQuery`
+- **`I<OperationId>RequestBody`** - Type for request body, if defined, e.g. `ICreateTodoRequestBody`
+- **`I<OperationId>Request`** - Complete request interface combining path, method, headers, and
+  body, e.g. `ICreateTodoRequest`
+- **`Successful<OperationId>Response`** - Union type excluding error responses for success-only
+  handling
 
-For shared error responses, generates:
+### 📬 Response Types
 
-- **Shared Response Types** (in `shared/` directory)
+All response-related types for an operation are defined in one file: `<OperationId>Response.ts`,
+e.g. `CreateTodoResponse.ts`. This file contains for each response defined inline in an operation:
 
-## Example Generated Code
+- **`I<ResponseName>ResponseHeader`** - Type for success response headers, if defined, e.g.
+  `ICreateTodoSuccessResponseHeader`
+- **`I<ResponseName>ResponseBody`** - Type for success response payload structure, if defined, e.g.
+  `ICreateTodoSuccessResponseBody`
+- **`I<ResponseName>Response`** - Complete success response interface with status code, e.g.
+  `I<ResponseName>Response`
+- **`<ResponseName>Response`** - Response class extending HttpResponse with validation and type
+  safety, e.g. `CreateTodoSuccessResponse`
 
-### Request Types
+Furthermore, two union types are generated, which include details about all possible responses
+(success + error), not only those defined inline in the operation:
+
+- **`I<OperationId>Response`** - Union type of all response types e.g. `ICreateTodoResponse`
+- **`<OperationId>Response`** - Union type of all response classes, e.g. `CreateTodoResponse`
+
+### 📨✓ Request Validators
+
+Request validation logic for an operation is defined in one file:
+`<OperationId>RequestValidator.ts`, e.g. `CreateTodoRequestValidator.ts`. This file contains:
+
+- **`<OperationId>RequestValidator`** - Main validation class extending `RequestValidator`, e.g.
+  `CreateTodoRequestValidator`
+- **`safeValidate()`** - Non-throwing validation method returning `SafeRequestValidationResult`
+- **`validate()`** - Throwing validation method that returns validated request or throws
+  `RequestValidationError`
+- **Header coercion logic** - Automatic conversion of headers to schema-appropriate types (single
+  string value & multi string value headers)
+- **Query parameter coercion logic** - Automatic conversion of query parameters to
+  schema-appropriate types (single string value & multi string value query parameters)
+- **Request validation errors** - Includes all issues related to the incoming request for headers,
+  query parameters, and body.
 
 ```typescript
-// GetUserRequest.ts
-import { HttpRequest } from "@rexeus/typeweaver-core";
-import { z } from "zod/v4";
+import { RequestValidationError, type IHttpRequest } from "@rexeus/typeweaver-core";
+import { CreateTodoRequestValidator } from "path/to/generated/output";
 
-export const GetUserRequestSchema = z.object({
-  param: z.object({
-    userId: z.string().uuid(),
-  }),
-  header: z
-    .object({
-      Authorization: z.string(),
-      Accept: z.literal("application/json"),
-    })
-    .optional(),
-});
+const requestValidator = new CreateTodoRequestValidator();
 
-export type GetUserRequest = z.infer<typeof GetUserRequestSchema>;
-
-export interface IGetUserRequest extends HttpRequest {
-  param: {
-    userId: string;
-  };
-  header?: {
-    Authorization: string;
-    Accept: "application/json";
-  };
-}
-
-export class GetUserRequestCommand {
-  constructor(public readonly data: IGetUserRequest) {
-    GetUserRequestSchema.parse(data);
-  }
-}
-```
-
-### Response Types
-
-```typescript
-// GetUserResponse.ts
-import { HttpResponse } from "@rexeus/typeweaver-core";
-import { z } from "zod/v4";
-
-// Success Response
-export const GetUserSuccessResponseSchema = z.object({
-  statusCode: z.literal(200),
-  header: z.object({
-    "Content-Type": z.literal("application/json"),
-  }),
-  body: z.object({
-    id: z.string().uuid(),
-    name: z.string(),
-    email: z.string().email(),
-  }),
-});
-
-export type GetUserSuccessResponse = z.infer<typeof GetUserSuccessResponseSchema>;
-
-// Error Responses
-export type GetUserErrorResponse =
-  | UserNotFoundErrorResponse
-  | ValidationErrorResponse
-  | InternalServerErrorResponse;
-
-// Union Type
-export type GetUserResponse = GetUserSuccessResponse | GetUserErrorResponse;
-
-export interface IGetUserResponse extends HttpResponse {
-  statusCode: 200 | 404 | 400 | 500;
-  header: {
-    "Content-Type": "application/json";
-  };
-  body:
-    | {
-        id: string;
-        name: string;
-        email: string;
-      }
-    | {
-        message: string;
-        code: string;
-      };
-}
-```
-
-### Request Validators
-
-```typescript
-// GetUserRequestValidator.ts
-import { RequestValidator } from "@rexeus/typeweaver-core";
-import { GetUserRequestSchema } from "./GetUserRequest";
-
-export class GetUserRequestValidator extends RequestValidator<typeof GetUserRequestSchema> {
-  constructor() {
-    super(GetUserRequestSchema);
-  }
-
-  public validate(request: unknown): GetUserRequest {
-    return this.schema.parse(request);
-  }
-
-  public safeValidate(request: unknown): SafeParseResult<GetUserRequest> {
-    return this.schema.safeParse(request);
-  }
-}
-```
-
-### Response Validators
-
-```typescript
-// GetUserResponseValidator.ts
-import { ResponseValidator } from "@rexeus/typeweaver-core";
-import { GetUserResponse } from "./GetUserResponse";
-
-export class GetUserResponseValidator extends ResponseValidator {
-  public validate(response: unknown): GetUserResponse {
-    const statusCode = (response as any)?.statusCode;
-
-    switch (statusCode) {
-      case 200:
-        return this.validateSuccessResponse(response);
-      case 404:
-        return this.validateUserNotFoundError(response);
-      case 400:
-        return this.validateValidationError(response);
-      case 500:
-        return this.validateInternalServerError(response);
-      default:
-        throw new ResponseValidationError(`Unexpected status code: ${statusCode}`);
-    }
-  }
-
-  private validateSuccessResponse(response: unknown): GetUserSuccessResponse {
-    return GetUserSuccessResponseSchema.parse(response);
-  }
-
-  // ... other validation methods
-}
-```
-
-## Type Features
-
-### Complete Type Safety
-
-- **Request Types** - Fully typed request interfaces
-- **Response Types** - Union types for all possible responses
-- **Parameter Types** - Path, query, header, and body parameters
-- **Validation Types** - Runtime validation with Zod schemas
-
-### Zod Integration
-
-- **Schema Generation** - Automatic Zod schema creation
-- **Runtime Validation** - Type-safe validation at runtime
-- **Error Handling** - Structured validation errors
-- **Type Inference** - TypeScript types inferred from Zod schemas
-
-### Error Response Handling
-
-```typescript
-// Shared error responses are reused across operations
-export type UserNotFoundErrorResponse = {
-  statusCode: 404;
-  body: {
-    message: "User not found";
-    code: "USER_NOT_FOUND";
-    userId: string;
-  };
+// A request in structure of IHttpRequest
+const request: IHttpRequest = {
+  // ...
 };
 
-// Operation-specific error handling
-export type GetUserErrorResponse =
-  | UserNotFoundErrorResponse
-  | ValidationErrorResponse
-  | InternalServerErrorResponse;
-```
+// Using safe validation
+const safeResult = requestValidator.safeValidate(request);
+if (safeResult.isValid) {
+  console.log("Request is valid", safeResult.data);
+} else {
+  // Error is instance of ResponseValidationError class
+  console.log("Request is invalid", safeResult.error);
+}
 
-## Usage Examples
-
-### Request Validation
-
-```typescript
-import { GetUserRequestValidator } from "./api/generated";
-
-const validator = new GetUserRequestValidator();
-
+// Using throwing validation
 try {
-  const validatedRequest = validator.validate({
-    param: { userId: "123e4567-e89b-12d3-a456-426614174000" },
-    header: { Authorization: "Bearer token" },
-  });
-
-  // validatedRequest is fully typed
-  console.log(validatedRequest.param.userId);
+  const validatedRequest = requestValidator.validate(request);
+  console.log("Request is valid", validatedRequest);
 } catch (error) {
-  console.error("Validation failed:", error.issues);
-}
-```
-
-### Response Validation
-
-```typescript
-import { GetUserResponseValidator } from "./api/generated";
-
-const validator = new GetUserResponseValidator();
-
-try {
-  const validatedResponse = validator.validate({
-    statusCode: 200,
-    header: { "Content-Type": "application/json" },
-    body: { id: "123", name: "John", email: "john@example.com" },
-  });
-
-  // Response is typed based on status code
-  if (validatedResponse.statusCode === 200) {
-    console.log(validatedResponse.body.name); // Type-safe access
-  }
-} catch (error) {
-  console.error("Response validation failed:", error);
-}
-```
-
-### Type Guards
-
-```typescript
-import { GetUserResponse } from "./api/generated";
-
-function isSuccessResponse(response: GetUserResponse): response is GetUserSuccessResponse {
-  return response.statusCode === 200;
-}
-
-function handleResponse(response: GetUserResponse) {
-  if (isSuccessResponse(response)) {
-    // TypeScript knows this is a success response
-    console.log(response.body.name);
-  } else {
-    // TypeScript knows this is an error response
-    console.error(response.body.message);
+  if (error instanceof RequestValidationError) {
+    console.log("Request is invalid", error);
   }
 }
 ```
 
-## Integration with Other Plugins
+### 📬✓ Response Validators
 
-### With Clients Plugin
+Response validation logic for an operation is defined in one file:
+`<OperationId>ResponseValidator.ts`, e.g. `CreateTodoResponseValidator.ts`. This file contains:
 
-The types plugin provides the foundation for type-safe clients:
-
-```typescript
-// Generated by types plugin
-import { GetUserRequestCommand, GetUserResponse } from "./GetUserRequest";
-import { GetUserResponseValidator } from "./GetUserResponseValidator";
-
-// Used by clients plugin
-export class UsersClient {
-  async send(command: GetUserRequestCommand): Promise<GetUserResponse> {
-    const response = await this.makeRequest(command);
-    const validator = new GetUserResponseValidator();
-    return validator.validate(response);
-  }
-}
-```
-
-### With AWS CDK Plugin
-
-Types provide the foundation for request/response handling:
+- **`<OperationId>ResponseValidator`** - Main validation class extending `ResponseValidator`, e.g.
+  `CreateTodoResponseValidator`
+- **`safeValidate()`** - Non-throwing validation method returning `SafeResponseValidationResult`
+- **`validate()`** - Throwing validation method that returns validated response or throws
+  ResponseValidationError
+- Valid response data is an instance of one of the generated response classes
+- **Header coercion logic** - Automatic conversion of headers to schema-appropriate types (single
+  string value & multi string value headers)
+- **Response validation errors** - Include details about the issues with all possible responses for
+  the given status code:
+  - An issue for a possible response includes details about header and body issues
+  - If the given status code is not specified in the operation at all an issue with details about
+    expected status codes is included
 
 ```typescript
-// In your Lambda handler
-import { GetUserRequestValidator, GetUserResponseValidator } from "./api/generated";
+import { ResponseValidationError, type IHttpResponse } from "@rexeus/typeweaver-core";
+import {
+  CreateTodoResponseValidator,
+  CreateTodoSuccessResponse,
+  InternalServerErrorResponse,
+} from "path/to/generated/output";
 
-export const handler = async (event: APIGatewayProxyEvent) => {
-  const requestValidator = new GetUserRequestValidator();
+const responseValidator = new CreateTodoResponseValidator();
 
-  try {
-    const validatedRequest = requestValidator.validate({
-      param: event.pathParameters,
-      header: event.headers,
-    });
-
-    // Handle request with type safety
-    const user = await userService.getUser(validatedRequest.param.userId);
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify(user),
-    };
-  } catch (error) {
-    if (error instanceof ValidationError) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ message: "Invalid request", issues: error.issues }),
-      };
-    }
-    throw error;
-  }
+// A response in structure of IHttpResponse
+const response: IHttpResponse = {
+  // ...
 };
-```
 
-## Advanced Features
+// Using safe validation
+const safeResult = responseValidator.safeValidate(response);
+if (safeResult.isValid) {
+  console.log("Response is valid", safeResult.data);
 
-### Custom Validators
+  // Data is an instance of one of the defined response classes
+  if (safeResult.data instanceof CreateTodoSuccessResponse) {
+    // handle CreateTodoSuccessResponse
+  }
+  if (safeResult.data instanceof InternalServerErrorResponse) {
+    // handle InternalServerErrorResponse
+  }
+  // handle other response types ...
+} else {
+  // Error is instance of ResponseValidationError class
+  console.log("Response is invalid", safeResult.error);
+}
 
-Extend generated validators for custom validation logic:
+// Using throwing validation
+try {
+  const validatedResponse = responseValidator.validate(response);
+  console.log("Response is valid", validatedResponse);
 
-```typescript
-import { GetUserRequestValidator } from "./api/generated";
-
-export class CustomGetUserRequestValidator extends GetUserRequestValidator {
-  public validate(request: unknown): GetUserRequest {
-    const validated = super.validate(request);
-
-    // Custom validation logic
-    if (validated.param.userId.startsWith("test_")) {
-      throw new Error("Test users not allowed in production");
-    }
-
-    return validated;
+  // Same here: Data is an instance of one of the defined response classes
+  if (validatedResponse instanceof CreateTodoSuccessResponse) {
+    // handle CreateTodoSuccessResponse
+  }
+  // ... handle other response types
+} catch (error) {
+  if (error instanceof ResponseValidationError) {
+    console.log("Response is invalid", error);
   }
 }
 ```
 
-### Schema Composition
-
-Generated schemas can be composed and extended:
-
-```typescript
-import { GetUserRequestSchema } from "./api/generated";
-
-// Extend for internal usage
-export const InternalGetUserRequestSchema = GetUserRequestSchema.extend({
-  internal: z.object({
-    requestId: z.string(),
-    userId: z.string(),
-  }),
-});
-```
-
-## Plugin Architecture
-
-This plugin extends the typeweaver plugin system:
-
-```typescript
-import { BasePlugin, type GeneratorContext } from "@rexeus/typeweaver-gen";
-
-export default class TypesPlugin extends BasePlugin {
-  public name = "types";
-
-  public override generate(context: GeneratorContext): void {
-    // Generates types and validators for all operations
-    SharedResponseGenerator.generate(context);
-    RequestGenerator.generate(context);
-    RequestValidationGenerator.generate(context);
-    ResponseGenerator.generate(context);
-    ResponseValidationGenerator.generate(context);
-  }
-}
-```
-
-## Best Practices
-
-### Organization
-
-- Keep generated types in source control for review
-- Regenerate types when API definitions change
-- Use TypeScript strict mode for maximum safety
-
-### Validation Strategy
-
-```typescript
-// Validate at boundaries
-export class ApiController {
-  async getUser(request: unknown) {
-    // Validate input
-    const validator = new GetUserRequestValidator();
-    const validatedRequest = validator.validate(request);
-
-    // Business logic with typed data
-    const user = await this.userService.getUser(validatedRequest.param.userId);
-
-    // Return typed response
-    return {
-      statusCode: 200,
-      body: user,
-    } as GetUserSuccessResponse;
-  }
-}
-```
-
-### Error Handling
-
-```typescript
-// Centralized error mapping
-export function mapValidationError(error: ZodError): ValidationErrorResponse {
-  return {
-    statusCode: 400,
-    body: {
-      message: "Validation failed",
-      issues: error.issues.map(issue => ({
-        path: issue.path.join("."),
-        message: issue.message,
-      })),
-    },
-  };
-}
-```
-
-## Troubleshooting
-
-### Common Issues
-
-**Type conflicts**: Ensure API definitions are consistent **Validation errors**: Check Zod schema
-compatibility **Import issues**: Verify generated files are properly exported
-
-### Debug Mode
-
-Enable detailed generation logging:
-
-```bash
-DEBUG=typeweaver:types npx typeweaver generate --plugins types
-```
-
-## License
+## 📄 License
 
 Apache 2.0 © Dennis Wentzien 2025

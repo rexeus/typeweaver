@@ -191,9 +191,7 @@ try {
 }
 ```
 
-<!-- TODO: add correct link -->
-
-&rarr; That's it! Start building your API. [Get started](./packages/cli/README.md#-Get-Started)
+&rarr; That's it! Start building your API. [Get started](./packages/cli/README.md#-get-started)
 
 ---
 
