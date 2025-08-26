@@ -36,7 +36,7 @@ export class HttpApiRouterGenerator {
     const outputDir = operationResources[0]!.outputDir;
     const outputFile = path.join(
       outputDir,
-      `${pascalCaseEntityName}HttpApiRouter.ts`
+      `${pascalCaseEntityName}HttpApiRoutes.ts`
     );
 
     for (const operation of operationResources) {

@@ -12,6 +12,6 @@ export type AwsHttpApiGatewayRoute = {
   methods: HttpMethod[];
 };
 
-export abstract class AwsHttpApiGatewayRouter {
+export abstract class AwsHttpApiGatewayRoutes {
   public abstract getRoutes(): AwsHttpApiGatewayRoute[];
 }

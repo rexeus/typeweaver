@@ -9,10 +9,10 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import {
   type AwsHttpApiGatewayRoute,
-  AwsHttpApiGatewayRouter,
+  AwsHttpApiGatewayRoutes,
 } from "../lib/aws-cdk";
 
-export class TodoHttpApiRouter extends AwsHttpApiGatewayRouter {
+export class TodoHttpApiRoutes extends AwsHttpApiGatewayRoutes {
   private routes: AwsHttpApiGatewayRoute[] = [
     {
       path: "/todos/{todoId}/subtodos",
