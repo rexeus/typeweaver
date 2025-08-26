@@ -27,7 +27,7 @@ npm install -D @rexeus/typeweaver
 npm install @rexeus/typeweaver-core
 ```
 
-## 💡 Usage
+## 💡 CLI Usage
 
 This plugin is included by default and doesn't need to be explicitly specified:
 
