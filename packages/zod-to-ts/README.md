@@ -15,7 +15,7 @@ representations. It is used internally by typeweaver to generate TypeScript type
 npm install @rexeus/typeweaver-zod-to-ts
 ```
 
-## 💡 Usage
+## 💡 How to use
 
 ```typescript
 import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";

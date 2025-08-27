@@ -27,7 +27,7 @@ npm install -D @rexeus/typeweaver
 npm install @rexeus/typeweaver-core
 ```
 
-## 💡 CLI Usage
+## 💡 How to use
 
 This plugin is included by default and doesn't need to be explicitly specified:
 
@@ -104,6 +104,9 @@ Request validation logic for an operation is defined in one file:
 - **Request validation errors** - Includes all issues related to the incoming request for headers,
   query parameters, and body.
 
+
+**Using the generated request validators**
+
 ```typescript
 import { RequestValidationError, type IHttpRequest } from "@rexeus/typeweaver-core";
 import { CreateTodoRequestValidator } from "path/to/generated/output";
@@ -153,6 +156,8 @@ Response validation logic for an operation is defined in one file:
   - An issue for a possible response includes details about header and body issues
   - If the given status code is not specified in the operation at all an issue with details about
     expected status codes is included
+
+**Using the generated response validators**
 
 ```typescript
 import { ResponseValidationError, type IHttpResponse } from "@rexeus/typeweaver-core";

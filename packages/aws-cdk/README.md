@@ -25,7 +25,7 @@ npm install -D @rexeus/typeweaver @rexeus/typeweaver-aws-cdk
 npm install @rexeus/typeweaver-core
 ```
 
-## 💡 CLI Usage
+## 💡 How to use
 
 ```bash
 npx typeweaver generate --input ./api/definitions --output ./api/generated --plugins aws-cdk
@@ -39,6 +39,8 @@ For each resource, one file is generated: `<ResourceName>HttpApiRoutes.ts`.
 
 This file contains a generated class `<ResourceName>HttpApiRoutes` that includes all routes for its
 defined operations, e.g. `TodoHttpApiRoutes`.
+
+**Using the generated routes**
 
 ```typescript
 import { Construct } from "constructs";
