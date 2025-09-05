@@ -48,12 +48,12 @@
   "peerDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "hono": "^4.0.0"
+    "hono": "^4.9.6"
   },
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "hono": "^4.0.0",
+    "hono": "^4.9.6",
     "test-utils": "file:../test-utils"
   },
   "dependencies": {
