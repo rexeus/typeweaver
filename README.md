@@ -35,7 +35,7 @@ syntax, powerful utilities like pick, omit, merge etc, all built for TypeScript 
 
 So why not use Zod to define your API contracts?
 
-That's exactly what Typeweaver does. Define your APIs with Zod schemas and focus on what
+That's exactly what typeweaver does. Define your APIs with Zod schemas and focus on what
 matters—designing great APIs and implementing business logic. The boilerplate? That's generated ✅.
 The type safety? It's real 🔒. The developer experience? Finally, it's what it should be 🚀.
 
