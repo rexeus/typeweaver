@@ -1,5 +1,35 @@
 # @rexeus/typeweaver
 
+## 0.0.4
+
+### Patch Changes
+
+- 2da4d2d: Remove support for optional path parameters
+- 25d2b25: Integrate definition validation.
+- 84c8f9f: Add option to specify the shared folder.
+- 74f411f: Definitions are now embedded in generated code, so the output is self-contained.
+- 4e5b0ea: Support entity-scoped responses & nested input dirs.
+- e564680: Fix issue with shared and entity-based responses
+- Updated dependencies [5b9d5d7]
+- Updated dependencies [84c8f9f]
+- Updated dependencies [c46bfc2]
+- Updated dependencies [f9437df]
+- Updated dependencies [74f411f]
+- Updated dependencies [4e5b0ea]
+- Updated dependencies [7353b0e]
+- Updated dependencies [eebc31d]
+- Updated dependencies [2ec3eaf]
+- Updated dependencies [e564680]
+- Updated dependencies [2ec3eaf]
+- Updated dependencies [2ec3eaf]
+- Updated dependencies [c46bfc2]
+  - @rexeus/typeweaver-hono@0.0.4
+  - @rexeus/typeweaver-gen@0.0.4
+  - @rexeus/typeweaver-clients@0.0.4
+  - @rexeus/typeweaver-types@0.0.4
+  - @rexeus/typeweaver-core@0.0.4
+  - @rexeus/typeweaver-aws-cdk@0.0.4
+
 ## 0.0.3
 
 ### Patch Changes
