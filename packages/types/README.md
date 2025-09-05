@@ -103,7 +103,8 @@ Request validation logic for an operation is defined in one file:
   schema-appropriate types (single string value & multi string value query parameters)
 - **Request validation errors** - Includes all issues related to the incoming request for headers,
   query parameters, and body.
-
+- **Unknown property filtering** - Automatically removes properties not defined in the request
+  schema. If a request exceeds the definition, it is not rejected directly.
 
 **Using the generated request validators**
 
@@ -156,6 +157,8 @@ Response validation logic for an operation is defined in one file:
   - An issue for a possible response includes details about header and body issues
   - If the given status code is not specified in the operation at all an issue with details about
     expected status codes is included
+- **Unknown property filtering** - Automatically removes properties not defined in the response
+  schema. If a response exceeds the definition, it is not rejected directly.
 
 **Using the generated response validators**
 
