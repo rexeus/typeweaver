@@ -24,15 +24,16 @@ npm install @rexeus/typeweaver-core
 
 ## 💡 How to use
 
-This package is not intended to be used directly. Look here to get started
-[@rexeus/typeweaver](../cli/README.md)
+This package is typically consumed by generated code. You can also import HTTP primitives (e.g.,
+`HttpResponse`, `HttpStatusCode`) directly in your application code. To get started with generation,
+see [@rexeus/typeweaver](../cli/README.md).
 
 ## 🔧 What It Provides
 
 - HTTP primitives: `HttpMethod`, `HttpStatusCode`, `IHttpRequest`, `IHttpResponse`, `HttpResponse`.
 - Definitions: `HttpOperationDefinition`, `HttpRequestDefinition`, `HttpResponseDefinition` (incl.
   `extend()` for composing headers/bodies).
-- Validation: `RequestValidator`, `ResponseValidator`, plus `RequestValidationError` and
+- Validation: `IRequestValidator`, `IResponseValidator`, plus `RequestValidationError` and
   `ResponseValidationError` with structured issues.
 - Utilities: `UnknownResponse` for catch‑all responses.
 

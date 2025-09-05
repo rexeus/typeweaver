@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 
-This utility library provides logic for converting Zod `V4` schemas into TypeScript type
+This utility library provides logic for converting Zod v4 schemas into TypeScript type
 representations. It is used internally by typeweaver to generate TypeScript types from Zod schemas.
 
 ---
@@ -19,7 +19,7 @@ npm install @rexeus/typeweaver-zod-to-ts
 
 ```typescript
 import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
-import { z } from "zod/4";
+import { z } from "zod/v4";
 
 // Define a Zod schema
 const userSchema = z.object({
