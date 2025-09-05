@@ -55,7 +55,7 @@
     "@hono/node-server": "^1.16.0",
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "axios": "^1.9.0",
+    "axios": "^1.11.0",
     "test-utils": "workspace:^"
   },
   "dependencies": {
