@@ -39,6 +39,10 @@ That's exactly what typeweaver does. Define your APIs with Zod schemas and focus
 matters—designing great APIs and implementing business logic. The boilerplate? That's generated ✅.
 The type safety? It's real 🔒. The developer experience? Finally, it's what it should be 🚀.
 
+## 🌱 Project Status
+
+Early-stage and actively working toward a stable 1.0. We’re expanding test coverage, running performance tests, and refining definition ingestion and the normalized output format used for generation — while keeping the project fully usable today.
+
 ## 🎯 Why typeweaver?
 
 - 📝 **Define once, generate everything**: API contracts in Zod become clients, servers, validators,
@@ -190,6 +194,17 @@ try {
 ```
 
 &rarr; That's it! Start building your API. [Get started](./packages/cli/README.md#-get-started)
+
+---
+
+## 🤝 Contributing
+
+Contributions are very welcome — from docs and examples to bug fixes, new plugins and features.
+
+## 💬 Feedback & Issues
+
+We’d love to hear your feedback — on API design, DX, docs, issues and ideas. Report them
+[here](https://github.com/rexeus/typeweaver/issues).
 
 ---
 
