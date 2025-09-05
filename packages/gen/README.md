@@ -1,267 +1,150 @@
-# @rexeus/typeweaver-gen
+# 🧵✨ @rexeus/typeweaver-gen
 
-Code generation engine and utilities for typeweaver plugins.
+[![npm version](https://img.shields.io/npm/v/@rexeus/typeweaver-gen.svg)](https://www.npmjs.com/package/@rexeus/typeweaver-gen)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 
-## Overview
+Typeweaver is a type-safe HTTP API framework built for API-first development with a focus on
+developer experience. Use typeweaver to specify your HTTP APIs in TypeScript and Zod, and generate
+clients, validators, routers, and more ✨
 
-This package provides the plugin architecture and utilities that power typeweaver's extensible code
-generation system. It includes base classes, context utilities, and the plugin registry system.
+## 📝 Generation Package
 
-## Installation
+Provides the core components for generating code with typeweaver. This package forms the basis for
+all plugins.
+
+---
+
+## 📥 Installation
 
 ```bash
-npm install @rexeus/typeweaver-gen
+npm install -D @rexeus/typeweaver-gen
 ```
 
-**Peer Dependencies:**
+## 💡 How to use
 
-```bash
-npm install @rexeus/typeweaver-core
-```
+Most users don’t depend on this package directly — use the CLI instead:
+[`@rexeus/typeweaver`](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md). If you’re writing a plugin, start here.
 
-## Plugin Architecture
+### 🚀 Minimal plugin
 
-### Creating a Plugin
-
-```typescript
+```ts
 import { BasePlugin, type GeneratorContext } from "@rexeus/typeweaver-gen";
 
 export default class MyPlugin extends BasePlugin {
-  public name = "my-plugin";
+  // Give your plugin a unique name
+  name = "my-plugin";
 
-  public override generate(context: GeneratorContext): Promise<void> | void {
-    // Your generation logic here
-    const content = context.renderTemplate(templatePath, templateData);
-    context.writeFile("relative/path/to/output.ts", content);
-    context.addGeneratedFile("relative/path/to/output.ts");
+  // Use the generate phase to render templates and write files
+  async generate(context: GeneratorContext) {
+    for (const [entity, { operations }] of Object.entries(context.resources.entityResources)) {
+      const content = context.renderTemplate("Entity.ejs", {
+        entity,
+        operations,
+        coreDir: context.coreDir,
+      });
+      context.writeFile(`${entity}/${entity}Stuff.ts`, content);
+    }
   }
 }
 ```
 
-### Plugin Context
+Templates live under your plugin’s `src/templates`. They receive your data object as EJS locals.
 
-The `GeneratorContext` provides utilities for code generation:
+## 🔧 What it provides
 
-```typescript
-interface GeneratorContext {
-  // Input/output directories
-  outputDir: string;
-  inputDir: string;
-  templateDir: string;
-  coreDir: string;
+- Base classes: `BasePlugin`, `BaseTemplatePlugin` for lifecycle defaults, EJS helpers, and lib
+  copying.
+- Types & contexts: `TypeweaverPlugin`, `PluginContext`, `GeneratorContext` with `writeFile`,
+  `renderTemplate`, and file tracking.
+- Registry: `PluginRegistry` to register and query plugins; the CLI orchestrates lifecycle
+  execution.
+- Resource model: `GetResourcesResult`, `EntityResources`, representing the normalized API data
+  derived from your definition.
 
-  // Resource data
-  resources: GetResourcesResult;
+## 🔌 Plugin lifecycle
 
-  // Configuration
-  config: PluginConfig;
+The lifecycle keeps concerns separated and makes it easy to compose multiple plugins. Implement only
+what you need.
 
-  // Utility functions
-  writeFile: (relativePath: string, content: string) => void;
-  renderTemplate: (templatePath: string, data: unknown) => string;
-  addGeneratedFile: (relativePath: string) => void;
-  getGeneratedFiles: () => string[];
-}
-```
-
-### Utility Functions
-
-#### `writeFile(relativePath, content)`
-
-Writes files relative to the output directory with automatic directory creation:
-
-```typescript
-context.writeFile("users/UserClient.ts", generatedClientCode);
-```
-
-#### `renderTemplate(templatePath, data)`
-
-Renders EJS templates with provided data:
-
-```typescript
-const content = context.renderTemplate(path.join(__dirname, "templates", "Client.ejs"), {
-  entityName,
-  operations,
-  coreDir: context.coreDir,
-});
-```
-
-#### `addGeneratedFile(relativePath)`
-
-Tracks generated files (automatically called by `writeFile`):
-
-```typescript
-context.addGeneratedFile("users/UserClient.ts");
-```
-
-## Resource System
-
-The resource system provides structured access to API definitions:
-
-### Resource Types
-
-```typescript
-interface GetResourcesResult {
-  entityResources: Record<string, OperationResource[]>;
-  sharedResponseResources: SharedResponseResource[];
-}
-
-interface OperationResource {
-  entityName: string;
-  definition: HttpOperationDefinition;
-  outputDir: string;
-  outputRequestFile: string;
-  outputResponseFile: string;
-  outputRequestValidationFile: string;
-  outputResponseValidationFile: string;
-  // ... more output file paths
-}
-
-interface SharedResponseResource {
+```ts
+type TypeweaverPlugin = {
   name: string;
-  definition: HttpResponseDefinition;
-  outputDir: string;
-  outputFileName: string;
-  outputFile: string;
-}
-```
-
-### Using Resources
-
-```typescript
-export default class MyPlugin extends BasePlugin {
-  public name = "my-plugin";
-
-  public override generate(context: GeneratorContext): void {
-    // Iterate through entities
-    for (const [entityName, operations] of Object.entries(context.resources.entityResources)) {
-      // Generate entity-level code
-      this.generateEntityCode(entityName, operations, context);
-
-      // Generate operation-level code
-      for (const operation of operations) {
-        this.generateOperationCode(operation, context);
-      }
-    }
-
-    // Use shared responses
-    for (const sharedResponse of context.resources.sharedResponseResources) {
-      this.generateSharedResponse(sharedResponse, context);
-    }
-  }
-}
-```
-
-## Template System
-
-### Template Structure
-
-Templates should be placed in a `templates/` directory within your plugin:
-
-```
-my-plugin/
-├── src/
-│   ├── index.ts
-│   ├── MyGenerator.ts
-│   └── templates/
-│       ├── Client.ejs
-│       └── Router.ejs
-└── package.json
-```
-
-### Template Usage
-
-Templates receive context data and can use EJS syntax:
-
-```ejs
-<%# templates/Client.ejs %>
-import { ApiClient } from "<%= coreDir %>";
-
-export class <%= pascalCaseEntityName %>Client extends ApiClient {
-  <% for (const operation of operations) { %>
-  public <%= operation.operationId %>() {
-    // Generated method
-  }
-  <% } %>
-}
-```
-
-## Plugin Lifecycle
-
-### Lifecycle Hooks
-
-```typescript
-interface TypeweaverPlugin {
-  /**
-   * Initialize the plugin
-   * Called before any generation happens
-   */
-  initialize?(context: PluginContext): Promise<void> | void;
-
-  /**
-   * Collect and transform resources
-   * Allows plugins to modify the resource collection
-   */
+  initialize?(context: PluginContext): void | Promise<void>;
   collectResources?(
     resources: GetResourcesResult
-  ): Promise<GetResourcesResult> | GetResourcesResult;
-
-  /**
-   * Main generation logic
-   * Called with all resources and utilities
-   */
-  generate?(context: GeneratorContext): Promise<void> | void;
-
-  /**
-   * Finalize the plugin
-   * Called after all generation is complete
-   */
-  finalize?(context: PluginContext): Promise<void> | void;
-}
+  ): GetResourcesResult | Promise<GetResourcesResult>;
+  generate?(context: GeneratorContext): void | Promise<void>;
+  finalize?(context: PluginContext): void | Promise<void>;
+};
 ```
 
-## Built-in Plugins
+- Initialize phase (`initialize`): Load and validate plugin configuration, check prerequisites.
+- Collect Resources phase (`collectResources`): Inspect the normalized API model; derive or enrich
+  metadata (naming, groupings), filter or reorder resources, and share derived artifacts across
+  plugins if needed.
+- Generate phase (`generate`): Render templates and emit code using `context.writeFile` (tracked);
+  copy or produce any runtime libraries required by the generated code.
+- Finalize phase (`finalize`): Post-process outputs, clean stale generated files, and perform final
+  organization steps.
 
-typeweaver includes several built-in plugins:
+## 🧰 Generator context
 
-- **@rexeus/typeweaver-types** - TypeScript types and Zod validators
-- **@rexeus/typeweaver-clients** - HTTP API clients
-- **@rexeus/typeweaver-aws-cdk** - AWS CDK constructs and HTTP API routers
+The `GeneratorContext` describes the generation phase: it provides access to resolved paths,
+configuration, the normalized resources, and helper methods for safe file emission and templating.
+You receive it only inside the `generate` lifecycle method.
 
-## Best Practices
+```ts
+type GeneratorContext = {
+  inputDir: string;
+  outputDir: string;
+  templateDir: string;
+  coreDir: string;
+  config: PluginConfig;
+  resources: GetResourcesResult;
+  writeFile(rel: string, content: string): void; // mkdir -p + write + track
+  // Tracked files are automatically exported via a generated barrel index.ts
+  renderTemplate(tplPath: string, data: unknown): string; // EJS render
+  addGeneratedFile(rel: string): void; // track only
+  getGeneratedFiles(): string[]; // list tracked files
+};
+```
 
-### File Organization
+### 📦 Shipping runtime helpers
 
-- Use consistent naming patterns for generated files
-- Organize output by entity or feature
-- Include proper imports and exports
+Sometimes your generated code needs small reusable runtime pieces (e.g., abstract classes, adapters,
+validators, utils etc.). Ship them with your plugin and copy them into the consumer’s generated
+output.
 
-### Template Design
+- Where to put them: Place TypeScript files under your plugin’s `src/lib`. They will compile to
+  `dist/lib` when you build the plugin.
+- Copy them:
 
-- Keep templates focused and modular
-- Use consistent variable naming
-- Include proper TypeScript types in generated code
+  ```ts
+  import path from "path";
+  import { fileURLToPath } from "url";
+  import { BasePlugin, type GeneratorContext } from "@rexeus/typeweaver-gen";
 
-### Error Handling
+  // Needed to resolve __dirname in ES modules
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-- Validate input data before generation
-- Provide clear error messages
-- Handle edge cases gracefully
+  export default class MyPlugin extends BasePlugin {
+    name = "my-plugin";
 
-```typescript
-export default class MyPlugin extends BasePlugin {
-  public name = "my-plugin";
-
-  public override generate(context: GeneratorContext): void {
-    try {
-      // Generation logic
-    } catch (error) {
-      throw new Error(`Plugin ${this.name} failed: ${error.message}`);
+    generate(context: GeneratorContext) {
+      const libSourceDir = path.join(__dirname, "lib");
+      this.copyLibFiles(context, libSourceDir, this.name); // -> <output>/lib/my-plugin
     }
   }
-}
-```
+  ```
 
-## License
+## 📌 Notes
+
+- Plugins are configured/executed by the CLI (`@rexeus/typeweaver`). See the CLI options
+  [here](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md#️-options).
+- Keep plugins focused: one concern per plugin (clients, routers, infra).
+- Prefer `GeneratorContext.writeFile` over manual fs writes for tracking and directory setup.
+
+## 📄 License
 
 Apache 2.0 © Dennis Wentzien 2025

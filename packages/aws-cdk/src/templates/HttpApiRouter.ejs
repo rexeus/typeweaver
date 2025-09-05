@@ -9,10 +9,10 @@
 import { HttpMethod } from "<%= coreDir %>";
 import {
   type AwsHttpApiGatewayRoute,
-  AwsHttpApiGatewayRouter,
+  AwsHttpApiGatewayRoutes,
 } from "../lib/aws-cdk";
 
-export class <%= pascalCaseEntityName %>HttpApiRouter extends AwsHttpApiGatewayRouter {
+export class <%= pascalCaseEntityName %>HttpApiRoutes extends AwsHttpApiGatewayRoutes {
   private routes: AwsHttpApiGatewayRoute[] = [
 <% for(const [path, methods] of Object.entries(routes)) { %>
     {

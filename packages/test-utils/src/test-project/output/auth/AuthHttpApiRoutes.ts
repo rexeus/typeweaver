@@ -9,13 +9,18 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import {
   type AwsHttpApiGatewayRoute,
-  AwsHttpApiGatewayRouter,
+  AwsHttpApiGatewayRoutes,
 } from "../lib/aws-cdk";
 
-export class AccountHttpApiRouter extends AwsHttpApiGatewayRouter {
+export class AuthHttpApiRoutes extends AwsHttpApiGatewayRoutes {
   private routes: AwsHttpApiGatewayRoute[] = [
     {
-      path: "/accounts",
+      path: "/auth/access-token",
+      methods: [HttpMethod.POST],
+    },
+
+    {
+      path: "/auth/refresh-token",
       methods: [HttpMethod.POST],
     },
   ];
