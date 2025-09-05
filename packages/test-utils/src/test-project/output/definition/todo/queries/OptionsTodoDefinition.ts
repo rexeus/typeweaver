@@ -3,7 +3,7 @@ import {
   HttpOperationDefinition,
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { defaultRequestHeadersWithoutPayload } from "../../shared/defaultRequestHeader";
 import { sharedResponses } from "../../shared/sharedResponses";
 import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";

@@ -4,7 +4,7 @@ import type {
   ZodObject,
   ZodString,
   ZodStringFormat,
-} from "zod/v4";
+} from "zod";
 
 export type IHttpParam = Record<string, string> | undefined;
 

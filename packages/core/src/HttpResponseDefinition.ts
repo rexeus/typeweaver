@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import type { HttpBodySchema } from "./HttpBody";
 import type { HttpHeaderSchema } from "./HttpHeader";
 import type { HttpStatusCode } from "./HttpStatusCode";
