@@ -26,7 +26,7 @@ npm install @rexeus/typeweaver-core
 
 This package is typically consumed by generated code. You can also import HTTP primitives (e.g.,
 `HttpResponse`, `HttpStatusCode`) directly in your application code. To get started with generation,
-see [@rexeus/typeweaver](../cli/README.md).
+see [@rexeus/typeweaver](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md).
 
 ## 🔧 What It Provides
 

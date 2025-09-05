@@ -36,7 +36,7 @@ This plugin is included by default and doesn't need to be explicitly specified:
 npx typeweaver generate --input ./api/definition --output ./api/generated --plugins clients
 ```
 
-More details on how to use the [CLI](../cli/README.md#️-cli).
+More details on how to use the [CLI](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md#️-cli).
 
 ## 📂 Generated Output
 
@@ -124,7 +124,7 @@ const safeResult = requestValidator.safeValidate(request);
 if (safeResult.isValid) {
   console.log("Request is valid", safeResult.data);
 } else {
-  // Error is instance of ResponseValidationError class
+  // Error is instance of RequestValidationError class
   console.log("Request is invalid", safeResult.error);
 }
 

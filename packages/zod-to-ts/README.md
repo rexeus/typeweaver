@@ -70,7 +70,7 @@ Typeweaver is a type-safe HTTP API framework built for API-first development wit
 developer experience. Use typeweaver to specify your HTTP APIs in TypeScript and Zod, and generate
 clients, validators, routers, and more ✨
 
-See more of [typeweaver](../cli/README.md)
+See more of [typeweaver](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md)
 
 ## 📄 License
 

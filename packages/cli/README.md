@@ -42,14 +42,14 @@ Now you are ready to start building! Check out [Quickstart](#-get-started)
 
 | Package                                            | Description                                                                                                 | Version                                                         |
 | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| [@rexeus/typeweaver-types](../types/README.md)     | Plugin for request/response types and validation - the foundation for all other plugins and always included | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-types)   |
-| [@rexeus/typeweaver-clients](../clients/README.md) | Plugin for HTTP clients using Axios                                                                         | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients) |
-| [@rexeus/typeweaver-hono](../hono/README.md)       | Plugin for Hono routers                                                                                     | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)    |
-| [@rexeus/typeweaver-aws-cdk](../aws-cdk/README.md) | Plugin for AWS CDK constructs for API Gateway V2                                                            | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
+| [@rexeus/typeweaver-types](https://github.com/rexeus/typeweaver/tree/main/packages/types/README.md)     | Plugin for request/response types and validation - the foundation for all other plugins and always included | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-types)   |
+| [@rexeus/typeweaver-clients](https://github.com/rexeus/typeweaver/tree/main/packages/clients/README.md) | Plugin for HTTP clients using Axios                                                                         | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients) |
+| [@rexeus/typeweaver-hono](https://github.com/rexeus/typeweaver/tree/main/packages/hono/README.md)       | Plugin for Hono routers                                                                                     | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)    |
+| [@rexeus/typeweaver-aws-cdk](https://github.com/rexeus/typeweaver/tree/main/packages/aws-cdk/README.md) | Plugin for AWS CDK constructs for API Gateway V2                                                            | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
 
 More plugins are planned. If you want to build your own, check out the plugin system
 
-[Plugin system](../gen/README.md#-how-to-use).
+[Plugin system](https://github.com/rexeus/typeweaver/tree/main/packages/gen/README.md#-how-to-use).
 
 ---
 

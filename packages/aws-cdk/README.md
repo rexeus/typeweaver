@@ -31,7 +31,7 @@ npm install @rexeus/typeweaver-core
 npx typeweaver generate --input ./api/definitions --output ./api/generated --plugins aws-cdk
 ```
 
-More details on how to use the [CLI](../cli/README.md#️-cli).
+More details on how to use the [CLI](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md#️-cli).
 
 ## 📂 Generated Output
 

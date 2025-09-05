@@ -31,7 +31,7 @@ npm install @rexeus/typeweaver-core
 npx typeweaver generate --input ./api/definitions --output ./api/generated --plugins clients
 ```
 
-More on the CLI in [@rexeus/typeweaver](../cli/README.md#️-cli).
+More on the CLI in [@rexeus/typeweaver](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md#️-cli).
 
 ## 📂 Generated Output
 
