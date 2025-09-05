@@ -67,6 +67,12 @@ jobs:
           pnpm run lint
           echo "::endgroup::"
 
+      - name: Run dry run publish
+        run: |
+          echo "::group::Dry run publishing all packages"
+          pnpm run publish:dry
+          echo "::endgroup::"
+
       - name: Run tests
         run: |
           echo "::group::Running tests"

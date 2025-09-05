@@ -56,7 +56,7 @@
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
     "axios": "^1.11.0",
-    "test-utils": "workspace:^"
+    "test-utils": "file:../test-utils"
   },
   "dependencies": {
     "@rexeus/typeweaver-zod-to-ts": "workspace:^",

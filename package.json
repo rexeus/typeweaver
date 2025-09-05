@@ -10,6 +10,7 @@
     "format": "prettier --write .",
     "test": "pnpm -r test",
     "test:gen": "pnpm -r test:gen",
+    "publish:dry": "pnpm publish -r --dry-run --no-git-checks",
     "ci:publish": "pnpm publish -r"
   },
   "keywords": [

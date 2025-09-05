@@ -53,7 +53,7 @@
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "test-utils": "workspace:^"
+    "test-utils": "file:../test-utils"
   },
   "dependencies": {
     "@rexeus/typeweaver-zod-to-ts": "workspace:^",
