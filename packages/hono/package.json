@@ -54,7 +54,7 @@
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
     "hono": "^4.0.0",
-    "test-utils": "workspace:^"
+    "test-utils": "file:../test-utils"
   },
   "dependencies": {
     "case": "^1.6.3"
