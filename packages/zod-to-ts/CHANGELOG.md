@@ -1,5 +1,11 @@
 # @rexeus/typeweaver-zod-to-ts
 
+## 0.0.4
+
+### Patch Changes
+
+- 4e5b0ea: Support entity-scoped responses & nested input dirs.
+
 ## 0.0.3
 
 ### Patch Changes

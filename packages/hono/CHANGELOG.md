@@ -1,5 +1,24 @@
 # @rexeus/typeweaver-hono
 
+## 0.0.4
+
+### Patch Changes
+
+- 5b9d5d7: Hono: Support more router options
+- f9437df: Improve header & query param handling in clients and hono routers.
+- 4e5b0ea: Support entity-scoped responses & nested input dirs.
+- 7353b0e: Improve error handler resilience in hono plugin
+- 2ec3eaf: Fix hono request handler bindings
+- 2ec3eaf: Fix hono error handlers
+- Updated dependencies [84c8f9f]
+- Updated dependencies [c46bfc2]
+- Updated dependencies [4e5b0ea]
+- Updated dependencies [e564680]
+- Updated dependencies [2ec3eaf]
+- Updated dependencies [c46bfc2]
+  - @rexeus/typeweaver-gen@0.0.4
+  - @rexeus/typeweaver-core@0.0.4
+
 ## 0.0.3
 
 ### Patch Changes

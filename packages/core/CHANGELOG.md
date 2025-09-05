@@ -1,5 +1,16 @@
 # @rexeus/typeweaver-core
 
+## 0.0.4
+
+### Patch Changes
+
+- c46bfc2: Provide more details in ResponseValidationErrors about specific responses and improve
+  ResponseValidators
+- 4e5b0ea: Support entity-scoped responses & nested input dirs.
+- e564680: Fix issue with shared and entity-based responses
+- 2ec3eaf: Drop http method support for trace & connect
+- c46bfc2: Improve client handling of UnknownResponses
+
 ## 0.0.3
 
 ### Patch Changes

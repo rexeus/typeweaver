@@ -1,5 +1,19 @@
 # @rexeus/typeweaver-gen
 
+## 0.0.4
+
+### Patch Changes
+
+- 84c8f9f: Add option to specify the shared folder.
+- 4e5b0ea: Support entity-scoped responses & nested input dirs.
+- e564680: Fix issue with shared and entity-based responses
+- Updated dependencies [c46bfc2]
+- Updated dependencies [4e5b0ea]
+- Updated dependencies [e564680]
+- Updated dependencies [2ec3eaf]
+- Updated dependencies [c46bfc2]
+  - @rexeus/typeweaver-core@0.0.4
+
 ## 0.0.3
 
 ### Patch Changes
