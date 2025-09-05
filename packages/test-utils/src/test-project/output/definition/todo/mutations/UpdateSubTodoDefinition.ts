@@ -3,7 +3,7 @@ import {
   HttpOperationDefinition,
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
-import { z } from "zod/v4";
+import { z } from "zod";
 import {
   defaultRequestHeadersWithPayload,
   defaultResponseHeader,

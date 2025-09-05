@@ -19,7 +19,7 @@ npm install @rexeus/typeweaver-zod-to-ts
 
 ```typescript
 import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 // Define a Zod schema
 const userSchema = z.object({

@@ -1,17 +1,17 @@
-import type { z } from "zod/v4";
+import type { $ZodIssue } from "zod/v4/core";
 
 /**
  * Input configuration for RequestValidationError.
  */
 export type RequestValidationErrorInput = {
   /** Validation issues found in HTTP headers */
-  headerIssues?: z.core.$ZodRawIssue[];
+  headerIssues?: $ZodIssue[];
   /** Validation issues found in request body */
-  bodyIssues?: z.core.$ZodRawIssue[];
+  bodyIssues?: $ZodIssue[];
   /** Validation issues found in query parameters */
-  queryIssues?: z.core.$ZodRawIssue[];
+  queryIssues?: $ZodIssue[];
   /** Validation issues found in path parameters */
-  pathParamIssues?: z.core.$ZodRawIssue[];
+  pathParamIssues?: $ZodIssue[];
 };
 
 /**
@@ -27,13 +27,13 @@ export type RequestValidationErrorInput = {
 export class RequestValidationError extends Error {
   public override readonly message: string;
   /** Validation issues found in HTTP headers */
-  public readonly headerIssues: z.core.$ZodRawIssue[] = [];
+  public readonly headerIssues: $ZodIssue[] = [];
   /** Validation issues found in request body */
-  public readonly bodyIssues: z.core.$ZodRawIssue[] = [];
+  public readonly bodyIssues: $ZodIssue[] = [];
   /** Validation issues found in query parameters */
-  public readonly queryIssues: z.core.$ZodRawIssue[] = [];
+  public readonly queryIssues: $ZodIssue[] = [];
   /** Validation issues found in path parameters */
-  public readonly pathParamIssues: z.core.$ZodRawIssue[] = [];
+  public readonly pathParamIssues: $ZodIssue[] = [];
 
   public constructor(input?: RequestValidationErrorInput) {
     const message = "Invalid request";
@@ -59,7 +59,7 @@ export class RequestValidationError extends Error {
    * Adds header validation issues to the error.
    * @param issues - Array of Zod validation issues
    */
-  public addHeaderIssues(issues: z.core.$ZodRawIssue[]) {
+  public addHeaderIssues(issues: $ZodIssue[]) {
     this.headerIssues.push(...issues);
   }
 
@@ -67,7 +67,7 @@ export class RequestValidationError extends Error {
    * Adds body validation issues to the error.
    * @param issues - Array of Zod validation issues
    */
-  public addBodyIssues(issues: z.core.$ZodRawIssue[]) {
+  public addBodyIssues(issues: $ZodIssue[]) {
     this.bodyIssues.push(...issues);
   }
 
@@ -75,7 +75,7 @@ export class RequestValidationError extends Error {
    * Adds query parameter validation issues to the error.
    * @param issues - Array of Zod validation issues
    */
-  public addQueryIssues(issues: z.core.$ZodRawIssue[]) {
+  public addQueryIssues(issues: $ZodIssue[]) {
     this.queryIssues.push(...issues);
   }
 
@@ -83,7 +83,7 @@ export class RequestValidationError extends Error {
    * Adds path parameter validation issues to the error.
    * @param issues - Array of Zod validation issues
    */
-  public addPathParamIssues(issues: z.core.$ZodRawIssue[]) {
+  public addPathParamIssues(issues: $ZodIssue[]) {
     this.pathParamIssues.push(...issues);
   }
 

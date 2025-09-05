@@ -1,11 +1,11 @@
 import type { HttpStatusCode } from "./HttpStatusCode";
-import type { z } from "zod/v4";
+import type { $ZodIssue } from "zod/v4/core";
 
 export type InvalidResponseIssue = {
   readonly type: "INVALID_RESPONSE";
   readonly responseName: string;
-  readonly headerIssues: z.core.$ZodRawIssue[];
-  readonly bodyIssues: z.core.$ZodRawIssue[];
+  readonly headerIssues: $ZodIssue[];
+  readonly bodyIssues: $ZodIssue[];
 };
 
 export type InvalidStatusCodeIssue = {
@@ -35,18 +35,18 @@ export class ResponseValidationError extends Error {
     this.issues = input?.issues ?? [];
   }
 
-  public addHeaderIssues(responseName: string, issues: z.core.$ZodRawIssue[]) {
+  public addHeaderIssues(responseName: string, issues: $ZodIssue[]) {
     this.addResponseIssues(responseName, issues);
   }
 
-  public addBodyIssues(responseName: string, issues: z.core.$ZodRawIssue[]) {
+  public addBodyIssues(responseName: string, issues: $ZodIssue[]) {
     this.addResponseIssues(responseName, [], issues);
   }
 
   public addResponseIssues(
     responseName: string,
-    headerIssues: z.core.$ZodRawIssue[] = [],
-    bodyIssues: z.core.$ZodRawIssue[] = []
+    headerIssues: $ZodIssue[] = [],
+    bodyIssues: $ZodIssue[] = []
   ) {
     if (headerIssues.length === 0 && bodyIssues.length === 0) {
       return;
@@ -89,14 +89,14 @@ export class ResponseValidationError extends Error {
     }
   }
 
-  public getResponseHeaderIssues(responseName: string): z.core.$ZodRawIssue[] {
+  public getResponseHeaderIssues(responseName: string): $ZodIssue[] {
     const issue = this.issues.find(
       i => i.type === "INVALID_RESPONSE" && i.responseName === responseName
     ) as InvalidResponseIssue;
     return issue ? issue.headerIssues : [];
   }
 
-  public getResponseBodyIssues(responseName: string): z.core.$ZodRawIssue[] {
+  public getResponseBodyIssues(responseName: string): $ZodIssue[] {
     const issue = this.issues.find(
       i => i.type === "INVALID_RESPONSE" && i.responseName === responseName
     ) as InvalidResponseIssue;

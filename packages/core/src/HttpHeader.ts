@@ -6,7 +6,7 @@ import type {
   ZodOptional,
   ZodString,
   ZodStringFormat,
-} from "zod/v4";
+} from "zod";
 
 export type IHttpHeader = Record<string, string | string[]> | undefined;
 

@@ -98,7 +98,7 @@ More plugins are planned. Want to build your own? Check out the plugin system
 // -> "user" folder = User resource. Each resource defines its own operations, and gets in case of the clients plugin its dedicated client.
 
 import { HttpOperationDefinition, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
-import { z } from "zod/v4";
+import { z } from "zod";
 import UserNotFoundErrorDefinition from "./errors/UserNotFoundErrorDefinition";
 import { sharedResponses } from "../shared/sharedResponses";
 

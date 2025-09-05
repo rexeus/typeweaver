@@ -173,7 +173,7 @@ api/definition/
 
 ```typescript
 // api/definition/user/userSchema.ts
-import { z } from "zod/v4";
+import { z } from "zod";
 
 // General schema for user status
 export const userStatusSchema = z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"]);
@@ -192,7 +192,7 @@ export const userSchema = z.object({
 ```typescript
 // api/definition/user/GetUserDefinition.ts
 import { HttpOperationDefinition, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { sharedResponses } from "../shared/sharedResponses";
 import { userSchema } from "./userSchema";
 import UserNotFoundErrorDefinition from "./errors/UserNotFoundErrorDefinition";
@@ -228,7 +228,7 @@ export default new HttpOperationDefinition({
 ```typescript
 // api/definition/user/UpdateUserDefinition.ts
 import { HttpOperationDefinition, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { sharedResponses } from "../shared/sharedResponses";
 import { userSchema } from "./userSchema";
 import UserNotFoundErrorDefinition from "./errors/UserNotFoundErrorDefinition";
@@ -270,7 +270,7 @@ export default new HttpOperationDefinition({
 
 ```typescript
 // api/definition/user/errors/UserNotFoundErrorDefinition.ts
-import { z } from "zod/v4";
+import { z } from "zod";
 import { NotFoundErrorDefinition } from "../../shared";
 
 // - uses the shared NotFoundErrorDefinition as "base" and extends it
@@ -291,7 +291,7 @@ export default NotFoundErrorDefinition.extend({
 ```typescript
 // api/definition/user/errors/UserStatusTransitionInvalidErrorDefinition.ts
 import { HttpResponseDefinition, HttpStatusCode } from "@rexeus/typeweaver-core";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { userStatusSchema } from "../userSchema";
 
 // could also extend the shared ConflictErrorDefinition:

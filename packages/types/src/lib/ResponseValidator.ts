@@ -14,7 +14,7 @@ import type {
   SafeResponseValidationResult,
 } from "@rexeus/typeweaver-core";
 import { Validator } from "./Validator";
-import type { ZodSafeParseResult } from "zod/v4";
+import type { ZodSafeParseResult } from "zod";
 
 /**
  * Abstract base class for HTTP response validation.
