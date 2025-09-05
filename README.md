@@ -26,12 +26,13 @@ Now you are ready to start building! Check out [Quickstart](#-Quickstart)
 
 ## 💡 Motivation
 
-OpenAPI is the standard for defining APIs, but I was never satisfied with the developer experience
-it provided. Writing YAMLs and JSON Schemas for huge projects felt cumbersome, and generators for
-TypeScript clients and servers often fell short.
+OpenAPI is the industry standard for defining APIs, but I was never satisfied with the developer
+experience it provided. Writing YAMLs and JSON Schemas for huge projects felt cumbersome, and
+generators for TypeScript clients and servers often fell short.
 
-Meanwhile, Zod is sitting right there 👀. Writing schemas with it feels like a breeze—beautiful
-syntax, powerful utilities like pick, omit, merge etc, all built for TypeScript from ground up.
+Meanwhile, [Zod](https://github.com/colinhacks/zod) is sitting right there 👀. Writing schemas with
+it feels like a breeze—beautiful syntax, powerful utilities like pick, omit, merge etc, all built
+for TypeScript from ground up.
 
 So why not use Zod to define your API contracts?
 
@@ -41,12 +42,14 @@ The type safety? It's real 🔒. The developer experience? Finally, it's what it
 
 ## 🌱 Project Status
 
-Early-stage and actively working toward a stable 1.0. We’re expanding test coverage, running performance tests, and refining definition ingestion and the normalized output format used for generation — while keeping the project fully usable today.
+Early-stage and actively working toward a stable 1.0. We’re expanding test coverage, running
+performance tests, and refining definition ingestion and the normalized output format used for
+generation — while keeping the project fully usable today.
 
 ## 🎯 Why typeweaver?
 
-- 📝 **Define once, generate everything**: API contracts in Zod become clients, servers, validators,
-  and docs.
+- 📝 **Define once, generate everything**: API contracts in Zod become clients, routers, validators,
+  and more.
 - 📂 **Resource-based architecture**: APIs organized by resources (like users, todos, projects, tags
   etc.), each with its operations and generated components (e.g. clients). Scale naturally as your
   API grows.
@@ -55,7 +58,7 @@ Early-stage and actively working toward a stable 1.0. We’re expanding test cov
 - ✅ **Automatic validation**: Invalid requests never reach your code.
 - 🔌 **Bring your own framework**: Ready-made adapters for popular frameworks, extensible plugin
   system for everything else.
-- 😊 **Finally, DX that doesn't suck**: One schema, no duplication, pure TypeScript.
+- 😊 **Delightful DX**: One schema, no duplication, pure TypeScript 🚀.
 
 ---
 
