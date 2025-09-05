@@ -78,9 +78,7 @@ Typeweaver is modular by design. Install only what you need.
 
 More plugins are planned. Want to build your own? Check out the plugin system
 
-<!-- TODO: add corect link -->
-
-[Plugin system](./packages/gen/README.md#plugins).
+[Plugin system](./packages/gen/README.md#-how-to-use).
 
 ---
 

@@ -49,9 +49,7 @@ Now you are ready to start building! Check out [Quickstart](#-get-started)
 
 More plugins are planned. If you want to build your own, check out the plugin system
 
-<!-- TODO: add correct link -->
-
-[Plugin system](./packages/gen/README.md#plugins).
+[Plugin system](../gen/README.md#-how-to-use).
 
 ---
 
