@@ -65,7 +65,7 @@
     "@rexeus/typeweaver-hono": "workspace:^",
     "axios": "^1.11.0",
     "case": "^1.6.3",
-    "hono": "^4.6.14",
+    "hono": "^4.9.6",
     "zod": "^3.25.67"
   },
   "peerDependencies": {
@@ -77,7 +77,7 @@
     "@rexeus/typeweaver-hono": "workspace:^",
     "axios": "^1.11.0",
     "case": "^1.6.3",
-    "hono": "^4.6.14",
+    "hono": "^4.9.6",
     "zod": "^3.25.67"
   },
   "dependencies": {
