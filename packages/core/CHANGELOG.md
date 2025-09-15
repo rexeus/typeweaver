@@ -1,5 +1,11 @@
 # @rexeus/typeweaver-core
 
+## 0.1.0
+
+### Minor Changes
+
+- 73fc785: Support zod v4
+
 ## 0.0.4
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-core",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "description": "Core TypeScript and Zod utilities for typeweaver API framework",
   "type": "module",
   "main": "dist/index.js",
