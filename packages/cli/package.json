@@ -63,7 +63,7 @@
     "@rexeus/typeweaver-gen": "workspace:^",
     "@rexeus/typeweaver-hono": "workspace:^",
     "@rexeus/typeweaver-types": "workspace:^",
-    "axios": "^1.11.0",
+    "axios": "^1.12.0",
     "case": "^1.6.3",
     "hono": "^4.9.7",
     "zod": "^4.1.5"
@@ -75,7 +75,7 @@
     "@rexeus/typeweaver-gen": "workspace:^",
     "@rexeus/typeweaver-hono": "workspace:^",
     "@rexeus/typeweaver-types": "workspace:^",
-    "axios": "^1.11.0",
+    "axios": "^1.12.0",
     "case": "^1.6.3",
     "hono": "^4.9.7",
     "zod": "^4.1.5"
