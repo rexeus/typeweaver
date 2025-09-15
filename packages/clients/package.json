@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-clients",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "description": "HTTP client generator for typeweaver API framework",
   "type": "module",
   "main": "dist/index.js",

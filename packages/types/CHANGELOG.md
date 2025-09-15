@@ -1,5 +1,18 @@
 # @rexeus/typeweaver-types
 
+## 0.1.0
+
+### Minor Changes
+
+- 73fc785: Support zod v4
+
+### Patch Changes
+
+- Updated dependencies [73fc785]
+  - @rexeus/typeweaver-zod-to-ts@0.1.0
+  - @rexeus/typeweaver-core@0.1.0
+  - @rexeus/typeweaver-gen@0.1.0
+
 ## 0.0.4
 
 ### Patch Changes
