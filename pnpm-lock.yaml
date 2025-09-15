@@ -110,8 +110,8 @@ importers:
         specifier: ^1.6.3
         version: 1.6.3
       hono:
-        specifier: ^4.9.6
-        version: 4.9.6
+        specifier: ^4.9.7
+        version: 4.9.7
       zod:
         specifier: ^4.1.5
         version: 4.1.5
@@ -127,7 +127,7 @@ importers:
     devDependencies:
       '@hono/node-server':
         specifier: ^1.19.1
-        version: 1.19.1(hono@4.9.6)
+        version: 1.19.1(hono@4.9.7)
       '@rexeus/typeweaver-core':
         specifier: workspace:^
         version: link:../core
@@ -170,8 +170,8 @@ importers:
         specifier: workspace:^
         version: link:../gen
       hono:
-        specifier: ^4.9.6
-        version: 4.9.6
+        specifier: ^4.9.7
+        version: 4.9.7
       test-utils:
         specifier: file:../test-utils
         version: link:../test-utils
@@ -180,7 +180,7 @@ importers:
     devDependencies:
       '@hono/node-server':
         specifier: ^1.19.1
-        version: 1.19.1(hono@4.9.6)
+        version: 1.19.1(hono@4.9.7)
       '@rexeus/typeweaver':
         specifier: workspace:^
         version: link:../cli
@@ -215,8 +215,8 @@ importers:
         specifier: ^7.1.0
         version: 7.1.0
       hono:
-        specifier: ^4.9.6
-        version: 4.9.6
+        specifier: ^4.9.7
+        version: 4.9.7
       zod:
         specifier: ^4.1.5
         version: 4.1.5
@@ -1622,8 +1622,8 @@ packages:
     resolution: {integrity: sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==}
     engines: {node: '>= 0.4'}
 
-  hono@4.9.6:
-    resolution: {integrity: sha512-doVjXhSFvYZ7y0dNokjwwSahcrAfdz+/BCLvAMa/vHLzjj8+CFyV5xteThGUsKdkaasgN+gF2mUxao+SGLpUeA==}
+  hono@4.9.7:
+    resolution: {integrity: sha512-t4Te6ERzIaC48W3x4hJmBwgNlLhmiEdEE5ViYb02ffw4ignHNHa5IBtPjmbKstmtKa8X6C35iWwK4HaqvrzG9w==}
     engines: {node: '>=16.9.0'}
 
   html-escaper@2.0.2:
@@ -2800,9 +2800,9 @@ snapshots:
 
   '@faker-js/faker@10.0.0': {}
 
-  '@hono/node-server@1.19.1(hono@4.9.6)':
+  '@hono/node-server@1.19.1(hono@4.9.7)':
     dependencies:
-      hono: 4.9.6
+      hono: 4.9.7
 
   '@humanfs/core@0.19.1': {}
 
@@ -3980,7 +3980,7 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
 
-  hono@4.9.6: {}
+  hono@4.9.7: {}
 
   html-escaper@2.0.2: {}
 
