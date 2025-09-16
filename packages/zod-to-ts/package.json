@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-zod-to-ts",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Generates TypeScript types from Zod schemas, used by typeweaver framework",
   "type": "module",
   "main": "dist/index.js",

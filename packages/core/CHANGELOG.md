@@ -1,5 +1,11 @@
 # @rexeus/typeweaver-core
 
+## 0.1.1
+
+### Patch Changes
+
+- f1ccb30: Solve issue with optional query params
+
 ## 0.1.0
 
 ### Minor Changes
