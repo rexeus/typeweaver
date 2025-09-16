@@ -1,5 +1,12 @@
 # @rexeus/typeweaver-gen
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies [95beee9]
+  - @rexeus/typeweaver-core@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes
