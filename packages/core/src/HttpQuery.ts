@@ -16,7 +16,7 @@ type HttpQueryValue =
   | ZodLiteral<string>
   | ZodEnum<Record<string, string>>;
 
-export type HttpQuerySchema = ZodObject<
+type HttpQueryObject = ZodObject<
   Record<
     string,
     | HttpQueryValue
@@ -25,3 +25,5 @@ export type HttpQuerySchema = ZodObject<
     | ZodOptional<ZodArray<HttpQueryValue>>
   >
 >;
+
+export type HttpQuerySchema = HttpQueryObject | ZodOptional<HttpQueryObject>;
