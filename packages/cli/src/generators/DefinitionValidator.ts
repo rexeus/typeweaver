@@ -289,27 +289,42 @@ export class DefinitionValidator {
       return;
     }
 
-    // For header, query, and param schemas, must be ZodObject
-    if (!(schema instanceof z.ZodObject)) {
-      throw new InvalidSchemaError(
-        schemaType,
+    if (schemaType === "query" || schemaType === "header") {
+      if (
+        !(schema instanceof z.ZodObject) &&
+        !(
+          schema instanceof z.ZodOptional &&
+          schema.unwrap() instanceof z.ZodObject
+        )
+      ) {
+        throw new InvalidSchemaError(
+          schemaType,
+          definitionName,
+          context,
+          sourceFile
+        );
+      }
+
+      this.validateHeaderOrQueryShape(
+        schema as z.ZodObject<any> | z.ZodOptional<z.ZodObject<any>>,
+        schemaType as "header" | "query",
         definitionName,
         context,
         sourceFile
       );
     }
 
-    // Validate the shape based on schema type
     if (schemaType === "param") {
+      if (!(schema instanceof z.ZodObject)) {
+        throw new InvalidSchemaError(
+          schemaType,
+          definitionName,
+          context,
+          sourceFile
+        );
+      }
+
       this.validateParamShape(schema, definitionName, sourceFile);
-    } else {
-      this.validateHeaderOrQueryShape(
-        schema,
-        schemaType as "header" | "query",
-        definitionName,
-        context,
-        sourceFile
-      );
     }
   }
 
@@ -379,13 +394,14 @@ export class DefinitionValidator {
   }
 
   private validateHeaderOrQueryShape(
-    schema: z.ZodObject<any>,
+    schema: z.ZodObject<any> | z.ZodOptional<z.ZodObject<any>>,
     schemaType: "header" | "query",
     definitionName: string,
     context: "request" | "response",
     sourceFile: string
   ): void {
-    const shape = schema.shape;
+    const shape =
+      schema instanceof z.ZodObject ? schema.shape : schema.unwrap().shape;
 
     for (const [propName, propSchema] of Object.entries(shape)) {
       if (!this.isValidHeaderOrQueryValue(propSchema)) {
@@ -403,11 +419,12 @@ export class DefinitionValidator {
   }
 
   private validateParamShape(
-    schema: z.ZodObject<any>,
+    schema: z.ZodObject<any> | z.ZodOptional<z.ZodObject<any>>,
     operationId: string,
     sourceFile: string
   ): void {
-    const shape = schema.shape;
+    const shape =
+      schema instanceof z.ZodObject ? schema.shape : schema.unwrap().shape;
 
     for (const [propName, propSchema] of Object.entries(shape)) {
       if (!this.isValidParamValue(propSchema)) {

@@ -34,14 +34,16 @@ export type IListSubTodosRequestParam = {
   todoId: string;
 };
 
-export type IListSubTodosRequestQuery = {
-  limit?: string | undefined;
-  nextToken?: string | undefined;
-  sortBy?:
-    | ("title" | "dueDate" | "priority" | "createdAt" | "modifiedAt")
-    | undefined;
-  sortOrder?: ("asc" | "desc") | undefined;
-};
+export type IListSubTodosRequestQuery =
+  | {
+      limit?: string | undefined;
+      nextToken?: string | undefined;
+      sortBy?:
+        | ("title" | "dueDate" | "priority" | "createdAt" | "modifiedAt")
+        | undefined;
+      sortOrder?: ("asc" | "desc") | undefined;
+    }
+  | undefined;
 
 export type IListSubTodosRequest = {
   path: string;
