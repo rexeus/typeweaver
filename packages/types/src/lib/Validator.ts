@@ -191,7 +191,7 @@ export abstract class Validator {
    * @returns Coerced header object
    */
   protected coerceHeaderToSchema(header: unknown, shape: $ZodShape): unknown {
-    return this.coerceToSchema(header, shape, false); // case-insensitive
+    return this.coerceToSchema(header ?? {}, shape, false); // case-insensitive
   }
 
   /**
@@ -202,6 +202,6 @@ export abstract class Validator {
    * @returns Coerced query object
    */
   protected coerceQueryToSchema(query: unknown, shape: $ZodShape): unknown {
-    return this.coerceToSchema(query, shape, true); // case-sensitive
+    return this.coerceToSchema(query ?? {}, shape, true); // case-sensitive
   }
 }

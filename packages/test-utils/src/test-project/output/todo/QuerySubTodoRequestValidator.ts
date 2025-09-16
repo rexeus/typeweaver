@@ -44,6 +44,7 @@ export class QuerySubTodoRequestValidator extends RequestValidator {
         request.header,
         definition.request.header.shape,
       );
+
       const result = definition.request.header.safeParse(coercedHeader);
 
       if (!result.success) {
@@ -68,6 +69,7 @@ export class QuerySubTodoRequestValidator extends RequestValidator {
         request.query,
         definition.request.query.shape,
       );
+
       const result = definition.request.query.safeParse(coercedQuery);
 
       if (!result.success) {

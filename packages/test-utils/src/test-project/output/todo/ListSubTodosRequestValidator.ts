@@ -34,6 +34,7 @@ export class ListSubTodosRequestValidator extends RequestValidator {
         request.header,
         definition.request.header.shape,
       );
+
       const result = definition.request.header.safeParse(coercedHeader);
 
       if (!result.success) {
@@ -56,8 +57,9 @@ export class ListSubTodosRequestValidator extends RequestValidator {
     if (definition.request.query) {
       const coercedQuery = this.coerceQueryToSchema(
         request.query,
-        definition.request.query.shape,
+        definition.request.query.unwrap().shape,
       );
+
       const result = definition.request.query.safeParse(coercedQuery);
 
       if (!result.success) {

@@ -44,6 +44,7 @@ export class AccessTokenRequestValidator extends RequestValidator {
         request.header,
         definition.request.header.shape,
       );
+
       const result = definition.request.header.safeParse(coercedHeader);
 
       if (!result.success) {
