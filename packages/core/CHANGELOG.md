@@ -1,5 +1,11 @@
 # @rexeus/typeweaver-core
 
+## 0.1.2
+
+### Patch Changes
+
+- 95beee9: Solve issue with optional headers
+
 ## 0.1.1
 
 ### Patch Changes

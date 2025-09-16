@@ -1,5 +1,18 @@
 # @rexeus/typeweaver
 
+## 0.1.2
+
+### Patch Changes
+
+- 95beee9: Solve issue with optional headers
+- Updated dependencies [95beee9]
+  - @rexeus/typeweaver-core@0.1.2
+  - @rexeus/typeweaver-aws-cdk@0.1.2
+  - @rexeus/typeweaver-clients@0.1.2
+  - @rexeus/typeweaver-gen@0.1.2
+  - @rexeus/typeweaver-hono@0.1.2
+  - @rexeus/typeweaver-types@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes
