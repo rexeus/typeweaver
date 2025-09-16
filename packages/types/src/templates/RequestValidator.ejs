@@ -41,7 +41,11 @@ export class <%= pascalCaseOperationId %>RequestValidator extends RequestValidat
 
         <% if(header) { %>
             if (definition.request.header) {
+                <% if(header instanceof z.ZodObject) { %>
                 const coercedHeader = this.coerceHeaderToSchema(request.header, definition.request.header.shape);
+                <% } else { %>
+                const coercedHeader = this.coerceHeaderToSchema(request.header, definition.request.header.unwrap().shape);
+                <% } %>  
                 const result = definition.request.header.safeParse(coercedHeader);
           
                 if (!result.success) {
@@ -66,7 +70,11 @@ export class <%= pascalCaseOperationId %>RequestValidator extends RequestValidat
 
         <% if(query) { %>
             if (definition.request.query) {
+                <% if(query instanceof z.ZodObject) { %>
                 const coercedQuery = this.coerceQueryToSchema(request.query, definition.request.query.shape);
+                <% } else { %>
+                const coercedQuery = this.coerceQueryToSchema(request.query, definition.request.query.unwrap().shape);
+                <% } %>
                 const result = definition.request.query.safeParse(coercedQuery);
           
                 if (!result.success) {

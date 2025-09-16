@@ -29,7 +29,7 @@ export default new HttpOperationDefinition({
       todoId: z.ulid(),
     }),
     header: defaultRequestHeadersWithoutPayload,
-    query: listSubTodosQuerySchema,
+    query: listSubTodosQuerySchema.optional(),
   },
   method: HttpMethod.GET,
   summary: "List subtodos for a specific todo",

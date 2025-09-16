@@ -16,7 +16,7 @@ type HttpHeaderValue =
   | ZodLiteral<string>
   | ZodEnum<Record<string, string>>;
 
-export type HttpHeaderSchema = ZodObject<
+type HttpHeaderObject = ZodObject<
   Record<
     string,
     | HttpHeaderValue
@@ -25,3 +25,5 @@ export type HttpHeaderSchema = ZodObject<
     | ZodOptional<ZodArray<HttpHeaderValue>>
   >
 >;
+
+export type HttpHeaderSchema = HttpHeaderObject | ZodOptional<HttpHeaderObject>;

@@ -2,6 +2,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { Path } from "@rexeus/typeweaver-gen";
 import Case from "case";
+import { z } from "zod";
 import type {
   GeneratorContext,
   OperationResource,
@@ -53,6 +54,7 @@ export class RequestValidationGenerator {
       query,
       param,
       header,
+      z,
     });
 
     const relativePath = path.relative(

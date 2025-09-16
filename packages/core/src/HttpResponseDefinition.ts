@@ -108,10 +108,24 @@ export class HttpResponseDefinition<
       if (!this.header && !definition.header) return undefined;
       if (!this.header) return definition.header as MergedHeader;
       if (!definition.header) return this.header as MergedHeader;
-      return z.object({
-        ...this.header.shape,
-        ...definition.header.shape,
-      }) as MergedHeader;
+      const mergedHeader = z.object({
+        ...(this.header instanceof z.ZodObject
+          ? this.header.shape
+          : this.header.unwrap().shape),
+        ...(definition.header instanceof z.ZodObject
+          ? definition.header.shape
+          : definition.header.unwrap().shape),
+      });
+
+      if (
+        Object.values(mergedHeader.shape).every(
+          schema => schema instanceof z.ZodOptional
+        )
+      ) {
+        return mergedHeader.optional() as MergedHeader;
+      }
+
+      return mergedHeader as MergedHeader;
     })();
 
     const mergedBody = ((): MergedBody | undefined => {
