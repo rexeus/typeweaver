@@ -131,8 +131,8 @@ importers:
         version: 1.6.3
     devDependencies:
       '@hono/node-server':
-        specifier: ^1.19.1
-        version: 1.19.1(hono@4.9.7)
+        specifier: ^1.19.5
+        version: 1.19.5(hono@4.9.7)
       '@rexeus/typeweaver-core':
         specifier: workspace:^
         version: link:../core
@@ -184,8 +184,8 @@ importers:
   packages/test-utils:
     devDependencies:
       '@hono/node-server':
-        specifier: ^1.19.1
-        version: 1.19.1(hono@4.9.7)
+        specifier: ^1.19.5
+        version: 1.19.5(hono@4.9.7)
       '@rexeus/typeweaver':
         specifier: workspace:^
         version: link:../cli
@@ -548,8 +548,8 @@ packages:
     resolution: {integrity: sha512-UollFEUkVXutsaP+Vndjxar40Gs5JL2HeLcl8xO1QAjJgOdhc3OmBFWyEylS+RddWaaBiAzH+5/17PLQJwDiLw==}
     engines: {node: ^20.19.0 || ^22.13.0 || ^23.5.0 || >=24.0.0, npm: '>=10'}
 
-  '@hono/node-server@1.19.1':
-    resolution: {integrity: sha512-h44e5s+ByUriaRIbeS/C74O8v90m0A95luyYQGMF7KEn96KkYMXO7bZAwombzTpjQTU4e0TkU8U1WBIXlwuwtA==}
+  '@hono/node-server@1.19.5':
+    resolution: {integrity: sha512-iBuhh+uaaggeAuf+TftcjZyWh2GEgZcVGXkNtskLVoWaXhnJtC5HLHrU8W1KHDoucqO1MswwglmkWLFyiDn4WQ==}
     engines: {node: '>=18.14.1'}
     peerDependencies:
       hono: ^4
@@ -2805,7 +2805,7 @@ snapshots:
 
   '@faker-js/faker@10.0.0': {}
 
-  '@hono/node-server@1.19.1(hono@4.9.7)':
+  '@hono/node-server@1.19.5(hono@4.9.7)':
     dependencies:
       hono: 4.9.7
 
