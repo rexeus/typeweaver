@@ -16,7 +16,7 @@
     "utils"
   ],
   "devDependencies": {
-    "@hono/node-server": "^1.19.1",
+    "@hono/node-server": "^1.19.5",
     "@rexeus/typeweaver": "workspace:^",
     "@rexeus/typeweaver-aws-cdk": "workspace:^",
     "@rexeus/typeweaver-clients": "workspace:^",

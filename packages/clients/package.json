@@ -52,7 +52,7 @@
     "axios": "^1.7.0"
   },
   "devDependencies": {
-    "@hono/node-server": "^1.19.1",
+    "@hono/node-server": "^1.19.5",
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
     "axios": "^1.12.2",
