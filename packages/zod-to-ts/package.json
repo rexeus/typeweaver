@@ -1,7 +1,7 @@
 {
   "name": "@rexeus/typeweaver-zod-to-ts",
   "version": "0.1.2",
-  "description": "Generates TypeScript types from Zod schemas, used by typeweaver framework",
+  "description": "Transforms Zod v4 schemas into precise TypeScript shapes. Powered by Typeweaver 🧵✨",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

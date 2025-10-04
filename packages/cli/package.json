@@ -1,7 +1,7 @@
 {
   "name": "@rexeus/typeweaver",
   "version": "0.1.2",
-  "description": "Command-line interface for the typeweaver API framework",
+  "description": "🧵✨ Typeweaver CLI. Entry point into the Typeweaver framework to scaffold, validate, and generate API assets.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
