@@ -1,5 +1,12 @@
 # @rexeus/typeweaver-zod-to-ts
 
+## 0.2.0
+
+### Minor Changes
+
+- 35be4c9: - Improve package descriptions
+  - Update all dependencies to latest versions
+
 ## 0.1.2
 
 ## 0.1.1

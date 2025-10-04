@@ -1,5 +1,17 @@
 # @rexeus/typeweaver-gen
 
+## 0.2.0
+
+### Minor Changes
+
+- 35be4c9: - Improve package descriptions
+  - Update all dependencies to latest versions
+
+### Patch Changes
+
+- Updated dependencies [35be4c9]
+  - @rexeus/typeweaver-core@0.2.0
+
 ## 0.1.2
 
 ### Patch Changes
