@@ -1,7 +1,7 @@
 {
   "name": "@rexeus/typeweaver-types",
   "version": "0.1.2",
-  "description": "TypeScript type and Zod validator generators for typeweaver APIs",
+  "description": "Generates request and response types plus validators aligned with your API contract. Powered by Typeweaver 🧵✨",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
