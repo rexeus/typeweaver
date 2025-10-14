@@ -1,5 +1,12 @@
 # @rexeus/typeweaver-core
 
+## 0.2.1
+
+### Patch Changes
+
+- 77fb21d: - Support 3xx HTTP status codes
+  - Support zod records in headers and queries
+
 ## 0.2.0
 
 ### Minor Changes
