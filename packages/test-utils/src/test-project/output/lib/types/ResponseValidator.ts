@@ -94,9 +94,7 @@ export abstract class ResponseValidator
       if (headerSchema) {
         const coercedHeader = this.coerceHeaderToSchema(
           response.header,
-          headerSchema instanceof z.ZodObject
-            ? headerSchema.shape
-            : headerSchema.unwrap().shape,
+          this.getSchema(headerSchema),
         );
         const validateHeaderResult = headerSchema.safeParse(
           coercedHeader,
