@@ -105,16 +105,27 @@ export class HttpResponseDefinition<
         : TBody & EBody;
 
     const mergedHeader = ((): MergedHeader | undefined => {
+      if (
+        this.header instanceof z.ZodRecord ||
+        definition.header instanceof z.ZodRecord ||
+        (this.header instanceof z.ZodOptional &&
+          this.header.unwrap() instanceof z.ZodRecord) ||
+        (definition.header instanceof z.ZodOptional &&
+          definition.header.unwrap() instanceof z.ZodRecord)
+      ) {
+        throw new Error("Cannot merge ZodRecord headers");
+      }
+
       if (!this.header && !definition.header) return undefined;
       if (!this.header) return definition.header as MergedHeader;
       if (!definition.header) return this.header as MergedHeader;
       const mergedHeader = z.object({
         ...(this.header instanceof z.ZodObject
           ? this.header.shape
-          : this.header.unwrap().shape),
+          : (this.header.unwrap() as z.ZodObject).shape),
         ...(definition.header instanceof z.ZodObject
           ? definition.header.shape
-          : definition.header.unwrap().shape),
+          : (definition.header.unwrap() as z.ZodObject).shape),
       });
 
       if (

@@ -4,26 +4,27 @@ import type {
   ZodLiteral,
   ZodObject,
   ZodOptional,
+  ZodRecord,
   ZodString,
   ZodStringFormat,
 } from "zod";
 
 export type IHttpHeader = Record<string, string | string[]> | undefined;
 
-type HttpHeaderValue =
+type ZodStringType =
   | ZodString
   | ZodStringFormat
   | ZodLiteral<string>
   | ZodEnum<Record<string, string>>;
 
-type HttpHeaderObject = ZodObject<
-  Record<
-    string,
-    | HttpHeaderValue
-    | ZodOptional<HttpHeaderValue>
-    | ZodArray<HttpHeaderValue>
-    | ZodOptional<ZodArray<HttpHeaderValue>>
-  >
->;
+type HttpHeaderValue =
+  | ZodStringType
+  | ZodOptional<ZodStringType>
+  | ZodArray<ZodStringType>
+  | ZodOptional<ZodArray<ZodStringType>>;
+
+type HttpHeaderObject =
+  | ZodObject<Record<string, HttpHeaderValue>>
+  | ZodRecord<ZodStringType, HttpHeaderValue>;
 
 export type HttpHeaderSchema = HttpHeaderObject | ZodOptional<HttpHeaderObject>;
