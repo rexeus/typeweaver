@@ -53,7 +53,7 @@
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "hono": "^4.9.9",
+    "hono": "^4.10.1",
     "test-utils": "file:../test-utils"
   },
   "dependencies": {
