@@ -1,8 +1,11 @@
+declare const Deno: unknown;
+declare const Bun: unknown;
+
 export type Runtime = "node" | "deno" | "bun";
 
 export const detectRuntime = (): Runtime => {
-  if ("Deno" in globalThis) return "deno";
-  if ("Bun" in globalThis) return "bun";
+  if (typeof Deno !== "undefined") return "deno";
+  if (typeof Bun !== "undefined") return "bun";
   return "node";
 };
 
