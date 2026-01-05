@@ -1,5 +1,18 @@
 # @rexeus/typeweaver
 
+## 0.3.1
+
+### Patch Changes
+
+- d53fd19: - Add shebang to bin execution script
+  - Update deno usage docs
+  - @rexeus/typeweaver-aws-cdk@0.3.1
+  - @rexeus/typeweaver-clients@0.3.1
+  - @rexeus/typeweaver-core@0.3.1
+  - @rexeus/typeweaver-gen@0.3.1
+  - @rexeus/typeweaver-hono@0.3.1
+  - @rexeus/typeweaver-types@0.3.1
+
 ## 0.3.0
 
 ### Minor Changes
