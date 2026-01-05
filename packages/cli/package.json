@@ -75,10 +75,10 @@
     "@rexeus/typeweaver-gen": "workspace:^",
     "@rexeus/typeweaver-hono": "workspace:^",
     "@rexeus/typeweaver-types": "workspace:^",
-    "axios": "^1.12.2",
+    "axios": "^1.13.2",
     "case": "^1.6.3",
-    "hono": "^4.10.1",
-    "zod": "^4.1.11"
+    "hono": "^4.11.3",
+    "zod": "^4.3.5"
   },
   "peerDependencies": {
     "@rexeus/typeweaver-aws-cdk": "workspace:^",
@@ -93,8 +93,8 @@
     "zod": "^4.1.11"
   },
   "dependencies": {
-    "commander": "^14.0.1",
+    "commander": "^14.0.2",
     "ejs": "^3.1.10",
-    "tsx": "^4.20.6"
+    "tsx": "^4.21.0"
   }
 }

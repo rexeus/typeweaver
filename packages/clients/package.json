@@ -59,10 +59,10 @@
     "axios": "^1.7.0"
   },
   "devDependencies": {
-    "@hono/node-server": "^1.19.5",
+    "@hono/node-server": "^1.19.7",
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "axios": "^1.12.2",
+    "axios": "^1.13.2",
     "test-utils": "file:../test-utils"
   },
   "dependencies": {
