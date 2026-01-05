@@ -53,9 +53,9 @@
   },
   "homepage": "https://github.com/rexeus/typeweaver#readme",
   "peerDependencies": {
-    "zod": "^4.1.11"
+    "zod": "^4.3.5"
   },
   "devDependencies": {
-    "zod": "^4.1.11"
+    "zod": "^4.3.5"
   }
 }
