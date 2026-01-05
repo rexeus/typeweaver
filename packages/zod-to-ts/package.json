@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-zod-to-ts",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Transforms Zod v4 schemas into precise TypeScript shapes. Powered by Typeweaver 🧵✨",
   "type": "module",
   "main": "dist/index.cjs",
