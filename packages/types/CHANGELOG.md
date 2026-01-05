@@ -1,5 +1,19 @@
 # @rexeus/typeweaver-types
 
+## 0.3.0
+
+### Minor Changes
+
+- 76b2a3b: - Add support for Bun & Deno
+  - Add support for Commonjs in addition to ESM
+
+### Patch Changes
+
+- Updated dependencies [76b2a3b]
+  - @rexeus/typeweaver-zod-to-ts@0.3.0
+  - @rexeus/typeweaver-core@0.3.0
+  - @rexeus/typeweaver-gen@0.3.0
+
 ## 0.2.1
 
 ### Patch Changes

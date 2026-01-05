@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-hono",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Generates Hono routers and handlers straight from your API definitions. Powered by Typeweaver 🧵✨",
   "type": "module",
   "main": "dist/index.cjs",

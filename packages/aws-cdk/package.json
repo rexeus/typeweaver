@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-aws-cdk",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Generates AWS CDK helpers to provision the infrastructure your APIs need. Powered by Typeweaver 🧵✨",
   "type": "module",
   "main": "dist/index.cjs",

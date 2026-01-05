@@ -1,5 +1,12 @@
 # @rexeus/typeweaver-core
 
+## 0.3.0
+
+### Minor Changes
+
+- 76b2a3b: - Add support for Bun & Deno
+  - Add support for Commonjs in addition to ESM
+
 ## 0.2.1
 
 ### Patch Changes
