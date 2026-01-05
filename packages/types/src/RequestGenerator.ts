@@ -1,5 +1,5 @@
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Path } from "@rexeus/typeweaver-gen";
 import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
 import Case from "case";
@@ -8,11 +8,11 @@ import type {
   OperationResource,
 } from "@rexeus/typeweaver-gen";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 export class RequestGenerator {
   public static generate(context: GeneratorContext): void {
-    const templateFilePath = path.join(__dirname, "templates", "Request.ejs");
+    const templateFilePath = path.join(moduleDir, "templates", "Request.ejs");
 
     for (const [, entityResource] of Object.entries(
       context.resources.entityResources

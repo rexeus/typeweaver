@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 
 export class Path {
   public static relative(from: string, to: string): string {

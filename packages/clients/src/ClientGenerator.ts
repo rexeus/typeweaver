@@ -1,5 +1,5 @@
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
 import Case from "case";
 import type {
@@ -7,13 +7,13 @@ import type {
   OperationResource,
 } from "@rexeus/typeweaver-gen";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 export class ClientGenerator {
   public static generate(context: GeneratorContext): void {
-    const clientTemplatePath = path.join(__dirname, "templates", "Client.ejs");
+    const clientTemplatePath = path.join(moduleDir, "templates", "Client.ejs");
     const commandTemplatePath = path.join(
-      __dirname,
+      moduleDir,
       "templates",
       "RequestCommand.ejs"
     );

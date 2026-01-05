@@ -3,6 +3,9 @@
 [![npm version](https://img.shields.io/npm/v/@rexeus/typeweaver.svg)](https://www.npmjs.com/package/@rexeus/typeweaver)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-supported-339933?logo=node.js&logoColor=fff)](https://nodejs.org/)
+[![Deno](https://img.shields.io/badge/Deno-supported-000?logo=deno&logoColor=fff)](https://deno.land/)
+[![Bun](https://img.shields.io/badge/Bun-supported-f9f1e1?logo=bun&logoColor=000)](https://bun.sh/)
 
 Typeweaver is a type-safe HTTP API framework built for API-first development with a focus on
 developer experience. Use typeweaver to specify your HTTP APIs in TypeScript and Zod, and generate
@@ -13,11 +16,20 @@ clients, validators, routers, and more ✨
 ## 📥 Installation
 
 ```bash
-# Install the CLI as a dev dependency
+# Node.js (npm)
 npm install -D @rexeus/typeweaver
-
-# Install the runtime as a dependency
 npm install @rexeus/typeweaver-core
+
+# Node.js (pnpm)
+pnpm add -D @rexeus/typeweaver
+pnpm add @rexeus/typeweaver-core
+
+# Deno
+deno add npm:@rexeus/typeweaver npm:@rexeus/typeweaver-core
+
+# Bun
+bun add -D @rexeus/typeweaver
+bun add @rexeus/typeweaver-core
 ```
 
 Now you are ready to start building! Check out [Quickstart](#-get-started)
@@ -40,8 +52,8 @@ Now you are ready to start building! Check out [Quickstart](#-get-started)
 
 ## 🔌 Available Plugins
 
-| Package                                            | Description                                                                                                 | Version                                                         |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Package                                                                                                 | Description                                                                                                 | Version                                                         |
+| ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | [@rexeus/typeweaver-types](https://github.com/rexeus/typeweaver/tree/main/packages/types/README.md)     | Plugin for request/response types and validation - the foundation for all other plugins and always included | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-types)   |
 | [@rexeus/typeweaver-clients](https://github.com/rexeus/typeweaver/tree/main/packages/clients/README.md) | Plugin for HTTP clients using Axios                                                                         | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients) |
 | [@rexeus/typeweaver-hono](https://github.com/rexeus/typeweaver/tree/main/packages/hono/README.md)       | Plugin for Hono routers                                                                                     | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)    |
@@ -58,15 +70,21 @@ More plugins are planned. If you want to build your own, check out the plugin sy
 Generate TypeScript code from your API definitions:
 
 ```bash
-# Generate with clients plugin:
+# Node.js (npm)
 npx typeweaver generate --input ./api/definition --output ./api/generated --plugins clients
 
-# Generate with multiple plugins:
-npx typeweaver generate --input ./api/definition --output ./api/generated --plugins clients,hono,aws-cdk
+# Node.js (pnpm)
+pnpx typeweaver generate --input ./api/definition --output ./api/generated --plugins clients
 
-# Using all available plugins:
-npx typeweaver generate --input ./api/definition --output ./api/generated --plugins all
+# Deno
+dx @rexeus/typeweaver generate --input ./api/definition --output ./api/generated --plugins clients
+
+# Bun
+bunx typeweaver generate --input ./api/definition --output ./api/generated --plugins clients
 ```
+
+> **Note**: Deno may require the `--sloppy-imports` flag or equivalent configuration in `deno.json`
+> when your API definitions use extensionless TypeScript imports.
 
 ### ⚙️ Options
 
@@ -99,6 +117,8 @@ Then run:
 ```bash
 npx typeweaver generate --config ./typeweaver.config.js
 ```
+
+> Replace `npx` with `pnpx`, `dx @rexeus/typeweaver`, or `bunx` depending on your runtime.
 
 ## 🌱 Get Started
 

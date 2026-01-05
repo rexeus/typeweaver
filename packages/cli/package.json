@@ -3,16 +3,23 @@
   "version": "0.2.1",
   "description": "🧵✨ Typeweaver CLI. Entry point into the Typeweaver framework to scaffold, validate, and generate API assets.",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "bin": {
-    "typeweaver": "./dist/run-cli-with-tsx.js"
+    "typeweaver": "./dist/entry.js"
   },
   "files": [
     "dist",
@@ -23,12 +30,17 @@
   ],
   "scripts": {
     "cli": "tsx src/cli.ts",
+    "cli:deno": "deno run -A src/entry.ts",
+    "cli:bun": "bun run src/entry.ts",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "build": "pkgroll --clean-dist && cp -r ./src/generators/templates ./dist/templates && cp ../../LICENSE ../../NOTICE ./dist/",
+    "build": "tsup && mkdir -p ./dist/templates && cp -r ./src/generators/templates/* ./dist/templates/ && cp ../../LICENSE ../../NOTICE ./dist/",
     "prepack": "npm run build",
     "preversion": "npm run build",
-    "test:bundle": "pnpm run build && node dist/run-cli-with-tsx.js generate --output test/output --input test/definition --plugins clients,aws-cdk,hono",
+    "test:bundle": "pnpm run build && node dist/entry.js generate --output test/outputs/bundle --input ../test-utils/src/test-project/definition --shared ../test-utils/src/test-project/definition/shared --plugins clients,aws-cdk,hono",
+    "test:bundle:deno": "pnpm run build && deno run -A --sloppy-imports dist/entry.js generate --output test/outputs/bundle-deno --input ../test-utils/src/test-project/definition --shared ../test-utils/src/test-project/definition/shared --plugins clients,aws-cdk,hono",
+    "test:bundle:bun": "pnpm run build && bun run dist/entry.js generate --output test/outputs/bundle-bun --input ../test-utils/src/test-project/definition --shared ../test-utils/src/test-project/definition/shared --plugins clients,aws-cdk,hono",
+    "test:bundle:all": "pnpm run test:bundle && pnpm run test:bundle:deno && pnpm run test:bundle:bun",
     "test:gen": "pnpm run test:gen:types && pnpm run test:gen:clients && pnpm run test:gen:aws-cdk && pnpm run test:gen:hono && pnpm run test:gen:all",
     "test:gen:types": "tsx src/cli.ts generate --output test/outputs/types --input ../test-utils/src/test-project/definition --shared ../test-utils/src/test-project/definition/shared",
     "test:gen:clients": "tsx src/cli.ts generate --output test/outputs/clients --input ../test-utils/src/test-project/definition --plugins clients --shared ../test-utils/src/test-project/definition/shared",

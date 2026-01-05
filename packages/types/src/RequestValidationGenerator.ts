@@ -1,5 +1,5 @@
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Path } from "@rexeus/typeweaver-gen";
 import Case from "case";
 import { z } from "zod";
@@ -8,12 +8,12 @@ import type {
   OperationResource,
 } from "@rexeus/typeweaver-gen";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 export class RequestValidationGenerator {
   public static generate(context: GeneratorContext): void {
     const templateFilePath = path.join(
-      __dirname,
+      moduleDir,
       "templates",
       "RequestValidator.ejs"
     );

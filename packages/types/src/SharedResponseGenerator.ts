@@ -1,5 +1,5 @@
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
 import Case from "case";
@@ -8,12 +8,12 @@ import type {
   SharedResponseResource,
 } from "@rexeus/typeweaver-gen";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 export class SharedResponseGenerator {
   public static generate(context: GeneratorContext): void {
     const templateFile = path.join(
-      __dirname,
+      moduleDir,
       "templates",
       "SharedResponse.ejs"
     );

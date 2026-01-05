@@ -9,8 +9,8 @@ import type {
 
 export class HonoRouterGenerator {
   public static generate(context: GeneratorContext): void {
-    const __dirname = path.dirname(fileURLToPath(import.meta.url));
-    const templateFile = path.join(__dirname, "templates", "HonoRouter.ejs");
+    const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+    const templateFile = path.join(moduleDir, "templates", "HonoRouter.ejs");
 
     for (const [entityName, entityResource] of Object.entries(
       context.resources.entityResources

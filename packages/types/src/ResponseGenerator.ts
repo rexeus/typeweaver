@@ -1,5 +1,5 @@
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { Path } from "@rexeus/typeweaver-gen";
 import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
@@ -10,13 +10,13 @@ import type {
   OperationResource,
 } from "@rexeus/typeweaver-gen";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 export class ResponseGenerator {
   public static generate(context: GeneratorContext): void {
-    const templateFile = path.join(__dirname, "templates", "Response.ejs");
+    const templateFile = path.join(moduleDir, "templates", "Response.ejs");
     const sharedResponseTemplateFile = path.join(
-      __dirname,
+      moduleDir,
       "templates",
       "SharedResponse.ejs"
     );

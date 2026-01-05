@@ -1,5 +1,5 @@
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import Case from "case";
 import type { HttpMethod } from "@rexeus/typeweaver-core";
 import type {
@@ -7,11 +7,11 @@ import type {
   OperationResource,
 } from "@rexeus/typeweaver-gen";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 export class HttpApiRouterGenerator {
   public static generate(context: GeneratorContext): void {
-    const templateFile = path.join(__dirname, "templates", "HttpApiRouter.ejs");
+    const templateFile = path.join(moduleDir, "templates", "HttpApiRouter.ejs");
 
     for (const [entityName, entityResource] of Object.entries(
       context.resources.entityResources
