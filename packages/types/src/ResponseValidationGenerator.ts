@@ -8,12 +8,12 @@ import type {
   OperationResource,
 } from "@rexeus/typeweaver-gen";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 export class ResponseValidationGenerator {
   public static generate(context: GeneratorContext): void {
     const templateFilePath = path.join(
-      __dirname,
+      moduleDir,
       "templates",
       "ResponseValidator.ejs"
     );

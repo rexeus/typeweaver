@@ -8,12 +8,12 @@ import type {
   SharedResponseResource,
 } from "@rexeus/typeweaver-gen";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 export class SharedResponseGenerator {
   public static generate(context: GeneratorContext): void {
     const templateFile = path.join(
-      __dirname,
+      moduleDir,
       "templates",
       "SharedResponse.ejs"
     );

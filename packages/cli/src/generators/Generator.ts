@@ -9,7 +9,7 @@ import { PluginLoader } from "./PluginLoader";
 import { Prettier } from "./Prettier";
 import { ResourceReader } from "./ResourceReader";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Main generator for typeweaver
@@ -17,7 +17,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  */
 export class Generator {
   public readonly coreDir = "@rexeus/typeweaver-core";
-  public readonly templateDir = path.join(__dirname, "templates");
+  public readonly templateDir = path.join(moduleDir, "templates");
 
   private readonly registry: PluginRegistry;
   private readonly contextBuilder: PluginContextBuilder;

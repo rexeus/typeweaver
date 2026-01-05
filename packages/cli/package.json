@@ -3,12 +3,19 @@
   "version": "0.2.1",
   "description": "🧵✨ Typeweaver CLI. Entry point into the Typeweaver framework to scaffold, validate, and generate API assets.",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "bin": {
@@ -27,7 +34,7 @@
     "cli:bun": "bun run src/entry.ts",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "build": "pkgroll --target=node24 --clean-dist && cp -r ./src/generators/templates ./dist/templates && cp ../../LICENSE ../../NOTICE ./dist/",
+    "build": "tsup && mkdir -p ./dist/templates && cp -r ./src/generators/templates/* ./dist/templates/ && cp ../../LICENSE ../../NOTICE ./dist/",
     "prepack": "npm run build",
     "preversion": "npm run build",
     "test:bundle": "pnpm run build && node dist/entry.js generate --output test/outputs/bundle --input ../test-utils/src/test-project/definition --shared ../test-utils/src/test-project/definition/shared --plugins clients,aws-cdk,hono",

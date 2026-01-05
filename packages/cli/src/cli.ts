@@ -6,9 +6,9 @@ import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { Generator } from "./generators/Generator";
 import type { CommandOptions as CommanderOptions } from "commander";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const packageJson = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "../package.json"), "utf-8")
+  fs.readFileSync(path.join(moduleDir, "../package.json"), "utf-8")
 ) as { readonly version: string; readonly name: string; readonly description: string };
 
 type CommandOptions = CommanderOptions & {

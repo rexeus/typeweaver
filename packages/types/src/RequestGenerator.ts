@@ -8,11 +8,11 @@ import type {
   OperationResource,
 } from "@rexeus/typeweaver-gen";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 export class RequestGenerator {
   public static generate(context: GeneratorContext): void {
-    const templateFilePath = path.join(__dirname, "templates", "Request.ejs");
+    const templateFilePath = path.join(moduleDir, "templates", "Request.ejs");
 
     for (const [, entityResource] of Object.entries(
       context.resources.entityResources

@@ -121,18 +121,18 @@ output.
 - Copy them:
 
   ```ts
-  import path from "path";
-  import { fileURLToPath } from "url";
+  import path from "node:path";
+  import { fileURLToPath } from "node:url";
   import { BasePlugin, type GeneratorContext } from "@rexeus/typeweaver-gen";
 
-  // Needed to resolve __dirname in ES modules
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  // Resolve the directory of the current module
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
   export default class MyPlugin extends BasePlugin {
     name = "my-plugin";
 
     generate(context: GeneratorContext) {
-      const libSourceDir = path.join(__dirname, "lib");
+      const libSourceDir = path.join(moduleDir, "lib");
       this.copyLibFiles(context, libSourceDir, this.name); // -> <output>/lib/my-plugin
     }
   }
