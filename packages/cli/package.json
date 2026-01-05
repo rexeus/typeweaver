@@ -33,6 +33,7 @@
     "test:bundle": "pnpm run build && node dist/entry.js generate --output test/outputs/bundle --input ../test-utils/src/test-project/definition --shared ../test-utils/src/test-project/definition/shared --plugins clients,aws-cdk,hono",
     "test:bundle:deno": "pnpm run build && deno run -A --sloppy-imports dist/entry.js generate --output test/outputs/bundle-deno --input ../test-utils/src/test-project/definition --shared ../test-utils/src/test-project/definition/shared --plugins clients,aws-cdk,hono",
     "test:bundle:bun": "pnpm run build && bun run dist/entry.js generate --output test/outputs/bundle-bun --input ../test-utils/src/test-project/definition --shared ../test-utils/src/test-project/definition/shared --plugins clients,aws-cdk,hono",
+    "test:bundle:all": "pnpm run test:bundle && pnpm run test:bundle:deno && pnpm run test:bundle:bun",
     "test:gen": "pnpm run test:gen:types && pnpm run test:gen:clients && pnpm run test:gen:aws-cdk && pnpm run test:gen:hono && pnpm run test:gen:all",
     "test:gen:types": "tsx src/cli.ts generate --output test/outputs/types --input ../test-utils/src/test-project/definition --shared ../test-utils/src/test-project/definition/shared",
     "test:gen:clients": "tsx src/cli.ts generate --output test/outputs/clients --input ../test-utils/src/test-project/definition --plugins clients --shared ../test-utils/src/test-project/definition/shared",

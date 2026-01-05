@@ -34,6 +34,16 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
 
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: ">=2.6"
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -53,6 +63,12 @@ jobs:
         run: |
           echo "::group::Generating all test projects"
           pnpm run test:gen
+          echo "::endgroup::"
+
+      - name: Run multi-runtime bundle tests
+        run: |
+          echo "::group::Running bundle tests on Node.js, Deno, and Bun"
+          pnpm run --filter @rexeus/typeweaver test:bundle:all
           echo "::endgroup::"
 
       - name: Run typecheck
