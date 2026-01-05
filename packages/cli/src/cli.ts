@@ -1,10 +1,15 @@
-import path from "path";
-import { pathToFileURL } from "url";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { Command } from "commander";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
-import packageJson from "../package.json";
 import { Generator } from "./generators/Generator";
 import type { CommandOptions as CommanderOptions } from "commander";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const packageJson = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "../package.json"), "utf-8")
+) as { readonly version: string; readonly name: string; readonly description: string };
 
 type CommandOptions = CommanderOptions & {
   input?: string;

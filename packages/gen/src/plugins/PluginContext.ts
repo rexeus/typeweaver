@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import { render } from "ejs";
 import type { GeneratorContext, PluginConfig, PluginContext } from "./types";
 import type { GetResourcesResult } from "../Resource";

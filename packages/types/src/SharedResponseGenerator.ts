@@ -1,5 +1,5 @@
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
 import Case from "case";

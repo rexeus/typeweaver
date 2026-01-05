@@ -3,6 +3,7 @@ import eslint from "@eslint/js";
 import { globalIgnores } from "eslint/config";
 import eslintPrettier from "eslint-config-prettier";
 import importPlugin from "eslint-plugin-import";
+import unicorn from "eslint-plugin-unicorn";
 import tseslint from "typescript-eslint";
 
 /** @type {import("eslint").Linter.Config[]} */
@@ -31,7 +32,11 @@ const config = tseslint.config(
     "**/outputs/**",
   ]),
   {
+    plugins: {
+      unicorn,
+    },
     rules: {
+      "unicorn/prefer-node-protocol": "error",
       "@typescript-eslint/consistent-type-definitions": ["error", "type"],
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": [

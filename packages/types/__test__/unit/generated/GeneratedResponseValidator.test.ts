@@ -1,4 +1,4 @@
-import assert from "assert";
+import assert from "node:assert";
 import { ResponseValidationError } from "@rexeus/typeweaver-core";
 import {
   captureError,
