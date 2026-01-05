@@ -77,7 +77,7 @@ npx typeweaver generate --input ./api/definition --output ./api/generated --plug
 pnpx typeweaver generate --input ./api/definition --output ./api/generated --plugins clients
 
 # Deno
-dx @rexeus/typeweaver generate --input ./api/definition --output ./api/generated --plugins clients
+deno run -A npm:@rexeus/typeweaver generate --input ./api/definition --output ./api/generated --plugins clients
 
 # Bun
 bunx typeweaver generate --input ./api/definition --output ./api/generated --plugins clients
@@ -118,7 +118,7 @@ Then run:
 npx typeweaver generate --config ./typeweaver.config.js
 ```
 
-> Replace `npx` with `pnpx`, `dx @rexeus/typeweaver`, or `bunx` depending on your runtime.
+> Replace `npx` with `pnpx`, `deno run -A npm:@rexeus/typeweaver`, or `bunx` depending on your runtime.
 
 ## 🌱 Get Started
 
