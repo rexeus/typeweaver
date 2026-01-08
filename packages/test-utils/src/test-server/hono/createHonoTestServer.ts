@@ -3,12 +3,12 @@ import { HttpResponse } from "@rexeus/typeweaver-core";
 import getPort, { portNumbers } from "get-port";
 import { Hono } from "hono";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
-import { AccountHono, AuthHono, TodoHono } from "..";
-import { HonoAdapter } from "../test-project/output/lib/hono";
-import { AccountHandlers } from "./handlers/AccountApiHandler";
-import { AuthHandlers } from "./handlers/AuthHandlers";
-import { TodoHandlers } from "./handlers/TodoHandlers";
-import type { TypeweaverHonoOptions } from "../test-project/output/lib/hono";
+import { AccountHono, AuthHono, TodoHono } from "../..";
+import { HonoAdapter } from "../../test-project/output/lib/hono";
+import { AccountHandlers } from "../handlers/AccountApiHandler";
+import { AuthHandlers } from "../handlers/AuthHandlers";
+import { TodoHandlers } from "../handlers/TodoHandlers";
+import type { TypeweaverHonoOptions } from "../../test-project/output/lib/hono";
 import type { ServerType } from "@hono/node-server";
 
 export type TestServerOptions = {

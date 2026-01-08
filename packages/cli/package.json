@@ -41,12 +41,13 @@
     "test:bundle:deno": "pnpm run build && deno run -A --sloppy-imports dist/entry.js generate --output test/outputs/bundle-deno --input ../test-utils/src/test-project/definition --shared ../test-utils/src/test-project/definition/shared --plugins clients,aws-cdk,hono",
     "test:bundle:bun": "pnpm run build && bun run dist/entry.js generate --output test/outputs/bundle-bun --input ../test-utils/src/test-project/definition --shared ../test-utils/src/test-project/definition/shared --plugins clients,aws-cdk,hono",
     "test:bundle:all": "pnpm run test:bundle && pnpm run test:bundle:deno && pnpm run test:bundle:bun",
-    "test:gen": "pnpm run test:gen:types && pnpm run test:gen:clients && pnpm run test:gen:aws-cdk && pnpm run test:gen:hono && pnpm run test:gen:all",
+    "test:gen": "pnpm run test:gen:types && pnpm run test:gen:clients && pnpm run test:gen:aws-cdk && pnpm run test:gen:hono && pnpm run test:gen:express && pnpm run test:gen:all",
     "test:gen:types": "tsx src/cli.ts generate --output test/outputs/types --input ../test-utils/src/test-project/definition --shared ../test-utils/src/test-project/definition/shared",
     "test:gen:clients": "tsx src/cli.ts generate --output test/outputs/clients --input ../test-utils/src/test-project/definition --plugins clients --shared ../test-utils/src/test-project/definition/shared",
     "test:gen:aws-cdk": "tsx src/cli.ts generate --output test/outputs/aws-cdk --input ../test-utils/src/test-project/definition --plugins aws-cdk --shared ../test-utils/src/test-project/definition/shared",
     "test:gen:hono": "tsx src/cli.ts generate --output test/outputs/hono --input ../test-utils/src/test-project/definition --plugins hono --shared ../test-utils/src/test-project/definition/shared",
-    "test:gen:all": "tsx src/cli.ts generate --output test/outputs/all --input ../test-utils/src/test-project/definition --plugins clients,aws-cdk,hono --shared ../test-utils/src/test-project/definition/shared"
+    "test:gen:express": "tsx src/cli.ts generate --output test/outputs/express --input ../test-utils/src/test-project/definition --plugins express --shared ../test-utils/src/test-project/definition/shared",
+    "test:gen:all": "tsx src/cli.ts generate --output test/outputs/all --input ../test-utils/src/test-project/definition --plugins clients,aws-cdk,hono,express --shared ../test-utils/src/test-project/definition/shared"
   },
   "keywords": [
     "api",
@@ -72,6 +73,7 @@
     "@rexeus/typeweaver-aws-cdk": "workspace:^",
     "@rexeus/typeweaver-clients": "workspace:^",
     "@rexeus/typeweaver-core": "workspace:^",
+    "@rexeus/typeweaver-express": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
     "@rexeus/typeweaver-hono": "workspace:^",
     "@rexeus/typeweaver-types": "workspace:^",

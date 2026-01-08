@@ -8,6 +8,8 @@
 
 export * from "./account/AccountClient";
 
+export * from "./account/AccountExpress";
+
 export * from "./account/AccountHono";
 
 export * from "./account/AccountHttpApiRoutes";
@@ -33,6 +35,8 @@ export * from "./auth/AccessTokenResponse";
 export * from "./auth/AccessTokenResponseValidator";
 
 export * from "./auth/AuthClient";
+
+export * from "./auth/AuthExpress";
 
 export * from "./auth/AuthHono";
 
@@ -193,6 +197,8 @@ export * from "./todo/SubTodoNotFoundErrorResponse";
 export * from "./todo/SubTodoStatusTransitionInvalidErrorResponse";
 
 export * from "./todo/TodoClient";
+
+export * from "./todo/TodoExpress";
 
 export * from "./todo/TodoHono";
 

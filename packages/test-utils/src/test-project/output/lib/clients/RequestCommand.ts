@@ -47,8 +47,7 @@ export abstract class RequestCommand<
   Param extends IHttpParam = IHttpParam | undefined,
   Query extends IHttpQuery = IHttpQuery | undefined,
   Body extends IHttpBody = IHttpBody | undefined,
-> implements IHttpRequest
-{
+> implements IHttpRequest {
   /** The HTTP method for this request */
   public readonly method!: HttpMethod;
   /** The URL path pattern with parameter placeholders (e.g., '/users/:id') */
