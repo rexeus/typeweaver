@@ -188,6 +188,9 @@ export abstract class ApiClient {
 
     const searchParams = url.searchParams;
     for (const [key, value] of Object.entries(query)) {
+      if (value === undefined) {
+        continue;
+      }
       if (!Array.isArray(value)) {
         searchParams.append(key, value);
         continue;
