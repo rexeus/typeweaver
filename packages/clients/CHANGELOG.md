@@ -1,5 +1,14 @@
 # @rexeus/typeweaver-clients
 
+## 0.3.2
+
+### Patch Changes
+
+- b49b9d6: Fix undefined query strings in client
+  - @rexeus/typeweaver-core@0.3.2
+  - @rexeus/typeweaver-gen@0.3.2
+  - @rexeus/typeweaver-zod-to-ts@0.3.2
+
 ## 0.3.1
 
 ### Patch Changes
