@@ -120,6 +120,9 @@ importers:
       hono:
         specifier: ^4.11.3
         version: 4.11.3
+      prettier:
+        specifier: ^3.6.2
+        version: 3.7.4
       zod:
         specifier: ^4.3.5
         version: 4.3.5
@@ -148,6 +151,9 @@ importers:
       test-utils:
         specifier: file:../test-utils
         version: link:../test-utils
+      zod:
+        specifier: ^4.3.5
+        version: 4.3.5
 
   packages/core:
     devDependencies:

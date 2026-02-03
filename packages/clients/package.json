@@ -57,14 +57,16 @@
   "peerDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "axios": "^1.13.2"
+    "axios": "^1.13.2",
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@hono/node-server": "^1.19.7",
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
     "axios": "^1.13.2",
-    "test-utils": "file:../test-utils"
+    "test-utils": "file:../test-utils",
+    "zod": "^4.3.5"
   },
   "dependencies": {
     "@rexeus/typeweaver-zod-to-ts": "workspace:^",
