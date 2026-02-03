@@ -29,3 +29,6 @@ coverage/
 
 # Test gen outputs
 **/test/outputs/
+
+# Turborepo
+.turbo
