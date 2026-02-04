@@ -197,7 +197,9 @@ export abstract class ApiClient {
       }
 
       for (const item of value) {
-        searchParams.append(key, item);
+        if (item !== undefined) {
+          searchParams.append(key, item);
+        }
       }
     }
   }

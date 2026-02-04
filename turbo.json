@@ -1,0 +1,32 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "src/**", "tsup.config.ts", "tsconfig.json", "package.json"],
+      "outputs": ["dist/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "src/**", "__test__/**", "tsconfig.json", "package.json"],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["build", "^build"],
+      "inputs": ["$TURBO_DEFAULT$", "src/**", "__test__/**", "vitest.config.ts", "package.json"],
+      "outputs": []
+    },
+    "test:gen": {
+      "dependsOn": ["build", "^build"],
+      "inputs": ["$TURBO_DEFAULT$", "src/**", "test/**"],
+      "outputs": ["test/outputs/**"]
+    },
+    "lint": {
+      "cache": false
+    },
+    "format": {
+      "inputs": ["$TURBO_DEFAULT$", "src/**", "__test__/**", "*.json", "*.md"],
+      "outputs": []
+    }
+  }
+}

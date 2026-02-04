@@ -28,6 +28,9 @@ export default defineConfig([
     platform: "node",
     shims: true,
     removeNodeProtocol: false,
+    treeshake: true,
+    metafile: true,
+    external: ["prettier"],
     banner: {
       js: "#!/usr/bin/env node",
     },
@@ -43,6 +46,9 @@ export default defineConfig([
     platform: "node",
     shims: true,
     removeNodeProtocol: false,
+    treeshake: true,
+    metafile: true,
+    external: ["prettier"],
     esbuildOptions: sharedEsbuildOptions,
   },
 ]);

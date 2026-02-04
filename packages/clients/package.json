@@ -3,6 +3,7 @@
   "version": "0.3.2",
   "description": "Generates HTTP clients directly from your API definitions. Powered by Typeweaver 🧵✨",
   "type": "module",
+  "sideEffects": false,
   "main": "dist/index.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -56,14 +57,16 @@
   "peerDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "axios": "^1.13.2"
+    "axios": "^1.13.0",
+    "zod": "^4.3.0"
   },
   "devDependencies": {
     "@hono/node-server": "^1.19.7",
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
     "axios": "^1.13.2",
-    "test-utils": "file:../test-utils"
+    "test-utils": "file:../test-utils",
+    "zod": "^4.3.6"
   },
   "dependencies": {
     "@rexeus/typeweaver-zod-to-ts": "workspace:^",

@@ -49,6 +49,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Cache Turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
       - name: Build all packages
         run: |
           echo "::group::Building all packages"
@@ -74,6 +82,8 @@ jobs:
           echo "::endgroup::"
 
       - name: Run typecheck
+        env:
+          NODE_OPTIONS: "--max-old-space-size=6144"
         run: |
           echo "::group::TypeScript type checking"
           pnpm run typecheck

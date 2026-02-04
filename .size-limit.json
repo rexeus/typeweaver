@@ -1,0 +1,10 @@
+[
+  { "path": "packages/cli/dist/*.js", "name": "cli (total)" },
+  { "path": "packages/types/dist/index.js", "name": "types" },
+  { "path": "packages/clients/dist/index.js", "name": "clients" },
+  { "path": "packages/core/dist/index.js", "name": "core" },
+  { "path": "packages/gen/dist/index.js", "name": "gen" },
+  { "path": "packages/aws-cdk/dist/index.js", "name": "aws-cdk" },
+  { "path": "packages/hono/dist/index.js", "name": "hono" },
+  { "path": "packages/zod-to-ts/dist/index.js", "name": "zod-to-ts" }
+]

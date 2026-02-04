@@ -188,13 +188,18 @@ export abstract class ApiClient {
 
     const searchParams = url.searchParams;
     for (const [key, value] of Object.entries(query)) {
+      if (value === undefined) {
+        continue;
+      }
       if (!Array.isArray(value)) {
         searchParams.append(key, value);
         continue;
       }
 
       for (const item of value) {
-        searchParams.append(key, item);
+        if (item !== undefined) {
+          searchParams.append(key, item);
+        }
       }
     }
   }

@@ -9,4 +9,6 @@ export default defineConfig({
   target: "esnext",
   platform: "node",
   removeNodeProtocol: false,
+  treeshake: true,
+  metafile: true,
 });
