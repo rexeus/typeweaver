@@ -1,5 +1,11 @@
 # @rexeus/typeweaver-core
 
+## 0.4.0
+
+### Minor Changes
+
+- 4c96840: Improve bundling
+
 ## 0.3.2
 
 ## 0.3.1

@@ -1,5 +1,17 @@
 # @rexeus/typeweaver-aws-cdk
 
+## 0.4.0
+
+### Minor Changes
+
+- 4c96840: Improve bundling
+
+### Patch Changes
+
+- Updated dependencies [4c96840]
+  - @rexeus/typeweaver-core@0.4.0
+  - @rexeus/typeweaver-gen@0.4.0
+
 ## 0.3.2
 
 ### Patch Changes
