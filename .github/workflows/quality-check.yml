@@ -82,6 +82,8 @@ jobs:
           echo "::endgroup::"
 
       - name: Run typecheck
+        env:
+          NODE_OPTIONS: "--max-old-space-size=6144"
         run: |
           echo "::group::TypeScript type checking"
           pnpm run typecheck
