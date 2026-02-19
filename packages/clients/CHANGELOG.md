@@ -1,5 +1,16 @@
 # @rexeus/typeweaver-clients
 
+## 0.4.1
+
+### Patch Changes
+
+- 3d939a2: - Fix ApiClient URL construction to support relative base paths
+  - ApiClient now uses string concatenation instead of `new URL()` for path construction, allowing
+    relative base paths like `/api` without requiring a full origin URL.
+  - @rexeus/typeweaver-core@0.4.1
+  - @rexeus/typeweaver-gen@0.4.1
+  - @rexeus/typeweaver-zod-to-ts@0.4.1
+
 ## 0.4.0
 
 ### Minor Changes
