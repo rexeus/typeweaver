@@ -70,6 +70,7 @@ export abstract class ApiClient {
         "Base URL must be provided either in axios instance or in constructor"
       );
     }
+    this.axiosInstance.defaults.baseURL = undefined;
 
     this.unknownResponseHandling = props.unknownResponseHandling ?? "throw";
     this.isSuccessStatusCode =
@@ -169,7 +170,7 @@ export abstract class ApiClient {
     }
 
     return Object.entries(param).reduce((acc, [key, value]) => {
-      const result = acc.replace(`:${key}`, value);
+      const result = acc.replace(`:${key}`, encodeURIComponent(value));
 
       if (result === acc) {
         throw new Error(
@@ -181,33 +182,36 @@ export abstract class ApiClient {
     }, path);
   }
 
-  private addQuery(url: URL, query?: IHttpQuery): void {
+  private createUrl(path: string, query?: IHttpQuery): string {
+    const base = this.baseUrl.replace(/\/+$/, "");
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    const queryString = this.buildQueryString(query);
+    return queryString
+      ? `${base}${normalizedPath}?${queryString}`
+      : `${base}${normalizedPath}`;
+  }
+
+  private buildQueryString(query?: IHttpQuery): string {
     if (!query) {
-      return;
+      return "";
     }
 
-    const searchParams = url.searchParams;
+    const params = new URLSearchParams();
     for (const [key, value] of Object.entries(query)) {
       if (value === undefined) {
         continue;
       }
       if (!Array.isArray(value)) {
-        searchParams.append(key, value);
+        params.append(key, value);
         continue;
       }
-
       for (const item of value) {
         if (item !== undefined) {
-          searchParams.append(key, item);
+          params.append(key, item);
         }
       }
     }
-  }
-
-  private createUrl(path: string, query?: IHttpQuery): string {
-    const url = new URL(path, this.baseUrl);
-    this.addQuery(url, query);
-    return url.toString();
+    return params.toString();
   }
 
   private createHeader(header: any): any {
