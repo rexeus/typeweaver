@@ -1,5 +1,13 @@
 # @rexeus/typeweaver-types
 
+## 0.4.1
+
+### Patch Changes
+
+- @rexeus/typeweaver-core@0.4.1
+- @rexeus/typeweaver-gen@0.4.1
+- @rexeus/typeweaver-zod-to-ts@0.4.1
+
 ## 0.4.0
 
 ### Minor Changes
