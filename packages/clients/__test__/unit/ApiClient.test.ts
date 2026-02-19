@@ -1,3 +1,4 @@
+import axios from "axios";
 import {
   createGetTodoRequest,
   createListTodosRequest,
@@ -73,6 +74,40 @@ describe("ApiClient URL Construction", () => {
     expect(client.axiosInstance.request).toHaveBeenCalledWith(
       expect.objectContaining({
         url: "http://localhost/api/v1/todos/abc123",
+      }),
+    );
+  });
+
+  test("axios instance baseURL does not cause double-prepending", async () => {
+    const instance = axios.create({ baseURL: "http://localhost/api" });
+    const client = new TodoClient({ axiosInstance: instance });
+
+    vi.spyOn(client.axiosInstance, "request").mockResolvedValue({
+      status: 200,
+      headers: { "content-type": "application/json" },
+      data: { id: "test", title: "Test", completed: false },
+    });
+
+    const command = createCommand("abc123");
+    await expect(client.send(command)).rejects.toThrow();
+
+    expect(client.axiosInstance.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "http://localhost/api/todos/abc123",
+      }),
+    );
+    expect(client.axiosInstance.defaults.baseURL).toBeUndefined();
+  });
+
+  test("path parameters with special characters are percent-encoded", async () => {
+    const client = createClientWithBaseUrl("http://localhost:3000");
+    const command = createCommand("hello world");
+
+    await expect(client.send(command)).rejects.toThrow();
+
+    expect(client.axiosInstance.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "http://localhost:3000/todos/hello%20world",
       }),
     );
   });

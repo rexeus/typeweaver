@@ -70,6 +70,7 @@ export abstract class ApiClient {
         "Base URL must be provided either in axios instance or in constructor",
       );
     }
+    this.axiosInstance.defaults.baseURL = undefined;
 
     this.unknownResponseHandling = props.unknownResponseHandling ?? "throw";
     this.isSuccessStatusCode =
@@ -169,7 +170,7 @@ export abstract class ApiClient {
     }
 
     return Object.entries(param).reduce((acc, [key, value]) => {
-      const result = acc.replace(`:${key}`, value);
+      const result = acc.replace(`:${key}`, encodeURIComponent(value));
 
       if (result === acc) {
         throw new Error(
