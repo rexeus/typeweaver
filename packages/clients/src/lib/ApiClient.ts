@@ -70,8 +70,6 @@ export abstract class ApiClient {
         "Base URL must be provided either in axios instance or in constructor"
       );
     }
-    this.axiosInstance.defaults.baseURL = undefined;
-
     this.unknownResponseHandling = props.unknownResponseHandling ?? "throw";
     this.isSuccessStatusCode =
       props.isSuccessStatusCode ??
@@ -119,6 +117,7 @@ export abstract class ApiClient {
         url,
         data: body,
         headers,
+        baseURL: this.baseUrl,
       });
 
       return this.createResponse(response);
@@ -183,12 +182,11 @@ export abstract class ApiClient {
   }
 
   private createUrl(path: string, query?: IHttpQuery): string {
-    const base = this.baseUrl.replace(/\/+$/, "");
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
     const queryString = this.buildQueryString(query);
     return queryString
-      ? `${base}${normalizedPath}?${queryString}`
-      : `${base}${normalizedPath}`;
+      ? `${normalizedPath}?${queryString}`
+      : normalizedPath;
   }
 
   private buildQueryString(query?: IHttpQuery): string {
