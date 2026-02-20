@@ -17,7 +17,7 @@ export default defineConfig({
         useAtomics: true,
       },
     },
-    fileParallelism: true,
+    fileParallelism: false,
   },
   cacheDir: ".vitestcache",
 });

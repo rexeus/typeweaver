@@ -73,3 +73,21 @@ export async function createTestServer(
     baseUrl: `http://localhost:${port}`,
   };
 }
+
+export async function createPrefixedTestServer(
+  prefix: string,
+  options?: TestServerOptions,
+): Promise<CreateTestServerResult> {
+  const port = await getPort({ port: portNumbers(3000, 3100) });
+
+  const root = new Hono();
+  const testHono = createTestHono(options);
+  root.route(prefix, testHono);
+
+  const server = serve({ fetch: root.fetch, port });
+
+  return {
+    server,
+    baseUrl: `http://localhost:${port}${prefix}`,
+  };
+}
