@@ -34,7 +34,8 @@ describe("ApiClient URL Construction", () => {
 
     expect(client.axiosInstance.request).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: "http://localhost:3000/todos/abc123",
+        url: "/todos/abc123",
+        baseURL: "http://localhost:3000",
       }),
     );
   });
@@ -47,7 +48,8 @@ describe("ApiClient URL Construction", () => {
 
     expect(client.axiosInstance.request).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: "http://localhost/api/todos/abc123",
+        url: "/todos/abc123",
+        baseURL: "http://localhost/api",
       }),
     );
   });
@@ -60,7 +62,8 @@ describe("ApiClient URL Construction", () => {
 
     expect(client.axiosInstance.request).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: "http://localhost/api/todos/abc123",
+        url: "/todos/abc123",
+        baseURL: "http://localhost/api/",
       }),
     );
   });
@@ -73,7 +76,8 @@ describe("ApiClient URL Construction", () => {
 
     expect(client.axiosInstance.request).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: "http://localhost/api/v1/todos/abc123",
+        url: "/todos/abc123",
+        baseURL: "http://localhost/api/v1",
       }),
     );
   });
@@ -93,10 +97,52 @@ describe("ApiClient URL Construction", () => {
 
     expect(client.axiosInstance.request).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: "http://localhost/api/todos/abc123",
+        url: "/todos/abc123",
+        baseURL: "http://localhost/api",
       }),
     );
-    expect(client.axiosInstance.defaults.baseURL).toBeUndefined();
+    expect(client.axiosInstance.defaults.baseURL).toBe("http://localhost/api");
+  });
+
+  test("shared axios instance is not mutated by multiple clients", async () => {
+    const sharedInstance = axios.create({ baseURL: "http://localhost/api" });
+
+    const clientA = new TodoClient({ axiosInstance: sharedInstance });
+    const clientB = new TodoClient({ axiosInstance: sharedInstance });
+
+    expect(sharedInstance.defaults.baseURL).toBe("http://localhost/api");
+    expect(clientA.baseUrl).toBe("http://localhost/api");
+    expect(clientB.baseUrl).toBe("http://localhost/api");
+
+    vi.spyOn(clientA.axiosInstance, "request").mockResolvedValue({
+      status: 200,
+      headers: { "content-type": "application/json" },
+      data: { id: "test", title: "Test", completed: false },
+    });
+
+    const command = createCommand("abc123");
+    await expect(clientA.send(command)).rejects.toThrow();
+
+    expect(clientA.axiosInstance.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "/todos/abc123",
+        baseURL: "http://localhost/api",
+      }),
+    );
+  });
+
+  test("relative base path works without host", async () => {
+    const client = createClientWithBaseUrl("/api");
+    const command = createCommand("abc123");
+
+    await expect(client.send(command)).rejects.toThrow();
+
+    expect(client.axiosInstance.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "/todos/abc123",
+        baseURL: "/api",
+      }),
+    );
   });
 
   test("path parameters with special characters are percent-encoded", async () => {
@@ -107,7 +153,8 @@ describe("ApiClient URL Construction", () => {
 
     expect(client.axiosInstance.request).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: "http://localhost:3000/todos/hello%20world",
+        url: "/todos/hello%20world",
+        baseURL: "http://localhost:3000",
       }),
     );
   });
@@ -165,8 +212,12 @@ describe("ApiClient Query String Construction", () => {
 
     const calledUrl = vi.mocked(client.axiosInstance.request).mock.calls[0][0]
       .url as string;
-    expect(calledUrl).toMatch(/^http:\/\/localhost\/api\/todos\?/);
+    expect(calledUrl).toMatch(/^\/todos\?/);
     expect(calledUrl).toContain("status=DONE");
+
+    const calledBaseURL = vi.mocked(client.axiosInstance.request).mock
+      .calls[0][0].baseURL as string;
+    expect(calledBaseURL).toBe("http://localhost/api");
   });
 
   test("no query produces URL without question mark", async () => {
@@ -178,7 +229,7 @@ describe("ApiClient Query String Construction", () => {
 
     const calledUrl = vi.mocked(client.axiosInstance.request).mock.calls[0][0]
       .url as string;
-    expect(calledUrl).toBe("http://localhost:3000/todos/abc");
+    expect(calledUrl).toBe("/todos/abc");
     expect(calledUrl).not.toContain("?");
   });
 });
