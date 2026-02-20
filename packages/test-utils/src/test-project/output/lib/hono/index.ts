@@ -6,5 +6,6 @@
  */
 
 export * from "./TypeweaverHono";
+export * from "./TypeweaverServer";
 export * from "./HonoRequestHandler";
 export * from "./HonoAdapter";

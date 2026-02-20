@@ -39,6 +39,7 @@
     "plugin",
     "hono",
     "router",
+    "server",
     "api",
     "http"
   ],
@@ -54,13 +55,21 @@
   },
   "homepage": "https://github.com/rexeus/typeweaver#readme",
   "peerDependencies": {
+    "@hono/node-server": "^1.13.0",
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
     "hono": "^4.11.0"
   },
+  "peerDependenciesMeta": {
+    "@hono/node-server": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@hono/node-server": "^1.19.7",
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
+    "get-port": "^7.1.0",
     "hono": "^4.11.3",
     "test-utils": "file:../test-utils"
   },
