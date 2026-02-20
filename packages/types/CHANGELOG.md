@@ -1,5 +1,15 @@
 # @rexeus/typeweaver-types
 
+## 0.4.2
+
+### Patch Changes
+
+- 645a4bb: Fix baseUrls in clients
+- Updated dependencies [645a4bb]
+  - @rexeus/typeweaver-zod-to-ts@0.4.2
+  - @rexeus/typeweaver-core@0.4.2
+  - @rexeus/typeweaver-gen@0.4.2
+
 ## 0.4.1
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @rexeus/typeweaver-core
 
+## 0.4.2
+
+### Patch Changes
+
+- 645a4bb: Fix baseUrls in clients
+
 ## 0.4.1
 
 ## 0.4.0
