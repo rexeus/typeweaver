@@ -33,6 +33,9 @@ import type { TypeweaverRouter } from "./TypeweaverRouter";
  * Internally, the entire pipeline operates on `IHttpRequest`/`IHttpResponse`.
  * Conversion from/to Fetch API `Request`/`Response` happens **only** at the boundary.
  *
+ * Middleware is return-based: each middleware returns an `IHttpResponse`
+ * instead of mutating shared state.
+ *
  * @example
  * ```typescript
  * const app = new TypeweaverApp();
@@ -40,17 +43,16 @@ import type { TypeweaverRouter } from "./TypeweaverRouter";
  * // Global middleware
  * app.use(async (ctx, next) => {
  *   console.log(`${ctx.request.method} ${ctx.request.path}`);
- *   await next();
+ *   return next();
  * });
  *
- * // Path-scoped middleware
+ * // Path-scoped middleware (short-circuit)
  * app.use("/todos/*", async (ctx, next) => {
  *   const token = ctx.request.header?.["authorization"];
  *   if (!token) {
- *     ctx.response = { statusCode: 401, body: { message: "Unauthorized" } };
- *     return;
+ *     return { statusCode: 401, body: { message: "Unauthorized" } };
  *   }
- *   await next();
+ *   return next();
  * });
  *
  * // Mount generated routers
@@ -141,9 +143,10 @@ export class TypeweaverApp {
     // --- INTERNAL: Everything is IHttpRequest/IHttpResponse ---
     const ctx: ServerContext = {
       request: httpRequest,
-      response: undefined,
       state: new Map(),
     };
+
+    let response: IHttpResponse;
 
     try {
       // Collect matching middleware
@@ -152,25 +155,17 @@ export class TypeweaverApp {
         .map(m => m.handler);
 
       // Execute middleware pipeline → handler
-      await executeMiddlewarePipeline(
+      response = await executeMiddlewarePipeline(
         matchingMiddleware,
         ctx,
         () => this.executeHandler(ctx, match.route)
       );
     } catch (error) {
-      ctx.response = await this.handleError(error, ctx, match.route);
+      response = await this.handleError(error, ctx, match.route);
     }
 
     // --- BOUNDARY OUT: IHttpResponse → Fetch API Response ---
-    return this.adapter.toResponse(
-      ctx.response ?? {
-        statusCode: 500,
-        body: {
-          code: "INTERNAL_SERVER_ERROR",
-          message: "An unexpected error occurred.",
-        },
-      }
-    );
+    return this.adapter.toResponse(response);
   };
 
   /**
@@ -179,17 +174,14 @@ export class TypeweaverApp {
   private async executeHandler(
     ctx: ServerContext,
     route: RouteDefinition
-  ): Promise<void> {
-    // If middleware already set a response, skip the handler
-    if (ctx.response) return;
-
+  ): Promise<IHttpResponse> {
     // Validate request if enabled
     const validatedRequest = route.routerConfig.validateRequests
       ? route.validator.validate(ctx.request)
       : ctx.request;
 
-    // Call handler — returns IHttpResponse directly, no mapping needed
-    ctx.response = await route.handler(validatedRequest, ctx);
+    // Call handler — returns IHttpResponse directly
+    return route.handler(validatedRequest, ctx);
   }
 
   /**
