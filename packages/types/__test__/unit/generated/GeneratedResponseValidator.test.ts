@@ -244,6 +244,25 @@ describe("Generated ResponseValidator", () => {
       expect(result.data.header.Allow).toEqual(["GET", "POST", "OPTIONS"]);
     });
 
+    test("should preserve falsy string '0' in comma-split header values", () => {
+      // Arrange
+      const validator = new OptionsTodoResponseValidator();
+      const response = createOptionsTodoSuccessResponse();
+      (response as any).header = {
+        Allow: "0, 1, 2",
+      };
+
+      // Act
+      const result = validator.safeValidate(response);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data).toBeInstanceOf(OptionsTodoSuccessResponse);
+      assert(result.data instanceof OptionsTodoSuccessResponse);
+      expect(result.data.header.Allow).toEqual(["0", "1", "2"]);
+    });
+
     test("should not split comma in non-array response header field", () => {
       // Arrange
       const validator = new OptionsTodoResponseValidator();

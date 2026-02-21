@@ -246,7 +246,7 @@ export abstract class Validator {
         result[key] = value
           .split(",")
           .map((v) => v.trim())
-          .filter(Boolean);
+          .filter((v) => v !== "");
       } else {
         result[key] = value;
       }

@@ -828,6 +828,28 @@ describe("ApiClient Request Timeout", () => {
   });
 });
 
+describe("ApiClient Serialization Error Isolation", () => {
+  test("circular reference body throws TypeError, not network error", async () => {
+    const mockFetch = createMockFetch(200, {});
+    const client = new TodoClient({
+      fetchFn: mockFetch,
+      baseUrl: "http://localhost:3000",
+      unknownResponseHandling: "passthrough",
+      isSuccessStatusCode: () => true,
+    });
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    const requestData = createCreateTodoRequest();
+    // Override body after factory construction to avoid deepmerge hitting circular ref
+    (requestData as { body: unknown }).body = circular;
+    const command = new CreateTodoRequestCommand(requestData);
+
+    await expect(client.send(command)).rejects.toSatisfy((error: Error) => {
+      return error instanceof TypeError && !error.message.startsWith("Network error:");
+    });
+  });
+});
+
 describe("ApiClient Body Read Error Isolation", () => {
   test("body-read error is not misclassified as network error", async () => {
     const mockResponse = new Response("body", { status: 200 });

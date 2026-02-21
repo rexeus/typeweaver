@@ -243,7 +243,10 @@ export abstract class Validator {
       const schemaInfo = schemaMap.get(key.toLowerCase());
 
       if (schemaInfo?.isArray && typeof value === "string") {
-        result[key] = value.split(",").map((v) => v.trim()).filter(Boolean);
+        result[key] = value
+          .split(",")
+          .map(v => v.trim())
+          .filter(v => v !== "");
       } else {
         result[key] = value;
       }

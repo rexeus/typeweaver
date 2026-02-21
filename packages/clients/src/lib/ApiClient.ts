@@ -52,7 +52,7 @@ export abstract class ApiClient {
   private readonly timeoutMs: number | undefined;
 
   protected constructor(props: ApiClientProps) {
-    this.fetchFn = props.fetchFn ?? globalThis.fetch;
+    this.fetchFn = props.fetchFn ?? globalThis.fetch.bind(globalThis);
     this.baseUrl = props.baseUrl;
 
     if (!this.baseUrl) {
@@ -86,6 +86,7 @@ export abstract class ApiClient {
     const pathWithParam = this.createPath(path, param);
     const relativeUrl = this.createUrl(pathWithParam, query);
     const fullUrl = this.buildFullUrl(relativeUrl);
+    const serializedBody = body !== undefined ? JSON.stringify(body) : undefined;
 
     let timedOut = false;
     const controller =
@@ -102,7 +103,7 @@ export abstract class ApiClient {
       response = await this.fetchFn(fullUrl, {
         method,
         headers: header as Record<string, string>,
-        body: body !== undefined ? JSON.stringify(body) : undefined,
+        body: serializedBody,
         signal: controller?.signal,
       });
     } catch (error) {
