@@ -86,7 +86,7 @@ export abstract class ApiClient {
     const pathWithParam = this.createPath(path, param);
     const relativeUrl = this.createUrl(pathWithParam, query);
     const fullUrl = this.buildFullUrl(relativeUrl);
-    const serializedBody = body !== undefined ? JSON.stringify(body) : undefined;
+    const serializedBody = this.serializeBody(body);
 
     let timedOut = false;
     const controller =
@@ -102,7 +102,7 @@ export abstract class ApiClient {
     try {
       response = await this.fetchFn(fullUrl, {
         method,
-        headers: header as Record<string, string>,
+        headers: this.flattenHeaders(header),
         body: serializedBody,
         signal: controller?.signal,
       });
@@ -141,7 +141,7 @@ export abstract class ApiClient {
     }
 
     const contentType = response.headers.get("content-type");
-    if (contentType?.includes("application/json")) {
+    if (this.isJsonContentType(contentType)) {
       try {
         return JSON.parse(text);
       } catch (parseError) {
@@ -197,6 +197,31 @@ export abstract class ApiClient {
     return new Error(
       `Network error: ${error instanceof Error ? error.message : String(error)} ${context}`,
       { cause: error instanceof Error ? error : undefined },
+    );
+  }
+
+  private flattenHeaders(
+    header: IHttpHeader,
+  ): Record<string, string> | undefined {
+    if (!header) return undefined;
+
+    const flattened: Record<string, string> = {};
+    for (const [key, value] of Object.entries(header)) {
+      flattened[key] = Array.isArray(value) ? value.join(", ") : value;
+    }
+    return flattened;
+  }
+
+  private serializeBody(body: unknown): string | undefined {
+    if (body === undefined) return undefined;
+    if (typeof body === "string") return body;
+    return JSON.stringify(body);
+  }
+
+  private isJsonContentType(contentType: string | null): boolean {
+    if (!contentType) return false;
+    return (
+      contentType.includes("application/json") || contentType.includes("+json")
     );
   }
 

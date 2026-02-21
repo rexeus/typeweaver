@@ -590,6 +590,62 @@ describe("ApiClient Response Body Parsing", () => {
 
     expect(result.body).toEqual({ a: 1 });
   });
+
+  test("application/problem+json is parsed as JSON", async () => {
+    const mockFetch = createRawMockFetch(400, '{"type":"about:blank","title":"Bad Request"}', {
+      "content-type": "application/problem+json",
+    });
+    const client = createPassthroughClient(mockFetch);
+    const command = new GetTodoRequestCommand(
+      createGetTodoRequest({ param: { todoId: "abc" } }),
+    );
+
+    const result = await client.send(command);
+
+    expect(result.body).toEqual({ type: "about:blank", title: "Bad Request" });
+  });
+
+  test("application/vnd.api+json is parsed as JSON", async () => {
+    const mockFetch = createRawMockFetch(200, '{"data":{"id":"1"}}', {
+      "content-type": "application/vnd.api+json",
+    });
+    const client = createPassthroughClient(mockFetch);
+    const command = new GetTodoRequestCommand(
+      createGetTodoRequest({ param: { todoId: "abc" } }),
+    );
+
+    const result = await client.send(command);
+
+    expect(result.body).toEqual({ data: { id: "1" } });
+  });
+
+  test("application/problem+json with charset is parsed as JSON", async () => {
+    const mockFetch = createRawMockFetch(400, '{"type":"about:blank"}', {
+      "content-type": "application/problem+json; charset=utf-8",
+    });
+    const client = createPassthroughClient(mockFetch);
+    const command = new GetTodoRequestCommand(
+      createGetTodoRequest({ param: { todoId: "abc" } }),
+    );
+
+    const result = await client.send(command);
+
+    expect(result.body).toEqual({ type: "about:blank" });
+  });
+
+  test("invalid JSON with +json content type throws parse error", async () => {
+    const mockFetch = createRawMockFetch(400, "not{json", {
+      "content-type": "application/problem+json",
+    });
+    const client = createPassthroughClient(mockFetch);
+    const command = new GetTodoRequestCommand(
+      createGetTodoRequest({ param: { todoId: "abc" } }),
+    );
+
+    await expect(client.send(command)).rejects.toThrow(
+      "Failed to parse JSON response (status 400)",
+    );
+  });
 });
 
 describe("ApiClient Response Header Handling", () => {
@@ -672,6 +728,26 @@ describe("ApiClient Request Options Passthrough", () => {
     expect(callArgs.body).toBe(JSON.stringify(requestData.body));
   });
 
+  test("string body is sent as-is without extra quotes", async () => {
+    const mockFetch = createRawMockFetch(200, "ok", {
+      "content-type": "text/plain",
+    });
+    const client = new TodoClient({
+      fetchFn: mockFetch,
+      baseUrl: "http://localhost:3000",
+      unknownResponseHandling: "passthrough",
+      isSuccessStatusCode: () => true,
+    });
+    const requestData = createCreateTodoRequest({ body: {} });
+    (requestData as { body: unknown }).body = "hello";
+    const command = new CreateTodoRequestCommand(requestData);
+
+    await client.send(command);
+
+    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    expect(callArgs.body).toBe("hello");
+  });
+
   test("GET has undefined body", async () => {
     const mockFetch = createRawMockFetch(200, '{}', {
       "content-type": "application/json",
@@ -692,7 +768,7 @@ describe("ApiClient Request Options Passthrough", () => {
     expect(callArgs.body).toBeUndefined();
   });
 
-  test("headers are passed unchanged", async () => {
+  test("string headers are passed unchanged", async () => {
     const mockFetch = createRawMockFetch(200, '{}', {
       "content-type": "application/json",
     });
@@ -872,5 +948,72 @@ describe("ApiClient Body Read Error Isolation", () => {
     await expect(client.send(command)).rejects.toSatisfy((error: Error) => {
       return !error.message.startsWith("Network error:");
     });
+  });
+});
+
+describe("ApiClient Request Header Flattening", () => {
+  test("array header values are joined with comma separator", async () => {
+    const mockFetch = createRawMockFetch(200, '{}', {
+      "content-type": "application/json",
+    });
+    const client = new TodoClient({
+      fetchFn: mockFetch,
+      baseUrl: "http://localhost:3000",
+      unknownResponseHandling: "passthrough",
+      isSuccessStatusCode: () => true,
+    });
+    const requestData = createGetTodoRequest({ param: { todoId: "abc" } });
+    (requestData as { header: Record<string, string | string[]> }).header = {
+      Accept: "application/json",
+      "X-Multi-Value": ["first", "second"],
+    };
+    const command = new GetTodoRequestCommand(requestData);
+
+    await client.send(command);
+
+    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const headers = callArgs.headers as Record<string, string>;
+    expect(headers["X-Multi-Value"]).toBe("first, second");
+    expect(headers["Accept"]).toBe("application/json");
+  });
+
+  test("single string headers pass through unchanged", async () => {
+    const mockFetch = createRawMockFetch(200, '{}', {
+      "content-type": "application/json",
+    });
+    const client = new TodoClient({
+      fetchFn: mockFetch,
+      baseUrl: "http://localhost:3000",
+      unknownResponseHandling: "passthrough",
+      isSuccessStatusCode: () => true,
+    });
+    const requestData = createGetTodoRequest({ param: { todoId: "abc" } });
+    const command = new GetTodoRequestCommand(requestData);
+
+    await client.send(command);
+
+    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const headers = callArgs.headers as Record<string, string>;
+    expect(headers["Accept"]).toBe("application/json");
+  });
+
+  test("undefined header is passed as undefined", async () => {
+    const mockFetch = createRawMockFetch(200, '{}', {
+      "content-type": "application/json",
+    });
+    const client = new TodoClient({
+      fetchFn: mockFetch,
+      baseUrl: "http://localhost:3000",
+      unknownResponseHandling: "passthrough",
+      isSuccessStatusCode: () => true,
+    });
+    const requestData = createGetTodoRequest({ param: { todoId: "abc" } });
+    (requestData as { header: undefined }).header = undefined;
+    const command = new GetTodoRequestCommand(requestData);
+
+    await client.send(command);
+
+    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    expect(callArgs.headers).toBeUndefined();
   });
 });
