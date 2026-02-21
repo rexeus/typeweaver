@@ -4,7 +4,7 @@ import {
   createListTodosRequest,
   createTestHono,
 } from "test-utils";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { Hono } from "hono";
 import { TypeweaverServer } from "../../src/lib/TypeweaverServer";
 import type { IHttpRequest } from "@rexeus/typeweaver-core";
@@ -63,7 +63,7 @@ describe("TypeweaverServer", () => {
     test("should respond with default health check on /health", async () => {
       const server = new TypeweaverServer();
 
-      const response = await server.app.request("http://localhost/health");
+      const response = await server.app.request("/health");
 
       expect(response.status).toBe(200);
       const data = await response.json();
@@ -81,7 +81,7 @@ describe("TypeweaverServer", () => {
         },
       });
 
-      const response = await server.app.request("http://localhost/health");
+      const response = await server.app.request("/health");
 
       expect(response.status).toBe(200);
       const data = await response.json();
@@ -102,7 +102,7 @@ describe("TypeweaverServer", () => {
         },
       });
 
-      const response = await server.app.request("http://localhost/health");
+      const response = await server.app.request("/health");
 
       expect(response.status).toBe(200);
       const data = await response.json();
@@ -116,14 +116,10 @@ describe("TypeweaverServer", () => {
         },
       });
 
-      const defaultResponse = await server.app.request(
-        "http://localhost/health"
-      );
+      const defaultResponse = await server.app.request("/health");
       expect(defaultResponse.status).toBe(404);
 
-      const customResponse = await server.app.request(
-        "http://localhost/healthz"
-      );
+      const customResponse = await server.app.request("/healthz");
       expect(customResponse.status).toBe(200);
       const data = await customResponse.json();
       expect(data).toEqual({ status: "ok" });
@@ -138,7 +134,7 @@ describe("TypeweaverServer", () => {
         },
       });
 
-      const response = await server.app.request("http://localhost/health");
+      const response = await server.app.request("/health");
 
       expect(response.status).toBe(503);
       const data = (await response.json()) as any;
@@ -155,7 +151,7 @@ describe("TypeweaverServer", () => {
         },
       });
 
-      const response = await server.app.request("http://localhost/health");
+      const response = await server.app.request("/health");
 
       expect(response.status).toBe(503);
       const data = (await response.json()) as any;
@@ -168,7 +164,7 @@ describe("TypeweaverServer", () => {
         healthCheck: false,
       });
 
-      const response = await server.app.request("http://localhost/health");
+      const response = await server.app.request("/health");
 
       expect(response.status).toBe(404);
     });
@@ -178,11 +174,118 @@ describe("TypeweaverServer", () => {
         healthCheck: true,
       });
 
-      const response = await server.app.request("http://localhost/health");
+      const response = await server.app.request("/health");
 
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data).toEqual({ status: "ok" });
+    });
+  });
+
+  describe("Middleware (use())", () => {
+    test("should register global middleware", async () => {
+      const server = new TypeweaverServer({
+        healthCheck: false,
+        requestId: false,
+      });
+
+      server.use(async (c, next) => {
+        c.header("X-Custom", "middleware-applied");
+        await next();
+      });
+
+      const router = new Hono();
+      router.get("/test", c => c.json({ ok: true }));
+      server.route("/", router);
+
+      const response = await server.app.request("/test");
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("X-Custom")).toBe("middleware-applied");
+    });
+
+    test("should register path-scoped middleware", async () => {
+      const server = new TypeweaverServer({
+        healthCheck: false,
+        requestId: false,
+      });
+
+      server.use("/admin/*", async (c, next) => {
+        c.header("X-Admin", "true");
+        await next();
+      });
+
+      const router = new Hono();
+      router.get("/admin/dashboard", c => c.json({ admin: true }));
+      router.get("/public", c => c.json({ public: true }));
+      server.route("/", router);
+
+      const adminResponse = await server.app.request("/admin/dashboard");
+      expect(adminResponse.status).toBe(200);
+      expect(adminResponse.headers.get("X-Admin")).toBe("true");
+
+      const publicResponse = await server.app.request("/public");
+      expect(publicResponse.status).toBe(200);
+      expect(publicResponse.headers.get("X-Admin")).toBeNull();
+    });
+
+    test("should execute middleware in registration order", async () => {
+      const order: string[] = [];
+      const server = new TypeweaverServer({
+        healthCheck: false,
+        requestId: false,
+      });
+
+      server.use(async (_c, next) => {
+        order.push("first");
+        await next();
+      });
+      server.use(async (_c, next) => {
+        order.push("second");
+        await next();
+      });
+
+      const router = new Hono();
+      router.get("/test", c => c.json({ ok: true }));
+      server.route("/", router);
+
+      await server.app.request("/test");
+
+      expect(order).toEqual(["first", "second"]);
+    });
+
+    test("should support chaining use() calls", () => {
+      const server = new TypeweaverServer({
+        healthCheck: false,
+        requestId: false,
+      });
+
+      const result = server
+        .use(async (_c, next) => next())
+        .use(async (_c, next) => next());
+
+      expect(result).toBe(server);
+    });
+
+    test("should support chaining use() with route()", async () => {
+      const server = new TypeweaverServer({
+        healthCheck: false,
+        requestId: false,
+      });
+
+      const router = new Hono();
+      router.get("/test", c => c.json({ ok: true }));
+
+      server
+        .use(async (c, next) => {
+          c.header("X-Chained", "yes");
+          await next();
+        })
+        .route("/", router);
+
+      const response = await server.app.request("/test");
+      expect(response.status).toBe(200);
+      expect(response.headers.get("X-Chained")).toBe("yes");
     });
   });
 
@@ -194,13 +297,12 @@ describe("TypeweaverServer", () => {
       simpleRouter.get("/test", c => c.json({ ok: true }));
       server.route("/", simpleRouter);
 
-      const response = await server.app.request("http://localhost/test");
+      const response = await server.app.request("/test");
 
       expect(response.status).toBe(200);
       const requestId = response.headers.get("X-Request-Id");
       expect(requestId).toBeDefined();
       expect(requestId).toBeTruthy();
-      // UUID format: 8-4-4-4-12
       expect(requestId).toMatch(
         /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/
       );
@@ -214,10 +316,8 @@ describe("TypeweaverServer", () => {
       server.route("/", simpleRouter);
 
       const existingId = "custom-request-id-123";
-      const response = await server.app.request("http://localhost/test", {
-        headers: {
-          "X-Request-Id": existingId,
-        },
+      const response = await server.app.request("/test", {
+        headers: { "X-Request-Id": existingId },
       });
 
       expect(response.status).toBe(200);
@@ -233,7 +333,7 @@ describe("TypeweaverServer", () => {
       simpleRouter.get("/test", c => c.json({ ok: true }));
       server.route("/", simpleRouter);
 
-      const response = await server.app.request("http://localhost/test");
+      const response = await server.app.request("/test");
 
       expect(response.status).toBe(200);
       expect(response.headers.get("X-Request-Id")).toBeNull();
@@ -246,8 +346,8 @@ describe("TypeweaverServer", () => {
       simpleRouter.get("/test", c => c.json({ ok: true }));
       server.route("/", simpleRouter);
 
-      const response1 = await server.app.request("http://localhost/test");
-      const response2 = await server.app.request("http://localhost/test");
+      const response1 = await server.app.request("/test");
+      const response2 = await server.app.request("/test");
 
       const id1 = response1.headers.get("X-Request-Id");
       const id2 = response2.headers.get("X-Request-Id");
@@ -266,7 +366,7 @@ describe("TypeweaverServer", () => {
       router.get("/items", c => c.json({ items: ["a", "b"] }));
       server.route("/", router);
 
-      const response = await server.app.request("http://localhost/items");
+      const response = await server.app.request("/items");
 
       expect(response.status).toBe(200);
       const data = await response.json();
@@ -284,20 +384,16 @@ describe("TypeweaverServer", () => {
       server.route("/", router1);
       server.route("/", router2);
 
-      const usersResponse = await server.app.request(
-        "http://localhost/users"
-      );
+      const usersResponse = await server.app.request("/users");
       expect(usersResponse.status).toBe(200);
       expect(await usersResponse.json()).toEqual({ users: [] });
 
-      const postsResponse = await server.app.request(
-        "http://localhost/posts"
-      );
+      const postsResponse = await server.app.request("/posts");
       expect(postsResponse.status).toBe(200);
       expect(await postsResponse.json()).toEqual({ posts: [] });
     });
 
-    test("should support chaining route() calls", async () => {
+    test("should support chaining route() calls", () => {
       const server = new TypeweaverServer();
 
       const router1 = new Hono();
@@ -321,7 +417,7 @@ describe("TypeweaverServer", () => {
 
       const requestData = createListTodosRequest();
       const response = await server.app.request(
-        "http://localhost/todos?status=TODO",
+        "/todos?status=TODO",
         prepareRequestData(requestData)
       );
 
@@ -331,8 +427,8 @@ describe("TypeweaverServer", () => {
     });
   });
 
-  describe("Base Path", () => {
-    test("should apply base path prefix via fetch handler", async () => {
+  describe("Base Path (native Hono basePath)", () => {
+    test("should apply basePath consistently via app.request()", async () => {
       const server = new TypeweaverServer({
         basePath: "/api/v1",
         healthCheck: false,
@@ -343,9 +439,41 @@ describe("TypeweaverServer", () => {
       router.get("/items", c => c.json({ items: [] }));
       server.route("/", router);
 
-      // Access through the fetch handler (which applies basePath)
-      const fetchHandler = server.fetch;
-      const response = await fetchHandler(
+      // app.request() works with the full prefixed path
+      const response = await server.app.request("/api/v1/items");
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ items: [] });
+    });
+
+    test("should 404 without basePath prefix via app.request()", async () => {
+      const server = new TypeweaverServer({
+        basePath: "/api/v1",
+        healthCheck: false,
+        requestId: false,
+      });
+
+      const router = new Hono();
+      router.get("/items", c => c.json({ items: [] }));
+      server.route("/", router);
+
+      const response = await server.app.request("/items");
+
+      expect(response.status).toBe(404);
+    });
+
+    test("should apply basePath consistently via fetch handler", async () => {
+      const server = new TypeweaverServer({
+        basePath: "/api/v1",
+        healthCheck: false,
+        requestId: false,
+      });
+
+      const router = new Hono();
+      router.get("/items", c => c.json({ items: [] }));
+      server.route("/", router);
+
+      const response = await server.fetch(
         new Request("http://localhost/api/v1/items")
       );
 
@@ -353,7 +481,7 @@ describe("TypeweaverServer", () => {
       expect(await response.json()).toEqual({ items: [] });
     });
 
-    test("should not match routes without base path prefix via fetch handler", async () => {
+    test("should 404 without basePath prefix via fetch handler", async () => {
       const server = new TypeweaverServer({
         basePath: "/api/v1",
         healthCheck: false,
@@ -364,27 +492,65 @@ describe("TypeweaverServer", () => {
       router.get("/items", c => c.json({ items: [] }));
       server.route("/", router);
 
-      const fetchHandler = server.fetch;
-      const response = await fetchHandler(
+      const response = await server.fetch(
         new Request("http://localhost/items")
       );
 
       expect(response.status).toBe(404);
     });
 
-    test("should expose health check under base path via fetch handler", async () => {
+    test("should serve health check under basePath", async () => {
       const server = new TypeweaverServer({
         basePath: "/api/v1",
       });
 
-      const fetchHandler = server.fetch;
-      const response = await fetchHandler(
-        new Request("http://localhost/api/v1/health")
-      );
+      const response = await server.app.request("/api/v1/health");
 
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data).toEqual({ status: "ok" });
+    });
+
+    test("should apply middleware under basePath", async () => {
+      const server = new TypeweaverServer({
+        basePath: "/api/v1",
+        healthCheck: false,
+        requestId: false,
+      });
+
+      server.use(async (c, next) => {
+        c.header("X-Prefixed", "yes");
+        await next();
+      });
+
+      const router = new Hono();
+      router.get("/test", c => c.json({ ok: true }));
+      server.route("/", router);
+
+      const response = await server.app.request("/api/v1/test");
+      expect(response.status).toBe(200);
+      expect(response.headers.get("X-Prefixed")).toBe("yes");
+    });
+
+    test("should work with generated TypeweaverHono routers under basePath", async () => {
+      const server = new TypeweaverServer({
+        basePath: "/api/v1",
+        healthCheck: false,
+        requestId: false,
+      });
+
+      const testHono = createTestHono();
+      server.route("/", testHono);
+
+      const requestData = createListTodosRequest();
+      const response = await server.app.request(
+        "/api/v1/todos?status=TODO",
+        prepareRequestData(requestData)
+      );
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data).toBeDefined();
     });
   });
 
@@ -407,6 +573,15 @@ describe("TypeweaverServer", () => {
       );
       expect(response.status).toBe(200);
       expect(await response.text()).toBe("pong");
+    });
+
+    test("should return the same handler reference on repeated access", () => {
+      const server = new TypeweaverServer();
+
+      const fetch1 = server.fetch;
+      const fetch2 = server.fetch;
+
+      expect(fetch1).toBe(fetch2);
     });
   });
 
@@ -460,7 +635,9 @@ describe("TypeweaverServer", () => {
 
       await server.start();
 
-      await expect(server.start()).rejects.toThrow("Server is already running.");
+      await expect(server.start()).rejects.toThrow(
+        "Server is already running."
+      );
     });
 
     test("should handle stop() on a non-running server gracefully", async () => {
@@ -493,7 +670,7 @@ describe("TypeweaverServer", () => {
       expect(await response.text()).toBe("pong");
     });
 
-    test("should serve health check endpoint on the configured port", async () => {
+    test("should serve health check via real HTTP", async () => {
       const getPort = (await import("get-port")).default;
       const port = await getPort();
 
@@ -510,7 +687,7 @@ describe("TypeweaverServer", () => {
       expect(data).toEqual({ status: "ok" });
     });
 
-    test("should serve generated TypeweaverHono routers on the configured port", async () => {
+    test("should serve generated TypeweaverHono routers via real HTTP", async () => {
       const getPort = (await import("get-port")).default;
       const port = await getPort();
 
@@ -535,7 +712,7 @@ describe("TypeweaverServer", () => {
       expect(data).toBeDefined();
     });
 
-    test("should serve with base path on the configured port", async () => {
+    test("should serve with basePath via real HTTP", async () => {
       const getPort = (await import("get-port")).default;
       const port = await getPort();
 
@@ -555,7 +732,6 @@ describe("TypeweaverServer", () => {
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual({ items: [] });
 
-      // Without prefix should 404
       const noPrefix = await fetch(`http://localhost:${port}/items`);
       expect(noPrefix.status).toBe(404);
     });
@@ -582,7 +758,7 @@ describe("TypeweaverServer", () => {
       expect(requestId).toBeTruthy();
     });
 
-    test("should call onStopping hook with async handler", async () => {
+    test("should call async onStopping hook during shutdown", async () => {
       const getPort = (await import("get-port")).default;
       const port = await getPort();
 
@@ -592,7 +768,6 @@ describe("TypeweaverServer", () => {
         gracefulShutdown: false,
         hooks: {
           onStopping: async () => {
-            // Simulate async cleanup
             await new Promise(resolve => setTimeout(resolve, 50));
             cleanupDone();
           },
@@ -603,6 +778,32 @@ describe("TypeweaverServer", () => {
       await server.stop();
 
       expect(cleanupDone).toHaveBeenCalledOnce();
+    });
+
+    test("should apply middleware via real HTTP", async () => {
+      const getPort = (await import("get-port")).default;
+      const port = await getPort();
+
+      server = new TypeweaverServer({
+        port,
+        gracefulShutdown: false,
+        requestId: false,
+      });
+
+      server.use(async (c, next) => {
+        c.header("X-Custom-Middleware", "active");
+        await next();
+      });
+
+      const router = new Hono();
+      router.get("/test", c => c.json({ ok: true }));
+      server.route("/", router);
+
+      await server.start();
+
+      const response = await fetch(`http://localhost:${port}/test`);
+      expect(response.status).toBe(200);
+      expect(response.headers.get("X-Custom-Middleware")).toBe("active");
     });
   });
 });

@@ -6,7 +6,7 @@
  */
 
 import { Hono } from "hono";
-import type { Env, Schema } from "hono/types";
+import type { MiddlewareHandler } from "hono/types";
 
 /**
  * Lifecycle hooks for the TypeweaverServer.
@@ -61,7 +61,9 @@ export type TypeweaverServerOptions = {
 
   /**
    * Base path prefix for all routes.
-   * When set, all routers are mounted under this prefix.
+   * Applied via Hono's native `basePath()` so all routes (including health check,
+   * middleware, and mounted routers) are served under this prefix.
+   * Works consistently across `app.request()`, `fetch`, and `start()`.
    * @example "/api/v1"
    */
   basePath?: string;
@@ -77,6 +79,7 @@ export type TypeweaverServerOptions = {
 
   /**
    * Enable graceful shutdown on SIGTERM and SIGINT signals.
+   * Only effective in Node.js. Ignored in Deno/Bun.
    * @default true
    */
   gracefulShutdown?: boolean;
@@ -108,34 +111,40 @@ export type TypeweaverServerOptions = {
  * Composes multiple TypeweaverHono routers into a single Hono application
  * with production features:
  * - Health check endpoint
- * - Graceful shutdown (SIGTERM/SIGINT)
+ * - Custom middleware via `use()`
+ * - Graceful shutdown (SIGTERM/SIGINT) on Node.js
  * - Request ID generation
- * - Base path / prefix support
- * - Multi-runtime support (Node.js, Deno, Bun)
+ * - Base path / prefix support (via Hono native `basePath()`)
+ * - Multi-runtime: `start()` for Node.js, `fetch` for Deno/Bun
  *
- * @example
+ * @example Node.js
  * ```ts
- * const server = new TypeweaverServer({
- *   port: 3000,
- *   basePath: "/api/v1",
- * });
- *
+ * const server = new TypeweaverServer({ port: 3000, basePath: "/api/v1" });
  * server.route("/", new TodoHono({ requestHandlers: new TodoHandlers() }));
- * server.route("/", new AuthHono({ requestHandlers: new AuthHandlers() }));
- *
  * await server.start();
  * ```
+ *
+ * @example Deno
+ * ```ts
+ * const server = new TypeweaverServer({ basePath: "/api/v1" });
+ * server.route("/", new TodoHono({ requestHandlers: new TodoHandlers() }));
+ * Deno.serve({ port: 3000 }, server.fetch);
+ * ```
+ *
+ * @example Bun
+ * ```ts
+ * const server = new TypeweaverServer({ basePath: "/api/v1" });
+ * server.route("/", new TodoHono({ requestHandlers: new TodoHandlers() }));
+ * Bun.serve({ port: 3000, fetch: server.fetch });
+ * ```
  */
-export class TypeweaverServer<
-  HonoEnv extends Env = Env,
-  HonoSchema extends Schema = Schema,
-  HonoBasePath extends string = "/",
-> {
+export class TypeweaverServer {
   /**
    * The underlying Hono application instance.
-   * Use this to add custom middleware before calling `start()`.
+   * BasePath is already applied when configured - all routes, middleware, and
+   * `app.request()` calls work consistently with the prefix.
    */
-  public readonly app: Hono<HonoEnv, HonoSchema, HonoBasePath>;
+  public readonly app: Hono;
 
   private readonly options: Required<
     Pick<
@@ -149,7 +158,9 @@ export class TypeweaverServer<
   > &
     TypeweaverServerOptions;
 
-  private server: { close: (callback?: (err?: Error) => void) => unknown } | undefined;
+  private server:
+    | { close: (callback?: (err?: Error) => void) => unknown }
+    | undefined;
   private isShuttingDown = false;
   private signalHandlers: Array<{ signal: string; handler: () => void }> = [];
 
@@ -163,10 +174,49 @@ export class TypeweaverServer<
       ...options,
     };
 
-    this.app = new Hono() as Hono<HonoEnv, HonoSchema, HonoBasePath>;
+    // Apply basePath via Hono's native basePath() so all routes and middleware
+    // consistently include the prefix — in tests (app.request), fetch, and start().
+    const hono = new Hono();
+    this.app = (
+      this.options.basePath ? hono.basePath(this.options.basePath) : hono
+    ) as Hono<HonoEnv, HonoSchema, HonoBasePath>;
 
-    this.setupMiddleware();
+    this.setupBuiltInMiddleware();
     this.setupHealthCheck();
+  }
+
+  /**
+   * Register middleware on the server.
+   *
+   * Middleware is executed for all routes in the order it is registered.
+   * Call this before `route()` to ensure middleware runs before request handlers.
+   *
+   * @param path - Optional path pattern to scope the middleware (default: all routes)
+   * @param handlers - One or more Hono middleware handlers
+   * @returns this (for chaining)
+   *
+   * @example
+   * ```ts
+   * import { cors } from "hono/cors";
+   * import { logger } from "hono/logger";
+   *
+   * server
+   *   .use(logger())
+   *   .use("/admin/*", authMiddleware)
+   *   .use(cors({ origin: "https://example.com" }))
+   *   .route("/", todoRouter);
+   * ```
+   */
+  public use(
+    pathOrHandler: string | MiddlewareHandler,
+    ...handlers: MiddlewareHandler[]
+  ): this {
+    if (typeof pathOrHandler === "string") {
+      this.app.use(pathOrHandler, ...handlers);
+    } else {
+      this.app.use(pathOrHandler, ...handlers);
+    }
+    return this;
   }
 
   /**
@@ -186,8 +236,9 @@ export class TypeweaverServer<
 
   /**
    * Start the server using `@hono/node-server`.
+   * Requires `@hono/node-server` to be installed.
    *
-   * For Deno/Bun, use the `fetch` property directly:
+   * For Deno/Bun, use the `fetch` property instead:
    * - Deno: `Deno.serve({ port: 3000 }, server.fetch)`
    * - Bun: `Bun.serve({ port: 3000, fetch: server.fetch })`
    */
@@ -201,10 +252,8 @@ export class TypeweaverServer<
     // Dynamically import @hono/node-server to keep it optional
     const { serve } = await import("@hono/node-server");
 
-    const rootApp = this.buildRootApp();
-
     this.server = serve({
-      fetch: rootApp.fetch,
+      fetch: this.app.fetch,
       port,
       hostname,
     });
@@ -238,11 +287,13 @@ export class TypeweaverServer<
 
   /**
    * The Fetch API handler for the server.
-   * Use this with Deno.serve() or Bun.serve().
+   * Use this with Deno.serve() or Bun.serve() for multi-runtime support.
+   *
+   * BasePath is already applied — the returned handler expects the full path
+   * including the prefix.
    */
   public get fetch(): (request: Request) => Response | Promise<Response> {
-    const rootApp = this.buildRootApp();
-    return rootApp.fetch;
+    return this.app.fetch;
   }
 
   /**
@@ -252,19 +303,9 @@ export class TypeweaverServer<
     return this.server !== undefined && !this.isShuttingDown;
   }
 
-  private buildRootApp(): Hono {
-    if (this.options.basePath) {
-      const root = new Hono();
-      root.route(this.options.basePath, this.app as unknown as Hono);
-      return root;
-    }
-
-    return this.app as unknown as Hono;
-  }
-
-  private setupMiddleware(): void {
+  private setupBuiltInMiddleware(): void {
     if (this.options.requestId) {
-      this.app.use("*", async (c, next) => {
+      this.app.use(async (c, next) => {
         const existingId = c.req.header("x-request-id");
         const requestId = existingId ?? crypto.randomUUID();
 
@@ -300,6 +341,11 @@ export class TypeweaverServer<
   }
 
   private registerSignalHandlers(): void {
+    // Guard for non-Node.js runtimes where process may not exist
+    if (typeof process === "undefined" || !process.on) {
+      return;
+    }
+
     const shutdown = () => {
       void this.stop();
     };
@@ -312,6 +358,10 @@ export class TypeweaverServer<
   }
 
   private removeSignalHandlers(): void {
+    if (typeof process === "undefined" || !process.removeListener) {
+      return;
+    }
+
     for (const { signal, handler } of this.signalHandlers) {
       process.removeListener(signal, handler);
     }
@@ -328,7 +378,6 @@ export class TypeweaverServer<
 
       this.server!.close((err?: Error) => {
         clearTimeout(timeout);
-        // Resolve even on error - we're shutting down regardless
         resolve();
       });
     });
