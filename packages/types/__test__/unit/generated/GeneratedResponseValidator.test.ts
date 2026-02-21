@@ -4,11 +4,14 @@ import {
   captureError,
   createCreateTodoSuccessResponse,
   createInternalServerErrorResponse,
+  createOptionsTodoSuccessResponse,
   CreateTodoResponseValidator,
   CreateTodoSuccessResponse,
   createUnauthorizedErrorResponse,
   createValidationErrorResponse,
   InternalServerErrorResponse,
+  OptionsTodoResponseValidator,
+  OptionsTodoSuccessResponse,
   UnauthorizedErrorResponse,
   ValidationErrorResponse,
 } from "test-utils";
@@ -219,6 +222,85 @@ describe("Generated ResponseValidator", () => {
       expect(result.data.header["X-Multi-Value"]).toEqual(["my-value"]);
       expect(result.data.header).not.toHaveProperty("CONTENT-TYPE");
       expect(result.data.header).not.toHaveProperty("x-multi-value");
+    });
+
+    test("should split comma-separated response header string into array when schema expects array", () => {
+      // Arrange
+      const validator = new OptionsTodoResponseValidator();
+      const response = createOptionsTodoSuccessResponse();
+      // Simulate what Headers.forEach delivers: comma-joined string
+      (response as any).header = {
+        Allow: "GET, POST, OPTIONS",
+      };
+
+      // Act
+      const result = validator.safeValidate(response);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data).toBeInstanceOf(OptionsTodoSuccessResponse);
+      assert(result.data instanceof OptionsTodoSuccessResponse);
+      expect(result.data.header.Allow).toEqual(["GET", "POST", "OPTIONS"]);
+    });
+
+    test("should not split comma in non-array response header field", () => {
+      // Arrange
+      const validator = new OptionsTodoResponseValidator();
+      const response = createOptionsTodoSuccessResponse();
+      (response as any).header = {
+        ...response.header,
+        "Access-Control-Allow-Origin": "https://foo.com, https://bar.com",
+      };
+
+      // Act
+      const result = validator.safeValidate(response);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data).toBeInstanceOf(OptionsTodoSuccessResponse);
+      assert(result.data instanceof OptionsTodoSuccessResponse);
+      expect(result.data.header["Access-Control-Allow-Origin"]).toBe(
+        "https://foo.com, https://bar.com"
+      );
+    });
+
+    test("should split comma-separated response header without spaces", () => {
+      // Arrange
+      const validator = new OptionsTodoResponseValidator();
+      const response = createOptionsTodoSuccessResponse();
+      (response as any).header = {
+        Allow: "GET,POST,OPTIONS",
+      };
+
+      // Act
+      const result = validator.safeValidate(response);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data).toBeInstanceOf(OptionsTodoSuccessResponse);
+      assert(result.data instanceof OptionsTodoSuccessResponse);
+      expect(result.data.header.Allow).toEqual(["GET", "POST", "OPTIONS"]);
+    });
+
+    test("should not re-split response header value that is already an array", () => {
+      // Arrange
+      const validator = new OptionsTodoResponseValidator();
+      const response = createOptionsTodoSuccessResponse();
+
+      // Act — factory already produces arrays, validate they pass through unchanged
+      const result = validator.safeValidate(response);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data).toBeInstanceOf(OptionsTodoSuccessResponse);
+      assert(result.data instanceof OptionsTodoSuccessResponse);
+      expect(result.data.header.Allow).toEqual([
+        "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
+      ]);
     });
 
     test("should coerce single response header value to array when schema expects array", () => {

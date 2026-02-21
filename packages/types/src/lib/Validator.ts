@@ -219,7 +219,37 @@ export abstract class Validator {
    * @returns Coerced header object
    */
   protected coerceHeaderToSchema(header: unknown, shape: $ZodShape): unknown {
-    return this.coerceToSchema(header ?? {}, shape, false); // case-insensitive
+    if (typeof header !== "object" || header === null) {
+      return this.coerceToSchema(header ?? {}, shape, false);
+    }
+
+    const preprocessed = this.splitCommaDelimitedValues(header, shape);
+    return this.coerceToSchema(preprocessed, shape, false);
+  }
+
+  /**
+   * Splits comma-separated header strings into arrays per RFC 7230.
+   * Only applies to fields where the schema expects an array type.
+   * Values that are already arrays pass through unchanged.
+   */
+  private splitCommaDelimitedValues(
+    header: object,
+    shape: $ZodShape
+  ): Record<string, unknown> {
+    const schemaMap = this.analyzeSchema(shape, false);
+    const result: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(header)) {
+      const schemaInfo = schemaMap.get(key.toLowerCase());
+
+      if (schemaInfo?.isArray && typeof value === "string") {
+        result[key] = value.split(",").map((v) => v.trim()).filter(Boolean);
+      } else {
+        result[key] = value;
+      }
+    }
+
+    return result;
   }
 
   /**
