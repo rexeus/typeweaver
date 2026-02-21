@@ -48,7 +48,7 @@ Resource-specific HTTP clients are generated as `<ResourceName>Client.ts` files,
 
 - **Type-safe HTTP methods** - Method overloads for each operation ensuring compile-time type
   checking
-- **axios based** - Supports all axios features and interceptors by using custom axios instances
+- **fetch based** - Zero dependencies, uses the native fetch API. Supports custom fetch functions for middleware and testing
 - **Response type mapping** - Each response is automatically mapped to the associated response class
   and an instance of the class is returned. This ensures that all responses are in the defined
   format and it is type-safe.
@@ -66,8 +66,8 @@ Resource-specific HTTP clients are generated as `<ResourceName>Client.ts` files,
 import { TodoClient } from "path/to/generated/output";
 
 const client = new TodoClient({
-  axiosInstance: customAxios, // Custom axios instance
-  baseUrl: "https://api.example.com", // Base URL for all requests
+  fetchFn: customFetch, // Custom fetch function (optional, defaults to globalThis.fetch)
+  baseUrl: "https://api.example.com", // Base URL for all requests (required)
   unknownResponseHandling: "throw", // "throw" | "passthrough" for unknown responses
   // -> In "passthrough" mode, the received status code determines if the response is thrown
   isSuccessStatusCode: code => code < 400, // Custom success status code predicate, determines whether the response is successful or should be thrown

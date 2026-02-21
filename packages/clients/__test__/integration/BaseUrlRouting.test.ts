@@ -1,4 +1,3 @@
-import axios from "axios";
 import {
   createCreateTodoRequest,
   createDeleteTodoRequest,
@@ -81,7 +80,7 @@ describe("Base URL Routing", () => {
 
     test("deeply nested prefix", async () => {
       const { baseUrl } = trackServer(
-        await createPrefixedTestServer("/api/v1")
+        await createPrefixedTestServer("/api/v1"),
       );
       const client = new TodoClient({ baseUrl });
 
@@ -109,25 +108,22 @@ describe("Base URL Routing", () => {
     });
   });
 
-  describe("shared Axios instance", () => {
-    test("two clients with shared instance and same baseUrl", async () => {
+  describe("shared fetch function", () => {
+    test("two clients with same fetchFn and same baseUrl", async () => {
       const { baseUrl } = trackServer(await createTestServer());
-      const sharedInstance = axios.create();
 
-      const clientA = new TodoClient({
-        axiosInstance: sharedInstance,
-        baseUrl,
-      });
-      const clientB = new TodoClient({
-        axiosInstance: sharedInstance,
-        baseUrl,
-      });
+      const clientA = new TodoClient({ baseUrl });
+      const clientB = new TodoClient({ baseUrl });
 
       const requestA = createGetTodoRequest();
-      const responseA = await clientA.send(new GetTodoRequestCommand(requestA));
+      const responseA = await clientA.send(
+        new GetTodoRequestCommand(requestA),
+      );
 
       const requestB = createGetTodoRequest();
-      const responseB = await clientB.send(new GetTodoRequestCommand(requestB));
+      const responseB = await clientB.send(
+        new GetTodoRequestCommand(requestB),
+      );
 
       expect(responseA).toBeInstanceOf(GetTodoSuccessResponse);
       expect(responseB).toBeInstanceOf(GetTodoSuccessResponse);
@@ -135,25 +131,22 @@ describe("Base URL Routing", () => {
       expect(responseB.body.id).toBe(requestB.param.todoId);
     });
 
-    test("two clients with shared instance and different baseUrls", async () => {
+    test("two clients with same fetchFn and different baseUrls", async () => {
       const serverA = trackServer(await createTestServer());
       const serverB = trackServer(await createPrefixedTestServer("/api"));
-      const sharedInstance = axios.create();
 
-      const clientA = new TodoClient({
-        axiosInstance: sharedInstance,
-        baseUrl: serverA.baseUrl,
-      });
-      const clientB = new TodoClient({
-        axiosInstance: sharedInstance,
-        baseUrl: serverB.baseUrl,
-      });
+      const clientA = new TodoClient({ baseUrl: serverA.baseUrl });
+      const clientB = new TodoClient({ baseUrl: serverB.baseUrl });
 
       const requestA = createGetTodoRequest();
-      const responseA = await clientA.send(new GetTodoRequestCommand(requestA));
+      const responseA = await clientA.send(
+        new GetTodoRequestCommand(requestA),
+      );
 
       const requestB = createGetTodoRequest();
-      const responseB = await clientB.send(new GetTodoRequestCommand(requestB));
+      const responseB = await clientB.send(
+        new GetTodoRequestCommand(requestB),
+      );
 
       expect(responseA).toBeInstanceOf(GetTodoSuccessResponse);
       expect(responseB).toBeInstanceOf(GetTodoSuccessResponse);
@@ -184,7 +177,7 @@ describe("Base URL Routing", () => {
       const { baseUrl } = trackServer(
         await createPrefixedTestServer("/api", {
           throwTodoError: createTodoNotFoundErrorResponse(),
-        })
+        }),
       );
       const client = new TodoClient({ baseUrl });
 
@@ -192,7 +185,7 @@ describe("Base URL Routing", () => {
       const command = new GetTodoRequestCommand(requestData);
 
       await expect(client.send(command)).rejects.toThrow(
-        TodoNotFoundErrorResponse
+        TodoNotFoundErrorResponse,
       );
     });
   });
