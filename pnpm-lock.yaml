@@ -199,6 +199,22 @@ importers:
         specifier: file:../test-utils
         version: link:../test-utils
 
+  packages/server:
+    dependencies:
+      case:
+        specifier: ^1.6.3
+        version: 1.6.3
+    devDependencies:
+      '@rexeus/typeweaver-core':
+        specifier: workspace:^
+        version: link:../core
+      '@rexeus/typeweaver-gen':
+        specifier: workspace:^
+        version: link:../gen
+      test-utils:
+        specifier: file:../test-utils
+        version: link:../test-utils
+
   packages/test-utils:
     devDependencies:
       '@hono/node-server':
