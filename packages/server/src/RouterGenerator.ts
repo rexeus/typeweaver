@@ -7,15 +7,15 @@ import type {
   OperationResource,
 } from "@rexeus/typeweaver-gen";
 
-export class ServerGenerator {
+export class RouterGenerator {
   public static generate(context: GeneratorContext): void {
     const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-    const templateFile = path.join(moduleDir, "templates", "Server.ejs");
+    const templateFile = path.join(moduleDir, "templates", "Router.ejs");
 
     for (const [entityName, entityResource] of Object.entries(
       context.resources.entityResources
     )) {
-      this.writeServer(
+      this.writeRouter(
         entityName,
         templateFile,
         entityResource.operations,
@@ -24,7 +24,7 @@ export class ServerGenerator {
     }
   }
 
-  private static writeServer(
+  private static writeRouter(
     entityName: string,
     templateFile: string,
     operationResources: OperationResource[],
@@ -34,7 +34,7 @@ export class ServerGenerator {
     const outputDir = path.join(context.outputDir, entityName);
     const outputPath = path.join(
       outputDir,
-      `${pascalCaseEntityName}Server.ts`
+      `${pascalCaseEntityName}Router.ts`
     );
 
     const operations = operationResources
@@ -67,8 +67,8 @@ export class ServerGenerator {
   }
 
   private static compareRoutes(
-    a: ReturnType<typeof ServerGenerator.createOperationData>,
-    b: ReturnType<typeof ServerGenerator.createOperationData>
+    a: ReturnType<typeof RouterGenerator.createOperationData>,
+    b: ReturnType<typeof RouterGenerator.createOperationData>
   ): number {
     const aSegments = a.path.split("/").filter(s => s);
     const bSegments = b.path.split("/").filter(s => s);

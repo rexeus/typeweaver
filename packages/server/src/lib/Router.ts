@@ -16,14 +16,14 @@ export type RouteDefinition = {
   path: string;
   validator: IRequestValidator;
   handler: RequestHandler<any, any>;
-  /** Reference to the server config for error handling. */
-  serverConfig: ServerErrorConfig;
+  /** Reference to the router config for error handling. */
+  routerConfig: RouterErrorConfig;
 };
 
 /**
- * Error handling configuration associated with a server.
+ * Error handling configuration associated with a router.
  */
-export type ServerErrorConfig = {
+export type RouterErrorConfig = {
   validateRequests: boolean;
   handleHttpResponseErrors: HttpResponseErrorHandler | boolean;
   handleValidationErrors: ValidationErrorHandler | boolean;

@@ -7,14 +7,14 @@
 
 export { TypeweaverApp } from "./TypeweaverApp";
 export {
-  TypeweaverServer,
-  type TypeweaverServerOptions,
-} from "./TypeweaverServer";
+  TypeweaverRouter,
+  type TypeweaverRouterOptions,
+} from "./TypeweaverRouter";
 export { Router } from "./Router";
 export type {
   RouteDefinition,
   RouteMatch,
-  ServerErrorConfig,
+  RouterErrorConfig,
   HttpResponseErrorHandler,
   ValidationErrorHandler,
   UnknownErrorHandler,

@@ -9,18 +9,18 @@ import type { IRequestValidator } from "@rexeus/typeweaver-core";
 import type { RequestHandler } from "./RequestHandler";
 import type {
   RouteDefinition,
-  ServerErrorConfig,
+  RouterErrorConfig,
   HttpResponseErrorHandler,
   ValidationErrorHandler,
   UnknownErrorHandler,
 } from "./Router";
 
 /**
- * Configuration options for TypeweaverServer instances.
+ * Configuration options for TypeweaverRouter instances.
  *
- * @template RequestHandlers - Object type containing all handler methods for this server
+ * @template RequestHandlers - Object type containing all handler methods for this router
  */
-export type TypeweaverServerOptions<RequestHandlers> = {
+export type TypeweaverRouterOptions<RequestHandlers> = {
   /**
    * Request handler methods for each operation.
    * Each handler receives a validated request and the server context.
@@ -63,25 +63,25 @@ export type TypeweaverServerOptions<RequestHandlers> = {
 };
 
 /**
- * Abstract base class for typeweaver-generated server instances.
+ * Abstract base class for typeweaver-generated routers.
  *
- * Each generated server (e.g., `AccountServer`, `TodoServer`) extends this class
+ * Each generated router (e.g., `AccountRouter`, `TodoRouter`) extends this class
  * and registers its routes in the constructor via `this.route(...)`.
  *
- * The server does **not** handle HTTP directly — it collects route definitions
- * that are mounted onto a `TypeweaverApp` which provides the routing engine.
+ * The router does **not** handle HTTP directly — it collects route definitions
+ * that are mounted onto a `TypeweaverApp` via `app.route(...)`.
  *
  * All types are in typeweaver's native `IHttpRequest`/`IHttpResponse` format.
  * No framework-specific types are involved.
  *
  * @template RequestHandlers - Object type containing typed handler methods
  */
-export abstract class TypeweaverServer<RequestHandlers> {
+export abstract class TypeweaverRouter<RequestHandlers> {
   protected readonly requestHandlers: RequestHandlers;
   private readonly routes: RouteDefinition[] = [];
-  private readonly errorConfig: ServerErrorConfig;
+  private readonly errorConfig: RouterErrorConfig;
 
-  public constructor(options: TypeweaverServerOptions<RequestHandlers>) {
+  public constructor(options: TypeweaverRouterOptions<RequestHandlers>) {
     const {
       requestHandlers,
       validateRequests = true,
@@ -119,12 +119,12 @@ export abstract class TypeweaverServer<RequestHandlers> {
       path,
       validator,
       handler,
-      serverConfig: this.errorConfig,
+      routerConfig: this.errorConfig,
     });
   }
 
   /**
-   * Returns all registered routes. Used by `TypeweaverApp` when mounting this server.
+   * Returns all registered routes. Used by `TypeweaverApp` when mounting via `app.route(...)`.
    */
   public getRoutes(): readonly RouteDefinition[] {
     return this.routes;

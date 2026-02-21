@@ -21,7 +21,7 @@ import {
   type UnknownErrorHandler,
 } from "./Router";
 import type { ServerContext } from "./ServerContext";
-import type { TypeweaverServer } from "./TypeweaverServer";
+import type { TypeweaverRouter } from "./TypeweaverRouter";
 
 /**
  * The main application class that provides routing, middleware, and
@@ -53,9 +53,9 @@ import type { TypeweaverServer } from "./TypeweaverServer";
  *   await next();
  * });
  *
- * // Mount generated servers
- * app.server(new AccountServer({ requestHandlers: { ... } }));
- * app.server(new TodoServer({ requestHandlers: { ... } }));
+ * // Mount generated routers
+ * app.route(new AccountRouter({ requestHandlers: { ... } }));
+ * app.route(new TodoRouter({ requestHandlers: { ... } }));
  *
  * // Start
  * Bun.serve({ fetch: app.fetch, port: 3000 });
@@ -97,13 +97,13 @@ export class TypeweaverApp {
   }
 
   /**
-   * Mount a generated `TypeweaverServer` instance.
+   * Mount a generated `TypeweaverRouter` instance.
    *
-   * Registers all routes from the server into the app's router.
-   * Multiple servers can be mounted on the same app.
+   * Registers all routes from the router into the app.
+   * Multiple routers can be mounted on the same app.
    */
-  public server(server: TypeweaverServer<any>): this {
-    for (const route of server.getRoutes()) {
+  public route(router: TypeweaverRouter<any>): this {
+    for (const route of router.getRoutes()) {
       this.router.add(route);
     }
     return this;
@@ -184,7 +184,7 @@ export class TypeweaverApp {
     if (ctx.response) return;
 
     // Validate request if enabled
-    const validatedRequest = route.serverConfig.validateRequests
+    const validatedRequest = route.routerConfig.validateRequests
       ? route.validator.validate(ctx.request)
       : ctx.request;
 
@@ -200,7 +200,7 @@ export class TypeweaverApp {
     ctx: ServerContext,
     route: RouteDefinition
   ): Promise<IHttpResponse> {
-    const config = route.serverConfig;
+    const config = route.routerConfig;
 
     // Handle validation errors
     if (error instanceof RequestValidationError) {
