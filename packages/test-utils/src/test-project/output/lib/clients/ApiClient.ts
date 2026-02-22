@@ -135,13 +135,11 @@ export abstract class ApiClient {
       return undefined;
     }
 
-    const text = await response.text();
-    if (!text) {
-      return undefined;
-    }
-
     const contentType = response.headers.get("content-type");
+
     if (this.isJsonContentType(contentType)) {
+      const text = await response.text();
+      if (!text) return undefined;
       try {
         return JSON.parse(text);
       } catch (parseError) {
@@ -155,7 +153,18 @@ export abstract class ApiClient {
       }
     }
 
-    return text;
+    if (this.isTextContentType(contentType) || !contentType) {
+      const text = await response.text();
+      if (!text) return undefined;
+      return text;
+    }
+
+    return await response.arrayBuffer();
+  }
+
+  private isTextContentType(contentType: string | null): boolean {
+    if (!contentType) return false;
+    return contentType.includes("text/");
   }
 
   private createNetworkError(
@@ -212,10 +221,25 @@ export abstract class ApiClient {
     return flattened;
   }
 
-  private serializeBody(body: unknown): string | undefined {
+  private serializeBody(
+    body: unknown,
+  ): NonNullable<RequestInit["body"]> | undefined {
     if (body === undefined) return undefined;
     if (typeof body === "string") return body;
+    if (this.isNativeBody(body))
+      return body as NonNullable<RequestInit["body"]>;
     return JSON.stringify(body);
+  }
+
+  private isNativeBody(body: unknown): boolean {
+    return (
+      body instanceof Blob ||
+      body instanceof ArrayBuffer ||
+      body instanceof FormData ||
+      body instanceof URLSearchParams ||
+      body instanceof ReadableStream ||
+      ArrayBuffer.isView(body)
+    );
   }
 
   private isJsonContentType(contentType: string | null): boolean {
@@ -256,9 +280,7 @@ export abstract class ApiClient {
   private createUrl(path: string, query?: IHttpQuery): string {
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
     const queryString = this.buildQueryString(query);
-    return queryString
-      ? `${normalizedPath}?${queryString}`
-      : normalizedPath;
+    return queryString ? `${normalizedPath}?${queryString}` : normalizedPath;
   }
 
   private buildQueryString(query?: IHttpQuery): string {

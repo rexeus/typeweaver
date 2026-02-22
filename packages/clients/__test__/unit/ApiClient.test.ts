@@ -646,6 +646,111 @@ describe("ApiClient Response Body Parsing", () => {
       "Failed to parse JSON response (status 400)",
     );
   });
+
+  test("application/octet-stream returns ArrayBuffer", async () => {
+    const binaryData = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+    const mockFetch = createRawMockFetch(200, binaryData, {
+      "content-type": "application/octet-stream",
+    });
+    const client = createPassthroughClient(mockFetch);
+    const command = new GetTodoRequestCommand(
+      createGetTodoRequest({ param: { todoId: "abc" } }),
+    );
+
+    const result = await client.send(command);
+
+    expect(result.body).toBeInstanceOf(ArrayBuffer);
+  });
+
+  test("image/png returns ArrayBuffer", async () => {
+    const binaryData = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+    const mockFetch = createRawMockFetch(200, binaryData, {
+      "content-type": "image/png",
+    });
+    const client = createPassthroughClient(mockFetch);
+    const command = new GetTodoRequestCommand(
+      createGetTodoRequest({ param: { todoId: "abc" } }),
+    );
+
+    const result = await client.send(command);
+
+    expect(result.body).toBeInstanceOf(ArrayBuffer);
+  });
+
+  test("application/pdf returns ArrayBuffer", async () => {
+    const binaryData = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+    const mockFetch = createRawMockFetch(200, binaryData, {
+      "content-type": "application/pdf",
+    });
+    const client = createPassthroughClient(mockFetch);
+    const command = new GetTodoRequestCommand(
+      createGetTodoRequest({ param: { todoId: "abc" } }),
+    );
+
+    const result = await client.send(command);
+
+    expect(result.body).toBeInstanceOf(ArrayBuffer);
+  });
+
+  test("audio/mpeg returns ArrayBuffer", async () => {
+    const binaryData = new Uint8Array([0xff, 0xfb, 0x90, 0x00]);
+    const mockFetch = createRawMockFetch(200, binaryData, {
+      "content-type": "audio/mpeg",
+    });
+    const client = createPassthroughClient(mockFetch);
+    const command = new GetTodoRequestCommand(
+      createGetTodoRequest({ param: { todoId: "abc" } }),
+    );
+
+    const result = await client.send(command);
+
+    expect(result.body).toBeInstanceOf(ArrayBuffer);
+  });
+
+  test("text/html returns string", async () => {
+    const mockFetch = createRawMockFetch(200, "<h1>Hello</h1>", {
+      "content-type": "text/html",
+    });
+    const client = createPassthroughClient(mockFetch);
+    const command = new GetTodoRequestCommand(
+      createGetTodoRequest({ param: { todoId: "abc" } }),
+    );
+
+    const result = await client.send(command);
+
+    expect(typeof result.body).toBe("string");
+    expect(result.body).toBe("<h1>Hello</h1>");
+  });
+
+  test("text/xml returns string", async () => {
+    const mockFetch = createRawMockFetch(200, "<root/>", {
+      "content-type": "text/xml",
+    });
+    const client = createPassthroughClient(mockFetch);
+    const command = new GetTodoRequestCommand(
+      createGetTodoRequest({ param: { todoId: "abc" } }),
+    );
+
+    const result = await client.send(command);
+
+    expect(typeof result.body).toBe("string");
+    expect(result.body).toBe("<root/>");
+  });
+
+  test("binary response with empty body returns empty ArrayBuffer", async () => {
+    const mockFetch = createRawMockFetch(200, new Uint8Array(0), {
+      "content-type": "application/octet-stream",
+    });
+    const client = createPassthroughClient(mockFetch);
+    const command = new GetTodoRequestCommand(
+      createGetTodoRequest({ param: { todoId: "abc" } }),
+    );
+
+    const result = await client.send(command);
+
+    expect(result.body).toBeInstanceOf(ArrayBuffer);
+    expect((result.body as ArrayBuffer).byteLength).toBe(0);
+  });
 });
 
 describe("ApiClient Response Header Handling", () => {
@@ -948,6 +1053,133 @@ describe("ApiClient Body Read Error Isolation", () => {
     await expect(client.send(command)).rejects.toSatisfy((error: Error) => {
       return !error.message.startsWith("Network error:");
     });
+  });
+});
+
+describe("ApiClient Native Body Passthrough", () => {
+  function createPassthroughClient(mockFetch: typeof globalThis.fetch) {
+    return new TodoClient({
+      fetchFn: mockFetch,
+      baseUrl: "http://localhost:3000",
+      unknownResponseHandling: "passthrough",
+      isSuccessStatusCode: () => true,
+    });
+  }
+
+  test("Blob body is passed to fetch as-is", async () => {
+    const mockFetch = createRawMockFetch(200, '{}', {
+      "content-type": "application/json",
+    });
+    const client = createPassthroughClient(mockFetch);
+    const blob = new Blob(["hello"], { type: "text/plain" });
+    const requestData = createCreateTodoRequest({ body: {} });
+    (requestData as { body: unknown }).body = blob;
+    const command = new CreateTodoRequestCommand(requestData);
+
+    await client.send(command);
+
+    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    expect(callArgs.body).toBe(blob);
+  });
+
+  test("ArrayBuffer body is passed to fetch as-is", async () => {
+    const mockFetch = createRawMockFetch(200, '{}', {
+      "content-type": "application/json",
+    });
+    const client = createPassthroughClient(mockFetch);
+    const buffer = new ArrayBuffer(8);
+    const requestData = createCreateTodoRequest({ body: {} });
+    (requestData as { body: unknown }).body = buffer;
+    const command = new CreateTodoRequestCommand(requestData);
+
+    await client.send(command);
+
+    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    expect(callArgs.body).toBe(buffer);
+  });
+
+  test("FormData body is passed to fetch as-is", async () => {
+    const mockFetch = createRawMockFetch(200, '{}', {
+      "content-type": "application/json",
+    });
+    const client = createPassthroughClient(mockFetch);
+    const formData = new FormData();
+    formData.append("file", new Blob(["data"]), "test.txt");
+    const requestData = createCreateTodoRequest({ body: {} });
+    (requestData as { body: unknown }).body = formData;
+    const command = new CreateTodoRequestCommand(requestData);
+
+    await client.send(command);
+
+    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    expect(callArgs.body).toBe(formData);
+  });
+
+  test("URLSearchParams body is passed to fetch as-is", async () => {
+    const mockFetch = createRawMockFetch(200, '{}', {
+      "content-type": "application/json",
+    });
+    const client = createPassthroughClient(mockFetch);
+    const params = new URLSearchParams({ key: "value" });
+    const requestData = createCreateTodoRequest({ body: {} });
+    (requestData as { body: unknown }).body = params;
+    const command = new CreateTodoRequestCommand(requestData);
+
+    await client.send(command);
+
+    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    expect(callArgs.body).toBe(params);
+  });
+
+  test("Uint8Array body is passed to fetch as-is", async () => {
+    const mockFetch = createRawMockFetch(200, '{}', {
+      "content-type": "application/json",
+    });
+    const client = createPassthroughClient(mockFetch);
+    const bytes = new Uint8Array([1, 2, 3]);
+    const requestData = createCreateTodoRequest({ body: {} });
+    (requestData as { body: unknown }).body = bytes;
+    const command = new CreateTodoRequestCommand(requestData);
+
+    await client.send(command);
+
+    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    expect(callArgs.body).toBe(bytes);
+  });
+
+  test("ReadableStream body is passed to fetch as-is", async () => {
+    const mockFetch = createRawMockFetch(200, '{}', {
+      "content-type": "application/json",
+    });
+    const client = createPassthroughClient(mockFetch);
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new Uint8Array([1, 2, 3]));
+        controller.close();
+      },
+    });
+    const requestData = createCreateTodoRequest({ body: {} });
+    (requestData as { body: unknown }).body = stream;
+    const command = new CreateTodoRequestCommand(requestData);
+
+    await client.send(command);
+
+    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    expect(callArgs.body).toBe(stream);
+  });
+
+  test("plain object body still gets JSON.stringify'd", async () => {
+    const mockFetch = createRawMockFetch(200, '{}', {
+      "content-type": "application/json",
+    });
+    const client = createPassthroughClient(mockFetch);
+    const requestData = createCreateTodoRequest();
+    const command = new CreateTodoRequestCommand(requestData);
+
+    await client.send(command);
+
+    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    expect(callArgs.body).toBe(JSON.stringify(requestData.body));
   });
 });
 
