@@ -215,5 +215,48 @@ describe("Middleware Pipeline", () => {
         })
       ).rejects.toThrow("Handler exploded");
     });
+
+    test("should throw when next() is called multiple times", async () => {
+      const ctx = createContext();
+
+      const doubleCallMiddleware: Middleware = async (_ctx, next) => {
+        await next();
+        // Calling next() a second time should throw
+        return next();
+      };
+
+      await expect(
+        executeMiddlewarePipeline([doubleCallMiddleware], ctx, async () => ({
+          statusCode: 200,
+        }))
+      ).rejects.toThrow("next() called multiple times");
+    });
+
+    test("should allow different middleware to each call next() once", async () => {
+      const ctx = createContext();
+      const order: string[] = [];
+
+      const mw1: Middleware = async (_ctx, next) => {
+        order.push("mw1");
+        return next();
+      };
+
+      const mw2: Middleware = async (_ctx, next) => {
+        order.push("mw2");
+        return next();
+      };
+
+      const response = await executeMiddlewarePipeline(
+        [mw1, mw2],
+        ctx,
+        async () => {
+          order.push("handler");
+          return { statusCode: 200 };
+        }
+      );
+
+      expect(response.statusCode).toBe(200);
+      expect(order).toEqual(["mw1", "mw2", "handler"]);
+    });
   });
 });

@@ -15,6 +15,17 @@ import type {
 } from "@rexeus/typeweaver-core";
 
 /**
+ * Error thrown when the request body cannot be parsed.
+ * Caught by TypeweaverApp to return a 400 Bad Request response.
+ */
+export class BodyParseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "BodyParseError";
+  }
+}
+
+/**
  * Converts between Fetch API `Request`/`Response` and typeweaver's
  * `IHttpRequest`/`IHttpResponse` at the server boundary.
  *
@@ -29,21 +40,26 @@ export class FetchApiAdapter {
   /**
    * Converts a Fetch API Request to an IHttpRequest.
    *
+   * Accepts an optional pre-parsed URL to avoid redundant parsing.
+   *
    * @param request - The Fetch API Request object
    * @param pathParams - Path parameters extracted by the router
+   * @param url - Optional pre-parsed URL object to avoid double parsing
    * @returns Promise resolving to an IHttpRequest
+   * @throws BodyParseError when the request body is malformed
    */
   public async toRequest(
     request: Request,
-    pathParams?: Record<string, string>
+    pathParams?: Record<string, string>,
+    url?: URL
   ): Promise<IHttpRequest> {
-    const url = new URL(request.url);
+    const parsedUrl = url ?? new URL(request.url);
 
     return {
       method: request.method.toUpperCase() as HttpMethod,
-      path: url.pathname,
+      path: parsedUrl.pathname,
       header: this.extractHeaders(request.headers),
-      query: this.extractQueryParams(url),
+      query: this.extractQueryParams(parsedUrl),
       param:
         pathParams && Object.keys(pathParams).length > 0
           ? pathParams
@@ -111,7 +127,7 @@ export class FetchApiAdapter {
       try {
         return await request.json();
       } catch {
-        return undefined;
+        throw new BodyParseError("Invalid JSON in request body");
       }
     }
 
@@ -127,6 +143,31 @@ export class FetchApiAdapter {
         this.addMultiValue(formObject, key, value);
       });
       return formObject;
+    }
+
+    if (contentType?.includes("multipart/form-data")) {
+      try {
+        const formData = await request.formData();
+        const formObject: Record<string, string | File | (string | File)[]> =
+          {};
+        formData.forEach((value, key) => {
+          const existing = formObject[key];
+          if (existing) {
+            if (Array.isArray(existing)) {
+              existing.push(value);
+            } else {
+              formObject[key] = [existing, value];
+            }
+          } else {
+            formObject[key] = value;
+          }
+        });
+        return formObject;
+      } catch {
+        throw new BodyParseError(
+          "Invalid multipart/form-data in request body"
+        );
+      }
     }
 
     const rawBody = await request.text();

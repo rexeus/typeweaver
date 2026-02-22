@@ -71,8 +71,16 @@ export async function executeMiddlewarePipeline(
 
   const next = async (): Promise<IHttpResponse> => {
     if (index < middlewares.length) {
-      const middleware = middlewares[index++]!;
-      return middleware(ctx, next);
+      const currentIndex = index++;
+      let called = false;
+
+      return middlewares[currentIndex]!(ctx, async () => {
+        if (called) {
+          throw new Error("next() called multiple times");
+        }
+        called = true;
+        return next();
+      });
     } else {
       return finalHandler();
     }

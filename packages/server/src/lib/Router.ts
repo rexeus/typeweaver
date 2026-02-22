@@ -69,6 +69,14 @@ export type RouteMatch = {
 };
 
 /**
+ * Result of a path-only match (node found, but method may not exist).
+ */
+export type PathMatch = {
+  node: RadixNode;
+  params: Record<string, string>;
+};
+
+/**
  * A node in the radix tree.
  *
  * Each node represents a single path segment.
@@ -76,7 +84,7 @@ export type RouteMatch = {
  * A single `paramChild` holds the branch for `:param` segments.
  * Leaf nodes store a `Map` of HTTP method → route definition.
  */
-type RadixNode = {
+export type RadixNode = {
   /** Static segment children: segment string → child node. */
   staticChildren: Map<string, RadixNode>;
   /** Child node for parameterized segments (`:param`). */
@@ -108,6 +116,8 @@ function createNode(): RadixNode {
  * - Static paths: `/accounts`
  * - Named parameters: `/todos/:todoId`
  * - Multiple parameters: `/todos/:todoId/subtodos/:subtodoId`
+ * - Automatic HEAD → GET fallback (per HTTP spec)
+ * - 405 Method Not Allowed detection with `Allow` header
  *
  * Path matching for middleware uses wildcard support:
  * - `/todos/*` matches `/todos/123`, `/todos/123/subtodos`, etc.
@@ -151,6 +161,9 @@ export class Router {
    * of path segments. Static segments are matched first (exact match),
    * then parameterized segments are tried as fallback.
    *
+   * For HEAD requests, automatically falls back to the GET handler
+   * if no explicit HEAD handler is registered (per HTTP spec).
+   *
    * @returns The matched route with extracted path parameters, or `undefined` if no match.
    */
   public match(method: string, path: string): RouteMatch | undefined {
@@ -161,10 +174,47 @@ export class Router {
     const node = this.traverse(this.root, segments, 0, params);
     if (!node) return undefined;
 
-    const definition = node.methods.get(upperMethod);
+    let definition = node.methods.get(upperMethod);
+
+    // HEAD falls back to GET per HTTP spec
+    if (!definition && upperMethod === "HEAD") {
+      definition = node.methods.get("GET");
+    }
+
     if (!definition) return undefined;
 
     return { route: definition, params };
+  }
+
+  /**
+   * Find a matching node for the given path, regardless of HTTP method.
+   *
+   * Used to distinguish "path not found" (404) from "method not allowed" (405).
+   *
+   * @returns The matched node and params, or `undefined` if the path doesn't exist.
+   */
+  public matchPath(path: string): PathMatch | undefined {
+    const segments = this.toSegments(path);
+    const params: Record<string, string> = {};
+
+    const node = this.traverse(this.root, segments, 0, params);
+    if (!node || node.methods.size === 0) return undefined;
+
+    return { node, params };
+  }
+
+  /**
+   * Get the list of allowed HTTP methods for a matched node.
+   *
+   * If a GET handler exists, HEAD is implicitly allowed.
+   */
+  public static getAllowedMethods(node: RadixNode): string[] {
+    const methods = Array.from(node.methods.keys());
+    // HEAD is implicitly allowed when GET exists
+    if (methods.includes("GET") && !methods.includes("HEAD")) {
+      methods.push("HEAD");
+    }
+    return methods.sort();
   }
 
   /**
@@ -199,6 +249,8 @@ export class Router {
    *
    * Prioritises static children over param children for correct
    * and predictable matching behaviour.
+   *
+   * Path parameters are URL-decoded during extraction.
    */
   private traverse(
     node: RadixNode,
@@ -223,7 +275,7 @@ export class Router {
     // 2. Try param child as fallback
     if (node.paramChild) {
       const { name, node: paramNode } = node.paramChild;
-      params[name] = segment;
+      params[name] = decodePathSegment(segment);
       const result = this.traverse(paramNode, segments, index + 1, params);
       if (result && result.methods.size > 0) return result;
       // Backtrack: remove param if this branch didn't match
@@ -235,5 +287,17 @@ export class Router {
 
   private toSegments(path: string): string[] {
     return path.split("/").filter(s => s.length > 0);
+  }
+}
+
+/**
+ * Safely URL-decodes a path segment.
+ * Returns the original segment if decoding fails (malformed encoding).
+ */
+function decodePathSegment(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
   }
 }

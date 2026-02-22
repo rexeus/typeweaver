@@ -10,7 +10,7 @@ import {
   RequestValidationError,
 } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
-import { FetchApiAdapter } from "./FetchApiAdapter";
+import { FetchApiAdapter, BodyParseError } from "./FetchApiAdapter";
 import type { Middleware, MiddlewareEntry } from "./Middleware";
 import { executeMiddlewarePipeline } from "./Middleware";
 import {
@@ -36,6 +36,9 @@ import type { TypeweaverRouter } from "./TypeweaverRouter";
  * Middleware is return-based: each middleware returns an `IHttpResponse`
  * instead of mutating shared state.
  *
+ * Middleware runs for **all** requests, including 404s and 405s, so global
+ * concerns like logging and CORS always execute.
+ *
  * @example
  * ```typescript
  * const app = new TypeweaverApp();
@@ -57,7 +60,7 @@ import type { TypeweaverRouter } from "./TypeweaverRouter";
  *
  * // Mount generated routers
  * app.route(new AccountRouter({ requestHandlers: { ... } }));
- * app.route(new TodoRouter({ requestHandlers: { ... } }));
+ * app.route("/api/v1", new TodoRouter({ requestHandlers: { ... } }));
  *
  * // Start
  * Bun.serve({ fetch: app.fetch, port: 3000 });
@@ -103,10 +106,37 @@ export class TypeweaverApp {
    *
    * Registers all routes from the router into the app.
    * Multiple routers can be mounted on the same app.
+   *
+   * Optionally accepts a prefix to prepend to all routes from the router.
+   *
+   * @example
+   * ```typescript
+   * app.route(new AccountRouter({ requestHandlers: { ... } }));
+   * app.route("/api/v1", new TodoRouter({ requestHandlers: { ... } }));
+   * ```
    */
-  public route(router: TypeweaverRouter<any>): this {
-    for (const route of router.getRoutes()) {
-      this.router.add(route);
+  public route(router: TypeweaverRouter<any>): this;
+  public route(prefix: string, router: TypeweaverRouter<any>): this;
+  public route(
+    prefixOrRouter: string | TypeweaverRouter<any>,
+    router?: TypeweaverRouter<any>
+  ): this {
+    const actualPrefix =
+      typeof prefixOrRouter === "string" ? prefixOrRouter : undefined;
+    const actualRouter =
+      typeof prefixOrRouter === "string" ? router! : prefixOrRouter;
+
+    for (const route of actualRouter.getRoutes()) {
+      if (actualPrefix) {
+        // Normalize: ensure prefix doesn't have trailing slash
+        const normalizedPrefix = actualPrefix.replace(/\/+$/, "");
+        this.router.add({
+          ...route,
+          path: normalizedPrefix + route.path,
+        });
+      } else {
+        this.router.add(route);
+      }
     }
     return this;
   }
@@ -116,6 +146,9 @@ export class TypeweaverApp {
    *
    * The entire pipeline works with `IHttpRequest`/`IHttpResponse`.
    * Conversion from/to Fetch API `Request`/`Response` happens only here, at the boundary.
+   *
+   * Middleware runs for all requests (including 404s and 405s).
+   * HEAD requests automatically fall back to GET handlers with body stripped from the response.
    *
    * @example
    * ```typescript
@@ -127,18 +160,18 @@ export class TypeweaverApp {
    * ```
    */
   public fetch = async (request: Request): Promise<Response> => {
-    // --- BOUNDARY IN: Fetch API Request → IHttpRequest ---
+    // --- BOUNDARY IN: Parse URL once, reuse everywhere ---
     const url = new URL(request.url);
-    const match = this.router.match(request.method, url.pathname);
+    const isHead = request.method.toUpperCase() === "HEAD";
 
-    if (!match) {
-      return this.adapter.toResponse({
-        statusCode: 404,
-        body: { code: "NOT_FOUND", message: "Not Found" },
-      });
+    let httpRequest;
+    try {
+      // Convert request early so middleware always has access
+      httpRequest = await this.adapter.toRequest(request, undefined, url);
+    } catch (error) {
+      // Body parse errors at the boundary
+      return this.adapter.toResponse(this.handleBoundaryError(error));
     }
-
-    const httpRequest = await this.adapter.toRequest(request, match.params);
 
     // --- INTERNAL: Everything is IHttpRequest/IHttpResponse ---
     const ctx: ServerContext = {
@@ -146,27 +179,73 @@ export class TypeweaverApp {
       state: new Map(),
     };
 
+    // Collect matching middleware based on path
+    const matchingMiddleware = this.middlewares
+      .filter(m => Router.matchesMiddlewarePath(m.path, httpRequest.path))
+      .map(m => m.handler);
+
     let response: IHttpResponse;
 
     try {
-      // Collect matching middleware
-      const matchingMiddleware = this.middlewares
-        .filter(m => Router.matchesMiddlewarePath(m.path, httpRequest.path))
-        .map(m => m.handler);
-
-      // Execute middleware pipeline → handler
+      // Execute middleware pipeline → route matching → handler
       response = await executeMiddlewarePipeline(
         matchingMiddleware,
         ctx,
-        () => this.executeHandler(ctx, match.route)
+        () => this.resolveAndExecute(request.method, url.pathname, ctx)
       );
     } catch (error) {
-      response = await this.handleError(error, ctx, match.route);
+      response = this.handleBoundaryError(error);
     }
 
     // --- BOUNDARY OUT: IHttpResponse → Fetch API Response ---
+    // For HEAD requests, strip the body from the response
+    if (isHead) {
+      response = { ...response, body: undefined };
+    }
+
     return this.adapter.toResponse(response);
   };
+
+  /**
+   * Match the route and execute the handler.
+   * Called as the final handler in the middleware pipeline.
+   */
+  private async resolveAndExecute(
+    method: string,
+    pathname: string,
+    ctx: ServerContext
+  ): Promise<IHttpResponse> {
+    const match = this.router.match(method, pathname);
+
+    if (match) {
+      // Inject extracted path params into the request
+      if (Object.keys(match.params).length > 0) {
+        ctx.request = { ...ctx.request, param: match.params };
+      }
+
+      try {
+        return await this.executeHandler(ctx, match.route);
+      } catch (error) {
+        return this.handleError(error, ctx, match.route);
+      }
+    }
+
+    // No method match — check if path exists (405 vs 404)
+    const pathMatch = this.router.matchPath(pathname);
+    if (pathMatch) {
+      const allowedMethods = Router.getAllowedMethods(pathMatch.node);
+      return {
+        statusCode: 405,
+        header: { Allow: allowedMethods.join(", ") },
+        body: { code: "METHOD_NOT_ALLOWED", message: "Method Not Allowed" },
+      };
+    }
+
+    return {
+      statusCode: 404,
+      body: { code: "NOT_FOUND", message: "Not Found" },
+    };
+  }
 
   /**
    * Execute the route handler with optional validation.
@@ -185,7 +264,31 @@ export class TypeweaverApp {
   }
 
   /**
-   * Handle errors using the server's configured error handlers.
+   * Handle errors at the boundary level (before route matching).
+   * Catches BodyParseError from the adapter.
+   */
+  private handleBoundaryError(error: unknown): IHttpResponse {
+    if (error instanceof BodyParseError) {
+      return {
+        statusCode: 400,
+        body: {
+          code: "BAD_REQUEST",
+          message: error.message,
+        },
+      };
+    }
+
+    return {
+      statusCode: 500,
+      body: {
+        code: "INTERNAL_SERVER_ERROR",
+        message: "An unexpected error occurred.",
+      },
+    };
+  }
+
+  /**
+   * Handle errors using the route's configured error handlers.
    */
   private async handleError(
     error: unknown,

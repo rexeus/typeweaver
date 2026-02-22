@@ -200,11 +200,87 @@ describe("TypeweaverApp", () => {
       expect(data.code).toBe("NOT_FOUND");
     });
 
-    test("should return 404 for wrong HTTP method on existing path", async () => {
+    test("should return 405 for wrong HTTP method on existing path", async () => {
       const app = createApp();
 
       const res = await app.fetch(
         new Request("http://localhost/todos", { method: "DELETE" })
+      );
+
+      expect(res.status).toBe(405);
+      const data = (await res.json()) as any;
+      expect(data.code).toBe("METHOD_NOT_ALLOWED");
+      // Should include Allow header with valid methods
+      const allow = res.headers.get("allow");
+      expect(allow).toContain("GET");
+      expect(allow).toContain("POST");
+      expect(allow).toContain("HEAD");
+    });
+
+    test("should return 405 with correct Allow header for parameterized paths", async () => {
+      const app = createApp();
+
+      const res = await app.fetch(
+        new Request("http://localhost/todos/t1", { method: "PUT" })
+      );
+
+      expect(res.status).toBe(405);
+      const allow = res.headers.get("allow");
+      expect(allow).toContain("GET");
+      expect(allow).toContain("HEAD");
+    });
+  });
+
+  describe("HEAD Request Support", () => {
+    test("should handle HEAD request by falling back to GET handler", async () => {
+      const app = createApp();
+
+      const res = await app.fetch(
+        new Request("http://localhost/todos", { method: "HEAD" })
+      );
+
+      expect(res.status).toBe(200);
+      // HEAD responses must not have a body
+      const body = await res.text();
+      expect(body).toBe("");
+    });
+
+    test("should handle HEAD request for parameterized paths", async () => {
+      const app = createApp();
+
+      const res = await app.fetch(
+        new Request("http://localhost/todos/t1", { method: "HEAD" })
+      );
+
+      expect(res.status).toBe(200);
+      const body = await res.text();
+      expect(body).toBe("");
+    });
+
+    test("should preserve response headers for HEAD request", async () => {
+      const app = createApp(undefined, {
+        handleGetTodos: async () => ({
+          statusCode: 200,
+          header: { "X-Custom": "value" },
+          body: [{ id: "1" }],
+        }),
+      });
+
+      const res = await app.fetch(
+        new Request("http://localhost/todos", { method: "HEAD" })
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.headers.get("x-custom")).toBe("value");
+      const body = await res.text();
+      expect(body).toBe("");
+    });
+
+    test("should return 404 for HEAD request on nonexistent path", async () => {
+      const app = createApp();
+
+      const res = await app.fetch(
+        new Request("http://localhost/nonexistent", { method: "HEAD" })
       );
 
       expect(res.status).toBe(404);
@@ -253,7 +329,6 @@ describe("TypeweaverApp", () => {
 
     test("should allow middleware to short-circuit with a response", async () => {
       const app = createApp();
-      let handlerCalled = false;
 
       app.use(async () => ({
         statusCode: 503,
@@ -313,6 +388,129 @@ describe("TypeweaverApp", () => {
 
       const data = (await res.json()) as any;
       expect(data.userId).toBe("user-99");
+    });
+
+    test("should execute global middleware even for 404 requests", async () => {
+      const app = createApp();
+      const seen: string[] = [];
+
+      app.use(async (ctx, next) => {
+        seen.push(ctx.request.path);
+        return next();
+      });
+
+      const res = await app.fetch(
+        new Request("http://localhost/nonexistent")
+      );
+
+      expect(res.status).toBe(404);
+      expect(seen).toContain("/nonexistent");
+    });
+
+    test("should execute global middleware even for 405 requests", async () => {
+      const app = createApp();
+      const seen: string[] = [];
+
+      app.use(async (ctx, next) => {
+        seen.push(`${ctx.request.method} ${ctx.request.path}`);
+        return next();
+      });
+
+      const res = await app.fetch(
+        new Request("http://localhost/todos", { method: "DELETE" })
+      );
+
+      expect(res.status).toBe(405);
+      expect(seen).toContain("DELETE /todos");
+    });
+
+    test("should allow middleware to intercept 404 responses", async () => {
+      const app = createApp();
+
+      app.use(async (ctx, next) => {
+        const response = await next();
+        if (response.statusCode === 404) {
+          return {
+            statusCode: 404,
+            body: { custom: true, message: "Custom not found" },
+          };
+        }
+        return response;
+      });
+
+      const res = await app.fetch(
+        new Request("http://localhost/nonexistent")
+      );
+
+      expect(res.status).toBe(404);
+      const data = (await res.json()) as any;
+      expect(data.custom).toBe(true);
+    });
+  });
+
+  describe("Router Prefix", () => {
+    test("should mount router with prefix", async () => {
+      const app = new TypeweaverApp();
+      const router = new TestRouter({
+        requestHandlers: defaultHandlers(),
+      });
+
+      app.route("/api/v1", router);
+
+      const res = await app.fetch(
+        new Request("http://localhost/api/v1/todos")
+      );
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data).toHaveLength(2);
+    });
+
+    test("should not match unprefixed path when prefix is used", async () => {
+      const app = new TypeweaverApp();
+      const router = new TestRouter({
+        requestHandlers: defaultHandlers(),
+      });
+
+      app.route("/api/v1", router);
+
+      const res = await app.fetch(
+        new Request("http://localhost/todos")
+      );
+
+      expect(res.status).toBe(404);
+    });
+
+    test("should extract path params with prefix", async () => {
+      const app = new TypeweaverApp();
+      const router = new TestRouter({
+        requestHandlers: defaultHandlers(),
+      });
+
+      app.route("/api", router);
+
+      const res = await app.fetch(
+        new Request("http://localhost/api/todos/my-todo")
+      );
+
+      expect(res.status).toBe(200);
+      const data = (await res.json()) as any;
+      expect(data.id).toBe("my-todo");
+    });
+
+    test("should normalize trailing slashes on prefix", async () => {
+      const app = new TypeweaverApp();
+      const router = new TestRouter({
+        requestHandlers: defaultHandlers(),
+      });
+
+      app.route("/api/v1/", router);
+
+      const res = await app.fetch(
+        new Request("http://localhost/api/v1/todos")
+      );
+
+      expect(res.status).toBe(200);
     });
   });
 
@@ -542,6 +740,23 @@ describe("TypeweaverApp", () => {
       const data = (await res.json()) as any;
       expect(data.code).toBe("INTERNAL_SERVER_ERROR");
     });
+
+    test("should return 400 for malformed JSON body", async () => {
+      const app = createApp();
+
+      const res = await app.fetch(
+        new Request("http://localhost/todos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{ invalid json",
+        })
+      );
+
+      expect(res.status).toBe(400);
+      const data = (await res.json()) as any;
+      expect(data.code).toBe("BAD_REQUEST");
+      expect(data.message).toContain("Invalid JSON");
+    });
   });
 
   describe("Response Conversion", () => {
@@ -605,6 +820,15 @@ describe("TypeweaverApp", () => {
         requestHandlers: defaultHandlers(),
       });
       const result = app.route(router);
+      expect(result).toBe(app);
+    });
+
+    test("should return this from route() with prefix for chaining", () => {
+      const app = new TypeweaverApp();
+      const router = new TestRouter({
+        requestHandlers: defaultHandlers(),
+      });
+      const result = app.route("/api", router);
       expect(result).toBe(app);
     });
   });

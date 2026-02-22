@@ -14,6 +14,8 @@ export { Router } from "./Router";
 export type {
   RouteDefinition,
   RouteMatch,
+  PathMatch,
+  RadixNode,
   RouterErrorConfig,
   HttpResponseErrorHandler,
   ValidationErrorHandler,
@@ -23,4 +25,4 @@ export type { Middleware, MiddlewareEntry } from "./Middleware";
 export { executeMiddlewarePipeline } from "./Middleware";
 export type { ServerContext } from "./ServerContext";
 export type { RequestHandler } from "./RequestHandler";
-export { FetchApiAdapter } from "./FetchApiAdapter";
+export { FetchApiAdapter, BodyParseError } from "./FetchApiAdapter";

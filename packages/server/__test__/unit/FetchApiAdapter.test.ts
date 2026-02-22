@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { FetchApiAdapter } from "../../src/lib/FetchApiAdapter";
+import { FetchApiAdapter, BodyParseError } from "../../src/lib/FetchApiAdapter";
 
 describe("FetchApiAdapter", () => {
   const adapter = new FetchApiAdapter();
@@ -131,6 +131,57 @@ describe("FetchApiAdapter", () => {
       const result = await adapter.toRequest(request);
 
       expect(result.body).toBeUndefined();
+    });
+
+    test("should throw BodyParseError for malformed JSON", async () => {
+      const request = new Request("http://localhost/todos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{ invalid json !!!",
+      });
+
+      await expect(adapter.toRequest(request)).rejects.toThrow(BodyParseError);
+      // Verify it's specifically a BodyParseError
+      try {
+        await adapter.toRequest(
+          new Request("http://localhost/todos", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: "not json",
+          })
+        );
+      } catch (err) {
+        expect(err).toBeInstanceOf(BodyParseError);
+        expect((err as BodyParseError).message).toContain("Invalid JSON");
+      }
+    });
+
+    test("should accept pre-parsed URL to avoid double parsing", async () => {
+      const request = new Request("http://localhost/todos?status=TODO");
+      const url = new URL(request.url);
+
+      const result = await adapter.toRequest(request, undefined, url);
+
+      expect(result.path).toBe("/todos");
+      expect(result.query).toEqual({ status: "TODO" });
+    });
+
+    test("should parse multipart/form-data body", async () => {
+      const formData = new FormData();
+      formData.append("title", "Test Todo");
+      formData.append("tags", "tag1");
+      formData.append("tags", "tag2");
+
+      const request = new Request("http://localhost/todos", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await adapter.toRequest(request);
+
+      expect(result.body).toBeDefined();
+      expect(result.body.title).toBe("Test Todo");
+      expect(result.body.tags).toEqual(["tag1", "tag2"]);
     });
   });
 

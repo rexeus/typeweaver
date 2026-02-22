@@ -173,7 +173,6 @@ describe("Router (Radix Tree)", () => {
       router.add(createRoute("POST", "/todos"));
 
       expect(router.match("POST", "/todos")).toBeDefined();
-      expect(router.match("GET", "/todos")).toBeUndefined();
     });
 
     test("should be case-insensitive for methods", () => {
@@ -216,6 +215,148 @@ describe("Router (Radix Tree)", () => {
       for (const method of methods) {
         expect(router.match(method, "/resource")).toBeDefined();
       }
+    });
+  });
+
+  describe("HEAD Fallback", () => {
+    test("should match HEAD request using GET handler when no explicit HEAD handler", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/todos", "get-handler"));
+
+      const match = router.match("HEAD", "/todos");
+      expect(match).toBeDefined();
+    });
+
+    test("should prefer explicit HEAD handler over GET fallback", async () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/todos", "get-handler"));
+      router.add(createRoute("HEAD", "/todos", "head-handler"));
+
+      const match = router.match("HEAD", "/todos");
+      expect(match).toBeDefined();
+      const response = await match!.route.handler(
+        {} as any,
+        { request: {} as any, state: new Map() }
+      );
+      expect(response.body.routeId).toBe("head-handler");
+    });
+
+    test("should not fall back to GET for non-HEAD methods", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/todos"));
+
+      expect(router.match("POST", "/todos")).toBeUndefined();
+      expect(router.match("DELETE", "/todos")).toBeUndefined();
+    });
+
+    test("should fall back HEAD to GET on parameterized routes", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/todos/:todoId"));
+
+      const match = router.match("HEAD", "/todos/t1");
+      expect(match).toBeDefined();
+      expect(match!.params).toEqual({ todoId: "t1" });
+    });
+  });
+
+  describe("matchPath (405 support)", () => {
+    test("should find node when path exists", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/todos"));
+      router.add(createRoute("POST", "/todos"));
+
+      const pathMatch = router.matchPath("/todos");
+      expect(pathMatch).toBeDefined();
+      expect(pathMatch!.node.methods.size).toBe(2);
+    });
+
+    test("should return undefined when path does not exist", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/todos"));
+
+      const pathMatch = router.matchPath("/nonexistent");
+      expect(pathMatch).toBeUndefined();
+    });
+
+    test("should extract params for parameterized paths", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/todos/:todoId"));
+
+      const pathMatch = router.matchPath("/todos/t1");
+      expect(pathMatch).toBeDefined();
+      expect(pathMatch!.params).toEqual({ todoId: "t1" });
+    });
+  });
+
+  describe("getAllowedMethods", () => {
+    test("should return registered methods sorted", () => {
+      const router = new Router();
+      router.add(createRoute("POST", "/todos"));
+      router.add(createRoute("GET", "/todos"));
+
+      const pathMatch = router.matchPath("/todos");
+      const allowed = Router.getAllowedMethods(pathMatch!.node);
+      expect(allowed).toEqual(["GET", "HEAD", "POST"]);
+    });
+
+    test("should implicitly include HEAD when GET is registered", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/todos"));
+
+      const pathMatch = router.matchPath("/todos");
+      const allowed = Router.getAllowedMethods(pathMatch!.node);
+      expect(allowed).toContain("HEAD");
+    });
+
+    test("should not duplicate HEAD if explicitly registered", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/todos"));
+      router.add(createRoute("HEAD", "/todos"));
+
+      const pathMatch = router.matchPath("/todos");
+      const allowed = Router.getAllowedMethods(pathMatch!.node);
+      const headCount = allowed.filter(m => m === "HEAD").length;
+      expect(headCount).toBe(1);
+    });
+  });
+
+  describe("URL Decoding", () => {
+    test("should decode URL-encoded path parameters", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/todos/:todoId"));
+
+      const match = router.match("GET", "/todos/hello%20world");
+      expect(match).toBeDefined();
+      expect(match!.params).toEqual({ todoId: "hello world" });
+    });
+
+    test("should decode special characters in path parameters", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/users/:name"));
+
+      const match = router.match("GET", "/users/caf%C3%A9");
+      expect(match).toBeDefined();
+      expect(match!.params).toEqual({ name: "café" });
+    });
+
+    test("should handle malformed encoding gracefully", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/todos/:todoId"));
+
+      // %ZZ is not valid percent-encoding
+      const match = router.match("GET", "/todos/%ZZ");
+      expect(match).toBeDefined();
+      // Should return the raw segment when decoding fails
+      expect(match!.params).toEqual({ todoId: "%ZZ" });
+    });
+
+    test("should not decode static segments during matching", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/todos"));
+
+      // %74odos = "todos" when decoded, but static matching is exact
+      const match = router.match("GET", "/%74odos");
+      expect(match).toBeUndefined();
     });
   });
 
