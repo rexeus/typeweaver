@@ -11,13 +11,34 @@ import { ServerTodoHandlers } from "./handlers/ServerTodoHandlers";
 import { ServerAccountHandlers } from "./handlers/ServerAccountHandlers";
 import { ServerAuthHandlers } from "./handlers/ServerAuthHandlers";
 
+/**
+ * Configuration options for TypeweaverApp-based test instances.
+ *
+ * Extends the standard `TypeweaverRouterOptions` (without `requestHandlers`)
+ * with options to force specific errors or override responses for testing
+ * error handling and edge cases.
+ */
 export type TestAppOptions = {
+  /** Error to throw from todo handlers (simulates handler failures). */
   readonly throwTodoError?: Error | HttpResponse;
+  /** Error to throw from auth handlers. */
   readonly throwAuthError?: Error | HttpResponse;
+  /** Error to throw from account handlers. */
   readonly throwAccountError?: Error | HttpResponse;
+  /** Custom response to return for all requests (bypasses handlers). */
   readonly customResponses?: HttpResponse | IHttpResponse;
 } & Omit<TypeweaverRouterOptions<unknown>, "requestHandlers">;
 
+/**
+ * Creates a TypeweaverApp with all generated test routers (Todo, Auth, Account) mounted.
+ *
+ * Uses the framework-agnostic `TypeweaverApp` (from the server plugin) instead of Hono.
+ * The returned app exposes a `fetch()` method compatible with Bun, Deno,
+ * and Cloudflare Workers — or can be used directly in tests via `app.fetch(request)`.
+ *
+ * @param options - Optional test app configuration
+ * @returns A configured TypeweaverApp instance
+ */
 export function createTestApp(options?: TestAppOptions): TypeweaverApp {
   const app = new TypeweaverApp();
 

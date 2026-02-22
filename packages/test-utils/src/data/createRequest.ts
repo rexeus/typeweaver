@@ -1,6 +1,24 @@
 import type { IHttpRequest } from "@rexeus/typeweaver-core";
 import { createData } from "./createData";
 
+/**
+ * Creates a fully populated test request by composing individual part creators.
+ *
+ * Builds a request object from separate body, header, param, and query creators,
+ * each producing defaults that can be individually overridden. This allows tests
+ * to create valid requests with minimal boilerplate while only specifying the
+ * fields relevant to the test case.
+ *
+ * @template TRequest - The specific request type (e.g., `ICreateTodoRequest`)
+ * @template TBody - Request body type
+ * @template THeader - Request header type
+ * @template TParam - Path parameter type
+ * @template TQuery - Query parameter type
+ * @param defaultRequest - Base request properties (method, path)
+ * @param creators - Factory functions for each request part (body, header, param, query)
+ * @param input - Optional partial overrides for any request part
+ * @returns A fully populated request object of type `TRequest`
+ */
 export function createRequest<
   TRequest extends IHttpRequest,
   TBody,

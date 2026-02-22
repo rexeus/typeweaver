@@ -7,7 +7,18 @@ import type {
   OperationResource,
 } from "@rexeus/typeweaver-gen";
 
+/**
+ * Generates TypeweaverRouter subclasses from API definitions.
+ *
+ * For each resource (e.g., `Todo`, `Account`), produces a `<ResourceName>Router.ts`
+ * file that extends `TypeweaverRouter` and registers all operations as routes.
+ */
 export class RouterGenerator {
+  /**
+   * Generates router files for all resources in the given context.
+   *
+   * @param context - The generator context containing resources, templates, and output configuration
+   */
   public static generate(context: GeneratorContext): void {
     const moduleDir = path.dirname(fileURLToPath(import.meta.url));
     const templateFile = path.join(moduleDir, "templates", "Router.ejs");
