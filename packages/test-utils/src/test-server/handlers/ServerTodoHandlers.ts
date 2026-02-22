@@ -5,21 +5,19 @@ import {
   createDeleteSubTodoSuccessResponse,
   createDeleteTodoSuccessResponse,
   createGetTodoSuccessResponse,
-  createHeadTodoSuccessResponse,
   createListSubTodosSuccessResponse,
   createListTodosSuccessResponse,
   createOptionsTodoSuccessResponse,
   createPutTodoSuccessResponse,
   createQuerySubTodoSuccessResponse,
-  CreateSubTodoSuccessResponse,
-  CreateTodoSuccessResponse,
   createUpdateSubTodoSuccessResponse,
   createUpdateTodoStatusSuccessResponse,
   createUpdateTodoSuccessResponse,
+  CreateSubTodoSuccessResponse,
+  CreateTodoSuccessResponse,
   DeleteSubTodoSuccessResponse,
   DeleteTodoSuccessResponse,
   GetTodoSuccessResponse,
-  HeadTodoSuccessResponse,
   ListSubTodosSuccessResponse,
   ListTodosSuccessResponse,
   OptionsTodoSuccessResponse,
@@ -30,20 +28,18 @@ import {
   UpdateTodoStatusSuccessResponse,
   UpdateTodoSuccessResponse,
 } from "../..";
-import type { TodoApiHandler } from "../../test-project/output/todo/TodoHono";
+import type { TodoApiHandler } from "../../test-project/output/todo/TodoRouter";
 import type {
   CreateSubTodoResponse,
   CreateTodoResponse,
   DeleteSubTodoResponse,
   DeleteTodoResponse,
   GetTodoResponse,
-  HeadTodoResponse,
   ICreateSubTodoRequest,
   ICreateTodoRequest,
   IDeleteSubTodoRequest,
   IDeleteTodoRequest,
   IGetTodoRequest,
-  IHeadTodoRequest,
   IListSubTodosRequest,
   IListTodosRequest,
   IOptionsTodoRequest,
@@ -64,7 +60,7 @@ import type {
   UpdateTodoStatusResponse,
 } from "../..";
 
-export class TodoHandlers implements TodoApiHandler {
+export class ServerTodoHandlers implements TodoApiHandler {
   public constructor(private readonly throwError?: Error | HttpResponse) {
     //
   }
@@ -87,7 +83,7 @@ export class TodoHandlers implements TodoApiHandler {
   }
 
   public async handleDeleteTodoRequest(
-    request: IDeleteTodoRequest
+    _request: IDeleteTodoRequest
   ): Promise<DeleteTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
@@ -171,7 +167,7 @@ export class TodoHandlers implements TodoApiHandler {
   }
 
   public async handleListTodosRequest(
-    request: IListTodosRequest
+    _request: IListTodosRequest
   ): Promise<ListTodosResponse> {
     if (this.throwError) {
       throw this.throwError;
@@ -201,14 +197,13 @@ export class TodoHandlers implements TodoApiHandler {
   }
 
   public async handleDeleteSubTodoRequest(
-    request: IDeleteSubTodoRequest
+    _request: IDeleteSubTodoRequest
   ): Promise<DeleteSubTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
 
     const response = createDeleteSubTodoSuccessResponse();
-
     return new DeleteSubTodoSuccessResponse(response);
   }
 
@@ -263,17 +258,6 @@ export class TodoHandlers implements TodoApiHandler {
 
     const response = createListTodosSuccessResponse();
     return new QueryTodoSuccessResponse(response);
-  }
-
-  public async handleHeadTodoRequest(
-    _request: IHeadTodoRequest
-  ): Promise<HeadTodoResponse> {
-    if (this.throwError) {
-      throw this.throwError;
-    }
-
-    const response = createHeadTodoSuccessResponse();
-    return new HeadTodoSuccessResponse(response);
   }
 
   public async handleOptionsTodoRequest(

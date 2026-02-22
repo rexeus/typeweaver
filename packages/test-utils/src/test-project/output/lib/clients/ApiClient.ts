@@ -184,9 +184,7 @@ export abstract class ApiClient {
   private createUrl(path: string, query?: IHttpQuery): string {
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
     const queryString = this.buildQueryString(query);
-    return queryString
-      ? `${normalizedPath}?${queryString}`
-      : normalizedPath;
+    return queryString ? `${normalizedPath}?${queryString}` : normalizedPath;
   }
 
   private buildQueryString(query?: IHttpQuery): string {

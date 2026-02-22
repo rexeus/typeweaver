@@ -12,6 +12,8 @@ export * from "./account/AccountHono";
 
 export * from "./account/AccountHttpApiRoutes";
 
+export * from "./account/AccountRouter";
+
 export * from "./account/RegisterAccountRequest";
 
 export * from "./account/RegisterAccountRequestCommand";
@@ -37,6 +39,8 @@ export * from "./auth/AuthClient";
 export * from "./auth/AuthHono";
 
 export * from "./auth/AuthHttpApiRoutes";
+
+export * from "./auth/AuthRouter";
 
 export * from "./auth/RefreshTokenRequest";
 
@@ -201,6 +205,8 @@ export * from "./todo/TodoHttpApiRoutes";
 export * from "./todo/TodoNotChangeableErrorResponse";
 
 export * from "./todo/TodoNotFoundErrorResponse";
+
+export * from "./todo/TodoRouter";
 
 export * from "./todo/TodoStatusTransitionInvalidErrorResponse";
 

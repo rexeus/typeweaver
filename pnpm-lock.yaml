@@ -107,6 +107,9 @@ importers:
       '@rexeus/typeweaver-hono':
         specifier: workspace:^
         version: link:../hono
+      '@rexeus/typeweaver-server':
+        specifier: workspace:^
+        version: link:../server
       '@rexeus/typeweaver-types':
         specifier: workspace:^
         version: link:../types
@@ -238,6 +241,9 @@ importers:
       '@rexeus/typeweaver-hono':
         specifier: workspace:^
         version: link:../hono
+      '@rexeus/typeweaver-server':
+        specifier: workspace:^
+        version: link:../server
       '@rexeus/typeweaver-types':
         specifier: workspace:^
         version: link:../types

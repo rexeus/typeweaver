@@ -5,7 +5,7 @@ import {
   createRefreshTokenSuccessResponse,
   RefreshTokenSuccessResponse,
 } from "../..";
-import type { AuthApiHandler } from "../../test-project/output/auth/AuthHono";
+import type { AuthApiHandler } from "../../test-project/output/auth/AuthRouter";
 import type {
   AccessTokenResponse,
   IAccessTokenRequest,
@@ -13,7 +13,7 @@ import type {
   RefreshTokenResponse,
 } from "../..";
 
-export class AuthHandlers implements AuthApiHandler {
+export class ServerAuthHandlers implements AuthApiHandler {
   public constructor(private readonly throwError?: Error | HttpResponse) {
     //
   }
