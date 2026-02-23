@@ -28,6 +28,7 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "test": "vitest --run",
     "format": "prettier --write .",
     "build": "tsup && cp ../../LICENSE ../../NOTICE ./dist/",
     "prepack": "npm run build",

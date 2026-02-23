@@ -89,7 +89,6 @@
     }
   },
   "devDependencies": {
-    "axios": "^1.13.2",
     "case": "^1.6.3",
     "hono": "^4.11.3",
     "prettier": "^3.6.2",

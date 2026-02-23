@@ -6,4 +6,7 @@
  */
 
 export * from "./ApiClient";
+export * from "./NetworkError";
+export * from "./PathParameterError";
 export * from "./RequestCommand";
+export * from "./ResponseParseError";

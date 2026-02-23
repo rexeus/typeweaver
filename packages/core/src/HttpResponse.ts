@@ -14,8 +14,7 @@ export type IHttpResponse<
 export class HttpResponse<
   Header extends IHttpHeader = IHttpHeader,
   Body extends IHttpBody = IHttpBody,
-> implements IHttpResponse<Header, Body>
-{
+> implements IHttpResponse<Header, Body> {
   public constructor(
     public readonly statusCode: HttpStatusCode,
     public readonly header: Header,

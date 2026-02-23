@@ -2,4 +2,4 @@ packages:
   - packages/*
 
 patchedDependencies:
-  '@changesets/assemble-release-plan@6.0.9': patches/@changesets__assemble-release-plan@6.0.9.patch
+  "@changesets/assemble-release-plan@6.0.9": patches/@changesets__assemble-release-plan@6.0.9.patch

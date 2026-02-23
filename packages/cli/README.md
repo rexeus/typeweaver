@@ -118,7 +118,8 @@ Then run:
 npx typeweaver generate --config ./typeweaver.config.js
 ```
 
-> Replace `npx` with `pnpx`, `deno run -A npm:@rexeus/typeweaver`, or `bunx` depending on your runtime.
+> Replace `npx` with `pnpx`, `deno run -A npm:@rexeus/typeweaver`, or `bunx` depending on your
+> runtime.
 
 ## 🌱 Get Started
 

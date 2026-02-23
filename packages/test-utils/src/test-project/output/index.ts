@@ -48,6 +48,42 @@ export * from "./auth/RefreshTokenResponse";
 
 export * from "./auth/RefreshTokenResponseValidator";
 
+export * from "./file/DownloadFileContentRequest";
+
+export * from "./file/DownloadFileContentRequestCommand";
+
+export * from "./file/DownloadFileContentRequestValidator";
+
+export * from "./file/DownloadFileContentResponse";
+
+export * from "./file/DownloadFileContentResponseValidator";
+
+export * from "./file/FileClient";
+
+export * from "./file/FileHono";
+
+export * from "./file/FileHttpApiRoutes";
+
+export * from "./file/GetFileMetadataRequest";
+
+export * from "./file/GetFileMetadataRequestCommand";
+
+export * from "./file/GetFileMetadataRequestValidator";
+
+export * from "./file/GetFileMetadataResponse";
+
+export * from "./file/GetFileMetadataResponseValidator";
+
+export * from "./file/UploadFileRequest";
+
+export * from "./file/UploadFileRequestCommand";
+
+export * from "./file/UploadFileRequestValidator";
+
+export * from "./file/UploadFileResponse";
+
+export * from "./file/UploadFileResponseValidator";
+
 export * from "./shared/ConflictErrorResponse";
 
 export * from "./shared/ForbiddenErrorResponse";

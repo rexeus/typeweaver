@@ -5,10 +5,12 @@ import {
   createCreateTodoRequest,
   createGetTodoRequest,
   createListTodosRequest,
+  createOptionsTodoRequest,
   createQuerySubTodoRequest,
   CreateTodoRequestValidator,
   GetTodoRequestValidator,
   ListTodosRequestValidator,
+  OptionsTodoRequestValidator,
   QuerySubTodoRequestValidator,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
@@ -154,6 +156,89 @@ describe("Generated RequestValidator", () => {
       expect(result.data.header).not.toHaveProperty("accept");
       expect(result.data.header).not.toHaveProperty("authorization");
       expect(result.data.header).not.toHaveProperty("CONTENT-TYPE");
+    });
+
+    test("should split comma-separated header string into array when schema expects array", () => {
+      // Arrange
+      const validator = new OptionsTodoRequestValidator();
+      const request = createOptionsTodoRequest({
+        header: {
+          "Access-Control-Request-Headers":
+            "Content-Type, Authorization" as any,
+        },
+      });
+
+      // Act
+      const result = validator.safeValidate(request);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.header["Access-Control-Request-Headers"]).toEqual([
+        "Content-Type",
+        "Authorization",
+      ]);
+    });
+
+    test("should not split comma in non-array header field", () => {
+      // Arrange
+      const validator = new OptionsTodoRequestValidator();
+      const tokenWithComma = "Bearer eyJhbGciOiJIUzI1NiJ9,extra";
+      const request = createOptionsTodoRequest({
+        header: {
+          Authorization: tokenWithComma,
+        },
+      });
+
+      // Act
+      const result = validator.safeValidate(request);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.header.Authorization).toBe(tokenWithComma);
+    });
+
+    test("should split comma-separated header string without spaces", () => {
+      // Arrange
+      const validator = new OptionsTodoRequestValidator();
+      const request = createOptionsTodoRequest({
+        header: {
+          "Access-Control-Request-Headers": "Content-Type,Authorization" as any,
+        },
+      });
+
+      // Act
+      const result = validator.safeValidate(request);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.header["Access-Control-Request-Headers"]).toEqual([
+        "Content-Type",
+        "Authorization",
+      ]);
+    });
+
+    test("should not re-split header value that is already an array", () => {
+      // Arrange
+      const validator = new OptionsTodoRequestValidator();
+      const request = createOptionsTodoRequest({
+        header: {
+          "Access-Control-Request-Headers": ["Content-Type", "Authorization"],
+        },
+      });
+
+      // Act
+      const result = validator.safeValidate(request);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.header["Access-Control-Request-Headers"]).toEqual([
+        "Content-Type",
+        "Authorization",
+      ]);
     });
 
     test("should coerce single header value to array when schema expects array", () => {

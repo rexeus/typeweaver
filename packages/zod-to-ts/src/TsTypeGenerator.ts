@@ -428,7 +428,6 @@ export class TsTypeNode {
   }
 
   private static fromZodFile(_zodFile: $ZodFile): TypeNode {
-    // TODO: handle zodFile
     return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
   }
 
