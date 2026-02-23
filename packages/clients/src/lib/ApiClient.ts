@@ -39,7 +39,9 @@ export type ApiClientProps = {
   readonly timeoutMs?: number;
 };
 
-const NETWORK_ERROR_MESSAGES: Readonly<Record<string, string>> = {
+const NETWORK_ERROR_MESSAGES: Readonly<
+  Partial<Record<NetworkErrorCode, string>>
+> = {
   ECONNREFUSED: "Connection refused",
   ECONNRESET: "Connection reset by peer",
   ENOTFOUND: "DNS lookup failed",
@@ -108,7 +110,7 @@ export abstract class ApiClient {
           : undefined,
     });
 
-    return await this.createResponse(response);
+    return await this.createResponse(response, method, fullUrl);
   }
 
   private async performFetch(
@@ -123,7 +125,11 @@ export abstract class ApiClient {
     }
   }
 
-  private async createResponse(response: Response): Promise<IHttpResponse> {
+  private async createResponse(
+    response: Response,
+    method: string,
+    url: string
+  ): Promise<IHttpResponse> {
     const header: IHttpHeader = {};
     response.headers.forEach((value, key) => {
       header[key] = value;
@@ -136,7 +142,7 @@ export abstract class ApiClient {
       }
     }
 
-    const body = await this.parseResponseBody(response);
+    const body = await this.parseResponseBody(response, method, url);
 
     return {
       body,
@@ -145,7 +151,29 @@ export abstract class ApiClient {
     };
   }
 
-  private async parseResponseBody(response: Response): Promise<unknown> {
+  private async readBody<T>(
+    read: () => Promise<T>,
+    response: Response,
+    method: string,
+    url: string
+  ): Promise<T> {
+    try {
+      return await read();
+    } catch (error) {
+      throw new ResponseParseError(
+        `Failed to read response body (${method} ${url})`,
+        response.status,
+        "",
+        { cause: error instanceof Error ? error : undefined }
+      );
+    }
+  }
+
+  private async parseResponseBody(
+    response: Response,
+    method: string,
+    url: string
+  ): Promise<unknown> {
     if (response.status === 204 || response.status === 304) {
       return undefined;
     }
@@ -153,7 +181,12 @@ export abstract class ApiClient {
     const contentType = response.headers.get("content-type");
 
     if (this.isJsonContentType(contentType)) {
-      const text = await response.text();
+      const text = await this.readBody(
+        () => response.text(),
+        response,
+        method,
+        url
+      );
       if (!text) return undefined;
       try {
         return JSON.parse(text);
@@ -170,12 +203,22 @@ export abstract class ApiClient {
     }
 
     if (this.isTextContentType(contentType) || !contentType) {
-      const text = await response.text();
+      const text = await this.readBody(
+        () => response.text(),
+        response,
+        method,
+        url
+      );
       if (!text) return undefined;
       return text;
     }
 
-    return await response.arrayBuffer();
+    return await this.readBody(
+      () => response.arrayBuffer(),
+      response,
+      method,
+      url
+    );
   }
 
   private isTextContentType(contentType: string | null): boolean {
@@ -221,8 +264,9 @@ export abstract class ApiClient {
       const code = cause?.code;
 
       if (code && code in NETWORK_ERROR_MESSAGES) {
+        const message = NETWORK_ERROR_MESSAGES[code as NetworkErrorCode];
         return new NetworkError(
-          `Network error: ${NETWORK_ERROR_MESSAGES[code]} ${context}`,
+          `Network error: ${message} ${context}`,
           code as NetworkErrorCode,
           method,
           url,
@@ -236,7 +280,7 @@ export abstract class ApiClient {
       "UNKNOWN",
       method,
       url,
-      { cause: error instanceof Error ? error : undefined }
+      { cause: error }
     );
   }
 

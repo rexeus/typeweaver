@@ -19,7 +19,8 @@ export class PathParameterError extends Error {
     message: string,
     public readonly paramName: string,
     public readonly path: string,
+    options?: ErrorOptions,
   ) {
-    super(message);
+    super(message, options);
   }
 }

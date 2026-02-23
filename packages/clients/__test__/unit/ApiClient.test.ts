@@ -21,14 +21,12 @@ function createMockFetch(
   body: unknown,
   headers: Record<string, string> = { "content-type": "application/json" }
 ): typeof globalThis.fetch {
-  return vi
-    .fn<typeof globalThis.fetch>()
-    .mockResolvedValue(
-      new Response(body !== undefined ? JSON.stringify(body) : null, {
-        status,
-        headers,
-      })
-    );
+  return vi.fn<typeof globalThis.fetch>().mockResolvedValue(
+    new Response(body !== undefined ? JSON.stringify(body) : null, {
+      status,
+      headers,
+    })
+  );
 }
 
 function createClientWithMockFetch(baseUrl: string) {
@@ -394,7 +392,8 @@ describe("ApiClient Network Error Handling", () => {
       return (
         error instanceof NetworkError &&
         error.code === "UNKNOWN" &&
-        error.message.includes("something broke")
+        error.message.includes("something broke") &&
+        error.cause === "something broke"
       );
     });
   });
@@ -1066,11 +1065,13 @@ describe("ApiClient Serialization Error Isolation", () => {
 });
 
 describe("ApiClient Body Read Error Isolation", () => {
-  test("body-read error is not misclassified as network error", async () => {
-    const mockResponse = new Response("body", { status: 200 });
-    vi.spyOn(mockResponse, "text").mockRejectedValue(
-      new Error("body stream interrupted")
-    );
+  test("JSON-branch text() failure wraps as ResponseParseError", async () => {
+    const originalError = new Error("body stream interrupted");
+    const mockResponse = new Response("body", {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+    vi.spyOn(mockResponse, "text").mockRejectedValue(originalError);
     const mockFetch = vi
       .fn<typeof globalThis.fetch>()
       .mockResolvedValue(mockResponse);
@@ -1084,8 +1085,74 @@ describe("ApiClient Body Read Error Isolation", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    await expect(client.send(command)).rejects.toSatisfy((error: Error) => {
-      return !error.message.startsWith("Network error:");
+    await expect(client.send(command)).rejects.toSatisfy((error: unknown) => {
+      return (
+        error instanceof ResponseParseError &&
+        error.statusCode === 200 &&
+        error.message.includes("Failed to read response body") &&
+        error.message.includes("GET") &&
+        error.cause === originalError
+      );
+    });
+  });
+
+  test("text-branch text() failure wraps as ResponseParseError", async () => {
+    const originalError = new Error("stream closed");
+    const mockResponse = new Response("body", {
+      status: 200,
+      headers: { "content-type": "text/plain" },
+    });
+    vi.spyOn(mockResponse, "text").mockRejectedValue(originalError);
+    const mockFetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValue(mockResponse);
+    const client = new TodoClient({
+      fetchFn: mockFetch,
+      baseUrl: "http://localhost:3000",
+      unknownResponseHandling: "passthrough",
+      isSuccessStatusCode: () => true,
+    });
+    const command = new GetTodoRequestCommand(
+      createGetTodoRequest({ param: { todoId: "abc" } })
+    );
+
+    await expect(client.send(command)).rejects.toSatisfy((error: unknown) => {
+      return (
+        error instanceof ResponseParseError &&
+        error.statusCode === 200 &&
+        error.message.includes("Failed to read response body") &&
+        error.cause === originalError
+      );
+    });
+  });
+
+  test("arrayBuffer() failure wraps as ResponseParseError", async () => {
+    const originalError = new Error("connection dropped");
+    const mockResponse = new Response(new Uint8Array([1, 2, 3]), {
+      status: 200,
+      headers: { "content-type": "application/octet-stream" },
+    });
+    vi.spyOn(mockResponse, "arrayBuffer").mockRejectedValue(originalError);
+    const mockFetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValue(mockResponse);
+    const client = new TodoClient({
+      fetchFn: mockFetch,
+      baseUrl: "http://localhost:3000",
+      unknownResponseHandling: "passthrough",
+      isSuccessStatusCode: () => true,
+    });
+    const command = new GetTodoRequestCommand(
+      createGetTodoRequest({ param: { todoId: "abc" } })
+    );
+
+    await expect(client.send(command)).rejects.toSatisfy((error: unknown) => {
+      return (
+        error instanceof ResponseParseError &&
+        error.statusCode === 200 &&
+        error.message.includes("Failed to read response body") &&
+        error.cause === originalError
+      );
     });
   });
 });
@@ -1364,6 +1431,15 @@ describe("PathParameterError", () => {
     expect(error.message).toBe(
       "Path parameter 'slug' is not found in path '/posts/:id'"
     );
+  });
+
+  test("preserves cause", () => {
+    const cause = new Error("underlying issue");
+    const error = new PathParameterError("test", "id", "/users/:id", {
+      cause,
+    });
+
+    expect(error.cause).toBe(cause);
   });
 });
 
