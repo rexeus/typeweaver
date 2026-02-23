@@ -28,7 +28,7 @@ type GetFileMetadataRequestInput = {
 };
 
 export function createGetFileMetadataRequest(
-  input: GetFileMetadataRequestInput = {},
+  input: GetFileMetadataRequestInput = {}
 ): IGetFileMetadataRequest {
   const param = input.param
     ? createGetFileMetadataRequestParam(input.param)
@@ -51,6 +51,6 @@ export function createGetFileMetadataRequest(
       header: createGetFileMetadataRequestHeader,
       param: () => param,
     },
-    input,
+    input
   );
 }

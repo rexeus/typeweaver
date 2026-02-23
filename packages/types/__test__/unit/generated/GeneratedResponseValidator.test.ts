@@ -318,7 +318,13 @@ describe("Generated ResponseValidator", () => {
       expect(result.data).toBeInstanceOf(OptionsTodoSuccessResponse);
       assert(result.data instanceof OptionsTodoSuccessResponse);
       expect(result.data.header.Allow).toEqual([
-        "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
+        "GET",
+        "HEAD",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS",
       ]);
     });
 

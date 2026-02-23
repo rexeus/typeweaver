@@ -80,7 +80,7 @@ describe("Base URL Routing", () => {
 
     test("deeply nested prefix", async () => {
       const { baseUrl } = trackServer(
-        await createPrefixedTestServer("/api/v1"),
+        await createPrefixedTestServer("/api/v1")
       );
       const client = new TodoClient({ baseUrl });
 
@@ -116,14 +116,10 @@ describe("Base URL Routing", () => {
       const clientB = new TodoClient({ baseUrl });
 
       const requestA = createGetTodoRequest();
-      const responseA = await clientA.send(
-        new GetTodoRequestCommand(requestA),
-      );
+      const responseA = await clientA.send(new GetTodoRequestCommand(requestA));
 
       const requestB = createGetTodoRequest();
-      const responseB = await clientB.send(
-        new GetTodoRequestCommand(requestB),
-      );
+      const responseB = await clientB.send(new GetTodoRequestCommand(requestB));
 
       expect(responseA).toBeInstanceOf(GetTodoSuccessResponse);
       expect(responseB).toBeInstanceOf(GetTodoSuccessResponse);
@@ -139,14 +135,10 @@ describe("Base URL Routing", () => {
       const clientB = new TodoClient({ baseUrl: serverB.baseUrl });
 
       const requestA = createGetTodoRequest();
-      const responseA = await clientA.send(
-        new GetTodoRequestCommand(requestA),
-      );
+      const responseA = await clientA.send(new GetTodoRequestCommand(requestA));
 
       const requestB = createGetTodoRequest();
-      const responseB = await clientB.send(
-        new GetTodoRequestCommand(requestB),
-      );
+      const responseB = await clientB.send(new GetTodoRequestCommand(requestB));
 
       expect(responseA).toBeInstanceOf(GetTodoSuccessResponse);
       expect(responseB).toBeInstanceOf(GetTodoSuccessResponse);
@@ -177,7 +169,7 @@ describe("Base URL Routing", () => {
       const { baseUrl } = trackServer(
         await createPrefixedTestServer("/api", {
           throwTodoError: createTodoNotFoundErrorResponse(),
-        }),
+        })
       );
       const client = new TodoClient({ baseUrl });
 
@@ -185,7 +177,7 @@ describe("Base URL Routing", () => {
       const command = new GetTodoRequestCommand(requestData);
 
       await expect(client.send(command)).rejects.toThrow(
-        TodoNotFoundErrorResponse,
+        TodoNotFoundErrorResponse
       );
     });
   });

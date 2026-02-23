@@ -17,9 +17,7 @@ export const createUploadFileRequestHeader =
   }));
 
 export const createUploadFileRequestBody = (): IUploadFileRequestBody => {
-  const bytes = new Uint8Array(
-    faker.number.int({ min: 8, max: 64 }),
-  );
+  const bytes = new Uint8Array(faker.number.int({ min: 8, max: 64 }));
   crypto.getRandomValues(bytes);
   return new Blob([bytes], { type: "application/octet-stream" });
 };
@@ -31,7 +29,7 @@ type UploadFileRequestInput = {
 };
 
 export function createUploadFileRequest(
-  input: UploadFileRequestInput = {},
+  input: UploadFileRequestInput = {}
 ): IUploadFileRequest {
   return createRequest<
     IUploadFileRequest,
@@ -48,6 +46,6 @@ export function createUploadFileRequest(
       body: () => input.body ?? createUploadFileRequestBody(),
       header: createUploadFileRequestHeader,
     },
-    input,
+    input
   );
 }

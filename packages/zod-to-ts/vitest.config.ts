@@ -6,9 +6,7 @@ export default defineConfig({
     globals: true,
     environment: "node",
     setupFiles: [],
-    include: [
-      "__test__/unit/**/*.test.ts",
-    ],
+    include: ["__test__/unit/**/*.test.ts"],
     poolOptions: {
       vmThreads: {
         singleThread: false,

@@ -20,8 +20,7 @@ export class HttpRequestDefinition<
   TParam extends HttpParamSchema | undefined,
   TQuery extends HttpQuerySchema | undefined,
   TBody extends HttpBodySchema | undefined,
-> implements IHttpRequestDefinition<THeader, TParam, TQuery, TBody>
-{
+> implements IHttpRequestDefinition<THeader, TParam, TQuery, TBody> {
   public readonly header?: THeader;
   public readonly param?: TParam;
   public readonly query?: TQuery;

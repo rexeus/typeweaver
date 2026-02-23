@@ -25,7 +25,7 @@ type DownloadFileContentSuccessResponseInput = {
 };
 
 export function createDownloadFileContentSuccessResponse(
-  input: DownloadFileContentSuccessResponseInput = {},
+  input: DownloadFileContentSuccessResponseInput = {}
 ): DownloadFileContentSuccessResponse {
   const responseData = createResponse<
     IDownloadFileContentSuccessResponse,
@@ -39,7 +39,7 @@ export function createDownloadFileContentSuccessResponse(
       body: () => input.body ?? createDownloadFileContentSuccessResponseBody(),
       header: createDownloadFileContentSuccessResponseHeader,
     },
-    input,
+    input
   );
   return new DownloadFileContentSuccessResponse(responseData);
 }

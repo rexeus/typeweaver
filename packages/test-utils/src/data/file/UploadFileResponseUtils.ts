@@ -30,7 +30,7 @@ type UploadFileSuccessResponseInput = {
 };
 
 export function createUploadFileSuccessResponse(
-  input: UploadFileSuccessResponseInput = {},
+  input: UploadFileSuccessResponseInput = {}
 ): UploadFileSuccessResponse {
   const responseData = createResponse<
     IUploadFileSuccessResponse,
@@ -44,7 +44,7 @@ export function createUploadFileSuccessResponse(
       body: createUploadFileSuccessResponseBody,
       header: createUploadFileSuccessResponseHeader,
     },
-    input,
+    input
   );
   return new UploadFileSuccessResponse(responseData);
 }

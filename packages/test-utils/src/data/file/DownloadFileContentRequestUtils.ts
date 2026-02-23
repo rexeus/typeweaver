@@ -27,7 +27,7 @@ type DownloadFileContentRequestInput = {
 };
 
 export function createDownloadFileContentRequest(
-  input: DownloadFileContentRequestInput = {},
+  input: DownloadFileContentRequestInput = {}
 ): IDownloadFileContentRequest {
   const param = input.param
     ? createDownloadFileContentRequestParam(input.param)
@@ -50,6 +50,6 @@ export function createDownloadFileContentRequest(
       header: createDownloadFileContentRequestHeader,
       param: () => param,
     },
-    input,
+    input
   );
 }

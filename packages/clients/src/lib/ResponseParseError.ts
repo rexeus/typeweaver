@@ -19,7 +19,7 @@ export class ResponseParseError extends Error {
     message: string,
     public readonly statusCode: number,
     public readonly bodyPreview: string,
-    options?: { cause?: unknown },
+    options?: { cause?: unknown }
   ) {
     super(message, options);
   }

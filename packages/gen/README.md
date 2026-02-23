@@ -24,7 +24,8 @@ npm install -D @rexeus/typeweaver-gen
 ## 💡 How to use
 
 Most users don’t depend on this package directly — use the CLI instead:
-[`@rexeus/typeweaver`](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md). If you’re writing a plugin, start here.
+[`@rexeus/typeweaver`](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md). If
+you’re writing a plugin, start here.
 
 ### 🚀 Minimal plugin
 

@@ -35,12 +35,8 @@ export type IHttpOperationDefinition<
   TParam extends HttpParamSchema | undefined = HttpParamSchema | undefined,
   TQuery extends HttpQuerySchema | undefined = HttpQuerySchema | undefined,
   TBody extends HttpBodySchema | undefined = HttpBodySchema | undefined,
-  TRequest extends IHttpRequestDefinition<
-    THeader,
-    TParam,
-    TQuery,
-    TBody
-  > = IHttpRequestDefinition<THeader, TParam, TQuery, TBody>,
+  TRequest extends IHttpRequestDefinition<THeader, TParam, TQuery, TBody> =
+    IHttpRequestDefinition<THeader, TParam, TQuery, TBody>,
   TResponses extends IHttpResponseDefinition[] = IHttpResponseDefinition[],
 > = {
   operationId: TOperationId;
@@ -85,20 +81,18 @@ export class HttpOperationDefinition<
   TBody extends HttpBodySchema | undefined,
   TRequest extends IHttpRequestDefinition<THeader, TParam, TQuery, TBody>,
   TResponses extends IHttpResponseDefinition[],
-> implements
-    IHttpOperationDefinition<
-      TOperationId,
-      TPath,
-      TMethod,
-      TSummary,
-      THeader,
-      TParam,
-      TQuery,
-      TBody,
-      TRequest,
-      TResponses
-    >
-{
+> implements IHttpOperationDefinition<
+  TOperationId,
+  TPath,
+  TMethod,
+  TSummary,
+  THeader,
+  TParam,
+  TQuery,
+  TBody,
+  TRequest,
+  TResponses
+> {
   public readonly operationId: TOperationId;
   public readonly path: TPath;
   public readonly method: TMethod;

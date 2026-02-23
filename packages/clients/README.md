@@ -31,7 +31,8 @@ npm install @rexeus/typeweaver-core
 npx typeweaver generate --input ./api/definitions --output ./api/generated --plugins clients
 ```
 
-More on the CLI in [@rexeus/typeweaver](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md#️-cli).
+More on the CLI in
+[@rexeus/typeweaver](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md#️-cli).
 
 ## 📂 Generated Output
 
@@ -48,7 +49,8 @@ Resource-specific HTTP clients are generated as `<ResourceName>Client.ts` files,
 
 - **Type-safe HTTP methods** - Method overloads for each operation ensuring compile-time type
   checking
-- **fetch based** - Zero dependencies, uses the native fetch API. Supports custom fetch functions for middleware and testing
+- **fetch based** - Zero dependencies, uses the native fetch API. Supports custom fetch functions
+  for middleware and testing
 - **Response type mapping** - Each response is automatically mapped to the associated response class
   and an instance of the class is returned. This ensures that all responses are in the defined
   format and it is type-safe.

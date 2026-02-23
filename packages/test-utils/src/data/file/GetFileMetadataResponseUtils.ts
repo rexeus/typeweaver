@@ -30,7 +30,7 @@ type GetFileMetadataSuccessResponseInput = {
 };
 
 export function createGetFileMetadataSuccessResponse(
-  input: GetFileMetadataSuccessResponseInput = {},
+  input: GetFileMetadataSuccessResponseInput = {}
 ): GetFileMetadataSuccessResponse {
   const responseData = createResponse<
     IGetFileMetadataSuccessResponse,
@@ -44,7 +44,7 @@ export function createGetFileMetadataSuccessResponse(
       body: createGetFileMetadataSuccessResponseBody,
       header: createGetFileMetadataSuccessResponseHeader,
     },
-    input,
+    input
   );
   return new GetFileMetadataSuccessResponse(responseData);
 }

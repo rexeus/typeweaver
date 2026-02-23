@@ -163,7 +163,8 @@ describe("Generated RequestValidator", () => {
       const validator = new OptionsTodoRequestValidator();
       const request = createOptionsTodoRequest({
         header: {
-          "Access-Control-Request-Headers": "Content-Type, Authorization" as any,
+          "Access-Control-Request-Headers":
+            "Content-Type, Authorization" as any,
         },
       });
 

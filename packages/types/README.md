@@ -36,7 +36,8 @@ This plugin is included by default and doesn't need to be explicitly specified:
 npx typeweaver generate --input ./api/definition --output ./api/generated --plugins clients
 ```
 
-More details on how to use the [CLI](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md#️-cli).
+More details on how to use the
+[CLI](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md#️-cli).
 
 ## 📂 Generated Output
 

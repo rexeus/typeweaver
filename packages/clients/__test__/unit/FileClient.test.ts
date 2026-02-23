@@ -53,7 +53,7 @@ describe("FileClient", () => {
     });
     const client = createFileClient(mockFetch);
     const command = new DownloadFileContentRequestCommand(
-      createDownloadFileContentRequest(),
+      createDownloadFileContentRequest()
     );
 
     const result = await client.send(command);
@@ -75,7 +75,7 @@ describe("FileClient", () => {
     });
     const client = createFileClient(mockFetch);
     const command = new GetFileMetadataRequestCommand(
-      createGetFileMetadataRequest(),
+      createGetFileMetadataRequest()
     );
 
     const result = await client.send(command);

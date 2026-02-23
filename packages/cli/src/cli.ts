@@ -9,7 +9,11 @@ import type { CommandOptions as CommanderOptions } from "commander";
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const packageJson = JSON.parse(
   fs.readFileSync(path.join(moduleDir, "../package.json"), "utf-8")
-) as { readonly version: string; readonly name: string; readonly description: string };
+) as {
+  readonly version: string;
+  readonly name: string;
+  readonly description: string;
+};
 
 type CommandOptions = CommanderOptions & {
   input?: string;

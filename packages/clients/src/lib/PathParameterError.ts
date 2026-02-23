@@ -18,7 +18,7 @@ export class PathParameterError extends Error {
   public constructor(
     message: string,
     public readonly paramName: string,
-    public readonly path: string,
+    public readonly path: string
   ) {
     super(message);
   }

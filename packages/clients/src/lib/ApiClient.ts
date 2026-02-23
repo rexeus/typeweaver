@@ -302,7 +302,7 @@ export abstract class ApiClient {
         throw new PathParameterError(
           `Path parameter '${key}' is not found in path '${path}'`,
           key,
-          path,
+          path
         );
       }
 

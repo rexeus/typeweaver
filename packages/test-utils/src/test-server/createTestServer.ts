@@ -76,7 +76,7 @@ export async function createTestServer(
 
 export async function createPrefixedTestServer(
   prefix: string,
-  options?: TestServerOptions,
+  options?: TestServerOptions
 ): Promise<CreateTestServerResult> {
   const port = await getPort({ port: portNumbers(3000, 3100) });
 
