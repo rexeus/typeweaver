@@ -3,11 +3,12 @@ import {
   HttpResponse,
   RequestValidationError,
 } from "@rexeus/typeweaver-core";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import type { IRequestValidator } from "@rexeus/typeweaver-core";
 import { TypeweaverApp } from "../../src/lib/TypeweaverApp";
 import { TypeweaverRouter } from "../../src/lib/TypeweaverRouter";
 import type { RequestHandler } from "../../src/lib/RequestHandler";
+import type { TypeweaverAppOptions } from "../../src/lib/TypeweaverApp";
 import type { TypeweaverRouterOptions } from "../../src/lib/TypeweaverRouter";
 
 // ---------------------------------------------------------------------------
@@ -24,6 +25,26 @@ const failingValidator: IRequestValidator = {
     throw new RequestValidationError({
       headerIssues: [{ code: "custom", message: "bad header", path: [] }],
       bodyIssues: [{ code: "custom", message: "bad body", path: [] }],
+    });
+  },
+  safeValidate: () => ({
+    isValid: false,
+    error: new RequestValidationError(),
+  }),
+};
+
+const bodyOnlyFailingValidator: IRequestValidator = {
+  validate: () => {
+    throw new RequestValidationError({
+      bodyIssues: [
+        {
+          code: "invalid_type",
+          expected: "string",
+          input: 42,
+          message: "Expected string",
+          path: ["title"],
+        },
+      ],
     });
   },
   safeValidate: () => ({
@@ -75,6 +96,19 @@ class ValidatingTestRouter extends TypeweaverRouter<TestHandlers> {
   }
 }
 
+class BodyOnlyValidatingRouter extends TypeweaverRouter<TestHandlers> {
+  constructor(options: TypeweaverRouterOptions<TestHandlers>) {
+    super(options);
+
+    this.route(
+      HttpMethod.POST,
+      "/todos",
+      bodyOnlyFailingValidator,
+      async (req, ctx) => this.requestHandlers.handleCreateTodo(req, ctx)
+    );
+  }
+}
+
 function defaultHandlers(overrides: Partial<TestHandlers> = {}): TestHandlers {
   return {
     handleGetTodos: async () => ({
@@ -99,9 +133,10 @@ function defaultHandlers(overrides: Partial<TestHandlers> = {}): TestHandlers {
 
 function createApp(
   routerOptions?: Partial<TypeweaverRouterOptions<TestHandlers>>,
-  handlerOverrides?: Partial<TestHandlers>
+  handlerOverrides?: Partial<TestHandlers>,
+  appOptions?: TypeweaverAppOptions
 ): TypeweaverApp {
-  const app = new TypeweaverApp();
+  const app = new TypeweaverApp(appOptions);
   const router = new TestRouter({
     requestHandlers: defaultHandlers(handlerOverrides),
     ...routerOptions,
@@ -112,9 +147,10 @@ function createApp(
 
 function createValidatingApp(
   routerOptions?: Partial<TypeweaverRouterOptions<TestHandlers>>,
-  handlerOverrides?: Partial<TestHandlers>
+  handlerOverrides?: Partial<TestHandlers>,
+  appOptions?: TypeweaverAppOptions
 ): TypeweaverApp {
-  const app = new TypeweaverApp();
+  const app = new TypeweaverApp(appOptions);
   const router = new ValidatingTestRouter({
     requestHandlers: defaultHandlers(handlerOverrides),
     ...routerOptions,
@@ -484,8 +520,11 @@ describe("TypeweaverApp", () => {
       class UserRouter extends TypeweaverRouter<UserHandlers> {
         constructor(options: TypeweaverRouterOptions<UserHandlers>) {
           super(options);
-          this.route(HttpMethod.GET, "/users", noopValidator, async (req, ctx) =>
-            this.requestHandlers.handleGetUsers(req, ctx)
+          this.route(
+            HttpMethod.GET,
+            "/users",
+            noopValidator,
+            async (req, ctx) => this.requestHandlers.handleGetUsers(req, ctx)
           );
         }
       }
@@ -520,7 +559,7 @@ describe("TypeweaverApp", () => {
   });
 
   describe("Error Handling", () => {
-    test("should handle validation errors with default handler", async () => {
+    test("should handle validation errors with default handler and sanitized shape", async () => {
       const app = createValidatingApp();
 
       const res = await app.fetch(
@@ -535,6 +574,47 @@ describe("TypeweaverApp", () => {
       const data = (await res.json()) as any;
       expect(data.code).toBe("VALIDATION_ERROR");
       expect(data.issues).toBeDefined();
+      // Sanitized: only message and path per issue, no code/expected/received
+      expect(data.issues.header[0]).toEqual({
+        message: "bad header",
+        path: [],
+      });
+      expect(data.issues.header[0]).not.toHaveProperty("code");
+      expect(data.issues.body[0]).toEqual({ message: "bad body", path: [] });
+      expect(data.issues.body[0]).not.toHaveProperty("code");
+    });
+
+    test("should omit empty issue categories from sanitized response", async () => {
+      const app = new TypeweaverApp();
+      const router = new BodyOnlyValidatingRouter({
+        requestHandlers: defaultHandlers(),
+      });
+      app.route(router);
+
+      const res = await app.fetch(
+        new Request("http://localhost/todos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: 123 }),
+        })
+      );
+
+      expect(res.status).toBe(400);
+      const data = (await res.json()) as any;
+      expect(data.code).toBe("VALIDATION_ERROR");
+      // body issues present, but sanitized — no code/expected/received
+      expect(data.issues.body).toHaveLength(1);
+      expect(data.issues.body[0]).toEqual({
+        message: "Expected string",
+        path: ["title"],
+      });
+      expect(data.issues.body[0]).not.toHaveProperty("code");
+      expect(data.issues.body[0]).not.toHaveProperty("expected");
+      expect(data.issues.body[0]).not.toHaveProperty("input");
+      // Empty categories omitted
+      expect(data.issues.header).toBeUndefined();
+      expect(data.issues.query).toBeUndefined();
+      expect(data.issues.param).toBeUndefined();
     });
 
     test("should handle validation errors with custom handler", async () => {
@@ -646,6 +726,62 @@ describe("TypeweaverApp", () => {
       expect(data.message).toBe("Boom");
     });
 
+    test("should bubble RequestValidationError to safety net when both validation and unknown handlers are disabled", async () => {
+      const onError = vi.fn();
+      const app = createValidatingApp(
+        {
+          handleValidationErrors: false,
+          handleUnknownErrors: false,
+        },
+        undefined,
+        { onError }
+      );
+
+      const res = await app.fetch(
+        new Request("http://localhost/todos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        })
+      );
+
+      expect(res.status).toBe(500);
+      const data = (await res.json()) as any;
+      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+      expect(onError).toHaveBeenCalledOnce();
+      expect(onError).toHaveBeenCalledWith(expect.any(RequestValidationError));
+    });
+
+    test("should bubble HttpResponse to safety net when both http response and unknown handlers are disabled", async () => {
+      const onError = vi.fn();
+      const app = createApp(
+        {
+          handleHttpResponseErrors: false,
+          handleUnknownErrors: false,
+        },
+        {
+          handleCreateTodo: async () => {
+            throw new HttpResponse(409, {}, { code: "CONFLICT" });
+          },
+        },
+        { onError }
+      );
+
+      const res = await app.fetch(
+        new Request("http://localhost/todos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: "dup" }),
+        })
+      );
+
+      expect(res.status).toBe(500);
+      const data = (await res.json()) as any;
+      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+      expect(onError).toHaveBeenCalledOnce();
+      expect(onError).toHaveBeenCalledWith(expect.any(HttpResponse));
+    });
+
     test("should return 500 when error handler throws", async () => {
       const app = createValidatingApp({
         handleValidationErrors: () => {
@@ -739,6 +875,223 @@ describe("TypeweaverApp", () => {
       // Multi-value headers are joined by fetch spec
       expect(res.headers.get("x-multi")).toContain("a");
       expect(res.headers.get("x-multi")).toContain("b");
+    });
+  });
+
+  describe("Error Observability", () => {
+    test("should call onError for unexpected errors caught by default unknown handler", async () => {
+      const onError = vi.fn();
+      const app = createApp(
+        undefined,
+        {
+          handleGetTodos: async () => {
+            throw new Error("Unexpected failure");
+          },
+        },
+        { onError }
+      );
+
+      const res = await app.fetch(new Request("http://localhost/todos"));
+
+      expect(res.status).toBe(500);
+      expect(onError).toHaveBeenCalledOnce();
+      expect(onError).toHaveBeenCalledWith(expect.any(Error));
+    });
+
+    test("should call onError for errors that escape to the safety net", async () => {
+      const onError = vi.fn();
+      const app = createApp(
+        { handleUnknownErrors: false },
+        {
+          handleGetTodos: async () => {
+            throw new Error("Unhandled");
+          },
+        },
+        { onError }
+      );
+
+      const res = await app.fetch(new Request("http://localhost/todos"));
+
+      expect(res.status).toBe(500);
+      expect(onError).toHaveBeenCalledOnce();
+    });
+
+    test("should NOT call onError for handled BodyParseError", async () => {
+      const onError = vi.fn();
+      const app = createApp(undefined, undefined, { onError });
+
+      const res = await app.fetch(
+        new Request("http://localhost/todos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{ invalid json",
+        })
+      );
+
+      expect(res.status).toBe(400);
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    test("should NOT call onError for handled HttpResponse errors", async () => {
+      const onError = vi.fn();
+      const app = createApp(
+        undefined,
+        {
+          handleCreateTodo: async () => {
+            throw new HttpResponse(409, {}, { code: "CONFLICT" });
+          },
+        },
+        { onError }
+      );
+
+      const res = await app.fetch(
+        new Request("http://localhost/todos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: "dup" }),
+        })
+      );
+
+      expect(res.status).toBe(409);
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    test("should NOT call onError for handled validation errors", async () => {
+      const onError = vi.fn();
+      const app = createValidatingApp(undefined, undefined, { onError });
+
+      const res = await app.fetch(
+        new Request("http://localhost/todos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        })
+      );
+
+      expect(res.status).toBe(400);
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    test("should still return 500 when onError throws", async () => {
+      const app = createApp(
+        undefined,
+        {
+          handleGetTodos: async () => {
+            throw new Error("Unexpected failure");
+          },
+        },
+        {
+          onError: () => {
+            throw new Error("Observer crashed");
+          },
+        }
+      );
+
+      const res = await app.fetch(new Request("http://localhost/todos"));
+
+      expect(res.status).toBe(500);
+      const data = (await res.json()) as any;
+      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+    });
+
+    test("should NOT call onError for handled PayloadTooLargeError", async () => {
+      const onError = vi.fn();
+      const app = createApp(undefined, undefined, {
+        maxBodySize: 50,
+        onError,
+      });
+      const body = "x".repeat(100);
+
+      const res = await app.fetch(
+        new Request("http://localhost/todos", {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/plain",
+            "Content-Length": String(body.length),
+          },
+          body,
+        })
+      );
+
+      expect(res.status).toBe(413);
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    test("should default onError to console.error", async () => {
+      const spy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+      const app = createApp(undefined, {
+        handleGetTodos: async () => {
+          throw new Error("should be logged");
+        },
+      });
+
+      await app.fetch(new Request("http://localhost/todos"));
+
+      expect(spy).toHaveBeenCalledOnce();
+      spy.mockRestore();
+    });
+  });
+
+  describe("Body Size Limit", () => {
+    test("should return 413 for oversized body with maxBodySize set", async () => {
+      const app = createApp(undefined, undefined, {
+        maxBodySize: 50,
+        onError: vi.fn(),
+      });
+      const body = "x".repeat(100);
+
+      const res = await app.fetch(
+        new Request("http://localhost/todos", {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/plain",
+            "Content-Length": String(body.length),
+          },
+          body,
+        })
+      );
+
+      expect(res.status).toBe(413);
+      const data = (await res.json()) as any;
+      expect(data.code).toBe("PAYLOAD_TOO_LARGE");
+    });
+
+    test("should accept normal bodies within the limit", async () => {
+      const app = createApp(undefined, undefined, {
+        maxBodySize: 10000,
+        onError: vi.fn(),
+      });
+
+      const res = await app.fetch(
+        new Request("http://localhost/todos", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": "27",
+          },
+          body: JSON.stringify({ title: "New Todo" }),
+        })
+      );
+
+      expect(res.status).toBe(201);
+    });
+
+    test("should not enforce limit when maxBodySize is not set", async () => {
+      const app = createApp();
+      const body = JSON.stringify({ title: "Large" });
+
+      const res = await app.fetch(
+        new Request("http://localhost/todos", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": String(body.length),
+          },
+          body,
+        })
+      );
+
+      expect(res.status).toBe(201);
     });
   });
 

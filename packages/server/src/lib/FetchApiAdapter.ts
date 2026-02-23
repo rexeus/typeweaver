@@ -20,11 +20,23 @@ import type {
  */
 export class BodyParseError extends Error {
   public override readonly name = "BodyParseError";
+}
 
-  public constructor(message: string, options?: { cause?: unknown }) {
-    super(message, options);
+export class PayloadTooLargeError extends Error {
+  public override readonly name = "PayloadTooLargeError";
+  public constructor(
+    public readonly contentLength: number,
+    public readonly maxBodySize: number
+  ) {
+    super(
+      `Request body too large: ${contentLength} bytes exceeds limit of ${maxBodySize} bytes`
+    );
   }
 }
+
+export type FetchApiAdapterOptions = {
+  readonly maxBodySize?: number;
+};
 
 /**
  * Converts between Fetch API `Request`/`Response` and typeweaver's
@@ -38,6 +50,12 @@ export class BodyParseError extends Error {
  * Bun, Deno, Node.js (>=18), Cloudflare Workers.
  */
 export class FetchApiAdapter {
+  private readonly maxBodySize: number | undefined;
+
+  public constructor(options?: FetchApiAdapterOptions) {
+    this.maxBodySize = options?.maxBodySize;
+  }
+
   /**
    * Converts a Fetch API Request to an IHttpRequest.
    *
@@ -93,7 +111,7 @@ export class FetchApiAdapter {
   }
 
   private extractHeaders(headers: Headers): IHttpHeader {
-    const result: Record<string, string | string[]> = {};
+    const result: Record<string, string | string[]> = Object.create(null);
     headers.forEach((value, key) => {
       if (!value) return;
       this.addMultiValue(result, key, value);
@@ -102,7 +120,7 @@ export class FetchApiAdapter {
   }
 
   private extractQueryParams(url: URL): IHttpQuery {
-    const result: Record<string, string | string[]> = {};
+    const result: Record<string, string | string[]> = Object.create(null);
     url.searchParams.forEach((value, key) => {
       this.addMultiValue(result, key, value);
     });
@@ -111,6 +129,13 @@ export class FetchApiAdapter {
 
   private async parseRequestBody(request: Request): Promise<IHttpBody> {
     if (!request.body) return undefined;
+
+    if (this.maxBodySize !== undefined) {
+      const contentLength = Number(request.headers.get("content-length"));
+      if (Number.isFinite(contentLength) && contentLength > this.maxBodySize) {
+        throw new PayloadTooLargeError(contentLength, this.maxBodySize);
+      }
+    }
 
     const contentType = request.headers.get("content-type");
 
@@ -134,7 +159,7 @@ export class FetchApiAdapter {
     if (contentType?.includes("application/x-www-form-urlencoded")) {
       const text = await request.text();
       const formData = new URLSearchParams(text);
-      const formObject: Record<string, string | string[]> = {};
+      const formObject: Record<string, string | string[]> = Object.create(null);
       formData.forEach((value, key) => {
         this.addMultiValue(formObject, key, value);
       });
@@ -145,7 +170,7 @@ export class FetchApiAdapter {
       try {
         const formData = await request.formData();
         const formObject: Record<string, string | File | (string | File)[]> =
-          {};
+          Object.create(null);
         formData.forEach((value, key) => {
           const existing = formObject[key];
           if (existing) {
@@ -176,9 +201,7 @@ export class FetchApiAdapter {
   }
 
   private buildResponseBody(body: any): string | ArrayBuffer | Blob | null {
-    if (body === undefined || body === null) {
-      return null;
-    }
+    if (body === undefined || body === null) return null;
 
     if (
       typeof body === "string" ||

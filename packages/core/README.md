@@ -42,4 +42,4 @@ This package does not ship framework adapters. Use plugins like `@rexeus/typewea
 
 ## 📄 License
 
-Apache 2.0 © Dennis Wentzien 2025
+Apache 2.0 © Dennis Wentzien 2026

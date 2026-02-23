@@ -84,4 +84,4 @@ export class TodoApi extends Construct {
 
 ## 📄 License
 
-Apache 2.0 © Dennis Wentzien 2025
+Apache 2.0 © Dennis Wentzien 2026

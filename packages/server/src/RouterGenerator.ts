@@ -7,6 +7,13 @@ import type {
   OperationResource,
 } from "@rexeus/typeweaver-gen";
 
+type OperationData = {
+  readonly className: string;
+  readonly handlerName: string;
+  readonly method: string;
+  readonly path: string;
+};
+
 /**
  * Generates TypeweaverRouter subclasses from API definitions.
  *
@@ -61,23 +68,20 @@ export class RouterGenerator {
     context.writeFile(relativePath, content);
   }
 
-  private static createOperationData(resource: OperationResource) {
-    const operationId = resource.definition.operationId;
-    const className = Case.pascal(operationId);
-    const handlerName = `handle${className}Request`;
+  private static createOperationData(
+    resource: OperationResource
+  ): OperationData {
+    const className = Case.pascal(resource.definition.operationId);
 
     return {
       className,
-      handlerName,
+      handlerName: `handle${className}Request`,
       method: resource.definition.method,
       path: resource.definition.path,
     };
   }
 
-  private static compareRoutes(
-    a: ReturnType<typeof RouterGenerator.createOperationData>,
-    b: ReturnType<typeof RouterGenerator.createOperationData>
-  ): number {
+  private static compareRoutes(a: OperationData, b: OperationData): number {
     const aSegments = a.path.split("/").filter(s => s);
     const bSegments = b.path.split("/").filter(s => s);
 
@@ -109,16 +113,17 @@ export class RouterGenerator {
     return this.getMethodPriority(a.method) - this.getMethodPriority(b.method);
   }
 
+  private static readonly METHOD_PRIORITY: Record<string, number> = {
+    GET: 1,
+    POST: 2,
+    PUT: 3,
+    PATCH: 4,
+    DELETE: 5,
+    OPTIONS: 6,
+    HEAD: 7,
+  };
+
   private static getMethodPriority(method: string): number {
-    const priorities: Record<string, number> = {
-      GET: 1,
-      POST: 2,
-      PUT: 3,
-      PATCH: 4,
-      DELETE: 5,
-      OPTIONS: 6,
-      HEAD: 7,
-    };
-    return priorities[method] ?? 999;
+    return this.METHOD_PRIORITY[method] ?? 999;
   }
 }

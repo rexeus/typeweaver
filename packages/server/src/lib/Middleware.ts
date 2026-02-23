@@ -81,9 +81,9 @@ export async function executeMiddlewarePipeline(
         called = true;
         return next();
       });
-    } else {
-      return finalHandler();
     }
+
+    return finalHandler();
   };
 
   return next();

@@ -72,4 +72,4 @@ pnpm --filter test-utils run test-project:gen
 
 ## License
 
-Apache 2.0 © Dennis Wentzien 2025
+Apache 2.0 © Dennis Wentzien 2026

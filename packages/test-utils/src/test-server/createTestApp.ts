@@ -2,15 +2,12 @@ import { HttpResponse } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { AccountRouter } from "../test-project/output/account/AccountRouter";
 import { AuthRouter } from "../test-project/output/auth/AuthRouter";
-import {
-  TypeweaverApp
-  
-} from "../test-project/output/lib/server";
+import { TypeweaverApp } from "../test-project/output/lib/server";
 import { TodoRouter } from "../test-project/output/todo/TodoRouter";
 import { ServerAccountHandlers } from "./handlers/ServerAccountHandlers";
 import { ServerAuthHandlers } from "./handlers/ServerAuthHandlers";
 import { ServerTodoHandlers } from "./handlers/ServerTodoHandlers";
-import type {TypeweaverRouterOptions} from "../test-project/output/lib/server";
+import type { TypeweaverRouterOptions } from "../test-project/output/lib/server";
 
 /**
  * Configuration options for TypeweaverApp-based test instances.

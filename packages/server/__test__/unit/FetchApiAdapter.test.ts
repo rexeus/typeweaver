@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { BodyParseError, FetchApiAdapter } from "../../src/lib/FetchApiAdapter";
+import {
+  BodyParseError,
+  FetchApiAdapter,
+  PayloadTooLargeError,
+} from "../../src/lib/FetchApiAdapter";
 
 describe("FetchApiAdapter", () => {
   const adapter = new FetchApiAdapter();
@@ -212,6 +216,152 @@ describe("FetchApiAdapter", () => {
       expect(result.body).toBeDefined();
       expect(result.body.title).toBe("Test Todo");
       expect(result.body.tags).toEqual(["tag1", "tag2"]);
+    });
+  });
+
+  describe("prototype pollution protection", () => {
+    test("should store __proto__ as a regular property in query params", async () => {
+      const request = new Request("http://localhost/todos?__proto__=polluted");
+      const before = ({} as any).__proto__;
+
+      const result = await adapter.toRequest(request);
+
+      expect(result.query?.["__proto__"]).toBe("polluted");
+      expect(({} as any).__proto__).toBe(before);
+      expect(Object.prototype).not.toHaveProperty("polluted");
+    });
+
+    test("should store multi-value __proto__ keys safely in query params", async () => {
+      const request = new Request(
+        "http://localhost/todos?__proto__=a&__proto__=b"
+      );
+
+      const result = await adapter.toRequest(request);
+
+      expect(result.query?.["__proto__"]).toEqual(["a", "b"]);
+      expect(Object.prototype).not.toHaveProperty("a");
+      expect(Object.prototype).not.toHaveProperty("b");
+    });
+
+    test("should store __proto__ as a regular property in multipart/form-data", async () => {
+      const formData = new FormData();
+      formData.append("__proto__", "polluted");
+      formData.append("constructor", "evil");
+
+      const request = new Request("http://localhost/todos", {
+        method: "POST",
+        body: formData,
+      });
+      const before = ({} as any).__proto__;
+
+      const result = await adapter.toRequest(request);
+
+      expect(result.body?.["__proto__"]).toBe("polluted");
+      expect(result.body?.["constructor"]).toBe("evil");
+      expect(({} as any).__proto__).toBe(before);
+    });
+
+    test("should store __proto__ as a regular property in form-urlencoded body", async () => {
+      const request = new Request("http://localhost/todos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: "__proto__=polluted&constructor=evil",
+      });
+      const before = ({} as any).__proto__;
+
+      const result = await adapter.toRequest(request);
+
+      expect(result.body?.["__proto__"]).toBe("polluted");
+      expect(result.body?.["constructor"]).toBe("evil");
+      expect(({} as any).__proto__).toBe(before);
+    });
+  });
+
+  describe("body size limit", () => {
+    test("should throw PayloadTooLargeError when Content-Length exceeds limit", async () => {
+      const limitedAdapter = new FetchApiAdapter({ maxBodySize: 100 });
+      const body = "x".repeat(200);
+      const request = new Request("http://localhost/todos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain",
+          "Content-Length": String(body.length),
+        },
+        body,
+      });
+
+      await expect(limitedAdapter.toRequest(request)).rejects.toThrow(
+        PayloadTooLargeError
+      );
+    });
+
+    test("should accept bodies within the limit", async () => {
+      const limitedAdapter = new FetchApiAdapter({ maxBodySize: 1000 });
+      const body = "hello";
+      const request = new Request("http://localhost/todos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain",
+          "Content-Length": String(body.length),
+        },
+        body,
+      });
+
+      const result = await limitedAdapter.toRequest(request);
+
+      expect(result.body).toBe("hello");
+    });
+
+    test("should ignore invalid Content-Length header gracefully", async () => {
+      const limitedAdapter = new FetchApiAdapter({ maxBodySize: 100 });
+      const request = new Request("http://localhost/todos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain",
+          "Content-Length": "not-a-number",
+        },
+        body: "hello",
+      });
+
+      const result = await limitedAdapter.toRequest(request);
+
+      expect(result.body).toBe("hello");
+    });
+
+    test("should accept body at exact maxBodySize boundary", async () => {
+      const limitedAdapter = new FetchApiAdapter({ maxBodySize: 100 });
+      const body = "x".repeat(100);
+      const request = new Request("http://localhost/todos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain",
+          "Content-Length": String(body.length),
+        },
+        body,
+      });
+
+      const result = await limitedAdapter.toRequest(request);
+
+      expect(result.body).toBe(body);
+    });
+
+    test("should not enforce limit when maxBodySize is not set", async () => {
+      const unlimitedAdapter = new FetchApiAdapter();
+      const body = "x".repeat(10000);
+      const request = new Request("http://localhost/todos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain",
+          "Content-Length": String(body.length),
+        },
+        body,
+      });
+
+      const result = await unlimitedAdapter.toRequest(request);
+
+      expect(result.body).toBe(body);
     });
   });
 

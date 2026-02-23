@@ -223,4 +223,4 @@ We’d love to hear your feedback — on API design, DX, docs, issues and ideas.
 
 ## License
 
-Apache 2.0 © Dennis Wentzien 2025
+Apache 2.0 © Dennis Wentzien 2026

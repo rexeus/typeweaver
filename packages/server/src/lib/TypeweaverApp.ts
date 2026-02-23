@@ -7,10 +7,15 @@
 
 import { HttpResponse, RequestValidationError } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
-import { BodyParseError, FetchApiAdapter } from "./FetchApiAdapter";
+import {
+  BodyParseError,
+  FetchApiAdapter,
+  PayloadTooLargeError,
+} from "./FetchApiAdapter";
 import { executeMiddlewarePipeline } from "./Middleware";
 import { Router } from "./Router";
 import type { Middleware, MiddlewareEntry } from "./Middleware";
+import type { RequestHandler } from "./RequestHandler";
 import type {
   HttpResponseErrorHandler,
   RouteDefinition,
@@ -63,10 +68,26 @@ import type { TypeweaverRouter } from "./TypeweaverRouter";
  * Bun.serve({ fetch: app.fetch, port: 3000 });
  * ```
  */
+export type TypeweaverAppOptions = {
+  readonly maxBodySize?: number;
+  readonly onError?: (error: unknown) => void;
+};
+
 export class TypeweaverApp {
+  private static readonly INTERNAL_SERVER_ERROR_BODY = {
+    code: "INTERNAL_SERVER_ERROR",
+    message: "An unexpected error occurred.",
+  } as const;
+
   private readonly router = new Router();
   private readonly middlewares: MiddlewareEntry[] = [];
-  private readonly adapter = new FetchApiAdapter();
+  private readonly adapter: FetchApiAdapter;
+  private readonly onError: (error: unknown) => void;
+
+  public constructor(options?: TypeweaverAppOptions) {
+    this.adapter = new FetchApiAdapter({ maxBodySize: options?.maxBodySize });
+    this.onError = options?.onError ?? console.error;
+  }
 
   /**
    * Register a global middleware that runs for all requests.
@@ -117,11 +138,14 @@ export class TypeweaverApp {
    * app.route("/api/v1", new TodoRouter({ requestHandlers: { ... } }));
    * ```
    */
-  public route(router: TypeweaverRouter<unknown>): this;
-  public route(prefix: string, router: TypeweaverRouter<unknown>): this;
+  public route(router: TypeweaverRouter<Record<string, RequestHandler>>): this;
   public route(
-    prefixOrRouter: string | TypeweaverRouter<unknown>,
-    router?: TypeweaverRouter<unknown>
+    prefix: string,
+    router: TypeweaverRouter<Record<string, RequestHandler>>
+  ): this;
+  public route(
+    prefixOrRouter: string | TypeweaverRouter<Record<string, RequestHandler>>,
+    router?: TypeweaverRouter<Record<string, RequestHandler>>
   ): this {
     if (typeof prefixOrRouter === "string") {
       if (!router) {
@@ -155,11 +179,22 @@ export class TypeweaverApp {
       const response = await this.processRequest(request);
       return this.adapter.toResponse(response);
     } catch (error) {
+      if (error instanceof PayloadTooLargeError) {
+        return this.adapter.toResponse({
+          statusCode: 413,
+          body: { code: "PAYLOAD_TOO_LARGE", message: error.message },
+        });
+      }
       if (error instanceof BodyParseError) {
         return this.adapter.toResponse({
           statusCode: 400,
           body: { code: "BAD_REQUEST", message: error.message },
         });
+      }
+      try {
+        this.onError(error);
+      } catch {
+        /* Safety net must never throw */
       }
       return TypeweaverApp.createErrorResponse();
     }
@@ -272,17 +307,11 @@ export class TypeweaverApp {
 
     const handler = this.resolveErrorHandler<UnknownErrorHandler>(
       config.handleUnknownErrors,
-      TypeweaverApp.defaultUnknownHandler
+      this.defaultUnknownHandler
     );
     if (handler) return handler(error, ctx);
 
-    return {
-      statusCode: 500,
-      body: {
-        code: "INTERNAL_SERVER_ERROR",
-        message: "An unexpected error occurred.",
-      },
-    };
+    throw error;
   }
 
   /**
@@ -298,7 +327,7 @@ export class TypeweaverApp {
   }
 
   private mountRouter(
-    router: TypeweaverRouter<unknown>,
+    router: TypeweaverRouter<Record<string, RequestHandler>>,
     prefix?: string
   ): this {
     const normalizedPrefix = prefix?.replace(/\/+$/, "");
@@ -311,42 +340,63 @@ export class TypeweaverApp {
     return this;
   }
 
+  private static sanitizeIssues(
+    issues: readonly {
+      readonly message: string;
+      readonly path: PropertyKey[];
+    }[]
+  ): readonly { message: string; path: PropertyKey[] }[] | undefined {
+    if (issues.length === 0) return undefined;
+    return issues.map(({ message, path }) => ({ message, path }));
+  }
+
   private static defaultValidationHandler: ValidationErrorHandler = (
     err
-  ): IHttpResponse => ({
-    statusCode: 400,
-    body: {
-      code: "VALIDATION_ERROR",
-      message: err.message,
-      issues: {
-        header: err.headerIssues,
-        body: err.bodyIssues,
-        query: err.queryIssues,
-        param: err.pathParamIssues,
+  ): IHttpResponse => {
+    const issues: Record<string, unknown> = Object.create(null);
+
+    const header = TypeweaverApp.sanitizeIssues(err.headerIssues);
+    const body = TypeweaverApp.sanitizeIssues(err.bodyIssues);
+    const query = TypeweaverApp.sanitizeIssues(err.queryIssues);
+    const param = TypeweaverApp.sanitizeIssues(err.pathParamIssues);
+
+    if (header) issues.header = header;
+    if (body) issues.body = body;
+    if (query) issues.query = query;
+    if (param) issues.param = param;
+
+    return {
+      statusCode: 400,
+      body: {
+        code: "VALIDATION_ERROR",
+        message: err.message,
+        issues,
       },
-    },
-  });
+    };
+  };
 
   private static defaultHttpResponseHandler: HttpResponseErrorHandler = (
     err
   ): IHttpResponse => err;
 
-  private static defaultUnknownHandler: UnknownErrorHandler =
-    (): IHttpResponse => ({
-      statusCode: 500,
-      body: {
-        code: "INTERNAL_SERVER_ERROR",
-        message: "An unexpected error occurred.",
-      },
-    });
+  private readonly defaultUnknownHandler: UnknownErrorHandler = (
+    error
+  ): IHttpResponse => {
+    try {
+      this.onError(error);
+    } catch {
+      /* Observer must not break the pipeline */
+    }
+    return { statusCode: 500, body: TypeweaverApp.INTERNAL_SERVER_ERROR_BODY };
+  };
 
   private static createErrorResponse(): Response {
     return new Response(
-      JSON.stringify({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "An unexpected error occurred.",
-      }),
-      { status: 500, headers: { "content-type": "application/json" } }
+      JSON.stringify(TypeweaverApp.INTERNAL_SERVER_ERROR_BODY),
+      {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      }
     );
   }
 }
