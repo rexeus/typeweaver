@@ -3,11 +3,8 @@ import {
   createRegisterAccountSuccessResponse,
   RegisterAccountSuccessResponse,
 } from "../..";
+import type { IRegisterAccountRequest, RegisterAccountResponse } from "../..";
 import type { AccountApiHandler } from "../../test-project/output/account/AccountHono";
-import type {
-  IRegisterAccountRequest,
-  RegisterAccountResponse,
-} from "../..";
 
 export class AccountHandlers implements AccountApiHandler {
   public constructor(private readonly throwError?: Error | HttpResponse) {

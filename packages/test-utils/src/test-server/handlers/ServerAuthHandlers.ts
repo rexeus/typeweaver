@@ -5,13 +5,13 @@ import {
   createRefreshTokenSuccessResponse,
   RefreshTokenSuccessResponse,
 } from "../..";
-import type { AuthApiHandler } from "../../test-project/output/auth/AuthRouter";
 import type {
   AccessTokenResponse,
   IAccessTokenRequest,
   IRefreshTokenRequest,
   RefreshTokenResponse,
 } from "../..";
+import type { AuthApiHandler } from "../../test-project/output/auth/AuthRouter";
 
 export class ServerAuthHandlers implements AuthApiHandler {
   public constructor(private readonly throwError?: Error | HttpResponse) {

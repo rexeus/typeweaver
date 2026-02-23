@@ -1,15 +1,14 @@
-import { HttpResponse, RequestValidationError } from "@rexeus/typeweaver-core";
-import type { IHttpRequest, IRequestValidator } from "@rexeus/typeweaver-core";
-import { describe, expect, test } from "vitest";
-
-import type { Middleware } from "../../src/lib/Middleware";
-import type { RequestHandler } from "../../src/lib/RequestHandler";
-import type { RouterErrorConfig } from "../../src/lib/Router";
-import { TypeweaverApp } from "../../src/lib/TypeweaverApp";
 import {
-  TypeweaverRouter,
-  type TypeweaverRouterOptions,
-} from "../../src/lib/TypeweaverRouter";
+  HttpMethod,
+  HttpResponse,
+  RequestValidationError,
+} from "@rexeus/typeweaver-core";
+import { describe, expect, test } from "vitest";
+import type { IRequestValidator } from "@rexeus/typeweaver-core";
+import { TypeweaverApp } from "../../src/lib/TypeweaverApp";
+import { TypeweaverRouter } from "../../src/lib/TypeweaverRouter";
+import type { RequestHandler } from "../../src/lib/RequestHandler";
+import type { TypeweaverRouterOptions } from "../../src/lib/TypeweaverRouter";
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -17,28 +16,19 @@ import {
 
 const noopValidator: IRequestValidator = {
   validate: (req: any) => req,
-  safeValidate: (req: any) => ({ success: true, data: req }),
+  safeValidate: (req: any) => ({ isValid: true, data: req }),
 };
 
 const failingValidator: IRequestValidator = {
   validate: () => {
-    throw new RequestValidationError(
-      "Validation failed",
-      [{ code: "custom", message: "bad header", path: [] }],
-      [{ code: "custom", message: "bad body", path: [] }],
-      [],
-      []
-    );
+    throw new RequestValidationError({
+      headerIssues: [{ code: "custom", message: "bad header", path: [] }],
+      bodyIssues: [{ code: "custom", message: "bad body", path: [] }],
+    });
   },
   safeValidate: () => ({
-    success: false,
-    error: new RequestValidationError(
-      "Validation failed",
-      [],
-      [],
-      [],
-      []
-    ),
+    isValid: false,
+    error: new RequestValidationError(),
   }),
 };
 
@@ -53,27 +43,24 @@ class TestRouter extends TypeweaverRouter<TestHandlers> {
     super(options);
 
     this.route(
-      "GET",
+      HttpMethod.GET,
       "/todos",
       options.validateRequests === false ? noopValidator : noopValidator,
-      async (req, ctx) =>
-        this.requestHandlers.handleGetTodos(req, ctx)
+      async (req, ctx) => this.requestHandlers.handleGetTodos(req, ctx)
     );
 
     this.route(
-      "POST",
+      HttpMethod.POST,
       "/todos",
       options.validateRequests === false ? noopValidator : noopValidator,
-      async (req, ctx) =>
-        this.requestHandlers.handleCreateTodo(req, ctx)
+      async (req, ctx) => this.requestHandlers.handleCreateTodo(req, ctx)
     );
 
     this.route(
-      "GET",
+      HttpMethod.GET,
       "/todos/:todoId",
       options.validateRequests === false ? noopValidator : noopValidator,
-      async (req, ctx) =>
-        this.requestHandlers.handleGetTodo(req, ctx)
+      async (req, ctx) => this.requestHandlers.handleGetTodo(req, ctx)
     );
   }
 }
@@ -82,19 +69,13 @@ class ValidatingTestRouter extends TypeweaverRouter<TestHandlers> {
   constructor(options: TypeweaverRouterOptions<TestHandlers>) {
     super(options);
 
-    this.route(
-      "POST",
-      "/todos",
-      failingValidator,
-      async (req, ctx) =>
-        this.requestHandlers.handleCreateTodo(req, ctx)
+    this.route(HttpMethod.POST, "/todos", failingValidator, async (req, ctx) =>
+      this.requestHandlers.handleCreateTodo(req, ctx)
     );
   }
 }
 
-function defaultHandlers(
-  overrides: Partial<TestHandlers> = {}
-): TestHandlers {
+function defaultHandlers(overrides: Partial<TestHandlers> = {}): TestHandlers {
   return {
     handleGetTodos: async () => ({
       statusCode: 200,
@@ -151,9 +132,7 @@ describe("TypeweaverApp", () => {
     test("should handle GET request to static path", async () => {
       const app = createApp();
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos")
-      );
+      const res = await app.fetch(new Request("http://localhost/todos"));
 
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -191,9 +170,7 @@ describe("TypeweaverApp", () => {
     test("should return 404 for unregistered paths", async () => {
       const app = createApp();
 
-      const res = await app.fetch(
-        new Request("http://localhost/nonexistent")
-      );
+      const res = await app.fetch(new Request("http://localhost/nonexistent"));
 
       expect(res.status).toBe(404);
       const data = (await res.json()) as any;
@@ -335,9 +312,7 @@ describe("TypeweaverApp", () => {
         body: { message: "Service Unavailable" },
       }));
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos")
-      );
+      const res = await app.fetch(new Request("http://localhost/todos"));
 
       expect(res.status).toBe(503);
     });
@@ -356,9 +331,7 @@ describe("TypeweaverApp", () => {
         };
       });
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos")
-      );
+      const res = await app.fetch(new Request("http://localhost/todos"));
 
       expect(res.status).toBe(200);
       expect(res.headers.get("x-request-id")).toBe("req-001");
@@ -382,9 +355,7 @@ describe("TypeweaverApp", () => {
         return next();
       });
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos")
-      );
+      const res = await app.fetch(new Request("http://localhost/todos"));
 
       const data = (await res.json()) as any;
       expect(data.userId).toBe("user-99");
@@ -399,9 +370,7 @@ describe("TypeweaverApp", () => {
         return next();
       });
 
-      const res = await app.fetch(
-        new Request("http://localhost/nonexistent")
-      );
+      const res = await app.fetch(new Request("http://localhost/nonexistent"));
 
       expect(res.status).toBe(404);
       expect(seen).toContain("/nonexistent");
@@ -438,9 +407,7 @@ describe("TypeweaverApp", () => {
         return response;
       });
 
-      const res = await app.fetch(
-        new Request("http://localhost/nonexistent")
-      );
+      const res = await app.fetch(new Request("http://localhost/nonexistent"));
 
       expect(res.status).toBe(404);
       const data = (await res.json()) as any;
@@ -457,9 +424,7 @@ describe("TypeweaverApp", () => {
 
       app.route("/api/v1", router);
 
-      const res = await app.fetch(
-        new Request("http://localhost/api/v1/todos")
-      );
+      const res = await app.fetch(new Request("http://localhost/api/v1/todos"));
 
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -474,9 +439,7 @@ describe("TypeweaverApp", () => {
 
       app.route("/api/v1", router);
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos")
-      );
+      const res = await app.fetch(new Request("http://localhost/todos"));
 
       expect(res.status).toBe(404);
     });
@@ -506,9 +469,7 @@ describe("TypeweaverApp", () => {
 
       app.route("/api/v1/", router);
 
-      const res = await app.fetch(
-        new Request("http://localhost/api/v1/todos")
-      );
+      const res = await app.fetch(new Request("http://localhost/api/v1/todos"));
 
       expect(res.status).toBe(200);
     });
@@ -523,12 +484,8 @@ describe("TypeweaverApp", () => {
       class UserRouter extends TypeweaverRouter<UserHandlers> {
         constructor(options: TypeweaverRouterOptions<UserHandlers>) {
           super(options);
-          this.route(
-            "GET",
-            "/users",
-            noopValidator,
-            async (req, ctx) =>
-              this.requestHandlers.handleGetUsers(req, ctx)
+          this.route(HttpMethod.GET, "/users", noopValidator, async (req, ctx) =>
+            this.requestHandlers.handleGetUsers(req, ctx)
           );
         }
       }
@@ -552,14 +509,10 @@ describe("TypeweaverApp", () => {
         })
       );
 
-      const todosRes = await app.fetch(
-        new Request("http://localhost/todos")
-      );
+      const todosRes = await app.fetch(new Request("http://localhost/todos"));
       expect(todosRes.status).toBe(200);
 
-      const usersRes = await app.fetch(
-        new Request("http://localhost/users")
-      );
+      const usersRes = await app.fetch(new Request("http://localhost/users"));
       expect(usersRes.status).toBe(200);
       const users = (await usersRes.json()) as any;
       expect(users[0].name).toBe("Alice");
@@ -660,9 +613,7 @@ describe("TypeweaverApp", () => {
         },
       });
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos")
-      );
+      const res = await app.fetch(new Request("http://localhost/todos"));
 
       expect(res.status).toBe(500);
       const data = (await res.json()) as any;
@@ -676,8 +627,7 @@ describe("TypeweaverApp", () => {
             statusCode: 500,
             body: {
               custom: true,
-              message:
-                err instanceof Error ? err.message : "Unknown",
+              message: err instanceof Error ? err.message : "Unknown",
             },
           }),
         },
@@ -688,9 +638,7 @@ describe("TypeweaverApp", () => {
         }
       );
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos")
-      );
+      const res = await app.fetch(new Request("http://localhost/todos"));
 
       expect(res.status).toBe(500);
       const data = (await res.json()) as any;
@@ -698,7 +646,7 @@ describe("TypeweaverApp", () => {
       expect(data.message).toBe("Boom");
     });
 
-    test("should fall back to unknown error handler when validation handler throws", async () => {
+    test("should return 500 when error handler throws", async () => {
       const app = createValidatingApp({
         handleValidationErrors: () => {
           throw new Error("Handler crashed");
@@ -713,28 +661,21 @@ describe("TypeweaverApp", () => {
         })
       );
 
+      // A broken handler bubbles up to the safety net — clean 500
       expect(res.status).toBe(500);
       const data = (await res.json()) as any;
       expect(data.code).toBe("INTERNAL_SERVER_ERROR");
     });
 
-    test("should return last-resort 500 when all error handlers fail", async () => {
-      const app = createValidatingApp({
-        handleValidationErrors: () => {
-          throw new Error("validation handler crashed");
-        },
-        handleUnknownErrors: () => {
-          throw new Error("unknown handler also crashed");
-        },
-      });
+    test("should return 500 for completely malformed request URL", async () => {
+      const app = createApp();
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        })
-      );
+      // Create a Request that will cause new URL() to throw
+      // by overriding the url property
+      const badRequest = new Request("http://localhost/todos");
+      Object.defineProperty(badRequest, "url", { value: "not-a-valid-url" });
+
+      const res = await app.fetch(badRequest);
 
       expect(res.status).toBe(500);
       const data = (await res.json()) as any;
@@ -763,9 +704,7 @@ describe("TypeweaverApp", () => {
     test("should set Content-Type to application/json for object bodies", async () => {
       const app = createApp();
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos")
-      );
+      const res = await app.fetch(new Request("http://localhost/todos"));
 
       expect(res.headers.get("content-type")).toBe("application/json");
     });
@@ -775,9 +714,7 @@ describe("TypeweaverApp", () => {
         handleGetTodos: async () => ({ statusCode: 204 }),
       });
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos")
-      );
+      const res = await app.fetch(new Request("http://localhost/todos"));
 
       expect(res.status).toBe(204);
       const text = await res.text();
@@ -796,9 +733,7 @@ describe("TypeweaverApp", () => {
         }),
       });
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos")
-      );
+      const res = await app.fetch(new Request("http://localhost/todos"));
 
       expect(res.headers.get("x-custom")).toBe("value");
       // Multi-value headers are joined by fetch spec

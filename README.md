@@ -80,17 +80,17 @@ Typeweaver is modular by design. Install only what you need.
 
 ### Plugins
 
-| Package                                                     | Description                                       | Version                                                          |
-| ----------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------- |
-| [@rexeus/typeweaver-clients](./packages/clients/README.md)  | HTTP client generators using Axios                | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients)  |
-| [@rexeus/typeweaver-hono](./packages/hono/README.md)        | Plugin for Hono routers                           | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)     |
-| [@rexeus/typeweaver-server](./packages/server/README.md)    | Dependency-free server with routing and middleware | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-server)   |
-| [@rexeus/typeweaver-aws-cdk](./packages/aws-cdk/README.md)  | AWS CDK constructs for API Gateway V2             | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk)  |
+| Package                                                    | Description                                        | Version                                                         |
+| ---------------------------------------------------------- | -------------------------------------------------- | --------------------------------------------------------------- |
+| [@rexeus/typeweaver-clients](./packages/clients/README.md) | HTTP client generators using the Fetch API         | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients) |
+| [@rexeus/typeweaver-hono](./packages/hono/README.md)       | Plugin for Hono routers                            | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)    |
+| [@rexeus/typeweaver-server](./packages/server/README.md)   | Dependency-free server with routing and middleware | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-server)  |
+| [@rexeus/typeweaver-aws-cdk](./packages/aws-cdk/README.md) | AWS CDK constructs for API Gateway V2              | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
 
 ### Internal packages
 
-| Package                                       | Description                                      |
-| --------------------------------------------- | ------------------------------------------------ |
+| Package                                       | Description                                       |
+| --------------------------------------------- | ------------------------------------------------- |
 | [test-utils](./packages/test-utils/README.md) | Shared test utilities, fixtures, and test servers |
 
 More plugins are planned. Want to build your own? Check out the plugin system

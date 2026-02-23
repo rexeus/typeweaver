@@ -43,10 +43,7 @@ export class RouterGenerator {
   ): void {
     const pascalCaseEntityName = Case.pascal(entityName);
     const outputDir = path.join(context.outputDir, entityName);
-    const outputPath = path.join(
-      outputDir,
-      `${pascalCaseEntityName}Router.ts`
-    );
+    const outputPath = path.join(outputDir, `${pascalCaseEntityName}Router.ts`);
 
     const operations = operationResources
       .filter(resource => resource.definition.method !== HttpMethod.HEAD)

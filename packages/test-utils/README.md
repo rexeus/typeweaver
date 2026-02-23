@@ -36,8 +36,8 @@ Pre-configured server instances for integration testing:
 - `createTestServer(options)` — Starts a Hono-based HTTP server on a random port with all routers
   mounted
 - `createPrefixedTestServer(prefix, options)` — Same, but with routes under a path prefix
-- `createTestApp(options)` — Creates a `TypeweaverApp` (server plugin) instance for direct
-  `fetch()` testing without starting an HTTP server
+- `createTestApp(options)` — Creates a `TypeweaverApp` (server plugin) instance for direct `fetch()`
+  testing without starting an HTTP server
 - `createTestHono(options)` — Creates a Hono app instance for direct testing
 
 All test server functions support options to force handler errors (`throwTodoError`,

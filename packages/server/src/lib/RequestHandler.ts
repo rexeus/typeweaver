@@ -11,8 +11,8 @@ import type { ServerContext } from "./ServerContext";
 /**
  * A type-safe request handler function.
  *
- * Receives a validated `IHttpRequest` and the `ServerContext`,
- * and returns a typed `IHttpResponse`. No framework-specific
+ * Receives an `IHttpRequest` (validated when `validateRequests` is enabled)
+ * and the `ServerContext`, and returns a typed `IHttpResponse`. No framework-specific
  * types — everything is in typeweaver's native format.
  *
  * @template TRequest - The specific request type (e.g., `ICreateTodoRequest`)

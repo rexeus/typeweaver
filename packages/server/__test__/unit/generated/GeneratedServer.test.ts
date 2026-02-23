@@ -13,10 +13,7 @@ import { describe, expect, test } from "vitest";
 import type { IHttpRequest } from "@rexeus/typeweaver-core";
 import type { IValidationErrorResponseBody } from "test-utils";
 
-function buildFetchRequest(
-  url: string,
-  requestData: IHttpRequest
-): Request {
+function buildFetchRequest(url: string, requestData: IHttpRequest): Request {
   const body =
     typeof requestData.body === "string"
       ? requestData.body
@@ -488,7 +485,7 @@ describe("Generated Server Router", () => {
       const customMessage = "Custom error handling";
       const app = createTestApp({
         throwTodoError: errorResponse,
-        handleHttpResponseErrors: (error) => {
+        handleHttpResponseErrors: error => {
           return {
             statusCode: 404,
             body: {
@@ -675,9 +672,7 @@ describe("Generated Server Router", () => {
       const requestData = createCreateTodoRequest();
 
       // Act
-      await app.fetch(
-        buildFetchRequest("http://localhost/todos", requestData)
-      );
+      await app.fetch(buildFetchRequest("http://localhost/todos", requestData));
 
       // Assert
       expect(middlewareExecuted).toBe(true);

@@ -30,7 +30,6 @@ import {
   UpdateTodoStatusSuccessResponse,
   UpdateTodoSuccessResponse,
 } from "../..";
-import type { TodoApiHandler } from "../../test-project/output/todo/TodoHono";
 import type {
   CreateSubTodoResponse,
   CreateTodoResponse,
@@ -63,6 +62,7 @@ import type {
   UpdateTodoResponse,
   UpdateTodoStatusResponse,
 } from "../..";
+import type { TodoApiHandler } from "../../test-project/output/todo/TodoHono";
 
 export class TodoHandlers implements TodoApiHandler {
   public constructor(private readonly throwError?: Error | HttpResponse) {

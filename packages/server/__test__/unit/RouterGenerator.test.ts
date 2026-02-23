@@ -1,6 +1,9 @@
-import { describe, expect, test } from "vitest";
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import type { OperationResource, GeneratorContext } from "@rexeus/typeweaver-gen";
+import { assert, describe, expect, test } from "vitest";
+import type {
+  GeneratorContext,
+  OperationResource,
+} from "@rexeus/typeweaver-gen";
 import { RouterGenerator } from "../../src/RouterGenerator";
 
 // ---------------------------------------------------------------------------
@@ -39,9 +42,10 @@ function createMockResource(
   } as OperationResource;
 }
 
-function createMockContext(
-  operations: OperationResource[]
-): { context: GeneratorContext; writtenFiles: Map<string, string> } {
+function createMockContext(operations: OperationResource[]): {
+  context: GeneratorContext;
+  writtenFiles: Map<string, string>;
+} {
   const writtenFiles = new Map<string, string>();
   const generatedFiles: string[] = [];
 
@@ -85,12 +89,13 @@ function createMockContext(
 
 function getOperationOrder(
   operations: OperationResource[]
-): { method: string; path: string; handlerName: string }[] {
+): { method: string; path: string; handlerName: string; className: string }[] {
   const { context, writtenFiles } = createMockContext(operations);
   RouterGenerator.generate(context);
 
   const content = writtenFiles.values().next().value;
-  return JSON.parse(content!);
+  assert(content, "Expected at least one written file");
+  return JSON.parse(content);
 }
 
 // ---------------------------------------------------------------------------
@@ -105,8 +110,10 @@ describe("RouterGenerator", () => {
         createMockResource("getItems", HttpMethod.GET, "/items"),
       ]);
 
-      expect(result[0]!.path).toBe("/items");
-      expect(result[1]!.path).toBe("/items/:id/sub");
+      assert(result[0]);
+      assert(result[1]);
+      expect(result[0].path).toBe("/items");
+      expect(result[1].path).toBe("/items/:id/sub");
     });
 
     test("should sort static segments before param segments at same depth", () => {
@@ -115,8 +122,10 @@ describe("RouterGenerator", () => {
         createMockResource("getSpecial", HttpMethod.GET, "/items/special"),
       ]);
 
-      expect(result[0]!.path).toBe("/items/special");
-      expect(result[1]!.path).toBe("/items/:id");
+      assert(result[0]);
+      assert(result[1]);
+      expect(result[0].path).toBe("/items/special");
+      expect(result[1].path).toBe("/items/:id");
     });
 
     test("should sort by method priority when paths are identical", () => {
@@ -164,12 +173,20 @@ describe("RouterGenerator", () => {
 
     test("should handle complex mixed routes", () => {
       const result = getOperationOrder([
-        createMockResource("deleteSubTodo", HttpMethod.DELETE, "/todos/:todoId/subtodos/:subtodoId"),
+        createMockResource(
+          "deleteSubTodo",
+          HttpMethod.DELETE,
+          "/todos/:todoId/subtodos/:subtodoId"
+        ),
         createMockResource("createTodo", HttpMethod.POST, "/todos"),
         createMockResource("listTodos", HttpMethod.GET, "/todos"),
         createMockResource("queryTodos", HttpMethod.POST, "/todos/query"),
         createMockResource("getTodo", HttpMethod.GET, "/todos/:todoId"),
-        createMockResource("listSubTodos", HttpMethod.GET, "/todos/:todoId/subtodos"),
+        createMockResource(
+          "listSubTodos",
+          HttpMethod.GET,
+          "/todos/:todoId/subtodos"
+        ),
       ]);
 
       // Expected order:
@@ -196,17 +213,23 @@ describe("RouterGenerator", () => {
         createMockResource("createTodo", HttpMethod.POST, "/todos"),
       ]);
 
-      expect(result[0]!.className).toBe("CreateTodo");
-      expect(result[0]!.handlerName).toBe("handleCreateTodoRequest");
+      assert(result[0]);
+      expect(result[0].className).toBe("CreateTodo");
+      expect(result[0].handlerName).toBe("handleCreateTodoRequest");
     });
 
     test("should handle multi-word operationIds", () => {
       const result = getOperationOrder([
-        createMockResource("updateTodoStatus", HttpMethod.PUT, "/todos/:id/status"),
+        createMockResource(
+          "updateTodoStatus",
+          HttpMethod.PUT,
+          "/todos/:id/status"
+        ),
       ]);
 
-      expect(result[0]!.className).toBe("UpdateTodoStatus");
-      expect(result[0]!.handlerName).toBe("handleUpdateTodoStatusRequest");
+      assert(result[0]);
+      expect(result[0].className).toBe("UpdateTodoStatus");
+      expect(result[0].handlerName).toBe("handleUpdateTodoStatusRequest");
     });
   });
 

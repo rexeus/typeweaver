@@ -21,14 +21,12 @@ function createMockFetch(
   body: unknown,
   headers: Record<string, string> = { "content-type": "application/json" }
 ): typeof globalThis.fetch {
-  return vi
-    .fn<typeof globalThis.fetch>()
-    .mockResolvedValue(
-      new Response(body !== undefined ? JSON.stringify(body) : null, {
-        status,
-        headers,
-      })
-    );
+  return vi.fn<typeof globalThis.fetch>().mockResolvedValue(
+    new Response(body !== undefined ? JSON.stringify(body) : null, {
+      status,
+      headers,
+    })
+  );
 }
 
 function createClientWithMockFetch(baseUrl: string) {

@@ -10,11 +10,11 @@ import {
   createOptionsTodoSuccessResponse,
   createPutTodoSuccessResponse,
   createQuerySubTodoSuccessResponse,
+  CreateSubTodoSuccessResponse,
+  CreateTodoSuccessResponse,
   createUpdateSubTodoSuccessResponse,
   createUpdateTodoStatusSuccessResponse,
   createUpdateTodoSuccessResponse,
-  CreateSubTodoSuccessResponse,
-  CreateTodoSuccessResponse,
   DeleteSubTodoSuccessResponse,
   DeleteTodoSuccessResponse,
   GetTodoSuccessResponse,
@@ -28,7 +28,6 @@ import {
   UpdateTodoStatusSuccessResponse,
   UpdateTodoSuccessResponse,
 } from "../..";
-import type { TodoApiHandler } from "../../test-project/output/todo/TodoRouter";
 import type {
   CreateSubTodoResponse,
   CreateTodoResponse,
@@ -59,6 +58,7 @@ import type {
   UpdateTodoResponse,
   UpdateTodoStatusResponse,
 } from "../..";
+import type { TodoApiHandler } from "../../test-project/output/todo/TodoRouter";
 
 export class ServerTodoHandlers implements TodoApiHandler {
   public constructor(private readonly throwError?: Error | HttpResponse) {

@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
-
-import { FetchApiAdapter, BodyParseError } from "../../src/lib/FetchApiAdapter";
+import { BodyParseError, FetchApiAdapter } from "../../src/lib/FetchApiAdapter";
 
 describe("FetchApiAdapter", () => {
   const adapter = new FetchApiAdapter();
@@ -26,9 +25,7 @@ describe("FetchApiAdapter", () => {
     });
 
     test("should handle multi-value query parameters", async () => {
-      const request = new Request(
-        "http://localhost/todos?tag=a&tag=b"
-      );
+      const request = new Request("http://localhost/todos?tag=a&tag=b");
 
       const result = await adapter.toRequest(request);
 
@@ -65,22 +62,17 @@ describe("FetchApiAdapter", () => {
 
       // Even without explicit headers, may have default ones
       // The key invariant is that the result is a valid IHttpHeader
-      expect(typeof result.header === "object" || result.header === undefined).toBe(true);
+      expect(
+        typeof result.header === "object" || result.header === undefined
+      ).toBe(true);
     });
 
-    test("should merge path parameters", async () => {
+    test("should not include path params at adapter level", async () => {
       const request = new Request("http://localhost/todos/t1");
 
-      const result = await adapter.toRequest(request, { todoId: "t1" });
+      const result = await adapter.toRequest(request);
 
-      expect(result.param).toEqual({ todoId: "t1" });
-    });
-
-    test("should set param to undefined when no path params", async () => {
-      const request = new Request("http://localhost/todos");
-
-      const result = await adapter.toRequest(request, {});
-
+      // Path params are injected later by TypeweaverApp.resolveAndExecute
       expect(result.param).toBeUndefined();
     });
 
@@ -94,6 +86,44 @@ describe("FetchApiAdapter", () => {
       const result = await adapter.toRequest(request);
 
       expect(result.body).toEqual({ title: "New Todo" });
+    });
+
+    test("should parse +json content types (RFC 6839)", async () => {
+      const request = new Request("http://localhost/todos", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/merge-patch+json" },
+        body: JSON.stringify({ title: "Updated" }),
+      });
+
+      const result = await adapter.toRequest(request);
+
+      expect(result.body).toEqual({ title: "Updated" });
+    });
+
+    test("should parse vendor +json content types", async () => {
+      const request = new Request("http://localhost/todos", {
+        method: "POST",
+        headers: { "Content-Type": "application/vnd.api+json; charset=utf-8" },
+        body: JSON.stringify({
+          data: { type: "todo", attributes: { title: "Test" } },
+        }),
+      });
+
+      const result = await adapter.toRequest(request);
+
+      expect(result.body).toEqual({
+        data: { type: "todo", attributes: { title: "Test" } },
+      });
+    });
+
+    test("should throw BodyParseError for malformed +json body", async () => {
+      const request = new Request("http://localhost/todos", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/merge-patch+json" },
+        body: "not valid json",
+      });
+
+      await expect(adapter.toRequest(request)).rejects.toThrow(BodyParseError);
     });
 
     test("should parse text body", async () => {
@@ -160,7 +190,7 @@ describe("FetchApiAdapter", () => {
       const request = new Request("http://localhost/todos?status=TODO");
       const url = new URL(request.url);
 
-      const result = await adapter.toRequest(request, undefined, url);
+      const result = await adapter.toRequest(request, url);
 
       expect(result.path).toBe("/todos");
       expect(result.query).toEqual({ status: "TODO" });
@@ -199,9 +229,7 @@ describe("FetchApiAdapter", () => {
       });
 
       expect(response.status).toBe(200);
-      expect(response.headers.get("content-type")).toBe(
-        "application/json"
-      );
+      expect(response.headers.get("content-type")).toBe("application/json");
     });
 
     test("should handle string body without auto content-type", async () => {
@@ -213,9 +241,7 @@ describe("FetchApiAdapter", () => {
       const text = await response.text();
       expect(text).toBe("plain text");
       // String body should NOT get auto application/json
-      expect(response.headers.get("content-type")).not.toBe(
-        "application/json"
-      );
+      expect(response.headers.get("content-type")).not.toBe("application/json");
     });
 
     test("should handle empty body (null)", async () => {

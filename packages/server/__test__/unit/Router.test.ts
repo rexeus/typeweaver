@@ -1,5 +1,5 @@
-import { describe, expect, test } from "vitest";
-
+import { assert, describe, expect, test } from "vitest";
+import type { HttpMethod } from "@rexeus/typeweaver-core";
 import { Router } from "../../src/lib/Router";
 import type { RouteDefinition, RouterErrorConfig } from "../../src/lib/Router";
 
@@ -16,13 +16,13 @@ function createRoute(
   id?: string
 ): RouteDefinition {
   return {
-    method,
+    method: method.toUpperCase() as HttpMethod,
     path,
     validator: {
       validate: (req: any) => req,
-      safeValidate: (req: any) => ({ success: true, data: req }),
+      safeValidate: (req: any) => ({ isValid: true, data: req }),
     },
-    handler: async (req, _ctx) => ({
+    handler: async (_req, _ctx) => ({
       statusCode: 200,
       body: { routeId: id ?? path },
     }),
@@ -37,8 +37,8 @@ describe("Router (Radix Tree)", () => {
       router.add(createRoute("GET", "/todos"));
 
       const match = router.match("GET", "/todos");
-      expect(match).toBeDefined();
-      expect(match!.params).toEqual({});
+      assert(match);
+      expect(match.params).toEqual({});
     });
 
     test("should match a deeply nested static path", () => {
@@ -46,8 +46,8 @@ describe("Router (Radix Tree)", () => {
       router.add(createRoute("GET", "/api/v1/accounts/settings"));
 
       const match = router.match("GET", "/api/v1/accounts/settings");
-      expect(match).toBeDefined();
-      expect(match!.params).toEqual({});
+      assert(match);
+      expect(match.params).toEqual({});
     });
 
     test("should return undefined for non-matching static path", () => {
@@ -80,11 +80,10 @@ describe("Router (Radix Tree)", () => {
       router.add(createRoute("GET", "/users", "users"));
 
       const todoMatch = router.match("GET", "/todos");
-      expect(todoMatch).toBeDefined();
-
       const userMatch = router.match("GET", "/users");
-      expect(userMatch).toBeDefined();
-      expect(todoMatch!.route).not.toBe(userMatch!.route);
+      assert(todoMatch);
+      assert(userMatch);
+      expect(todoMatch.route).not.toBe(userMatch.route);
     });
   });
 
@@ -94,19 +93,17 @@ describe("Router (Radix Tree)", () => {
       router.add(createRoute("GET", "/todos/:todoId"));
 
       const match = router.match("GET", "/todos/abc-123");
-      expect(match).toBeDefined();
-      expect(match!.params).toEqual({ todoId: "abc-123" });
+      assert(match);
+      expect(match.params).toEqual({ todoId: "abc-123" });
     });
 
     test("should match multiple path parameters", () => {
       const router = new Router();
-      router.add(
-        createRoute("GET", "/todos/:todoId/subtodos/:subtodoId")
-      );
+      router.add(createRoute("GET", "/todos/:todoId/subtodos/:subtodoId"));
 
       const match = router.match("GET", "/todos/t1/subtodos/st2");
-      expect(match).toBeDefined();
-      expect(match!.params).toEqual({ todoId: "t1", subtodoId: "st2" });
+      assert(match);
+      expect(match.params).toEqual({ todoId: "t1", subtodoId: "st2" });
     });
 
     test("should match path parameter at the end", () => {
@@ -114,8 +111,8 @@ describe("Router (Radix Tree)", () => {
       router.add(createRoute("DELETE", "/accounts/:accountId"));
 
       const match = router.match("DELETE", "/accounts/acc-42");
-      expect(match).toBeDefined();
-      expect(match!.params).toEqual({ accountId: "acc-42" });
+      assert(match);
+      expect(match.params).toEqual({ accountId: "acc-42" });
     });
 
     test("should not match if segment count differs", () => {
@@ -134,13 +131,12 @@ describe("Router (Radix Tree)", () => {
       router.add(createRoute("GET", "/todos/:todoId", "param"));
 
       const match = router.match("GET", "/todos/special");
-      expect(match).toBeDefined();
+      assert(match);
 
-      // Static route should be preferred
-      const response = await match!.route.handler(
-        {} as any,
-        { request: {} as any, state: new Map() }
-      );
+      const response = await match.route.handler({} as any, {
+        request: {} as any,
+        state: new Map(),
+      });
       expect(response).toEqual({
         statusCode: 200,
         body: { routeId: "static" },
@@ -153,13 +149,13 @@ describe("Router (Radix Tree)", () => {
       router.add(createRoute("GET", "/todos/:todoId", "param"));
 
       const match = router.match("GET", "/todos/other-value");
-      expect(match).toBeDefined();
-      expect(match!.params).toEqual({ todoId: "other-value" });
+      assert(match);
+      expect(match.params).toEqual({ todoId: "other-value" });
 
-      const response = await match!.route.handler(
-        {} as any,
-        { request: {} as any, state: new Map() }
-      );
+      const response = await match.route.handler({} as any, {
+        request: {} as any,
+        state: new Map(),
+      });
       expect(response).toEqual({
         statusCode: 200,
         body: { routeId: "param" },
@@ -190,10 +186,9 @@ describe("Router (Radix Tree)", () => {
 
       const getMatch = router.match("GET", "/todos");
       const postMatch = router.match("POST", "/todos");
-
-      expect(getMatch).toBeDefined();
-      expect(postMatch).toBeDefined();
-      expect(getMatch!.route).not.toBe(postMatch!.route);
+      assert(getMatch);
+      assert(postMatch);
+      expect(getMatch.route).not.toBe(postMatch.route);
     });
 
     test("should support all standard HTTP methods", () => {
@@ -233,11 +228,11 @@ describe("Router (Radix Tree)", () => {
       router.add(createRoute("HEAD", "/todos", "head-handler"));
 
       const match = router.match("HEAD", "/todos");
-      expect(match).toBeDefined();
-      const response = await match!.route.handler(
-        {} as any,
-        { request: {} as any, state: new Map() }
-      );
+      assert(match);
+      const response = await match.route.handler({} as any, {
+        request: {} as any,
+        state: new Map(),
+      });
       expect(response.body.routeId).toBe("head-handler");
     });
 
@@ -254,20 +249,20 @@ describe("Router (Radix Tree)", () => {
       router.add(createRoute("GET", "/todos/:todoId"));
 
       const match = router.match("HEAD", "/todos/t1");
-      expect(match).toBeDefined();
-      expect(match!.params).toEqual({ todoId: "t1" });
+      assert(match);
+      expect(match.params).toEqual({ todoId: "t1" });
     });
   });
 
   describe("matchPath (405 support)", () => {
-    test("should find node when path exists", () => {
+    test("should find path and return allowed methods", () => {
       const router = new Router();
       router.add(createRoute("GET", "/todos"));
       router.add(createRoute("POST", "/todos"));
 
       const pathMatch = router.matchPath("/todos");
-      expect(pathMatch).toBeDefined();
-      expect(pathMatch!.node.methods.size).toBe(2);
+      assert(pathMatch);
+      expect(pathMatch.allowedMethods).toEqual(["GET", "HEAD", "POST"]);
     });
 
     test("should return undefined when path does not exist", () => {
@@ -278,34 +273,13 @@ describe("Router (Radix Tree)", () => {
       expect(pathMatch).toBeUndefined();
     });
 
-    test("should extract params for parameterized paths", () => {
-      const router = new Router();
-      router.add(createRoute("GET", "/todos/:todoId"));
-
-      const pathMatch = router.matchPath("/todos/t1");
-      expect(pathMatch).toBeDefined();
-      expect(pathMatch!.params).toEqual({ todoId: "t1" });
-    });
-  });
-
-  describe("getAllowedMethods", () => {
-    test("should return registered methods sorted", () => {
-      const router = new Router();
-      router.add(createRoute("POST", "/todos"));
-      router.add(createRoute("GET", "/todos"));
-
-      const pathMatch = router.matchPath("/todos");
-      const allowed = Router.getAllowedMethods(pathMatch!.node);
-      expect(allowed).toEqual(["GET", "HEAD", "POST"]);
-    });
-
     test("should implicitly include HEAD when GET is registered", () => {
       const router = new Router();
       router.add(createRoute("GET", "/todos"));
 
       const pathMatch = router.matchPath("/todos");
-      const allowed = Router.getAllowedMethods(pathMatch!.node);
-      expect(allowed).toContain("HEAD");
+      assert(pathMatch);
+      expect(pathMatch.allowedMethods).toContain("HEAD");
     });
 
     test("should not duplicate HEAD if explicitly registered", () => {
@@ -314,8 +288,10 @@ describe("Router (Radix Tree)", () => {
       router.add(createRoute("HEAD", "/todos"));
 
       const pathMatch = router.matchPath("/todos");
-      const allowed = Router.getAllowedMethods(pathMatch!.node);
-      const headCount = allowed.filter(m => m === "HEAD").length;
+      assert(pathMatch);
+      const headCount = pathMatch.allowedMethods.filter(
+        m => m === "HEAD"
+      ).length;
       expect(headCount).toBe(1);
     });
   });
@@ -326,8 +302,8 @@ describe("Router (Radix Tree)", () => {
       router.add(createRoute("GET", "/todos/:todoId"));
 
       const match = router.match("GET", "/todos/hello%20world");
-      expect(match).toBeDefined();
-      expect(match!.params).toEqual({ todoId: "hello world" });
+      assert(match);
+      expect(match.params).toEqual({ todoId: "hello world" });
     });
 
     test("should decode special characters in path parameters", () => {
@@ -335,8 +311,8 @@ describe("Router (Radix Tree)", () => {
       router.add(createRoute("GET", "/users/:name"));
 
       const match = router.match("GET", "/users/caf%C3%A9");
-      expect(match).toBeDefined();
-      expect(match!.params).toEqual({ name: "café" });
+      assert(match);
+      expect(match.params).toEqual({ name: "café" });
     });
 
     test("should handle malformed encoding gracefully", () => {
@@ -345,9 +321,9 @@ describe("Router (Radix Tree)", () => {
 
       // %ZZ is not valid percent-encoding
       const match = router.match("GET", "/todos/%ZZ");
-      expect(match).toBeDefined();
+      assert(match);
       // Should return the raw segment when decoding fails
-      expect(match!.params).toEqual({ todoId: "%ZZ" });
+      expect(match.params).toEqual({ todoId: "%ZZ" });
     });
 
     test("should not decode static segments during matching", () => {
@@ -366,8 +342,8 @@ describe("Router (Radix Tree)", () => {
       router.add(createRoute("GET", "/"));
 
       const match = router.match("GET", "/");
-      expect(match).toBeDefined();
-      expect(match!.params).toEqual({});
+      assert(match);
+      expect(match.params).toEqual({});
     });
 
     test("should handle trailing slashes consistently", () => {
@@ -406,8 +382,8 @@ describe("Router (Radix Tree)", () => {
       expect(match199).toBeDefined();
 
       const matchParam = router.match("GET", "/users/u42/profile");
-      expect(matchParam).toBeDefined();
-      expect(matchParam!.params).toEqual({ userId: "u42" });
+      assert(matchParam);
+      expect(matchParam.params).toEqual({ userId: "u42" });
 
       const noMatch = router.match("GET", "/nonexistent");
       expect(noMatch).toBeUndefined();
@@ -416,48 +392,35 @@ describe("Router (Radix Tree)", () => {
 
   describe("matchesMiddlewarePath (static)", () => {
     test("should match everything when pattern is undefined", () => {
-      expect(
-        Router.matchesMiddlewarePath(undefined, "/any/path")
-      ).toBe(true);
+      expect(Router.matchesMiddlewarePath(undefined, "/any/path")).toBe(true);
     });
 
     test("should match exact path", () => {
-      expect(
-        Router.matchesMiddlewarePath("/todos", "/todos")
-      ).toBe(true);
+      expect(Router.matchesMiddlewarePath("/todos", "/todos")).toBe(true);
     });
 
     test("should not match different path without wildcard", () => {
-      expect(
-        Router.matchesMiddlewarePath("/todos", "/users")
-      ).toBe(false);
+      expect(Router.matchesMiddlewarePath("/todos", "/users")).toBe(false);
     });
 
     test("should match wildcard prefix", () => {
-      expect(
-        Router.matchesMiddlewarePath("/todos/*", "/todos/123")
-      ).toBe(true);
+      expect(Router.matchesMiddlewarePath("/todos/*", "/todos/123")).toBe(true);
     });
 
     test("should match deeply nested paths with wildcard", () => {
       expect(
-        Router.matchesMiddlewarePath(
-          "/todos/*",
-          "/todos/123/subtodos/456"
-        )
+        Router.matchesMiddlewarePath("/todos/*", "/todos/123/subtodos/456")
       ).toBe(true);
     });
 
     test("should match base path without trailing segment for wildcard", () => {
-      expect(
-        Router.matchesMiddlewarePath("/todos/*", "/todos")
-      ).toBe(true);
+      expect(Router.matchesMiddlewarePath("/todos/*", "/todos")).toBe(true);
     });
 
     test("should not match sibling paths with wildcard", () => {
-      expect(
-        Router.matchesMiddlewarePath("/todos/*", "/todosx/123")
-      ).toBe(false);
+      expect(Router.matchesMiddlewarePath("/todos/*", "/todosx/123")).toBe(
+        false
+      );
     });
   });
 });

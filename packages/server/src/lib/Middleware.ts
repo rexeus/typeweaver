@@ -45,9 +45,9 @@ export type Middleware = (
  */
 export type MiddlewareEntry = {
   /** Path pattern to match. `undefined` means global (matches all paths). */
-  path: string | undefined;
+  readonly path: string | undefined;
   /** The middleware function. */
-  handler: Middleware;
+  readonly handler: Middleware;
 };
 
 /**

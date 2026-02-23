@@ -1,13 +1,10 @@
 import { describe, expect, test } from "vitest";
-
+import type { HttpMethod, IHttpRequest } from "@rexeus/typeweaver-core";
 import { executeMiddlewarePipeline } from "../../src/lib/Middleware";
 import type { Middleware } from "../../src/lib/Middleware";
 import type { ServerContext } from "../../src/lib/ServerContext";
-import type { HttpMethod, IHttpRequest } from "@rexeus/typeweaver-core";
 
-function createContext(
-  overrides: Partial<IHttpRequest> = {}
-): ServerContext {
+function createContext(overrides: Partial<IHttpRequest> = {}): ServerContext {
   return {
     request: {
       method: "GET" as HttpMethod,

@@ -20,7 +20,7 @@ requests, and wires your handler methods with full type safety. Mount routers on
 
 ### Key Features
 
-- **Zero dependencies** — no Hono, Express, or Fastify required
+- **Zero runtime dependencies** — no Hono, Express, or Fastify required
 - **Fetch API compatible** — works with Bun, Deno, Cloudflare Workers, and Node.js (>=18)
 - **High-performance radix tree router** — O(d) lookup where d = number of path segments
 - **Return-based middleware** — clean onion model without shared mutable state
@@ -45,7 +45,8 @@ npm install @rexeus/typeweaver-core
 npx typeweaver generate --input ./api/definition --output ./api/generated --plugins server
 ```
 
-More on the CLI in [@rexeus/typeweaver](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md#️-cli).
+More on the CLI in
+[@rexeus/typeweaver](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md#️-cli).
 
 ## Generated Output
 
@@ -61,7 +62,7 @@ Implement your handlers and mount the generated routers on a `TypeweaverApp`.
 // api/user-handlers.ts
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import type { IGetUserRequest, GetUserResponse } from "./generated";
-import type { ServerContext } from "./generated/lib/server";
+import type { ServerContext } from "./generated/lib";
 
 export const userHandlers = {
   async handleGetUserRequest(
@@ -83,7 +84,7 @@ export const userHandlers = {
 
 ```ts
 // api/server.ts
-import { TypeweaverApp } from "./generated/lib/server";
+import { TypeweaverApp } from "./generated/lib";
 import { UserRouter } from "./generated";
 
 const app = new TypeweaverApp();
@@ -104,13 +105,15 @@ app.use("/users/*", async (ctx, next) => {
 });
 
 // Mount the generated router
-app.route(new UserRouter({
-  requestHandlers: userHandlers,
-  validateRequests: true,
-  handleValidationErrors: true,
-  handleHttpResponseErrors: true,
-  handleUnknownErrors: true,
-}));
+app.route(
+  new UserRouter({
+    requestHandlers: userHandlers,
+    validateRequests: true,
+    handleValidationErrors: true,
+    handleHttpResponseErrors: true,
+    handleUnknownErrors: true,
+  })
+);
 
 // Optionally mount with a prefix
 // app.route("/api/v1", new UserRouter({ requestHandlers: userHandlers }));
@@ -131,7 +134,9 @@ early to short-circuit the pipeline.
 app.use(async (ctx, next) => {
   const start = Date.now();
   const response = await next();
-  console.log(`${ctx.request.method} ${ctx.request.path} -> ${response.statusCode} (${Date.now() - start}ms)`);
+  console.log(
+    `${ctx.request.method} ${ctx.request.path} -> ${response.statusCode} (${Date.now() - start}ms)`
+  );
   return response;
 });
 
@@ -155,17 +160,17 @@ CORS always execute.
 - `validateRequests` (default: `true`): enable/disable request validation
 - `handleValidationErrors`: `true` | `false` | `(err, ctx) => IHttpResponse`
   - If `true` (default), returns `400 Bad Request` with validation issues in the body
-  - If `false`, lets the error propagate
+  - If `false`, disables this handler (errors fall through to the unknown error handler)
   - If function, calls the function with the error and context, expects an `IHttpResponse` to
     return, so you can customize the response in the way you want
 - `handleHttpResponseErrors`: `true` | `false` | `(err, ctx) => IHttpResponse`
   - If `true` (default), returns thrown `HttpResponse` as-is, they will be sent as the response
-  - If `false`, lets the error propagate, which will likely result in a `500 Internal Server Error`
+  - If `false`, disables this handler (errors fall through to the unknown error handler)
   - If function, calls the function with the error and context, expects an `IHttpResponse` to
     return, so you can customize the response in the way you want
 - `handleUnknownErrors`: `true` | `false` | `(err, ctx) => IHttpResponse`
   - If `true` (default), returns `500 Internal Server Error` with a generic message
-  - If `false`, lets the error propagate
+  - If `false`, disables this handler (errors bubble up to the safety net)
   - If function, calls the function with the error and context, expects an `IHttpResponse` to
     return, so you can customize the response in the way you want
 

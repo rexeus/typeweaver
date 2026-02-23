@@ -35,8 +35,8 @@ import type { IHttpRequest } from "@rexeus/typeweaver-core";
  */
 export type ServerContext = {
   /** The incoming HTTP request in typeweaver format. */
-  request: IHttpRequest;
+  readonly request: IHttpRequest;
 
   /** Key-value store for sharing data between middleware and handlers. */
-  state: Map<string, unknown>;
+  readonly state: Map<string, unknown>;
 };

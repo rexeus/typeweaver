@@ -19,9 +19,10 @@ import type {
  * Caught by TypeweaverApp to return a 400 Bad Request response.
  */
 export class BodyParseError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "BodyParseError";
+  public override readonly name = "BodyParseError";
+
+  public constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
   }
 }
 
@@ -43,16 +44,11 @@ export class FetchApiAdapter {
    * Accepts an optional pre-parsed URL to avoid redundant parsing.
    *
    * @param request - The Fetch API Request object
-   * @param pathParams - Path parameters extracted by the router
    * @param url - Optional pre-parsed URL object to avoid double parsing
    * @returns Promise resolving to an IHttpRequest
    * @throws BodyParseError when the request body is malformed
    */
-  public async toRequest(
-    request: Request,
-    pathParams?: Record<string, string>,
-    url?: URL
-  ): Promise<IHttpRequest> {
+  public async toRequest(request: Request, url?: URL): Promise<IHttpRequest> {
     const parsedUrl = url ?? new URL(request.url);
 
     return {
@@ -60,10 +56,6 @@ export class FetchApiAdapter {
       path: parsedUrl.pathname,
       header: this.extractHeaders(request.headers),
       query: this.extractQueryParams(parsedUrl),
-      param:
-        pathParams && Object.keys(pathParams).length > 0
-          ? pathParams
-          : undefined,
       body: await this.parseRequestBody(request),
     };
   }
@@ -101,7 +93,6 @@ export class FetchApiAdapter {
   }
 
   private extractHeaders(headers: Headers): IHttpHeader {
-    if (!headers) return undefined;
     const result: Record<string, string | string[]> = {};
     headers.forEach((value, key) => {
       if (!value) return;
@@ -123,11 +114,16 @@ export class FetchApiAdapter {
 
     const contentType = request.headers.get("content-type");
 
-    if (contentType?.includes("application/json")) {
+    if (
+      contentType?.includes("application/json") ||
+      contentType?.includes("+json")
+    ) {
       try {
         return await request.json();
-      } catch {
-        throw new BodyParseError("Invalid JSON in request body");
+      } catch (error) {
+        throw new BodyParseError("Invalid JSON in request body", {
+          cause: error,
+        });
       }
     }
 
@@ -163,15 +159,20 @@ export class FetchApiAdapter {
           }
         });
         return formObject;
-      } catch {
+      } catch (error) {
         throw new BodyParseError(
-          "Invalid multipart/form-data in request body"
+          "Invalid multipart/form-data in request body",
+          { cause: error }
         );
       }
     }
 
-    const rawBody = await request.text();
-    return rawBody || undefined;
+    try {
+      const rawBody = await request.text();
+      return rawBody || undefined;
+    } catch (error) {
+      throw new BodyParseError("Failed to read request body", { cause: error });
+    }
   }
 
   private buildResponseBody(body: any): string | ArrayBuffer | Blob | null {
