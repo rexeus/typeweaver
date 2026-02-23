@@ -82,7 +82,7 @@ Typeweaver is modular by design. Install only what you need.
 
 | Package                                                    | Description                           | Version                                                         |
 | ---------------------------------------------------------- | ------------------------------------- | --------------------------------------------------------------- |
-| [@rexeus/typeweaver-clients](./packages/clients/README.md) | HTTP client generators using Axios    | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients) |
+| [@rexeus/typeweaver-clients](./packages/clients/README.md) | HTTP client generators using fetch    | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients) |
 | [@rexeus/typeweaver-hono](./packages/hono/README.md)       | Plugin for Hono routers               | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)    |
 | [@rexeus/typeweaver-aws-cdk](./packages/aws-cdk/README.md) | AWS CDK constructs for API Gateway V2 | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
 
