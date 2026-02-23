@@ -6,6 +6,10 @@
       "inputs": ["$TURBO_DEFAULT$", "src/**", "tsup.config.ts", "tsconfig.json", "package.json"],
       "outputs": ["dist/**"]
     },
+    "test-utils#build": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
     "typecheck": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", "src/**", "__test__/**", "tsconfig.json", "package.json"],

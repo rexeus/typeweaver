@@ -10,13 +10,7 @@ export default defineConfig({
       "__test__/unit/**/*.test.ts",
       "__test__/integration/**/*.test.ts",
     ],
-    poolOptions: {
-      vmThreads: {
-        singleThread: false,
-        isolate: true,
-        useAtomics: true,
-      },
-    },
+    isolate: true,
     fileParallelism: false,
   },
   cacheDir: ".vitestcache",
