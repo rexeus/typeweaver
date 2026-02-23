@@ -1,5 +1,21 @@
 # @rexeus/typeweaver-types
 
+## 0.5.0
+
+### Minor Changes
+
+- d2bb619: - Replace axios with native fetch API.
+  - The fetchFn prop on ApiClientProps allows injecting a custom fetch implementation.
+  - Response header validation now correctly splits comma-delimited values per RFC 7230 when the
+    schema expects an array.
+
+### Patch Changes
+
+- Updated dependencies [d2bb619]
+  - @rexeus/typeweaver-zod-to-ts@0.5.0
+  - @rexeus/typeweaver-core@0.5.0
+  - @rexeus/typeweaver-gen@0.5.0
+
 ## 0.4.2
 
 ### Patch Changes

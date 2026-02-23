@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-gen",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Template-driven engine that turns structured API definitions into production-ready artifacts. Powered by Typeweaver 🧵✨",
   "type": "module",
   "sideEffects": false,
