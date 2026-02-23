@@ -1,6 +1,7 @@
 import { assert, describe, expect, test } from "vitest";
 import type { HttpMethod } from "@rexeus/typeweaver-core";
 import { Router } from "../../src/lib/Router";
+import { createServerContext, noopValidator } from "../helpers";
 import type { RouteDefinition, RouterErrorConfig } from "../../src/lib/Router";
 
 const defaultConfig: RouterErrorConfig = {
@@ -18,10 +19,7 @@ function createRoute(
   return {
     method: method.toUpperCase() as HttpMethod,
     path,
-    validator: {
-      validate: (req: any) => req,
-      safeValidate: (req: any) => ({ isValid: true, data: req }),
-    },
+    validator: noopValidator,
     handler: async (_req, _ctx) => ({
       statusCode: 200,
       body: { routeId: id ?? path },
@@ -133,10 +131,10 @@ describe("Router (Radix Tree)", () => {
       const match = router.match("GET", "/todos/special");
       assert(match);
 
-      const response = await match.route.handler({} as any, {
-        request: {} as any,
-        state: new Map(),
-      });
+      const response = await match.route.handler(
+        {} as any,
+        createServerContext()
+      );
       expect(response).toEqual({
         statusCode: 200,
         body: { routeId: "static" },
@@ -152,10 +150,10 @@ describe("Router (Radix Tree)", () => {
       assert(match);
       expect(match.params).toEqual({ todoId: "other-value" });
 
-      const response = await match.route.handler({} as any, {
-        request: {} as any,
-        state: new Map(),
-      });
+      const response = await match.route.handler(
+        {} as any,
+        createServerContext()
+      );
       expect(response).toEqual({
         statusCode: 200,
         body: { routeId: "param" },
@@ -229,10 +227,10 @@ describe("Router (Radix Tree)", () => {
 
       const match = router.match("HEAD", "/todos");
       assert(match);
-      const response = await match.route.handler({} as any, {
-        request: {} as any,
-        state: new Map(),
-      });
+      const response = await match.route.handler(
+        {} as any,
+        createServerContext()
+      );
       expect(response.body.routeId).toBe("head-handler");
     });
 

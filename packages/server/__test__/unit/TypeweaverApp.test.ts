@@ -7,18 +7,21 @@ import { describe, expect, test, vi } from "vitest";
 import type { IRequestValidator } from "@rexeus/typeweaver-core";
 import { TypeweaverApp } from "../../src/lib/TypeweaverApp";
 import { TypeweaverRouter } from "../../src/lib/TypeweaverRouter";
+import {
+  BASE_URL,
+  del,
+  expectErrorResponse,
+  expectJson,
+  get,
+  head,
+  noopValidator,
+  post,
+  postRaw,
+  put,
+} from "../helpers";
 import type { RequestHandler } from "../../src/lib/RequestHandler";
 import type { TypeweaverAppOptions } from "../../src/lib/TypeweaverApp";
 import type { TypeweaverRouterOptions } from "../../src/lib/TypeweaverRouter";
-
-// ---------------------------------------------------------------------------
-// Test helpers
-// ---------------------------------------------------------------------------
-
-const noopValidator: IRequestValidator = {
-  validate: (req: any) => req,
-  safeValidate: (req: any) => ({ isValid: true, data: req }),
-};
 
 const failingValidator: IRequestValidator = {
   validate: () => {
@@ -66,21 +69,21 @@ class TestRouter extends TypeweaverRouter<TestHandlers> {
     this.route(
       HttpMethod.GET,
       "/todos",
-      options.validateRequests === false ? noopValidator : noopValidator,
+      options.validateRequests === false ? noopValidator : failingValidator,
       async (req, ctx) => this.requestHandlers.handleGetTodos(req, ctx)
     );
 
     this.route(
       HttpMethod.POST,
       "/todos",
-      options.validateRequests === false ? noopValidator : noopValidator,
+      options.validateRequests === false ? noopValidator : failingValidator,
       async (req, ctx) => this.requestHandlers.handleCreateTodo(req, ctx)
     );
 
     this.route(
       HttpMethod.GET,
       "/todos/:todoId",
-      options.validateRequests === false ? noopValidator : noopValidator,
+      options.validateRequests === false ? noopValidator : failingValidator,
       async (req, ctx) => this.requestHandlers.handleGetTodo(req, ctx)
     );
   }
@@ -123,7 +126,7 @@ function defaultHandlers(overrides: Partial<TestHandlers> = {}): TestHandlers {
       header: { "Content-Type": "application/json" },
       body: { id: "3", title: req.body?.title ?? "Untitled" },
     }),
-    handleGetTodo: async (req, ctx) => ({
+    handleGetTodo: async (req, _ctx) => ({
       statusCode: 200,
       body: { id: req.param?.todoId ?? "unknown", title: "A Todo" },
     }),
@@ -138,6 +141,7 @@ function createApp(
 ): TypeweaverApp {
   const app = new TypeweaverApp(appOptions);
   const router = new TestRouter({
+    validateRequests: false,
     requestHandlers: defaultHandlers(handlerOverrides),
     ...routerOptions,
   });
@@ -159,71 +163,49 @@ function createValidatingApp(
   return app;
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 describe("TypeweaverApp", () => {
   describe("Route Matching", () => {
     test("should handle GET request to static path", async () => {
       const app = createApp();
 
-      const res = await app.fetch(new Request("http://localhost/todos"));
+      const res = await app.fetch(get("/todos"));
 
-      expect(res.status).toBe(200);
-      const data = await res.json();
+      const data = await expectJson(res, 200);
       expect(data).toHaveLength(2);
     });
 
     test("should handle POST request", async () => {
       const app = createApp();
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: "New Todo" }),
-        })
-      );
+      const res = await app.fetch(post("/todos", { title: "New Todo" }));
 
-      expect(res.status).toBe(201);
-      const data = (await res.json()) as any;
+      const data = await expectJson(res, 201);
       expect(data.title).toBe("New Todo");
     });
 
     test("should extract path parameters", async () => {
       const app = createApp();
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos/todo-42")
-      );
+      const res = await app.fetch(get("/todos/todo-42"));
 
-      expect(res.status).toBe(200);
-      const data = (await res.json()) as any;
+      const data = await expectJson(res, 200);
       expect(data.id).toBe("todo-42");
     });
 
     test("should return 404 for unregistered paths", async () => {
       const app = createApp();
 
-      const res = await app.fetch(new Request("http://localhost/nonexistent"));
+      const res = await app.fetch(get("/nonexistent"));
 
-      expect(res.status).toBe(404);
-      const data = (await res.json()) as any;
-      expect(data.code).toBe("NOT_FOUND");
+      await expectErrorResponse(res, 404, "NOT_FOUND");
     });
 
     test("should return 405 for wrong HTTP method on existing path", async () => {
       const app = createApp();
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos", { method: "DELETE" })
-      );
+      const res = await app.fetch(del("/todos"));
 
-      expect(res.status).toBe(405);
-      const data = (await res.json()) as any;
-      expect(data.code).toBe("METHOD_NOT_ALLOWED");
-      // Should include Allow header with valid methods
+      await expectErrorResponse(res, 405, "METHOD_NOT_ALLOWED");
       const allow = res.headers.get("allow");
       expect(allow).toContain("GET");
       expect(allow).toContain("POST");
@@ -233,9 +215,7 @@ describe("TypeweaverApp", () => {
     test("should return 405 with correct Allow header for parameterized paths", async () => {
       const app = createApp();
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos/t1", { method: "PUT" })
-      );
+      const res = await app.fetch(put("/todos/t1"));
 
       expect(res.status).toBe(405);
       const allow = res.headers.get("allow");
@@ -248,12 +228,9 @@ describe("TypeweaverApp", () => {
     test("should handle HEAD request by falling back to GET handler", async () => {
       const app = createApp();
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos", { method: "HEAD" })
-      );
+      const res = await app.fetch(head("/todos"));
 
       expect(res.status).toBe(200);
-      // HEAD responses must not have a body
       const body = await res.text();
       expect(body).toBe("");
     });
@@ -261,9 +238,7 @@ describe("TypeweaverApp", () => {
     test("should handle HEAD request for parameterized paths", async () => {
       const app = createApp();
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos/t1", { method: "HEAD" })
-      );
+      const res = await app.fetch(head("/todos/t1"));
 
       expect(res.status).toBe(200);
       const body = await res.text();
@@ -279,9 +254,7 @@ describe("TypeweaverApp", () => {
         }),
       });
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos", { method: "HEAD" })
-      );
+      const res = await app.fetch(head("/todos"));
 
       expect(res.status).toBe(200);
       expect(res.headers.get("x-custom")).toBe("value");
@@ -292,9 +265,7 @@ describe("TypeweaverApp", () => {
     test("should return 404 for HEAD request on nonexistent path", async () => {
       const app = createApp();
 
-      const res = await app.fetch(
-        new Request("http://localhost/nonexistent", { method: "HEAD" })
-      );
+      const res = await app.fetch(head("/nonexistent"));
 
       expect(res.status).toBe(404);
     });
@@ -310,8 +281,8 @@ describe("TypeweaverApp", () => {
         return next();
       });
 
-      await app.fetch(new Request("http://localhost/todos"));
-      await app.fetch(new Request("http://localhost/todos/t1"));
+      await app.fetch(get("/todos"));
+      await app.fetch(get("/todos/t1"));
 
       expect(seen).toEqual(["/todos", "/todos/t1"]);
     });
@@ -319,6 +290,7 @@ describe("TypeweaverApp", () => {
     test("should execute path-scoped middleware only for matching paths", async () => {
       const app = new TypeweaverApp();
       const router = new TestRouter({
+        validateRequests: false,
         requestHandlers: defaultHandlers(),
       });
       app.route(router);
@@ -330,14 +302,10 @@ describe("TypeweaverApp", () => {
         return next();
       });
 
-      // This request should NOT trigger middleware (exact match /todos, not /todos/*)
-      // Actually /todos/* should also match /todos based on matchesMiddlewarePath
-      await app.fetch(new Request("http://localhost/todos"));
+      await app.fetch(get("/todos"));
+      await app.fetch(get("/todos/t1"));
 
-      // This request should trigger middleware
-      await app.fetch(new Request("http://localhost/todos/t1"));
-
-      expect(scoped).toContain("/todos/t1");
+      expect(scoped).toEqual(["/todos", "/todos/t1"]);
     });
 
     test("should allow middleware to short-circuit with a response", async () => {
@@ -348,7 +316,7 @@ describe("TypeweaverApp", () => {
         body: { message: "Service Unavailable" },
       }));
 
-      const res = await app.fetch(new Request("http://localhost/todos"));
+      const res = await app.fetch(get("/todos"));
 
       expect(res.status).toBe(503);
     });
@@ -356,7 +324,7 @@ describe("TypeweaverApp", () => {
     test("should allow middleware to modify response", async () => {
       const app = createApp();
 
-      app.use(async (ctx, next) => {
+      app.use(async (_ctx, next) => {
         const response = await next();
         return {
           ...response,
@@ -367,7 +335,7 @@ describe("TypeweaverApp", () => {
         };
       });
 
-      const res = await app.fetch(new Request("http://localhost/todos"));
+      const res = await app.fetch(get("/todos"));
 
       expect(res.status).toBe(200);
       expect(res.headers.get("x-request-id")).toBe("req-001");
@@ -376,6 +344,7 @@ describe("TypeweaverApp", () => {
     test("should pass state between middleware and handler", async () => {
       const app = new TypeweaverApp();
       const router = new TestRouter({
+        validateRequests: false,
         requestHandlers: {
           ...defaultHandlers(),
           handleGetTodos: async (_req, ctx) => ({
@@ -391,9 +360,9 @@ describe("TypeweaverApp", () => {
         return next();
       });
 
-      const res = await app.fetch(new Request("http://localhost/todos"));
+      const res = await app.fetch(get("/todos"));
 
-      const data = (await res.json()) as any;
+      const data = await expectJson(res, 200);
       expect(data.userId).toBe("user-99");
     });
 
@@ -406,7 +375,7 @@ describe("TypeweaverApp", () => {
         return next();
       });
 
-      const res = await app.fetch(new Request("http://localhost/nonexistent"));
+      const res = await app.fetch(get("/nonexistent"));
 
       expect(res.status).toBe(404);
       expect(seen).toContain("/nonexistent");
@@ -421,18 +390,29 @@ describe("TypeweaverApp", () => {
         return next();
       });
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos", { method: "DELETE" })
-      );
+      const res = await app.fetch(del("/todos"));
 
       expect(res.status).toBe(405);
       expect(seen).toContain("DELETE /todos");
     });
 
+    test("should execute multiple global middlewares in registration order", async () => {
+      const app = createApp();
+      const order: number[] = [];
+
+      app.use(async (_ctx, next) => { order.push(1); const r = await next(); order.push(6); return r; });
+      app.use(async (_ctx, next) => { order.push(2); const r = await next(); order.push(5); return r; });
+      app.use(async (_ctx, next) => { order.push(3); const r = await next(); order.push(4); return r; });
+
+      await app.fetch(get("/todos"));
+
+      expect(order).toEqual([1, 2, 3, 4, 5, 6]);
+    });
+
     test("should allow middleware to intercept 404 responses", async () => {
       const app = createApp();
 
-      app.use(async (ctx, next) => {
+      app.use(async (_ctx, next) => {
         const response = await next();
         if (response.statusCode === 404) {
           return {
@@ -443,10 +423,9 @@ describe("TypeweaverApp", () => {
         return response;
       });
 
-      const res = await app.fetch(new Request("http://localhost/nonexistent"));
+      const res = await app.fetch(get("/nonexistent"));
 
-      expect(res.status).toBe(404);
-      const data = (await res.json()) as any;
+      const data = await expectJson(res, 404);
       expect(data.custom).toBe(true);
     });
   });
@@ -455,27 +434,28 @@ describe("TypeweaverApp", () => {
     test("should mount router with prefix", async () => {
       const app = new TypeweaverApp();
       const router = new TestRouter({
+        validateRequests: false,
         requestHandlers: defaultHandlers(),
       });
 
       app.route("/api/v1", router);
 
-      const res = await app.fetch(new Request("http://localhost/api/v1/todos"));
+      const res = await app.fetch(get("/api/v1/todos"));
 
-      expect(res.status).toBe(200);
-      const data = await res.json();
+      const data = await expectJson(res, 200);
       expect(data).toHaveLength(2);
     });
 
     test("should not match unprefixed path when prefix is used", async () => {
       const app = new TypeweaverApp();
       const router = new TestRouter({
+        validateRequests: false,
         requestHandlers: defaultHandlers(),
       });
 
       app.route("/api/v1", router);
 
-      const res = await app.fetch(new Request("http://localhost/todos"));
+      const res = await app.fetch(get("/todos"));
 
       expect(res.status).toBe(404);
     });
@@ -483,29 +463,28 @@ describe("TypeweaverApp", () => {
     test("should extract path params with prefix", async () => {
       const app = new TypeweaverApp();
       const router = new TestRouter({
+        validateRequests: false,
         requestHandlers: defaultHandlers(),
       });
 
       app.route("/api", router);
 
-      const res = await app.fetch(
-        new Request("http://localhost/api/todos/my-todo")
-      );
+      const res = await app.fetch(get("/api/todos/my-todo"));
 
-      expect(res.status).toBe(200);
-      const data = (await res.json()) as any;
+      const data = await expectJson(res, 200);
       expect(data.id).toBe("my-todo");
     });
 
     test("should normalize trailing slashes on prefix", async () => {
       const app = new TypeweaverApp();
       const router = new TestRouter({
+        validateRequests: false,
         requestHandlers: defaultHandlers(),
       });
 
       app.route("/api/v1/", router);
 
-      const res = await app.fetch(new Request("http://localhost/api/v1/todos"));
+      const res = await app.fetch(get("/api/v1/todos"));
 
       expect(res.status).toBe(200);
     });
@@ -533,6 +512,7 @@ describe("TypeweaverApp", () => {
 
       app.route(
         new TestRouter({
+          validateRequests: false,
           requestHandlers: defaultHandlers(),
         })
       );
@@ -548,33 +528,24 @@ describe("TypeweaverApp", () => {
         })
       );
 
-      const todosRes = await app.fetch(new Request("http://localhost/todos"));
+      const todosRes = await app.fetch(get("/todos"));
       expect(todosRes.status).toBe(200);
 
-      const usersRes = await app.fetch(new Request("http://localhost/users"));
-      expect(usersRes.status).toBe(200);
-      const users = (await usersRes.json()) as any;
+      const usersRes = await app.fetch(get("/users"));
+      const users = await expectJson(usersRes, 200);
       expect(users[0].name).toBe("Alice");
     });
   });
 
   describe("Error Handling", () => {
-    test("should handle validation errors with default handler and sanitized shape", async () => {
-      const app = createValidatingApp();
+    test("should handle validation errors with default handler and not call onError", async () => {
+      const onError = vi.fn();
+      const app = createValidatingApp(undefined, undefined, { onError });
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: "bad" }),
-        })
-      );
+      const res = await app.fetch(post("/todos", { title: "bad" }));
 
-      expect(res.status).toBe(400);
-      const data = (await res.json()) as any;
-      expect(data.code).toBe("VALIDATION_ERROR");
+      const data = await expectErrorResponse(res, 400, "VALIDATION_ERROR");
       expect(data.issues).toBeDefined();
-      // Sanitized: only message and path per issue, no code/expected/received
       expect(data.issues.header[0]).toEqual({
         message: "bad header",
         path: [],
@@ -582,6 +553,7 @@ describe("TypeweaverApp", () => {
       expect(data.issues.header[0]).not.toHaveProperty("code");
       expect(data.issues.body[0]).toEqual({ message: "bad body", path: [] });
       expect(data.issues.body[0]).not.toHaveProperty("code");
+      expect(onError).not.toHaveBeenCalled();
     });
 
     test("should omit empty issue categories from sanitized response", async () => {
@@ -591,18 +563,9 @@ describe("TypeweaverApp", () => {
       });
       app.route(router);
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: 123 }),
-        })
-      );
+      const res = await app.fetch(post("/todos", { title: 123 }));
 
-      expect(res.status).toBe(400);
-      const data = (await res.json()) as any;
-      expect(data.code).toBe("VALIDATION_ERROR");
-      // body issues present, but sanitized — no code/expected/received
+      const data = await expectErrorResponse(res, 400, "VALIDATION_ERROR");
       expect(data.issues.body).toHaveLength(1);
       expect(data.issues.body[0]).toEqual({
         message: "Expected string",
@@ -611,7 +574,6 @@ describe("TypeweaverApp", () => {
       expect(data.issues.body[0]).not.toHaveProperty("code");
       expect(data.issues.body[0]).not.toHaveProperty("expected");
       expect(data.issues.body[0]).not.toHaveProperty("input");
-      // Empty categories omitted
       expect(data.issues.header).toBeUndefined();
       expect(data.issues.query).toBeUndefined();
       expect(data.issues.param).toBeUndefined();
@@ -625,37 +587,28 @@ describe("TypeweaverApp", () => {
         }),
       });
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        })
-      );
+      const res = await app.fetch(post("/todos", {}));
 
-      expect(res.status).toBe(422);
-      const data = (await res.json()) as any;
+      const data = await expectJson(res, 422);
       expect(data.custom).toBe(true);
     });
 
-    test("should handle HttpResponse errors with default handler", async () => {
-      const app = createApp(undefined, {
-        handleCreateTodo: async () => {
-          throw new HttpResponse(409, {}, { code: "CONFLICT" });
+    test("should handle HttpResponse errors with default handler and not call onError", async () => {
+      const onError = vi.fn();
+      const app = createApp(
+        undefined,
+        {
+          handleCreateTodo: async () => {
+            throw new HttpResponse(409, {}, { code: "CONFLICT" });
+          },
         },
-      });
-
-      const res = await app.fetch(
-        new Request("http://localhost/todos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: "dup" }),
-        })
+        { onError }
       );
 
-      expect(res.status).toBe(409);
-      const data = (await res.json()) as any;
-      expect(data.code).toBe("CONFLICT");
+      const res = await app.fetch(post("/todos", { title: "dup" }));
+
+      await expectErrorResponse(res, 409, "CONFLICT");
+      expect(onError).not.toHaveBeenCalled();
     });
 
     test("should handle HttpResponse errors with custom handler", async () => {
@@ -673,31 +626,29 @@ describe("TypeweaverApp", () => {
         }
       );
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        })
-      );
+      const res = await app.fetch(post("/todos", {}));
 
-      expect(res.status).toBe(409);
-      const data = (await res.json()) as any;
+      const data = await expectJson(res, 409);
       expect(data.wrapped).toBe(true);
     });
 
-    test("should handle unknown errors with default handler", async () => {
-      const app = createApp(undefined, {
-        handleGetTodos: async () => {
-          throw new Error("Unexpected failure");
+    test("should handle unknown errors with default handler and call onError", async () => {
+      const onError = vi.fn();
+      const app = createApp(
+        undefined,
+        {
+          handleGetTodos: async () => {
+            throw new Error("Unexpected failure");
+          },
         },
-      });
+        { onError }
+      );
 
-      const res = await app.fetch(new Request("http://localhost/todos"));
+      const res = await app.fetch(get("/todos"));
 
-      expect(res.status).toBe(500);
-      const data = (await res.json()) as any;
-      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+      await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
+      expect(onError).toHaveBeenCalledOnce();
+      expect(onError).toHaveBeenCalledWith(expect.any(Error));
     });
 
     test("should handle unknown errors with custom handler", async () => {
@@ -718,12 +669,29 @@ describe("TypeweaverApp", () => {
         }
       );
 
-      const res = await app.fetch(new Request("http://localhost/todos"));
+      const res = await app.fetch(get("/todos"));
 
-      expect(res.status).toBe(500);
-      const data = (await res.json()) as any;
+      const data = await expectJson(res, 500);
       expect(data.custom).toBe(true);
       expect(data.message).toBe("Boom");
+    });
+
+    test("should call onError for errors that escape to the safety net", async () => {
+      const onError = vi.fn();
+      const app = createApp(
+        { handleUnknownErrors: false },
+        {
+          handleGetTodos: async () => {
+            throw new Error("Unhandled");
+          },
+        },
+        { onError }
+      );
+
+      const res = await app.fetch(get("/todos"));
+
+      expect(res.status).toBe(500);
+      expect(onError).toHaveBeenCalledOnce();
     });
 
     test("should bubble RequestValidationError to safety net when both validation and unknown handlers are disabled", async () => {
@@ -737,17 +705,9 @@ describe("TypeweaverApp", () => {
         { onError }
       );
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        })
-      );
+      const res = await app.fetch(post("/todos", {}));
 
-      expect(res.status).toBe(500);
-      const data = (await res.json()) as any;
-      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+      await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
       expect(onError).toHaveBeenCalledOnce();
       expect(onError).toHaveBeenCalledWith(expect.any(RequestValidationError));
     });
@@ -767,17 +727,9 @@ describe("TypeweaverApp", () => {
         { onError }
       );
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: "dup" }),
-        })
-      );
+      const res = await app.fetch(post("/todos", { title: "dup" }));
 
-      expect(res.status).toBe(500);
-      const data = (await res.json()) as any;
-      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+      await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
       expect(onError).toHaveBeenCalledOnce();
       expect(onError).toHaveBeenCalledWith(expect.any(HttpResponse));
     });
@@ -789,50 +741,104 @@ describe("TypeweaverApp", () => {
         },
       });
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        })
+      const res = await app.fetch(post("/todos", {}));
+
+      await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
+    });
+
+    test("should still return 500 when onError throws", async () => {
+      const app = createApp(
+        undefined,
+        {
+          handleGetTodos: async () => {
+            throw new Error("Unexpected failure");
+          },
+        },
+        {
+          onError: () => {
+            throw new Error("Observer crashed");
+          },
+        }
       );
 
-      // A broken handler bubbles up to the safety net — clean 500
-      expect(res.status).toBe(500);
-      const data = (await res.json()) as any;
-      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+      const res = await app.fetch(get("/todos"));
+
+      await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
     });
 
     test("should return 500 for completely malformed request URL", async () => {
       const app = createApp();
 
-      // Create a Request that will cause new URL() to throw
-      // by overriding the url property
-      const badRequest = new Request("http://localhost/todos");
+      const badRequest = get("/todos");
       Object.defineProperty(badRequest, "url", { value: "not-a-valid-url" });
 
       const res = await app.fetch(badRequest);
 
-      expect(res.status).toBe(500);
-      const data = (await res.json()) as any;
-      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+      await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
     });
 
     test("should return 400 for malformed JSON body", async () => {
       const app = createApp();
 
       const res = await app.fetch(
-        new Request("http://localhost/todos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: "{ invalid json",
-        })
+        postRaw("/todos", "{ invalid json", "application/json")
+      );
+
+      const data = await expectErrorResponse(res, 400, "BAD_REQUEST");
+      expect(data.message).toContain("Invalid JSON");
+    });
+
+    test("should NOT call onError for handled BodyParseError", async () => {
+      const onError = vi.fn();
+      const app = createApp(undefined, undefined, { onError });
+
+      const res = await app.fetch(
+        postRaw("/todos", "{ invalid json", "application/json")
       );
 
       expect(res.status).toBe(400);
-      const data = (await res.json()) as any;
-      expect(data.code).toBe("BAD_REQUEST");
-      expect(data.message).toContain("Invalid JSON");
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    test("should NOT call onError for handled PayloadTooLargeError", async () => {
+      const onError = vi.fn();
+      const app = createApp(undefined, undefined, {
+        maxBodySize: 50,
+        onError,
+      });
+
+      const res = await app.fetch(
+        postRaw("/todos", "x".repeat(100), "text/plain")
+      );
+
+      expect(res.status).toBe(413);
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    test("should default onError to console.error", async () => {
+      const spy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+      const app = createApp(undefined, {
+        handleGetTodos: async () => {
+          throw new Error("should be logged");
+        },
+      });
+
+      await app.fetch(get("/todos"));
+
+      expect(spy).toHaveBeenCalledOnce();
+      spy.mockRestore();
+    });
+
+    test("should handle errors thrown inside middleware", async () => {
+      const onError = vi.fn();
+      const app = createApp(undefined, undefined, { onError });
+
+      app.use(async () => { throw new Error("middleware boom"); });
+
+      const res = await app.fetch(get("/todos"));
+
+      await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
+      expect(onError).toHaveBeenCalledOnce();
     });
   });
 
@@ -840,7 +846,7 @@ describe("TypeweaverApp", () => {
     test("should set Content-Type to application/json for object bodies", async () => {
       const app = createApp();
 
-      const res = await app.fetch(new Request("http://localhost/todos"));
+      const res = await app.fetch(get("/todos"));
 
       expect(res.headers.get("content-type")).toBe("application/json");
     });
@@ -850,7 +856,7 @@ describe("TypeweaverApp", () => {
         handleGetTodos: async () => ({ statusCode: 204 }),
       });
 
-      const res = await app.fetch(new Request("http://localhost/todos"));
+      const res = await app.fetch(get("/todos"));
 
       expect(res.status).toBe(204);
       const text = await res.text();
@@ -869,166 +875,36 @@ describe("TypeweaverApp", () => {
         }),
       });
 
-      const res = await app.fetch(new Request("http://localhost/todos"));
+      const res = await app.fetch(get("/todos"));
 
       expect(res.headers.get("x-custom")).toBe("value");
-      // Multi-value headers are joined by fetch spec
       expect(res.headers.get("x-multi")).toContain("a");
       expect(res.headers.get("x-multi")).toContain("b");
     });
-  });
 
-  describe("Error Observability", () => {
-    test("should call onError for unexpected errors caught by default unknown handler", async () => {
-      const onError = vi.fn();
-      const app = createApp(
-        undefined,
-        {
-          handleGetTodos: async () => {
-            throw new Error("Unexpected failure");
-          },
-        },
-        { onError }
-      );
-
-      const res = await app.fetch(new Request("http://localhost/todos"));
-
-      expect(res.status).toBe(500);
-      expect(onError).toHaveBeenCalledOnce();
-      expect(onError).toHaveBeenCalledWith(expect.any(Error));
-    });
-
-    test("should call onError for errors that escape to the safety net", async () => {
-      const onError = vi.fn();
-      const app = createApp(
-        { handleUnknownErrors: false },
-        {
-          handleGetTodos: async () => {
-            throw new Error("Unhandled");
-          },
-        },
-        { onError }
-      );
-
-      const res = await app.fetch(new Request("http://localhost/todos"));
-
-      expect(res.status).toBe(500);
-      expect(onError).toHaveBeenCalledOnce();
-    });
-
-    test("should NOT call onError for handled BodyParseError", async () => {
-      const onError = vi.fn();
-      const app = createApp(undefined, undefined, { onError });
-
-      const res = await app.fetch(
-        new Request("http://localhost/todos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: "{ invalid json",
-        })
-      );
-
-      expect(res.status).toBe(400);
-      expect(onError).not.toHaveBeenCalled();
-    });
-
-    test("should NOT call onError for handled HttpResponse errors", async () => {
-      const onError = vi.fn();
-      const app = createApp(
-        undefined,
-        {
-          handleCreateTodo: async () => {
-            throw new HttpResponse(409, {}, { code: "CONFLICT" });
-          },
-        },
-        { onError }
-      );
-
-      const res = await app.fetch(
-        new Request("http://localhost/todos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: "dup" }),
-        })
-      );
-
-      expect(res.status).toBe(409);
-      expect(onError).not.toHaveBeenCalled();
-    });
-
-    test("should NOT call onError for handled validation errors", async () => {
-      const onError = vi.fn();
-      const app = createValidatingApp(undefined, undefined, { onError });
-
-      const res = await app.fetch(
-        new Request("http://localhost/todos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        })
-      );
-
-      expect(res.status).toBe(400);
-      expect(onError).not.toHaveBeenCalled();
-    });
-
-    test("should still return 500 when onError throws", async () => {
-      const app = createApp(
-        undefined,
-        {
-          handleGetTodos: async () => {
-            throw new Error("Unexpected failure");
-          },
-        },
-        {
-          onError: () => {
-            throw new Error("Observer crashed");
-          },
-        }
-      );
-
-      const res = await app.fetch(new Request("http://localhost/todos"));
-
-      expect(res.status).toBe(500);
-      const data = (await res.json()) as any;
-      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
-    });
-
-    test("should NOT call onError for handled PayloadTooLargeError", async () => {
-      const onError = vi.fn();
-      const app = createApp(undefined, undefined, {
-        maxBodySize: 50,
-        onError,
-      });
-      const body = "x".repeat(100);
-
-      const res = await app.fetch(
-        new Request("http://localhost/todos", {
-          method: "POST",
-          headers: {
-            "Content-Type": "text/plain",
-            "Content-Length": String(body.length),
-          },
-          body,
-        })
-      );
-
-      expect(res.status).toBe(413);
-      expect(onError).not.toHaveBeenCalled();
-    });
-
-    test("should default onError to console.error", async () => {
-      const spy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+    test("should return string body without auto-setting Content-Type to JSON", async () => {
       const app = createApp(undefined, {
-        handleGetTodos: async () => {
-          throw new Error("should be logged");
-        },
+        handleGetTodos: async () => ({ statusCode: 200, body: "plain text" }),
       });
+      const res = await app.fetch(get("/todos"));
 
-      await app.fetch(new Request("http://localhost/todos"));
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe("plain text");
+      expect(res.headers.get("content-type")).not.toBe("application/json");
+    });
 
-      expect(spy).toHaveBeenCalledOnce();
-      spy.mockRestore();
+    test("should preserve explicit Content-Type for string body", async () => {
+      const app = createApp(undefined, {
+        handleGetTodos: async () => ({
+          statusCode: 200,
+          header: { "Content-Type": "text/plain" },
+          body: "plain text",
+        }),
+      });
+      const res = await app.fetch(get("/todos"));
+
+      expect(res.headers.get("content-type")).toBe("text/plain");
+      expect(await res.text()).toBe("plain text");
     });
   });
 
@@ -1038,22 +914,11 @@ describe("TypeweaverApp", () => {
         maxBodySize: 50,
         onError: vi.fn(),
       });
-      const body = "x".repeat(100);
-
       const res = await app.fetch(
-        new Request("http://localhost/todos", {
-          method: "POST",
-          headers: {
-            "Content-Type": "text/plain",
-            "Content-Length": String(body.length),
-          },
-          body,
-        })
+        postRaw("/todos", "x".repeat(100), "text/plain")
       );
 
-      expect(res.status).toBe(413);
-      const data = (await res.json()) as any;
-      expect(data.code).toBe("PAYLOAD_TOO_LARGE");
+      await expectErrorResponse(res, 413, "PAYLOAD_TOO_LARGE");
     });
 
     test("should accept normal bodies within the limit", async () => {
@@ -1062,62 +927,88 @@ describe("TypeweaverApp", () => {
         onError: vi.fn(),
       });
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Content-Length": "27",
-          },
-          body: JSON.stringify({ title: "New Todo" }),
-        })
-      );
+      const res = await app.fetch(post("/todos", { title: "New Todo" }));
 
       expect(res.status).toBe(201);
     });
 
-    test("should not enforce limit when maxBodySize is not set", async () => {
+    test("should use 1 MB default when maxBodySize is not configured", async () => {
       const app = createApp();
-      const body = JSON.stringify({ title: "Large" });
 
-      const res = await app.fetch(
-        new Request("http://localhost/todos", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Content-Length": String(body.length),
-          },
-          body,
-        })
-      );
+      const res = await app.fetch(post("/todos", { title: "Large" }));
 
       expect(res.status).toBe(201);
+    });
+
+    test("should return 413 for oversized body without Content-Length header", async () => {
+      const app = createApp(undefined, undefined, {
+        maxBodySize: 50,
+        onError: vi.fn(),
+      });
+      const request = new Request(BASE_URL + "/todos", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: "x".repeat(100),
+      });
+      request.headers.delete("content-length");
+
+      const res = await app.fetch(request);
+
+      await expectErrorResponse(res, 413, "PAYLOAD_TOO_LARGE");
     });
   });
 
   describe("Fluent API", () => {
     test("should return this from use() for chaining", () => {
       const app = new TypeweaverApp();
-      const result = app.use(async (_ctx, next) => next());
-      expect(result).toBe(app);
+
+      expect(app.use(async (_ctx, next) => next())).toBe(app);
     });
 
     test("should return this from route() for chaining", () => {
       const app = new TypeweaverApp();
-      const router = new TestRouter({
-        requestHandlers: defaultHandlers(),
-      });
-      const result = app.route(router);
-      expect(result).toBe(app);
+      const router = new TestRouter({ requestHandlers: defaultHandlers() });
+
+      expect(app.route(router)).toBe(app);
     });
 
     test("should return this from route() with prefix for chaining", () => {
       const app = new TypeweaverApp();
-      const router = new TestRouter({
-        requestHandlers: defaultHandlers(),
-      });
-      const result = app.route("/api", router);
-      expect(result).toBe(app);
+      const router = new TestRouter({ requestHandlers: defaultHandlers() });
+
+      expect(app.route("/api", router)).toBe(app);
+    });
+  });
+
+  describe("Request Validation", () => {
+    test("should skip validation when validateRequests is false", async () => {
+      const app = createApp({ validateRequests: false });
+      const res = await app.fetch(post("/todos", { title: "Valid" }));
+      await expectJson(res, 201);
+    });
+
+    test("should enforce validation when validateRequests is true", async () => {
+      const app = createApp({ validateRequests: true });
+      const res = await app.fetch(post("/todos", { title: "Any" }));
+      await expectErrorResponse(res, 400, "VALIDATION_ERROR");
+    });
+  });
+
+  describe("Defensive Validation", () => {
+    test("should throw when use() is called with path but no middleware", () => {
+      const app = new TypeweaverApp();
+      // @ts-expect-error — testing runtime guard
+      expect(() => app.use("/path")).toThrow(
+        "Middleware handler is required when registering path-scoped middleware"
+      );
+    });
+
+    test("should throw when route() is called with prefix but no router", () => {
+      const app = new TypeweaverApp();
+      // @ts-expect-error — testing runtime guard
+      expect(() => app.route("/prefix")).toThrow(
+        "Router is required when mounting with a prefix"
+      );
     });
   });
 });

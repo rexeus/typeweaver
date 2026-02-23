@@ -1,24 +1,12 @@
 import { describe, expect, test } from "vitest";
-import type { HttpMethod, IHttpRequest } from "@rexeus/typeweaver-core";
 import { executeMiddlewarePipeline } from "../../src/lib/Middleware";
+import { createServerContext } from "../helpers";
 import type { Middleware } from "../../src/lib/Middleware";
-import type { ServerContext } from "../../src/lib/ServerContext";
-
-function createContext(overrides: Partial<IHttpRequest> = {}): ServerContext {
-  return {
-    request: {
-      method: "GET" as HttpMethod,
-      path: "/test",
-      ...overrides,
-    },
-    state: new Map(),
-  };
-}
 
 describe("Middleware Pipeline", () => {
   describe("executeMiddlewarePipeline", () => {
     test("should call final handler when no middleware registered", async () => {
-      const ctx = createContext();
+      const ctx = createServerContext();
 
       const response = await executeMiddlewarePipeline([], ctx, async () => ({
         statusCode: 200,
@@ -30,7 +18,7 @@ describe("Middleware Pipeline", () => {
     });
 
     test("should execute single middleware that passes through", async () => {
-      const ctx = createContext();
+      const ctx = createServerContext();
       const order: string[] = [];
 
       const middleware: Middleware = async (_ctx, next) => {
@@ -54,7 +42,7 @@ describe("Middleware Pipeline", () => {
     });
 
     test("should execute middleware in onion order", async () => {
-      const ctx = createContext();
+      const ctx = createServerContext();
       const order: string[] = [];
 
       const mw1: Middleware = async (_ctx, next) => {
@@ -86,7 +74,7 @@ describe("Middleware Pipeline", () => {
     });
 
     test("should short-circuit when middleware returns without calling next", async () => {
-      const ctx = createContext();
+      const ctx = createServerContext();
       let handlerCalled = false;
 
       const authMiddleware: Middleware = async () => {
@@ -107,7 +95,7 @@ describe("Middleware Pipeline", () => {
     });
 
     test("should short-circuit at correct middleware in chain", async () => {
-      const ctx = createContext();
+      const ctx = createServerContext();
       const reached: string[] = [];
 
       const mw1: Middleware = async (_ctx, next) => {
@@ -139,7 +127,7 @@ describe("Middleware Pipeline", () => {
     });
 
     test("should allow middleware to modify the response", async () => {
-      const ctx = createContext();
+      const ctx = createServerContext();
 
       const addHeader: Middleware = async (_ctx, next) => {
         const response = await next();
@@ -167,7 +155,7 @@ describe("Middleware Pipeline", () => {
     });
 
     test("should allow middleware to use ctx.state for data passing", async () => {
-      const ctx = createContext();
+      const ctx = createServerContext();
 
       const setUser: Middleware = async (ctx, next) => {
         ctx.state.set("userId", "user_42");
@@ -190,7 +178,7 @@ describe("Middleware Pipeline", () => {
     });
 
     test("should propagate errors from middleware", async () => {
-      const ctx = createContext();
+      const ctx = createServerContext();
 
       const errorMiddleware: Middleware = async () => {
         throw new Error("Middleware exploded");
@@ -204,7 +192,7 @@ describe("Middleware Pipeline", () => {
     });
 
     test("should propagate errors from final handler", async () => {
-      const ctx = createContext();
+      const ctx = createServerContext();
 
       await expect(
         executeMiddlewarePipeline([], ctx, async () => {
@@ -214,7 +202,7 @@ describe("Middleware Pipeline", () => {
     });
 
     test("should throw when next() is called multiple times", async () => {
-      const ctx = createContext();
+      const ctx = createServerContext();
 
       const doubleCallMiddleware: Middleware = async (_ctx, next) => {
         await next();
@@ -230,7 +218,7 @@ describe("Middleware Pipeline", () => {
     });
 
     test("should allow different middleware to each call next() once", async () => {
-      const ctx = createContext();
+      const ctx = createServerContext();
       const order: string[] = [];
 
       const mw1: Middleware = async (_ctx, next) => {

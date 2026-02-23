@@ -50,10 +50,12 @@ export type FetchApiAdapterOptions = {
  * Bun, Deno, Node.js (>=18), Cloudflare Workers.
  */
 export class FetchApiAdapter {
-  private readonly maxBodySize: number | undefined;
+  private static readonly DEFAULT_MAX_BODY_SIZE = 1_048_576; // 1 MB
+
+  private readonly maxBodySize: number;
 
   public constructor(options?: FetchApiAdapterOptions) {
-    this.maxBodySize = options?.maxBodySize;
+    this.maxBodySize = options?.maxBodySize ?? FetchApiAdapter.DEFAULT_MAX_BODY_SIZE;
   }
 
   /**
@@ -130,21 +132,16 @@ export class FetchApiAdapter {
   private async parseRequestBody(request: Request): Promise<IHttpBody> {
     if (!request.body) return undefined;
 
-    if (this.maxBodySize !== undefined) {
-      const contentLength = Number(request.headers.get("content-length"));
-      if (Number.isFinite(contentLength) && contentLength > this.maxBodySize) {
-        throw new PayloadTooLargeError(contentLength, this.maxBodySize);
-      }
-    }
+    const checkedRequest = await this.enforceBodySizeLimit(request);
 
-    const contentType = request.headers.get("content-type");
+    const contentType = checkedRequest.headers.get("content-type");
 
     if (
       contentType?.includes("application/json") ||
       contentType?.includes("+json")
     ) {
       try {
-        return await request.json();
+        return await checkedRequest.json();
       } catch (error) {
         throw new BodyParseError("Invalid JSON in request body", {
           cause: error,
@@ -153,11 +150,11 @@ export class FetchApiAdapter {
     }
 
     if (contentType?.includes("text/")) {
-      return await request.text();
+      return await checkedRequest.text();
     }
 
     if (contentType?.includes("application/x-www-form-urlencoded")) {
-      const text = await request.text();
+      const text = await checkedRequest.text();
       const formData = new URLSearchParams(text);
       const formObject: Record<string, string | string[]> = Object.create(null);
       formData.forEach((value, key) => {
@@ -168,7 +165,7 @@ export class FetchApiAdapter {
 
     if (contentType?.includes("multipart/form-data")) {
       try {
-        const formData = await request.formData();
+        const formData = await checkedRequest.formData();
         const formObject: Record<string, string | File | (string | File)[]> =
           Object.create(null);
         formData.forEach((value, key) => {
@@ -193,11 +190,62 @@ export class FetchApiAdapter {
     }
 
     try {
-      const rawBody = await request.text();
+      const rawBody = await checkedRequest.text();
       return rawBody || undefined;
     } catch (error) {
       throw new BodyParseError("Failed to read request body", { cause: error });
     }
+  }
+
+  private async enforceBodySizeLimit(request: Request): Promise<Request> {
+    const contentLengthHeader = request.headers.get("content-length");
+
+    if (contentLengthHeader !== null) {
+      const contentLength = Number(contentLengthHeader);
+      if (Number.isFinite(contentLength)) {
+        if (contentLength > this.maxBodySize) {
+          throw new PayloadTooLargeError(contentLength, this.maxBodySize);
+        }
+        return request;
+      }
+    }
+
+    return this.readBodyWithLimit(request);
+  }
+
+  private async readBodyWithLimit(request: Request): Promise<Request> {
+    const reader = request.body!.getReader();
+    const chunks: Uint8Array[] = [];
+    let totalBytes = 0;
+
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        totalBytes += value.byteLength;
+        if (totalBytes > this.maxBodySize) {
+          await reader.cancel();
+          throw new PayloadTooLargeError(totalBytes, this.maxBodySize);
+        }
+        chunks.push(value);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    const buffer = new Uint8Array(totalBytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      buffer.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+
+    return new Request(request.url, {
+      method: request.method,
+      headers: request.headers,
+      body: buffer,
+    });
   }
 
   private buildResponseBody(body: any): string | ArrayBuffer | Blob | null {
