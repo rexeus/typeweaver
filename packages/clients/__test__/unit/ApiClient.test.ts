@@ -8,9 +8,13 @@ import {
   DeleteTodoSuccessResponse,
   GetTodoRequestCommand,
   ListTodosRequestCommand,
+  NetworkError,
+  PathParameterError,
+  ResponseParseError,
   TodoClient,
 } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
+import { createRawMockFetch } from "../helpers";
 
 function createMockFetch(
   status: number,
@@ -22,16 +26,6 @@ function createMockFetch(
       body !== undefined ? JSON.stringify(body) : null,
       { status, headers },
     ),
-  );
-}
-
-function createRawMockFetch(
-  status: number,
-  body: BodyInit | null,
-  headers: Record<string, string> = {},
-): typeof globalThis.fetch {
-  return vi.fn<typeof globalThis.fetch>().mockResolvedValue(
-    new Response(body, { status, headers }),
   );
 }
 
@@ -48,6 +42,15 @@ function createClientWithMockFetch(baseUrl: string) {
     isSuccessStatusCode: () => true,
   });
   return { client, mockFetch };
+}
+
+function createPassthroughClient(mockFetch: typeof globalThis.fetch) {
+  return new TodoClient({
+    fetchFn: mockFetch,
+    baseUrl: "http://localhost:3000",
+    unknownResponseHandling: "passthrough",
+    isSuccessStatusCode: () => true,
+  });
 }
 
 describe("ApiClient URL Construction", () => {
@@ -323,10 +326,15 @@ describe("ApiClient Constructor Validation", () => {
 });
 
 describe("ApiClient Network Error Handling", () => {
-  test("maps ECONNREFUSED to connection refused error", async () => {
+  test.each([
+    ["ECONNREFUSED", "Connection refused"],
+    ["ECONNRESET", "Connection reset by peer"],
+    ["ENOTFOUND", "DNS lookup failed"],
+    ["ETIMEDOUT", "Connection timed out"],
+  ] as const)("maps %s to '%s'", async (code, expectedMessage) => {
     const mockFetch = vi.fn<typeof globalThis.fetch>().mockRejectedValue(
       Object.assign(new TypeError("fetch failed"), {
-        cause: { code: "ECONNREFUSED" },
+        cause: { code },
       }),
     );
     const client = new TodoClient({
@@ -337,65 +345,16 @@ describe("ApiClient Network Error Handling", () => {
       createGetTodoRequest({ param: { todoId: "abc" } }),
     );
 
-    await expect(client.send(command)).rejects.toThrow(
-      "Network error: Connection refused (GET http://localhost:3000/todos/abc)",
-    );
-  });
-
-  test("maps ECONNRESET to connection reset error", async () => {
-    const mockFetch = vi.fn<typeof globalThis.fetch>().mockRejectedValue(
-      Object.assign(new TypeError("fetch failed"), {
-        cause: { code: "ECONNRESET" },
-      }),
-    );
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } }),
-    );
-
-    await expect(client.send(command)).rejects.toThrow(
-      "Network error: Connection reset by peer (GET http://localhost:3000/todos/abc)",
-    );
-  });
-
-  test("maps ENOTFOUND to DNS lookup failed error", async () => {
-    const mockFetch = vi.fn<typeof globalThis.fetch>().mockRejectedValue(
-      Object.assign(new TypeError("fetch failed"), {
-        cause: { code: "ENOTFOUND" },
-      }),
-    );
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } }),
-    );
-
-    await expect(client.send(command)).rejects.toThrow(
-      "Network error: DNS lookup failed (GET http://localhost:3000/todos/abc)",
-    );
-  });
-
-  test("maps ETIMEDOUT to connection timed out error", async () => {
-    const mockFetch = vi.fn<typeof globalThis.fetch>().mockRejectedValue(
-      Object.assign(new TypeError("fetch failed"), {
-        cause: { code: "ETIMEDOUT" },
-      }),
-    );
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } }),
-    );
-
-    await expect(client.send(command)).rejects.toThrow(
-      "Network error: Connection timed out (GET http://localhost:3000/todos/abc)",
+    await expect(client.send(command)).rejects.toSatisfy(
+      (error: unknown) => {
+        return (
+          error instanceof NetworkError &&
+          error.code === code &&
+          error.method === "GET" &&
+          error.url === "http://localhost:3000/todos/abc" &&
+          error.message.includes(expectedMessage)
+        );
+      },
     );
   });
 
@@ -411,8 +370,14 @@ describe("ApiClient Network Error Handling", () => {
       createGetTodoRequest({ param: { todoId: "abc" } }),
     );
 
-    await expect(client.send(command)).rejects.toThrow(
-      "Network error: fetch failed (GET http://localhost:3000/todos/abc)",
+    await expect(client.send(command)).rejects.toSatisfy(
+      (error: unknown) => {
+        return (
+          error instanceof NetworkError &&
+          error.code === "UNKNOWN" &&
+          error.message.includes("fetch failed")
+        );
+      },
     );
   });
 
@@ -428,8 +393,14 @@ describe("ApiClient Network Error Handling", () => {
       createGetTodoRequest({ param: { todoId: "abc" } }),
     );
 
-    await expect(client.send(command)).rejects.toThrow(
-      "Network error: something broke (GET http://localhost:3000/todos/abc)",
+    await expect(client.send(command)).rejects.toSatisfy(
+      (error: unknown) => {
+        return (
+          error instanceof NetworkError &&
+          error.code === "UNKNOWN" &&
+          error.message.includes("something broke")
+        );
+      },
     );
   });
 
@@ -448,22 +419,17 @@ describe("ApiClient Network Error Handling", () => {
       createGetTodoRequest({ param: { todoId: "abc" } }),
     );
 
-    await expect(client.send(command)).rejects.toSatisfy((error: Error) => {
-      return error.cause === originalError;
-    });
+    await expect(client.send(command)).rejects.toSatisfy(
+      (error: unknown) => {
+        return (
+          error instanceof NetworkError && error.cause === originalError
+        );
+      },
+    );
   });
 });
 
 describe("ApiClient Response Body Parsing", () => {
-  function createPassthroughClient(mockFetch: typeof globalThis.fetch) {
-    return new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
-    });
-  }
-
   test("204 No Content returns undefined body", async () => {
     const mockFetch = createRawMockFetch(204, null, {
       "content-type": "application/json",
@@ -482,6 +448,20 @@ describe("ApiClient Response Body Parsing", () => {
 
   test("304 Not Modified returns undefined body", async () => {
     const mockFetch = createRawMockFetch(304, null);
+    const client = createPassthroughClient(mockFetch);
+    const command = new GetTodoRequestCommand(
+      createGetTodoRequest({ param: { todoId: "abc" } }),
+    );
+
+    const result = await client.send(command);
+
+    expect(result.body).toBeUndefined();
+  });
+
+  test("304 with content-type application/json returns undefined body", async () => {
+    const mockFetch = createRawMockFetch(304, null, {
+      "content-type": "application/json",
+    });
     const client = createPassthroughClient(mockFetch);
     const command = new GetTodoRequestCommand(
       createGetTodoRequest({ param: { todoId: "abc" } }),
@@ -518,7 +498,7 @@ describe("ApiClient Response Body Parsing", () => {
     expect(result.body).toEqual({ key: "value" });
   });
 
-  test("invalid JSON with application/json header throws parse error", async () => {
+  test("invalid JSON with application/json header throws ResponseParseError", async () => {
     const mockFetch = createRawMockFetch(200, "not{json", {
       "content-type": "application/json",
     });
@@ -527,12 +507,19 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } }),
     );
 
-    await expect(client.send(command)).rejects.toThrow(
-      "Failed to parse JSON response (status 200)",
+    await expect(client.send(command)).rejects.toSatisfy(
+      (error: unknown) => {
+        return (
+          error instanceof ResponseParseError &&
+          error.statusCode === 200 &&
+          error.bodyPreview === "not{json" &&
+          error.message === "Failed to parse JSON response"
+        );
+      },
     );
   });
 
-  test("JSON parse failure includes body preview", async () => {
+  test("JSON parse failure includes body preview truncated to 200 chars", async () => {
     const longBody = "x".repeat(300);
     const mockFetch = createRawMockFetch(200, longBody, {
       "content-type": "application/json",
@@ -542,13 +529,15 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } }),
     );
 
-    await expect(client.send(command)).rejects.toSatisfy((error: Error) => {
-      return (
-        error.message.includes("Body (first 200 chars):") &&
-        error.message.includes("x".repeat(200)) &&
-        !error.message.includes("x".repeat(201))
-      );
-    });
+    await expect(client.send(command)).rejects.toSatisfy(
+      (error: unknown) => {
+        return (
+          error instanceof ResponseParseError &&
+          error.bodyPreview === "x".repeat(200) &&
+          error.bodyPreview.length === 200
+        );
+      },
+    );
   });
 
   test("text/plain content is returned as string", async () => {
@@ -633,7 +622,7 @@ describe("ApiClient Response Body Parsing", () => {
     expect(result.body).toEqual({ type: "about:blank" });
   });
 
-  test("invalid JSON with +json content type throws parse error", async () => {
+  test("invalid JSON with +json content type throws ResponseParseError", async () => {
     const mockFetch = createRawMockFetch(400, "not{json", {
       "content-type": "application/problem+json",
     });
@@ -642,8 +631,14 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } }),
     );
 
-    await expect(client.send(command)).rejects.toThrow(
-      "Failed to parse JSON response (status 400)",
+    await expect(client.send(command)).rejects.toSatisfy(
+      (error: unknown) => {
+        return (
+          error instanceof ResponseParseError &&
+          error.statusCode === 400 &&
+          error.message === "Failed to parse JSON response"
+        );
+      },
     );
   });
 
@@ -754,15 +749,6 @@ describe("ApiClient Response Body Parsing", () => {
 });
 
 describe("ApiClient Response Header Handling", () => {
-  function createPassthroughClient(mockFetch: typeof globalThis.fetch) {
-    return new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
-    });
-  }
-
   test("single header is stored as string", async () => {
     const mockFetch = createRawMockFetch(200, '{}', {
       "content-type": "application/json",
@@ -812,6 +798,28 @@ describe("ApiClient Response Header Handling", () => {
 
     expect(result.header["x-a"]).toBe("1");
     expect(result.header["x-b"]).toBe("2");
+  });
+
+  test("preserves multiple Set-Cookie headers as array", async () => {
+    const headers = new Headers();
+    headers.append("set-cookie", "a=1; Path=/");
+    headers.append("set-cookie", "b=2; Path=/");
+    headers.append("content-type", "application/json");
+
+    const mockFetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(
+      new Response('{}', { status: 200, headers }),
+    );
+    const client = createPassthroughClient(mockFetch);
+    const command = new GetTodoRequestCommand(
+      createGetTodoRequest({ param: { todoId: "abc" } }),
+    );
+
+    const result = await client.send(command);
+
+    expect(result.header["set-cookie"]).toEqual([
+      "a=1; Path=/",
+      "b=2; Path=/",
+    ]);
   });
 });
 
@@ -873,6 +881,26 @@ describe("ApiClient Request Options Passthrough", () => {
     expect(callArgs.body).toBeUndefined();
   });
 
+  test("null body is not sent as the string 'null'", async () => {
+    const mockFetch = createRawMockFetch(200, '{}', {
+      "content-type": "application/json",
+    });
+    const client = new TodoClient({
+      fetchFn: mockFetch,
+      baseUrl: "http://localhost:3000",
+      unknownResponseHandling: "passthrough",
+      isSuccessStatusCode: () => true,
+    });
+    const requestData = createCreateTodoRequest({ body: {} });
+    (requestData as { body: unknown }).body = null;
+    const command = new CreateTodoRequestCommand(requestData);
+
+    await client.send(command);
+
+    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    expect(callArgs.body).toBeUndefined();
+  });
+
   test("string headers are passed unchanged", async () => {
     const mockFetch = createRawMockFetch(200, '{}', {
       "content-type": "application/json",
@@ -921,7 +949,7 @@ describe("ApiClient Request Timeout", () => {
           );
           init?.signal?.addEventListener("abort", () => {
             clearTimeout(timer);
-            reject(new DOMException("The operation was aborted", "AbortError"));
+            reject(new DOMException("The operation timed out", "TimeoutError"));
           });
         }),
       );
@@ -934,8 +962,15 @@ describe("ApiClient Request Timeout", () => {
       createGetTodoRequest({ param: { todoId: "abc" } }),
     );
 
-    await expect(client.send(command)).rejects.toThrow(
-      "Network error: Request timed out (GET http://localhost:3000/todos/abc)",
+    await expect(client.send(command)).rejects.toSatisfy(
+      (error: unknown) => {
+        return (
+          error instanceof NetworkError &&
+          error.code === "TIMEOUT" &&
+          error.method === "GET" &&
+          error.url === "http://localhost:3000/todos/abc"
+        );
+      },
     );
   });
 
@@ -1003,8 +1038,15 @@ describe("ApiClient Request Timeout", () => {
       createGetTodoRequest({ param: { todoId: "abc" } }),
     );
 
-    await expect(client.send(command)).rejects.toThrow(
-      "Network error: Request aborted (GET http://localhost:3000/todos/abc)",
+    await expect(client.send(command)).rejects.toSatisfy(
+      (error: unknown) => {
+        return (
+          error instanceof NetworkError &&
+          error.code === "ABORT" &&
+          error.method === "GET" &&
+          error.url === "http://localhost:3000/todos/abc"
+        );
+      },
     );
   });
 });
@@ -1057,15 +1099,6 @@ describe("ApiClient Body Read Error Isolation", () => {
 });
 
 describe("ApiClient Native Body Passthrough", () => {
-  function createPassthroughClient(mockFetch: typeof globalThis.fetch) {
-    return new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
-    });
-  }
-
   test("Blob body is passed to fetch as-is", async () => {
     const mockFetch = createRawMockFetch(200, '{}', {
       "content-type": "application/json",
@@ -1247,5 +1280,128 @@ describe("ApiClient Request Header Flattening", () => {
 
     const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
     expect(callArgs.headers).toBeUndefined();
+  });
+});
+
+describe("ApiClient Path Parameter Validation", () => {
+  test("throws PathParameterError when key not found in template", async () => {
+    const mockFetch = createRawMockFetch(200, '{}', {
+      "content-type": "application/json",
+    });
+    const client = new TodoClient({
+      fetchFn: mockFetch,
+      baseUrl: "http://localhost:3000",
+      unknownResponseHandling: "passthrough",
+      isSuccessStatusCode: () => true,
+    });
+    const requestData = createGetTodoRequest({ param: { todoId: "abc" } });
+    (requestData as { param: Record<string, string> }).param = {
+      todoId: "abc",
+      nonExistent: "value",
+    };
+    const command = new GetTodoRequestCommand(requestData);
+
+    await expect(client.send(command)).rejects.toSatisfy(
+      (error: unknown) => {
+        return (
+          error instanceof PathParameterError &&
+          error.paramName === "nonExistent" &&
+          error.path === "/todos/:todoId" &&
+          error.message.includes("Path parameter 'nonExistent' is not found in path")
+        );
+      },
+    );
+  });
+});
+
+describe("NetworkError", () => {
+  test("is instanceof Error", () => {
+    const error = new NetworkError("test", "TIMEOUT", "GET", "/api");
+    expect(error).toBeInstanceOf(Error);
+  });
+
+  test("has name 'NetworkError'", () => {
+    const error = new NetworkError("test", "TIMEOUT", "GET", "/api");
+    expect(error.name).toBe("NetworkError");
+  });
+
+  test("exposes code, method, url", () => {
+    const error = new NetworkError(
+      "Connection refused",
+      "ECONNREFUSED",
+      "POST",
+      "http://localhost:3000/api",
+    );
+
+    expect(error.code).toBe("ECONNREFUSED");
+    expect(error.method).toBe("POST");
+    expect(error.url).toBe("http://localhost:3000/api");
+    expect(error.message).toBe("Connection refused");
+  });
+
+  test("preserves cause", () => {
+    const cause = new TypeError("fetch failed");
+    const error = new NetworkError("test", "UNKNOWN", "GET", "/api", {
+      cause,
+    });
+
+    expect(error.cause).toBe(cause);
+  });
+});
+
+describe("PathParameterError", () => {
+  test("is instanceof Error", () => {
+    const error = new PathParameterError("test", "id", "/users/:id");
+    expect(error).toBeInstanceOf(Error);
+  });
+
+  test("has name 'PathParameterError'", () => {
+    const error = new PathParameterError("test", "id", "/users/:id");
+    expect(error.name).toBe("PathParameterError");
+  });
+
+  test("exposes paramName and path", () => {
+    const error = new PathParameterError(
+      "Path parameter 'slug' is not found in path '/posts/:id'",
+      "slug",
+      "/posts/:id",
+    );
+
+    expect(error.paramName).toBe("slug");
+    expect(error.path).toBe("/posts/:id");
+    expect(error.message).toBe(
+      "Path parameter 'slug' is not found in path '/posts/:id'",
+    );
+  });
+});
+
+describe("ResponseParseError", () => {
+  test("is instanceof Error", () => {
+    const error = new ResponseParseError("test", 200, "body");
+    expect(error).toBeInstanceOf(Error);
+  });
+
+  test("has name 'ResponseParseError'", () => {
+    const error = new ResponseParseError("test", 200, "body");
+    expect(error.name).toBe("ResponseParseError");
+  });
+
+  test("exposes statusCode and bodyPreview", () => {
+    const error = new ResponseParseError(
+      "Failed to parse",
+      502,
+      "<html>Bad Gateway</html>",
+    );
+
+    expect(error.statusCode).toBe(502);
+    expect(error.bodyPreview).toBe("<html>Bad Gateway</html>");
+    expect(error.message).toBe("Failed to parse");
+  });
+
+  test("preserves cause", () => {
+    const cause = new SyntaxError("Unexpected token");
+    const error = new ResponseParseError("test", 200, "body", { cause });
+
+    expect(error.cause).toBe(cause);
   });
 });

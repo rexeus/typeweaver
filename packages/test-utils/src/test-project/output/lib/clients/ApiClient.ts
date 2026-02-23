@@ -11,7 +11,11 @@ import type {
   IHttpQuery,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
+import { NetworkError } from "./NetworkError";
+import { PathParameterError } from "./PathParameterError";
 import { RequestCommand } from "./RequestCommand";
+import { ResponseParseError } from "./ResponseParseError";
+import type { NetworkErrorCode } from "./NetworkError";
 import type { ProcessResponseOptions } from "./RequestCommand";
 
 /**
@@ -33,6 +37,13 @@ export type ApiClientProps = {
   readonly isSuccessStatusCode?: (statusCode: number) => boolean;
   /** Request timeout in milliseconds. When set, requests will be aborted after this duration */
   readonly timeoutMs?: number;
+};
+
+const NETWORK_ERROR_MESSAGES: Readonly<Record<string, string>> = {
+  ECONNREFUSED: "Connection refused",
+  ECONNRESET: "Connection reset by peer",
+  ENOTFOUND: "DNS lookup failed",
+  ETIMEDOUT: "Connection timed out",
 };
 
 /**
@@ -86,33 +97,30 @@ export abstract class ApiClient {
     const pathWithParam = this.createPath(path, param);
     const relativeUrl = this.createUrl(pathWithParam, query);
     const fullUrl = this.buildFullUrl(relativeUrl);
-    const serializedBody = this.serializeBody(body);
 
-    let timedOut = false;
-    const controller =
-      this.timeoutMs !== undefined ? new AbortController() : undefined;
-    const timeoutId = controller
-      ? setTimeout(() => {
-          timedOut = true;
-          controller.abort();
-        }, this.timeoutMs)
-      : undefined;
-
-    let response: Response;
-    try {
-      response = await this.fetchFn(fullUrl, {
-        method,
-        headers: this.flattenHeaders(header),
-        body: serializedBody,
-        signal: controller?.signal,
-      });
-    } catch (error) {
-      throw this.createNetworkError(error, method, fullUrl, timedOut);
-    } finally {
-      if (timeoutId !== undefined) clearTimeout(timeoutId);
-    }
+    const response = await this.performFetch(method, fullUrl, {
+      method,
+      headers: this.flattenHeaders(header),
+      body: this.serializeBody(body),
+      signal:
+        this.timeoutMs !== undefined
+          ? AbortSignal.timeout(this.timeoutMs)
+          : undefined,
+    });
 
     return await this.createResponse(response);
+  }
+
+  private async performFetch(
+    method: string,
+    url: string,
+    init: RequestInit,
+  ): Promise<Response> {
+    try {
+      return await this.fetchFn(url, init);
+    } catch (error) {
+      throw this.createNetworkError(error, method, url);
+    }
   }
 
   private async createResponse(response: Response): Promise<IHttpResponse> {
@@ -120,6 +128,13 @@ export abstract class ApiClient {
     response.headers.forEach((value, key) => {
       header[key] = value;
     });
+
+    if (typeof response.headers.getSetCookie === "function") {
+      const cookies = response.headers.getSetCookie();
+      if (cookies.length > 1) {
+        header["set-cookie"] = cookies;
+      }
+    }
 
     const body = await this.parseResponseBody(response);
 
@@ -131,7 +146,7 @@ export abstract class ApiClient {
   }
 
   private async parseResponseBody(response: Response): Promise<unknown> {
-    if (response.status === 204) {
+    if (response.status === 204 || response.status === 304) {
       return undefined;
     }
 
@@ -143,9 +158,10 @@ export abstract class ApiClient {
       try {
         return JSON.parse(text);
       } catch (parseError) {
-        throw new Error(
-          `Failed to parse JSON response (status ${response.status}). ` +
-            `Body (first 200 chars): ${text.slice(0, 200)}`,
+        throw new ResponseParseError(
+          "Failed to parse JSON response",
+          response.status,
+          text.slice(0, 200),
           {
             cause: parseError instanceof Error ? parseError : undefined,
           },
@@ -171,40 +187,55 @@ export abstract class ApiClient {
     error: unknown,
     method: string,
     url: string,
-    timedOut: boolean,
-  ): Error {
+  ): NetworkError {
     const context = `(${method} ${url})`;
+
+    if (
+      (error instanceof DOMException || error instanceof Error) &&
+      error.name === "TimeoutError"
+    ) {
+      return new NetworkError(
+        `Network error: Request timed out ${context}`,
+        "TIMEOUT",
+        method,
+        url,
+        { cause: error },
+      );
+    }
 
     if (
       (error instanceof DOMException || error instanceof Error) &&
       error.name === "AbortError"
     ) {
-      const message = timedOut ? "Request timed out" : "Request aborted";
-      return new Error(`Network error: ${message} ${context}`, {
-        cause: error,
-      });
+      return new NetworkError(
+        `Network error: Request aborted ${context}`,
+        "ABORT",
+        method,
+        url,
+        { cause: error },
+      );
     }
 
     if (error instanceof TypeError) {
       const cause = (error as TypeError & { cause?: { code?: string } }).cause;
       const code = cause?.code;
 
-      const messageMap: Record<string, string> = {
-        ECONNREFUSED: "Connection refused",
-        ECONNRESET: "Connection reset by peer",
-        ENOTFOUND: "DNS lookup failed",
-        ETIMEDOUT: "Connection timed out",
-      };
-
-      if (code && code in messageMap) {
-        return new Error(`Network error: ${messageMap[code]} ${context}`, {
-          cause: error,
-        });
+      if (code && code in NETWORK_ERROR_MESSAGES) {
+        return new NetworkError(
+          `Network error: ${NETWORK_ERROR_MESSAGES[code]} ${context}`,
+          code as NetworkErrorCode,
+          method,
+          url,
+          { cause: error },
+        );
       }
     }
 
-    return new Error(
+    return new NetworkError(
       `Network error: ${error instanceof Error ? error.message : String(error)} ${context}`,
+      "UNKNOWN",
+      method,
+      url,
       { cause: error instanceof Error ? error : undefined },
     );
   }
@@ -212,7 +243,7 @@ export abstract class ApiClient {
   private flattenHeaders(
     header: IHttpHeader,
   ): Record<string, string> | undefined {
-    if (!header) return undefined;
+    if (header === undefined) return undefined;
 
     const flattened: Record<string, string> = {};
     for (const [key, value] of Object.entries(header)) {
@@ -224,7 +255,7 @@ export abstract class ApiClient {
   private serializeBody(
     body: unknown,
   ): NonNullable<RequestInit["body"]> | undefined {
-    if (body === undefined) return undefined;
+    if (body === null || body === undefined) return undefined;
     if (typeof body === "string") return body;
     if (this.isNativeBody(body))
       return body as NonNullable<RequestInit["body"]>;
@@ -268,8 +299,10 @@ export abstract class ApiClient {
       const result = acc.replace(`:${key}`, encodeURIComponent(value));
 
       if (result === acc) {
-        throw new Error(
+        throw new PathParameterError(
           `Path parameter '${key}' is not found in path '${path}'`,
+          key,
+          path,
         );
       }
 

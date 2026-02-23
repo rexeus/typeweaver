@@ -11,17 +11,8 @@ import {
   UploadFileRequestCommand,
   UploadFileSuccessResponse,
 } from "test-utils";
-import { describe, expect, test, vi } from "vitest";
-
-function createRawMockFetch(
-  status: number,
-  body: BodyInit | null,
-  headers: Record<string, string> = {},
-): typeof globalThis.fetch {
-  return vi.fn<typeof globalThis.fetch>().mockResolvedValue(
-    new Response(body, { status, headers }),
-  );
-}
+import { describe, expect, test } from "vitest";
+import { createRawMockFetch } from "../helpers";
 
 function createFileClient(mockFetch: typeof globalThis.fetch) {
   return new FileClient({
