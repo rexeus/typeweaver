@@ -115,6 +115,11 @@ export class Router {
     for (const segment of segments) {
       if (segment.startsWith(":")) {
         const paramName = segment.slice(1);
+        if (current.paramChild && current.paramChild.name !== paramName) {
+          throw new Error(
+            `Conflicting path parameter names at "${definition.path}": ":${current.paramChild.name}" vs ":${paramName}"`
+          );
+        }
         if (!current.paramChild) {
           current.paramChild = { name: paramName, node: Router.createNode() };
         }
@@ -127,6 +132,12 @@ export class Router {
         }
         current = child;
       }
+    }
+
+    if (current.methods.has(definition.method)) {
+      throw new Error(
+        `Route conflict: ${definition.method} ${definition.path} is already registered`
+      );
     }
 
     current.methods.set(definition.method, definition);
@@ -258,9 +269,18 @@ export class Router {
     };
   }
 
+  /**
+   * Decodes a URL-encoded path segment while guarding against path traversal.
+   *
+   * Encoded dot-segments like `%2e%2e` would decode to `..`, which could
+   * enable directory traversal if a downstream handler builds file paths
+   * from params. Returning the raw segment neutralises this vector.
+   */
   private static decodePathSegment(segment: string): string {
     try {
-      return decodeURIComponent(segment);
+      const decoded = decodeURIComponent(segment);
+      if (decoded === ".." || decoded === ".") return segment;
+      return decoded;
     } catch {
       return segment;
     }

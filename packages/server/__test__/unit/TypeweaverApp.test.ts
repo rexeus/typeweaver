@@ -5,6 +5,7 @@ import {
 } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
 import type { IRequestValidator } from "@rexeus/typeweaver-core";
+import { PayloadTooLargeError } from "../../src/lib/Errors";
 import { TypeweaverApp } from "../../src/lib/TypeweaverApp";
 import { TypeweaverRouter } from "../../src/lib/TypeweaverRouter";
 import {
@@ -766,6 +767,61 @@ describe("TypeweaverApp", () => {
       await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
     });
 
+    test("should call console.error as last-resort when onError throws in safety net", async () => {
+      const spy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+      const originalError = new Error("Unexpected failure");
+      const onErrorFailure = new Error("Observer crashed");
+      const app = createApp(
+        undefined,
+        {
+          handleGetTodos: async () => {
+            throw originalError;
+          },
+        },
+        {
+          onError: () => {
+            throw onErrorFailure;
+          },
+        }
+      );
+
+      await app.fetch(get("/todos"));
+
+      expect(spy).toHaveBeenCalledWith(
+        "TypeweaverApp: onError callback threw while handling error",
+        { onErrorFailure, originalError }
+      );
+      spy.mockRestore();
+    });
+
+    test("should call console.error as last-resort when onError throws in defaultUnknownHandler", async () => {
+      const spy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+      const originalError = new Error("Handler failure");
+      const onErrorFailure = new Error("onError crashed");
+      const app = createApp(
+        undefined,
+        {
+          handleGetTodos: async () => {
+            throw originalError;
+          },
+        },
+        {
+          onError: () => {
+            throw onErrorFailure;
+          },
+        }
+      );
+
+      const res = await app.fetch(get("/todos"));
+
+      expect(res.status).toBe(500);
+      expect(spy).toHaveBeenCalledWith(
+        "TypeweaverApp: onError callback threw while handling error",
+        { onErrorFailure, originalError }
+      );
+      spy.mockRestore();
+    });
+
     test("should return 500 for completely malformed request URL", async () => {
       const app = createApp();
 
@@ -800,7 +856,7 @@ describe("TypeweaverApp", () => {
       expect(onError).not.toHaveBeenCalled();
     });
 
-    test("should NOT call onError for handled PayloadTooLargeError", async () => {
+    test("should call onError for PayloadTooLargeError", async () => {
       const onError = vi.fn();
       const app = createApp(undefined, undefined, {
         maxBodySize: 50,
@@ -812,7 +868,8 @@ describe("TypeweaverApp", () => {
       );
 
       expect(res.status).toBe(413);
-      expect(onError).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledOnce();
+      expect(onError).toHaveBeenCalledWith(expect.any(PayloadTooLargeError));
     });
 
     test("should default onError to console.error", async () => {
@@ -1009,6 +1066,169 @@ describe("TypeweaverApp", () => {
       expect(() => app.route("/prefix")).toThrow(
         "Router is required when mounting with a prefix"
       );
+    });
+  });
+
+  describe("Error Handler Fallthrough", () => {
+    test("should fall through to unknown handler when validation handler is disabled", async () => {
+      const unknownHandler = vi.fn((_err: unknown) => ({
+        statusCode: 500,
+        body: { code: "CUSTOM_UNKNOWN", message: "Caught by unknown handler" },
+      }));
+      const app = createValidatingApp({
+        handleValidationErrors: false,
+        handleUnknownErrors: unknownHandler,
+      });
+
+      const res = await app.fetch(post("/todos", {}));
+
+      await expectErrorResponse(res, 500, "CUSTOM_UNKNOWN");
+      expect(unknownHandler).toHaveBeenCalledOnce();
+      expect(unknownHandler).toHaveBeenCalledWith(
+        expect.any(RequestValidationError),
+        expect.anything()
+      );
+    });
+
+    test("should fall through to unknown handler when HttpResponse handler is disabled", async () => {
+      const unknownHandler = vi.fn((_err: unknown) => ({
+        statusCode: 500,
+        body: { code: "CUSTOM_UNKNOWN", message: "Caught by unknown handler" },
+      }));
+      const app = createApp(
+        {
+          handleHttpResponseErrors: false,
+          handleUnknownErrors: unknownHandler,
+        },
+        {
+          handleCreateTodo: async () => {
+            throw new HttpResponse(409, {}, { code: "CONFLICT" });
+          },
+        }
+      );
+
+      const res = await app.fetch(post("/todos", {}));
+
+      await expectErrorResponse(res, 500, "CUSTOM_UNKNOWN");
+      expect(unknownHandler).toHaveBeenCalledOnce();
+      expect(unknownHandler).toHaveBeenCalledWith(
+        expect.any(HttpResponse),
+        expect.anything()
+      );
+    });
+
+    test("should return 500 via handler path when defaultUnknownHandler onError throws", async () => {
+      const spy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+      const app = createApp(
+        undefined,
+        {
+          handleGetTodos: async () => {
+            throw new Error("Handler failure");
+          },
+        },
+        {
+          onError: () => {
+            throw new Error("onError also failed");
+          },
+        }
+      );
+
+      const res = await app.fetch(get("/todos"));
+
+      await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
+      expect(spy).toHaveBeenCalled();
+      spy.mockRestore();
+    });
+  });
+
+  describe("Concurrent Request Isolation", () => {
+    test("should isolate state across concurrent requests", async () => {
+      const app = new TypeweaverApp();
+      const router = new TestRouter({
+        validateRequests: false,
+        requestHandlers: {
+          ...defaultHandlers(),
+          handleGetTodo: async (_req, ctx) => {
+            const id = _req.param?.todoId ?? "unknown";
+            ctx.state.set("id", id);
+            await new Promise(r => setTimeout(r, 5));
+            return {
+              statusCode: 200,
+              body: { id, stateId: ctx.state.get("id") },
+            };
+          },
+        },
+      });
+      app.route(router);
+
+      const results = await Promise.all(
+        Array.from({ length: 10 }, (_, i) =>
+          app.fetch(get(`/todos/todo-${i}`)).then(r => r.json())
+        )
+      );
+
+      for (let i = 0; i < 10; i++) {
+        expect(results[i].id).toBe(`todo-${i}`);
+        expect(results[i].stateId).toBe(`todo-${i}`);
+      }
+    });
+  });
+
+  describe("Middleware Error Propagation", () => {
+    test("should propagate errors thrown after next() resolves", async () => {
+      const onError = vi.fn();
+      const app = createApp(undefined, undefined, { onError });
+
+      app.use(async (_ctx, next) => {
+        await next();
+        throw new Error("Post-next failure");
+      });
+
+      const res = await app.fetch(get("/todos"));
+
+      await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
+      expect(onError).toHaveBeenCalledOnce();
+    });
+
+    test("should not trigger path-scoped middleware for non-matching paths", async () => {
+      const app = createApp();
+      const scoped = vi.fn();
+
+      app.use("/admin/*", async (_ctx, next) => {
+        scoped();
+        return next();
+      });
+
+      await app.fetch(get("/todos"));
+
+      expect(scoped).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Form URL-Encoded Edge Cases", () => {
+    test("should handle multi-value fields in form-urlencoded body", async () => {
+      const app = new TypeweaverApp();
+      const router = new TestRouter({
+        validateRequests: false,
+        requestHandlers: {
+          ...defaultHandlers(),
+          handleCreateTodo: async req => ({
+            statusCode: 200,
+            body: req.body,
+          }),
+        },
+      });
+      app.route(router);
+
+      const request = new Request(BASE_URL + "/todos", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "tags=a&tags=b&tags=c",
+      });
+
+      const res = await app.fetch(request);
+      const data = await expectJson(res, 200);
+      expect(data.tags).toEqual(["a", "b", "c"]);
     });
   });
 });

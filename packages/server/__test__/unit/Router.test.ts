@@ -332,6 +332,45 @@ describe("Router (Radix Tree)", () => {
       const match = router.match("GET", "/%74odos");
       expect(match).toBeUndefined();
     });
+
+    test("should not decode encoded dot-dot segments to prevent path traversal", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/files/:fileId"));
+
+      // %2e%2e = ".." when decoded — must stay raw
+      const match = router.match("GET", "/files/%2e%2e");
+      assert(match);
+      expect(match.params).toEqual({ fileId: "%2e%2e" });
+    });
+
+    test("should not decode encoded single-dot segments", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/files/:fileId"));
+
+      // %2e = "." when decoded — must stay raw
+      const match = router.match("GET", "/files/%2e");
+      assert(match);
+      expect(match.params).toEqual({ fileId: "%2e" });
+    });
+
+    test("should not decode double-encoded dot-dot segments", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/files/:fileId"));
+
+      // %252e%252e → first decode → %2e%2e (stays raw, not decoded further)
+      const match = router.match("GET", "/files/%252e%252e");
+      assert(match);
+      expect(match.params).toEqual({ fileId: "%2e%2e" });
+    });
+
+    test("should still decode normal URL-encoded characters", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/files/:fileId"));
+
+      const match = router.match("GET", "/files/my%20file");
+      assert(match);
+      expect(match.params).toEqual({ fileId: "my file" });
+    });
   });
 
   describe("Edge Cases", () => {
@@ -361,6 +400,31 @@ describe("Router (Radix Tree)", () => {
       expect(router.match("GET", "/anything")).toBeUndefined();
     });
 
+    test("should normalize double slashes in request path", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/todos"));
+
+      const match = router.match("GET", "//todos");
+      expect(match).toBeDefined();
+    });
+
+    test("should backtrack from static to param when deeper static branch has no match", async () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/items/special/info", "static-deep"));
+      router.add(createRoute("GET", "/items/:itemId/details", "param-deep"));
+
+      const staticMatch = router.match("GET", "/items/special/info");
+      assert(staticMatch);
+      const staticRes = await staticMatch.route.handler({} as any, createServerContext());
+      expect(staticRes.body.routeId).toBe("static-deep");
+
+      const paramMatch = router.match("GET", "/items/special/details");
+      assert(paramMatch);
+      expect(paramMatch.params).toEqual({ itemId: "special" });
+      const paramRes = await paramMatch.route.handler({} as any, createServerContext());
+      expect(paramRes.body.routeId).toBe("param-deep");
+    });
+
     test("should handle many routes efficiently", () => {
       const router = new Router();
 
@@ -385,6 +449,51 @@ describe("Router (Radix Tree)", () => {
 
       const noMatch = router.match("GET", "/nonexistent");
       expect(noMatch).toBeUndefined();
+    });
+  });
+
+  describe("Route Conflict Detection", () => {
+    test("should throw when registering duplicate method + path", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/todos"));
+
+      expect(() => router.add(createRoute("GET", "/todos"))).toThrow(
+        "Route conflict: GET /todos is already registered"
+      );
+    });
+
+    test("should allow different methods on the same path", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/todos"));
+
+      expect(() => router.add(createRoute("POST", "/todos"))).not.toThrow();
+    });
+
+    test("should throw when registering conflicting param names at same position", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/users/:userId"));
+
+      expect(() => router.add(createRoute("GET", "/users/:id/profile"))).toThrow(
+        'Conflicting path parameter names at "/users/:id/profile": ":userId" vs ":id"'
+      );
+    });
+
+    test("should allow same param name at same position", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/users/:userId"));
+
+      expect(() =>
+        router.add(createRoute("POST", "/users/:userId"))
+      ).not.toThrow();
+    });
+
+    test("should throw for duplicate parameterized routes", () => {
+      const router = new Router();
+      router.add(createRoute("GET", "/todos/:todoId"));
+
+      expect(() => router.add(createRoute("GET", "/todos/:todoId"))).toThrow(
+        "Route conflict: GET /todos/:todoId is already registered"
+      );
     });
   });
 

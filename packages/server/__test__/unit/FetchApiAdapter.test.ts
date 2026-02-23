@@ -1,9 +1,10 @@
 import { describe, expect, test } from "vitest";
 import {
   BodyParseError,
-  FetchApiAdapter,
   PayloadTooLargeError,
-} from "../../src/lib/FetchApiAdapter";
+  ResponseSerializationError,
+} from "../../src/lib/Errors";
+import { FetchApiAdapter } from "../../src/lib/FetchApiAdapter";
 import { BASE_URL } from "../helpers";
 
 describe("FetchApiAdapter", () => {
@@ -276,6 +277,89 @@ describe("FetchApiAdapter", () => {
       expect(result.body).toBeUndefined();
     });
 
+    describe("Content-Type Matching", () => {
+      test("should parse application/vnd.api+json with charset as JSON", async () => {
+        const adapter = new FetchApiAdapter();
+        const request = new Request(`${BASE_URL}/todos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/vnd.api+json; charset=utf-8" },
+          body: JSON.stringify({ title: "Test" }),
+        });
+
+        const result = await adapter.toRequest(request);
+
+        expect(result.body).toEqual({ title: "Test" });
+      });
+
+      test("should not parse text/html+json-not-really as JSON", async () => {
+        const adapter = new FetchApiAdapter();
+        const request = new Request(`${BASE_URL}/todos`, {
+          method: "POST",
+          headers: { "Content-Type": "text/html+json-not-really" },
+          body: "not json",
+        });
+
+        const result = await adapter.toRequest(request);
+
+        expect(result.body).toBe("not json");
+      });
+
+      test("should parse text/html as text, not as JSON even if body looks like JSON", async () => {
+        const adapter = new FetchApiAdapter();
+        const request = new Request(`${BASE_URL}/todos`, {
+          method: "POST",
+          headers: { "Content-Type": "text/html" },
+          body: '{"title": "test"}',
+        });
+
+        const result = await adapter.toRequest(request);
+
+        expect(result.body).toBe('{"title": "test"}');
+      });
+
+      test("should strip charset parameter before matching content type", async () => {
+        const adapter = new FetchApiAdapter();
+        const request = new Request(`${BASE_URL}/todos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json; charset=utf-8" },
+          body: JSON.stringify({ title: "Charset Test" }),
+        });
+
+        const result = await adapter.toRequest(request);
+
+        expect(result.body).toEqual({ title: "Charset Test" });
+      });
+
+      test("should handle case-insensitive content type matching", async () => {
+        const adapter = new FetchApiAdapter();
+        const request = new Request(`${BASE_URL}/todos`, {
+          method: "POST",
+          headers: { "Content-Type": "Application/JSON" },
+          body: JSON.stringify({ title: "Case Test" }),
+        });
+
+        const result = await adapter.toRequest(request);
+
+        expect(result.body).toEqual({ title: "Case Test" });
+      });
+
+      test("should parse application/x-www-form-urlencoded with charset as form data", async () => {
+        const adapter = new FetchApiAdapter();
+        const request = new Request(`${BASE_URL}/todos`, {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/x-www-form-urlencoded; charset=utf-8",
+          },
+          body: "title=Test",
+        });
+
+        const result = await adapter.toRequest(request);
+
+        expect(result.body).toEqual({ title: "Test" });
+      });
+    });
+
     describe("Prototype Pollution Protection", () => {
       test("should store __proto__ as a regular property in query params", async () => {
         const adapter = new FetchApiAdapter();
@@ -337,6 +421,56 @@ describe("FetchApiAdapter", () => {
         expect(result.body?.["__proto__"]).toBe("polluted");
         expect(result.body?.["constructor"]).toBe("evil");
         expect(({} as any).__proto__).toBe(before);
+      });
+
+      test("should strip __proto__ from JSON body to prevent prototype pollution", async () => {
+        const adapter = new FetchApiAdapter();
+        const request = new Request(`${BASE_URL}/todos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: "legit",
+            __proto__: { isAdmin: true },
+          }),
+        });
+        const before = ({} as any).__proto__;
+
+        const result = await adapter.toRequest(request);
+
+        expect(result.body.title).toBe("legit");
+        expect(result.body).not.toHaveProperty("__proto__");
+        expect(({} as any).__proto__).toBe(before);
+        expect(({} as any).isAdmin).toBeUndefined();
+      });
+
+      test("should strip nested __proto__ from JSON body", async () => {
+        const adapter = new FetchApiAdapter();
+        const body = '{"user": {"__proto__": {"isAdmin": true}, "name": "test"}}';
+        const request = new Request(`${BASE_URL}/todos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+        });
+
+        const result = await adapter.toRequest(request);
+
+        expect(result.body.user.name).toBe("test");
+        expect(result.body.user).not.toHaveProperty("__proto__");
+        expect(({} as any).isAdmin).toBeUndefined();
+      });
+
+      test("should allow constructor and prototype as regular JSON keys", async () => {
+        const adapter = new FetchApiAdapter();
+        const request = new Request(`${BASE_URL}/todos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ constructor: "value", prototype: "value" }),
+        });
+
+        const result = await adapter.toRequest(request);
+
+        expect(result.body.constructor).toBe("value");
+        expect(result.body.prototype).toBe("value");
       });
     });
 
@@ -617,6 +751,16 @@ describe("FetchApiAdapter", () => {
       });
 
       expect(response.headers.get("content-type")).toBe("text/html");
+    });
+
+    test("should throw ResponseSerializationError for non-serializable response body", () => {
+      const adapter = new FetchApiAdapter();
+      const circular: Record<string, unknown> = {};
+      circular.self = circular;
+
+      expect(() =>
+        adapter.toResponse({ statusCode: 200, body: circular })
+      ).toThrow(ResponseSerializationError);
     });
   });
 });

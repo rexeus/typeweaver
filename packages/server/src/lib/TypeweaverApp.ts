@@ -7,11 +7,8 @@
 
 import { HttpResponse, RequestValidationError } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
-import {
-  BodyParseError,
-  FetchApiAdapter,
-  PayloadTooLargeError,
-} from "./FetchApiAdapter";
+import { BodyParseError, PayloadTooLargeError } from "./Errors";
+import { FetchApiAdapter } from "./FetchApiAdapter";
 import { executeMiddlewarePipeline } from "./Middleware";
 import { Router } from "./Router";
 import type { Middleware, MiddlewareEntry } from "./Middleware";
@@ -87,6 +84,17 @@ export class TypeweaverApp {
   public constructor(options?: TypeweaverAppOptions) {
     this.adapter = new FetchApiAdapter({ maxBodySize: options?.maxBodySize });
     this.onError = options?.onError ?? console.error;
+  }
+
+  private safeOnError(error: unknown): void {
+    try {
+      this.onError(error);
+    } catch (onErrorFailure) {
+      console.error(
+        "TypeweaverApp: onError callback threw while handling error",
+        { onErrorFailure, originalError: error }
+      );
+    }
   }
 
   /**
@@ -180,9 +188,10 @@ export class TypeweaverApp {
       return this.adapter.toResponse(response);
     } catch (error) {
       if (error instanceof PayloadTooLargeError) {
+        this.safeOnError(error);
         return this.adapter.toResponse({
           statusCode: 413,
-          body: { code: "PAYLOAD_TOO_LARGE", message: error.message },
+          body: { code: "PAYLOAD_TOO_LARGE", message: "Request body too large" },
         });
       }
       if (error instanceof BodyParseError) {
@@ -191,11 +200,7 @@ export class TypeweaverApp {
           body: { code: "BAD_REQUEST", message: error.message },
         });
       }
-      try {
-        this.onError(error);
-      } catch {
-        /* Safety net must never throw */
-      }
+      this.safeOnError(error);
       return TypeweaverApp.createErrorResponse();
     }
   };
@@ -382,11 +387,7 @@ export class TypeweaverApp {
   private readonly defaultUnknownHandler: UnknownErrorHandler = (
     error
   ): IHttpResponse => {
-    try {
-      this.onError(error);
-    } catch {
-      /* Observer must not break the pipeline */
-    }
+    this.safeOnError(error);
     return { statusCode: 500, body: TypeweaverApp.INTERNAL_SERVER_ERROR_BODY };
   };
 
