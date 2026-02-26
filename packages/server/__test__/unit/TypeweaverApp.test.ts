@@ -841,7 +841,7 @@ describe("TypeweaverApp", () => {
       );
 
       const data = await expectErrorResponse(res, 400, "BAD_REQUEST");
-      expect(data.message).toContain("Invalid JSON");
+      expect(data.message).toBe("Malformed request body");
     });
 
     test("should NOT call onError for handled BodyParseError", async () => {

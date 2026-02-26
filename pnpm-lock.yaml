@@ -208,9 +208,15 @@ importers:
       '@rexeus/typeweaver-gen':
         specifier: workspace:^
         version: link:../gen
+      get-port:
+        specifier: ^7.1.0
+        version: 7.1.0
       test-utils:
         specifier: file:../test-utils
         version: link:../test-utils
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
 
   packages/test-utils:
     devDependencies:

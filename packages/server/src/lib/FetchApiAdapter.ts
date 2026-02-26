@@ -118,7 +118,7 @@ export class FetchApiAdapter {
   private static extractHeaders(headers: Headers): IHttpHeader {
     const result: Record<string, string | string[]> = Object.create(null);
     headers.forEach((value, key) => {
-      if (value) FetchApiAdapter.addMultiValue(result, key, value);
+      FetchApiAdapter.addMultiValue(result, key, value);
     });
     return Object.keys(result).length > 0 ? result : undefined;
   }

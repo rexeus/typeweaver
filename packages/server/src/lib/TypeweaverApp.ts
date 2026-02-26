@@ -73,7 +73,7 @@ export type TypeweaverAppOptions = {
 export class TypeweaverApp {
   private static readonly INTERNAL_SERVER_ERROR_BODY = {
     code: "INTERNAL_SERVER_ERROR",
-    message: "An unexpected error occurred.",
+    message: "An unexpected error occurred",
   } as const;
 
   private readonly router = new Router();
@@ -191,13 +191,13 @@ export class TypeweaverApp {
         this.safeOnError(error);
         return this.adapter.toResponse({
           statusCode: 413,
-          body: { code: "PAYLOAD_TOO_LARGE", message: "Request body too large" },
+          body: { code: "PAYLOAD_TOO_LARGE", message: "Request body exceeds the size limit" },
         });
       }
       if (error instanceof BodyParseError) {
         return this.adapter.toResponse({
           statusCode: 400,
-          body: { code: "BAD_REQUEST", message: error.message },
+          body: { code: "BAD_REQUEST", message: "Malformed request body" },
         });
       }
       this.safeOnError(error);
@@ -254,13 +254,13 @@ export class TypeweaverApp {
       return {
         statusCode: 405,
         header: { Allow: pathMatch.allowedMethods.join(", ") },
-        body: { code: "METHOD_NOT_ALLOWED", message: "Method Not Allowed" },
+        body: { code: "METHOD_NOT_ALLOWED", message: "Method not supported for this resource" },
       };
     }
 
     return {
       statusCode: 404,
-      body: { code: "NOT_FOUND", message: "Not Found" },
+      body: { code: "NOT_FOUND", message: "No matching resource found" },
     };
   }
 

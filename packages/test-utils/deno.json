@@ -1,0 +1,7 @@
+{
+  "unstable": ["sloppy-imports"],
+  "nodeModulesDir": "manual",
+  "lint": {
+    "include": ["src/test-server/runtimes/serve-deno.ts"]
+  }
+}

@@ -61,7 +61,9 @@
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "test-utils": "file:../test-utils"
+    "get-port": "^7.1.0",
+    "test-utils": "file:../test-utils",
+    "tsx": "^4.21.0"
   },
   "dependencies": {
     "case": "^1.6.3"

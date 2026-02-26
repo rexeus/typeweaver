@@ -108,21 +108,23 @@ serve({ fetch: app.fetch, port: 3000 }, () => {
 
 `TypeweaverHonoOptions<RequestHandlers>`
 
-- `requestHandlers`: object implementing the generated `<ResourceName>ApiHandler` interface
+- `requestHandlers`: object implementing the generated `<ResourceName>ApiHandler` type
 - `validateRequests` (default: `true`): enable/disable request validation
-- `handleValidationErrors`: `true` | `false` | `(err, c) => IHttpResponse`,
+- `handleValidationErrors`: `true` | `false` | `(err, c) => IHttpResponse | Promise<IHttpResponse>`,
   - If `true` (default), returns `400 Bad Request` with validation issues in the body
-  - If `false`, lets the error propagate
+  - If `false`, disables this handler (errors fall through to the unknown error handler)
   - If function, calls the function with the error and context, expects an `IHttpResponse` to
     return, so you can customize the response in the way you want
-- `handleHttpResponseErrors`: `true` | `false` | `(err, c) => IHttpResponse`
+- `handleHttpResponseErrors`: `true` | `false` |
+  `(err, c) => IHttpResponse | Promise<IHttpResponse>`
   - If `true` (default), returns thrown `HttpResponse` as-is, they will be sent as the response
-  - If `false`, lets the error propagate, which will likely result in a `500 Internal Server Error`
+  - If `false`, disables this handler (errors fall through to the unknown error handler)
   - If function, calls the function with the error and context, expects an `IHttpResponse` to
     return, so you can customize the response in the way you want
-- `handleUnknownErrors`: `true` | `false` | `(err, c) => IHttpResponse`
+- `handleUnknownErrors`: `true` | `false` | `(err, c) => IHttpResponse | Promise<IHttpResponse>`
   - If `true` (default), returns `500 Internal Server Error` with a generic message
-  - If `false`, lets the error propagate and the Hono app can handle it (e.g., via middleware)
+  - If `false`, disables this handler (errors propagate to Hono's error handling, e.g. via
+    `app.onError`)
   - If function, calls the function with the error and context, expects an `IHttpResponse` to
     return, so you can customize the response in the way you want
 

@@ -1,9 +1,10 @@
+/* eslint-disable import/no-useless-path-segments -- Deno rejects bare ".." directory imports */
 import { serve } from "@hono/node-server";
 import { HttpResponse } from "@rexeus/typeweaver-core";
 import getPort, { portNumbers } from "get-port";
 import { Hono } from "hono";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
-import { AccountHono, AuthHono, TodoHono } from "..";
+import { AccountHono, AuthHono, TodoHono } from "../";
 import { HonoAdapter } from "../test-project/output/lib/hono";
 import { AccountHandlers } from "./handlers/AccountApiHandler";
 import { AuthHandlers } from "./handlers/AuthHandlers";

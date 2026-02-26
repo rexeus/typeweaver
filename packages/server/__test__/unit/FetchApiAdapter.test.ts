@@ -75,6 +75,17 @@ describe("FetchApiAdapter", () => {
       }
     });
 
+    test("should preserve headers with empty string values", async () => {
+      const adapter = new FetchApiAdapter();
+      const request = new Request(`${BASE_URL}/todos`, {
+        headers: { "X-Empty": "" },
+      });
+
+      const result = await adapter.toRequest(request);
+
+      expect(result.header?.["x-empty"]).toBe("");
+    });
+
     test("should not include path params at adapter level", async () => {
       const adapter = new FetchApiAdapter();
       const request = new Request(`${BASE_URL}/todos/t1`);

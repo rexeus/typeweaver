@@ -80,12 +80,17 @@ Typeweaver is modular by design. Install only what you need.
 
 ### Plugins
 
-| Package                                                    | Description                                        | Version                                                         |
-| ---------------------------------------------------------- | -------------------------------------------------- | --------------------------------------------------------------- |
-| [@rexeus/typeweaver-clients](./packages/clients/README.md) | HTTP client generators using the Fetch API         | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients) |
-| [@rexeus/typeweaver-hono](./packages/hono/README.md)       | Plugin for Hono routers                            | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)    |
-| [@rexeus/typeweaver-server](./packages/server/README.md)   | Dependency-free server with routing and middleware | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-server)  |
-| [@rexeus/typeweaver-aws-cdk](./packages/aws-cdk/README.md) | AWS CDK constructs for API Gateway V2              | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
+| Package                                                    | Description                                                                 | Version                                                         |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| [@rexeus/typeweaver-clients](./packages/clients/README.md) | HTTP client generators using the Fetch API                                  | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients) |
+| [@rexeus/typeweaver-hono](./packages/hono/README.md)       | Generates type-safe Hono routers with validation and error handling         | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)    |
+| [@rexeus/typeweaver-server](./packages/server/README.md)   | Generates a lightweight, dependency-free server with routing and middleware | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-server)  |
+| [@rexeus/typeweaver-aws-cdk](./packages/aws-cdk/README.md) | AWS CDK constructs for API Gateway V2                                       | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
+
+> **Server vs Hono?** The [Server plugin](./packages/server/README.md) is a dependency-free, Fetch
+> API-native server — ideal for Bun, Deno, and Cloudflare Workers. The
+> [Hono plugin](./packages/hono/README.md) generates routers for the Hono framework — ideal if you
+> already use Hono or want its middleware ecosystem.
 
 ### Internal packages
 
@@ -173,6 +178,9 @@ api/
 # Select the plugins you want to use
 # -> In this case "clients" for type-safe Http-Clients, "hono" for Hono framework integration
 npx typeweaver generate --input ./api/definition --output ./api/generated --plugins clients,hono
+
+# Or use the built-in server (zero external dependencies)
+npx typeweaver generate --input ./api/definition --output ./api/generated --plugins clients,server
 ```
 
 4. **Use the generated code**
