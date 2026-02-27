@@ -240,7 +240,7 @@ export class FetchApiAdapter {
     }
 
     const contentLength = Number(contentLengthHeader);
-    if (!Number.isFinite(contentLength)) {
+    if (!Number.isFinite(contentLength) || contentLength < 0) {
       return this.readBodyWithLimit(request);
     }
 
@@ -252,7 +252,9 @@ export class FetchApiAdapter {
   }
 
   private async readBodyWithLimit(request: Request): Promise<Request> {
-    const reader = request.body!.getReader();
+    if (!request.body) return request;
+
+    const reader = request.body.getReader();
     const chunks: Uint8Array[] = [];
     let totalBytes = 0;
 

@@ -46,6 +46,9 @@ export class StateMap<TState extends Record<string, unknown> = Record<string, un
 
   public merge(state: Record<string, unknown>): void {
     for (const [key, value] of Object.entries(state)) {
+      if (key === "__proto__" || key === "constructor" || key === "prototype") {
+        continue;
+      }
       this.map.set(key, value);
     }
   }

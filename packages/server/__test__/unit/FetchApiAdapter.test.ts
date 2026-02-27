@@ -543,6 +543,34 @@ describe("FetchApiAdapter", () => {
         expect(result.body).toBe("hello");
       });
 
+      test("should fall back to streaming validation for negative Content-Length", async () => {
+        const adapter = new FetchApiAdapter({ maxBodySize: 100 });
+        const request = new Request(`${BASE_URL}/todos`, {
+          method: "POST",
+          body: JSON.stringify({ ok: true }),
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": "-1",
+          },
+        });
+
+        const result = await adapter.toRequest(request);
+
+        expect(result.body).toEqual({ ok: true });
+      });
+
+      test("should handle null body gracefully in streaming validation", async () => {
+        const adapter = new FetchApiAdapter({ maxBodySize: 100 });
+        const request = new Request(`${BASE_URL}/todos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        const result = await adapter.toRequest(request);
+
+        expect(result.body).toBeUndefined();
+      });
+
       test("should accept body at exact maxBodySize boundary", async () => {
         const adapter = new FetchApiAdapter({ maxBodySize: 100 });
         const body = "x".repeat(100);
