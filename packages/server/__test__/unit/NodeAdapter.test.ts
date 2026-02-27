@@ -213,4 +213,89 @@ describe("nodeAdapter", () => {
       consoleSpy.mockRestore();
     });
   });
+
+  describe("body size enforcement", () => {
+    test("returns 413 when body exceeds maxBodySize", async () => {
+      const app = new TypeweaverApp();
+      stubFetch(app, new Response(""));
+
+      const handler = nodeAdapter(app, { maxBodySize: 16 });
+      const body = "x".repeat(32);
+      const req = createMockIncomingMessage(
+        "POST",
+        "/upload",
+        { "content-type": "text/plain" },
+        body
+      );
+      const res = createMockServerResponse(req);
+
+      handler(req, res);
+      await awaitResponse(res);
+
+      expect(res.writtenStatus).toBe(413);
+      const parsed = JSON.parse(res.writtenBody);
+      expect(parsed).toEqual({
+        code: "PAYLOAD_TOO_LARGE",
+        message: "Request body exceeds the size limit",
+      });
+    });
+
+    test("passes body through when exactly at maxBodySize", async () => {
+      const app = new TypeweaverApp();
+      const fetchSpy = stubFetch(app, new Response("ok"));
+
+      const body = "x".repeat(64);
+      const handler = nodeAdapter(app, { maxBodySize: 64 });
+      const req = createMockIncomingMessage(
+        "POST",
+        "/upload",
+        { "content-type": "text/plain" },
+        body
+      );
+      const res = createMockServerResponse(req);
+
+      handler(req, res);
+      await awaitResponse(res);
+
+      expect(res.writtenStatus).toBe(200);
+      const request = fetchSpy.mock.calls[0]![0] as Request;
+      expect(await request.text()).toBe(body);
+    });
+
+    test("uses default 1 MB limit when no maxBodySize option provided", async () => {
+      const app = new TypeweaverApp();
+      const fetchSpy = stubFetch(app, new Response("ok"));
+
+      const body = "x".repeat(1024);
+      const handler = nodeAdapter(app);
+      const req = createMockIncomingMessage(
+        "POST",
+        "/upload",
+        { "content-type": "text/plain" },
+        body
+      );
+      const res = createMockServerResponse(req);
+
+      handler(req, res);
+      await awaitResponse(res);
+
+      expect(res.writtenStatus).toBe(200);
+      const request = fetchSpy.mock.calls[0]![0] as Request;
+      expect(await request.text()).toBe(body);
+    });
+
+    test("does not enforce body size for GET requests", async () => {
+      const app = new TypeweaverApp();
+      stubFetch(app, new Response("ok"));
+
+      const handler = nodeAdapter(app, { maxBodySize: 1 });
+      const req = createMockIncomingMessage("GET", "/items");
+      const res = createMockServerResponse(req);
+
+      handler(req, res);
+      await awaitResponse(res);
+
+      expect(res.writtenStatus).toBe(200);
+    });
+  });
 });

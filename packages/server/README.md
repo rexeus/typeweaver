@@ -26,7 +26,8 @@ requests, and wires your handler methods with full type safety. Mount routers on
 - **Zero runtime dependencies** — no Hono, Express, or Fastify required
 - **Fetch API compatible** — works with Bun, Deno, Cloudflare Workers, and Node.js (>=18)
 - **High-performance radix tree router** — O(d) lookup where d = number of path segments
-- **Return-based middleware** — clean onion model without shared mutable state
+- **Type-safe middleware** — compile-time state guarantees via `defineMiddleware`, `StateMap`, and
+  `InferState`
 - **Automatic HEAD handling** — falls back to GET handlers per HTTP spec
 - **405 Method Not Allowed** — with proper `Allow` header
 
@@ -161,13 +162,42 @@ app.route("/api/v1", new OrderRouter({ requestHandlers: orderHandlers }));
 
 ### 🔗 Middleware
 
-Middleware follows a return-based onion model. Each middleware receives `ServerContext` and a
-`next()` function. Call `next()` to pass control downstream — or return early to short-circuit.
+Middleware is defined with `defineMiddleware` and follows a return-based onion model. Each
+middleware declares what state it **provides** downstream and what state it **requires** from
+upstream — all checked at compile time.
 
-**Logging**
+**Providing state** — pass state to `next()`:
 
 ```ts
-app.use(async (ctx, next) => {
+import { defineMiddleware } from "./generated/lib/server";
+
+const auth = defineMiddleware<{ userId: string }>(async (ctx, next) => {
+  const token = ctx.request.header?.["authorization"];
+  return next({ userId: parseToken(token) });
+});
+```
+
+When `TProvides` has keys, `next()` **requires** the state object as its argument — you can't forget
+to provide it.
+
+**Requiring upstream state** — declare dependencies:
+
+```ts
+const permissions = defineMiddleware<{ permissions: string[] }, { userId: string }>(
+  async (ctx, next) => {
+    const userId = ctx.state.get("userId"); // string — no cast, no undefined
+    return next({ permissions: await loadPermissions(userId) });
+  }
+);
+```
+
+Registering `permissions` before `auth` produces a **compile-time error** because `userId` is not
+yet available in the accumulated state.
+
+**Pass-through middleware** — `next()` takes no arguments:
+
+```ts
+const logger = defineMiddleware(async (ctx, next) => {
   const start = Date.now();
   const response = await next();
   console.log(
@@ -177,10 +207,10 @@ app.use(async (ctx, next) => {
 });
 ```
 
-**Auth guard** (path-scoped, short-circuit)
+**Short-circuit** — return a response without calling `next()`:
 
 ```ts
-app.use("/users/*", async (ctx, next) => {
+const guard = defineMiddleware(async (ctx, next) => {
   if (!ctx.request.header?.["authorization"]) {
     return { statusCode: 401, body: { message: "Unauthorized" } };
   }
@@ -188,21 +218,36 @@ app.use("/users/*", async (ctx, next) => {
 });
 ```
 
-**State passing** — share data between middleware and handlers via `ctx.state`:
+**Path-scoped guard** — skip non-matching paths with an early `next()`:
 
 ```ts
-// In middleware
-app.use(async (ctx, next) => {
-  const token = ctx.request.header?.["authorization"];
-  ctx.state.set("userId", parseToken(token));
+const usersGuard = defineMiddleware(async (ctx, next) => {
+  if (!ctx.request.path.startsWith("/users")) {
+    return next();
+  }
+  if (!ctx.request.header?.["authorization"]) {
+    return { statusCode: 401, body: { message: "Unauthorized" } };
+  }
   return next();
 });
+```
 
-// In handler
-async handleGetUserRequest(request, ctx) {
-  const userId = ctx.state.get("userId") as string;
-  // ...
-}
+**Chaining** — state accumulates through `.use()`:
+
+```ts
+const app = new TypeweaverApp()
+  .use(auth) // provides { userId: string }
+  .use(permissions) // requires { userId }, provides { permissions: string[] }
+  .route(new TodoRouter({ requestHandlers: todoHandlers }));
+```
+
+**`InferState`** — extract the accumulated state type for handlers:
+
+```ts
+import type { InferState } from "./generated/lib/server";
+
+type AppState = InferState<typeof app>;
+// { userId: string } & { permissions: string[] }
 ```
 
 Middleware runs for **all** requests, including 404s and 405s, so global concerns like logging and
