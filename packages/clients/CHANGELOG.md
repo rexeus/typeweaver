@@ -1,5 +1,34 @@
 # @rexeus/typeweaver-clients
 
+## 0.5.0
+
+### Minor Changes
+
+- d2bb619: - Replace axios with native fetch API.
+  - The fetchFn prop on ApiClientProps allows injecting a custom fetch implementation.
+  - Response header validation now correctly splits comma-delimited values per RFC 7230 when the
+    schema expects an array.
+
+### Patch Changes
+
+- Updated dependencies [d2bb619]
+  - @rexeus/typeweaver-zod-to-ts@0.5.0
+  - @rexeus/typeweaver-core@0.5.0
+  - @rexeus/typeweaver-gen@0.5.0
+
+## 0.4.2
+
+### Patch Changes
+
+- 3208c25: - Fix ApiClient URL construction to support relative base paths
+  - ApiClient now uses string concatenation instead of `new URL()` for path construction, allowing
+    relative base paths like `/api` without requiring a full origin URL.
+- 645a4bb: Fix baseUrls in clients
+- Updated dependencies [645a4bb]
+  - @rexeus/typeweaver-zod-to-ts@0.4.2
+  - @rexeus/typeweaver-core@0.4.2
+  - @rexeus/typeweaver-gen@0.4.2
+
 ## 0.4.1
 
 ### Patch Changes

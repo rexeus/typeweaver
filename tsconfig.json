@@ -22,10 +22,6 @@
     "skipLibCheck": true,
     "isolatedModules": true,
 
-    /* Experimental Features */
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-
     /* Strictness */
     "strict": true,
     "noImplicitAny": true,

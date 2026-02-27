@@ -7,13 +7,7 @@ export default defineConfig({
     environment: "node",
     setupFiles: [],
     include: ["__test__/unit/**/*.test.ts"],
-    poolOptions: {
-      vmThreads: {
-        singleThread: false,
-        isolate: true,
-        useAtomics: true,
-      },
-    },
+    isolate: true,
     fileParallelism: true,
   },
   cacheDir: ".vitestcache",

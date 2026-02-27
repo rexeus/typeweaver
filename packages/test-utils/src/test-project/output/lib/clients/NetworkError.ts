@@ -32,7 +32,7 @@ export class NetworkError extends Error {
     public readonly code: NetworkErrorCode,
     public readonly method: string,
     public readonly url: string,
-    options?: { cause?: unknown },
+    options?: ErrorOptions,
   ) {
     super(message, options);
   }
