@@ -12,6 +12,7 @@ export {
   TypeweaverRouter,
   type TypeweaverRouterOptions,
 } from "./TypeweaverRouter";
+export { HttpMethod } from "@rexeus/typeweaver-core";
 export type {
   HttpResponseErrorHandler,
   UnknownErrorHandler,

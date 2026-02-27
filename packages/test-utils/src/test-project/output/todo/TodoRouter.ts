@@ -7,6 +7,7 @@
  */
 
 import {
+  HttpMethod,
   TypeweaverRouter,
   type RequestHandler,
   type TypeweaverRouterOptions,
@@ -166,63 +167,63 @@ export class TodoRouter<
 
   protected setupRoutes(): void {
     this.route(
-      "GET",
+      HttpMethod.GET,
       "/todos",
       new ListTodosRequestValidator(),
       this.requestHandlers.handleListTodosRequest.bind(this.requestHandlers),
     );
 
     this.route(
-      "POST",
+      HttpMethod.POST,
       "/todos",
       new CreateTodoRequestValidator(),
       this.requestHandlers.handleCreateTodoRequest.bind(this.requestHandlers),
     );
 
     this.route(
-      "POST",
+      HttpMethod.POST,
       "/todos/query",
       new QueryTodoRequestValidator(),
       this.requestHandlers.handleQueryTodoRequest.bind(this.requestHandlers),
     );
 
     this.route(
-      "GET",
+      HttpMethod.GET,
       "/todos/:todoId",
       new GetTodoRequestValidator(),
       this.requestHandlers.handleGetTodoRequest.bind(this.requestHandlers),
     );
 
     this.route(
-      "PUT",
+      HttpMethod.PUT,
       "/todos/:todoId",
       new PutTodoRequestValidator(),
       this.requestHandlers.handlePutTodoRequest.bind(this.requestHandlers),
     );
 
     this.route(
-      "PATCH",
+      HttpMethod.PATCH,
       "/todos/:todoId",
       new UpdateTodoRequestValidator(),
       this.requestHandlers.handleUpdateTodoRequest.bind(this.requestHandlers),
     );
 
     this.route(
-      "DELETE",
+      HttpMethod.DELETE,
       "/todos/:todoId",
       new DeleteTodoRequestValidator(),
       this.requestHandlers.handleDeleteTodoRequest.bind(this.requestHandlers),
     );
 
     this.route(
-      "OPTIONS",
+      HttpMethod.OPTIONS,
       "/todos/:todoId",
       new OptionsTodoRequestValidator(),
       this.requestHandlers.handleOptionsTodoRequest.bind(this.requestHandlers),
     );
 
     this.route(
-      "PUT",
+      HttpMethod.PUT,
       "/todos/:todoId/status",
       new UpdateTodoStatusRequestValidator(),
       this.requestHandlers.handleUpdateTodoStatusRequest.bind(
@@ -231,14 +232,14 @@ export class TodoRouter<
     );
 
     this.route(
-      "GET",
+      HttpMethod.GET,
       "/todos/:todoId/subtodos",
       new ListSubTodosRequestValidator(),
       this.requestHandlers.handleListSubTodosRequest.bind(this.requestHandlers),
     );
 
     this.route(
-      "POST",
+      HttpMethod.POST,
       "/todos/:todoId/subtodos",
       new CreateSubTodoRequestValidator(),
       this.requestHandlers.handleCreateSubTodoRequest.bind(
@@ -247,14 +248,14 @@ export class TodoRouter<
     );
 
     this.route(
-      "POST",
+      HttpMethod.POST,
       "/todos/:todoId/subtodos/query",
       new QuerySubTodoRequestValidator(),
       this.requestHandlers.handleQuerySubTodoRequest.bind(this.requestHandlers),
     );
 
     this.route(
-      "PUT",
+      HttpMethod.PUT,
       "/todos/:todoId/subtodos/:subtodoId",
       new UpdateSubTodoRequestValidator(),
       this.requestHandlers.handleUpdateSubTodoRequest.bind(
@@ -263,7 +264,7 @@ export class TodoRouter<
     );
 
     this.route(
-      "DELETE",
+      HttpMethod.DELETE,
       "/todos/:todoId/subtodos/:subtodoId",
       new DeleteSubTodoRequestValidator(),
       this.requestHandlers.handleDeleteSubTodoRequest.bind(

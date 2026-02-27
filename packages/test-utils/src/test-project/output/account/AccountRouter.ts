@@ -7,6 +7,7 @@
  */
 
 import {
+  HttpMethod,
   TypeweaverRouter,
   type RequestHandler,
   type TypeweaverRouterOptions,
@@ -38,7 +39,7 @@ export class AccountRouter<
 
   protected setupRoutes(): void {
     this.route(
-      "POST",
+      HttpMethod.POST,
       "/accounts",
       new RegisterAccountRequestValidator(),
       this.requestHandlers.handleRegisterAccountRequest.bind(

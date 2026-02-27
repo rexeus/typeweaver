@@ -7,6 +7,7 @@
  */
 
 import {
+  HttpMethod,
   TypeweaverRouter,
   type RequestHandler,
   type TypeweaverRouterOptions,
@@ -46,14 +47,14 @@ export class AuthRouter<
 
   protected setupRoutes(): void {
     this.route(
-      "POST",
+      HttpMethod.POST,
       "/auth/access-token",
       new AccessTokenRequestValidator(),
       this.requestHandlers.handleAccessTokenRequest.bind(this.requestHandlers),
     );
 
     this.route(
-      "POST",
+      HttpMethod.POST,
       "/auth/refresh-token",
       new RefreshTokenRequestValidator(),
       this.requestHandlers.handleRefreshTokenRequest.bind(this.requestHandlers),

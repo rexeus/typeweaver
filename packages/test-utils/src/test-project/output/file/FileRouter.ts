@@ -7,6 +7,7 @@
  */
 
 import {
+  HttpMethod,
   TypeweaverRouter,
   type RequestHandler,
   type TypeweaverRouterOptions,
@@ -56,14 +57,14 @@ export class FileRouter<
 
   protected setupRoutes(): void {
     this.route(
-      "POST",
+      HttpMethod.POST,
       "/files",
       new UploadFileRequestValidator(),
       this.requestHandlers.handleUploadFileRequest.bind(this.requestHandlers),
     );
 
     this.route(
-      "GET",
+      HttpMethod.GET,
       "/files/:fileId",
       new GetFileMetadataRequestValidator(),
       this.requestHandlers.handleGetFileMetadataRequest.bind(
@@ -72,7 +73,7 @@ export class FileRouter<
     );
 
     this.route(
-      "GET",
+      HttpMethod.GET,
       "/files/:fileId/content",
       new DownloadFileContentRequestValidator(),
       this.requestHandlers.handleDownloadFileContentRequest.bind(
