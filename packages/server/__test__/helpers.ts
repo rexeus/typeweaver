@@ -4,6 +4,7 @@ import type {
   IHttpRequest,
   IRequestValidator,
 } from "@rexeus/typeweaver-core";
+import { StateMap } from "../src/lib/StateMap";
 import type { ServerContext } from "../src/lib/ServerContext";
 
 export const BASE_URL = "http://localhost";
@@ -21,7 +22,7 @@ export function createServerContext(
       method: (overrides.method ?? "GET") as HttpMethod,
       path: overrides.path ?? "/test",
     },
-    state: new Map(),
+    state: new StateMap(),
   };
 }
 

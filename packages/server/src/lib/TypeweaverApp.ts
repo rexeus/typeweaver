@@ -11,6 +11,7 @@ import { BodyParseError, PayloadTooLargeError } from "./Errors";
 import { FetchApiAdapter } from "./FetchApiAdapter";
 import { executeMiddlewarePipeline } from "./Middleware";
 import { Router } from "./Router";
+import { StateMap } from "./StateMap";
 import type { Middleware, MiddlewareEntry } from "./Middleware";
 import type { RequestHandler } from "./RequestHandler";
 import type {
@@ -20,6 +21,7 @@ import type {
   ValidationErrorHandler,
 } from "./Router";
 import type { ServerContext } from "./ServerContext";
+import type { StateRequirementError, TypedMiddleware } from "./TypedMiddleware";
 import type { TypeweaverRouter } from "./TypeweaverRouter";
 
 /**
@@ -70,7 +72,8 @@ export type TypeweaverAppOptions = {
   readonly onError?: (error: unknown) => void;
 };
 
-export class TypeweaverApp {
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
   private static readonly INTERNAL_SERVER_ERROR_BODY = {
     code: "INTERNAL_SERVER_ERROR",
     message: "An unexpected error occurred",
@@ -98,6 +101,25 @@ export class TypeweaverApp {
   }
 
   /**
+   * Register a typed global middleware that provides state to downstream handlers.
+   *
+   * Returns a new `TypeweaverApp` type with the accumulated state.
+   * Produces a compile-time error if the middleware's requirements are not met
+   * by the currently accumulated state.
+   *
+   * Only global middleware participates in type accumulation.
+   * Use {@link defineMiddleware} to create typed middleware.
+   */
+  public use<
+    TProv extends Record<string, unknown>,
+    TReq extends Record<string, unknown>,
+  >(
+    middleware: TypedMiddleware<TProv, TReq> & (
+      [TState] extends [TReq] ? unknown : StateRequirementError<TReq, TState>
+    )
+  ): TypeweaverApp<TState & TProv>;
+
+  /**
    * Register a global middleware that runs for all requests.
    */
   public use(middleware: Middleware): this;
@@ -106,13 +128,15 @@ export class TypeweaverApp {
    * Register a path-scoped middleware that runs only for matching paths.
    *
    * Supports wildcard patterns: `/todos/*` matches `/todos/123`, `/todos/123/subtodos`, etc.
+   *
+   * Path-scoped middleware does not participate in type accumulation.
    */
   public use(path: string, middleware: Middleware): this;
 
   public use(
-    pathOrMiddleware: string | Middleware,
+    pathOrMiddleware: string | Middleware | TypedMiddleware<any, any>,
     middleware?: Middleware
-  ): this {
+  ): any {
     if (typeof pathOrMiddleware === "string") {
       if (!middleware) {
         throw new Error(
@@ -123,12 +147,21 @@ export class TypeweaverApp {
         path: pathOrMiddleware,
         handler: middleware,
       });
-    } else {
+      return this;
+    }
+
+    if (typeof pathOrMiddleware === "function") {
       this.middlewares.push({
         path: undefined,
         handler: pathOrMiddleware,
       });
+      return this;
     }
+
+    this.middlewares.push({
+      path: undefined,
+      handler: pathOrMiddleware.handler,
+    });
     return this;
   }
 
@@ -211,7 +244,7 @@ export class TypeweaverApp {
 
     const ctx: ServerContext = {
       request: httpRequest,
-      state: new Map(),
+      state: new StateMap(),
     };
 
     const matchingMiddleware = this.middlewares
