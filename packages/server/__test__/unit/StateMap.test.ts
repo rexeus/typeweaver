@@ -40,4 +40,27 @@ describe("StateMap", () => {
     state.set("anything", 42);
     expect(state.get("anything")).toBe(42);
   });
+
+  describe("merge", () => {
+    test("should merge multiple keys at once", () => {
+      const state = new StateMap<{ userId: string; role: string }>();
+      state.merge({ userId: "u_1", role: "admin" });
+      expect(state.get("userId")).toBe("u_1");
+      expect(state.get("role")).toBe("admin");
+    });
+
+    test("should overwrite existing values on merge", () => {
+      const state = new StateMap<{ userId: string }>();
+      state.set("userId", "old");
+      state.merge({ userId: "new" });
+      expect(state.get("userId")).toBe("new");
+    });
+
+    test("should handle empty merge object", () => {
+      const state = new StateMap<{ userId: string }>();
+      state.set("userId", "u_1");
+      state.merge({});
+      expect(state.get("userId")).toBe("u_1");
+    });
+  });
 });

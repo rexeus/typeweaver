@@ -12,7 +12,7 @@ import { FetchApiAdapter } from "./FetchApiAdapter";
 import { executeMiddlewarePipeline } from "./Middleware";
 import { Router } from "./Router";
 import { StateMap } from "./StateMap";
-import type { Middleware, MiddlewareEntry } from "./Middleware";
+import type { Middleware } from "./Middleware";
 import type { RequestHandler } from "./RequestHandler";
 import type {
   HttpResponseErrorHandler,
@@ -42,28 +42,11 @@ import type { TypeweaverRouter } from "./TypeweaverRouter";
  *
  * @example
  * ```typescript
- * const app = new TypeweaverApp();
+ * const app = new TypeweaverApp()
+ *   .use(authMiddleware)       // defineMiddleware<{ userId: string }>
+ *   .use(permissionsMiddleware) // defineMiddleware<{ perms: string[] }, { userId: string }>
+ *   .route(new TodoRouter({ requestHandlers: { ... } }));
  *
- * // Global middleware
- * app.use(async (ctx, next) => {
- *   console.log(`${ctx.request.method} ${ctx.request.path}`);
- *   return next();
- * });
- *
- * // Path-scoped middleware (short-circuit)
- * app.use("/todos/*", async (ctx, next) => {
- *   const token = ctx.request.header?.["authorization"];
- *   if (!token) {
- *     return { statusCode: 401, body: { message: "Unauthorized" } };
- *   }
- *   return next();
- * });
- *
- * // Mount generated routers
- * app.route(new AccountRouter({ requestHandlers: { ... } }));
- * app.route("/api/v1", new TodoRouter({ requestHandlers: { ... } }));
- *
- * // Start
  * Bun.serve({ fetch: app.fetch, port: 3000 });
  * ```
  */
@@ -80,7 +63,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
   } as const;
 
   private readonly router = new Router();
-  private readonly middlewares: MiddlewareEntry[] = [];
+  private readonly middlewares: Middleware[] = [];
   private readonly adapter: FetchApiAdapter;
   private readonly onError: (error: unknown) => void;
 
@@ -101,13 +84,12 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
   }
 
   /**
-   * Register a typed global middleware that provides state to downstream handlers.
+   * Register a typed middleware that provides state to downstream handlers.
    *
    * Returns a new `TypeweaverApp` type with the accumulated state.
    * Produces a compile-time error if the middleware's requirements are not met
    * by the currently accumulated state.
    *
-   * Only global middleware participates in type accumulation.
    * Use {@link defineMiddleware} to create typed middleware.
    */
   public use<
@@ -117,52 +99,9 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
     middleware: TypedMiddleware<TProv, TReq> & (
       [TState] extends [TReq] ? unknown : StateRequirementError<TReq, TState>
     )
-  ): TypeweaverApp<TState & TProv>;
-
-  /**
-   * Register a global middleware that runs for all requests.
-   */
-  public use(middleware: Middleware): this;
-
-  /**
-   * Register a path-scoped middleware that runs only for matching paths.
-   *
-   * Supports wildcard patterns: `/todos/*` matches `/todos/123`, `/todos/123/subtodos`, etc.
-   *
-   * Path-scoped middleware does not participate in type accumulation.
-   */
-  public use(path: string, middleware: Middleware): this;
-
-  public use(
-    pathOrMiddleware: string | Middleware | TypedMiddleware<any, any>,
-    middleware?: Middleware
-  ): any {
-    if (typeof pathOrMiddleware === "string") {
-      if (!middleware) {
-        throw new Error(
-          "Middleware handler is required when registering path-scoped middleware"
-        );
-      }
-      this.middlewares.push({
-        path: pathOrMiddleware,
-        handler: middleware,
-      });
-      return this;
-    }
-
-    if (typeof pathOrMiddleware === "function") {
-      this.middlewares.push({
-        path: undefined,
-        handler: pathOrMiddleware,
-      });
-      return this;
-    }
-
-    this.middlewares.push({
-      path: undefined,
-      handler: pathOrMiddleware.handler,
-    });
-    return this;
+  ): TypeweaverApp<TState & TProv> {
+    this.middlewares.push(middleware.handler);
+    return this as unknown as TypeweaverApp<TState & TProv>;
   }
 
   /**
@@ -247,12 +186,8 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
       state: new StateMap(),
     };
 
-    const matchingMiddleware = this.middlewares
-      .filter(m => Router.matchesMiddlewarePath(m.path, httpRequest.path))
-      .map(m => m.handler);
-
     const response = await executeMiddlewarePipeline(
-      matchingMiddleware,
+      this.middlewares,
       ctx,
       () => this.resolveAndExecute(request.method, url.pathname, ctx)
     );

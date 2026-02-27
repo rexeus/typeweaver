@@ -17,13 +17,13 @@ export type {
   UnknownErrorHandler,
   ValidationErrorHandler,
 } from "./Router";
-export type { Middleware } from "./Middleware";
 export type { ServerContext } from "./ServerContext";
 export type { RequestHandler } from "./RequestHandler";
 export { StateMap } from "./StateMap";
 export {
   defineMiddleware,
   type InferState,
+  type NextFn,
   type StateRequirementError,
   type TypedMiddleware,
 } from "./TypedMiddleware";

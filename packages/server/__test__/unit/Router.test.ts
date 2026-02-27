@@ -497,37 +497,4 @@ describe("Router (Radix Tree)", () => {
     });
   });
 
-  describe("matchesMiddlewarePath (static)", () => {
-    test("should match everything when pattern is undefined", () => {
-      expect(Router.matchesMiddlewarePath(undefined, "/any/path")).toBe(true);
-    });
-
-    test("should match exact path", () => {
-      expect(Router.matchesMiddlewarePath("/todos", "/todos")).toBe(true);
-    });
-
-    test("should not match different path without wildcard", () => {
-      expect(Router.matchesMiddlewarePath("/todos", "/users")).toBe(false);
-    });
-
-    test("should match wildcard prefix", () => {
-      expect(Router.matchesMiddlewarePath("/todos/*", "/todos/123")).toBe(true);
-    });
-
-    test("should match deeply nested paths with wildcard", () => {
-      expect(
-        Router.matchesMiddlewarePath("/todos/*", "/todos/123/subtodos/456")
-      ).toBe(true);
-    });
-
-    test("should match base path without trailing segment for wildcard", () => {
-      expect(Router.matchesMiddlewarePath("/todos/*", "/todos")).toBe(true);
-    });
-
-    test("should not match sibling paths with wildcard", () => {
-      expect(Router.matchesMiddlewarePath("/todos/*", "/todosx/123")).toBe(
-        false
-      );
-    });
-  });
 });

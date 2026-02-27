@@ -97,9 +97,6 @@ type RadixNode = {
  * - Multiple parameters: `/todos/:todoId/subtodos/:subtodoId`
  * - Automatic HEAD → GET fallback (per HTTP spec)
  * - 405 Method Not Allowed detection with `Allow` header
- *
- * Path matching for middleware uses wildcard support:
- * - `/todos/*` matches `/todos/123`, `/todos/123/subtodos`, etc.
  */
 export class Router {
   private readonly root: RadixNode = Router.createNode();
@@ -192,32 +189,6 @@ export class Router {
     }
 
     return { allowedMethods: methods.sort() };
-  }
-
-  /**
-   * Check if a request path matches a middleware path pattern.
-   *
-   * Supports wildcard (`*`) at the end: `/todos/*` matches `/todos/123/subtodos`.
-   * An `undefined` pattern matches everything.
-   */
-  public static matchesMiddlewarePath(
-    pattern: string | undefined,
-    requestPath: string
-  ): boolean {
-    if (pattern === undefined) return true;
-
-    // Exact match
-    if (pattern === requestPath) return true;
-
-    // Wildcard: /foo/* matches /foo/anything
-    if (pattern.endsWith("/*")) {
-      const prefix = pattern.slice(0, -1); // "/foo/"
-      return (
-        requestPath.startsWith(prefix) || requestPath === pattern.slice(0, -2)
-      );
-    }
-
-    return false;
   }
 
   /**

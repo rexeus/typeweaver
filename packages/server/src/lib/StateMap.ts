@@ -12,7 +12,7 @@
  * type safety for `get`/`set`/`has` operations. When using the default
  * `Record<string, unknown>`, behaves identically to `Map<string, unknown>`.
  *
- * The API surface is intentionally narrow (`get`, `set`, `has` only).
+ * The API surface is intentionally narrow (`get`, `set`, `has`, `merge` only).
  * Generic `Map` methods like `forEach`, `entries`, or `delete` are excluded
  * to prevent bypassing type safety.
  *
@@ -20,17 +20,12 @@
  *
  * @example
  * ```typescript
- * // Untyped (default) — accepts any key/value
- * const state = new StateMap();
- * state.set("anything", 42);
- * state.get("anything"); // unknown | undefined
- *
  * // Typed — constrains keys and values
  * type MyState = { userId: string; role: "admin" | "user" };
  * const typed = new StateMap<MyState>();
  * typed.set("userId", "u_123");     // ✓
  * typed.set("userId", 123);         // ✗ compile error
- * typed.get("userId");              // string | undefined
+ * typed.get("userId");              // string (guaranteed by middleware pipeline)
  * typed.get("nonexistent");         // ✗ compile error
  * ```
  */
@@ -41,11 +36,17 @@ export class StateMap<TState extends Record<string, unknown> = Record<string, un
     this.map.set(key, value);
   }
 
-  public get<K extends string & keyof TState>(key: K): TState[K] | undefined {
-    return this.map.get(key) as TState[K] | undefined;
+  public get<K extends string & keyof TState>(key: K): TState[K] {
+    return this.map.get(key) as TState[K];
   }
 
   public has<K extends string & keyof TState>(key: K): boolean {
     return this.map.has(key);
+  }
+
+  public merge(state: Record<string, unknown>): void {
+    for (const [key, value] of Object.entries(state)) {
+      this.map.set(key, value);
+    }
   }
 }

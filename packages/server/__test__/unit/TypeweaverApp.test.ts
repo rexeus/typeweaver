@@ -6,6 +6,7 @@ import {
 import { describe, expect, test, vi } from "vitest";
 import type { IRequestValidator } from "@rexeus/typeweaver-core";
 import { PayloadTooLargeError } from "../../src/lib/Errors";
+import { defineMiddleware } from "../../src/lib/TypedMiddleware";
 import { TypeweaverApp } from "../../src/lib/TypeweaverApp";
 import { TypeweaverRouter } from "../../src/lib/TypeweaverRouter";
 import {
@@ -274,13 +275,14 @@ describe("TypeweaverApp", () => {
 
   describe("Middleware", () => {
     test("should execute global middleware for all requests", async () => {
-      const app = createApp();
       const seen: string[] = [];
-
-      app.use(async (ctx, next) => {
+      const logger = defineMiddleware(async (ctx, next) => {
         seen.push(ctx.request.path);
         return next();
       });
+
+      const app = createApp();
+      app.use(logger);
 
       await app.fetch(get("/todos"));
       await app.fetch(get("/todos/t1"));
@@ -288,34 +290,14 @@ describe("TypeweaverApp", () => {
       expect(seen).toEqual(["/todos", "/todos/t1"]);
     });
 
-    test("should execute path-scoped middleware only for matching paths", async () => {
-      const app = new TypeweaverApp();
-      const router = new TestRouter({
-        validateRequests: false,
-        requestHandlers: defaultHandlers(),
-      });
-      app.route(router);
-
-      const scoped: string[] = [];
-
-      app.use("/todos/*", async (ctx, next) => {
-        scoped.push(ctx.request.path);
-        return next();
-      });
-
-      await app.fetch(get("/todos"));
-      await app.fetch(get("/todos/t1"));
-
-      expect(scoped).toEqual(["/todos", "/todos/t1"]);
-    });
-
     test("should allow middleware to short-circuit with a response", async () => {
-      const app = createApp();
-
-      app.use(async () => ({
+      const maintenance = defineMiddleware(async () => ({
         statusCode: 503,
         body: { message: "Service Unavailable" },
       }));
+
+      const app = createApp();
+      app.use(maintenance);
 
       const res = await app.fetch(get("/todos"));
 
@@ -323,9 +305,7 @@ describe("TypeweaverApp", () => {
     });
 
     test("should allow middleware to modify response", async () => {
-      const app = createApp();
-
-      app.use(async (_ctx, next) => {
+      const addRequestId = defineMiddleware(async (_ctx, next) => {
         const response = await next();
         return {
           ...response,
@@ -336,13 +316,20 @@ describe("TypeweaverApp", () => {
         };
       });
 
+      const app = createApp();
+      app.use(addRequestId);
+
       const res = await app.fetch(get("/todos"));
 
       expect(res.status).toBe(200);
       expect(res.headers.get("x-request-id")).toBe("req-001");
     });
 
-    test("should pass state between middleware and handler", async () => {
+    test("should pass state between middleware and handler via next(state)", async () => {
+      const auth = defineMiddleware<{ userId: string }>(async (_ctx, next) =>
+        next({ userId: "user-99" })
+      );
+
       const app = new TypeweaverApp();
       const router = new TestRouter({
         validateRequests: false,
@@ -354,12 +341,7 @@ describe("TypeweaverApp", () => {
           }),
         },
       });
-      app.route(router);
-
-      app.use(async (ctx, next) => {
-        ctx.state.set("userId", "user-99");
-        return next();
-      });
+      app.use(auth).route(router);
 
       const res = await app.fetch(get("/todos"));
 
@@ -368,13 +350,14 @@ describe("TypeweaverApp", () => {
     });
 
     test("should execute global middleware even for 404 requests", async () => {
-      const app = createApp();
       const seen: string[] = [];
-
-      app.use(async (ctx, next) => {
+      const logger = defineMiddleware(async (ctx, next) => {
         seen.push(ctx.request.path);
         return next();
       });
+
+      const app = createApp();
+      app.use(logger);
 
       const res = await app.fetch(get("/nonexistent"));
 
@@ -383,13 +366,14 @@ describe("TypeweaverApp", () => {
     });
 
     test("should execute global middleware even for 405 requests", async () => {
-      const app = createApp();
       const seen: string[] = [];
-
-      app.use(async (ctx, next) => {
+      const logger = defineMiddleware(async (ctx, next) => {
         seen.push(`${ctx.request.method} ${ctx.request.path}`);
         return next();
       });
+
+      const app = createApp();
+      app.use(logger);
 
       const res = await app.fetch(del("/todos"));
 
@@ -398,12 +382,29 @@ describe("TypeweaverApp", () => {
     });
 
     test("should execute multiple global middlewares in registration order", async () => {
-      const app = createApp();
       const order: number[] = [];
 
-      app.use(async (_ctx, next) => { order.push(1); const r = await next(); order.push(6); return r; });
-      app.use(async (_ctx, next) => { order.push(2); const r = await next(); order.push(5); return r; });
-      app.use(async (_ctx, next) => { order.push(3); const r = await next(); order.push(4); return r; });
+      const mw1 = defineMiddleware(async (_ctx, next) => {
+        order.push(1);
+        const r = await next();
+        order.push(6);
+        return r;
+      });
+      const mw2 = defineMiddleware(async (_ctx, next) => {
+        order.push(2);
+        const r = await next();
+        order.push(5);
+        return r;
+      });
+      const mw3 = defineMiddleware(async (_ctx, next) => {
+        order.push(3);
+        const r = await next();
+        order.push(4);
+        return r;
+      });
+
+      const app = createApp();
+      app.use(mw1).use(mw2).use(mw3);
 
       await app.fetch(get("/todos"));
 
@@ -411,9 +412,7 @@ describe("TypeweaverApp", () => {
     });
 
     test("should allow middleware to intercept 404 responses", async () => {
-      const app = createApp();
-
-      app.use(async (_ctx, next) => {
+      const notFoundInterceptor = defineMiddleware(async (_ctx, next) => {
         const response = await next();
         if (response.statusCode === 404) {
           return {
@@ -423,6 +422,9 @@ describe("TypeweaverApp", () => {
         }
         return response;
       });
+
+      const app = createApp();
+      app.use(notFoundInterceptor);
 
       const res = await app.fetch(get("/nonexistent"));
 
@@ -889,8 +891,11 @@ describe("TypeweaverApp", () => {
     test("should handle errors thrown inside middleware", async () => {
       const onError = vi.fn();
       const app = createApp(undefined, undefined, { onError });
+      const boom = defineMiddleware(async () => {
+        throw new Error("middleware boom");
+      });
 
-      app.use(async () => { throw new Error("middleware boom"); });
+      app.use(boom);
 
       const res = await app.fetch(get("/todos"));
 
@@ -1016,10 +1021,11 @@ describe("TypeweaverApp", () => {
   });
 
   describe("Fluent API", () => {
-    test("should return this from use() for chaining", () => {
-      const app = new TypeweaverApp();
+    test("should support chaining use() calls", () => {
+      const mw = defineMiddleware(async (_ctx, next) => next());
 
-      expect(app.use(async (_ctx, next) => next())).toBe(app);
+      const app = new TypeweaverApp().use(mw);
+      expect(app).toBeInstanceOf(TypeweaverApp);
     });
 
     test("should return this from route() for chaining", () => {
@@ -1052,14 +1058,6 @@ describe("TypeweaverApp", () => {
   });
 
   describe("Defensive Validation", () => {
-    test("should throw when use() is called with path but no middleware", () => {
-      const app = new TypeweaverApp();
-      // @ts-expect-error — testing runtime guard
-      expect(() => app.use("/path")).toThrow(
-        "Middleware handler is required when registering path-scoped middleware"
-      );
-    });
-
     test("should throw when route() is called with prefix but no router", () => {
       const app = new TypeweaverApp();
       // @ts-expect-error — testing runtime guard
@@ -1163,13 +1161,15 @@ describe("TypeweaverApp", () => {
 
       const results = await Promise.all(
         Array.from({ length: 10 }, (_, i) =>
-          app.fetch(get(`/todos/todo-${i}`)).then(r => r.json())
+          app
+            .fetch(get(`/todos/todo-${i}`))
+            .then(r => r.json() as Promise<{ id: string; stateId: string }>)
         )
       );
 
       for (let i = 0; i < 10; i++) {
-        expect(results[i].id).toBe(`todo-${i}`);
-        expect(results[i].stateId).toBe(`todo-${i}`);
+        expect(results[i]!.id).toBe(`todo-${i}`);
+        expect(results[i]!.stateId).toBe(`todo-${i}`);
       }
     });
   });
@@ -1178,30 +1178,17 @@ describe("TypeweaverApp", () => {
     test("should propagate errors thrown after next() resolves", async () => {
       const onError = vi.fn();
       const app = createApp(undefined, undefined, { onError });
-
-      app.use(async (_ctx, next) => {
+      const postNextError = defineMiddleware(async (_ctx, next) => {
         await next();
         throw new Error("Post-next failure");
       });
+
+      app.use(postNextError);
 
       const res = await app.fetch(get("/todos"));
 
       await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
       expect(onError).toHaveBeenCalledOnce();
-    });
-
-    test("should not trigger path-scoped middleware for non-matching paths", async () => {
-      const app = createApp();
-      const scoped = vi.fn();
-
-      app.use("/admin/*", async (_ctx, next) => {
-        scoped();
-        return next();
-      });
-
-      await app.fetch(get("/todos"));
-
-      expect(scoped).not.toHaveBeenCalled();
     });
   });
 

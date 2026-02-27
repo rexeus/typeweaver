@@ -15,15 +15,14 @@ import type { ServerContext } from "../../src/lib/ServerContext";
 import type { InferState } from "../../src/lib/TypedMiddleware";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. DEFINE TYPED MIDDLEWARE
+// 1. DEFINE TYPED MIDDLEWARE — state is passed through next()
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Auth middleware — provides { userId: string }, requires nothing
 const auth = defineMiddleware<{ userId: string }>(async (ctx, next) => {
   const token = ctx.request.header?.["authorization"];
-  ctx.state.set("userId", token?.toString() ?? "anonymous");
-  //                ↑ Hover: only accepts "userId" as key, only accepts string as value
-  return next();
+  return next({ userId: token?.toString() ?? "anonymous" });
+  //           ↑ MUST pass { userId: string } — enforced by NextFn<{ userId: string }>
 });
 
 // Permissions middleware — provides { permissions: string[] }, requires { userId: string }
@@ -32,27 +31,45 @@ const permissions = defineMiddleware<
   { userId: string }
 >(async (ctx, next) => {
   const userId = ctx.state.get("userId");
-  //                              ↑ Hover: string | undefined — typed!
-  ctx.state.set("permissions", [`read:${userId}`, "write"]);
-  return next();
+  //    ↑ Hover: string — no | undefined! State is guaranteed by upstream auth middleware
+  return next({ permissions: [`read:${userId}`, "write"] });
 });
 
 // Tenant middleware — provides { tenantId: string }, requires nothing
-const tenant = defineMiddleware<{ tenantId: string }>(async (ctx, next) => {
-  ctx.state.set("tenantId", "tenant_acme");
-  return next();
+const tenant = defineMiddleware<{ tenantId: string }>(async (_ctx, next) => {
+  return next({ tenantId: "tenant_acme" });
 });
+
+// Pass-through middleware — provides nothing, next() takes no args
+const logger = defineMiddleware(async (ctx, next) => {
+  console.log(ctx.request.path);
+  return next();
+  //     ↑ No argument needed — NextFn<{}> = () => Promise<IHttpResponse>
+});
+
+// Short-circuiting guard — can return early without calling next()
+const guard = defineMiddleware<{ userId: string }>(async (ctx, next) => {
+  if (!ctx.request.header?.["authorization"]) {
+    return { statusCode: 401, body: { message: "Unauthorized" } };
+    //       ↑ Early return — no next() call, no state enforcement
+  }
+  return next({ userId: "u_verified" });
+});
+
+// UNCOMMENT TO SEE ERROR — forgetting to pass state to next():
+// defineMiddleware<{ userId: string }>(async (_ctx, next) => next());
+//                                                           ↑ Expected 1 argument, but got 0
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 2. BUILD APP — TYPES ACCUMULATE
 // ─────────────────────────────────────────────────────────────────────────────
 
 const app = new TypeweaverApp()
-  //              ↑ Hover: TypeweaverApp<Record<string, unknown>>
+  //              ↑ Hover: TypeweaverApp<{}>
   .use(auth)
-  //  ↑ Hover: TypeweaverApp<Record<string, unknown> & { userId: string }>
+  //  ↑ Hover: TypeweaverApp<{} & { userId: string }>
   .use(permissions)
-  //  ↑ Hover: TypeweaverApp<Record<string, unknown> & { userId: string } & { permissions: string[] }>
+  //  ↑ Hover: TypeweaverApp<{} & { userId: string } & { permissions: string[] }>
   .use(tenant);
 //  ↑ Hover: TypeweaverApp<... & { tenantId: string }>
 
@@ -88,10 +105,10 @@ state.set("permissions", ["read"]); // ✅ key exists, value is string[]
 //           ↑ Argument of type '"nonExistent"' is not assignable to parameter of type '"userId" | "permissions" | "tenantId"'
 
 const userId = state.get("userId");
-//    ↑ Hover: string | undefined — honest typing
+//    ↑ Hover: string — no | undefined, state is provably set via next(state) enforcement
 
 const perms = state.get("permissions");
-//    ↑ Hover: string[] | undefined
+//    ↑ Hover: string[]
 
 // UNCOMMENT TO SEE ERROR — typo in key:
 // state.get("userID");
@@ -103,13 +120,13 @@ const perms = state.get("permissions");
 
 async function exampleHandler(_req: any, ctx: ServerContext<AppState>) {
   const userId = ctx.state.get("userId");
-  //    ↑ Hover: string | undefined
+  //    ↑ Hover: string
 
   const perms = ctx.state.get("permissions");
-  //    ↑ Hover: string[] | undefined
+  //    ↑ Hover: string[]
 
   const tenantId = ctx.state.get("tenantId");
-  //    ↑ Hover: string | undefined
+  //    ↑ Hover: string
 
   // UNCOMMENT TO SEE ERROR — key doesn't exist:
   // ctx.state.get("typo");
@@ -129,20 +146,8 @@ async function exampleHandler(_req: any, ctx: ServerContext<AppState>) {
 //
 // The error message shows:
 //   Type 'TypedMiddleware<{ permissions: string[] }, { userId: string }>'
-//   is not assignable to type 'StateRequirementError<{ userId: string }, Record<string, unknown>>'
+//   is not assignable to type 'StateRequirementError<{ userId: string }, {}>'
 //   with property 'missing: "userId"'
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 7. UNTYPED MIDDLEWARE STILL WORKS (backward compatible)
-// ─────────────────────────────────────────────────────────────────────────────
-
-const appWithMixed = new TypeweaverApp()
-  .use(auth) // typed — accumulates
-  .use(async (_ctx, next) => next()) // untyped — passes through, returns `this`
-  .use("/admin/*", async (_ctx, next) => next()) // path-scoped — passes through, returns `this`
-  .use(permissions); // typed — accumulates
-
-// All three middleware styles coexist.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Suppress unused variable warnings
@@ -151,4 +156,5 @@ void userId;
 void perms;
 void exampleHandler;
 void app;
-void appWithMixed;
+void logger;
+void guard;

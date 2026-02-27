@@ -14,48 +14,24 @@ import type { ServerContext } from "./ServerContext";
  * Follows a return-based onion model: call `next()` to pass control to the next
  * middleware or handler and receive the response, then return it (optionally modified).
  *
+ * When middleware provides state, it passes the state object to `next(state)`.
+ * The pipeline merges this state into `ctx.state` before continuing to the
+ * next middleware, guaranteeing downstream consumers can read it.
+ *
  * To short-circuit the pipeline, return a response without calling `next()`.
- *
- * @example
- * ```typescript
- * // Logging middleware
- * const logger: Middleware = async (ctx, next) => {
- *   const start = Date.now();
- *   const response = await next();
- *   console.log(`${ctx.request.method} ${ctx.request.path} -> ${response.statusCode} (${Date.now() - start}ms)`);
- *   return response;
- * };
- *
- * // Auth guard (short-circuit)
- * const auth: Middleware = async (ctx, next) => {
- *   if (!ctx.request.header?.["authorization"]) {
- *     return { statusCode: 401, body: { message: "Unauthorized" } };
- *   }
- *   return next();
- * };
- * ```
  */
 export type Middleware = (
   ctx: ServerContext,
-  next: () => Promise<IHttpResponse>
+  next: (state?: Record<string, unknown>) => Promise<IHttpResponse>
 ) => Promise<IHttpResponse>;
-
-/**
- * Internal representation of a registered middleware with optional path scope.
- */
-export type MiddlewareEntry = {
-  /** Path pattern to match. `undefined` means global (matches all paths). */
-  readonly path: string | undefined;
-  /** The middleware function. */
-  readonly handler: Middleware;
-};
 
 /**
  * Executes a middleware pipeline in onion order (return-based).
  *
- * Each middleware receives a `next()` function that invokes the next
- * middleware in the chain and returns its response. The final `next()`
- * calls the provided `finalHandler`.
+ * Each middleware receives a `next()` function that optionally accepts a state
+ * object. When state is provided, it is merged into `ctx.state` before invoking
+ * the next middleware in the chain. The final `next()` calls the provided
+ * `finalHandler`.
  *
  * @param middlewares - Ordered list of middleware functions to execute
  * @param ctx - The server context shared across the pipeline
@@ -69,22 +45,27 @@ export async function executeMiddlewarePipeline(
 ): Promise<IHttpResponse> {
   let index = 0;
 
-  const next = async (): Promise<IHttpResponse> => {
+  const advance = async (): Promise<IHttpResponse> => {
     if (index < middlewares.length) {
       const currentIndex = index++;
       let called = false;
 
-      return middlewares[currentIndex]!(ctx, async () => {
+      return middlewares[currentIndex]!(ctx, async (state) => {
         if (called) {
           throw new Error("next() called multiple times");
         }
         called = true;
-        return next();
+
+        if (state) {
+          ctx.state.merge(state);
+        }
+
+        return advance();
       });
     }
 
     return finalHandler();
   };
 
-  return next();
+  return advance();
 }

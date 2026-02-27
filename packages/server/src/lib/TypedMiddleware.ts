@@ -55,31 +55,52 @@ export type StateRequirementError<
 };
 
 /**
+ * The type of the `next` function inside a typed middleware handler.
+ *
+ * When `TProvides` has keys, `next` requires the state object as its argument,
+ * enforcing at compile time that middleware provides the state it declares.
+ *
+ * When `TProvides` is empty (`{}`), `next` takes no arguments — the middleware
+ * is pass-through and doesn't need to provide any state.
+ *
+ * @template TProvides - The state keys this middleware declares it provides
+ */
+export type NextFn<TProvides extends Record<string, unknown>> =
+  [keyof TProvides] extends [never]
+    ? () => Promise<IHttpResponse>
+    : (state: TProvides) => Promise<IHttpResponse>;
+
+/**
  * Creates a typed middleware descriptor.
  *
- * The handler receives a `ServerContext` parameterized with both the
- * required and provided state, allowing it to read required state and
- * write provided state with full type safety.
+ * The handler receives a `ServerContext` parameterized with the required
+ * upstream state, and a `next` function that enforces providing the declared
+ * state. When the middleware declares `TProvides`, the state must be passed
+ * to `next()` — the pipeline merges it into `ctx.state` before continuing.
  *
  * @template TProvides - State keys this middleware adds
  * @template TRequires - State keys this middleware expects (defaults to none)
  *
  * @example
  * ```typescript
- * // Simple middleware — no requirements
+ * // Middleware that provides state — MUST pass it to next()
  * const auth = defineMiddleware<{ userId: string }>(async (ctx, next) => {
- *   ctx.state.set("userId", parseToken(ctx.request.header?.["authorization"]));
- *   return next();
+ *   return next({ userId: parseToken(ctx.request.header?.["authorization"]) });
  * });
  *
- * // Middleware with requirements
+ * // Middleware with requirements — reads upstream state, provides new state
  * const permissions = defineMiddleware<{ permissions: string[] }, { userId: string }>(
  *   async (ctx, next) => {
- *     const userId = ctx.state.get("userId");
- *     ctx.state.set("permissions", await loadPermissions(userId!));
- *     return next();
+ *     const userId = ctx.state.get("userId"); // string (no undefined!)
+ *     return next({ permissions: await loadPermissions(userId) });
  *   }
  * );
+ *
+ * // Pass-through middleware — next() takes no args
+ * const logger = defineMiddleware(async (ctx, next) => {
+ *   console.log(ctx.request.path);
+ *   return next();
+ * });
  * ```
  */
 export function defineMiddleware<
@@ -87,8 +108,8 @@ export function defineMiddleware<
   TRequires extends Record<string, unknown> = {},
 >(
   handler: (
-    ctx: ServerContext<TRequires & TProvides>,
-    next: () => Promise<IHttpResponse>
+    ctx: ServerContext<TRequires>,
+    next: NextFn<TProvides>
   ) => Promise<IHttpResponse>
 ): TypedMiddleware<TProvides, TRequires> {
   return {

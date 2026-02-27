@@ -154,27 +154,44 @@ describe("Middleware Pipeline", () => {
       });
     });
 
-    test("should allow middleware to use ctx.state for data passing", async () => {
+    test("should merge state passed to next() into ctx.state", async () => {
       const ctx = createServerContext();
 
-      const setUser: Middleware = async (ctx, next) => {
-        ctx.state.set("userId", "user_42");
-        return next();
+      const setUser: Middleware = async (_ctx, next) => {
+        return next({ userId: "user_42" });
       };
 
       const response = await executeMiddlewarePipeline(
         [setUser],
         ctx,
-        async () => {
-          const userId = ctx.state.get("userId");
-          return {
-            statusCode: 200,
-            body: { userId },
-          };
-        }
+        async () => ({
+          statusCode: 200,
+          body: { userId: ctx.state.get("userId") },
+        })
       );
 
       expect(response.body).toEqual({ userId: "user_42" });
+    });
+
+    test("should accumulate state from multiple middlewares via next(state)", async () => {
+      const ctx = createServerContext();
+
+      const mw1: Middleware = async (_ctx, next) => next({ userId: "u_1" });
+      const mw2: Middleware = async (_ctx, next) => next({ role: "admin" });
+
+      const response = await executeMiddlewarePipeline(
+        [mw1, mw2],
+        ctx,
+        async () => ({
+          statusCode: 200,
+          body: {
+            userId: ctx.state.get("userId"),
+            role: ctx.state.get("role"),
+          },
+        })
+      );
+
+      expect(response.body).toEqual({ userId: "u_1", role: "admin" });
     });
 
     test("should propagate errors from middleware", async () => {
