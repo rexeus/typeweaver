@@ -33,4 +33,5 @@ export {
   ResponseSerializationError,
 } from "./Errors";
 export { FetchApiAdapter } from "./FetchApiAdapter";
-export { nodeAdapter } from "./NodeAdapter";
+export { nodeAdapter, type NodeAdapterOptions } from "./NodeAdapter";
+export { pathMatcher } from "./PathMatcher";

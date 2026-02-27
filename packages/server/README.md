@@ -218,19 +218,23 @@ const guard = defineMiddleware(async (ctx, next) => {
 });
 ```
 
-**Path-scoped guard** — skip non-matching paths with an early `next()`:
+**Path-scoped guard** — use `pathMatcher` to limit middleware to specific routes:
 
 ```ts
+import { defineMiddleware, pathMatcher } from "./generated/lib/server";
+
+const isUsersPath = pathMatcher("/users/*");
+
 const usersGuard = defineMiddleware(async (ctx, next) => {
-  if (!ctx.request.path.startsWith("/users")) {
-    return next();
-  }
+  if (!isUsersPath(ctx.request.path)) return next();
   if (!ctx.request.header?.["authorization"]) {
     return { statusCode: 401, body: { message: "Unauthorized" } };
   }
   return next();
 });
 ```
+
+`pathMatcher` supports exact matches (`"/health"`) and prefix matches (`"/users/*"`).
 
 **Chaining** — state accumulates through `.use()`:
 
