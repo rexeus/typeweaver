@@ -7,17 +7,21 @@
 
 import { HttpResponse, RequestValidationError } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
-import { FetchApiAdapter, BodyParseError } from "./FetchApiAdapter";
-import type { Middleware, MiddlewareEntry } from "./Middleware";
+import { BodyParseError, PayloadTooLargeError } from "./Errors";
+import { FetchApiAdapter } from "./FetchApiAdapter";
 import { executeMiddlewarePipeline } from "./Middleware";
-import {
-  Router,
-  type RouteDefinition,
-  type HttpResponseErrorHandler,
-  type ValidationErrorHandler,
-  type UnknownErrorHandler,
+import { Router } from "./Router";
+import { StateMap } from "./StateMap";
+import type { Middleware } from "./Middleware";
+import type { RequestHandler } from "./RequestHandler";
+import type {
+  HttpResponseErrorHandler,
+  RouteDefinition,
+  UnknownErrorHandler,
+  ValidationErrorHandler,
 } from "./Router";
 import type { ServerContext } from "./ServerContext";
+import type { StateRequirementError, TypedMiddleware } from "./TypedMiddleware";
 import type { TypeweaverRouter } from "./TypeweaverRouter";
 
 /**
@@ -38,64 +42,65 @@ import type { TypeweaverRouter } from "./TypeweaverRouter";
  *
  * @example
  * ```typescript
- * const app = new TypeweaverApp();
+ * const app = new TypeweaverApp()
+ *   .use(authMiddleware)       // defineMiddleware<{ userId: string }>
+ *   .use(permissionsMiddleware) // defineMiddleware<{ perms: string[] }, { userId: string }>
+ *   .route(new TodoRouter({ requestHandlers: { ... } }));
  *
- * // Global middleware
- * app.use(async (ctx, next) => {
- *   console.log(`${ctx.request.method} ${ctx.request.path}`);
- *   return next();
- * });
- *
- * // Path-scoped middleware (short-circuit)
- * app.use("/todos/*", async (ctx, next) => {
- *   const token = ctx.request.header?.["authorization"];
- *   if (!token) {
- *     return { statusCode: 401, body: { message: "Unauthorized" } };
- *   }
- *   return next();
- * });
- *
- * // Mount generated routers
- * app.route(new AccountRouter({ requestHandlers: { ... } }));
- * app.route("/api/v1", new TodoRouter({ requestHandlers: { ... } }));
- *
- * // Start
  * Bun.serve({ fetch: app.fetch, port: 3000 });
  * ```
  */
-export class TypeweaverApp {
+export type TypeweaverAppOptions = {
+  readonly maxBodySize?: number;
+  readonly onError?: (error: unknown) => void;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
+  private static readonly INTERNAL_SERVER_ERROR_BODY = {
+    code: "INTERNAL_SERVER_ERROR",
+    message: "An unexpected error occurred",
+  } as const;
+
   private readonly router = new Router();
-  private readonly middlewares: MiddlewareEntry[] = [];
-  private readonly adapter = new FetchApiAdapter();
+  private readonly middlewares: Middleware[] = [];
+  private readonly adapter: FetchApiAdapter;
+  private readonly onError: (error: unknown) => void;
 
-  /**
-   * Register a global middleware that runs for all requests.
-   */
-  public use(middleware: Middleware): this;
+  public constructor(options?: TypeweaverAppOptions) {
+    this.adapter = new FetchApiAdapter({ maxBodySize: options?.maxBodySize });
+    this.onError = options?.onError ?? console.error;
+  }
 
-  /**
-   * Register a path-scoped middleware that runs only for matching paths.
-   *
-   * Supports wildcard patterns: `/todos/*` matches `/todos/123`, `/todos/123/subtodos`, etc.
-   */
-  public use(path: string, middleware: Middleware): this;
-
-  public use(
-    pathOrMiddleware: string | Middleware,
-    middleware?: Middleware,
-  ): this {
-    if (typeof pathOrMiddleware === "string") {
-      this.middlewares.push({
-        path: pathOrMiddleware,
-        handler: middleware!,
-      });
-    } else {
-      this.middlewares.push({
-        path: undefined,
-        handler: pathOrMiddleware,
-      });
+  private safeOnError(error: unknown): void {
+    try {
+      this.onError(error);
+    } catch (onErrorFailure) {
+      console.error(
+        "TypeweaverApp: onError callback threw while handling error",
+        { onErrorFailure, originalError: error },
+      );
     }
-    return this;
+  }
+
+  /**
+   * Register a typed middleware that provides state to downstream handlers.
+   *
+   * Returns a new `TypeweaverApp` type with the accumulated state.
+   * Produces a compile-time error if the middleware's requirements are not met
+   * by the currently accumulated state.
+   *
+   * Use {@link defineMiddleware} to create typed middleware.
+   */
+  public use<
+    TProv extends Record<string, unknown>,
+    TReq extends Record<string, unknown>,
+  >(
+    middleware: TypedMiddleware<TProv, TReq> &
+      ([TState] extends [TReq] ? unknown : StateRequirementError<TReq, TState>),
+  ): TypeweaverApp<TState & TProv> {
+    this.middlewares.push(middleware.handler);
+    return this as unknown as TypeweaverApp<TState & TProv>;
   }
 
   /**
@@ -112,30 +117,22 @@ export class TypeweaverApp {
    * app.route("/api/v1", new TodoRouter({ requestHandlers: { ... } }));
    * ```
    */
-  public route(router: TypeweaverRouter<any>): this;
-  public route(prefix: string, router: TypeweaverRouter<any>): this;
+  public route(router: TypeweaverRouter<Record<string, RequestHandler>>): this;
   public route(
-    prefixOrRouter: string | TypeweaverRouter<any>,
-    router?: TypeweaverRouter<any>,
+    prefix: string,
+    router: TypeweaverRouter<Record<string, RequestHandler>>,
+  ): this;
+  public route(
+    prefixOrRouter: string | TypeweaverRouter<Record<string, RequestHandler>>,
+    router?: TypeweaverRouter<Record<string, RequestHandler>>,
   ): this {
-    const actualPrefix =
-      typeof prefixOrRouter === "string" ? prefixOrRouter : undefined;
-    const actualRouter =
-      typeof prefixOrRouter === "string" ? router! : prefixOrRouter;
-
-    for (const route of actualRouter.getRoutes()) {
-      if (actualPrefix) {
-        // Normalize: ensure prefix doesn't have trailing slash
-        const normalizedPrefix = actualPrefix.replace(/\/+$/, "");
-        this.router.add({
-          ...route,
-          path: normalizedPrefix + route.path,
-        });
-      } else {
-        this.router.add(route);
+    if (typeof prefixOrRouter === "string") {
+      if (!router) {
+        throw new Error("Router is required when mounting with a prefix");
       }
+      return this.mountRouter(router, prefixOrRouter);
     }
-    return this;
+    return this.mountRouter(prefixOrRouter);
   }
 
   /**
@@ -157,49 +154,50 @@ export class TypeweaverApp {
    * ```
    */
   public fetch = async (request: Request): Promise<Response> => {
-    // --- BOUNDARY IN: Parse URL once, reuse everywhere ---
-    const url = new URL(request.url);
-    const isHead = request.method.toUpperCase() === "HEAD";
-
-    let httpRequest;
     try {
-      // Convert request early so middleware always has access
-      httpRequest = await this.adapter.toRequest(request, undefined, url);
+      const response = await this.processRequest(request);
+      return this.adapter.toResponse(response);
     } catch (error) {
-      // Body parse errors at the boundary
-      return this.adapter.toResponse(this.handleBoundaryError(error));
+      if (error instanceof PayloadTooLargeError) {
+        this.safeOnError(error);
+        return this.adapter.toResponse({
+          statusCode: 413,
+          body: {
+            code: "PAYLOAD_TOO_LARGE",
+            message: "Request body exceeds the size limit",
+          },
+        });
+      }
+      if (error instanceof BodyParseError) {
+        return this.adapter.toResponse({
+          statusCode: 400,
+          body: { code: "BAD_REQUEST", message: "Malformed request body" },
+        });
+      }
+      this.safeOnError(error);
+      return TypeweaverApp.createErrorResponse();
     }
+  };
 
-    // --- INTERNAL: Everything is IHttpRequest/IHttpResponse ---
+  private async processRequest(request: Request): Promise<IHttpResponse> {
+    const url = new URL(request.url);
+    const httpRequest = await this.adapter.toRequest(request, url);
+
     const ctx: ServerContext = {
       request: httpRequest,
-      state: new Map(),
+      state: new StateMap(),
     };
 
-    // Collect matching middleware based on path
-    const matchingMiddleware = this.middlewares
-      .filter((m) => Router.matchesMiddlewarePath(m.path, httpRequest.path))
-      .map((m) => m.handler);
+    const response = await executeMiddlewarePipeline(
+      this.middlewares,
+      ctx,
+      () => this.resolveAndExecute(request.method, url.pathname, ctx),
+    );
 
-    let response: IHttpResponse;
-
-    try {
-      // Execute middleware pipeline → route matching → handler
-      response = await executeMiddlewarePipeline(matchingMiddleware, ctx, () =>
-        this.resolveAndExecute(request.method, url.pathname, ctx),
-      );
-    } catch (error) {
-      response = this.handleBoundaryError(error);
-    }
-
-    // --- BOUNDARY OUT: IHttpResponse → Fetch API Response ---
-    // For HEAD requests, strip the body from the response
-    if (isHead) {
-      response = { ...response, body: undefined };
-    }
-
-    return this.adapter.toResponse(response);
-  };
+    return request.method.toUpperCase() === "HEAD"
+      ? { ...response, body: undefined }
+      : response;
+  }
 
   /**
    * Match the route and execute the handler.
@@ -213,154 +211,85 @@ export class TypeweaverApp {
     const match = this.router.match(method, pathname);
 
     if (match) {
-      // Inject extracted path params into the request
-      if (Object.keys(match.params).length > 0) {
-        ctx.request = { ...ctx.request, param: match.params };
-      }
-
+      const routeCtx = this.withPathParams(ctx, match.params);
       try {
-        return await this.executeHandler(ctx, match.route);
+        return await this.executeHandler(routeCtx, match.route);
       } catch (error) {
-        return this.handleError(error, ctx, match.route);
+        return this.handleError(error, routeCtx, match.route);
       }
     }
 
-    // No method match — check if path exists (405 vs 404)
     const pathMatch = this.router.matchPath(pathname);
     if (pathMatch) {
-      const allowedMethods = Router.getAllowedMethods(pathMatch.node);
       return {
         statusCode: 405,
-        header: { Allow: allowedMethods.join(", ") },
-        body: { code: "METHOD_NOT_ALLOWED", message: "Method Not Allowed" },
+        header: { Allow: pathMatch.allowedMethods.join(", ") },
+        body: {
+          code: "METHOD_NOT_ALLOWED",
+          message: "Method not supported for this resource",
+        },
       };
     }
 
     return {
       statusCode: 404,
-      body: { code: "NOT_FOUND", message: "Not Found" },
+      body: { code: "NOT_FOUND", message: "No matching resource found" },
     };
   }
 
-  /**
-   * Execute the route handler with optional validation.
-   */
+  private withPathParams(
+    ctx: ServerContext,
+    params: Record<string, string>,
+  ): ServerContext {
+    if (Object.keys(params).length === 0) return ctx;
+    return { ...ctx, request: { ...ctx.request, param: params } };
+  }
+
   private async executeHandler(
     ctx: ServerContext,
     route: RouteDefinition,
   ): Promise<IHttpResponse> {
-    // Validate request if enabled
     const validatedRequest = route.routerConfig.validateRequests
       ? route.validator.validate(ctx.request)
       : ctx.request;
 
-    // Call handler — returns IHttpResponse directly
     return route.handler(validatedRequest, ctx);
   }
 
   /**
-   * Handle errors at the boundary level (before route matching).
-   * Catches BodyParseError from the adapter.
-   */
-  private handleBoundaryError(error: unknown): IHttpResponse {
-    if (error instanceof BodyParseError) {
-      return {
-        statusCode: 400,
-        body: {
-          code: "BAD_REQUEST",
-          message: error.message,
-        },
-      };
-    }
-
-    return {
-      statusCode: 500,
-      body: {
-        code: "INTERNAL_SERVER_ERROR",
-        message: "An unexpected error occurred.",
-      },
-    };
-  }
-
-  /**
    * Handle errors using the route's configured error handlers.
+   * Handler errors bubble up to the safety net in `fetch()`.
    */
-  private async handleError(
+  private handleError(
     error: unknown,
     ctx: ServerContext,
     route: RouteDefinition,
-  ): Promise<IHttpResponse> {
+  ): IHttpResponse | Promise<IHttpResponse> {
     const config = route.routerConfig;
 
-    // Handle validation errors
     if (error instanceof RequestValidationError) {
       const handler = this.resolveErrorHandler<ValidationErrorHandler>(
         config.handleValidationErrors,
-        (err): IHttpResponse => ({
-          statusCode: 400,
-          body: {
-            code: "VALIDATION_ERROR",
-            message: err.message,
-            issues: {
-              header: err.headerIssues,
-              body: err.bodyIssues,
-              query: err.queryIssues,
-              param: err.pathParamIssues,
-            },
-          },
-        }),
+        TypeweaverApp.defaultValidationHandler,
       );
-      if (handler) {
-        try {
-          return await handler(error, ctx);
-        } catch {
-          // Handler failed, fall through
-        }
-      }
+      if (handler) return handler(error, ctx);
     }
 
-    // Handle HTTP response errors (thrown HttpResponse instances)
     if (error instanceof HttpResponse) {
       const handler = this.resolveErrorHandler<HttpResponseErrorHandler>(
         config.handleHttpResponseErrors,
-        (err): IHttpResponse => err,
+        TypeweaverApp.defaultHttpResponseHandler,
       );
-      if (handler) {
-        try {
-          return await handler(error, ctx);
-        } catch {
-          // Handler failed, fall through
-        }
-      }
+      if (handler) return handler(error, ctx);
     }
 
-    // Handle unknown errors
     const handler = this.resolveErrorHandler<UnknownErrorHandler>(
       config.handleUnknownErrors,
-      (): IHttpResponse => ({
-        statusCode: 500,
-        body: {
-          code: "INTERNAL_SERVER_ERROR",
-          message: "An unexpected error occurred.",
-        },
-      }),
+      this.defaultUnknownHandler,
     );
-    if (handler) {
-      try {
-        return await handler(error, ctx);
-      } catch {
-        // Handler also failed
-      }
-    }
+    if (handler) return handler(error, ctx);
 
-    // Last resort
-    return {
-      statusCode: 500,
-      body: {
-        code: "INTERNAL_SERVER_ERROR",
-        message: "An unexpected error occurred.",
-      },
-    };
+    throw error;
   }
 
   /**
@@ -373,5 +302,75 @@ export class TypeweaverApp {
     if (option === false) return undefined;
     if (option === true || option === undefined) return defaultHandler;
     return option;
+  }
+
+  private mountRouter(
+    router: TypeweaverRouter<Record<string, RequestHandler>>,
+    prefix?: string,
+  ): this {
+    const normalizedPrefix = prefix?.replace(/\/+$/, "");
+    for (const route of router.getRoutes()) {
+      this.router.add({
+        ...route,
+        path: normalizedPrefix ? normalizedPrefix + route.path : route.path,
+      });
+    }
+    return this;
+  }
+
+  private static sanitizeIssues(
+    issues: readonly {
+      readonly message: string;
+      readonly path: PropertyKey[];
+    }[],
+  ): readonly { message: string; path: PropertyKey[] }[] | undefined {
+    if (issues.length === 0) return undefined;
+    return issues.map(({ message, path }) => ({ message, path }));
+  }
+
+  private static defaultValidationHandler: ValidationErrorHandler = (
+    err,
+  ): IHttpResponse => {
+    const issues: Record<string, unknown> = Object.create(null);
+
+    const header = TypeweaverApp.sanitizeIssues(err.headerIssues);
+    const body = TypeweaverApp.sanitizeIssues(err.bodyIssues);
+    const query = TypeweaverApp.sanitizeIssues(err.queryIssues);
+    const param = TypeweaverApp.sanitizeIssues(err.pathParamIssues);
+
+    if (header) issues.header = header;
+    if (body) issues.body = body;
+    if (query) issues.query = query;
+    if (param) issues.param = param;
+
+    return {
+      statusCode: 400,
+      body: {
+        code: "VALIDATION_ERROR",
+        message: err.message,
+        issues,
+      },
+    };
+  };
+
+  private static defaultHttpResponseHandler: HttpResponseErrorHandler = (
+    err,
+  ): IHttpResponse => err;
+
+  private readonly defaultUnknownHandler: UnknownErrorHandler = (
+    error,
+  ): IHttpResponse => {
+    this.safeOnError(error);
+    return { statusCode: 500, body: TypeweaverApp.INTERNAL_SERVER_ERROR_BODY };
+  };
+
+  private static createErrorResponse(): Response {
+    return new Response(
+      JSON.stringify(TypeweaverApp.INTERNAL_SERVER_ERROR_BODY),
+      {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      },
+    );
   }
 }

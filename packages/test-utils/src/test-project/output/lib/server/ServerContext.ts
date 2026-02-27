@@ -6,37 +6,49 @@
  */
 
 import type { IHttpRequest } from "@rexeus/typeweaver-core";
+import type { StateMap } from "./StateMap";
 
 /**
  * Context object passed through the middleware pipeline and to request handlers.
  *
- * The context carries the current request and a state map
+ * The context carries the current request and a typed state map
  * that middleware can use to pass data downstream to handlers.
+ *
+ * When parameterized with a state shape, provides compile-time type safety
+ * for state access. Without an explicit type parameter, accepts any key/value
+ * (backward compatible).
  *
  * All data is in typeweaver's native `IHttpRequest`/`IHttpResponse` format —
  * no framework-specific types leak into middleware or handlers.
  *
  * Responses are returned, not mutated on the context (return-based middleware).
  *
+ * @template TState - The accumulated state shape from middleware
+ *
  * @example
  * ```typescript
- * // In middleware: set state and delegate
+ * // Typed state — no casts needed
+ * type AppState = { userId: string };
+ *
+ * // In middleware: set state (typed)
  * app.use(async (ctx, next) => {
  *   ctx.state.set("userId", "user_123");
  *   return next();
  * });
  *
- * // In handler: read state
- * handleCreateTodo: async (request, ctx) => {
- *   const userId = ctx.state.get("userId") as string;
+ * // In handler: read state (typed)
+ * handleCreateTodo: async (request, ctx: ServerContext<AppState>) => {
+ *   const userId = ctx.state.get("userId"); // string | undefined
  *   return { statusCode: 201, body: { id: "1", title: "..." } };
  * };
  * ```
  */
-export type ServerContext = {
+export type ServerContext<
+  TState extends Record<string, unknown> = Record<string, unknown>,
+> = {
   /** The incoming HTTP request in typeweaver format. */
-  request: IHttpRequest;
+  readonly request: IHttpRequest;
 
-  /** Key-value store for sharing data between middleware and handlers. */
-  state: Map<string, unknown>;
+  /** Type-safe key-value store for sharing data between middleware and handlers. */
+  readonly state: StateMap<TState>;
 };

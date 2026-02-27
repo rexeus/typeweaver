@@ -11,12 +11,13 @@ import type { ServerContext } from "./ServerContext";
 /**
  * A type-safe request handler function.
  *
- * Receives a validated `IHttpRequest` and the `ServerContext`,
- * and returns a typed `IHttpResponse`. No framework-specific
+ * Receives an `IHttpRequest` (validated when `validateRequests` is enabled)
+ * and the `ServerContext`, and returns a typed `IHttpResponse`. No framework-specific
  * types — everything is in typeweaver's native format.
  *
  * @template TRequest - The specific request type (e.g., `ICreateTodoRequest`)
  * @template TResponse - The specific response type (e.g., `CreateTodoResponse`)
+ * @template TState - The state shape available in the server context
  *
  * @example
  * ```typescript
@@ -30,4 +31,5 @@ import type { ServerContext } from "./ServerContext";
 export type RequestHandler<
   TRequest extends IHttpRequest = IHttpRequest,
   TResponse extends IHttpResponse = IHttpResponse,
-> = (request: TRequest, ctx: ServerContext) => Promise<TResponse>;
+  TState extends Record<string, unknown> = Record<string, unknown>,
+> = (request: TRequest, ctx: ServerContext<TState>) => Promise<TResponse>;

@@ -68,68 +68,98 @@ import type { IDeleteSubTodoRequest } from "./DeleteSubTodoRequest";
 import { DeleteSubTodoRequestValidator } from "./DeleteSubTodoRequestValidator";
 import type { DeleteSubTodoResponse } from "./DeleteSubTodoResponse";
 
-export type TodoApiHandler = {
-  handleListTodosRequest: RequestHandler<IListTodosRequest, ListTodosResponse>;
+export type TodoApiHandler<
+  TState extends Record<string, unknown> = Record<string, unknown>,
+> = {
+  handleListTodosRequest: RequestHandler<
+    IListTodosRequest,
+    ListTodosResponse,
+    TState
+  >;
 
   handleCreateTodoRequest: RequestHandler<
     ICreateTodoRequest,
-    CreateTodoResponse
+    CreateTodoResponse,
+    TState
   >;
 
-  handleQueryTodoRequest: RequestHandler<IQueryTodoRequest, QueryTodoResponse>;
+  handleQueryTodoRequest: RequestHandler<
+    IQueryTodoRequest,
+    QueryTodoResponse,
+    TState
+  >;
 
-  handleGetTodoRequest: RequestHandler<IGetTodoRequest, GetTodoResponse>;
+  handleGetTodoRequest: RequestHandler<
+    IGetTodoRequest,
+    GetTodoResponse,
+    TState
+  >;
 
-  handlePutTodoRequest: RequestHandler<IPutTodoRequest, PutTodoResponse>;
+  handlePutTodoRequest: RequestHandler<
+    IPutTodoRequest,
+    PutTodoResponse,
+    TState
+  >;
 
   handleUpdateTodoRequest: RequestHandler<
     IUpdateTodoRequest,
-    UpdateTodoResponse
+    UpdateTodoResponse,
+    TState
   >;
 
   handleDeleteTodoRequest: RequestHandler<
     IDeleteTodoRequest,
-    DeleteTodoResponse
+    DeleteTodoResponse,
+    TState
   >;
 
   handleOptionsTodoRequest: RequestHandler<
     IOptionsTodoRequest,
-    OptionsTodoResponse
+    OptionsTodoResponse,
+    TState
   >;
 
   handleUpdateTodoStatusRequest: RequestHandler<
     IUpdateTodoStatusRequest,
-    UpdateTodoStatusResponse
+    UpdateTodoStatusResponse,
+    TState
   >;
 
   handleListSubTodosRequest: RequestHandler<
     IListSubTodosRequest,
-    ListSubTodosResponse
+    ListSubTodosResponse,
+    TState
   >;
 
   handleCreateSubTodoRequest: RequestHandler<
     ICreateSubTodoRequest,
-    CreateSubTodoResponse
+    CreateSubTodoResponse,
+    TState
   >;
 
   handleQuerySubTodoRequest: RequestHandler<
     IQuerySubTodoRequest,
-    QuerySubTodoResponse
+    QuerySubTodoResponse,
+    TState
   >;
 
   handleUpdateSubTodoRequest: RequestHandler<
     IUpdateSubTodoRequest,
-    UpdateSubTodoResponse
+    UpdateSubTodoResponse,
+    TState
   >;
 
   handleDeleteSubTodoRequest: RequestHandler<
     IDeleteSubTodoRequest,
-    DeleteSubTodoResponse
+    DeleteSubTodoResponse,
+    TState
   >;
 };
 
-export class TodoRouter extends TypeweaverRouter<TodoApiHandler> {
-  public constructor(options: TypeweaverRouterOptions<TodoApiHandler>) {
+export class TodoRouter<
+  TState extends Record<string, unknown> = Record<string, unknown>,
+> extends TypeweaverRouter<TodoApiHandler<TState>> {
+  public constructor(options: TypeweaverRouterOptions<TodoApiHandler<TState>>) {
     super(options);
     this.setupRoutes();
   }

@@ -6,38 +6,39 @@
  */
 
 import type {
-  IHttpRequest,
+  HttpMethod,
   IHttpResponse,
   IRequestValidator,
+  RequestValidationError,
 } from "@rexeus/typeweaver-core";
 import type { RequestHandler } from "./RequestHandler";
+import type { ServerContext } from "./ServerContext";
 
 /**
  * A registered route with its method, path pattern, validator, and handler.
  */
 export type RouteDefinition = {
-  method: string;
-  path: string;
-  validator: IRequestValidator;
-  handler: RequestHandler<any, any>;
+  readonly method: HttpMethod;
+  readonly path: string;
+  readonly validator: IRequestValidator;
+  readonly handler: RequestHandler;
   /** Reference to the router config for error handling. */
-  routerConfig: RouterErrorConfig;
+  readonly routerConfig: RouterErrorConfig;
 };
 
 /**
  * Error handling configuration associated with a router.
  */
 export type RouterErrorConfig = {
-  validateRequests: boolean;
-  handleHttpResponseErrors: HttpResponseErrorHandler | boolean;
-  handleValidationErrors: ValidationErrorHandler | boolean;
-  handleUnknownErrors: UnknownErrorHandler | boolean;
+  readonly validateRequests: boolean;
+  readonly handleHttpResponseErrors: HttpResponseErrorHandler | boolean;
+  readonly handleValidationErrors: ValidationErrorHandler | boolean;
+  readonly handleUnknownErrors: UnknownErrorHandler | boolean;
 };
-
-import type { ServerContext } from "./ServerContext";
 
 /**
  * Handles HTTP response errors thrown by request handlers.
+ * The error parameter is an `HttpResponse` instance (thrown via `throw new HttpResponse(...)`).
  */
 export type HttpResponseErrorHandler = (
   error: IHttpResponse,
@@ -48,7 +49,7 @@ export type HttpResponseErrorHandler = (
  * Handles request validation errors.
  */
 export type ValidationErrorHandler = (
-  error: import("@rexeus/typeweaver-core").RequestValidationError,
+  error: RequestValidationError,
   ctx: ServerContext,
 ) => Promise<IHttpResponse> | IHttpResponse;
 
@@ -64,16 +65,8 @@ export type UnknownErrorHandler = (
  * Result of a successful route match.
  */
 export type RouteMatch = {
-  route: RouteDefinition;
-  params: Record<string, string>;
-};
-
-/**
- * Result of a path-only match (node found, but method may not exist).
- */
-export type PathMatch = {
-  node: RadixNode;
-  params: Record<string, string>;
+  readonly route: RouteDefinition;
+  readonly params: Record<string, string>;
 };
 
 /**
@@ -84,25 +77,11 @@ export type PathMatch = {
  * A single `paramChild` holds the branch for `:param` segments.
  * Leaf nodes store a `Map` of HTTP method → route definition.
  */
-export type RadixNode = {
-  /** Static segment children: segment string → child node. */
-  staticChildren: Map<string, RadixNode>;
-  /** Child node for parameterized segments (`:param`). */
-  paramChild: { name: string; node: RadixNode } | undefined;
-  /** Route definitions at this node, keyed by HTTP method. */
-  methods: Map<string, RouteDefinition>;
+type RadixNode = {
+  readonly staticChildren: Map<string, RadixNode>;
+  paramChild: { readonly name: string; readonly node: RadixNode } | undefined;
+  readonly methods: Map<string, RouteDefinition>;
 };
-
-/**
- * Creates a new empty radix node.
- */
-function createNode(): RadixNode {
-  return {
-    staticChildren: new Map(),
-    paramChild: undefined,
-    methods: new Map(),
-  };
-}
 
 /**
  * High-performance radix tree router with path parameter support.
@@ -118,40 +97,47 @@ function createNode(): RadixNode {
  * - Multiple parameters: `/todos/:todoId/subtodos/:subtodoId`
  * - Automatic HEAD → GET fallback (per HTTP spec)
  * - 405 Method Not Allowed detection with `Allow` header
- *
- * Path matching for middleware uses wildcard support:
- * - `/todos/*` matches `/todos/123`, `/todos/123/subtodos`, etc.
  */
 export class Router {
-  private readonly root: RadixNode = createNode();
+  private readonly root: RadixNode = Router.createNode();
 
   /**
    * Register a route in the radix tree.
    */
   public add(definition: RouteDefinition): void {
-    const segments = this.toSegments(definition.path);
-    const method = definition.method.toUpperCase();
+    const segments = Router.toSegments(definition.path);
 
     let current = this.root;
 
     for (const segment of segments) {
       if (segment.startsWith(":")) {
         const paramName = segment.slice(1);
+        if (current.paramChild && current.paramChild.name !== paramName) {
+          throw new Error(
+            `Conflicting path parameter names at "${definition.path}": ":${current.paramChild.name}" vs ":${paramName}"`,
+          );
+        }
         if (!current.paramChild) {
-          current.paramChild = { name: paramName, node: createNode() };
+          current.paramChild = { name: paramName, node: Router.createNode() };
         }
         current = current.paramChild.node;
       } else {
         let child = current.staticChildren.get(segment);
         if (!child) {
-          child = createNode();
+          child = Router.createNode();
           current.staticChildren.set(segment, child);
         }
         current = child;
       }
     }
 
-    current.methods.set(method, definition);
+    if (current.methods.has(definition.method)) {
+      throw new Error(
+        `Route conflict: ${definition.method} ${definition.path} is already registered`,
+      );
+    }
+
+    current.methods.set(definition.method, definition);
   }
 
   /**
@@ -168,18 +154,15 @@ export class Router {
    */
   public match(method: string, path: string): RouteMatch | undefined {
     const upperMethod = method.toUpperCase();
-    const segments = this.toSegments(path);
+    const segments = Router.toSegments(path);
     const params: Record<string, string> = {};
 
     const node = this.traverse(this.root, segments, 0, params);
     if (!node) return undefined;
 
-    let definition = node.methods.get(upperMethod);
-
-    // HEAD falls back to GET per HTTP spec
-    if (!definition && upperMethod === "HEAD") {
-      definition = node.methods.get("GET");
-    }
+    const definition =
+      node.methods.get(upperMethod) ??
+      (upperMethod === "HEAD" ? node.methods.get("GET") : undefined);
 
     if (!definition) return undefined;
 
@@ -191,56 +174,21 @@ export class Router {
    *
    * Used to distinguish "path not found" (404) from "method not allowed" (405).
    *
-   * @returns The matched node and params, or `undefined` if the path doesn't exist.
+   * @returns The allowed methods for this path, or `undefined` if the path doesn't exist.
    */
-  public matchPath(path: string): PathMatch | undefined {
-    const segments = this.toSegments(path);
+  public matchPath(path: string): { allowedMethods: string[] } | undefined {
+    const segments = Router.toSegments(path);
     const params: Record<string, string> = {};
 
     const node = this.traverse(this.root, segments, 0, params);
     if (!node || node.methods.size === 0) return undefined;
 
-    return { node, params };
-  }
-
-  /**
-   * Get the list of allowed HTTP methods for a matched node.
-   *
-   * If a GET handler exists, HEAD is implicitly allowed.
-   */
-  public static getAllowedMethods(node: RadixNode): string[] {
     const methods = Array.from(node.methods.keys());
-    // HEAD is implicitly allowed when GET exists
     if (methods.includes("GET") && !methods.includes("HEAD")) {
       methods.push("HEAD");
     }
-    return methods.sort();
-  }
 
-  /**
-   * Check if a request path matches a middleware path pattern.
-   *
-   * Supports wildcard (`*`) at the end: `/todos/*` matches `/todos/123/subtodos`.
-   * An `undefined` pattern matches everything.
-   */
-  public static matchesMiddlewarePath(
-    pattern: string | undefined,
-    requestPath: string,
-  ): boolean {
-    if (pattern === undefined) return true;
-
-    // Exact match
-    if (pattern === requestPath) return true;
-
-    // Wildcard: /foo/* matches /foo/anything
-    if (pattern.endsWith("/*")) {
-      const prefix = pattern.slice(0, -1); // "/foo/"
-      return (
-        requestPath.startsWith(prefix) || requestPath === pattern.slice(0, -2)
-      );
-    }
-
-    return false;
+    return { allowedMethods: methods.sort() };
   }
 
   /**
@@ -274,7 +222,7 @@ export class Router {
     // 2. Try param child as fallback
     if (node.paramChild) {
       const { name, node: paramNode } = node.paramChild;
-      params[name] = decodePathSegment(segment);
+      params[name] = Router.decodePathSegment(segment);
       const result = this.traverse(paramNode, segments, index + 1, params);
       if (result && result.methods.size > 0) return result;
       // Backtrack: remove param if this branch didn't match
@@ -284,19 +232,32 @@ export class Router {
     return undefined;
   }
 
-  private toSegments(path: string): string[] {
-    return path.split("/").filter((s) => s.length > 0);
+  private static createNode(): RadixNode {
+    return {
+      staticChildren: new Map(),
+      paramChild: undefined,
+      methods: new Map(),
+    };
   }
-}
 
-/**
- * Safely URL-decodes a path segment.
- * Returns the original segment if decoding fails (malformed encoding).
- */
-function decodePathSegment(segment: string): string {
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    return segment;
+  /**
+   * Decodes a URL-encoded path segment while guarding against path traversal.
+   *
+   * Encoded dot-segments like `%2e%2e` would decode to `..`, which could
+   * enable directory traversal if a downstream handler builds file paths
+   * from params. Returning the raw segment neutralises this vector.
+   */
+  private static decodePathSegment(segment: string): string {
+    try {
+      const decoded = decodeURIComponent(segment);
+      if (decoded === ".." || decoded === ".") return segment;
+      return decoded;
+    } catch {
+      return segment;
+    }
+  }
+
+  private static toSegments(path: string): string[] {
+    return path.split("/").filter((s) => s.length > 0);
   }
 }

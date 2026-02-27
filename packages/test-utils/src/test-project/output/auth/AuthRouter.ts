@@ -20,20 +20,26 @@ import type { IRefreshTokenRequest } from "./RefreshTokenRequest";
 import { RefreshTokenRequestValidator } from "./RefreshTokenRequestValidator";
 import type { RefreshTokenResponse } from "./RefreshTokenResponse";
 
-export type AuthApiHandler = {
+export type AuthApiHandler<
+  TState extends Record<string, unknown> = Record<string, unknown>,
+> = {
   handleAccessTokenRequest: RequestHandler<
     IAccessTokenRequest,
-    AccessTokenResponse
+    AccessTokenResponse,
+    TState
   >;
 
   handleRefreshTokenRequest: RequestHandler<
     IRefreshTokenRequest,
-    RefreshTokenResponse
+    RefreshTokenResponse,
+    TState
   >;
 };
 
-export class AuthRouter extends TypeweaverRouter<AuthApiHandler> {
-  public constructor(options: TypeweaverRouterOptions<AuthApiHandler>) {
+export class AuthRouter<
+  TState extends Record<string, unknown> = Record<string, unknown>,
+> extends TypeweaverRouter<AuthApiHandler<TState>> {
+  public constructor(options: TypeweaverRouterOptions<AuthApiHandler<TState>>) {
     super(options);
     this.setupRoutes();
   }

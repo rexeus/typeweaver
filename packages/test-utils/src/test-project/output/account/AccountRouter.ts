@@ -16,15 +16,22 @@ import type { IRegisterAccountRequest } from "./RegisterAccountRequest";
 import { RegisterAccountRequestValidator } from "./RegisterAccountRequestValidator";
 import type { RegisterAccountResponse } from "./RegisterAccountResponse";
 
-export type AccountApiHandler = {
+export type AccountApiHandler<
+  TState extends Record<string, unknown> = Record<string, unknown>,
+> = {
   handleRegisterAccountRequest: RequestHandler<
     IRegisterAccountRequest,
-    RegisterAccountResponse
+    RegisterAccountResponse,
+    TState
   >;
 };
 
-export class AccountRouter extends TypeweaverRouter<AccountApiHandler> {
-  public constructor(options: TypeweaverRouterOptions<AccountApiHandler>) {
+export class AccountRouter<
+  TState extends Record<string, unknown> = Record<string, unknown>,
+> extends TypeweaverRouter<AccountApiHandler<TState>> {
+  public constructor(
+    options: TypeweaverRouterOptions<AccountApiHandler<TState>>,
+  ) {
     super(options);
     this.setupRoutes();
   }

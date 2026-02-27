@@ -13,17 +13,15 @@ import type {
   IHttpRequest,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
+import {
+  BodyParseError,
+  PayloadTooLargeError,
+  ResponseSerializationError,
+} from "./Errors";
 
-/**
- * Error thrown when the request body cannot be parsed.
- * Caught by TypeweaverApp to return a 400 Bad Request response.
- */
-export class BodyParseError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "BodyParseError";
-  }
-}
+export type FetchApiAdapterOptions = {
+  readonly maxBodySize?: number;
+};
 
 /**
  * Converts between Fetch API `Request`/`Response` and typeweaver's
@@ -37,33 +35,33 @@ export class BodyParseError extends Error {
  * Bun, Deno, Node.js (>=18), Cloudflare Workers.
  */
 export class FetchApiAdapter {
+  private static readonly DEFAULT_MAX_BODY_SIZE = 1_048_576; // 1 MB
+
+  private readonly maxBodySize: number;
+
+  public constructor(options?: FetchApiAdapterOptions) {
+    this.maxBodySize =
+      options?.maxBodySize ?? FetchApiAdapter.DEFAULT_MAX_BODY_SIZE;
+  }
+
   /**
    * Converts a Fetch API Request to an IHttpRequest.
    *
    * Accepts an optional pre-parsed URL to avoid redundant parsing.
    *
    * @param request - The Fetch API Request object
-   * @param pathParams - Path parameters extracted by the router
    * @param url - Optional pre-parsed URL object to avoid double parsing
    * @returns Promise resolving to an IHttpRequest
    * @throws BodyParseError when the request body is malformed
    */
-  public async toRequest(
-    request: Request,
-    pathParams?: Record<string, string>,
-    url?: URL,
-  ): Promise<IHttpRequest> {
+  public async toRequest(request: Request, url?: URL): Promise<IHttpRequest> {
     const parsedUrl = url ?? new URL(request.url);
 
     return {
       method: request.method.toUpperCase() as HttpMethod,
       path: parsedUrl.pathname,
-      header: this.extractHeaders(request.headers),
-      query: this.extractQueryParams(parsedUrl),
-      param:
-        pathParams && Object.keys(pathParams).length > 0
-          ? pathParams
-          : undefined,
+      header: FetchApiAdapter.extractHeaders(request.headers),
+      query: FetchApiAdapter.extractQueryParams(parsedUrl),
       body: await this.parseRequestBody(request),
     };
   }
@@ -77,43 +75,58 @@ export class FetchApiAdapter {
   public toResponse(response: IHttpResponse): Response {
     const { statusCode, body, header } = response;
 
-    return new Response(this.buildResponseBody(body), {
+    return new Response(FetchApiAdapter.serializeResponseBody(body), {
       status: statusCode,
-      headers: this.buildResponseHeaders(header, body),
+      headers: FetchApiAdapter.buildResponseHeaders(header, body),
     });
   }
 
-  private addMultiValue(
-    record: Record<string, string | string[]>,
-    key: string,
-    value: string,
-  ): void {
-    const existing = record[key];
-    if (existing) {
-      if (Array.isArray(existing)) {
-        existing.push(value);
-      } else {
-        record[key] = [existing, value];
-      }
-    } else {
-      record[key] = value;
-    }
+  private static extractMediaType(contentType: string | null): string | null {
+    if (!contentType) return null;
+    return contentType.split(";")[0]!.trim().toLowerCase();
   }
 
-  private extractHeaders(headers: Headers): IHttpHeader {
-    if (!headers) return undefined;
-    const result: Record<string, string | string[]> = {};
+  private static isJsonContentType(contentType: string | null): boolean {
+    const mediaType = FetchApiAdapter.extractMediaType(contentType);
+    if (!mediaType) return false;
+    return mediaType === "application/json" || mediaType.endsWith("+json");
+  }
+
+  private static isTextContentType(contentType: string | null): boolean {
+    const mediaType = FetchApiAdapter.extractMediaType(contentType);
+    if (!mediaType) return false;
+    return mediaType.startsWith("text/");
+  }
+
+  private static isFormUrlencodedContentType(
+    contentType: string | null,
+  ): boolean {
+    return (
+      FetchApiAdapter.extractMediaType(contentType) ===
+      "application/x-www-form-urlencoded"
+    );
+  }
+
+  private static isMultipartFormDataContentType(
+    contentType: string | null,
+  ): boolean {
+    return (
+      FetchApiAdapter.extractMediaType(contentType) === "multipart/form-data"
+    );
+  }
+
+  private static extractHeaders(headers: Headers): IHttpHeader {
+    const result: Record<string, string | string[]> = Object.create(null);
     headers.forEach((value, key) => {
-      if (!value) return;
-      this.addMultiValue(result, key, value);
+      FetchApiAdapter.addMultiValue(result, key, value);
     });
     return Object.keys(result).length > 0 ? result : undefined;
   }
 
-  private extractQueryParams(url: URL): IHttpQuery {
-    const result: Record<string, string | string[]> = {};
+  private static extractQueryParams(url: URL): IHttpQuery {
+    const result: Record<string, string | string[]> = Object.create(null);
     url.searchParams.forEach((value, key) => {
-      this.addMultiValue(result, key, value);
+      FetchApiAdapter.addMultiValue(result, key, value);
     });
     return Object.keys(result).length > 0 ? result : undefined;
   }
@@ -121,100 +134,229 @@ export class FetchApiAdapter {
   private async parseRequestBody(request: Request): Promise<IHttpBody> {
     if (!request.body) return undefined;
 
-    const contentType = request.headers.get("content-type");
+    const checkedRequest = await this.enforceBodySizeLimit(request);
+    const contentType = checkedRequest.headers.get("content-type");
 
-    if (contentType?.includes("application/json")) {
-      try {
-        return await request.json();
-      } catch {
-        throw new BodyParseError("Invalid JSON in request body");
-      }
+    if (FetchApiAdapter.isJsonContentType(contentType)) {
+      return FetchApiAdapter.parseJsonBody(checkedRequest);
     }
-
-    if (contentType?.includes("text/")) {
-      return await request.text();
+    if (FetchApiAdapter.isTextContentType(contentType)) {
+      return FetchApiAdapter.parseTextBody(checkedRequest);
     }
+    if (FetchApiAdapter.isFormUrlencodedContentType(contentType)) {
+      return FetchApiAdapter.parseFormUrlencodedBody(checkedRequest);
+    }
+    if (FetchApiAdapter.isMultipartFormDataContentType(contentType)) {
+      return FetchApiAdapter.parseMultipartBody(checkedRequest);
+    }
+    return FetchApiAdapter.parseRawBody(checkedRequest);
+  }
 
-    if (contentType?.includes("application/x-www-form-urlencoded")) {
+  private static async parseJsonBody(request: Request): Promise<IHttpBody> {
+    try {
       const text = await request.text();
-      const formData = new URLSearchParams(text);
-      const formObject: Record<string, string | string[]> = {};
-      formData.forEach((value, key) => {
-        this.addMultiValue(formObject, key, value);
+      return JSON.parse(text, (key, value) => {
+        if (key === "__proto__") return undefined;
+        return value;
       });
-      return formObject;
+    } catch (error) {
+      throw new BodyParseError("Invalid JSON in request body", {
+        cause: error,
+      });
+    }
+  }
+
+  private static async parseTextBody(request: Request): Promise<IHttpBody> {
+    try {
+      return await request.text();
+    } catch (error) {
+      throw new BodyParseError("Failed to read text request body", {
+        cause: error,
+      });
+    }
+  }
+
+  private static async parseFormUrlencodedBody(
+    request: Request,
+  ): Promise<IHttpBody> {
+    let text: string;
+    try {
+      text = await request.text();
+    } catch (error) {
+      throw new BodyParseError("Failed to read form-urlencoded request body", {
+        cause: error,
+      });
     }
 
-    if (contentType?.includes("multipart/form-data")) {
-      try {
-        const formData = await request.formData();
-        const formObject: Record<string, string | File | (string | File)[]> =
-          {};
-        formData.forEach((value, key) => {
-          const existing = formObject[key];
-          if (existing) {
-            if (Array.isArray(existing)) {
-              existing.push(value);
-            } else {
-              formObject[key] = [existing, value];
-            }
-          } else {
-            formObject[key] = value;
-          }
-        });
-        return formObject;
-      } catch {
-        throw new BodyParseError("Invalid multipart/form-data in request body");
+    const result: Record<string, string | string[]> = Object.create(null);
+    new URLSearchParams(text).forEach((value, key) => {
+      FetchApiAdapter.addMultiValue(result, key, value);
+    });
+    return result;
+  }
+
+  private static async parseMultipartBody(
+    request: Request,
+  ): Promise<IHttpBody> {
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch (error) {
+      throw new BodyParseError("Invalid multipart/form-data in request body", {
+        cause: error,
+      });
+    }
+
+    const result: Record<string, string | File | (string | File)[]> =
+      Object.create(null);
+    formData.forEach((value, key) => {
+      const existing = result[key];
+      if (!existing) {
+        result[key] = value;
+      } else if (Array.isArray(existing)) {
+        existing.push(value);
+      } else {
+        result[key] = [existing, value];
       }
-    }
-
-    const rawBody = await request.text();
-    return rawBody || undefined;
+    });
+    return result;
   }
 
-  private buildResponseBody(body: any): string | ArrayBuffer | Blob | null {
-    if (body === undefined || body === null) {
-      return null;
+  private static async parseRawBody(request: Request): Promise<IHttpBody> {
+    try {
+      const text = await request.text();
+      return text || undefined;
+    } catch (error) {
+      throw new BodyParseError("Failed to read request body", {
+        cause: error,
+      });
     }
-
-    if (
-      typeof body === "string" ||
-      body instanceof Blob ||
-      body instanceof ArrayBuffer
-    ) {
-      return body;
-    }
-
-    return JSON.stringify(body);
   }
 
-  private buildResponseHeaders(header?: IHttpHeader, body?: any): Headers {
+  private async enforceBodySizeLimit(request: Request): Promise<Request> {
+    const contentLengthHeader = request.headers.get("content-length");
+    if (contentLengthHeader === null) {
+      return this.readBodyWithLimit(request);
+    }
+
+    const contentLength = Number(contentLengthHeader);
+    if (!Number.isFinite(contentLength) || contentLength < 0) {
+      return this.readBodyWithLimit(request);
+    }
+
+    if (contentLength > this.maxBodySize) {
+      throw new PayloadTooLargeError(contentLength, this.maxBodySize);
+    }
+
+    return request;
+  }
+
+  private async readBodyWithLimit(request: Request): Promise<Request> {
+    if (!request.body) return request;
+
+    const reader = request.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let totalBytes = 0;
+
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        totalBytes += value.byteLength;
+        if (totalBytes > this.maxBodySize) {
+          await reader.cancel();
+          throw new PayloadTooLargeError(totalBytes, this.maxBodySize);
+        }
+        chunks.push(value);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    return new Request(request.url, {
+      method: request.method,
+      headers: request.headers,
+      body: FetchApiAdapter.concatChunks(chunks, totalBytes),
+    });
+  }
+
+  private static concatChunks(
+    chunks: Uint8Array[],
+    totalBytes: number,
+  ): Uint8Array {
+    const buffer = new Uint8Array(totalBytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      buffer.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return buffer;
+  }
+
+  private static serializeResponseBody(
+    body: any,
+  ): string | ArrayBuffer | Blob | null {
+    if (body === undefined || body === null) return null;
+    if (typeof body === "string") return body;
+    if (body instanceof Blob || body instanceof ArrayBuffer) return body;
+
+    try {
+      return JSON.stringify(body);
+    } catch (error) {
+      throw new ResponseSerializationError(
+        "Failed to serialize response body to JSON",
+        { cause: error },
+      );
+    }
+  }
+
+  private static buildResponseHeaders(
+    header?: IHttpHeader,
+    body?: any,
+  ): Headers {
     const headers = new Headers();
 
     if (header) {
-      Object.entries(header).forEach(([key, value]) => {
-        if (value !== undefined) {
-          if (Array.isArray(value)) {
-            value.forEach((v) => headers.append(key, v));
-          } else {
-            headers.set(key, String(value));
-          }
+      for (const [key, value] of Object.entries(header)) {
+        if (value === undefined) continue;
+        if (Array.isArray(value)) {
+          for (const v of value) headers.append(key, v);
+        } else {
+          headers.set(key, String(value));
         }
-      });
+      }
     }
 
-    // Set Content-Type if not already set and body is an object (JSON)
-    if (
-      !headers.has("content-type") &&
+    if (!headers.has("content-type") && FetchApiAdapter.isJsonBody(body)) {
+      headers.set("content-type", "application/json");
+    }
+
+    return headers;
+  }
+
+  private static isJsonBody(body: any): boolean {
+    return (
       body !== undefined &&
       body !== null &&
       typeof body !== "string" &&
       !(body instanceof Blob) &&
       !(body instanceof ArrayBuffer)
-    ) {
-      headers.set("content-type", "application/json");
-    }
+    );
+  }
 
-    return headers;
+  private static addMultiValue(
+    record: Record<string, string | string[]>,
+    key: string,
+    value: string,
+  ): void {
+    const existing = record[key];
+    if (!existing) {
+      record[key] = value;
+    } else if (Array.isArray(existing)) {
+      existing.push(value);
+    } else {
+      record[key] = [existing, value];
+    }
   }
 }
