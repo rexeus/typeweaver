@@ -2,7 +2,10 @@ import { HttpResponse } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { AccountRouter } from "../test-project/output/account/AccountRouter";
 import { AuthRouter } from "../test-project/output/auth/AuthRouter";
-import { TypeweaverApp } from "../test-project/output/lib/server";
+import {
+  defineMiddleware,
+  TypeweaverApp,
+} from "../test-project/output/lib/server";
 import { TodoRouter } from "../test-project/output/todo/TodoRouter";
 import { ServerAccountHandlers } from "./handlers/ServerAccountHandlers";
 import { ServerAuthHandlers } from "./handlers/ServerAuthHandlers";
@@ -41,9 +44,11 @@ export function createTestApp(options?: TestAppOptions): TypeweaverApp {
   const app = new TypeweaverApp();
 
   if (options?.customResponses) {
-    app.use(async (_ctx, _next) => {
-      return options.customResponses!;
-    });
+    app.use(
+      defineMiddleware(async (_ctx, _next) => {
+        return options.customResponses!;
+      })
+    );
   }
 
   const todoRouter = new TodoRouter({

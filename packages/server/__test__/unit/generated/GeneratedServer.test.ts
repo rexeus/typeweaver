@@ -8,6 +8,7 @@ import {
   createTestApp,
   createUpdateTodoRequest,
   createUpdateTodoStatusRequest,
+  defineMiddleware,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
 import {
@@ -429,10 +430,12 @@ describe("Generated Server Router", () => {
     test("should execute global middleware for all requests", async () => {
       const app = createTestApp();
       let middlewareExecuted = false;
-      app.use(async (_ctx, next) => {
-        middlewareExecuted = true;
-        return next();
-      });
+      app.use(
+        defineMiddleware(async (_ctx, next) => {
+          middlewareExecuted = true;
+          return next();
+        })
+      );
       const requestData = createCreateTodoRequest();
 
       await app.fetch(buildFetchRequest(`${BASE_URL}/todos`, requestData));
@@ -443,10 +446,12 @@ describe("Generated Server Router", () => {
     test("should execute middleware even for 404 responses", async () => {
       const app = createTestApp();
       let middlewareExecuted = false;
-      app.use(async (_ctx, next) => {
-        middlewareExecuted = true;
-        return next();
-      });
+      app.use(
+        defineMiddleware(async (_ctx, next) => {
+          middlewareExecuted = true;
+          return next();
+        })
+      );
 
       await app.fetch(
         new Request(`${BASE_URL}/unknown-path`, { method: "GET" })
