@@ -62,7 +62,11 @@ export function head(path: string): Request {
   return new Request(BASE_URL + path, { method: "HEAD" });
 }
 
-export function postRaw(path: string, body: string, contentType: string): Request {
+export function postRaw(
+  path: string,
+  body: string,
+  contentType: string
+): Request {
   return new Request(BASE_URL + path, {
     method: "POST",
     headers: {

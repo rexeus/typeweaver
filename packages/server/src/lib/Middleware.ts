@@ -50,7 +50,7 @@ export async function executeMiddlewarePipeline(
       const currentIndex = index++;
       let called = false;
 
-      return middlewares[currentIndex]!(ctx, async (state) => {
+      return middlewares[currentIndex]!(ctx, async state => {
         if (called) {
           throw new Error("next() called multiple times");
         }

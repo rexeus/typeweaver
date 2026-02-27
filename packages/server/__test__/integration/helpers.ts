@@ -71,7 +71,7 @@ export function spawnRuntimeServer(
       }
     });
 
-    child.on("error", (err) => {
+    child.on("error", err => {
       clearTimeout(timeout);
       reject(
         new Error(
@@ -80,7 +80,7 @@ export function spawnRuntimeServer(
       );
     });
 
-    child.on("exit", (code) => {
+    child.on("exit", code => {
       clearTimeout(timeout);
       if (code !== null && code !== 0) {
         reject(

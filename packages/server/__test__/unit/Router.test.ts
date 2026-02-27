@@ -415,13 +415,19 @@ describe("Router (Radix Tree)", () => {
 
       const staticMatch = router.match("GET", "/items/special/info");
       assert(staticMatch);
-      const staticRes = await staticMatch.route.handler({} as any, createServerContext());
+      const staticRes = await staticMatch.route.handler(
+        {} as any,
+        createServerContext()
+      );
       expect(staticRes.body.routeId).toBe("static-deep");
 
       const paramMatch = router.match("GET", "/items/special/details");
       assert(paramMatch);
       expect(paramMatch.params).toEqual({ itemId: "special" });
-      const paramRes = await paramMatch.route.handler({} as any, createServerContext());
+      const paramRes = await paramMatch.route.handler(
+        {} as any,
+        createServerContext()
+      );
       expect(paramRes.body.routeId).toBe("param-deep");
     });
 
@@ -473,7 +479,9 @@ describe("Router (Radix Tree)", () => {
       const router = new Router();
       router.add(createRoute("GET", "/users/:userId"));
 
-      expect(() => router.add(createRoute("GET", "/users/:id/profile"))).toThrow(
+      expect(() =>
+        router.add(createRoute("GET", "/users/:id/profile"))
+      ).toThrow(
         'Conflicting path parameter names at "/users/:id/profile": ":userId" vs ":id"'
       );
     });
@@ -496,5 +504,4 @@ describe("Router (Radix Tree)", () => {
       );
     });
   });
-
 });

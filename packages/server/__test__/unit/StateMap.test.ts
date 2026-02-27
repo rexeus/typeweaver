@@ -65,7 +65,12 @@ describe("StateMap", () => {
 
     test("should skip __proto__, constructor, and prototype keys", () => {
       const state = new StateMap();
-      state.merge({ __proto__: { evil: true }, constructor: "bad", prototype: "bad", userId: "u_1" });
+      state.merge({
+        __proto__: { evil: true },
+        constructor: "bad",
+        prototype: "bad",
+        userId: "u_1",
+      });
       expect(state.get("userId")).toBe("u_1");
       expect(state.has("__proto__" as any)).toBe(false);
       expect(state.has("constructor" as any)).toBe(false);

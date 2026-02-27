@@ -96,9 +96,8 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
     TProv extends Record<string, unknown>,
     TReq extends Record<string, unknown>,
   >(
-    middleware: TypedMiddleware<TProv, TReq> & (
-      [TState] extends [TReq] ? unknown : StateRequirementError<TReq, TState>
-    )
+    middleware: TypedMiddleware<TProv, TReq> &
+      ([TState] extends [TReq] ? unknown : StateRequirementError<TReq, TState>)
   ): TypeweaverApp<TState & TProv> {
     this.middlewares.push(middleware.handler);
     return this as unknown as TypeweaverApp<TState & TProv>;
@@ -163,7 +162,10 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
         this.safeOnError(error);
         return this.adapter.toResponse({
           statusCode: 413,
-          body: { code: "PAYLOAD_TOO_LARGE", message: "Request body exceeds the size limit" },
+          body: {
+            code: "PAYLOAD_TOO_LARGE",
+            message: "Request body exceeds the size limit",
+          },
         });
       }
       if (error instanceof BodyParseError) {
@@ -222,7 +224,10 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
       return {
         statusCode: 405,
         header: { Allow: pathMatch.allowedMethods.join(", ") },
-        body: { code: "METHOD_NOT_ALLOWED", message: "Method not supported for this resource" },
+        body: {
+          code: "METHOD_NOT_ALLOWED",
+          message: "Method not supported for this resource",
+        },
       };
     }
 

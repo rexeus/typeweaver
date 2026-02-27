@@ -172,9 +172,7 @@ describe("nodeAdapter", () => {
     test("returns 500 JSON when app.fetch rejects", async () => {
       const app = new TypeweaverApp();
       vi.spyOn(app, "fetch").mockRejectedValue(new Error("boom"));
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(vi.fn());
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
 
       const handler = nodeAdapter(app);
       const req = createMockIncomingMessage("GET", "/");
@@ -197,9 +195,7 @@ describe("nodeAdapter", () => {
       const app = new TypeweaverApp();
       const error = new Error("something broke");
       vi.spyOn(app, "fetch").mockRejectedValue(error);
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(vi.fn());
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
 
       const handler = nodeAdapter(app);
       const req = createMockIncomingMessage("GET", "/");

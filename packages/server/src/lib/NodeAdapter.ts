@@ -91,7 +91,10 @@ async function handleRequest(
   }
 }
 
-function collectBody(req: IncomingMessage, maxBodySize: number): Promise<string> {
+function collectBody(
+  req: IncomingMessage,
+  maxBodySize: number
+): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const chunks: Buffer[] = [];
     let totalBytes = 0;
@@ -106,7 +109,9 @@ function collectBody(req: IncomingMessage, maxBodySize: number): Promise<string>
       chunks.push(chunk);
     });
 
-    req.on("end", () => resolve(Buffer.concat(chunks, totalBytes).toString("utf8")));
+    req.on("end", () =>
+      resolve(Buffer.concat(chunks, totalBytes).toString("utf8"))
+    );
     req.on("error", reject);
   });
 }

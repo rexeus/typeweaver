@@ -65,10 +65,11 @@ export type StateRequirementError<
  *
  * @template TProvides - The state keys this middleware declares it provides
  */
-export type NextFn<TProvides extends Record<string, unknown>> =
-  [keyof TProvides] extends [never]
-    ? () => Promise<IHttpResponse>
-    : (state: TProvides) => Promise<IHttpResponse>;
+export type NextFn<TProvides extends Record<string, unknown>> = [
+  keyof TProvides,
+] extends [never]
+  ? () => Promise<IHttpResponse>
+  : (state: TProvides) => Promise<IHttpResponse>;
 
 /**
  * Creates a typed middleware descriptor.

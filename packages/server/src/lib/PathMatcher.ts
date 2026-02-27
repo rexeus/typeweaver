@@ -32,22 +32,20 @@
 export function pathMatcher(pattern: string): (path: string) => boolean {
   if (pattern.endsWith("/*")) {
     const prefix = pattern.slice(0, -2);
-    return (path) => path === prefix || path.startsWith(prefix + "/");
+    return path => path === prefix || path.startsWith(prefix + "/");
   }
 
   const segments = pattern.split("/");
-  const hasParams = segments.some((s) => s.startsWith(":"));
+  const hasParams = segments.some(s => s.startsWith(":"));
 
   if (!hasParams) {
-    return (path) => path === pattern;
+    return path => path === pattern;
   }
 
   const segmentCount = segments.length;
-  const matchers = segments.map((s) =>
-    s.startsWith(":") ? null : s
-  );
+  const matchers = segments.map(s => (s.startsWith(":") ? null : s));
 
-  return (path) => {
+  return path => {
     const parts = path.split("/");
     if (parts.length !== segmentCount) return false;
     for (let i = 0; i < segmentCount; i++) {

@@ -29,7 +29,9 @@
  * typed.get("nonexistent");         // ✗ compile error
  * ```
  */
-export class StateMap<TState extends Record<string, unknown> = Record<string, unknown>> {
+export class StateMap<
+  TState extends Record<string, unknown> = Record<string, unknown>,
+> {
   private readonly map = new Map<string, unknown>();
 
   public set<K extends string & keyof TState>(key: K, value: TState[K]): void {

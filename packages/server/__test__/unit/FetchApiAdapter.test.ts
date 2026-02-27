@@ -293,7 +293,9 @@ describe("FetchApiAdapter", () => {
         const adapter = new FetchApiAdapter();
         const request = new Request(`${BASE_URL}/todos`, {
           method: "POST",
-          headers: { "Content-Type": "application/vnd.api+json; charset=utf-8" },
+          headers: {
+            "Content-Type": "application/vnd.api+json; charset=utf-8",
+          },
           body: JSON.stringify({ title: "Test" }),
         });
 
@@ -359,8 +361,7 @@ describe("FetchApiAdapter", () => {
         const request = new Request(`${BASE_URL}/todos`, {
           method: "POST",
           headers: {
-            "Content-Type":
-              "application/x-www-form-urlencoded; charset=utf-8",
+            "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
           },
           body: "title=Test",
         });
@@ -456,7 +457,8 @@ describe("FetchApiAdapter", () => {
 
       test("should strip nested __proto__ from JSON body", async () => {
         const adapter = new FetchApiAdapter();
-        const body = '{"user": {"__proto__": {"isAdmin": true}, "name": "test"}}';
+        const body =
+          '{"user": {"__proto__": {"isAdmin": true}, "name": "test"}}';
         const request = new Request(`${BASE_URL}/todos`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -613,7 +615,9 @@ describe("FetchApiAdapter", () => {
         });
         request.headers.delete("content-length");
 
-        await expect(adapter.toRequest(request)).rejects.toThrow(PayloadTooLargeError);
+        await expect(adapter.toRequest(request)).rejects.toThrow(
+          PayloadTooLargeError
+        );
       });
 
       test("should accept body within limit when Content-Length header is missing", async () => {
@@ -656,7 +660,9 @@ describe("FetchApiAdapter", () => {
         });
         request.headers.delete("content-length");
 
-        await expect(adapter.toRequest(request)).rejects.toThrow(PayloadTooLargeError);
+        await expect(adapter.toRequest(request)).rejects.toThrow(
+          PayloadTooLargeError
+        );
       });
     });
   });
@@ -715,7 +721,9 @@ describe("FetchApiAdapter", () => {
 
     test("should handle Blob body without auto content-type", async () => {
       const adapter = new FetchApiAdapter();
-      const blob = new Blob(["binary data"], { type: "application/octet-stream" });
+      const blob = new Blob(["binary data"], {
+        type: "application/octet-stream",
+      });
 
       const response = adapter.toResponse({
         statusCode: 200,
