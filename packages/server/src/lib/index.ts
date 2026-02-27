@@ -24,3 +24,4 @@ export {
   ResponseSerializationError,
 } from "./Errors";
 export { FetchApiAdapter } from "./FetchApiAdapter";
+export { nodeAdapter } from "./NodeAdapter";

@@ -144,29 +144,12 @@ Deno.serve({ port: 3000 }, app.fetch);
 
 **Node.js**
 
-Node.js requires converting between `http.IncomingMessage` and Fetch API `Request`:
-
 ```ts
 import { createServer } from "node:http";
+import { nodeAdapter } from "./generated/lib/server";
 import app from "./server";
 
-const server = createServer(async (req, res) => {
-  const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
-  const body = await new Promise<string>(resolve => {
-    let data = "";
-    req.on("data", chunk => (data += chunk));
-    req.on("end", () => resolve(data));
-  });
-  const request = new Request(url, {
-    method: req.method,
-    headers: req.headers as HeadersInit,
-    body: ["GET", "HEAD"].includes(req.method!) ? undefined : body,
-  });
-  const response = await app.fetch(request);
-  res.writeHead(response.status, Object.fromEntries(response.headers));
-  res.end(await response.text());
-});
-server.listen(3000);
+createServer(nodeAdapter(app)).listen(3000);
 ```
 
 ### Multiple routers
@@ -241,7 +224,7 @@ const app = new TypeweaverApp({
 });
 ```
 
-### ⚙️ Configuration
+### ⚙️ Router Configuration
 
 Each router accepts `TypeweaverRouterOptions`:
 
@@ -254,16 +237,92 @@ Each router accepts `TypeweaverRouterOptions`:
 | `handleUnknownErrors`      | `boolean \| function`  | `true`     | Handle unexpected errors           |
 
 When set to `true`, error handlers use sensible defaults (400/500 responses). When set to `false`,
-errors fall through to the next handler in the chain. When set to a function, it receives
-`(error, ctx)` and must return an `IHttpResponse`:
+errors fall through to the next handler in the chain. When set to a function, it receives the error
+and `ServerContext` and must return an `IHttpResponse`.
+
+### 🚨 Error Handling
+
+#### Throwing errors in handlers
+
+All generated error response classes (e.g. `NotFoundErrorResponse`, `ValidationErrorResponse`)
+extend `HttpResponse`. Throw them in your handlers — the framework catches them automatically:
+
+```ts
+import { HttpStatusCode } from "@rexeus/typeweaver-core";
+import { GetUserSuccessResponse, NotFoundErrorResponse } from "./generated";
+
+async handleGetUserRequest(request) {
+  const user = await db.findUser(request.param.userId);
+  if (!user) {
+    throw new NotFoundErrorResponse({
+      statusCode: HttpStatusCode.NOT_FOUND,
+      header: { "Content-Type": "application/json" },
+      body: { message: "Resource not found", code: "NOT_FOUND_ERROR" },
+    });
+  }
+  return new GetUserSuccessResponse({
+    statusCode: HttpStatusCode.OK,
+    header: { "Content-Type": "application/json" },
+    body: user,
+  });
+}
+```
+
+When `handleHttpResponseErrors` is `true` (the default), thrown `HttpResponse` instances are
+returned as-is. No extra configuration needed.
+
+#### Custom error mapping
+
+Use custom handler functions to transform errors into your own response shape.
+
+**Validation errors** — map framework validation errors to your spec-defined format:
 
 ```ts
 new UserRouter({
   requestHandlers: userHandlers,
-  handleValidationErrors: (error, ctx) => ({
-    statusCode: 400,
-    body: { message: "Validation failed", details: error.message },
-  }),
+  handleValidationErrors: (error, ctx) =>
+    new ValidationErrorResponse({
+      statusCode: HttpStatusCode.BAD_REQUEST,
+      header: { "Content-Type": "application/json" },
+      body: {
+        code: "VALIDATION_ERROR",
+        message: "Request is invalid",
+        issues: {
+          body: error.bodyIssues,
+          query: error.queryIssues,
+          param: error.pathParamIssues,
+          header: error.headerIssues,
+        },
+      },
+    }),
+});
+```
+
+**HTTP response errors** — log thrown errors and pass them through:
+
+```ts
+new UserRouter({
+  requestHandlers: userHandlers,
+  handleHttpResponseErrors: (error, ctx) => {
+    logger.warn("HTTP error", { status: error.statusCode, path: ctx.request.path });
+    return error;
+  },
+});
+```
+
+**Unknown errors** — catch unexpected failures and return a safe response:
+
+```ts
+new UserRouter({
+  requestHandlers: userHandlers,
+  handleUnknownErrors: (error, ctx) => {
+    logger.error("Unhandled error", { error, path: ctx.request.path });
+    return new InternalServerErrorResponse({
+      statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
+      header: { "Content-Type": "application/json" },
+      body: { code: "INTERNAL_SERVER_ERROR", message: "Something went wrong" },
+    });
+  },
 });
 ```
 

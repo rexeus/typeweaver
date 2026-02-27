@@ -26,3 +26,4 @@ export { executeMiddlewarePipeline } from "./Middleware";
 export type { ServerContext } from "./ServerContext";
 export type { RequestHandler } from "./RequestHandler";
 export { FetchApiAdapter, BodyParseError } from "./FetchApiAdapter";
+export { nodeAdapter } from "./NodeAdapter";
