@@ -3,7 +3,7 @@ import path from "node:path";
 
 type FormatFn = (filename: string, source: string) => Promise<{ code: string }>;
 
-export class Prettier {
+export class Formatter {
   public constructor(private readonly outputDir: string) {}
 
   public async formatCode(startDir?: string): Promise<void> {

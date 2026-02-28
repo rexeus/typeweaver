@@ -42,7 +42,7 @@ program
   .option("-c, --config <configFile>", "path to configuration file")
   .option("-p, --plugins <plugins>", "comma-separated list of plugins to use")
   .option("--format", "format generated code with oxfmt (default: true)")
-  .option("--no-format", "disable formatting")
+  .option("--no-format", "disable code formatting")
   .option("--clean", "clean output directory before generation (default: true)")
   .option("--no-clean", "disable cleaning output directory")
   .action(async (options: CommandOptions) => {

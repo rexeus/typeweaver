@@ -95,7 +95,7 @@ bunx typeweaver generate --input ./api/definition --output ./api/generated --plu
 - `--config, -c <path>`: Configuration file path (optional)
 - `--plugins, -p <plugins>`: Comma-separated list of plugins to use (e.g., "clients,hono" or "all"
   for all plugins)
-- `--prettier / --no-prettier`: Enable/disable code formatting with Prettier (default: true)
+- `--format / --no-format`: Enable/disable code formatting with oxfmt (default: true)
 - `--clean / --no-clean`: Enable/disable output directory cleaning (default: true)
 
 ### 📝 Configuration File
@@ -107,7 +107,7 @@ export default {
   input: "./api/definition",
   output: "./api/generated",
   plugins: ["clients", "hono", "aws-cdk"],
-  prettier: true,
+  format: true,
   clean: true,
 };
 ```

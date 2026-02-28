@@ -87,7 +87,7 @@ export class TodoHandlers implements HonoTodoApiHandler {
   }
 
   public async handleDeleteTodoRequest(
-    request: IDeleteTodoRequest
+    _request: IDeleteTodoRequest
   ): Promise<DeleteTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
@@ -171,7 +171,7 @@ export class TodoHandlers implements HonoTodoApiHandler {
   }
 
   public async handleListTodosRequest(
-    request: IListTodosRequest
+    _request: IListTodosRequest
   ): Promise<ListTodosResponse> {
     if (this.throwError) {
       throw this.throwError;
@@ -201,7 +201,7 @@ export class TodoHandlers implements HonoTodoApiHandler {
   }
 
   public async handleDeleteSubTodoRequest(
-    request: IDeleteSubTodoRequest
+    _request: IDeleteSubTodoRequest
   ): Promise<DeleteSubTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
