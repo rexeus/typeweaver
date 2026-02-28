@@ -1,5 +1,21 @@
 # @rexeus/typeweaver-types
 
+## 0.6.1
+
+### Patch Changes
+
+- edd224c: Fix generated code issues and stabilize CLI binary resolution
+
+  - Fix trailing comma in Response.ejs template that produced `HttpResponse<Header, Body,>` in
+    generated response classes
+  - Widen `TypeweaverRouter` generic constraint from `RequestHandler` to
+    `RequestHandler<any, any, any>` to resolve contravariance error under `strictFunctionTypes`
+  - Add persistent `bin/` wrapper for CLI so pnpm creates the binary symlink reliably before the first
+    build
+  - @rexeus/typeweaver-core@0.6.1
+  - @rexeus/typeweaver-gen@0.6.1
+  - @rexeus/typeweaver-zod-to-ts@0.6.1
+
 ## 0.6.0
 
 ### Minor Changes
