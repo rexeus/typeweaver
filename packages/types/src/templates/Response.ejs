@@ -29,7 +29,7 @@ import type { I<%= sharedResponse.name %>Response, <%= sharedResponse.name %>Res
 
     export class <%= ownResponse.name %>Response extends HttpResponse<
             <%= ownResponse.header ? `I${ownResponse.name}ResponseHeader` : 'undefined' %>,
-            <%= ownResponse.body ? `I${ownResponse.name}ResponseBody` : 'undefined' %>,
+            <%= ownResponse.body ? `I${ownResponse.name}ResponseBody` : 'undefined' %>
             > implements I<%= ownResponse.name %>Response {
         public override readonly statusCode: HttpStatusCode.<%= ownResponse.statusCodeKey %>;
 

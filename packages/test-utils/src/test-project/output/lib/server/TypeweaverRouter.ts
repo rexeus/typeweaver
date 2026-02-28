@@ -22,7 +22,9 @@ import type {
  *
  * @template RequestHandlers - Object type containing all handler methods for this router
  */
-export type TypeweaverRouterOptions<RequestHandlers extends Record<string, RequestHandler>> = {
+export type TypeweaverRouterOptions<
+  RequestHandlers extends Record<string, RequestHandler<any, any, any>>,
+> = {
   /**
    * Request handler methods for each operation.
    * Each handler receives a validated request and the server context.
@@ -78,7 +80,9 @@ export type TypeweaverRouterOptions<RequestHandlers extends Record<string, Reque
  *
  * @template RequestHandlers - Object type containing typed handler methods
  */
-export abstract class TypeweaverRouter<RequestHandlers extends Record<string, RequestHandler>> {
+export abstract class TypeweaverRouter<
+  RequestHandlers extends Record<string, RequestHandler<any, any, any>>,
+> {
   protected readonly requestHandlers: RequestHandlers;
   private readonly routes: RouteDefinition[] = [];
   private readonly errorConfig: RouterErrorConfig;
