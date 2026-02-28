@@ -16,7 +16,7 @@ export function requestId(options?: RequestIdOptions) {
       typeof existing === "string"
         ? existing
         : Array.isArray(existing)
-          ? existing[0]!
+          ? (existing[0] ?? generator())
           : generator();
 
     const response = await next({ requestId: id });

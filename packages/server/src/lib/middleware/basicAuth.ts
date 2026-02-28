@@ -45,7 +45,7 @@ export function basicAuth(options: BasicAuthOptions) {
     }
 
     const colonIndex = decoded.indexOf(":");
-    if (colonIndex === -1) return deny(ctx);
+    if (colonIndex <= 0) return deny(ctx);
 
     const username = decoded.slice(0, colonIndex);
     const password = decoded.slice(colonIndex + 1);

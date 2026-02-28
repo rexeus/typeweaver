@@ -59,6 +59,21 @@ describe("basicAuth", () => {
     expect(response.statusCode).toBe(401);
   });
 
+  test("should return 401 when username is empty (RFC 7617)", async () => {
+    const mw = basicAuth({ verifyCredentials: alwaysValid });
+    const ctx = createServerContext({
+      header: { authorization: `Basic ${encode(":password")}` },
+    });
+
+    const response = await executeMiddlewarePipeline(
+      [mw.handler],
+      ctx,
+      async () => ({ statusCode: 200 })
+    );
+
+    expect(response.statusCode).toBe(401);
+  });
+
   test("should return 401 when decoded string has no colon", async () => {
     const mw = basicAuth({ verifyCredentials: alwaysValid });
     const ctx = createServerContext({
