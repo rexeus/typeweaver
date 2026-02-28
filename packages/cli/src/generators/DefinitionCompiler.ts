@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { transformSync } from "oxc-transform";
+import { DefinitionCompilationError } from "./errors/DefinitionCompilationError.js";
 
 /**
  * Compiles TypeScript definition files to JavaScript + declaration stubs.
@@ -16,17 +17,32 @@ export class DefinitionCompiler {
    * The original .ts files are removed after compilation.
    */
   public compileInPlace(definitionDir: string): void {
-    this.processDirectory(definitionDir);
+    const errors: DefinitionCompilationError[] = [];
+    this.processDirectory(definitionDir, errors);
+
+    if (errors.length > 0) {
+      const summary = errors
+        .map((e) => `  - ${e.filePath}: ${e.details}`)
+        .join("\n");
+
+      throw new DefinitionCompilationError(
+        definitionDir,
+        `${errors.length} file(s) failed to compile:\n${summary}`
+      );
+    }
   }
 
-  private processDirectory(dir: string): void {
+  private processDirectory(
+    dir: string,
+    errors: DefinitionCompilationError[]
+  ): void {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
 
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
 
       if (entry.isDirectory()) {
-        this.processDirectory(fullPath);
+        this.processDirectory(fullPath, errors);
         continue;
       }
 
@@ -35,21 +51,40 @@ export class DefinitionCompiler {
         entry.name.endsWith(".ts") &&
         !entry.name.endsWith(".d.ts")
       ) {
-        this.compileFile(fullPath, dir, entry.name);
+        try {
+          this.compileFile(fullPath, dir, entry.name);
+        } catch (error) {
+          errors.push(
+            error instanceof DefinitionCompilationError
+              ? error
+              : new DefinitionCompilationError(fullPath, String(error))
+          );
+        }
       }
     }
   }
 
   private compileFile(srcPath: string, dir: string, fileName: string): void {
-    const source = fs.readFileSync(srcPath, "utf-8");
-    const baseName = fileName.replace(/\.ts$/, "");
+    try {
+      const source = fs.readFileSync(srcPath, "utf-8");
+      const baseName = fileName.replace(/\.ts$/, "");
 
-    const jsCode = this.transpileToJs(fileName, source);
-    const dtsCode = this.generateDtsStub(source);
+      const jsCode = this.transpileToJs(fileName, source);
+      const dtsCode = this.generateDtsStub(source);
 
-    fs.writeFileSync(path.join(dir, `${baseName}.js`), jsCode);
-    fs.writeFileSync(path.join(dir, `${baseName}.d.ts`), dtsCode);
-    fs.unlinkSync(srcPath);
+      fs.writeFileSync(path.join(dir, `${baseName}.js`), jsCode);
+      fs.writeFileSync(path.join(dir, `${baseName}.d.ts`), dtsCode);
+      fs.unlinkSync(srcPath);
+    } catch (error) {
+      throw new DefinitionCompilationError(
+        srcPath,
+        error instanceof DefinitionCompilationError
+          ? error.details
+          : error instanceof Error
+            ? error.message
+            : String(error)
+      );
+    }
   }
 
   private transpileToJs(fileName: string, source: string): string {
@@ -57,6 +92,13 @@ export class DefinitionCompiler {
       lang: "ts",
       sourceType: "module",
     });
+
+    const errors = result.errors.filter((e) => e.severity === "Error");
+    if (errors.length > 0) {
+      const messages = errors.map((e) => e.message).join("; ");
+      throw new DefinitionCompilationError(fileName, messages);
+    }
+
     return result.code;
   }
 
