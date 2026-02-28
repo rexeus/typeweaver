@@ -20,9 +20,10 @@
     }
   },
   "bin": {
-    "typeweaver": "./dist/entry.mjs"
+    "typeweaver": "./bin/typeweaver.mjs"
   },
   "files": [
+    "bin",
     "dist",
     "package.json",
     "README.md",
