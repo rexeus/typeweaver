@@ -114,7 +114,10 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
    * ```
    */
   public route(router: TypeweaverRouter<Record<string, RequestHandler<any, any, any>>>): this;
-  public route(prefix: string, router: TypeweaverRouter<Record<string, RequestHandler<any, any, any>>>): this;
+  public route(
+    prefix: string,
+    router: TypeweaverRouter<Record<string, RequestHandler<any, any, any>>>,
+  ): this;
   public route(
     prefixOrRouter: string | TypeweaverRouter<Record<string, RequestHandler<any, any, any>>>,
     router?: TypeweaverRouter<Record<string, RequestHandler<any, any, any>>>,
