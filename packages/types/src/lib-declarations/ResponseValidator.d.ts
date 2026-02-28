@@ -11,15 +11,15 @@ export declare abstract class ResponseValidator
   implements IResponseValidator
 {
   public abstract safeValidate(
-    response: IHttpResponse,
+    response: IHttpResponse
   ): SafeResponseValidationResult<IHttpResponse>;
   public abstract validate(response: IHttpResponse): IHttpResponse;
   protected validateResponseType<Response extends IHttpResponse>(
     responseName: string,
     headerSchema: unknown,
-    bodySchema: unknown,
+    bodySchema: unknown
   ): (
     response: IHttpResponse,
-    error: ResponseValidationError,
+    error: ResponseValidationError
   ) => SafeResponseValidationResult<Response>;
 }

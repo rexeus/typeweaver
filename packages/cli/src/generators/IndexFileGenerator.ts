@@ -31,9 +31,7 @@ export class IndexFileGenerator {
       if (firstSegment === "lib") {
         const secondSlash = stripped.indexOf("/", firstSlash + 1);
         const groupKey =
-          secondSlash === -1
-            ? stripped
-            : stripped.slice(0, secondSlash);
+          secondSlash === -1 ? stripped : stripped.slice(0, secondSlash);
 
         const entryName = stripped.slice(groupKey.length + 1);
 
@@ -71,7 +69,7 @@ export class IndexFileGenerator {
       const domainIndexPath = path.join(
         context.outputDir,
         groupKey,
-        "index.ts",
+        "index.ts"
       );
       fs.mkdirSync(path.dirname(domainIndexPath), { recursive: true });
       fs.writeFileSync(domainIndexPath, domainBarrelContent);

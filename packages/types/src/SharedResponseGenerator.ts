@@ -21,7 +21,6 @@ export class SharedResponseGenerator {
     for (const sharedResponse of context.resources.sharedResponseResources) {
       this.writeSharedResponse(templateFile, sharedResponse, context);
     }
-
   }
 
   public static writeSharedResponse(
@@ -52,5 +51,4 @@ export class SharedResponseGenerator {
     );
     context.writeFile(relativePath, content);
   }
-
 }

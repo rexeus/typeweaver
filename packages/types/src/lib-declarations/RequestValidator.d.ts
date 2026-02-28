@@ -11,7 +11,7 @@ export declare abstract class RequestValidator
 {
   public constructor();
   public abstract safeValidate(
-    request: IHttpRequest,
+    request: IHttpRequest
   ): SafeRequestValidationResult<IHttpRequest>;
   public abstract validate(request: IHttpRequest): IHttpRequest;
 }

@@ -84,9 +84,7 @@ export class DefinitionCompiler {
         continue;
       }
 
-      const constMatch = trimmed.match(
-        /^export\s+(?:const|let|var)\s+(\w+)/,
-      );
+      const constMatch = trimmed.match(/^export\s+(?:const|let|var)\s+(\w+)/);
       if (constMatch) {
         lines.push(`export declare const ${constMatch[1]}: any;`);
         continue;
@@ -95,7 +93,7 @@ export class DefinitionCompiler {
       const funcMatch = trimmed.match(/^export\s+function\s+(\w+)/);
       if (funcMatch) {
         lines.push(
-          `export declare function ${funcMatch[1]}(...args: any[]): any;`,
+          `export declare function ${funcMatch[1]}(...args: any[]): any;`
         );
         continue;
       }
