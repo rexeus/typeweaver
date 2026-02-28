@@ -211,7 +211,7 @@ export class FetchApiAdapter {
       Object.create(null);
     formData.forEach((value, key) => {
       const existing = result[key];
-      if (!existing) {
+      if (existing === undefined) {
         result[key] = value;
       } else if (Array.isArray(existing)) {
         existing.push(value);
@@ -351,7 +351,7 @@ export class FetchApiAdapter {
     value: string
   ): void {
     const existing = record[key];
-    if (!existing) {
+    if (existing === undefined) {
       record[key] = value;
     } else if (Array.isArray(existing)) {
       existing.push(value);
