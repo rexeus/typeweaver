@@ -1,5 +1,20 @@
 # @rexeus/typeweaver
 
+## 0.6.4
+
+### Patch Changes
+
+- bee197f: Normalize custom `headerName` option to lowercase in `requestId` middleware so that mixed-case
+  values like `"X-Request-Id"` match HTTP-layer-normalized headers correctly
+- Updated dependencies [bee197f]
+  - @rexeus/typeweaver-aws-cdk@0.6.4
+  - @rexeus/typeweaver-clients@0.6.4
+  - @rexeus/typeweaver-server@0.6.4
+  - @rexeus/typeweaver-types@0.6.4
+  - @rexeus/typeweaver-core@0.6.4
+  - @rexeus/typeweaver-hono@0.6.4
+  - @rexeus/typeweaver-gen@0.6.4
+
 ## 0.6.3
 
 ### Patch Changes
@@ -35,6 +50,7 @@
 ### Patch Changes
 
 - edd224c: Fix generated code issues and stabilize CLI binary resolution
+
   - Fix trailing comma in Response.ejs template that produced `HttpResponse<Header, Body,>` in
     generated response classes
   - Widen `TypeweaverRouter` generic constraint from `RequestHandler` to
