@@ -54,7 +54,7 @@ import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import type { IGetUserRequest, GetUserResponse, UserNotFoundErrorResponse } from "./generated";
 import { GetUserSuccessResponse } from "./generated";
 
-export class UserHandlers implements UserApiHandler {
+export class UserHandlers implements HonoUserApiHandler {
     async handleGetUserRequest(request: IGetUserRequest, context: Context): Promise<GetUserResponse> {
       // Symbolic database fetch
       const databaseResult = {} as any;
@@ -108,7 +108,7 @@ serve({ fetch: app.fetch, port: 3000 }, () => {
 
 `TypeweaverHonoOptions<RequestHandlers>`
 
-- `requestHandlers`: object implementing the generated `<ResourceName>ApiHandler` type
+- `requestHandlers`: object implementing the generated `Hono<ResourceName>ApiHandler` type
 - `validateRequests` (default: `true`): enable/disable request validation
 - `handleValidationErrors`: `true` | `false` | `(err, c) => IHttpResponse | Promise<IHttpResponse>`,
   - If `true` (default), returns `400 Bad Request` with validation issues in the body
