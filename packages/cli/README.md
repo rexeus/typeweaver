@@ -213,11 +213,7 @@ export const userSchema = z.object({
 
 ```typescript
 // api/definition/user/GetUserDefinition.ts
-import {
-  HttpOperationDefinition,
-  HttpMethod,
-  HttpStatusCode,
-} from "@rexeus/typeweaver-core";
+import { HttpOperationDefinition, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import { sharedResponses } from "../shared/sharedResponses";
 import { userSchema } from "./userSchema";
@@ -253,11 +249,7 @@ export default new HttpOperationDefinition({
 
 ```typescript
 // api/definition/user/UpdateUserDefinition.ts
-import {
-  HttpOperationDefinition,
-  HttpMethod,
-  HttpStatusCode,
-} from "@rexeus/typeweaver-core";
+import { HttpOperationDefinition, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import { sharedResponses } from "../shared/sharedResponses";
 import { userSchema } from "./userSchema";
@@ -320,10 +312,7 @@ export default NotFoundErrorDefinition.extend({
 
 ```typescript
 // api/definition/user/errors/UserStatusTransitionInvalidErrorDefinition.ts
-import {
-  HttpResponseDefinition,
-  HttpStatusCode,
-} from "@rexeus/typeweaver-core";
+import { HttpResponseDefinition, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import { userStatusSchema } from "../userSchema";
 
@@ -335,9 +324,7 @@ export default new HttpResponseDefinition({
   name: "UserStatusTransitionInvalidError",
   description: "User status transition is conflicting with current status",
   body: z.object({
-    message: z.literal(
-      "User status transition is conflicting with current status",
-    ),
+    message: z.literal("User status transition is conflicting with current status"),
     code: z.literal("USER_STATUS_TRANSITION_INVALID_ERROR"),
     context: z.object({
       userId: z.uuid(),
@@ -404,9 +391,7 @@ import {
 export class UserHandlers implements HonoUserApiHandler {
   public constructor() {}
 
-  public async handleGetUserRequest(
-    request: IGetUserRequest,
-  ): Promise<GetUserResponse> {
+  public async handleGetUserRequest(request: IGetUserRequest): Promise<GetUserResponse> {
     // Simulate fetching user data
     const fetchedUser = {
       id: request.param.userId,
@@ -426,21 +411,15 @@ export class UserHandlers implements HonoUserApiHandler {
     });
   }
 
-  public handleCreateUserRequest(
-    request: ICreateUserRequest,
-  ): Promise<CreateUserResponse> {
+  public handleCreateUserRequest(request: ICreateUserRequest): Promise<CreateUserResponse> {
     throw new Error("Not implemented");
   }
 
-  public handleUpdateUserRequest(
-    request: IUpdateUserRequest,
-  ): Promise<UpdateUserResponse> {
+  public handleUpdateUserRequest(request: IUpdateUserRequest): Promise<UpdateUserResponse> {
     throw new Error("Not implemented");
   }
 
-  public handleListUserRequest(
-    request: IListUserRequest,
-  ): Promise<ListUserResponse> {
+  public handleListUserRequest(request: IListUserRequest): Promise<ListUserResponse> {
     throw new Error("Not implemented");
   }
 }
@@ -480,7 +459,7 @@ serve(
   },
   () => {
     console.log("Server is running on http://localhost:3000");
-  },
+  }
 );
 ```
 
@@ -493,11 +472,7 @@ tsx api/server.ts
 
 ```typescript
 // api/client-test.ts
-import {
-  UserClient,
-  GetUserRequestCommand,
-  UserNotFoundErrorResponse,
-} from "./generated";
+import { UserClient, GetUserRequestCommand, UserNotFoundErrorResponse } from "./generated";
 
 const client = new UserClient({ baseUrl: "http://localhost:3000" });
 

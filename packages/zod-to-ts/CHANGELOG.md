@@ -6,7 +6,9 @@
 
 - 10dc399: Replace built-in Prettier formatter with oxfmt
 
-  The `--prettier` / `--no-prettier` CLI flags have been renamed to `--format` / `--no-format`. The `prettier` config option is now `format`. Generated code is now formatted using oxfmt instead of Prettier.
+  The `--prettier` / `--no-prettier` CLI flags have been renamed to `--format` / `--no-format`. The
+  `prettier` config option is now `format`. Generated code is now formatted using oxfmt instead of
+  Prettier.
 
 ## 0.5.1
 

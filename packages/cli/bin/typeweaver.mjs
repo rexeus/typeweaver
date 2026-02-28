@@ -10,7 +10,7 @@ const entry = resolve(__dirname, "../dist/entry.mjs");
 if (!existsSync(entry)) {
   console.error(
     "TypeWeaver CLI has not been built yet.\n" +
-      "Run 'pnpm build' in the project root first.",
+      "Run 'pnpm build' in the project root first."
   );
   process.exit(1);
 }

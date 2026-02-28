@@ -187,13 +187,12 @@ to provide it.
 **Requiring upstream state** — declare dependencies:
 
 ```ts
-const permissions = defineMiddleware<
-  { permissions: string[] },
-  { userId: string }
->(async (ctx, next) => {
-  const userId = ctx.state.get("userId"); // string — no cast, no undefined
-  return next({ permissions: await loadPermissions(userId) });
-});
+const permissions = defineMiddleware<{ permissions: string[] }, { userId: string }>(
+  async (ctx, next) => {
+    const userId = ctx.state.get("userId"); // string — no cast, no undefined
+    return next({ permissions: await loadPermissions(userId) });
+  }
+);
 ```
 
 Registering `permissions` before `auth` produces a **compile-time error** because `userId` is not
@@ -206,7 +205,7 @@ const logger = defineMiddleware(async (ctx, next) => {
   const start = Date.now();
   const response = await next();
   console.log(
-    `${ctx.request.method} ${ctx.request.path} -> ${response.statusCode} (${Date.now() - start}ms)`,
+    `${ctx.request.method} ${ctx.request.path} -> ${response.statusCode} (${Date.now() - start}ms)`
   );
   return response;
 });
@@ -274,7 +273,7 @@ CORS always execute.
 ```ts
 const app = new TypeweaverApp({
   maxBodySize: 5 * 1024 * 1024, // 5 MB
-  onError: (error) => logger.error("Unhandled error", error),
+  onError: error => logger.error("Unhandled error", error),
 });
 ```
 
