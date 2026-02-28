@@ -33,10 +33,7 @@ export type ITodoNotChangeableErrorResponse = {
 };
 
 export class TodoNotChangeableErrorResponse
-  extends HttpResponse<
-    ITodoNotChangeableErrorResponseHeader,
-    ITodoNotChangeableErrorResponseBody
-  >
+  extends HttpResponse<ITodoNotChangeableErrorResponseHeader, ITodoNotChangeableErrorResponseBody>
   implements ITodoNotChangeableErrorResponse
 {
   public override readonly statusCode: HttpStatusCode.CONFLICT;

@@ -1,13 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 
-type FormatFn = typeof import("prettier").format;
+type FormatFn = (filename: string, source: string) => Promise<{ code: string }>;
 
-export class Prettier {
+export class Formatter {
   public constructor(private readonly outputDir: string) {}
 
   public async formatCode(startDir?: string): Promise<void> {
-    const format = await this.loadPrettier();
+    const format = await this.loadFormatter();
     if (!format) {
       return;
     }
@@ -16,13 +16,13 @@ export class Prettier {
     await this.formatDirectory(targetDir, format);
   }
 
-  private async loadPrettier(): Promise<FormatFn | undefined> {
+  private async loadFormatter(): Promise<FormatFn | undefined> {
     try {
-      const prettier = await import("prettier");
-      return prettier.format;
+      const oxfmt = await import("oxfmt");
+      return oxfmt.format;
     } catch {
       console.warn(
-        "Prettier not installed - skipping formatting. Install with: npm install -D prettier"
+        "oxfmt not installed - skipping formatting. Install with: npm install -D oxfmt"
       );
       return undefined;
     }
@@ -38,8 +38,8 @@ export class Prettier {
       if (content.isFile()) {
         const filePath = path.join(targetDir, content.name);
         const unformatted = fs.readFileSync(filePath, "utf8");
-        const formatted = await format(unformatted, { parser: "typescript" });
-        fs.writeFileSync(filePath, formatted);
+        const { code } = await format(filePath, unformatted);
+        fs.writeFileSync(filePath, code);
       } else if (content.isDirectory()) {
         await this.formatDirectory(path.join(targetDir, content.name), format);
       }

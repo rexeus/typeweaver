@@ -69,100 +69,57 @@ import type { IDeleteSubTodoRequest } from "./DeleteSubTodoRequest";
 import { DeleteSubTodoRequestValidator } from "./DeleteSubTodoRequestValidator";
 import type { DeleteSubTodoResponse } from "./DeleteSubTodoResponse";
 
-export type ServerTodoApiHandler<
-  TState extends Record<string, unknown> = Record<string, unknown>,
-> = {
-  handleListTodosRequest: RequestHandler<
-    IListTodosRequest,
-    ListTodosResponse,
-    TState
-  >;
+export type ServerTodoApiHandler<TState extends Record<string, unknown> = Record<string, unknown>> =
+  {
+    handleListTodosRequest: RequestHandler<IListTodosRequest, ListTodosResponse, TState>;
 
-  handleCreateTodoRequest: RequestHandler<
-    ICreateTodoRequest,
-    CreateTodoResponse,
-    TState
-  >;
+    handleCreateTodoRequest: RequestHandler<ICreateTodoRequest, CreateTodoResponse, TState>;
 
-  handleQueryTodoRequest: RequestHandler<
-    IQueryTodoRequest,
-    QueryTodoResponse,
-    TState
-  >;
+    handleQueryTodoRequest: RequestHandler<IQueryTodoRequest, QueryTodoResponse, TState>;
 
-  handleGetTodoRequest: RequestHandler<
-    IGetTodoRequest,
-    GetTodoResponse,
-    TState
-  >;
+    handleGetTodoRequest: RequestHandler<IGetTodoRequest, GetTodoResponse, TState>;
 
-  handlePutTodoRequest: RequestHandler<
-    IPutTodoRequest,
-    PutTodoResponse,
-    TState
-  >;
+    handlePutTodoRequest: RequestHandler<IPutTodoRequest, PutTodoResponse, TState>;
 
-  handleUpdateTodoRequest: RequestHandler<
-    IUpdateTodoRequest,
-    UpdateTodoResponse,
-    TState
-  >;
+    handleUpdateTodoRequest: RequestHandler<IUpdateTodoRequest, UpdateTodoResponse, TState>;
 
-  handleDeleteTodoRequest: RequestHandler<
-    IDeleteTodoRequest,
-    DeleteTodoResponse,
-    TState
-  >;
+    handleDeleteTodoRequest: RequestHandler<IDeleteTodoRequest, DeleteTodoResponse, TState>;
 
-  handleOptionsTodoRequest: RequestHandler<
-    IOptionsTodoRequest,
-    OptionsTodoResponse,
-    TState
-  >;
+    handleOptionsTodoRequest: RequestHandler<IOptionsTodoRequest, OptionsTodoResponse, TState>;
 
-  handleUpdateTodoStatusRequest: RequestHandler<
-    IUpdateTodoStatusRequest,
-    UpdateTodoStatusResponse,
-    TState
-  >;
+    handleUpdateTodoStatusRequest: RequestHandler<
+      IUpdateTodoStatusRequest,
+      UpdateTodoStatusResponse,
+      TState
+    >;
 
-  handleListSubTodosRequest: RequestHandler<
-    IListSubTodosRequest,
-    ListSubTodosResponse,
-    TState
-  >;
+    handleListSubTodosRequest: RequestHandler<IListSubTodosRequest, ListSubTodosResponse, TState>;
 
-  handleCreateSubTodoRequest: RequestHandler<
-    ICreateSubTodoRequest,
-    CreateSubTodoResponse,
-    TState
-  >;
+    handleCreateSubTodoRequest: RequestHandler<
+      ICreateSubTodoRequest,
+      CreateSubTodoResponse,
+      TState
+    >;
 
-  handleQuerySubTodoRequest: RequestHandler<
-    IQuerySubTodoRequest,
-    QuerySubTodoResponse,
-    TState
-  >;
+    handleQuerySubTodoRequest: RequestHandler<IQuerySubTodoRequest, QuerySubTodoResponse, TState>;
 
-  handleUpdateSubTodoRequest: RequestHandler<
-    IUpdateSubTodoRequest,
-    UpdateSubTodoResponse,
-    TState
-  >;
+    handleUpdateSubTodoRequest: RequestHandler<
+      IUpdateSubTodoRequest,
+      UpdateSubTodoResponse,
+      TState
+    >;
 
-  handleDeleteSubTodoRequest: RequestHandler<
-    IDeleteSubTodoRequest,
-    DeleteSubTodoResponse,
-    TState
-  >;
-};
+    handleDeleteSubTodoRequest: RequestHandler<
+      IDeleteSubTodoRequest,
+      DeleteSubTodoResponse,
+      TState
+    >;
+  };
 
 export class TodoRouter<
   TState extends Record<string, unknown> = Record<string, unknown>,
 > extends TypeweaverRouter<ServerTodoApiHandler<TState>> {
-  public constructor(
-    options: TypeweaverRouterOptions<ServerTodoApiHandler<TState>>,
-  ) {
+  public constructor(options: TypeweaverRouterOptions<ServerTodoApiHandler<TState>>) {
     super(options);
     this.setupRoutes();
   }
@@ -228,9 +185,7 @@ export class TodoRouter<
       HttpMethod.PUT,
       "/todos/:todoId/status",
       new UpdateTodoStatusRequestValidator(),
-      this.requestHandlers.handleUpdateTodoStatusRequest.bind(
-        this.requestHandlers,
-      ),
+      this.requestHandlers.handleUpdateTodoStatusRequest.bind(this.requestHandlers),
     );
 
     this.route(
@@ -244,9 +199,7 @@ export class TodoRouter<
       HttpMethod.POST,
       "/todos/:todoId/subtodos",
       new CreateSubTodoRequestValidator(),
-      this.requestHandlers.handleCreateSubTodoRequest.bind(
-        this.requestHandlers,
-      ),
+      this.requestHandlers.handleCreateSubTodoRequest.bind(this.requestHandlers),
     );
 
     this.route(
@@ -260,18 +213,14 @@ export class TodoRouter<
       HttpMethod.PUT,
       "/todos/:todoId/subtodos/:subtodoId",
       new UpdateSubTodoRequestValidator(),
-      this.requestHandlers.handleUpdateSubTodoRequest.bind(
-        this.requestHandlers,
-      ),
+      this.requestHandlers.handleUpdateSubTodoRequest.bind(this.requestHandlers),
     );
 
     this.route(
       HttpMethod.DELETE,
       "/todos/:todoId/subtodos/:subtodoId",
       new DeleteSubTodoRequestValidator(),
-      this.requestHandlers.handleDeleteSubTodoRequest.bind(
-        this.requestHandlers,
-      ),
+      this.requestHandlers.handleDeleteSubTodoRequest.bind(this.requestHandlers),
     );
   }
 }

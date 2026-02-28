@@ -70,10 +70,7 @@ export type IListTodosSuccessResponse = {
 };
 
 export class ListTodosSuccessResponse
-  extends HttpResponse<
-    IListTodosSuccessResponseHeader,
-    IListTodosSuccessResponseBody
-  >
+  extends HttpResponse<IListTodosSuccessResponseHeader, IListTodosSuccessResponseBody>
   implements IListTodosSuccessResponse
 {
   public override readonly statusCode: HttpStatusCode.OK;
@@ -82,9 +79,7 @@ export class ListTodosSuccessResponse
     super(response.statusCode, response.header, response.body);
 
     if (response.statusCode !== HttpStatusCode.OK) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for ListTodosSuccessResponse`,
-      );
+      throw new Error(`Invalid status code: '${response.statusCode}' for ListTodosSuccessResponse`);
     }
 
     this.statusCode = response.statusCode;

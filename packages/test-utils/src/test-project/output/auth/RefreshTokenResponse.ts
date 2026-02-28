@@ -56,10 +56,7 @@ export type IRefreshTokenSuccessResponse = {
 };
 
 export class RefreshTokenSuccessResponse
-  extends HttpResponse<
-    IRefreshTokenSuccessResponseHeader,
-    IRefreshTokenSuccessResponseBody
-  >
+  extends HttpResponse<IRefreshTokenSuccessResponseHeader, IRefreshTokenSuccessResponseBody>
   implements IRefreshTokenSuccessResponse
 {
   public override readonly statusCode: HttpStatusCode.OK;

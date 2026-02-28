@@ -145,7 +145,6 @@ describe("TypedMiddleware", () => {
       const auth = defineMiddleware<{ userId: string }>(async (_ctx, next) =>
         next({ userId: "test" })
       );
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const app = new TypeweaverApp().use(auth);
 
       type State = InferState<typeof app>;

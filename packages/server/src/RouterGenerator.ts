@@ -2,8 +2,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { Path } from "@rexeus/typeweaver-gen";
+import type {
+  GeneratorContext,
+  OperationResource,
+} from "@rexeus/typeweaver-gen";
 import Case from "case";
-import type { GeneratorContext, OperationResource } from "@rexeus/typeweaver-gen";
 
 type OperationData = {
   readonly className: string;

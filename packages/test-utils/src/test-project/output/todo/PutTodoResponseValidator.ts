@@ -61,15 +61,11 @@ import {
 } from "../shared/ValidationErrorResponse";
 
 export class PutTodoResponseValidator extends ResponseValidator {
-  public safeValidate(
-    response: IHttpResponse,
-  ): SafeResponseValidationResult<PutTodoResponse> {
+  public safeValidate(response: IHttpResponse): SafeResponseValidationResult<PutTodoResponse> {
     const result = this.validateAgainstDefinedResponses(response);
 
     if (!result.isValid && !result.error.hasResponseIssues()) {
-      result.error.addStatusCodeIssue([
-        200, 400, 401, 403, 404, 409, 415, 429, 500,
-      ]);
+      result.error.addStatusCodeIssue([200, 400, 401, 403, 404, 409, 415, 429, 500]);
     }
 
     return result;
@@ -91,16 +87,20 @@ export class PutTodoResponseValidator extends ResponseValidator {
     const error = new ResponseValidationError(response.statusCode);
 
     if (response.statusCode === 200) {
-      const validatePutTodoSuccessResponseResult =
-        this.validatePutTodoSuccessResponse(response, error);
+      const validatePutTodoSuccessResponseResult = this.validatePutTodoSuccessResponse(
+        response,
+        error,
+      );
       if (validatePutTodoSuccessResponseResult.isValid) {
         return validatePutTodoSuccessResponseResult;
       }
     }
 
     if (response.statusCode === 404) {
-      const validateTodoNotFoundErrorResponseResult =
-        this.validateTodoNotFoundErrorResponse(response, error);
+      const validateTodoNotFoundErrorResponseResult = this.validateTodoNotFoundErrorResponse(
+        response,
+        error,
+      );
       if (validateTodoNotFoundErrorResponseResult.isValid) {
         return validateTodoNotFoundErrorResponseResult;
       }
@@ -115,32 +115,40 @@ export class PutTodoResponseValidator extends ResponseValidator {
     }
 
     if (response.statusCode === 403) {
-      const validateForbiddenErrorResponseResult =
-        this.validateForbiddenErrorResponse(response, error);
+      const validateForbiddenErrorResponseResult = this.validateForbiddenErrorResponse(
+        response,
+        error,
+      );
       if (validateForbiddenErrorResponseResult.isValid) {
         return validateForbiddenErrorResponseResult;
       }
     }
 
     if (response.statusCode === 500) {
-      const validateInternalServerErrorResponseResult =
-        this.validateInternalServerErrorResponse(response, error);
+      const validateInternalServerErrorResponseResult = this.validateInternalServerErrorResponse(
+        response,
+        error,
+      );
       if (validateInternalServerErrorResponseResult.isValid) {
         return validateInternalServerErrorResponseResult;
       }
     }
 
     if (response.statusCode === 429) {
-      const validateTooManyRequestsErrorResponseResult =
-        this.validateTooManyRequestsErrorResponse(response, error);
+      const validateTooManyRequestsErrorResponseResult = this.validateTooManyRequestsErrorResponse(
+        response,
+        error,
+      );
       if (validateTooManyRequestsErrorResponseResult.isValid) {
         return validateTooManyRequestsErrorResponseResult;
       }
     }
 
     if (response.statusCode === 401) {
-      const validateUnauthorizedErrorResponseResult =
-        this.validateUnauthorizedErrorResponse(response, error);
+      const validateUnauthorizedErrorResponseResult = this.validateUnauthorizedErrorResponse(
+        response,
+        error,
+      );
       if (validateUnauthorizedErrorResponseResult.isValid) {
         return validateUnauthorizedErrorResponseResult;
       }
@@ -155,8 +163,10 @@ export class PutTodoResponseValidator extends ResponseValidator {
     }
 
     if (response.statusCode === 400) {
-      const validateValidationErrorResponseResult =
-        this.validateValidationErrorResponse(response, error);
+      const validateValidationErrorResponseResult = this.validateValidationErrorResponse(
+        response,
+        error,
+      );
       if (validateValidationErrorResponseResult.isValid) {
         return validateValidationErrorResponseResult;
       }
@@ -212,9 +222,7 @@ export class PutTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new TodoNotFoundErrorResponse(
-        result.data as ITodoNotFoundErrorResponse,
-      ),
+      data: new TodoNotFoundErrorResponse(result.data as ITodoNotFoundErrorResponse),
     };
   }
 
@@ -238,9 +246,7 @@ export class PutTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new TodoNotChangeableErrorResponse(
-        result.data as ITodoNotChangeableErrorResponse,
-      ),
+      data: new TodoNotChangeableErrorResponse(result.data as ITodoNotChangeableErrorResponse),
     };
   }
 
@@ -288,9 +294,7 @@ export class PutTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new InternalServerErrorResponse(
-        result.data as IInternalServerErrorResponse,
-      ),
+      data: new InternalServerErrorResponse(result.data as IInternalServerErrorResponse),
     };
   }
 
@@ -314,9 +318,7 @@ export class PutTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new TooManyRequestsErrorResponse(
-        result.data as ITooManyRequestsErrorResponse,
-      ),
+      data: new TooManyRequestsErrorResponse(result.data as ITooManyRequestsErrorResponse),
     };
   }
 
@@ -340,9 +342,7 @@ export class PutTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new UnauthorizedErrorResponse(
-        result.data as IUnauthorizedErrorResponse,
-      ),
+      data: new UnauthorizedErrorResponse(result.data as IUnauthorizedErrorResponse),
     };
   }
 
@@ -392,9 +392,7 @@ export class PutTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new ValidationErrorResponse(
-        result.data as IValidationErrorResponse,
-      ),
+      data: new ValidationErrorResponse(result.data as IValidationErrorResponse),
     };
   }
 }

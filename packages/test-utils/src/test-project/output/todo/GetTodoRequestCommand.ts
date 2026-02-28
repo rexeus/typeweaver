@@ -24,10 +24,7 @@ import type {
 
 import { GetTodoSuccessResponse } from "./GetTodoResponse";
 
-export class GetTodoRequestCommand
-  extends RequestCommand
-  implements IGetTodoRequest
-{
+export class GetTodoRequestCommand extends RequestCommand implements IGetTodoRequest {
   public override readonly method = definition.method as HttpMethod.GET;
   public override readonly path = definition.path;
 

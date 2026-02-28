@@ -16,9 +16,7 @@ import { RequestValidator } from "../lib/types";
 import type { IQueryTodoRequest } from "./QueryTodoRequest";
 
 export class QueryTodoRequestValidator extends RequestValidator {
-  public safeValidate(
-    request: IHttpRequest,
-  ): SafeRequestValidationResult<IQueryTodoRequest> {
+  public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IQueryTodoRequest> {
     const error = new RequestValidationError();
     const validatedRequest: IHttpRequest = {
       method: request.method,
@@ -55,10 +53,7 @@ export class QueryTodoRequestValidator extends RequestValidator {
     }
 
     if (definition.request.query) {
-      const coercedQuery = this.coerceQueryToSchema(
-        request.query,
-        definition.request.query.shape,
-      );
+      const coercedQuery = this.coerceQueryToSchema(request.query, definition.request.query.shape);
 
       const result = definition.request.query.safeParse(coercedQuery);
 

@@ -1,5 +1,5 @@
-import { faker } from "@faker-js/faker";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
+import { faker } from "@faker-js/faker";
 import { UploadFileSuccessResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";

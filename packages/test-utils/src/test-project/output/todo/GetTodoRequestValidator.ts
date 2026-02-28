@@ -16,9 +16,7 @@ import { RequestValidator } from "../lib/types";
 import type { IGetTodoRequest } from "./GetTodoRequest";
 
 export class GetTodoRequestValidator extends RequestValidator {
-  public safeValidate(
-    request: IHttpRequest,
-  ): SafeRequestValidationResult<IGetTodoRequest> {
+  public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IGetTodoRequest> {
     const error = new RequestValidationError();
     const validatedRequest: IHttpRequest = {
       method: request.method,

@@ -7,11 +7,7 @@
  */
 
 import type { Context } from "hono";
-import {
-  TypeweaverHono,
-  type HonoRequestHandler,
-  type TypeweaverHonoOptions,
-} from "../lib/hono";
+import { TypeweaverHono, type HonoRequestHandler, type TypeweaverHonoOptions } from "../lib/hono";
 
 import type { IUploadFileRequest } from "./UploadFileRequest";
 import { UploadFileRequestValidator } from "./UploadFileRequestValidator";
@@ -26,10 +22,7 @@ import { DownloadFileContentRequestValidator } from "./DownloadFileContentReques
 import type { DownloadFileContentResponse } from "./DownloadFileContentResponse";
 
 export type HonoFileApiHandler = {
-  handleUploadFileRequest: HonoRequestHandler<
-    IUploadFileRequest,
-    UploadFileResponse
-  >;
+  handleUploadFileRequest: HonoRequestHandler<IUploadFileRequest, UploadFileResponse>;
 
   handleGetFileMetadataRequest: HonoRequestHandler<
     IGetFileMetadataRequest,
@@ -61,9 +54,7 @@ export class FileHono extends TypeweaverHono<HonoFileApiHandler> {
       this.handleRequest(
         context,
         new GetFileMetadataRequestValidator(),
-        this.requestHandlers.handleGetFileMetadataRequest.bind(
-          this.requestHandlers,
-        ),
+        this.requestHandlers.handleGetFileMetadataRequest.bind(this.requestHandlers),
       ),
     );
 
@@ -71,9 +62,7 @@ export class FileHono extends TypeweaverHono<HonoFileApiHandler> {
       this.handleRequest(
         context,
         new DownloadFileContentRequestValidator(),
-        this.requestHandlers.handleDownloadFileContentRequest.bind(
-          this.requestHandlers,
-        ),
+        this.requestHandlers.handleDownloadFileContentRequest.bind(this.requestHandlers),
       ),
     );
   }

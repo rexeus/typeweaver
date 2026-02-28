@@ -6,12 +6,12 @@
  */
 
 import { HttpResponse, RequestValidationError } from "@rexeus/typeweaver-core";
-import { Hono } from "hono";
 import type {
   IHttpRequest,
   IHttpResponse,
   IRequestValidator,
 } from "@rexeus/typeweaver-core";
+import { Hono } from "hono";
 import { HonoAdapter } from "./HonoAdapter";
 import type { HonoRequestHandler } from "./HonoRequestHandler";
 import type { Context } from "hono";

@@ -1,2 +1,2 @@
-/* eslint-disable import/no-unassigned-import */
+/* oxlint-disable import/no-unassigned-import */
 import "tsx";

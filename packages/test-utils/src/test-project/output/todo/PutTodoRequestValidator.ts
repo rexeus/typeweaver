@@ -16,9 +16,7 @@ import { RequestValidator } from "../lib/types";
 import type { IPutTodoRequest } from "./PutTodoRequest";
 
 export class PutTodoRequestValidator extends RequestValidator {
-  public safeValidate(
-    request: IHttpRequest,
-  ): SafeRequestValidationResult<IPutTodoRequest> {
+  public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IPutTodoRequest> {
     const error = new RequestValidationError();
     const validatedRequest: IHttpRequest = {
       method: request.method,

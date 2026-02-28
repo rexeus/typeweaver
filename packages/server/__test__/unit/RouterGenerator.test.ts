@@ -1,9 +1,9 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { assert, describe, expect, test } from "vitest";
 import type {
   GeneratorContext,
   OperationResource,
 } from "@rexeus/typeweaver-gen";
+import { assert, describe, expect, test } from "vitest";
 import { RouterGenerator } from "../../src/RouterGenerator";
 
 // ---------------------------------------------------------------------------

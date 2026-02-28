@@ -38,9 +38,7 @@ export type IQuerySubTodoRequestParam = {
 export type IQuerySubTodoRequestQuery = {
   limit?: string | undefined;
   nextToken?: string | undefined;
-  sortBy?:
-    | ("title" | "dueDate" | "priority" | "createdAt" | "modifiedAt")
-    | undefined;
+  sortBy?: ("title" | "dueDate" | "priority" | "createdAt" | "modifiedAt") | undefined;
   sortOrder?: ("asc" | "desc") | undefined;
   format?: ("summary" | "detailed") | undefined;
 };

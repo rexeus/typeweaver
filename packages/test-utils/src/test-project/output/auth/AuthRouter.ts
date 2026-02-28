@@ -21,28 +21,17 @@ import type { IRefreshTokenRequest } from "./RefreshTokenRequest";
 import { RefreshTokenRequestValidator } from "./RefreshTokenRequestValidator";
 import type { RefreshTokenResponse } from "./RefreshTokenResponse";
 
-export type ServerAuthApiHandler<
-  TState extends Record<string, unknown> = Record<string, unknown>,
-> = {
-  handleAccessTokenRequest: RequestHandler<
-    IAccessTokenRequest,
-    AccessTokenResponse,
-    TState
-  >;
+export type ServerAuthApiHandler<TState extends Record<string, unknown> = Record<string, unknown>> =
+  {
+    handleAccessTokenRequest: RequestHandler<IAccessTokenRequest, AccessTokenResponse, TState>;
 
-  handleRefreshTokenRequest: RequestHandler<
-    IRefreshTokenRequest,
-    RefreshTokenResponse,
-    TState
-  >;
-};
+    handleRefreshTokenRequest: RequestHandler<IRefreshTokenRequest, RefreshTokenResponse, TState>;
+  };
 
 export class AuthRouter<
   TState extends Record<string, unknown> = Record<string, unknown>,
 > extends TypeweaverRouter<ServerAuthApiHandler<TState>> {
-  public constructor(
-    options: TypeweaverRouterOptions<ServerAuthApiHandler<TState>>,
-  ) {
+  public constructor(options: TypeweaverRouterOptions<ServerAuthApiHandler<TState>>) {
     super(options);
     this.setupRoutes();
   }

@@ -97,10 +97,7 @@ async function handleRequest(
   }
 }
 
-function collectBody(
-  req: IncomingMessage,
-  maxBodySize: number,
-): Promise<Buffer> {
+function collectBody(req: IncomingMessage, maxBodySize: number): Promise<Buffer> {
   return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];
     let totalBytes = 0;

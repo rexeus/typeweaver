@@ -24,10 +24,7 @@ import type {
 
 import { HeadTodoSuccessResponse } from "./HeadTodoResponse";
 
-export class HeadTodoRequestCommand
-  extends RequestCommand
-  implements IHeadTodoRequest
-{
+export class HeadTodoRequestCommand extends RequestCommand implements IHeadTodoRequest {
   public override readonly method = definition.method as HttpMethod.HEAD;
   public override readonly path = definition.path;
 

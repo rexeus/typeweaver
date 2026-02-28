@@ -24,10 +24,7 @@ import type {
 
 import { ListTodosSuccessResponse } from "./ListTodosResponse";
 
-export class ListTodosRequestCommand
-  extends RequestCommand
-  implements IListTodosRequest
-{
+export class ListTodosRequestCommand extends RequestCommand implements IListTodosRequest {
   public override readonly method = definition.method as HttpMethod.GET;
   public override readonly path = definition.path;
 

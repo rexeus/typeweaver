@@ -96,7 +96,7 @@ export type TypeweaverConfig = {
   output: string;
   shared?: string;
   plugins?: (string | [string, PluginConfig])[];
-  prettier?: boolean;
+  format?: boolean;
   clean?: boolean;
 };
 

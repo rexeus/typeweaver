@@ -1,8 +1,4 @@
-import {
-  HttpMethod,
-  HttpOperationDefinition,
-  HttpStatusCode,
-} from "@rexeus/typeweaver-core";
+import { HttpMethod, HttpOperationDefinition, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import {
   defaultRequestHeadersWithoutPayload,
@@ -23,9 +19,7 @@ const listTodosQuerySchema = z.object({
   nextToken: z.string().optional(),
 
   // Sorting parameters
-  sortBy: z
-    .enum(["title", "dueDate", "priority", "createdAt", "modifiedAt"])
-    .optional(),
+  sortBy: z.enum(["title", "dueDate", "priority", "createdAt", "modifiedAt"]).optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
 
   // Search and date parameters

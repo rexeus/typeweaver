@@ -1,12 +1,12 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Path } from "@rexeus/typeweaver-gen";
-import Case from "case";
-import { z } from "zod";
 import type {
   GeneratorContext,
   OperationResource,
 } from "@rexeus/typeweaver-gen";
+import Case from "case";
+import { z } from "zod";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 

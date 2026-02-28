@@ -89,9 +89,15 @@ jobs:
           pnpm run typecheck
           echo "::endgroup::"
 
+      - name: Check formatting
+        run: |
+          echo "::group::oxfmt format checking"
+          pnpm run format:check
+          echo "::endgroup::"
+
       - name: Run lint
         run: |
-          echo "::group::ESLint checking"
+          echo "::group::oxlint checking"
           pnpm run lint
           echo "::endgroup::"
 

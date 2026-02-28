@@ -88,7 +88,9 @@ describe("nodeAdapter", () => {
       const fetchSpy = stubFetch(app, new Response(""));
 
       const handler = nodeAdapter(app);
-      const binaryBody = Buffer.from([0x00, 0x01, 0x80, 0xff, 0xfe, 0x89, 0x50, 0x4e, 0x47]);
+      const binaryBody = Buffer.from([
+        0x00, 0x01, 0x80, 0xff, 0xfe, 0x89, 0x50, 0x4e, 0x47,
+      ]);
       const req = createMockIncomingMessage(
         "POST",
         "/upload",
@@ -190,7 +192,9 @@ describe("nodeAdapter", () => {
     });
 
     test("preserves binary response body without corruption", async () => {
-      const binaryData = new Uint8Array([0x00, 0x01, 0x80, 0xff, 0xfe, 0x89, 0x50, 0x4e, 0x47]);
+      const binaryData = new Uint8Array([
+        0x00, 0x01, 0x80, 0xff, 0xfe, 0x89, 0x50, 0x4e, 0x47,
+      ]);
       const app = new TypeweaverApp();
       stubFetch(
         app,

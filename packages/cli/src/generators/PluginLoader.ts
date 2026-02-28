@@ -1,9 +1,9 @@
-import TypesPlugin from "@rexeus/typeweaver-types";
 import type {
   PluginRegistry,
   TypeweaverConfig,
   TypeweaverPlugin,
 } from "@rexeus/typeweaver-gen";
+import TypesPlugin from "@rexeus/typeweaver-types";
 import { PluginLoadingFailure } from "./errors/PluginLoadingFailure";
 import type { PluginLoadError } from "./errors/PluginLoadingFailure";
 

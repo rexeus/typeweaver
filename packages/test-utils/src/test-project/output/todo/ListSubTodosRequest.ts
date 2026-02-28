@@ -38,9 +38,7 @@ export type IListSubTodosRequestQuery =
   | {
       limit?: string | undefined;
       nextToken?: string | undefined;
-      sortBy?:
-        | ("title" | "dueDate" | "priority" | "createdAt" | "modifiedAt")
-        | undefined;
+      sortBy?: ("title" | "dueDate" | "priority" | "createdAt" | "modifiedAt") | undefined;
       sortOrder?: ("asc" | "desc") | undefined;
     }
   | undefined;

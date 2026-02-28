@@ -38,9 +38,7 @@ export class DownloadFileContentRequestCommand
 
   private readonly responseValidator: DownloadFileContentResponseValidator;
 
-  public constructor(
-    input: Omit<IDownloadFileContentRequest, "method" | "path">,
-  ) {
+  public constructor(input: Omit<IDownloadFileContentRequest, "method" | "path">) {
     super();
 
     this.header = input.header;

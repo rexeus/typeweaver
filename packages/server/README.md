@@ -60,7 +60,7 @@ For a resource `User`, the plugin generates:
 generated/
   lib/server/              ← TypeweaverApp, middleware types, etc.
   user/
-    UserRouter.ts          ← Router class + UserApiHandler type
+    UserRouter.ts          ← Router class + ServerUserApiHandler type
     GetUserRequest.ts      ← Request types (IGetUserRequest)
     GetUserResponse.ts     ← Response types + factory classes
     ...
@@ -79,9 +79,9 @@ bodies.
 ```ts
 // user-handlers.ts
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { UserApiHandler } from "./generated";
+import type { ServerUserApiHandler } from "./generated";
 
-export const userHandlers: UserApiHandler = {
+export const userHandlers: ServerUserApiHandler = {
   async handleListUsersRequest() {
     return {
       statusCode: HttpStatusCode.OK,
@@ -99,7 +99,11 @@ export const userHandlers: UserApiHandler = {
   async handleGetUserRequest(request) {
     return {
       statusCode: HttpStatusCode.OK,
-      body: { id: request.param.userId, name: "Jane", email: "jane@example.com" },
+      body: {
+        id: request.param.userId,
+        name: "Jane",
+        email: "jane@example.com",
+      },
     };
   },
 
@@ -183,12 +187,13 @@ to provide it.
 **Requiring upstream state** — declare dependencies:
 
 ```ts
-const permissions = defineMiddleware<{ permissions: string[] }, { userId: string }>(
-  async (ctx, next) => {
-    const userId = ctx.state.get("userId"); // string — no cast, no undefined
-    return next({ permissions: await loadPermissions(userId) });
-  }
-);
+const permissions = defineMiddleware<
+  { permissions: string[] },
+  { userId: string }
+>(async (ctx, next) => {
+  const userId = ctx.state.get("userId"); // string — no cast, no undefined
+  return next({ permissions: await loadPermissions(userId) });
+});
 ```
 
 Registering `permissions` before `auth` produces a **compile-time error** because `userId` is not
@@ -201,7 +206,7 @@ const logger = defineMiddleware(async (ctx, next) => {
   const start = Date.now();
   const response = await next();
   console.log(
-    `${ctx.request.method} ${ctx.request.path} -> ${response.statusCode} (${Date.now() - start}ms)`
+    `${ctx.request.method} ${ctx.request.path} -> ${response.statusCode} (${Date.now() - start}ms)`,
   );
   return response;
 });
@@ -269,7 +274,7 @@ CORS always execute.
 ```ts
 const app = new TypeweaverApp({
   maxBodySize: 5 * 1024 * 1024, // 5 MB
-  onError: error => logger.error("Unhandled error", error),
+  onError: (error) => logger.error("Unhandled error", error),
 });
 ```
 
@@ -277,13 +282,13 @@ const app = new TypeweaverApp({
 
 Each router accepts `TypeweaverRouterOptions`:
 
-| Option                     | Type                   | Default    | Description                        |
-| -------------------------- | ---------------------- | ---------- | ---------------------------------- |
-| `requestHandlers`          | `<Resource>ApiHandler` | _required_ | Handler methods for each operation |
-| `validateRequests`         | `boolean`              | `true`     | Enable/disable request validation  |
-| `handleValidationErrors`   | `boolean \| function`  | `true`     | Handle validation errors           |
-| `handleHttpResponseErrors` | `boolean \| function`  | `true`     | Handle thrown `HttpResponse`       |
-| `handleUnknownErrors`      | `boolean \| function`  | `true`     | Handle unexpected errors           |
+| Option                     | Type                         | Default    | Description                        |
+| -------------------------- | ---------------------------- | ---------- | ---------------------------------- |
+| `requestHandlers`          | `Server<Resource>ApiHandler` | _required_ | Handler methods for each operation |
+| `validateRequests`         | `boolean`                    | `true`     | Enable/disable request validation  |
+| `handleValidationErrors`   | `boolean \| function`        | `true`     | Handle validation errors           |
+| `handleHttpResponseErrors` | `boolean \| function`        | `true`     | Handle thrown `HttpResponse`       |
+| `handleUnknownErrors`      | `boolean \| function`        | `true`     | Handle unexpected errors           |
 
 When set to `true`, error handlers use sensible defaults (400/500 responses). When set to `false`,
 errors fall through to the next handler in the chain. When set to a function, it receives the error
@@ -353,7 +358,10 @@ new UserRouter({
 new UserRouter({
   requestHandlers: userHandlers,
   handleHttpResponseErrors: (error, ctx) => {
-    logger.warn("HTTP error", { status: error.statusCode, path: ctx.request.path });
+    logger.warn("HTTP error", {
+      status: error.statusCode,
+      path: ctx.request.path,
+    });
     return error;
   },
 });

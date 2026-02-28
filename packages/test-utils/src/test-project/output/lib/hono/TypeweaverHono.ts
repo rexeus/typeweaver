@@ -6,12 +6,8 @@
  */
 
 import { HttpResponse, RequestValidationError } from "@rexeus/typeweaver-core";
+import type { IHttpRequest, IHttpResponse, IRequestValidator } from "@rexeus/typeweaver-core";
 import { Hono } from "hono";
-import type {
-  IHttpRequest,
-  IHttpResponse,
-  IRequestValidator,
-} from "@rexeus/typeweaver-core";
 import { HonoAdapter } from "./HonoAdapter";
 import type { HonoRequestHandler } from "./HonoRequestHandler";
 import type { Context } from "hono";
@@ -202,9 +198,8 @@ export abstract class TypeweaverHono<
         validation: this.resolveErrorHandler(handleValidationErrors, (error) =>
           this.defaultHandlers.validation(error),
         ),
-        httpResponse: this.resolveErrorHandler(
-          handleHttpResponseErrors,
-          (error) => this.defaultHandlers.httpResponse(error),
+        httpResponse: this.resolveErrorHandler(handleHttpResponseErrors, (error) =>
+          this.defaultHandlers.httpResponse(error),
         ),
         unknown: this.resolveErrorHandler(handleUnknownErrors, () =>
           this.defaultHandlers.unknown(),
@@ -261,15 +256,9 @@ export abstract class TypeweaverHono<
     }
   }
 
-  protected async handleError(
-    error: unknown,
-    context: Context,
-  ): Promise<Response> {
+  protected async handleError(error: unknown, context: Context): Promise<Response> {
     // Handle validation errors
-    if (
-      error instanceof RequestValidationError &&
-      this.config.errorHandlers.validation
-    ) {
+    if (error instanceof RequestValidationError && this.config.errorHandlers.validation) {
       const response = await this.safelyExecuteHandler(() =>
         this.config.errorHandlers.validation!(error, context),
       );
@@ -277,10 +266,7 @@ export abstract class TypeweaverHono<
     }
 
     // Handle HTTP response errors
-    if (
-      error instanceof HttpResponse &&
-      this.config.errorHandlers.httpResponse
-    ) {
+    if (error instanceof HttpResponse && this.config.errorHandlers.httpResponse) {
       const response = await this.safelyExecuteHandler(() =>
         this.config.errorHandlers.httpResponse!(error, context),
       );
@@ -307,10 +293,7 @@ export abstract class TypeweaverHono<
    * @param handler - Type-safe request handler function
    * @returns Hono-compatible Response object
    */
-  protected async handleRequest<
-    TRequest extends IHttpRequest,
-    TResponse extends IHttpResponse,
-  >(
+  protected async handleRequest<TRequest extends IHttpRequest, TResponse extends IHttpResponse>(
     context: Context,
     validator: IRequestValidator,
     handler: HonoRequestHandler<TRequest, TResponse>,

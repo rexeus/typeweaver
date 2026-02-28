@@ -56,6 +56,7 @@ Now you are ready to start building! Check out [Quickstart](#-get-started)
 | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | [@rexeus/typeweaver-types](https://github.com/rexeus/typeweaver/tree/main/packages/types/README.md)     | Plugin for request/response types and validation - the foundation for all other plugins and always included | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-types)   |
 | [@rexeus/typeweaver-clients](https://github.com/rexeus/typeweaver/tree/main/packages/clients/README.md) | Plugin for HTTP clients using fetch                                                                         | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients) |
+| [@rexeus/typeweaver-server](https://github.com/rexeus/typeweaver/tree/main/packages/server/README.md)   | Plugin for a zero-dependency, Fetch API-native server with built-in routing and middleware                  | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-server)  |
 | [@rexeus/typeweaver-hono](https://github.com/rexeus/typeweaver/tree/main/packages/hono/README.md)       | Plugin for Hono routers                                                                                     | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)    |
 | [@rexeus/typeweaver-aws-cdk](https://github.com/rexeus/typeweaver/tree/main/packages/aws-cdk/README.md) | Plugin for AWS CDK constructs for API Gateway V2                                                            | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
 
@@ -95,7 +96,7 @@ bunx typeweaver generate --input ./api/definition --output ./api/generated --plu
 - `--config, -c <path>`: Configuration file path (optional)
 - `--plugins, -p <plugins>`: Comma-separated list of plugins to use (e.g., "clients,hono" or "all"
   for all plugins)
-- `--prettier / --no-prettier`: Enable/disable code formatting with Prettier (default: true)
+- `--format / --no-format`: Enable/disable code formatting with oxfmt (default: true)
 - `--clean / --no-clean`: Enable/disable output directory cleaning (default: true)
 
 ### 📝 Configuration File
@@ -107,7 +108,7 @@ export default {
   input: "./api/definition",
   output: "./api/generated",
   plugins: ["clients", "hono", "aws-cdk"],
-  prettier: true,
+  format: true,
   clean: true,
 };
 ```
@@ -212,7 +213,11 @@ export const userSchema = z.object({
 
 ```typescript
 // api/definition/user/GetUserDefinition.ts
-import { HttpOperationDefinition, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
+import {
+  HttpOperationDefinition,
+  HttpMethod,
+  HttpStatusCode,
+} from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import { sharedResponses } from "../shared/sharedResponses";
 import { userSchema } from "./userSchema";
@@ -248,7 +253,11 @@ export default new HttpOperationDefinition({
 
 ```typescript
 // api/definition/user/UpdateUserDefinition.ts
-import { HttpOperationDefinition, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
+import {
+  HttpOperationDefinition,
+  HttpMethod,
+  HttpStatusCode,
+} from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import { sharedResponses } from "../shared/sharedResponses";
 import { userSchema } from "./userSchema";
@@ -311,7 +320,10 @@ export default NotFoundErrorDefinition.extend({
 
 ```typescript
 // api/definition/user/errors/UserStatusTransitionInvalidErrorDefinition.ts
-import { HttpResponseDefinition, HttpStatusCode } from "@rexeus/typeweaver-core";
+import {
+  HttpResponseDefinition,
+  HttpStatusCode,
+} from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import { userStatusSchema } from "../userSchema";
 
@@ -323,7 +335,9 @@ export default new HttpResponseDefinition({
   name: "UserStatusTransitionInvalidError",
   description: "User status transition is conflicting with current status",
   body: z.object({
-    message: z.literal("User status transition is conflicting with current status"),
+    message: z.literal(
+      "User status transition is conflicting with current status",
+    ),
     code: z.literal("USER_STATUS_TRANSITION_INVALID_ERROR"),
     context: z.object({
       userId: z.uuid(),
@@ -375,7 +389,7 @@ npx typeweaver generate --input ./api/definition --output ./api/generated --plug
 // api/user-handlers.ts
 import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 import {
-  type UserApiHandler,
+  type HonoUserApiHandler,
   type IGetUserRequest,
   GetUserResponse,
   GetUserSuccessResponse,
@@ -387,10 +401,12 @@ import {
   ListUserResponse,
 } from "./generated";
 
-export class UserHandlers implements UserApiHandler {
+export class UserHandlers implements HonoUserApiHandler {
   public constructor() {}
 
-  public async handleGetUserRequest(request: IGetUserRequest): Promise<GetUserResponse> {
+  public async handleGetUserRequest(
+    request: IGetUserRequest,
+  ): Promise<GetUserResponse> {
     // Simulate fetching user data
     const fetchedUser = {
       id: request.param.userId,
@@ -410,15 +426,21 @@ export class UserHandlers implements UserApiHandler {
     });
   }
 
-  public handleCreateUserRequest(request: ICreateUserRequest): Promise<CreateUserResponse> {
+  public handleCreateUserRequest(
+    request: ICreateUserRequest,
+  ): Promise<CreateUserResponse> {
     throw new Error("Not implemented");
   }
 
-  public handleUpdateUserRequest(request: IUpdateUserRequest): Promise<UpdateUserResponse> {
+  public handleUpdateUserRequest(
+    request: IUpdateUserRequest,
+  ): Promise<UpdateUserResponse> {
     throw new Error("Not implemented");
   }
 
-  public handleListUserRequest(request: IListUserRequest): Promise<ListUserResponse> {
+  public handleListUserRequest(
+    request: IListUserRequest,
+  ): Promise<ListUserResponse> {
     throw new Error("Not implemented");
   }
 }
@@ -458,7 +480,7 @@ serve(
   },
   () => {
     console.log("Server is running on http://localhost:3000");
-  }
+  },
 );
 ```
 
@@ -471,12 +493,18 @@ tsx api/server.ts
 
 ```typescript
 // api/client-test.ts
-import { UserClient, GetUserRequestCommand, UserNotFoundErrorResponse } from "./generated";
+import {
+  UserClient,
+  GetUserRequestCommand,
+  UserNotFoundErrorResponse,
+} from "./generated";
 
 const client = new UserClient({ baseUrl: "http://localhost:3000" });
 
 try {
-  const getUserRequestCommand = new GetUserRequestCommand({ param: { userId: "123" } });
+  const getUserRequestCommand = new GetUserRequestCommand({
+    param: { userId: "123" },
+  });
   const result = await client.send(getUserRequestCommand);
 
   console.log("Successfully fetched user:", result.body);

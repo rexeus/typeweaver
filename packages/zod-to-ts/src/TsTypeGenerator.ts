@@ -335,7 +335,7 @@ export class TsTypeNode {
 
   private static fromZodEnum(zodEnum: $ZodEnum): TypeNode {
     const entries = Object.entries(zodEnum._zod.def.entries);
-    const types = entries.map(([key, value]) => {
+    const types = entries.map(([key, _value]) => {
       return factory.createLiteralTypeNode(factory.createStringLiteral(key));
     });
     return factory.createUnionTypeNode(types);

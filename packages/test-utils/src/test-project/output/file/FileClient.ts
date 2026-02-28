@@ -40,13 +40,9 @@ export class FileClient extends ApiClient {
     command: GetFileMetadataRequestCommand,
   ): Promise<SuccessfulGetFileMetadataResponse>;
 
-  public async send(
-    command: UploadFileRequestCommand,
-  ): Promise<SuccessfulUploadFileResponse>;
+  public async send(command: UploadFileRequestCommand): Promise<SuccessfulUploadFileResponse>;
 
-  public async send(
-    command: FileRequestCommands,
-  ): Promise<SuccessfulFileResponses> {
+  public async send(command: FileRequestCommands): Promise<SuccessfulFileResponses> {
     const response = await this.execute(command);
     return command.processResponse(response, this.processResponseOptions);
   }

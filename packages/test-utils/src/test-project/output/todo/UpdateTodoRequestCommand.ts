@@ -25,10 +25,7 @@ import type {
 
 import { UpdateTodoSuccessResponse } from "./UpdateTodoResponse";
 
-export class UpdateTodoRequestCommand
-  extends RequestCommand
-  implements IUpdateTodoRequest
-{
+export class UpdateTodoRequestCommand extends RequestCommand implements IUpdateTodoRequest {
   public override readonly method = definition.method as HttpMethod.PATCH;
   public override readonly path = definition.path;
 

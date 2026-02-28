@@ -43,10 +43,7 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
       path: url.pathname,
       header: this.extractHeaders(request.headers),
       query: this.extractQueryParams(url),
-      param:
-        pathParams && Object.keys(pathParams).length > 0
-          ? pathParams
-          : undefined,
+      param: pathParams && Object.keys(pathParams).length > 0 ? pathParams : undefined,
       body: await this.parseRequestBody(request),
     };
   }
@@ -138,11 +135,7 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
       return null;
     }
 
-    if (
-      typeof body === "string" ||
-      body instanceof Blob ||
-      body instanceof ArrayBuffer
-    ) {
+    if (typeof body === "string" || body instanceof Blob || body instanceof ArrayBuffer) {
       return body;
     }
 

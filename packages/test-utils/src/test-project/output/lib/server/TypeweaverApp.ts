@@ -55,7 +55,6 @@ export type TypeweaverAppOptions = {
   readonly onError?: (error: unknown) => void;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
   private static readonly INTERNAL_SERVER_ERROR_BODY = {
     code: "INTERNAL_SERVER_ERROR",
@@ -76,10 +75,10 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
     try {
       this.onError(error);
     } catch (onErrorFailure) {
-      console.error(
-        "TypeweaverApp: onError callback threw while handling error",
-        { onErrorFailure, originalError: error },
-      );
+      console.error("TypeweaverApp: onError callback threw while handling error", {
+        onErrorFailure,
+        originalError: error,
+      });
     }
   }
 
@@ -92,10 +91,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
    *
    * Use {@link defineMiddleware} to create typed middleware.
    */
-  public use<
-    TProv extends Record<string, unknown>,
-    TReq extends Record<string, unknown>,
-  >(
+  public use<TProv extends Record<string, unknown>, TReq extends Record<string, unknown>>(
     middleware: TypedMiddleware<TProv, TReq> &
       ([TState] extends [TReq] ? unknown : StateRequirementError<TReq, TState>),
   ): TypeweaverApp<TState & TProv> {
@@ -118,10 +114,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
    * ```
    */
   public route(router: TypeweaverRouter<Record<string, RequestHandler>>): this;
-  public route(
-    prefix: string,
-    router: TypeweaverRouter<Record<string, RequestHandler>>,
-  ): this;
+  public route(prefix: string, router: TypeweaverRouter<Record<string, RequestHandler>>): this;
   public route(
     prefixOrRouter: string | TypeweaverRouter<Record<string, RequestHandler>>,
     router?: TypeweaverRouter<Record<string, RequestHandler>>,
@@ -188,15 +181,11 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
       state: new StateMap(),
     };
 
-    const response = await executeMiddlewarePipeline(
-      this.middlewares,
-      ctx,
-      () => this.resolveAndExecute(request.method, url.pathname, ctx),
+    const response = await executeMiddlewarePipeline(this.middlewares, ctx, () =>
+      this.resolveAndExecute(request.method, url.pathname, ctx),
     );
 
-    return request.method.toUpperCase() === "HEAD"
-      ? { ...response, body: undefined }
-      : response;
+    return request.method.toUpperCase() === "HEAD" ? { ...response, body: undefined } : response;
   }
 
   /**
@@ -237,18 +226,12 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
     };
   }
 
-  private withPathParams(
-    ctx: ServerContext,
-    params: Record<string, string>,
-  ): ServerContext {
+  private withPathParams(ctx: ServerContext, params: Record<string, string>): ServerContext {
     if (Object.keys(params).length === 0) return ctx;
     return { ...ctx, request: { ...ctx.request, param: params } };
   }
 
-  private async executeHandler(
-    ctx: ServerContext,
-    route: RouteDefinition,
-  ): Promise<IHttpResponse> {
+  private async executeHandler(ctx: ServerContext, route: RouteDefinition): Promise<IHttpResponse> {
     const validatedRequest = route.routerConfig.validateRequests
       ? route.validator.validate(ctx.request)
       : ctx.request;
@@ -328,9 +311,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
     return issues.map(({ message, path }) => ({ message, path }));
   }
 
-  private static defaultValidationHandler: ValidationErrorHandler = (
-    err,
-  ): IHttpResponse => {
+  private static defaultValidationHandler: ValidationErrorHandler = (err): IHttpResponse => {
     const issues: Record<string, unknown> = Object.create(null);
 
     const header = TypeweaverApp.sanitizeIssues(err.headerIssues);
@@ -353,24 +334,17 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
     };
   };
 
-  private static defaultHttpResponseHandler: HttpResponseErrorHandler = (
-    err,
-  ): IHttpResponse => err;
+  private static defaultHttpResponseHandler: HttpResponseErrorHandler = (err): IHttpResponse => err;
 
-  private readonly defaultUnknownHandler: UnknownErrorHandler = (
-    error,
-  ): IHttpResponse => {
+  private readonly defaultUnknownHandler: UnknownErrorHandler = (error): IHttpResponse => {
     this.safeOnError(error);
     return { statusCode: 500, body: TypeweaverApp.INTERNAL_SERVER_ERROR_BODY };
   };
 
   private static createErrorResponse(): Response {
-    return new Response(
-      JSON.stringify(TypeweaverApp.INTERNAL_SERVER_ERROR_BODY),
-      {
-        status: 500,
-        headers: { "content-type": "application/json" },
-      },
-    );
+    return new Response(JSON.stringify(TypeweaverApp.INTERNAL_SERVER_ERROR_BODY), {
+      status: 500,
+      headers: { "content-type": "application/json" },
+    });
   }
 }

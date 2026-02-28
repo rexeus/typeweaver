@@ -7,11 +7,7 @@
  */
 
 import type { Context } from "hono";
-import {
-  TypeweaverHono,
-  type HonoRequestHandler,
-  type TypeweaverHonoOptions,
-} from "../lib/hono";
+import { TypeweaverHono, type HonoRequestHandler, type TypeweaverHonoOptions } from "../lib/hono";
 
 import type { IAccessTokenRequest } from "./AccessTokenRequest";
 import { AccessTokenRequestValidator } from "./AccessTokenRequestValidator";
@@ -22,15 +18,9 @@ import { RefreshTokenRequestValidator } from "./RefreshTokenRequestValidator";
 import type { RefreshTokenResponse } from "./RefreshTokenResponse";
 
 export type HonoAuthApiHandler = {
-  handleAccessTokenRequest: HonoRequestHandler<
-    IAccessTokenRequest,
-    AccessTokenResponse
-  >;
+  handleAccessTokenRequest: HonoRequestHandler<IAccessTokenRequest, AccessTokenResponse>;
 
-  handleRefreshTokenRequest: HonoRequestHandler<
-    IRefreshTokenRequest,
-    RefreshTokenResponse
-  >;
+  handleRefreshTokenRequest: HonoRequestHandler<IRefreshTokenRequest, RefreshTokenResponse>;
 };
 
 export class AuthHono extends TypeweaverHono<HonoAuthApiHandler> {
@@ -44,9 +34,7 @@ export class AuthHono extends TypeweaverHono<HonoAuthApiHandler> {
       this.handleRequest(
         context,
         new AccessTokenRequestValidator(),
-        this.requestHandlers.handleAccessTokenRequest.bind(
-          this.requestHandlers,
-        ),
+        this.requestHandlers.handleAccessTokenRequest.bind(this.requestHandlers),
       ),
     );
 
@@ -54,9 +42,7 @@ export class AuthHono extends TypeweaverHono<HonoAuthApiHandler> {
       this.handleRequest(
         context,
         new RefreshTokenRequestValidator(),
-        this.requestHandlers.handleRefreshTokenRequest.bind(
-          this.requestHandlers,
-        ),
+        this.requestHandlers.handleRefreshTokenRequest.bind(this.requestHandlers),
       ),
     );
   }

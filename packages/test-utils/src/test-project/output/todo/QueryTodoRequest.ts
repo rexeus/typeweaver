@@ -32,9 +32,7 @@ export type IQueryTodoRequestHeader = {
 export type IQueryTodoRequestQuery = {
   limit?: string | undefined;
   nextToken?: string | undefined;
-  sortBy?:
-    | ("title" | "dueDate" | "priority" | "createdAt" | "modifiedAt")
-    | undefined;
+  sortBy?: ("title" | "dueDate" | "priority" | "createdAt" | "modifiedAt") | undefined;
   sortOrder?: ("asc" | "desc") | undefined;
 };
 

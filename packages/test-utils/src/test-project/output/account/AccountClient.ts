@@ -24,9 +24,7 @@ export class AccountClient extends ApiClient {
     command: RegisterAccountRequestCommand,
   ): Promise<SuccessfulRegisterAccountResponse>;
 
-  public async send(
-    command: AccountRequestCommands,
-  ): Promise<SuccessfulAccountResponses> {
+  public async send(command: AccountRequestCommands): Promise<SuccessfulAccountResponses> {
     const response = await this.execute(command);
     return command.processResponse(response, this.processResponseOptions);
   }

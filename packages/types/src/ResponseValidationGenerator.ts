@@ -2,11 +2,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { Path } from "@rexeus/typeweaver-gen";
-import Case from "case";
 import type {
   GeneratorContext,
   OperationResource,
 } from "@rexeus/typeweaver-gen";
+import Case from "case";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 

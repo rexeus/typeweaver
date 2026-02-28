@@ -1,8 +1,4 @@
-import {
-  HttpMethod,
-  HttpOperationDefinition,
-  HttpStatusCode,
-} from "@rexeus/typeweaver-core";
+import { HttpMethod, HttpOperationDefinition, HttpStatusCode } from "@rexeus/typeweaver-core";
 import {
   defaultRequestHeadersWithPayload,
   defaultResponseHeader,

@@ -67,10 +67,7 @@ export type ICreateTodoSuccessResponse = {
 };
 
 export class CreateTodoSuccessResponse
-  extends HttpResponse<
-    ICreateTodoSuccessResponseHeader,
-    ICreateTodoSuccessResponseBody
-  >
+  extends HttpResponse<ICreateTodoSuccessResponseHeader, ICreateTodoSuccessResponseBody>
   implements ICreateTodoSuccessResponse
 {
   public override readonly statusCode: HttpStatusCode.CREATED;

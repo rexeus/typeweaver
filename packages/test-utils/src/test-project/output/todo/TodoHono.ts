@@ -7,11 +7,7 @@
  */
 
 import type { Context } from "hono";
-import {
-  TypeweaverHono,
-  type HonoRequestHandler,
-  type TypeweaverHonoOptions,
-} from "../lib/hono";
+import { TypeweaverHono, type HonoRequestHandler, type TypeweaverHonoOptions } from "../lib/hono";
 
 import type { IListTodosRequest } from "./ListTodosRequest";
 import { ListTodosRequestValidator } from "./ListTodosRequestValidator";
@@ -70,69 +66,36 @@ import { DeleteSubTodoRequestValidator } from "./DeleteSubTodoRequestValidator";
 import type { DeleteSubTodoResponse } from "./DeleteSubTodoResponse";
 
 export type HonoTodoApiHandler = {
-  handleListTodosRequest: HonoRequestHandler<
-    IListTodosRequest,
-    ListTodosResponse
-  >;
+  handleListTodosRequest: HonoRequestHandler<IListTodosRequest, ListTodosResponse>;
 
-  handleCreateTodoRequest: HonoRequestHandler<
-    ICreateTodoRequest,
-    CreateTodoResponse
-  >;
+  handleCreateTodoRequest: HonoRequestHandler<ICreateTodoRequest, CreateTodoResponse>;
 
-  handleQueryTodoRequest: HonoRequestHandler<
-    IQueryTodoRequest,
-    QueryTodoResponse
-  >;
+  handleQueryTodoRequest: HonoRequestHandler<IQueryTodoRequest, QueryTodoResponse>;
 
   handleGetTodoRequest: HonoRequestHandler<IGetTodoRequest, GetTodoResponse>;
 
   handlePutTodoRequest: HonoRequestHandler<IPutTodoRequest, PutTodoResponse>;
 
-  handleUpdateTodoRequest: HonoRequestHandler<
-    IUpdateTodoRequest,
-    UpdateTodoResponse
-  >;
+  handleUpdateTodoRequest: HonoRequestHandler<IUpdateTodoRequest, UpdateTodoResponse>;
 
-  handleDeleteTodoRequest: HonoRequestHandler<
-    IDeleteTodoRequest,
-    DeleteTodoResponse
-  >;
+  handleDeleteTodoRequest: HonoRequestHandler<IDeleteTodoRequest, DeleteTodoResponse>;
 
-  handleOptionsTodoRequest: HonoRequestHandler<
-    IOptionsTodoRequest,
-    OptionsTodoResponse
-  >;
+  handleOptionsTodoRequest: HonoRequestHandler<IOptionsTodoRequest, OptionsTodoResponse>;
 
   handleUpdateTodoStatusRequest: HonoRequestHandler<
     IUpdateTodoStatusRequest,
     UpdateTodoStatusResponse
   >;
 
-  handleListSubTodosRequest: HonoRequestHandler<
-    IListSubTodosRequest,
-    ListSubTodosResponse
-  >;
+  handleListSubTodosRequest: HonoRequestHandler<IListSubTodosRequest, ListSubTodosResponse>;
 
-  handleCreateSubTodoRequest: HonoRequestHandler<
-    ICreateSubTodoRequest,
-    CreateSubTodoResponse
-  >;
+  handleCreateSubTodoRequest: HonoRequestHandler<ICreateSubTodoRequest, CreateSubTodoResponse>;
 
-  handleQuerySubTodoRequest: HonoRequestHandler<
-    IQuerySubTodoRequest,
-    QuerySubTodoResponse
-  >;
+  handleQuerySubTodoRequest: HonoRequestHandler<IQuerySubTodoRequest, QuerySubTodoResponse>;
 
-  handleUpdateSubTodoRequest: HonoRequestHandler<
-    IUpdateSubTodoRequest,
-    UpdateSubTodoResponse
-  >;
+  handleUpdateSubTodoRequest: HonoRequestHandler<IUpdateSubTodoRequest, UpdateSubTodoResponse>;
 
-  handleDeleteSubTodoRequest: HonoRequestHandler<
-    IDeleteSubTodoRequest,
-    DeleteSubTodoResponse
-  >;
+  handleDeleteSubTodoRequest: HonoRequestHandler<IDeleteSubTodoRequest, DeleteSubTodoResponse>;
 };
 
 export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
@@ -202,9 +165,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
       this.handleRequest(
         context,
         new OptionsTodoRequestValidator(),
-        this.requestHandlers.handleOptionsTodoRequest.bind(
-          this.requestHandlers,
-        ),
+        this.requestHandlers.handleOptionsTodoRequest.bind(this.requestHandlers),
       ),
     );
 
@@ -212,9 +173,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
       this.handleRequest(
         context,
         new UpdateTodoStatusRequestValidator(),
-        this.requestHandlers.handleUpdateTodoStatusRequest.bind(
-          this.requestHandlers,
-        ),
+        this.requestHandlers.handleUpdateTodoStatusRequest.bind(this.requestHandlers),
       ),
     );
 
@@ -222,9 +181,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
       this.handleRequest(
         context,
         new ListSubTodosRequestValidator(),
-        this.requestHandlers.handleListSubTodosRequest.bind(
-          this.requestHandlers,
-        ),
+        this.requestHandlers.handleListSubTodosRequest.bind(this.requestHandlers),
       ),
     );
 
@@ -232,9 +189,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
       this.handleRequest(
         context,
         new CreateSubTodoRequestValidator(),
-        this.requestHandlers.handleCreateSubTodoRequest.bind(
-          this.requestHandlers,
-        ),
+        this.requestHandlers.handleCreateSubTodoRequest.bind(this.requestHandlers),
       ),
     );
 
@@ -242,9 +197,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
       this.handleRequest(
         context,
         new QuerySubTodoRequestValidator(),
-        this.requestHandlers.handleQuerySubTodoRequest.bind(
-          this.requestHandlers,
-        ),
+        this.requestHandlers.handleQuerySubTodoRequest.bind(this.requestHandlers),
       ),
     );
 
@@ -252,22 +205,16 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
       this.handleRequest(
         context,
         new UpdateSubTodoRequestValidator(),
-        this.requestHandlers.handleUpdateSubTodoRequest.bind(
-          this.requestHandlers,
-        ),
+        this.requestHandlers.handleUpdateSubTodoRequest.bind(this.requestHandlers),
       ),
     );
 
-    this.delete(
-      "/todos/:todoId/subtodos/:subtodoId",
-      async (context: Context) =>
-        this.handleRequest(
-          context,
-          new DeleteSubTodoRequestValidator(),
-          this.requestHandlers.handleDeleteSubTodoRequest.bind(
-            this.requestHandlers,
-          ),
-        ),
+    this.delete("/todos/:todoId/subtodos/:subtodoId", async (context: Context) =>
+      this.handleRequest(
+        context,
+        new DeleteSubTodoRequestValidator(),
+        this.requestHandlers.handleDeleteSubTodoRequest.bind(this.requestHandlers),
+      ),
     );
   }
 }

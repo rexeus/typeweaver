@@ -24,10 +24,7 @@ import type {
 
 import { RefreshTokenSuccessResponse } from "./RefreshTokenResponse";
 
-export class RefreshTokenRequestCommand
-  extends RequestCommand
-  implements IRefreshTokenRequest
-{
+export class RefreshTokenRequestCommand extends RequestCommand implements IRefreshTokenRequest {
   public override readonly method = definition.method as HttpMethod.POST;
   public override readonly path = definition.path;
 

@@ -4,8 +4,7 @@ import { todoStatus } from "../todoSchema";
 
 export default ConflictErrorDefinition.extend({
   name: "SubTodoNotChangeableError",
-  description:
-    "SubTodo in current status or because of parent todo status cannot be changed",
+  description: "SubTodo in current status or because of parent todo status cannot be changed",
   body: z.object({
     message: z.literal(
       "SubTodo in current status or because of parent todo status cannot be changed",

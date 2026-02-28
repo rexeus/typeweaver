@@ -55,7 +55,6 @@ export type TypeweaverAppOptions = {
   readonly onError?: (error: unknown) => void;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
   private static readonly INTERNAL_SERVER_ERROR_BODY = {
     code: "INTERNAL_SERVER_ERROR",

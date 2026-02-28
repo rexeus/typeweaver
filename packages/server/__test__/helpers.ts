@@ -1,9 +1,9 @@
-import { expect } from "vitest";
 import type {
   HttpMethod,
   IHttpRequest,
   IRequestValidator,
 } from "@rexeus/typeweaver-core";
+import { expect } from "vitest";
 import { StateMap } from "../src/lib/StateMap";
 import type { ServerContext } from "../src/lib/ServerContext";
 

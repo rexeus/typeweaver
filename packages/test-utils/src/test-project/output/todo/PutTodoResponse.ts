@@ -77,10 +77,7 @@ export type IPutTodoSuccessResponse = {
 };
 
 export class PutTodoSuccessResponse
-  extends HttpResponse<
-    IPutTodoSuccessResponseHeader,
-    IPutTodoSuccessResponseBody
-  >
+  extends HttpResponse<IPutTodoSuccessResponseHeader, IPutTodoSuccessResponseBody>
   implements IPutTodoSuccessResponse
 {
   public override readonly statusCode: HttpStatusCode.OK;
@@ -89,9 +86,7 @@ export class PutTodoSuccessResponse
     super(response.statusCode, response.header, response.body);
 
     if (response.statusCode !== HttpStatusCode.OK) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for PutTodoSuccessResponse`,
-      );
+      throw new Error(`Invalid status code: '${response.statusCode}' for PutTodoSuccessResponse`);
     }
 
     this.statusCode = response.statusCode;

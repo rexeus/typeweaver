@@ -16,9 +16,7 @@ import { RequestValidator } from "../lib/types";
 import type { IListSubTodosRequest } from "./ListSubTodosRequest";
 
 export class ListSubTodosRequestValidator extends RequestValidator {
-  public safeValidate(
-    request: IHttpRequest,
-  ): SafeRequestValidationResult<IListSubTodosRequest> {
+  public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IListSubTodosRequest> {
     const error = new RequestValidationError();
     const validatedRequest: IHttpRequest = {
       method: request.method,

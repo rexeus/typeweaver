@@ -16,9 +16,7 @@ import { RequestValidator } from "../lib/types";
 import type { IAccessTokenRequest } from "./AccessTokenRequest";
 
 export class AccessTokenRequestValidator extends RequestValidator {
-  public safeValidate(
-    request: IHttpRequest,
-  ): SafeRequestValidationResult<IAccessTokenRequest> {
+  public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IAccessTokenRequest> {
     const error = new RequestValidationError();
     const validatedRequest: IHttpRequest = {
       method: request.method,

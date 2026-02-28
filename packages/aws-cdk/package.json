@@ -5,13 +5,13 @@
   "type": "module",
   "sideEffects": false,
   "main": "dist/index.cjs",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.mts",
   "exports": {
     ".": {
       "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
       },
       "require": {
         "types": "./dist/index.d.cts",
@@ -28,8 +28,8 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write .",
-    "build": "tsup && mkdir -p ./dist/templates ./dist/lib && cp -r ./src/templates/* ./dist/templates/ && cp -r ./src/lib/* ./dist/lib/ && cp ../../LICENSE ../../NOTICE ./dist/",
+    "format": "oxfmt",
+    "build": "tsdown && mkdir -p ./dist/templates ./dist/lib && cp -r ./src/templates/* ./dist/templates/ && cp -r ./src/lib/* ./dist/lib/ && cp ../../LICENSE ../../NOTICE ./dist/",
     "prepack": "npm run build",
     "preversion": "npm run build"
   },

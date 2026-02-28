@@ -28,10 +28,7 @@ import type { ZodSafeParseResult } from "zod";
  * Response validators are typically used in API clients to ensure
  * responses match the expected format before processing.
  */
-export abstract class ResponseValidator
-  extends Validator
-  implements IResponseValidator
-{
+export abstract class ResponseValidator extends Validator implements IResponseValidator {
   /**
    * Validates a response without throwing errors.
    *
@@ -100,10 +97,7 @@ export abstract class ResponseValidator
         ) as unknown as ZodSafeParseResult<Response["header"]>;
 
         if (!validateHeaderResult.success) {
-          error.addHeaderIssues(
-            responseName,
-            validateHeaderResult.error.issues,
-          );
+          error.addHeaderIssues(responseName, validateHeaderResult.error.issues);
           isValid = false;
         } else {
           validatedResponse.header = validateHeaderResult.data;

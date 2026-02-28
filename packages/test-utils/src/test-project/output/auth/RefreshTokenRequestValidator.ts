@@ -16,9 +16,7 @@ import { RequestValidator } from "../lib/types";
 import type { IRefreshTokenRequest } from "./RefreshTokenRequest";
 
 export class RefreshTokenRequestValidator extends RequestValidator {
-  public safeValidate(
-    request: IHttpRequest,
-  ): SafeRequestValidationResult<IRefreshTokenRequest> {
+  public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IRefreshTokenRequest> {
     const error = new RequestValidationError();
     const validatedRequest: IHttpRequest = {
       method: request.method,

@@ -1,8 +1,4 @@
-import {
-  HttpMethod,
-  HttpOperationDefinition,
-  HttpStatusCode,
-} from "@rexeus/typeweaver-core";
+import { HttpMethod, HttpOperationDefinition, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import { defaultRequestHeadersWithoutPayload } from "../../shared/defaultRequestHeader";
 import { defaultResponseHeader } from "../../shared/defaultResponseHeader";

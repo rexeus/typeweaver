@@ -64,9 +64,7 @@ export class HeadTodoSuccessResponse
     super(response.statusCode, response.header, undefined);
 
     if (response.statusCode !== HttpStatusCode.OK) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for HeadTodoSuccessResponse`,
-      );
+      throw new Error(`Invalid status code: '${response.statusCode}' for HeadTodoSuccessResponse`);
     }
 
     this.statusCode = response.statusCode;

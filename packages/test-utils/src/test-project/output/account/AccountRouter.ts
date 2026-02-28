@@ -30,9 +30,7 @@ export type ServerAccountApiHandler<
 export class AccountRouter<
   TState extends Record<string, unknown> = Record<string, unknown>,
 > extends TypeweaverRouter<ServerAccountApiHandler<TState>> {
-  public constructor(
-    options: TypeweaverRouterOptions<ServerAccountApiHandler<TState>>,
-  ) {
+  public constructor(options: TypeweaverRouterOptions<ServerAccountApiHandler<TState>>) {
     super(options);
     this.setupRoutes();
   }
@@ -42,9 +40,7 @@ export class AccountRouter<
       HttpMethod.POST,
       "/accounts",
       new RegisterAccountRequestValidator(),
-      this.requestHandlers.handleRegisterAccountRequest.bind(
-        this.requestHandlers,
-      ),
+      this.requestHandlers.handleRegisterAccountRequest.bind(this.requestHandlers),
     );
   }
 }

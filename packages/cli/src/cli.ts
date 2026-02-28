@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { Command } from "commander";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
+import { Command } from "commander";
 import { Generator } from "./generators/Generator";
 import type { CommandOptions as CommanderOptions } from "commander";
 
@@ -21,7 +21,7 @@ type CommandOptions = CommanderOptions & {
   shared?: string;
   config?: string;
   plugins?: string;
-  prettier?: boolean;
+  format?: boolean;
   clean?: boolean;
 };
 
@@ -41,8 +41,8 @@ program
   .option("-s, --shared <path>", "path to shared definitions directory")
   .option("-c, --config <configFile>", "path to configuration file")
   .option("-p, --plugins <plugins>", "comma-separated list of plugins to use")
-  .option("--prettier", "format generated code with Prettier (default: true)")
-  .option("--no-prettier", "disable Prettier formatting")
+  .option("--format", "format generated code with oxfmt (default: true)")
+  .option("--no-format", "disable code formatting")
   .option("--clean", "clean output directory before generation (default: true)")
   .option("--no-clean", "disable cleaning output directory")
   .action(async (options: CommandOptions) => {
@@ -101,7 +101,7 @@ program
       input: resolvedInputDir,
       output: resolvedOutputDir,
       shared: resolvedSharedDir,
-      prettier: options.prettier ?? config.prettier ?? true,
+      format: options.format ?? config.format ?? true,
       clean: options.clean ?? config.clean ?? true,
     };
 

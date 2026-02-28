@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { render } from "ejs";
 import type { GeneratorContext } from "@rexeus/typeweaver-gen";
+import { render } from "ejs";
 
 export class IndexFileGenerator {
   public constructor(private readonly templateDir: string) {

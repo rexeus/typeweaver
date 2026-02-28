@@ -70,10 +70,7 @@ export type IQueryTodoSuccessResponse = {
 };
 
 export class QueryTodoSuccessResponse
-  extends HttpResponse<
-    IQueryTodoSuccessResponseHeader,
-    IQueryTodoSuccessResponseBody
-  >
+  extends HttpResponse<IQueryTodoSuccessResponseHeader, IQueryTodoSuccessResponseBody>
   implements IQueryTodoSuccessResponse
 {
   public override readonly statusCode: HttpStatusCode.OK;
@@ -82,9 +79,7 @@ export class QueryTodoSuccessResponse
     super(response.statusCode, response.header, response.body);
 
     if (response.statusCode !== HttpStatusCode.OK) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for QueryTodoSuccessResponse`,
-      );
+      throw new Error(`Invalid status code: '${response.statusCode}' for QueryTodoSuccessResponse`);
     }
 
     this.statusCode = response.statusCode;

@@ -84,48 +84,60 @@ export class CreateSubTodoResponseValidator extends ResponseValidator {
     const error = new ResponseValidationError(response.statusCode);
 
     if (response.statusCode === 201) {
-      const validateCreateSubTodoSuccessResponseResult =
-        this.validateCreateSubTodoSuccessResponse(response, error);
+      const validateCreateSubTodoSuccessResponseResult = this.validateCreateSubTodoSuccessResponse(
+        response,
+        error,
+      );
       if (validateCreateSubTodoSuccessResponseResult.isValid) {
         return validateCreateSubTodoSuccessResponseResult;
       }
     }
 
     if (response.statusCode === 404) {
-      const validateTodoNotFoundErrorResponseResult =
-        this.validateTodoNotFoundErrorResponse(response, error);
+      const validateTodoNotFoundErrorResponseResult = this.validateTodoNotFoundErrorResponse(
+        response,
+        error,
+      );
       if (validateTodoNotFoundErrorResponseResult.isValid) {
         return validateTodoNotFoundErrorResponseResult;
       }
     }
 
     if (response.statusCode === 403) {
-      const validateForbiddenErrorResponseResult =
-        this.validateForbiddenErrorResponse(response, error);
+      const validateForbiddenErrorResponseResult = this.validateForbiddenErrorResponse(
+        response,
+        error,
+      );
       if (validateForbiddenErrorResponseResult.isValid) {
         return validateForbiddenErrorResponseResult;
       }
     }
 
     if (response.statusCode === 500) {
-      const validateInternalServerErrorResponseResult =
-        this.validateInternalServerErrorResponse(response, error);
+      const validateInternalServerErrorResponseResult = this.validateInternalServerErrorResponse(
+        response,
+        error,
+      );
       if (validateInternalServerErrorResponseResult.isValid) {
         return validateInternalServerErrorResponseResult;
       }
     }
 
     if (response.statusCode === 429) {
-      const validateTooManyRequestsErrorResponseResult =
-        this.validateTooManyRequestsErrorResponse(response, error);
+      const validateTooManyRequestsErrorResponseResult = this.validateTooManyRequestsErrorResponse(
+        response,
+        error,
+      );
       if (validateTooManyRequestsErrorResponseResult.isValid) {
         return validateTooManyRequestsErrorResponseResult;
       }
     }
 
     if (response.statusCode === 401) {
-      const validateUnauthorizedErrorResponseResult =
-        this.validateUnauthorizedErrorResponse(response, error);
+      const validateUnauthorizedErrorResponseResult = this.validateUnauthorizedErrorResponse(
+        response,
+        error,
+      );
       if (validateUnauthorizedErrorResponseResult.isValid) {
         return validateUnauthorizedErrorResponseResult;
       }
@@ -140,8 +152,10 @@ export class CreateSubTodoResponseValidator extends ResponseValidator {
     }
 
     if (response.statusCode === 400) {
-      const validateValidationErrorResponseResult =
-        this.validateValidationErrorResponse(response, error);
+      const validateValidationErrorResponseResult = this.validateValidationErrorResponse(
+        response,
+        error,
+      );
       if (validateValidationErrorResponseResult.isValid) {
         return validateValidationErrorResponseResult;
       }
@@ -173,9 +187,7 @@ export class CreateSubTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new CreateSubTodoSuccessResponse(
-        result.data as ICreateSubTodoSuccessResponse,
-      ),
+      data: new CreateSubTodoSuccessResponse(result.data as ICreateSubTodoSuccessResponse),
     };
   }
 
@@ -199,9 +211,7 @@ export class CreateSubTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new TodoNotFoundErrorResponse(
-        result.data as ITodoNotFoundErrorResponse,
-      ),
+      data: new TodoNotFoundErrorResponse(result.data as ITodoNotFoundErrorResponse),
     };
   }
 
@@ -249,9 +259,7 @@ export class CreateSubTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new InternalServerErrorResponse(
-        result.data as IInternalServerErrorResponse,
-      ),
+      data: new InternalServerErrorResponse(result.data as IInternalServerErrorResponse),
     };
   }
 
@@ -275,9 +283,7 @@ export class CreateSubTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new TooManyRequestsErrorResponse(
-        result.data as ITooManyRequestsErrorResponse,
-      ),
+      data: new TooManyRequestsErrorResponse(result.data as ITooManyRequestsErrorResponse),
     };
   }
 
@@ -301,9 +307,7 @@ export class CreateSubTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new UnauthorizedErrorResponse(
-        result.data as IUnauthorizedErrorResponse,
-      ),
+      data: new UnauthorizedErrorResponse(result.data as IUnauthorizedErrorResponse),
     };
   }
 
@@ -353,9 +357,7 @@ export class CreateSubTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new ValidationErrorResponse(
-        result.data as IValidationErrorResponse,
-      ),
+      data: new ValidationErrorResponse(result.data as IValidationErrorResponse),
     };
   }
 }

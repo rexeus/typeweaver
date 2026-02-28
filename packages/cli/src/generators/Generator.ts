@@ -2,11 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PluginContextBuilder, PluginRegistry } from "@rexeus/typeweaver-gen";
-import TypesPlugin from "@rexeus/typeweaver-types";
 import type { PluginConfig, TypeweaverConfig } from "@rexeus/typeweaver-gen";
+import TypesPlugin from "@rexeus/typeweaver-types";
 import { IndexFileGenerator } from "./IndexFileGenerator";
 import { PluginLoader } from "./PluginLoader";
-import { Prettier } from "./Prettier";
+import { Formatter } from "./Formatter";
 import { ResourceReader } from "./ResourceReader";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
@@ -24,7 +24,7 @@ export class Generator {
   private readonly pluginLoader: PluginLoader;
   private readonly indexFileGenerator: IndexFileGenerator;
   private resourceReader: ResourceReader | null = null;
-  private prettier: Prettier | null = null;
+  private formatter: Formatter | null = null;
 
   private inputDir = "";
   private sharedInputDir = "";
@@ -99,8 +99,7 @@ export class Generator {
       sharedOutputDir: this.sharedOutputDir,
     });
 
-    // Create Prettier instance
-    this.prettier = new Prettier(this.outputDir);
+    this.formatter = new Formatter(this.outputDir);
 
     // Read resources
     console.info("Reading definitions...");
@@ -159,8 +158,8 @@ export class Generator {
     }
 
     // Format code if requested
-    if (config?.prettier ?? true) {
-      await this.prettier.formatCode();
+    if (config?.format ?? true) {
+      await this.formatter.formatCode();
     }
 
     console.info("Generation complete!");

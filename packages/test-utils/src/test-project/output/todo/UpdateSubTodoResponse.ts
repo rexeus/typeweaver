@@ -87,10 +87,7 @@ export type IUpdateSubTodoSuccessResponse = {
 };
 
 export class UpdateSubTodoSuccessResponse
-  extends HttpResponse<
-    IUpdateSubTodoSuccessResponseHeader,
-    IUpdateSubTodoSuccessResponseBody
-  >
+  extends HttpResponse<IUpdateSubTodoSuccessResponseHeader, IUpdateSubTodoSuccessResponseBody>
   implements IUpdateSubTodoSuccessResponse
 {
   public override readonly statusCode: HttpStatusCode.OK;

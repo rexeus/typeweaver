@@ -23,9 +23,7 @@ export class PayloadTooLargeError extends Error {
     public readonly contentLength: number,
     public readonly maxBodySize: number,
   ) {
-    super(
-      `Request body too large: ${contentLength} bytes exceeds limit of ${maxBodySize} bytes`,
-    );
+    super(`Request body too large: ${contentLength} bytes exceeds limit of ${maxBodySize} bytes`);
   }
 }
 

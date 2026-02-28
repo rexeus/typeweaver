@@ -75,10 +75,7 @@ export type IListSubTodosSuccessResponse = {
 };
 
 export class ListSubTodosSuccessResponse
-  extends HttpResponse<
-    IListSubTodosSuccessResponseHeader,
-    IListSubTodosSuccessResponseBody
-  >
+  extends HttpResponse<IListSubTodosSuccessResponseHeader, IListSubTodosSuccessResponseBody>
   implements IListSubTodosSuccessResponse
 {
   public override readonly statusCode: HttpStatusCode.OK;
