@@ -10,4 +10,5 @@
 "@rexeus/typeweaver-gen": patch
 ---
 
-Widen remaining bare `RequestHandler` types in `RouteDefinition` and `TypeweaverRouter.route()` to `RequestHandler<any, any, any>`
+Widen remaining bare `RequestHandler` types in `RouteDefinition` and `TypeweaverRouter.route()` to
+`RequestHandler<any, any, any>`

@@ -4,8 +4,8 @@
 
 ### Patch Changes
 
-- 9fbe741: Widen `RequestHandler` constraint in `TypeweaverApp.route()` from bare `RequestHandler` to
-  `RequestHandler<any, any, any>` to resolve contravariance error under `strictFunctionTypes`
+- 9fbe741: Widen `RequestHandler` constraint in `TypeweaverApp.route()` from bare `RequestHandler`
+  to `RequestHandler<any, any, any>` to resolve contravariance error under `strictFunctionTypes`
 - Updated dependencies [9fbe741]
   - @rexeus/typeweaver-aws-cdk@0.6.2
   - @rexeus/typeweaver-clients@0.6.2
@@ -20,7 +20,6 @@
 ### Patch Changes
 
 - edd224c: Fix generated code issues and stabilize CLI binary resolution
-
   - Fix trailing comma in Response.ejs template that produced `HttpResponse<Header, Body,>` in
     generated response classes
   - Widen `TypeweaverRouter` generic constraint from `RequestHandler` to
