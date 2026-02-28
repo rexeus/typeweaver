@@ -4,9 +4,9 @@ import { fileURLToPath } from "node:url";
 import { PluginContextBuilder, PluginRegistry } from "@rexeus/typeweaver-gen";
 import type { PluginConfig, TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import TypesPlugin from "@rexeus/typeweaver-types";
+import { Formatter } from "./Formatter";
 import { IndexFileGenerator } from "./IndexFileGenerator";
 import { PluginLoader } from "./PluginLoader";
-import { Formatter } from "./Formatter";
 import { ResourceReader } from "./ResourceReader";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));

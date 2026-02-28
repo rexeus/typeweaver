@@ -187,13 +187,12 @@ to provide it.
 **Requiring upstream state** — declare dependencies:
 
 ```ts
-const permissions = defineMiddleware<
-  { permissions: string[] },
-  { userId: string }
->(async (ctx, next) => {
-  const userId = ctx.state.get("userId"); // string — no cast, no undefined
-  return next({ permissions: await loadPermissions(userId) });
-});
+const permissions = defineMiddleware<{ permissions: string[] }, { userId: string }>(
+  async (ctx, next) => {
+    const userId = ctx.state.get("userId"); // string — no cast, no undefined
+    return next({ permissions: await loadPermissions(userId) });
+  }
+);
 ```
 
 Registering `permissions` before `auth` produces a **compile-time error** because `userId` is not
@@ -206,7 +205,7 @@ const logger = defineMiddleware(async (ctx, next) => {
   const start = Date.now();
   const response = await next();
   console.log(
-    `${ctx.request.method} ${ctx.request.path} -> ${response.statusCode} (${Date.now() - start}ms)`,
+    `${ctx.request.method} ${ctx.request.path} -> ${response.statusCode} (${Date.now() - start}ms)`
   );
   return response;
 });
@@ -262,6 +261,35 @@ type AppState = InferState<typeof app>;
 Middleware runs for **all** requests, including 404s and 405s, so global concerns like logging and
 CORS always execute.
 
+### 📦 Built-in Middleware
+
+Ready-to-use middleware included with the server plugin.
+
+| Middleware                                           | Description                          | State           |
+| ---------------------------------------------------- | ------------------------------------ | --------------- |
+| [`cors`](docs/middleware/cors.md)                    | CORS headers & preflight handling    | —               |
+| [`basicAuth`](docs/middleware/basic-auth.md)         | HTTP Basic Authentication            | `{ username }`  |
+| [`bearerAuth`](docs/middleware/bearer-auth.md)       | HTTP Bearer Token Authentication     | `{ token }`     |
+| [`logger`](docs/middleware/logger.md)                | Request/response logging with timing | —               |
+| [`secureHeaders`](docs/middleware/secure-headers.md) | OWASP security headers               | —               |
+| [`requestId`](docs/middleware/request-id.md)         | Request ID generation & propagation  | `{ requestId }` |
+| [`poweredBy`](docs/middleware/powered-by.md)         | `X-Powered-By` header                | —               |
+| [`scoped` / `except`](docs/middleware/scoped.md)     | Path-based middleware filtering      | —               |
+
+```ts
+import { cors, logger, secureHeaders, bearerAuth, requestId } from "@rexeus/typeweaver-server";
+
+const app = new TypeweaverApp()
+  .use(cors())
+  .use(secureHeaders())
+  .use(logger())
+  .use(requestId())
+  .use(bearerAuth({ verifyToken: verify }))
+  .route(new UserRouter({ requestHandlers }));
+```
+
+Each middleware is documented in detail — click the links above.
+
 ### 🛠️ App Options
 
 `TypeweaverApp` accepts an optional options object:
@@ -274,7 +302,7 @@ CORS always execute.
 ```ts
 const app = new TypeweaverApp({
   maxBodySize: 5 * 1024 * 1024, // 5 MB
-  onError: (error) => logger.error("Unhandled error", error),
+  onError: error => logger.error("Unhandled error", error),
 });
 ```
 
