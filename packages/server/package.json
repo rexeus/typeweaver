@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-server",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Generates a lightweight, dependency-free server with built-in routing and middleware from your API definitions. Powered by Typeweaver.",
   "type": "module",
   "sideEffects": false,
