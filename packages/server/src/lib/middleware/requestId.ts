@@ -7,7 +7,7 @@ export type RequestIdOptions = {
 };
 
 export function requestId(options?: RequestIdOptions) {
-  const headerName = options?.headerName ?? "x-request-id";
+  const headerName = (options?.headerName ?? "x-request-id").toLowerCase();
   const generator = options?.generator ?? (() => crypto.randomUUID());
 
   return defineMiddleware<{ requestId: string }>(async (ctx, next) => {

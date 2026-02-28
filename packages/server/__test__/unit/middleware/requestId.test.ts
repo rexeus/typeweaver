@@ -97,6 +97,22 @@ describe("requestId", () => {
     expect(response.header?.["x-request-id"]).toBe("first-id");
   });
 
+  test("should normalize mixed-case headerName to lowercase", async () => {
+    const mw = requestId({ headerName: "X-Request-Id" });
+    const ctx = createServerContext({
+      header: { "x-request-id": "existing-from-header" },
+    });
+
+    const response = await executeMiddlewarePipeline(
+      [mw.handler],
+      ctx,
+      async () => ({ statusCode: 200 })
+    );
+
+    expect(response.header?.["x-request-id"]).toBe("existing-from-header");
+    expect(response.header?.["X-Request-Id"]).toBeUndefined();
+  });
+
   test("should preserve existing response headers", async () => {
     const mw = requestId({ generator: () => "id-1" });
     const ctx = createServerContext();
