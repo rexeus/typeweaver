@@ -7,13 +7,13 @@ import {
 } from "../..";
 import type {
   AccessTokenResponse,
-  AuthApiHandler,
   IAccessTokenRequest,
   IRefreshTokenRequest,
   RefreshTokenResponse,
 } from "../..";
+import type { HonoAuthApiHandler } from "../../test-project/output/auth/AuthHono";
 
-export class AuthHandlers implements AuthApiHandler {
+export class AuthHandlers implements HonoAuthApiHandler {
   public constructor(private readonly throwError?: Error | HttpResponse) {
     //
   }

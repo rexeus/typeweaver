@@ -76,6 +76,11 @@ export abstract class BasePlugin implements TypeweaverPlugin {
           fs.copyFileSync(sourcePath, targetPath);
         }
       }
+
+      const libIndexPath = path.join("lib", libNamespace, "index.ts");
+      if (fs.existsSync(path.join(libDir, "index.ts"))) {
+        context.addGeneratedFile(libIndexPath);
+      }
     }
   }
 }

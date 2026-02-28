@@ -21,7 +21,7 @@ import type { IRefreshTokenRequest } from "./RefreshTokenRequest";
 import { RefreshTokenRequestValidator } from "./RefreshTokenRequestValidator";
 import type { RefreshTokenResponse } from "./RefreshTokenResponse";
 
-export type AuthApiHandler = {
+export type HonoAuthApiHandler = {
   handleAccessTokenRequest: HonoRequestHandler<
     IAccessTokenRequest,
     AccessTokenResponse
@@ -33,8 +33,8 @@ export type AuthApiHandler = {
   >;
 };
 
-export class AuthHono extends TypeweaverHono<AuthApiHandler> {
-  public constructor(options: TypeweaverHonoOptions<AuthApiHandler>) {
+export class AuthHono extends TypeweaverHono<HonoAuthApiHandler> {
+  public constructor(options: TypeweaverHonoOptions<HonoAuthApiHandler>) {
     super(options);
     this.setupRoutes();
   }

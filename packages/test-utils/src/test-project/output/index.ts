@@ -12,6 +12,8 @@ export * from "./account/AccountHono";
 
 export * from "./account/AccountHttpApiRoutes";
 
+export * from "./account/AccountRouter";
+
 export * from "./account/RegisterAccountRequest";
 
 export * from "./account/RegisterAccountRequestCommand";
@@ -37,6 +39,8 @@ export * from "./auth/AuthClient";
 export * from "./auth/AuthHono";
 
 export * from "./auth/AuthHttpApiRoutes";
+
+export * from "./auth/AuthRouter";
 
 export * from "./auth/RefreshTokenRequest";
 
@@ -64,6 +68,8 @@ export * from "./file/FileHono";
 
 export * from "./file/FileHttpApiRoutes";
 
+export * from "./file/FileRouter";
+
 export * from "./file/GetFileMetadataRequest";
 
 export * from "./file/GetFileMetadataRequestCommand";
@@ -83,6 +89,16 @@ export * from "./file/UploadFileRequestValidator";
 export * from "./file/UploadFileResponse";
 
 export * from "./file/UploadFileResponseValidator";
+
+export * from "./lib/aws-cdk/index";
+
+export * from "./lib/clients/index";
+
+export * from "./lib/hono/index";
+
+export * from "./lib/server/index";
+
+export * from "./lib/types/index";
 
 export * from "./shared/ConflictErrorResponse";
 
@@ -237,6 +253,8 @@ export * from "./todo/TodoHttpApiRoutes";
 export * from "./todo/TodoNotChangeableErrorResponse";
 
 export * from "./todo/TodoNotFoundErrorResponse";
+
+export * from "./todo/TodoRouter";
 
 export * from "./todo/TodoStatusTransitionInvalidErrorResponse";
 

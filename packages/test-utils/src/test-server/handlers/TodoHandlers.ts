@@ -58,13 +58,13 @@ import type {
   PutTodoResponse,
   QuerySubTodoResponse,
   QueryTodoResponse,
-  TodoApiHandler,
   UpdateSubTodoResponse,
   UpdateTodoResponse,
   UpdateTodoStatusResponse,
 } from "../..";
+import type { HonoTodoApiHandler } from "../../test-project/output/todo/TodoHono";
 
-export class TodoHandlers implements TodoApiHandler {
+export class TodoHandlers implements HonoTodoApiHandler {
   public constructor(private readonly throwError?: Error | HttpResponse) {
     //
   }

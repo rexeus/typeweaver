@@ -74,4 +74,4 @@ See more of [typeweaver](https://github.com/rexeus/typeweaver/tree/main/packages
 
 ## 📄 License
 
-Apache 2.0 © Dennis Wentzien 2025
+Apache 2.0 © Dennis Wentzien 2026

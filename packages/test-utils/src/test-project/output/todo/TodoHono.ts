@@ -69,7 +69,7 @@ import type { IDeleteSubTodoRequest } from "./DeleteSubTodoRequest";
 import { DeleteSubTodoRequestValidator } from "./DeleteSubTodoRequestValidator";
 import type { DeleteSubTodoResponse } from "./DeleteSubTodoResponse";
 
-export type TodoApiHandler = {
+export type HonoTodoApiHandler = {
   handleListTodosRequest: HonoRequestHandler<
     IListTodosRequest,
     ListTodosResponse
@@ -135,8 +135,8 @@ export type TodoApiHandler = {
   >;
 };
 
-export class TodoHono extends TypeweaverHono<TodoApiHandler> {
-  public constructor(options: TypeweaverHonoOptions<TodoApiHandler>) {
+export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
+  public constructor(options: TypeweaverHonoOptions<HonoTodoApiHandler>) {
     super(options);
     this.setupRoutes();
   }

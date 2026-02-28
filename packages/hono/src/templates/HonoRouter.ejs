@@ -14,14 +14,14 @@ import { <%- operation.className %>RequestValidator } from "./<%- operation.clas
 import type { <%- operation.className %>Response } from "./<%- operation.className %>Response";
 <% } %>
 
-export type <%- pascalCaseEntityName %>ApiHandler = {
+export type Hono<%- pascalCaseEntityName %>ApiHandler = {
 <% for (const operation of operations) { %>
   <%- operation.handlerName %>: HonoRequestHandler<I<%- operation.className %>Request, <%- operation.className %>Response>;
 <% } %>
 };
 
-export class <%- pascalCaseEntityName %>Hono extends TypeweaverHono<<%- pascalCaseEntityName %>ApiHandler> {
-  public constructor(options: TypeweaverHonoOptions<<%- pascalCaseEntityName %>ApiHandler>) {
+export class <%- pascalCaseEntityName %>Hono extends TypeweaverHono<Hono<%- pascalCaseEntityName %>ApiHandler> {
+  public constructor(options: TypeweaverHonoOptions<Hono<%- pascalCaseEntityName %>ApiHandler>) {
     super(options);
     this.setupRoutes();
   }
