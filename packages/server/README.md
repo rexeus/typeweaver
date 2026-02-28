@@ -261,6 +261,35 @@ type AppState = InferState<typeof app>;
 Middleware runs for **all** requests, including 404s and 405s, so global concerns like logging and
 CORS always execute.
 
+### 📦 Built-in Middleware
+
+Ready-to-use middleware included with the server plugin.
+
+| Middleware                                                                                                          | Description                          | State           |
+| ------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | --------------- |
+| [`cors`](https://github.com/rexeus/typeweaver/blob/main/packages/server/docs/middleware/cors.md)                    | CORS headers & preflight handling    | —               |
+| [`basicAuth`](https://github.com/rexeus/typeweaver/blob/main/packages/server/docs/middleware/basic-auth.md)         | HTTP Basic Authentication            | `{ username }`  |
+| [`bearerAuth`](https://github.com/rexeus/typeweaver/blob/main/packages/server/docs/middleware/bearer-auth.md)       | HTTP Bearer Token Authentication     | `{ token }`     |
+| [`logger`](https://github.com/rexeus/typeweaver/blob/main/packages/server/docs/middleware/logger.md)                | Request/response logging with timing | —               |
+| [`secureHeaders`](https://github.com/rexeus/typeweaver/blob/main/packages/server/docs/middleware/secure-headers.md) | OWASP security headers               | —               |
+| [`requestId`](https://github.com/rexeus/typeweaver/blob/main/packages/server/docs/middleware/request-id.md)         | Request ID generation & propagation  | `{ requestId }` |
+| [`poweredBy`](https://github.com/rexeus/typeweaver/blob/main/packages/server/docs/middleware/powered-by.md)         | `X-Powered-By` header                | —               |
+| [`scoped` / `except`](https://github.com/rexeus/typeweaver/blob/main/packages/server/docs/middleware/scoped.md)     | Path-based middleware filtering      | —               |
+
+```ts
+import { cors, logger, secureHeaders, bearerAuth, requestId } from "@rexeus/typeweaver-server";
+
+const app = new TypeweaverApp()
+  .use(cors())
+  .use(secureHeaders())
+  .use(logger())
+  .use(requestId())
+  .use(bearerAuth({ verifyToken: verify }))
+  .route(new UserRouter({ requestHandlers }));
+```
+
+Each middleware is documented in detail — click the links above.
+
 ### 🛠️ App Options
 
 `TypeweaverApp` accepts an optional options object:
