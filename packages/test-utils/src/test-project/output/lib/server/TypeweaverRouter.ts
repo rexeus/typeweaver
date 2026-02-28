@@ -118,7 +118,7 @@ export abstract class TypeweaverRouter<
     method: HttpMethod,
     path: string,
     validator: IRequestValidator,
-    handler: RequestHandler,
+    handler: RequestHandler<any, any, any>,
   ): void {
     this.routes.push({
       method,
