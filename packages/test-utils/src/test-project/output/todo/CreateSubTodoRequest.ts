@@ -9,19 +9,9 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { type CreateSubTodoResponse } from "./CreateSubTodoResponse";
 
+import type { SharedErrorResponse } from "../shared/SharedErrorResponses";
+
 import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
-
-import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
-
-import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
-
-import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
-
-import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
-
-import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
-
-import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
 
 export type ICreateSubTodoRequestHeader = {
   "Content-Type": "application/json";
@@ -54,11 +44,5 @@ export type ICreateSubTodoRequest = {
 
 export type SuccessfulCreateSubTodoResponse = Exclude<
   CreateSubTodoResponse,
-  | TodoNotFoundErrorResponse
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse
+  SharedErrorResponse | TodoNotFoundErrorResponse
 >;

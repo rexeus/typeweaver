@@ -9,17 +9,7 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { type GetFileMetadataResponse } from "./GetFileMetadataResponse";
 
-import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
-
-import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
-
-import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
-
-import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
-
-import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
-
-import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
+import type { SharedErrorResponse } from "../shared/SharedErrorResponses";
 
 export type IGetFileMetadataRequestHeader = {
   Accept: "application/json";
@@ -41,10 +31,5 @@ export type IGetFileMetadataRequest = {
 
 export type SuccessfulGetFileMetadataResponse = Exclude<
   GetFileMetadataResponse,
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse
+  SharedErrorResponse
 >;

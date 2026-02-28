@@ -9,6 +9,8 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { type UpdateSubTodoResponse } from "./UpdateSubTodoResponse";
 
+import type { SharedErrorResponse } from "../shared/SharedErrorResponses";
+
 import { SubTodoNotFoundErrorResponse } from "./SubTodoNotFoundErrorResponse";
 
 import { SubTodoNotChangeableErrorResponse } from "./SubTodoNotChangeableErrorResponse";
@@ -16,18 +18,6 @@ import { SubTodoNotChangeableErrorResponse } from "./SubTodoNotChangeableErrorRe
 import { SubTodoStatusTransitionInvalidErrorResponse } from "./SubTodoStatusTransitionInvalidErrorResponse";
 
 import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
-
-import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
-
-import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
-
-import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
-
-import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
-
-import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
-
-import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
 
 export type IUpdateSubTodoRequestHeader = {
   "Content-Type": "application/json";
@@ -62,14 +52,9 @@ export type IUpdateSubTodoRequest = {
 
 export type SuccessfulUpdateSubTodoResponse = Exclude<
   UpdateSubTodoResponse,
+  | SharedErrorResponse
   | SubTodoNotFoundErrorResponse
   | SubTodoNotChangeableErrorResponse
   | SubTodoStatusTransitionInvalidErrorResponse
   | TodoNotFoundErrorResponse
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse
 >;

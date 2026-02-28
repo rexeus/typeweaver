@@ -24,7 +24,7 @@ import type { BlankEnv, BlankSchema, Env, Schema } from "hono/types";
  * @param context - The Hono context for the current request
  * @returns The HTTP response to send to the client
  */
-export type HttpResponseErrorHandler = (
+export type HonoHttpResponseErrorHandler = (
   error: HttpResponse,
   context: Context
 ) => Promise<IHttpResponse> | IHttpResponse;
@@ -35,7 +35,7 @@ export type HttpResponseErrorHandler = (
  * @param context - The Hono context for the current request
  * @returns The HTTP response to send to the client
  */
-export type ValidationErrorHandler = (
+export type HonoValidationErrorHandler = (
   error: RequestValidationError,
   context: Context
 ) => Promise<IHttpResponse> | IHttpResponse;
@@ -46,7 +46,7 @@ export type ValidationErrorHandler = (
  * @param context - The Hono context for the current request
  * @returns The HTTP response to send to the client
  */
-export type UnknownErrorHandler = (
+export type HonoUnknownErrorHandler = (
   error: unknown,
   context: Context
 ) => Promise<IHttpResponse> | IHttpResponse;
@@ -80,7 +80,7 @@ export type TypeweaverHonoOptions<
    * - `function`: Use custom error handler
    * @default true
    */
-  handleHttpResponseErrors?: HttpResponseErrorHandler | boolean;
+  handleHttpResponseErrors?: HonoHttpResponseErrorHandler | boolean;
 
   /**
    * Configure handling of request validation errors.
@@ -89,7 +89,7 @@ export type TypeweaverHonoOptions<
    * - `function`: Use custom error handler
    * @default true
    */
-  handleValidationErrors?: ValidationErrorHandler | boolean;
+  handleValidationErrors?: HonoValidationErrorHandler | boolean;
 
   /**
    * Configure handling of unknown errors.
@@ -98,7 +98,7 @@ export type TypeweaverHonoOptions<
    * - `function`: Use custom error handler
    * @default true
    */
-  handleUnknownErrors?: UnknownErrorHandler | boolean;
+  handleUnknownErrors?: HonoUnknownErrorHandler | boolean;
 };
 
 /**
@@ -136,9 +136,9 @@ export abstract class TypeweaverHono<
   private readonly config: {
     validateRequests: boolean;
     errorHandlers: {
-      validation: ValidationErrorHandler | undefined;
-      httpResponse: HttpResponseErrorHandler | undefined;
-      unknown: UnknownErrorHandler | undefined;
+      validation: HonoValidationErrorHandler | undefined;
+      httpResponse: HonoHttpResponseErrorHandler | undefined;
+      unknown: HonoUnknownErrorHandler | undefined;
     };
   };
 

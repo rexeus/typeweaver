@@ -8,6 +8,8 @@
 
 import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 
+import type { ISharedErrorResponse, SharedErrorResponse } from "../shared/SharedErrorResponses";
+
 import type {
   ISubTodoNotFoundErrorResponse,
   SubTodoNotFoundErrorResponse,
@@ -17,36 +19,6 @@ import type {
   ITodoNotFoundErrorResponse,
   TodoNotFoundErrorResponse,
 } from "./TodoNotFoundErrorResponse";
-
-import type {
-  IForbiddenErrorResponse,
-  ForbiddenErrorResponse,
-} from "../shared/ForbiddenErrorResponse";
-
-import type {
-  IInternalServerErrorResponse,
-  InternalServerErrorResponse,
-} from "../shared/InternalServerErrorResponse";
-
-import type {
-  ITooManyRequestsErrorResponse,
-  TooManyRequestsErrorResponse,
-} from "../shared/TooManyRequestsErrorResponse";
-
-import type {
-  IUnauthorizedErrorResponse,
-  UnauthorizedErrorResponse,
-} from "../shared/UnauthorizedErrorResponse";
-
-import type {
-  IUnsupportedMediaTypeErrorResponse,
-  UnsupportedMediaTypeErrorResponse,
-} from "../shared/UnsupportedMediaTypeErrorResponse";
-
-import type {
-  IValidationErrorResponse,
-  ValidationErrorResponse,
-} from "../shared/ValidationErrorResponse";
 
 export type IDeleteSubTodoSuccessResponseHeader = {
   "Content-Type": "application/json";
@@ -89,22 +61,12 @@ export type DeleteSubTodoSuccessResponses = DeleteSubTodoSuccessResponse;
 
 export type IDeleteSubTodoResponse =
   | IDeleteSubTodoSuccessResponse
+  | ISharedErrorResponse
   | ISubTodoNotFoundErrorResponse
-  | ITodoNotFoundErrorResponse
-  | IForbiddenErrorResponse
-  | IInternalServerErrorResponse
-  | ITooManyRequestsErrorResponse
-  | IUnauthorizedErrorResponse
-  | IUnsupportedMediaTypeErrorResponse
-  | IValidationErrorResponse;
+  | ITodoNotFoundErrorResponse;
 
 export type DeleteSubTodoResponse =
   | DeleteSubTodoSuccessResponse
+  | SharedErrorResponse
   | SubTodoNotFoundErrorResponse
-  | TodoNotFoundErrorResponse
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse;
+  | TodoNotFoundErrorResponse;

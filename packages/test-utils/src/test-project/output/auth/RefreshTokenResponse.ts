@@ -8,35 +8,7 @@
 
 import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 
-import type {
-  IForbiddenErrorResponse,
-  ForbiddenErrorResponse,
-} from "../shared/ForbiddenErrorResponse";
-
-import type {
-  IInternalServerErrorResponse,
-  InternalServerErrorResponse,
-} from "../shared/InternalServerErrorResponse";
-
-import type {
-  ITooManyRequestsErrorResponse,
-  TooManyRequestsErrorResponse,
-} from "../shared/TooManyRequestsErrorResponse";
-
-import type {
-  IUnauthorizedErrorResponse,
-  UnauthorizedErrorResponse,
-} from "../shared/UnauthorizedErrorResponse";
-
-import type {
-  IUnsupportedMediaTypeErrorResponse,
-  UnsupportedMediaTypeErrorResponse,
-} from "../shared/UnsupportedMediaTypeErrorResponse";
-
-import type {
-  IValidationErrorResponse,
-  ValidationErrorResponse,
-} from "../shared/ValidationErrorResponse";
+import type { ISharedErrorResponse, SharedErrorResponse } from "../shared/SharedErrorResponses";
 
 export type IRefreshTokenSuccessResponseHeader = {
   "Content-Type": "application/json";
@@ -78,20 +50,6 @@ export type IRefreshTokenSuccessResponses = IRefreshTokenSuccessResponse;
 
 export type RefreshTokenSuccessResponses = RefreshTokenSuccessResponse;
 
-export type IRefreshTokenResponse =
-  | IRefreshTokenSuccessResponse
-  | IForbiddenErrorResponse
-  | IInternalServerErrorResponse
-  | ITooManyRequestsErrorResponse
-  | IUnauthorizedErrorResponse
-  | IUnsupportedMediaTypeErrorResponse
-  | IValidationErrorResponse;
+export type IRefreshTokenResponse = IRefreshTokenSuccessResponse | ISharedErrorResponse;
 
-export type RefreshTokenResponse =
-  | RefreshTokenSuccessResponse
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse;
+export type RefreshTokenResponse = RefreshTokenSuccessResponse | SharedErrorResponse;

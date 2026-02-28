@@ -7,7 +7,6 @@
  */
 
 import definition from "../definition/account/RegisterAccountDefinition";
-import type { ZodSafeParseResult } from "zod";
 import {
   type IHttpResponse,
   type SafeResponseValidationResult,

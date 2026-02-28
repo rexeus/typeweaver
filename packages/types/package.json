@@ -29,7 +29,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "format": "oxfmt",
-    "build": "tsdown && mkdir -p ./dist/templates ./dist/lib && cp -r ./src/templates/* ./dist/templates/ && cp -r ./src/lib/* ./dist/lib/ && cp ../../LICENSE ../../NOTICE ./dist/",
+    "build": "tsdown && mkdir -p ./dist/templates ./dist/lib && cp -r ./src/templates/* ./dist/templates/ && node scripts/compile-lib.mjs && cp src/lib-declarations/*.d.ts dist/lib/ && cp src/lib/index.ts dist/lib/ && cp ../../LICENSE ../../NOTICE ./dist/",
     "test": "vitest --run",
     "prepack": "npm run build",
     "preversion": "npm run build"
@@ -61,6 +61,7 @@
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
+    "oxc-transform": "^0.115.0",
     "test-utils": "file:../test-utils"
   },
   "dependencies": {

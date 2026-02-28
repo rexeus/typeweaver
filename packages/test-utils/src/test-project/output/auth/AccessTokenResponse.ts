@@ -8,35 +8,7 @@
 
 import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 
-import type {
-  IForbiddenErrorResponse,
-  ForbiddenErrorResponse,
-} from "../shared/ForbiddenErrorResponse";
-
-import type {
-  IInternalServerErrorResponse,
-  InternalServerErrorResponse,
-} from "../shared/InternalServerErrorResponse";
-
-import type {
-  ITooManyRequestsErrorResponse,
-  TooManyRequestsErrorResponse,
-} from "../shared/TooManyRequestsErrorResponse";
-
-import type {
-  IUnauthorizedErrorResponse,
-  UnauthorizedErrorResponse,
-} from "../shared/UnauthorizedErrorResponse";
-
-import type {
-  IUnsupportedMediaTypeErrorResponse,
-  UnsupportedMediaTypeErrorResponse,
-} from "../shared/UnsupportedMediaTypeErrorResponse";
-
-import type {
-  IValidationErrorResponse,
-  ValidationErrorResponse,
-} from "../shared/ValidationErrorResponse";
+import type { ISharedErrorResponse, SharedErrorResponse } from "../shared/SharedErrorResponses";
 
 export type IAccessTokenSuccessResponseHeader = {
   "Content-Type": "application/json";
@@ -78,20 +50,6 @@ export type IAccessTokenSuccessResponses = IAccessTokenSuccessResponse;
 
 export type AccessTokenSuccessResponses = AccessTokenSuccessResponse;
 
-export type IAccessTokenResponse =
-  | IAccessTokenSuccessResponse
-  | IForbiddenErrorResponse
-  | IInternalServerErrorResponse
-  | ITooManyRequestsErrorResponse
-  | IUnauthorizedErrorResponse
-  | IUnsupportedMediaTypeErrorResponse
-  | IValidationErrorResponse;
+export type IAccessTokenResponse = IAccessTokenSuccessResponse | ISharedErrorResponse;
 
-export type AccessTokenResponse =
-  | AccessTokenSuccessResponse
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse;
+export type AccessTokenResponse = AccessTokenSuccessResponse | SharedErrorResponse;

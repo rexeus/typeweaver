@@ -8,40 +8,12 @@
 
 import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 
+import type { ISharedErrorResponse, SharedErrorResponse } from "../shared/SharedErrorResponses";
+
 import type {
   ITodoNotFoundErrorResponse,
   TodoNotFoundErrorResponse,
 } from "./TodoNotFoundErrorResponse";
-
-import type {
-  IForbiddenErrorResponse,
-  ForbiddenErrorResponse,
-} from "../shared/ForbiddenErrorResponse";
-
-import type {
-  IInternalServerErrorResponse,
-  InternalServerErrorResponse,
-} from "../shared/InternalServerErrorResponse";
-
-import type {
-  ITooManyRequestsErrorResponse,
-  TooManyRequestsErrorResponse,
-} from "../shared/TooManyRequestsErrorResponse";
-
-import type {
-  IUnauthorizedErrorResponse,
-  UnauthorizedErrorResponse,
-} from "../shared/UnauthorizedErrorResponse";
-
-import type {
-  IUnsupportedMediaTypeErrorResponse,
-  UnsupportedMediaTypeErrorResponse,
-} from "../shared/UnsupportedMediaTypeErrorResponse";
-
-import type {
-  IValidationErrorResponse,
-  ValidationErrorResponse,
-} from "../shared/ValidationErrorResponse";
 
 export type IDeleteTodoSuccessResponseHeader = {
   "Content-Type": "application/json";
@@ -79,20 +51,10 @@ export type DeleteTodoSuccessResponses = DeleteTodoSuccessResponse;
 
 export type IDeleteTodoResponse =
   | IDeleteTodoSuccessResponse
-  | ITodoNotFoundErrorResponse
-  | IForbiddenErrorResponse
-  | IInternalServerErrorResponse
-  | ITooManyRequestsErrorResponse
-  | IUnauthorizedErrorResponse
-  | IUnsupportedMediaTypeErrorResponse
-  | IValidationErrorResponse;
+  | ISharedErrorResponse
+  | ITodoNotFoundErrorResponse;
 
 export type DeleteTodoResponse =
   | DeleteTodoSuccessResponse
-  | TodoNotFoundErrorResponse
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse;
+  | SharedErrorResponse
+  | TodoNotFoundErrorResponse;

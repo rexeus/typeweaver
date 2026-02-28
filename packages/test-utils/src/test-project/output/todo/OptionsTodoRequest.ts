@@ -9,19 +9,9 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { type OptionsTodoResponse } from "./OptionsTodoResponse";
 
+import type { SharedErrorResponse } from "../shared/SharedErrorResponses";
+
 import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
-
-import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
-
-import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
-
-import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
-
-import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
-
-import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
-
-import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
 
 export type IOptionsTodoRequestHeader = {
   Accept: "application/json";
@@ -45,11 +35,5 @@ export type IOptionsTodoRequest = {
 
 export type SuccessfulOptionsTodoResponse = Exclude<
   OptionsTodoResponse,
-  | TodoNotFoundErrorResponse
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse
+  SharedErrorResponse | TodoNotFoundErrorResponse
 >;

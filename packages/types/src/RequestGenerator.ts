@@ -66,62 +66,60 @@ export class RequestGenerator {
       name: string;
       path: string;
     }[] = [];
-    const sharedErrorResponses: {
+    const entityErrorResponses: {
       name: string;
       path: string;
     }[] = [];
+
+    let hasGlobalSharedErrors = false;
 
     for (const response of responses) {
       const { statusCode, name, isReference } = response;
 
       if (isReference) {
-        // First check in global shared resources
         const sharedResponse = context.resources.sharedResponseResources.find(
           resource => resource.name === name
         );
 
-        let responsePath: string;
-
-        // If not found globally, check in entity-specific responses
-        if (!sharedResponse) {
+        if (sharedResponse) {
+          if (statusCode >= 200 && statusCode < 300) {
+            sharedSuccessResponses.push({
+              name,
+              path: Path.relative(
+                outputDir,
+                `${sharedResponse.outputDir}/${path.basename(sharedResponse.outputFileName, ".ts")}`
+              ),
+            });
+          } else {
+            hasGlobalSharedErrors = true;
+          }
+        } else {
           const entityResponses =
             context.resources.entityResources[operationResource.entityName]
               ?.responses;
           const entityResponse = entityResponses?.find(r => r.name === name);
-          if (entityResponse) {
-            responsePath = Path.relative(
-              outputDir,
-              `${entityResponse.outputDir}/${path.basename(entityResponse.outputFileName, ".ts")}`
-            );
-          } else {
+          if (!entityResponse) {
             throw new Error(
               `Shared response '${response.name}' not found in shared or entity resources`
             );
           }
-        } else {
-          responsePath = Path.relative(
+
+          const responsePath = Path.relative(
             outputDir,
-            `${sharedResponse.outputDir}/${path.basename(sharedResponse.outputFileName, ".ts")}`
+            `${entityResponse.outputDir}/${path.basename(entityResponse.outputFileName, ".ts")}`
           );
-        }
 
-        const assembledResponse = {
-          name,
-          path: responsePath,
-        };
-
-        if (statusCode >= 200 && statusCode < 300) {
-          sharedSuccessResponses.push(assembledResponse);
-        } else {
-          sharedErrorResponses.push(assembledResponse);
+          if (statusCode >= 200 && statusCode < 300) {
+            sharedSuccessResponses.push({ name, path: responsePath });
+          } else {
+            entityErrorResponses.push({ name, path: responsePath });
+          }
         }
 
         continue;
       }
 
-      const assembledResponse = {
-        name,
-      };
+      const assembledResponse = { name };
 
       if (statusCode >= 200 && statusCode < 300) {
         ownSuccessResponses.push(assembledResponse);
@@ -129,6 +127,13 @@ export class RequestGenerator {
         ownErrorResponses.push(assembledResponse);
       }
     }
+
+    const sharedErrorUnionPath = hasGlobalSharedErrors
+      ? Path.relative(
+          outputDir,
+          `${context.resources.sharedResponseResources[0].outputDir}/SharedErrorResponses`
+        )
+      : undefined;
 
     const content = context.renderTemplate(templateFilePath, {
       pascalCaseOperationId,
@@ -143,7 +148,9 @@ export class RequestGenerator {
       ownSuccessResponses,
       ownErrorResponses,
       sharedSuccessResponses,
-      sharedErrorResponses,
+      entityErrorResponses,
+      hasGlobalSharedErrors,
+      sharedErrorUnionPath,
       responseFile: Path.relative(
         outputDir,
         `${outputDir}/${path.basename(outputResponseFileName, ".ts")}`
@@ -153,7 +160,9 @@ export class RequestGenerator {
         `${outputDir}/${path.basename(outputResponseValidationFileName, ".ts")}`
       ),
       hasErrorResponses:
-        ownErrorResponses.length > 0 || sharedErrorResponses.length > 0,
+        ownErrorResponses.length > 0 ||
+        entityErrorResponses.length > 0 ||
+        hasGlobalSharedErrors,
       hasSuccessResponses:
         ownSuccessResponses.length > 0 || sharedSuccessResponses.length > 0,
     });

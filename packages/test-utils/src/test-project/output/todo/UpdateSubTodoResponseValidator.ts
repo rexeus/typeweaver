@@ -7,7 +7,6 @@
  */
 
 import definition from "../definition/todo/mutations/UpdateSubTodoDefinition";
-import type { ZodSafeParseResult } from "zod";
 import {
   type IHttpResponse,
   type SafeResponseValidationResult,

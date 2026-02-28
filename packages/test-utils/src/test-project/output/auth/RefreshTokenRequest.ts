@@ -9,17 +9,7 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { type RefreshTokenResponse } from "./RefreshTokenResponse";
 
-import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
-
-import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
-
-import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
-
-import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
-
-import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
-
-import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
+import type { SharedErrorResponse } from "../shared/SharedErrorResponses";
 
 export type IRefreshTokenRequestHeader = {
   "Content-Type": "application/json";
@@ -40,12 +30,4 @@ export type IRefreshTokenRequest = {
   body: IRefreshTokenRequestBody;
 };
 
-export type SuccessfulRefreshTokenResponse = Exclude<
-  RefreshTokenResponse,
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse
->;
+export type SuccessfulRefreshTokenResponse = Exclude<RefreshTokenResponse, SharedErrorResponse>;

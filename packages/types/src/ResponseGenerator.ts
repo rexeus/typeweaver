@@ -62,33 +62,27 @@ export class ResponseGenerator {
       name: string;
       statusCodeKey: string;
     }[] = [];
-    const sharedResponses: {
+    const entityResponses: {
       name: string;
       path: string;
     }[] = [];
+
+    let hasGlobalSharedResponses = false;
 
     for (const response of responses) {
       const { statusCode, name, body, header, isReference } = response;
 
       if (isReference) {
-        // Check in global shared resources first
         const sharedResponse = context.resources.sharedResponseResources.find(
           resource => resource.name === name
         );
 
         if (sharedResponse) {
-          sharedResponses.push({
-            name,
-            path: Path.relative(
-              outputDir,
-              `${sharedResponse.outputDir}/${path.basename(sharedResponse.outputFileName, ".ts")}`
-            ),
-          });
+          hasGlobalSharedResponses = true;
         } else {
-          // Check in entity-specific responses
-          const entityResponses =
+          const entityResponseList =
             context.resources.entityResources[resource.entityName]?.responses;
-          const entityResponse = entityResponses?.find(r => r.name === name);
+          const entityResponse = entityResponseList?.find(r => r.name === name);
 
           if (!entityResponse) {
             throw new Error(
@@ -96,7 +90,7 @@ export class ResponseGenerator {
             );
           }
 
-          sharedResponses.push({
+          entityResponses.push({
             name,
             path: Path.relative(
               outputDir,
@@ -119,12 +113,21 @@ export class ResponseGenerator {
       });
     }
 
+    const sharedErrorUnionPath = hasGlobalSharedResponses
+      ? Path.relative(
+          outputDir,
+          `${context.resources.sharedResponseResources[0].outputDir}/SharedErrorResponses`
+        )
+      : undefined;
+
     const content = context.renderTemplate(templateFile, {
       operationId,
       pascalCaseOperationId,
       coreDir: context.coreDir,
       ownResponses,
-      sharedResponses,
+      entityResponses,
+      hasGlobalSharedResponses,
+      sharedErrorUnionPath,
       responseFile: Path.relative(
         outputDir,
         `${outputDir}/${path.basename(outputResponseFileName, ".ts")}`

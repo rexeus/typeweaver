@@ -7,7 +7,6 @@
  */
 
 import definition from "../definition/file/UploadFileDefinition";
-import type { ZodSafeParseResult } from "zod";
 import {
   type IHttpResponse,
   type SafeResponseValidationResult,

@@ -9,23 +9,13 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { type UpdateTodoStatusResponse } from "./UpdateTodoStatusResponse";
 
+import type { SharedErrorResponse } from "../shared/SharedErrorResponses";
+
 import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 
 import { TodoStatusTransitionInvalidErrorResponse } from "./TodoStatusTransitionInvalidErrorResponse";
 
 import { TodoNotChangeableErrorResponse } from "./TodoNotChangeableErrorResponse";
-
-import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
-
-import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
-
-import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
-
-import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
-
-import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
-
-import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
 
 export type IUpdateTodoStatusRequestHeader = {
   "Content-Type": "application/json";
@@ -54,13 +44,8 @@ export type IUpdateTodoStatusRequest = {
 
 export type SuccessfulUpdateTodoStatusResponse = Exclude<
   UpdateTodoStatusResponse,
+  | SharedErrorResponse
   | TodoNotFoundErrorResponse
   | TodoStatusTransitionInvalidErrorResponse
   | TodoNotChangeableErrorResponse
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse
 >;

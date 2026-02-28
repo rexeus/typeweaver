@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { PluginContextBuilder, PluginRegistry } from "@rexeus/typeweaver-gen";
 import type { PluginConfig, TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import TypesPlugin from "@rexeus/typeweaver-types";
+import { DefinitionCompiler } from "./DefinitionCompiler";
 import { IndexFileGenerator } from "./IndexFileGenerator";
 import { PluginLoader } from "./PluginLoader";
 import { Formatter } from "./Formatter";
@@ -23,6 +24,7 @@ export class Generator {
   private readonly contextBuilder: PluginContextBuilder;
   private readonly pluginLoader: PluginLoader;
   private readonly indexFileGenerator: IndexFileGenerator;
+  private readonly definitionCompiler: DefinitionCompiler;
   private resourceReader: ResourceReader | null = null;
   private formatter: Formatter | null = null;
 
@@ -46,6 +48,7 @@ export class Generator {
       pluginLoader ?? new PluginLoader(this.registry, requiredPlugins);
     this.indexFileGenerator =
       indexFileGenerator ?? new IndexFileGenerator(this.templateDir);
+    this.definitionCompiler = new DefinitionCompiler();
   }
 
   /**
@@ -156,6 +159,11 @@ export class Generator {
         await registration.plugin.finalize(pluginContext);
       }
     }
+
+    // Compile definitions from .ts to .js + .d.ts stubs
+    // This prevents tsc from resolving Zod's recursive type system
+    console.info("Compiling definitions...");
+    this.definitionCompiler.compileInPlace(this.sourceDir);
 
     // Format code if requested
     if (config?.format ?? true) {

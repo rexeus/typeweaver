@@ -8,6 +8,8 @@
 
 import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 
+import type { ISharedErrorResponse, SharedErrorResponse } from "../shared/SharedErrorResponses";
+
 import type {
   ITodoNotFoundErrorResponse,
   TodoNotFoundErrorResponse,
@@ -17,36 +19,6 @@ import type {
   ITodoNotChangeableErrorResponse,
   TodoNotChangeableErrorResponse,
 } from "./TodoNotChangeableErrorResponse";
-
-import type {
-  IForbiddenErrorResponse,
-  ForbiddenErrorResponse,
-} from "../shared/ForbiddenErrorResponse";
-
-import type {
-  IInternalServerErrorResponse,
-  InternalServerErrorResponse,
-} from "../shared/InternalServerErrorResponse";
-
-import type {
-  ITooManyRequestsErrorResponse,
-  TooManyRequestsErrorResponse,
-} from "../shared/TooManyRequestsErrorResponse";
-
-import type {
-  IUnauthorizedErrorResponse,
-  UnauthorizedErrorResponse,
-} from "../shared/UnauthorizedErrorResponse";
-
-import type {
-  IUnsupportedMediaTypeErrorResponse,
-  UnsupportedMediaTypeErrorResponse,
-} from "../shared/UnsupportedMediaTypeErrorResponse";
-
-import type {
-  IValidationErrorResponse,
-  ValidationErrorResponse,
-} from "../shared/ValidationErrorResponse";
 
 export type IPutTodoSuccessResponseHeader = {
   "Content-Type": "application/json";
@@ -99,22 +71,12 @@ export type PutTodoSuccessResponses = PutTodoSuccessResponse;
 
 export type IPutTodoResponse =
   | IPutTodoSuccessResponse
+  | ISharedErrorResponse
   | ITodoNotFoundErrorResponse
-  | ITodoNotChangeableErrorResponse
-  | IForbiddenErrorResponse
-  | IInternalServerErrorResponse
-  | ITooManyRequestsErrorResponse
-  | IUnauthorizedErrorResponse
-  | IUnsupportedMediaTypeErrorResponse
-  | IValidationErrorResponse;
+  | ITodoNotChangeableErrorResponse;
 
 export type PutTodoResponse =
   | PutTodoSuccessResponse
+  | SharedErrorResponse
   | TodoNotFoundErrorResponse
-  | TodoNotChangeableErrorResponse
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse;
+  | TodoNotChangeableErrorResponse;
