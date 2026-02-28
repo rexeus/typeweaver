@@ -15,12 +15,19 @@ export const noopValidator: IRequestValidator = {
 };
 
 export function createServerContext(
-  overrides: Partial<{ method: HttpMethod; path: string }> = {}
+  overrides: Partial<{
+    method: HttpMethod;
+    path: string;
+    header: Record<string, string | string[]>;
+    query: Record<string, string | string[]>;
+  }> = {}
 ): ServerContext {
   return {
     request: {
       method: (overrides.method ?? "GET") as HttpMethod,
       path: overrides.path ?? "/test",
+      ...(overrides.header ? { header: overrides.header } : {}),
+      ...(overrides.query ? { query: overrides.query } : {}),
     },
     state: new StateMap(),
   };

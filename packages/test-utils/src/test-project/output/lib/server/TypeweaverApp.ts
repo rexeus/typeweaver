@@ -113,11 +113,14 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
    * app.route("/api/v1", new TodoRouter({ requestHandlers: { ... } }));
    * ```
    */
-  public route(router: TypeweaverRouter<Record<string, RequestHandler>>): this;
-  public route(prefix: string, router: TypeweaverRouter<Record<string, RequestHandler>>): this;
+  public route(router: TypeweaverRouter<Record<string, RequestHandler<any, any, any>>>): this;
   public route(
-    prefixOrRouter: string | TypeweaverRouter<Record<string, RequestHandler>>,
-    router?: TypeweaverRouter<Record<string, RequestHandler>>,
+    prefix: string,
+    router: TypeweaverRouter<Record<string, RequestHandler<any, any, any>>>,
+  ): this;
+  public route(
+    prefixOrRouter: string | TypeweaverRouter<Record<string, RequestHandler<any, any, any>>>,
+    router?: TypeweaverRouter<Record<string, RequestHandler<any, any, any>>>,
   ): this {
     if (typeof prefixOrRouter === "string") {
       if (!router) {
@@ -288,7 +291,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
   }
 
   private mountRouter(
-    router: TypeweaverRouter<Record<string, RequestHandler>>,
+    router: TypeweaverRouter<Record<string, RequestHandler<any, any, any>>>,
     prefix?: string,
   ): this {
     const normalizedPrefix = prefix?.replace(/\/+$/, "");

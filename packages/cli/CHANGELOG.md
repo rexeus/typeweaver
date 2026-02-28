@@ -1,5 +1,93 @@
 # @rexeus/typeweaver
 
+## 0.6.4
+
+### Patch Changes
+
+- bee197f: Normalize custom `headerName` option to lowercase in `requestId` middleware so that mixed-case
+  values like `"X-Request-Id"` match HTTP-layer-normalized headers correctly
+- Updated dependencies [bee197f]
+  - @rexeus/typeweaver-aws-cdk@0.6.4
+  - @rexeus/typeweaver-clients@0.6.4
+  - @rexeus/typeweaver-server@0.6.4
+  - @rexeus/typeweaver-types@0.6.4
+  - @rexeus/typeweaver-core@0.6.4
+  - @rexeus/typeweaver-hono@0.6.4
+  - @rexeus/typeweaver-gen@0.6.4
+
+## 0.6.3
+
+### Patch Changes
+
+- be839c7: Widen remaining bare `RequestHandler` types in `RouteDefinition` and
+  `TypeweaverRouter.route()` to `RequestHandler<any, any, any>`
+- Updated dependencies [be839c7]
+  - @rexeus/typeweaver-aws-cdk@0.6.3
+  - @rexeus/typeweaver-clients@0.6.3
+  - @rexeus/typeweaver-server@0.6.3
+  - @rexeus/typeweaver-types@0.6.3
+  - @rexeus/typeweaver-core@0.6.3
+  - @rexeus/typeweaver-hono@0.6.3
+  - @rexeus/typeweaver-gen@0.6.3
+
+## 0.6.2
+
+### Patch Changes
+
+- 9fbe741: Widen `RequestHandler` constraint in `TypeweaverApp.route()` from bare `RequestHandler`
+  to `RequestHandler<any, any, any>` to resolve contravariance error under `strictFunctionTypes`
+- Updated dependencies [9fbe741]
+  - @rexeus/typeweaver-aws-cdk@0.6.2
+  - @rexeus/typeweaver-clients@0.6.2
+  - @rexeus/typeweaver-server@0.6.2
+  - @rexeus/typeweaver-types@0.6.2
+  - @rexeus/typeweaver-core@0.6.2
+  - @rexeus/typeweaver-hono@0.6.2
+  - @rexeus/typeweaver-gen@0.6.2
+
+## 0.6.1
+
+### Patch Changes
+
+- edd224c: Fix generated code issues and stabilize CLI binary resolution
+
+  - Fix trailing comma in Response.ejs template that produced `HttpResponse<Header, Body,>` in
+    generated response classes
+  - Widen `TypeweaverRouter` generic constraint from `RequestHandler` to
+    `RequestHandler<any, any, any>` to resolve contravariance error under `strictFunctionTypes`
+  - Add persistent `bin/` wrapper for CLI so pnpm creates the binary symlink reliably before the
+    first build
+
+- Updated dependencies [edd224c]
+  - @rexeus/typeweaver-server@0.6.1
+  - @rexeus/typeweaver-types@0.6.1
+  - @rexeus/typeweaver-aws-cdk@0.6.1
+  - @rexeus/typeweaver-clients@0.6.1
+  - @rexeus/typeweaver-core@0.6.1
+  - @rexeus/typeweaver-gen@0.6.1
+  - @rexeus/typeweaver-hono@0.6.1
+
+## 0.6.0
+
+### Minor Changes
+
+- 10dc399: Replace built-in Prettier formatter with oxfmt
+
+  The `--prettier` / `--no-prettier` CLI flags have been renamed to `--format` / `--no-format`. The
+  `prettier` config option is now `format`. Generated code is now formatted using oxfmt instead of
+  Prettier.
+
+### Patch Changes
+
+- Updated dependencies [10dc399]
+  - @rexeus/typeweaver-aws-cdk@0.6.0
+  - @rexeus/typeweaver-clients@0.6.0
+  - @rexeus/typeweaver-server@0.6.0
+  - @rexeus/typeweaver-types@0.6.0
+  - @rexeus/typeweaver-core@0.6.0
+  - @rexeus/typeweaver-hono@0.6.0
+  - @rexeus/typeweaver-gen@0.6.0
+
 ## 0.5.1
 
 ### Patch Changes

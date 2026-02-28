@@ -1,5 +1,53 @@
 # @rexeus/typeweaver-gen
 
+## 0.6.4
+
+### Patch Changes
+
+- bee197f: Normalize custom `headerName` option to lowercase in `requestId` middleware so that mixed-case
+  values like `"X-Request-Id"` match HTTP-layer-normalized headers correctly
+- Updated dependencies [bee197f]
+  - @rexeus/typeweaver-core@0.6.4
+
+## 0.6.3
+
+### Patch Changes
+
+- be839c7: Widen remaining bare `RequestHandler` types in `RouteDefinition` and
+  `TypeweaverRouter.route()` to `RequestHandler<any, any, any>`
+- Updated dependencies [be839c7]
+  - @rexeus/typeweaver-core@0.6.3
+
+## 0.6.2
+
+### Patch Changes
+
+- 9fbe741: Widen `RequestHandler` constraint in `TypeweaverApp.route()` from bare `RequestHandler`
+  to `RequestHandler<any, any, any>` to resolve contravariance error under `strictFunctionTypes`
+- Updated dependencies [9fbe741]
+  - @rexeus/typeweaver-core@0.6.2
+
+## 0.6.1
+
+### Patch Changes
+
+- @rexeus/typeweaver-core@0.6.1
+
+## 0.6.0
+
+### Minor Changes
+
+- 10dc399: Replace built-in Prettier formatter with oxfmt
+
+  The `--prettier` / `--no-prettier` CLI flags have been renamed to `--format` / `--no-format`. The
+  `prettier` config option is now `format`. Generated code is now formatted using oxfmt instead of
+  Prettier.
+
+### Patch Changes
+
+- Updated dependencies [10dc399]
+  - @rexeus/typeweaver-core@0.6.0
+
 ## 0.5.1
 
 ### Patch Changes

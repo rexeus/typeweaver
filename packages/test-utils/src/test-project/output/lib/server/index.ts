@@ -29,3 +29,22 @@ export { BodyParseError, PayloadTooLargeError, ResponseSerializationError } from
 export { FetchApiAdapter } from "./FetchApiAdapter";
 export { nodeAdapter, type NodeAdapterOptions } from "./NodeAdapter";
 export { pathMatcher } from "./PathMatcher";
+export {
+  basicAuth,
+  type BasicAuthOptions,
+  bearerAuth,
+  type BearerAuthOptions,
+  cors,
+  type CorsOptions,
+  except,
+  logger,
+  type LogData,
+  type LoggerOptions,
+  poweredBy,
+  type PoweredByOptions,
+  requestId,
+  type RequestIdOptions,
+  scoped,
+  secureHeaders,
+  type SecureHeadersOptions,
+} from "./middleware/index";

@@ -21,7 +21,7 @@ export type RouteDefinition = {
   readonly method: HttpMethod;
   readonly path: string;
   readonly validator: IRequestValidator;
-  readonly handler: RequestHandler;
+  readonly handler: RequestHandler<any, any, any>;
   /** Reference to the router config for error handling. */
   readonly routerConfig: RouterErrorConfig;
 };
