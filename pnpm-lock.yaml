@@ -98,6 +98,9 @@ importers:
       ejs:
         specifier: ^3.1.10
         version: 3.1.10
+      oxfmt:
+        specifier: '>=0.30.0'
+        version: 0.35.0
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
@@ -108,9 +111,6 @@ importers:
       hono:
         specifier: ^4.11.3
         version: 4.11.3
-      prettier:
-        specifier: ^3.6.2
-        version: 3.7.4
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -1518,11 +1518,6 @@ packages:
     engines: {node: '>=10.13.0'}
     hasBin: true
 
-  prettier@3.7.4:
-    resolution: {integrity: sha512-v6UNi1+3hSlVvv8fSaoUbggEM5VErKmmpGA7Pl3HF8V6uKY7rvClBOJlH6yNwQtfTueNkGVpOv/mtWL9L4bgRA==}
-    engines: {node: '>=14'}
-    hasBin: true
-
   quansync@0.2.11:
     resolution: {integrity: sha512-AifT7QEbW9Nri4tAwR5M/uzpBuqfZf+zwaEM/QkzEjj7NBuFD2rBuy0K3dE+8wltbezDV7JMA0WfnCPYRSYbXA==}
 
@@ -2925,8 +2920,6 @@ snapshots:
       source-map-js: 1.2.1
 
   prettier@2.8.8: {}
-
-  prettier@3.7.4: {}
 
   quansync@0.2.11: {}
 
