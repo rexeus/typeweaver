@@ -1,5 +1,19 @@
 # @rexeus/typeweaver-aws-cdk
 
+## 0.6.0
+
+### Minor Changes
+
+- 10dc399: Replace built-in Prettier formatter with oxfmt
+
+  The `--prettier` / `--no-prettier` CLI flags have been renamed to `--format` / `--no-format`. The `prettier` config option is now `format`. Generated code is now formatted using oxfmt instead of Prettier.
+
+### Patch Changes
+
+- Updated dependencies [10dc399]
+  - @rexeus/typeweaver-core@0.6.0
+  - @rexeus/typeweaver-gen@0.6.0
+
 ## 0.5.1
 
 ### Patch Changes
