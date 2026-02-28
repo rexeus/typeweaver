@@ -1,5 +1,12 @@
 # @rexeus/typeweaver-core
 
+## 0.6.3
+
+### Patch Changes
+
+- be839c7: Widen remaining bare `RequestHandler` types in `RouteDefinition` and `TypeweaverRouter.route()` to
+  `RequestHandler<any, any, any>`
+
 ## 0.6.2
 
 ### Patch Changes

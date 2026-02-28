@@ -1,5 +1,20 @@
 # @rexeus/typeweaver
 
+## 0.6.3
+
+### Patch Changes
+
+- be839c7: Widen remaining bare `RequestHandler` types in `RouteDefinition` and `TypeweaverRouter.route()` to
+  `RequestHandler<any, any, any>`
+- Updated dependencies [be839c7]
+  - @rexeus/typeweaver-aws-cdk@0.6.3
+  - @rexeus/typeweaver-clients@0.6.3
+  - @rexeus/typeweaver-server@0.6.3
+  - @rexeus/typeweaver-types@0.6.3
+  - @rexeus/typeweaver-core@0.6.3
+  - @rexeus/typeweaver-hono@0.6.3
+  - @rexeus/typeweaver-gen@0.6.3
+
 ## 0.6.2
 
 ### Patch Changes
@@ -20,6 +35,7 @@
 ### Patch Changes
 
 - edd224c: Fix generated code issues and stabilize CLI binary resolution
+
   - Fix trailing comma in Response.ejs template that produced `HttpResponse<Header, Body,>` in
     generated response classes
   - Widen `TypeweaverRouter` generic constraint from `RequestHandler` to
