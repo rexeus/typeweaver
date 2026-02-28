@@ -11,7 +11,7 @@ import {
   TypeweaverRouter,
   type RequestHandler,
   type TypeweaverRouterOptions,
-} from "../lib/server";
+} from "./../lib/server";
 
 import type { IUploadFileRequest } from "./UploadFileRequest";
 import { UploadFileRequestValidator } from "./UploadFileRequestValidator";
@@ -25,7 +25,7 @@ import type { IDownloadFileContentRequest } from "./DownloadFileContentRequest";
 import { DownloadFileContentRequestValidator } from "./DownloadFileContentRequestValidator";
 import type { DownloadFileContentResponse } from "./DownloadFileContentResponse";
 
-export type FileApiHandler<
+export type ServerFileApiHandler<
   TState extends Record<string, unknown> = Record<string, unknown>,
 > = {
   handleUploadFileRequest: RequestHandler<
@@ -49,8 +49,10 @@ export type FileApiHandler<
 
 export class FileRouter<
   TState extends Record<string, unknown> = Record<string, unknown>,
-> extends TypeweaverRouter<FileApiHandler<TState>> {
-  public constructor(options: TypeweaverRouterOptions<FileApiHandler<TState>>) {
+> extends TypeweaverRouter<ServerFileApiHandler<TState>> {
+  public constructor(
+    options: TypeweaverRouterOptions<ServerFileApiHandler<TState>>,
+  ) {
     super(options);
     this.setupRoutes();
   }

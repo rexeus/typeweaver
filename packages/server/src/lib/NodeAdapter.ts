@@ -60,10 +60,16 @@ async function handleRequest(
     const response = await app.fetch(request);
 
     response.headers.forEach((value, key) => {
-      res.setHeader(key, value);
+      if (key.toLowerCase() !== "set-cookie") {
+        res.setHeader(key, value);
+      }
     });
+    const cookies = response.headers.getSetCookie();
+    if (cookies.length > 0) {
+      res.setHeader("set-cookie", cookies);
+    }
     res.writeHead(response.status);
-    res.end(await response.text());
+    res.end(Buffer.from(await response.arrayBuffer()));
   } catch (error) {
     if (error instanceof PayloadTooLargeError) {
       if (!res.headersSent) {
@@ -94,8 +100,8 @@ async function handleRequest(
 function collectBody(
   req: IncomingMessage,
   maxBodySize: number
-): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
+): Promise<Buffer> {
+  return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];
     let totalBytes = 0;
 
@@ -109,9 +115,7 @@ function collectBody(
       chunks.push(chunk);
     });
 
-    req.on("end", () =>
-      resolve(Buffer.concat(chunks, totalBytes).toString("utf8"))
-    );
+    req.on("end", () => resolve(Buffer.concat(chunks, totalBytes)));
     req.on("error", reject);
   });
 }

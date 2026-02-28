@@ -11,7 +11,7 @@ import {
   TypeweaverRouter,
   type RequestHandler,
   type TypeweaverRouterOptions,
-} from "../lib/server";
+} from "./../lib/server";
 
 import type { IAccessTokenRequest } from "./AccessTokenRequest";
 import { AccessTokenRequestValidator } from "./AccessTokenRequestValidator";
@@ -21,7 +21,7 @@ import type { IRefreshTokenRequest } from "./RefreshTokenRequest";
 import { RefreshTokenRequestValidator } from "./RefreshTokenRequestValidator";
 import type { RefreshTokenResponse } from "./RefreshTokenResponse";
 
-export type AuthApiHandler<
+export type ServerAuthApiHandler<
   TState extends Record<string, unknown> = Record<string, unknown>,
 > = {
   handleAccessTokenRequest: RequestHandler<
@@ -39,8 +39,10 @@ export type AuthApiHandler<
 
 export class AuthRouter<
   TState extends Record<string, unknown> = Record<string, unknown>,
-> extends TypeweaverRouter<AuthApiHandler<TState>> {
-  public constructor(options: TypeweaverRouterOptions<AuthApiHandler<TState>>) {
+> extends TypeweaverRouter<ServerAuthApiHandler<TState>> {
+  public constructor(
+    options: TypeweaverRouterOptions<ServerAuthApiHandler<TState>>,
+  ) {
     super(options);
     this.setupRoutes();
   }

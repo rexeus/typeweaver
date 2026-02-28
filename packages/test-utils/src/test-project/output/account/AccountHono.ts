@@ -17,15 +17,15 @@ import type { IRegisterAccountRequest } from "./RegisterAccountRequest";
 import { RegisterAccountRequestValidator } from "./RegisterAccountRequestValidator";
 import type { RegisterAccountResponse } from "./RegisterAccountResponse";
 
-export type AccountApiHandler = {
+export type HonoAccountApiHandler = {
   handleRegisterAccountRequest: HonoRequestHandler<
     IRegisterAccountRequest,
     RegisterAccountResponse
   >;
 };
 
-export class AccountHono extends TypeweaverHono<AccountApiHandler> {
-  public constructor(options: TypeweaverHonoOptions<AccountApiHandler>) {
+export class AccountHono extends TypeweaverHono<HonoAccountApiHandler> {
+  public constructor(options: TypeweaverHonoOptions<HonoAccountApiHandler>) {
     super(options);
     this.setupRoutes();
   }

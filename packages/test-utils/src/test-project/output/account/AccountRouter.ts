@@ -11,13 +11,13 @@ import {
   TypeweaverRouter,
   type RequestHandler,
   type TypeweaverRouterOptions,
-} from "../lib/server";
+} from "./../lib/server";
 
 import type { IRegisterAccountRequest } from "./RegisterAccountRequest";
 import { RegisterAccountRequestValidator } from "./RegisterAccountRequestValidator";
 import type { RegisterAccountResponse } from "./RegisterAccountResponse";
 
-export type AccountApiHandler<
+export type ServerAccountApiHandler<
   TState extends Record<string, unknown> = Record<string, unknown>,
 > = {
   handleRegisterAccountRequest: RequestHandler<
@@ -29,9 +29,9 @@ export type AccountApiHandler<
 
 export class AccountRouter<
   TState extends Record<string, unknown> = Record<string, unknown>,
-> extends TypeweaverRouter<AccountApiHandler<TState>> {
+> extends TypeweaverRouter<ServerAccountApiHandler<TState>> {
   public constructor(
-    options: TypeweaverRouterOptions<AccountApiHandler<TState>>,
+    options: TypeweaverRouterOptions<ServerAccountApiHandler<TState>>,
   ) {
     super(options);
     this.setupRoutes();

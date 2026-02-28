@@ -4,9 +4,9 @@ import {
   RegisterAccountSuccessResponse,
 } from "../..";
 import type { IRegisterAccountRequest, RegisterAccountResponse } from "../..";
-import type { AccountApiHandler } from "../../test-project/output/account/AccountHono";
+import type { HonoAccountApiHandler } from "../../test-project/output/account/AccountHono";
 
-export class AccountHandlers implements AccountApiHandler {
+export class AccountHandlers implements HonoAccountApiHandler {
   public constructor(private readonly throwError?: Error | HttpResponse) {
     //
   }

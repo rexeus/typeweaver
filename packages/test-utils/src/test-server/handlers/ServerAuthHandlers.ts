@@ -11,9 +11,9 @@ import type {
   IRefreshTokenRequest,
   RefreshTokenResponse,
 } from "../..";
-import type { AuthApiHandler } from "../../test-project/output/auth/AuthRouter";
+import type { ServerAuthApiHandler } from "../../test-project/output/auth/AuthRouter";
 
-export class ServerAuthHandlers implements AuthApiHandler {
+export class ServerAuthHandlers implements ServerAuthApiHandler {
   public constructor(private readonly throwError?: Error | HttpResponse) {
     //
   }

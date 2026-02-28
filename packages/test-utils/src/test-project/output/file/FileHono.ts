@@ -25,7 +25,7 @@ import type { IDownloadFileContentRequest } from "./DownloadFileContentRequest";
 import { DownloadFileContentRequestValidator } from "./DownloadFileContentRequestValidator";
 import type { DownloadFileContentResponse } from "./DownloadFileContentResponse";
 
-export type FileApiHandler = {
+export type HonoFileApiHandler = {
   handleUploadFileRequest: HonoRequestHandler<
     IUploadFileRequest,
     UploadFileResponse
@@ -42,8 +42,8 @@ export type FileApiHandler = {
   >;
 };
 
-export class FileHono extends TypeweaverHono<FileApiHandler> {
-  public constructor(options: TypeweaverHonoOptions<FileApiHandler>) {
+export class FileHono extends TypeweaverHono<HonoFileApiHandler> {
+  public constructor(options: TypeweaverHonoOptions<HonoFileApiHandler>) {
     super(options);
     this.setupRoutes();
   }

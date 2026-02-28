@@ -13,7 +13,7 @@ import { <%- operation.className %>RequestValidator } from "./<%- operation.clas
 import type { <%- operation.className %>Response } from "./<%- operation.className %>Response";
 <% } %>
 
-export type <%- pascalCaseEntityName %>ApiHandler<
+export type Server<%- pascalCaseEntityName %>ApiHandler<
   TState extends Record<string, unknown> = Record<string, unknown>,
 > = {
 <% for (const operation of operations) { %>
@@ -23,8 +23,8 @@ export type <%- pascalCaseEntityName %>ApiHandler<
 
 export class <%- pascalCaseEntityName %>Router<
   TState extends Record<string, unknown> = Record<string, unknown>,
-> extends TypeweaverRouter<<%- pascalCaseEntityName %>ApiHandler<TState>> {
-  public constructor(options: TypeweaverRouterOptions<<%- pascalCaseEntityName %>ApiHandler<TState>>) {
+> extends TypeweaverRouter<Server<%- pascalCaseEntityName %>ApiHandler<TState>> {
+  public constructor(options: TypeweaverRouterOptions<Server<%- pascalCaseEntityName %>ApiHandler<TState>>) {
     super(options);
     this.setupRoutes();
   }

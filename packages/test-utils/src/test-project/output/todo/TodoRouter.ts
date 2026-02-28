@@ -11,7 +11,7 @@ import {
   TypeweaverRouter,
   type RequestHandler,
   type TypeweaverRouterOptions,
-} from "../lib/server";
+} from "./../lib/server";
 
 import type { IListTodosRequest } from "./ListTodosRequest";
 import { ListTodosRequestValidator } from "./ListTodosRequestValidator";
@@ -69,7 +69,7 @@ import type { IDeleteSubTodoRequest } from "./DeleteSubTodoRequest";
 import { DeleteSubTodoRequestValidator } from "./DeleteSubTodoRequestValidator";
 import type { DeleteSubTodoResponse } from "./DeleteSubTodoResponse";
 
-export type TodoApiHandler<
+export type ServerTodoApiHandler<
   TState extends Record<string, unknown> = Record<string, unknown>,
 > = {
   handleListTodosRequest: RequestHandler<
@@ -159,8 +159,10 @@ export type TodoApiHandler<
 
 export class TodoRouter<
   TState extends Record<string, unknown> = Record<string, unknown>,
-> extends TypeweaverRouter<TodoApiHandler<TState>> {
-  public constructor(options: TypeweaverRouterOptions<TodoApiHandler<TState>>) {
+> extends TypeweaverRouter<ServerTodoApiHandler<TState>> {
+  public constructor(
+    options: TypeweaverRouterOptions<ServerTodoApiHandler<TState>>,
+  ) {
     super(options);
     this.setupRoutes();
   }

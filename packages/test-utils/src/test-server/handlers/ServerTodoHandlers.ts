@@ -58,9 +58,9 @@ import type {
   UpdateTodoResponse,
   UpdateTodoStatusResponse,
 } from "../..";
-import type { TodoApiHandler } from "../../test-project/output/todo/TodoRouter";
+import type { ServerTodoApiHandler } from "../../test-project/output/todo/TodoRouter";
 
-export class ServerTodoHandlers implements TodoApiHandler {
+export class ServerTodoHandlers implements ServerTodoApiHandler {
   public constructor(private readonly throwError?: Error | HttpResponse) {
     //
   }

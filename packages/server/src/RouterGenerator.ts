@@ -1,11 +1,9 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { HttpMethod } from "@rexeus/typeweaver-core";
+import { Path } from "@rexeus/typeweaver-gen";
 import Case from "case";
-import type {
-  GeneratorContext,
-  OperationResource,
-} from "@rexeus/typeweaver-gen";
+import type { GeneratorContext, OperationResource } from "@rexeus/typeweaver-gen";
 
 type OperationData = {
   readonly className: string;
@@ -58,7 +56,7 @@ export class RouterGenerator {
       .sort((a, b) => this.compareRoutes(a, b));
 
     const content = context.renderTemplate(templateFile, {
-      coreDir: path.relative(outputDir, context.outputDir),
+      coreDir: Path.relative(outputDir, context.outputDir),
       entityName,
       pascalCaseEntityName,
       operations,

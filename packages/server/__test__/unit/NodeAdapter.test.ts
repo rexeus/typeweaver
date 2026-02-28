@@ -83,6 +83,28 @@ describe("nodeAdapter", () => {
       expect(await request.text()).toBe(body);
     });
 
+    test("preserves binary request body without corruption", async () => {
+      const app = new TypeweaverApp();
+      const fetchSpy = stubFetch(app, new Response(""));
+
+      const handler = nodeAdapter(app);
+      const binaryBody = Buffer.from([0x00, 0x01, 0x80, 0xff, 0xfe, 0x89, 0x50, 0x4e, 0x47]);
+      const req = createMockIncomingMessage(
+        "POST",
+        "/upload",
+        { "content-type": "application/octet-stream" },
+        binaryBody
+      );
+      const res = createMockServerResponse(req);
+
+      handler(req, res);
+      await awaitResponse(res);
+
+      const request = fetchSpy.mock.calls[0]![0] as Request;
+      const receivedBytes = Buffer.from(await request.arrayBuffer());
+      expect(receivedBytes).toEqual(binaryBody);
+    });
+
     test("omits body for GET", async () => {
       const app = new TypeweaverApp();
       const fetchSpy = stubFetch(app, new Response(""));
@@ -165,6 +187,50 @@ describe("nodeAdapter", () => {
       await awaitResponse(res);
 
       expect(res.writtenBody).toBe('{"ok":true}');
+    });
+
+    test("preserves binary response body without corruption", async () => {
+      const binaryData = new Uint8Array([0x00, 0x01, 0x80, 0xff, 0xfe, 0x89, 0x50, 0x4e, 0x47]);
+      const app = new TypeweaverApp();
+      stubFetch(
+        app,
+        new Response(binaryData, {
+          status: 200,
+          headers: { "content-type": "application/octet-stream" },
+        })
+      );
+
+      const handler = nodeAdapter(app);
+      const req = createMockIncomingMessage("GET", "/download");
+      const res = createMockServerResponse(req);
+
+      handler(req, res);
+      await awaitResponse(res);
+
+      expect(res.writtenBodyBuffer).toEqual(Buffer.from(binaryData));
+    });
+
+    test("preserves multiple Set-Cookie headers individually", async () => {
+      const headers = new Headers();
+      headers.append("set-cookie", "session=abc; Path=/; HttpOnly");
+      headers.append("set-cookie", "theme=dark; Path=/");
+      headers.append("content-type", "text/html");
+
+      const app = new TypeweaverApp();
+      stubFetch(app, new Response("ok", { status: 200, headers }));
+
+      const handler = nodeAdapter(app);
+      const req = createMockIncomingMessage("GET", "/");
+      const res = createMockServerResponse(req);
+
+      handler(req, res);
+      await awaitResponse(res);
+
+      expect(res.writtenRawHeaders["set-cookie"]).toEqual([
+        "session=abc; Path=/; HttpOnly",
+        "theme=dark; Path=/",
+      ]);
+      expect(res.writtenHeaders["content-type"]).toBe("text/html");
     });
   });
 
