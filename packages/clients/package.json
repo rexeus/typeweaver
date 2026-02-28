@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-clients",
-  "version": "0.6.0",
+  "version": "0.6.2",
   "description": "Generates HTTP clients directly from your API definitions. Powered by Typeweaver 🧵✨",
   "type": "module",
   "sideEffects": false,

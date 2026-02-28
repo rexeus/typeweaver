@@ -1,5 +1,24 @@
 # @rexeus/typeweaver-clients
 
+## 0.6.2
+
+### Patch Changes
+
+- 9fbe741: Widen `RequestHandler` constraint in `TypeweaverApp.route()` from bare `RequestHandler` to
+  `RequestHandler<any, any, any>` to resolve contravariance error under `strictFunctionTypes`
+- Updated dependencies [9fbe741]
+  - @rexeus/typeweaver-zod-to-ts@0.6.2
+  - @rexeus/typeweaver-core@0.6.2
+  - @rexeus/typeweaver-gen@0.6.2
+
+## 0.6.1
+
+### Patch Changes
+
+- @rexeus/typeweaver-core@0.6.1
+- @rexeus/typeweaver-gen@0.6.1
+- @rexeus/typeweaver-zod-to-ts@0.6.1
+
 ## 0.6.0
 
 ### Minor Changes

@@ -1,5 +1,29 @@
 # @rexeus/typeweaver-server
 
+## 0.6.2
+
+### Patch Changes
+
+- 9fbe741: Widen `RequestHandler` constraint in `TypeweaverApp.route()` from bare `RequestHandler` to
+  `RequestHandler<any, any, any>` to resolve contravariance error under `strictFunctionTypes`
+- Updated dependencies [9fbe741]
+  - @rexeus/typeweaver-core@0.6.2
+  - @rexeus/typeweaver-gen@0.6.2
+
+## 0.6.1
+
+### Patch Changes
+
+- edd224c: Fix generated code issues and stabilize CLI binary resolution
+  - Fix trailing comma in Response.ejs template that produced `HttpResponse<Header, Body,>` in
+    generated response classes
+  - Widen `TypeweaverRouter` generic constraint from `RequestHandler` to
+    `RequestHandler<any, any, any>` to resolve contravariance error under `strictFunctionTypes`
+  - Add persistent `bin/` wrapper for CLI so pnpm creates the binary symlink reliably before the
+    first build
+  - @rexeus/typeweaver-core@0.6.1
+  - @rexeus/typeweaver-gen@0.6.1
+
 ## 0.6.0
 
 ### Minor Changes

@@ -13,7 +13,8 @@
     "test": "turbo test",
     "test:gen": "turbo test:gen",
     "publish:dry": "pnpm publish -r --dry-run --no-git-checks",
-    "ci:publish": "pnpm publish -r"
+    "ci:publish": "pnpm publish -r",
+    "prepare:commit": "pnpm run format && pnpm run lint:fix && pnpm run typecheck && pnpm run build && pnpm run test"
   },
   "keywords": [
     "api",
