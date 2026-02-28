@@ -1,5 +1,12 @@
 # @rexeus/typeweaver-aws-cdk
 
+## 0.5.1
+
+### Patch Changes
+
+- @rexeus/typeweaver-core@0.5.1
+- @rexeus/typeweaver-gen@0.5.1
+
 ## 0.5.0
 
 ### Minor Changes
