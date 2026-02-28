@@ -10,4 +10,5 @@
 "@rexeus/typeweaver-gen": patch
 ---
 
-Normalize custom `headerName` option to lowercase in `requestId` middleware so that mixed-case values like `"X-Request-Id"` match HTTP-layer-normalized headers correctly
+Normalize custom `headerName` option to lowercase in `requestId` middleware so that mixed-case
+values like `"X-Request-Id"` match HTTP-layer-normalized headers correctly
