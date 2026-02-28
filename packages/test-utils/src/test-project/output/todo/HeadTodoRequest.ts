@@ -9,7 +9,17 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { type HeadTodoResponse } from "./HeadTodoResponse";
 
-import type { SharedErrorResponse } from "../shared/SharedErrorResponses";
+import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
+
+import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
+
+import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
+
+import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
+
+import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
+
+import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
 
 import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 
@@ -33,5 +43,11 @@ export type IHeadTodoRequest = {
 
 export type SuccessfulHeadTodoResponse = Exclude<
   HeadTodoResponse,
-  SharedErrorResponse | TodoNotFoundErrorResponse
+  | ForbiddenErrorResponse
+  | InternalServerErrorResponse
+  | TooManyRequestsErrorResponse
+  | UnauthorizedErrorResponse
+  | UnsupportedMediaTypeErrorResponse
+  | ValidationErrorResponse
+  | TodoNotFoundErrorResponse
 >;

@@ -66,8 +66,10 @@ export class ResponseGenerator {
       name: string;
       path: string;
     }[] = [];
-
-    let hasGlobalSharedResponses = false;
+    const sharedResponses: {
+      name: string;
+      path: string;
+    }[] = [];
 
     for (const response of responses) {
       const { statusCode, name, body, header, isReference } = response;
@@ -78,7 +80,13 @@ export class ResponseGenerator {
         );
 
         if (sharedResponse) {
-          hasGlobalSharedResponses = true;
+          sharedResponses.push({
+            name,
+            path: Path.relative(
+              outputDir,
+              `${sharedResponse.outputDir}/${path.basename(sharedResponse.outputFileName, ".ts")}`
+            ),
+          });
         } else {
           const entityResponseList =
             context.resources.entityResources[resource.entityName]?.responses;
@@ -113,21 +121,13 @@ export class ResponseGenerator {
       });
     }
 
-    const sharedErrorUnionPath = hasGlobalSharedResponses
-      ? Path.relative(
-          outputDir,
-          `${context.resources.sharedResponseResources[0].outputDir}/SharedErrorResponses`
-        )
-      : undefined;
-
     const content = context.renderTemplate(templateFile, {
       operationId,
       pascalCaseOperationId,
       coreDir: context.coreDir,
       ownResponses,
       entityResponses,
-      hasGlobalSharedResponses,
-      sharedErrorUnionPath,
+      sharedResponses,
       responseFile: Path.relative(
         outputDir,
         `${outputDir}/${path.basename(outputResponseFileName, ".ts")}`

@@ -13,8 +13,8 @@ import {
         <%= ownResponse.name %>Response,
     <% } %>
 } from "<%= responseFile %>";
-<% if (hasGlobalSharedErrors) { %>
-import type { SharedErrorResponse } from "<%= sharedErrorUnionPath %>";
+<% for (const sharedError of sharedErrorResponses) { %>
+import { <%= sharedError.name %>Response } from "<%= sharedError.path %>";
 <% } %>
 <% for (const entityError of entityErrorResponses) { %>
 import { <%= entityError.name %>Response } from "<%= entityError.path %>";
@@ -51,7 +51,7 @@ export type I<%= pascalCaseOperationId %>Request = {
     export type Successful<%= pascalCaseOperationId %>Response = <%= pascalCaseOperationId %>Response;
 <% } else { %>
     export type Successful<%= pascalCaseOperationId %>Response = Exclude<<%= pascalCaseOperationId %>Response, <%= [
-        ...(hasGlobalSharedErrors ? [{ name: 'SharedError' }] : []),
+        ...sharedErrorResponses,
         ...ownErrorResponses,
         ...entityErrorResponses,
     ].map(({ name }) => `${name}Response`).join(" | ") %>

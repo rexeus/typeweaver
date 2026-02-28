@@ -7,8 +7,8 @@
  */
 
 import { HttpResponse, HttpStatusCode } from "<%= coreDir %>";
-<% if (hasGlobalSharedResponses) { %>
-import type { ISharedErrorResponse, SharedErrorResponse } from "<%= sharedErrorUnionPath %>";
+<% for (const shared of sharedResponses) { %>
+import type { I<%= shared.name %>Response, <%= shared.name %>Response } from "<%= shared.path %>";
 <% } %>
 <% for(const entityResponse of entityResponses) { %>
 import type { I<%= entityResponse.name %>Response, <%= entityResponse.name %>Response } from "<%= entityResponse.path %>";
@@ -76,8 +76,8 @@ export type I<%= pascalCaseOperationId %>Response =
 <% for (const ownResponse of ownResponses) { %>
     | I<%= ownResponse.name %>Response
 <% } %>
-<% if (hasGlobalSharedResponses) { %>
-    | ISharedErrorResponse
+<% for (const shared of sharedResponses) { %>
+    | I<%= shared.name %>Response
 <% } %>
 <% for (const entityResponse of entityResponses) { %>
     | I<%= entityResponse.name %>Response
@@ -87,8 +87,8 @@ export type <%= pascalCaseOperationId %>Response =
 <% for (const ownResponse of ownResponses) { %>
     | <%= ownResponse.name %>Response
 <% } %>
-<% if (hasGlobalSharedResponses) { %>
-    | SharedErrorResponse
+<% for (const shared of sharedResponses) { %>
+    | <%= shared.name %>Response
 <% } %>
 <% for (const entityResponse of entityResponses) { %>
     | <%= entityResponse.name %>Response

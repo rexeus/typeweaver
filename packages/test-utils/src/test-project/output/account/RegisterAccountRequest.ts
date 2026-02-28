@@ -9,7 +9,17 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { type RegisterAccountResponse } from "./RegisterAccountResponse";
 
-import type { SharedErrorResponse } from "../shared/SharedErrorResponses";
+import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
+
+import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
+
+import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
+
+import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
+
+import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
+
+import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
 
 export type IRegisterAccountRequestHeader = {
   "Content-Type": "application/json";
@@ -33,5 +43,10 @@ export type IRegisterAccountRequest = {
 
 export type SuccessfulRegisterAccountResponse = Exclude<
   RegisterAccountResponse,
-  SharedErrorResponse
+  | ForbiddenErrorResponse
+  | InternalServerErrorResponse
+  | TooManyRequestsErrorResponse
+  | UnauthorizedErrorResponse
+  | UnsupportedMediaTypeErrorResponse
+  | ValidationErrorResponse
 >;

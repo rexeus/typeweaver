@@ -8,7 +8,35 @@
 
 import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 
-import type { ISharedErrorResponse, SharedErrorResponse } from "../shared/SharedErrorResponses";
+import type {
+  IForbiddenErrorResponse,
+  ForbiddenErrorResponse,
+} from "../shared/ForbiddenErrorResponse";
+
+import type {
+  IInternalServerErrorResponse,
+  InternalServerErrorResponse,
+} from "../shared/InternalServerErrorResponse";
+
+import type {
+  ITooManyRequestsErrorResponse,
+  TooManyRequestsErrorResponse,
+} from "../shared/TooManyRequestsErrorResponse";
+
+import type {
+  IUnauthorizedErrorResponse,
+  UnauthorizedErrorResponse,
+} from "../shared/UnauthorizedErrorResponse";
+
+import type {
+  IUnsupportedMediaTypeErrorResponse,
+  UnsupportedMediaTypeErrorResponse,
+} from "../shared/UnsupportedMediaTypeErrorResponse";
+
+import type {
+  IValidationErrorResponse,
+  ValidationErrorResponse,
+} from "../shared/ValidationErrorResponse";
 
 export type IUploadFileSuccessResponseHeader = {
   "Content-Type": "application/json";
@@ -53,6 +81,20 @@ export type IUploadFileSuccessResponses = IUploadFileSuccessResponse;
 
 export type UploadFileSuccessResponses = UploadFileSuccessResponse;
 
-export type IUploadFileResponse = IUploadFileSuccessResponse | ISharedErrorResponse;
+export type IUploadFileResponse =
+  | IUploadFileSuccessResponse
+  | IForbiddenErrorResponse
+  | IInternalServerErrorResponse
+  | ITooManyRequestsErrorResponse
+  | IUnauthorizedErrorResponse
+  | IUnsupportedMediaTypeErrorResponse
+  | IValidationErrorResponse;
 
-export type UploadFileResponse = UploadFileSuccessResponse | SharedErrorResponse;
+export type UploadFileResponse =
+  | UploadFileSuccessResponse
+  | ForbiddenErrorResponse
+  | InternalServerErrorResponse
+  | TooManyRequestsErrorResponse
+  | UnauthorizedErrorResponse
+  | UnsupportedMediaTypeErrorResponse
+  | ValidationErrorResponse;

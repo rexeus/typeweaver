@@ -22,7 +22,6 @@ export class SharedResponseGenerator {
       this.writeSharedResponse(templateFile, sharedResponse, context);
     }
 
-    this.writeSharedErrorUnion(context);
   }
 
   public static writeSharedResponse(
@@ -54,33 +53,4 @@ export class SharedResponseGenerator {
     context.writeFile(relativePath, content);
   }
 
-  private static writeSharedErrorUnion(context: GeneratorContext): void {
-    const sharedErrorResponses = context.resources.sharedResponseResources
-      .filter(r => r.statusCode >= 300)
-      .map(r => ({
-        pascalCaseName: Case.pascal(r.name),
-        fileName: path.basename(r.outputFileName, ".ts"),
-      }));
-
-    if (sharedErrorResponses.length === 0) {
-      return;
-    }
-
-    const templateFile = path.join(
-      moduleDir,
-      "templates",
-      "SharedErrorResponses.ejs"
-    );
-
-    const content = context.renderTemplate(templateFile, {
-      sharedErrorResponses,
-    });
-
-    const outputDir = context.resources.sharedResponseResources[0].outputDir;
-    const relativePath = path.relative(
-      context.outputDir,
-      path.join(outputDir, "SharedErrorResponses.ts")
-    );
-    context.writeFile(relativePath, content);
-  }
 }

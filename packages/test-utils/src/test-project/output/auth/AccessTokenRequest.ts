@@ -9,7 +9,17 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { type AccessTokenResponse } from "./AccessTokenResponse";
 
-import type { SharedErrorResponse } from "../shared/SharedErrorResponses";
+import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
+
+import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
+
+import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
+
+import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
+
+import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
+
+import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
 
 export type IAccessTokenRequestHeader = {
   "Content-Type": "application/json";
@@ -31,4 +41,12 @@ export type IAccessTokenRequest = {
   body: IAccessTokenRequestBody;
 };
 
-export type SuccessfulAccessTokenResponse = Exclude<AccessTokenResponse, SharedErrorResponse>;
+export type SuccessfulAccessTokenResponse = Exclude<
+  AccessTokenResponse,
+  | ForbiddenErrorResponse
+  | InternalServerErrorResponse
+  | TooManyRequestsErrorResponse
+  | UnauthorizedErrorResponse
+  | UnsupportedMediaTypeErrorResponse
+  | ValidationErrorResponse
+>;

@@ -9,7 +9,17 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { type DeleteSubTodoResponse } from "./DeleteSubTodoResponse";
 
-import type { SharedErrorResponse } from "../shared/SharedErrorResponses";
+import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
+
+import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
+
+import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
+
+import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
+
+import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
+
+import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
 
 import { SubTodoNotFoundErrorResponse } from "./SubTodoNotFoundErrorResponse";
 
@@ -36,5 +46,12 @@ export type IDeleteSubTodoRequest = {
 
 export type SuccessfulDeleteSubTodoResponse = Exclude<
   DeleteSubTodoResponse,
-  SharedErrorResponse | SubTodoNotFoundErrorResponse | TodoNotFoundErrorResponse
+  | ForbiddenErrorResponse
+  | InternalServerErrorResponse
+  | TooManyRequestsErrorResponse
+  | UnauthorizedErrorResponse
+  | UnsupportedMediaTypeErrorResponse
+  | ValidationErrorResponse
+  | SubTodoNotFoundErrorResponse
+  | TodoNotFoundErrorResponse
 >;

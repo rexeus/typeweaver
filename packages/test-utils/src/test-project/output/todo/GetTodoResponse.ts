@@ -8,7 +8,35 @@
 
 import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 
-import type { ISharedErrorResponse, SharedErrorResponse } from "../shared/SharedErrorResponses";
+import type {
+  IForbiddenErrorResponse,
+  ForbiddenErrorResponse,
+} from "../shared/ForbiddenErrorResponse";
+
+import type {
+  IInternalServerErrorResponse,
+  InternalServerErrorResponse,
+} from "../shared/InternalServerErrorResponse";
+
+import type {
+  ITooManyRequestsErrorResponse,
+  TooManyRequestsErrorResponse,
+} from "../shared/TooManyRequestsErrorResponse";
+
+import type {
+  IUnauthorizedErrorResponse,
+  UnauthorizedErrorResponse,
+} from "../shared/UnauthorizedErrorResponse";
+
+import type {
+  IUnsupportedMediaTypeErrorResponse,
+  UnsupportedMediaTypeErrorResponse,
+} from "../shared/UnsupportedMediaTypeErrorResponse";
+
+import type {
+  IValidationErrorResponse,
+  ValidationErrorResponse,
+} from "../shared/ValidationErrorResponse";
 
 import type {
   ITodoNotFoundErrorResponse,
@@ -66,10 +94,20 @@ export type GetTodoSuccessResponses = GetTodoSuccessResponse;
 
 export type IGetTodoResponse =
   | IGetTodoSuccessResponse
-  | ISharedErrorResponse
+  | IForbiddenErrorResponse
+  | IInternalServerErrorResponse
+  | ITooManyRequestsErrorResponse
+  | IUnauthorizedErrorResponse
+  | IUnsupportedMediaTypeErrorResponse
+  | IValidationErrorResponse
   | ITodoNotFoundErrorResponse;
 
 export type GetTodoResponse =
   | GetTodoSuccessResponse
-  | SharedErrorResponse
+  | ForbiddenErrorResponse
+  | InternalServerErrorResponse
+  | TooManyRequestsErrorResponse
+  | UnauthorizedErrorResponse
+  | UnsupportedMediaTypeErrorResponse
+  | ValidationErrorResponse
   | TodoNotFoundErrorResponse;

@@ -66,12 +66,14 @@ export class RequestGenerator {
       name: string;
       path: string;
     }[] = [];
+    const sharedErrorResponses: {
+      name: string;
+      path: string;
+    }[] = [];
     const entityErrorResponses: {
       name: string;
       path: string;
     }[] = [];
-
-    let hasGlobalSharedErrors = false;
 
     for (const response of responses) {
       const { statusCode, name, isReference } = response;
@@ -82,16 +84,15 @@ export class RequestGenerator {
         );
 
         if (sharedResponse) {
+          const responsePath = Path.relative(
+            outputDir,
+            `${sharedResponse.outputDir}/${path.basename(sharedResponse.outputFileName, ".ts")}`
+          );
+
           if (statusCode >= 200 && statusCode < 300) {
-            sharedSuccessResponses.push({
-              name,
-              path: Path.relative(
-                outputDir,
-                `${sharedResponse.outputDir}/${path.basename(sharedResponse.outputFileName, ".ts")}`
-              ),
-            });
+            sharedSuccessResponses.push({ name, path: responsePath });
           } else {
-            hasGlobalSharedErrors = true;
+            sharedErrorResponses.push({ name, path: responsePath });
           }
         } else {
           const entityResponses =
@@ -128,13 +129,6 @@ export class RequestGenerator {
       }
     }
 
-    const sharedErrorUnionPath = hasGlobalSharedErrors
-      ? Path.relative(
-          outputDir,
-          `${context.resources.sharedResponseResources[0].outputDir}/SharedErrorResponses`
-        )
-      : undefined;
-
     const content = context.renderTemplate(templateFilePath, {
       pascalCaseOperationId,
       operationId,
@@ -148,9 +142,8 @@ export class RequestGenerator {
       ownSuccessResponses,
       ownErrorResponses,
       sharedSuccessResponses,
+      sharedErrorResponses,
       entityErrorResponses,
-      hasGlobalSharedErrors,
-      sharedErrorUnionPath,
       responseFile: Path.relative(
         outputDir,
         `${outputDir}/${path.basename(outputResponseFileName, ".ts")}`
@@ -162,7 +155,7 @@ export class RequestGenerator {
       hasErrorResponses:
         ownErrorResponses.length > 0 ||
         entityErrorResponses.length > 0 ||
-        hasGlobalSharedErrors,
+        sharedErrorResponses.length > 0,
       hasSuccessResponses:
         ownSuccessResponses.length > 0 || sharedSuccessResponses.length > 0,
     });

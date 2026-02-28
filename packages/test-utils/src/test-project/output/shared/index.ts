@@ -14,8 +14,6 @@ export * from "./InternalServerErrorResponse";
 
 export * from "./NotFoundErrorResponse";
 
-export * from "./SharedErrorResponses";
-
 export * from "./TooManyRequestsErrorResponse";
 
 export * from "./UnauthorizedErrorResponse";

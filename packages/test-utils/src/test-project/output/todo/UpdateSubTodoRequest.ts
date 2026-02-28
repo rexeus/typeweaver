@@ -9,7 +9,17 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { type UpdateSubTodoResponse } from "./UpdateSubTodoResponse";
 
-import type { SharedErrorResponse } from "../shared/SharedErrorResponses";
+import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
+
+import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
+
+import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
+
+import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
+
+import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
+
+import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
 
 import { SubTodoNotFoundErrorResponse } from "./SubTodoNotFoundErrorResponse";
 
@@ -52,7 +62,12 @@ export type IUpdateSubTodoRequest = {
 
 export type SuccessfulUpdateSubTodoResponse = Exclude<
   UpdateSubTodoResponse,
-  | SharedErrorResponse
+  | ForbiddenErrorResponse
+  | InternalServerErrorResponse
+  | TooManyRequestsErrorResponse
+  | UnauthorizedErrorResponse
+  | UnsupportedMediaTypeErrorResponse
+  | ValidationErrorResponse
   | SubTodoNotFoundErrorResponse
   | SubTodoNotChangeableErrorResponse
   | SubTodoStatusTransitionInvalidErrorResponse
