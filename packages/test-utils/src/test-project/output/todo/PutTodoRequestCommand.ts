@@ -25,10 +25,7 @@ import type {
 
 import { PutTodoSuccessResponse } from "./PutTodoResponse";
 
-export class PutTodoRequestCommand
-  extends RequestCommand
-  implements IPutTodoRequest
-{
+export class PutTodoRequestCommand extends RequestCommand implements IPutTodoRequest {
   public override readonly method = definition.method as HttpMethod.PUT;
   public override readonly path = definition.path;
 

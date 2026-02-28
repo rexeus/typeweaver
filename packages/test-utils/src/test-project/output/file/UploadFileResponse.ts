@@ -59,10 +59,7 @@ export type IUploadFileSuccessResponse = {
 };
 
 export class UploadFileSuccessResponse
-  extends HttpResponse<
-    IUploadFileSuccessResponseHeader,
-    IUploadFileSuccessResponseBody
-  >
+  extends HttpResponse<IUploadFileSuccessResponseHeader, IUploadFileSuccessResponseBody>
   implements IUploadFileSuccessResponse
 {
   public override readonly statusCode: HttpStatusCode.CREATED;

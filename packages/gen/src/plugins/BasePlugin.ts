@@ -27,7 +27,7 @@ export abstract class BasePlugin implements TypeweaverPlugin {
   /**
    * Default implementation - override in subclasses if needed
    */
-  async initialize(context: PluginContext): Promise<void> {
+  async initialize(_context: PluginContext): Promise<void> {
     // Default: no initialization needed
   }
 
@@ -47,7 +47,7 @@ export abstract class BasePlugin implements TypeweaverPlugin {
   /**
    * Default implementation - override in subclasses if needed
    */
-  async finalize(context: PluginContext): Promise<void> {
+  async finalize(_context: PluginContext): Promise<void> {
     // Default: no finalization needed
   }
 

@@ -26,10 +26,7 @@ export type IInternalServerErrorResponse = {
 };
 
 export class InternalServerErrorResponse
-  extends HttpResponse<
-    IInternalServerErrorResponseHeader,
-    IInternalServerErrorResponseBody
-  >
+  extends HttpResponse<IInternalServerErrorResponseHeader, IInternalServerErrorResponseBody>
   implements IInternalServerErrorResponse
 {
   public override readonly statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR;

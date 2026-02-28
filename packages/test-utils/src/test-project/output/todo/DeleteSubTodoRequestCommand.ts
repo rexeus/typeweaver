@@ -24,10 +24,7 @@ import type {
 
 import { DeleteSubTodoSuccessResponse } from "./DeleteSubTodoResponse";
 
-export class DeleteSubTodoRequestCommand
-  extends RequestCommand
-  implements IDeleteSubTodoRequest
-{
+export class DeleteSubTodoRequestCommand extends RequestCommand implements IDeleteSubTodoRequest {
   public override readonly method = definition.method as HttpMethod.DELETE;
   public override readonly path = definition.path;
 

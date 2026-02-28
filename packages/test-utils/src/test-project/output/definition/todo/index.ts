@@ -1,4 +1,4 @@
-/* eslint-disable import/max-dependencies */
+/* oxlint-disable import/max-dependencies */
 export * from "./todoSchema";
 export { default as SubTodoNotChangeableErrorDefinition } from "./errors/SubTodoNotChangeableErrorDefinition";
 export { default as SubTodoNotFoundErrorDefinition } from "./errors/SubTodoNotFoundErrorDefinition";

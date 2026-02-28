@@ -1,4 +1,4 @@
-/* eslint-disable import/max-dependencies */
+/* oxlint-disable import/max-dependencies */
 export * from "./HttpRequest";
 export * from "./HttpResponse";
 export * from "./HttpHeader";

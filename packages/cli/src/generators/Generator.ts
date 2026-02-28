@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PluginContextBuilder, PluginRegistry } from "@rexeus/typeweaver-gen";
-import TypesPlugin from "@rexeus/typeweaver-types";
 import type { PluginConfig, TypeweaverConfig } from "@rexeus/typeweaver-gen";
+import TypesPlugin from "@rexeus/typeweaver-types";
 import { IndexFileGenerator } from "./IndexFileGenerator";
 import { PluginLoader } from "./PluginLoader";
 import { Prettier } from "./Prettier";
@@ -159,7 +159,7 @@ export class Generator {
     }
 
     // Format code if requested
-    if (config?.prettier ?? true) {
+    if (config?.format ?? true) {
       await this.prettier.formatCode();
     }
 

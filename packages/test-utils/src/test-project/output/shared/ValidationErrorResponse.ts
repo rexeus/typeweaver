@@ -32,10 +32,7 @@ export type IValidationErrorResponse = {
 };
 
 export class ValidationErrorResponse
-  extends HttpResponse<
-    IValidationErrorResponseHeader,
-    IValidationErrorResponseBody
-  >
+  extends HttpResponse<IValidationErrorResponseHeader, IValidationErrorResponseBody>
   implements IValidationErrorResponse
 {
   public override readonly statusCode: HttpStatusCode.BAD_REQUEST;
@@ -44,9 +41,7 @@ export class ValidationErrorResponse
     super(response.statusCode, response.header, response.body);
 
     if (response.statusCode !== HttpStatusCode.BAD_REQUEST) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for ValidationErrorResponse`,
-      );
+      throw new Error(`Invalid status code: '${response.statusCode}' for ValidationErrorResponse`);
     }
 
     this.statusCode = response.statusCode;

@@ -56,10 +56,7 @@ export type IAccessTokenSuccessResponse = {
 };
 
 export class AccessTokenSuccessResponse
-  extends HttpResponse<
-    IAccessTokenSuccessResponseHeader,
-    IAccessTokenSuccessResponseBody
-  >
+  extends HttpResponse<IAccessTokenSuccessResponseHeader, IAccessTokenSuccessResponseBody>
   implements IAccessTokenSuccessResponse
 {
   public override readonly statusCode: HttpStatusCode.OK;

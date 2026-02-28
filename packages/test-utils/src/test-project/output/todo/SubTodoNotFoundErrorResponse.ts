@@ -32,10 +32,7 @@ export type ISubTodoNotFoundErrorResponse = {
 };
 
 export class SubTodoNotFoundErrorResponse
-  extends HttpResponse<
-    ISubTodoNotFoundErrorResponseHeader,
-    ISubTodoNotFoundErrorResponseBody
-  >
+  extends HttpResponse<ISubTodoNotFoundErrorResponseHeader, ISubTodoNotFoundErrorResponseBody>
   implements ISubTodoNotFoundErrorResponse
 {
   public override readonly statusCode: HttpStatusCode.NOT_FOUND;

@@ -14,9 +14,7 @@ import type { SuccessfulAccessTokenResponse } from "./AccessTokenRequest";
 import { RefreshTokenRequestCommand } from "./RefreshTokenRequestCommand";
 import type { SuccessfulRefreshTokenResponse } from "./RefreshTokenRequest";
 
-export type AuthRequestCommands =
-  | AccessTokenRequestCommand
-  | RefreshTokenRequestCommand;
+export type AuthRequestCommands = AccessTokenRequestCommand | RefreshTokenRequestCommand;
 
 export type SuccessfulAuthResponses =
   | SuccessfulAccessTokenResponse
@@ -27,17 +25,11 @@ export class AuthClient extends ApiClient {
     super(props);
   }
 
-  public async send(
-    command: AccessTokenRequestCommand,
-  ): Promise<SuccessfulAccessTokenResponse>;
+  public async send(command: AccessTokenRequestCommand): Promise<SuccessfulAccessTokenResponse>;
 
-  public async send(
-    command: RefreshTokenRequestCommand,
-  ): Promise<SuccessfulRefreshTokenResponse>;
+  public async send(command: RefreshTokenRequestCommand): Promise<SuccessfulRefreshTokenResponse>;
 
-  public async send(
-    command: AuthRequestCommands,
-  ): Promise<SuccessfulAuthResponses> {
+  public async send(command: AuthRequestCommands): Promise<SuccessfulAuthResponses> {
     const response = await this.execute(command);
     return command.processResponse(response, this.processResponseOptions);
   }

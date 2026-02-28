@@ -59,10 +59,7 @@ export type IGetFileMetadataSuccessResponse = {
 };
 
 export class GetFileMetadataSuccessResponse
-  extends HttpResponse<
-    IGetFileMetadataSuccessResponseHeader,
-    IGetFileMetadataSuccessResponseBody
-  >
+  extends HttpResponse<IGetFileMetadataSuccessResponseHeader, IGetFileMetadataSuccessResponseBody>
   implements IGetFileMetadataSuccessResponse
 {
   public override readonly statusCode: HttpStatusCode.OK;

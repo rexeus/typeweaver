@@ -16,9 +16,7 @@ import { RequestValidator } from "../lib/types";
 import type { IRegisterAccountRequest } from "./RegisterAccountRequest";
 
 export class RegisterAccountRequestValidator extends RequestValidator {
-  public safeValidate(
-    request: IHttpRequest,
-  ): SafeRequestValidationResult<IRegisterAccountRequest> {
+  public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IRegisterAccountRequest> {
     const error = new RequestValidationError();
     const validatedRequest: IHttpRequest = {
       method: request.method,

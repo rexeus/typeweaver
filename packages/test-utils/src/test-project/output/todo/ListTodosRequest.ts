@@ -34,9 +34,7 @@ export type IListTodosRequestQuery = {
   tags?: string[] | undefined;
   limit?: string | undefined;
   nextToken?: string | undefined;
-  sortBy?:
-    | ("title" | "dueDate" | "priority" | "createdAt" | "modifiedAt")
-    | undefined;
+  sortBy?: ("title" | "dueDate" | "priority" | "createdAt" | "modifiedAt") | undefined;
   sortOrder?: ("asc" | "desc") | undefined;
   search?: string | undefined;
   dateFrom?: string | undefined;

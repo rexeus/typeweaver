@@ -26,10 +26,7 @@ export type IUnauthorizedErrorResponse = {
 };
 
 export class UnauthorizedErrorResponse
-  extends HttpResponse<
-    IUnauthorizedErrorResponseHeader,
-    IUnauthorizedErrorResponseBody
-  >
+  extends HttpResponse<IUnauthorizedErrorResponseHeader, IUnauthorizedErrorResponseBody>
   implements IUnauthorizedErrorResponse
 {
   public override readonly statusCode: HttpStatusCode.UNAUTHORIZED;

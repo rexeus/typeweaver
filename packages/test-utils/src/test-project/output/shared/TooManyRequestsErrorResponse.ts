@@ -26,10 +26,7 @@ export type ITooManyRequestsErrorResponse = {
 };
 
 export class TooManyRequestsErrorResponse
-  extends HttpResponse<
-    ITooManyRequestsErrorResponseHeader,
-    ITooManyRequestsErrorResponseBody
-  >
+  extends HttpResponse<ITooManyRequestsErrorResponseHeader, ITooManyRequestsErrorResponseBody>
   implements ITooManyRequestsErrorResponse
 {
   public override readonly statusCode: HttpStatusCode.TOO_MANY_REQUESTS;

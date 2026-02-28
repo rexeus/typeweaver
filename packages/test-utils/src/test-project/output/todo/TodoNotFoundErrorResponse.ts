@@ -29,10 +29,7 @@ export type ITodoNotFoundErrorResponse = {
 };
 
 export class TodoNotFoundErrorResponse
-  extends HttpResponse<
-    ITodoNotFoundErrorResponseHeader,
-    ITodoNotFoundErrorResponseBody
-  >
+  extends HttpResponse<ITodoNotFoundErrorResponseHeader, ITodoNotFoundErrorResponseBody>
   implements ITodoNotFoundErrorResponse
 {
   public override readonly statusCode: HttpStatusCode.NOT_FOUND;

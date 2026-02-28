@@ -1,5 +1,5 @@
-import { faker } from "@faker-js/faker";
 import { HttpMethod } from "@rexeus/typeweaver-core";
+import { faker } from "@faker-js/faker";
 import { createDataFactory } from "../createDataFactory";
 import { createJwtToken } from "../createJwtToken";
 import { createRequest } from "../createRequest";

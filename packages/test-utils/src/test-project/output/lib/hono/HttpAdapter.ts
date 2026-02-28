@@ -21,10 +21,7 @@ export abstract class HttpAdapter<TRequest = any, TResponse = any> {
    * @param context - Optional additional context needed for conversion
    * @returns Promise resolving to an IHttpRequest
    */
-  public abstract toRequest(
-    request: TRequest,
-    context?: any,
-  ): Promise<IHttpRequest>;
+  public abstract toRequest(request: TRequest, context?: any): Promise<IHttpRequest>;
 
   /**
    * Converts an IHttpResponse to a framework-specific response.

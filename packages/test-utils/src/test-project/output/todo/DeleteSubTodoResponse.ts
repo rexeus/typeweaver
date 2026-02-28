@@ -65,10 +65,7 @@ export type IDeleteSubTodoSuccessResponse = {
 };
 
 export class DeleteSubTodoSuccessResponse
-  extends HttpResponse<
-    IDeleteSubTodoSuccessResponseHeader,
-    IDeleteSubTodoSuccessResponseBody
-  >
+  extends HttpResponse<IDeleteSubTodoSuccessResponseHeader, IDeleteSubTodoSuccessResponseBody>
   implements IDeleteSubTodoSuccessResponse
 {
   public override readonly statusCode: HttpStatusCode.OK;

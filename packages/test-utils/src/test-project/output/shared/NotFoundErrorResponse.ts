@@ -35,9 +35,7 @@ export class NotFoundErrorResponse
     super(response.statusCode, response.header, response.body);
 
     if (response.statusCode !== HttpStatusCode.NOT_FOUND) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for NotFoundErrorResponse`,
-      );
+      throw new Error(`Invalid status code: '${response.statusCode}' for NotFoundErrorResponse`);
     }
 
     this.statusCode = response.statusCode;

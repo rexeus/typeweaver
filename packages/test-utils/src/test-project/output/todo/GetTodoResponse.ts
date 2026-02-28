@@ -72,10 +72,7 @@ export type IGetTodoSuccessResponse = {
 };
 
 export class GetTodoSuccessResponse
-  extends HttpResponse<
-    IGetTodoSuccessResponseHeader,
-    IGetTodoSuccessResponseBody
-  >
+  extends HttpResponse<IGetTodoSuccessResponseHeader, IGetTodoSuccessResponseBody>
   implements IGetTodoSuccessResponse
 {
   public override readonly statusCode: HttpStatusCode.OK;
@@ -84,9 +81,7 @@ export class GetTodoSuccessResponse
     super(response.statusCode, response.header, response.body);
 
     if (response.statusCode !== HttpStatusCode.OK) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for GetTodoSuccessResponse`,
-      );
+      throw new Error(`Invalid status code: '${response.statusCode}' for GetTodoSuccessResponse`);
     }
 
     this.statusCode = response.statusCode;

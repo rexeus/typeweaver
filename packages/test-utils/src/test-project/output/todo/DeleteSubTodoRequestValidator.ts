@@ -16,9 +16,7 @@ import { RequestValidator } from "../lib/types";
 import type { IDeleteSubTodoRequest } from "./DeleteSubTodoRequest";
 
 export class DeleteSubTodoRequestValidator extends RequestValidator {
-  public safeValidate(
-    request: IHttpRequest,
-  ): SafeRequestValidationResult<IDeleteSubTodoRequest> {
+  public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IDeleteSubTodoRequest> {
     const error = new RequestValidationError();
     const validatedRequest: IHttpRequest = {
       method: request.method,

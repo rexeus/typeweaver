@@ -16,9 +16,7 @@ import { RequestValidator } from "../lib/types";
 import type { IUploadFileRequest } from "./UploadFileRequest";
 
 export class UploadFileRequestValidator extends RequestValidator {
-  public safeValidate(
-    request: IHttpRequest,
-  ): SafeRequestValidationResult<IUploadFileRequest> {
+  public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IUploadFileRequest> {
     const error = new RequestValidationError();
     const validatedRequest: IHttpRequest = {
       method: request.method,

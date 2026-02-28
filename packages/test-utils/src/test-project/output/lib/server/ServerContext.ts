@@ -43,9 +43,7 @@ import type { StateMap } from "./StateMap";
  * };
  * ```
  */
-export type ServerContext<
-  TState extends Record<string, unknown> = Record<string, unknown>,
-> = {
+export type ServerContext<TState extends Record<string, unknown> = Record<string, unknown>> = {
   /** The incoming HTTP request in typeweaver format. */
   readonly request: IHttpRequest;
 

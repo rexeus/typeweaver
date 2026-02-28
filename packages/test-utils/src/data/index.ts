@@ -1,4 +1,4 @@
-/* eslint-disable import/max-dependencies */
+/* oxlint-disable import/max-dependencies */
 export * from "./createData";
 export * from "./createDataFactory";
 export * from "./createRequest";

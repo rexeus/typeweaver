@@ -1,4 +1,5 @@
 import { HttpResponse } from "@rexeus/typeweaver-core";
+import type { IHttpRequest } from "@rexeus/typeweaver-core";
 import {
   createCreateTodoRequest,
   createDeleteTodoRequest,
@@ -10,7 +11,6 @@ import {
   createUpdateTodoStatusRequest,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import type { IHttpRequest } from "@rexeus/typeweaver-core";
 import type { IValidationErrorResponseBody } from "test-utils";
 
 function prepareRequestData(requestData: IHttpRequest): RequestInit {
@@ -378,12 +378,9 @@ describe("Generated Hono Router", () => {
       // TODO: Implement test
     });
 
-    test.todo(
-      "should handle NodeJS.ArrayBufferView response bodies",
-      async () => {
-        // TODO: Implement test
-      }
-    );
+    test.todo("should handle NodeJS.ArrayBufferView response bodies", async () => {
+      // TODO: Implement test
+    });
 
     test("should handle empty response bodies", async () => {
       // Arrange

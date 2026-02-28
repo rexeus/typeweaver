@@ -4,8 +4,8 @@ import {
   HttpResponseDefinition,
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
-import { z } from "zod";
 import type { IHttpResponseDefinition } from "@rexeus/typeweaver-core";
+import { z } from "zod";
 import { DefinitionRegistry } from "./DefinitionRegistry";
 import { EmptyResponseArrayError } from "./errors/EmptyResponseArrayError";
 import { InvalidHttpMethodError } from "./errors/InvalidHttpMethodError";

@@ -77,9 +77,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     const result = this.validateAgainstDefinedResponses(response);
 
     if (!result.isValid && !result.error.hasResponseIssues()) {
-      result.error.addStatusCodeIssue([
-        200, 400, 401, 403, 404, 409, 415, 429, 500,
-      ]);
+      result.error.addStatusCodeIssue([200, 400, 401, 403, 404, 409, 415, 429, 500]);
     }
 
     return result;
@@ -101,22 +99,28 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     const error = new ResponseValidationError(response.statusCode);
 
     if (response.statusCode === 200) {
-      const validateUpdateSubTodoSuccessResponseResult =
-        this.validateUpdateSubTodoSuccessResponse(response, error);
+      const validateUpdateSubTodoSuccessResponseResult = this.validateUpdateSubTodoSuccessResponse(
+        response,
+        error,
+      );
       if (validateUpdateSubTodoSuccessResponseResult.isValid) {
         return validateUpdateSubTodoSuccessResponseResult;
       }
     }
 
     if (response.statusCode === 404) {
-      const validateSubTodoNotFoundErrorResponseResult =
-        this.validateSubTodoNotFoundErrorResponse(response, error);
+      const validateSubTodoNotFoundErrorResponseResult = this.validateSubTodoNotFoundErrorResponse(
+        response,
+        error,
+      );
       if (validateSubTodoNotFoundErrorResponseResult.isValid) {
         return validateSubTodoNotFoundErrorResponseResult;
       }
 
-      const validateTodoNotFoundErrorResponseResult =
-        this.validateTodoNotFoundErrorResponse(response, error);
+      const validateTodoNotFoundErrorResponseResult = this.validateTodoNotFoundErrorResponse(
+        response,
+        error,
+      );
       if (validateTodoNotFoundErrorResponseResult.isValid) {
         return validateTodoNotFoundErrorResponseResult;
       }
@@ -130,42 +134,47 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
       }
 
       const validateSubTodoStatusTransitionInvalidErrorResponseResult =
-        this.validateSubTodoStatusTransitionInvalidErrorResponse(
-          response,
-          error,
-        );
+        this.validateSubTodoStatusTransitionInvalidErrorResponse(response, error);
       if (validateSubTodoStatusTransitionInvalidErrorResponseResult.isValid) {
         return validateSubTodoStatusTransitionInvalidErrorResponseResult;
       }
     }
 
     if (response.statusCode === 403) {
-      const validateForbiddenErrorResponseResult =
-        this.validateForbiddenErrorResponse(response, error);
+      const validateForbiddenErrorResponseResult = this.validateForbiddenErrorResponse(
+        response,
+        error,
+      );
       if (validateForbiddenErrorResponseResult.isValid) {
         return validateForbiddenErrorResponseResult;
       }
     }
 
     if (response.statusCode === 500) {
-      const validateInternalServerErrorResponseResult =
-        this.validateInternalServerErrorResponse(response, error);
+      const validateInternalServerErrorResponseResult = this.validateInternalServerErrorResponse(
+        response,
+        error,
+      );
       if (validateInternalServerErrorResponseResult.isValid) {
         return validateInternalServerErrorResponseResult;
       }
     }
 
     if (response.statusCode === 429) {
-      const validateTooManyRequestsErrorResponseResult =
-        this.validateTooManyRequestsErrorResponse(response, error);
+      const validateTooManyRequestsErrorResponseResult = this.validateTooManyRequestsErrorResponse(
+        response,
+        error,
+      );
       if (validateTooManyRequestsErrorResponseResult.isValid) {
         return validateTooManyRequestsErrorResponseResult;
       }
     }
 
     if (response.statusCode === 401) {
-      const validateUnauthorizedErrorResponseResult =
-        this.validateUnauthorizedErrorResponse(response, error);
+      const validateUnauthorizedErrorResponseResult = this.validateUnauthorizedErrorResponse(
+        response,
+        error,
+      );
       if (validateUnauthorizedErrorResponseResult.isValid) {
         return validateUnauthorizedErrorResponseResult;
       }
@@ -180,8 +189,10 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     }
 
     if (response.statusCode === 400) {
-      const validateValidationErrorResponseResult =
-        this.validateValidationErrorResponse(response, error);
+      const validateValidationErrorResponseResult = this.validateValidationErrorResponse(
+        response,
+        error,
+      );
       if (validateValidationErrorResponseResult.isValid) {
         return validateValidationErrorResponseResult;
       }
@@ -213,9 +224,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new UpdateSubTodoSuccessResponse(
-        result.data as IUpdateSubTodoSuccessResponse,
-      ),
+      data: new UpdateSubTodoSuccessResponse(result.data as IUpdateSubTodoSuccessResponse),
     };
   }
 
@@ -239,9 +248,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new SubTodoNotFoundErrorResponse(
-        result.data as ISubTodoNotFoundErrorResponse,
-      ),
+      data: new SubTodoNotFoundErrorResponse(result.data as ISubTodoNotFoundErrorResponse),
     };
   }
 
@@ -275,16 +282,15 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<SubTodoStatusTransitionInvalidErrorResponse> {
-    const result =
-      this.validateResponseType<SubTodoStatusTransitionInvalidErrorResponse>(
-        "SubTodoStatusTransitionInvalidError",
-        definition.responses[3] && "header" in definition.responses[3]
-          ? definition.responses[3]!.header
-          : undefined,
-        definition.responses[3] && "body" in definition.responses[3]
-          ? definition.responses[3]!.body
-          : undefined,
-      )(response, error);
+    const result = this.validateResponseType<SubTodoStatusTransitionInvalidErrorResponse>(
+      "SubTodoStatusTransitionInvalidError",
+      definition.responses[3] && "header" in definition.responses[3]
+        ? definition.responses[3]!.header
+        : undefined,
+      definition.responses[3] && "body" in definition.responses[3]
+        ? definition.responses[3]!.body
+        : undefined,
+    )(response, error);
 
     if (!result.isValid) {
       return result;
@@ -318,9 +324,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new TodoNotFoundErrorResponse(
-        result.data as ITodoNotFoundErrorResponse,
-      ),
+      data: new TodoNotFoundErrorResponse(result.data as ITodoNotFoundErrorResponse),
     };
   }
 
@@ -368,9 +372,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new InternalServerErrorResponse(
-        result.data as IInternalServerErrorResponse,
-      ),
+      data: new InternalServerErrorResponse(result.data as IInternalServerErrorResponse),
     };
   }
 
@@ -394,9 +396,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new TooManyRequestsErrorResponse(
-        result.data as ITooManyRequestsErrorResponse,
-      ),
+      data: new TooManyRequestsErrorResponse(result.data as ITooManyRequestsErrorResponse),
     };
   }
 
@@ -420,9 +420,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new UnauthorizedErrorResponse(
-        result.data as IUnauthorizedErrorResponse,
-      ),
+      data: new UnauthorizedErrorResponse(result.data as IUnauthorizedErrorResponse),
     };
   }
 
@@ -472,9 +470,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new ValidationErrorResponse(
-        result.data as IValidationErrorResponse,
-      ),
+      data: new ValidationErrorResponse(result.data as IValidationErrorResponse),
     };
   }
 }

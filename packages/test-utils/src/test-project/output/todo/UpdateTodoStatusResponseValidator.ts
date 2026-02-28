@@ -72,9 +72,7 @@ export class UpdateTodoStatusResponseValidator extends ResponseValidator {
     const result = this.validateAgainstDefinedResponses(response);
 
     if (!result.isValid && !result.error.hasResponseIssues()) {
-      result.error.addStatusCodeIssue([
-        200, 400, 401, 403, 404, 409, 415, 429, 500,
-      ]);
+      result.error.addStatusCodeIssue([200, 400, 401, 403, 404, 409, 415, 429, 500]);
     }
 
     return result;
@@ -104,8 +102,10 @@ export class UpdateTodoStatusResponseValidator extends ResponseValidator {
     }
 
     if (response.statusCode === 404) {
-      const validateTodoNotFoundErrorResponseResult =
-        this.validateTodoNotFoundErrorResponse(response, error);
+      const validateTodoNotFoundErrorResponseResult = this.validateTodoNotFoundErrorResponse(
+        response,
+        error,
+      );
       if (validateTodoNotFoundErrorResponseResult.isValid) {
         return validateTodoNotFoundErrorResponseResult;
       }
@@ -126,32 +126,40 @@ export class UpdateTodoStatusResponseValidator extends ResponseValidator {
     }
 
     if (response.statusCode === 403) {
-      const validateForbiddenErrorResponseResult =
-        this.validateForbiddenErrorResponse(response, error);
+      const validateForbiddenErrorResponseResult = this.validateForbiddenErrorResponse(
+        response,
+        error,
+      );
       if (validateForbiddenErrorResponseResult.isValid) {
         return validateForbiddenErrorResponseResult;
       }
     }
 
     if (response.statusCode === 500) {
-      const validateInternalServerErrorResponseResult =
-        this.validateInternalServerErrorResponse(response, error);
+      const validateInternalServerErrorResponseResult = this.validateInternalServerErrorResponse(
+        response,
+        error,
+      );
       if (validateInternalServerErrorResponseResult.isValid) {
         return validateInternalServerErrorResponseResult;
       }
     }
 
     if (response.statusCode === 429) {
-      const validateTooManyRequestsErrorResponseResult =
-        this.validateTooManyRequestsErrorResponse(response, error);
+      const validateTooManyRequestsErrorResponseResult = this.validateTooManyRequestsErrorResponse(
+        response,
+        error,
+      );
       if (validateTooManyRequestsErrorResponseResult.isValid) {
         return validateTooManyRequestsErrorResponseResult;
       }
     }
 
     if (response.statusCode === 401) {
-      const validateUnauthorizedErrorResponseResult =
-        this.validateUnauthorizedErrorResponse(response, error);
+      const validateUnauthorizedErrorResponseResult = this.validateUnauthorizedErrorResponse(
+        response,
+        error,
+      );
       if (validateUnauthorizedErrorResponseResult.isValid) {
         return validateUnauthorizedErrorResponseResult;
       }
@@ -166,8 +174,10 @@ export class UpdateTodoStatusResponseValidator extends ResponseValidator {
     }
 
     if (response.statusCode === 400) {
-      const validateValidationErrorResponseResult =
-        this.validateValidationErrorResponse(response, error);
+      const validateValidationErrorResponseResult = this.validateValidationErrorResponse(
+        response,
+        error,
+      );
       if (validateValidationErrorResponseResult.isValid) {
         return validateValidationErrorResponseResult;
       }
@@ -199,9 +209,7 @@ export class UpdateTodoStatusResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new UpdateTodoStatusSuccessResponse(
-        result.data as IUpdateTodoStatusSuccessResponse,
-      ),
+      data: new UpdateTodoStatusSuccessResponse(result.data as IUpdateTodoStatusSuccessResponse),
     };
   }
 
@@ -225,9 +233,7 @@ export class UpdateTodoStatusResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new TodoNotFoundErrorResponse(
-        result.data as ITodoNotFoundErrorResponse,
-      ),
+      data: new TodoNotFoundErrorResponse(result.data as ITodoNotFoundErrorResponse),
     };
   }
 
@@ -235,16 +241,15 @@ export class UpdateTodoStatusResponseValidator extends ResponseValidator {
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<TodoStatusTransitionInvalidErrorResponse> {
-    const result =
-      this.validateResponseType<TodoStatusTransitionInvalidErrorResponse>(
-        "TodoStatusTransitionInvalidError",
-        definition.responses[2] && "header" in definition.responses[2]
-          ? definition.responses[2]!.header
-          : undefined,
-        definition.responses[2] && "body" in definition.responses[2]
-          ? definition.responses[2]!.body
-          : undefined,
-      )(response, error);
+    const result = this.validateResponseType<TodoStatusTransitionInvalidErrorResponse>(
+      "TodoStatusTransitionInvalidError",
+      definition.responses[2] && "header" in definition.responses[2]
+        ? definition.responses[2]!.header
+        : undefined,
+      definition.responses[2] && "body" in definition.responses[2]
+        ? definition.responses[2]!.body
+        : undefined,
+    )(response, error);
 
     if (!result.isValid) {
       return result;
@@ -278,9 +283,7 @@ export class UpdateTodoStatusResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new TodoNotChangeableErrorResponse(
-        result.data as ITodoNotChangeableErrorResponse,
-      ),
+      data: new TodoNotChangeableErrorResponse(result.data as ITodoNotChangeableErrorResponse),
     };
   }
 
@@ -328,9 +331,7 @@ export class UpdateTodoStatusResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new InternalServerErrorResponse(
-        result.data as IInternalServerErrorResponse,
-      ),
+      data: new InternalServerErrorResponse(result.data as IInternalServerErrorResponse),
     };
   }
 
@@ -354,9 +355,7 @@ export class UpdateTodoStatusResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new TooManyRequestsErrorResponse(
-        result.data as ITooManyRequestsErrorResponse,
-      ),
+      data: new TooManyRequestsErrorResponse(result.data as ITooManyRequestsErrorResponse),
     };
   }
 
@@ -380,9 +379,7 @@ export class UpdateTodoStatusResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new UnauthorizedErrorResponse(
-        result.data as IUnauthorizedErrorResponse,
-      ),
+      data: new UnauthorizedErrorResponse(result.data as IUnauthorizedErrorResponse),
     };
   }
 
@@ -432,9 +429,7 @@ export class UpdateTodoStatusResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new ValidationErrorResponse(
-        result.data as IValidationErrorResponse,
-      ),
+      data: new ValidationErrorResponse(result.data as IValidationErrorResponse),
     };
   }
 }

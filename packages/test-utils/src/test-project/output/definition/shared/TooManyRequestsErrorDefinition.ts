@@ -1,7 +1,4 @@
-import {
-  HttpResponseDefinition,
-  HttpStatusCode,
-} from "@rexeus/typeweaver-core";
+import { HttpResponseDefinition, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import { defaultResponseHeader } from "./defaultResponseHeader";
 

@@ -60,10 +60,7 @@ export type IRegisterAccountSuccessResponse = {
 };
 
 export class RegisterAccountSuccessResponse
-  extends HttpResponse<
-    IRegisterAccountSuccessResponseHeader,
-    IRegisterAccountSuccessResponseBody
-  >
+  extends HttpResponse<IRegisterAccountSuccessResponseHeader, IRegisterAccountSuccessResponseBody>
   implements IRegisterAccountSuccessResponse
 {
   public override readonly statusCode: HttpStatusCode.CREATED;

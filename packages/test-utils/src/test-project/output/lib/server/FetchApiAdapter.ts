@@ -13,11 +13,7 @@ import type {
   IHttpRequest,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
-import {
-  BodyParseError,
-  PayloadTooLargeError,
-  ResponseSerializationError,
-} from "./Errors";
+import { BodyParseError, PayloadTooLargeError, ResponseSerializationError } from "./Errors";
 
 export type FetchApiAdapterOptions = {
   readonly maxBodySize?: number;
@@ -40,8 +36,7 @@ export class FetchApiAdapter {
   private readonly maxBodySize: number;
 
   public constructor(options?: FetchApiAdapterOptions) {
-    this.maxBodySize =
-      options?.maxBodySize ?? FetchApiAdapter.DEFAULT_MAX_BODY_SIZE;
+    this.maxBodySize = options?.maxBodySize ?? FetchApiAdapter.DEFAULT_MAX_BODY_SIZE;
   }
 
   /**
@@ -98,21 +93,12 @@ export class FetchApiAdapter {
     return mediaType.startsWith("text/");
   }
 
-  private static isFormUrlencodedContentType(
-    contentType: string | null,
-  ): boolean {
-    return (
-      FetchApiAdapter.extractMediaType(contentType) ===
-      "application/x-www-form-urlencoded"
-    );
+  private static isFormUrlencodedContentType(contentType: string | null): boolean {
+    return FetchApiAdapter.extractMediaType(contentType) === "application/x-www-form-urlencoded";
   }
 
-  private static isMultipartFormDataContentType(
-    contentType: string | null,
-  ): boolean {
-    return (
-      FetchApiAdapter.extractMediaType(contentType) === "multipart/form-data"
-    );
+  private static isMultipartFormDataContentType(contentType: string | null): boolean {
+    return FetchApiAdapter.extractMediaType(contentType) === "multipart/form-data";
   }
 
   private static extractHeaders(headers: Headers): IHttpHeader {
@@ -176,9 +162,7 @@ export class FetchApiAdapter {
     }
   }
 
-  private static async parseFormUrlencodedBody(
-    request: Request,
-  ): Promise<IHttpBody> {
+  private static async parseFormUrlencodedBody(request: Request): Promise<IHttpBody> {
     let text: string;
     try {
       text = await request.text();
@@ -195,9 +179,7 @@ export class FetchApiAdapter {
     return result;
   }
 
-  private static async parseMultipartBody(
-    request: Request,
-  ): Promise<IHttpBody> {
+  private static async parseMultipartBody(request: Request): Promise<IHttpBody> {
     let formData: FormData;
     try {
       formData = await request.formData();
@@ -207,8 +189,7 @@ export class FetchApiAdapter {
       });
     }
 
-    const result: Record<string, string | File | (string | File)[]> =
-      Object.create(null);
+    const result: Record<string, string | File | (string | File)[]> = Object.create(null);
     formData.forEach((value, key) => {
       const existing = result[key];
       if (existing === undefined) {
@@ -281,10 +262,7 @@ export class FetchApiAdapter {
     });
   }
 
-  private static concatChunks(
-    chunks: Uint8Array[],
-    totalBytes: number,
-  ): Uint8Array {
+  private static concatChunks(chunks: Uint8Array[], totalBytes: number): Uint8Array {
     const buffer = new Uint8Array(totalBytes);
     let offset = 0;
     for (const chunk of chunks) {
@@ -294,9 +272,7 @@ export class FetchApiAdapter {
     return buffer;
   }
 
-  private static serializeResponseBody(
-    body: any,
-  ): string | ArrayBuffer | Blob | null {
+  private static serializeResponseBody(body: any): string | ArrayBuffer | Blob | null {
     if (body === undefined || body === null) return null;
     if (typeof body === "string") return body;
     if (body instanceof Blob || body instanceof ArrayBuffer) return body;
@@ -304,17 +280,13 @@ export class FetchApiAdapter {
     try {
       return JSON.stringify(body);
     } catch (error) {
-      throw new ResponseSerializationError(
-        "Failed to serialize response body to JSON",
-        { cause: error },
-      );
+      throw new ResponseSerializationError("Failed to serialize response body to JSON", {
+        cause: error,
+      });
     }
   }
 
-  private static buildResponseHeaders(
-    header?: IHttpHeader,
-    body?: any,
-  ): Headers {
+  private static buildResponseHeaders(header?: IHttpHeader, body?: any): Headers {
     const headers = new Headers();
 
     if (header) {

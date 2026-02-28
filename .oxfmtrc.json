@@ -1,0 +1,65 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 80,
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": false,
+  "quoteProps": "as-needed",
+  "trailingComma": "es5",
+  "bracketSpacing": true,
+  "bracketSameLine": false,
+  "arrowParens": "avoid",
+  "endOfLine": "lf",
+  "singleAttributePerLine": false,
+  "sortPackageJson": false,
+  "sortImports": {
+    "customGroups": [
+      {
+        "groupName": "typeweaver-core",
+        "elementNamePattern": ["@rexeus/typeweaver-core"]
+      },
+      {
+        "groupName": "typeweaver-packages",
+        "elementNamePattern": ["@rexeus/typeweaver-**"]
+      }
+    ],
+    "groups": [
+      "value-builtin",
+      "typeweaver-core",
+      "typeweaver-packages",
+      "value-external",
+      "value-internal",
+      ["value-parent", "value-sibling", "value-index"],
+      "type-import"
+    ],
+    "newlinesBetween": false,
+    "order": "asc",
+    "ignoreCase": true
+  },
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    "pnpm-lock.yaml",
+    "coverage",
+    "*.log",
+    "tmp/",
+    ".DS_Store",
+    "packages/cli/test/outputs/",
+    "packages/test-utils/src/test-project/output/"
+  ],
+  "overrides": [
+    {
+      "files": ["*.md"],
+      "options": { "printWidth": 100, "proseWrap": "always" }
+    },
+    {
+      "files": ["*.json"],
+      "options": { "printWidth": 120, "trailingComma": "none" }
+    },
+    {
+      "files": ["*.yml", "*.yaml"],
+      "options": { "tabWidth": 2, "singleQuote": false }
+    }
+  ]
+}

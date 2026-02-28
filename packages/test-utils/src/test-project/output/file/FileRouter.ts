@@ -25,34 +25,27 @@ import type { IDownloadFileContentRequest } from "./DownloadFileContentRequest";
 import { DownloadFileContentRequestValidator } from "./DownloadFileContentRequestValidator";
 import type { DownloadFileContentResponse } from "./DownloadFileContentResponse";
 
-export type ServerFileApiHandler<
-  TState extends Record<string, unknown> = Record<string, unknown>,
-> = {
-  handleUploadFileRequest: RequestHandler<
-    IUploadFileRequest,
-    UploadFileResponse,
-    TState
-  >;
+export type ServerFileApiHandler<TState extends Record<string, unknown> = Record<string, unknown>> =
+  {
+    handleUploadFileRequest: RequestHandler<IUploadFileRequest, UploadFileResponse, TState>;
 
-  handleGetFileMetadataRequest: RequestHandler<
-    IGetFileMetadataRequest,
-    GetFileMetadataResponse,
-    TState
-  >;
+    handleGetFileMetadataRequest: RequestHandler<
+      IGetFileMetadataRequest,
+      GetFileMetadataResponse,
+      TState
+    >;
 
-  handleDownloadFileContentRequest: RequestHandler<
-    IDownloadFileContentRequest,
-    DownloadFileContentResponse,
-    TState
-  >;
-};
+    handleDownloadFileContentRequest: RequestHandler<
+      IDownloadFileContentRequest,
+      DownloadFileContentResponse,
+      TState
+    >;
+  };
 
 export class FileRouter<
   TState extends Record<string, unknown> = Record<string, unknown>,
 > extends TypeweaverRouter<ServerFileApiHandler<TState>> {
-  public constructor(
-    options: TypeweaverRouterOptions<ServerFileApiHandler<TState>>,
-  ) {
+  public constructor(options: TypeweaverRouterOptions<ServerFileApiHandler<TState>>) {
     super(options);
     this.setupRoutes();
   }
@@ -69,18 +62,14 @@ export class FileRouter<
       HttpMethod.GET,
       "/files/:fileId",
       new GetFileMetadataRequestValidator(),
-      this.requestHandlers.handleGetFileMetadataRequest.bind(
-        this.requestHandlers,
-      ),
+      this.requestHandlers.handleGetFileMetadataRequest.bind(this.requestHandlers),
     );
 
     this.route(
       HttpMethod.GET,
       "/files/:fileId/content",
       new DownloadFileContentRequestValidator(),
-      this.requestHandlers.handleDownloadFileContentRequest.bind(
-        this.requestHandlers,
-      ),
+      this.requestHandlers.handleDownloadFileContentRequest.bind(this.requestHandlers),
     );
   }
 }

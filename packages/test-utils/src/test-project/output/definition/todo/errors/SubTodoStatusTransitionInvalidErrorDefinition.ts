@@ -4,8 +4,7 @@ import { todoStatus } from "../todoSchema";
 
 export default ConflictErrorDefinition.extend({
   name: "SubTodoStatusTransitionInvalidError",
-  description:
-    "SubTodo status transition is conflicting with its status or parent todo status",
+  description: "SubTodo status transition is conflicting with its status or parent todo status",
   body: z.object({
     message: z.literal(
       "SubTodo status transition is conflicting with its status or parent todo status",

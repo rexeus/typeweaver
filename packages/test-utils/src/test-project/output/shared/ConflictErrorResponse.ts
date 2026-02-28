@@ -35,9 +35,7 @@ export class ConflictErrorResponse
     super(response.statusCode, response.header, response.body);
 
     if (response.statusCode !== HttpStatusCode.CONFLICT) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for ConflictErrorResponse`,
-      );
+      throw new Error(`Invalid status code: '${response.statusCode}' for ConflictErrorResponse`);
     }
 
     this.statusCode = response.statusCode;

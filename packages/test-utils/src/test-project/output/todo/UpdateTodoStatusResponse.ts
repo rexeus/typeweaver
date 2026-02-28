@@ -82,10 +82,7 @@ export type IUpdateTodoStatusSuccessResponse = {
 };
 
 export class UpdateTodoStatusSuccessResponse
-  extends HttpResponse<
-    IUpdateTodoStatusSuccessResponseHeader,
-    IUpdateTodoStatusSuccessResponseBody
-  >
+  extends HttpResponse<IUpdateTodoStatusSuccessResponseHeader, IUpdateTodoStatusSuccessResponseBody>
   implements IUpdateTodoStatusSuccessResponse
 {
   public override readonly statusCode: HttpStatusCode.OK;
@@ -103,8 +100,7 @@ export class UpdateTodoStatusSuccessResponse
   }
 }
 
-export type IUpdateTodoStatusSuccessResponses =
-  IUpdateTodoStatusSuccessResponse;
+export type IUpdateTodoStatusSuccessResponses = IUpdateTodoStatusSuccessResponse;
 
 export type UpdateTodoStatusSuccessResponses = UpdateTodoStatusSuccessResponse;
 

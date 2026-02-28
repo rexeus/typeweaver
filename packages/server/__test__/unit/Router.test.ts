@@ -1,5 +1,5 @@
-import { assert, describe, expect, test } from "vitest";
 import type { HttpMethod } from "@rexeus/typeweaver-core";
+import { assert, describe, expect, test } from "vitest";
 import { Router } from "../../src/lib/Router";
 import { createServerContext, noopValidator } from "../helpers";
 import type { RouteDefinition, RouterErrorConfig } from "../../src/lib/Router";

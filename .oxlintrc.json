@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "import"],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "unicorn/prefer-node-protocol": "error",
+    "typescript/consistent-type-definitions": ["error", "type"],
+    "typescript/no-explicit-any": "off",
+    "eslint/no-unused-vars": "off",
+    "import/consistent-type-specifier-style": ["error", "prefer-top-level"],
+    "import/max-dependencies": ["error", { "max": 10, "ignoreTypeImports": false }],
+    "import/no-duplicates": "error",
+    "import/no-named-default": "error",
+    "import/no-namespace": "error",
+    "import/no-unassigned-import": "error"
+  },
+  "ignorePatterns": ["**/dist/**", "**/node_modules/**", ".vscode/**", "**/output/**", "**/outputs/**"]
+}

@@ -16,9 +16,7 @@ import { RequestValidator } from "../lib/types";
 import type { IGetFileMetadataRequest } from "./GetFileMetadataRequest";
 
 export class GetFileMetadataRequestValidator extends RequestValidator {
-  public safeValidate(
-    request: IHttpRequest,
-  ): SafeRequestValidationResult<IGetFileMetadataRequest> {
+  public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IGetFileMetadataRequest> {
     const error = new RequestValidationError();
     const validatedRequest: IHttpRequest = {
       method: request.method,

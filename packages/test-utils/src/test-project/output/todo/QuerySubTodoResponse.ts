@@ -75,10 +75,7 @@ export type IQuerySubTodoSuccessResponse = {
 };
 
 export class QuerySubTodoSuccessResponse
-  extends HttpResponse<
-    IQuerySubTodoSuccessResponseHeader,
-    IQuerySubTodoSuccessResponseBody
-  >
+  extends HttpResponse<IQuerySubTodoSuccessResponseHeader, IQuerySubTodoSuccessResponseBody>
   implements IQuerySubTodoSuccessResponse
 {
   public override readonly statusCode: HttpStatusCode.OK;

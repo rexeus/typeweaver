@@ -26,10 +26,7 @@ import type {
 
 import { QuerySubTodoSuccessResponse } from "./QuerySubTodoResponse";
 
-export class QuerySubTodoRequestCommand
-  extends RequestCommand
-  implements IQuerySubTodoRequest
-{
+export class QuerySubTodoRequestCommand extends RequestCommand implements IQuerySubTodoRequest {
   public override readonly method = definition.method as HttpMethod.POST;
   public override readonly path = definition.path;
 

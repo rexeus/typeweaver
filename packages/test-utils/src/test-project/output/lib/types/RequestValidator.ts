@@ -25,10 +25,7 @@ import { Validator } from "./Validator";
  * - Return validated data (for `validate`)
  * - Return success/error result (for `safeValidate`)
  */
-export abstract class RequestValidator
-  extends Validator
-  implements IRequestValidator
-{
+export abstract class RequestValidator extends Validator implements IRequestValidator {
   public constructor() {
     super();
   }
@@ -39,9 +36,7 @@ export abstract class RequestValidator
    * @param request - The HTTP request to validate
    * @returns A result object containing either the validated request or error details
    */
-  public abstract safeValidate(
-    request: IHttpRequest,
-  ): SafeRequestValidationResult<IHttpRequest>;
+  public abstract safeValidate(request: IHttpRequest): SafeRequestValidationResult<IHttpRequest>;
 
   /**
    * Validates a request and throws if validation fails.

@@ -1,11 +1,11 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import Case from "case";
 import type {
   GeneratorContext,
   OperationResource,
 } from "@rexeus/typeweaver-gen";
+import Case from "case";
 
 export class HonoRouterGenerator {
   public static generate(context: GeneratorContext): void {

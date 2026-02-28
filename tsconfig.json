@@ -38,6 +38,8 @@
     "noImplicitReturns": true,
     "allowUnreachableCode": false,
     "useUnknownInCatchVariables": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
 
     /* Other Options */
     "moduleDetection": "force"

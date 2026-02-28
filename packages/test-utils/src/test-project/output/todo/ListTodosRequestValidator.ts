@@ -16,9 +16,7 @@ import { RequestValidator } from "../lib/types";
 import type { IListTodosRequest } from "./ListTodosRequest";
 
 export class ListTodosRequestValidator extends RequestValidator {
-  public safeValidate(
-    request: IHttpRequest,
-  ): SafeRequestValidationResult<IListTodosRequest> {
+  public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IListTodosRequest> {
     const error = new RequestValidationError();
     const validatedRequest: IHttpRequest = {
       method: request.method,
@@ -45,10 +43,7 @@ export class ListTodosRequestValidator extends RequestValidator {
     }
 
     if (definition.request.query) {
-      const coercedQuery = this.coerceQueryToSchema(
-        request.query,
-        definition.request.query.shape,
-      );
+      const coercedQuery = this.coerceQueryToSchema(request.query, definition.request.query.shape);
 
       const result = definition.request.query.safeParse(coercedQuery);
 

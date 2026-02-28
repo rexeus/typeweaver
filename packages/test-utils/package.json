@@ -7,7 +7,7 @@
   "scripts": {
     "build": "echo 'No build needed for test-utils'",
     "typecheck": "echo 'Skipping typecheck for test-utils (requires 8GB+ memory)'",
-    "format": "prettier --write .",
+    "format": "oxfmt",
     "test-project:gen": "pnpm exec typeweaver generate --output src/test-project/output --input src/test-project/definition --plugins clients,aws-cdk,hono,server --shared src/test-project/definition/shared",
     "test:gen": "pnpm run test-project:gen"
   },

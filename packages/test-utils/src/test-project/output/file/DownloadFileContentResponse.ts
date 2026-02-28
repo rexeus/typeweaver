@@ -72,11 +72,9 @@ export class DownloadFileContentSuccessResponse
   }
 }
 
-export type IDownloadFileContentSuccessResponses =
-  IDownloadFileContentSuccessResponse;
+export type IDownloadFileContentSuccessResponses = IDownloadFileContentSuccessResponse;
 
-export type DownloadFileContentSuccessResponses =
-  DownloadFileContentSuccessResponse;
+export type DownloadFileContentSuccessResponses = DownloadFileContentSuccessResponse;
 
 export type IDownloadFileContentResponse =
   | IDownloadFileContentSuccessResponse

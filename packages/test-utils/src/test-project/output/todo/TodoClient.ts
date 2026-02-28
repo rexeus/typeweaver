@@ -92,69 +92,39 @@ export class TodoClient extends ApiClient {
     super(props);
   }
 
-  public async send(
-    command: CreateSubTodoRequestCommand,
-  ): Promise<SuccessfulCreateSubTodoResponse>;
+  public async send(command: CreateSubTodoRequestCommand): Promise<SuccessfulCreateSubTodoResponse>;
 
-  public async send(
-    command: CreateTodoRequestCommand,
-  ): Promise<SuccessfulCreateTodoResponse>;
+  public async send(command: CreateTodoRequestCommand): Promise<SuccessfulCreateTodoResponse>;
 
-  public async send(
-    command: DeleteSubTodoRequestCommand,
-  ): Promise<SuccessfulDeleteSubTodoResponse>;
+  public async send(command: DeleteSubTodoRequestCommand): Promise<SuccessfulDeleteSubTodoResponse>;
 
-  public async send(
-    command: DeleteTodoRequestCommand,
-  ): Promise<SuccessfulDeleteTodoResponse>;
+  public async send(command: DeleteTodoRequestCommand): Promise<SuccessfulDeleteTodoResponse>;
 
-  public async send(
-    command: PutTodoRequestCommand,
-  ): Promise<SuccessfulPutTodoResponse>;
+  public async send(command: PutTodoRequestCommand): Promise<SuccessfulPutTodoResponse>;
 
-  public async send(
-    command: UpdateSubTodoRequestCommand,
-  ): Promise<SuccessfulUpdateSubTodoResponse>;
+  public async send(command: UpdateSubTodoRequestCommand): Promise<SuccessfulUpdateSubTodoResponse>;
 
-  public async send(
-    command: UpdateTodoRequestCommand,
-  ): Promise<SuccessfulUpdateTodoResponse>;
+  public async send(command: UpdateTodoRequestCommand): Promise<SuccessfulUpdateTodoResponse>;
 
   public async send(
     command: UpdateTodoStatusRequestCommand,
   ): Promise<SuccessfulUpdateTodoStatusResponse>;
 
-  public async send(
-    command: GetTodoRequestCommand,
-  ): Promise<SuccessfulGetTodoResponse>;
+  public async send(command: GetTodoRequestCommand): Promise<SuccessfulGetTodoResponse>;
 
-  public async send(
-    command: HeadTodoRequestCommand,
-  ): Promise<SuccessfulHeadTodoResponse>;
+  public async send(command: HeadTodoRequestCommand): Promise<SuccessfulHeadTodoResponse>;
 
-  public async send(
-    command: ListSubTodosRequestCommand,
-  ): Promise<SuccessfulListSubTodosResponse>;
+  public async send(command: ListSubTodosRequestCommand): Promise<SuccessfulListSubTodosResponse>;
 
-  public async send(
-    command: ListTodosRequestCommand,
-  ): Promise<SuccessfulListTodosResponse>;
+  public async send(command: ListTodosRequestCommand): Promise<SuccessfulListTodosResponse>;
 
-  public async send(
-    command: OptionsTodoRequestCommand,
-  ): Promise<SuccessfulOptionsTodoResponse>;
+  public async send(command: OptionsTodoRequestCommand): Promise<SuccessfulOptionsTodoResponse>;
 
-  public async send(
-    command: QuerySubTodoRequestCommand,
-  ): Promise<SuccessfulQuerySubTodoResponse>;
+  public async send(command: QuerySubTodoRequestCommand): Promise<SuccessfulQuerySubTodoResponse>;
 
-  public async send(
-    command: QueryTodoRequestCommand,
-  ): Promise<SuccessfulQueryTodoResponse>;
+  public async send(command: QueryTodoRequestCommand): Promise<SuccessfulQueryTodoResponse>;
 
-  public async send(
-    command: TodoRequestCommands,
-  ): Promise<SuccessfulTodoResponses> {
+  public async send(command: TodoRequestCommands): Promise<SuccessfulTodoResponses> {
     const response = await this.execute(command);
     return command.processResponse(response, this.processResponseOptions);
   }
