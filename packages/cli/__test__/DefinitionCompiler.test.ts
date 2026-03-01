@@ -103,6 +103,38 @@ describe("DefinitionCompiler", () => {
       );
     });
 
+    test("joins multiline export { } re-exports into a single line", () => {
+      const source = [
+        "export {",
+        "  FooDefinition,",
+        "  BarDefinition,",
+        '} from "./definitions";',
+      ].join("\n");
+      const result = generateDtsStub(source);
+      expect(result).toBe(
+        `${GENERATED_HEADER}\nexport { FooDefinition, BarDefinition, } from "./definitions";\n`
+      );
+    });
+
+    test("joins multiline local export { } into a single line", () => {
+      const source = [
+        "export const foo = 1;",
+        "export {",
+        "  foo,",
+        "  bar,",
+        "};",
+      ].join("\n");
+      const result = generateDtsStub(source);
+      expect(result).toBe(
+        [
+          GENERATED_HEADER,
+          "export declare const foo: any;",
+          "export { foo, bar, };",
+          "",
+        ].join("\n")
+      );
+    });
+
     test("preserves leading comments before first export", () => {
       const source = [
         "/* oxlint-disable import/max-dependencies */",
@@ -184,11 +216,37 @@ describe("DefinitionCompiler", () => {
       );
     });
 
-    test("warns on unrecognized export patterns", () => {
+    test("handles multiline export const (matches first line only)", () => {
+      const source = [
+        "export const schema = z.object({",
+        "  name: z.string(),",
+        "  age: z.number(),",
+        "});",
+      ].join("\n");
+      const result = generateDtsStub(source);
+      expect(result).toBe(
+        `${GENERATED_HEADER}\nexport declare const schema: any;\n`
+      );
+    });
+
+    test("warns on unrecognized export patterns and omits them from stub", () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-      generateDtsStub("export class Foo {}");
+      const source = [
+        "export const valid = 1;",
+        "export class Foo {}",
+        "export const alsoValid = 2;",
+      ].join("\n");
+      const result = generateDtsStub(source);
 
+      expect(result).toBe(
+        [
+          GENERATED_HEADER,
+          "export declare const valid: any;",
+          "export declare const alsoValid: any;",
+          "",
+        ].join("\n")
+      );
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining("Unrecognized export pattern")
       );
