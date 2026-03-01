@@ -9,26 +9,6 @@
 import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 
 import type {
-  ISubTodoNotFoundErrorResponse,
-  SubTodoNotFoundErrorResponse,
-} from "./SubTodoNotFoundErrorResponse";
-
-import type {
-  ISubTodoNotChangeableErrorResponse,
-  SubTodoNotChangeableErrorResponse,
-} from "./SubTodoNotChangeableErrorResponse";
-
-import type {
-  ISubTodoStatusTransitionInvalidErrorResponse,
-  SubTodoStatusTransitionInvalidErrorResponse,
-} from "./SubTodoStatusTransitionInvalidErrorResponse";
-
-import type {
-  ITodoNotFoundErrorResponse,
-  TodoNotFoundErrorResponse,
-} from "./TodoNotFoundErrorResponse";
-
-import type {
   IForbiddenErrorResponse,
   ForbiddenErrorResponse,
 } from "../shared/ForbiddenErrorResponse";
@@ -57,6 +37,26 @@ import type {
   IValidationErrorResponse,
   ValidationErrorResponse,
 } from "../shared/ValidationErrorResponse";
+
+import type {
+  ISubTodoNotFoundErrorResponse,
+  SubTodoNotFoundErrorResponse,
+} from "./SubTodoNotFoundErrorResponse";
+
+import type {
+  ISubTodoNotChangeableErrorResponse,
+  SubTodoNotChangeableErrorResponse,
+} from "./SubTodoNotChangeableErrorResponse";
+
+import type {
+  ISubTodoStatusTransitionInvalidErrorResponse,
+  SubTodoStatusTransitionInvalidErrorResponse,
+} from "./SubTodoStatusTransitionInvalidErrorResponse";
+
+import type {
+  ITodoNotFoundErrorResponse,
+  TodoNotFoundErrorResponse,
+} from "./TodoNotFoundErrorResponse";
 
 export type IUpdateSubTodoSuccessResponseHeader = {
   "Content-Type": "application/json";
@@ -111,26 +111,26 @@ export type UpdateSubTodoSuccessResponses = UpdateSubTodoSuccessResponse;
 
 export type IUpdateSubTodoResponse =
   | IUpdateSubTodoSuccessResponse
-  | ISubTodoNotFoundErrorResponse
-  | ISubTodoNotChangeableErrorResponse
-  | ISubTodoStatusTransitionInvalidErrorResponse
-  | ITodoNotFoundErrorResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
   | ITooManyRequestsErrorResponse
   | IUnauthorizedErrorResponse
   | IUnsupportedMediaTypeErrorResponse
-  | IValidationErrorResponse;
+  | IValidationErrorResponse
+  | ISubTodoNotFoundErrorResponse
+  | ISubTodoNotChangeableErrorResponse
+  | ISubTodoStatusTransitionInvalidErrorResponse
+  | ITodoNotFoundErrorResponse;
 
 export type UpdateSubTodoResponse =
   | UpdateSubTodoSuccessResponse
-  | SubTodoNotFoundErrorResponse
-  | SubTodoNotChangeableErrorResponse
-  | SubTodoStatusTransitionInvalidErrorResponse
-  | TodoNotFoundErrorResponse
   | ForbiddenErrorResponse
   | InternalServerErrorResponse
   | TooManyRequestsErrorResponse
   | UnauthorizedErrorResponse
   | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse;
+  | ValidationErrorResponse
+  | SubTodoNotFoundErrorResponse
+  | SubTodoNotChangeableErrorResponse
+  | SubTodoStatusTransitionInvalidErrorResponse
+  | TodoNotFoundErrorResponse;

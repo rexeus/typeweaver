@@ -62,6 +62,10 @@ export class ResponseGenerator {
       name: string;
       statusCodeKey: string;
     }[] = [];
+    const entityResponses: {
+      name: string;
+      path: string;
+    }[] = [];
     const sharedResponses: {
       name: string;
       path: string;
@@ -71,7 +75,6 @@ export class ResponseGenerator {
       const { statusCode, name, body, header, isReference } = response;
 
       if (isReference) {
-        // Check in global shared resources first
         const sharedResponse = context.resources.sharedResponseResources.find(
           resource => resource.name === name
         );
@@ -85,10 +88,9 @@ export class ResponseGenerator {
             ),
           });
         } else {
-          // Check in entity-specific responses
-          const entityResponses =
+          const entityResponseList =
             context.resources.entityResources[resource.entityName]?.responses;
-          const entityResponse = entityResponses?.find(r => r.name === name);
+          const entityResponse = entityResponseList?.find(r => r.name === name);
 
           if (!entityResponse) {
             throw new Error(
@@ -96,7 +98,7 @@ export class ResponseGenerator {
             );
           }
 
-          sharedResponses.push({
+          entityResponses.push({
             name,
             path: Path.relative(
               outputDir,
@@ -124,6 +126,7 @@ export class ResponseGenerator {
       pascalCaseOperationId,
       coreDir: context.coreDir,
       ownResponses,
+      entityResponses,
       sharedResponses,
       responseFile: Path.relative(
         outputDir,

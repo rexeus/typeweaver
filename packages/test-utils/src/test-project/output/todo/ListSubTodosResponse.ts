@@ -9,11 +9,6 @@
 import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 
 import type {
-  ITodoNotFoundErrorResponse,
-  TodoNotFoundErrorResponse,
-} from "./TodoNotFoundErrorResponse";
-
-import type {
   IForbiddenErrorResponse,
   ForbiddenErrorResponse,
 } from "../shared/ForbiddenErrorResponse";
@@ -42,6 +37,11 @@ import type {
   IValidationErrorResponse,
   ValidationErrorResponse,
 } from "../shared/ValidationErrorResponse";
+
+import type {
+  ITodoNotFoundErrorResponse,
+  TodoNotFoundErrorResponse,
+} from "./TodoNotFoundErrorResponse";
 
 export type IListSubTodosSuccessResponseHeader = {
   "Content-Type": "application/json";
@@ -99,20 +99,20 @@ export type ListSubTodosSuccessResponses = ListSubTodosSuccessResponse;
 
 export type IListSubTodosResponse =
   | IListSubTodosSuccessResponse
-  | ITodoNotFoundErrorResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
   | ITooManyRequestsErrorResponse
   | IUnauthorizedErrorResponse
   | IUnsupportedMediaTypeErrorResponse
-  | IValidationErrorResponse;
+  | IValidationErrorResponse
+  | ITodoNotFoundErrorResponse;
 
 export type ListSubTodosResponse =
   | ListSubTodosSuccessResponse
-  | TodoNotFoundErrorResponse
   | ForbiddenErrorResponse
   | InternalServerErrorResponse
   | TooManyRequestsErrorResponse
   | UnauthorizedErrorResponse
   | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse;
+  | ValidationErrorResponse
+  | TodoNotFoundErrorResponse;

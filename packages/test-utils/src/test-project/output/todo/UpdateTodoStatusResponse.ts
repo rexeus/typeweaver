@@ -9,21 +9,6 @@
 import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 
 import type {
-  ITodoNotFoundErrorResponse,
-  TodoNotFoundErrorResponse,
-} from "./TodoNotFoundErrorResponse";
-
-import type {
-  ITodoStatusTransitionInvalidErrorResponse,
-  TodoStatusTransitionInvalidErrorResponse,
-} from "./TodoStatusTransitionInvalidErrorResponse";
-
-import type {
-  ITodoNotChangeableErrorResponse,
-  TodoNotChangeableErrorResponse,
-} from "./TodoNotChangeableErrorResponse";
-
-import type {
   IForbiddenErrorResponse,
   ForbiddenErrorResponse,
 } from "../shared/ForbiddenErrorResponse";
@@ -52,6 +37,21 @@ import type {
   IValidationErrorResponse,
   ValidationErrorResponse,
 } from "../shared/ValidationErrorResponse";
+
+import type {
+  ITodoNotFoundErrorResponse,
+  TodoNotFoundErrorResponse,
+} from "./TodoNotFoundErrorResponse";
+
+import type {
+  ITodoStatusTransitionInvalidErrorResponse,
+  TodoStatusTransitionInvalidErrorResponse,
+} from "./TodoStatusTransitionInvalidErrorResponse";
+
+import type {
+  ITodoNotChangeableErrorResponse,
+  TodoNotChangeableErrorResponse,
+} from "./TodoNotChangeableErrorResponse";
 
 export type IUpdateTodoStatusSuccessResponseHeader = {
   "Content-Type": "application/json";
@@ -106,24 +106,24 @@ export type UpdateTodoStatusSuccessResponses = UpdateTodoStatusSuccessResponse;
 
 export type IUpdateTodoStatusResponse =
   | IUpdateTodoStatusSuccessResponse
-  | ITodoNotFoundErrorResponse
-  | ITodoStatusTransitionInvalidErrorResponse
-  | ITodoNotChangeableErrorResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
   | ITooManyRequestsErrorResponse
   | IUnauthorizedErrorResponse
   | IUnsupportedMediaTypeErrorResponse
-  | IValidationErrorResponse;
+  | IValidationErrorResponse
+  | ITodoNotFoundErrorResponse
+  | ITodoStatusTransitionInvalidErrorResponse
+  | ITodoNotChangeableErrorResponse;
 
 export type UpdateTodoStatusResponse =
   | UpdateTodoStatusSuccessResponse
-  | TodoNotFoundErrorResponse
-  | TodoStatusTransitionInvalidErrorResponse
-  | TodoNotChangeableErrorResponse
   | ForbiddenErrorResponse
   | InternalServerErrorResponse
   | TooManyRequestsErrorResponse
   | UnauthorizedErrorResponse
   | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse;
+  | ValidationErrorResponse
+  | TodoNotFoundErrorResponse
+  | TodoStatusTransitionInvalidErrorResponse
+  | TodoNotChangeableErrorResponse;

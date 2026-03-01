@@ -9,16 +9,6 @@
 import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 
 import type {
-  ITodoNotFoundErrorResponse,
-  TodoNotFoundErrorResponse,
-} from "./TodoNotFoundErrorResponse";
-
-import type {
-  ITodoNotChangeableErrorResponse,
-  TodoNotChangeableErrorResponse,
-} from "./TodoNotChangeableErrorResponse";
-
-import type {
   IForbiddenErrorResponse,
   ForbiddenErrorResponse,
 } from "../shared/ForbiddenErrorResponse";
@@ -47,6 +37,16 @@ import type {
   IValidationErrorResponse,
   ValidationErrorResponse,
 } from "../shared/ValidationErrorResponse";
+
+import type {
+  ITodoNotFoundErrorResponse,
+  TodoNotFoundErrorResponse,
+} from "./TodoNotFoundErrorResponse";
+
+import type {
+  ITodoNotChangeableErrorResponse,
+  TodoNotChangeableErrorResponse,
+} from "./TodoNotChangeableErrorResponse";
 
 export type IPutTodoSuccessResponseHeader = {
   "Content-Type": "application/json";
@@ -99,22 +99,22 @@ export type PutTodoSuccessResponses = PutTodoSuccessResponse;
 
 export type IPutTodoResponse =
   | IPutTodoSuccessResponse
-  | ITodoNotFoundErrorResponse
-  | ITodoNotChangeableErrorResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
   | ITooManyRequestsErrorResponse
   | IUnauthorizedErrorResponse
   | IUnsupportedMediaTypeErrorResponse
-  | IValidationErrorResponse;
+  | IValidationErrorResponse
+  | ITodoNotFoundErrorResponse
+  | ITodoNotChangeableErrorResponse;
 
 export type PutTodoResponse =
   | PutTodoSuccessResponse
-  | TodoNotFoundErrorResponse
-  | TodoNotChangeableErrorResponse
   | ForbiddenErrorResponse
   | InternalServerErrorResponse
   | TooManyRequestsErrorResponse
   | UnauthorizedErrorResponse
   | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse;
+  | ValidationErrorResponse
+  | TodoNotFoundErrorResponse
+  | TodoNotChangeableErrorResponse;

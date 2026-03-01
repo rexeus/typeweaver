@@ -9,16 +9,6 @@
 import { HttpResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 
 import type {
-  ISubTodoNotFoundErrorResponse,
-  SubTodoNotFoundErrorResponse,
-} from "./SubTodoNotFoundErrorResponse";
-
-import type {
-  ITodoNotFoundErrorResponse,
-  TodoNotFoundErrorResponse,
-} from "./TodoNotFoundErrorResponse";
-
-import type {
   IForbiddenErrorResponse,
   ForbiddenErrorResponse,
 } from "../shared/ForbiddenErrorResponse";
@@ -47,6 +37,16 @@ import type {
   IValidationErrorResponse,
   ValidationErrorResponse,
 } from "../shared/ValidationErrorResponse";
+
+import type {
+  ISubTodoNotFoundErrorResponse,
+  SubTodoNotFoundErrorResponse,
+} from "./SubTodoNotFoundErrorResponse";
+
+import type {
+  ITodoNotFoundErrorResponse,
+  TodoNotFoundErrorResponse,
+} from "./TodoNotFoundErrorResponse";
 
 export type IDeleteSubTodoSuccessResponseHeader = {
   "Content-Type": "application/json";
@@ -89,22 +89,22 @@ export type DeleteSubTodoSuccessResponses = DeleteSubTodoSuccessResponse;
 
 export type IDeleteSubTodoResponse =
   | IDeleteSubTodoSuccessResponse
-  | ISubTodoNotFoundErrorResponse
-  | ITodoNotFoundErrorResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
   | ITooManyRequestsErrorResponse
   | IUnauthorizedErrorResponse
   | IUnsupportedMediaTypeErrorResponse
-  | IValidationErrorResponse;
+  | IValidationErrorResponse
+  | ISubTodoNotFoundErrorResponse
+  | ITodoNotFoundErrorResponse;
 
 export type DeleteSubTodoResponse =
   | DeleteSubTodoSuccessResponse
-  | SubTodoNotFoundErrorResponse
-  | TodoNotFoundErrorResponse
   | ForbiddenErrorResponse
   | InternalServerErrorResponse
   | TooManyRequestsErrorResponse
   | UnauthorizedErrorResponse
   | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse;
+  | ValidationErrorResponse
+  | SubTodoNotFoundErrorResponse
+  | TodoNotFoundErrorResponse;

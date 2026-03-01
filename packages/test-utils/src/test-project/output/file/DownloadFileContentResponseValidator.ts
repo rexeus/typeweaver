@@ -7,7 +7,6 @@
  */
 
 import definition from "../definition/file/DownloadFileContentDefinition";
-import type { ZodSafeParseResult } from "zod";
 import {
   type IHttpResponse,
   type SafeResponseValidationResult,

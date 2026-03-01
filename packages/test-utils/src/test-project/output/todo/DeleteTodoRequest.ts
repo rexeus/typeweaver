@@ -9,8 +9,6 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { type DeleteTodoResponse } from "./DeleteTodoResponse";
 
-import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
-
 import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 
 import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
@@ -22,6 +20,8 @@ import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
 import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
 
 import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
+
+import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 
 export type IDeleteTodoRequestHeader = {
   Accept: "application/json";
@@ -43,11 +43,11 @@ export type IDeleteTodoRequest = {
 
 export type SuccessfulDeleteTodoResponse = Exclude<
   DeleteTodoResponse,
-  | TodoNotFoundErrorResponse
   | ForbiddenErrorResponse
   | InternalServerErrorResponse
   | TooManyRequestsErrorResponse
   | UnauthorizedErrorResponse
   | UnsupportedMediaTypeErrorResponse
   | ValidationErrorResponse
+  | TodoNotFoundErrorResponse
 >;
