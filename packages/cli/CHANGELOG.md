@@ -1,5 +1,24 @@
 # @rexeus/typeweaver
 
+## 0.6.5
+
+### Patch Changes
+
+- 4ebea8e: Pre-compile Zod definition files to `.js` + `.d.ts` stubs before tsc
+
+  Definition files containing Zod schemas are now transpiled ahead of the TypeScript compiler pass.
+  This prevents tsc from hitting OOM on Zod v4's deeply recursive type inference. The generated
+  `.d.ts` stubs use `any` internally — the public API remains fully typed through the validator and
+  consumer layers.
+
+  - @rexeus/typeweaver-aws-cdk@0.6.5
+  - @rexeus/typeweaver-clients@0.6.5
+  - @rexeus/typeweaver-core@0.6.5
+  - @rexeus/typeweaver-gen@0.6.5
+  - @rexeus/typeweaver-hono@0.6.5
+  - @rexeus/typeweaver-server@0.6.5
+  - @rexeus/typeweaver-types@0.6.5
+
 ## 0.6.4
 
 ### Patch Changes
@@ -50,6 +69,7 @@
 ### Patch Changes
 
 - edd224c: Fix generated code issues and stabilize CLI binary resolution
+
   - Fix trailing comma in Response.ejs template that produced `HttpResponse<Header, Body,>` in
     generated response classes
   - Widen `TypeweaverRouter` generic constraint from `RequestHandler` to
