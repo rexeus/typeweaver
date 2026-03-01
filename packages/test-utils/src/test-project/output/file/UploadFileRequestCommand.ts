@@ -25,6 +25,7 @@ import type {
 import { UploadFileSuccessResponse } from "./UploadFileResponse";
 
 export class UploadFileRequestCommand extends RequestCommand implements IUploadFileRequest {
+  public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.POST;
   public override readonly path = definition.path;
 

@@ -25,6 +25,7 @@ import type {
 import { DeleteTodoSuccessResponse } from "./DeleteTodoResponse";
 
 export class DeleteTodoRequestCommand extends RequestCommand implements IDeleteTodoRequest {
+  public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.DELETE;
   public override readonly path = definition.path;
 

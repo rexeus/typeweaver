@@ -17,6 +17,7 @@ function createRoute(
   id?: string
 ): RouteDefinition {
   return {
+    operationId: id ?? `${method.toLowerCase()}${path.replace(/[/:]/g, "_")}`,
     method: method.toUpperCase() as HttpMethod,
     path,
     validator: noopValidator,

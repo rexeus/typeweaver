@@ -26,6 +26,7 @@ import type {
 import { CreateSubTodoSuccessResponse } from "./CreateSubTodoResponse";
 
 export class CreateSubTodoRequestCommand extends RequestCommand implements ICreateSubTodoRequest {
+  public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.POST;
   public override readonly path = definition.path;
 

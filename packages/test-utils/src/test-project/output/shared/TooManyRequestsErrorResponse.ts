@@ -29,17 +29,9 @@ export class TooManyRequestsErrorResponse
   extends HttpResponse<ITooManyRequestsErrorResponseHeader, ITooManyRequestsErrorResponseBody>
   implements ITooManyRequestsErrorResponse
 {
-  public override readonly statusCode: HttpStatusCode.TOO_MANY_REQUESTS;
+  public override readonly statusCode = HttpStatusCode.TOO_MANY_REQUESTS;
 
-  public constructor(response: ITooManyRequestsErrorResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.TOO_MANY_REQUESTS) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for TooManyRequestsErrorResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<ITooManyRequestsErrorResponse, "statusCode">) {
+    super(HttpStatusCode.TOO_MANY_REQUESTS, response.header, response.body);
   }
 }

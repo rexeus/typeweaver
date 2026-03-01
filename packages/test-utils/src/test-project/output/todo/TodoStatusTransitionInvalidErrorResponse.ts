@@ -42,17 +42,9 @@ export class TodoStatusTransitionInvalidErrorResponse
   >
   implements ITodoStatusTransitionInvalidErrorResponse
 {
-  public override readonly statusCode: HttpStatusCode.CONFLICT;
+  public override readonly statusCode = HttpStatusCode.CONFLICT;
 
-  public constructor(response: ITodoStatusTransitionInvalidErrorResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.CONFLICT) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for TodoStatusTransitionInvalidErrorResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<ITodoStatusTransitionInvalidErrorResponse, "statusCode">) {
+    super(HttpStatusCode.CONFLICT, response.header, response.body);
   }
 }

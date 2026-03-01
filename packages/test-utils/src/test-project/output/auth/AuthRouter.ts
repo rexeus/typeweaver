@@ -38,6 +38,7 @@ export class AuthRouter<
 
   protected setupRoutes(): void {
     this.route(
+      "AccessToken",
       HttpMethod.POST,
       "/auth/access-token",
       new AccessTokenRequestValidator(),
@@ -45,6 +46,7 @@ export class AuthRouter<
     );
 
     this.route(
+      "RefreshToken",
       HttpMethod.POST,
       "/auth/refresh-token",
       new RefreshTokenRequestValidator(),

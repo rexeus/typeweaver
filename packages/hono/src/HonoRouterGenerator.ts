@@ -57,6 +57,7 @@ export class HonoRouterGenerator {
     const handlerName = `handle${className}Request`;
 
     return {
+      operationId,
       className,
       handlerName,
       method: resource.definition.method,

@@ -62,18 +62,10 @@ export class GetFileMetadataSuccessResponse
   extends HttpResponse<IGetFileMetadataSuccessResponseHeader, IGetFileMetadataSuccessResponseBody>
   implements IGetFileMetadataSuccessResponse
 {
-  public override readonly statusCode: HttpStatusCode.OK;
+  public override readonly statusCode = HttpStatusCode.OK;
 
-  public constructor(response: IGetFileMetadataSuccessResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.OK) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for GetFileMetadataSuccessResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IGetFileMetadataSuccessResponse, "statusCode">) {
+    super(HttpStatusCode.OK, response.header, response.body);
   }
 }
 

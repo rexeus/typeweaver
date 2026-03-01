@@ -15,9 +15,19 @@ import type { RequestHandler } from "./RequestHandler";
 import type { ServerContext } from "./ServerContext";
 
 /**
+ * Metadata about a matched route, available in middleware and handlers via `ctx.route`.
+ */
+export type RouteMetadata = {
+  readonly operationId: string;
+  readonly method: HttpMethod;
+  readonly path: string;
+};
+
+/**
  * A registered route with its method, path pattern, validator, and handler.
  */
 export type RouteDefinition = {
+  readonly operationId: string;
   readonly method: HttpMethod;
   readonly path: string;
   readonly validator: IRequestValidator;

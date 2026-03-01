@@ -6,6 +6,7 @@
  */
 
 import type { IHttpRequest } from "@rexeus/typeweaver-core";
+import type { RouteMetadata } from "./Router";
 import type { StateMap } from "./StateMap";
 
 /**
@@ -51,4 +52,7 @@ export type ServerContext<
 
   /** Type-safe key-value store for sharing data between middleware and handlers. */
   readonly state: StateMap<TState>;
+
+  /** Metadata about the matched route, or `undefined` for 404/405 requests. */
+  readonly route: RouteMetadata | undefined;
 };

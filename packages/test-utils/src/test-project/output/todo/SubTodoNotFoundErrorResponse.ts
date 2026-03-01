@@ -35,17 +35,9 @@ export class SubTodoNotFoundErrorResponse
   extends HttpResponse<ISubTodoNotFoundErrorResponseHeader, ISubTodoNotFoundErrorResponseBody>
   implements ISubTodoNotFoundErrorResponse
 {
-  public override readonly statusCode: HttpStatusCode.NOT_FOUND;
+  public override readonly statusCode = HttpStatusCode.NOT_FOUND;
 
-  public constructor(response: ISubTodoNotFoundErrorResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.NOT_FOUND) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for SubTodoNotFoundErrorResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<ISubTodoNotFoundErrorResponse, "statusCode">) {
+    super(HttpStatusCode.NOT_FOUND, response.header, response.body);
   }
 }

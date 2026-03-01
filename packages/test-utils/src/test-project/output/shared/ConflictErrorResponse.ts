@@ -29,15 +29,9 @@ export class ConflictErrorResponse
   extends HttpResponse<IConflictErrorResponseHeader, IConflictErrorResponseBody>
   implements IConflictErrorResponse
 {
-  public override readonly statusCode: HttpStatusCode.CONFLICT;
+  public override readonly statusCode = HttpStatusCode.CONFLICT;
 
-  public constructor(response: IConflictErrorResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.CONFLICT) {
-      throw new Error(`Invalid status code: '${response.statusCode}' for ConflictErrorResponse`);
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IConflictErrorResponse, "statusCode">) {
+    super(HttpStatusCode.CONFLICT, response.header, response.body);
   }
 }

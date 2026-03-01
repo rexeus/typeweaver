@@ -29,15 +29,9 @@ export class ForbiddenErrorResponse
   extends HttpResponse<IForbiddenErrorResponseHeader, IForbiddenErrorResponseBody>
   implements IForbiddenErrorResponse
 {
-  public override readonly statusCode: HttpStatusCode.FORBIDDEN;
+  public override readonly statusCode = HttpStatusCode.FORBIDDEN;
 
-  public constructor(response: IForbiddenErrorResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.FORBIDDEN) {
-      throw new Error(`Invalid status code: '${response.statusCode}' for ForbiddenErrorResponse`);
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IForbiddenErrorResponse, "statusCode">) {
+    super(HttpStatusCode.FORBIDDEN, response.header, response.body);
   }
 }

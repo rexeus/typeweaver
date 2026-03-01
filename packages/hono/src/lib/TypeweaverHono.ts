@@ -303,6 +303,7 @@ export abstract class TypeweaverHono<
    * Handles a request with validation and type-safe response conversion.
    *
    * @param context - Hono context for the current request
+   * @param operationId - Unique operation identifier from the API definition
    * @param validator - Request validator for the specific operation
    * @param handler - Type-safe request handler function
    * @returns Hono-compatible Response object
@@ -312,10 +313,13 @@ export abstract class TypeweaverHono<
     TResponse extends IHttpResponse,
   >(
     context: Context,
+    operationId: string,
     validator: IRequestValidator,
     handler: HonoRequestHandler<TRequest, TResponse>
   ): Promise<Response> {
     try {
+      context.set("operationId", operationId);
+
       const httpRequest = await this.adapter.toRequest(context);
 
       // Conditionally validate

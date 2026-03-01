@@ -109,18 +109,21 @@ export abstract class TypeweaverRouter<
   /**
    * Register a route. Called by generated subclasses in their constructor.
    *
+   * @param operationId - Unique operation identifier from the API definition
    * @param method - HTTP method (GET, POST, PUT, DELETE, etc.)
    * @param path - Path pattern with `:param` placeholders
    * @param validator - Request validator for this operation
    * @param handler - Type-safe request handler
    */
   protected route(
+    operationId: string,
     method: HttpMethod,
     path: string,
     validator: IRequestValidator,
     handler: RequestHandler<any, any, any>
   ): void {
     this.routes.push({
+      operationId,
       method,
       path,
       validator,

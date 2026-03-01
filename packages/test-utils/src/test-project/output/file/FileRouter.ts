@@ -52,6 +52,7 @@ export class FileRouter<
 
   protected setupRoutes(): void {
     this.route(
+      "UploadFile",
       HttpMethod.POST,
       "/files",
       new UploadFileRequestValidator(),
@@ -59,6 +60,7 @@ export class FileRouter<
     );
 
     this.route(
+      "GetFileMetadata",
       HttpMethod.GET,
       "/files/:fileId",
       new GetFileMetadataRequestValidator(),
@@ -66,6 +68,7 @@ export class FileRouter<
     );
 
     this.route(
+      "DownloadFileContent",
       HttpMethod.GET,
       "/files/:fileId/content",
       new DownloadFileContentRequestValidator(),

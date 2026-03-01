@@ -26,21 +26,25 @@ export class <%= pascalCaseName %>Response extends HttpResponse<
 <%= sharedResponse.header ? `I${pascalCaseName}ResponseHeader` : 'undefined' %>,
 <%= sharedResponse.body ? `I${pascalCaseName}ResponseBody` : 'undefined' %>
 > implements I<%= pascalCaseName %>Response {
-public override readonly statusCode: HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>;
+public override readonly statusCode = HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>;
 
-public constructor(response: I<%= pascalCaseName %>Response) {
+<% if (sharedResponse.header || sharedResponse.body) { %>
+public constructor(response: Omit<I<%= pascalCaseName %>Response, "statusCode">) {
     super(
-        response.statusCode,
+        HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>,
         <%= sharedResponse.header ? `response.header` : 'undefined' %>,
         <%= sharedResponse.body ? `response.body` : 'undefined' %>,
     );
-
-    if (response.statusCode !== HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>) {
-        throw new Error(`Invalid status code: '${response.statusCode}' for <%= pascalCaseName %>Response`);
-    }
-
-    this.statusCode = response.statusCode;
 }
+<% } else { %>
+public constructor() {
+    super(
+        HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>,
+        undefined,
+        undefined,
+    );
+}
+<% } %>
 }
 
 

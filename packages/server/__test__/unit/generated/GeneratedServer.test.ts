@@ -147,6 +147,45 @@ describe("Generated Server Router", () => {
     });
   });
 
+  describe("Route Metadata (operationId)", () => {
+    test("should expose operationId to middleware via ctx.route", async () => {
+      let capturedOperationId: string | undefined;
+      const spy = defineMiddleware(async (ctx, next) => {
+        capturedOperationId = ctx.route?.operationId;
+        return next();
+      });
+
+      const app = createTestApp();
+      app.use(spy);
+
+      await app.fetch(
+        buildFetchRequest(
+          `${BASE_URL}/todos?status=TODO`,
+          createListTodosRequest()
+        )
+      );
+
+      expect(capturedOperationId).toBe("ListTodos");
+    });
+
+    test("should set ctx.route to undefined for unmatched paths", async () => {
+      let capturedRoute: unknown = "not-set";
+      const spy = defineMiddleware(async (ctx, next) => {
+        capturedRoute = ctx.route;
+        return next();
+      });
+
+      const app = createTestApp();
+      app.use(spy);
+
+      await app.fetch(
+        new Request(`${BASE_URL}/nonexistent`, { method: "GET" })
+      );
+
+      expect(capturedRoute).toBeUndefined();
+    });
+  });
+
   describe("Request Validation", () => {
     test.each([
       {

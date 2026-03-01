@@ -75,18 +75,10 @@ export class CreateSubTodoSuccessResponse
   extends HttpResponse<ICreateSubTodoSuccessResponseHeader, ICreateSubTodoSuccessResponseBody>
   implements ICreateSubTodoSuccessResponse
 {
-  public override readonly statusCode: HttpStatusCode.CREATED;
+  public override readonly statusCode = HttpStatusCode.CREATED;
 
-  public constructor(response: ICreateSubTodoSuccessResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.CREATED) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for CreateSubTodoSuccessResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<ICreateSubTodoSuccessResponse, "statusCode">) {
+    super(HttpStatusCode.CREATED, response.header, response.body);
   }
 }
 

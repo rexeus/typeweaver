@@ -42,17 +42,9 @@ export class SubTodoNotChangeableErrorResponse
   >
   implements ISubTodoNotChangeableErrorResponse
 {
-  public override readonly statusCode: HttpStatusCode.CONFLICT;
+  public override readonly statusCode = HttpStatusCode.CONFLICT;
 
-  public constructor(response: ISubTodoNotChangeableErrorResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.CONFLICT) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for SubTodoNotChangeableErrorResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<ISubTodoNotChangeableErrorResponse, "statusCode">) {
+    super(HttpStatusCode.CONFLICT, response.header, response.body);
   }
 }

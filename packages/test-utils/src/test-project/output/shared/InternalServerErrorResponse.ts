@@ -29,17 +29,9 @@ export class InternalServerErrorResponse
   extends HttpResponse<IInternalServerErrorResponseHeader, IInternalServerErrorResponseBody>
   implements IInternalServerErrorResponse
 {
-  public override readonly statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR;
+  public override readonly statusCode = HttpStatusCode.INTERNAL_SERVER_ERROR;
 
-  public constructor(response: IInternalServerErrorResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.INTERNAL_SERVER_ERROR) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for InternalServerErrorResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IInternalServerErrorResponse, "statusCode">) {
+    super(HttpStatusCode.INTERNAL_SERVER_ERROR, response.header, response.body);
   }
 }

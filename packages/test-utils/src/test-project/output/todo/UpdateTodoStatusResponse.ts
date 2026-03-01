@@ -85,18 +85,10 @@ export class UpdateTodoStatusSuccessResponse
   extends HttpResponse<IUpdateTodoStatusSuccessResponseHeader, IUpdateTodoStatusSuccessResponseBody>
   implements IUpdateTodoStatusSuccessResponse
 {
-  public override readonly statusCode: HttpStatusCode.OK;
+  public override readonly statusCode = HttpStatusCode.OK;
 
-  public constructor(response: IUpdateTodoStatusSuccessResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.OK) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for UpdateTodoStatusSuccessResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IUpdateTodoStatusSuccessResponse, "statusCode">) {
+    super(HttpStatusCode.OK, response.header, response.body);
   }
 }
 

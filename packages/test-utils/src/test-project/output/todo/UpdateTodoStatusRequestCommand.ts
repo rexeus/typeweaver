@@ -29,6 +29,7 @@ export class UpdateTodoStatusRequestCommand
   extends RequestCommand
   implements IUpdateTodoStatusRequest
 {
+  public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.PUT;
   public override readonly path = definition.path;
 

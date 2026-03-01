@@ -32,6 +32,7 @@ export class <%- pascalCaseEntityName %>Router<
   protected setupRoutes(): void {
 <% for (const operation of operations) { %>
     this.route(
+      '<%- operation.operationId %>',
       HttpMethod.<%- operation.method %>,
       '<%- operation.path %>',
       new <%- operation.className %>RequestValidator(),

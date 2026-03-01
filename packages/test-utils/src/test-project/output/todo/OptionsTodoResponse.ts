@@ -60,18 +60,10 @@ export class OptionsTodoSuccessResponse
   extends HttpResponse<IOptionsTodoSuccessResponseHeader, undefined>
   implements IOptionsTodoSuccessResponse
 {
-  public override readonly statusCode: HttpStatusCode.OK;
+  public override readonly statusCode = HttpStatusCode.OK;
 
-  public constructor(response: IOptionsTodoSuccessResponse) {
-    super(response.statusCode, response.header, undefined);
-
-    if (response.statusCode !== HttpStatusCode.OK) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for OptionsTodoSuccessResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IOptionsTodoSuccessResponse, "statusCode">) {
+    super(HttpStatusCode.OK, response.header, undefined);
   }
 }
 

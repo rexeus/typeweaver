@@ -33,6 +33,7 @@ export class AuthHono extends TypeweaverHono<HonoAuthApiHandler> {
     this.post("/auth/access-token", async (context: Context) =>
       this.handleRequest(
         context,
+        "AccessToken",
         new AccessTokenRequestValidator(),
         this.requestHandlers.handleAccessTokenRequest.bind(this.requestHandlers),
       ),
@@ -41,6 +42,7 @@ export class AuthHono extends TypeweaverHono<HonoAuthApiHandler> {
     this.post("/auth/refresh-token", async (context: Context) =>
       this.handleRequest(
         context,
+        "RefreshToken",
         new RefreshTokenRequestValidator(),
         this.requestHandlers.handleRefreshTokenRequest.bind(this.requestHandlers),
       ),

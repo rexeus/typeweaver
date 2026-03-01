@@ -45,6 +45,7 @@ export class FileHono extends TypeweaverHono<HonoFileApiHandler> {
     this.post("/files", async (context: Context) =>
       this.handleRequest(
         context,
+        "UploadFile",
         new UploadFileRequestValidator(),
         this.requestHandlers.handleUploadFileRequest.bind(this.requestHandlers),
       ),
@@ -53,6 +54,7 @@ export class FileHono extends TypeweaverHono<HonoFileApiHandler> {
     this.get("/files/:fileId", async (context: Context) =>
       this.handleRequest(
         context,
+        "GetFileMetadata",
         new GetFileMetadataRequestValidator(),
         this.requestHandlers.handleGetFileMetadataRequest.bind(this.requestHandlers),
       ),
@@ -61,6 +63,7 @@ export class FileHono extends TypeweaverHono<HonoFileApiHandler> {
     this.get("/files/:fileId/content", async (context: Context) =>
       this.handleRequest(
         context,
+        "DownloadFileContent",
         new DownloadFileContentRequestValidator(),
         this.requestHandlers.handleDownloadFileContentRequest.bind(this.requestHandlers),
       ),
