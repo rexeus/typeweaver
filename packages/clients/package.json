@@ -60,7 +60,7 @@
     "zod": "^4.3.0"
   },
   "devDependencies": {
-    "@hono/node-server": "^1.19.7",
+    "@hono/node-server": "^1.19.9",
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
     "test-utils": "file:../test-utils",
