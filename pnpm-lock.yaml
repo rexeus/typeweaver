@@ -112,8 +112,8 @@ importers:
         specifier: ^1.6.3
         version: 1.6.3
       hono:
-        specifier: ^4.11.3
-        version: 4.11.3
+        specifier: ^4.12.3
+        version: 4.12.3
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -129,7 +129,7 @@ importers:
     devDependencies:
       '@hono/node-server':
         specifier: ^1.19.7
-        version: 1.19.7(hono@4.11.3)
+        version: 1.19.7(hono@4.12.3)
       '@rexeus/typeweaver-core':
         specifier: workspace:^
         version: link:../core
@@ -172,8 +172,8 @@ importers:
         specifier: workspace:^
         version: link:../gen
       hono:
-        specifier: ^4.11.3
-        version: 4.11.3
+        specifier: ^4.12.3
+        version: 4.12.3
       test-utils:
         specifier: file:../test-utils
         version: link:../test-utils
@@ -204,7 +204,7 @@ importers:
     devDependencies:
       '@hono/node-server':
         specifier: ^1.19.7
-        version: 1.19.7(hono@4.11.3)
+        version: 1.19.7(hono@4.12.3)
       '@rexeus/typeweaver':
         specifier: workspace:^
         version: link:../cli
@@ -239,8 +239,8 @@ importers:
         specifier: ^7.1.0
         version: 7.1.0
       hono:
-        specifier: ^4.11.3
-        version: 4.11.3
+        specifier: ^4.12.3
+        version: 4.12.3
       zod:
         specifier: ^4.3.5
         version: 4.3.5
@@ -1591,8 +1591,8 @@ packages:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
     engines: {node: '>=8'}
 
-  hono@4.11.3:
-    resolution: {integrity: sha512-PmQi306+M/ct/m5s66Hrg+adPnkD5jiO6IjA7WhWw0gSBSo1EcRegwuI1deZ+wd5pzCGynCcn2DprnE4/yEV4w==}
+  hono@4.12.3:
+    resolution: {integrity: sha512-SFsVSjp8sj5UumXOOFlkZOG6XS9SJDKw0TbwFeV+AJ8xlST8kxK5Z/5EYa111UY8732lK2S/xB653ceuaoGwpg==}
     engines: {node: '>=16.9.0'}
 
   hookable@6.0.1:
@@ -2511,9 +2511,9 @@ snapshots:
 
   '@faker-js/faker@10.3.0': {}
 
-  '@hono/node-server@1.19.7(hono@4.11.3)':
+  '@hono/node-server@1.19.7(hono@4.12.3)':
     dependencies:
-      hono: 4.11.3
+      hono: 4.12.3
 
   '@inquirer/external-editor@1.0.1(@types/node@24.10.13)':
     dependencies:
@@ -3178,7 +3178,7 @@ snapshots:
 
   has-flag@4.0.0: {}
 
-  hono@4.11.3: {}
+  hono@4.12.3: {}
 
   hookable@6.0.1: {}
 
