@@ -22,7 +22,7 @@ export class DefinitionCompiler {
 
     if (errors.length > 0) {
       const summary = errors
-        .map((e) => `  - ${e.filePath}: ${e.details}`)
+        .map(e => `  - ${e.filePath}: ${e.details}`)
         .join("\n");
 
       throw new DefinitionCompilationError(
@@ -93,9 +93,9 @@ export class DefinitionCompiler {
       sourceType: "module",
     });
 
-    const errors = result.errors.filter((e) => e.severity === "Error");
+    const errors = result.errors.filter(e => e.severity === "Error");
     if (errors.length > 0) {
-      const messages = errors.map((e) => e.message).join("; ");
+      const messages = errors.map(e => e.message).join("; ");
       throw new DefinitionCompilationError(fileName, messages);
     }
 

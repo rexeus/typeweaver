@@ -3,8 +3,6 @@ export class DefinitionCompilationError extends Error {
     public readonly filePath: string,
     public readonly details: string
   ) {
-    super(
-      `Failed to compile definition at \`${filePath}\`. ${details}`
-    );
+    super(`Failed to compile definition at \`${filePath}\`. ${details}`);
   }
 }
