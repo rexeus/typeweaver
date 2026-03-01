@@ -88,9 +88,13 @@ function createMockContext(operations: OperationResource[]): {
   return { context, writtenFiles };
 }
 
-function getOperationOrder(
-  operations: OperationResource[]
-): { operationId: string; method: string; path: string; handlerName: string; className: string }[] {
+function getOperationOrder(operations: OperationResource[]): {
+  operationId: string;
+  method: string;
+  path: string;
+  handlerName: string;
+  className: string;
+}[] {
   const { context, writtenFiles } = createMockContext(operations);
   RouterGenerator.generate(context);
 

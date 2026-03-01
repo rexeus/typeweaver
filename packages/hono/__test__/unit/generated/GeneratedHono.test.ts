@@ -12,7 +12,10 @@ import {
   TodoHono,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import type { HonoTodoApiHandler, IValidationErrorResponseBody } from "test-utils";
+import type {
+  HonoTodoApiHandler,
+  IValidationErrorResponseBody,
+} from "test-utils";
 
 function prepareRequestData(requestData: IHttpRequest): RequestInit {
   const body =
@@ -469,11 +472,10 @@ describe("Generated Hono Router", () => {
       const capturedIds: string[] = [];
 
       const stubHandlers = new Proxy({} as HonoTodoApiHandler, {
-        get: () =>
-          async (_req: any, context: any) => {
-            capturedIds.push(context.get("operationId"));
-            return { statusCode: 200, body: {} };
-          },
+        get: () => async (_req: any, context: any) => {
+          capturedIds.push(context.get("operationId"));
+          return { statusCode: 200, body: {} };
+        },
       });
 
       const app = new TodoHono({

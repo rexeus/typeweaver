@@ -159,7 +159,10 @@ describe("Generated Server Router", () => {
       app.use(spy);
 
       await app.fetch(
-        buildFetchRequest(`${BASE_URL}/todos?status=TODO`, createListTodosRequest())
+        buildFetchRequest(
+          `${BASE_URL}/todos?status=TODO`,
+          createListTodosRequest()
+        )
       );
 
       expect(capturedOperationId).toBe("ListTodos");
@@ -175,7 +178,9 @@ describe("Generated Server Router", () => {
       const app = createTestApp();
       app.use(spy);
 
-      await app.fetch(new Request(`${BASE_URL}/nonexistent`, { method: "GET" }));
+      await app.fetch(
+        new Request(`${BASE_URL}/nonexistent`, { method: "GET" })
+      );
 
       expect(capturedRoute).toBeUndefined();
     });
