@@ -30,6 +30,7 @@ export function createServerContext(
       ...(overrides.query ? { query: overrides.query } : {}),
     },
     state: new StateMap(),
+    route: undefined,
   };
 }
 

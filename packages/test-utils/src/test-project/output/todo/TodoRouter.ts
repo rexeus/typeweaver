@@ -126,6 +126,7 @@ export class TodoRouter<
 
   protected setupRoutes(): void {
     this.route(
+      "ListTodos",
       HttpMethod.GET,
       "/todos",
       new ListTodosRequestValidator(),
@@ -133,6 +134,7 @@ export class TodoRouter<
     );
 
     this.route(
+      "CreateTodo",
       HttpMethod.POST,
       "/todos",
       new CreateTodoRequestValidator(),
@@ -140,6 +142,7 @@ export class TodoRouter<
     );
 
     this.route(
+      "QueryTodo",
       HttpMethod.POST,
       "/todos/query",
       new QueryTodoRequestValidator(),
@@ -147,6 +150,7 @@ export class TodoRouter<
     );
 
     this.route(
+      "GetTodo",
       HttpMethod.GET,
       "/todos/:todoId",
       new GetTodoRequestValidator(),
@@ -154,6 +158,7 @@ export class TodoRouter<
     );
 
     this.route(
+      "PutTodo",
       HttpMethod.PUT,
       "/todos/:todoId",
       new PutTodoRequestValidator(),
@@ -161,6 +166,7 @@ export class TodoRouter<
     );
 
     this.route(
+      "UpdateTodo",
       HttpMethod.PATCH,
       "/todos/:todoId",
       new UpdateTodoRequestValidator(),
@@ -168,6 +174,7 @@ export class TodoRouter<
     );
 
     this.route(
+      "DeleteTodo",
       HttpMethod.DELETE,
       "/todos/:todoId",
       new DeleteTodoRequestValidator(),
@@ -175,6 +182,7 @@ export class TodoRouter<
     );
 
     this.route(
+      "OptionsTodo",
       HttpMethod.OPTIONS,
       "/todos/:todoId",
       new OptionsTodoRequestValidator(),
@@ -182,6 +190,7 @@ export class TodoRouter<
     );
 
     this.route(
+      "UpdateTodoStatus",
       HttpMethod.PUT,
       "/todos/:todoId/status",
       new UpdateTodoStatusRequestValidator(),
@@ -189,6 +198,7 @@ export class TodoRouter<
     );
 
     this.route(
+      "ListSubTodos",
       HttpMethod.GET,
       "/todos/:todoId/subtodos",
       new ListSubTodosRequestValidator(),
@@ -196,6 +206,7 @@ export class TodoRouter<
     );
 
     this.route(
+      "CreateSubTodo",
       HttpMethod.POST,
       "/todos/:todoId/subtodos",
       new CreateSubTodoRequestValidator(),
@@ -203,6 +214,7 @@ export class TodoRouter<
     );
 
     this.route(
+      "QuerySubTodo",
       HttpMethod.POST,
       "/todos/:todoId/subtodos/query",
       new QuerySubTodoRequestValidator(),
@@ -210,6 +222,7 @@ export class TodoRouter<
     );
 
     this.route(
+      "UpdateSubTodo",
       HttpMethod.PUT,
       "/todos/:todoId/subtodos/:subtodoId",
       new UpdateSubTodoRequestValidator(),
@@ -217,6 +230,7 @@ export class TodoRouter<
     );
 
     this.route(
+      "DeleteSubTodo",
       HttpMethod.DELETE,
       "/todos/:todoId/subtodos/:subtodoId",
       new DeleteSubTodoRequestValidator(),

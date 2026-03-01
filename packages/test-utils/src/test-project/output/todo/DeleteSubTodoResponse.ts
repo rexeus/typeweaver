@@ -68,18 +68,10 @@ export class DeleteSubTodoSuccessResponse
   extends HttpResponse<IDeleteSubTodoSuccessResponseHeader, IDeleteSubTodoSuccessResponseBody>
   implements IDeleteSubTodoSuccessResponse
 {
-  public override readonly statusCode: HttpStatusCode.OK;
+  public override readonly statusCode = HttpStatusCode.OK;
 
-  public constructor(response: IDeleteSubTodoSuccessResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.OK) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for DeleteSubTodoSuccessResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IDeleteSubTodoSuccessResponse, "statusCode">) {
+    super(HttpStatusCode.OK, response.header, response.body);
   }
 }
 

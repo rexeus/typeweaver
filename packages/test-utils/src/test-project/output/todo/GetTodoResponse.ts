@@ -75,16 +75,10 @@ export class GetTodoSuccessResponse
   extends HttpResponse<IGetTodoSuccessResponseHeader, IGetTodoSuccessResponseBody>
   implements IGetTodoSuccessResponse
 {
-  public override readonly statusCode: HttpStatusCode.OK;
+  public override readonly statusCode = HttpStatusCode.OK;
 
-  public constructor(response: IGetTodoSuccessResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.OK) {
-      throw new Error(`Invalid status code: '${response.statusCode}' for GetTodoSuccessResponse`);
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IGetTodoSuccessResponse, "statusCode">) {
+    super(HttpStatusCode.OK, response.header, response.body);
   }
 }
 

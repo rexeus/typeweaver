@@ -81,7 +81,7 @@ describe("TypedMiddleware", () => {
       class TestRouter extends TypeweaverRouter<Handlers> {
         public constructor(options: any) {
           super(options);
-          this.route(HttpMethod.GET, "/test", noopValidator, async (req, ctx) =>
+          this.route("getTest", HttpMethod.GET, "/test", noopValidator, async (req, ctx) =>
             this.requestHandlers.handleGet(req, ctx)
           );
         }

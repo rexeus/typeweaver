@@ -17,6 +17,7 @@ import type { RequestHandler } from "./RequestHandler";
 import type {
   HttpResponseErrorHandler,
   RouteDefinition,
+  RouteMatch,
   UnknownErrorHandler,
   ValidationErrorHandler,
 } from "./Router";
@@ -186,15 +187,24 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
     const url = new URL(request.url);
     const httpRequest = await this.adapter.toRequest(request, url);
 
+    const match = this.router.match(request.method, url.pathname);
+
     const ctx: ServerContext = {
       request: httpRequest,
       state: new StateMap(),
+      route: match
+        ? {
+            operationId: match.route.operationId,
+            method: match.route.method,
+            path: match.route.path,
+          }
+        : undefined,
     };
 
     const response = await executeMiddlewarePipeline(
       this.middlewares,
       ctx,
-      () => this.resolveAndExecute(request.method, url.pathname, ctx)
+      () => this.resolveAndExecute(match, url.pathname, ctx)
     );
 
     return request.method.toUpperCase() === "HEAD"
@@ -203,16 +213,14 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
   }
 
   /**
-   * Match the route and execute the handler.
+   * Execute the matched route handler, or produce 404/405 responses.
    * Called as the final handler in the middleware pipeline.
    */
   private async resolveAndExecute(
-    method: string,
+    match: RouteMatch | undefined,
     pathname: string,
     ctx: ServerContext
   ): Promise<IHttpResponse> {
-    const match = this.router.match(method, pathname);
-
     if (match) {
       const routeCtx = this.withPathParams(ctx, match.params);
       try {

@@ -25,6 +25,7 @@ import type {
 import { ListTodosSuccessResponse } from "./ListTodosResponse";
 
 export class ListTodosRequestCommand extends RequestCommand implements IListTodosRequest {
+  public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.GET;
   public override readonly path = definition.path;
 

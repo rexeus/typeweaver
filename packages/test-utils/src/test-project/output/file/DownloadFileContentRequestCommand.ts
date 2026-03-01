@@ -28,6 +28,7 @@ export class DownloadFileContentRequestCommand
   extends RequestCommand
   implements IDownloadFileContentRequest
 {
+  public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.GET;
   public override readonly path = definition.path;
 

@@ -23,6 +23,7 @@ import { <%= successResponse.name %>Response } from "<%= successResponseImportPa
 <% } %>
 
 export class <%= pascalCaseOperationId %>RequestCommand extends RequestCommand implements I<%= pascalCaseOperationId %>Request {
+    public override readonly operationId = definition.operationId;
     public override readonly method = definition.method as HttpMethod.<%= method %>;
     public override readonly path = definition.path;
 

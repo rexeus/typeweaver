@@ -44,17 +44,9 @@ export class SubTodoStatusTransitionInvalidErrorResponse
   >
   implements ISubTodoStatusTransitionInvalidErrorResponse
 {
-  public override readonly statusCode: HttpStatusCode.CONFLICT;
+  public override readonly statusCode = HttpStatusCode.CONFLICT;
 
-  public constructor(response: ISubTodoStatusTransitionInvalidErrorResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.CONFLICT) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for SubTodoStatusTransitionInvalidErrorResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<ISubTodoStatusTransitionInvalidErrorResponse, "statusCode">) {
+    super(HttpStatusCode.CONFLICT, response.header, response.body);
   }
 }

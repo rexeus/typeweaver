@@ -15,6 +15,7 @@ export {
 export { HttpMethod } from "@rexeus/typeweaver-core";
 export type {
   HttpResponseErrorHandler,
+  RouteMetadata,
   UnknownErrorHandler,
   ValidationErrorHandler,
 } from "./Router";

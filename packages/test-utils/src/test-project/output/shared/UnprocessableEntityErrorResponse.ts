@@ -32,17 +32,9 @@ export class UnprocessableEntityErrorResponse
   >
   implements IUnprocessableEntityErrorResponse
 {
-  public override readonly statusCode: HttpStatusCode.UNPROCESSABLE_ENTITY;
+  public override readonly statusCode = HttpStatusCode.UNPROCESSABLE_ENTITY;
 
-  public constructor(response: IUnprocessableEntityErrorResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.UNPROCESSABLE_ENTITY) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for UnprocessableEntityErrorResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IUnprocessableEntityErrorResponse, "statusCode">) {
+    super(HttpStatusCode.UNPROCESSABLE_ENTITY, response.header, response.body);
   }
 }

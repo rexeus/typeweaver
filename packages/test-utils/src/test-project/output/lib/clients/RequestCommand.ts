@@ -48,6 +48,8 @@ export abstract class RequestCommand<
   Query extends IHttpQuery = IHttpQuery | undefined,
   Body extends IHttpBody = IHttpBody | undefined,
 > implements IHttpRequest {
+  /** Unique operation identifier from the API definition */
+  public readonly operationId!: string;
   /** The HTTP method for this request */
   public readonly method!: HttpMethod;
   /** The URL path pattern with parameter placeholders (e.g., '/users/:id') */

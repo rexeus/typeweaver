@@ -62,18 +62,10 @@ export class UploadFileSuccessResponse
   extends HttpResponse<IUploadFileSuccessResponseHeader, IUploadFileSuccessResponseBody>
   implements IUploadFileSuccessResponse
 {
-  public override readonly statusCode: HttpStatusCode.CREATED;
+  public override readonly statusCode = HttpStatusCode.CREATED;
 
-  public constructor(response: IUploadFileSuccessResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.CREATED) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for UploadFileSuccessResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IUploadFileSuccessResponse, "statusCode">) {
+    super(HttpStatusCode.CREATED, response.header, response.body);
   }
 }
 

@@ -29,17 +29,9 @@ export class UnauthorizedErrorResponse
   extends HttpResponse<IUnauthorizedErrorResponseHeader, IUnauthorizedErrorResponseBody>
   implements IUnauthorizedErrorResponse
 {
-  public override readonly statusCode: HttpStatusCode.UNAUTHORIZED;
+  public override readonly statusCode = HttpStatusCode.UNAUTHORIZED;
 
-  public constructor(response: IUnauthorizedErrorResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.UNAUTHORIZED) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for UnauthorizedErrorResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IUnauthorizedErrorResponse, "statusCode">) {
+    super(HttpStatusCode.UNAUTHORIZED, response.header, response.body);
   }
 }

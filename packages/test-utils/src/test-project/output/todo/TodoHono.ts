@@ -108,6 +108,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
     this.get("/todos", async (context: Context) =>
       this.handleRequest(
         context,
+        "ListTodos",
         new ListTodosRequestValidator(),
         this.requestHandlers.handleListTodosRequest.bind(this.requestHandlers),
       ),
@@ -116,6 +117,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
     this.post("/todos", async (context: Context) =>
       this.handleRequest(
         context,
+        "CreateTodo",
         new CreateTodoRequestValidator(),
         this.requestHandlers.handleCreateTodoRequest.bind(this.requestHandlers),
       ),
@@ -124,6 +126,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
     this.post("/todos/query", async (context: Context) =>
       this.handleRequest(
         context,
+        "QueryTodo",
         new QueryTodoRequestValidator(),
         this.requestHandlers.handleQueryTodoRequest.bind(this.requestHandlers),
       ),
@@ -132,6 +135,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
     this.get("/todos/:todoId", async (context: Context) =>
       this.handleRequest(
         context,
+        "GetTodo",
         new GetTodoRequestValidator(),
         this.requestHandlers.handleGetTodoRequest.bind(this.requestHandlers),
       ),
@@ -140,6 +144,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
     this.put("/todos/:todoId", async (context: Context) =>
       this.handleRequest(
         context,
+        "PutTodo",
         new PutTodoRequestValidator(),
         this.requestHandlers.handlePutTodoRequest.bind(this.requestHandlers),
       ),
@@ -148,6 +153,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
     this.patch("/todos/:todoId", async (context: Context) =>
       this.handleRequest(
         context,
+        "UpdateTodo",
         new UpdateTodoRequestValidator(),
         this.requestHandlers.handleUpdateTodoRequest.bind(this.requestHandlers),
       ),
@@ -156,6 +162,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
     this.delete("/todos/:todoId", async (context: Context) =>
       this.handleRequest(
         context,
+        "DeleteTodo",
         new DeleteTodoRequestValidator(),
         this.requestHandlers.handleDeleteTodoRequest.bind(this.requestHandlers),
       ),
@@ -164,6 +171,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
     this.options("/todos/:todoId", async (context: Context) =>
       this.handleRequest(
         context,
+        "OptionsTodo",
         new OptionsTodoRequestValidator(),
         this.requestHandlers.handleOptionsTodoRequest.bind(this.requestHandlers),
       ),
@@ -172,6 +180,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
     this.put("/todos/:todoId/status", async (context: Context) =>
       this.handleRequest(
         context,
+        "UpdateTodoStatus",
         new UpdateTodoStatusRequestValidator(),
         this.requestHandlers.handleUpdateTodoStatusRequest.bind(this.requestHandlers),
       ),
@@ -180,6 +189,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
     this.get("/todos/:todoId/subtodos", async (context: Context) =>
       this.handleRequest(
         context,
+        "ListSubTodos",
         new ListSubTodosRequestValidator(),
         this.requestHandlers.handleListSubTodosRequest.bind(this.requestHandlers),
       ),
@@ -188,6 +198,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
     this.post("/todos/:todoId/subtodos", async (context: Context) =>
       this.handleRequest(
         context,
+        "CreateSubTodo",
         new CreateSubTodoRequestValidator(),
         this.requestHandlers.handleCreateSubTodoRequest.bind(this.requestHandlers),
       ),
@@ -196,6 +207,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
     this.post("/todos/:todoId/subtodos/query", async (context: Context) =>
       this.handleRequest(
         context,
+        "QuerySubTodo",
         new QuerySubTodoRequestValidator(),
         this.requestHandlers.handleQuerySubTodoRequest.bind(this.requestHandlers),
       ),
@@ -204,6 +216,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
     this.put("/todos/:todoId/subtodos/:subtodoId", async (context: Context) =>
       this.handleRequest(
         context,
+        "UpdateSubTodo",
         new UpdateSubTodoRequestValidator(),
         this.requestHandlers.handleUpdateSubTodoRequest.bind(this.requestHandlers),
       ),
@@ -212,6 +225,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
     this.delete("/todos/:todoId/subtodos/:subtodoId", async (context: Context) =>
       this.handleRequest(
         context,
+        "DeleteSubTodo",
         new DeleteSubTodoRequestValidator(),
         this.requestHandlers.handleDeleteSubTodoRequest.bind(this.requestHandlers),
       ),

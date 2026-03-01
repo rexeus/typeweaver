@@ -31,6 +31,7 @@ export class <%- pascalCaseEntityName %>Hono extends TypeweaverHono<Hono<%- pasc
     this.<%- operation.method.toLowerCase() %>('<%- operation.path %>', async (context: Context) =>
       this.handleRequest(
         context,
+        '<%- operation.operationId %>',
         new <%- operation.className %>RequestValidator(),
         this.requestHandlers.<%- operation.handlerName %>.bind(this.requestHandlers)
       ));

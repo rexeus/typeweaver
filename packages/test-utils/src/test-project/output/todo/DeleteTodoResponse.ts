@@ -58,18 +58,10 @@ export class DeleteTodoSuccessResponse
   extends HttpResponse<IDeleteTodoSuccessResponseHeader, undefined>
   implements IDeleteTodoSuccessResponse
 {
-  public override readonly statusCode: HttpStatusCode.NO_CONTENT;
+  public override readonly statusCode = HttpStatusCode.NO_CONTENT;
 
-  public constructor(response: IDeleteTodoSuccessResponse) {
-    super(response.statusCode, response.header, undefined);
-
-    if (response.statusCode !== HttpStatusCode.NO_CONTENT) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for DeleteTodoSuccessResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IDeleteTodoSuccessResponse, "statusCode">) {
+    super(HttpStatusCode.NO_CONTENT, response.header, undefined);
   }
 }
 

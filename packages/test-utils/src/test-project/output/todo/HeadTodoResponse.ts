@@ -58,16 +58,10 @@ export class HeadTodoSuccessResponse
   extends HttpResponse<IHeadTodoSuccessResponseHeader, undefined>
   implements IHeadTodoSuccessResponse
 {
-  public override readonly statusCode: HttpStatusCode.OK;
+  public override readonly statusCode = HttpStatusCode.OK;
 
-  public constructor(response: IHeadTodoSuccessResponse) {
-    super(response.statusCode, response.header, undefined);
-
-    if (response.statusCode !== HttpStatusCode.OK) {
-      throw new Error(`Invalid status code: '${response.statusCode}' for HeadTodoSuccessResponse`);
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IHeadTodoSuccessResponse, "statusCode">) {
+    super(HttpStatusCode.OK, response.header, undefined);
   }
 }
 

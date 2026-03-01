@@ -25,6 +25,7 @@ import type {
 import { GetTodoSuccessResponse } from "./GetTodoResponse";
 
 export class GetTodoRequestCommand extends RequestCommand implements IGetTodoRequest {
+  public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.GET;
   public override readonly path = definition.path;
 

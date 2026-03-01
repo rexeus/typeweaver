@@ -9,9 +9,10 @@ import {
   createTestHono,
   createUpdateTodoRequest,
   createUpdateTodoStatusRequest,
+  TodoHono,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import type { IValidationErrorResponseBody } from "test-utils";
+import type { HonoTodoApiHandler, IValidationErrorResponseBody } from "test-utils";
 
 function prepareRequestData(requestData: IHttpRequest): RequestInit {
   const body =
@@ -432,6 +433,59 @@ describe("Generated Hono Router", () => {
       const allowHeader = response.headers.get("Allow");
       expect(allowHeader).toBeDefined();
       expect(allowHeader).toBe("GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS");
+    });
+  });
+
+  describe("Route Metadata (operationId)", () => {
+    test("should set operationId on Hono context before handler runs", async () => {
+      let capturedOperationId: string | undefined;
+
+      const stubHandlers = new Proxy({} as HonoTodoApiHandler, {
+        get: (_target, prop) => {
+          if (prop === "handleListTodosRequest") {
+            return async (_req: any, context: any) => {
+              capturedOperationId = context.get("operationId");
+              return { statusCode: 200, body: [] };
+            };
+          }
+          return async () => ({ statusCode: 200 });
+        },
+      });
+
+      const app = new TodoHono({
+        requestHandlers: stubHandlers,
+        validateRequests: false,
+      });
+
+      const response = await app.request("http://localhost/todos?status=TODO", {
+        method: "GET",
+      });
+
+      expect(response.status).toBe(200);
+      expect(capturedOperationId).toBe("ListTodos");
+    });
+
+    test("should set different operationId per route", async () => {
+      const capturedIds: string[] = [];
+
+      const stubHandlers = new Proxy({} as HonoTodoApiHandler, {
+        get: () =>
+          async (_req: any, context: any) => {
+            capturedIds.push(context.get("operationId"));
+            return { statusCode: 200, body: {} };
+          },
+      });
+
+      const app = new TodoHono({
+        requestHandlers: stubHandlers,
+        validateRequests: false,
+      });
+
+      await app.request("http://localhost/todos", { method: "GET" });
+      await app.request("http://localhost/todos", { method: "POST" });
+      await app.request("http://localhost/todos/t1", { method: "GET" });
+
+      expect(capturedIds).toEqual(["ListTodos", "CreateTodo", "GetTodo"]);
     });
   });
 

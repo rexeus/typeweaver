@@ -63,18 +63,10 @@ export class RegisterAccountSuccessResponse
   extends HttpResponse<IRegisterAccountSuccessResponseHeader, IRegisterAccountSuccessResponseBody>
   implements IRegisterAccountSuccessResponse
 {
-  public override readonly statusCode: HttpStatusCode.CREATED;
+  public override readonly statusCode = HttpStatusCode.CREATED;
 
-  public constructor(response: IRegisterAccountSuccessResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.CREATED) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for RegisterAccountSuccessResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IRegisterAccountSuccessResponse, "statusCode">) {
+    super(HttpStatusCode.CREATED, response.header, response.body);
   }
 }
 

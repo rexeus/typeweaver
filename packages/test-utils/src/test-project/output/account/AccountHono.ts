@@ -30,6 +30,7 @@ export class AccountHono extends TypeweaverHono<HonoAccountApiHandler> {
     this.post("/accounts", async (context: Context) =>
       this.handleRequest(
         context,
+        "RegisterAccount",
         new RegisterAccountRequestValidator(),
         this.requestHandlers.handleRegisterAccountRequest.bind(this.requestHandlers),
       ),

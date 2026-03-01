@@ -78,18 +78,10 @@ export class ListSubTodosSuccessResponse
   extends HttpResponse<IListSubTodosSuccessResponseHeader, IListSubTodosSuccessResponseBody>
   implements IListSubTodosSuccessResponse
 {
-  public override readonly statusCode: HttpStatusCode.OK;
+  public override readonly statusCode = HttpStatusCode.OK;
 
-  public constructor(response: IListSubTodosSuccessResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.OK) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for ListSubTodosSuccessResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IListSubTodosSuccessResponse, "statusCode">) {
+    super(HttpStatusCode.OK, response.header, response.body);
   }
 }
 

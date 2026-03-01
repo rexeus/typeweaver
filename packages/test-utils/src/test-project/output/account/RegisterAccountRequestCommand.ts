@@ -28,6 +28,7 @@ export class RegisterAccountRequestCommand
   extends RequestCommand
   implements IRegisterAccountRequest
 {
+  public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.POST;
   public override readonly path = definition.path;
 

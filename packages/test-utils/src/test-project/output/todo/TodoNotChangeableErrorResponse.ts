@@ -36,17 +36,9 @@ export class TodoNotChangeableErrorResponse
   extends HttpResponse<ITodoNotChangeableErrorResponseHeader, ITodoNotChangeableErrorResponseBody>
   implements ITodoNotChangeableErrorResponse
 {
-  public override readonly statusCode: HttpStatusCode.CONFLICT;
+  public override readonly statusCode = HttpStatusCode.CONFLICT;
 
-  public constructor(response: ITodoNotChangeableErrorResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.CONFLICT) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for TodoNotChangeableErrorResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<ITodoNotChangeableErrorResponse, "statusCode">) {
+    super(HttpStatusCode.CONFLICT, response.header, response.body);
   }
 }

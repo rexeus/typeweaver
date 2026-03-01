@@ -73,16 +73,10 @@ export class QueryTodoSuccessResponse
   extends HttpResponse<IQueryTodoSuccessResponseHeader, IQueryTodoSuccessResponseBody>
   implements IQueryTodoSuccessResponse
 {
-  public override readonly statusCode: HttpStatusCode.OK;
+  public override readonly statusCode = HttpStatusCode.OK;
 
-  public constructor(response: IQueryTodoSuccessResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.OK) {
-      throw new Error(`Invalid status code: '${response.statusCode}' for QueryTodoSuccessResponse`);
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IQueryTodoSuccessResponse, "statusCode">) {
+    super(HttpStatusCode.OK, response.header, response.body);
   }
 }
 

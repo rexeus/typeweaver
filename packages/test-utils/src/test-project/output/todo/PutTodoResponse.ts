@@ -80,16 +80,10 @@ export class PutTodoSuccessResponse
   extends HttpResponse<IPutTodoSuccessResponseHeader, IPutTodoSuccessResponseBody>
   implements IPutTodoSuccessResponse
 {
-  public override readonly statusCode: HttpStatusCode.OK;
+  public override readonly statusCode = HttpStatusCode.OK;
 
-  public constructor(response: IPutTodoSuccessResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.OK) {
-      throw new Error(`Invalid status code: '${response.statusCode}' for PutTodoSuccessResponse`);
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IPutTodoSuccessResponse, "statusCode">) {
+    super(HttpStatusCode.OK, response.header, response.body);
   }
 }
 

@@ -26,6 +26,7 @@ import type {
 import { UpdateSubTodoSuccessResponse } from "./UpdateSubTodoResponse";
 
 export class UpdateSubTodoRequestCommand extends RequestCommand implements IUpdateSubTodoRequest {
+  public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.PUT;
   public override readonly path = definition.path;
 

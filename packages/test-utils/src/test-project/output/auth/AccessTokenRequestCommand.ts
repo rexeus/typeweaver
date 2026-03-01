@@ -25,6 +25,7 @@ import type {
 import { AccessTokenSuccessResponse } from "./AccessTokenResponse";
 
 export class AccessTokenRequestCommand extends RequestCommand implements IAccessTokenRequest {
+  public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.POST;
   public override readonly path = definition.path;
 

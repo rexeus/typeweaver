@@ -28,6 +28,7 @@ export class GetFileMetadataRequestCommand
   extends RequestCommand
   implements IGetFileMetadataRequest
 {
+  public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.GET;
   public override readonly path = definition.path;
 

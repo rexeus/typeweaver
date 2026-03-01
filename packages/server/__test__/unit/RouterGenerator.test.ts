@@ -71,6 +71,7 @@ function createMockContext(operations: OperationResource[]): {
       // Return operations in order so we can verify sorting
       return JSON.stringify(
         data.operations.map((op: any) => ({
+          operationId: op.operationId,
           method: op.method,
           path: op.path,
           handlerName: op.handlerName,
@@ -89,7 +90,7 @@ function createMockContext(operations: OperationResource[]): {
 
 function getOperationOrder(
   operations: OperationResource[]
-): { method: string; path: string; handlerName: string; className: string }[] {
+): { operationId: string; method: string; path: string; handlerName: string; className: string }[] {
   const { context, writtenFiles } = createMockContext(operations);
   RouterGenerator.generate(context);
 

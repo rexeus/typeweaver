@@ -37,6 +37,7 @@ export class AccountRouter<
 
   protected setupRoutes(): void {
     this.route(
+      "RegisterAccount",
       HttpMethod.POST,
       "/accounts",
       new RegisterAccountRequestValidator(),

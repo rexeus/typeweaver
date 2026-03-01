@@ -10,6 +10,8 @@ import {
   ListTodosRequestCommand,
   NetworkError,
   PathParameterError,
+  PutTodoRequestCommand,
+  createPutTodoRequest,
   ResponseParseError,
   TodoClient,
 } from "test-utils";
@@ -52,6 +54,24 @@ function createPassthroughClient(mockFetch: typeof globalThis.fetch) {
     isSuccessStatusCode: () => true,
   });
 }
+
+describe("RequestCommand operationId", () => {
+  test("should expose operationId from the API definition", () => {
+    const command = new ListTodosRequestCommand(createListTodosRequest());
+
+    expect(command.operationId).toBe("ListTodos");
+  });
+
+  test("should expose correct operationId for different commands", () => {
+    const get = new GetTodoRequestCommand(createGetTodoRequest());
+    const create = new CreateTodoRequestCommand(createCreateTodoRequest());
+    const put = new PutTodoRequestCommand(createPutTodoRequest());
+
+    expect(get.operationId).toBe("GetTodo");
+    expect(create.operationId).toBe("CreateTodo");
+    expect(put.operationId).toBe("PutTodo");
+  });
+});
 
 describe("ApiClient URL Construction", () => {
   function createCommand(todoId: string) {

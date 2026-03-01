@@ -38,17 +38,9 @@ export class UnsupportedMediaTypeErrorResponse
   >
   implements IUnsupportedMediaTypeErrorResponse
 {
-  public override readonly statusCode: HttpStatusCode.UNSUPPORTED_MEDIA_TYPE;
+  public override readonly statusCode = HttpStatusCode.UNSUPPORTED_MEDIA_TYPE;
 
-  public constructor(response: IUnsupportedMediaTypeErrorResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.UNSUPPORTED_MEDIA_TYPE) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for UnsupportedMediaTypeErrorResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IUnsupportedMediaTypeErrorResponse, "statusCode">) {
+    super(HttpStatusCode.UNSUPPORTED_MEDIA_TYPE, response.header, response.body);
   }
 }

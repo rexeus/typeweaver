@@ -25,6 +25,7 @@ import type {
 import { OptionsTodoSuccessResponse } from "./OptionsTodoResponse";
 
 export class OptionsTodoRequestCommand extends RequestCommand implements IOptionsTodoRequest {
+  public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.OPTIONS;
   public override readonly path = definition.path;
 

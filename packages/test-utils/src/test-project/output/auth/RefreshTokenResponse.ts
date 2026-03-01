@@ -59,18 +59,10 @@ export class RefreshTokenSuccessResponse
   extends HttpResponse<IRefreshTokenSuccessResponseHeader, IRefreshTokenSuccessResponseBody>
   implements IRefreshTokenSuccessResponse
 {
-  public override readonly statusCode: HttpStatusCode.OK;
+  public override readonly statusCode = HttpStatusCode.OK;
 
-  public constructor(response: IRefreshTokenSuccessResponse) {
-    super(response.statusCode, response.header, response.body);
-
-    if (response.statusCode !== HttpStatusCode.OK) {
-      throw new Error(
-        `Invalid status code: '${response.statusCode}' for RefreshTokenSuccessResponse`,
-      );
-    }
-
-    this.statusCode = response.statusCode;
+  public constructor(response: Omit<IRefreshTokenSuccessResponse, "statusCode">) {
+    super(HttpStatusCode.OK, response.header, response.body);
   }
 }
 

@@ -26,6 +26,7 @@ import type {
 import { QueryTodoSuccessResponse } from "./QueryTodoResponse";
 
 export class QueryTodoRequestCommand extends RequestCommand implements IQueryTodoRequest {
+  public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.POST;
   public override readonly path = definition.path;
 

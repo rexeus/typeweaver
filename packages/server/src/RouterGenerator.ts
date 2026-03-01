@@ -9,6 +9,7 @@ import type {
 import Case from "case";
 
 type OperationData = {
+  readonly operationId: string;
   readonly className: string;
   readonly handlerName: string;
   readonly method: string;
@@ -72,9 +73,11 @@ export class RouterGenerator {
   private static createOperationData(
     resource: OperationResource
   ): OperationData {
-    const className = Case.pascal(resource.definition.operationId);
+    const operationId = resource.definition.operationId;
+    const className = Case.pascal(operationId);
 
     return {
+      operationId,
       className,
       handlerName: `handle${className}Request`,
       method: resource.definition.method,
