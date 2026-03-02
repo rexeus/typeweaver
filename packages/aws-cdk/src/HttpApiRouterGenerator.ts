@@ -31,6 +31,10 @@ export class HttpApiRouterGenerator {
     operationResources: OperationResource[],
     context: GeneratorContext
   ): void {
+    if (operationResources.length === 0) {
+      return;
+    }
+
     const routes: Record<string, HttpMethod[]> = {};
     const pascalCaseEntityName = Case.pascal(entityName);
     const outputDir = operationResources[0]!.outputDir;

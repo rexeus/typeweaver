@@ -50,6 +50,10 @@ export class RouterGenerator {
     operationResources: OperationResource[],
     context: GeneratorContext
   ): void {
+    if (operationResources.length === 0) {
+      return;
+    }
+
     const pascalCaseEntityName = Case.pascal(entityName);
     const outputDir = path.join(context.outputDir, entityName);
     const outputPath = path.join(outputDir, `${pascalCaseEntityName}Router.ts`);

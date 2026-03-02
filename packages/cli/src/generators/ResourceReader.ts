@@ -106,6 +106,13 @@ export class ResourceReader {
         [...result.sharedResponseResources, ...responseResources]
       );
 
+      if (operationResources.length === 0 && responseResources.length === 0) {
+        console.info(
+          `Skipping '${entityName}' as it contains no valid definitions`
+        );
+        continue;
+      }
+
       result.entityResources[entityName] = {
         operations: operationResources,
         responses: responseResources,

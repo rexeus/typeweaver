@@ -35,6 +35,10 @@ export class ClientGenerator {
     operationResources: OperationResource[],
     context: GeneratorContext
   ): void {
+    if (operationResources.length === 0) {
+      return;
+    }
+
     const entityName = operationResources[0]!.entityName;
     const pascalCaseEntityName = Case.pascal(entityName);
     const outputDir = operationResources[0]!.outputDir;
