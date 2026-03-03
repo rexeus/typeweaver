@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { Command } from "commander";
+import { FileWatcher } from "./generators/FileWatcher";
 import { Generator } from "./generators/Generator";
 import type { CommandOptions as CommanderOptions } from "commander";
 
@@ -23,6 +24,7 @@ type CommandOptions = CommanderOptions & {
   plugins?: string;
   format?: boolean;
   clean?: boolean;
+  watch?: boolean;
 };
 
 const program = new Command();
@@ -45,6 +47,7 @@ program
   .option("--no-format", "disable code formatting")
   .option("--clean", "clean output directory before generation (default: true)")
   .option("--no-clean", "disable cleaning output directory")
+  .option("-w, --watch", "watch for changes and regenerate automatically")
   .action(async (options: CommandOptions) => {
     let config: Partial<TypeweaverConfig> = {};
 
@@ -116,6 +119,15 @@ program
     // If no plugins specified, Generator will use defaults
 
     // Run generation
+    if (options.watch) {
+      const watcher = new FileWatcher(
+        resolvedInputDir,
+        resolvedOutputDir,
+        finalConfig
+      );
+      return watcher.watch();
+    }
+
     const generator = new Generator();
     return generator.generate(resolvedInputDir, resolvedOutputDir, finalConfig);
   });

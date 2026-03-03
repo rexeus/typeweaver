@@ -1,10 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { DefinitionValidator } from "../src/generators/DefinitionValidator";
 import { ReservedKeywordError } from "../src/generators/errors/ReservedKeywordError";
-import {
-  createOperationHelper,
-  createResponseHelper,
-} from "./helpers";
+import { catchError, createOperation, createResponse } from "./helpers";
 
 describe("DefinitionValidator – reserved keyword rejection", () => {
   const SAMPLE_KEYWORDS = [
@@ -16,76 +13,48 @@ describe("DefinitionValidator – reserved keyword rejection", () => {
 
   describe("operationId", () => {
     test.each(SAMPLE_KEYWORDS)(
-      "rejects reserved keyword '%s' as operationId",
+      "rejects '%s' as operationId",
       (keyword) => {
         const validator = new DefinitionValidator();
-        const operation = createOperationHelper(keyword);
+        const operation = createOperation(keyword);
 
-        expect(() => validator.validateOperation(operation, "test.ts")).toThrow(
-          ReservedKeywordError
-        );
-      }
-    );
+        const error = catchError(() =>
+          validator.validateOperation(operation, "test.ts")
+        ) as ReservedKeywordError;
 
-    test.each(SAMPLE_KEYWORDS)(
-      "ReservedKeywordError has correct properties for operationId '%s'",
-      (keyword) => {
-        const validator = new DefinitionValidator();
-        const operation = createOperationHelper(keyword);
-
-        try {
-          validator.validateOperation(operation, "test.ts");
-          expect.unreachable("Should have thrown");
-        } catch (error) {
-          expect(error).toBeInstanceOf(ReservedKeywordError);
-          const rke = error as ReservedKeywordError;
-          expect(rke.entityType).toBe("operationId");
-          expect(rke.identifier).toBe(keyword);
-          expect(rke.file).toBe("test.ts");
-        }
+        expect(error).toBeInstanceOf(ReservedKeywordError);
+        expect(error.entityType).toBe("operationId");
+        expect(error.identifier).toBe(keyword);
+        expect(error.file).toBe("test.ts");
       }
     );
   });
 
   describe("response name", () => {
     test.each(SAMPLE_KEYWORDS)(
-      "rejects reserved keyword '%s' as response name",
+      "rejects '%s' as response name",
       (keyword) => {
         const validator = new DefinitionValidator();
-        const response = createResponseHelper(keyword);
+        const response = createResponse(keyword);
 
-        expect(() => validator.validateResponse(response, "test.ts")).toThrow(
-          ReservedKeywordError
-        );
-      }
-    );
+        const error = catchError(() =>
+          validator.validateResponse(response, "test.ts")
+        ) as ReservedKeywordError;
 
-    test.each(SAMPLE_KEYWORDS)(
-      "ReservedKeywordError has correct properties for response name '%s'",
-      (keyword) => {
-        const validator = new DefinitionValidator();
-        const response = createResponseHelper(keyword);
-
-        try {
-          validator.validateResponse(response, "test.ts");
-          expect.unreachable("Should have thrown");
-        } catch (error) {
-          expect(error).toBeInstanceOf(ReservedKeywordError);
-          const rke = error as ReservedKeywordError;
-          expect(rke.entityType).toBe("responseName");
-          expect(rke.identifier).toBe(keyword);
-          expect(rke.file).toBe("test.ts");
-        }
+        expect(error).toBeInstanceOf(ReservedKeywordError);
+        expect(error.entityType).toBe("responseName");
+        expect(error.identifier).toBe(keyword);
+        expect(error.file).toBe("test.ts");
       }
     );
   });
 
-  describe("valid identifiers accepted", () => {
+  describe("valid identifiers", () => {
     test.each(["deleteTodo", "Delete", "myClass", "getItems", "listUsers"])(
-      "accepts valid identifier '%s' as operationId",
+      "accepts '%s' as operationId",
       (name) => {
         const validator = new DefinitionValidator();
-        const operation = createOperationHelper(name);
+        const operation = createOperation(name);
 
         expect(() =>
           validator.validateOperation(operation, "test.ts")
@@ -94,10 +63,10 @@ describe("DefinitionValidator – reserved keyword rejection", () => {
     );
 
     test.each(["Success", "NotFound", "DeleteResult", "MyType", "Created"])(
-      "accepts valid identifier '%s' as response name",
+      "accepts '%s' as response name",
       (name) => {
         const validator = new DefinitionValidator();
-        const response = createResponseHelper(name);
+        const response = createResponse(name);
 
         expect(() =>
           validator.validateResponse(response, "test.ts")
