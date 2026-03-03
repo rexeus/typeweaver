@@ -362,28 +362,158 @@ describe("Generated Hono Router", () => {
       expect(text).toBe(customStringResponse);
     });
 
-    test.todo("should handle ArrayBuffer response bodies", async () => {
-      // TODO: Implement test
+    test("should handle ArrayBuffer response bodies", async () => {
+      // Arrange
+      const content = "binary content";
+      const arrayBuffer = new TextEncoder().encode(content).buffer;
+      const app = createTestHono({
+        throwTodoError: new HttpResponse(
+          200,
+          { "Content-Type": "application/octet-stream" },
+          arrayBuffer
+        ),
+      });
+      const requestData = createCreateTodoRequest();
+
+      // Act
+      const response = await app.request(
+        "http://localhost/todos",
+        prepareRequestData(requestData)
+      );
+
+      // Assert
+      expect(response.status).toBe(200);
+      const buffer = await response.arrayBuffer();
+      const decoded = new TextDecoder().decode(buffer);
+      expect(decoded).toBe(content);
     });
 
-    test.todo("should handle Blob response bodies", async () => {
-      // TODO: Implement test
+    test("should handle Blob response bodies", async () => {
+      // Arrange
+      const content = "blob content";
+      const blob = new Blob([content], { type: "text/plain" });
+      const app = createTestHono({
+        throwTodoError: new HttpResponse(
+          200,
+          { "Content-Type": "text/plain" },
+          blob
+        ),
+      });
+      const requestData = createCreateTodoRequest();
+
+      // Act
+      const response = await app.request(
+        "http://localhost/todos",
+        prepareRequestData(requestData)
+      );
+
+      // Assert
+      expect(response.status).toBe(200);
+      const text = await response.text();
+      expect(text).toBe(content);
     });
 
-    test.todo("should handle FormData response bodies", async () => {
-      // TODO: Implement test
+    test("should handle FormData response bodies", async () => {
+      // Arrange
+      const formData = new FormData();
+      formData.append("name", "typeweaver");
+      formData.append("version", "1.0");
+      const app = createTestHono({
+        throwTodoError: new HttpResponse(200, {}, formData),
+      });
+      const requestData = createCreateTodoRequest();
+
+      // Act
+      const response = await app.request(
+        "http://localhost/todos",
+        prepareRequestData(requestData)
+      );
+
+      // Assert
+      expect(response.status).toBe(200);
+      const result = await response.formData();
+      expect(result.get("name")).toBe("typeweaver");
+      expect(result.get("version")).toBe("1.0");
     });
 
-    test.todo("should handle URLSearchParams response bodies", async () => {
-      // TODO: Implement test
+    test("should handle URLSearchParams response bodies", async () => {
+      // Arrange
+      const params = new URLSearchParams();
+      params.append("key", "value");
+      params.append("foo", "bar");
+      const app = createTestHono({
+        throwTodoError: new HttpResponse(
+          200,
+          { "Content-Type": "application/x-www-form-urlencoded" },
+          params
+        ),
+      });
+      const requestData = createCreateTodoRequest();
+
+      // Act
+      const response = await app.request(
+        "http://localhost/todos",
+        prepareRequestData(requestData)
+      );
+
+      // Assert
+      expect(response.status).toBe(200);
+      const text = await response.text();
+      expect(text).toBe("key=value&foo=bar");
     });
 
-    test.todo("should handle AsyncIterable response bodies", async () => {
-      // TODO: Implement test
+    test("should handle ReadableStream response bodies", async () => {
+      // Arrange
+      const encoder = new TextEncoder();
+      async function* generate() {
+        yield encoder.encode("hello ");
+        yield encoder.encode("world");
+      }
+      const stream = ReadableStream.from(generate());
+      const app = createTestHono({
+        throwTodoError: new HttpResponse(
+          200,
+          { "Content-Type": "text/plain" },
+          stream
+        ),
+      });
+      const requestData = createCreateTodoRequest();
+
+      // Act
+      const response = await app.request(
+        "http://localhost/todos",
+        prepareRequestData(requestData)
+      );
+
+      // Assert
+      expect(response.status).toBe(200);
+      const text = await response.text();
+      expect(text).toBe("hello world");
     });
 
-    test.todo("should handle NodeJS.ArrayBufferView response bodies", async () => {
-      // TODO: Implement test
+    test("should handle ArrayBufferView response bodies", async () => {
+      // Arrange
+      const content = "uint8 content";
+      const uint8Array = new TextEncoder().encode(content);
+      const app = createTestHono({
+        throwTodoError: new HttpResponse(
+          200,
+          { "Content-Type": "application/octet-stream" },
+          uint8Array
+        ),
+      });
+      const requestData = createCreateTodoRequest();
+
+      // Act
+      const response = await app.request(
+        "http://localhost/todos",
+        prepareRequestData(requestData)
+      );
+
+      // Assert
+      expect(response.status).toBe(200);
+      const text = await response.text();
+      expect(text).toBe(content);
     });
 
     test("should handle empty response bodies", async () => {
