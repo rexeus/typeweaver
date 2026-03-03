@@ -22,8 +22,18 @@ import type {
   OperationResource,
   SharedResponseResource,
 } from "@rexeus/typeweaver-gen";
+import { isReservedKeyword } from "@rexeus/typeweaver-gen";
 import { DefinitionValidator } from "./DefinitionValidator";
 import { InvalidSharedDirError } from "./errors/InvalidSharedDirError";
+import { ReservedEntityNameError } from "./errors/ReservedEntityNameError";
+import { ReservedKeywordError } from "./errors/ReservedKeywordError";
+
+const RESERVED_ENTITY_NAMES: ReadonlySet<string> = new Set([
+  "shared",
+  "lib",
+  "definition",
+  "index",
+]);
 
 export type ResourceReaderConfig = {
   readonly sourceDir: string;
@@ -91,6 +101,18 @@ export class ResourceReader {
           `Skipping '${content.name}' as it is or contains the shared directory`
         );
         continue;
+      }
+
+      if (isReservedKeyword(entityName)) {
+        throw new ReservedKeywordError(
+          "entityName",
+          entityName,
+          entitySourceDir
+        );
+      }
+
+      if (RESERVED_ENTITY_NAMES.has(entityName)) {
+        throw new ReservedEntityNameError(entityName, entitySourceDir);
       }
 
       const responseResources = await this.getEntityResponseResources(

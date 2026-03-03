@@ -3,6 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ResourceReader } from "../src/generators/ResourceReader.js";
+import { ReservedEntityNameError } from "../src/generators/errors/ReservedEntityNameError";
+import { ReservedKeywordError } from "../src/generators/errors/ReservedKeywordError";
 
 describe("ResourceReader", () => {
   describe("getResources – empty entity handling", () => {
@@ -102,6 +104,88 @@ describe("ResourceReader", () => {
       expect(console.info).toHaveBeenCalledWith(
         "Skipping 'stray-file.ts' as it is not a directory"
       );
+    });
+  });
+
+  describe("getResources – reserved entity name rejection", () => {
+    let tmpDir: string;
+    let tmpOutputDir: string;
+    let tmpSharedDir: string;
+    let tmpSharedOutputDir: string;
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "rr-reserved-"));
+      tmpOutputDir = fs.mkdtempSync(path.join(os.tmpdir(), "rr-out-"));
+      tmpSharedDir = path.join(tmpDir, "_shared");
+      tmpSharedOutputDir = path.join(tmpOutputDir, "shared");
+
+      vi.spyOn(console, "info").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+      fs.rmSync(tmpOutputDir, { recursive: true, force: true });
+      vi.restoreAllMocks();
+    });
+
+    const createReader = (sourceDir: string) =>
+      new ResourceReader({
+        sourceDir,
+        outputDir: tmpOutputDir,
+        sharedSourceDir: tmpSharedDir,
+        sharedOutputDir: tmpSharedOutputDir,
+      });
+
+    test.each(["shared", "lib", "definition", "index"])(
+      "rejects reserved Typeweaver entity name '%s'",
+      async (name) => {
+        fs.mkdirSync(path.join(tmpDir, name));
+
+        const reader = createReader(tmpDir);
+
+        await expect(reader.getResources()).rejects.toThrow(
+          ReservedEntityNameError
+        );
+      }
+    );
+
+    test.each(["shared", "lib", "definition", "index"])(
+      "ReservedEntityNameError has correct properties for '%s'",
+      async (name) => {
+        fs.mkdirSync(path.join(tmpDir, name));
+
+        const reader = createReader(tmpDir);
+
+        try {
+          await reader.getResources();
+          expect.unreachable("Should have thrown");
+        } catch (error) {
+          expect(error).toBeInstanceOf(ReservedEntityNameError);
+          const rne = error as ReservedEntityNameError;
+          expect(rne.entityName).toBe(name);
+          expect(rne.file).toContain(name);
+        }
+      }
+    );
+
+    test("rejects JS/TS reserved keyword as entity name", async () => {
+      fs.mkdirSync(path.join(tmpDir, "delete"));
+
+      const reader = createReader(tmpDir);
+
+      await expect(reader.getResources()).rejects.toThrow(
+        ReservedKeywordError
+      );
+    });
+
+    test("accepts valid entity names", async () => {
+      fs.mkdirSync(path.join(tmpDir, "todo"));
+      fs.mkdirSync(path.join(tmpDir, "account"));
+
+      const reader = createReader(tmpDir);
+      const result = await reader.getResources();
+
+      expect(result).toBeDefined();
     });
   });
 });

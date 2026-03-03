@@ -1,3 +1,4 @@
+// oxlint-disable import/max-dependencies
 import {
   HttpMethod,
   HttpOperationDefinition,
@@ -5,6 +6,7 @@ import {
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
 import type { IHttpResponseDefinition } from "@rexeus/typeweaver-core";
+import { isReservedKeyword } from "@rexeus/typeweaver-gen";
 import { z } from "zod";
 import { DefinitionRegistry } from "./DefinitionRegistry";
 import { EmptyResponseArrayError } from "./errors/EmptyResponseArrayError";
@@ -14,6 +16,7 @@ import { InvalidSchemaError } from "./errors/InvalidSchemaError";
 import { InvalidSchemaShapeError } from "./errors/InvalidSchemaShapeError";
 import { InvalidStatusCodeError } from "./errors/InvalidStatusCodeError";
 import { MissingRequiredFieldError } from "./errors/MissingRequiredFieldError";
+import { ReservedKeywordError } from "./errors/ReservedKeywordError";
 
 // Type aliases for better readability
 type AnyHttpOperation = HttpOperationDefinition<
@@ -49,6 +52,9 @@ export class DefinitionValidator {
     // Validate required fields
     this.validateOperationRequiredFields(operation, sourceFile);
 
+    // Validate operationId is not a reserved keyword
+    this.validateOperationIdNotReserved(operation, sourceFile);
+
     // Validate HTTP method
     this.validateHttpMethod(operation, sourceFile);
 
@@ -70,6 +76,9 @@ export class DefinitionValidator {
 
     // Validate required fields
     this.validateResponseRequiredFields(response, sourceFile);
+
+    // Validate response name is not a reserved keyword
+    this.validateResponseNameNotReserved(response, sourceFile);
 
     // Validate status code
     this.validateStatusCode(response, sourceFile);
@@ -116,6 +125,28 @@ export class DefinitionValidator {
         "summary",
         sourceFile
       );
+    }
+  }
+
+  private validateOperationIdNotReserved(
+    operation: AnyHttpOperation,
+    sourceFile: string
+  ): void {
+    if (isReservedKeyword(operation.operationId)) {
+      throw new ReservedKeywordError(
+        "operationId",
+        operation.operationId,
+        sourceFile
+      );
+    }
+  }
+
+  private validateResponseNameNotReserved(
+    response: AnyHttpResponse,
+    sourceFile: string
+  ): void {
+    if (isReservedKeyword(response.name)) {
+      throw new ReservedKeywordError("responseName", response.name, sourceFile);
     }
   }
 

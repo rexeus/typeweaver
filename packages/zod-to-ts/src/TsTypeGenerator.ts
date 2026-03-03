@@ -47,6 +47,18 @@ import type {
 } from "typescript";
 import type { $ZodType } from "zod/v4/core";
 
+const RESERVED_KEYWORDS: ReadonlySet<string> = new Set([
+  "break", "case", "catch", "continue", "debugger", "default", "delete",
+  "do", "else", "finally", "for", "function", "if", "in", "instanceof",
+  "new", "return", "switch", "this", "throw", "try", "typeof", "var",
+  "void", "while", "with",
+  "class", "const", "enum", "export", "extends", "import", "super",
+  "implements", "interface", "let", "package", "private", "protected",
+  "public", "static", "yield",
+  "abstract", "declare", "is", "module", "namespace", "require", "type",
+  "constructor", "prototype", "__proto__", "arguments", "eval",
+]);
+
 export class TsTypeNode {
   static fromZod(zodType: $ZodType): TypeNode {
     if (zodType instanceof $ZodString) {
@@ -442,8 +454,7 @@ export class TsTypeNode {
   private static createTsAstPropertyKey(
     key: string
   ): Identifier | StringLiteral {
-    // TODO: is TsTypeNode correct or required anymore?
-    if (/^[$A-Z_a-z][\w$]*$/.test(key)) {
+    if (/^[$A-Z_a-z][\w$]*$/.test(key) && !RESERVED_KEYWORDS.has(key)) {
       return factory.createIdentifier(key);
     }
     return factory.createStringLiteral(key);
