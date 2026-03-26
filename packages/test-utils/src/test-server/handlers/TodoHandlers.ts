@@ -1,4 +1,4 @@
-import { HttpResponse } from "@rexeus/typeweaver-core";
+import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
 import {
   createCreateSubTodoSuccessResponse,
   createCreateTodoSuccessResponse,
@@ -9,27 +9,13 @@ import {
   createListSubTodosSuccessResponse,
   createListTodosSuccessResponse,
   createOptionsTodoSuccessResponse,
+  createQueryTodoSuccessResponse,
   createPutTodoSuccessResponse,
   createQuerySubTodoSuccessResponse,
-  CreateSubTodoSuccessResponse,
-  CreateTodoSuccessResponse,
   createUpdateSubTodoSuccessResponse,
   createUpdateTodoStatusSuccessResponse,
   createUpdateTodoSuccessResponse,
-  DeleteSubTodoSuccessResponse,
-  DeleteTodoSuccessResponse,
-  GetTodoSuccessResponse,
-  HeadTodoSuccessResponse,
-  ListSubTodosSuccessResponse,
-  ListTodosSuccessResponse,
-  OptionsTodoSuccessResponse,
-  PutTodoSuccessResponse,
-  QuerySubTodoSuccessResponse,
-  QueryTodoSuccessResponse,
-  UpdateSubTodoSuccessResponse,
-  UpdateTodoStatusSuccessResponse,
-  UpdateTodoSuccessResponse,
-} from "../..";
+} from "../../data";
 import type {
   CreateSubTodoResponse,
   CreateTodoResponse,
@@ -65,7 +51,7 @@ import type {
 import type { HonoTodoApiHandler } from "../../test-project/output/todo/TodoHono";
 
 export class TodoHandlers implements HonoTodoApiHandler {
-  public constructor(private readonly throwError?: Error | HttpResponse) {
+  public constructor(private readonly throwError?: Error | ITaggedHttpResponse) {
     //
   }
 
@@ -76,14 +62,12 @@ export class TodoHandlers implements HonoTodoApiHandler {
       throw this.throwError;
     }
 
-    const response = createCreateTodoSuccessResponse({
+    return createCreateTodoSuccessResponse({
       body: {
         ...request.body,
         status: "TODO",
       },
     });
-
-    return new CreateTodoSuccessResponse(response);
   }
 
   public async handleDeleteTodoRequest(
@@ -93,8 +77,7 @@ export class TodoHandlers implements HonoTodoApiHandler {
       throw this.throwError;
     }
 
-    const response = createDeleteTodoSuccessResponse();
-    return new DeleteTodoSuccessResponse(response);
+    return createDeleteTodoSuccessResponse();
   }
 
   public async handlePutTodoRequest(
@@ -106,14 +89,12 @@ export class TodoHandlers implements HonoTodoApiHandler {
 
     const { todoId } = request.param;
 
-    const response = createPutTodoSuccessResponse({
+    return createPutTodoSuccessResponse({
       body: {
         ...request.body,
         id: todoId,
       },
     });
-
-    return new PutTodoSuccessResponse(response);
   }
 
   public async handleUpdateTodoRequest(
@@ -125,14 +106,12 @@ export class TodoHandlers implements HonoTodoApiHandler {
 
     const { todoId } = request.param;
 
-    const response = createUpdateTodoSuccessResponse({
+    return createUpdateTodoSuccessResponse({
       body: {
         ...request.body,
         id: todoId,
       },
     });
-
-    return new UpdateTodoSuccessResponse(response);
   }
 
   public async handleUpdateTodoStatusRequest(
@@ -144,14 +123,12 @@ export class TodoHandlers implements HonoTodoApiHandler {
 
     const { todoId } = request.param;
 
-    const response = createUpdateTodoStatusSuccessResponse({
+    return createUpdateTodoStatusSuccessResponse({
       body: {
         id: todoId,
         status: request.body.value,
       },
     });
-
-    return new UpdateTodoStatusSuccessResponse(response);
   }
 
   public async handleGetTodoRequest(
@@ -163,11 +140,9 @@ export class TodoHandlers implements HonoTodoApiHandler {
 
     const { todoId } = request.param;
 
-    const response = createGetTodoSuccessResponse({
+    return createGetTodoSuccessResponse({
       body: { id: todoId },
     });
-
-    return new GetTodoSuccessResponse(response);
   }
 
   public async handleListTodosRequest(
@@ -177,8 +152,7 @@ export class TodoHandlers implements HonoTodoApiHandler {
       throw this.throwError;
     }
 
-    const response = createListTodosSuccessResponse();
-    return new ListTodosSuccessResponse(response);
+    return createListTodosSuccessResponse();
   }
 
   public async handleCreateSubTodoRequest(
@@ -190,14 +164,12 @@ export class TodoHandlers implements HonoTodoApiHandler {
 
     const { todoId } = request.param;
 
-    const response = createCreateSubTodoSuccessResponse({
+    return createCreateSubTodoSuccessResponse({
       body: {
         ...request.body,
         parentId: todoId,
       },
     });
-
-    return new CreateSubTodoSuccessResponse(response);
   }
 
   public async handleDeleteSubTodoRequest(
@@ -207,9 +179,7 @@ export class TodoHandlers implements HonoTodoApiHandler {
       throw this.throwError;
     }
 
-    const response = createDeleteSubTodoSuccessResponse();
-
-    return new DeleteSubTodoSuccessResponse(response);
+    return createDeleteSubTodoSuccessResponse();
   }
 
   public async handleUpdateSubTodoRequest(
@@ -221,15 +191,13 @@ export class TodoHandlers implements HonoTodoApiHandler {
 
     const { todoId, subtodoId } = request.param;
 
-    const response = createUpdateSubTodoSuccessResponse({
+    return createUpdateSubTodoSuccessResponse({
       body: {
         ...request.body,
         id: subtodoId,
         parentId: todoId,
       },
     });
-
-    return new UpdateSubTodoSuccessResponse(response);
   }
 
   public async handleListSubTodosRequest(
@@ -239,8 +207,7 @@ export class TodoHandlers implements HonoTodoApiHandler {
       throw this.throwError;
     }
 
-    const response = createListSubTodosSuccessResponse();
-    return new ListSubTodosSuccessResponse(response);
+    return createListSubTodosSuccessResponse();
   }
 
   public async handleQuerySubTodoRequest(
@@ -250,8 +217,7 @@ export class TodoHandlers implements HonoTodoApiHandler {
       throw this.throwError;
     }
 
-    const response = createQuerySubTodoSuccessResponse();
-    return new QuerySubTodoSuccessResponse(response);
+    return createQuerySubTodoSuccessResponse();
   }
 
   public async handleQueryTodoRequest(
@@ -261,8 +227,7 @@ export class TodoHandlers implements HonoTodoApiHandler {
       throw this.throwError;
     }
 
-    const response = createListTodosSuccessResponse();
-    return new QueryTodoSuccessResponse(response);
+    return createQueryTodoSuccessResponse();
   }
 
   public async handleHeadTodoRequest(
@@ -272,8 +237,7 @@ export class TodoHandlers implements HonoTodoApiHandler {
       throw this.throwError;
     }
 
-    const response = createHeadTodoSuccessResponse();
-    return new HeadTodoSuccessResponse(response);
+    return createHeadTodoSuccessResponse();
   }
 
   public async handleOptionsTodoRequest(
@@ -283,7 +247,6 @@ export class TodoHandlers implements HonoTodoApiHandler {
       throw this.throwError;
     }
 
-    const response = createOptionsTodoSuccessResponse();
-    return new OptionsTodoSuccessResponse(response);
+    return createOptionsTodoSuccessResponse();
   }
 }

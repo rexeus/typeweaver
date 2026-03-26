@@ -1,4 +1,5 @@
-import { HttpResponse, UnknownResponse } from "@rexeus/typeweaver-core";
+import { isTaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import {
   createCreateTodoRequest,
   createDeleteTodoRequest,
@@ -11,24 +12,13 @@ import {
   createTodoNotChangeableErrorResponse,
   createTodoNotFoundErrorResponse,
   CreateTodoRequestCommand,
-  CreateTodoSuccessResponse,
   createUpdateTodoRequest,
   DeleteTodoRequestCommand,
-  DeleteTodoSuccessResponse,
-  ForbiddenErrorResponse,
   GetTodoRequestCommand,
-  GetTodoSuccessResponse,
   HeadTodoRequestCommand,
-  HeadTodoSuccessResponse,
-  InternalServerErrorResponse,
   OptionsTodoRequestCommand,
-  OptionsTodoSuccessResponse,
   PutTodoRequestCommand,
-  PutTodoSuccessResponse,
-  TodoNotChangeableErrorResponse,
-  TodoNotFoundErrorResponse,
   UpdateTodoRequestCommand,
-  UpdateTodoSuccessResponse,
 } from "test-utils";
 import { afterEach, describe, expect, test } from "vitest";
 import { runClientCleanup, setupClientTest } from "./clientSetup";
@@ -49,7 +39,7 @@ describe("Generated Client", () => {
       const response = await client.send(command);
 
       // Assert
-      expect(response).toBeInstanceOf(GetTodoSuccessResponse);
+      expect(response._tag).toBe("GetTodoSuccess");
       expect(response.statusCode).toBe(200);
       expect(response.body.id).toBe(requestData.param.todoId);
     });
@@ -64,7 +54,7 @@ describe("Generated Client", () => {
       const response = await client.send(command);
 
       // Assert
-      expect(response).toBeInstanceOf(CreateTodoSuccessResponse);
+      expect(response._tag).toBe("CreateTodoSuccess");
       expect(response.statusCode).toBe(201);
       expect(response.body.title).toBe(requestData.body.title);
     });
@@ -79,7 +69,7 @@ describe("Generated Client", () => {
       const response = await client.send(command);
 
       // Assert
-      expect(response).toBeInstanceOf(PutTodoSuccessResponse);
+      expect(response._tag).toBe("PutTodoSuccess");
       expect(response.statusCode).toBe(200);
       expect(response.body.id).toBe(requestData.param.todoId);
     });
@@ -94,7 +84,7 @@ describe("Generated Client", () => {
       const response = await client.send(command);
 
       // Assert
-      expect(response).toBeInstanceOf(UpdateTodoSuccessResponse);
+      expect(response._tag).toBe("UpdateTodoSuccess");
       expect(response.statusCode).toBe(200);
       expect(response.body.id).toBe(requestData.param.todoId);
     });
@@ -109,7 +99,7 @@ describe("Generated Client", () => {
       const response = await client.send(command);
 
       // Assert
-      expect(response).toBeInstanceOf(DeleteTodoSuccessResponse);
+      expect(response._tag).toBe("DeleteTodoSuccess");
       expect(response.statusCode).toBe(204);
     });
 
@@ -123,7 +113,7 @@ describe("Generated Client", () => {
       const response = await client.send(command);
 
       // Assert
-      expect(response).toBeInstanceOf(HeadTodoSuccessResponse);
+      expect(response._tag).toBe("HeadTodoSuccess");
       expect(response.statusCode).toBe(200);
       expect(response.body).toBeUndefined();
     });
@@ -138,7 +128,7 @@ describe("Generated Client", () => {
       const response = await client.send(command);
 
       // Assert
-      expect(response).toBeInstanceOf(OptionsTodoSuccessResponse);
+      expect(response._tag).toBe("OptionsTodoSuccess");
       expect(response.statusCode).toBe(200);
       expect(response.header.Allow).toBeDefined();
     });
@@ -155,7 +145,7 @@ describe("Generated Client", () => {
       const response = await client.send(command);
 
       // Assert
-      expect(response).toBeInstanceOf(UpdateTodoSuccessResponse);
+      expect(response._tag).toBe("UpdateTodoSuccess");
       expect(response.statusCode).toBe(200);
     });
 
@@ -168,8 +158,9 @@ describe("Generated Client", () => {
       const command = new UpdateTodoRequestCommand(requestData);
 
       // Act & Assert
-      await expect(client.send(command)).rejects.toThrow(
-        TodoNotFoundErrorResponse
+      await expect(client.send(command)).rejects.toSatisfy(
+        (error: unknown) =>
+          isTaggedHttpResponse(error) && error._tag === "TodoNotFoundError"
       );
     });
 
@@ -182,8 +173,9 @@ describe("Generated Client", () => {
       const command = new UpdateTodoRequestCommand(requestData);
 
       // Act & Assert
-      await expect(client.send(command)).rejects.toThrow(
-        TodoNotChangeableErrorResponse
+      await expect(client.send(command)).rejects.toSatisfy(
+        (error: unknown) =>
+          isTaggedHttpResponse(error) && error._tag === "TodoNotChangeableError"
       );
     });
 
@@ -196,8 +188,9 @@ describe("Generated Client", () => {
       const command = new UpdateTodoRequestCommand(requestData);
 
       // Act & Assert
-      await expect(client.send(command)).rejects.toThrow(
-        ForbiddenErrorResponse
+      await expect(client.send(command)).rejects.toSatisfy(
+        (error: unknown) =>
+          isTaggedHttpResponse(error) && error._tag === "ForbiddenError"
       );
     });
 
@@ -210,8 +203,9 @@ describe("Generated Client", () => {
       const command = new UpdateTodoRequestCommand(requestData);
 
       // Act & Assert
-      await expect(client.send(command)).rejects.toThrow(
-        InternalServerErrorResponse
+      await expect(client.send(command)).rejects.toSatisfy(
+        (error: unknown) =>
+          isTaggedHttpResponse(error) && error._tag === "InternalServerError"
       );
     });
   });
@@ -220,28 +214,31 @@ describe("Generated Client", () => {
     test("should throw UnknownResponse by default for unknown response body", async () => {
       // Arrange
       const { client } = await setupClientTest({
-        customResponses: new HttpResponse(
-          200,
-          { "Content-Type": "application/json" },
-          { unexpectedField: "unexpected value" }
-        ),
+        customResponses: {
+          statusCode: 200,
+          header: { "Content-Type": "application/json" },
+          body: { unexpectedField: "unexpected value" },
+        } satisfies IHttpResponse,
       });
       const requestData = createGetTodoRequest();
       const command = new GetTodoRequestCommand(requestData);
 
       // Act & Assert
-      await expect(client.send(command)).rejects.toThrow(UnknownResponse);
+      await expect(client.send(command)).rejects.toSatisfy(
+        (error: unknown) =>
+          isTaggedHttpResponse(error) && error._tag === "Unknown"
+      );
     });
 
     test("should pass through unknown success responses when configured", async () => {
       // Arrange
       const { client } = await setupClientTest(
         {
-          customResponses: new HttpResponse(
-            200,
-            { "Content-Type": "application/json" },
-            { unexpectedField: "unexpected value" }
-          ),
+          customResponses: {
+            statusCode: 200,
+            header: { "Content-Type": "application/json" },
+            body: { unexpectedField: "unexpected value" },
+          } satisfies IHttpResponse,
         },
         { unknownResponseHandling: "passthrough" }
       );
@@ -253,7 +250,7 @@ describe("Generated Client", () => {
       const response = await client.send(command);
 
       // Assert
-      expect(response).toBeInstanceOf(UnknownResponse);
+      expect(response._tag).toBe("Unknown");
       expect(response.statusCode).toBe(200);
       expect(response.body).toEqual({ unexpectedField: "unexpected value" });
     });
@@ -262,11 +259,11 @@ describe("Generated Client", () => {
       // Arrange
       const { client } = await setupClientTest(
         {
-          customResponses: new HttpResponse(
-            400,
-            { "Content-Type": "application/json" },
-            { error: "Bad request with unknown structure" }
-          ),
+          customResponses: {
+            statusCode: 400,
+            header: { "Content-Type": "application/json" },
+            body: { error: "Bad request with unknown structure" },
+          } satisfies IHttpResponse,
         },
         { unknownResponseHandling: "passthrough" }
       );
@@ -275,20 +272,23 @@ describe("Generated Client", () => {
       const command = new GetTodoRequestCommand(requestData);
 
       // Act & Assert
-      await expect(client.send(command)).rejects.toThrow(UnknownResponse);
+      await expect(client.send(command)).rejects.toSatisfy(
+        (error: unknown) =>
+          isTaggedHttpResponse(error) && error._tag === "Unknown"
+      );
     });
 
     test("should respect custom isSuccessStatusCode predicate", async () => {
       // Arrange
       const { client } = await setupClientTest(
         {
-          customResponses: new HttpResponse(
-            400,
-            { "Content-Type": "application/json" },
-            {
+          customResponses: {
+            statusCode: 400,
+            header: { "Content-Type": "application/json" },
+            body: {
               message: "Invalid request",
-            }
-          ),
+            },
+          } satisfies IHttpResponse,
         },
         {
           unknownResponseHandling: "passthrough",
@@ -304,7 +304,7 @@ describe("Generated Client", () => {
       const response = await client.send(command);
 
       // Assert
-      expect(response).toBeInstanceOf(UnknownResponse);
+      expect(response._tag).toBe("Unknown");
       expect(response.statusCode).toBe(400);
       expect(response.body).toEqual({
         message: "Invalid request",

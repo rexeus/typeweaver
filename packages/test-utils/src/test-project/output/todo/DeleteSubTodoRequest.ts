@@ -7,23 +7,23 @@
  */
 
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { type DeleteSubTodoResponse } from "./DeleteSubTodoResponse";
+import type { DeleteSubTodoResponse } from "./DeleteSubTodoResponse";
 
-import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
+import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 
-import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
+import type { IInternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
 
-import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
+import type { ITooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
 
-import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
+import type { IUnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
 
-import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
+import type { IUnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
 
-import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
+import type { IValidationErrorResponse } from "../shared/ValidationErrorResponse";
 
-import { SubTodoNotFoundErrorResponse } from "./SubTodoNotFoundErrorResponse";
+import type { ISubTodoNotFoundErrorResponse } from "./SubTodoNotFoundErrorResponse";
 
-import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
+import type { ITodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 
 export type IDeleteSubTodoRequestHeader = {
   Accept: "application/json";
@@ -46,12 +46,12 @@ export type IDeleteSubTodoRequest = {
 
 export type SuccessfulDeleteSubTodoResponse = Exclude<
   DeleteSubTodoResponse,
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse
-  | SubTodoNotFoundErrorResponse
-  | TodoNotFoundErrorResponse
+  | IForbiddenErrorResponse
+  | IInternalServerErrorResponse
+  | ITooManyRequestsErrorResponse
+  | IUnauthorizedErrorResponse
+  | IUnsupportedMediaTypeErrorResponse
+  | IValidationErrorResponse
+  | ISubTodoNotFoundErrorResponse
+  | ITodoNotFoundErrorResponse
 >;

@@ -1,5 +1,4 @@
-import { HttpResponse } from "@rexeus/typeweaver-core";
-import type { IHttpResponse } from "@rexeus/typeweaver-core";
+import type { IHttpResponse, ITaggedHttpResponse } from "@rexeus/typeweaver-core";
 import { AccountRouter } from "../test-project/output/account/AccountRouter";
 import { AuthRouter } from "../test-project/output/auth/AuthRouter";
 import {
@@ -10,7 +9,7 @@ import { TodoRouter } from "../test-project/output/todo/TodoRouter";
 import { ServerAccountHandlers } from "./handlers/ServerAccountHandlers";
 import { ServerAuthHandlers } from "./handlers/ServerAuthHandlers";
 import { ServerTodoHandlers } from "./handlers/ServerTodoHandlers";
-import type { TypeweaverRouterOptions } from "../test-project/output/lib/server";
+import type { RequestHandler, TypeweaverRouterOptions } from "../test-project/output/lib/server";
 
 /**
  * Configuration options for TypeweaverApp-based test instances.
@@ -21,14 +20,14 @@ import type { TypeweaverRouterOptions } from "../test-project/output/lib/server"
  */
 export type TestAppOptions = {
   /** Error to throw from todo handlers (simulates handler failures). */
-  readonly throwTodoError?: Error | HttpResponse;
+  readonly throwTodoError?: Error | ITaggedHttpResponse;
   /** Error to throw from auth handlers. */
-  readonly throwAuthError?: Error | HttpResponse;
+  readonly throwAuthError?: Error | ITaggedHttpResponse;
   /** Error to throw from account handlers. */
-  readonly throwAccountError?: Error | HttpResponse;
+  readonly throwAccountError?: Error | ITaggedHttpResponse;
   /** Custom response to return for all requests (bypasses handlers). */
-  readonly customResponses?: HttpResponse | IHttpResponse;
-} & Omit<TypeweaverRouterOptions<unknown>, "requestHandlers">;
+  readonly customResponses?: IHttpResponse;
+} & Omit<TypeweaverRouterOptions<Record<string, RequestHandler<any, any, any>>>, "requestHandlers">;
 
 /**
  * Creates a TypeweaverApp with all generated test routers (Todo, Auth, Account) mounted.

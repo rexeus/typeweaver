@@ -11,7 +11,7 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  UnknownResponse,
+  createUnknownResponse,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
 import { UploadFileResponseValidator } from "./UploadFileResponseValidator";
@@ -21,8 +21,6 @@ import type {
   IUploadFileRequestBody,
   SuccessfulUploadFileResponse,
 } from "./UploadFileRequest";
-
-import { UploadFileSuccessResponse } from "./UploadFileResponse";
 
 export class UploadFileRequestCommand extends RequestCommand implements IUploadFileRequest {
   public override readonly operationId = definition.operationId;
@@ -53,14 +51,14 @@ export class UploadFileRequestCommand extends RequestCommand implements IUploadF
     try {
       const result = this.responseValidator.validate(response);
 
-      if (result instanceof UploadFileSuccessResponse) {
-        return result;
+      if (result._tag === "UploadFileSuccess") {
+        return result as SuccessfulUploadFileResponse;
       }
 
       throw result;
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = new UnknownResponse(
+        const unknownResponse = createUnknownResponse(
           response.statusCode,
           response.header,
           response.body,

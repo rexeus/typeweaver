@@ -11,7 +11,7 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  UnknownResponse,
+  createUnknownResponse,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
 import { PutTodoResponseValidator } from "./PutTodoResponseValidator";
@@ -22,8 +22,6 @@ import type {
   IPutTodoRequestBody,
   SuccessfulPutTodoResponse,
 } from "./PutTodoRequest";
-
-import { PutTodoSuccessResponse } from "./PutTodoResponse";
 
 export class PutTodoRequestCommand extends RequestCommand implements IPutTodoRequest {
   public override readonly operationId = definition.operationId;
@@ -56,14 +54,14 @@ export class PutTodoRequestCommand extends RequestCommand implements IPutTodoReq
     try {
       const result = this.responseValidator.validate(response);
 
-      if (result instanceof PutTodoSuccessResponse) {
-        return result;
+      if (result._tag === "PutTodoSuccess") {
+        return result as SuccessfulPutTodoResponse;
       }
 
       throw result;
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = new UnknownResponse(
+        const unknownResponse = createUnknownResponse(
           response.statusCode,
           response.header,
           response.body,

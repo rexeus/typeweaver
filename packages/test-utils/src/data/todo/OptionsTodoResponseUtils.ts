@@ -1,6 +1,6 @@
-import { OptionsTodoSuccessResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
+import { createOptionsTodoSuccessResponse as generatedCreateOptionsTodoSuccessResponse } from "../../test-project/output/todo/OptionsTodoResponse";
 import type {
   IOptionsTodoSuccessResponse,
   IOptionsTodoSuccessResponseHeader,
@@ -29,7 +29,7 @@ type CreateOptionsTodoSuccessResponseInput = {
 
 export function createOptionsTodoSuccessResponse(
   input: CreateOptionsTodoSuccessResponseInput = {}
-): OptionsTodoSuccessResponse {
+): IOptionsTodoSuccessResponse {
   const responseData = createResponse<
     IOptionsTodoSuccessResponse,
     never,
@@ -43,5 +43,5 @@ export function createOptionsTodoSuccessResponse(
     },
     input
   );
-  return new OptionsTodoSuccessResponse(responseData);
+  return generatedCreateOptionsTodoSuccessResponse(responseData);
 }

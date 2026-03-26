@@ -7,25 +7,25 @@
  */
 
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { type UpdateTodoStatusResponse } from "./UpdateTodoStatusResponse";
+import type { UpdateTodoStatusResponse } from "./UpdateTodoStatusResponse";
 
-import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
+import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 
-import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
+import type { IInternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
 
-import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
+import type { ITooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
 
-import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
+import type { IUnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
 
-import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
+import type { IUnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
 
-import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
+import type { IValidationErrorResponse } from "../shared/ValidationErrorResponse";
 
-import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
+import type { ITodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 
-import { TodoStatusTransitionInvalidErrorResponse } from "./TodoStatusTransitionInvalidErrorResponse";
+import type { ITodoStatusTransitionInvalidErrorResponse } from "./TodoStatusTransitionInvalidErrorResponse";
 
-import { TodoNotChangeableErrorResponse } from "./TodoNotChangeableErrorResponse";
+import type { ITodoNotChangeableErrorResponse } from "./TodoNotChangeableErrorResponse";
 
 export type IUpdateTodoStatusRequestHeader = {
   "Content-Type": "application/json";
@@ -54,13 +54,13 @@ export type IUpdateTodoStatusRequest = {
 
 export type SuccessfulUpdateTodoStatusResponse = Exclude<
   UpdateTodoStatusResponse,
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse
-  | TodoNotFoundErrorResponse
-  | TodoStatusTransitionInvalidErrorResponse
-  | TodoNotChangeableErrorResponse
+  | IForbiddenErrorResponse
+  | IInternalServerErrorResponse
+  | ITooManyRequestsErrorResponse
+  | IUnauthorizedErrorResponse
+  | IUnsupportedMediaTypeErrorResponse
+  | IValidationErrorResponse
+  | ITodoNotFoundErrorResponse
+  | ITodoStatusTransitionInvalidErrorResponse
+  | ITodoNotChangeableErrorResponse
 >;

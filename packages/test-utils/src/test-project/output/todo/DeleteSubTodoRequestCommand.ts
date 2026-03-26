@@ -11,7 +11,7 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  UnknownResponse,
+  createUnknownResponse,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
 import { DeleteSubTodoResponseValidator } from "./DeleteSubTodoResponseValidator";
@@ -21,8 +21,6 @@ import type {
   IDeleteSubTodoRequestParam,
   SuccessfulDeleteSubTodoResponse,
 } from "./DeleteSubTodoRequest";
-
-import { DeleteSubTodoSuccessResponse } from "./DeleteSubTodoResponse";
 
 export class DeleteSubTodoRequestCommand extends RequestCommand implements IDeleteSubTodoRequest {
   public override readonly operationId = definition.operationId;
@@ -53,14 +51,14 @@ export class DeleteSubTodoRequestCommand extends RequestCommand implements IDele
     try {
       const result = this.responseValidator.validate(response);
 
-      if (result instanceof DeleteSubTodoSuccessResponse) {
-        return result;
+      if (result._tag === "DeleteSubTodoSuccess") {
+        return result as SuccessfulDeleteSubTodoResponse;
       }
 
       throw result;
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = new UnknownResponse(
+        const unknownResponse = createUnknownResponse(
           response.statusCode,
           response.header,
           response.body,

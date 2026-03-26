@@ -11,7 +11,7 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  UnknownResponse,
+  createUnknownResponse,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
 import { QuerySubTodoResponseValidator } from "./QuerySubTodoResponseValidator";
@@ -23,8 +23,6 @@ import type {
   IQuerySubTodoRequestBody,
   SuccessfulQuerySubTodoResponse,
 } from "./QuerySubTodoRequest";
-
-import { QuerySubTodoSuccessResponse } from "./QuerySubTodoResponse";
 
 export class QuerySubTodoRequestCommand extends RequestCommand implements IQuerySubTodoRequest {
   public override readonly operationId = definition.operationId;
@@ -59,14 +57,14 @@ export class QuerySubTodoRequestCommand extends RequestCommand implements IQuery
     try {
       const result = this.responseValidator.validate(response);
 
-      if (result instanceof QuerySubTodoSuccessResponse) {
-        return result;
+      if (result._tag === "QuerySubTodoSuccess") {
+        return result as SuccessfulQuerySubTodoResponse;
       }
 
       throw result;
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = new UnknownResponse(
+        const unknownResponse = createUnknownResponse(
           response.statusCode,
           response.header,
           response.body,

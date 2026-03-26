@@ -4,12 +4,9 @@ import {
   createUploadFileRequest,
   createUploadFileSuccessResponseBody,
   DownloadFileContentRequestCommand,
-  DownloadFileContentSuccessResponse,
   FileClient,
   GetFileMetadataRequestCommand,
-  GetFileMetadataSuccessResponse,
   UploadFileRequestCommand,
-  UploadFileSuccessResponse,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
 import { createRawMockFetch } from "../helpers";
@@ -38,7 +35,7 @@ describe("FileClient", () => {
 
     const result = await client.send(command);
 
-    expect(result).toBeInstanceOf(UploadFileSuccessResponse);
+    expect(result._tag).toBe("UploadFileSuccess");
     expect(result.body.id).toBe(metadata.id);
     expect(result.body.name).toBe("report.pdf");
     expect(result.body.mimeType).toBe("application/pdf");
@@ -58,7 +55,7 @@ describe("FileClient", () => {
 
     const result = await client.send(command);
 
-    expect(result).toBeInstanceOf(DownloadFileContentSuccessResponse);
+    expect(result._tag).toBe("DownloadFileContentSuccess");
     expect(result.body).toBeInstanceOf(ArrayBuffer);
     const bytes = new Uint8Array(result.body as ArrayBuffer);
     expect(Array.from(bytes)).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]);
@@ -80,7 +77,7 @@ describe("FileClient", () => {
 
     const result = await client.send(command);
 
-    expect(result).toBeInstanceOf(GetFileMetadataSuccessResponse);
+    expect(result._tag).toBe("GetFileMetadataSuccess");
     expect(result.body.id).toBe(metadata.id);
     expect(result.body.name).toBe("notes.txt");
     expect(result.body.mimeType).toBe("text/plain");

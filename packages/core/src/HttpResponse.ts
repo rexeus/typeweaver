@@ -1,4 +1,4 @@
-import { HttpStatusCode } from "./HttpStatusCode";
+import type { HttpStatusCode } from "./HttpStatusCode";
 import type { IHttpBody } from "./HttpBody";
 import type { IHttpHeader } from "./HttpHeader";
 
@@ -6,18 +6,22 @@ export type IHttpResponse<
   Header extends IHttpHeader = IHttpHeader,
   Body extends IHttpBody = IHttpBody,
 > = {
-  statusCode: HttpStatusCode;
-  header?: Header;
-  body?: Body;
+  readonly statusCode: HttpStatusCode;
+  readonly header?: Header;
+  readonly body?: Body;
 };
 
-export class HttpResponse<
+export type ITaggedHttpResponse<
+  Tag extends string = string,
   Header extends IHttpHeader = IHttpHeader,
   Body extends IHttpBody = IHttpBody,
-> implements IHttpResponse<Header, Body> {
-  public constructor(
-    public readonly statusCode: HttpStatusCode,
-    public readonly header: Header,
-    public readonly body: Body
-  ) {}
-}
+> = IHttpResponse<Header, Body> & {
+  readonly _tag: Tag;
+};
+
+export const isTaggedHttpResponse = (value: unknown): value is ITaggedHttpResponse =>
+  typeof value === "object" &&
+  value !== null &&
+  "_tag" in value &&
+  typeof (value as Record<string, unknown>)._tag === "string" &&
+  "statusCode" in value;

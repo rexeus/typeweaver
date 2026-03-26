@@ -1,6 +1,6 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { PutTodoSuccessResponse } from "../..";
 import { createResponse } from "../createResponse";
+import { createPutTodoSuccessResponse as generatedCreatePutTodoSuccessResponse } from "../../test-project/output/todo/PutTodoResponse";
 import { createCreateTodoSuccessResponseHeader } from "./CreateTodoResponseUtils";
 import { createGetTodoSuccessResponseBody } from "./GetTodoResponseUtils";
 import type {
@@ -17,7 +17,7 @@ type PutTodoSuccessResponseInput = {
 
 export function createPutTodoSuccessResponse(
   input: PutTodoSuccessResponseInput = {}
-): PutTodoSuccessResponse {
+): IPutTodoSuccessResponse {
   const responseData = createResponse<
     IPutTodoSuccessResponse,
     IPutTodoSuccessResponseBody,
@@ -32,5 +32,5 @@ export function createPutTodoSuccessResponse(
     },
     input
   );
-  return new PutTodoSuccessResponse(responseData);
+  return generatedCreatePutTodoSuccessResponse(responseData);
 }

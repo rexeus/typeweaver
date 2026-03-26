@@ -7,27 +7,27 @@
  */
 
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { type UpdateSubTodoResponse } from "./UpdateSubTodoResponse";
+import type { UpdateSubTodoResponse } from "./UpdateSubTodoResponse";
 
-import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
+import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 
-import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
+import type { IInternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
 
-import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
+import type { ITooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
 
-import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
+import type { IUnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
 
-import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
+import type { IUnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
 
-import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
+import type { IValidationErrorResponse } from "../shared/ValidationErrorResponse";
 
-import { SubTodoNotFoundErrorResponse } from "./SubTodoNotFoundErrorResponse";
+import type { ISubTodoNotFoundErrorResponse } from "./SubTodoNotFoundErrorResponse";
 
-import { SubTodoNotChangeableErrorResponse } from "./SubTodoNotChangeableErrorResponse";
+import type { ISubTodoNotChangeableErrorResponse } from "./SubTodoNotChangeableErrorResponse";
 
-import { SubTodoStatusTransitionInvalidErrorResponse } from "./SubTodoStatusTransitionInvalidErrorResponse";
+import type { ISubTodoStatusTransitionInvalidErrorResponse } from "./SubTodoStatusTransitionInvalidErrorResponse";
 
-import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
+import type { ITodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 
 export type IUpdateSubTodoRequestHeader = {
   "Content-Type": "application/json";
@@ -62,14 +62,14 @@ export type IUpdateSubTodoRequest = {
 
 export type SuccessfulUpdateSubTodoResponse = Exclude<
   UpdateSubTodoResponse,
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse
-  | SubTodoNotFoundErrorResponse
-  | SubTodoNotChangeableErrorResponse
-  | SubTodoStatusTransitionInvalidErrorResponse
-  | TodoNotFoundErrorResponse
+  | IForbiddenErrorResponse
+  | IInternalServerErrorResponse
+  | ITooManyRequestsErrorResponse
+  | IUnauthorizedErrorResponse
+  | IUnsupportedMediaTypeErrorResponse
+  | IValidationErrorResponse
+  | ISubTodoNotFoundErrorResponse
+  | ISubTodoNotChangeableErrorResponse
+  | ISubTodoStatusTransitionInvalidErrorResponse
+  | ITodoNotFoundErrorResponse
 >;

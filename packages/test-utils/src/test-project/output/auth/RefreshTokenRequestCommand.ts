@@ -11,7 +11,7 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  UnknownResponse,
+  createUnknownResponse,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
 import { RefreshTokenResponseValidator } from "./RefreshTokenResponseValidator";
@@ -21,8 +21,6 @@ import type {
   IRefreshTokenRequestBody,
   SuccessfulRefreshTokenResponse,
 } from "./RefreshTokenRequest";
-
-import { RefreshTokenSuccessResponse } from "./RefreshTokenResponse";
 
 export class RefreshTokenRequestCommand extends RequestCommand implements IRefreshTokenRequest {
   public override readonly operationId = definition.operationId;
@@ -53,14 +51,14 @@ export class RefreshTokenRequestCommand extends RequestCommand implements IRefre
     try {
       const result = this.responseValidator.validate(response);
 
-      if (result instanceof RefreshTokenSuccessResponse) {
-        return result;
+      if (result._tag === "RefreshTokenSuccess") {
+        return result as SuccessfulRefreshTokenResponse;
       }
 
       throw result;
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = new UnknownResponse(
+        const unknownResponse = createUnknownResponse(
           response.statusCode,
           response.header,
           response.body,

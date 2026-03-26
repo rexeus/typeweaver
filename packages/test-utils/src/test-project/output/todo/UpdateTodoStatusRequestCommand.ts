@@ -11,7 +11,7 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  UnknownResponse,
+  createUnknownResponse,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
 import { UpdateTodoStatusResponseValidator } from "./UpdateTodoStatusResponseValidator";
@@ -22,8 +22,6 @@ import type {
   IUpdateTodoStatusRequestBody,
   SuccessfulUpdateTodoStatusResponse,
 } from "./UpdateTodoStatusRequest";
-
-import { UpdateTodoStatusSuccessResponse } from "./UpdateTodoStatusResponse";
 
 export class UpdateTodoStatusRequestCommand
   extends RequestCommand
@@ -59,14 +57,14 @@ export class UpdateTodoStatusRequestCommand
     try {
       const result = this.responseValidator.validate(response);
 
-      if (result instanceof UpdateTodoStatusSuccessResponse) {
-        return result;
+      if (result._tag === "UpdateTodoStatusSuccess") {
+        return result as SuccessfulUpdateTodoStatusResponse;
       }
 
       throw result;
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = new UnknownResponse(
+        const unknownResponse = createUnknownResponse(
           response.statusCode,
           response.header,
           response.body,

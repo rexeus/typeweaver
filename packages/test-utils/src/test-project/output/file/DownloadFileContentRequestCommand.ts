@@ -11,7 +11,7 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  UnknownResponse,
+  createUnknownResponse,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
 import { DownloadFileContentResponseValidator } from "./DownloadFileContentResponseValidator";
@@ -21,8 +21,6 @@ import type {
   IDownloadFileContentRequestParam,
   SuccessfulDownloadFileContentResponse,
 } from "./DownloadFileContentRequest";
-
-import { DownloadFileContentSuccessResponse } from "./DownloadFileContentResponse";
 
 export class DownloadFileContentRequestCommand
   extends RequestCommand
@@ -56,14 +54,14 @@ export class DownloadFileContentRequestCommand
     try {
       const result = this.responseValidator.validate(response);
 
-      if (result instanceof DownloadFileContentSuccessResponse) {
-        return result;
+      if (result._tag === "DownloadFileContentSuccess") {
+        return result as SuccessfulDownloadFileContentResponse;
       }
 
       throw result;
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = new UnknownResponse(
+        const unknownResponse = createUnknownResponse(
           response.statusCode,
           response.header,
           response.body,

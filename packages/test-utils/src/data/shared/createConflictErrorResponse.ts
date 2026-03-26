@@ -1,8 +1,8 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { ConflictErrorResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import { createResponse } from "../createResponse";
+import { createConflictErrorResponse as generatedCreateConflictErrorResponse } from "../../test-project/output/shared/ConflictErrorResponse";
 import type {
   IConflictErrorResponse,
   IConflictErrorResponseBody,
@@ -23,7 +23,7 @@ const createConflictErrorResponseBody =
 
 export function createConflictErrorResponse(
   input: ConflictErrorResponseInput = {}
-): ConflictErrorResponse {
+): IConflictErrorResponse {
   const responseData = createResponse<
     IConflictErrorResponse,
     IConflictErrorResponseBody,
@@ -38,5 +38,5 @@ export function createConflictErrorResponse(
     },
     input
   );
-  return new ConflictErrorResponse(responseData);
+  return generatedCreateConflictErrorResponse(responseData);
 }

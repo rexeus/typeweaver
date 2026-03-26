@@ -1,9 +1,9 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { TodoNotFoundErrorResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import { createResponse } from "../createResponse";
+import { createTodoNotFoundErrorResponse as generatedCreateTodoNotFoundErrorResponse } from "../../test-project/output/todo/TodoNotFoundErrorResponse";
 import type {
   ITodoNotFoundErrorResponse,
   ITodoNotFoundErrorResponseBody,
@@ -30,7 +30,7 @@ export const createTodoNotFoundErrorResponseBody =
 
 export function createTodoNotFoundErrorResponse(
   input: TodoNotFoundErrorResponseInput = {}
-): TodoNotFoundErrorResponse {
+): ITodoNotFoundErrorResponse {
   const responseData = createResponse<
     ITodoNotFoundErrorResponse,
     ITodoNotFoundErrorResponseBody,
@@ -45,5 +45,5 @@ export function createTodoNotFoundErrorResponse(
     },
     input
   );
-  return new TodoNotFoundErrorResponse(responseData);
+  return generatedCreateTodoNotFoundErrorResponse(responseData);
 }

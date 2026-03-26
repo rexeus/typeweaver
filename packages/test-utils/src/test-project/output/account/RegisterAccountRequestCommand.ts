@@ -11,7 +11,7 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  UnknownResponse,
+  createUnknownResponse,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
 import { RegisterAccountResponseValidator } from "./RegisterAccountResponseValidator";
@@ -21,8 +21,6 @@ import type {
   IRegisterAccountRequestBody,
   SuccessfulRegisterAccountResponse,
 } from "./RegisterAccountRequest";
-
-import { RegisterAccountSuccessResponse } from "./RegisterAccountResponse";
 
 export class RegisterAccountRequestCommand
   extends RequestCommand
@@ -56,14 +54,14 @@ export class RegisterAccountRequestCommand
     try {
       const result = this.responseValidator.validate(response);
 
-      if (result instanceof RegisterAccountSuccessResponse) {
-        return result;
+      if (result._tag === "RegisterAccountSuccess") {
+        return result as SuccessfulRegisterAccountResponse;
       }
 
       throw result;
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = new UnknownResponse(
+        const unknownResponse = createUnknownResponse(
           response.statusCode,
           response.header,
           response.body,

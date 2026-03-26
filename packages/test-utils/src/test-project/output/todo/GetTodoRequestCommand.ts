@@ -11,7 +11,7 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  UnknownResponse,
+  createUnknownResponse,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
 import { GetTodoResponseValidator } from "./GetTodoResponseValidator";
@@ -21,8 +21,6 @@ import type {
   IGetTodoRequestParam,
   SuccessfulGetTodoResponse,
 } from "./GetTodoRequest";
-
-import { GetTodoSuccessResponse } from "./GetTodoResponse";
 
 export class GetTodoRequestCommand extends RequestCommand implements IGetTodoRequest {
   public override readonly operationId = definition.operationId;
@@ -53,14 +51,14 @@ export class GetTodoRequestCommand extends RequestCommand implements IGetTodoReq
     try {
       const result = this.responseValidator.validate(response);
 
-      if (result instanceof GetTodoSuccessResponse) {
-        return result;
+      if (result._tag === "GetTodoSuccess") {
+        return result as SuccessfulGetTodoResponse;
       }
 
       throw result;
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = new UnknownResponse(
+        const unknownResponse = createUnknownResponse(
           response.statusCode,
           response.header,
           response.body,

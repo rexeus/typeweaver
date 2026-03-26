@@ -1,9 +1,8 @@
-import {
-  HttpMethod,
-  HttpResponse,
-  RequestValidationError,
+import { HttpMethod, RequestValidationError } from "@rexeus/typeweaver-core";
+import type {
+  IRequestValidator,
+  ITaggedHttpResponse,
 } from "@rexeus/typeweaver-core";
-import type { IRequestValidator } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
 import { PayloadTooLargeError } from "../../src/lib/Errors";
 import { defineMiddleware } from "../../src/lib/TypedMiddleware";
@@ -611,7 +610,12 @@ describe("TypeweaverApp", () => {
         undefined,
         {
           handleCreateTodo: async () => {
-            throw new HttpResponse(409, {}, { code: "CONFLICT" });
+            throw {
+              _tag: "ConflictError",
+              statusCode: 409,
+              header: {},
+              body: { code: "CONFLICT" },
+            } satisfies ITaggedHttpResponse;
           },
         },
         { onError }
@@ -633,7 +637,12 @@ describe("TypeweaverApp", () => {
         },
         {
           handleCreateTodo: async () => {
-            throw new HttpResponse(409, {}, { code: "CONFLICT" });
+            throw {
+              _tag: "ConflictError",
+              statusCode: 409,
+              header: {},
+              body: { code: "CONFLICT" },
+            } satisfies ITaggedHttpResponse;
           },
         }
       );
@@ -733,7 +742,12 @@ describe("TypeweaverApp", () => {
         },
         {
           handleCreateTodo: async () => {
-            throw new HttpResponse(409, {}, { code: "CONFLICT" });
+            throw {
+              _tag: "ConflictError",
+              statusCode: 409,
+              header: {},
+              body: { code: "CONFLICT" },
+            } satisfies ITaggedHttpResponse;
           },
         },
         { onError }
@@ -743,7 +757,9 @@ describe("TypeweaverApp", () => {
 
       await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
       expect(onError).toHaveBeenCalledOnce();
-      expect(onError).toHaveBeenCalledWith(expect.any(HttpResponse));
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ _tag: "ConflictError", statusCode: 409 })
+      );
     });
 
     test("should return 500 when error handler throws", async () => {
@@ -1109,7 +1125,12 @@ describe("TypeweaverApp", () => {
         },
         {
           handleCreateTodo: async () => {
-            throw new HttpResponse(409, {}, { code: "CONFLICT" });
+            throw {
+              _tag: "ConflictError",
+              statusCode: 409,
+              header: {},
+              body: { code: "CONFLICT" },
+            } satisfies ITaggedHttpResponse;
           },
         }
       );
@@ -1119,7 +1140,7 @@ describe("TypeweaverApp", () => {
       await expectErrorResponse(res, 500, "CUSTOM_UNKNOWN");
       expect(unknownHandler).toHaveBeenCalledOnce();
       expect(unknownHandler).toHaveBeenCalledWith(
-        expect.any(HttpResponse),
+        expect.objectContaining({ _tag: "ConflictError", statusCode: 409 }),
         expect.anything()
       );
     });

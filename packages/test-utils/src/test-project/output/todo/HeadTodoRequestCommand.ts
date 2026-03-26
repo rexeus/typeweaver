@@ -11,7 +11,7 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  UnknownResponse,
+  createUnknownResponse,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
 import { HeadTodoResponseValidator } from "./HeadTodoResponseValidator";
@@ -21,8 +21,6 @@ import type {
   IHeadTodoRequestParam,
   SuccessfulHeadTodoResponse,
 } from "./HeadTodoRequest";
-
-import { HeadTodoSuccessResponse } from "./HeadTodoResponse";
 
 export class HeadTodoRequestCommand extends RequestCommand implements IHeadTodoRequest {
   public override readonly operationId = definition.operationId;
@@ -53,14 +51,14 @@ export class HeadTodoRequestCommand extends RequestCommand implements IHeadTodoR
     try {
       const result = this.responseValidator.validate(response);
 
-      if (result instanceof HeadTodoSuccessResponse) {
-        return result;
+      if (result._tag === "HeadTodoSuccess") {
+        return result as SuccessfulHeadTodoResponse;
       }
 
       throw result;
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = new UnknownResponse(
+        const unknownResponse = createUnknownResponse(
           response.statusCode,
           response.header,
           response.body,

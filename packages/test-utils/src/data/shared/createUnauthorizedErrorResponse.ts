@@ -1,8 +1,8 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { UnauthorizedErrorResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import { createResponse } from "../createResponse";
+import { createUnauthorizedErrorResponse as generatedCreateUnauthorizedErrorResponse } from "../../test-project/output/shared/UnauthorizedErrorResponse";
 import type {
   IUnauthorizedErrorResponse,
   IUnauthorizedErrorResponseBody,
@@ -23,7 +23,7 @@ const createUnauthorizedErrorResponseBody =
 
 export function createUnauthorizedErrorResponse(
   input: UnauthorizedErrorResponseInput = {}
-): UnauthorizedErrorResponse {
+): IUnauthorizedErrorResponse {
   const responseData = createResponse<
     IUnauthorizedErrorResponse,
     IUnauthorizedErrorResponseBody,
@@ -38,5 +38,5 @@ export function createUnauthorizedErrorResponse(
     },
     input
   );
-  return new UnauthorizedErrorResponse(responseData);
+  return generatedCreateUnauthorizedErrorResponse(responseData);
 }

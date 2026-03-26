@@ -13,46 +13,21 @@ import {
   ResponseValidationError,
 } from "@rexeus/typeweaver-core";
 import { ResponseValidator } from "../lib/types";
-import {
-  type GetTodoResponse,
-  type IGetTodoSuccessResponse,
-  GetTodoSuccessResponse,
-} from "./GetTodoResponse";
+import { type GetTodoResponse, type IGetTodoSuccessResponse } from "./GetTodoResponse";
 
-import {
-  type ITodoNotFoundErrorResponse,
-  TodoNotFoundErrorResponse,
-} from "./TodoNotFoundErrorResponse";
+import type { ITodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 
-import {
-  type IForbiddenErrorResponse,
-  ForbiddenErrorResponse,
-} from "../shared/ForbiddenErrorResponse";
+import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 
-import {
-  type IInternalServerErrorResponse,
-  InternalServerErrorResponse,
-} from "../shared/InternalServerErrorResponse";
+import type { IInternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
 
-import {
-  type ITooManyRequestsErrorResponse,
-  TooManyRequestsErrorResponse,
-} from "../shared/TooManyRequestsErrorResponse";
+import type { ITooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
 
-import {
-  type IUnauthorizedErrorResponse,
-  UnauthorizedErrorResponse,
-} from "../shared/UnauthorizedErrorResponse";
+import type { IUnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
 
-import {
-  type IUnsupportedMediaTypeErrorResponse,
-  UnsupportedMediaTypeErrorResponse,
-} from "../shared/UnsupportedMediaTypeErrorResponse";
+import type { IUnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
 
-import {
-  type IValidationErrorResponse,
-  ValidationErrorResponse,
-} from "../shared/ValidationErrorResponse";
+import type { IValidationErrorResponse } from "../shared/ValidationErrorResponse";
 
 export class GetTodoResponseValidator extends ResponseValidator {
   public safeValidate(response: IHttpResponse): SafeResponseValidationResult<GetTodoResponse> {
@@ -167,8 +142,8 @@ export class GetTodoResponseValidator extends ResponseValidator {
   private validateGetTodoSuccessResponse(
     response: IHttpResponse,
     error: ResponseValidationError,
-  ): SafeResponseValidationResult<GetTodoSuccessResponse> {
-    const result = this.validateResponseType<GetTodoSuccessResponse>(
+  ): SafeResponseValidationResult<IGetTodoSuccessResponse> {
+    const result = this.validateResponseType<IGetTodoSuccessResponse>(
       "GetTodoSuccess",
       definition.responses[0] && "header" in definition.responses[0]
         ? definition.responses[0]!.header
@@ -184,15 +159,20 @@ export class GetTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new GetTodoSuccessResponse(result.data as IGetTodoSuccessResponse),
+      data: {
+        _tag: "GetTodoSuccess" as const,
+        statusCode: result.data.statusCode,
+        header: result.data.header,
+        body: result.data.body,
+      } as IGetTodoSuccessResponse,
     };
   }
 
   private validateTodoNotFoundErrorResponse(
     response: IHttpResponse,
     error: ResponseValidationError,
-  ): SafeResponseValidationResult<TodoNotFoundErrorResponse> {
-    const result = this.validateResponseType<TodoNotFoundErrorResponse>(
+  ): SafeResponseValidationResult<ITodoNotFoundErrorResponse> {
+    const result = this.validateResponseType<ITodoNotFoundErrorResponse>(
       "TodoNotFoundError",
       definition.responses[1] && "header" in definition.responses[1]
         ? definition.responses[1]!.header
@@ -208,15 +188,20 @@ export class GetTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new TodoNotFoundErrorResponse(result.data as ITodoNotFoundErrorResponse),
+      data: {
+        _tag: "TodoNotFoundError" as const,
+        statusCode: result.data.statusCode,
+        header: result.data.header,
+        body: result.data.body,
+      } as ITodoNotFoundErrorResponse,
     };
   }
 
   private validateForbiddenErrorResponse(
     response: IHttpResponse,
     error: ResponseValidationError,
-  ): SafeResponseValidationResult<ForbiddenErrorResponse> {
-    const result = this.validateResponseType<ForbiddenErrorResponse>(
+  ): SafeResponseValidationResult<IForbiddenErrorResponse> {
+    const result = this.validateResponseType<IForbiddenErrorResponse>(
       "ForbiddenError",
       definition.responses[2] && "header" in definition.responses[2]
         ? definition.responses[2]!.header
@@ -232,15 +217,20 @@ export class GetTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new ForbiddenErrorResponse(result.data as IForbiddenErrorResponse),
+      data: {
+        _tag: "ForbiddenError" as const,
+        statusCode: result.data.statusCode,
+        header: result.data.header,
+        body: result.data.body,
+      } as IForbiddenErrorResponse,
     };
   }
 
   private validateInternalServerErrorResponse(
     response: IHttpResponse,
     error: ResponseValidationError,
-  ): SafeResponseValidationResult<InternalServerErrorResponse> {
-    const result = this.validateResponseType<InternalServerErrorResponse>(
+  ): SafeResponseValidationResult<IInternalServerErrorResponse> {
+    const result = this.validateResponseType<IInternalServerErrorResponse>(
       "InternalServerError",
       definition.responses[3] && "header" in definition.responses[3]
         ? definition.responses[3]!.header
@@ -256,15 +246,20 @@ export class GetTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new InternalServerErrorResponse(result.data as IInternalServerErrorResponse),
+      data: {
+        _tag: "InternalServerError" as const,
+        statusCode: result.data.statusCode,
+        header: result.data.header,
+        body: result.data.body,
+      } as IInternalServerErrorResponse,
     };
   }
 
   private validateTooManyRequestsErrorResponse(
     response: IHttpResponse,
     error: ResponseValidationError,
-  ): SafeResponseValidationResult<TooManyRequestsErrorResponse> {
-    const result = this.validateResponseType<TooManyRequestsErrorResponse>(
+  ): SafeResponseValidationResult<ITooManyRequestsErrorResponse> {
+    const result = this.validateResponseType<ITooManyRequestsErrorResponse>(
       "TooManyRequestsError",
       definition.responses[4] && "header" in definition.responses[4]
         ? definition.responses[4]!.header
@@ -280,15 +275,20 @@ export class GetTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new TooManyRequestsErrorResponse(result.data as ITooManyRequestsErrorResponse),
+      data: {
+        _tag: "TooManyRequestsError" as const,
+        statusCode: result.data.statusCode,
+        header: result.data.header,
+        body: result.data.body,
+      } as ITooManyRequestsErrorResponse,
     };
   }
 
   private validateUnauthorizedErrorResponse(
     response: IHttpResponse,
     error: ResponseValidationError,
-  ): SafeResponseValidationResult<UnauthorizedErrorResponse> {
-    const result = this.validateResponseType<UnauthorizedErrorResponse>(
+  ): SafeResponseValidationResult<IUnauthorizedErrorResponse> {
+    const result = this.validateResponseType<IUnauthorizedErrorResponse>(
       "UnauthorizedError",
       definition.responses[5] && "header" in definition.responses[5]
         ? definition.responses[5]!.header
@@ -304,15 +304,20 @@ export class GetTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new UnauthorizedErrorResponse(result.data as IUnauthorizedErrorResponse),
+      data: {
+        _tag: "UnauthorizedError" as const,
+        statusCode: result.data.statusCode,
+        header: result.data.header,
+        body: result.data.body,
+      } as IUnauthorizedErrorResponse,
     };
   }
 
   private validateUnsupportedMediaTypeErrorResponse(
     response: IHttpResponse,
     error: ResponseValidationError,
-  ): SafeResponseValidationResult<UnsupportedMediaTypeErrorResponse> {
-    const result = this.validateResponseType<UnsupportedMediaTypeErrorResponse>(
+  ): SafeResponseValidationResult<IUnsupportedMediaTypeErrorResponse> {
+    const result = this.validateResponseType<IUnsupportedMediaTypeErrorResponse>(
       "UnsupportedMediaTypeError",
       definition.responses[6] && "header" in definition.responses[6]
         ? definition.responses[6]!.header
@@ -328,17 +333,20 @@ export class GetTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new UnsupportedMediaTypeErrorResponse(
-        result.data as IUnsupportedMediaTypeErrorResponse,
-      ),
+      data: {
+        _tag: "UnsupportedMediaTypeError" as const,
+        statusCode: result.data.statusCode,
+        header: result.data.header,
+        body: result.data.body,
+      } as IUnsupportedMediaTypeErrorResponse,
     };
   }
 
   private validateValidationErrorResponse(
     response: IHttpResponse,
     error: ResponseValidationError,
-  ): SafeResponseValidationResult<ValidationErrorResponse> {
-    const result = this.validateResponseType<ValidationErrorResponse>(
+  ): SafeResponseValidationResult<IValidationErrorResponse> {
+    const result = this.validateResponseType<IValidationErrorResponse>(
       "ValidationError",
       definition.responses[7] && "header" in definition.responses[7]
         ? definition.responses[7]!.header
@@ -354,7 +362,12 @@ export class GetTodoResponseValidator extends ResponseValidator {
 
     return {
       isValid: true,
-      data: new ValidationErrorResponse(result.data as IValidationErrorResponse),
+      data: {
+        _tag: "ValidationError" as const,
+        statusCode: result.data.statusCode,
+        header: result.data.header,
+        body: result.data.body,
+      } as IValidationErrorResponse,
     };
   }
 }

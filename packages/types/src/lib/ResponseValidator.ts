@@ -14,6 +14,8 @@ import type {
   SafeResponseValidationResult,
 } from "@rexeus/typeweaver-core";
 import { Validator } from "./Validator";
+
+type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 import type { ZodSafeParseResult } from "zod";
 
 /**
@@ -71,7 +73,7 @@ export abstract class ResponseValidator
   ) => SafeResponseValidationResult<Response> {
     return (response, error) => {
       let isValid = true;
-      const validatedResponse: IHttpResponse = {
+      const validatedResponse: Mutable<IHttpResponse> = {
         statusCode: response.statusCode,
         header: undefined,
         body: undefined,

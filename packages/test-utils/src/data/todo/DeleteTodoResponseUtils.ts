@@ -1,6 +1,6 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { DeleteTodoSuccessResponse } from "../..";
 import { createResponse } from "../createResponse";
+import { createDeleteTodoSuccessResponse as generatedCreateDeleteTodoSuccessResponse } from "../../test-project/output/todo/DeleteTodoResponse";
 import { createCreateTodoSuccessResponseHeader } from "./CreateTodoResponseUtils";
 import type {
   IDeleteTodoSuccessResponse,
@@ -14,7 +14,7 @@ type DeleteTodoSuccessResponseInput = {
 
 export function createDeleteTodoSuccessResponse(
   input: DeleteTodoSuccessResponseInput = {}
-): DeleteTodoSuccessResponse {
+): IDeleteTodoSuccessResponse {
   const responseData = createResponse<
     IDeleteTodoSuccessResponse,
     never,
@@ -28,5 +28,5 @@ export function createDeleteTodoSuccessResponse(
     },
     input
   );
-  return new DeleteTodoSuccessResponse(responseData);
+  return generatedCreateDeleteTodoSuccessResponse(responseData);
 }

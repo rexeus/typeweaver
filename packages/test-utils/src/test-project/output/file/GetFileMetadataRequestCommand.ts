@@ -11,7 +11,7 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  UnknownResponse,
+  createUnknownResponse,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
 import { GetFileMetadataResponseValidator } from "./GetFileMetadataResponseValidator";
@@ -21,8 +21,6 @@ import type {
   IGetFileMetadataRequestParam,
   SuccessfulGetFileMetadataResponse,
 } from "./GetFileMetadataRequest";
-
-import { GetFileMetadataSuccessResponse } from "./GetFileMetadataResponse";
 
 export class GetFileMetadataRequestCommand
   extends RequestCommand
@@ -56,14 +54,14 @@ export class GetFileMetadataRequestCommand
     try {
       const result = this.responseValidator.validate(response);
 
-      if (result instanceof GetFileMetadataSuccessResponse) {
-        return result;
+      if (result._tag === "GetFileMetadataSuccess") {
+        return result as SuccessfulGetFileMetadataResponse;
       }
 
       throw result;
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = new UnknownResponse(
+        const unknownResponse = createUnknownResponse(
           response.statusCode,
           response.header,
           response.body,

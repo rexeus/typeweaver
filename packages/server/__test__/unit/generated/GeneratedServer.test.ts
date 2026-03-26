@@ -1,4 +1,4 @@
-import { HttpResponse } from "@rexeus/typeweaver-core";
+import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
 import {
   createCreateTodoRequest,
   createDeleteTodoRequest,
@@ -285,11 +285,12 @@ describe("Generated Server Router", () => {
     test("should handle string response bodies", async () => {
       const customStringResponse = "This is a plain text response";
       const app = createTestApp({
-        throwTodoError: new HttpResponse(
-          200,
-          { "Content-Type": "text/plain" },
-          customStringResponse
-        ),
+        throwTodoError: {
+          _tag: "CustomStringResponse" as const,
+          statusCode: 200,
+          header: { "Content-Type": "text/plain" },
+          body: customStringResponse,
+        } satisfies ITaggedHttpResponse,
       });
       const requestData = createCreateTodoRequest();
 
@@ -337,11 +338,12 @@ describe("Generated Server Router", () => {
   describe("Error Handling", () => {
     test("should handle HTTP response errors with default handler", async () => {
       const app = createTestApp({
-        throwTodoError: new HttpResponse(
-          404,
-          {},
-          { errorCode: "TODO_NOT_FOUND" }
-        ),
+        throwTodoError: {
+          _tag: "TodoNotFoundError" as const,
+          statusCode: 404,
+          header: {},
+          body: { errorCode: "TODO_NOT_FOUND" },
+        } satisfies ITaggedHttpResponse,
       });
       const requestData = createCreateTodoRequest();
 
@@ -355,11 +357,12 @@ describe("Generated Server Router", () => {
 
     test("should handle HTTP response errors with custom handler", async () => {
       const app = createTestApp({
-        throwTodoError: new HttpResponse(
-          404,
-          {},
-          { errorCode: "TODO_NOT_FOUND" }
-        ),
+        throwTodoError: {
+          _tag: "TodoNotFoundError" as const,
+          statusCode: 404,
+          header: {},
+          body: { errorCode: "TODO_NOT_FOUND" },
+        } satisfies ITaggedHttpResponse,
         handleHttpResponseErrors: () => ({
           statusCode: 404,
           body: { customMessage: "Custom error handling" },
@@ -446,11 +449,12 @@ describe("Generated Server Router", () => {
 
     test("should handle HTTP response error handler failures with unknown handlers", async () => {
       const app = createTestApp({
-        throwTodoError: new HttpResponse(
-          404,
-          {},
-          { code: "TODO_NOT_FOUND", message: "Todo not found" }
-        ),
+        throwTodoError: {
+          _tag: "TodoNotFoundError" as const,
+          statusCode: 404,
+          header: {},
+          body: { code: "TODO_NOT_FOUND", message: "Todo not found" },
+        } satisfies ITaggedHttpResponse,
         handleHttpResponseErrors: () => {
           throw new Error("HTTP handler failed");
         },

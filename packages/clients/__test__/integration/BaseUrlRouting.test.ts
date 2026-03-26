@@ -1,3 +1,4 @@
+import { isTaggedHttpResponse } from "@rexeus/typeweaver-core";
 import {
   createCreateTodoRequest,
   createDeleteTodoRequest,
@@ -7,15 +8,10 @@ import {
   createTestServer,
   createTodoNotFoundErrorResponse,
   CreateTodoRequestCommand,
-  CreateTodoSuccessResponse,
   DeleteTodoRequestCommand,
-  DeleteTodoSuccessResponse,
   GetTodoRequestCommand,
-  GetTodoSuccessResponse,
   ListTodosRequestCommand,
-  ListTodosSuccessResponse,
   TodoClient,
-  TodoNotFoundErrorResponse,
 } from "test-utils";
 import { afterEach, describe, expect, test } from "vitest";
 import type { ServerType } from "@hono/node-server";
@@ -46,7 +42,7 @@ describe("Base URL Routing", () => {
 
       const response = await client.send(command);
 
-      expect(response).toBeInstanceOf(GetTodoSuccessResponse);
+      expect(response._tag).toBe("GetTodoSuccess");
       expect(response.statusCode).toBe(200);
       expect(response.body.id).toBe(requestData.param.todoId);
     });
@@ -60,7 +56,7 @@ describe("Base URL Routing", () => {
 
       const response = await client.send(command);
 
-      expect(response).toBeInstanceOf(CreateTodoSuccessResponse);
+      expect(response._tag).toBe("CreateTodoSuccess");
       expect(response.statusCode).toBe(201);
       expect(response.body.title).toBe(requestData.body.title);
     });
@@ -74,7 +70,7 @@ describe("Base URL Routing", () => {
 
       const response = await client.send(command);
 
-      expect(response).toBeInstanceOf(DeleteTodoSuccessResponse);
+      expect(response._tag).toBe("DeleteTodoSuccess");
       expect(response.statusCode).toBe(204);
     });
 
@@ -89,7 +85,7 @@ describe("Base URL Routing", () => {
 
       const response = await client.send(command);
 
-      expect(response).toBeInstanceOf(GetTodoSuccessResponse);
+      expect(response._tag).toBe("GetTodoSuccess");
       expect(response.statusCode).toBe(200);
       expect(response.body.id).toBe(requestData.param.todoId);
     });
@@ -103,7 +99,7 @@ describe("Base URL Routing", () => {
 
       const response = await client.send(command);
 
-      expect(response).toBeInstanceOf(GetTodoSuccessResponse);
+      expect(response._tag).toBe("GetTodoSuccess");
       expect(response.statusCode).toBe(200);
     });
   });
@@ -121,8 +117,8 @@ describe("Base URL Routing", () => {
       const requestB = createGetTodoRequest();
       const responseB = await clientB.send(new GetTodoRequestCommand(requestB));
 
-      expect(responseA).toBeInstanceOf(GetTodoSuccessResponse);
-      expect(responseB).toBeInstanceOf(GetTodoSuccessResponse);
+      expect(responseA._tag).toBe("GetTodoSuccess");
+      expect(responseB._tag).toBe("GetTodoSuccess");
       expect(responseA.body.id).toBe(requestA.param.todoId);
       expect(responseB.body.id).toBe(requestB.param.todoId);
     });
@@ -140,8 +136,8 @@ describe("Base URL Routing", () => {
       const requestB = createGetTodoRequest();
       const responseB = await clientB.send(new GetTodoRequestCommand(requestB));
 
-      expect(responseA).toBeInstanceOf(GetTodoSuccessResponse);
-      expect(responseB).toBeInstanceOf(GetTodoSuccessResponse);
+      expect(responseA._tag).toBe("GetTodoSuccess");
+      expect(responseB._tag).toBe("GetTodoSuccess");
       expect(responseA.body.id).toBe(requestA.param.todoId);
       expect(responseB.body.id).toBe(requestB.param.todoId);
     });
@@ -159,7 +155,7 @@ describe("Base URL Routing", () => {
 
       const response = await client.send(command);
 
-      expect(response).toBeInstanceOf(ListTodosSuccessResponse);
+      expect(response._tag).toBe("ListTodosSuccess");
       expect(response.statusCode).toBe(200);
     });
   });
@@ -176,8 +172,8 @@ describe("Base URL Routing", () => {
       const requestData = createGetTodoRequest();
       const command = new GetTodoRequestCommand(requestData);
 
-      await expect(client.send(command)).rejects.toThrow(
-        TodoNotFoundErrorResponse
+      await expect(client.send(command)).rejects.toSatisfy(
+        (error: unknown) => isTaggedHttpResponse(error) && error._tag === "TodoNotFoundError"
       );
     });
   });

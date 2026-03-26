@@ -7,19 +7,19 @@
  */
 
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { type UploadFileResponse } from "./UploadFileResponse";
+import type { UploadFileResponse } from "./UploadFileResponse";
 
-import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
+import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 
-import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
+import type { IInternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
 
-import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
+import type { ITooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
 
-import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
+import type { IUnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
 
-import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
+import type { IUnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
 
-import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
+import type { IValidationErrorResponse } from "../shared/ValidationErrorResponse";
 
 export type IUploadFileRequestHeader = {
   "Content-Type": "application/octet-stream";
@@ -39,10 +39,10 @@ export type IUploadFileRequest = {
 
 export type SuccessfulUploadFileResponse = Exclude<
   UploadFileResponse,
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse
+  | IForbiddenErrorResponse
+  | IInternalServerErrorResponse
+  | ITooManyRequestsErrorResponse
+  | IUnauthorizedErrorResponse
+  | IUnsupportedMediaTypeErrorResponse
+  | IValidationErrorResponse
 >;

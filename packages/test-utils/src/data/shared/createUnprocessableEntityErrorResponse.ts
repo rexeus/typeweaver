@@ -1,8 +1,8 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { UnprocessableEntityErrorResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import { createResponse } from "../createResponse";
+import { createUnprocessableEntityErrorResponse as generatedCreateUnprocessableEntityErrorResponse } from "../../test-project/output/shared/UnprocessableEntityErrorResponse";
 import type {
   IUnprocessableEntityErrorResponse,
   IUnprocessableEntityErrorResponseBody,
@@ -23,7 +23,7 @@ const createUnprocessableEntityErrorResponseBody =
 
 export function createUnprocessableEntityErrorResponse(
   input: UnprocessableEntityErrorResponseInput = {}
-): UnprocessableEntityErrorResponse {
+): IUnprocessableEntityErrorResponse {
   const responseData = createResponse<
     IUnprocessableEntityErrorResponse,
     IUnprocessableEntityErrorResponseBody,
@@ -39,5 +39,5 @@ export function createUnprocessableEntityErrorResponse(
     },
     input
   );
-  return new UnprocessableEntityErrorResponse(responseData);
+  return generatedCreateUnprocessableEntityErrorResponse(responseData);
 }

@@ -5,7 +5,6 @@ import {
   createListTodosRequest,
   CreateTodoRequestCommand,
   DeleteTodoRequestCommand,
-  DeleteTodoSuccessResponse,
   GetTodoRequestCommand,
   ListTodosRequestCommand,
   NetworkError,
@@ -226,7 +225,7 @@ describe("ApiClient Query String Construction", () => {
 
     await client.send(command);
 
-    const calledUrl = vi.mocked(mockFetch).mock.calls[0][0] as string;
+    const calledUrl = vi.mocked(mockFetch).mock.calls[0]![0] as string;
     expect(calledUrl).toContain("?");
     expect(calledUrl).toContain("status=TODO");
   });
@@ -240,7 +239,7 @@ describe("ApiClient Query String Construction", () => {
 
     await client.send(command);
 
-    const calledUrl = vi.mocked(mockFetch).mock.calls[0][0] as string;
+    const calledUrl = vi.mocked(mockFetch).mock.calls[0]![0] as string;
     expect(calledUrl).toContain("tags=a");
     expect(calledUrl).toContain("tags=b");
   });
@@ -257,7 +256,7 @@ describe("ApiClient Query String Construction", () => {
 
     await client.send(command);
 
-    const calledUrl = vi.mocked(mockFetch).mock.calls[0][0] as string;
+    const calledUrl = vi.mocked(mockFetch).mock.calls[0]![0] as string;
     expect(calledUrl).toContain("status=TODO");
     expect(calledUrl).not.toContain("priority");
   });
@@ -271,7 +270,7 @@ describe("ApiClient Query String Construction", () => {
 
     await client.send(command);
 
-    const calledUrl = vi.mocked(mockFetch).mock.calls[0][0] as string;
+    const calledUrl = vi.mocked(mockFetch).mock.calls[0]![0] as string;
     expect(calledUrl).toMatch(/^http:\/\/localhost\/api\/todos\?/);
     expect(calledUrl).toContain("status=DONE");
   });
@@ -285,7 +284,7 @@ describe("ApiClient Query String Construction", () => {
 
     await client.send(command);
 
-    const calledUrl = vi.mocked(mockFetch).mock.calls[0][0] as string;
+    const calledUrl = vi.mocked(mockFetch).mock.calls[0]![0] as string;
     expect(calledUrl).toBe("http://localhost:3000/todos/abc");
     expect(calledUrl).not.toContain("?");
   });
@@ -452,7 +451,7 @@ describe("ApiClient Response Body Parsing", () => {
 
     const result = await client.send(command);
 
-    expect(result).toBeInstanceOf(DeleteTodoSuccessResponse);
+    expect(result._tag).toBe("DeleteTodoSuccess");
     expect(result.body).toBeUndefined();
   });
 
@@ -752,7 +751,7 @@ describe("ApiClient Response Body Parsing", () => {
     const result = await client.send(command);
 
     expect(result.body).toBeInstanceOf(ArrayBuffer);
-    expect((result.body as ArrayBuffer).byteLength).toBe(0);
+    expect((result.body as unknown as ArrayBuffer).byteLength).toBe(0);
   });
 });
 
@@ -769,7 +768,9 @@ describe("ApiClient Response Header Handling", () => {
 
     const result = await client.send(command);
 
-    expect(result.header["x-request-id"]).toBe("abc123");
+    expect(
+      (result.header as Record<string, string | string[]>)["x-request-id"]
+    ).toBe("abc123");
   });
 
   test("multi-value headers are comma-joined by native Headers", async () => {
@@ -788,7 +789,9 @@ describe("ApiClient Response Header Handling", () => {
 
     const result = await client.send(command);
 
-    expect(result.header["x-custom"]).toBe("first, second");
+    expect(
+      (result.header as Record<string, string | string[]>)["x-custom"]
+    ).toBe("first, second");
   });
 
   test("multiple distinct headers are preserved", async () => {
@@ -804,8 +807,12 @@ describe("ApiClient Response Header Handling", () => {
 
     const result = await client.send(command);
 
-    expect(result.header["x-a"]).toBe("1");
-    expect(result.header["x-b"]).toBe("2");
+    expect((result.header as Record<string, string | string[]>)["x-a"]).toBe(
+      "1"
+    );
+    expect((result.header as Record<string, string | string[]>)["x-b"]).toBe(
+      "2"
+    );
   });
 
   test("preserves multiple Set-Cookie headers as array", async () => {
@@ -824,7 +831,9 @@ describe("ApiClient Response Header Handling", () => {
 
     const result = await client.send(command);
 
-    expect(result.header["set-cookie"]).toEqual(["a=1; Path=/", "b=2; Path=/"]);
+    expect(
+      (result.header as Record<string, string | string[]>)["set-cookie"]
+    ).toEqual(["a=1; Path=/", "b=2; Path=/"]);
   });
 });
 
@@ -846,7 +855,7 @@ describe("ApiClient Request Options Passthrough", () => {
 
     await client.send(command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBe(JSON.stringify(requestData.body));
   });
 
@@ -866,7 +875,7 @@ describe("ApiClient Request Options Passthrough", () => {
 
     await client.send(command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBe("hello");
   });
 
@@ -886,7 +895,7 @@ describe("ApiClient Request Options Passthrough", () => {
 
     await client.send(command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBeUndefined();
   });
 
@@ -906,7 +915,7 @@ describe("ApiClient Request Options Passthrough", () => {
 
     await client.send(command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBeUndefined();
   });
 
@@ -925,7 +934,7 @@ describe("ApiClient Request Options Passthrough", () => {
 
     await client.send(command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.headers).toEqual(requestData.header);
   });
 
@@ -945,7 +954,7 @@ describe("ApiClient Request Options Passthrough", () => {
 
     await client.send(command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.method).toBe("POST");
   });
 });
@@ -997,7 +1006,7 @@ describe("ApiClient Request Timeout", () => {
 
     const result = await client.send(command);
 
-    expect(result).toBeInstanceOf(DeleteTodoSuccessResponse);
+    expect(result._tag).toBe("DeleteTodoSuccess");
   });
 
   test("no signal is passed without timeoutMs", async () => {
@@ -1012,7 +1021,7 @@ describe("ApiClient Request Timeout", () => {
 
     await client.send(command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.signal).toBeUndefined();
   });
 
@@ -1029,7 +1038,7 @@ describe("ApiClient Request Timeout", () => {
 
     await client.send(command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.signal).toBeInstanceOf(AbortSignal);
   });
 
@@ -1190,7 +1199,7 @@ describe("ApiClient Native Body Passthrough", () => {
 
     await client.send(command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBe(blob);
   });
 
@@ -1206,7 +1215,7 @@ describe("ApiClient Native Body Passthrough", () => {
 
     await client.send(command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBe(buffer);
   });
 
@@ -1223,7 +1232,7 @@ describe("ApiClient Native Body Passthrough", () => {
 
     await client.send(command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBe(formData);
   });
 
@@ -1239,7 +1248,7 @@ describe("ApiClient Native Body Passthrough", () => {
 
     await client.send(command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBe(params);
   });
 
@@ -1255,7 +1264,7 @@ describe("ApiClient Native Body Passthrough", () => {
 
     await client.send(command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBe(bytes);
   });
 
@@ -1276,7 +1285,7 @@ describe("ApiClient Native Body Passthrough", () => {
 
     await client.send(command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBe(stream);
   });
 
@@ -1290,7 +1299,7 @@ describe("ApiClient Native Body Passthrough", () => {
 
     await client.send(command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBe(JSON.stringify(requestData.body));
   });
 });
@@ -1315,7 +1324,7 @@ describe("ApiClient Request Header Flattening", () => {
 
     await client.send(command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     const headers = callArgs.headers as Record<string, string>;
     expect(headers["X-Multi-Value"]).toBe("first, second");
     expect(headers["Accept"]).toBe("application/json");
@@ -1336,7 +1345,7 @@ describe("ApiClient Request Header Flattening", () => {
 
     await client.send(command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     const headers = callArgs.headers as Record<string, string>;
     expect(headers["Accept"]).toBe("application/json");
   });
@@ -1352,12 +1361,12 @@ describe("ApiClient Request Header Flattening", () => {
       isSuccessStatusCode: () => true,
     });
     const requestData = createGetTodoRequest({ param: { todoId: "abc" } });
-    (requestData as { header: undefined }).header = undefined;
+    (requestData as unknown as { header: undefined }).header = undefined;
     const command = new GetTodoRequestCommand(requestData);
 
     await client.send(command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.headers).toBeUndefined();
   });
 });

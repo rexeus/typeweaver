@@ -1,6 +1,6 @@
-import { HeadTodoSuccessResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
+import { createHeadTodoSuccessResponse as generatedCreateHeadTodoSuccessResponse } from "../../test-project/output/todo/HeadTodoResponse";
 import type {
   IHeadTodoSuccessResponse,
   IHeadTodoSuccessResponseHeader,
@@ -17,7 +17,7 @@ type CreateHeadTodoSuccessResponseInput = {
 
 export function createHeadTodoSuccessResponse(
   input: CreateHeadTodoSuccessResponseInput = {}
-): HeadTodoSuccessResponse {
+): IHeadTodoSuccessResponse {
   const responseData = createResponse<
     IHeadTodoSuccessResponse,
     never,
@@ -31,5 +31,5 @@ export function createHeadTodoSuccessResponse(
     },
     input
   );
-  return new HeadTodoSuccessResponse(responseData);
+  return generatedCreateHeadTodoSuccessResponse(responseData);
 }

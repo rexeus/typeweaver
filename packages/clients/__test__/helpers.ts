@@ -1,8 +1,10 @@
 import { vi } from "vitest";
 
+type ResponseBody = ConstructorParameters<typeof Response>[0];
+
 export function createRawMockFetch(
   status: number,
-  body: BodyInit | null,
+  body: ResponseBody,
   headers: Record<string, string> = {}
 ): typeof globalThis.fetch {
   return vi

@@ -11,7 +11,7 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  UnknownResponse,
+  createUnknownResponse,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
 import { UpdateSubTodoResponseValidator } from "./UpdateSubTodoResponseValidator";
@@ -22,8 +22,6 @@ import type {
   IUpdateSubTodoRequestBody,
   SuccessfulUpdateSubTodoResponse,
 } from "./UpdateSubTodoRequest";
-
-import { UpdateSubTodoSuccessResponse } from "./UpdateSubTodoResponse";
 
 export class UpdateSubTodoRequestCommand extends RequestCommand implements IUpdateSubTodoRequest {
   public override readonly operationId = definition.operationId;
@@ -56,14 +54,14 @@ export class UpdateSubTodoRequestCommand extends RequestCommand implements IUpda
     try {
       const result = this.responseValidator.validate(response);
 
-      if (result instanceof UpdateSubTodoSuccessResponse) {
-        return result;
+      if (result._tag === "UpdateSubTodoSuccess") {
+        return result as SuccessfulUpdateSubTodoResponse;
       }
 
       throw result;
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = new UnknownResponse(
+        const unknownResponse = createUnknownResponse(
           response.statusCode,
           response.header,
           response.body,

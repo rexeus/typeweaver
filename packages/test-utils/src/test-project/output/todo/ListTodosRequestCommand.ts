@@ -11,7 +11,7 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  UnknownResponse,
+  createUnknownResponse,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
 import { ListTodosResponseValidator } from "./ListTodosResponseValidator";
@@ -21,8 +21,6 @@ import type {
   IListTodosRequestQuery,
   SuccessfulListTodosResponse,
 } from "./ListTodosRequest";
-
-import { ListTodosSuccessResponse } from "./ListTodosResponse";
 
 export class ListTodosRequestCommand extends RequestCommand implements IListTodosRequest {
   public override readonly operationId = definition.operationId;
@@ -53,14 +51,14 @@ export class ListTodosRequestCommand extends RequestCommand implements IListTodo
     try {
       const result = this.responseValidator.validate(response);
 
-      if (result instanceof ListTodosSuccessResponse) {
-        return result;
+      if (result._tag === "ListTodosSuccess") {
+        return result as SuccessfulListTodosResponse;
       }
 
       throw result;
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = new UnknownResponse(
+        const unknownResponse = createUnknownResponse(
           response.statusCode,
           response.header,
           response.body,

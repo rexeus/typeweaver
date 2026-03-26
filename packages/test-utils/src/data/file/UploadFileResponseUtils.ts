@@ -1,8 +1,8 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { UploadFileSuccessResponse } from "../..";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
+import { createUploadFileSuccessResponse as generatedCreateUploadFileSuccessResponse } from "../../test-project/output/file/UploadFileResponse";
 import type {
   IUploadFileSuccessResponse,
   IUploadFileSuccessResponseBody,
@@ -31,7 +31,7 @@ type UploadFileSuccessResponseInput = {
 
 export function createUploadFileSuccessResponse(
   input: UploadFileSuccessResponseInput = {}
-): UploadFileSuccessResponse {
+): IUploadFileSuccessResponse {
   const responseData = createResponse<
     IUploadFileSuccessResponse,
     IUploadFileSuccessResponseBody,
@@ -46,5 +46,5 @@ export function createUploadFileSuccessResponse(
     },
     input
   );
-  return new UploadFileSuccessResponse(responseData);
+  return generatedCreateUploadFileSuccessResponse(responseData);
 }

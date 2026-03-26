@@ -7,21 +7,21 @@
  */
 
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { type HeadTodoResponse } from "./HeadTodoResponse";
+import type { HeadTodoResponse } from "./HeadTodoResponse";
 
-import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
+import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 
-import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
+import type { IInternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
 
-import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
+import type { ITooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
 
-import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
+import type { IUnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
 
-import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
+import type { IUnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
 
-import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
+import type { IValidationErrorResponse } from "../shared/ValidationErrorResponse";
 
-import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
+import type { ITodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 
 export type IHeadTodoRequestHeader = {
   Accept: "application/json";
@@ -43,11 +43,11 @@ export type IHeadTodoRequest = {
 
 export type SuccessfulHeadTodoResponse = Exclude<
   HeadTodoResponse,
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse
-  | TodoNotFoundErrorResponse
+  | IForbiddenErrorResponse
+  | IInternalServerErrorResponse
+  | ITooManyRequestsErrorResponse
+  | IUnauthorizedErrorResponse
+  | IUnsupportedMediaTypeErrorResponse
+  | IValidationErrorResponse
+  | ITodoNotFoundErrorResponse
 >;

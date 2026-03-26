@@ -11,7 +11,7 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  UnknownResponse,
+  createUnknownResponse,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
 import { OptionsTodoResponseValidator } from "./OptionsTodoResponseValidator";
@@ -21,8 +21,6 @@ import type {
   IOptionsTodoRequestParam,
   SuccessfulOptionsTodoResponse,
 } from "./OptionsTodoRequest";
-
-import { OptionsTodoSuccessResponse } from "./OptionsTodoResponse";
 
 export class OptionsTodoRequestCommand extends RequestCommand implements IOptionsTodoRequest {
   public override readonly operationId = definition.operationId;
@@ -53,14 +51,14 @@ export class OptionsTodoRequestCommand extends RequestCommand implements IOption
     try {
       const result = this.responseValidator.validate(response);
 
-      if (result instanceof OptionsTodoSuccessResponse) {
-        return result;
+      if (result._tag === "OptionsTodoSuccess") {
+        return result as SuccessfulOptionsTodoResponse;
       }
 
       throw result;
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = new UnknownResponse(
+        const unknownResponse = createUnknownResponse(
           response.statusCode,
           response.header,
           response.body,
