@@ -1,6 +1,6 @@
+import { createOptionsTodoSuccessResponse as generatedCreateOptionsTodoSuccessResponse } from "../../test-project/output/todo/OptionsTodoResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
-import { createOptionsTodoSuccessResponse as generatedCreateOptionsTodoSuccessResponse } from "../../test-project/output/todo/OptionsTodoResponse";
 import type {
   IOptionsTodoSuccessResponse,
   IOptionsTodoSuccessResponseHeader,

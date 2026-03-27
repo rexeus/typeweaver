@@ -1,8 +1,8 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
+import { createSubTodoStatusTransitionInvalidErrorResponse as generatedCreateSubTodoStatusTransitionInvalidErrorResponse } from "../../test-project/output/todo/SubTodoStatusTransitionInvalidErrorResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
-import { createSubTodoStatusTransitionInvalidErrorResponse as generatedCreateSubTodoStatusTransitionInvalidErrorResponse } from "../../test-project/output/todo/SubTodoStatusTransitionInvalidErrorResponse";
 import type {
   ISubTodoStatusTransitionInvalidErrorResponse,
   ISubTodoStatusTransitionInvalidErrorResponseBody,
@@ -80,5 +80,7 @@ export function createSubTodoStatusTransitionInvalidErrorResponse(
     },
     input
   );
-  return generatedCreateSubTodoStatusTransitionInvalidErrorResponse(responseData);
+  return generatedCreateSubTodoStatusTransitionInvalidErrorResponse(
+    responseData
+  );
 }

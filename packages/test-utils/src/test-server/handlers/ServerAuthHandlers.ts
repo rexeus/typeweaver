@@ -12,7 +12,9 @@ import type {
 import type { ServerAuthApiHandler } from "../../test-project/output/auth/AuthRouter";
 
 export class ServerAuthHandlers implements ServerAuthApiHandler {
-  public constructor(private readonly throwError?: Error | ITaggedHttpResponse) {
+  public constructor(
+    private readonly throwError?: Error | ITaggedHttpResponse
+  ) {
     //
   }
 

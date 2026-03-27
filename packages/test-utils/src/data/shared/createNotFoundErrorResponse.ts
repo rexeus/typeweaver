@@ -1,8 +1,8 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
+import { createNotFoundErrorResponse as generatedCreateNotFoundErrorResponse } from "../../test-project/output/shared/NotFoundErrorResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import { createResponse } from "../createResponse";
-import { createNotFoundErrorResponse as generatedCreateNotFoundErrorResponse } from "../../test-project/output/shared/NotFoundErrorResponse";
 import type {
   INotFoundErrorResponse,
   INotFoundErrorResponseBody,

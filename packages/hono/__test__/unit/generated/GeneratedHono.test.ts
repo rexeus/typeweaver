@@ -54,7 +54,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos?status=TODO",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -71,7 +71,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -88,7 +88,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         `http://localhost/todos/${requestData.param.todoId}/status`,
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -105,7 +105,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         `http://localhost/todos/${requestData.param.todoId}`,
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -122,7 +122,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         `http://localhost/todos/${requestData.param.todoId}`,
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -139,7 +139,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         `http://localhost/todos/${requestData.param.todoId}`,
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -155,7 +155,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         `http://localhost/todos/${requestData.param.todoId}`,
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -174,7 +174,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -195,7 +195,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -216,7 +216,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -233,7 +233,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos/invalid-uuid-format",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -250,7 +250,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos?status=INVALID_STATUS",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -273,7 +273,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -286,7 +286,7 @@ describe("Generated Hono Router", () => {
       // Arrange
       const customValidationMessage = "Custom validation error";
       const app = createTestHono({
-        handleValidationErrors: () => ({
+        handleRequestValidationErrors: () => ({
           statusCode: 400,
           header: {
             "Content-Type": "application/json",
@@ -305,7 +305,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -324,7 +324,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -342,6 +342,7 @@ describe("Generated Hono Router", () => {
       // Arrange
       const customStringResponse = "This is a plain text response";
       const app = createTestHono({
+        validateResponses: false,
         throwTodoError: {
           _tag: "CustomStringResponse" as const,
           statusCode: 200,
@@ -354,7 +355,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -383,12 +384,9 @@ describe("Generated Hono Router", () => {
       // TODO: Implement test
     });
 
-    test.todo(
-      "should handle NodeJS.ArrayBufferView response bodies",
-      async () => {
-        // TODO: Implement test
-      },
-    );
+    test.todo("should handle NodeJS.ArrayBufferView response bodies", async () => {
+      // TODO: Implement test
+    });
 
     test("should handle empty response bodies", async () => {
       // Arrange
@@ -398,7 +396,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         `http://localhost/todos/${requestData.param.todoId}`,
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -415,7 +413,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -431,7 +429,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         `http://localhost/todos/${requestData.param.todoId}`,
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -462,6 +460,7 @@ describe("Generated Hono Router", () => {
       const app = new TodoHono({
         requestHandlers: stubHandlers,
         validateRequests: false,
+        validateResponses: false,
       });
 
       const response = await app.request("http://localhost/todos?status=TODO", {
@@ -485,6 +484,7 @@ describe("Generated Hono Router", () => {
       const app = new TodoHono({
         requestHandlers: stubHandlers,
         validateRequests: false,
+        validateResponses: false,
       });
 
       await app.request("http://localhost/todos", { method: "GET" });
@@ -507,6 +507,7 @@ describe("Generated Hono Router", () => {
         },
       };
       const app = createTestHono({
+        validateResponses: false,
         throwTodoError: errorResponse,
       });
       const requestData = createCreateTodoRequest();
@@ -514,7 +515,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -535,6 +536,7 @@ describe("Generated Hono Router", () => {
       };
       const customMessage = "Custom error handling";
       const app = createTestHono({
+        validateResponses: false,
         throwTodoError: errorResponse,
         handleHttpResponseErrors: (error: ITaggedHttpResponse) => ({
           statusCode: 404,
@@ -550,7 +552,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -571,7 +573,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -587,7 +589,7 @@ describe("Generated Hono Router", () => {
       // Arrange
       const customValidationMessage = "Custom validation error handling";
       const app = createTestHono({
-        handleValidationErrors: () => ({
+        handleRequestValidationErrors: () => ({
           statusCode: 404,
           header: {},
           body: {
@@ -604,7 +606,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -624,7 +626,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -653,7 +655,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -665,7 +667,7 @@ describe("Generated Hono Router", () => {
     test("should handle validation error handler failures with unknown handlers", async () => {
       // Arrange
       const app = createTestHono({
-        handleValidationErrors: () => {
+        handleRequestValidationErrors: () => {
           throw new Error("Validation handler failed"); // Custom handler throws exception
         },
       });
@@ -678,7 +680,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert
@@ -697,6 +699,7 @@ describe("Generated Hono Router", () => {
       };
 
       const app = createTestHono({
+        validateResponses: false,
         throwTodoError: originalError,
         handleHttpResponseErrors: () => {
           throw new Error("HTTP handler failed"); // Custom handler throws exception
@@ -708,7 +711,7 @@ describe("Generated Hono Router", () => {
       // Act
       const response = await app.request(
         "http://localhost/todos",
-        prepareRequestData(requestData),
+        prepareRequestData(requestData)
       );
 
       // Assert - Should fall back to default unknown error handler

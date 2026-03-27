@@ -10,7 +10,9 @@ import type {
   IHttpRequest,
   IHttpResponse,
   IRequestValidator,
+  IResponseValidator,
   ITaggedHttpResponse,
+  ResponseValidationError,
 } from "@rexeus/typeweaver-core";
 import { Hono } from "hono";
 import { HonoAdapter } from "./HonoAdapter";
@@ -36,7 +38,7 @@ export type HonoHttpResponseErrorHandler = (
  * @param context - The Hono context for the current request
  * @returns The HTTP response to send to the client
  */
-export type HonoValidationErrorHandler = (
+export type HonoRequestValidationErrorHandler = (
   error: RequestValidationError,
   context: Context,
 ) => Promise<IHttpResponse> | IHttpResponse;
@@ -49,6 +51,20 @@ export type HonoValidationErrorHandler = (
  */
 export type HonoUnknownErrorHandler = (
   error: unknown,
+  context: Context,
+) => Promise<IHttpResponse> | IHttpResponse;
+
+/**
+ * Handles response validation errors.
+ * Called when a handler returns a response that does not match the expected schema.
+ * @param error - The response validation error with schema mismatch details
+ * @param response - The original (invalid) response from the handler
+ * @param context - The Hono context for the current request
+ * @returns The HTTP response to send to the client (typically a 500)
+ */
+export type HonoResponseValidationErrorHandler = (
+  error: ResponseValidationError,
+  response: IHttpResponse,
   context: Context,
 ) => Promise<IHttpResponse> | IHttpResponse;
 
@@ -75,6 +91,31 @@ export type TypeweaverHonoOptions<
   validateRequests?: boolean;
 
   /**
+   * Enable response validation using generated validators.
+   * When true, responses are validated and stripped of extra fields before sending.
+   * @default true
+   */
+  validateResponses?: boolean;
+
+  /**
+   * Configure handling of request validation errors.
+   * - `true`: Use default handler (400 with error details)
+   * - `false`: Let errors bubble up to Hono
+   * - `function`: Use custom request validation error handler
+   * @default true
+   */
+  handleRequestValidationErrors?: HonoRequestValidationErrorHandler | boolean;
+
+  /**
+   * Configure handling of response validation errors.
+   * - `true`: Use default handler (500 Internal Server Error)
+   * - `false`: Disable response validation error handling (return response as-is)
+   * - `function`: Use custom response validation error handler
+   * @default true
+   */
+  handleResponseValidationErrors?: HonoResponseValidationErrorHandler | boolean;
+
+  /**
    * Configure handling of HttpResponse errors thrown by handlers.
    * - `true`: Use default handler (returns the error as-is)
    * - `false`: Let errors bubble up to Hono
@@ -82,15 +123,6 @@ export type TypeweaverHonoOptions<
    * @default true
    */
   handleHttpResponseErrors?: HonoHttpResponseErrorHandler | boolean;
-
-  /**
-   * Configure handling of request validation errors.
-   * - `true`: Use default handler (400 with error details)
-   * - `false`: Let errors bubble up to Hono
-   * - `function`: Use custom error handler
-   * @default true
-   */
-  handleValidationErrors?: HonoValidationErrorHandler | boolean;
 
   /**
    * Configure handling of unknown errors.
@@ -135,11 +167,13 @@ export abstract class TypeweaverHono<
    * Resolved configuration for validation and error handling.
    */
   private readonly config: {
-    validateRequests: boolean;
-    errorHandlers: {
-      validation: HonoValidationErrorHandler | undefined;
-      httpResponse: HonoHttpResponseErrorHandler | undefined;
-      unknown: HonoUnknownErrorHandler | undefined;
+    readonly validateRequests: boolean;
+    readonly validateResponses: boolean;
+    readonly errorHandlers: {
+      readonly requestValidation: HonoRequestValidationErrorHandler | undefined;
+      readonly responseValidation: HonoResponseValidationErrorHandler | undefined;
+      readonly httpResponse: HonoHttpResponseErrorHandler | undefined;
+      readonly unknown: HonoUnknownErrorHandler | undefined;
     };
   };
 
@@ -147,7 +181,7 @@ export abstract class TypeweaverHono<
    * Default error handlers used when custom handlers are not provided.
    */
   private readonly defaultHandlers = {
-    validation: (error: RequestValidationError): IHttpResponse => ({
+    requestValidation: (error: RequestValidationError): IHttpResponse => ({
       statusCode: 400,
       body: {
         code: "VALIDATION_ERROR",
@@ -158,6 +192,14 @@ export abstract class TypeweaverHono<
           query: error.queryIssues,
           param: error.pathParamIssues,
         },
+      },
+    }),
+
+    responseValidation: (): IHttpResponse => ({
+      statusCode: 500,
+      body: {
+        code: "INTERNAL_SERVER_ERROR",
+        message: "An unexpected error occurred.",
       },
     }),
 
@@ -179,15 +221,17 @@ export abstract class TypeweaverHono<
    * @param options.requestHandlers - Object containing all request handler methods
    * @param options.validateRequests - Whether to validate requests (default: true)
    * @param options.handleHttpResponseErrors - Handler or boolean for HTTP errors (default: true)
-   * @param options.handleValidationErrors - Handler or boolean for validation errors (default: true)
+   * @param options.handleRequestValidationErrors - Handler or boolean for request validation errors (default: true)
    * @param options.handleUnknownErrors - Handler or boolean for unknown errors (default: true)
    */
   public constructor(options: TypeweaverHonoOptions<RequestHandlers, HonoEnv>) {
     const {
       requestHandlers,
       validateRequests = true,
+      validateResponses = true,
       handleHttpResponseErrors,
-      handleValidationErrors,
+      handleRequestValidationErrors,
+      handleResponseValidationErrors,
       handleUnknownErrors,
       ...honoOptions
     } = options;
@@ -199,9 +243,14 @@ export abstract class TypeweaverHono<
     // Resolve configuration
     this.config = {
       validateRequests,
+      validateResponses,
       errorHandlers: {
-        validation: this.resolveErrorHandler(handleValidationErrors, (error) =>
-          this.defaultHandlers.validation(error),
+        requestValidation: this.resolveErrorHandler(handleRequestValidationErrors, (error) =>
+          this.defaultHandlers.requestValidation(error),
+        ),
+        responseValidation: this.resolveErrorHandler(
+          handleResponseValidationErrors,
+          (_error, _response) => this.defaultHandlers.responseValidation(),
         ),
         httpResponse: this.resolveErrorHandler(handleHttpResponseErrors, (error) =>
           this.defaultHandlers.httpResponse(error),
@@ -244,28 +293,42 @@ export abstract class TypeweaverHono<
 
   /**
    * Safely executes an error handler and returns null if it fails.
-   * This allows for graceful fallback to the next handler in the chain.
+   * This allows for graceful fallback to the next handler in the chain
+   * without crashing the request pipeline.
    *
    * @param handlerFn - Function that executes the error handler
-   * @returns Response if successful, null if handler throws
+   * @returns The handler's response if successful, null if the handler throws
    */
-  private async safelyExecuteHandler(
+  private async safelyExecuteErrorHandler(
     handlerFn: () => Promise<IHttpResponse> | IHttpResponse,
-  ): Promise<Response | null> {
+  ): Promise<IHttpResponse | null> {
     try {
-      const response = await handlerFn();
-      return this.adapter.toResponse(response);
+      return await handlerFn();
     } catch {
-      // Handler execution failed, return null to continue to next handler
       return null;
     }
   }
 
+  /**
+   * Safely executes an error handler and converts the result to a Hono Response.
+   * Returns null if the handler throws, allowing graceful fallback
+   * to the next handler in the chain.
+   *
+   * @param handlerFn - Function that executes the error handler
+   * @returns Hono Response if successful, null if handler throws
+   */
+  private async safelyExecuteHandler(
+    handlerFn: () => Promise<IHttpResponse> | IHttpResponse,
+  ): Promise<Response | null> {
+    const response = await this.safelyExecuteErrorHandler(handlerFn);
+    return response ? this.adapter.toResponse(response) : null;
+  }
+
   protected async handleError(error: unknown, context: Context): Promise<Response> {
     // Handle validation errors
-    if (error instanceof RequestValidationError && this.config.errorHandlers.validation) {
+    if (error instanceof RequestValidationError && this.config.errorHandlers.requestValidation) {
       const response = await this.safelyExecuteHandler(() =>
-        this.config.errorHandlers.validation!(error, context),
+        this.config.errorHandlers.requestValidation!(error, context),
       );
       if (response) return response;
     }
@@ -295,14 +358,16 @@ export abstract class TypeweaverHono<
    *
    * @param context - Hono context for the current request
    * @param operationId - Unique operation identifier from the API definition
-   * @param validator - Request validator for the specific operation
+   * @param requestValidator - Request validator for the specific operation
+   * @param responseValidator - Response validator for the specific operation
    * @param handler - Type-safe request handler function
    * @returns Hono-compatible Response object
    */
   protected async handleRequest<TRequest extends IHttpRequest, TResponse extends IHttpResponse>(
     context: Context,
     operationId: string,
-    validator: IRequestValidator,
+    requestValidator: IRequestValidator,
+    responseValidator: IResponseValidator,
     handler: HonoRequestHandler<TRequest, TResponse>,
   ): Promise<Response> {
     try {
@@ -310,15 +375,59 @@ export abstract class TypeweaverHono<
 
       const httpRequest = await this.adapter.toRequest(context);
 
-      // Conditionally validate
       const validatedRequest = this.config.validateRequests
-        ? (validator.validate(httpRequest) as TRequest)
+        ? (requestValidator.validate(httpRequest) as TRequest)
         : (httpRequest as TRequest);
 
       const httpResponse = await handler(validatedRequest, context);
-      return this.adapter.toResponse(httpResponse);
+      return this.adapter.toResponse(
+        await this.validateResponse(responseValidator, httpResponse, context),
+      );
     } catch (error) {
+      if (isTaggedHttpResponse(error) && this.config.validateResponses) {
+        const validated = await this.validateResponse(responseValidator, error, context);
+        return this.adapter.toResponse(validated);
+      }
       return this.handleError(error, context);
     }
+  }
+
+  /**
+   * Validates a response against the operation's response validator.
+   *
+   * Behavior depends on configuration:
+   * - `validateResponses: false` → returns the original response unchanged.
+   * - `validateResponses: true` (default) → runs validation:
+   *   - Valid response → returns the stripped response (extra fields removed).
+   *   - Invalid response + handler configured → calls the handler safely.
+   *     If the handler throws, falls back to the original response.
+   *   - Invalid response + `handleResponseValidationErrors: false` → returns
+   *     the original (invalid) response as-is.
+   *
+   * @param responseValidator - The response validator for the operation
+   * @param response - The response to validate
+   * @param context - The Hono context for the current request
+   * @returns The validated (and stripped) response, the handler's response, or the original
+   */
+  private async validateResponse(
+    responseValidator: IResponseValidator,
+    response: IHttpResponse,
+    context: Context,
+  ): Promise<IHttpResponse> {
+    if (!this.config.validateResponses) return response;
+
+    const result = responseValidator.safeValidate(response);
+
+    if (result.isValid) return result.data;
+
+    if (this.config.errorHandlers.responseValidation) {
+      const handlerResponse = await this.safelyExecuteErrorHandler(() =>
+        this.config.errorHandlers.responseValidation!(result.error, response, context),
+      );
+
+      if (handlerResponse) return handlerResponse;
+    }
+
+    return response;
   }
 }

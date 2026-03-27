@@ -16,10 +16,12 @@ import {
 import type { IAccessTokenRequest } from "./AccessTokenRequest";
 import { AccessTokenRequestValidator } from "./AccessTokenRequestValidator";
 import type { AccessTokenResponse } from "./AccessTokenResponse";
+import { AccessTokenResponseValidator } from "./AccessTokenResponseValidator";
 
 import type { IRefreshTokenRequest } from "./RefreshTokenRequest";
 import { RefreshTokenRequestValidator } from "./RefreshTokenRequestValidator";
 import type { RefreshTokenResponse } from "./RefreshTokenResponse";
+import { RefreshTokenResponseValidator } from "./RefreshTokenResponseValidator";
 
 export type ServerAuthApiHandler<TState extends Record<string, unknown> = Record<string, unknown>> =
   {
@@ -42,6 +44,7 @@ export class AuthRouter<
       HttpMethod.POST,
       "/auth/access-token",
       new AccessTokenRequestValidator(),
+      new AccessTokenResponseValidator(),
       this.requestHandlers.handleAccessTokenRequest.bind(this.requestHandlers),
     );
 
@@ -50,6 +53,7 @@ export class AuthRouter<
       HttpMethod.POST,
       "/auth/refresh-token",
       new RefreshTokenRequestValidator(),
+      new RefreshTokenResponseValidator(),
       this.requestHandlers.handleRefreshTokenRequest.bind(this.requestHandlers),
     );
   }

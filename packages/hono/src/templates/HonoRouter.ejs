@@ -12,6 +12,7 @@ import { TypeweaverHono, type HonoRequestHandler, type TypeweaverHonoOptions } f
 import type { I<%- operation.className %>Request } from "./<%- operation.className %>Request";
 import { <%- operation.className %>RequestValidator } from "./<%- operation.className %>RequestValidator";
 import type { <%- operation.className %>Response } from "./<%- operation.className %>Response";
+import { <%- operation.className %>ResponseValidator } from "./<%- operation.className %>ResponseValidator";
 <% } %>
 
 export type Hono<%- pascalCaseEntityName %>ApiHandler = {
@@ -33,6 +34,7 @@ export class <%- pascalCaseEntityName %>Hono extends TypeweaverHono<Hono<%- pasc
         context,
         '<%- operation.operationId %>',
         new <%- operation.className %>RequestValidator(),
+        new <%- operation.className %>ResponseValidator(),
         this.requestHandlers.<%- operation.handlerName %>.bind(this.requestHandlers)
       ));
 

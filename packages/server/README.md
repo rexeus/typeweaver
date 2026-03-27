@@ -310,17 +310,22 @@ const app = new TypeweaverApp({
 
 Each router accepts `TypeweaverRouterOptions`:
 
-| Option                     | Type                         | Default    | Description                        |
-| -------------------------- | ---------------------------- | ---------- | ---------------------------------- |
-| `requestHandlers`          | `Server<Resource>ApiHandler` | _required_ | Handler methods for each operation |
-| `validateRequests`         | `boolean`                    | `true`     | Enable/disable request validation  |
-| `handleValidationErrors`   | `boolean \| function`        | `true`     | Handle validation errors           |
-| `handleHttpResponseErrors` | `boolean \| function`        | `true`     | Handle thrown `HttpResponse`       |
-| `handleUnknownErrors`      | `boolean \| function`        | `true`     | Handle unexpected errors           |
+| Option                           | Type                         | Default    | Description                        |
+| -------------------------------- | ---------------------------- | ---------- | ---------------------------------- |
+| `requestHandlers`                | `Server<Resource>ApiHandler` | _required_ | Handler methods for each operation |
+| `validateRequests`               | `boolean`                    | `true`     | Enable/disable request validation  |
+| `validateResponses`              | `boolean`                    | `true`     | Enable/disable response validation |
+| `handleRequestValidationErrors`  | `boolean \| function`        | `true`     | Handle request validation errors   |
+| `handleResponseValidationErrors` | `boolean \| function`        | `true`     | Handle response validation errors  |
+| `handleHttpResponseErrors`       | `boolean \| function`        | `true`     | Handle thrown `HttpResponse`       |
+| `handleUnknownErrors`            | `boolean \| function`        | `true`     | Handle unexpected errors           |
 
 When set to `true`, error handlers use sensible defaults (400/500 responses). When set to `false`,
-errors fall through to the next handler in the chain. When set to a function, it receives the error
-and `ServerContext` and must return an `IHttpResponse`.
+errors fall through to the next handler in the chain (except `handleResponseValidationErrors`, where
+`false` means the invalid response is returned as-is — validation still runs for field stripping,
+but invalid responses pass through unchanged). When set to a function, it receives the error and
+`ServerContext` and must return an `IHttpResponse`. If a custom error handler throws, the framework
+catches the exception and falls through gracefully to the next handler.
 
 ### 🚨 Error Handling
 
@@ -362,7 +367,7 @@ Use custom handler functions to transform errors into your own response shape.
 ```ts
 new UserRouter({
   requestHandlers: userHandlers,
-  handleValidationErrors: (error, ctx) =>
+  handleRequestValidationErrors: (error, ctx) =>
     new ValidationErrorResponse({
       statusCode: HttpStatusCode.BAD_REQUEST,
       header: { "Content-Type": "application/json" },
@@ -413,14 +418,15 @@ new UserRouter({
 
 ### 📋 Error Responses
 
-| Status | Code                    | When                                                          |
-| ------ | ----------------------- | ------------------------------------------------------------- |
-| `400`  | `BAD_REQUEST`           | Malformed request body                                        |
-| `400`  | Validation issues       | `handleValidationErrors: true` and request fails validation   |
-| `404`  | `NOT_FOUND`             | No matching route                                             |
-| `405`  | `METHOD_NOT_ALLOWED`    | Route exists but method not allowed (includes `Allow` header) |
-| `413`  | `PAYLOAD_TOO_LARGE`     | Request body exceeds `maxBodySize`                            |
-| `500`  | `INTERNAL_SERVER_ERROR` | Unhandled error in handler                                    |
+| Status | Code                    | When                                                                 |
+| ------ | ----------------------- | -------------------------------------------------------------------- |
+| `400`  | `BAD_REQUEST`           | Malformed request body                                               |
+| `400`  | Validation issues       | `handleRequestValidationErrors: true` and request fails validation   |
+| `404`  | `NOT_FOUND`             | No matching route                                                    |
+| `405`  | `METHOD_NOT_ALLOWED`    | Route exists but method not allowed (includes `Allow` header)        |
+| `413`  | `PAYLOAD_TOO_LARGE`     | Request body exceeds `maxBodySize`                                   |
+| `500`  | `INTERNAL_SERVER_ERROR` | `handleResponseValidationErrors: true` and response fails validation |
+| `500`  | `INTERNAL_SERVER_ERROR` | Unhandled error in handler                                           |
 
 All error responses follow the shape: `{ code: string, message: string }`.
 

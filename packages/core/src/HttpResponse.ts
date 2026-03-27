@@ -1,6 +1,6 @@
-import type { HttpStatusCode } from "./HttpStatusCode";
 import type { IHttpBody } from "./HttpBody";
 import type { IHttpHeader } from "./HttpHeader";
+import type { HttpStatusCode } from "./HttpStatusCode";
 
 export type IHttpResponse<
   Header extends IHttpHeader = IHttpHeader,
@@ -19,7 +19,9 @@ export type ITaggedHttpResponse<
   readonly _tag: Tag;
 };
 
-export const isTaggedHttpResponse = (value: unknown): value is ITaggedHttpResponse =>
+export const isTaggedHttpResponse = (
+  value: unknown
+): value is ITaggedHttpResponse =>
   typeof value === "object" &&
   value !== null &&
   "_tag" in value &&

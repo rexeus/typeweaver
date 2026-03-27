@@ -16,10 +16,11 @@ import type { Middleware } from "./Middleware";
 import type { RequestHandler } from "./RequestHandler";
 import type {
   HttpResponseErrorHandler,
+  ResponseValidationErrorHandler,
   RouteDefinition,
   RouteMatch,
   UnknownErrorHandler,
-  ValidationErrorHandler,
+  RequestValidationErrorHandler,
 } from "./Router";
 import type { ServerContext } from "./ServerContext";
 import type { StateRequirementError, TypedMiddleware } from "./TypedMiddleware";
@@ -213,8 +214,12 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
     if (match) {
       const routeCtx = this.withPathParams(ctx, match.params);
       try {
-        return await this.executeHandler(routeCtx, match.route);
+        const response = await this.executeHandler(routeCtx, match.route);
+        return await this.validateResponse(match.route, response, routeCtx);
       } catch (error) {
+        if (isTaggedHttpResponse(error) && match.route.routerConfig.validateResponses) {
+          return await this.validateResponse(match.route, error, routeCtx);
+        }
         return this.handleError(error, routeCtx, match.route);
       }
     }
@@ -244,29 +249,96 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
 
   private async executeHandler(ctx: ServerContext, route: RouteDefinition): Promise<IHttpResponse> {
     const validatedRequest = route.routerConfig.validateRequests
-      ? route.validator.validate(ctx.request)
+      ? route.requestValidator.validate(ctx.request)
       : ctx.request;
 
     return route.handler(validatedRequest, ctx);
   }
 
   /**
-   * Handle errors using the route's configured error handlers.
-   * Handler errors bubble up to the safety net in `fetch()`.
+   * Validates a response against the operation's response validator.
+   *
+   * Behavior depends on configuration:
+   * - `validateResponses: false` → returns the original response unchanged.
+   * - `validateResponses: true` (default) → runs validation:
+   *   - Valid response → returns the stripped response (extra fields removed).
+   *   - Invalid response + handler configured → calls the handler safely.
+   *     If the handler throws, falls back to the original response.
+   *   - Invalid response + `handleResponseValidationErrors: false` → returns
+   *     the original (invalid) response as-is.
+   *
+   * @param route - The route definition containing the response validator and config
+   * @param response - The response to validate
+   * @param ctx - The server context for the current request
+   * @returns The validated (and stripped) response, the handler's response, or the original
    */
-  private handleError(
+  private async validateResponse(
+    route: RouteDefinition,
+    response: IHttpResponse,
+    ctx: ServerContext,
+  ): Promise<IHttpResponse> {
+    if (!route.routerConfig.validateResponses) return response;
+
+    const result = route.responseValidator.safeValidate(response);
+
+    if (result.isValid) return result.data;
+
+    const handler = this.resolveErrorHandler<ResponseValidationErrorHandler>(
+      route.routerConfig.handleResponseValidationErrors,
+      TypeweaverApp.defaultResponseValidationHandler,
+    );
+
+    if (handler) {
+      const handlerResponse = await this.safelyExecuteErrorHandler(() =>
+        handler(result.error, response, ctx),
+      );
+      if (handlerResponse) return handlerResponse;
+    }
+
+    return response;
+  }
+
+  /**
+   * Safely executes an error handler and returns null if it fails.
+   * This allows for graceful fallback to the next handler in the chain
+   * without crashing the request pipeline.
+   *
+   * If the handler throws, the error is reported via `safeOnError`
+   * and null is returned so the caller can fall through to the next handler.
+   *
+   * @param handlerFn - Function that executes the error handler
+   * @returns The handler's response if successful, null if the handler throws
+   */
+  private async safelyExecuteErrorHandler(
+    handlerFn: () => Promise<IHttpResponse> | IHttpResponse,
+  ): Promise<IHttpResponse | null> {
+    try {
+      return await handlerFn();
+    } catch (error) {
+      this.safeOnError(error);
+      return null;
+    }
+  }
+
+  /**
+   * Handle errors using the route's configured error handlers.
+   */
+  private async handleError(
     error: unknown,
     ctx: ServerContext,
     route: RouteDefinition,
-  ): IHttpResponse | Promise<IHttpResponse> {
+  ): Promise<IHttpResponse> {
     const config = route.routerConfig;
 
     if (error instanceof RequestValidationError) {
-      const handler = this.resolveErrorHandler<ValidationErrorHandler>(
-        config.handleValidationErrors,
-        TypeweaverApp.defaultValidationHandler,
+      const handler = this.resolveErrorHandler<RequestValidationErrorHandler>(
+        config.handleRequestValidationErrors,
+        TypeweaverApp.defaultRequestValidationHandler,
       );
-      if (handler) return handler(error, ctx);
+      if (handler) {
+        const response = await this.safelyExecuteErrorHandler(() => handler(error, ctx));
+        if (response) return response;
+      }
     }
 
     if (isTaggedHttpResponse(error)) {
@@ -274,14 +346,20 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
         config.handleHttpResponseErrors,
         TypeweaverApp.defaultHttpResponseHandler,
       );
-      if (handler) return handler(error, ctx);
+      if (handler) {
+        const response = await this.safelyExecuteErrorHandler(() => handler(error, ctx));
+        if (response) return response;
+      }
     }
 
     const handler = this.resolveErrorHandler<UnknownErrorHandler>(
       config.handleUnknownErrors,
       this.defaultUnknownHandler,
     );
-    if (handler) return handler(error, ctx);
+    if (handler) {
+      const response = await this.safelyExecuteErrorHandler(() => handler(error, ctx));
+      if (response) return response;
+    }
 
     throw error;
   }
@@ -322,7 +400,9 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
     return issues.map(({ message, path }) => ({ message, path }));
   }
 
-  private static defaultValidationHandler: ValidationErrorHandler = (err): IHttpResponse => {
+  private static defaultRequestValidationHandler: RequestValidationErrorHandler = (
+    err,
+  ): IHttpResponse => {
     const issues: Record<string, unknown> = Object.create(null);
 
     const header = TypeweaverApp.sanitizeIssues(err.headerIssues);
@@ -344,6 +424,12 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
       },
     };
   };
+
+  private static defaultResponseValidationHandler: ResponseValidationErrorHandler =
+    (): IHttpResponse => ({
+      statusCode: 500,
+      body: TypeweaverApp.INTERNAL_SERVER_ERROR_BODY,
+    });
 
   private static defaultHttpResponseHandler: HttpResponseErrorHandler = (err): IHttpResponse => err;
 

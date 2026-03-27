@@ -12,7 +12,9 @@ import type {
 import type { HonoAuthApiHandler } from "../../test-project/output/auth/AuthHono";
 
 export class AuthHandlers implements HonoAuthApiHandler {
-  public constructor(private readonly throwError?: Error | ITaggedHttpResponse) {
+  public constructor(
+    private readonly throwError?: Error | ITaggedHttpResponse
+  ) {
     //
   }
 

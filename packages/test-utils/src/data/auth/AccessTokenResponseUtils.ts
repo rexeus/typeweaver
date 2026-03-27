@@ -1,8 +1,8 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
+import { createAccessTokenSuccessResponse as generatedCreateAccessTokenSuccessResponse } from "../../test-project/output/auth/AccessTokenResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createJwtToken } from "../createJwtToken";
 import { createResponse } from "../createResponse";
-import { createAccessTokenSuccessResponse as generatedCreateAccessTokenSuccessResponse } from "../../test-project/output/auth/AccessTokenResponse";
 import type {
   IAccessTokenSuccessResponse,
   IAccessTokenSuccessResponseBody,

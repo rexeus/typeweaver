@@ -122,7 +122,10 @@ describe("Base URL Routing", () => {
 
       expect(responseA._tag).toBe("GetTodoSuccess");
       expect(responseB._tag).toBe("GetTodoSuccess");
-      assert(responseA._tag === "GetTodoSuccess" && responseB._tag === "GetTodoSuccess");
+      assert(
+        responseA._tag === "GetTodoSuccess" &&
+          responseB._tag === "GetTodoSuccess"
+      );
       expect(responseA.body.id).toBe(requestA.param.todoId);
       expect(responseB.body.id).toBe(requestB.param.todoId);
     });
@@ -142,7 +145,10 @@ describe("Base URL Routing", () => {
 
       expect(responseA._tag).toBe("GetTodoSuccess");
       expect(responseB._tag).toBe("GetTodoSuccess");
-      assert(responseA._tag === "GetTodoSuccess" && responseB._tag === "GetTodoSuccess");
+      assert(
+        responseA._tag === "GetTodoSuccess" &&
+          responseB._tag === "GetTodoSuccess"
+      );
       expect(responseA.body.id).toBe(requestA.param.todoId);
       expect(responseB.body.id).toBe(requestB.param.todoId);
     });

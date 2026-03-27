@@ -1,12 +1,12 @@
 import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
-import {
-  createRegisterAccountSuccessResponse,
-} from "../../data";
+import { createRegisterAccountSuccessResponse } from "../../data";
 import type { IRegisterAccountRequest, RegisterAccountResponse } from "../..";
 import type { HonoAccountApiHandler } from "../../test-project/output/account/AccountHono";
 
 export class AccountHandlers implements HonoAccountApiHandler {
-  public constructor(private readonly throwError?: Error | ITaggedHttpResponse) {
+  public constructor(
+    private readonly throwError?: Error | ITaggedHttpResponse
+  ) {
     //
   }
 

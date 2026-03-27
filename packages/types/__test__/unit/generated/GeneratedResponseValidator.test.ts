@@ -394,7 +394,11 @@ describe("Generated ResponseValidator", () => {
       expect(validationResult.isValid).toBe(true);
       expect(unauthorizedResult.isValid).toBe(true);
       expect(internalResult.isValid).toBe(true);
-      assert(validationResult.isValid && unauthorizedResult.isValid && internalResult.isValid);
+      assert(
+        validationResult.isValid &&
+          unauthorizedResult.isValid &&
+          internalResult.isValid
+      );
       expect(validationResult.data._tag).toBe("ValidationError");
       expect(unauthorizedResult.data._tag).toBe("UnauthorizedError");
       expect(internalResult.data._tag).toBe("InternalServerError");

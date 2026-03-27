@@ -12,10 +12,12 @@ import { TypeweaverHono, type HonoRequestHandler, type TypeweaverHonoOptions } f
 import type { IAccessTokenRequest } from "./AccessTokenRequest";
 import { AccessTokenRequestValidator } from "./AccessTokenRequestValidator";
 import type { AccessTokenResponse } from "./AccessTokenResponse";
+import { AccessTokenResponseValidator } from "./AccessTokenResponseValidator";
 
 import type { IRefreshTokenRequest } from "./RefreshTokenRequest";
 import { RefreshTokenRequestValidator } from "./RefreshTokenRequestValidator";
 import type { RefreshTokenResponse } from "./RefreshTokenResponse";
+import { RefreshTokenResponseValidator } from "./RefreshTokenResponseValidator";
 
 export type HonoAuthApiHandler = {
   handleAccessTokenRequest: HonoRequestHandler<IAccessTokenRequest, AccessTokenResponse>;
@@ -35,6 +37,7 @@ export class AuthHono extends TypeweaverHono<HonoAuthApiHandler> {
         context,
         "AccessToken",
         new AccessTokenRequestValidator(),
+        new AccessTokenResponseValidator(),
         this.requestHandlers.handleAccessTokenRequest.bind(this.requestHandlers),
       ),
     );
@@ -44,6 +47,7 @@ export class AuthHono extends TypeweaverHono<HonoAuthApiHandler> {
         context,
         "RefreshToken",
         new RefreshTokenRequestValidator(),
+        new RefreshTokenResponseValidator(),
         this.requestHandlers.handleRefreshTokenRequest.bind(this.requestHandlers),
       ),
     );

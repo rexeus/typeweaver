@@ -91,7 +91,9 @@ const userHandlers = new UserHandlers();
 const userRouter = new UserHono({
   requestHandlers: userHandlers,
   validateRequests: true, // default, validates requests
-  handleValidationErrors: true, // default: returns 400 with issues
+  validateResponses: true, // default, validates responses and strips extra fields
+  handleRequestValidationErrors: true, // default: returns 400 with issues
+  handleResponseValidationErrors: true, // default: returns 500
   handleHttpResponseErrors: true, // default: returns thrown HttpResponse as-is
   handleUnknownErrors: true, // default: returns 500
 });
@@ -110,11 +112,23 @@ serve({ fetch: app.fetch, port: 3000 }, () => {
 
 - `requestHandlers`: object implementing the generated `Hono<ResourceName>ApiHandler` type
 - `validateRequests` (default: `true`): enable/disable request validation
-- `handleValidationErrors`: `true` | `false` | `(err, c) => IHttpResponse | Promise<IHttpResponse>`,
+- `validateResponses` (default: `true`): enable/disable response validation. When enabled, responses
+  are validated against the operation's schema and extra body fields are stripped before sending.
+- `handleRequestValidationErrors`: `true` | `false` |
+  `(err, c) => IHttpResponse | Promise<IHttpResponse>`
   - If `true` (default), returns `400 Bad Request` with validation issues in the body
   - If `false`, disables this handler (errors fall through to the unknown error handler)
   - If function, calls the function with the error and context, expects an `IHttpResponse` to
     return, so you can customize the response in the way you want
+- `handleResponseValidationErrors`: `true` | `false` |
+  `(err, response, c) => IHttpResponse | Promise<IHttpResponse>`
+  - If `true` (default), returns `500 Internal Server Error`
+  - If `false`, disables response validation error handling — the invalid response is returned
+    as-is. Validation still runs (and strips extra fields on valid responses), but invalid responses
+    pass through unchanged. Useful when you want field stripping without blocking invalid responses.
+  - If function, calls the function with the `ResponseValidationError`, the original (invalid)
+    response, and the Hono context. The function should return an `IHttpResponse`. If the custom
+    handler throws, the original response is returned as a fallback.
 - `handleHttpResponseErrors`: `true` | `false` |
   `(err, c) => IHttpResponse | Promise<IHttpResponse>`
   - If `true` (default), returns thrown `HttpResponse` as-is, they will be sent as the response

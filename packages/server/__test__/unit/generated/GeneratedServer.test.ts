@@ -248,7 +248,7 @@ describe("Generated Server Router", () => {
 
     test("should use custom validation error handler when provided", async () => {
       const app = createTestApp({
-        handleValidationErrors: () => ({
+        handleRequestValidationErrors: () => ({
           statusCode: 400,
           header: { "Content-Type": "application/json" },
           body: { message: "Custom validation error" },
@@ -285,6 +285,7 @@ describe("Generated Server Router", () => {
     test("should handle string response bodies", async () => {
       const customStringResponse = "This is a plain text response";
       const app = createTestApp({
+        validateResponses: false,
         throwTodoError: {
           _tag: "CustomStringResponse" as const,
           statusCode: 200,
@@ -338,6 +339,7 @@ describe("Generated Server Router", () => {
   describe("Error Handling", () => {
     test("should handle HTTP response errors with default handler", async () => {
       const app = createTestApp({
+        validateResponses: false,
         throwTodoError: {
           _tag: "TodoNotFoundError" as const,
           statusCode: 404,
@@ -357,6 +359,7 @@ describe("Generated Server Router", () => {
 
     test("should handle HTTP response errors with custom handler", async () => {
       const app = createTestApp({
+        validateResponses: false,
         throwTodoError: {
           _tag: "TodoNotFoundError" as const,
           statusCode: 404,
@@ -380,7 +383,7 @@ describe("Generated Server Router", () => {
 
     test("should handle validation errors with custom handler", async () => {
       const app = createTestApp({
-        handleValidationErrors: () => ({
+        handleRequestValidationErrors: () => ({
           statusCode: 404,
           body: { customValidationError: "Custom validation error handling" },
         }),
@@ -432,7 +435,7 @@ describe("Generated Server Router", () => {
 
     test("should handle validation error handler failures with unknown handlers", async () => {
       const app = createTestApp({
-        handleValidationErrors: () => {
+        handleRequestValidationErrors: () => {
           throw new Error("Validation handler failed");
         },
       });
@@ -449,6 +452,7 @@ describe("Generated Server Router", () => {
 
     test("should handle HTTP response error handler failures with unknown handlers", async () => {
       const app = createTestApp({
+        validateResponses: false,
         throwTodoError: {
           _tag: "TodoNotFoundError" as const,
           statusCode: 404,

@@ -1,4 +1,7 @@
-import type { IHttpResponse, ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type {
+  IHttpResponse,
+  ITaggedHttpResponse,
+} from "@rexeus/typeweaver-core";
 import { AccountRouter } from "../test-project/output/account/AccountRouter";
 import { AuthRouter } from "../test-project/output/auth/AuthRouter";
 import {
@@ -9,7 +12,10 @@ import { TodoRouter } from "../test-project/output/todo/TodoRouter";
 import { ServerAccountHandlers } from "./handlers/ServerAccountHandlers";
 import { ServerAuthHandlers } from "./handlers/ServerAuthHandlers";
 import { ServerTodoHandlers } from "./handlers/ServerTodoHandlers";
-import type { RequestHandler, TypeweaverRouterOptions } from "../test-project/output/lib/server";
+import type {
+  RequestHandler,
+  TypeweaverRouterOptions,
+} from "../test-project/output/lib/server";
 
 /**
  * Configuration options for TypeweaverApp-based test instances.
@@ -27,7 +33,10 @@ export type TestAppOptions = {
   readonly throwAccountError?: Error | ITaggedHttpResponse;
   /** Custom response to return for all requests (bypasses handlers). */
   readonly customResponses?: IHttpResponse;
-} & Omit<TypeweaverRouterOptions<Record<string, RequestHandler<any, any, any>>>, "requestHandlers">;
+} & Omit<
+  TypeweaverRouterOptions<Record<string, RequestHandler<any, any, any>>>,
+  "requestHandlers"
+>;
 
 /**
  * Creates a TypeweaverApp with all generated test routers (Todo, Auth, Account) mounted.
@@ -53,22 +62,28 @@ export function createTestApp(options?: TestAppOptions): TypeweaverApp {
   const todoRouter = new TodoRouter({
     requestHandlers: new ServerTodoHandlers(options?.throwTodoError),
     validateRequests: options?.validateRequests,
+    validateResponses: options?.validateResponses,
     handleHttpResponseErrors: options?.handleHttpResponseErrors,
-    handleValidationErrors: options?.handleValidationErrors,
+    handleRequestValidationErrors: options?.handleRequestValidationErrors,
+    handleResponseValidationErrors: options?.handleResponseValidationErrors,
     handleUnknownErrors: options?.handleUnknownErrors,
   });
   const authRouter = new AuthRouter({
     requestHandlers: new ServerAuthHandlers(options?.throwAuthError),
     validateRequests: options?.validateRequests,
+    validateResponses: options?.validateResponses,
     handleHttpResponseErrors: options?.handleHttpResponseErrors,
-    handleValidationErrors: options?.handleValidationErrors,
+    handleRequestValidationErrors: options?.handleRequestValidationErrors,
+    handleResponseValidationErrors: options?.handleResponseValidationErrors,
     handleUnknownErrors: options?.handleUnknownErrors,
   });
   const accountRouter = new AccountRouter({
     requestHandlers: new ServerAccountHandlers(options?.throwAccountError),
     validateRequests: options?.validateRequests,
+    validateResponses: options?.validateResponses,
     handleHttpResponseErrors: options?.handleHttpResponseErrors,
-    handleValidationErrors: options?.handleValidationErrors,
+    handleRequestValidationErrors: options?.handleRequestValidationErrors,
+    handleResponseValidationErrors: options?.handleResponseValidationErrors,
     handleUnknownErrors: options?.handleUnknownErrors,
   });
 

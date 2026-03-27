@@ -12,6 +12,7 @@ import { TypeweaverHono, type HonoRequestHandler, type TypeweaverHonoOptions } f
 import type { IRegisterAccountRequest } from "./RegisterAccountRequest";
 import { RegisterAccountRequestValidator } from "./RegisterAccountRequestValidator";
 import type { RegisterAccountResponse } from "./RegisterAccountResponse";
+import { RegisterAccountResponseValidator } from "./RegisterAccountResponseValidator";
 
 export type HonoAccountApiHandler = {
   handleRegisterAccountRequest: HonoRequestHandler<
@@ -32,6 +33,7 @@ export class AccountHono extends TypeweaverHono<HonoAccountApiHandler> {
         context,
         "RegisterAccount",
         new RegisterAccountRequestValidator(),
+        new RegisterAccountResponseValidator(),
         this.requestHandlers.handleRegisterAccountRequest.bind(this.requestHandlers),
       ),
     );
