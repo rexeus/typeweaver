@@ -11,17 +11,17 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  createUnknownResponse,
+  UnknownResponseError,
 } from "@rexeus/typeweaver-core";
-import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
+import { RequestCommand } from "../lib/clients";
 import { ListSubTodosResponseValidator } from "./ListSubTodosResponseValidator";
 import type {
   IListSubTodosRequest,
   IListSubTodosRequestHeader,
   IListSubTodosRequestParam,
   IListSubTodosRequestQuery,
-  SuccessfulListSubTodosResponse,
 } from "./ListSubTodosRequest";
+import type { ListSubTodosResponse } from "./ListSubTodosResponse";
 
 export class ListSubTodosRequestCommand extends RequestCommand implements IListSubTodosRequest {
   public override readonly operationId = definition.operationId;
@@ -47,35 +47,12 @@ export class ListSubTodosRequestCommand extends RequestCommand implements IListS
     this.responseValidator = new ListSubTodosResponseValidator();
   }
 
-  public processResponse(
-    response: IHttpResponse,
-    options: ProcessResponseOptions,
-  ): SuccessfulListSubTodosResponse {
+  public processResponse(response: IHttpResponse): ListSubTodosResponse {
     try {
-      const result = this.responseValidator.validate(response);
-
-      if (result._tag === "ListSubTodosSuccess") {
-        return result as SuccessfulListSubTodosResponse;
-      }
-
-      throw result;
+      return this.responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = createUnknownResponse(
-          response.statusCode,
-          response.header,
-          response.body,
-          error,
-        );
-
-        if (
-          options.unknownResponseHandling === "passthrough" &&
-          options.isSuccessStatusCode(response.statusCode)
-        ) {
-          return unknownResponse as any;
-        }
-
-        throw unknownResponse;
+        throw new UnknownResponseError(response.statusCode, response.header, response.body, error);
       }
       throw error;
     }

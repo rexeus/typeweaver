@@ -1,4 +1,4 @@
-import { isTaggedHttpResponse } from "@rexeus/typeweaver-core";
+import assert from "node:assert";
 import {
   createCreateTodoRequest,
   createDeleteTodoRequest,
@@ -43,6 +43,7 @@ describe("Base URL Routing", () => {
       const response = await client.send(command);
 
       expect(response._tag).toBe("GetTodoSuccess");
+      assert(response._tag === "GetTodoSuccess");
       expect(response.statusCode).toBe(200);
       expect(response.body.id).toBe(requestData.param.todoId);
     });
@@ -57,6 +58,7 @@ describe("Base URL Routing", () => {
       const response = await client.send(command);
 
       expect(response._tag).toBe("CreateTodoSuccess");
+      assert(response._tag === "CreateTodoSuccess");
       expect(response.statusCode).toBe(201);
       expect(response.body.title).toBe(requestData.body.title);
     });
@@ -86,6 +88,7 @@ describe("Base URL Routing", () => {
       const response = await client.send(command);
 
       expect(response._tag).toBe("GetTodoSuccess");
+      assert(response._tag === "GetTodoSuccess");
       expect(response.statusCode).toBe(200);
       expect(response.body.id).toBe(requestData.param.todoId);
     });
@@ -119,6 +122,7 @@ describe("Base URL Routing", () => {
 
       expect(responseA._tag).toBe("GetTodoSuccess");
       expect(responseB._tag).toBe("GetTodoSuccess");
+      assert(responseA._tag === "GetTodoSuccess" && responseB._tag === "GetTodoSuccess");
       expect(responseA.body.id).toBe(requestA.param.todoId);
       expect(responseB.body.id).toBe(requestB.param.todoId);
     });
@@ -138,6 +142,7 @@ describe("Base URL Routing", () => {
 
       expect(responseA._tag).toBe("GetTodoSuccess");
       expect(responseB._tag).toBe("GetTodoSuccess");
+      assert(responseA._tag === "GetTodoSuccess" && responseB._tag === "GetTodoSuccess");
       expect(responseA.body.id).toBe(requestA.param.todoId);
       expect(responseB.body.id).toBe(requestB.param.todoId);
     });
@@ -172,9 +177,9 @@ describe("Base URL Routing", () => {
       const requestData = createGetTodoRequest();
       const command = new GetTodoRequestCommand(requestData);
 
-      await expect(client.send(command)).rejects.toSatisfy(
-        (error: unknown) => isTaggedHttpResponse(error) && error._tag === "TodoNotFoundError"
-      );
+      const result = await client.send(command);
+
+      expect(result._tag).toBe("TodoNotFoundError");
     });
   });
 });

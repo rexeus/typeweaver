@@ -14,27 +14,14 @@ import type {
   IHttpRequest,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
-import type { UnknownResponseHandling } from "./ApiClient";
-
-/**
- * Configuration options for processing HTTP responses.
- */
-export type ProcessResponseOptions = {
-  readonly unknownResponseHandling: UnknownResponseHandling;
-  readonly isSuccessStatusCode: (statusCode: number) => boolean;
-};
 
 /**
  * Abstract base class for type-safe API request commands.
  *
- * This class represents a command pattern for HTTP requests, providing:
+ * Represents a command pattern for HTTP requests, providing:
  * - Type-safe request parameters (headers, path params, query, body)
- * - Response processing abstraction
+ * - Response processing with validation and type narrowing
  * - Integration with ApiClient for execution
- *
- * Implementations should:
- * 1. Set all readonly properties in the constructor
- * 2. Implement processResponse to handle response transformation
  *
  * @template Header - The HTTP header type
  * @template Param - The path parameter type
@@ -63,19 +50,14 @@ export abstract class RequestCommand<
   public readonly body!: Body;
 
   /**
-   * Processes the raw HTTP response into a typed response object.
+   * Processes the raw HTTP response into a typed, validated response object.
    *
-   * This method should handle:
-   * - Response validation
-   * - Data transformation
-   * - Error response handling
+   * Returns the full response union (success and error responses).
+   * Throws UnknownResponseError if the response doesn't match any defined schema.
    *
    * @param response - The raw HTTP response from the server
-   * @param options - Configuration options for response processing
-   * @returns The processed, type-safe response object
+   * @returns The validated, type-safe response object
+   * @throws {UnknownResponseError} If the response doesn't match any defined schema
    */
-  public abstract processResponse(
-    response: IHttpResponse,
-    options: ProcessResponseOptions,
-  ): IHttpResponse;
+  public abstract processResponse(response: IHttpResponse): IHttpResponse;
 }

@@ -11,16 +11,16 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  createUnknownResponse,
+  UnknownResponseError,
 } from "@rexeus/typeweaver-core";
-import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
+import { RequestCommand } from "../lib/clients";
 import { GetFileMetadataResponseValidator } from "./GetFileMetadataResponseValidator";
 import type {
   IGetFileMetadataRequest,
   IGetFileMetadataRequestHeader,
   IGetFileMetadataRequestParam,
-  SuccessfulGetFileMetadataResponse,
 } from "./GetFileMetadataRequest";
+import type { GetFileMetadataResponse } from "./GetFileMetadataResponse";
 
 export class GetFileMetadataRequestCommand
   extends RequestCommand
@@ -47,35 +47,12 @@ export class GetFileMetadataRequestCommand
     this.responseValidator = new GetFileMetadataResponseValidator();
   }
 
-  public processResponse(
-    response: IHttpResponse,
-    options: ProcessResponseOptions,
-  ): SuccessfulGetFileMetadataResponse {
+  public processResponse(response: IHttpResponse): GetFileMetadataResponse {
     try {
-      const result = this.responseValidator.validate(response);
-
-      if (result._tag === "GetFileMetadataSuccess") {
-        return result as SuccessfulGetFileMetadataResponse;
-      }
-
-      throw result;
+      return this.responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = createUnknownResponse(
-          response.statusCode,
-          response.header,
-          response.body,
-          error,
-        );
-
-        if (
-          options.unknownResponseHandling === "passthrough" &&
-          options.isSuccessStatusCode(response.statusCode)
-        ) {
-          return unknownResponse as any;
-        }
-
-        throw unknownResponse;
+        throw new UnknownResponseError(response.statusCode, response.header, response.body, error);
       }
       throw error;
     }

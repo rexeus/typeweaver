@@ -11,16 +11,16 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  createUnknownResponse,
+  UnknownResponseError,
 } from "@rexeus/typeweaver-core";
-import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
+import { RequestCommand } from "../lib/clients";
 import { DownloadFileContentResponseValidator } from "./DownloadFileContentResponseValidator";
 import type {
   IDownloadFileContentRequest,
   IDownloadFileContentRequestHeader,
   IDownloadFileContentRequestParam,
-  SuccessfulDownloadFileContentResponse,
 } from "./DownloadFileContentRequest";
+import type { DownloadFileContentResponse } from "./DownloadFileContentResponse";
 
 export class DownloadFileContentRequestCommand
   extends RequestCommand
@@ -47,35 +47,12 @@ export class DownloadFileContentRequestCommand
     this.responseValidator = new DownloadFileContentResponseValidator();
   }
 
-  public processResponse(
-    response: IHttpResponse,
-    options: ProcessResponseOptions,
-  ): SuccessfulDownloadFileContentResponse {
+  public processResponse(response: IHttpResponse): DownloadFileContentResponse {
     try {
-      const result = this.responseValidator.validate(response);
-
-      if (result._tag === "DownloadFileContentSuccess") {
-        return result as SuccessfulDownloadFileContentResponse;
-      }
-
-      throw result;
+      return this.responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = createUnknownResponse(
-          response.statusCode,
-          response.header,
-          response.body,
-          error,
-        );
-
-        if (
-          options.unknownResponseHandling === "passthrough" &&
-          options.isSuccessStatusCode(response.statusCode)
-        ) {
-          return unknownResponse as any;
-        }
-
-        throw unknownResponse;
+        throw new UnknownResponseError(response.statusCode, response.header, response.body, error);
       }
       throw error;
     }

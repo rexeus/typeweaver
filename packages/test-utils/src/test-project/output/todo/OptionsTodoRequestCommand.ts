@@ -11,16 +11,16 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  createUnknownResponse,
+  UnknownResponseError,
 } from "@rexeus/typeweaver-core";
-import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
+import { RequestCommand } from "../lib/clients";
 import { OptionsTodoResponseValidator } from "./OptionsTodoResponseValidator";
 import type {
   IOptionsTodoRequest,
   IOptionsTodoRequestHeader,
   IOptionsTodoRequestParam,
-  SuccessfulOptionsTodoResponse,
 } from "./OptionsTodoRequest";
+import type { OptionsTodoResponse } from "./OptionsTodoResponse";
 
 export class OptionsTodoRequestCommand extends RequestCommand implements IOptionsTodoRequest {
   public override readonly operationId = definition.operationId;
@@ -44,35 +44,12 @@ export class OptionsTodoRequestCommand extends RequestCommand implements IOption
     this.responseValidator = new OptionsTodoResponseValidator();
   }
 
-  public processResponse(
-    response: IHttpResponse,
-    options: ProcessResponseOptions,
-  ): SuccessfulOptionsTodoResponse {
+  public processResponse(response: IHttpResponse): OptionsTodoResponse {
     try {
-      const result = this.responseValidator.validate(response);
-
-      if (result._tag === "OptionsTodoSuccess") {
-        return result as SuccessfulOptionsTodoResponse;
-      }
-
-      throw result;
+      return this.responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = createUnknownResponse(
-          response.statusCode,
-          response.header,
-          response.body,
-          error,
-        );
-
-        if (
-          options.unknownResponseHandling === "passthrough" &&
-          options.isSuccessStatusCode(response.statusCode)
-        ) {
-          return unknownResponse as any;
-        }
-
-        throw unknownResponse;
+        throw new UnknownResponseError(response.statusCode, response.header, response.body, error);
       }
       throw error;
     }

@@ -11,16 +11,16 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  createUnknownResponse,
+  UnknownResponseError,
 } from "@rexeus/typeweaver-core";
-import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
+import { RequestCommand } from "../lib/clients";
 import { HeadTodoResponseValidator } from "./HeadTodoResponseValidator";
 import type {
   IHeadTodoRequest,
   IHeadTodoRequestHeader,
   IHeadTodoRequestParam,
-  SuccessfulHeadTodoResponse,
 } from "./HeadTodoRequest";
+import type { HeadTodoResponse } from "./HeadTodoResponse";
 
 export class HeadTodoRequestCommand extends RequestCommand implements IHeadTodoRequest {
   public override readonly operationId = definition.operationId;
@@ -44,35 +44,12 @@ export class HeadTodoRequestCommand extends RequestCommand implements IHeadTodoR
     this.responseValidator = new HeadTodoResponseValidator();
   }
 
-  public processResponse(
-    response: IHttpResponse,
-    options: ProcessResponseOptions,
-  ): SuccessfulHeadTodoResponse {
+  public processResponse(response: IHttpResponse): HeadTodoResponse {
     try {
-      const result = this.responseValidator.validate(response);
-
-      if (result._tag === "HeadTodoSuccess") {
-        return result as SuccessfulHeadTodoResponse;
-      }
-
-      throw result;
+      return this.responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = createUnknownResponse(
-          response.statusCode,
-          response.header,
-          response.body,
-          error,
-        );
-
-        if (
-          options.unknownResponseHandling === "passthrough" &&
-          options.isSuccessStatusCode(response.statusCode)
-        ) {
-          return unknownResponse as any;
-        }
-
-        throw unknownResponse;
+        throw new UnknownResponseError(response.statusCode, response.header, response.body, error);
       }
       throw error;
     }

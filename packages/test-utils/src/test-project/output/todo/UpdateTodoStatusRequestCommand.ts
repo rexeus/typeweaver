@@ -11,17 +11,17 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  createUnknownResponse,
+  UnknownResponseError,
 } from "@rexeus/typeweaver-core";
-import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
+import { RequestCommand } from "../lib/clients";
 import { UpdateTodoStatusResponseValidator } from "./UpdateTodoStatusResponseValidator";
 import type {
   IUpdateTodoStatusRequest,
   IUpdateTodoStatusRequestHeader,
   IUpdateTodoStatusRequestParam,
   IUpdateTodoStatusRequestBody,
-  SuccessfulUpdateTodoStatusResponse,
 } from "./UpdateTodoStatusRequest";
+import type { UpdateTodoStatusResponse } from "./UpdateTodoStatusResponse";
 
 export class UpdateTodoStatusRequestCommand
   extends RequestCommand
@@ -50,35 +50,12 @@ export class UpdateTodoStatusRequestCommand
     this.responseValidator = new UpdateTodoStatusResponseValidator();
   }
 
-  public processResponse(
-    response: IHttpResponse,
-    options: ProcessResponseOptions,
-  ): SuccessfulUpdateTodoStatusResponse {
+  public processResponse(response: IHttpResponse): UpdateTodoStatusResponse {
     try {
-      const result = this.responseValidator.validate(response);
-
-      if (result._tag === "UpdateTodoStatusSuccess") {
-        return result as SuccessfulUpdateTodoStatusResponse;
-      }
-
-      throw result;
+      return this.responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = createUnknownResponse(
-          response.statusCode,
-          response.header,
-          response.body,
-          error,
-        );
-
-        if (
-          options.unknownResponseHandling === "passthrough" &&
-          options.isSuccessStatusCode(response.statusCode)
-        ) {
-          return unknownResponse as any;
-        }
-
-        throw unknownResponse;
+        throw new UnknownResponseError(response.statusCode, response.header, response.body, error);
       }
       throw error;
     }

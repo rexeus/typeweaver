@@ -11,16 +11,16 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  createUnknownResponse,
+  UnknownResponseError,
 } from "@rexeus/typeweaver-core";
-import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
+import { RequestCommand } from "../lib/clients";
 import { UploadFileResponseValidator } from "./UploadFileResponseValidator";
 import type {
   IUploadFileRequest,
   IUploadFileRequestHeader,
   IUploadFileRequestBody,
-  SuccessfulUploadFileResponse,
 } from "./UploadFileRequest";
+import type { UploadFileResponse } from "./UploadFileResponse";
 
 export class UploadFileRequestCommand extends RequestCommand implements IUploadFileRequest {
   public override readonly operationId = definition.operationId;
@@ -44,35 +44,12 @@ export class UploadFileRequestCommand extends RequestCommand implements IUploadF
     this.responseValidator = new UploadFileResponseValidator();
   }
 
-  public processResponse(
-    response: IHttpResponse,
-    options: ProcessResponseOptions,
-  ): SuccessfulUploadFileResponse {
+  public processResponse(response: IHttpResponse): UploadFileResponse {
     try {
-      const result = this.responseValidator.validate(response);
-
-      if (result._tag === "UploadFileSuccess") {
-        return result as SuccessfulUploadFileResponse;
-      }
-
-      throw result;
+      return this.responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = createUnknownResponse(
-          response.statusCode,
-          response.header,
-          response.body,
-          error,
-        );
-
-        if (
-          options.unknownResponseHandling === "passthrough" &&
-          options.isSuccessStatusCode(response.statusCode)
-        ) {
-          return unknownResponse as any;
-        }
-
-        throw unknownResponse;
+        throw new UnknownResponseError(response.statusCode, response.header, response.body, error);
       }
       throw error;
     }

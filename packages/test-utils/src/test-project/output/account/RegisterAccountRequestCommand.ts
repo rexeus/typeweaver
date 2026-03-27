@@ -11,16 +11,16 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  createUnknownResponse,
+  UnknownResponseError,
 } from "@rexeus/typeweaver-core";
-import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
+import { RequestCommand } from "../lib/clients";
 import { RegisterAccountResponseValidator } from "./RegisterAccountResponseValidator";
 import type {
   IRegisterAccountRequest,
   IRegisterAccountRequestHeader,
   IRegisterAccountRequestBody,
-  SuccessfulRegisterAccountResponse,
 } from "./RegisterAccountRequest";
+import type { RegisterAccountResponse } from "./RegisterAccountResponse";
 
 export class RegisterAccountRequestCommand
   extends RequestCommand
@@ -47,35 +47,12 @@ export class RegisterAccountRequestCommand
     this.responseValidator = new RegisterAccountResponseValidator();
   }
 
-  public processResponse(
-    response: IHttpResponse,
-    options: ProcessResponseOptions,
-  ): SuccessfulRegisterAccountResponse {
+  public processResponse(response: IHttpResponse): RegisterAccountResponse {
     try {
-      const result = this.responseValidator.validate(response);
-
-      if (result._tag === "RegisterAccountSuccess") {
-        return result as SuccessfulRegisterAccountResponse;
-      }
-
-      throw result;
+      return this.responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = createUnknownResponse(
-          response.statusCode,
-          response.header,
-          response.body,
-          error,
-        );
-
-        if (
-          options.unknownResponseHandling === "passthrough" &&
-          options.isSuccessStatusCode(response.statusCode)
-        ) {
-          return unknownResponse as any;
-        }
-
-        throw unknownResponse;
+        throw new UnknownResponseError(response.statusCode, response.header, response.body, error);
       }
       throw error;
     }

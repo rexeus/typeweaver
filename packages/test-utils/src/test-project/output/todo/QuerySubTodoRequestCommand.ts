@@ -11,9 +11,9 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  createUnknownResponse,
+  UnknownResponseError,
 } from "@rexeus/typeweaver-core";
-import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
+import { RequestCommand } from "../lib/clients";
 import { QuerySubTodoResponseValidator } from "./QuerySubTodoResponseValidator";
 import type {
   IQuerySubTodoRequest,
@@ -21,8 +21,8 @@ import type {
   IQuerySubTodoRequestParam,
   IQuerySubTodoRequestQuery,
   IQuerySubTodoRequestBody,
-  SuccessfulQuerySubTodoResponse,
 } from "./QuerySubTodoRequest";
+import type { QuerySubTodoResponse } from "./QuerySubTodoResponse";
 
 export class QuerySubTodoRequestCommand extends RequestCommand implements IQuerySubTodoRequest {
   public override readonly operationId = definition.operationId;
@@ -50,35 +50,12 @@ export class QuerySubTodoRequestCommand extends RequestCommand implements IQuery
     this.responseValidator = new QuerySubTodoResponseValidator();
   }
 
-  public processResponse(
-    response: IHttpResponse,
-    options: ProcessResponseOptions,
-  ): SuccessfulQuerySubTodoResponse {
+  public processResponse(response: IHttpResponse): QuerySubTodoResponse {
     try {
-      const result = this.responseValidator.validate(response);
-
-      if (result._tag === "QuerySubTodoSuccess") {
-        return result as SuccessfulQuerySubTodoResponse;
-      }
-
-      throw result;
+      return this.responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = createUnknownResponse(
-          response.statusCode,
-          response.header,
-          response.body,
-          error,
-        );
-
-        if (
-          options.unknownResponseHandling === "passthrough" &&
-          options.isSuccessStatusCode(response.statusCode)
-        ) {
-          return unknownResponse as any;
-        }
-
-        throw unknownResponse;
+        throw new UnknownResponseError(response.statusCode, response.header, response.body, error);
       }
       throw error;
     }
