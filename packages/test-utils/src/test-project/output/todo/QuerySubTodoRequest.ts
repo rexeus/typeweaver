@@ -7,21 +7,6 @@
  */
 
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import type { QuerySubTodoResponse } from "./QuerySubTodoResponse";
-
-import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
-
-import type { IInternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
-
-import type { ITooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
-
-import type { IUnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
-
-import type { IUnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
-
-import type { IValidationErrorResponse } from "../shared/ValidationErrorResponse";
-
-import type { ITodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 
 export type IQuerySubTodoRequestHeader = {
   "Content-Type": "application/json";
@@ -64,14 +49,3 @@ export type IQuerySubTodoRequest = {
   query: IQuerySubTodoRequestQuery;
   body: IQuerySubTodoRequestBody;
 };
-
-export type SuccessfulQuerySubTodoResponse = Exclude<
-  QuerySubTodoResponse,
-  | IForbiddenErrorResponse
-  | IInternalServerErrorResponse
-  | ITooManyRequestsErrorResponse
-  | IUnauthorizedErrorResponse
-  | IUnsupportedMediaTypeErrorResponse
-  | IValidationErrorResponse
-  | ITodoNotFoundErrorResponse
->;

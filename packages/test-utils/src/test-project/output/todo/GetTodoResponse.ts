@@ -63,11 +63,7 @@ export const createGetTodoSuccessResponse = (
   ...input,
 });
 
-export type IGetTodoSuccessResponses = IGetTodoSuccessResponse;
-
-export type GetTodoSuccessResponses = IGetTodoSuccessResponses;
-
-export type IGetTodoResponse =
+export type GetTodoResponse =
   | IGetTodoSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
@@ -76,5 +72,3 @@ export type IGetTodoResponse =
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse
   | ITodoNotFoundErrorResponse;
-
-export type GetTodoResponse = IGetTodoResponse;

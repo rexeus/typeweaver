@@ -64,11 +64,7 @@ export const createListTodosSuccessResponse = (
   ...input,
 });
 
-export type IListTodosSuccessResponses = IListTodosSuccessResponse;
-
-export type ListTodosSuccessResponses = IListTodosSuccessResponses;
-
-export type IListTodosResponse =
+export type ListTodosResponse =
   | IListTodosSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
@@ -76,5 +72,3 @@ export type IListTodosResponse =
   | IUnauthorizedErrorResponse
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse;
-
-export type ListTodosResponse = IListTodosResponse;

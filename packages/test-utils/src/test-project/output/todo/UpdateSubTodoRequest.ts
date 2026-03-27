@@ -7,27 +7,6 @@
  */
 
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import type { UpdateSubTodoResponse } from "./UpdateSubTodoResponse";
-
-import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
-
-import type { IInternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
-
-import type { ITooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
-
-import type { IUnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
-
-import type { IUnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
-
-import type { IValidationErrorResponse } from "../shared/ValidationErrorResponse";
-
-import type { ISubTodoNotFoundErrorResponse } from "./SubTodoNotFoundErrorResponse";
-
-import type { ISubTodoNotChangeableErrorResponse } from "./SubTodoNotChangeableErrorResponse";
-
-import type { ISubTodoStatusTransitionInvalidErrorResponse } from "./SubTodoStatusTransitionInvalidErrorResponse";
-
-import type { ITodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 
 export type IUpdateSubTodoRequestHeader = {
   "Content-Type": "application/json";
@@ -59,17 +38,3 @@ export type IUpdateSubTodoRequest = {
 
   body: IUpdateSubTodoRequestBody;
 };
-
-export type SuccessfulUpdateSubTodoResponse = Exclude<
-  UpdateSubTodoResponse,
-  | IForbiddenErrorResponse
-  | IInternalServerErrorResponse
-  | ITooManyRequestsErrorResponse
-  | IUnauthorizedErrorResponse
-  | IUnsupportedMediaTypeErrorResponse
-  | IValidationErrorResponse
-  | ISubTodoNotFoundErrorResponse
-  | ISubTodoNotChangeableErrorResponse
-  | ISubTodoStatusTransitionInvalidErrorResponse
-  | ITodoNotFoundErrorResponse
->;

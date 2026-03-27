@@ -64,11 +64,7 @@ export const createQueryTodoSuccessResponse = (
   ...input,
 });
 
-export type IQueryTodoSuccessResponses = IQueryTodoSuccessResponse;
-
-export type QueryTodoSuccessResponses = IQueryTodoSuccessResponses;
-
-export type IQueryTodoResponse =
+export type QueryTodoResponse =
   | IQueryTodoSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
@@ -76,5 +72,3 @@ export type IQueryTodoResponse =
   | IUnauthorizedErrorResponse
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse;
-
-export type QueryTodoResponse = IQueryTodoResponse;

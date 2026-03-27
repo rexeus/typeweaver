@@ -54,11 +54,7 @@ export const createRegisterAccountSuccessResponse = (
   ...input,
 });
 
-export type IRegisterAccountSuccessResponses = IRegisterAccountSuccessResponse;
-
-export type RegisterAccountSuccessResponses = IRegisterAccountSuccessResponses;
-
-export type IRegisterAccountResponse =
+export type RegisterAccountResponse =
   | IRegisterAccountSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
@@ -66,5 +62,3 @@ export type IRegisterAccountResponse =
   | IUnauthorizedErrorResponse
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse;
-
-export type RegisterAccountResponse = IRegisterAccountResponse;

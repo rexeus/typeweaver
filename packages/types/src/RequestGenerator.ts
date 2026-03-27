@@ -1,6 +1,5 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { Path } from "@rexeus/typeweaver-gen";
 import type {
   GeneratorContext,
   OperationResource,
@@ -28,136 +27,24 @@ export class RequestGenerator {
     operationResource: OperationResource,
     context: GeneratorContext
   ): void {
-    const {
-      outputDir,
-      definition,
-      outputResponseFileName,
-      outputResponseValidationFileName,
-    } = operationResource;
-    const { request, operationId, method, responses } = definition;
+    const { request, operationId, method } = operationResource.definition;
     const { header, query, param, body } = request;
 
-    const headerTsType = header
-      ? TsTypePrinter.print(TsTypeNode.fromZod(header))
-      : undefined;
-    const queryTsType = query
-      ? TsTypePrinter.print(TsTypeNode.fromZod(query))
-      : undefined;
-    const paramTsType = param
-      ? TsTypePrinter.print(TsTypeNode.fromZod(param))
-      : undefined;
-    const bodyTsType = body
-      ? TsTypePrinter.print(TsTypeNode.fromZod(body))
-      : undefined;
-
-    const pascalCaseOperationId = Case.pascal(operationId);
-    const sourcePath = Path.relative(
-      outputDir,
-      `${operationResource.sourceDir}/${path.relative(operationResource.sourceDir, operationResource.sourceFile).replace(/\.ts$/, "")}`
-    );
-
-    const ownSuccessResponses: {
-      name: string;
-    }[] = [];
-    const ownErrorResponses: {
-      name: string;
-    }[] = [];
-    const sharedSuccessResponses: {
-      name: string;
-      path: string;
-    }[] = [];
-    const sharedErrorResponses: {
-      name: string;
-      path: string;
-    }[] = [];
-    const entityErrorResponses: {
-      name: string;
-      path: string;
-    }[] = [];
-
-    for (const response of responses) {
-      const { statusCode, name, isReference } = response;
-
-      if (isReference) {
-        const sharedResponse = context.resources.sharedResponseResources.find(
-          resource => resource.name === name
-        );
-
-        if (sharedResponse) {
-          const responsePath = Path.relative(
-            outputDir,
-            `${sharedResponse.outputDir}/${path.basename(sharedResponse.outputFileName, ".ts")}`
-          );
-
-          if (statusCode >= 200 && statusCode < 300) {
-            sharedSuccessResponses.push({ name, path: responsePath });
-          } else {
-            sharedErrorResponses.push({ name, path: responsePath });
-          }
-        } else {
-          const entityResponses =
-            context.resources.entityResources[operationResource.entityName]
-              ?.responses;
-          const entityResponse = entityResponses?.find(r => r.name === name);
-          if (!entityResponse) {
-            throw new Error(
-              `Shared response '${response.name}' not found in shared or entity resources`
-            );
-          }
-
-          const responsePath = Path.relative(
-            outputDir,
-            `${entityResponse.outputDir}/${path.basename(entityResponse.outputFileName, ".ts")}`
-          );
-
-          if (statusCode >= 200 && statusCode < 300) {
-            sharedSuccessResponses.push({ name, path: responsePath });
-          } else {
-            entityErrorResponses.push({ name, path: responsePath });
-          }
-        }
-
-        continue;
-      }
-
-      const assembledResponse = { name };
-
-      if (statusCode >= 200 && statusCode < 300) {
-        ownSuccessResponses.push(assembledResponse);
-      } else {
-        ownErrorResponses.push(assembledResponse);
-      }
-    }
-
     const content = context.renderTemplate(templateFilePath, {
-      pascalCaseOperationId,
-      operationId,
-      coreDir: context.coreDir,
-      sourcePath,
-      headerTsType,
-      queryTsType,
-      paramTsType,
-      bodyTsType,
+      pascalCaseOperationId: Case.pascal(operationId),
       method,
-      ownSuccessResponses,
-      ownErrorResponses,
-      sharedSuccessResponses,
-      sharedErrorResponses,
-      entityErrorResponses,
-      responseFile: Path.relative(
-        outputDir,
-        `${outputDir}/${path.basename(outputResponseFileName, ".ts")}`
-      ),
-      responseValidationFile: Path.relative(
-        outputDir,
-        `${outputDir}/${path.basename(outputResponseValidationFileName, ".ts")}`
-      ),
-      hasErrorResponses:
-        ownErrorResponses.length > 0 ||
-        entityErrorResponses.length > 0 ||
-        sharedErrorResponses.length > 0,
-      hasSuccessResponses:
-        ownSuccessResponses.length > 0 || sharedSuccessResponses.length > 0,
+      headerTsType: header
+        ? TsTypePrinter.print(TsTypeNode.fromZod(header))
+        : undefined,
+      queryTsType: query
+        ? TsTypePrinter.print(TsTypeNode.fromZod(query))
+        : undefined,
+      paramTsType: param
+        ? TsTypePrinter.print(TsTypeNode.fromZod(param))
+        : undefined,
+      bodyTsType: body
+        ? TsTypePrinter.print(TsTypeNode.fromZod(body))
+        : undefined,
     });
 
     const relativePath = path.relative(

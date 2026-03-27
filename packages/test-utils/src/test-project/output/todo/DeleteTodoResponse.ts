@@ -46,11 +46,7 @@ export const createDeleteTodoSuccessResponse = (
   ...input,
 });
 
-export type IDeleteTodoSuccessResponses = IDeleteTodoSuccessResponse;
-
-export type DeleteTodoSuccessResponses = IDeleteTodoSuccessResponses;
-
-export type IDeleteTodoResponse =
+export type DeleteTodoResponse =
   | IDeleteTodoSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
@@ -59,5 +55,3 @@ export type IDeleteTodoResponse =
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse
   | ITodoNotFoundErrorResponse;
-
-export type DeleteTodoResponse = IDeleteTodoResponse;

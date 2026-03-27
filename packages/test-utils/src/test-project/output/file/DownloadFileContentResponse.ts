@@ -45,11 +45,7 @@ export const createDownloadFileContentSuccessResponse = (
   ...input,
 });
 
-export type IDownloadFileContentSuccessResponses = IDownloadFileContentSuccessResponse;
-
-export type DownloadFileContentSuccessResponses = IDownloadFileContentSuccessResponses;
-
-export type IDownloadFileContentResponse =
+export type DownloadFileContentResponse =
   | IDownloadFileContentSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
@@ -57,5 +53,3 @@ export type IDownloadFileContentResponse =
   | IUnauthorizedErrorResponse
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse;
-
-export type DownloadFileContentResponse = IDownloadFileContentResponse;

@@ -7,21 +7,6 @@
  */
 
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import type { ListSubTodosResponse } from "./ListSubTodosResponse";
-
-import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
-
-import type { IInternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
-
-import type { ITooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
-
-import type { IUnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
-
-import type { IUnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
-
-import type { IValidationErrorResponse } from "../shared/ValidationErrorResponse";
-
-import type { ITodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 
 export type IListSubTodosRequestHeader = {
   Accept: "application/json";
@@ -50,14 +35,3 @@ export type IListSubTodosRequest = {
   param: IListSubTodosRequestParam;
   query: IListSubTodosRequestQuery;
 };
-
-export type SuccessfulListSubTodosResponse = Exclude<
-  ListSubTodosResponse,
-  | IForbiddenErrorResponse
-  | IInternalServerErrorResponse
-  | ITooManyRequestsErrorResponse
-  | IUnauthorizedErrorResponse
-  | IUnsupportedMediaTypeErrorResponse
-  | IValidationErrorResponse
-  | ITodoNotFoundErrorResponse
->;

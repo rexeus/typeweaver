@@ -53,11 +53,7 @@ export const createUploadFileSuccessResponse = (
   ...input,
 });
 
-export type IUploadFileSuccessResponses = IUploadFileSuccessResponse;
-
-export type UploadFileSuccessResponses = IUploadFileSuccessResponses;
-
-export type IUploadFileResponse =
+export type UploadFileResponse =
   | IUploadFileSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
@@ -65,5 +61,3 @@ export type IUploadFileResponse =
   | IUnauthorizedErrorResponse
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse;
-
-export type UploadFileResponse = IUploadFileResponse;

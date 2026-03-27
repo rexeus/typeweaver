@@ -46,11 +46,7 @@ export const createHeadTodoSuccessResponse = (
   ...input,
 });
 
-export type IHeadTodoSuccessResponses = IHeadTodoSuccessResponse;
-
-export type HeadTodoSuccessResponses = IHeadTodoSuccessResponses;
-
-export type IHeadTodoResponse =
+export type HeadTodoResponse =
   | IHeadTodoSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
@@ -59,5 +55,3 @@ export type IHeadTodoResponse =
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse
   | ITodoNotFoundErrorResponse;
-
-export type HeadTodoResponse = IHeadTodoResponse;

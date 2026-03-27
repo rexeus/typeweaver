@@ -7,23 +7,6 @@
  */
 
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import type { UpdateTodoResponse } from "./UpdateTodoResponse";
-
-import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
-
-import type { IInternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
-
-import type { ITooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
-
-import type { IUnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
-
-import type { IUnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
-
-import type { IValidationErrorResponse } from "../shared/ValidationErrorResponse";
-
-import type { ITodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
-
-import type { ITodoNotChangeableErrorResponse } from "./TodoNotChangeableErrorResponse";
 
 export type IUpdateTodoRequestHeader = {
   "Content-Type": "application/json";
@@ -53,15 +36,3 @@ export type IUpdateTodoRequest = {
 
   body: IUpdateTodoRequestBody;
 };
-
-export type SuccessfulUpdateTodoResponse = Exclude<
-  UpdateTodoResponse,
-  | IForbiddenErrorResponse
-  | IInternalServerErrorResponse
-  | ITooManyRequestsErrorResponse
-  | IUnauthorizedErrorResponse
-  | IUnsupportedMediaTypeErrorResponse
-  | IValidationErrorResponse
-  | ITodoNotFoundErrorResponse
-  | ITodoNotChangeableErrorResponse
->;

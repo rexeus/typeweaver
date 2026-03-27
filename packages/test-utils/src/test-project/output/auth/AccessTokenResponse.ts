@@ -50,11 +50,7 @@ export const createAccessTokenSuccessResponse = (
   ...input,
 });
 
-export type IAccessTokenSuccessResponses = IAccessTokenSuccessResponse;
-
-export type AccessTokenSuccessResponses = IAccessTokenSuccessResponses;
-
-export type IAccessTokenResponse =
+export type AccessTokenResponse =
   | IAccessTokenSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
@@ -62,5 +58,3 @@ export type IAccessTokenResponse =
   | IUnauthorizedErrorResponse
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse;
-
-export type AccessTokenResponse = IAccessTokenResponse;

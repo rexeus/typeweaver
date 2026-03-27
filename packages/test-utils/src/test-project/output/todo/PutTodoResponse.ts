@@ -65,11 +65,7 @@ export const createPutTodoSuccessResponse = (
   ...input,
 });
 
-export type IPutTodoSuccessResponses = IPutTodoSuccessResponse;
-
-export type PutTodoSuccessResponses = IPutTodoSuccessResponses;
-
-export type IPutTodoResponse =
+export type PutTodoResponse =
   | IPutTodoSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
@@ -79,5 +75,3 @@ export type IPutTodoResponse =
   | IValidationErrorResponse
   | ITodoNotFoundErrorResponse
   | ITodoNotChangeableErrorResponse;
-
-export type PutTodoResponse = IPutTodoResponse;

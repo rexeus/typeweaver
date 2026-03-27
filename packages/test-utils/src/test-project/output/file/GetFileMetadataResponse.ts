@@ -53,11 +53,7 @@ export const createGetFileMetadataSuccessResponse = (
   ...input,
 });
 
-export type IGetFileMetadataSuccessResponses = IGetFileMetadataSuccessResponse;
-
-export type GetFileMetadataSuccessResponses = IGetFileMetadataSuccessResponses;
-
-export type IGetFileMetadataResponse =
+export type GetFileMetadataResponse =
   | IGetFileMetadataSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
@@ -65,5 +61,3 @@ export type IGetFileMetadataResponse =
   | IUnauthorizedErrorResponse
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse;
-
-export type GetFileMetadataResponse = IGetFileMetadataResponse;

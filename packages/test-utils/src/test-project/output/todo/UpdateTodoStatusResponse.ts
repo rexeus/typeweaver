@@ -67,11 +67,7 @@ export const createUpdateTodoStatusSuccessResponse = (
   ...input,
 });
 
-export type IUpdateTodoStatusSuccessResponses = IUpdateTodoStatusSuccessResponse;
-
-export type UpdateTodoStatusSuccessResponses = IUpdateTodoStatusSuccessResponses;
-
-export type IUpdateTodoStatusResponse =
+export type UpdateTodoStatusResponse =
   | IUpdateTodoStatusSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
@@ -82,5 +78,3 @@ export type IUpdateTodoStatusResponse =
   | ITodoNotFoundErrorResponse
   | ITodoStatusTransitionInvalidErrorResponse
   | ITodoNotChangeableErrorResponse;
-
-export type UpdateTodoStatusResponse = IUpdateTodoStatusResponse;

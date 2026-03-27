@@ -53,11 +53,7 @@ export const createDeleteSubTodoSuccessResponse = (
   ...input,
 });
 
-export type IDeleteSubTodoSuccessResponses = IDeleteSubTodoSuccessResponse;
-
-export type DeleteSubTodoSuccessResponses = IDeleteSubTodoSuccessResponses;
-
-export type IDeleteSubTodoResponse =
+export type DeleteSubTodoResponse =
   | IDeleteSubTodoSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
@@ -67,5 +63,3 @@ export type IDeleteSubTodoResponse =
   | IValidationErrorResponse
   | ISubTodoNotFoundErrorResponse
   | ITodoNotFoundErrorResponse;
-
-export type DeleteSubTodoResponse = IDeleteSubTodoResponse;

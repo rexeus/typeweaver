@@ -66,11 +66,7 @@ export const createQuerySubTodoSuccessResponse = (
   ...input,
 });
 
-export type IQuerySubTodoSuccessResponses = IQuerySubTodoSuccessResponse;
-
-export type QuerySubTodoSuccessResponses = IQuerySubTodoSuccessResponses;
-
-export type IQuerySubTodoResponse =
+export type QuerySubTodoResponse =
   | IQuerySubTodoSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
@@ -79,5 +75,3 @@ export type IQuerySubTodoResponse =
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse
   | ITodoNotFoundErrorResponse;
-
-export type QuerySubTodoResponse = IQuerySubTodoResponse;

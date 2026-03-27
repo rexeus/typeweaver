@@ -69,11 +69,7 @@ export const createUpdateSubTodoSuccessResponse = (
   ...input,
 });
 
-export type IUpdateSubTodoSuccessResponses = IUpdateSubTodoSuccessResponse;
-
-export type UpdateSubTodoSuccessResponses = IUpdateSubTodoSuccessResponses;
-
-export type IUpdateSubTodoResponse =
+export type UpdateSubTodoResponse =
   | IUpdateSubTodoSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
@@ -85,5 +81,3 @@ export type IUpdateSubTodoResponse =
   | ISubTodoNotChangeableErrorResponse
   | ISubTodoStatusTransitionInvalidErrorResponse
   | ITodoNotFoundErrorResponse;
-
-export type UpdateSubTodoResponse = IUpdateSubTodoResponse;

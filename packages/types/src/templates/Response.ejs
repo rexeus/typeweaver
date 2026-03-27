@@ -48,23 +48,7 @@ import type { I<%= entityResponse.name %>Response } from "<%= entityResponse.pat
 <% } %>
 <% } %>
 
-<%
-// Identify success responses (status codes 200-299)
-const successResponses = ownResponses.filter(response => response.statusCode >= 200 && response.statusCode < 300);
-const errorResponses = ownResponses.filter(response => response.statusCode < 200 || response.statusCode >= 300);
-%>
-
-<% if (successResponses.length > 0) { %>
-export type I<%= pascalCaseOperationId %>SuccessResponses =<% if (successResponses.length === 1) { %> I<%= successResponses[0].name %>Response;<% } else { %>
-<% for (const [index, successResponse] of successResponses.entries()) { %>
-<% if (index === 0) { %>    I<%= successResponse.name %>Response<% } else { %>
-    | I<%= successResponse.name %>Response<% } %>
-<% } %>;<% } %>
-
-export type <%= pascalCaseOperationId %>SuccessResponses = I<%= pascalCaseOperationId %>SuccessResponses;
-<% } %>
-
-export type I<%= pascalCaseOperationId %>Response =
+export type <%= pascalCaseOperationId %>Response =
 <% for (const ownResponse of ownResponses) { %>
     | I<%= ownResponse.name %>Response
 <% } %>
@@ -74,5 +58,3 @@ export type I<%= pascalCaseOperationId %>Response =
 <% for (const entityResponse of entityResponses) { %>
     | I<%= entityResponse.name %>Response
 <% } %>;
-
-export type <%= pascalCaseOperationId %>Response = I<%= pascalCaseOperationId %>Response;

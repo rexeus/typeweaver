@@ -61,11 +61,7 @@ export const createCreateTodoSuccessResponse = (
   ...input,
 });
 
-export type ICreateTodoSuccessResponses = ICreateTodoSuccessResponse;
-
-export type CreateTodoSuccessResponses = ICreateTodoSuccessResponses;
-
-export type ICreateTodoResponse =
+export type CreateTodoResponse =
   | ICreateTodoSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
@@ -73,5 +69,3 @@ export type ICreateTodoResponse =
   | IUnauthorizedErrorResponse
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse;
-
-export type CreateTodoResponse = ICreateTodoResponse;

@@ -48,11 +48,7 @@ export const createOptionsTodoSuccessResponse = (
   ...input,
 });
 
-export type IOptionsTodoSuccessResponses = IOptionsTodoSuccessResponse;
-
-export type OptionsTodoSuccessResponses = IOptionsTodoSuccessResponses;
-
-export type IOptionsTodoResponse =
+export type OptionsTodoResponse =
   | IOptionsTodoSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
@@ -61,5 +57,3 @@ export type IOptionsTodoResponse =
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse
   | ITodoNotFoundErrorResponse;
-
-export type OptionsTodoResponse = IOptionsTodoResponse;

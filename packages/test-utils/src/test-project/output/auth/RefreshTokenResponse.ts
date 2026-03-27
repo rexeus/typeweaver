@@ -50,11 +50,7 @@ export const createRefreshTokenSuccessResponse = (
   ...input,
 });
 
-export type IRefreshTokenSuccessResponses = IRefreshTokenSuccessResponse;
-
-export type RefreshTokenSuccessResponses = IRefreshTokenSuccessResponses;
-
-export type IRefreshTokenResponse =
+export type RefreshTokenResponse =
   | IRefreshTokenSuccessResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
@@ -62,5 +58,3 @@ export type IRefreshTokenResponse =
   | IUnauthorizedErrorResponse
   | IUnsupportedMediaTypeErrorResponse
   | IValidationErrorResponse;
-
-export type RefreshTokenResponse = IRefreshTokenResponse;
