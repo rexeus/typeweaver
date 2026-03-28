@@ -25,6 +25,7 @@ export class ResponseValidator extends Validator {
     return (response, error) => {
       let isValid = true;
       const validatedResponse = {
+        type: responseName,
         statusCode: response.statusCode,
         header: undefined,
         body: undefined,

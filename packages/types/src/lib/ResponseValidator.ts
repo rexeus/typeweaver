@@ -10,6 +10,7 @@ import type {
   HttpHeaderSchema,
   IHttpResponse,
   IResponseValidator,
+  ITypedHttpResponse,
   ResponseValidationError,
   SafeResponseValidationResult,
 } from "@rexeus/typeweaver-core";
@@ -63,7 +64,7 @@ export abstract class ResponseValidator
    * @param bodySchema - Zod schema for body validation (optional)
    * @returns Function that validates response and returns result
    */
-  protected validateResponseType<Response extends IHttpResponse>(
+  protected validateResponseType<Response extends ITypedHttpResponse>(
     responseName: string,
     headerSchema: HttpHeaderSchema | undefined,
     bodySchema: HttpBodySchema | undefined
@@ -73,7 +74,8 @@ export abstract class ResponseValidator
   ) => SafeResponseValidationResult<Response> {
     return (response, error) => {
       let isValid = true;
-      const validatedResponse: Mutable<IHttpResponse> = {
+      const validatedResponse: Mutable<ITypedHttpResponse> = {
+        type: responseName,
         statusCode: response.statusCode,
         header: undefined,
         body: undefined,

@@ -295,7 +295,9 @@ export abstract class TypeweaverHono<
    * Processes errors in order: validation, HTTP response, unknown.
    */
   protected registerErrorHandler(): void {
-    this.onError(this.handleError.bind(this));
+    this.onError(async (error, context) =>
+      this.adapter.toResponse(await this.handleError(error, context))
+    );
   }
 
   /**
@@ -311,36 +313,22 @@ export abstract class TypeweaverHono<
   ): Promise<IHttpResponse | null> {
     try {
       return await handlerFn();
-    } catch {
+    } catch (error) {
+      console.error("TypeweaverHono: error handler threw while handling error", error);
       return null;
     }
-  }
-
-  /**
-   * Safely executes an error handler and converts the result to a Hono Response.
-   * Returns null if the handler throws, allowing graceful fallback
-   * to the next handler in the chain.
-   *
-   * @param handlerFn - Function that executes the error handler
-   * @returns Hono Response if successful, null if handler throws
-   */
-  private async safelyExecuteHandler(
-    handlerFn: () => Promise<IHttpResponse> | IHttpResponse
-  ): Promise<Response | null> {
-    const response = await this.safelyExecuteErrorHandler(handlerFn);
-    return response ? this.adapter.toResponse(response) : null;
   }
 
   protected async handleError(
     error: unknown,
     context: Context
-  ): Promise<Response> {
+  ): Promise<IHttpResponse> {
     // Handle validation errors
     if (
       error instanceof RequestValidationError &&
       this.config.errorHandlers.requestValidation
     ) {
-      const response = await this.safelyExecuteHandler(() =>
+      const response = await this.safelyExecuteErrorHandler(() =>
         this.config.errorHandlers.requestValidation!(error, context)
       );
       if (response) return response;
@@ -348,7 +336,7 @@ export abstract class TypeweaverHono<
 
     // Handle HTTP response errors
     if (isTypedHttpResponse(error) && this.config.errorHandlers.httpResponse) {
-      const response = await this.safelyExecuteHandler(() =>
+      const response = await this.safelyExecuteErrorHandler(() =>
         this.config.errorHandlers.httpResponse!(error, context)
       );
       if (response) return response;
@@ -356,7 +344,7 @@ export abstract class TypeweaverHono<
 
     // Handle unknown errors
     if (this.config.errorHandlers.unknown) {
-      const response = await this.safelyExecuteHandler(() =>
+      const response = await this.safelyExecuteErrorHandler(() =>
         this.config.errorHandlers.unknown!(error, context)
       );
       if (response) return response;
@@ -408,7 +396,7 @@ export abstract class TypeweaverHono<
         );
         return this.adapter.toResponse(validated);
       }
-      return this.handleError(error, context);
+      return this.adapter.toResponse(await this.handleError(error, context));
     }
   }
 

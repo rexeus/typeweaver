@@ -77,21 +77,11 @@ export class <%= pascalCaseOperationId %>ResponseValidator extends ResponseValid
 
     <% for (const response of [...ownResponses, ...sharedResponses]) { %>
     private validate<%= response.name %>Response(response: IHttpResponse, error: ResponseValidationError): SafeResponseValidationResult<I<%= response.name %>Response> {
-        const result = this.validateResponseType<I<%= response.name %>Response>(
+        return this.validateResponseType<I<%= response.name %>Response>(
             "<%= response.name.replace(/Response$/, '') %>",
             <% if(response.hasHeader) { %>definition.responses[<%= response.index %>] && "header" in definition.responses[<%= response.index %>] ? definition.responses[<%= response.index %>]!.header : undefined<% } else { %>undefined<% } %>,
             <% if(response.hasBody) { %>definition.responses[<%= response.index %>] && "body" in definition.responses[<%= response.index %>] ? definition.responses[<%= response.index %>]!.body : undefined<% } else { %>undefined<% } %>,
         )(response, error);
-
-        if (!result.isValid) {
-            return result;
-        }
-
-<% if (response.hasHeader || response.hasBody) { %>
-        return { isValid: true, data: { type: "<%= response.name %>" as const, statusCode: result.data.statusCode, header: result.data.header, body: result.data.body } as I<%= response.name %>Response };
-<% } else { %>
-        return { isValid: true, data: { type: "<%= response.name %>" as const, statusCode: response.statusCode } as I<%= response.name %>Response };
-<% } %>
     }
     <% } %>
 }

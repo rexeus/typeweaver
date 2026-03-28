@@ -176,7 +176,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<IUpdateSubTodoSuccessResponse> {
-    const result = this.validateResponseType<IUpdateSubTodoSuccessResponse>(
+    return this.validateResponseType<IUpdateSubTodoSuccessResponse>(
       "UpdateSubTodoSuccess",
       definition.responses[0] && "header" in definition.responses[0]
         ? definition.responses[0]!.header
@@ -185,27 +185,13 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         ? definition.responses[0]!.body
         : undefined,
     )(response, error);
-
-    if (!result.isValid) {
-      return result;
-    }
-
-    return {
-      isValid: true,
-      data: {
-        type: "UpdateSubTodoSuccess" as const,
-        statusCode: result.data.statusCode,
-        header: result.data.header,
-        body: result.data.body,
-      } as IUpdateSubTodoSuccessResponse,
-    };
   }
 
   private validateSubTodoNotFoundErrorResponse(
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<ISubTodoNotFoundErrorResponse> {
-    const result = this.validateResponseType<ISubTodoNotFoundErrorResponse>(
+    return this.validateResponseType<ISubTodoNotFoundErrorResponse>(
       "SubTodoNotFoundError",
       definition.responses[1] && "header" in definition.responses[1]
         ? definition.responses[1]!.header
@@ -214,27 +200,13 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         ? definition.responses[1]!.body
         : undefined,
     )(response, error);
-
-    if (!result.isValid) {
-      return result;
-    }
-
-    return {
-      isValid: true,
-      data: {
-        type: "SubTodoNotFoundError" as const,
-        statusCode: result.data.statusCode,
-        header: result.data.header,
-        body: result.data.body,
-      } as ISubTodoNotFoundErrorResponse,
-    };
   }
 
   private validateSubTodoNotChangeableErrorResponse(
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<ISubTodoNotChangeableErrorResponse> {
-    const result = this.validateResponseType<ISubTodoNotChangeableErrorResponse>(
+    return this.validateResponseType<ISubTodoNotChangeableErrorResponse>(
       "SubTodoNotChangeableError",
       definition.responses[2] && "header" in definition.responses[2]
         ? definition.responses[2]!.header
@@ -243,27 +215,13 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         ? definition.responses[2]!.body
         : undefined,
     )(response, error);
-
-    if (!result.isValid) {
-      return result;
-    }
-
-    return {
-      isValid: true,
-      data: {
-        type: "SubTodoNotChangeableError" as const,
-        statusCode: result.data.statusCode,
-        header: result.data.header,
-        body: result.data.body,
-      } as ISubTodoNotChangeableErrorResponse,
-    };
   }
 
   private validateSubTodoStatusTransitionInvalidErrorResponse(
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<ISubTodoStatusTransitionInvalidErrorResponse> {
-    const result = this.validateResponseType<ISubTodoStatusTransitionInvalidErrorResponse>(
+    return this.validateResponseType<ISubTodoStatusTransitionInvalidErrorResponse>(
       "SubTodoStatusTransitionInvalidError",
       definition.responses[3] && "header" in definition.responses[3]
         ? definition.responses[3]!.header
@@ -272,27 +230,13 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         ? definition.responses[3]!.body
         : undefined,
     )(response, error);
-
-    if (!result.isValid) {
-      return result;
-    }
-
-    return {
-      isValid: true,
-      data: {
-        type: "SubTodoStatusTransitionInvalidError" as const,
-        statusCode: result.data.statusCode,
-        header: result.data.header,
-        body: result.data.body,
-      } as ISubTodoStatusTransitionInvalidErrorResponse,
-    };
   }
 
   private validateTodoNotFoundErrorResponse(
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<ITodoNotFoundErrorResponse> {
-    const result = this.validateResponseType<ITodoNotFoundErrorResponse>(
+    return this.validateResponseType<ITodoNotFoundErrorResponse>(
       "TodoNotFoundError",
       definition.responses[4] && "header" in definition.responses[4]
         ? definition.responses[4]!.header
@@ -301,27 +245,13 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         ? definition.responses[4]!.body
         : undefined,
     )(response, error);
-
-    if (!result.isValid) {
-      return result;
-    }
-
-    return {
-      isValid: true,
-      data: {
-        type: "TodoNotFoundError" as const,
-        statusCode: result.data.statusCode,
-        header: result.data.header,
-        body: result.data.body,
-      } as ITodoNotFoundErrorResponse,
-    };
   }
 
   private validateForbiddenErrorResponse(
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<IForbiddenErrorResponse> {
-    const result = this.validateResponseType<IForbiddenErrorResponse>(
+    return this.validateResponseType<IForbiddenErrorResponse>(
       "ForbiddenError",
       definition.responses[5] && "header" in definition.responses[5]
         ? definition.responses[5]!.header
@@ -330,27 +260,13 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         ? definition.responses[5]!.body
         : undefined,
     )(response, error);
-
-    if (!result.isValid) {
-      return result;
-    }
-
-    return {
-      isValid: true,
-      data: {
-        type: "ForbiddenError" as const,
-        statusCode: result.data.statusCode,
-        header: result.data.header,
-        body: result.data.body,
-      } as IForbiddenErrorResponse,
-    };
   }
 
   private validateInternalServerErrorResponse(
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<IInternalServerErrorResponse> {
-    const result = this.validateResponseType<IInternalServerErrorResponse>(
+    return this.validateResponseType<IInternalServerErrorResponse>(
       "InternalServerError",
       definition.responses[6] && "header" in definition.responses[6]
         ? definition.responses[6]!.header
@@ -359,27 +275,13 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         ? definition.responses[6]!.body
         : undefined,
     )(response, error);
-
-    if (!result.isValid) {
-      return result;
-    }
-
-    return {
-      isValid: true,
-      data: {
-        type: "InternalServerError" as const,
-        statusCode: result.data.statusCode,
-        header: result.data.header,
-        body: result.data.body,
-      } as IInternalServerErrorResponse,
-    };
   }
 
   private validateTooManyRequestsErrorResponse(
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<ITooManyRequestsErrorResponse> {
-    const result = this.validateResponseType<ITooManyRequestsErrorResponse>(
+    return this.validateResponseType<ITooManyRequestsErrorResponse>(
       "TooManyRequestsError",
       definition.responses[7] && "header" in definition.responses[7]
         ? definition.responses[7]!.header
@@ -388,27 +290,13 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         ? definition.responses[7]!.body
         : undefined,
     )(response, error);
-
-    if (!result.isValid) {
-      return result;
-    }
-
-    return {
-      isValid: true,
-      data: {
-        type: "TooManyRequestsError" as const,
-        statusCode: result.data.statusCode,
-        header: result.data.header,
-        body: result.data.body,
-      } as ITooManyRequestsErrorResponse,
-    };
   }
 
   private validateUnauthorizedErrorResponse(
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<IUnauthorizedErrorResponse> {
-    const result = this.validateResponseType<IUnauthorizedErrorResponse>(
+    return this.validateResponseType<IUnauthorizedErrorResponse>(
       "UnauthorizedError",
       definition.responses[8] && "header" in definition.responses[8]
         ? definition.responses[8]!.header
@@ -417,27 +305,13 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         ? definition.responses[8]!.body
         : undefined,
     )(response, error);
-
-    if (!result.isValid) {
-      return result;
-    }
-
-    return {
-      isValid: true,
-      data: {
-        type: "UnauthorizedError" as const,
-        statusCode: result.data.statusCode,
-        header: result.data.header,
-        body: result.data.body,
-      } as IUnauthorizedErrorResponse,
-    };
   }
 
   private validateUnsupportedMediaTypeErrorResponse(
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<IUnsupportedMediaTypeErrorResponse> {
-    const result = this.validateResponseType<IUnsupportedMediaTypeErrorResponse>(
+    return this.validateResponseType<IUnsupportedMediaTypeErrorResponse>(
       "UnsupportedMediaTypeError",
       definition.responses[9] && "header" in definition.responses[9]
         ? definition.responses[9]!.header
@@ -446,27 +320,13 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         ? definition.responses[9]!.body
         : undefined,
     )(response, error);
-
-    if (!result.isValid) {
-      return result;
-    }
-
-    return {
-      isValid: true,
-      data: {
-        type: "UnsupportedMediaTypeError" as const,
-        statusCode: result.data.statusCode,
-        header: result.data.header,
-        body: result.data.body,
-      } as IUnsupportedMediaTypeErrorResponse,
-    };
   }
 
   private validateValidationErrorResponse(
     response: IHttpResponse,
     error: ResponseValidationError,
   ): SafeResponseValidationResult<IValidationErrorResponse> {
-    const result = this.validateResponseType<IValidationErrorResponse>(
+    return this.validateResponseType<IValidationErrorResponse>(
       "ValidationError",
       definition.responses[10] && "header" in definition.responses[10]
         ? definition.responses[10]!.header
@@ -475,19 +335,5 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
         ? definition.responses[10]!.body
         : undefined,
     )(response, error);
-
-    if (!result.isValid) {
-      return result;
-    }
-
-    return {
-      isValid: true,
-      data: {
-        type: "ValidationError" as const,
-        statusCode: result.data.statusCode,
-        header: result.data.header,
-        body: result.data.body,
-      } as IValidationErrorResponse,
-    };
   }
 }
