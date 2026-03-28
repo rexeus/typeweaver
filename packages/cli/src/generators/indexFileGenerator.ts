@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { GeneratorContext } from "@rexeus/typeweaver-gen";
-import { render } from "ejs";
+import ejs from "ejs";
 
 export function generateIndexFiles(
   templateDir: string,
@@ -60,7 +60,7 @@ export function generateIndexFiles(
       continue;
     }
 
-    const domainBarrelContent = render(template, {
+    const domainBarrelContent = ejs.render(template, {
       indexPaths: Array.from(entries).sort(),
     });
 
@@ -77,7 +77,7 @@ export function generateIndexFiles(
     rootIndexPaths.add(`./${barrelKey}`);
   }
 
-  const rootContent = render(template, {
+  const rootContent = ejs.render(template, {
     indexPaths: Array.from(rootIndexPaths).sort(),
   });
 

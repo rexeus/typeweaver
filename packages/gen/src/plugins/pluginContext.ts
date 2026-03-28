@@ -1,10 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { render } from "ejs";
+import ejs from "ejs";
 import { relative } from "../helpers/path";
 import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec";
 import type { GeneratorContext, PluginConfig, PluginContext } from "./types";
-import type { Data } from "ejs";
 
 export type PluginContextBuilderApi = {
   readonly createPluginContext: (params: {
@@ -153,7 +152,7 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
           : path.join(params.templateDir, templatePath);
 
         const template = fs.readFileSync(fullTemplatePath, "utf8");
-        return render(template, data as Data);
+        return ejs.render(template, data);
       },
 
       addGeneratedFile: (relativePath: string) => {
