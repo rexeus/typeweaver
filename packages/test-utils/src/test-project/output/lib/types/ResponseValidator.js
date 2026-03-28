@@ -3,10 +3,25 @@ import { Validator } from "./Validator";
 /**
  * Abstract base class for HTTP response validation.
  *
+ * This class provides the foundation for response validators that:
+ * - Validate response status codes match expected values
+ * - Validate response headers and body against schemas
+ * - Support both safe (non-throwing) and unsafe (throwing) validation
+ * - Integrate with Zod schemas for runtime validation
+ *
+ * Response validators are typically used in API clients to ensure
+ * responses match the expected format before processing.
+ *
  * Subclasses provide response metadata via `responseEntries` and
- * `expectedStatusCodes`. All validation logic lives here.
+ * `expectedStatusCodes`. All validation logic lives in this base class.
  */
 export class ResponseValidator extends Validator {
+  /**
+   * Validates a response without throwing errors.
+   *
+   * @param response - The HTTP response to validate
+   * @returns A result object containing either the validated response or error details
+   */
   safeValidate(response) {
     const error = new ResponseValidationError(response.statusCode);
     for (const entry of this.responseEntries) {
@@ -27,11 +42,26 @@ export class ResponseValidator extends Validator {
       error,
     };
   }
+  /**
+   * Validates a response and throws if validation fails.
+   *
+   * @param response - The HTTP response to validate
+   * @returns The validated response with proper typing
+   * @throws {ResponseValidationError} If response structure fails validation
+   */
   validate(response) {
     const result = this.safeValidate(response);
     if (!result.isValid) throw result.error;
     return result.data;
   }
+  /**
+   * Validates a single response variant against its header and body schemas.
+   *
+   * @param responseName - Name of the response type for error reporting
+   * @param headerSchema - Zod schema for header validation (optional)
+   * @param bodySchema - Zod schema for body validation (optional)
+   * @returns Function that validates response and returns result
+   */
   validateResponseType(responseName, headerSchema, bodySchema) {
     return (response, error) => {
       let isValid = true;

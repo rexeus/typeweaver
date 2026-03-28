@@ -46,9 +46,9 @@ export type IRegisterAccountSuccessResponse = ITypedHttpResponse<
 export const createRegisterAccountSuccessResponse = (
   input: Omit<IRegisterAccountSuccessResponse, "type" | "statusCode">,
 ): IRegisterAccountSuccessResponse => ({
+  ...input,
   type: "RegisterAccountSuccess",
   statusCode: HttpStatusCode.CREATED,
-  ...input,
 });
 
 export type RegisterAccountResponse =

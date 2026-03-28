@@ -9,7 +9,7 @@ export class UnknownResponseError extends Error {
   public constructor(
     public readonly statusCode: HttpStatusCode,
     public readonly header: IHttpHeader | undefined,
-    public readonly body: IHttpBody,
+    public readonly body: IHttpBody | undefined,
     public readonly validationError: ResponseValidationError
   ) {
     super(`Unknown response with status code '${statusCode}'`);

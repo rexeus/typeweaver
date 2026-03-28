@@ -45,9 +45,9 @@ export type IDeleteSubTodoSuccessResponse = ITypedHttpResponse<
 export const createDeleteSubTodoSuccessResponse = (
   input: Omit<IDeleteSubTodoSuccessResponse, "type" | "statusCode">,
 ): IDeleteSubTodoSuccessResponse => ({
+  ...input,
   type: "DeleteSubTodoSuccess",
   statusCode: HttpStatusCode.OK,
-  ...input,
 });
 
 export type DeleteSubTodoResponse =

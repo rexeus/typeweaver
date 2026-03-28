@@ -45,9 +45,9 @@ export type IGetFileMetadataSuccessResponse = ITypedHttpResponse<
 export const createGetFileMetadataSuccessResponse = (
   input: Omit<IGetFileMetadataSuccessResponse, "type" | "statusCode">,
 ): IGetFileMetadataSuccessResponse => ({
+  ...input,
   type: "GetFileMetadataSuccess",
   statusCode: HttpStatusCode.OK,
-  ...input,
 });
 
 export type GetFileMetadataResponse =

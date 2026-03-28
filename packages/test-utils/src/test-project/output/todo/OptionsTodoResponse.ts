@@ -41,9 +41,9 @@ export type IOptionsTodoSuccessResponse = ITypedHttpResponse<
 export const createOptionsTodoSuccessResponse = (
   input: Omit<IOptionsTodoSuccessResponse, "type" | "statusCode">,
 ): IOptionsTodoSuccessResponse => ({
+  ...input,
   type: "OptionsTodoSuccess",
   statusCode: HttpStatusCode.OK,
-  ...input,
 });
 
 export type OptionsTodoResponse =

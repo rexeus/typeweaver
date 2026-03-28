@@ -42,9 +42,9 @@ export type IRefreshTokenSuccessResponse = ITypedHttpResponse<
 export const createRefreshTokenSuccessResponse = (
   input: Omit<IRefreshTokenSuccessResponse, "type" | "statusCode">,
 ): IRefreshTokenSuccessResponse => ({
+  ...input,
   type: "RefreshTokenSuccess",
   statusCode: HttpStatusCode.OK,
-  ...input,
 });
 
 export type RefreshTokenResponse =

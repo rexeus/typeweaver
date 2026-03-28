@@ -39,9 +39,9 @@ export type IHeadTodoSuccessResponse = ITypedHttpResponse<
 export const createHeadTodoSuccessResponse = (
   input: Omit<IHeadTodoSuccessResponse, "type" | "statusCode">,
 ): IHeadTodoSuccessResponse => ({
+  ...input,
   type: "HeadTodoSuccess",
   statusCode: HttpStatusCode.OK,
-  ...input,
 });
 
 export type HeadTodoResponse =

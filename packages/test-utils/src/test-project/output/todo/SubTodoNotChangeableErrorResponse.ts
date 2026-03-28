@@ -40,7 +40,7 @@ export type ISubTodoNotChangeableErrorResponse = ITypedHttpResponse<
 export const createSubTodoNotChangeableErrorResponse = (
   input: Omit<ISubTodoNotChangeableErrorResponse, "type" | "statusCode">,
 ): ISubTodoNotChangeableErrorResponse => ({
+  ...input,
   type: "SubTodoNotChangeableError",
   statusCode: HttpStatusCode.CONFLICT,
-  ...input,
 });

@@ -30,7 +30,7 @@ export type IConflictErrorResponse = ITypedHttpResponse<
 export const createConflictErrorResponse = (
   input: Omit<IConflictErrorResponse, "type" | "statusCode">,
 ): IConflictErrorResponse => ({
+  ...input,
   type: "ConflictError",
   statusCode: HttpStatusCode.CONFLICT,
-  ...input,
 });

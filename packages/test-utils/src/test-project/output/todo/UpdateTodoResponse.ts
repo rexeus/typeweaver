@@ -57,9 +57,9 @@ export type IUpdateTodoSuccessResponse = ITypedHttpResponse<
 export const createUpdateTodoSuccessResponse = (
   input: Omit<IUpdateTodoSuccessResponse, "type" | "statusCode">,
 ): IUpdateTodoSuccessResponse => ({
+  ...input,
   type: "UpdateTodoSuccess",
   statusCode: HttpStatusCode.OK,
-  ...input,
 });
 
 export type UpdateTodoResponse =

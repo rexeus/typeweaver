@@ -30,7 +30,7 @@ export type IInternalServerErrorResponse = ITypedHttpResponse<
 export const createInternalServerErrorResponse = (
   input: Omit<IInternalServerErrorResponse, "type" | "statusCode">,
 ): IInternalServerErrorResponse => ({
+  ...input,
   type: "InternalServerError",
   statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
-  ...input,
 });

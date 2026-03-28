@@ -55,9 +55,9 @@ export type IGetTodoSuccessResponse = ITypedHttpResponse<
 export const createGetTodoSuccessResponse = (
   input: Omit<IGetTodoSuccessResponse, "type" | "statusCode">,
 ): IGetTodoSuccessResponse => ({
+  ...input,
   type: "GetTodoSuccess",
   statusCode: HttpStatusCode.OK,
-  ...input,
 });
 
 export type GetTodoResponse =

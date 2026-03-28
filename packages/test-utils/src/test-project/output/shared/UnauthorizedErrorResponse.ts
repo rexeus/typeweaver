@@ -30,7 +30,7 @@ export type IUnauthorizedErrorResponse = ITypedHttpResponse<
 export const createUnauthorizedErrorResponse = (
   input: Omit<IUnauthorizedErrorResponse, "type" | "statusCode">,
 ): IUnauthorizedErrorResponse => ({
+  ...input,
   type: "UnauthorizedError",
   statusCode: HttpStatusCode.UNAUTHORIZED,
-  ...input,
 });

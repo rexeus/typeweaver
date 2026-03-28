@@ -55,9 +55,9 @@ export type ICreateSubTodoSuccessResponse = ITypedHttpResponse<
 export const createCreateSubTodoSuccessResponse = (
   input: Omit<ICreateSubTodoSuccessResponse, "type" | "statusCode">,
 ): ICreateSubTodoSuccessResponse => ({
+  ...input,
   type: "CreateSubTodoSuccess",
   statusCode: HttpStatusCode.CREATED,
-  ...input,
 });
 
 export type CreateSubTodoResponse =

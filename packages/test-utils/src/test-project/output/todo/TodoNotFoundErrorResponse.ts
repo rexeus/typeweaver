@@ -33,7 +33,7 @@ export type ITodoNotFoundErrorResponse = ITypedHttpResponse<
 export const createTodoNotFoundErrorResponse = (
   input: Omit<ITodoNotFoundErrorResponse, "type" | "statusCode">,
 ): ITodoNotFoundErrorResponse => ({
+  ...input,
   type: "TodoNotFoundError",
   statusCode: HttpStatusCode.NOT_FOUND,
-  ...input,
 });

@@ -36,7 +36,7 @@ export type ISubTodoNotFoundErrorResponse = ITypedHttpResponse<
 export const createSubTodoNotFoundErrorResponse = (
   input: Omit<ISubTodoNotFoundErrorResponse, "type" | "statusCode">,
 ): ISubTodoNotFoundErrorResponse => ({
+  ...input,
   type: "SubTodoNotFoundError",
   statusCode: HttpStatusCode.NOT_FOUND,
-  ...input,
 });

@@ -30,7 +30,7 @@ export type ITooManyRequestsErrorResponse = ITypedHttpResponse<
 export const createTooManyRequestsErrorResponse = (
   input: Omit<ITooManyRequestsErrorResponse, "type" | "statusCode">,
 ): ITooManyRequestsErrorResponse => ({
+  ...input,
   type: "TooManyRequestsError",
   statusCode: HttpStatusCode.TOO_MANY_REQUESTS,
-  ...input,
 });

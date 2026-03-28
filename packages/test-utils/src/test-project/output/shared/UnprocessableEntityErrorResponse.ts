@@ -30,7 +30,7 @@ export type IUnprocessableEntityErrorResponse = ITypedHttpResponse<
 export const createUnprocessableEntityErrorResponse = (
   input: Omit<IUnprocessableEntityErrorResponse, "type" | "statusCode">,
 ): IUnprocessableEntityErrorResponse => ({
+  ...input,
   type: "UnprocessableEntityError",
   statusCode: HttpStatusCode.UNPROCESSABLE_ENTITY,
-  ...input,
 });

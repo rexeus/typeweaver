@@ -57,9 +57,9 @@ export type IPutTodoSuccessResponse = ITypedHttpResponse<
 export const createPutTodoSuccessResponse = (
   input: Omit<IPutTodoSuccessResponse, "type" | "statusCode">,
 ): IPutTodoSuccessResponse => ({
+  ...input,
   type: "PutTodoSuccess",
   statusCode: HttpStatusCode.OK,
-  ...input,
 });
 
 export type PutTodoResponse =

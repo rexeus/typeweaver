@@ -39,9 +39,9 @@ export type IDeleteTodoSuccessResponse = ITypedHttpResponse<
 export const createDeleteTodoSuccessResponse = (
   input: Omit<IDeleteTodoSuccessResponse, "type" | "statusCode">,
 ): IDeleteTodoSuccessResponse => ({
+  ...input,
   type: "DeleteTodoSuccess",
   statusCode: HttpStatusCode.NO_CONTENT,
-  ...input,
 });
 
 export type DeleteTodoResponse =

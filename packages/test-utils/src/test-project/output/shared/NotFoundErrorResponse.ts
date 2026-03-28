@@ -30,7 +30,7 @@ export type INotFoundErrorResponse = ITypedHttpResponse<
 export const createNotFoundErrorResponse = (
   input: Omit<INotFoundErrorResponse, "type" | "statusCode">,
 ): INotFoundErrorResponse => ({
+  ...input,
   type: "NotFoundError",
   statusCode: HttpStatusCode.NOT_FOUND,
-  ...input,
 });

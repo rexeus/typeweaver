@@ -37,7 +37,7 @@ export type ITodoNotChangeableErrorResponse = ITypedHttpResponse<
 export const createTodoNotChangeableErrorResponse = (
   input: Omit<ITodoNotChangeableErrorResponse, "type" | "statusCode">,
 ): ITodoNotChangeableErrorResponse => ({
+  ...input,
   type: "TodoNotChangeableError",
   statusCode: HttpStatusCode.CONFLICT,
-  ...input,
 });

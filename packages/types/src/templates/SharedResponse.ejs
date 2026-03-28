@@ -26,9 +26,9 @@ HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>,
 
 <% if (sharedResponse.header || sharedResponse.body) { %>
 export const create<%= pascalCaseName %>Response = (input: Omit<I<%= pascalCaseName %>Response, "type" | "statusCode">): I<%= pascalCaseName %>Response => ({
+    ...input,
     type: "<%= pascalCaseName %>",
     statusCode: HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>,
-    ...input,
 });
 <% } else { %>
 export const create<%= pascalCaseName %>Response = (): I<%= pascalCaseName %>Response => ({

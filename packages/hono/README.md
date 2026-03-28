@@ -94,7 +94,7 @@ const userRouter = new UserHono({
   validateResponses: true, // default, validates responses and strips extra fields
   handleRequestValidationErrors: true, // default: returns 400 with issues
   handleResponseValidationErrors: true, // default: returns 500
-  handleHttpResponseErrors: true, // default: returns thrown HttpResponse as-is
+  handleHttpResponseErrors: true, // default: returns thrown typed HTTP responses as-is
   handleUnknownErrors: true, // default: returns 500
 });
 

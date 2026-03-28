@@ -40,7 +40,7 @@ export type ITodoStatusTransitionInvalidErrorResponse = ITypedHttpResponse<
 export const createTodoStatusTransitionInvalidErrorResponse = (
   input: Omit<ITodoStatusTransitionInvalidErrorResponse, "type" | "statusCode">,
 ): ITodoStatusTransitionInvalidErrorResponse => ({
+  ...input,
   type: "TodoStatusTransitionInvalidError",
   statusCode: HttpStatusCode.CONFLICT,
-  ...input,
 });

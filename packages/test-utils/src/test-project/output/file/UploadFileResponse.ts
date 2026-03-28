@@ -45,9 +45,9 @@ export type IUploadFileSuccessResponse = ITypedHttpResponse<
 export const createUploadFileSuccessResponse = (
   input: Omit<IUploadFileSuccessResponse, "type" | "statusCode">,
 ): IUploadFileSuccessResponse => ({
+  ...input,
   type: "UploadFileSuccess",
   statusCode: HttpStatusCode.CREATED,
-  ...input,
 });
 
 export type UploadFileResponse =

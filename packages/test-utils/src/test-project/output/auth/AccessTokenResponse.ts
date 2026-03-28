@@ -42,9 +42,9 @@ export type IAccessTokenSuccessResponse = ITypedHttpResponse<
 export const createAccessTokenSuccessResponse = (
   input: Omit<IAccessTokenSuccessResponse, "type" | "statusCode">,
 ): IAccessTokenSuccessResponse => ({
+  ...input,
   type: "AccessTokenSuccess",
   statusCode: HttpStatusCode.OK,
-  ...input,
 });
 
 export type AccessTokenResponse =

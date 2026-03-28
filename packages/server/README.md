@@ -113,8 +113,8 @@ export const userHandlers: ServerUserApiHandler = {
 };
 ```
 
-> Generated response classes (e.g. `GetUserSuccessResponse`) are also available for when you need
-> runtime type checks or `instanceof` discrimination in error handling.
+> Generated response factory functions (e.g. `createGetUserSuccessResponse`) are also available for
+> constructing typed responses with pre-set `type` and `statusCode` discriminators.
 
 ### Create the app
 
@@ -331,32 +331,46 @@ catches the exception and falls through gracefully to the next handler.
 
 #### Throwing errors in handlers
 
-All generated error response classes (e.g. `NotFoundErrorResponse`, `ValidationErrorResponse`)
-extend `HttpResponse`. Throw them in your handlers — the framework catches them automatically:
+Throw any object matching `ITypedHttpResponse` (i.e. `{ type: string, statusCode: number, ... }`)
+from your handlers — the framework catches it automatically and returns it as the response:
 
 ```ts
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { GetUserSuccessResponse, NotFoundErrorResponse } from "./generated";
 
 async handleGetUserRequest(request) {
   const user = await db.findUser(request.param.userId);
   if (!user) {
-    throw new NotFoundErrorResponse({
+    // Plain objects work — anything with `type` and `statusCode` is recognized
+    throw {
+      type: "NotFoundError",
       statusCode: HttpStatusCode.NOT_FOUND,
       header: { "Content-Type": "application/json" },
       body: { message: "Resource not found", code: "NOT_FOUND_ERROR" },
-    });
+    };
   }
-  return new GetUserSuccessResponse({
+  return {
+    type: "GetUserSuccess",
     statusCode: HttpStatusCode.OK,
     header: { "Content-Type": "application/json" },
     body: user,
-  });
+  };
 }
 ```
 
-When `handleHttpResponseErrors` is `true` (the default), thrown `HttpResponse` instances are
-returned as-is. No extra configuration needed.
+Generated factory functions (e.g. `createNotFoundErrorResponse`) are a convenient shorthand — they
+set `type` and `statusCode` for you so you only pass `header` and `body`:
+
+```ts
+import { createNotFoundErrorResponse } from "./generated";
+
+throw createNotFoundErrorResponse({
+  header: { "Content-Type": "application/json" },
+  body: { message: "Resource not found", code: "NOT_FOUND_ERROR" },
+});
+```
+
+When `handleHttpResponseErrors` is `true` (the default), thrown typed HTTP responses
+(`ITypedHttpResponse`) are returned as-is. No extra configuration needed.
 
 #### Custom error mapping
 

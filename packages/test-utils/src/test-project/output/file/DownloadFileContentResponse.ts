@@ -37,9 +37,9 @@ export type IDownloadFileContentSuccessResponse = ITypedHttpResponse<
 export const createDownloadFileContentSuccessResponse = (
   input: Omit<IDownloadFileContentSuccessResponse, "type" | "statusCode">,
 ): IDownloadFileContentSuccessResponse => ({
+  ...input,
   type: "DownloadFileContentSuccess",
   statusCode: HttpStatusCode.OK,
-  ...input,
 });
 
 export type DownloadFileContentResponse =

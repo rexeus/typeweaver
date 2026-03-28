@@ -56,9 +56,9 @@ export type IQueryTodoSuccessResponse = ITypedHttpResponse<
 export const createQueryTodoSuccessResponse = (
   input: Omit<IQueryTodoSuccessResponse, "type" | "statusCode">,
 ): IQueryTodoSuccessResponse => ({
+  ...input,
   type: "QueryTodoSuccess",
   statusCode: HttpStatusCode.OK,
-  ...input,
 });
 
 export type QueryTodoResponse =

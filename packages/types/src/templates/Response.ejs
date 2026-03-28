@@ -33,9 +33,9 @@ import type { I<%= entityResponse.name %>Response } from "<%= entityResponse.pat
 
 <% if (ownResponse.header || ownResponse.body) { %>
     export const create<%= ownResponse.name %>Response = (input: Omit<I<%= ownResponse.name %>Response, "type" | "statusCode">): I<%= ownResponse.name %>Response => ({
+        ...input,
         type: "<%= ownResponse.name %>",
         statusCode: HttpStatusCode.<%= ownResponse.statusCodeKey %>,
-        ...input,
     });
 <% } else { %>
     export const create<%= ownResponse.name %>Response = (): I<%= ownResponse.name %>Response => ({

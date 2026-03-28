@@ -30,4 +30,5 @@ export const isTypedHttpResponse = (
   value !== null &&
   "type" in value &&
   typeof (value as Record<string, unknown>).type === "string" &&
-  "statusCode" in value;
+  "statusCode" in value &&
+  typeof (value as Record<string, unknown>).statusCode === "number";

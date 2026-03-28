@@ -36,7 +36,7 @@ export type IUnsupportedMediaTypeErrorResponse = ITypedHttpResponse<
 export const createUnsupportedMediaTypeErrorResponse = (
   input: Omit<IUnsupportedMediaTypeErrorResponse, "type" | "statusCode">,
 ): IUnsupportedMediaTypeErrorResponse => ({
+  ...input,
   type: "UnsupportedMediaTypeError",
   statusCode: HttpStatusCode.UNSUPPORTED_MEDIA_TYPE,
-  ...input,
 });
