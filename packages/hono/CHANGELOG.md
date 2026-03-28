@@ -1,5 +1,24 @@
 # @rexeus/typeweaver-hono
 
+## 0.8.0
+
+### Minor Changes
+
+- 424f170: Replace generated response classes with tagged plain objects across the core,
+  types, clients, server, and hono packages.
+  Generated clients now return the full response union instead of throwing typed
+  error responses, and generated server and hono routers now validate responses
+  before sending them, stripping extra fields from valid bodies.
+  This release also renames `handleValidationErrors` to
+  `handleRequestValidationErrors` and adds configurable response validation error
+  handling for generated routers.
+
+### Patch Changes
+
+- Updated dependencies [424f170]
+  - @rexeus/typeweaver-core@0.8.0
+  - @rexeus/typeweaver-gen@0.8.0
+
 ## 0.7.0
 
 ### Minor Changes
