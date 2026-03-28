@@ -12,6 +12,11 @@ import { type AwsHttpApiGatewayRoute, AwsHttpApiGatewayRoutes } from "../lib/aws
 export class FileHttpApiRoutes extends AwsHttpApiGatewayRoutes {
   private routes: AwsHttpApiGatewayRoute[] = [
     {
+      path: "/files",
+      methods: [HttpMethod.POST],
+    },
+
+    {
       path: "/files/{fileId}/content",
       methods: [HttpMethod.GET],
     },
@@ -19,11 +24,6 @@ export class FileHttpApiRoutes extends AwsHttpApiGatewayRoutes {
     {
       path: "/files/{fileId}",
       methods: [HttpMethod.GET],
-    },
-
-    {
-      path: "/files",
-      methods: [HttpMethod.POST],
     },
   ];
 

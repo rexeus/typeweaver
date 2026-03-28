@@ -1,4 +1,13 @@
-import { HttpMethod, RequestValidationError } from "@rexeus/typeweaver-core";
+import {
+  badRequestDefaultError,
+  HttpMethod,
+  internalServerErrorDefaultError,
+  methodNotAllowedDefaultError,
+  notFoundDefaultError,
+  payloadTooLargeDefaultError,
+  RequestValidationError,
+  validationDefaultError,
+} from "@rexeus/typeweaver-core";
 import type {
   IRequestValidator,
   ITypedHttpResponse,
@@ -212,7 +221,12 @@ describe("TypeweaverApp", () => {
 
       const res = await app.fetch(get("/nonexistent"));
 
-      await expectErrorResponse(res, 404, "NOT_FOUND");
+      const data = await expectErrorResponse(
+        res,
+        notFoundDefaultError.statusCode,
+        notFoundDefaultError.code
+      );
+      expect(data.message).toBe(notFoundDefaultError.message);
     });
 
     test("should return 405 for wrong HTTP method on existing path", async () => {
@@ -220,7 +234,12 @@ describe("TypeweaverApp", () => {
 
       const res = await app.fetch(del("/todos"));
 
-      await expectErrorResponse(res, 405, "METHOD_NOT_ALLOWED");
+      const data = await expectErrorResponse(
+        res,
+        methodNotAllowedDefaultError.statusCode,
+        methodNotAllowedDefaultError.code
+      );
+      expect(data.message).toBe(methodNotAllowedDefaultError.message);
       const allow = res.headers.get("allow");
       expect(allow).toContain("GET");
       expect(allow).toContain("POST");
@@ -562,7 +581,11 @@ describe("TypeweaverApp", () => {
 
       const res = await app.fetch(post("/todos", { title: "bad" }));
 
-      const data = await expectErrorResponse(res, 400, "VALIDATION_ERROR");
+      const data = await expectErrorResponse(
+        res,
+        validationDefaultError.statusCode,
+        validationDefaultError.code
+      );
       expect(data.issues).toBeDefined();
       expect(data.issues.header[0]).toEqual({
         message: "bad header",
@@ -583,7 +606,11 @@ describe("TypeweaverApp", () => {
 
       const res = await app.fetch(post("/todos", { title: 123 }));
 
-      const data = await expectErrorResponse(res, 400, "VALIDATION_ERROR");
+      const data = await expectErrorResponse(
+        res,
+        validationDefaultError.statusCode,
+        validationDefaultError.code
+      );
       expect(data.issues.body).toHaveLength(1);
       expect(data.issues.body[0]).toEqual({
         message: "Expected string",
@@ -876,8 +903,12 @@ describe("TypeweaverApp", () => {
         postRaw("/todos", "{ invalid json", "application/json")
       );
 
-      const data = await expectErrorResponse(res, 400, "BAD_REQUEST");
-      expect(data.message).toBe("Malformed request body");
+      const data = await expectErrorResponse(
+        res,
+        badRequestDefaultError.statusCode,
+        badRequestDefaultError.code
+      );
+      expect(data.message).toBe(badRequestDefaultError.message);
     });
 
     test("should NOT call onError for handled BodyParseError", async () => {
@@ -1014,7 +1045,12 @@ describe("TypeweaverApp", () => {
         postRaw("/todos", "x".repeat(100), "text/plain")
       );
 
-      await expectErrorResponse(res, 413, "PAYLOAD_TOO_LARGE");
+      const data = await expectErrorResponse(
+        res,
+        payloadTooLargeDefaultError.statusCode,
+        payloadTooLargeDefaultError.code
+      );
+      expect(data.message).toBe(payloadTooLargeDefaultError.message);
     });
 
     test("should accept normal bodies within the limit", async () => {
@@ -1050,7 +1086,50 @@ describe("TypeweaverApp", () => {
 
       const res = await app.fetch(request);
 
-      await expectErrorResponse(res, 413, "PAYLOAD_TOO_LARGE");
+      const data = await expectErrorResponse(
+        res,
+        payloadTooLargeDefaultError.statusCode,
+        payloadTooLargeDefaultError.code
+      );
+      expect(data.message).toBe(payloadTooLargeDefaultError.message);
+    });
+  });
+
+  describe("Default error descriptors", () => {
+    test("should use core default descriptors for built-in runtime errors", async () => {
+      const app = createApp(undefined, {
+        handleGetTodos: async () => {
+          throw new Error("Unexpected failure");
+        },
+      });
+
+      const notFoundResponse = await app.fetch(get("/missing"));
+      const notFoundData = await expectErrorResponse(
+        notFoundResponse,
+        notFoundDefaultError.statusCode,
+        notFoundDefaultError.code
+      );
+      expect(notFoundData.message).toBe(notFoundDefaultError.message);
+
+      const methodNotAllowedResponse = await app.fetch(del("/todos"));
+      const methodNotAllowedData = await expectErrorResponse(
+        methodNotAllowedResponse,
+        methodNotAllowedDefaultError.statusCode,
+        methodNotAllowedDefaultError.code
+      );
+      expect(methodNotAllowedData.message).toBe(
+        methodNotAllowedDefaultError.message
+      );
+
+      const internalServerErrorResponse = await app.fetch(get("/todos"));
+      const internalServerErrorData = await expectErrorResponse(
+        internalServerErrorResponse,
+        internalServerErrorDefaultError.statusCode,
+        internalServerErrorDefaultError.code
+      );
+      expect(internalServerErrorData.message).toBe(
+        internalServerErrorDefaultError.message
+      );
     });
   });
 

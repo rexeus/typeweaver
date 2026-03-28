@@ -1,6 +1,6 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createUpdateSubTodoSuccessResponse as generatedCreateUpdateSubTodoSuccessResponse } from "../../test-project/output/todo/UpdateSubTodoResponse";
+import { createUpdateSubTodoSuccessResponse as generatedCreateUpdateSubTodoSuccessResponse } from "../../test-project/output/responses/UpdateSubTodoSuccessResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 import type {

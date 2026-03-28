@@ -1,5 +1,5 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createDeleteTodoSuccessResponse as generatedCreateDeleteTodoSuccessResponse } from "../../test-project/output/todo/DeleteTodoResponse";
+import { createDeleteTodoSuccessResponse as generatedCreateDeleteTodoSuccessResponse } from "../../test-project/output/responses/DeleteTodoSuccessResponse";
 import { createResponse } from "../createResponse";
 import { createCreateTodoSuccessResponseHeader } from "./CreateTodoResponseUtils";
 import type {

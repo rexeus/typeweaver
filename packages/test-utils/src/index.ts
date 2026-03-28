@@ -7,7 +7,6 @@ export * from "./captureError";
 // take precedence over generated factories from ./test-project
 export {
   createAccessTokenSuccessResponse,
-  createConflictErrorResponse,
   createCreateSubTodoSuccessResponse,
   createCreateTodoSuccessResponse,
   createDeleteSubTodoSuccessResponse,
@@ -20,7 +19,6 @@ export {
   createInternalServerErrorResponse,
   createListSubTodosSuccessResponse,
   createListTodosSuccessResponse,
-  createNotFoundErrorResponse,
   createOptionsTodoSuccessResponse,
   createPutTodoSuccessResponse,
   createQuerySubTodoSuccessResponse,
@@ -35,7 +33,6 @@ export {
   createTodoStatusTransitionInvalidErrorResponse,
   createTooManyRequestsErrorResponse,
   createUnauthorizedErrorResponse,
-  createUnprocessableEntityErrorResponse,
   createUnsupportedMediaTypeErrorResponse,
   createUpdateSubTodoSuccessResponse,
   createUpdateTodoStatusSuccessResponse,

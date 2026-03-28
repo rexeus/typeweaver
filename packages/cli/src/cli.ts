@@ -18,7 +18,6 @@ const packageJson = JSON.parse(
 type CommandOptions = CommanderOptions & {
   input?: string;
   output?: string;
-  shared?: string;
   config?: string;
   plugins?: string;
   format?: boolean;
@@ -35,10 +34,9 @@ program
 
 program
   .command("generate")
-  .description("Generate types, validators, and clients from API definitions")
-  .option("-i, --input <inputDir>", "path to definition directory")
+  .description("Generate types, validators, and clients from an API spec")
+  .option("-i, --input <inputPath>", "path to spec entrypoint file")
   .option("-o, --output <outputDir>", "output directory for generated files")
-  .option("-s, --shared <path>", "path to shared definitions directory")
   .option("-c, --config <configFile>", "path to configuration file")
   .option("-p, --plugins <plugins>", "comma-separated list of plugins to use")
   .option("--format", "format generated code with oxfmt (default: true)")
@@ -67,14 +65,12 @@ program
     }
 
     // Override with CLI options
-    const inputDir = options.input ?? config.input;
+    const inputPath = options.input ?? config.input;
     const outputDir = options.output ?? config.output;
-    const sharedDir = options.shared ?? config.shared;
-
     // Validate required options
-    if (!inputDir) {
+    if (!inputPath) {
       throw new Error(
-        "No input directory provided. Use --input or specify in config file."
+        "No input spec entrypoint provided. Use --input or specify in config file."
       );
     }
     if (!outputDir) {
@@ -84,23 +80,17 @@ program
     }
 
     // Resolve paths
-    const resolvedInputDir = path.isAbsolute(inputDir)
-      ? inputDir
-      : path.join(execDir, inputDir);
+    const resolvedInputPath = path.isAbsolute(inputPath)
+      ? inputPath
+      : path.join(execDir, inputPath);
     const resolvedOutputDir = path.isAbsolute(outputDir)
       ? outputDir
       : path.join(execDir, outputDir);
-    const resolvedSharedDir = sharedDir
-      ? path.isAbsolute(sharedDir)
-        ? sharedDir
-        : path.join(execDir, sharedDir)
-      : undefined;
 
     // Build final configuration
     const finalConfig: TypeweaverConfig = {
-      input: resolvedInputDir,
+      input: resolvedInputPath,
       output: resolvedOutputDir,
-      shared: resolvedSharedDir,
       format: options.format ?? config.format ?? true,
       clean: options.clean ?? config.clean ?? true,
     };
@@ -117,7 +107,11 @@ program
 
     // Run generation
     const generator = new Generator();
-    return generator.generate(resolvedInputDir, resolvedOutputDir, finalConfig);
+    return generator.generate(
+      resolvedInputPath,
+      resolvedOutputDir,
+      finalConfig
+    );
   });
 
 // Add future commands placeholder

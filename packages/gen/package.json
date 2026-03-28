@@ -55,12 +55,14 @@
   },
   "homepage": "https://github.com/rexeus/typeweaver#readme",
   "peerDependencies": {
-    "@rexeus/typeweaver-core": "workspace:^"
+    "@rexeus/typeweaver-core": "workspace:^",
+    "zod": "^4.3.0"
   },
   "devDependencies": {
-    "@rexeus/typeweaver-core": "workspace:^"
+    "@rexeus/typeweaver-core": "workspace:^",
+    "zod": "^4.3.6"
   },
   "dependencies": {
-    "ejs": "^3.1.10"
+    "ejs": "^5.0.1"
   }
 }

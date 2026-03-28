@@ -1,5 +1,5 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createForbiddenErrorResponse as generatedCreateForbiddenErrorResponse } from "../../test-project/output/shared/ForbiddenErrorResponse";
+import { createForbiddenErrorResponse as generatedCreateForbiddenErrorResponse } from "../../test-project/output/responses/ForbiddenErrorResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import { createResponse } from "../createResponse";

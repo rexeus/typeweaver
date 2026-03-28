@@ -36,20 +36,20 @@
     "cli:bun": "bun run src/entry.ts",
     "typecheck": "tsc --noEmit",
     "format": "oxfmt",
-    "build": "tsdown && mkdir -p ./dist/templates && cp -r ./src/generators/templates/* ./dist/templates/ && cp ../../LICENSE ../../NOTICE ./dist/",
+    "build": "tsdown && mkdir -p ./dist/templates && cp -r ./src/generators/templates/. ./dist/templates/ && cp ../../LICENSE ../../NOTICE ./dist/",
     "prepack": "npm run build",
     "preversion": "npm run build",
-    "test:bundle": "pnpm run build && node dist/entry.mjs generate --output test/outputs/bundle --input ../test-utils/src/test-project/definition --shared ../test-utils/src/test-project/definition/shared --plugins clients,aws-cdk,hono",
-    "test:bundle:deno": "pnpm run build && deno run -A --sloppy-imports dist/entry.mjs generate --output test/outputs/bundle-deno --input ../test-utils/src/test-project/definition --shared ../test-utils/src/test-project/definition/shared --plugins clients,aws-cdk,hono",
-    "test:bundle:bun": "pnpm run build && bun run dist/entry.mjs generate --output test/outputs/bundle-bun --input ../test-utils/src/test-project/definition --shared ../test-utils/src/test-project/definition/shared --plugins clients,aws-cdk,hono",
+    "test:bundle": "pnpm run build && node dist/entry.mjs generate --output test/outputs/bundle --input ../test-utils/src/test-project/spec/index.ts --plugins clients,aws-cdk,hono",
+    "test:bundle:deno": "pnpm run build && deno run -A --sloppy-imports dist/entry.mjs generate --output test/outputs/bundle-deno --input ../test-utils/src/test-project/spec/index.ts --plugins clients,aws-cdk,hono",
+    "test:bundle:bun": "pnpm run build && bun run dist/entry.mjs generate --output test/outputs/bundle-bun --input ../test-utils/src/test-project/spec/index.ts --plugins clients,aws-cdk,hono",
     "test:bundle:all": "pnpm run test:bundle && pnpm run test:bundle:deno && pnpm run test:bundle:bun",
     "test": "vitest --run",
     "test:gen": "pnpm run test:gen:types && pnpm run test:gen:clients && pnpm run test:gen:aws-cdk && pnpm run test:gen:hono && pnpm run test:gen:all",
-    "test:gen:types": "tsx src/cli.ts generate --output test/outputs/types --input ../test-utils/src/test-project/definition --shared ../test-utils/src/test-project/definition/shared",
-    "test:gen:clients": "tsx src/cli.ts generate --output test/outputs/clients --input ../test-utils/src/test-project/definition --plugins clients --shared ../test-utils/src/test-project/definition/shared",
-    "test:gen:aws-cdk": "tsx src/cli.ts generate --output test/outputs/aws-cdk --input ../test-utils/src/test-project/definition --plugins aws-cdk --shared ../test-utils/src/test-project/definition/shared",
-    "test:gen:hono": "tsx src/cli.ts generate --output test/outputs/hono --input ../test-utils/src/test-project/definition --plugins hono --shared ../test-utils/src/test-project/definition/shared",
-    "test:gen:all": "tsx src/cli.ts generate --output test/outputs/all --input ../test-utils/src/test-project/definition --plugins clients,aws-cdk,hono --shared ../test-utils/src/test-project/definition/shared"
+    "test:gen:types": "tsx src/cli.ts generate --output test/outputs/types --input ../test-utils/src/test-project/spec/index.ts",
+    "test:gen:clients": "tsx src/cli.ts generate --output test/outputs/clients --input ../test-utils/src/test-project/spec/index.ts --plugins clients",
+    "test:gen:aws-cdk": "tsx src/cli.ts generate --output test/outputs/aws-cdk --input ../test-utils/src/test-project/spec/index.ts --plugins aws-cdk",
+    "test:gen:hono": "tsx src/cli.ts generate --output test/outputs/hono --input ../test-utils/src/test-project/spec/index.ts --plugins hono",
+    "test:gen:all": "tsx src/cli.ts generate --output test/outputs/all --input ../test-utils/src/test-project/spec/index.ts --plugins clients,aws-cdk,hono"
   },
   "keywords": [
     "api",
@@ -79,9 +79,10 @@
     "@rexeus/typeweaver-hono": "workspace:^",
     "@rexeus/typeweaver-server": "workspace:^",
     "@rexeus/typeweaver-types": "workspace:^",
-    "commander": "^14.0.2",
-    "ejs": "^3.1.10",
-    "oxc-transform": "^0.115.0",
+    "commander": "^14.0.3",
+    "ejs": "^5.0.1",
+    "oxc-transform": "^0.121.0",
+    "tsdown": "^0.21.7",
     "tsx": "^4.21.0"
   },
   "peerDependencies": {
@@ -94,7 +95,7 @@
   },
   "devDependencies": {
     "case": "^1.6.3",
-    "hono": "^4.11.3",
+    "hono": "^4.12.9",
     "zod": "^4.3.6"
   }
 }

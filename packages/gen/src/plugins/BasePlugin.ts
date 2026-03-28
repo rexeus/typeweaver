@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { GetResourcesResult } from "../Resource";
+import type { NormalizedSpec } from "../NormalizedSpec";
 import type {
   GeneratorContext,
   PluginConfig,
@@ -34,9 +34,8 @@ export abstract class BasePlugin implements TypeweaverPlugin {
   /**
    * Default implementation - override in subclasses if needed
    */
-  collectResources(resources: GetResourcesResult): GetResourcesResult {
-    // Default: return resources unchanged
-    return resources;
+  collectResources(normalizedSpec: NormalizedSpec): NormalizedSpec {
+    return normalizedSpec;
   }
 
   /**

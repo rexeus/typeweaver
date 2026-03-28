@@ -29,7 +29,7 @@ npm install @rexeus/typeweaver-core
 ## 💡 How to use
 
 ```bash
-npx typeweaver generate --input ./api/definition --output ./api/generated --plugins hono
+npx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --plugins hono
 ```
 
 More on the CLI in
@@ -66,7 +66,11 @@ export class UserHandlers implements HonoUserApiHandler {
 
     return createGetUserSuccessResponse({
       header: { "Content-Type": "application/json" },
-      body: { id: request.param.userId, name: "Jane", email: "jane@example.com" },
+      body: {
+        id: request.param.userId,
+        name: "Jane",
+        email: "jane@example.com",
+      },
     });
   }
   // Implement other operation handlers: handleCreateUserRequest, ...

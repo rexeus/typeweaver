@@ -61,7 +61,7 @@
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "oxc-transform": "^0.115.0",
+    "oxc-transform": "^0.121.0",
     "test-utils": "file:../test-utils"
   },
   "dependencies": {

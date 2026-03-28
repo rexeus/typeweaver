@@ -2,11 +2,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { BasePlugin } from "@rexeus/typeweaver-gen";
 import type { GeneratorContext } from "@rexeus/typeweaver-gen";
-import { RequestGenerator } from "./RequestGenerator";
-import { RequestValidationGenerator } from "./RequestValidationGenerator";
-import { ResponseGenerator } from "./ResponseGenerator";
-import { ResponseValidationGenerator } from "./ResponseValidationGenerator";
-import { SharedResponseGenerator } from "./SharedResponseGenerator";
+import { generate as generateRequests } from "./requestGenerator";
+import { generate as generateRequestValidators } from "./requestValidationGenerator";
+import { generate as generateResponses } from "./responseGenerator";
+import { generate as generateResponseValidators } from "./responseValidationGenerator";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -18,10 +17,9 @@ export default class TypesPlugin extends BasePlugin {
     const libDir = path.join(moduleDir, "lib");
     this.copyLibFiles(context, libDir, this.name);
 
-    SharedResponseGenerator.generate(context);
-    RequestGenerator.generate(context);
-    RequestValidationGenerator.generate(context);
-    ResponseGenerator.generate(context);
-    ResponseValidationGenerator.generate(context);
+    generateRequests(context);
+    generateRequestValidators(context);
+    generateResponses(context);
+    generateResponseValidators(context);
   }
 }

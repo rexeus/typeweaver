@@ -1,2 +1,2 @@
-export * from "./TsTypeGenerator";
-export * from "./TsTypePrinter";
+export * from "./tsTypeGenerator";
+export * from "./tsTypePrinter";

@@ -4,8 +4,6 @@ import type { HttpStatusCode } from "./HttpStatusCode";
 import type { ResponseValidationError } from "./ResponseValidationError";
 
 export class UnknownResponseError extends Error {
-  public override readonly name = "UnknownResponseError";
-
   public constructor(
     public readonly statusCode: HttpStatusCode,
     public readonly header: IHttpHeader | undefined,
@@ -13,5 +11,6 @@ export class UnknownResponseError extends Error {
     public readonly validationError: ResponseValidationError
   ) {
     super(`Unknown response with status code '${statusCode}'`);
+    this.name = "UnknownResponseError";
   }
 }

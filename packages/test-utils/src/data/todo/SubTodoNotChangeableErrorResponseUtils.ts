@@ -1,6 +1,6 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createSubTodoNotChangeableErrorResponse as generatedCreateSubTodoNotChangeableErrorResponse } from "../../test-project/output/todo/SubTodoNotChangeableErrorResponse";
+import { createSubTodoNotChangeableErrorResponse as generatedCreateSubTodoNotChangeableErrorResponse } from "../../test-project/output/responses/SubTodoNotChangeableErrorResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 import type {

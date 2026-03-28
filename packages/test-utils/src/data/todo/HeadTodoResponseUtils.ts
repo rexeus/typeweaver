@@ -1,4 +1,4 @@
-import { createHeadTodoSuccessResponse as generatedCreateHeadTodoSuccessResponse } from "../../test-project/output/todo/HeadTodoResponse";
+import { createHeadTodoSuccessResponse as generatedCreateHeadTodoSuccessResponse } from "../../test-project/output/responses/HeadTodoSuccessResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 import type {

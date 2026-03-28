@@ -8,37 +8,37 @@
 
 import { ApiClient, type ApiClientProps } from "../lib/clients";
 
+import { UploadFileRequestCommand } from "./UploadFileRequestCommand";
+import type { UploadFileResponse } from "./UploadFileResponse";
+
 import { DownloadFileContentRequestCommand } from "./DownloadFileContentRequestCommand";
 import type { DownloadFileContentResponse } from "./DownloadFileContentResponse";
 
 import { GetFileMetadataRequestCommand } from "./GetFileMetadataRequestCommand";
 import type { GetFileMetadataResponse } from "./GetFileMetadataResponse";
 
-import { UploadFileRequestCommand } from "./UploadFileRequestCommand";
-import type { UploadFileResponse } from "./UploadFileResponse";
-
 export type FileRequestCommands =
+  | UploadFileRequestCommand
   | DownloadFileContentRequestCommand
-  | GetFileMetadataRequestCommand
-  | UploadFileRequestCommand;
+  | GetFileMetadataRequestCommand;
 
 export type FileResponses =
+  | UploadFileResponse
   | DownloadFileContentResponse
-  | GetFileMetadataResponse
-  | UploadFileResponse;
+  | GetFileMetadataResponse;
 
 export class FileClient extends ApiClient {
   public constructor(props: ApiClientProps) {
     super(props);
   }
 
+  public async send(command: UploadFileRequestCommand): Promise<UploadFileResponse>;
+
   public async send(
     command: DownloadFileContentRequestCommand,
   ): Promise<DownloadFileContentResponse>;
 
   public async send(command: GetFileMetadataRequestCommand): Promise<GetFileMetadataResponse>;
-
-  public async send(command: UploadFileRequestCommand): Promise<UploadFileResponse>;
 
   public async send(command: FileRequestCommands): Promise<FileResponses> {
     const response = await this.execute(command);

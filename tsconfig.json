@@ -12,6 +12,7 @@
     /* Target and Output */
     "target": "ESNext",
     "lib": ["ESNext"],
+    "types": ["node"],
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,

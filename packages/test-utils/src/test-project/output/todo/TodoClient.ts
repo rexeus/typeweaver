@@ -20,18 +20,6 @@ import type { DeleteSubTodoResponse } from "./DeleteSubTodoResponse";
 import { DeleteTodoRequestCommand } from "./DeleteTodoRequestCommand";
 import type { DeleteTodoResponse } from "./DeleteTodoResponse";
 
-import { PutTodoRequestCommand } from "./PutTodoRequestCommand";
-import type { PutTodoResponse } from "./PutTodoResponse";
-
-import { UpdateSubTodoRequestCommand } from "./UpdateSubTodoRequestCommand";
-import type { UpdateSubTodoResponse } from "./UpdateSubTodoResponse";
-
-import { UpdateTodoRequestCommand } from "./UpdateTodoRequestCommand";
-import type { UpdateTodoResponse } from "./UpdateTodoResponse";
-
-import { UpdateTodoStatusRequestCommand } from "./UpdateTodoStatusRequestCommand";
-import type { UpdateTodoStatusResponse } from "./UpdateTodoStatusResponse";
-
 import { GetTodoRequestCommand } from "./GetTodoRequestCommand";
 import type { GetTodoResponse } from "./GetTodoResponse";
 
@@ -47,45 +35,57 @@ import type { ListTodosResponse } from "./ListTodosResponse";
 import { OptionsTodoRequestCommand } from "./OptionsTodoRequestCommand";
 import type { OptionsTodoResponse } from "./OptionsTodoResponse";
 
+import { PutTodoRequestCommand } from "./PutTodoRequestCommand";
+import type { PutTodoResponse } from "./PutTodoResponse";
+
 import { QuerySubTodoRequestCommand } from "./QuerySubTodoRequestCommand";
 import type { QuerySubTodoResponse } from "./QuerySubTodoResponse";
 
 import { QueryTodoRequestCommand } from "./QueryTodoRequestCommand";
 import type { QueryTodoResponse } from "./QueryTodoResponse";
 
+import { UpdateSubTodoRequestCommand } from "./UpdateSubTodoRequestCommand";
+import type { UpdateSubTodoResponse } from "./UpdateSubTodoResponse";
+
+import { UpdateTodoRequestCommand } from "./UpdateTodoRequestCommand";
+import type { UpdateTodoResponse } from "./UpdateTodoResponse";
+
+import { UpdateTodoStatusRequestCommand } from "./UpdateTodoStatusRequestCommand";
+import type { UpdateTodoStatusResponse } from "./UpdateTodoStatusResponse";
+
 export type TodoRequestCommands =
   | CreateSubTodoRequestCommand
   | CreateTodoRequestCommand
   | DeleteSubTodoRequestCommand
   | DeleteTodoRequestCommand
-  | PutTodoRequestCommand
-  | UpdateSubTodoRequestCommand
-  | UpdateTodoRequestCommand
-  | UpdateTodoStatusRequestCommand
   | GetTodoRequestCommand
   | HeadTodoRequestCommand
   | ListSubTodosRequestCommand
   | ListTodosRequestCommand
   | OptionsTodoRequestCommand
+  | PutTodoRequestCommand
   | QuerySubTodoRequestCommand
-  | QueryTodoRequestCommand;
+  | QueryTodoRequestCommand
+  | UpdateSubTodoRequestCommand
+  | UpdateTodoRequestCommand
+  | UpdateTodoStatusRequestCommand;
 
 export type TodoResponses =
   | CreateSubTodoResponse
   | CreateTodoResponse
   | DeleteSubTodoResponse
   | DeleteTodoResponse
-  | PutTodoResponse
-  | UpdateSubTodoResponse
-  | UpdateTodoResponse
-  | UpdateTodoStatusResponse
   | GetTodoResponse
   | HeadTodoResponse
   | ListSubTodosResponse
   | ListTodosResponse
   | OptionsTodoResponse
+  | PutTodoResponse
   | QuerySubTodoResponse
-  | QueryTodoResponse;
+  | QueryTodoResponse
+  | UpdateSubTodoResponse
+  | UpdateTodoResponse
+  | UpdateTodoStatusResponse;
 
 export class TodoClient extends ApiClient {
   public constructor(props: ApiClientProps) {
@@ -100,14 +100,6 @@ export class TodoClient extends ApiClient {
 
   public async send(command: DeleteTodoRequestCommand): Promise<DeleteTodoResponse>;
 
-  public async send(command: PutTodoRequestCommand): Promise<PutTodoResponse>;
-
-  public async send(command: UpdateSubTodoRequestCommand): Promise<UpdateSubTodoResponse>;
-
-  public async send(command: UpdateTodoRequestCommand): Promise<UpdateTodoResponse>;
-
-  public async send(command: UpdateTodoStatusRequestCommand): Promise<UpdateTodoStatusResponse>;
-
   public async send(command: GetTodoRequestCommand): Promise<GetTodoResponse>;
 
   public async send(command: HeadTodoRequestCommand): Promise<HeadTodoResponse>;
@@ -118,9 +110,17 @@ export class TodoClient extends ApiClient {
 
   public async send(command: OptionsTodoRequestCommand): Promise<OptionsTodoResponse>;
 
+  public async send(command: PutTodoRequestCommand): Promise<PutTodoResponse>;
+
   public async send(command: QuerySubTodoRequestCommand): Promise<QuerySubTodoResponse>;
 
   public async send(command: QueryTodoRequestCommand): Promise<QueryTodoResponse>;
+
+  public async send(command: UpdateSubTodoRequestCommand): Promise<UpdateSubTodoResponse>;
+
+  public async send(command: UpdateTodoRequestCommand): Promise<UpdateTodoResponse>;
+
+  public async send(command: UpdateTodoStatusRequestCommand): Promise<UpdateTodoStatusResponse>;
 
   public async send(command: TodoRequestCommands): Promise<TodoResponses> {
     const response = await this.execute(command);

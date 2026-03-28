@@ -1,5 +1,5 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createDownloadFileContentSuccessResponse as generatedCreateDownloadFileContentSuccessResponse } from "../../test-project/output/file/DownloadFileContentResponse";
+import { createDownloadFileContentSuccessResponse as generatedCreateDownloadFileContentSuccessResponse } from "../../test-project/output/responses/DownloadFileContentSuccessResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 import type {

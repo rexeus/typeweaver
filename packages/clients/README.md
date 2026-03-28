@@ -28,7 +28,7 @@ npm install @rexeus/typeweaver-core
 ## 💡 How to use
 
 ```bash
-npx typeweaver generate --input ./api/definitions --output ./api/generated --plugins clients
+npx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --plugins clients
 ```
 
 More on the CLI in
@@ -51,16 +51,11 @@ Resource-specific HTTP clients are generated as `<ResourceName>Client.ts` files,
   checking
 - **fetch based** - Zero dependencies, uses the native fetch API. Supports custom fetch functions
   for middleware and testing
-- **Response type mapping** - Each response is automatically mapped to the associated response class
-  and an instance of the class is returned. This ensures that all responses are in the defined
-  format and it is type-safe.
+- **Response type mapping** - Each response is automatically mapped to the associated typed response
+  object. This ensures that all responses are in the defined format and it is type-safe.
 - **Unknown response handling**
   - Unknown properties are automatically removed from the response. If a response exceeds the
     definition, it is not rejected directly.
-  - If a response does not match any known format, it will be rejected by default as an
-    `UnknownResponse` instance.
-  - This unknown response handling can be configured. It is also possible for an `UnknownResponse`
-    instance to be created without being thrown.
 
 **Using generated clients**
 
@@ -70,9 +65,7 @@ import { TodoClient } from "path/to/generated/output";
 const client = new TodoClient({
   fetchFn: customFetch, // Custom fetch function (optional, defaults to globalThis.fetch)
   baseUrl: "https://api.example.com", // Base URL for all requests (required)
-  unknownResponseHandling: "throw", // "throw" | "passthrough" for unknown responses
-  // -> In "passthrough" mode, the received status code determines if the response is thrown
-  isSuccessStatusCode: code => code < 400, // Custom success status code predicate, determines whether the response is successful or should be thrown
+  timeoutMs: 30_000, // Request timeout in milliseconds (optional)
 });
 ```
 
@@ -83,20 +76,12 @@ Request commands are generated as `<OperationId>RequestCommand.ts` files, e.g.
 
 - **Type-safe construction** - Constructor enforces correct request structure
 - **Complete request encapsulation** - Contains method, path, headers, query parameters, and body
-- **Response processing** - Transform raw HTTP responses into typed response objects of the correct
-  response class
+- **Response processing** - Transform raw HTTP responses into typed response objects
 
 ### Basic Usage
 
 ```typescript
-import {
-  TodoClient,
-  CreateTodoRequestCommand,
-  CreateTodoSuccessResponse,
-  OtherSuccessResponse,
-  ValidationErrorResponse,
-  InternalServerErrorResponse,
-} from "path/to/generated/output";
+import { TodoClient, CreateTodoRequestCommand } from "path/to/generated/output";
 
 const client = new TodoClient({
   baseUrl: "https://api.example.com",
@@ -107,30 +92,17 @@ const command = new CreateTodoRequestCommand({
   body: { title: "New Todo", status: "PENDING" },
 });
 
-try {
-  const response = await client.send(command);
+const response = await client.send(command);
 
-  // If there is only one success response,
-  // you can directly access the response like:
-  console.log("Success:", response.body);
-
-  // If there are multiple success responses, you can check the instance like:
-  if (response instanceof CreateTodoSuccessResponse) {
-    console.log("Todo created successfully:", response.body);
-  }
-  if (response instanceof OtherSuccessResponse) {
-    // ... Handle "OtherSuccessResponse"
-  }
-  // ...
-} catch (error) {
-  if (error instanceof ValidationErrorResponse) {
-    // Handle validation errors
-  }
-  if (error instanceof InternalServerErrorResponse) {
-    // Handle internal server errors
-  }
-  // ... Handle other errors
+// Use the type discriminator to narrow the response type
+if (response.type === "CreateTodoSuccess") {
+  console.log("Todo created successfully:", response.body);
+} else if (response.type === "ValidationError") {
+  // Handle validation errors
+} else if (response.type === "InternalServerError") {
+  // Handle internal server errors
 }
+// ... Handle other response types
 ```
 
 ## 📄 License

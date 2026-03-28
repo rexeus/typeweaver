@@ -1,5 +1,5 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createPutTodoSuccessResponse as generatedCreatePutTodoSuccessResponse } from "../../test-project/output/todo/PutTodoResponse";
+import { createPutTodoSuccessResponse as generatedCreatePutTodoSuccessResponse } from "../../test-project/output/responses/PutTodoSuccessResponse";
 import { createResponse } from "../createResponse";
 import { createCreateTodoSuccessResponseHeader } from "./CreateTodoResponseUtils";
 import { createGetTodoSuccessResponseBody } from "./GetTodoResponseUtils";

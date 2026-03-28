@@ -1,6 +1,6 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createUnsupportedMediaTypeErrorResponse as generatedCreateUnsupportedMediaTypeErrorResponse } from "../../test-project/output/shared/UnsupportedMediaTypeErrorResponse";
+import { createUnsupportedMediaTypeErrorResponse as generatedCreateUnsupportedMediaTypeErrorResponse } from "../../test-project/output/responses/UnsupportedMediaTypeErrorResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import { createResponse } from "../createResponse";

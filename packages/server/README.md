@@ -46,7 +46,7 @@ npm install @rexeus/typeweaver-core
 ## 💡 How to use
 
 ```bash
-npx typeweaver generate --input ./api/definition --output ./api/generated --plugins server
+npx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --plugins server
 ```
 
 More on the CLI in

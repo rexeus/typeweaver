@@ -1,5 +1,5 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createInternalServerErrorResponse as generatedCreateInternalServerErrorResponse } from "../../test-project/output/shared/InternalServerErrorResponse";
+import { createInternalServerErrorResponse as generatedCreateInternalServerErrorResponse } from "../../test-project/output/responses/InternalServerErrorResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import { createResponse } from "../createResponse";

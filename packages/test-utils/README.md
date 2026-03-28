@@ -7,11 +7,11 @@ is used exclusively by other packages for integration and unit testing.
 
 ### Test Project (`src/test-project/`)
 
-A complete sample API project with definitions, generated output, and typed schemas:
+A complete sample API project with a spec entrypoint, generated output, and typed schemas:
 
-- **Definitions** — API contracts for `Todo`, `Account`, `Auth` resources with shared error
-  responses, demonstrating all typeweaver features (path params, query params, headers, bodies,
-  error types, nested resources like SubTodos)
+- **Spec authoring** — API contracts under `src/test-project/spec/` for `Todo`, `Account`, `Auth`
+  resources with shared error responses, demonstrating all typeweaver features (path params, query
+  params, headers, bodies, error types, nested resources like SubTodos)
 - **Generated Output** — Pre-generated code from the definitions using all plugins (`clients`,
   `hono`, `server`, `aws-cdk`), providing real generated artifacts for testing
 
@@ -64,7 +64,7 @@ import {
 
 ## Regenerating Test Output
 
-When definitions or plugins change, regenerate the test output:
+When the spec or plugins change, regenerate the test output:
 
 ```bash
 pnpm --filter test-utils run test-project:gen

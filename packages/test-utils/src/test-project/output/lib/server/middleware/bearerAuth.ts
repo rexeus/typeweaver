@@ -1,3 +1,4 @@
+import { createDefaultErrorBody, unauthorizedDefaultError } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { defineMiddleware } from "../TypedMiddleware";
 import type { ServerContext } from "../ServerContext";
@@ -5,7 +6,6 @@ import type { ServerContext } from "../ServerContext";
 export type BearerAuthOptions = {
   readonly verifyToken: (token: string, ctx: ServerContext) => boolean | Promise<boolean>;
   readonly realm?: string;
-  readonly unauthorizedMessage?: string;
   readonly onUnauthorized?: (ctx: ServerContext) => IHttpResponse;
 };
 
@@ -13,12 +13,11 @@ const BEARER_PREFIX = "Bearer ";
 
 export function bearerAuth(options: BearerAuthOptions) {
   const realm = options.realm ?? "Secure Area";
-  const message = options.unauthorizedMessage ?? "Unauthorized";
 
   const defaultResponse: IHttpResponse = {
-    statusCode: 401,
+    statusCode: unauthorizedDefaultError.statusCode,
     header: { "www-authenticate": `Bearer realm="${realm}"` },
-    body: { code: "UNAUTHORIZED", message },
+    body: createDefaultErrorBody(unauthorizedDefaultError),
   };
 
   const deny = (ctx: ServerContext): IHttpResponse =>

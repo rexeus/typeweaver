@@ -1,5 +1,5 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createUnauthorizedErrorResponse as generatedCreateUnauthorizedErrorResponse } from "../../test-project/output/shared/UnauthorizedErrorResponse";
+import { createUnauthorizedErrorResponse as generatedCreateUnauthorizedErrorResponse } from "../../test-project/output/responses/UnauthorizedErrorResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import { createResponse } from "../createResponse";

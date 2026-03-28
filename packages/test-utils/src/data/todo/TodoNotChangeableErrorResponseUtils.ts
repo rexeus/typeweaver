@@ -1,6 +1,6 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createTodoNotChangeableErrorResponse as generatedCreateTodoNotChangeableErrorResponse } from "../../test-project/output/todo/TodoNotChangeableErrorResponse";
+import { createTodoNotChangeableErrorResponse as generatedCreateTodoNotChangeableErrorResponse } from "../../test-project/output/responses/TodoNotChangeableErrorResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import { createResponse } from "../createResponse";
