@@ -3,7 +3,7 @@ import {
   HttpStatusCode,
   ResponseValidationError,
 } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 import {
   createCreateTodoRequest,
   createCreateTodoSuccessResponseBody,
@@ -70,8 +70,8 @@ describe("Response Validation (Hono)", () => {
 
   describe("invalid response handling", () => {
     test("should return 500 when response body has wrong field types", async () => {
-      const invalidResponse: ITaggedHttpResponse = {
-        _tag: "CreateTodoSuccess" as const,
+      const invalidResponse: ITypedHttpResponse = {
+        type: "CreateTodoSuccess" as const,
         statusCode: 201,
         header: { "Content-Type": "application/json" },
         body: {
@@ -96,8 +96,8 @@ describe("Response Validation (Hono)", () => {
     });
 
     test("should return 500 when response has unrecognized status code", async () => {
-      const unknownStatusResponse: ITaggedHttpResponse = {
-        _tag: "UnknownResponse" as const,
+      const unknownStatusResponse: ITypedHttpResponse = {
+        type: "UnknownResponse" as const,
         statusCode: 299 as unknown as HttpStatusCode,
         header: { "Content-Type": "application/json" },
         body: { message: "unexpected" },
@@ -127,8 +127,8 @@ describe("Response Validation (Hono)", () => {
         statusCode: 502,
         body: { code: "CUSTOM_VALIDATION_FAILURE", detail: "body mismatch" },
       }));
-      const invalidResponse: ITaggedHttpResponse = {
-        _tag: "CreateTodoSuccess" as const,
+      const invalidResponse: ITypedHttpResponse = {
+        type: "CreateTodoSuccess" as const,
         statusCode: 201,
         header: { "Content-Type": "application/json" },
         body: { id: 12345 },
@@ -165,11 +165,11 @@ describe("Response Validation (Hono)", () => {
           body: { reason: "schema mismatch" },
         }),
         throwTodoError: {
-          _tag: "CreateTodoSuccess" as const,
+          type: "CreateTodoSuccess" as const,
           statusCode: 201,
           header: { "Content-Type": "application/json" },
           body: { id: 999 },
-        } satisfies ITaggedHttpResponse,
+        } satisfies ITypedHttpResponse,
       });
       const requestData = createCreateTodoRequest();
 
@@ -209,8 +209,8 @@ describe("Response Validation (Hono)", () => {
     });
 
     test("should pass through invalid response types when validation is disabled", async () => {
-      const invalidResponse: ITaggedHttpResponse = {
-        _tag: "CreateTodoSuccess" as const,
+      const invalidResponse: ITypedHttpResponse = {
+        type: "CreateTodoSuccess" as const,
         statusCode: 201,
         header: { "Content-Type": "application/json" },
         body: { id: 12345, title: true },
@@ -233,8 +233,8 @@ describe("Response Validation (Hono)", () => {
     });
   });
 
-  describe("thrown tagged responses", () => {
-    test("should strip extra fields from thrown tagged responses", async () => {
+  describe("thrown typed responses", () => {
+    test("should strip extra fields from thrown typed responses", async () => {
       const thrownResponse = buildCreateTodoSuccess({
         extraField: "thrown-extra",
       });
@@ -255,9 +255,9 @@ describe("Response Validation (Hono)", () => {
       expect(data.id).toBeDefined();
     });
 
-    test("should return 500 for thrown tagged response with invalid body", async () => {
-      const thrownInvalid: ITaggedHttpResponse = {
-        _tag: "CreateTodoSuccess" as const,
+    test("should return 500 for thrown typed response with invalid body", async () => {
+      const thrownInvalid: ITypedHttpResponse = {
+        type: "CreateTodoSuccess" as const,
         statusCode: 201,
         header: { "Content-Type": "application/json" },
         body: { wrongField: "completely wrong structure" },
@@ -281,8 +281,8 @@ describe("Response Validation (Hono)", () => {
 
   describe("handleResponseValidationErrors: false (pass-through mode)", () => {
     test("should return the invalid response as-is when handleResponseValidationErrors is false", async () => {
-      const invalidResponse: ITaggedHttpResponse = {
-        _tag: "CreateTodoSuccess" as const,
+      const invalidResponse: ITypedHttpResponse = {
+        type: "CreateTodoSuccess" as const,
         statusCode: 201,
         header: { "Content-Type": "application/json" },
         body: {
@@ -333,8 +333,8 @@ describe("Response Validation (Hono)", () => {
 
   describe("custom handler error recovery", () => {
     test("should fall back to original response when custom handler throws", async () => {
-      const invalidResponse: ITaggedHttpResponse = {
-        _tag: "CreateTodoSuccess" as const,
+      const invalidResponse: ITypedHttpResponse = {
+        type: "CreateTodoSuccess" as const,
         statusCode: 201,
         header: { "Content-Type": "application/json" },
         body: { id: 12345 },
@@ -359,8 +359,8 @@ describe("Response Validation (Hono)", () => {
     });
 
     test("should fall back to original response when async custom handler rejects", async () => {
-      const invalidResponse: ITaggedHttpResponse = {
-        _tag: "CreateTodoSuccess" as const,
+      const invalidResponse: ITypedHttpResponse = {
+        type: "CreateTodoSuccess" as const,
         statusCode: 201,
         header: { "Content-Type": "application/json" },
         body: { id: 12345 },
@@ -390,11 +390,11 @@ describe("Response Validation (Hono)", () => {
       const app = createTestHono({
         validateResponses: true,
         throwTodoError: {
-          _tag: "CreateTodoSuccess" as const,
+          type: "CreateTodoSuccess" as const,
           statusCode: 201,
           header: { "Content-Type": "application/json" },
           body: undefined,
-        } satisfies ITaggedHttpResponse,
+        } satisfies ITypedHttpResponse,
       });
       const requestData = createCreateTodoRequest();
 
@@ -412,11 +412,11 @@ describe("Response Validation (Hono)", () => {
       const app = createTestHono({
         validateResponses: true,
         throwTodoError: {
-          _tag: "CreateTodoSuccess" as const,
+          type: "CreateTodoSuccess" as const,
           statusCode: 201,
           header: { "Content-Type": "application/json" },
           body: null,
-        } satisfies ITaggedHttpResponse,
+        } satisfies ITypedHttpResponse,
       });
       const requestData = createCreateTodoRequest();
 
@@ -434,11 +434,11 @@ describe("Response Validation (Hono)", () => {
       const app = createTestHono({
         validateResponses: true,
         throwTodoError: {
-          _tag: "CreateTodoSuccess" as const,
+          type: "CreateTodoSuccess" as const,
           statusCode: 201,
           header: { "Content-Type": "application/json" },
           body: {},
-        } satisfies ITaggedHttpResponse,
+        } satisfies ITypedHttpResponse,
       });
       const requestData = createCreateTodoRequest();
 

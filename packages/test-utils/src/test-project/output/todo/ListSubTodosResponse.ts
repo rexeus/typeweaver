@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 
@@ -48,7 +48,7 @@ export type IListSubTodosSuccessResponseBody = {
   nextToken?: string | undefined;
 };
 
-export type IListSubTodosSuccessResponse = ITaggedHttpResponse<
+export type IListSubTodosSuccessResponse = ITypedHttpResponse<
   "ListSubTodosSuccess",
   IListSubTodosSuccessResponseHeader,
   IListSubTodosSuccessResponseBody
@@ -59,9 +59,9 @@ export type IListSubTodosSuccessResponse = ITaggedHttpResponse<
 };
 
 export const createListSubTodosSuccessResponse = (
-  input: Omit<IListSubTodosSuccessResponse, "_tag" | "statusCode">,
+  input: Omit<IListSubTodosSuccessResponse, "type" | "statusCode">,
 ): IListSubTodosSuccessResponse => ({
-  _tag: "ListSubTodosSuccess",
+  type: "ListSubTodosSuccess",
   statusCode: HttpStatusCode.OK,
   ...input,
 });

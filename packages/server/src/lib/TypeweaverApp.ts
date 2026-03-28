@@ -6,7 +6,7 @@
  */
 
 import {
-  isTaggedHttpResponse,
+  isTypedHttpResponse,
   RequestValidationError,
 } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
@@ -232,7 +232,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
         return await this.validateResponse(match.route, response, routeCtx);
       } catch (error) {
         if (
-          isTaggedHttpResponse(error) &&
+          isTypedHttpResponse(error) &&
           match.route.routerConfig.validateResponses
         ) {
           return await this.validateResponse(match.route, error, routeCtx);
@@ -366,7 +366,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
       }
     }
 
-    if (isTaggedHttpResponse(error)) {
+    if (isTypedHttpResponse(error)) {
       const handler = this.resolveErrorHandler<HttpResponseErrorHandler>(
         config.handleHttpResponseErrors,
         TypeweaverApp.defaultHttpResponseHandler

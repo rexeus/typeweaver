@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 export type IUnprocessableEntityErrorResponseHeader = {
   "Content-Type": "application/json";
@@ -20,7 +20,7 @@ export type IUnprocessableEntityErrorResponseBody = {
   code: "UNPROCESSABLE_ENTITY_ERROR";
 };
 
-export type IUnprocessableEntityErrorResponse = ITaggedHttpResponse<
+export type IUnprocessableEntityErrorResponse = ITypedHttpResponse<
   "UnprocessableEntityError",
   IUnprocessableEntityErrorResponseHeader,
   IUnprocessableEntityErrorResponseBody
@@ -31,9 +31,9 @@ export type IUnprocessableEntityErrorResponse = ITaggedHttpResponse<
 };
 
 export const createUnprocessableEntityErrorResponse = (
-  input: Omit<IUnprocessableEntityErrorResponse, "_tag" | "statusCode">,
+  input: Omit<IUnprocessableEntityErrorResponse, "type" | "statusCode">,
 ): IUnprocessableEntityErrorResponse => ({
-  _tag: "UnprocessableEntityError",
+  type: "UnprocessableEntityError",
   statusCode: HttpStatusCode.UNPROCESSABLE_ENTITY,
   ...input,
 });

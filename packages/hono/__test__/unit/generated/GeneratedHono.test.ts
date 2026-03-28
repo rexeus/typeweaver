@@ -1,6 +1,6 @@
 import type {
   IHttpRequest,
-  ITaggedHttpResponse,
+  ITypedHttpResponse,
 } from "@rexeus/typeweaver-core";
 import {
   createCreateTodoRequest,
@@ -344,7 +344,7 @@ describe("Generated Hono Router", () => {
       const app = createTestHono({
         validateResponses: false,
         throwTodoError: {
-          _tag: "CustomStringResponse" as const,
+          type: "CustomStringResponse" as const,
           statusCode: 200,
           header: { "Content-Type": "text/plain" },
           body: customStringResponse,
@@ -499,7 +499,7 @@ describe("Generated Hono Router", () => {
     test("should handle HTTP response errors with default handler", async () => {
       // Arrange
       const errorResponse = {
-        _tag: "TodoNotFoundError" as const,
+        type: "TodoNotFoundError" as const,
         statusCode: 404,
         header: {},
         body: {
@@ -527,7 +527,7 @@ describe("Generated Hono Router", () => {
     test("should handle HTTP response errors with custom handler", async () => {
       // Arrange
       const errorResponse = {
-        _tag: "TodoNotFoundError" as const,
+        type: "TodoNotFoundError" as const,
         statusCode: 404,
         header: {},
         body: {
@@ -538,7 +538,7 @@ describe("Generated Hono Router", () => {
       const app = createTestHono({
         validateResponses: false,
         throwTodoError: errorResponse,
-        handleHttpResponseErrors: (error: ITaggedHttpResponse) => ({
+        handleHttpResponseErrors: (error: ITypedHttpResponse) => ({
           statusCode: 404,
           header: {},
           body: {
@@ -692,7 +692,7 @@ describe("Generated Hono Router", () => {
     test("should handle HTTP response error handler failures with unknown handlers", async () => {
       // Arrange
       const originalError = {
-        _tag: "TodoNotFoundError" as const,
+        type: "TodoNotFoundError" as const,
         statusCode: 404,
         header: {},
         body: { code: "TODO_NOT_FOUND", message: "Todo not found" },

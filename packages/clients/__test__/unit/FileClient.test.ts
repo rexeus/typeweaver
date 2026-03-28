@@ -33,8 +33,8 @@ describe("FileClient", () => {
 
     const result = await client.send(command);
 
-    expect(result._tag).toBe("UploadFileSuccess");
-    if (result._tag !== "UploadFileSuccess") return;
+    expect(result.type).toBe("UploadFileSuccess");
+    if (result.type !== "UploadFileSuccess") return;
     expect(result.body.id).toBe(metadata.id);
     expect(result.body.name).toBe("report.pdf");
     expect(result.body.mimeType).toBe("application/pdf");
@@ -54,8 +54,8 @@ describe("FileClient", () => {
 
     const result = await client.send(command);
 
-    expect(result._tag).toBe("DownloadFileContentSuccess");
-    if (result._tag !== "DownloadFileContentSuccess") return;
+    expect(result.type).toBe("DownloadFileContentSuccess");
+    if (result.type !== "DownloadFileContentSuccess") return;
     expect(result.body).toBeInstanceOf(ArrayBuffer);
     const bytes = new Uint8Array(result.body as ArrayBuffer);
     expect(Array.from(bytes)).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]);
@@ -77,8 +77,8 @@ describe("FileClient", () => {
 
     const result = await client.send(command);
 
-    expect(result._tag).toBe("GetFileMetadataSuccess");
-    if (result._tag !== "GetFileMetadataSuccess") return;
+    expect(result.type).toBe("GetFileMetadataSuccess");
+    if (result.type !== "GetFileMetadataSuccess") return;
     expect(result.body.id).toBe(metadata.id);
     expect(result.body.name).toBe("notes.txt");
     expect(result.body.mimeType).toBe("text/plain");

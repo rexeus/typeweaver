@@ -3,7 +3,7 @@ import type {
   IHttpRequest,
   IRequestValidator,
   IResponseValidator,
-  ITaggedHttpResponse,
+  ITypedHttpResponse,
 } from "@rexeus/typeweaver-core";
 import { createCreateTodoSuccessResponseBody } from "test-utils";
 import { expect } from "vitest";
@@ -137,15 +137,15 @@ export async function expectJson(res: Response, status: number): Promise<any> {
 }
 
 /**
- * Builds a tagged CreateTodoSuccess response with optional body overrides.
+ * Builds a typed CreateTodoSuccess response with optional body overrides.
  * Merges overrides with a schema-conformant factory body so all required fields are present.
  */
 export function buildCreateTodoSuccess(
   bodyOverrides: Record<string, unknown> = {}
-): ITaggedHttpResponse {
+): ITypedHttpResponse {
   const base = createCreateTodoSuccessResponseBody();
   return {
-    _tag: "CreateTodoSuccess" as const,
+    type: "CreateTodoSuccess" as const,
     statusCode: 201,
     header: { "Content-Type": "application/json" },
     body: { ...base, ...bodyOverrides },

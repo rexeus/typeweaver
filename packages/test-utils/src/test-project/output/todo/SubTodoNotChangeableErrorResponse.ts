@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 export type ISubTodoNotChangeableErrorResponseHeader = {
   "Content-Type": "application/json";
@@ -30,7 +30,7 @@ export type ISubTodoNotChangeableErrorResponseBody = {
   };
 };
 
-export type ISubTodoNotChangeableErrorResponse = ITaggedHttpResponse<
+export type ISubTodoNotChangeableErrorResponse = ITypedHttpResponse<
   "SubTodoNotChangeableError",
   ISubTodoNotChangeableErrorResponseHeader,
   ISubTodoNotChangeableErrorResponseBody
@@ -41,9 +41,9 @@ export type ISubTodoNotChangeableErrorResponse = ITaggedHttpResponse<
 };
 
 export const createSubTodoNotChangeableErrorResponse = (
-  input: Omit<ISubTodoNotChangeableErrorResponse, "_tag" | "statusCode">,
+  input: Omit<ISubTodoNotChangeableErrorResponse, "type" | "statusCode">,
 ): ISubTodoNotChangeableErrorResponse => ({
-  _tag: "SubTodoNotChangeableError",
+  type: "SubTodoNotChangeableError",
   statusCode: HttpStatusCode.CONFLICT,
   ...input,
 });

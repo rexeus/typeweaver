@@ -1,4 +1,4 @@
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 import {
   createAccessTokenSuccessResponse,
   createRefreshTokenSuccessResponse,
@@ -13,7 +13,7 @@ import type { ServerAuthApiHandler } from "../../test-project/output/auth/AuthRo
 
 export class ServerAuthHandlers implements ServerAuthApiHandler {
   public constructor(
-    private readonly throwError?: Error | ITaggedHttpResponse
+    private readonly throwError?: Error | ITypedHttpResponse
   ) {
     //
   }

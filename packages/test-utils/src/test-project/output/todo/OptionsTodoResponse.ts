@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 
@@ -31,7 +31,7 @@ export type IOptionsTodoSuccessResponseHeader = {
   "Access-Control-Max-Age"?: string | undefined;
 };
 
-export type IOptionsTodoSuccessResponse = ITaggedHttpResponse<
+export type IOptionsTodoSuccessResponse = ITypedHttpResponse<
   "OptionsTodoSuccess",
   IOptionsTodoSuccessResponseHeader,
   undefined
@@ -41,9 +41,9 @@ export type IOptionsTodoSuccessResponse = ITaggedHttpResponse<
 };
 
 export const createOptionsTodoSuccessResponse = (
-  input: Omit<IOptionsTodoSuccessResponse, "_tag" | "statusCode">,
+  input: Omit<IOptionsTodoSuccessResponse, "type" | "statusCode">,
 ): IOptionsTodoSuccessResponse => ({
-  _tag: "OptionsTodoSuccess",
+  type: "OptionsTodoSuccess",
   statusCode: HttpStatusCode.OK,
   ...input,
 });

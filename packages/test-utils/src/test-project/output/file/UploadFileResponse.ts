@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 
@@ -35,7 +35,7 @@ export type IUploadFileSuccessResponseBody = {
   createdAt: string;
 };
 
-export type IUploadFileSuccessResponse = ITaggedHttpResponse<
+export type IUploadFileSuccessResponse = ITypedHttpResponse<
   "UploadFileSuccess",
   IUploadFileSuccessResponseHeader,
   IUploadFileSuccessResponseBody
@@ -46,9 +46,9 @@ export type IUploadFileSuccessResponse = ITaggedHttpResponse<
 };
 
 export const createUploadFileSuccessResponse = (
-  input: Omit<IUploadFileSuccessResponse, "_tag" | "statusCode">,
+  input: Omit<IUploadFileSuccessResponse, "type" | "statusCode">,
 ): IUploadFileSuccessResponse => ({
-  _tag: "UploadFileSuccess",
+  type: "UploadFileSuccess",
   statusCode: HttpStatusCode.CREATED,
   ...input,
 });

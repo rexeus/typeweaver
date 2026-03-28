@@ -1,6 +1,6 @@
 import type {
   IHttpResponse,
-  ITaggedHttpResponse,
+  ITypedHttpResponse,
 } from "@rexeus/typeweaver-core";
 import { serve } from "@hono/node-server";
 import getPort, { portNumbers } from "get-port";
@@ -22,13 +22,13 @@ import type { ServerType } from "@hono/node-server";
  */
 export type TestServerOptions = {
   /** Error to throw from todo handlers (simulates handler failures). */
-  readonly throwTodoError?: Error | ITaggedHttpResponse;
+  readonly throwTodoError?: Error | ITypedHttpResponse;
   /** Error to throw from auth handlers. */
-  readonly throwAuthError?: Error | ITaggedHttpResponse;
+  readonly throwAuthError?: Error | ITypedHttpResponse;
   /** Error to throw from account handlers. */
-  readonly throwAccountError?: Error | ITaggedHttpResponse;
+  readonly throwAccountError?: Error | ITypedHttpResponse;
   /** Error to throw from specimen handlers. */
-  readonly throwSpecimenError?: Error | ITaggedHttpResponse;
+  readonly throwSpecimenError?: Error | ITypedHttpResponse;
   /** Custom response to return for all requests (bypasses handlers). */
   readonly customResponses?: IHttpResponse;
 } & Omit<TypeweaverHonoOptions<unknown>, "requestHandlers">;

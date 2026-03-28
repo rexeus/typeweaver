@@ -16,7 +16,7 @@ import { createData } from "./createData";
  * @returns A fully populated response object of type `TResponse`
  */
 export function createResponse<TResponse extends IHttpResponse, TBody, THeader>(
-  defaultResponse: Omit<TResponse, "_tag" | "body" | "header">,
+  defaultResponse: Omit<TResponse, "type" | "body" | "header">,
   creators: {
     body?: (input?: Partial<TBody>) => TBody;
     header?: (input?: Partial<THeader>) => THeader;

@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 
@@ -36,7 +36,7 @@ export type IRegisterAccountSuccessResponseBody = {
   modifiedBy: string;
 };
 
-export type IRegisterAccountSuccessResponse = ITaggedHttpResponse<
+export type IRegisterAccountSuccessResponse = ITypedHttpResponse<
   "RegisterAccountSuccess",
   IRegisterAccountSuccessResponseHeader,
   IRegisterAccountSuccessResponseBody
@@ -47,9 +47,9 @@ export type IRegisterAccountSuccessResponse = ITaggedHttpResponse<
 };
 
 export const createRegisterAccountSuccessResponse = (
-  input: Omit<IRegisterAccountSuccessResponse, "_tag" | "statusCode">,
+  input: Omit<IRegisterAccountSuccessResponse, "type" | "statusCode">,
 ): IRegisterAccountSuccessResponse => ({
-  _tag: "RegisterAccountSuccess",
+  type: "RegisterAccountSuccess",
   statusCode: HttpStatusCode.CREATED,
   ...input,
 });

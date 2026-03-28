@@ -193,7 +193,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "UpdateSubTodoSuccess" as const,
+        type: "UpdateSubTodoSuccess" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,
@@ -222,7 +222,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "SubTodoNotFoundError" as const,
+        type: "SubTodoNotFoundError" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,
@@ -251,7 +251,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "SubTodoNotChangeableError" as const,
+        type: "SubTodoNotChangeableError" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,
@@ -280,7 +280,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "SubTodoStatusTransitionInvalidError" as const,
+        type: "SubTodoStatusTransitionInvalidError" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,
@@ -309,7 +309,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "TodoNotFoundError" as const,
+        type: "TodoNotFoundError" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,
@@ -338,7 +338,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "ForbiddenError" as const,
+        type: "ForbiddenError" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,
@@ -367,7 +367,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "InternalServerError" as const,
+        type: "InternalServerError" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,
@@ -396,7 +396,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "TooManyRequestsError" as const,
+        type: "TooManyRequestsError" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,
@@ -425,7 +425,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "UnauthorizedError" as const,
+        type: "UnauthorizedError" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,
@@ -454,7 +454,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "UnsupportedMediaTypeError" as const,
+        type: "UnsupportedMediaTypeError" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,
@@ -483,7 +483,7 @@ export class UpdateSubTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "ValidationError" as const,
+        type: "ValidationError" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,

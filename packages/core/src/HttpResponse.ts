@@ -11,19 +11,19 @@ export type IHttpResponse<
   readonly body?: Body;
 };
 
-export type ITaggedHttpResponse<
-  Tag extends string = string,
+export type ITypedHttpResponse<
+  TypeName extends string = string,
   Header extends IHttpHeader = IHttpHeader,
   Body extends IHttpBody = IHttpBody,
 > = IHttpResponse<Header, Body> & {
-  readonly _tag: Tag;
+  readonly type: TypeName;
 };
 
-export const isTaggedHttpResponse = (
+export const isTypedHttpResponse = (
   value: unknown
-): value is ITaggedHttpResponse =>
+): value is ITypedHttpResponse =>
   typeof value === "object" &&
   value !== null &&
-  "_tag" in value &&
-  typeof (value as Record<string, unknown>)._tag === "string" &&
+  "type" in value &&
+  typeof (value as Record<string, unknown>).type === "string" &&
   "statusCode" in value;

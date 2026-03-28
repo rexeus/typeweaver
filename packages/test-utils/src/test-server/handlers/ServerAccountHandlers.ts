@@ -1,11 +1,11 @@
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 import { createRegisterAccountSuccessResponse } from "../../data";
 import type { IRegisterAccountRequest, RegisterAccountResponse } from "../..";
 import type { ServerAccountApiHandler } from "../../test-project/output/account/AccountRouter";
 
 export class ServerAccountHandlers implements ServerAccountApiHandler {
   public constructor(
-    private readonly throwError?: Error | ITaggedHttpResponse
+    private readonly throwError?: Error | ITypedHttpResponse
   ) {
     //
   }

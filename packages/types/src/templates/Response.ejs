@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "<%= coreDir %>";
-import type { ITaggedHttpResponse } from "<%= coreDir %>";
+import type { ITypedHttpResponse } from "<%= coreDir %>";
 <% for (const shared of sharedResponses) { %>
 import type { I<%= shared.name %>Response } from "<%= shared.path %>";
 <% } %>
@@ -24,7 +24,7 @@ import type { I<%= entityResponse.name %>Response } from "<%= entityResponse.pat
         export type I<%= ownResponse.name %>ResponseBody = <%- ownResponse.body %>;
     <% } %>
 
-    export type I<%= ownResponse.name %>Response = ITaggedHttpResponse<
+    export type I<%= ownResponse.name %>Response = ITypedHttpResponse<
             "<%= ownResponse.name %>",
             <%= ownResponse.header ? `I${ownResponse.name}ResponseHeader` : 'undefined' %>,
             <%= ownResponse.body ? `I${ownResponse.name}ResponseBody` : 'undefined' %>
@@ -35,14 +35,14 @@ import type { I<%= entityResponse.name %>Response } from "<%= entityResponse.pat
             };
 
 <% if (ownResponse.header || ownResponse.body) { %>
-    export const create<%= ownResponse.name %>Response = (input: Omit<I<%= ownResponse.name %>Response, "_tag" | "statusCode">): I<%= ownResponse.name %>Response => ({
-        _tag: "<%= ownResponse.name %>",
+    export const create<%= ownResponse.name %>Response = (input: Omit<I<%= ownResponse.name %>Response, "type" | "statusCode">): I<%= ownResponse.name %>Response => ({
+        type: "<%= ownResponse.name %>",
         statusCode: HttpStatusCode.<%= ownResponse.statusCodeKey %>,
         ...input,
     });
 <% } else { %>
     export const create<%= ownResponse.name %>Response = (): I<%= ownResponse.name %>Response => ({
-        _tag: "<%= ownResponse.name %>",
+        type: "<%= ownResponse.name %>",
         statusCode: HttpStatusCode.<%= ownResponse.statusCodeKey %>,
     });
 <% } %>

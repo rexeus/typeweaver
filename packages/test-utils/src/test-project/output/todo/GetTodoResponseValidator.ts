@@ -160,7 +160,7 @@ export class GetTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "GetTodoSuccess" as const,
+        type: "GetTodoSuccess" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,
@@ -189,7 +189,7 @@ export class GetTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "TodoNotFoundError" as const,
+        type: "TodoNotFoundError" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,
@@ -218,7 +218,7 @@ export class GetTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "ForbiddenError" as const,
+        type: "ForbiddenError" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,
@@ -247,7 +247,7 @@ export class GetTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "InternalServerError" as const,
+        type: "InternalServerError" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,
@@ -276,7 +276,7 @@ export class GetTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "TooManyRequestsError" as const,
+        type: "TooManyRequestsError" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,
@@ -305,7 +305,7 @@ export class GetTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "UnauthorizedError" as const,
+        type: "UnauthorizedError" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,
@@ -334,7 +334,7 @@ export class GetTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "UnsupportedMediaTypeError" as const,
+        type: "UnsupportedMediaTypeError" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,
@@ -363,7 +363,7 @@ export class GetTodoResponseValidator extends ResponseValidator {
     return {
       isValid: true,
       data: {
-        _tag: "ValidationError" as const,
+        type: "ValidationError" as const,
         statusCode: result.data.statusCode,
         header: result.data.header,
         body: result.data.body,

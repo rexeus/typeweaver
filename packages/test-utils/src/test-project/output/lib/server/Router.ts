@@ -10,7 +10,7 @@ import type {
   IHttpResponse,
   IRequestValidator,
   IResponseValidator,
-  ITaggedHttpResponse,
+  ITypedHttpResponse,
   RequestValidationError,
   ResponseValidationError,
 } from "@rexeus/typeweaver-core";
@@ -54,10 +54,10 @@ export type RouterErrorConfig = {
 
 /**
  * Handles HTTP response errors thrown by request handlers.
- * The error parameter is a tagged HTTP response object (thrown via `throw { _tag, statusCode, ... }`).
+ * The error parameter is a typed HTTP response object (thrown via `throw { type, statusCode, ... }`).
  */
 export type HttpResponseErrorHandler = (
-  error: ITaggedHttpResponse,
+  error: ITypedHttpResponse,
   ctx: ServerContext,
 ) => Promise<IHttpResponse> | IHttpResponse;
 

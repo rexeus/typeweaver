@@ -6,7 +6,7 @@
  */
 
 import {
-  isTaggedHttpResponse,
+  isTypedHttpResponse,
   RequestValidationError,
 } from "@rexeus/typeweaver-core";
 import type {
@@ -14,7 +14,7 @@ import type {
   IHttpResponse,
   IRequestValidator,
   IResponseValidator,
-  ITaggedHttpResponse,
+  ITypedHttpResponse,
   ResponseValidationError,
 } from "@rexeus/typeweaver-core";
 import { Hono } from "hono";
@@ -31,7 +31,7 @@ import type { BlankEnv, BlankSchema, Env, Schema } from "hono/types";
  * @returns The HTTP response to send to the client
  */
 export type HonoHttpResponseErrorHandler = (
-  error: ITaggedHttpResponse,
+  error: ITypedHttpResponse,
   context: Context
 ) => Promise<IHttpResponse> | IHttpResponse;
 
@@ -208,7 +208,7 @@ export abstract class TypeweaverHono<
       },
     }),
 
-    httpResponse: (error: ITaggedHttpResponse): IHttpResponse => error,
+    httpResponse: (error: ITypedHttpResponse): IHttpResponse => error,
 
     unknown: (): IHttpResponse => ({
       statusCode: 500,
@@ -347,7 +347,7 @@ export abstract class TypeweaverHono<
     }
 
     // Handle HTTP response errors
-    if (isTaggedHttpResponse(error) && this.config.errorHandlers.httpResponse) {
+    if (isTypedHttpResponse(error) && this.config.errorHandlers.httpResponse) {
       const response = await this.safelyExecuteHandler(() =>
         this.config.errorHandlers.httpResponse!(error, context)
       );
@@ -400,7 +400,7 @@ export abstract class TypeweaverHono<
         await this.validateResponse(responseValidator, httpResponse, context)
       );
     } catch (error) {
-      if (isTaggedHttpResponse(error) && this.config.validateResponses) {
+      if (isTypedHttpResponse(error) && this.config.validateResponses) {
         const validated = await this.validateResponse(
           responseValidator,
           error,

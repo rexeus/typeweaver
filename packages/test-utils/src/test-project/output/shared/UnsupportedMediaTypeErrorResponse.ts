@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 export type IUnsupportedMediaTypeErrorResponseHeader = {
   "Content-Type": "application/json";
@@ -26,7 +26,7 @@ export type IUnsupportedMediaTypeErrorResponseBody = {
   };
 };
 
-export type IUnsupportedMediaTypeErrorResponse = ITaggedHttpResponse<
+export type IUnsupportedMediaTypeErrorResponse = ITypedHttpResponse<
   "UnsupportedMediaTypeError",
   IUnsupportedMediaTypeErrorResponseHeader,
   IUnsupportedMediaTypeErrorResponseBody
@@ -37,9 +37,9 @@ export type IUnsupportedMediaTypeErrorResponse = ITaggedHttpResponse<
 };
 
 export const createUnsupportedMediaTypeErrorResponse = (
-  input: Omit<IUnsupportedMediaTypeErrorResponse, "_tag" | "statusCode">,
+  input: Omit<IUnsupportedMediaTypeErrorResponse, "type" | "statusCode">,
 ): IUnsupportedMediaTypeErrorResponse => ({
-  _tag: "UnsupportedMediaTypeError",
+  type: "UnsupportedMediaTypeError",
   statusCode: HttpStatusCode.UNSUPPORTED_MEDIA_TYPE,
   ...input,
 });

@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 export type IConflictErrorResponseHeader = {
   "Content-Type": "application/json";
@@ -20,7 +20,7 @@ export type IConflictErrorResponseBody = {
   code: "CONFLICT_ERROR";
 };
 
-export type IConflictErrorResponse = ITaggedHttpResponse<
+export type IConflictErrorResponse = ITypedHttpResponse<
   "ConflictError",
   IConflictErrorResponseHeader,
   IConflictErrorResponseBody
@@ -31,9 +31,9 @@ export type IConflictErrorResponse = ITaggedHttpResponse<
 };
 
 export const createConflictErrorResponse = (
-  input: Omit<IConflictErrorResponse, "_tag" | "statusCode">,
+  input: Omit<IConflictErrorResponse, "type" | "statusCode">,
 ): IConflictErrorResponse => ({
-  _tag: "ConflictError",
+  type: "ConflictError",
   statusCode: HttpStatusCode.CONFLICT,
   ...input,
 });

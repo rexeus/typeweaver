@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 export type IInternalServerErrorResponseHeader = {
   "Content-Type": "application/json";
@@ -20,7 +20,7 @@ export type IInternalServerErrorResponseBody = {
   code: "INTERNAL_SERVER_ERROR";
 };
 
-export type IInternalServerErrorResponse = ITaggedHttpResponse<
+export type IInternalServerErrorResponse = ITypedHttpResponse<
   "InternalServerError",
   IInternalServerErrorResponseHeader,
   IInternalServerErrorResponseBody
@@ -31,9 +31,9 @@ export type IInternalServerErrorResponse = ITaggedHttpResponse<
 };
 
 export const createInternalServerErrorResponse = (
-  input: Omit<IInternalServerErrorResponse, "_tag" | "statusCode">,
+  input: Omit<IInternalServerErrorResponse, "type" | "statusCode">,
 ): IInternalServerErrorResponse => ({
-  _tag: "InternalServerError",
+  type: "InternalServerError",
   statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
   ...input,
 });

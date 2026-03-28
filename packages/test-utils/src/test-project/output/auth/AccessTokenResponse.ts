@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 
@@ -32,7 +32,7 @@ export type IAccessTokenSuccessResponseBody = {
   refreshToken: string;
 };
 
-export type IAccessTokenSuccessResponse = ITaggedHttpResponse<
+export type IAccessTokenSuccessResponse = ITypedHttpResponse<
   "AccessTokenSuccess",
   IAccessTokenSuccessResponseHeader,
   IAccessTokenSuccessResponseBody
@@ -43,9 +43,9 @@ export type IAccessTokenSuccessResponse = ITaggedHttpResponse<
 };
 
 export const createAccessTokenSuccessResponse = (
-  input: Omit<IAccessTokenSuccessResponse, "_tag" | "statusCode">,
+  input: Omit<IAccessTokenSuccessResponse, "type" | "statusCode">,
 ): IAccessTokenSuccessResponse => ({
-  _tag: "AccessTokenSuccess",
+  type: "AccessTokenSuccess",
   statusCode: HttpStatusCode.OK,
   ...input,
 });

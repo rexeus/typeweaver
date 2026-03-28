@@ -88,9 +88,9 @@ export class <%= pascalCaseOperationId %>ResponseValidator extends ResponseValid
         }
 
 <% if (response.hasHeader || response.hasBody) { %>
-        return { isValid: true, data: { _tag: "<%= response.name %>" as const, statusCode: result.data.statusCode, header: result.data.header, body: result.data.body } as I<%= response.name %>Response };
+        return { isValid: true, data: { type: "<%= response.name %>" as const, statusCode: result.data.statusCode, header: result.data.header, body: result.data.body } as I<%= response.name %>Response };
 <% } else { %>
-        return { isValid: true, data: { _tag: "<%= response.name %>" as const, statusCode: response.statusCode } as I<%= response.name %>Response };
+        return { isValid: true, data: { type: "<%= response.name %>" as const, statusCode: response.statusCode } as I<%= response.name %>Response };
 <% } %>
     }
     <% } %>

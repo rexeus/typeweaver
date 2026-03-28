@@ -37,8 +37,8 @@ describe("Generated Client", () => {
 
       const response = await client.send(command);
 
-      expect(response._tag).toBe("GetTodoSuccess");
-      assert(response._tag === "GetTodoSuccess");
+      expect(response.type).toBe("GetTodoSuccess");
+      assert(response.type === "GetTodoSuccess");
       expect(response.statusCode).toBe(200);
       expect(response.body.id).toBe(requestData.param.todoId);
     });
@@ -50,8 +50,8 @@ describe("Generated Client", () => {
 
       const response = await client.send(command);
 
-      expect(response._tag).toBe("CreateTodoSuccess");
-      assert(response._tag === "CreateTodoSuccess");
+      expect(response.type).toBe("CreateTodoSuccess");
+      assert(response.type === "CreateTodoSuccess");
       expect(response.statusCode).toBe(201);
       expect(response.body.title).toBe(requestData.body.title);
     });
@@ -63,8 +63,8 @@ describe("Generated Client", () => {
 
       const response = await client.send(command);
 
-      expect(response._tag).toBe("PutTodoSuccess");
-      assert(response._tag === "PutTodoSuccess");
+      expect(response.type).toBe("PutTodoSuccess");
+      assert(response.type === "PutTodoSuccess");
       expect(response.statusCode).toBe(200);
       expect(response.body.id).toBe(requestData.param.todoId);
     });
@@ -76,8 +76,8 @@ describe("Generated Client", () => {
 
       const response = await client.send(command);
 
-      expect(response._tag).toBe("UpdateTodoSuccess");
-      assert(response._tag === "UpdateTodoSuccess");
+      expect(response.type).toBe("UpdateTodoSuccess");
+      assert(response.type === "UpdateTodoSuccess");
       expect(response.statusCode).toBe(200);
       expect(response.body.id).toBe(requestData.param.todoId);
     });
@@ -89,7 +89,7 @@ describe("Generated Client", () => {
 
       const response = await client.send(command);
 
-      expect(response._tag).toBe("DeleteTodoSuccess");
+      expect(response.type).toBe("DeleteTodoSuccess");
       expect(response.statusCode).toBe(204);
     });
 
@@ -100,7 +100,7 @@ describe("Generated Client", () => {
 
       const response = await client.send(command);
 
-      expect(response._tag).toBe("HeadTodoSuccess");
+      expect(response.type).toBe("HeadTodoSuccess");
       expect(response.statusCode).toBe(200);
       expect(response.body).toBeUndefined();
     });
@@ -112,8 +112,8 @@ describe("Generated Client", () => {
 
       const response = await client.send(command);
 
-      expect(response._tag).toBe("OptionsTodoSuccess");
-      assert(response._tag === "OptionsTodoSuccess");
+      expect(response.type).toBe("OptionsTodoSuccess");
+      assert(response.type === "OptionsTodoSuccess");
       expect(response.statusCode).toBe(200);
       expect(response.header.Allow).toBeDefined();
     });
@@ -127,7 +127,7 @@ describe("Generated Client", () => {
 
       const response = await client.send(command);
 
-      expect(response._tag).toBe("UpdateTodoSuccess");
+      expect(response.type).toBe("UpdateTodoSuccess");
       expect(response.statusCode).toBe(200);
     });
 
@@ -140,7 +140,7 @@ describe("Generated Client", () => {
 
       const result = await client.send(command);
 
-      expect(result._tag).toBe("TodoNotFoundError");
+      expect(result.type).toBe("TodoNotFoundError");
     });
 
     test("should handle TodoNotChangeable error responses", async () => {
@@ -152,7 +152,7 @@ describe("Generated Client", () => {
 
       const result = await client.send(command);
 
-      expect(result._tag).toBe("TodoNotChangeableError");
+      expect(result.type).toBe("TodoNotChangeableError");
     });
 
     test("should handle Forbidden error responses", async () => {
@@ -164,7 +164,7 @@ describe("Generated Client", () => {
 
       const result = await client.send(command);
 
-      expect(result._tag).toBe("ForbiddenError");
+      expect(result.type).toBe("ForbiddenError");
     });
 
     test("should handle InternalServer error responses", async () => {
@@ -176,7 +176,7 @@ describe("Generated Client", () => {
 
       const result = await client.send(command);
 
-      expect(result._tag).toBe("InternalServerError");
+      expect(result.type).toBe("InternalServerError");
     });
   });
 

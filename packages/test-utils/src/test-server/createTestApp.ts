@@ -1,6 +1,6 @@
 import type {
   IHttpResponse,
-  ITaggedHttpResponse,
+  ITypedHttpResponse,
 } from "@rexeus/typeweaver-core";
 import { AccountRouter } from "../test-project/output/account/AccountRouter";
 import { AuthRouter } from "../test-project/output/auth/AuthRouter";
@@ -26,11 +26,11 @@ import type {
  */
 export type TestAppOptions = {
   /** Error to throw from todo handlers (simulates handler failures). */
-  readonly throwTodoError?: Error | ITaggedHttpResponse;
+  readonly throwTodoError?: Error | ITypedHttpResponse;
   /** Error to throw from auth handlers. */
-  readonly throwAuthError?: Error | ITaggedHttpResponse;
+  readonly throwAuthError?: Error | ITypedHttpResponse;
   /** Error to throw from account handlers. */
-  readonly throwAccountError?: Error | ITaggedHttpResponse;
+  readonly throwAccountError?: Error | ITypedHttpResponse;
   /** Custom response to return for all requests (bypasses handlers). */
   readonly customResponses?: IHttpResponse;
 } & Omit<

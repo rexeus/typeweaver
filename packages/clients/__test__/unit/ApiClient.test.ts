@@ -445,7 +445,7 @@ describe("ApiClient Response Body Parsing", () => {
 
     const result = await client.send(command);
 
-    expect(result._tag).toBe("DeleteTodoSuccess");
+    expect(result.type).toBe("DeleteTodoSuccess");
     expect(result.body).toBeUndefined();
   });
 
@@ -988,7 +988,7 @@ describe("ApiClient Request Timeout", () => {
 
     const result = await client.send(command);
 
-    expect(result._tag).toBe("DeleteTodoSuccess");
+    expect(result.type).toBe("DeleteTodoSuccess");
   });
 
   test("no signal is passed without timeoutMs", async () => {

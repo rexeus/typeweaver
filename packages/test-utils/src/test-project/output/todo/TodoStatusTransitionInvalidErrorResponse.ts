@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 export type ITodoStatusTransitionInvalidErrorResponseHeader = {
   "Content-Type": "application/json";
@@ -30,7 +30,7 @@ export type ITodoStatusTransitionInvalidErrorResponseBody = {
   };
 };
 
-export type ITodoStatusTransitionInvalidErrorResponse = ITaggedHttpResponse<
+export type ITodoStatusTransitionInvalidErrorResponse = ITypedHttpResponse<
   "TodoStatusTransitionInvalidError",
   ITodoStatusTransitionInvalidErrorResponseHeader,
   ITodoStatusTransitionInvalidErrorResponseBody
@@ -41,9 +41,9 @@ export type ITodoStatusTransitionInvalidErrorResponse = ITaggedHttpResponse<
 };
 
 export const createTodoStatusTransitionInvalidErrorResponse = (
-  input: Omit<ITodoStatusTransitionInvalidErrorResponse, "_tag" | "statusCode">,
+  input: Omit<ITodoStatusTransitionInvalidErrorResponse, "type" | "statusCode">,
 ): ITodoStatusTransitionInvalidErrorResponse => ({
-  _tag: "TodoStatusTransitionInvalidError",
+  type: "TodoStatusTransitionInvalidError",
   statusCode: HttpStatusCode.CONFLICT,
   ...input,
 });

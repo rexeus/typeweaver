@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 export type ITodoNotFoundErrorResponseHeader = {
   "Content-Type": "application/json";
@@ -23,7 +23,7 @@ export type ITodoNotFoundErrorResponseBody = {
   };
 };
 
-export type ITodoNotFoundErrorResponse = ITaggedHttpResponse<
+export type ITodoNotFoundErrorResponse = ITypedHttpResponse<
   "TodoNotFoundError",
   ITodoNotFoundErrorResponseHeader,
   ITodoNotFoundErrorResponseBody
@@ -34,9 +34,9 @@ export type ITodoNotFoundErrorResponse = ITaggedHttpResponse<
 };
 
 export const createTodoNotFoundErrorResponse = (
-  input: Omit<ITodoNotFoundErrorResponse, "_tag" | "statusCode">,
+  input: Omit<ITodoNotFoundErrorResponse, "type" | "statusCode">,
 ): ITodoNotFoundErrorResponse => ({
-  _tag: "TodoNotFoundError",
+  type: "TodoNotFoundError",
   statusCode: HttpStatusCode.NOT_FOUND,
   ...input,
 });

@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 
@@ -29,7 +29,7 @@ export type IDeleteTodoSuccessResponseHeader = {
   "X-Multi-Value"?: string[] | undefined;
 };
 
-export type IDeleteTodoSuccessResponse = ITaggedHttpResponse<
+export type IDeleteTodoSuccessResponse = ITypedHttpResponse<
   "DeleteTodoSuccess",
   IDeleteTodoSuccessResponseHeader,
   undefined
@@ -39,9 +39,9 @@ export type IDeleteTodoSuccessResponse = ITaggedHttpResponse<
 };
 
 export const createDeleteTodoSuccessResponse = (
-  input: Omit<IDeleteTodoSuccessResponse, "_tag" | "statusCode">,
+  input: Omit<IDeleteTodoSuccessResponse, "type" | "statusCode">,
 ): IDeleteTodoSuccessResponse => ({
-  _tag: "DeleteTodoSuccess",
+  type: "DeleteTodoSuccess",
   statusCode: HttpStatusCode.NO_CONTENT,
   ...input,
 });

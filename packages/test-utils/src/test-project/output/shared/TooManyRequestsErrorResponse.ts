@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 export type ITooManyRequestsErrorResponseHeader = {
   "Content-Type": "application/json";
@@ -20,7 +20,7 @@ export type ITooManyRequestsErrorResponseBody = {
   code: "TOO_MANY_REQUESTS_ERROR";
 };
 
-export type ITooManyRequestsErrorResponse = ITaggedHttpResponse<
+export type ITooManyRequestsErrorResponse = ITypedHttpResponse<
   "TooManyRequestsError",
   ITooManyRequestsErrorResponseHeader,
   ITooManyRequestsErrorResponseBody
@@ -31,9 +31,9 @@ export type ITooManyRequestsErrorResponse = ITaggedHttpResponse<
 };
 
 export const createTooManyRequestsErrorResponse = (
-  input: Omit<ITooManyRequestsErrorResponse, "_tag" | "statusCode">,
+  input: Omit<ITooManyRequestsErrorResponse, "type" | "statusCode">,
 ): ITooManyRequestsErrorResponse => ({
-  _tag: "TooManyRequestsError",
+  type: "TooManyRequestsError",
   statusCode: HttpStatusCode.TOO_MANY_REQUESTS,
   ...input,
 });

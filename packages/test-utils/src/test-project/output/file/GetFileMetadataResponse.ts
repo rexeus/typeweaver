@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
 
@@ -35,7 +35,7 @@ export type IGetFileMetadataSuccessResponseBody = {
   createdAt: string;
 };
 
-export type IGetFileMetadataSuccessResponse = ITaggedHttpResponse<
+export type IGetFileMetadataSuccessResponse = ITypedHttpResponse<
   "GetFileMetadataSuccess",
   IGetFileMetadataSuccessResponseHeader,
   IGetFileMetadataSuccessResponseBody
@@ -46,9 +46,9 @@ export type IGetFileMetadataSuccessResponse = ITaggedHttpResponse<
 };
 
 export const createGetFileMetadataSuccessResponse = (
-  input: Omit<IGetFileMetadataSuccessResponse, "_tag" | "statusCode">,
+  input: Omit<IGetFileMetadataSuccessResponse, "type" | "statusCode">,
 ): IGetFileMetadataSuccessResponse => ({
-  _tag: "GetFileMetadataSuccess",
+  type: "GetFileMetadataSuccess",
   statusCode: HttpStatusCode.OK,
   ...input,
 });

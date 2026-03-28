@@ -42,8 +42,8 @@ describe("Base URL Routing", () => {
 
       const response = await client.send(command);
 
-      expect(response._tag).toBe("GetTodoSuccess");
-      assert(response._tag === "GetTodoSuccess");
+      expect(response.type).toBe("GetTodoSuccess");
+      assert(response.type === "GetTodoSuccess");
       expect(response.statusCode).toBe(200);
       expect(response.body.id).toBe(requestData.param.todoId);
     });
@@ -57,8 +57,8 @@ describe("Base URL Routing", () => {
 
       const response = await client.send(command);
 
-      expect(response._tag).toBe("CreateTodoSuccess");
-      assert(response._tag === "CreateTodoSuccess");
+      expect(response.type).toBe("CreateTodoSuccess");
+      assert(response.type === "CreateTodoSuccess");
       expect(response.statusCode).toBe(201);
       expect(response.body.title).toBe(requestData.body.title);
     });
@@ -72,7 +72,7 @@ describe("Base URL Routing", () => {
 
       const response = await client.send(command);
 
-      expect(response._tag).toBe("DeleteTodoSuccess");
+      expect(response.type).toBe("DeleteTodoSuccess");
       expect(response.statusCode).toBe(204);
     });
 
@@ -87,8 +87,8 @@ describe("Base URL Routing", () => {
 
       const response = await client.send(command);
 
-      expect(response._tag).toBe("GetTodoSuccess");
-      assert(response._tag === "GetTodoSuccess");
+      expect(response.type).toBe("GetTodoSuccess");
+      assert(response.type === "GetTodoSuccess");
       expect(response.statusCode).toBe(200);
       expect(response.body.id).toBe(requestData.param.todoId);
     });
@@ -102,7 +102,7 @@ describe("Base URL Routing", () => {
 
       const response = await client.send(command);
 
-      expect(response._tag).toBe("GetTodoSuccess");
+      expect(response.type).toBe("GetTodoSuccess");
       expect(response.statusCode).toBe(200);
     });
   });
@@ -120,11 +120,11 @@ describe("Base URL Routing", () => {
       const requestB = createGetTodoRequest();
       const responseB = await clientB.send(new GetTodoRequestCommand(requestB));
 
-      expect(responseA._tag).toBe("GetTodoSuccess");
-      expect(responseB._tag).toBe("GetTodoSuccess");
+      expect(responseA.type).toBe("GetTodoSuccess");
+      expect(responseB.type).toBe("GetTodoSuccess");
       assert(
-        responseA._tag === "GetTodoSuccess" &&
-          responseB._tag === "GetTodoSuccess"
+        responseA.type === "GetTodoSuccess" &&
+          responseB.type === "GetTodoSuccess"
       );
       expect(responseA.body.id).toBe(requestA.param.todoId);
       expect(responseB.body.id).toBe(requestB.param.todoId);
@@ -143,11 +143,11 @@ describe("Base URL Routing", () => {
       const requestB = createGetTodoRequest();
       const responseB = await clientB.send(new GetTodoRequestCommand(requestB));
 
-      expect(responseA._tag).toBe("GetTodoSuccess");
-      expect(responseB._tag).toBe("GetTodoSuccess");
+      expect(responseA.type).toBe("GetTodoSuccess");
+      expect(responseB.type).toBe("GetTodoSuccess");
       assert(
-        responseA._tag === "GetTodoSuccess" &&
-          responseB._tag === "GetTodoSuccess"
+        responseA.type === "GetTodoSuccess" &&
+          responseB.type === "GetTodoSuccess"
       );
       expect(responseA.body.id).toBe(requestA.param.todoId);
       expect(responseB.body.id).toBe(requestB.param.todoId);
@@ -166,7 +166,7 @@ describe("Base URL Routing", () => {
 
       const response = await client.send(command);
 
-      expect(response._tag).toBe("ListTodosSuccess");
+      expect(response.type).toBe("ListTodosSuccess");
       expect(response.statusCode).toBe(200);
     });
   });
@@ -185,7 +185,7 @@ describe("Base URL Routing", () => {
 
       const result = await client.send(command);
 
-      expect(result._tag).toBe("TodoNotFoundError");
+      expect(result.type).toBe("TodoNotFoundError");
     });
   });
 });

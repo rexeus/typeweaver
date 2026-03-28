@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 export type ISubTodoNotFoundErrorResponseHeader = {
   "Content-Type": "application/json";
@@ -26,7 +26,7 @@ export type ISubTodoNotFoundErrorResponseBody = {
   };
 };
 
-export type ISubTodoNotFoundErrorResponse = ITaggedHttpResponse<
+export type ISubTodoNotFoundErrorResponse = ITypedHttpResponse<
   "SubTodoNotFoundError",
   ISubTodoNotFoundErrorResponseHeader,
   ISubTodoNotFoundErrorResponseBody
@@ -37,9 +37,9 @@ export type ISubTodoNotFoundErrorResponse = ITaggedHttpResponse<
 };
 
 export const createSubTodoNotFoundErrorResponse = (
-  input: Omit<ISubTodoNotFoundErrorResponse, "_tag" | "statusCode">,
+  input: Omit<ISubTodoNotFoundErrorResponse, "type" | "statusCode">,
 ): ISubTodoNotFoundErrorResponse => ({
-  _tag: "SubTodoNotFoundError",
+  type: "SubTodoNotFoundError",
   statusCode: HttpStatusCode.NOT_FOUND,
   ...input,
 });

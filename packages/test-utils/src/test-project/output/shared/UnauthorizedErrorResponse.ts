@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 export type IUnauthorizedErrorResponseHeader = {
   "Content-Type": "application/json";
@@ -20,7 +20,7 @@ export type IUnauthorizedErrorResponseBody = {
   code: "UNAUTHORIZED_ERROR";
 };
 
-export type IUnauthorizedErrorResponse = ITaggedHttpResponse<
+export type IUnauthorizedErrorResponse = ITypedHttpResponse<
   "UnauthorizedError",
   IUnauthorizedErrorResponseHeader,
   IUnauthorizedErrorResponseBody
@@ -31,9 +31,9 @@ export type IUnauthorizedErrorResponse = ITaggedHttpResponse<
 };
 
 export const createUnauthorizedErrorResponse = (
-  input: Omit<IUnauthorizedErrorResponse, "_tag" | "statusCode">,
+  input: Omit<IUnauthorizedErrorResponse, "type" | "statusCode">,
 ): IUnauthorizedErrorResponse => ({
-  _tag: "UnauthorizedError",
+  type: "UnauthorizedError",
   statusCode: HttpStatusCode.UNAUTHORIZED,
   ...input,
 });

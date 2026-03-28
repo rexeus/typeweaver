@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 export type IForbiddenErrorResponseHeader = {
   "Content-Type": "application/json";
@@ -20,7 +20,7 @@ export type IForbiddenErrorResponseBody = {
   code: "FORBIDDEN_ERROR";
 };
 
-export type IForbiddenErrorResponse = ITaggedHttpResponse<
+export type IForbiddenErrorResponse = ITypedHttpResponse<
   "ForbiddenError",
   IForbiddenErrorResponseHeader,
   IForbiddenErrorResponseBody
@@ -31,9 +31,9 @@ export type IForbiddenErrorResponse = ITaggedHttpResponse<
 };
 
 export const createForbiddenErrorResponse = (
-  input: Omit<IForbiddenErrorResponse, "_tag" | "statusCode">,
+  input: Omit<IForbiddenErrorResponse, "type" | "statusCode">,
 ): IForbiddenErrorResponse => ({
-  _tag: "ForbiddenError",
+  type: "ForbiddenError",
   statusCode: HttpStatusCode.FORBIDDEN,
   ...input,
 });

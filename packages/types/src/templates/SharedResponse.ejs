@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "<%= coreDir %>";
-import type { ITaggedHttpResponse } from "<%= coreDir %>";
+import type { ITypedHttpResponse } from "<%= coreDir %>";
 
 <% if (headerTsType) { %>
     export type I<%= pascalCaseName %>ResponseHeader = <%- headerTsType %>;
@@ -17,7 +17,7 @@ import type { ITaggedHttpResponse } from "<%= coreDir %>";
     export type I<%= pascalCaseName %>ResponseBody = <%- bodyTsType %>;
 <% } %>
 
-export type I<%= pascalCaseName %>Response = ITaggedHttpResponse<
+export type I<%= pascalCaseName %>Response = ITypedHttpResponse<
 "<%= pascalCaseName %>",
 <%= sharedResponse.header ? `I${pascalCaseName}ResponseHeader` : 'undefined' %>,
 <%= sharedResponse.body ? `I${pascalCaseName}ResponseBody` : 'undefined' %>
@@ -28,14 +28,14 @@ readonly statusCode: HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode
 };
 
 <% if (sharedResponse.header || sharedResponse.body) { %>
-export const create<%= pascalCaseName %>Response = (input: Omit<I<%= pascalCaseName %>Response, "_tag" | "statusCode">): I<%= pascalCaseName %>Response => ({
-    _tag: "<%= pascalCaseName %>",
+export const create<%= pascalCaseName %>Response = (input: Omit<I<%= pascalCaseName %>Response, "type" | "statusCode">): I<%= pascalCaseName %>Response => ({
+    type: "<%= pascalCaseName %>",
     statusCode: HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>,
     ...input,
 });
 <% } else { %>
 export const create<%= pascalCaseName %>Response = (): I<%= pascalCaseName %>Response => ({
-    _tag: "<%= pascalCaseName %>",
+    type: "<%= pascalCaseName %>",
     statusCode: HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>,
 });
 <% } %>

@@ -7,7 +7,7 @@
  */
 
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
 export type IValidationErrorResponseHeader = {
   "Content-Type": "application/json";
@@ -26,7 +26,7 @@ export type IValidationErrorResponseBody = {
   };
 };
 
-export type IValidationErrorResponse = ITaggedHttpResponse<
+export type IValidationErrorResponse = ITypedHttpResponse<
   "ValidationError",
   IValidationErrorResponseHeader,
   IValidationErrorResponseBody
@@ -37,9 +37,9 @@ export type IValidationErrorResponse = ITaggedHttpResponse<
 };
 
 export const createValidationErrorResponse = (
-  input: Omit<IValidationErrorResponse, "_tag" | "statusCode">,
+  input: Omit<IValidationErrorResponse, "type" | "statusCode">,
 ): IValidationErrorResponse => ({
-  _tag: "ValidationError",
+  type: "ValidationError",
   statusCode: HttpStatusCode.BAD_REQUEST,
   ...input,
 });

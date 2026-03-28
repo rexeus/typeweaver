@@ -1,4 +1,4 @@
-import type { ITaggedHttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 import {
   createCreateSubTodoSuccessResponse,
   createCreateTodoSuccessResponse,
@@ -49,7 +49,7 @@ import type { ServerTodoApiHandler } from "../../test-project/output/todo/TodoRo
 
 export class ServerTodoHandlers implements ServerTodoApiHandler {
   public constructor(
-    private readonly throwError?: Error | ITaggedHttpResponse
+    private readonly throwError?: Error | ITypedHttpResponse
   ) {
     //
   }
