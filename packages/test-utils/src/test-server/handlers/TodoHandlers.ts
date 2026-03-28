@@ -51,9 +51,7 @@ import type {
 import type { HonoTodoApiHandler } from "../../test-project/output/todo/TodoHono";
 
 export class TodoHandlers implements HonoTodoApiHandler {
-  public constructor(
-    private readonly throwError?: Error | ITypedHttpResponse
-  ) {
+  public constructor(private readonly throwError?: Error | ITypedHttpResponse) {
     //
   }
 

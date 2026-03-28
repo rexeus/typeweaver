@@ -4,9 +4,7 @@ import type { IRegisterAccountRequest, RegisterAccountResponse } from "../..";
 import type { ServerAccountApiHandler } from "../../test-project/output/account/AccountRouter";
 
 export class ServerAccountHandlers implements ServerAccountApiHandler {
-  public constructor(
-    private readonly throwError?: Error | ITypedHttpResponse
-  ) {
+  public constructor(private readonly throwError?: Error | ITypedHttpResponse) {
     //
   }
 

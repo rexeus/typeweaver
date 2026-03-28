@@ -48,9 +48,7 @@ import type {
 import type { ServerTodoApiHandler } from "../../test-project/output/todo/TodoRouter";
 
 export class ServerTodoHandlers implements ServerTodoApiHandler {
-  public constructor(
-    private readonly throwError?: Error | ITypedHttpResponse
-  ) {
+  public constructor(private readonly throwError?: Error | ITypedHttpResponse) {
     //
   }
 

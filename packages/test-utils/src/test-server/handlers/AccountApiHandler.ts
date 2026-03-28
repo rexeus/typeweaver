@@ -4,9 +4,7 @@ import type { IRegisterAccountRequest, RegisterAccountResponse } from "../..";
 import type { HonoAccountApiHandler } from "../../test-project/output/account/AccountHono";
 
 export class AccountHandlers implements HonoAccountApiHandler {
-  public constructor(
-    private readonly throwError?: Error | ITypedHttpResponse
-  ) {
+  public constructor(private readonly throwError?: Error | ITypedHttpResponse) {
     //
   }
 
