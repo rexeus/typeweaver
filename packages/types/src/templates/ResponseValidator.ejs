@@ -23,7 +23,7 @@ export class <%= pascalCaseOperationId %>ResponseValidator extends ResponseValid
 
     protected override readonly responseEntries: readonly ResponseEntry[] = [
         <% for (const response of [...ownResponses, ...sharedResponses]) { %>
-        { name: "<%= response.name.replace(/Response$/, '') %>", statusCode: <%= response.statusCode %>, headerSchema: definition.responses[<%= response.index %>]?.header, bodySchema: definition.responses[<%= response.index %>]?.body },
+        { name: "<%= response.name %>", statusCode: <%= response.statusCode %>, headerSchema: definition.responses[<%= response.index %>]?.header, bodySchema: definition.responses[<%= response.index %>]?.body },
         <% } %>
     ];
 }

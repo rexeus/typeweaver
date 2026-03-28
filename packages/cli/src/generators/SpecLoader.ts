@@ -16,17 +16,10 @@ export type LoadedSpec = {
 };
 
 export class SpecLoader {
-  private readonly bundler: SpecBundler;
-
-  private readonly importer: SpecImporter;
-
   public constructor(
-    bundler: SpecBundler = new SpecBundler(),
-    importer: SpecImporter = new SpecImporter()
-  ) {
-    this.bundler = bundler;
-    this.importer = importer;
-  }
+    private readonly bundler: SpecBundler = new SpecBundler(),
+    private readonly importer: SpecImporter = new SpecImporter()
+  ) {}
 
   public async load(config: SpecLoaderConfig): Promise<LoadedSpec> {
     fs.mkdirSync(config.specOutputDir, { recursive: true });

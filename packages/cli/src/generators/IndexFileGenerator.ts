@@ -4,9 +4,7 @@ import type { GeneratorContext } from "@rexeus/typeweaver-gen";
 import { render } from "ejs";
 
 export class IndexFileGenerator {
-  public constructor(private readonly templateDir: string) {
-    //
-  }
+  public constructor(private readonly templateDir: string) {}
 
   public generate(context: GeneratorContext): void {
     const templateFilePath = path.join(this.templateDir, "Index.ejs");

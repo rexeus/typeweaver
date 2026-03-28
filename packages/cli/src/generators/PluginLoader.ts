@@ -26,9 +26,7 @@ export class PluginLoader {
     private readonly registry: PluginRegistry,
     private readonly requiredPlugins: [TypesPlugin],
     private readonly strategies: PluginResolutionStrategy[] = ["npm", "local"]
-  ) {
-    //
-  }
+  ) {}
 
   /**
    * Load all plugins from configuration

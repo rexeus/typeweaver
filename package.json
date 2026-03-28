@@ -10,7 +10,7 @@
     "lint:fix": "oxlint . --fix && pnpm format",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
-    "test": "turbo test",
+    "test": "turbo test:gen && turbo test",
     "test:gen": "turbo test:gen",
     "publish:dry": "pnpm publish -r --dry-run --no-git-checks",
     "ci:publish": "pnpm publish -r",

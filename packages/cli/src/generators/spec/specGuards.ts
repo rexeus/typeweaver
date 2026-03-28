@@ -5,10 +5,6 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 };
 
-const isRequestDefinition = (value: unknown): boolean => {
-  return isRecord(value);
-};
-
 const isResponseDefinition = (value: unknown): boolean => {
   if (!isRecord(value)) {
     return false;
@@ -36,7 +32,7 @@ const isOperationDefinition = (value: unknown): boolean => {
     typeof value.summary === "string" &&
     value.summary.length > 0 &&
     Object.values(HttpMethod).includes(value.method as HttpMethod) &&
-    isRequestDefinition(value.request) &&
+    isRecord(value.request) &&
     value.responses.length > 0 &&
     value.responses.every(response => isResponseDefinition(response))
   );
