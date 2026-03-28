@@ -1,13 +1,13 @@
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { TsTypeNode } from "../../src/TsTypeGenerator";
-import { TsTypePrinter } from "../../src/TsTypePrinter";
+import { fromZod } from "../../src/tsTypeGenerator";
+import { print } from "../../src/tsTypePrinter";
 
 function zodToTs(schema: z.ZodType): string {
-  return TsTypePrinter.print(TsTypeNode.fromZod(schema));
+  return print(fromZod(schema));
 }
 
-describe("TsTypeNode", () => {
+describe("fromZod", () => {
   test("z.file() maps to unknown", () => {
     expect(zodToTs(z.file())).toBe("unknown");
   });

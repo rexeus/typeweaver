@@ -3,7 +3,7 @@ import { HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
 import type { GeneratorContext, NormalizedSpec } from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { ResponseGenerator } from "../../src/ResponseGenerator";
+import { generate } from "../../src/responseGenerator";
 
 describe("ResponseGenerator", () => {
   test("emits canonical responses separately from inline operation responses", () => {
@@ -114,7 +114,7 @@ describe("ResponseGenerator", () => {
       getGeneratedFiles: () => [],
     } satisfies GeneratorContext;
 
-    ResponseGenerator.generate(context);
+    generate(context);
 
     const sharedResponseContent = writtenFiles.get(
       "responses/SharedErrorResponse.ts"

@@ -1,36 +1,18 @@
 import fs from "node:fs";
 import path from "node:path";
 import { render } from "ejs";
-import { Path } from "../helpers/Path";
+import { relative } from "../helpers/path";
 import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec";
 import type { GeneratorContext, PluginConfig, PluginContext } from "./types";
 import type { Data } from "ejs";
 
-/**
- * Builder for plugin contexts
- */
-export class PluginContextBuilder {
-  private generatedFiles = new Set<string>();
-
-  /**
-   * Create a basic plugin context
-   */
-  createPluginContext(params: {
+export type PluginContextBuilderApi = {
+  readonly createPluginContext: (params: {
     outputDir: string;
     inputDir: string;
     config: PluginConfig;
-  }): PluginContext {
-    return {
-      outputDir: params.outputDir,
-      inputDir: params.inputDir,
-      config: params.config,
-    };
-  }
-
-  /**
-   * Create a generator context with utilities
-   */
-  createGeneratorContext(params: {
+  }) => PluginContext;
+  readonly createGeneratorContext: (params: {
     readonly outputDir: string;
     readonly inputDir: string;
     readonly config: PluginConfig;
@@ -39,8 +21,37 @@ export class PluginContextBuilder {
     readonly coreDir: string;
     readonly responsesOutputDir: string;
     readonly specOutputDir: string;
-  }): GeneratorContext {
-    const pluginContext = this.createPluginContext(params);
+  }) => GeneratorContext;
+  readonly getGeneratedFiles: () => string[];
+  readonly clearGeneratedFiles: () => void;
+};
+
+export function createPluginContextBuilder(): PluginContextBuilderApi {
+  const generatedFiles = new Set<string>();
+
+  const createPluginContext = (params: {
+    outputDir: string;
+    inputDir: string;
+    config: PluginConfig;
+  }): PluginContext => {
+    return {
+      outputDir: params.outputDir,
+      inputDir: params.inputDir,
+      config: params.config,
+    };
+  };
+
+  const createGeneratorContext = (params: {
+    readonly outputDir: string;
+    readonly inputDir: string;
+    readonly config: PluginConfig;
+    readonly normalizedSpec: NormalizedSpec;
+    readonly templateDir: string;
+    readonly coreDir: string;
+    readonly responsesOutputDir: string;
+    readonly specOutputDir: string;
+  }): GeneratorContext => {
+    const pluginContext = createPluginContext(params);
     const canonicalResponsesByName = new Map<string, NormalizedResponse>(
       params.normalizedSpec.responses.map(response => [response.name, response])
     );
@@ -102,7 +113,7 @@ export class PluginContextBuilder {
       getCanonicalResponse,
       getCanonicalResponseOutputFile,
       getCanonicalResponseImportPath: config => {
-        return Path.relative(
+        return relative(
           config.importerDir,
           getCanonicalResponseOutputFile(config.responseName).replace(
             /\.ts$/,
@@ -111,7 +122,7 @@ export class PluginContextBuilder {
         );
       },
       getSpecImportPath: config => {
-        return Path.relative(
+        return relative(
           config.importerDir,
           path.join(params.specOutputDir, "spec").replace(/\.ts$/, "")
         );
@@ -131,7 +142,7 @@ export class PluginContextBuilder {
         fs.writeFileSync(fullPath, content);
 
         // Track generated file
-        this.generatedFiles.add(relativePath);
+        generatedFiles.add(relativePath);
 
         console.info(`Generated: ${relativePath}`);
       },
@@ -146,26 +157,19 @@ export class PluginContextBuilder {
       },
 
       addGeneratedFile: (relativePath: string) => {
-        this.generatedFiles.add(relativePath);
+        generatedFiles.add(relativePath);
       },
 
       getGeneratedFiles: () => {
-        return Array.from(this.generatedFiles);
+        return Array.from(generatedFiles);
       },
     };
-  }
+  };
 
-  /**
-   * Get all generated files
-   */
-  getGeneratedFiles(): string[] {
-    return Array.from(this.generatedFiles);
-  }
-
-  /**
-   * Clear generated files tracking
-   */
-  clearGeneratedFiles(): void {
-    this.generatedFiles.clear();
-  }
+  return {
+    createPluginContext,
+    createGeneratorContext,
+    getGeneratedFiles: () => Array.from(generatedFiles),
+    clearGeneratedFiles: () => generatedFiles.clear(),
+  };
 }

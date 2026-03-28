@@ -6,7 +6,7 @@ import type {
   NormalizedSpec,
 } from "@rexeus/typeweaver-gen";
 import { assert, describe, expect, test } from "vitest";
-import { RouterGenerator } from "../../src/RouterGenerator";
+import { generate } from "../../src/routerGenerator";
 
 function createMockOperation(
   operationId: string,
@@ -122,7 +122,7 @@ function getOperationOrder(operations: NormalizedOperation[]): {
   className: string;
 }[] {
   const { context, writtenFiles } = createMockContext(operations);
-  RouterGenerator.generate(context);
+  generate(context);
 
   const content = writtenFiles.values().next().value;
   assert(content, "Expected at least one written file");
@@ -260,7 +260,7 @@ describe("RouterGenerator", () => {
       ];
       const { context, writtenFiles } = createMockContext(operations);
 
-      RouterGenerator.generate(context);
+      generate(context);
 
       expect(writtenFiles.has("entity/EntityRouter.ts")).toBe(true);
     });

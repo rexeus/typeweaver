@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { isSpecDefinition } from "../src/generators/spec/specGuards.js";
-import { SpecLoader } from "../src/generators/SpecLoader.js";
+import { loadSpec } from "../src/generators/specLoader.js";
 
 describe("SpecLoader", () => {
   const tempDirs: string[] = [];
@@ -246,7 +246,7 @@ describe("SpecLoader", () => {
       ].join("\n")
     );
 
-    const loadedSpec = await new SpecLoader().load({
+    const loadedSpec = await loadSpec({
       inputFile: specFile,
       specOutputDir: outputDir,
     });

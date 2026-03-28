@@ -1,13 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { PluginContextBuilder, PluginRegistry } from "@rexeus/typeweaver-gen";
+import {
+  createPluginContextBuilder,
+  createPluginRegistry,
+} from "@rexeus/typeweaver-gen";
 import type { PluginConfig, TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import TypesPlugin from "@rexeus/typeweaver-types";
-import { Formatter } from "./Formatter";
-import { IndexFileGenerator } from "./IndexFileGenerator";
-import { PluginLoader } from "./PluginLoader";
-import { SpecLoader } from "./SpecLoader";
+import { formatCode } from "./formatter";
+import { generateIndexFiles } from "./indexFileGenerator";
+import { loadPlugins } from "./pluginLoader";
+import { loadSpec } from "./specLoader";
+import type { PluginResolutionStrategy } from "./pluginLoader";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -19,12 +23,10 @@ export class Generator {
   public readonly coreDir = "@rexeus/typeweaver-core";
   public readonly templateDir = path.join(moduleDir, "templates");
 
-  private readonly registry: PluginRegistry;
-  private readonly contextBuilder: PluginContextBuilder;
-  private readonly pluginLoader: PluginLoader;
-  private readonly indexFileGenerator: IndexFileGenerator;
-  private readonly specLoader: SpecLoader;
-  private formatter: Formatter | null = null;
+  private readonly registry = createPluginRegistry();
+  private readonly contextBuilder = createPluginContextBuilder();
+  private readonly requiredPlugins: [TypesPlugin];
+  private readonly strategies: PluginResolutionStrategy[];
 
   private inputFile = "";
   private outputDir = "";
@@ -32,19 +34,11 @@ export class Generator {
   private responsesOutputDir = "";
 
   public constructor(
-    registry?: PluginRegistry,
-    contextBuilder?: PluginContextBuilder,
-    pluginLoader?: PluginLoader,
-    indexFileGenerator?: IndexFileGenerator,
-    requiredPlugins: [TypesPlugin] = [new TypesPlugin()]
+    requiredPlugins: [TypesPlugin] = [new TypesPlugin()],
+    strategies?: PluginResolutionStrategy[]
   ) {
-    this.registry = registry ?? new PluginRegistry();
-    this.contextBuilder = contextBuilder ?? new PluginContextBuilder();
-    this.pluginLoader =
-      pluginLoader ?? new PluginLoader(this.registry, requiredPlugins);
-    this.indexFileGenerator =
-      indexFileGenerator ?? new IndexFileGenerator(this.templateDir);
-    this.specLoader = new SpecLoader();
+    this.requiredPlugins = requiredPlugins;
+    this.strategies = strategies ?? ["npm", "local"];
   }
 
   /**
@@ -57,41 +51,38 @@ export class Generator {
   ): Promise<void> {
     console.info("Starting generation...");
 
-    // Initialize directories
     this.initializeDirectories(specFile, outputDir);
 
-    // Clean output if requested
     if (config?.clean ?? true) {
       console.info("Cleaning output directory...");
       fs.rmSync(this.outputDir, { recursive: true, force: true });
     }
 
-    // Create output directories
     fs.mkdirSync(this.outputDir, { recursive: true });
     fs.mkdirSync(this.responsesOutputDir, { recursive: true });
     fs.mkdirSync(this.specOutputDir, { recursive: true });
 
-    // Load and register plugins
-    await this.pluginLoader.loadPlugins(config);
-
-    this.formatter = new Formatter(this.outputDir);
+    await loadPlugins(
+      this.registry,
+      this.requiredPlugins,
+      this.strategies,
+      config
+    );
 
     console.info(
       `Bundling spec from '${this.inputFile}' to '${this.specOutputDir}'...`
     );
-    let { normalizedSpec } = await this.specLoader.load({
+    let { normalizedSpec } = await loadSpec({
       inputFile: this.inputFile,
       specOutputDir: this.specOutputDir,
     });
 
-    // Create contexts
     const pluginContext = this.contextBuilder.createPluginContext({
       outputDir: this.outputDir,
       inputDir: path.dirname(this.inputFile),
       config: (config ?? {}) as PluginConfig,
     });
 
-    // Initialize plugins
     console.info("Initializing plugins...");
     for (const registration of this.registry.getAll()) {
       if (registration.plugin.initialize) {
@@ -99,7 +90,6 @@ export class Generator {
       }
     }
 
-    // Let plugins collect/transform resources
     console.info("Collecting resources...");
     for (const registration of this.registry.getAll()) {
       if (registration.plugin.collectResources) {
@@ -108,7 +98,6 @@ export class Generator {
       }
     }
 
-    // Create generator context
     const generatorContext = this.contextBuilder.createGeneratorContext({
       outputDir: this.outputDir,
       inputDir: path.dirname(this.inputFile),
@@ -120,7 +109,6 @@ export class Generator {
       specOutputDir: this.specOutputDir,
     });
 
-    // Run generation for each plugin
     console.info("Generating code...");
     for (const registration of this.registry.getAll()) {
       console.info(`Running plugin: ${registration.plugin.name}`);
@@ -129,9 +117,8 @@ export class Generator {
       }
     }
 
-    this.indexFileGenerator.generate(generatorContext);
+    generateIndexFiles(this.templateDir, generatorContext);
 
-    // Finalize plugins
     console.info("Finalizing plugins...");
     for (const registration of this.registry.getAll()) {
       if (registration.plugin.finalize) {
@@ -139,9 +126,8 @@ export class Generator {
       }
     }
 
-    // Format code if requested
     if (config?.format ?? true) {
-      await this.formatter.formatCode();
+      await formatCode(this.outputDir);
     }
 
     console.info("Generation complete!");

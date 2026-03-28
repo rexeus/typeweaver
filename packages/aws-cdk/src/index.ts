@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { BasePlugin } from "@rexeus/typeweaver-gen";
 import type { GeneratorContext } from "@rexeus/typeweaver-gen";
-import { HttpApiRouterGenerator } from "./HttpApiRouterGenerator";
+import { generate as generateHttpApiRoutes } from "./httpApiRouterGenerator";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -13,6 +13,6 @@ export default class AwsCdkPlugin extends BasePlugin {
     const libDir = path.join(moduleDir, "lib");
     this.copyLibFiles(context, libDir, "aws-cdk");
 
-    HttpApiRouterGenerator.generate(context);
+    generateHttpApiRoutes(context);
   }
 }
