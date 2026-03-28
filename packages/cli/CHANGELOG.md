@@ -1,5 +1,31 @@
 # @rexeus/typeweaver
 
+## 0.9.0
+
+### Minor Changes
+
+- f3dfcf5: Switch typeweaver to the new functional spec-entrypoint architecture.
+  This removes the legacy filesystem- and class-based definition flow in favor of
+  `defineSpec`, `defineOperation`, `defineResponse`, and `defineDerivedResponse`,
+  and updates the CLI, generators, runtime defaults, and generated outputs to use
+  the new normalized spec pipeline.
+  ### Breaking changes
+  - Remove legacy `Http*Definition` classes
+  - Remove filesystem-based definition discovery
+  - Require a spec entrypoint file for CLI generation
+  - Update generated runtime/output structure and centralized default errors
+
+### Patch Changes
+
+- Updated dependencies [f3dfcf5]
+  - @rexeus/typeweaver-aws-cdk@0.9.0
+  - @rexeus/typeweaver-clients@0.9.0
+  - @rexeus/typeweaver-server@0.9.0
+  - @rexeus/typeweaver-types@0.9.0
+  - @rexeus/typeweaver-core@0.9.0
+  - @rexeus/typeweaver-hono@0.9.0
+  - @rexeus/typeweaver-gen@0.9.0
+
 ## 0.8.0
 
 ### Minor Changes
@@ -60,6 +86,7 @@
   This prevents tsc from hitting OOM on Zod v4's deeply recursive type inference. The generated
   `.d.ts` stubs use `any` internally — the public API remains fully typed through the validator and
   consumer layers.
+
   - @rexeus/typeweaver-aws-cdk@0.6.5
   - @rexeus/typeweaver-clients@0.6.5
   - @rexeus/typeweaver-core@0.6.5
@@ -118,6 +145,7 @@
 ### Patch Changes
 
 - edd224c: Fix generated code issues and stabilize CLI binary resolution
+
   - Fix trailing comma in Response.ejs template that produced `HttpResponse<Header, Body,>` in
     generated response classes
   - Widen `TypeweaverRouter` generic constraint from `RequestHandler` to
