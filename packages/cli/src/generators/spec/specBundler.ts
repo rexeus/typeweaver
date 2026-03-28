@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { build } from "rolldown";
+import { Rolldown } from "tsdown";
 
 export type SpecBundlerConfig = {
   readonly inputFile: string;
@@ -32,7 +32,7 @@ export async function bundle(config: SpecBundlerConfig): Promise<string> {
   );
 
   try {
-    await build({
+    await Rolldown.build({
       cwd: tempDir,
       input: wrapperFile,
       treeshake: true,

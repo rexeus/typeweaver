@@ -82,7 +82,6 @@
     "commander": "^14.0.3",
     "ejs": "^5.0.1",
     "oxc-transform": "^0.121.0",
-    "rolldown": "1.0.0-rc.12",
     "tsx": "^4.21.0"
   },
   "peerDependencies": {
