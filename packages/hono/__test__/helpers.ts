@@ -1,6 +1,4 @@
-import {
-  internalServerErrorDefaultError,
-} from "@rexeus/typeweaver-core";
+import { internalServerErrorDefaultError } from "@rexeus/typeweaver-core";
 import type { IHttpRequest, ITypedHttpResponse } from "@rexeus/typeweaver-core";
 import { createCreateTodoSuccessResponseBody } from "test-utils";
 import { expect } from "vitest";

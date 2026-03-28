@@ -1,9 +1,6 @@
 import { defineSpec } from "@rexeus/typeweaver-core";
 import { RegisterAccountDefinition } from "./account";
-import {
-  AccessTokenDefinition,
-  RefreshTokenDefinition,
-} from "./auth";
+import { AccessTokenDefinition, RefreshTokenDefinition } from "./auth";
 import {
   DownloadFileContentDefinition,
   GetFileMetadataDefinition,

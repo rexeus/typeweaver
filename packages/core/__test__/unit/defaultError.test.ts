@@ -68,7 +68,9 @@ describe("defaultError", () => {
       message: "Internal server error occurred",
     });
     expectTypeOf(body.code).toEqualTypeOf<"INTERNAL_SERVER_ERROR">();
-    expectTypeOf(body.message).toEqualTypeOf<"Internal server error occurred">();
+    expectTypeOf(
+      body.message
+    ).toEqualTypeOf<"Internal server error occurred">();
   });
 
   test("merges additional body properties without weakening literals", () => {
@@ -102,7 +104,9 @@ describe("defaultError", () => {
         message: "Method not allowed for this resource",
       },
     });
-    expectTypeOf(response.statusCode).toEqualTypeOf<HttpStatusCode.METHOD_NOT_ALLOWED>();
+    expectTypeOf(
+      response.statusCode
+    ).toEqualTypeOf<HttpStatusCode.METHOD_NOT_ALLOWED>();
   });
 
   test("exports stable descriptor constants", () => {

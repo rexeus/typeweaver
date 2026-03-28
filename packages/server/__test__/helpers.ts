@@ -5,9 +5,7 @@ import type {
   IResponseValidator,
   ITypedHttpResponse,
 } from "@rexeus/typeweaver-core";
-import {
-  internalServerErrorDefaultError,
-} from "@rexeus/typeweaver-core";
+import { internalServerErrorDefaultError } from "@rexeus/typeweaver-core";
 import { createCreateTodoSuccessResponseBody } from "test-utils";
 import { expect } from "vitest";
 import { StateMap } from "../src/lib/StateMap";

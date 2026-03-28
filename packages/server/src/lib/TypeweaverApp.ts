@@ -69,8 +69,9 @@ export type TypeweaverAppOptions = {
 };
 
 export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
-  private static readonly INTERNAL_SERVER_ERROR_BODY =
-    createDefaultErrorBody(internalServerErrorDefaultError);
+  private static readonly INTERNAL_SERVER_ERROR_BODY = createDefaultErrorBody(
+    internalServerErrorDefaultError
+  );
 
   private readonly router = new Router();
   private readonly middlewares: Middleware[] = [];

@@ -77,8 +77,8 @@ e.g. `CreateTodoResponse.ts`. This file contains for each response defined inlin
   `ICreateTodoSuccessResponseHeader`
 - **`I<ResponseName>ResponseBody`** - Type for success response payload structure, if defined, e.g.
   `ICreateTodoSuccessResponseBody`
-- **`I<ResponseName>Response`** - Typed response object using `ITypedHttpResponse<TType, TStatusCode, THeader, TBody>`, e.g.
-  `ICreateTodoSuccessResponse`
+- **`I<ResponseName>Response`** - Typed response object using
+  `ITypedHttpResponse<TType, TStatusCode, THeader, TBody>`, e.g. `ICreateTodoSuccessResponse`
 - **`create<ResponseName>Response`** - Factory function that creates a typed response object, e.g.
   `createCreateTodoSuccessResponse`
 
@@ -86,7 +86,8 @@ Furthermore, a union type is generated, which includes all possible responses (s
 only those defined inline in the operation:
 
 - **`<OperationId>Response`** - Union type of all `I`-prefixed response types, e.g.
-  `CreateTodoResponse` which is a union of `ICreateTodoSuccessResponse | IForbiddenErrorResponse | ...`
+  `CreateTodoResponse` which is a union of
+  `ICreateTodoSuccessResponse | IForbiddenErrorResponse | ...`
 
 ### 📨✓ Request Validators
 
@@ -110,10 +111,7 @@ Request validation logic for an operation is defined in one file:
 **Using the generated request validators**
 
 ```typescript
-import {
-  RequestValidationError,
-  type IHttpRequest,
-} from "@rexeus/typeweaver-core";
+import { RequestValidationError, type IHttpRequest } from "@rexeus/typeweaver-core";
 import { CreateTodoRequestValidator } from "path/to/generated/output";
 
 const requestValidator = new CreateTodoRequestValidator();
@@ -167,10 +165,7 @@ Response validation logic for an operation is defined in one file:
 **Using the generated response validators**
 
 ```typescript
-import {
-  ResponseValidationError,
-  type IHttpResponse,
-} from "@rexeus/typeweaver-core";
+import { ResponseValidationError, type IHttpResponse } from "@rexeus/typeweaver-core";
 import { CreateTodoResponseValidator } from "path/to/generated/output";
 
 const responseValidator = new CreateTodoResponseValidator();

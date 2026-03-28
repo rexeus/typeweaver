@@ -141,8 +141,8 @@ api/spec/
     └── ValidationErrorDefinition.ts
 ```
 
-This is just one way to organize your spec. The directory layout is up to you — typeweaver only cares
-about the `defineSpec(...)` entrypoint, not about folder names or file conventions.
+This is just one way to organize your spec. The directory layout is up to you — typeweaver only
+cares about the `defineSpec(...)` entrypoint, not about folder names or file conventions.
 
 - Resource names come from `defineSpec({ resources: ... })`, not from directory names.
 - Shared responses and schemas can live anywhere that your spec entrypoint imports from.
@@ -255,11 +255,7 @@ npx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --p
 ```typescript
 // api/user-handlers.ts
 import type { Context } from "hono";
-import type {
-  HonoUserApiHandler,
-  IGetUserRequest,
-  GetUserResponse,
-} from "./generated";
+import type { HonoUserApiHandler, IGetUserRequest, GetUserResponse } from "./generated";
 import { createGetUserSuccessResponse } from "./generated";
 
 // Implement HonoUserApiHandler — the generated interface enforces

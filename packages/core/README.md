@@ -32,8 +32,8 @@ This package is typically consumed by generated code. You also use it when autho
 
 - **HTTP primitives**: `HttpMethod`, `HttpStatusCode`, `IHttpRequest`, `IHttpResponse`,
   `ITypedHttpResponse`.
-- **Spec authoring**: `defineSpec`, `defineOperation`, `defineResponse`, `defineDerivedResponse` — the
-  functional API for declaring your API contracts.
+- **Spec authoring**: `defineSpec`, `defineOperation`, `defineResponse`, `defineDerivedResponse` —
+  the functional API for declaring your API contracts.
 - **Type guards**: `isTypedHttpResponse` for runtime discrimination of typed response objects.
 - **Validation**: `IRequestValidator`, `IResponseValidator`, plus `RequestValidationError` and
   `ResponseValidationError` with structured issues.

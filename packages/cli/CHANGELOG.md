@@ -4,14 +4,12 @@
 
 ### Minor Changes
 
-- 424f170: Replace generated response classes with tagged plain objects across the core,
-  types, clients, server, and hono packages.
-  Generated clients now return the full response union instead of throwing typed
-  error responses, and generated server and hono routers now validate responses
-  before sending them, stripping extra fields from valid bodies.
-  This release also renames `handleValidationErrors` to
-  `handleRequestValidationErrors` and adds configurable response validation error
-  handling for generated routers.
+- 424f170: Replace generated response classes with tagged plain objects across the core, types,
+  clients, server, and hono packages. Generated clients now return the full response union instead
+  of throwing typed error responses, and generated server and hono routers now validate responses
+  before sending them, stripping extra fields from valid bodies. This release also renames
+  `handleValidationErrors` to `handleRequestValidationErrors` and adds configurable response
+  validation error handling for generated routers.
 
 ### Patch Changes
 
@@ -62,7 +60,6 @@
   This prevents tsc from hitting OOM on Zod v4's deeply recursive type inference. The generated
   `.d.ts` stubs use `any` internally — the public API remains fully typed through the validator and
   consumer layers.
-
   - @rexeus/typeweaver-aws-cdk@0.6.5
   - @rexeus/typeweaver-clients@0.6.5
   - @rexeus/typeweaver-core@0.6.5
@@ -121,7 +118,6 @@
 ### Patch Changes
 
 - edd224c: Fix generated code issues and stabilize CLI binary resolution
-
   - Fix trailing comma in Response.ejs template that produced `HttpResponse<Header, Body,>` in
     generated response classes
   - Widen `TypeweaverRouter` generic constraint from `RequestHandler` to

@@ -51,21 +51,11 @@ Implement your handlers and mount the generated router in a Hono app.
 // api/user-handlers.ts
 import type { Context } from "hono";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type {
-  HonoUserApiHandler,
-  IGetUserRequest,
-  GetUserResponse,
-} from "./generated";
-import {
-  createUserNotFoundErrorResponse,
-  createGetUserSuccessResponse,
-} from "./generated";
+import type { HonoUserApiHandler, IGetUserRequest, GetUserResponse } from "./generated";
+import { createUserNotFoundErrorResponse, createGetUserSuccessResponse } from "./generated";
 
 export class UserHandlers implements HonoUserApiHandler {
-  async handleGetUserRequest(
-    request: IGetUserRequest,
-    context: Context
-  ): Promise<GetUserResponse> {
+  async handleGetUserRequest(request: IGetUserRequest, context: Context): Promise<GetUserResponse> {
     const user = await db.findUser(request.param.userId);
     if (!user) {
       return createUserNotFoundErrorResponse({
