@@ -1,6 +1,7 @@
 export { DerivedResponseCycleError } from "./DerivedResponseCycleError";
 export { DuplicateOperationIdError } from "./DuplicateOperationIdError";
 export { DuplicateRouteError } from "./DuplicateRouteError";
+export { EmptyOperationResponsesError } from "./EmptyOperationResponsesError";
 export { EmptyResourceOperationsError } from "./EmptyResourceOperationsError";
 export { EmptySpecResourcesError } from "./EmptySpecResourcesError";
 export { InvalidDerivedResponseError } from "./InvalidDerivedResponseError";

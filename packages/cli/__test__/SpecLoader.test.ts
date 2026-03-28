@@ -127,6 +127,66 @@ describe("SpecLoader", () => {
     ).toBe(false);
   });
 
+  test("rejects null input", () => {
+    expect(isSpecDefinition(null)).toBe(false);
+  });
+
+  test("rejects undefined input", () => {
+    expect(isSpecDefinition(undefined)).toBe(false);
+  });
+
+  test("rejects non-object resources", () => {
+    expect(isSpecDefinition({ resources: [1, 2] })).toBe(false);
+  });
+
+  test("rejects operations with empty responses array", () => {
+    expect(
+      isSpecDefinition({
+        resources: {
+          todos: {
+            operations: [
+              {
+                operationId: "listTodos",
+                method: "GET",
+                path: "/todos",
+                summary: "List todos",
+                request: {},
+                responses: [],
+              },
+            ],
+          },
+        },
+      })
+    ).toBe(false);
+  });
+
+  test("rejects operations with undefined request", () => {
+    expect(
+      isSpecDefinition({
+        resources: {
+          todos: {
+            operations: [
+              {
+                operationId: "listTodos",
+                method: "GET",
+                path: "/todos",
+                summary: "List todos",
+                request: undefined,
+                responses: [
+                  {
+                    name: "TodoResponse",
+                    statusCode: 200,
+                    description: "Todo response",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      })
+    ).toBe(false);
+  });
+
   test("loads bundled specs and emits only the bundled spec artifacts", async () => {
     const fixtureDir = createTempDir();
     const outputDir = path.join(fixtureDir, "generated-spec");

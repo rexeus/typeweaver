@@ -38,24 +38,24 @@ export type GeneratorContext = PluginContext & {
   readonly responsesOutputDir: string;
   readonly specOutputDir: string;
 
-  getCanonicalResponse: (responseName: string) => NormalizedResponse;
-  getCanonicalResponseOutputFile: (responseName: string) => string;
-  getCanonicalResponseImportPath: (params: {
+  readonly getCanonicalResponse: (responseName: string) => NormalizedResponse;
+  readonly getCanonicalResponseOutputFile: (responseName: string) => string;
+  readonly getCanonicalResponseImportPath: (params: {
     readonly importerDir: string;
     readonly responseName: string;
   }) => string;
-  getSpecImportPath: (params: { readonly importerDir: string }) => string;
-  getOperationOutputPaths: (params: {
+  readonly getSpecImportPath: (params: {
+    readonly importerDir: string;
+  }) => string;
+  readonly getOperationOutputPaths: (params: {
     readonly resourceName: string;
     readonly operationId: string;
   }) => OperationOutputPaths;
-  getResourceOutputDir: (resourceName: string) => string;
-
-  // Utility functions
-  writeFile: (relativePath: string, content: string) => void;
-  renderTemplate: (templatePath: string, data: unknown) => string;
-  addGeneratedFile: (relativePath: string) => void;
-  getGeneratedFiles: () => string[];
+  readonly getResourceOutputDir: (resourceName: string) => string;
+  readonly writeFile: (relativePath: string, content: string) => void;
+  readonly renderTemplate: (templatePath: string, data: unknown) => string;
+  readonly addGeneratedFile: (relativePath: string) => void;
+  readonly getGeneratedFiles: () => string[];
 };
 
 /**

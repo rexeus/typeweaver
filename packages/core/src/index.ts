@@ -17,3 +17,4 @@ export * from "./defineOperation";
 export * from "./defineResponse";
 export * from "./defineSpec";
 export * from "./defaultError";
+export * from "./validateResponseUniqueness";

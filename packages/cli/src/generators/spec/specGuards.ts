@@ -6,7 +6,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 };
 
 const isRequestDefinition = (value: unknown): boolean => {
-  return value === undefined || isRecord(value);
+  return isRecord(value);
 };
 
 const isResponseDefinition = (value: unknown): boolean => {
@@ -37,6 +37,7 @@ const isOperationDefinition = (value: unknown): boolean => {
     value.summary.length > 0 &&
     Object.values(HttpMethod).includes(value.method as HttpMethod) &&
     isRequestDefinition(value.request) &&
+    value.responses.length > 0 &&
     value.responses.every(response => isResponseDefinition(response))
   );
 };

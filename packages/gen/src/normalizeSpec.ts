@@ -1,7 +1,7 @@
 import {
-  DuplicateResponseNameError,
   HttpStatusCodeNameMap,
   isNamedResponseDefinition,
+  validateUniqueResponseNames,
 } from "@rexeus/typeweaver-core";
 import type {
   RequestDefinition,
@@ -14,6 +14,7 @@ import {
   DerivedResponseCycleError,
   DuplicateOperationIdError,
   DuplicateRouteError,
+  EmptyOperationResponsesError,
   EmptyResourceOperationsError,
   EmptySpecResourcesError,
   InvalidDerivedResponseError,
@@ -177,24 +178,6 @@ const validateDerivedResponseMetadata = (
   }
 };
 
-const validateUniqueResponseNames = (definition: SpecDefinition): void => {
-  const responsesByName = new Map<string, ResponseDefinition>();
-
-  for (const resource of Object.values(definition.resources)) {
-    for (const operation of resource.operations) {
-      for (const response of operation.responses) {
-        const existingResponse = responsesByName.get(response.name);
-
-        if (existingResponse !== undefined && existingResponse !== response) {
-          throw new DuplicateResponseNameError(response.name);
-        }
-
-        responsesByName.set(response.name, response);
-      }
-    }
-  }
-};
-
 const collectCanonicalResponseDefinitions = (
   definition: SpecDefinition
 ): Map<string, ResponseDefinition> => {
@@ -333,6 +316,10 @@ const normalizeOperation = (
 
   routeKeys.add(routeKey);
 
+  if (operation.responses.length === 0) {
+    throw new EmptyOperationResponsesError(operation.operationId);
+  }
+
   return {
     operationId: operation.operationId,
     method: operation.method,
@@ -354,7 +341,7 @@ export const normalizeSpec = (definition: SpecDefinition): NormalizedSpec => {
     throw new EmptySpecResourcesError();
   }
 
-  validateUniqueResponseNames(definition);
+  validateUniqueResponseNames(definition.resources);
   const canonicalResponses = collectCanonicalResponses(definition);
   const operationIds = new Set<string>();
   const routeKeys = new Set<string>();

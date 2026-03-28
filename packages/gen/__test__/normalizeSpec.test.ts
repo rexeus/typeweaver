@@ -13,6 +13,7 @@ import {
   DerivedResponseCycleError,
   DuplicateOperationIdError,
   DuplicateRouteError,
+  EmptyOperationResponsesError,
   EmptyResourceOperationsError,
   EmptySpecResourcesError,
   InvalidDerivedResponseError,
@@ -140,7 +141,36 @@ describe("normalizeSpec", () => {
     ).toThrowError(EmptyResourceOperationsError);
   });
 
+  test("rejects operations without responses", () => {
+    const spec = defineSpec({
+      resources: {
+        todos: {
+          operations: [
+            defineOperation({
+              operationId: "getTodo",
+              method: HttpMethod.GET,
+              path: "/todos",
+              summary: "Get todo",
+              request: {},
+              responses: [],
+            }),
+          ],
+        },
+      },
+    });
+
+    expect(() => normalizeSpec(spec)).toThrowError(
+      EmptyOperationResponsesError
+    );
+  });
+
   test("rejects duplicate operation IDs", () => {
+    const dummyResponse = defineResponse({
+      name: "DummyResponse",
+      statusCode: HttpStatusCode.OK,
+      description: "Ok",
+    });
+
     const spec = defineSpec({
       resources: {
         todos: {
@@ -151,7 +181,7 @@ describe("normalizeSpec", () => {
               path: "/todos",
               summary: "List todos",
               request: {},
-              responses: [],
+              responses: [dummyResponse],
             }),
           ],
         },
@@ -163,7 +193,7 @@ describe("normalizeSpec", () => {
               path: "/accounts",
               summary: "List accounts",
               request: {},
-              responses: [],
+              responses: [dummyResponse],
             }),
           ],
         },
@@ -255,6 +285,12 @@ describe("normalizeSpec", () => {
   });
 
   test("rejects duplicate normalized routes", () => {
+    const dummyResponse = defineResponse({
+      name: "DummyResponse",
+      statusCode: HttpStatusCode.OK,
+      description: "Ok",
+    });
+
     const spec = defineSpec({
       resources: {
         todos: {
@@ -267,7 +303,7 @@ describe("normalizeSpec", () => {
               request: {
                 param: z.object({ todoId: z.string() }),
               },
-              responses: [],
+              responses: [dummyResponse],
             }),
           ],
         },
@@ -281,7 +317,7 @@ describe("normalizeSpec", () => {
               request: {
                 param: z.object({ accountId: z.string() }),
               },
-              responses: [],
+              responses: [dummyResponse],
             }),
           ],
         },
@@ -292,6 +328,12 @@ describe("normalizeSpec", () => {
   });
 
   test("rejects path parameter mismatches", () => {
+    const dummyResponse = defineResponse({
+      name: "DummyResponse",
+      statusCode: HttpStatusCode.OK,
+      description: "Ok",
+    });
+
     const spec = defineSpec({
       resources: {
         todos: {
@@ -304,7 +346,7 @@ describe("normalizeSpec", () => {
               request: {
                 param: z.object({ id: z.string() }),
               },
-              responses: [],
+              responses: [dummyResponse],
             }),
           ],
         },
@@ -327,7 +369,13 @@ describe("normalizeSpec", () => {
               request: {
                 param: z.string(),
               },
-              responses: [],
+              responses: [
+                {
+                  name: "DummyResponse",
+                  statusCode: HttpStatusCode.OK,
+                  description: "Ok",
+                },
+              ],
             },
           ],
         },
@@ -350,7 +398,13 @@ describe("normalizeSpec", () => {
               request: {
                 body: { parse: () => ({}) },
               },
-              responses: [],
+              responses: [
+                {
+                  name: "DummyResponse",
+                  statusCode: HttpStatusCode.OK,
+                  description: "Ok",
+                },
+              ],
             },
           ],
         },
