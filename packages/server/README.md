@@ -317,7 +317,7 @@ Each router accepts `TypeweaverRouterOptions`:
 | `validateResponses`              | `boolean`                    | `true`     | Enable/disable response validation |
 | `handleRequestValidationErrors`  | `boolean \| function`        | `true`     | Handle request validation errors   |
 | `handleResponseValidationErrors` | `boolean \| function`        | `true`     | Handle response validation errors  |
-| `handleHttpResponseErrors`       | `boolean \| function`        | `true`     | Handle thrown `HttpResponse`       |
+| `handleHttpResponseErrors`       | `boolean \| function`        | `true`     | Handle thrown typed HTTP responses |
 | `handleUnknownErrors`            | `boolean \| function`        | `true`     | Handle unexpected errors           |
 
 When set to `true`, error handlers use sensible defaults (400/500 responses). When set to `false`,

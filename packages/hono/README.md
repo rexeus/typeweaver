@@ -131,7 +131,8 @@ serve({ fetch: app.fetch, port: 3000 }, () => {
     handler throws, the original response is returned as a fallback.
 - `handleHttpResponseErrors`: `true` | `false` |
   `(err, c) => IHttpResponse | Promise<IHttpResponse>`
-  - If `true` (default), returns thrown `HttpResponse` as-is, they will be sent as the response
+  - If `true` (default), returns thrown typed HTTP responses (`ITypedHttpResponse`) as-is, they will
+    be sent as the response
   - If `false`, disables this handler (errors fall through to the unknown error handler)
   - If function, calls the function with the error and context, expects an `IHttpResponse` to
     return, so you can customize the response in the way you want
