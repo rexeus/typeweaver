@@ -1,5 +1,5 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { NotFoundErrorResponse } from "../..";
+import { createNotFoundErrorResponse as generatedCreateNotFoundErrorResponse } from "../../test-project/output/shared/NotFoundErrorResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import { createResponse } from "../createResponse";
@@ -23,7 +23,7 @@ const createNotFoundErrorResponseBody =
 
 export function createNotFoundErrorResponse(
   input: NotFoundErrorResponseInput = {}
-): NotFoundErrorResponse {
+): INotFoundErrorResponse {
   const responseData = createResponse<
     INotFoundErrorResponse,
     INotFoundErrorResponseBody,
@@ -38,5 +38,5 @@ export function createNotFoundErrorResponse(
     },
     input
   );
-  return new NotFoundErrorResponse(responseData);
+  return generatedCreateNotFoundErrorResponse(responseData);
 }

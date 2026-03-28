@@ -1,3 +1,4 @@
+import { HttpMethod } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
 import { executeMiddlewarePipeline } from "../../../src/lib/Middleware";
 import { logger } from "../../../src/lib/middleware/logger";
@@ -7,7 +8,7 @@ describe("logger", () => {
   test("should log request with default format", async () => {
     const logFn = vi.fn();
     const mw = logger({ logFn });
-    const ctx = createServerContext({ method: "GET", path: "/users" });
+    const ctx = createServerContext({ method: HttpMethod.GET, path: "/users" });
 
     await executeMiddlewarePipeline([mw.handler], ctx, async () => ({
       statusCode: 200,
@@ -24,7 +25,10 @@ describe("logger", () => {
       logFn,
       format: data => `[${data.statusCode}] ${data.method} ${data.path}`,
     });
-    const ctx = createServerContext({ method: "POST", path: "/items" });
+    const ctx = createServerContext({
+      method: HttpMethod.POST,
+      path: "/items",
+    });
 
     await executeMiddlewarePipeline([mw.handler], ctx, async () => ({
       statusCode: 201,
@@ -70,7 +74,10 @@ describe("logger", () => {
   test("should use console.log by default", async () => {
     const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const mw = logger();
-    const ctx = createServerContext({ method: "DELETE", path: "/items/1" });
+    const ctx = createServerContext({
+      method: HttpMethod.DELETE,
+      path: "/items/1",
+    });
 
     await executeMiddlewarePipeline([mw.handler], ctx, async () => ({
       statusCode: 204,

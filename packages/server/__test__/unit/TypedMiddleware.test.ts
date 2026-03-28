@@ -71,7 +71,8 @@ describe("TypedMiddleware", () => {
       const { TypeweaverRouter } =
         await import("../../src/lib/TypeweaverRouter");
       const { HttpMethod } = await import("@rexeus/typeweaver-core");
-      const { noopValidator } = await import("../helpers");
+      const { noopValidator, noopResponseValidator } =
+        await import("../helpers");
 
       const auth = defineMiddleware<{ userId: string }>(async (_ctx, next) =>
         next({ userId: "u_runtime" })
@@ -86,6 +87,7 @@ describe("TypedMiddleware", () => {
             HttpMethod.GET,
             "/test",
             noopValidator,
+            noopResponseValidator,
             async (req, ctx) => this.requestHandlers.handleGet(req, ctx)
           );
         }

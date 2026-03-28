@@ -1,13 +1,10 @@
-import { HttpResponse } from "@rexeus/typeweaver-core";
-import {
-  createRegisterAccountSuccessResponse,
-  RegisterAccountSuccessResponse,
-} from "../..";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
+import { createRegisterAccountSuccessResponse } from "../../data";
 import type { IRegisterAccountRequest, RegisterAccountResponse } from "../..";
 import type { ServerAccountApiHandler } from "../../test-project/output/account/AccountRouter";
 
 export class ServerAccountHandlers implements ServerAccountApiHandler {
-  public constructor(private readonly throwError?: Error | HttpResponse) {
+  public constructor(private readonly throwError?: Error | ITypedHttpResponse) {
     //
   }
 
@@ -18,10 +15,8 @@ export class ServerAccountHandlers implements ServerAccountApiHandler {
       throw this.throwError;
     }
 
-    const response = createRegisterAccountSuccessResponse({
+    return createRegisterAccountSuccessResponse({
       body: request.body,
     });
-
-    return new RegisterAccountSuccessResponse(response);
   }
 }

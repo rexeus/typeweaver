@@ -11,9 +11,10 @@
   - This enables logging, tracing, and metrics keyed to the original API operation without
     hardcoding strings.
   - Simplify response class constructors.
-    - Response constructors no longer accept `statusCode` — each class hard-codes its own status code
-      via a direct property initializer. The constructor parameter type changes from `I…Response` to
-      `Omit<I…Response, "statusCode">`. Responses without header or body use a zero-arg constructor.
+    - Response constructors no longer accept `statusCode` — each class hard-codes its own status
+      code via a direct property initializer. The constructor parameter type changes from
+      `I…Response` to `Omit<I…Response, "statusCode">`. Responses without header or body use a
+      zero-arg constructor.
     - Fix ResponseValidator to call the zero-arg constructor for empty responses.
 
 ### Patch Changes
@@ -37,7 +38,6 @@
   This prevents tsc from hitting OOM on Zod v4's deeply recursive type inference. The generated
   `.d.ts` stubs use `any` internally — the public API remains fully typed through the validator and
   consumer layers.
-
   - @rexeus/typeweaver-aws-cdk@0.6.5
   - @rexeus/typeweaver-clients@0.6.5
   - @rexeus/typeweaver-core@0.6.5
@@ -96,7 +96,6 @@
 ### Patch Changes
 
 - edd224c: Fix generated code issues and stabilize CLI binary resolution
-
   - Fix trailing comma in Response.ejs template that produced `HttpResponse<Header, Body,>` in
     generated response classes
   - Widen `TypeweaverRouter` generic constraint from `RequestHandler` to

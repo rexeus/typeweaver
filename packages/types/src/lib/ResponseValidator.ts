@@ -10,11 +10,27 @@ import type {
   HttpHeaderSchema,
   IHttpResponse,
   IResponseValidator,
-  ResponseValidationError,
+  ITypedHttpResponse,
   SafeResponseValidationResult,
 } from "@rexeus/typeweaver-core";
+import { ResponseValidationError } from "@rexeus/typeweaver-core";
 import { Validator } from "./Validator";
 import type { ZodSafeParseResult } from "zod";
+
+type Mutable<T> = { -readonly [K in keyof T]: T[K] };
+
+/**
+ * Metadata entry describing a single expected response variant.
+ *
+ * Each entry maps a response name and status code to its Zod
+ * header/body schemas from the operation definition.
+ */
+export type ResponseEntry = {
+  readonly name: string;
+  readonly statusCode: number;
+  readonly headerSchema: HttpHeaderSchema | undefined;
+  readonly bodySchema: HttpBodySchema | undefined;
+};
 
 /**
  * Abstract base class for HTTP response validation.
@@ -27,41 +43,72 @@ import type { ZodSafeParseResult } from "zod";
  *
  * Response validators are typically used in API clients to ensure
  * responses match the expected format before processing.
+ *
+ * Subclasses provide response metadata via `responseEntries` and
+ * `expectedStatusCodes`. All validation logic lives in this base class.
  */
-export abstract class ResponseValidator
+export abstract class ResponseValidator<
+  TResponse extends ITypedHttpResponse = ITypedHttpResponse,
+>
   extends Validator
   implements IResponseValidator
 {
+  /** Ordered list of response variants this validator recognizes. */
+  protected abstract readonly responseEntries: readonly ResponseEntry[];
+  /** Set of valid HTTP status codes for this operation. */
+  protected abstract readonly expectedStatusCodes: readonly number[];
+
   /**
    * Validates a response without throwing errors.
    *
    * @param response - The HTTP response to validate
    * @returns A result object containing either the validated response or error details
    */
-  public abstract safeValidate(
+  public safeValidate(
     response: IHttpResponse
-  ): SafeResponseValidationResult<IHttpResponse>;
+  ): SafeResponseValidationResult<TResponse> {
+    const error = new ResponseValidationError(response.statusCode);
+
+    for (const entry of this.responseEntries) {
+      if (response.statusCode === entry.statusCode) {
+        const result = this.validateResponseType<TResponse>(
+          entry.name,
+          entry.headerSchema,
+          entry.bodySchema
+        )(response, error);
+        if (result.isValid) return result;
+      }
+    }
+
+    if (!error.hasResponseIssues()) {
+      error.addStatusCodeIssue([...this.expectedStatusCodes]);
+    }
+
+    return { isValid: false, error };
+  }
 
   /**
    * Validates a response and throws if validation fails.
    *
    * @param response - The HTTP response to validate
    * @returns The validated response with proper typing
-   * @throws {InvalidResponseStatusCodeError} If status code doesn't match expected
    * @throws {ResponseValidationError} If response structure fails validation
    */
-  public abstract validate(response: IHttpResponse): IHttpResponse;
+  public validate(response: IHttpResponse): TResponse {
+    const result = this.safeValidate(response);
+    if (!result.isValid) throw result.error;
+    return result.data;
+  }
 
   /**
-   * Generic response validation method that validates header and body schemas.
-   * This method reduces code duplication across individual response validators.
+   * Validates a single response variant against its header and body schemas.
    *
    * @param responseName - Name of the response type for error reporting
    * @param headerSchema - Zod schema for header validation (optional)
    * @param bodySchema - Zod schema for body validation (optional)
    * @returns Function that validates response and returns result
    */
-  protected validateResponseType<Response extends IHttpResponse>(
+  protected validateResponseType<Response extends ITypedHttpResponse>(
     responseName: string,
     headerSchema: HttpHeaderSchema | undefined,
     bodySchema: HttpBodySchema | undefined
@@ -71,7 +118,8 @@ export abstract class ResponseValidator
   ) => SafeResponseValidationResult<Response> {
     return (response, error) => {
       let isValid = true;
-      const validatedResponse: IHttpResponse = {
+      const validatedResponse: Mutable<ITypedHttpResponse> = {
+        type: responseName,
         statusCode: response.statusCode,
         header: undefined,
         body: undefined,

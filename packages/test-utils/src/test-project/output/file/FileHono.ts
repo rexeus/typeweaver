@@ -12,14 +12,17 @@ import { TypeweaverHono, type HonoRequestHandler, type TypeweaverHonoOptions } f
 import type { IUploadFileRequest } from "./UploadFileRequest";
 import { UploadFileRequestValidator } from "./UploadFileRequestValidator";
 import type { UploadFileResponse } from "./UploadFileResponse";
+import { UploadFileResponseValidator } from "./UploadFileResponseValidator";
 
 import type { IGetFileMetadataRequest } from "./GetFileMetadataRequest";
 import { GetFileMetadataRequestValidator } from "./GetFileMetadataRequestValidator";
 import type { GetFileMetadataResponse } from "./GetFileMetadataResponse";
+import { GetFileMetadataResponseValidator } from "./GetFileMetadataResponseValidator";
 
 import type { IDownloadFileContentRequest } from "./DownloadFileContentRequest";
 import { DownloadFileContentRequestValidator } from "./DownloadFileContentRequestValidator";
 import type { DownloadFileContentResponse } from "./DownloadFileContentResponse";
+import { DownloadFileContentResponseValidator } from "./DownloadFileContentResponseValidator";
 
 export type HonoFileApiHandler = {
   handleUploadFileRequest: HonoRequestHandler<IUploadFileRequest, UploadFileResponse>;
@@ -47,6 +50,7 @@ export class FileHono extends TypeweaverHono<HonoFileApiHandler> {
         context,
         "UploadFile",
         new UploadFileRequestValidator(),
+        new UploadFileResponseValidator(),
         this.requestHandlers.handleUploadFileRequest.bind(this.requestHandlers),
       ),
     );
@@ -56,6 +60,7 @@ export class FileHono extends TypeweaverHono<HonoFileApiHandler> {
         context,
         "GetFileMetadata",
         new GetFileMetadataRequestValidator(),
+        new GetFileMetadataResponseValidator(),
         this.requestHandlers.handleGetFileMetadataRequest.bind(this.requestHandlers),
       ),
     );
@@ -65,6 +70,7 @@ export class FileHono extends TypeweaverHono<HonoFileApiHandler> {
         context,
         "DownloadFileContent",
         new DownloadFileContentRequestValidator(),
+        new DownloadFileContentResponseValidator(),
         this.requestHandlers.handleDownloadFileContentRequest.bind(this.requestHandlers),
       ),
     );

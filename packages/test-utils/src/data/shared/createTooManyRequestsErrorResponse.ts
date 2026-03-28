@@ -1,5 +1,5 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { TooManyRequestsErrorResponse } from "../..";
+import { createTooManyRequestsErrorResponse as generatedCreateTooManyRequestsErrorResponse } from "../../test-project/output/shared/TooManyRequestsErrorResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import { createResponse } from "../createResponse";
@@ -23,7 +23,7 @@ const createTooManyRequestsErrorResponseBody =
 
 export function createTooManyRequestsErrorResponse(
   input: TooManyRequestsErrorResponseInput = {}
-): TooManyRequestsErrorResponse {
+): ITooManyRequestsErrorResponse {
   const responseData = createResponse<
     ITooManyRequestsErrorResponse,
     ITooManyRequestsErrorResponseBody,
@@ -38,5 +38,5 @@ export function createTooManyRequestsErrorResponse(
     },
     input
   );
-  return new TooManyRequestsErrorResponse(responseData);
+  return generatedCreateTooManyRequestsErrorResponse(responseData);
 }

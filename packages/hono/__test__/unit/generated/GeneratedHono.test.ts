@@ -1,5 +1,4 @@
-import { HttpResponse } from "@rexeus/typeweaver-core";
-import type { IHttpRequest } from "@rexeus/typeweaver-core";
+import type { IHttpRequest, ITypedHttpResponse } from "@rexeus/typeweaver-core";
 import {
   createCreateTodoRequest,
   createDeleteTodoRequest,
@@ -284,17 +283,15 @@ describe("Generated Hono Router", () => {
       // Arrange
       const customValidationMessage = "Custom validation error";
       const app = createTestHono({
-        handleValidationErrors: () => {
-          return new HttpResponse(
-            400,
-            {
-              "Content-Type": "application/json",
-            },
-            {
-              message: customValidationMessage,
-            }
-          );
-        },
+        handleRequestValidationErrors: () => ({
+          statusCode: 400,
+          header: {
+            "Content-Type": "application/json",
+          },
+          body: {
+            message: customValidationMessage,
+          },
+        }),
       });
       const requestData = createCreateTodoRequest({
         body: {
@@ -342,11 +339,13 @@ describe("Generated Hono Router", () => {
       // Arrange
       const customStringResponse = "This is a plain text response";
       const app = createTestHono({
-        throwTodoError: new HttpResponse(
-          200,
-          { "Content-Type": "text/plain" },
-          customStringResponse
-        ),
+        validateResponses: false,
+        throwTodoError: {
+          type: "CustomStringResponse" as const,
+          statusCode: 200,
+          header: { "Content-Type": "text/plain" },
+          body: customStringResponse,
+        },
       });
       const requestData = createCreateTodoRequest();
 
@@ -458,6 +457,7 @@ describe("Generated Hono Router", () => {
       const app = new TodoHono({
         requestHandlers: stubHandlers,
         validateRequests: false,
+        validateResponses: false,
       });
 
       const response = await app.request("http://localhost/todos?status=TODO", {
@@ -481,6 +481,7 @@ describe("Generated Hono Router", () => {
       const app = new TodoHono({
         requestHandlers: stubHandlers,
         validateRequests: false,
+        validateResponses: false,
       });
 
       await app.request("http://localhost/todos", { method: "GET" });
@@ -494,14 +495,16 @@ describe("Generated Hono Router", () => {
   describe("Error Handling", () => {
     test("should handle HTTP response errors with default handler", async () => {
       // Arrange
-      const errorResponse = new HttpResponse(
-        404,
-        {},
-        {
+      const errorResponse = {
+        type: "TodoNotFoundError" as const,
+        statusCode: 404,
+        header: {},
+        body: {
           errorCode: "TODO_NOT_FOUND",
-        }
-      );
+        },
+      };
       const app = createTestHono({
+        validateResponses: false,
         throwTodoError: errorResponse,
       });
       const requestData = createCreateTodoRequest();
@@ -520,26 +523,26 @@ describe("Generated Hono Router", () => {
 
     test("should handle HTTP response errors with custom handler", async () => {
       // Arrange
-      const errorResponse = new HttpResponse(
-        404,
-        {},
-        {
+      const errorResponse = {
+        type: "TodoNotFoundError" as const,
+        statusCode: 404,
+        header: {},
+        body: {
           errorCode: "TODO_NOT_FOUND",
-        }
-      );
+        },
+      };
       const customMessage = "Custom error handling";
       const app = createTestHono({
+        validateResponses: false,
         throwTodoError: errorResponse,
-        handleHttpResponseErrors: (error: HttpResponse) => {
-          return new HttpResponse(
-            404,
-            {},
-            {
-              ...error.body.customError,
-              customMessage,
-            }
-          );
-        },
+        handleHttpResponseErrors: (error: ITypedHttpResponse) => ({
+          statusCode: 404,
+          header: {},
+          body: {
+            ...error.body.customError,
+            customMessage,
+          },
+        }),
       });
       const requestData = createCreateTodoRequest();
 
@@ -583,15 +586,13 @@ describe("Generated Hono Router", () => {
       // Arrange
       const customValidationMessage = "Custom validation error handling";
       const app = createTestHono({
-        handleValidationErrors: () => {
-          return new HttpResponse(
-            404,
-            {},
-            {
-              customValidationError: customValidationMessage,
-            }
-          );
-        },
+        handleRequestValidationErrors: () => ({
+          statusCode: 404,
+          header: {},
+          body: {
+            customValidationError: customValidationMessage,
+          },
+        }),
       });
       const requestData = createCreateTodoRequest({
         body: {
@@ -638,15 +639,13 @@ describe("Generated Hono Router", () => {
 
       const app = createTestHono({
         throwTodoError: unknownError,
-        handleUnknownErrors: () => {
-          return new HttpResponse(
-            500,
-            {},
-            {
-              customUnknownError: customUnknownMessage,
-            }
-          );
-        },
+        handleUnknownErrors: () => ({
+          statusCode: 500,
+          header: {},
+          body: {
+            customUnknownError: customUnknownMessage,
+          },
+        }),
       });
       const requestData = createCreateTodoRequest();
 
@@ -665,7 +664,7 @@ describe("Generated Hono Router", () => {
     test("should handle validation error handler failures with unknown handlers", async () => {
       // Arrange
       const app = createTestHono({
-        handleValidationErrors: () => {
+        handleRequestValidationErrors: () => {
           throw new Error("Validation handler failed"); // Custom handler throws exception
         },
       });
@@ -689,13 +688,15 @@ describe("Generated Hono Router", () => {
 
     test("should handle HTTP response error handler failures with unknown handlers", async () => {
       // Arrange
-      const originalError = new HttpResponse(
-        404,
-        {},
-        { code: "TODO_NOT_FOUND", message: "Todo not found" }
-      );
+      const originalError = {
+        type: "TodoNotFoundError" as const,
+        statusCode: 404,
+        header: {},
+        body: { code: "TODO_NOT_FOUND", message: "Todo not found" },
+      };
 
       const app = createTestHono({
+        validateResponses: false,
         throwTodoError: originalError,
         handleHttpResponseErrors: () => {
           throw new Error("HTTP handler failed"); // Custom handler throws exception

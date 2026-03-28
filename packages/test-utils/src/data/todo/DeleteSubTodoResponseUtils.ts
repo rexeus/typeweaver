@@ -1,6 +1,6 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { DeleteSubTodoSuccessResponse } from "../..";
+import { createDeleteSubTodoSuccessResponse as generatedCreateDeleteSubTodoSuccessResponse } from "../../test-project/output/todo/DeleteSubTodoResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 import type {
@@ -27,7 +27,7 @@ type DeleteSubTodoSuccessResponseInput = {
 
 export function createDeleteSubTodoSuccessResponse(
   input: DeleteSubTodoSuccessResponseInput = {}
-): DeleteSubTodoSuccessResponse {
+): IDeleteSubTodoSuccessResponse {
   const responseData = createResponse<
     IDeleteSubTodoSuccessResponse,
     IDeleteSubTodoSuccessResponseBody,
@@ -42,5 +42,5 @@ export function createDeleteSubTodoSuccessResponse(
     },
     input
   );
-  return new DeleteSubTodoSuccessResponse(responseData);
+  return generatedCreateDeleteSubTodoSuccessResponse(responseData);
 }

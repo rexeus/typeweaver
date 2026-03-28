@@ -1,10 +1,8 @@
-import { HttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 import {
-  AccessTokenSuccessResponse,
   createAccessTokenSuccessResponse,
   createRefreshTokenSuccessResponse,
-  RefreshTokenSuccessResponse,
-} from "../..";
+} from "../../data";
 import type {
   AccessTokenResponse,
   IAccessTokenRequest,
@@ -14,7 +12,7 @@ import type {
 import type { ServerAuthApiHandler } from "../../test-project/output/auth/AuthRouter";
 
 export class ServerAuthHandlers implements ServerAuthApiHandler {
-  public constructor(private readonly throwError?: Error | HttpResponse) {
+  public constructor(private readonly throwError?: Error | ITypedHttpResponse) {
     //
   }
 
@@ -25,8 +23,7 @@ export class ServerAuthHandlers implements ServerAuthApiHandler {
       throw this.throwError;
     }
 
-    const response = createAccessTokenSuccessResponse();
-    return new AccessTokenSuccessResponse(response);
+    return createAccessTokenSuccessResponse();
   }
 
   public async handleRefreshTokenRequest(
@@ -36,7 +33,6 @@ export class ServerAuthHandlers implements ServerAuthApiHandler {
       throw this.throwError;
     }
 
-    const response = createRefreshTokenSuccessResponse();
-    return new RefreshTokenSuccessResponse(response);
+    return createRefreshTokenSuccessResponse();
   }
 }

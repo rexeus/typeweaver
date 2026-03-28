@@ -1,5 +1,7 @@
-import { HttpResponse } from "@rexeus/typeweaver-core";
-import type { IHttpResponse } from "@rexeus/typeweaver-core";
+import type {
+  IHttpResponse,
+  ITypedHttpResponse,
+} from "@rexeus/typeweaver-core";
 import { serve } from "@hono/node-server";
 import getPort, { portNumbers } from "get-port";
 import { Hono } from "hono";
@@ -20,15 +22,15 @@ import type { ServerType } from "@hono/node-server";
  */
 export type TestServerOptions = {
   /** Error to throw from todo handlers (simulates handler failures). */
-  readonly throwTodoError?: Error | HttpResponse;
+  readonly throwTodoError?: Error | ITypedHttpResponse;
   /** Error to throw from auth handlers. */
-  readonly throwAuthError?: Error | HttpResponse;
+  readonly throwAuthError?: Error | ITypedHttpResponse;
   /** Error to throw from account handlers. */
-  readonly throwAccountError?: Error | HttpResponse;
+  readonly throwAccountError?: Error | ITypedHttpResponse;
   /** Error to throw from specimen handlers. */
-  readonly throwSpecimenError?: Error | HttpResponse;
+  readonly throwSpecimenError?: Error | ITypedHttpResponse;
   /** Custom response to return for all requests (bypasses handlers). */
-  readonly customResponses?: HttpResponse | IHttpResponse;
+  readonly customResponses?: IHttpResponse;
 } & Omit<TypeweaverHonoOptions<unknown>, "requestHandlers">;
 
 /**
@@ -54,7 +56,7 @@ export function createTestHono(options?: TestServerOptions): Hono {
   const app = new Hono();
   const adapter = new HonoAdapter();
 
-  app.use("*", async (c, next) => {
+  app.use("*", async (_c, next) => {
     if (options?.customResponses) {
       return adapter.toResponse(options.customResponses);
     }

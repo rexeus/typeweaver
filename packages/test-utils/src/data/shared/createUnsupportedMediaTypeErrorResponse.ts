@@ -1,6 +1,6 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { UnsupportedMediaTypeErrorResponse } from "../..";
+import { createUnsupportedMediaTypeErrorResponse as generatedCreateUnsupportedMediaTypeErrorResponse } from "../../test-project/output/shared/UnsupportedMediaTypeErrorResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import { createResponse } from "../createResponse";
@@ -35,7 +35,7 @@ const createUnsupportedMediaTypeErrorResponseBody =
 
 export function createUnsupportedMediaTypeErrorResponse(
   input: UnsupportedMediaTypeErrorResponseInput = {}
-): UnsupportedMediaTypeErrorResponse {
+): IUnsupportedMediaTypeErrorResponse {
   const responseData = createResponse<
     IUnsupportedMediaTypeErrorResponse,
     IUnsupportedMediaTypeErrorResponseBody,
@@ -51,5 +51,5 @@ export function createUnsupportedMediaTypeErrorResponse(
     },
     input
   );
-  return new UnsupportedMediaTypeErrorResponse(responseData);
+  return generatedCreateUnsupportedMediaTypeErrorResponse(responseData);
 }

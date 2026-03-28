@@ -9,23 +9,21 @@
 import { ApiClient, type ApiClientProps } from "../lib/clients";
 
 import { RegisterAccountRequestCommand } from "./RegisterAccountRequestCommand";
-import type { SuccessfulRegisterAccountResponse } from "./RegisterAccountRequest";
+import type { RegisterAccountResponse } from "./RegisterAccountResponse";
 
 export type AccountRequestCommands = RegisterAccountRequestCommand;
 
-export type SuccessfulAccountResponses = SuccessfulRegisterAccountResponse;
+export type AccountResponses = RegisterAccountResponse;
 
 export class AccountClient extends ApiClient {
   public constructor(props: ApiClientProps) {
     super(props);
   }
 
-  public async send(
-    command: RegisterAccountRequestCommand,
-  ): Promise<SuccessfulRegisterAccountResponse>;
+  public async send(command: RegisterAccountRequestCommand): Promise<RegisterAccountResponse>;
 
-  public async send(command: AccountRequestCommands): Promise<SuccessfulAccountResponses> {
+  public async send(command: AccountRequestCommands): Promise<AccountResponses> {
     const response = await this.execute(command);
-    return command.processResponse(response, this.processResponseOptions);
+    return command.processResponse(response);
   }
 }

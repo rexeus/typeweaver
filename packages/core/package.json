@@ -30,6 +30,7 @@
     "typecheck": "tsc --noEmit",
     "format": "oxfmt",
     "build": "tsdown && cp ../../LICENSE ../../NOTICE ./dist/",
+    "test": "vitest run",
     "prepack": "npm run build",
     "preversion": "npm run build"
   },
@@ -57,6 +58,7 @@
     "zod": "^4.3.0"
   },
   "devDependencies": {
+    "vitest": "^4.0.18",
     "zod": "^4.3.6"
   }
 }

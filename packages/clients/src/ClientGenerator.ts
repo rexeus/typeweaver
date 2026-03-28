@@ -108,23 +108,8 @@ export class ClientGenerator {
       outputRequestFileName,
     } = operationResource;
 
-    const { operationId, method, request, responses } = definition;
+    const { operationId, method, request } = definition;
     const pascalCaseOperationId = Case.pascal(operationId);
-
-    // Get response information
-    const allResponses = responses;
-    const ownSuccessResponses = allResponses.filter(
-      r => r.statusCode >= 200 && r.statusCode < 300 && !r.isReference
-    );
-    const ownErrorResponses = allResponses.filter(
-      r => (r.statusCode < 200 || r.statusCode >= 300) && !r.isReference
-    );
-    const sharedSuccessResponses = allResponses.filter(
-      r => r.statusCode >= 200 && r.statusCode < 300 && r.isReference
-    );
-    const sharedErrorResponses = allResponses.filter(
-      r => (r.statusCode < 200 || r.statusCode >= 300) && r.isReference
-    );
 
     // Build request type information
     const headerTsType = request.header
@@ -140,21 +125,10 @@ export class ClientGenerator {
       ? TsTypePrinter.print(TsTypeNode.fromZod(request.body))
       : undefined;
 
-    // Helper function to determine response import path
-    const successResponseImportPath = (response: {
-      name: string;
-      isReference?: boolean;
-      path?: string;
-    }) => {
-      if (response.isReference && response.path) {
-        return response.path;
-      }
-      return `./${path.basename(outputResponseFileName, ".ts")}`;
-    };
-
     // Build relative paths
     const requestFile = `./${path.basename(outputRequestFileName, ".ts")}`;
     const responseValidatorFile = `./${path.basename(outputResponseValidationFileName, ".ts")}`;
+    const responseFile = `./${path.basename(outputResponseFileName, ".ts")}`;
     const relativeSourceFile = path.relative(sourceDir, sourceFile);
     const sourcePath = path.join(
       sourceDir,
@@ -171,13 +145,9 @@ export class ClientGenerator {
       paramTsType,
       queryTsType,
       bodyTsType,
-      ownSuccessResponses,
-      ownErrorResponses,
-      sharedSuccessResponses,
-      sharedErrorResponses,
       requestFile,
       responseValidatorFile,
-      successResponseImportPath,
+      responseFile,
     });
 
     const outputCommandFile = path.join(

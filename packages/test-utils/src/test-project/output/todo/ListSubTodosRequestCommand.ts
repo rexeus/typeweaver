@@ -11,19 +11,19 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  UnknownResponse,
+  UnknownResponseError,
 } from "@rexeus/typeweaver-core";
-import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
+import { RequestCommand } from "../lib/clients";
 import { ListSubTodosResponseValidator } from "./ListSubTodosResponseValidator";
 import type {
   IListSubTodosRequest,
   IListSubTodosRequestHeader,
   IListSubTodosRequestParam,
   IListSubTodosRequestQuery,
-  SuccessfulListSubTodosResponse,
 } from "./ListSubTodosRequest";
+import type { ListSubTodosResponse } from "./ListSubTodosResponse";
 
-import { ListSubTodosSuccessResponse } from "./ListSubTodosResponse";
+const responseValidator = new ListSubTodosResponseValidator();
 
 export class ListSubTodosRequestCommand extends RequestCommand implements IListSubTodosRequest {
   public override readonly operationId = definition.operationId;
@@ -35,8 +35,6 @@ export class ListSubTodosRequestCommand extends RequestCommand implements IListS
   public override readonly query: IListSubTodosRequestQuery;
   declare public readonly body: undefined;
 
-  private readonly responseValidator: ListSubTodosResponseValidator;
-
   public constructor(input: Omit<IListSubTodosRequest, "method" | "path">) {
     super();
 
@@ -45,39 +43,14 @@ export class ListSubTodosRequestCommand extends RequestCommand implements IListS
     this.param = input.param;
 
     this.query = input.query;
-
-    this.responseValidator = new ListSubTodosResponseValidator();
   }
 
-  public processResponse(
-    response: IHttpResponse,
-    options: ProcessResponseOptions,
-  ): SuccessfulListSubTodosResponse {
+  public processResponse(response: IHttpResponse): ListSubTodosResponse {
     try {
-      const result = this.responseValidator.validate(response);
-
-      if (result instanceof ListSubTodosSuccessResponse) {
-        return result;
-      }
-
-      throw result;
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = new UnknownResponse(
-          response.statusCode,
-          response.header,
-          response.body,
-          error,
-        );
-
-        if (
-          options.unknownResponseHandling === "passthrough" &&
-          options.isSuccessStatusCode(response.statusCode)
-        ) {
-          return unknownResponse as any;
-        }
-
-        throw unknownResponse;
+        throw new UnknownResponseError(response.statusCode, response.header, response.body, error);
       }
       throw error;
     }

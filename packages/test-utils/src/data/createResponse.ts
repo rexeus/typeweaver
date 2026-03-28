@@ -16,7 +16,7 @@ import { createData } from "./createData";
  * @returns A fully populated response object of type `TResponse`
  */
 export function createResponse<TResponse extends IHttpResponse, TBody, THeader>(
-  defaultResponse: Omit<TResponse, "body" | "header">,
+  defaultResponse: Omit<TResponse, "type" | "body" | "header">,
   creators: {
     body?: (input?: Partial<TBody>) => TBody;
     header?: (input?: Partial<THeader>) => THeader;
@@ -26,7 +26,7 @@ export function createResponse<TResponse extends IHttpResponse, TBody, THeader>(
     body?: Partial<TBody>;
     header?: Partial<THeader>;
   } = {}
-): TResponse {
+): Omit<TResponse, "type"> {
   const defaults: Partial<TResponse> = {
     ...defaultResponse,
   } as Partial<TResponse>;
@@ -41,5 +41,8 @@ export function createResponse<TResponse extends IHttpResponse, TBody, THeader>(
   if (input.header && creators.header)
     (overrides as any).header = creators.header(input.header);
 
-  return createData(defaults as TResponse, overrides);
+  return createData(defaults as TResponse, overrides) as Omit<
+    TResponse,
+    "type"
+  >;
 }

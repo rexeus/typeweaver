@@ -16,14 +16,17 @@ import {
 import type { IUploadFileRequest } from "./UploadFileRequest";
 import { UploadFileRequestValidator } from "./UploadFileRequestValidator";
 import type { UploadFileResponse } from "./UploadFileResponse";
+import { UploadFileResponseValidator } from "./UploadFileResponseValidator";
 
 import type { IGetFileMetadataRequest } from "./GetFileMetadataRequest";
 import { GetFileMetadataRequestValidator } from "./GetFileMetadataRequestValidator";
 import type { GetFileMetadataResponse } from "./GetFileMetadataResponse";
+import { GetFileMetadataResponseValidator } from "./GetFileMetadataResponseValidator";
 
 import type { IDownloadFileContentRequest } from "./DownloadFileContentRequest";
 import { DownloadFileContentRequestValidator } from "./DownloadFileContentRequestValidator";
 import type { DownloadFileContentResponse } from "./DownloadFileContentResponse";
+import { DownloadFileContentResponseValidator } from "./DownloadFileContentResponseValidator";
 
 export type ServerFileApiHandler<TState extends Record<string, unknown> = Record<string, unknown>> =
   {
@@ -56,6 +59,7 @@ export class FileRouter<
       HttpMethod.POST,
       "/files",
       new UploadFileRequestValidator(),
+      new UploadFileResponseValidator(),
       this.requestHandlers.handleUploadFileRequest.bind(this.requestHandlers),
     );
 
@@ -64,6 +68,7 @@ export class FileRouter<
       HttpMethod.GET,
       "/files/:fileId",
       new GetFileMetadataRequestValidator(),
+      new GetFileMetadataResponseValidator(),
       this.requestHandlers.handleGetFileMetadataRequest.bind(this.requestHandlers),
     );
 
@@ -72,6 +77,7 @@ export class FileRouter<
       HttpMethod.GET,
       "/files/:fileId/content",
       new DownloadFileContentRequestValidator(),
+      new DownloadFileContentResponseValidator(),
       this.requestHandlers.handleDownloadFileContentRequest.bind(this.requestHandlers),
     );
   }

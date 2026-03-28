@@ -1,6 +1,6 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { TodoStatusTransitionInvalidErrorResponse } from "../..";
+import { createTodoStatusTransitionInvalidErrorResponse as generatedCreateTodoStatusTransitionInvalidErrorResponse } from "../../test-project/output/todo/TodoStatusTransitionInvalidErrorResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import { createResponse } from "../createResponse";
@@ -37,7 +37,7 @@ export const createTodoStatusTransitionInvalidErrorResponseBody =
 
 export function createTodoStatusTransitionInvalidErrorResponse(
   input: TodoStatusTransitionInvalidErrorResponseInput = {}
-): TodoStatusTransitionInvalidErrorResponse {
+): ITodoStatusTransitionInvalidErrorResponse {
   const responseData = createResponse<
     ITodoStatusTransitionInvalidErrorResponse,
     ITodoStatusTransitionInvalidErrorResponseBody,
@@ -52,5 +52,5 @@ export function createTodoStatusTransitionInvalidErrorResponse(
     },
     input
   );
-  return new TodoStatusTransitionInvalidErrorResponse(responseData);
+  return generatedCreateTodoStatusTransitionInvalidErrorResponse(responseData);
 }

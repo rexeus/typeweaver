@@ -1,21 +1,24 @@
 import assert from "node:assert";
-import { ResponseValidationError } from "@rexeus/typeweaver-core";
+import {
+  ResponseValidationError,
+  HttpStatusCode,
+} from "@rexeus/typeweaver-core";
 import {
   captureError,
   createCreateTodoSuccessResponse,
+  createDeleteTodoSuccessResponse,
   createInternalServerErrorResponse,
   createOptionsTodoSuccessResponse,
   CreateTodoResponseValidator,
-  CreateTodoSuccessResponse,
   createUnauthorizedErrorResponse,
   createValidationErrorResponse,
-  InternalServerErrorResponse,
+  DeleteTodoResponseValidator,
   OptionsTodoResponseValidator,
-  OptionsTodoSuccessResponse,
-  UnauthorizedErrorResponse,
-  ValidationErrorResponse,
+  ResponseValidator,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
+import { z } from "zod";
+import type { ResponseEntry } from "test-utils";
 
 describe("Generated ResponseValidator", () => {
   describe("Status Code Validation", () => {
@@ -33,10 +36,8 @@ describe("Generated ResponseValidator", () => {
       expect(successResult.isValid).toBe(true);
       expect(errorResult.isValid).toBe(true);
       assert(successResult.isValid && errorResult.isValid);
-      expect(successResult.data).toBeInstanceOf(CreateTodoSuccessResponse);
-      assert(successResult.data instanceof CreateTodoSuccessResponse);
-      expect(errorResult.data).toBeInstanceOf(ValidationErrorResponse);
-      assert(errorResult.data instanceof ValidationErrorResponse);
+      expect(successResult.data.type).toBe("CreateTodoSuccess");
+      expect(errorResult.data.type).toBe("ValidationError");
       expect(successResult.data.statusCode).toBe(201);
       expect(errorResult.data.statusCode).toBe(400);
     });
@@ -76,8 +77,8 @@ describe("Generated ResponseValidator", () => {
       // Assert
       expect(result.isValid).toBe(true);
       assert(result.isValid);
-      expect(result.data).toBeInstanceOf(CreateTodoSuccessResponse);
-      assert(result.data instanceof CreateTodoSuccessResponse);
+      expect(result.data.type).toBe("CreateTodoSuccess");
+      assert(result.data.type === "CreateTodoSuccess");
       expect(result.data.body.id).toBeDefined();
       expect(result.data.body.title).toBeDefined();
       expect(result.data.body.status).toBeDefined();
@@ -101,7 +102,6 @@ describe("Generated ResponseValidator", () => {
       expect(result.isValid).toBe(false);
       assert(!result.isValid);
       expect(result.error).toBeInstanceOf(ResponseValidationError);
-      assert(result.error instanceof ResponseValidationError);
       expect(result.error.hasIssues()).toBe(true);
       expect(result.error.issues).toHaveLength(1);
       expect(
@@ -125,8 +125,8 @@ describe("Generated ResponseValidator", () => {
       // Assert
       expect(result.isValid).toBe(true);
       assert(result.isValid);
-      expect(result.data).toBeInstanceOf(CreateTodoSuccessResponse);
-      assert(result.data instanceof CreateTodoSuccessResponse);
+      expect(result.data.type).toBe("CreateTodoSuccess");
+      assert(result.data.type === "CreateTodoSuccess");
       expect(result.data.body.title).toBe("Custom title");
       expect(result.data.body).not.toHaveProperty("extraField");
       expect(result.data.body).not.toHaveProperty("anotherExtraField");
@@ -145,8 +145,8 @@ describe("Generated ResponseValidator", () => {
       // Assert
       expect(result.isValid).toBe(true);
       assert(result.isValid);
-      expect(result.data).toBeInstanceOf(CreateTodoSuccessResponse);
-      assert(result.data instanceof CreateTodoSuccessResponse);
+      expect(result.data.type).toBe("CreateTodoSuccess");
+      assert(result.data.type === "CreateTodoSuccess");
       expect(result.data.header["Content-Type"]).toBe("application/json");
     });
 
@@ -166,7 +166,6 @@ describe("Generated ResponseValidator", () => {
       expect(invalidResult.isValid).toBe(false);
       assert(!invalidResult.isValid);
       expect(invalidResult.error).toBeInstanceOf(ResponseValidationError);
-      assert(invalidResult.error instanceof ResponseValidationError);
       expect(invalidResult.error.issues).toHaveLength(1);
       expect(
         invalidResult.error.getResponseHeaderIssues("CreateTodoSuccess")
@@ -189,8 +188,8 @@ describe("Generated ResponseValidator", () => {
       // Assert
       expect(result.isValid).toBe(true);
       assert(result.isValid);
-      expect(result.data).toBeInstanceOf(CreateTodoSuccessResponse);
-      assert(result.data instanceof CreateTodoSuccessResponse);
+      expect(result.data.type).toBe("CreateTodoSuccess");
+      assert(result.data.type === "CreateTodoSuccess");
       expect(result.data.header["Content-Type"]).toBe("application/json");
       expect(result.data.header).not.toHaveProperty("X-Custom-Header");
       expect(result.data.header).not.toHaveProperty("X-Another-Header");
@@ -216,8 +215,8 @@ describe("Generated ResponseValidator", () => {
       // Assert
       expect(result.isValid).toBe(true);
       assert(result.isValid);
-      expect(result.data).toBeInstanceOf(CreateTodoSuccessResponse);
-      assert(result.data instanceof CreateTodoSuccessResponse);
+      expect(result.data.type).toBe("CreateTodoSuccess");
+      assert(result.data.type === "CreateTodoSuccess");
       expect(result.data.header["Content-Type"]).toBe("application/json");
       expect(result.data.header["X-Multi-Value"]).toEqual(["my-value"]);
       expect(result.data.header).not.toHaveProperty("CONTENT-TYPE");
@@ -239,8 +238,8 @@ describe("Generated ResponseValidator", () => {
       // Assert
       expect(result.isValid).toBe(true);
       assert(result.isValid);
-      expect(result.data).toBeInstanceOf(OptionsTodoSuccessResponse);
-      assert(result.data instanceof OptionsTodoSuccessResponse);
+      expect(result.data.type).toBe("OptionsTodoSuccess");
+      assert(result.data.type === "OptionsTodoSuccess");
       expect(result.data.header.Allow).toEqual(["GET", "POST", "OPTIONS"]);
     });
 
@@ -258,8 +257,8 @@ describe("Generated ResponseValidator", () => {
       // Assert
       expect(result.isValid).toBe(true);
       assert(result.isValid);
-      expect(result.data).toBeInstanceOf(OptionsTodoSuccessResponse);
-      assert(result.data instanceof OptionsTodoSuccessResponse);
+      expect(result.data.type).toBe("OptionsTodoSuccess");
+      assert(result.data.type === "OptionsTodoSuccess");
       expect(result.data.header.Allow).toEqual(["0", "1", "2"]);
     });
 
@@ -278,8 +277,8 @@ describe("Generated ResponseValidator", () => {
       // Assert
       expect(result.isValid).toBe(true);
       assert(result.isValid);
-      expect(result.data).toBeInstanceOf(OptionsTodoSuccessResponse);
-      assert(result.data instanceof OptionsTodoSuccessResponse);
+      expect(result.data.type).toBe("OptionsTodoSuccess");
+      assert(result.data.type === "OptionsTodoSuccess");
       expect(result.data.header["Access-Control-Allow-Origin"]).toBe(
         "https://foo.com, https://bar.com"
       );
@@ -299,8 +298,8 @@ describe("Generated ResponseValidator", () => {
       // Assert
       expect(result.isValid).toBe(true);
       assert(result.isValid);
-      expect(result.data).toBeInstanceOf(OptionsTodoSuccessResponse);
-      assert(result.data instanceof OptionsTodoSuccessResponse);
+      expect(result.data.type).toBe("OptionsTodoSuccess");
+      assert(result.data.type === "OptionsTodoSuccess");
       expect(result.data.header.Allow).toEqual(["GET", "POST", "OPTIONS"]);
     });
 
@@ -315,8 +314,8 @@ describe("Generated ResponseValidator", () => {
       // Assert
       expect(result.isValid).toBe(true);
       assert(result.isValid);
-      expect(result.data).toBeInstanceOf(OptionsTodoSuccessResponse);
-      assert(result.data instanceof OptionsTodoSuccessResponse);
+      expect(result.data.type).toBe("OptionsTodoSuccess");
+      assert(result.data.type === "OptionsTodoSuccess");
       expect(result.data.header.Allow).toEqual([
         "GET",
         "HEAD",
@@ -342,8 +341,8 @@ describe("Generated ResponseValidator", () => {
       // Assert
       expect(result.isValid).toBe(true);
       assert(result.isValid);
-      expect(result.data).toBeInstanceOf(CreateTodoSuccessResponse);
-      assert(result.data instanceof CreateTodoSuccessResponse);
+      expect(result.data.type).toBe("CreateTodoSuccess");
+      assert(result.data.type === "CreateTodoSuccess");
       expect(result.data.header["X-Multi-Value"]).toEqual(["my-value"]);
     });
 
@@ -362,8 +361,8 @@ describe("Generated ResponseValidator", () => {
       // Assert
       expect(result.isValid).toBe(true);
       assert(result.isValid);
-      expect(result.data).toBeInstanceOf(CreateTodoSuccessResponse);
-      assert(result.data instanceof CreateTodoSuccessResponse);
+      expect(result.data.type).toBe("CreateTodoSuccess");
+      assert(result.data.type === "CreateTodoSuccess");
       expect(result.data.header["Content-Type"]).toBe("application/json");
     });
   });
@@ -380,8 +379,8 @@ describe("Generated ResponseValidator", () => {
       // Assert
       expect(result.isValid).toBe(true);
       assert(result.isValid);
-      expect(result.data).toBeInstanceOf(CreateTodoSuccessResponse);
-      assert(result.data instanceof CreateTodoSuccessResponse);
+      expect(result.data.type).toBe("CreateTodoSuccess");
+      assert(result.data.type === "CreateTodoSuccess");
       expect(result.data.statusCode).toBe(201);
       expect(result.data.body.id).toBeDefined();
       expect(result.data.body.title).toBeDefined();
@@ -408,12 +407,9 @@ describe("Generated ResponseValidator", () => {
           unauthorizedResult.isValid &&
           internalResult.isValid
       );
-      expect(validationResult.data).toBeInstanceOf(ValidationErrorResponse);
-      assert(validationResult.data instanceof ValidationErrorResponse);
-      expect(unauthorizedResult.data).toBeInstanceOf(UnauthorizedErrorResponse);
-      assert(unauthorizedResult.data instanceof UnauthorizedErrorResponse);
-      expect(internalResult.data).toBeInstanceOf(InternalServerErrorResponse);
-      assert(internalResult.data instanceof InternalServerErrorResponse);
+      expect(validationResult.data.type).toBe("ValidationError");
+      expect(unauthorizedResult.data.type).toBe("UnauthorizedError");
+      expect(internalResult.data.type).toBe("InternalServerError");
       expect(validationResult.data.statusCode).toBe(400);
       expect(unauthorizedResult.data.statusCode).toBe(401);
       expect(internalResult.data.statusCode).toBe(500);
@@ -430,8 +426,8 @@ describe("Generated ResponseValidator", () => {
       // Assert
       expect(result.isValid).toBe(true);
       assert(result.isValid);
-      expect(result.data).toBeInstanceOf(CreateTodoSuccessResponse);
-      assert(result.data instanceof CreateTodoSuccessResponse);
+      expect(result.data.type).toBe("CreateTodoSuccess");
+      assert(result.data.type === "CreateTodoSuccess");
       expect(result.data.statusCode).toBe(201);
       expect(result.data.body.id).toBeDefined();
       expect(result.data.body.title).toBeDefined();
@@ -459,7 +455,6 @@ describe("Generated ResponseValidator", () => {
       expect(result.isValid).toBe(false);
       assert(!result.isValid);
       expect(result.error).toBeInstanceOf(ResponseValidationError);
-      assert(result.error instanceof ResponseValidationError);
       expect(result.error.hasIssues()).toBe(true);
       expect(result.error.issues).toHaveLength(1);
       expect(
@@ -489,13 +484,155 @@ describe("Generated ResponseValidator", () => {
       // Assert
       expect(result.isValid).toBe(true);
       assert(result.isValid);
-      expect(result.data).toBeInstanceOf(CreateTodoSuccessResponse);
-      assert(result.data instanceof CreateTodoSuccessResponse);
+      expect(result.data.type).toBe("CreateTodoSuccess");
+      assert(result.data.type === "CreateTodoSuccess");
       expect(result.data.header["Content-Type"]).toBe("application/json");
       expect(result.data.header).not.toHaveProperty("X-Extra-Header");
       expect(result.data.body.title).toBe("Custom title");
       expect(result.data.body).not.toHaveProperty("extraBodyField");
       expect(result.data.body).not.toHaveProperty("anotherBodyField");
+    });
+  });
+
+  describe("Response Factory Invariants", () => {
+    test("factory should not allow callers to override type via spread", () => {
+      const response = createCreateTodoSuccessResponse();
+
+      // Replicate the generated factory pattern: { ...input, type, statusCode }
+      // The tampered input has type: "Tampered", but the factory overwrites it
+      const tamperedInput = {
+        header: response.header,
+        body: response.body,
+        type: "Tampered",
+      };
+      const result = Object.assign({}, tamperedInput, {
+        type: "CreateTodoSuccess",
+        statusCode: HttpStatusCode.CREATED,
+      });
+
+      expect(result.type).toBe("CreateTodoSuccess");
+      expect(result.statusCode).toBe(HttpStatusCode.CREATED);
+    });
+
+    test("factory should not allow callers to override statusCode via spread", () => {
+      const response = createCreateTodoSuccessResponse();
+
+      // Replicate the generated factory pattern: { ...input, type, statusCode }
+      // The tampered input has statusCode: 999, but the factory overwrites it
+      const tamperedInput = {
+        header: response.header,
+        body: response.body,
+        statusCode: 999,
+      };
+      const result = Object.assign({}, tamperedInput, {
+        type: "CreateTodoSuccess",
+        statusCode: HttpStatusCode.CREATED,
+      });
+
+      expect(result.statusCode).toBe(HttpStatusCode.CREATED);
+      expect(result.type).toBe("CreateTodoSuccess");
+    });
+  });
+
+  describe("Bodyless Response Validation", () => {
+    test("should validate a 204 No Content response with undefined body", () => {
+      // Arrange
+      const validator = new DeleteTodoResponseValidator();
+      const response = createDeleteTodoSuccessResponse();
+
+      // Act
+      const result = validator.safeValidate(response);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.type).toBe("DeleteTodoSuccess");
+      expect(result.data.statusCode).toBe(204);
+      expect(result.data.body).toBeUndefined();
+    });
+  });
+
+  describe("Duplicate Status Code Fallthrough", () => {
+    class DuplicateStatusCodeValidator extends ResponseValidator {
+      protected override readonly expectedStatusCodes = [200];
+      protected override readonly responseEntries: readonly ResponseEntry[] = [
+        {
+          name: "NarrowSuccess",
+          statusCode: 200,
+          headerSchema: undefined,
+          bodySchema: z.object({
+            variant: z.literal("narrow"),
+            data: z.string(),
+          }),
+        },
+        {
+          name: "WideSuccess",
+          statusCode: 200,
+          headerSchema: undefined,
+          bodySchema: z.object({
+            variant: z.literal("wide"),
+            count: z.number(),
+          }),
+        },
+      ];
+    }
+
+    test("should match second entry when first entry's body validation fails", () => {
+      // Arrange
+      const validator = new DuplicateStatusCodeValidator();
+      const response = {
+        statusCode: 200,
+        header: undefined,
+        body: { variant: "wide", count: 42 },
+      };
+
+      // Act
+      const result = validator.safeValidate(response);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.type).toBe("WideSuccess");
+      expect(result.data.body).toEqual({ variant: "wide", count: 42 });
+    });
+
+    test("should match first entry when its body validates", () => {
+      // Arrange
+      const validator = new DuplicateStatusCodeValidator();
+      const response = {
+        statusCode: 200,
+        header: undefined,
+        body: { variant: "narrow", data: "hello" },
+      };
+
+      // Act
+      const result = validator.safeValidate(response);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.type).toBe("NarrowSuccess");
+      expect(result.data.body).toEqual({ variant: "narrow", data: "hello" });
+    });
+
+    test("should fail when no entry matches the body", () => {
+      // Arrange
+      const validator = new DuplicateStatusCodeValidator();
+      const response = {
+        statusCode: 200,
+        header: undefined,
+        body: { variant: "unknown" },
+      };
+
+      // Act
+      const result = validator.safeValidate(response);
+
+      // Assert
+      expect(result.isValid).toBe(false);
+      assert(!result.isValid);
+      expect(result.error).toBeInstanceOf(ResponseValidationError);
+      expect(result.error.getResponseBodyIssues("NarrowSuccess")).toBeDefined();
+      expect(result.error.getResponseBodyIssues("WideSuccess")).toBeDefined();
     });
   });
 
@@ -512,10 +649,8 @@ describe("Generated ResponseValidator", () => {
       // Assert
       expect(safeResult.isValid).toBe(true);
       assert(safeResult.isValid);
-      expect(safeResult.data).toBeInstanceOf(CreateTodoSuccessResponse);
-      assert(safeResult.data instanceof CreateTodoSuccessResponse);
-      expect(directResult).toBeInstanceOf(CreateTodoSuccessResponse);
-      assert(directResult instanceof CreateTodoSuccessResponse);
+      expect(safeResult.data.type).toBe("CreateTodoSuccess");
+      expect(directResult.type).toBe("CreateTodoSuccess");
       expect(safeResult.data).toEqual(directResult);
     });
 

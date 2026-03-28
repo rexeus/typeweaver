@@ -1,9 +1,8 @@
-import {
-  HttpMethod,
-  HttpResponse,
-  RequestValidationError,
+import { HttpMethod, RequestValidationError } from "@rexeus/typeweaver-core";
+import type {
+  IRequestValidator,
+  ITypedHttpResponse,
 } from "@rexeus/typeweaver-core";
-import type { IRequestValidator } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
 import { PayloadTooLargeError } from "../../src/lib/Errors";
 import { defineMiddleware } from "../../src/lib/TypedMiddleware";
@@ -16,6 +15,7 @@ import {
   expectJson,
   get,
   head,
+  noopResponseValidator,
   noopValidator,
   post,
   postRaw,
@@ -73,6 +73,7 @@ class TestRouter extends TypeweaverRouter<TestHandlers> {
       HttpMethod.GET,
       "/todos",
       options.validateRequests === false ? noopValidator : failingValidator,
+      noopResponseValidator,
       async (req, ctx) => this.requestHandlers.handleGetTodos(req, ctx)
     );
 
@@ -81,6 +82,7 @@ class TestRouter extends TypeweaverRouter<TestHandlers> {
       HttpMethod.POST,
       "/todos",
       options.validateRequests === false ? noopValidator : failingValidator,
+      noopResponseValidator,
       async (req, ctx) => this.requestHandlers.handleCreateTodo(req, ctx)
     );
 
@@ -89,6 +91,7 @@ class TestRouter extends TypeweaverRouter<TestHandlers> {
       HttpMethod.GET,
       "/todos/:todoId",
       options.validateRequests === false ? noopValidator : failingValidator,
+      noopResponseValidator,
       async (req, ctx) => this.requestHandlers.handleGetTodo(req, ctx)
     );
   }
@@ -103,6 +106,7 @@ class ValidatingTestRouter extends TypeweaverRouter<TestHandlers> {
       HttpMethod.POST,
       "/todos",
       failingValidator,
+      noopResponseValidator,
       async (req, ctx) => this.requestHandlers.handleCreateTodo(req, ctx)
     );
   }
@@ -117,6 +121,7 @@ class BodyOnlyValidatingRouter extends TypeweaverRouter<TestHandlers> {
       HttpMethod.POST,
       "/todos",
       bodyOnlyFailingValidator,
+      noopResponseValidator,
       async (req, ctx) => this.requestHandlers.handleCreateTodo(req, ctx)
     );
   }
@@ -515,6 +520,7 @@ describe("TypeweaverApp", () => {
             HttpMethod.GET,
             "/users",
             noopValidator,
+            noopResponseValidator,
             async (req, ctx) => this.requestHandlers.handleGetUsers(req, ctx)
           );
         }
@@ -593,7 +599,7 @@ describe("TypeweaverApp", () => {
 
     test("should handle validation errors with custom handler", async () => {
       const app = createValidatingApp({
-        handleValidationErrors: async err => ({
+        handleRequestValidationErrors: async err => ({
           statusCode: 422,
           body: { custom: true, message: err.message },
         }),
@@ -611,7 +617,12 @@ describe("TypeweaverApp", () => {
         undefined,
         {
           handleCreateTodo: async () => {
-            throw new HttpResponse(409, {}, { code: "CONFLICT" });
+            throw {
+              type: "ConflictError",
+              statusCode: 409,
+              header: {},
+              body: { code: "CONFLICT" },
+            } satisfies ITypedHttpResponse;
           },
         },
         { onError }
@@ -626,6 +637,7 @@ describe("TypeweaverApp", () => {
     test("should handle HttpResponse errors with custom handler", async () => {
       const app = createApp(
         {
+          validateResponses: false,
           handleHttpResponseErrors: async err => ({
             statusCode: err.statusCode,
             body: { wrapped: true, original: err.body },
@@ -633,7 +645,12 @@ describe("TypeweaverApp", () => {
         },
         {
           handleCreateTodo: async () => {
-            throw new HttpResponse(409, {}, { code: "CONFLICT" });
+            throw {
+              type: "ConflictError",
+              statusCode: 409,
+              header: {},
+              body: { code: "CONFLICT" },
+            } satisfies ITypedHttpResponse;
           },
         }
       );
@@ -710,7 +727,7 @@ describe("TypeweaverApp", () => {
       const onError = vi.fn();
       const app = createValidatingApp(
         {
-          handleValidationErrors: false,
+          handleRequestValidationErrors: false,
           handleUnknownErrors: false,
         },
         undefined,
@@ -728,12 +745,18 @@ describe("TypeweaverApp", () => {
       const onError = vi.fn();
       const app = createApp(
         {
+          validateResponses: false,
           handleHttpResponseErrors: false,
           handleUnknownErrors: false,
         },
         {
           handleCreateTodo: async () => {
-            throw new HttpResponse(409, {}, { code: "CONFLICT" });
+            throw {
+              type: "ConflictError",
+              statusCode: 409,
+              header: {},
+              body: { code: "CONFLICT" },
+            } satisfies ITypedHttpResponse;
           },
         },
         { onError }
@@ -743,12 +766,14 @@ describe("TypeweaverApp", () => {
 
       await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
       expect(onError).toHaveBeenCalledOnce();
-      expect(onError).toHaveBeenCalledWith(expect.any(HttpResponse));
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "ConflictError", statusCode: 409 })
+      );
     });
 
     test("should return 500 when error handler throws", async () => {
       const app = createValidatingApp({
-        handleValidationErrors: () => {
+        handleRequestValidationErrors: () => {
           throw new Error("Handler crashed");
         },
       });
@@ -1083,7 +1108,7 @@ describe("TypeweaverApp", () => {
         body: { code: "CUSTOM_UNKNOWN", message: "Caught by unknown handler" },
       }));
       const app = createValidatingApp({
-        handleValidationErrors: false,
+        handleRequestValidationErrors: false,
         handleUnknownErrors: unknownHandler,
       });
 
@@ -1104,12 +1129,18 @@ describe("TypeweaverApp", () => {
       }));
       const app = createApp(
         {
+          validateResponses: false,
           handleHttpResponseErrors: false,
           handleUnknownErrors: unknownHandler,
         },
         {
           handleCreateTodo: async () => {
-            throw new HttpResponse(409, {}, { code: "CONFLICT" });
+            throw {
+              type: "ConflictError",
+              statusCode: 409,
+              header: {},
+              body: { code: "CONFLICT" },
+            } satisfies ITypedHttpResponse;
           },
         }
       );
@@ -1119,7 +1150,7 @@ describe("TypeweaverApp", () => {
       await expectErrorResponse(res, 500, "CUSTOM_UNKNOWN");
       expect(unknownHandler).toHaveBeenCalledOnce();
       expect(unknownHandler).toHaveBeenCalledWith(
-        expect.any(HttpResponse),
+        expect.objectContaining({ type: "ConflictError", statusCode: 409 }),
         expect.anything()
       );
     });

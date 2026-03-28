@@ -16,6 +16,7 @@ import {
 import type { IRegisterAccountRequest } from "./RegisterAccountRequest";
 import { RegisterAccountRequestValidator } from "./RegisterAccountRequestValidator";
 import type { RegisterAccountResponse } from "./RegisterAccountResponse";
+import { RegisterAccountResponseValidator } from "./RegisterAccountResponseValidator";
 
 export type ServerAccountApiHandler<
   TState extends Record<string, unknown> = Record<string, unknown>,
@@ -41,6 +42,7 @@ export class AccountRouter<
       HttpMethod.POST,
       "/accounts",
       new RegisterAccountRequestValidator(),
+      new RegisterAccountResponseValidator(),
       this.requestHandlers.handleRegisterAccountRequest.bind(this.requestHandlers),
     );
   }

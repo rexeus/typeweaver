@@ -1,6 +1,6 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { CreateSubTodoSuccessResponse } from "../..";
+import { createCreateSubTodoSuccessResponse as generatedCreateCreateSubTodoSuccessResponse } from "../../test-project/output/todo/CreateSubTodoResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 import type {
@@ -61,7 +61,7 @@ type CreateSubTodoSuccessResponseInput = {
 
 export function createCreateSubTodoSuccessResponse(
   input: CreateSubTodoSuccessResponseInput = {}
-): CreateSubTodoSuccessResponse {
+): ICreateSubTodoSuccessResponse {
   const responseData = createResponse<
     ICreateSubTodoSuccessResponse,
     ICreateSubTodoSuccessResponseBody,
@@ -76,5 +76,5 @@ export function createCreateSubTodoSuccessResponse(
     },
     input
   );
-  return new CreateSubTodoSuccessResponse(responseData);
+  return generatedCreateCreateSubTodoSuccessResponse(responseData);
 }

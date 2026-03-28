@@ -113,8 +113,8 @@ export const userHandlers: ServerUserApiHandler = {
 };
 ```
 
-> Generated response classes (e.g. `GetUserSuccessResponse`) are also available for when you need
-> runtime type checks or `instanceof` discrimination in error handling.
+> Generated response factory functions (e.g. `createGetUserSuccessResponse`) are also available for
+> constructing typed responses with pre-set `type` and `statusCode` discriminators.
 
 ### Create the app
 
@@ -310,48 +310,67 @@ const app = new TypeweaverApp({
 
 Each router accepts `TypeweaverRouterOptions`:
 
-| Option                     | Type                         | Default    | Description                        |
-| -------------------------- | ---------------------------- | ---------- | ---------------------------------- |
-| `requestHandlers`          | `Server<Resource>ApiHandler` | _required_ | Handler methods for each operation |
-| `validateRequests`         | `boolean`                    | `true`     | Enable/disable request validation  |
-| `handleValidationErrors`   | `boolean \| function`        | `true`     | Handle validation errors           |
-| `handleHttpResponseErrors` | `boolean \| function`        | `true`     | Handle thrown `HttpResponse`       |
-| `handleUnknownErrors`      | `boolean \| function`        | `true`     | Handle unexpected errors           |
+| Option                           | Type                         | Default    | Description                        |
+| -------------------------------- | ---------------------------- | ---------- | ---------------------------------- |
+| `requestHandlers`                | `Server<Resource>ApiHandler` | _required_ | Handler methods for each operation |
+| `validateRequests`               | `boolean`                    | `true`     | Enable/disable request validation  |
+| `validateResponses`              | `boolean`                    | `true`     | Enable/disable response validation |
+| `handleRequestValidationErrors`  | `boolean \| function`        | `true`     | Handle request validation errors   |
+| `handleResponseValidationErrors` | `boolean \| function`        | `true`     | Handle response validation errors  |
+| `handleHttpResponseErrors`       | `boolean \| function`        | `true`     | Handle thrown typed HTTP responses |
+| `handleUnknownErrors`            | `boolean \| function`        | `true`     | Handle unexpected errors           |
 
 When set to `true`, error handlers use sensible defaults (400/500 responses). When set to `false`,
-errors fall through to the next handler in the chain. When set to a function, it receives the error
-and `ServerContext` and must return an `IHttpResponse`.
+errors fall through to the next handler in the chain (except `handleResponseValidationErrors`, where
+`false` means the invalid response is returned as-is — validation still runs for field stripping,
+but invalid responses pass through unchanged). When set to a function, it receives the error and
+`ServerContext` and must return an `IHttpResponse`. If a custom error handler throws, the framework
+catches the exception and falls through gracefully to the next handler.
 
 ### 🚨 Error Handling
 
 #### Throwing errors in handlers
 
-All generated error response classes (e.g. `NotFoundErrorResponse`, `ValidationErrorResponse`)
-extend `HttpResponse`. Throw them in your handlers — the framework catches them automatically:
+Throw any object matching `ITypedHttpResponse` (i.e. `{ type: string, statusCode: number, ... }`)
+from your handlers — the framework catches it automatically and returns it as the response:
 
 ```ts
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { GetUserSuccessResponse, NotFoundErrorResponse } from "./generated";
 
 async handleGetUserRequest(request) {
   const user = await db.findUser(request.param.userId);
   if (!user) {
-    throw new NotFoundErrorResponse({
+    // Plain objects work — anything with `type` and `statusCode` is recognized
+    throw {
+      type: "NotFoundError",
       statusCode: HttpStatusCode.NOT_FOUND,
       header: { "Content-Type": "application/json" },
       body: { message: "Resource not found", code: "NOT_FOUND_ERROR" },
-    });
+    };
   }
-  return new GetUserSuccessResponse({
+  return {
+    type: "GetUserSuccess",
     statusCode: HttpStatusCode.OK,
     header: { "Content-Type": "application/json" },
     body: user,
-  });
+  };
 }
 ```
 
-When `handleHttpResponseErrors` is `true` (the default), thrown `HttpResponse` instances are
-returned as-is. No extra configuration needed.
+Generated factory functions (e.g. `createNotFoundErrorResponse`) are a convenient shorthand — they
+set `type` and `statusCode` for you so you only pass `header` and `body`:
+
+```ts
+import { createNotFoundErrorResponse } from "./generated";
+
+throw createNotFoundErrorResponse({
+  header: { "Content-Type": "application/json" },
+  body: { message: "Resource not found", code: "NOT_FOUND_ERROR" },
+});
+```
+
+When `handleHttpResponseErrors` is `true` (the default), thrown typed HTTP responses
+(`ITypedHttpResponse`) are returned as-is. No extra configuration needed.
 
 #### Custom error mapping
 
@@ -362,21 +381,21 @@ Use custom handler functions to transform errors into your own response shape.
 ```ts
 new UserRouter({
   requestHandlers: userHandlers,
-  handleValidationErrors: (error, ctx) =>
-    new ValidationErrorResponse({
-      statusCode: HttpStatusCode.BAD_REQUEST,
-      header: { "Content-Type": "application/json" },
-      body: {
-        code: "VALIDATION_ERROR",
-        message: "Request is invalid",
-        issues: {
-          body: error.bodyIssues,
-          query: error.queryIssues,
-          param: error.pathParamIssues,
-          header: error.headerIssues,
-        },
+  handleRequestValidationErrors: (error, ctx) => ({
+    type: "ValidationError",
+    statusCode: HttpStatusCode.BAD_REQUEST,
+    header: { "Content-Type": "application/json" },
+    body: {
+      code: "VALIDATION_ERROR",
+      message: "Request is invalid",
+      issues: {
+        body: error.bodyIssues,
+        query: error.queryIssues,
+        param: error.pathParamIssues,
+        header: error.headerIssues,
       },
-    }),
+    },
+  }),
 });
 ```
 
@@ -402,25 +421,27 @@ new UserRouter({
   requestHandlers: userHandlers,
   handleUnknownErrors: (error, ctx) => {
     logger.error("Unhandled error", { error, path: ctx.request.path });
-    return new InternalServerErrorResponse({
+    return {
+      type: "InternalServerError",
       statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
       header: { "Content-Type": "application/json" },
       body: { code: "INTERNAL_SERVER_ERROR", message: "Something went wrong" },
-    });
+    };
   },
 });
 ```
 
 ### 📋 Error Responses
 
-| Status | Code                    | When                                                          |
-| ------ | ----------------------- | ------------------------------------------------------------- |
-| `400`  | `BAD_REQUEST`           | Malformed request body                                        |
-| `400`  | Validation issues       | `handleValidationErrors: true` and request fails validation   |
-| `404`  | `NOT_FOUND`             | No matching route                                             |
-| `405`  | `METHOD_NOT_ALLOWED`    | Route exists but method not allowed (includes `Allow` header) |
-| `413`  | `PAYLOAD_TOO_LARGE`     | Request body exceeds `maxBodySize`                            |
-| `500`  | `INTERNAL_SERVER_ERROR` | Unhandled error in handler                                    |
+| Status | Code                    | When                                                                 |
+| ------ | ----------------------- | -------------------------------------------------------------------- |
+| `400`  | `BAD_REQUEST`           | Malformed request body                                               |
+| `400`  | Validation issues       | `handleRequestValidationErrors: true` and request fails validation   |
+| `404`  | `NOT_FOUND`             | No matching route                                                    |
+| `405`  | `METHOD_NOT_ALLOWED`    | Route exists but method not allowed (includes `Allow` header)        |
+| `413`  | `PAYLOAD_TOO_LARGE`     | Request body exceeds `maxBodySize`                                   |
+| `500`  | `INTERNAL_SERVER_ERROR` | `handleResponseValidationErrors: true` and response fails validation |
+| `500`  | `INTERNAL_SERVER_ERROR` | Unhandled error in handler                                           |
 
 All error responses follow the shape: `{ code: string, message: string }`.
 

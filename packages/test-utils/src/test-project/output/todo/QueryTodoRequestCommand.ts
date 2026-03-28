@@ -11,19 +11,19 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  UnknownResponse,
+  UnknownResponseError,
 } from "@rexeus/typeweaver-core";
-import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
+import { RequestCommand } from "../lib/clients";
 import { QueryTodoResponseValidator } from "./QueryTodoResponseValidator";
 import type {
   IQueryTodoRequest,
   IQueryTodoRequestHeader,
   IQueryTodoRequestQuery,
   IQueryTodoRequestBody,
-  SuccessfulQueryTodoResponse,
 } from "./QueryTodoRequest";
+import type { QueryTodoResponse } from "./QueryTodoResponse";
 
-import { QueryTodoSuccessResponse } from "./QueryTodoResponse";
+const responseValidator = new QueryTodoResponseValidator();
 
 export class QueryTodoRequestCommand extends RequestCommand implements IQueryTodoRequest {
   public override readonly operationId = definition.operationId;
@@ -35,8 +35,6 @@ export class QueryTodoRequestCommand extends RequestCommand implements IQueryTod
   public override readonly query: IQueryTodoRequestQuery;
   public override readonly body: IQueryTodoRequestBody;
 
-  private readonly responseValidator: QueryTodoResponseValidator;
-
   public constructor(input: Omit<IQueryTodoRequest, "method" | "path">) {
     super();
 
@@ -45,39 +43,14 @@ export class QueryTodoRequestCommand extends RequestCommand implements IQueryTod
     this.query = input.query;
 
     this.body = input.body;
-
-    this.responseValidator = new QueryTodoResponseValidator();
   }
 
-  public processResponse(
-    response: IHttpResponse,
-    options: ProcessResponseOptions,
-  ): SuccessfulQueryTodoResponse {
+  public processResponse(response: IHttpResponse): QueryTodoResponse {
     try {
-      const result = this.responseValidator.validate(response);
-
-      if (result instanceof QueryTodoSuccessResponse) {
-        return result;
-      }
-
-      throw result;
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = new UnknownResponse(
-          response.statusCode,
-          response.header,
-          response.body,
-          error,
-        );
-
-        if (
-          options.unknownResponseHandling === "passthrough" &&
-          options.isSuccessStatusCode(response.statusCode)
-        ) {
-          return unknownResponse as any;
-        }
-
-        throw unknownResponse;
+        throw new UnknownResponseError(response.statusCode, response.header, response.body, error);
       }
       throw error;
     }

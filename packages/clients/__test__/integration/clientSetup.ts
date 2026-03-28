@@ -5,7 +5,7 @@ const cleanupFunctions: (() => void | Promise<void>)[] = [];
 
 export async function setupClientTest(
   serverConfig: Parameters<typeof createTestServer>[0] = {},
-  clientConfig: ApiClientProps = {}
+  clientConfig: Omit<ApiClientProps, "baseUrl"> = {}
 ) {
   const testServer = await createTestServer(serverConfig);
   const client = new TodoClient({

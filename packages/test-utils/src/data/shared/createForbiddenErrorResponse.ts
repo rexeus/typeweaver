@@ -1,5 +1,5 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { ForbiddenErrorResponse } from "../..";
+import { createForbiddenErrorResponse as generatedCreateForbiddenErrorResponse } from "../../test-project/output/shared/ForbiddenErrorResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import { createResponse } from "../createResponse";
@@ -23,7 +23,7 @@ const createForbiddenErrorResponseBody =
 
 export function createForbiddenErrorResponse(
   input: ForbiddenErrorResponseInput = {}
-): ForbiddenErrorResponse {
+): IForbiddenErrorResponse {
   const responseData = createResponse<
     IForbiddenErrorResponse,
     IForbiddenErrorResponseBody,
@@ -38,5 +38,5 @@ export function createForbiddenErrorResponse(
     },
     input
   );
-  return new ForbiddenErrorResponse(responseData);
+  return generatedCreateForbiddenErrorResponse(responseData);
 }

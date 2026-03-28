@@ -7,21 +7,6 @@
  */
 
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { type DeleteTodoResponse } from "./DeleteTodoResponse";
-
-import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
-
-import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
-
-import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
-
-import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
-
-import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
-
-import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
-
-import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
 
 export type IDeleteTodoRequestHeader = {
   Accept: "application/json";
@@ -40,14 +25,3 @@ export type IDeleteTodoRequest = {
   header: IDeleteTodoRequestHeader;
   param: IDeleteTodoRequestParam;
 };
-
-export type SuccessfulDeleteTodoResponse = Exclude<
-  DeleteTodoResponse,
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse
-  | TodoNotFoundErrorResponse
->;

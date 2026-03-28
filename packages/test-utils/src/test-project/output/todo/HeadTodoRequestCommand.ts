@@ -11,18 +11,18 @@ import {
   HttpMethod,
   type IHttpResponse,
   ResponseValidationError,
-  UnknownResponse,
+  UnknownResponseError,
 } from "@rexeus/typeweaver-core";
-import { RequestCommand, type ProcessResponseOptions } from "../lib/clients";
+import { RequestCommand } from "../lib/clients";
 import { HeadTodoResponseValidator } from "./HeadTodoResponseValidator";
 import type {
   IHeadTodoRequest,
   IHeadTodoRequestHeader,
   IHeadTodoRequestParam,
-  SuccessfulHeadTodoResponse,
 } from "./HeadTodoRequest";
+import type { HeadTodoResponse } from "./HeadTodoResponse";
 
-import { HeadTodoSuccessResponse } from "./HeadTodoResponse";
+const responseValidator = new HeadTodoResponseValidator();
 
 export class HeadTodoRequestCommand extends RequestCommand implements IHeadTodoRequest {
   public override readonly operationId = definition.operationId;
@@ -34,47 +34,20 @@ export class HeadTodoRequestCommand extends RequestCommand implements IHeadTodoR
   declare public readonly query: undefined;
   declare public readonly body: undefined;
 
-  private readonly responseValidator: HeadTodoResponseValidator;
-
   public constructor(input: Omit<IHeadTodoRequest, "method" | "path">) {
     super();
 
     this.header = input.header;
 
     this.param = input.param;
-
-    this.responseValidator = new HeadTodoResponseValidator();
   }
 
-  public processResponse(
-    response: IHttpResponse,
-    options: ProcessResponseOptions,
-  ): SuccessfulHeadTodoResponse {
+  public processResponse(response: IHttpResponse): HeadTodoResponse {
     try {
-      const result = this.responseValidator.validate(response);
-
-      if (result instanceof HeadTodoSuccessResponse) {
-        return result;
-      }
-
-      throw result;
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
-        const unknownResponse = new UnknownResponse(
-          response.statusCode,
-          response.header,
-          response.body,
-          error,
-        );
-
-        if (
-          options.unknownResponseHandling === "passthrough" &&
-          options.isSuccessStatusCode(response.statusCode)
-        ) {
-          return unknownResponse as any;
-        }
-
-        throw unknownResponse;
+        throw new UnknownResponseError(response.statusCode, response.header, response.body, error);
       }
       throw error;
     }

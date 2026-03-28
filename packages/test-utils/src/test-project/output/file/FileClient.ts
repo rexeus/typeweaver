@@ -9,23 +9,23 @@
 import { ApiClient, type ApiClientProps } from "../lib/clients";
 
 import { DownloadFileContentRequestCommand } from "./DownloadFileContentRequestCommand";
-import type { SuccessfulDownloadFileContentResponse } from "./DownloadFileContentRequest";
+import type { DownloadFileContentResponse } from "./DownloadFileContentResponse";
 
 import { GetFileMetadataRequestCommand } from "./GetFileMetadataRequestCommand";
-import type { SuccessfulGetFileMetadataResponse } from "./GetFileMetadataRequest";
+import type { GetFileMetadataResponse } from "./GetFileMetadataResponse";
 
 import { UploadFileRequestCommand } from "./UploadFileRequestCommand";
-import type { SuccessfulUploadFileResponse } from "./UploadFileRequest";
+import type { UploadFileResponse } from "./UploadFileResponse";
 
 export type FileRequestCommands =
   | DownloadFileContentRequestCommand
   | GetFileMetadataRequestCommand
   | UploadFileRequestCommand;
 
-export type SuccessfulFileResponses =
-  | SuccessfulDownloadFileContentResponse
-  | SuccessfulGetFileMetadataResponse
-  | SuccessfulUploadFileResponse;
+export type FileResponses =
+  | DownloadFileContentResponse
+  | GetFileMetadataResponse
+  | UploadFileResponse;
 
 export class FileClient extends ApiClient {
   public constructor(props: ApiClientProps) {
@@ -34,16 +34,14 @@ export class FileClient extends ApiClient {
 
   public async send(
     command: DownloadFileContentRequestCommand,
-  ): Promise<SuccessfulDownloadFileContentResponse>;
+  ): Promise<DownloadFileContentResponse>;
 
-  public async send(
-    command: GetFileMetadataRequestCommand,
-  ): Promise<SuccessfulGetFileMetadataResponse>;
+  public async send(command: GetFileMetadataRequestCommand): Promise<GetFileMetadataResponse>;
 
-  public async send(command: UploadFileRequestCommand): Promise<SuccessfulUploadFileResponse>;
+  public async send(command: UploadFileRequestCommand): Promise<UploadFileResponse>;
 
-  public async send(command: FileRequestCommands): Promise<SuccessfulFileResponses> {
+  public async send(command: FileRequestCommands): Promise<FileResponses> {
     const response = await this.execute(command);
-    return command.processResponse(response, this.processResponseOptions);
+    return command.processResponse(response);
   }
 }

@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import {
   createCreateTodoRequest,
   createDeleteTodoRequest,
@@ -7,15 +8,10 @@ import {
   createTestServer,
   createTodoNotFoundErrorResponse,
   CreateTodoRequestCommand,
-  CreateTodoSuccessResponse,
   DeleteTodoRequestCommand,
-  DeleteTodoSuccessResponse,
   GetTodoRequestCommand,
-  GetTodoSuccessResponse,
   ListTodosRequestCommand,
-  ListTodosSuccessResponse,
   TodoClient,
-  TodoNotFoundErrorResponse,
 } from "test-utils";
 import { afterEach, describe, expect, test } from "vitest";
 import type { ServerType } from "@hono/node-server";
@@ -46,7 +42,8 @@ describe("Base URL Routing", () => {
 
       const response = await client.send(command);
 
-      expect(response).toBeInstanceOf(GetTodoSuccessResponse);
+      expect(response.type).toBe("GetTodoSuccess");
+      assert(response.type === "GetTodoSuccess");
       expect(response.statusCode).toBe(200);
       expect(response.body.id).toBe(requestData.param.todoId);
     });
@@ -60,7 +57,8 @@ describe("Base URL Routing", () => {
 
       const response = await client.send(command);
 
-      expect(response).toBeInstanceOf(CreateTodoSuccessResponse);
+      expect(response.type).toBe("CreateTodoSuccess");
+      assert(response.type === "CreateTodoSuccess");
       expect(response.statusCode).toBe(201);
       expect(response.body.title).toBe(requestData.body.title);
     });
@@ -74,7 +72,7 @@ describe("Base URL Routing", () => {
 
       const response = await client.send(command);
 
-      expect(response).toBeInstanceOf(DeleteTodoSuccessResponse);
+      expect(response.type).toBe("DeleteTodoSuccess");
       expect(response.statusCode).toBe(204);
     });
 
@@ -89,7 +87,8 @@ describe("Base URL Routing", () => {
 
       const response = await client.send(command);
 
-      expect(response).toBeInstanceOf(GetTodoSuccessResponse);
+      expect(response.type).toBe("GetTodoSuccess");
+      assert(response.type === "GetTodoSuccess");
       expect(response.statusCode).toBe(200);
       expect(response.body.id).toBe(requestData.param.todoId);
     });
@@ -103,7 +102,7 @@ describe("Base URL Routing", () => {
 
       const response = await client.send(command);
 
-      expect(response).toBeInstanceOf(GetTodoSuccessResponse);
+      expect(response.type).toBe("GetTodoSuccess");
       expect(response.statusCode).toBe(200);
     });
   });
@@ -121,8 +120,12 @@ describe("Base URL Routing", () => {
       const requestB = createGetTodoRequest();
       const responseB = await clientB.send(new GetTodoRequestCommand(requestB));
 
-      expect(responseA).toBeInstanceOf(GetTodoSuccessResponse);
-      expect(responseB).toBeInstanceOf(GetTodoSuccessResponse);
+      expect(responseA.type).toBe("GetTodoSuccess");
+      expect(responseB.type).toBe("GetTodoSuccess");
+      assert(
+        responseA.type === "GetTodoSuccess" &&
+          responseB.type === "GetTodoSuccess"
+      );
       expect(responseA.body.id).toBe(requestA.param.todoId);
       expect(responseB.body.id).toBe(requestB.param.todoId);
     });
@@ -140,8 +143,12 @@ describe("Base URL Routing", () => {
       const requestB = createGetTodoRequest();
       const responseB = await clientB.send(new GetTodoRequestCommand(requestB));
 
-      expect(responseA).toBeInstanceOf(GetTodoSuccessResponse);
-      expect(responseB).toBeInstanceOf(GetTodoSuccessResponse);
+      expect(responseA.type).toBe("GetTodoSuccess");
+      expect(responseB.type).toBe("GetTodoSuccess");
+      assert(
+        responseA.type === "GetTodoSuccess" &&
+          responseB.type === "GetTodoSuccess"
+      );
       expect(responseA.body.id).toBe(requestA.param.todoId);
       expect(responseB.body.id).toBe(requestB.param.todoId);
     });
@@ -159,7 +166,7 @@ describe("Base URL Routing", () => {
 
       const response = await client.send(command);
 
-      expect(response).toBeInstanceOf(ListTodosSuccessResponse);
+      expect(response.type).toBe("ListTodosSuccess");
       expect(response.statusCode).toBe(200);
     });
   });
@@ -176,9 +183,9 @@ describe("Base URL Routing", () => {
       const requestData = createGetTodoRequest();
       const command = new GetTodoRequestCommand(requestData);
 
-      await expect(client.send(command)).rejects.toThrow(
-        TodoNotFoundErrorResponse
-      );
+      const result = await client.send(command);
+
+      expect(result.type).toBe("TodoNotFoundError");
     });
   });
 });

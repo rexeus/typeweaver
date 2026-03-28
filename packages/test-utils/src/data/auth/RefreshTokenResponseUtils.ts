@@ -1,5 +1,5 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { RefreshTokenSuccessResponse } from "../..";
+import { createRefreshTokenSuccessResponse as generatedCreateRefreshTokenSuccessResponse } from "../../test-project/output/auth/RefreshTokenResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createJwtToken } from "../createJwtToken";
 import { createResponse } from "../createResponse";
@@ -28,7 +28,7 @@ type RefreshTokenSuccessResponseInput = {
 
 export function createRefreshTokenSuccessResponse(
   input: RefreshTokenSuccessResponseInput = {}
-): RefreshTokenSuccessResponse {
+): IRefreshTokenSuccessResponse {
   const responseData = createResponse<
     IRefreshTokenSuccessResponse,
     IRefreshTokenSuccessResponseBody,
@@ -43,5 +43,5 @@ export function createRefreshTokenSuccessResponse(
     },
     input
   );
-  return new RefreshTokenSuccessResponse(responseData);
+  return generatedCreateRefreshTokenSuccessResponse(responseData);
 }

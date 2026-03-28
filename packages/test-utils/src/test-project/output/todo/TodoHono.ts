@@ -12,58 +12,72 @@ import { TypeweaverHono, type HonoRequestHandler, type TypeweaverHonoOptions } f
 import type { IListTodosRequest } from "./ListTodosRequest";
 import { ListTodosRequestValidator } from "./ListTodosRequestValidator";
 import type { ListTodosResponse } from "./ListTodosResponse";
+import { ListTodosResponseValidator } from "./ListTodosResponseValidator";
 
 import type { ICreateTodoRequest } from "./CreateTodoRequest";
 import { CreateTodoRequestValidator } from "./CreateTodoRequestValidator";
 import type { CreateTodoResponse } from "./CreateTodoResponse";
+import { CreateTodoResponseValidator } from "./CreateTodoResponseValidator";
 
 import type { IQueryTodoRequest } from "./QueryTodoRequest";
 import { QueryTodoRequestValidator } from "./QueryTodoRequestValidator";
 import type { QueryTodoResponse } from "./QueryTodoResponse";
+import { QueryTodoResponseValidator } from "./QueryTodoResponseValidator";
 
 import type { IGetTodoRequest } from "./GetTodoRequest";
 import { GetTodoRequestValidator } from "./GetTodoRequestValidator";
 import type { GetTodoResponse } from "./GetTodoResponse";
+import { GetTodoResponseValidator } from "./GetTodoResponseValidator";
 
 import type { IPutTodoRequest } from "./PutTodoRequest";
 import { PutTodoRequestValidator } from "./PutTodoRequestValidator";
 import type { PutTodoResponse } from "./PutTodoResponse";
+import { PutTodoResponseValidator } from "./PutTodoResponseValidator";
 
 import type { IUpdateTodoRequest } from "./UpdateTodoRequest";
 import { UpdateTodoRequestValidator } from "./UpdateTodoRequestValidator";
 import type { UpdateTodoResponse } from "./UpdateTodoResponse";
+import { UpdateTodoResponseValidator } from "./UpdateTodoResponseValidator";
 
 import type { IDeleteTodoRequest } from "./DeleteTodoRequest";
 import { DeleteTodoRequestValidator } from "./DeleteTodoRequestValidator";
 import type { DeleteTodoResponse } from "./DeleteTodoResponse";
+import { DeleteTodoResponseValidator } from "./DeleteTodoResponseValidator";
 
 import type { IOptionsTodoRequest } from "./OptionsTodoRequest";
 import { OptionsTodoRequestValidator } from "./OptionsTodoRequestValidator";
 import type { OptionsTodoResponse } from "./OptionsTodoResponse";
+import { OptionsTodoResponseValidator } from "./OptionsTodoResponseValidator";
 
 import type { IUpdateTodoStatusRequest } from "./UpdateTodoStatusRequest";
 import { UpdateTodoStatusRequestValidator } from "./UpdateTodoStatusRequestValidator";
 import type { UpdateTodoStatusResponse } from "./UpdateTodoStatusResponse";
+import { UpdateTodoStatusResponseValidator } from "./UpdateTodoStatusResponseValidator";
 
 import type { IListSubTodosRequest } from "./ListSubTodosRequest";
 import { ListSubTodosRequestValidator } from "./ListSubTodosRequestValidator";
 import type { ListSubTodosResponse } from "./ListSubTodosResponse";
+import { ListSubTodosResponseValidator } from "./ListSubTodosResponseValidator";
 
 import type { ICreateSubTodoRequest } from "./CreateSubTodoRequest";
 import { CreateSubTodoRequestValidator } from "./CreateSubTodoRequestValidator";
 import type { CreateSubTodoResponse } from "./CreateSubTodoResponse";
+import { CreateSubTodoResponseValidator } from "./CreateSubTodoResponseValidator";
 
 import type { IQuerySubTodoRequest } from "./QuerySubTodoRequest";
 import { QuerySubTodoRequestValidator } from "./QuerySubTodoRequestValidator";
 import type { QuerySubTodoResponse } from "./QuerySubTodoResponse";
+import { QuerySubTodoResponseValidator } from "./QuerySubTodoResponseValidator";
 
 import type { IUpdateSubTodoRequest } from "./UpdateSubTodoRequest";
 import { UpdateSubTodoRequestValidator } from "./UpdateSubTodoRequestValidator";
 import type { UpdateSubTodoResponse } from "./UpdateSubTodoResponse";
+import { UpdateSubTodoResponseValidator } from "./UpdateSubTodoResponseValidator";
 
 import type { IDeleteSubTodoRequest } from "./DeleteSubTodoRequest";
 import { DeleteSubTodoRequestValidator } from "./DeleteSubTodoRequestValidator";
 import type { DeleteSubTodoResponse } from "./DeleteSubTodoResponse";
+import { DeleteSubTodoResponseValidator } from "./DeleteSubTodoResponseValidator";
 
 export type HonoTodoApiHandler = {
   handleListTodosRequest: HonoRequestHandler<IListTodosRequest, ListTodosResponse>;
@@ -110,6 +124,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
         context,
         "ListTodos",
         new ListTodosRequestValidator(),
+        new ListTodosResponseValidator(),
         this.requestHandlers.handleListTodosRequest.bind(this.requestHandlers),
       ),
     );
@@ -119,6 +134,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
         context,
         "CreateTodo",
         new CreateTodoRequestValidator(),
+        new CreateTodoResponseValidator(),
         this.requestHandlers.handleCreateTodoRequest.bind(this.requestHandlers),
       ),
     );
@@ -128,6 +144,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
         context,
         "QueryTodo",
         new QueryTodoRequestValidator(),
+        new QueryTodoResponseValidator(),
         this.requestHandlers.handleQueryTodoRequest.bind(this.requestHandlers),
       ),
     );
@@ -137,6 +154,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
         context,
         "GetTodo",
         new GetTodoRequestValidator(),
+        new GetTodoResponseValidator(),
         this.requestHandlers.handleGetTodoRequest.bind(this.requestHandlers),
       ),
     );
@@ -146,6 +164,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
         context,
         "PutTodo",
         new PutTodoRequestValidator(),
+        new PutTodoResponseValidator(),
         this.requestHandlers.handlePutTodoRequest.bind(this.requestHandlers),
       ),
     );
@@ -155,6 +174,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
         context,
         "UpdateTodo",
         new UpdateTodoRequestValidator(),
+        new UpdateTodoResponseValidator(),
         this.requestHandlers.handleUpdateTodoRequest.bind(this.requestHandlers),
       ),
     );
@@ -164,6 +184,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
         context,
         "DeleteTodo",
         new DeleteTodoRequestValidator(),
+        new DeleteTodoResponseValidator(),
         this.requestHandlers.handleDeleteTodoRequest.bind(this.requestHandlers),
       ),
     );
@@ -173,6 +194,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
         context,
         "OptionsTodo",
         new OptionsTodoRequestValidator(),
+        new OptionsTodoResponseValidator(),
         this.requestHandlers.handleOptionsTodoRequest.bind(this.requestHandlers),
       ),
     );
@@ -182,6 +204,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
         context,
         "UpdateTodoStatus",
         new UpdateTodoStatusRequestValidator(),
+        new UpdateTodoStatusResponseValidator(),
         this.requestHandlers.handleUpdateTodoStatusRequest.bind(this.requestHandlers),
       ),
     );
@@ -191,6 +214,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
         context,
         "ListSubTodos",
         new ListSubTodosRequestValidator(),
+        new ListSubTodosResponseValidator(),
         this.requestHandlers.handleListSubTodosRequest.bind(this.requestHandlers),
       ),
     );
@@ -200,6 +224,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
         context,
         "CreateSubTodo",
         new CreateSubTodoRequestValidator(),
+        new CreateSubTodoResponseValidator(),
         this.requestHandlers.handleCreateSubTodoRequest.bind(this.requestHandlers),
       ),
     );
@@ -209,6 +234,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
         context,
         "QuerySubTodo",
         new QuerySubTodoRequestValidator(),
+        new QuerySubTodoResponseValidator(),
         this.requestHandlers.handleQuerySubTodoRequest.bind(this.requestHandlers),
       ),
     );
@@ -218,6 +244,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
         context,
         "UpdateSubTodo",
         new UpdateSubTodoRequestValidator(),
+        new UpdateSubTodoResponseValidator(),
         this.requestHandlers.handleUpdateSubTodoRequest.bind(this.requestHandlers),
       ),
     );
@@ -227,6 +254,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
         context,
         "DeleteSubTodo",
         new DeleteSubTodoRequestValidator(),
+        new DeleteSubTodoResponseValidator(),
         this.requestHandlers.handleDeleteSubTodoRequest.bind(this.requestHandlers),
       ),
     );

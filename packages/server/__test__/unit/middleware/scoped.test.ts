@@ -4,7 +4,7 @@ import { scoped, except } from "../../../src/lib/middleware/scoped";
 import { defineMiddleware } from "../../../src/lib/TypedMiddleware";
 import { createServerContext } from "../../helpers";
 
-const marker = defineMiddleware(async (ctx, next) => {
+const marker = defineMiddleware(async (_ctx, next) => {
   const response = await next();
   return {
     ...response,

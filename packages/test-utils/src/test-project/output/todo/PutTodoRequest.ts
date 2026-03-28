@@ -7,23 +7,6 @@
  */
 
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { type PutTodoResponse } from "./PutTodoResponse";
-
-import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
-
-import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
-
-import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
-
-import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
-
-import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
-
-import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
-
-import { TodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
-
-import { TodoNotChangeableErrorResponse } from "./TodoNotChangeableErrorResponse";
 
 export type IPutTodoRequestHeader = {
   "Content-Type": "application/json";
@@ -56,15 +39,3 @@ export type IPutTodoRequest = {
 
   body: IPutTodoRequestBody;
 };
-
-export type SuccessfulPutTodoResponse = Exclude<
-  PutTodoResponse,
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse
-  | TodoNotFoundErrorResponse
-  | TodoNotChangeableErrorResponse
->;
