@@ -1,5 +1,4 @@
 import {
-  HttpStatusCodeNameMap,
   isNamedResponseDefinition,
   validateUniqueResponseNames,
 } from "@rexeus/typeweaver-core";
@@ -11,43 +10,28 @@ import type {
 } from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import {
-  DerivedResponseCycleError,
   DuplicateOperationIdError,
   DuplicateRouteError,
   EmptyOperationResponsesError,
   EmptyResourceOperationsError,
   EmptySpecResourcesError,
-  InvalidDerivedResponseError,
   InvalidRequestSchemaError,
-  MissingDerivedResponseParentError,
   PathParameterMismatchError,
 } from "./errors";
 import type {
   NormalizedOperation,
   NormalizedRequest,
-  NormalizedResponse,
   NormalizedResponseUsage,
   NormalizedSpec,
 } from "./NormalizedSpec";
-
-const PATH_PARAMETER_PATTERN = /:([A-Za-z0-9_]+)/g;
-
-const normalizeRoutePath = (path: string): string => {
-  const segments = path.split("/").filter(Boolean);
-
-  if (segments.length === 0) {
-    return "/";
-  }
-
-  return `/${segments.map(segment => (segment.startsWith(":") ? ":" : segment)).join("/")}`;
-};
-
-const getPathParameterNames = (path: string): string[] => {
-  return Array.from(
-    path.matchAll(PATH_PARAMETER_PATTERN),
-    match => match[1] as string
-  );
-};
+import {
+  getPathParameterNames,
+  normalizeRoutePath,
+} from "./helpers/routePath";
+import {
+  collectCanonicalResponses,
+  normalizeResponseDefinition,
+} from "./validation";
 
 const isZodType = (schema: unknown): schema is z.ZodType => {
   return schema instanceof z.ZodType;
@@ -125,152 +109,6 @@ const validateRequest = (
     query: request.query,
     body: request.body,
   };
-};
-
-const normalizeResponseDefinition = (
-  response: ResponseDefinition
-): NormalizedResponse => {
-  return {
-    name: response.name,
-    statusCode: response.statusCode,
-    statusCodeName: HttpStatusCodeNameMap[response.statusCode],
-    description: response.description,
-    header: response.header,
-    body: response.body,
-    kind: response.derived === undefined ? "response" : "derived-response",
-    derivedFrom: response.derived?.parentName,
-    lineage: response.derived?.lineage,
-    depth: response.derived?.depth,
-  };
-};
-
-const validateDerivedResponseMetadata = (
-  response: ResponseDefinition
-): void => {
-  const derived = response.derived;
-
-  if (derived === undefined) {
-    return;
-  }
-
-  if (derived.parentName === response.name) {
-    throw new DerivedResponseCycleError(response.name);
-  }
-
-  if (derived.lineage.length === 0) {
-    throw new InvalidDerivedResponseError(response.name);
-  }
-
-  if (derived.lineage.at(-1) !== response.name) {
-    throw new InvalidDerivedResponseError(response.name);
-  }
-
-  if (derived.lineage.length !== derived.depth) {
-    throw new InvalidDerivedResponseError(response.name);
-  }
-
-  if (new Set(derived.lineage).size !== derived.lineage.length) {
-    throw new DerivedResponseCycleError(response.name);
-  }
-
-  if (derived.depth > 1 && derived.lineage.at(-2) !== derived.parentName) {
-    throw new InvalidDerivedResponseError(response.name);
-  }
-};
-
-const collectCanonicalResponseDefinitions = (
-  definition: SpecDefinition
-): Map<string, ResponseDefinition> => {
-  const canonicalResponses = new Map<string, ResponseDefinition>();
-
-  for (const resource of Object.values(definition.resources)) {
-    for (const operation of resource.operations) {
-      for (const response of operation.responses) {
-        if (!isNamedResponseDefinition(response)) {
-          continue;
-        }
-
-        validateDerivedResponseMetadata(response);
-
-        canonicalResponses.set(response.name, response);
-      }
-    }
-  }
-
-  return canonicalResponses;
-};
-
-const getDerivedResponseChain = (
-  response: ResponseDefinition,
-  canonicalResponses: ReadonlyMap<string, ResponseDefinition>
-): readonly string[] => {
-  const chain: string[] = [response.name];
-  const visitedResponseNames = new Set(chain);
-  let parentName = response.derived?.parentName;
-
-  while (parentName !== undefined) {
-    if (visitedResponseNames.has(parentName)) {
-      throw new DerivedResponseCycleError(response.name);
-    }
-
-    const parentResponse = canonicalResponses.get(parentName);
-
-    if (parentResponse === undefined) {
-      throw new MissingDerivedResponseParentError(response.name, parentName);
-    }
-
-    chain.unshift(parentResponse.name);
-    visitedResponseNames.add(parentResponse.name);
-    parentName = parentResponse.derived?.parentName;
-  }
-
-  return chain;
-};
-
-const validateDerivedResponseGraph = (
-  canonicalResponses: ReadonlyMap<string, ResponseDefinition>
-): void => {
-  for (const response of canonicalResponses.values()) {
-    if (response.derived === undefined) {
-      continue;
-    }
-
-    const chain = getDerivedResponseChain(response, canonicalResponses);
-    const materializedLineage = chain.slice(1);
-
-    if (response.derived.depth !== materializedLineage.length) {
-      throw new InvalidDerivedResponseError(response.name);
-    }
-
-    if (
-      materializedLineage.length !== response.derived.lineage.length ||
-      materializedLineage.some(
-        (lineageEntry, index) =>
-          lineageEntry !== response.derived?.lineage[index]
-      )
-    ) {
-      throw new InvalidDerivedResponseError(response.name);
-    }
-  }
-};
-
-const collectCanonicalResponses = (
-  definition: SpecDefinition
-): Map<string, NormalizedResponse> => {
-  const canonicalResponseDefinitions =
-    collectCanonicalResponseDefinitions(definition);
-
-  validateDerivedResponseGraph(canonicalResponseDefinitions);
-
-  return new Map(
-    Array.from(
-      canonicalResponseDefinitions.entries(),
-      ([responseName, response]) => [
-        responseName,
-        normalizeResponseDefinition(response),
-      ]
-    )
-  );
 };
 
 const normalizeOperationResponses = (

@@ -1,6 +1,6 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
-import { compareRoutes, getMethodPriority } from "../src/helpers/RouteSort";
+import { compareRoutes, getMethodPriority } from "../src/helpers/routeSort";
 
 describe("getMethodPriority", () => {
   test("returns the configured priority for known methods", () => {

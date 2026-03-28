@@ -111,7 +111,7 @@ file tracking.
 | `getCanonicalResponse(name)`                                     | Look up a canonical (shared) response by name. Throws if the response does not exist.                    |
 | `getCanonicalResponseOutputFile(name)`                           | Get the absolute output file path for a canonical response.                                              |
 | `getCanonicalResponseImportPath({ importerDir, responseName })`  | Compute the relative import path from a generated file to a canonical response file.                     |
-| `getOperationDefinitionImportPath({ importerDir, operationId })` | Compute the relative import path from a generated file to the bundled operation definition shim.         |
+| `getSpecImportPath({ importerDir })`                           | Compute the relative import path from a generated `spec.ts` consumer to the bundled spec shim.            |
 | `getOperationOutputPaths({ resourceName, operationId })`         | Get all output file paths for a given operation (request, response, validators, etc.).                   |
 | `getResourceOutputDir(name)`                                     | Get the absolute output directory for a resource (e.g. `<output>/todo/`).                                |
 | `writeFile(rel, content)`                                        | Write a file relative to the output root. Creates directories as needed and tracks the file for cleanup. |
