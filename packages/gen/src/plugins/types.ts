@@ -47,6 +47,10 @@ export type GeneratorContext = PluginContext & {
   readonly getSpecImportPath: (params: {
     readonly importerDir: string;
   }) => string;
+  readonly getOperationDefinitionAccessor: (params: {
+    readonly resourceName: string;
+    readonly operationId: string;
+  }) => string;
   readonly getOperationOutputPaths: (params: {
     readonly resourceName: string;
     readonly operationId: string;
@@ -62,7 +66,7 @@ export type GeneratorContext = PluginContext & {
  * Plugin metadata
  */
 export type PluginMetadata = {
-  name: string;
+  readonly name: string;
 };
 
 /**

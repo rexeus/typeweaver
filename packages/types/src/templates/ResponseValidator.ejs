@@ -14,6 +14,9 @@ import {
 import type { <%= pascalCaseOperationId %>Response } from "<%= responseFile %>";
 
 const definition = <%- definitionAccessor %>;
+const responseDefinitions = new Map(
+    definition.responses.map(response => [response.name, response] as const)
+);
 
 export class <%= pascalCaseOperationId %>ResponseValidator extends ResponseValidator<<%= pascalCaseOperationId %>Response> {
     protected override readonly expectedStatusCodes = [
@@ -23,7 +26,7 @@ export class <%= pascalCaseOperationId %>ResponseValidator extends ResponseValid
 
     protected override readonly responseEntries: readonly ResponseEntry[] = [
         <% for (const response of [...ownResponses, ...sharedResponses]) { %>
-        { name: "<%= response.name %>", statusCode: <%= response.statusCode %>, headerSchema: definition.responses[<%= response.index %>]?.header, bodySchema: definition.responses[<%= response.index %>]?.body },
+        { name: "<%= response.name %>", statusCode: <%= response.statusCode %>, headerSchema: responseDefinitions.get("<%= response.name %>")?.header, bodySchema: responseDefinitions.get("<%= response.name %>")?.body },
         <% } %>
     ];
 }

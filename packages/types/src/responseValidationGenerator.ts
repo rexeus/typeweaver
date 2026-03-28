@@ -13,7 +13,6 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 type ResponseTemplateData = {
   readonly name: string;
   readonly statusCode: HttpStatusCode;
-  readonly index: number;
   readonly hasHeader: boolean;
   readonly hasBody: boolean;
   readonly statusCodeKey?: string;
@@ -27,14 +26,8 @@ export function generate(context: GeneratorContext): void {
   );
 
   for (const resource of context.normalizedSpec.resources) {
-    resource.operations.forEach((operation, operationIndex) => {
-      writeResponseValidator(
-        templateFilePath,
-        resource,
-        operation,
-        operationIndex,
-        context
-      );
+    resource.operations.forEach(operation => {
+      writeResponseValidator(templateFilePath, resource, operation, context);
     });
   }
 }
@@ -43,7 +36,6 @@ function writeResponseValidator(
   templateFilePath: string,
   resource: NormalizedResource,
   operation: NormalizedOperation,
-  operationIndex: number,
   context: GeneratorContext
 ): void {
   const outputPaths = context.getOperationOutputPaths({
@@ -55,7 +47,7 @@ function writeResponseValidator(
   const sharedResponses: ResponseTemplateData[] = [];
   const allStatusCodes = new Map<HttpStatusCode, string>();
 
-  operation.responses.forEach((responseUsage, index) => {
+  operation.responses.forEach(responseUsage => {
     const response =
       responseUsage.source === "canonical"
         ? context.getCanonicalResponse(responseUsage.responseName)
@@ -68,7 +60,6 @@ function writeResponseValidator(
       hasBody: response.body !== undefined,
       hasHeader: response.header !== undefined,
       statusCode: response.statusCode,
-      index,
     };
 
     if (responseUsage.source === "canonical") {
@@ -90,7 +81,10 @@ function writeResponseValidator(
     specPath: context.getSpecImportPath({
       importerDir: outputPaths.outputDir,
     }),
-    definitionAccessor: `spec.resources[${JSON.stringify(resource.name)}]!.operations[${operationIndex}]!`,
+    definitionAccessor: context.getOperationDefinitionAccessor({
+      resourceName: resource.name,
+      operationId: operation.operationId,
+    }),
     sharedResponses,
     ownResponses,
     allStatusCodes: Array.from(allStatusCodes.entries()).map(

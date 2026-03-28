@@ -15,7 +15,9 @@ import {
 import { RequestValidator } from "../lib/types";
 import type { IDeleteSubTodoRequest } from "./DeleteSubTodoRequest";
 
-const definition = spec.resources["todo"]!.operations[2]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "DeleteSubTodo",
+)!;
 
 export class DeleteSubTodoRequestValidator extends RequestValidator {
   public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IDeleteSubTodoRequest> {

@@ -15,7 +15,9 @@ import {
 import { RequestValidator } from "../lib/types";
 import type { IListTodosRequest } from "./ListTodosRequest";
 
-const definition = spec.resources["todo"]!.operations[7]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "ListTodos",
+)!;
 
 export class ListTodosRequestValidator extends RequestValidator {
   public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IListTodosRequest> {

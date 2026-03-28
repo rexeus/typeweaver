@@ -74,6 +74,15 @@ describe("ResponseGenerator", () => {
         return `../responses/${responseName}Response`;
       },
       getSpecImportPath: () => "../spec/spec",
+      getOperationDefinitionAccessor: ({
+        operationId,
+        resourceName,
+      }: {
+        readonly operationId: string;
+        readonly resourceName: string;
+      }) => {
+        return `spec.resources[${JSON.stringify(resourceName)}]!.operations.find(operation => operation.operationId === ${JSON.stringify(operationId)})!`;
+      },
       getOperationOutputPaths: ({
         operationId,
         resourceName,

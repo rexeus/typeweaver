@@ -22,7 +22,9 @@ import type {
 } from "./OptionsTodoRequest";
 import type { OptionsTodoResponse } from "./OptionsTodoResponse";
 
-const definition = spec.resources["todo"]!.operations[8]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "OptionsTodo",
+)!;
 const responseValidator = new OptionsTodoResponseValidator();
 
 export class OptionsTodoRequestCommand extends RequestCommand implements IOptionsTodoRequest {

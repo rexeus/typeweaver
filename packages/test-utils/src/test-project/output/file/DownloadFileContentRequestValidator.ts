@@ -15,7 +15,9 @@ import {
 import { RequestValidator } from "../lib/types";
 import type { IDownloadFileContentRequest } from "./DownloadFileContentRequest";
 
-const definition = spec.resources["file"]!.operations[1]!;
+const definition = spec.resources["file"]!.operations.find(
+  (operation) => operation.operationId === "DownloadFileContent",
+)!;
 
 export class DownloadFileContentRequestValidator extends RequestValidator {
   public safeValidate(

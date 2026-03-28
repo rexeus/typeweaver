@@ -23,7 +23,9 @@ import type {
 } from "./CreateSubTodoRequest";
 import type { CreateSubTodoResponse } from "./CreateSubTodoResponse";
 
-const definition = spec.resources["todo"]!.operations[0]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "CreateSubTodo",
+)!;
 const responseValidator = new CreateSubTodoResponseValidator();
 
 export class CreateSubTodoRequestCommand extends RequestCommand implements ICreateSubTodoRequest {

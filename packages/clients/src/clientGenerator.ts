@@ -66,14 +66,8 @@ function writeRequestCommands(
   resource: NormalizedResource,
   context: GeneratorContext
 ): void {
-  resource.operations.forEach((operation, operationIndex) => {
-    writeRequestCommand(
-      templateFilePath,
-      resource.name,
-      operation,
-      operationIndex,
-      context
-    );
+  resource.operations.forEach(operation => {
+    writeRequestCommand(templateFilePath, resource.name, operation, context);
   });
 }
 
@@ -81,7 +75,6 @@ function writeRequestCommand(
   templateFilePath: string,
   resourceName: string,
   operation: NormalizedOperation,
-  operationIndex: number,
   context: GeneratorContext
 ): void {
   const outputPaths = context.getOperationOutputPaths({
@@ -102,7 +95,10 @@ function writeRequestCommand(
     specPath: context.getSpecImportPath({
       importerDir: outputPaths.outputDir,
     }),
-    definitionAccessor: `spec.resources[${JSON.stringify(resourceName)}]!.operations[${operationIndex}]!`,
+    definitionAccessor: context.getOperationDefinitionAccessor({
+      resourceName,
+      operationId: operation.operationId,
+    }),
     operationId: operation.operationId,
     pascalCaseOperationId,
     method: operation.method,

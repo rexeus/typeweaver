@@ -22,7 +22,9 @@ import type {
 } from "./GetTodoRequest";
 import type { GetTodoResponse } from "./GetTodoResponse";
 
-const definition = spec.resources["todo"]!.operations[4]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "GetTodo",
+)!;
 const responseValidator = new GetTodoResponseValidator();
 
 export class GetTodoRequestCommand extends RequestCommand implements IGetTodoRequest {

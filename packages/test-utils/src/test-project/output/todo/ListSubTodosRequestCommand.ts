@@ -23,7 +23,9 @@ import type {
 } from "./ListSubTodosRequest";
 import type { ListSubTodosResponse } from "./ListSubTodosResponse";
 
-const definition = spec.resources["todo"]!.operations[6]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "ListSubTodos",
+)!;
 const responseValidator = new ListSubTodosResponseValidator();
 
 export class ListSubTodosRequestCommand extends RequestCommand implements IListSubTodosRequest {

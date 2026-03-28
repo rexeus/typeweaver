@@ -22,7 +22,9 @@ import type {
 } from "./RegisterAccountRequest";
 import type { RegisterAccountResponse } from "./RegisterAccountResponse";
 
-const definition = spec.resources["account"]!.operations[0]!;
+const definition = spec.resources["account"]!.operations.find(
+  (operation) => operation.operationId === "RegisterAccount",
+)!;
 const responseValidator = new RegisterAccountResponseValidator();
 
 export class RegisterAccountRequestCommand

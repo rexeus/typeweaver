@@ -22,7 +22,9 @@ import type {
 } from "./DeleteSubTodoRequest";
 import type { DeleteSubTodoResponse } from "./DeleteSubTodoResponse";
 
-const definition = spec.resources["todo"]!.operations[2]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "DeleteSubTodo",
+)!;
 const responseValidator = new DeleteSubTodoResponseValidator();
 
 export class DeleteSubTodoRequestCommand extends RequestCommand implements IDeleteSubTodoRequest {

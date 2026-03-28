@@ -17,12 +17,11 @@ export function generate(context: GeneratorContext): void {
   );
 
   for (const resource of context.normalizedSpec.resources) {
-    resource.operations.forEach((operation, operationIndex) => {
+    resource.operations.forEach(operation => {
       writeRequestValidator(
         templateFilePath,
         resource.name,
         operation,
-        operationIndex,
         context
       );
     });
@@ -33,7 +32,6 @@ function writeRequestValidator(
   templateFilePath: string,
   resourceName: string,
   operation: NormalizedOperation,
-  operationIndex: number,
   context: GeneratorContext
 ): void {
   const { operationId, request } = operation;
@@ -51,7 +49,10 @@ function writeRequestValidator(
     specPath: context.getSpecImportPath({
       importerDir: outputPaths.outputDir,
     }),
-    definitionAccessor: `spec.resources[${JSON.stringify(resourceName)}]!.operations[${operationIndex}]!`,
+    definitionAccessor: context.getOperationDefinitionAccessor({
+      resourceName,
+      operationId,
+    }),
     corePath: context.coreDir,
     requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}`,
     body,

@@ -22,7 +22,9 @@ import type {
 } from "./AccessTokenRequest";
 import type { AccessTokenResponse } from "./AccessTokenResponse";
 
-const definition = spec.resources["auth"]!.operations[0]!;
+const definition = spec.resources["auth"]!.operations.find(
+  (operation) => operation.operationId === "AccessToken",
+)!;
 const responseValidator = new AccessTokenResponseValidator();
 
 export class AccessTokenRequestCommand extends RequestCommand implements IAccessTokenRequest {

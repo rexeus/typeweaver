@@ -22,7 +22,9 @@ import type {
 } from "./DeleteTodoRequest";
 import type { DeleteTodoResponse } from "./DeleteTodoResponse";
 
-const definition = spec.resources["todo"]!.operations[3]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "DeleteTodo",
+)!;
 const responseValidator = new DeleteTodoResponseValidator();
 
 export class DeleteTodoRequestCommand extends RequestCommand implements IDeleteTodoRequest {

@@ -22,7 +22,9 @@ import type {
 } from "./ListTodosRequest";
 import type { ListTodosResponse } from "./ListTodosResponse";
 
-const definition = spec.resources["todo"]!.operations[7]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "ListTodos",
+)!;
 const responseValidator = new ListTodosResponseValidator();
 
 export class ListTodosRequestCommand extends RequestCommand implements IListTodosRequest {

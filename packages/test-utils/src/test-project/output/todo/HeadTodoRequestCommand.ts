@@ -22,7 +22,9 @@ import type {
 } from "./HeadTodoRequest";
 import type { HeadTodoResponse } from "./HeadTodoResponse";
 
-const definition = spec.resources["todo"]!.operations[5]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "HeadTodo",
+)!;
 const responseValidator = new HeadTodoResponseValidator();
 
 export class HeadTodoRequestCommand extends RequestCommand implements IHeadTodoRequest {

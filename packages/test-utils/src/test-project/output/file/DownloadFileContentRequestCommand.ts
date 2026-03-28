@@ -22,7 +22,9 @@ import type {
 } from "./DownloadFileContentRequest";
 import type { DownloadFileContentResponse } from "./DownloadFileContentResponse";
 
-const definition = spec.resources["file"]!.operations[1]!;
+const definition = spec.resources["file"]!.operations.find(
+  (operation) => operation.operationId === "DownloadFileContent",
+)!;
 const responseValidator = new DownloadFileContentResponseValidator();
 
 export class DownloadFileContentRequestCommand

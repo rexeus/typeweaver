@@ -22,7 +22,9 @@ import type {
 } from "./UploadFileRequest";
 import type { UploadFileResponse } from "./UploadFileResponse";
 
-const definition = spec.resources["file"]!.operations[0]!;
+const definition = spec.resources["file"]!.operations.find(
+  (operation) => operation.operationId === "UploadFile",
+)!;
 const responseValidator = new UploadFileResponseValidator();
 
 export class UploadFileRequestCommand extends RequestCommand implements IUploadFileRequest {

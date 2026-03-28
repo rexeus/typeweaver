@@ -10,7 +10,12 @@ import spec from "../spec/spec";
 import { type ResponseEntry, ResponseValidator } from "../lib/types";
 import type { ListTodosResponse } from "./ListTodosResponse";
 
-const definition = spec.resources["todo"]!.operations[7]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "ListTodos",
+)!;
+const responseDefinitions = new Map(
+  definition.responses.map((response) => [response.name, response] as const),
+);
 
 export class ListTodosResponseValidator extends ResponseValidator<ListTodosResponse> {
   protected override readonly expectedStatusCodes = [200, 400, 401, 403, 415, 429, 500];
@@ -19,50 +24,50 @@ export class ListTodosResponseValidator extends ResponseValidator<ListTodosRespo
     {
       name: "ListTodosSuccess",
       statusCode: 200,
-      headerSchema: definition.responses[0]?.header,
-      bodySchema: definition.responses[0]?.body,
+      headerSchema: responseDefinitions.get("ListTodosSuccess")?.header,
+      bodySchema: responseDefinitions.get("ListTodosSuccess")?.body,
     },
 
     {
       name: "ForbiddenError",
       statusCode: 403,
-      headerSchema: definition.responses[1]?.header,
-      bodySchema: definition.responses[1]?.body,
+      headerSchema: responseDefinitions.get("ForbiddenError")?.header,
+      bodySchema: responseDefinitions.get("ForbiddenError")?.body,
     },
 
     {
       name: "InternalServerError",
       statusCode: 500,
-      headerSchema: definition.responses[2]?.header,
-      bodySchema: definition.responses[2]?.body,
+      headerSchema: responseDefinitions.get("InternalServerError")?.header,
+      bodySchema: responseDefinitions.get("InternalServerError")?.body,
     },
 
     {
       name: "TooManyRequestsError",
       statusCode: 429,
-      headerSchema: definition.responses[3]?.header,
-      bodySchema: definition.responses[3]?.body,
+      headerSchema: responseDefinitions.get("TooManyRequestsError")?.header,
+      bodySchema: responseDefinitions.get("TooManyRequestsError")?.body,
     },
 
     {
       name: "UnauthorizedError",
       statusCode: 401,
-      headerSchema: definition.responses[4]?.header,
-      bodySchema: definition.responses[4]?.body,
+      headerSchema: responseDefinitions.get("UnauthorizedError")?.header,
+      bodySchema: responseDefinitions.get("UnauthorizedError")?.body,
     },
 
     {
       name: "UnsupportedMediaTypeError",
       statusCode: 415,
-      headerSchema: definition.responses[5]?.header,
-      bodySchema: definition.responses[5]?.body,
+      headerSchema: responseDefinitions.get("UnsupportedMediaTypeError")?.header,
+      bodySchema: responseDefinitions.get("UnsupportedMediaTypeError")?.body,
     },
 
     {
       name: "ValidationError",
       statusCode: 400,
-      headerSchema: definition.responses[6]?.header,
-      bodySchema: definition.responses[6]?.body,
+      headerSchema: responseDefinitions.get("ValidationError")?.header,
+      bodySchema: responseDefinitions.get("ValidationError")?.body,
     },
   ];
 }

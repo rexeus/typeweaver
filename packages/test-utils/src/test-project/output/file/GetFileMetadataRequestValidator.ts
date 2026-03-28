@@ -15,7 +15,9 @@ import {
 import { RequestValidator } from "../lib/types";
 import type { IGetFileMetadataRequest } from "./GetFileMetadataRequest";
 
-const definition = spec.resources["file"]!.operations[2]!;
+const definition = spec.resources["file"]!.operations.find(
+  (operation) => operation.operationId === "GetFileMetadata",
+)!;
 
 export class GetFileMetadataRequestValidator extends RequestValidator {
   public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IGetFileMetadataRequest> {

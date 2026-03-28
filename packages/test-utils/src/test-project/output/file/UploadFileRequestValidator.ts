@@ -15,7 +15,9 @@ import {
 import { RequestValidator } from "../lib/types";
 import type { IUploadFileRequest } from "./UploadFileRequest";
 
-const definition = spec.resources["file"]!.operations[0]!;
+const definition = spec.resources["file"]!.operations.find(
+  (operation) => operation.operationId === "UploadFile",
+)!;
 
 export class UploadFileRequestValidator extends RequestValidator {
   public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IUploadFileRequest> {

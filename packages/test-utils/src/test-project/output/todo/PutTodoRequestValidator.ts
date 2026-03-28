@@ -15,7 +15,9 @@ import {
 import { RequestValidator } from "../lib/types";
 import type { IPutTodoRequest } from "./PutTodoRequest";
 
-const definition = spec.resources["todo"]!.operations[9]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "PutTodo",
+)!;
 
 export class PutTodoRequestValidator extends RequestValidator {
   public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IPutTodoRequest> {

@@ -22,7 +22,9 @@ import type {
 } from "./GetFileMetadataRequest";
 import type { GetFileMetadataResponse } from "./GetFileMetadataResponse";
 
-const definition = spec.resources["file"]!.operations[2]!;
+const definition = spec.resources["file"]!.operations.find(
+  (operation) => operation.operationId === "GetFileMetadata",
+)!;
 const responseValidator = new GetFileMetadataResponseValidator();
 
 export class GetFileMetadataRequestCommand

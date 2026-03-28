@@ -23,7 +23,9 @@ import type {
 } from "./UpdateSubTodoRequest";
 import type { UpdateSubTodoResponse } from "./UpdateSubTodoResponse";
 
-const definition = spec.resources["todo"]!.operations[12]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "UpdateSubTodo",
+)!;
 const responseValidator = new UpdateSubTodoResponseValidator();
 
 export class UpdateSubTodoRequestCommand extends RequestCommand implements IUpdateSubTodoRequest {

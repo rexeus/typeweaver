@@ -23,7 +23,9 @@ import type {
 } from "./QueryTodoRequest";
 import type { QueryTodoResponse } from "./QueryTodoResponse";
 
-const definition = spec.resources["todo"]!.operations[11]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "QueryTodo",
+)!;
 const responseValidator = new QueryTodoResponseValidator();
 
 export class QueryTodoRequestCommand extends RequestCommand implements IQueryTodoRequest {

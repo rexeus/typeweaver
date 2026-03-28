@@ -24,7 +24,9 @@ import type {
 } from "./QuerySubTodoRequest";
 import type { QuerySubTodoResponse } from "./QuerySubTodoResponse";
 
-const definition = spec.resources["todo"]!.operations[10]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "QuerySubTodo",
+)!;
 const responseValidator = new QuerySubTodoResponseValidator();
 
 export class QuerySubTodoRequestCommand extends RequestCommand implements IQuerySubTodoRequest {

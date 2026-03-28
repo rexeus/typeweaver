@@ -22,7 +22,9 @@ import type {
 } from "./RefreshTokenRequest";
 import type { RefreshTokenResponse } from "./RefreshTokenResponse";
 
-const definition = spec.resources["auth"]!.operations[1]!;
+const definition = spec.resources["auth"]!.operations.find(
+  (operation) => operation.operationId === "RefreshToken",
+)!;
 const responseValidator = new RefreshTokenResponseValidator();
 
 export class RefreshTokenRequestCommand extends RequestCommand implements IRefreshTokenRequest {

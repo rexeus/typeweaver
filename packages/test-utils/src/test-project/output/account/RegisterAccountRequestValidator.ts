@@ -15,7 +15,9 @@ import {
 import { RequestValidator } from "../lib/types";
 import type { IRegisterAccountRequest } from "./RegisterAccountRequest";
 
-const definition = spec.resources["account"]!.operations[0]!;
+const definition = spec.resources["account"]!.operations.find(
+  (operation) => operation.operationId === "RegisterAccount",
+)!;
 
 export class RegisterAccountRequestValidator extends RequestValidator {
   public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IRegisterAccountRequest> {

@@ -126,21 +126,21 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
           path.join(params.specOutputDir, "spec").replace(/\.ts$/, "")
         );
       },
+      getOperationDefinitionAccessor: config => {
+        return (
+          `spec.resources[${JSON.stringify(config.resourceName)}]!` +
+          `.operations.find(operation => operation.operationId === ${JSON.stringify(config.operationId)})!`
+        );
+      },
       getOperationOutputPaths,
       getResourceOutputDir,
 
-      // Utility functions
       writeFile: (relativePath: string, content: string) => {
         const fullPath = path.join(params.outputDir, relativePath);
         const dir = path.dirname(fullPath);
 
-        // Ensure directory exists
         fs.mkdirSync(dir, { recursive: true });
-
-        // Write file
         fs.writeFileSync(fullPath, content);
-
-        // Track generated file
         generatedFiles.add(relativePath);
 
         console.info(`Generated: ${relativePath}`);
@@ -152,7 +152,7 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
           : path.join(params.templateDir, templatePath);
 
         const template = fs.readFileSync(fullTemplatePath, "utf8");
-        return ejs.render(template, data);
+        return ejs.render(template, data as ejs.Data);
       },
 
       addGeneratedFile: (relativePath: string) => {

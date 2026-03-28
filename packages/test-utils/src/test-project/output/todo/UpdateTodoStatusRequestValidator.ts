@@ -15,7 +15,9 @@ import {
 import { RequestValidator } from "../lib/types";
 import type { IUpdateTodoStatusRequest } from "./UpdateTodoStatusRequest";
 
-const definition = spec.resources["todo"]!.operations[14]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "UpdateTodoStatus",
+)!;
 
 export class UpdateTodoStatusRequestValidator extends RequestValidator {
   public safeValidate(

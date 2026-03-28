@@ -23,7 +23,9 @@ import type {
 } from "./PutTodoRequest";
 import type { PutTodoResponse } from "./PutTodoResponse";
 
-const definition = spec.resources["todo"]!.operations[9]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "PutTodo",
+)!;
 const responseValidator = new PutTodoResponseValidator();
 
 export class PutTodoRequestCommand extends RequestCommand implements IPutTodoRequest {

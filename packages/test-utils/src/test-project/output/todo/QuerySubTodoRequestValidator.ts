@@ -15,7 +15,9 @@ import {
 import { RequestValidator } from "../lib/types";
 import type { IQuerySubTodoRequest } from "./QuerySubTodoRequest";
 
-const definition = spec.resources["todo"]!.operations[10]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "QuerySubTodo",
+)!;
 
 export class QuerySubTodoRequestValidator extends RequestValidator {
   public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IQuerySubTodoRequest> {

@@ -60,6 +60,9 @@ function createMockContext(operations: NormalizedOperation[]): {
     getSpecImportPath: () => {
       throw new Error("not implemented");
     },
+    getOperationDefinitionAccessor: ({ resourceName, operationId }) => {
+      return `spec.resources[${JSON.stringify(resourceName)}]!.operations.find(operation => operation.operationId === ${JSON.stringify(operationId)})!`;
+    },
     getOperationOutputPaths: ({
       operationId,
       resourceName,

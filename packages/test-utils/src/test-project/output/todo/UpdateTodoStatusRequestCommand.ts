@@ -23,7 +23,9 @@ import type {
 } from "./UpdateTodoStatusRequest";
 import type { UpdateTodoStatusResponse } from "./UpdateTodoStatusResponse";
 
-const definition = spec.resources["todo"]!.operations[14]!;
+const definition = spec.resources["todo"]!.operations.find(
+  (operation) => operation.operationId === "UpdateTodoStatus",
+)!;
 const responseValidator = new UpdateTodoStatusResponseValidator();
 
 export class UpdateTodoStatusRequestCommand
