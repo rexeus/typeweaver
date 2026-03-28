@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import {
+  internalServerErrorDefaultError,
   HttpStatusCode,
   ResponseValidationError,
 } from "@rexeus/typeweaver-core";
@@ -10,7 +11,11 @@ import {
   createTestHono,
 } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
-import { buildCreateTodoSuccess, prepareRequestData } from "../../helpers";
+import {
+  buildCreateTodoSuccess,
+  expectErrorResponse,
+  prepareRequestData,
+} from "../../helpers";
 
 describe("Response Validation (Hono)", () => {
   describe("field stripping", () => {
@@ -90,9 +95,12 @@ describe("Response Validation (Hono)", () => {
         prepareRequestData(requestData)
       );
 
-      expect(response.status).toBe(500);
-      const data = (await response.json()) as Record<string, unknown>;
-      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+      const data = await expectErrorResponse(
+        response,
+        internalServerErrorDefaultError.statusCode,
+        internalServerErrorDefaultError.code
+      );
+      expect(data.message).toBe(internalServerErrorDefaultError.message);
     });
 
     test("should return 500 when response has unrecognized status code", async () => {
@@ -113,9 +121,7 @@ describe("Response Validation (Hono)", () => {
         prepareRequestData(requestData)
       );
 
-      expect(response.status).toBe(500);
-      const data = (await response.json()) as Record<string, unknown>;
-      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+      await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
     });
   });
 
@@ -273,9 +279,7 @@ describe("Response Validation (Hono)", () => {
         prepareRequestData(requestData)
       );
 
-      expect(response.status).toBe(500);
-      const data = (await response.json()) as Record<string, unknown>;
-      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+      await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
     });
   });
 
@@ -402,9 +406,7 @@ describe("Response Validation (Hono)", () => {
       );
 
       // Assert
-      expect(response.status).toBe(500);
-      const data = (await response.json()) as Record<string, unknown>;
-      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+      await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
     });
   });
 
@@ -426,9 +428,7 @@ describe("Response Validation (Hono)", () => {
         prepareRequestData(requestData)
       );
 
-      expect(response.status).toBe(500);
-      const data = (await response.json()) as Record<string, unknown>;
-      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+      await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
     });
 
     test("should handle response with null body", async () => {
@@ -448,9 +448,7 @@ describe("Response Validation (Hono)", () => {
         prepareRequestData(requestData)
       );
 
-      expect(response.status).toBe(500);
-      const data = (await response.json()) as Record<string, unknown>;
-      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+      await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
     });
 
     test("should handle response with empty object body", async () => {
@@ -470,9 +468,7 @@ describe("Response Validation (Hono)", () => {
         prepareRequestData(requestData)
       );
 
-      expect(response.status).toBe(500);
-      const data = (await response.json()) as Record<string, unknown>;
-      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+      await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
     });
   });
 });

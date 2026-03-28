@@ -1,6 +1,6 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createUploadFileSuccessResponse as generatedCreateUploadFileSuccessResponse } from "../../test-project/output/file/UploadFileResponse";
+import { createUploadFileSuccessResponse as generatedCreateUploadFileSuccessResponse } from "../../test-project/output/responses/UploadFileSuccessResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 import type {

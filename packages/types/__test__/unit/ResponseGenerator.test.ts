@@ -73,8 +73,7 @@ describe("ResponseGenerator", () => {
       }) => {
         return `../responses/${responseName}Response`;
       },
-      getOperationDefinitionImportPath: () =>
-        "../../spec/todos/createTodoDefinition",
+      getSpecImportPath: () => "../spec/spec",
       getOperationOutputPaths: ({
         operationId,
         resourceName,

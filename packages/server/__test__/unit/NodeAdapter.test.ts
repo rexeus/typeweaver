@@ -1,3 +1,7 @@
+import {
+  internalServerErrorDefaultError,
+  payloadTooLargeDefaultError,
+} from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
 import { nodeAdapter } from "../../src/lib/NodeAdapter";
 import { TypeweaverApp } from "../../src/lib/TypeweaverApp";
@@ -254,8 +258,8 @@ describe("nodeAdapter", () => {
       expect(res.writtenStatus).toBe(500);
       const parsed = JSON.parse(res.writtenBody);
       expect(parsed).toEqual({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "An unexpected error occurred",
+        code: internalServerErrorDefaultError.code,
+        message: internalServerErrorDefaultError.message,
       });
 
       consoleSpy.mockRestore();
@@ -301,8 +305,8 @@ describe("nodeAdapter", () => {
       expect(res.writtenStatus).toBe(413);
       const parsed = JSON.parse(res.writtenBody);
       expect(parsed).toEqual({
-        code: "PAYLOAD_TOO_LARGE",
-        message: "Request body exceeds the size limit",
+        code: payloadTooLargeDefaultError.code,
+        message: payloadTooLargeDefaultError.message,
       });
     });
 

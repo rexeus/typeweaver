@@ -1,6 +1,5 @@
 import {
   DuplicateResponseNameError,
-  HttpResponseDefinition,
   HttpStatusCodeNameMap,
   isNamedResponseDefinition,
 } from "@rexeus/typeweaver-core";
@@ -11,6 +10,17 @@ import type {
   SpecDefinition,
 } from "@rexeus/typeweaver-core";
 import { z } from "zod";
+import {
+  DerivedResponseCycleError,
+  DuplicateOperationIdError,
+  DuplicateRouteError,
+  EmptyResourceOperationsError,
+  EmptySpecResourcesError,
+  InvalidDerivedResponseError,
+  InvalidRequestSchemaError,
+  MissingDerivedResponseParentError,
+  PathParameterMismatchError,
+} from "./errors";
 import type {
   NormalizedOperation,
   NormalizedRequest,
@@ -18,91 +28,6 @@ import type {
   NormalizedResponseUsage,
   NormalizedSpec,
 } from "./NormalizedSpec";
-
-export class EmptySpecResourcesError extends Error {
-  public constructor() {
-    super("Spec definition must contain at least one resource.");
-    this.name = "EmptySpecResourcesError";
-  }
-}
-
-export class EmptyResourceOperationsError extends Error {
-  public constructor(resourceName: string) {
-    super(`Resource '${resourceName}' must contain at least one operation.`);
-    this.name = "EmptyResourceOperationsError";
-  }
-}
-
-export class DuplicateOperationIdError extends Error {
-  public constructor(operationId: string) {
-    super(
-      `Operation ID '${operationId}' must be globally unique within a spec.`
-    );
-    this.name = "DuplicateOperationIdError";
-  }
-}
-
-export class DuplicateRouteError extends Error {
-  public constructor(method: string, path: string, normalizedPath: string) {
-    super(
-      `Route '${method} ${path}' conflicts with an existing route using normalized path '${normalizedPath}'.`
-    );
-    this.name = "DuplicateRouteError";
-  }
-}
-
-export class InvalidRequestSchemaError extends Error {
-  public constructor(
-    operationId: string,
-    requestPart: keyof NormalizedRequest
-  ) {
-    super(
-      `Operation '${operationId}' has an invalid request.${requestPart} schema definition.`
-    );
-    this.name = "InvalidRequestSchemaError";
-  }
-}
-
-export class PathParameterMismatchError extends Error {
-  public constructor(
-    operationId: string,
-    path: string,
-    pathParams: readonly string[],
-    requestParams: readonly string[]
-  ) {
-    super(
-      `Operation '${operationId}' has mismatched path parameters for '${path}'. Path params: [${pathParams.join(
-        ", "
-      )}], request.param keys: [${requestParams.join(", ")}].`
-    );
-    this.name = "PathParameterMismatchError";
-  }
-}
-
-export class DerivedResponseCycleError extends Error {
-  public constructor(responseName: string) {
-    super(`Derived response '${responseName}' contains a cyclic lineage.`);
-    this.name = "DerivedResponseCycleError";
-  }
-}
-
-export class InvalidDerivedResponseError extends Error {
-  public constructor(responseName: string) {
-    super(
-      `Derived response '${responseName}' contains invalid lineage metadata.`
-    );
-    this.name = "InvalidDerivedResponseError";
-  }
-}
-
-export class MissingDerivedResponseParentError extends Error {
-  public constructor(responseName: string, parentName: string) {
-    super(
-      `Derived response '${responseName}' references missing canonical parent '${parentName}'.`
-    );
-    this.name = "MissingDerivedResponseParentError";
-  }
-}
 
 const PATH_PARAMETER_PATTERN = /:([A-Za-z0-9_]+)/g;
 
@@ -218,15 +143,6 @@ const normalizeResponseDefinition = (
   };
 };
 
-const isCanonicalResponseDefinition = (
-  response: ResponseDefinition
-): boolean => {
-  return (
-    isNamedResponseDefinition(response) ||
-    response instanceof HttpResponseDefinition
-  );
-};
-
 const validateDerivedResponseMetadata = (
   response: ResponseDefinition
 ): void => {
@@ -287,7 +203,7 @@ const collectCanonicalResponseDefinitions = (
   for (const resource of Object.values(definition.resources)) {
     for (const operation of resource.operations) {
       for (const response of operation.responses) {
-        if (!isCanonicalResponseDefinition(response)) {
+        if (!isNamedResponseDefinition(response)) {
           continue;
         }
 
@@ -378,7 +294,7 @@ const normalizeOperationResponses = (
   responses: readonly ResponseDefinition[]
 ): NormalizedResponseUsage[] => {
   return responses.map(response => {
-    if (isCanonicalResponseDefinition(response)) {
+    if (isNamedResponseDefinition(response)) {
       return {
         responseName: response.name,
         source: "canonical",

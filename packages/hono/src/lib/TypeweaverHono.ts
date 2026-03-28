@@ -6,8 +6,12 @@
  */
 
 import {
+  createDefaultErrorBody,
+  createDefaultErrorResponse,
+  internalServerErrorDefaultError,
   isTypedHttpResponse,
   RequestValidationError,
+  validationDefaultError,
 } from "@rexeus/typeweaver-core";
 import type {
   IHttpRequest,
@@ -191,10 +195,9 @@ export abstract class TypeweaverHono<
    */
   private readonly defaultHandlers = {
     requestValidation: (error: RequestValidationError): IHttpResponse => ({
-      statusCode: 400,
+      statusCode: validationDefaultError.statusCode,
       body: {
-        code: "VALIDATION_ERROR",
-        message: error.message,
+        ...createDefaultErrorBody(validationDefaultError),
         issues: {
           header: error.headerIssues,
           body: error.bodyIssues,
@@ -204,23 +207,13 @@ export abstract class TypeweaverHono<
       },
     }),
 
-    responseValidation: (): IHttpResponse => ({
-      statusCode: 500,
-      body: {
-        code: "INTERNAL_SERVER_ERROR",
-        message: "An unexpected error occurred",
-      },
-    }),
+    responseValidation: (): IHttpResponse =>
+      createDefaultErrorResponse(internalServerErrorDefaultError),
 
     httpResponse: (error: ITypedHttpResponse): IHttpResponse => error,
 
-    unknown: (): IHttpResponse => ({
-      statusCode: 500,
-      body: {
-        code: "INTERNAL_SERVER_ERROR",
-        message: "An unexpected error occurred",
-      },
-    }),
+    unknown: (): IHttpResponse =>
+      createDefaultErrorResponse(internalServerErrorDefaultError),
   };
 
   /**

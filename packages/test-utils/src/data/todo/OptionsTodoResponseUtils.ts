@@ -1,4 +1,4 @@
-import { createOptionsTodoSuccessResponse as generatedCreateOptionsTodoSuccessResponse } from "../../test-project/output/todo/OptionsTodoResponse";
+import { createOptionsTodoSuccessResponse as generatedCreateOptionsTodoSuccessResponse } from "../../test-project/output/responses/OptionsTodoSuccessResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 import type {

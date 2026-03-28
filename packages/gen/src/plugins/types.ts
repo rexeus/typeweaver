@@ -44,11 +44,7 @@ export type GeneratorContext = PluginContext & {
     readonly importerDir: string;
     readonly responseName: string;
   }) => string;
-  getOperationDefinitionImportPath: (params: {
-    readonly importerDir: string;
-    readonly resourceName: string;
-    readonly operationId: string;
-  }) => string;
+  getSpecImportPath: (params: { readonly importerDir: string }) => string;
   getOperationOutputPaths: (params: {
     readonly resourceName: string;
     readonly operationId: string;
@@ -127,7 +123,6 @@ export type PluginRegistration = {
 export type TypeweaverConfig = {
   input: string;
   output: string;
-  shared?: string;
   plugins?: (string | [string, PluginConfig])[];
   format?: boolean;
   clean?: boolean;

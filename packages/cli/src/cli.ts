@@ -18,7 +18,6 @@ const packageJson = JSON.parse(
 type CommandOptions = CommanderOptions & {
   input?: string;
   output?: string;
-  shared?: string;
   config?: string;
   plugins?: string;
   format?: boolean;
@@ -38,10 +37,6 @@ program
   .description("Generate types, validators, and clients from an API spec")
   .option("-i, --input <inputPath>", "path to spec entrypoint file")
   .option("-o, --output <outputDir>", "output directory for generated files")
-  .option(
-    "-s, --shared <path>",
-    "deprecated compatibility option for legacy definition discovery"
-  )
   .option("-c, --config <configFile>", "path to configuration file")
   .option("-p, --plugins <plugins>", "comma-separated list of plugins to use")
   .option("--format", "format generated code with oxfmt (default: true)")
@@ -72,8 +67,6 @@ program
     // Override with CLI options
     const inputPath = options.input ?? config.input;
     const outputDir = options.output ?? config.output;
-    const sharedDir = options.shared ?? config.shared;
-
     // Validate required options
     if (!inputPath) {
       throw new Error(
@@ -93,17 +86,11 @@ program
     const resolvedOutputDir = path.isAbsolute(outputDir)
       ? outputDir
       : path.join(execDir, outputDir);
-    const resolvedSharedDir = sharedDir
-      ? path.isAbsolute(sharedDir)
-        ? sharedDir
-        : path.join(execDir, sharedDir)
-      : undefined;
 
     // Build final configuration
     const finalConfig: TypeweaverConfig = {
       input: resolvedInputPath,
       output: resolvedOutputDir,
-      shared: resolvedSharedDir,
       format: options.format ?? config.format ?? true,
       clean: options.clean ?? config.clean ?? true,
     };

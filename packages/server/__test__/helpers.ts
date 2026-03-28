@@ -5,6 +5,9 @@ import type {
   IResponseValidator,
   ITypedHttpResponse,
 } from "@rexeus/typeweaver-core";
+import {
+  internalServerErrorDefaultError,
+} from "@rexeus/typeweaver-core";
 import { createCreateTodoSuccessResponseBody } from "test-utils";
 import { expect } from "vitest";
 import { StateMap } from "../src/lib/StateMap";
@@ -159,5 +162,8 @@ export async function expectErrorResponse(
 ): Promise<any> {
   const data = await expectJson(res, status);
   expect(data.code).toBe(code);
+  if (code === "INTERNAL_SERVER_ERROR") {
+    expect(data.message).toBe(internalServerErrorDefaultError.message);
+  }
   return data;
 }

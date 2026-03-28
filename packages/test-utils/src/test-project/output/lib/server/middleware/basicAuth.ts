@@ -1,3 +1,4 @@
+import { createDefaultErrorBody, unauthorizedDefaultError } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { defineMiddleware } from "../TypedMiddleware";
 import type { ServerContext } from "../ServerContext";
@@ -9,7 +10,6 @@ export type BasicAuthOptions = {
     ctx: ServerContext,
   ) => boolean | Promise<boolean>;
   readonly realm?: string;
-  readonly unauthorizedMessage?: string;
   readonly onUnauthorized?: (ctx: ServerContext) => IHttpResponse;
 };
 
@@ -17,12 +17,11 @@ const BASIC_PREFIX = "Basic ";
 
 export function basicAuth(options: BasicAuthOptions) {
   const realm = options.realm ?? "Secure Area";
-  const message = options.unauthorizedMessage ?? "Unauthorized";
 
   const defaultResponse: IHttpResponse = {
-    statusCode: 401,
+    statusCode: unauthorizedDefaultError.statusCode,
     header: { "www-authenticate": `Basic realm="${realm}"` },
-    body: { code: "UNAUTHORIZED", message },
+    body: createDefaultErrorBody(unauthorizedDefaultError),
   };
 
   const deny = (ctx: ServerContext): IHttpResponse =>

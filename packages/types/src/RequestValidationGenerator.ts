@@ -18,14 +18,15 @@ export class RequestValidationGenerator {
     );
 
     for (const resource of context.normalizedSpec.resources) {
-      for (const operation of resource.operations) {
+      resource.operations.forEach((operation, operationIndex) => {
         this.writeRequestValidator(
           templateFilePath,
           resource.name,
           operation,
+          operationIndex,
           context
         );
-      }
+      });
     }
   }
 
@@ -33,6 +34,7 @@ export class RequestValidationGenerator {
     templateFilePath: string,
     resourceName: string,
     operation: NormalizedOperation,
+    operationIndex: number,
     context: GeneratorContext
   ): void {
     const { operationId, request } = operation;
@@ -47,11 +49,10 @@ export class RequestValidationGenerator {
     const content = context.renderTemplate(templateFilePath, {
       pascalCaseOperationId,
       operationId,
-      sourcePath: context.getOperationDefinitionImportPath({
+      specPath: context.getSpecImportPath({
         importerDir: outputPaths.outputDir,
-        resourceName,
-        operationId,
       }),
+      definitionAccessor: `spec.resources[${JSON.stringify(resourceName)}]!.operations[${operationIndex}]!`,
       corePath: context.coreDir,
       requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}`,
       body,

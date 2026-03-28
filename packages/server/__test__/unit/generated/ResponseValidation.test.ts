@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import {
+  internalServerErrorDefaultError,
   HttpStatusCode,
   ResponseValidationError,
 } from "@rexeus/typeweaver-core";
@@ -91,7 +92,12 @@ describe("Response Validation (Server)", () => {
         buildFetchRequest(`${BASE_URL}/todos`, requestData)
       );
 
-      await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
+      const data = await expectErrorResponse(
+        response,
+        internalServerErrorDefaultError.statusCode,
+        internalServerErrorDefaultError.code
+      );
+      expect(data.message).toBe(internalServerErrorDefaultError.message);
     });
 
     test("should return 500 when response has unrecognized status code", async () => {

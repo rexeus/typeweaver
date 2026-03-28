@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
+import { isSpecDefinition } from "../src/generators/spec/specGuards.js";
 import { SpecLoader } from "../src/generators/SpecLoader.js";
 
 describe("SpecLoader", () => {
@@ -12,10 +13,6 @@ describe("SpecLoader", () => {
     });
     tempDirs.length = 0;
   });
-
-  const isSpecDefinition = (value: unknown): boolean => {
-    return (new SpecLoader() as any).isSpecDefinition(value);
-  };
 
   const createTempDir = (): string => {
     const tempDir = fs.mkdtempSync(
@@ -130,7 +127,7 @@ describe("SpecLoader", () => {
     ).toBe(false);
   });
 
-  test("loads bundled specs and emits declaration and operation shims", async () => {
+  test("loads bundled specs and emits only the bundled spec artifacts", async () => {
     const fixtureDir = createTempDir();
     const outputDir = path.join(fixtureDir, "generated-spec");
     const helperFile = path.join(fixtureDir, "responses.ts");
@@ -236,14 +233,6 @@ describe("SpecLoader", () => {
     expect(fs.existsSync(path.join(outputDir, "spec.js"))).toBe(true);
     expect(fs.existsSync(path.join(outputDir, "spec.d.ts"))).toBe(true);
 
-    const operationShimFile = path.join(
-      outputDir,
-      "todos",
-      "getTodoDefinition.ts"
-    );
-    expect(fs.existsSync(operationShimFile)).toBe(true);
-    expect(fs.readFileSync(operationShimFile, "utf8")).toContain(
-      'export default spec.resources["todos"]!.operations[0]!;'
-    );
+    expect(fs.existsSync(path.join(outputDir, "todos"))).toBe(false);
   });
 });

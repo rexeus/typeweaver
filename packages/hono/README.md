@@ -29,7 +29,7 @@ npm install @rexeus/typeweaver-core
 ## 💡 How to use
 
 ```bash
-npx typeweaver generate --input ./api/definition --output ./api/generated --plugins hono
+npx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --plugins hono
 ```
 
 More on the CLI in
@@ -51,11 +51,21 @@ Implement your handlers and mount the generated router in a Hono app.
 // api/user-handlers.ts
 import type { Context } from "hono";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { HonoUserApiHandler, IGetUserRequest, GetUserResponse } from "./generated";
-import { createUserNotFoundErrorResponse, createGetUserSuccessResponse } from "./generated";
+import type {
+  HonoUserApiHandler,
+  IGetUserRequest,
+  GetUserResponse,
+} from "./generated";
+import {
+  createUserNotFoundErrorResponse,
+  createGetUserSuccessResponse,
+} from "./generated";
 
 export class UserHandlers implements HonoUserApiHandler {
-  async handleGetUserRequest(request: IGetUserRequest, context: Context): Promise<GetUserResponse> {
+  async handleGetUserRequest(
+    request: IGetUserRequest,
+    context: Context
+  ): Promise<GetUserResponse> {
     const user = await db.findUser(request.param.userId);
     if (!user) {
       return createUserNotFoundErrorResponse({
@@ -66,7 +76,11 @@ export class UserHandlers implements HonoUserApiHandler {
 
     return createGetUserSuccessResponse({
       header: { "Content-Type": "application/json" },
-      body: { id: request.param.userId, name: "Jane", email: "jane@example.com" },
+      body: {
+        id: request.param.userId,
+        name: "Jane",
+        email: "jane@example.com",
+      },
     });
   }
   // Implement other operation handlers: handleCreateUserRequest, ...

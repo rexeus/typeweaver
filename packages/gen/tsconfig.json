@@ -2,11 +2,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "dist",
-    "baseUrl": ".",
-    "paths": {
-      "@rexeus/typeweaver-core": ["../core/dist/index.d.mts"]
-    }
+    "outDir": "dist"
   },
   "include": ["src/**/*.ts"]
 }

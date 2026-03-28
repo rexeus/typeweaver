@@ -1,5 +1,9 @@
 import type { IHttpRequest, ITypedHttpResponse } from "@rexeus/typeweaver-core";
 import {
+  internalServerErrorDefaultError,
+  validationDefaultError,
+} from "@rexeus/typeweaver-core";
+import {
   createCreateTodoRequest,
   createDeleteTodoRequest,
   createHeadTodoRequest,
@@ -39,6 +43,21 @@ function prepareRequestData(requestData: IHttpRequest): RequestInit {
     headers,
     body,
   };
+}
+
+async function expectErrorResponse(
+  response: Response,
+  status: number,
+  code: string
+): Promise<void> {
+  expect(response.status).toBe(status);
+
+  const data = (await response.json()) as Record<string, unknown>;
+  expect(data.code).toBe(code);
+
+  if (code === "INTERNAL_SERVER_ERROR") {
+    expect(data.message).toBe(internalServerErrorDefaultError.message);
+  }
 }
 
 describe("Generated Hono Router", () => {
@@ -576,8 +595,8 @@ describe("Generated Hono Router", () => {
       // Assert
       expect(response.status).toBe(400);
       const data = (await response.json()) as any;
-      expect(data.code).toBe("VALIDATION_ERROR");
-      expect(data.message).toBeDefined();
+      expect(data.code).toBe(validationDefaultError.code);
+      expect(data.message).toBe(validationDefaultError.message);
       expect(data.issues).toBeDefined();
       expect(data.issues.body).toHaveLength(1);
     });
@@ -627,9 +646,7 @@ describe("Generated Hono Router", () => {
       );
 
       // Assert
-      expect(response.status).toBe(500);
-      const data = (await response.json()) as any;
-      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+      await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
     });
 
     test("should handle unknown errors with custom handler", async () => {
@@ -681,9 +698,7 @@ describe("Generated Hono Router", () => {
       );
 
       // Assert
-      expect(response.status).toBe(500);
-      const data = (await response.json()) as any;
-      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+      await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
     });
 
     test("should handle HTTP response error handler failures with unknown handlers", async () => {
@@ -712,10 +727,7 @@ describe("Generated Hono Router", () => {
       );
 
       // Assert - Should fall back to default unknown error handler
-      expect(response.status).toBe(500);
-
-      const data = (await response.json()) as any;
-      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+      await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
     });
   });
 });

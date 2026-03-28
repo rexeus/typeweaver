@@ -1,6 +1,6 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createRegisterAccountSuccessResponse as generatedCreateRegisterAccountSuccessResponse } from "../../test-project/output/account/RegisterAccountResponse";
+import { createRegisterAccountSuccessResponse as generatedCreateRegisterAccountSuccessResponse } from "../../test-project/output/responses/RegisterAccountSuccessResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 import type {

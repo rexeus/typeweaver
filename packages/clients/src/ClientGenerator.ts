@@ -67,20 +67,22 @@ export class ClientGenerator {
     resource: NormalizedResource,
     context: GeneratorContext
   ): void {
-    for (const operation of resource.operations) {
+    resource.operations.forEach((operation, operationIndex) => {
       this.writeRequestCommand(
         templateFilePath,
         resource.name,
         operation,
+        operationIndex,
         context
       );
-    }
+    });
   }
 
   private static writeRequestCommand(
     templateFilePath: string,
     resourceName: string,
     operation: NormalizedOperation,
+    operationIndex: number,
     context: GeneratorContext
   ): void {
     const outputPaths = context.getOperationOutputPaths({
@@ -104,11 +106,10 @@ export class ClientGenerator {
       : undefined;
 
     const content = context.renderTemplate(templateFilePath, {
-      sourcePath: context.getOperationDefinitionImportPath({
+      specPath: context.getSpecImportPath({
         importerDir: outputPaths.outputDir,
-        resourceName,
-        operationId: operation.operationId,
       }),
+      definitionAccessor: `spec.resources[${JSON.stringify(resourceName)}]!.operations[${operationIndex}]!`,
       operationId: operation.operationId,
       pascalCaseOperationId,
       method: operation.method,

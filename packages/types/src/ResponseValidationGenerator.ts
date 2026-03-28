@@ -28,14 +28,15 @@ export class ResponseValidationGenerator {
     );
 
     for (const resource of context.normalizedSpec.resources) {
-      for (const operation of resource.operations) {
+      resource.operations.forEach((operation, operationIndex) => {
         this.writeResponseValidator(
           templateFilePath,
           resource,
           operation,
+          operationIndex,
           context
         );
-      }
+      });
     }
   }
 
@@ -43,6 +44,7 @@ export class ResponseValidationGenerator {
     templateFilePath: string,
     resource: NormalizedResource,
     operation: NormalizedOperation,
+    operationIndex: number,
     context: GeneratorContext
   ): void {
     const outputPaths = context.getOperationOutputPaths({
@@ -86,11 +88,10 @@ export class ResponseValidationGenerator {
       pascalCaseOperationId,
       coreDir: context.coreDir,
       responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}`,
-      sourcePath: context.getOperationDefinitionImportPath({
+      specPath: context.getSpecImportPath({
         importerDir: outputPaths.outputDir,
-        resourceName: resource.name,
-        operationId: operation.operationId,
       }),
+      definitionAccessor: `spec.resources[${JSON.stringify(resource.name)}]!.operations[${operationIndex}]!`,
       sharedResponses,
       ownResponses,
       allStatusCodes: Array.from(allStatusCodes.entries()).map(

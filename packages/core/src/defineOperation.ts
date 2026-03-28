@@ -11,14 +11,57 @@ export type OperationDefinition<
   TResponses extends readonly ResponseDefinition[] =
     readonly ResponseDefinition[],
 > = {
+  /**
+   * Must be globally unique within a spec. Used as the base name for
+   * generated clients, validators, and route handlers
+   */
   readonly operationId: TOperationId;
+  /**
+   * Express-style path with `:param` placeholders (e.g. `/todos/:todoId`).
+   * Parameters must match the keys in `request.param`
+   */
   readonly path: TPath;
+  /**
+   * One of the standard HTTP methods from the `HttpMethod` enum
+   */
   readonly method: TMethod;
+  /**
+   * Appears in generated OpenAPI descriptions and code comments
+   */
   readonly summary: TSummary;
+  /**
+   * Zod schemas defining the shape of incoming data. All parts (header,
+   * param, query, body) are optional; omit a key to indicate no constraint
+   */
   readonly request: TRequest;
+  /**
+   * First response is treated as the primary success case. Use `defineResponse`
+   * for shared responses and inline objects for operation-specific ones
+   */
   readonly responses: TResponses;
 };
 
+/**
+ * Declares a single API operation while preserving literal types for code
+ * generation and validation.
+ *
+ * @param definition - The operation definition to register in a spec
+ * @returns The same operation definition with its inferred types preserved
+ *
+ * @example
+ * ```ts
+ * const GetTodo = defineOperation({
+ *   operationId: "GetTodo",
+ *   path: "/todos/:todoId",
+ *   method: HttpMethod.GET,
+ *   summary: "Retrieve a single todo by ID",
+ *   request: {
+ *     param: z.object({ todoId: z.string().uuid() }),
+ *   },
+ *   responses: [GetTodoSuccess, NotFoundError] as const,
+ * });
+ * ```
+ */
 export const defineOperation = <
   TOperationId extends string,
   TPath extends string,

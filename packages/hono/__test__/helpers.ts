@@ -1,5 +1,9 @@
+import {
+  internalServerErrorDefaultError,
+} from "@rexeus/typeweaver-core";
 import type { IHttpRequest, ITypedHttpResponse } from "@rexeus/typeweaver-core";
 import { createCreateTodoSuccessResponseBody } from "test-utils";
+import { expect } from "vitest";
 
 /**
  * Converts an IHttpRequest to fetch-compatible RequestInit for Hono's `app.request()`.
@@ -39,4 +43,21 @@ export function buildCreateTodoSuccess(
     header: { "Content-Type": "application/json" },
     body: { ...base, ...bodyOverrides },
   };
+}
+
+export async function expectErrorResponse(
+  response: Response,
+  status: number,
+  code: string
+): Promise<Record<string, unknown>> {
+  expect(response.status).toBe(status);
+
+  const data = (await response.json()) as Record<string, unknown>;
+  expect(data.code).toBe(code);
+
+  if (code === "INTERNAL_SERVER_ERROR") {
+    expect(data.message).toBe(internalServerErrorDefaultError.message);
+  }
+
+  return data;
 }

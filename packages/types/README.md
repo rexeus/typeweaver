@@ -33,7 +33,7 @@ This plugin is included by default and doesn't need to be explicitly specified:
 
 ```bash
 # Generate with clients + types plugins
-npx typeweaver generate --input ./api/definition --output ./api/generated --plugins clients
+npx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --plugins clients
 ```
 
 More details on how to use the
@@ -49,7 +49,7 @@ For each operation (e.g., `CreateTodo`), the plugin generates four main files:
 - `<OperationId>ResponseValidator.ts`
 
 These files contain the necessary types and validators for requests and responses. All of these
-provided types and classes are exported.
+provided types and factory functions are exported.
 
 ### 📨 Request Types
 
@@ -77,16 +77,16 @@ e.g. `CreateTodoResponse.ts`. This file contains for each response defined inlin
   `ICreateTodoSuccessResponseHeader`
 - **`I<ResponseName>ResponseBody`** - Type for success response payload structure, if defined, e.g.
   `ICreateTodoSuccessResponseBody`
-- **`I<ResponseName>Response`** - Complete success response interface with status code, e.g.
-  `I<ResponseName>Response`
-- **`<ResponseName>Response`** - Response class extending HttpResponse with validation and type
-  safety, e.g. `CreateTodoSuccessResponse`
+- **`I<ResponseName>Response`** - Typed response object using `ITypedHttpResponse<TType, TStatusCode, THeader, TBody>`, e.g.
+  `ICreateTodoSuccessResponse`
+- **`create<ResponseName>Response`** - Factory function that creates a typed response object, e.g.
+  `createCreateTodoSuccessResponse`
 
-Furthermore, two union types are generated, which include details about all possible responses
-(success + error), not only those defined inline in the operation:
+Furthermore, a union type is generated, which includes all possible responses (success + error), not
+only those defined inline in the operation:
 
-- **`I<OperationId>Response`** - Union type of all response types e.g. `ICreateTodoResponse`
-- **`<OperationId>Response`** - Union type of all response classes, e.g. `CreateTodoResponse`
+- **`<OperationId>Response`** - Union type of all `I`-prefixed response types, e.g.
+  `CreateTodoResponse` which is a union of `ICreateTodoSuccessResponse | IForbiddenErrorResponse | ...`
 
 ### 📨✓ Request Validators
 
@@ -110,7 +110,10 @@ Request validation logic for an operation is defined in one file:
 **Using the generated request validators**
 
 ```typescript
-import { RequestValidationError, type IHttpRequest } from "@rexeus/typeweaver-core";
+import {
+  RequestValidationError,
+  type IHttpRequest,
+} from "@rexeus/typeweaver-core";
 import { CreateTodoRequestValidator } from "path/to/generated/output";
 
 const requestValidator = new CreateTodoRequestValidator();
@@ -150,7 +153,7 @@ Response validation logic for an operation is defined in one file:
 - **`safeValidate()`** - Non-throwing validation method returning `SafeResponseValidationResult`
 - **`validate()`** - Throwing validation method that returns validated response or throws
   ResponseValidationError
-- Valid response data is an instance of one of the generated response classes
+- Valid response data is a typed response object matching one of the generated response types
 - **Header coercion logic** - Automatic conversion of headers to schema-appropriate types (single
   string value & multi string value headers)
 - **Response validation errors** - Include details about the issues with all possible responses for
@@ -164,12 +167,11 @@ Response validation logic for an operation is defined in one file:
 **Using the generated response validators**
 
 ```typescript
-import { ResponseValidationError, type IHttpResponse } from "@rexeus/typeweaver-core";
 import {
-  CreateTodoResponseValidator,
-  CreateTodoSuccessResponse,
-  InternalServerErrorResponse,
-} from "path/to/generated/output";
+  ResponseValidationError,
+  type IHttpResponse,
+} from "@rexeus/typeweaver-core";
+import { CreateTodoResponseValidator } from "path/to/generated/output";
 
 const responseValidator = new CreateTodoResponseValidator();
 
@@ -183,11 +185,11 @@ const safeResult = responseValidator.safeValidate(response);
 if (safeResult.isValid) {
   console.log("Response is valid", safeResult.data);
 
-  // Data is an instance of one of the defined response classes
-  if (safeResult.data instanceof CreateTodoSuccessResponse) {
+  // Data is a typed response object — use the type discriminator to narrow
+  if (safeResult.data.type === "CreateTodoSuccess") {
     // handle CreateTodoSuccessResponse
   }
-  if (safeResult.data instanceof InternalServerErrorResponse) {
+  if (safeResult.data.type === "InternalServerError") {
     // handle InternalServerErrorResponse
   }
   // handle other response types ...
@@ -201,8 +203,8 @@ try {
   const validatedResponse = responseValidator.validate(response);
   console.log("Response is valid", validatedResponse);
 
-  // Same here: Data is an instance of one of the defined response classes
-  if (validatedResponse instanceof CreateTodoSuccessResponse) {
+  // Same here: use the type discriminator to narrow
+  if (validatedResponse.type === "CreateTodoSuccess") {
     // handle CreateTodoSuccessResponse
   }
   // ... handle other response types

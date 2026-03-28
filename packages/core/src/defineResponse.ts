@@ -15,8 +15,21 @@ export type DerivedResponseMetadata<
   TParentName extends string = string,
   TLineage extends readonly string[] = readonly string[],
 > = {
+  /**
+   * References the immediate parent in the derivation chain. For a first-level
+   * derived response this equals the canonical response name
+   */
   readonly parentName: TParentName;
+  /**
+   * Traces the full derivation path from root to this response.
+   * A response derived from "NotFoundError" via "TodoNotFoundError" has
+   * lineage `["TodoNotFoundError"]` at depth 1
+   */
   readonly lineage: TLineage;
+  /**
+   * Always equals `lineage.length`. Fast check for derivation depth
+   * without traversing the array
+   */
   readonly depth: TLineage["length"];
 };
 
@@ -30,11 +43,34 @@ export type ResponseDefinition<
     | DerivedResponseMetadata
     | undefined,
 > = {
+  /**
+   * Must be globally unique across all operations in a spec.
+   * Used as the generated class and type name
+   */
   readonly name: TName;
+  /**
+   * HTTP status code sent to the client. Must be a valid `HttpStatusCode` value
+   */
   readonly statusCode: TStatusCode;
+  /**
+   * Appears in generated OpenAPI descriptions and as the default error
+   * message for error responses
+   */
   readonly description: TDescription;
+  /**
+   * Zod schema for response headers. When derived, child headers are
+   * merged onto the parent schema
+   */
   readonly header?: THeader;
+  /**
+   * Zod schema for the response body. When derived, ZodObject bodies are
+   * shallow-merged; other schema types are replaced
+   */
   readonly body?: TBody;
+  /**
+   * Present only on responses created via `defineDerivedResponse`.
+   * Do not set manually
+   */
   readonly derived?: TDerived;
   readonly [responseDefinitionMetadataSymbol]?: ResponseDefinitionMetadata;
 };
@@ -57,10 +93,25 @@ export type DerivedResponseOverrides<
   THeader extends HttpHeaderSchema | undefined,
   TBody extends HttpBodySchema | undefined,
 > = {
+  /**
+   * Unique name for this derived variant
+   */
   readonly name: TName;
+  /**
+   * Overrides the parent status code. Omit to inherit
+   */
   readonly statusCode?: TStatusCode;
+  /**
+   * Overrides the parent description. Omit to inherit
+   */
   readonly description?: TDescription;
+  /**
+   * Additional header fields merged onto the parent's header schema
+   */
   readonly header?: THeader;
+  /**
+   * Body schema merged onto or replacing the parent's body schema
+   */
   readonly body?: TBody;
 };
 
@@ -247,6 +298,23 @@ const mergeBodySchemas = <
   );
 };
 
+/**
+ * Declares a canonical response that can be shared across operations and
+ * used as the base for derived responses.
+ *
+ * @param definition - The response metadata and optional schemas
+ * @returns The response definition with non-enumerable authoring metadata attached
+ *
+ * @example
+ * ```ts
+ * const NotFoundError = defineResponse({
+ *   name: "NotFoundError",
+ *   statusCode: HttpStatusCode.NOT_FOUND,
+ *   description: "The requested resource was not found",
+ *   body: z.object({ message: z.string() }),
+ * });
+ * ```
+ */
 export const defineResponse = <
   TName extends string,
   TStatusCode extends HttpStatusCode,
@@ -267,6 +335,22 @@ export const defineResponse = <
   });
 };
 
+/**
+ * Creates a response derived from a canonical parent, inheriting and
+ * merging schemas while recording lineage metadata.
+ *
+ * @param base - The canonical or previously derived response to extend
+ * @param overrides - The derived response name and optional schema overrides
+ * @returns A new response definition with merged schemas and lineage metadata
+ *
+ * @example
+ * ```ts
+ * const TodoNotFoundError = defineDerivedResponse(NotFoundError, {
+ *   name: "TodoNotFoundError",
+ *   body: z.object({ todoId: z.string().uuid() }),
+ * });
+ * ```
+ */
 export const defineDerivedResponse = <
   TBase extends ResponseDefinition,
   TName extends string,

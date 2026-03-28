@@ -4,7 +4,6 @@ import { fileURLToPath } from "node:url";
 import { PluginContextBuilder, PluginRegistry } from "@rexeus/typeweaver-gen";
 import type { PluginConfig, TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import TypesPlugin from "@rexeus/typeweaver-types";
-import { DefinitionCompiler } from "./DefinitionCompiler";
 import { Formatter } from "./Formatter";
 import { IndexFileGenerator } from "./IndexFileGenerator";
 import { PluginLoader } from "./PluginLoader";
@@ -24,7 +23,6 @@ export class Generator {
   private readonly contextBuilder: PluginContextBuilder;
   private readonly pluginLoader: PluginLoader;
   private readonly indexFileGenerator: IndexFileGenerator;
-  private readonly definitionCompiler: DefinitionCompiler;
   private readonly specLoader: SpecLoader;
   private formatter: Formatter | null = null;
 
@@ -46,7 +44,6 @@ export class Generator {
       pluginLoader ?? new PluginLoader(this.registry, requiredPlugins);
     this.indexFileGenerator =
       indexFileGenerator ?? new IndexFileGenerator(this.templateDir);
-    this.definitionCompiler = new DefinitionCompiler();
     this.specLoader = new SpecLoader();
   }
 
@@ -141,10 +138,6 @@ export class Generator {
         await registration.plugin.finalize(pluginContext);
       }
     }
-
-    // Compile compatibility shims from .ts to .js + .d.ts stubs.
-    console.info("Compiling spec compatibility shims...");
-    this.definitionCompiler.compileInPlace(this.specOutputDir);
 
     // Format code if requested
     if (config?.format ?? true) {

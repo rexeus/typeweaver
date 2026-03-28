@@ -88,11 +88,6 @@ export class ResponseGenerator {
       entityResponses: [],
       sharedResponses: canonicalResponses,
       responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}`,
-      sourcePath: context.getOperationDefinitionImportPath({
-        importerDir: outputPaths.outputDir,
-        resourceName: resource.name,
-        operationId: operation.operationId,
-      }),
     });
 
     const relativePath = path.relative(

@@ -57,7 +57,7 @@ function createMockContext(operations: NormalizedOperation[]): {
     getCanonicalResponseImportPath: () => {
       throw new Error("not implemented");
     },
-    getOperationDefinitionImportPath: () => {
+    getSpecImportPath: () => {
       throw new Error("not implemented");
     },
     getOperationOutputPaths: ({

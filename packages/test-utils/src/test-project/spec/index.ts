@@ -1,14 +1,14 @@
 import { defineSpec } from "@rexeus/typeweaver-core";
-import { RegisterAccountDefinition } from "../definition/account";
+import { RegisterAccountDefinition } from "./account";
 import {
   AccessTokenDefinition,
   RefreshTokenDefinition,
-} from "../definition/auth";
+} from "./auth";
 import {
   DownloadFileContentDefinition,
   GetFileMetadataDefinition,
   UploadFileDefinition,
-} from "../definition/file";
+} from "./file";
 import {
   CreateSubTodoDefinition,
   CreateTodoDefinition,
@@ -25,7 +25,7 @@ import {
   UpdateSubTodoDefinition,
   UpdateTodoDefinition,
   UpdateTodoStatusDefinition,
-} from "../definition/todo";
+} from "./todo";
 
 export default defineSpec({
   resources: {

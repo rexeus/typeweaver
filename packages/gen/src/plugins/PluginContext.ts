@@ -110,16 +110,10 @@ export class PluginContextBuilder {
           )
         );
       },
-      getOperationDefinitionImportPath: config => {
+      getSpecImportPath: config => {
         return Path.relative(
           config.importerDir,
-          path
-            .join(
-              params.specOutputDir,
-              config.resourceName,
-              `${config.operationId}Definition`
-            )
-            .replace(/\.ts$/, "")
+          path.join(params.specOutputDir, "spec").replace(/\.ts$/, "")
         );
       },
       getOperationOutputPaths,

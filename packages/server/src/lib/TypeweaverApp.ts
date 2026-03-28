@@ -6,8 +6,16 @@
  */
 
 import {
+  badRequestDefaultError,
+  createDefaultErrorBody,
+  createDefaultErrorResponse,
+  internalServerErrorDefaultError,
   isTypedHttpResponse,
+  methodNotAllowedDefaultError,
+  notFoundDefaultError,
+  payloadTooLargeDefaultError,
   RequestValidationError,
+  validationDefaultError,
 } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { BodyParseError, PayloadTooLargeError } from "./Errors";
@@ -61,10 +69,8 @@ export type TypeweaverAppOptions = {
 };
 
 export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
-  private static readonly INTERNAL_SERVER_ERROR_BODY = {
-    code: "INTERNAL_SERVER_ERROR",
-    message: "An unexpected error occurred",
-  } as const;
+  private static readonly INTERNAL_SERVER_ERROR_BODY =
+    createDefaultErrorBody(internalServerErrorDefaultError);
 
   private readonly router = new Router();
   private readonly middlewares: Middleware[] = [];
@@ -168,19 +174,14 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
     } catch (error) {
       if (error instanceof PayloadTooLargeError) {
         this.safeOnError(error);
-        return this.adapter.toResponse({
-          statusCode: 413,
-          body: {
-            code: "PAYLOAD_TOO_LARGE",
-            message: "Request body exceeds the size limit",
-          },
-        });
+        return this.adapter.toResponse(
+          createDefaultErrorResponse(payloadTooLargeDefaultError)
+        );
       }
       if (error instanceof BodyParseError) {
-        return this.adapter.toResponse({
-          statusCode: 400,
-          body: { code: "BAD_REQUEST", message: "Malformed request body" },
-        });
+        return this.adapter.toResponse(
+          createDefaultErrorResponse(badRequestDefaultError)
+        );
       }
       this.safeOnError(error);
       return TypeweaverApp.createErrorResponse();
@@ -243,20 +244,12 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
 
     const pathMatch = this.router.matchPath(pathname);
     if (pathMatch) {
-      return {
-        statusCode: 405,
+      return createDefaultErrorResponse(methodNotAllowedDefaultError, {
         header: { Allow: pathMatch.allowedMethods.join(", ") },
-        body: {
-          code: "METHOD_NOT_ALLOWED",
-          message: "Method not supported for this resource",
-        },
-      };
+      });
     }
 
-    return {
-      statusCode: 404,
-      body: { code: "NOT_FOUND", message: "No matching resource found" },
-    };
+    return createDefaultErrorResponse(notFoundDefaultError);
   }
 
   private withPathParams(
@@ -444,20 +437,17 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
       if (param) issues.param = param;
 
       return {
-        statusCode: 400,
+        statusCode: validationDefaultError.statusCode,
         body: {
-          code: "VALIDATION_ERROR",
-          message: err.message,
+          ...createDefaultErrorBody(validationDefaultError),
           issues,
         },
       };
     };
 
   private static defaultResponseValidationHandler: ResponseValidationErrorHandler =
-    (): IHttpResponse => ({
-      statusCode: 500,
-      body: TypeweaverApp.INTERNAL_SERVER_ERROR_BODY,
-    });
+    (): IHttpResponse =>
+      createDefaultErrorResponse(internalServerErrorDefaultError);
 
   private static defaultHttpResponseHandler: HttpResponseErrorHandler = (
     err
@@ -467,14 +457,17 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
     error
   ): IHttpResponse => {
     this.safeOnError(error);
-    return { statusCode: 500, body: TypeweaverApp.INTERNAL_SERVER_ERROR_BODY };
+    return {
+      statusCode: internalServerErrorDefaultError.statusCode,
+      body: TypeweaverApp.INTERNAL_SERVER_ERROR_BODY,
+    };
   };
 
   private static createErrorResponse(): Response {
     return new Response(
       JSON.stringify(TypeweaverApp.INTERNAL_SERVER_ERROR_BODY),
       {
-        status: 500,
+        status: internalServerErrorDefaultError.statusCode,
         headers: { "content-type": "application/json" },
       }
     );

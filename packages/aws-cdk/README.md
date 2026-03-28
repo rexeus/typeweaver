@@ -28,7 +28,7 @@ npm install @rexeus/typeweaver-core
 ## 💡 How to use
 
 ```bash
-npx typeweaver generate --input ./api/definitions --output ./api/generated --plugins aws-cdk
+npx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --plugins aws-cdk
 ```
 
 More details on how to use the

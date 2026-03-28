@@ -1,6 +1,6 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createGetFileMetadataSuccessResponse as generatedCreateGetFileMetadataSuccessResponse } from "../../test-project/output/file/GetFileMetadataResponse";
+import { createGetFileMetadataSuccessResponse as generatedCreateGetFileMetadataSuccessResponse } from "../../test-project/output/responses/GetFileMetadataSuccessResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 import type {

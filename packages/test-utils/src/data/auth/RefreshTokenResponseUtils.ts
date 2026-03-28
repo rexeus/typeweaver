@@ -1,5 +1,5 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createRefreshTokenSuccessResponse as generatedCreateRefreshTokenSuccessResponse } from "../../test-project/output/auth/RefreshTokenResponse";
+import { createRefreshTokenSuccessResponse as generatedCreateRefreshTokenSuccessResponse } from "../../test-project/output/responses/RefreshTokenSuccessResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createJwtToken } from "../createJwtToken";
 import { createResponse } from "../createResponse";
