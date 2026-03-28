@@ -30,17 +30,12 @@ export class TodoHttpApiRoutes extends AwsHttpApiGatewayRoutes {
       path: "/todos/{todoId}",
       methods: [
         HttpMethod.DELETE,
-        HttpMethod.PUT,
-        HttpMethod.PATCH,
         HttpMethod.GET,
         HttpMethod.HEAD,
         HttpMethod.OPTIONS,
+        HttpMethod.PUT,
+        HttpMethod.PATCH,
       ],
-    },
-
-    {
-      path: "/todos/{todoId}/status",
-      methods: [HttpMethod.PUT],
     },
 
     {
@@ -51,6 +46,11 @@ export class TodoHttpApiRoutes extends AwsHttpApiGatewayRoutes {
     {
       path: "/todos/query",
       methods: [HttpMethod.POST],
+    },
+
+    {
+      path: "/todos/{todoId}/status",
+      methods: [HttpMethod.PUT],
     },
   ];
 

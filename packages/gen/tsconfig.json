@@ -3,7 +3,10 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {
+      "@rexeus/typeweaver-core": ["../core/dist/index.d.mts"]
+    }
   },
   "include": ["src/**/*.ts"]
 }

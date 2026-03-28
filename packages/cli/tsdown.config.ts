@@ -9,7 +9,7 @@ export default defineConfig([
     target: "esnext",
     platform: "node",
     treeshake: true,
-    external: ["oxfmt"],
+    external: ["oxfmt", "rolldown"],
     nodeProtocol: true,
     banner: "#!/usr/bin/env node",
   },
@@ -21,7 +21,7 @@ export default defineConfig([
     target: "esnext",
     platform: "node",
     treeshake: true,
-    external: ["oxfmt"],
+    external: ["oxfmt", "rolldown"],
     nodeProtocol: true,
   },
 ]);

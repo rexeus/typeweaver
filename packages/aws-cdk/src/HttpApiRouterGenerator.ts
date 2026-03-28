@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import type { HttpMethod } from "@rexeus/typeweaver-core";
 import type {
   GeneratorContext,
-  OperationResource,
+  NormalizedResource,
 } from "@rexeus/typeweaver-gen";
 import Case from "case";
 
@@ -13,44 +13,36 @@ export class HttpApiRouterGenerator {
   public static generate(context: GeneratorContext): void {
     const templateFile = path.join(moduleDir, "templates", "HttpApiRouter.ejs");
 
-    for (const [entityName, entityResource] of Object.entries(
-      context.resources.entityResources
-    )) {
-      this.writeHttpApiRoutes(
-        entityName,
-        templateFile,
-        entityResource.operations,
-        context
-      );
+    for (const resource of context.normalizedSpec.resources) {
+      this.writeHttpApiRoutes(resource, templateFile, context);
     }
   }
 
   private static writeHttpApiRoutes(
-    entityName: string,
+    resource: NormalizedResource,
     templateFile: string,
-    operationResources: OperationResource[],
     context: GeneratorContext
   ): void {
     const routes: Record<string, HttpMethod[]> = {};
-    const pascalCaseEntityName = Case.pascal(entityName);
-    const outputDir = operationResources[0]!.outputDir;
+    const pascalCaseEntityName = Case.pascal(resource.name);
+    const outputDir = context.getResourceOutputDir(resource.name);
     const outputFile = path.join(
       outputDir,
       `${pascalCaseEntityName}HttpApiRoutes.ts`
     );
 
-    for (const operation of operationResources) {
-      const path = this.createRoutePath(operation.definition.path);
+    for (const operation of resource.operations) {
+      const path = this.createRoutePath(operation.path);
 
       if (!routes[path]) {
         routes[path] = [];
       }
 
-      routes[path]!.push(operation.definition.method);
+      routes[path]!.push(operation.method);
     }
 
     const content = context.renderTemplate(templateFile, {
-      entityName,
+      entityName: resource.name,
       pascalCaseEntityName,
       routes,
       coreDir: context.coreDir,
@@ -60,8 +52,8 @@ export class HttpApiRouterGenerator {
     context.writeFile(relativePath, content);
   }
 
-  private static createRoutePath(path: string): string {
-    const parts = path.split("/").map(part => {
+  private static createRoutePath(routePath: string): string {
+    const parts = routePath.split("/").map(part => {
       if (part.startsWith(":")) {
         return `{${part.slice(1)}}`;
       }

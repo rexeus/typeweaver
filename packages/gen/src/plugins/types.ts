@@ -1,4 +1,4 @@
-import type { GetResourcesResult } from "../Resource";
+import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec";
 
 /**
  * Configuration for a typeweaver plugin
@@ -9,18 +9,51 @@ export type PluginConfig = Record<string, unknown>;
  * Context provided to plugins during initialization and finalization
  */
 export type PluginContext = {
-  outputDir: string;
-  inputDir: string;
-  config: PluginConfig;
+  readonly outputDir: string;
+  readonly inputDir: string;
+  readonly config: PluginConfig;
+};
+
+export type OperationOutputPaths = {
+  readonly outputDir: string;
+  readonly requestFile: string;
+  readonly requestFileName: string;
+  readonly responseFile: string;
+  readonly responseFileName: string;
+  readonly requestValidationFile: string;
+  readonly requestValidationFileName: string;
+  readonly responseValidationFile: string;
+  readonly responseValidationFileName: string;
+  readonly clientFile: string;
+  readonly clientFileName: string;
 };
 
 /**
  * Context provided to plugins during generation
  */
 export type GeneratorContext = PluginContext & {
-  resources: GetResourcesResult;
-  templateDir: string;
-  coreDir: string;
+  readonly normalizedSpec: NormalizedSpec;
+  readonly templateDir: string;
+  readonly coreDir: string;
+  readonly responsesOutputDir: string;
+  readonly specOutputDir: string;
+
+  getCanonicalResponse: (responseName: string) => NormalizedResponse;
+  getCanonicalResponseOutputFile: (responseName: string) => string;
+  getCanonicalResponseImportPath: (params: {
+    readonly importerDir: string;
+    readonly responseName: string;
+  }) => string;
+  getOperationDefinitionImportPath: (params: {
+    readonly importerDir: string;
+    readonly resourceName: string;
+    readonly operationId: string;
+  }) => string;
+  getOperationOutputPaths: (params: {
+    readonly resourceName: string;
+    readonly operationId: string;
+  }) => OperationOutputPaths;
+  getResourceOutputDir: (resourceName: string) => string;
 
   // Utility functions
   writeFile: (relativePath: string, content: string) => void;
@@ -51,8 +84,8 @@ export type TypeweaverPlugin = PluginMetadata & {
    * Allows plugins to modify the resource collection
    */
   collectResources?(
-    resources: GetResourcesResult
-  ): Promise<GetResourcesResult> | GetResourcesResult;
+    normalizedSpec: NormalizedSpec
+  ): Promise<NormalizedSpec> | NormalizedSpec;
 
   /**
    * Main generation logic

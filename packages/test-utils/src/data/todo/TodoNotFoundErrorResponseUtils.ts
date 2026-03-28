@@ -1,6 +1,6 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createTodoNotFoundErrorResponse as generatedCreateTodoNotFoundErrorResponse } from "../../test-project/output/todo/TodoNotFoundErrorResponse";
+import { createTodoNotFoundErrorResponse as generatedCreateTodoNotFoundErrorResponse } from "../../test-project/output/responses/TodoNotFoundErrorResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import { createResponse } from "../createResponse";

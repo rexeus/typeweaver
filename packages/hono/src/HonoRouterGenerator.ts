@@ -3,7 +3,8 @@ import { fileURLToPath } from "node:url";
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import type {
   GeneratorContext,
-  OperationResource,
+  NormalizedOperation,
+  NormalizedResource,
 } from "@rexeus/typeweaver-gen";
 import Case from "case";
 
@@ -12,37 +13,29 @@ export class HonoRouterGenerator {
     const moduleDir = path.dirname(fileURLToPath(import.meta.url));
     const templateFile = path.join(moduleDir, "templates", "HonoRouter.ejs");
 
-    for (const [entityName, entityResource] of Object.entries(
-      context.resources.entityResources
-    )) {
-      this.writeHonoRouter(
-        entityName,
-        templateFile,
-        entityResource.operations,
-        context
-      );
+    for (const resource of context.normalizedSpec.resources) {
+      this.writeHonoRouter(resource, templateFile, context);
     }
   }
 
   private static writeHonoRouter(
-    entityName: string,
+    resource: NormalizedResource,
     templateFile: string,
-    operationResources: OperationResource[],
     context: GeneratorContext
   ): void {
-    const pascalCaseEntityName = Case.pascal(entityName);
-    const outputDir = path.join(context.outputDir, entityName);
+    const pascalCaseEntityName = Case.pascal(resource.name);
+    const outputDir = context.getResourceOutputDir(resource.name);
     const outputPath = path.join(outputDir, `${pascalCaseEntityName}Hono.ts`);
 
-    const operations = operationResources
+    const operations = resource.operations
       // Hono handles HEAD requests automatically, so we skip them
-      .filter(resource => resource.definition.method !== HttpMethod.HEAD)
-      .map(resource => this.createOperationData(resource))
+      .filter(operation => operation.method !== HttpMethod.HEAD)
+      .map(operation => this.createOperationData(operation))
       .sort((a, b) => this.compareRoutes(a, b));
 
     const content = context.renderTemplate(templateFile, {
       coreDir: path.relative(outputDir, context.outputDir),
-      entityName,
+      entityName: resource.name,
       pascalCaseEntityName,
       operations,
     });
@@ -51,8 +44,8 @@ export class HonoRouterGenerator {
     context.writeFile(relativePath, content);
   }
 
-  private static createOperationData(resource: OperationResource) {
-    const operationId = resource.definition.operationId;
+  private static createOperationData(operation: NormalizedOperation) {
+    const operationId = operation.operationId;
     const className = Case.pascal(operationId);
     const handlerName = `handle${className}Request`;
 
@@ -60,8 +53,8 @@ export class HonoRouterGenerator {
       operationId,
       className,
       handlerName,
-      method: resource.definition.method,
-      path: resource.definition.path,
+      method: operation.method,
+      path: operation.path,
     };
   }
 

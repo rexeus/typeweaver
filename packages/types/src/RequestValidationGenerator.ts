@@ -1,9 +1,8 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { Path } from "@rexeus/typeweaver-gen";
 import type {
   GeneratorContext,
-  OperationResource,
+  NormalizedOperation,
 } from "@rexeus/typeweaver-gen";
 import Case from "case";
 import { z } from "zod";
@@ -18,38 +17,43 @@ export class RequestValidationGenerator {
       "RequestValidator.ejs"
     );
 
-    for (const [, entityResource] of Object.entries(
-      context.resources.entityResources
-    )) {
-      for (const definition of entityResource.operations) {
-        this.writeRequestValidator(templateFilePath, definition, context);
+    for (const resource of context.normalizedSpec.resources) {
+      for (const operation of resource.operations) {
+        this.writeRequestValidator(
+          templateFilePath,
+          resource.name,
+          operation,
+          context
+        );
       }
     }
   }
 
   private static writeRequestValidator(
     templateFilePath: string,
-    operationResource: OperationResource,
+    resourceName: string,
+    operation: NormalizedOperation,
     context: GeneratorContext
   ): void {
-    const { outputDir, definition, outputRequestFileName } = operationResource;
-    const { operationId, request } = definition;
-    const { body, query, param, header } = request;
+    const { operationId, request } = operation;
+    const { body, query, param, header } = request ?? {};
+    const outputPaths = context.getOperationOutputPaths({
+      resourceName,
+      operationId,
+    });
 
     const pascalCaseOperationId = Case.pascal(operationId);
 
     const content = context.renderTemplate(templateFilePath, {
       pascalCaseOperationId,
       operationId,
-      sourcePath: Path.relative(
-        outputDir,
-        `${operationResource.sourceDir}/${path.relative(operationResource.sourceDir, operationResource.sourceFile).replace(/\.ts$/, "")}`
-      ),
+      sourcePath: context.getOperationDefinitionImportPath({
+        importerDir: outputPaths.outputDir,
+        resourceName,
+        operationId,
+      }),
       corePath: context.coreDir,
-      requestFile: Path.relative(
-        outputDir,
-        `${outputDir}/${path.basename(outputRequestFileName, ".ts")}`
-      ),
+      requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}`,
       body,
       query,
       param,
@@ -59,7 +63,7 @@ export class RequestValidationGenerator {
 
     const relativePath = path.relative(
       context.outputDir,
-      operationResource.outputRequestValidationFile
+      outputPaths.requestValidationFile
     );
     context.writeFile(relativePath, content);
   }

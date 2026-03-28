@@ -9,21 +9,21 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
-import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
+import type { ISubTodoNotFoundErrorResponse } from "../responses/SubTodoNotFoundErrorResponse";
 
-import type { IInternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
+import type { ITodoNotFoundErrorResponse } from "../responses/TodoNotFoundErrorResponse";
 
-import type { ITooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
+import type { IForbiddenErrorResponse } from "../responses/ForbiddenErrorResponse";
 
-import type { IUnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
+import type { IInternalServerErrorResponse } from "../responses/InternalServerErrorResponse";
 
-import type { IUnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
+import type { ITooManyRequestsErrorResponse } from "../responses/TooManyRequestsErrorResponse";
 
-import type { IValidationErrorResponse } from "../shared/ValidationErrorResponse";
+import type { IUnauthorizedErrorResponse } from "../responses/UnauthorizedErrorResponse";
 
-import type { ISubTodoNotFoundErrorResponse } from "./SubTodoNotFoundErrorResponse";
+import type { IUnsupportedMediaTypeErrorResponse } from "../responses/UnsupportedMediaTypeErrorResponse";
 
-import type { ITodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
+import type { IValidationErrorResponse } from "../responses/ValidationErrorResponse";
 
 export type IDeleteSubTodoSuccessResponseHeader = {
   "Content-Type": "application/json";
@@ -52,11 +52,11 @@ export const createDeleteSubTodoSuccessResponse = (
 
 export type DeleteSubTodoResponse =
   | IDeleteSubTodoSuccessResponse
+  | ISubTodoNotFoundErrorResponse
+  | ITodoNotFoundErrorResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
   | ITooManyRequestsErrorResponse
   | IUnauthorizedErrorResponse
   | IUnsupportedMediaTypeErrorResponse
-  | IValidationErrorResponse
-  | ISubTodoNotFoundErrorResponse
-  | ITodoNotFoundErrorResponse;
+  | IValidationErrorResponse;

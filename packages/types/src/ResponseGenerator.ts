@@ -1,160 +1,134 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { Path } from "@rexeus/typeweaver-gen";
 import type {
-  EntityResponseResource,
   GeneratorContext,
-  OperationResource,
+  NormalizedOperation,
+  NormalizedResource,
+  NormalizedResponse,
 } from "@rexeus/typeweaver-gen";
 import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
 import Case from "case";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
+type OwnResponseTemplateData = {
+  readonly header?: string;
+  readonly body?: string;
+  readonly statusCode: HttpStatusCode;
+  readonly name: string;
+  readonly statusCodeKey: string;
+};
+
+type ImportedResponseTemplateData = {
+  readonly name: string;
+  readonly path: string;
+};
+
 export class ResponseGenerator {
   public static generate(context: GeneratorContext): void {
     const templateFile = path.join(moduleDir, "templates", "Response.ejs");
-    const sharedResponseTemplateFile = path.join(
+    const canonicalResponseTemplateFile = path.join(
       moduleDir,
       "templates",
       "SharedResponse.ejs"
     );
 
-    for (const [, entityResource] of Object.entries(
-      context.resources.entityResources
-    )) {
-      // Generate operation responses
-      for (const definition of entityResource.operations) {
-        this.writeResponseType(templateFile, definition, context);
-      }
+    for (const response of context.normalizedSpec.responses) {
+      this.writeCanonicalResponseType(
+        canonicalResponseTemplateFile,
+        response,
+        context
+      );
+    }
 
-      // Generate entity-specific responses
-      for (const responseResource of entityResource.responses) {
-        this.writeEntityResponseType(
-          sharedResponseTemplateFile,
-          responseResource,
-          context
-        );
+    for (const resource of context.normalizedSpec.resources) {
+      for (const operation of resource.operations) {
+        this.writeResponseType(templateFile, resource, operation, context);
       }
     }
   }
 
   private static writeResponseType(
     templateFile: string,
-    resource: OperationResource,
+    resource: NormalizedResource,
+    operation: NormalizedOperation,
     context: GeneratorContext
   ): void {
-    const {
-      definition,
-      outputResponseFile,
-      outputDir,
-      outputResponseFileName,
-      sourceDir,
-      sourceFile,
-    } = resource;
-    const { responses, operationId } = definition;
-    const pascalCaseOperationId = Case.pascal(operationId);
-    const ownResponses: {
-      header?: string;
-      body?: string;
-      statusCode: HttpStatusCode;
-      name: string;
-      statusCodeKey: string;
-    }[] = [];
-    const entityResponses: {
-      name: string;
-      path: string;
-    }[] = [];
-    const sharedResponses: {
-      name: string;
-      path: string;
-    }[] = [];
+    const outputPaths = context.getOperationOutputPaths({
+      resourceName: resource.name,
+      operationId: operation.operationId,
+    });
+    const pascalCaseOperationId = Case.pascal(operation.operationId);
+    const ownResponses: OwnResponseTemplateData[] = [];
+    const canonicalResponses: ImportedResponseTemplateData[] = [];
 
-    for (const response of responses) {
-      const { statusCode, name, body, header, isReference } = response;
-
-      if (isReference) {
-        const sharedResponse = context.resources.sharedResponseResources.find(
-          resource => resource.name === name
-        );
-
-        if (sharedResponse) {
-          sharedResponses.push({
-            name,
-            path: Path.relative(
-              outputDir,
-              `${sharedResponse.outputDir}/${path.basename(sharedResponse.outputFileName, ".ts")}`
-            ),
-          });
-        } else {
-          const entityResponseList =
-            context.resources.entityResources[resource.entityName]?.responses;
-          const entityResponse = entityResponseList?.find(r => r.name === name);
-
-          if (!entityResponse) {
-            throw new Error(
-              `Response ${name} not found in shared or entity-specific responses`
-            );
-          }
-
-          entityResponses.push({
-            name,
-            path: Path.relative(
-              outputDir,
-              `${entityResponse.outputDir}/${path.basename(entityResponse.outputFileName, ".ts")}`
-            ),
-          });
-        }
-
+    for (const responseUsage of operation.responses) {
+      if (responseUsage.source === "canonical") {
+        canonicalResponses.push({
+          name: responseUsage.responseName,
+          path: context.getCanonicalResponseImportPath({
+            importerDir: outputPaths.outputDir,
+            responseName: responseUsage.responseName,
+          }),
+        });
         continue;
       }
 
-      ownResponses.push({
-        name,
-        body: body ? TsTypePrinter.print(TsTypeNode.fromZod(body)) : undefined,
-        header: header
-          ? TsTypePrinter.print(TsTypeNode.fromZod(header))
-          : undefined,
-        statusCode,
-        statusCodeKey: HttpStatusCode[statusCode],
-      });
+      ownResponses.push(
+        this.createOwnResponseTemplateData(responseUsage.response)
+      );
     }
 
     const content = context.renderTemplate(templateFile, {
-      operationId,
+      operationId: operation.operationId,
       pascalCaseOperationId,
       coreDir: context.coreDir,
       ownResponses,
-      entityResponses,
-      sharedResponses,
-      responseFile: Path.relative(
-        outputDir,
-        `${outputDir}/${path.basename(outputResponseFileName, ".ts")}`
-      ),
-      sourcePath: Path.relative(
-        outputDir,
-        `${sourceDir}/${path.relative(sourceDir, sourceFile).replace(/\.ts$/, "")}`
-      ),
+      entityResponses: [],
+      sharedResponses: canonicalResponses,
+      responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}`,
+      sourcePath: context.getOperationDefinitionImportPath({
+        importerDir: outputPaths.outputDir,
+        resourceName: resource.name,
+        operationId: operation.operationId,
+      }),
     });
 
-    const relativePath = path.relative(context.outputDir, outputResponseFile);
+    const relativePath = path.relative(
+      context.outputDir,
+      outputPaths.responseFile
+    );
     context.writeFile(relativePath, content);
   }
 
-  private static writeEntityResponseType(
+  private static createOwnResponseTemplateData(
+    response: NormalizedResponse
+  ): OwnResponseTemplateData {
+    return {
+      name: response.name,
+      body: response.body
+        ? TsTypePrinter.print(TsTypeNode.fromZod(response.body))
+        : undefined,
+      header: response.header
+        ? TsTypePrinter.print(TsTypeNode.fromZod(response.header))
+        : undefined,
+      statusCode: response.statusCode,
+      statusCodeKey: HttpStatusCode[response.statusCode],
+    };
+  }
+
+  private static writeCanonicalResponseType(
     templateFile: string,
-    resource: EntityResponseResource,
+    response: NormalizedResponse,
     context: GeneratorContext
   ): void {
-    const { name, body, header, outputFile } = resource;
-    const pascalCaseName = Case.pascal(name);
-
-    const headerTsType = header
-      ? TsTypePrinter.print(TsTypeNode.fromZod(header))
+    const pascalCaseName = Case.pascal(response.name);
+    const headerTsType = response.header
+      ? TsTypePrinter.print(TsTypeNode.fromZod(response.header))
       : undefined;
-    const bodyTsType = body
-      ? TsTypePrinter.print(TsTypeNode.fromZod(body))
+    const bodyTsType = response.body
+      ? TsTypePrinter.print(TsTypeNode.fromZod(response.body))
       : undefined;
 
     const content = context.renderTemplate(templateFile, {
@@ -163,10 +137,13 @@ export class ResponseGenerator {
       headerTsType,
       bodyTsType,
       pascalCaseName,
-      sharedResponse: resource, // The template expects this property name
+      sharedResponse: response,
     });
 
-    const relativePath = path.relative(context.outputDir, outputFile);
+    const relativePath = path.relative(
+      context.outputDir,
+      context.getCanonicalResponseOutputFile(response.name)
+    );
     context.writeFile(relativePath, content);
   }
 }

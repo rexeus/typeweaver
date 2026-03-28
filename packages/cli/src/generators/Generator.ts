@@ -8,7 +8,7 @@ import { DefinitionCompiler } from "./DefinitionCompiler";
 import { Formatter } from "./Formatter";
 import { IndexFileGenerator } from "./IndexFileGenerator";
 import { PluginLoader } from "./PluginLoader";
-import { ResourceReader } from "./ResourceReader";
+import { SpecLoader } from "./SpecLoader";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -25,15 +25,13 @@ export class Generator {
   private readonly pluginLoader: PluginLoader;
   private readonly indexFileGenerator: IndexFileGenerator;
   private readonly definitionCompiler: DefinitionCompiler;
-  private resourceReader: ResourceReader | null = null;
+  private readonly specLoader: SpecLoader;
   private formatter: Formatter | null = null;
 
-  private inputDir = "";
-  private sharedInputDir = "";
+  private inputFile = "";
   private outputDir = "";
-  private sourceDir = "";
-  private sharedSourceDir = "";
-  private sharedOutputDir = "";
+  private specOutputDir = "";
+  private responsesOutputDir = "";
 
   public constructor(
     registry?: PluginRegistry,
@@ -49,20 +47,21 @@ export class Generator {
     this.indexFileGenerator =
       indexFileGenerator ?? new IndexFileGenerator(this.templateDir);
     this.definitionCompiler = new DefinitionCompiler();
+    this.specLoader = new SpecLoader();
   }
 
   /**
    * Generate code using the plugin system
    */
   public async generate(
-    definitionDir: string,
+    specFile: string,
     outputDir: string,
     config?: TypeweaverConfig
   ): Promise<void> {
     console.info("Starting generation...");
 
     // Initialize directories
-    this.initializeDirectories(definitionDir, outputDir, config?.shared);
+    this.initializeDirectories(specFile, outputDir);
 
     // Clean output if requested
     if (config?.clean ?? true) {
@@ -72,46 +71,26 @@ export class Generator {
 
     // Create output directories
     fs.mkdirSync(this.outputDir, { recursive: true });
-    fs.mkdirSync(this.sharedOutputDir, { recursive: true });
-
-    console.info(
-      `Copying definitions from '${this.inputDir}' to '${this.sourceDir}'...`
-    );
-    fs.cpSync(this.inputDir, this.sourceDir, {
-      recursive: true,
-      filter: src => {
-        return (
-          src.endsWith(".ts") ||
-          src.endsWith(".js") ||
-          src.endsWith(".json") ||
-          src.endsWith(".mjs") ||
-          src.endsWith(".cjs") ||
-          fs.statSync(src).isDirectory()
-        );
-      },
-    });
+    fs.mkdirSync(this.responsesOutputDir, { recursive: true });
+    fs.mkdirSync(this.specOutputDir, { recursive: true });
 
     // Load and register plugins
     await this.pluginLoader.loadPlugins(config);
 
-    // Create ResourceReader instance
-    this.resourceReader = new ResourceReader({
-      sourceDir: this.sourceDir,
-      outputDir: this.outputDir,
-      sharedSourceDir: this.sharedSourceDir,
-      sharedOutputDir: this.sharedOutputDir,
-    });
-
     this.formatter = new Formatter(this.outputDir);
 
-    // Read resources
-    console.info("Reading definitions...");
-    let resources = await this.resourceReader.getResources();
+    console.info(
+      `Bundling spec from '${this.inputFile}' to '${this.specOutputDir}'...`
+    );
+    let { normalizedSpec } = await this.specLoader.load({
+      inputFile: this.inputFile,
+      specOutputDir: this.specOutputDir,
+    });
 
     // Create contexts
     const pluginContext = this.contextBuilder.createPluginContext({
       outputDir: this.outputDir,
-      inputDir: this.sourceDir,
+      inputDir: path.dirname(this.inputFile),
       config: (config ?? {}) as PluginConfig,
     });
 
@@ -127,18 +106,21 @@ export class Generator {
     console.info("Collecting resources...");
     for (const registration of this.registry.getAll()) {
       if (registration.plugin.collectResources) {
-        resources = await registration.plugin.collectResources(resources);
+        normalizedSpec =
+          await registration.plugin.collectResources(normalizedSpec);
       }
     }
 
     // Create generator context
     const generatorContext = this.contextBuilder.createGeneratorContext({
       outputDir: this.outputDir,
-      inputDir: this.sourceDir,
+      inputDir: path.dirname(this.inputFile),
       config: (config ?? {}) as PluginConfig,
-      resources,
+      normalizedSpec,
       templateDir: this.templateDir,
       coreDir: this.coreDir,
+      responsesOutputDir: this.responsesOutputDir,
+      specOutputDir: this.specOutputDir,
     });
 
     // Run generation for each plugin
@@ -160,10 +142,9 @@ export class Generator {
       }
     }
 
-    // Compile definitions from .ts to .js + .d.ts stubs
-    // This prevents tsc from resolving Zod's recursive type system
-    console.info("Compiling definitions...");
-    this.definitionCompiler.compileInPlace(this.sourceDir);
+    // Compile compatibility shims from .ts to .js + .d.ts stubs.
+    console.info("Compiling spec compatibility shims...");
+    this.definitionCompiler.compileInPlace(this.specOutputDir);
 
     // Format code if requested
     if (config?.format ?? true) {
@@ -176,20 +157,10 @@ export class Generator {
     );
   }
 
-  private initializeDirectories(
-    definitionDir: string,
-    outputDir: string,
-    sharedDir?: string
-  ): void {
-    this.inputDir = definitionDir;
-    this.sharedInputDir = sharedDir ?? path.join(definitionDir, "shared");
+  private initializeDirectories(specFile: string, outputDir: string): void {
+    this.inputFile = specFile;
     this.outputDir = outputDir;
-    this.sharedOutputDir = path.join(outputDir, "shared");
-    this.sourceDir = path.join(this.outputDir, "definition");
-    const inputToSharedDirRelative = path.relative(
-      this.inputDir,
-      this.sharedInputDir
-    );
-    this.sharedSourceDir = path.join(this.sourceDir, inputToSharedDirRelative);
+    this.responsesOutputDir = path.join(outputDir, "responses");
+    this.specOutputDir = path.join(this.outputDir, "spec");
   }
 }

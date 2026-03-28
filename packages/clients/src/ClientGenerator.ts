@@ -2,7 +2,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
   GeneratorContext,
-  OperationResource,
+  NormalizedOperation,
+  NormalizedResource,
 } from "@rexeus/typeweaver-gen";
 import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
 import Case from "case";
@@ -18,56 +19,34 @@ export class ClientGenerator {
       "RequestCommand.ejs"
     );
 
-    for (const [, entityResource] of Object.entries(
-      context.resources.entityResources
-    )) {
-      this.writeClient(clientTemplatePath, entityResource.operations, context);
-      this.writeRequestCommands(
-        commandTemplatePath,
-        entityResource.operations,
-        context
-      );
+    for (const resource of context.normalizedSpec.resources) {
+      this.writeClient(clientTemplatePath, resource, context);
+      this.writeRequestCommands(commandTemplatePath, resource, context);
     }
   }
 
   private static writeClient(
     templateFilePath: string,
-    operationResources: OperationResource[],
+    resource: NormalizedResource,
     context: GeneratorContext
   ): void {
-    const entityName = operationResources[0]!.entityName;
-    const pascalCaseEntityName = Case.pascal(entityName);
-    const outputDir = operationResources[0]!.outputDir;
+    const pascalCaseEntityName = Case.pascal(resource.name);
+    const outputDir = context.getResourceOutputDir(resource.name);
 
-    const operations: {
-      operationId: string;
-      pascalCaseOperationId: string;
-      requestFile: string;
-      responseValidatorFile: string;
-      responseFile: string;
-    }[] = [];
-    for (const operationResource of operationResources) {
-      const {
-        definition,
-        outputResponseFileName,
-        outputResponseValidationFileName,
-        outputRequestFileName,
-      } = operationResource;
-      const { operationId } = definition;
-
-      const pascalCaseOperationId = Case.pascal(operationId);
-      const requestFile = `./${path.basename(outputRequestFileName, ".ts")}`;
-      const responseValidatorFile = `./${path.basename(outputResponseValidationFileName, ".ts")}`;
-      const responseFile = `./${path.basename(outputResponseFileName, ".ts")}`;
-
-      operations.push({
-        operationId,
-        pascalCaseOperationId,
-        requestFile,
-        responseValidatorFile,
-        responseFile,
+    const operations = resource.operations.map(operation => {
+      const outputPaths = context.getOperationOutputPaths({
+        resourceName: resource.name,
+        operationId: operation.operationId,
       });
-    }
+
+      return {
+        operationId: operation.operationId,
+        pascalCaseOperationId: Case.pascal(operation.operationId),
+        requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}`,
+        responseValidatorFile: `./${path.basename(outputPaths.responseValidationFileName, ".ts")}`,
+        responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}`,
+      };
+    });
 
     const content = context.renderTemplate(templateFilePath, {
       coreDir: context.coreDir,
@@ -85,33 +64,32 @@ export class ClientGenerator {
 
   private static writeRequestCommands(
     templateFilePath: string,
-    operationResources: OperationResource[],
+    resource: NormalizedResource,
     context: GeneratorContext
   ): void {
-    for (const operationResource of operationResources) {
-      this.writeRequestCommand(templateFilePath, operationResource, context);
+    for (const operation of resource.operations) {
+      this.writeRequestCommand(
+        templateFilePath,
+        resource.name,
+        operation,
+        context
+      );
     }
   }
 
   private static writeRequestCommand(
     templateFilePath: string,
-    operationResource: OperationResource,
+    resourceName: string,
+    operation: NormalizedOperation,
     context: GeneratorContext
   ): void {
-    const {
-      definition,
-      sourceDir,
-      sourceFile,
-      outputDir,
-      outputResponseFileName,
-      outputResponseValidationFileName,
-      outputRequestFileName,
-    } = operationResource;
+    const outputPaths = context.getOperationOutputPaths({
+      resourceName,
+      operationId: operation.operationId,
+    });
+    const request = operation.request ?? {};
+    const pascalCaseOperationId = Case.pascal(operation.operationId);
 
-    const { operationId, method, request } = definition;
-    const pascalCaseOperationId = Case.pascal(operationId);
-
-    // Build request type information
     const headerTsType = request.header
       ? TsTypePrinter.print(TsTypeNode.fromZod(request.header))
       : undefined;
@@ -125,33 +103,26 @@ export class ClientGenerator {
       ? TsTypePrinter.print(TsTypeNode.fromZod(request.body))
       : undefined;
 
-    // Build relative paths
-    const requestFile = `./${path.basename(outputRequestFileName, ".ts")}`;
-    const responseValidatorFile = `./${path.basename(outputResponseValidationFileName, ".ts")}`;
-    const responseFile = `./${path.basename(outputResponseFileName, ".ts")}`;
-    const relativeSourceFile = path.relative(sourceDir, sourceFile);
-    const sourcePath = path.join(
-      sourceDir,
-      relativeSourceFile.replace(/\.ts$/, "")
-    );
-    const relativeSourcePath = path.relative(outputDir, sourcePath);
-
     const content = context.renderTemplate(templateFilePath, {
-      sourcePath: relativeSourcePath,
-      operationId,
+      sourcePath: context.getOperationDefinitionImportPath({
+        importerDir: outputPaths.outputDir,
+        resourceName,
+        operationId: operation.operationId,
+      }),
+      operationId: operation.operationId,
       pascalCaseOperationId,
-      method,
+      method: operation.method,
       headerTsType,
       paramTsType,
       queryTsType,
       bodyTsType,
-      requestFile,
-      responseValidatorFile,
-      responseFile,
+      requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}`,
+      responseValidatorFile: `./${path.basename(outputPaths.responseValidationFileName, ".ts")}`,
+      responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}`,
     });
 
     const outputCommandFile = path.join(
-      outputDir,
+      outputPaths.outputDir,
       `${pascalCaseOperationId}RequestCommand.ts`
     );
     const relativePath = path.relative(context.outputDir, outputCommandFile);

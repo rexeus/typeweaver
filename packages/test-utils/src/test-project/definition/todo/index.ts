@@ -15,7 +15,9 @@ export { default as UpdateSubTodoDefinition } from "./mutations/UpdateSubTodoDef
 export { default as UpdateTodoDefinition } from "./mutations/UpdateTodoDefinition";
 export { default as UpdateTodoStatusDefinition } from "./mutations/UpdateTodoStatusDefinition";
 export { default as GetTodoDefinition } from "./queries/GetTodoDefinition";
+export { default as HeadTodoDefinition } from "./queries/HeadTodoDefinition";
 export { default as ListSubTodosDefinition } from "./queries/ListSubTodosDefinition";
 export { default as ListTodosDefinition } from "./queries/ListTodosDefinition";
+export { default as OptionsTodoDefinition } from "./queries/OptionsTodoDefinition";
 export { default as QuerySubTodoDefinition } from "./queries/QuerySubTodoDefinition";
 export { default as QueryTodoDefinition } from "./queries/QueryTodoDefinition";

@@ -9,19 +9,19 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
-import type { IForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
+import type { ITodoNotFoundErrorResponse } from "../responses/TodoNotFoundErrorResponse";
 
-import type { IInternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
+import type { IForbiddenErrorResponse } from "../responses/ForbiddenErrorResponse";
 
-import type { ITooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
+import type { IInternalServerErrorResponse } from "../responses/InternalServerErrorResponse";
 
-import type { IUnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
+import type { ITooManyRequestsErrorResponse } from "../responses/TooManyRequestsErrorResponse";
 
-import type { IUnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
+import type { IUnauthorizedErrorResponse } from "../responses/UnauthorizedErrorResponse";
 
-import type { IValidationErrorResponse } from "../shared/ValidationErrorResponse";
+import type { IUnsupportedMediaTypeErrorResponse } from "../responses/UnsupportedMediaTypeErrorResponse";
 
-import type { ITodoNotFoundErrorResponse } from "./TodoNotFoundErrorResponse";
+import type { IValidationErrorResponse } from "../responses/ValidationErrorResponse";
 
 export type IOptionsTodoSuccessResponseHeader = {
   Allow: string[];
@@ -48,10 +48,10 @@ export const createOptionsTodoSuccessResponse = (
 
 export type OptionsTodoResponse =
   | IOptionsTodoSuccessResponse
+  | ITodoNotFoundErrorResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse
   | ITooManyRequestsErrorResponse
   | IUnauthorizedErrorResponse
   | IUnsupportedMediaTypeErrorResponse
-  | IValidationErrorResponse
-  | ITodoNotFoundErrorResponse;
+  | IValidationErrorResponse;

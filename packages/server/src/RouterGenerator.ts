@@ -4,7 +4,8 @@ import { HttpMethod } from "@rexeus/typeweaver-core";
 import { Path } from "@rexeus/typeweaver-gen";
 import type {
   GeneratorContext,
-  OperationResource,
+  NormalizedOperation,
+  NormalizedResource,
 } from "@rexeus/typeweaver-gen";
 import Case from "case";
 
@@ -32,36 +33,28 @@ export class RouterGenerator {
     const moduleDir = path.dirname(fileURLToPath(import.meta.url));
     const templateFile = path.join(moduleDir, "templates", "Router.ejs");
 
-    for (const [entityName, entityResource] of Object.entries(
-      context.resources.entityResources
-    )) {
-      this.writeRouter(
-        entityName,
-        templateFile,
-        entityResource.operations,
-        context
-      );
+    for (const resource of context.normalizedSpec.resources) {
+      this.writeRouter(resource, templateFile, context);
     }
   }
 
   private static writeRouter(
-    entityName: string,
+    resource: NormalizedResource,
     templateFile: string,
-    operationResources: OperationResource[],
     context: GeneratorContext
   ): void {
-    const pascalCaseEntityName = Case.pascal(entityName);
-    const outputDir = path.join(context.outputDir, entityName);
+    const pascalCaseEntityName = Case.pascal(resource.name);
+    const outputDir = context.getResourceOutputDir(resource.name);
     const outputPath = path.join(outputDir, `${pascalCaseEntityName}Router.ts`);
 
-    const operations = operationResources
-      .filter(resource => resource.definition.method !== HttpMethod.HEAD)
-      .map(resource => this.createOperationData(resource))
+    const operations = resource.operations
+      .filter(operation => operation.method !== HttpMethod.HEAD)
+      .map(operation => this.createOperationData(operation))
       .sort((a, b) => this.compareRoutes(a, b));
 
     const content = context.renderTemplate(templateFile, {
       coreDir: Path.relative(outputDir, context.outputDir),
-      entityName,
+      entityName: resource.name,
       pascalCaseEntityName,
       operations,
     });
@@ -71,17 +64,17 @@ export class RouterGenerator {
   }
 
   private static createOperationData(
-    resource: OperationResource
+    operation: NormalizedOperation
   ): OperationData {
-    const operationId = resource.definition.operationId;
+    const operationId = operation.operationId;
     const className = Case.pascal(operationId);
 
     return {
       operationId,
       className,
       handlerName: `handle${className}Request`,
-      method: resource.definition.method,
-      path: resource.definition.path,
+      method: operation.method,
+      path: operation.path,
     };
   }
 

@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
   GeneratorContext,
-  OperationResource,
+  NormalizedOperation,
 } from "@rexeus/typeweaver-gen";
 import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
 import Case from "case";
@@ -13,22 +13,30 @@ export class RequestGenerator {
   public static generate(context: GeneratorContext): void {
     const templateFilePath = path.join(moduleDir, "templates", "Request.ejs");
 
-    for (const [, entityResource] of Object.entries(
-      context.resources.entityResources
-    )) {
-      for (const definition of entityResource.operations) {
-        this.writeRequestType(templateFilePath, definition, context);
+    for (const resource of context.normalizedSpec.resources) {
+      for (const operation of resource.operations) {
+        this.writeRequestType(
+          templateFilePath,
+          resource.name,
+          operation,
+          context
+        );
       }
     }
   }
 
   private static writeRequestType(
     templateFilePath: string,
-    operationResource: OperationResource,
+    resourceName: string,
+    operation: NormalizedOperation,
     context: GeneratorContext
   ): void {
-    const { request, operationId, method } = operationResource.definition;
-    const { header, query, param, body } = request;
+    const { request, operationId, method } = operation;
+    const { header, query, param, body } = request ?? {};
+    const outputPaths = context.getOperationOutputPaths({
+      resourceName,
+      operationId,
+    });
 
     const content = context.renderTemplate(templateFilePath, {
       pascalCaseOperationId: Case.pascal(operationId),
@@ -49,7 +57,7 @@ export class RequestGenerator {
 
     const relativePath = path.relative(
       context.outputDir,
-      operationResource.outputRequestFile
+      outputPaths.requestFile
     );
     context.writeFile(relativePath, content);
   }

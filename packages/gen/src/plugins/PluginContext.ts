@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { render } from "ejs";
-import type { GetResourcesResult } from "../Resource";
+import { Path } from "../helpers/Path";
+import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec";
 import type { GeneratorContext, PluginConfig, PluginContext } from "./types";
 import type { Data } from "ejs";
 
@@ -30,20 +31,99 @@ export class PluginContextBuilder {
    * Create a generator context with utilities
    */
   createGeneratorContext(params: {
-    outputDir: string;
-    inputDir: string;
-    config: PluginConfig;
-    resources: GetResourcesResult;
-    templateDir: string;
-    coreDir: string;
+    readonly outputDir: string;
+    readonly inputDir: string;
+    readonly config: PluginConfig;
+    readonly normalizedSpec: NormalizedSpec;
+    readonly templateDir: string;
+    readonly coreDir: string;
+    readonly responsesOutputDir: string;
+    readonly specOutputDir: string;
   }): GeneratorContext {
     const pluginContext = this.createPluginContext(params);
+    const canonicalResponsesByName = new Map<string, NormalizedResponse>(
+      params.normalizedSpec.responses.map(response => [response.name, response])
+    );
+
+    const getResourceOutputDir = (resourceName: string): string => {
+      return path.join(params.outputDir, resourceName);
+    };
+
+    const getOperationOutputPaths = (config: {
+      readonly resourceName: string;
+      readonly operationId: string;
+    }) => {
+      const outputDir = getResourceOutputDir(config.resourceName);
+      const requestFileName = `${config.operationId}Request.ts`;
+      const responseFileName = `${config.operationId}Response.ts`;
+      const requestValidationFileName = `${config.operationId}RequestValidator.ts`;
+      const responseValidationFileName = `${config.operationId}ResponseValidator.ts`;
+      const clientFileName = `${config.operationId}Client.ts`;
+
+      return {
+        outputDir,
+        requestFile: path.join(outputDir, requestFileName),
+        requestFileName,
+        responseFile: path.join(outputDir, responseFileName),
+        responseFileName,
+        requestValidationFile: path.join(outputDir, requestValidationFileName),
+        requestValidationFileName,
+        responseValidationFile: path.join(
+          outputDir,
+          responseValidationFileName
+        ),
+        responseValidationFileName,
+        clientFile: path.join(outputDir, clientFileName),
+        clientFileName,
+      };
+    };
+
+    const getCanonicalResponse = (responseName: string): NormalizedResponse => {
+      const response = canonicalResponsesByName.get(responseName);
+
+      if (response === undefined) {
+        throw new Error(`Missing canonical response '${responseName}'.`);
+      }
+
+      return response;
+    };
+
+    const getCanonicalResponseOutputFile = (responseName: string): string => {
+      return path.join(params.responsesOutputDir, `${responseName}Response.ts`);
+    };
 
     return {
       ...pluginContext,
-      resources: params.resources,
+      normalizedSpec: params.normalizedSpec,
       templateDir: params.templateDir,
       coreDir: params.coreDir,
+      responsesOutputDir: params.responsesOutputDir,
+      specOutputDir: params.specOutputDir,
+      getCanonicalResponse,
+      getCanonicalResponseOutputFile,
+      getCanonicalResponseImportPath: config => {
+        return Path.relative(
+          config.importerDir,
+          getCanonicalResponseOutputFile(config.responseName).replace(
+            /\.ts$/,
+            ""
+          )
+        );
+      },
+      getOperationDefinitionImportPath: config => {
+        return Path.relative(
+          config.importerDir,
+          path
+            .join(
+              params.specOutputDir,
+              config.resourceName,
+              `${config.operationId}Definition`
+            )
+            .replace(/\.ts$/, "")
+        );
+      },
+      getOperationOutputPaths,
+      getResourceOutputDir,
 
       // Utility functions
       writeFile: (relativePath: string, content: string) => {

@@ -1,6 +1,6 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createSubTodoStatusTransitionInvalidErrorResponse as generatedCreateSubTodoStatusTransitionInvalidErrorResponse } from "../../test-project/output/todo/SubTodoStatusTransitionInvalidErrorResponse";
+import { createSubTodoStatusTransitionInvalidErrorResponse as generatedCreateSubTodoStatusTransitionInvalidErrorResponse } from "../../test-project/output/responses/SubTodoStatusTransitionInvalidErrorResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createResponse } from "../createResponse";
 import type {

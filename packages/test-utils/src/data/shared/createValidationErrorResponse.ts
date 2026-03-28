@@ -1,5 +1,5 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createValidationErrorResponse as generatedCreateValidationErrorResponse } from "../../test-project/output/shared/ValidationErrorResponse";
+import { createValidationErrorResponse as generatedCreateValidationErrorResponse } from "../../test-project/output/responses/ValidationErrorResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import { createResponse } from "../createResponse";

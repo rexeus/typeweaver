@@ -1,5 +1,5 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createTooManyRequestsErrorResponse as generatedCreateTooManyRequestsErrorResponse } from "../../test-project/output/shared/TooManyRequestsErrorResponse";
+import { createTooManyRequestsErrorResponse as generatedCreateTooManyRequestsErrorResponse } from "../../test-project/output/responses/TooManyRequestsErrorResponse";
 import { createDataFactory } from "../createDataFactory";
 import { createErrorResponseHeader } from "../createErrorResponseHeader";
 import { createResponse } from "../createResponse";

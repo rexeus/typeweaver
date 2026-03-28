@@ -22,6 +22,6 @@ export * from "./lib/server";
 
 export * from "./lib/types";
 
-export * from "./shared";
+export * from "./responses";
 
 export * from "./todo";

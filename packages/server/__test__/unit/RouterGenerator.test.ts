@@ -1,81 +1,107 @@
+import path from "node:path";
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import type {
   GeneratorContext,
-  OperationResource,
+  NormalizedOperation,
+  NormalizedSpec,
 } from "@rexeus/typeweaver-gen";
 import { assert, describe, expect, test } from "vitest";
 import { RouterGenerator } from "../../src/RouterGenerator";
 
-// ---------------------------------------------------------------------------
-// Helpers — we test the generator indirectly by capturing rendered output
-// ---------------------------------------------------------------------------
-
-function createMockResource(
+function createMockOperation(
   operationId: string,
   method: HttpMethod,
-  path: string
-): OperationResource {
+  routePath: string
+): NormalizedOperation {
   return {
-    sourceDir: "/src",
-    sourceFile: "/src/def.ts",
-    sourceFileName: "def.ts",
-    definition: {
-      operationId,
-      path,
-      method,
-      summary: "",
-      request: {},
-      responses: [],
-    },
-    outputDir: "/out/entity",
-    entityName: "entity",
-    outputRequestFile: "",
-    outputRequestFileName: "",
-    outputResponseFile: "",
-    outputResponseFileName: "",
-    outputRequestValidationFile: "",
-    outputRequestValidationFileName: "",
-    outputResponseValidationFile: "",
-    outputResponseValidationFileName: "",
-    outputClientFile: "",
-    outputClientFileName: "",
-  } as OperationResource;
+    operationId,
+    path: routePath,
+    method,
+    summary: "",
+    request: undefined,
+    responses: [],
+  };
 }
 
-function createMockContext(operations: OperationResource[]): {
+function createMockContext(operations: NormalizedOperation[]): {
   context: GeneratorContext;
   writtenFiles: Map<string, string>;
 } {
   const writtenFiles = new Map<string, string>();
   const generatedFiles: string[] = [];
+  const normalizedSpec: NormalizedSpec = {
+    resources: [
+      {
+        name: "entity",
+        operations,
+      },
+    ],
+    responses: [],
+  };
 
   const context = {
     outputDir: "/out",
     inputDir: "/in",
     config: {},
-    resources: {
-      entityResources: {
-        entity: {
-          operations,
-          responses: [],
-        },
-      },
-      sharedResponseResources: [],
-    },
+    normalizedSpec,
     templateDir: "/templates",
     coreDir: "/core",
+    responsesOutputDir: "/out/responses",
+    specOutputDir: "/out/spec",
+    getCanonicalResponse: () => {
+      throw new Error("not implemented");
+    },
+    getCanonicalResponseOutputFile: (responseName: string) => {
+      return `/out/responses/${responseName}Response.ts`;
+    },
+    getCanonicalResponseImportPath: () => {
+      throw new Error("not implemented");
+    },
+    getOperationDefinitionImportPath: () => {
+      throw new Error("not implemented");
+    },
+    getOperationOutputPaths: ({
+      operationId,
+      resourceName,
+    }: {
+      readonly operationId: string;
+      readonly resourceName: string;
+    }) => {
+      const outputDir = path.join("/out", resourceName);
+
+      return {
+        outputDir,
+        requestFile: path.join(outputDir, `${operationId}Request.ts`),
+        requestFileName: `${operationId}Request.ts`,
+        responseFile: path.join(outputDir, `${operationId}Response.ts`),
+        responseFileName: `${operationId}Response.ts`,
+        requestValidationFile: path.join(
+          outputDir,
+          `${operationId}RequestValidator.ts`
+        ),
+        requestValidationFileName: `${operationId}RequestValidator.ts`,
+        responseValidationFile: path.join(
+          outputDir,
+          `${operationId}ResponseValidator.ts`
+        ),
+        responseValidationFileName: `${operationId}ResponseValidator.ts`,
+        clientFile: path.join(outputDir, `${operationId}Client.ts`),
+        clientFileName: `${operationId}Client.ts`,
+      };
+    },
+    getResourceOutputDir: (resourceName: string) =>
+      path.join("/out", resourceName),
     writeFile: (relativePath: string, content: string) => {
       writtenFiles.set(relativePath, content);
     },
     renderTemplate: (_templatePath: string, data: any) => {
-      // Return operations in order so we can verify sorting
       return JSON.stringify(
-        data.operations.map((op: any) => ({
-          operationId: op.operationId,
-          method: op.method,
-          path: op.path,
-          handlerName: op.handlerName,
-          className: op.className,
+        data.operations.map((operation: any) => ({
+          operationId: operation.operationId,
+          method: operation.method,
+          path: operation.path,
+          handlerName: operation.handlerName,
+          className: operation.className,
         }))
       );
     },
@@ -83,12 +109,12 @@ function createMockContext(operations: OperationResource[]): {
       generatedFiles.push(relativePath);
     },
     getGeneratedFiles: () => generatedFiles,
-  } as unknown as GeneratorContext;
+  } satisfies GeneratorContext;
 
   return { context, writtenFiles };
 }
 
-function getOperationOrder(operations: OperationResource[]): {
+function getOperationOrder(operations: NormalizedOperation[]): {
   operationId: string;
   method: string;
   path: string;
@@ -103,16 +129,12 @@ function getOperationOrder(operations: OperationResource[]): {
   return JSON.parse(content);
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 describe("RouterGenerator", () => {
   describe("Route Sorting", () => {
     test("should sort shallow routes before deep routes", () => {
       const result = getOperationOrder([
-        createMockResource("getSubItem", HttpMethod.GET, "/items/:id/sub"),
-        createMockResource("getItems", HttpMethod.GET, "/items"),
+        createMockOperation("getSubItem", HttpMethod.GET, "/items/:id/sub"),
+        createMockOperation("getItems", HttpMethod.GET, "/items"),
       ]);
 
       assert(result[0]);
@@ -123,8 +145,8 @@ describe("RouterGenerator", () => {
 
     test("should sort static segments before param segments at same depth", () => {
       const result = getOperationOrder([
-        createMockResource("getItem", HttpMethod.GET, "/items/:id"),
-        createMockResource("getSpecial", HttpMethod.GET, "/items/special"),
+        createMockOperation("getItem", HttpMethod.GET, "/items/:id"),
+        createMockOperation("getSpecial", HttpMethod.GET, "/items/special"),
       ]);
 
       assert(result[0]);
@@ -135,11 +157,11 @@ describe("RouterGenerator", () => {
 
     test("should sort by method priority when paths are identical", () => {
       const result = getOperationOrder([
-        createMockResource("deleteItem", HttpMethod.DELETE, "/items"),
-        createMockResource("getItems", HttpMethod.GET, "/items"),
-        createMockResource("createItem", HttpMethod.POST, "/items"),
-        createMockResource("updateItem", HttpMethod.PUT, "/items"),
-        createMockResource("patchItem", HttpMethod.PATCH, "/items"),
+        createMockOperation("deleteItem", HttpMethod.DELETE, "/items"),
+        createMockOperation("getItems", HttpMethod.GET, "/items"),
+        createMockOperation("createItem", HttpMethod.POST, "/items"),
+        createMockOperation("updateItem", HttpMethod.PUT, "/items"),
+        createMockOperation("patchItem", HttpMethod.PATCH, "/items"),
       ]);
 
       expect(result.map(r => r.method)).toEqual([
@@ -153,9 +175,9 @@ describe("RouterGenerator", () => {
 
     test("should filter out HEAD operations", () => {
       const result = getOperationOrder([
-        createMockResource("getItems", HttpMethod.GET, "/items"),
-        createMockResource("headItems", HttpMethod.HEAD, "/items"),
-        createMockResource("createItem", HttpMethod.POST, "/items"),
+        createMockOperation("getItems", HttpMethod.GET, "/items"),
+        createMockOperation("headItems", HttpMethod.HEAD, "/items"),
+        createMockOperation("createItem", HttpMethod.POST, "/items"),
       ]);
 
       expect(result).toHaveLength(2);
@@ -164,9 +186,9 @@ describe("RouterGenerator", () => {
 
     test("should sort alphabetically within same segment type", () => {
       const result = getOperationOrder([
-        createMockResource("getUsers", HttpMethod.GET, "/users"),
-        createMockResource("getTodos", HttpMethod.GET, "/todos"),
-        createMockResource("getAccounts", HttpMethod.GET, "/accounts"),
+        createMockOperation("getUsers", HttpMethod.GET, "/users"),
+        createMockOperation("getTodos", HttpMethod.GET, "/todos"),
+        createMockOperation("getAccounts", HttpMethod.GET, "/accounts"),
       ]);
 
       expect(result.map(r => r.path)).toEqual([
@@ -178,29 +200,22 @@ describe("RouterGenerator", () => {
 
     test("should handle complex mixed routes", () => {
       const result = getOperationOrder([
-        createMockResource(
+        createMockOperation(
           "deleteSubTodo",
           HttpMethod.DELETE,
           "/todos/:todoId/subtodos/:subtodoId"
         ),
-        createMockResource("createTodo", HttpMethod.POST, "/todos"),
-        createMockResource("listTodos", HttpMethod.GET, "/todos"),
-        createMockResource("queryTodos", HttpMethod.POST, "/todos/query"),
-        createMockResource("getTodo", HttpMethod.GET, "/todos/:todoId"),
-        createMockResource(
+        createMockOperation("createTodo", HttpMethod.POST, "/todos"),
+        createMockOperation("listTodos", HttpMethod.GET, "/todos"),
+        createMockOperation("queryTodos", HttpMethod.POST, "/todos/query"),
+        createMockOperation("getTodo", HttpMethod.GET, "/todos/:todoId"),
+        createMockOperation(
           "listSubTodos",
           HttpMethod.GET,
           "/todos/:todoId/subtodos"
         ),
       ]);
 
-      // Expected order:
-      // 1. /todos (GET) - depth 1, method priority 1
-      // 2. /todos (POST) - depth 1, method priority 2
-      // 3. /todos/query (POST) - depth 2, static/static
-      // 4. /todos/:todoId (GET) - depth 2, static/param
-      // 5. /todos/:todoId/subtodos (GET) - depth 3
-      // 6. /todos/:todoId/subtodos/:subtodoId (DELETE) - depth 4
       expect(result.map(r => `${r.method} ${r.path}`)).toEqual([
         "GET /todos",
         "POST /todos",
@@ -215,7 +230,7 @@ describe("RouterGenerator", () => {
   describe("Operation Data Generation", () => {
     test("should generate correct className and handlerName from operationId", () => {
       const result = getOperationOrder([
-        createMockResource("createTodo", HttpMethod.POST, "/todos"),
+        createMockOperation("createTodo", HttpMethod.POST, "/todos"),
       ]);
 
       assert(result[0]);
@@ -225,7 +240,7 @@ describe("RouterGenerator", () => {
 
     test("should handle multi-word operationIds", () => {
       const result = getOperationOrder([
-        createMockResource(
+        createMockOperation(
           "updateTodoStatus",
           HttpMethod.PUT,
           "/todos/:id/status"
@@ -241,7 +256,7 @@ describe("RouterGenerator", () => {
   describe("File Output", () => {
     test("should write output file with correct path", () => {
       const operations = [
-        createMockResource("getItems", HttpMethod.GET, "/items"),
+        createMockOperation("getItems", HttpMethod.GET, "/items"),
       ];
       const { context, writtenFiles } = createMockContext(operations);
 

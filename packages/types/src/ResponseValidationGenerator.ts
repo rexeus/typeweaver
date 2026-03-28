@@ -1,14 +1,23 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { Path } from "@rexeus/typeweaver-gen";
 import type {
   GeneratorContext,
-  OperationResource,
+  NormalizedOperation,
+  NormalizedResource,
 } from "@rexeus/typeweaver-gen";
 import Case from "case";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+
+type ResponseTemplateData = {
+  readonly name: string;
+  readonly statusCode: HttpStatusCode;
+  readonly index: number;
+  readonly hasHeader: boolean;
+  readonly hasBody: boolean;
+  readonly statusCodeKey?: string;
+};
 
 export class ResponseValidationGenerator {
   public static generate(context: GeneratorContext): void {
@@ -18,13 +27,12 @@ export class ResponseValidationGenerator {
       "ResponseValidator.ejs"
     );
 
-    for (const [, entityResource] of Object.entries(
-      context.resources.entityResources
-    )) {
-      for (const operationResource of entityResource.operations) {
+    for (const resource of context.normalizedSpec.resources) {
+      for (const operation of resource.operations) {
         this.writeResponseValidator(
           templateFilePath,
-          operationResource,
+          resource,
+          operation,
           context
         );
       }
@@ -33,123 +41,69 @@ export class ResponseValidationGenerator {
 
   private static writeResponseValidator(
     templateFilePath: string,
-    resource: OperationResource,
+    resource: NormalizedResource,
+    operation: NormalizedOperation,
     context: GeneratorContext
   ): void {
-    const {
-      definition,
-      outputDir,
-      outputResponseFileName,
-      sourceDir,
-      sourceFile,
-      outputResponseValidationFile,
-    } = resource;
-    const { responses, operationId } = definition;
-    const pascalCaseOperationId = Case.pascal(operationId);
-    const ownResponses: {
-      hasHeader: boolean;
-      hasBody: boolean;
-      statusCode: HttpStatusCode;
-      name: string;
-      statusCodeKey: string;
-      index: number;
-    }[] = [];
-    const sharedResponses: {
-      name: string;
-      importPath: string;
-      statusCode: HttpStatusCode;
-      hasHeader: boolean;
-      hasBody: boolean;
-      index: number;
-    }[] = [];
-    const allStatusCodes: {
-      statusCode: HttpStatusCode;
-      name: string;
-    }[] = [];
+    const outputPaths = context.getOperationOutputPaths({
+      resourceName: resource.name,
+      operationId: operation.operationId,
+    });
+    const pascalCaseOperationId = Case.pascal(operation.operationId);
+    const ownResponses: ResponseTemplateData[] = [];
+    const sharedResponses: ResponseTemplateData[] = [];
+    const allStatusCodes = new Map<HttpStatusCode, string>();
 
-    for (const response of responses) {
-      const { statusCode, name, isReference, body, header, statusCodeName } =
-        response;
-      const index = responses.indexOf(response);
+    operation.responses.forEach((responseUsage, index) => {
+      const response =
+        responseUsage.source === "canonical"
+          ? context.getCanonicalResponse(responseUsage.responseName)
+          : responseUsage.response;
 
-      const isStatusCodeIncluded = allStatusCodes.some(status => {
-        return status.statusCode === statusCode;
-      });
-      if (!isStatusCodeIncluded) {
-        allStatusCodes.push({
-          statusCode,
-          name: statusCodeName,
-        });
-      }
+      allStatusCodes.set(response.statusCode, response.statusCodeName);
 
-      if (isReference) {
-        // First check in global shared resources
-        const sharedResponse = context.resources.sharedResponseResources.find(
-          resource => resource.name === name
-        );
+      const templateData: ResponseTemplateData = {
+        name: response.name,
+        hasBody: response.body !== undefined,
+        hasHeader: response.header !== undefined,
+        statusCode: response.statusCode,
+        index,
+      };
 
-        let importPath: string;
-
-        // If not found globally, check in entity-specific responses
-        if (!sharedResponse) {
-          const entityResponses =
-            context.resources.entityResources[resource.entityName]?.responses;
-          const entityResponse = entityResponses?.find(r => r.name === name);
-          if (entityResponse) {
-            importPath = Path.relative(
-              outputDir,
-              `${entityResponse.outputDir}/${path.basename(entityResponse.outputFileName, ".ts")}`
-            );
-          } else {
-            throw new Error(
-              `Shared response '${response.name}' not found in shared or entity resources`
-            );
-          }
-        } else {
-          importPath = Path.relative(
-            outputDir,
-            `${sharedResponse.outputDir}/${path.basename(sharedResponse.outputFileName, ".ts")}`
-          );
-        }
-
-        sharedResponses.push({
-          name,
-          importPath,
-          hasBody: !!body,
-          hasHeader: !!header,
-          statusCode,
-          index,
-        });
-        continue;
+      if (responseUsage.source === "canonical") {
+        sharedResponses.push(templateData);
+        return;
       }
 
       ownResponses.push({
-        name,
-        hasBody: !!body,
-        hasHeader: !!header,
-        statusCode,
-        statusCodeKey: HttpStatusCode[statusCode],
-        index,
+        ...templateData,
+        statusCodeKey: HttpStatusCode[response.statusCode],
       });
-    }
+    });
 
     const content = context.renderTemplate(templateFilePath, {
-      operationId,
+      operationId: operation.operationId,
       pascalCaseOperationId,
       coreDir: context.coreDir,
-      responseFile: `./${path.basename(outputResponseFileName, ".ts")}`,
-      sourcePath: Path.relative(
-        outputDir,
-        `${sourceDir}/${path.relative(sourceDir, sourceFile).replace(/\.ts$/, "")}`
-      ),
+      responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}`,
+      sourcePath: context.getOperationDefinitionImportPath({
+        importerDir: outputPaths.outputDir,
+        resourceName: resource.name,
+        operationId: operation.operationId,
+      }),
       sharedResponses,
       ownResponses,
-      allStatusCodes,
+      allStatusCodes: Array.from(allStatusCodes.entries()).map(
+        ([statusCode, name]) => ({
+          statusCode,
+          name,
+        })
+      ),
     });
 
     const relativePath = path.relative(
       context.outputDir,
-      outputResponseValidationFile
+      outputPaths.responseValidationFile
     );
     context.writeFile(relativePath, content);
   }
