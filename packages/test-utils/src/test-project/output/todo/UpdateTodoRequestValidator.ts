@@ -12,12 +12,10 @@ import {
   type SafeRequestValidationResult,
   RequestValidationError,
 } from "@rexeus/typeweaver-core";
-import { RequestValidator } from "../lib/types";
+import { getOperationDefinition, RequestValidator } from "../lib/types";
 import type { IUpdateTodoRequest } from "./UpdateTodoRequest";
 
-const definition = spec.resources["todo"]!.operations.find(
-  (operation) => operation.operationId === "UpdateTodo",
-)!;
+const definition = getOperationDefinition(spec, "todo", "UpdateTodo");
 
 export class UpdateTodoRequestValidator extends RequestValidator {
   public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IUpdateTodoRequest> {

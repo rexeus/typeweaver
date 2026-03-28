@@ -12,12 +12,10 @@ import {
   type SafeRequestValidationResult,
   RequestValidationError,
 } from "@rexeus/typeweaver-core";
-import { RequestValidator } from "../lib/types";
+import { getOperationDefinition, RequestValidator } from "../lib/types";
 import type { IAccessTokenRequest } from "./AccessTokenRequest";
 
-const definition = spec.resources["auth"]!.operations.find(
-  (operation) => operation.operationId === "AccessToken",
-)!;
+const definition = getOperationDefinition(spec, "auth", "AccessToken");
 
 export class AccessTokenRequestValidator extends RequestValidator {
   public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IAccessTokenRequest> {

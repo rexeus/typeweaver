@@ -12,12 +12,10 @@ import {
   type SafeRequestValidationResult,
   RequestValidationError,
 } from "@rexeus/typeweaver-core";
-import { RequestValidator } from "../lib/types";
+import { getOperationDefinition, RequestValidator } from "../lib/types";
 import type { IRefreshTokenRequest } from "./RefreshTokenRequest";
 
-const definition = spec.resources["auth"]!.operations.find(
-  (operation) => operation.operationId === "RefreshToken",
-)!;
+const definition = getOperationDefinition(spec, "auth", "RefreshToken");
 
 export class RefreshTokenRequestValidator extends RequestValidator {
   public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IRefreshTokenRequest> {

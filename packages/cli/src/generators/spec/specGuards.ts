@@ -1,5 +1,11 @@
-import { HttpMethod } from "@rexeus/typeweaver-core";
+import { HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
 import type { SpecDefinition } from "@rexeus/typeweaver-core";
+
+const validHttpStatusCodes = new Set<HttpStatusCode>(
+  Object.values(HttpStatusCode).filter(
+    (statusCode): statusCode is HttpStatusCode => typeof statusCode === "number"
+  )
+);
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -15,7 +21,7 @@ const isResponseDefinition = (value: unknown): boolean => {
     value.name.length > 0 &&
     typeof value.description === "string" &&
     value.description.length > 0 &&
-    typeof value.statusCode === "number"
+    validHttpStatusCodes.has(value.statusCode as HttpStatusCode)
   );
 };
 

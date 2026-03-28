@@ -46,12 +46,9 @@ function writeRequestValidator(
   const content = context.renderTemplate(templateFilePath, {
     pascalCaseOperationId,
     operationId,
+    resourceName,
     specPath: context.getSpecImportPath({
       importerDir: outputPaths.outputDir,
-    }),
-    definitionAccessor: context.getOperationDefinitionAccessor({
-      resourceName,
-      operationId,
     }),
     corePath: context.coreDir,
     requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}`,

@@ -14,6 +14,7 @@ import {
   UnknownResponseError,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
+import { getOperationDefinition } from "../lib/types";
 import { UploadFileResponseValidator } from "./UploadFileResponseValidator";
 import type {
   IUploadFileRequest,
@@ -22,9 +23,7 @@ import type {
 } from "./UploadFileRequest";
 import type { UploadFileResponse } from "./UploadFileResponse";
 
-const definition = spec.resources["file"]!.operations.find(
-  (operation) => operation.operationId === "UploadFile",
-)!;
+const definition = getOperationDefinition(spec, "file", "UploadFile");
 const responseValidator = new UploadFileResponseValidator();
 
 export class UploadFileRequestCommand extends RequestCommand implements IUploadFileRequest {

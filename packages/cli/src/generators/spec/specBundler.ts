@@ -3,10 +3,40 @@ import os from "node:os";
 import path from "node:path";
 import { Rolldown } from "tsdown";
 
+const WINDOWS_ABSOLUTE_PATH_PATTERN = /^[A-Za-z]:[\\/]/;
+const WINDOWS_UNC_PATH_PATTERN = /^\\\\/;
+
 export type SpecBundlerConfig = {
   readonly inputFile: string;
   readonly specOutputDir: string;
 };
+
+export function createWrapperImportSpecifier(
+  wrapperFile: string,
+  inputFile: string
+): string {
+  const absoluteInputFile = resolveBundledInputFile(inputFile);
+  const useWindowsPathSemantics = usesWindowsPathSemantics(
+    wrapperFile,
+    absoluteInputFile
+  );
+  const pathModule = useWindowsPathSemantics ? path.win32 : path.posix;
+  const wrapperDir = useWindowsPathSemantics
+    ? pathModule.dirname(wrapperFile)
+    : resolveRealFilePath(pathModule.dirname(wrapperFile));
+  const resolvedInputFile = useWindowsPathSemantics
+    ? absoluteInputFile
+    : resolveRealFilePath(absoluteInputFile);
+  const relativeInputFile = pathModule
+    .relative(wrapperDir, resolvedInputFile)
+    .replaceAll(pathModule.sep, "/");
+
+  if (relativeInputFile.startsWith(".") || relativeInputFile.startsWith("..")) {
+    return relativeInputFile;
+  }
+
+  return `./${relativeInputFile}`;
+}
 
 export async function bundle(config: SpecBundlerConfig): Promise<string> {
   const tempDir = fs.mkdtempSync(
@@ -14,12 +44,15 @@ export async function bundle(config: SpecBundlerConfig): Promise<string> {
   );
   const wrapperFile = path.join(tempDir, "spec-entrypoint.ts");
   const bundledSpecFile = path.join(config.specOutputDir, "spec.js");
-  const normalizedInputFile = config.inputFile.replaceAll(path.sep, "/");
+  const wrapperImportSpecifier = createWrapperImportSpecifier(
+    wrapperFile,
+    config.inputFile
+  );
 
   fs.writeFileSync(
     wrapperFile,
     [
-      `import * as specModule from ${JSON.stringify(normalizedInputFile)};`,
+      `import * as specModule from ${JSON.stringify(wrapperImportSpecifier)};`,
       "const resolvedSpec =",
       '  Reflect.get(specModule, "default") ??',
       '  Reflect.get(specModule, "spec") ??',
@@ -59,4 +92,37 @@ export async function bundle(config: SpecBundlerConfig): Promise<string> {
   }
 
   return bundledSpecFile;
+}
+
+function resolveBundledInputFile(inputFile: string): string {
+  if (path.isAbsolute(inputFile)) {
+    return inputFile;
+  }
+
+  if (WINDOWS_ABSOLUTE_PATH_PATTERN.test(inputFile)) {
+    return path.win32.normalize(inputFile);
+  }
+
+  if (WINDOWS_UNC_PATH_PATTERN.test(inputFile)) {
+    return path.win32.normalize(inputFile);
+  }
+
+  return path.resolve(inputFile);
+}
+
+function usesWindowsPathSemantics(...filePaths: string[]): boolean {
+  return filePaths.some(filePath => {
+    return (
+      WINDOWS_ABSOLUTE_PATH_PATTERN.test(filePath) ||
+      WINDOWS_UNC_PATH_PATTERN.test(filePath)
+    );
+  });
+}
+
+function resolveRealFilePath(filePath: string): string {
+  if (!fs.existsSync(filePath)) {
+    return filePath;
+  }
+
+  return fs.realpathSync.native(filePath);
 }

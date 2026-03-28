@@ -14,6 +14,7 @@ import {
   UnknownResponseError,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
+import { getOperationDefinition } from "../lib/types";
 import { UpdateTodoResponseValidator } from "./UpdateTodoResponseValidator";
 import type {
   IUpdateTodoRequest,
@@ -23,9 +24,7 @@ import type {
 } from "./UpdateTodoRequest";
 import type { UpdateTodoResponse } from "./UpdateTodoResponse";
 
-const definition = spec.resources["todo"]!.operations.find(
-  (operation) => operation.operationId === "UpdateTodo",
-)!;
+const definition = getOperationDefinition(spec, "todo", "UpdateTodo");
 const responseValidator = new UpdateTodoResponseValidator();
 
 export class UpdateTodoRequestCommand extends RequestCommand implements IUpdateTodoRequest {

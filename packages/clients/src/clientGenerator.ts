@@ -92,12 +92,9 @@ function writeRequestCommand(
   const bodyTsType = request.body ? print(fromZod(request.body)) : undefined;
 
   const content = context.renderTemplate(templateFilePath, {
+    resourceName,
     specPath: context.getSpecImportPath({
       importerDir: outputPaths.outputDir,
-    }),
-    definitionAccessor: context.getOperationDefinitionAccessor({
-      resourceName,
-      operationId: operation.operationId,
     }),
     operationId: operation.operationId,
     pascalCaseOperationId,

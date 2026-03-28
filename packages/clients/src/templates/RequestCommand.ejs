@@ -9,6 +9,7 @@
 import spec from "<%= specPath %>";
 import { HttpMethod, type IHttpResponse, ResponseValidationError, UnknownResponseError } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
+import { getOperationDefinition } from "../lib/types";
 import { <%= pascalCaseOperationId %>ResponseValidator } from "<%= responseValidatorFile %>";
 import type {
     I<%= pascalCaseOperationId %>Request,
@@ -19,7 +20,7 @@ import type {
 } from "<%= requestFile %>";
 import type { <%= pascalCaseOperationId %>Response } from "<%= responseFile %>";
 
-const definition = <%- definitionAccessor %>;
+const definition = getOperationDefinition(spec, "<%= resourceName %>", "<%= operationId %>");
 const responseValidator = new <%= pascalCaseOperationId %>ResponseValidator();
 
 export class <%= pascalCaseOperationId %>RequestCommand extends RequestCommand implements I<%= pascalCaseOperationId %>Request {

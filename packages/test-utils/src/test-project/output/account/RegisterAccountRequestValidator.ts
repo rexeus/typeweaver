@@ -12,12 +12,10 @@ import {
   type SafeRequestValidationResult,
   RequestValidationError,
 } from "@rexeus/typeweaver-core";
-import { RequestValidator } from "../lib/types";
+import { getOperationDefinition, RequestValidator } from "../lib/types";
 import type { IRegisterAccountRequest } from "./RegisterAccountRequest";
 
-const definition = spec.resources["account"]!.operations.find(
-  (operation) => operation.operationId === "RegisterAccount",
-)!;
+const definition = getOperationDefinition(spec, "account", "RegisterAccount");
 
 export class RegisterAccountRequestValidator extends RequestValidator {
   public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IRegisterAccountRequest> {

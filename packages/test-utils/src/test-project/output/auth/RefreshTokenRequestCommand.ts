@@ -14,6 +14,7 @@ import {
   UnknownResponseError,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
+import { getOperationDefinition } from "../lib/types";
 import { RefreshTokenResponseValidator } from "./RefreshTokenResponseValidator";
 import type {
   IRefreshTokenRequest,
@@ -22,9 +23,7 @@ import type {
 } from "./RefreshTokenRequest";
 import type { RefreshTokenResponse } from "./RefreshTokenResponse";
 
-const definition = spec.resources["auth"]!.operations.find(
-  (operation) => operation.operationId === "RefreshToken",
-)!;
+const definition = getOperationDefinition(spec, "auth", "RefreshToken");
 const responseValidator = new RefreshTokenResponseValidator();
 
 export class RefreshTokenRequestCommand extends RequestCommand implements IRefreshTokenRequest {

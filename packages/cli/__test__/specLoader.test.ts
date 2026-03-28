@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { afterEach, describe, expect, test } from "vitest";
+import { createWrapperImportSpecifier } from "../src/generators/spec/specBundler.js";
 import { isSpecDefinition } from "../src/generators/spec/specGuards.js";
 import { loadSpec } from "../src/generators/specLoader.js";
 
@@ -48,6 +50,24 @@ describe("SpecLoader", () => {
         },
       })
     ).toBe(true);
+  });
+
+  test("creates a relative wrapper import specifier for posix paths", () => {
+    expect(
+      createWrapperImportSpecifier(
+        "/tmp/typeweaver/spec-entrypoint.ts",
+        "/tmp/typeweaver/spec.ts"
+      )
+    ).toBe("./spec.ts");
+  });
+
+  test("creates a relative wrapper import specifier for windows paths", () => {
+    expect(
+      createWrapperImportSpecifier(
+        "C:\\project\\.typeweaver\\spec-entrypoint.ts",
+        "C:\\project\\specs\\spec.ts"
+      )
+    ).toBe("../specs/spec.ts");
   });
 
   test("rejects resources without an operations array", () => {
@@ -125,6 +145,60 @@ describe("SpecLoader", () => {
         },
       })
     ).toBe(false);
+  });
+
+  test("rejects responses with invalid http status codes", () => {
+    expect(
+      isSpecDefinition({
+        resources: {
+          todos: {
+            operations: [
+              {
+                operationId: "listTodos",
+                method: "GET",
+                path: "/todos",
+                summary: "List todos",
+                request: {},
+                responses: [
+                  {
+                    name: "TodoResponse",
+                    statusCode: 299,
+                    description: "Todo response",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      })
+    ).toBe(false);
+  });
+
+  test("accepts responses with enum-backed http status codes", () => {
+    expect(
+      isSpecDefinition({
+        resources: {
+          todos: {
+            operations: [
+              {
+                operationId: "listTodos",
+                method: "GET",
+                path: "/todos",
+                summary: "List todos",
+                request: {},
+                responses: [
+                  {
+                    name: "TodoResponse",
+                    statusCode: HttpStatusCode.OK,
+                    description: "Todo response",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      })
+    ).toBe(true);
   });
 
   test("rejects null input", () => {
@@ -247,7 +321,7 @@ describe("SpecLoader", () => {
     );
 
     const loadedSpec = await loadSpec({
-      inputFile: specFile,
+      inputFile: path.relative(process.cwd(), specFile),
       specOutputDir: outputDir,
     });
 

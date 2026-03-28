@@ -14,6 +14,7 @@ import {
   UnknownResponseError,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
+import { getOperationDefinition } from "../lib/types";
 import { ListSubTodosResponseValidator } from "./ListSubTodosResponseValidator";
 import type {
   IListSubTodosRequest,
@@ -23,9 +24,7 @@ import type {
 } from "./ListSubTodosRequest";
 import type { ListSubTodosResponse } from "./ListSubTodosResponse";
 
-const definition = spec.resources["todo"]!.operations.find(
-  (operation) => operation.operationId === "ListSubTodos",
-)!;
+const definition = getOperationDefinition(spec, "todo", "ListSubTodos");
 const responseValidator = new ListSubTodosResponseValidator();
 
 export class ListSubTodosRequestCommand extends RequestCommand implements IListSubTodosRequest {

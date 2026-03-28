@@ -14,6 +14,7 @@ import {
   UnknownResponseError,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
+import { getOperationDefinition } from "../lib/types";
 import { GetFileMetadataResponseValidator } from "./GetFileMetadataResponseValidator";
 import type {
   IGetFileMetadataRequest,
@@ -22,9 +23,7 @@ import type {
 } from "./GetFileMetadataRequest";
 import type { GetFileMetadataResponse } from "./GetFileMetadataResponse";
 
-const definition = spec.resources["file"]!.operations.find(
-  (operation) => operation.operationId === "GetFileMetadata",
-)!;
+const definition = getOperationDefinition(spec, "file", "GetFileMetadata");
 const responseValidator = new GetFileMetadataResponseValidator();
 
 export class GetFileMetadataRequestCommand

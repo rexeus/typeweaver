@@ -972,7 +972,7 @@ var spec_default = defineSpec({
   },
 });
 //#endregion
-//#region ../../private/tmp/typeweaver-spec-loader-R6CSfZ/spec-entrypoint.ts
+//#region ../../private/tmp/typeweaver-spec-loader-WH26jw/spec-entrypoint.ts
 const resolvedSpec =
   Reflect.get(spec_exports, "default") ?? Reflect.get(spec_exports, "spec") ?? spec_exports;
 const spec = resolvedSpec;

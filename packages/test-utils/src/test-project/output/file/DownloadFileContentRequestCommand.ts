@@ -14,6 +14,7 @@ import {
   UnknownResponseError,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
+import { getOperationDefinition } from "../lib/types";
 import { DownloadFileContentResponseValidator } from "./DownloadFileContentResponseValidator";
 import type {
   IDownloadFileContentRequest,
@@ -22,9 +23,7 @@ import type {
 } from "./DownloadFileContentRequest";
 import type { DownloadFileContentResponse } from "./DownloadFileContentResponse";
 
-const definition = spec.resources["file"]!.operations.find(
-  (operation) => operation.operationId === "DownloadFileContent",
-)!;
+const definition = getOperationDefinition(spec, "file", "DownloadFileContent");
 const responseValidator = new DownloadFileContentResponseValidator();
 
 export class DownloadFileContentRequestCommand

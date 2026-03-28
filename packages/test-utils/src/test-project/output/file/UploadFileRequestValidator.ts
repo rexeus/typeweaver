@@ -12,12 +12,10 @@ import {
   type SafeRequestValidationResult,
   RequestValidationError,
 } from "@rexeus/typeweaver-core";
-import { RequestValidator } from "../lib/types";
+import { getOperationDefinition, RequestValidator } from "../lib/types";
 import type { IUploadFileRequest } from "./UploadFileRequest";
 
-const definition = spec.resources["file"]!.operations.find(
-  (operation) => operation.operationId === "UploadFile",
-)!;
+const definition = getOperationDefinition(spec, "file", "UploadFile");
 
 export class UploadFileRequestValidator extends RequestValidator {
   public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IUploadFileRequest> {

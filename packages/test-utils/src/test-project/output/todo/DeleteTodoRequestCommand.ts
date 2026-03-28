@@ -14,6 +14,7 @@ import {
   UnknownResponseError,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
+import { getOperationDefinition } from "../lib/types";
 import { DeleteTodoResponseValidator } from "./DeleteTodoResponseValidator";
 import type {
   IDeleteTodoRequest,
@@ -22,9 +23,7 @@ import type {
 } from "./DeleteTodoRequest";
 import type { DeleteTodoResponse } from "./DeleteTodoResponse";
 
-const definition = spec.resources["todo"]!.operations.find(
-  (operation) => operation.operationId === "DeleteTodo",
-)!;
+const definition = getOperationDefinition(spec, "todo", "DeleteTodo");
 const responseValidator = new DeleteTodoResponseValidator();
 
 export class DeleteTodoRequestCommand extends RequestCommand implements IDeleteTodoRequest {

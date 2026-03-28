@@ -12,6 +12,7 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 type ResponseTemplateData = {
   readonly name: string;
+  readonly definitionVariableName: string;
   readonly statusCode: HttpStatusCode;
   readonly hasHeader: boolean;
   readonly hasBody: boolean;
@@ -56,6 +57,7 @@ function writeResponseValidator(
     allStatusCodes.set(response.statusCode, response.statusCodeName);
 
     const templateData: ResponseTemplateData = {
+      definitionVariableName: `${Case.camel(response.name)}Definition`,
       name: response.name,
       hasBody: response.body !== undefined,
       hasHeader: response.header !== undefined,
@@ -74,16 +76,13 @@ function writeResponseValidator(
   });
 
   const content = context.renderTemplate(templateFilePath, {
+    resourceName: resource.name,
     operationId: operation.operationId,
     pascalCaseOperationId,
     coreDir: context.coreDir,
     responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}`,
     specPath: context.getSpecImportPath({
       importerDir: outputPaths.outputDir,
-    }),
-    definitionAccessor: context.getOperationDefinitionAccessor({
-      resourceName: resource.name,
-      operationId: operation.operationId,
     }),
     sharedResponses,
     ownResponses,

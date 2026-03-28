@@ -14,6 +14,7 @@ import {
   UnknownResponseError,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
+import { getOperationDefinition } from "../lib/types";
 import { PutTodoResponseValidator } from "./PutTodoResponseValidator";
 import type {
   IPutTodoRequest,
@@ -23,9 +24,7 @@ import type {
 } from "./PutTodoRequest";
 import type { PutTodoResponse } from "./PutTodoResponse";
 
-const definition = spec.resources["todo"]!.operations.find(
-  (operation) => operation.operationId === "PutTodo",
-)!;
+const definition = getOperationDefinition(spec, "todo", "PutTodo");
 const responseValidator = new PutTodoResponseValidator();
 
 export class PutTodoRequestCommand extends RequestCommand implements IPutTodoRequest {

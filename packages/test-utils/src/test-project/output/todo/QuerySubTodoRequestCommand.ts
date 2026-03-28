@@ -14,6 +14,7 @@ import {
   UnknownResponseError,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
+import { getOperationDefinition } from "../lib/types";
 import { QuerySubTodoResponseValidator } from "./QuerySubTodoResponseValidator";
 import type {
   IQuerySubTodoRequest,
@@ -24,9 +25,7 @@ import type {
 } from "./QuerySubTodoRequest";
 import type { QuerySubTodoResponse } from "./QuerySubTodoResponse";
 
-const definition = spec.resources["todo"]!.operations.find(
-  (operation) => operation.operationId === "QuerySubTodo",
-)!;
+const definition = getOperationDefinition(spec, "todo", "QuerySubTodo");
 const responseValidator = new QuerySubTodoResponseValidator();
 
 export class QuerySubTodoRequestCommand extends RequestCommand implements IQuerySubTodoRequest {

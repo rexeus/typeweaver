@@ -128,8 +128,11 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
       },
       getOperationDefinitionAccessor: config => {
         return (
-          `spec.resources[${JSON.stringify(config.resourceName)}]!` +
-          `.operations.find(operation => operation.operationId === ${JSON.stringify(config.operationId)})!`
+          `getOperationDefinition(` +
+          `spec, ` +
+          `${JSON.stringify(config.resourceName)}, ` +
+          `${JSON.stringify(config.operationId)}` +
+          `)`
         );
       },
       getOperationOutputPaths,

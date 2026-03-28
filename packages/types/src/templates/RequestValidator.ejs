@@ -12,10 +12,10 @@ import {
   type SafeRequestValidationResult,
   RequestValidationError
 } from "@rexeus/typeweaver-core";
-import { RequestValidator } from "../lib/types";
+import { getOperationDefinition, RequestValidator } from "../lib/types";
 import type { I<%= pascalCaseOperationId %>Request } from "<%= requestFile %>";
 
-const definition = <%- definitionAccessor %>;
+const definition = getOperationDefinition(spec, "<%= resourceName %>", "<%= operationId %>");
 
 export class <%= pascalCaseOperationId %>RequestValidator extends RequestValidator {
     public safeValidate(request: IHttpRequest): SafeRequestValidationResult<I<%= pascalCaseOperationId %>Request> {

@@ -14,6 +14,7 @@ import {
   UnknownResponseError,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
+import { getOperationDefinition } from "../lib/types";
 import { AccessTokenResponseValidator } from "./AccessTokenResponseValidator";
 import type {
   IAccessTokenRequest,
@@ -22,9 +23,7 @@ import type {
 } from "./AccessTokenRequest";
 import type { AccessTokenResponse } from "./AccessTokenResponse";
 
-const definition = spec.resources["auth"]!.operations.find(
-  (operation) => operation.operationId === "AccessToken",
-)!;
+const definition = getOperationDefinition(spec, "auth", "AccessToken");
 const responseValidator = new AccessTokenResponseValidator();
 
 export class AccessTokenRequestCommand extends RequestCommand implements IAccessTokenRequest {

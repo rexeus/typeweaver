@@ -14,6 +14,7 @@ import {
   UnknownResponseError,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
+import { getOperationDefinition } from "../lib/types";
 import { OptionsTodoResponseValidator } from "./OptionsTodoResponseValidator";
 import type {
   IOptionsTodoRequest,
@@ -22,9 +23,7 @@ import type {
 } from "./OptionsTodoRequest";
 import type { OptionsTodoResponse } from "./OptionsTodoResponse";
 
-const definition = spec.resources["todo"]!.operations.find(
-  (operation) => operation.operationId === "OptionsTodo",
-)!;
+const definition = getOperationDefinition(spec, "todo", "OptionsTodo");
 const responseValidator = new OptionsTodoResponseValidator();
 
 export class OptionsTodoRequestCommand extends RequestCommand implements IOptionsTodoRequest {

@@ -14,6 +14,7 @@ import {
   UnknownResponseError,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
+import { getOperationDefinition } from "../lib/types";
 import { HeadTodoResponseValidator } from "./HeadTodoResponseValidator";
 import type {
   IHeadTodoRequest,
@@ -22,9 +23,7 @@ import type {
 } from "./HeadTodoRequest";
 import type { HeadTodoResponse } from "./HeadTodoResponse";
 
-const definition = spec.resources["todo"]!.operations.find(
-  (operation) => operation.operationId === "HeadTodo",
-)!;
+const definition = getOperationDefinition(spec, "todo", "HeadTodo");
 const responseValidator = new HeadTodoResponseValidator();
 
 export class HeadTodoRequestCommand extends RequestCommand implements IHeadTodoRequest {

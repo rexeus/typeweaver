@@ -14,6 +14,7 @@ import {
   UnknownResponseError,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
+import { getOperationDefinition } from "../lib/types";
 import { RegisterAccountResponseValidator } from "./RegisterAccountResponseValidator";
 import type {
   IRegisterAccountRequest,
@@ -22,9 +23,7 @@ import type {
 } from "./RegisterAccountRequest";
 import type { RegisterAccountResponse } from "./RegisterAccountResponse";
 
-const definition = spec.resources["account"]!.operations.find(
-  (operation) => operation.operationId === "RegisterAccount",
-)!;
+const definition = getOperationDefinition(spec, "account", "RegisterAccount");
 const responseValidator = new RegisterAccountResponseValidator();
 
 export class RegisterAccountRequestCommand

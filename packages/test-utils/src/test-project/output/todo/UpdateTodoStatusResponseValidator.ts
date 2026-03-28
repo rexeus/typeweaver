@@ -7,15 +7,59 @@
  */
 
 import spec from "../spec/spec";
-import { type ResponseEntry, ResponseValidator } from "../lib/types";
+import {
+  getOperationDefinition,
+  getResponseDefinition,
+  type ResponseEntry,
+  ResponseValidator,
+} from "../lib/types";
 import type { UpdateTodoStatusResponse } from "./UpdateTodoStatusResponse";
 
-const definition = spec.resources["todo"]!.operations.find(
-  (operation) => operation.operationId === "UpdateTodoStatus",
-)!;
-const responseDefinitions = new Map(
-  definition.responses.map((response) => [response.name, response] as const),
+const definition = getOperationDefinition(spec, "todo", "UpdateTodoStatus");
+
+const updateTodoStatusSuccessDefinition = getResponseDefinition(
+  definition.responses,
+  "UpdateTodoStatusSuccess",
 );
+
+const todoNotFoundErrorDefinition = getResponseDefinition(
+  definition.responses,
+  "TodoNotFoundError",
+);
+
+const todoStatusTransitionInvalidErrorDefinition = getResponseDefinition(
+  definition.responses,
+  "TodoStatusTransitionInvalidError",
+);
+
+const todoNotChangeableErrorDefinition = getResponseDefinition(
+  definition.responses,
+  "TodoNotChangeableError",
+);
+
+const forbiddenErrorDefinition = getResponseDefinition(definition.responses, "ForbiddenError");
+
+const internalServerErrorDefinition = getResponseDefinition(
+  definition.responses,
+  "InternalServerError",
+);
+
+const tooManyRequestsErrorDefinition = getResponseDefinition(
+  definition.responses,
+  "TooManyRequestsError",
+);
+
+const unauthorizedErrorDefinition = getResponseDefinition(
+  definition.responses,
+  "UnauthorizedError",
+);
+
+const unsupportedMediaTypeErrorDefinition = getResponseDefinition(
+  definition.responses,
+  "UnsupportedMediaTypeError",
+);
+
+const validationErrorDefinition = getResponseDefinition(definition.responses, "ValidationError");
 
 export class UpdateTodoStatusResponseValidator extends ResponseValidator<UpdateTodoStatusResponse> {
   protected override readonly expectedStatusCodes = [200, 400, 401, 403, 404, 409, 415, 429, 500];
@@ -24,71 +68,71 @@ export class UpdateTodoStatusResponseValidator extends ResponseValidator<UpdateT
     {
       name: "UpdateTodoStatusSuccess",
       statusCode: 200,
-      headerSchema: responseDefinitions.get("UpdateTodoStatusSuccess")?.header,
-      bodySchema: responseDefinitions.get("UpdateTodoStatusSuccess")?.body,
+      headerSchema: updateTodoStatusSuccessDefinition.header,
+      bodySchema: updateTodoStatusSuccessDefinition.body,
     },
 
     {
       name: "TodoNotFoundError",
       statusCode: 404,
-      headerSchema: responseDefinitions.get("TodoNotFoundError")?.header,
-      bodySchema: responseDefinitions.get("TodoNotFoundError")?.body,
+      headerSchema: todoNotFoundErrorDefinition.header,
+      bodySchema: todoNotFoundErrorDefinition.body,
     },
 
     {
       name: "TodoStatusTransitionInvalidError",
       statusCode: 409,
-      headerSchema: responseDefinitions.get("TodoStatusTransitionInvalidError")?.header,
-      bodySchema: responseDefinitions.get("TodoStatusTransitionInvalidError")?.body,
+      headerSchema: todoStatusTransitionInvalidErrorDefinition.header,
+      bodySchema: todoStatusTransitionInvalidErrorDefinition.body,
     },
 
     {
       name: "TodoNotChangeableError",
       statusCode: 409,
-      headerSchema: responseDefinitions.get("TodoNotChangeableError")?.header,
-      bodySchema: responseDefinitions.get("TodoNotChangeableError")?.body,
+      headerSchema: todoNotChangeableErrorDefinition.header,
+      bodySchema: todoNotChangeableErrorDefinition.body,
     },
 
     {
       name: "ForbiddenError",
       statusCode: 403,
-      headerSchema: responseDefinitions.get("ForbiddenError")?.header,
-      bodySchema: responseDefinitions.get("ForbiddenError")?.body,
+      headerSchema: forbiddenErrorDefinition.header,
+      bodySchema: forbiddenErrorDefinition.body,
     },
 
     {
       name: "InternalServerError",
       statusCode: 500,
-      headerSchema: responseDefinitions.get("InternalServerError")?.header,
-      bodySchema: responseDefinitions.get("InternalServerError")?.body,
+      headerSchema: internalServerErrorDefinition.header,
+      bodySchema: internalServerErrorDefinition.body,
     },
 
     {
       name: "TooManyRequestsError",
       statusCode: 429,
-      headerSchema: responseDefinitions.get("TooManyRequestsError")?.header,
-      bodySchema: responseDefinitions.get("TooManyRequestsError")?.body,
+      headerSchema: tooManyRequestsErrorDefinition.header,
+      bodySchema: tooManyRequestsErrorDefinition.body,
     },
 
     {
       name: "UnauthorizedError",
       statusCode: 401,
-      headerSchema: responseDefinitions.get("UnauthorizedError")?.header,
-      bodySchema: responseDefinitions.get("UnauthorizedError")?.body,
+      headerSchema: unauthorizedErrorDefinition.header,
+      bodySchema: unauthorizedErrorDefinition.body,
     },
 
     {
       name: "UnsupportedMediaTypeError",
       statusCode: 415,
-      headerSchema: responseDefinitions.get("UnsupportedMediaTypeError")?.header,
-      bodySchema: responseDefinitions.get("UnsupportedMediaTypeError")?.body,
+      headerSchema: unsupportedMediaTypeErrorDefinition.header,
+      bodySchema: unsupportedMediaTypeErrorDefinition.body,
     },
 
     {
       name: "ValidationError",
       statusCode: 400,
-      headerSchema: responseDefinitions.get("ValidationError")?.header,
-      bodySchema: responseDefinitions.get("ValidationError")?.body,
+      headerSchema: validationErrorDefinition.header,
+      bodySchema: validationErrorDefinition.body,
     },
   ];
 }

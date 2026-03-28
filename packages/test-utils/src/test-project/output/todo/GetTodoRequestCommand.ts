@@ -14,6 +14,7 @@ import {
   UnknownResponseError,
 } from "@rexeus/typeweaver-core";
 import { RequestCommand } from "../lib/clients";
+import { getOperationDefinition } from "../lib/types";
 import { GetTodoResponseValidator } from "./GetTodoResponseValidator";
 import type {
   IGetTodoRequest,
@@ -22,9 +23,7 @@ import type {
 } from "./GetTodoRequest";
 import type { GetTodoResponse } from "./GetTodoResponse";
 
-const definition = spec.resources["todo"]!.operations.find(
-  (operation) => operation.operationId === "GetTodo",
-)!;
+const definition = getOperationDefinition(spec, "todo", "GetTodo");
 const responseValidator = new GetTodoResponseValidator();
 
 export class GetTodoRequestCommand extends RequestCommand implements IGetTodoRequest {
