@@ -28,13 +28,10 @@ export type ISubTodoNotFoundErrorResponseBody = {
 
 export type ISubTodoNotFoundErrorResponse = ITypedHttpResponse<
   "SubTodoNotFoundError",
+  HttpStatusCode.NOT_FOUND,
   ISubTodoNotFoundErrorResponseHeader,
   ISubTodoNotFoundErrorResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.NOT_FOUND;
-  readonly header: ISubTodoNotFoundErrorResponseHeader;
-  readonly body: ISubTodoNotFoundErrorResponseBody;
-};
+>;
 
 export const createSubTodoNotFoundErrorResponse = (
   input: Omit<ISubTodoNotFoundErrorResponse, "type" | "statusCode">,

@@ -22,6 +22,8 @@ import type {
 } from "./GetFileMetadataRequest";
 import type { GetFileMetadataResponse } from "./GetFileMetadataResponse";
 
+const responseValidator = new GetFileMetadataResponseValidator();
+
 export class GetFileMetadataRequestCommand
   extends RequestCommand
   implements IGetFileMetadataRequest
@@ -35,21 +37,17 @@ export class GetFileMetadataRequestCommand
   declare public readonly query: undefined;
   declare public readonly body: undefined;
 
-  private readonly responseValidator: GetFileMetadataResponseValidator;
-
   public constructor(input: Omit<IGetFileMetadataRequest, "method" | "path">) {
     super();
 
     this.header = input.header;
 
     this.param = input.param;
-
-    this.responseValidator = new GetFileMetadataResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): GetFileMetadataResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

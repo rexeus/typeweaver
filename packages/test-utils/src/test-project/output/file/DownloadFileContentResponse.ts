@@ -29,13 +29,10 @@ export type IDownloadFileContentSuccessResponseBody = any;
 
 export type IDownloadFileContentSuccessResponse = ITypedHttpResponse<
   "DownloadFileContentSuccess",
+  HttpStatusCode.OK,
   IDownloadFileContentSuccessResponseHeader,
   IDownloadFileContentSuccessResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.OK;
-  readonly header: IDownloadFileContentSuccessResponseHeader;
-  readonly body: IDownloadFileContentSuccessResponseBody;
-};
+>;
 
 export const createDownloadFileContentSuccessResponse = (
   input: Omit<IDownloadFileContentSuccessResponse, "type" | "statusCode">,

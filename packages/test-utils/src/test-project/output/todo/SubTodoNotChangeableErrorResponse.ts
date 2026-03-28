@@ -32,13 +32,10 @@ export type ISubTodoNotChangeableErrorResponseBody = {
 
 export type ISubTodoNotChangeableErrorResponse = ITypedHttpResponse<
   "SubTodoNotChangeableError",
+  HttpStatusCode.CONFLICT,
   ISubTodoNotChangeableErrorResponseHeader,
   ISubTodoNotChangeableErrorResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.CONFLICT;
-  readonly header: ISubTodoNotChangeableErrorResponseHeader;
-  readonly body: ISubTodoNotChangeableErrorResponseBody;
-};
+>;
 
 export const createSubTodoNotChangeableErrorResponse = (
   input: Omit<ISubTodoNotChangeableErrorResponse, "type" | "statusCode">,

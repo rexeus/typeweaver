@@ -22,6 +22,8 @@ import type {
 } from "./CreateTodoRequest";
 import type { CreateTodoResponse } from "./CreateTodoResponse";
 
+const responseValidator = new CreateTodoResponseValidator();
+
 export class CreateTodoRequestCommand extends RequestCommand implements ICreateTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.POST;
@@ -32,21 +34,17 @@ export class CreateTodoRequestCommand extends RequestCommand implements ICreateT
   declare public readonly query: undefined;
   public override readonly body: ICreateTodoRequestBody;
 
-  private readonly responseValidator: CreateTodoResponseValidator;
-
   public constructor(input: Omit<ICreateTodoRequest, "method" | "path">) {
     super();
 
     this.header = input.header;
 
     this.body = input.body;
-
-    this.responseValidator = new CreateTodoResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): CreateTodoResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

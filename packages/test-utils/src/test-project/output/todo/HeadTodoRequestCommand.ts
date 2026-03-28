@@ -22,6 +22,8 @@ import type {
 } from "./HeadTodoRequest";
 import type { HeadTodoResponse } from "./HeadTodoResponse";
 
+const responseValidator = new HeadTodoResponseValidator();
+
 export class HeadTodoRequestCommand extends RequestCommand implements IHeadTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.HEAD;
@@ -32,21 +34,17 @@ export class HeadTodoRequestCommand extends RequestCommand implements IHeadTodoR
   declare public readonly query: undefined;
   declare public readonly body: undefined;
 
-  private readonly responseValidator: HeadTodoResponseValidator;
-
   public constructor(input: Omit<IHeadTodoRequest, "method" | "path">) {
     super();
 
     this.header = input.header;
 
     this.param = input.param;
-
-    this.responseValidator = new HeadTodoResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): HeadTodoResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

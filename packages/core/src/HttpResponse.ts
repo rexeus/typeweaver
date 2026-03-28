@@ -13,10 +13,14 @@ export type IHttpResponse<
 
 export type ITypedHttpResponse<
   TypeName extends string = string,
-  Header extends IHttpHeader = IHttpHeader,
-  Body extends IHttpBody = IHttpBody,
-> = IHttpResponse<Header, Body> & {
+  StatusCode extends HttpStatusCode = HttpStatusCode,
+  Header extends IHttpHeader | undefined = IHttpHeader | undefined,
+  Body extends IHttpBody | undefined = IHttpBody | undefined,
+> = {
   readonly type: TypeName;
+  readonly statusCode: StatusCode;
+  readonly header: Header;
+  readonly body: Body;
 };
 
 export const isTypedHttpResponse = (

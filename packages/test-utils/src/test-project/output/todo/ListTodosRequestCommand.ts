@@ -22,6 +22,8 @@ import type {
 } from "./ListTodosRequest";
 import type { ListTodosResponse } from "./ListTodosResponse";
 
+const responseValidator = new ListTodosResponseValidator();
+
 export class ListTodosRequestCommand extends RequestCommand implements IListTodosRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.GET;
@@ -32,21 +34,17 @@ export class ListTodosRequestCommand extends RequestCommand implements IListTodo
   public override readonly query: IListTodosRequestQuery;
   declare public readonly body: undefined;
 
-  private readonly responseValidator: ListTodosResponseValidator;
-
   public constructor(input: Omit<IListTodosRequest, "method" | "path">) {
     super();
 
     this.header = input.header;
 
     this.query = input.query;
-
-    this.responseValidator = new ListTodosResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): ListTodosResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

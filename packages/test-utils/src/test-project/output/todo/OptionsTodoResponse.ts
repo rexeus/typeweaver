@@ -33,12 +33,10 @@ export type IOptionsTodoSuccessResponseHeader = {
 
 export type IOptionsTodoSuccessResponse = ITypedHttpResponse<
   "OptionsTodoSuccess",
+  HttpStatusCode.OK,
   IOptionsTodoSuccessResponseHeader,
   undefined
-> & {
-  readonly statusCode: HttpStatusCode.OK;
-  readonly header: IOptionsTodoSuccessResponseHeader;
-};
+>;
 
 export const createOptionsTodoSuccessResponse = (
   input: Omit<IOptionsTodoSuccessResponse, "type" | "statusCode">,

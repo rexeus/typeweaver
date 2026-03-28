@@ -34,13 +34,10 @@ export type IAccessTokenSuccessResponseBody = {
 
 export type IAccessTokenSuccessResponse = ITypedHttpResponse<
   "AccessTokenSuccess",
+  HttpStatusCode.OK,
   IAccessTokenSuccessResponseHeader,
   IAccessTokenSuccessResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.OK;
-  readonly header: IAccessTokenSuccessResponseHeader;
-  readonly body: IAccessTokenSuccessResponseBody;
-};
+>;
 
 export const createAccessTokenSuccessResponse = (
   input: Omit<IAccessTokenSuccessResponse, "type" | "statusCode">,

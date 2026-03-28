@@ -22,6 +22,8 @@ import type {
 } from "./OptionsTodoRequest";
 import type { OptionsTodoResponse } from "./OptionsTodoResponse";
 
+const responseValidator = new OptionsTodoResponseValidator();
+
 export class OptionsTodoRequestCommand extends RequestCommand implements IOptionsTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.OPTIONS;
@@ -32,21 +34,17 @@ export class OptionsTodoRequestCommand extends RequestCommand implements IOption
   declare public readonly query: undefined;
   declare public readonly body: undefined;
 
-  private readonly responseValidator: OptionsTodoResponseValidator;
-
   public constructor(input: Omit<IOptionsTodoRequest, "method" | "path">) {
     super();
 
     this.header = input.header;
 
     this.param = input.param;
-
-    this.responseValidator = new OptionsTodoResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): OptionsTodoResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

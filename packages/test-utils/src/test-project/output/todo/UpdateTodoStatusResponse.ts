@@ -51,13 +51,10 @@ export type IUpdateTodoStatusSuccessResponseBody = {
 
 export type IUpdateTodoStatusSuccessResponse = ITypedHttpResponse<
   "UpdateTodoStatusSuccess",
+  HttpStatusCode.OK,
   IUpdateTodoStatusSuccessResponseHeader,
   IUpdateTodoStatusSuccessResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.OK;
-  readonly header: IUpdateTodoStatusSuccessResponseHeader;
-  readonly body: IUpdateTodoStatusSuccessResponseBody;
-};
+>;
 
 export const createUpdateTodoStatusSuccessResponse = (
   input: Omit<IUpdateTodoStatusSuccessResponse, "type" | "statusCode">,

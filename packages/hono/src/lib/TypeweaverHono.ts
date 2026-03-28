@@ -314,7 +314,10 @@ export abstract class TypeweaverHono<
     try {
       return await handlerFn();
     } catch (error) {
-      console.error("TypeweaverHono: error handler threw while handling error", error);
+      console.error(
+        "TypeweaverHono: error handler threw while handling error",
+        error
+      );
       return null;
     }
   }

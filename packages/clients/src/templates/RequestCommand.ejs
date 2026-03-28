@@ -19,6 +19,8 @@ import type {
 } from "<%= requestFile %>";
 import type { <%= pascalCaseOperationId %>Response } from "<%= responseFile %>";
 
+const responseValidator = new <%= pascalCaseOperationId %>ResponseValidator();
+
 export class <%= pascalCaseOperationId %>RequestCommand extends RequestCommand implements I<%= pascalCaseOperationId %>Request {
     public override readonly operationId = definition.operationId;
     public override readonly method = definition.method as HttpMethod.<%= method %>;
@@ -28,8 +30,6 @@ export class <%= pascalCaseOperationId %>RequestCommand extends RequestCommand i
     public  <%= paramTsType ? `override` : `declare` %> readonly param: <%= paramTsType ? `I${pascalCaseOperationId}RequestParam` : `undefined` %>;
     public <%= queryTsType ? `override` : `declare` %> readonly query: <%= queryTsType ? `I${pascalCaseOperationId}RequestQuery` : `undefined` %>;
     public <%= bodyTsType ? `override` : `declare` %> readonly body: <%= bodyTsType ? `I${pascalCaseOperationId}RequestBody` : `undefined` %>;
-
-    private readonly responseValidator: <%= pascalCaseOperationId %>ResponseValidator;
 
     public constructor(input: Omit<I<%= pascalCaseOperationId %>Request, "method" | "path">) {
         super();
@@ -49,13 +49,11 @@ export class <%= pascalCaseOperationId %>RequestCommand extends RequestCommand i
         <% if (bodyTsType) { %>
         this.body = input.body;
         <% } %>
-
-        this.responseValidator = new <%= pascalCaseOperationId %>ResponseValidator();
     }
 
     public processResponse(response: IHttpResponse): <%= pascalCaseOperationId %>Response {
         try {
-            return this.responseValidator.validate(response);
+            return responseValidator.validate(response);
         } catch (error) {
             if (error instanceof ResponseValidationError) {
                 throw new UnknownResponseError(

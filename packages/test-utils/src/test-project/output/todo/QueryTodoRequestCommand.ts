@@ -23,6 +23,8 @@ import type {
 } from "./QueryTodoRequest";
 import type { QueryTodoResponse } from "./QueryTodoResponse";
 
+const responseValidator = new QueryTodoResponseValidator();
+
 export class QueryTodoRequestCommand extends RequestCommand implements IQueryTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.POST;
@@ -33,8 +35,6 @@ export class QueryTodoRequestCommand extends RequestCommand implements IQueryTod
   public override readonly query: IQueryTodoRequestQuery;
   public override readonly body: IQueryTodoRequestBody;
 
-  private readonly responseValidator: QueryTodoResponseValidator;
-
   public constructor(input: Omit<IQueryTodoRequest, "method" | "path">) {
     super();
 
@@ -43,13 +43,11 @@ export class QueryTodoRequestCommand extends RequestCommand implements IQueryTod
     this.query = input.query;
 
     this.body = input.body;
-
-    this.responseValidator = new QueryTodoResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): QueryTodoResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

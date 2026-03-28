@@ -48,13 +48,10 @@ export type IListTodosSuccessResponseBody = {
 
 export type IListTodosSuccessResponse = ITypedHttpResponse<
   "ListTodosSuccess",
+  HttpStatusCode.OK,
   IListTodosSuccessResponseHeader,
   IListTodosSuccessResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.OK;
-  readonly header: IListTodosSuccessResponseHeader;
-  readonly body: IListTodosSuccessResponseBody;
-};
+>;
 
 export const createListTodosSuccessResponse = (
   input: Omit<IListTodosSuccessResponse, "type" | "statusCode">,

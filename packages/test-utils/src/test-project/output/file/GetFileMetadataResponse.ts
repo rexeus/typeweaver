@@ -37,13 +37,10 @@ export type IGetFileMetadataSuccessResponseBody = {
 
 export type IGetFileMetadataSuccessResponse = ITypedHttpResponse<
   "GetFileMetadataSuccess",
+  HttpStatusCode.OK,
   IGetFileMetadataSuccessResponseHeader,
   IGetFileMetadataSuccessResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.OK;
-  readonly header: IGetFileMetadataSuccessResponseHeader;
-  readonly body: IGetFileMetadataSuccessResponseBody;
-};
+>;
 
 export const createGetFileMetadataSuccessResponse = (
   input: Omit<IGetFileMetadataSuccessResponse, "type" | "statusCode">,

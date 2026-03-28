@@ -26,13 +26,10 @@ import type { I<%= entityResponse.name %>Response } from "<%= entityResponse.pat
 
     export type I<%= ownResponse.name %>Response = ITypedHttpResponse<
             "<%= ownResponse.name %>",
+            HttpStatusCode.<%= ownResponse.statusCodeKey %>,
             <%= ownResponse.header ? `I${ownResponse.name}ResponseHeader` : 'undefined' %>,
             <%= ownResponse.body ? `I${ownResponse.name}ResponseBody` : 'undefined' %>
-            > & {
-            readonly statusCode: HttpStatusCode.<%= ownResponse.statusCodeKey %>
-            <%= ownResponse.header ? `readonly header: I${ownResponse.name}ResponseHeader;` : "" %>
-            <%= ownResponse.body ? `readonly body: I${ownResponse.name}ResponseBody;` : "" %>
-            };
+            >;
 
 <% if (ownResponse.header || ownResponse.body) { %>
     export const create<%= ownResponse.name %>Response = (input: Omit<I<%= ownResponse.name %>Response, "type" | "statusCode">): I<%= ownResponse.name %>Response => ({

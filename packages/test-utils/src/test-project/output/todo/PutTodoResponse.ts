@@ -49,13 +49,10 @@ export type IPutTodoSuccessResponseBody = {
 
 export type IPutTodoSuccessResponse = ITypedHttpResponse<
   "PutTodoSuccess",
+  HttpStatusCode.OK,
   IPutTodoSuccessResponseHeader,
   IPutTodoSuccessResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.OK;
-  readonly header: IPutTodoSuccessResponseHeader;
-  readonly body: IPutTodoSuccessResponseBody;
-};
+>;
 
 export const createPutTodoSuccessResponse = (
   input: Omit<IPutTodoSuccessResponse, "type" | "statusCode">,

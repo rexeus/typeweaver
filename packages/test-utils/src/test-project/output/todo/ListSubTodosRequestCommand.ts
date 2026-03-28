@@ -23,6 +23,8 @@ import type {
 } from "./ListSubTodosRequest";
 import type { ListSubTodosResponse } from "./ListSubTodosResponse";
 
+const responseValidator = new ListSubTodosResponseValidator();
+
 export class ListSubTodosRequestCommand extends RequestCommand implements IListSubTodosRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.GET;
@@ -33,8 +35,6 @@ export class ListSubTodosRequestCommand extends RequestCommand implements IListS
   public override readonly query: IListSubTodosRequestQuery;
   declare public readonly body: undefined;
 
-  private readonly responseValidator: ListSubTodosResponseValidator;
-
   public constructor(input: Omit<IListSubTodosRequest, "method" | "path">) {
     super();
 
@@ -43,13 +43,11 @@ export class ListSubTodosRequestCommand extends RequestCommand implements IListS
     this.param = input.param;
 
     this.query = input.query;
-
-    this.responseValidator = new ListSubTodosResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): ListSubTodosResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

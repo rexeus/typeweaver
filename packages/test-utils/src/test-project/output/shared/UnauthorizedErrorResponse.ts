@@ -22,13 +22,10 @@ export type IUnauthorizedErrorResponseBody = {
 
 export type IUnauthorizedErrorResponse = ITypedHttpResponse<
   "UnauthorizedError",
+  HttpStatusCode.UNAUTHORIZED,
   IUnauthorizedErrorResponseHeader,
   IUnauthorizedErrorResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.UNAUTHORIZED;
-  readonly header: IUnauthorizedErrorResponseHeader;
-  readonly body: IUnauthorizedErrorResponseBody;
-};
+>;
 
 export const createUnauthorizedErrorResponse = (
   input: Omit<IUnauthorizedErrorResponse, "type" | "statusCode">,

@@ -22,6 +22,8 @@ import type {
 } from "./RefreshTokenRequest";
 import type { RefreshTokenResponse } from "./RefreshTokenResponse";
 
+const responseValidator = new RefreshTokenResponseValidator();
+
 export class RefreshTokenRequestCommand extends RequestCommand implements IRefreshTokenRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.POST;
@@ -32,21 +34,17 @@ export class RefreshTokenRequestCommand extends RequestCommand implements IRefre
   declare public readonly query: undefined;
   public override readonly body: IRefreshTokenRequestBody;
 
-  private readonly responseValidator: RefreshTokenResponseValidator;
-
   public constructor(input: Omit<IRefreshTokenRequest, "method" | "path">) {
     super();
 
     this.header = input.header;
 
     this.body = input.body;
-
-    this.responseValidator = new RefreshTokenResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): RefreshTokenResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

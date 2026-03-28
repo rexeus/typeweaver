@@ -22,6 +22,8 @@ import type {
 } from "./DeleteTodoRequest";
 import type { DeleteTodoResponse } from "./DeleteTodoResponse";
 
+const responseValidator = new DeleteTodoResponseValidator();
+
 export class DeleteTodoRequestCommand extends RequestCommand implements IDeleteTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.DELETE;
@@ -32,21 +34,17 @@ export class DeleteTodoRequestCommand extends RequestCommand implements IDeleteT
   declare public readonly query: undefined;
   declare public readonly body: undefined;
 
-  private readonly responseValidator: DeleteTodoResponseValidator;
-
   public constructor(input: Omit<IDeleteTodoRequest, "method" | "path">) {
     super();
 
     this.header = input.header;
 
     this.param = input.param;
-
-    this.responseValidator = new DeleteTodoResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): DeleteTodoResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

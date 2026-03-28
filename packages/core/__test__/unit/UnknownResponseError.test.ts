@@ -6,13 +6,14 @@ import { UnknownResponseError } from "../../src/UnknownResponse";
 describe("UnknownResponseError", () => {
   const createError = (
     statusCode: HttpStatusCode = HttpStatusCode.IM_A_TEAPOT,
-    header: Record<string, string> | undefined = { "Content-Type": "text/plain" },
+    header: Record<string, string> | undefined = {
+      "Content-Type": "text/plain",
+    },
     body: Record<string, unknown> = { detail: "unexpected" },
     validationError: ResponseValidationError = new ResponseValidationError(
       statusCode
     )
-  ) =>
-    new UnknownResponseError(statusCode, header, body, validationError);
+  ) => new UnknownResponseError(statusCode, header, body, validationError);
 
   test("stores statusCode from constructor", () => {
     const error = createError();

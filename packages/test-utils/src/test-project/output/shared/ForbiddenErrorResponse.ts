@@ -22,13 +22,10 @@ export type IForbiddenErrorResponseBody = {
 
 export type IForbiddenErrorResponse = ITypedHttpResponse<
   "ForbiddenError",
+  HttpStatusCode.FORBIDDEN,
   IForbiddenErrorResponseHeader,
   IForbiddenErrorResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.FORBIDDEN;
-  readonly header: IForbiddenErrorResponseHeader;
-  readonly body: IForbiddenErrorResponseBody;
-};
+>;
 
 export const createForbiddenErrorResponse = (
   input: Omit<IForbiddenErrorResponse, "type" | "statusCode">,

@@ -47,13 +47,10 @@ export type ICreateSubTodoSuccessResponseBody = {
 
 export type ICreateSubTodoSuccessResponse = ITypedHttpResponse<
   "CreateSubTodoSuccess",
+  HttpStatusCode.CREATED,
   ICreateSubTodoSuccessResponseHeader,
   ICreateSubTodoSuccessResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.CREATED;
-  readonly header: ICreateSubTodoSuccessResponseHeader;
-  readonly body: ICreateSubTodoSuccessResponseBody;
-};
+>;
 
 export const createCreateSubTodoSuccessResponse = (
   input: Omit<ICreateSubTodoSuccessResponse, "type" | "statusCode">,

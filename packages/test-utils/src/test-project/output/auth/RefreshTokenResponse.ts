@@ -34,13 +34,10 @@ export type IRefreshTokenSuccessResponseBody = {
 
 export type IRefreshTokenSuccessResponse = ITypedHttpResponse<
   "RefreshTokenSuccess",
+  HttpStatusCode.OK,
   IRefreshTokenSuccessResponseHeader,
   IRefreshTokenSuccessResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.OK;
-  readonly header: IRefreshTokenSuccessResponseHeader;
-  readonly body: IRefreshTokenSuccessResponseBody;
-};
+>;
 
 export const createRefreshTokenSuccessResponse = (
   input: Omit<IRefreshTokenSuccessResponse, "type" | "statusCode">,

@@ -22,13 +22,10 @@ export type ITooManyRequestsErrorResponseBody = {
 
 export type ITooManyRequestsErrorResponse = ITypedHttpResponse<
   "TooManyRequestsError",
+  HttpStatusCode.TOO_MANY_REQUESTS,
   ITooManyRequestsErrorResponseHeader,
   ITooManyRequestsErrorResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.TOO_MANY_REQUESTS;
-  readonly header: ITooManyRequestsErrorResponseHeader;
-  readonly body: ITooManyRequestsErrorResponseBody;
-};
+>;
 
 export const createTooManyRequestsErrorResponse = (
   input: Omit<ITooManyRequestsErrorResponse, "type" | "statusCode">,

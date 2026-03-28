@@ -1,26 +1,37 @@
+import { ResponseValidationError } from "@rexeus/typeweaver-core";
 import { Validator } from "./Validator";
 /**
  * Abstract base class for HTTP response validation.
  *
- * This class provides the foundation for response validators that:
- * - Validate response status codes match expected values
- * - Validate response headers and body against schemas
- * - Support both safe (non-throwing) and unsafe (throwing) validation
- * - Integrate with Zod schemas for runtime validation
- *
- * Response validators are typically used in API clients to ensure
- * responses match the expected format before processing.
+ * Subclasses provide response metadata via `responseEntries` and
+ * `expectedStatusCodes`. All validation logic lives here.
  */
 export class ResponseValidator extends Validator {
-  /**
-   * Generic response validation method that validates header and body schemas.
-   * This method reduces code duplication across individual response validators.
-   *
-   * @param responseName - Name of the response type for error reporting
-   * @param headerSchema - Zod schema for header validation (optional)
-   * @param bodySchema - Zod schema for body validation (optional)
-   * @returns Function that validates response and returns result
-   */
+  safeValidate(response) {
+    const error = new ResponseValidationError(response.statusCode);
+    for (const entry of this.responseEntries) {
+      if (response.statusCode === entry.statusCode) {
+        const result = this.validateResponseType(
+          entry.name,
+          entry.headerSchema,
+          entry.bodySchema,
+        )(response, error);
+        if (result.isValid) return result;
+      }
+    }
+    if (!error.hasResponseIssues()) {
+      error.addStatusCodeIssue([...this.expectedStatusCodes]);
+    }
+    return {
+      isValid: false,
+      error,
+    };
+  }
+  validate(response) {
+    const result = this.safeValidate(response);
+    if (!result.isValid) throw result.error;
+    return result.data;
+  }
   validateResponseType(responseName, headerSchema, bodySchema) {
     return (response, error) => {
       let isValid = true;

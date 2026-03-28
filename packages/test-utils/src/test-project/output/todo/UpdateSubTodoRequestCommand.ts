@@ -23,6 +23,8 @@ import type {
 } from "./UpdateSubTodoRequest";
 import type { UpdateSubTodoResponse } from "./UpdateSubTodoResponse";
 
+const responseValidator = new UpdateSubTodoResponseValidator();
+
 export class UpdateSubTodoRequestCommand extends RequestCommand implements IUpdateSubTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.PUT;
@@ -33,8 +35,6 @@ export class UpdateSubTodoRequestCommand extends RequestCommand implements IUpda
   declare public readonly query: undefined;
   public override readonly body: IUpdateSubTodoRequestBody;
 
-  private readonly responseValidator: UpdateSubTodoResponseValidator;
-
   public constructor(input: Omit<IUpdateSubTodoRequest, "method" | "path">) {
     super();
 
@@ -43,13 +43,11 @@ export class UpdateSubTodoRequestCommand extends RequestCommand implements IUpda
     this.param = input.param;
 
     this.body = input.body;
-
-    this.responseValidator = new UpdateSubTodoResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): UpdateSubTodoResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

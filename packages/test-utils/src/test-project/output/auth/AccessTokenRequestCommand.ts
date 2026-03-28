@@ -22,6 +22,8 @@ import type {
 } from "./AccessTokenRequest";
 import type { AccessTokenResponse } from "./AccessTokenResponse";
 
+const responseValidator = new AccessTokenResponseValidator();
+
 export class AccessTokenRequestCommand extends RequestCommand implements IAccessTokenRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.POST;
@@ -32,21 +34,17 @@ export class AccessTokenRequestCommand extends RequestCommand implements IAccess
   declare public readonly query: undefined;
   public override readonly body: IAccessTokenRequestBody;
 
-  private readonly responseValidator: AccessTokenResponseValidator;
-
   public constructor(input: Omit<IAccessTokenRequest, "method" | "path">) {
     super();
 
     this.header = input.header;
 
     this.body = input.body;
-
-    this.responseValidator = new AccessTokenResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): AccessTokenResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

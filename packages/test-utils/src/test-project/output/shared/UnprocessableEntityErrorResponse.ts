@@ -22,13 +22,10 @@ export type IUnprocessableEntityErrorResponseBody = {
 
 export type IUnprocessableEntityErrorResponse = ITypedHttpResponse<
   "UnprocessableEntityError",
+  HttpStatusCode.UNPROCESSABLE_ENTITY,
   IUnprocessableEntityErrorResponseHeader,
   IUnprocessableEntityErrorResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.UNPROCESSABLE_ENTITY;
-  readonly header: IUnprocessableEntityErrorResponseHeader;
-  readonly body: IUnprocessableEntityErrorResponseBody;
-};
+>;
 
 export const createUnprocessableEntityErrorResponse = (
   input: Omit<IUnprocessableEntityErrorResponse, "type" | "statusCode">,

@@ -23,6 +23,8 @@ import type {
 } from "./UpdateTodoRequest";
 import type { UpdateTodoResponse } from "./UpdateTodoResponse";
 
+const responseValidator = new UpdateTodoResponseValidator();
+
 export class UpdateTodoRequestCommand extends RequestCommand implements IUpdateTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.PATCH;
@@ -33,8 +35,6 @@ export class UpdateTodoRequestCommand extends RequestCommand implements IUpdateT
   declare public readonly query: undefined;
   public override readonly body: IUpdateTodoRequestBody;
 
-  private readonly responseValidator: UpdateTodoResponseValidator;
-
   public constructor(input: Omit<IUpdateTodoRequest, "method" | "path">) {
     super();
 
@@ -43,13 +43,11 @@ export class UpdateTodoRequestCommand extends RequestCommand implements IUpdateT
     this.param = input.param;
 
     this.body = input.body;
-
-    this.responseValidator = new UpdateTodoResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): UpdateTodoResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

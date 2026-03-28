@@ -19,13 +19,10 @@ import type { ITypedHttpResponse } from "<%= coreDir %>";
 
 export type I<%= pascalCaseName %>Response = ITypedHttpResponse<
 "<%= pascalCaseName %>",
+HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>,
 <%= sharedResponse.header ? `I${pascalCaseName}ResponseHeader` : 'undefined' %>,
 <%= sharedResponse.body ? `I${pascalCaseName}ResponseBody` : 'undefined' %>
-> & {
-readonly statusCode: HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>
-<%= sharedResponse.header ? `readonly header: I${pascalCaseName}ResponseHeader;` : "" %>
-<%= sharedResponse.body ? `readonly body: I${pascalCaseName}ResponseBody;` : "" %>
-};
+>;
 
 <% if (sharedResponse.header || sharedResponse.body) { %>
 export const create<%= pascalCaseName %>Response = (input: Omit<I<%= pascalCaseName %>Response, "type" | "statusCode">): I<%= pascalCaseName %>Response => ({

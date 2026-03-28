@@ -28,13 +28,10 @@ export type IUnsupportedMediaTypeErrorResponseBody = {
 
 export type IUnsupportedMediaTypeErrorResponse = ITypedHttpResponse<
   "UnsupportedMediaTypeError",
+  HttpStatusCode.UNSUPPORTED_MEDIA_TYPE,
   IUnsupportedMediaTypeErrorResponseHeader,
   IUnsupportedMediaTypeErrorResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.UNSUPPORTED_MEDIA_TYPE;
-  readonly header: IUnsupportedMediaTypeErrorResponseHeader;
-  readonly body: IUnsupportedMediaTypeErrorResponseBody;
-};
+>;
 
 export const createUnsupportedMediaTypeErrorResponse = (
   input: Omit<IUnsupportedMediaTypeErrorResponse, "type" | "statusCode">,

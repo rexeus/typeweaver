@@ -23,6 +23,8 @@ import type {
 } from "./PutTodoRequest";
 import type { PutTodoResponse } from "./PutTodoResponse";
 
+const responseValidator = new PutTodoResponseValidator();
+
 export class PutTodoRequestCommand extends RequestCommand implements IPutTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.PUT;
@@ -33,8 +35,6 @@ export class PutTodoRequestCommand extends RequestCommand implements IPutTodoReq
   declare public readonly query: undefined;
   public override readonly body: IPutTodoRequestBody;
 
-  private readonly responseValidator: PutTodoResponseValidator;
-
   public constructor(input: Omit<IPutTodoRequest, "method" | "path">) {
     super();
 
@@ -43,13 +43,11 @@ export class PutTodoRequestCommand extends RequestCommand implements IPutTodoReq
     this.param = input.param;
 
     this.body = input.body;
-
-    this.responseValidator = new PutTodoResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): PutTodoResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

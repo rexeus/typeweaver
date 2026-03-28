@@ -23,6 +23,8 @@ import type {
 } from "./UpdateTodoStatusRequest";
 import type { UpdateTodoStatusResponse } from "./UpdateTodoStatusResponse";
 
+const responseValidator = new UpdateTodoStatusResponseValidator();
+
 export class UpdateTodoStatusRequestCommand
   extends RequestCommand
   implements IUpdateTodoStatusRequest
@@ -36,8 +38,6 @@ export class UpdateTodoStatusRequestCommand
   declare public readonly query: undefined;
   public override readonly body: IUpdateTodoStatusRequestBody;
 
-  private readonly responseValidator: UpdateTodoStatusResponseValidator;
-
   public constructor(input: Omit<IUpdateTodoStatusRequest, "method" | "path">) {
     super();
 
@@ -46,13 +46,11 @@ export class UpdateTodoStatusRequestCommand
     this.param = input.param;
 
     this.body = input.body;
-
-    this.responseValidator = new UpdateTodoStatusResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): UpdateTodoStatusResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

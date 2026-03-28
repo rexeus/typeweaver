@@ -22,6 +22,8 @@ import type {
 } from "./UploadFileRequest";
 import type { UploadFileResponse } from "./UploadFileResponse";
 
+const responseValidator = new UploadFileResponseValidator();
+
 export class UploadFileRequestCommand extends RequestCommand implements IUploadFileRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.POST;
@@ -32,21 +34,17 @@ export class UploadFileRequestCommand extends RequestCommand implements IUploadF
   declare public readonly query: undefined;
   public override readonly body: IUploadFileRequestBody;
 
-  private readonly responseValidator: UploadFileResponseValidator;
-
   public constructor(input: Omit<IUploadFileRequest, "method" | "path">) {
     super();
 
     this.header = input.header;
 
     this.body = input.body;
-
-    this.responseValidator = new UploadFileResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): UploadFileResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

@@ -22,6 +22,8 @@ import type {
 } from "./RegisterAccountRequest";
 import type { RegisterAccountResponse } from "./RegisterAccountResponse";
 
+const responseValidator = new RegisterAccountResponseValidator();
+
 export class RegisterAccountRequestCommand
   extends RequestCommand
   implements IRegisterAccountRequest
@@ -35,21 +37,17 @@ export class RegisterAccountRequestCommand
   declare public readonly query: undefined;
   public override readonly body: IRegisterAccountRequestBody;
 
-  private readonly responseValidator: RegisterAccountResponseValidator;
-
   public constructor(input: Omit<IRegisterAccountRequest, "method" | "path">) {
     super();
 
     this.header = input.header;
 
     this.body = input.body;
-
-    this.responseValidator = new RegisterAccountResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): RegisterAccountResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

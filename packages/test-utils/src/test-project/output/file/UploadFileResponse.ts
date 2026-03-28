@@ -37,13 +37,10 @@ export type IUploadFileSuccessResponseBody = {
 
 export type IUploadFileSuccessResponse = ITypedHttpResponse<
   "UploadFileSuccess",
+  HttpStatusCode.CREATED,
   IUploadFileSuccessResponseHeader,
   IUploadFileSuccessResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.CREATED;
-  readonly header: IUploadFileSuccessResponseHeader;
-  readonly body: IUploadFileSuccessResponseBody;
-};
+>;
 
 export const createUploadFileSuccessResponse = (
   input: Omit<IUploadFileSuccessResponse, "type" | "statusCode">,

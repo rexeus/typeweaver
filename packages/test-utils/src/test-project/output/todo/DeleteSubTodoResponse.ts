@@ -37,13 +37,10 @@ export type IDeleteSubTodoSuccessResponseBody = {
 
 export type IDeleteSubTodoSuccessResponse = ITypedHttpResponse<
   "DeleteSubTodoSuccess",
+  HttpStatusCode.OK,
   IDeleteSubTodoSuccessResponseHeader,
   IDeleteSubTodoSuccessResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.OK;
-  readonly header: IDeleteSubTodoSuccessResponseHeader;
-  readonly body: IDeleteSubTodoSuccessResponseBody;
-};
+>;
 
 export const createDeleteSubTodoSuccessResponse = (
   input: Omit<IDeleteSubTodoSuccessResponse, "type" | "statusCode">,

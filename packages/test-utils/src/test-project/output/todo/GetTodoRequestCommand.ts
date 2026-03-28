@@ -22,6 +22,8 @@ import type {
 } from "./GetTodoRequest";
 import type { GetTodoResponse } from "./GetTodoResponse";
 
+const responseValidator = new GetTodoResponseValidator();
+
 export class GetTodoRequestCommand extends RequestCommand implements IGetTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.GET;
@@ -32,21 +34,17 @@ export class GetTodoRequestCommand extends RequestCommand implements IGetTodoReq
   declare public readonly query: undefined;
   declare public readonly body: undefined;
 
-  private readonly responseValidator: GetTodoResponseValidator;
-
   public constructor(input: Omit<IGetTodoRequest, "method" | "path">) {
     super();
 
     this.header = input.header;
 
     this.param = input.param;
-
-    this.responseValidator = new GetTodoResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): GetTodoResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

@@ -23,6 +23,8 @@ import type {
 } from "./CreateSubTodoRequest";
 import type { CreateSubTodoResponse } from "./CreateSubTodoResponse";
 
+const responseValidator = new CreateSubTodoResponseValidator();
+
 export class CreateSubTodoRequestCommand extends RequestCommand implements ICreateSubTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.POST;
@@ -33,8 +35,6 @@ export class CreateSubTodoRequestCommand extends RequestCommand implements ICrea
   declare public readonly query: undefined;
   public override readonly body: ICreateSubTodoRequestBody;
 
-  private readonly responseValidator: CreateSubTodoResponseValidator;
-
   public constructor(input: Omit<ICreateSubTodoRequest, "method" | "path">) {
     super();
 
@@ -43,13 +43,11 @@ export class CreateSubTodoRequestCommand extends RequestCommand implements ICrea
     this.param = input.param;
 
     this.body = input.body;
-
-    this.responseValidator = new CreateSubTodoResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): CreateSubTodoResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

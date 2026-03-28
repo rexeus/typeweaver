@@ -22,13 +22,10 @@ export type IInternalServerErrorResponseBody = {
 
 export type IInternalServerErrorResponse = ITypedHttpResponse<
   "InternalServerError",
+  HttpStatusCode.INTERNAL_SERVER_ERROR,
   IInternalServerErrorResponseHeader,
   IInternalServerErrorResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR;
-  readonly header: IInternalServerErrorResponseHeader;
-  readonly body: IInternalServerErrorResponseBody;
-};
+>;
 
 export const createInternalServerErrorResponse = (
   input: Omit<IInternalServerErrorResponse, "type" | "statusCode">,

@@ -45,13 +45,10 @@ export type ICreateTodoSuccessResponseBody = {
 
 export type ICreateTodoSuccessResponse = ITypedHttpResponse<
   "CreateTodoSuccess",
+  HttpStatusCode.CREATED,
   ICreateTodoSuccessResponseHeader,
   ICreateTodoSuccessResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.CREATED;
-  readonly header: ICreateTodoSuccessResponseHeader;
-  readonly body: ICreateTodoSuccessResponseBody;
-};
+>;
 
 export const createCreateTodoSuccessResponse = (
   input: Omit<ICreateTodoSuccessResponse, "type" | "statusCode">,

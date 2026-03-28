@@ -32,13 +32,10 @@ export type ITodoStatusTransitionInvalidErrorResponseBody = {
 
 export type ITodoStatusTransitionInvalidErrorResponse = ITypedHttpResponse<
   "TodoStatusTransitionInvalidError",
+  HttpStatusCode.CONFLICT,
   ITodoStatusTransitionInvalidErrorResponseHeader,
   ITodoStatusTransitionInvalidErrorResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.CONFLICT;
-  readonly header: ITodoStatusTransitionInvalidErrorResponseHeader;
-  readonly body: ITodoStatusTransitionInvalidErrorResponseBody;
-};
+>;
 
 export const createTodoStatusTransitionInvalidErrorResponse = (
   input: Omit<ITodoStatusTransitionInvalidErrorResponse, "type" | "statusCode">,

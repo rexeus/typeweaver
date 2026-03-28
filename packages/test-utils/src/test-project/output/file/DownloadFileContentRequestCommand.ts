@@ -22,6 +22,8 @@ import type {
 } from "./DownloadFileContentRequest";
 import type { DownloadFileContentResponse } from "./DownloadFileContentResponse";
 
+const responseValidator = new DownloadFileContentResponseValidator();
+
 export class DownloadFileContentRequestCommand
   extends RequestCommand
   implements IDownloadFileContentRequest
@@ -35,21 +37,17 @@ export class DownloadFileContentRequestCommand
   declare public readonly query: undefined;
   declare public readonly body: undefined;
 
-  private readonly responseValidator: DownloadFileContentResponseValidator;
-
   public constructor(input: Omit<IDownloadFileContentRequest, "method" | "path">) {
     super();
 
     this.header = input.header;
 
     this.param = input.param;
-
-    this.responseValidator = new DownloadFileContentResponseValidator();
   }
 
   public processResponse(response: IHttpResponse): DownloadFileContentResponse {
     try {
-      return this.responseValidator.validate(response);
+      return responseValidator.validate(response);
     } catch (error) {
       if (error instanceof ResponseValidationError) {
         throw new UnknownResponseError(response.statusCode, response.header, response.body, error);

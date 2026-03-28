@@ -38,13 +38,10 @@ export type IRegisterAccountSuccessResponseBody = {
 
 export type IRegisterAccountSuccessResponse = ITypedHttpResponse<
   "RegisterAccountSuccess",
+  HttpStatusCode.CREATED,
   IRegisterAccountSuccessResponseHeader,
   IRegisterAccountSuccessResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.CREATED;
-  readonly header: IRegisterAccountSuccessResponseHeader;
-  readonly body: IRegisterAccountSuccessResponseBody;
-};
+>;
 
 export const createRegisterAccountSuccessResponse = (
   input: Omit<IRegisterAccountSuccessResponse, "type" | "statusCode">,

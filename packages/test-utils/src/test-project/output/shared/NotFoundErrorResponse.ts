@@ -22,13 +22,10 @@ export type INotFoundErrorResponseBody = {
 
 export type INotFoundErrorResponse = ITypedHttpResponse<
   "NotFoundError",
+  HttpStatusCode.NOT_FOUND,
   INotFoundErrorResponseHeader,
   INotFoundErrorResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.NOT_FOUND;
-  readonly header: INotFoundErrorResponseHeader;
-  readonly body: INotFoundErrorResponseBody;
-};
+>;
 
 export const createNotFoundErrorResponse = (
   input: Omit<INotFoundErrorResponse, "type" | "statusCode">,

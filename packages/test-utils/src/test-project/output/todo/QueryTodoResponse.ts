@@ -48,13 +48,10 @@ export type IQueryTodoSuccessResponseBody = {
 
 export type IQueryTodoSuccessResponse = ITypedHttpResponse<
   "QueryTodoSuccess",
+  HttpStatusCode.OK,
   IQueryTodoSuccessResponseHeader,
   IQueryTodoSuccessResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.OK;
-  readonly header: IQueryTodoSuccessResponseHeader;
-  readonly body: IQueryTodoSuccessResponseBody;
-};
+>;
 
 export const createQueryTodoSuccessResponse = (
   input: Omit<IQueryTodoSuccessResponse, "type" | "statusCode">,

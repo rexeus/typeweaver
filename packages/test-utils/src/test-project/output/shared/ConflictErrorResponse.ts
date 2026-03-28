@@ -22,13 +22,10 @@ export type IConflictErrorResponseBody = {
 
 export type IConflictErrorResponse = ITypedHttpResponse<
   "ConflictError",
+  HttpStatusCode.CONFLICT,
   IConflictErrorResponseHeader,
   IConflictErrorResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.CONFLICT;
-  readonly header: IConflictErrorResponseHeader;
-  readonly body: IConflictErrorResponseBody;
-};
+>;
 
 export const createConflictErrorResponse = (
   input: Omit<IConflictErrorResponse, "type" | "statusCode">,

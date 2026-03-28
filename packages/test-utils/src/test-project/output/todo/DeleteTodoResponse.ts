@@ -31,12 +31,10 @@ export type IDeleteTodoSuccessResponseHeader = {
 
 export type IDeleteTodoSuccessResponse = ITypedHttpResponse<
   "DeleteTodoSuccess",
+  HttpStatusCode.NO_CONTENT,
   IDeleteTodoSuccessResponseHeader,
   undefined
-> & {
-  readonly statusCode: HttpStatusCode.NO_CONTENT;
-  readonly header: IDeleteTodoSuccessResponseHeader;
-};
+>;
 
 export const createDeleteTodoSuccessResponse = (
   input: Omit<IDeleteTodoSuccessResponse, "type" | "statusCode">,

@@ -28,13 +28,10 @@ export type IValidationErrorResponseBody = {
 
 export type IValidationErrorResponse = ITypedHttpResponse<
   "ValidationError",
+  HttpStatusCode.BAD_REQUEST,
   IValidationErrorResponseHeader,
   IValidationErrorResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.BAD_REQUEST;
-  readonly header: IValidationErrorResponseHeader;
-  readonly body: IValidationErrorResponseBody;
-};
+>;
 
 export const createValidationErrorResponse = (
   input: Omit<IValidationErrorResponse, "type" | "statusCode">,

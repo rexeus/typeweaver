@@ -47,13 +47,10 @@ export type IGetTodoSuccessResponseBody = {
 
 export type IGetTodoSuccessResponse = ITypedHttpResponse<
   "GetTodoSuccess",
+  HttpStatusCode.OK,
   IGetTodoSuccessResponseHeader,
   IGetTodoSuccessResponseBody
-> & {
-  readonly statusCode: HttpStatusCode.OK;
-  readonly header: IGetTodoSuccessResponseHeader;
-  readonly body: IGetTodoSuccessResponseBody;
-};
+>;
 
 export const createGetTodoSuccessResponse = (
   input: Omit<IGetTodoSuccessResponse, "type" | "statusCode">,
