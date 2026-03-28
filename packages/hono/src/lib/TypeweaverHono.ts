@@ -107,7 +107,9 @@ export type TypeweaverHonoOptions<
    * - `function`: Use custom request validation error handler
    * @default true
    */
-  readonly handleRequestValidationErrors?: HonoRequestValidationErrorHandler | boolean;
+  readonly handleRequestValidationErrors?:
+    | HonoRequestValidationErrorHandler
+    | boolean;
 
   /**
    * Configure handling of response validation errors.
@@ -116,7 +118,9 @@ export type TypeweaverHonoOptions<
    * - `function`: Use custom response validation error handler
    * @default true
    */
-  readonly handleResponseValidationErrors?: HonoResponseValidationErrorHandler | boolean;
+  readonly handleResponseValidationErrors?:
+    | HonoResponseValidationErrorHandler
+    | boolean;
 
   /**
    * Configure handling of HttpResponse errors thrown by handlers.

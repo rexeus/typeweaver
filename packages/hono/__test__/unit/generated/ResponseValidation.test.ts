@@ -385,6 +385,29 @@ describe("Response Validation (Hono)", () => {
     });
   });
 
+  describe("non-typed errors with validateResponses enabled", () => {
+    test("should route non-typed errors to error handler, not response validation", async () => {
+      // Arrange
+      const plainError = new Error("handler crashed");
+      const app = createTestHono({
+        validateResponses: true,
+        throwTodoError: plainError,
+      });
+      const requestData = createCreateTodoRequest();
+
+      // Act
+      const response = await app.request(
+        "http://localhost/todos",
+        prepareRequestData(requestData)
+      );
+
+      // Assert
+      expect(response.status).toBe(500);
+      const data = (await response.json()) as Record<string, unknown>;
+      expect(data.code).toBe("INTERNAL_SERVER_ERROR");
+    });
+  });
+
   describe("edge cases", () => {
     test("should handle response with undefined body", async () => {
       const app = createTestHono({

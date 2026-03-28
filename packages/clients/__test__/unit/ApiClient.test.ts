@@ -1,8 +1,11 @@
+import { UnknownResponseError } from "@rexeus/typeweaver-core";
 import {
   createCreateTodoRequest,
+  createCreateTodoSuccessResponseBody,
   createDeleteTodoRequest,
   createGetTodoRequest,
   createListTodosRequest,
+  createUnauthorizedErrorResponse,
   CreateTodoRequestCommand,
   DeleteTodoRequestCommand,
   GetTodoRequestCommand,
@@ -69,6 +72,55 @@ describe("RequestCommand operationId", () => {
     expect(get.operationId).toBe("GetTodo");
     expect(create.operationId).toBe("CreateTodo");
     expect(put.operationId).toBe("PutTodo");
+  });
+});
+
+describe("RequestCommand.processResponse", () => {
+  test("should return success response from the union", () => {
+    // Arrange
+    const command = new CreateTodoRequestCommand(createCreateTodoRequest());
+    const body = createCreateTodoSuccessResponseBody();
+    const mockResponse = {
+      statusCode: 201,
+      header: { "Content-Type": "application/json" },
+      body,
+    };
+
+    // Act
+    const result = command.processResponse(mockResponse);
+
+    // Assert
+    expect(result.type).toBe("CreateTodoSuccess");
+    expect(result.statusCode).toBe(201);
+  });
+
+  test("should return error response from the union instead of throwing", () => {
+    // Arrange
+    const command = new CreateTodoRequestCommand(createCreateTodoRequest());
+    const errorResponse = createUnauthorizedErrorResponse();
+    const mockResponse = {
+      statusCode: errorResponse.statusCode,
+      header: errorResponse.header,
+      body: errorResponse.body,
+    };
+
+    // Act
+    const result = command.processResponse(mockResponse);
+
+    // Assert
+    expect(result.type).toBe("UnauthorizedError");
+    expect(result.statusCode).toBe(401);
+  });
+
+  test("should throw UnknownResponseError for unrecognized status code", () => {
+    // Arrange
+    const command = new CreateTodoRequestCommand(createCreateTodoRequest());
+    const mockResponse = { statusCode: 418, header: undefined, body: {} };
+
+    // Act & Assert
+    expect(() => command.processResponse(mockResponse)).toThrow(
+      UnknownResponseError
+    );
   });
 });
 

@@ -1,17 +1,24 @@
 import assert from "node:assert";
-import { ResponseValidationError } from "@rexeus/typeweaver-core";
+import {
+  ResponseValidationError,
+  HttpStatusCode,
+} from "@rexeus/typeweaver-core";
 import {
   captureError,
   createCreateTodoSuccessResponse,
+  createDeleteTodoSuccessResponse,
   createInternalServerErrorResponse,
   createOptionsTodoSuccessResponse,
   CreateTodoResponseValidator,
   createUnauthorizedErrorResponse,
   createValidationErrorResponse,
+  DeleteTodoResponseValidator,
   OptionsTodoResponseValidator,
+  ResponseValidator,
 } from "test-utils";
-import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
+import { z } from "zod";
+import type { ResponseEntry } from "test-utils";
 
 describe("Generated ResponseValidator", () => {
   describe("Status Code Validation", () => {
@@ -492,11 +499,16 @@ describe("Generated ResponseValidator", () => {
       const response = createCreateTodoSuccessResponse();
 
       // Replicate the generated factory pattern: { ...input, type, statusCode }
-      const result = {
-        ...{ header: response.header, body: response.body, type: "Tampered" },
+      // The tampered input has type: "Tampered", but the factory overwrites it
+      const tamperedInput = {
+        header: response.header,
+        body: response.body,
+        type: "Tampered",
+      };
+      const result = Object.assign({}, tamperedInput, {
         type: "CreateTodoSuccess",
         statusCode: HttpStatusCode.CREATED,
-      };
+      });
 
       expect(result.type).toBe("CreateTodoSuccess");
       expect(result.statusCode).toBe(HttpStatusCode.CREATED);
@@ -506,14 +518,121 @@ describe("Generated ResponseValidator", () => {
       const response = createCreateTodoSuccessResponse();
 
       // Replicate the generated factory pattern: { ...input, type, statusCode }
-      const result = {
-        ...{ header: response.header, body: response.body, statusCode: 999 },
+      // The tampered input has statusCode: 999, but the factory overwrites it
+      const tamperedInput = {
+        header: response.header,
+        body: response.body,
+        statusCode: 999,
+      };
+      const result = Object.assign({}, tamperedInput, {
         type: "CreateTodoSuccess",
         statusCode: HttpStatusCode.CREATED,
-      };
+      });
 
       expect(result.statusCode).toBe(HttpStatusCode.CREATED);
       expect(result.type).toBe("CreateTodoSuccess");
+    });
+  });
+
+  describe("Bodyless Response Validation", () => {
+    test("should validate a 204 No Content response with undefined body", () => {
+      // Arrange
+      const validator = new DeleteTodoResponseValidator();
+      const response = createDeleteTodoSuccessResponse();
+
+      // Act
+      const result = validator.safeValidate(response);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.type).toBe("DeleteTodoSuccess");
+      expect(result.data.statusCode).toBe(204);
+      expect(result.data.body).toBeUndefined();
+    });
+  });
+
+  describe("Duplicate Status Code Fallthrough", () => {
+    class DuplicateStatusCodeValidator extends ResponseValidator {
+      protected override readonly expectedStatusCodes = [200];
+      protected override readonly responseEntries: readonly ResponseEntry[] = [
+        {
+          name: "NarrowSuccess",
+          statusCode: 200,
+          headerSchema: undefined,
+          bodySchema: z.object({
+            variant: z.literal("narrow"),
+            data: z.string(),
+          }),
+        },
+        {
+          name: "WideSuccess",
+          statusCode: 200,
+          headerSchema: undefined,
+          bodySchema: z.object({
+            variant: z.literal("wide"),
+            count: z.number(),
+          }),
+        },
+      ];
+    }
+
+    test("should match second entry when first entry's body validation fails", () => {
+      // Arrange
+      const validator = new DuplicateStatusCodeValidator();
+      const response = {
+        statusCode: 200,
+        header: undefined,
+        body: { variant: "wide", count: 42 },
+      };
+
+      // Act
+      const result = validator.safeValidate(response);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.type).toBe("WideSuccess");
+      expect(result.data.body).toEqual({ variant: "wide", count: 42 });
+    });
+
+    test("should match first entry when its body validates", () => {
+      // Arrange
+      const validator = new DuplicateStatusCodeValidator();
+      const response = {
+        statusCode: 200,
+        header: undefined,
+        body: { variant: "narrow", data: "hello" },
+      };
+
+      // Act
+      const result = validator.safeValidate(response);
+
+      // Assert
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.type).toBe("NarrowSuccess");
+      expect(result.data.body).toEqual({ variant: "narrow", data: "hello" });
+    });
+
+    test("should fail when no entry matches the body", () => {
+      // Arrange
+      const validator = new DuplicateStatusCodeValidator();
+      const response = {
+        statusCode: 200,
+        header: undefined,
+        body: { variant: "unknown" },
+      };
+
+      // Act
+      const result = validator.safeValidate(response);
+
+      // Assert
+      expect(result.isValid).toBe(false);
+      assert(!result.isValid);
+      expect(result.error).toBeInstanceOf(ResponseValidationError);
+      expect(result.error.getResponseBodyIssues("NarrowSuccess")).toBeDefined();
+      expect(result.error.getResponseBodyIssues("WideSuccess")).toBeDefined();
     });
   });
 

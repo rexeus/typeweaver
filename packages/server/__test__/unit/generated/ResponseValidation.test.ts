@@ -358,6 +358,26 @@ describe("Response Validation (Server)", () => {
     });
   });
 
+  describe("non-typed errors with validateResponses enabled", () => {
+    test("should route non-typed errors to error handler, not response validation", async () => {
+      // Arrange
+      const plainError = new Error("handler crashed");
+      const app = createTestApp({
+        validateResponses: true,
+        throwTodoError: plainError,
+      });
+      const requestData = createCreateTodoRequest();
+
+      // Act
+      const response = await app.fetch(
+        buildFetchRequest(`${BASE_URL}/todos`, requestData)
+      );
+
+      // Assert
+      await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
+    });
+  });
+
   describe("edge cases", () => {
     test("should handle response with undefined body", async () => {
       const app = createTestApp({
