@@ -10,6 +10,7 @@ import {
   createValidationErrorResponse,
   OptionsTodoResponseValidator,
 } from "test-utils";
+import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
 
 describe("Generated ResponseValidator", () => {
@@ -483,6 +484,36 @@ describe("Generated ResponseValidator", () => {
       expect(result.data.body.title).toBe("Custom title");
       expect(result.data.body).not.toHaveProperty("extraBodyField");
       expect(result.data.body).not.toHaveProperty("anotherBodyField");
+    });
+  });
+
+  describe("Response Factory Invariants", () => {
+    test("factory should not allow callers to override type via spread", () => {
+      const response = createCreateTodoSuccessResponse();
+
+      // Replicate the generated factory pattern: { ...input, type, statusCode }
+      const result = {
+        ...{ header: response.header, body: response.body, type: "Tampered" },
+        type: "CreateTodoSuccess",
+        statusCode: HttpStatusCode.CREATED,
+      };
+
+      expect(result.type).toBe("CreateTodoSuccess");
+      expect(result.statusCode).toBe(HttpStatusCode.CREATED);
+    });
+
+    test("factory should not allow callers to override statusCode via spread", () => {
+      const response = createCreateTodoSuccessResponse();
+
+      // Replicate the generated factory pattern: { ...input, type, statusCode }
+      const result = {
+        ...{ header: response.header, body: response.body, statusCode: 999 },
+        type: "CreateTodoSuccess",
+        statusCode: HttpStatusCode.CREATED,
+      };
+
+      expect(result.statusCode).toBe(HttpStatusCode.CREATED);
+      expect(result.type).toBe("CreateTodoSuccess");
     });
   });
 

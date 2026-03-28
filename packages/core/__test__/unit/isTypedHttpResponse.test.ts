@@ -38,6 +38,16 @@ describe("isTypedHttpResponse", () => {
     expect(isTypedHttpResponse({ statusCode: 200 })).toBe(false);
   });
 
+  test("returns false when statusCode is a string", () => {
+    expect(isTypedHttpResponse({ type: "Success", statusCode: "200" })).toBe(
+      false
+    );
+  });
+
+  test("returns false for an array", () => {
+    expect(isTypedHttpResponse([])).toBe(false);
+  });
+
   test("returns true for a minimal valid typed response", () => {
     expect(isTypedHttpResponse({ type: "Success", statusCode: 200 })).toBe(
       true

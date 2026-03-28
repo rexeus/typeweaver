@@ -51,28 +51,24 @@ Implement your handlers and mount the generated router in a Hono app.
 // api/user-handlers.ts
 import type { Context } from "hono";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { IGetUserRequest, GetUserResponse, UserNotFoundErrorResponse } from "./generated";
-import { GetUserSuccessResponse } from "./generated";
+import type { HonoUserApiHandler, IGetUserRequest, GetUserResponse } from "./generated";
+import { createUserNotFoundErrorResponse, createGetUserSuccessResponse } from "./generated";
 
 export class UserHandlers implements HonoUserApiHandler {
-    async handleGetUserRequest(request: IGetUserRequest, context: Context): Promise<GetUserResponse> {
-      // Symbolic database fetch
-      const databaseResult = {} as any;
-      if (!databaseResult) {
-        // Will be properly handled by the generated router and returned as a 404 response
-        return new UserNotFoundErrorResponse({
-          statusCode: HttpStatusCode.NotFound,
-          header: { "Content-Type": "application/json" },
-          body: { message: "User not found" },
-        });
-      }
-
-      return new GetUserSuccessResponse({
-        statusCode: HttpStatusCode.OK,
+  async handleGetUserRequest(request: IGetUserRequest, context: Context): Promise<GetUserResponse> {
+    const user = await db.findUser(request.param.userId);
+    if (!user) {
+      return createUserNotFoundErrorResponse({
         header: { "Content-Type": "application/json" },
-        body: { id: request.param.userId, name: "Jane", email: "jane@example.com" },
+        body: { message: "User not found" },
       });
-  },
+    }
+
+    return createGetUserSuccessResponse({
+      header: { "Content-Type": "application/json" },
+      body: { id: request.param.userId, name: "Jane", email: "jane@example.com" },
+    });
+  }
   // Implement other operation handlers: handleCreateUserRequest, ...
 }
 ```

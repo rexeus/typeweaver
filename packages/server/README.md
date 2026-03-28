@@ -381,21 +381,21 @@ Use custom handler functions to transform errors into your own response shape.
 ```ts
 new UserRouter({
   requestHandlers: userHandlers,
-  handleRequestValidationErrors: (error, ctx) =>
-    new ValidationErrorResponse({
-      statusCode: HttpStatusCode.BAD_REQUEST,
-      header: { "Content-Type": "application/json" },
-      body: {
-        code: "VALIDATION_ERROR",
-        message: "Request is invalid",
-        issues: {
-          body: error.bodyIssues,
-          query: error.queryIssues,
-          param: error.pathParamIssues,
-          header: error.headerIssues,
-        },
+  handleRequestValidationErrors: (error, ctx) => ({
+    type: "ValidationError",
+    statusCode: HttpStatusCode.BAD_REQUEST,
+    header: { "Content-Type": "application/json" },
+    body: {
+      code: "VALIDATION_ERROR",
+      message: "Request is invalid",
+      issues: {
+        body: error.bodyIssues,
+        query: error.queryIssues,
+        param: error.pathParamIssues,
+        header: error.headerIssues,
       },
-    }),
+    },
+  }),
 });
 ```
 
@@ -421,11 +421,12 @@ new UserRouter({
   requestHandlers: userHandlers,
   handleUnknownErrors: (error, ctx) => {
     logger.error("Unhandled error", { error, path: ctx.request.path });
-    return new InternalServerErrorResponse({
+    return {
+      type: "InternalServerError",
       statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
       header: { "Content-Type": "application/json" },
       body: { code: "INTERNAL_SERVER_ERROR", message: "Something went wrong" },
-    });
+    };
   },
 });
 ```

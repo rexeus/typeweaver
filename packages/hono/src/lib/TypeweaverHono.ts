@@ -84,21 +84,21 @@ export type TypeweaverHonoOptions<
    * Request handler methods for each operation.
    * Each handler receives a request (validated if `validateRequests` is true) and Hono context.
    */
-  requestHandlers: RequestHandlers;
+  readonly requestHandlers: RequestHandlers;
 
   /**
    * Enable request validation using generated validators.
    * When false, requests are passed through without validation.
    * @default true
    */
-  validateRequests?: boolean;
+  readonly validateRequests?: boolean;
 
   /**
    * Enable response validation using generated validators.
    * When true, responses are validated and stripped of extra fields before sending.
    * @default true
    */
-  validateResponses?: boolean;
+  readonly validateResponses?: boolean;
 
   /**
    * Configure handling of request validation errors.
@@ -107,7 +107,7 @@ export type TypeweaverHonoOptions<
    * - `function`: Use custom request validation error handler
    * @default true
    */
-  handleRequestValidationErrors?: HonoRequestValidationErrorHandler | boolean;
+  readonly handleRequestValidationErrors?: HonoRequestValidationErrorHandler | boolean;
 
   /**
    * Configure handling of response validation errors.
@@ -116,7 +116,7 @@ export type TypeweaverHonoOptions<
    * - `function`: Use custom response validation error handler
    * @default true
    */
-  handleResponseValidationErrors?: HonoResponseValidationErrorHandler | boolean;
+  readonly handleResponseValidationErrors?: HonoResponseValidationErrorHandler | boolean;
 
   /**
    * Configure handling of HttpResponse errors thrown by handlers.
@@ -125,7 +125,7 @@ export type TypeweaverHonoOptions<
    * - `function`: Use custom error handler
    * @default true
    */
-  handleHttpResponseErrors?: HonoHttpResponseErrorHandler | boolean;
+  readonly handleHttpResponseErrors?: HonoHttpResponseErrorHandler | boolean;
 
   /**
    * Configure handling of unknown errors.
@@ -134,7 +134,7 @@ export type TypeweaverHonoOptions<
    * - `function`: Use custom error handler
    * @default true
    */
-  handleUnknownErrors?: HonoUnknownErrorHandler | boolean;
+  readonly handleUnknownErrors?: HonoUnknownErrorHandler | boolean;
 };
 
 /**
@@ -204,7 +204,7 @@ export abstract class TypeweaverHono<
       statusCode: 500,
       body: {
         code: "INTERNAL_SERVER_ERROR",
-        message: "An unexpected error occurred.",
+        message: "An unexpected error occurred",
       },
     }),
 
@@ -214,7 +214,7 @@ export abstract class TypeweaverHono<
       statusCode: 500,
       body: {
         code: "INTERNAL_SERVER_ERROR",
-        message: "An unexpected error occurred.",
+        message: "An unexpected error occurred",
       },
     }),
   };
