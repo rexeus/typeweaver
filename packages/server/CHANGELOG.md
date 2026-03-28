@@ -1,5 +1,26 @@
 # @rexeus/typeweaver-server
 
+## 0.9.0
+
+### Minor Changes
+
+- f3dfcf5: Switch typeweaver to the new functional spec-entrypoint architecture.
+  This removes the legacy filesystem- and class-based definition flow in favor of
+  `defineSpec`, `defineOperation`, `defineResponse`, and `defineDerivedResponse`,
+  and updates the CLI, generators, runtime defaults, and generated outputs to use
+  the new normalized spec pipeline.
+  ### Breaking changes
+  - Remove legacy `Http*Definition` classes
+  - Remove filesystem-based definition discovery
+  - Require a spec entrypoint file for CLI generation
+  - Update generated runtime/output structure and centralized default errors
+
+### Patch Changes
+
+- Updated dependencies [f3dfcf5]
+  - @rexeus/typeweaver-core@0.9.0
+  - @rexeus/typeweaver-gen@0.9.0
+
 ## 0.8.0
 
 ### Minor Changes
