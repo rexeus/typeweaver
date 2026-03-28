@@ -6,12 +6,12 @@ import type {
   ResponseDefinition,
   SpecDefinition,
 } from "@rexeus/typeweaver-core";
-import type { NormalizedResponse } from "../NormalizedSpec";
 import {
   DerivedResponseCycleError,
   InvalidDerivedResponseError,
   MissingDerivedResponseParentError,
 } from "../errors";
+import type { NormalizedResponse } from "../NormalizedSpec";
 
 export const validateDerivedResponseMetadata = (
   response: ResponseDefinition

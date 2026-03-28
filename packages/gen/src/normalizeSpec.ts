@@ -18,20 +18,17 @@ import {
   InvalidRequestSchemaError,
   PathParameterMismatchError,
 } from "./errors";
+import { getPathParameterNames, normalizeRoutePath } from "./helpers/routePath";
+import {
+  collectCanonicalResponses,
+  normalizeResponseDefinition,
+} from "./validation";
 import type {
   NormalizedOperation,
   NormalizedRequest,
   NormalizedResponseUsage,
   NormalizedSpec,
 } from "./NormalizedSpec";
-import {
-  getPathParameterNames,
-  normalizeRoutePath,
-} from "./helpers/routePath";
-import {
-  collectCanonicalResponses,
-  normalizeResponseDefinition,
-} from "./validation";
 
 const isZodType = (schema: unknown): schema is z.ZodType => {
   return schema instanceof z.ZodType;

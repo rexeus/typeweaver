@@ -106,18 +106,18 @@ file tracking.
 
 ### Methods
 
-| Method                                                           | Description                                                                                              |
-| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `getCanonicalResponse(name)`                                     | Look up a canonical (shared) response by name. Throws if the response does not exist.                    |
-| `getCanonicalResponseOutputFile(name)`                           | Get the absolute output file path for a canonical response.                                              |
-| `getCanonicalResponseImportPath({ importerDir, responseName })`  | Compute the relative import path from a generated file to a canonical response file.                     |
-| `getSpecImportPath({ importerDir })`                           | Compute the relative import path from a generated `spec.ts` consumer to the bundled spec shim.            |
-| `getOperationOutputPaths({ resourceName, operationId })`         | Get all output file paths for a given operation (request, response, validators, etc.).                   |
-| `getResourceOutputDir(name)`                                     | Get the absolute output directory for a resource (e.g. `<output>/todo/`).                                |
-| `writeFile(rel, content)`                                        | Write a file relative to the output root. Creates directories as needed and tracks the file for cleanup. |
-| `renderTemplate(tplPath, data)`                                  | Render an EJS template from `templateDir` with the given data object. Returns the rendered string.       |
-| `addGeneratedFile(rel)`                                          | Mark a file as generated (for tracking) without writing it. Useful when another tool produces the file.  |
-| `getGeneratedFiles()`                                            | List all file paths tracked during this generation run.                                                  |
+| Method                                                          | Description                                                                                              |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `getCanonicalResponse(name)`                                    | Look up a canonical (shared) response by name. Throws if the response does not exist.                    |
+| `getCanonicalResponseOutputFile(name)`                          | Get the absolute output file path for a canonical response.                                              |
+| `getCanonicalResponseImportPath({ importerDir, responseName })` | Compute the relative import path from a generated file to a canonical response file.                     |
+| `getSpecImportPath({ importerDir })`                            | Compute the relative import path from a generated `spec.ts` consumer to the bundled spec shim.           |
+| `getOperationOutputPaths({ resourceName, operationId })`        | Get all output file paths for a given operation (request, response, validators, etc.).                   |
+| `getResourceOutputDir(name)`                                    | Get the absolute output directory for a resource (e.g. `<output>/todo/`).                                |
+| `writeFile(rel, content)`                                       | Write a file relative to the output root. Creates directories as needed and tracks the file for cleanup. |
+| `renderTemplate(tplPath, data)`                                 | Render an EJS template from `templateDir` with the given data object. Returns the rendered string.       |
+| `addGeneratedFile(rel)`                                         | Mark a file as generated (for tracking) without writing it. Useful when another tool produces the file.  |
+| `getGeneratedFiles()`                                           | List all file paths tracked during this generation run.                                                  |
 
 ### Example: using the context in a plugin
 
