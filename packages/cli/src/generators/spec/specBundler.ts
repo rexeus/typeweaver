@@ -69,6 +69,9 @@ export async function bundle(config: SpecBundlerConfig): Promise<string> {
       cwd: tempDir,
       input: wrapperFile,
       treeshake: true,
+      experimental: {
+        attachDebugInfo: "none",
+      },
       external: (source: string) => {
         if (source.startsWith("node:")) {
           return true;

@@ -6,7 +6,6 @@ import {
   defineSpec,
 } from "@rexeus/typeweaver-core";
 import { z } from "zod";
-//#region \0rolldown/runtime.js
 var __defProp = Object.defineProperty;
 var __exportAll = (all, no_symbols) => {
   let target = {};
@@ -18,8 +17,6 @@ var __exportAll = (all, no_symbols) => {
   if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
   return target;
 };
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/shared/defaultResponseHeader.ts
 const defaultResponseHeader = z.object({
   "Content-Type": z.literal("application/json"),
   "X-Single-Value": z.string().optional(),
@@ -35,8 +32,6 @@ defineResponse({
   statusCode: HttpStatusCode.CONFLICT,
   description: "Conflicted request",
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/shared/ForbiddenErrorDefinition.ts
 var ForbiddenErrorDefinition_default = defineResponse({
   name: "ForbiddenError",
   body: z.object({
@@ -47,8 +42,6 @@ var ForbiddenErrorDefinition_default = defineResponse({
   statusCode: HttpStatusCode.FORBIDDEN,
   description: "Forbidden request",
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/shared/InternalServerErrorDefinition.ts
 var InternalServerErrorDefinition_default = defineResponse({
   name: "InternalServerError",
   description: "Internal server error occurred",
@@ -69,8 +62,6 @@ defineResponse({
     code: z.literal("NOT_FOUND_ERROR"),
   }),
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/shared/TooManyRequestsErrorDefinition.ts
 var TooManyRequestsErrorDefinition_default = defineResponse({
   name: "TooManyRequestsError",
   description: "Too many requests",
@@ -81,8 +72,6 @@ var TooManyRequestsErrorDefinition_default = defineResponse({
     code: z.literal("TOO_MANY_REQUESTS_ERROR"),
   }),
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/shared/UnauthorizedErrorDefinition.ts
 var UnauthorizedErrorDefinition_default = defineResponse({
   name: "UnauthorizedError",
   description: "Unauthorized request",
@@ -103,8 +92,6 @@ defineResponse({
     code: z.literal("UNPROCESSABLE_ENTITY_ERROR"),
   }),
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/shared/UnsupportedMediaTypeErrorDefinition.ts
 var UnsupportedMediaTypeErrorDefinition_default = defineResponse({
   name: "UnsupportedMediaTypeError",
   body: z.object({
@@ -117,8 +104,6 @@ var UnsupportedMediaTypeErrorDefinition_default = defineResponse({
   statusCode: HttpStatusCode.UNSUPPORTED_MEDIA_TYPE,
   description: "Unsupported media type",
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/shared/ValidationErrorDefinition.ts
 var ValidationErrorDefinition_default = defineResponse({
   name: "ValidationError",
   description: "Validation error",
@@ -135,8 +120,6 @@ var ValidationErrorDefinition_default = defineResponse({
     }),
   }),
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/shared/defaultRequestHeader.ts
 const defaultRequestHeadersWithPayload = z.object({
   "Content-Type": z.literal("application/json"),
   Accept: z.literal("application/json"),
@@ -150,8 +133,6 @@ const defaultRequestHeadersWithoutPayload = z.object({
   "X-Single-Value": z.string().optional(),
   "X-Multi-Value": z.array(z.string()).optional(),
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/shared/sharedResponses.ts
 const sharedResponses = [
   ForbiddenErrorDefinition_default,
   InternalServerErrorDefinition_default,
@@ -160,31 +141,23 @@ const sharedResponses = [
   UnsupportedMediaTypeErrorDefinition_default,
   ValidationErrorDefinition_default,
 ];
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/shared/schemas/listResponseSchema.ts
 function listResponseSchema(schema) {
   return z.object({
     results: z.array(schema),
     nextToken: z.string().optional(),
   });
 }
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/shared/schemas/metadataSchema.ts
 const metadataSchema = z.object({
   createdAt: z.string(),
   modifiedAt: z.string(),
   createdBy: z.string(),
   modifiedBy: z.string(),
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/account/accountSchema.ts
 const accountSchema = z.object({
   id: z.string().max(256),
   email: z.email().max(256),
   ...metadataSchema.shape,
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/account/RegisterAccountDefinition.ts
 var RegisterAccountDefinition_default = defineOperation({
   operationId: "RegisterAccount",
   path: "/accounts",
@@ -208,8 +181,6 @@ var RegisterAccountDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/auth/AccessTokenDefinition.ts
 var AccessTokenDefinition_default = defineOperation({
   operationId: "AccessToken",
   path: "/auth/access-token",
@@ -236,8 +207,6 @@ var AccessTokenDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/auth/RefreshTokenDefinition.ts
 var RefreshTokenDefinition_default = defineOperation({
   operationId: "RefreshToken",
   path: "/auth/refresh-token",
@@ -261,8 +230,6 @@ var RefreshTokenDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/file/fileSchema.ts
 const fileMetadataSchema = z.object({
   id: z.ulid(),
   name: z.string(),
@@ -270,8 +237,6 @@ const fileMetadataSchema = z.object({
   mimeType: z.string(),
   createdAt: z.string(),
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/file/UploadFileDefinition.ts
 var UploadFileDefinition_default = defineOperation({
   operationId: "UploadFile",
   path: "/files",
@@ -296,8 +261,6 @@ var UploadFileDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/file/DownloadFileContentDefinition.ts
 var DownloadFileContentDefinition_default = defineOperation({
   operationId: "DownloadFileContent",
   path: "/files/:fileId/content",
@@ -318,8 +281,6 @@ var DownloadFileContentDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/file/GetFileMetadataDefinition.ts
 var GetFileMetadataDefinition_default = defineOperation({
   operationId: "GetFileMetadata",
   path: "/files/:fileId",
@@ -340,8 +301,6 @@ var GetFileMetadataDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/todoSchema.ts
 const todoStatus = z.enum(["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]);
 const todoSchema = z.object({
   id: z.ulid(),
@@ -355,8 +314,6 @@ const todoSchema = z.object({
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
   ...metadataSchema.shape,
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/errors/SubTodoNotChangeableErrorDefinition.ts
 var SubTodoNotChangeableErrorDefinition_default = defineResponse({
   name: "SubTodoNotChangeableError",
   description: "SubTodo in current status or because of parent todo status cannot be changed",
@@ -379,8 +336,6 @@ var SubTodoNotChangeableErrorDefinition_default = defineResponse({
     }),
   }),
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/errors/SubTodoNotFoundErrorDefinition.ts
 var SubTodoNotFoundErrorDefinition_default = defineResponse({
   name: "SubTodoNotFoundError",
   description: "SubTodo not found",
@@ -393,8 +348,6 @@ var SubTodoNotFoundErrorDefinition_default = defineResponse({
     actualValues: z.object({ subtodoId: z.ulid() }),
   }),
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/errors/SubTodoStatusTransitionInvalidErrorDefinition.ts
 var SubTodoStatusTransitionInvalidErrorDefinition_default = defineResponse({
   name: "SubTodoStatusTransitionInvalidError",
   description: "SubTodo status transition is conflicting with its status or parent todo status",
@@ -415,8 +368,6 @@ var SubTodoStatusTransitionInvalidErrorDefinition_default = defineResponse({
     expectedValues: z.object({ allowedSubtodoStatuses: z.array(todoStatus) }),
   }),
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/errors/TodoNotChangeableErrorDefinition.ts
 var TodoNotChangeableErrorDefinition_default = defineResponse({
   name: "TodoNotChangeableError",
   description: "Todo in current status cannot be changed",
@@ -432,8 +383,6 @@ var TodoNotChangeableErrorDefinition_default = defineResponse({
     expectedValues: z.object({ allowedStatuses: z.array(todoStatus) }),
   }),
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/errors/TodoNotFoundErrorDefinition.ts
 var TodoNotFoundErrorDefinition_default = defineResponse({
   name: "TodoNotFoundError",
   description: "Todo not found",
@@ -445,8 +394,6 @@ var TodoNotFoundErrorDefinition_default = defineResponse({
     actualValues: z.object({ todoId: z.ulid() }),
   }),
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/errors/TodoStatusTransitionInvalidErrorDefinition.ts
 var TodoStatusTransitionInvalidErrorDefinition_default = defineResponse({
   name: "TodoStatusTransitionInvalidError",
   description: "Todo status transition is conflicting with current status",
@@ -463,8 +410,6 @@ var TodoStatusTransitionInvalidErrorDefinition_default = defineResponse({
     expectedValues: z.object({ allowedStatuses: z.array(todoStatus) }),
   }),
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/mutations/CreateSubTodoDefinition.ts
 var CreateSubTodoDefinition_default = defineOperation({
   operationId: "CreateSubTodo",
   summary: "Create new subtodo",
@@ -496,8 +441,6 @@ var CreateSubTodoDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/mutations/CreateTodoDefinition.ts
 var CreateTodoDefinition_default = defineOperation({
   operationId: "CreateTodo",
   summary: "Create new todo",
@@ -527,8 +470,6 @@ var CreateTodoDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/mutations/DeleteSubTodoDefinition.ts
 var DeleteSubTodoDefinition_default = defineOperation({
   operationId: "DeleteSubTodo",
   summary: "Delete subtodo",
@@ -554,8 +495,6 @@ var DeleteSubTodoDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/mutations/DeleteTodoDefinition.ts
 var DeleteTodoDefinition_default = defineOperation({
   operationId: "DeleteTodo",
   summary: "Delete todo",
@@ -576,8 +515,6 @@ var DeleteTodoDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/mutations/PutTodoDefinition.ts
 var PutTodoDefinition_default = defineOperation({
   operationId: "PutTodo",
   path: "/todos/:todoId",
@@ -607,8 +544,6 @@ var PutTodoDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/mutations/UpdateSubTodoDefinition.ts
 var UpdateSubTodoDefinition_default = defineOperation({
   operationId: "UpdateSubTodo",
   summary: "Update subtodo",
@@ -647,8 +582,6 @@ var UpdateSubTodoDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/mutations/UpdateTodoDefinition.ts
 var UpdateTodoDefinition_default = defineOperation({
   operationId: "UpdateTodo",
   path: "/todos/:todoId",
@@ -683,8 +616,6 @@ var UpdateTodoDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/mutations/UpdateTodoStatusDefinition.ts
 var UpdateTodoStatusDefinition_default = defineOperation({
   operationId: "UpdateTodoStatus",
   path: "/todos/:todoId/status",
@@ -709,8 +640,6 @@ var UpdateTodoStatusDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/queries/GetTodoDefinition.ts
 var GetTodoDefinition_default = defineOperation({
   operationId: "GetTodo",
   request: {
@@ -732,8 +661,6 @@ var GetTodoDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/queries/HeadTodoDefinition.ts
 var HeadTodoDefinition_default = defineOperation({
   operationId: "HeadTodo",
   request: {
@@ -754,8 +681,6 @@ var HeadTodoDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/queries/ListSubTodosDefinition.ts
 const listSubTodosQuerySchema = z.object({
   limit: z.string().optional(),
   nextToken: z.string().optional(),
@@ -784,8 +709,6 @@ var ListSubTodosDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/queries/ListTodosDefinition.ts
 const listTodosQuerySchema = z.object({
   status: z.enum(["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]).optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
@@ -818,8 +741,6 @@ var ListTodosDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/queries/OptionsTodoDefinition.ts
 var OptionsTodoDefinition_default = defineOperation({
   operationId: "OptionsTodo",
   request: {
@@ -850,8 +771,6 @@ var OptionsTodoDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/queries/QuerySubTodoDefinition.ts
 const querySubTodoRequestBodySchema = z.object({
   searchText: z.string().optional(),
   status: z.enum(["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]).optional(),
@@ -894,8 +813,6 @@ var QuerySubTodoDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/todo/queries/QueryTodoDefinition.ts
 const queryTodoRequestBodySchema = z.object({
   searchText: z.string().optional(),
   accountId: z.ulid().optional(),
@@ -936,8 +853,6 @@ var QueryTodoDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-//#endregion
-//#region ../../Users/denniswentzien/Development/rexeus/typeweaver/packages/test-utils/src/test-project/spec/index.ts
 var spec_exports = /* @__PURE__ */ __exportAll({ default: () => spec_default });
 var spec_default = defineSpec({
   resources: {
@@ -971,10 +886,7 @@ var spec_default = defineSpec({
     },
   },
 });
-//#endregion
-//#region ../../private/tmp/typeweaver-spec-loader-WH26jw/spec-entrypoint.ts
 const resolvedSpec =
   Reflect.get(spec_exports, "default") ?? Reflect.get(spec_exports, "spec") ?? spec_exports;
 const spec = resolvedSpec;
-//#endregion
 export { resolvedSpec as default, spec };
