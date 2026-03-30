@@ -103,8 +103,8 @@ async function handleRequest(
 function collectBody(
   req: IncomingMessage,
   maxBodySize: number
-): Promise<Buffer> {
-  return new Promise<Buffer>((resolve, reject) => {
+): Promise<ArrayBuffer> {
+  return new Promise<ArrayBuffer>((resolve, reject) => {
     const chunks: Buffer[] = [];
     let totalBytes = 0;
 
@@ -118,7 +118,15 @@ function collectBody(
       chunks.push(chunk);
     });
 
-    req.on("end", () => resolve(Buffer.concat(chunks, totalBytes)));
+    req.on("end", () => {
+      const combined = Buffer.concat(chunks, totalBytes);
+      resolve(
+        combined.buffer.slice(
+          combined.byteOffset,
+          combined.byteOffset + combined.byteLength
+        ) as ArrayBuffer
+      );
+    });
     req.on("error", reject);
   });
 }
