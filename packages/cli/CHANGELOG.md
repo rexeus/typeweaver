@@ -1,5 +1,18 @@
 # @rexeus/typeweaver
 
+## 0.9.2
+
+### Patch Changes
+
+- Updated dependencies [ff722c3]
+  - @rexeus/typeweaver-server@0.9.2
+  - @rexeus/typeweaver-aws-cdk@0.9.2
+  - @rexeus/typeweaver-clients@0.9.2
+  - @rexeus/typeweaver-core@0.9.2
+  - @rexeus/typeweaver-gen@0.9.2
+  - @rexeus/typeweaver-hono@0.9.2
+  - @rexeus/typeweaver-types@0.9.2
+
 ## 0.9.1
 
 ### Patch Changes

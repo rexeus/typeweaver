@@ -1,5 +1,11 @@
 # @rexeus/typeweaver-gen
 
+## 0.9.2
+
+### Patch Changes
+
+- @rexeus/typeweaver-core@0.9.2
+
 ## 0.9.1
 
 ### Patch Changes

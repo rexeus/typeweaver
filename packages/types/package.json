@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-types",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Generates request and response types plus validators aligned with your API contract. Powered by Typeweaver 🧵✨",
   "type": "module",
   "sideEffects": false,
