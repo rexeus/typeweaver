@@ -284,14 +284,14 @@ export class FetchApiAdapter {
   private static concatChunks(
     chunks: Uint8Array[],
     totalBytes: number
-  ): Uint8Array {
+  ): ArrayBuffer {
     const buffer = new Uint8Array(totalBytes);
     let offset = 0;
     for (const chunk of chunks) {
       buffer.set(chunk, offset);
       offset += chunk.byteLength;
     }
-    return buffer;
+    return buffer.buffer as ArrayBuffer;
   }
 
   private static serializeResponseBody(
