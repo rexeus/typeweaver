@@ -9,7 +9,7 @@ import { generate as generateResponseValidators } from "./responseValidationGene
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
-export default class TypesPlugin extends BasePlugin {
+export class TypesPlugin extends BasePlugin {
   public name = "types";
 
   public override generate(context: GeneratorContext): void {

@@ -11,7 +11,7 @@ import {
   sharedResponses,
 } from "../shared";
 
-export default defineOperation({
+export const RefreshTokenDefinition = defineOperation({
   operationId: "RefreshToken",
   path: "/auth/refresh-token",
   summary: "Refresh access token by refresh token",

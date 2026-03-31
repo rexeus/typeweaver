@@ -35,7 +35,7 @@ const listTodosQuerySchema = z.object({
   dateTo: z.string().optional(),
 });
 
-export default defineOperation({
+export const ListTodosDefinition = defineOperation({
   operationId: "ListTodos",
   summary: "List todos with filtering, pagination, and search",
   method: HttpMethod.GET,

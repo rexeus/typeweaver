@@ -2,7 +2,7 @@ import { defineResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import { defaultResponseHeader } from "./defaultResponseHeader";
 
-export default defineResponse({
+export const UnprocessableEntityErrorDefinition = defineResponse({
   statusCode: HttpStatusCode.UNPROCESSABLE_ENTITY,
   name: "UnprocessableEntityError",
   description: "Unprocessable entity error",

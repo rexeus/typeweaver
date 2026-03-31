@@ -2,7 +2,7 @@ import { defineResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import { defaultResponseHeader } from "./defaultResponseHeader";
 
-export default defineResponse({
+export const UnsupportedMediaTypeErrorDefinition = defineResponse({
   name: "UnsupportedMediaTypeError",
   body: z.object({
     message: z.literal("Unsupported media type"),

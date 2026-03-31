@@ -10,10 +10,10 @@ import {
   defaultResponseHeader,
   sharedResponses,
 } from "../../shared";
-import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
+import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition";
 import { todoSchema } from "../todoSchema";
 
-export default defineOperation({
+export const CreateSubTodoDefinition = defineOperation({
   operationId: "CreateSubTodo",
   summary: "Create new subtodo",
   method: HttpMethod.POST,

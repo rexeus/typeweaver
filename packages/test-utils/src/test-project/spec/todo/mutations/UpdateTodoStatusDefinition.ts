@@ -10,12 +10,12 @@ import {
   defaultResponseHeader,
   sharedResponses,
 } from "../../shared";
-import TodoNotChangeableErrorDefinition from "../errors/TodoNotChangeableErrorDefinition";
-import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
-import TodoStatusTransitionInvalidErrorDefinition from "../errors/TodoStatusTransitionInvalidErrorDefinition";
+import { TodoNotChangeableErrorDefinition } from "../errors/TodoNotChangeableErrorDefinition";
+import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition";
+import { TodoStatusTransitionInvalidErrorDefinition } from "../errors/TodoStatusTransitionInvalidErrorDefinition";
 import { todoSchema } from "../todoSchema";
 
-export default defineOperation({
+export const UpdateTodoStatusDefinition = defineOperation({
   operationId: "UpdateTodoStatus",
   path: "/todos/:todoId/status",
   method: HttpMethod.PUT,

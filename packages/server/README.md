@@ -126,7 +126,7 @@ import { userHandlers } from "./user-handlers";
 const app = new TypeweaverApp();
 app.route(new UserRouter({ requestHandlers: userHandlers }));
 
-export default app;
+export { app };
 ```
 
 ### Start the server
@@ -134,7 +134,7 @@ export default app;
 **Bun**
 
 ```ts
-import app from "./server";
+import { app } from "./server";
 
 Bun.serve({ fetch: app.fetch, port: 3000 });
 ```
@@ -142,7 +142,7 @@ Bun.serve({ fetch: app.fetch, port: 3000 });
 **Deno**
 
 ```ts
-import app from "./server.ts";
+import { app } from "./server.ts";
 
 Deno.serve({ port: 3000 }, app.fetch);
 ```
@@ -152,7 +152,7 @@ Deno.serve({ port: 3000 }, app.fetch);
 ```ts
 import { createServer } from "node:http";
 import { nodeAdapter } from "./generated/lib/server";
-import app from "./server";
+import { app } from "./server";
 
 createServer(nodeAdapter(app)).listen(3000);
 ```

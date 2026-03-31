@@ -32,7 +32,7 @@ defineResponse({
   statusCode: HttpStatusCode.CONFLICT,
   description: "Conflicted request",
 });
-var ForbiddenErrorDefinition_default = defineResponse({
+const ForbiddenErrorDefinition = defineResponse({
   name: "ForbiddenError",
   body: z.object({
     message: z.literal("Forbidden request"),
@@ -42,7 +42,7 @@ var ForbiddenErrorDefinition_default = defineResponse({
   statusCode: HttpStatusCode.FORBIDDEN,
   description: "Forbidden request",
 });
-var InternalServerErrorDefinition_default = defineResponse({
+const InternalServerErrorDefinition = defineResponse({
   name: "InternalServerError",
   description: "Internal server error occurred",
   statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
@@ -62,7 +62,7 @@ defineResponse({
     code: z.literal("NOT_FOUND_ERROR"),
   }),
 });
-var TooManyRequestsErrorDefinition_default = defineResponse({
+const TooManyRequestsErrorDefinition = defineResponse({
   name: "TooManyRequestsError",
   description: "Too many requests",
   statusCode: HttpStatusCode.TOO_MANY_REQUESTS,
@@ -72,7 +72,7 @@ var TooManyRequestsErrorDefinition_default = defineResponse({
     code: z.literal("TOO_MANY_REQUESTS_ERROR"),
   }),
 });
-var UnauthorizedErrorDefinition_default = defineResponse({
+const UnauthorizedErrorDefinition = defineResponse({
   name: "UnauthorizedError",
   description: "Unauthorized request",
   statusCode: HttpStatusCode.UNAUTHORIZED,
@@ -92,7 +92,7 @@ defineResponse({
     code: z.literal("UNPROCESSABLE_ENTITY_ERROR"),
   }),
 });
-var UnsupportedMediaTypeErrorDefinition_default = defineResponse({
+const UnsupportedMediaTypeErrorDefinition = defineResponse({
   name: "UnsupportedMediaTypeError",
   body: z.object({
     message: z.literal("Unsupported media type"),
@@ -104,7 +104,7 @@ var UnsupportedMediaTypeErrorDefinition_default = defineResponse({
   statusCode: HttpStatusCode.UNSUPPORTED_MEDIA_TYPE,
   description: "Unsupported media type",
 });
-var ValidationErrorDefinition_default = defineResponse({
+const ValidationErrorDefinition = defineResponse({
   name: "ValidationError",
   description: "Validation error",
   statusCode: HttpStatusCode.BAD_REQUEST,
@@ -134,12 +134,12 @@ const defaultRequestHeadersWithoutPayload = z.object({
   "X-Multi-Value": z.array(z.string()).optional(),
 });
 const sharedResponses = [
-  ForbiddenErrorDefinition_default,
-  InternalServerErrorDefinition_default,
-  TooManyRequestsErrorDefinition_default,
-  UnauthorizedErrorDefinition_default,
-  UnsupportedMediaTypeErrorDefinition_default,
-  ValidationErrorDefinition_default,
+  ForbiddenErrorDefinition,
+  InternalServerErrorDefinition,
+  TooManyRequestsErrorDefinition,
+  UnauthorizedErrorDefinition,
+  UnsupportedMediaTypeErrorDefinition,
+  ValidationErrorDefinition,
 ];
 function listResponseSchema(schema) {
   return z.object({
@@ -158,7 +158,7 @@ const accountSchema = z.object({
   email: z.email().max(256),
   ...metadataSchema.shape,
 });
-var RegisterAccountDefinition_default = defineOperation({
+const RegisterAccountDefinition = defineOperation({
   operationId: "RegisterAccount",
   path: "/accounts",
   summary: "Register new account",
@@ -181,7 +181,7 @@ var RegisterAccountDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-var AccessTokenDefinition_default = defineOperation({
+const AccessTokenDefinition = defineOperation({
   operationId: "AccessToken",
   path: "/auth/access-token",
   summary: "Get access token by email and password",
@@ -207,7 +207,7 @@ var AccessTokenDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-var RefreshTokenDefinition_default = defineOperation({
+const RefreshTokenDefinition = defineOperation({
   operationId: "RefreshToken",
   path: "/auth/refresh-token",
   summary: "Refresh access token by refresh token",
@@ -237,7 +237,7 @@ const fileMetadataSchema = z.object({
   mimeType: z.string(),
   createdAt: z.string(),
 });
-var UploadFileDefinition_default = defineOperation({
+const UploadFileDefinition = defineOperation({
   operationId: "UploadFile",
   path: "/files",
   summary: "Upload a file",
@@ -261,7 +261,7 @@ var UploadFileDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-var DownloadFileContentDefinition_default = defineOperation({
+const DownloadFileContentDefinition = defineOperation({
   operationId: "DownloadFileContent",
   path: "/files/:fileId/content",
   summary: "Download file content",
@@ -281,7 +281,7 @@ var DownloadFileContentDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-var GetFileMetadataDefinition_default = defineOperation({
+const GetFileMetadataDefinition = defineOperation({
   operationId: "GetFileMetadata",
   path: "/files/:fileId",
   summary: "Get file metadata",
@@ -314,7 +314,7 @@ const todoSchema = z.object({
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
   ...metadataSchema.shape,
 });
-var SubTodoNotChangeableErrorDefinition_default = defineResponse({
+const SubTodoNotChangeableErrorDefinition = defineResponse({
   name: "SubTodoNotChangeableError",
   description: "SubTodo in current status or because of parent todo status cannot be changed",
   statusCode: HttpStatusCode.CONFLICT,
@@ -336,7 +336,7 @@ var SubTodoNotChangeableErrorDefinition_default = defineResponse({
     }),
   }),
 });
-var SubTodoNotFoundErrorDefinition_default = defineResponse({
+const SubTodoNotFoundErrorDefinition = defineResponse({
   name: "SubTodoNotFoundError",
   description: "SubTodo not found",
   statusCode: HttpStatusCode.NOT_FOUND,
@@ -348,7 +348,7 @@ var SubTodoNotFoundErrorDefinition_default = defineResponse({
     actualValues: z.object({ subtodoId: z.ulid() }),
   }),
 });
-var SubTodoStatusTransitionInvalidErrorDefinition_default = defineResponse({
+const SubTodoStatusTransitionInvalidErrorDefinition = defineResponse({
   name: "SubTodoStatusTransitionInvalidError",
   description: "SubTodo status transition is conflicting with its status or parent todo status",
   statusCode: HttpStatusCode.CONFLICT,
@@ -368,7 +368,7 @@ var SubTodoStatusTransitionInvalidErrorDefinition_default = defineResponse({
     expectedValues: z.object({ allowedSubtodoStatuses: z.array(todoStatus) }),
   }),
 });
-var TodoNotChangeableErrorDefinition_default = defineResponse({
+const TodoNotChangeableErrorDefinition = defineResponse({
   name: "TodoNotChangeableError",
   description: "Todo in current status cannot be changed",
   statusCode: HttpStatusCode.CONFLICT,
@@ -383,7 +383,7 @@ var TodoNotChangeableErrorDefinition_default = defineResponse({
     expectedValues: z.object({ allowedStatuses: z.array(todoStatus) }),
   }),
 });
-var TodoNotFoundErrorDefinition_default = defineResponse({
+const TodoNotFoundErrorDefinition = defineResponse({
   name: "TodoNotFoundError",
   description: "Todo not found",
   statusCode: HttpStatusCode.NOT_FOUND,
@@ -394,7 +394,7 @@ var TodoNotFoundErrorDefinition_default = defineResponse({
     actualValues: z.object({ todoId: z.ulid() }),
   }),
 });
-var TodoStatusTransitionInvalidErrorDefinition_default = defineResponse({
+const TodoStatusTransitionInvalidErrorDefinition = defineResponse({
   name: "TodoStatusTransitionInvalidError",
   description: "Todo status transition is conflicting with current status",
   statusCode: HttpStatusCode.CONFLICT,
@@ -410,7 +410,7 @@ var TodoStatusTransitionInvalidErrorDefinition_default = defineResponse({
     expectedValues: z.object({ allowedStatuses: z.array(todoStatus) }),
   }),
 });
-var CreateSubTodoDefinition_default = defineOperation({
+const CreateSubTodoDefinition = defineOperation({
   operationId: "CreateSubTodo",
   summary: "Create new subtodo",
   method: HttpMethod.POST,
@@ -437,11 +437,11 @@ var CreateSubTodoDefinition_default = defineOperation({
       statusCode: HttpStatusCode.CREATED,
       header: defaultResponseHeader,
     }),
-    TodoNotFoundErrorDefinition_default,
+    TodoNotFoundErrorDefinition,
     ...sharedResponses,
   ],
 });
-var CreateTodoDefinition_default = defineOperation({
+const CreateTodoDefinition = defineOperation({
   operationId: "CreateTodo",
   summary: "Create new todo",
   method: HttpMethod.POST,
@@ -470,7 +470,7 @@ var CreateTodoDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-var DeleteSubTodoDefinition_default = defineOperation({
+const DeleteSubTodoDefinition = defineOperation({
   operationId: "DeleteSubTodo",
   summary: "Delete subtodo",
   method: HttpMethod.DELETE,
@@ -490,12 +490,12 @@ var DeleteSubTodoDefinition_default = defineOperation({
       statusCode: HttpStatusCode.OK,
       header: defaultResponseHeader,
     }),
-    SubTodoNotFoundErrorDefinition_default,
-    TodoNotFoundErrorDefinition_default,
+    SubTodoNotFoundErrorDefinition,
+    TodoNotFoundErrorDefinition,
     ...sharedResponses,
   ],
 });
-var DeleteTodoDefinition_default = defineOperation({
+const DeleteTodoDefinition = defineOperation({
   operationId: "DeleteTodo",
   summary: "Delete todo",
   method: HttpMethod.DELETE,
@@ -511,11 +511,11 @@ var DeleteTodoDefinition_default = defineOperation({
       statusCode: HttpStatusCode.NO_CONTENT,
       header: defaultResponseHeader,
     }),
-    TodoNotFoundErrorDefinition_default,
+    TodoNotFoundErrorDefinition,
     ...sharedResponses,
   ],
 });
-var PutTodoDefinition_default = defineOperation({
+const PutTodoDefinition = defineOperation({
   operationId: "PutTodo",
   path: "/todos/:todoId",
   request: {
@@ -539,12 +539,12 @@ var PutTodoDefinition_default = defineOperation({
       statusCode: HttpStatusCode.OK,
       header: defaultResponseHeader,
     }),
-    TodoNotFoundErrorDefinition_default,
-    TodoNotChangeableErrorDefinition_default,
+    TodoNotFoundErrorDefinition,
+    TodoNotChangeableErrorDefinition,
     ...sharedResponses,
   ],
 });
-var UpdateSubTodoDefinition_default = defineOperation({
+const UpdateSubTodoDefinition = defineOperation({
   operationId: "UpdateSubTodo",
   summary: "Update subtodo",
   method: HttpMethod.PUT,
@@ -575,14 +575,14 @@ var UpdateSubTodoDefinition_default = defineOperation({
       statusCode: HttpStatusCode.OK,
       header: defaultResponseHeader,
     }),
-    SubTodoNotFoundErrorDefinition_default,
-    SubTodoNotChangeableErrorDefinition_default,
-    SubTodoStatusTransitionInvalidErrorDefinition_default,
-    TodoNotFoundErrorDefinition_default,
+    SubTodoNotFoundErrorDefinition,
+    SubTodoNotChangeableErrorDefinition,
+    SubTodoStatusTransitionInvalidErrorDefinition,
+    TodoNotFoundErrorDefinition,
     ...sharedResponses,
   ],
 });
-var UpdateTodoDefinition_default = defineOperation({
+const UpdateTodoDefinition = defineOperation({
   operationId: "UpdateTodo",
   path: "/todos/:todoId",
   request: {
@@ -611,12 +611,12 @@ var UpdateTodoDefinition_default = defineOperation({
       statusCode: HttpStatusCode.OK,
       header: defaultResponseHeader,
     }),
-    TodoNotFoundErrorDefinition_default,
-    TodoNotChangeableErrorDefinition_default,
+    TodoNotFoundErrorDefinition,
+    TodoNotChangeableErrorDefinition,
     ...sharedResponses,
   ],
 });
-var UpdateTodoStatusDefinition_default = defineOperation({
+const UpdateTodoStatusDefinition = defineOperation({
   operationId: "UpdateTodoStatus",
   path: "/todos/:todoId/status",
   method: HttpMethod.PUT,
@@ -634,13 +634,13 @@ var UpdateTodoStatusDefinition_default = defineOperation({
       statusCode: HttpStatusCode.OK,
       header: defaultResponseHeader,
     }),
-    TodoNotFoundErrorDefinition_default,
-    TodoStatusTransitionInvalidErrorDefinition_default,
-    TodoNotChangeableErrorDefinition_default,
+    TodoNotFoundErrorDefinition,
+    TodoStatusTransitionInvalidErrorDefinition,
+    TodoNotChangeableErrorDefinition,
     ...sharedResponses,
   ],
 });
-var GetTodoDefinition_default = defineOperation({
+const GetTodoDefinition = defineOperation({
   operationId: "GetTodo",
   request: {
     param: z.object({ todoId: z.ulid() }),
@@ -657,11 +657,11 @@ var GetTodoDefinition_default = defineOperation({
       statusCode: HttpStatusCode.OK,
       header: defaultResponseHeader,
     }),
-    TodoNotFoundErrorDefinition_default,
+    TodoNotFoundErrorDefinition,
     ...sharedResponses,
   ],
 });
-var HeadTodoDefinition_default = defineOperation({
+const HeadTodoDefinition = defineOperation({
   operationId: "HeadTodo",
   request: {
     param: z.object({ todoId: z.ulid() }),
@@ -677,7 +677,7 @@ var HeadTodoDefinition_default = defineOperation({
       statusCode: HttpStatusCode.OK,
       header: defaultResponseHeader,
     }),
-    TodoNotFoundErrorDefinition_default,
+    TodoNotFoundErrorDefinition,
     ...sharedResponses,
   ],
 });
@@ -687,7 +687,7 @@ const listSubTodosQuerySchema = z.object({
   sortBy: z.enum(["title", "dueDate", "priority", "createdAt", "modifiedAt"]).optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
 });
-var ListSubTodosDefinition_default = defineOperation({
+const ListSubTodosDefinition = defineOperation({
   operationId: "ListSubTodos",
   request: {
     param: z.object({ todoId: z.ulid() }),
@@ -705,7 +705,7 @@ var ListSubTodosDefinition_default = defineOperation({
       statusCode: HttpStatusCode.OK,
       header: defaultResponseHeader,
     }),
-    TodoNotFoundErrorDefinition_default,
+    TodoNotFoundErrorDefinition,
     ...sharedResponses,
   ],
 });
@@ -721,7 +721,7 @@ const listTodosQuerySchema = z.object({
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
 });
-var ListTodosDefinition_default = defineOperation({
+const ListTodosDefinition = defineOperation({
   operationId: "ListTodos",
   summary: "List todos with filtering, pagination, and search",
   method: HttpMethod.GET,
@@ -741,7 +741,7 @@ var ListTodosDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-var OptionsTodoDefinition_default = defineOperation({
+const OptionsTodoDefinition = defineOperation({
   operationId: "OptionsTodo",
   request: {
     param: z.object({ todoId: z.ulid() }),
@@ -767,7 +767,7 @@ var OptionsTodoDefinition_default = defineOperation({
         "Access-Control-Max-Age": z.string().optional(),
       }),
     }),
-    TodoNotFoundErrorDefinition_default,
+    TodoNotFoundErrorDefinition,
     ...sharedResponses,
   ],
 });
@@ -790,7 +790,7 @@ const querySubTodoRequestQuerySchema = z.object({
   sortOrder: z.enum(["asc", "desc"]).optional(),
   format: z.enum(["summary", "detailed"]).optional(),
 });
-var QuerySubTodoDefinition_default = defineOperation({
+const QuerySubTodoDefinition = defineOperation({
   operationId: "QuerySubTodo",
   request: {
     param: z.object({ todoId: z.ulid() }),
@@ -809,7 +809,7 @@ var QuerySubTodoDefinition_default = defineOperation({
       statusCode: HttpStatusCode.OK,
       header: defaultResponseHeader,
     }),
-    TodoNotFoundErrorDefinition_default,
+    TodoNotFoundErrorDefinition,
     ...sharedResponses,
   ],
 });
@@ -827,7 +827,7 @@ const queryTodoRequestBodySchema = z.object({
   tags: z.array(z.string()).optional(),
   hasParent: z.boolean().optional(),
 });
-var QueryTodoDefinition_default = defineOperation({
+const QueryTodoDefinition = defineOperation({
   operationId: "QueryTodo",
   request: {
     header: defaultRequestHeadersWithPayload,
@@ -853,40 +853,35 @@ var QueryTodoDefinition_default = defineOperation({
     ...sharedResponses,
   ],
 });
-var spec_exports = /* @__PURE__ */ __exportAll({ default: () => spec_default });
-var spec_default = defineSpec({
+var spec_exports = /* @__PURE__ */ __exportAll({ spec: () => spec$1 });
+const spec$1 = defineSpec({
   resources: {
-    account: { operations: [RegisterAccountDefinition_default] },
-    auth: { operations: [AccessTokenDefinition_default, RefreshTokenDefinition_default] },
+    account: { operations: [RegisterAccountDefinition] },
+    auth: { operations: [AccessTokenDefinition, RefreshTokenDefinition] },
     file: {
-      operations: [
-        UploadFileDefinition_default,
-        DownloadFileContentDefinition_default,
-        GetFileMetadataDefinition_default,
-      ],
+      operations: [UploadFileDefinition, DownloadFileContentDefinition, GetFileMetadataDefinition],
     },
     todo: {
       operations: [
-        CreateSubTodoDefinition_default,
-        CreateTodoDefinition_default,
-        DeleteSubTodoDefinition_default,
-        DeleteTodoDefinition_default,
-        GetTodoDefinition_default,
-        HeadTodoDefinition_default,
-        ListSubTodosDefinition_default,
-        ListTodosDefinition_default,
-        OptionsTodoDefinition_default,
-        PutTodoDefinition_default,
-        QuerySubTodoDefinition_default,
-        QueryTodoDefinition_default,
-        UpdateSubTodoDefinition_default,
-        UpdateTodoDefinition_default,
-        UpdateTodoStatusDefinition_default,
+        CreateSubTodoDefinition,
+        CreateTodoDefinition,
+        DeleteSubTodoDefinition,
+        DeleteTodoDefinition,
+        GetTodoDefinition,
+        HeadTodoDefinition,
+        ListSubTodosDefinition,
+        ListTodosDefinition,
+        OptionsTodoDefinition,
+        PutTodoDefinition,
+        QuerySubTodoDefinition,
+        QueryTodoDefinition,
+        UpdateSubTodoDefinition,
+        UpdateTodoDefinition,
+        UpdateTodoStatusDefinition,
       ],
     },
   },
 });
-const resolvedSpec =
-  Reflect.get(spec_exports, "default") ?? Reflect.get(spec_exports, "spec") ?? spec_exports;
-const spec = resolvedSpec;
-export { resolvedSpec as default, spec };
+const spec =
+  Reflect.get(spec_exports, "spec") ?? Reflect.get(spec_exports, "default") ?? spec_exports;
+export { spec };

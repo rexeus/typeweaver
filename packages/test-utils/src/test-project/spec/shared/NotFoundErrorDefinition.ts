@@ -2,7 +2,7 @@ import { defineResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import { defaultResponseHeader } from "./defaultResponseHeader";
 
-export default defineResponse({
+export const NotFoundErrorDefinition = defineResponse({
   statusCode: HttpStatusCode.NOT_FOUND,
   name: "NotFoundError",
   description: "Resource not found",

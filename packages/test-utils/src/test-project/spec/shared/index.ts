@@ -1,13 +1,13 @@
 /* oxlint-disable import/max-dependencies */
-export { default as ConflictErrorDefinition } from "./ConflictErrorDefinition";
-export { default as ForbiddenErrorDefinition } from "./ForbiddenErrorDefinition";
-export { default as InternalServerErrorDefinition } from "./InternalServerErrorDefinition";
-export { default as NotFoundErrorDefinition } from "./NotFoundErrorDefinition";
-export { default as TooManyRequestsErrorDefinition } from "./TooManyRequestsErrorDefinition";
-export { default as UnauthorizedErrorDefinition } from "./UnauthorizedErrorDefinition";
-export { default as UnprocessableEntityErrorDefinition } from "./UnprocessableEntityErrorDefinition";
-export { default as UnsupportedMediaTypeErrorDefinition } from "./UnsupportedMediaTypeErrorDefinition";
-export { default as ValidationErrorDefinition } from "./ValidationErrorDefinition";
+export { ConflictErrorDefinition } from "./ConflictErrorDefinition";
+export { ForbiddenErrorDefinition } from "./ForbiddenErrorDefinition";
+export { InternalServerErrorDefinition } from "./InternalServerErrorDefinition";
+export { NotFoundErrorDefinition } from "./NotFoundErrorDefinition";
+export { TooManyRequestsErrorDefinition } from "./TooManyRequestsErrorDefinition";
+export { UnauthorizedErrorDefinition } from "./UnauthorizedErrorDefinition";
+export { UnprocessableEntityErrorDefinition } from "./UnprocessableEntityErrorDefinition";
+export { UnsupportedMediaTypeErrorDefinition } from "./UnsupportedMediaTypeErrorDefinition";
+export { ValidationErrorDefinition } from "./ValidationErrorDefinition";
 export * from "./defaultRequestHeader";
 export * from "./defaultResponseHeader";
 export * from "./sharedResponses";

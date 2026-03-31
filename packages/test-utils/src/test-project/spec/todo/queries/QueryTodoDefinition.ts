@@ -37,7 +37,7 @@ const queryTodoRequestQuerySchema = z.object({
   sortOrder: z.enum(["asc", "desc"]).optional(),
 });
 
-export default defineOperation({
+export const QueryTodoDefinition = defineOperation({
   operationId: "QueryTodo",
   request: {
     header: defaultRequestHeadersWithPayload,

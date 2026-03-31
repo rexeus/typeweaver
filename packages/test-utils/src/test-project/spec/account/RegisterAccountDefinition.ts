@@ -12,7 +12,7 @@ import {
 } from "../shared";
 import { accountSchema } from "./accountSchema";
 
-export default defineOperation({
+export const RegisterAccountDefinition = defineOperation({
   operationId: "RegisterAccount",
   path: "/accounts",
   summary: "Register new account",

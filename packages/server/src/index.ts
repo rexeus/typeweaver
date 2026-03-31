@@ -13,7 +13,7 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
  * Copies the runtime library files (`TypeweaverApp`, `TypeweaverRouter`, `Router`,
  * `Middleware`, etc.) and generates typed router classes for each resource.
  */
-export default class ServerPlugin extends BasePlugin {
+export class ServerPlugin extends BasePlugin {
   public name = "server";
 
   /**

@@ -6,7 +6,7 @@ import { generate as generateHttpApiRoutes } from "./httpApiRouterGenerator";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
-export default class AwsCdkPlugin extends BasePlugin {
+export class AwsCdkPlugin extends BasePlugin {
   public name = "aws-cdk";
   public override generate(context: GeneratorContext): Promise<void> | void {
     // Copy lib files to lib/aws-cdk/ from dist folder

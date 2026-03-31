@@ -10,13 +10,13 @@ import {
   defaultResponseHeader,
   sharedResponses,
 } from "../../shared";
-import SubTodoNotChangeableErrorDefinition from "../errors/SubTodoNotChangeableErrorDefinition";
-import SubTodoNotFoundErrorDefinition from "../errors/SubTodoNotFoundErrorDefinition";
-import SubTodoStatusTransitionInvalidErrorDefinition from "../errors/SubTodoStatusTransitionInvalidErrorDefinition";
-import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
+import { SubTodoNotChangeableErrorDefinition } from "../errors/SubTodoNotChangeableErrorDefinition";
+import { SubTodoNotFoundErrorDefinition } from "../errors/SubTodoNotFoundErrorDefinition";
+import { SubTodoStatusTransitionInvalidErrorDefinition } from "../errors/SubTodoStatusTransitionInvalidErrorDefinition";
+import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition";
 import { todoSchema } from "../todoSchema";
 
-export default defineOperation({
+export const UpdateSubTodoDefinition = defineOperation({
   operationId: "UpdateSubTodo",
   summary: "Update subtodo",
   method: HttpMethod.PUT,

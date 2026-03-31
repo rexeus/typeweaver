@@ -2,7 +2,7 @@ import { defineResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import { defaultResponseHeader } from "../../shared";
 
-export default defineResponse({
+export const SubTodoNotFoundErrorDefinition = defineResponse({
   name: "SubTodoNotFoundError",
   description: "SubTodo not found",
   statusCode: HttpStatusCode.NOT_FOUND,

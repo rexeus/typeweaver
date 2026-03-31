@@ -2,7 +2,7 @@ import { defineResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import { defaultResponseHeader } from "./defaultResponseHeader";
 
-export default defineResponse({
+export const UnauthorizedErrorDefinition = defineResponse({
   name: "UnauthorizedError",
   description: "Unauthorized request",
   statusCode: HttpStatusCode.UNAUTHORIZED,

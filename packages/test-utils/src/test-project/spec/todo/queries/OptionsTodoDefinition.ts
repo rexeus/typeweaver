@@ -7,9 +7,9 @@ import {
 import { z } from "zod";
 import { defaultRequestHeadersWithoutPayload } from "../../shared/defaultRequestHeader";
 import { sharedResponses } from "../../shared/sharedResponses";
-import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
+import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition";
 
-export default defineOperation({
+export const OptionsTodoDefinition = defineOperation({
   operationId: "OptionsTodo",
   request: {
     param: z.object({

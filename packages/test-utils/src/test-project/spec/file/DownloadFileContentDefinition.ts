@@ -7,7 +7,7 @@ import {
 import { z } from "zod";
 import { sharedResponses } from "../shared";
 
-export default defineOperation({
+export const DownloadFileContentDefinition = defineOperation({
   operationId: "DownloadFileContent",
   path: "/files/:fileId/content",
   summary: "Download file content",

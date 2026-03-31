@@ -54,11 +54,10 @@ export async function bundle(config: SpecBundlerConfig): Promise<string> {
     [
       `import * as specModule from ${JSON.stringify(wrapperImportSpecifier)};`,
       "const resolvedSpec =",
-      '  Reflect.get(specModule, "default") ??',
       '  Reflect.get(specModule, "spec") ??',
+      '  Reflect.get(specModule, "default") ??',
       "  specModule;",
       "",
-      "export default resolvedSpec;",
       "export const spec = resolvedSpec;",
       "",
     ].join("\n")

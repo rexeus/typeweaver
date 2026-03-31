@@ -10,11 +10,11 @@ import {
   defaultResponseHeader,
   sharedResponses,
 } from "../../shared";
-import TodoNotChangeableErrorDefinition from "../errors/TodoNotChangeableErrorDefinition";
-import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
+import { TodoNotChangeableErrorDefinition } from "../errors/TodoNotChangeableErrorDefinition";
+import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition";
 import { todoSchema } from "../todoSchema";
 
-export default defineOperation({
+export const UpdateTodoDefinition = defineOperation({
   operationId: "UpdateTodo",
   path: "/todos/:todoId",
   request: {

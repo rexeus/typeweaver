@@ -290,7 +290,7 @@ describe("SpecLoader", () => {
         'import { z } from "zod";',
         'import { todoResponse } from "./responses";',
         "",
-        "export default defineSpec({",
+        "export const spec = defineSpec({",
         "  resources: {",
         "    todos: {",
         "      operations: [",

@@ -63,7 +63,7 @@ describe("pluginLoader", () => {
     fs.writeFileSync(
       pluginPath,
       [
-        "export default class LocalPlugin {",
+        "export class LocalPlugin {",
         '  name = "local-plugin";',
         "}",
         "",

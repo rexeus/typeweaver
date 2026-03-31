@@ -3,7 +3,7 @@ import type {
   TypeweaverConfig,
   TypeweaverPlugin,
 } from "@rexeus/typeweaver-gen";
-import TypesPlugin from "@rexeus/typeweaver-types";
+import { TypesPlugin } from "@rexeus/typeweaver-types";
 import { PluginLoadingFailure } from "./errors/PluginLoadingFailure";
 import type { PluginLoadError } from "./errors/PluginLoadingFailure";
 
@@ -66,18 +66,19 @@ async function loadPlugin(
   for (const possiblePath of possiblePaths) {
     try {
       const pluginPackage = await import(possiblePath);
-      if (pluginPackage.default) {
+      const PluginClass = findPluginConstructor(pluginPackage);
+      if (PluginClass) {
         return {
           success: true,
           value: {
-            plugin: new pluginPackage.default(),
+            plugin: new PluginClass(),
             source: possiblePath,
           },
         };
       }
       attempts.push({
         path: possiblePath,
-        error: "No default export found",
+        error: "No plugin class export found",
       });
     } catch (error) {
       attempts.push({
@@ -94,6 +95,24 @@ async function loadPlugin(
       attempts,
     },
   };
+}
+
+function findPluginConstructor(
+  pluginModule: Record<string, unknown>
+): (new () => TypeweaverPlugin) | undefined {
+  for (const [key, value] of Object.entries(pluginModule)) {
+    if (key !== "default" && typeof value === "function") {
+      return value as new () => TypeweaverPlugin;
+    }
+  }
+
+  // Fall back to default export for third-party plugin compatibility
+  const defaultExport = pluginModule.default;
+  if (typeof defaultExport === "function") {
+    return defaultExport as new () => TypeweaverPlugin;
+  }
+
+  return undefined;
 }
 
 function generatePluginPaths(

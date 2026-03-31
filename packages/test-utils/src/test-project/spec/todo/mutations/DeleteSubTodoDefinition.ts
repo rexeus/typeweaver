@@ -10,10 +10,10 @@ import {
   defaultResponseHeader,
   sharedResponses,
 } from "../../shared";
-import SubTodoNotFoundErrorDefinition from "../errors/SubTodoNotFoundErrorDefinition";
-import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
+import { SubTodoNotFoundErrorDefinition } from "../errors/SubTodoNotFoundErrorDefinition";
+import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition";
 
-export default defineOperation({
+export const DeleteSubTodoDefinition = defineOperation({
   operationId: "DeleteSubTodo",
   summary: "Delete subtodo",
   method: HttpMethod.DELETE,

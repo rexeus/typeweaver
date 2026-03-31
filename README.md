@@ -117,10 +117,10 @@ import {
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
 import { z } from "zod";
-import UserNotFoundErrorDefinition from "./errors/UserNotFoundErrorDefinition";
+import { UserNotFoundErrorDefinition } from "./errors/UserNotFoundErrorDefinition";
 import { sharedResponses } from "../shared/sharedResponses";
 
-export default defineOperation({
+export const GetUserDefinition = defineOperation({
   operationId: "GetUser",
   method: HttpMethod.GET,
   path: "/users/:userId",
@@ -153,9 +153,9 @@ export default defineOperation({
 ```typescript
 // api/spec/index.ts
 import { defineSpec } from "@rexeus/typeweaver-core";
-import GetUserDefinition from "./user/GetUserDefinition";
+import { GetUserDefinition } from "./user/GetUserDefinition";
 
-export default defineSpec({
+export const spec = defineSpec({
   resources: {
     user: {
       operations: [GetUserDefinition],

@@ -24,7 +24,7 @@ import {
   UpdateTodoStatusDefinition,
 } from "./todo";
 
-export default defineSpec({
+export const spec = defineSpec({
   resources: {
     account: {
       operations: [RegisterAccountDefinition],

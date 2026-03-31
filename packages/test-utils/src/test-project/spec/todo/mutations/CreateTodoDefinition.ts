@@ -11,7 +11,7 @@ import {
 } from "../../shared";
 import { todoSchema } from "../todoSchema";
 
-export default defineOperation({
+export const CreateTodoDefinition = defineOperation({
   operationId: "CreateTodo",
   summary: "Create new todo",
   method: HttpMethod.POST,

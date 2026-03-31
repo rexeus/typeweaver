@@ -3,7 +3,7 @@ import { z } from "zod";
 import { defaultResponseHeader } from "../../shared";
 import { todoStatus } from "../todoSchema";
 
-export default defineResponse({
+export const SubTodoStatusTransitionInvalidErrorDefinition = defineResponse({
   name: "SubTodoStatusTransitionInvalidError",
   description:
     "SubTodo status transition is conflicting with its status or parent todo status",
