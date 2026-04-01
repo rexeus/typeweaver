@@ -30,11 +30,11 @@ describe("relative", () => {
     expect(result).toBe("../../c/d/file.ts");
   });
 
-  test("strips node_modules prefix and uses forward slashes", () => {
+  test("preserves parent traversal for external directories", () => {
     const from = path.join("/project", "src");
     const to = path.join(
       "/project",
-      "node_modules",
+      "vendor",
       "@rexeus",
       "typeweaver-core",
       "dist",
@@ -42,7 +42,7 @@ describe("relative", () => {
     );
     const result = relative(from, to);
 
-    expect(result).toBe("@rexeus/typeweaver-core/dist/index.js");
+    expect(result).toBe("../vendor/@rexeus/typeweaver-core/dist/index.js");
     expect(result).not.toContain("\\");
   });
 });

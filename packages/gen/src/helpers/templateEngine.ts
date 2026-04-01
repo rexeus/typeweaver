@@ -56,6 +56,8 @@ export function renderTemplate(
     "__stringify",
     // This intentionally relies on `new Function()` sloppy mode so `with (data)`
     // can expose template variables as bare identifiers during rendering.
+    // The tests pin the expected collision behavior: own properties on `data`
+    // (including names like `name` or `toString`) must win over outer built-ins.
     `const __output = []; with (data) { ${outputChunks.join("\n")} } return __output.join("");`
   ) as (
     data: Record<string, unknown>,

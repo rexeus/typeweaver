@@ -1,7 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { compareRoutes, toPascalCase } from "@rexeus/typeweaver-gen";
+import { compareRoutes, relative, toPascalCase } from "@rexeus/typeweaver-gen";
 import type {
   GeneratorContext,
   NormalizedOperation,
@@ -33,7 +33,7 @@ function writeHonoRouter(
     .sort((a, b) => compareRoutes(a, b));
 
   const content = context.renderTemplate(templateFile, {
-    coreDir: path.relative(outputDir, context.outputDir),
+    coreDir: relative(outputDir, context.outputDir),
     entityName: resource.name,
     pascalCaseEntityName,
     operations,

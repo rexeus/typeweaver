@@ -7,7 +7,7 @@
  */
 
 import type { Context } from "hono";
-import { TypeweaverHono, type HonoRequestHandler, type TypeweaverHonoOptions } from "../lib/hono";
+import { TypeweaverHono, type HonoRequestHandler, type TypeweaverHonoOptions } from "./../lib/hono";
 
 import type { IAccessTokenRequest } from "./AccessTokenRequest";
 import { AccessTokenRequestValidator } from "./AccessTokenRequestValidator";

@@ -8,6 +8,8 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 export class ClientsPlugin extends BasePlugin {
   public name = "clients";
+  public override depends = ["types"];
+
   public override generate(context: GeneratorContext): Promise<void> | void {
     // Copy lib files to lib/clients/ from dist folder
     const libDir = path.join(moduleDir, "lib");

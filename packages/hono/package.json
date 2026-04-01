@@ -29,7 +29,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "format": "oxfmt",
-    "build": "tsdown && mkdir -p ./dist/templates ./dist/lib && cp -r ./src/templates/* ./dist/templates/ && cp -r ./src/lib/* ./dist/lib/ && cp ../../LICENSE ../../NOTICE ./dist/",
+    "build": "tsdown",
     "test": "vitest --run",
     "prepack": "npm run build",
     "preversion": "npm run build"

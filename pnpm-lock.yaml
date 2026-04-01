@@ -235,9 +235,6 @@ importers:
       '@rexeus/typeweaver-gen':
         specifier: workspace:^
         version: link:../gen
-      oxc-transform:
-        specifier: ^0.121.0
-        version: 0.121.0
       test-utils:
         specifier: file:../test-utils
         version: link:../test-utils

@@ -79,4 +79,14 @@ describe("renderTemplate", () => {
 
     expect(result).toBe("||done");
   });
+
+  test("prefers colliding data properties over built-in identifiers", () => {
+    const template = "<%= name %> | <%- toString %>";
+    const result = renderTemplate(template, {
+      name: "Template Name",
+      toString: "custom toString value",
+    });
+
+    expect(result).toBe("Template Name | custom toString value");
+  });
 });

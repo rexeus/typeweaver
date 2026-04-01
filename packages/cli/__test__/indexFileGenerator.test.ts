@@ -17,7 +17,6 @@ function createContext(
       resources: [],
       responses: [],
     },
-    templateDir: "/templates",
     coreDir: "@rexeus/typeweaver-core",
     responsesOutputDir: path.join(outputDir, "responses"),
     specOutputDir: path.join(outputDir, "spec"),

@@ -105,7 +105,6 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
     return {
       ...pluginContext,
       normalizedSpec: params.normalizedSpec,
-      templateDir: params.templateDir,
       coreDir: params.coreDir,
       responsesOutputDir: params.responsesOutputDir,
       specOutputDir: params.specOutputDir,

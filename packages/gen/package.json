@@ -30,7 +30,7 @@
     "typecheck": "tsc --noEmit",
     "format": "oxfmt",
     "test": "vitest run",
-    "build": "tsdown && cp ../../LICENSE ../../NOTICE ./dist/",
+    "build": "tsdown",
     "prepack": "npm run build",
     "preversion": "npm run build"
   },

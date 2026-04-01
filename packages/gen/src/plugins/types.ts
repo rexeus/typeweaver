@@ -33,7 +33,6 @@ export type OperationOutputPaths = {
  */
 export type GeneratorContext = PluginContext & {
   readonly normalizedSpec: NormalizedSpec;
-  readonly templateDir: string;
   readonly coreDir: string;
   readonly responsesOutputDir: string;
   readonly specOutputDir: string;
@@ -67,6 +66,7 @@ export type GeneratorContext = PluginContext & {
  */
 export type PluginMetadata = {
   readonly name: string;
+  readonly depends?: readonly string[];
 };
 
 /**
@@ -151,10 +151,12 @@ export class PluginLoadError extends Error {
 export class PluginDependencyError extends Error {
   constructor(
     public pluginName: string,
-    public missingDependency: string
+    public missingDependency: string,
+    message?: string
   ) {
     super(
-      `Plugin '${pluginName}' depends on '${missingDependency}' which is not loaded`
+      message ??
+        `Plugin '${pluginName}' depends on '${missingDependency}' which is not loaded`
     );
     this.name = "PluginDependencyError";
   }
