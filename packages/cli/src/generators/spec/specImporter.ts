@@ -8,10 +8,10 @@ export async function importDefinition(
 ): Promise<SpecDefinition> {
   const moduleUrl = pathToFileURL(bundledSpecFile).toString();
   const specModule = (await import(moduleUrl)) as {
-    readonly default?: unknown;
     readonly spec?: unknown;
+    readonly default?: unknown;
   };
-  const definition = specModule.default ?? specModule.spec ?? specModule;
+  const definition = specModule.spec ?? specModule.default ?? specModule;
 
   if (!isSpecDefinition(definition)) {
     throw new InvalidSpecEntrypointError(bundledSpecFile);

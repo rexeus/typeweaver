@@ -6,7 +6,7 @@ import {
   createPluginRegistry,
 } from "@rexeus/typeweaver-gen";
 import type { PluginConfig, TypeweaverConfig } from "@rexeus/typeweaver-gen";
-import TypesPlugin from "@rexeus/typeweaver-types";
+import { TypesPlugin } from "@rexeus/typeweaver-types";
 import { formatCode } from "./formatter";
 import { generateIndexFiles } from "./indexFileGenerator";
 import { loadPlugins } from "./pluginLoader";

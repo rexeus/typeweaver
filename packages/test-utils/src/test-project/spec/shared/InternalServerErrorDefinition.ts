@@ -2,7 +2,7 @@ import { defineResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import { defaultResponseHeader } from "./defaultResponseHeader";
 
-export default defineResponse({
+export const InternalServerErrorDefinition = defineResponse({
   name: "InternalServerError",
   description: "Internal server error occurred",
   statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,

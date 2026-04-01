@@ -6,7 +6,7 @@ import { generate as generateClients } from "./clientGenerator";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
-export default class ClientsPlugin extends BasePlugin {
+export class ClientsPlugin extends BasePlugin {
   public name = "clients";
   public override generate(context: GeneratorContext): Promise<void> | void {
     // Copy lib files to lib/clients/ from dist folder

@@ -108,7 +108,7 @@ const GetTodo = defineOperation({
   ],
 });
 
-export default defineSpec({
+export const spec = defineSpec({
   resources: {
     todo: [GetTodo],
   },

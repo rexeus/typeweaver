@@ -12,7 +12,7 @@ import {
 } from "../shared";
 import { fileMetadataSchema } from "./fileSchema";
 
-export default defineOperation({
+export const GetFileMetadataDefinition = defineOperation({
   operationId: "GetFileMetadata",
   path: "/files/:fileId",
   summary: "Get file metadata",

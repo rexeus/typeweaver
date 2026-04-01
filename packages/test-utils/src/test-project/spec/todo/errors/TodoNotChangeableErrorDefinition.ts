@@ -3,7 +3,7 @@ import { z } from "zod";
 import { defaultResponseHeader } from "../../shared";
 import { todoStatus } from "../todoSchema";
 
-export default defineResponse({
+export const TodoNotChangeableErrorDefinition = defineResponse({
   name: "TodoNotChangeableError",
   description: "Todo in current status cannot be changed",
   statusCode: HttpStatusCode.CONFLICT,

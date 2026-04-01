@@ -161,9 +161,9 @@ import {
 import { z } from "zod";
 import { sharedResponses } from "../shared/sharedResponses";
 import { userSchema } from "./userSchema";
-import UserNotFoundErrorDefinition from "./errors/UserNotFoundErrorDefinition";
+import { UserNotFoundErrorDefinition } from "./errors/UserNotFoundErrorDefinition";
 
-export default defineOperation({
+export const GetUserDefinition = defineOperation({
   operationId: "GetUser",
   method: HttpMethod.GET,
   path: "/users/:userId",
@@ -192,9 +192,9 @@ export default defineOperation({
 ```typescript
 // api/spec/index.ts
 import { defineSpec } from "@rexeus/typeweaver-core";
-import GetUserDefinition from "./user/GetUserDefinition";
+import { GetUserDefinition } from "./user/GetUserDefinition";
 
-export default defineSpec({
+export const spec = defineSpec({
   resources: {
     user: {
       operations: [GetUserDefinition],
@@ -221,12 +221,12 @@ export const userSchema = z.object({
 
 ```typescript
 // api/spec/shared/sharedResponses.ts
-import ForbiddenErrorDefinition from "./ForbiddenErrorDefinition";
-import InternalServerErrorDefinition from "./InternalServerErrorDefinition";
-import TooManyRequestsErrorDefinition from "./TooManyRequestsErrorDefinition";
-import UnauthorizedErrorDefinition from "./UnauthorizedErrorDefinition";
-import UnsupportedMediaTypeErrorDefinition from "./UnsupportedMediaTypeErrorDefinition";
-import ValidationErrorDefinition from "./ValidationErrorDefinition";
+import { ForbiddenErrorDefinition } from "./ForbiddenErrorDefinition";
+import { InternalServerErrorDefinition } from "./InternalServerErrorDefinition";
+import { TooManyRequestsErrorDefinition } from "./TooManyRequestsErrorDefinition";
+import { UnauthorizedErrorDefinition } from "./UnauthorizedErrorDefinition";
+import { UnsupportedMediaTypeErrorDefinition } from "./UnsupportedMediaTypeErrorDefinition";
+import { ValidationErrorDefinition } from "./ValidationErrorDefinition";
 
 export const sharedResponses = [
   ForbiddenErrorDefinition,

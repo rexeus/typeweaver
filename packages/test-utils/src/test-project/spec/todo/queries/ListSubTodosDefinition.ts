@@ -11,7 +11,7 @@ import {
   listResponseSchema,
   sharedResponses,
 } from "../../shared";
-import TodoNotFoundErrorDefinition from "../errors/TodoNotFoundErrorDefinition";
+import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition";
 import { todoSchema } from "../todoSchema";
 
 const listSubTodosQuerySchema = z.object({
@@ -23,7 +23,7 @@ const listSubTodosQuerySchema = z.object({
   sortOrder: z.enum(["asc", "desc"]).optional(),
 });
 
-export default defineOperation({
+export const ListSubTodosDefinition = defineOperation({
   operationId: "ListSubTodos",
   request: {
     param: z.object({

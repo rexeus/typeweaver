@@ -3,7 +3,7 @@ import { z } from "zod";
 import { defaultResponseHeader } from "../../shared";
 import { todoStatus } from "../todoSchema";
 
-export default defineResponse({
+export const SubTodoNotChangeableErrorDefinition = defineResponse({
   name: "SubTodoNotChangeableError",
   description:
     "SubTodo in current status or because of parent todo status cannot be changed",

@@ -32,7 +32,7 @@ you’re writing a plugin, start here.
 ```ts
 import { BasePlugin, type GeneratorContext } from "@rexeus/typeweaver-gen";
 
-export default class MyPlugin extends BasePlugin {
+export class MyPlugin extends BasePlugin {
   // Give your plugin a unique name
   name = "my-plugin";
 
@@ -158,7 +158,7 @@ output.
   // Resolve the directory of the current module
   const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
-  export default class MyPlugin extends BasePlugin {
+  export class MyPlugin extends BasePlugin {
     name = "my-plugin";
 
     generate(context: GeneratorContext) {

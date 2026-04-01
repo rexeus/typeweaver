@@ -3,7 +3,7 @@ import { z } from "zod";
 import { defaultResponseHeader } from "../../shared";
 import { todoStatus } from "../todoSchema";
 
-export default defineResponse({
+export const TodoStatusTransitionInvalidErrorDefinition = defineResponse({
   name: "TodoStatusTransitionInvalidError",
   description: "Todo status transition is conflicting with current status",
   statusCode: HttpStatusCode.CONFLICT,

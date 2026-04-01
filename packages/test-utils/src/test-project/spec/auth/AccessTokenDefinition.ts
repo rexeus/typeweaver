@@ -11,7 +11,7 @@ import {
   sharedResponses,
 } from "../shared";
 
-export default defineOperation({
+export const AccessTokenDefinition = defineOperation({
   operationId: "AccessToken",
   path: "/auth/access-token",
   summary: "Get access token by email and password",

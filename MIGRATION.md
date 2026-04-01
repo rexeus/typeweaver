@@ -273,7 +273,7 @@ import {
   // ...
 } from "./todo";
 
-export default defineSpec({
+export const spec = defineSpec({
   resources: {
     auth: {
       operations: [AccessTokenDefinition, RefreshTokenDefinition],
@@ -311,7 +311,7 @@ import { HttpOperationDefinition, HttpStatusCode, HttpMethod } from "@rexeus/typ
 import { sharedResponses, defaultRequestHeadersWithPayload, defaultResponseHeader } from "../../shared";
 import { todoSchema } from "../todoSchema";
 
-export default new HttpOperationDefinition({
+export const CreateTodoDefinition = new HttpOperationDefinition({
   operationId: "CreateTodo",
   summary: "Create new todo",
   method: HttpMethod.POST,
@@ -341,7 +341,7 @@ import { defineOperation, defineResponse, HttpMethod, HttpStatusCode } from "@re
 import { sharedResponses, defaultRequestHeadersWithPayload, defaultResponseHeader } from "../../shared";
 import { todoSchema } from "../todoSchema";
 
-export default defineOperation({
+export const CreateTodoDefinition = defineOperation({
   operationId: "CreateTodo",
   summary: "Create new todo",
   method: HttpMethod.POST,
@@ -375,7 +375,7 @@ import { HttpResponseDefinition, HttpStatusCode } from "@rexeus/typeweaver-core"
 import { z } from "zod";
 import { defaultResponseHeader } from "./defaultResponseHeader";
 
-export default new HttpResponseDefinition({
+export const ForbiddenErrorDefinition = new HttpResponseDefinition({
   name: "ForbiddenError",
   body: z.object({
     message: z.literal("Forbidden request"),
@@ -395,7 +395,7 @@ import { defineResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import { defaultResponseHeader } from "./defaultResponseHeader";
 
-export default defineResponse({
+export const ForbiddenErrorDefinition = defineResponse({
   name: "ForbiddenError",
   body: z.object({
     message: z.literal("Forbidden request"),
@@ -419,7 +419,7 @@ standalone `defineDerivedResponse()` function.
 import { z } from "zod";
 import { NotFoundErrorDefinition } from "../../shared";
 
-export default NotFoundErrorDefinition.extend({
+export const TodoNotFoundErrorDefinition = NotFoundErrorDefinition.extend({
   name: "TodoNotFoundError",
   description: "Todo not found",
   body: z.object({
@@ -440,7 +440,7 @@ import { defineResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import { defaultResponseHeader } from "../../shared";
 
-export default defineResponse({
+export const TodoNotFoundErrorDefinition = defineResponse({
   name: "TodoNotFoundError",
   description: "Todo not found",
   statusCode: HttpStatusCode.NOT_FOUND,
@@ -460,9 +460,9 @@ Alternatively, use `defineDerivedResponse()` to inherit and merge schemas from a
 ```ts
 import { defineDerivedResponse } from "@rexeus/typeweaver-core";
 import { z } from "zod";
-import NotFoundErrorDefinition from "../../shared/NotFoundErrorDefinition";
+import { NotFoundErrorDefinition } from "../../shared/NotFoundErrorDefinition";
 
-export default defineDerivedResponse(NotFoundErrorDefinition, {
+export const TodoNotFoundErrorDefinition = defineDerivedResponse(NotFoundErrorDefinition, {
   name: "TodoNotFoundError",
   description: "Todo not found",
   body: z.object({

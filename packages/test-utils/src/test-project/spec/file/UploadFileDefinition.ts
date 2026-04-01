@@ -8,7 +8,7 @@ import { z } from "zod";
 import { defaultResponseHeader, sharedResponses } from "../shared";
 import { fileMetadataSchema } from "./fileSchema";
 
-export default defineOperation({
+export const UploadFileDefinition = defineOperation({
   operationId: "UploadFile",
   path: "/files",
   summary: "Upload a file",
