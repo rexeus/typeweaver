@@ -61,7 +61,7 @@ describe("pluginLoader", () => {
   }
 
   test("registers required plugins before loading configured plugins", async () => {
-    const requiredPlugin = { name: "types" } as unknown as TypesPlugin;
+    const requiredPlugin = { name: "types" } as TypesPlugin;
     const pluginDir = createTempDir();
     const pluginPath = path.join(pluginDir, "local-plugin.mjs");
 
@@ -95,16 +95,11 @@ describe("pluginLoader", () => {
     const { registry } = createRegistry();
 
     await expect(
-      loadPlugins(
-        registry,
-        [{ name: "types" } as unknown as TypesPlugin],
-        ["local"],
-        {
-          input: "./spec.ts",
-          output: "./generated",
-          plugins: ["missing-plugin"],
-        }
-      )
+      loadPlugins(registry, [{ name: "types" } as TypesPlugin], ["local"], {
+        input: "./spec.ts",
+        output: "./generated",
+        plugins: ["missing-plugin"],
+      })
     ).rejects.toEqual(
       expect.objectContaining<Partial<PluginLoadingFailure>>({
         pluginName: "missing-plugin",
@@ -133,16 +128,11 @@ describe("pluginLoader", () => {
 
     const { registry, registeredPlugins } = createRegistry();
 
-    await loadPlugins(
-      registry,
-      [{ name: "types" } as unknown as TypesPlugin],
-      ["local"],
-      {
-        input: "./spec.ts",
-        output: "./generated",
-        plugins: [pluginPath],
-      }
-    );
+    await loadPlugins(registry, [{ name: "types" } as TypesPlugin], ["local"], {
+      input: "./spec.ts",
+      output: "./generated",
+      plugins: [pluginPath],
+    });
 
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
       "types",

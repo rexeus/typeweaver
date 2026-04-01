@@ -39,7 +39,8 @@ export const loadConfig = async (
 ): Promise<Partial<TypeweaverConfig>> => {
   assertSupportedConfigPath(configPath);
 
-  const configUrl = pathToFileURL(configPath).toString();
+  const resolvedPath = path.resolve(configPath);
+  const configUrl = pathToFileURL(resolvedPath).toString();
   const configModule = await import(configUrl);
   const loadedConfig = getConfigExport(configModule, configPath);
 

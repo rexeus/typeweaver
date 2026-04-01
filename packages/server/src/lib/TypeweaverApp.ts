@@ -111,7 +111,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
       ([TState] extends [TReq] ? unknown : StateRequirementError<TReq, TState>)
   ): TypeweaverApp<TState & TProv> {
     this.middlewares.push(middleware.handler);
-    return this as unknown as TypeweaverApp<TState & TProv>;
+    return this as TypeweaverApp<TState & TProv>;
   }
 
   /**

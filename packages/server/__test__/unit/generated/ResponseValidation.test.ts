@@ -103,7 +103,7 @@ describe("Response Validation (Server)", () => {
     test("should return 500 when response has unrecognized status code", async () => {
       const unknownStatusResponse: ITypedHttpResponse = {
         type: "UnknownResponse" as const,
-        statusCode: 299 as unknown as HttpStatusCode,
+        statusCode: 299 as HttpStatusCode,
         header: { "Content-Type": "application/json" },
         body: { message: "unexpected" },
       };
