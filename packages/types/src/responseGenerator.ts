@@ -7,8 +7,8 @@ import type {
   NormalizedResource,
   NormalizedResponse,
 } from "@rexeus/typeweaver-gen";
+import { toPascalCase } from "@rexeus/typeweaver-gen";
 import { fromZod, print } from "@rexeus/typeweaver-zod-to-ts";
-import Case from "case";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -58,7 +58,7 @@ function writeResponseType(
     resourceName: resource.name,
     operationId: operation.operationId,
   });
-  const pascalCaseOperationId = Case.pascal(operation.operationId);
+  const pascalCaseOperationId = toPascalCase(operation.operationId);
   const ownResponses: OwnResponseTemplateData[] = [];
   const canonicalResponses: ImportedResponseTemplateData[] = [];
 
@@ -111,7 +111,7 @@ function writeCanonicalResponseType(
   response: NormalizedResponse,
   context: GeneratorContext
 ): void {
-  const pascalCaseName = Case.pascal(response.name);
+  const pascalCaseName = toPascalCase(response.name);
   const headerTsType = response.header
     ? print(fromZod(response.header))
     : undefined;

@@ -26,7 +26,6 @@
     "@rexeus/typeweaver-hono": "workspace:^",
     "@rexeus/typeweaver-server": "workspace:^",
     "@rexeus/typeweaver-types": "workspace:^",
-    "case": "^1.6.3",
     "deepmerge": "^4.3.1",
     "get-port": "^7.2.0",
     "hono": "^4.12.9",

@@ -5,8 +5,8 @@ import type {
   NormalizedOperation,
   NormalizedResource,
 } from "@rexeus/typeweaver-gen";
+import { toPascalCase } from "@rexeus/typeweaver-gen";
 import { fromZod, print } from "@rexeus/typeweaver-zod-to-ts";
-import Case from "case";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -29,7 +29,7 @@ function writeClient(
   resource: NormalizedResource,
   context: GeneratorContext
 ): void {
-  const pascalCaseEntityName = Case.pascal(resource.name);
+  const pascalCaseEntityName = toPascalCase(resource.name);
   const outputDir = context.getResourceOutputDir(resource.name);
 
   const operations = resource.operations.map(operation => {
@@ -40,7 +40,7 @@ function writeClient(
 
     return {
       operationId: operation.operationId,
-      pascalCaseOperationId: Case.pascal(operation.operationId),
+      pascalCaseOperationId: toPascalCase(operation.operationId),
       requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}`,
       responseValidatorFile: `./${path.basename(outputPaths.responseValidationFileName, ".ts")}`,
       responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}`,
@@ -82,7 +82,7 @@ function writeRequestCommand(
     operationId: operation.operationId,
   });
   const request = operation.request ?? {};
-  const pascalCaseOperationId = Case.pascal(operation.operationId);
+  const pascalCaseOperationId = toPascalCase(operation.operationId);
 
   const headerTsType = request.header
     ? print(fromZod(request.header))

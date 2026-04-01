@@ -15,6 +15,50 @@ import type { PluginResolutionStrategy } from "./pluginLoader";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
+export const assertSafeCleanTarget = (
+  outputDir: string,
+  currentWorkingDirectory: string
+): void => {
+  const trimmedOutputDir = outputDir.trim();
+  if (trimmedOutputDir.length === 0) {
+    throw new Error(
+      "Refusing to clean an empty output directory path. Pass a dedicated generated output directory instead."
+    );
+  }
+
+  const resolvedWorkingDirectory = path.resolve(currentWorkingDirectory);
+  const resolvedOutputDir = path.resolve(
+    resolvedWorkingDirectory,
+    trimmedOutputDir
+  );
+  const filesystemRoot = path.parse(resolvedOutputDir).root;
+
+  if (resolvedOutputDir === filesystemRoot) {
+    throw new Error(
+      `Refusing to clean '${outputDir}' because it resolves to the filesystem root.`
+    );
+  }
+
+  if (resolvedOutputDir === resolvedWorkingDirectory) {
+    throw new Error(
+      `Refusing to clean '${outputDir}' because it resolves to the current working directory.`
+    );
+  }
+
+  const protectedWorkspaceRoot = findProtectedWorkspaceRoot(
+    resolvedWorkingDirectory
+  );
+
+  if (
+    protectedWorkspaceRoot !== undefined &&
+    resolvedOutputDir === protectedWorkspaceRoot
+  ) {
+    throw new Error(
+      `Refusing to clean '${outputDir}' because it resolves to the inferred workspace root '${protectedWorkspaceRoot}'. Choose a dedicated output subdirectory instead.`
+    );
+  }
+};
+
 /**
  * Main generator for typeweaver
  * Uses a plugin-based architecture for extensible code generation
@@ -47,13 +91,15 @@ export class Generator {
   public async generate(
     specFile: string,
     outputDir: string,
-    config?: TypeweaverConfig
+    config?: TypeweaverConfig,
+    currentWorkingDirectory: string = process.cwd()
   ): Promise<void> {
     console.info("Starting generation...");
 
-    this.initializeDirectories(specFile, outputDir);
+    this.initializeDirectories(specFile, outputDir, currentWorkingDirectory);
 
     if (config?.clean ?? true) {
+      assertSafeCleanTarget(this.outputDir, currentWorkingDirectory);
       console.info("Cleaning output directory...");
       fs.rmSync(this.outputDir, { recursive: true, force: true });
     }
@@ -136,10 +182,39 @@ export class Generator {
     );
   }
 
-  private initializeDirectories(specFile: string, outputDir: string): void {
-    this.inputFile = specFile;
-    this.outputDir = outputDir;
-    this.responsesOutputDir = path.join(outputDir, "responses");
+  private initializeDirectories(
+    specFile: string,
+    outputDir: string,
+    currentWorkingDirectory: string
+  ): void {
+    this.inputFile = path.resolve(currentWorkingDirectory, specFile);
+    this.outputDir = path.resolve(currentWorkingDirectory, outputDir);
+    this.responsesOutputDir = path.join(this.outputDir, "responses");
     this.specOutputDir = path.join(this.outputDir, "spec");
   }
 }
+
+const findProtectedWorkspaceRoot = (
+  startDirectory: string
+): string | undefined => {
+  let currentDirectory = startDirectory;
+
+  while (true) {
+    if (hasWorkspaceMarker(currentDirectory)) {
+      return currentDirectory;
+    }
+
+    const parentDirectory = path.dirname(currentDirectory);
+    if (parentDirectory === currentDirectory) {
+      return undefined;
+    }
+
+    currentDirectory = parentDirectory;
+  }
+};
+
+const hasWorkspaceMarker = (directory: string): boolean => {
+  return ["pnpm-workspace.yaml", ".git"].some(marker =>
+    fs.existsSync(path.join(directory, marker))
+  );
+};

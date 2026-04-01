@@ -4,8 +4,8 @@ import type {
   GeneratorContext,
   NormalizedOperation,
 } from "@rexeus/typeweaver-gen";
+import { toPascalCase } from "@rexeus/typeweaver-gen";
 import { fromZod, print } from "@rexeus/typeweaver-zod-to-ts";
-import Case from "case";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -33,7 +33,7 @@ function writeRequestType(
   });
 
   const content = context.renderTemplate(templateFilePath, {
-    pascalCaseOperationId: Case.pascal(operationId),
+    pascalCaseOperationId: toPascalCase(operationId),
     method,
     headerTsType: header ? print(fromZod(header)) : undefined,
     queryTsType: query ? print(fromZod(query)) : undefined,

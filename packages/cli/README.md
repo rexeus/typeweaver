@@ -91,7 +91,7 @@ bunx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --
 
 - `--input, -i <path>`: Spec entrypoint file (required)
 - `--output, -o <path>`: Output directory for generated code (required)
-- `--config, -c <path>`: Configuration file path (optional)
+- `--config, -c <path>`: Configuration file path (`.js`, `.mjs`, or `.cjs`, optional)
 - `--plugins, -p <plugins>`: Comma-separated list of plugins to use (e.g., "clients,hono" or "all"
   for all plugins)
 - `--format / --no-format`: Enable/disable code formatting with oxfmt (default: true)
@@ -99,10 +99,11 @@ bunx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --
 
 ### 📝 Configuration File
 
-Create a config file (e.g. `typeweaver.config.js`) for more complex configurations:
+Create a JavaScript config file (for example `typeweaver.config.mjs`) for more complex
+configurations:
 
-```javascript
-export const config = {
+```js
+export default {
   input: "./api/spec/index.ts",
   output: "./api/generated",
   plugins: ["clients", "hono", "aws-cdk"],
@@ -114,11 +115,14 @@ export const config = {
 Then run:
 
 ```bash
-npx typeweaver generate --config ./typeweaver.config.js
+npx typeweaver generate --config ./typeweaver.config.mjs
 ```
 
 > Replace `npx` with `pnpx`, `deno run -A npm:@rexeus/typeweaver`, or `bunx` depending on your
 > runtime.
+>
+> TypeScript config files (`.ts`, `.mts`, `.cts`) are no longer supported by the published CLI.
+> Convert them to JavaScript first if needed.
 
 ## 🌱 Get Started
 

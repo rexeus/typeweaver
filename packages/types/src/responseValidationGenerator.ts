@@ -6,7 +6,7 @@ import type {
   NormalizedOperation,
   NormalizedResource,
 } from "@rexeus/typeweaver-gen";
-import Case from "case";
+import { toCamelCase, toPascalCase } from "@rexeus/typeweaver-gen";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -43,7 +43,7 @@ function writeResponseValidator(
     resourceName: resource.name,
     operationId: operation.operationId,
   });
-  const pascalCaseOperationId = Case.pascal(operation.operationId);
+  const pascalCaseOperationId = toPascalCase(operation.operationId);
   const ownResponses: ResponseTemplateData[] = [];
   const sharedResponses: ResponseTemplateData[] = [];
   const allStatusCodes = new Map<HttpStatusCode, string>();
@@ -57,7 +57,7 @@ function writeResponseValidator(
     allStatusCodes.set(response.statusCode, response.statusCodeName);
 
     const templateData: ResponseTemplateData = {
-      definitionVariableName: `${Case.camel(response.name)}Definition`,
+      definitionVariableName: `${toCamelCase(response.name)}Definition`,
       name: response.name,
       hasBody: response.body !== undefined,
       hasHeader: response.header !== undefined,

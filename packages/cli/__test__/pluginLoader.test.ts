@@ -5,6 +5,7 @@ import type {
   PluginRegistryApi,
   TypeweaverPlugin,
 } from "@rexeus/typeweaver-gen";
+import { TypesPlugin } from "@rexeus/typeweaver-types";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { PluginLoadingFailure } from "../src/generators/errors/PluginLoadingFailure.js";
 import { loadPlugins } from "../src/generators/pluginLoader.js";
@@ -28,6 +29,10 @@ function createRegistry(): {
           plugin,
         });
       },
+      get: () => undefined,
+      getAll: () => [],
+      has: () => false,
+      clear: () => {},
     },
     registeredPlugins,
   };
@@ -56,7 +61,7 @@ describe("pluginLoader", () => {
   }
 
   test("registers required plugins before loading configured plugins", async () => {
-    const requiredPlugin = { name: "types" } as TypeweaverPlugin;
+    const requiredPlugin = { name: "types" } as unknown as TypesPlugin;
     const pluginDir = createTempDir();
     const pluginPath = path.join(pluginDir, "local-plugin.mjs");
 
@@ -95,7 +100,7 @@ describe("pluginLoader", () => {
     await expect(
       loadPlugins(
         registry,
-        [{ name: "types" } as TypeweaverPlugin],
+        [{ name: "types" } as unknown as TypesPlugin],
         ["local"],
         {
           input: "./spec.ts",
@@ -113,5 +118,38 @@ describe("pluginLoader", () => {
         ],
       })
     );
+  });
+
+  test("falls back to default plugin exports for third-party compatibility", async () => {
+    const pluginDir = createTempDir();
+    const pluginPath = path.join(pluginDir, "default-plugin.mjs");
+
+    fs.writeFileSync(
+      pluginPath,
+      [
+        "export default class DefaultPlugin {",
+        '  name = "default-plugin";',
+        "}",
+        "",
+      ].join("\n")
+    );
+
+    const { registry, registeredPlugins } = createRegistry();
+
+    await loadPlugins(
+      registry,
+      [{ name: "types" } as unknown as TypesPlugin],
+      ["local"],
+      {
+        input: "./spec.ts",
+        output: "./generated",
+        plugins: [pluginPath],
+      }
+    );
+
+    expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
+      "types",
+      "default-plugin",
+    ]);
   });
 });
