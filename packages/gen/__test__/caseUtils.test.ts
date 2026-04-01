@@ -15,12 +15,8 @@ describe("caseUtils", () => {
   });
 
   test("normalizes separator-delimited identifiers", () => {
-    expect(toPascalCase("refresh-token_response")).toBe(
-      "RefreshTokenResponse"
-    );
-    expect(toCamelCase("refresh-token_response")).toBe(
-      "refreshTokenResponse"
-    );
+    expect(toPascalCase("refresh-token_response")).toBe("RefreshTokenResponse");
+    expect(toCamelCase("refresh-token_response")).toBe("refreshTokenResponse");
   });
 
   test("handles single-character and acronym-only inputs", () => {

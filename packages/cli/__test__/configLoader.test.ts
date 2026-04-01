@@ -102,8 +102,8 @@ describe("configLoader", () => {
     fs.writeFileSync(
       configPath,
       [
-        "export const config = { output: \"./named\" };",
-        "export default { output: \"./default\" };",
+        'export const config = { output: "./named" };',
+        'export default { output: "./default" };',
         "",
       ].join("\n")
     );

@@ -17,7 +17,9 @@ import {
   EmptyResourceOperationsError,
   EmptySpecResourcesError,
   InvalidDerivedResponseError,
+  InvalidOperationIdError,
   InvalidRequestSchemaError,
+  InvalidResourceNameError,
   MissingDerivedResponseParentError,
   normalizeSpec,
   PathParameterMismatchError,
@@ -201,6 +203,238 @@ describe("normalizeSpec", () => {
     });
 
     expect(() => normalizeSpec(spec)).toThrowError(DuplicateOperationIdError);
+  });
+
+  test("accepts camelCase operation IDs", () => {
+    const spec = defineSpec({
+      resources: {
+        todo: {
+          operations: [
+            defineOperation({
+              operationId: "getTodo",
+              method: HttpMethod.GET,
+              path: "/todos/:todoId",
+              summary: "Get todo",
+              request: {
+                param: z.object({ todoId: z.string() }),
+              },
+              responses: [
+                defineResponse({
+                  name: "GetTodoResponse",
+                  statusCode: HttpStatusCode.OK,
+                  description: "Ok",
+                }),
+              ],
+            }),
+          ],
+        },
+      },
+    });
+
+    expect(() => normalizeSpec(spec)).not.toThrow();
+  });
+
+  test("accepts PascalCase operation IDs", () => {
+    const spec = defineSpec({
+      resources: {
+        todo: {
+          operations: [
+            defineOperation({
+              operationId: "GetTodo",
+              method: HttpMethod.GET,
+              path: "/todos/:todoId",
+              summary: "Get todo",
+              request: {
+                param: z.object({ todoId: z.string() }),
+              },
+              responses: [
+                defineResponse({
+                  name: "GetTodoPascalResponse",
+                  statusCode: HttpStatusCode.OK,
+                  description: "Ok",
+                }),
+              ],
+            }),
+          ],
+        },
+      },
+    });
+
+    expect(() => normalizeSpec(spec)).not.toThrow();
+  });
+
+  test("rejects snake_case operation IDs", () => {
+    const spec = defineSpec({
+      resources: {
+        todo: {
+          operations: [
+            defineOperation({
+              operationId: "get_todo",
+              method: HttpMethod.GET,
+              path: "/todos/:todoId",
+              summary: "Get todo",
+              request: {
+                param: z.object({ todoId: z.string() }),
+              },
+              responses: [
+                defineResponse({
+                  name: "GetTodoSnakeResponse",
+                  statusCode: HttpStatusCode.OK,
+                  description: "Ok",
+                }),
+              ],
+            }),
+          ],
+        },
+      },
+    });
+
+    expect(() => normalizeSpec(spec)).toThrowError(InvalidOperationIdError);
+  });
+
+  test("rejects kebab-case operation IDs", () => {
+    const spec = defineSpec({
+      resources: {
+        todo: {
+          operations: [
+            defineOperation({
+              operationId: "get-todo",
+              method: HttpMethod.GET,
+              path: "/todos/:todoId",
+              summary: "Get todo",
+              request: {
+                param: z.object({ todoId: z.string() }),
+              },
+              responses: [
+                defineResponse({
+                  name: "GetTodoKebabResponse",
+                  statusCode: HttpStatusCode.OK,
+                  description: "Ok",
+                }),
+              ],
+            }),
+          ],
+        },
+      },
+    });
+
+    expect(() => normalizeSpec(spec)).toThrowError(InvalidOperationIdError);
+  });
+
+  test("accepts camelCase resource names", () => {
+    const spec = defineSpec({
+      resources: {
+        userProfile: {
+          operations: [
+            defineOperation({
+              operationId: "getUserProfile",
+              method: HttpMethod.GET,
+              path: "/users/:userId/profile",
+              summary: "Get user profile",
+              request: {
+                param: z.object({ userId: z.string() }),
+              },
+              responses: [
+                defineResponse({
+                  name: "GetUserProfileResponse",
+                  statusCode: HttpStatusCode.OK,
+                  description: "Ok",
+                }),
+              ],
+            }),
+          ],
+        },
+      },
+    });
+
+    expect(() => normalizeSpec(spec)).not.toThrow();
+  });
+
+  test("accepts PascalCase resource names", () => {
+    const spec = defineSpec({
+      resources: {
+        UserProfile: {
+          operations: [
+            defineOperation({
+              operationId: "getUserProfile",
+              method: HttpMethod.GET,
+              path: "/users/:userId/profile",
+              summary: "Get user profile",
+              request: {
+                param: z.object({ userId: z.string() }),
+              },
+              responses: [
+                defineResponse({
+                  name: "GetPascalUserProfileResponse",
+                  statusCode: HttpStatusCode.OK,
+                  description: "Ok",
+                }),
+              ],
+            }),
+          ],
+        },
+      },
+    });
+
+    expect(() => normalizeSpec(spec)).not.toThrow();
+  });
+
+  test("rejects snake_case resource names", () => {
+    const spec = defineSpec({
+      resources: {
+        user_profile: {
+          operations: [
+            defineOperation({
+              operationId: "getUserProfile",
+              method: HttpMethod.GET,
+              path: "/users/:userId/profile",
+              summary: "Get user profile",
+              request: {
+                param: z.object({ userId: z.string() }),
+              },
+              responses: [
+                defineResponse({
+                  name: "GetSnakeUserProfileResponse",
+                  statusCode: HttpStatusCode.OK,
+                  description: "Ok",
+                }),
+              ],
+            }),
+          ],
+        },
+      },
+    });
+
+    expect(() => normalizeSpec(spec)).toThrowError(InvalidResourceNameError);
+  });
+
+  test("rejects kebab-case resource names", () => {
+    const spec = defineSpec({
+      resources: {
+        "user-profile": {
+          operations: [
+            defineOperation({
+              operationId: "getUserProfile",
+              method: HttpMethod.GET,
+              path: "/users/:userId/profile",
+              summary: "Get user profile",
+              request: {
+                param: z.object({ userId: z.string() }),
+              },
+              responses: [
+                defineResponse({
+                  name: "GetKebabUserProfileResponse",
+                  statusCode: HttpStatusCode.OK,
+                  description: "Ok",
+                }),
+              ],
+            }),
+          ],
+        },
+      },
+    });
+
+    expect(() => normalizeSpec(spec)).toThrowError(InvalidResourceNameError);
   });
 
   test("rejects duplicate inline response names when spec validation is bypassed", () => {

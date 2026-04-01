@@ -4,20 +4,26 @@ import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 const loadPluginsMock = vi.fn(async () => {});
-const loadSpecMock = vi.fn(async ({ inputFile, specOutputDir }: {
-  readonly inputFile: string;
-  readonly specOutputDir: string;
-}) => ({
-  normalizedSpec: {
+const loadSpecMock = vi.fn(
+  async ({
     inputFile,
     specOutputDir,
-  },
-}));
+  }: {
+    readonly inputFile: string;
+    readonly specOutputDir: string;
+  }) => ({
+    normalizedSpec: {
+      inputFile,
+      specOutputDir,
+    },
+  })
+);
 const formatCodeMock = vi.fn(async () => {});
 const generateIndexFilesMock = vi.fn();
 
 vi.mock("@rexeus/typeweaver-gen", async importOriginal => {
-  const actual = await importOriginal<typeof import("@rexeus/typeweaver-gen")>();
+  const actual =
+    await importOriginal<typeof import("@rexeus/typeweaver-gen")>();
 
   return {
     ...actual,
@@ -63,7 +69,9 @@ describe("Generator.generate", () => {
   });
 
   const createTempDir = (): string => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "typeweaver-generate-"));
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "typeweaver-generate-")
+    );
     tempDirs.push(tempDir);
 
     return tempDir;
@@ -89,7 +97,9 @@ describe("Generator.generate", () => {
       inputFile: path.join(workingDirectory, "spec/index.ts"),
       specOutputDir: path.join(workingDirectory, "generated/output/spec"),
     });
-    expect(fs.existsSync(path.join(workingDirectory, "generated/output"))).toBe(true);
+    expect(fs.existsSync(path.join(workingDirectory, "generated/output"))).toBe(
+      true
+    );
   });
 
   test("uses the provided working directory for clean safety checks", async () => {

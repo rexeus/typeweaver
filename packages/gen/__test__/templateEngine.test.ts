@@ -3,13 +3,13 @@ import { renderTemplate } from "../src/helpers/templateEngine";
 
 describe("renderTemplate", () => {
   test("renders escaped and raw expressions", () => {
-    const template = '<%= unsafe %> | <%- unsafe %>';
+    const template = "<%= unsafe %> | <%- unsafe %>";
     const result = renderTemplate(template, {
       unsafe: '<tag attr="value">&</tag>',
     });
 
     expect(result).toBe(
-      "&lt;tag attr=&quot;value&quot;&gt;&amp;&lt;/tag&gt; | <tag attr=\"value\">&</tag>"
+      '&lt;tag attr=&quot;value&quot;&gt;&amp;&lt;/tag&gt; | <tag attr="value">&</tag>'
     );
   });
 
@@ -52,8 +52,8 @@ describe("renderTemplate", () => {
     const template = [
       "<%= user.name %>",
       "<%- user.name.toUpperCase() %>",
-      "<%= user.details.hasOwnProperty(\"role\") %>",
-      "<%= labels.join(\",\") %>",
+      '<%= user.details.hasOwnProperty("role") %>',
+      '<%= labels.join(",") %>',
     ].join(" | ");
 
     const result = renderTemplate(template, {

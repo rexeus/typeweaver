@@ -67,12 +67,9 @@ describe("pluginLoader", () => {
 
     fs.writeFileSync(
       pluginPath,
-      [
-        "export class LocalPlugin {",
-        '  name = "local-plugin";',
-        "}",
-        "",
-      ].join("\n")
+      ["export class LocalPlugin {", '  name = "local-plugin";', "}", ""].join(
+        "\n"
+      )
     );
 
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});

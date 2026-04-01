@@ -155,7 +155,10 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
           : path.join(params.templateDir, templatePath);
 
         const template = fs.readFileSync(fullTemplatePath, "utf8");
-        return renderTemplate(template, (data ?? {}) as Record<string, unknown>);
+        return renderTemplate(
+          template,
+          (data ?? {}) as Record<string, unknown>
+        );
       },
 
       addGeneratedFile: (relativePath: string) => {

@@ -28,7 +28,9 @@ export function renderTemplate(
     const [tag] = match;
     const tagStart = match.index;
 
-    outputChunks.push(`__output.push(${JSON.stringify(template.slice(currentIndex, tagStart))});`);
+    outputChunks.push(
+      `__output.push(${JSON.stringify(template.slice(currentIndex, tagStart))});`
+    );
 
     if (tag.startsWith("<%=")) {
       const expression = tag.slice(3, -2).trim();
@@ -44,7 +46,9 @@ export function renderTemplate(
     match = expressionPattern.exec(template);
   }
 
-  outputChunks.push(`__output.push(${JSON.stringify(template.slice(currentIndex))});`);
+  outputChunks.push(
+    `__output.push(${JSON.stringify(template.slice(currentIndex))});`
+  );
 
   const render = new Function(
     "data",

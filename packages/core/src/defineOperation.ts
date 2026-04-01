@@ -13,7 +13,9 @@ export type OperationDefinition<
 > = {
   /**
    * Must be globally unique within a spec. Used as the base name for
-   * generated clients, validators, and route handlers
+   * generated clients, validators, and route handlers. Prefer camelCase
+   * (for example `getUser`). PascalCase is supported for compatibility,
+   * but snake_case and kebab-case are not supported.
    */
   readonly operationId: TOperationId;
   /**
@@ -51,7 +53,7 @@ export type OperationDefinition<
  * @example
  * ```ts
  * const GetTodo = defineOperation({
- *   operationId: "GetTodo",
+ *   operationId: "getTodo",
  *   path: "/todos/:todoId",
  *   method: HttpMethod.GET,
  *   summary: "Retrieve a single todo by ID",
