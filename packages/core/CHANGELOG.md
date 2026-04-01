@@ -1,5 +1,23 @@
 # @rexeus/typeweaver-core
 
+## 0.10.0
+
+### Minor Changes
+
+- 40f90d3: ### Supply chain hardening
+
+  - Replace `ejs` dependency with a zero-dependency template engine
+  - Replace `case` dependency with built-in `toPascalCase` and `toCamelCase` utilities
+  - Remove `tsx` from production dependencies; TypeScript config files (`.ts`, `.mts`, `.cts`) are no longer supported by the published CLI
+  - Add clean safety guards to prevent destructive `rm` on workspace roots
+  - Enable npm provenance on publish
+
+  ### Naming convention validation
+
+  - Validate `operationId` and `resourceName` during spec normalization
+  - Reject `snake_case` and `kebab-case` identifiers with dedicated error types (`InvalidOperationIdError`, `InvalidResourceNameError`)
+  - Supported formats: camelCase (preferred) and PascalCase (for compatibility)
+
 ## 0.9.2
 
 ## 0.9.1
