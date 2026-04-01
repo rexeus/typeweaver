@@ -507,7 +507,7 @@ npx typeweaver generate \
 
 ```js
 // typeweaver.config.js
-export const config = {
+export default {
   input: "./api/spec/index.ts",
   output: "./api/generated",
   plugins: ["clients", "hono"],

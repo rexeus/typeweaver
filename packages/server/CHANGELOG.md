@@ -1,5 +1,13 @@
 # @rexeus/typeweaver-server
 
+## 0.9.2
+
+### Patch Changes
+
+- ff722c3: Return ArrayBuffer instead of Uint8Array/Buffer from body collectors for broader runtime compatibility
+  - @rexeus/typeweaver-core@0.9.2
+  - @rexeus/typeweaver-gen@0.9.2
+
 ## 0.9.1
 
 ### Patch Changes
