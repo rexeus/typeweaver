@@ -102,7 +102,7 @@ bunx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --
 Create a config file (e.g. `typeweaver.config.js`) for more complex configurations:
 
 ```javascript
-export const config = {
+export default {
   input: "./api/spec/index.ts",
   output: "./api/generated",
   plugins: ["clients", "hono", "aws-cdk"],
