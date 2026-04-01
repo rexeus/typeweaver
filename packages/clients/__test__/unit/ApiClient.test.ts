@@ -797,7 +797,7 @@ describe("ApiClient Response Body Parsing", () => {
     const result = await sendAndExtractRawResponse(client, command);
 
     expect(result.body).toBeInstanceOf(ArrayBuffer);
-    expect((result.body as unknown as ArrayBuffer).byteLength).toBe(0);
+    expect((result.body as ArrayBuffer).byteLength).toBe(0);
   });
 });
 

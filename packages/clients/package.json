@@ -67,7 +67,6 @@
     "zod": "^4.3.6"
   },
   "dependencies": {
-    "@rexeus/typeweaver-zod-to-ts": "workspace:^",
-    "case": "^1.6.3"
+    "@rexeus/typeweaver-zod-to-ts": "workspace:^"
   }
 }

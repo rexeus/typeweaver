@@ -20,8 +20,9 @@ export type SpecDefinition<
 > = {
   /**
    * Each key becomes the resource directory name in generated output.
-   * Keys should be lowercase, typically matching the domain entity
-   * (e.g. `"todo"`, `"auth"`)
+   * Prefer singular camelCase names (for example `"user"`, `"authSession"`).
+   * PascalCase and plural names are supported for compatibility, but
+   * snake_case and kebab-case are not supported.
    */
   readonly resources: TResources;
 };

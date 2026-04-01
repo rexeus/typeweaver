@@ -61,8 +61,5 @@
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "zod": "^4.3.6"
-  },
-  "dependencies": {
-    "ejs": "^5.0.1"
   }
 }

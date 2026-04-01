@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { Command } from "commander";
+import { getResolvedConfigPath, loadConfig } from "./configLoader";
 import { Generator } from "./generators/Generator";
 import type { CommandOptions as CommanderOptions } from "commander";
 
@@ -37,7 +38,10 @@ program
   .description("Generate types, validators, and clients from an API spec")
   .option("-i, --input <inputPath>", "path to spec entrypoint file")
   .option("-o, --output <outputDir>", "output directory for generated files")
-  .option("-c, --config <configFile>", "path to configuration file")
+  .option(
+    "-c, --config <configFile>",
+    "path to a .js, .mjs, or .cjs configuration file"
+  )
   .option("-p, --plugins <plugins>", "comma-separated list of plugins to use")
   .option("--format", "format generated code with oxfmt (default: true)")
   .option("--no-format", "disable code formatting")
@@ -48,14 +52,10 @@ program
 
     // Load configuration file if provided
     if (options.config) {
-      const configPath = path.isAbsolute(options.config)
-        ? options.config
-        : path.join(execDir, options.config);
+      const configPath = getResolvedConfigPath(options.config, execDir);
 
       try {
-        const configUrl = pathToFileURL(configPath).toString();
-        const configModule = await import(configUrl);
-        config = configModule.default ?? configModule;
+        config = await loadConfig(configPath);
         console.info(`Loaded configuration from ${configPath}`);
       } catch (error) {
         console.error(`Failed to load configuration file: ${options.config}`);
@@ -110,7 +110,8 @@ program
     return generator.generate(
       resolvedInputPath,
       resolvedOutputDir,
-      finalConfig
+      finalConfig,
+      execDir
     );
   });
 

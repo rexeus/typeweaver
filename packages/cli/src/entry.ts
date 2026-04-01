@@ -5,11 +5,6 @@ const main = async (): Promise<void> => {
 
   console.info(`Running on ${getRuntimeDisplayName(runtime)}`);
 
-  // Only load tsx in Node.js - Deno and Bun have native TypeScript support
-  if (runtime === "node") {
-    await import("./tsx-loader.js");
-  }
-
   await import("./cli.js");
 };
 

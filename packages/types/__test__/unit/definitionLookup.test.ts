@@ -44,7 +44,7 @@ describe("definitionLookup", () => {
         },
       },
       responses: [],
-    } as unknown as SpecDefinition;
+    } as SpecDefinition;
 
     expect(() =>
       getOperationDefinition(spec, "account", "registerAccount")
@@ -68,7 +68,7 @@ describe("definitionLookup", () => {
   });
 
   test("throws when the response definition is missing", () => {
-    const responses = [] as unknown as readonly ResponseDefinition[];
+    const responses = [] as readonly ResponseDefinition[];
 
     expect(() =>
       getResponseDefinition(responses, "RegisterAccountSuccess")

@@ -34,6 +34,16 @@ bun add @rexeus/typeweaver-core
 
 Now you are ready to start building! Check out [Quickstart](#-get-started)
 
+## 🏷️ Naming conventions
+
+- `operationId` should use camelCase (preferred), for example `getUser`.
+- PascalCase `operationId` values are supported for compatibility.
+- snake_case and kebab-case `operationId` values are not supported.
+- `resourceName` should preferably be a singular noun in camelCase, for example `user` or
+  `authSession`.
+- Plural and PascalCase `resourceName` values are supported.
+- snake_case and kebab-case `resourceName` values are not supported.
+
 ## 🎯 Why typeweaver?
 
 - 📝 **Define once, generate everything**: API contracts in Zod become clients, servers, validators,
@@ -91,7 +101,7 @@ bunx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --
 
 - `--input, -i <path>`: Spec entrypoint file (required)
 - `--output, -o <path>`: Output directory for generated code (required)
-- `--config, -c <path>`: Configuration file path (optional)
+- `--config, -c <path>`: Configuration file path (`.js`, `.mjs`, or `.cjs`, optional)
 - `--plugins, -p <plugins>`: Comma-separated list of plugins to use (e.g., "clients,hono" or "all"
   for all plugins)
 - `--format / --no-format`: Enable/disable code formatting with oxfmt (default: true)
@@ -99,9 +109,10 @@ bunx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --
 
 ### 📝 Configuration File
 
-Create a config file (e.g. `typeweaver.config.js`) for more complex configurations:
+Create a JavaScript config file (for example `typeweaver.config.mjs`) for more complex
+configurations:
 
-```javascript
+```js
 export default {
   input: "./api/spec/index.ts",
   output: "./api/generated",
@@ -114,11 +125,14 @@ export default {
 Then run:
 
 ```bash
-npx typeweaver generate --config ./typeweaver.config.js
+npx typeweaver generate --config ./typeweaver.config.mjs
 ```
 
 > Replace `npx` with `pnpx`, `deno run -A npm:@rexeus/typeweaver`, or `bunx` depending on your
 > runtime.
+>
+> TypeScript config files (`.ts`, `.mts`, `.cts`) are no longer supported by the published CLI.
+> Convert them to JavaScript first if needed.
 
 ## 🌱 Get Started
 
@@ -164,7 +178,7 @@ import { userSchema } from "./userSchema";
 import { UserNotFoundErrorDefinition } from "./errors/UserNotFoundErrorDefinition";
 
 export const GetUserDefinition = defineOperation({
-  operationId: "GetUser",
+  operationId: "getUser",
   method: HttpMethod.GET,
   path: "/users/:userId",
   summary: "Get a user by id",

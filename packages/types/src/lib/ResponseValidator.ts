@@ -128,7 +128,7 @@ export abstract class ResponseValidator<
       if (bodySchema) {
         const validateBodyResult = bodySchema.safeParse(
           response.body
-        ) as unknown as ZodSafeParseResult<Response["body"]>;
+        ) as ZodSafeParseResult<Response["body"]>;
 
         if (!validateBodyResult.success) {
           error.addBodyIssues(responseName, validateBodyResult.error.issues);
@@ -145,7 +145,7 @@ export abstract class ResponseValidator<
         );
         const validateHeaderResult = headerSchema.safeParse(
           coercedHeader
-        ) as unknown as ZodSafeParseResult<Response["header"]>;
+        ) as ZodSafeParseResult<Response["header"]>;
 
         if (!validateHeaderResult.success) {
           error.addHeaderIssues(

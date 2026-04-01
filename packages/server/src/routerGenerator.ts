@@ -1,13 +1,12 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { compareRoutes, relative } from "@rexeus/typeweaver-gen";
+import { compareRoutes, relative, toPascalCase } from "@rexeus/typeweaver-gen";
 import type {
   GeneratorContext,
   NormalizedOperation,
   NormalizedResource,
 } from "@rexeus/typeweaver-gen";
-import Case from "case";
 
 type OperationData = {
   readonly operationId: string;
@@ -43,7 +42,7 @@ function writeRouter(
   templateFile: string,
   context: GeneratorContext
 ): void {
-  const pascalCaseEntityName = Case.pascal(resource.name);
+  const pascalCaseEntityName = toPascalCase(resource.name);
   const outputDir = context.getResourceOutputDir(resource.name);
   const outputPath = path.join(outputDir, `${pascalCaseEntityName}Router.ts`);
 
@@ -65,7 +64,7 @@ function writeRouter(
 
 function createOperationData(operation: NormalizedOperation): OperationData {
   const operationId = operation.operationId;
-  const className = Case.pascal(operationId);
+  const className = toPascalCase(operationId);
 
   return {
     operationId,

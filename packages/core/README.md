@@ -42,6 +42,16 @@ This package is typically consumed by generated code. You also use it when autho
 This package does not ship framework adapters. Use plugins like `@rexeus/typeweaver-hono` or
 `@rexeus/typeweaver-aws-cdk` for routers/integrations.
 
+## 🏷️ Naming conventions
+
+- `operationId` should use camelCase (preferred), for example `getUser`.
+- PascalCase `operationId` values are still supported.
+- snake_case and kebab-case `operationId` values are not supported.
+- `resourceName` should preferably be a singular noun in camelCase, for example `user` or
+  `authSession`.
+- Plural and PascalCase `resourceName` values are supported.
+- snake_case and kebab-case `resourceName` values are not supported.
+
 ## 📄 License
 
 Apache 2.0 © Dennis Wentzien 2026

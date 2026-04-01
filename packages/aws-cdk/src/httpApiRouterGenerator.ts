@@ -5,7 +5,7 @@ import type {
   GeneratorContext,
   NormalizedResource,
 } from "@rexeus/typeweaver-gen";
-import Case from "case";
+import { toPascalCase } from "@rexeus/typeweaver-gen";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -23,7 +23,7 @@ function writeHttpApiRoutes(
   context: GeneratorContext
 ): void {
   const routes: Record<string, HttpMethod[]> = {};
-  const pascalCaseEntityName = Case.pascal(resource.name);
+  const pascalCaseEntityName = toPascalCase(resource.name);
   const outputDir = context.getResourceOutputDir(resource.name);
   const outputFile = path.join(
     outputDir,

@@ -15,9 +15,15 @@ import {
   EmptyOperationResponsesError,
   EmptyResourceOperationsError,
   EmptySpecResourcesError,
+  InvalidOperationIdError,
   InvalidRequestSchemaError,
+  InvalidResourceNameError,
   PathParameterMismatchError,
 } from "./errors";
+import {
+  isSupportedOperationId,
+  isSupportedResourceName,
+} from "./helpers/namingUtils";
 import { getPathParameterNames, normalizeRoutePath } from "./helpers/routePath";
 import {
   collectCanonicalResponses,
@@ -132,6 +138,10 @@ const normalizeOperation = (
   routeKeys: Set<string>,
   operation: ResourceDefinition["operations"][number]
 ): NormalizedOperation => {
+  if (!isSupportedOperationId(operation.operationId)) {
+    throw new InvalidOperationIdError(operation.operationId);
+  }
+
   if (operationIds.has(operation.operationId)) {
     throw new DuplicateOperationIdError(operation.operationId);
   }
@@ -183,6 +193,10 @@ export const normalizeSpec = (definition: SpecDefinition): NormalizedSpec => {
 
   return {
     resources: resourceEntries.map(([resourceName, resource]) => {
+      if (!isSupportedResourceName(resourceName)) {
+        throw new InvalidResourceNameError(resourceName);
+      }
+
       if (resource.operations.length === 0) {
         throw new EmptyResourceOperationsError(resourceName);
       }

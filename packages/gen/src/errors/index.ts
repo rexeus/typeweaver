@@ -5,6 +5,8 @@ export { EmptyOperationResponsesError } from "./EmptyOperationResponsesError";
 export { EmptyResourceOperationsError } from "./EmptyResourceOperationsError";
 export { EmptySpecResourcesError } from "./EmptySpecResourcesError";
 export { InvalidDerivedResponseError } from "./InvalidDerivedResponseError";
+export { InvalidOperationIdError } from "./InvalidOperationIdError";
 export { InvalidRequestSchemaError } from "./InvalidRequestSchemaError";
+export { InvalidResourceNameError } from "./InvalidResourceNameError";
 export { MissingDerivedResponseParentError } from "./MissingDerivedResponseParentError";
 export { PathParameterMismatchError } from "./PathParameterMismatchError";
