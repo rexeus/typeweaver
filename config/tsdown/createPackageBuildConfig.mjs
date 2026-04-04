@@ -22,6 +22,7 @@ export function createPackageBuildConfig(options) {
     runSharedPostBuild = true,
     ...config
   } = options;
+  const callerOnSuccess = config.onSuccess;
 
   if (!runSharedPostBuild) {
     return {
@@ -55,6 +56,8 @@ export function createPackageBuildConfig(options) {
       for (const postBuildStep of postBuildSteps) {
         await postBuildStep({ packageDir, distDir });
       }
+
+      await callerOnSuccess?.();
     },
   };
 }

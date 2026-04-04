@@ -44,7 +44,7 @@ export function createPluginRegistry(): PluginRegistryApi {
         );
       }
 
-      return sortedRegistrations;
+      return [...sortedRegistrations];
     },
     has: (name: string) => plugins.has(name),
     clear: () => {

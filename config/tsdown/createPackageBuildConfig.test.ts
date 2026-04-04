@@ -101,6 +101,34 @@ describe("createPackageBuildConfig", () => {
     );
   });
 
+  test("composes caller-provided onSuccess with shared post-build work", async () => {
+    const { packageDir } = createPackageFixture("example-on-success");
+
+    writeFile(path.join(packageDir, "src/lib/runtime.js"), "runtime");
+
+    const executionOrder: string[] = [];
+    const onSuccess = vi.fn(async () => {
+      executionOrder.push("caller");
+      writeFile(path.join(packageDir, "dist/caller.txt"), "caller");
+    });
+
+    const config = createPackageBuildConfig({
+      packageDir,
+      onSuccess,
+    });
+
+    await config.onSuccess?.();
+
+    expect(
+      fs.readFileSync(path.join(packageDir, "dist/lib/runtime.js"), "utf8")
+    ).toBe("runtime");
+    expect(
+      fs.readFileSync(path.join(packageDir, "dist/caller.txt"), "utf8")
+    ).toBe("caller");
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(executionOrder).toEqual(["caller"]);
+  });
+
   test("omits shared post-build work when disabled", () => {
     const { packageDir } = createPackageFixture("example-disabled");
 

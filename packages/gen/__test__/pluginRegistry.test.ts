@@ -22,7 +22,7 @@ describe("createPluginRegistry", () => {
     ]);
   });
 
-  test("reuses the cached order until the registry changes", () => {
+  test("returns a defensive copy while reusing the cached order", () => {
     const registry = createPluginRegistry();
 
     registry.register(createPlugin("clients", ["types"]));
@@ -31,7 +31,15 @@ describe("createPluginRegistry", () => {
     const firstResult = registry.getAll();
     const secondResult = registry.getAll();
 
-    expect(secondResult).toBe(firstResult);
+    expect(secondResult).not.toBe(firstResult);
+    expect(secondResult).toEqual(firstResult);
+
+    firstResult.reverse();
+
+    expect(registry.getAll().map(registration => registration.name)).toEqual([
+      "types",
+      "clients",
+    ]);
 
     registry.register(createPlugin("analytics", ["clients"]));
 
