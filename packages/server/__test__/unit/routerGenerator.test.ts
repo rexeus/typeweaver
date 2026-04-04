@@ -44,7 +44,6 @@ function createMockContext(operations: NormalizedOperation[]): {
     inputDir: "/in",
     config: {},
     normalizedSpec,
-    templateDir: "/templates",
     coreDir: "/core",
     responsesOutputDir: "/out/responses",
     specOutputDir: "/out/spec",

@@ -1,10 +1,16 @@
+/* eslint-disable import/max-dependencies */
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { AwsCdkPlugin } from "@rexeus/typeweaver-aws-cdk";
+import { ClientsPlugin } from "@rexeus/typeweaver-clients";
 import type {
   PluginRegistryApi,
   TypeweaverPlugin,
 } from "@rexeus/typeweaver-gen";
+import { createPluginRegistry } from "@rexeus/typeweaver-gen";
+import { HonoPlugin } from "@rexeus/typeweaver-hono";
+import { ServerPlugin } from "@rexeus/typeweaver-server";
 import { TypesPlugin } from "@rexeus/typeweaver-types";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { PluginLoadingFailure } from "../src/generators/errors/PluginLoadingFailure.js";
@@ -137,6 +143,24 @@ describe("pluginLoader", () => {
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
       "types",
       "default-plugin",
+    ]);
+  });
+
+  test("preserves the expected built-in plugin order after dependency resolution", () => {
+    const registry = createPluginRegistry();
+
+    registry.register(new TypesPlugin());
+    registry.register(new ClientsPlugin());
+    registry.register(new ServerPlugin());
+    registry.register(new HonoPlugin());
+    registry.register(new AwsCdkPlugin());
+
+    expect(registry.getAll().map(registration => registration.name)).toEqual([
+      "types",
+      "clients",
+      "server",
+      "hono",
+      "aws-cdk",
     ]);
   });
 });

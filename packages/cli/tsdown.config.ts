@@ -1,27 +1,32 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "tsdown";
+import { createPackageBuildConfig } from "../../config/tsdown/createPackageBuildConfig.mjs";
+
+const packageDir = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig([
-  {
+  createPackageBuildConfig({
+    packageDir,
     entry: ["src/entry.ts"],
     format: ["esm"],
     dts: false,
     clean: false,
-    target: "esnext",
-    platform: "node",
-    treeshake: true,
-    external: ["oxfmt", "tsdown"],
+    deps: {
+      neverBundle: ["oxfmt", "rolldown"],
+    },
     nodeProtocol: true,
     banner: "#!/usr/bin/env node",
-  },
-  {
+    runSharedPostBuild: false,
+  }),
+  createPackageBuildConfig({
+    packageDir,
     entry: ["src/index.ts", "src/cli.ts"],
-    format: ["esm", "cjs"],
-    dts: true,
-    clean: true,
-    target: "esnext",
-    platform: "node",
-    treeshake: true,
-    external: ["oxfmt", "tsdown"],
+    deps: {
+      neverBundle: ["oxfmt", "rolldown"],
+    },
     nodeProtocol: true,
-  },
+    libSourceDir: false,
+    templateSourceDir: "src/generators/templates",
+  }),
 ]);

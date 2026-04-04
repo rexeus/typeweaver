@@ -1,3 +1,4 @@
+import { PluginDependencyError } from "./types";
 import type { PluginRegistration, TypeweaverPlugin } from "./types";
 
 export type PluginRegistryApi = {
@@ -10,6 +11,11 @@ export type PluginRegistryApi = {
 
 export function createPluginRegistry(): PluginRegistryApi {
   const plugins = new Map<string, PluginRegistration>();
+  let sortedRegistrations: PluginRegistration[] | undefined;
+
+  const invalidateSortedRegistrations = (): void => {
+    sortedRegistrations = undefined;
+  };
 
   return {
     register: (plugin: TypeweaverPlugin, config?: unknown): void => {
@@ -27,11 +33,100 @@ export function createPluginRegistry(): PluginRegistryApi {
       };
 
       plugins.set(plugin.name, registration);
+      invalidateSortedRegistrations();
       console.info(`Registered plugin: ${plugin.name}`);
     },
     get: (name: string) => plugins.get(name),
-    getAll: () => Array.from(plugins.values()),
+    getAll: () => {
+      if (sortedRegistrations === undefined) {
+        sortedRegistrations = sortPluginRegistrations(
+          Array.from(plugins.values())
+        );
+      }
+
+      return [...sortedRegistrations];
+    },
     has: (name: string) => plugins.has(name),
-    clear: () => plugins.clear(),
+    clear: () => {
+      plugins.clear();
+      invalidateSortedRegistrations();
+    },
   };
+}
+
+function sortPluginRegistrations(
+  registrations: readonly PluginRegistration[]
+): PluginRegistration[] {
+  const registrationsByName = new Map(
+    registrations.map(registration => [registration.name, registration])
+  );
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const sorted: PluginRegistration[] = [];
+
+  for (const registration of registrations) {
+    visitPlugin({
+      registration,
+      registrationsByName,
+      visiting,
+      visited,
+      sorted,
+      dependencyPath: [],
+    });
+  }
+
+  return sorted;
+}
+
+function visitPlugin(params: {
+  readonly registration: PluginRegistration;
+  readonly registrationsByName: ReadonlyMap<string, PluginRegistration>;
+  readonly visiting: Set<string>;
+  readonly visited: Set<string>;
+  readonly sorted: PluginRegistration[];
+  readonly dependencyPath: readonly string[];
+}): void {
+  const {
+    registration,
+    registrationsByName,
+    visiting,
+    visited,
+    sorted,
+    dependencyPath,
+  } = params;
+
+  if (visited.has(registration.name)) {
+    return;
+  }
+
+  if (visiting.has(registration.name)) {
+    const cyclePath = [...dependencyPath, registration.name].join(" -> ");
+    throw new PluginDependencyError(
+      registration.name,
+      registration.name,
+      `Detected plugin dependency cycle: ${cyclePath}`
+    );
+  }
+
+  visiting.add(registration.name);
+
+  for (const dependencyName of registration.plugin.depends ?? []) {
+    const dependency = registrationsByName.get(dependencyName);
+    if (dependency === undefined) {
+      throw new PluginDependencyError(registration.name, dependencyName);
+    }
+
+    visitPlugin({
+      registration: dependency,
+      registrationsByName,
+      visiting,
+      visited,
+      sorted,
+      dependencyPath: [...dependencyPath, registration.name],
+    });
+  }
+
+  visiting.delete(registration.name);
+  visited.add(registration.name);
+  sorted.push(registration);
 }

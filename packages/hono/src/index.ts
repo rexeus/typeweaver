@@ -8,6 +8,7 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 export class HonoPlugin extends BasePlugin {
   public name = "hono";
+  public override depends = ["types"];
 
   public override generate(context: GeneratorContext): void {
     const libSourceDir = path.join(moduleDir, "lib");

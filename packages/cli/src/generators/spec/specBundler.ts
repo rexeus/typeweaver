@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { Rolldown } from "tsdown";
+import { build } from "rolldown";
 
 const WINDOWS_ABSOLUTE_PATH_PATTERN = /^[A-Za-z]:[\\/]/;
 const WINDOWS_UNC_PATH_PATTERN = /^\\\\/;
@@ -64,7 +64,7 @@ export async function bundle(config: SpecBundlerConfig): Promise<string> {
   );
 
   try {
-    await Rolldown.build({
+    await build({
       cwd: tempDir,
       input: wrapperFile,
       treeshake: true,

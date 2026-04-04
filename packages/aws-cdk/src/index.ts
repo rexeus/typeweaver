@@ -8,6 +8,8 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 export class AwsCdkPlugin extends BasePlugin {
   public name = "aws-cdk";
+  public override depends = ["types"];
+
   public override generate(context: GeneratorContext): Promise<void> | void {
     // Copy lib files to lib/aws-cdk/ from dist folder
     const libDir = path.join(moduleDir, "lib");

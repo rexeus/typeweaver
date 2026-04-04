@@ -15,6 +15,7 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
  */
 export class ServerPlugin extends BasePlugin {
   public name = "server";
+  public override depends = ["types"];
 
   /**
    * Generates the server runtime and typed routers for all resources.

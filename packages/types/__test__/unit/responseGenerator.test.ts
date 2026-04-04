@@ -58,7 +58,6 @@ describe("ResponseGenerator", () => {
       inputDir: "/in",
       config: {},
       normalizedSpec,
-      templateDir: "/templates",
       coreDir: "@rexeus/typeweaver-core",
       responsesOutputDir: "/out/responses",
       specOutputDir: "/out/spec",

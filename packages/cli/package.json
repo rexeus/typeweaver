@@ -36,7 +36,7 @@
     "cli:bun": "bun run src/entry.ts",
     "typecheck": "tsc --noEmit",
     "format": "oxfmt",
-    "build": "tsdown && mkdir -p ./dist/templates && cp -r ./src/generators/templates/. ./dist/templates/ && cp ../../LICENSE ../../NOTICE ./dist/",
+    "build": "tsdown",
     "prepack": "npm run build",
     "preversion": "npm run build",
     "test:bundle": "pnpm run build && node dist/entry.mjs generate --output test/outputs/bundle --input ../test-utils/src/test-project/spec/index.ts --plugins clients,aws-cdk,hono",
@@ -81,7 +81,7 @@
     "@rexeus/typeweaver-types": "workspace:^",
     "commander": "^14.0.3",
     "oxc-transform": "^0.121.0",
-    "tsdown": "^0.21.7"
+    "rolldown": "^1.0.0-rc.13"
   },
   "peerDependencies": {
     "oxfmt": ">=0.30.0"
