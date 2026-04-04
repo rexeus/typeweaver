@@ -369,4 +369,73 @@ describe("SpecLoader", () => {
 
     expect(fs.existsSync(path.join(outputDir, "todos"))).toBe(false);
   });
+
+  test("loads bundled javascript specs", async () => {
+    const fixtureDir = createTempDir();
+    const outputDir = path.join(fixtureDir, "generated-spec");
+    const helperFile = path.join(fixtureDir, "responses.js");
+    const specFile = path.join(fixtureDir, "spec.js");
+
+    fs.writeFileSync(
+      helperFile,
+      [
+        'import { defineResponse, HttpStatusCode } from "@rexeus/typeweaver-core";',
+        'import { z } from "zod";',
+        "",
+        "export const todoResponse = defineResponse({",
+        '  name: "TodoResponse",',
+        "  statusCode: HttpStatusCode.OK,",
+        '  description: "Todo loaded",',
+        "  body: z.object({ id: z.string() }),",
+        "});",
+        "",
+      ].join("\n")
+    );
+
+    fs.writeFileSync(
+      specFile,
+      [
+        'import { defineOperation, defineSpec, HttpMethod } from "@rexeus/typeweaver-core";',
+        'import { z } from "zod";',
+        'import { todoResponse } from "./responses.js";',
+        "",
+        "export default defineSpec({",
+        "  resources: {",
+        "    todos: {",
+        "      operations: [",
+        "        defineOperation({",
+        '          operationId: "getTodo",',
+        "          method: HttpMethod.GET,",
+        '          path: "/todos/:todoId",',
+        '          summary: "Get todo",',
+        "          request: {",
+        "            param: z.object({ todoId: z.string() }),",
+        "          },",
+        "          responses: [todoResponse],",
+        "        }),",
+        "      ],",
+        "    },",
+        "  },",
+        "});",
+        "",
+      ].join("\n")
+    );
+
+    const loadedSpec = await loadSpec({
+      inputFile: path.relative(process.cwd(), specFile),
+      specOutputDir: outputDir,
+    });
+
+    expect(loadedSpec.definition.resources.todos?.operations).toHaveLength(1);
+    expect(loadedSpec.normalizedSpec.responses).toEqual([
+      expect.objectContaining({
+        name: "TodoResponse",
+        kind: "response",
+        statusCode: 200,
+      }),
+    ]);
+
+    expect(fs.existsSync(path.join(outputDir, "spec.js"))).toBe(true);
+    expect(fs.existsSync(path.join(outputDir, "spec.d.ts"))).toBe(true);
+  });
 });

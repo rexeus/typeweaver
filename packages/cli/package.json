@@ -81,7 +81,7 @@
     "@rexeus/typeweaver-types": "workspace:^",
     "commander": "^14.0.3",
     "oxc-transform": "^0.121.0",
-    "tsdown": "^0.21.7"
+    "rolldown": "^1.0.0-rc.13"
   },
   "peerDependencies": {
     "oxfmt": ">=0.30.0"

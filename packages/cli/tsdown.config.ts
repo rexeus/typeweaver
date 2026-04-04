@@ -12,7 +12,9 @@ export default defineConfig([
     format: ["esm"],
     dts: false,
     clean: false,
-    external: ["oxfmt", "tsdown"],
+    deps: {
+      neverBundle: ["oxfmt", "rolldown"],
+    },
     nodeProtocol: true,
     banner: "#!/usr/bin/env node",
     runSharedPostBuild: false,
@@ -20,7 +22,9 @@ export default defineConfig([
   createPackageBuildConfig({
     packageDir,
     entry: ["src/index.ts", "src/cli.ts"],
-    external: ["oxfmt", "tsdown"],
+    deps: {
+      neverBundle: ["oxfmt", "rolldown"],
+    },
     nodeProtocol: true,
     libSourceDir: false,
     templateSourceDir: "src/generators/templates",
