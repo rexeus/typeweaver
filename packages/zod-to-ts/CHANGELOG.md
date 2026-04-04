@@ -1,5 +1,11 @@
 # @rexeus/typeweaver-zod-to-ts
 
+## 0.10.1
+
+### Patch Changes
+
+- 5389382: Switch internal bundler to rolldown.
+
 ## 0.10.0
 
 ## 0.9.2
