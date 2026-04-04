@@ -1,5 +1,14 @@
 # @rexeus/typeweaver-core
 
+## 0.10.1
+
+### Patch Changes
+
+- 5389382: Switch internal bundler to rolldown.
+- a76e62e: Unify generator build mechanics behind shared tsdown helpers, enforce plugin
+  dependency ordering, simplify the precompiled `types` lib build path, and switch
+  the CLI spec bundler from `tsdown` to direct `rolldown` usage.
+
 ## 0.10.0
 
 ### Minor Changes
