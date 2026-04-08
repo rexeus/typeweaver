@@ -1,15 +1,15 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createQueryTodoSuccessResponse as generatedCreateQueryTodoSuccessResponse } from "../../test-project/output/responses/QueryTodoSuccessResponse";
-import { createDataFactory } from "../createDataFactory";
-import { createResponse } from "../createResponse";
-import { createCreateTodoSuccessResponseHeader } from "./CreateTodoResponseUtils";
-import { createGetTodoSuccessResponseBody } from "./GetTodoResponseUtils";
+import { createQueryTodoSuccessResponse as generatedCreateQueryTodoSuccessResponse } from "../../test-project/output/responses/QueryTodoSuccessResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createResponse } from "../createResponse.js";
+import { createCreateTodoSuccessResponseHeader } from "./CreateTodoResponseUtils.js";
+import { createGetTodoSuccessResponseBody } from "./GetTodoResponseUtils.js";
 import type {
   IQueryTodoSuccessResponse,
   IQueryTodoSuccessResponseBody,
   IQueryTodoSuccessResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 export const createQueryTodoSuccessResponseBody =
   createDataFactory<IQueryTodoSuccessResponseBody>(() => {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { createPluginRegistry } from "../src/plugins/pluginRegistry";
-import { PluginDependencyError } from "../src/plugins/types";
+import { createPluginRegistry } from "../src/plugins/pluginRegistry.js";
+import { PluginDependencyError } from "../src/plugins/types.js";
 
 const createPlugin = (name: string, depends?: readonly string[]) => ({
   name,

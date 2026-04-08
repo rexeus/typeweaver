@@ -7,8 +7,8 @@
 
 /* oxlint-disable import/max-dependencies */
 
-export { TypeweaverApp, type TypeweaverAppOptions } from "./TypeweaverApp";
-export { TypeweaverRouter, type TypeweaverRouterOptions } from "./TypeweaverRouter";
+export { TypeweaverApp, type TypeweaverAppOptions } from "./TypeweaverApp.js";
+export { TypeweaverRouter, type TypeweaverRouterOptions } from "./TypeweaverRouter.js";
 export { HttpMethod } from "@rexeus/typeweaver-core";
 export type {
   HttpResponseErrorHandler,
@@ -16,21 +16,21 @@ export type {
   ResponseValidationErrorHandler,
   RouteMetadata,
   UnknownErrorHandler,
-} from "./Router";
-export type { ServerContext } from "./ServerContext";
-export type { RequestHandler } from "./RequestHandler";
-export { StateMap } from "./StateMap";
+} from "./Router.js";
+export type { ServerContext } from "./ServerContext.js";
+export type { RequestHandler } from "./RequestHandler.js";
+export { StateMap } from "./StateMap.js";
 export {
   defineMiddleware,
   type InferState,
   type NextFn,
   type StateRequirementError,
   type TypedMiddleware,
-} from "./TypedMiddleware";
-export { BodyParseError, PayloadTooLargeError, ResponseSerializationError } from "./Errors";
-export { FetchApiAdapter } from "./FetchApiAdapter";
-export { nodeAdapter, type NodeAdapterOptions } from "./NodeAdapter";
-export { pathMatcher } from "./PathMatcher";
+} from "./TypedMiddleware.js";
+export { BodyParseError, PayloadTooLargeError, ResponseSerializationError } from "./Errors.js";
+export { FetchApiAdapter } from "./FetchApiAdapter.js";
+export { nodeAdapter, type NodeAdapterOptions } from "./NodeAdapter.js";
+export { pathMatcher } from "./PathMatcher.js";
 export {
   basicAuth,
   type BasicAuthOptions,
@@ -49,4 +49,4 @@ export {
   scoped,
   secureHeaders,
   type SecureHeadersOptions,
-} from "./middleware/index";
+} from "./middleware/index.js";

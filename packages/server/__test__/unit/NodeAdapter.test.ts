@@ -3,13 +3,13 @@ import {
   payloadTooLargeDefaultError,
 } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
-import { nodeAdapter } from "../../src/lib/NodeAdapter";
-import { TypeweaverApp } from "../../src/lib/TypeweaverApp";
+import { nodeAdapter } from "../../src/lib/NodeAdapter.js";
+import { TypeweaverApp } from "../../src/lib/TypeweaverApp.js";
 import {
   awaitResponse,
   createMockIncomingMessage,
   createMockServerResponse,
-} from "../node-helpers";
+} from "../node-helpers.js";
 
 function stubFetch(app: TypeweaverApp, response: Response) {
   return vi.spyOn(app, "fetch").mockResolvedValue(response);

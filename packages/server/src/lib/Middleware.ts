@@ -6,7 +6,7 @@
  */
 
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
-import type { ServerContext } from "./ServerContext";
+import type { ServerContext } from "./ServerContext.js";
 
 /**
  * A middleware function that processes requests in the pipeline.

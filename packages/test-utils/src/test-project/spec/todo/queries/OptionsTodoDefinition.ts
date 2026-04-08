@@ -5,9 +5,9 @@ import {
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
 import { z } from "zod";
-import { defaultRequestHeadersWithoutPayload } from "../../shared/defaultRequestHeader";
-import { sharedResponses } from "../../shared/sharedResponses";
-import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition";
+import { defaultRequestHeadersWithoutPayload } from "../../shared/defaultRequestHeader.js";
+import { sharedResponses } from "../../shared/sharedResponses.js";
+import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition.js";
 
 export const OptionsTodoDefinition = defineOperation({
   operationId: "OptionsTodo",

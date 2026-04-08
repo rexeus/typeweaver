@@ -6,8 +6,8 @@
  */
 
 import type { IHttpRequest, IHttpResponse } from "@rexeus/typeweaver-core";
-import { FetchApiAdapter } from "./FetchApiAdapter";
-import { HttpAdapter } from "./HttpAdapter";
+import { FetchApiAdapter } from "./FetchApiAdapter.js";
+import { HttpAdapter } from "./HttpAdapter.js";
 import type { Context } from "hono";
 
 /**

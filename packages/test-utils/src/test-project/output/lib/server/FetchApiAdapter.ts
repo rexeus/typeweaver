@@ -13,7 +13,7 @@ import type {
   IHttpRequest,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
-import { BodyParseError, PayloadTooLargeError, ResponseSerializationError } from "./Errors";
+import { BodyParseError, PayloadTooLargeError, ResponseSerializationError } from "./Errors.js";
 
 export type FetchApiAdapterOptions = {
   readonly maxBodySize?: number;

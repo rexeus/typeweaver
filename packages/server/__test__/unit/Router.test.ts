@@ -1,12 +1,12 @@
 import type { HttpMethod } from "@rexeus/typeweaver-core";
 import { assert, describe, expect, test } from "vitest";
-import { Router } from "../../src/lib/Router";
+import { Router } from "../../src/lib/Router.js";
 import {
   createServerContext,
   noopResponseValidator,
   noopValidator,
-} from "../helpers";
-import type { RouteDefinition, RouterErrorConfig } from "../../src/lib/Router";
+} from "../helpers.js";
+import type { RouteDefinition, RouterErrorConfig } from "../../src/lib/Router.js";
 
 const defaultConfig: RouterErrorConfig = {
   validateRequests: true,

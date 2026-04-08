@@ -1,5 +1,5 @@
-import type { IHttpResponse } from "./HttpResponse";
-import type { ResponseValidationError } from "./ResponseValidationError";
+import type { IHttpResponse } from "./HttpResponse.js";
+import type { ResponseValidationError } from "./ResponseValidationError.js";
 
 type ValidationSuccessResult<T> = {
   readonly isValid: true;

@@ -11,22 +11,22 @@ import {
   TypeweaverRouter,
   type RequestHandler,
   type TypeweaverRouterOptions,
-} from "./../lib/server";
+} from "./../lib/server/index.js";
 
-import type { IUploadFileRequest } from "./UploadFileRequest";
-import { UploadFileRequestValidator } from "./UploadFileRequestValidator";
-import type { UploadFileResponse } from "./UploadFileResponse";
-import { UploadFileResponseValidator } from "./UploadFileResponseValidator";
+import type { IUploadFileRequest } from "./UploadFileRequest.js";
+import { UploadFileRequestValidator } from "./UploadFileRequestValidator.js";
+import type { UploadFileResponse } from "./UploadFileResponse.js";
+import { UploadFileResponseValidator } from "./UploadFileResponseValidator.js";
 
-import type { IGetFileMetadataRequest } from "./GetFileMetadataRequest";
-import { GetFileMetadataRequestValidator } from "./GetFileMetadataRequestValidator";
-import type { GetFileMetadataResponse } from "./GetFileMetadataResponse";
-import { GetFileMetadataResponseValidator } from "./GetFileMetadataResponseValidator";
+import type { IGetFileMetadataRequest } from "./GetFileMetadataRequest.js";
+import { GetFileMetadataRequestValidator } from "./GetFileMetadataRequestValidator.js";
+import type { GetFileMetadataResponse } from "./GetFileMetadataResponse.js";
+import { GetFileMetadataResponseValidator } from "./GetFileMetadataResponseValidator.js";
 
-import type { IDownloadFileContentRequest } from "./DownloadFileContentRequest";
-import { DownloadFileContentRequestValidator } from "./DownloadFileContentRequestValidator";
-import type { DownloadFileContentResponse } from "./DownloadFileContentResponse";
-import { DownloadFileContentResponseValidator } from "./DownloadFileContentResponseValidator";
+import type { IDownloadFileContentRequest } from "./DownloadFileContentRequest.js";
+import { DownloadFileContentRequestValidator } from "./DownloadFileContentRequestValidator.js";
+import type { DownloadFileContentResponse } from "./DownloadFileContentResponse.js";
+import { DownloadFileContentResponseValidator } from "./DownloadFileContentResponseValidator.js";
 
 export type ServerFileApiHandler<TState extends Record<string, unknown> = Record<string, unknown>> =
   {

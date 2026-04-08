@@ -1,12 +1,12 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createDataFactory } from "../createDataFactory";
-import { createRequest } from "../createRequest";
+import { createDataFactory } from "../createDataFactory.js";
+import { createRequest } from "../createRequest.js";
 import type {
   IRegisterAccountRequest,
   IRegisterAccountRequestBody,
   IRegisterAccountRequestHeader,
-} from "../..";
+} from "../../index.js";
 
 export const createRegisterAccountRequestBody =
   createDataFactory<IRegisterAccountRequestBody>(() => ({

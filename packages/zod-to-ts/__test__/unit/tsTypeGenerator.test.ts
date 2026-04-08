@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { fromZod } from "../../src/tsTypeGenerator";
-import { print } from "../../src/tsTypePrinter";
+import { fromZod } from "../../src/tsTypeGenerator.js";
+import { print } from "../../src/tsTypePrinter.js";
 
 function zodToTs(schema: z.ZodType): string {
   return print(fromZod(schema));

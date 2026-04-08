@@ -6,7 +6,7 @@
  */
 
 import type { IHttpRequest, IHttpResponse } from "@rexeus/typeweaver-core";
-import type { ServerContext } from "./ServerContext";
+import type { ServerContext } from "./ServerContext.js";
 
 /**
  * A type-safe request handler function.

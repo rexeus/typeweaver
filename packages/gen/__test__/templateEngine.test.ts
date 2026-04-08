@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { renderTemplate } from "../src/helpers/templateEngine";
+import { renderTemplate } from "../src/helpers/templateEngine.js";
 
 describe("renderTemplate", () => {
   test("renders escaped and raw expressions", () => {

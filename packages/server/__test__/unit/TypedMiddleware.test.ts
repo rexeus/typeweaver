@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { StateMap } from "../../src/lib/StateMap";
-import { defineMiddleware } from "../../src/lib/TypedMiddleware";
-import { TypeweaverApp } from "../../src/lib/TypeweaverApp";
-import { createServerContext } from "../helpers";
-import type { InferState } from "../../src/lib/TypedMiddleware";
+import { StateMap } from "../../src/lib/StateMap.js";
+import { defineMiddleware } from "../../src/lib/TypedMiddleware.js";
+import { TypeweaverApp } from "../../src/lib/TypeweaverApp.js";
+import { createServerContext } from "../helpers.js";
+import type { InferState } from "../../src/lib/TypedMiddleware.js";
 
 describe("TypedMiddleware", () => {
   describe("defineMiddleware", () => {
@@ -69,10 +69,10 @@ describe("TypedMiddleware", () => {
 
     test("should execute typed middleware at runtime", async () => {
       const { TypeweaverRouter } =
-        await import("../../src/lib/TypeweaverRouter");
+        await import("../../src/lib/TypeweaverRouter.js");
       const { HttpMethod } = await import("@rexeus/typeweaver-core");
       const { noopValidator, noopResponseValidator } =
-        await import("../helpers");
+        await import("../helpers.js");
 
       const auth = defineMiddleware<{ userId: string }>(async (_ctx, next) =>
         next({ userId: "u_runtime" })

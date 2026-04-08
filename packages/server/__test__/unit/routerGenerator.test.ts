@@ -6,7 +6,7 @@ import type {
   NormalizedSpec,
 } from "@rexeus/typeweaver-gen";
 import { assert, describe, expect, test } from "vitest";
-import { generate } from "../../src/routerGenerator";
+import { generate } from "../../src/routerGenerator.js";
 
 function createMockOperation(
   operationId: string,

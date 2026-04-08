@@ -9,8 +9,8 @@ import {
   defaultRequestHeadersWithoutPayload,
   defaultResponseHeader,
   sharedResponses,
-} from "../shared";
-import { fileMetadataSchema } from "./fileSchema";
+} from "../shared/index.js";
+import { fileMetadataSchema } from "./fileSchema.js";
 
 export const GetFileMetadataDefinition = defineOperation({
   operationId: "GetFileMetadata",

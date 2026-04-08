@@ -1,14 +1,14 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createTodoNotFoundErrorResponse as generatedCreateTodoNotFoundErrorResponse } from "../../test-project/output/responses/TodoNotFoundErrorResponse";
-import { createDataFactory } from "../createDataFactory";
-import { createErrorResponseHeader } from "../createErrorResponseHeader";
-import { createResponse } from "../createResponse";
+import { createTodoNotFoundErrorResponse as generatedCreateTodoNotFoundErrorResponse } from "../../test-project/output/responses/TodoNotFoundErrorResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createErrorResponseHeader } from "../createErrorResponseHeader.js";
+import { createResponse } from "../createResponse.js";
 import type {
   ITodoNotFoundErrorResponse,
   ITodoNotFoundErrorResponseBody,
   ITodoNotFoundErrorResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 type TodoNotFoundErrorResponseInput = {
   statusCode?: number;

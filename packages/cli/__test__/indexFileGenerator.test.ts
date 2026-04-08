@@ -93,21 +93,21 @@ describe("indexFileGenerator", () => {
 
     expect(
       fs.readFileSync(path.join(outputDir, "todo", "index.ts"), "utf8")
-    ).toContain('export * from "./GetTodoRequest";');
+    ).toContain('export * from "./GetTodoRequest.js";');
     expect(
       fs.readFileSync(path.join(outputDir, "todo", "index.ts"), "utf8")
-    ).toContain('export * from "./GetTodoResponse";');
+    ).toContain('export * from "./GetTodoResponse.js";');
     expect(
       fs.readFileSync(path.join(outputDir, "responses", "index.ts"), "utf8")
-    ).toContain('export * from "./TodoResponse";');
+    ).toContain('export * from "./TodoResponse.js";');
     expect(
       fs.existsSync(path.join(outputDir, "lib", "types", "index.ts"))
     ).toBe(false);
 
     const rootIndex = fs.readFileSync(path.join(outputDir, "index.ts"), "utf8");
-    expect(rootIndex).toContain('export * from "./lib/clients";');
-    expect(rootIndex).toContain('export * from "./lib/types";');
-    expect(rootIndex).toContain('export * from "./responses";');
-    expect(rootIndex).toContain('export * from "./todo";');
+    expect(rootIndex).toContain('export * from "./lib/clients/index.js";');
+    expect(rootIndex).toContain('export * from "./lib/types/index.js";');
+    expect(rootIndex).toContain('export * from "./responses/index.js";');
+    expect(rootIndex).toContain('export * from "./todo/index.js";');
   });
 });

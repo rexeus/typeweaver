@@ -1,2 +1,2 @@
-export * from "../NormalizedSpec";
-export * from "../normalizeSpec";
+export * from "../NormalizedSpec.js";
+export * from "../normalizeSpec.js";

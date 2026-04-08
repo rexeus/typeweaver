@@ -9,9 +9,9 @@ import {
   defaultRequestHeadersWithPayload,
   defaultResponseHeader,
   sharedResponses,
-} from "../../shared";
-import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition";
-import { todoSchema } from "../todoSchema";
+} from "../../shared/index.js";
+import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition.js";
+import { todoSchema } from "../todoSchema.js";
 
 export const CreateSubTodoDefinition = defineOperation({
   operationId: "CreateSubTodo",

@@ -2,14 +2,14 @@ import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 import {
   createAccessTokenSuccessResponse,
   createRefreshTokenSuccessResponse,
-} from "../../data";
+} from "../../data/index.js";
 import type {
   AccessTokenResponse,
   IAccessTokenRequest,
   IRefreshTokenRequest,
   RefreshTokenResponse,
-} from "../..";
-import type { HonoAuthApiHandler } from "../../test-project/output/auth/AuthHono";
+} from "../../index.js";
+import type { HonoAuthApiHandler } from "../../test-project/output/auth/AuthHono.js";
 
 export class AuthHandlers implements HonoAuthApiHandler {
   public constructor(private readonly throwError?: Error | ITypedHttpResponse) {

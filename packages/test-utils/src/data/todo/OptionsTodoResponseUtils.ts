@@ -1,10 +1,10 @@
-import { createOptionsTodoSuccessResponse as generatedCreateOptionsTodoSuccessResponse } from "../../test-project/output/responses/OptionsTodoSuccessResponse";
-import { createDataFactory } from "../createDataFactory";
-import { createResponse } from "../createResponse";
+import { createOptionsTodoSuccessResponse as generatedCreateOptionsTodoSuccessResponse } from "../../test-project/output/responses/OptionsTodoSuccessResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createResponse } from "../createResponse.js";
 import type {
   IOptionsTodoSuccessResponse,
   IOptionsTodoSuccessResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 export const createOptionsTodoSuccessResponseHeader =
   createDataFactory<IOptionsTodoSuccessResponseHeader>(() => ({

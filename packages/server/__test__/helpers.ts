@@ -8,8 +8,8 @@ import type {
 import { internalServerErrorDefaultError } from "@rexeus/typeweaver-core";
 import { createCreateTodoSuccessResponseBody } from "test-utils";
 import { expect } from "vitest";
-import { StateMap } from "../src/lib/StateMap";
-import type { ServerContext } from "../src/lib/ServerContext";
+import { StateMap } from "../src/lib/StateMap.js";
+import type { ServerContext } from "../src/lib/ServerContext.js";
 
 export const BASE_URL = "http://localhost";
 

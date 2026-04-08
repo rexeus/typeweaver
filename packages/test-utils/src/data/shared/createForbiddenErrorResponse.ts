@@ -1,13 +1,13 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createForbiddenErrorResponse as generatedCreateForbiddenErrorResponse } from "../../test-project/output/responses/ForbiddenErrorResponse";
-import { createDataFactory } from "../createDataFactory";
-import { createErrorResponseHeader } from "../createErrorResponseHeader";
-import { createResponse } from "../createResponse";
+import { createForbiddenErrorResponse as generatedCreateForbiddenErrorResponse } from "../../test-project/output/responses/ForbiddenErrorResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createErrorResponseHeader } from "../createErrorResponseHeader.js";
+import { createResponse } from "../createResponse.js";
 import type {
   IForbiddenErrorResponse,
   IForbiddenErrorResponseBody,
   IForbiddenErrorResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 type ForbiddenErrorResponseInput = {
   statusCode?: number;

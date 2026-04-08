@@ -10,8 +10,8 @@ import {
   DerivedResponseCycleError,
   InvalidDerivedResponseError,
   MissingDerivedResponseParentError,
-} from "../errors";
-import type { NormalizedResponse } from "../NormalizedSpec";
+} from "../errors/index.js";
+import type { NormalizedResponse } from "../NormalizedSpec.js";
 
 export const validateDerivedResponseMetadata = (
   response: ResponseDefinition

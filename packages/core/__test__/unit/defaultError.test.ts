@@ -11,8 +11,8 @@ import {
   payloadTooLargeDefaultError,
   unauthorizedDefaultError,
   validationDefaultError,
-} from "../../src/defaultError";
-import { HttpStatusCode } from "../../src/HttpStatusCode";
+} from "../../src/defaultError.js";
+import { HttpStatusCode } from "../../src/HttpStatusCode.js";
 
 describe("defaultError", () => {
   test("covers all current framework default errors", () => {

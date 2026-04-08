@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { relative } from "../helpers/path";
-import { renderTemplate } from "../helpers/templateEngine";
-import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec";
-import type { GeneratorContext, PluginConfig, PluginContext } from "./types";
+import { relative } from "../helpers/path.js";
+import { renderTemplate } from "../helpers/templateEngine.js";
+import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec.js";
+import type { GeneratorContext, PluginConfig, PluginContext } from "./types.js";
 
 export type PluginContextBuilderApi = {
   readonly createPluginContext: (params: {
@@ -115,14 +115,14 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
           config.importerDir,
           getCanonicalResponseOutputFile(config.responseName).replace(
             /\.ts$/,
-            ""
+            ".js"
           )
         );
       },
       getSpecImportPath: config => {
         return relative(
           config.importerDir,
-          path.join(params.specOutputDir, "spec").replace(/\.ts$/, "")
+          path.join(params.specOutputDir, "spec") + ".js"
         );
       },
       getOperationDefinitionAccessor: config => {

@@ -13,10 +13,10 @@ import type {
   ITypedHttpResponse,
 } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
-import { PayloadTooLargeError } from "../../src/lib/Errors";
-import { defineMiddleware } from "../../src/lib/TypedMiddleware";
-import { TypeweaverApp } from "../../src/lib/TypeweaverApp";
-import { TypeweaverRouter } from "../../src/lib/TypeweaverRouter";
+import { PayloadTooLargeError } from "../../src/lib/Errors.js";
+import { defineMiddleware } from "../../src/lib/TypedMiddleware.js";
+import { TypeweaverApp } from "../../src/lib/TypeweaverApp.js";
+import { TypeweaverRouter } from "../../src/lib/TypeweaverRouter.js";
 import {
   BASE_URL,
   del,
@@ -29,10 +29,10 @@ import {
   post,
   postRaw,
   put,
-} from "../helpers";
-import type { RequestHandler } from "../../src/lib/RequestHandler";
-import type { TypeweaverAppOptions } from "../../src/lib/TypeweaverApp";
-import type { TypeweaverRouterOptions } from "../../src/lib/TypeweaverRouter";
+} from "../helpers.js";
+import type { RequestHandler } from "../../src/lib/RequestHandler.js";
+import type { TypeweaverAppOptions } from "../../src/lib/TypeweaverApp.js";
+import type { TypeweaverRouterOptions } from "../../src/lib/TypeweaverRouter.js";
 
 const failingValidator: IRequestValidator = {
   validate: () => {

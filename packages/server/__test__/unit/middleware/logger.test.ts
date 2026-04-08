@@ -1,8 +1,8 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
-import { executeMiddlewarePipeline } from "../../../src/lib/Middleware";
-import { logger } from "../../../src/lib/middleware/logger";
-import { createServerContext } from "../../helpers";
+import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
+import { logger } from "../../../src/lib/middleware/logger.js";
+import { createServerContext } from "../../helpers.js";
 
 describe("logger", () => {
   test("should log request with default format", async () => {

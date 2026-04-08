@@ -1,8 +1,8 @@
 import { unauthorizedDefaultError } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
-import { executeMiddlewarePipeline } from "../../../src/lib/Middleware";
-import { basicAuth } from "../../../src/lib/middleware/basicAuth";
-import { createServerContext } from "../../helpers";
+import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
+import { basicAuth } from "../../../src/lib/middleware/basicAuth.js";
+import { createServerContext } from "../../helpers.js";
 
 const encode = (str: string) => btoa(str);
 

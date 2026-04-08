@@ -1,5 +1,5 @@
-import { PluginDependencyError } from "./types";
-import type { PluginRegistration, TypeweaverPlugin } from "./types";
+import { PluginDependencyError } from "./types.js";
+import type { PluginRegistration, TypeweaverPlugin } from "./types.js";
 
 export type PluginRegistryApi = {
   readonly register: (plugin: TypeweaverPlugin, config?: unknown) => void;

@@ -4,8 +4,8 @@ import type {
   TypeweaverPlugin,
 } from "@rexeus/typeweaver-gen";
 import { TypesPlugin } from "@rexeus/typeweaver-types";
-import { PluginLoadingFailure } from "./errors/PluginLoadingFailure";
-import type { PluginLoadError } from "./errors/PluginLoadingFailure";
+import { PluginLoadingFailure } from "./errors/PluginLoadingFailure.js";
+import type { PluginLoadError } from "./errors/PluginLoadingFailure.js";
 
 export type PluginResolutionStrategy = "npm" | "local" | "scoped";
 

@@ -51,7 +51,7 @@ function writeRequestValidator(
       importerDir: outputPaths.outputDir,
     }),
     corePath: context.coreDir,
-    requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}`,
+    requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}.js`,
     body,
     query,
     param,

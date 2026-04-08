@@ -5,10 +5,10 @@ import {
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
 import { z } from "zod";
-import { defaultRequestHeadersWithoutPayload } from "../../shared/defaultRequestHeader";
-import { defaultResponseHeader } from "../../shared/defaultResponseHeader";
-import { sharedResponses } from "../../shared/sharedResponses";
-import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition";
+import { defaultRequestHeadersWithoutPayload } from "../../shared/defaultRequestHeader.js";
+import { defaultResponseHeader } from "../../shared/defaultResponseHeader.js";
+import { sharedResponses } from "../../shared/sharedResponses.js";
+import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition.js";
 
 export const HeadTodoDefinition = defineOperation({
   operationId: "HeadTodo",

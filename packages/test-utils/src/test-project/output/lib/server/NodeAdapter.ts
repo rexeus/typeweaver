@@ -10,8 +10,8 @@ import {
   internalServerErrorDefaultError,
   payloadTooLargeDefaultError,
 } from "@rexeus/typeweaver-core";
-import { PayloadTooLargeError } from "./Errors";
-import type { TypeweaverApp } from "./TypeweaverApp";
+import { PayloadTooLargeError } from "./Errors.js";
+import type { TypeweaverApp } from "./TypeweaverApp.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 /**

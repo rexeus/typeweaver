@@ -1,8 +1,8 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
-import { executeMiddlewarePipeline } from "../../../src/lib/Middleware";
-import { cors } from "../../../src/lib/middleware/cors";
-import { createServerContext } from "../../helpers";
+import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
+import { cors } from "../../../src/lib/middleware/cors.js";
+import { createServerContext } from "../../helpers.js";
 
 describe("cors", () => {
   describe("simple requests", () => {

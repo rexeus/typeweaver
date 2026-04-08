@@ -1,4 +1,4 @@
-import type { NormalizedRequest } from "../NormalizedSpec";
+import type { NormalizedRequest } from "../NormalizedSpec.js";
 
 export class InvalidRequestSchemaError extends Error {
   public constructor(

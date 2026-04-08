@@ -1,5 +1,5 @@
-import { validateUniqueResponseNames } from "./validateResponseUniqueness";
-import type { OperationDefinition } from "./defineOperation";
+import { validateUniqueResponseNames } from "./validateResponseUniqueness.js";
+import type { OperationDefinition } from "./defineOperation.js";
 
 export type ResourceDefinition<
   TOperations extends readonly OperationDefinition[] =

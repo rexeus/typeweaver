@@ -1,4 +1,4 @@
-import { createDataFactory } from "./createDataFactory";
+import { createDataFactory } from "./createDataFactory.js";
 
 /**
  * Creates a factory for error response headers with `Content-Type: application/json` as default.

@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { defineOperation } from "../../src/defineOperation";
-import { defineResponse } from "../../src/defineResponse";
-import { DuplicateResponseNameError, defineSpec } from "../../src/defineSpec";
-import { HttpMethod } from "../../src/HttpMethod";
-import { HttpStatusCode } from "../../src/HttpStatusCode";
+import { defineOperation } from "../../src/defineOperation.js";
+import { defineResponse } from "../../src/defineResponse.js";
+import { DuplicateResponseNameError, defineSpec } from "../../src/defineSpec.js";
+import { HttpMethod } from "../../src/HttpMethod.js";
+import { HttpStatusCode } from "../../src/HttpStatusCode.js";
 
 describe("defineSpec", () => {
   test("accepts globally unique response names", () => {

@@ -10,7 +10,7 @@ import type {
   IRequestValidator,
   SafeRequestValidationResult,
 } from "@rexeus/typeweaver-core";
-import { Validator } from "./Validator";
+import { Validator } from "./Validator.js";
 
 /**
  * Abstract base class for HTTP request validation.

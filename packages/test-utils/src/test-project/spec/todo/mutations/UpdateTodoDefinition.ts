@@ -9,10 +9,10 @@ import {
   defaultRequestHeadersWithPayload,
   defaultResponseHeader,
   sharedResponses,
-} from "../../shared";
-import { TodoNotChangeableErrorDefinition } from "../errors/TodoNotChangeableErrorDefinition";
-import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition";
-import { todoSchema } from "../todoSchema";
+} from "../../shared/index.js";
+import { TodoNotChangeableErrorDefinition } from "../errors/TodoNotChangeableErrorDefinition.js";
+import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition.js";
+import { todoSchema } from "../todoSchema.js";
 
 export const UpdateTodoDefinition = defineOperation({
   operationId: "UpdateTodo",

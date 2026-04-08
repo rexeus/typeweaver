@@ -1,14 +1,14 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createTodoStatusTransitionInvalidErrorResponse as generatedCreateTodoStatusTransitionInvalidErrorResponse } from "../../test-project/output/responses/TodoStatusTransitionInvalidErrorResponse";
-import { createDataFactory } from "../createDataFactory";
-import { createErrorResponseHeader } from "../createErrorResponseHeader";
-import { createResponse } from "../createResponse";
+import { createTodoStatusTransitionInvalidErrorResponse as generatedCreateTodoStatusTransitionInvalidErrorResponse } from "../../test-project/output/responses/TodoStatusTransitionInvalidErrorResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createErrorResponseHeader } from "../createErrorResponseHeader.js";
+import { createResponse } from "../createResponse.js";
 import type {
   ITodoStatusTransitionInvalidErrorResponse,
   ITodoStatusTransitionInvalidErrorResponseBody,
   ITodoStatusTransitionInvalidErrorResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 type TodoStatusTransitionInvalidErrorResponseInput = {
   statusCode?: number;

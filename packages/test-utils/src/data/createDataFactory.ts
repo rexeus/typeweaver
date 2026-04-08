@@ -1,4 +1,4 @@
-import { createData } from "./createData";
+import { createData } from "./createData.js";
 
 /**
  * Creates a reusable factory function that produces data objects with defaults.
