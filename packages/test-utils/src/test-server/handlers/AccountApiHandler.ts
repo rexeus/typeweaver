@@ -1,6 +1,9 @@
 import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 import { createRegisterAccountSuccessResponse } from "../../data/index.js";
-import type { IRegisterAccountRequest, RegisterAccountResponse } from "../../index.js";
+import type {
+  IRegisterAccountRequest,
+  RegisterAccountResponse,
+} from "../../index.js";
 import type { HonoAccountApiHandler } from "../../test-project/output/account/AccountHono.js";
 
 export class AccountHandlers implements HonoAccountApiHandler {

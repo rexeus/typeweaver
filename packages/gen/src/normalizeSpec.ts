@@ -24,7 +24,10 @@ import {
   isSupportedOperationId,
   isSupportedResourceName,
 } from "./helpers/namingUtils.js";
-import { getPathParameterNames, normalizeRoutePath } from "./helpers/routePath.js";
+import {
+  getPathParameterNames,
+  normalizeRoutePath,
+} from "./helpers/routePath.js";
 import {
   collectCanonicalResponses,
   normalizeResponseDefinition,

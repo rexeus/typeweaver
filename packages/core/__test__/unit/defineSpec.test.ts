@@ -1,7 +1,10 @@
 import { describe, expect, test } from "vitest";
 import { defineOperation } from "../../src/defineOperation.js";
 import { defineResponse } from "../../src/defineResponse.js";
-import { DuplicateResponseNameError, defineSpec } from "../../src/defineSpec.js";
+import {
+  DuplicateResponseNameError,
+  defineSpec,
+} from "../../src/defineSpec.js";
 import { HttpMethod } from "../../src/HttpMethod.js";
 import { HttpStatusCode } from "../../src/HttpStatusCode.js";
 

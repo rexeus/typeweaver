@@ -1,6 +1,9 @@
 import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 import { createRegisterAccountSuccessResponse } from "../../data/index.js";
-import type { IRegisterAccountRequest, RegisterAccountResponse } from "../../index.js";
+import type {
+  IRegisterAccountRequest,
+  RegisterAccountResponse,
+} from "../../index.js";
 import type { ServerAccountApiHandler } from "../../test-project/output/account/AccountRouter.js";
 
 export class ServerAccountHandlers implements ServerAccountApiHandler {

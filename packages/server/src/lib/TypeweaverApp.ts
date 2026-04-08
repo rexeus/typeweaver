@@ -34,7 +34,10 @@ import type {
   RequestValidationErrorHandler,
 } from "./Router.js";
 import type { ServerContext } from "./ServerContext.js";
-import type { StateRequirementError, TypedMiddleware } from "./TypedMiddleware.js";
+import type {
+  StateRequirementError,
+  TypedMiddleware,
+} from "./TypedMiddleware.js";
 import type { TypeweaverRouter } from "./TypeweaverRouter.js";
 
 /**

@@ -6,7 +6,10 @@ import {
   noopResponseValidator,
   noopValidator,
 } from "../helpers.js";
-import type { RouteDefinition, RouterErrorConfig } from "../../src/lib/Router.js";
+import type {
+  RouteDefinition,
+  RouterErrorConfig,
+} from "../../src/lib/Router.js";
 
 const defaultConfig: RouterErrorConfig = {
   validateRequests: true,
