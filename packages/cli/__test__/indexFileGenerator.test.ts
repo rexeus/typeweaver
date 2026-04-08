@@ -110,4 +110,38 @@ describe("indexFileGenerator", () => {
     expect(rootIndex).toContain('export * from "./responses/index.js";');
     expect(rootIndex).toContain('export * from "./todo/index.js";');
   });
+
+  test("normalizes Windows-style generated file paths in barrel exports", () => {
+    const outputDir = createTempDir();
+    const templateDir = createTempDir();
+    const templatePath = path.join(templateDir, "Index.ejs");
+
+    fs.writeFileSync(
+      templatePath,
+      '<% for (const indexPath of indexPaths) { %>export * from "<%= indexPath %>";\n<% } %>'
+    );
+
+    generateIndexFiles(
+      templateDir,
+      createContext(outputDir, [
+        "todo\\GetTodoRequest.ts",
+        "todo\\GetTodoResponse.ts",
+        "lib\\clients\\BaseClient.ts",
+      ])
+    );
+
+    const todoIndex = fs.readFileSync(
+      path.join(outputDir, "todo", "index.ts"),
+      "utf8"
+    );
+    const rootIndex = fs.readFileSync(path.join(outputDir, "index.ts"), "utf8");
+
+    expect(todoIndex).toContain('export * from "./GetTodoRequest.js";');
+    expect(todoIndex).toContain('export * from "./GetTodoResponse.js";');
+    expect(todoIndex).not.toContain("\\");
+
+    expect(rootIndex).toContain('export * from "./lib/clients/index.js";');
+    expect(rootIndex).toContain('export * from "./todo/index.js";');
+    expect(rootIndex).not.toContain("\\");
+  });
 });

@@ -122,7 +122,7 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
       getSpecImportPath: config => {
         return relative(
           config.importerDir,
-          path.join(params.specOutputDir, "spec") + ".js"
+          path.join(params.specOutputDir, "spec.js")
         );
       },
       getOperationDefinitionAccessor: config => {

@@ -16,8 +16,9 @@ export function generateIndexFiles(
   const existingBarrels = new Set<string>();
 
   for (const file of generatedFiles) {
-    const withJsExt = file.replace(/\.ts$/, ".js");
-    const stripped = file.replace(/\.ts$/, "");
+    const normalizedFile = file.replace(/\\/g, "/");
+    const withJsExt = normalizedFile.replace(/\.ts$/, ".js");
+    const stripped = normalizedFile.replace(/\.ts$/, "");
     const firstSlash = stripped.indexOf("/");
 
     if (firstSlash === -1) {
