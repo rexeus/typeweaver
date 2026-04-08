@@ -3,8 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { Command } from "commander";
-import { getResolvedConfigPath, loadConfig } from "./configLoader";
-import { Generator } from "./generators/Generator";
+import { getResolvedConfigPath, loadConfig } from "./configLoader.js";
+import { Generator } from "./generators/Generator.js";
 import type { CommandOptions as CommanderOptions } from "commander";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));

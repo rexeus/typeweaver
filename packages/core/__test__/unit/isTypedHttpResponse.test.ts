@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { isTypedHttpResponse } from "../../src/HttpResponse";
+import { isTypedHttpResponse } from "../../src/HttpResponse.js";
 
 describe("isTypedHttpResponse", () => {
   test("returns false for null", () => {

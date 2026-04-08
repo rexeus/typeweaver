@@ -4,7 +4,7 @@ import {
   isPascalCase,
   isSupportedOperationId,
   isSupportedResourceName,
-} from "../src/helpers/namingUtils";
+} from "../src/helpers/namingUtils.js";
 
 describe("namingUtils", () => {
   describe("isCamelCase", () => {

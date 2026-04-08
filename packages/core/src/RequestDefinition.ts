@@ -1,7 +1,7 @@
-import type { HttpBodySchema } from "./HttpBody";
-import type { HttpHeaderSchema } from "./HttpHeader";
-import type { HttpParamSchema } from "./HttpParam";
-import type { HttpQuerySchema } from "./HttpQuery";
+import type { HttpBodySchema } from "./HttpBody.js";
+import type { HttpHeaderSchema } from "./HttpHeader.js";
+import type { HttpParamSchema } from "./HttpParam.js";
+import type { HttpQuerySchema } from "./HttpQuery.js";
 
 export type RequestDefinition<
   THeader extends HttpHeaderSchema | undefined = HttpHeaderSchema | undefined,

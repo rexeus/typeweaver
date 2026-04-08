@@ -10,8 +10,8 @@ import {
   defaultResponseHeader,
   listResponseSchema,
   sharedResponses,
-} from "../../shared";
-import { todoSchema } from "../todoSchema";
+} from "../../shared/index.js";
+import { todoSchema } from "../todoSchema.js";
 
 const listTodosQuerySchema = z.object({
   // Filtering parameters

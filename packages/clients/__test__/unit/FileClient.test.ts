@@ -9,7 +9,7 @@ import {
   UploadFileRequestCommand,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import { createRawMockFetch } from "../helpers";
+import { createRawMockFetch } from "../helpers.js";
 
 function createFileClient(mockFetch: typeof globalThis.fetch) {
   return new FileClient({

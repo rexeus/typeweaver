@@ -5,8 +5,8 @@ import {
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
 import { z } from "zod";
-import { defaultResponseHeader, sharedResponses } from "../shared";
-import { fileMetadataSchema } from "./fileSchema";
+import { defaultResponseHeader, sharedResponses } from "../shared/index.js";
+import { fileMetadataSchema } from "./fileSchema.js";
 
 export const UploadFileDefinition = defineOperation({
   operationId: "UploadFile",

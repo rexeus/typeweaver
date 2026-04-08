@@ -17,7 +17,7 @@ import {
   buildFetchRequest,
   expectErrorResponse,
   expectJson,
-} from "../../helpers";
+} from "../../helpers.js";
 
 describe("Response Validation (Server)", () => {
   describe("field stripping", () => {

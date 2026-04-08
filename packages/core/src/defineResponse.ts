@@ -1,7 +1,7 @@
 import { z } from "zod";
-import type { HttpBodySchema } from "./HttpBody";
-import type { HttpHeaderSchema } from "./HttpHeader";
-import type { HttpStatusCode } from "./HttpStatusCode";
+import type { HttpBodySchema } from "./HttpBody.js";
+import type { HttpHeaderSchema } from "./HttpHeader.js";
+import type { HttpStatusCode } from "./HttpStatusCode.js";
 
 export const responseDefinitionMetadataSymbol = Symbol.for(
   "@rexeus/typeweaver/response-definition-metadata"

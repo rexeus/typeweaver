@@ -5,7 +5,7 @@ import {
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
 import { z } from "zod";
-import { sharedResponses } from "../shared";
+import { sharedResponses } from "../shared/index.js";
 
 export const DownloadFileContentDefinition = defineOperation({
   operationId: "DownloadFileContent",

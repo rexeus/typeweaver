@@ -6,11 +6,11 @@
  */
 
 import type { IHttpHeader, IHttpParam, IHttpQuery, IHttpResponse } from "@rexeus/typeweaver-core";
-import { NetworkError } from "./NetworkError";
-import { PathParameterError } from "./PathParameterError";
-import { RequestCommand } from "./RequestCommand";
-import { ResponseParseError } from "./ResponseParseError";
-import type { NetworkErrorCode } from "./NetworkError";
+import { NetworkError } from "./NetworkError.js";
+import { PathParameterError } from "./PathParameterError.js";
+import { RequestCommand } from "./RequestCommand.js";
+import { ResponseParseError } from "./ResponseParseError.js";
+import type { NetworkErrorCode } from "./NetworkError.js";
 
 /**
  * Configuration options for ApiClient initialization.

@@ -22,7 +22,7 @@ import {
   UpdateTodoRequestCommand,
 } from "test-utils";
 import { afterEach, describe, expect, test } from "vitest";
-import { runClientCleanup, setupClientTest } from "./clientSetup";
+import { runClientCleanup, setupClientTest } from "./clientSetup.js";
 
 describe("Generated Client", () => {
   afterEach(async () => {

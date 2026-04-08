@@ -1,4 +1,4 @@
-import type { HttpStatusCode } from "./HttpStatusCode";
+import type { HttpStatusCode } from "./HttpStatusCode.js";
 import type { $ZodIssue } from "zod/v4/core";
 
 export type InvalidResponseIssue = {

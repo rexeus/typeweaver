@@ -1,6 +1,6 @@
 import path from "node:path";
 import { describe, expect, test } from "vitest";
-import { relative } from "../src/helpers/path";
+import { relative } from "../src/helpers/path.js";
 
 describe("relative", () => {
   test("returns POSIX path with ./ prefix for sibling directories", () => {

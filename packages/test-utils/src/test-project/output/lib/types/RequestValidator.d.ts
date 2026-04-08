@@ -3,7 +3,7 @@ import type {
   IRequestValidator,
   SafeRequestValidationResult,
 } from "@rexeus/typeweaver-core";
-import { Validator } from "./Validator";
+import { Validator } from "./Validator.js";
 
 export declare abstract class RequestValidator extends Validator implements IRequestValidator {
   public constructor();

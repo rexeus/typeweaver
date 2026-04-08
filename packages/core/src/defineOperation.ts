@@ -1,6 +1,6 @@
-import type { ResponseDefinition } from "./defineResponse";
-import type { HttpMethod } from "./HttpMethod";
-import type { RequestDefinition } from "./RequestDefinition";
+import type { ResponseDefinition } from "./defineResponse.js";
+import type { HttpMethod } from "./HttpMethod.js";
+import type { RequestDefinition } from "./RequestDefinition.js";
 
 export type OperationDefinition<
   TOperationId extends string = string,

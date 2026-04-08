@@ -1,13 +1,13 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createUploadFileSuccessResponse as generatedCreateUploadFileSuccessResponse } from "../../test-project/output/responses/UploadFileSuccessResponse";
-import { createDataFactory } from "../createDataFactory";
-import { createResponse } from "../createResponse";
+import { createUploadFileSuccessResponse as generatedCreateUploadFileSuccessResponse } from "../../test-project/output/responses/UploadFileSuccessResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createResponse } from "../createResponse.js";
 import type {
   IUploadFileSuccessResponse,
   IUploadFileSuccessResponseBody,
   IUploadFileSuccessResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 export const createUploadFileSuccessResponseHeader =
   createDataFactory<IUploadFileSuccessResponseHeader>(() => ({

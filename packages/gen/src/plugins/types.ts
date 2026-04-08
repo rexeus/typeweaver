@@ -1,4 +1,4 @@
-import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec";
+import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec.js";
 
 /**
  * Configuration for a typeweaver plugin

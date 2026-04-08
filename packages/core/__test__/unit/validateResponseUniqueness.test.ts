@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { defineOperation } from "../../src/defineOperation";
-import { defineResponse } from "../../src/defineResponse";
-import { DuplicateResponseNameError } from "../../src/DuplicateResponseNameError";
-import { HttpMethod } from "../../src/HttpMethod";
-import { HttpStatusCode } from "../../src/HttpStatusCode";
-import { validateUniqueResponseNames } from "../../src/validateResponseUniqueness";
+import { defineOperation } from "../../src/defineOperation.js";
+import { defineResponse } from "../../src/defineResponse.js";
+import { DuplicateResponseNameError } from "../../src/DuplicateResponseNameError.js";
+import { HttpMethod } from "../../src/HttpMethod.js";
+import { HttpStatusCode } from "../../src/HttpStatusCode.js";
+import { validateUniqueResponseNames } from "../../src/validateResponseUniqueness.js";
 
 describe("validateUniqueResponseNames", () => {
   test("accepts globally unique named responses", () => {

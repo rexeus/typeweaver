@@ -1,13 +1,13 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { createNotFoundErrorResponse as generatedCreateNotFoundErrorResponse } from "../../test-project/output/shared/NotFoundErrorResponse";
-import { createDataFactory } from "../createDataFactory";
-import { createErrorResponseHeader } from "../createErrorResponseHeader";
-import { createResponse } from "../createResponse";
+import { createDataFactory } from "../createDataFactory.js";
+import { createErrorResponseHeader } from "../createErrorResponseHeader.js";
+import { createResponse } from "../createResponse.js";
 import type {
   INotFoundErrorResponse,
   INotFoundErrorResponseBody,
   INotFoundErrorResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 type NotFoundErrorResponseInput = {
   statusCode?: number;

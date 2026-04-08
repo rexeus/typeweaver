@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { BasePlugin } from "@rexeus/typeweaver-gen";
 import type { GeneratorContext } from "@rexeus/typeweaver-gen";
-import { generate as generateRouters } from "./routerGenerator";
+import { generate as generateRouters } from "./routerGenerator.js";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 

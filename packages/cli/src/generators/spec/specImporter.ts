@@ -1,7 +1,7 @@
 import { pathToFileURL } from "node:url";
 import type { SpecDefinition } from "@rexeus/typeweaver-core";
-import { InvalidSpecEntrypointError } from "./InvalidSpecEntrypointError";
-import { isSpecDefinition } from "./specGuards";
+import { InvalidSpecEntrypointError } from "./InvalidSpecEntrypointError.js";
+import { isSpecDefinition } from "./specGuards.js";
 
 export async function importDefinition(
   bundledSpecFile: string

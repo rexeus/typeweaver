@@ -13,7 +13,7 @@ import type {
   IHttpRequest,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
-import { HttpAdapter } from "./HttpAdapter";
+import { HttpAdapter } from "./HttpAdapter.js";
 
 /**
  * Adapter for converting between Fetch API Request/Response objects

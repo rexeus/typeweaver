@@ -1,2 +1,2 @@
-export * from "./tsTypeGenerator";
-export * from "./tsTypePrinter";
+export * from "./tsTypeGenerator.js";
+export * from "./tsTypePrinter.js";

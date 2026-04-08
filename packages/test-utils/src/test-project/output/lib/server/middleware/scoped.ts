@@ -1,6 +1,6 @@
-import { pathMatcher } from "../PathMatcher";
-import { defineMiddleware } from "../TypedMiddleware";
-import type { TypedMiddleware } from "../TypedMiddleware";
+import { pathMatcher } from "../PathMatcher.js";
+import { defineMiddleware } from "../TypedMiddleware.js";
+import type { TypedMiddleware } from "../TypedMiddleware.js";
 
 /**
  * Restricts a middleware to only run on paths matching the given patterns.

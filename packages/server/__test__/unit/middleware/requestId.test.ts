@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { executeMiddlewarePipeline } from "../../../src/lib/Middleware";
-import { requestId } from "../../../src/lib/middleware/requestId";
-import { createServerContext } from "../../helpers";
+import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
+import { requestId } from "../../../src/lib/middleware/requestId.js";
+import { createServerContext } from "../../helpers.js";
 
 describe("requestId", () => {
   test("should generate a UUID when no header is present", async () => {

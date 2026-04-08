@@ -93,21 +93,55 @@ describe("indexFileGenerator", () => {
 
     expect(
       fs.readFileSync(path.join(outputDir, "todo", "index.ts"), "utf8")
-    ).toContain('export * from "./GetTodoRequest";');
+    ).toContain('export * from "./GetTodoRequest.js";');
     expect(
       fs.readFileSync(path.join(outputDir, "todo", "index.ts"), "utf8")
-    ).toContain('export * from "./GetTodoResponse";');
+    ).toContain('export * from "./GetTodoResponse.js";');
     expect(
       fs.readFileSync(path.join(outputDir, "responses", "index.ts"), "utf8")
-    ).toContain('export * from "./TodoResponse";');
+    ).toContain('export * from "./TodoResponse.js";');
     expect(
       fs.existsSync(path.join(outputDir, "lib", "types", "index.ts"))
     ).toBe(false);
 
     const rootIndex = fs.readFileSync(path.join(outputDir, "index.ts"), "utf8");
-    expect(rootIndex).toContain('export * from "./lib/clients";');
-    expect(rootIndex).toContain('export * from "./lib/types";');
-    expect(rootIndex).toContain('export * from "./responses";');
-    expect(rootIndex).toContain('export * from "./todo";');
+    expect(rootIndex).toContain('export * from "./lib/clients/index.js";');
+    expect(rootIndex).toContain('export * from "./lib/types/index.js";');
+    expect(rootIndex).toContain('export * from "./responses/index.js";');
+    expect(rootIndex).toContain('export * from "./todo/index.js";');
+  });
+
+  test("normalizes Windows-style generated file paths in barrel exports", () => {
+    const outputDir = createTempDir();
+    const templateDir = createTempDir();
+    const templatePath = path.join(templateDir, "Index.ejs");
+
+    fs.writeFileSync(
+      templatePath,
+      '<% for (const indexPath of indexPaths) { %>export * from "<%= indexPath %>";\n<% } %>'
+    );
+
+    generateIndexFiles(
+      templateDir,
+      createContext(outputDir, [
+        "todo\\GetTodoRequest.ts",
+        "todo\\GetTodoResponse.ts",
+        "lib\\clients\\BaseClient.ts",
+      ])
+    );
+
+    const todoIndex = fs.readFileSync(
+      path.join(outputDir, "todo", "index.ts"),
+      "utf8"
+    );
+    const rootIndex = fs.readFileSync(path.join(outputDir, "index.ts"), "utf8");
+
+    expect(todoIndex).toContain('export * from "./GetTodoRequest.js";');
+    expect(todoIndex).toContain('export * from "./GetTodoResponse.js";');
+    expect(todoIndex).not.toContain("\\");
+
+    expect(rootIndex).toContain('export * from "./lib/clients/index.js";');
+    expect(rootIndex).toContain('export * from "./todo/index.js";');
+    expect(rootIndex).not.toContain("\\");
   });
 });

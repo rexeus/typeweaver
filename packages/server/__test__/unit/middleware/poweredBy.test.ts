@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { executeMiddlewarePipeline } from "../../../src/lib/Middleware";
-import { poweredBy } from "../../../src/lib/middleware/poweredBy";
-import { createServerContext } from "../../helpers";
+import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
+import { poweredBy } from "../../../src/lib/middleware/poweredBy.js";
+import { createServerContext } from "../../helpers.js";
 
 describe("poweredBy", () => {
   test("should set X-Powered-By header with default value", async () => {

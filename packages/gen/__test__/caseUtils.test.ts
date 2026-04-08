@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { toCamelCase, toPascalCase } from "../src/helpers/caseUtils";
+import { toCamelCase, toPascalCase } from "../src/helpers/caseUtils.js";
 
 describe("caseUtils", () => {
   test("keeps camelCase and PascalCase identifiers stable", () => {

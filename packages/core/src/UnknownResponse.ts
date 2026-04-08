@@ -1,7 +1,7 @@
-import type { IHttpBody } from "./HttpBody";
-import type { IHttpHeader } from "./HttpHeader";
-import type { HttpStatusCode } from "./HttpStatusCode";
-import type { ResponseValidationError } from "./ResponseValidationError";
+import type { IHttpBody } from "./HttpBody.js";
+import type { IHttpHeader } from "./HttpHeader.js";
+import type { HttpStatusCode } from "./HttpStatusCode.js";
+import type { ResponseValidationError } from "./ResponseValidationError.js";
 
 export class UnknownResponseError extends Error {
   public constructor(

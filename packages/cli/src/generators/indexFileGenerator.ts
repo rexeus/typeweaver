@@ -16,11 +16,13 @@ export function generateIndexFiles(
   const existingBarrels = new Set<string>();
 
   for (const file of generatedFiles) {
-    const stripped = file.replace(/\.ts$/, "");
+    const normalizedFile = file.replace(/\\/g, "/");
+    const withJsExt = normalizedFile.replace(/\.ts$/, ".js");
+    const stripped = normalizedFile.replace(/\.ts$/, "");
     const firstSlash = stripped.indexOf("/");
 
     if (firstSlash === -1) {
-      rootFiles.add(`./${stripped}`);
+      rootFiles.add(`./${withJsExt}`);
       continue;
     }
 
@@ -39,7 +41,7 @@ export function generateIndexFiles(
         if (!groups.has(groupKey)) {
           groups.set(groupKey, new Set());
         }
-        groups.get(groupKey)!.add(`./${entryName}`);
+        groups.get(groupKey)!.add(`./${entryName}.js`);
       }
     } else {
       const entryName = stripped.slice(firstSlash + 1);
@@ -50,7 +52,7 @@ export function generateIndexFiles(
         if (!groups.has(firstSegment)) {
           groups.set(firstSegment, new Set());
         }
-        groups.get(firstSegment)!.add(`./${entryName}`);
+        groups.get(firstSegment)!.add(`./${entryName}.js`);
       }
     }
   }
@@ -71,10 +73,10 @@ export function generateIndexFiles(
 
   const rootIndexPaths = new Set<string>(rootFiles);
   for (const groupKey of groups.keys()) {
-    rootIndexPaths.add(`./${groupKey}`);
+    rootIndexPaths.add(`./${groupKey}/index.js`);
   }
   for (const barrelKey of existingBarrels) {
-    rootIndexPaths.add(`./${barrelKey}`);
+    rootIndexPaths.add(`./${barrelKey}/index.js`);
   }
 
   const rootContent = renderTemplate(template, {

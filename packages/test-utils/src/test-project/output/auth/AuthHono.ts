@@ -7,17 +7,21 @@
  */
 
 import type { Context } from "hono";
-import { TypeweaverHono, type HonoRequestHandler, type TypeweaverHonoOptions } from "./../lib/hono";
+import {
+  TypeweaverHono,
+  type HonoRequestHandler,
+  type TypeweaverHonoOptions,
+} from "./../lib/hono/index.js";
 
-import type { IAccessTokenRequest } from "./AccessTokenRequest";
-import { AccessTokenRequestValidator } from "./AccessTokenRequestValidator";
-import type { AccessTokenResponse } from "./AccessTokenResponse";
-import { AccessTokenResponseValidator } from "./AccessTokenResponseValidator";
+import type { IAccessTokenRequest } from "./AccessTokenRequest.js";
+import { AccessTokenRequestValidator } from "./AccessTokenRequestValidator.js";
+import type { AccessTokenResponse } from "./AccessTokenResponse.js";
+import { AccessTokenResponseValidator } from "./AccessTokenResponseValidator.js";
 
-import type { IRefreshTokenRequest } from "./RefreshTokenRequest";
-import { RefreshTokenRequestValidator } from "./RefreshTokenRequestValidator";
-import type { RefreshTokenResponse } from "./RefreshTokenResponse";
-import { RefreshTokenResponseValidator } from "./RefreshTokenResponseValidator";
+import type { IRefreshTokenRequest } from "./RefreshTokenRequest.js";
+import { RefreshTokenRequestValidator } from "./RefreshTokenRequestValidator.js";
+import type { RefreshTokenResponse } from "./RefreshTokenResponse.js";
+import { RefreshTokenResponseValidator } from "./RefreshTokenResponseValidator.js";
 
 export type HonoAuthApiHandler = {
   handleAccessTokenRequest: HonoRequestHandler<IAccessTokenRequest, AccessTokenResponse>;

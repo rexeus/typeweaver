@@ -1,12 +1,12 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { createDataFactory } from "../createDataFactory";
-import { createJwtToken } from "../createJwtToken";
-import { createRequest } from "../createRequest";
+import { createDataFactory } from "../createDataFactory.js";
+import { createJwtToken } from "../createJwtToken.js";
+import { createRequest } from "../createRequest.js";
 import type {
   IRefreshTokenRequest,
   IRefreshTokenRequestBody,
   IRefreshTokenRequestHeader,
-} from "../..";
+} from "../../index.js";
 
 export const createRefreshTokenRequestHeader =
   createDataFactory<IRefreshTokenRequestHeader>(() => ({

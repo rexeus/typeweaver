@@ -9,7 +9,7 @@ import {
   defaultRequestHeadersWithPayload,
   defaultResponseHeader,
   sharedResponses,
-} from "../shared";
+} from "../shared/index.js";
 
 export const AccessTokenDefinition = defineOperation({
   operationId: "AccessToken",

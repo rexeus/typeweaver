@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { NormalizedSpec } from "../NormalizedSpec";
+import type { NormalizedSpec } from "../NormalizedSpec.js";
 import type {
   GeneratorContext,
   PluginConfig,
   PluginContext,
   TypeweaverPlugin,
-} from "./types";
+} from "./types.js";
 
 /**
  * Base class for typeweaver plugins

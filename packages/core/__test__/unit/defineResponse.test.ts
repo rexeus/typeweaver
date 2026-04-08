@@ -7,8 +7,8 @@ import {
   getResponseDefinitionMetadata,
   isNamedResponseDefinition,
   responseDefinitionMetadataSymbol,
-} from "../../src/defineResponse";
-import { HttpStatusCode } from "../../src/HttpStatusCode";
+} from "../../src/defineResponse.js";
+import { HttpStatusCode } from "../../src/HttpStatusCode.js";
 
 describe("defineResponse", () => {
   test("returns the definition with correct properties", () => {

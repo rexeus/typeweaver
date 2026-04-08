@@ -41,9 +41,9 @@ function writeClient(
     return {
       operationId: operation.operationId,
       pascalCaseOperationId: toPascalCase(operation.operationId),
-      requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}`,
-      responseValidatorFile: `./${path.basename(outputPaths.responseValidationFileName, ".ts")}`,
-      responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}`,
+      requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}.js`,
+      responseValidatorFile: `./${path.basename(outputPaths.responseValidationFileName, ".ts")}.js`,
+      responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}.js`,
     };
   });
 
@@ -103,9 +103,9 @@ function writeRequestCommand(
     paramTsType,
     queryTsType,
     bodyTsType,
-    requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}`,
-    responseValidatorFile: `./${path.basename(outputPaths.responseValidationFileName, ".ts")}`,
-    responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}`,
+    requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}.js`,
+    responseValidatorFile: `./${path.basename(outputPaths.responseValidationFileName, ".ts")}.js`,
+    responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}.js`,
   });
 
   const outputCommandFile = path.join(

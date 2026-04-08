@@ -14,7 +14,7 @@ import type {
   SafeResponseValidationResult,
 } from "@rexeus/typeweaver-core";
 import { ResponseValidationError } from "@rexeus/typeweaver-core";
-import { Validator } from "./Validator";
+import { Validator } from "./Validator.js";
 import type { ZodSafeParseResult } from "zod";
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };

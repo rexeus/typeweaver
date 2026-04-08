@@ -18,13 +18,13 @@ import {
   validationDefaultError,
 } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
-import { BodyParseError, PayloadTooLargeError } from "./Errors";
-import { FetchApiAdapter } from "./FetchApiAdapter";
-import { executeMiddlewarePipeline } from "./Middleware";
-import { Router } from "./Router";
-import { StateMap } from "./StateMap";
-import type { Middleware } from "./Middleware";
-import type { RequestHandler } from "./RequestHandler";
+import { BodyParseError, PayloadTooLargeError } from "./Errors.js";
+import { FetchApiAdapter } from "./FetchApiAdapter.js";
+import { executeMiddlewarePipeline } from "./Middleware.js";
+import { Router } from "./Router.js";
+import { StateMap } from "./StateMap.js";
+import type { Middleware } from "./Middleware.js";
+import type { RequestHandler } from "./RequestHandler.js";
 import type {
   HttpResponseErrorHandler,
   ResponseValidationErrorHandler,
@@ -32,10 +32,13 @@ import type {
   RouteMatch,
   UnknownErrorHandler,
   RequestValidationErrorHandler,
-} from "./Router";
-import type { ServerContext } from "./ServerContext";
-import type { StateRequirementError, TypedMiddleware } from "./TypedMiddleware";
-import type { TypeweaverRouter } from "./TypeweaverRouter";
+} from "./Router.js";
+import type { ServerContext } from "./ServerContext.js";
+import type {
+  StateRequirementError,
+  TypedMiddleware,
+} from "./TypedMiddleware.js";
+import type { TypeweaverRouter } from "./TypeweaverRouter.js";
 
 /**
  * The main application class that provides routing, middleware, and

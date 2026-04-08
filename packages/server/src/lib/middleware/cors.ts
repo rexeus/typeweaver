@@ -1,5 +1,5 @@
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
-import { defineMiddleware } from "../TypedMiddleware";
+import { defineMiddleware } from "../TypedMiddleware.js";
 
 export type CorsOptions = {
   readonly origin?:

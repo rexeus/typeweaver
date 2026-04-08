@@ -3,8 +3,8 @@ import {
   unauthorizedDefaultError,
 } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
-import { defineMiddleware } from "../TypedMiddleware";
-import type { ServerContext } from "../ServerContext";
+import { defineMiddleware } from "../TypedMiddleware.js";
+import type { ServerContext } from "../ServerContext.js";
 
 export type BasicAuthOptions = {
   readonly verifyCredentials: (

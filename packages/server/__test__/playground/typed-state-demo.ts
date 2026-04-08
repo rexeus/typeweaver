@@ -8,11 +8,11 @@
  * This is NOT a test file — it's a hands-on demo of the type system.
  */
 
-import { StateMap } from "../../src/lib/StateMap";
-import { defineMiddleware } from "../../src/lib/TypedMiddleware";
-import { TypeweaverApp } from "../../src/lib/TypeweaverApp";
-import type { ServerContext } from "../../src/lib/ServerContext";
-import type { InferState } from "../../src/lib/TypedMiddleware";
+import { StateMap } from "../../src/lib/StateMap.js";
+import { defineMiddleware } from "../../src/lib/TypedMiddleware.js";
+import { TypeweaverApp } from "../../src/lib/TypeweaverApp.js";
+import type { ServerContext } from "../../src/lib/ServerContext.js";
+import type { InferState } from "../../src/lib/TypedMiddleware.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. DEFINE TYPED MIDDLEWARE — state is passed through next()

@@ -80,7 +80,7 @@ function writeResponseValidator(
     operationId: operation.operationId,
     pascalCaseOperationId,
     coreDir: context.coreDir,
-    responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}`,
+    responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}.js`,
     specPath: context.getSpecImportPath({
       importerDir: outputPaths.outputDir,
     }),

@@ -1,13 +1,13 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createValidationErrorResponse as generatedCreateValidationErrorResponse } from "../../test-project/output/responses/ValidationErrorResponse";
-import { createDataFactory } from "../createDataFactory";
-import { createErrorResponseHeader } from "../createErrorResponseHeader";
-import { createResponse } from "../createResponse";
+import { createValidationErrorResponse as generatedCreateValidationErrorResponse } from "../../test-project/output/responses/ValidationErrorResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createErrorResponseHeader } from "../createErrorResponseHeader.js";
+import { createResponse } from "../createResponse.js";
 import type {
   IValidationErrorResponse,
   IValidationErrorResponseBody,
   IValidationErrorResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 type ValidationErrorResponseInput = {
   statusCode?: number;

@@ -1,13 +1,13 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createGetFileMetadataSuccessResponse as generatedCreateGetFileMetadataSuccessResponse } from "../../test-project/output/responses/GetFileMetadataSuccessResponse";
-import { createDataFactory } from "../createDataFactory";
-import { createResponse } from "../createResponse";
+import { createGetFileMetadataSuccessResponse as generatedCreateGetFileMetadataSuccessResponse } from "../../test-project/output/responses/GetFileMetadataSuccessResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createResponse } from "../createResponse.js";
 import type {
   IGetFileMetadataSuccessResponse,
   IGetFileMetadataSuccessResponseBody,
   IGetFileMetadataSuccessResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 export const createGetFileMetadataSuccessResponseHeader =
   createDataFactory<IGetFileMetadataSuccessResponseHeader>(() => ({

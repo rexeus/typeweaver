@@ -1,7 +1,7 @@
-export * from "./data";
-export * from "./test-project";
-export * from "./test-server";
-export * from "./captureError";
+export * from "./data/index.js";
+export * from "./test-project/index.js";
+export * from "./test-server/index.js";
+export * from "./captureError.js";
 
 // Resolve ambiguous exports: data factories (test-enriched with random data)
 // take precedence over generated factories from ./test-project
@@ -39,4 +39,4 @@ export {
   createUpdateTodoSuccessResponse,
   createUploadFileSuccessResponse,
   createValidationErrorResponse,
-} from "./data";
+} from "./data/index.js";
