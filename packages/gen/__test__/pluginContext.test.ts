@@ -1,7 +1,7 @@
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import type { NormalizedSpec } from "../src/NormalizedSpec.js";
 import { createPluginContextBuilder } from "../src/plugins/pluginContext.js";
+import type { NormalizedSpec } from "../src/NormalizedSpec.js";
 
 const normalizedSpec: NormalizedSpec = {
   resources: [],
@@ -48,7 +48,14 @@ describe("createPluginContextBuilder", () => {
     });
 
     const specImportPath = generatorContext.getSpecImportPath({
-      importerDir: path.join("C:", "project", "generated", "todo", "validators", "nested"),
+      importerDir: path.join(
+        "C:",
+        "project",
+        "generated",
+        "todo",
+        "validators",
+        "nested"
+      ),
     });
 
     expect(specImportPath).toBe("../../../spec/spec.js");
