@@ -1,16 +1,63 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { PluginContextBuilder, PluginRegistry } from "@rexeus/typeweaver-gen";
+import {
+  createPluginContextBuilder,
+  createPluginRegistry,
+} from "@rexeus/typeweaver-gen";
 import type { PluginConfig, TypeweaverConfig } from "@rexeus/typeweaver-gen";
-import TypesPlugin from "@rexeus/typeweaver-types";
-import { DefinitionCompiler } from "./DefinitionCompiler";
-import { Formatter } from "./Formatter";
-import { IndexFileGenerator } from "./IndexFileGenerator";
-import { PluginLoader } from "./PluginLoader";
-import { ResourceReader } from "./ResourceReader";
+import { TypesPlugin } from "@rexeus/typeweaver-types";
+import { formatCode } from "./formatter.js";
+import { generateIndexFiles } from "./indexFileGenerator.js";
+import { loadPlugins } from "./pluginLoader.js";
+import { loadSpec } from "./specLoader.js";
+import type { PluginResolutionStrategy } from "./pluginLoader.js";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+
+export const assertSafeCleanTarget = (
+  outputDir: string,
+  currentWorkingDirectory: string
+): void => {
+  const trimmedOutputDir = outputDir.trim();
+  if (trimmedOutputDir.length === 0) {
+    throw new Error(
+      "Refusing to clean an empty output directory path. Pass a dedicated generated output directory instead."
+    );
+  }
+
+  const resolvedWorkingDirectory = path.resolve(currentWorkingDirectory);
+  const resolvedOutputDir = path.resolve(
+    resolvedWorkingDirectory,
+    trimmedOutputDir
+  );
+  const filesystemRoot = path.parse(resolvedOutputDir).root;
+
+  if (resolvedOutputDir === filesystemRoot) {
+    throw new Error(
+      `Refusing to clean '${outputDir}' because it resolves to the filesystem root.`
+    );
+  }
+
+  if (resolvedOutputDir === resolvedWorkingDirectory) {
+    throw new Error(
+      `Refusing to clean '${outputDir}' because it resolves to the current working directory.`
+    );
+  }
+
+  const protectedWorkspaceRoot = findProtectedWorkspaceRoot(
+    resolvedWorkingDirectory
+  );
+
+  if (
+    protectedWorkspaceRoot !== undefined &&
+    resolvedOutputDir === protectedWorkspaceRoot
+  ) {
+    throw new Error(
+      `Refusing to clean '${outputDir}' because it resolves to the inferred workspace root '${protectedWorkspaceRoot}'. Choose a dedicated output subdirectory instead.`
+    );
+  }
+};
 
 /**
  * Main generator for typeweaver
@@ -20,102 +67,68 @@ export class Generator {
   public readonly coreDir = "@rexeus/typeweaver-core";
   public readonly templateDir = path.join(moduleDir, "templates");
 
-  private readonly registry: PluginRegistry;
-  private readonly contextBuilder: PluginContextBuilder;
-  private readonly pluginLoader: PluginLoader;
-  private readonly indexFileGenerator: IndexFileGenerator;
-  private readonly definitionCompiler: DefinitionCompiler;
-  private resourceReader: ResourceReader | null = null;
-  private formatter: Formatter | null = null;
+  private readonly registry = createPluginRegistry();
+  private readonly contextBuilder = createPluginContextBuilder();
+  private readonly requiredPlugins: [TypesPlugin];
+  private readonly strategies: PluginResolutionStrategy[];
 
-  private inputDir = "";
-  private sharedInputDir = "";
+  private inputFile = "";
   private outputDir = "";
-  private sourceDir = "";
-  private sharedSourceDir = "";
-  private sharedOutputDir = "";
+  private specOutputDir = "";
+  private responsesOutputDir = "";
 
   public constructor(
-    registry?: PluginRegistry,
-    contextBuilder?: PluginContextBuilder,
-    pluginLoader?: PluginLoader,
-    indexFileGenerator?: IndexFileGenerator,
-    requiredPlugins: [TypesPlugin] = [new TypesPlugin()]
+    requiredPlugins: [TypesPlugin] = [new TypesPlugin()],
+    strategies?: PluginResolutionStrategy[]
   ) {
-    this.registry = registry ?? new PluginRegistry();
-    this.contextBuilder = contextBuilder ?? new PluginContextBuilder();
-    this.pluginLoader =
-      pluginLoader ?? new PluginLoader(this.registry, requiredPlugins);
-    this.indexFileGenerator =
-      indexFileGenerator ?? new IndexFileGenerator(this.templateDir);
-    this.definitionCompiler = new DefinitionCompiler();
+    this.requiredPlugins = requiredPlugins;
+    this.strategies = strategies ?? ["npm", "local"];
   }
 
   /**
    * Generate code using the plugin system
    */
   public async generate(
-    definitionDir: string,
+    specFile: string,
     outputDir: string,
-    config?: TypeweaverConfig
+    config?: TypeweaverConfig,
+    currentWorkingDirectory: string = process.cwd()
   ): Promise<void> {
     console.info("Starting generation...");
 
-    // Initialize directories
-    this.initializeDirectories(definitionDir, outputDir, config?.shared);
+    this.initializeDirectories(specFile, outputDir, currentWorkingDirectory);
 
-    // Clean output if requested
     if (config?.clean ?? true) {
+      assertSafeCleanTarget(this.outputDir, currentWorkingDirectory);
       console.info("Cleaning output directory...");
       fs.rmSync(this.outputDir, { recursive: true, force: true });
     }
 
-    // Create output directories
     fs.mkdirSync(this.outputDir, { recursive: true });
-    fs.mkdirSync(this.sharedOutputDir, { recursive: true });
+    fs.mkdirSync(this.responsesOutputDir, { recursive: true });
+    fs.mkdirSync(this.specOutputDir, { recursive: true });
+
+    await loadPlugins(
+      this.registry,
+      this.requiredPlugins,
+      this.strategies,
+      config
+    );
 
     console.info(
-      `Copying definitions from '${this.inputDir}' to '${this.sourceDir}'...`
+      `Bundling spec from '${this.inputFile}' to '${this.specOutputDir}'...`
     );
-    fs.cpSync(this.inputDir, this.sourceDir, {
-      recursive: true,
-      filter: src => {
-        return (
-          src.endsWith(".ts") ||
-          src.endsWith(".js") ||
-          src.endsWith(".json") ||
-          src.endsWith(".mjs") ||
-          src.endsWith(".cjs") ||
-          fs.statSync(src).isDirectory()
-        );
-      },
+    let { normalizedSpec } = await loadSpec({
+      inputFile: this.inputFile,
+      specOutputDir: this.specOutputDir,
     });
 
-    // Load and register plugins
-    await this.pluginLoader.loadPlugins(config);
-
-    // Create ResourceReader instance
-    this.resourceReader = new ResourceReader({
-      sourceDir: this.sourceDir,
-      outputDir: this.outputDir,
-      sharedSourceDir: this.sharedSourceDir,
-      sharedOutputDir: this.sharedOutputDir,
-    });
-
-    this.formatter = new Formatter(this.outputDir);
-
-    // Read resources
-    console.info("Reading definitions...");
-    let resources = await this.resourceReader.getResources();
-
-    // Create contexts
     const pluginContext = this.contextBuilder.createPluginContext({
       outputDir: this.outputDir,
-      inputDir: this.sourceDir,
+      inputDir: path.dirname(this.inputFile),
       config: (config ?? {}) as PluginConfig,
     });
 
-    // Initialize plugins
     console.info("Initializing plugins...");
     for (const registration of this.registry.getAll()) {
       if (registration.plugin.initialize) {
@@ -123,25 +136,25 @@ export class Generator {
       }
     }
 
-    // Let plugins collect/transform resources
     console.info("Collecting resources...");
     for (const registration of this.registry.getAll()) {
       if (registration.plugin.collectResources) {
-        resources = await registration.plugin.collectResources(resources);
+        normalizedSpec =
+          await registration.plugin.collectResources(normalizedSpec);
       }
     }
 
-    // Create generator context
     const generatorContext = this.contextBuilder.createGeneratorContext({
       outputDir: this.outputDir,
-      inputDir: this.sourceDir,
+      inputDir: path.dirname(this.inputFile),
       config: (config ?? {}) as PluginConfig,
-      resources,
+      normalizedSpec,
       templateDir: this.templateDir,
       coreDir: this.coreDir,
+      responsesOutputDir: this.responsesOutputDir,
+      specOutputDir: this.specOutputDir,
     });
 
-    // Run generation for each plugin
     console.info("Generating code...");
     for (const registration of this.registry.getAll()) {
       console.info(`Running plugin: ${registration.plugin.name}`);
@@ -150,9 +163,8 @@ export class Generator {
       }
     }
 
-    this.indexFileGenerator.generate(generatorContext);
+    generateIndexFiles(this.templateDir, generatorContext);
 
-    // Finalize plugins
     console.info("Finalizing plugins...");
     for (const registration of this.registry.getAll()) {
       if (registration.plugin.finalize) {
@@ -160,14 +172,8 @@ export class Generator {
       }
     }
 
-    // Compile definitions from .ts to .js + .d.ts stubs
-    // This prevents tsc from resolving Zod's recursive type system
-    console.info("Compiling definitions...");
-    this.definitionCompiler.compileInPlace(this.sourceDir);
-
-    // Format code if requested
     if (config?.format ?? true) {
-      await this.formatter.formatCode();
+      await formatCode(this.outputDir);
     }
 
     console.info("Generation complete!");
@@ -177,19 +183,38 @@ export class Generator {
   }
 
   private initializeDirectories(
-    definitionDir: string,
+    specFile: string,
     outputDir: string,
-    sharedDir?: string
+    currentWorkingDirectory: string
   ): void {
-    this.inputDir = definitionDir;
-    this.sharedInputDir = sharedDir ?? path.join(definitionDir, "shared");
-    this.outputDir = outputDir;
-    this.sharedOutputDir = path.join(outputDir, "shared");
-    this.sourceDir = path.join(this.outputDir, "definition");
-    const inputToSharedDirRelative = path.relative(
-      this.inputDir,
-      this.sharedInputDir
-    );
-    this.sharedSourceDir = path.join(this.sourceDir, inputToSharedDirRelative);
+    this.inputFile = path.resolve(currentWorkingDirectory, specFile);
+    this.outputDir = path.resolve(currentWorkingDirectory, outputDir);
+    this.responsesOutputDir = path.join(this.outputDir, "responses");
+    this.specOutputDir = path.join(this.outputDir, "spec");
   }
 }
+
+const findProtectedWorkspaceRoot = (
+  startDirectory: string
+): string | undefined => {
+  let currentDirectory = startDirectory;
+
+  while (true) {
+    if (hasWorkspaceMarker(currentDirectory)) {
+      return currentDirectory;
+    }
+
+    const parentDirectory = path.dirname(currentDirectory);
+    if (parentDirectory === currentDirectory) {
+      return undefined;
+    }
+
+    currentDirectory = parentDirectory;
+  }
+};
+
+const hasWorkspaceMarker = (directory: string): boolean => {
+  return ["pnpm-workspace.yaml", ".git"].some(marker =>
+    fs.existsSync(path.join(directory, marker))
+  );
+};

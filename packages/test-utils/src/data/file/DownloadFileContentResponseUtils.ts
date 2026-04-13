@@ -1,12 +1,12 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { DownloadFileContentSuccessResponse } from "../..";
-import { createDataFactory } from "../createDataFactory";
-import { createResponse } from "../createResponse";
+import { createDownloadFileContentSuccessResponse as generatedCreateDownloadFileContentSuccessResponse } from "../../test-project/output/responses/DownloadFileContentSuccessResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createResponse } from "../createResponse.js";
 import type {
   IDownloadFileContentSuccessResponse,
   IDownloadFileContentSuccessResponseBody,
   IDownloadFileContentSuccessResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 export const createDownloadFileContentSuccessResponseHeader =
   createDataFactory<IDownloadFileContentSuccessResponseHeader>(() => ({
@@ -26,7 +26,7 @@ type DownloadFileContentSuccessResponseInput = {
 
 export function createDownloadFileContentSuccessResponse(
   input: DownloadFileContentSuccessResponseInput = {}
-): DownloadFileContentSuccessResponse {
+): IDownloadFileContentSuccessResponse {
   const responseData = createResponse<
     IDownloadFileContentSuccessResponse,
     IDownloadFileContentSuccessResponseBody,
@@ -41,5 +41,5 @@ export function createDownloadFileContentSuccessResponse(
     },
     input
   );
-  return new DownloadFileContentSuccessResponse(responseData);
+  return generatedCreateDownloadFileContentSuccessResponse(responseData);
 }

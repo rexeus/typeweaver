@@ -9,10 +9,13 @@ import type {
   HttpMethod,
   IHttpResponse,
   IRequestValidator,
+  IResponseValidator,
+  ITypedHttpResponse,
   RequestValidationError,
+  ResponseValidationError,
 } from "@rexeus/typeweaver-core";
-import type { RequestHandler } from "./RequestHandler";
-import type { ServerContext } from "./ServerContext";
+import type { RequestHandler } from "./RequestHandler.js";
+import type { ServerContext } from "./ServerContext.js";
 
 /**
  * Metadata about a matched route, available in middleware and handlers via `ctx.route`.
@@ -30,7 +33,8 @@ export type RouteDefinition = {
   readonly operationId: string;
   readonly method: HttpMethod;
   readonly path: string;
-  readonly validator: IRequestValidator;
+  readonly requestValidator: IRequestValidator;
+  readonly responseValidator: IResponseValidator;
   readonly handler: RequestHandler<any, any, any>;
   /** Reference to the router config for error handling. */
   readonly routerConfig: RouterErrorConfig;
@@ -41,25 +45,41 @@ export type RouteDefinition = {
  */
 export type RouterErrorConfig = {
   readonly validateRequests: boolean;
+  readonly validateResponses: boolean;
   readonly handleHttpResponseErrors: HttpResponseErrorHandler | boolean;
-  readonly handleValidationErrors: ValidationErrorHandler | boolean;
+  readonly handleRequestValidationErrors:
+    | RequestValidationErrorHandler
+    | boolean;
+  readonly handleResponseValidationErrors:
+    | ResponseValidationErrorHandler
+    | boolean;
   readonly handleUnknownErrors: UnknownErrorHandler | boolean;
 };
 
 /**
  * Handles HTTP response errors thrown by request handlers.
- * The error parameter is an `HttpResponse` instance (thrown via `throw new HttpResponse(...)`).
+ * The error parameter is a typed HTTP response object (thrown via `throw { type, statusCode, ... }`).
  */
 export type HttpResponseErrorHandler = (
-  error: IHttpResponse,
+  error: ITypedHttpResponse,
   ctx: ServerContext
 ) => Promise<IHttpResponse> | IHttpResponse;
 
 /**
  * Handles request validation errors.
  */
-export type ValidationErrorHandler = (
+export type RequestValidationErrorHandler = (
   error: RequestValidationError,
+  ctx: ServerContext
+) => Promise<IHttpResponse> | IHttpResponse;
+
+/**
+ * Handles response validation errors.
+ * Called when a handler returns a response that does not match the expected schema.
+ */
+export type ResponseValidationErrorHandler = (
+  error: ResponseValidationError,
+  response: IHttpResponse,
   ctx: ServerContext
 ) => Promise<IHttpResponse> | IHttpResponse;
 

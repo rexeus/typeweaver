@@ -1,11 +1,24 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "tsdown";
+import { buildPrecompiledLib } from "../../config/tsdown/buildPrecompiledLib.mjs";
+import { createPackageBuildConfig } from "../../config/tsdown/createPackageBuildConfig.mjs";
 
-export default defineConfig({
-  entry: ["src/index.ts"],
-  format: ["esm", "cjs"],
-  dts: true,
-  clean: true,
-  target: "esnext",
-  platform: "node",
-  treeshake: true,
-});
+const packageDir = path.dirname(fileURLToPath(import.meta.url));
+
+export default defineConfig(
+  createPackageBuildConfig({
+    packageDir,
+    entry: ["src/index.ts"],
+    libSourceDir: false,
+    postBuildSteps: [
+      () =>
+        buildPrecompiledLib({
+          packageDir,
+          runtimeSourceDir: "src/lib",
+          declarationSourceDir: "src/lib-declarations",
+          outputDir: "dist/lib",
+        }),
+    ],
+  })
+);

@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { BasePlugin } from "@rexeus/typeweaver-gen";
 import type { GeneratorContext } from "@rexeus/typeweaver-gen";
-import { RouterGenerator } from "./RouterGenerator";
+import { generate as generateRouters } from "./routerGenerator.js";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -13,8 +13,9 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
  * Copies the runtime library files (`TypeweaverApp`, `TypeweaverRouter`, `Router`,
  * `Middleware`, etc.) and generates typed router classes for each resource.
  */
-export default class ServerPlugin extends BasePlugin {
+export class ServerPlugin extends BasePlugin {
   public name = "server";
+  public override depends = ["types"];
 
   /**
    * Generates the server runtime and typed routers for all resources.
@@ -25,6 +26,6 @@ export default class ServerPlugin extends BasePlugin {
     const libSourceDir = path.join(moduleDir, "lib");
     this.copyLibFiles(context, libSourceDir, this.name);
 
-    RouterGenerator.generate(context);
+    generateRouters(context);
   }
 }

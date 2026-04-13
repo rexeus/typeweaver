@@ -1,11 +1,13 @@
+import { UnknownResponseError } from "@rexeus/typeweaver-core";
 import {
   createCreateTodoRequest,
+  createCreateTodoSuccessResponseBody,
   createDeleteTodoRequest,
   createGetTodoRequest,
   createListTodosRequest,
+  createUnauthorizedErrorResponse,
   CreateTodoRequestCommand,
   DeleteTodoRequestCommand,
-  DeleteTodoSuccessResponse,
   GetTodoRequestCommand,
   ListTodosRequestCommand,
   NetworkError,
@@ -16,7 +18,11 @@ import {
   TodoClient,
 } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
-import { createRawMockFetch } from "../helpers";
+import {
+  createRawMockFetch,
+  sendAndExtractRawResponse,
+  sendIgnoringValidation,
+} from "../helpers.js";
 
 function createMockFetch(
   status: number,
@@ -40,8 +46,6 @@ function createClientWithMockFetch(baseUrl: string) {
   const client = new TodoClient({
     baseUrl,
     fetchFn: mockFetch,
-    unknownResponseHandling: "passthrough",
-    isSuccessStatusCode: () => true,
   });
   return { client, mockFetch };
 }
@@ -50,8 +54,6 @@ function createPassthroughClient(mockFetch: typeof globalThis.fetch) {
   return new TodoClient({
     fetchFn: mockFetch,
     baseUrl: "http://localhost:3000",
-    unknownResponseHandling: "passthrough",
-    isSuccessStatusCode: () => true,
   });
 }
 
@@ -73,6 +75,55 @@ describe("RequestCommand operationId", () => {
   });
 });
 
+describe("RequestCommand.processResponse", () => {
+  test("should return success response from the union", () => {
+    // Arrange
+    const command = new CreateTodoRequestCommand(createCreateTodoRequest());
+    const body = createCreateTodoSuccessResponseBody();
+    const mockResponse = {
+      statusCode: 201,
+      header: { "Content-Type": "application/json" },
+      body,
+    };
+
+    // Act
+    const result = command.processResponse(mockResponse);
+
+    // Assert
+    expect(result.type).toBe("CreateTodoSuccess");
+    expect(result.statusCode).toBe(201);
+  });
+
+  test("should return error response from the union instead of throwing", () => {
+    // Arrange
+    const command = new CreateTodoRequestCommand(createCreateTodoRequest());
+    const errorResponse = createUnauthorizedErrorResponse();
+    const mockResponse = {
+      statusCode: errorResponse.statusCode,
+      header: errorResponse.header,
+      body: errorResponse.body,
+    };
+
+    // Act
+    const result = command.processResponse(mockResponse);
+
+    // Assert
+    expect(result.type).toBe("UnauthorizedError");
+    expect(result.statusCode).toBe(401);
+  });
+
+  test("should throw UnknownResponseError for unrecognized status code", () => {
+    // Arrange
+    const command = new CreateTodoRequestCommand(createCreateTodoRequest());
+    const mockResponse = { statusCode: 418, header: undefined, body: {} };
+
+    // Act & Assert
+    expect(() => command.processResponse(mockResponse)).toThrow(
+      UnknownResponseError
+    );
+  });
+});
+
 describe("ApiClient URL Construction", () => {
   function createCommand(todoId: string) {
     const requestData = createGetTodoRequest({ param: { todoId } });
@@ -85,7 +136,7 @@ describe("ApiClient URL Construction", () => {
     );
     const command = createCommand("abc123");
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
     expect(mockFetch).toHaveBeenCalledWith(
       "http://localhost:3000/todos/abc123",
@@ -99,7 +150,7 @@ describe("ApiClient URL Construction", () => {
     );
     const command = createCommand("abc123");
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
     expect(mockFetch).toHaveBeenCalledWith(
       "http://localhost/api/todos/abc123",
@@ -113,7 +164,7 @@ describe("ApiClient URL Construction", () => {
     );
     const command = createCommand("abc123");
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
     expect(mockFetch).toHaveBeenCalledWith(
       "http://localhost/api/todos/abc123",
@@ -127,7 +178,7 @@ describe("ApiClient URL Construction", () => {
     );
     const command = createCommand("abc123");
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
     expect(mockFetch).toHaveBeenCalledWith(
       "http://localhost/api/v1/todos/abc123",
@@ -144,12 +195,10 @@ describe("ApiClient URL Construction", () => {
     const client = new TodoClient({
       fetchFn: mockFetch,
       baseUrl: "http://localhost/api",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
     });
 
     const command = createCommand("abc123");
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
     expect(mockFetch).toHaveBeenCalledWith(
       "http://localhost/api/todos/abc123",
@@ -167,21 +216,17 @@ describe("ApiClient URL Construction", () => {
     const clientA = new TodoClient({
       fetchFn: sharedFetch,
       baseUrl: "http://localhost/api",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
     });
     const clientB = new TodoClient({
       fetchFn: sharedFetch,
       baseUrl: "http://localhost/api",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
     });
 
     expect(clientA.baseUrl).toBe("http://localhost/api");
     expect(clientB.baseUrl).toBe("http://localhost/api");
 
     const command = createCommand("abc123");
-    await clientA.send(command);
+    await sendIgnoringValidation(clientA, command);
 
     expect(sharedFetch).toHaveBeenCalledWith(
       "http://localhost/api/todos/abc123",
@@ -193,7 +238,7 @@ describe("ApiClient URL Construction", () => {
     const { client, mockFetch } = createClientWithMockFetch("/api");
     const command = createCommand("abc123");
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
     expect(mockFetch).toHaveBeenCalledWith(
       "/api/todos/abc123",
@@ -207,7 +252,7 @@ describe("ApiClient URL Construction", () => {
     );
     const command = createCommand("hello world");
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
     expect(mockFetch).toHaveBeenCalledWith(
       "http://localhost:3000/todos/hello%20world",
@@ -224,9 +269,9 @@ describe("ApiClient Query String Construction", () => {
     const request = createListTodosRequest({ query: { status: "TODO" } });
     const command = new ListTodosRequestCommand(request);
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const calledUrl = vi.mocked(mockFetch).mock.calls[0][0] as string;
+    const calledUrl = vi.mocked(mockFetch).mock.calls[0]![0] as string;
     expect(calledUrl).toContain("?");
     expect(calledUrl).toContain("status=TODO");
   });
@@ -238,9 +283,9 @@ describe("ApiClient Query String Construction", () => {
     const request = createListTodosRequest({ query: { tags: ["a", "b"] } });
     const command = new ListTodosRequestCommand(request);
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const calledUrl = vi.mocked(mockFetch).mock.calls[0][0] as string;
+    const calledUrl = vi.mocked(mockFetch).mock.calls[0]![0] as string;
     expect(calledUrl).toContain("tags=a");
     expect(calledUrl).toContain("tags=b");
   });
@@ -255,9 +300,9 @@ describe("ApiClient Query String Construction", () => {
       query: { status: "TODO", priority: undefined },
     });
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const calledUrl = vi.mocked(mockFetch).mock.calls[0][0] as string;
+    const calledUrl = vi.mocked(mockFetch).mock.calls[0]![0] as string;
     expect(calledUrl).toContain("status=TODO");
     expect(calledUrl).not.toContain("priority");
   });
@@ -269,9 +314,9 @@ describe("ApiClient Query String Construction", () => {
     const request = createListTodosRequest({ query: { status: "DONE" } });
     const command = new ListTodosRequestCommand(request);
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const calledUrl = vi.mocked(mockFetch).mock.calls[0][0] as string;
+    const calledUrl = vi.mocked(mockFetch).mock.calls[0]![0] as string;
     expect(calledUrl).toMatch(/^http:\/\/localhost\/api\/todos\?/);
     expect(calledUrl).toContain("status=DONE");
   });
@@ -283,9 +328,9 @@ describe("ApiClient Query String Construction", () => {
     const request = createGetTodoRequest({ param: { todoId: "abc" } });
     const command = new GetTodoRequestCommand(request);
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const calledUrl = vi.mocked(mockFetch).mock.calls[0][0] as string;
+    const calledUrl = vi.mocked(mockFetch).mock.calls[0]![0] as string;
     expect(calledUrl).toBe("http://localhost:3000/todos/abc");
     expect(calledUrl).not.toContain("?");
   });
@@ -452,7 +497,7 @@ describe("ApiClient Response Body Parsing", () => {
 
     const result = await client.send(command);
 
-    expect(result).toBeInstanceOf(DeleteTodoSuccessResponse);
+    expect(result.type).toBe("DeleteTodoSuccess");
     expect(result.body).toBeUndefined();
   });
 
@@ -463,7 +508,7 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
     expect(result.body).toBeUndefined();
   });
@@ -477,7 +522,7 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
     expect(result.body).toBeUndefined();
   });
@@ -489,7 +534,7 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
     expect(result.body).toBeUndefined();
   });
@@ -503,7 +548,7 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
     expect(result.body).toEqual({ key: "value" });
   });
@@ -555,7 +600,7 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
     expect(result.body).toBe("plain text");
   });
@@ -567,7 +612,7 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
     expect(result.body).toBe("raw content");
   });
@@ -581,7 +626,7 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
     expect(result.body).toEqual({ a: 1 });
   });
@@ -599,7 +644,7 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
     expect(result.body).toEqual({ type: "about:blank", title: "Bad Request" });
   });
@@ -613,7 +658,7 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
     expect(result.body).toEqual({ data: { id: "1" } });
   });
@@ -627,7 +672,7 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
     expect(result.body).toEqual({ type: "about:blank" });
   });
@@ -660,7 +705,7 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
     expect(result.body).toBeInstanceOf(ArrayBuffer);
   });
@@ -675,7 +720,7 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
     expect(result.body).toBeInstanceOf(ArrayBuffer);
   });
@@ -690,7 +735,7 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
     expect(result.body).toBeInstanceOf(ArrayBuffer);
   });
@@ -705,7 +750,7 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
     expect(result.body).toBeInstanceOf(ArrayBuffer);
   });
@@ -719,7 +764,7 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
     expect(typeof result.body).toBe("string");
     expect(result.body).toBe("<h1>Hello</h1>");
@@ -734,7 +779,7 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
     expect(typeof result.body).toBe("string");
     expect(result.body).toBe("<root/>");
@@ -749,7 +794,7 @@ describe("ApiClient Response Body Parsing", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
     expect(result.body).toBeInstanceOf(ArrayBuffer);
     expect((result.body as ArrayBuffer).byteLength).toBe(0);
@@ -767,9 +812,11 @@ describe("ApiClient Response Header Handling", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
-    expect(result.header["x-request-id"]).toBe("abc123");
+    expect(
+      (result.header as Record<string, string | string[]>)["x-request-id"]
+    ).toBe("abc123");
   });
 
   test("multi-value headers are comma-joined by native Headers", async () => {
@@ -786,9 +833,11 @@ describe("ApiClient Response Header Handling", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
-    expect(result.header["x-custom"]).toBe("first, second");
+    expect(
+      (result.header as Record<string, string | string[]>)["x-custom"]
+    ).toBe("first, second");
   });
 
   test("multiple distinct headers are preserved", async () => {
@@ -802,10 +851,14 @@ describe("ApiClient Response Header Handling", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
-    expect(result.header["x-a"]).toBe("1");
-    expect(result.header["x-b"]).toBe("2");
+    expect((result.header as Record<string, string | string[]>)["x-a"]).toBe(
+      "1"
+    );
+    expect((result.header as Record<string, string | string[]>)["x-b"]).toBe(
+      "2"
+    );
   });
 
   test("preserves multiple Set-Cookie headers as array", async () => {
@@ -822,9 +875,11 @@ describe("ApiClient Response Header Handling", () => {
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    const result = await client.send(command);
+    const result = await sendAndExtractRawResponse(client, command);
 
-    expect(result.header["set-cookie"]).toEqual(["a=1; Path=/", "b=2; Path=/"]);
+    expect(
+      (result.header as Record<string, string | string[]>)["set-cookie"]
+    ).toEqual(["a=1; Path=/", "b=2; Path=/"]);
   });
 });
 
@@ -838,15 +893,13 @@ describe("ApiClient Request Options Passthrough", () => {
     const client = new TodoClient({
       fetchFn: mockFetch,
       baseUrl: "http://localhost:3000",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
     });
     const requestData = createCreateTodoRequest();
     const command = new CreateTodoRequestCommand(requestData);
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBe(JSON.stringify(requestData.body));
   });
 
@@ -857,16 +910,14 @@ describe("ApiClient Request Options Passthrough", () => {
     const client = new TodoClient({
       fetchFn: mockFetch,
       baseUrl: "http://localhost:3000",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
     });
     const requestData = createCreateTodoRequest({ body: {} });
     (requestData as { body: unknown }).body = "hello";
     const command = new CreateTodoRequestCommand(requestData);
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBe("hello");
   });
 
@@ -877,16 +928,14 @@ describe("ApiClient Request Options Passthrough", () => {
     const client = new TodoClient({
       fetchFn: mockFetch,
       baseUrl: "http://localhost:3000",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
     });
     const command = new GetTodoRequestCommand(
       createGetTodoRequest({ param: { todoId: "abc" } })
     );
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBeUndefined();
   });
 
@@ -897,16 +946,14 @@ describe("ApiClient Request Options Passthrough", () => {
     const client = new TodoClient({
       fetchFn: mockFetch,
       baseUrl: "http://localhost:3000",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
     });
     const requestData = createCreateTodoRequest({ body: {} });
     (requestData as { body: unknown }).body = null;
     const command = new CreateTodoRequestCommand(requestData);
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBeUndefined();
   });
 
@@ -917,15 +964,13 @@ describe("ApiClient Request Options Passthrough", () => {
     const client = new TodoClient({
       fetchFn: mockFetch,
       baseUrl: "http://localhost:3000",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
     });
     const requestData = createGetTodoRequest({ param: { todoId: "abc" } });
     const command = new GetTodoRequestCommand(requestData);
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.headers).toEqual(requestData.header);
   });
 
@@ -938,14 +983,12 @@ describe("ApiClient Request Options Passthrough", () => {
     const client = new TodoClient({
       fetchFn: mockFetch,
       baseUrl: "http://localhost:3000",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
     });
     const command = new CreateTodoRequestCommand(createCreateTodoRequest());
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.method).toBe("POST");
   });
 });
@@ -997,7 +1040,7 @@ describe("ApiClient Request Timeout", () => {
 
     const result = await client.send(command);
 
-    expect(result).toBeInstanceOf(DeleteTodoSuccessResponse);
+    expect(result.type).toBe("DeleteTodoSuccess");
   });
 
   test("no signal is passed without timeoutMs", async () => {
@@ -1010,9 +1053,9 @@ describe("ApiClient Request Timeout", () => {
     });
     const command = new DeleteTodoRequestCommand(createDeleteTodoRequest());
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.signal).toBeUndefined();
   });
 
@@ -1027,9 +1070,9 @@ describe("ApiClient Request Timeout", () => {
     });
     const command = new DeleteTodoRequestCommand(createDeleteTodoRequest());
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.signal).toBeInstanceOf(AbortSignal);
   });
 
@@ -1065,8 +1108,6 @@ describe("ApiClient Serialization Error Isolation", () => {
     const client = new TodoClient({
       fetchFn: mockFetch,
       baseUrl: "http://localhost:3000",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
     });
     const circular: Record<string, unknown> = {};
     circular.self = circular;
@@ -1098,8 +1139,6 @@ describe("ApiClient Body Read Error Isolation", () => {
     const client = new TodoClient({
       fetchFn: mockFetch,
       baseUrl: "http://localhost:3000",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
     });
     const command = new GetTodoRequestCommand(
       createGetTodoRequest({ param: { todoId: "abc" } })
@@ -1129,8 +1168,6 @@ describe("ApiClient Body Read Error Isolation", () => {
     const client = new TodoClient({
       fetchFn: mockFetch,
       baseUrl: "http://localhost:3000",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
     });
     const command = new GetTodoRequestCommand(
       createGetTodoRequest({ param: { todoId: "abc" } })
@@ -1159,8 +1196,6 @@ describe("ApiClient Body Read Error Isolation", () => {
     const client = new TodoClient({
       fetchFn: mockFetch,
       baseUrl: "http://localhost:3000",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
     });
     const command = new GetTodoRequestCommand(
       createGetTodoRequest({ param: { todoId: "abc" } })
@@ -1188,9 +1223,9 @@ describe("ApiClient Native Body Passthrough", () => {
     (requestData as { body: unknown }).body = blob;
     const command = new CreateTodoRequestCommand(requestData);
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBe(blob);
   });
 
@@ -1204,9 +1239,9 @@ describe("ApiClient Native Body Passthrough", () => {
     (requestData as { body: unknown }).body = buffer;
     const command = new CreateTodoRequestCommand(requestData);
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBe(buffer);
   });
 
@@ -1221,9 +1256,9 @@ describe("ApiClient Native Body Passthrough", () => {
     (requestData as { body: unknown }).body = formData;
     const command = new CreateTodoRequestCommand(requestData);
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBe(formData);
   });
 
@@ -1237,9 +1272,9 @@ describe("ApiClient Native Body Passthrough", () => {
     (requestData as { body: unknown }).body = params;
     const command = new CreateTodoRequestCommand(requestData);
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBe(params);
   });
 
@@ -1253,9 +1288,9 @@ describe("ApiClient Native Body Passthrough", () => {
     (requestData as { body: unknown }).body = bytes;
     const command = new CreateTodoRequestCommand(requestData);
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBe(bytes);
   });
 
@@ -1274,9 +1309,9 @@ describe("ApiClient Native Body Passthrough", () => {
     (requestData as { body: unknown }).body = stream;
     const command = new CreateTodoRequestCommand(requestData);
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBe(stream);
   });
 
@@ -1288,9 +1323,9 @@ describe("ApiClient Native Body Passthrough", () => {
     const requestData = createCreateTodoRequest();
     const command = new CreateTodoRequestCommand(requestData);
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.body).toBe(JSON.stringify(requestData.body));
   });
 });
@@ -1303,8 +1338,6 @@ describe("ApiClient Request Header Flattening", () => {
     const client = new TodoClient({
       fetchFn: mockFetch,
       baseUrl: "http://localhost:3000",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
     });
     const requestData = createGetTodoRequest({ param: { todoId: "abc" } });
     (requestData as { header: Record<string, string | string[]> }).header = {
@@ -1313,9 +1346,9 @@ describe("ApiClient Request Header Flattening", () => {
     };
     const command = new GetTodoRequestCommand(requestData);
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     const headers = callArgs.headers as Record<string, string>;
     expect(headers["X-Multi-Value"]).toBe("first, second");
     expect(headers["Accept"]).toBe("application/json");
@@ -1328,15 +1361,13 @@ describe("ApiClient Request Header Flattening", () => {
     const client = new TodoClient({
       fetchFn: mockFetch,
       baseUrl: "http://localhost:3000",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
     });
     const requestData = createGetTodoRequest({ param: { todoId: "abc" } });
     const command = new GetTodoRequestCommand(requestData);
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     const headers = callArgs.headers as Record<string, string>;
     expect(headers["Accept"]).toBe("application/json");
   });
@@ -1348,16 +1379,14 @@ describe("ApiClient Request Header Flattening", () => {
     const client = new TodoClient({
       fetchFn: mockFetch,
       baseUrl: "http://localhost:3000",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
     });
     const requestData = createGetTodoRequest({ param: { todoId: "abc" } });
-    (requestData as { header: undefined }).header = undefined;
+    (requestData as unknown as { header: undefined }).header = undefined;
     const command = new GetTodoRequestCommand(requestData);
 
-    await client.send(command);
+    await sendIgnoringValidation(client, command);
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0][1]!;
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
     expect(callArgs.headers).toBeUndefined();
   });
 });
@@ -1370,8 +1399,6 @@ describe("ApiClient Path Parameter Validation", () => {
     const client = new TodoClient({
       fetchFn: mockFetch,
       baseUrl: "http://localhost:3000",
-      unknownResponseHandling: "passthrough",
-      isSuccessStatusCode: () => true,
     });
     const requestData = createGetTodoRequest({ param: { todoId: "abc" } });
     (requestData as { param: Record<string, string> }).param = {

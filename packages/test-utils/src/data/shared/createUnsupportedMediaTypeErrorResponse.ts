@@ -1,14 +1,14 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { UnsupportedMediaTypeErrorResponse } from "../..";
-import { createDataFactory } from "../createDataFactory";
-import { createErrorResponseHeader } from "../createErrorResponseHeader";
-import { createResponse } from "../createResponse";
+import { createUnsupportedMediaTypeErrorResponse as generatedCreateUnsupportedMediaTypeErrorResponse } from "../../test-project/output/responses/UnsupportedMediaTypeErrorResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createErrorResponseHeader } from "../createErrorResponseHeader.js";
+import { createResponse } from "../createResponse.js";
 import type {
   IUnsupportedMediaTypeErrorResponse,
   IUnsupportedMediaTypeErrorResponseBody,
   IUnsupportedMediaTypeErrorResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 type UnsupportedMediaTypeErrorResponseInput = {
   statusCode?: number;
@@ -35,7 +35,7 @@ const createUnsupportedMediaTypeErrorResponseBody =
 
 export function createUnsupportedMediaTypeErrorResponse(
   input: UnsupportedMediaTypeErrorResponseInput = {}
-): UnsupportedMediaTypeErrorResponse {
+): IUnsupportedMediaTypeErrorResponse {
   const responseData = createResponse<
     IUnsupportedMediaTypeErrorResponse,
     IUnsupportedMediaTypeErrorResponseBody,
@@ -51,5 +51,5 @@ export function createUnsupportedMediaTypeErrorResponse(
     },
     input
   );
-  return new UnsupportedMediaTypeErrorResponse(responseData);
+  return generatedCreateUnsupportedMediaTypeErrorResponse(responseData);
 }

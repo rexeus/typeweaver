@@ -1,2 +1,2 @@
-export * from "./RegisterAccountRequestUtils";
-export * from "./RegisterAccountResponseUtils";
+export * from "./RegisterAccountRequestUtils.js";
+export * from "./RegisterAccountResponseUtils.js";

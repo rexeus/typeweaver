@@ -1,5 +1,95 @@
 # @rexeus/typeweaver-server
 
+## 0.10.1
+
+### Patch Changes
+
+- 5389382: Switch internal bundler to rolldown.
+- a76e62e: Unify generator build mechanics behind shared tsdown helpers, enforce plugin
+  dependency ordering, simplify the precompiled `types` lib build path, and switch
+  the CLI spec bundler from `tsdown` to direct `rolldown` usage.
+- Updated dependencies [5389382]
+- Updated dependencies [a76e62e]
+  - @rexeus/typeweaver-core@0.10.1
+  - @rexeus/typeweaver-gen@0.10.1
+
+## 0.10.0
+
+### Minor Changes
+
+- 40f90d3: ### Supply chain hardening
+
+  - Replace `ejs` dependency with a zero-dependency template engine
+  - Replace `case` dependency with built-in `toPascalCase` and `toCamelCase` utilities
+  - Remove `tsx` from production dependencies; TypeScript config files (`.ts`, `.mts`, `.cts`) are no longer supported by the published CLI
+  - Add clean safety guards to prevent destructive `rm` on workspace roots
+  - Enable npm provenance on publish
+
+  ### Naming convention validation
+
+  - Validate `operationId` and `resourceName` during spec normalization
+  - Reject `snake_case` and `kebab-case` identifiers with dedicated error types (`InvalidOperationIdError`, `InvalidResourceNameError`)
+  - Supported formats: camelCase (preferred) and PascalCase (for compatibility)
+
+### Patch Changes
+
+- Updated dependencies [40f90d3]
+  - @rexeus/typeweaver-core@0.10.0
+  - @rexeus/typeweaver-gen@0.10.0
+
+## 0.9.2
+
+### Patch Changes
+
+- ff722c3: Return ArrayBuffer instead of Uint8Array/Buffer from body collectors for broader runtime compatibility
+  - @rexeus/typeweaver-core@0.9.2
+  - @rexeus/typeweaver-gen@0.9.2
+
+## 0.9.1
+
+### Patch Changes
+
+- @rexeus/typeweaver-core@0.9.1
+- @rexeus/typeweaver-gen@0.9.1
+
+## 0.9.0
+
+### Minor Changes
+
+- f3dfcf5: Switch typeweaver to the new functional spec-entrypoint architecture.
+  This removes the legacy filesystem- and class-based definition flow in favor of
+  `defineSpec`, `defineOperation`, `defineResponse`, and `defineDerivedResponse`,
+  and updates the CLI, generators, runtime defaults, and generated outputs to use
+  the new normalized spec pipeline.
+  ### Breaking changes
+  - Remove legacy `Http*Definition` classes
+  - Remove filesystem-based definition discovery
+  - Require a spec entrypoint file for CLI generation
+  - Update generated runtime/output structure and centralized default errors
+
+### Patch Changes
+
+- Updated dependencies [f3dfcf5]
+  - @rexeus/typeweaver-core@0.9.0
+  - @rexeus/typeweaver-gen@0.9.0
+
+## 0.8.0
+
+### Minor Changes
+
+- 424f170: Replace generated response classes with tagged plain objects across the core, types,
+  clients, server, and hono packages. Generated clients now return the full response union instead
+  of throwing typed error responses, and generated server and hono routers now validate responses
+  before sending them, stripping extra fields from valid bodies. This release also renames
+  `handleValidationErrors` to `handleRequestValidationErrors` and adds configurable response
+  validation error handling for generated routers.
+
+### Patch Changes
+
+- Updated dependencies [424f170]
+  - @rexeus/typeweaver-core@0.8.0
+  - @rexeus/typeweaver-gen@0.8.0
+
 ## 0.7.0
 
 ### Minor Changes
@@ -11,9 +101,10 @@
   - This enables logging, tracing, and metrics keyed to the original API operation without
     hardcoding strings.
   - Simplify response class constructors.
-    - Response constructors no longer accept `statusCode` — each class hard-codes its own status code
-      via a direct property initializer. The constructor parameter type changes from `I…Response` to
-      `Omit<I…Response, "statusCode">`. Responses without header or body use a zero-arg constructor.
+    - Response constructors no longer accept `statusCode` — each class hard-codes its own status
+      code via a direct property initializer. The constructor parameter type changes from
+      `I…Response` to `Omit<I…Response, "statusCode">`. Responses without header or body use a
+      zero-arg constructor.
     - Fix ResponseValidator to call the zero-arg constructor for empty responses.
 
 ### Patch Changes

@@ -2,16 +2,25 @@ import type {
   HttpMethod,
   IHttpRequest,
   IRequestValidator,
+  IResponseValidator,
+  ITypedHttpResponse,
 } from "@rexeus/typeweaver-core";
+import { internalServerErrorDefaultError } from "@rexeus/typeweaver-core";
+import { createCreateTodoSuccessResponseBody } from "test-utils";
 import { expect } from "vitest";
-import { StateMap } from "../src/lib/StateMap";
-import type { ServerContext } from "../src/lib/ServerContext";
+import { StateMap } from "../src/lib/StateMap.js";
+import type { ServerContext } from "../src/lib/ServerContext.js";
 
 export const BASE_URL = "http://localhost";
 
 export const noopValidator: IRequestValidator = {
   validate: (req: any) => req,
   safeValidate: (req: any) => ({ isValid: true, data: req }),
+};
+
+export const noopResponseValidator: IResponseValidator = {
+  validate: (res: any) => res,
+  safeValidate: (res: any) => ({ isValid: true, data: res }),
 };
 
 export function createServerContext(
@@ -128,6 +137,22 @@ export async function expectJson(res: Response, status: number): Promise<any> {
   return res.json();
 }
 
+/**
+ * Builds a typed CreateTodoSuccess response with optional body overrides.
+ * Merges overrides with a schema-conformant factory body so all required fields are present.
+ */
+export function buildCreateTodoSuccess(
+  bodyOverrides: Record<string, unknown> = {}
+): ITypedHttpResponse {
+  const base = createCreateTodoSuccessResponseBody();
+  return {
+    type: "CreateTodoSuccess" as const,
+    statusCode: 201,
+    header: { "Content-Type": "application/json" },
+    body: { ...base, ...bodyOverrides },
+  };
+}
+
 export async function expectErrorResponse(
   res: Response,
   status: number,
@@ -135,5 +160,8 @@ export async function expectErrorResponse(
 ): Promise<any> {
   const data = await expectJson(res, status);
   expect(data.code).toBe(code);
+  if (code === "INTERNAL_SERVER_ERROR") {
+    expect(data.message).toBe(internalServerErrorDefaultError.message);
+  }
   return data;
 }

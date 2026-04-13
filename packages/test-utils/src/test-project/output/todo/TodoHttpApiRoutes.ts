@@ -7,7 +7,7 @@
  */
 
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { type AwsHttpApiGatewayRoute, AwsHttpApiGatewayRoutes } from "../lib/aws-cdk";
+import { type AwsHttpApiGatewayRoute, AwsHttpApiGatewayRoutes } from "../lib/aws-cdk/index.js";
 
 export class TodoHttpApiRoutes extends AwsHttpApiGatewayRoutes {
   private routes: AwsHttpApiGatewayRoute[] = [
@@ -30,17 +30,12 @@ export class TodoHttpApiRoutes extends AwsHttpApiGatewayRoutes {
       path: "/todos/{todoId}",
       methods: [
         HttpMethod.DELETE,
-        HttpMethod.PUT,
-        HttpMethod.PATCH,
         HttpMethod.GET,
         HttpMethod.HEAD,
         HttpMethod.OPTIONS,
+        HttpMethod.PUT,
+        HttpMethod.PATCH,
       ],
-    },
-
-    {
-      path: "/todos/{todoId}/status",
-      methods: [HttpMethod.PUT],
     },
 
     {
@@ -51,6 +46,11 @@ export class TodoHttpApiRoutes extends AwsHttpApiGatewayRoutes {
     {
       path: "/todos/query",
       methods: [HttpMethod.POST],
+    },
+
+    {
+      path: "/todos/{todoId}/status",
+      methods: [HttpMethod.PUT],
     },
   ];
 

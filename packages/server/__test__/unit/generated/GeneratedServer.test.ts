@@ -1,4 +1,4 @@
-import { HttpResponse } from "@rexeus/typeweaver-core";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 import {
   createCreateTodoRequest,
   createDeleteTodoRequest,
@@ -16,7 +16,7 @@ import {
   buildFetchRequest,
   expectErrorResponse,
   expectJson,
-} from "../../helpers";
+} from "../../helpers.js";
 import type { IValidationErrorResponseBody } from "test-utils";
 
 describe("Generated Server Router", () => {
@@ -248,7 +248,7 @@ describe("Generated Server Router", () => {
 
     test("should use custom validation error handler when provided", async () => {
       const app = createTestApp({
-        handleValidationErrors: () => ({
+        handleRequestValidationErrors: () => ({
           statusCode: 400,
           header: { "Content-Type": "application/json" },
           body: { message: "Custom validation error" },
@@ -285,11 +285,13 @@ describe("Generated Server Router", () => {
     test("should handle string response bodies", async () => {
       const customStringResponse = "This is a plain text response";
       const app = createTestApp({
-        throwTodoError: new HttpResponse(
-          200,
-          { "Content-Type": "text/plain" },
-          customStringResponse
-        ),
+        validateResponses: false,
+        throwTodoError: {
+          type: "CustomStringResponse" as const,
+          statusCode: 200,
+          header: { "Content-Type": "text/plain" },
+          body: customStringResponse,
+        } satisfies ITypedHttpResponse,
       });
       const requestData = createCreateTodoRequest();
 
@@ -337,11 +339,13 @@ describe("Generated Server Router", () => {
   describe("Error Handling", () => {
     test("should handle HTTP response errors with default handler", async () => {
       const app = createTestApp({
-        throwTodoError: new HttpResponse(
-          404,
-          {},
-          { errorCode: "TODO_NOT_FOUND" }
-        ),
+        validateResponses: false,
+        throwTodoError: {
+          type: "TodoNotFoundError" as const,
+          statusCode: 404,
+          header: {},
+          body: { errorCode: "TODO_NOT_FOUND" },
+        } satisfies ITypedHttpResponse,
       });
       const requestData = createCreateTodoRequest();
 
@@ -355,11 +359,13 @@ describe("Generated Server Router", () => {
 
     test("should handle HTTP response errors with custom handler", async () => {
       const app = createTestApp({
-        throwTodoError: new HttpResponse(
-          404,
-          {},
-          { errorCode: "TODO_NOT_FOUND" }
-        ),
+        validateResponses: false,
+        throwTodoError: {
+          type: "TodoNotFoundError" as const,
+          statusCode: 404,
+          header: {},
+          body: { errorCode: "TODO_NOT_FOUND" },
+        } satisfies ITypedHttpResponse,
         handleHttpResponseErrors: () => ({
           statusCode: 404,
           body: { customMessage: "Custom error handling" },
@@ -377,7 +383,7 @@ describe("Generated Server Router", () => {
 
     test("should handle validation errors with custom handler", async () => {
       const app = createTestApp({
-        handleValidationErrors: () => ({
+        handleRequestValidationErrors: () => ({
           statusCode: 404,
           body: { customValidationError: "Custom validation error handling" },
         }),
@@ -429,7 +435,7 @@ describe("Generated Server Router", () => {
 
     test("should handle validation error handler failures with unknown handlers", async () => {
       const app = createTestApp({
-        handleValidationErrors: () => {
+        handleRequestValidationErrors: () => {
           throw new Error("Validation handler failed");
         },
       });
@@ -446,11 +452,13 @@ describe("Generated Server Router", () => {
 
     test("should handle HTTP response error handler failures with unknown handlers", async () => {
       const app = createTestApp({
-        throwTodoError: new HttpResponse(
-          404,
-          {},
-          { code: "TODO_NOT_FOUND", message: "Todo not found" }
-        ),
+        validateResponses: false,
+        throwTodoError: {
+          type: "TodoNotFoundError" as const,
+          statusCode: 404,
+          header: {},
+          body: { code: "TODO_NOT_FOUND", message: "Todo not found" },
+        } satisfies ITypedHttpResponse,
         handleHttpResponseErrors: () => {
           throw new Error("HTTP handler failed");
         },

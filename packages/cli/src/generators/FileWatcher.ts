@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
-import { Generator } from "./Generator";
+import { Generator } from "./Generator.js";
 
 const WATCHED_EXTENSIONS = new Set([".ts", ".js", ".json", ".mjs", ".cjs"]);
 const DEBOUNCE_MS = 200;
@@ -16,13 +16,16 @@ export class FileWatcher {
   private stopped = false;
   private resolveWatch: (() => void) | null = null;
   private shutdownHandler: (() => void) | null = null;
+  private readonly watchDir: string;
 
   public constructor(
-    private readonly inputDir: string,
+    private readonly inputPath: string,
     private readonly outputDir: string,
     private readonly config: TypeweaverConfig,
     private readonly createGenerator: GeneratorFactory = () => new Generator()
-  ) {}
+  ) {
+    this.watchDir = path.dirname(this.inputPath);
+  }
 
   public async watch(): Promise<void> {
     await this.runGeneration(true);
@@ -30,7 +33,7 @@ export class FileWatcher {
     this.startWatching();
     this.setupShutdownHandlers();
 
-    this.log(`Watching for changes in ${this.inputDir}...`);
+    this.log(`Watching for changes in ${this.watchDir}...`);
 
     return new Promise<void>(resolve => {
       this.resolveWatch = resolve;
@@ -70,7 +73,7 @@ export class FileWatcher {
         this.scheduleRegeneration();
       });
 
-      watcher.on("error", (error) => {
+      watcher.on("error", error => {
         const code = (error as NodeJS.ErrnoException).code;
         if (code !== "ENOENT") {
           this.log(`Watch error: ${error.message}`);
@@ -82,22 +85,7 @@ export class FileWatcher {
   }
 
   private getWatchDirs(): readonly string[] {
-    const dirs = [this.inputDir];
-
-    if (
-      this.config.shared &&
-      !this.isSubdirectory(this.inputDir, this.config.shared)
-    ) {
-      dirs.push(this.config.shared);
-      this.log(`Also watching shared directory: ${this.config.shared}`);
-    }
-
-    return dirs;
-  }
-
-  private isSubdirectory(parent: string, child: string): boolean {
-    const relative = path.relative(parent, child);
-    return !relative.startsWith("..") && !path.isAbsolute(relative);
+    return [this.watchDir];
   }
 
   private shouldIgnore(filename: string | null): boolean {
@@ -139,7 +127,7 @@ export class FileWatcher {
     try {
       if (!isInitial) this.log("Regenerating...");
       const generator = this.createGenerator();
-      await generator.generate(this.inputDir, this.outputDir, config);
+      await generator.generate(this.inputPath, this.outputDir, config);
       const elapsed = Math.round(performance.now() - start);
       if (!isInitial) this.log(`Regeneration complete (${elapsed}ms)`);
     } catch (error) {

@@ -1,7 +1,8 @@
+import { unauthorizedDefaultError } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
-import { executeMiddlewarePipeline } from "../../../src/lib/Middleware";
-import { basicAuth } from "../../../src/lib/middleware/basicAuth";
-import { createServerContext } from "../../helpers";
+import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
+import { basicAuth } from "../../../src/lib/middleware/basicAuth.js";
+import { createServerContext } from "../../helpers.js";
 
 const encode = (str: string) => btoa(str);
 
@@ -21,8 +22,8 @@ describe("basicAuth", () => {
 
     expect(response.statusCode).toBe(401);
     expect(response.body).toEqual({
-      code: "UNAUTHORIZED",
-      message: "Unauthorized",
+      code: unauthorizedDefaultError.code,
+      message: unauthorizedDefaultError.message,
     });
     expect(response.header?.["www-authenticate"]).toBe(
       'Basic realm="Secure Area"'
@@ -208,26 +209,6 @@ describe("basicAuth", () => {
     expect(response.statusCode).toBe(200);
   });
 
-  test("should use custom unauthorizedMessage", async () => {
-    const mw = basicAuth({
-      verifyCredentials: alwaysValid,
-      unauthorizedMessage: "Invalid credentials provided",
-    });
-    const ctx = createServerContext();
-
-    const response = await executeMiddlewarePipeline(
-      [mw.handler],
-      ctx,
-      async () => ({ statusCode: 200 })
-    );
-
-    expect(response.statusCode).toBe(401);
-    expect(response.body).toEqual({
-      code: "UNAUTHORIZED",
-      message: "Invalid credentials provided",
-    });
-  });
-
   test("should use onUnauthorized handler when provided", async () => {
     const mw = basicAuth({
       verifyCredentials: alwaysInvalid,
@@ -273,10 +254,9 @@ describe("basicAuth", () => {
     expect(onUnauthorized).toHaveBeenCalledWith(ctx);
   });
 
-  test("should prefer onUnauthorized over unauthorizedMessage", async () => {
+  test("should prefer onUnauthorized over default response", async () => {
     const mw = basicAuth({
       verifyCredentials: alwaysInvalid,
-      unauthorizedMessage: "ignored",
       onUnauthorized: () => ({
         statusCode: 401,
         body: { custom: true },

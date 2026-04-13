@@ -1,4 +1,4 @@
-import type { GetResourcesResult } from "../Resource";
+import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec.js";
 
 /**
  * Configuration for a typeweaver plugin
@@ -9,31 +9,64 @@ export type PluginConfig = Record<string, unknown>;
  * Context provided to plugins during initialization and finalization
  */
 export type PluginContext = {
-  outputDir: string;
-  inputDir: string;
-  config: PluginConfig;
+  readonly outputDir: string;
+  readonly inputDir: string;
+  readonly config: PluginConfig;
+};
+
+export type OperationOutputPaths = {
+  readonly outputDir: string;
+  readonly requestFile: string;
+  readonly requestFileName: string;
+  readonly responseFile: string;
+  readonly responseFileName: string;
+  readonly requestValidationFile: string;
+  readonly requestValidationFileName: string;
+  readonly responseValidationFile: string;
+  readonly responseValidationFileName: string;
+  readonly clientFile: string;
+  readonly clientFileName: string;
 };
 
 /**
  * Context provided to plugins during generation
  */
 export type GeneratorContext = PluginContext & {
-  resources: GetResourcesResult;
-  templateDir: string;
-  coreDir: string;
+  readonly normalizedSpec: NormalizedSpec;
+  readonly coreDir: string;
+  readonly responsesOutputDir: string;
+  readonly specOutputDir: string;
 
-  // Utility functions
-  writeFile: (relativePath: string, content: string) => void;
-  renderTemplate: (templatePath: string, data: unknown) => string;
-  addGeneratedFile: (relativePath: string) => void;
-  getGeneratedFiles: () => string[];
+  readonly getCanonicalResponse: (responseName: string) => NormalizedResponse;
+  readonly getCanonicalResponseOutputFile: (responseName: string) => string;
+  readonly getCanonicalResponseImportPath: (params: {
+    readonly importerDir: string;
+    readonly responseName: string;
+  }) => string;
+  readonly getSpecImportPath: (params: {
+    readonly importerDir: string;
+  }) => string;
+  readonly getOperationDefinitionAccessor: (params: {
+    readonly resourceName: string;
+    readonly operationId: string;
+  }) => string;
+  readonly getOperationOutputPaths: (params: {
+    readonly resourceName: string;
+    readonly operationId: string;
+  }) => OperationOutputPaths;
+  readonly getResourceOutputDir: (resourceName: string) => string;
+  readonly writeFile: (relativePath: string, content: string) => void;
+  readonly renderTemplate: (templatePath: string, data: unknown) => string;
+  readonly addGeneratedFile: (relativePath: string) => void;
+  readonly getGeneratedFiles: () => string[];
 };
 
 /**
  * Plugin metadata
  */
 export type PluginMetadata = {
-  name: string;
+  readonly name: string;
+  readonly depends?: readonly string[];
 };
 
 /**
@@ -51,8 +84,8 @@ export type TypeweaverPlugin = PluginMetadata & {
    * Allows plugins to modify the resource collection
    */
   collectResources?(
-    resources: GetResourcesResult
-  ): Promise<GetResourcesResult> | GetResourcesResult;
+    normalizedSpec: NormalizedSpec
+  ): Promise<NormalizedSpec> | NormalizedSpec;
 
   /**
    * Main generation logic
@@ -94,7 +127,6 @@ export type PluginRegistration = {
 export type TypeweaverConfig = {
   input: string;
   output: string;
-  shared?: string;
   plugins?: (string | [string, PluginConfig])[];
   format?: boolean;
   clean?: boolean;
@@ -119,10 +151,12 @@ export class PluginLoadError extends Error {
 export class PluginDependencyError extends Error {
   constructor(
     public pluginName: string,
-    public missingDependency: string
+    public missingDependency: string,
+    message?: string
   ) {
     super(
-      `Plugin '${pluginName}' depends on '${missingDependency}' which is not loaded`
+      message ??
+        `Plugin '${pluginName}' depends on '${missingDependency}' which is not loaded`
     );
     this.name = "PluginDependencyError";
   }

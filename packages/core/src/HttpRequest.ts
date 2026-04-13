@@ -1,8 +1,8 @@
-import type { IHttpBody } from "./HttpBody";
-import type { IHttpHeader } from "./HttpHeader";
-import type { HttpMethod } from "./HttpMethod";
-import type { IHttpParam } from "./HttpParam";
-import type { IHttpQuery } from "./HttpQuery";
+import type { IHttpBody } from "./HttpBody.js";
+import type { IHttpHeader } from "./HttpHeader.js";
+import type { HttpMethod } from "./HttpMethod.js";
+import type { IHttpParam } from "./HttpParam.js";
+import type { IHttpQuery } from "./HttpQuery.js";
 
 export type IHttpRequest<
   Header extends IHttpHeader = IHttpHeader,

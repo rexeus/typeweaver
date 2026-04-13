@@ -11,19 +11,22 @@ import {
   TypeweaverRouter,
   type RequestHandler,
   type TypeweaverRouterOptions,
-} from "./../lib/server";
+} from "./../lib/server/index.js";
 
-import type { IUploadFileRequest } from "./UploadFileRequest";
-import { UploadFileRequestValidator } from "./UploadFileRequestValidator";
-import type { UploadFileResponse } from "./UploadFileResponse";
+import type { IUploadFileRequest } from "./UploadFileRequest.js";
+import { UploadFileRequestValidator } from "./UploadFileRequestValidator.js";
+import type { UploadFileResponse } from "./UploadFileResponse.js";
+import { UploadFileResponseValidator } from "./UploadFileResponseValidator.js";
 
-import type { IGetFileMetadataRequest } from "./GetFileMetadataRequest";
-import { GetFileMetadataRequestValidator } from "./GetFileMetadataRequestValidator";
-import type { GetFileMetadataResponse } from "./GetFileMetadataResponse";
+import type { IGetFileMetadataRequest } from "./GetFileMetadataRequest.js";
+import { GetFileMetadataRequestValidator } from "./GetFileMetadataRequestValidator.js";
+import type { GetFileMetadataResponse } from "./GetFileMetadataResponse.js";
+import { GetFileMetadataResponseValidator } from "./GetFileMetadataResponseValidator.js";
 
-import type { IDownloadFileContentRequest } from "./DownloadFileContentRequest";
-import { DownloadFileContentRequestValidator } from "./DownloadFileContentRequestValidator";
-import type { DownloadFileContentResponse } from "./DownloadFileContentResponse";
+import type { IDownloadFileContentRequest } from "./DownloadFileContentRequest.js";
+import { DownloadFileContentRequestValidator } from "./DownloadFileContentRequestValidator.js";
+import type { DownloadFileContentResponse } from "./DownloadFileContentResponse.js";
+import { DownloadFileContentResponseValidator } from "./DownloadFileContentResponseValidator.js";
 
 export type ServerFileApiHandler<TState extends Record<string, unknown> = Record<string, unknown>> =
   {
@@ -56,6 +59,7 @@ export class FileRouter<
       HttpMethod.POST,
       "/files",
       new UploadFileRequestValidator(),
+      new UploadFileResponseValidator(),
       this.requestHandlers.handleUploadFileRequest.bind(this.requestHandlers),
     );
 
@@ -64,6 +68,7 @@ export class FileRouter<
       HttpMethod.GET,
       "/files/:fileId",
       new GetFileMetadataRequestValidator(),
+      new GetFileMetadataResponseValidator(),
       this.requestHandlers.handleGetFileMetadataRequest.bind(this.requestHandlers),
     );
 
@@ -72,6 +77,7 @@ export class FileRouter<
       HttpMethod.GET,
       "/files/:fileId/content",
       new DownloadFileContentRequestValidator(),
+      new DownloadFileContentResponseValidator(),
       this.requestHandlers.handleDownloadFileContentRequest.bind(this.requestHandlers),
     );
   }

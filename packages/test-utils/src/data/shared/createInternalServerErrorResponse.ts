@@ -1,13 +1,13 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { InternalServerErrorResponse } from "../..";
-import { createDataFactory } from "../createDataFactory";
-import { createErrorResponseHeader } from "../createErrorResponseHeader";
-import { createResponse } from "../createResponse";
+import { createInternalServerErrorResponse as generatedCreateInternalServerErrorResponse } from "../../test-project/output/responses/InternalServerErrorResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createErrorResponseHeader } from "../createErrorResponseHeader.js";
+import { createResponse } from "../createResponse.js";
 import type {
   IInternalServerErrorResponse,
   IInternalServerErrorResponseBody,
   IInternalServerErrorResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 type InternalServerErrorResponseInput = {
   statusCode?: number;
@@ -23,7 +23,7 @@ const createInternalServerErrorResponseBody =
 
 export function createInternalServerErrorResponse(
   input: InternalServerErrorResponseInput = {}
-): InternalServerErrorResponse {
+): IInternalServerErrorResponse {
   const responseData = createResponse<
     IInternalServerErrorResponse,
     IInternalServerErrorResponseBody,
@@ -38,5 +38,5 @@ export function createInternalServerErrorResponse(
     },
     input
   );
-  return new InternalServerErrorResponse(responseData);
+  return generatedCreateInternalServerErrorResponse(responseData);
 }

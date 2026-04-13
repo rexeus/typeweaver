@@ -1,14 +1,14 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { ListTodosSuccessResponse } from "../..";
-import { createDataFactory } from "../createDataFactory";
-import { createResponse } from "../createResponse";
-import { createGetTodoSuccessResponseBody } from "./GetTodoResponseUtils";
+import { createListTodosSuccessResponse as generatedCreateListTodosSuccessResponse } from "../../test-project/output/responses/ListTodosSuccessResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createResponse } from "../createResponse.js";
+import { createGetTodoSuccessResponseBody } from "./GetTodoResponseUtils.js";
 import type {
   IListTodosSuccessResponse,
   IListTodosSuccessResponseBody,
   IListTodosSuccessResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 type ListTodosSuccessResponseInput = {
   statusCode?: number;
@@ -33,7 +33,7 @@ export const createListTodosSuccessResponseBody =
 
 export function createListTodosSuccessResponse(
   input: ListTodosSuccessResponseInput = {}
-): ListTodosSuccessResponse {
+): IListTodosSuccessResponse {
   const responseData = createResponse<
     IListTodosSuccessResponse,
     IListTodosSuccessResponseBody,
@@ -48,5 +48,5 @@ export function createListTodosSuccessResponse(
     },
     input
   );
-  return new ListTodosSuccessResponse(responseData);
+  return generatedCreateListTodosSuccessResponse(responseData);
 }

@@ -1,14 +1,14 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { TodoNotChangeableErrorResponse } from "../..";
-import { createDataFactory } from "../createDataFactory";
-import { createErrorResponseHeader } from "../createErrorResponseHeader";
-import { createResponse } from "../createResponse";
+import { createTodoNotChangeableErrorResponse as generatedCreateTodoNotChangeableErrorResponse } from "../../test-project/output/responses/TodoNotChangeableErrorResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createErrorResponseHeader } from "../createErrorResponseHeader.js";
+import { createResponse } from "../createResponse.js";
 import type {
   ITodoNotChangeableErrorResponse,
   ITodoNotChangeableErrorResponseBody,
   ITodoNotChangeableErrorResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 type TodoNotChangeableErrorResponseInput = {
   statusCode?: number;
@@ -34,7 +34,7 @@ export const createTodoNotChangeableErrorResponseBody =
 
 export function createTodoNotChangeableErrorResponse(
   input: TodoNotChangeableErrorResponseInput = {}
-): TodoNotChangeableErrorResponse {
+): ITodoNotChangeableErrorResponse {
   const responseData = createResponse<
     ITodoNotChangeableErrorResponse,
     ITodoNotChangeableErrorResponseBody,
@@ -49,5 +49,5 @@ export function createTodoNotChangeableErrorResponse(
     },
     input
   );
-  return new TodoNotChangeableErrorResponse(responseData);
+  return generatedCreateTodoNotChangeableErrorResponse(responseData);
 }

@@ -1,7 +1,8 @@
+import { unauthorizedDefaultError } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
-import { executeMiddlewarePipeline } from "../../../src/lib/Middleware";
-import { bearerAuth } from "../../../src/lib/middleware/bearerAuth";
-import { createServerContext } from "../../helpers";
+import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
+import { bearerAuth } from "../../../src/lib/middleware/bearerAuth.js";
+import { createServerContext } from "../../helpers.js";
 
 describe("bearerAuth", () => {
   const alwaysValid = () => true;
@@ -19,8 +20,8 @@ describe("bearerAuth", () => {
 
     expect(response.statusCode).toBe(401);
     expect(response.body).toEqual({
-      code: "UNAUTHORIZED",
-      message: "Unauthorized",
+      code: unauthorizedDefaultError.code,
+      message: unauthorizedDefaultError.message,
     });
     expect(response.header?.["www-authenticate"]).toBe(
       'Bearer realm="Secure Area"'
@@ -153,27 +154,6 @@ describe("bearerAuth", () => {
     expect(response.header?.["www-authenticate"]).toBe('Bearer realm="API"');
   });
 
-  test("should use custom unauthorized message", async () => {
-    const mw = bearerAuth({
-      verifyToken: alwaysInvalid,
-      unauthorizedMessage: "Invalid API key",
-    });
-    const ctx = createServerContext({
-      header: { authorization: "Bearer bad-token" },
-    });
-
-    const response = await executeMiddlewarePipeline(
-      [mw.handler],
-      ctx,
-      async () => ({ statusCode: 200 })
-    );
-
-    expect(response.body).toEqual({
-      code: "UNAUTHORIZED",
-      message: "Invalid API key",
-    });
-  });
-
   test("should use onUnauthorized handler when provided", async () => {
     const mw = bearerAuth({
       verifyToken: alwaysInvalid,
@@ -222,10 +202,9 @@ describe("bearerAuth", () => {
     expect(onUnauthorized).toHaveBeenCalledWith(ctx);
   });
 
-  test("should prefer onUnauthorized over unauthorizedMessage", async () => {
+  test("should prefer onUnauthorized over default response", async () => {
     const mw = bearerAuth({
       verifyToken: alwaysInvalid,
-      unauthorizedMessage: "ignored",
       onUnauthorized: () => ({
         statusCode: 401,
         body: { custom: true },

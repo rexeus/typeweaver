@@ -12,7 +12,7 @@ class MockWatcher extends EventEmitter {
 
 function createConfig(overrides?: Partial<TypeweaverConfig>): TypeweaverConfig {
   return {
-    input: "/test/input",
+    input: "/test/input/spec.ts",
     output: "/test/output",
     format: false,
     clean: true,
@@ -43,7 +43,10 @@ describe("FileWatcher", () => {
   const blockNextGeneration = () => {
     let resolve!: () => void;
     mockGenerate.mockImplementationOnce(
-      () => new Promise<void>(r => { resolve = r; })
+      () =>
+        new Promise<void>(r => {
+          resolve = r;
+        })
     );
     return { resolve: () => resolve() };
   };
@@ -60,7 +63,7 @@ describe("FileWatcher", () => {
     mockGenerate = vi.fn().mockResolvedValue(undefined);
 
     fileWatcher = new FileWatcher(
-      "/test/input",
+      "/test/input/spec.ts",
       "/test/output",
       createConfig(),
       createGeneratorMock
@@ -80,7 +83,7 @@ describe("FileWatcher", () => {
 
     expect(mockGenerate).toHaveBeenCalledTimes(1);
     expect(mockGenerate).toHaveBeenCalledWith(
-      "/test/input",
+      "/test/input/spec.ts",
       "/test/output",
       expect.objectContaining({ clean: true })
     );
@@ -172,7 +175,7 @@ describe("FileWatcher", () => {
     await startWatching();
 
     expect(mockGenerate).toHaveBeenCalledWith(
-      "/test/input",
+      "/test/input/spec.ts",
       "/test/output",
       expect.objectContaining({ clean: true })
     );
@@ -181,7 +184,7 @@ describe("FileWatcher", () => {
     await flushDebounce();
 
     expect(mockGenerate).toHaveBeenLastCalledWith(
-      "/test/input",
+      "/test/input/spec.ts",
       "/test/output",
       expect.objectContaining({ clean: false })
     );
@@ -189,7 +192,7 @@ describe("FileWatcher", () => {
 
   test("respects --no-clean on initial run", async () => {
     fileWatcher = new FileWatcher(
-      "/test/input",
+      "/test/input/spec.ts",
       "/test/output",
       createConfig({ clean: false }),
       createGeneratorMock
@@ -198,45 +201,17 @@ describe("FileWatcher", () => {
     await startWatching();
 
     expect(mockGenerate).toHaveBeenCalledWith(
-      "/test/input",
+      "/test/input/spec.ts",
       "/test/output",
       expect.objectContaining({ clean: false })
     );
   });
 
-  test("watches shared directory when outside input", async () => {
-    const secondMockWatcher = new MockWatcher();
-    vi.mocked(fs.watch)
-      .mockReturnValueOnce(mockWatcher as unknown as fs.FSWatcher)
-      .mockReturnValueOnce(secondMockWatcher as unknown as fs.FSWatcher);
-
-    fileWatcher = new FileWatcher(
-      "/test/input",
-      "/test/output",
-      createConfig({ shared: "/external/shared" }),
-      createGeneratorMock
-    );
-
-    await startWatching();
-
-    expect(fs.watch).toHaveBeenCalledTimes(2);
-    expect(fs.watch).toHaveBeenCalledWith("/test/input", { recursive: true });
-    expect(fs.watch).toHaveBeenCalledWith("/external/shared", {
-      recursive: true,
-    });
-  });
-
-  test("does not create extra watcher when shared is inside input", async () => {
-    fileWatcher = new FileWatcher(
-      "/test/input",
-      "/test/output",
-      createConfig({ shared: "/test/input/shared" }),
-      createGeneratorMock
-    );
-
+  test("watches parent directory derived from input file path", async () => {
     await startWatching();
 
     expect(fs.watch).toHaveBeenCalledTimes(1);
+    expect(fs.watch).toHaveBeenCalledWith("/test/input", { recursive: true });
   });
 
   test("closes all watchers on stop", async () => {

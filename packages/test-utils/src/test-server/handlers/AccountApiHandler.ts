@@ -1,13 +1,13 @@
-import { HttpResponse } from "@rexeus/typeweaver-core";
-import {
-  createRegisterAccountSuccessResponse,
-  RegisterAccountSuccessResponse,
-} from "../..";
-import type { IRegisterAccountRequest, RegisterAccountResponse } from "../..";
-import type { HonoAccountApiHandler } from "../../test-project/output/account/AccountHono";
+import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
+import { createRegisterAccountSuccessResponse } from "../../data/index.js";
+import type {
+  IRegisterAccountRequest,
+  RegisterAccountResponse,
+} from "../../index.js";
+import type { HonoAccountApiHandler } from "../../test-project/output/account/AccountHono.js";
 
 export class AccountHandlers implements HonoAccountApiHandler {
-  public constructor(private readonly throwError?: Error | HttpResponse) {
+  public constructor(private readonly throwError?: Error | ITypedHttpResponse) {
     //
   }
 
@@ -18,10 +18,8 @@ export class AccountHandlers implements HonoAccountApiHandler {
       throw this.throwError;
     }
 
-    const response = createRegisterAccountSuccessResponse({
+    return createRegisterAccountSuccessResponse({
       body: request.body,
     });
-
-    return new RegisterAccountSuccessResponse(response);
   }
 }

@@ -1,14 +1,14 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { TodoStatusTransitionInvalidErrorResponse } from "../..";
-import { createDataFactory } from "../createDataFactory";
-import { createErrorResponseHeader } from "../createErrorResponseHeader";
-import { createResponse } from "../createResponse";
+import { createTodoStatusTransitionInvalidErrorResponse as generatedCreateTodoStatusTransitionInvalidErrorResponse } from "../../test-project/output/responses/TodoStatusTransitionInvalidErrorResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createErrorResponseHeader } from "../createErrorResponseHeader.js";
+import { createResponse } from "../createResponse.js";
 import type {
   ITodoStatusTransitionInvalidErrorResponse,
   ITodoStatusTransitionInvalidErrorResponseBody,
   ITodoStatusTransitionInvalidErrorResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 type TodoStatusTransitionInvalidErrorResponseInput = {
   statusCode?: number;
@@ -37,7 +37,7 @@ export const createTodoStatusTransitionInvalidErrorResponseBody =
 
 export function createTodoStatusTransitionInvalidErrorResponse(
   input: TodoStatusTransitionInvalidErrorResponseInput = {}
-): TodoStatusTransitionInvalidErrorResponse {
+): ITodoStatusTransitionInvalidErrorResponse {
   const responseData = createResponse<
     ITodoStatusTransitionInvalidErrorResponse,
     ITodoStatusTransitionInvalidErrorResponseBody,
@@ -52,5 +52,5 @@ export function createTodoStatusTransitionInvalidErrorResponse(
     },
     input
   );
-  return new TodoStatusTransitionInvalidErrorResponse(responseData);
+  return generatedCreateTodoStatusTransitionInvalidErrorResponse(responseData);
 }

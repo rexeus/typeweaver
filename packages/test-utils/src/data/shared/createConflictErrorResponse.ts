@@ -1,13 +1,13 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { ConflictErrorResponse } from "../..";
-import { createDataFactory } from "../createDataFactory";
-import { createErrorResponseHeader } from "../createErrorResponseHeader";
-import { createResponse } from "../createResponse";
+import { createConflictErrorResponse as generatedCreateConflictErrorResponse } from "../../test-project/output/shared/ConflictErrorResponse";
+import { createDataFactory } from "../createDataFactory.js";
+import { createErrorResponseHeader } from "../createErrorResponseHeader.js";
+import { createResponse } from "../createResponse.js";
 import type {
   IConflictErrorResponse,
   IConflictErrorResponseBody,
   IConflictErrorResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 type ConflictErrorResponseInput = {
   statusCode?: number;
@@ -23,7 +23,7 @@ const createConflictErrorResponseBody =
 
 export function createConflictErrorResponse(
   input: ConflictErrorResponseInput = {}
-): ConflictErrorResponse {
+): IConflictErrorResponse {
   const responseData = createResponse<
     IConflictErrorResponse,
     IConflictErrorResponseBody,
@@ -38,5 +38,5 @@ export function createConflictErrorResponse(
     },
     input
   );
-  return new ConflictErrorResponse(responseData);
+  return generatedCreateConflictErrorResponse(responseData);
 }

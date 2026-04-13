@@ -11,15 +11,17 @@ import {
   TypeweaverRouter,
   type RequestHandler,
   type TypeweaverRouterOptions,
-} from "./../lib/server";
+} from "./../lib/server/index.js";
 
-import type { IAccessTokenRequest } from "./AccessTokenRequest";
-import { AccessTokenRequestValidator } from "./AccessTokenRequestValidator";
-import type { AccessTokenResponse } from "./AccessTokenResponse";
+import type { IAccessTokenRequest } from "./AccessTokenRequest.js";
+import { AccessTokenRequestValidator } from "./AccessTokenRequestValidator.js";
+import type { AccessTokenResponse } from "./AccessTokenResponse.js";
+import { AccessTokenResponseValidator } from "./AccessTokenResponseValidator.js";
 
-import type { IRefreshTokenRequest } from "./RefreshTokenRequest";
-import { RefreshTokenRequestValidator } from "./RefreshTokenRequestValidator";
-import type { RefreshTokenResponse } from "./RefreshTokenResponse";
+import type { IRefreshTokenRequest } from "./RefreshTokenRequest.js";
+import { RefreshTokenRequestValidator } from "./RefreshTokenRequestValidator.js";
+import type { RefreshTokenResponse } from "./RefreshTokenResponse.js";
+import { RefreshTokenResponseValidator } from "./RefreshTokenResponseValidator.js";
 
 export type ServerAuthApiHandler<TState extends Record<string, unknown> = Record<string, unknown>> =
   {
@@ -42,6 +44,7 @@ export class AuthRouter<
       HttpMethod.POST,
       "/auth/access-token",
       new AccessTokenRequestValidator(),
+      new AccessTokenResponseValidator(),
       this.requestHandlers.handleAccessTokenRequest.bind(this.requestHandlers),
     );
 
@@ -50,6 +53,7 @@ export class AuthRouter<
       HttpMethod.POST,
       "/auth/refresh-token",
       new RefreshTokenRequestValidator(),
+      new RefreshTokenResponseValidator(),
       this.requestHandlers.handleRefreshTokenRequest.bind(this.requestHandlers),
     );
   }

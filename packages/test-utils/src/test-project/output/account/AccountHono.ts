@@ -7,11 +7,16 @@
  */
 
 import type { Context } from "hono";
-import { TypeweaverHono, type HonoRequestHandler, type TypeweaverHonoOptions } from "../lib/hono";
+import {
+  TypeweaverHono,
+  type HonoRequestHandler,
+  type TypeweaverHonoOptions,
+} from "./../lib/hono/index.js";
 
-import type { IRegisterAccountRequest } from "./RegisterAccountRequest";
-import { RegisterAccountRequestValidator } from "./RegisterAccountRequestValidator";
-import type { RegisterAccountResponse } from "./RegisterAccountResponse";
+import type { IRegisterAccountRequest } from "./RegisterAccountRequest.js";
+import { RegisterAccountRequestValidator } from "./RegisterAccountRequestValidator.js";
+import type { RegisterAccountResponse } from "./RegisterAccountResponse.js";
+import { RegisterAccountResponseValidator } from "./RegisterAccountResponseValidator.js";
 
 export type HonoAccountApiHandler = {
   handleRegisterAccountRequest: HonoRequestHandler<
@@ -32,6 +37,7 @@ export class AccountHono extends TypeweaverHono<HonoAccountApiHandler> {
         context,
         "RegisterAccount",
         new RegisterAccountRequestValidator(),
+        new RegisterAccountResponseValidator(),
         this.requestHandlers.handleRegisterAccountRequest.bind(this.requestHandlers),
       ),
     );

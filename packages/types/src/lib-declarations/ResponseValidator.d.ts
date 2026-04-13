@@ -1,23 +1,37 @@
 import type {
+  HttpBodySchema,
+  HttpHeaderSchema,
   IHttpResponse,
   IResponseValidator,
+  ITypedHttpResponse,
   ResponseValidationError,
   SafeResponseValidationResult,
 } from "@rexeus/typeweaver-core";
-import { Validator } from "./Validator";
+import { Validator } from "./Validator.js";
 
-export declare abstract class ResponseValidator
+export type ResponseEntry = {
+  readonly name: string;
+  readonly statusCode: number;
+  readonly headerSchema: HttpHeaderSchema | undefined;
+  readonly bodySchema: HttpBodySchema | undefined;
+};
+
+export declare abstract class ResponseValidator<
+  TResponse extends ITypedHttpResponse = ITypedHttpResponse,
+>
   extends Validator
   implements IResponseValidator
 {
-  public abstract safeValidate(
+  protected abstract readonly responseEntries: readonly ResponseEntry[];
+  protected abstract readonly expectedStatusCodes: readonly number[];
+  public safeValidate(
     response: IHttpResponse
-  ): SafeResponseValidationResult<IHttpResponse>;
-  public abstract validate(response: IHttpResponse): IHttpResponse;
-  protected validateResponseType<Response extends IHttpResponse>(
+  ): SafeResponseValidationResult<TResponse>;
+  public validate(response: IHttpResponse): TResponse;
+  protected validateResponseType<Response extends ITypedHttpResponse>(
     responseName: string,
-    headerSchema: unknown,
-    bodySchema: unknown
+    headerSchema: HttpHeaderSchema | undefined,
+    bodySchema: HttpBodySchema | undefined
   ): (
     response: IHttpResponse,
     error: ResponseValidationError

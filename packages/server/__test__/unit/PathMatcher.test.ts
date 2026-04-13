@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { pathMatcher } from "../../src/lib/PathMatcher";
+import { pathMatcher } from "../../src/lib/PathMatcher.js";
 
 describe("pathMatcher", () => {
   describe("exact match", () => {

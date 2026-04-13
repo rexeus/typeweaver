@@ -1,13 +1,13 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { ListSubTodosSuccessResponse } from "../..";
-import { createDataFactory } from "../createDataFactory";
-import { createResponse } from "../createResponse";
+import { createListSubTodosSuccessResponse as generatedCreateListSubTodosSuccessResponse } from "../../test-project/output/responses/ListSubTodosSuccessResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createResponse } from "../createResponse.js";
 import type {
   IListSubTodosSuccessResponse,
   IListSubTodosSuccessResponseBody,
   IListSubTodosSuccessResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 export const createListSubTodosSuccessResponseHeader =
   createDataFactory<IListSubTodosSuccessResponseHeader>(() => ({
@@ -75,7 +75,7 @@ type ListSubTodosSuccessResponseInput = {
 
 export function createListSubTodosSuccessResponse(
   input: ListSubTodosSuccessResponseInput = {}
-): ListSubTodosSuccessResponse {
+): IListSubTodosSuccessResponse {
   const responseData = createResponse<
     IListSubTodosSuccessResponse,
     IListSubTodosSuccessResponseBody,
@@ -90,5 +90,5 @@ export function createListSubTodosSuccessResponse(
     },
     input
   );
-  return new ListSubTodosSuccessResponse(responseData);
+  return generatedCreateListSubTodosSuccessResponse(responseData);
 }

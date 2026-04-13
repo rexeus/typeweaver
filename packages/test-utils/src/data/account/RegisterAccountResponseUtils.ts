@@ -1,13 +1,13 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { RegisterAccountSuccessResponse } from "../..";
-import { createDataFactory } from "../createDataFactory";
-import { createResponse } from "../createResponse";
+import { createRegisterAccountSuccessResponse as generatedCreateRegisterAccountSuccessResponse } from "../../test-project/output/responses/RegisterAccountSuccessResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createResponse } from "../createResponse.js";
 import type {
   IRegisterAccountSuccessResponse,
   IRegisterAccountSuccessResponseBody,
   IRegisterAccountSuccessResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 export const createRegisterAccountSuccessResponseHeader =
   createDataFactory<IRegisterAccountSuccessResponseHeader>(() => ({
@@ -32,7 +32,7 @@ type RegisterAccountSuccessResponseInput = {
 
 export function createRegisterAccountSuccessResponse(
   input: RegisterAccountSuccessResponseInput = {}
-): RegisterAccountSuccessResponse {
+): IRegisterAccountSuccessResponse {
   const responseData = createResponse<
     IRegisterAccountSuccessResponse,
     IRegisterAccountSuccessResponseBody,
@@ -47,5 +47,5 @@ export function createRegisterAccountSuccessResponse(
     },
     input
   );
-  return new RegisterAccountSuccessResponse(responseData);
+  return generatedCreateRegisterAccountSuccessResponse(responseData);
 }

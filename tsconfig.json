@@ -2,8 +2,8 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
     /* Module Resolution Options */
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
@@ -12,6 +12,7 @@
     /* Target and Output */
     "target": "ESNext",
     "lib": ["ESNext"],
+    "types": ["node"],
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,

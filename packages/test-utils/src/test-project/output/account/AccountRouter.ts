@@ -11,11 +11,12 @@ import {
   TypeweaverRouter,
   type RequestHandler,
   type TypeweaverRouterOptions,
-} from "./../lib/server";
+} from "./../lib/server/index.js";
 
-import type { IRegisterAccountRequest } from "./RegisterAccountRequest";
-import { RegisterAccountRequestValidator } from "./RegisterAccountRequestValidator";
-import type { RegisterAccountResponse } from "./RegisterAccountResponse";
+import type { IRegisterAccountRequest } from "./RegisterAccountRequest.js";
+import { RegisterAccountRequestValidator } from "./RegisterAccountRequestValidator.js";
+import type { RegisterAccountResponse } from "./RegisterAccountResponse.js";
+import { RegisterAccountResponseValidator } from "./RegisterAccountResponseValidator.js";
 
 export type ServerAccountApiHandler<
   TState extends Record<string, unknown> = Record<string, unknown>,
@@ -41,6 +42,7 @@ export class AccountRouter<
       HttpMethod.POST,
       "/accounts",
       new RegisterAccountRequestValidator(),
+      new RegisterAccountResponseValidator(),
       this.requestHandlers.handleRegisterAccountRequest.bind(this.requestHandlers),
     );
   }

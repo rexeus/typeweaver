@@ -1,13 +1,22 @@
 import type { HttpMethod } from "@rexeus/typeweaver-core";
 import { assert, describe, expect, test } from "vitest";
-import { Router } from "../../src/lib/Router";
-import { createServerContext, noopValidator } from "../helpers";
-import type { RouteDefinition, RouterErrorConfig } from "../../src/lib/Router";
+import { Router } from "../../src/lib/Router.js";
+import {
+  createServerContext,
+  noopResponseValidator,
+  noopValidator,
+} from "../helpers.js";
+import type {
+  RouteDefinition,
+  RouterErrorConfig,
+} from "../../src/lib/Router.js";
 
 const defaultConfig: RouterErrorConfig = {
   validateRequests: true,
+  validateResponses: true,
   handleHttpResponseErrors: true,
-  handleValidationErrors: true,
+  handleRequestValidationErrors: true,
+  handleResponseValidationErrors: true,
   handleUnknownErrors: true,
 };
 
@@ -20,7 +29,8 @@ function createRoute(
     operationId: id ?? `${method.toLowerCase()}${path.replace(/[/:]/g, "_")}`,
     method: method.toUpperCase() as HttpMethod,
     path,
-    validator: noopValidator,
+    requestValidator: noopValidator,
+    responseValidator: noopResponseValidator,
     handler: async (_req, _ctx) => ({
       statusCode: 200,
       body: { routeId: id ?? path },

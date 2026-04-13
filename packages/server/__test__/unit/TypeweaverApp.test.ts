@@ -1,14 +1,22 @@
 import {
+  badRequestDefaultError,
   HttpMethod,
-  HttpResponse,
+  internalServerErrorDefaultError,
+  methodNotAllowedDefaultError,
+  notFoundDefaultError,
+  payloadTooLargeDefaultError,
   RequestValidationError,
+  validationDefaultError,
 } from "@rexeus/typeweaver-core";
-import type { IRequestValidator } from "@rexeus/typeweaver-core";
+import type {
+  IRequestValidator,
+  ITypedHttpResponse,
+} from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
-import { PayloadTooLargeError } from "../../src/lib/Errors";
-import { defineMiddleware } from "../../src/lib/TypedMiddleware";
-import { TypeweaverApp } from "../../src/lib/TypeweaverApp";
-import { TypeweaverRouter } from "../../src/lib/TypeweaverRouter";
+import { PayloadTooLargeError } from "../../src/lib/Errors.js";
+import { defineMiddleware } from "../../src/lib/TypedMiddleware.js";
+import { TypeweaverApp } from "../../src/lib/TypeweaverApp.js";
+import { TypeweaverRouter } from "../../src/lib/TypeweaverRouter.js";
 import {
   BASE_URL,
   del,
@@ -16,14 +24,15 @@ import {
   expectJson,
   get,
   head,
+  noopResponseValidator,
   noopValidator,
   post,
   postRaw,
   put,
-} from "../helpers";
-import type { RequestHandler } from "../../src/lib/RequestHandler";
-import type { TypeweaverAppOptions } from "../../src/lib/TypeweaverApp";
-import type { TypeweaverRouterOptions } from "../../src/lib/TypeweaverRouter";
+} from "../helpers.js";
+import type { RequestHandler } from "../../src/lib/RequestHandler.js";
+import type { TypeweaverAppOptions } from "../../src/lib/TypeweaverApp.js";
+import type { TypeweaverRouterOptions } from "../../src/lib/TypeweaverRouter.js";
 
 const failingValidator: IRequestValidator = {
   validate: () => {
@@ -73,6 +82,7 @@ class TestRouter extends TypeweaverRouter<TestHandlers> {
       HttpMethod.GET,
       "/todos",
       options.validateRequests === false ? noopValidator : failingValidator,
+      noopResponseValidator,
       async (req, ctx) => this.requestHandlers.handleGetTodos(req, ctx)
     );
 
@@ -81,6 +91,7 @@ class TestRouter extends TypeweaverRouter<TestHandlers> {
       HttpMethod.POST,
       "/todos",
       options.validateRequests === false ? noopValidator : failingValidator,
+      noopResponseValidator,
       async (req, ctx) => this.requestHandlers.handleCreateTodo(req, ctx)
     );
 
@@ -89,6 +100,7 @@ class TestRouter extends TypeweaverRouter<TestHandlers> {
       HttpMethod.GET,
       "/todos/:todoId",
       options.validateRequests === false ? noopValidator : failingValidator,
+      noopResponseValidator,
       async (req, ctx) => this.requestHandlers.handleGetTodo(req, ctx)
     );
   }
@@ -103,6 +115,7 @@ class ValidatingTestRouter extends TypeweaverRouter<TestHandlers> {
       HttpMethod.POST,
       "/todos",
       failingValidator,
+      noopResponseValidator,
       async (req, ctx) => this.requestHandlers.handleCreateTodo(req, ctx)
     );
   }
@@ -117,6 +130,7 @@ class BodyOnlyValidatingRouter extends TypeweaverRouter<TestHandlers> {
       HttpMethod.POST,
       "/todos",
       bodyOnlyFailingValidator,
+      noopResponseValidator,
       async (req, ctx) => this.requestHandlers.handleCreateTodo(req, ctx)
     );
   }
@@ -207,7 +221,12 @@ describe("TypeweaverApp", () => {
 
       const res = await app.fetch(get("/nonexistent"));
 
-      await expectErrorResponse(res, 404, "NOT_FOUND");
+      const data = await expectErrorResponse(
+        res,
+        notFoundDefaultError.statusCode,
+        notFoundDefaultError.code
+      );
+      expect(data.message).toBe(notFoundDefaultError.message);
     });
 
     test("should return 405 for wrong HTTP method on existing path", async () => {
@@ -215,7 +234,12 @@ describe("TypeweaverApp", () => {
 
       const res = await app.fetch(del("/todos"));
 
-      await expectErrorResponse(res, 405, "METHOD_NOT_ALLOWED");
+      const data = await expectErrorResponse(
+        res,
+        methodNotAllowedDefaultError.statusCode,
+        methodNotAllowedDefaultError.code
+      );
+      expect(data.message).toBe(methodNotAllowedDefaultError.message);
       const allow = res.headers.get("allow");
       expect(allow).toContain("GET");
       expect(allow).toContain("POST");
@@ -515,6 +539,7 @@ describe("TypeweaverApp", () => {
             HttpMethod.GET,
             "/users",
             noopValidator,
+            noopResponseValidator,
             async (req, ctx) => this.requestHandlers.handleGetUsers(req, ctx)
           );
         }
@@ -556,7 +581,11 @@ describe("TypeweaverApp", () => {
 
       const res = await app.fetch(post("/todos", { title: "bad" }));
 
-      const data = await expectErrorResponse(res, 400, "VALIDATION_ERROR");
+      const data = await expectErrorResponse(
+        res,
+        validationDefaultError.statusCode,
+        validationDefaultError.code
+      );
       expect(data.issues).toBeDefined();
       expect(data.issues.header[0]).toEqual({
         message: "bad header",
@@ -577,7 +606,11 @@ describe("TypeweaverApp", () => {
 
       const res = await app.fetch(post("/todos", { title: 123 }));
 
-      const data = await expectErrorResponse(res, 400, "VALIDATION_ERROR");
+      const data = await expectErrorResponse(
+        res,
+        validationDefaultError.statusCode,
+        validationDefaultError.code
+      );
       expect(data.issues.body).toHaveLength(1);
       expect(data.issues.body[0]).toEqual({
         message: "Expected string",
@@ -593,7 +626,7 @@ describe("TypeweaverApp", () => {
 
     test("should handle validation errors with custom handler", async () => {
       const app = createValidatingApp({
-        handleValidationErrors: async err => ({
+        handleRequestValidationErrors: async err => ({
           statusCode: 422,
           body: { custom: true, message: err.message },
         }),
@@ -611,7 +644,12 @@ describe("TypeweaverApp", () => {
         undefined,
         {
           handleCreateTodo: async () => {
-            throw new HttpResponse(409, {}, { code: "CONFLICT" });
+            throw {
+              type: "ConflictError",
+              statusCode: 409,
+              header: {},
+              body: { code: "CONFLICT" },
+            } satisfies ITypedHttpResponse;
           },
         },
         { onError }
@@ -626,6 +664,7 @@ describe("TypeweaverApp", () => {
     test("should handle HttpResponse errors with custom handler", async () => {
       const app = createApp(
         {
+          validateResponses: false,
           handleHttpResponseErrors: async err => ({
             statusCode: err.statusCode,
             body: { wrapped: true, original: err.body },
@@ -633,7 +672,12 @@ describe("TypeweaverApp", () => {
         },
         {
           handleCreateTodo: async () => {
-            throw new HttpResponse(409, {}, { code: "CONFLICT" });
+            throw {
+              type: "ConflictError",
+              statusCode: 409,
+              header: {},
+              body: { code: "CONFLICT" },
+            } satisfies ITypedHttpResponse;
           },
         }
       );
@@ -710,7 +754,7 @@ describe("TypeweaverApp", () => {
       const onError = vi.fn();
       const app = createValidatingApp(
         {
-          handleValidationErrors: false,
+          handleRequestValidationErrors: false,
           handleUnknownErrors: false,
         },
         undefined,
@@ -728,12 +772,18 @@ describe("TypeweaverApp", () => {
       const onError = vi.fn();
       const app = createApp(
         {
+          validateResponses: false,
           handleHttpResponseErrors: false,
           handleUnknownErrors: false,
         },
         {
           handleCreateTodo: async () => {
-            throw new HttpResponse(409, {}, { code: "CONFLICT" });
+            throw {
+              type: "ConflictError",
+              statusCode: 409,
+              header: {},
+              body: { code: "CONFLICT" },
+            } satisfies ITypedHttpResponse;
           },
         },
         { onError }
@@ -743,12 +793,14 @@ describe("TypeweaverApp", () => {
 
       await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
       expect(onError).toHaveBeenCalledOnce();
-      expect(onError).toHaveBeenCalledWith(expect.any(HttpResponse));
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "ConflictError", statusCode: 409 })
+      );
     });
 
     test("should return 500 when error handler throws", async () => {
       const app = createValidatingApp({
-        handleValidationErrors: () => {
+        handleRequestValidationErrors: () => {
           throw new Error("Handler crashed");
         },
       });
@@ -851,8 +903,12 @@ describe("TypeweaverApp", () => {
         postRaw("/todos", "{ invalid json", "application/json")
       );
 
-      const data = await expectErrorResponse(res, 400, "BAD_REQUEST");
-      expect(data.message).toBe("Malformed request body");
+      const data = await expectErrorResponse(
+        res,
+        badRequestDefaultError.statusCode,
+        badRequestDefaultError.code
+      );
+      expect(data.message).toBe(badRequestDefaultError.message);
     });
 
     test("should NOT call onError for handled BodyParseError", async () => {
@@ -989,7 +1045,12 @@ describe("TypeweaverApp", () => {
         postRaw("/todos", "x".repeat(100), "text/plain")
       );
 
-      await expectErrorResponse(res, 413, "PAYLOAD_TOO_LARGE");
+      const data = await expectErrorResponse(
+        res,
+        payloadTooLargeDefaultError.statusCode,
+        payloadTooLargeDefaultError.code
+      );
+      expect(data.message).toBe(payloadTooLargeDefaultError.message);
     });
 
     test("should accept normal bodies within the limit", async () => {
@@ -1025,7 +1086,50 @@ describe("TypeweaverApp", () => {
 
       const res = await app.fetch(request);
 
-      await expectErrorResponse(res, 413, "PAYLOAD_TOO_LARGE");
+      const data = await expectErrorResponse(
+        res,
+        payloadTooLargeDefaultError.statusCode,
+        payloadTooLargeDefaultError.code
+      );
+      expect(data.message).toBe(payloadTooLargeDefaultError.message);
+    });
+  });
+
+  describe("Default error descriptors", () => {
+    test("should use core default descriptors for built-in runtime errors", async () => {
+      const app = createApp(undefined, {
+        handleGetTodos: async () => {
+          throw new Error("Unexpected failure");
+        },
+      });
+
+      const notFoundResponse = await app.fetch(get("/missing"));
+      const notFoundData = await expectErrorResponse(
+        notFoundResponse,
+        notFoundDefaultError.statusCode,
+        notFoundDefaultError.code
+      );
+      expect(notFoundData.message).toBe(notFoundDefaultError.message);
+
+      const methodNotAllowedResponse = await app.fetch(del("/todos"));
+      const methodNotAllowedData = await expectErrorResponse(
+        methodNotAllowedResponse,
+        methodNotAllowedDefaultError.statusCode,
+        methodNotAllowedDefaultError.code
+      );
+      expect(methodNotAllowedData.message).toBe(
+        methodNotAllowedDefaultError.message
+      );
+
+      const internalServerErrorResponse = await app.fetch(get("/todos"));
+      const internalServerErrorData = await expectErrorResponse(
+        internalServerErrorResponse,
+        internalServerErrorDefaultError.statusCode,
+        internalServerErrorDefaultError.code
+      );
+      expect(internalServerErrorData.message).toBe(
+        internalServerErrorDefaultError.message
+      );
     });
   });
 
@@ -1083,7 +1187,7 @@ describe("TypeweaverApp", () => {
         body: { code: "CUSTOM_UNKNOWN", message: "Caught by unknown handler" },
       }));
       const app = createValidatingApp({
-        handleValidationErrors: false,
+        handleRequestValidationErrors: false,
         handleUnknownErrors: unknownHandler,
       });
 
@@ -1104,12 +1208,18 @@ describe("TypeweaverApp", () => {
       }));
       const app = createApp(
         {
+          validateResponses: false,
           handleHttpResponseErrors: false,
           handleUnknownErrors: unknownHandler,
         },
         {
           handleCreateTodo: async () => {
-            throw new HttpResponse(409, {}, { code: "CONFLICT" });
+            throw {
+              type: "ConflictError",
+              statusCode: 409,
+              header: {},
+              body: { code: "CONFLICT" },
+            } satisfies ITypedHttpResponse;
           },
         }
       );
@@ -1119,7 +1229,7 @@ describe("TypeweaverApp", () => {
       await expectErrorResponse(res, 500, "CUSTOM_UNKNOWN");
       expect(unknownHandler).toHaveBeenCalledOnce();
       expect(unknownHandler).toHaveBeenCalledWith(
-        expect.any(HttpResponse),
+        expect.objectContaining({ type: "ConflictError", statusCode: 409 }),
         expect.anything()
       );
     });

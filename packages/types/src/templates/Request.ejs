@@ -7,18 +7,6 @@
  */
 
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import {
-    type <%= pascalCaseOperationId %>Response,
-    <% for (const ownResponse of ownErrorResponses) { %>
-        <%= ownResponse.name %>Response,
-    <% } %>
-} from "<%= responseFile %>";
-<% for (const sharedError of sharedErrorResponses) { %>
-import { <%= sharedError.name %>Response } from "<%= sharedError.path %>";
-<% } %>
-<% for (const entityError of entityErrorResponses) { %>
-import { <%= entityError.name %>Response } from "<%= entityError.path %>";
-<% } %>
 
 <% if (headerTsType) { %>
 export type I<%= pascalCaseOperationId %>RequestHeader = <%- headerTsType %>
@@ -45,15 +33,3 @@ export type I<%= pascalCaseOperationId %>Request = {
     <%= bodyTsType ? `body: I${pascalCaseOperationId}RequestBody;` : "" %>
 };
 
-<% if (!hasSuccessResponses) { %>
-    export type Successful<%= pascalCaseOperationId %>Response = never;
-<% } else if (!hasErrorResponses) { %>
-    export type Successful<%= pascalCaseOperationId %>Response = <%= pascalCaseOperationId %>Response;
-<% } else { %>
-    export type Successful<%= pascalCaseOperationId %>Response = Exclude<<%= pascalCaseOperationId %>Response, <%= [
-        ...sharedErrorResponses,
-        ...ownErrorResponses,
-        ...entityErrorResponses,
-    ].map(({ name }) => `${name}Response`).join(" | ") %>
-    >;
-<% } %>

@@ -1,13 +1,13 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { SubTodoNotChangeableErrorResponse } from "../..";
-import { createDataFactory } from "../createDataFactory";
-import { createResponse } from "../createResponse";
+import { createSubTodoNotChangeableErrorResponse as generatedCreateSubTodoNotChangeableErrorResponse } from "../../test-project/output/responses/SubTodoNotChangeableErrorResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createResponse } from "../createResponse.js";
 import type {
   ISubTodoNotChangeableErrorResponse,
   ISubTodoNotChangeableErrorResponseBody,
   ISubTodoNotChangeableErrorResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 export const createSubTodoNotChangeableErrorResponseHeader =
   createDataFactory<ISubTodoNotChangeableErrorResponseHeader>(() => ({
@@ -60,7 +60,7 @@ type SubTodoNotChangeableErrorResponseInput = {
 
 export function createSubTodoNotChangeableErrorResponse(
   input: SubTodoNotChangeableErrorResponseInput = {}
-): SubTodoNotChangeableErrorResponse {
+): ISubTodoNotChangeableErrorResponse {
   const responseData = createResponse<
     ISubTodoNotChangeableErrorResponse,
     ISubTodoNotChangeableErrorResponseBody,
@@ -75,5 +75,5 @@ export function createSubTodoNotChangeableErrorResponse(
     },
     input
   );
-  return new SubTodoNotChangeableErrorResponse(responseData);
+  return generatedCreateSubTodoNotChangeableErrorResponse(responseData);
 }

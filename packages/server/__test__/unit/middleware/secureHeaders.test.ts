@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { executeMiddlewarePipeline } from "../../../src/lib/Middleware";
-import { secureHeaders } from "../../../src/lib/middleware/secureHeaders";
-import { createServerContext } from "../../helpers";
+import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
+import { secureHeaders } from "../../../src/lib/middleware/secureHeaders.js";
+import { createServerContext } from "../../helpers.js";
 
 describe("secureHeaders", () => {
   test("should set all default security headers", async () => {

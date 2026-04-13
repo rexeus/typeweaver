@@ -47,7 +47,8 @@
     "tmp/",
     ".DS_Store",
     "packages/cli/test/outputs/",
-    "packages/test-utils/src/test-project/output/"
+    "packages/test-utils/src/test-project/output/",
+    "**/CHANGELOG.md"
   ],
   "overrides": [
     {

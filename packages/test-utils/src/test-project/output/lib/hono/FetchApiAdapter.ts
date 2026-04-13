@@ -13,7 +13,7 @@ import type {
   IHttpRequest,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
-import { HttpAdapter } from "./HttpAdapter";
+import { HttpAdapter } from "./HttpAdapter.js";
 
 type ResponseBody = ConstructorParameters<typeof Response>[0];
 

@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-core",
-  "version": "0.7.0",
+  "version": "0.10.1",
   "description": "Runtime utilities and shared types to drive type-safe API definitions. Powered by Typeweaver 🧵✨",
   "type": "module",
   "sideEffects": false,
@@ -29,7 +29,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "format": "oxfmt",
-    "build": "tsdown && cp ../../LICENSE ../../NOTICE ./dist/",
+    "build": "tsdown",
+    "test": "vitest run",
     "prepack": "npm run build",
     "preversion": "npm run build"
   },
@@ -57,6 +58,7 @@
     "zod": "^4.3.0"
   },
   "devDependencies": {
+    "vitest": "^4.0.18",
     "zod": "^4.3.6"
   }
 }

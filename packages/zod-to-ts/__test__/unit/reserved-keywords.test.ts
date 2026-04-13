@@ -1,13 +1,13 @@
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { TsTypeNode } from "../../src/TsTypeGenerator";
-import { TsTypePrinter } from "../../src/TsTypePrinter";
+import { fromZod } from "../../src/tsTypeGenerator.js";
+import { print } from "../../src/tsTypePrinter.js";
 
 function zodToTs(schema: z.ZodType): string {
-  return TsTypePrinter.print(TsTypeNode.fromZod(schema));
+  return print(fromZod(schema));
 }
 
-describe("TsTypeNode – reserved keyword property quoting", () => {
+describe("fromZod reserved keyword property quoting", () => {
   test("quotes reserved keyword 'delete' in object property", () => {
     const result = zodToTs(z.object({ delete: z.string() }));
     expect(result).toContain('"delete"');

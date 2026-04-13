@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { StateMap } from "../../src/lib/StateMap";
+import { StateMap } from "../../src/lib/StateMap.js";
 
 describe("StateMap", () => {
   test("should set and get a value", () => {

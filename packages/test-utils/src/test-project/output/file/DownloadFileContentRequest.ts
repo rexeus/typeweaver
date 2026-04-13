@@ -7,19 +7,6 @@
  */
 
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { type DownloadFileContentResponse } from "./DownloadFileContentResponse";
-
-import { ForbiddenErrorResponse } from "../shared/ForbiddenErrorResponse";
-
-import { InternalServerErrorResponse } from "../shared/InternalServerErrorResponse";
-
-import { TooManyRequestsErrorResponse } from "../shared/TooManyRequestsErrorResponse";
-
-import { UnauthorizedErrorResponse } from "../shared/UnauthorizedErrorResponse";
-
-import { UnsupportedMediaTypeErrorResponse } from "../shared/UnsupportedMediaTypeErrorResponse";
-
-import { ValidationErrorResponse } from "../shared/ValidationErrorResponse";
 
 export type IDownloadFileContentRequestHeader = {
   Authorization: string;
@@ -35,13 +22,3 @@ export type IDownloadFileContentRequest = {
   header: IDownloadFileContentRequestHeader;
   param: IDownloadFileContentRequestParam;
 };
-
-export type SuccessfulDownloadFileContentResponse = Exclude<
-  DownloadFileContentResponse,
-  | ForbiddenErrorResponse
-  | InternalServerErrorResponse
-  | TooManyRequestsErrorResponse
-  | UnauthorizedErrorResponse
-  | UnsupportedMediaTypeErrorResponse
-  | ValidationErrorResponse
->;

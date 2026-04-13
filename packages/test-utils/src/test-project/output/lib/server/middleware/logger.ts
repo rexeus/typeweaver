@@ -1,4 +1,4 @@
-import { defineMiddleware } from "../TypedMiddleware";
+import { defineMiddleware } from "../TypedMiddleware.js";
 
 export type LogData = {
   readonly method: string;

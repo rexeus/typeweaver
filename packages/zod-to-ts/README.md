@@ -18,7 +18,7 @@ npm install @rexeus/typeweaver-zod-to-ts
 ## 💡 How to use
 
 ```typescript
-import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
+import { fromZod, print } from "@rexeus/typeweaver-zod-to-ts";
 import { z } from "zod";
 
 // Define a Zod schema
@@ -30,10 +30,10 @@ const userSchema = z.object({
 });
 
 // Convert to TypeScript AST node
-const typeNode = TsTypeNode.fromZod(userSchema);
+const typeNode = fromZod(userSchema);
 
 // Print as TypeScript type string
-const typeString = TsTypePrinter.print(typeNode);
+const typeString = print(typeNode);
 // Output: { id: string; name: string; email: string; age?: number | undefined; }
 ```
 
@@ -58,7 +58,7 @@ The library provides complete TypeScript type generation for the following Zod s
 The following Zod types are not yet implemented and will fall back to `unknown` type:
 
 - **Advanced types**: `z.lazy()`, `z.templateLiteral()`, `z.custom()`, `z.transform()`, `z.pipe()`
-- **Modifiers**: `z.nonOptional()`, `z.readonly()`, `z.default()`, `z.catch()`
+- **Modifiers**: `z.nonOptional()`, `z.readonly()`, `z.catch()`
 - **Special types**: `z.nan()`, `z.file()`, `z.success()`
 
 > **Note**: When encountering unsupported Zod types, the library gracefully falls back to

@@ -1,7 +1,8 @@
+import { HttpMethod } from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
-import { executeMiddlewarePipeline } from "../../../src/lib/Middleware";
-import { cors } from "../../../src/lib/middleware/cors";
-import { createServerContext } from "../../helpers";
+import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
+import { cors } from "../../../src/lib/middleware/cors.js";
+import { createServerContext } from "../../helpers.js";
 
 describe("cors", () => {
   describe("simple requests", () => {
@@ -165,7 +166,7 @@ describe("cors", () => {
     test("should short-circuit OPTIONS with 204", async () => {
       const mw = cors();
       const ctx = createServerContext({
-        method: "OPTIONS",
+        method: HttpMethod.OPTIONS,
         header: {
           origin: "https://app.com",
           "access-control-request-method": "POST",
@@ -189,7 +190,7 @@ describe("cors", () => {
     test("should include allowed methods in preflight response", async () => {
       const mw = cors();
       const ctx = createServerContext({
-        method: "OPTIONS",
+        method: HttpMethod.OPTIONS,
         header: {
           origin: "https://app.com",
           "access-control-request-method": "PUT",
@@ -210,7 +211,7 @@ describe("cors", () => {
     test("should use custom allow methods", async () => {
       const mw = cors({ allowMethods: ["GET", "POST"] });
       const ctx = createServerContext({
-        method: "OPTIONS",
+        method: HttpMethod.OPTIONS,
         header: {
           origin: "https://app.com",
           "access-control-request-method": "GET",
@@ -231,7 +232,7 @@ describe("cors", () => {
     test("should reflect requested headers when none configured", async () => {
       const mw = cors();
       const ctx = createServerContext({
-        method: "OPTIONS",
+        method: HttpMethod.OPTIONS,
         header: {
           origin: "https://app.com",
           "access-control-request-method": "POST",
@@ -255,7 +256,7 @@ describe("cors", () => {
         allowHeaders: ["Content-Type", "X-API-Key"],
       });
       const ctx = createServerContext({
-        method: "OPTIONS",
+        method: HttpMethod.OPTIONS,
         header: {
           origin: "https://app.com",
           "access-control-request-method": "POST",
@@ -277,7 +278,7 @@ describe("cors", () => {
     test("should set max-age on preflight", async () => {
       const mw = cors({ maxAge: 3600 });
       const ctx = createServerContext({
-        method: "OPTIONS",
+        method: HttpMethod.OPTIONS,
         header: {
           origin: "https://app.com",
           "access-control-request-method": "POST",
@@ -296,7 +297,7 @@ describe("cors", () => {
     test("should not treat regular OPTIONS as preflight", async () => {
       const mw = cors();
       const ctx = createServerContext({
-        method: "OPTIONS",
+        method: HttpMethod.OPTIONS,
       });
       let handlerCalled = false;
 

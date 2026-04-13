@@ -1,5 +1,34 @@
 # @rexeus/typeweaver-zod-to-ts
 
+## 0.10.1
+
+### Patch Changes
+
+- 5389382: Switch internal bundler to rolldown.
+
+## 0.10.0
+
+## 0.9.2
+
+## 0.9.1
+
+## 0.9.0
+
+### Minor Changes
+
+- f3dfcf5: Switch typeweaver to the new functional spec-entrypoint architecture.
+  This removes the legacy filesystem- and class-based definition flow in favor of
+  `defineSpec`, `defineOperation`, `defineResponse`, and `defineDerivedResponse`,
+  and updates the CLI, generators, runtime defaults, and generated outputs to use
+  the new normalized spec pipeline.
+  ### Breaking changes
+  - Remove legacy `Http*Definition` classes
+  - Remove filesystem-based definition discovery
+  - Require a spec entrypoint file for CLI generation
+  - Update generated runtime/output structure and centralized default errors
+
+## 0.8.0
+
 ## 0.7.0
 
 ## 0.6.5

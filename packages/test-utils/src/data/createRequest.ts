@@ -1,5 +1,5 @@
 import type { IHttpRequest } from "@rexeus/typeweaver-core";
-import { createData } from "./createData";
+import { createData } from "./createData.js";
 
 /**
  * Creates a fully populated test request by composing individual part creators.

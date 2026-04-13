@@ -13,7 +13,7 @@ import type {
   IHttpRequest,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
-import { BodyParseError, PayloadTooLargeError, ResponseSerializationError } from "./Errors";
+import { BodyParseError, PayloadTooLargeError, ResponseSerializationError } from "./Errors.js";
 
 export type FetchApiAdapterOptions = {
   readonly maxBodySize?: number;
@@ -246,7 +246,6 @@ export class FetchApiAdapter {
 
         totalBytes += value.byteLength;
         if (totalBytes > this.maxBodySize) {
-          await reader.cancel();
           throw new PayloadTooLargeError(totalBytes, this.maxBodySize);
         }
         chunks.push(value);
@@ -262,14 +261,14 @@ export class FetchApiAdapter {
     });
   }
 
-  private static concatChunks(chunks: Uint8Array[], totalBytes: number): Uint8Array {
+  private static concatChunks(chunks: Uint8Array[], totalBytes: number): ArrayBuffer {
     const buffer = new Uint8Array(totalBytes);
     let offset = 0;
     for (const chunk of chunks) {
       buffer.set(chunk, offset);
       offset += chunk.byteLength;
     }
-    return buffer;
+    return buffer.buffer as ArrayBuffer;
   }
 
   private static serializeResponseBody(body: any): string | ArrayBuffer | Blob | null {

@@ -1,13 +1,13 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { GetFileMetadataSuccessResponse } from "../..";
-import { createDataFactory } from "../createDataFactory";
-import { createResponse } from "../createResponse";
+import { createGetFileMetadataSuccessResponse as generatedCreateGetFileMetadataSuccessResponse } from "../../test-project/output/responses/GetFileMetadataSuccessResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createResponse } from "../createResponse.js";
 import type {
   IGetFileMetadataSuccessResponse,
   IGetFileMetadataSuccessResponseBody,
   IGetFileMetadataSuccessResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 export const createGetFileMetadataSuccessResponseHeader =
   createDataFactory<IGetFileMetadataSuccessResponseHeader>(() => ({
@@ -31,7 +31,7 @@ type GetFileMetadataSuccessResponseInput = {
 
 export function createGetFileMetadataSuccessResponse(
   input: GetFileMetadataSuccessResponseInput = {}
-): GetFileMetadataSuccessResponse {
+): IGetFileMetadataSuccessResponse {
   const responseData = createResponse<
     IGetFileMetadataSuccessResponse,
     IGetFileMetadataSuccessResponseBody,
@@ -46,5 +46,5 @@ export function createGetFileMetadataSuccessResponse(
     },
     input
   );
-  return new GetFileMetadataSuccessResponse(responseData);
+  return generatedCreateGetFileMetadataSuccessResponse(responseData);
 }

@@ -1,16 +1,21 @@
-import { HttpResponse } from "@rexeus/typeweaver-core";
-import type { IHttpResponse } from "@rexeus/typeweaver-core";
-import { AccountRouter } from "../test-project/output/account/AccountRouter";
-import { AuthRouter } from "../test-project/output/auth/AuthRouter";
+import type {
+  IHttpResponse,
+  ITypedHttpResponse,
+} from "@rexeus/typeweaver-core";
+import { AccountRouter } from "../test-project/output/account/AccountRouter.js";
+import { AuthRouter } from "../test-project/output/auth/AuthRouter.js";
 import {
   defineMiddleware,
   TypeweaverApp,
-} from "../test-project/output/lib/server";
-import { TodoRouter } from "../test-project/output/todo/TodoRouter";
-import { ServerAccountHandlers } from "./handlers/ServerAccountHandlers";
-import { ServerAuthHandlers } from "./handlers/ServerAuthHandlers";
-import { ServerTodoHandlers } from "./handlers/ServerTodoHandlers";
-import type { TypeweaverRouterOptions } from "../test-project/output/lib/server";
+} from "../test-project/output/lib/server/index.js";
+import { TodoRouter } from "../test-project/output/todo/TodoRouter.js";
+import { ServerAccountHandlers } from "./handlers/ServerAccountHandlers.js";
+import { ServerAuthHandlers } from "./handlers/ServerAuthHandlers.js";
+import { ServerTodoHandlers } from "./handlers/ServerTodoHandlers.js";
+import type {
+  RequestHandler,
+  TypeweaverRouterOptions,
+} from "../test-project/output/lib/server/index.js";
 
 /**
  * Configuration options for TypeweaverApp-based test instances.
@@ -21,14 +26,17 @@ import type { TypeweaverRouterOptions } from "../test-project/output/lib/server"
  */
 export type TestAppOptions = {
   /** Error to throw from todo handlers (simulates handler failures). */
-  readonly throwTodoError?: Error | HttpResponse;
+  readonly throwTodoError?: Error | ITypedHttpResponse;
   /** Error to throw from auth handlers. */
-  readonly throwAuthError?: Error | HttpResponse;
+  readonly throwAuthError?: Error | ITypedHttpResponse;
   /** Error to throw from account handlers. */
-  readonly throwAccountError?: Error | HttpResponse;
+  readonly throwAccountError?: Error | ITypedHttpResponse;
   /** Custom response to return for all requests (bypasses handlers). */
-  readonly customResponses?: HttpResponse | IHttpResponse;
-} & Omit<TypeweaverRouterOptions<unknown>, "requestHandlers">;
+  readonly customResponses?: IHttpResponse;
+} & Omit<
+  TypeweaverRouterOptions<Record<string, RequestHandler<any, any, any>>>,
+  "requestHandlers"
+>;
 
 /**
  * Creates a TypeweaverApp with all generated test routers (Todo, Auth, Account) mounted.
@@ -54,22 +62,28 @@ export function createTestApp(options?: TestAppOptions): TypeweaverApp {
   const todoRouter = new TodoRouter({
     requestHandlers: new ServerTodoHandlers(options?.throwTodoError),
     validateRequests: options?.validateRequests,
+    validateResponses: options?.validateResponses,
     handleHttpResponseErrors: options?.handleHttpResponseErrors,
-    handleValidationErrors: options?.handleValidationErrors,
+    handleRequestValidationErrors: options?.handleRequestValidationErrors,
+    handleResponseValidationErrors: options?.handleResponseValidationErrors,
     handleUnknownErrors: options?.handleUnknownErrors,
   });
   const authRouter = new AuthRouter({
     requestHandlers: new ServerAuthHandlers(options?.throwAuthError),
     validateRequests: options?.validateRequests,
+    validateResponses: options?.validateResponses,
     handleHttpResponseErrors: options?.handleHttpResponseErrors,
-    handleValidationErrors: options?.handleValidationErrors,
+    handleRequestValidationErrors: options?.handleRequestValidationErrors,
+    handleResponseValidationErrors: options?.handleResponseValidationErrors,
     handleUnknownErrors: options?.handleUnknownErrors,
   });
   const accountRouter = new AccountRouter({
     requestHandlers: new ServerAccountHandlers(options?.throwAccountError),
     validateRequests: options?.validateRequests,
+    validateResponses: options?.validateResponses,
     handleHttpResponseErrors: options?.handleHttpResponseErrors,
-    handleValidationErrors: options?.handleValidationErrors,
+    handleRequestValidationErrors: options?.handleRequestValidationErrors,
+    handleResponseValidationErrors: options?.handleResponseValidationErrors,
     handleUnknownErrors: options?.handleUnknownErrors,
   });
 

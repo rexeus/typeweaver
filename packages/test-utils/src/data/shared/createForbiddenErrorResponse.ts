@@ -1,13 +1,13 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { ForbiddenErrorResponse } from "../..";
-import { createDataFactory } from "../createDataFactory";
-import { createErrorResponseHeader } from "../createErrorResponseHeader";
-import { createResponse } from "../createResponse";
+import { createForbiddenErrorResponse as generatedCreateForbiddenErrorResponse } from "../../test-project/output/responses/ForbiddenErrorResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createErrorResponseHeader } from "../createErrorResponseHeader.js";
+import { createResponse } from "../createResponse.js";
 import type {
   IForbiddenErrorResponse,
   IForbiddenErrorResponseBody,
   IForbiddenErrorResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 type ForbiddenErrorResponseInput = {
   statusCode?: number;
@@ -23,7 +23,7 @@ const createForbiddenErrorResponseBody =
 
 export function createForbiddenErrorResponse(
   input: ForbiddenErrorResponseInput = {}
-): ForbiddenErrorResponse {
+): IForbiddenErrorResponse {
   const responseData = createResponse<
     IForbiddenErrorResponse,
     IForbiddenErrorResponseBody,
@@ -38,5 +38,5 @@ export function createForbiddenErrorResponse(
     },
     input
   );
-  return new ForbiddenErrorResponse(responseData);
+  return generatedCreateForbiddenErrorResponse(responseData);
 }

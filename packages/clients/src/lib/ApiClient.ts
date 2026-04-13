@@ -11,17 +11,11 @@ import type {
   IHttpQuery,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
-import { NetworkError } from "./NetworkError";
-import { PathParameterError } from "./PathParameterError";
-import { RequestCommand } from "./RequestCommand";
-import { ResponseParseError } from "./ResponseParseError";
-import type { NetworkErrorCode } from "./NetworkError";
-import type { ProcessResponseOptions } from "./RequestCommand";
-
-/**
- * Configuration options for handling unknown responses.
- */
-export type UnknownResponseHandling = "throw" | "passthrough";
+import { NetworkError } from "./NetworkError.js";
+import { PathParameterError } from "./PathParameterError.js";
+import { RequestCommand } from "./RequestCommand.js";
+import { ResponseParseError } from "./ResponseParseError.js";
+import type { NetworkErrorCode } from "./NetworkError.js";
 
 /**
  * Configuration options for ApiClient initialization.
@@ -31,10 +25,6 @@ export type ApiClientProps = {
   readonly fetchFn?: typeof globalThis.fetch;
   /** Base URL for API requests */
   readonly baseUrl: string;
-  /** How to handle unknown responses. Defaults to "throw" */
-  readonly unknownResponseHandling?: UnknownResponseHandling;
-  /** Predicate to determine if a status code represents success. Defaults to 2xx status codes */
-  readonly isSuccessStatusCode?: (statusCode: number) => boolean;
   /** Request timeout in milliseconds. When set, requests will be aborted after this duration */
   readonly timeoutMs?: number;
 };
@@ -60,8 +50,6 @@ const NETWORK_ERROR_MESSAGES: Readonly<
 export abstract class ApiClient {
   private readonly fetchFn: typeof globalThis.fetch;
   public readonly baseUrl: string;
-  public readonly unknownResponseHandling: UnknownResponseHandling;
-  public readonly isSuccessStatusCode: (statusCode: number) => boolean;
   private readonly timeoutMs: number | undefined;
 
   protected constructor(props: ApiClientProps) {
@@ -79,18 +67,7 @@ export abstract class ApiClient {
       throw new Error("timeoutMs must be a positive finite number");
     }
 
-    this.unknownResponseHandling = props.unknownResponseHandling ?? "throw";
-    this.isSuccessStatusCode =
-      props.isSuccessStatusCode ??
-      ((statusCode: number) => statusCode >= 200 && statusCode < 300);
     this.timeoutMs = props.timeoutMs;
-  }
-
-  protected get processResponseOptions(): ProcessResponseOptions {
-    return {
-      unknownResponseHandling: this.unknownResponseHandling,
-      isSuccessStatusCode: this.isSuccessStatusCode,
-    };
   }
 
   protected async execute(request: RequestCommand): Promise<IHttpResponse> {

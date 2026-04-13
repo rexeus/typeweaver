@@ -1,0 +1,39 @@
+import {
+  defineOperation,
+  defineResponse,
+  HttpMethod,
+  HttpStatusCode,
+} from "@rexeus/typeweaver-core";
+import { z } from "zod";
+import {
+  defaultRequestHeadersWithPayload,
+  defaultResponseHeader,
+  sharedResponses,
+} from "../shared/index.js";
+import { accountSchema } from "./accountSchema.js";
+
+export const RegisterAccountDefinition = defineOperation({
+  operationId: "RegisterAccount",
+  path: "/accounts",
+  summary: "Register new account",
+  method: HttpMethod.POST,
+  request: {
+    body: z.object({
+      email: z.email().max(256),
+      password: z.string().max(256),
+    }),
+    header: defaultRequestHeadersWithPayload.omit({
+      Authorization: true,
+    }),
+  },
+  responses: [
+    defineResponse({
+      statusCode: HttpStatusCode.CREATED,
+      description: "Account created successfully",
+      body: accountSchema,
+      name: "RegisterAccountSuccess",
+      header: defaultResponseHeader,
+    }),
+    ...sharedResponses,
+  ],
+});

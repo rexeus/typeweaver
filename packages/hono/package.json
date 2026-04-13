@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-hono",
-  "version": "0.7.0",
+  "version": "0.10.1",
   "description": "Generates Hono routers and handlers straight from your API definitions. Powered by Typeweaver 🧵✨",
   "type": "module",
   "sideEffects": false,
@@ -27,9 +27,9 @@
     "NOTICE"
   ],
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "format": "oxfmt",
-    "build": "tsdown && mkdir -p ./dist/templates ./dist/lib && cp -r ./src/templates/* ./dist/templates/ && cp -r ./src/lib/* ./dist/lib/ && cp ../../LICENSE ../../NOTICE ./dist/",
+    "build": "tsdown",
     "test": "vitest --run",
     "prepack": "npm run build",
     "preversion": "npm run build"
@@ -61,10 +61,7 @@
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "hono": "^4.11.3",
+    "hono": "^4.12.9",
     "test-utils": "file:../test-utils"
-  },
-  "dependencies": {
-    "case": "^1.6.3"
   }
 }

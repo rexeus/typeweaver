@@ -1,13 +1,13 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { TooManyRequestsErrorResponse } from "../..";
-import { createDataFactory } from "../createDataFactory";
-import { createErrorResponseHeader } from "../createErrorResponseHeader";
-import { createResponse } from "../createResponse";
+import { createTooManyRequestsErrorResponse as generatedCreateTooManyRequestsErrorResponse } from "../../test-project/output/responses/TooManyRequestsErrorResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createErrorResponseHeader } from "../createErrorResponseHeader.js";
+import { createResponse } from "../createResponse.js";
 import type {
   ITooManyRequestsErrorResponse,
   ITooManyRequestsErrorResponseBody,
   ITooManyRequestsErrorResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 type TooManyRequestsErrorResponseInput = {
   statusCode?: number;
@@ -23,7 +23,7 @@ const createTooManyRequestsErrorResponseBody =
 
 export function createTooManyRequestsErrorResponse(
   input: TooManyRequestsErrorResponseInput = {}
-): TooManyRequestsErrorResponse {
+): ITooManyRequestsErrorResponse {
   const responseData = createResponse<
     ITooManyRequestsErrorResponse,
     ITooManyRequestsErrorResponseBody,
@@ -38,5 +38,5 @@ export function createTooManyRequestsErrorResponse(
     },
     input
   );
-  return new TooManyRequestsErrorResponse(responseData);
+  return generatedCreateTooManyRequestsErrorResponse(responseData);
 }

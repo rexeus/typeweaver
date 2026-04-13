@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-types",
-  "version": "0.7.0",
+  "version": "0.10.1",
   "description": "Generates request and response types plus validators aligned with your API contract. Powered by Typeweaver 🧵✨",
   "type": "module",
   "sideEffects": false,
@@ -27,9 +27,9 @@
     "NOTICE"
   ],
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "format": "oxfmt",
-    "build": "tsdown && mkdir -p ./dist/templates ./dist/lib && cp -r ./src/templates/* ./dist/templates/ && node scripts/compile-lib.mjs && cp src/lib-declarations/*.d.ts dist/lib/ && cp src/lib/index.ts dist/lib/ && cp ../../LICENSE ../../NOTICE ./dist/",
+    "build": "tsdown",
     "test": "vitest --run",
     "prepack": "npm run build",
     "preversion": "npm run build"
@@ -61,11 +61,9 @@
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "oxc-transform": "^0.115.0",
     "test-utils": "file:../test-utils"
   },
   "dependencies": {
-    "@rexeus/typeweaver-zod-to-ts": "workspace:^",
-    "case": "^1.6.3"
+    "@rexeus/typeweaver-zod-to-ts": "workspace:^"
   }
 }
