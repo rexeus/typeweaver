@@ -12,7 +12,7 @@ import type {
   IRequestValidator,
   IResponseValidator,
 } from "@rexeus/typeweaver-core";
-import type { RequestHandler } from "./RequestHandler";
+import type { RequestHandler } from "./RequestHandler.js";
 import type {
   HttpResponseErrorHandler,
   ResponseValidationErrorHandler,
@@ -20,7 +20,7 @@ import type {
   RouterErrorConfig,
   UnknownErrorHandler,
   RequestValidationErrorHandler,
-} from "./Router";
+} from "./Router.js";
 
 /**
  * Configuration options for TypeweaverRouter instances.

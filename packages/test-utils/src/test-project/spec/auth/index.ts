@@ -1,2 +1,2 @@
-export { AccessTokenDefinition } from "./AccessTokenDefinition";
-export { RefreshTokenDefinition } from "./RefreshTokenDefinition";
+export { AccessTokenDefinition } from "./AccessTokenDefinition.js";
+export { RefreshTokenDefinition } from "./RefreshTokenDefinition.js";

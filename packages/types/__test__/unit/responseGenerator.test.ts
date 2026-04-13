@@ -3,7 +3,7 @@ import { HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
 import type { GeneratorContext, NormalizedSpec } from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { generate } from "../../src/responseGenerator";
+import { generate } from "../../src/responseGenerator.js";
 
 describe("ResponseGenerator", () => {
   test("emits canonical responses separately from inline operation responses", () => {

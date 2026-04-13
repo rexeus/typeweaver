@@ -1,4 +1,4 @@
-export * from "./fileSchema";
-export { UploadFileDefinition } from "./UploadFileDefinition";
-export { DownloadFileContentDefinition } from "./DownloadFileContentDefinition";
-export { GetFileMetadataDefinition } from "./GetFileMetadataDefinition";
+export * from "./fileSchema.js";
+export { UploadFileDefinition } from "./UploadFileDefinition.js";
+export { DownloadFileContentDefinition } from "./DownloadFileContentDefinition.js";
+export { GetFileMetadataDefinition } from "./GetFileMetadataDefinition.js";

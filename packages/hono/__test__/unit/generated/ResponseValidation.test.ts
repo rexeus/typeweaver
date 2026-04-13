@@ -15,7 +15,7 @@ import {
   buildCreateTodoSuccess,
   expectErrorResponse,
   prepareRequestData,
-} from "../../helpers";
+} from "../../helpers.js";
 
 describe("Response Validation (Hono)", () => {
   describe("field stripping", () => {

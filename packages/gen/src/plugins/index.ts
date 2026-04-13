@@ -1,6 +1,6 @@
-export * from "./types";
-export { BasePlugin } from "./BasePlugin";
-export { createPluginRegistry } from "./pluginRegistry";
-export type { PluginRegistryApi } from "./pluginRegistry";
-export { createPluginContextBuilder } from "./pluginContext";
-export type { PluginContextBuilderApi } from "./pluginContext";
+export * from "./types.js";
+export { BasePlugin } from "./BasePlugin.js";
+export { createPluginRegistry } from "./pluginRegistry.js";
+export type { PluginRegistryApi } from "./pluginRegistry.js";
+export { createPluginContextBuilder } from "./pluginContext.js";
+export type { PluginContextBuilderApi } from "./pluginContext.js";

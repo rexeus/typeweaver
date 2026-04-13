@@ -1,6 +1,6 @@
 import { defineResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { z } from "zod";
-import { defaultResponseHeader } from "../../shared";
+import { defaultResponseHeader } from "../../shared/index.js";
 
 export const TodoNotFoundErrorDefinition = defineResponse({
   name: "TodoNotFoundError",

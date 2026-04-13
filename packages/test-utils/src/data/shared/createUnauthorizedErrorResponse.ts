@@ -1,13 +1,13 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createUnauthorizedErrorResponse as generatedCreateUnauthorizedErrorResponse } from "../../test-project/output/responses/UnauthorizedErrorResponse";
-import { createDataFactory } from "../createDataFactory";
-import { createErrorResponseHeader } from "../createErrorResponseHeader";
-import { createResponse } from "../createResponse";
+import { createUnauthorizedErrorResponse as generatedCreateUnauthorizedErrorResponse } from "../../test-project/output/responses/UnauthorizedErrorResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createErrorResponseHeader } from "../createErrorResponseHeader.js";
+import { createResponse } from "../createResponse.js";
 import type {
   IUnauthorizedErrorResponse,
   IUnauthorizedErrorResponseBody,
   IUnauthorizedErrorResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 type UnauthorizedErrorResponseInput = {
   statusCode?: number;

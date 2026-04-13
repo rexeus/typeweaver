@@ -1,6 +1,6 @@
-import { DuplicateResponseNameError } from "./DuplicateResponseNameError";
-import type { ResponseDefinition } from "./defineResponse";
-import type { ResourceDefinition } from "./defineSpec";
+import { DuplicateResponseNameError } from "./DuplicateResponseNameError.js";
+import type { ResponseDefinition } from "./defineResponse.js";
+import type { ResourceDefinition } from "./defineSpec.js";
 
 /**
  * Iterates through all responses in a spec definition and validates

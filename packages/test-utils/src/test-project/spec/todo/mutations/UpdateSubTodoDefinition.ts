@@ -9,12 +9,12 @@ import {
   defaultRequestHeadersWithPayload,
   defaultResponseHeader,
   sharedResponses,
-} from "../../shared";
-import { SubTodoNotChangeableErrorDefinition } from "../errors/SubTodoNotChangeableErrorDefinition";
-import { SubTodoNotFoundErrorDefinition } from "../errors/SubTodoNotFoundErrorDefinition";
-import { SubTodoStatusTransitionInvalidErrorDefinition } from "../errors/SubTodoStatusTransitionInvalidErrorDefinition";
-import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition";
-import { todoSchema } from "../todoSchema";
+} from "../../shared/index.js";
+import { SubTodoNotChangeableErrorDefinition } from "../errors/SubTodoNotChangeableErrorDefinition.js";
+import { SubTodoNotFoundErrorDefinition } from "../errors/SubTodoNotFoundErrorDefinition.js";
+import { SubTodoStatusTransitionInvalidErrorDefinition } from "../errors/SubTodoStatusTransitionInvalidErrorDefinition.js";
+import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition.js";
+import { todoSchema } from "../todoSchema.js";
 
 export const UpdateSubTodoDefinition = defineOperation({
   operationId: "UpdateSubTodo",

@@ -10,9 +10,9 @@ import {
   defaultResponseHeader,
   listResponseSchema,
   sharedResponses,
-} from "../../shared";
-import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition";
-import { todoSchema } from "../todoSchema";
+} from "../../shared/index.js";
+import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition.js";
+import { todoSchema } from "../todoSchema.js";
 
 const listSubTodosQuerySchema = z.object({
   limit: z.string().optional(),

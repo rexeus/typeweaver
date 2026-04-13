@@ -1,13 +1,13 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createTooManyRequestsErrorResponse as generatedCreateTooManyRequestsErrorResponse } from "../../test-project/output/responses/TooManyRequestsErrorResponse";
-import { createDataFactory } from "../createDataFactory";
-import { createErrorResponseHeader } from "../createErrorResponseHeader";
-import { createResponse } from "../createResponse";
+import { createTooManyRequestsErrorResponse as generatedCreateTooManyRequestsErrorResponse } from "../../test-project/output/responses/TooManyRequestsErrorResponse.js";
+import { createDataFactory } from "../createDataFactory.js";
+import { createErrorResponseHeader } from "../createErrorResponseHeader.js";
+import { createResponse } from "../createResponse.js";
 import type {
   ITooManyRequestsErrorResponse,
   ITooManyRequestsErrorResponseBody,
   ITooManyRequestsErrorResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 type TooManyRequestsErrorResponseInput = {
   statusCode?: number;

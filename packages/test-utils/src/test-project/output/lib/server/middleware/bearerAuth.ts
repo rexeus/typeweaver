@@ -1,7 +1,7 @@
 import { createDefaultErrorBody, unauthorizedDefaultError } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
-import { defineMiddleware } from "../TypedMiddleware";
-import type { ServerContext } from "../ServerContext";
+import { defineMiddleware } from "../TypedMiddleware.js";
+import type { ServerContext } from "../ServerContext.js";
 
 export type BearerAuthOptions = {
   readonly verifyToken: (token: string, ctx: ServerContext) => boolean | Promise<boolean>;

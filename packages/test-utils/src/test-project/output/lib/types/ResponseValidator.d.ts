@@ -7,7 +7,7 @@ import type {
   ResponseValidationError,
   SafeResponseValidationResult,
 } from "@rexeus/typeweaver-core";
-import { Validator } from "./Validator";
+import { Validator } from "./Validator.js";
 
 export type ResponseEntry = {
   readonly name: string;

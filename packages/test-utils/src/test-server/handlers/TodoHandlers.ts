@@ -15,7 +15,7 @@ import {
   createUpdateSubTodoSuccessResponse,
   createUpdateTodoStatusSuccessResponse,
   createUpdateTodoSuccessResponse,
-} from "../../data";
+} from "../../data/index.js";
 import type {
   CreateSubTodoResponse,
   CreateTodoResponse,
@@ -47,8 +47,8 @@ import type {
   UpdateSubTodoResponse,
   UpdateTodoResponse,
   UpdateTodoStatusResponse,
-} from "../..";
-import type { HonoTodoApiHandler } from "../../test-project/output/todo/TodoHono";
+} from "../../index.js";
+import type { HonoTodoApiHandler } from "../../test-project/output/todo/TodoHono.js";
 
 export class TodoHandlers implements HonoTodoApiHandler {
   public constructor(private readonly throwError?: Error | ITypedHttpResponse) {

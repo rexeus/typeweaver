@@ -23,7 +23,7 @@ import {
   MissingDerivedResponseParentError,
   normalizeSpec,
   PathParameterMismatchError,
-} from "../src";
+} from "../src/index.js";
 
 describe("normalizeSpec", () => {
   test("normalizes canonical and inline responses separately", () => {

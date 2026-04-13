@@ -1,4 +1,4 @@
 export {
   collectCanonicalResponses,
   normalizeResponseDefinition,
-} from "./derivedResponseValidation";
+} from "./derivedResponseValidation.js";

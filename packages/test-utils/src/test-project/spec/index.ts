@@ -1,11 +1,11 @@
 import { defineSpec } from "@rexeus/typeweaver-core";
-import { RegisterAccountDefinition } from "./account";
-import { AccessTokenDefinition, RefreshTokenDefinition } from "./auth";
+import { RegisterAccountDefinition } from "./account/index.js";
+import { AccessTokenDefinition, RefreshTokenDefinition } from "./auth/index.js";
 import {
   DownloadFileContentDefinition,
   GetFileMetadataDefinition,
   UploadFileDefinition,
-} from "./file";
+} from "./file/index.js";
 import {
   CreateSubTodoDefinition,
   CreateTodoDefinition,
@@ -22,7 +22,7 @@ import {
   UpdateSubTodoDefinition,
   UpdateTodoDefinition,
   UpdateTodoStatusDefinition,
-} from "./todo";
+} from "./todo/index.js";
 
 export const spec = defineSpec({
   resources: {

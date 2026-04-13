@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { metadataSchema } from "../shared";
+import { metadataSchema } from "../shared/index.js";
 
 export const todoStatus = z.enum(["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]);
 

@@ -2,10 +2,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { BasePlugin } from "@rexeus/typeweaver-gen";
 import type { GeneratorContext } from "@rexeus/typeweaver-gen";
-import { generate as generateRequests } from "./requestGenerator";
-import { generate as generateRequestValidators } from "./requestValidationGenerator";
-import { generate as generateResponses } from "./responseGenerator";
-import { generate as generateResponseValidators } from "./responseValidationGenerator";
+import { generate as generateRequests } from "./requestGenerator.js";
+import { generate as generateRequestValidators } from "./requestValidationGenerator.js";
+import { generate as generateResponses } from "./responseGenerator.js";
+import { generate as generateResponseValidators } from "./responseValidationGenerator.js";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 

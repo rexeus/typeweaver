@@ -5,12 +5,12 @@ import type {
 import { serve } from "@hono/node-server";
 import getPort, { portNumbers } from "get-port";
 import { Hono } from "hono";
-import { AccountHono, AuthHono, TodoHono } from "../";
-import { HonoAdapter } from "../test-project/output/lib/hono";
-import { AccountHandlers } from "./handlers/AccountApiHandler";
-import { AuthHandlers } from "./handlers/AuthHandlers";
-import { TodoHandlers } from "./handlers/TodoHandlers";
-import type { TypeweaverHonoOptions } from "../test-project/output/lib/hono";
+import { AccountHono, AuthHono, TodoHono } from "..//index.js";
+import { HonoAdapter } from "../test-project/output/lib/hono/index.js";
+import { AccountHandlers } from "./handlers/AccountApiHandler.js";
+import { AuthHandlers } from "./handlers/AuthHandlers.js";
+import { TodoHandlers } from "./handlers/TodoHandlers.js";
+import type { TypeweaverHonoOptions } from "../test-project/output/lib/hono/index.js";
 import type { ServerType } from "@hono/node-server";
 
 /**

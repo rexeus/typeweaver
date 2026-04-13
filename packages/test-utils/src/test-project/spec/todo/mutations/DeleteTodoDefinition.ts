@@ -9,8 +9,8 @@ import {
   defaultRequestHeadersWithoutPayload,
   defaultResponseHeader,
   sharedResponses,
-} from "../../shared";
-import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition";
+} from "../../shared/index.js";
+import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition.js";
 
 export const DeleteTodoDefinition = defineOperation({
   operationId: "DeleteTodo",

@@ -1,8 +1,8 @@
 import { unauthorizedDefaultError } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
-import { executeMiddlewarePipeline } from "../../../src/lib/Middleware";
-import { bearerAuth } from "../../../src/lib/middleware/bearerAuth";
-import { createServerContext } from "../../helpers";
+import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
+import { bearerAuth } from "../../../src/lib/middleware/bearerAuth.js";
+import { createServerContext } from "../../helpers.js";
 
 describe("bearerAuth", () => {
   const alwaysValid = () => true;

@@ -1,14 +1,14 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { faker } from "@faker-js/faker";
-import { createDataFactory } from "../createDataFactory";
-import { createJwtToken } from "../createJwtToken";
-import { createRequest } from "../createRequest";
+import { createDataFactory } from "../createDataFactory.js";
+import { createJwtToken } from "../createJwtToken.js";
+import { createRequest } from "../createRequest.js";
 import type {
   ICreateSubTodoRequest,
   ICreateSubTodoRequestBody,
   ICreateSubTodoRequestHeader,
   ICreateSubTodoRequestParam,
-} from "../..";
+} from "../../index.js";
 
 export const createCreateSubTodoRequestHeader =
   createDataFactory<ICreateSubTodoRequestHeader>(() => ({

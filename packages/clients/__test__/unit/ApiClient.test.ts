@@ -22,7 +22,7 @@ import {
   createRawMockFetch,
   sendAndExtractRawResponse,
   sendIgnoringValidation,
-} from "../helpers";
+} from "../helpers.js";
 
 function createMockFetch(
   status: number,

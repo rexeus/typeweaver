@@ -2,8 +2,8 @@ import fs from "node:fs";
 import type { SpecDefinition } from "@rexeus/typeweaver-core";
 import { normalizeSpec } from "@rexeus/typeweaver-gen";
 import type { NormalizedSpec } from "@rexeus/typeweaver-gen";
-import { bundle } from "./spec/specBundler";
-import { importDefinition } from "./spec/specImporter";
+import { bundle } from "./spec/specBundler.js";
+import { importDefinition } from "./spec/specImporter.js";
 
 export type SpecLoaderConfig = {
   readonly inputFile: string;

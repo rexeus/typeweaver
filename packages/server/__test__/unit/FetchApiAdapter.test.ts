@@ -3,9 +3,9 @@ import {
   BodyParseError,
   PayloadTooLargeError,
   ResponseSerializationError,
-} from "../../src/lib/Errors";
-import { FetchApiAdapter } from "../../src/lib/FetchApiAdapter";
-import { BASE_URL } from "../helpers";
+} from "../../src/lib/Errors.js";
+import { FetchApiAdapter } from "../../src/lib/FetchApiAdapter.js";
+import { BASE_URL } from "../helpers.js";
 
 describe("FetchApiAdapter", () => {
   describe("toRequest", () => {

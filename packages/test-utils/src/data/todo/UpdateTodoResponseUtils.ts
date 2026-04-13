@@ -1,13 +1,13 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { createUpdateTodoSuccessResponse as generatedCreateUpdateTodoSuccessResponse } from "../../test-project/output/responses/UpdateTodoSuccessResponse";
-import { createResponse } from "../createResponse";
-import { createCreateTodoSuccessResponseHeader } from "./CreateTodoResponseUtils";
-import { createGetTodoSuccessResponseBody } from "./GetTodoResponseUtils";
+import { createUpdateTodoSuccessResponse as generatedCreateUpdateTodoSuccessResponse } from "../../test-project/output/responses/UpdateTodoSuccessResponse.js";
+import { createResponse } from "../createResponse.js";
+import { createCreateTodoSuccessResponseHeader } from "./CreateTodoResponseUtils.js";
+import { createGetTodoSuccessResponseBody } from "./GetTodoResponseUtils.js";
 import type {
   IUpdateTodoSuccessResponse,
   IUpdateTodoSuccessResponseBody,
   IUpdateTodoSuccessResponseHeader,
-} from "../..";
+} from "../../index.js";
 
 type UpdateTodoSuccessResponseInput = {
   statusCode?: number;

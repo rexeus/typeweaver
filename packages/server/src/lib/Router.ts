@@ -14,8 +14,8 @@ import type {
   RequestValidationError,
   ResponseValidationError,
 } from "@rexeus/typeweaver-core";
-import type { RequestHandler } from "./RequestHandler";
-import type { ServerContext } from "./ServerContext";
+import type { RequestHandler } from "./RequestHandler.js";
+import type { ServerContext } from "./ServerContext.js";
 
 /**
  * Metadata about a matched route, available in middleware and handlers via `ctx.route`.

@@ -6,8 +6,8 @@
  */
 
 import type { IHttpRequest } from "@rexeus/typeweaver-core";
-import type { RouteMetadata } from "./Router";
-import type { StateMap } from "./StateMap";
+import type { RouteMetadata } from "./Router.js";
+import type { StateMap } from "./StateMap.js";
 
 /**
  * Context object passed through the middleware pipeline and to request handlers.

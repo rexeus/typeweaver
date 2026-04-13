@@ -8,8 +8,8 @@ import {
   defaultRequestHeadersWithPayload,
   defaultResponseHeader,
   sharedResponses,
-} from "../../shared";
-import { todoSchema } from "../todoSchema";
+} from "../../shared/index.js";
+import { todoSchema } from "../todoSchema.js";
 
 export const CreateTodoDefinition = defineOperation({
   operationId: "CreateTodo",

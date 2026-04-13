@@ -1,7 +1,7 @@
 import { defineResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { z } from "zod";
-import { defaultResponseHeader } from "../../shared";
-import { todoStatus } from "../todoSchema";
+import { defaultResponseHeader } from "../../shared/index.js";
+import { todoStatus } from "../todoSchema.js";
 
 export const TodoStatusTransitionInvalidErrorDefinition = defineResponse({
   name: "TodoStatusTransitionInvalidError",

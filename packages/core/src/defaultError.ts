@@ -1,6 +1,6 @@
-import { HttpStatusCode } from "./HttpStatusCode";
-import type { IHttpHeader } from "./HttpHeader";
-import type { IHttpResponse } from "./HttpResponse";
+import { HttpStatusCode } from "./HttpStatusCode.js";
+import type { IHttpHeader } from "./HttpHeader.js";
+import type { IHttpResponse } from "./HttpResponse.js";
 
 export type DefaultErrorDescriptor<
   StatusCode extends HttpStatusCode = HttpStatusCode,

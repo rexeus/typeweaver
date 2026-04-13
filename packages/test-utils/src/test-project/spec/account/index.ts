@@ -1,2 +1,2 @@
-export { RegisterAccountDefinition } from "./RegisterAccountDefinition";
-export * from "./accountSchema";
+export { RegisterAccountDefinition } from "./RegisterAccountDefinition.js";
+export * from "./accountSchema.js";

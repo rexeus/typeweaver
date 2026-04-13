@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { HttpStatusCode } from "../../src/HttpStatusCode";
-import { ResponseValidationError } from "../../src/ResponseValidationError";
-import { UnknownResponseError } from "../../src/UnknownResponse";
+import { HttpStatusCode } from "../../src/HttpStatusCode.js";
+import { ResponseValidationError } from "../../src/ResponseValidationError.js";
+import { UnknownResponseError } from "../../src/UnknownResponse.js";
 
 describe("UnknownResponseError", () => {
   const createError = (

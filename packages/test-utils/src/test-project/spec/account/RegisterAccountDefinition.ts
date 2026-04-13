@@ -9,8 +9,8 @@ import {
   defaultRequestHeadersWithPayload,
   defaultResponseHeader,
   sharedResponses,
-} from "../shared";
-import { accountSchema } from "./accountSchema";
+} from "../shared/index.js";
+import { accountSchema } from "./accountSchema.js";
 
 export const RegisterAccountDefinition = defineOperation({
   operationId: "RegisterAccount",

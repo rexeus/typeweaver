@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { defineOperation } from "../../src/defineOperation";
-import { defineResponse } from "../../src/defineResponse";
-import { HttpMethod } from "../../src/HttpMethod";
-import { HttpStatusCode } from "../../src/HttpStatusCode";
+import { defineOperation } from "../../src/defineOperation.js";
+import { defineResponse } from "../../src/defineResponse.js";
+import { HttpMethod } from "../../src/HttpMethod.js";
+import { HttpStatusCode } from "../../src/HttpStatusCode.js";
 
 describe("defineOperation", () => {
   test("returns the original operation definition", () => {

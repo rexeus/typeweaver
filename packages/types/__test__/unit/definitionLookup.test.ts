@@ -6,7 +6,7 @@ import { describe, expect, test } from "vitest";
 import {
   getOperationDefinition,
   getResponseDefinition,
-} from "../../src/lib/definitionLookup";
+} from "../../src/lib/definitionLookup.js";
 
 describe("definitionLookup", () => {
   test("returns the matching operation definition", () => {

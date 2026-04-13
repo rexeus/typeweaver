@@ -1,8 +1,8 @@
 import { describe, expect, test, vi } from "vitest";
-import { executeMiddlewarePipeline } from "../../../src/lib/Middleware";
-import { scoped, except } from "../../../src/lib/middleware/scoped";
-import { defineMiddleware } from "../../../src/lib/TypedMiddleware";
-import { createServerContext } from "../../helpers";
+import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
+import { scoped, except } from "../../../src/lib/middleware/scoped.js";
+import { defineMiddleware } from "../../../src/lib/TypedMiddleware.js";
+import { createServerContext } from "../../helpers.js";
 
 const marker = defineMiddleware(async (_ctx, next) => {
   const response = await next();

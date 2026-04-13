@@ -7,11 +7,11 @@ import {
 } from "@rexeus/typeweaver-gen";
 import type { PluginConfig, TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { TypesPlugin } from "@rexeus/typeweaver-types";
-import { formatCode } from "./formatter";
-import { generateIndexFiles } from "./indexFileGenerator";
-import { loadPlugins } from "./pluginLoader";
-import { loadSpec } from "./specLoader";
-import type { PluginResolutionStrategy } from "./pluginLoader";
+import { formatCode } from "./formatter.js";
+import { generateIndexFiles } from "./indexFileGenerator.js";
+import { loadPlugins } from "./pluginLoader.js";
+import { loadSpec } from "./specLoader.js";
+import type { PluginResolutionStrategy } from "./pluginLoader.js";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 

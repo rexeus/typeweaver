@@ -19,22 +19,25 @@ import {
   InvalidRequestSchemaError,
   InvalidResourceNameError,
   PathParameterMismatchError,
-} from "./errors";
+} from "./errors/index.js";
 import {
   isSupportedOperationId,
   isSupportedResourceName,
-} from "./helpers/namingUtils";
-import { getPathParameterNames, normalizeRoutePath } from "./helpers/routePath";
+} from "./helpers/namingUtils.js";
+import {
+  getPathParameterNames,
+  normalizeRoutePath,
+} from "./helpers/routePath.js";
 import {
   collectCanonicalResponses,
   normalizeResponseDefinition,
-} from "./validation";
+} from "./validation/index.js";
 import type {
   NormalizedOperation,
   NormalizedRequest,
   NormalizedResponseUsage,
   NormalizedSpec,
-} from "./NormalizedSpec";
+} from "./NormalizedSpec.js";
 
 const isZodType = (schema: unknown): schema is z.ZodType => {
   return schema instanceof z.ZodType;

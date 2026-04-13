@@ -22,8 +22,8 @@ import type {
   ResponseValidationError,
 } from "@rexeus/typeweaver-core";
 import { Hono } from "hono";
-import { HonoAdapter } from "./HonoAdapter";
-import type { HonoRequestHandler } from "./HonoRequestHandler";
+import { HonoAdapter } from "./HonoAdapter.js";
+import type { HonoRequestHandler } from "./HonoRequestHandler.js";
 import type { Context } from "hono";
 import type { HonoOptions } from "hono/hono-base";
 import type { BlankEnv, BlankSchema, Env, Schema } from "hono/types";

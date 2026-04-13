@@ -6,9 +6,9 @@
  */
 
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
-import type { Middleware } from "./Middleware";
-import type { ServerContext } from "./ServerContext";
-import type { TypeweaverApp } from "./TypeweaverApp";
+import type { Middleware } from "./Middleware.js";
+import type { ServerContext } from "./ServerContext.js";
+import type { TypeweaverApp } from "./TypeweaverApp.js";
 
 /**
  * A middleware descriptor carrying compile-time metadata about what state

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { executeMiddlewarePipeline } from "../../src/lib/Middleware";
-import { createServerContext } from "../helpers";
-import type { Middleware } from "../../src/lib/Middleware";
+import { executeMiddlewarePipeline } from "../../src/lib/Middleware.js";
+import { createServerContext } from "../helpers.js";
+import type { Middleware } from "../../src/lib/Middleware.js";
 
 describe("Middleware Pipeline", () => {
   describe("executeMiddlewarePipeline", () => {

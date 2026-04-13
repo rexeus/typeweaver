@@ -17,7 +17,7 @@ import {
   BodyParseError,
   PayloadTooLargeError,
   ResponseSerializationError,
-} from "./Errors";
+} from "./Errors.js";
 
 export type FetchApiAdapterOptions = {
   readonly maxBodySize?: number;

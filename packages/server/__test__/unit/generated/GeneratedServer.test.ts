@@ -16,7 +16,7 @@ import {
   buildFetchRequest,
   expectErrorResponse,
   expectJson,
-} from "../../helpers";
+} from "../../helpers.js";
 import type { IValidationErrorResponseBody } from "test-utils";
 
 describe("Generated Server Router", () => {
