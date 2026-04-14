@@ -2,8 +2,8 @@ import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { FileWatcher } from "../src/generators/FileWatcher";
-import type { Generator } from "../src/generators/Generator";
+import { FileWatcher } from "../src/generators/fileWatcher";
+import type { Generator } from "../src/generators/generator";
 import type { Mock } from "vitest";
 
 class MockWatcher extends EventEmitter {

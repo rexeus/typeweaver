@@ -265,6 +265,9 @@ export class FetchApiAdapter {
 
         totalBytes += value.byteLength;
         if (totalBytes > this.maxBodySize) {
+          try {
+            await reader.cancel();
+          } catch {}
           throw new PayloadTooLargeError(totalBytes, this.maxBodySize);
         }
         chunks.push(value);

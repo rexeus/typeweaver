@@ -13,7 +13,7 @@ import { HonoPlugin } from "@rexeus/typeweaver-hono";
 import { ServerPlugin } from "@rexeus/typeweaver-server";
 import { TypesPlugin } from "@rexeus/typeweaver-types";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { PluginLoadingFailure } from "../src/generators/errors/PluginLoadingFailure.js";
+import { PluginLoadingFailure } from "../src/generators/errors/pluginLoadingFailure.js";
 import { loadPlugins } from "../src/generators/pluginLoader.js";
 
 type RegisteredPlugin = {

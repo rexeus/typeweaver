@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { Command } from "commander";
 import { getResolvedConfigPath, loadConfig } from "./configLoader.js";
-import { FileWatcher } from "./generators/FileWatcher.js";
-import { Generator } from "./generators/Generator.js";
+import { FileWatcher } from "./generators/fileWatcher.js";
+import { Generator } from "./generators/generator.js";
 import type { CommandOptions as CommanderOptions } from "commander";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));

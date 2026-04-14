@@ -620,6 +620,41 @@ describe("FetchApiAdapter", () => {
         );
       });
 
+      test("should cancel oversized streamed bodies without leaking unhandled rejections", async () => {
+        const adapter = new FetchApiAdapter({ maxBodySize: 5 });
+        let cancelCalls = 0;
+        const request = new Request(`${BASE_URL}/todos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/octet-stream" },
+        });
+
+        Object.defineProperty(request, "body", {
+          value: {
+            getReader() {
+              return {
+                async read() {
+                  return {
+                    done: false,
+                    value: new TextEncoder().encode("123456"),
+                  };
+                },
+                async cancel() {
+                  cancelCalls += 1;
+                  throw new TypeError("stream already closed");
+                },
+                releaseLock() {},
+              };
+            },
+          } as unknown as ReadableStream<Uint8Array>,
+        });
+
+        await expect(adapter.toRequest(request)).rejects.toThrow(
+          PayloadTooLargeError
+        );
+
+        expect(cancelCalls).toBe(1);
+      });
+
       test("should accept body within limit when Content-Length header is missing", async () => {
         const adapter = new FetchApiAdapter({ maxBodySize: 200 });
         const request = new Request(`${BASE_URL}/todos`, {
@@ -651,14 +686,27 @@ describe("FetchApiAdapter", () => {
 
       test("should reject oversized multipart body when Content-Length header is missing", async () => {
         const adapter = new FetchApiAdapter({ maxBodySize: 10 });
-        const formData = new FormData();
-        formData.append("file", new Blob(["x".repeat(100)]), "big.txt");
-
         const request = new Request(`${BASE_URL}/todos`, {
           method: "POST",
-          body: formData,
+          headers: { "Content-Type": "multipart/form-data; boundary=test" },
         });
-        request.headers.delete("content-length");
+
+        Object.defineProperty(request, "body", {
+          value: {
+            getReader() {
+              return {
+                async read() {
+                  return {
+                    done: false,
+                    value: new TextEncoder().encode("--test\r\nbody"),
+                  };
+                },
+                async cancel() {},
+                releaseLock() {},
+              };
+            },
+          } as unknown as ReadableStream<Uint8Array>,
+        });
 
         await expect(adapter.toRequest(request)).rejects.toThrow(
           PayloadTooLargeError

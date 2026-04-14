@@ -54,7 +54,7 @@ vi.mock("../src/generators/indexFileGenerator.js", () => ({
   generateIndexFiles: generateIndexFilesMock,
 }));
 
-const { Generator } = await import("../src/generators/Generator.js");
+const { Generator } = await import("../src/generators/generator.js");
 
 describe("Generator.generate", () => {
   const tempDirs: string[] = [];

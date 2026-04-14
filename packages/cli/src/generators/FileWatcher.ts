@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
-import { Generator } from "./Generator.js";
+import { Generator } from "./generator.js";
 
 const WATCHED_EXTENSIONS = new Set([".ts", ".js", ".json", ".mjs", ".cjs"]);
 const DEBOUNCE_MS = 200;

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import { assertSafeCleanTarget } from "../src/generators/Generator.js";
+import { assertSafeCleanTarget } from "../src/generators/generator.js";
 
 describe("Generator clean safety", () => {
   const tempDirs: string[] = [];
