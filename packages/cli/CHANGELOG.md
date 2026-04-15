@@ -1,5 +1,19 @@
 # @rexeus/typeweaver
 
+## 0.10.2
+
+### Patch Changes
+
+- 4719f61: Enforce explicit `.js` file extensions on all relative imports for strict ESM compliance. Switch `moduleResolution` to `NodeNext`. Generated code now includes proper extensions, ensuring compatibility with strict ESM consumers.
+- Updated dependencies [4719f61]
+  - @rexeus/typeweaver-aws-cdk@0.10.2
+  - @rexeus/typeweaver-clients@0.10.2
+  - @rexeus/typeweaver-server@0.10.2
+  - @rexeus/typeweaver-types@0.10.2
+  - @rexeus/typeweaver-core@0.10.2
+  - @rexeus/typeweaver-hono@0.10.2
+  - @rexeus/typeweaver-gen@0.10.2
+
 ## 0.10.1
 
 ### Patch Changes
