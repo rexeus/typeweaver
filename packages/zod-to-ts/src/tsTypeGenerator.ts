@@ -1,4 +1,4 @@
-import { factory, SyntaxKind } from "typescript";
+import { factory, isUnionTypeNode, SyntaxKind } from "typescript";
 import {
   $ZodAny,
   $ZodArray,
@@ -40,7 +40,6 @@ import {
 } from "zod/v4/core";
 import type {
   Identifier,
-  Node,
   StringLiteral,
   TypeElement,
   TypeNode,
@@ -410,18 +409,7 @@ function fromZodOptional(zodOptional: $ZodOptional): TypeNode {
 }
 
 function fromZodDefault(zodDefault: $ZodDefault): TypeNode {
-  const innerType = fromZod(zodDefault._zod.def.innerType);
-  const filteredNodes: Node[] = [];
-
-  innerType.forEachChild(node => {
-    if (node.kind !== SyntaxKind.UndefinedKeyword) {
-      filteredNodes.push(node);
-    }
-  });
-
-  // @ts-expect-error TypeScript AST nodes do not expose a typed setter for children.
-  innerType.types = filteredNodes;
-  return innerType;
+  return fromZodDefaultLikeInnerType(zodDefault._zod.def.innerType);
 }
 
 function fromZodTemplateLiteral(
@@ -438,32 +426,60 @@ function fromZodTransform(_zodTransform: $ZodTransform): TypeNode {
   return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
 }
 
-function fromZodNonOptional(_zodNonOptional: $ZodNonOptional): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+function fromZodNonOptional(zodNonOptional: $ZodNonOptional): TypeNode {
+  return fromZodDefaultLikeInnerType(zodNonOptional._zod.def.innerType);
 }
 
-function fromZodReadonly(_zodReadonly: $ZodReadonly): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+function fromZodReadonly(zodReadonly: $ZodReadonly): TypeNode {
+  return factory.createTypeReferenceNode(factory.createIdentifier("Readonly"), [
+    fromZod(zodReadonly._zod.def.innerType),
+  ]);
 }
 
 function fromZodNaN(_zodNaN: $ZodNaN): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+  return factory.createKeywordTypeNode(SyntaxKind.NumberKeyword);
 }
 
-function fromZodPipe(_zodPipe: $ZodPipe): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+function fromZodPipe(zodPipe: $ZodPipe): TypeNode {
+  return fromZod(zodPipe._zod.def.out);
 }
 
 function fromZodSuccess(_zodSuccess: $ZodSuccess): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+  return factory.createKeywordTypeNode(SyntaxKind.BooleanKeyword);
 }
 
-function fromZodCatch(_zodCatch: $ZodCatch): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+function fromZodCatch(zodCatch: $ZodCatch): TypeNode {
+  return fromZod(zodCatch._zod.def.innerType);
 }
 
 function fromZodFile(_zodFile: $ZodFile): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+  return factory.createTypeReferenceNode(factory.createIdentifier("File"));
+}
+
+function fromZodDefaultLikeInnerType(zodType: $ZodType): TypeNode {
+  const innerType = fromZod(zodType);
+
+  if (!isUnionTypeNode(innerType)) {
+    return innerType;
+  }
+
+  const filteredTypes = innerType.types.filter(
+    node => node.kind !== SyntaxKind.UndefinedKeyword
+  );
+
+  if (filteredTypes.length === 0) {
+    return factory.createKeywordTypeNode(SyntaxKind.NeverKeyword);
+  }
+
+  if (filteredTypes.length === 1) {
+    const [onlyType] = filteredTypes;
+
+    if (onlyType !== undefined) {
+      return onlyType;
+    }
+  }
+
+  return factory.createUnionTypeNode(filteredTypes);
 }
 
 function createTsAstPropertyKey(key: string): Identifier | StringLiteral {
