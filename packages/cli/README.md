@@ -34,16 +34,6 @@ bun add @rexeus/typeweaver-core
 
 Now you are ready to start building! Check out [Quickstart](#-get-started)
 
-## 🏷️ Naming conventions
-
-- `operationId` should use camelCase (preferred), for example `getUser`.
-- PascalCase `operationId` values are supported for compatibility.
-- snake_case and kebab-case `operationId` values are not supported.
-- `resourceName` should preferably be a singular noun in camelCase, for example `user` or
-  `authSession`.
-- Plural and PascalCase `resourceName` values are supported.
-- snake_case and kebab-case `resourceName` values are not supported.
-
 ## 🎯 Why typeweaver?
 
 - 📝 **Define once, generate everything**: API contracts in Zod become clients, servers, validators,
