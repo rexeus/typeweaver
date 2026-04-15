@@ -1,7 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
+import { writeDiagnostic } from "../diagnosticFormatter.js";
+import { createLogger, type Logger } from "../logger.js";
 import { Generator } from "./generator.js";
+import type { GeneratorConfig } from "./generator.js";
 
 const WATCHED_EXTENSIONS = new Set([".ts", ".js", ".json", ".mjs", ".cjs"]);
 const DEBOUNCE_MS = 200;
@@ -22,7 +25,8 @@ export class FileWatcher {
     private readonly inputPath: string,
     private readonly outputDir: string,
     private readonly config: TypeweaverConfig,
-    private readonly createGenerator: GeneratorFactory = () => new Generator()
+    private readonly createGenerator: GeneratorFactory = () => new Generator(),
+    private readonly logger: Logger = createLogger()
   ) {
     this.watchDir = path.dirname(this.inputPath);
   }
@@ -33,7 +37,7 @@ export class FileWatcher {
     this.startWatching();
     this.setupShutdownHandlers();
 
-    this.log(`Watching for changes in ${this.watchDir}...`);
+    this.logger.success(`Watching for changes in ${this.watchDir}...`);
 
     return new Promise<void>(resolve => {
       this.resolveWatch = resolve;
@@ -69,14 +73,14 @@ export class FileWatcher {
 
       watcher.on("change", (_eventType, filename) => {
         if (this.shouldIgnore(filename as string | null)) return;
-        this.log(`Change detected: ${String(filename)}`);
+        this.logger.info(`Change detected: ${String(filename)}`);
         this.scheduleRegeneration();
       });
 
       watcher.on("error", error => {
         const code = (error as NodeJS.ErrnoException).code;
         if (code !== "ENOENT") {
-          this.log(`Watch error: ${error.message}`);
+          this.logger.warn(`Watch error: ${error.message}`);
         }
       });
 
@@ -120,34 +124,31 @@ export class FileWatcher {
 
   private async runGeneration(isInitial: boolean): Promise<void> {
     const start = performance.now();
-    const config: TypeweaverConfig = isInitial
+    const config: GeneratorConfig = isInitial
       ? this.config
       : { ...this.config, clean: false };
 
     try {
-      if (!isInitial) this.log("Regenerating...");
+      if (!isInitial) this.logger.step("Regenerating...");
       const generator = this.createGenerator();
-      await generator.generate(this.inputPath, this.outputDir, config);
+      const summary = await generator.generate(this.inputPath, this.outputDir, config);
       const elapsed = Math.round(performance.now() - start);
-      if (!isInitial) this.log(`Regeneration complete (${elapsed}ms)`);
+      if (!isInitial) {
+        this.logger.success(`Regeneration complete (${elapsed}ms)`);
+        this.logger.summary(summary);
+      }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.log(`Generation failed: ${message}`);
+      writeDiagnostic(this.logger, error);
     }
   }
 
   private setupShutdownHandlers(): void {
     this.shutdownHandler = () => {
-      this.log("Stopping watcher...");
+      this.logger.step("Stopping watcher...");
       this.stop();
     };
 
     process.once("SIGINT", this.shutdownHandler);
     process.once("SIGTERM", this.shutdownHandler);
-  }
-
-  private log(message: string): void {
-    const time = new Date().toLocaleTimeString("en-GB", { hour12: false });
-    console.info(`[${time}] ${message}`);
   }
 }

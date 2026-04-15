@@ -9,6 +9,7 @@ export type PluginConfig = Record<string, unknown>;
  * Context provided to plugins during initialization and finalization
  */
 export type PluginContext = {
+  readonly pluginName: string;
   readonly outputDir: string;
   readonly inputDir: string;
   readonly config: PluginConfig;
@@ -28,6 +29,15 @@ export type OperationOutputPaths = {
   readonly clientFileName: string;
 };
 
+export type OperationImportPaths = {
+  readonly outputDir: string;
+  readonly requestFile: string;
+  readonly responseFile: string;
+  readonly requestValidationFile: string;
+  readonly responseValidationFile: string;
+  readonly clientFile: string;
+};
+
 /**
  * Context provided to plugins during generation
  */
@@ -37,6 +47,11 @@ export type GeneratorContext = PluginContext & {
   readonly responsesOutputDir: string;
   readonly specOutputDir: string;
 
+  readonly getPluginOutputDir: (pluginName: string) => string;
+  readonly getPluginResourceOutputDir: (params: {
+    readonly pluginName: string;
+    readonly resourceName: string;
+  }) => string;
   readonly getCanonicalResponse: (responseName: string) => NormalizedResponse;
   readonly getCanonicalResponseOutputFile: (responseName: string) => string;
   readonly getCanonicalResponseImportPath: (params: {
@@ -51,10 +66,22 @@ export type GeneratorContext = PluginContext & {
     readonly operationId: string;
   }) => string;
   readonly getOperationOutputPaths: (params: {
+    readonly pluginName?: string;
     readonly resourceName: string;
     readonly operationId: string;
   }) => OperationOutputPaths;
+  readonly getOperationImportPaths: (params: {
+    readonly importerDir: string;
+    readonly pluginName: string;
+    readonly resourceName: string;
+    readonly operationId: string;
+  }) => OperationImportPaths;
   readonly getResourceOutputDir: (resourceName: string) => string;
+  readonly getLibImportPath: (params: {
+    readonly importerDir: string;
+    readonly pluginName: string;
+    readonly entry?: string;
+  }) => string;
   readonly writeFile: (relativePath: string, content: string) => void;
   readonly renderTemplate: (templatePath: string, data: unknown) => string;
   readonly addGeneratedFile: (relativePath: string) => void;

@@ -15,6 +15,7 @@ import { TypesPlugin } from "@rexeus/typeweaver-types";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { PluginLoadingFailure } from "../src/generators/errors/pluginLoadingFailure.js";
 import { loadPlugins } from "../src/generators/pluginLoader.js";
+import { createLogger } from "../src/logger.js";
 
 type RegisteredPlugin = {
   readonly name: string;
@@ -78,10 +79,11 @@ describe("pluginLoader", () => {
       )
     );
 
-    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const { registry, registeredPlugins } = createRegistry();
+    const stream = { isTTY: false, write: vi.fn() };
+    const logger = createLogger({ stdout: stream, stderr: stream });
 
-    await loadPlugins(registry, [requiredPlugin], ["local"], {
+    await loadPlugins(registry, [requiredPlugin], ["local"], logger, {
       input: "./spec.ts",
       output: "./generated",
       plugins: [pluginPath],
@@ -91,9 +93,12 @@ describe("pluginLoader", () => {
       "types",
       "local-plugin",
     ]);
-    expect(infoSpy).toHaveBeenCalledWith("Successfully loaded 1 plugin(s):");
-    expect(infoSpy).toHaveBeenCalledWith(
+    expect(stream.write).toHaveBeenCalledWith(
+      "Successfully loaded 1 plugin(s):\n"
+    );
+    expect(stream.write).toHaveBeenCalledWith(
       `  - local-plugin (from ${pluginPath})`
+        .concat("\n")
     );
   });
 
@@ -101,11 +106,17 @@ describe("pluginLoader", () => {
     const { registry } = createRegistry();
 
     await expect(
-      loadPlugins(registry, [{ name: "types" } as TypesPlugin], ["local"], {
-        input: "./spec.ts",
-        output: "./generated",
-        plugins: ["missing-plugin"],
-      })
+      loadPlugins(
+        registry,
+        [{ name: "types" } as TypesPlugin],
+        ["local"],
+        createLogger({ quiet: true }),
+        {
+          input: "./spec.ts",
+          output: "./generated",
+          plugins: ["missing-plugin"],
+        }
+      )
     ).rejects.toEqual(
       expect.objectContaining<Partial<PluginLoadingFailure>>({
         pluginName: "missing-plugin",
@@ -134,11 +145,17 @@ describe("pluginLoader", () => {
 
     const { registry, registeredPlugins } = createRegistry();
 
-    await loadPlugins(registry, [{ name: "types" } as TypesPlugin], ["local"], {
-      input: "./spec.ts",
-      output: "./generated",
-      plugins: [pluginPath],
-    });
+    await loadPlugins(
+      registry,
+      [{ name: "types" } as TypesPlugin],
+      ["local"],
+      createLogger({ quiet: true }),
+      {
+        input: "./spec.ts",
+        output: "./generated",
+        plugins: [pluginPath],
+      }
+    );
 
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
       "types",

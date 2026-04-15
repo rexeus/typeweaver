@@ -1,9 +1,17 @@
 import fs from "node:fs";
+import path from "node:path";
 import type { SpecDefinition } from "@rexeus/typeweaver-core";
 import { normalizeSpec } from "@rexeus/typeweaver-gen";
 import type { NormalizedSpec } from "@rexeus/typeweaver-gen";
 import { bundle } from "./spec/specBundler.js";
+import {
+  createSpecDependencyResolutionBridge,
+} from "./spec/specDependencyResolution.js";
 import { importDefinition } from "./spec/specImporter.js";
+export {
+  ensureSpecDependencyResolution,
+  findClosestNodeModules,
+} from "./spec/specDependencyResolution.js";
 
 export type SpecLoaderConfig = {
   readonly inputFile: string;
@@ -21,7 +29,13 @@ export async function loadSpec(config: SpecLoaderConfig): Promise<LoadedSpec> {
   const bundledSpecFile = await bundle(config);
   writeSpecDeclarationFile(config.specOutputDir);
 
-  const definition = await importDefinition(bundledSpecFile);
+  const cleanupDependencyResolutionBridge = createSpecDependencyResolutionBridge({
+    specExecutionDir: path.dirname(config.specOutputDir),
+    inputFile: config.inputFile,
+  });
+  const definition = await importDefinition(bundledSpecFile).finally(() => {
+    cleanupDependencyResolutionBridge();
+  });
   const normalizedSpec = normalizeSpec(definition);
 
   return {

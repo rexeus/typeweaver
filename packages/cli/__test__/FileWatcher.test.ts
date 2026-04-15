@@ -2,13 +2,27 @@ import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import type { GenerationSummary } from "../src/generationResult";
 import { FileWatcher } from "../src/generators/fileWatcher";
 import type { Generator } from "../src/generators/generator";
+import type { Logger } from "../src/logger";
 import type { Mock } from "vitest";
 
 class MockWatcher extends EventEmitter {
   public readonly close = vi.fn();
 }
+
+const generationSummary: GenerationSummary = {
+  mode: "generate",
+  dryRun: false,
+  targetOutputDir: "/test/output",
+  resourceCount: 1,
+  operationCount: 1,
+  responseCount: 1,
+  pluginCount: 1,
+  generatedFiles: ["index.ts"],
+  warnings: [],
+};
 
 function createConfig(overrides?: Partial<TypeweaverConfig>): TypeweaverConfig {
   return {
@@ -25,6 +39,7 @@ describe("FileWatcher", () => {
   let mockGenerate: Mock;
   let fileWatcher: FileWatcher;
   let activeWatchPromise: Promise<void> | null = null;
+  let logger: Logger;
 
   const createGeneratorMock = () =>
     ({ generate: mockGenerate }) as unknown as Generator;
@@ -41,32 +56,42 @@ describe("FileWatcher", () => {
   const flushDebounce = () => vi.advanceTimersByTimeAsync(200);
 
   const blockNextGeneration = () => {
-    let resolve!: () => void;
+    let resolve!: (value: GenerationSummary) => void;
     mockGenerate.mockImplementationOnce(
       () =>
-        new Promise<void>(r => {
-          resolve = r;
+        new Promise<GenerationSummary>(promiseResolve => {
+          resolve = promiseResolve;
         })
     );
-    return { resolve: () => resolve() };
+    return { resolve: () => resolve(generationSummary) };
   };
 
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.spyOn(console, "info").mockImplementation(() => {});
 
     mockWatcher = new MockWatcher();
     vi.spyOn(fs, "watch").mockReturnValue(
       mockWatcher as unknown as fs.FSWatcher
     );
 
-    mockGenerate = vi.fn().mockResolvedValue(undefined);
+    mockGenerate = vi.fn().mockResolvedValue(generationSummary);
+    logger = {
+      isVerbose: false,
+      debug: vi.fn(),
+      info: vi.fn(),
+      success: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      step: vi.fn(),
+      summary: vi.fn(),
+    };
 
     fileWatcher = new FileWatcher(
       "/test/input/spec.ts",
       "/test/output",
       createConfig(),
-      createGeneratorMock
+      createGeneratorMock,
+      logger
     );
   });
 
@@ -152,6 +177,7 @@ describe("FileWatcher", () => {
     await flushDebounce();
 
     expect(mockGenerate).toHaveBeenCalledTimes(3);
+    expect(logger.error).toHaveBeenCalled();
   });
 
   test("queues rebuild when change arrives during generation", async () => {
@@ -195,7 +221,8 @@ describe("FileWatcher", () => {
       "/test/input/spec.ts",
       "/test/output",
       createConfig({ clean: false }),
-      createGeneratorMock
+      createGeneratorMock,
+      logger
     );
 
     await startWatching();

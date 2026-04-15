@@ -1,19 +1,29 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   createPluginContextBuilder,
   createPluginRegistry,
+  type NormalizedSpec,
 } from "@rexeus/typeweaver-gen";
 import type { PluginConfig, TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { TypesPlugin } from "@rexeus/typeweaver-types";
+import type { GenerationSummary } from "../generationResult.js";
+import { createLogger, type Logger } from "../logger.js";
+import { ReservedEntityNameError } from "./errors/reservedEntityNameError.js";
 import { formatCode } from "./formatter.js";
 import { generateIndexFiles } from "./indexFileGenerator.js";
 import { loadPlugins } from "./pluginLoader.js";
 import { loadSpec } from "./specLoader.js";
 import type { PluginResolutionStrategy } from "./pluginLoader.js";
 
+export type GeneratorConfig = TypeweaverConfig & {
+  readonly dryRun?: boolean;
+};
+
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const RESERVED_PLUGIN_OUTPUT_DIRECTORIES = new Set(["lib", "responses", "spec"]);
 
 export const assertSafeCleanTarget = (
   outputDir: string,
@@ -71,18 +81,19 @@ export class Generator {
   private readonly contextBuilder = createPluginContextBuilder();
   private readonly requiredPlugins: [TypesPlugin];
   private readonly strategies: PluginResolutionStrategy[];
+  private readonly logger: Logger;
 
   private inputFile = "";
   private outputDir = "";
-  private specOutputDir = "";
-  private responsesOutputDir = "";
 
   public constructor(
     requiredPlugins: [TypesPlugin] = [new TypesPlugin()],
-    strategies?: PluginResolutionStrategy[]
+    strategies?: PluginResolutionStrategy[],
+    logger: Logger = createLogger()
   ) {
     this.requiredPlugins = requiredPlugins;
     this.strategies = strategies ?? ["npm", "local"];
+    this.logger = logger;
   }
 
   /**
@@ -91,95 +102,142 @@ export class Generator {
   public async generate(
     specFile: string,
     outputDir: string,
-    config?: TypeweaverConfig,
+    config?: GeneratorConfig,
     currentWorkingDirectory: string = process.cwd()
-  ): Promise<void> {
-    console.info("Starting generation...");
+  ): Promise<GenerationSummary> {
+    this.logger.step("Starting generation...");
+    this.contextBuilder.clearGeneratedFiles();
 
     this.initializeDirectories(specFile, outputDir, currentWorkingDirectory);
 
-    if (config?.clean ?? true) {
-      assertSafeCleanTarget(this.outputDir, currentWorkingDirectory);
-      console.info("Cleaning output directory...");
-      fs.rmSync(this.outputDir, { recursive: true, force: true });
-    }
+    const isDryRun = config?.dryRun ?? false;
+    const warnings: string[] = [];
+    const temporaryOutputDir = isDryRun
+      ? createTemporaryOutputDir(currentWorkingDirectory)
+      : undefined;
+    const generationOutputDir = temporaryOutputDir ?? this.outputDir;
+    const responsesOutputDir = path.join(generationOutputDir, "responses");
+    const specOutputDir = path.join(generationOutputDir, "spec");
 
-    fs.mkdirSync(this.outputDir, { recursive: true });
-    fs.mkdirSync(this.responsesOutputDir, { recursive: true });
-    fs.mkdirSync(this.specOutputDir, { recursive: true });
+    try {
+      if ((config?.clean ?? true) && !isDryRun) {
+        assertSafeCleanTarget(this.outputDir, currentWorkingDirectory);
+        this.logger.step("Cleaning output directory...");
+        fs.rmSync(this.outputDir, { recursive: true, force: true });
+      }
 
-    await loadPlugins(
-      this.registry,
-      this.requiredPlugins,
-      this.strategies,
-      config
-    );
+      fs.mkdirSync(generationOutputDir, { recursive: true });
+      fs.mkdirSync(responsesOutputDir, { recursive: true });
+      fs.mkdirSync(specOutputDir, { recursive: true });
 
-    console.info(
-      `Bundling spec from '${this.inputFile}' to '${this.specOutputDir}'...`
-    );
-    let { normalizedSpec } = await loadSpec({
-      inputFile: this.inputFile,
-      specOutputDir: this.specOutputDir,
-    });
+      await loadPlugins(
+        this.registry,
+        this.requiredPlugins,
+        this.strategies,
+        this.logger,
+        config
+      );
 
-    const pluginContext = this.contextBuilder.createPluginContext({
-      outputDir: this.outputDir,
-      inputDir: path.dirname(this.inputFile),
-      config: (config ?? {}) as PluginConfig,
-    });
+      assertSafePluginOutputNamespaces(
+        this.registry.getAll().map(registration => registration.plugin.name),
+        generationOutputDir
+      );
 
-    console.info("Initializing plugins...");
-    for (const registration of this.registry.getAll()) {
-      if (registration.plugin.initialize) {
-        await registration.plugin.initialize(pluginContext);
+      this.logger.step(
+        `Bundling spec from '${this.inputFile}'${
+          isDryRun ? " for dry-run preview" : ""
+        }...`
+      );
+      let { normalizedSpec } = await loadSpec({
+        inputFile: this.inputFile,
+        specOutputDir,
+      });
+
+      const pluginContext = this.contextBuilder.createPluginContext({
+        pluginName: "typeweaver",
+        outputDir: generationOutputDir,
+        inputDir: path.dirname(this.inputFile),
+        config: (config ?? {}) as PluginConfig,
+      });
+
+      this.logger.step("Initializing plugins...");
+      for (const registration of this.registry.getAll()) {
+        if (registration.plugin.initialize) {
+          await registration.plugin.initialize({
+            ...pluginContext,
+            pluginName: registration.plugin.name,
+          });
+        }
+      }
+
+      this.logger.step("Collecting resources...");
+      for (const registration of this.registry.getAll()) {
+        if (registration.plugin.collectResources) {
+          normalizedSpec =
+            await registration.plugin.collectResources(normalizedSpec);
+        }
+      }
+
+      const createGeneratorContext = (pluginName: string) => {
+        return this.contextBuilder.createGeneratorContext({
+          pluginName,
+          outputDir: generationOutputDir,
+          inputDir: path.dirname(this.inputFile),
+          config: (config ?? {}) as PluginConfig,
+          normalizedSpec,
+          templateDir: this.templateDir,
+          coreDir: this.coreDir,
+          responsesOutputDir,
+          specOutputDir,
+        });
+      };
+
+      const indexGeneratorContext = createGeneratorContext("typeweaver");
+
+      this.logger.step("Generating code...");
+      for (const registration of this.registry.getAll()) {
+        this.logger.info(`Running plugin: ${registration.plugin.name}`);
+        if (registration.plugin.generate) {
+          const generatorContext = createGeneratorContext(registration.plugin.name);
+          await registration.plugin.generate(generatorContext);
+        }
+      }
+
+      generateIndexFiles(this.templateDir, indexGeneratorContext);
+
+      this.logger.step("Finalizing plugins...");
+      for (const registration of this.registry.getAll()) {
+        if (registration.plugin.finalize) {
+          await registration.plugin.finalize({
+            ...pluginContext,
+            pluginName: registration.plugin.name,
+          });
+        }
+      }
+
+      if (config?.format ?? true) {
+        warnings.push(...(await formatCode(generationOutputDir)));
+      }
+
+      const summary = createGenerationSummary({
+        dryRun: isDryRun,
+        outputDir: this.outputDir,
+        normalizedSpec,
+        pluginCount: this.registry.getAll().length,
+        generatedFiles: listGeneratedFiles(generationOutputDir),
+        warnings,
+      });
+
+      this.logger.success(
+        `Generation complete${isDryRun ? " (dry run)" : ""}!`
+      );
+
+      return summary;
+    } finally {
+      if (temporaryOutputDir) {
+        fs.rmSync(temporaryOutputDir, { recursive: true, force: true });
       }
     }
-
-    console.info("Collecting resources...");
-    for (const registration of this.registry.getAll()) {
-      if (registration.plugin.collectResources) {
-        normalizedSpec =
-          await registration.plugin.collectResources(normalizedSpec);
-      }
-    }
-
-    const generatorContext = this.contextBuilder.createGeneratorContext({
-      outputDir: this.outputDir,
-      inputDir: path.dirname(this.inputFile),
-      config: (config ?? {}) as PluginConfig,
-      normalizedSpec,
-      templateDir: this.templateDir,
-      coreDir: this.coreDir,
-      responsesOutputDir: this.responsesOutputDir,
-      specOutputDir: this.specOutputDir,
-    });
-
-    console.info("Generating code...");
-    for (const registration of this.registry.getAll()) {
-      console.info(`Running plugin: ${registration.plugin.name}`);
-      if (registration.plugin.generate) {
-        await registration.plugin.generate(generatorContext);
-      }
-    }
-
-    generateIndexFiles(this.templateDir, generatorContext);
-
-    console.info("Finalizing plugins...");
-    for (const registration of this.registry.getAll()) {
-      if (registration.plugin.finalize) {
-        await registration.plugin.finalize(pluginContext);
-      }
-    }
-
-    if (config?.format ?? true) {
-      await formatCode(this.outputDir);
-    }
-
-    console.info("Generation complete!");
-    console.info(
-      `Generated files: ${this.contextBuilder.getGeneratedFiles().length}`
-    );
   }
 
   private initializeDirectories(
@@ -189,10 +247,74 @@ export class Generator {
   ): void {
     this.inputFile = path.resolve(currentWorkingDirectory, specFile);
     this.outputDir = path.resolve(currentWorkingDirectory, outputDir);
-    this.responsesOutputDir = path.join(this.outputDir, "responses");
-    this.specOutputDir = path.join(this.outputDir, "spec");
   }
 }
+
+const createGenerationSummary = (config: {
+  readonly dryRun: boolean;
+  readonly outputDir: string;
+  readonly normalizedSpec: NormalizedSpec;
+  readonly pluginCount: number;
+  readonly generatedFiles: readonly string[];
+  readonly warnings: readonly string[];
+}): GenerationSummary => {
+  const operationCount = config.normalizedSpec.resources.reduce(
+    (count, resource) => count + resource.operations.length,
+    0
+  );
+
+  return {
+    mode: "generate",
+    dryRun: config.dryRun,
+    targetOutputDir: config.outputDir,
+    resourceCount: config.normalizedSpec.resources.length,
+    operationCount,
+    responseCount: config.normalizedSpec.responses.length,
+    pluginCount: config.pluginCount,
+    generatedFiles: config.generatedFiles,
+    warnings: [...config.warnings],
+  };
+};
+
+export const assertSafePluginOutputNamespaces = (
+  pluginNames: readonly string[],
+  outputDir: string
+): void => {
+  for (const pluginName of pluginNames) {
+    if (!RESERVED_PLUGIN_OUTPUT_DIRECTORIES.has(pluginName)) {
+      continue;
+    }
+
+    throw new ReservedEntityNameError(pluginName, path.join(outputDir, pluginName));
+  }
+};
+
+const createTemporaryOutputDir = (_currentWorkingDirectory: string): string => {
+  return fs.mkdtempSync(path.join(os.tmpdir(), "typeweaver-generate-"));
+};
+
+const listGeneratedFiles = (outputDir: string): string[] => {
+  const generatedFiles: string[] = [];
+
+  const visit = (currentDir: string): void => {
+    for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
+      const entryPath = path.join(currentDir, entry.name);
+
+      if (entry.isDirectory()) {
+        visit(entryPath);
+        continue;
+      }
+
+      generatedFiles.push(path.relative(outputDir, entryPath).replaceAll("\\", "/"));
+    }
+  };
+
+  if (fs.existsSync(outputDir)) {
+    visit(outputDir);
+  }
+
+  return generatedFiles.sort();
+};
 
 const findProtectedWorkspaceRoot = (
   startDirectory: string

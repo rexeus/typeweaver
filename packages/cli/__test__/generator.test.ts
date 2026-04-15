@@ -2,7 +2,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import { assertSafeCleanTarget } from "../src/generators/generator.js";
+import {
+  assertSafeCleanTarget,
+  assertSafePluginOutputNamespaces,
+} from "../src/generators/generator.js";
 
 describe("Generator clean safety", () => {
   const tempDirs: string[] = [];
@@ -85,5 +88,11 @@ describe("Generator clean safety", () => {
     expect(() => assertSafeCleanTarget("../../", packageDirectory)).toThrow(
       /inferred workspace root/
     );
+  });
+
+  test("rejects plugin names that collide with reserved top-level output directories", () => {
+    expect(() =>
+      assertSafePluginOutputNamespaces(["types", "responses"], "/tmp/generated")
+    ).toThrow(/Reserved entity name 'responses'/);
   });
 });

@@ -2,7 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { afterEach, describe, expect, test } from "vitest";
-import { createWrapperImportSpecifier } from "../src/generators/spec/specBundler.js";
+import {
+  createWrapperImportSpecifier,
+  isExternalSpecImport,
+} from "../src/generators/spec/specBundler.js";
 import { isSpecDefinition } from "../src/generators/spec/specGuards.js";
 import { loadSpec } from "../src/generators/specLoader.js";
 
@@ -68,6 +71,14 @@ describe("SpecLoader", () => {
         "C:\\project\\specs\\spec.ts"
       )
     ).toBe("../specs/spec.ts");
+  });
+
+  test("keeps bare package imports external during spec bundling", () => {
+    expect(isExternalSpecImport("zod")).toBe(true);
+    expect(isExternalSpecImport("@rexeus/typeweaver-core")).toBe(true);
+    expect(isExternalSpecImport("node:path")).toBe(true);
+    expect(isExternalSpecImport("./todo/index.ts")).toBe(false);
+    expect(isExternalSpecImport("/workspace/spec/index.ts")).toBe(false);
   });
 
   test("rejects resources without an operations array", () => {
@@ -366,6 +377,7 @@ describe("SpecLoader", () => {
 
     expect(fs.existsSync(path.join(outputDir, "spec.js"))).toBe(true);
     expect(fs.existsSync(path.join(outputDir, "spec.d.ts"))).toBe(true);
+    expect(fs.existsSync(path.join(fixtureDir, "node_modules"))).toBe(false);
 
     expect(fs.existsSync(path.join(outputDir, "todos"))).toBe(false);
   });

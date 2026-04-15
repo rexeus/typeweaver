@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { createLogger } from "../src/logger.js";
 
 const loadPluginsMock = vi.fn(async () => {});
 const loadSpecMock = vi.fn(
@@ -13,6 +14,8 @@ const loadSpecMock = vi.fn(
     readonly specOutputDir: string;
   }) => ({
     normalizedSpec: {
+      resources: [],
+      responses: [],
       inputFile,
       specOutputDir,
     },
@@ -34,6 +37,7 @@ vi.mock("@rexeus/typeweaver-gen", async importOriginal => {
       createPluginContext: () => ({}),
       createGeneratorContext: (context: Record<string, unknown>) => context,
       getGeneratedFiles: () => [],
+      clearGeneratedFiles: () => {},
     }),
   };
 });
@@ -79,9 +83,9 @@ describe("Generator.generate", () => {
 
   test("resolves generation paths from the provided working directory", async () => {
     const workingDirectory = createTempDir();
-    const generator = new Generator();
+    const generator = new Generator(undefined, undefined, createLogger({ quiet: true }));
 
-    await generator.generate(
+    const summary = await generator.generate(
       "spec/index.ts",
       "generated/output",
       {
@@ -97,6 +101,9 @@ describe("Generator.generate", () => {
       inputFile: path.join(workingDirectory, "spec/index.ts"),
       specOutputDir: path.join(workingDirectory, "generated/output/spec"),
     });
+    expect(summary.targetOutputDir).toBe(
+      path.join(workingDirectory, "generated/output")
+    );
     expect(fs.existsSync(path.join(workingDirectory, "generated/output"))).toBe(
       true
     );
@@ -105,7 +112,7 @@ describe("Generator.generate", () => {
   test("uses the provided working directory for clean safety checks", async () => {
     const workspaceRoot = createTempDir();
     const packageDirectory = path.join(workspaceRoot, "packages", "cli");
-    const generator = new Generator();
+    const generator = new Generator(undefined, undefined, createLogger({ quiet: true }));
 
     fs.mkdirSync(path.join(workspaceRoot, ".git"), { recursive: true });
     fs.mkdirSync(packageDirectory, { recursive: true });
@@ -123,5 +130,42 @@ describe("Generator.generate", () => {
         packageDirectory
       )
     ).rejects.toThrow(/inferred workspace root/);
+  });
+
+  test("supports dry-run generation without mutating the output directory", async () => {
+    const workingDirectory = createTempDir();
+    const outputDirectory = path.join(workingDirectory, "generated/output");
+    const existingFile = path.join(outputDirectory, "keep.txt");
+    const generator = new Generator(undefined, undefined, createLogger({ quiet: true }));
+
+    fs.mkdirSync(outputDirectory, { recursive: true });
+    fs.writeFileSync(existingFile, "keep");
+
+    const summary = await generator.generate(
+      "spec/index.ts",
+      "generated/output",
+      {
+        input: "spec/index.ts",
+        output: "generated/output",
+        clean: true,
+        format: false,
+        dryRun: true,
+      },
+      workingDirectory
+    );
+
+    expect(fs.readFileSync(existingFile, "utf8")).toBe("keep");
+    expect(summary.dryRun).toBe(true);
+    expect(summary.targetOutputDir).toBe(outputDirectory);
+    expect(generateIndexFilesMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ pluginName: "typeweaver" })
+    );
+    expect(loadSpecMock.mock.calls[0]?.[0].specOutputDir).not.toBe(
+      path.join(workingDirectory, "generated/output/spec")
+    );
+    expect(loadSpecMock.mock.calls[0]?.[0].specOutputDir).toEqual(
+      expect.stringMatching(new RegExp(`^${os.tmpdir().replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}/typeweaver-generate-.*?/spec$`))
+    );
   });
 });
