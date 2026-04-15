@@ -1,7 +1,7 @@
-import fs from "node:fs";
 import path from "node:path";
 import { renderTemplate } from "@rexeus/typeweaver-gen";
 import type { GeneratorContext } from "@rexeus/typeweaver-gen";
+import fs from "node:fs";
 
 export function generateIndexFiles(
   templateDir: string,
@@ -10,78 +10,82 @@ export function generateIndexFiles(
   const templateFilePath = path.join(templateDir, "Index.ejs");
   const template = fs.readFileSync(templateFilePath, "utf8");
 
-  const generatedFiles = context.getGeneratedFiles();
-  const groups = new Map<string, Set<string>>();
-  const rootFiles = new Set<string>();
-  const existingBarrels = new Set<string>();
+  const nodes = new Map<string, DirectoryNode>();
+  const explicitBarrels = new Set<string>();
 
-  for (const file of generatedFiles) {
-    const normalizedFile = file.replace(/\\/g, "/");
-    const withJsExt = normalizedFile.replace(/\.ts$/, ".js");
-    const stripped = normalizedFile.replace(/\.ts$/, "");
-    const firstSlash = stripped.indexOf("/");
+  const ensureNode = (directory: string): DirectoryNode => {
+    const existingNode = nodes.get(directory);
+    if (existingNode !== undefined) {
+      return existingNode;
+    }
 
-    if (firstSlash === -1) {
-      rootFiles.add(`./${withJsExt}`);
+    const node: DirectoryNode = {
+      fileEntries: new Set(),
+      childDirectories: new Set(),
+    };
+    nodes.set(directory, node);
+    return node;
+  };
+
+  ensureNode(".");
+
+  for (const generatedFile of context.getGeneratedFiles()) {
+    const normalizedFile = generatedFile.replace(/\\/g, "/");
+    if (!normalizedFile.endsWith(".ts")) {
       continue;
     }
 
-    const firstSegment = stripped.slice(0, firstSlash);
+    const strippedFile = normalizedFile.replace(/\.ts$/, "");
+    const directory = path.posix.dirname(strippedFile);
+    const fileName = path.posix.basename(strippedFile);
 
-    if (firstSegment === "lib") {
-      const secondSlash = stripped.indexOf("/", firstSlash + 1);
-      const groupKey =
-        secondSlash === -1 ? stripped : stripped.slice(0, secondSlash);
+    ensureAncestors(directory, ensureNode);
 
-      const entryName = stripped.slice(groupKey.length + 1);
-
-      if (entryName === "index") {
-        existingBarrels.add(groupKey);
-      } else {
-        if (!groups.has(groupKey)) {
-          groups.set(groupKey, new Set());
-        }
-        groups.get(groupKey)!.add(`./${entryName}.js`);
-      }
-    } else {
-      const entryName = stripped.slice(firstSlash + 1);
-
-      if (entryName === "index") {
-        existingBarrels.add(firstSegment);
-      } else {
-        if (!groups.has(firstSegment)) {
-          groups.set(firstSegment, new Set());
-        }
-        groups.get(firstSegment)!.add(`./${entryName}.js`);
-      }
+    if (fileName === "index") {
+      explicitBarrels.add(directory);
+      continue;
     }
+
+    ensureNode(directory).fileEntries.add(`./${fileName}.js`);
   }
 
-  for (const [groupKey, entries] of groups) {
-    if (existingBarrels.has(groupKey)) {
+  for (const [directory, node] of nodes) {
+    if (directory !== "." && explicitBarrels.has(directory)) {
       continue;
     }
 
-    const domainBarrelContent = renderTemplate(template, {
-      indexPaths: Array.from(entries).sort(),
+    const indexPaths = new Set<string>(node.fileEntries);
+    for (const childDirectory of node.childDirectories) {
+      indexPaths.add(`./${childDirectory}/index.js`);
+    }
+
+    const content = renderTemplate(template, {
+      indexPaths: Array.from(indexPaths).sort(),
     });
+    const relativePath =
+      directory === "." ? "index.ts" : path.posix.join(directory, "index.ts");
 
-    const domainIndexPath = path.join(context.outputDir, groupKey, "index.ts");
-    fs.mkdirSync(path.dirname(domainIndexPath), { recursive: true });
-    fs.writeFileSync(domainIndexPath, domainBarrelContent);
+    context.writeFile(relativePath, content);
   }
-
-  const rootIndexPaths = new Set<string>(rootFiles);
-  for (const groupKey of groups.keys()) {
-    rootIndexPaths.add(`./${groupKey}/index.js`);
-  }
-  for (const barrelKey of existingBarrels) {
-    rootIndexPaths.add(`./${barrelKey}/index.js`);
-  }
-
-  const rootContent = renderTemplate(template, {
-    indexPaths: Array.from(rootIndexPaths).sort(),
-  });
-
-  fs.writeFileSync(path.join(context.outputDir, "index.ts"), rootContent);
 }
+
+type DirectoryNode = {
+  readonly fileEntries: Set<string>;
+  readonly childDirectories: Set<string>;
+};
+
+const ensureAncestors = (
+  directory: string,
+  ensureNode: (directory: string) => DirectoryNode
+): void => {
+  let currentDirectory = directory;
+
+  while (currentDirectory !== ".") {
+    const parentDirectory = path.posix.dirname(currentDirectory);
+    ensureNode(parentDirectory).childDirectories.add(
+      path.posix.basename(currentDirectory)
+    );
+    ensureNode(currentDirectory);
+    currentDirectory = parentDirectory;
+  }
+};

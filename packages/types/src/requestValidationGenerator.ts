@@ -51,6 +51,10 @@ function writeRequestValidator(
       importerDir: outputPaths.outputDir,
     }),
     corePath: context.coreDir,
+    typesLibPath: context.getLibImportPath({
+      importerDir: outputPaths.outputDir,
+      pluginName: "types",
+    }),
     requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}.js`,
     body,
     query,

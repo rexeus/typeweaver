@@ -9,7 +9,7 @@ import type {
   IRefreshTokenRequest,
   RefreshTokenResponse,
 } from "../../index.js";
-import type { ServerAuthApiHandler } from "../../test-project/output/auth/AuthRouter.js";
+import type { ServerAuthApiHandler } from "../../test-project/output/server/auth/AuthRouter.js";
 
 export class ServerAuthHandlers implements ServerAuthApiHandler {
   public constructor(private readonly throwError?: Error | ITypedHttpResponse) {

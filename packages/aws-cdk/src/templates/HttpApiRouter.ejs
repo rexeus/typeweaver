@@ -10,7 +10,7 @@ import { HttpMethod } from "<%= coreDir %>";
 import {
   type AwsHttpApiGatewayRoute,
   AwsHttpApiGatewayRoutes,
-} from "../lib/aws-cdk/index.js";
+} from "<%= awsCdkLibPath %>";
 
 export class <%= pascalCaseEntityName %>HttpApiRoutes extends AwsHttpApiGatewayRoutes {
   private routes: AwsHttpApiGatewayRoute[] = [

@@ -579,7 +579,63 @@ api/spec/
 
 The key difference: `index.ts` at the root now calls `defineSpec()` instead of simply re-exporting.
 
-### 9. Migration Checklist (0.8.x to 0.9.x)
+### 9. Generated Output Namespaces
+
+Generated files are now grouped by plugin under the output root. Shared artifacts still stay at the
+top level.
+
+**Before:**
+
+```text
+generated/
+├── spec/
+├── responses/
+├── lib/
+├── todo/
+│   ├── GetTodoRequest.ts
+│   ├── GetTodoResponse.ts
+│   ├── TodoClient.ts
+│   ├── TodoRouter.ts
+│   └── TodoHono.ts
+└── index.ts
+```
+
+**After:**
+
+```text
+generated/
+├── spec/
+├── responses/
+├── lib/
+│   ├── clients/
+│   ├── hono/
+│   ├── server/
+│   └── types/
+├── types/
+│   └── todo/
+├── clients/
+│   └── todo/
+├── server/
+│   └── todo/
+├── hono/
+│   └── todo/
+└── index.ts
+```
+
+Update any direct imports into generated resource files so they point at the plugin namespace:
+
+- `generated/todo/GetTodoRequest` → `generated/types/todo/GetTodoRequest`
+- `generated/todo/TodoClient` → `generated/clients/todo/TodoClient`
+- `generated/todo/TodoRouter` → `generated/server/todo/TodoRouter`
+- `generated/todo/TodoHono` → `generated/hono/todo/TodoHono`
+
+Shared imports stay rooted where they were before:
+
+- `generated/spec/spec`
+- `generated/responses/...`
+- `generated/lib/<plugin>/...`
+
+### 10. Migration Checklist (0.8.x to 0.9.x)
 
 - [ ] Rename `definition/` directory to `spec/` (recommended convention, not required)
 - [ ] Replace `new HttpOperationDefinition({...})` with `defineOperation({...})`
@@ -594,6 +650,7 @@ The key difference: `index.ts` at the root now calls `defineSpec()` instead of s
 - [ ] Remove `--shared` flag from CLI invocations and config files
 - [ ] Update `typeweaver.config.js` if used: `input` is now a file path, remove `shared`
 - [ ] Regenerate all output with `npx typeweaver generate`
+- [ ] Update direct generated imports to use plugin namespaces (`types/`, `clients/`, `server/`, `hono/`, etc.)
 - [ ] Verify no `HttpOperationDefinition` or `HttpResponseDefinition` class imports remain
 
 ---

@@ -40,6 +40,7 @@ function createMockContext(operations: NormalizedOperation[]): {
   };
 
   const context = {
+    pluginName: "server",
     outputDir: "/out",
     inputDir: "/in",
     config: {},
@@ -50,6 +51,14 @@ function createMockContext(operations: NormalizedOperation[]): {
     getCanonicalResponse: () => {
       throw new Error("not implemented");
     },
+    getPluginOutputDir: (pluginName: string) => path.join("/out", pluginName),
+    getPluginResourceOutputDir: ({
+      pluginName,
+      resourceName,
+    }: {
+      readonly pluginName: string;
+      readonly resourceName: string;
+    }) => path.join("/out", pluginName, resourceName),
     getCanonicalResponseOutputFile: (responseName: string) => {
       return `/out/responses/${responseName}Response.ts`;
     },
@@ -63,13 +72,15 @@ function createMockContext(operations: NormalizedOperation[]): {
       return `spec.resources[${JSON.stringify(resourceName)}]!.operations.find(operation => operation.operationId === ${JSON.stringify(operationId)})!`;
     },
     getOperationOutputPaths: ({
+      pluginName,
       operationId,
       resourceName,
     }: {
+      readonly pluginName?: string;
       readonly operationId: string;
       readonly resourceName: string;
     }) => {
-      const outputDir = path.join("/out", resourceName);
+      const outputDir = path.join("/out", pluginName ?? "server", resourceName);
 
       return {
         outputDir,
@@ -91,8 +102,25 @@ function createMockContext(operations: NormalizedOperation[]): {
         clientFileName: `${operationId}Client.ts`,
       };
     },
+    getOperationImportPaths: ({
+      operationId,
+      resourceName,
+    }: {
+      readonly importerDir: string;
+      readonly pluginName: string;
+      readonly operationId: string;
+      readonly resourceName: string;
+    }) => ({
+      outputDir: path.join("/out", "types", resourceName),
+      requestFile: `../../types/${resourceName}/${operationId}Request.js`,
+      responseFile: `../../types/${resourceName}/${operationId}Response.js`,
+      requestValidationFile: `../../types/${resourceName}/${operationId}RequestValidator.js`,
+      responseValidationFile: `../../types/${resourceName}/${operationId}ResponseValidator.js`,
+      clientFile: `../../types/${resourceName}/${operationId}Client.js`,
+    }),
     getResourceOutputDir: (resourceName: string) =>
-      path.join("/out", resourceName),
+      path.join("/out", "server", resourceName),
+    getLibImportPath: () => "../../lib/server/index.js",
     writeFile: (relativePath: string, content: string) => {
       writtenFiles.set(relativePath, content);
     },
@@ -264,7 +292,7 @@ describe("RouterGenerator", () => {
 
       generate(context);
 
-      expect(writtenFiles.has("entity/EntityRouter.ts")).toBe(true);
+      expect(writtenFiles.has("server/entity/EntityRouter.ts")).toBe(true);
     });
   });
 });

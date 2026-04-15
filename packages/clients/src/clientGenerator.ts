@@ -31,9 +31,15 @@ function writeClient(
 ): void {
   const pascalCaseEntityName = toPascalCase(resource.name);
   const outputDir = context.getResourceOutputDir(resource.name);
+  const clientsLibPath = context.getLibImportPath({
+    importerDir: outputDir,
+    pluginName: "clients",
+  });
 
   const operations = resource.operations.map(operation => {
-    const outputPaths = context.getOperationOutputPaths({
+    const typeImports = context.getOperationImportPaths({
+      importerDir: outputDir,
+      pluginName: "types",
       resourceName: resource.name,
       operationId: operation.operationId,
     });
@@ -41,14 +47,13 @@ function writeClient(
     return {
       operationId: operation.operationId,
       pascalCaseOperationId: toPascalCase(operation.operationId),
-      requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}.js`,
-      responseValidatorFile: `./${path.basename(outputPaths.responseValidationFileName, ".ts")}.js`,
-      responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}.js`,
+      requestCommandFile: `./${toPascalCase(operation.operationId)}RequestCommand.js`,
+      responseFile: typeImports.responseFile,
     };
   });
 
   const content = context.renderTemplate(templateFilePath, {
-    coreDir: context.coreDir,
+    clientsLibPath,
     pascalCaseEntityName,
     operations,
   });
@@ -81,6 +86,12 @@ function writeRequestCommand(
     resourceName,
     operationId: operation.operationId,
   });
+  const typeImports = context.getOperationImportPaths({
+    importerDir: outputPaths.outputDir,
+    pluginName: "types",
+    resourceName,
+    operationId: operation.operationId,
+  });
   const request = operation.request ?? {};
   const pascalCaseOperationId = toPascalCase(operation.operationId);
 
@@ -96,6 +107,14 @@ function writeRequestCommand(
     specPath: context.getSpecImportPath({
       importerDir: outputPaths.outputDir,
     }),
+    clientsLibPath: context.getLibImportPath({
+      importerDir: outputPaths.outputDir,
+      pluginName: "clients",
+    }),
+    typesLibPath: context.getLibImportPath({
+      importerDir: outputPaths.outputDir,
+      pluginName: "types",
+    }),
     operationId: operation.operationId,
     pascalCaseOperationId,
     method: operation.method,
@@ -103,9 +122,9 @@ function writeRequestCommand(
     paramTsType,
     queryTsType,
     bodyTsType,
-    requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}.js`,
-    responseValidatorFile: `./${path.basename(outputPaths.responseValidationFileName, ".ts")}.js`,
-    responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}.js`,
+    requestFile: typeImports.requestFile,
+    responseValidatorFile: typeImports.responseValidationFile,
+    responseFile: typeImports.responseFile,
   });
 
   const outputCommandFile = path.join(

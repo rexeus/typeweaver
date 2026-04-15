@@ -1,7 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { compareRoutes, relative, toPascalCase } from "@rexeus/typeweaver-gen";
+import { compareRoutes, toPascalCase } from "@rexeus/typeweaver-gen";
 import type {
   GeneratorContext,
   NormalizedOperation,
@@ -14,6 +14,10 @@ type OperationData = {
   readonly handlerName: string;
   readonly method: string;
   readonly path: string;
+  readonly requestFile: string;
+  readonly requestValidationFile: string;
+  readonly responseFile: string;
+  readonly responseValidationFile: string;
 };
 
 /**
@@ -48,11 +52,14 @@ function writeRouter(
 
   const operations = resource.operations
     .filter(operation => operation.method !== HttpMethod.HEAD)
-    .map(operation => createOperationData(operation))
+    .map(operation => createOperationData(outputDir, resource.name, operation, context))
     .sort((a, b) => compareRoutes(a, b));
 
   const content = context.renderTemplate(templateFile, {
-    coreDir: relative(outputDir, context.outputDir),
+    serverLibPath: context.getLibImportPath({
+      importerDir: outputDir,
+      pluginName: "server",
+    }),
     entityName: resource.name,
     pascalCaseEntityName,
     operations,
@@ -62,9 +69,20 @@ function writeRouter(
   context.writeFile(relativePath, content);
 }
 
-function createOperationData(operation: NormalizedOperation): OperationData {
+function createOperationData(
+  importerDir: string,
+  resourceName: string,
+  operation: NormalizedOperation,
+  context: GeneratorContext
+): OperationData {
   const operationId = operation.operationId;
   const className = toPascalCase(operationId);
+  const importPaths = context.getOperationImportPaths({
+    importerDir,
+    pluginName: "types",
+    resourceName,
+    operationId,
+  });
 
   return {
     operationId,
@@ -72,5 +90,9 @@ function createOperationData(operation: NormalizedOperation): OperationData {
     handlerName: `handle${className}Request`,
     method: operation.method,
     path: operation.path,
+    requestFile: importPaths.requestFile,
+    requestValidationFile: importPaths.requestValidationFile,
+    responseFile: importPaths.responseFile,
+    responseValidationFile: importPaths.responseValidationFile,
   };
 }

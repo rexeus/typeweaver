@@ -1,7 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { compareRoutes, relative, toPascalCase } from "@rexeus/typeweaver-gen";
+import { compareRoutes, toPascalCase } from "@rexeus/typeweaver-gen";
 import type {
   GeneratorContext,
   NormalizedOperation,
@@ -28,11 +28,14 @@ function writeHonoRouter(
 
   const operations = resource.operations
     .filter(operation => operation.method !== HttpMethod.HEAD)
-    .map(operation => createOperationData(operation))
+    .map(operation => createOperationData(outputDir, resource.name, operation, context))
     .sort((a, b) => compareRoutes(a, b));
 
   const content = context.renderTemplate(templateFile, {
-    coreDir: relative(outputDir, context.outputDir),
+    honoLibPath: context.getLibImportPath({
+      importerDir: outputDir,
+      pluginName: "hono",
+    }),
     entityName: resource.name,
     pascalCaseEntityName,
     operations,
@@ -42,10 +45,21 @@ function writeHonoRouter(
   context.writeFile(relativePath, content);
 }
 
-function createOperationData(operation: NormalizedOperation) {
+function createOperationData(
+  importerDir: string,
+  resourceName: string,
+  operation: NormalizedOperation,
+  context: GeneratorContext
+) {
   const operationId = operation.operationId;
   const className = toPascalCase(operationId);
   const handlerName = `handle${className}Request`;
+  const importPaths = context.getOperationImportPaths({
+    importerDir,
+    pluginName: "types",
+    resourceName,
+    operationId,
+  });
 
   return {
     operationId,
@@ -53,5 +67,9 @@ function createOperationData(operation: NormalizedOperation) {
     handlerName,
     method: operation.method,
     path: operation.path,
+    requestFile: importPaths.requestFile,
+    requestValidationFile: importPaths.requestValidationFile,
+    responseFile: importPaths.responseFile,
+    responseValidationFile: importPaths.responseValidationFile,
   };
 }

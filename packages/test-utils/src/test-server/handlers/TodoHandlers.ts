@@ -48,7 +48,7 @@ import type {
   UpdateTodoResponse,
   UpdateTodoStatusResponse,
 } from "../../index.js";
-import type { HonoTodoApiHandler } from "../../test-project/output/todo/TodoHono.js";
+import type { HonoTodoApiHandler } from "../../test-project/output/hono/todo/TodoHono.js";
 
 export class TodoHandlers implements HonoTodoApiHandler {
   public constructor(private readonly throwError?: Error | ITypedHttpResponse) {

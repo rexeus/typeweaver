@@ -45,7 +45,7 @@ import type {
   UpdateTodoResponse,
   UpdateTodoStatusResponse,
 } from "../../index.js";
-import type { ServerTodoApiHandler } from "../../test-project/output/todo/TodoRouter.js";
+import type { ServerTodoApiHandler } from "../../test-project/output/server/todo/TodoRouter.js";
 
 export class ServerTodoHandlers implements ServerTodoApiHandler {
   public constructor(private readonly throwError?: Error | ITypedHttpResponse) {

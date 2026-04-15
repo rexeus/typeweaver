@@ -12,7 +12,7 @@ import {
     getResponseDefinition,
     type ResponseEntry,
     ResponseValidator,
-} from "../lib/types/index.js";
+} from "<%= typesLibPath %>";
 import type { <%= pascalCaseOperationId %>Response } from "<%= responseFile %>";
 
 const definition = getOperationDefinition(spec, "<%= resourceName %>", "<%= operationId %>");

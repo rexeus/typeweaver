@@ -54,6 +54,7 @@ describe("ResponseGenerator", () => {
     };
 
     const context = {
+      pluginName: "types",
       outputDir: "/out",
       inputDir: "/in",
       config: {},
@@ -61,6 +62,14 @@ describe("ResponseGenerator", () => {
       coreDir: "@rexeus/typeweaver-core",
       responsesOutputDir: "/out/responses",
       specOutputDir: "/out/spec",
+      getPluginOutputDir: (pluginName: string) => path.join("/out", pluginName),
+      getPluginResourceOutputDir: ({
+        pluginName,
+        resourceName,
+      }: {
+        readonly pluginName: string;
+        readonly resourceName: string;
+      }) => path.join("/out", pluginName, resourceName),
       getCanonicalResponse: () => normalizedSpec.responses[0]!,
       getCanonicalResponseOutputFile: (responseName: string) => {
         return path.join("/out/responses", `${responseName}Response.ts`);
@@ -70,9 +79,9 @@ describe("ResponseGenerator", () => {
       }: {
         responseName: string;
       }) => {
-        return `../responses/${responseName}Response`;
+        return `../../responses/${responseName}Response`;
       },
-      getSpecImportPath: () => "../spec/spec",
+      getSpecImportPath: () => "../../spec/spec",
       getOperationDefinitionAccessor: ({
         operationId,
         resourceName,
@@ -83,13 +92,15 @@ describe("ResponseGenerator", () => {
         return `spec.resources[${JSON.stringify(resourceName)}]!.operations.find(operation => operation.operationId === ${JSON.stringify(operationId)})!`;
       },
       getOperationOutputPaths: ({
+        pluginName,
         operationId,
         resourceName,
       }: {
+        readonly pluginName?: string;
         readonly operationId: string;
         readonly resourceName: string;
       }) => {
-        const outputDir = path.join("/out", resourceName);
+        const outputDir = path.join("/out", pluginName ?? "types", resourceName);
 
         return {
           outputDir,
@@ -111,8 +122,25 @@ describe("ResponseGenerator", () => {
           clientFileName: `${operationId}Client.ts`,
         };
       },
+      getOperationImportPaths: ({
+        operationId,
+        resourceName,
+      }: {
+        readonly importerDir: string;
+        readonly pluginName: string;
+        readonly operationId: string;
+        readonly resourceName: string;
+      }) => ({
+        outputDir: path.join("/out", "types", resourceName),
+        requestFile: `../types/${resourceName}/${operationId}Request.js`,
+        responseFile: `../types/${resourceName}/${operationId}Response.js`,
+        requestValidationFile: `../types/${resourceName}/${operationId}RequestValidator.js`,
+        responseValidationFile: `../types/${resourceName}/${operationId}ResponseValidator.js`,
+        clientFile: `../types/${resourceName}/${operationId}Client.js`,
+      }),
       getResourceOutputDir: (resourceName: string) =>
-        path.join("/out", resourceName),
+        path.join("/out", "types", resourceName),
+      getLibImportPath: () => "../../lib/types/index.js",
       writeFile: (relativePath: string, content: string) => {
         writtenFiles.set(relativePath, content);
       },
@@ -128,7 +156,7 @@ describe("ResponseGenerator", () => {
       "responses/SharedErrorResponse.ts"
     );
     const operationResponseContent = writtenFiles.get(
-      "todos/createTodoResponse.ts"
+      "types/todos/createTodoResponse.ts"
     );
 
     expect(sharedResponseContent).toBeDefined();
@@ -155,7 +183,7 @@ describe("ResponseGenerator", () => {
         sharedResponses: [
           {
             name: "SharedError",
-            path: "../responses/SharedErrorResponse",
+            path: "../../responses/SharedErrorResponse",
           },
         ],
       })

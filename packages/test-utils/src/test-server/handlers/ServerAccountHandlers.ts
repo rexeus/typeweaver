@@ -4,7 +4,7 @@ import type {
   IRegisterAccountRequest,
   RegisterAccountResponse,
 } from "../../index.js";
-import type { ServerAccountApiHandler } from "../../test-project/output/account/AccountRouter.js";
+import type { ServerAccountApiHandler } from "../../test-project/output/server/account/AccountRouter.js";
 
 export class ServerAccountHandlers implements ServerAccountApiHandler {
   public constructor(private readonly throwError?: Error | ITypedHttpResponse) {

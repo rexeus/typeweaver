@@ -45,6 +45,10 @@ function writeHttpApiRoutes(
     pascalCaseEntityName,
     routes,
     coreDir: context.coreDir,
+    awsCdkLibPath: context.getLibImportPath({
+      importerDir: outputDir,
+      pluginName: "aws-cdk",
+    }),
   });
 
   const relativePath = path.relative(context.outputDir, outputFile);
