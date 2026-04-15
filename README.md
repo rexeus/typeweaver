@@ -11,18 +11,6 @@ Typeweaver is a type-safe HTTP API framework built for API-first development wit
 developer experience. Use typeweaver to specify your HTTP APIs in TypeScript and Zod, and generate
 clients, validators, routers, and more ✨
 
-### Naming conventions
-
-- `operationId` should use camelCase (preferred), for example `getUser`.
-- PascalCase `operationId` values are supported for compatibility.
-- `operationId` values in snake_case or kebab-case are not supported.
-- `resourceName` should preferably be a singular noun in camelCase, for example `user` or
-  `authSession`.
-- Plural and PascalCase `resourceName` values are supported.
-- `resourceName` values in snake_case or kebab-case are not supported.
-
----
-
 ## 📥 Installation
 
 ```bash

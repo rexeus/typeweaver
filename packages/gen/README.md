@@ -27,18 +27,6 @@ Most users don’t depend on this package directly — use the CLI instead:
 [`@rexeus/typeweaver`](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md). If
 you’re writing a plugin, start here.
 
-## 🏷️ Spec naming validation
-
-The normalization pipeline validates supported naming formats before generation:
-
-- `operationId` should use camelCase (preferred), for example `getUser`.
-- PascalCase `operationId` values are supported for compatibility.
-- snake_case and kebab-case `operationId` values are rejected during normalization.
-- `resourceName` should preferably be a singular noun in camelCase, for example `user` or
-  `authSession`.
-- Plural and PascalCase `resourceName` values are supported.
-- snake_case and kebab-case `resourceName` values are rejected during normalization.
-
 ### 🚀 Minimal plugin
 
 ```ts
@@ -186,6 +174,18 @@ output.
   [here](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md#️-options).
 - Keep plugins focused: one concern per plugin (clients, routers, infra).
 - Prefer `GeneratorContext.writeFile` over manual fs writes for tracking and directory setup.
+
+### 🏷️ Spec naming validation
+
+The normalization pipeline validates supported naming formats before generation:
+
+- `operationId` should use camelCase (preferred), for example `getUser`.
+- PascalCase `operationId` values are supported for compatibility.
+- snake_case and kebab-case `operationId` values are rejected during normalization.
+- `resourceName` should preferably be a singular noun in camelCase, for example `user` or
+  `authSession`.
+- Plural and PascalCase `resourceName` values are supported.
+- snake_case and kebab-case `resourceName` values are rejected during normalization.
 
 ## 📄 License
 
