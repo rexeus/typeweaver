@@ -1,5 +1,5 @@
 export type GenerationSummary = {
-  readonly mode: "generate" | "validate" | "init" | "migrate" | "doctor";
+  readonly mode: "generate" | "init" | "migrate" | "doctor";
   readonly dryRun: boolean;
   readonly targetOutputDir?: string;
   readonly targetConfigPath?: string;

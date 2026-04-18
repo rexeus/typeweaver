@@ -1,3 +1,4 @@
+// oxlint-disable import/max-dependencies
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -5,25 +6,45 @@ import { fileURLToPath } from "node:url";
 import {
   createPluginContextBuilder,
   createPluginRegistry,
-  type NormalizedSpec,
 } from "@rexeus/typeweaver-gen";
-import type { PluginConfig, TypeweaverConfig } from "@rexeus/typeweaver-gen";
+import type {
+  NormalizedSpec,
+  PluginConfig,
+  TypeweaverConfig,
+} from "@rexeus/typeweaver-gen";
 import { TypesPlugin } from "@rexeus/typeweaver-types";
-import type { GenerationSummary } from "../generationResult.js";
-import { createLogger, type Logger } from "../logger.js";
+import { createLogger } from "../logger.js";
 import { ReservedEntityNameError } from "./errors/reservedEntityNameError.js";
-import { formatCode } from "./formatter.js";
-import { generateIndexFiles } from "./indexFileGenerator.js";
-import { loadPlugins } from "./pluginLoader.js";
-import { loadSpec } from "./specLoader.js";
+import {
+  collectRegisteredResources,
+  createGeneratorContextFactory,
+  finalizeRegisteredPlugins,
+  formatGeneratedOutput,
+  generateRegisteredFiles,
+  initializeRegisteredPlugins,
+  loadGeneratorPlugins,
+  loadNormalizedSpec,
+} from "./generatorSupport.js";
+import type { GenerationSummary } from "../generationResult.js";
+import type { Logger } from "../logger.js";
 import type { PluginResolutionStrategy } from "./pluginLoader.js";
 
 export type GeneratorConfig = TypeweaverConfig & {
   readonly dryRun?: boolean;
 };
 
+export type GeneratorOptions = {
+  readonly requiredPlugins?: [TypesPlugin];
+  readonly strategies?: PluginResolutionStrategy[];
+  readonly logger?: Logger;
+};
+
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-const RESERVED_PLUGIN_OUTPUT_DIRECTORIES = new Set(["lib", "responses", "spec"]);
+const RESERVED_PLUGIN_OUTPUT_DIRECTORIES = new Set([
+  "lib",
+  "responses",
+  "spec",
+]);
 
 export const assertSafeCleanTarget = (
   outputDir: string,
@@ -86,14 +107,10 @@ export class Generator {
   private inputFile = "";
   private outputDir = "";
 
-  public constructor(
-    requiredPlugins: [TypesPlugin] = [new TypesPlugin()],
-    strategies?: PluginResolutionStrategy[],
-    logger: Logger = createLogger()
-  ) {
-    this.requiredPlugins = requiredPlugins;
-    this.strategies = strategies ?? ["npm", "local"];
-    this.logger = logger;
+  public constructor(options: GeneratorOptions = {}) {
+    this.requiredPlugins = options.requiredPlugins ?? [new TypesPlugin()];
+    this.strategies = options.strategies ?? ["npm", "local"];
+    this.logger = options.logger ?? createLogger();
   }
 
   /**
@@ -130,13 +147,13 @@ export class Generator {
       fs.mkdirSync(responsesOutputDir, { recursive: true });
       fs.mkdirSync(specOutputDir, { recursive: true });
 
-      await loadPlugins(
-        this.registry,
-        this.requiredPlugins,
-        this.strategies,
-        this.logger,
-        config
-      );
+      await loadGeneratorPlugins({
+        registry: this.registry,
+        requiredPlugins: this.requiredPlugins,
+        strategies: this.strategies,
+        logger: this.logger,
+        generationConfig: config,
+      });
 
       assertSafePluginOutputNamespaces(
         this.registry.getAll().map(registration => registration.plugin.name),
@@ -148,7 +165,7 @@ export class Generator {
           isDryRun ? " for dry-run preview" : ""
         }...`
       );
-      let { normalizedSpec } = await loadSpec({
+      let normalizedSpec = await loadNormalizedSpec({
         inputFile: this.inputFile,
         specOutputDir,
       });
@@ -161,69 +178,59 @@ export class Generator {
       });
 
       this.logger.step("Initializing plugins...");
-      for (const registration of this.registry.getAll()) {
-        if (registration.plugin.initialize) {
-          await registration.plugin.initialize({
-            ...pluginContext,
-            pluginName: registration.plugin.name,
-          });
-        }
-      }
+      await initializeRegisteredPlugins({
+        registry: this.registry,
+        pluginContext,
+      });
 
       this.logger.step("Collecting resources...");
-      for (const registration of this.registry.getAll()) {
-        if (registration.plugin.collectResources) {
-          normalizedSpec =
-            await registration.plugin.collectResources(normalizedSpec);
-        }
-      }
+      normalizedSpec = await collectRegisteredResources({
+        registry: this.registry,
+        normalizedSpec,
+      });
 
-      const createGeneratorContext = (pluginName: string) => {
-        return this.contextBuilder.createGeneratorContext({
-          pluginName,
-          outputDir: generationOutputDir,
-          inputDir: path.dirname(this.inputFile),
-          config: (config ?? {}) as PluginConfig,
-          normalizedSpec,
-          templateDir: this.templateDir,
-          coreDir: this.coreDir,
-          responsesOutputDir,
-          specOutputDir,
-        });
-      };
+      const createGeneratorContext = createGeneratorContextFactory({
+        contextBuilder: this.contextBuilder,
+        generationOutputDir,
+        inputFile: this.inputFile,
+        generationConfig: (config ?? {}) as PluginConfig,
+        normalizedSpec,
+        templateDir: this.templateDir,
+        coreDir: this.coreDir,
+        responsesOutputDir,
+        specOutputDir,
+      });
 
       const indexGeneratorContext = createGeneratorContext("typeweaver");
 
       this.logger.step("Generating code...");
-      for (const registration of this.registry.getAll()) {
-        this.logger.info(`Running plugin: ${registration.plugin.name}`);
-        if (registration.plugin.generate) {
-          const generatorContext = createGeneratorContext(registration.plugin.name);
-          await registration.plugin.generate(generatorContext);
-        }
-      }
-
-      generateIndexFiles(this.templateDir, indexGeneratorContext);
+      await generateRegisteredFiles({
+        registry: this.registry,
+        createGeneratorContext,
+        templateDir: this.templateDir,
+        indexGeneratorContext,
+        logger: this.logger,
+      });
 
       this.logger.step("Finalizing plugins...");
-      for (const registration of this.registry.getAll()) {
-        if (registration.plugin.finalize) {
-          await registration.plugin.finalize({
-            ...pluginContext,
-            pluginName: registration.plugin.name,
-          });
-        }
-      }
+      await finalizeRegisteredPlugins({
+        registry: this.registry,
+        pluginContext,
+      });
 
-      if (config?.format ?? true) {
-        warnings.push(...(await formatCode(generationOutputDir)));
-      }
+      warnings.push(
+        ...(await formatGeneratedOutput({
+          generationOutputDir,
+          shouldFormat: config?.format ?? true,
+        }))
+      );
 
       const summary = createGenerationSummary({
         dryRun: isDryRun,
         outputDir: this.outputDir,
         normalizedSpec,
-        pluginCount: this.registry.getAll().length,
+        pluginCount:
+          this.registry.getAll().length - this.requiredPlugins.length,
         generatedFiles: listGeneratedFiles(generationOutputDir),
         warnings,
       });
@@ -285,7 +292,10 @@ export const assertSafePluginOutputNamespaces = (
       continue;
     }
 
-    throw new ReservedEntityNameError(pluginName, path.join(outputDir, pluginName));
+    throw new ReservedEntityNameError(
+      pluginName,
+      path.join(outputDir, pluginName)
+    );
   }
 };
 
@@ -305,7 +315,9 @@ const listGeneratedFiles = (outputDir: string): string[] => {
         continue;
       }
 
-      generatedFiles.push(path.relative(outputDir, entryPath).replaceAll("\\", "/"));
+      generatedFiles.push(
+        path.relative(outputDir, entryPath).replaceAll("\\", "/")
+      );
     }
   };
 

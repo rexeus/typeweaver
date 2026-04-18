@@ -650,7 +650,8 @@ Shared imports stay rooted where they were before:
 - [ ] Remove `--shared` flag from CLI invocations and config files
 - [ ] Update `typeweaver.config.js` if used: `input` is now a file path, remove `shared`
 - [ ] Regenerate all output with `npx typeweaver generate`
-- [ ] Update direct generated imports to use plugin namespaces (`types/`, `clients/`, `server/`, `hono/`, etc.)
+- [ ] Update direct generated imports to use plugin namespaces (`types/`, `clients/`, `server/`,
+      `hono/`, etc.)
 - [ ] Verify no `HttpOperationDefinition` or `HttpResponseDefinition` class imports remain
 
 ---

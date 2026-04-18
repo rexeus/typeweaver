@@ -1,16 +1,14 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { GenerationSummary } from "../generationResult.js";
-import type { Logger } from "../logger.js";
-import { TYPEWEAVER_CONFIG_FILE } from "../templates/typeweaverConfigTemplate.js";
 import { createDoctorChecks } from "../doctor/checks.js";
 import { reportDoctorChecks } from "../doctor/reporter.js";
 import { runDoctorChecks, summarizeDoctorChecks } from "../doctor/runner.js";
-import {
-  createCommandLogger,
-  type SharedCommandOptions,
-} from "./shared.js";
+import { TYPEWEAVER_CONFIG_FILE } from "../templates/typeweaverConfigTemplate.js";
+import { createCommandLogger } from "./shared.js";
+import type { GenerationSummary } from "../generationResult.js";
+import type { Logger } from "../logger.js";
+import type { SharedCommandOptions } from "./shared.js";
 
 export type DoctorCommandOptions = SharedCommandOptions & {
   readonly config?: string;
@@ -28,7 +26,10 @@ export const handleDoctorCommand = async (
 ): Promise<GenerationSummary> => {
   const execDir = context.execDir ?? process.cwd();
   const logger = (context.createLogger ?? createCommandLogger)(options);
-  const configPath = path.resolve(execDir, options.config ?? TYPEWEAVER_CONFIG_FILE);
+  const configPath = path.resolve(
+    execDir,
+    options.config ?? TYPEWEAVER_CONFIG_FILE
+  );
   const temporaryDirectory = fs.mkdtempSync(
     path.join(os.tmpdir(), "typeweaver-doctor-")
   );
@@ -36,14 +37,17 @@ export const handleDoctorCommand = async (
   try {
     logger.step("Running Typeweaver doctor...");
 
-    const results = await runDoctorChecks(createDoctorChecks(options.deep ?? false), {
-      execDir,
-      configPath,
-      isDeep: options.deep ?? false,
-      logger,
-      temporaryDirectory,
-      state: {},
-    });
+    const results = await runDoctorChecks(
+      createDoctorChecks(options.deep ?? false),
+      {
+        execDir,
+        configPath,
+        isDeep: options.deep ?? false,
+        logger,
+        temporaryDirectory,
+        state: {},
+      }
+    );
     reportDoctorChecks(logger, results);
 
     const summary = summarizeDoctorChecks(results);

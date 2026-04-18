@@ -52,7 +52,9 @@ function writeRouter(
 
   const operations = resource.operations
     .filter(operation => operation.method !== HttpMethod.HEAD)
-    .map(operation => createOperationData(outputDir, resource.name, operation, context))
+    .map(operation =>
+      createOperationData(outputDir, resource.name, operation, context)
+    )
     .sort((a, b) => compareRoutes(a, b));
 
   const content = context.renderTemplate(templateFile, {

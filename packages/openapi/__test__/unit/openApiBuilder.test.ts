@@ -1,10 +1,20 @@
 import { HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
+import type { NormalizedSpec } from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import type { NormalizedSpec } from "@rexeus/typeweaver-gen";
-import { buildOpenApiDocument, toOpenApiPath } from "../../src/openApiBuilder.js";
+import {
+  buildOpenApiDocument,
+  toOpenApiPath,
+} from "../../src/openApiBuilder.js";
+import { createOperationFixture } from "../fixtures/operationFixture.js";
 
 describe("openApiBuilder", () => {
+  test("leaves OpenAPI-style paths unchanged", () => {
+    expect(toOpenApiPath("/todos/{todoId}/sub-todos")).toBe(
+      "/todos/{todoId}/sub-todos"
+    );
+  });
+
   test("converts express-style paths to OpenAPI paths", () => {
     expect(toOpenApiPath("/todos/:todoId/sub-todos/:subTodoId")).toBe(
       "/todos/{todoId}/sub-todos/{subTodoId}"
@@ -155,40 +165,15 @@ describe("openApiBuilder", () => {
   });
 
   test("surfaces warnings for broadened schemas", () => {
-    const normalizedSpec: NormalizedSpec = {
-      resources: [
-        {
-          name: "todo",
-          operations: [
-            {
-              operationId: "createTodo",
-              method: HttpMethod.POST,
-              path: "/todos",
-              summary: "Create a todo",
-              request: {
-                body: z.object({
-                  scheduledAt: z.date(),
-                }),
-              },
-              responses: [
-                {
-                  source: "inline",
-                  responseName: "CreateTodoSuccess",
-                  response: {
-                    name: "CreateTodoSuccess",
-                    statusCode: HttpStatusCode.CREATED,
-                    statusCodeName: "CREATED",
-                    description: "Created",
-                    kind: "response",
-                  },
-                },
-              ],
-            },
-          ],
-        },
-      ],
-      responses: [],
-    };
+    const normalizedSpec = createOperationFixture({
+      operationId: "createTodo",
+      method: HttpMethod.POST,
+      request: {
+        body: z.object({
+          scheduledAt: z.date(),
+        }),
+      },
+    });
 
     const result = buildOpenApiDocument({ normalizedSpec });
 
@@ -198,5 +183,42 @@ describe("openApiBuilder", () => {
         location: "operation:createTodo:requestBody",
       }),
     ]);
+  });
+
+  test("keeps tuple response schemas validator-friendly end to end", () => {
+    const normalizedSpec = createOperationFixture({
+      operationId: "getTupleTodo",
+      path: "/todos/:todoId/tuple",
+      request: {
+        param: z.object({
+          todoId: z.string(),
+        }),
+      },
+      responseBody: z.object({
+        coordinates: z.tuple([z.number(), z.number()]),
+      }),
+    });
+
+    const result = buildOpenApiDocument({ normalizedSpec });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.document).toMatchObject({
+      components: {
+        schemas: {
+          TodoGetTupleTodoGetTupleTodoSuccessBody: {
+            type: "object",
+            properties: {
+              coordinates: {
+                type: "array",
+                prefixItems: [{ type: "number" }, { type: "number" }],
+                items: {},
+                minItems: 2,
+                maxItems: 2,
+              },
+            },
+          },
+        },
+      },
+    });
   });
 });

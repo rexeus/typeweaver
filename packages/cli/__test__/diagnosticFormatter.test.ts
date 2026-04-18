@@ -13,12 +13,18 @@ import {
   PathParameterMismatchError,
 } from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
-import { formatDiagnostic } from "../src/diagnosticFormatter.js";
+import {
+  formatDiagnostic,
+  reportErrorFromDiagnostic,
+  writeDiagnostic,
+} from "../src/diagnosticFormatter.js";
 import { DefinitionCompilationError } from "../src/generators/errors/definitionCompilationError.js";
 import { PluginLoadingFailure } from "../src/generators/errors/pluginLoadingFailure.js";
 import { ReservedEntityNameError } from "../src/generators/errors/reservedEntityNameError.js";
 import { ReservedKeywordError } from "../src/generators/errors/reservedKeywordError.js";
 import { InvalidSpecEntrypointError } from "../src/generators/spec/InvalidSpecEntrypointError.js";
+import { createTestLogger } from "./__helpers__/testLogger.js";
+import type { Logger } from "../src/logger.js";
 
 describe("formatDiagnostic", () => {
   test("formats plugin loading failures", () => {
@@ -93,7 +99,9 @@ describe("formatDiagnostic", () => {
       new DuplicateRouteError("GET", "/todos/:id", "/todos/{id}")
     );
 
-    expect(diagnostic.summary).toBe("Two operations resolve to the same route.");
+    expect(diagnostic.summary).toBe(
+      "Two operations resolve to the same route."
+    );
     expect(diagnostic.contextLines[0]).toContain("GET /todos/:id");
   });
 
@@ -127,7 +135,9 @@ describe("formatDiagnostic", () => {
       new InvalidDerivedResponseError("TodoResponse")
     );
 
-    expect(diagnostic.summary).toBe("A derived response definition is invalid.");
+    expect(diagnostic.summary).toBe(
+      "A derived response definition is invalid."
+    );
     expect(diagnostic.contextLines[0]).toContain("TodoResponse");
   });
 
@@ -215,5 +225,63 @@ describe("formatDiagnostic", () => {
     expect(diagnostic.contextLines).toEqual([]);
     expect(diagnostic.hint).toBe("Re-run with --verbose to see more detail.");
     expect(diagnostic.verboseDetails).toEqual(["plain failure"]);
+  });
+});
+
+describe("reportErrorFromDiagnostic", () => {
+  test("bridges a diagnostic into an ErrorReport with context lines and hint", () => {
+    const report = reportErrorFromDiagnostic(
+      new DuplicateOperationIdError("getTodo")
+    );
+
+    expect(report.summary).toBe("Operation IDs must be globally unique.");
+    expect(report.details[0]).toContain("getTodo");
+    expect(report.details).toContain(
+      "Rename one of the duplicated operation IDs so every operation is unique across the spec."
+    );
+  });
+
+  test("appends the diagnostic hint exactly once when present", () => {
+    const report = reportErrorFromDiagnostic(
+      new DuplicateOperationIdError("getTodo")
+    );
+
+    const diagnosticHints = report.details.filter(detail =>
+      detail.startsWith("Rename one of")
+    );
+    expect(diagnosticHints).toHaveLength(1);
+  });
+
+  test("falls back to the error message for unknown throwables", () => {
+    const report = reportErrorFromDiagnostic(new Error("unexpected boom"));
+
+    expect(report.summary).toBe("unexpected boom");
+  });
+});
+
+describe("writeDiagnostic", () => {
+  test("routes summary to error() and hint to warn()", () => {
+    const logger = createTestLogger();
+
+    writeDiagnostic(logger, new DuplicateOperationIdError("getTodo"));
+
+    expect(logger.error).toHaveBeenCalledWith(
+      "Operation IDs must be globally unique."
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining("getTodo")
+    );
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringMatching(/^Hint:/));
+  });
+
+  test("emits stack details via debug only when verbose is enabled", () => {
+    const quietLogger: Logger = { ...createTestLogger(), isVerbose: false };
+    const verboseLogger: Logger = { ...createTestLogger(), isVerbose: true };
+
+    writeDiagnostic(quietLogger, new Error("quiet"));
+    writeDiagnostic(verboseLogger, new Error("verbose"));
+
+    expect(quietLogger.debug).not.toHaveBeenCalled();
+    expect(verboseLogger.debug).toHaveBeenCalled();
   });
 });

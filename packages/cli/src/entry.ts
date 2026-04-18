@@ -1,5 +1,5 @@
-import { writeDiagnostic } from "./diagnosticFormatter.js";
 import { createCli } from "./cli.js";
+import { writeDiagnostic } from "./diagnosticFormatter.js";
 import { createLogger } from "./logger.js";
 
 const main = async (): Promise<void> => {

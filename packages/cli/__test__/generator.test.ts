@@ -1,31 +1,14 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import {
   assertSafeCleanTarget,
   assertSafePluginOutputNamespaces,
 } from "../src/generators/generator.js";
+import { createTempDirFactory } from "./__helpers__/tempDir.js";
 
 describe("Generator clean safety", () => {
-  const tempDirs: string[] = [];
-
-  afterEach(() => {
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-
-    tempDirs.length = 0;
-  });
-
-  const createTempDir = (): string => {
-    const tempDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "typeweaver-generator-")
-    );
-    tempDirs.push(tempDir);
-
-    return tempDir;
-  };
+  const createTempDir = createTempDirFactory("typeweaver-generator-");
 
   test("rejects filesystem root clean targets", () => {
     expect(() =>

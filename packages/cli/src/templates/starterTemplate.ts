@@ -273,68 +273,80 @@ export const sharedResponses = [
 ];
 `;
 
-export const createStarterTemplate = (): StarterTemplate => {
-  return {
-    resourceCount: 1,
-    operationCount: 3,
-    responseCount: 6,
-    files: [
-      {
-        relativePath: `${STARTER_SPEC_DIR}/README.md`,
-        content: starterReadme,
-      },
-      {
-        relativePath: STARTER_SPEC_ENTRYPOINT,
-        content: starterSpecEntrypoint,
-      },
-      {
-        relativePath: `${STARTER_RESOURCE_DIR}/index.ts`,
-        content: starterTodoIndex,
-      },
-      {
-        relativePath: `${STARTER_RESOURCE_DIR}/todoSchema.ts`,
-        content: starterTodoSchema,
-      },
-      {
-        relativePath: `${STARTER_RESOURCE_DIR}/ListTodosDefinition.ts`,
-        content: starterListTodosDefinition,
-      },
-      {
-        relativePath: `${STARTER_RESOURCE_DIR}/GetTodoDefinition.ts`,
-        content: starterGetTodoDefinition,
-      },
-      {
-        relativePath: `${STARTER_RESOURCE_DIR}/CreateTodoDefinition.ts`,
-        content: starterCreateTodoDefinition,
-      },
-      {
-        relativePath: `${STARTER_SHARED_DIR}/index.ts`,
-        content: starterSharedIndex,
-      },
-      {
-        relativePath: `${STARTER_SHARED_DIR}/defaultRequestHeader.ts`,
-        content: starterDefaultRequestHeader,
-      },
-      {
-        relativePath: `${STARTER_SHARED_DIR}/defaultResponseHeader.ts`,
-        content: starterDefaultResponseHeader,
-      },
-      {
-        relativePath: `${STARTER_SHARED_DIR}/ForbiddenErrorDefinition.ts`,
-        content: starterForbiddenErrorDefinition,
-      },
-      {
-        relativePath: `${STARTER_SHARED_DIR}/InternalServerErrorDefinition.ts`,
-        content: starterInternalServerErrorDefinition,
-      },
-      {
-        relativePath: `${STARTER_SHARED_DIR}/ValidationErrorDefinition.ts`,
-        content: starterValidationErrorDefinition,
-      },
-      {
-        relativePath: `${STARTER_SHARED_DIR}/sharedResponses.ts`,
-        content: starterSharedResponses,
-      },
-    ],
-  };
+const starterGitignore = `node_modules
+dist
+generated
+
+.DS_Store
+.env
+.env.local
+*.log
+`;
+
+export const STARTER_TEMPLATE: StarterTemplate = {
+  resourceCount: 1,
+  operationCount: 3,
+  responseCount: 6,
+  files: [
+    {
+      relativePath: ".gitignore",
+      content: starterGitignore,
+    },
+    {
+      relativePath: `${STARTER_SPEC_DIR}/README.md`,
+      content: starterReadme,
+    },
+    {
+      relativePath: STARTER_SPEC_ENTRYPOINT,
+      content: starterSpecEntrypoint,
+    },
+    {
+      relativePath: `${STARTER_RESOURCE_DIR}/index.ts`,
+      content: starterTodoIndex,
+    },
+    {
+      relativePath: `${STARTER_RESOURCE_DIR}/todoSchema.ts`,
+      content: starterTodoSchema,
+    },
+    {
+      relativePath: `${STARTER_RESOURCE_DIR}/ListTodosDefinition.ts`,
+      content: starterListTodosDefinition,
+    },
+    {
+      relativePath: `${STARTER_RESOURCE_DIR}/GetTodoDefinition.ts`,
+      content: starterGetTodoDefinition,
+    },
+    {
+      relativePath: `${STARTER_RESOURCE_DIR}/CreateTodoDefinition.ts`,
+      content: starterCreateTodoDefinition,
+    },
+    {
+      relativePath: `${STARTER_SHARED_DIR}/index.ts`,
+      content: starterSharedIndex,
+    },
+    {
+      relativePath: `${STARTER_SHARED_DIR}/defaultRequestHeader.ts`,
+      content: starterDefaultRequestHeader,
+    },
+    {
+      relativePath: `${STARTER_SHARED_DIR}/defaultResponseHeader.ts`,
+      content: starterDefaultResponseHeader,
+    },
+    {
+      relativePath: `${STARTER_SHARED_DIR}/ForbiddenErrorDefinition.ts`,
+      content: starterForbiddenErrorDefinition,
+    },
+    {
+      relativePath: `${STARTER_SHARED_DIR}/InternalServerErrorDefinition.ts`,
+      content: starterInternalServerErrorDefinition,
+    },
+    {
+      relativePath: `${STARTER_SHARED_DIR}/ValidationErrorDefinition.ts`,
+      content: starterValidationErrorDefinition,
+    },
+    {
+      relativePath: `${STARTER_SHARED_DIR}/sharedResponses.ts`,
+      content: starterSharedResponses,
+    },
+  ],
 };

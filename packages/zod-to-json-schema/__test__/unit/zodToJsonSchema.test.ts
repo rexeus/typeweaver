@@ -1,5 +1,6 @@
-import { z } from "zod";
 import { describe, expect, test } from "vitest";
+import { z } from "zod";
+import { normalizeJsonSchema } from "../../src/internal/normalizeJsonSchema.js";
 import { fromZod } from "../../src/zodToJsonSchema.js";
 
 describe("fromZod", () => {
@@ -68,6 +69,9 @@ describe("fromZod", () => {
         tuple: {
           type: "array",
           prefixItems: [{ type: "string" }, { type: "number" }],
+          items: {},
+          minItems: 2,
+          maxItems: 2,
         },
         nullable: {
           anyOf: [{ type: "string" }, { type: "null" }],
@@ -81,6 +85,7 @@ describe("fromZod", () => {
         },
       },
     });
+    expect(result.schema).not.toHaveProperty("items");
   });
 
   test("emits warnings and broad fallback schemas for unsupported constructs", () => {
@@ -157,6 +162,63 @@ describe("fromZod", () => {
           type: "array",
         },
       },
+    });
+  });
+
+  test("produces bounded array schemas with empty items for Zod tuples", () => {
+    const result = fromZod(z.tuple([z.string(), z.number()]));
+
+    expect(result.warnings).toEqual([]);
+    expect(result.schema).toEqual({
+      type: "array",
+      prefixItems: [{ type: "string" }, { type: "number" }],
+      items: {},
+      minItems: 2,
+      maxItems: 2,
+    });
+  });
+
+  test("normalizes nested tuples recursively", () => {
+    const result = fromZod(
+      z.object({
+        nested: z.array(z.tuple([z.string(), z.number()])),
+      })
+    );
+
+    expect(result.warnings).toEqual([]);
+    expect(result.schema).toMatchObject({
+      type: "object",
+      properties: {
+        nested: {
+          type: "array",
+          items: {
+            type: "array",
+            prefixItems: [{ type: "string" }, { type: "number" }],
+            items: {},
+            minItems: 2,
+            maxItems: 2,
+          },
+        },
+      },
+    });
+  });
+});
+
+describe("normalizeJsonSchema", () => {
+  test("preserves existing minItems and maxItems on tuple-shaped schemas", () => {
+    expect(
+      normalizeJsonSchema({
+        type: "array",
+        prefixItems: [{ type: "string" }, { type: "number" }],
+        minItems: 1,
+        maxItems: 3,
+      })
+    ).toEqual({
+      type: "array",
+      prefixItems: [{ type: "string" }, { type: "number" }],
+      items: {},
+      minItems: 1,
+      maxItems: 3,
     });
   });
 });

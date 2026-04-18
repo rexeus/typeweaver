@@ -1,6 +1,7 @@
-import { fromZod, type ZodToJsonSchemaWarning } from "@rexeus/typeweaver-zod-to-json-schema";
-import type { $ZodType } from "zod/v4/core";
+import { fromZod } from "@rexeus/typeweaver-zod-to-json-schema";
+import type { ZodToJsonSchemaWarning } from "@rexeus/typeweaver-zod-to-json-schema";
 import type { OpenApiWarning } from "./types.js";
+import type { $ZodType } from "zod/v4/core";
 
 type JsonSchemaObject = Record<string, unknown>;
 

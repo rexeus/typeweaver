@@ -1,14 +1,16 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import type { GenerationSummary } from "../src/generationResult.js";
 import { handleGenerateCommand } from "../src/commands/generate.js";
-import type { Logger } from "../src/logger.js";
+import { createTestLogger } from "./__helpers__/testLogger.js";
+import type { GenerationSummary } from "../src/generationResult.js";
+import type { ValidationReport } from "../src/validate/index.js";
 
 const { loadConfigMock } = vi.hoisted(() => ({
   loadConfigMock: vi.fn(),
 }));
 
 vi.mock("../src/configLoader.js", async importOriginal => {
-  const actual = await importOriginal<typeof import("../src/configLoader.js")>();
+  const actual =
+    await importOriginal<typeof import("../src/configLoader.js")>();
 
   return {
     ...actual,
@@ -16,18 +18,40 @@ vi.mock("../src/configLoader.js", async importOriginal => {
   };
 });
 
-const createLogger = (): Logger => {
-  return {
-    isVerbose: false,
-    debug: vi.fn(),
-    info: vi.fn(),
-    success: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    step: vi.fn(),
-    summary: vi.fn(),
-  };
-};
+const createCleanPreflightReport = (): ValidationReport => ({
+  checks: [],
+  issues: [],
+  stats: {
+    errors: 0,
+    warnings: 0,
+    infos: 0,
+    resources: 0,
+    operations: 0,
+    responses: 0,
+  },
+  hasErrors: false,
+  failOn: "error",
+});
+
+const passingPreflight = (): Promise<ValidationReport> =>
+  Promise.resolve(createCleanPreflightReport());
+
+const createFailingPreflightReport = (
+  message: string = "boom"
+): ValidationReport => ({
+  checks: [],
+  issues: [{ code: "TW-SPEC-001", severity: "error", message }],
+  stats: {
+    errors: 1,
+    warnings: 0,
+    infos: 0,
+    resources: 0,
+    operations: 0,
+    responses: 0,
+  },
+  hasErrors: true,
+  failOn: "error",
+});
 
 const summary: GenerationSummary = {
   mode: "generate",
@@ -48,7 +72,7 @@ describe("handleGenerateCommand", () => {
   });
 
   test("passes dry-run through to the generator and logs the summary", async () => {
-    const logger = createLogger();
+    const logger = createTestLogger();
     const generate = vi.fn().mockResolvedValue({ ...summary, dryRun: true });
 
     const result = await handleGenerateCommand(
@@ -61,6 +85,7 @@ describe("handleGenerateCommand", () => {
         execDir: "/workspace",
         createLogger: () => logger,
         createGenerator: () => ({ generate }) as never,
+        runPreflight: passingPreflight,
       }
     );
 
@@ -70,14 +95,17 @@ describe("handleGenerateCommand", () => {
       expect.objectContaining({ dryRun: true }),
       "/workspace"
     );
-    expect(result).toEqual(expect.objectContaining({ dryRun: true }));
+    expect(result).toEqual({
+      kind: "once",
+      summary: expect.objectContaining({ dryRun: true }),
+    });
     expect(logger.summary).toHaveBeenCalledWith(
       expect.objectContaining({ dryRun: true })
     );
   });
 
   test("branches to watch mode instead of generation when requested", async () => {
-    const logger = createLogger();
+    const logger = createTestLogger();
     const watch = vi.fn().mockResolvedValue(undefined);
     const generate = vi.fn();
 
@@ -92,16 +120,17 @@ describe("handleGenerateCommand", () => {
         createLogger: () => logger,
         createGenerator: () => ({ generate }) as never,
         createWatcher: () => ({ watch }) as never,
+        runPreflight: passingPreflight,
       }
     );
 
     expect(watch).toHaveBeenCalledTimes(1);
     expect(generate).not.toHaveBeenCalled();
-    expect(result).toBeUndefined();
+    expect(result).toEqual({ kind: "watch" });
   });
 
-  test("rejects combining dry-run with watch clearly", async () => {
-    const logger = createLogger();
+  test("rejects combining dry-run with watch", async () => {
+    const logger = createTestLogger();
     const watch = vi.fn();
 
     const result = await handleGenerateCommand(
@@ -126,8 +155,37 @@ describe("handleGenerateCommand", () => {
     expect(process.exitCode).toBe(1);
   });
 
-  test("fails clearly when required arguments are missing", async () => {
-    const logger = createLogger();
+  test("aborts before running the generator when preflight reports errors", async () => {
+    const logger = createTestLogger();
+    const generate = vi.fn();
+    const runPreflight = vi
+      .fn()
+      .mockResolvedValue(createFailingPreflightReport());
+
+    const result = await handleGenerateCommand(
+      {
+        input: "spec/index.ts",
+        output: "generated",
+      },
+      {
+        execDir: "/workspace",
+        createLogger: () => logger,
+        createGenerator: () => ({ generate }) as never,
+        runPreflight,
+      }
+    );
+
+    expect(runPreflight).toHaveBeenCalledTimes(1);
+    expect(generate).not.toHaveBeenCalled();
+    expect(result).toBeUndefined();
+    expect(process.exitCode).toBe(1);
+    expect(logger.error).toHaveBeenCalledWith(
+      "Spec validation failed. Fix the issues above or run 'typeweaver validate' for details."
+    );
+  });
+
+  test("fails when required arguments are missing", async () => {
+    const logger = createTestLogger();
 
     await handleGenerateCommand(
       { output: "generated" },
@@ -144,7 +202,7 @@ describe("handleGenerateCommand", () => {
   });
 
   test("loads config and lets CLI options override config values", async () => {
-    const logger = createLogger();
+    const logger = createTestLogger();
     const generate = vi.fn().mockResolvedValue(summary);
 
     loadConfigMock.mockResolvedValueOnce({
@@ -165,6 +223,7 @@ describe("handleGenerateCommand", () => {
         execDir: "/workspace",
         createLogger: () => logger,
         createGenerator: () => ({ generate }) as never,
+        runPreflight: passingPreflight,
       }
     );
 

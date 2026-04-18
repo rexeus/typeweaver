@@ -65,7 +65,9 @@ describe("fromZod", () => {
     });
 
     test("z.union() maps all options", () => {
-      expect(zodToTs(z.union([z.string(), z.number()]))).toBe("string | number");
+      expect(zodToTs(z.union([z.string(), z.number()]))).toBe(
+        "string | number"
+      );
     });
 
     test("z.intersection() maps both sides", () => {
@@ -80,15 +82,21 @@ describe("fromZod", () => {
     });
 
     test("z.tuple() maps each item", () => {
-      expect(zodToTs(z.tuple([z.string(), z.number()]))).toBe("[ string, number ]");
+      expect(zodToTs(z.tuple([z.string(), z.number()]))).toBe(
+        "[ string, number ]"
+      );
     });
 
     test("z.record() maps key and value types", () => {
-      expect(zodToTs(z.record(z.string(), z.number()))).toBe("Record<string, number>");
+      expect(zodToTs(z.record(z.string(), z.number()))).toBe(
+        "Record<string, number>"
+      );
     });
 
     test("z.map() maps key and value types", () => {
-      expect(zodToTs(z.map(z.string(), z.number()))).toBe("Map<string, number>");
+      expect(zodToTs(z.map(z.string(), z.number()))).toBe(
+        "Map<string, number>"
+      );
     });
 
     test("z.set() maps the value type", () => {
@@ -120,9 +128,11 @@ describe("fromZod", () => {
     test("z.readonly() maps to Readonly<T>", () => {
       expect(
         zodToTs(
-          z.object({
-            name: z.string(),
-          }).readonly()
+          z
+            .object({
+              name: z.string(),
+            })
+            .readonly()
         )
       ).toBe("Readonly<{ name: string; }>");
     });
@@ -160,7 +170,9 @@ describe("fromZod", () => {
     });
 
     test("z.transform() stays unknown through z.pipe() output mapping", () => {
-      expect(zodToTs(z.string().transform(value => value.length))).toBe("unknown");
+      expect(zodToTs(z.string().transform(value => value.length))).toBe(
+        "unknown"
+      );
     });
   });
 });

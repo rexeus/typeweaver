@@ -1,375 +1,314 @@
 import fs from "node:fs";
 import path from "node:path";
-import { createPluginRegistry, normalizeSpec } from "@rexeus/typeweaver-gen";
-import { TypesPlugin } from "@rexeus/typeweaver-types";
-import {
-  assertSupportedConfigPath,
-  loadConfig,
-} from "../configLoader.js";
+import { assertSupportedConfigPath, loadConfig } from "../configLoader.js";
 import { isFormatterAvailable } from "../generators/formatter.js";
-import { assertSafeCleanTarget } from "../generators/generator.js";
-import { loadPlugins } from "../generators/pluginLoader.js";
-import { bundle } from "../generators/spec/specBundler.js";
-import { createSpecDependencyResolutionBridge } from "../generators/spec/specDependencyResolution.js";
-import { importDefinition } from "../generators/spec/specImporter.js";
+import {
+  fail as baseFail,
+  pass as basePass,
+  warn as baseWarn,
+} from "../pipeline/helpers.js";
 import { detectRuntime, getRuntimeDisplayName } from "../runtime.js";
-import { resolveCommandPath } from "../commands/shared.js";
-import type { DoctorCheck, DoctorCheckOutcome } from "./types.js";
+import {
+  assertOutputPathSafety,
+  bundleInputSpec,
+  inspectBundledSpec,
+  resolveInputPath,
+  resolveOptionalPlugins,
+} from "./checkSupport.js";
+import type { OutcomeOptions, ResultTemplate } from "../pipeline/helpers.js";
+import type {
+  DoctorCheck,
+  DoctorCheckOutcome,
+  DoctorCheckResult,
+  DoctorState,
+} from "./types.js";
 
-const CONFIG_EXISTS_CHECK = "config-exists";
-const CONFIG_EXTENSION_CHECK = "config-extension";
-const CONFIG_EXPORT_CHECK = "config-export";
-const INPUT_EXISTS_CHECK = "input-exists";
-const OUTPUT_SAFETY_CHECK = "output-safety";
-const SPEC_BUNDLE_CHECK = "spec-bundle";
+type CheckTemplate = ResultTemplate<DoctorCheckResult>;
 
-export const createDoctorChecks = (isDeep: boolean): readonly DoctorCheck[] => {
-  const checks: DoctorCheck[] = [
-    {
-      id: "runtime",
-      label: "Runtime detection",
-      phase: "standard",
-      run: async () => {
-        const runtime = detectRuntime();
-        const runtimeVersion = typeof process !== "undefined" ? process.version : undefined;
-
-        return pass("runtime", "Runtime detection", `${getRuntimeDisplayName(runtime)} detected${runtimeVersion ? ` (${runtimeVersion})` : ""}.`);
-      },
-    },
-    {
-      id: CONFIG_EXISTS_CHECK,
-      label: "Config file",
-      phase: "standard",
-      run: async context => {
-        if (!fs.existsSync(context.configPath)) {
-          return fail(
-            CONFIG_EXISTS_CHECK,
-            "Config file",
-            `Config file not found at '${context.configPath}'.`
-          );
-        }
-
-        return pass(
-          CONFIG_EXISTS_CHECK,
-          "Config file",
-          `Found config at '${context.configPath}'.`
-        );
-      },
-    },
-    {
-      id: CONFIG_EXTENSION_CHECK,
-      label: "Config extension",
-      phase: "standard",
-      dependsOn: [CONFIG_EXISTS_CHECK],
-      run: async context => {
-        assertSupportedConfigPath(context.configPath);
-
-        return pass(
-          CONFIG_EXTENSION_CHECK,
-          "Config extension",
-          `Supported config extension '${path.extname(context.configPath)}'.`
-        );
-      },
-    },
-    {
-      id: CONFIG_EXPORT_CHECK,
-      label: "Config export",
-      phase: "standard",
-      dependsOn: [CONFIG_EXTENSION_CHECK],
-      run: async context => {
-        const loadedConfig = await loadConfig(context.configPath);
-
-        return {
-          result: {
-            id: CONFIG_EXPORT_CHECK,
-            label: "Config export",
-            phase: "standard",
-            status: "pass",
-            summary: "Configuration exports a valid config object.",
-            details: [],
-          },
-          state: {
-            loadedConfig,
-          },
-        } satisfies DoctorCheckOutcome;
-      },
-    },
-    {
-      id: INPUT_EXISTS_CHECK,
-      label: "Input path",
-      phase: "standard",
-      dependsOn: [CONFIG_EXPORT_CHECK],
-      run: async context => {
-        const inputPath = context.state.loadedConfig?.input;
-
-        if (!inputPath) {
-          return fail(
-            INPUT_EXISTS_CHECK,
-            "Input path",
-            "Config is missing an input spec entrypoint."
-          );
-        }
-
-        const resolvedInputPath = resolveCommandPath(context.execDir, inputPath);
-        if (!fs.existsSync(resolvedInputPath)) {
-          return fail(
-            INPUT_EXISTS_CHECK,
-            "Input path",
-            `Spec entrypoint not found at '${resolvedInputPath}'.`
-          );
-        }
-
-        return {
-          result: {
-            id: INPUT_EXISTS_CHECK,
-            label: "Input path",
-            phase: "standard",
-            status: "pass",
-            summary: `Found spec entrypoint at '${resolvedInputPath}'.`,
-            details: [],
-          },
-          state: {
-            inputPath: resolvedInputPath,
-          },
-        } satisfies DoctorCheckOutcome;
-      },
-    },
-    {
-      id: OUTPUT_SAFETY_CHECK,
-      label: "Output path safety",
-      phase: "standard",
-      dependsOn: [CONFIG_EXPORT_CHECK],
-      run: async context => {
-        const outputPath = context.state.loadedConfig?.output;
-
-        if (!outputPath) {
-          return fail(
-            OUTPUT_SAFETY_CHECK,
-            "Output path safety",
-            "Config is missing an output directory."
-          );
-        }
-
-        const resolvedOutputPath = resolveCommandPath(context.execDir, outputPath);
-        if ((context.state.loadedConfig?.clean ?? true) === true) {
-          assertSafeCleanTarget(resolvedOutputPath, context.execDir);
-        }
-
-        return {
-          result: {
-            id: OUTPUT_SAFETY_CHECK,
-            label: "Output path safety",
-            phase: "standard",
-            status: "pass",
-            summary:
-              (context.state.loadedConfig?.clean ?? true) === true
-                ? `Output directory '${resolvedOutputPath}' passed clean-path safety checks.`
-                : `Output directory '${resolvedOutputPath}' configured with clean disabled.`,
-            details: [],
-          },
-          state: {
-            outputPath: resolvedOutputPath,
-          },
-        } satisfies DoctorCheckOutcome;
-      },
-    },
-    {
-      id: "plugin-resolution",
-      label: "Plugin resolution",
-      phase: "standard",
-      dependsOn: [CONFIG_EXPORT_CHECK],
-      run: async context => {
-        const plugins = context.state.loadedConfig?.plugins ?? [];
-
-        if (plugins.length === 0) {
-          return pass(
-            "plugin-resolution",
-            "Plugin resolution",
-            "No optional plugins configured."
-          );
-        }
-
-        const registry = createPluginRegistry();
-        await loadPlugins(
-          registry,
-          [new TypesPlugin()],
-          ["npm", "local"],
-          createQuietLogger(),
-          {
-            input: context.state.loadedConfig?.input ?? "",
-            output: context.state.loadedConfig?.output ?? "",
-            plugins,
-          }
-        );
-
-        return pass(
-          "plugin-resolution",
-          "Plugin resolution",
-          `Resolved ${plugins.length} optional plugin(s).`
-        );
-      },
-    },
-    {
-      id: "formatter-availability",
-      label: "Formatter availability",
-      phase: "standard",
-      dependsOn: [CONFIG_EXPORT_CHECK],
-      run: async context => {
-        if ((context.state.loadedConfig?.format ?? true) === false) {
-          return pass(
-            "formatter-availability",
-            "Formatter availability",
-            "Formatting is disabled in config."
-          );
-        }
-
-        if (await isFormatterAvailable()) {
-          return pass(
-            "formatter-availability",
-            "Formatter availability",
-            "oxfmt is available."
-          );
-        }
-
-        return {
-          result: {
-            id: "formatter-availability",
-            label: "Formatter availability",
-            phase: "standard",
-            status: "warn",
-            summary: "oxfmt is not installed; generated code will not be formatted.",
-            details: ["Install it with: npm install -D oxfmt"],
-          },
-        } satisfies DoctorCheckOutcome;
-      },
-    },
-  ];
-
-  if (isDeep) {
-    checks.push(
-      {
-        id: SPEC_BUNDLE_CHECK,
-        label: "Spec bundle",
-        phase: "deep",
-        dependsOn: [INPUT_EXISTS_CHECK],
-        run: async context => {
-          if (!context.state.inputPath) {
-            return fail(
-              SPEC_BUNDLE_CHECK,
-              "Spec bundle",
-              "Cannot bundle the spec because the resolved input path is unavailable after prerequisite checks."
-            );
-          }
-
-          const specOutputDir = path.join(context.temporaryDirectory, "spec-bundle");
-          const bundledSpecFile = await bundle({
-            inputFile: context.state.inputPath,
-            specOutputDir,
-          });
-
-          return {
-            result: {
-              id: SPEC_BUNDLE_CHECK,
-              label: "Spec bundle",
-              phase: "deep",
-              status: "pass",
-              summary: "Spec entrypoint bundled successfully.",
-              details: [bundledSpecFile],
-            },
-            state: {
-              bundledSpecFile,
-            },
-          } satisfies DoctorCheckOutcome;
-        },
-      },
-      {
-        id: "spec-import-shape",
-        label: "Spec import and shape",
-        phase: "deep",
-        dependsOn: [SPEC_BUNDLE_CHECK],
-        run: async context => {
-          if (!context.state.bundledSpecFile) {
-            return fail(
-              "spec-import-shape",
-              "Spec import and shape",
-              "Cannot import the bundled spec because the bundle output path is unavailable after prerequisite checks."
-            );
-          }
-
-          const cleanupDependencyResolutionBridge =
-            createSpecDependencyResolutionBridge({
-              specExecutionDir: path.dirname(context.state.bundledSpecFile),
-              inputFile: context.state.inputPath!,
-            });
-          const definition = await importDefinition(
-            context.state.bundledSpecFile
-          ).finally(() => {
-            cleanupDependencyResolutionBridge();
-          });
-          const normalizedSpec = normalizeSpec(definition);
-          const operationCount = normalizedSpec.resources.reduce(
-            (count, resource) => count + resource.operations.length,
-            0
-          );
-
-          return pass(
-            "spec-import-shape",
-            "Spec import and shape",
-            `Imported a valid spec with ${normalizedSpec.resources.length} resource(s), ${operationCount} operation(s), and ${normalizedSpec.responses.length} response(s).`
-          );
-        },
-      }
-    );
-  }
-
-  return checks;
+const RUNTIME: CheckTemplate = {
+  id: "runtime",
+  label: "Runtime detection",
+  phase: "standard",
 };
 
-const createQuietLogger = () => {
-  return {
-    isVerbose: false,
-    debug: () => {},
-    info: () => {},
-    success: () => {},
-    warn: () => {},
-    error: () => {},
-    step: () => {},
-    summary: () => {},
-  } as const;
+const CONFIG_EXISTS: CheckTemplate = {
+  id: "config-exists",
+  label: "Config file",
+  phase: "standard",
+};
+
+const CONFIG_EXTENSION: CheckTemplate = {
+  id: "config-extension",
+  label: "Config extension",
+  phase: "standard",
+};
+
+const CONFIG_EXPORT: CheckTemplate = {
+  id: "config-export",
+  label: "Config export",
+  phase: "standard",
+};
+
+const INPUT_EXISTS: CheckTemplate = {
+  id: "input-exists",
+  label: "Input path",
+  phase: "standard",
+};
+
+const OUTPUT_SAFETY: CheckTemplate = {
+  id: "output-safety",
+  label: "Output path safety",
+  phase: "standard",
+};
+
+const PLUGIN_RESOLUTION: CheckTemplate = {
+  id: "plugin-resolution",
+  label: "Plugin resolution",
+  phase: "standard",
+};
+
+const FORMATTER_AVAILABILITY: CheckTemplate = {
+  id: "formatter-availability",
+  label: "Formatter availability",
+  phase: "standard",
+};
+
+const SPEC_BUNDLE: CheckTemplate = {
+  id: "spec-bundle",
+  label: "Spec bundle",
+  phase: "deep",
+};
+
+const SPEC_IMPORT_SHAPE: CheckTemplate = {
+  id: "spec-import-shape",
+  label: "Spec import and shape",
+  phase: "deep",
+};
+
+const STANDARD_CHECKS: readonly DoctorCheck[] = [
+  {
+    ...RUNTIME,
+    run: async () => {
+      const runtime = detectRuntime();
+      const runtimeVersion =
+        typeof process !== "undefined" ? process.version : undefined;
+
+      return pass(
+        RUNTIME,
+        `${getRuntimeDisplayName(runtime)} detected${runtimeVersion ? ` (${runtimeVersion})` : ""}.`
+      );
+    },
+  },
+  {
+    ...CONFIG_EXISTS,
+    run: async context => {
+      if (!fs.existsSync(context.configPath)) {
+        return fail(
+          CONFIG_EXISTS,
+          `Config file not found at '${context.configPath}'.`
+        );
+      }
+
+      return pass(CONFIG_EXISTS, `Found config at '${context.configPath}'.`);
+    },
+  },
+  {
+    ...CONFIG_EXTENSION,
+    dependsOn: [CONFIG_EXISTS.id],
+    run: async context => {
+      assertSupportedConfigPath(context.configPath);
+
+      return pass(
+        CONFIG_EXTENSION,
+        `Supported config extension '${path.extname(context.configPath)}'.`
+      );
+    },
+  },
+  {
+    ...CONFIG_EXPORT,
+    dependsOn: [CONFIG_EXTENSION.id],
+    run: async context => {
+      const loadedConfig = await loadConfig(context.configPath);
+
+      return pass(
+        CONFIG_EXPORT,
+        "Configuration exports a valid config object.",
+        { state: { loadedConfig } }
+      );
+    },
+  },
+  {
+    ...INPUT_EXISTS,
+    dependsOn: [CONFIG_EXPORT.id],
+    run: async context => {
+      const inputPath = context.state.loadedConfig?.input;
+
+      if (!inputPath) {
+        return fail(
+          INPUT_EXISTS,
+          "Config is missing an input spec entrypoint."
+        );
+      }
+
+      const resolvedInputPath = resolveInputPath(context.execDir, inputPath);
+      if (!fs.existsSync(resolvedInputPath)) {
+        return fail(
+          INPUT_EXISTS,
+          `Spec entrypoint not found at '${resolvedInputPath}'.`
+        );
+      }
+
+      return pass(
+        INPUT_EXISTS,
+        `Found spec entrypoint at '${resolvedInputPath}'.`,
+        { state: { inputPath: resolvedInputPath } }
+      );
+    },
+  },
+  {
+    ...OUTPUT_SAFETY,
+    dependsOn: [CONFIG_EXPORT.id],
+    run: async context => {
+      const outputPath = context.state.loadedConfig?.output;
+
+      if (!outputPath) {
+        return fail(OUTPUT_SAFETY, "Config is missing an output directory.");
+      }
+
+      const { resolvedOutputPath, cleanEnabled } = assertOutputPathSafety({
+        execDir: context.execDir,
+        outputPath,
+        loadedConfig: context.state.loadedConfig,
+      });
+
+      return pass(
+        OUTPUT_SAFETY,
+        cleanEnabled
+          ? `Output directory '${resolvedOutputPath}' passed clean-path safety checks.`
+          : `Output directory '${resolvedOutputPath}' configured with clean disabled.`,
+        { state: { outputPath: resolvedOutputPath } }
+      );
+    },
+  },
+  {
+    ...PLUGIN_RESOLUTION,
+    dependsOn: [CONFIG_EXPORT.id],
+    run: async context => {
+      const plugins = context.state.loadedConfig?.plugins ?? [];
+
+      if (plugins.length === 0) {
+        return pass(PLUGIN_RESOLUTION, "No optional plugins configured.");
+      }
+
+      await resolveOptionalPlugins({
+        input: context.state.loadedConfig?.input ?? "",
+        output: context.state.loadedConfig?.output ?? "",
+        plugins,
+      });
+
+      return pass(
+        PLUGIN_RESOLUTION,
+        `Resolved ${plugins.length} optional plugin(s).`
+      );
+    },
+  },
+  {
+    ...FORMATTER_AVAILABILITY,
+    dependsOn: [CONFIG_EXPORT.id],
+    run: async context => {
+      if ((context.state.loadedConfig?.format ?? true) === false) {
+        return pass(
+          FORMATTER_AVAILABILITY,
+          "Formatting is disabled in config."
+        );
+      }
+
+      if (await isFormatterAvailable()) {
+        return pass(FORMATTER_AVAILABILITY, "oxfmt is available.");
+      }
+
+      return warn(
+        FORMATTER_AVAILABILITY,
+        "oxfmt is not installed; generated code will not be formatted.",
+        { details: ["Install it with: npm install -D oxfmt"] }
+      );
+    },
+  },
+];
+
+const DEEP_CHECKS: readonly DoctorCheck[] = [
+  {
+    ...SPEC_BUNDLE,
+    dependsOn: [INPUT_EXISTS.id],
+    run: async context => {
+      if (!context.state.inputPath) {
+        return fail(
+          SPEC_BUNDLE,
+          "Cannot bundle the spec because the resolved input path is unavailable after prerequisite checks."
+        );
+      }
+
+      const bundledSpecFile = await bundleInputSpec({
+        inputFile: context.state.inputPath,
+        temporaryDirectory: context.temporaryDirectory,
+      });
+
+      return pass(SPEC_BUNDLE, "Spec entrypoint bundled successfully.", {
+        details: [bundledSpecFile],
+        state: { bundledSpecFile },
+      });
+    },
+  },
+  {
+    ...SPEC_IMPORT_SHAPE,
+    dependsOn: [SPEC_BUNDLE.id],
+    run: async context => {
+      const { bundledSpecFile, inputPath } = context.state;
+
+      if (!bundledSpecFile || !inputPath) {
+        return fail(
+          SPEC_IMPORT_SHAPE,
+          "Cannot import the bundled spec because prerequisite check state is unavailable."
+        );
+      }
+
+      const specShape = await inspectBundledSpec({
+        bundledSpecFile,
+        inputFile: inputPath,
+      });
+
+      return pass(
+        SPEC_IMPORT_SHAPE,
+        `Imported a valid spec with ${specShape.resourceCount} resource(s), ${specShape.operationCount} operation(s), and ${specShape.responseCount} response(s).`
+      );
+    },
+  },
+];
+
+export const createDoctorChecks = (isDeep: boolean): readonly DoctorCheck[] => {
+  return isDeep ? [...STANDARD_CHECKS, ...DEEP_CHECKS] : STANDARD_CHECKS;
 };
 
 const pass = (
-  id: string,
-  label: string,
+  template: CheckTemplate,
   summary: string,
-  details: readonly string[] = []
+  options: OutcomeOptions<DoctorState> = {}
 ): DoctorCheckOutcome => {
-  return {
-    result: {
-      id,
-      label,
-      phase: id === SPEC_BUNDLE_CHECK || id === "spec-import-shape" ? "deep" : "standard",
-      status: "pass",
-      summary,
-      details,
-    },
-  };
+  return basePass<DoctorState, DoctorCheckResult>(template, summary, options);
+};
+
+const warn = (
+  template: CheckTemplate,
+  summary: string,
+  options: OutcomeOptions<DoctorState> = {}
+): DoctorCheckOutcome => {
+  return baseWarn<DoctorState, DoctorCheckResult>(template, summary, options);
 };
 
 const fail = (
-  id: string,
-  label: string,
+  template: CheckTemplate,
   summary: string,
-  details: readonly string[] = []
+  options: OutcomeOptions<DoctorState> = {}
 ): DoctorCheckOutcome => {
-  return {
-    result: {
-      id,
-      label,
-      phase: id === SPEC_BUNDLE_CHECK || id === "spec-import-shape" ? "deep" : "standard",
-      status: "fail",
-      summary,
-      details,
-    },
-  };
+  return baseFail<DoctorState, DoctorCheckResult>(template, summary, options);
 };

@@ -1,28 +1,25 @@
 import fs from "node:fs";
 import path from "node:path";
-import { afterEach, describe, expect, test } from "vitest";
+import { fileURLToPath } from "node:url";
+import { describe, expect, test } from "vitest";
 import { Generator } from "../src/generators/generator.js";
 import { createLogger } from "../src/logger.js";
+import { createTempDirFactory } from "./__helpers__/tempDir.js";
+
+// Temp dirs MUST live inside the CLI package so pnpm-workspace module
+// resolution finds `@rexeus/typeweaver-core` when the bundler loads the spec.
+// Anchoring to this file's URL keeps tests stable regardless of which
+// directory `vitest` is launched from.
+const PACKAGE_DIR = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  ".."
+);
 
 describe("Generator integration", () => {
-  const tempDirs: string[] = [];
-
-  afterEach(() => {
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-
-    tempDirs.length = 0;
-  });
-
-  const createTempDir = (): string => {
-    const tempDir = fs.mkdtempSync(
-      path.join(process.cwd(), ".typeweaver-generator-integration-")
-    );
-    tempDirs.push(tempDir);
-
-    return tempDir;
-  };
+  const createTempDir = createTempDirFactory(
+    ".typeweaver-generator-integration-",
+    PACKAGE_DIR
+  );
 
   test("generates namespaced plugin output without leaking bundler plumbing", async () => {
     const tempDir = createTempDir();
@@ -66,7 +63,9 @@ describe("Generator integration", () => {
       ].join("\n")
     );
 
-    const generator = new Generator(undefined, undefined, createLogger({ quiet: true }));
+    const generator = new Generator({
+      logger: createLogger({ quiet: true }),
+    });
 
     await generator.generate(
       specFile,

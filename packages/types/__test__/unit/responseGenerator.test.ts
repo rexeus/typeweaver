@@ -100,7 +100,11 @@ describe("ResponseGenerator", () => {
         readonly operationId: string;
         readonly resourceName: string;
       }) => {
-        const outputDir = path.join("/out", pluginName ?? "types", resourceName);
+        const outputDir = path.join(
+          "/out",
+          pluginName ?? "types",
+          resourceName
+        );
 
         return {
           outputDir,

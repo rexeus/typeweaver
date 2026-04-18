@@ -1,5 +1,5 @@
-import type { ZodToJsonSchemaWarning } from "@rexeus/typeweaver-zod-to-json-schema";
 import type { NormalizedSpec } from "@rexeus/typeweaver-gen";
+import type { ZodToJsonSchemaWarning } from "@rexeus/typeweaver-zod-to-json-schema";
 
 export type OpenApiDocument = Record<string, unknown>;
 

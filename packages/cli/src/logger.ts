@@ -29,6 +29,21 @@ export type Logger = {
   readonly summary: (summary: GenerationSummary) => void;
 };
 
+/**
+ * Logger that discards every message. Use it to suppress noise from subsystems
+ * that take a logger but whose output is irrelevant to the caller.
+ */
+export const NOOP_LOGGER: Logger = {
+  isVerbose: false,
+  debug: () => {},
+  info: () => {},
+  success: () => {},
+  warn: () => {},
+  error: () => {},
+  step: () => {},
+  summary: () => {},
+};
+
 export const createLogger = (options: LoggerOptions = {}): Logger => {
   const stdout = options.stdout ?? process.stdout;
   const stderr = options.stderr ?? process.stderr;
@@ -65,7 +80,11 @@ export const createLogger = (options: LoggerOptions = {}): Logger => {
   const logger: Logger = {
     isVerbose,
     debug: (message: string) => {
-      write(stderr, `${formatLabel("debug", ANSI.dim)} ${message}`, isVerbose && !isQuiet);
+      write(
+        stderr,
+        `${formatLabel("debug", ANSI.dim)} ${message}`,
+        isVerbose && !isQuiet
+      );
     },
     info: (message: string) => {
       write(stdout, message, !isQuiet);
@@ -89,13 +108,11 @@ export const createLogger = (options: LoggerOptions = {}): Logger => {
 
       const generatedCount = summary.generatedFiles.length;
       const action =
-        summary.mode === "validate"
-          ? "Validated"
-          : summary.mode === "init"
-            ? "Initialized"
-            : summary.mode === "migrate"
-              ? "Migration guidance"
-              : "Generated";
+        summary.mode === "init"
+          ? "Initialized"
+          : summary.mode === "migrate"
+            ? "Migration guidance"
+            : "Generated";
       const suffix = summary.dryRun ? " (dry run)" : "";
 
       if (summary.mode === "migrate") {

@@ -1,45 +1,20 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   detectInstalledTypeweaverVersion,
   handleMigrateCommand,
 } from "../src/commands/migrate.js";
-import type { Logger } from "../src/logger.js";
-
-const createLogger = (): Logger => {
-  return {
-    isVerbose: false,
-    debug: vi.fn(),
-    info: vi.fn(),
-    success: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    step: vi.fn(),
-    summary: vi.fn(),
-  };
-};
+import { createTempDirFactory } from "./__helpers__/tempDir.js";
+import { createTestLogger } from "./__helpers__/testLogger.js";
 
 describe("handleMigrateCommand", () => {
-  const tempDirs: string[] = [];
+  const createTempDir = createTempDirFactory("typeweaver-migrate-");
 
   afterEach(() => {
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-
-    tempDirs.length = 0;
     vi.clearAllMocks();
     process.exitCode = undefined;
   });
-
-  const createTempDir = (): string => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "typeweaver-migrate-"));
-    tempDirs.push(tempDir);
-
-    return tempDir;
-  };
 
   test("detects the installed project version from package.json", () => {
     const tempDir = createTempDir();
@@ -62,7 +37,7 @@ describe("handleMigrateCommand", () => {
 
   test("prints concise migration guidance for detected 0.8 projects", async () => {
     const tempDir = createTempDir();
-    const logger = createLogger();
+    const logger = createTestLogger();
 
     fs.writeFileSync(
       path.join(tempDir, "package.json"),
@@ -100,7 +75,7 @@ describe("handleMigrateCommand", () => {
 
   test("supports explicit --from values for 0.7 projects", async () => {
     const tempDir = createTempDir();
-    const logger = createLogger();
+    const logger = createTestLogger();
 
     const summary = await handleMigrateCommand(
       {
@@ -124,7 +99,7 @@ describe("handleMigrateCommand", () => {
 
   test("reports when no bundled migration guidance is needed", async () => {
     const tempDir = createTempDir();
-    const logger = createLogger();
+    const logger = createTestLogger();
 
     const summary = await handleMigrateCommand(
       {
@@ -148,9 +123,9 @@ describe("handleMigrateCommand", () => {
     );
   });
 
-  test("fails clearly when no version can be detected", async () => {
+  test("fails with guidance when no version can be detected", async () => {
     const tempDir = createTempDir();
-    const logger = createLogger();
+    const logger = createTestLogger();
 
     const summary = await handleMigrateCommand(
       {},
@@ -162,7 +137,9 @@ describe("handleMigrateCommand", () => {
 
     expect(summary).toBeUndefined();
     expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining("Could not detect an installed Typeweaver version")
+      expect.stringContaining(
+        "Could not detect an installed Typeweaver version"
+      )
     );
     expect(process.exitCode).toBe(1);
   });

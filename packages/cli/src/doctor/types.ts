@@ -1,7 +1,15 @@
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import type { Logger } from "../logger.js";
+import type {
+  BaseCheckResult,
+  Check,
+  CheckContext,
+  CheckOutcome,
+  CheckStatus,
+  RunSummary,
+} from "../pipeline/types.js";
 
-export type DoctorCheckStatus = "pass" | "warn" | "fail" | "skip";
+export type DoctorCheckStatus = CheckStatus;
 
 export type DoctorCheckPhase = "standard" | "deep";
 
@@ -12,42 +20,24 @@ export type DoctorState = {
   bundledSpecFile?: string;
 };
 
-export type DoctorCheckContext = {
+export type DoctorCheckContext = CheckContext<DoctorState> & {
+  readonly logger: Logger;
   readonly execDir: string;
   readonly configPath: string;
   readonly isDeep: boolean;
-  readonly logger: Logger;
   readonly temporaryDirectory: string;
-  readonly state: DoctorState;
 };
 
-export type DoctorCheckResult = {
-  readonly id: string;
-  readonly label: string;
+export type DoctorCheckResult = BaseCheckResult & {
   readonly phase: DoctorCheckPhase;
-  readonly status: DoctorCheckStatus;
-  readonly summary: string;
-  readonly details: readonly string[];
 };
 
-export type DoctorCheckOutcome = {
-  readonly result: DoctorCheckResult;
-  readonly state?: Partial<DoctorState>;
-};
+export type DoctorCheckOutcome = CheckOutcome<DoctorState, DoctorCheckResult>;
 
-export type DoctorCheck = {
-  readonly id: string;
-  readonly label: string;
-  readonly phase: DoctorCheckPhase;
-  readonly dependsOn?: readonly string[];
-  readonly run: (context: DoctorCheckContext) => Promise<DoctorCheckOutcome>;
-};
+export type DoctorCheck = Check<
+  DoctorState,
+  DoctorCheckResult,
+  DoctorCheckContext
+>;
 
-export type DoctorRunSummary = {
-  readonly totalChecks: number;
-  readonly passedChecks: number;
-  readonly warnedChecks: number;
-  readonly failedChecks: number;
-  readonly skippedChecks: number;
-  readonly hasFailures: boolean;
-};
+export type DoctorRunSummary = RunSummary;

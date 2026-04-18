@@ -27,6 +27,9 @@ export class OpenApiPlugin extends BasePlugin {
         ? config.outputFile
         : `${this.name}/openapi.json`;
 
-    context.writeFile(outputFile, `${JSON.stringify(result.document, null, 2)}\n`);
+    context.writeFile(
+      outputFile,
+      `${JSON.stringify(result.document, null, 2)}\n`
+    );
   }
 }

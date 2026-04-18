@@ -1,6 +1,7 @@
 import path from "node:path";
+import { createLogger } from "../logger.js";
+import type { Logger } from "../logger.js";
 import type { CommandOptions as CommanderOptions } from "commander";
-import { createLogger, type Logger } from "../logger.js";
 
 export type SharedCommandOptions = CommanderOptions & {
   readonly verbose?: boolean;
@@ -16,11 +17,16 @@ export const createCommandLogger = (options: SharedCommandOptions): Logger => {
   });
 };
 
-export const resolveCommandPath = (execDir: string, filePath: string): string => {
+export const resolveCommandPath = (
+  execDir: string,
+  filePath: string
+): string => {
   return path.isAbsolute(filePath) ? filePath : path.join(execDir, filePath);
 };
 
-export const resolvePluginList = (plugins: string | undefined): string[] | undefined => {
+export const resolvePluginList = (
+  plugins: string | undefined
+): string[] | undefined => {
   if (!plugins) {
     return undefined;
   }

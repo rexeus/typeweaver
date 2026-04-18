@@ -2,10 +2,11 @@ import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import type { GenerationSummary } from "../src/generationResult";
-import { FileWatcher } from "../src/generators/fileWatcher";
-import type { Generator } from "../src/generators/generator";
-import type { Logger } from "../src/logger";
+import { FileWatcher } from "../src/generators/fileWatcher.js";
+import { createTestLogger } from "./__helpers__/testLogger.js";
+import type { GenerationSummary } from "../src/generationResult.js";
+import type { Generator } from "../src/generators/generator.js";
+import type { Logger } from "../src/logger.js";
 import type { Mock } from "vitest";
 
 class MockWatcher extends EventEmitter {
@@ -75,16 +76,7 @@ describe("FileWatcher", () => {
     );
 
     mockGenerate = vi.fn().mockResolvedValue(generationSummary);
-    logger = {
-      isVerbose: false,
-      debug: vi.fn(),
-      info: vi.fn(),
-      success: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      step: vi.fn(),
-      summary: vi.fn(),
-    };
+    logger = createTestLogger();
 
     fileWatcher = new FileWatcher(
       "/test/input/spec.ts",
@@ -148,22 +140,19 @@ describe("FileWatcher", () => {
     }
   });
 
-  test("triggers regeneration on null filenames", async () => {
+  test("does not ignore events whose filename has no detectable extension", async () => {
     await startWatching();
 
+    // Covers both branches of `shouldIgnore`: a null filename (permission-denied
+    // or kernel-coalesced event) and an extensionless filename (e.g. a directory
+    // rename). Both must fall through to regeneration.
     emitChange(null);
     await flushDebounce();
-
     expect(mockGenerate).toHaveBeenCalledTimes(2);
-  });
-
-  test("triggers regeneration on extensionless filenames", async () => {
-    await startWatching();
 
     emitChange("new-directory");
     await flushDebounce();
-
-    expect(mockGenerate).toHaveBeenCalledTimes(2);
+    expect(mockGenerate).toHaveBeenCalledTimes(3);
   });
 
   test("recovers from generation errors and continues watching", async () => {

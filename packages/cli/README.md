@@ -120,8 +120,8 @@ Shared options for all commands:
 - `--input, -i <path>`: Spec entrypoint file (required)
 - `--output, -o <path>`: Output directory for generated code (required)
 - `--config, -c <path>`: Configuration file path (`.js`, `.mjs`, or `.cjs`, optional)
-- `--plugins, -p <plugins>`: Comma-separated list of plugins to use (e.g., "clients,hono" or
-  "all" for all plugins)
+- `--plugins, -p <plugins>`: Comma-separated list of plugins to use (e.g., "clients,hono" or "all"
+  for all plugins)
 - `--format / --no-format`: Enable/disable code formatting with oxfmt (default: true)
 - `--clean / --no-clean`: Enable/disable output directory cleaning (default: true)
 
@@ -150,8 +150,8 @@ npx typeweaver validate --config ./typeweaver.config.mjs
 npx typeweaver generate --config ./typeweaver.config.mjs
 ```
 
-The starter creates a small `spec/` tree with one resource, shared helpers, shared responses, and
-a ready-to-edit `typeweaver.config.mjs`.
+The starter creates a small `spec/` tree with one resource, shared helpers, shared responses, and a
+ready-to-edit `typeweaver.config.mjs`.
 
 ### 📦 Generated output layout
 

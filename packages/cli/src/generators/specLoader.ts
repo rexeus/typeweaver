@@ -4,9 +4,7 @@ import type { SpecDefinition } from "@rexeus/typeweaver-core";
 import { normalizeSpec } from "@rexeus/typeweaver-gen";
 import type { NormalizedSpec } from "@rexeus/typeweaver-gen";
 import { bundle } from "./spec/specBundler.js";
-import {
-  createSpecDependencyResolutionBridge,
-} from "./spec/specDependencyResolution.js";
+import { createSpecDependencyResolutionBridge } from "./spec/specDependencyResolution.js";
 import { importDefinition } from "./spec/specImporter.js";
 export {
   ensureSpecDependencyResolution,
@@ -29,10 +27,11 @@ export async function loadSpec(config: SpecLoaderConfig): Promise<LoadedSpec> {
   const bundledSpecFile = await bundle(config);
   writeSpecDeclarationFile(config.specOutputDir);
 
-  const cleanupDependencyResolutionBridge = createSpecDependencyResolutionBridge({
-    specExecutionDir: path.dirname(config.specOutputDir),
-    inputFile: config.inputFile,
-  });
+  const cleanupDependencyResolutionBridge =
+    createSpecDependencyResolutionBridge({
+      specExecutionDir: path.dirname(config.specOutputDir),
+      inputFile: config.inputFile,
+    });
   const definition = await importDefinition(bundledSpecFile).finally(() => {
     cleanupDependencyResolutionBridge();
   });

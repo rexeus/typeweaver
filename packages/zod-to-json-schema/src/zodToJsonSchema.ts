@@ -1,11 +1,12 @@
 import { z } from "zod";
-import type { $ZodType } from "zod/v4/core";
+import { normalizeJsonSchema } from "./internal/normalizeJsonSchema.js";
 import type {
   JsonSchema,
   ZodToJsonSchemaResult,
   ZodToJsonSchemaWarning,
   ZodToJsonSchemaWarningCode,
 } from "./types.js";
+import type { $ZodType } from "zod/v4/core";
 
 type ZodDef = {
   readonly type?: string;
@@ -120,7 +121,7 @@ export function fromZod(schema: $ZodType): ZodToJsonSchemaResult {
     }) as JsonSchema;
 
     return {
-      schema: stripRootSchemaDialect(converted),
+      schema: normalizeJsonSchema(stripRootSchemaDialect(converted)),
       warnings: collector.warnings,
     };
   } catch (error) {

@@ -68,7 +68,10 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
       readonly pluginName: string;
       readonly resourceName: string;
     }): string => {
-      return path.join(getPluginOutputDir(config.pluginName), config.resourceName);
+      return path.join(
+        getPluginOutputDir(config.pluginName),
+        config.resourceName
+      );
     };
 
     const getResourceOutputDir = (resourceName: string): string => {

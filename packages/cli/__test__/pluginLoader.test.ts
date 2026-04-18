@@ -1,6 +1,5 @@
 /* eslint-disable import/max-dependencies */
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { AwsCdkPlugin } from "@rexeus/typeweaver-aws-cdk";
 import { ClientsPlugin } from "@rexeus/typeweaver-clients";
@@ -16,6 +15,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { PluginLoadingFailure } from "../src/generators/errors/pluginLoadingFailure.js";
 import { loadPlugins } from "../src/generators/pluginLoader.js";
 import { createLogger } from "../src/logger.js";
+import { createTempDirFactory } from "./__helpers__/tempDir.js";
 
 type RegisteredPlugin = {
   readonly name: string;
@@ -46,26 +46,11 @@ function createRegistry(): {
 }
 
 describe("pluginLoader", () => {
-  const tempDirs: string[] = [];
+  const createTempDir = createTempDirFactory("typeweaver-plugin-");
 
   afterEach(() => {
     vi.restoreAllMocks();
-
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-
-    tempDirs.length = 0;
   });
-
-  function createTempDir(): string {
-    const tempDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "typeweaver-plugin-")
-    );
-    tempDirs.push(tempDir);
-
-    return tempDir;
-  }
 
   test("registers required plugins before loading configured plugins", async () => {
     const requiredPlugin = { name: "types" } as TypesPlugin;
@@ -97,8 +82,7 @@ describe("pluginLoader", () => {
       "Successfully loaded 1 plugin(s):\n"
     );
     expect(stream.write).toHaveBeenCalledWith(
-      `  - local-plugin (from ${pluginPath})`
-        .concat("\n")
+      `  - local-plugin (from ${pluginPath})`.concat("\n")
     );
   });
 

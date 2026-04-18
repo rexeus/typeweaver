@@ -18,6 +18,7 @@ import { ReservedEntityNameError } from "./generators/errors/reservedEntityNameE
 import { ReservedKeywordError } from "./generators/errors/reservedKeywordError.js";
 import { InvalidSpecEntrypointError } from "./generators/spec/InvalidSpecEntrypointError.js";
 import type { Logger } from "./logger.js";
+import type { ErrorReporter } from "./pipeline/types.js";
 
 export type Diagnostic = {
   readonly summary: string;
@@ -166,7 +167,8 @@ export const formatDiagnostic = (error: unknown): Diagnostic => {
 
   if (error instanceof PathParameterMismatchError) {
     return withVerboseDetails(error, {
-      summary: "An operation path does not match its declared request parameters.",
+      summary:
+        "An operation path does not match its declared request parameters.",
       contextLines: [error.message],
       hint: "Make sure every path placeholder is declared in request.param and there are no extra path params.",
     });
@@ -193,6 +195,18 @@ export const formatDiagnostic = (error: unknown): Diagnostic => {
     contextLines: [],
     hint: "Re-run with --verbose to see more detail.",
     verboseDetails: [String(error)],
+  };
+};
+
+export const reportErrorFromDiagnostic: ErrorReporter = error => {
+  const diagnostic = formatDiagnostic(error);
+
+  return {
+    summary: diagnostic.summary,
+    details: [
+      ...diagnostic.contextLines,
+      ...(diagnostic.hint ? [diagnostic.hint] : []),
+    ],
   };
 };
 

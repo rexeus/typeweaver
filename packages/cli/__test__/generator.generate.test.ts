@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createLogger } from "../src/logger.js";
+import { createTempDirFactory } from "./__helpers__/tempDir.js";
 
 const loadPluginsMock = vi.fn(async () => {});
 const loadSpecMock = vi.fn(
@@ -61,29 +62,17 @@ vi.mock("../src/generators/indexFileGenerator.js", () => ({
 const { Generator } = await import("../src/generators/generator.js");
 
 describe("Generator.generate", () => {
-  const tempDirs: string[] = [];
+  const createTempDir = createTempDirFactory("typeweaver-generate-");
 
   afterEach(() => {
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-
-    tempDirs.length = 0;
     vi.clearAllMocks();
   });
 
-  const createTempDir = (): string => {
-    const tempDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "typeweaver-generate-")
-    );
-    tempDirs.push(tempDir);
-
-    return tempDir;
-  };
-
   test("resolves generation paths from the provided working directory", async () => {
     const workingDirectory = createTempDir();
-    const generator = new Generator(undefined, undefined, createLogger({ quiet: true }));
+    const generator = new Generator({
+      logger: createLogger({ quiet: true }),
+    });
 
     const summary = await generator.generate(
       "spec/index.ts",
@@ -112,7 +101,9 @@ describe("Generator.generate", () => {
   test("uses the provided working directory for clean safety checks", async () => {
     const workspaceRoot = createTempDir();
     const packageDirectory = path.join(workspaceRoot, "packages", "cli");
-    const generator = new Generator(undefined, undefined, createLogger({ quiet: true }));
+    const generator = new Generator({
+      logger: createLogger({ quiet: true }),
+    });
 
     fs.mkdirSync(path.join(workspaceRoot, ".git"), { recursive: true });
     fs.mkdirSync(packageDirectory, { recursive: true });
@@ -136,7 +127,9 @@ describe("Generator.generate", () => {
     const workingDirectory = createTempDir();
     const outputDirectory = path.join(workingDirectory, "generated/output");
     const existingFile = path.join(outputDirectory, "keep.txt");
-    const generator = new Generator(undefined, undefined, createLogger({ quiet: true }));
+    const generator = new Generator({
+      logger: createLogger({ quiet: true }),
+    });
 
     fs.mkdirSync(outputDirectory, { recursive: true });
     fs.writeFileSync(existingFile, "keep");
@@ -165,7 +158,11 @@ describe("Generator.generate", () => {
       path.join(workingDirectory, "generated/output/spec")
     );
     expect(loadSpecMock.mock.calls[0]?.[0].specOutputDir).toEqual(
-      expect.stringMatching(new RegExp(`^${os.tmpdir().replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}/typeweaver-generate-.*?/spec$`))
+      expect.stringMatching(
+        new RegExp(
+          `^${os.tmpdir().replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}/typeweaver-generate-.*?/spec$`
+        )
+      )
     );
   });
 });

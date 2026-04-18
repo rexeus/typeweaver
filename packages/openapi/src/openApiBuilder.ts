@@ -5,9 +5,13 @@ import type {
   NormalizedResponse,
   NormalizedResponseUsage,
 } from "@rexeus/typeweaver-gen";
-import type { $ZodObject, $ZodType } from "zod/v4/core";
 import { createSchemaRegistry } from "./schemaRegistry.js";
-import type { OpenApiBuildResult, OpenApiBuilderInput, OpenApiPluginConfig } from "./types.js";
+import type {
+  OpenApiBuildResult,
+  OpenApiBuilderInput,
+  OpenApiPluginConfig,
+} from "./types.js";
+import type { $ZodObject, $ZodType } from "zod/v4/core";
 
 type JsonSchemaObject = Record<string, unknown>;
 type OpenApiParameters = readonly JsonSchemaObject[];
@@ -297,7 +301,9 @@ function getResponseStatusCode(
 
   const response = canonicalResponsesByName.get(responseUsage.responseName);
   if (response === undefined) {
-    throw new Error(`Missing canonical response '${responseUsage.responseName}'.`);
+    throw new Error(
+      `Missing canonical response '${responseUsage.responseName}'.`
+    );
   }
 
   return String(response.statusCode);
@@ -320,7 +326,9 @@ function unwrapObjectSchema(schema: $ZodType): $ZodObject | undefined {
       type === "readonly" ||
       type === "nonoptional"
     ) {
-      currentSchema = (currentSchema._zod.def as { readonly innerType?: $ZodType }).innerType;
+      currentSchema = (
+        currentSchema._zod.def as { readonly innerType?: $ZodType }
+      ).innerType;
       continue;
     }
 
@@ -334,9 +342,15 @@ function getSchemaType(schema: $ZodType): string {
   return (schema._zod.def as { readonly type?: string }).type ?? "unknown";
 }
 
-function getObjectPropertySchemas(schema: JsonSchemaObject): Record<string, JsonSchemaObject> {
+function getObjectPropertySchemas(
+  schema: JsonSchemaObject
+): Record<string, JsonSchemaObject> {
   const properties = schema.properties;
-  if (properties === undefined || typeof properties !== "object" || Array.isArray(properties)) {
+  if (
+    properties === undefined ||
+    typeof properties !== "object" ||
+    Array.isArray(properties)
+  ) {
     return {};
   }
 
@@ -352,7 +366,9 @@ function getRequiredPropertyNames(schema: JsonSchemaObject): string[] {
   return required.filter((entry): entry is string => typeof entry === "string");
 }
 
-function resolveInfo(config: OpenApiPluginConfig | undefined): JsonSchemaObject {
+function resolveInfo(
+  config: OpenApiPluginConfig | undefined
+): JsonSchemaObject {
   return omitUndefinedEntries({
     title: config?.info?.title ?? DEFAULT_INFO.title,
     version: config?.info?.version ?? DEFAULT_INFO.version,
@@ -360,7 +376,9 @@ function resolveInfo(config: OpenApiPluginConfig | undefined): JsonSchemaObject 
   });
 }
 
-function omitUndefinedEntries(schema: Record<string, unknown>): JsonSchemaObject {
+function omitUndefinedEntries(
+  schema: Record<string, unknown>
+): JsonSchemaObject {
   return Object.fromEntries(
     Object.entries(schema).filter(([, value]) => value !== undefined)
   ) as JsonSchemaObject;

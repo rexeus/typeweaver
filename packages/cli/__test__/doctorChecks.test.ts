@@ -1,6 +1,8 @@
 import { describe, expect, test, vi } from "vitest";
 import { createDoctorChecks } from "../src/doctor/checks.js";
 import { runDoctorChecks } from "../src/doctor/runner.js";
+import { assertKnownDependencies } from "../src/pipeline/runner.js";
+import { createTestLogger } from "./__helpers__/testLogger.js";
 import type { DoctorCheckContext } from "../src/doctor/types.js";
 
 const { isFormatterAvailableMock } = vi.hoisted(() => ({
@@ -8,7 +10,8 @@ const { isFormatterAvailableMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("../src/generators/formatter.js", async importOriginal => {
-  const actual = await importOriginal<typeof import("../src/generators/formatter.js")>();
+  const actual =
+    await importOriginal<typeof import("../src/generators/formatter.js")>();
 
   return {
     ...actual,
@@ -23,16 +26,7 @@ const createContext = (
     execDir: "/workspace/project",
     configPath: "/workspace/project/typeweaver.config.mjs",
     isDeep: false,
-    logger: {
-      isVerbose: false,
-      debug: () => {},
-      info: () => {},
-      success: () => {},
-      warn: () => {},
-      error: () => {},
-      step: () => {},
-      summary: () => {},
-    },
+    logger: createTestLogger(),
     temporaryDirectory: "/tmp/typeweaver-doctor-test",
     state: {
       loadedConfig: {
@@ -46,6 +40,15 @@ const createContext = (
 };
 
 describe("doctor checks", () => {
+  test("every check's dependencies are declared in both shallow and deep sets", () => {
+    expect(() =>
+      assertKnownDependencies(createDoctorChecks(false))
+    ).not.toThrow();
+    expect(() =>
+      assertKnownDependencies(createDoctorChecks(true))
+    ).not.toThrow();
+  });
+
   test("marks dangerous output paths as failures", async () => {
     const outputSafetyCheck = createDoctorChecks(false).find(
       check => check.id === "output-safety"
@@ -110,12 +113,13 @@ describe("doctor checks", () => {
     expect(outcome.result).toEqual(
       expect.objectContaining({
         status: "warn",
-        summary: "oxfmt is not installed; generated code will not be formatted.",
+        summary:
+          "oxfmt is not installed; generated code will not be formatted.",
       })
     );
   });
 
-  test("fails clearly when the config is missing an input path", async () => {
+  test("fails with an explanatory summary when the config is missing an input path", async () => {
     const inputCheck = createDoctorChecks(false).find(
       check => check.id === "input-exists"
     );
@@ -140,7 +144,7 @@ describe("doctor checks", () => {
     );
   });
 
-  test("fails deep spec import checks clearly when bundle state is unexpectedly missing", async () => {
+  test("fails the deep spec import check when bundle state is unexpectedly missing", async () => {
     const specImportCheck = createDoctorChecks(true).find(
       check => check.id === "spec-import-shape"
     );
@@ -153,7 +157,7 @@ describe("doctor checks", () => {
       expect.objectContaining({
         status: "fail",
         summary:
-          "Cannot import the bundled spec because the bundle output path is unavailable after prerequisite checks.",
+          "Cannot import the bundled spec because prerequisite check state is unavailable.",
       })
     );
   });

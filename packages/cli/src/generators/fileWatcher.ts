@@ -2,8 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { writeDiagnostic } from "../diagnosticFormatter.js";
-import { createLogger, type Logger } from "../logger.js";
+import { createLogger } from "../logger.js";
 import { Generator } from "./generator.js";
+import type { Logger } from "../logger.js";
 import type { GeneratorConfig } from "./generator.js";
 
 const WATCHED_EXTENSIONS = new Set([".ts", ".js", ".json", ".mjs", ".cjs"]);
@@ -131,7 +132,11 @@ export class FileWatcher {
     try {
       if (!isInitial) this.logger.step("Regenerating...");
       const generator = this.createGenerator();
-      const summary = await generator.generate(this.inputPath, this.outputDir, config);
+      const summary = await generator.generate(
+        this.inputPath,
+        this.outputDir,
+        config
+      );
       const elapsed = Math.round(performance.now() - start);
       if (!isInitial) {
         this.logger.success(`Regeneration complete (${elapsed}ms)`);

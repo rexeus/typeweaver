@@ -1,9 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { writeDiagnostic } from "../diagnosticFormatter.js";
+import { createCommandLogger } from "./shared.js";
 import type { GenerationSummary } from "../generationResult.js";
 import type { Logger } from "../logger.js";
-import { createCommandLogger, type SharedCommandOptions } from "./shared.js";
+import type { SharedCommandOptions } from "./shared.js";
 
 type MigrationGuide = {
   readonly heading: string;
@@ -18,7 +19,7 @@ const MIGRATION_GUIDE_07: MigrationGuide = {
   steps: [
     "Regenerate output before updating application code.",
     "Replace `new XxxResponse(...)` with `createXxxResponse(...)`.",
-    "Replace `instanceof` response checks with `response.type === \"XxxName\"`.",
+    'Replace `instanceof` response checks with `response.type === "XxxName"`.',
     "Update client error handling to inspect returned response unions instead of catching typed response classes.",
     "Update imports so shared/generated responses come from the centralized `responses/` output directory.",
   ],
@@ -56,7 +57,8 @@ export const handleMigrateCommand = async (
   const logger = (context.createLogger ?? createCommandLogger)(options);
 
   try {
-    const detectedVersion = options.from ?? detectInstalledTypeweaverVersion(execDir);
+    const detectedVersion =
+      options.from ?? detectInstalledTypeweaverVersion(execDir);
 
     if (!detectedVersion) {
       throw new Error(
@@ -101,13 +103,18 @@ export const handleMigrateCommand = async (
     }
 
     logger.info("");
-    logger.info("For the full rationale and examples, see MIGRATION.md in the repository.");
+    logger.info(
+      "For the full rationale and examples, see MIGRATION.md in the repository."
+    );
 
     const summary: GenerationSummary = {
       mode: "migrate",
       dryRun: false,
       detectedVersion,
-      advisoryCount: guides.reduce((count, guide) => count + guide.steps.length, 0),
+      advisoryCount: guides.reduce(
+        (count, guide) => count + guide.steps.length,
+        0
+      ),
       resourceCount: 0,
       operationCount: 0,
       responseCount: 0,
@@ -148,7 +155,8 @@ export const detectInstalledTypeweaverVersion = (
 
   for (const dependencies of dependencyGroups) {
     const declaredVersion =
-      dependencies?.["@rexeus/typeweaver"] ?? dependencies?.["@rexeus/typeweaver-core"];
+      dependencies?.["@rexeus/typeweaver"] ??
+      dependencies?.["@rexeus/typeweaver-core"];
 
     if (declaredVersion) {
       return normalizeVersion(declaredVersion);
@@ -165,7 +173,9 @@ const getMigrationGuides = (version: string): readonly MigrationGuide[] => {
   const minor = Number(versionParts[1]);
 
   if (!Number.isFinite(major) || !Number.isFinite(minor)) {
-    throw new Error(`Unsupported version format '${version}'. Use a semver-like value such as 0.8.4.`);
+    throw new Error(
+      `Unsupported version format '${version}'. Use a semver-like value such as 0.8.4.`
+    );
   }
 
   if (major > 0 || minor >= 9) {
@@ -186,7 +196,11 @@ const getMigrationGuides = (version: string): readonly MigrationGuide[] => {
 };
 
 const normalizeVersion = (version: string): string => {
-  const match = version.match(/(\d+\.\d+(?:\.\d+)?)/u);
+  const match = version
+    .trim()
+    .match(
+      /^(?:[~^]|>=|<=|>|<|=)?v?(\d+\.\d+(?:\.\d+)?)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u
+    );
   const normalizedVersion = match?.[1];
 
   if (!normalizedVersion) {

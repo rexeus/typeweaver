@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
-import type { GenerationSummary } from "../src/generationResult.js";
 import { createLogger } from "../src/logger.js";
+import type { GenerationSummary } from "../src/generationResult.js";
 
 const summary: GenerationSummary = {
   mode: "generate",
@@ -30,7 +30,11 @@ describe("logger", () => {
   test("only emits debug lines in verbose mode", () => {
     const stderr = { isTTY: false, write: vi.fn() };
     const quietLogger = createLogger({ stderr, stdout: stderr });
-    const verboseLogger = createLogger({ verbose: true, stderr, stdout: stderr });
+    const verboseLogger = createLogger({
+      verbose: true,
+      stderr,
+      stdout: stderr,
+    });
 
     quietLogger.debug("hidden");
     verboseLogger.debug("visible");
@@ -52,9 +56,7 @@ describe("logger", () => {
     expect(stdout.write).toHaveBeenCalledWith("  warnings: 1\n");
     expect(stdout.write).toHaveBeenCalledWith("  ! formatter missing\n");
     expect(stdout.write).toHaveBeenCalledWith("  - index.ts\n");
-    expect(stdout.write).toHaveBeenCalledWith(
-      "  - todo/GetTodoRequest.ts\n"
-    );
+    expect(stdout.write).toHaveBeenCalledWith("  - todo/GetTodoRequest.ts\n");
   });
 
   test("prints doctor summary counts", () => {

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { runDoctorChecks, summarizeDoctorChecks } from "../src/doctor/runner.js";
+import { runDoctorChecks } from "../src/doctor/runner.js";
+import { createTestLogger } from "./__helpers__/testLogger.js";
 import type { DoctorCheck, DoctorCheckContext } from "../src/doctor/types.js";
 
 const createContext = (): DoctorCheckContext => {
@@ -7,139 +8,35 @@ const createContext = (): DoctorCheckContext => {
     execDir: "/workspace",
     configPath: "/workspace/typeweaver.config.mjs",
     isDeep: true,
-    logger: {
-      isVerbose: false,
-      debug: () => {},
-      info: () => {},
-      success: () => {},
-      warn: () => {},
-      error: () => {},
-      step: () => {},
-      summary: () => {},
-    },
+    logger: createTestLogger(),
     temporaryDirectory: "/tmp/typeweaver-doctor-test",
     state: {},
   };
 };
 
-describe("doctor runner", () => {
-  test("runs checks in order and cascades skips from failed prerequisites", async () => {
-    const executionOrder: string[] = [];
-    const checks: readonly DoctorCheck[] = [
-      {
-        id: "first",
-        label: "First",
-        phase: "standard",
-        run: async () => {
-          executionOrder.push("first");
-
-          return {
-            result: {
-              id: "first",
-              label: "First",
-              phase: "standard",
-              status: "fail",
-              summary: "nope",
-              details: [],
-            },
-          };
-        },
+describe("runDoctorChecks", () => {
+  // Orchestration semantics (order, skip-cascade, summarizeChecks etc.) are
+  // covered by `pipelineRunner.test.ts`. This file focuses on what
+  // `runDoctorChecks` adds on top: routing thrown errors through the rich
+  // diagnostic formatter so doctor results surface context lines and hints.
+  test("renders thrown errors via the diagnostic formatter", async () => {
+    const exploding: DoctorCheck = {
+      id: "explosive",
+      label: "Explosive",
+      phase: "standard",
+      run: async () => {
+        throw new Error("Deep failure mode");
       },
-      {
-        id: "second",
-        label: "Second",
-        phase: "standard",
-        dependsOn: ["first"],
-        run: async () => {
-          executionOrder.push("second");
+    };
 
-          return {
-            result: {
-              id: "second",
-              label: "Second",
-              phase: "standard",
-              status: "pass",
-              summary: "ok",
-              details: [],
-            },
-          };
-        },
-      },
-      {
-        id: "third",
-        label: "Third",
-        phase: "deep",
-        run: async () => {
-          executionOrder.push("third");
+    const [result] = await runDoctorChecks([exploding], createContext());
 
-          return {
-            result: {
-              id: "third",
-              label: "Third",
-              phase: "deep",
-              status: "pass",
-              summary: "ok",
-              details: [],
-            },
-          };
-        },
-      },
-    ];
-
-    const results = await runDoctorChecks(checks, createContext());
-
-    expect(executionOrder).toEqual(["first", "third"]);
-    expect(results.map(result => result.status)).toEqual(["fail", "skip", "pass"]);
-    expect(results[1]).toEqual(
+    expect(result).toEqual(
       expect.objectContaining({
-        summary: "Skipped because 'First' did not pass.",
+        id: "explosive",
+        status: "fail",
+        summary: "Deep failure mode",
       })
     );
-  });
-
-  test("summarizes pass warn fail and skip counts", () => {
-    const summary = summarizeDoctorChecks([
-      {
-        id: "pass",
-        label: "Pass",
-        phase: "standard",
-        status: "pass",
-        summary: "ok",
-        details: [],
-      },
-      {
-        id: "warn",
-        label: "Warn",
-        phase: "standard",
-        status: "warn",
-        summary: "careful",
-        details: [],
-      },
-      {
-        id: "fail",
-        label: "Fail",
-        phase: "deep",
-        status: "fail",
-        summary: "broken",
-        details: [],
-      },
-      {
-        id: "skip",
-        label: "Skip",
-        phase: "deep",
-        status: "skip",
-        summary: "skipped",
-        details: [],
-      },
-    ]);
-
-    expect(summary).toEqual({
-      totalChecks: 4,
-      passedChecks: 1,
-      warnedChecks: 1,
-      failedChecks: 1,
-      skippedChecks: 1,
-      hasFailures: true,
-    });
   });
 });

@@ -1,7 +1,7 @@
+import fs from "node:fs";
 import path from "node:path";
 import { renderTemplate } from "@rexeus/typeweaver-gen";
 import type { GeneratorContext } from "@rexeus/typeweaver-gen";
-import fs from "node:fs";
 
 export function generateIndexFiles(
   templateDir: string,

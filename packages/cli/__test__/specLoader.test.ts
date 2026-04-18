@@ -1,278 +1,29 @@
 import fs from "node:fs";
 import path from "node:path";
-import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { afterEach, describe, expect, test } from "vitest";
-import {
-  createWrapperImportSpecifier,
-  isExternalSpecImport,
-} from "../src/generators/spec/specBundler.js";
-import { isSpecDefinition } from "../src/generators/spec/specGuards.js";
+import { fileURLToPath } from "node:url";
+import { describe, expect, test } from "vitest";
 import { loadSpec } from "../src/generators/specLoader.js";
+import { createTempDirFactory } from "./__helpers__/tempDir.js";
 
-describe("SpecLoader", () => {
-  const tempDirs: string[] = [];
+// Integration coverage for the full spec-loading pipeline. The pure-function
+// guards around it are unit-tested in specGuards.test.ts and specBundler.test.ts.
+//
+// Temp dirs MUST live inside the CLI package so pnpm-workspace module
+// resolution finds `@rexeus/typeweaver-core` when the bundler loads the spec.
+// Anchoring to this file's URL keeps tests stable regardless of which
+// directory `vitest` is launched from.
+const PACKAGE_DIR = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  ".."
+);
 
-  afterEach(() => {
-    tempDirs.forEach(tempDir => {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    });
-    tempDirs.length = 0;
-  });
+describe("loadSpec (integration)", () => {
+  const createTempDir = createTempDirFactory(
+    ".typeweaver-spec-loader-test-",
+    PACKAGE_DIR
+  );
 
-  const createTempDir = (): string => {
-    const tempDir = fs.mkdtempSync(
-      path.join(process.cwd(), ".typeweaver-spec-loader-test-")
-    );
-    tempDirs.push(tempDir);
-
-    return tempDir;
-  };
-
-  test("accepts a structurally valid spec definition", () => {
-    expect(
-      isSpecDefinition({
-        resources: {
-          todos: {
-            operations: [
-              {
-                operationId: "listTodos",
-                method: "GET",
-                path: "/todos",
-                summary: "List todos",
-                request: {},
-                responses: [
-                  {
-                    name: "TodoResponse",
-                    statusCode: 200,
-                    description: "Todo response",
-                  },
-                ],
-              },
-            ],
-          },
-        },
-      })
-    ).toBe(true);
-  });
-
-  test("creates a relative wrapper import specifier for posix paths", () => {
-    expect(
-      createWrapperImportSpecifier(
-        "/tmp/typeweaver/spec-entrypoint.ts",
-        "/tmp/typeweaver/spec.ts"
-      )
-    ).toBe("./spec.ts");
-  });
-
-  test("creates a relative wrapper import specifier for windows paths", () => {
-    expect(
-      createWrapperImportSpecifier(
-        "C:\\project\\.typeweaver\\spec-entrypoint.ts",
-        "C:\\project\\specs\\spec.ts"
-      )
-    ).toBe("../specs/spec.ts");
-  });
-
-  test("keeps bare package imports external during spec bundling", () => {
-    expect(isExternalSpecImport("zod")).toBe(true);
-    expect(isExternalSpecImport("@rexeus/typeweaver-core")).toBe(true);
-    expect(isExternalSpecImport("node:path")).toBe(true);
-    expect(isExternalSpecImport("./todo/index.ts")).toBe(false);
-    expect(isExternalSpecImport("/workspace/spec/index.ts")).toBe(false);
-  });
-
-  test("rejects resources without an operations array", () => {
-    expect(
-      isSpecDefinition({
-        resources: {
-          todos: {},
-        },
-      })
-    ).toBe(false);
-  });
-
-  test("rejects operations missing required fields", () => {
-    expect(
-      isSpecDefinition({
-        resources: {
-          todos: {
-            operations: [
-              {
-                operationId: "listTodos",
-                method: "GET",
-                path: "/todos",
-                request: {},
-                responses: [],
-              },
-            ],
-          },
-        },
-      })
-    ).toBe(false);
-  });
-
-  test("rejects operations with invalid http methods", () => {
-    expect(
-      isSpecDefinition({
-        resources: {
-          todos: {
-            operations: [
-              {
-                operationId: "listTodos",
-                method: "FETCH",
-                path: "/todos",
-                summary: "List todos",
-                request: {},
-                responses: [],
-              },
-            ],
-          },
-        },
-      })
-    ).toBe(false);
-  });
-
-  test("rejects responses missing required fields", () => {
-    expect(
-      isSpecDefinition({
-        resources: {
-          todos: {
-            operations: [
-              {
-                operationId: "listTodos",
-                method: "GET",
-                path: "/todos",
-                summary: "List todos",
-                request: {},
-                responses: [
-                  {
-                    name: "TodoResponse",
-                    description: "Todo response",
-                  },
-                ],
-              },
-            ],
-          },
-        },
-      })
-    ).toBe(false);
-  });
-
-  test("rejects responses with invalid http status codes", () => {
-    expect(
-      isSpecDefinition({
-        resources: {
-          todos: {
-            operations: [
-              {
-                operationId: "listTodos",
-                method: "GET",
-                path: "/todos",
-                summary: "List todos",
-                request: {},
-                responses: [
-                  {
-                    name: "TodoResponse",
-                    statusCode: 299,
-                    description: "Todo response",
-                  },
-                ],
-              },
-            ],
-          },
-        },
-      })
-    ).toBe(false);
-  });
-
-  test("accepts responses with enum-backed http status codes", () => {
-    expect(
-      isSpecDefinition({
-        resources: {
-          todos: {
-            operations: [
-              {
-                operationId: "listTodos",
-                method: "GET",
-                path: "/todos",
-                summary: "List todos",
-                request: {},
-                responses: [
-                  {
-                    name: "TodoResponse",
-                    statusCode: HttpStatusCode.OK,
-                    description: "Todo response",
-                  },
-                ],
-              },
-            ],
-          },
-        },
-      })
-    ).toBe(true);
-  });
-
-  test("rejects null input", () => {
-    expect(isSpecDefinition(null)).toBe(false);
-  });
-
-  test("rejects undefined input", () => {
-    expect(isSpecDefinition(undefined)).toBe(false);
-  });
-
-  test("rejects non-object resources", () => {
-    expect(isSpecDefinition({ resources: [1, 2] })).toBe(false);
-  });
-
-  test("rejects operations with empty responses array", () => {
-    expect(
-      isSpecDefinition({
-        resources: {
-          todos: {
-            operations: [
-              {
-                operationId: "listTodos",
-                method: "GET",
-                path: "/todos",
-                summary: "List todos",
-                request: {},
-                responses: [],
-              },
-            ],
-          },
-        },
-      })
-    ).toBe(false);
-  });
-
-  test("rejects operations with undefined request", () => {
-    expect(
-      isSpecDefinition({
-        resources: {
-          todos: {
-            operations: [
-              {
-                operationId: "listTodos",
-                method: "GET",
-                path: "/todos",
-                summary: "List todos",
-                request: undefined,
-                responses: [
-                  {
-                    name: "TodoResponse",
-                    statusCode: 200,
-                    description: "Todo response",
-                  },
-                ],
-              },
-            ],
-          },
-        },
-      })
-    ).toBe(false);
-  });
-
-  test("loads bundled specs and emits only the bundled spec artifacts", async () => {
+  test("normalizes bundled TypeScript specs and emits only spec artifacts", async () => {
     const fixtureDir = createTempDir();
     const outputDir = path.join(fixtureDir, "generated-spec");
     const helperFile = path.join(fixtureDir, "responses.ts");
@@ -332,7 +83,7 @@ describe("SpecLoader", () => {
     );
 
     const loadedSpec = await loadSpec({
-      inputFile: path.relative(process.cwd(), specFile),
+      inputFile: specFile,
       specOutputDir: outputDir,
     });
 
@@ -378,11 +129,10 @@ describe("SpecLoader", () => {
     expect(fs.existsSync(path.join(outputDir, "spec.js"))).toBe(true);
     expect(fs.existsSync(path.join(outputDir, "spec.d.ts"))).toBe(true);
     expect(fs.existsSync(path.join(fixtureDir, "node_modules"))).toBe(false);
-
     expect(fs.existsSync(path.join(outputDir, "todos"))).toBe(false);
   });
 
-  test("loads bundled javascript specs", async () => {
+  test("normalizes bundled JavaScript specs", async () => {
     const fixtureDir = createTempDir();
     const outputDir = path.join(fixtureDir, "generated-spec");
     const helperFile = path.join(fixtureDir, "responses.js");
@@ -434,7 +184,7 @@ describe("SpecLoader", () => {
     );
 
     const loadedSpec = await loadSpec({
-      inputFile: path.relative(process.cwd(), specFile),
+      inputFile: specFile,
       specOutputDir: outputDir,
     });
 
