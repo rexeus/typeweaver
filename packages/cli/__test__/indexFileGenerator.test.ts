@@ -1,15 +1,25 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import type { GeneratorContext } from "@rexeus/typeweaver-gen";
-import { afterEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vitest";
 import { generateIndexFiles } from "../src/generators/indexFileGenerator.js";
+import { createTempDirFactory } from "./__helpers__/tempDir.js";
 
-function createContext(
+const BARREL_TEMPLATE = `<% for (const indexPath of indexPaths) { %>export * from "<%= indexPath %>";
+<% } %>`;
+
+/**
+ * Creates a GeneratorContext whose actually-used fields are populated and
+ * whose unused fields throw a descriptive error on access. Any future
+ * `indexFileGenerator` change that starts touching a new context member
+ * will get a clear "stub missing" error instead of a silent undefined.
+ */
+const createStubContext = (
   outputDir: string,
-  generatedFiles: string[]
-): GeneratorContext {
-  return {
+  generatedFiles: readonly string[]
+): GeneratorContext => {
+  const stubs = {
+    pluginName: "types",
     outputDir,
     inputDir: "/input",
     config: {},
@@ -20,128 +30,134 @@ function createContext(
     coreDir: "@rexeus/typeweaver-core",
     responsesOutputDir: path.join(outputDir, "responses"),
     specOutputDir: path.join(outputDir, "spec"),
-    getCanonicalResponse: () => {
-      throw new Error("not implemented");
-    },
-    getCanonicalResponseOutputFile: () => {
-      throw new Error("not implemented");
-    },
-    getCanonicalResponseImportPath: () => {
-      throw new Error("not implemented");
-    },
-    getSpecImportPath: () => {
-      throw new Error("not implemented");
-    },
-    getOperationDefinitionAccessor: () => {
-      throw new Error("not implemented");
-    },
-    getOperationOutputPaths: () => {
-      throw new Error("not implemented");
-    },
-    getResourceOutputDir: () => {
-      throw new Error("not implemented");
-    },
-    writeFile: () => {
-      throw new Error("not implemented");
-    },
-    renderTemplate: () => {
-      throw new Error("not implemented");
+    writeFile: (relativePath: string, content: string) => {
+      const filePath = path.join(outputDir, relativePath);
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, content);
     },
     addGeneratedFile: () => {},
-    getGeneratedFiles: () => generatedFiles,
+    getGeneratedFiles: () => [...generatedFiles],
   };
-}
 
-describe("indexFileGenerator", () => {
-  const tempDirs: string[] = [];
+  return new Proxy(stubs, {
+    get(target, property) {
+      if (property in target) {
+        return target[property as keyof typeof target];
+      }
+      if (typeof property === "symbol") {
+        return undefined;
+      }
+      throw new Error(
+        `GeneratorContext.${property} is not stubbed for indexFileGenerator tests. Add it to createStubContext if the code under test now requires it.`
+      );
+    },
+  }) as unknown as GeneratorContext;
+};
 
-  afterEach(() => {
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
+const readIndex = (outputDir: string, ...segments: string[]): string => {
+  return fs.readFileSync(path.join(outputDir, ...segments, "index.ts"), "utf8");
+};
 
-    tempDirs.length = 0;
+describe("generateIndexFiles", () => {
+  const createTempDir = createTempDirFactory("typeweaver-index-");
+
+  let outputDir: string;
+  let templateDir: string;
+
+  beforeEach(() => {
+    outputDir = createTempDir();
+    templateDir = createTempDir();
+    fs.writeFileSync(path.join(templateDir, "Index.ejs"), BARREL_TEMPLATE);
   });
 
-  function createTempDir(): string {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "typeweaver-index-"));
-    tempDirs.push(tempDir);
-
-    return tempDir;
-  }
-
-  test("creates nested barrel files and respects existing index files", () => {
-    const outputDir = createTempDir();
-    const templateDir = createTempDir();
-    const templatePath = path.join(templateDir, "Index.ejs");
-
-    fs.writeFileSync(
-      templatePath,
-      '<% for (const indexPath of indexPaths) { %>export * from "<%= indexPath %>";\n<% } %>'
-    );
-
+  test("creates resource-level barrels that re-export each sibling file", () => {
     generateIndexFiles(
       templateDir,
-      createContext(outputDir, [
-        "todo/GetTodoRequest.ts",
-        "todo/GetTodoResponse.ts",
+      createStubContext(outputDir, [
+        "types/todo/GetTodoRequest.ts",
+        "types/todo/GetTodoResponse.ts",
+        "clients/todo/TodoClient.ts",
+      ])
+    );
+
+    const typesTodoIndex = readIndex(outputDir, "types", "todo");
+    expect(typesTodoIndex).toContain('export * from "./GetTodoRequest.js";');
+    expect(typesTodoIndex).toContain('export * from "./GetTodoResponse.js";');
+
+    const clientsTodoIndex = readIndex(outputDir, "clients", "todo");
+    expect(clientsTodoIndex).toContain('export * from "./TodoClient.js";');
+  });
+
+  test("creates plugin-level barrels that link resource barrels", () => {
+    generateIndexFiles(
+      templateDir,
+      createStubContext(outputDir, [
+        "types/todo/GetTodoRequest.ts",
         "responses/TodoResponse.ts",
+      ])
+    );
+
+    expect(readIndex(outputDir, "types")).toContain(
+      'export * from "./todo/index.js";'
+    );
+    expect(readIndex(outputDir, "responses")).toContain(
+      'export * from "./TodoResponse.js";'
+    );
+  });
+
+  test("preserves a pre-existing lib/index.ts instead of overwriting it", () => {
+    generateIndexFiles(
+      templateDir,
+      createStubContext(outputDir, [
         "lib/clients/BaseClient.ts",
         "lib/types/index.ts",
       ])
     );
 
-    expect(
-      fs.readFileSync(path.join(outputDir, "todo", "index.ts"), "utf8")
-    ).toContain('export * from "./GetTodoRequest.js";');
-    expect(
-      fs.readFileSync(path.join(outputDir, "todo", "index.ts"), "utf8")
-    ).toContain('export * from "./GetTodoResponse.js";');
-    expect(
-      fs.readFileSync(path.join(outputDir, "responses", "index.ts"), "utf8")
-    ).toContain('export * from "./TodoResponse.js";');
+    // A generated file ending in `/index.ts` is treated as authoritative —
+    // the generator must not produce a shadowing barrel next to it.
     expect(
       fs.existsSync(path.join(outputDir, "lib", "types", "index.ts"))
     ).toBe(false);
-
-    const rootIndex = fs.readFileSync(path.join(outputDir, "index.ts"), "utf8");
-    expect(rootIndex).toContain('export * from "./lib/clients/index.js";');
-    expect(rootIndex).toContain('export * from "./lib/types/index.js";');
-    expect(rootIndex).toContain('export * from "./responses/index.js";');
-    expect(rootIndex).toContain('export * from "./todo/index.js";');
+    expect(fs.existsSync(path.join(outputDir, "lib", "index.ts"))).toBe(true);
   });
 
-  test("normalizes Windows-style generated file paths in barrel exports", () => {
-    const outputDir = createTempDir();
-    const templateDir = createTempDir();
-    const templatePath = path.join(templateDir, "Index.ejs");
-
-    fs.writeFileSync(
-      templatePath,
-      '<% for (const indexPath of indexPaths) { %>export * from "<%= indexPath %>";\n<% } %>'
-    );
-
+  test("creates a root barrel that re-exports every top-level directory", () => {
     generateIndexFiles(
       templateDir,
-      createContext(outputDir, [
-        "todo\\GetTodoRequest.ts",
-        "todo\\GetTodoResponse.ts",
+      createStubContext(outputDir, [
+        "types/todo/GetTodoRequest.ts",
+        "clients/todo/TodoClient.ts",
+        "responses/TodoResponse.ts",
+        "lib/clients/BaseClient.ts",
+      ])
+    );
+
+    const rootIndex = readIndex(outputDir);
+    expect(rootIndex).toContain('export * from "./clients/index.js";');
+    expect(rootIndex).toContain('export * from "./lib/index.js";');
+    expect(rootIndex).toContain('export * from "./responses/index.js";');
+    expect(rootIndex).toContain('export * from "./types/index.js";');
+  });
+
+  test("normalizes Windows-style backslashes to forward slashes", () => {
+    generateIndexFiles(
+      templateDir,
+      createStubContext(outputDir, [
+        "types\\todo\\GetTodoRequest.ts",
+        "types\\todo\\GetTodoResponse.ts",
         "lib\\clients\\BaseClient.ts",
       ])
     );
 
-    const todoIndex = fs.readFileSync(
-      path.join(outputDir, "todo", "index.ts"),
-      "utf8"
-    );
-    const rootIndex = fs.readFileSync(path.join(outputDir, "index.ts"), "utf8");
-
+    const todoIndex = readIndex(outputDir, "types", "todo");
     expect(todoIndex).toContain('export * from "./GetTodoRequest.js";');
     expect(todoIndex).toContain('export * from "./GetTodoResponse.js";');
     expect(todoIndex).not.toContain("\\");
 
-    expect(rootIndex).toContain('export * from "./lib/clients/index.js";');
-    expect(rootIndex).toContain('export * from "./todo/index.js";');
+    const rootIndex = readIndex(outputDir);
+    expect(rootIndex).toContain('export * from "./lib/index.js";');
+    expect(rootIndex).toContain('export * from "./types/index.js";');
     expect(rootIndex).not.toContain("\\");
   });
 });

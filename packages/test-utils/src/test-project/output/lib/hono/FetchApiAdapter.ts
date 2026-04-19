@@ -15,6 +15,8 @@ import type {
 } from "@rexeus/typeweaver-core";
 import { HttpAdapter } from "./HttpAdapter.js";
 
+type ResponseBody = ConstructorParameters<typeof Response>[0];
+
 /**
  * Adapter for converting between Fetch API Request/Response objects
  * and the framework-agnostic HTTP types.
@@ -130,13 +132,24 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
     return rawBody || undefined;
   }
 
-  private buildResponseBody(body: any): string | ArrayBuffer | Blob | null {
+  private buildResponseBody(body: any): ResponseBody {
     if (body === undefined) {
       return null;
     }
 
-    if (typeof body === "string" || body instanceof Blob || body instanceof ArrayBuffer) {
+    if (
+      typeof body === "string" ||
+      body instanceof Blob ||
+      body instanceof ArrayBuffer ||
+      body instanceof FormData ||
+      body instanceof URLSearchParams ||
+      body instanceof ReadableStream
+    ) {
       return body;
+    }
+
+    if (ArrayBuffer.isView(body)) {
+      return body as ResponseBody;
     }
 
     return JSON.stringify(body);

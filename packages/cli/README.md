@@ -68,6 +68,16 @@ More plugins are planned. If you want to build your own, check out the plugin sy
 
 ## ⌨️ CLI
 
+Start a new project with a working starter spec and config:
+
+```bash
+# Node.js (npm)
+npx typeweaver init --output ./api/generated --plugins clients,hono
+
+# Node.js (pnpm)
+pnpx typeweaver init --output ./api/generated --plugins clients,hono
+```
+
 Generate TypeScript code from a spec entrypoint file:
 
 ```bash
@@ -89,6 +99,14 @@ bunx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --
 
 ### ⚙️ Options
 
+Shared options for all commands:
+
+- `--verbose`: Show extra diagnostics
+- `--quiet`: Suppress non-error output
+- `--no-color`: Disable ANSI colors
+
+`generate` options:
+
 - `--input, -i <path>`: Spec entrypoint file (required)
 - `--output, -o <path>`: Output directory for generated code (required)
 - `--config, -c <path>`: Configuration file path (`.js`, `.mjs`, or `.cjs`, optional)
@@ -96,6 +114,57 @@ bunx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --
   for all plugins)
 - `--format / --no-format`: Enable/disable code formatting with oxfmt (default: true)
 - `--clean / --no-clean`: Enable/disable output directory cleaning (default: true)
+
+`init` options:
+
+- `--output, -o <path>`: Output directory to write into the generated config (default:
+  `./generated`)
+- `--plugins, -p <plugins>`: Comma-separated plugins to include in `typeweaver.config.mjs`
+- `--force, -f`: Overwrite the generated starter files if they already exist
+
+`validate` options:
+
+- `--input, -i <path>`: Spec entrypoint file
+- `--config, -c <path>`: Configuration file path (`.js`, `.mjs`, or `.cjs`)
+
+`migrate` options:
+
+- `--from <version>`: Show guidance for a specific installed version instead of autodetecting from
+  `package.json`
+
+### 🌱 First-success flow
+
+```bash
+npx typeweaver init
+npx typeweaver validate --config ./typeweaver.config.mjs
+npx typeweaver generate --config ./typeweaver.config.mjs
+```
+
+The starter creates a small `spec/` tree with one resource, shared helpers, shared responses, and a
+ready-to-edit `typeweaver.config.mjs`.
+
+### 📦 Generated output layout
+
+Generated output is namespaced by plugin, while shared artifacts stay at the root:
+
+```text
+generated/
+├── spec/
+├── responses/
+├── lib/
+│   └── <plugin>/
+├── types/
+│   └── <resource>/
+├── clients/
+│   └── <resource>/
+├── server/
+│   └── <resource>/
+└── hono/
+    └── <resource>/
+```
+
+This keeps cross-plugin imports explicit while preserving a convenient root `generated/index.ts`
+barrel.
 
 ### 📝 Configuration File
 
@@ -123,6 +192,19 @@ npx typeweaver generate --config ./typeweaver.config.mjs
 >
 > TypeScript config files (`.ts`, `.mts`, `.cts`) are no longer supported by the published CLI.
 > Convert them to JavaScript first if needed.
+
+### 🔄 Migration help
+
+If you're upgrading an older project, the CLI can print a concise migration checklist without
+modifying files:
+
+```bash
+npx typeweaver migrate
+npx typeweaver migrate --from 0.8.7
+```
+
+This command summarizes the relevant steps from the repository's `MIGRATION.md` and points you to
+the full guide for details.
 
 ## 🌱 Get Started
 

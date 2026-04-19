@@ -1,4 +1,5 @@
 import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec.js";
+import type { Issue } from "./issue.js";
 
 /**
  * Configuration for a typeweaver plugin
@@ -9,6 +10,7 @@ export type PluginConfig = Record<string, unknown>;
  * Context provided to plugins during initialization and finalization
  */
 export type PluginContext = {
+  readonly pluginName: string;
   readonly outputDir: string;
   readonly inputDir: string;
   readonly config: PluginConfig;
@@ -28,6 +30,15 @@ export type OperationOutputPaths = {
   readonly clientFileName: string;
 };
 
+export type OperationImportPaths = {
+  readonly outputDir: string;
+  readonly requestFile: string;
+  readonly responseFile: string;
+  readonly requestValidationFile: string;
+  readonly responseValidationFile: string;
+  readonly clientFile: string;
+};
+
 /**
  * Context provided to plugins during generation
  */
@@ -37,6 +48,11 @@ export type GeneratorContext = PluginContext & {
   readonly responsesOutputDir: string;
   readonly specOutputDir: string;
 
+  readonly getPluginOutputDir: (pluginName: string) => string;
+  readonly getPluginResourceOutputDir: (params: {
+    readonly pluginName: string;
+    readonly resourceName: string;
+  }) => string;
   readonly getCanonicalResponse: (responseName: string) => NormalizedResponse;
   readonly getCanonicalResponseOutputFile: (responseName: string) => string;
   readonly getCanonicalResponseImportPath: (params: {
@@ -51,10 +67,22 @@ export type GeneratorContext = PluginContext & {
     readonly operationId: string;
   }) => string;
   readonly getOperationOutputPaths: (params: {
+    readonly pluginName?: string;
     readonly resourceName: string;
     readonly operationId: string;
   }) => OperationOutputPaths;
+  readonly getOperationImportPaths: (params: {
+    readonly importerDir: string;
+    readonly pluginName: string;
+    readonly resourceName: string;
+    readonly operationId: string;
+  }) => OperationImportPaths;
   readonly getResourceOutputDir: (resourceName: string) => string;
+  readonly getLibImportPath: (params: {
+    readonly importerDir: string;
+    readonly pluginName: string;
+    readonly entry?: string;
+  }) => string;
   readonly writeFile: (relativePath: string, content: string) => void;
   readonly renderTemplate: (templatePath: string, data: unknown) => string;
   readonly addGeneratedFile: (relativePath: string) => void;
@@ -67,6 +95,18 @@ export type GeneratorContext = PluginContext & {
 export type PluginMetadata = {
   readonly name: string;
   readonly depends?: readonly string[];
+};
+
+/**
+ * Read-only context passed to `plugin.validate()`.
+ *
+ * Deliberately lacks any `outputDir`, `writeFile`, or template access: the
+ * validation phase must not mutate the file system.
+ */
+export type PluginValidationContext = {
+  readonly pluginName: string;
+  readonly inputDir: string;
+  readonly config: PluginConfig;
 };
 
 /**
@@ -86,6 +126,19 @@ export type TypeweaverPlugin = PluginMetadata & {
   collectResources?(
     normalizedSpec: NormalizedSpec
   ): Promise<NormalizedSpec> | NormalizedSpec;
+
+  /**
+   * Validate the normalized spec from the plugin's perspective.
+   *
+   * Called during `typeweaver validate` before any generation. The hook must
+   * be pure: it may inspect the spec but must not touch the file system or
+   * mutate shared state. Plugins return any number of issues; an empty array
+   * means the spec is acceptable.
+   */
+  validate?(
+    normalizedSpec: NormalizedSpec,
+    context: PluginValidationContext
+  ): Promise<readonly Issue[]> | readonly Issue[];
 
   /**
    * Main generation logic
@@ -122,6 +175,23 @@ export type PluginRegistration = {
 };
 
 /**
+ * Validation-specific configuration. Mirrors the CLI flags of
+ * `typeweaver validate` so CI and local runs stay aligned.
+ */
+export type ValidateConfig = {
+  /** Upgrade every warning to an error when computing `failOn`. */
+  readonly strict?: boolean;
+  /** Exit with a non-zero code when any issue of this severity (or higher) is emitted. */
+  readonly failOn?: "error" | "warning" | "info";
+  /** Issue codes (e.g. `TW-STYLE-001`) that should be silenced. */
+  readonly disable?: readonly string[];
+  /** Issue codes that default to disabled but should be activated for this project. */
+  readonly enable?: readonly string[];
+  /** Whether plugins should contribute validation. Defaults to `true`. */
+  readonly plugins?: boolean;
+};
+
+/**
  * typeweaver configuration
  */
 export type TypeweaverConfig = {
@@ -130,6 +200,7 @@ export type TypeweaverConfig = {
   plugins?: (string | [string, PluginConfig])[];
   format?: boolean;
   clean?: boolean;
+  validate?: ValidateConfig;
 };
 
 /**

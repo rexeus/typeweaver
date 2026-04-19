@@ -6,5 +6,7 @@
   { "path": "packages/gen/dist/index.mjs", "name": "gen" },
   { "path": "packages/aws-cdk/dist/index.mjs", "name": "aws-cdk" },
   { "path": "packages/hono/dist/index.mjs", "name": "hono" },
+  { "path": "packages/openapi/dist/index.mjs", "name": "openapi" },
+  { "path": "packages/zod-to-json-schema/dist/index.mjs", "name": "zod-to-json-schema" },
   { "path": "packages/zod-to-ts/dist/index.mjs", "name": "zod-to-ts" }
 ]

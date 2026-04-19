@@ -6,14 +6,24 @@ type FormatFn = (filename: string, source: string) => Promise<{ code: string }>;
 export async function formatCode(
   outputDir: string,
   startDir?: string
-): Promise<void> {
+): Promise<readonly string[]> {
   const format = await loadFormatter();
   if (!format) {
-    return;
+    return [
+      "oxfmt not installed - skipping formatting. Install with: npm install -D oxfmt",
+    ];
   }
 
   const targetDir = startDir ?? outputDir;
   await formatDirectory(targetDir, format);
+
+  return [];
+}
+
+export async function isFormatterAvailable(): Promise<boolean> {
+  const format = await loadFormatter();
+
+  return format !== undefined;
 }
 
 async function loadFormatter(): Promise<FormatFn | undefined> {
@@ -21,9 +31,6 @@ async function loadFormatter(): Promise<FormatFn | undefined> {
     const oxfmt = await import("oxfmt");
     return oxfmt.format;
   } catch {
-    console.warn(
-      "oxfmt not installed - skipping formatting. Install with: npm install -D oxfmt"
-    );
     return undefined;
   }
 }

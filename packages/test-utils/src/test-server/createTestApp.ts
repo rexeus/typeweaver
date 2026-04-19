@@ -2,13 +2,13 @@ import type {
   IHttpResponse,
   ITypedHttpResponse,
 } from "@rexeus/typeweaver-core";
-import { AccountRouter } from "../test-project/output/account/AccountRouter.js";
-import { AuthRouter } from "../test-project/output/auth/AuthRouter.js";
 import {
   defineMiddleware,
   TypeweaverApp,
 } from "../test-project/output/lib/server/index.js";
-import { TodoRouter } from "../test-project/output/todo/TodoRouter.js";
+import { AccountRouter } from "../test-project/output/server/account/AccountRouter.js";
+import { AuthRouter } from "../test-project/output/server/auth/AuthRouter.js";
+import { TodoRouter } from "../test-project/output/server/todo/TodoRouter.js";
 import { ServerAccountHandlers } from "./handlers/ServerAccountHandlers.js";
 import { ServerAuthHandlers } from "./handlers/ServerAuthHandlers.js";
 import { ServerTodoHandlers } from "./handlers/ServerTodoHandlers.js";

@@ -1,126 +1,133 @@
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
-import { Command } from "commander";
-import { getResolvedConfigPath, loadConfig } from "./configLoader.js";
-import { Generator } from "./generators/Generator.js";
-import type { CommandOptions as CommanderOptions } from "commander";
+import { Command, Option } from "commander";
+import { handleDoctorCommand } from "./commands/doctor.js";
+import { handleGenerateCommand } from "./commands/generate.js";
+import { handleInitCommand } from "./commands/init.js";
+import { handleMigrateCommand } from "./commands/migrate.js";
+import { handleValidateCommand } from "./commands/validate.js";
+import { getCliVersion } from "./version.js";
+import type { DoctorCommandOptions } from "./commands/doctor.js";
+import type { GenerateCommandOptions } from "./commands/generate.js";
+import type { InitCommandOptions } from "./commands/init.js";
+import type { MigrateCommandOptions } from "./commands/migrate.js";
+import type { ValidateCommandOptions } from "./commands/validate.js";
 
-const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-const packageJson = JSON.parse(
-  fs.readFileSync(path.join(moduleDir, "../package.json"), "utf-8")
-) as {
-  readonly version: string;
-  readonly name: string;
-  readonly description: string;
-};
+export const createCli = (): Command => {
+  const program = new Command();
 
-type CommandOptions = CommanderOptions & {
-  input?: string;
-  output?: string;
-  config?: string;
-  plugins?: string;
-  format?: boolean;
-  clean?: boolean;
-};
+  program
+    .name("@rexeus/typeweaver")
+    .description("Type-safe API framework with code generation for TypeScript")
+    .version(getCliVersion())
+    .addOption(
+      new Option("--verbose", "show debug diagnostics").conflicts("quiet")
+    )
+    .addOption(
+      new Option("--quiet", "suppress non-error output").conflicts("verbose")
+    )
+    .option("--no-color", "disable ANSI colors in CLI output");
 
-const program = new Command();
-const execDir = process.cwd();
-
-program
-  .name("@rexeus/typeweaver")
-  .description("Type-safe API framework with code generation for TypeScript")
-  .version(packageJson.version);
-
-program
-  .command("generate")
-  .description("Generate types, validators, and clients from an API spec")
-  .option("-i, --input <inputPath>", "path to spec entrypoint file")
-  .option("-o, --output <outputDir>", "output directory for generated files")
-  .option(
-    "-c, --config <configFile>",
-    "path to a .js, .mjs, or .cjs configuration file"
-  )
-  .option("-p, --plugins <plugins>", "comma-separated list of plugins to use")
-  .option("--format", "format generated code with oxfmt (default: true)")
-  .option("--no-format", "disable code formatting")
-  .option("--clean", "clean output directory before generation (default: true)")
-  .option("--no-clean", "disable cleaning output directory")
-  .action(async (options: CommandOptions) => {
-    let config: Partial<TypeweaverConfig> = {};
-
-    // Load configuration file if provided
-    if (options.config) {
-      const configPath = getResolvedConfigPath(options.config, execDir);
-
-      try {
-        config = await loadConfig(configPath);
-        console.info(`Loaded configuration from ${configPath}`);
-      } catch (error) {
-        console.error(`Failed to load configuration file: ${options.config}`);
-        console.error(error);
-        process.exit(1);
-      }
-    }
-
-    // Override with CLI options
-    const inputPath = options.input ?? config.input;
-    const outputDir = options.output ?? config.output;
-    // Validate required options
-    if (!inputPath) {
-      throw new Error(
-        "No input spec entrypoint provided. Use --input or specify in config file."
+  program
+    .command("doctor")
+    .description(
+      "Run read-only setup diagnostics for the current Typeweaver project"
+    )
+    .option(
+      "-c, --config <configFile>",
+      "path to a .js, .mjs, or .cjs configuration file"
+    )
+    .option(
+      "--deep",
+      "run deeper spec bundle/import checks in a temp directory"
+    )
+    .action(async (_options, command) => {
+      await handleDoctorCommand(
+        command.optsWithGlobals() as DoctorCommandOptions
       );
-    }
-    if (!outputDir) {
-      throw new Error(
-        "No output directory provided. Use --output or specify in config file."
+    });
+
+  program
+    .command("generate")
+    .description("Generate types, validators, and clients from an API spec")
+    .option("-i, --input <inputPath>", "path to spec entrypoint file")
+    .option("-o, --output <outputDir>", "output directory for generated files")
+    .option(
+      "-c, --config <configFile>",
+      "path to a .js, .mjs, or .cjs configuration file"
+    )
+    .option("-p, --plugins <plugins>", "comma-separated list of plugins to use")
+    .option("--format", "format generated code with oxfmt (default: true)")
+    .option("--no-format", "disable code formatting")
+    .option(
+      "--clean",
+      "clean output directory before generation (default: true)"
+    )
+    .option("--no-clean", "disable cleaning output directory")
+    .option("-w, --watch", "watch for changes and regenerate automatically")
+    .option("--dry-run", "run generation without mutating the output directory")
+    .action(async (_options, command) => {
+      await handleGenerateCommand(
+        command.optsWithGlobals() as GenerateCommandOptions
       );
-    }
+    });
 
-    // Resolve paths
-    const resolvedInputPath = path.isAbsolute(inputPath)
-      ? inputPath
-      : path.join(execDir, inputPath);
-    const resolvedOutputDir = path.isAbsolute(outputDir)
-      ? outputDir
-      : path.join(execDir, outputDir);
+  program
+    .command("validate")
+    .description("Validate a spec entrypoint without writing generated output")
+    .option("-i, --input <inputPath>", "path to spec entrypoint file")
+    .option(
+      "-c, --config <configFile>",
+      "path to a .js, .mjs, or .cjs configuration file"
+    )
+    .option("--strict", "treat warnings as errors")
+    .option(
+      "--fail-on <severity>",
+      "exit non-zero when any issue of this severity or higher is emitted (error|warning|info)"
+    )
+    .option(
+      "--disable <codes>",
+      "comma-separated issue codes to silence (e.g. TW-STYLE-001,TW-STYLE-002)"
+    )
+    .option(
+      "--enable <codes>",
+      "comma-separated issue codes that default to disabled but should run"
+    )
+    .option("--plugins", "run plugin-contributed validators (default)")
+    .option("--no-plugins", "skip plugin-contributed validators")
+    .option("--json", "emit a machine-readable ValidationReport on stdout")
+    .action(async (_options, command) => {
+      await handleValidateCommand(
+        command.optsWithGlobals() as ValidateCommandOptions
+      );
+    });
 
-    // Build final configuration
-    const finalConfig: TypeweaverConfig = {
-      input: resolvedInputPath,
-      output: resolvedOutputDir,
-      format: options.format ?? config.format ?? true,
-      clean: options.clean ?? config.clean ?? true,
-    };
+  program
+    .command("init")
+    .description("Create a starter spec and config in the current project")
+    .option("-o, --output <outputDir>", "output directory for generated files")
+    .option(
+      "-p, --plugins <plugins>",
+      "comma-separated list of plugins to add to the generated config"
+    )
+    .option("-f, --force", "overwrite starter files if they already exist")
+    .option(
+      "--config-format <format>",
+      "config file format: mjs, cjs, or js (default: mjs)"
+    )
+    .action(async (_options, command) => {
+      await handleInitCommand(command.optsWithGlobals() as InitCommandOptions);
+    });
 
-    // Handle plugins
-    if (options.plugins) {
-      // Parse comma-separated plugins from CLI
-      finalConfig.plugins = options.plugins.split(",").map(p => p.trim());
-    } else if (config.plugins) {
-      // Use plugins from config file
-      finalConfig.plugins = config.plugins;
-    }
-    // If no plugins specified, Generator will use defaults
+  program
+    .command("migrate")
+    .description(
+      "Show read-only migration guidance for older Typeweaver projects"
+    )
+    .option("--from <version>", "override the detected Typeweaver version")
+    .action(async (_options, command) => {
+      await handleMigrateCommand(
+        command.optsWithGlobals() as MigrateCommandOptions
+      );
+    });
 
-    // Run generation
-    const generator = new Generator();
-    return generator.generate(
-      resolvedInputPath,
-      resolvedOutputDir,
-      finalConfig,
-      execDir
-    );
-  });
-
-// Add future commands placeholder
-program
-  .command("init")
-  .description("Initialize a new typeweaver project (coming soon)")
-  .action(() => {
-    console.log("The init command is coming soon!");
-  });
-
-program.parse(process.argv);
+  return program;
+};

@@ -71,13 +71,7 @@ export async function bundle(config: SpecBundlerConfig): Promise<string> {
       experimental: {
         attachDebugInfo: "none",
       },
-      external: (source: string) => {
-        if (source.startsWith("node:")) {
-          return true;
-        }
-
-        return !source.startsWith(".") && !path.isAbsolute(source);
-      },
+      external: isExternalSpecImport,
       output: {
         file: bundledSpecFile,
         format: "esm",
@@ -94,6 +88,19 @@ export async function bundle(config: SpecBundlerConfig): Promise<string> {
   }
 
   return bundledSpecFile;
+}
+
+export function isExternalSpecImport(source: string): boolean {
+  return !isBundledSpecImport(source);
+}
+
+function isBundledSpecImport(source: string): boolean {
+  return (
+    source.startsWith(".") ||
+    source.startsWith("/") ||
+    WINDOWS_ABSOLUTE_PATH_PATTERN.test(source) ||
+    WINDOWS_UNC_PATH_PATTERN.test(source)
+  );
 }
 
 function resolveBundledInputFile(inputFile: string): string {

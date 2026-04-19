@@ -1,6 +1,5 @@
 /* eslint-disable import/max-dependencies */
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { AwsCdkPlugin } from "@rexeus/typeweaver-aws-cdk";
 import { ClientsPlugin } from "@rexeus/typeweaver-clients";
@@ -13,8 +12,10 @@ import { HonoPlugin } from "@rexeus/typeweaver-hono";
 import { ServerPlugin } from "@rexeus/typeweaver-server";
 import { TypesPlugin } from "@rexeus/typeweaver-types";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { PluginLoadingFailure } from "../src/generators/errors/PluginLoadingFailure.js";
+import { PluginLoadingFailure } from "../src/generators/errors/pluginLoadingFailure.js";
 import { loadPlugins } from "../src/generators/pluginLoader.js";
+import { createLogger } from "../src/logger.js";
+import { createTempDirFactory } from "./__helpers__/tempDir.js";
 
 type RegisteredPlugin = {
   readonly name: string;
@@ -45,26 +46,11 @@ function createRegistry(): {
 }
 
 describe("pluginLoader", () => {
-  const tempDirs: string[] = [];
+  const createTempDir = createTempDirFactory("typeweaver-plugin-");
 
   afterEach(() => {
     vi.restoreAllMocks();
-
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-
-    tempDirs.length = 0;
   });
-
-  function createTempDir(): string {
-    const tempDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "typeweaver-plugin-")
-    );
-    tempDirs.push(tempDir);
-
-    return tempDir;
-  }
 
   test("registers required plugins before loading configured plugins", async () => {
     const requiredPlugin = { name: "types" } as TypesPlugin;
@@ -78,10 +64,11 @@ describe("pluginLoader", () => {
       )
     );
 
-    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const { registry, registeredPlugins } = createRegistry();
+    const stream = { isTTY: false, write: vi.fn() };
+    const logger = createLogger({ stdout: stream, stderr: stream });
 
-    await loadPlugins(registry, [requiredPlugin], ["local"], {
+    await loadPlugins(registry, [requiredPlugin], ["local"], logger, {
       input: "./spec.ts",
       output: "./generated",
       plugins: [pluginPath],
@@ -91,9 +78,11 @@ describe("pluginLoader", () => {
       "types",
       "local-plugin",
     ]);
-    expect(infoSpy).toHaveBeenCalledWith("Successfully loaded 1 plugin(s):");
-    expect(infoSpy).toHaveBeenCalledWith(
-      `  - local-plugin (from ${pluginPath})`
+    expect(stream.write).toHaveBeenCalledWith(
+      "Successfully loaded 1 plugin(s):\n"
+    );
+    expect(stream.write).toHaveBeenCalledWith(
+      `  - local-plugin (from ${pluginPath})`.concat("\n")
     );
   });
 
@@ -101,11 +90,17 @@ describe("pluginLoader", () => {
     const { registry } = createRegistry();
 
     await expect(
-      loadPlugins(registry, [{ name: "types" } as TypesPlugin], ["local"], {
-        input: "./spec.ts",
-        output: "./generated",
-        plugins: ["missing-plugin"],
-      })
+      loadPlugins(
+        registry,
+        [{ name: "types" } as TypesPlugin],
+        ["local"],
+        createLogger({ quiet: true }),
+        {
+          input: "./spec.ts",
+          output: "./generated",
+          plugins: ["missing-plugin"],
+        }
+      )
     ).rejects.toEqual(
       expect.objectContaining<Partial<PluginLoadingFailure>>({
         pluginName: "missing-plugin",
@@ -134,11 +129,17 @@ describe("pluginLoader", () => {
 
     const { registry, registeredPlugins } = createRegistry();
 
-    await loadPlugins(registry, [{ name: "types" } as TypesPlugin], ["local"], {
-      input: "./spec.ts",
-      output: "./generated",
-      plugins: [pluginPath],
-    });
+    await loadPlugins(
+      registry,
+      [{ name: "types" } as TypesPlugin],
+      ["local"],
+      createLogger({ quiet: true }),
+      {
+        input: "./spec.ts",
+        output: "./generated",
+        plugins: [pluginPath],
+      }
+    );
 
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
       "types",

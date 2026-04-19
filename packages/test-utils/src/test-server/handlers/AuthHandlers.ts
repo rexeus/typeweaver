@@ -9,7 +9,7 @@ import type {
   IRefreshTokenRequest,
   RefreshTokenResponse,
 } from "../../index.js";
-import type { HonoAuthApiHandler } from "../../test-project/output/auth/AuthHono.js";
+import type { HonoAuthApiHandler } from "../../test-project/output/hono/auth/AuthHono.js";
 
 export class AuthHandlers implements HonoAuthApiHandler {
   public constructor(private readonly throwError?: Error | ITypedHttpResponse) {

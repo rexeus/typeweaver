@@ -4,7 +4,7 @@ import type {
   IRegisterAccountRequest,
   RegisterAccountResponse,
 } from "../../index.js";
-import type { HonoAccountApiHandler } from "../../test-project/output/account/AccountHono.js";
+import type { HonoAccountApiHandler } from "../../test-project/output/hono/account/AccountHono.js";
 
 export class AccountHandlers implements HonoAccountApiHandler {
   public constructor(private readonly throwError?: Error | ITypedHttpResponse) {

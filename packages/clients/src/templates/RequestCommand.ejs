@@ -8,8 +8,8 @@
 
 import { spec } from "<%= specPath %>";
 import { HttpMethod, type IHttpResponse, ResponseValidationError, UnknownResponseError } from "@rexeus/typeweaver-core";
-import { RequestCommand } from "../lib/clients/index.js";
-import { getOperationDefinition } from "../lib/types/index.js";
+import { RequestCommand } from "<%= clientsLibPath %>";
+import { getOperationDefinition } from "<%= typesLibPath %>";
 import { <%= pascalCaseOperationId %>ResponseValidator } from "<%= responseValidatorFile %>";
 import type {
     I<%= pascalCaseOperationId %>Request,

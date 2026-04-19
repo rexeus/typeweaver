@@ -4,8 +4,9 @@ import type {
   TypeweaverPlugin,
 } from "@rexeus/typeweaver-gen";
 import { TypesPlugin } from "@rexeus/typeweaver-types";
-import { PluginLoadingFailure } from "./errors/PluginLoadingFailure.js";
-import type { PluginLoadError } from "./errors/PluginLoadingFailure.js";
+import { PluginLoadingFailure } from "./errors/pluginLoadingFailure.js";
+import type { Logger } from "../logger.js";
+import type { PluginLoadError } from "./errors/pluginLoadingFailure.js";
 
 export type PluginResolutionStrategy = "npm" | "local" | "scoped";
 
@@ -22,6 +23,7 @@ export async function loadPlugins(
   registry: PluginRegistryApi,
   requiredPlugins: [TypesPlugin],
   strategies: PluginResolutionStrategy[],
+  logger: Logger,
   config?: TypeweaverConfig
 ): Promise<void> {
   for (const requiredPlugin of requiredPlugins) {
@@ -53,7 +55,7 @@ export async function loadPlugins(
     registry.register(result.value.plugin);
   }
 
-  reportSuccessfulLoads(successful);
+  reportSuccessfulLoads(successful, logger);
 }
 
 async function loadPlugin(
@@ -136,11 +138,14 @@ function generatePluginPaths(
   return paths;
 }
 
-function reportSuccessfulLoads(successful: PluginLoadResult[]): void {
+function reportSuccessfulLoads(
+  successful: PluginLoadResult[],
+  logger: Logger
+): void {
   if (successful.length > 0) {
-    console.info(`Successfully loaded ${successful.length} plugin(s):`);
+    logger.info(`Successfully loaded ${successful.length} plugin(s):`);
     for (const result of successful) {
-      console.info(`  - ${result.plugin.name} (from ${result.source})`);
+      logger.info(`  - ${result.plugin.name} (from ${result.source})`);
     }
   }
 }
