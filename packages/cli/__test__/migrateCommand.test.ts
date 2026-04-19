@@ -123,6 +123,80 @@ describe("handleMigrateCommand", () => {
     );
   });
 
+  test("parses pre-release specifiers down to their core semver", () => {
+    const tempDir = createTempDir();
+
+    fs.writeFileSync(
+      path.join(tempDir, "package.json"),
+      JSON.stringify(
+        {
+          dependencies: {
+            "@rexeus/typeweaver": "0.8.5-beta.2+build.1",
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    expect(detectInstalledTypeweaverVersion(tempDir)).toBe("0.8.5");
+  });
+
+  test("returns undefined for opaque specifiers such as workspace:* or git URLs", () => {
+    const tempDir = createTempDir();
+
+    fs.writeFileSync(
+      path.join(tempDir, "package.json"),
+      JSON.stringify(
+        {
+          dependencies: {
+            "@rexeus/typeweaver": "workspace:*",
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    expect(detectInstalledTypeweaverVersion(tempDir)).toBeUndefined();
+
+    fs.writeFileSync(
+      path.join(tempDir, "package.json"),
+      JSON.stringify(
+        {
+          dependencies: {
+            "@rexeus/typeweaver": "git+https://github.com/rexeus/typeweaver",
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    expect(detectInstalledTypeweaverVersion(tempDir)).toBeUndefined();
+  });
+
+  test("rejects 0.6.x projects with a clear unsupported-version error", async () => {
+    const tempDir = createTempDir();
+    const logger = createTestLogger();
+
+    const summary = await handleMigrateCommand(
+      {
+        from: "0.6.4",
+      },
+      {
+        execDir: tempDir,
+        createLogger: () => logger,
+      }
+    );
+
+    expect(summary).toBeUndefined();
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining("No bundled migration guidance is available")
+    );
+    expect(process.exitCode).toBe(1);
+  });
+
   test("fails with guidance when no version can be detected", async () => {
     const tempDir = createTempDir();
     const logger = createTestLogger();

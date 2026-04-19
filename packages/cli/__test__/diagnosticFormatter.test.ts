@@ -22,7 +22,7 @@ import { DefinitionCompilationError } from "../src/generators/errors/definitionC
 import { PluginLoadingFailure } from "../src/generators/errors/pluginLoadingFailure.js";
 import { ReservedEntityNameError } from "../src/generators/errors/reservedEntityNameError.js";
 import { ReservedKeywordError } from "../src/generators/errors/reservedKeywordError.js";
-import { InvalidSpecEntrypointError } from "../src/generators/spec/InvalidSpecEntrypointError.js";
+import { InvalidSpecEntrypointError } from "../src/generators/spec/invalidSpecEntrypointError.js";
 import { createTestLogger } from "./__helpers__/testLogger.js";
 import type { Logger } from "../src/logger.js";
 

@@ -8,7 +8,7 @@ import { loadPlugins } from "../generators/pluginLoader.js";
 import { bundle } from "../generators/spec/specBundler.js";
 import { createSpecDependencyResolutionBridge } from "../generators/spec/specDependencyResolution.js";
 import { importDefinition } from "../generators/spec/specImporter.js";
-import type { Logger } from "../logger.js";
+import { NOOP_LOGGER } from "../logger.js";
 
 export const resolveInputPath = (
   execDir: string,
@@ -56,7 +56,7 @@ export const resolveOptionalPlugins = async (config: {
     registry,
     [new TypesPlugin()],
     ["npm", "local"],
-    createQuietLogger(),
+    NOOP_LOGGER,
     {
       input: config.input,
       output: config.output,
@@ -110,17 +110,4 @@ export const inspectBundledSpec = async (config: {
     operationCount,
     responseCount: normalizedSpec.responses.length,
   };
-};
-
-const createQuietLogger = (): Logger => {
-  return {
-    isVerbose: false,
-    debug: () => {},
-    info: () => {},
-    success: () => {},
-    warn: () => {},
-    error: () => {},
-    step: () => {},
-    summary: () => {},
-  } as const;
 };

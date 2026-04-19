@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { handleGenerateCommand } from "../src/commands/generate.js";
 import { createTestLogger } from "./__helpers__/testLogger.js";
-import type { GenerationSummary } from "../src/generationResult.js";
+import type { GenerateSummary } from "../src/generationResult.js";
 import type { ValidationReport } from "../src/validate/index.js";
 
 const { loadConfigMock } = vi.hoisted(() => ({
@@ -53,7 +53,7 @@ const createFailingPreflightReport = (
   failOn: "error",
 });
 
-const summary: GenerationSummary = {
+const summary: GenerateSummary = {
   mode: "generate",
   dryRun: false,
   targetOutputDir: "/workspace/generated",

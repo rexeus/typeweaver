@@ -165,4 +165,63 @@ describe("Generator.generate", () => {
       )
     );
   });
+
+  test("removes the dry-run temporary directory after success", async () => {
+    const workingDirectory = createTempDir();
+    const generator = new Generator({
+      logger: createLogger({ quiet: true }),
+    });
+
+    await generator.generate(
+      "spec/index.ts",
+      "generated/output",
+      {
+        input: "spec/index.ts",
+        output: "generated/output",
+        clean: true,
+        format: false,
+        dryRun: true,
+      },
+      workingDirectory
+    );
+
+    const temporarySpecOutputDir = loadSpecMock.mock.calls[0]?.[0]
+      .specOutputDir as string;
+    const temporaryRoot = path.dirname(temporarySpecOutputDir);
+
+    expect(path.basename(temporaryRoot)).toMatch(/^typeweaver-generate-/u);
+    expect(fs.existsSync(temporaryRoot)).toBe(false);
+  });
+
+  test("removes the dry-run temporary directory even when generation throws", async () => {
+    const workingDirectory = createTempDir();
+    const failure = new Error("boom during spec load");
+    loadSpecMock.mockRejectedValueOnce(failure);
+
+    const generator = new Generator({
+      logger: createLogger({ quiet: true }),
+    });
+
+    await expect(
+      generator.generate(
+        "spec/index.ts",
+        "generated/output",
+        {
+          input: "spec/index.ts",
+          output: "generated/output",
+          clean: true,
+          format: false,
+          dryRun: true,
+        },
+        workingDirectory
+      )
+    ).rejects.toBe(failure);
+
+    const temporarySpecOutputDir = loadSpecMock.mock.calls[0]?.[0]
+      .specOutputDir as string;
+    const temporaryRoot = path.dirname(temporarySpecOutputDir);
+
+    expect(path.basename(temporaryRoot)).toMatch(/^typeweaver-generate-/u);
+    expect(fs.existsSync(temporaryRoot)).toBe(false);
+  });
 });

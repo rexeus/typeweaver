@@ -9,7 +9,7 @@ import {
   resolveCommandPath,
   resolvePluginList,
 } from "./shared.js";
-import type { GenerationSummary } from "../generationResult.js";
+import type { GenerateSummary } from "../generationResult.js";
 import type { GeneratorConfig } from "../generators/generator.js";
 import type { Logger } from "../logger.js";
 import type { PreflightOptions, ValidationReport } from "../validate/index.js";
@@ -33,7 +33,7 @@ export type GenerateCommandOptions = SharedCommandOptions & {
 
 export type GenerateCommandResult =
   | { readonly kind: "watch" }
-  | { readonly kind: "once"; readonly summary: GenerationSummary };
+  | { readonly kind: "once"; readonly summary: GenerateSummary };
 
 export type GenerateCommandContext = {
   readonly execDir?: string;
@@ -122,7 +122,7 @@ const runOnceMode = async (
     params.execDir
   );
 
-  const commandSummary: GenerationSummary = {
+  const commandSummary: GenerateSummary = {
     ...summary,
     targetOutputDir: params.summaryOutputDir,
   };

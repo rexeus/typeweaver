@@ -27,6 +27,32 @@ export type PluginContextBuilderApi = {
   readonly clearGeneratedFiles: () => void;
 };
 
+function resolveWithinOutputDir(
+  outputDir: string,
+  relativePath: string
+): string {
+  if (path.isAbsolute(relativePath)) {
+    throw new Error(
+      `Plugin writeFile refused an absolute path '${relativePath}'. Pass a path relative to the plugin output directory instead.`
+    );
+  }
+
+  const resolvedOutputDir = path.resolve(outputDir);
+  const resolvedTarget = path.resolve(resolvedOutputDir, relativePath);
+  const relativeFromOutput = path.relative(resolvedOutputDir, resolvedTarget);
+
+  if (
+    relativeFromOutput.startsWith("..") ||
+    path.isAbsolute(relativeFromOutput)
+  ) {
+    throw new Error(
+      `Plugin writeFile refused path '${relativePath}' because it escapes the output directory.`
+    );
+  }
+
+  return resolvedTarget;
+}
+
 export function createPluginContextBuilder(): PluginContextBuilderApi {
   const generatedFiles = new Set<string>();
 
@@ -209,7 +235,7 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
       },
 
       writeFile: (relativePath: string, content: string) => {
-        const fullPath = path.join(params.outputDir, relativePath);
+        const fullPath = resolveWithinOutputDir(params.outputDir, relativePath);
         const dir = path.dirname(fullPath);
 
         fs.mkdirSync(dir, { recursive: true });

@@ -1,3 +1,4 @@
+import { reportCheckSection } from "../pipeline/reporting.js";
 import { applyIssueRules } from "./rules.js";
 import type { Logger } from "../logger.js";
 import type { RuleResolver } from "./rules.js";
@@ -70,7 +71,7 @@ export const reportValidationText = (
   logger: Logger,
   report: ValidationReport
 ): void => {
-  reportSection(logger, "Checks", report.checks);
+  reportCheckSection(logger, "Checks", report.checks);
   reportIssues(logger, report.issues);
 };
 
@@ -100,43 +101,6 @@ export const reportFinalSummary = (
   logger.step(
     `Validation ${verdict}: ${stats.errors} error(s), ${stats.warnings} warning(s), ${stats.infos} info(s) across ${stats.resources} resource(s), ${stats.operations} operation(s), ${stats.responses} response(s).`
   );
-};
-
-const reportSection = (
-  logger: Logger,
-  title: string,
-  results: readonly ValidateCheckResult[]
-): void => {
-  if (results.length === 0) {
-    return;
-  }
-
-  logger.step(title);
-
-  for (const result of results) {
-    const message = `${result.label}: ${result.summary}`;
-
-    switch (result.status) {
-      case "pass":
-        logger.success(message);
-        break;
-      case "warn":
-        logger.warn(message);
-        break;
-      case "fail":
-        logger.error(message);
-        break;
-      case "skip":
-        logger.info(`○ ${message}`);
-        break;
-    }
-
-    if (logger.isVerbose) {
-      for (const detail of result.details) {
-        logger.info(`  ${detail}`);
-      }
-    }
-  }
 };
 
 const reportIssues = (logger: Logger, issues: readonly Issue[]): void => {

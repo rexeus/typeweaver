@@ -323,7 +323,7 @@ function formatPath(path: readonly string[]): string {
   return `$.${path.join(".")}`;
 }
 
-function getSchemaType(schema: $ZodType): string {
+export function getSchemaType(schema: $ZodType): string {
   const def = schema._zod.def as ZodDef;
   return def.type ?? "unknown";
 }

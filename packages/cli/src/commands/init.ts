@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { writeDiagnostic } from "../diagnosticFormatter.js";
 import {
   createPackageJsonTemplateFile,
@@ -15,25 +14,15 @@ import {
   DEFAULT_CONFIG_FORMAT,
   SUPPORTED_CONFIG_FORMATS,
 } from "../templates/typeweaverConfigTemplate.js";
+import { getCliVersion } from "../version.js";
 import { createCommandLogger, resolvePluginList } from "./shared.js";
-import type { GenerationSummary } from "../generationResult.js";
+import type { InitSummary } from "../generationResult.js";
 import type { Logger } from "../logger.js";
 import type { TypeweaverConfigFormat } from "../templates/typeweaverConfigTemplate.js";
 import type { SharedCommandOptions } from "./shared.js";
 
 const DEFAULT_GENERATED_OUTPUT_DIR = "generated";
 const STARTER_ZOD_VERSION = "^4.3.6";
-
-const CLI_MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
-const CLI_PACKAGE_JSON_PATH = path.join(CLI_MODULE_DIR, "../../package.json");
-
-const getTypeweaverVersion = (): string => {
-  const packageJson = JSON.parse(
-    fs.readFileSync(CLI_PACKAGE_JSON_PATH, "utf-8")
-  ) as { readonly version: string };
-
-  return packageJson.version;
-};
 
 export type InitCommandOptions = SharedCommandOptions & {
   readonly output?: string;
@@ -50,7 +39,7 @@ export type InitCommandContext = {
 export const handleInitCommand = async (
   options: InitCommandOptions,
   context: InitCommandContext = {}
-): Promise<GenerationSummary | void> => {
+): Promise<InitSummary | void> => {
   const execDir = context.execDir ?? process.cwd();
   const logger = (context.createLogger ?? createCommandLogger)(options);
   const template = STARTER_TEMPLATE;
@@ -70,7 +59,7 @@ export const handleInitCommand = async (
     const shouldCreatePackageJson = !fs.existsSync(packageJsonPath);
     const packageJsonFile = shouldCreatePackageJson
       ? createPackageJsonTemplateFile({
-          typeweaverVersion: getTypeweaverVersion(),
+          typeweaverVersion: getCliVersion(),
           zodVersion: STARTER_ZOD_VERSION,
         })
       : undefined;
@@ -117,9 +106,8 @@ export const handleInitCommand = async (
       `Generate output with: typeweaver generate --config ./${configFile.relativePath}`
     );
 
-    const summary: GenerationSummary = {
+    const summary: InitSummary = {
       mode: "init",
-      dryRun: false,
       targetOutputDir: outputDir,
       targetConfigPath: configPath,
       resourceCount: template.resourceCount,
@@ -129,7 +117,6 @@ export const handleInitCommand = async (
       generatedFiles: filesToWrite.map(file =>
         path.relative(execDir, file.absolutePath)
       ),
-      warnings: [],
     };
 
     logger.summary(summary);

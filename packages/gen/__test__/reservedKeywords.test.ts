@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { isReservedKeyword, RESERVED_KEYWORDS } from "../src/reserved-keywords";
+import { isReservedKeyword, RESERVED_KEYWORDS } from "../src/reservedKeywords";
 
 describe("isReservedKeyword", () => {
   test.each([

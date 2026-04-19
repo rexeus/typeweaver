@@ -1,22 +1,9 @@
-import {
-  DerivedResponseCycleError,
-  DuplicateOperationIdError,
-  DuplicateRouteError,
-  EmptyOperationResponsesError,
-  EmptyResourceOperationsError,
-  EmptySpecResourcesError,
-  InvalidDerivedResponseError,
-  InvalidOperationIdError,
-  InvalidRequestSchemaError,
-  InvalidResourceNameError,
-  MissingDerivedResponseParentError,
-  PathParameterMismatchError,
-} from "@rexeus/typeweaver-gen";
 import { DefinitionCompilationError } from "./generators/errors/definitionCompilationError.js";
 import { PluginLoadingFailure } from "./generators/errors/pluginLoadingFailure.js";
 import { ReservedEntityNameError } from "./generators/errors/reservedEntityNameError.js";
 import { ReservedKeywordError } from "./generators/errors/reservedKeywordError.js";
-import { InvalidSpecEntrypointError } from "./generators/spec/InvalidSpecEntrypointError.js";
+import { InvalidSpecEntrypointError } from "./generators/spec/invalidSpecEntrypointError.js";
+import { lookupSpecErrorEntry } from "./specErrorRegistry.js";
 import type { Logger } from "./logger.js";
 import type { ErrorReporter } from "./pipeline/types.js";
 
@@ -85,100 +72,12 @@ export const formatDiagnostic = (error: unknown): Diagnostic => {
     });
   }
 
-  if (error instanceof DuplicateOperationIdError) {
+  const specEntry = lookupSpecErrorEntry(error);
+  if (specEntry !== undefined && error instanceof Error) {
     return withVerboseDetails(error, {
-      summary: "Operation IDs must be globally unique.",
+      summary: specEntry.summary,
       contextLines: [error.message],
-      hint: "Rename one of the duplicated operation IDs so every operation is unique across the spec.",
-    });
-  }
-
-  if (error instanceof DuplicateRouteError) {
-    return withVerboseDetails(error, {
-      summary: "Two operations resolve to the same route.",
-      contextLines: [error.message],
-      hint: "Change the route path or method so the normalized route is unique.",
-    });
-  }
-
-  if (error instanceof EmptyOperationResponsesError) {
-    return withVerboseDetails(error, {
-      summary: "An operation is missing responses.",
-      contextLines: [error.message],
-      hint: "Add at least one response to every operation.",
-    });
-  }
-
-  if (error instanceof EmptyResourceOperationsError) {
-    return withVerboseDetails(error, {
-      summary: "A resource is missing operations.",
-      contextLines: [error.message],
-      hint: "Add at least one operation to every resource.",
-    });
-  }
-
-  if (error instanceof EmptySpecResourcesError) {
-    return withVerboseDetails(error, {
-      summary: "The spec does not define any resources.",
-      contextLines: [error.message],
-      hint: "Add at least one resource before generating or validating.",
-    });
-  }
-
-  if (error instanceof InvalidDerivedResponseError) {
-    return withVerboseDetails(error, {
-      summary: "A derived response definition is invalid.",
-      contextLines: [error.message],
-      hint: "Check derived response lineage metadata and ensure it points to a valid canonical response.",
-    });
-  }
-
-  if (error instanceof InvalidOperationIdError) {
-    return withVerboseDetails(error, {
-      summary: "An operation ID uses an unsupported naming style.",
-      contextLines: [error.message],
-      hint: "Use camelCase or PascalCase for operation IDs.",
-    });
-  }
-
-  if (error instanceof InvalidRequestSchemaError) {
-    return withVerboseDetails(error, {
-      summary: "An operation request schema is invalid.",
-      contextLines: [error.message],
-      hint: "Check the request schema shape and ensure every request section is a supported schema definition.",
-    });
-  }
-
-  if (error instanceof InvalidResourceNameError) {
-    return withVerboseDetails(error, {
-      summary: "A resource name uses an unsupported naming style.",
-      contextLines: [error.message],
-      hint: "Use camelCase singular nouns when possible; PascalCase is also supported.",
-    });
-  }
-
-  if (error instanceof MissingDerivedResponseParentError) {
-    return withVerboseDetails(error, {
-      summary: "A derived response references a missing parent.",
-      contextLines: [error.message],
-      hint: "Define the canonical response first or update the derived response to reference an existing parent.",
-    });
-  }
-
-  if (error instanceof PathParameterMismatchError) {
-    return withVerboseDetails(error, {
-      summary:
-        "An operation path does not match its declared request parameters.",
-      contextLines: [error.message],
-      hint: "Make sure every path placeholder is declared in request.param and there are no extra path params.",
-    });
-  }
-
-  if (error instanceof DerivedResponseCycleError) {
-    return withVerboseDetails(error, {
-      summary: "A derived response contains a cycle.",
-      contextLines: [error.message],
-      hint: "Break the response inheritance cycle so every derived response has an acyclic lineage.",
+      hint: specEntry.hint,
     });
   }
 

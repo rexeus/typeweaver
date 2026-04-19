@@ -4,7 +4,7 @@ import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { FileWatcher } from "../src/generators/fileWatcher.js";
 import { createTestLogger } from "./__helpers__/testLogger.js";
-import type { GenerationSummary } from "../src/generationResult.js";
+import type { GenerateSummary } from "../src/generationResult.js";
 import type { Generator } from "../src/generators/generator.js";
 import type { Logger } from "../src/logger.js";
 import type { Mock } from "vitest";
@@ -13,7 +13,7 @@ class MockWatcher extends EventEmitter {
   public readonly close = vi.fn();
 }
 
-const generationSummary: GenerationSummary = {
+const generationSummary: GenerateSummary = {
   mode: "generate",
   dryRun: false,
   targetOutputDir: "/test/output",
@@ -57,10 +57,10 @@ describe("FileWatcher", () => {
   const flushDebounce = () => vi.advanceTimersByTimeAsync(200);
 
   const blockNextGeneration = () => {
-    let resolve!: (value: GenerationSummary) => void;
+    let resolve!: (value: GenerateSummary) => void;
     mockGenerate.mockImplementationOnce(
       () =>
-        new Promise<GenerationSummary>(promiseResolve => {
+        new Promise<GenerateSummary>(promiseResolve => {
           resolve = promiseResolve;
         })
     );

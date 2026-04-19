@@ -221,4 +221,93 @@ describe("openApiBuilder", () => {
       },
     });
   });
+
+  test("falls back to DEFAULT_INFO when no plugin config is supplied", () => {
+    const normalizedSpec = createOperationFixture({
+      operationId: "listTodos",
+      responseBody: z.object({ items: z.array(z.string()) }),
+    });
+
+    const result = buildOpenApiDocument({ normalizedSpec });
+    const document = result.document as {
+      readonly info: { readonly title: string; readonly version: string };
+    };
+
+    expect(document.info).toEqual({
+      title: "Typeweaver API",
+      version: "0.0.0",
+    });
+  });
+
+  test("uses disambiguated component names when two resources share an operationId", () => {
+    const normalizedSpec: NormalizedSpec = {
+      resources: [
+        {
+          name: "todo",
+          operations: [
+            {
+              operationId: "get",
+              method: HttpMethod.GET,
+              path: "/todos/:id",
+              summary: "get todo",
+              request: {},
+              responses: [
+                {
+                  source: "inline",
+                  responseName: "GetSuccess",
+                  response: {
+                    name: "GetSuccess",
+                    statusCode: HttpStatusCode.OK,
+                    statusCodeName: "OK",
+                    description: "ok",
+                    body: z.object({ kind: z.literal("todo") }),
+                    kind: "response",
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          name: "user",
+          operations: [
+            {
+              operationId: "get",
+              method: HttpMethod.GET,
+              path: "/users/:id",
+              summary: "get user",
+              request: {},
+              responses: [
+                {
+                  source: "inline",
+                  responseName: "GetSuccess",
+                  response: {
+                    name: "GetSuccess",
+                    statusCode: HttpStatusCode.OK,
+                    statusCodeName: "OK",
+                    description: "ok",
+                    body: z.object({ kind: z.literal("user") }),
+                    kind: "response",
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      responses: [],
+    };
+
+    const result = buildOpenApiDocument({ normalizedSpec });
+    const schemas = (
+      result.document as {
+        readonly components: {
+          readonly schemas: Record<string, unknown>;
+        };
+      }
+    ).components.schemas;
+
+    expect(schemas).toHaveProperty("TodoGetGetSuccessBody");
+    expect(schemas).toHaveProperty("UserGetGetSuccessBody");
+  });
 });

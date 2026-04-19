@@ -6,7 +6,7 @@ import { reportDoctorChecks } from "../doctor/reporter.js";
 import { runDoctorChecks, summarizeDoctorChecks } from "../doctor/runner.js";
 import { TYPEWEAVER_CONFIG_FILE } from "../templates/typeweaverConfigTemplate.js";
 import { createCommandLogger } from "./shared.js";
-import type { GenerationSummary } from "../generationResult.js";
+import type { DoctorSummary } from "../generationResult.js";
 import type { Logger } from "../logger.js";
 import type { SharedCommandOptions } from "./shared.js";
 
@@ -23,7 +23,7 @@ export type DoctorCommandContext = {
 export const handleDoctorCommand = async (
   options: DoctorCommandOptions,
   context: DoctorCommandContext = {}
-): Promise<GenerationSummary> => {
+): Promise<DoctorSummary> => {
   const execDir = context.execDir ?? process.cwd();
   const logger = (context.createLogger ?? createCommandLogger)(options);
   const configPath = path.resolve(
@@ -51,30 +51,23 @@ export const handleDoctorCommand = async (
     reportDoctorChecks(logger, results);
 
     const summary = summarizeDoctorChecks(results);
-    const generationSummary: GenerationSummary = {
+    const doctorSummary: DoctorSummary = {
       mode: "doctor",
-      dryRun: false,
       targetConfigPath: configPath,
       totalChecks: summary.totalChecks,
       passedChecks: summary.passedChecks,
       warnedChecks: summary.warnedChecks,
       failedChecks: summary.failedChecks,
       skippedChecks: summary.skippedChecks,
-      resourceCount: 0,
-      operationCount: 0,
-      responseCount: 0,
-      pluginCount: 0,
-      generatedFiles: [],
-      warnings: [],
     };
 
-    logger.summary(generationSummary);
+    logger.summary(doctorSummary);
 
     if (summary.hasFailures) {
       process.exitCode = 1;
     }
 
-    return generationSummary;
+    return doctorSummary;
   } finally {
     fs.rmSync(temporaryDirectory, { recursive: true, force: true });
   }

@@ -77,6 +77,76 @@ export const createLogger = (options: LoggerOptions = {}): Logger => {
     return colorize(color, label);
   };
 
+  const summaryLabel = formatLabel("Summary", ANSI.blue);
+
+  const writeGenerateSummary = (
+    summary: Extract<GenerationSummary, { mode: "generate" }>
+  ): void => {
+    const suffix = summary.dryRun ? " (dry run)" : "";
+
+    write(
+      stdout,
+      `${summaryLabel} Generated${suffix}: ${summary.resourceCount} resource(s), ${summary.operationCount} operation(s), ${summary.responseCount} response(s), ${summary.generatedFiles.length} file(s), ${summary.pluginCount} plugin(s)`,
+      true
+    );
+    write(stdout, `  output: ${summary.targetOutputDir}`, true);
+
+    if (summary.warnings.length > 0) {
+      write(stdout, `  warnings: ${summary.warnings.length}`, true);
+
+      if (isVerbose) {
+        for (const warning of summary.warnings) {
+          write(stdout, `  ! ${warning}`, true);
+        }
+      }
+    }
+
+    if (isVerbose && summary.generatedFiles.length > 0) {
+      for (const file of summary.generatedFiles) {
+        write(stdout, `  - ${file}`, true);
+      }
+    }
+  };
+
+  const writeInitSummary = (
+    summary: Extract<GenerationSummary, { mode: "init" }>
+  ): void => {
+    write(
+      stdout,
+      `${summaryLabel} Initialized: ${summary.resourceCount} resource(s), ${summary.operationCount} operation(s), ${summary.responseCount} response(s), ${summary.generatedFiles.length} file(s), ${summary.pluginCount} plugin(s)`,
+      true
+    );
+    write(stdout, `  config: ${summary.targetConfigPath}`, true);
+
+    if (isVerbose && summary.generatedFiles.length > 0) {
+      for (const file of summary.generatedFiles) {
+        write(stdout, `  - ${file}`, true);
+      }
+    }
+  };
+
+  const writeMigrateSummary = (
+    summary: Extract<GenerationSummary, { mode: "migrate" }>
+  ): void => {
+    write(
+      stdout,
+      `${summaryLabel} Migration guidance: ${summary.advisoryCount} advisory step(s)`,
+      true
+    );
+    write(stdout, `  from: ${summary.detectedVersion}`, true);
+  };
+
+  const writeDoctorSummary = (
+    summary: Extract<GenerationSummary, { mode: "doctor" }>
+  ): void => {
+    write(
+      stdout,
+      `${summaryLabel} Doctor: ${summary.passedChecks} passed, ${summary.warnedChecks} warned, ${summary.failedChecks} failed, ${summary.skippedChecks} skipped (${summary.totalChecks} total)`,
+      true
+    );
+    write(stdout, `  config: ${summary.targetConfigPath}`, true);
+  };
+
   const logger: Logger = {
     isVerbose,
     debug: (message: string) => {
@@ -106,73 +176,19 @@ export const createLogger = (options: LoggerOptions = {}): Logger => {
         return;
       }
 
-      const generatedCount = summary.generatedFiles.length;
-      const action =
-        summary.mode === "init"
-          ? "Initialized"
-          : summary.mode === "migrate"
-            ? "Migration guidance"
-            : "Generated";
-      const suffix = summary.dryRun ? " (dry run)" : "";
-
-      if (summary.mode === "migrate") {
-        const adviceCount = summary.advisoryCount ?? 0;
-
-        write(
-          stdout,
-          `${formatLabel("Summary", ANSI.blue)} ${action}${suffix}: ${adviceCount} advisory step(s)`,
-          true
-        );
-
-        if (summary.detectedVersion) {
-          write(stdout, `  from: ${summary.detectedVersion}`, true);
-        }
-
-        return;
-      }
-
-      if (summary.mode === "doctor") {
-        write(
-          stdout,
-          `${formatLabel("Summary", ANSI.blue)} Doctor: ${summary.passedChecks ?? 0} passed, ${summary.warnedChecks ?? 0} warned, ${summary.failedChecks ?? 0} failed, ${summary.skippedChecks ?? 0} skipped (${summary.totalChecks ?? 0} total)`,
-          true
-        );
-
-        if (summary.targetConfigPath) {
-          write(stdout, `  config: ${summary.targetConfigPath}`, true);
-        }
-
-        return;
-      }
-
-      write(
-        stdout,
-        `${formatLabel("Summary", ANSI.blue)} ${action}${suffix}: ${summary.resourceCount} resource(s), ${summary.operationCount} operation(s), ${summary.responseCount} response(s), ${generatedCount} file(s), ${summary.pluginCount} plugin(s)`,
-        true
-      );
-
-      if (summary.targetOutputDir && summary.mode === "generate") {
-        write(stdout, `  output: ${summary.targetOutputDir}`, true);
-      }
-
-      if (summary.targetConfigPath && summary.mode === "init") {
-        write(stdout, `  config: ${summary.targetConfigPath}`, true);
-      }
-
-      if (summary.warnings.length > 0) {
-        write(stdout, `  warnings: ${summary.warnings.length}`, true);
-
-        if (isVerbose) {
-          for (const warning of summary.warnings) {
-            write(stdout, `  ! ${warning}`, true);
-          }
-        }
-      }
-
-      if (isVerbose && generatedCount > 0) {
-        for (const file of summary.generatedFiles) {
-          write(stdout, `  - ${file}`, true);
-        }
+      switch (summary.mode) {
+        case "generate":
+          writeGenerateSummary(summary);
+          return;
+        case "init":
+          writeInitSummary(summary);
+          return;
+        case "migrate":
+          writeMigrateSummary(summary);
+          return;
+        case "doctor":
+          writeDoctorSummary(summary);
+          return;
       }
     },
   };

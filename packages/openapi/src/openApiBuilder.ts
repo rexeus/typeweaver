@@ -5,6 +5,7 @@ import type {
   NormalizedResponse,
   NormalizedResponseUsage,
 } from "@rexeus/typeweaver-gen";
+import { getSchemaType } from "@rexeus/typeweaver-zod-to-json-schema";
 import { createSchemaRegistry } from "./schemaRegistry.js";
 import type {
   OpenApiBuildResult,
@@ -336,10 +337,6 @@ function unwrapObjectSchema(schema: $ZodType): $ZodObject | undefined {
   }
 
   return undefined;
-}
-
-function getSchemaType(schema: $ZodType): string {
-  return (schema._zod.def as { readonly type?: string }).type ?? "unknown";
 }
 
 function getObjectPropertySchemas(

@@ -7,12 +7,6 @@ export type RuleMetadata = {
   readonly enabledByDefault: boolean;
 };
 
-/**
- * The canonical rule registry. Every issue emitted by a core check MUST
- * reference a code listed here. Plugin-emitted issues are allowed to use codes
- * not in this registry — the resolver treats them as "enabled by default,
- * severity as reported".
- */
 const makeRule = (
   code: string,
   label: string,

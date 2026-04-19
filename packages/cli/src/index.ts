@@ -34,5 +34,11 @@ export type {
 export { createLogger } from "./logger.js";
 export type { Logger } from "./logger.js";
 
-export type { GenerationSummary } from "./generationResult.js";
+export type {
+  DoctorSummary,
+  GenerateSummary,
+  GenerationSummary,
+  InitSummary,
+  MigrateSummary,
+} from "./generationResult.js";
 export type { ValidationReport } from "./validate/index.js";

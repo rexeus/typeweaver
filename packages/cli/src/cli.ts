@@ -1,26 +1,15 @@
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { Command, Option } from "commander";
 import { handleDoctorCommand } from "./commands/doctor.js";
 import { handleGenerateCommand } from "./commands/generate.js";
 import { handleInitCommand } from "./commands/init.js";
 import { handleMigrateCommand } from "./commands/migrate.js";
 import { handleValidateCommand } from "./commands/validate.js";
+import { getCliVersion } from "./version.js";
 import type { DoctorCommandOptions } from "./commands/doctor.js";
 import type { GenerateCommandOptions } from "./commands/generate.js";
 import type { InitCommandOptions } from "./commands/init.js";
 import type { MigrateCommandOptions } from "./commands/migrate.js";
 import type { ValidateCommandOptions } from "./commands/validate.js";
-
-const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-const packageJson = JSON.parse(
-  fs.readFileSync(path.join(moduleDir, "../package.json"), "utf-8")
-) as {
-  readonly version: string;
-  readonly name: string;
-  readonly description: string;
-};
 
 export const createCli = (): Command => {
   const program = new Command();
@@ -28,7 +17,7 @@ export const createCli = (): Command => {
   program
     .name("@rexeus/typeweaver")
     .description("Type-safe API framework with code generation for TypeScript")
-    .version(packageJson.version)
+    .version(getCliVersion())
     .addOption(
       new Option("--verbose", "show debug diagnostics").conflicts("quiet")
     )

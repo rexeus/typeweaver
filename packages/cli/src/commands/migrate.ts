@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { writeDiagnostic } from "../diagnosticFormatter.js";
 import { createCommandLogger } from "./shared.js";
-import type { GenerationSummary } from "../generationResult.js";
+import type { MigrateSummary } from "../generationResult.js";
 import type { Logger } from "../logger.js";
 import type { SharedCommandOptions } from "./shared.js";
 
@@ -52,7 +52,7 @@ export type MigrateCommandContext = {
 export const handleMigrateCommand = async (
   options: MigrateCommandOptions,
   context: MigrateCommandContext = {}
-): Promise<GenerationSummary | void> => {
+): Promise<MigrateSummary | void> => {
   const execDir = context.execDir ?? process.cwd();
   const logger = (context.createLogger ?? createCommandLogger)(options);
 
@@ -73,17 +73,10 @@ export const handleMigrateCommand = async (
         `No bundled migration guidance is needed for ${detectedVersion}. You're already on the functional spec API line.`
       );
 
-      const summary: GenerationSummary = {
+      const summary: MigrateSummary = {
         mode: "migrate",
-        dryRun: false,
         detectedVersion,
         advisoryCount: 0,
-        resourceCount: 0,
-        operationCount: 0,
-        responseCount: 0,
-        pluginCount: 0,
-        generatedFiles: [],
-        warnings: [],
       };
 
       logger.summary(summary);
@@ -107,20 +100,13 @@ export const handleMigrateCommand = async (
       "For the full rationale and examples, see MIGRATION.md in the repository."
     );
 
-    const summary: GenerationSummary = {
+    const summary: MigrateSummary = {
       mode: "migrate",
-      dryRun: false,
       detectedVersion,
       advisoryCount: guides.reduce(
         (count, guide) => count + guide.steps.length,
         0
       ),
-      resourceCount: 0,
-      operationCount: 0,
-      responseCount: 0,
-      pluginCount: 0,
-      generatedFiles: [],
-      warnings: [],
     };
 
     logger.summary(summary);
@@ -159,11 +145,19 @@ export const detectInstalledTypeweaverVersion = (
       dependencies?.["@rexeus/typeweaver-core"];
 
     if (declaredVersion) {
-      return normalizeVersion(declaredVersion);
+      return tryNormalizeVersion(declaredVersion);
     }
   }
 
   return undefined;
+};
+
+const tryNormalizeVersion = (version: string): string | undefined => {
+  try {
+    return normalizeVersion(version);
+  } catch {
+    return undefined;
+  }
 };
 
 const getMigrationGuides = (version: string): readonly MigrationGuide[] => {

@@ -46,6 +46,13 @@ import type {
 } from "typescript";
 import type { $ZodType } from "zod/v4/core";
 
+/**
+ * Tokens that cannot appear as unquoted property keys in a TypeScript type
+ * literal, so we emit them as string literals instead. Deliberately narrower
+ * than `@rexeus/typeweaver-gen`'s `RESERVED_KEYWORDS` (which rejects entity
+ * names entirely): here we permit `true`/`false`/`null` as valid property
+ * keys but still require quoting.
+ */
 const RESERVED_KEYWORDS = new Set([
   "await",
   "break",
