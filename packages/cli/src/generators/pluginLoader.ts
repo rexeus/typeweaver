@@ -54,9 +54,10 @@ export async function loadPlugins(
   reportSuccessfulLoads(successful, logger);
 }
 
-function parsePluginEntry(
-  entry: string | readonly [string, ...unknown[]]
-): { name: string; pluginConfig: unknown } {
+function parsePluginEntry(entry: string | readonly [string, ...unknown[]]): {
+  name: string;
+  pluginConfig: unknown;
+} {
   if (typeof entry === "string") {
     return { name: entry, pluginConfig: undefined };
   }
@@ -73,19 +74,19 @@ async function loadPlugin(
   for (const possiblePath of possiblePaths) {
     try {
       const pluginPackage = await import(possiblePath);
-      const plugin = instantiatePlugin(pluginPackage);
-      if (plugin) {
+      const result = instantiatePlugin(pluginPackage);
+      if (result.success) {
         return {
           success: true,
           value: {
-            plugin,
+            plugin: result.plugin,
             source: possiblePath,
           },
         };
       }
       attempts.push({
         path: possiblePath,
-        error: "No plugin class export found",
+        error: result.error,
       });
     } catch (error) {
       attempts.push({
@@ -104,43 +105,86 @@ async function loadPlugin(
   };
 }
 
+type PluginClass = new (...args: never[]) => unknown;
+
+type InstantiateResult =
+  | { success: true; plugin: TypeweaverPlugin }
+  | { success: false; error: string };
+
+type ConstructResult =
+  | { success: true; plugin: TypeweaverPlugin }
+  | { success: false; reason: string };
+
 function instantiatePlugin(
   pluginModule: Record<string, unknown>
-): TypeweaverPlugin | undefined {
+): InstantiateResult {
+  const failures: string[] = [];
+
   for (const [key, value] of Object.entries(pluginModule)) {
-    if (key === "default" || typeof value !== "function") {
+    if (key === "default" || !isPluginClass(value)) {
       continue;
     }
-    const plugin = tryConstruct(value);
-    if (plugin) {
-      return plugin;
+    const result = tryConstruct(value);
+    if (result.success) {
+      return result;
     }
+    failures.push(`${key}: ${result.reason}`);
   }
 
   // Fall back to default export for third-party plugin compatibility
   const defaultExport = pluginModule.default;
-  if (typeof defaultExport === "function") {
-    return tryConstruct(defaultExport);
+  if (isPluginClass(defaultExport)) {
+    const result = tryConstruct(defaultExport);
+    if (result.success) {
+      return result;
+    }
+    failures.push(`default: ${result.reason}`);
   }
 
-  return undefined;
+  return {
+    success: false,
+    error:
+      failures.length > 0
+        ? `Failed to instantiate a plugin from module exports — ${failures.join("; ")}`
+        : "No plugin class export found",
+  };
 }
 
-function tryConstruct(value: Function): TypeweaverPlugin | undefined {
+function tryConstruct(value: PluginClass): ConstructResult {
   let instance: unknown;
   try {
     instance = Reflect.construct(value, []);
-  } catch {
-    return undefined;
+  } catch (error) {
+    return {
+      success: false,
+      reason: `constructor threw ${error instanceof Error ? error.message : String(error)}`,
+    };
   }
-  return isTypeweaverPlugin(instance) ? instance : undefined;
+  if (!isTypeweaverPlugin(instance)) {
+    return {
+      success: false,
+      reason: "instance is not a typeweaver plugin (missing non-empty 'name')",
+    };
+  }
+  return { success: true, plugin: instance };
+}
+
+// Classes expose a non-writable `prototype`; regular functions are writable,
+// and arrows/methods have none. Skipping non-classes keeps factory helpers
+// from being invoked during plugin discovery.
+function isPluginClass(value: unknown): value is PluginClass {
+  if (typeof value !== "function") {
+    return false;
+  }
+  const descriptor = Object.getOwnPropertyDescriptor(value, "prototype");
+  return descriptor !== undefined && descriptor.writable === false;
 }
 
 function isTypeweaverPlugin(value: unknown): value is TypeweaverPlugin {
   if (value === null || typeof value !== "object") {
     return false;
   }
-  const candidate = value as { name?: unknown; generate?: unknown };
+  const candidate = value as { name?: unknown };
   return typeof candidate.name === "string" && candidate.name.length > 0;
 }
 

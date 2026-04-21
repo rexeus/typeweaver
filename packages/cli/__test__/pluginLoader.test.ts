@@ -156,7 +156,7 @@ describe("pluginLoader", () => {
       [
         "export function createPlugin() { return {}; }",
         "export class RealPlugin {",
-        "  constructor() { this.name = \"real-plugin\"; }",
+        '  constructor() { this.name = "real-plugin"; }',
         "}",
         "",
       ].join("\n")
@@ -225,7 +225,7 @@ describe("pluginLoader", () => {
       pluginPath,
       [
         "export class EmptyNamePlugin {",
-        "  constructor() { this.name = \"\"; }",
+        '  constructor() { this.name = ""; }',
         "}",
         "",
       ].join("\n")
@@ -280,6 +280,122 @@ describe("pluginLoader", () => {
         pluginName: pluginPath,
       })
     );
+  });
+
+  test("surfaces the real constructor error when instantiation throws", async () => {
+    const pluginDir = createTempDir();
+    const pluginPath = path.join(pluginDir, "throwing-plugin.mjs");
+
+    fs.writeFileSync(
+      pluginPath,
+      [
+        "export class BrokenPlugin {",
+        '  constructor() { throw new Error("boot failed: missing TENANT"); }',
+        "}",
+        "",
+      ].join("\n")
+    );
+
+    const { registry } = createRegistry();
+
+    await expect(
+      loadPlugins(
+        registry,
+        [{ name: "types" } as TypesPlugin],
+        ["local"],
+        createLogger({ quiet: true }),
+        {
+          input: "./spec.ts",
+          output: "./generated",
+          plugins: [pluginPath],
+        }
+      )
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<PluginLoadingFailure>>({
+        pluginName: pluginPath,
+        attempts: [
+          expect.objectContaining({
+            path: pluginPath,
+            error: expect.stringContaining("boot failed: missing TENANT"),
+          }),
+        ],
+      })
+    );
+  });
+
+  test("falls through a throwing class to a later valid plugin class", async () => {
+    const pluginDir = createTempDir();
+    const pluginPath = path.join(pluginDir, "throw-then-valid.mjs");
+
+    fs.writeFileSync(
+      pluginPath,
+      [
+        "export class FirstBroken {",
+        '  constructor() { throw new Error("nope"); }',
+        "}",
+        "export class LaterPlugin {",
+        '  constructor() { this.name = "later-plugin"; }',
+        "}",
+        "",
+      ].join("\n")
+    );
+
+    const { registry, registeredPlugins } = createRegistry();
+
+    await loadPlugins(
+      registry,
+      [{ name: "types" } as TypesPlugin],
+      ["local"],
+      createLogger({ quiet: true }),
+      {
+        input: "./spec.ts",
+        output: "./generated",
+        plugins: [pluginPath],
+      }
+    );
+
+    expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
+      "types",
+      "later-plugin",
+    ]);
+  });
+
+  test("does not invoke factory-style function exports during discovery", async () => {
+    const pluginDir = createTempDir();
+    const pluginPath = path.join(pluginDir, "factory-side-effect.mjs");
+    const markerPath = path.join(pluginDir, "factory-was-called.marker");
+
+    fs.writeFileSync(
+      pluginPath,
+      [
+        'import { writeFileSync } from "node:fs";',
+        `export function createPlugin() { writeFileSync(${JSON.stringify(markerPath)}, "called"); return {}; }`,
+        "export class RealPlugin {",
+        '  constructor() { this.name = "real-plugin"; }',
+        "}",
+        "",
+      ].join("\n")
+    );
+
+    const { registry, registeredPlugins } = createRegistry();
+
+    await loadPlugins(
+      registry,
+      [{ name: "types" } as TypesPlugin],
+      ["local"],
+      createLogger({ quiet: true }),
+      {
+        input: "./spec.ts",
+        output: "./generated",
+        plugins: [pluginPath],
+      }
+    );
+
+    expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
+      "types",
+      "real-plugin",
+    ]);
+    expect(fs.existsSync(markerPath)).toBe(false);
   });
 
   test("preserves the expected built-in plugin order after dependency resolution", () => {

@@ -974,4 +974,24 @@ describe("FetchApiAdapter", () => {
       ).toThrow(ResponseSerializationError);
     });
   });
+
+  describe("PayloadTooLargeError", () => {
+    test("leaves cause undefined when constructed without ErrorOptions", () => {
+      const error = new PayloadTooLargeError(128, 64);
+
+      expect(error.name).toBe("PayloadTooLargeError");
+      expect(error.contentLength).toBe(128);
+      expect(error.maxBodySize).toBe(64);
+      expect(error.cause).toBeUndefined();
+      expect(error.message).toContain("128");
+      expect(error.message).toContain("64");
+    });
+
+    test("propagates ErrorOptions.cause when provided", () => {
+      const cause = new Error("upstream");
+      const error = new PayloadTooLargeError(128, 64, { cause });
+
+      expect(error.cause).toBe(cause);
+    });
+  });
 });

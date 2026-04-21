@@ -20,8 +20,8 @@ import {
 } from "../src/diagnosticFormatter.js";
 import { DefinitionCompilationError } from "../src/generators/errors/definitionCompilationError.js";
 import { PluginLoadingFailure } from "../src/generators/errors/pluginLoadingFailure.js";
-import { ReservedPluginOutputDirectoryError } from "../src/generators/errors/reservedPluginOutputDirectoryError.js";
 import { ReservedKeywordError } from "../src/generators/errors/reservedKeywordError.js";
+import { ReservedPluginOutputDirectoryError } from "../src/generators/errors/reservedPluginOutputDirectoryError.js";
 import { InvalidSpecEntrypointError } from "../src/generators/spec/invalidSpecEntrypointError.js";
 import { createTestLogger } from "./__helpers__/testLogger.js";
 import type { Logger } from "../src/logger.js";

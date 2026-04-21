@@ -76,6 +76,8 @@ describe("Generator clean safety", () => {
   test("rejects plugin names that collide with reserved top-level output directories", () => {
     expect(() =>
       assertSafePluginOutputNamespaces(["types", "responses"], "/tmp/generated")
-    ).toThrow(/Plugin name 'responses' conflicts with a reserved output directory/);
+    ).toThrow(
+      /Plugin name 'responses' conflicts with a reserved output directory/
+    );
   });
 });
