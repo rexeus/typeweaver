@@ -15,7 +15,7 @@ import {
 } from "../lib/types/index.js";
 import type { OptionsTodoResponse } from "./OptionsTodoResponse.js";
 
-const definition = getOperationDefinition(spec, "todo", "OptionsTodo");
+const definition = getOperationDefinition(spec, "todo", "optionsTodo");
 
 const optionsTodoSuccessDefinition = getResponseDefinition(
   definition.responses,

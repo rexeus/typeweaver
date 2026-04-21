@@ -64,6 +64,7 @@
     "test-utils": "file:../test-utils"
   },
   "dependencies": {
-    "@rexeus/typeweaver-zod-to-ts": "workspace:^"
+    "@rexeus/typeweaver-zod-to-ts": "workspace:^",
+    "polycase": "^1.1.0"
   }
 }

@@ -10,7 +10,7 @@ import { sharedResponses } from "../../shared/sharedResponses.js";
 import { TodoNotFoundErrorDefinition } from "../errors/TodoNotFoundErrorDefinition.js";
 
 export const OptionsTodoDefinition = defineOperation({
-  operationId: "OptionsTodo",
+  operationId: "optionsTodo",
   request: {
     param: z.object({
       todoId: z.ulid(),

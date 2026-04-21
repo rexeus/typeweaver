@@ -15,7 +15,7 @@ import {
 import { getOperationDefinition, RequestValidator } from "../lib/types/index.js";
 import type { IOptionsTodoRequest } from "./OptionsTodoRequest.js";
 
-const definition = getOperationDefinition(spec, "todo", "OptionsTodo");
+const definition = getOperationDefinition(spec, "todo", "optionsTodo");
 
 export class OptionsTodoRequestValidator extends RequestValidator {
   public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IOptionsTodoRequest> {

@@ -742,7 +742,7 @@ const ListTodosDefinition = defineOperation({
   ],
 });
 const OptionsTodoDefinition = defineOperation({
-  operationId: "OptionsTodo",
+  operationId: "optionsTodo",
   request: {
     param: z.object({ todoId: z.ulid() }),
     header: z.object({

@@ -54,6 +54,10 @@ importers:
         version: 4.3.6
 
   packages/aws-cdk:
+    dependencies:
+      polycase:
+        specifier: ^1.1.0
+        version: 1.1.0
     devDependencies:
       '@rexeus/typeweaver-core':
         specifier: workspace:^
@@ -113,6 +117,9 @@ importers:
       '@rexeus/typeweaver-zod-to-ts':
         specifier: workspace:^
         version: link:../zod-to-ts
+      polycase:
+        specifier: ^1.1.0
+        version: 1.1.0
     devDependencies:
       '@hono/node-server':
         specifier: ^1.19.11
@@ -140,6 +147,10 @@ importers:
         version: 4.3.6
 
   packages/gen:
+    dependencies:
+      polycase:
+        specifier: ^1.1.0
+        version: 1.1.0
     devDependencies:
       '@rexeus/typeweaver-core':
         specifier: workspace:^
@@ -149,6 +160,10 @@ importers:
         version: 4.3.6
 
   packages/hono:
+    dependencies:
+      polycase:
+        specifier: ^1.1.0
+        version: 1.1.0
     devDependencies:
       '@rexeus/typeweaver-core':
         specifier: workspace:^
@@ -164,6 +179,10 @@ importers:
         version: link:../test-utils
 
   packages/server:
+    dependencies:
+      polycase:
+        specifier: ^1.1.0
+        version: 1.1.0
     devDependencies:
       '@rexeus/typeweaver-core':
         specifier: workspace:^
@@ -228,6 +247,9 @@ importers:
       '@rexeus/typeweaver-zod-to-ts':
         specifier: workspace:^
         version: link:../zod-to-ts
+      polycase:
+        specifier: ^1.1.0
+        version: 1.1.0
     devDependencies:
       '@rexeus/typeweaver-core':
         specifier: workspace:^
@@ -2051,6 +2073,10 @@ packages:
     resolution: {integrity: sha512-uB80kBFb/tfd68bVleG9T5GGsGPjJrLAUpR5PZIrhBnIaRTQRjqdJSsIKkOP6OAIFbj7GOrcudc5pNjZ+geV2g==}
     engines: {node: '>=6'}
 
+  polycase@1.1.0:
+    resolution: {integrity: sha512-0xyb4S2e/BCa0KkhF+vYr+L+9/naroAAa6V0Q3JfJshmNIXbxEKVBKsGYycXAq7m5/mh9XN5Id6gTTcPqkFoiA==}
+    engines: {node: '>=20.0.0'}
+
   postcss@8.5.6:
     resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
     engines: {node: ^10 || ^12 || >=14}
@@ -3864,6 +3890,8 @@ snapshots:
   picomatch@4.0.4: {}
 
   pify@4.0.1: {}
+
+  polycase@1.1.0: {}
 
   postcss@8.5.6:
     dependencies:
