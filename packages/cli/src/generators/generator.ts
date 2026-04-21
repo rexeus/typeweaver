@@ -14,7 +14,7 @@ import type {
 } from "@rexeus/typeweaver-gen";
 import { TypesPlugin } from "@rexeus/typeweaver-types";
 import { createLogger } from "../logger.js";
-import { ReservedEntityNameError } from "./errors/reservedEntityNameError.js";
+import { ReservedPluginOutputDirectoryError } from "./errors/reservedPluginOutputDirectoryError.js";
 import {
   collectRegisteredResources,
   createGeneratorContextFactory,
@@ -316,7 +316,7 @@ export const assertSafePluginOutputNamespaces = (
       continue;
     }
 
-    throw new ReservedEntityNameError(
+    throw new ReservedPluginOutputDirectoryError(
       pluginName,
       path.join(outputDir, pluginName)
     );

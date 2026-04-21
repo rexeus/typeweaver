@@ -20,7 +20,7 @@ import {
 } from "../src/diagnosticFormatter.js";
 import { DefinitionCompilationError } from "../src/generators/errors/definitionCompilationError.js";
 import { PluginLoadingFailure } from "../src/generators/errors/pluginLoadingFailure.js";
-import { ReservedEntityNameError } from "../src/generators/errors/reservedEntityNameError.js";
+import { ReservedPluginOutputDirectoryError } from "../src/generators/errors/reservedPluginOutputDirectoryError.js";
 import { ReservedKeywordError } from "../src/generators/errors/reservedKeywordError.js";
 import { InvalidSpecEntrypointError } from "../src/generators/spec/invalidSpecEntrypointError.js";
 import { createTestLogger } from "./__helpers__/testLogger.js";
@@ -63,13 +63,13 @@ describe("formatDiagnostic", () => {
     expect(diagnostic.contextLines).toEqual(["File: spec/index.ts"]);
   });
 
-  test("formats reserved entity name errors", () => {
+  test("formats reserved plugin output directory errors", () => {
     const diagnostic = formatDiagnostic(
-      new ReservedEntityNameError("responses", "generated/responses")
+      new ReservedPluginOutputDirectoryError("responses", "generated/responses")
     );
 
     expect(diagnostic.summary).toBe(
-      "Reserved entity name 'responses' cannot be used for generated output."
+      "Plugin name 'responses' conflicts with a reserved output directory."
     );
     expect(diagnostic.contextLines).toEqual(["Directory: generated/responses"]);
   });

@@ -153,6 +153,44 @@ describe("handleValidateCommand", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("rejects uppercase --fail-on values that do not normalize to a known severity", async () => {
+    const logger = createTestLogger();
+
+    const report = await handleValidateCommand(
+      { input: "spec/index.ts", failOn: "BOGUS" },
+      {
+        execDir: "/workspace",
+        createLogger: () => logger,
+      }
+    );
+
+    expect(report).toBeUndefined();
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "Invalid --fail-on value 'BOGUS'. Expected one of: info, warning, error."
+      )
+    );
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("accepts mixed-case --fail-on values by lowercasing before the guard", async () => {
+    mockCleanSpec();
+    const logger = createTestLogger();
+
+    const report = await handleValidateCommand(
+      { input: "spec/index.ts", failOn: "WARNING" },
+      {
+        execDir: "/workspace",
+        createLogger: () => logger,
+      }
+    );
+
+    expect(report).toBeDefined();
+    expect(report?.hasErrors).toBe(false);
+    expect(process.exitCode).toBeUndefined();
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
   test("reports rule violations from enabled style checks", async () => {
     mockSpecWithStyleViolation();
     const logger = createTestLogger();

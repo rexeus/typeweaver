@@ -7,12 +7,10 @@ export * from "./types.js";
 export { buildOpenApiDocument, toOpenApiPath } from "./openApiBuilder.js";
 
 export class OpenApiPlugin extends BasePlugin {
-  public name = "openapi";
+  public readonly name = "openapi";
 
   public override generate(context: GeneratorContext): void {
-    const config = this.config as OpenApiPluginConfig & {
-      readonly outputFile?: string;
-    };
+    const config = this.config as OpenApiPluginConfig;
     const result = buildOpenApiDocument({
       normalizedSpec: context.normalizedSpec,
       config,

@@ -3,6 +3,15 @@ import path from "node:path";
 
 type FormatFn = (filename: string, source: string) => Promise<{ code: string }>;
 
+const FORMATTABLE_EXTENSIONS = new Set([
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+]);
+
 export async function formatCode(
   outputDir: string,
   startDir?: string
@@ -43,6 +52,9 @@ async function formatDirectory(
 
   for (const content of contents) {
     if (content.isFile()) {
+      if (!FORMATTABLE_EXTENSIONS.has(path.extname(content.name))) {
+        continue;
+      }
       const filePath = path.join(targetDir, content.name);
       const unformatted = fs.readFileSync(filePath, "utf8");
       const { code } = await format(filePath, unformatted);

@@ -54,7 +54,6 @@ type ResolvedValidateConfig = {
   readonly loadedConfig: Partial<TypeweaverConfig>;
   readonly validateConfig: ValidateConfig;
   readonly pluginsEnabled: boolean;
-  readonly json: boolean;
 };
 
 export const handleValidateCommand = async (
@@ -177,7 +176,6 @@ const resolveValidateConfig = async (
     loadedConfig,
     validateConfig,
     pluginsEnabled,
-    json: options.json ?? false,
   };
 };
 
@@ -192,13 +190,16 @@ const splitCodes = (raw: string | undefined): readonly string[] => {
     .filter(code => code.length > 0);
 };
 
+const isIssueSeverity = (value: string): value is IssueSeverity =>
+  (SEVERITY_VALUES as readonly string[]).includes(value);
+
 const parseSeverity = (raw: string | undefined): IssueSeverity | undefined => {
   if (!raw) {
     return undefined;
   }
 
-  const normalized = raw.trim().toLowerCase() as IssueSeverity;
-  if (!SEVERITY_VALUES.includes(normalized)) {
+  const normalized = raw.trim().toLowerCase();
+  if (!isIssueSeverity(normalized)) {
     throw new Error(
       `Invalid --fail-on value '${raw}'. Expected one of: ${SEVERITY_VALUES.join(", ")}.`
     );

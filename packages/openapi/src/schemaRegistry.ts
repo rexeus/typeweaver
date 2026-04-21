@@ -39,11 +39,9 @@ export function createSchemaRegistry(): SchemaRegistry {
   return {
     register: params => {
       const resolvedName = reserveName(components, params.name);
-      if (!components.has(resolvedName)) {
-        const result = fromZod(params.schema);
-        components.set(resolvedName, result.schema);
-        pushWarnings(params.location, result.warnings);
-      }
+      const result = fromZod(params.schema);
+      components.set(resolvedName, result.schema);
+      pushWarnings(params.location, result.warnings);
 
       return {
         $ref: `#/components/schemas/${resolvedName}`,

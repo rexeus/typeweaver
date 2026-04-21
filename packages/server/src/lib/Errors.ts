@@ -21,10 +21,12 @@ export class PayloadTooLargeError extends Error {
   public override readonly name = "PayloadTooLargeError";
   public constructor(
     public readonly contentLength: number,
-    public readonly maxBodySize: number
+    public readonly maxBodySize: number,
+    options?: ErrorOptions
   ) {
     super(
-      `Request body too large: ${contentLength} bytes exceeds limit of ${maxBodySize} bytes`
+      `Request body too large: ${contentLength} bytes exceeds limit of ${maxBodySize} bytes`,
+      options
     );
   }
 }

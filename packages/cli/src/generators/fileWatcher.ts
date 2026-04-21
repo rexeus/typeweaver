@@ -108,18 +108,22 @@ export class FileWatcher {
   }
 
   private async triggerRegeneration(): Promise<void> {
-    if (this.stopped || this.isGenerating) {
-      if (this.isGenerating) this.pendingRegeneration = true;
+    if (this.isGenerating) {
+      this.pendingRegeneration = true;
+      return;
+    }
+    if (this.stopped) {
       return;
     }
 
     this.isGenerating = true;
-    await this.runGeneration(false);
-    this.isGenerating = false;
-
-    if (this.pendingRegeneration && !this.stopped) {
-      this.pendingRegeneration = false;
-      await this.triggerRegeneration();
+    try {
+      do {
+        this.pendingRegeneration = false;
+        await this.runGeneration(false);
+      } while (this.pendingRegeneration && !this.stopped);
+    } finally {
+      this.isGenerating = false;
     }
   }
 

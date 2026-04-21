@@ -147,6 +147,141 @@ describe("pluginLoader", () => {
     ]);
   });
 
+  test("skips non-plugin named exports and picks the real plugin class", async () => {
+    const pluginDir = createTempDir();
+    const pluginPath = path.join(pluginDir, "mixed-exports.mjs");
+
+    fs.writeFileSync(
+      pluginPath,
+      [
+        "export function createPlugin() { return {}; }",
+        "export class RealPlugin {",
+        "  constructor() { this.name = \"real-plugin\"; }",
+        "}",
+        "",
+      ].join("\n")
+    );
+
+    const { registry, registeredPlugins } = createRegistry();
+
+    await loadPlugins(
+      registry,
+      [{ name: "types" } as TypesPlugin],
+      ["local"],
+      createLogger({ quiet: true }),
+      {
+        input: "./spec.ts",
+        output: "./generated",
+        plugins: [pluginPath],
+      }
+    );
+
+    expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
+      "types",
+      "real-plugin",
+    ]);
+  });
+
+  test("rejects a module whose only function export returns an object without a name", async () => {
+    const pluginDir = createTempDir();
+    const pluginPath = path.join(pluginDir, "nameless-plugin.mjs");
+
+    fs.writeFileSync(
+      pluginPath,
+      ["export function createPlugin() { return {}; }", ""].join("\n")
+    );
+
+    const { registry } = createRegistry();
+
+    await expect(
+      loadPlugins(
+        registry,
+        [{ name: "types" } as TypesPlugin],
+        ["local"],
+        createLogger({ quiet: true }),
+        {
+          input: "./spec.ts",
+          output: "./generated",
+          plugins: [pluginPath],
+        }
+      )
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<PluginLoadingFailure>>({
+        pluginName: pluginPath,
+        attempts: [
+          expect.objectContaining({
+            path: pluginPath,
+          }),
+        ],
+      })
+    );
+  });
+
+  test("rejects a plugin instance whose name is an empty string", async () => {
+    const pluginDir = createTempDir();
+    const pluginPath = path.join(pluginDir, "empty-name-plugin.mjs");
+
+    fs.writeFileSync(
+      pluginPath,
+      [
+        "export class EmptyNamePlugin {",
+        "  constructor() { this.name = \"\"; }",
+        "}",
+        "",
+      ].join("\n")
+    );
+
+    const { registry } = createRegistry();
+
+    await expect(
+      loadPlugins(
+        registry,
+        [{ name: "types" } as TypesPlugin],
+        ["local"],
+        createLogger({ quiet: true }),
+        {
+          input: "./spec.ts",
+          output: "./generated",
+          plugins: [pluginPath],
+        }
+      )
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<PluginLoadingFailure>>({
+        pluginName: pluginPath,
+      })
+    );
+  });
+
+  test("shape-checks the default export when falling back", async () => {
+    const pluginDir = createTempDir();
+    const pluginPath = path.join(pluginDir, "default-nameless.mjs");
+
+    fs.writeFileSync(
+      pluginPath,
+      ["export default function notAPlugin() { return {}; }", ""].join("\n")
+    );
+
+    const { registry } = createRegistry();
+
+    await expect(
+      loadPlugins(
+        registry,
+        [{ name: "types" } as TypesPlugin],
+        ["local"],
+        createLogger({ quiet: true }),
+        {
+          input: "./spec.ts",
+          output: "./generated",
+          plugins: [pluginPath],
+        }
+      )
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<PluginLoadingFailure>>({
+        pluginName: pluginPath,
+      })
+    );
+  });
+
   test("preserves the expected built-in plugin order after dependency resolution", () => {
     const registry = createPluginRegistry();
 

@@ -512,6 +512,59 @@ describe("FetchApiAdapter", () => {
         );
       });
 
+      test("should cancel the request body when Content-Length exceeds the limit", async () => {
+        const adapter = new FetchApiAdapter({ maxBodySize: 100 });
+        let cancelCalls = 0;
+        const request = new Request(`${BASE_URL}/todos`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/octet-stream",
+            "Content-Length": "200",
+          },
+        });
+
+        Object.defineProperty(request, "body", {
+          value: {
+            async cancel() {
+              cancelCalls += 1;
+            },
+            getReader() {
+              throw new Error("reader should not be consumed");
+            },
+          } as unknown as ReadableStream<Uint8Array>,
+        });
+
+        await expect(adapter.toRequest(request)).rejects.toThrow(
+          PayloadTooLargeError
+        );
+        expect(cancelCalls).toBe(1);
+      });
+
+      test("should preserve a Content-Length cancel failure as the PayloadTooLargeError cause", async () => {
+        const adapter = new FetchApiAdapter({ maxBodySize: 100 });
+        const cancelError = new Error("cancel failed");
+        const request = new Request(`${BASE_URL}/todos`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/octet-stream",
+            "Content-Length": "200",
+          },
+        });
+
+        Object.defineProperty(request, "body", {
+          value: {
+            async cancel() {
+              throw cancelError;
+            },
+          } as unknown as ReadableStream<Uint8Array>,
+        });
+
+        await expect(adapter.toRequest(request)).rejects.toSatisfy(
+          (error: unknown) =>
+            error instanceof PayloadTooLargeError && error.cause === cancelError
+        );
+      });
+
       test("should accept bodies within the limit", async () => {
         const adapter = new FetchApiAdapter({ maxBodySize: 1000 });
         const body = "hello";
@@ -653,6 +706,69 @@ describe("FetchApiAdapter", () => {
         );
 
         expect(cancelCalls).toBe(1);
+      });
+
+      test("should preserve the cancel failure as the PayloadTooLargeError cause", async () => {
+        const adapter = new FetchApiAdapter({ maxBodySize: 5 });
+        const cancelError = new Error("cancel failed");
+        const request = new Request(`${BASE_URL}/todos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/octet-stream" },
+        });
+
+        Object.defineProperty(request, "body", {
+          value: {
+            getReader() {
+              return {
+                async read() {
+                  return {
+                    done: false,
+                    value: new TextEncoder().encode("123456"),
+                  };
+                },
+                async cancel() {
+                  throw cancelError;
+                },
+                releaseLock() {},
+              };
+            },
+          } as unknown as ReadableStream<Uint8Array>,
+        });
+
+        await expect(adapter.toRequest(request)).rejects.toSatisfy(
+          (error: unknown) =>
+            error instanceof PayloadTooLargeError && error.cause === cancelError
+        );
+      });
+
+      test("should omit cause on PayloadTooLargeError when cancel succeeds", async () => {
+        const adapter = new FetchApiAdapter({ maxBodySize: 5 });
+        const request = new Request(`${BASE_URL}/todos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/octet-stream" },
+        });
+
+        Object.defineProperty(request, "body", {
+          value: {
+            getReader() {
+              return {
+                async read() {
+                  return {
+                    done: false,
+                    value: new TextEncoder().encode("123456"),
+                  };
+                },
+                async cancel() {},
+                releaseLock() {},
+              };
+            },
+          } as unknown as ReadableStream<Uint8Array>,
+        });
+
+        await expect(adapter.toRequest(request)).rejects.toSatisfy(
+          (error: unknown) =>
+            error instanceof PayloadTooLargeError && error.cause === undefined
+        );
       });
 
       test("should accept body within limit when Content-Length header is missing", async () => {

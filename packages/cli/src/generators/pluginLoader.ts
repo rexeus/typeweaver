@@ -36,13 +36,9 @@ export async function loadPlugins(
 
   const successful: PluginLoadResult[] = [];
 
-  for (const plugin of config.plugins) {
-    let result: LoadResult<PluginLoadResult, PluginLoadError>;
-    if (typeof plugin === "string") {
-      result = await loadPlugin(plugin, strategies);
-    } else {
-      result = await loadPlugin(plugin[0], strategies);
-    }
+  for (const entry of config.plugins) {
+    const { name, pluginConfig } = parsePluginEntry(entry);
+    const result = await loadPlugin(name, strategies);
 
     if (result.success === false) {
       throw new PluginLoadingFailure(
@@ -52,10 +48,19 @@ export async function loadPlugins(
     }
 
     successful.push(result.value);
-    registry.register(result.value.plugin);
+    registry.register(result.value.plugin, pluginConfig);
   }
 
   reportSuccessfulLoads(successful, logger);
+}
+
+function parsePluginEntry(
+  entry: string | readonly [string, ...unknown[]]
+): { name: string; pluginConfig: unknown } {
+  if (typeof entry === "string") {
+    return { name: entry, pluginConfig: undefined };
+  }
+  return { name: entry[0], pluginConfig: entry[1] };
 }
 
 async function loadPlugin(
@@ -68,12 +73,12 @@ async function loadPlugin(
   for (const possiblePath of possiblePaths) {
     try {
       const pluginPackage = await import(possiblePath);
-      const PluginClass = findPluginConstructor(pluginPackage);
-      if (PluginClass) {
+      const plugin = instantiatePlugin(pluginPackage);
+      if (plugin) {
         return {
           success: true,
           value: {
-            plugin: new PluginClass(),
+            plugin,
             source: possiblePath,
           },
         };
@@ -99,22 +104,44 @@ async function loadPlugin(
   };
 }
 
-function findPluginConstructor(
+function instantiatePlugin(
   pluginModule: Record<string, unknown>
-): (new () => TypeweaverPlugin) | undefined {
+): TypeweaverPlugin | undefined {
   for (const [key, value] of Object.entries(pluginModule)) {
-    if (key !== "default" && typeof value === "function") {
-      return value as new () => TypeweaverPlugin;
+    if (key === "default" || typeof value !== "function") {
+      continue;
+    }
+    const plugin = tryConstruct(value);
+    if (plugin) {
+      return plugin;
     }
   }
 
   // Fall back to default export for third-party plugin compatibility
   const defaultExport = pluginModule.default;
   if (typeof defaultExport === "function") {
-    return defaultExport as new () => TypeweaverPlugin;
+    return tryConstruct(defaultExport);
   }
 
   return undefined;
+}
+
+function tryConstruct(value: Function): TypeweaverPlugin | undefined {
+  let instance: unknown;
+  try {
+    instance = Reflect.construct(value, []);
+  } catch {
+    return undefined;
+  }
+  return isTypeweaverPlugin(instance) ? instance : undefined;
+}
+
+function isTypeweaverPlugin(value: unknown): value is TypeweaverPlugin {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+  const candidate = value as { name?: unknown; generate?: unknown };
+  return typeof candidate.name === "string" && candidate.name.length > 0;
 }
 
 function generatePluginPaths(

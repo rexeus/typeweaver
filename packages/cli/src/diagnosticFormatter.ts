@@ -1,7 +1,7 @@
 import { DefinitionCompilationError } from "./generators/errors/definitionCompilationError.js";
 import { PluginLoadingFailure } from "./generators/errors/pluginLoadingFailure.js";
-import { ReservedEntityNameError } from "./generators/errors/reservedEntityNameError.js";
 import { ReservedKeywordError } from "./generators/errors/reservedKeywordError.js";
+import { ReservedPluginOutputDirectoryError } from "./generators/errors/reservedPluginOutputDirectoryError.js";
 import { InvalidSpecEntrypointError } from "./generators/spec/invalidSpecEntrypointError.js";
 import { lookupSpecErrorEntry } from "./specErrorRegistry.js";
 import type { Logger } from "./logger.js";
@@ -56,11 +56,11 @@ export const formatDiagnostic = (error: unknown): Diagnostic => {
     });
   }
 
-  if (error instanceof ReservedEntityNameError) {
+  if (error instanceof ReservedPluginOutputDirectoryError) {
     return withVerboseDetails(error, {
-      summary: `Reserved entity name '${error.entityName}' cannot be used for generated output.`,
-      contextLines: [`Directory: ${error.file}`],
-      hint: "Rename the resource so it does not conflict with Typeweaver's internal output structure.",
+      summary: `Plugin name '${error.pluginName}' conflicts with a reserved output directory.`,
+      contextLines: [`Directory: ${error.directory}`],
+      hint: "Rename the plugin so it does not shadow Typeweaver's shared output directories.",
     });
   }
 
