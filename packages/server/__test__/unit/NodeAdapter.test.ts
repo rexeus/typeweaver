@@ -388,8 +388,10 @@ describe("nodeAdapter", () => {
     test("marks stricter Node prevalidation so fetch parsing skips duplicate reads", async () => {
       const app = new TypeweaverApp({ maxBodySize: 64 });
       const readBodyWithLimitSpy = vi.spyOn(
-        FetchApiAdapter.prototype as never,
-        "readBodyWithLimit" as never
+        FetchApiAdapter.prototype as unknown as {
+          readBodyWithLimit: (request: Request) => Promise<Request>;
+        },
+        "readBodyWithLimit"
       );
 
       const handler = nodeAdapter(app, { maxBodySize: 16 });

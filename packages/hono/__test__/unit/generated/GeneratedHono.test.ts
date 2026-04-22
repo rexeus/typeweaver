@@ -394,6 +394,7 @@ describe("Generated Hono Router", () => {
         throwTodoError: {
           type: "CustomBlobResponse" as const,
           statusCode: 200,
+          header: { "Content-Type": "application/octet-stream" },
           body: blob,
         },
       });
