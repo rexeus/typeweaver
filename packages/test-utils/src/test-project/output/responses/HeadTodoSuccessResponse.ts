@@ -22,10 +22,11 @@ export type IHeadTodoSuccessResponse = ITypedHttpResponse<
   undefined
 >;
 
-export const createHeadTodoSuccessResponse = (
-  input: Omit<IHeadTodoSuccessResponse, "type" | "statusCode">,
-): IHeadTodoSuccessResponse => ({
-  ...input,
+export const createHeadTodoSuccessResponse = (input: {
+  header: IHeadTodoSuccessResponseHeader;
+}): IHeadTodoSuccessResponse => ({
   type: "HeadTodoSuccess",
   statusCode: HttpStatusCode.OK,
+  header: input.header,
+  body: undefined,
 });

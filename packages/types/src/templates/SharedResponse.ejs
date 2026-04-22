@@ -24,15 +24,39 @@ HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>,
 <%= sharedResponse.body ? `I${pascalCaseName}ResponseBody` : 'undefined' %>
 >;
 
-<% if (sharedResponse.header || sharedResponse.body) { %>
-export const create<%= pascalCaseName %>Response = (input: Omit<I<%= pascalCaseName %>Response, "type" | "statusCode">): I<%= pascalCaseName %>Response => ({
-    ...input,
+<% if (sharedResponse.header && sharedResponse.body) { %>
+export const create<%= pascalCaseName %>Response = (input: {
+    header: I<%= pascalCaseName %>ResponseHeader;
+    body: I<%= pascalCaseName %>ResponseBody;
+}): I<%= pascalCaseName %>Response => ({
     type: "<%= pascalCaseName %>",
     statusCode: HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>,
+    header: input.header,
+    body: input.body,
+});
+<% } else if (sharedResponse.header) { %>
+export const create<%= pascalCaseName %>Response = (input: {
+    header: I<%= pascalCaseName %>ResponseHeader;
+}): I<%= pascalCaseName %>Response => ({
+    type: "<%= pascalCaseName %>",
+    statusCode: HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>,
+    header: input.header,
+    body: undefined,
+});
+<% } else if (sharedResponse.body) { %>
+export const create<%= pascalCaseName %>Response = (input: {
+    body: I<%= pascalCaseName %>ResponseBody;
+}): I<%= pascalCaseName %>Response => ({
+    type: "<%= pascalCaseName %>",
+    statusCode: HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>,
+    header: undefined,
+    body: input.body,
 });
 <% } else { %>
 export const create<%= pascalCaseName %>Response = (): I<%= pascalCaseName %>Response => ({
     type: "<%= pascalCaseName %>",
     statusCode: HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>,
+    header: undefined,
+    body: undefined,
 });
 <% } %>

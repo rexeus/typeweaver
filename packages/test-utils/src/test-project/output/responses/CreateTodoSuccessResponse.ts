@@ -38,10 +38,12 @@ export type ICreateTodoSuccessResponse = ITypedHttpResponse<
   ICreateTodoSuccessResponseBody
 >;
 
-export const createCreateTodoSuccessResponse = (
-  input: Omit<ICreateTodoSuccessResponse, "type" | "statusCode">,
-): ICreateTodoSuccessResponse => ({
-  ...input,
+export const createCreateTodoSuccessResponse = (input: {
+  header: ICreateTodoSuccessResponseHeader;
+  body: ICreateTodoSuccessResponseBody;
+}): ICreateTodoSuccessResponse => ({
   type: "CreateTodoSuccess",
   statusCode: HttpStatusCode.CREATED,
+  header: input.header,
+  body: input.body,
 });

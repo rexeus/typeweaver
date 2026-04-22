@@ -31,10 +31,12 @@ export type IRegisterAccountSuccessResponse = ITypedHttpResponse<
   IRegisterAccountSuccessResponseBody
 >;
 
-export const createRegisterAccountSuccessResponse = (
-  input: Omit<IRegisterAccountSuccessResponse, "type" | "statusCode">,
-): IRegisterAccountSuccessResponse => ({
-  ...input,
+export const createRegisterAccountSuccessResponse = (input: {
+  header: IRegisterAccountSuccessResponseHeader;
+  body: IRegisterAccountSuccessResponseBody;
+}): IRegisterAccountSuccessResponse => ({
   type: "RegisterAccountSuccess",
   statusCode: HttpStatusCode.CREATED,
+  header: input.header,
+  body: input.body,
 });

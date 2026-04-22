@@ -24,10 +24,11 @@ export type IOptionsTodoSuccessResponse = ITypedHttpResponse<
   undefined
 >;
 
-export const createOptionsTodoSuccessResponse = (
-  input: Omit<IOptionsTodoSuccessResponse, "type" | "statusCode">,
-): IOptionsTodoSuccessResponse => ({
-  ...input,
+export const createOptionsTodoSuccessResponse = (input: {
+  header: IOptionsTodoSuccessResponseHeader;
+}): IOptionsTodoSuccessResponse => ({
   type: "OptionsTodoSuccess",
   statusCode: HttpStatusCode.OK,
+  header: input.header,
+  body: undefined,
 });

@@ -37,10 +37,12 @@ export type ITodoStatusTransitionInvalidErrorResponse = ITypedHttpResponse<
   ITodoStatusTransitionInvalidErrorResponseBody
 >;
 
-export const createTodoStatusTransitionInvalidErrorResponse = (
-  input: Omit<ITodoStatusTransitionInvalidErrorResponse, "type" | "statusCode">,
-): ITodoStatusTransitionInvalidErrorResponse => ({
-  ...input,
+export const createTodoStatusTransitionInvalidErrorResponse = (input: {
+  header: ITodoStatusTransitionInvalidErrorResponseHeader;
+  body: ITodoStatusTransitionInvalidErrorResponseBody;
+}): ITodoStatusTransitionInvalidErrorResponse => ({
   type: "TodoStatusTransitionInvalidError",
   statusCode: HttpStatusCode.CONFLICT,
+  header: input.header,
+  body: input.body,
 });

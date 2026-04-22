@@ -38,10 +38,12 @@ export type IPutTodoSuccessResponse = ITypedHttpResponse<
   IPutTodoSuccessResponseBody
 >;
 
-export const createPutTodoSuccessResponse = (
-  input: Omit<IPutTodoSuccessResponse, "type" | "statusCode">,
-): IPutTodoSuccessResponse => ({
-  ...input,
+export const createPutTodoSuccessResponse = (input: {
+  header: IPutTodoSuccessResponseHeader;
+  body: IPutTodoSuccessResponseBody;
+}): IPutTodoSuccessResponse => ({
   type: "PutTodoSuccess",
   statusCode: HttpStatusCode.OK,
+  header: input.header,
+  body: input.body,
 });

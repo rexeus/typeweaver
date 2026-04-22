@@ -27,10 +27,12 @@ export type IRefreshTokenSuccessResponse = ITypedHttpResponse<
   IRefreshTokenSuccessResponseBody
 >;
 
-export const createRefreshTokenSuccessResponse = (
-  input: Omit<IRefreshTokenSuccessResponse, "type" | "statusCode">,
-): IRefreshTokenSuccessResponse => ({
-  ...input,
+export const createRefreshTokenSuccessResponse = (input: {
+  header: IRefreshTokenSuccessResponseHeader;
+  body: IRefreshTokenSuccessResponseBody;
+}): IRefreshTokenSuccessResponse => ({
   type: "RefreshTokenSuccess",
   statusCode: HttpStatusCode.OK,
+  header: input.header,
+  body: input.body,
 });

@@ -26,10 +26,12 @@ export type IDeleteSubTodoSuccessResponse = ITypedHttpResponse<
   IDeleteSubTodoSuccessResponseBody
 >;
 
-export const createDeleteSubTodoSuccessResponse = (
-  input: Omit<IDeleteSubTodoSuccessResponse, "type" | "statusCode">,
-): IDeleteSubTodoSuccessResponse => ({
-  ...input,
+export const createDeleteSubTodoSuccessResponse = (input: {
+  header: IDeleteSubTodoSuccessResponseHeader;
+  body: IDeleteSubTodoSuccessResponseBody;
+}): IDeleteSubTodoSuccessResponse => ({
   type: "DeleteSubTodoSuccess",
   statusCode: HttpStatusCode.OK,
+  header: input.header,
+  body: input.body,
 });
