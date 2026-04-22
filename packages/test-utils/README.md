@@ -12,8 +12,8 @@ A complete sample API project with a spec entrypoint, generated output, and type
 - **Spec authoring** — API contracts under `src/test-project/spec/` for `Todo`, `Account`, `Auth`
   resources with shared error responses, demonstrating all typeweaver features (path params, query
   params, headers, bodies, error types, nested resources like SubTodos)
-- **Generated Output** — Pre-generated code from the definitions using all plugins (`clients`,
-  `hono`, `server`, `aws-cdk`), providing real generated artifacts for testing
+- **Generated Output** — Pre-generated artifacts from the definitions using all plugins (`clients`,
+  `hono`, `server`, `aws-cdk`, `openapi`), providing real generated outputs for testing
 
 ### Test Data Factories (`src/data/`)
 

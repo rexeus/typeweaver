@@ -7,11 +7,13 @@ import type { GeneratorContext, PluginConfig, PluginContext } from "./types.js";
 
 export type PluginContextBuilderApi = {
   readonly createPluginContext: (params: {
+    pluginName: string;
     outputDir: string;
     inputDir: string;
     config: PluginConfig;
   }) => PluginContext;
   readonly createGeneratorContext: (params: {
+    readonly pluginName: string;
     readonly outputDir: string;
     readonly inputDir: string;
     readonly config: PluginConfig;
@@ -25,15 +27,43 @@ export type PluginContextBuilderApi = {
   readonly clearGeneratedFiles: () => void;
 };
 
+function resolveWithinOutputDir(
+  outputDir: string,
+  relativePath: string
+): string {
+  if (path.isAbsolute(relativePath)) {
+    throw new Error(
+      `Plugin writeFile refused an absolute path '${relativePath}'. Pass a path relative to the plugin output directory instead.`
+    );
+  }
+
+  const resolvedOutputDir = path.resolve(outputDir);
+  const resolvedTarget = path.resolve(resolvedOutputDir, relativePath);
+  const relativeFromOutput = path.relative(resolvedOutputDir, resolvedTarget);
+
+  if (
+    relativeFromOutput.startsWith("..") ||
+    path.isAbsolute(relativeFromOutput)
+  ) {
+    throw new Error(
+      `Plugin writeFile refused path '${relativePath}' because it escapes the output directory.`
+    );
+  }
+
+  return resolvedTarget;
+}
+
 export function createPluginContextBuilder(): PluginContextBuilderApi {
   const generatedFiles = new Set<string>();
 
   const createPluginContext = (params: {
+    pluginName: string;
     outputDir: string;
     inputDir: string;
     config: PluginConfig;
   }): PluginContext => {
     return {
+      pluginName: params.pluginName,
       outputDir: params.outputDir,
       inputDir: params.inputDir,
       config: params.config,
@@ -41,6 +71,7 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
   };
 
   const createGeneratorContext = (params: {
+    readonly pluginName: string;
     readonly outputDir: string;
     readonly inputDir: string;
     readonly config: PluginConfig;
@@ -55,15 +86,36 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
       params.normalizedSpec.responses.map(response => [response.name, response])
     );
 
+    const getPluginOutputDir = (pluginName: string): string => {
+      return path.join(params.outputDir, pluginName);
+    };
+
+    const getPluginResourceOutputDir = (config: {
+      readonly pluginName: string;
+      readonly resourceName: string;
+    }): string => {
+      return path.join(
+        getPluginOutputDir(config.pluginName),
+        config.resourceName
+      );
+    };
+
     const getResourceOutputDir = (resourceName: string): string => {
-      return path.join(params.outputDir, resourceName);
+      return getPluginResourceOutputDir({
+        pluginName: params.pluginName,
+        resourceName,
+      });
     };
 
     const getOperationOutputPaths = (config: {
+      readonly pluginName?: string;
       readonly resourceName: string;
       readonly operationId: string;
     }) => {
-      const outputDir = getResourceOutputDir(config.resourceName);
+      const outputDir = getPluginResourceOutputDir({
+        pluginName: config.pluginName ?? params.pluginName,
+        resourceName: config.resourceName,
+      });
       const requestFileName = `${config.operationId}Request.ts`;
       const responseFileName = `${config.operationId}Response.ts`;
       const requestValidationFileName = `${config.operationId}RequestValidator.ts`;
@@ -88,6 +140,39 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
       };
     };
 
+    const getOperationImportPaths = (config: {
+      readonly importerDir: string;
+      readonly pluginName: string;
+      readonly resourceName: string;
+      readonly operationId: string;
+    }) => {
+      const outputPaths = getOperationOutputPaths(config);
+
+      return {
+        outputDir: outputPaths.outputDir,
+        requestFile: relative(
+          config.importerDir,
+          outputPaths.requestFile.replace(/\.ts$/, ".js")
+        ),
+        responseFile: relative(
+          config.importerDir,
+          outputPaths.responseFile.replace(/\.ts$/, ".js")
+        ),
+        requestValidationFile: relative(
+          config.importerDir,
+          outputPaths.requestValidationFile.replace(/\.ts$/, ".js")
+        ),
+        responseValidationFile: relative(
+          config.importerDir,
+          outputPaths.responseValidationFile.replace(/\.ts$/, ".js")
+        ),
+        clientFile: relative(
+          config.importerDir,
+          outputPaths.clientFile.replace(/\.ts$/, ".js")
+        ),
+      };
+    };
+
     const getCanonicalResponse = (responseName: string): NormalizedResponse => {
       const response = canonicalResponsesByName.get(responseName);
 
@@ -108,6 +193,8 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
       coreDir: params.coreDir,
       responsesOutputDir: params.responsesOutputDir,
       specOutputDir: params.specOutputDir,
+      getPluginOutputDir,
+      getPluginResourceOutputDir,
       getCanonicalResponse,
       getCanonicalResponseOutputFile,
       getCanonicalResponseImportPath: config => {
@@ -136,16 +223,24 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
       },
       getOperationOutputPaths,
       getResourceOutputDir,
+      getOperationImportPaths,
+      getLibImportPath: config => {
+        const entry = config.entry ?? "index.js";
+        const entryFile = path.extname(entry) === "" ? `${entry}.js` : entry;
+
+        return relative(
+          config.importerDir,
+          path.join(params.outputDir, "lib", config.pluginName, entryFile)
+        );
+      },
 
       writeFile: (relativePath: string, content: string) => {
-        const fullPath = path.join(params.outputDir, relativePath);
+        const fullPath = resolveWithinOutputDir(params.outputDir, relativePath);
         const dir = path.dirname(fullPath);
 
         fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(fullPath, content);
         generatedFiles.add(relativePath);
-
-        console.info(`Generated: ${relativePath}`);
       },
 
       renderTemplate: (templatePath: string, data: unknown) => {

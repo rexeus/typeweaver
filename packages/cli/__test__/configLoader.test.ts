@@ -1,32 +1,15 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import {
   assertSupportedConfigPath,
   getResolvedConfigPath,
   loadConfig,
 } from "../src/configLoader.js";
+import { createTempDirFactory } from "./__helpers__/tempDir.js";
 
 describe("configLoader", () => {
-  const tempDirs: string[] = [];
-
-  afterEach(() => {
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-
-    tempDirs.length = 0;
-  });
-
-  const createTempDir = (): string => {
-    const tempDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "typeweaver-config-")
-    );
-    tempDirs.push(tempDir);
-
-    return tempDir;
-  };
+  const createTempDir = createTempDirFactory("typeweaver-config-");
 
   test("rejects TypeScript config files", () => {
     expect(() => assertSupportedConfigPath("typeweaver.config.ts")).toThrow(

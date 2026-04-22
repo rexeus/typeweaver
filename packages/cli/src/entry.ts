@@ -1,14 +1,15 @@
-import { detectRuntime, getRuntimeDisplayName } from "./runtime.js";
+import { createCli } from "./cli.js";
+import { writeDiagnostic } from "./diagnosticFormatter.js";
+import { createLogger } from "./logger.js";
 
 const main = async (): Promise<void> => {
-  const runtime = detectRuntime();
-
-  console.info(`Running on ${getRuntimeDisplayName(runtime)}`);
-
-  await import("./cli.js");
+  await createCli().parseAsync(process.argv);
 };
 
 main().catch((error: unknown) => {
-  console.error("Failed to start TypeWeaver CLI:", error);
+  const logger = createLogger();
+
+  logger.error("Failed to start TypeWeaver CLI.");
+  writeDiagnostic(logger, error);
   process.exit(1);
 });

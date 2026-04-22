@@ -18,7 +18,7 @@
     "build": "echo 'No build needed for test-utils'",
     "typecheck": "echo 'Skipping typecheck for test-utils (requires 8GB+ memory)'",
     "format": "oxfmt",
-    "test-project:gen": "pnpm exec typeweaver generate --output src/test-project/output --input src/test-project/spec/index.ts --plugins clients,aws-cdk,hono,server",
+    "test-project:gen": "pnpm exec typeweaver generate --output src/test-project/output --input src/test-project/spec/index.ts --plugins clients,aws-cdk,hono,server,openapi",
     "test:gen": "pnpm run test-project:gen"
   },
   "keywords": [
@@ -34,6 +34,7 @@
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
     "@rexeus/typeweaver-hono": "workspace:^",
+    "@rexeus/typeweaver-openapi": "workspace:^",
     "@rexeus/typeweaver-server": "workspace:^",
     "@rexeus/typeweaver-types": "workspace:^",
     "deepmerge": "^4.3.1",

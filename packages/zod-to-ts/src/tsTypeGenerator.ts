@@ -1,4 +1,4 @@
-import { factory, SyntaxKind } from "typescript";
+import { factory, isUnionTypeNode, SyntaxKind } from "typescript";
 import {
   $ZodAny,
   $ZodArray,
@@ -40,12 +40,84 @@ import {
 } from "zod/v4/core";
 import type {
   Identifier,
-  Node,
   StringLiteral,
   TypeElement,
   TypeNode,
 } from "typescript";
 import type { $ZodType } from "zod/v4/core";
+
+/**
+ * Tokens that cannot appear as unquoted property keys in a TypeScript type
+ * literal, so we emit them as string literals instead. Deliberately narrower
+ * than `@rexeus/typeweaver-gen`'s `RESERVED_KEYWORDS` (which rejects entity
+ * names entirely): here we permit `true`/`false`/`null` as valid property
+ * keys but still require quoting.
+ */
+const RESERVED_KEYWORDS = new Set([
+  "await",
+  "break",
+  "case",
+  "catch",
+  "class",
+  "const",
+  "continue",
+  "debugger",
+  "default",
+  "delete",
+  "do",
+  "else",
+  "enum",
+  "export",
+  "extends",
+  "false",
+  "finally",
+  "for",
+  "function",
+  "if",
+  "import",
+  "in",
+  "instanceof",
+  "new",
+  "null",
+  "return",
+  "super",
+  "switch",
+  "this",
+  "throw",
+  "true",
+  "try",
+  "typeof",
+  "var",
+  "void",
+  "while",
+  "with",
+  "yield",
+  "as",
+  "implements",
+  "interface",
+  "let",
+  "package",
+  "private",
+  "protected",
+  "public",
+  "static",
+  "any",
+  "boolean",
+  "constructor",
+  "declare",
+  "get",
+  "module",
+  "require",
+  "number",
+  "set",
+  "string",
+  "symbol",
+  "type",
+  "from",
+  "of",
+]);
+
+const IDENTIFIER_PATTERN = /^[$A-Z_a-z][\w$]*$/u;
 
 export function fromZod(zodType: $ZodType): TypeNode {
   if (zodType instanceof $ZodString) {
@@ -229,28 +301,16 @@ function fromZodObject(zodObject: $ZodObject): TypeNode {
 
   const members: TypeElement[] = entries.map(([key, nextZodNode]) => {
     const type = fromZod(nextZodNode);
+    const isOptional = nextZodNode._zod.def.type === "optional";
 
-    if (!nextZodNode._zod?.def) {
-      console.warn(
-        `Zod node for key "${key}" does not have a _zod.def property. This may indicate an issue with the Zod schema.`,
-        {
-          key,
-        }
-      );
-    }
-    const { type: nextZodNodeTypeName } = nextZodNode._zod?.def ?? {};
-    const isOptional = nextZodNodeTypeName === "optional";
-
-    const propertySignature = factory.createPropertySignature(
+    return factory.createPropertySignature(
       undefined,
       createTsAstPropertyKey(key),
       isOptional ? factory.createToken(SyntaxKind.QuestionToken) : undefined,
       type
     );
-
-    // TODO: add description?
-    return propertySignature;
   });
+
   return factory.createTypeLiteralNode(members);
 }
 
@@ -299,6 +359,7 @@ function fromZodLiteral(zodLiteral: $ZodLiteral): TypeNode {
   if (zodLiteral._zod.def.values.length === 0) {
     throw new Error("ZodLiteral has no values");
   }
+
   const value = zodLiteral._zod.def.values[0];
 
   if (typeof value === "string") {
@@ -329,7 +390,7 @@ function fromZodLiteral(zodLiteral: $ZodLiteral): TypeNode {
 
 function fromZodEnum(zodEnum: $ZodEnum): TypeNode {
   const entries = Object.entries(zodEnum._zod.def.entries);
-  const types = entries.map(([key, _value]) => {
+  const types = entries.map(([key]) => {
     return factory.createLiteralTypeNode(factory.createStringLiteral(key));
   });
   return factory.createUnionTypeNode(types);
@@ -343,7 +404,6 @@ function fromZodPromise(zodPromise: $ZodPromise): TypeNode {
 }
 
 function fromZodLazy(_zodLazy: $ZodLazy): TypeNode {
-  // TODO: handle zodLazy
   return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
 }
 
@@ -356,84 +416,83 @@ function fromZodOptional(zodOptional: $ZodOptional): TypeNode {
 }
 
 function fromZodDefault(zodDefault: $ZodDefault): TypeNode {
-  const innerType = fromZod(zodDefault._zod.def.innerType);
-
-  const filteredNodes: Node[] = [];
-  innerType.forEachChild(node => {
-    if (node.kind !== SyntaxKind.UndefinedKeyword) {
-      filteredNodes.push(node);
-    }
-  });
-
-  // TODO: is TsTypeNode correct?
-  // @ts-expect-error needed to set children
-  innerType.types = filteredNodes;
-  return innerType;
+  return fromZodDefaultLikeInnerType(zodDefault._zod.def.innerType);
 }
 
 function fromZodTemplateLiteral(
   _zodTemplateLiteral: $ZodTemplateLiteral
 ): TypeNode {
-  // TODO: handle zodTemplateLiteral
   return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
 }
 
 function fromZodCustom(_zodCustom: $ZodCustom): TypeNode {
-  // TODO: handle zodCustom
   return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
 }
 
 function fromZodTransform(_zodTransform: $ZodTransform): TypeNode {
-  // TODO: handle zodTransform
   return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
 }
 
-function fromZodNonOptional(_zodNonOptional: $ZodNonOptional): TypeNode {
-  // TODO: handle zodNonOptional
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+function fromZodNonOptional(zodNonOptional: $ZodNonOptional): TypeNode {
+  return fromZodDefaultLikeInnerType(zodNonOptional._zod.def.innerType);
 }
 
-function fromZodReadonly(_zodReadonly: $ZodReadonly): TypeNode {
-  // TODO: handle zodReadonly
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+function fromZodReadonly(zodReadonly: $ZodReadonly): TypeNode {
+  return factory.createTypeReferenceNode(factory.createIdentifier("Readonly"), [
+    fromZod(zodReadonly._zod.def.innerType),
+  ]);
 }
 
 function fromZodNaN(_zodNaN: $ZodNaN): TypeNode {
-  // TODO: handle zodNaN
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+  return factory.createKeywordTypeNode(SyntaxKind.NumberKeyword);
 }
 
-function fromZodPipe(_zodPipe: $ZodPipe): TypeNode {
-  // TODO: handle zodPipe
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+function fromZodPipe(zodPipe: $ZodPipe): TypeNode {
+  return fromZod(zodPipe._zod.def.out);
 }
 
 function fromZodSuccess(_zodSuccess: $ZodSuccess): TypeNode {
-  // TODO: handle zodSuccess
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+  return factory.createKeywordTypeNode(SyntaxKind.BooleanKeyword);
 }
 
-function fromZodCatch(_zodCatch: $ZodCatch): TypeNode {
-  // TODO: handle zodCatch
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+function fromZodCatch(zodCatch: $ZodCatch): TypeNode {
+  return fromZod(zodCatch._zod.def.innerType);
 }
 
 function fromZodFile(_zodFile: $ZodFile): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+  return factory.createTypeReferenceNode(factory.createIdentifier("File"));
 }
 
-/**
- * Returns a TypeScript AST node representing the property key.
- * If the key is a valid JavaScript identifier, returns an Identifier node.
- * Otherwise, returns a StringLiteral node.
- *
- * @param {string} key - The property key to convert.
- * @returns {Identifier | StringLiteral} The corresponding AST node for the property key.
- */
+function fromZodDefaultLikeInnerType(zodType: $ZodType): TypeNode {
+  const innerType = fromZod(zodType);
+
+  if (!isUnionTypeNode(innerType)) {
+    return innerType;
+  }
+
+  const filteredTypes = innerType.types.filter(
+    node => node.kind !== SyntaxKind.UndefinedKeyword
+  );
+
+  if (filteredTypes.length === 0) {
+    return factory.createKeywordTypeNode(SyntaxKind.NeverKeyword);
+  }
+
+  if (filteredTypes.length === 1) {
+    const [onlyType] = filteredTypes;
+
+    if (onlyType !== undefined) {
+      return onlyType;
+    }
+  }
+
+  return factory.createUnionTypeNode(filteredTypes);
+}
+
 function createTsAstPropertyKey(key: string): Identifier | StringLiteral {
-  // TODO: is TsTypeNode correct or required anymore?
-  if (/^[$A-Z_a-z][\w$]*$/.test(key)) {
+  if (IDENTIFIER_PATTERN.test(key) && !RESERVED_KEYWORDS.has(key)) {
     return factory.createIdentifier(key);
   }
+
   return factory.createStringLiteral(key);
 }

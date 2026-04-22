@@ -226,7 +226,17 @@ export class FetchApiAdapter {
     }
 
     if (contentLength > this.maxBodySize) {
-      throw new PayloadTooLargeError(contentLength, this.maxBodySize);
+      let cancelError: unknown;
+      try {
+        await request.body?.cancel();
+      } catch (error) {
+        cancelError = error;
+      }
+      throw new PayloadTooLargeError(
+        contentLength,
+        this.maxBodySize,
+        cancelError === undefined ? undefined : { cause: cancelError },
+      );
     }
 
     return request;
@@ -246,8 +256,17 @@ export class FetchApiAdapter {
 
         totalBytes += value.byteLength;
         if (totalBytes > this.maxBodySize) {
-          await reader.cancel();
-          throw new PayloadTooLargeError(totalBytes, this.maxBodySize);
+          let cancelError: unknown;
+          try {
+            await reader.cancel();
+          } catch (error) {
+            cancelError = error;
+          }
+          throw new PayloadTooLargeError(
+            totalBytes,
+            this.maxBodySize,
+            cancelError === undefined ? undefined : { cause: cancelError },
+          );
         }
         chunks.push(value);
       }

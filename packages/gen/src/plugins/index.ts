@@ -1,4 +1,5 @@
 export * from "./types.js";
+export * from "./issue.js";
 export { BasePlugin } from "./BasePlugin.js";
 export { createPluginRegistry } from "./pluginRegistry.js";
 export type { PluginRegistryApi } from "./pluginRegistry.js";

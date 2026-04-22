@@ -20,9 +20,6 @@ export function createPluginRegistry(): PluginRegistryApi {
   return {
     register: (plugin: TypeweaverPlugin, config?: unknown): void => {
       if (plugins.has(plugin.name)) {
-        console.info(
-          `Skipping duplicate registration of required plugin: ${plugin.name}`
-        );
         return;
       }
 
@@ -34,7 +31,6 @@ export function createPluginRegistry(): PluginRegistryApi {
 
       plugins.set(plugin.name, registration);
       invalidateSortedRegistrations();
-      console.info(`Registered plugin: ${plugin.name}`);
     },
     get: (name: string) => plugins.get(name),
     getAll: () => {

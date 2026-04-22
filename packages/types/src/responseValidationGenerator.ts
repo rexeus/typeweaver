@@ -80,6 +80,10 @@ function writeResponseValidator(
     operationId: operation.operationId,
     pascalCaseOperationId,
     coreDir: context.coreDir,
+    typesLibPath: context.getLibImportPath({
+      importerDir: outputPaths.outputDir,
+      pluginName: "types",
+    }),
     responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}.js`,
     specPath: context.getSpecImportPath({
       importerDir: outputPaths.outputDir,

@@ -1,0 +1,5263 @@
+{
+  "openapi": "3.1.1",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "info": {
+    "title": "Typeweaver API",
+    "version": "0.0.0"
+  },
+  "paths": {
+    "/accounts": {
+      "post": {
+        "operationId": "RegisterAccount",
+        "summary": "Register new account",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Content-Type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountRegisterAccountRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/RegisterAccountSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/auth/access-token": {
+      "post": {
+        "operationId": "AccessToken",
+        "summary": "Get access token by email and password",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Content-Type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthAccessTokenRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AccessTokenSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/auth/refresh-token": {
+      "post": {
+        "operationId": "RefreshToken",
+        "summary": "Refresh access token by refresh token",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Content-Type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthRefreshTokenRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/RefreshTokenSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/files": {
+      "post": {
+        "operationId": "UploadFile",
+        "summary": "Upload a file",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Content-Type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/octet-stream"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-File-Name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileUploadFileRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/UploadFileSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/files/{fileId}/content": {
+      "get": {
+        "operationId": "DownloadFileContent",
+        "summary": "Download file content",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fileId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ulid",
+              "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/DownloadFileContentSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/files/{fileId}": {
+      "get": {
+        "operationId": "GetFileMetadata",
+        "summary": "Get file metadata",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fileId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ulid",
+              "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/GetFileMetadataSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/todos/{todoId}/subtodos": {
+      "post": {
+        "operationId": "CreateSubTodo",
+        "summary": "Create new subtodo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "todoId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ulid",
+              "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Content-Type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TodoCreateSubTodoRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreateSubTodoSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/TodoNotFoundError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "get": {
+        "operationId": "ListSubTodos",
+        "summary": "List subtodos for a specific todo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "todoId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ulid",
+              "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "nextToken",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "title",
+                "dueDate",
+                "priority",
+                "createdAt",
+                "modifiedAt"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ListSubTodosSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/TodoNotFoundError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/todos": {
+      "post": {
+        "operationId": "CreateTodo",
+        "summary": "Create new todo",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Content-Type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TodoCreateTodoRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreateTodoSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "get": {
+        "operationId": "ListTodos",
+        "summary": "List todos with filtering, pagination, and search",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "TODO",
+                "IN_PROGRESS",
+                "DONE",
+                "ARCHIVED"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "priority",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "LOW",
+                "MEDIUM",
+                "HIGH"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "tags",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "nextToken",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "title",
+                "dueDate",
+                "priority",
+                "createdAt",
+                "modifiedAt"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dateFrom",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dateTo",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ListTodosSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/todos/{todoId}/subtodos/{subtodoId}": {
+      "delete": {
+        "operationId": "DeleteSubTodo",
+        "summary": "Delete subtodo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "todoId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ulid",
+              "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+            }
+          },
+          {
+            "in": "path",
+            "name": "subtodoId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ulid",
+              "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/DeleteSubTodoSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "description": "SubTodoNotFoundError: SubTodo not found / TodoNotFoundError: Todo not found",
+            "headers": {
+              "Content-Type": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "application/json"
+                }
+              },
+              "X-Single-Value": {
+                "required": false,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Multi-Value": {
+                "required": false,
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SubTodoNotFoundErrorBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TodoNotFoundErrorBody"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put": {
+        "operationId": "UpdateSubTodo",
+        "summary": "Update subtodo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "todoId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ulid",
+              "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+            }
+          },
+          {
+            "in": "path",
+            "name": "subtodoId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ulid",
+              "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Content-Type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TodoUpdateSubTodoRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/UpdateSubTodoSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "description": "SubTodoNotFoundError: SubTodo not found / TodoNotFoundError: Todo not found",
+            "headers": {
+              "Content-Type": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "application/json"
+                }
+              },
+              "X-Single-Value": {
+                "required": false,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Multi-Value": {
+                "required": false,
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SubTodoNotFoundErrorBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TodoNotFoundErrorBody"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SubTodoNotChangeableError: SubTodo in current status or because of parent todo status cannot be changed / SubTodoStatusTransitionInvalidError: SubTodo status transition is conflicting with its status or parent todo status",
+            "headers": {
+              "Content-Type": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "application/json"
+                }
+              },
+              "X-Single-Value": {
+                "required": false,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Multi-Value": {
+                "required": false,
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SubTodoNotChangeableErrorBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SubTodoStatusTransitionInvalidErrorBody"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/todos/{todoId}": {
+      "delete": {
+        "operationId": "DeleteTodo",
+        "summary": "Delete todo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "todoId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ulid",
+              "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/DeleteTodoSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/TodoNotFoundError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "get": {
+        "operationId": "GetTodo",
+        "summary": "Get todo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "todoId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ulid",
+              "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/GetTodoSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/TodoNotFoundError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "head": {
+        "operationId": "HeadTodo",
+        "summary": "Check if todo exists",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "todoId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ulid",
+              "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HeadTodoSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/TodoNotFoundError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "options": {
+        "operationId": "OptionsTodo",
+        "summary": "Get allowed methods for todo resource",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "todoId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ulid",
+              "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "in": "header",
+            "name": "Access-Control-Request-Method",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Access-Control-Request-Headers",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OptionsTodoSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/TodoNotFoundError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put": {
+        "operationId": "PutTodo",
+        "summary": "Replace todo completely",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "todoId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ulid",
+              "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Content-Type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TodoPutTodoRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/PutTodoSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/TodoNotFoundError"
+          },
+          "409": {
+            "$ref": "#/components/responses/TodoNotChangeableError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "UpdateTodo",
+        "summary": "Update todo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "todoId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ulid",
+              "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Content-Type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TodoUpdateTodoRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/UpdateTodoSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/TodoNotFoundError"
+          },
+          "409": {
+            "$ref": "#/components/responses/TodoNotChangeableError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/todos/{todoId}/subtodos/query": {
+      "post": {
+        "operationId": "QuerySubTodo",
+        "summary": "Query subtodos for a specific todo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "todoId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ulid",
+              "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "nextToken",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "title",
+                "dueDate",
+                "priority",
+                "createdAt",
+                "modifiedAt"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "summary",
+                "detailed"
+              ]
+            }
+          },
+          {
+            "in": "header",
+            "name": "Content-Type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TodoQuerySubTodoRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/QuerySubTodoSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/TodoNotFoundError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/todos/query": {
+      "post": {
+        "operationId": "QueryTodo",
+        "summary": "Query todos with advanced search criteria",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "nextToken",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "title",
+                "dueDate",
+                "priority",
+                "createdAt",
+                "modifiedAt"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "in": "header",
+            "name": "Content-Type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TodoQueryTodoRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/QueryTodoSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/todos/{todoId}/status": {
+      "put": {
+        "operationId": "UpdateTodoStatus",
+        "summary": "Update todo status",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "todoId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ulid",
+              "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Content-Type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Single-Value",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Multi-Value",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TodoUpdateTodoStatusRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/UpdateTodoStatusSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/TodoNotFoundError"
+          },
+          "409": {
+            "description": "TodoStatusTransitionInvalidError: Todo status transition is conflicting with current status / TodoNotChangeableError: Todo in current status cannot be changed",
+            "headers": {
+              "Content-Type": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "application/json"
+                }
+              },
+              "X-Single-Value": {
+                "required": false,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Multi-Value": {
+                "required": false,
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/TodoStatusTransitionInvalidErrorBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TodoNotChangeableErrorBody"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RegisterAccountSuccessBody": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 256,
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "modifiedAt": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "modifiedBy": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "createdAt",
+          "modifiedAt",
+          "createdBy",
+          "modifiedBy"
+        ],
+        "additionalProperties": false
+      },
+      "ForbiddenErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "const": "Forbidden request"
+          },
+          "code": {
+            "type": "string",
+            "const": "FORBIDDEN_ERROR"
+          }
+        },
+        "required": [
+          "message",
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "InternalServerErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "const": "Internal server error occurred"
+          },
+          "code": {
+            "type": "string",
+            "const": "INTERNAL_SERVER_ERROR"
+          }
+        },
+        "required": [
+          "message",
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "TooManyRequestsErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "const": "Too many requests"
+          },
+          "code": {
+            "type": "string",
+            "const": "TOO_MANY_REQUESTS_ERROR"
+          }
+        },
+        "required": [
+          "message",
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "UnauthorizedErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "const": "Unauthorized request"
+          },
+          "code": {
+            "type": "string",
+            "const": "UNAUTHORIZED_ERROR"
+          }
+        },
+        "required": [
+          "message",
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "UnsupportedMediaTypeErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "const": "Unsupported media type"
+          },
+          "code": {
+            "type": "string",
+            "const": "UNSUPPORTED_MEDIA_TYPE_ERROR"
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "contentType": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "contentType"
+            ],
+            "additionalProperties": false
+          },
+          "expectedValues": {
+            "type": "object",
+            "properties": {
+              "contentTypes": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "type": "string",
+                    "const": "application/json"
+                  }
+                ],
+                "items": {},
+                "minItems": 1,
+                "maxItems": 1
+              }
+            },
+            "required": [
+              "contentTypes"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "message",
+          "code",
+          "context",
+          "expectedValues"
+        ],
+        "additionalProperties": false
+      },
+      "ValidationErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "const": "Request is invalid"
+          },
+          "code": {
+            "type": "string",
+            "const": "VALIDATION_ERROR"
+          },
+          "issues": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "array",
+                "items": {}
+              },
+              "query": {
+                "type": "array",
+                "items": {}
+              },
+              "param": {
+                "type": "array",
+                "items": {}
+              },
+              "header": {
+                "type": "array",
+                "items": {}
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "message",
+          "code",
+          "issues"
+        ],
+        "additionalProperties": false
+      },
+      "AccessTokenSuccessBody": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "maxLength": 1028
+          },
+          "refreshToken": {
+            "type": "string",
+            "maxLength": 1028
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken"
+        ],
+        "additionalProperties": false
+      },
+      "RefreshTokenSuccessBody": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "maxLength": 1028
+          },
+          "refreshToken": {
+            "type": "string",
+            "maxLength": 1028
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken"
+        ],
+        "additionalProperties": false
+      },
+      "UploadFileSuccessBody": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "number"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "size",
+          "mimeType",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "DownloadFileContentSuccessBody": {},
+      "GetFileMetadataSuccessBody": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "number"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "size",
+          "mimeType",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "CreateSubTodoSuccessBody": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE",
+              "ARCHIVED"
+            ]
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "modifiedAt": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "modifiedBy": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "title",
+          "status",
+          "createdAt",
+          "modifiedAt",
+          "createdBy",
+          "modifiedBy"
+        ],
+        "additionalProperties": false
+      },
+      "TodoNotFoundErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "const": "Todo not found"
+          },
+          "code": {
+            "type": "string",
+            "const": "TODO_NOT_FOUND_ERROR"
+          },
+          "actualValues": {
+            "type": "object",
+            "properties": {
+              "todoId": {
+                "type": "string",
+                "format": "ulid",
+                "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+              }
+            },
+            "required": [
+              "todoId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "message",
+          "code",
+          "actualValues"
+        ],
+        "additionalProperties": false
+      },
+      "CreateTodoSuccessBody": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE",
+              "ARCHIVED"
+            ]
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "modifiedAt": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "modifiedBy": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "title",
+          "status",
+          "createdAt",
+          "modifiedAt",
+          "createdBy",
+          "modifiedBy"
+        ],
+        "additionalProperties": false
+      },
+      "DeleteSubTodoSuccessBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "additionalProperties": false
+      },
+      "SubTodoNotFoundErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "const": "SubTodo not found"
+          },
+          "code": {
+            "type": "string",
+            "const": "SUBTODO_NOT_FOUND_ERROR"
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "todoId": {
+                "type": "string",
+                "format": "ulid",
+                "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+              }
+            },
+            "required": [
+              "todoId"
+            ],
+            "additionalProperties": false
+          },
+          "actualValues": {
+            "type": "object",
+            "properties": {
+              "subtodoId": {
+                "type": "string",
+                "format": "ulid",
+                "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+              }
+            },
+            "required": [
+              "subtodoId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "message",
+          "code",
+          "context",
+          "actualValues"
+        ],
+        "additionalProperties": false
+      },
+      "GetTodoSuccessBody": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE",
+              "ARCHIVED"
+            ]
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "modifiedAt": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "modifiedBy": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "title",
+          "status",
+          "createdAt",
+          "modifiedAt",
+          "createdBy",
+          "modifiedBy"
+        ],
+        "additionalProperties": false
+      },
+      "ListSubTodosSuccessBody": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "accountId": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "parentId": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "TODO",
+                    "IN_PROGRESS",
+                    "DONE",
+                    "ARCHIVED"
+                  ]
+                },
+                "dueDate": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "priority": {
+                  "type": "string",
+                  "enum": [
+                    "LOW",
+                    "MEDIUM",
+                    "HIGH"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "modifiedAt": {
+                  "type": "string"
+                },
+                "createdBy": {
+                  "type": "string"
+                },
+                "modifiedBy": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "accountId",
+                "title",
+                "status",
+                "createdAt",
+                "modifiedAt",
+                "createdBy",
+                "modifiedBy"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "nextToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "additionalProperties": false
+      },
+      "ListTodosSuccessBody": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "accountId": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "parentId": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "TODO",
+                    "IN_PROGRESS",
+                    "DONE",
+                    "ARCHIVED"
+                  ]
+                },
+                "dueDate": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "priority": {
+                  "type": "string",
+                  "enum": [
+                    "LOW",
+                    "MEDIUM",
+                    "HIGH"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "modifiedAt": {
+                  "type": "string"
+                },
+                "createdBy": {
+                  "type": "string"
+                },
+                "modifiedBy": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "accountId",
+                "title",
+                "status",
+                "createdAt",
+                "modifiedAt",
+                "createdBy",
+                "modifiedBy"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "nextToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "additionalProperties": false
+      },
+      "PutTodoSuccessBody": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE",
+              "ARCHIVED"
+            ]
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "modifiedAt": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "modifiedBy": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "title",
+          "status",
+          "createdAt",
+          "modifiedAt",
+          "createdBy",
+          "modifiedBy"
+        ],
+        "additionalProperties": false
+      },
+      "TodoNotChangeableErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "const": "Todo in current status cannot be changed"
+          },
+          "code": {
+            "type": "string",
+            "const": "TODO_NOT_CHANGEABLE_ERROR"
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "todoId": {
+                "type": "string",
+                "format": "ulid",
+                "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+              },
+              "currentStatus": {
+                "type": "string",
+                "enum": [
+                  "TODO",
+                  "IN_PROGRESS",
+                  "DONE",
+                  "ARCHIVED"
+                ]
+              }
+            },
+            "required": [
+              "todoId",
+              "currentStatus"
+            ],
+            "additionalProperties": false
+          },
+          "expectedValues": {
+            "type": "object",
+            "properties": {
+              "allowedStatuses": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "TODO",
+                    "IN_PROGRESS",
+                    "DONE",
+                    "ARCHIVED"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "allowedStatuses"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "message",
+          "code",
+          "context",
+          "expectedValues"
+        ],
+        "additionalProperties": false
+      },
+      "QuerySubTodoSuccessBody": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "accountId": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "parentId": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "TODO",
+                    "IN_PROGRESS",
+                    "DONE",
+                    "ARCHIVED"
+                  ]
+                },
+                "dueDate": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "priority": {
+                  "type": "string",
+                  "enum": [
+                    "LOW",
+                    "MEDIUM",
+                    "HIGH"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "modifiedAt": {
+                  "type": "string"
+                },
+                "createdBy": {
+                  "type": "string"
+                },
+                "modifiedBy": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "accountId",
+                "title",
+                "status",
+                "createdAt",
+                "modifiedAt",
+                "createdBy",
+                "modifiedBy"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "nextToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "additionalProperties": false
+      },
+      "QueryTodoSuccessBody": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "accountId": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "parentId": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "TODO",
+                    "IN_PROGRESS",
+                    "DONE",
+                    "ARCHIVED"
+                  ]
+                },
+                "dueDate": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "priority": {
+                  "type": "string",
+                  "enum": [
+                    "LOW",
+                    "MEDIUM",
+                    "HIGH"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "modifiedAt": {
+                  "type": "string"
+                },
+                "createdBy": {
+                  "type": "string"
+                },
+                "modifiedBy": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "accountId",
+                "title",
+                "status",
+                "createdAt",
+                "modifiedAt",
+                "createdBy",
+                "modifiedBy"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "nextToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateSubTodoSuccessBody": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE",
+              "ARCHIVED"
+            ]
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "modifiedAt": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "modifiedBy": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "title",
+          "status",
+          "createdAt",
+          "modifiedAt",
+          "createdBy",
+          "modifiedBy"
+        ],
+        "additionalProperties": false
+      },
+      "SubTodoNotChangeableErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "const": "SubTodo in current status or because of parent todo status cannot be changed"
+          },
+          "code": {
+            "type": "string",
+            "const": "SUBTODO_NOT_CHANGEABLE_ERROR"
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "todoId": {
+                "type": "string",
+                "format": "ulid",
+                "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+              },
+              "subtodoId": {
+                "type": "string",
+                "format": "ulid",
+                "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+              },
+              "currentTodoStatus": {
+                "type": "string",
+                "enum": [
+                  "TODO",
+                  "IN_PROGRESS",
+                  "DONE",
+                  "ARCHIVED"
+                ]
+              },
+              "currentSubtodoStatus": {
+                "type": "string",
+                "enum": [
+                  "TODO",
+                  "IN_PROGRESS",
+                  "DONE",
+                  "ARCHIVED"
+                ]
+              }
+            },
+            "required": [
+              "todoId",
+              "subtodoId",
+              "currentTodoStatus",
+              "currentSubtodoStatus"
+            ],
+            "additionalProperties": false
+          },
+          "expectedValues": {
+            "type": "object",
+            "properties": {
+              "allowedTodoStatuses": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "TODO",
+                    "IN_PROGRESS",
+                    "DONE",
+                    "ARCHIVED"
+                  ]
+                }
+              },
+              "allowedSubtodoStatuses": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "TODO",
+                    "IN_PROGRESS",
+                    "DONE",
+                    "ARCHIVED"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "allowedTodoStatuses",
+              "allowedSubtodoStatuses"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "message",
+          "code",
+          "context",
+          "expectedValues"
+        ],
+        "additionalProperties": false
+      },
+      "SubTodoStatusTransitionInvalidErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "const": "SubTodo status transition is conflicting with its status or parent todo status"
+          },
+          "code": {
+            "type": "string",
+            "const": "SUBTODO_STATUS_TRANSITION_INVALID_ERROR"
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "todoId": {
+                "type": "string",
+                "format": "ulid",
+                "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+              },
+              "subtodoId": {
+                "type": "string",
+                "format": "ulid",
+                "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+              },
+              "currentTodoStatus": {
+                "type": "string",
+                "enum": [
+                  "TODO",
+                  "IN_PROGRESS",
+                  "DONE",
+                  "ARCHIVED"
+                ]
+              },
+              "currentSubtodoStatus": {
+                "type": "string",
+                "enum": [
+                  "TODO",
+                  "IN_PROGRESS",
+                  "DONE",
+                  "ARCHIVED"
+                ]
+              }
+            },
+            "required": [
+              "todoId",
+              "subtodoId",
+              "currentTodoStatus",
+              "currentSubtodoStatus"
+            ],
+            "additionalProperties": false
+          },
+          "actualValues": {
+            "type": "object",
+            "properties": {
+              "requestedSubtodoStatus": {
+                "type": "string",
+                "enum": [
+                  "TODO",
+                  "IN_PROGRESS",
+                  "DONE",
+                  "ARCHIVED"
+                ]
+              }
+            },
+            "required": [
+              "requestedSubtodoStatus"
+            ],
+            "additionalProperties": false
+          },
+          "expectedValues": {
+            "type": "object",
+            "properties": {
+              "allowedSubtodoStatuses": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "TODO",
+                    "IN_PROGRESS",
+                    "DONE",
+                    "ARCHIVED"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "allowedSubtodoStatuses"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "message",
+          "code",
+          "context",
+          "actualValues",
+          "expectedValues"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateTodoSuccessBody": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE",
+              "ARCHIVED"
+            ]
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "modifiedAt": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "modifiedBy": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "title",
+          "status",
+          "createdAt",
+          "modifiedAt",
+          "createdBy",
+          "modifiedBy"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateTodoStatusSuccessBody": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE",
+              "ARCHIVED"
+            ]
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "modifiedAt": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "modifiedBy": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "title",
+          "status",
+          "createdAt",
+          "modifiedAt",
+          "createdBy",
+          "modifiedBy"
+        ],
+        "additionalProperties": false
+      },
+      "TodoStatusTransitionInvalidErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "const": "Todo status transition is conflicting with current status"
+          },
+          "code": {
+            "type": "string",
+            "const": "TODO_STATUS_TRANSITION_INVALID_ERROR"
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "todoId": {
+                "type": "string",
+                "format": "ulid",
+                "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+              },
+              "currentStatus": {
+                "type": "string",
+                "enum": [
+                  "TODO",
+                  "IN_PROGRESS",
+                  "DONE",
+                  "ARCHIVED"
+                ]
+              }
+            },
+            "required": [
+              "todoId",
+              "currentStatus"
+            ],
+            "additionalProperties": false
+          },
+          "actualValues": {
+            "type": "object",
+            "properties": {
+              "requestedStatus": {
+                "type": "string",
+                "enum": [
+                  "TODO",
+                  "IN_PROGRESS",
+                  "DONE",
+                  "ARCHIVED"
+                ]
+              }
+            },
+            "required": [
+              "requestedStatus"
+            ],
+            "additionalProperties": false
+          },
+          "expectedValues": {
+            "type": "object",
+            "properties": {
+              "allowedStatuses": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "TODO",
+                    "IN_PROGRESS",
+                    "DONE",
+                    "ARCHIVED"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "allowedStatuses"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "message",
+          "code",
+          "context",
+          "actualValues",
+          "expectedValues"
+        ],
+        "additionalProperties": false
+      },
+      "AccountRegisterAccountRequestBody": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 256,
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": false
+      },
+      "AuthAccessTokenRequestBody": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 256,
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": false
+      },
+      "AuthRefreshTokenRequestBody": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "maxLength": 1028
+          }
+        },
+        "required": [
+          "refreshToken"
+        ],
+        "additionalProperties": false
+      },
+      "FileUploadFileRequestBody": {},
+      "TodoCreateSubTodoRequestBody": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "additionalProperties": false
+      },
+      "TodoCreateTodoRequestBody": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "additionalProperties": false
+      },
+      "TodoPutTodoRequestBody": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE",
+              "ARCHIVED"
+            ]
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          }
+        },
+        "required": [
+          "accountId",
+          "title",
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "TodoQuerySubTodoRequestBody": {
+        "type": "object",
+        "properties": {
+          "searchText": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE",
+              "ARCHIVED"
+            ]
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          },
+          "dateRange": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "TodoQueryTodoRequestBody": {
+        "type": "object",
+        "properties": {
+          "searchText": {
+            "type": "string"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE",
+              "ARCHIVED"
+            ]
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          },
+          "dateRange": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "hasParent": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TodoUpdateSubTodoRequestBody": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE",
+              "ARCHIVED"
+            ]
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "TodoUpdateTodoRequestBody": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "TodoUpdateTodoStatusRequestBody": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "enum": [
+              "TODO",
+              "IN_PROGRESS",
+              "DONE",
+              "ARCHIVED"
+            ]
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "responses": {
+      "RegisterAccountSuccess": {
+        "description": "Account created successfully",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/RegisterAccountSuccessBody"
+            }
+          }
+        }
+      },
+      "ForbiddenError": {
+        "description": "Forbidden request",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ForbiddenErrorBody"
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal server error occurred",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/InternalServerErrorBody"
+            }
+          }
+        }
+      },
+      "TooManyRequestsError": {
+        "description": "Too many requests",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/TooManyRequestsErrorBody"
+            }
+          }
+        }
+      },
+      "UnauthorizedError": {
+        "description": "Unauthorized request",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/UnauthorizedErrorBody"
+            }
+          }
+        }
+      },
+      "UnsupportedMediaTypeError": {
+        "description": "Unsupported media type",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/UnsupportedMediaTypeErrorBody"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Validation error",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ValidationErrorBody"
+            }
+          }
+        }
+      },
+      "AccessTokenSuccess": {
+        "description": "Access token created successfully",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AccessTokenSuccessBody"
+            }
+          }
+        }
+      },
+      "RefreshTokenSuccess": {
+        "description": "Refreshed token successfully",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/RefreshTokenSuccessBody"
+            }
+          }
+        }
+      },
+      "UploadFileSuccess": {
+        "description": "File uploaded successfully",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/UploadFileSuccessBody"
+            }
+          }
+        }
+      },
+      "DownloadFileContentSuccess": {
+        "description": "File content retrieved successfully",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/octet-stream"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/DownloadFileContentSuccessBody"
+            }
+          }
+        }
+      },
+      "GetFileMetadataSuccess": {
+        "description": "File metadata retrieved successfully",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/GetFileMetadataSuccessBody"
+            }
+          }
+        }
+      },
+      "CreateSubTodoSuccess": {
+        "description": "SubTodo created successfully",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CreateSubTodoSuccessBody"
+            }
+          }
+        }
+      },
+      "TodoNotFoundError": {
+        "description": "Todo not found",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/TodoNotFoundErrorBody"
+            }
+          }
+        }
+      },
+      "CreateTodoSuccess": {
+        "description": "Todo created successfully",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CreateTodoSuccessBody"
+            }
+          }
+        }
+      },
+      "DeleteSubTodoSuccess": {
+        "description": "SubTodo deleted successfully",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/DeleteSubTodoSuccessBody"
+            }
+          }
+        }
+      },
+      "SubTodoNotFoundError": {
+        "description": "SubTodo not found",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SubTodoNotFoundErrorBody"
+            }
+          }
+        }
+      },
+      "DeleteTodoSuccess": {
+        "description": "Todo deleted successfully",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "GetTodoSuccess": {
+        "description": "Todo retrieved successfully",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/GetTodoSuccessBody"
+            }
+          }
+        }
+      },
+      "HeadTodoSuccess": {
+        "description": "Todo exists",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "ListSubTodosSuccess": {
+        "description": "Subtodos retrieved successfully",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ListSubTodosSuccessBody"
+            }
+          }
+        }
+      },
+      "ListTodosSuccess": {
+        "description": "List todos successfully",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ListTodosSuccessBody"
+            }
+          }
+        }
+      },
+      "OptionsTodoSuccess": {
+        "description": "Allowed methods for todo resource",
+        "headers": {
+          "Allow": {
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "Access-Control-Allow-Origin": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "Access-Control-Allow-Methods": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "Access-Control-Allow-Headers": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "Access-Control-Max-Age": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PutTodoSuccess": {
+        "description": "Todo replaced successfully",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/PutTodoSuccessBody"
+            }
+          }
+        }
+      },
+      "TodoNotChangeableError": {
+        "description": "Todo in current status cannot be changed",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/TodoNotChangeableErrorBody"
+            }
+          }
+        }
+      },
+      "QuerySubTodoSuccess": {
+        "description": "Subtodos query results",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/QuerySubTodoSuccessBody"
+            }
+          }
+        }
+      },
+      "QueryTodoSuccess": {
+        "description": "Todos query results",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/QueryTodoSuccessBody"
+            }
+          }
+        }
+      },
+      "UpdateSubTodoSuccess": {
+        "description": "SubTodo updated successfully",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/UpdateSubTodoSuccessBody"
+            }
+          }
+        }
+      },
+      "SubTodoNotChangeableError": {
+        "description": "SubTodo in current status or because of parent todo status cannot be changed",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SubTodoNotChangeableErrorBody"
+            }
+          }
+        }
+      },
+      "SubTodoStatusTransitionInvalidError": {
+        "description": "SubTodo status transition is conflicting with its status or parent todo status",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SubTodoStatusTransitionInvalidErrorBody"
+            }
+          }
+        }
+      },
+      "UpdateTodoSuccess": {
+        "description": "Todo updated successfully",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/UpdateTodoSuccessBody"
+            }
+          }
+        }
+      },
+      "UpdateTodoStatusSuccess": {
+        "description": "Todo status updated successfully",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/UpdateTodoStatusSuccessBody"
+            }
+          }
+        }
+      },
+      "TodoStatusTransitionInvalidError": {
+        "description": "Todo status transition is conflicting with current status",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/TodoStatusTransitionInvalidErrorBody"
+            }
+          }
+        }
+      }
+    }
+  }
+}

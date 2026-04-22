@@ -12,7 +12,7 @@ import {
   type SafeRequestValidationResult,
   RequestValidationError
 } from "@rexeus/typeweaver-core";
-import { getOperationDefinition, RequestValidator } from "../lib/types/index.js";
+import { getOperationDefinition, RequestValidator } from "<%= typesLibPath %>";
 import type { I<%= pascalCaseOperationId %>Request } from "<%= requestFile %>";
 
 const definition = getOperationDefinition(spec, "<%= resourceName %>", "<%= operationId %>");

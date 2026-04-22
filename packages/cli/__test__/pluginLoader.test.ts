@@ -1,6 +1,5 @@
 /* eslint-disable import/max-dependencies */
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { AwsCdkPlugin } from "@rexeus/typeweaver-aws-cdk";
 import { ClientsPlugin } from "@rexeus/typeweaver-clients";
@@ -13,8 +12,10 @@ import { HonoPlugin } from "@rexeus/typeweaver-hono";
 import { ServerPlugin } from "@rexeus/typeweaver-server";
 import { TypesPlugin } from "@rexeus/typeweaver-types";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { PluginLoadingFailure } from "../src/generators/errors/PluginLoadingFailure.js";
+import { PluginLoadingFailure } from "../src/generators/errors/pluginLoadingFailure.js";
 import { loadPlugins } from "../src/generators/pluginLoader.js";
+import { createLogger } from "../src/logger.js";
+import { createTempDirFactory } from "./__helpers__/tempDir.js";
 
 type RegisteredPlugin = {
   readonly name: string;
@@ -45,26 +46,11 @@ function createRegistry(): {
 }
 
 describe("pluginLoader", () => {
-  const tempDirs: string[] = [];
+  const createTempDir = createTempDirFactory("typeweaver-plugin-");
 
   afterEach(() => {
     vi.restoreAllMocks();
-
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-
-    tempDirs.length = 0;
   });
-
-  function createTempDir(): string {
-    const tempDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "typeweaver-plugin-")
-    );
-    tempDirs.push(tempDir);
-
-    return tempDir;
-  }
 
   test("registers required plugins before loading configured plugins", async () => {
     const requiredPlugin = { name: "types" } as TypesPlugin;
@@ -78,10 +64,11 @@ describe("pluginLoader", () => {
       )
     );
 
-    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const { registry, registeredPlugins } = createRegistry();
+    const stream = { isTTY: false, write: vi.fn() };
+    const logger = createLogger({ stdout: stream, stderr: stream });
 
-    await loadPlugins(registry, [requiredPlugin], ["local"], {
+    await loadPlugins(registry, [requiredPlugin], ["local"], logger, {
       input: "./spec.ts",
       output: "./generated",
       plugins: [pluginPath],
@@ -91,9 +78,11 @@ describe("pluginLoader", () => {
       "types",
       "local-plugin",
     ]);
-    expect(infoSpy).toHaveBeenCalledWith("Successfully loaded 1 plugin(s):");
-    expect(infoSpy).toHaveBeenCalledWith(
-      `  - local-plugin (from ${pluginPath})`
+    expect(stream.write).toHaveBeenCalledWith(
+      "Successfully loaded 1 plugin(s):\n"
+    );
+    expect(stream.write).toHaveBeenCalledWith(
+      `  - local-plugin (from ${pluginPath})`.concat("\n")
     );
   });
 
@@ -101,11 +90,17 @@ describe("pluginLoader", () => {
     const { registry } = createRegistry();
 
     await expect(
-      loadPlugins(registry, [{ name: "types" } as TypesPlugin], ["local"], {
-        input: "./spec.ts",
-        output: "./generated",
-        plugins: ["missing-plugin"],
-      })
+      loadPlugins(
+        registry,
+        [{ name: "types" } as TypesPlugin],
+        ["local"],
+        createLogger({ quiet: true }),
+        {
+          input: "./spec.ts",
+          output: "./generated",
+          plugins: ["missing-plugin"],
+        }
+      )
     ).rejects.toEqual(
       expect.objectContaining<Partial<PluginLoadingFailure>>({
         pluginName: "missing-plugin",
@@ -134,16 +129,273 @@ describe("pluginLoader", () => {
 
     const { registry, registeredPlugins } = createRegistry();
 
-    await loadPlugins(registry, [{ name: "types" } as TypesPlugin], ["local"], {
-      input: "./spec.ts",
-      output: "./generated",
-      plugins: [pluginPath],
-    });
+    await loadPlugins(
+      registry,
+      [{ name: "types" } as TypesPlugin],
+      ["local"],
+      createLogger({ quiet: true }),
+      {
+        input: "./spec.ts",
+        output: "./generated",
+        plugins: [pluginPath],
+      }
+    );
 
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
       "types",
       "default-plugin",
     ]);
+  });
+
+  test("skips non-plugin named exports and picks the real plugin class", async () => {
+    const pluginDir = createTempDir();
+    const pluginPath = path.join(pluginDir, "mixed-exports.mjs");
+
+    fs.writeFileSync(
+      pluginPath,
+      [
+        "export function createPlugin() { return {}; }",
+        "export class RealPlugin {",
+        '  constructor() { this.name = "real-plugin"; }',
+        "}",
+        "",
+      ].join("\n")
+    );
+
+    const { registry, registeredPlugins } = createRegistry();
+
+    await loadPlugins(
+      registry,
+      [{ name: "types" } as TypesPlugin],
+      ["local"],
+      createLogger({ quiet: true }),
+      {
+        input: "./spec.ts",
+        output: "./generated",
+        plugins: [pluginPath],
+      }
+    );
+
+    expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
+      "types",
+      "real-plugin",
+    ]);
+  });
+
+  test("rejects a module whose only function export returns an object without a name", async () => {
+    const pluginDir = createTempDir();
+    const pluginPath = path.join(pluginDir, "nameless-plugin.mjs");
+
+    fs.writeFileSync(
+      pluginPath,
+      ["export function createPlugin() { return {}; }", ""].join("\n")
+    );
+
+    const { registry } = createRegistry();
+
+    await expect(
+      loadPlugins(
+        registry,
+        [{ name: "types" } as TypesPlugin],
+        ["local"],
+        createLogger({ quiet: true }),
+        {
+          input: "./spec.ts",
+          output: "./generated",
+          plugins: [pluginPath],
+        }
+      )
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<PluginLoadingFailure>>({
+        pluginName: pluginPath,
+        attempts: [
+          expect.objectContaining({
+            path: pluginPath,
+          }),
+        ],
+      })
+    );
+  });
+
+  test("rejects a plugin instance whose name is an empty string", async () => {
+    const pluginDir = createTempDir();
+    const pluginPath = path.join(pluginDir, "empty-name-plugin.mjs");
+
+    fs.writeFileSync(
+      pluginPath,
+      [
+        "export class EmptyNamePlugin {",
+        '  constructor() { this.name = ""; }',
+        "}",
+        "",
+      ].join("\n")
+    );
+
+    const { registry } = createRegistry();
+
+    await expect(
+      loadPlugins(
+        registry,
+        [{ name: "types" } as TypesPlugin],
+        ["local"],
+        createLogger({ quiet: true }),
+        {
+          input: "./spec.ts",
+          output: "./generated",
+          plugins: [pluginPath],
+        }
+      )
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<PluginLoadingFailure>>({
+        pluginName: pluginPath,
+      })
+    );
+  });
+
+  test("shape-checks the default export when falling back", async () => {
+    const pluginDir = createTempDir();
+    const pluginPath = path.join(pluginDir, "default-nameless.mjs");
+
+    fs.writeFileSync(
+      pluginPath,
+      ["export default function notAPlugin() { return {}; }", ""].join("\n")
+    );
+
+    const { registry } = createRegistry();
+
+    await expect(
+      loadPlugins(
+        registry,
+        [{ name: "types" } as TypesPlugin],
+        ["local"],
+        createLogger({ quiet: true }),
+        {
+          input: "./spec.ts",
+          output: "./generated",
+          plugins: [pluginPath],
+        }
+      )
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<PluginLoadingFailure>>({
+        pluginName: pluginPath,
+      })
+    );
+  });
+
+  test("surfaces the real constructor error when instantiation throws", async () => {
+    const pluginDir = createTempDir();
+    const pluginPath = path.join(pluginDir, "throwing-plugin.mjs");
+
+    fs.writeFileSync(
+      pluginPath,
+      [
+        "export class BrokenPlugin {",
+        '  constructor() { throw new Error("boot failed: missing TENANT"); }',
+        "}",
+        "",
+      ].join("\n")
+    );
+
+    const { registry } = createRegistry();
+
+    await expect(
+      loadPlugins(
+        registry,
+        [{ name: "types" } as TypesPlugin],
+        ["local"],
+        createLogger({ quiet: true }),
+        {
+          input: "./spec.ts",
+          output: "./generated",
+          plugins: [pluginPath],
+        }
+      )
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<PluginLoadingFailure>>({
+        pluginName: pluginPath,
+        attempts: [
+          expect.objectContaining({
+            path: pluginPath,
+            error: expect.stringContaining("boot failed: missing TENANT"),
+          }),
+        ],
+      })
+    );
+  });
+
+  test("falls through a throwing class to a later valid plugin class", async () => {
+    const pluginDir = createTempDir();
+    const pluginPath = path.join(pluginDir, "throw-then-valid.mjs");
+
+    fs.writeFileSync(
+      pluginPath,
+      [
+        "export class FirstBroken {",
+        '  constructor() { throw new Error("nope"); }',
+        "}",
+        "export class LaterPlugin {",
+        '  constructor() { this.name = "later-plugin"; }',
+        "}",
+        "",
+      ].join("\n")
+    );
+
+    const { registry, registeredPlugins } = createRegistry();
+
+    await loadPlugins(
+      registry,
+      [{ name: "types" } as TypesPlugin],
+      ["local"],
+      createLogger({ quiet: true }),
+      {
+        input: "./spec.ts",
+        output: "./generated",
+        plugins: [pluginPath],
+      }
+    );
+
+    expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
+      "types",
+      "later-plugin",
+    ]);
+  });
+
+  test("does not invoke factory-style function exports during discovery", async () => {
+    const pluginDir = createTempDir();
+    const pluginPath = path.join(pluginDir, "factory-side-effect.mjs");
+    const markerPath = path.join(pluginDir, "factory-was-called.marker");
+
+    fs.writeFileSync(
+      pluginPath,
+      [
+        'import { writeFileSync } from "node:fs";',
+        `export function createPlugin() { writeFileSync(${JSON.stringify(markerPath)}, "called"); return {}; }`,
+        "export class RealPlugin {",
+        '  constructor() { this.name = "real-plugin"; }',
+        "}",
+        "",
+      ].join("\n")
+    );
+
+    const { registry, registeredPlugins } = createRegistry();
+
+    await loadPlugins(
+      registry,
+      [{ name: "types" } as TypesPlugin],
+      ["local"],
+      createLogger({ quiet: true }),
+      {
+        input: "./spec.ts",
+        output: "./generated",
+        plugins: [pluginPath],
+      }
+    );
+
+    expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
+      "types",
+      "real-plugin",
+    ]);
+    expect(fs.existsSync(markerPath)).toBe(false);
   });
 
   test("preserves the expected built-in plugin order after dependency resolution", () => {
