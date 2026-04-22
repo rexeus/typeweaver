@@ -17,55 +17,87 @@ function stubFetch(app: TypeweaverApp, response: Response) {
   return vi.spyOn(app, "fetch").mockResolvedValue(response);
 }
 
+type InvokeNodeAdapterOptions = {
+  readonly app?: TypeweaverApp;
+  readonly response?: Response;
+  readonly method: string;
+  readonly url: string;
+  readonly headers?: Record<string, string>;
+  readonly body?: string | Buffer;
+  readonly adapterOptions?: Parameters<typeof nodeAdapter>[1];
+};
+
+async function invokeNodeAdapter(options: InvokeNodeAdapterOptions) {
+  const app = options.app ?? new TypeweaverApp();
+  const fetchSpy =
+    options.response !== undefined
+      ? stubFetch(app, options.response)
+      : undefined;
+  const handler = nodeAdapter(app, options.adapterOptions);
+  const req = createMockIncomingMessage(
+    options.method,
+    options.url,
+    options.headers,
+    options.body
+  );
+  const res = createMockServerResponse(req);
+
+  handler(req, res);
+  await awaitResponse(res);
+
+  const request = fetchSpy?.mock.calls[0]?.[0] as Request | undefined;
+  return { fetchSpy, request, res };
+}
+
+function expectRequest(request: Request | undefined): Request {
+  if (request === undefined) {
+    throw new Error("Expected app.fetch to receive a Request");
+  }
+
+  return request;
+}
+
 describe("nodeAdapter", () => {
   describe("request translation", () => {
     test("constructs URL from req.url and host header", async () => {
-      const app = new TypeweaverApp();
-      const fetchSpy = stubFetch(app, new Response(""));
+      const { request } = await invokeNodeAdapter({
+        method: "GET",
+        url: "/api/users?page=2",
+        response: new Response(""),
+      });
 
-      const handler = nodeAdapter(app);
-      const req = createMockIncomingMessage("GET", "/api/users?page=2");
-      const res = createMockServerResponse(req);
-
-      handler(req, res);
-      await awaitResponse(res);
-
-      const request = fetchSpy.mock.calls[0]![0] as Request;
-      expect(request.url).toBe("http://localhost:3000/api/users?page=2");
+      expect(expectRequest(request).url).toBe(
+        "http://localhost:3000/api/users?page=2"
+      );
     });
 
     test("forwards HTTP method", async () => {
-      const app = new TypeweaverApp();
-      const fetchSpy = stubFetch(app, new Response(""));
+      const { request } = await invokeNodeAdapter({
+        method: "DELETE",
+        url: "/items/1",
+        response: new Response(""),
+      });
 
-      const handler = nodeAdapter(app);
-      const req = createMockIncomingMessage("DELETE", "/items/1");
-      const res = createMockServerResponse(req);
-
-      handler(req, res);
-      await awaitResponse(res);
-
-      const request = fetchSpy.mock.calls[0]![0] as Request;
-      expect(request.method).toBe("DELETE");
+      expect(expectRequest(request).method).toBe("DELETE");
     });
 
     test("forwards request headers", async () => {
-      const app = new TypeweaverApp();
-      const fetchSpy = stubFetch(app, new Response(""));
-
-      const handler = nodeAdapter(app);
-      const req = createMockIncomingMessage("GET", "/", {
-        authorization: "Bearer token",
-        "x-request-id": "abc-123",
+      const { request } = await invokeNodeAdapter({
+        method: "GET",
+        url: "/",
+        headers: {
+          authorization: "Bearer token",
+          "x-request-id": "abc-123",
+        },
+        response: new Response(""),
       });
-      const res = createMockServerResponse(req);
 
-      handler(req, res);
-      await awaitResponse(res);
-
-      const request = fetchSpy.mock.calls[0]![0] as Request;
-      expect(request.headers.get("authorization")).toBe("Bearer token");
-      expect(request.headers.get("x-request-id")).toBe("abc-123");
+      expect(expectRequest(request).headers.get("authorization")).toBe(
+        "Bearer token"
+      );
+      expect(expectRequest(request).headers.get("x-request-id")).toBe(
+        "abc-123"
+      );
     });
 
     test("forwards body for POST", async () => {
@@ -130,7 +162,7 @@ describe("nodeAdapter", () => {
       await awaitResponse(res);
 
       const request = fetchSpy.mock.calls[0]![0] as Request;
-      expect(request.body).toBeNull();
+      expect(expectRequest(request).body).toBeNull();
     });
 
     test("omits body for HEAD", async () => {
@@ -145,7 +177,7 @@ describe("nodeAdapter", () => {
       await awaitResponse(res);
 
       const request = fetchSpy.mock.calls[0]![0] as Request;
-      expect(request.body).toBeNull();
+      expect(expectRequest(request).body).toBeNull();
     });
   });
 
@@ -413,39 +445,29 @@ describe("nodeAdapter", () => {
     });
 
     test("does not return 413 for oversized GET content-length", async () => {
-      const app = new TypeweaverApp();
-      const fetchSpy = stubFetch(app, new Response("ok"));
-
-      const handler = nodeAdapter(app, { maxBodySize: 1 });
-      const req = createMockIncomingMessage("GET", "/items", {
-        "content-length": "999",
+      const { request, res } = await invokeNodeAdapter({
+        method: "GET",
+        url: "/items",
+        headers: { "content-length": "999" },
+        response: new Response("ok"),
+        adapterOptions: { maxBodySize: 1 },
       });
-      const res = createMockServerResponse(req);
-
-      handler(req, res);
-      await awaitResponse(res);
 
       expect(res.writtenStatus).toBe(200);
-      const request = fetchSpy.mock.calls[0]![0] as Request;
-      expect(request.body).toBeNull();
+      expect(expectRequest(request).body).toBeNull();
     });
 
     test("does not return 413 for oversized HEAD content-length", async () => {
-      const app = new TypeweaverApp();
-      const fetchSpy = stubFetch(app, new Response("ok"));
-
-      const handler = nodeAdapter(app, { maxBodySize: 1 });
-      const req = createMockIncomingMessage("HEAD", "/items", {
-        "content-length": "999",
+      const { request, res } = await invokeNodeAdapter({
+        method: "HEAD",
+        url: "/items",
+        headers: { "content-length": "999" },
+        response: new Response("ok"),
+        adapterOptions: { maxBodySize: 1 },
       });
-      const res = createMockServerResponse(req);
-
-      handler(req, res);
-      await awaitResponse(res);
 
       expect(res.writtenStatus).toBe(200);
-      const request = fetchSpy.mock.calls[0]![0] as Request;
-      expect(request.body).toBeNull();
+      expect(expectRequest(request).body).toBeNull();
     });
 
     test("reports oversized body errors through app onError", async () => {

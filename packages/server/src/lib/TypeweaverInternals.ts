@@ -14,6 +14,10 @@ export type TypeweaverAppInternals = {
 
 const appInternalsRegistry = new WeakMap<object, TypeweaverAppInternals>();
 
+function fallbackReportError(error: unknown): void {
+  console.error(error);
+}
+
 export function setTypeweaverAppInternals(
   app: object,
   internals: TypeweaverAppInternals
@@ -25,4 +29,10 @@ export function getTypeweaverAppInternals(
   app: object
 ): TypeweaverAppInternals | undefined {
   return appInternalsRegistry.get(app);
+}
+
+export function getTypeweaverAppErrorReporter(
+  app: object
+): (error: unknown) => void {
+  return getTypeweaverAppInternals(app)?.reportError ?? fallbackReportError;
 }

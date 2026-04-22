@@ -40,6 +40,31 @@ export type TestAppOptions = {
   "requestHandlers"
 >;
 
+export const DEFAULT_RUNTIME_TEST_APP_OPTIONS = {
+  maxBodySize: 64,
+  validateRequests: false,
+  validateResponses: false,
+} satisfies Pick<
+  TestAppOptions,
+  "maxBodySize" | "validateRequests" | "validateResponses"
+>;
+
+function createSharedRouterOptions(
+  options?: TestAppOptions
+): Omit<
+  TypeweaverRouterOptions<Record<string, RequestHandler<any, any, any>>>,
+  "requestHandlers"
+> {
+  return {
+    validateRequests: options?.validateRequests,
+    validateResponses: options?.validateResponses,
+    handleHttpResponseErrors: options?.handleHttpResponseErrors,
+    handleRequestValidationErrors: options?.handleRequestValidationErrors,
+    handleResponseValidationErrors: options?.handleResponseValidationErrors,
+    handleUnknownErrors: options?.handleUnknownErrors,
+  };
+}
+
 /**
  * Creates a TypeweaverApp with all generated test routers (Todo, Auth, Account) mounted.
  *
@@ -52,41 +77,28 @@ export type TestAppOptions = {
  */
 export function createTestApp(options?: TestAppOptions): TypeweaverApp {
   const app = new TypeweaverApp({ maxBodySize: options?.maxBodySize });
+  const customResponse = options?.customResponses;
+  const sharedRouterOptions = createSharedRouterOptions(options);
 
-  if (options?.customResponses) {
+  if (customResponse !== undefined) {
     app.use(
       defineMiddleware(async (_ctx, _next) => {
-        return options.customResponses!;
+        return customResponse;
       })
     );
   }
 
   const todoRouter = new TodoRouter({
     requestHandlers: new ServerTodoHandlers(options?.throwTodoError),
-    validateRequests: options?.validateRequests,
-    validateResponses: options?.validateResponses,
-    handleHttpResponseErrors: options?.handleHttpResponseErrors,
-    handleRequestValidationErrors: options?.handleRequestValidationErrors,
-    handleResponseValidationErrors: options?.handleResponseValidationErrors,
-    handleUnknownErrors: options?.handleUnknownErrors,
+    ...sharedRouterOptions,
   });
   const authRouter = new AuthRouter({
     requestHandlers: new ServerAuthHandlers(options?.throwAuthError),
-    validateRequests: options?.validateRequests,
-    validateResponses: options?.validateResponses,
-    handleHttpResponseErrors: options?.handleHttpResponseErrors,
-    handleRequestValidationErrors: options?.handleRequestValidationErrors,
-    handleResponseValidationErrors: options?.handleResponseValidationErrors,
-    handleUnknownErrors: options?.handleUnknownErrors,
+    ...sharedRouterOptions,
   });
   const accountRouter = new AccountRouter({
     requestHandlers: new ServerAccountHandlers(options?.throwAccountError),
-    validateRequests: options?.validateRequests,
-    validateResponses: options?.validateResponses,
-    handleHttpResponseErrors: options?.handleHttpResponseErrors,
-    handleRequestValidationErrors: options?.handleRequestValidationErrors,
-    handleResponseValidationErrors: options?.handleResponseValidationErrors,
-    handleUnknownErrors: options?.handleUnknownErrors,
+    ...sharedRouterOptions,
   });
 
   app.route(authRouter);
@@ -94,4 +106,8 @@ export function createTestApp(options?: TestAppOptions): TypeweaverApp {
   app.route(todoRouter);
 
   return app;
+}
+
+export function createRuntimeTestApp(): TypeweaverApp {
+  return createTestApp(DEFAULT_RUNTIME_TEST_APP_OPTIONS);
 }

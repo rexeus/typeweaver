@@ -26,16 +26,40 @@ const NODE_BODY_LIMIT_CAPABILITY: BodyLimitCapability = "prevalidated-request-bo
 
 export function createFetchBodyLimitPolicy(maxBodySize?: number): BodyLimitPolicy {
   return {
-    maxBodySize: maxBodySize ?? DEFAULT_MAX_BODY_SIZE,
+    maxBodySize: resolveMaxBodySize(maxBodySize),
     capability: FETCH_BODY_LIMIT_CAPABILITY,
   };
 }
 
 export function createNodeBodyLimitPolicy(maxBodySize?: number): BodyLimitPolicy {
   return {
-    maxBodySize: maxBodySize ?? DEFAULT_MAX_BODY_SIZE,
+    maxBodySize: resolveMaxBodySize(maxBodySize),
     capability: NODE_BODY_LIMIT_CAPABILITY,
   };
+}
+
+export function resolveMaxBodySize(maxBodySize?: number): number {
+  return maxBodySize ?? DEFAULT_MAX_BODY_SIZE;
+}
+
+export function parseContentLength(
+  value: string | string[] | null | undefined,
+): number | undefined {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  if (rawValue === undefined || rawValue === null) {
+    return undefined;
+  }
+
+  const contentLength = Number(rawValue);
+  if (!Number.isFinite(contentLength) || contentLength < 0) {
+    return undefined;
+  }
+
+  return contentLength;
+}
+
+export function isBodySizeOverLimit(bodySize: number, maxBodySize: number): boolean {
+  return bodySize > maxBodySize;
 }
 
 export function markRequestBodyPrevalidated(request: Request, policy: BodyLimitPolicy): void {

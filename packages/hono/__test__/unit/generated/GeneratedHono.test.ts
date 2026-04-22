@@ -20,6 +20,8 @@ import type {
   IValidationErrorResponseBody,
 } from "test-utils";
 
+type CreateTestHonoOptions = Parameters<typeof createTestHono>[0];
+
 function prepareRequestData(requestData: IHttpRequest): RequestInit {
   const body =
     typeof requestData.body === "string"
@@ -60,121 +62,104 @@ async function expectErrorResponse(
   }
 }
 
+async function requestTestHono(
+  url: string,
+  requestData: IHttpRequest,
+  options?: CreateTestHonoOptions
+): Promise<Response> {
+  return await createTestHono(options).request(
+    url,
+    prepareRequestData(requestData)
+  );
+}
+
 describe("Generated Hono Router", () => {
   describe("Operation Registration & Handling", () => {
     test("should register and handle GET operations", async () => {
-      // Arrange
-      const app = createTestHono();
       const requestData = createListTodosRequest();
 
-      // Act
-      const response = await app.request(
+      const response = await requestTestHono(
         "http://localhost/todos?status=TODO",
-        prepareRequestData(requestData)
+        requestData
       );
 
-      // Assert
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data).toBeDefined();
     });
 
     test("should register and handle POST operations", async () => {
-      // Arrange
-      const app = createTestHono();
       const requestData = createCreateTodoRequest();
 
-      // Act
-      const response = await app.request(
+      const response = await requestTestHono(
         "http://localhost/todos",
-        prepareRequestData(requestData)
+        requestData
       );
 
-      // Assert
       expect(response.status).toBe(201);
       const data = await response.json();
       expect(data).toBeDefined();
     });
 
     test("should register and handle PUT operations", async () => {
-      // Arrange
-      const app = createTestHono();
       const requestData = createUpdateTodoStatusRequest();
 
-      // Act
-      const response = await app.request(
+      const response = await requestTestHono(
         `http://localhost/todos/${requestData.param.todoId}/status`,
-        prepareRequestData(requestData)
+        requestData
       );
 
-      // Assert
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data).toBeDefined();
     });
 
     test("should register and handle DELETE operations", async () => {
-      // Arrange
-      const app = createTestHono();
       const requestData = createDeleteTodoRequest();
 
-      // Act
-      const response = await app.request(
+      const response = await requestTestHono(
         `http://localhost/todos/${requestData.param.todoId}`,
-        prepareRequestData(requestData)
+        requestData
       );
 
-      // Assert
       expect(response.status).toBe(204);
       const data = await response.text();
       expect(data).toBe(""); // DELETE should have no content
     });
 
     test("should register and handle PATCH operations", async () => {
-      // Arrange
-      const app = createTestHono();
       const requestData = createUpdateTodoRequest();
 
-      // Act
-      const response = await app.request(
+      const response = await requestTestHono(
         `http://localhost/todos/${requestData.param.todoId}`,
-        prepareRequestData(requestData)
+        requestData
       );
 
-      // Assert
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data).toBeDefined();
     });
 
     test("should register and handle OPTIONS operations", async () => {
-      // Arrange
-      const app = createTestHono();
       const requestData = createOptionsTodoRequest();
 
-      // Act
-      const response = await app.request(
+      const response = await requestTestHono(
         `http://localhost/todos/${requestData.param.todoId}`,
-        prepareRequestData(requestData)
+        requestData
       );
 
-      // Assert
       expect(response.status).toBe(200);
       expect(response.headers.get("Allow")).toBeDefined();
     });
 
     test("should register and handle HEAD operations", async () => {
-      // Arrange
-      const app = createTestHono();
       const requestData = createHeadTodoRequest();
 
-      // Act
-      const response = await app.request(
+      const response = await requestTestHono(
         `http://localhost/todos/${requestData.param.todoId}`,
-        prepareRequestData(requestData)
+        requestData
       );
 
-      // Assert
       expect(response.status).toBe(200);
       const text = await response.text();
       expect(text).toBe(""); // HEAD should have empty body
@@ -183,38 +168,30 @@ describe("Generated Hono Router", () => {
 
   describe("Request Validation", () => {
     test("should validate valid requests successfully", async () => {
-      // Arrange
-      const app = createTestHono();
       const requestData = createCreateTodoRequest();
 
-      // Act
-      const response = await app.request(
+      const response = await requestTestHono(
         "http://localhost/todos",
-        prepareRequestData(requestData)
+        requestData
       );
 
-      // Assert
       expect(response.status).toBe(201);
       const data = await response.json();
       expect(data).toBeDefined();
     });
 
     test("should reject invalid request body", async () => {
-      // Arrange
-      const app = createTestHono();
       const requestData = createCreateTodoRequest({
         body: {
           priority: "INVALID_PRIORITY" as any, // Invalid priority
         },
       });
 
-      // Act
-      const response = await app.request(
+      const response = await requestTestHono(
         "http://localhost/todos",
-        prepareRequestData(requestData)
+        requestData
       );
 
-      // Assert
       expect(response.status).toBe(400);
       const data = (await response.json()) as IValidationErrorResponseBody;
       expect(data.issues.body).toHaveLength(1);

@@ -33,42 +33,7 @@ import type { I<%= entityResponse.name %>Response } from "<%= entityResponse.pat
             <%= ownResponse.body ? `I${ownResponse.name}ResponseBody` : 'undefined' %>
             >;
 
-<% if (ownResponse.header && ownResponse.body) { %>
-    export const create<%= ownResponse.name %>Response = (input: {
-        header: I<%= ownResponse.name %>ResponseHeader;
-        body: I<%= ownResponse.name %>ResponseBody;
-    }): I<%= ownResponse.name %>Response => ({
-        type: "<%= ownResponse.name %>",
-        statusCode: HttpStatusCode.<%= ownResponse.statusCodeKey %>,
-        header: input.header,
-        body: input.body,
-    });
-<% } else if (ownResponse.header) { %>
-    export const create<%= ownResponse.name %>Response = (input: {
-        header: I<%= ownResponse.name %>ResponseHeader;
-    }): I<%= ownResponse.name %>Response => ({
-        type: "<%= ownResponse.name %>",
-        statusCode: HttpStatusCode.<%= ownResponse.statusCodeKey %>,
-        header: input.header,
-        body: undefined,
-    });
-<% } else if (ownResponse.body) { %>
-    export const create<%= ownResponse.name %>Response = (input: {
-        body: I<%= ownResponse.name %>ResponseBody;
-    }): I<%= ownResponse.name %>Response => ({
-        type: "<%= ownResponse.name %>",
-        statusCode: HttpStatusCode.<%= ownResponse.statusCodeKey %>,
-        header: undefined,
-        body: input.body,
-    });
-<% } else { %>
-    export const create<%= ownResponse.name %>Response = (): I<%= ownResponse.name %>Response => ({
-        type: "<%= ownResponse.name %>",
-        statusCode: HttpStatusCode.<%= ownResponse.statusCodeKey %>,
-        header: undefined,
-        body: undefined,
-    });
-<% } %>
+<%- ownResponse.factory %>
 <% } %>
 
 export type <%= pascalCaseOperationId %>Response =

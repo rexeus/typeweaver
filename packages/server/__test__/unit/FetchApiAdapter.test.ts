@@ -7,23 +7,41 @@ import {
 import { FetchApiAdapter } from "../../src/lib/FetchApiAdapter.js";
 import { BASE_URL } from "../helpers.js";
 
+function createAdapterRequest(path: string, init?: RequestInit): Request {
+  return new Request(`${BASE_URL}${path}`, init);
+}
+
+function parseRequest(request: Request, url?: URL) {
+  return new FetchApiAdapter().toRequest(request, url);
+}
+
+async function expectBodyParseError(
+  request: Request,
+  expectedMessage: string
+): Promise<void> {
+  await expect(parseRequest(request)).rejects.toSatisfy(
+    (error: BodyParseError) => {
+      expect(error).toBeInstanceOf(BodyParseError);
+      expect(error.message).toContain(expectedMessage);
+      expect(error.cause).toBeDefined();
+      return true;
+    }
+  );
+}
+
 describe("FetchApiAdapter", () => {
   describe("toRequest", () => {
     test("should extract method and path", async () => {
-      const adapter = new FetchApiAdapter();
-      const request = new Request(`${BASE_URL}/todos`);
-
-      const result = await adapter.toRequest(request);
+      const result = await parseRequest(createAdapterRequest("/todos"));
 
       expect(result.method).toBe("GET");
       expect(result.path).toBe("/todos");
     });
 
     test("should extract query parameters", async () => {
-      const adapter = new FetchApiAdapter();
-      const request = new Request(`${BASE_URL}/todos?status=TODO&limit=10`);
-
-      const result = await adapter.toRequest(request);
+      const result = await parseRequest(
+        createAdapterRequest("/todos?status=TODO&limit=10")
+      );
 
       expect(result.query).toEqual({ status: "TODO", limit: "10" });
     });
@@ -139,39 +157,23 @@ describe("FetchApiAdapter", () => {
     });
 
     test("should throw BodyParseError for malformed JSON and preserve cause", async () => {
-      const adapter = new FetchApiAdapter();
-      const request = new Request(`${BASE_URL}/todos`, {
+      const request = createAdapterRequest("/todos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: "{ invalid json !!!",
       });
 
-      await expect(adapter.toRequest(request)).rejects.toSatisfy(
-        (error: BodyParseError) => {
-          expect(error).toBeInstanceOf(BodyParseError);
-          expect(error.message).toContain("Invalid JSON");
-          expect(error.cause).toBeDefined();
-          return true;
-        }
-      );
+      await expectBodyParseError(request, "Invalid JSON");
     });
 
     test("should throw BodyParseError for malformed +json body and preserve cause", async () => {
-      const adapter = new FetchApiAdapter();
-      const request = new Request(`${BASE_URL}/todos`, {
+      const request = createAdapterRequest("/todos", {
         method: "PATCH",
         headers: { "Content-Type": "application/merge-patch+json" },
         body: "not valid json",
       });
 
-      await expect(adapter.toRequest(request)).rejects.toSatisfy(
-        (error: BodyParseError) => {
-          expect(error).toBeInstanceOf(BodyParseError);
-          expect(error.message).toContain("Invalid JSON");
-          expect(error.cause).toBeDefined();
-          return true;
-        }
-      );
+      await expectBodyParseError(request, "Invalid JSON");
     });
 
     test("should parse text body", async () => {
@@ -244,21 +246,13 @@ describe("FetchApiAdapter", () => {
     });
 
     test("should throw BodyParseError for malformed multipart/form-data", async () => {
-      const adapter = new FetchApiAdapter();
-      const request = new Request(`${BASE_URL}/todos`, {
+      const request = createAdapterRequest("/todos", {
         method: "POST",
         headers: { "Content-Type": "multipart/form-data; boundary=invalid" },
         body: "this is not valid multipart data",
       });
 
-      await expect(adapter.toRequest(request)).rejects.toSatisfy(
-        (error: BodyParseError) => {
-          expect(error).toBeInstanceOf(BodyParseError);
-          expect(error.message).toContain("multipart/form-data");
-          expect(error.cause).toBeDefined();
-          return true;
-        }
-      );
+      await expectBodyParseError(request, "multipart/form-data");
     });
 
     test("should fall back to raw text for unknown content types", async () => {

@@ -84,7 +84,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
   private readonly onError: (error: unknown) => void;
 
   public constructor(options?: TypeweaverAppOptions) {
-    this.onError = options?.onError ?? console.error;
+    this.onError = options?.onError ?? (error => console.error(error));
     this.adapter = initializeTypeweaverAppRuntime({
       app: this,
       options,

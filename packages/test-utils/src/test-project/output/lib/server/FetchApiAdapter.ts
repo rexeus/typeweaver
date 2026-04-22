@@ -13,7 +13,12 @@ import type {
   IHttpRequest,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
-import { createFetchBodyLimitPolicy, hasSatisfiedBodyLimitPolicy } from "./BodyLimitPolicy.js";
+import {
+  createFetchBodyLimitPolicy,
+  hasSatisfiedBodyLimitPolicy,
+  isBodySizeOverLimit,
+  parseContentLength,
+} from "./BodyLimitPolicy.js";
 import { BodyParseError, PayloadTooLargeError, ResponseSerializationError } from "./Errors.js";
 import type { BodyLimitPolicy } from "./BodyLimitPolicy.js";
 
@@ -221,17 +226,12 @@ export class FetchApiAdapter {
       return request;
     }
 
-    const contentLengthHeader = request.headers.get("content-length");
-    if (contentLengthHeader === null) {
+    const contentLength = parseContentLength(request.headers.get("content-length"));
+    if (contentLength === undefined) {
       return this.readBodyWithLimit(request);
     }
 
-    const contentLength = Number(contentLengthHeader);
-    if (!Number.isFinite(contentLength) || contentLength < 0) {
-      return this.readBodyWithLimit(request);
-    }
-
-    if (contentLength > this.bodyLimitPolicy.maxBodySize) {
+    if (isBodySizeOverLimit(contentLength, this.bodyLimitPolicy.maxBodySize)) {
       throw new PayloadTooLargeError(contentLength, this.bodyLimitPolicy.maxBodySize);
     }
 
@@ -251,7 +251,7 @@ export class FetchApiAdapter {
         if (done) break;
 
         totalBytes += value.byteLength;
-        if (totalBytes > this.bodyLimitPolicy.maxBodySize) {
+        if (isBodySizeOverLimit(totalBytes, this.bodyLimitPolicy.maxBodySize)) {
           throw new PayloadTooLargeError(totalBytes, this.bodyLimitPolicy.maxBodySize);
         }
         chunks.push(value);

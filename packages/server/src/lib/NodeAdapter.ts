@@ -12,10 +12,15 @@ import {
 } from "@rexeus/typeweaver-core";
 import {
   createNodeBodyLimitPolicy,
+  isBodySizeOverLimit,
   markRequestBodyPrevalidated,
+  parseContentLength,
 } from "./BodyLimitPolicy.js";
 import { PayloadTooLargeError } from "./Errors.js";
-import { getTypeweaverAppInternals } from "./TypeweaverInternals.js";
+import {
+  getTypeweaverAppErrorReporter,
+  getTypeweaverAppInternals,
+} from "./TypeweaverInternals.js";
 import type { TypeweaverApp } from "./TypeweaverApp.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
@@ -46,15 +51,10 @@ export function nodeAdapter(
   const maxBodySize =
     options?.maxBodySize ?? appInternals?.bodyLimitPolicy.maxBodySize;
   const bodyLimitPolicy = createNodeBodyLimitPolicy(maxBodySize);
+  const reportError = getTypeweaverAppErrorReporter(app);
 
   return (req, res) => {
-    void handleRequest(
-      app,
-      req,
-      res,
-      bodyLimitPolicy,
-      appInternals?.reportError
-    );
+    void handleRequest(app, req, res, bodyLimitPolicy, reportError);
   };
 }
 
@@ -63,7 +63,7 @@ async function handleRequest(
   req: IncomingMessage,
   res: ServerResponse,
   bodyLimitPolicy: ReturnType<typeof createNodeBodyLimitPolicy>,
-  reportError?: (error: unknown) => void
+  reportError: (error: unknown) => void
 ): Promise<void> {
   try {
     const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
@@ -99,29 +99,15 @@ async function handleRequest(
     res.writeHead(response.status);
     res.end(Buffer.from(await response.arrayBuffer()));
   } catch (error) {
+    reportError(error);
+
     if (error instanceof PayloadTooLargeError) {
-      reportError?.(error);
-      if (!res.headersSent) {
-        res.writeHead(payloadTooLargeDefaultError.statusCode, {
-          "content-type": "application/json",
-        });
-      }
-      res.end(
-        JSON.stringify(createDefaultErrorBody(payloadTooLargeDefaultError))
-      );
+      writeDefaultErrorResponse(res, payloadTooLargeDefaultError);
       void drainRequest(req).catch(() => {});
       return;
     }
 
-    console.error(error);
-    if (!res.headersSent) {
-      res.writeHead(internalServerErrorDefaultError.statusCode, {
-        "content-type": "application/json",
-      });
-    }
-    res.end(
-      JSON.stringify(createDefaultErrorBody(internalServerErrorDefaultError))
-    );
+    writeDefaultErrorResponse(res, internalServerErrorDefaultError);
   }
 }
 
@@ -133,23 +119,29 @@ function enforceContentLengthLimit(
   req: IncomingMessage,
   maxBodySize: number
 ): void {
-  const contentLengthHeader = req.headers["content-length"];
-  const rawContentLength = Array.isArray(contentLengthHeader)
-    ? contentLengthHeader[0]
-    : contentLengthHeader;
-
-  if (rawContentLength === undefined) {
+  const contentLength = parseContentLength(req.headers["content-length"]);
+  if (contentLength === undefined) {
     return;
   }
 
-  const contentLength = Number(rawContentLength);
-  if (!Number.isFinite(contentLength) || contentLength < 0) {
-    return;
-  }
-
-  if (contentLength > maxBodySize) {
+  if (isBodySizeOverLimit(contentLength, maxBodySize)) {
     throw new PayloadTooLargeError(contentLength, maxBodySize);
   }
+}
+
+function writeDefaultErrorResponse(
+  res: ServerResponse,
+  error:
+    | typeof payloadTooLargeDefaultError
+    | typeof internalServerErrorDefaultError
+): void {
+  if (!res.headersSent) {
+    res.writeHead(error.statusCode, {
+      "content-type": "application/json",
+    });
+  }
+
+  res.end(JSON.stringify(createDefaultErrorBody(error)));
 }
 
 async function drainRequest(req: IncomingMessage): Promise<void> {
@@ -204,7 +196,7 @@ function collectBody(
       if (isSettled) return;
 
       totalBytes += chunk.byteLength;
-      if (totalBytes > maxBodySize) {
+      if (isBodySizeOverLimit(totalBytes, maxBodySize)) {
         req.pause();
         req.removeAllListeners("data");
         req.removeAllListeners("end");
