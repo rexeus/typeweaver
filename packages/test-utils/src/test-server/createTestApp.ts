@@ -33,6 +33,8 @@ export type TestAppOptions = {
   readonly throwAccountError?: Error | ITypedHttpResponse;
   /** Custom response to return for all requests (bypasses handlers). */
   readonly customResponses?: IHttpResponse;
+  /** Maximum request body size forwarded to the app. */
+  readonly maxBodySize?: number;
 } & Omit<
   TypeweaverRouterOptions<Record<string, RequestHandler<any, any, any>>>,
   "requestHandlers"
@@ -49,7 +51,7 @@ export type TestAppOptions = {
  * @returns A configured TypeweaverApp instance
  */
 export function createTestApp(options?: TestAppOptions): TypeweaverApp {
-  const app = new TypeweaverApp();
+  const app = new TypeweaverApp({ maxBodySize: options?.maxBodySize });
 
   if (options?.customResponses) {
     app.use(

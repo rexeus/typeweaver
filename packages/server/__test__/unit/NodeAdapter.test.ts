@@ -3,6 +3,8 @@ import {
   payloadTooLargeDefaultError,
 } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
+import { PayloadTooLargeError } from "../../src/lib/Errors.js";
+import { FetchApiAdapter } from "../../src/lib/FetchApiAdapter.js";
 import { nodeAdapter } from "../../src/lib/NodeAdapter.js";
 import { TypeweaverApp } from "../../src/lib/TypeweaverApp.js";
 import {
@@ -111,12 +113,17 @@ describe("nodeAdapter", () => {
       expect(receivedBytes).toEqual(binaryBody);
     });
 
-    test("omits body for GET", async () => {
+    test("skips body collection for GET requests", async () => {
       const app = new TypeweaverApp();
       const fetchSpy = stubFetch(app, new Response(""));
 
       const handler = nodeAdapter(app);
-      const req = createMockIncomingMessage("GET", "/items");
+      const req = createMockIncomingMessage(
+        "GET",
+        "/items",
+        { "content-length": "5" },
+        "hello"
+      );
       const res = createMockServerResponse(req);
 
       handler(req, res);
@@ -286,7 +293,7 @@ describe("nodeAdapter", () => {
 
   describe("body size enforcement", () => {
     test("returns 413 when body exceeds maxBodySize", async () => {
-      const app = new TypeweaverApp();
+      const app = new TypeweaverApp({ onError: vi.fn() });
       stubFetch(app, new Response(""));
 
       const handler = nodeAdapter(app, { maxBodySize: 16 });
@@ -354,18 +361,110 @@ describe("nodeAdapter", () => {
       expect(await request.text()).toBe(body);
     });
 
-    test("does not enforce body size for GET requests", async () => {
-      const app = new TypeweaverApp();
+    test("uses app maxBodySize when adapter option is omitted", async () => {
+      const app = new TypeweaverApp({ maxBodySize: 8, onError: vi.fn() });
       stubFetch(app, new Response("ok"));
 
+      const handler = nodeAdapter(app);
+      const req = createMockIncomingMessage(
+        "POST",
+        "/upload",
+        { "content-type": "text/plain" },
+        "x".repeat(16)
+      );
+      const res = createMockServerResponse(req);
+
+      handler(req, res);
+      await awaitResponse(res);
+
+      expect(res.writtenStatus).toBe(413);
+      const parsed = JSON.parse(res.writtenBody);
+      expect(parsed).toEqual({
+        code: payloadTooLargeDefaultError.code,
+        message: payloadTooLargeDefaultError.message,
+      });
+    });
+
+    test("marks stricter Node prevalidation so fetch parsing skips duplicate reads", async () => {
+      const app = new TypeweaverApp({ maxBodySize: 64 });
+      const readBodyWithLimitSpy = vi.spyOn(
+        FetchApiAdapter.prototype as never,
+        "readBodyWithLimit" as never
+      );
+
+      const handler = nodeAdapter(app, { maxBodySize: 16 });
+      const req = createMockIncomingMessage(
+        "POST",
+        "/missing",
+        { "content-type": "text/plain" },
+        "hello"
+      );
+      const res = createMockServerResponse(req);
+
+      handler(req, res);
+      await awaitResponse(res);
+
+      expect(res.writtenStatus).toBe(404);
+      expect(readBodyWithLimitSpy).not.toHaveBeenCalled();
+
+      readBodyWithLimitSpy.mockRestore();
+    });
+
+    test("does not return 413 for oversized GET content-length", async () => {
+      const app = new TypeweaverApp();
+      const fetchSpy = stubFetch(app, new Response("ok"));
+
       const handler = nodeAdapter(app, { maxBodySize: 1 });
-      const req = createMockIncomingMessage("GET", "/items");
+      const req = createMockIncomingMessage("GET", "/items", {
+        "content-length": "999",
+      });
       const res = createMockServerResponse(req);
 
       handler(req, res);
       await awaitResponse(res);
 
       expect(res.writtenStatus).toBe(200);
+      const request = fetchSpy.mock.calls[0]![0] as Request;
+      expect(request.body).toBeNull();
+    });
+
+    test("does not return 413 for oversized HEAD content-length", async () => {
+      const app = new TypeweaverApp();
+      const fetchSpy = stubFetch(app, new Response("ok"));
+
+      const handler = nodeAdapter(app, { maxBodySize: 1 });
+      const req = createMockIncomingMessage("HEAD", "/items", {
+        "content-length": "999",
+      });
+      const res = createMockServerResponse(req);
+
+      handler(req, res);
+      await awaitResponse(res);
+
+      expect(res.writtenStatus).toBe(200);
+      const request = fetchSpy.mock.calls[0]![0] as Request;
+      expect(request.body).toBeNull();
+    });
+
+    test("reports oversized body errors through app onError", async () => {
+      const onError = vi.fn();
+      const app = new TypeweaverApp({ maxBodySize: 64, onError });
+
+      const handler = nodeAdapter(app, { maxBodySize: 8 });
+      const req = createMockIncomingMessage(
+        "POST",
+        "/upload",
+        { "content-type": "text/plain" },
+        "x".repeat(16)
+      );
+      const res = createMockServerResponse(req);
+
+      handler(req, res);
+      await awaitResponse(res);
+
+      expect(res.writtenStatus).toBe(413);
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(PayloadTooLargeError);
     });
   });
 });

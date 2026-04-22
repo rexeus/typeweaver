@@ -19,19 +19,19 @@ import {
 } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { BodyParseError, PayloadTooLargeError } from "./Errors.js";
-import { FetchApiAdapter } from "./FetchApiAdapter.js";
 import { executeMiddlewarePipeline } from "./Middleware.js";
 import { Router } from "./Router.js";
 import { StateMap } from "./StateMap.js";
+import { initializeTypeweaverAppRuntime } from "./TypeweaverAppRuntime.js";
 import type { Middleware } from "./Middleware.js";
 import type { RequestHandler } from "./RequestHandler.js";
 import type {
   HttpResponseErrorHandler,
+  RequestValidationErrorHandler,
   ResponseValidationErrorHandler,
   RouteDefinition,
   RouteMatch,
   UnknownErrorHandler,
-  RequestValidationErrorHandler,
 } from "./Router.js";
 import type { ServerContext } from "./ServerContext.js";
 import type { StateRequirementError, TypedMiddleware } from "./TypedMiddleware.js";
@@ -79,8 +79,12 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
   private readonly onError: (error: unknown) => void;
 
   public constructor(options?: TypeweaverAppOptions) {
-    this.adapter = new FetchApiAdapter({ maxBodySize: options?.maxBodySize });
     this.onError = options?.onError ?? console.error;
+    this.adapter = initializeTypeweaverAppRuntime({
+      app: this,
+      options,
+      reportError: (error) => this.safeOnError(error),
+    });
   }
 
   private safeOnError(error: unknown): void {

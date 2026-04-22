@@ -13,10 +13,13 @@ import type {
   IHttpRequest,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
+import { createFetchBodyLimitPolicy, hasSatisfiedBodyLimitPolicy } from "./BodyLimitPolicy.js";
 import { BodyParseError, PayloadTooLargeError, ResponseSerializationError } from "./Errors.js";
+import type { BodyLimitPolicy } from "./BodyLimitPolicy.js";
 
 export type FetchApiAdapterOptions = {
   readonly maxBodySize?: number;
+  readonly bodyLimitPolicy?: BodyLimitPolicy;
 };
 
 /**
@@ -31,12 +34,11 @@ export type FetchApiAdapterOptions = {
  * Bun, Deno, Node.js (>=18), Cloudflare Workers.
  */
 export class FetchApiAdapter {
-  private static readonly DEFAULT_MAX_BODY_SIZE = 1_048_576; // 1 MB
-
-  private readonly maxBodySize: number;
+  private readonly bodyLimitPolicy: BodyLimitPolicy;
 
   public constructor(options?: FetchApiAdapterOptions) {
-    this.maxBodySize = options?.maxBodySize ?? FetchApiAdapter.DEFAULT_MAX_BODY_SIZE;
+    this.bodyLimitPolicy =
+      options?.bodyLimitPolicy ?? createFetchBodyLimitPolicy(options?.maxBodySize);
   }
 
   /**
@@ -215,6 +217,10 @@ export class FetchApiAdapter {
   }
 
   private async enforceBodySizeLimit(request: Request): Promise<Request> {
+    if (hasSatisfiedBodyLimitPolicy(request, this.bodyLimitPolicy)) {
+      return request;
+    }
+
     const contentLengthHeader = request.headers.get("content-length");
     if (contentLengthHeader === null) {
       return this.readBodyWithLimit(request);
@@ -225,8 +231,8 @@ export class FetchApiAdapter {
       return this.readBodyWithLimit(request);
     }
 
-    if (contentLength > this.maxBodySize) {
-      throw new PayloadTooLargeError(contentLength, this.maxBodySize);
+    if (contentLength > this.bodyLimitPolicy.maxBodySize) {
+      throw new PayloadTooLargeError(contentLength, this.bodyLimitPolicy.maxBodySize);
     }
 
     return request;
@@ -245,8 +251,8 @@ export class FetchApiAdapter {
         if (done) break;
 
         totalBytes += value.byteLength;
-        if (totalBytes > this.maxBodySize) {
-          throw new PayloadTooLargeError(totalBytes, this.maxBodySize);
+        if (totalBytes > this.bodyLimitPolicy.maxBodySize) {
+          throw new PayloadTooLargeError(totalBytes, this.bodyLimitPolicy.maxBodySize);
         }
         chunks.push(value);
       }

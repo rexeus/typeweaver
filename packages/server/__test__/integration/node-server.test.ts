@@ -1,8 +1,11 @@
 import { resolve } from "node:path";
+import { payloadTooLargeDefaultError } from "@rexeus/typeweaver-core";
 import getPort from "get-port";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { fetchJson, RUNTIMES_DIR, spawnRuntimeServer } from "./helpers.js";
 import type { RuntimeServer } from "./helpers.js";
+
+const OVERSIZED_BODY = "x".repeat(128);
 
 describe("Node.js runtime server", () => {
   let server: RuntimeServer;
@@ -88,5 +91,16 @@ describe("Node.js runtime server", () => {
     });
     expect(status).toBe(400);
     expect(body.code).toBe("BAD_REQUEST");
+  });
+
+  test("POST /todos with oversized body returns 413 with PAYLOAD_TOO_LARGE code", async () => {
+    const { status, body } = await fetchJson(`${server.baseUrl}/todos`, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: OVERSIZED_BODY,
+    });
+    expect(status).toBe(413);
+    expect(body.code).toBe("PAYLOAD_TOO_LARGE");
+    expect(body.message).toBe(payloadTooLargeDefaultError.message);
   });
 });

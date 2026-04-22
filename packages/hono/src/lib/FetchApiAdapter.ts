@@ -133,9 +133,7 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
     return rawBody || undefined;
   }
 
-  private buildResponseBody(
-    body: any
-  ): string | ArrayBuffer | Blob | null {
+  private buildResponseBody(body: any): string | ArrayBuffer | Blob | null {
     if (body === undefined) {
       return null;
     }
@@ -151,7 +149,10 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
     return JSON.stringify(body);
   }
 
-  private buildResponseHeaders(header?: IHttpHeader, body?: IHttpBody): Headers {
+  private buildResponseHeaders(
+    header?: IHttpHeader,
+    body?: IHttpBody
+  ): Headers {
     const headers = new Headers();
 
     if (header) {

@@ -260,7 +260,7 @@ describe("ResponseGenerator", () => {
       responsesOutputDir: "/out/responses",
       specOutputDir: "/out/spec",
       getCanonicalResponse: (name: string) =>
-        normalizedSpec.responses.find((r) => r.name === name)!,
+        normalizedSpec.responses.find(r => r.name === name)!,
       getCanonicalResponseOutputFile: (responseName: string) => {
         return path.join("/out/responses", `${responseName}Response.ts`);
       },
