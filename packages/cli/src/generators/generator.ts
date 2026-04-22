@@ -22,9 +22,9 @@ import {
   formatGeneratedOutput,
   generateRegisteredFiles,
   initializeRegisteredPlugins,
-  loadGeneratorPlugins,
-  loadNormalizedSpec,
 } from "./generatorSupport.js";
+import { loadPlugins } from "./pluginLoader.js";
+import { loadSpec } from "./specLoader.js";
 import type { GenerateSummary } from "../generationResult.js";
 import type { Logger } from "../logger.js";
 import type { PluginResolutionStrategy } from "./pluginLoader.js";
@@ -184,13 +184,13 @@ export class Generator {
     paths: GenerationPaths,
     config: GeneratorConfig | undefined
   ): Promise<NormalizedSpec> {
-    await loadGeneratorPlugins({
-      registry: this.registry,
-      requiredPlugins: this.requiredPlugins,
-      strategies: this.strategies,
-      logger: this.logger,
-      generationConfig: config,
-    });
+    await loadPlugins(
+      this.registry,
+      this.requiredPlugins,
+      this.strategies,
+      this.logger,
+      config
+    );
 
     assertSafePluginOutputNamespaces(
       this.registry.getAll().map(registration => registration.plugin.name),
@@ -203,10 +203,11 @@ export class Generator {
         isDryRun ? " for dry-run preview" : ""
       }...`
     );
-    let normalizedSpec = await loadNormalizedSpec({
+    const { normalizedSpec: initialSpec } = await loadSpec({
       inputFile: paths.inputFile,
       specOutputDir: paths.specOutputDir,
     });
+    let normalizedSpec = initialSpec;
 
     const pluginContext = this.contextBuilder.createPluginContext({
       pluginName: "typeweaver",

@@ -4,7 +4,11 @@ import { buildOpenApiDocument } from "./openApiBuilder.js";
 import type { OpenApiPluginConfig } from "./types.js";
 
 export * from "./types.js";
-export { buildOpenApiDocument, toOpenApiPath } from "./openApiBuilder.js";
+export {
+  buildOpenApiDocument,
+  MERGED_DUPLICATE_STATUS_RESPONSE,
+  toOpenApiPath,
+} from "./openApiBuilder.js";
 
 export class OpenApiPlugin extends BasePlugin {
   public readonly name = "openapi";

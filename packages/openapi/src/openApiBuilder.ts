@@ -23,6 +23,9 @@ const DEFAULT_INFO = {
   version: "0.0.0",
 } as const;
 
+export const MERGED_DUPLICATE_STATUS_RESPONSE =
+  "MERGED_DUPLICATE_STATUS_RESPONSE" as const;
+
 export function buildOpenApiDocument(
   input: OpenApiBuilderInput
 ): OpenApiBuildResult {
@@ -101,21 +104,210 @@ function buildOperationObject(params: {
       location: `operation:${params.operation.operationId}:requestBody`,
       registry: params.registry,
     }),
-    responses: Object.fromEntries(
-      params.operation.responses.map(responseUsage => {
-        return [
-          getResponseStatusCode(responseUsage, params.canonicalResponsesByName),
-          buildResponseUsageObject({
+    responses: buildResponsesMap({
+      resourceName: params.resourceName,
+      operation: params.operation,
+      canonicalResponsesByName: params.canonicalResponsesByName,
+      registry: params.registry,
+    }),
+  });
+}
+
+function buildResponsesMap(params: {
+  readonly resourceName: string;
+  readonly operation: NormalizedOperation;
+  readonly canonicalResponsesByName: ReadonlyMap<string, NormalizedResponse>;
+  readonly registry: ReturnType<typeof createSchemaRegistry>;
+}): Record<string, JsonSchemaObject> {
+  const byStatusCode = new Map<string, NormalizedResponseUsage[]>();
+  for (const responseUsage of params.operation.responses) {
+    const statusCode = getResponseStatusCode(
+      responseUsage,
+      params.canonicalResponsesByName
+    );
+    const existing = byStatusCode.get(statusCode);
+    if (existing === undefined) {
+      byStatusCode.set(statusCode, [responseUsage]);
+    } else {
+      existing.push(responseUsage);
+    }
+  }
+
+  const responses: Record<string, JsonSchemaObject> = {};
+  for (const [statusCode, usages] of byStatusCode) {
+    responses[statusCode] =
+      usages.length === 1
+        ? buildResponseUsageObject({
             resourceName: params.resourceName,
             operation: params.operation,
-            responseUsage,
+            responseUsage: usages[0]!,
             canonicalResponsesByName: params.canonicalResponsesByName,
             registry: params.registry,
-          }),
-        ];
-      })
-    ),
+          })
+        : buildMergedResponse({
+            resourceName: params.resourceName,
+            operation: params.operation,
+            statusCode,
+            usages,
+            canonicalResponsesByName: params.canonicalResponsesByName,
+            registry: params.registry,
+          });
+  }
+
+  return responses;
+}
+
+// OpenAPI 3.1 allows exactly one response object per status code, so when an
+// operation declares multiple (e.g. two distinct 404 shapes) we flatten them
+// into a single entry whose body schema is a `oneOf` of each variant. Headers
+// travel along only when every variant declares the identical schema (shared
+// import): OpenAPI has no way to vary headers per variant, so we refuse to
+// invent a union there.
+function buildMergedResponse(params: {
+  readonly resourceName: string;
+  readonly operation: NormalizedOperation;
+  readonly statusCode: string;
+  readonly usages: readonly NormalizedResponseUsage[];
+  readonly canonicalResponsesByName: ReadonlyMap<string, NormalizedResponse>;
+  readonly registry: ReturnType<typeof createSchemaRegistry>;
+}): JsonSchemaObject {
+  const operationPrefix = `${toPascalCase(params.resourceName)}${toPascalCase(params.operation.operationId)}`;
+  const bodySchemas: JsonSchemaObject[] = [];
+  const descriptions: string[] = [];
+  const variantNames: string[] = [];
+  const headerSchemas: ($ZodType | undefined)[] = [];
+  const location = `operation:${params.operation.operationId}:response:${params.statusCode}`;
+
+  for (const usage of params.usages) {
+    const response = resolveResponse(usage, params.canonicalResponsesByName);
+    variantNames.push(response.name);
+    headerSchemas.push(response.header);
+    if (response.description.length > 0) {
+      descriptions.push(`${response.name}: ${response.description}`);
+    }
+
+    const bodySchema = resolveVariantBodySchema({
+      usage,
+      response,
+      operationPrefix,
+      location,
+      registry: params.registry,
+    });
+    if (bodySchema !== undefined) {
+      bodySchemas.push(bodySchema);
+    }
+  }
+
+  const sharedHeader = findSharedHeaderSchema(headerSchemas);
+  if (sharedHeader === "divergent") {
+    params.registry.addWarning({
+      code: MERGED_DUPLICATE_STATUS_RESPONSE,
+      location: `${location}:headers`,
+      message: `Dropped headers at status ${params.statusCode}: variants declare different header schemas which OpenAPI 3.1 cannot express per-variant (variants: ${variantNames.join(", ")}).`,
+    });
+  }
+
+  params.registry.addWarning({
+    code: MERGED_DUPLICATE_STATUS_RESPONSE,
+    location,
+    message: `${variantNames.length} responses at status ${params.statusCode} merged into one (variants: ${variantNames.join(", ")}).`,
   });
+
+  const description =
+    descriptions.length > 0
+      ? descriptions.join(" / ")
+      : `Multiple responses at status ${params.statusCode}.`;
+
+  return omitUndefinedEntries({
+    description,
+    headers:
+      sharedHeader !== undefined && sharedHeader !== "divergent"
+        ? buildHeaders({
+            schema: sharedHeader,
+            location: `${location}:headers`,
+            registry: params.registry,
+          })
+        : undefined,
+    content: buildMergedContent(bodySchemas),
+  });
+}
+
+function resolveVariantBodySchema(params: {
+  readonly usage: NormalizedResponseUsage;
+  readonly response: NormalizedResponse;
+  readonly operationPrefix: string;
+  readonly location: string;
+  readonly registry: ReturnType<typeof createSchemaRegistry>;
+}): JsonSchemaObject | undefined {
+  if (params.response.body === undefined) {
+    return undefined;
+  }
+
+  if (params.usage.source === "canonical") {
+    // Canonical bodies are registered by the top-level pass under the
+    // `${PascalCase(name)}Body` slot, so we can point straight at the
+    // existing ref instead of re-registering (which would append a `2`
+    // suffix via reserveName).
+    return {
+      $ref: `#/components/schemas/${toPascalCase(params.response.name)}Body`,
+    };
+  }
+
+  return params.registry.register({
+    name: `${params.operationPrefix}${toPascalCase(params.response.name)}Body`,
+    schema: params.response.body,
+    location: `${params.location}:${params.response.name}:body`,
+  });
+}
+
+function buildMergedContent(
+  bodySchemas: readonly JsonSchemaObject[]
+): JsonSchemaObject | undefined {
+  if (bodySchemas.length === 0) {
+    return undefined;
+  }
+
+  return {
+    "application/json": {
+      schema:
+        bodySchemas.length === 1 ? bodySchemas[0]! : { oneOf: bodySchemas },
+    },
+  };
+}
+
+// Returns the shared schema when every variant points at the exact same
+// instance, `undefined` when no variant declares headers, or the sentinel
+// `"divergent"` when variants disagree.
+function findSharedHeaderSchema(
+  headerSchemas: readonly ($ZodType | undefined)[]
+): $ZodType | undefined | "divergent" {
+  const withHeaders = headerSchemas.filter(
+    (schema): schema is $ZodType => schema !== undefined
+  );
+  if (withHeaders.length === 0) {
+    return undefined;
+  }
+  if (withHeaders.length !== headerSchemas.length) {
+    return "divergent";
+  }
+
+  const [first] = withHeaders;
+  return withHeaders.every(schema => schema === first) ? first : "divergent";
+}
+
+function resolveResponse(
+  usage: NormalizedResponseUsage,
+  canonicalResponsesByName: ReadonlyMap<string, NormalizedResponse>
+): NormalizedResponse {
+  if (usage.source === "inline") {
+    return usage.response;
+  }
+
+  const response = canonicalResponsesByName.get(usage.responseName);
+  if (response === undefined) {
+    throw new Error(`Missing canonical response '${usage.responseName}'.`);
+  }
+  return response;
 }
 
 function buildParameters(params: {
@@ -296,18 +488,9 @@ function getResponseStatusCode(
   responseUsage: NormalizedResponseUsage,
   canonicalResponsesByName: ReadonlyMap<string, NormalizedResponse>
 ): string {
-  if (responseUsage.source === "inline") {
-    return String(responseUsage.response.statusCode);
-  }
-
-  const response = canonicalResponsesByName.get(responseUsage.responseName);
-  if (response === undefined) {
-    throw new Error(
-      `Missing canonical response '${responseUsage.responseName}'.`
-    );
-  }
-
-  return String(response.statusCode);
+  return String(
+    resolveResponse(responseUsage, canonicalResponsesByName).statusCode
+  );
 }
 
 function unwrapObjectSchema(schema: $ZodType): $ZodObject | undefined {

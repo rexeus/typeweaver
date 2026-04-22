@@ -100,6 +100,7 @@ export class FileWatcher {
   }
 
   private scheduleRegeneration(): void {
+    if (this.stopped) return;
     if (this.debounceTimer) clearTimeout(this.debounceTimer);
     this.debounceTimer = setTimeout(() => {
       this.debounceTimer = null;

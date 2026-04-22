@@ -116,12 +116,7 @@ export const handleValidateCommand = async (
       ValidateCheckContext
     >(checks, checkContext, { reportError: reportErrorFromDiagnostic });
 
-    const report = buildValidationReport(
-      state,
-      checkResults,
-      ruleResolver,
-      resolved.validateConfig
-    );
+    const report = buildValidationReport(state, checkResults, ruleResolver);
 
     if (useJson) {
       reportValidationJson(stdout, report);

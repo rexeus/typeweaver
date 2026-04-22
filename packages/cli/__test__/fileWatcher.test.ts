@@ -263,4 +263,15 @@ describe("FileWatcher", () => {
 
     expect(mockGenerate).toHaveBeenCalledTimes(2);
   });
+
+  test("ignores change events that arrive after stop()", async () => {
+    await startWatching();
+    fileWatcher.stop();
+
+    emitChange("late.ts");
+    await flushDebounce();
+
+    // 1 = the initial generation; the post-stop change must not schedule another.
+    expect(mockGenerate).toHaveBeenCalledTimes(1);
+  });
 });

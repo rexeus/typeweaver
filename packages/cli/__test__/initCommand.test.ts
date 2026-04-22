@@ -23,7 +23,7 @@ describe("handleInitCommand", () => {
   );
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
     process.exitCode = undefined;
   });
 
@@ -118,6 +118,67 @@ describe("handleInitCommand", () => {
     expect(
       fs.readFileSync(path.join(tempDir, TYPEWEAVER_CONFIG_FILE), "utf-8")
     ).toContain('output: "./generated"');
+  });
+
+  test("removes directories it created when a later write fails", async () => {
+    const tempDir = createWorkspaceTempDir();
+    const logger = createTestLogger();
+    const realWriteFileSync = fs.writeFileSync;
+
+    vi.spyOn(fs, "writeFileSync").mockImplementation(((
+      target: fs.PathOrFileDescriptor,
+      data: string | NodeJS.ArrayBufferView,
+      options?: fs.WriteFileOptions
+    ) => {
+      if (target.toString().endsWith(path.join("spec", "todo", "index.ts"))) {
+        throw new Error("Simulated mid-write failure");
+      }
+
+      return realWriteFileSync(target, data, options);
+    }) as typeof fs.writeFileSync);
+
+    await handleInitCommand(
+      {},
+      { execDir: tempDir, createLogger: () => logger }
+    );
+
+    expect(process.exitCode).toBe(1);
+    expect(fs.existsSync(path.join(tempDir, "spec", "todo"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "spec"))).toBe(false);
+  });
+
+  test("surfaces the original write error even when rollback also fails", async () => {
+    const tempDir = createWorkspaceTempDir();
+    const logger = createTestLogger();
+    const realWriteFileSync = fs.writeFileSync;
+
+    vi.spyOn(fs, "writeFileSync").mockImplementation(((
+      target: fs.PathOrFileDescriptor,
+      data: string | NodeJS.ArrayBufferView,
+      options?: fs.WriteFileOptions
+    ) => {
+      if (target.toString().endsWith(path.join("spec", "todo", "index.ts"))) {
+        throw new Error("Simulated mid-write failure");
+      }
+
+      return realWriteFileSync(target, data, options);
+    }) as typeof fs.writeFileSync);
+    vi.spyOn(fs, "rmSync").mockImplementation(() => {
+      throw new Error("Simulated rollback failure");
+    });
+
+    await handleInitCommand(
+      {},
+      { execDir: tempDir, createLogger: () => logger }
+    );
+
+    expect(process.exitCode).toBe(1);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining("Simulated mid-write failure")
+    );
+    expect(logger.error).not.toHaveBeenCalledWith(
+      expect.stringContaining("Simulated rollback failure")
+    );
   });
 
   test("creates a starter that validates and generates plugin output successfully", async () => {

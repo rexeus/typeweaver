@@ -44,6 +44,7 @@ export const CORE_RULES: readonly RuleMetadata[] = [
   makeRule("TW-STYLE-002", "style/path-kebab-case", "warning", false),
 
   // Plugin infrastructure.
+  makeRule("TW-PLUGIN-LOAD-001", "plugin/load-failure", "error"),
   makeRule("TW-PLUGIN-CRASH-001", "plugin/validator-crash", "error"),
 ];
 
@@ -62,6 +63,7 @@ export type RuleResolver = {
   readonly isEnabled: (code: string) => boolean;
   readonly resolveSeverity: (issue: Issue) => IssueSeverity;
   readonly isFailing: (severity: IssueSeverity) => boolean;
+  readonly failOn: IssueSeverity;
   readonly rules: readonly RuleMetadata[];
 };
 
@@ -116,6 +118,7 @@ export const createRuleResolver = (
     isEnabled,
     resolveSeverity,
     isFailing,
+    failOn: config.failOn,
     rules,
   };
 };

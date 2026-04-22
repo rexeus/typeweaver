@@ -7,6 +7,7 @@ import type {
   TypeweaverConfig,
 } from "@rexeus/typeweaver-gen";
 import { TypesPlugin } from "@rexeus/typeweaver-types";
+import { PluginLoadingFailure } from "../../generators/errors/pluginLoadingFailure.js";
 import { loadPlugins } from "../../generators/pluginLoader.js";
 import { NOOP_LOGGER } from "../../logger.js";
 import { LOAD_SPEC_ID } from "./loadSpec.js";
@@ -29,6 +30,29 @@ const normalizePluginEntry = (
 
   const [name, maybeConfig] = entry;
   return [name, (maybeConfig ?? {}) as PluginConfig];
+};
+
+const buildPluginLoadIssue = (error: unknown): Issue => {
+  if (error instanceof PluginLoadingFailure) {
+    const attemptsDetail = error.attempts
+      .map(attempt => `${attempt.path}: ${attempt.error}`)
+      .join("; ");
+    return {
+      code: "TW-PLUGIN-LOAD-001",
+      severity: "error",
+      message: `Failed to load plugin '${error.pluginName}'${
+        attemptsDetail.length > 0 ? ` — ${attemptsDetail}` : ""
+      }`,
+      hint: "Install the plugin package or fix the module's plugin export.",
+    };
+  }
+
+  return {
+    code: "TW-PLUGIN-LOAD-001",
+    severity: "error",
+    message: `Plugin load failed: ${error instanceof Error ? error.message : String(error)}`,
+    hint: "Install the plugin package or fix the module's plugin export.",
+  };
 };
 
 export const createPluginValidatorsCheck = (): ValidateCheck => {
@@ -71,15 +95,28 @@ export const createPluginValidatorsCheck = (): ValidateCheck => {
         plugins: declaredPlugins.map(normalizePluginEntry),
       };
 
-      await loadPlugins(
-        registry,
-        [new TypesPlugin()],
-        ["npm", "local"],
-        NOOP_LOGGER,
-        loaderConfig
-      );
-
       const issues: Issue[] = [];
+
+      try {
+        await loadPlugins(
+          registry,
+          [new TypesPlugin()],
+          ["npm", "local"],
+          NOOP_LOGGER,
+          loaderConfig
+        );
+      } catch (error) {
+        const loadIssue = buildPluginLoadIssue(error);
+        issues.push(loadIssue);
+        context.emitIssue(loadIssue);
+
+        return helpers.finalize(issues, context.ruleResolver, {
+          pass: "Plugins skipped.",
+          warn: count => `Plugin load surfaced ${count} warning(s).`,
+          fail: count => `Plugin load surfaced ${count} error(s).`,
+          info: count => `Plugin load surfaced ${count} note(s).`,
+        });
+      }
 
       for (const registration of registry.getAll()) {
         const plugin = registration.plugin;

@@ -6,39 +6,10 @@ import type {
   PluginContext,
   PluginContextBuilderApi,
   PluginRegistryApi,
-  TypeweaverConfig,
 } from "@rexeus/typeweaver-gen";
-import { TypesPlugin } from "@rexeus/typeweaver-types";
 import { formatCode } from "./formatter.js";
 import { generateIndexFiles } from "./indexFileGenerator.js";
-import { loadPlugins } from "./pluginLoader.js";
-import { loadSpec } from "./specLoader.js";
 import type { Logger } from "../logger.js";
-import type { PluginResolutionStrategy } from "./pluginLoader.js";
-
-export const loadGeneratorPlugins = async (config: {
-  readonly registry: PluginRegistryApi;
-  readonly requiredPlugins: [TypesPlugin];
-  readonly strategies: PluginResolutionStrategy[];
-  readonly logger: Logger;
-  readonly generationConfig?: TypeweaverConfig;
-}): Promise<void> => {
-  await loadPlugins(
-    config.registry,
-    config.requiredPlugins,
-    config.strategies,
-    config.logger,
-    config.generationConfig
-  );
-};
-
-export const loadNormalizedSpec = async (config: {
-  readonly inputFile: string;
-  readonly specOutputDir: string;
-}): Promise<NormalizedSpec> => {
-  const { normalizedSpec } = await loadSpec(config);
-  return normalizedSpec;
-};
 
 export const initializeRegisteredPlugins = async (config: {
   readonly registry: PluginRegistryApi;

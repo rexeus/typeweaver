@@ -176,6 +176,28 @@ describe("handleMigrateCommand", () => {
     expect(detectInstalledTypeweaverVersion(tempDir)).toBeUndefined();
   });
 
+  test("falls through to the next dep group when a specifier is unparseable", () => {
+    const tempDir = createTempDir();
+
+    fs.writeFileSync(
+      path.join(tempDir, "package.json"),
+      JSON.stringify(
+        {
+          dependencies: {
+            "@rexeus/typeweaver": "workspace:*",
+          },
+          devDependencies: {
+            "@rexeus/typeweaver-core": "^0.8.4",
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    expect(detectInstalledTypeweaverVersion(tempDir)).toBe("0.8.4");
+  });
+
   test("rejects 0.6.x projects with a clear unsupported-version error", async () => {
     const tempDir = createTempDir();
     const logger = createTestLogger();

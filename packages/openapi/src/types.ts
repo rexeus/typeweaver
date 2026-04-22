@@ -20,8 +20,12 @@ export type OpenApiPluginConfig = {
   readonly outputFile?: string;
 };
 
+export type OpenApiWarningCode =
+  | ZodToJsonSchemaWarning["code"]
+  | "MERGED_DUPLICATE_STATUS_RESPONSE";
+
 export type OpenApiWarning = {
-  readonly code: ZodToJsonSchemaWarning["code"];
+  readonly code: OpenApiWarningCode;
   readonly location: string;
   readonly message: string;
 };

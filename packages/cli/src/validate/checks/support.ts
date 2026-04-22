@@ -9,7 +9,6 @@ import type {
   IssueSeverity,
   ValidateCheckOutcome,
   ValidateCheckResult,
-  ValidateCheckContext,
   ValidateState,
 } from "../types.js";
 
@@ -59,7 +58,7 @@ export const createCheckHelpers = (
   };
 };
 
-export const pass = (
+const pass = (
   template: CheckTemplate,
   summary: string,
   options: OutcomeOptions<ValidateState> = {}
@@ -71,7 +70,7 @@ export const pass = (
   );
 };
 
-export const warn = (
+const warn = (
   template: CheckTemplate,
   summary: string,
   options: OutcomeOptions<ValidateState> = {}
@@ -83,7 +82,7 @@ export const warn = (
   );
 };
 
-export const fail = (
+const fail = (
   template: CheckTemplate,
   summary: string,
   options: OutcomeOptions<ValidateState> = {}
@@ -93,10 +92,6 @@ export const fail = (
     summary,
     options
   );
-};
-
-export const emit = (context: ValidateCheckContext, issue: Issue): void => {
-  context.emitIssue(issue);
 };
 
 /**
@@ -141,7 +136,7 @@ const countSeverities = (
   return { errors, warnings, infos };
 };
 
-export const finalize = (
+const finalize = (
   template: CheckTemplate,
   issues: readonly Issue[],
   resolver: { readonly resolveSeverity: (issue: Issue) => IssueSeverity },

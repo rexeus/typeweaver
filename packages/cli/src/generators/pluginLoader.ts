@@ -8,16 +8,16 @@ import { PluginLoadingFailure } from "./errors/pluginLoadingFailure.js";
 import type { Logger } from "../logger.js";
 import type { PluginLoadError } from "./errors/pluginLoadingFailure.js";
 
-export type PluginResolutionStrategy = "npm" | "local" | "scoped";
+export type PluginResolutionStrategy = "npm" | "local";
 
 export type PluginLoadResult = {
-  plugin: TypeweaverPlugin;
-  source: string;
+  readonly plugin: TypeweaverPlugin;
+  readonly source: string;
 };
 
 type LoadResult<T, E> =
-  | { success: true; value: T }
-  | { success: false; error: E };
+  | { readonly success: true; readonly value: T }
+  | { readonly success: false; readonly error: E };
 
 export async function loadPlugins(
   registry: PluginRegistryApi,
@@ -108,12 +108,12 @@ async function loadPlugin(
 type PluginClass = new (...args: never[]) => unknown;
 
 type InstantiateResult =
-  | { success: true; plugin: TypeweaverPlugin }
-  | { success: false; error: string };
+  | { readonly success: true; readonly plugin: TypeweaverPlugin }
+  | { readonly success: false; readonly error: string };
 
 type ConstructResult =
-  | { success: true; plugin: TypeweaverPlugin }
-  | { success: false; reason: string };
+  | { readonly success: true; readonly plugin: TypeweaverPlugin }
+  | { readonly success: false; readonly reason: string };
 
 function instantiatePlugin(
   pluginModule: Record<string, unknown>

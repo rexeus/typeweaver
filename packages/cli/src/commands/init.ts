@@ -134,6 +134,7 @@ type FileToWrite = {
 
 const writeFilesAtomically = (files: readonly FileToWrite[]): void => {
   const snapshots = new Map<string, string | null>();
+  const createdDirectories: string[] = [];
 
   for (const file of files) {
     snapshots.set(
@@ -146,25 +147,75 @@ const writeFilesAtomically = (files: readonly FileToWrite[]): void => {
 
   try {
     for (const file of files) {
-      fs.mkdirSync(path.dirname(file.absolutePath), { recursive: true });
+      createdDirectories.push(
+        ...ensureDirectoryTree(path.dirname(file.absolutePath))
+      );
       fs.writeFileSync(file.absolutePath, file.content, "utf-8");
     }
   } catch (error) {
     rollbackFiles(snapshots);
+    removeCreatedDirectories(createdDirectories);
     throw error;
   }
 };
 
+// Returns every directory that had to be created, deepest first, so rollback
+// can remove them in reverse without ever touching pre-existing ancestors.
+const ensureDirectoryTree = (targetDirectory: string): readonly string[] => {
+  const missing: string[] = [];
+  let current = targetDirectory;
+  while (!fs.existsSync(current)) {
+    missing.push(current);
+    const parent = path.dirname(current);
+    if (parent === current) {
+      break;
+    }
+    current = parent;
+  }
+
+  fs.mkdirSync(targetDirectory, { recursive: true });
+  return missing;
+};
+
+// Rollback is best-effort on purpose: a failing rollback must never mask the
+// original write error that triggered it. Each file is attempted in isolation
+// so one unrecoverable path doesn't skip the rest.
 const rollbackFiles = (snapshots: ReadonlyMap<string, string | null>): void => {
   for (const [absolutePath, originalContent] of snapshots) {
-    if (originalContent === null) {
-      if (fs.existsSync(absolutePath)) {
-        fs.rmSync(absolutePath, { force: true });
+    try {
+      if (originalContent === null) {
+        if (fs.existsSync(absolutePath)) {
+          fs.rmSync(absolutePath, { force: true });
+        }
+        continue;
       }
-      continue;
-    }
 
-    fs.writeFileSync(absolutePath, originalContent, "utf-8");
+      fs.writeFileSync(absolutePath, originalContent, "utf-8");
+    } catch {
+      // Swallow: the original write error is the signal the caller needs.
+    }
+  }
+};
+
+// Walk deepest-first and drop directories that are still empty; a directory
+// that picked up an unrelated file in the meantime is left alone. Failures are
+// swallowed for the same reason as rollbackFiles. Deduplicating by path is
+// needed because multiple files can share the same ancestor; sorting by
+// segment count is a strictly correct "deeper first" ordering regardless of
+// how the paths were collected.
+const removeCreatedDirectories = (directories: readonly string[]): void => {
+  const uniqueDirectories = [...new Set(directories)].sort(
+    (left, right) => right.split(path.sep).length - left.split(path.sep).length
+  );
+
+  for (const directory of uniqueDirectories) {
+    try {
+      if (fs.existsSync(directory) && fs.readdirSync(directory).length === 0) {
+        fs.rmdirSync(directory);
+      }
+    } catch {
+      // Swallow: the original write error is the signal the caller needs.
+    }
   }
 };
 

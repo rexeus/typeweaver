@@ -15,6 +15,7 @@ export type SchemaRegistry = {
     readonly schema: $ZodType;
     readonly location: string;
   }) => JsonSchemaObject;
+  readonly addWarning: (warning: OpenApiWarning) => void;
   readonly getComponents: () => Record<string, JsonSchemaObject>;
   readonly getWarnings: () => readonly OpenApiWarning[];
 };
@@ -51,6 +52,9 @@ export function createSchemaRegistry(): SchemaRegistry {
       const result = fromZod(params.schema);
       pushWarnings(params.location, result.warnings);
       return result.schema;
+    },
+    addWarning: warning => {
+      warnings.push(warning);
     },
     getComponents: () => {
       return Object.fromEntries(components.entries());

@@ -10,26 +10,12 @@ import { createSpecDependencyResolutionBridge } from "../generators/spec/specDep
 import { importDefinition } from "../generators/spec/specImporter.js";
 import { NOOP_LOGGER } from "../logger.js";
 
-export const resolveInputPath = (
-  execDir: string,
-  inputPath: string
-): string => {
-  return resolveCommandPath(execDir, inputPath);
-};
-
-export const resolveOutputPath = (
-  execDir: string,
-  outputPath: string
-): string => {
-  return resolveCommandPath(execDir, outputPath);
-};
-
 export const assertOutputPathSafety = (config: {
   readonly execDir: string;
   readonly outputPath: string;
   readonly loadedConfig?: Partial<TypeweaverConfig>;
 }): { readonly resolvedOutputPath: string; readonly cleanEnabled: boolean } => {
-  const resolvedOutputPath = resolveOutputPath(
+  const resolvedOutputPath = resolveCommandPath(
     config.execDir,
     config.outputPath
   );

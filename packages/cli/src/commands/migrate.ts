@@ -144,8 +144,14 @@ export const detectInstalledTypeweaverVersion = (
       dependencies?.["@rexeus/typeweaver"] ??
       dependencies?.["@rexeus/typeweaver-core"];
 
-    if (declaredVersion) {
-      return tryNormalizeVersion(declaredVersion);
+    if (!declaredVersion) {
+      continue;
+    }
+
+    const normalizedVersion = tryNormalizeVersion(declaredVersion);
+
+    if (normalizedVersion !== undefined) {
+      return normalizedVersion;
     }
   }
 

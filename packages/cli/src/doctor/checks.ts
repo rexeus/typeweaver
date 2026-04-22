@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { resolveCommandPath } from "../commands/shared.js";
 import { assertSupportedConfigPath, loadConfig } from "../configLoader.js";
 import { isFormatterAvailable } from "../generators/formatter.js";
 import {
@@ -12,7 +13,6 @@ import {
   assertOutputPathSafety,
   bundleInputSpec,
   inspectBundledSpec,
-  resolveInputPath,
   resolveOptionalPlugins,
 } from "./checkSupport.js";
 import type { OutcomeOptions, ResultTemplate } from "../pipeline/helpers.js";
@@ -150,7 +150,7 @@ const STANDARD_CHECKS: readonly DoctorCheck[] = [
         );
       }
 
-      const resolvedInputPath = resolveInputPath(context.execDir, inputPath);
+      const resolvedInputPath = resolveCommandPath(context.execDir, inputPath);
       if (!fs.existsSync(resolvedInputPath)) {
         return fail(
           INPUT_EXISTS,

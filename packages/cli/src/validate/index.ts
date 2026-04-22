@@ -1,7 +1,2 @@
-export * from "./command.js";
-export * from "./preflight.js";
-export * from "./reporter.js";
-export * from "./rules.js";
-export * from "./run.js";
-export * from "./types.js";
-export * from "./checks/index.js";
+export type { PreflightOptions } from "./preflight.js";
+export type { ValidationReport } from "./types.js";

@@ -163,7 +163,7 @@ describe("buildValidationReport", () => {
     expect(report.hasErrors).toBe(true);
   });
 
-  test("respects an overridden failOn in the validate config", () => {
+  test("mirrors the resolver's effective failOn, not the config file", () => {
     const state: ValidateState = {
       collectedIssues: [
         { code: "TW-STYLE-001", severity: "warning", message: "meh" },
@@ -177,8 +177,7 @@ describe("buildValidationReport", () => {
         ...baseResolverConfig,
         failOn: "warning",
         enable: ["TW-STYLE-001"],
-      }),
-      { failOn: "warning" }
+      })
     );
 
     expect(report.failOn).toBe("warning");

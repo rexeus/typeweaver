@@ -6,7 +6,6 @@ import type {
   Issue,
   IssueSeverity,
   ValidateCheckResult,
-  ValidateConfig,
   ValidateState,
   ValidationReport,
   ValidationStats,
@@ -46,12 +45,10 @@ export const computeValidationStats = (
 export const buildValidationReport = (
   state: ValidateState,
   checks: readonly ValidateCheckResult[],
-  ruleResolver: RuleResolver,
-  validateConfig: ValidateConfig = {}
+  ruleResolver: RuleResolver
 ): ValidationReport => {
   const issues = applyIssueRules(state.collectedIssues, ruleResolver);
   const stats = computeValidationStats(state, issues);
-  const failOn: IssueSeverity = validateConfig.failOn ?? "error";
   const hasErrors = issues.some(issue =>
     ruleResolver.isFailing(issue.severity)
   );
@@ -61,7 +58,7 @@ export const buildValidationReport = (
     issues,
     stats,
     hasErrors,
-    failOn,
+    failOn: ruleResolver.failOn,
   };
 };
 
