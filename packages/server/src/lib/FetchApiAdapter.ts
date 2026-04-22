@@ -265,13 +265,16 @@ export class FetchApiAdapter {
 
         totalBytes += value.byteLength;
         if (totalBytes > this.maxBodySize) {
-          await reader.cancel();
           throw new PayloadTooLargeError(totalBytes, this.maxBodySize);
         }
         chunks.push(value);
       }
     } finally {
-      reader.releaseLock();
+      try {
+        reader.releaseLock();
+      } catch {
+        // Some runtimes may report release errors after stream termination.
+      }
     }
 
     return new Request(request.url, {
@@ -299,7 +302,8 @@ export class FetchApiAdapter {
   ): string | ArrayBuffer | Blob | null {
     if (body === undefined || body === null) return null;
     if (typeof body === "string") return body;
-    if (body instanceof Blob || body instanceof ArrayBuffer) return body;
+    if (body instanceof ArrayBuffer) return body;
+    if (body instanceof Blob) return body;
 
     try {
       return JSON.stringify(body);
@@ -330,6 +334,14 @@ export class FetchApiAdapter {
 
     if (!headers.has("content-type") && FetchApiAdapter.isJsonBody(body)) {
       headers.set("content-type", "application/json");
+    }
+
+    if (
+      !headers.has("content-type") &&
+      body instanceof Blob &&
+      body.type
+    ) {
+      headers.set("content-type", body.type);
     }
 
     return headers;

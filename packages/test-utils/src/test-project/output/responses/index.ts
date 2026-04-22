@@ -14,6 +14,10 @@ export * from "./CreateTodoSuccessResponse.js";
 
 export * from "./DeleteSubTodoSuccessResponse.js";
 
+export * from "./DeleteTodoBodyOnlyResponse.js";
+
+export * from "./DeleteTodoNoContentResponse.js";
+
 export * from "./DeleteTodoSuccessResponse.js";
 
 export * from "./DownloadFileContentSuccessResponse.js";

@@ -8,6 +8,10 @@
 
 import type { IDeleteTodoSuccessResponse } from "../responses/DeleteTodoSuccessResponse.js";
 
+import type { IDeleteTodoBodyOnlyResponse } from "../responses/DeleteTodoBodyOnlyResponse.js";
+
+import type { IDeleteTodoNoContentResponse } from "../responses/DeleteTodoNoContentResponse.js";
+
 import type { ITodoNotFoundErrorResponse } from "../responses/TodoNotFoundErrorResponse.js";
 
 import type { IForbiddenErrorResponse } from "../responses/ForbiddenErrorResponse.js";
@@ -24,6 +28,8 @@ import type { IValidationErrorResponse } from "../responses/ValidationErrorRespo
 
 export type DeleteTodoResponse =
   | IDeleteTodoSuccessResponse
+  | IDeleteTodoBodyOnlyResponse
+  | IDeleteTodoNoContentResponse
   | ITodoNotFoundErrorResponse
   | IForbiddenErrorResponse
   | IInternalServerErrorResponse

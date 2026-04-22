@@ -24,11 +24,27 @@ export const DeleteTodoDefinition = defineOperation({
     header: defaultRequestHeadersWithoutPayload,
   },
   responses: [
+    // Header-only inline response (existing coverage)
     defineResponse({
       name: "DeleteTodoSuccess",
       description: "Todo deleted successfully",
       statusCode: HttpStatusCode.NO_CONTENT,
       header: defaultResponseHeader,
+    }),
+    // Body-only inline response (new coverage)
+    defineResponse({
+      name: "DeleteTodoBodyOnly",
+      description: "Success with body only",
+      statusCode: HttpStatusCode.OK,
+      body: z.object({
+        message: z.string(),
+      }),
+    }),
+    // Neither header nor body inline response (new coverage)
+    defineResponse({
+      name: "DeleteTodoNoContent",
+      description: "No content response",
+      statusCode: HttpStatusCode.NO_CONTENT,
     }),
     TodoNotFoundErrorDefinition,
     ...sharedResponses,

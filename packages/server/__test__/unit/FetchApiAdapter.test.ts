@@ -730,7 +730,40 @@ describe("FetchApiAdapter", () => {
         body: blob,
       });
 
-      expect(response.headers.get("content-type")).not.toBe("application/json");
+      expect(response.headers.get("content-type")).toBe(
+        "application/octet-stream"
+      );
+      const result = await response.blob();
+      expect(result.size).toBe(blob.size);
+    });
+
+    test("should not infer content-type for Blob body without type", async () => {
+      const adapter = new FetchApiAdapter();
+      const blob = new Blob(["binary data"]);
+
+      const response = adapter.toResponse({
+        statusCode: 200,
+        body: blob,
+      });
+
+      expect(response.headers.get("content-type")).toBeNull();
+      const result = await response.blob();
+      expect(result.size).toBe(blob.size);
+    });
+
+    test("should prefer explicit Content-Type header over Blob type", async () => {
+      const adapter = new FetchApiAdapter();
+      const blob = new Blob(["binary data"], {
+        type: "application/octet-stream",
+      });
+
+      const response = adapter.toResponse({
+        statusCode: 200,
+        header: { "Content-Type": "text/plain" },
+        body: blob,
+      });
+
+      expect(response.headers.get("content-type")).toBe("text/plain");
       const result = await response.blob();
       expect(result.size).toBe(blob.size);
     });

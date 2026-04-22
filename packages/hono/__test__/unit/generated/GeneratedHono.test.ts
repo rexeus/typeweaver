@@ -384,8 +384,35 @@ describe("Generated Hono Router", () => {
       // TODO: Implement test
     });
 
-    test.todo("should handle Blob response bodies", async () => {
-      // TODO: Implement test
+    test("should handle Blob response bodies", async () => {
+      // Arrange
+      const blob = new Blob(["binary data"], {
+        type: "application/octet-stream",
+      });
+      const app = createTestHono({
+        validateResponses: false,
+        throwTodoError: {
+          type: "CustomBlobResponse" as const,
+          statusCode: 200,
+          body: blob,
+        },
+      });
+      const requestData = createCreateTodoRequest();
+
+      // Act
+      const response = await app.request(
+        "http://localhost/todos",
+        prepareRequestData(requestData)
+      );
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toBe(
+        "application/octet-stream"
+      );
+
+      const responseBlob = await response.blob();
+      expect(responseBlob.size).toBe(blob.size);
     });
 
     test.todo("should handle FormData response bodies", async () => {

@@ -511,6 +511,17 @@ const DeleteTodoDefinition = defineOperation({
       statusCode: HttpStatusCode.NO_CONTENT,
       header: defaultResponseHeader,
     }),
+    defineResponse({
+      name: "DeleteTodoBodyOnly",
+      description: "Success with body only",
+      statusCode: HttpStatusCode.OK,
+      body: z.object({ message: z.string() }),
+    }),
+    defineResponse({
+      name: "DeleteTodoNoContent",
+      description: "No content response",
+      statusCode: HttpStatusCode.NO_CONTENT,
+    }),
     TodoNotFoundErrorDefinition,
     ...sharedResponses,
   ],
