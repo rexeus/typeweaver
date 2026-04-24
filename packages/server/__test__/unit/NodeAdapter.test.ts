@@ -323,9 +323,7 @@ describe("nodeAdapter", () => {
           maxBodySize: 4,
           timeoutMs: 5_000,
         });
-        expect(onError.mock.calls[0]?.[0]).not.toHaveProperty(
-          "contentLength"
-        );
+        expect(onError.mock.calls[0]?.[0]).not.toHaveProperty("contentLength");
 
         await vi.advanceTimersByTimeAsync(5_000);
 

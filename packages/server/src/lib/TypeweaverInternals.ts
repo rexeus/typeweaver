@@ -39,5 +39,7 @@ export function getTypeweaverAppRuntimeContext(
 export function getTypeweaverAppErrorReporter(
   app: TypeweaverApp<any>
 ): (error: unknown) => void {
-  return getTypeweaverAppRuntimeContext(app)?.reportError ?? fallbackReportError;
+  return (
+    getTypeweaverAppRuntimeContext(app)?.reportError ?? fallbackReportError
+  );
 }

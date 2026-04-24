@@ -17,7 +17,10 @@ import {
   parseContentLength,
 } from "./BodyLimitPolicy.js";
 import { PayloadTooLargeError, RequestBodyDrainTimeoutError } from "./Errors.js";
-import { getTypeweaverAppErrorReporter, getTypeweaverAppRuntimeContext } from "./TypeweaverInternals.js";
+import {
+  getTypeweaverAppErrorReporter,
+  getTypeweaverAppRuntimeContext,
+} from "./TypeweaverInternals.js";
 import type { TypeweaverApp } from "./TypeweaverApp.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
@@ -88,7 +91,10 @@ async function handleRequest(
         throw new PayloadTooLargeError(drainResult.totalBytes, bodyLimitPolicy.maxBodySize);
       }
       if (drainResult.timedOut) {
-        throw new RequestBodyDrainTimeoutError(bodyLimitPolicy.maxBodySize, REQUEST_DRAIN_TIMEOUT_MS);
+        throw new RequestBodyDrainTimeoutError(
+          bodyLimitPolicy.maxBodySize,
+          REQUEST_DRAIN_TIMEOUT_MS,
+        );
       }
     }
 
@@ -195,9 +201,7 @@ async function drainRequest(
       resolve({ ...result, totalBytes: drainedBytes });
     };
 
-    const stopReading = (
-      result: Omit<DrainRequestResult, "totalBytes">,
-    ): void => {
+    const stopReading = (result: Omit<DrainRequestResult, "totalBytes">): void => {
       if (isSettled) return;
       isSettled = true;
       cleanup();

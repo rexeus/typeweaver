@@ -27,7 +27,9 @@ export function setTypeweaverAppRuntimeContext(
   appRuntimeContextRegistry.set(app, runtimeContext);
 }
 
-export function getTypeweaverAppRuntimeContext(app: TypeweaverApp<any>): TypeweaverRuntimeContext | undefined {
+export function getTypeweaverAppRuntimeContext(
+  app: TypeweaverApp<any>,
+): TypeweaverRuntimeContext | undefined {
   return appRuntimeContextRegistry.get(app);
 }
 

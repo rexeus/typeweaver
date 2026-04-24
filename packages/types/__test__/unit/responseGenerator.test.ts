@@ -181,7 +181,9 @@ function renderCanonicalResponseSource(response: NormalizedResponse): string {
   );
 
   if (source === undefined) {
-    throw new Error(`Expected ${response.name} response source to be generated`);
+    throw new Error(
+      `Expected ${response.name} response source to be generated`
+    );
   }
 
   return source;
@@ -262,25 +264,26 @@ describe("ResponseGenerator", () => {
         statusCodeKey: "BAD_REQUEST",
       })
     );
-    expect(parseGeneratedData(writtenFiles, "todos/createTodoResponse.ts"))
-      .toEqual(
-        expect.objectContaining({
-          operationId: "createTodo",
-          ownResponses: [
-            expect.objectContaining({
-              identifierName: "CreateTodoSuccess",
-              typeValue: "CreateTodoSuccess",
-              statusCode: HttpStatusCode.CREATED,
-            }),
-          ],
-          sharedResponses: [
-            {
-              identifierName: "SharedError",
-              path: "../responses/SharedErrorResponse",
-            },
-          ],
-        })
-      );
+    expect(
+      parseGeneratedData(writtenFiles, "todos/createTodoResponse.ts")
+    ).toEqual(
+      expect.objectContaining({
+        operationId: "createTodo",
+        ownResponses: [
+          expect.objectContaining({
+            identifierName: "CreateTodoSuccess",
+            typeValue: "CreateTodoSuccess",
+            statusCode: HttpStatusCode.CREATED,
+          }),
+        ],
+        sharedResponses: [
+          {
+            identifierName: "SharedError",
+            path: "../responses/SharedErrorResponse",
+          },
+        ],
+      })
+    );
   });
 
   test("uses PascalCase identifiers and raw discriminants for camelCase canonical responses", () => {
