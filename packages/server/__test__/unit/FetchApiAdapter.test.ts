@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import {
   BodyParseError,
   PayloadTooLargeError,
@@ -11,8 +11,60 @@ function createAdapterRequest(path: string, init?: RequestInit): Request {
   return new Request(`${BASE_URL}${path}`, init);
 }
 
+function createAdapterRequestWithStream(
+  path: string,
+  headers: Record<string, string>,
+  body: ReadableStream<Uint8Array>
+): Request {
+  const request = createAdapterRequest(path, { method: "POST", headers });
+  Object.defineProperty(request, "body", { value: body });
+  return request;
+}
+
 function parseRequest(request: Request, url?: URL) {
   return new FetchApiAdapter().toRequest(request, url);
+}
+
+function createOversizedStream(
+  cancel: () => Promise<void>
+): ReadableStream<Uint8Array> {
+  const chunks = [new Uint8Array([1, 2, 3]), new Uint8Array([4, 5, 6])];
+
+  return new ReadableStream<Uint8Array>({
+    pull(controller) {
+      const chunk = chunks.shift();
+      if (chunk) {
+        controller.enqueue(chunk);
+        return;
+      }
+      controller.close();
+    },
+    cancel,
+  });
+}
+
+function createFailingBodyReadStream(
+  readFailure: Error,
+  cancel: () => Promise<void>
+): ReadableStream<Uint8Array> {
+  let hasEnqueuedFailure = false;
+  const failingChunk = Object.defineProperty({}, "byteLength", {
+    get() {
+      throw readFailure;
+    },
+  }) as Uint8Array;
+
+  return new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (hasEnqueuedFailure) {
+        return;
+      }
+
+      hasEnqueuedFailure = true;
+      controller.enqueue(failingChunk);
+    },
+    cancel,
+  });
 }
 
 async function expectBodyParseError(
@@ -27,6 +79,21 @@ async function expectBodyParseError(
       return true;
     }
   );
+}
+
+async function expectPayloadTooLargeError(
+  promise: Promise<unknown>,
+  expectedContentLength: number,
+  expectedMaxBodySize: number
+): Promise<void> {
+  await expect(promise).rejects.toSatisfy((error: PayloadTooLargeError) => {
+    expect(error).toBeInstanceOf(PayloadTooLargeError);
+    expect(error.contentLength).toBe(expectedContentLength);
+    expect(error.maxBodySize).toBe(expectedMaxBodySize);
+    expect(error.message).toContain(`${expectedContentLength} bytes`);
+    expect(error.message).toContain(`${expectedMaxBodySize} bytes`);
+    return true;
+  });
 }
 
 describe("FetchApiAdapter", () => {
@@ -282,6 +349,52 @@ describe("FetchApiAdapter", () => {
       expect(result.body).toBeUndefined();
     });
 
+    test("cancels oversized request streams without masking the original error", async () => {
+      const cancel = vi.fn().mockRejectedValue(new Error("cancel failed"));
+      const body = createOversizedStream(cancel);
+      const request = createAdapterRequestWithStream(
+        "/upload",
+        { "Content-Type": "application/octet-stream" },
+        body
+      );
+      const adapter = new FetchApiAdapter({ maxBodySize: 4 });
+
+      await expectPayloadTooLargeError(adapter.toRequest(request), 6, 4);
+
+      expect(cancel).toHaveBeenCalledTimes(1);
+    });
+
+    test("cancels oversized multipart request streams without masking the size-limit error", async () => {
+      const cancel = vi.fn().mockRejectedValue(new Error("cancel failed"));
+      const body = createOversizedStream(cancel);
+      const request = createAdapterRequestWithStream(
+        "/upload",
+        { "Content-Type": "multipart/form-data; boundary=typeweaver-test" },
+        body
+      );
+      const adapter = new FetchApiAdapter({ maxBodySize: 4 });
+
+      await expectPayloadTooLargeError(adapter.toRequest(request), 6, 4);
+
+      expect(cancel).toHaveBeenCalledTimes(1);
+    });
+
+    test("cancels multipart request streams after body read failures without masking the original error", async () => {
+      const readFailure = new Error("read failed");
+      const cancel = vi.fn().mockRejectedValue(new Error("cancel failed"));
+      const body = createFailingBodyReadStream(readFailure, cancel);
+      const request = createAdapterRequestWithStream(
+        "/upload",
+        { "Content-Type": "multipart/form-data; boundary=typeweaver-test" },
+        body
+      );
+      const adapter = new FetchApiAdapter({ maxBodySize: 64 });
+
+      await expect(adapter.toRequest(request)).rejects.toBe(readFailure);
+
+      expect(cancel).toHaveBeenCalledTimes(1);
+    });
+
     describe("Content-Type Matching", () => {
       test("should parse application/vnd.api+json with charset as JSON", async () => {
         const adapter = new FetchApiAdapter();
@@ -494,16 +607,7 @@ describe("FetchApiAdapter", () => {
           body,
         });
 
-        await expect(adapter.toRequest(request)).rejects.toSatisfy(
-          (error: PayloadTooLargeError) => {
-            expect(error).toBeInstanceOf(PayloadTooLargeError);
-            expect(error.contentLength).toBe(200);
-            expect(error.maxBodySize).toBe(100);
-            expect(error.message).toContain("200 bytes");
-            expect(error.message).toContain("100 bytes");
-            return true;
-          }
-        );
+        await expectPayloadTooLargeError(adapter.toRequest(request), 200, 100);
       });
 
       test("should accept bodies within the limit", async () => {
@@ -644,19 +748,14 @@ describe("FetchApiAdapter", () => {
       });
 
       test("should reject oversized multipart body when Content-Length header is missing", async () => {
-        const adapter = new FetchApiAdapter({ maxBodySize: 10 });
-        const formData = new FormData();
-        formData.append("file", new Blob(["x".repeat(100)]), "big.txt");
-
-        const request = new Request(`${BASE_URL}/todos`, {
-          method: "POST",
-          body: formData,
-        });
-        request.headers.delete("content-length");
-
-        await expect(adapter.toRequest(request)).rejects.toThrow(
-          PayloadTooLargeError
+        const adapter = new FetchApiAdapter({ maxBodySize: 4 });
+        const request = createAdapterRequestWithStream(
+          "/todos",
+          { "Content-Type": "multipart/form-data; boundary=typeweaver-test" },
+          createOversizedStream(vi.fn())
         );
+
+        await expectPayloadTooLargeError(adapter.toRequest(request), 6, 4);
       });
     });
   });

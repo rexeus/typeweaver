@@ -283,6 +283,13 @@ export class FetchApiAdapter {
         }
         chunks.push(value);
       }
+    } catch (error) {
+      try {
+        await reader.cancel();
+      } catch {
+        // Preserve the original read failure if stream cleanup also fails.
+      }
+      throw error;
     } finally {
       try {
         reader.releaseLock();

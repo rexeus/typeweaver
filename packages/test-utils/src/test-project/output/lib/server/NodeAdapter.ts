@@ -66,6 +66,8 @@ async function handleRequest(
     const shouldValidateBody = shouldValidateRequestBody(req.method);
     if (shouldValidateBody) {
       enforceContentLengthLimit(req, bodyLimitPolicy.maxBodySize);
+    } else {
+      void drainRequest(req);
     }
 
     const body = !shouldValidateBody
@@ -99,7 +101,7 @@ async function handleRequest(
 
     if (error instanceof PayloadTooLargeError) {
       writeDefaultErrorResponse(res, payloadTooLargeDefaultError);
-      void drainRequest(req).catch(() => {});
+      void drainRequest(req);
       return;
     }
 
@@ -140,24 +142,43 @@ async function drainRequest(req: IncomingMessage): Promise<void> {
     return;
   }
 
-  await new Promise<void>((resolve, reject) => {
-    const handleEnd = (): void => {
+  await new Promise<void>((resolve) => {
+    let isSettled = false;
+
+    const settle = (callback: () => void): void => {
+      if (isSettled) return;
+      isSettled = true;
       cleanup();
-      resolve();
+      callback();
     };
 
-    const handleError = (error: Error): void => {
-      cleanup();
-      reject(error);
+    const handleEnd = (): void => {
+      settle(resolve);
+    };
+
+    const handleClose = (): void => {
+      settle(resolve);
+    };
+
+    const handleAborted = (): void => {
+      settle(resolve);
+    };
+
+    const handleError = (): void => {
+      settle(resolve);
     };
 
     const cleanup = (): void => {
       req.off("end", handleEnd);
       req.off("error", handleError);
+      req.off("aborted", handleAborted);
+      req.off("close", handleClose);
     };
 
     req.on("end", handleEnd);
     req.on("error", handleError);
+    req.on("aborted", handleAborted);
+    req.on("close", handleClose);
     req.resume();
   });
 }
@@ -168,34 +189,43 @@ function collectBody(req: IncomingMessage, maxBodySize: number): Promise<ArrayBu
     let totalBytes = 0;
     let isSettled = false;
 
+    const cleanup = (): void => {
+      req.off("data", handleData);
+      req.off("end", handleEnd);
+      req.off("error", handleError);
+      req.off("aborted", handleAborted);
+      req.off("close", handleClose);
+    };
+
     const rejectOnce = (error: unknown): void => {
       if (isSettled) return;
       isSettled = true;
+      cleanup();
       reject(error);
     };
 
     const resolveOnce = (body: ArrayBuffer): void => {
       if (isSettled) return;
       isSettled = true;
+      cleanup();
       resolve(body);
     };
 
-    req.on("data", (chunk: Buffer) => {
+    const handleData = (chunk: Buffer): void => {
       if (isSettled) return;
 
       totalBytes += chunk.byteLength;
       if (isBodySizeOverLimit(totalBytes, maxBodySize)) {
         req.pause();
-        req.removeAllListeners("data");
-        req.removeAllListeners("end");
+        cleanup();
         req.resume();
         rejectOnce(new PayloadTooLargeError(totalBytes, maxBodySize));
         return;
       }
       chunks.push(chunk);
-    });
+    };
 
-    req.on("end", () => {
+    const handleEnd = (): void => {
       const combined = Buffer.concat(chunks, totalBytes);
       resolveOnce(
         combined.buffer.slice(
@@ -203,7 +233,26 @@ function collectBody(req: IncomingMessage, maxBodySize: number): Promise<ArrayBu
           combined.byteOffset + combined.byteLength,
         ) as ArrayBuffer,
       );
-    });
-    req.on("error", rejectOnce);
+    };
+
+    const handleError = (error: Error): void => {
+      rejectOnce(error);
+    };
+
+    const handleAborted = (): void => {
+      rejectOnce(new Error("Request aborted while reading body"));
+    };
+
+    const handleClose = (): void => {
+      if (!req.readableEnded) {
+        rejectOnce(new Error("Request closed before body was fully read"));
+      }
+    };
+
+    req.on("data", handleData);
+    req.on("end", handleEnd);
+    req.on("error", handleError);
+    req.on("aborted", handleAborted);
+    req.on("close", handleClose);
   });
 }

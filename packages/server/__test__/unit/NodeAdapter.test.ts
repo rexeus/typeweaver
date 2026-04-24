@@ -1,10 +1,12 @@
+import { IncomingMessage } from "node:http";
+import { Socket } from "node:net";
 import {
   internalServerErrorDefaultError,
+  notFoundDefaultError,
   payloadTooLargeDefaultError,
 } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
 import { PayloadTooLargeError } from "../../src/lib/Errors.js";
-import { FetchApiAdapter } from "../../src/lib/FetchApiAdapter.js";
 import { nodeAdapter } from "../../src/lib/NodeAdapter.js";
 import { TypeweaverApp } from "../../src/lib/TypeweaverApp.js";
 import {
@@ -15,6 +17,44 @@ import {
 
 function stubFetch(app: TypeweaverApp, response: Response) {
   return vi.spyOn(app, "fetch").mockResolvedValue(response);
+}
+
+function createControlledIncomingMessage(
+  method: string,
+  url: string,
+  headers: Record<string, string> = {}
+): IncomingMessage {
+  const socket = new Socket();
+  const req = new IncomingMessage(socket);
+  req.method = method;
+  req.url = url;
+  req.headers = { host: "localhost:3000", ...headers };
+  return req;
+}
+
+function waitForRequestErrorListener(
+  req: IncomingMessage,
+  targetAdditions: number
+): Promise<void> {
+  let errorListenerAdditions = 0;
+
+  return new Promise<void>(resolve => {
+    const handleNewListener = (eventName: string | symbol): void => {
+      if (eventName !== "error") {
+        return;
+      }
+
+      errorListenerAdditions += 1;
+      if (errorListenerAdditions !== targetAdditions) {
+        return;
+      }
+
+      req.off("newListener", handleNewListener);
+      resolve();
+    };
+
+    req.on("newListener", handleNewListener);
+  });
 }
 
 type InvokeNodeAdapterOptions = {
@@ -163,6 +203,60 @@ describe("nodeAdapter", () => {
 
       const request = fetchSpy.mock.calls[0]![0] as Request;
       expect(expectRequest(request).body).toBeNull();
+    });
+
+    test("drains skipped GET request bodies", async () => {
+      const handler = nodeAdapter(new TypeweaverApp());
+      const req = createMockIncomingMessage(
+        "GET",
+        "/items",
+        { "content-length": "5" },
+        "hello"
+      );
+      const chunks: Buffer[] = [];
+      req.on("data", chunk => {
+        chunks.push(Buffer.from(chunk));
+      });
+      const endListener = vi.fn();
+      req.on("end", endListener);
+      const endPromise = new Promise<void>(resolve => {
+        req.on("end", () => resolve());
+      });
+      const res = createMockServerResponse(req);
+
+      handler(req, res);
+      await awaitResponse(res);
+      await endPromise;
+
+      expect(Buffer.concat(chunks).toString()).toBe("hello");
+      expect(endListener).toHaveBeenCalledTimes(1);
+    });
+
+    test("writes the app response when skipped GET body drain emits an error", async () => {
+      const onError = vi.fn();
+      const app = new TypeweaverApp({ onError });
+
+      const handler = nodeAdapter(app);
+      const req = createControlledIncomingMessage("GET", "/items", {
+        "content-length": "5",
+      });
+      const drainStarted = waitForRequestErrorListener(req, 1);
+      const res = createMockServerResponse(req);
+      const responseFinished = awaitResponse(res);
+
+      handler(req, res);
+      await drainStarted;
+      req.push(Buffer.from("hello"));
+      req.emit("error", new Error("drain failed"));
+      req.push(null);
+      await responseFinished;
+
+      expect(res.writtenStatus).toBe(404);
+      expect(JSON.parse(res.writtenBody)).toEqual({
+        code: notFoundDefaultError.code,
+        message: notFoundDefaultError.message,
+      });
+      expect(onError).not.toHaveBeenCalled();
     });
 
     test("omits body for HEAD", async () => {
@@ -349,6 +443,62 @@ describe("nodeAdapter", () => {
       });
     });
 
+    test("preserves unrelated request end and close listeners after rejecting an oversized body", async () => {
+      const app = new TypeweaverApp({ onError: vi.fn() });
+
+      const handler = nodeAdapter(app, { maxBodySize: 4 });
+      const req = createMockIncomingMessage(
+        "POST",
+        "/upload",
+        { "content-type": "text/plain" },
+        "hello"
+      );
+      const endListener = vi.fn();
+      req.on("end", endListener);
+      const closeListener = vi.fn();
+      req.on("close", closeListener);
+      const closePromise = new Promise<void>(resolve => {
+        req.on("close", () => resolve());
+      });
+      const res = createMockServerResponse(req);
+
+      handler(req, res);
+      await awaitResponse(res);
+      await closePromise;
+
+      expect(res.writtenStatus).toBe(413);
+      expect(endListener).toHaveBeenCalledTimes(1);
+      expect(closeListener).toHaveBeenCalled();
+    });
+
+    test("preserves the 413 response when post-limit body drain emits an error", async () => {
+      const onError = vi.fn();
+      const app = new TypeweaverApp({ onError });
+
+      const handler = nodeAdapter(app, { maxBodySize: 4 });
+      const req = createControlledIncomingMessage("POST", "/upload", {
+        "content-type": "text/plain",
+      });
+      const drainStarted = waitForRequestErrorListener(req, 2);
+      const res = createMockServerResponse(req);
+      const responseFinished = awaitResponse(res);
+
+      handler(req, res);
+      req.push(Buffer.from("hello"));
+      await drainStarted;
+      req.emit("error", new Error("drain failed"));
+      req.push(null);
+      await responseFinished;
+
+      expect(res.writtenStatus).toBe(413);
+      expect(JSON.parse(res.writtenBody)).toEqual({
+        code: payloadTooLargeDefaultError.code,
+        message: payloadTooLargeDefaultError.message,
+      });
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(PayloadTooLargeError);
+    });
+
     test("passes body through when exactly at maxBodySize", async () => {
       const app = new TypeweaverApp();
       const fetchSpy = stubFetch(app, new Response("ok"));
@@ -417,14 +567,8 @@ describe("nodeAdapter", () => {
       });
     });
 
-    test("marks stricter Node prevalidation so fetch parsing skips duplicate reads", async () => {
+    test("returns the app response after Node prevalidation consumes the body", async () => {
       const app = new TypeweaverApp({ maxBodySize: 64 });
-      const readBodyWithLimitSpy = vi.spyOn(
-        FetchApiAdapter.prototype as unknown as {
-          readBodyWithLimit: (request: Request) => Promise<Request>;
-        },
-        "readBodyWithLimit"
-      );
 
       const handler = nodeAdapter(app, { maxBodySize: 16 });
       const req = createMockIncomingMessage(
@@ -439,9 +583,10 @@ describe("nodeAdapter", () => {
       await awaitResponse(res);
 
       expect(res.writtenStatus).toBe(404);
-      expect(readBodyWithLimitSpy).not.toHaveBeenCalled();
-
-      readBodyWithLimitSpy.mockRestore();
+      expect(JSON.parse(res.writtenBody)).toEqual({
+        code: notFoundDefaultError.code,
+        message: notFoundDefaultError.message,
+      });
     });
 
     test("does not return 413 for oversized GET content-length", async () => {
