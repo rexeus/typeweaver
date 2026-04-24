@@ -6,26 +6,31 @@
  */
 
 import type { BodyLimitPolicy } from "./BodyLimitPolicy.js";
+import type { TypeweaverApp } from "./TypeweaverApp.js";
 
-export type TypeweaverAppInternals = {
+/** Runtime context shared privately between TypeweaverApp and adapters. */
+export type TypeweaverRuntimeContext = {
   readonly bodyLimitPolicy: BodyLimitPolicy;
   readonly reportError: (error: unknown) => void;
 };
 
-const appInternalsRegistry = new WeakMap<object, TypeweaverAppInternals>();
+const appRuntimeContextRegistry = new WeakMap<TypeweaverApp<any>, TypeweaverRuntimeContext>();
 
 function fallbackReportError(error: unknown): void {
   console.error(error);
 }
 
-export function setTypeweaverAppInternals(app: object, internals: TypeweaverAppInternals): void {
-  appInternalsRegistry.set(app, internals);
+export function setTypeweaverAppRuntimeContext(
+  app: TypeweaverApp<any>,
+  runtimeContext: TypeweaverRuntimeContext,
+): void {
+  appRuntimeContextRegistry.set(app, runtimeContext);
 }
 
-export function getTypeweaverAppInternals(app: object): TypeweaverAppInternals | undefined {
-  return appInternalsRegistry.get(app);
+export function getTypeweaverAppRuntimeContext(app: TypeweaverApp<any>): TypeweaverRuntimeContext | undefined {
+  return appRuntimeContextRegistry.get(app);
 }
 
-export function getTypeweaverAppErrorReporter(app: object): (error: unknown) => void {
-  return getTypeweaverAppInternals(app)?.reportError ?? fallbackReportError;
+export function getTypeweaverAppErrorReporter(app: TypeweaverApp<any>): (error: unknown) => void {
+  return getTypeweaverAppRuntimeContext(app)?.reportError ?? fallbackReportError;
 }

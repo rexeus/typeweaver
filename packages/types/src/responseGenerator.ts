@@ -13,16 +13,31 @@ import { pascalCase } from "polycase";
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 type OwnResponseTemplateData = {
-  readonly factory: string;
+  readonly identifierName: string;
+  readonly typeValue: string;
   readonly header?: string;
   readonly body?: string;
   readonly statusCode: HttpStatusCode;
-  readonly name: string;
   readonly statusCodeKey: string;
+  readonly hasHeader: boolean;
+  readonly hasBody: boolean;
+  readonly factory: string;
+};
+
+type ResponseFactoryTemplateData = {
+  readonly identifierName: string;
+  readonly typeValue: string;
+  readonly statusCodeKey: string;
+  readonly hasHeader: boolean;
+  readonly hasBody: boolean;
+};
+
+type RenderResponseFactoryTemplateData = ResponseFactoryTemplateData & {
+  readonly indentation: string;
 };
 
 type ImportedResponseTemplateData = {
-  readonly name: string;
+  readonly identifierName: string;
   readonly path: string;
 };
 
@@ -33,10 +48,16 @@ export function generate(context: GeneratorContext): void {
     "templates",
     "SharedResponse.ejs"
   );
+  const responseFactoryTemplateFile = path.join(
+    moduleDir,
+    "templates",
+    "ResponseFactory.ejs"
+  );
 
   for (const response of context.normalizedSpec.responses) {
     writeCanonicalResponseType(
       canonicalResponseTemplateFile,
+      responseFactoryTemplateFile,
       response,
       context
     );
@@ -44,13 +65,20 @@ export function generate(context: GeneratorContext): void {
 
   for (const resource of context.normalizedSpec.resources) {
     for (const operation of resource.operations) {
-      writeResponseType(templateFile, resource, operation, context);
+      writeResponseType(
+        templateFile,
+        responseFactoryTemplateFile,
+        resource,
+        operation,
+        context
+      );
     }
   }
 }
 
 function writeResponseType(
   templateFile: string,
+  responseFactoryTemplateFile: string,
   resource: NormalizedResource,
   operation: NormalizedOperation,
   context: GeneratorContext
@@ -66,7 +94,7 @@ function writeResponseType(
   for (const responseUsage of operation.responses) {
     if (responseUsage.source === "canonical") {
       canonicalResponses.push({
-        name: responseUsage.responseName,
+        identifierName: pascalCase(responseUsage.responseName),
         path: context.getCanonicalResponseImportPath({
           importerDir: outputPaths.outputDir,
           responseName: responseUsage.responseName,
@@ -75,7 +103,13 @@ function writeResponseType(
       continue;
     }
 
-    ownResponses.push(createOwnResponseTemplateData(responseUsage.response));
+    ownResponses.push(
+      createOwnResponseTemplateData(
+        responseUsage.response,
+        responseFactoryTemplateFile,
+        context
+      )
+    );
   }
 
   const content = context.renderTemplate(templateFile, {
@@ -96,26 +130,37 @@ function writeResponseType(
 }
 
 function createOwnResponseTemplateData(
-  response: NormalizedResponse
+  response: NormalizedResponse,
+  responseFactoryTemplateFile: string,
+  context: GeneratorContext
 ): OwnResponseTemplateData {
+  const hasHeader = response.header !== undefined;
+  const hasBody = response.body !== undefined;
+  const factoryData: ResponseFactoryTemplateData = {
+    identifierName: pascalCase(response.name),
+    typeValue: response.name,
+    statusCodeKey: HttpStatusCode[response.statusCode],
+    hasHeader,
+    hasBody,
+  };
+
   return {
-    factory: createResponseFactorySource({
-      name: response.name,
-      statusCodeKey: HttpStatusCode[response.statusCode],
-      hasHeader: response.header !== undefined,
-      hasBody: response.body !== undefined,
-      indentation: "    ",
-    }),
-    name: response.name,
+    ...factoryData,
     body: response.body ? print(fromZod(response.body)) : undefined,
     header: response.header ? print(fromZod(response.header)) : undefined,
     statusCode: response.statusCode,
-    statusCodeKey: HttpStatusCode[response.statusCode],
+    factory: renderResponseFactory(
+      responseFactoryTemplateFile,
+      factoryData,
+      context,
+      "    "
+    ),
   };
 }
 
 function writeCanonicalResponseType(
   templateFile: string,
+  responseFactoryTemplateFile: string,
   response: NormalizedResponse,
   context: GeneratorContext
 ): void {
@@ -124,20 +169,25 @@ function writeCanonicalResponseType(
     ? print(fromZod(response.header))
     : undefined;
   const bodyTsType = response.body ? print(fromZod(response.body)) : undefined;
+  const factoryData: ResponseFactoryTemplateData = {
+    identifierName: pascalCaseName,
+    typeValue: response.name,
+    statusCodeKey: HttpStatusCode[response.statusCode],
+    hasHeader: response.header !== undefined,
+    hasBody: response.body !== undefined,
+  };
 
   const content = context.renderTemplate(templateFile, {
     coreDir: context.coreDir,
     headerTsType,
     bodyTsType,
-    pascalCaseName,
-    sharedResponse: response,
-    statusCodeKey: HttpStatusCode[response.statusCode],
-    responseFactory: createResponseFactorySource({
-      name: pascalCaseName,
-      statusCodeKey: HttpStatusCode[response.statusCode],
-      hasHeader: response.header !== undefined,
-      hasBody: response.body !== undefined,
-    }),
+    ...factoryData,
+    factory: renderResponseFactory(
+      responseFactoryTemplateFile,
+      factoryData,
+      context,
+      ""
+    ),
   });
 
   const relativePath = path.relative(
@@ -147,43 +197,14 @@ function writeCanonicalResponseType(
   context.writeFile(relativePath, content);
 }
 
-type CreateResponseFactorySourceParameters = {
-  readonly name: string;
-  readonly statusCodeKey: string;
-  readonly hasHeader: boolean;
-  readonly hasBody: boolean;
-  readonly indentation?: string;
-};
-
-function createResponseFactorySource({
-  name,
-  statusCodeKey,
-  hasHeader,
-  hasBody,
-  indentation = "",
-}: CreateResponseFactorySourceParameters): string {
-  const inputProperties = [
-    hasHeader ? `${indentation}    header: I${name}ResponseHeader;` : undefined,
-    hasBody ? `${indentation}    body: I${name}ResponseBody;` : undefined,
-  ].filter((property): property is string => property !== undefined);
-
-  const signature =
-    inputProperties.length === 0
-      ? `(): I${name}Response`
-      : [
-          `(`,
-          `${indentation}input: {`,
-          ...inputProperties,
-          `${indentation}}`,
-          `${indentation}): I${name}Response`,
-        ].join("\n");
-
-  return [
-    `${indentation}export const create${name}Response = ${signature} => ({`,
-    `${indentation}    type: "${name}",`,
-    `${indentation}    statusCode: HttpStatusCode.${statusCodeKey},`,
-    `${indentation}    header: ${hasHeader ? "input.header" : "undefined"},`,
-    `${indentation}    body: ${hasBody ? "input.body" : "undefined"},`,
-    `${indentation}});`,
-  ].join("\n");
+function renderResponseFactory(
+  templateFile: string,
+  data: ResponseFactoryTemplateData,
+  context: GeneratorContext,
+  indentation: string
+): string {
+  return context.renderTemplate(templateFile, {
+    ...data,
+    indentation,
+  } satisfies RenderResponseFactoryTemplateData);
 }

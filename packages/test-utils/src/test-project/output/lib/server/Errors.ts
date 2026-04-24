@@ -28,6 +28,22 @@ export class PayloadTooLargeError extends Error {
 }
 
 /**
+ * Error thrown when a skipped request body cannot be drained before timeout.
+ * Caught by NodeAdapter to return a 413 Payload Too Large response.
+ */
+export class RequestBodyDrainTimeoutError extends Error {
+  public override readonly name = "RequestBodyDrainTimeoutError";
+  public constructor(
+    public readonly maxBodySize: number,
+    public readonly timeoutMs: number,
+  ) {
+    super(
+      `Request body drain timed out after ${timeoutMs}ms while enforcing ${maxBodySize} byte limit`,
+    );
+  }
+}
+
+/**
  * Error thrown when the response body cannot be serialized to JSON.
  * Typically caused by circular references or non-serializable values.
  */

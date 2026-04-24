@@ -248,18 +248,17 @@ export class FetchApiAdapter {
     const contentLength = parseContentLength(
       request.headers.get("content-length")
     );
-    if (contentLength === undefined) {
-      return this.readBodyWithLimit(request);
-    }
-
-    if (isBodySizeOverLimit(contentLength, this.bodyLimitPolicy.maxBodySize)) {
+    if (
+      contentLength !== undefined &&
+      isBodySizeOverLimit(contentLength, this.bodyLimitPolicy.maxBodySize)
+    ) {
       throw new PayloadTooLargeError(
         contentLength,
         this.bodyLimitPolicy.maxBodySize
       );
     }
 
-    return request;
+    return this.readBodyWithLimit(request);
   }
 
   private async readBodyWithLimit(request: Request): Promise<Request> {

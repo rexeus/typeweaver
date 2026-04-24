@@ -20,6 +20,9 @@ type RequestBodyPrevalidation = {
   readonly maxBodySize: number;
 };
 
+// NodeAdapter reads and caps IncomingMessage bodies before creating Fetch
+// Requests. This WeakMap records that Node→Fetch handoff so FetchApiAdapter
+// skips re-reading only when the Node policy was at least as strict.
 const requestBodyPrevalidations = new WeakMap<
   Request,
   RequestBodyPrevalidation

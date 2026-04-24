@@ -16,10 +16,23 @@ import {
   markRequestBodyPrevalidated,
   parseContentLength,
 } from "./BodyLimitPolicy.js";
-import { PayloadTooLargeError } from "./Errors.js";
-import { getTypeweaverAppErrorReporter, getTypeweaverAppInternals } from "./TypeweaverInternals.js";
+import { PayloadTooLargeError, RequestBodyDrainTimeoutError } from "./Errors.js";
+import { getTypeweaverAppErrorReporter, getTypeweaverAppRuntimeContext } from "./TypeweaverInternals.js";
 import type { TypeweaverApp } from "./TypeweaverApp.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
+
+type DrainRequestResult = {
+  readonly exceededLimit: boolean;
+  readonly timedOut: boolean;
+  readonly totalBytes: number;
+};
+
+type DrainRequestOptions = {
+  readonly destroyOnLimitExceeded?: boolean;
+  readonly timeoutMs?: number;
+};
+
+const REQUEST_DRAIN_TIMEOUT_MS = 5_000;
 
 /**
  * Adapts a `TypeweaverApp` to Node.js `http.createServer`.
@@ -44,8 +57,8 @@ export function nodeAdapter(
   app: TypeweaverApp<any>,
   options?: NodeAdapterOptions,
 ): (req: IncomingMessage, res: ServerResponse) => void {
-  const appInternals = getTypeweaverAppInternals(app);
-  const maxBodySize = options?.maxBodySize ?? appInternals?.bodyLimitPolicy.maxBodySize;
+  const appRuntimeContext = getTypeweaverAppRuntimeContext(app);
+  const maxBodySize = options?.maxBodySize ?? appRuntimeContext?.bodyLimitPolicy.maxBodySize;
   const bodyLimitPolicy = createNodeBodyLimitPolicy(maxBodySize);
   const reportError = getTypeweaverAppErrorReporter(app);
 
@@ -64,10 +77,19 @@ async function handleRequest(
   try {
     const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
     const shouldValidateBody = shouldValidateRequestBody(req.method);
-    if (shouldValidateBody) {
-      enforceContentLengthLimit(req, bodyLimitPolicy.maxBodySize);
-    } else {
-      void drainRequest(req);
+
+    enforceContentLengthLimit(req, bodyLimitPolicy.maxBodySize);
+
+    if (!shouldValidateBody) {
+      const drainResult = await drainRequest(req, bodyLimitPolicy.maxBodySize, {
+        destroyOnLimitExceeded: false,
+      });
+      if (drainResult.exceededLimit) {
+        throw new PayloadTooLargeError(drainResult.totalBytes, bodyLimitPolicy.maxBodySize);
+      }
+      if (drainResult.timedOut) {
+        throw new RequestBodyDrainTimeoutError(bodyLimitPolicy.maxBodySize, REQUEST_DRAIN_TIMEOUT_MS);
+      }
     }
 
     const body = !shouldValidateBody
@@ -99,9 +121,12 @@ async function handleRequest(
   } catch (error) {
     reportError(error);
 
-    if (error instanceof PayloadTooLargeError) {
-      writeDefaultErrorResponse(res, payloadTooLargeDefaultError);
-      void drainRequest(req);
+    if (isRequestBodyLimitError(error)) {
+      writeDefaultErrorResponse(res, payloadTooLargeDefaultError, () => {
+        void drainRequest(req, bodyLimitPolicy.maxBodySize, {
+          destroyOnLimitExceeded: true,
+        });
+      });
       return;
     }
 
@@ -111,6 +136,12 @@ async function handleRequest(
 
 function shouldValidateRequestBody(method?: string): boolean {
   return method !== "GET" && method !== "HEAD";
+}
+
+function isRequestBodyLimitError(
+  error: unknown,
+): error is PayloadTooLargeError | RequestBodyDrainTimeoutError {
+  return error instanceof PayloadTooLargeError || error instanceof RequestBodyDrainTimeoutError;
 }
 
 function enforceContentLengthLimit(req: IncomingMessage, maxBodySize: number): void {
@@ -127,6 +158,7 @@ function enforceContentLengthLimit(req: IncomingMessage, maxBodySize: number): v
 function writeDefaultErrorResponse(
   res: ServerResponse,
   error: typeof payloadTooLargeDefaultError | typeof internalServerErrorDefaultError,
+  onFinished?: () => void,
 ): void {
   if (!res.headersSent) {
     res.writeHead(error.statusCode, {
@@ -134,47 +166,86 @@ function writeDefaultErrorResponse(
     });
   }
 
+  if (onFinished !== undefined) {
+    res.once("finish", onFinished);
+  }
+
   res.end(JSON.stringify(createDefaultErrorBody(error)));
 }
 
-async function drainRequest(req: IncomingMessage): Promise<void> {
+async function drainRequest(
+  req: IncomingMessage,
+  maxBodySize: number,
+  options: DrainRequestOptions = {},
+): Promise<DrainRequestResult> {
   if (req.readableEnded || req.destroyed) {
-    return;
+    return { exceededLimit: false, timedOut: false, totalBytes: 0 };
   }
 
-  await new Promise<void>((resolve) => {
+  return await new Promise<DrainRequestResult>((resolve) => {
+    const destroyOnLimitExceeded = options.destroyOnLimitExceeded ?? true;
+    const timeoutMs = options.timeoutMs ?? REQUEST_DRAIN_TIMEOUT_MS;
+    let drainedBytes = 0;
     let isSettled = false;
 
-    const settle = (callback: () => void): void => {
+    const settle = (result: Omit<DrainRequestResult, "totalBytes">): void => {
       if (isSettled) return;
       isSettled = true;
       cleanup();
-      callback();
+      resolve({ ...result, totalBytes: drainedBytes });
+    };
+
+    const stopReading = (
+      result: Omit<DrainRequestResult, "totalBytes">,
+    ): void => {
+      if (isSettled) return;
+      isSettled = true;
+      cleanup();
+      if (destroyOnLimitExceeded) {
+        req.destroy();
+      }
+      resolve({ ...result, totalBytes: drainedBytes });
+    };
+
+    const drainTimeout = setTimeout(() => {
+      stopReading({ exceededLimit: false, timedOut: true });
+    }, timeoutMs);
+    drainTimeout.unref();
+
+    const handleData = (chunk: Buffer | string): void => {
+      drainedBytes += typeof chunk === "string" ? Buffer.byteLength(chunk) : chunk.byteLength;
+
+      if (isBodySizeOverLimit(drainedBytes, maxBodySize)) {
+        stopReading({ exceededLimit: true, timedOut: false });
+      }
     };
 
     const handleEnd = (): void => {
-      settle(resolve);
+      settle({ exceededLimit: false, timedOut: false });
     };
 
     const handleClose = (): void => {
-      settle(resolve);
+      settle({ exceededLimit: false, timedOut: false });
     };
 
     const handleAborted = (): void => {
-      settle(resolve);
+      settle({ exceededLimit: false, timedOut: false });
     };
 
     const handleError = (): void => {
-      settle(resolve);
+      settle({ exceededLimit: false, timedOut: false });
     };
 
     const cleanup = (): void => {
+      clearTimeout(drainTimeout);
+      req.off("data", handleData);
       req.off("end", handleEnd);
       req.off("error", handleError);
       req.off("aborted", handleAborted);
       req.off("close", handleClose);
     };
 
+    req.on("data", handleData);
     req.on("end", handleEnd);
     req.on("error", handleError);
     req.on("aborted", handleAborted);

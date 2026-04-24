@@ -357,8 +357,34 @@ describe("Generated Hono Router", () => {
       expect(text).toBe(customStringResponse);
     });
 
-    test.todo("should handle ArrayBuffer response bodies", async () => {
-      // TODO: Implement test
+    test("should return ArrayBuffer response bodies with octet-stream headers and preserved bytes", async () => {
+      // Arrange
+      const body = new TextEncoder().encode("binary data").buffer;
+      const app = createTestHono({
+        validateResponses: false,
+        throwTodoError: {
+          type: "CustomArrayBufferResponse" as const,
+          statusCode: 200,
+          header: { "Content-Type": "application/octet-stream" },
+          body,
+        },
+      });
+      const requestData = createCreateTodoRequest();
+
+      // Act
+      const response = await app.request(
+        "http://localhost/todos",
+        prepareRequestData(requestData)
+      );
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toBe(
+        "application/octet-stream"
+      );
+      expect(Buffer.from(await response.arrayBuffer())).toEqual(
+        Buffer.from(body)
+      );
     });
 
     test("should handle Blob response bodies", async () => {
@@ -391,22 +417,6 @@ describe("Generated Hono Router", () => {
 
       const responseBlob = await response.blob();
       expect(responseBlob.size).toBe(blob.size);
-    });
-
-    test.todo("should handle FormData response bodies", async () => {
-      // TODO: Implement test
-    });
-
-    test.todo("should handle URLSearchParams response bodies", async () => {
-      // TODO: Implement test
-    });
-
-    test.todo("should handle AsyncIterable response bodies", async () => {
-      // TODO: Implement test
-    });
-
-    test.todo("should handle NodeJS.ArrayBufferView response bodies", async () => {
-      // TODO: Implement test
     });
 
     test("should handle empty response bodies", async () => {

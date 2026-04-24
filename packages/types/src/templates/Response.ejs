@@ -11,26 +11,26 @@ import { HttpStatusCode } from "<%= coreDir %>";
 import type { ITypedHttpResponse } from "<%= coreDir %>";
 <% } %>
 <% for (const shared of sharedResponses) { %>
-import type { I<%= shared.name %>Response } from "<%= shared.path %>";
+import type { I<%= shared.identifierName %>Response } from "<%= shared.path %>";
 <% } %>
 <% for(const entityResponse of entityResponses) { %>
-import type { I<%= entityResponse.name %>Response } from "<%= entityResponse.path %>";
+import type { I<%= entityResponse.identifierName %>Response } from "<%= entityResponse.path %>";
 <% } %>
 
 <% for (const ownResponse of ownResponses) { %>
-    <% if (ownResponse.header) { %>
-        export type I<%= ownResponse.name %>ResponseHeader = <%- ownResponse.header %>;
+    <% if (ownResponse.hasHeader) { %>
+        export type I<%= ownResponse.identifierName %>ResponseHeader = <%- ownResponse.header %>;
     <% } %>
 
-    <% if (ownResponse.body) { %>
-        export type I<%= ownResponse.name %>ResponseBody = <%- ownResponse.body %>;
+    <% if (ownResponse.hasBody) { %>
+        export type I<%= ownResponse.identifierName %>ResponseBody = <%- ownResponse.body %>;
     <% } %>
 
-    export type I<%= ownResponse.name %>Response = ITypedHttpResponse<
-            "<%= ownResponse.name %>",
+    export type I<%= ownResponse.identifierName %>Response = ITypedHttpResponse<
+            "<%= ownResponse.typeValue %>",
             HttpStatusCode.<%= ownResponse.statusCodeKey %>,
-            <%= ownResponse.header ? `I${ownResponse.name}ResponseHeader` : 'undefined' %>,
-            <%= ownResponse.body ? `I${ownResponse.name}ResponseBody` : 'undefined' %>
+            <%= ownResponse.hasHeader ? `I${ownResponse.identifierName}ResponseHeader` : 'undefined' %>,
+            <%= ownResponse.hasBody ? `I${ownResponse.identifierName}ResponseBody` : 'undefined' %>
             >;
 
 <%- ownResponse.factory %>
@@ -38,11 +38,11 @@ import type { I<%= entityResponse.name %>Response } from "<%= entityResponse.pat
 
 export type <%= pascalCaseOperationId %>Response =
 <% for (const ownResponse of ownResponses) { %>
-    | I<%= ownResponse.name %>Response
+    | I<%= ownResponse.identifierName %>Response
 <% } %>
 <% for (const shared of sharedResponses) { %>
-    | I<%= shared.name %>Response
+    | I<%= shared.identifierName %>Response
 <% } %>
 <% for (const entityResponse of entityResponses) { %>
-    | I<%= entityResponse.name %>Response
+    | I<%= entityResponse.identifierName %>Response
 <% } %>;

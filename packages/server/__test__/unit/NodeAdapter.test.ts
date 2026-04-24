@@ -6,7 +6,10 @@ import {
   payloadTooLargeDefaultError,
 } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
-import { PayloadTooLargeError } from "../../src/lib/Errors.js";
+import {
+  PayloadTooLargeError,
+  RequestBodyDrainTimeoutError,
+} from "../../src/lib/Errors.js";
 import { nodeAdapter } from "../../src/lib/NodeAdapter.js";
 import { TypeweaverApp } from "../../src/lib/TypeweaverApp.js";
 import {
@@ -32,20 +35,10 @@ function createControlledIncomingMessage(
   return req;
 }
 
-function waitForRequestErrorListener(
-  req: IncomingMessage,
-  targetAdditions: number
-): Promise<void> {
-  let errorListenerAdditions = 0;
-
+function waitForSkippedBodyDrain(req: IncomingMessage): Promise<void> {
   return new Promise<void>(resolve => {
     const handleNewListener = (eventName: string | symbol): void => {
       if (eventName !== "error") {
-        return;
-      }
-
-      errorListenerAdditions += 1;
-      if (errorListenerAdditions !== targetAdditions) {
         return;
       }
 
@@ -240,7 +233,7 @@ describe("nodeAdapter", () => {
       const req = createControlledIncomingMessage("GET", "/items", {
         "content-length": "5",
       });
-      const drainStarted = waitForRequestErrorListener(req, 1);
+      const drainStarted = waitForSkippedBodyDrain(req);
       const res = createMockServerResponse(req);
       const responseFinished = awaitResponse(res);
 
@@ -257,6 +250,90 @@ describe("nodeAdapter", () => {
         message: notFoundDefaultError.message,
       });
       expect(onError).not.toHaveBeenCalled();
+    });
+
+    test("returns 413 before destroying oversized skipped GET bodies during cleanup", async () => {
+      const onError = vi.fn();
+      const app = new TypeweaverApp({ onError });
+      const fetchSpy = stubFetch(app, new Response("ok"));
+
+      const handler = nodeAdapter(app, { maxBodySize: 4 });
+      const req = createControlledIncomingMessage("GET", "/items", {
+        "content-length": "4",
+      });
+      const destroySpy = vi.spyOn(req, "destroy");
+      const drainStarted = waitForSkippedBodyDrain(req);
+      const res = createMockServerResponse(req);
+      const responseFinished = awaitResponse(res);
+
+      handler(req, res);
+      await drainStarted;
+      req.push(Buffer.from("12345"));
+      await responseFinished;
+
+      expect(res.writtenStatus).toBe(413);
+      expect(JSON.parse(res.writtenBody)).toEqual({
+        code: payloadTooLargeDefaultError.code,
+        message: payloadTooLargeDefaultError.message,
+      });
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(destroySpy).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(PayloadTooLargeError);
+
+      req.push(Buffer.from("again"));
+
+      expect(destroySpy).toHaveBeenCalledTimes(1);
+      expect(req.destroyed).toBe(true);
+    });
+
+    test("returns 413 when skipped GET body drain times out before dispatching to the app", async () => {
+      vi.useFakeTimers();
+      try {
+        const onError = vi.fn();
+        const app = new TypeweaverApp({ onError });
+        const fetchSpy = stubFetch(app, new Response("ok"));
+
+        const handler = nodeAdapter(app, { maxBodySize: 4 });
+        const req = createControlledIncomingMessage("GET", "/items", {
+          "content-length": "4",
+        });
+        const destroySpy = vi.spyOn(req, "destroy");
+        const drainStarted = waitForSkippedBodyDrain(req);
+        const res = createMockServerResponse(req);
+        const responseFinished = awaitResponse(res);
+
+        handler(req, res);
+        await drainStarted;
+        await vi.advanceTimersByTimeAsync(5_000);
+        await responseFinished;
+
+        expect(res.writtenStatus).toBe(413);
+        expect(JSON.parse(res.writtenBody)).toEqual({
+          code: payloadTooLargeDefaultError.code,
+          message: payloadTooLargeDefaultError.message,
+        });
+        expect(fetchSpy).not.toHaveBeenCalled();
+        expect(destroySpy).not.toHaveBeenCalled();
+        expect(onError).toHaveBeenCalledTimes(1);
+        expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(
+          RequestBodyDrainTimeoutError
+        );
+        expect(onError.mock.calls[0]?.[0]).toMatchObject({
+          maxBodySize: 4,
+          timeoutMs: 5_000,
+        });
+        expect(onError.mock.calls[0]?.[0]).not.toHaveProperty(
+          "contentLength"
+        );
+
+        await vi.advanceTimersByTimeAsync(5_000);
+
+        expect(destroySpy).toHaveBeenCalledTimes(1);
+        expect(req.destroyed).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     test("omits body for HEAD", async () => {
@@ -479,22 +556,83 @@ describe("nodeAdapter", () => {
       const req = createControlledIncomingMessage("POST", "/upload", {
         "content-type": "text/plain",
       });
-      const drainStarted = waitForRequestErrorListener(req, 2);
       const res = createMockServerResponse(req);
       const responseFinished = awaitResponse(res);
 
       handler(req, res);
       req.push(Buffer.from("hello"));
-      await drainStarted;
+      await responseFinished;
       req.emit("error", new Error("drain failed"));
       req.push(null);
-      await responseFinished;
 
       expect(res.writtenStatus).toBe(413);
       expect(JSON.parse(res.writtenBody)).toEqual({
         code: payloadTooLargeDefaultError.code,
         message: payloadTooLargeDefaultError.message,
       });
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(PayloadTooLargeError);
+    });
+
+    test("stops post-limit body draining without replacing the original 413 error", async () => {
+      const onError = vi.fn();
+      const app = new TypeweaverApp({ onError });
+
+      const handler = nodeAdapter(app, { maxBodySize: 4 });
+      const req = createControlledIncomingMessage("POST", "/upload", {
+        "content-type": "text/plain",
+      });
+      const res = createMockServerResponse(req);
+      const responseFinished = awaitResponse(res);
+
+      handler(req, res);
+      req.push(Buffer.from("hello"));
+      await responseFinished;
+      req.push(Buffer.from("again"));
+
+      expect(res.writtenStatus).toBe(413);
+      expect(JSON.parse(res.writtenBody)).toEqual({
+        code: payloadTooLargeDefaultError.code,
+        message: payloadTooLargeDefaultError.message,
+      });
+      expect(req.destroyed).toBe(true);
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError.mock.calls[0]?.[0]).toMatchObject({
+        contentLength: 5,
+        maxBodySize: 4,
+      });
+    });
+
+    test("starts destructive post-limit cleanup after the 413 response finishes", async () => {
+      const onError = vi.fn();
+      const app = new TypeweaverApp({ onError });
+
+      const handler = nodeAdapter(app, { maxBodySize: 4 });
+      const req = createControlledIncomingMessage("POST", "/upload", {
+        "content-type": "text/plain",
+      });
+      const events: string[] = [];
+      const originalDestroy = req.destroy.bind(req);
+      vi.spyOn(req, "destroy").mockImplementation((error?: Error) => {
+        events.push("destroy");
+        return originalDestroy(error);
+      });
+      const res = createMockServerResponse(req);
+      const responseFinished = awaitResponse(res);
+      res.once("finish", () => {
+        events.push("finish");
+      });
+
+      handler(req, res);
+      req.push(Buffer.from("hello"));
+      await responseFinished;
+
+      expect(events).toEqual(["finish"]);
+
+      req.push(Buffer.from("again"));
+
+      expect(res.writtenStatus).toBe(413);
+      expect(events).toEqual(["finish", "destroy"]);
       expect(onError).toHaveBeenCalledTimes(1);
       expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(PayloadTooLargeError);
     });
@@ -589,8 +727,8 @@ describe("nodeAdapter", () => {
       });
     });
 
-    test("does not return 413 for oversized GET content-length", async () => {
-      const { request, res } = await invokeNodeAdapter({
+    test("returns 413 for oversized GET content-length without dispatching to the app", async () => {
+      const { fetchSpy, res } = await invokeNodeAdapter({
         method: "GET",
         url: "/items",
         headers: { "content-length": "999" },
@@ -598,12 +736,12 @@ describe("nodeAdapter", () => {
         adapterOptions: { maxBodySize: 1 },
       });
 
-      expect(res.writtenStatus).toBe(200);
-      expect(expectRequest(request).body).toBeNull();
+      expect(res.writtenStatus).toBe(413);
+      expect(fetchSpy).not.toHaveBeenCalled();
     });
 
-    test("does not return 413 for oversized HEAD content-length", async () => {
-      const { request, res } = await invokeNodeAdapter({
+    test("returns 413 for oversized HEAD content-length without dispatching to the app", async () => {
+      const { fetchSpy, res } = await invokeNodeAdapter({
         method: "HEAD",
         url: "/items",
         headers: { "content-length": "999" },
@@ -611,8 +749,8 @@ describe("nodeAdapter", () => {
         adapterOptions: { maxBodySize: 1 },
       });
 
-      expect(res.writtenStatus).toBe(200);
-      expect(expectRequest(request).body).toBeNull();
+      expect(res.writtenStatus).toBe(413);
+      expect(fetchSpy).not.toHaveBeenCalled();
     });
 
     test("reports oversized body errors through app onError", async () => {

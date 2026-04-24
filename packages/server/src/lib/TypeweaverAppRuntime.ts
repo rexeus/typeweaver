@@ -7,14 +7,15 @@
 
 import { createFetchBodyLimitPolicy } from "./BodyLimitPolicy.js";
 import { FetchApiAdapter } from "./FetchApiAdapter.js";
-import { setTypeweaverAppInternals } from "./TypeweaverInternals.js";
+import { setTypeweaverAppRuntimeContext } from "./TypeweaverInternals.js";
+import type { TypeweaverApp } from "./TypeweaverApp.js";
 
 type InitializeTypeweaverAppRuntimeOptions = {
   readonly maxBodySize?: number;
 };
 
 type InitializeTypeweaverAppRuntimeParameters = {
-  readonly app: object;
+  readonly app: TypeweaverApp<any>;
   readonly options?: InitializeTypeweaverAppRuntimeOptions;
   readonly reportError: (error: unknown) => void;
 };
@@ -27,7 +28,7 @@ export function initializeTypeweaverAppRuntime({
   const bodyLimitPolicy = createFetchBodyLimitPolicy(options?.maxBodySize);
   const adapter = new FetchApiAdapter({ bodyLimitPolicy });
 
-  setTypeweaverAppInternals(app, {
+  setTypeweaverAppRuntimeContext(app, {
     bodyLimitPolicy,
     reportError,
   });

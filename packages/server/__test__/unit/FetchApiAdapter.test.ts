@@ -718,6 +718,24 @@ describe("FetchApiAdapter", () => {
         );
       });
 
+      test("rejects under-declared Content-Length streams and cancels the stream", async () => {
+        const cancel = vi.fn().mockResolvedValue(undefined);
+        const body = createOversizedStream(cancel);
+        const request = createAdapterRequestWithStream(
+          "/todos",
+          {
+            "Content-Type": "application/octet-stream",
+            "Content-Length": "4",
+          },
+          body
+        );
+        const adapter = new FetchApiAdapter({ maxBodySize: 4 });
+
+        await expectPayloadTooLargeError(adapter.toRequest(request), 6, 4);
+
+        expect(cancel).toHaveBeenCalledTimes(1);
+      });
+
       test("should accept body within limit when Content-Length header is missing", async () => {
         const adapter = new FetchApiAdapter({ maxBodySize: 200 });
         const request = new Request(`${BASE_URL}/todos`, {

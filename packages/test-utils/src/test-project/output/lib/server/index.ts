@@ -27,7 +27,12 @@ export {
   type StateRequirementError,
   type TypedMiddleware,
 } from "./TypedMiddleware.js";
-export { BodyParseError, PayloadTooLargeError, ResponseSerializationError } from "./Errors.js";
+export {
+  BodyParseError,
+  PayloadTooLargeError,
+  RequestBodyDrainTimeoutError,
+  ResponseSerializationError,
+} from "./Errors.js";
 export { FetchApiAdapter } from "./FetchApiAdapter.js";
 export { nodeAdapter, type NodeAdapterOptions } from "./NodeAdapter.js";
 export { pathMatcher } from "./PathMatcher.js";

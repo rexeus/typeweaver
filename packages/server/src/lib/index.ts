@@ -33,6 +33,7 @@ export {
 export {
   BodyParseError,
   PayloadTooLargeError,
+  RequestBodyDrainTimeoutError,
   ResponseSerializationError,
 } from "./Errors.js";
 export { FetchApiAdapter } from "./FetchApiAdapter.js";
