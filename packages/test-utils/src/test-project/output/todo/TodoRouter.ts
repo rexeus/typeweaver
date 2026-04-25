@@ -203,7 +203,7 @@ export class TodoRouter<
     );
 
     this.route(
-      "OptionsTodo",
+      "optionsTodo",
       HttpMethod.OPTIONS,
       "/todos/:todoId",
       new OptionsTodoRequestValidator(),

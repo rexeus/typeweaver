@@ -196,7 +196,7 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
     this.options("/todos/:todoId", async (context: Context) =>
       this.handleRequest(
         context,
-        "OptionsTodo",
+        "optionsTodo",
         new OptionsTodoRequestValidator(),
         new OptionsTodoResponseValidator(),
         this.requestHandlers.handleOptionsTodoRequest.bind(this.requestHandlers),

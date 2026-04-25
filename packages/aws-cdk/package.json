@@ -60,5 +60,8 @@
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^"
+  },
+  "dependencies": {
+    "polycase": "^1.1.0"
   }
 }

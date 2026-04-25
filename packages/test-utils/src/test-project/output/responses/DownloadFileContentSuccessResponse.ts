@@ -22,10 +22,12 @@ export type IDownloadFileContentSuccessResponse = ITypedHttpResponse<
   IDownloadFileContentSuccessResponseBody
 >;
 
-export const createDownloadFileContentSuccessResponse = (
-  input: Omit<IDownloadFileContentSuccessResponse, "type" | "statusCode">,
-): IDownloadFileContentSuccessResponse => ({
-  ...input,
+export const createDownloadFileContentSuccessResponse = (input: {
+  header: IDownloadFileContentSuccessResponseHeader;
+  body: IDownloadFileContentSuccessResponseBody;
+}): IDownloadFileContentSuccessResponse => ({
   type: "DownloadFileContentSuccess",
   statusCode: HttpStatusCode.OK,
+  header: input.header,
+  body: input.body,
 });

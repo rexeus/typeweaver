@@ -1,0 +1,12 @@
+<%= indentation %>export const create<%= identifierName %>Response = <% if (hasHeader || hasBody) { %>(
+<%= indentation %>input: {
+<% if (hasHeader) { %><%= indentation %>  header: I<%= identifierName %>ResponseHeader;
+<% } %><% if (hasBody) { %><%= indentation %>  body: I<%= identifierName %>ResponseBody;
+<% } %>
+<%= indentation %>}
+<%= indentation %>): I<%= identifierName %>Response<% } else { %>(): I<%= identifierName %>Response<% } %> => ({
+<%= indentation %>    type: "<%= typeValue %>",
+<%= indentation %>    statusCode: HttpStatusCode.<%= statusCodeKey %>,
+<%= indentation %>    header: <%= hasHeader ? 'input.header' : 'undefined' %>,
+<%= indentation %>    body: <%= hasBody ? 'input.body' : 'undefined' %>,
+<%= indentation %>});

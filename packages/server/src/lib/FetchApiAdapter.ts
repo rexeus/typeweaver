@@ -14,13 +14,21 @@ import type {
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
 import {
+  createFetchBodyLimitPolicy,
+  hasSatisfiedBodyLimitPolicy,
+  isBodySizeOverLimit,
+  parseContentLength,
+} from "./BodyLimitPolicy.js";
+import {
   BodyParseError,
   PayloadTooLargeError,
   ResponseSerializationError,
 } from "./Errors.js";
+import type { BodyLimitPolicy } from "./BodyLimitPolicy.js";
 
 export type FetchApiAdapterOptions = {
   readonly maxBodySize?: number;
+  readonly bodyLimitPolicy?: BodyLimitPolicy;
 };
 
 /**
@@ -35,13 +43,12 @@ export type FetchApiAdapterOptions = {
  * Bun, Deno, Node.js (>=18), Cloudflare Workers.
  */
 export class FetchApiAdapter {
-  private static readonly DEFAULT_MAX_BODY_SIZE = 1_048_576; // 1 MB
-
-  private readonly maxBodySize: number;
+  private readonly bodyLimitPolicy: BodyLimitPolicy;
 
   public constructor(options?: FetchApiAdapterOptions) {
-    this.maxBodySize =
-      options?.maxBodySize ?? FetchApiAdapter.DEFAULT_MAX_BODY_SIZE;
+    this.bodyLimitPolicy =
+      options?.bodyLimitPolicy ??
+      createFetchBodyLimitPolicy(options?.maxBodySize);
   }
 
   /**
@@ -234,21 +241,24 @@ export class FetchApiAdapter {
   }
 
   private async enforceBodySizeLimit(request: Request): Promise<Request> {
-    const contentLengthHeader = request.headers.get("content-length");
-    if (contentLengthHeader === null) {
-      return this.readBodyWithLimit(request);
+    if (hasSatisfiedBodyLimitPolicy(request, this.bodyLimitPolicy)) {
+      return request;
     }
 
-    const contentLength = Number(contentLengthHeader);
-    if (!Number.isFinite(contentLength) || contentLength < 0) {
-      return this.readBodyWithLimit(request);
+    const contentLength = parseContentLength(
+      request.headers.get("content-length")
+    );
+    if (
+      contentLength !== undefined &&
+      isBodySizeOverLimit(contentLength, this.bodyLimitPolicy.maxBodySize)
+    ) {
+      throw new PayloadTooLargeError(
+        contentLength,
+        this.bodyLimitPolicy.maxBodySize
+      );
     }
 
-    if (contentLength > this.maxBodySize) {
-      throw new PayloadTooLargeError(contentLength, this.maxBodySize);
-    }
-
-    return request;
+    return this.readBodyWithLimit(request);
   }
 
   private async readBodyWithLimit(request: Request): Promise<Request> {
@@ -264,14 +274,27 @@ export class FetchApiAdapter {
         if (done) break;
 
         totalBytes += value.byteLength;
-        if (totalBytes > this.maxBodySize) {
-          await reader.cancel();
-          throw new PayloadTooLargeError(totalBytes, this.maxBodySize);
+        if (isBodySizeOverLimit(totalBytes, this.bodyLimitPolicy.maxBodySize)) {
+          throw new PayloadTooLargeError(
+            totalBytes,
+            this.bodyLimitPolicy.maxBodySize
+          );
         }
         chunks.push(value);
       }
+    } catch (error) {
+      try {
+        await reader.cancel();
+      } catch {
+        // Preserve the original read failure if stream cleanup also fails.
+      }
+      throw error;
     } finally {
-      reader.releaseLock();
+      try {
+        reader.releaseLock();
+      } catch {
+        // Some runtimes may report release errors after stream termination.
+      }
     }
 
     return new Request(request.url, {
@@ -299,7 +322,8 @@ export class FetchApiAdapter {
   ): string | ArrayBuffer | Blob | null {
     if (body === undefined || body === null) return null;
     if (typeof body === "string") return body;
-    if (body instanceof Blob || body instanceof ArrayBuffer) return body;
+    if (body instanceof ArrayBuffer) return body;
+    if (body instanceof Blob) return body;
 
     try {
       return JSON.stringify(body);
@@ -330,6 +354,10 @@ export class FetchApiAdapter {
 
     if (!headers.has("content-type") && FetchApiAdapter.isJsonBody(body)) {
       headers.set("content-type", "application/json");
+    }
+
+    if (!headers.has("content-type") && body instanceof Blob && body.type) {
+      headers.set("content-type", body.type);
     }
 
     return headers;

@@ -27,10 +27,12 @@ export type IUnauthorizedErrorResponse = ITypedHttpResponse<
   IUnauthorizedErrorResponseBody
 >;
 
-export const createUnauthorizedErrorResponse = (
-  input: Omit<IUnauthorizedErrorResponse, "type" | "statusCode">,
-): IUnauthorizedErrorResponse => ({
-  ...input,
+export const createUnauthorizedErrorResponse = (input: {
+  header: IUnauthorizedErrorResponseHeader;
+  body: IUnauthorizedErrorResponseBody;
+}): IUnauthorizedErrorResponse => ({
   type: "UnauthorizedError",
   statusCode: HttpStatusCode.UNAUTHORIZED,
+  header: input.header,
+  body: input.body,
 });

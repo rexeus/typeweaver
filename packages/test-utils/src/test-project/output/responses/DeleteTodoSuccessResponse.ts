@@ -22,10 +22,11 @@ export type IDeleteTodoSuccessResponse = ITypedHttpResponse<
   undefined
 >;
 
-export const createDeleteTodoSuccessResponse = (
-  input: Omit<IDeleteTodoSuccessResponse, "type" | "statusCode">,
-): IDeleteTodoSuccessResponse => ({
-  ...input,
+export const createDeleteTodoSuccessResponse = (input: {
+  header: IDeleteTodoSuccessResponseHeader;
+}): IDeleteTodoSuccessResponse => ({
   type: "DeleteTodoSuccess",
   statusCode: HttpStatusCode.NO_CONTENT,
+  header: input.header,
+  body: undefined,
 });

@@ -27,10 +27,12 @@ export type IInternalServerErrorResponse = ITypedHttpResponse<
   IInternalServerErrorResponseBody
 >;
 
-export const createInternalServerErrorResponse = (
-  input: Omit<IInternalServerErrorResponse, "type" | "statusCode">,
-): IInternalServerErrorResponse => ({
-  ...input,
+export const createInternalServerErrorResponse = (input: {
+  header: IInternalServerErrorResponseHeader;
+  body: IInternalServerErrorResponseBody;
+}): IInternalServerErrorResponse => ({
   type: "InternalServerError",
   statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
+  header: input.header,
+  body: input.body,
 });

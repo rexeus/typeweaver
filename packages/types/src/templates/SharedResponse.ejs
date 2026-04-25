@@ -10,29 +10,18 @@ import { HttpStatusCode } from "<%= coreDir %>";
 import type { ITypedHttpResponse } from "<%= coreDir %>";
 
 <% if (headerTsType) { %>
-    export type I<%= pascalCaseName %>ResponseHeader = <%- headerTsType %>;
+    export type I<%= identifierName %>ResponseHeader = <%- headerTsType %>;
 <% } %>
 
 <% if (bodyTsType) { %>
-    export type I<%= pascalCaseName %>ResponseBody = <%- bodyTsType %>;
+    export type I<%= identifierName %>ResponseBody = <%- bodyTsType %>;
 <% } %>
 
-export type I<%= pascalCaseName %>Response = ITypedHttpResponse<
-"<%= pascalCaseName %>",
-HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>,
-<%= sharedResponse.header ? `I${pascalCaseName}ResponseHeader` : 'undefined' %>,
-<%= sharedResponse.body ? `I${pascalCaseName}ResponseBody` : 'undefined' %>
+export type I<%= identifierName %>Response = ITypedHttpResponse<
+"<%= typeValue %>",
+HttpStatusCode.<%= statusCodeKey %>,
+<%= hasHeader ? `I${identifierName}ResponseHeader` : 'undefined' %>,
+<%= hasBody ? `I${identifierName}ResponseBody` : 'undefined' %>
 >;
 
-<% if (sharedResponse.header || sharedResponse.body) { %>
-export const create<%= pascalCaseName %>Response = (input: Omit<I<%= pascalCaseName %>Response, "type" | "statusCode">): I<%= pascalCaseName %>Response => ({
-    ...input,
-    type: "<%= pascalCaseName %>",
-    statusCode: HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>,
-});
-<% } else { %>
-export const create<%= pascalCaseName %>Response = (): I<%= pascalCaseName %>Response => ({
-    type: "<%= pascalCaseName %>",
-    statusCode: HttpStatusCode.<%= httpStatusCode[sharedResponse.statusCode] %>,
-});
-<% } %>
+<%- factory %>

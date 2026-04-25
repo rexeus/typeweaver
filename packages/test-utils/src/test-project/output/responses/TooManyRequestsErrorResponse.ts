@@ -27,10 +27,12 @@ export type ITooManyRequestsErrorResponse = ITypedHttpResponse<
   ITooManyRequestsErrorResponseBody
 >;
 
-export const createTooManyRequestsErrorResponse = (
-  input: Omit<ITooManyRequestsErrorResponse, "type" | "statusCode">,
-): ITooManyRequestsErrorResponse => ({
-  ...input,
+export const createTooManyRequestsErrorResponse = (input: {
+  header: ITooManyRequestsErrorResponseHeader;
+  body: ITooManyRequestsErrorResponseBody;
+}): ITooManyRequestsErrorResponse => ({
   type: "TooManyRequestsError",
   statusCode: HttpStatusCode.TOO_MANY_REQUESTS,
+  header: input.header,
+  body: input.body,
 });

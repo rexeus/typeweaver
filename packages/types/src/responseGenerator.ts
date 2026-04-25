@@ -7,21 +7,37 @@ import type {
   NormalizedResource,
   NormalizedResponse,
 } from "@rexeus/typeweaver-gen";
-import { toPascalCase } from "@rexeus/typeweaver-gen";
 import { fromZod, print } from "@rexeus/typeweaver-zod-to-ts";
+import { pascalCase } from "polycase";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 type OwnResponseTemplateData = {
+  readonly identifierName: string;
+  readonly typeValue: string;
   readonly header?: string;
   readonly body?: string;
   readonly statusCode: HttpStatusCode;
-  readonly name: string;
   readonly statusCodeKey: string;
+  readonly hasHeader: boolean;
+  readonly hasBody: boolean;
+  readonly factory: string;
+};
+
+type ResponseFactoryTemplateData = {
+  readonly identifierName: string;
+  readonly typeValue: string;
+  readonly statusCodeKey: string;
+  readonly hasHeader: boolean;
+  readonly hasBody: boolean;
+};
+
+type RenderResponseFactoryTemplateData = ResponseFactoryTemplateData & {
+  readonly indentation: string;
 };
 
 type ImportedResponseTemplateData = {
-  readonly name: string;
+  readonly identifierName: string;
   readonly path: string;
 };
 
@@ -32,10 +48,16 @@ export function generate(context: GeneratorContext): void {
     "templates",
     "SharedResponse.ejs"
   );
+  const responseFactoryTemplateFile = path.join(
+    moduleDir,
+    "templates",
+    "ResponseFactory.ejs"
+  );
 
   for (const response of context.normalizedSpec.responses) {
     writeCanonicalResponseType(
       canonicalResponseTemplateFile,
+      responseFactoryTemplateFile,
       response,
       context
     );
@@ -43,13 +65,20 @@ export function generate(context: GeneratorContext): void {
 
   for (const resource of context.normalizedSpec.resources) {
     for (const operation of resource.operations) {
-      writeResponseType(templateFile, resource, operation, context);
+      writeResponseType(
+        templateFile,
+        responseFactoryTemplateFile,
+        resource,
+        operation,
+        context
+      );
     }
   }
 }
 
 function writeResponseType(
   templateFile: string,
+  responseFactoryTemplateFile: string,
   resource: NormalizedResource,
   operation: NormalizedOperation,
   context: GeneratorContext
@@ -58,14 +87,14 @@ function writeResponseType(
     resourceName: resource.name,
     operationId: operation.operationId,
   });
-  const pascalCaseOperationId = toPascalCase(operation.operationId);
+  const pascalCaseOperationId = pascalCase(operation.operationId);
   const ownResponses: OwnResponseTemplateData[] = [];
   const canonicalResponses: ImportedResponseTemplateData[] = [];
 
   for (const responseUsage of operation.responses) {
     if (responseUsage.source === "canonical") {
       canonicalResponses.push({
-        name: responseUsage.responseName,
+        identifierName: pascalCase(responseUsage.responseName),
         path: context.getCanonicalResponseImportPath({
           importerDir: outputPaths.outputDir,
           responseName: responseUsage.responseName,
@@ -74,7 +103,13 @@ function writeResponseType(
       continue;
     }
 
-    ownResponses.push(createOwnResponseTemplateData(responseUsage.response));
+    ownResponses.push(
+      createOwnResponseTemplateData(
+        responseUsage.response,
+        responseFactoryTemplateFile,
+        context
+      )
+    );
   }
 
   const content = context.renderTemplate(templateFile, {
@@ -95,35 +130,64 @@ function writeResponseType(
 }
 
 function createOwnResponseTemplateData(
-  response: NormalizedResponse
+  response: NormalizedResponse,
+  responseFactoryTemplateFile: string,
+  context: GeneratorContext
 ): OwnResponseTemplateData {
+  const hasHeader = response.header !== undefined;
+  const hasBody = response.body !== undefined;
+  const factoryData: ResponseFactoryTemplateData = {
+    identifierName: pascalCase(response.name),
+    typeValue: response.name,
+    statusCodeKey: HttpStatusCode[response.statusCode],
+    hasHeader,
+    hasBody,
+  };
+
   return {
-    name: response.name,
+    ...factoryData,
     body: response.body ? print(fromZod(response.body)) : undefined,
     header: response.header ? print(fromZod(response.header)) : undefined,
     statusCode: response.statusCode,
-    statusCodeKey: HttpStatusCode[response.statusCode],
+    factory: renderResponseFactory(
+      responseFactoryTemplateFile,
+      factoryData,
+      context,
+      "    "
+    ),
   };
 }
 
 function writeCanonicalResponseType(
   templateFile: string,
+  responseFactoryTemplateFile: string,
   response: NormalizedResponse,
   context: GeneratorContext
 ): void {
-  const pascalCaseName = toPascalCase(response.name);
+  const pascalCaseName = pascalCase(response.name);
   const headerTsType = response.header
     ? print(fromZod(response.header))
     : undefined;
   const bodyTsType = response.body ? print(fromZod(response.body)) : undefined;
+  const factoryData: ResponseFactoryTemplateData = {
+    identifierName: pascalCaseName,
+    typeValue: response.name,
+    statusCodeKey: HttpStatusCode[response.statusCode],
+    hasHeader: response.header !== undefined,
+    hasBody: response.body !== undefined,
+  };
 
   const content = context.renderTemplate(templateFile, {
     coreDir: context.coreDir,
-    httpStatusCode: HttpStatusCode,
     headerTsType,
     bodyTsType,
-    pascalCaseName,
-    sharedResponse: response,
+    ...factoryData,
+    factory: renderResponseFactory(
+      responseFactoryTemplateFile,
+      factoryData,
+      context,
+      ""
+    ),
   });
 
   const relativePath = path.relative(
@@ -131,4 +195,16 @@ function writeCanonicalResponseType(
     context.getCanonicalResponseOutputFile(response.name)
   );
   context.writeFile(relativePath, content);
+}
+
+function renderResponseFactory(
+  templateFile: string,
+  data: ResponseFactoryTemplateData,
+  context: GeneratorContext,
+  indentation: string
+): string {
+  return context.renderTemplate(templateFile, {
+    ...data,
+    indentation,
+  } satisfies RenderResponseFactoryTemplateData);
 }

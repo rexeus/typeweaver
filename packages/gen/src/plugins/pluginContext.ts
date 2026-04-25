@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { pascalCase } from "polycase";
 import { relative } from "../helpers/path.js";
 import { renderTemplate } from "../helpers/templateEngine.js";
 import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec.js";
@@ -64,11 +65,12 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
       readonly operationId: string;
     }) => {
       const outputDir = getResourceOutputDir(config.resourceName);
-      const requestFileName = `${config.operationId}Request.ts`;
-      const responseFileName = `${config.operationId}Response.ts`;
-      const requestValidationFileName = `${config.operationId}RequestValidator.ts`;
-      const responseValidationFileName = `${config.operationId}ResponseValidator.ts`;
-      const clientFileName = `${config.operationId}Client.ts`;
+      const fileBase = pascalCase(config.operationId);
+      const requestFileName = `${fileBase}Request.ts`;
+      const responseFileName = `${fileBase}Response.ts`;
+      const requestValidationFileName = `${fileBase}RequestValidator.ts`;
+      const responseValidationFileName = `${fileBase}ResponseValidator.ts`;
+      const clientFileName = `${fileBase}Client.ts`;
 
       return {
         outputDir,
@@ -99,7 +101,10 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
     };
 
     const getCanonicalResponseOutputFile = (responseName: string): string => {
-      return path.join(params.responsesOutputDir, `${responseName}Response.ts`);
+      return path.join(
+        params.responsesOutputDir,
+        `${pascalCase(responseName)}Response.ts`
+      );
     };
 
     return {

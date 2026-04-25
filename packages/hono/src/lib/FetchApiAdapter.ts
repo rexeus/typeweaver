@@ -63,7 +63,7 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
 
     return new Response(this.buildResponseBody(body), {
       status: statusCode,
-      headers: this.buildResponseHeaders(header),
+      headers: this.buildResponseHeaders(header, body),
     });
   }
 
@@ -138,18 +138,21 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
       return null;
     }
 
-    if (
-      typeof body === "string" ||
-      body instanceof Blob ||
-      body instanceof ArrayBuffer
-    ) {
+    if (typeof body === "string" || body instanceof ArrayBuffer) {
+      return body;
+    }
+
+    if (body instanceof Blob) {
       return body;
     }
 
     return JSON.stringify(body);
   }
 
-  private buildResponseHeaders(header?: IHttpHeader): Headers {
+  private buildResponseHeaders(
+    header?: IHttpHeader,
+    body?: IHttpBody
+  ): Headers {
     const headers = new Headers();
 
     if (header) {
@@ -162,6 +165,10 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
           }
         }
       });
+    }
+
+    if (!headers.has("content-type") && body instanceof Blob && body.type) {
+      headers.set("content-type", body.type);
     }
 
     return headers;

@@ -4,7 +4,7 @@ import type {
   GeneratorContext,
   NormalizedOperation,
 } from "@rexeus/typeweaver-gen";
-import { toPascalCase } from "@rexeus/typeweaver-gen";
+import { pascalCase } from "polycase";
 import { z } from "zod";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
@@ -41,7 +41,7 @@ function writeRequestValidator(
     operationId,
   });
 
-  const pascalCaseOperationId = toPascalCase(operationId);
+  const pascalCaseOperationId = pascalCase(operationId);
 
   const content = context.renderTemplate(templateFilePath, {
     pascalCaseOperationId,

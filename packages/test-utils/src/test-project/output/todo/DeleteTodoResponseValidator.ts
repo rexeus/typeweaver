@@ -22,6 +22,16 @@ const deleteTodoSuccessDefinition = getResponseDefinition(
   "DeleteTodoSuccess",
 );
 
+const deleteTodoBodyOnlyDefinition = getResponseDefinition(
+  definition.responses,
+  "DeleteTodoBodyOnly",
+);
+
+const deleteTodoNoContentDefinition = getResponseDefinition(
+  definition.responses,
+  "DeleteTodoNoContent",
+);
+
 const todoNotFoundErrorDefinition = getResponseDefinition(
   definition.responses,
   "TodoNotFoundError",
@@ -52,7 +62,7 @@ const unsupportedMediaTypeErrorDefinition = getResponseDefinition(
 const validationErrorDefinition = getResponseDefinition(definition.responses, "ValidationError");
 
 export class DeleteTodoResponseValidator extends ResponseValidator<DeleteTodoResponse> {
-  protected override readonly expectedStatusCodes = [204, 400, 401, 403, 404, 415, 429, 500];
+  protected override readonly expectedStatusCodes = [200, 204, 400, 401, 403, 404, 415, 429, 500];
 
   protected override readonly responseEntries: readonly ResponseEntry[] = [
     {
@@ -60,6 +70,20 @@ export class DeleteTodoResponseValidator extends ResponseValidator<DeleteTodoRes
       statusCode: 204,
       headerSchema: deleteTodoSuccessDefinition.header,
       bodySchema: deleteTodoSuccessDefinition.body,
+    },
+
+    {
+      name: "DeleteTodoBodyOnly",
+      statusCode: 200,
+      headerSchema: deleteTodoBodyOnlyDefinition.header,
+      bodySchema: deleteTodoBodyOnlyDefinition.body,
+    },
+
+    {
+      name: "DeleteTodoNoContent",
+      statusCode: 204,
+      headerSchema: deleteTodoNoContentDefinition.header,
+      bodySchema: deleteTodoNoContentDefinition.body,
     },
 
     {

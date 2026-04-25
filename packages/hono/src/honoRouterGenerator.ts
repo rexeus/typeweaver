@@ -1,12 +1,13 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { compareRoutes, relative, toPascalCase } from "@rexeus/typeweaver-gen";
+import { compareRoutes, relative } from "@rexeus/typeweaver-gen";
 import type {
   GeneratorContext,
   NormalizedOperation,
   NormalizedResource,
 } from "@rexeus/typeweaver-gen";
+import { pascalCase } from "polycase";
 
 export function generate(context: GeneratorContext): void {
   const moduleDir = path.dirname(fileURLToPath(import.meta.url));
@@ -22,7 +23,7 @@ function writeHonoRouter(
   templateFile: string,
   context: GeneratorContext
 ): void {
-  const pascalCaseEntityName = toPascalCase(resource.name);
+  const pascalCaseEntityName = pascalCase(resource.name);
   const outputDir = context.getResourceOutputDir(resource.name);
   const outputPath = path.join(outputDir, `${pascalCaseEntityName}Hono.ts`);
 
@@ -45,7 +46,7 @@ function writeHonoRouter(
 
 function createOperationData(operation: NormalizedOperation) {
   const operationId = operation.operationId;
-  const className = toPascalCase(operationId);
+  const className = pascalCase(operationId);
   const handlerName = `handle${className}Request`;
 
   return {

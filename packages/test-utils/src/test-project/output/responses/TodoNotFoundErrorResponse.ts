@@ -30,10 +30,12 @@ export type ITodoNotFoundErrorResponse = ITypedHttpResponse<
   ITodoNotFoundErrorResponseBody
 >;
 
-export const createTodoNotFoundErrorResponse = (
-  input: Omit<ITodoNotFoundErrorResponse, "type" | "statusCode">,
-): ITodoNotFoundErrorResponse => ({
-  ...input,
+export const createTodoNotFoundErrorResponse = (input: {
+  header: ITodoNotFoundErrorResponseHeader;
+  body: ITodoNotFoundErrorResponseBody;
+}): ITodoNotFoundErrorResponse => ({
   type: "TodoNotFoundError",
   statusCode: HttpStatusCode.NOT_FOUND,
+  header: input.header,
+  body: input.body,
 });

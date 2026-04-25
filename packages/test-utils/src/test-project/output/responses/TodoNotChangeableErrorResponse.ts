@@ -34,10 +34,12 @@ export type ITodoNotChangeableErrorResponse = ITypedHttpResponse<
   ITodoNotChangeableErrorResponseBody
 >;
 
-export const createTodoNotChangeableErrorResponse = (
-  input: Omit<ITodoNotChangeableErrorResponse, "type" | "statusCode">,
-): ITodoNotChangeableErrorResponse => ({
-  ...input,
+export const createTodoNotChangeableErrorResponse = (input: {
+  header: ITodoNotChangeableErrorResponseHeader;
+  body: ITodoNotChangeableErrorResponseBody;
+}): ITodoNotChangeableErrorResponse => ({
   type: "TodoNotChangeableError",
   statusCode: HttpStatusCode.CONFLICT,
+  header: input.header,
+  body: input.body,
 });

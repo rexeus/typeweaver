@@ -39,10 +39,12 @@ export type ISubTodoStatusTransitionInvalidErrorResponse = ITypedHttpResponse<
   ISubTodoStatusTransitionInvalidErrorResponseBody
 >;
 
-export const createSubTodoStatusTransitionInvalidErrorResponse = (
-  input: Omit<ISubTodoStatusTransitionInvalidErrorResponse, "type" | "statusCode">,
-): ISubTodoStatusTransitionInvalidErrorResponse => ({
-  ...input,
+export const createSubTodoStatusTransitionInvalidErrorResponse = (input: {
+  header: ISubTodoStatusTransitionInvalidErrorResponseHeader;
+  body: ISubTodoStatusTransitionInvalidErrorResponseBody;
+}): ISubTodoStatusTransitionInvalidErrorResponse => ({
   type: "SubTodoStatusTransitionInvalidError",
   statusCode: HttpStatusCode.CONFLICT,
+  header: input.header,
+  body: input.body,
 });
