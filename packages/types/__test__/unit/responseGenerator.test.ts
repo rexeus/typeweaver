@@ -111,25 +111,28 @@ function aResponseGeneratorContext({
       readonly resourceName: string;
     }) => {
       const outputDir = path.join("/out", resourceName);
+      const fileBase = pascalCase(operationId);
+      const requestFileName = `${fileBase}Request.ts`;
+      const responseFileName = `${fileBase}Response.ts`;
+      const requestValidationFileName = `${fileBase}RequestValidator.ts`;
+      const responseValidationFileName = `${fileBase}ResponseValidator.ts`;
+      const clientFileName = `${fileBase}Client.ts`;
 
       return {
         outputDir,
-        requestFile: path.join(outputDir, `${operationId}Request.ts`),
-        requestFileName: `${operationId}Request.ts`,
-        responseFile: path.join(outputDir, `${operationId}Response.ts`),
-        responseFileName: `${operationId}Response.ts`,
-        requestValidationFile: path.join(
-          outputDir,
-          `${operationId}RequestValidator.ts`
-        ),
-        requestValidationFileName: `${operationId}RequestValidator.ts`,
+        requestFile: path.join(outputDir, requestFileName),
+        requestFileName,
+        responseFile: path.join(outputDir, responseFileName),
+        responseFileName,
+        requestValidationFile: path.join(outputDir, requestValidationFileName),
+        requestValidationFileName,
         responseValidationFile: path.join(
           outputDir,
-          `${operationId}ResponseValidator.ts`
+          responseValidationFileName
         ),
-        responseValidationFileName: `${operationId}ResponseValidator.ts`,
-        clientFile: path.join(outputDir, `${operationId}Client.ts`),
-        clientFileName: `${operationId}Client.ts`,
+        responseValidationFileName,
+        clientFile: path.join(outputDir, clientFileName),
+        clientFileName,
       };
     },
     getResourceOutputDir: (resourceName: string) =>
@@ -204,7 +207,7 @@ function renderOperationResponseSource(
     },
     { renderSource: true }
   );
-  const source = writtenFiles.get("todos/createTodoResponse.ts");
+  const source = writtenFiles.get("todos/CreateTodoResponse.ts");
 
   if (source === undefined) {
     throw new Error("Expected createTodo response source to be generated");
@@ -254,7 +257,7 @@ describe("ResponseGenerator", () => {
     const writtenFiles = generateResponses(normalizedSpec);
 
     expect(writtenFiles.has("responses/SharedErrorResponse.ts")).toBe(true);
-    expect(writtenFiles.has("todos/createTodoResponse.ts")).toBe(true);
+    expect(writtenFiles.has("todos/CreateTodoResponse.ts")).toBe(true);
     expect(
       parseGeneratedData(writtenFiles, "responses/SharedErrorResponse.ts")
     ).toEqual(
@@ -265,7 +268,7 @@ describe("ResponseGenerator", () => {
       })
     );
     expect(
-      parseGeneratedData(writtenFiles, "todos/createTodoResponse.ts")
+      parseGeneratedData(writtenFiles, "todos/CreateTodoResponse.ts")
     ).toEqual(
       expect.objectContaining({
         operationId: "createTodo",
@@ -316,7 +319,7 @@ describe("ResponseGenerator", () => {
     const sharedResponse = writtenFiles.get(
       "responses/ValidationErrorResponse.ts"
     );
-    const operationResponse = writtenFiles.get("todos/createTodoResponse.ts");
+    const operationResponse = writtenFiles.get("todos/CreateTodoResponse.ts");
     expect(sharedResponse).toContain("export type IValidationErrorResponse");
     expect(sharedResponse).toContain('ITypedHttpResponse<\n"validationError"');
     expect(sharedResponse).toContain(
