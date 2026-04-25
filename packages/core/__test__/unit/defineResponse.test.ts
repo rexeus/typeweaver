@@ -11,7 +11,7 @@ import {
 import { HttpStatusCode } from "../../src/HttpStatusCode.js";
 
 describe("defineResponse", () => {
-  test("returns the definition with correct properties", () => {
+  test("authored responses preserve supplied fields and schema identities", () => {
     const body = z.object({ id: z.string() });
     const header = z.object({ "x-request-id": z.string() });
 
@@ -30,7 +30,7 @@ describe("defineResponse", () => {
     expect(response.header).toBe(header);
   });
 
-  test("attaches non-enumerable metadata with source define-response", () => {
+  test("authored responses expose define-response metadata without leaking it to consumers", () => {
     const response = defineResponse({
       name: "MetadataResponse",
       statusCode: HttpStatusCode.CREATED,
@@ -40,12 +40,20 @@ describe("defineResponse", () => {
     const metadata = getResponseDefinitionMetadata(response);
 
     expect(metadata).toEqual({ source: "define-response" });
-    expect(Object.keys(response)).not.toContain(
-      responseDefinitionMetadataSymbol
+    expect(responseDefinitionMetadataSymbol in { ...response }).toBe(false);
+    expect(
+      responseDefinitionMetadataSymbol in Object.assign({}, response)
+    ).toBe(false);
+    expect(JSON.stringify(response)).toBe(
+      JSON.stringify({
+        name: "MetadataResponse",
+        statusCode: HttpStatusCode.CREATED,
+        description: "Created",
+      })
     );
   });
 
-  test("is recognized by isNamedResponseDefinition", () => {
+  test("authored responses are recognized as named responses", () => {
     const response = defineResponse({
       name: "NamedResponse",
       statusCode: HttpStatusCode.OK,
@@ -58,80 +66,342 @@ describe("defineResponse", () => {
   test("plain object literals are not recognized as named responses", () => {
     const plainObj = {
       name: "Foo",
-      statusCode: 200,
+      statusCode: HttpStatusCode.OK,
       description: "test",
     };
 
-    expect(isNamedResponseDefinition(plainObj as any)).toBe(false);
+    expect(isNamedResponseDefinition(plainObj)).toBe(false);
   });
 });
 
 describe("defineDerivedResponse", () => {
-  test("merges object headers and bodies while preserving lineage", () => {
-    const baseResponse = defineResponse({
+  test("derived responses expose define-derived-response metadata", () => {
+    const base = defineResponse({
+      name: "BaseResponse",
+      statusCode: HttpStatusCode.OK,
+      description: "Base response",
+    });
+
+    const child = defineDerivedResponse(base, {
+      name: "ChildResponse",
+    });
+
+    expect(getResponseDefinitionMetadata(child)).toEqual({
+      source: "define-derived-response",
+    });
+  });
+
+  test("derived responses are recognized as named responses", () => {
+    const base = defineResponse({
+      name: "BaseResponse",
+      statusCode: HttpStatusCode.OK,
+      description: "Base response",
+    });
+
+    const child = defineDerivedResponse(base, {
+      name: "ChildResponse",
+    });
+
+    expect(isNamedResponseDefinition(child)).toBe(true);
+  });
+
+  test("first-level derived responses record parent name and lineage depth", () => {
+    const base = defineResponse({
       name: "BaseError",
       statusCode: HttpStatusCode.BAD_REQUEST,
       description: "Base error",
-      header: z
-        .object({
-          "x-request-id": z.string().optional(),
-        })
-        .optional(),
-      body: z.object({
-        code: z.string(),
-      }),
     });
 
-    const derivedResponse = defineDerivedResponse(baseResponse, {
+    const child = defineDerivedResponse(base, {
       name: "ValidationError",
-      description: "Validation failed",
-      body: z.object({
-        field: z.string(),
-      }),
-      header: z.object({
-        "x-trace-id": z.string().optional(),
-      }),
     });
 
-    const deeplyDerivedResponse = defineDerivedResponse(derivedResponse, {
+    expect(child.derived).toEqual({
+      parentName: "BaseError",
+      lineage: ["ValidationError"],
+      depth: 1,
+    });
+  });
+
+  test("nested derived responses record lineage through each derivation", () => {
+    const base = defineResponse({
+      name: "BaseError",
+      statusCode: HttpStatusCode.BAD_REQUEST,
+      description: "Base error",
+    });
+    const validationError = defineDerivedResponse(base, {
+      name: "ValidationError",
+    });
+
+    const signupValidationError = defineDerivedResponse(validationError, {
       name: "SignupValidationError",
-      statusCode: HttpStatusCode.UNPROCESSABLE_ENTITY,
-      body: z.object({
-        form: z.string(),
-      }),
     });
 
-    expect(deeplyDerivedResponse.statusCode).toBe(
-      HttpStatusCode.UNPROCESSABLE_ENTITY
-    );
-    expect(deeplyDerivedResponse.description).toBe("Validation failed");
-    expect(deeplyDerivedResponse.derived).toEqual({
+    expect(signupValidationError.derived).toEqual({
       parentName: "ValidationError",
       lineage: ["ValidationError", "SignupValidationError"],
       depth: 2,
     });
+  });
 
-    expect(deeplyDerivedResponse.header).toBeInstanceOf(z.ZodOptional);
-    expect(deeplyDerivedResponse.body).toBeInstanceOf(z.ZodObject);
-
-    const optionalHeader = deeplyDerivedResponse.header as
-      | z.ZodOptional<z.ZodObject<any>>
-      | undefined;
-    const headerShape = optionalHeader?.unwrap().shape;
-    const bodyShape =
-      deeplyDerivedResponse.body instanceof z.ZodObject
-        ? deeplyDerivedResponse.body.shape
-        : undefined;
-
-    expect(headerShape).toMatchObject({
-      "x-request-id": expect.any(z.ZodOptional),
-      "x-trace-id": expect.any(z.ZodOptional),
+  test("derived responses inherit parent description when only status is overridden", () => {
+    const base = defineResponse({
+      name: "BaseError",
+      statusCode: HttpStatusCode.BAD_REQUEST,
+      description: "Base error",
     });
-    expect(bodyShape).toMatchObject({
-      code: expect.any(z.ZodString),
-      field: expect.any(z.ZodString),
-      form: expect.any(z.ZodString),
+
+    const child = defineDerivedResponse(base, {
+      name: "ValidationError",
+      statusCode: HttpStatusCode.UNPROCESSABLE_ENTITY,
     });
+
+    expect(child.description).toBe("Base error");
+  });
+
+  test("derived responses use supplied description over parent description", () => {
+    const base = defineResponse({
+      name: "BaseError",
+      statusCode: HttpStatusCode.BAD_REQUEST,
+      description: "Base error",
+    });
+
+    const child = defineDerivedResponse(base, {
+      name: "ValidationError",
+      description: "Validation error",
+    });
+
+    expect(child.description).toBe("Validation error");
+  });
+
+  test("derived responses use supplied status over parent status", () => {
+    const base = defineResponse({
+      name: "BaseError",
+      statusCode: HttpStatusCode.BAD_REQUEST,
+      description: "Base error",
+    });
+
+    const child = defineDerivedResponse(base, {
+      name: "ValidationError",
+      statusCode: HttpStatusCode.UNPROCESSABLE_ENTITY,
+    });
+
+    expect(child.statusCode).toBe(HttpStatusCode.UNPROCESSABLE_ENTITY);
+  });
+
+  test("derived responses merge object body schemas across derivation levels", () => {
+    const base = defineResponse({
+      name: "BaseError",
+      statusCode: HttpStatusCode.BAD_REQUEST,
+      description: "Base error",
+      body: z.object({ code: z.string() }),
+    });
+    const validationError = defineDerivedResponse(base, {
+      name: "ValidationError",
+      body: z.object({ field: z.string() }),
+    });
+
+    const signupValidationError = defineDerivedResponse(validationError, {
+      name: "SignupValidationError",
+      body: z.object({ form: z.string() }),
+    });
+
+    const bodySchema = signupValidationError.body;
+
+    expect(
+      bodySchema?.safeParse({
+        code: "invalid",
+        field: "email",
+        form: "signup",
+      }).success
+    ).toBe(true);
+    expect(
+      bodySchema?.safeParse({
+        field: "email",
+        form: "signup",
+      }).success
+    ).toBe(false);
+    expect(
+      bodySchema?.safeParse({
+        code: 400,
+        field: "email",
+        form: "signup",
+      }).success
+    ).toBe(false);
+    expect(
+      bodySchema?.safeParse({
+        code: "invalid",
+        form: "signup",
+      }).success
+    ).toBe(false);
+  });
+
+  test("child body fields override parent fields with the same name", () => {
+    const base = defineResponse({
+      name: "BaseError",
+      statusCode: HttpStatusCode.BAD_REQUEST,
+      description: "Base error",
+      body: z.object({ code: z.literal("parent") }),
+    });
+
+    const child = defineDerivedResponse(base, {
+      name: "ChildError",
+      body: z.object({ code: z.literal("child") }),
+    });
+
+    expect(child.body?.safeParse({ code: "child" }).success).toBe(true);
+    expect(child.body?.safeParse({ code: "parent" }).success).toBe(false);
+  });
+
+  test("child header fields override parent header fields with the same name", () => {
+    const base = defineResponse({
+      name: "BaseError",
+      statusCode: HttpStatusCode.BAD_REQUEST,
+      description: "Base error",
+      header: z.object({ "x-request-id": z.literal("parent") }),
+    });
+
+    const child = defineDerivedResponse(base, {
+      name: "ChildError",
+      header: z.object({ "x-request-id": z.literal("child") }),
+    });
+
+    expect(child.header?.safeParse({ "x-request-id": "child" }).success).toBe(
+      true
+    );
+    expect(child.header?.safeParse({ "x-request-id": "parent" }).success).toBe(
+      false
+    );
+  });
+
+  test("derived responses merge optional object header schemas", () => {
+    const base = defineResponse({
+      name: "BaseError",
+      statusCode: HttpStatusCode.BAD_REQUEST,
+      description: "Base error",
+      header: z.object({ "x-request-id": z.string().optional() }).optional(),
+    });
+
+    const child = defineDerivedResponse(base, {
+      name: "ChildError",
+      header: z.object({ "x-trace-id": z.string().optional() }),
+    });
+
+    const headerSchema = child.header;
+
+    expect(headerSchema?.safeParse(undefined).success).toBe(true);
+    expect(headerSchema?.safeParse({}).success).toBe(true);
+    expect(
+      headerSchema?.safeParse({
+        "x-request-id": "request-1",
+        "x-trace-id": "trace-1",
+      }).success
+    ).toBe(true);
+    expect(
+      headerSchema?.safeParse({
+        "x-request-id": 123,
+        "x-trace-id": "trace-1",
+      }).success
+    ).toBe(false);
+    expect(
+      headerSchema?.safeParse({
+        "x-request-id": "request-1",
+        "x-trace-id": 123,
+      }).success
+    ).toBe(false);
+  });
+
+  test("derived responses require merged headers when an optional parent adds a required child field", () => {
+    const base = defineResponse({
+      name: "BaseError",
+      statusCode: HttpStatusCode.BAD_REQUEST,
+      description: "Base error",
+      header: z.object({ "x-request-id": z.string().optional() }).optional(),
+    });
+
+    const child = defineDerivedResponse(base, {
+      name: "ChildError",
+      header: z.object({ "x-trace-id": z.string() }),
+    });
+
+    const headerSchema = child.header;
+
+    expect(headerSchema?.safeParse(undefined).success).toBe(false);
+    expect(headerSchema?.safeParse({}).success).toBe(false);
+    expect(
+      headerSchema?.safeParse({
+        "x-trace-id": "trace-1",
+      }).success
+    ).toBe(true);
+    expect(
+      headerSchema?.safeParse({
+        "x-request-id": "request-1",
+        "x-trace-id": "trace-1",
+      }).success
+    ).toBe(true);
+  });
+
+  test("derived responses merge required object header schemas", () => {
+    const base = defineResponse({
+      name: "BaseError",
+      statusCode: HttpStatusCode.BAD_REQUEST,
+      description: "Base error",
+      header: z.object({ "x-request-id": z.string() }),
+    });
+
+    const child = defineDerivedResponse(base, {
+      name: "ChildError",
+      header: z.object({ "x-trace-id": z.string() }),
+    });
+
+    const headerSchema = child.header;
+
+    expect(
+      headerSchema?.safeParse({
+        "x-request-id": "request-1",
+        "x-trace-id": "trace-1",
+      }).success
+    ).toBe(true);
+    expect(
+      headerSchema?.safeParse({
+        "x-trace-id": "trace-1",
+      }).success
+    ).toBe(false);
+    expect(
+      headerSchema?.safeParse({
+        "x-request-id": "request-1",
+      }).success
+    ).toBe(false);
+  });
+
+  test("derived responses preserve required parent headers when the child header is optional", () => {
+    const base = defineResponse({
+      name: "BaseError",
+      statusCode: HttpStatusCode.BAD_REQUEST,
+      description: "Base error",
+      header: z.object({ "x-request-id": z.string() }),
+    });
+
+    const child = defineDerivedResponse(base, {
+      name: "ChildError",
+      header: z.object({ "x-trace-id": z.string().optional() }).optional(),
+    });
+
+    const headerSchema = child.header;
+
+    expect(headerSchema?.safeParse(undefined).success).toBe(false);
+    expect(headerSchema?.safeParse({}).success).toBe(false);
+    expect(
+      headerSchema?.safeParse({
+        "x-request-id": "request-1",
+      }).success
+    ).toBe(true);
+    expect(
+      headerSchema?.safeParse({
+        "x-request-id": "request-1",
+        "x-trace-id": "trace-1",
+      }).success
+    ).toBe(true);
   });
 
   test("inherits parent statusCode and description when not overridden", () => {
@@ -149,6 +419,70 @@ describe("defineDerivedResponse", () => {
     expect(child.description).toBe("Not found");
   });
 
+  test("inherits parent body when child omits body", () => {
+    const body = z.object({ id: z.string() });
+    const base = defineResponse({
+      name: "ParentResponse",
+      statusCode: HttpStatusCode.OK,
+      description: "Ok",
+      body,
+    });
+
+    const child = defineDerivedResponse(base, {
+      name: "ChildResponse",
+    });
+
+    expect(child.body).toBe(body);
+  });
+
+  test("inherits parent header when child omits header", () => {
+    const header = z.object({ "x-request-id": z.string() });
+    const base = defineResponse({
+      name: "ParentResponse",
+      statusCode: HttpStatusCode.OK,
+      description: "Ok",
+      header,
+    });
+
+    const child = defineDerivedResponse(base, {
+      name: "ChildResponse",
+    });
+
+    expect(child.header).toBe(header);
+  });
+
+  test("uses child body when parent omits body", () => {
+    const body = z.object({ id: z.string() });
+    const base = defineResponse({
+      name: "ParentResponse",
+      statusCode: HttpStatusCode.OK,
+      description: "Ok",
+    });
+
+    const child = defineDerivedResponse(base, {
+      name: "ChildResponse",
+      body,
+    });
+
+    expect(child.body).toBe(body);
+  });
+
+  test("uses child header when parent omits header", () => {
+    const header = z.object({ "x-request-id": z.string() });
+    const base = defineResponse({
+      name: "ParentResponse",
+      statusCode: HttpStatusCode.OK,
+      description: "Ok",
+    });
+
+    const child = defineDerivedResponse(base, {
+      name: "ChildResponse",
+      header,
+    });
+
+    expect(child.header).toBe(header);
+  });
+
   test("replaces parent ZodObject body when child provides non-object schema", () => {
     const base = defineResponse({
       name: "ObjectBodyResponse",
@@ -162,10 +496,28 @@ describe("defineDerivedResponse", () => {
       body: z.string(),
     });
 
-    expect(child.body).toBeInstanceOf(z.ZodString);
+    expect(child.body?.safeParse("ok").success).toBe(true);
+    expect(child.body?.safeParse({ code: "ok" }).success).toBe(false);
   });
 
-  test("fails fast when headers cannot be merged", () => {
+  test("child object body replaces a non-object parent body", () => {
+    const base = defineResponse({
+      name: "StringBodyResponse",
+      statusCode: HttpStatusCode.OK,
+      description: "Ok",
+      body: z.string(),
+    });
+
+    const child = defineDerivedResponse(base, {
+      name: "ObjectBodyResponse",
+      body: z.object({ code: z.string() }),
+    });
+
+    expect(child.body?.safeParse({ code: "ok" }).success).toBe(true);
+    expect(child.body?.safeParse("ok").success).toBe(false);
+  });
+
+  test("throws ResponseDefinitionMergeError when deriving from record headers", () => {
     const baseResponse = defineResponse({
       name: "BaseError",
       statusCode: HttpStatusCode.BAD_REQUEST,
@@ -179,6 +531,24 @@ describe("defineDerivedResponse", () => {
         header: z.object({
           "x-request-id": z.string(),
         }),
+      })
+    ).toThrowError(ResponseDefinitionMergeError);
+  });
+
+  test("throws ResponseDefinitionMergeError when deriving with record headers", () => {
+    const baseResponse = defineResponse({
+      name: "BaseError",
+      statusCode: HttpStatusCode.BAD_REQUEST,
+      description: "Base error",
+      header: z.object({
+        "x-request-id": z.string(),
+      }),
+    });
+
+    expect(() =>
+      defineDerivedResponse(baseResponse, {
+        name: "ChildError",
+        header: z.record(z.string(), z.string()),
       })
     ).toThrowError(ResponseDefinitionMergeError);
   });
