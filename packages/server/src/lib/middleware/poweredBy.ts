@@ -10,10 +10,15 @@ export function poweredBy(options?: PoweredByOptions) {
 
   return defineMiddleware(async (_ctx, next) => {
     const response = await next();
+    const responseHeaders = Object.fromEntries(
+      Object.entries(response.header ?? {}).filter(
+        ([headerName]) => headerName.toLowerCase() !== "x-powered-by"
+      )
+    );
 
     return {
       ...response,
-      header: { ...response.header, "x-powered-by": value },
+      header: { ...responseHeaders, "x-powered-by": value },
     } satisfies IHttpResponse;
   });
 }
