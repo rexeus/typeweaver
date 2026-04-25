@@ -11,7 +11,7 @@ import {
   TypeweaverRouter,
   type RequestHandler,
   type TypeweaverRouterOptions,
-} from "./../lib/server/index.js";
+} from "../lib/server/index.js";
 
 import type { IListTodosRequest } from "./ListTodosRequest.js";
 import { ListTodosRequestValidator } from "./ListTodosRequestValidator.js";

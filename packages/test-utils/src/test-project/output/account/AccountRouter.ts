@@ -11,7 +11,7 @@ import {
   TypeweaverRouter,
   type RequestHandler,
   type TypeweaverRouterOptions,
-} from "./../lib/server/index.js";
+} from "../lib/server/index.js";
 
 import type { IRegisterAccountRequest } from "./RegisterAccountRequest.js";
 import { RegisterAccountRequestValidator } from "./RegisterAccountRequestValidator.js";

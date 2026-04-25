@@ -11,7 +11,7 @@ import {
   TypeweaverHono,
   type HonoRequestHandler,
   type TypeweaverHonoOptions,
-} from "./../lib/hono/index.js";
+} from "../lib/hono/index.js";
 
 import type { IUploadFileRequest } from "./UploadFileRequest.js";
 import { UploadFileRequestValidator } from "./UploadFileRequestValidator.js";

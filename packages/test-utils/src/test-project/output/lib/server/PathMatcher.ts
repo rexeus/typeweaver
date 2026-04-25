@@ -9,13 +9,17 @@
  * Creates a predicate that tests whether a request path matches a pattern.
  *
  * Supports three pattern types:
- * - **Exact match**: `"/users"` matches only `"/users"`
+ * - **Exact match**: `"/users"` matches `"/users"` and canonically
+ *   equivalent rooted paths such as `"/users/"` and `"/users//"`
  * - **Prefix match**: `"/users/*"` matches `"/users"` and any path beneath it
  *   (e.g. `"/users/123"`, `"/users/123/posts"`)
  * - **Parameterized segments**: `"/users/:id"` matches paths where `:id` stands
  *   for exactly one segment (e.g. `"/users/123"` but not `"/users/123/posts"`)
  *
  * Uses the same `:paramName` syntax as typeweaver route definitions.
+ * Rooted request paths are canonicalized with the same empty-segment
+ * filtering used by the router, so duplicate and trailing slashes match the
+ * route they dispatch to. Unrooted request paths do not match rooted patterns.
  *
  * @example
  * ```typescript
@@ -30,27 +34,67 @@
  * ```
  */
 export function pathMatcher(pattern: string): (path: string) => boolean {
+  const patternSegments = patternToSegments(pattern);
+
   if (pattern.endsWith("/*")) {
-    const prefix = pattern.slice(0, -2);
-    return (path) => path === prefix || path.startsWith(prefix + "/");
+    const prefixSegments = patternToSegments(pattern.slice(0, -2));
+
+    return (path) => {
+      const pathSegments = toSegments(path);
+      if (pathSegments === undefined) return false;
+      if (pathSegments.length < prefixSegments.length) return false;
+
+      return prefixSegments.every(
+        (segment, index) => pathSegments[index] === segment
+      );
+    };
   }
 
-  const segments = pattern.split("/");
-  const hasParams = segments.some((s) => s.startsWith(":"));
+  const hasParams = patternSegments.some((s) => s.startsWith(":"));
 
   if (!hasParams) {
-    return (path) => path === pattern;
+    return (path) => {
+      const pathSegments = toSegments(path);
+      if (pathSegments === undefined) return false;
+
+      return segmentsEqual(patternSegments, pathSegments);
+    };
   }
 
-  const segmentCount = segments.length;
-  const matchers = segments.map((s) => (s.startsWith(":") ? null : s));
+  const segmentCount = patternSegments.length;
+  const matchers = patternSegments.map((s) => (s.startsWith(":") ? null : s));
 
   return (path) => {
-    const parts = path.split("/");
+    const parts = toSegments(path);
+    if (parts === undefined) return false;
     if (parts.length !== segmentCount) return false;
+
     for (let i = 0; i < segmentCount; i++) {
-      if (matchers[i] !== null && matchers[i] !== parts[i]) return false;
+      if (matchers[i] === null) {
+        continue;
+      }
+
+      if (matchers[i] !== parts[i]) return false;
     }
     return true;
   };
+}
+
+function toSegments(path: string): readonly string[] | undefined {
+  if (!path.startsWith("/")) return undefined;
+
+  return patternToSegments(path);
+}
+
+function patternToSegments(path: string): readonly string[] {
+  return path.split("/").filter((segment) => segment.length > 0);
+}
+
+function segmentsEqual(
+  left: readonly string[],
+  right: readonly string[]
+): boolean {
+  if (left.length !== right.length) return false;
+
+  return left.every((segment, index) => right[index] === segment);
 }

@@ -11,7 +11,7 @@ import {
   TypeweaverRouter,
   type RequestHandler,
   type TypeweaverRouterOptions,
-} from "./../lib/server/index.js";
+} from "../lib/server/index.js";
 
 import type { IUploadFileRequest } from "./UploadFileRequest.js";
 import { UploadFileRequestValidator } from "./UploadFileRequestValidator.js";
