@@ -1,5 +1,16 @@
 # @rexeus/typeweaver-aws-cdk
 
+## 0.10.3
+
+### Patch Changes
+
+- 7a9a8b3: - Normalize generated file names to PascalCase across generators and outputs for more consistent imports.
+  - Improve generated response helpers so they only require defined header and body inputs, including coverage for body-only and empty responses.
+  - Unify oversized request body handling across Node, Bun, and Deno with a shared server body limit policy and 413 integration coverage.
+- Updated dependencies [7a9a8b3]
+  - @rexeus/typeweaver-gen@0.10.3
+  - @rexeus/typeweaver-core@0.10.3
+
 ## 0.10.2
 
 ### Patch Changes

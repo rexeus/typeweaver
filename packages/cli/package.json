@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "description": "🧵✨ Typeweaver CLI. Entry point into the Typeweaver framework to scaffold, validate, and generate API assets.",
   "type": "module",
   "sideEffects": false,
