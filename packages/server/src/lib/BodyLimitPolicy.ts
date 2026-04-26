@@ -34,6 +34,8 @@ const FETCH_BODY_LIMIT_CAPABILITY: BodyLimitCapability =
 const NODE_BODY_LIMIT_CAPABILITY: BodyLimitCapability =
   "prevalidated-request-body";
 
+const CONTENT_LENGTH_HEADER_PATTERN = /^\d+$/;
+
 export function createFetchBodyLimitPolicy(
   maxBodySize?: number
 ): BodyLimitPolicy {
@@ -64,7 +66,12 @@ export function parseContentLength(
     return undefined;
   }
 
-  const contentLength = Number(rawValue);
+  const trimmedValue = rawValue.trim();
+  if (!CONTENT_LENGTH_HEADER_PATTERN.test(trimmedValue)) {
+    return undefined;
+  }
+
+  const contentLength = Number(trimmedValue);
   if (!Number.isFinite(contentLength) || contentLength < 0) {
     return undefined;
   }

@@ -47,8 +47,12 @@ export type RouterErrorConfig = {
   readonly validateRequests: boolean;
   readonly validateResponses: boolean;
   readonly handleHttpResponseErrors: HttpResponseErrorHandler | boolean;
-  readonly handleRequestValidationErrors: RequestValidationErrorHandler | boolean;
-  readonly handleResponseValidationErrors: ResponseValidationErrorHandler | boolean;
+  readonly handleRequestValidationErrors:
+    | RequestValidationErrorHandler
+    | boolean;
+  readonly handleResponseValidationErrors:
+    | ResponseValidationErrorHandler
+    | boolean;
   readonly handleUnknownErrors: UnknownErrorHandler | boolean;
 };
 
@@ -58,7 +62,7 @@ export type RouterErrorConfig = {
  */
 export type HttpResponseErrorHandler = (
   error: ITypedHttpResponse,
-  ctx: ServerContext,
+  ctx: ServerContext
 ) => Promise<IHttpResponse> | IHttpResponse;
 
 /**
@@ -66,7 +70,7 @@ export type HttpResponseErrorHandler = (
  */
 export type RequestValidationErrorHandler = (
   error: RequestValidationError,
-  ctx: ServerContext,
+  ctx: ServerContext
 ) => Promise<IHttpResponse> | IHttpResponse;
 
 /**
@@ -76,7 +80,7 @@ export type RequestValidationErrorHandler = (
 export type ResponseValidationErrorHandler = (
   error: ResponseValidationError,
   response: IHttpResponse,
-  ctx: ServerContext,
+  ctx: ServerContext
 ) => Promise<IHttpResponse> | IHttpResponse;
 
 /**
@@ -84,7 +88,7 @@ export type ResponseValidationErrorHandler = (
  */
 export type UnknownErrorHandler = (
   error: unknown,
-  ctx: ServerContext,
+  ctx: ServerContext
 ) => Promise<IHttpResponse> | IHttpResponse;
 
 /**
@@ -131,6 +135,11 @@ export class Router {
    * Register a route in the radix tree.
    */
   public add(definition: RouteDefinition): void {
+    const method = definition.method.toUpperCase();
+    const normalizedDefinition =
+      definition.method === method
+        ? definition
+        : { ...definition, method: method as HttpMethod };
     const segments = Router.toSegments(definition.path);
 
     let current = this.root;
@@ -140,7 +149,7 @@ export class Router {
         const paramName = segment.slice(1);
         if (current.paramChild && current.paramChild.name !== paramName) {
           throw new Error(
-            `Conflicting path parameter names at "${definition.path}": ":${current.paramChild.name}" vs ":${paramName}"`,
+            `Conflicting path parameter names at "${definition.path}": ":${current.paramChild.name}" vs ":${paramName}"`
           );
         }
         if (!current.paramChild) {
@@ -157,13 +166,13 @@ export class Router {
       }
     }
 
-    if (current.methods.has(definition.method)) {
+    if (current.methods.has(method)) {
       throw new Error(
-        `Route conflict: ${definition.method} ${definition.path} is already registered`,
+        `Route conflict: ${method} ${definition.path} is already registered`
       );
     }
 
-    current.methods.set(definition.method, definition);
+    current.methods.set(method, normalizedDefinition);
   }
 
   /**
@@ -229,7 +238,7 @@ export class Router {
     node: RadixNode,
     segments: string[],
     index: number,
-    params: Record<string, string>,
+    params: Record<string, string>
   ): RadixNode | undefined {
     // All segments consumed — this node is the match candidate
     if (index === segments.length) {
@@ -276,7 +285,14 @@ export class Router {
   private static decodePathSegment(segment: string): string {
     try {
       const decoded = decodeURIComponent(segment);
-      if (decoded === ".." || decoded === ".") return segment;
+      if (
+        decoded === ".." ||
+        decoded === "." ||
+        decoded.includes("/") ||
+        decoded.includes("\\")
+      ) {
+        return segment;
+      }
       return decoded;
     } catch {
       return segment;
@@ -284,6 +300,6 @@ export class Router {
   }
 
   private static toSegments(path: string): string[] {
-    return path.split("/").filter((s) => s.length > 0);
+    return path.split("/").filter(s => s.length > 0);
   }
 }

@@ -1,132 +1,267 @@
+import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
 import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
-import { requestId } from "../../../src/lib/middleware/requestId.js";
+import {
+  requestId,
+  type RequestIdOptions,
+} from "../../../src/lib/middleware/requestId.js";
 import { createServerContext } from "../../helpers.js";
 
+type RequestIdScenario = {
+  readonly options?: RequestIdOptions;
+  readonly ctx?: ReturnType<typeof createServerContext>;
+  readonly finalHandler?: () => Promise<IHttpResponse>;
+};
+
+const defaultHandler = async (): Promise<IHttpResponse> => ({ statusCode: 200 });
+
+const executeRequestId = ({
+  options,
+  ctx = createServerContext(),
+  finalHandler = defaultHandler,
+}: RequestIdScenario = {}): Promise<IHttpResponse> => {
+  const mw = requestId(options);
+
+  return executeMiddlewarePipeline([mw.handler], ctx, finalHandler);
+};
+
+const expectUuid = (value: string | string[] | undefined): void => {
+  expect(typeof value).toBe("string");
+  expect(value).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+  );
+};
+
 describe("requestId", () => {
-  test("should generate a UUID when no header is present", async () => {
-    const mw = requestId();
-    const ctx = createServerContext();
+  test("generates a UUID when no inbound request ID exists", async () => {
+    const response = await executeRequestId();
 
-    const response = await executeMiddlewarePipeline(
-      [mw.handler],
-      ctx,
-      async () => ({ statusCode: 200 })
-    );
-
-    const id = response.header?.["x-request-id"];
-    expect(id).toBeDefined();
-    expect(typeof id).toBe("string");
-    expect(id).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
-    );
+    expectUuid(response.header?.["x-request-id"]);
   });
 
-  test("should reuse existing request header value", async () => {
-    const mw = requestId();
+  test("reuses a valid inbound request ID with case-insensitive lookup", async () => {
     const ctx = createServerContext({
-      header: { "x-request-id": "existing-id-123" },
+      header: { "X-Request-ID": "existing-id-123" },
     });
 
-    const response = await executeMiddlewarePipeline(
-      [mw.handler],
-      ctx,
-      async () => ({ statusCode: 200 })
-    );
+    const response = await executeRequestId({ ctx });
 
     expect(response.header?.["x-request-id"]).toBe("existing-id-123");
   });
 
-  test("should provide requestId in state for downstream", async () => {
-    const mw = requestId({
-      generator: () => "generated-id",
-    });
+  test("exposes the same request ID to downstream state and response headers", async () => {
     const ctx = createServerContext();
 
-    await executeMiddlewarePipeline([mw.handler], ctx, async () => {
-      expect(ctx.state.get("requestId")).toBe("generated-id");
-      return { statusCode: 200 };
+    const response = await executeRequestId({
+      options: { generator: () => "generated-id" },
+      ctx,
+      finalHandler: async () => ({
+        statusCode: 200,
+        body: { requestId: ctx.state.get("requestId") },
+      }),
     });
+
+    expect(response.header?.["x-request-id"]).toBe("generated-id");
+    expect(response.body).toEqual({ requestId: "generated-id" });
   });
 
-  test("should use custom header name", async () => {
-    const mw = requestId({
-      headerName: "x-trace-id",
-      generator: () => "trace-123",
+  test("writes custom request ID headers with a lowercase name", async () => {
+    const response = await executeRequestId({
+      options: {
+        headerName: "X-Trace-ID",
+        generator: () => "trace-123",
+      },
     });
-    const ctx = createServerContext();
-
-    const response = await executeMiddlewarePipeline(
-      [mw.handler],
-      ctx,
-      async () => ({ statusCode: 200 })
-    );
 
     expect(response.header?.["x-trace-id"]).toBe("trace-123");
+    expect(response.header?.["X-Trace-ID"]).toBeUndefined();
     expect(response.header?.["x-request-id"]).toBeUndefined();
   });
 
-  test("should use custom generator", async () => {
-    let counter = 0;
-    const mw = requestId({
-      generator: () => `req-${++counter}`,
+  test("reuses a valid custom inbound request ID with case-insensitive lookup", async () => {
+    const ctx = createServerContext({
+      header: { "x-trace-id": "incoming-trace" },
     });
-    const ctx = createServerContext();
 
-    const response = await executeMiddlewarePipeline(
-      [mw.handler],
+    const response = await executeRequestId({
+      options: {
+        headerName: "X-Trace-ID",
+        generator: () => "generated-id",
+      },
       ctx,
-      async () => ({ statusCode: 200 })
-    );
+      finalHandler: async () => ({
+        statusCode: 200,
+        body: { requestId: ctx.state.get("requestId") },
+      }),
+    });
+
+    expect(response.header?.["x-trace-id"]).toBe("incoming-trace");
+    expect(response.header?.["x-request-id"]).toBeUndefined();
+    expect(response.body).toEqual({ requestId: "incoming-trace" });
+  });
+
+  test("does not invoke the generator when a valid inbound request ID exists", async () => {
+    const ctx = createServerContext({
+      header: { "X-Request-ID": "existing-id" },
+    });
+
+    const response = await executeRequestId({
+      options: {
+        generator: () => {
+          throw new Error("generator should not run");
+        },
+      },
+      ctx,
+    });
+
+    expect(response.header?.["x-request-id"]).toBe("existing-id");
+  });
+
+  test("uses the custom generator when no valid inbound request ID exists", async () => {
+    const response = await executeRequestId({
+      options: { generator: () => "req-1" },
+    });
 
     expect(response.header?.["x-request-id"]).toBe("req-1");
   });
 
-  test("should pick first value when header is an array", async () => {
-    const mw = requestId();
+  test("rejects array-valued inbound request IDs", async () => {
     const ctx = createServerContext({
       header: { "x-request-id": ["first-id", "second-id"] },
     });
 
-    const response = await executeMiddlewarePipeline(
-      [mw.handler],
+    const response = await executeRequestId({
+      options: { generator: () => "generated-id" },
       ctx,
-      async () => ({ statusCode: 200 })
-    );
-
-    expect(response.header?.["x-request-id"]).toBe("first-id");
-  });
-
-  test("should normalize mixed-case headerName to lowercase", async () => {
-    const mw = requestId({ headerName: "X-Request-Id" });
-    const ctx = createServerContext({
-      header: { "x-request-id": "existing-from-header" },
     });
 
-    const response = await executeMiddlewarePipeline(
-      [mw.handler],
-      ctx,
-      async () => ({ statusCode: 200 })
-    );
-
-    expect(response.header?.["x-request-id"]).toBe("existing-from-header");
-    expect(response.header?.["X-Request-Id"]).toBeUndefined();
+    expect(response.header?.["x-request-id"]).toBe("generated-id");
   });
 
-  test("should preserve existing response headers", async () => {
-    const mw = requestId({ generator: () => "id-1" });
-    const ctx = createServerContext();
+  test("rejects mixed duplicate and array-valued inbound request IDs", async () => {
+    const ctx = createServerContext({
+      header: {
+        "X-Request-ID": ["first-id"],
+        "x-request-id": "second-id",
+      },
+    });
 
-    const response = await executeMiddlewarePipeline(
-      [mw.handler],
+    const response = await executeRequestId({
+      options: { generator: () => "generated-id" },
       ctx,
-      async () => ({
+      finalHandler: async () => ({
         statusCode: 200,
-        header: { "content-type": "application/json" },
-      })
-    );
+        body: { requestId: ctx.state.get("requestId") },
+      }),
+    });
 
+    expect(response.header?.["x-request-id"]).toBe("generated-id");
+    expect(response.body).toEqual({ requestId: "generated-id" });
+  });
+
+  test("rejects duplicate differently cased inbound request IDs", async () => {
+    const ctx = createServerContext({
+      header: {
+        "x-request-id": "first-id",
+        "X-Request-ID": "second-id",
+      },
+    });
+
+    const response = await executeRequestId({
+      options: { generator: () => "generated-id" },
+      ctx,
+    });
+
+    expect(response.header?.["x-request-id"]).toBe("generated-id");
+  });
+
+  test("rejects empty inbound request IDs", async () => {
+    const ctx = createServerContext({ header: { "x-request-id": "" } });
+
+    const response = await executeRequestId({
+      options: { generator: () => "generated-id" },
+      ctx,
+    });
+
+    expect(response.header?.["x-request-id"]).toBe("generated-id");
+  });
+
+  test.each([
+    { case: "CR", inboundValue: "safe\rinjected" },
+    { case: "LF", inboundValue: "safe\ninjected" },
+  ])(
+    "rejects inbound request IDs containing $case",
+    async ({ inboundValue }) => {
+      const ctx = createServerContext({
+        header: { "x-request-id": inboundValue },
+      });
+
+      const response = await executeRequestId({
+        options: { generator: () => "generated-id" },
+        ctx,
+        finalHandler: async () => ({
+          statusCode: 200,
+          body: { requestId: ctx.state.get("requestId") },
+        }),
+      });
+
+      expect(response.header?.["x-request-id"]).toBe("generated-id");
+      expect(response.body).toEqual({ requestId: "generated-id" });
+    }
+  );
+
+  test("overrides conflicting downstream request ID headers case-insensitively", async () => {
+    const response = await executeRequestId({
+      options: { generator: () => "generated-id" },
+      finalHandler: async () => ({
+        statusCode: 200,
+        header: {
+          "X-Request-ID": "downstream-id",
+          "x-request-id": "second-downstream-id",
+          "content-type": "application/json",
+        },
+      }),
+    });
+
+    expect(response.header?.["x-request-id"]).toBe("generated-id");
+    expect(response.header?.["X-Request-ID"]).toBeUndefined();
     expect(response.header?.["content-type"]).toBe("application/json");
-    expect(response.header?.["x-request-id"]).toBe("id-1");
+  });
+
+  test("replaces array-valued downstream request ID headers", async () => {
+    const response = await executeRequestId({
+      options: { generator: () => "generated-id" },
+      finalHandler: async () => ({
+        statusCode: 200,
+        header: {
+          "X-Request-ID": ["bad-1", "bad-2"],
+          "x-custom": "value",
+        },
+      }),
+    });
+
+    expect(response.header?.["x-request-id"]).toBe("generated-id");
+    expect(response.header?.["X-Request-ID"]).toBeUndefined();
+    expect(response.header?.["x-custom"]).toBe("value");
+  });
+
+  test("preserves downstream status and body while replacing request ID headers", async () => {
+    const response = await executeRequestId({
+      options: { generator: () => "generated-id" },
+      finalHandler: async () => ({
+        statusCode: 202,
+        body: { queued: true },
+        header: {
+          "X-Request-ID": "downstream-id",
+          "content-type": "application/json",
+        },
+      }),
+    });
+
+    expect(response.statusCode).toBe(202);
+    expect(response.body).toEqual({ queued: true });
+    expect(response.header?.["x-request-id"]).toBe("generated-id");
+    expect(response.header?.["X-Request-ID"]).toBeUndefined();
+    expect(response.header?.["content-type"]).toBe("application/json");
   });
 });

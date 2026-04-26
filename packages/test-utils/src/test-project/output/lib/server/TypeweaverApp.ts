@@ -262,7 +262,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
    * - `validateResponses: true` (default) → runs validation:
    *   - Valid response → returns the stripped response (extra fields removed).
    *   - Invalid response + handler configured → calls the handler safely.
-   *     If the handler throws, falls back to the original response.
+   *     If the handler throws, fails closed with a sanitized 500 response.
    *   - Invalid response + `handleResponseValidationErrors: false` → returns
    *     the original (invalid) response as-is.
    *
@@ -292,6 +292,11 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
         handler(result.error, response, ctx),
       );
       if (handlerResponse) return handlerResponse;
+      return TypeweaverApp.defaultResponseValidationHandler(
+        result.error,
+        response,
+        ctx,
+      );
     }
 
     return response;

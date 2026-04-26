@@ -2,6 +2,8 @@ import { IncomingMessage, ServerResponse } from "node:http";
 import { Socket } from "node:net";
 import { PassThrough } from "node:stream";
 
+export type NodeRequestHeaders = Record<string, string | string[] | undefined>;
+
 export type MockServerResponse = ServerResponse & {
   readonly writtenStatus: number | undefined;
   readonly writtenHeaders: Record<string, string>;
@@ -12,8 +14,8 @@ export type MockServerResponse = ServerResponse & {
 
 export function createMockIncomingMessage(
   method: string,
-  url: string,
-  headers: Record<string, string> = {},
+  url: string | undefined,
+  headers: NodeRequestHeaders = {},
   body?: string | Buffer
 ): IncomingMessage {
   const socket = new Socket();
@@ -22,7 +24,7 @@ export function createMockIncomingMessage(
   req.url = url;
   req.headers = { host: "localhost:3000", ...headers };
 
-  if (body) {
+  if (body !== undefined) {
     process.nextTick(() => {
       req.push(Buffer.isBuffer(body) ? body : Buffer.from(body));
       req.push(null);

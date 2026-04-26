@@ -315,12 +315,12 @@ describe("Response Validation (Server)", () => {
   });
 
   describe("custom handler error recovery", () => {
-    test("should fall back to original response when custom handler throws", async () => {
+    test("returns a sanitized 500 when custom handler throws", async () => {
       const invalidResponse: ITypedHttpResponse = {
         type: "CreateTodoSuccess" as const,
         statusCode: 201,
         header: { "Content-Type": "application/json" },
-        body: { id: 12345 },
+        body: { id: 12345, secret: "invalid response detail" },
       };
       const app = createTestApp({
         validateResponses: true,
@@ -335,16 +335,20 @@ describe("Response Validation (Server)", () => {
         buildFetchRequest(`${BASE_URL}/todos`, requestData)
       );
 
-      const data = await expectJson(response, 201);
-      expect(data).toEqual({ id: 12345 });
+      const data = await expectErrorResponse(
+        response,
+        internalServerErrorDefaultError.statusCode,
+        internalServerErrorDefaultError.code
+      );
+      expect(JSON.stringify(data)).not.toContain("invalid response detail");
     });
 
-    test("should fall back to original response when async custom handler rejects", async () => {
+    test("returns a sanitized 500 when async custom handler rejects", async () => {
       const invalidResponse: ITypedHttpResponse = {
         type: "CreateTodoSuccess" as const,
         statusCode: 201,
         header: { "Content-Type": "application/json" },
-        body: { id: 12345 },
+        body: { id: 12345, secret: "async invalid response detail" },
       };
       const app = createTestApp({
         validateResponses: true,
@@ -359,8 +363,14 @@ describe("Response Validation (Server)", () => {
         buildFetchRequest(`${BASE_URL}/todos`, requestData)
       );
 
-      const data = await expectJson(response, 201);
-      expect(data).toEqual({ id: 12345 });
+      const data = await expectErrorResponse(
+        response,
+        internalServerErrorDefaultError.statusCode,
+        internalServerErrorDefaultError.code
+      );
+      expect(JSON.stringify(data)).not.toContain(
+        "async invalid response detail"
+      );
     });
   });
 

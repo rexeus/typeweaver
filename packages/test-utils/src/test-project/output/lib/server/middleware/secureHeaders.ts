@@ -1,5 +1,6 @@
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { defineMiddleware } from "../TypedMiddleware.js";
+import { omitHeaders } from "./header.js";
 
 export type SecureHeadersOptions = {
   readonly contentTypeOptions?: string | false;
@@ -16,10 +17,16 @@ export type SecureHeadersOptions = {
   readonly originAgentCluster?: string | false;
 };
 
-const DEFAULTS: ReadonlyArray<readonly [keyof SecureHeadersOptions, string, string]> = [
+const DEFAULTS: ReadonlyArray<
+  readonly [keyof SecureHeadersOptions, string, string]
+> = [
   ["contentTypeOptions", "x-content-type-options", "nosniff"],
   ["frameOptions", "x-frame-options", "SAMEORIGIN"],
-  ["strictTransportSecurity", "strict-transport-security", "max-age=15552000; includeSubDomains"],
+  [
+    "strictTransportSecurity",
+    "strict-transport-security",
+    "max-age=15552000; includeSubDomains",
+  ],
   ["referrerPolicy", "referrer-policy", "no-referrer"],
   ["xssProtection", "x-xss-protection", "0"],
   ["downloadOptions", "x-download-options", "noopen"],
@@ -42,10 +49,11 @@ export function secureHeaders(options?: SecureHeadersOptions) {
 
   return defineMiddleware(async (_ctx, next) => {
     const response = await next();
+    const header = omitHeaders(response.header, Object.keys(headers));
 
     return {
       ...response,
-      header: { ...headers, ...response.header },
+      header: { ...header, ...headers },
     } satisfies IHttpResponse;
   });
 }

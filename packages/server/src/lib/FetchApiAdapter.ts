@@ -326,7 +326,11 @@ export class FetchApiAdapter {
     if (body instanceof Blob) return body;
 
     try {
-      return JSON.stringify(body);
+      const serializedBody = JSON.stringify(body);
+      if (serializedBody === undefined) {
+        throw new TypeError("Response body cannot be serialized to JSON");
+      }
+      return serializedBody;
     } catch (error) {
       throw new ResponseSerializationError(
         "Failed to serialize response body to JSON",

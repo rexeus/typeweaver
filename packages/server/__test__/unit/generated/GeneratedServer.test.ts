@@ -1,99 +1,290 @@
-import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
+import type { IHttpRequest, ITypedHttpResponse } from "@rexeus/typeweaver-core";
 import {
+  createCreateSubTodoRequest,
   createCreateTodoRequest,
+  createDeleteSubTodoRequest,
   createDeleteTodoRequest,
+  createGetTodoRequest,
   createHeadTodoRequest,
+  createListSubTodosRequest,
   createListTodosRequest,
   createOptionsTodoRequest,
+  createPutTodoRequest,
+  createQuerySubTodoRequest,
+  createQueryTodoRequest,
   createTestApp,
+  createUpdateSubTodoRequest,
   createUpdateTodoRequest,
   createUpdateTodoStatusRequest,
   defineMiddleware,
+  type IValidationErrorResponseBody,
 } from "test-utils";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import {
   BASE_URL,
   buildFetchRequest,
   expectErrorResponse,
   expectJson,
+  postRaw,
 } from "../../helpers.js";
-import type { IValidationErrorResponseBody } from "test-utils";
+
+async function expectNoBody(response: Response): Promise<void> {
+  expect(await response.text()).toBe("");
+}
+
+async function expectValidationIssue(
+  response: Response,
+  issueKey: keyof IValidationErrorResponseBody["issues"]
+): Promise<void> {
+  const data = (await expectErrorResponse(
+    response,
+    400,
+    "VALIDATION_ERROR"
+  )) as IValidationErrorResponseBody;
+  expect(data.issues[issueKey]).toHaveLength(1);
+}
+
+function buildRawBodyFetchRequest(
+  url: string,
+  requestData: IHttpRequest,
+  body: string
+): Request {
+  return buildFetchRequest(url, { ...requestData, body });
+}
+
+function aCreateTodoJsonBodyWithPrototypePollutionPayload(
+  validBody: object
+): string {
+  const payload = Object.assign(Object.create(null), validBody, {
+    constructor: { prototype: { polluted: "yes" } },
+    prototype: { polluted: "yes" },
+  }) as Record<string, unknown>;
+
+  Object.defineProperty(payload, "__proto__", {
+    value: { polluted: "yes" },
+    enumerable: true,
+  });
+
+  return JSON.stringify(payload);
+}
 
 describe("Generated Server Router", () => {
-  describe("Operation Registration & Handling", () => {
-    test.each([
-      {
-        name: "GET",
-        setup: () => ({
-          req: createListTodosRequest(),
-          url: `${BASE_URL}/todos?status=TODO`,
-        }),
-        expectedStatus: 200,
-      },
-      {
-        name: "POST",
-        setup: () => ({
-          req: createCreateTodoRequest(),
-          url: `${BASE_URL}/todos`,
-        }),
-        expectedStatus: 201,
-      },
-      {
-        name: "PUT",
-        setup: () => {
-          const req = createUpdateTodoStatusRequest();
-          return {
-            req,
-            url: `${BASE_URL}/todos/${req.param.todoId}/status`,
-          };
-        },
-        expectedStatus: 200,
-      },
-      {
-        name: "DELETE",
-        setup: () => {
-          const req = createDeleteTodoRequest();
-          return { req, url: `${BASE_URL}/todos/${req.param.todoId}` };
-        },
-        expectedStatus: 204,
-      },
-      {
-        name: "PATCH",
-        setup: () => {
-          const req = createUpdateTodoRequest();
-          return { req, url: `${BASE_URL}/todos/${req.param.todoId}` };
-        },
-        expectedStatus: 200,
-      },
-      {
-        name: "OPTIONS",
-        setup: () => {
-          const req = createOptionsTodoRequest();
-          return { req, url: `${BASE_URL}/todos/${req.param.todoId}` };
-        },
-        expectedStatus: 200,
-      },
-      {
-        name: "HEAD (via GET fallback)",
-        setup: () => {
-          const req = createHeadTodoRequest();
-          return { req, url: `${BASE_URL}/todos/${req.param.todoId}` };
-        },
-        expectedStatus: 200,
-      },
-    ])(
-      "should register and handle $name operations",
-      async ({ setup, expectedStatus }) => {
-        const app = createTestApp();
-        const { req, url } = setup();
+  describe("Generated Route Requests", () => {
+    test("returns request body fields from the create todo route", async () => {
+      const app = createTestApp();
+      const requestData = createCreateTodoRequest({
+        body: { title: "Write generated server tests", priority: "HIGH" },
+      });
 
-        const response = await app.fetch(buildFetchRequest(url, req));
+      const response = await app.fetch(
+        buildFetchRequest(`${BASE_URL}/todos`, requestData)
+      );
 
-        expect(response.status).toBe(expectedStatus);
-      }
-    );
+      const data = await expectJson(response, 201);
+      expect(data.title).toBe("Write generated server tests");
+      expect(data.priority).toBe("HIGH");
+      expect(data.status).toBe("TODO");
+    });
 
-    test("should return empty body for HEAD operations", async () => {
+    test("merges route params into the replace todo response", async () => {
+      const app = createTestApp();
+      const requestData = createPutTodoRequest({
+        param: { todoId: "01J9Z8ZK9Y3X2W1V0T9S8R7Q6P" },
+        body: { title: "Replace from route params" },
+      });
+
+      const response = await app.fetch(
+        buildFetchRequest(
+          `${BASE_URL}/todos/${requestData.param.todoId}`,
+          requestData
+        )
+      );
+
+      const data = await expectJson(response, 200);
+      expect(data.id).toBe(requestData.param.todoId);
+      expect(data.title).toBe("Replace from route params");
+    });
+
+    test("merges route params and body into the update todo response", async () => {
+      const app = createTestApp();
+      const requestData = createUpdateTodoRequest({
+        param: { todoId: "01J9Z8ZK9Y3X2W1V0T9S8R7Q6P" },
+        body: { title: "Patch from route params" },
+      });
+
+      const response = await app.fetch(
+        buildFetchRequest(
+          `${BASE_URL}/todos/${requestData.param.todoId}`,
+          requestData
+        )
+      );
+
+      const data = await expectJson(response, 200);
+      expect(data.id).toBe(requestData.param.todoId);
+      expect(data.title).toBe("Patch from route params");
+    });
+
+    test("returns the requested todo status update", async () => {
+      const app = createTestApp();
+      const requestData = createUpdateTodoStatusRequest({
+        param: { todoId: "01J9Z8ZK9Y3X2W1V0T9S8R7Q6P" },
+        body: { value: "DONE" },
+      });
+
+      const response = await app.fetch(
+        buildFetchRequest(
+          `${BASE_URL}/todos/${requestData.param.todoId}/status`,
+          requestData
+        )
+      );
+
+      const data = await expectJson(response, 200);
+      expect(data.id).toBe(requestData.param.todoId);
+      expect(data.status).toBe("DONE");
+    });
+
+    test("returns the decoded nextToken from the query todo request", async () => {
+      const app = createTestApp();
+      const requestData = createQueryTodoRequest({
+        query: { nextToken: "runtime query+token" },
+      });
+
+      const response = await app.fetch(
+        buildFetchRequest(
+          `${BASE_URL}/todos/query?nextToken=runtime%20query%2Btoken`,
+          requestData
+        )
+      );
+
+      const data = await expectJson(response, 200);
+      expect(data.nextToken).toBe("runtime query+token");
+    });
+
+    test("routes /todos/query to the static query operation", async () => {
+      const app = createTestApp();
+      const requestData = createQueryTodoRequest();
+
+      const response = await app.fetch(
+        buildFetchRequest(`${BASE_URL}/todos/query`, requestData)
+      );
+
+      const data = await expectJson(response, 200);
+      expect(data.results).toEqual(expect.any(Array));
+    });
+
+    test("decodes path parameters before passing them to generated handlers", async () => {
+      const app = createTestApp({
+        validateRequests: false,
+        validateResponses: false,
+      });
+      const requestData = createGetTodoRequest();
+
+      const response = await app.fetch(
+        buildFetchRequest(`${BASE_URL}/todos/runtime%20todo%2B42`, requestData)
+      );
+
+      const data = await expectJson(response, 200);
+      expect(data.id).toBe("runtime todo+42");
+    });
+
+    test("propagates nested subtodo route parameters", async () => {
+      const app = createTestApp();
+      const requestData = createUpdateSubTodoRequest({
+        param: {
+          todoId: "01J9Z8ZK9Y3X2W1V0T9S8R7Q6P",
+          subtodoId: "01J9Z8ZK9Y3X2W1V0T9S8R7Q6Q",
+        },
+        body: { title: "Nested route update" },
+      });
+
+      const response = await app.fetch(
+        buildFetchRequest(
+          `${BASE_URL}/todos/${requestData.param.todoId}/subtodos/${requestData.param.subtodoId}`,
+          requestData
+        )
+      );
+
+      const data = await expectJson(response, 200);
+      expect(data.parentId).toBe(requestData.param.todoId);
+      expect(data.id).toBe(requestData.param.subtodoId);
+      expect(data.title).toBe("Nested route update");
+    });
+
+    test("routes nested list requests to the subtodo collection handler", async () => {
+      const app = createTestApp();
+      const requestData = createListSubTodosRequest({
+        param: { todoId: "01J9Z8ZK9Y3X2W1V0T9S8R7Q6P" },
+      });
+
+      const response = await app.fetch(
+        buildFetchRequest(
+          `${BASE_URL}/todos/${requestData.param.todoId}/subtodos`,
+          requestData
+        )
+      );
+
+      const data = await expectJson(response, 200);
+      expect(data.results).toEqual(expect.any(Array));
+    });
+
+    test("returns the parent id and body fields from the create subtodo route", async () => {
+      const app = createTestApp();
+      const requestData = createCreateSubTodoRequest({
+        param: { todoId: "01J9Z8ZK9Y3X2W1V0T9S8R7Q6P" },
+        body: { title: "Create nested route" },
+      });
+
+      const response = await app.fetch(
+        buildFetchRequest(
+          `${BASE_URL}/todos/${requestData.param.todoId}/subtodos`,
+          requestData
+        )
+      );
+
+      const data = await expectJson(response, 201);
+      expect(data.parentId).toBe(requestData.param.todoId);
+      expect(data.title).toBe("Create nested route");
+    });
+
+    test("routes nested static query requests to the subtodo query handler", async () => {
+      const app = createTestApp();
+      const requestData = createQuerySubTodoRequest({
+        param: { todoId: "01J9Z8ZK9Y3X2W1V0T9S8R7Q6P" },
+        body: { searchText: "nested search" },
+      });
+
+      const response = await app.fetch(
+        buildFetchRequest(
+          `${BASE_URL}/todos/${requestData.param.todoId}/subtodos/query`,
+          requestData
+        )
+      );
+
+      const data = await expectJson(response, 200);
+      expect(data.results).toEqual(expect.any(Array));
+    });
+
+    test("routes nested delete requests to the subtodo delete handler", async () => {
+      const app = createTestApp();
+      const requestData = createDeleteSubTodoRequest({
+        param: {
+          todoId: "01J9Z8ZK9Y3X2W1V0T9S8R7Q6P",
+          subtodoId: "01J9Z8ZK9Y3X2W1V0T9S8R7Q6Q",
+        },
+      });
+
+      const response = await app.fetch(
+        buildFetchRequest(
+          `${BASE_URL}/todos/${requestData.param.todoId}/subtodos/${requestData.param.subtodoId}`,
+          requestData
+        )
+      );
+
+      const data = await expectJson(response, 200);
+      expect(data.message).toEqual(expect.any(String));
+    });
+
+    test("returns an empty body for HEAD requests", async () => {
       const app = createTestApp();
       const requestData = createHeadTodoRequest();
 
@@ -105,10 +296,10 @@ describe("Generated Server Router", () => {
       );
 
       expect(response.status).toBe(200);
-      expect(await response.text()).toBe("");
+      await expectNoBody(response);
     });
 
-    test("should include Allow header for OPTIONS operations", async () => {
+    test("includes the Allow header for OPTIONS requests", async () => {
       const app = createTestApp();
       const requestData = createOptionsTodoRequest();
 
@@ -125,7 +316,7 @@ describe("Generated Server Router", () => {
       );
     });
 
-    test("should return 404 for unknown paths", async () => {
+    test("returns 404 for unknown paths", async () => {
       const app = createTestApp();
 
       const response = await app.fetch(
@@ -135,7 +326,7 @@ describe("Generated Server Router", () => {
       await expectErrorResponse(response, 404, "NOT_FOUND");
     });
 
-    test("should return 405 for wrong method on valid path", async () => {
+    test("returns 405 with an Allow header for unsupported methods on known paths", async () => {
       const app = createTestApp();
 
       const response = await app.fetch(
@@ -147,11 +338,11 @@ describe("Generated Server Router", () => {
     });
   });
 
-  describe("Route Metadata (operationId)", () => {
-    test("should expose operationId to middleware via ctx.route", async () => {
-      let capturedOperationId: string | undefined;
+  describe("Route Metadata", () => {
+    test("exposes complete metadata for matched generated routes", async () => {
+      let capturedRoute: unknown;
       const spy = defineMiddleware(async (ctx, next) => {
-        capturedOperationId = ctx.route?.operationId;
+        capturedRoute = ctx.route;
         return next();
       });
 
@@ -165,10 +356,41 @@ describe("Generated Server Router", () => {
         )
       );
 
-      expect(capturedOperationId).toBe("ListTodos");
+      expect(capturedRoute).toEqual({
+        operationId: "ListTodos",
+        method: "GET",
+        path: "/todos",
+      });
     });
 
-    test("should set ctx.route to undefined for unmatched paths", async () => {
+    test("matches nested static subtodo query metadata before parameter routes", async () => {
+      let capturedRoute: unknown;
+      const spy = defineMiddleware(async (ctx, next) => {
+        capturedRoute = ctx.route;
+        return next();
+      });
+
+      const app = createTestApp();
+      app.use(spy);
+      const requestData = createQuerySubTodoRequest({
+        param: { todoId: "01J9Z8ZK9Y3X2W1V0T9S8R7Q6P" },
+      });
+
+      await app.fetch(
+        buildFetchRequest(
+          `${BASE_URL}/todos/${requestData.param.todoId}/subtodos/query`,
+          requestData
+        )
+      );
+
+      expect(capturedRoute).toEqual({
+        operationId: "QuerySubTodo",
+        method: "POST",
+        path: "/todos/:todoId/subtodos/query",
+      });
+    });
+
+    test("leaves ctx.route undefined for unmatched paths", async () => {
       let capturedRoute: unknown = "not-set";
       const spy = defineMiddleware(async (ctx, next) => {
         capturedRoute = ctx.route;
@@ -219,23 +441,18 @@ describe("Generated Server Router", () => {
         issueKey: "query" as const,
       },
     ])(
-      "should reject invalid $name",
+      "rejects invalid $name",
       async ({ createRequest, url, issueKey }) => {
         const app = createTestApp();
         const requestData = createRequest();
 
         const response = await app.fetch(buildFetchRequest(url, requestData));
 
-        const data = (await expectErrorResponse(
-          response,
-          400,
-          "VALIDATION_ERROR"
-        )) as IValidationErrorResponseBody;
-        expect(data.issues[issueKey]).toHaveLength(1);
+        await expectValidationIssue(response, issueKey);
       }
     );
 
-    test("should bypass validation when validateRequests is disabled", async () => {
+    test("bypasses body validation when validateRequests is disabled", async () => {
       const app = createTestApp({ validateRequests: false });
       const requestData = createCreateTodoRequest({ body: { title: "" } });
 
@@ -246,7 +463,52 @@ describe("Generated Server Router", () => {
       expect(response.status).toBe(201);
     });
 
-    test("should use custom validation error handler when provided", async () => {
+    test("bypasses path validation when validateRequests is disabled", async () => {
+      const app = createTestApp({
+        validateRequests: false,
+        validateResponses: false,
+      });
+      const requestData = createGetTodoRequest();
+
+      const response = await app.fetch(
+        buildFetchRequest(`${BASE_URL}/todos/not-a-ulid`, requestData)
+      );
+
+      const data = await expectJson(response, 200);
+      expect(data.id).toBe("not-a-ulid");
+    });
+
+    test("bypasses query validation when validateRequests is disabled", async () => {
+      const app = createTestApp({ validateRequests: false });
+      const requestData = createListTodosRequest();
+
+      const response = await app.fetch(
+        buildFetchRequest(
+          `${BASE_URL}/todos?status=INVALID_STATUS`,
+          requestData
+        )
+      );
+
+      const data = await expectJson(response, 200);
+      expect(data.results).toEqual(expect.any(Array));
+    });
+
+    test("preserves encoded dangerous path parameters at the fetch boundary", async () => {
+      const app = createTestApp({
+        validateRequests: false,
+        validateResponses: false,
+      });
+      const requestData = createGetTodoRequest();
+
+      const response = await app.fetch(
+        buildFetchRequest(`${BASE_URL}/todos/a%2Fb`, requestData)
+      );
+
+      const data = await expectJson(response, 200);
+      expect(data.id).toBe("a%2Fb");
+    });
+
+    test("uses a custom request validation error handler when provided", async () => {
       const app = createTestApp({
         handleRequestValidationErrors: () => ({
           statusCode: 400,
@@ -265,10 +527,61 @@ describe("Generated Server Router", () => {
       const data = await expectJson(response, 400);
       expect(data.message).toBe("Custom validation error");
     });
+
+    test("returns a sanitized bad request response for malformed JSON", async () => {
+      const app = createTestApp();
+
+      const response = await app.fetch(
+        postRaw("/todos", '{"title":', "application/json")
+      );
+
+      const data = await expectErrorResponse(response, 400, "BAD_REQUEST");
+      expect(data.message).toBe("Malformed request body");
+      expect(JSON.stringify(data)).not.toContain("title");
+    });
+
+    test("returns payload too large when the generated app body limit is exceeded", async () => {
+      const consoleError = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
+      const app = createTestApp({ maxBodySize: 16 });
+
+      try {
+        const response = await app.fetch(
+          postRaw("/todos", "x".repeat(32), "text/plain")
+        );
+
+        await expectErrorResponse(response, 413, "PAYLOAD_TOO_LARGE");
+      } finally {
+        consoleError.mockRestore();
+      }
+    });
+
+    test("does not pollute Object.prototype from generated JSON request bodies", async () => {
+      const app = createTestApp();
+      const requestData = createCreateTodoRequest({
+        body: { title: "Pollution guard" },
+      });
+      const rawBody = aCreateTodoJsonBodyWithPrototypePollutionPayload(
+        requestData.body
+      );
+
+      try {
+        const response = await app.fetch(
+          buildRawBodyFetchRequest(`${BASE_URL}/todos`, requestData, rawBody)
+        );
+
+        const data = await expectJson(response, 201);
+        expect(data.title).toBe("Pollution guard");
+        expect(Object.prototype).not.toHaveProperty("polluted");
+      } finally {
+        delete (Object.prototype as { polluted?: unknown }).polluted;
+      }
+    });
   });
 
   describe("Response Handling", () => {
-    test("should handle JSON response bodies", async () => {
+    test("returns JSON response bodies with the generated content type", async () => {
       const app = createTestApp();
       const requestData = createCreateTodoRequest();
 
@@ -282,7 +595,7 @@ describe("Generated Server Router", () => {
       expect(data.title).toBe(requestData.body.title);
     });
 
-    test("should handle string response bodies", async () => {
+    test("returns string response bodies as plain text", async () => {
       const customStringResponse = "This is a plain text response";
       const app = createTestApp({
         validateResponses: false,
@@ -303,7 +616,7 @@ describe("Generated Server Router", () => {
       expect(await response.text()).toBe(customStringResponse);
     });
 
-    test("should handle empty response bodies", async () => {
+    test("returns an empty body for no-content responses", async () => {
       const app = createTestApp();
       const requestData = createDeleteTodoRequest();
 
@@ -315,29 +628,12 @@ describe("Generated Server Router", () => {
       );
 
       expect(response.status).toBe(204);
-      expect(await response.text()).toBe("");
-    });
-
-    test("should handle multi-value response headers", async () => {
-      const app = createTestApp();
-      const requestData = createOptionsTodoRequest();
-
-      const response = await app.fetch(
-        buildFetchRequest(
-          `${BASE_URL}/todos/${requestData.param.todoId}`,
-          requestData
-        )
-      );
-
-      expect(response.status).toBe(200);
-      expect(response.headers.get("Allow")).toBe(
-        "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS"
-      );
+      await expectNoBody(response);
     });
   });
 
   describe("Error Handling", () => {
-    test("should handle HTTP response errors with default handler", async () => {
+    test("returns typed HTTP response errors through the default handler", async () => {
       const app = createTestApp({
         validateResponses: false,
         throwTodoError: {
@@ -357,7 +653,7 @@ describe("Generated Server Router", () => {
       expect(data.errorCode).toBe("TODO_NOT_FOUND");
     });
 
-    test("should handle HTTP response errors with custom handler", async () => {
+    test("uses a custom HTTP response error handler when provided", async () => {
       const app = createTestApp({
         validateResponses: false,
         throwTodoError: {
@@ -381,28 +677,31 @@ describe("Generated Server Router", () => {
       expect(data.customMessage).toBe("Custom error handling");
     });
 
-    test("should handle validation errors with custom handler", async () => {
+    test("fails closed with a sanitized 500 for invalid generated responses", async () => {
       const app = createTestApp({
-        handleRequestValidationErrors: () => ({
-          statusCode: 404,
-          body: { customValidationError: "Custom validation error handling" },
-        }),
+        validateResponses: true,
+        throwTodoError: {
+          type: "CreateTodoSuccess" as const,
+          statusCode: 201,
+          header: { "Content-Type": "application/json" },
+          body: { id: 42, title: true },
+        } satisfies ITypedHttpResponse,
       });
-      const requestData = createCreateTodoRequest({
-        body: { priority: "INVALID_PRIORITY" as any },
-      });
+      const requestData = createCreateTodoRequest();
 
       const response = await app.fetch(
         buildFetchRequest(`${BASE_URL}/todos`, requestData)
       );
 
-      const data = await expectJson(response, 404);
-      expect(data.customValidationError).toBe(
-        "Custom validation error handling"
+      const data = await expectErrorResponse(
+        response,
+        500,
+        "INTERNAL_SERVER_ERROR"
       );
+      expect(JSON.stringify(data)).not.toContain("CreateTodoSuccess");
     });
 
-    test("should handle unknown errors with default handler", async () => {
+    test("returns the default 500 response for unknown errors", async () => {
       const app = createTestApp({
         throwTodoError: new Error("Something went wrong"),
       });
@@ -415,7 +714,7 @@ describe("Generated Server Router", () => {
       await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
     });
 
-    test("should handle unknown errors with custom handler", async () => {
+    test("uses a custom unknown error handler when provided", async () => {
       const app = createTestApp({
         throwTodoError: new Error("Something went wrong"),
         handleUnknownErrors: () => ({
@@ -433,7 +732,7 @@ describe("Generated Server Router", () => {
       expect(data.customUnknownError).toBe("Custom unknown error handling");
     });
 
-    test("should handle validation error handler failures with unknown handlers", async () => {
+    test("returns the default 500 response when the request validation error handler throws", async () => {
       const app = createTestApp({
         handleRequestValidationErrors: () => {
           throw new Error("Validation handler failed");
@@ -450,7 +749,7 @@ describe("Generated Server Router", () => {
       await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
     });
 
-    test("should handle HTTP response error handler failures with unknown handlers", async () => {
+    test("returns the default 500 response when the HTTP response error handler throws", async () => {
       const app = createTestApp({
         validateResponses: false,
         throwTodoError: {
@@ -474,23 +773,34 @@ describe("Generated Server Router", () => {
   });
 
   describe("Middleware", () => {
-    test("should execute global middleware for all requests", async () => {
-      const app = createTestApp();
-      let middlewareExecuted = false;
-      app.use(
-        defineMiddleware(async (_ctx, next) => {
-          middlewareExecuted = true;
-          return next();
-        })
-      );
+    test("passes middleware state in registration order", async () => {
+      const order: string[] = [];
+      let capturedTrace: readonly string[] | undefined;
+      const app = createTestApp()
+        .use(
+          defineMiddleware<{ trace: readonly string[] }>(async (_ctx, next) => {
+            order.push("first");
+            return next({ trace: ["first"] });
+          })
+        )
+        .use(
+          defineMiddleware<{}, { trace: readonly string[] }>(
+            async (ctx, next) => {
+              order.push("second");
+              capturedTrace = ctx.state.get("trace");
+              return next();
+            }
+          )
+        );
       const requestData = createCreateTodoRequest();
 
       await app.fetch(buildFetchRequest(`${BASE_URL}/todos`, requestData));
 
-      expect(middlewareExecuted).toBe(true);
+      expect(order).toEqual(["first", "second"]);
+      expect(capturedTrace).toEqual(["first"]);
     });
 
-    test("should execute middleware even for 404 responses", async () => {
+    test("runs middleware before returning 404 responses", async () => {
       const app = createTestApp();
       let middlewareExecuted = false;
       app.use(
@@ -507,13 +817,14 @@ describe("Generated Server Router", () => {
       expect(middlewareExecuted).toBe(true);
     });
 
-    test("should allow middleware to short-circuit with custom response", async () => {
-      const app = createTestApp({
-        customResponses: {
+    test("returns middleware short-circuit responses before generated handlers", async () => {
+      const app = createTestApp();
+      app.use(
+        defineMiddleware(async (_ctx, _next) => ({
           statusCode: 418,
           body: { message: "I'm a teapot" },
-        },
-      });
+        }))
+      );
       const requestData = createCreateTodoRequest();
 
       const response = await app.fetch(
@@ -522,6 +833,27 @@ describe("Generated Server Router", () => {
 
       const data = await expectJson(response, 418);
       expect(data.message).toBe("I'm a teapot");
+    });
+
+    test("returns middleware short-circuit responses before request validation", async () => {
+      const app = createTestApp();
+      app.use(
+        defineMiddleware(async (_ctx, _next) => ({
+          statusCode: 418,
+          body: { message: "I'm still a teapot" },
+        }))
+      );
+      const requestData = createCreateTodoRequest({
+        body: { priority: "INVALID_PRIORITY" as any },
+      });
+
+      const response = await app.fetch(
+        buildFetchRequest(`${BASE_URL}/todos`, requestData)
+      );
+
+      const data = await expectJson(response, 418);
+      expect(data.message).toBe("I'm still a teapot");
+      expect(data.code).toBeUndefined();
     });
   });
 });

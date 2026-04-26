@@ -1,264 +1,297 @@
+import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
 import { executeMiddlewarePipeline } from "../../src/lib/Middleware.js";
 import { createServerContext } from "../helpers.js";
 import type { Middleware } from "../../src/lib/Middleware.js";
 
-describe("Middleware Pipeline", () => {
-  describe("executeMiddlewarePipeline", () => {
-    test("should call final handler when no middleware registered", async () => {
-      const ctx = createServerContext();
+const okResponse = (body?: unknown): IHttpResponse => ({
+  statusCode: 200,
+  ...(body === undefined ? {} : { body }),
+});
 
-      const response = await executeMiddlewarePipeline([], ctx, async () => ({
-        statusCode: 200,
-        body: { message: "handler" },
-      }));
+const recordingMiddleware =
+  (name: string, order: string[]): Middleware =>
+  async (_ctx, next) => {
+    order.push(`${name}-before`);
+    const response = await next();
+    order.push(`${name}-after`);
+    return response;
+  };
 
-      expect(response.statusCode).toBe(200);
-      expect(response.body).toEqual({ message: "handler" });
-    });
+describe("middleware pipeline", () => {
+  test("calls the final handler when no middleware is registered", async () => {
+    const ctx = createServerContext();
 
-    test("should execute single middleware that passes through", async () => {
-      const ctx = createServerContext();
-      const order: string[] = [];
+    const response = await executeMiddlewarePipeline([], ctx, async () =>
+      okResponse({ message: "handler" })
+    );
 
-      const middleware: Middleware = async (_ctx, next) => {
-        order.push("before");
-        const response = await next();
-        order.push("after");
-        return response;
-      };
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual({ message: "handler" });
+  });
 
-      const response = await executeMiddlewarePipeline(
-        [middleware],
-        ctx,
-        async () => {
-          order.push("handler");
-          return { statusCode: 200, body: { message: "ok" } };
-        }
-      );
+  test("wraps a single pass-through middleware around the final handler", async () => {
+    const ctx = createServerContext();
+    const order: string[] = [];
+    const middleware = recordingMiddleware("middleware", order);
 
-      expect(response.statusCode).toBe(200);
-      expect(order).toEqual(["before", "handler", "after"]);
-    });
-
-    test("should execute middleware in onion order", async () => {
-      const ctx = createServerContext();
-      const order: string[] = [];
-
-      const mw1: Middleware = async (_ctx, next) => {
-        order.push("mw1-before");
-        const response = await next();
-        order.push("mw1-after");
-        return response;
-      };
-
-      const mw2: Middleware = async (_ctx, next) => {
-        order.push("mw2-before");
-        const response = await next();
-        order.push("mw2-after");
-        return response;
-      };
-
-      await executeMiddlewarePipeline([mw1, mw2], ctx, async () => {
+    const response = await executeMiddlewarePipeline(
+      [middleware],
+      ctx,
+      async () => {
         order.push("handler");
-        return { statusCode: 200 };
-      });
+        return okResponse({ message: "ok" });
+      }
+    );
 
-      expect(order).toEqual([
-        "mw1-before",
-        "mw2-before",
-        "handler",
-        "mw2-after",
-        "mw1-after",
-      ]);
+    expect(response.statusCode).toBe(200);
+    expect(order).toEqual(["middleware-before", "handler", "middleware-after"]);
+  });
+
+  test("executes multiple middleware in onion order", async () => {
+    const ctx = createServerContext();
+    const order: string[] = [];
+    const mw1 = recordingMiddleware("mw1", order);
+    const mw2 = recordingMiddleware("mw2", order);
+
+    await executeMiddlewarePipeline([mw1, mw2], ctx, async () => {
+      order.push("handler");
+      return okResponse();
     });
 
-    test("should short-circuit when middleware returns without calling next", async () => {
-      const ctx = createServerContext();
-      let handlerCalled = false;
+    expect(order).toEqual([
+      "mw1-before",
+      "mw2-before",
+      "handler",
+      "mw2-after",
+      "mw1-after",
+    ]);
+  });
 
-      const authMiddleware: Middleware = async () => {
-        return { statusCode: 401, body: { message: "Unauthorized" } };
-      };
+  test("returns a short-circuit response without calling the final handler", async () => {
+    const ctx = createServerContext();
+    let handlerCalled = false;
 
-      const response = await executeMiddlewarePipeline(
-        [authMiddleware],
-        ctx,
-        async () => {
-          handlerCalled = true;
-          return { statusCode: 200 };
-        }
-      );
-
-      expect(response.statusCode).toBe(401);
-      expect(handlerCalled).toBe(false);
+    const authMiddleware: Middleware = async () => ({
+      statusCode: 401,
+      body: { message: "Unauthorized" },
     });
 
-    test("should short-circuit at correct middleware in chain", async () => {
-      const ctx = createServerContext();
-      const reached: string[] = [];
+    const response = await executeMiddlewarePipeline(
+      [authMiddleware],
+      ctx,
+      async () => {
+        handlerCalled = true;
+        return okResponse();
+      }
+    );
 
-      const mw1: Middleware = async (_ctx, next) => {
-        reached.push("mw1");
-        return next();
+    expect(response.statusCode).toBe(401);
+    expect(handlerCalled).toBe(false);
+  });
+
+  test("prevents later middleware and the final handler after a short-circuit", async () => {
+    const ctx = createServerContext();
+    const reached: string[] = [];
+
+    const mw1: Middleware = async (_ctx, next) => {
+      reached.push("mw1");
+      return next();
+    };
+    const mw2: Middleware = async () => {
+      reached.push("mw2");
+      return {
+        statusCode: 403,
+        body: { message: "Forbidden" },
       };
+    };
+    const mw3: Middleware = async (_ctx, next) => {
+      reached.push("mw3");
+      return next();
+    };
 
-      const mw2: Middleware = async () => {
-        reached.push("mw2");
-        return { statusCode: 403, body: { message: "Forbidden" } };
+    const response = await executeMiddlewarePipeline(
+      [mw1, mw2, mw3],
+      ctx,
+      async () => {
+        reached.push("handler");
+        return okResponse();
+      }
+    );
+
+    expect(response.statusCode).toBe(403);
+    expect(reached).toEqual(["mw1", "mw2"]);
+  });
+
+  test("preserves existing response fields when middleware adds headers", async () => {
+    const ctx = createServerContext();
+
+    const addHeader: Middleware = async (_ctx, next) => {
+      const response = await next();
+      return {
+        ...response,
+        header: { ...response.header, "x-request-id": "abc-123" },
       };
+    };
 
-      const mw3: Middleware = async (_ctx, next) => {
-        reached.push("mw3");
-        return next();
-      };
+    const response = await executeMiddlewarePipeline(
+      [addHeader],
+      ctx,
+      async () => ({
+        statusCode: 200,
+        header: { "content-type": "application/json" },
+        body: { ok: true },
+      })
+    );
 
-      const response = await executeMiddlewarePipeline(
-        [mw1, mw2, mw3],
-        ctx,
-        async () => {
-          reached.push("handler");
-          return { statusCode: 200 };
-        }
-      );
-
-      expect(response.statusCode).toBe(403);
-      expect(reached).toEqual(["mw1", "mw2"]);
-    });
-
-    test("should allow middleware to modify the response", async () => {
-      const ctx = createServerContext();
-
-      const addHeader: Middleware = async (_ctx, next) => {
-        const response = await next();
-        return {
-          ...response,
-          header: { ...response.header, "x-request-id": "abc-123" },
-        };
-      };
-
-      const response = await executeMiddlewarePipeline(
-        [addHeader],
-        ctx,
-        async () => ({
-          statusCode: 200,
-          header: { "content-type": "application/json" },
-          body: { ok: true },
-        })
-      );
-
-      expect(response.statusCode).toBe(200);
-      expect(response.header).toEqual({
+    expect(response).toEqual({
+      statusCode: 200,
+      header: {
         "content-type": "application/json",
         "x-request-id": "abc-123",
-      });
+      },
+      body: { ok: true },
     });
+  });
 
-    test("should merge state passed to next() into ctx.state", async () => {
-      const ctx = createServerContext();
+  test("makes state passed to next available downstream", async () => {
+    const ctx = createServerContext();
 
-      const setUser: Middleware = async (_ctx, next) => {
-        return next({ userId: "user_42" });
-      };
+    const setUser: Middleware = async (_ctx, next) => {
+      return next({ userId: "user_42" });
+    };
 
-      const response = await executeMiddlewarePipeline(
-        [setUser],
-        ctx,
-        async () => ({
-          statusCode: 200,
-          body: { userId: ctx.state.get("userId") },
+    const response = await executeMiddlewarePipeline([setUser], ctx, async () =>
+      okResponse({ userId: ctx.state.get("userId") })
+    );
+
+    expect(response.body).toEqual({ userId: "user_42" });
+  });
+
+  test("accumulates state from multiple middleware without replacing unrelated values", async () => {
+    const ctx = createServerContext();
+
+    const setUser: Middleware = async (_ctx, next) => next({ userId: "u_1" });
+    const setRole: Middleware = async (_ctx, next) => next({ role: "admin" });
+
+    const response = await executeMiddlewarePipeline(
+      [setUser, setRole],
+      ctx,
+      async () =>
+        okResponse({
+          userId: ctx.state.get("userId"),
+          role: ctx.state.get("role"),
         })
-      );
+    );
 
-      expect(response.body).toEqual({ userId: "user_42" });
-    });
+    expect(response.body).toEqual({ userId: "u_1", role: "admin" });
+  });
 
-    test("should accumulate state from multiple middlewares via next(state)", async () => {
-      const ctx = createServerContext();
+  test("lets downstream middleware read upstream state before the final handler", async () => {
+    const ctx = createServerContext();
 
-      const mw1: Middleware = async (_ctx, next) => next({ userId: "u_1" });
-      const mw2: Middleware = async (_ctx, next) => next({ role: "admin" });
+    const setUser: Middleware = async (_ctx, next) => next({ userId: "u_1" });
+    const deriveGreeting: Middleware = async (ctx, next) => {
+      const userId = ctx.state.get("userId");
+      return next({ greeting: `hello ${userId}` });
+    };
 
-      const response = await executeMiddlewarePipeline(
-        [mw1, mw2],
-        ctx,
-        async () => ({
-          statusCode: 200,
-          body: {
-            userId: ctx.state.get("userId"),
-            role: ctx.state.get("role"),
-          },
+    const response = await executeMiddlewarePipeline(
+      [setUser, deriveGreeting],
+      ctx,
+      async () =>
+        okResponse({
+          userId: ctx.state.get("userId"),
+          greeting: ctx.state.get("greeting"),
         })
-      );
+    );
 
-      expect(response.body).toEqual({ userId: "u_1", role: "admin" });
-    });
+    expect(response.body).toEqual({ userId: "u_1", greeting: "hello u_1" });
+  });
 
-    test("should propagate errors from middleware", async () => {
-      const ctx = createServerContext();
+  test("overlays matching state keys while preserving earlier keys", async () => {
+    const ctx = createServerContext();
 
-      const errorMiddleware: Middleware = async () => {
-        throw new Error("Middleware exploded");
-      };
+    const setReader: Middleware = async (_ctx, next) =>
+      next({ userId: "u_1", role: "reader" });
+    const promoteToAdmin: Middleware = async (_ctx, next) =>
+      next({ role: "admin" });
 
-      await expect(
-        executeMiddlewarePipeline([errorMiddleware], ctx, async () => ({
-          statusCode: 200,
-        }))
-      ).rejects.toThrow("Middleware exploded");
-    });
-
-    test("should propagate errors from final handler", async () => {
-      const ctx = createServerContext();
-
-      await expect(
-        executeMiddlewarePipeline([], ctx, async () => {
-          throw new Error("Handler exploded");
+    const response = await executeMiddlewarePipeline(
+      [setReader, promoteToAdmin],
+      ctx,
+      async () =>
+        okResponse({
+          userId: ctx.state.get("userId"),
+          role: ctx.state.get("role"),
         })
-      ).rejects.toThrow("Handler exploded");
-    });
+    );
 
-    test("should throw when next() is called multiple times", async () => {
-      const ctx = createServerContext();
+    expect(response.body).toEqual({ userId: "u_1", role: "admin" });
+  });
 
-      const doubleCallMiddleware: Middleware = async (_ctx, next) => {
-        await next();
-        // Calling next() a second time should throw
-        return next();
-      };
+  test("propagates errors thrown by middleware", async () => {
+    const ctx = createServerContext();
 
-      await expect(
-        executeMiddlewarePipeline([doubleCallMiddleware], ctx, async () => ({
-          statusCode: 200,
-        }))
-      ).rejects.toThrow("next() called multiple times");
-    });
+    const errorMiddleware: Middleware = async () => {
+      throw new Error("Middleware exploded");
+    };
 
-    test("should allow different middleware to each call next() once", async () => {
-      const ctx = createServerContext();
-      const order: string[] = [];
+    await expect(
+      executeMiddlewarePipeline([errorMiddleware], ctx, async () =>
+        okResponse()
+      )
+    ).rejects.toThrow("Middleware exploded");
+  });
 
-      const mw1: Middleware = async (_ctx, next) => {
-        order.push("mw1");
-        return next();
-      };
+  test("propagates errors thrown by the final handler", async () => {
+    const ctx = createServerContext();
 
-      const mw2: Middleware = async (_ctx, next) => {
-        order.push("mw2");
-        return next();
-      };
+    await expect(
+      executeMiddlewarePipeline([], ctx, async () => {
+        throw new Error("Handler exploded");
+      })
+    ).rejects.toThrow("Handler exploded");
+  });
 
-      const response = await executeMiddlewarePipeline(
-        [mw1, mw2],
-        ctx,
-        async () => {
-          order.push("handler");
-          return { statusCode: 200 };
-        }
-      );
+  test("rejects a middleware that calls next twice", async () => {
+    const ctx = createServerContext();
 
-      expect(response.statusCode).toBe(200);
-      expect(order).toEqual(["mw1", "mw2", "handler"]);
-    });
+    const doubleCallMiddleware: Middleware = async (_ctx, next) => {
+      await next();
+      return next();
+    };
+
+    await expect(
+      executeMiddlewarePipeline([doubleCallMiddleware], ctx, async () =>
+        okResponse()
+      )
+    ).rejects.toThrow("next() called multiple times");
+  });
+
+  test("allows separate middleware instances to each call next once", async () => {
+    const ctx = createServerContext();
+    const order: string[] = [];
+
+    const mw1: Middleware = async (_ctx, next) => {
+      order.push("mw1");
+      return next();
+    };
+    const mw2: Middleware = async (_ctx, next) => {
+      order.push("mw2");
+      return next();
+    };
+
+    const response = await executeMiddlewarePipeline(
+      [mw1, mw2],
+      ctx,
+      async () => {
+        order.push("handler");
+        return okResponse();
+      }
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(order).toEqual(["mw1", "mw2", "handler"]);
   });
 });

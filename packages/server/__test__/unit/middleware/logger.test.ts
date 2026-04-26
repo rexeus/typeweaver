@@ -1,92 +1,184 @@
-import { HttpMethod } from "@rexeus/typeweaver-core";
+import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
 import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
-import { logger } from "../../../src/lib/middleware/logger.js";
+import {
+  logger,
+  type LogData,
+  type LoggerOptions,
+} from "../../../src/lib/middleware/logger.js";
 import { createServerContext } from "../../helpers.js";
 
+type LoggerScenario = {
+  readonly options?: LoggerOptions;
+  readonly ctx?: ReturnType<typeof createServerContext>;
+  readonly finalHandler?: () => Promise<IHttpResponse>;
+};
+
+const defaultHandler = async (): Promise<IHttpResponse> => ({ statusCode: 200 });
+
+const nowFrom = (values: readonly number[]): (() => number) => {
+  let index = 0;
+
+  return () => values[index++] ?? values.at(-1) ?? 0;
+};
+
+const executeLogger = ({
+  options,
+  ctx = createServerContext(),
+  finalHandler = defaultHandler,
+}: LoggerScenario = {}): Promise<IHttpResponse> => {
+  const mw = logger(options);
+
+  return executeMiddlewarePipeline([mw.handler], ctx, finalHandler);
+};
+
 describe("logger", () => {
-  test("should log request with default format", async () => {
+  test("logs requests with the default format", async () => {
     const logFn = vi.fn();
-    const mw = logger({ logFn });
     const ctx = createServerContext({ method: HttpMethod.GET, path: "/users" });
 
-    await executeMiddlewarePipeline([mw.handler], ctx, async () => ({
-      statusCode: 200,
-    }));
+    await executeLogger({ options: { logFn, nowMs: nowFrom([10, 24.4]) }, ctx });
 
     expect(logFn).toHaveBeenCalledOnce();
-    const message = logFn.mock.calls[0]![0] as string;
-    expect(message).toMatch(/^GET \/users 200 \d+ms$/);
+    expect(logFn.mock.calls[0]![0]).toBe("GET /users 200 14ms");
   });
 
-  test("should use custom format function", async () => {
+  test("passes complete request and response data to a custom formatter", async () => {
     const logFn = vi.fn();
-    const mw = logger({
-      logFn,
-      format: data => `[${data.statusCode}] ${data.method} ${data.path}`,
-    });
+    const format = vi.fn(
+      (data: LogData) => `[${data.statusCode}] ${data.method} ${data.path}`
+    );
     const ctx = createServerContext({
       method: HttpMethod.POST,
       path: "/items",
     });
 
-    await executeMiddlewarePipeline([mw.handler], ctx, async () => ({
-      statusCode: 201,
-    }));
+    await executeLogger({
+      options: { logFn, format, nowMs: nowFrom([10, 25.8]) },
+      ctx,
+      finalHandler: async () => ({ statusCode: 201 }),
+    });
 
+    expect(format).toHaveBeenCalledOnce();
+    expect(format.mock.calls[0]![0]).toEqual({
+      method: HttpMethod.POST,
+      path: "/items",
+      statusCode: 201,
+      durationMs: 16,
+    });
     expect(logFn).toHaveBeenCalledWith("[201] POST /items");
   });
 
-  test("should not modify the response", async () => {
+  test("returns the downstream response unchanged", async () => {
     const logFn = vi.fn();
-    const mw = logger({ logFn });
-    const ctx = createServerContext();
+    const downstreamResponse: IHttpResponse = {
+      statusCode: 200,
+      body: { ok: true },
+      header: { "x-custom": "value" },
+    };
 
-    const response = await executeMiddlewarePipeline(
-      [mw.handler],
-      ctx,
-      async () => ({
-        statusCode: 200,
-        body: { ok: true },
-        header: { "x-custom": "value" },
-      })
-    );
+    const response = await executeLogger({
+      options: { logFn },
+      finalHandler: async () => downstreamResponse,
+    });
 
-    expect(response.statusCode).toBe(200);
-    expect(response.body).toEqual({ ok: true });
-    expect(response.header?.["x-custom"]).toBe("value");
+    expect(response).toEqual(downstreamResponse);
   });
 
-  test("should log after response is received", async () => {
+  test("logs after the downstream response is produced", async () => {
     const order: string[] = [];
     const logFn = vi.fn(() => order.push("logged"));
-    const mw = logger({ logFn });
-    const ctx = createServerContext();
 
-    await executeMiddlewarePipeline([mw.handler], ctx, async () => {
-      order.push("handler");
-      return { statusCode: 200 };
+    await executeLogger({
+      options: { logFn },
+      finalHandler: async () => {
+        order.push("handler");
+        return { statusCode: 200 };
+      },
     });
 
     expect(order).toEqual(["handler", "logged"]);
   });
 
-  test("should use console.log by default", async () => {
+  test("uses console.log when no logging callback is configured", async () => {
     const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    const mw = logger();
     const ctx = createServerContext({
       method: HttpMethod.DELETE,
       path: "/items/1",
     });
 
-    await executeMiddlewarePipeline([mw.handler], ctx, async () => ({
-      statusCode: 204,
-    }));
+    try {
+      await executeLogger({
+        options: { nowMs: nowFrom([20, 37.2]) },
+        ctx,
+        finalHandler: async () => ({ statusCode: 204 }),
+      });
 
-    expect(consoleSpy).toHaveBeenCalledOnce();
-    const message = consoleSpy.mock.calls[0]![0] as string;
-    expect(message).toMatch(/^DELETE \/items\/1 204 \d+ms$/);
+      expect(consoleSpy).toHaveBeenCalledOnce();
+      expect(consoleSpy.mock.calls[0]![0]).toBe("DELETE /items/1 204 17ms");
+    } finally {
+      consoleSpy.mockRestore();
+    }
+  });
 
-    consoleSpy.mockRestore();
+  test("propagates downstream errors without logging", async () => {
+    const logFn = vi.fn();
+
+    await expect(
+      executeLogger({
+        options: { logFn },
+        finalHandler: async () => {
+          throw new Error("downstream failed");
+        },
+      })
+    ).rejects.toThrow("downstream failed");
+
+    expect(logFn).not.toHaveBeenCalled();
+  });
+
+  test("propagates formatter errors after downstream completion and before logging", async () => {
+    const order: string[] = [];
+    const logFn = vi.fn();
+    const format = () => {
+      order.push("format");
+      throw new Error("format failed");
+    };
+
+    await expect(
+      executeLogger({
+        options: { logFn, format, nowMs: nowFrom([0, 1]) },
+        finalHandler: async () => {
+          order.push("handler");
+          return { statusCode: 200 };
+        },
+      })
+    ).rejects.toThrow("format failed");
+
+    expect(order).toEqual(["handler", "format"]);
+    expect(logFn).not.toHaveBeenCalled();
+  });
+
+  test("propagates logging callback errors after formatting", async () => {
+    const order: string[] = [];
+    const format = () => {
+      order.push("format");
+      return "formatted message";
+    };
+    const logFn = vi.fn((message: string) => {
+      order.push(`log:${message}`);
+      throw new Error("log failed");
+    });
+
+    await expect(
+      executeLogger({
+        options: { logFn, format, nowMs: nowFrom([0, 1]) },
+        finalHandler: async () => {
+          order.push("handler");
+          return { statusCode: 200 };
+        },
+      })
+    ).rejects.toThrow("log failed");
+
+    expect(order).toEqual(["handler", "format", "log:formatted message"]);
   });
 });

@@ -1,10 +1,17 @@
-import { createDefaultErrorBody, unauthorizedDefaultError } from "@rexeus/typeweaver-core";
+import {
+  createDefaultErrorBody,
+  unauthorizedDefaultError,
+} from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { defineMiddleware } from "../TypedMiddleware.js";
+import { readSingletonHeader } from "./header.js";
 import type { ServerContext } from "../ServerContext.js";
 
 export type BearerAuthOptions = {
-  readonly verifyToken: (token: string, ctx: ServerContext) => boolean | Promise<boolean>;
+  readonly verifyToken: (
+    token: string,
+    ctx: ServerContext
+  ) => boolean | Promise<boolean>;
   readonly realm?: string;
   readonly onUnauthorized?: (ctx: ServerContext) => IHttpResponse;
 };
@@ -24,10 +31,18 @@ export function bearerAuth(options: BearerAuthOptions) {
     options.onUnauthorized?.(ctx) ?? defaultResponse;
 
   return defineMiddleware<{ token: string }>(async (ctx, next) => {
-    const authorization = ctx.request.header?.["authorization"];
+    const authorization = readSingletonHeader(
+      ctx.request.header,
+      "authorization"
+    );
     if (typeof authorization !== "string") return deny(ctx);
 
-    if (!authorization.startsWith(BEARER_PREFIX)) return deny(ctx);
+    if (
+      authorization.slice(0, BEARER_PREFIX.length).toLowerCase() !==
+      BEARER_PREFIX.toLowerCase()
+    ) {
+      return deny(ctx);
+    }
 
     const token = authorization.slice(BEARER_PREFIX.length);
     if (token.length === 0) return deny(ctx);
