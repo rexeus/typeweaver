@@ -82,7 +82,7 @@ export class Validator {
    * @returns Coerced data object with proper key casing and array coercion
    */
   coerceToSchema(data, shape, caseSensitive) {
-    if (typeof data !== "object" || data === null) {
+    if (typeof data !== "object" || data === null || Array.isArray(data)) {
       return data;
     }
     const schemaMap = this.analyzeSchema(shape, caseSensitive);
@@ -158,6 +158,9 @@ export class Validator {
   coerceHeaderToSchema(header, shape) {
     if (typeof header !== "object" || header === null) {
       return this.coerceToSchema(header ?? {}, shape, false);
+    }
+    if (Array.isArray(header)) {
+      return header;
     }
     const preprocessed = this.splitCommaDelimitedValues(header, shape);
     return this.coerceToSchema(preprocessed, shape, false);
