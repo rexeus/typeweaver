@@ -29,9 +29,15 @@ export class ResponseValidator extends Validator {
    * @returns A result object containing either the validated response or error details
    */
   safeValidate(response) {
-    const error = new ResponseValidationError(response.statusCode);
+    const statusCode =
+      typeof response === "object" && response !== null ? response.statusCode : undefined;
+    const error = new ResponseValidationError(statusCode);
+    if (typeof statusCode !== "number") {
+      error.addStatusCodeIssue([...this.expectedStatusCodes]);
+      return { isValid: false, error };
+    }
     for (const entry of this.responseEntries) {
-      if (response.statusCode === entry.statusCode) {
+      if (statusCode === entry.statusCode) {
         const result = this.validateResponseType(
           entry.name,
           entry.headerSchema,

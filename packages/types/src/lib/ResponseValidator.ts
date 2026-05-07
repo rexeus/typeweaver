@@ -67,10 +67,19 @@ export abstract class ResponseValidator<
   public safeValidate(
     response: IHttpResponse
   ): SafeResponseValidationResult<TResponse> {
-    const error = new ResponseValidationError(response.statusCode);
+    const statusCode =
+      typeof response === "object" && response !== null
+        ? (response as { readonly statusCode?: unknown }).statusCode
+        : undefined;
+    const error = new ResponseValidationError(statusCode);
+
+    if (typeof statusCode !== "number") {
+      error.addStatusCodeIssue([...this.expectedStatusCodes]);
+      return { isValid: false, error };
+    }
 
     for (const entry of this.responseEntries) {
-      if (response.statusCode === entry.statusCode) {
+      if (statusCode === entry.statusCode) {
         const result = this.validateResponseType<TResponse>(
           entry.name,
           entry.headerSchema,
