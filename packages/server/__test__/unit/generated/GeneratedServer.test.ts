@@ -1,24 +1,6 @@
 import type { IHttpRequest, ITypedHttpResponse } from "@rexeus/typeweaver-core";
-import {
-  createCreateSubTodoRequest,
-  createCreateTodoRequest,
-  createDeleteSubTodoRequest,
-  createDeleteTodoRequest,
-  createGetTodoRequest,
-  createHeadTodoRequest,
-  createListSubTodosRequest,
-  createListTodosRequest,
-  createOptionsTodoRequest,
-  createPutTodoRequest,
-  createQuerySubTodoRequest,
-  createQueryTodoRequest,
-  createTestApp,
-  createUpdateSubTodoRequest,
-  createUpdateTodoRequest,
-  createUpdateTodoStatusRequest,
-  defineMiddleware,
-  type IValidationErrorResponseBody,
-} from "test-utils";
+import { createCreateSubTodoRequest, createCreateTodoRequest, createDeleteSubTodoRequest, createDeleteTodoRequest, createGetTodoRequest, createHeadTodoRequest, createListSubTodosRequest, createListTodosRequest, createOptionsTodoRequest, createPutTodoRequest, createQuerySubTodoRequest, createQueryTodoRequest, createTestApp, createUpdateSubTodoRequest, createUpdateTodoRequest, createUpdateTodoStatusRequest, defineMiddleware } from 'test-utils';
+import type { IValidationErrorResponseBody } from 'test-utils';
 import { describe, expect, test, vi } from "vitest";
 import {
   BASE_URL,
@@ -440,17 +422,14 @@ describe("Generated Server Router", () => {
         url: `${BASE_URL}/todos?status=INVALID_STATUS`,
         issueKey: "query" as const,
       },
-    ])(
-      "rejects invalid $name",
-      async ({ createRequest, url, issueKey }) => {
-        const app = createTestApp();
-        const requestData = createRequest();
+    ])("rejects invalid $name", async ({ createRequest, url, issueKey }) => {
+      const app = createTestApp();
+      const requestData = createRequest();
 
-        const response = await app.fetch(buildFetchRequest(url, requestData));
+      const response = await app.fetch(buildFetchRequest(url, requestData));
 
-        await expectValidationIssue(response, issueKey);
-      }
-    );
+      await expectValidationIssue(response, issueKey);
+    });
 
     test("bypasses body validation when validateRequests is disabled", async () => {
       const app = createTestApp({ validateRequests: false });

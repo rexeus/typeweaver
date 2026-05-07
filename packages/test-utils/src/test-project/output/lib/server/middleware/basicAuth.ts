@@ -1,7 +1,4 @@
-import {
-  createDefaultErrorBody,
-  unauthorizedDefaultError,
-} from "@rexeus/typeweaver-core";
+import { createDefaultErrorBody, unauthorizedDefaultError } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { defineMiddleware } from "../TypedMiddleware.js";
 import { readSingletonHeader } from "./header.js";
@@ -11,7 +8,7 @@ export type BasicAuthOptions = {
   readonly verifyCredentials: (
     username: string,
     password: string,
-    ctx: ServerContext
+    ctx: ServerContext,
   ) => boolean | Promise<boolean>;
   readonly realm?: string;
   readonly onUnauthorized?: (ctx: ServerContext) => IHttpResponse;
@@ -32,16 +29,10 @@ export function basicAuth(options: BasicAuthOptions) {
     options.onUnauthorized?.(ctx) ?? defaultResponse;
 
   return defineMiddleware<{ username: string }>(async (ctx, next) => {
-    const authorization = readSingletonHeader(
-      ctx.request.header,
-      "authorization"
-    );
+    const authorization = readSingletonHeader(ctx.request.header, "authorization");
     if (typeof authorization !== "string") return deny(ctx);
 
-    if (
-      authorization.slice(0, BASIC_PREFIX.length).toLowerCase() !==
-      BASIC_PREFIX.toLowerCase()
-    ) {
+    if (authorization.slice(0, BASIC_PREFIX.length).toLowerCase() !== BASIC_PREFIX.toLowerCase()) {
       return deny(ctx);
     }
 

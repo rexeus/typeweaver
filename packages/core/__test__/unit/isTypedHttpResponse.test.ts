@@ -1,8 +1,6 @@
 import { describe, expect, test } from "vitest";
-import {
-  type ITypedHttpResponse,
-  isTypedHttpResponse,
-} from "../../src/HttpResponse.js";
+import { isTypedHttpResponse } from '../../src/HttpResponse.js';
+import type { ITypedHttpResponse } from '../../src/HttpResponse.js';
 import { HttpStatusCode } from "../../src/HttpStatusCode.js";
 
 const valuesThatAreNotTypedResponses: readonly {

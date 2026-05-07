@@ -1,9 +1,6 @@
 export type HeaderMap = Record<string, string | string[]> | undefined;
 
-export function readSingletonHeader(
-  header: HeaderMap,
-  name: string
-): string | undefined {
+export function readSingletonHeader(header: HeaderMap, name: string): string | undefined {
   const normalizedName = name.toLowerCase();
   let foundValue: string | undefined;
 
@@ -22,15 +19,10 @@ export function readSingletonHeader(
 export function hasHeaderName(header: HeaderMap, name: string): boolean {
   const normalizedName = name.toLowerCase();
 
-  return Object.keys(header ?? {}).some(
-    (key) => key.toLowerCase() === normalizedName
-  );
+  return Object.keys(header ?? {}).some((key) => key.toLowerCase() === normalizedName);
 }
 
-export function readHeaderValues(
-  header: HeaderMap,
-  name: string
-): readonly string[] {
+export function readHeaderValues(header: HeaderMap, name: string): readonly string[] {
   const normalizedName = name.toLowerCase();
   const values: string[] = [];
 
@@ -45,9 +37,9 @@ export function readHeaderValues(
 
 export function omitHeaders(
   header: HeaderMap,
-  names: readonly string[]
+  names: readonly string[],
 ): Record<string, string | string[]> {
-  const normalizedNames = new Set(names.map(name => name.toLowerCase()));
+  const normalizedNames = new Set(names.map((name) => name.toLowerCase()));
   const headers: Record<string, string | string[]> = {};
 
   for (const [key, value] of Object.entries(header ?? {})) {

@@ -271,7 +271,6 @@ const isSameOrDescendantOf = (directory: string, ancestor: string): boolean => {
     relativePath === ".." || relativePath.startsWith(parentTraversalPrefix);
 
   return (
-    relativePath === "" ||
-    (!escapesAncestor && !path.isAbsolute(relativePath))
+    relativePath === "" || (!escapesAncestor && !path.isAbsolute(relativePath))
   );
 };

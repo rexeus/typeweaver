@@ -55,7 +55,7 @@ async function executeBasicAuthWithContext({
     ...(realm !== undefined ? { realm } : {}),
     ...(onUnauthorized !== undefined ? { onUnauthorized } : {}),
   });
-  const ctx = createServerContext({ ...(header ? { header } : {}) });
+  const ctx = createServerContext((header ? { header } : {}));
 
   const response = await executeMiddlewarePipeline([mw.handler], ctx, () =>
     finalHandler(ctx)
@@ -213,23 +213,26 @@ describe("basicAuth", () => {
       case: "the credentials verifier rejects",
       verifyCredentials: () => Promise.reject(new Error("DB error")),
     },
-  ])("uses the unauthorized callback when $case", async ({ verifyCredentials }) => {
-    const finalHandler = vi.fn(finalHandlerShouldNotRun);
+  ])(
+    "uses the unauthorized callback when $case",
+    async ({ verifyCredentials }) => {
+      const finalHandler = vi.fn(finalHandlerShouldNotRun);
 
-    const response = await executeBasicAuth({
-      header: { authorization: basicAuthorizationHeader("admin:secret") },
-      verifyCredentials,
-      finalHandler,
-      onUnauthorized: () => ({
-        statusCode: 403,
-        body: { denied: true },
-      }),
-    });
+      const response = await executeBasicAuth({
+        header: { authorization: basicAuthorizationHeader("admin:secret") },
+        verifyCredentials,
+        finalHandler,
+        onUnauthorized: () => ({
+          statusCode: 403,
+          body: { denied: true },
+        }),
+      });
 
-    expect(response.statusCode).toBe(403);
-    expect(response.body).toEqual({ denied: true });
-    expect(finalHandler).not.toHaveBeenCalled();
-  });
+      expect(response.statusCode).toBe(403);
+      expect(response.body).toEqual({ denied: true });
+      expect(finalHandler).not.toHaveBeenCalled();
+    }
+  );
 
   test("passes decoded credentials and the request context to the verifier", async () => {
     const verifyCredentials = vi.fn(alwaysValid);
@@ -246,7 +249,7 @@ describe("basicAuth", () => {
   test("returns the downstream response with the authenticated username", async () => {
     const response = await executeBasicAuth({
       header: { authorization: basicAuthorizationHeader("admin:secret") },
-      finalHandler: async (ctx) => ({
+      finalHandler: async ctx => ({
         statusCode: 202,
         header: { "x-downstream": "used" },
         body: { username: ctx.state.get("username") },

@@ -403,10 +403,10 @@ function withoutUndefined(type: TypeNode): TypeNode {
 
   const types = type.types
     .map(withoutUndefined)
-    .flatMap((nextType) =>
+    .flatMap(nextType =>
       isUnionTypeNode(nextType) ? Array.from(nextType.types) : [nextType]
     )
-    .filter((nextType) => nextType.kind !== SyntaxKind.UndefinedKeyword);
+    .filter(nextType => nextType.kind !== SyntaxKind.UndefinedKeyword);
 
   const [singleType] = types;
   if (types.length === 0) {

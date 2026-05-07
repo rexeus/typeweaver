@@ -44,9 +44,7 @@ export function pathMatcher(pattern: string): (path: string) => boolean {
       if (pathSegments === undefined) return false;
       if (pathSegments.length < prefixSegments.length) return false;
 
-      return prefixSegments.every(
-        (segment, index) => pathSegments[index] === segment
-      );
+      return prefixSegments.every((segment, index) => pathSegments[index] === segment);
     };
   }
 
@@ -90,10 +88,7 @@ function patternToSegments(path: string): readonly string[] {
   return path.split("/").filter((segment) => segment.length > 0);
 }
 
-function segmentsEqual(
-  left: readonly string[],
-  right: readonly string[]
-): boolean {
+function segmentsEqual(left: readonly string[], right: readonly string[]): boolean {
   if (left.length !== right.length) return false;
 
   return left.every((segment, index) => right[index] === segment);

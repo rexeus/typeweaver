@@ -7,9 +7,7 @@
 
 export const DEFAULT_MAX_BODY_SIZE = 1_048_576; // 1 MB
 
-export type BodyLimitCapability =
-  | "unvalidated-request-body"
-  | "prevalidated-request-body";
+export type BodyLimitCapability = "unvalidated-request-body" | "prevalidated-request-body";
 
 export type BodyLimitPolicy = {
   readonly maxBodySize: number;
@@ -23,31 +21,22 @@ type RequestBodyPrevalidation = {
 // NodeAdapter reads and caps IncomingMessage bodies before creating Fetch
 // Requests. This WeakMap records that Node→Fetch handoff so FetchApiAdapter
 // skips re-reading only when the Node policy was at least as strict.
-const requestBodyPrevalidations = new WeakMap<
-  Request,
-  RequestBodyPrevalidation
->();
+const requestBodyPrevalidations = new WeakMap<Request, RequestBodyPrevalidation>();
 
-const FETCH_BODY_LIMIT_CAPABILITY: BodyLimitCapability =
-  "unvalidated-request-body";
+const FETCH_BODY_LIMIT_CAPABILITY: BodyLimitCapability = "unvalidated-request-body";
 
-const NODE_BODY_LIMIT_CAPABILITY: BodyLimitCapability =
-  "prevalidated-request-body";
+const NODE_BODY_LIMIT_CAPABILITY: BodyLimitCapability = "prevalidated-request-body";
 
 const CONTENT_LENGTH_HEADER_PATTERN = /^\d+$/;
 
-export function createFetchBodyLimitPolicy(
-  maxBodySize?: number
-): BodyLimitPolicy {
+export function createFetchBodyLimitPolicy(maxBodySize?: number): BodyLimitPolicy {
   return {
     maxBodySize: resolveMaxBodySize(maxBodySize),
     capability: FETCH_BODY_LIMIT_CAPABILITY,
   };
 }
 
-export function createNodeBodyLimitPolicy(
-  maxBodySize?: number
-): BodyLimitPolicy {
+export function createNodeBodyLimitPolicy(maxBodySize?: number): BodyLimitPolicy {
   return {
     maxBodySize: resolveMaxBodySize(maxBodySize),
     capability: NODE_BODY_LIMIT_CAPABILITY,
@@ -59,7 +48,7 @@ export function resolveMaxBodySize(maxBodySize?: number): number {
 }
 
 export function parseContentLength(
-  value: string | string[] | null | undefined
+  value: string | string[] | null | undefined,
 ): number | undefined {
   const rawValue = Array.isArray(value) ? value[0] : value;
   if (rawValue === undefined || rawValue === null) {
@@ -79,17 +68,11 @@ export function parseContentLength(
   return contentLength;
 }
 
-export function isBodySizeOverLimit(
-  bodySize: number,
-  maxBodySize: number
-): boolean {
+export function isBodySizeOverLimit(bodySize: number, maxBodySize: number): boolean {
   return bodySize > maxBodySize;
 }
 
-export function markRequestBodyPrevalidated(
-  request: Request,
-  policy: BodyLimitPolicy
-): void {
+export function markRequestBodyPrevalidated(request: Request, policy: BodyLimitPolicy): void {
   if (policy.capability !== "prevalidated-request-body") {
     return;
   }
@@ -100,15 +83,12 @@ export function markRequestBodyPrevalidated(
 }
 
 export function getRequestBodyPrevalidation(
-  request: Request
+  request: Request,
 ): RequestBodyPrevalidation | undefined {
   return requestBodyPrevalidations.get(request);
 }
 
-export function hasSatisfiedBodyLimitPolicy(
-  request: Request,
-  policy: BodyLimitPolicy
-): boolean {
+export function hasSatisfiedBodyLimitPolicy(request: Request, policy: BodyLimitPolicy): boolean {
   const prevalidation = getRequestBodyPrevalidation(request);
   if (!prevalidation) {
     return false;

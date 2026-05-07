@@ -415,9 +415,7 @@ describe("Router", () => {
     test("returns normalized uppercase methods for mixed-case registrations", () => {
       const router = new Router();
       router.add(routeWithRegisteredMethod("get", "/todos", "list-todos"));
-      router.add(
-        routeWithRegisteredMethod("pOsT", "/todos", "create-todo")
-      );
+      router.add(routeWithRegisteredMethod("pOsT", "/todos", "create-todo"));
 
       expectAllowedMethods(router, "/todos", ["GET", "HEAD", "POST"]);
     });

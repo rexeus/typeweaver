@@ -1,10 +1,8 @@
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
 import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
-import {
-  secureHeaders,
-  type SecureHeadersOptions,
-} from "../../../src/lib/middleware/secureHeaders.js";
+import { secureHeaders } from '../../../src/lib/middleware/secureHeaders.js';
+import type { SecureHeadersOptions } from '../../../src/lib/middleware/secureHeaders.js';
 import { createServerContext } from "../../helpers.js";
 
 type SecureHeadersScenario = {
@@ -135,7 +133,9 @@ const securityHeaderOptions = [
   readonly unrelatedValue: string;
 }>;
 
-const defaultHandler = async (): Promise<IHttpResponse> => ({ statusCode: 200 });
+const defaultHandler = async (): Promise<IHttpResponse> => ({
+  statusCode: 200,
+});
 
 const executeSecureHeaders = ({
   options,

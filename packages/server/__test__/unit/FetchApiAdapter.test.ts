@@ -62,7 +62,7 @@ function createBodyStream(
   cancel: () => Promise<void> = async () => {}
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
-  const encodedChunks = chunks.map((chunk) => encoder.encode(chunk));
+  const encodedChunks = chunks.map(chunk => encoder.encode(chunk));
 
   return new ReadableStream<Uint8Array>({
     pull(controller) {
@@ -177,7 +177,9 @@ function anUntypedResponseWithHeaders(
   } as Parameters<FetchApiAdapter["toResponse"]>[0];
 }
 
-function captureResponseSerializationError(body: unknown): ResponseSerializationError {
+function captureResponseSerializationError(
+  body: unknown
+): ResponseSerializationError {
   const adapter = new FetchApiAdapter();
 
   try {

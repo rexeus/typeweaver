@@ -128,9 +128,7 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
 
   private isJsonContentType(contentType: string | null): boolean {
     const mediaType = contentType?.split(";")[0]?.trim().toLowerCase();
-    return (
-      mediaType === "application/json" || mediaType?.endsWith("+json") === true
-    );
+    return mediaType === "application/json" || mediaType?.endsWith("+json") === true;
   }
 
   private async parseJsonBody(request: Request): Promise<IHttpBody> {

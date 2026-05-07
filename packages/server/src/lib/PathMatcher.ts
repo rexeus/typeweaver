@@ -39,7 +39,7 @@ export function pathMatcher(pattern: string): (path: string) => boolean {
   if (pattern.endsWith("/*")) {
     const prefixSegments = patternToSegments(pattern.slice(0, -2));
 
-    return (path) => {
+    return path => {
       const pathSegments = toSegments(path);
       if (pathSegments === undefined) return false;
       if (pathSegments.length < prefixSegments.length) return false;
@@ -50,10 +50,10 @@ export function pathMatcher(pattern: string): (path: string) => boolean {
     };
   }
 
-  const hasParams = patternSegments.some((s) => s.startsWith(":"));
+  const hasParams = patternSegments.some(s => s.startsWith(":"));
 
   if (!hasParams) {
-    return (path) => {
+    return path => {
       const pathSegments = toSegments(path);
       if (pathSegments === undefined) return false;
 
@@ -62,9 +62,9 @@ export function pathMatcher(pattern: string): (path: string) => boolean {
   }
 
   const segmentCount = patternSegments.length;
-  const matchers = patternSegments.map((s) => (s.startsWith(":") ? null : s));
+  const matchers = patternSegments.map(s => (s.startsWith(":") ? null : s));
 
-  return (path) => {
+  return path => {
     const parts = toSegments(path);
     if (parts === undefined) return false;
     if (parts.length !== segmentCount) return false;
@@ -87,7 +87,7 @@ function toSegments(path: string): readonly string[] | undefined {
 }
 
 function patternToSegments(path: string): readonly string[] {
-  return path.split("/").filter((segment) => segment.length > 0);
+  return path.split("/").filter(segment => segment.length > 0);
 }
 
 function segmentsEqual(

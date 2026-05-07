@@ -17,16 +17,10 @@ export type SecureHeadersOptions = {
   readonly originAgentCluster?: string | false;
 };
 
-const DEFAULTS: ReadonlyArray<
-  readonly [keyof SecureHeadersOptions, string, string]
-> = [
+const DEFAULTS: ReadonlyArray<readonly [keyof SecureHeadersOptions, string, string]> = [
   ["contentTypeOptions", "x-content-type-options", "nosniff"],
   ["frameOptions", "x-frame-options", "SAMEORIGIN"],
-  [
-    "strictTransportSecurity",
-    "strict-transport-security",
-    "max-age=15552000; includeSubDomains",
-  ],
+  ["strictTransportSecurity", "strict-transport-security", "max-age=15552000; includeSubDomains"],
   ["referrerPolicy", "referrer-policy", "no-referrer"],
   ["xssProtection", "x-xss-protection", "0"],
   ["downloadOptions", "x-download-options", "noopen"],

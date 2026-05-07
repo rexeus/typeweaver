@@ -5,7 +5,6 @@ import {
   validationDefaultError,
 } from "@rexeus/typeweaver-core";
 import { Hono } from "hono";
-import type { Context } from "hono";
 import {
   createCreateSubTodoRequest,
   createCreateTodoRequest,
@@ -29,6 +28,7 @@ import {
 } from "test-utils";
 import { describe, expect, test } from "vitest";
 import { expectErrorResponse, prepareRequestData } from "../../helpers.js";
+import type { Context } from "hono";
 import type {
   HonoTodoApiHandler,
   IValidationErrorResponseBody,
@@ -615,14 +615,13 @@ describe("Generated Hono Router", () => {
     });
 
     test("returns sanitized BAD_REQUEST for malformed vendor JSON request bodies", async () => {
-      const response = await createTestHono({ validateRequests: false }).request(
-        "http://localhost/todos",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/vnd.api+json; charset=utf-8" },
-          body: "{",
-        }
-      );
+      const response = await createTestHono({
+        validateRequests: false,
+      }).request("http://localhost/todos", {
+        method: "POST",
+        headers: { "Content-Type": "application/vnd.api+json; charset=utf-8" },
+        body: "{",
+      });
 
       await expectErrorResponse(
         response,

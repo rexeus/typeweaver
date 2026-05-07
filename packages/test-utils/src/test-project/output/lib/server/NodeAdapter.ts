@@ -126,11 +126,7 @@ async function handleRequest(
     }
 
     const response = await app.fetch(request);
-    const responseBody = await readWritableResponseBody(
-      req.method,
-      response,
-      reportError,
-    );
+    const responseBody = await readWritableResponseBody(req.method, response, reportError);
 
     response.headers.forEach((value, key) => {
       if (key.toLowerCase() !== "set-cookie") {
@@ -202,20 +198,14 @@ function createAsteriskFormRequestUrl(req: IncomingMessage): URL | undefined {
     return undefined;
   }
 
-  return new URL(
-    ASTERISK_FORM_REQUEST_TARGET,
-    `${ORIGIN_FORM_BASE_URL_PROTOCOL}//${host.host}/`,
-  );
+  return new URL(ASTERISK_FORM_REQUEST_TARGET, `${ORIGIN_FORM_BASE_URL_PROTOCOL}//${host.host}/`);
 }
 
 function hasAuthorityLikeRequestTargetPrefix(rawUrl: string): boolean {
   return AUTHORITY_LIKE_REQUEST_TARGET_PREFIX.test(rawUrl);
 }
 
-function isAbsoluteRequestHostAllowed(
-  url: URL,
-  req: IncomingMessage,
-): boolean {
+function isAbsoluteRequestHostAllowed(url: URL, req: IncomingMessage): boolean {
   const host = parseRequestHostHeader(req, url.protocol);
   if (host === undefined) {
     return false;
@@ -336,10 +326,7 @@ function shouldValidateRequestBody(method?: string): boolean {
   return method !== "GET" && method !== "HEAD";
 }
 
-function shouldWriteResponseBody(
-  method: string | undefined,
-  status: number,
-): boolean {
+function shouldWriteResponseBody(method: string | undefined, status: number): boolean {
   return method !== "HEAD" && status !== 204 && status !== 304;
 }
 
@@ -385,14 +372,11 @@ function reportSuppressedResponseBodyCancelError(
 
 function hasReadableRequestBody(req: IncomingMessage): boolean {
   return (
-    req.headers["content-length"] !== undefined ||
-    req.headers["transfer-encoding"] !== undefined
+    req.headers["content-length"] !== undefined || req.headers["transfer-encoding"] !== undefined
   );
 }
 
-function createRequestHeaders(
-  headers: IncomingMessage["headers"]
-): Headers {
+function createRequestHeaders(headers: IncomingMessage["headers"]): Headers {
   const requestHeaders = new Headers();
 
   for (const [name, value] of Object.entries(headers)) {

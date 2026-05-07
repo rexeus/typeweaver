@@ -6,10 +6,8 @@ import type {
   NormalizedSpec,
 } from "@rexeus/typeweaver-gen";
 import { assert, describe, expect, test } from "vitest";
-import {
-  generate,
-  type RouterGenerationContext,
-} from "../../src/routerGenerator.js";
+import { generate } from '../../src/routerGenerator.js';
+import type { RouterGenerationContext } from '../../src/routerGenerator.js';
 
 type RouterOperationData = {
   readonly operationId: string;
@@ -139,7 +137,7 @@ describe("RouterGenerator", () => {
         anOperation("patchItem", HttpMethod.PATCH, "/items"),
       ]);
 
-      expect(result.map((r) => r.method)).toEqual([
+      expect(result.map(r => r.method)).toEqual([
         "GET",
         "POST",
         "PUT",
@@ -156,7 +154,7 @@ describe("RouterGenerator", () => {
         anOperation("optionsItems", HttpMethod.OPTIONS, "/items"),
       ]);
 
-      expect(result.map((r) => r.method)).toEqual(["GET", "POST", "OPTIONS"]);
+      expect(result.map(r => r.method)).toEqual(["GET", "POST", "OPTIONS"]);
     });
 
     test("sorts alphabetically within the same segment type", () => {
@@ -166,7 +164,7 @@ describe("RouterGenerator", () => {
         anOperation("getAccounts", HttpMethod.GET, "/accounts"),
       ]);
 
-      expect(result.map((r) => r.path)).toEqual([
+      expect(result.map(r => r.path)).toEqual([
         "/accounts",
         "/todos",
         "/users",
@@ -187,7 +185,7 @@ describe("RouterGenerator", () => {
         anOperation("listSubTodos", HttpMethod.GET, "/todos/:todoId/subtodos"),
       ]);
 
-      expect(result.map((r) => `${r.method} ${r.path}`)).toEqual([
+      expect(result.map(r => `${r.method} ${r.path}`)).toEqual([
         "GET /todos",
         "POST /todos",
         "POST /todos/query",
@@ -367,7 +365,7 @@ describe("RouterGenerator", () => {
       const routerData = getRenderedRouter(renderedRouters, "entity");
 
       expect(
-        routerData.operations.map((operation) => operation.operationId)
+        routerData.operations.map(operation => operation.operationId)
       ).toEqual(["listItems", "deleteItem"]);
     });
   });

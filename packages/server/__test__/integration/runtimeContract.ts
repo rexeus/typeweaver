@@ -287,7 +287,10 @@ function postJson(
   return sendJsonRequest(url, body, "POST");
 }
 
-function putJson(url: string, body: Record<string, unknown>): Promise<Response> {
+function putJson(
+  url: string,
+  body: Record<string, unknown>
+): Promise<Response> {
   return sendJsonRequest(url, body, "PUT");
 }
 

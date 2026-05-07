@@ -258,9 +258,9 @@ describe("collection schemas", () => {
   });
 
   test("maps variadic tuple union rests with TypeScript parentheses", () => {
-    expect(toTs(z.tuple([z.string()], z.union([z.number(), z.boolean()])))).toBe(
-      ["[", "    string,", "    ...(number | boolean)[]", "]"].join("\n")
-    );
+    expect(
+      toTs(z.tuple([z.string()], z.union([z.number(), z.boolean()])))
+    ).toBe(["[", "    string,", "    ...(number | boolean)[]", "]"].join("\n"));
   });
 
   test("maps records to TypeScript Record types", () => {
@@ -293,11 +293,11 @@ describe("unsupported schemas", () => {
     { scenario: "z.custom()", schema: z.custom() },
     {
       scenario: "z.transform()",
-      schema: z.string().transform((value) => value.length),
+      schema: z.string().transform(value => value.length),
     },
     {
       scenario: "z.pipe()",
-      schema: z.string().pipe(z.transform((value) => value)),
+      schema: z.string().pipe(z.transform(value => value)),
     },
     {
       scenario: "z.nonoptional()",
@@ -310,7 +310,10 @@ describe("unsupported schemas", () => {
     { scenario: "z.nan()", schema: z.nan() },
     { scenario: "z.catch()", schema: z.string().catch("fallback") },
     { scenario: "z.success()", schema: z.success(z.string()) },
-  ])("falls back to unknown for unsupported $scenario schemas", ({ schema }) => {
-    expect(toTs(schema)).toBe("unknown");
-  });
+  ])(
+    "falls back to unknown for unsupported $scenario schemas",
+    ({ schema }) => {
+      expect(toTs(schema)).toBe("unknown");
+    }
+  );
 });

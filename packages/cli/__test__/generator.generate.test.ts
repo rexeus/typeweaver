@@ -201,7 +201,11 @@ describe("Generator.generate", () => {
   };
 
   const writePhaseOrderingLocalPlugin = (workspace: string): string => {
-    const pluginFile = path.join(workspace, "plugins", "phase-order-plugin.mjs");
+    const pluginFile = path.join(
+      workspace,
+      "plugins",
+      "phase-order-plugin.mjs"
+    );
 
     fs.mkdirSync(path.dirname(pluginFile), { recursive: true });
     fs.writeFileSync(
@@ -218,7 +222,7 @@ describe("Generator.generate", () => {
         ");",
         "",
         "const appendEvent = eventName => {",
-        '  fs.appendFileSync(eventLogFile, `${eventName}\\n`);',
+        "  fs.appendFileSync(eventLogFile, `${eventName}\\n`);",
         "};",
         "",
         "export class PhaseOrderPlugin {",

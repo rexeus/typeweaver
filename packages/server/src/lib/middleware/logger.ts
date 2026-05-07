@@ -32,7 +32,7 @@ export function logger(options?: LoggerOptions) {
         path: ctx.request.path,
         statusCode: response.statusCode,
         durationMs,
-      }),
+      })
     );
 
     return response;

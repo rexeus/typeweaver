@@ -23,7 +23,7 @@ export function hasHeaderName(header: HeaderMap, name: string): boolean {
   const normalizedName = name.toLowerCase();
 
   return Object.keys(header ?? {}).some(
-    (key) => key.toLowerCase() === normalizedName
+    key => key.toLowerCase() === normalizedName
   );
 }
 

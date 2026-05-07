@@ -43,7 +43,7 @@ describe("compareRoutes", () => {
       { label: "root", method: HttpMethod.GET, path: "/" },
     ];
 
-    const orderedRoutes = [...routes].sort(compareRoutes).map((route) => ({
+    const orderedRoutes = [...routes].sort(compareRoutes).map(route => ({
       label: route.label,
       method: route.method,
       path: route.path,

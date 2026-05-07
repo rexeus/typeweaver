@@ -1,9 +1,9 @@
-import { describe, expect, test } from "vitest";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
+import { describe, expect, test } from "vitest";
 import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
 import { poweredBy } from "../../../src/lib/middleware/poweredBy.js";
-import type { PoweredByOptions } from "../../../src/lib/middleware/poweredBy.js";
 import { createServerContext } from "../../helpers.js";
+import type { PoweredByOptions } from "../../../src/lib/middleware/poweredBy.js";
 
 describe("poweredBy", () => {
   const runPoweredByMiddleware = async (

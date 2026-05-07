@@ -78,11 +78,11 @@ function isOriginDependentWithoutRequestOrigin(
 }
 
 function splitHeaderValues(values: readonly string[]): readonly string[] {
-  return values.flatMap((value) =>
+  return values.flatMap(value =>
     value
       .split(",")
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0)
+      .map(item => item.trim())
+      .filter(item => item.length > 0)
   );
 }
 
@@ -91,7 +91,7 @@ function mergeVary(existing: readonly string[], value: string): string {
   if (values.length === 0) return value;
 
   const hasValue = values.some(
-    (item) => item.toLowerCase() === value.toLowerCase()
+    item => item.toLowerCase() === value.toLowerCase()
   );
 
   return hasValue ? values.join(", ") : [...values, value].join(", ");

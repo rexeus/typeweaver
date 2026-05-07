@@ -70,7 +70,7 @@ async function executeCors({
 }
 
 function expectNoPolicyControlledCorsHeaders(response: IHttpResponse): void {
-  const responseHeaderNames = Object.keys(response.header ?? {}).map((key) =>
+  const responseHeaderNames = Object.keys(response.header ?? {}).map(key =>
     key.toLowerCase()
   );
 
@@ -169,7 +169,7 @@ describe("cors", () => {
     test("reflects the allowed Origin from a function origin resolver", async () => {
       const response = await executeCors({
         options: {
-          origin: (origin) =>
+          origin: origin =>
             origin.endsWith(".example.com") ? origin : undefined,
         },
         header: { origin: "https://app.example.com" },
@@ -183,7 +183,7 @@ describe("cors", () => {
     test("removes downstream CORS headers when a function origin resolver rejects the request", async () => {
       const response = await executeCors({
         options: {
-          origin: (origin) =>
+          origin: origin =>
             origin.endsWith(".example.com") ? origin : undefined,
         },
         header: { origin: "https://evil.com" },
@@ -204,7 +204,7 @@ describe("cors", () => {
     test("strips downstream CORS headers and varies on Origin when a function origin resolver has no request Origin", async () => {
       const response = await executeCors({
         options: {
-          origin: (origin) =>
+          origin: origin =>
             origin.endsWith(".example.com") ? origin : undefined,
         },
         finalHandler: async () =>
@@ -432,12 +432,8 @@ describe("cors", () => {
       expect(
         response.header?.["access-control-expose-headers"]
       ).toBeUndefined();
-      expect(
-        response.header?.["access-control-allow-methods"]
-      ).toBeUndefined();
-      expect(
-        response.header?.["access-control-allow-headers"]
-      ).toBeUndefined();
+      expect(response.header?.["access-control-allow-methods"]).toBeUndefined();
+      expect(response.header?.["access-control-allow-headers"]).toBeUndefined();
       expect(response.header?.["access-control-max-age"]).toBeUndefined();
     });
 
@@ -750,9 +746,7 @@ describe("cors", () => {
       });
 
       expect(response.statusCode).toBe(204);
-      expect(
-        response.header?.["access-control-allow-headers"]
-      ).toBeUndefined();
+      expect(response.header?.["access-control-allow-headers"]).toBeUndefined();
     });
 
     test("sets max-age on preflight responses", async () => {

@@ -292,11 +292,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
         handler(result.error, response, ctx),
       );
       if (handlerResponse) return handlerResponse;
-      return TypeweaverApp.defaultResponseValidationHandler(
-        result.error,
-        response,
-        ctx,
-      );
+      return TypeweaverApp.defaultResponseValidationHandler(result.error, response, ctx);
     }
 
     return response;

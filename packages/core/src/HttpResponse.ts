@@ -1,6 +1,6 @@
+import { HttpStatusCode } from "./HttpStatusCode.js";
 import type { IHttpBody } from "./HttpBody.js";
 import type { IHttpHeader } from "./HttpHeader.js";
-import { HttpStatusCode } from "./HttpStatusCode.js";
 
 export type IHttpResponse<
   Header extends IHttpHeader = IHttpHeader,

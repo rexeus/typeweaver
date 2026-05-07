@@ -50,7 +50,7 @@ async function executeBearerAuthWithContext({
     ...(realm !== undefined ? { realm } : {}),
     ...(onUnauthorized !== undefined ? { onUnauthorized } : {}),
   });
-  const ctx = createServerContext({ ...(header ? { header } : {}) });
+  const ctx = createServerContext((header ? { header } : {}));
 
   const response = await executeMiddlewarePipeline([mw.handler], ctx, () =>
     finalHandler(ctx)
@@ -221,7 +221,7 @@ describe("bearerAuth", () => {
   test("returns the downstream response with the authenticated token", async () => {
     const response = await executeBearerAuth({
       header: { authorization: "Bearer my-secret-token" },
-      finalHandler: async (ctx) => ({
+      finalHandler: async ctx => ({
         statusCode: 202,
         header: { "x-downstream": "used" },
         body: { token: ctx.state.get("token") },
@@ -254,7 +254,7 @@ describe("bearerAuth", () => {
   test("supports asynchronous token verification", async () => {
     const response = await executeBearerAuth({
       header: { authorization: "Bearer async-valid" },
-      verifyToken: async (token) => token === "async-valid",
+      verifyToken: async token => token === "async-valid",
     });
 
     expect(response.statusCode).toBe(200);

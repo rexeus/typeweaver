@@ -23,12 +23,12 @@ type NoProvidedState = Record<string, never>;
  */
 export function scoped<TRequires extends Record<string, unknown>>(
   paths: readonly string[],
-  middleware: TypedMiddleware<NoProvidedState, TRequires>
+  middleware: TypedMiddleware<NoProvidedState, TRequires>,
 ): TypedMiddleware<{}, TRequires> {
   const matchers = paths.map(pathMatcher);
 
   return defineMiddleware<{}, TRequires>(async (ctx, next) => {
-    if (!matchers.some(match => match(ctx.request.path))) {
+    if (!matchers.some((match) => match(ctx.request.path))) {
       return next();
     }
     return middleware.handler(ctx, next);
@@ -48,12 +48,12 @@ export function scoped<TRequires extends Record<string, unknown>>(
  */
 export function except<TRequires extends Record<string, unknown>>(
   paths: readonly string[],
-  middleware: TypedMiddleware<NoProvidedState, TRequires>
+  middleware: TypedMiddleware<NoProvidedState, TRequires>,
 ): TypedMiddleware<{}, TRequires> {
   const matchers = paths.map(pathMatcher);
 
   return defineMiddleware<{}, TRequires>(async (ctx, next) => {
-    if (matchers.some(match => match(ctx.request.path))) {
+    if (matchers.some((match) => match(ctx.request.path))) {
       return next();
     }
     return middleware.handler(ctx, next);

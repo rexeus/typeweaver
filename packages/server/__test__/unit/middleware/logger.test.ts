@@ -1,11 +1,9 @@
-import { HttpMethod, type IHttpResponse } from "@rexeus/typeweaver-core";
+import { HttpMethod } from '@rexeus/typeweaver-core';
+import type { IHttpResponse } from '@rexeus/typeweaver-core';
 import { describe, expect, test, vi } from "vitest";
 import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
-import {
-  logger,
-  type LogData,
-  type LoggerOptions,
-} from "../../../src/lib/middleware/logger.js";
+import { logger } from '../../../src/lib/middleware/logger.js';
+import type { LogData, LoggerOptions } from '../../../src/lib/middleware/logger.js';
 import { createServerContext } from "../../helpers.js";
 
 type LoggerScenario = {
@@ -14,7 +12,9 @@ type LoggerScenario = {
   readonly finalHandler?: () => Promise<IHttpResponse>;
 };
 
-const defaultHandler = async (): Promise<IHttpResponse> => ({ statusCode: 200 });
+const defaultHandler = async (): Promise<IHttpResponse> => ({
+  statusCode: 200,
+});
 
 const nowFrom = (values: readonly number[]): (() => number) => {
   let index = 0;
@@ -37,7 +37,10 @@ describe("logger", () => {
     const logFn = vi.fn();
     const ctx = createServerContext({ method: HttpMethod.GET, path: "/users" });
 
-    await executeLogger({ options: { logFn, nowMs: nowFrom([10, 24.4]) }, ctx });
+    await executeLogger({
+      options: { logFn, nowMs: nowFrom([10, 24.4]) },
+      ctx,
+    });
 
     expect(logFn).toHaveBeenCalledOnce();
     expect(logFn.mock.calls[0]![0]).toBe("GET /users 200 14ms");

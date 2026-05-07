@@ -94,7 +94,7 @@ describe("typed middleware", () => {
       });
       const ctx = createServerContext();
 
-      const response = await mw.handler(ctx, async (state) => {
+      const response = await mw.handler(ctx, async state => {
         if (state) ctx.state.merge(state);
         return {
           statusCode: 200,
