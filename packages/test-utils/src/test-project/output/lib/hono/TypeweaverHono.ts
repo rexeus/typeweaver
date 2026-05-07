@@ -15,6 +15,7 @@ import {
   validationDefaultError,
 } from "@rexeus/typeweaver-core";
 import type {
+  IHttpHeader,
   IHttpRequest,
   IHttpResponse,
   IRequestValidator,
@@ -208,7 +209,8 @@ export abstract class TypeweaverHono<
 
     bodyParse: (): IHttpResponse => createDefaultErrorResponse(badRequestDefaultError),
 
-    httpResponse: (error: ITypedHttpResponse): IHttpResponse => error,
+    httpResponse: (error: ITypedHttpResponse): IHttpResponse =>
+      TypeweaverHono.toHttpResponse(error),
 
     unknown: (): IHttpResponse => createDefaultErrorResponse(internalServerErrorDefaultError),
   };
@@ -368,7 +370,11 @@ export abstract class TypeweaverHono<
 
       const httpResponse = await handler(validatedRequest, context);
       return this.adapter.toResponse(
-        await this.validateResponse(responseValidator, httpResponse, context),
+        await this.validateResponse(
+          responseValidator,
+          TypeweaverHono.normalizeHttpResponse(httpResponse),
+          context,
+        ),
       );
     } catch (error) {
       if (error instanceof BodyParseError) {
@@ -376,7 +382,8 @@ export abstract class TypeweaverHono<
       }
 
       if (isTypedHttpResponse(error) && this.config.validateResponses) {
-        const validated = await this.validateResponse(responseValidator, error, context);
+        const httpResponse = TypeweaverHono.toHttpResponse(error);
+        const validated = await this.validateResponse(responseValidator, httpResponse, context);
         return this.adapter.toResponse(validated);
       }
       return this.adapter.toResponse(await this.handleError(error, context));
@@ -409,7 +416,9 @@ export abstract class TypeweaverHono<
 
     const result = responseValidator.safeValidate(response);
 
-    if (result.isValid) return result.data;
+    if (result.isValid) {
+      return TypeweaverHono.normalizeHttpResponse(result.data);
+    }
 
     if (this.config.errorHandlers.responseValidation) {
       const handlerResponse = await this.safelyExecuteErrorHandler(() =>
@@ -421,5 +430,30 @@ export abstract class TypeweaverHono<
     }
 
     return response;
+  }
+
+  private static toHttpResponse(response: ITypedHttpResponse): IHttpResponse {
+    return {
+      statusCode: response.statusCode,
+      header: TypeweaverHono.toHttpHeader(response.header),
+      body: response.body,
+    };
+  }
+
+  private static normalizeHttpResponse(
+    response: IHttpResponse | ITypedHttpResponse,
+  ): IHttpResponse {
+    return isTypedHttpResponse(response) ? TypeweaverHono.toHttpResponse(response) : response;
+  }
+
+  private static toHttpHeader(header: ITypedHttpResponse["header"]): IHttpHeader {
+    if (!header) return undefined;
+
+    const normalizedHeader: NonNullable<IHttpHeader> = {};
+    for (const [key, value] of Object.entries(header)) {
+      if (value !== undefined) normalizedHeader[key] = value;
+    }
+
+    return Object.keys(normalizedHeader).length > 0 ? normalizedHeader : undefined;
   }
 }

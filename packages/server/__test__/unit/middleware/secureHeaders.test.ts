@@ -1,9 +1,9 @@
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
 import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
-import { secureHeaders } from '../../../src/lib/middleware/secureHeaders.js';
-import type { SecureHeadersOptions } from '../../../src/lib/middleware/secureHeaders.js';
+import { secureHeaders } from "../../../src/lib/middleware/secureHeaders.js";
 import { createServerContext } from "../../helpers.js";
+import type { SecureHeadersOptions } from "../../../src/lib/middleware/secureHeaders.js";
 
 type SecureHeadersScenario = {
   readonly options?: SecureHeadersOptions;

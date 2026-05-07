@@ -51,7 +51,7 @@ export abstract class ResponseValidator<
   TResponse extends ITypedHttpResponse = ITypedHttpResponse,
 >
   extends Validator
-  implements IResponseValidator
+  implements IResponseValidator<TResponse>
 {
   /** Ordered list of response variants this validator recognizes. */
   protected abstract readonly responseEntries: readonly ResponseEntry[];

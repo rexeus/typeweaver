@@ -6,8 +6,8 @@ import type {
   NormalizedSpec,
 } from "@rexeus/typeweaver-gen";
 import { assert, describe, expect, test } from "vitest";
-import { generate } from '../../src/routerGenerator.js';
-import type { RouterGenerationContext } from '../../src/routerGenerator.js';
+import { generate } from "../../src/routerGenerator.js";
+import type { RouterGenerationContext } from "../../src/routerGenerator.js";
 
 type RouterOperationData = {
   readonly operationId: string;

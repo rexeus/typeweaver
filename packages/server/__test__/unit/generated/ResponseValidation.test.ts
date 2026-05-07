@@ -7,10 +7,14 @@ import {
 import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 import {
   createCreateTodoRequest,
+  createCreateTodoSuccessResponse,
   createCreateTodoSuccessResponseBody,
   createTestApp,
+  TodoRouter,
+  TypeweaverApp,
 } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
+import type { CreateTodoResponse, ServerTodoApiHandler } from "test-utils";
 import {
   BASE_URL,
   buildCreateTodoSuccess,
@@ -18,6 +22,43 @@ import {
   expectErrorResponse,
   expectJson,
 } from "../../helpers.js";
+
+const unhandledServerTodoRequest = async (): Promise<never> => {
+  throw new Error("Unexpected test route invocation");
+};
+
+const createServerTodoHandlersReturning = (
+  response: CreateTodoResponse
+): ServerTodoApiHandler => ({
+  handleListTodosRequest: unhandledServerTodoRequest,
+  handleCreateTodoRequest: async () => response,
+  handleQueryTodoRequest: unhandledServerTodoRequest,
+  handleGetTodoRequest: unhandledServerTodoRequest,
+  handlePutTodoRequest: unhandledServerTodoRequest,
+  handleUpdateTodoRequest: unhandledServerTodoRequest,
+  handleDeleteTodoRequest: unhandledServerTodoRequest,
+  handleOptionsTodoRequest: unhandledServerTodoRequest,
+  handleUpdateTodoStatusRequest: unhandledServerTodoRequest,
+  handleListSubTodosRequest: unhandledServerTodoRequest,
+  handleCreateSubTodoRequest: unhandledServerTodoRequest,
+  handleQuerySubTodoRequest: unhandledServerTodoRequest,
+  handleUpdateSubTodoRequest: unhandledServerTodoRequest,
+  handleDeleteSubTodoRequest: unhandledServerTodoRequest,
+});
+
+const createTodoAppReturning = (
+  response: CreateTodoResponse
+): TypeweaverApp => {
+  const app = new TypeweaverApp();
+  app.route(
+    new TodoRouter({
+      requestHandlers: createServerTodoHandlersReturning(response),
+      validateRequests: false,
+      validateResponses: true,
+    })
+  );
+  return app;
+};
 
 describe("Response Validation (Server)", () => {
   describe("field stripping", () => {
@@ -122,7 +163,7 @@ describe("Response Validation (Server)", () => {
   });
 
   describe("custom handleResponseValidationErrors hook", () => {
-    test("should call custom handler with error, response, and context", async () => {
+    test("should pass response validation details and context to custom handlers", async () => {
       const handler = vi.fn<
         import("test-utils").ResponseValidationErrorHandler
       >(() => ({
@@ -152,9 +193,43 @@ describe("Response Validation (Server)", () => {
       expect(handler).toHaveBeenCalledOnce();
       const args = handler.mock.calls[0]!;
       assert(args[0] instanceof ResponseValidationError);
-      expect(args[1].statusCode).toBe(201);
       expect(args[2]).toBeDefined();
       expect(args[2].request).toBeDefined();
+    });
+
+    test("should pass a strict HTTP response to custom handlers", async () => {
+      const handler = vi.fn<
+        import("test-utils").ResponseValidationErrorHandler
+      >(() => ({
+        statusCode: 502,
+        body: { code: "CUSTOM_VALIDATION_FAILURE" },
+      }));
+      const invalidResponse: ITypedHttpResponse = {
+        type: "CreateTodoSuccess" as const,
+        statusCode: 201,
+        header: {
+          "Content-Type": "application/json",
+          "X-Single-Value": "defined",
+          "X-Multi-Value": undefined,
+        },
+        body: { id: 12345 },
+      };
+      const app = createTestApp({
+        validateResponses: true,
+        handleResponseValidationErrors: handler,
+        throwTodoError: invalidResponse,
+      });
+      const requestData = createCreateTodoRequest();
+
+      await app.fetch(buildFetchRequest(`${BASE_URL}/todos`, requestData));
+
+      const response = handler.mock.calls[0]![1];
+      expect(response).not.toHaveProperty("type");
+      expect(response.header).toEqual({
+        "Content-Type": "application/json",
+        "X-Single-Value": "defined",
+      });
+      expect(response.body).toEqual(invalidResponse.body);
     });
 
     test("should send the custom handler's response to the client", async () => {
@@ -226,6 +301,49 @@ describe("Response Validation (Server)", () => {
       expect(data.id).toBe(12345);
       expect(data.title).toBe(true);
     });
+
+    test("should omit undefined header values from thrown typed responses when validation is disabled", async () => {
+      const thrownResponse: ITypedHttpResponse = {
+        ...buildCreateTodoSuccess(),
+        header: { "X-Single-Value": undefined },
+      };
+      const app = createTestApp({
+        validateResponses: false,
+        throwTodoError: thrownResponse,
+      });
+      const requestData = createCreateTodoRequest();
+
+      const response = await app.fetch(
+        buildFetchRequest(`${BASE_URL}/todos`, requestData)
+      );
+
+      const data = await expectJson(response, 201);
+      expect(data).toEqual(thrownResponse.body);
+      expect(response.headers.get("x-single-value")).toBeNull();
+    });
+  });
+
+  describe("returned typed responses", () => {
+    test("should omit undefined header values from returned typed responses", async () => {
+      const returnedResponse = createCreateTodoSuccessResponse({
+        header: {
+          "X-Single-Value": "defined",
+          "X-Multi-Value": undefined,
+        },
+      });
+      const app = createTodoAppReturning(returnedResponse);
+      const requestData = createCreateTodoRequest();
+
+      const response = await app.fetch(
+        buildFetchRequest(`${BASE_URL}/todos`, requestData)
+      );
+
+      const data = await expectJson(response, 201);
+      expect(data).toEqual(returnedResponse.body);
+      expect(response.headers.get("x-single-value")).toBe("defined");
+      expect(response.headers.get("x-multi-value")).toBeNull();
+      expect(response.headers.get("x-multi-value")).not.toBe("undefined");
+    });
   });
 
   describe("thrown typed responses", () => {
@@ -246,6 +364,28 @@ describe("Response Validation (Server)", () => {
       const data = await expectJson(response, 201);
       expect(data).not.toHaveProperty("extraField");
       expect(data.id).toBeDefined();
+    });
+
+    test("should omit undefined header values from thrown typed responses", async () => {
+      const thrownResponse: ITypedHttpResponse = {
+        ...buildCreateTodoSuccess(),
+        header: {
+          "Content-Type": "application/json",
+          "X-Single-Value": undefined,
+        },
+      };
+      const app = createTestApp({
+        validateResponses: true,
+        throwTodoError: thrownResponse,
+      });
+      const requestData = createCreateTodoRequest();
+
+      const response = await app.fetch(
+        buildFetchRequest(`${BASE_URL}/todos`, requestData)
+      );
+
+      expect(response.status).toBe(201);
+      expect(response.headers.get("x-single-value")).toBeNull();
     });
 
     test("should return 500 for thrown typed response with invalid body", async () => {

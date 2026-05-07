@@ -12,8 +12,8 @@ import {
   unauthorizedDefaultError,
   validationDefaultError,
 } from "../../src/defaultError.js";
-import type { DefaultErrorDescriptor } from "../../src/defaultError.js";
 import { HttpStatusCode } from "../../src/HttpStatusCode.js";
+import type { DefaultErrorDescriptor } from "../../src/defaultError.js";
 
 const defaultErrorDescriptorCases = [
   {
@@ -164,11 +164,14 @@ describe("defaultError", () => {
   });
 
   test("creates default error responses with matching status and non-validation body detail", () => {
-    const response = createDefaultErrorResponse(internalServerErrorDefaultError, {
-      body: {
-        requestId: "req-1",
-      },
-    });
+    const response = createDefaultErrorResponse(
+      internalServerErrorDefaultError,
+      {
+        body: {
+          requestId: "req-1",
+        },
+      }
+    );
 
     expect(response.statusCode).toBe(HttpStatusCode.INTERNAL_SERVER_ERROR);
     expect(response.header).toBeUndefined();
@@ -183,7 +186,9 @@ describe("defaultError", () => {
   });
 
   test("creates default error responses with descriptor body when no detail is supplied", () => {
-    const response = createDefaultErrorResponse(internalServerErrorDefaultError);
+    const response = createDefaultErrorResponse(
+      internalServerErrorDefaultError
+    );
 
     expect(response.statusCode).toBe(HttpStatusCode.INTERNAL_SERVER_ERROR);
     expect(response.header).toBeUndefined();
@@ -246,9 +251,6 @@ describe("defaultError", () => {
         requestId: "req-1",
       },
     });
-    expectTypeOf(
-      response.statusCode
-    ).toEqualTypeOf<HttpStatusCode.CONFLICT>();
+    expectTypeOf(response.statusCode).toEqualTypeOf<HttpStatusCode.CONFLICT>();
   });
-
 });

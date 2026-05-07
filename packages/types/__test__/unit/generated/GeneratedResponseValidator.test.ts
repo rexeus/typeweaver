@@ -3,6 +3,7 @@ import {
   ResponseValidationError,
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
+import type { IResponseValidator } from "@rexeus/typeweaver-core";
 import {
   captureError,
   createCreateTodoSuccessResponse,
@@ -16,9 +17,9 @@ import {
   OptionsTodoResponseValidator,
   ResponseValidator,
 } from "test-utils";
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 import { z } from "zod";
-import type { ResponseEntry } from "test-utils";
+import type { CreateTodoResponse, ResponseEntry } from "test-utils";
 
 describe("Generated ResponseValidator", () => {
   describe("Status Code Validation", () => {
@@ -368,6 +369,28 @@ describe("Generated ResponseValidator", () => {
   });
 
   describe("Operation Response Types", () => {
+    test("should expose generated response validators through the generic validator contract", () => {
+      // Arrange
+      const validator: IResponseValidator<CreateTodoResponse> =
+        new CreateTodoResponseValidator();
+      const validResponse = createCreateTodoSuccessResponse();
+
+      // Act
+      const result = validator.safeValidate(validResponse);
+
+      // Assert
+      expectTypeOf(validator).toMatchTypeOf<
+        IResponseValidator<CreateTodoResponse>
+      >();
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expectTypeOf(result.data).toMatchTypeOf<CreateTodoResponse>();
+      expect(result.data.type).toBe("CreateTodoSuccess");
+      assert(result.data.type === "CreateTodoSuccess");
+      expectTypeOf(result.data.type).toEqualTypeOf<"CreateTodoSuccess">();
+      expect(result.data.header["Content-Type"]).toBe("application/json");
+    });
+
     test("should validate success response", () => {
       // Arrange
       const validator = new CreateTodoResponseValidator();

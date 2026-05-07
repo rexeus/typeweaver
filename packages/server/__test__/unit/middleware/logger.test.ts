@@ -1,10 +1,13 @@
-import { HttpMethod } from '@rexeus/typeweaver-core';
-import type { IHttpResponse } from '@rexeus/typeweaver-core';
+import { HttpMethod } from "@rexeus/typeweaver-core";
+import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
 import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
-import { logger } from '../../../src/lib/middleware/logger.js';
-import type { LogData, LoggerOptions } from '../../../src/lib/middleware/logger.js';
+import { logger } from "../../../src/lib/middleware/logger.js";
 import { createServerContext } from "../../helpers.js";
+import type {
+  LogData,
+  LoggerOptions,
+} from "../../../src/lib/middleware/logger.js";
 
 type LoggerScenario = {
   readonly options?: LoggerOptions;

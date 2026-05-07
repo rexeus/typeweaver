@@ -1,17 +1,19 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 import { z } from "zod";
-import { DuplicateResponseNameError } from "../../src/DuplicateResponseNameError.js";
 import { defineOperation } from "../../src/defineOperation.js";
-import type { OperationDefinition } from "../../src/defineOperation.js";
 import { defineResponse } from "../../src/defineResponse.js";
-import type { ResponseDefinition } from "../../src/defineResponse.js";
 import { defineSpec } from "../../src/defineSpec.js";
+import { DuplicateResponseNameError } from "../../src/DuplicateResponseNameError.js";
 import { HttpMethod } from "../../src/HttpMethod.js";
 import { HttpStatusCode } from "../../src/HttpStatusCode.js";
+import type { OperationDefinition } from "../../src/defineOperation.js";
+import type { ResponseDefinition } from "../../src/defineResponse.js";
 
 const aResponseNamed = (
   name: string,
-  overrides: Partial<Pick<ResponseDefinition, "description" | "statusCode">> = {}
+  overrides: Partial<
+    Pick<ResponseDefinition, "description" | "statusCode">
+  > = {}
 ): ResponseDefinition => {
   return defineResponse({
     name,
@@ -109,9 +111,7 @@ describe("defineSpec", () => {
     const spec = defineSpec(definition);
 
     expect(spec.resources.users.operations[0].responses[0].body).toBe(body);
-    expect(spec.resources.users.operations[0].responses[0].header).toBe(
-      header
-    );
+    expect(spec.resources.users.operations[0].responses[0].header).toBe(header);
   });
 
   test("preserves spec literal types for generated consumers", () => {
@@ -280,7 +280,10 @@ describe("defineSpec", () => {
           },
           sessions: {
             operations: [
-              anOperationReturning("createSession", aResponseNamed("SharedError")),
+              anOperationReturning(
+                "createSession",
+                aResponseNamed("SharedError")
+              ),
             ],
           },
         },

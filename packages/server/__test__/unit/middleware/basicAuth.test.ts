@@ -55,7 +55,7 @@ async function executeBasicAuthWithContext({
     ...(realm !== undefined ? { realm } : {}),
     ...(onUnauthorized !== undefined ? { onUnauthorized } : {}),
   });
-  const ctx = createServerContext((header ? { header } : {}));
+  const ctx = createServerContext(header ? { header } : {});
 
   const response = await executeMiddlewarePipeline([mw.handler], ctx, () =>
     finalHandler(ctx)

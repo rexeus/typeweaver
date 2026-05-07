@@ -7,16 +7,50 @@ import {
 import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 import {
   createCreateTodoRequest,
+  createCreateTodoSuccessResponse,
   createCreateTodoSuccessResponseBody,
   createTestHono,
+  TodoHono,
 } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
+import type { CreateTodoResponse, HonoTodoApiHandler } from "test-utils";
 import {
   aCreateTodoSuccessResponseWithBody,
   buildCreateTodoSuccess,
   expectErrorResponse,
   prepareRequestData,
 } from "../../helpers.js";
+
+const unhandledHonoTodoRequest = async (): Promise<never> => {
+  throw new Error("Unexpected test route invocation");
+};
+
+const createHonoTodoHandlersReturning = (
+  response: CreateTodoResponse
+): HonoTodoApiHandler => ({
+  handleListTodosRequest: unhandledHonoTodoRequest,
+  handleCreateTodoRequest: async () => response,
+  handleQueryTodoRequest: unhandledHonoTodoRequest,
+  handleGetTodoRequest: unhandledHonoTodoRequest,
+  handlePutTodoRequest: unhandledHonoTodoRequest,
+  handleUpdateTodoRequest: unhandledHonoTodoRequest,
+  handleDeleteTodoRequest: unhandledHonoTodoRequest,
+  handleOptionsTodoRequest: unhandledHonoTodoRequest,
+  handleUpdateTodoStatusRequest: unhandledHonoTodoRequest,
+  handleListSubTodosRequest: unhandledHonoTodoRequest,
+  handleCreateSubTodoRequest: unhandledHonoTodoRequest,
+  handleQuerySubTodoRequest: unhandledHonoTodoRequest,
+  handleUpdateSubTodoRequest: unhandledHonoTodoRequest,
+  handleDeleteSubTodoRequest: unhandledHonoTodoRequest,
+});
+
+const createTodoHonoReturning = (response: CreateTodoResponse): TodoHono => {
+  return new TodoHono({
+    requestHandlers: createHonoTodoHandlersReturning(response),
+    validateRequests: false,
+    validateResponses: true,
+  });
+};
 
 describe("Response Validation (Hono)", () => {
   describe("field stripping", () => {
@@ -149,8 +183,45 @@ describe("Response Validation (Hono)", () => {
       expect(handler).toHaveBeenCalledOnce();
       const args = handler.mock.calls[0]!;
       assert(args[0] instanceof ResponseValidationError);
-      expect(args[1]).toBe(invalidResponse);
       expect(args[2].get("operationId")).toBe("CreateTodo");
+    });
+
+    test("passes a strict HTTP response to custom handlers", async () => {
+      const handler = vi.fn<
+        import("test-utils").HonoResponseValidationErrorHandler
+      >(() => ({
+        statusCode: 502,
+        body: { code: "CUSTOM_VALIDATION_FAILURE" },
+      }));
+      const invalidResponse: ITypedHttpResponse = {
+        type: "CreateTodoSuccess" as const,
+        statusCode: 201,
+        header: {
+          "Content-Type": "application/json",
+          "X-Single-Value": "defined",
+          "X-Multi-Value": undefined,
+        },
+        body: { id: 12345 },
+      };
+      const app = createTestHono({
+        validateResponses: true,
+        handleResponseValidationErrors: handler,
+        throwTodoError: invalidResponse,
+      });
+      const requestData = createCreateTodoRequest();
+
+      await app.request(
+        "http://localhost/todos",
+        prepareRequestData(requestData)
+      );
+
+      const response = handler.mock.calls[0]![1];
+      expect(response).not.toHaveProperty("type");
+      expect(response.header).toEqual({
+        "Content-Type": "application/json",
+        "X-Single-Value": "defined",
+      });
+      expect(response.body).toEqual(invalidResponse.body);
     });
 
     test("returns the custom handler's response to the client", async () => {
@@ -221,6 +292,53 @@ describe("Response Validation (Hono)", () => {
       expect(data.id).toBe(12345);
       expect(data.title).toBe(true);
     });
+
+    test("omits undefined header values from thrown typed responses when validation is disabled", async () => {
+      const thrownResponse: ITypedHttpResponse = {
+        ...buildCreateTodoSuccess(),
+        header: { "X-Single-Value": undefined },
+      };
+      const app = createTestHono({
+        validateResponses: false,
+        throwTodoError: thrownResponse,
+      });
+      const requestData = createCreateTodoRequest();
+
+      const response = await app.request(
+        "http://localhost/todos",
+        prepareRequestData(requestData)
+      );
+
+      expect(response.status).toBe(201);
+      const data = (await response.json()) as Record<string, unknown>;
+      expect(data).toEqual(thrownResponse.body);
+      expect(response.headers.get("x-single-value")).toBeNull();
+    });
+  });
+
+  describe("returned typed responses", () => {
+    test("omits undefined header values from returned typed responses", async () => {
+      const returnedResponse = createCreateTodoSuccessResponse({
+        header: {
+          "X-Single-Value": "defined",
+          "X-Multi-Value": undefined,
+        },
+      });
+      const app = createTodoHonoReturning(returnedResponse);
+      const requestData = createCreateTodoRequest();
+
+      const response = await app.request(
+        "http://localhost/todos",
+        prepareRequestData(requestData)
+      );
+
+      expect(response.status).toBe(201);
+      const data = (await response.json()) as Record<string, unknown>;
+      expect(data).toEqual(returnedResponse.body);
+      expect(response.headers.get("x-single-value")).toBe("defined");
+      expect(response.headers.get("x-multi-value")).toBeNull();
+      expect(response.headers.get("x-multi-value")).not.toBe("undefined");
+    });
   });
 
   describe("thrown typed responses", () => {
@@ -243,6 +361,29 @@ describe("Response Validation (Hono)", () => {
       const data = (await response.json()) as Record<string, unknown>;
       expect(data).not.toHaveProperty("extraField");
       expect(data.id).toBeDefined();
+    });
+
+    test("omits undefined header values from thrown typed responses", async () => {
+      const thrownResponse: ITypedHttpResponse = {
+        ...buildCreateTodoSuccess(),
+        header: {
+          "Content-Type": "application/json",
+          "X-Single-Value": undefined,
+        },
+      };
+      const app = createTestHono({
+        validateResponses: true,
+        throwTodoError: thrownResponse,
+      });
+      const requestData = createCreateTodoRequest();
+
+      const response = await app.request(
+        "http://localhost/todos",
+        prepareRequestData(requestData)
+      );
+
+      expect(response.status).toBe(201);
+      expect(response.headers.get("x-single-value")).toBeNull();
     });
 
     test("returns sanitized 500 for thrown typed response with invalid body", async () => {

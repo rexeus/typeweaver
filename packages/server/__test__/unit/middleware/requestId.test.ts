@@ -1,9 +1,9 @@
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
 import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
-import { requestId } from '../../../src/lib/middleware/requestId.js';
-import type { RequestIdOptions } from '../../../src/lib/middleware/requestId.js';
+import { requestId } from "../../../src/lib/middleware/requestId.js";
 import { createServerContext } from "../../helpers.js";
+import type { RequestIdOptions } from "../../../src/lib/middleware/requestId.js";
 
 type RequestIdScenario = {
   readonly options?: RequestIdOptions;

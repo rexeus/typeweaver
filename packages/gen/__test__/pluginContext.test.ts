@@ -371,10 +371,7 @@ describe("createPluginContextBuilder", () => {
   test("renders absolute template paths without prefixing the template directory", () => {
     const templateDir = aTempDir();
     const absoluteTemplatePath = path.join(aTempDir(), "absolute.ejs");
-    fs.writeFileSync(
-      path.join(templateDir, "absolute.ejs"),
-      "wrong template"
-    );
+    fs.writeFileSync(path.join(templateDir, "absolute.ejs"), "wrong template");
     fs.writeFileSync(absoluteTemplatePath, "Absolute <%= name %>");
     const generatorContext = aGeneratedProjectContext({ templateDir });
 
