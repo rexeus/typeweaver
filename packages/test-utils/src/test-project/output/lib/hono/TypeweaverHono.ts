@@ -6,6 +6,7 @@
  */
 
 import {
+  badRequestDefaultError,
   createDefaultErrorBody,
   createDefaultErrorResponse,
   internalServerErrorDefaultError,
@@ -22,6 +23,7 @@ import type {
   ResponseValidationError,
 } from "@rexeus/typeweaver-core";
 import { Hono } from "hono";
+import { BodyParseError } from "./Errors.js";
 import { HonoAdapter } from "./HonoAdapter.js";
 import type { HonoRequestHandler } from "./HonoRequestHandler.js";
 import type { Context } from "hono";
@@ -204,6 +206,8 @@ export abstract class TypeweaverHono<
     responseValidation: (): IHttpResponse =>
       createDefaultErrorResponse(internalServerErrorDefaultError),
 
+    bodyParse: (): IHttpResponse => createDefaultErrorResponse(badRequestDefaultError),
+
     httpResponse: (error: ITypedHttpResponse): IHttpResponse => error,
 
     unknown: (): IHttpResponse => createDefaultErrorResponse(internalServerErrorDefaultError),
@@ -367,6 +371,10 @@ export abstract class TypeweaverHono<
         await this.validateResponse(responseValidator, httpResponse, context),
       );
     } catch (error) {
+      if (error instanceof BodyParseError) {
+        return this.adapter.toResponse(this.defaultHandlers.bodyParse());
+      }
+
       if (isTypedHttpResponse(error) && this.config.validateResponses) {
         const validated = await this.validateResponse(responseValidator, error, context);
         return this.adapter.toResponse(validated);
@@ -383,7 +391,7 @@ export abstract class TypeweaverHono<
    * - `validateResponses: true` (default) → runs validation:
    *   - Valid response → returns the stripped response (extra fields removed).
    *   - Invalid response + handler configured → calls the handler safely.
-   *     If the handler throws, falls back to the original response.
+   *     If the handler throws, fails closed with a sanitized 500 response.
    *   - Invalid response + `handleResponseValidationErrors: false` → returns
    *     the original (invalid) response as-is.
    *
@@ -409,6 +417,7 @@ export abstract class TypeweaverHono<
       );
 
       if (handlerResponse) return handlerResponse;
+      return this.defaultHandlers.responseValidation();
     }
 
     return response;

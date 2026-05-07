@@ -12,6 +12,7 @@ import {
 } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
 import {
+  aCreateTodoSuccessResponseWithBody,
   buildCreateTodoSuccess,
   expectErrorResponse,
   prepareRequestData,
@@ -19,7 +20,7 @@ import {
 
 describe("Response Validation (Hono)", () => {
   describe("field stripping", () => {
-    test("should strip extra body fields from a valid response", async () => {
+    test("strips extra body fields from a valid response", async () => {
       const responseWithExtra = buildCreateTodoSuccess({
         extraField: "should-be-stripped",
         anotherExtra: 42,
@@ -43,7 +44,7 @@ describe("Response Validation (Hono)", () => {
       expect(data.title).toBeDefined();
     });
 
-    test("should preserve all schema-defined fields after stripping", async () => {
+    test("preserves all schema-defined fields after stripping", async () => {
       const body = createCreateTodoSuccessResponseBody();
       const responseWithExtra = buildCreateTodoSuccess({
         ...body,
@@ -74,16 +75,11 @@ describe("Response Validation (Hono)", () => {
   });
 
   describe("invalid response handling", () => {
-    test("should return 500 when response body has wrong field types", async () => {
-      const invalidResponse: ITypedHttpResponse = {
-        type: "CreateTodoSuccess" as const,
-        statusCode: 201,
-        header: { "Content-Type": "application/json" },
-        body: {
-          id: 12345,
-          title: true,
-        },
-      };
+    test("returns sanitized 500 when response body has wrong field types", async () => {
+      const invalidResponse = aCreateTodoSuccessResponseWithBody({
+        id: 12345,
+        title: true,
+      });
       const app = createTestHono({
         validateResponses: true,
         throwTodoError: invalidResponse,
@@ -103,7 +99,7 @@ describe("Response Validation (Hono)", () => {
       expect(data.message).toBe(internalServerErrorDefaultError.message);
     });
 
-    test("should return 500 when response has unrecognized status code", async () => {
+    test("returns sanitized 500 when response has unrecognized status code", async () => {
       const unknownStatusResponse: ITypedHttpResponse = {
         type: "UnknownResponse" as const,
         statusCode: 299 as HttpStatusCode,
@@ -126,19 +122,14 @@ describe("Response Validation (Hono)", () => {
   });
 
   describe("custom handleResponseValidationErrors hook", () => {
-    test("should call custom handler with error, response, and context", async () => {
+    test("passes response validation details and Hono context to custom handlers", async () => {
       const handler = vi.fn<
         import("test-utils").HonoResponseValidationErrorHandler
       >(() => ({
         statusCode: 502,
         body: { code: "CUSTOM_VALIDATION_FAILURE", detail: "body mismatch" },
       }));
-      const invalidResponse: ITypedHttpResponse = {
-        type: "CreateTodoSuccess" as const,
-        statusCode: 201,
-        header: { "Content-Type": "application/json" },
-        body: { id: 12345 },
-      };
+      const invalidResponse = aCreateTodoSuccessResponseWithBody({ id: 12345 });
       const app = createTestHono({
         validateResponses: true,
         handleResponseValidationErrors: handler,
@@ -158,11 +149,11 @@ describe("Response Validation (Hono)", () => {
       expect(handler).toHaveBeenCalledOnce();
       const args = handler.mock.calls[0]!;
       assert(args[0] instanceof ResponseValidationError);
-      expect(args[1]!.statusCode).toBe(201);
-      expect(args[2]).toBeDefined();
+      expect(args[1]).toBe(invalidResponse);
+      expect(args[2].get("operationId")).toBe("CreateTodo");
     });
 
-    test("should send the custom handler's response to the client", async () => {
+    test("returns the custom handler's response to the client", async () => {
       const app = createTestHono({
         validateResponses: true,
         handleResponseValidationErrors: () => ({
@@ -170,12 +161,7 @@ describe("Response Validation (Hono)", () => {
           header: { "X-Custom": "response-validation" },
           body: { reason: "schema mismatch" },
         }),
-        throwTodoError: {
-          type: "CreateTodoSuccess" as const,
-          statusCode: 201,
-          header: { "Content-Type": "application/json" },
-          body: { id: 999 },
-        } satisfies ITypedHttpResponse,
+        throwTodoError: aCreateTodoSuccessResponseWithBody({ id: 999 }),
       });
       const requestData = createCreateTodoRequest();
 
@@ -192,7 +178,7 @@ describe("Response Validation (Hono)", () => {
   });
 
   describe("validateResponses: false", () => {
-    test("should pass through extra body fields when validation is disabled", async () => {
+    test("passes through extra body fields when validation is disabled", async () => {
       const responseWithExtra = buildCreateTodoSuccess({
         extraField: "should-remain",
         secretData: { nested: true },
@@ -214,13 +200,11 @@ describe("Response Validation (Hono)", () => {
       expect(data.secretData).toEqual({ nested: true });
     });
 
-    test("should pass through invalid response types when validation is disabled", async () => {
-      const invalidResponse: ITypedHttpResponse = {
-        type: "CreateTodoSuccess" as const,
-        statusCode: 201,
-        header: { "Content-Type": "application/json" },
-        body: { id: 12345, title: true },
-      };
+    test("passes through invalid response types when validation is disabled", async () => {
+      const invalidResponse = aCreateTodoSuccessResponseWithBody({
+        id: 12345,
+        title: true,
+      });
       const app = createTestHono({
         validateResponses: false,
         throwTodoError: invalidResponse,
@@ -240,7 +224,7 @@ describe("Response Validation (Hono)", () => {
   });
 
   describe("thrown typed responses", () => {
-    test("should strip extra fields from thrown typed responses", async () => {
+    test("strips extra fields from thrown typed responses", async () => {
       const thrownResponse = buildCreateTodoSuccess({
         extraField: "thrown-extra",
       });
@@ -261,13 +245,10 @@ describe("Response Validation (Hono)", () => {
       expect(data.id).toBeDefined();
     });
 
-    test("should return 500 for thrown typed response with invalid body", async () => {
-      const thrownInvalid: ITypedHttpResponse = {
-        type: "CreateTodoSuccess" as const,
-        statusCode: 201,
-        header: { "Content-Type": "application/json" },
-        body: { wrongField: "completely wrong structure" },
-      };
+    test("returns sanitized 500 for thrown typed response with invalid body", async () => {
+      const thrownInvalid = aCreateTodoSuccessResponseWithBody({
+        wrongField: "completely wrong structure",
+      });
       const app = createTestHono({
         validateResponses: true,
         throwTodoError: thrownInvalid,
@@ -284,16 +265,11 @@ describe("Response Validation (Hono)", () => {
   });
 
   describe("handleResponseValidationErrors: false (pass-through mode)", () => {
-    test("should return the invalid response as-is when handleResponseValidationErrors is false", async () => {
-      const invalidResponse: ITypedHttpResponse = {
-        type: "CreateTodoSuccess" as const,
-        statusCode: 201,
-        header: { "Content-Type": "application/json" },
-        body: {
-          id: 12345,
-          title: true,
-        },
-      };
+    test("returns the invalid response as-is when response validation handling is disabled", async () => {
+      const invalidResponse = aCreateTodoSuccessResponseWithBody({
+        id: 12345,
+        title: true,
+      });
       const app = createTestHono({
         validateResponses: true,
         handleResponseValidationErrors: false,
@@ -312,7 +288,7 @@ describe("Response Validation (Hono)", () => {
       expect(data.title).toBe(true);
     });
 
-    test("should still strip extra fields from valid responses when handleResponseValidationErrors is false", async () => {
+    test("still strips extra fields from valid responses when response validation handling is disabled", async () => {
       const app = createTestHono({
         validateResponses: true,
         handleResponseValidationErrors: false,
@@ -336,13 +312,8 @@ describe("Response Validation (Hono)", () => {
   });
 
   describe("custom handler error recovery", () => {
-    test("should fall back to original response when custom handler throws", async () => {
-      const invalidResponse: ITypedHttpResponse = {
-        type: "CreateTodoSuccess" as const,
-        statusCode: 201,
-        header: { "Content-Type": "application/json" },
-        body: { id: 12345 },
-      };
+    test("returns sanitized 500 without leaking the invalid response when custom handler throws", async () => {
+      const invalidResponse = aCreateTodoSuccessResponseWithBody({ id: 12345 });
       const app = createTestHono({
         validateResponses: true,
         handleResponseValidationErrors: () => {
@@ -357,18 +328,16 @@ describe("Response Validation (Hono)", () => {
         prepareRequestData(requestData)
       );
 
-      expect(response.status).toBe(201);
-      const data = (await response.json()) as Record<string, unknown>;
-      expect(data).toEqual({ id: 12345 });
+      const data = await expectErrorResponse(
+        response,
+        500,
+        "INTERNAL_SERVER_ERROR"
+      );
+      expect(data).not.toHaveProperty("id");
     });
 
-    test("should fall back to original response when async custom handler rejects", async () => {
-      const invalidResponse: ITypedHttpResponse = {
-        type: "CreateTodoSuccess" as const,
-        statusCode: 201,
-        header: { "Content-Type": "application/json" },
-        body: { id: 12345 },
-      };
+    test("returns sanitized 500 without leaking the invalid response when async custom handler rejects", async () => {
+      const invalidResponse = aCreateTodoSuccessResponseWithBody({ id: 12345 });
       const app = createTestHono({
         validateResponses: true,
         handleResponseValidationErrors: async () => {
@@ -383,14 +352,17 @@ describe("Response Validation (Hono)", () => {
         prepareRequestData(requestData)
       );
 
-      expect(response.status).toBe(201);
-      const data = (await response.json()) as Record<string, unknown>;
-      expect(data).toEqual({ id: 12345 });
+      const data = await expectErrorResponse(
+        response,
+        500,
+        "INTERNAL_SERVER_ERROR"
+      );
+      expect(data).not.toHaveProperty("id");
     });
   });
 
   describe("non-typed errors with validateResponses enabled", () => {
-    test("should route non-typed errors to error handler, not response validation", async () => {
+    test("routes non-typed errors to error handler, not response validation", async () => {
       // Arrange
       const plainError = new Error("handler crashed");
       const app = createTestHono({
@@ -411,15 +383,10 @@ describe("Response Validation (Hono)", () => {
   });
 
   describe("edge cases", () => {
-    test("should handle response with undefined body", async () => {
+    test("returns sanitized 500 for response with undefined body", async () => {
       const app = createTestHono({
         validateResponses: true,
-        throwTodoError: {
-          type: "CreateTodoSuccess" as const,
-          statusCode: 201,
-          header: { "Content-Type": "application/json" },
-          body: undefined,
-        } satisfies ITypedHttpResponse,
+        throwTodoError: aCreateTodoSuccessResponseWithBody(undefined),
       });
       const requestData = createCreateTodoRequest();
 
@@ -431,15 +398,10 @@ describe("Response Validation (Hono)", () => {
       await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
     });
 
-    test("should handle response with null body", async () => {
+    test("returns sanitized 500 for response with null body", async () => {
       const app = createTestHono({
         validateResponses: true,
-        throwTodoError: {
-          type: "CreateTodoSuccess" as const,
-          statusCode: 201,
-          header: { "Content-Type": "application/json" },
-          body: null,
-        } satisfies ITypedHttpResponse,
+        throwTodoError: aCreateTodoSuccessResponseWithBody(null),
       });
       const requestData = createCreateTodoRequest();
 
@@ -451,15 +413,10 @@ describe("Response Validation (Hono)", () => {
       await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
     });
 
-    test("should handle response with empty object body", async () => {
+    test("returns sanitized 500 for response with empty object body", async () => {
       const app = createTestHono({
         validateResponses: true,
-        throwTodoError: {
-          type: "CreateTodoSuccess" as const,
-          statusCode: 201,
-          header: { "Content-Type": "application/json" },
-          body: {},
-        } satisfies ITypedHttpResponse,
+        throwTodoError: aCreateTodoSuccessResponseWithBody({}),
       });
       const requestData = createCreateTodoRequest();
 
