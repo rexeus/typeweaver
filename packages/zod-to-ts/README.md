@@ -49,7 +49,7 @@ The library provides complete TypeScript type generation for the following Zod s
 - **Objects**: `z.object()` with nested properties and optional fields
 - **Unions**: `z.union()`
 - **Intersections**: `z.intersection()`
-- **Modifiers**: `z.optional()`, `z.nullable()`
+- **Modifiers**: `z.optional()`, `z.nullable()`, `z.default()`
 - **Special types**: `z.unknown()`, `z.any()`, `z.void()`, `z.never()`, `z.null()`, `z.undefined()`
 - **Async types**: `z.promise()`
 
@@ -58,7 +58,7 @@ The library provides complete TypeScript type generation for the following Zod s
 The following Zod types are not yet implemented and will fall back to `unknown` type:
 
 - **Advanced types**: `z.lazy()`, `z.templateLiteral()`, `z.custom()`, `z.transform()`, `z.pipe()`
-- **Modifiers**: `z.nonOptional()`, `z.readonly()`, `z.default()`, `z.catch()`
+- **Modifiers**: `z.nonoptional()`, `z.readonly()`, `z.catch()`
 - **Special types**: `z.nan()`, `z.file()`, `z.success()`
 
 > **Note**: When encountering unsupported Zod types, the library gracefully falls back to
