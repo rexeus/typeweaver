@@ -268,6 +268,9 @@ export abstract class ApiClient {
 
     const flattened: Record<string, string> = {};
     for (const [key, value] of Object.entries(header)) {
+      if (value === undefined) {
+        continue;
+      }
       flattened[key] = Array.isArray(value) ? value.join(", ") : value;
     }
     return flattened;
@@ -317,7 +320,10 @@ export abstract class ApiClient {
     }
 
     return Object.entries(param).reduce((acc, [key, value]) => {
-      const result = acc.replace(`:${key}`, encodeURIComponent(value));
+      const result = acc.replace(
+        `:${key}`,
+        this.encodePathParameter(key, value, path)
+      );
 
       if (result === acc) {
         throw new PathParameterError(
@@ -329,6 +335,22 @@ export abstract class ApiClient {
 
       return result;
     }, path);
+  }
+
+  private encodePathParameter(
+    key: string,
+    value: string,
+    path: string
+  ): string {
+    if (value === "." || value === "..") {
+      throw new PathParameterError(
+        `Path parameter '${key}' cannot be a URL dot-segment`,
+        key,
+        path
+      );
+    }
+
+    return encodeURIComponent(value);
   }
 
   private createUrl(path: string, query?: IHttpQuery): string {

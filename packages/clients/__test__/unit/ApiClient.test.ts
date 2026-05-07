@@ -1,4 +1,5 @@
-import { UnknownResponseError } from "@rexeus/typeweaver-core";
+import { HttpMethod, UnknownResponseError } from "@rexeus/typeweaver-core";
+import type { IHttpHeader, IHttpResponse } from "@rexeus/typeweaver-core";
 import {
   createCreateTodoRequest,
   createCreateTodoSuccessResponseBody,
@@ -23,6 +24,11 @@ import {
   sendAndExtractRawResponse,
   sendIgnoringValidation,
 } from "../helpers.js";
+import { ApiClient } from "../../src/lib/ApiClient.js";
+import {
+  PathParameterError as SourcePathParameterError,
+} from "../../src/lib/PathParameterError.js";
+import { RequestCommand } from "../../src/lib/RequestCommand.js";
 
 function createMockFetch(
   status: number,
@@ -55,6 +61,63 @@ function createPassthroughClient(mockFetch: typeof globalThis.fetch) {
     fetchFn: mockFetch,
     baseUrl: "http://localhost:3000",
   });
+}
+
+class SourceApiClient extends ApiClient {
+  public constructor(mockFetch: typeof globalThis.fetch) {
+    super({ fetchFn: mockFetch, baseUrl: "http://localhost:3000" });
+  }
+
+  public send(command: RequestCommand): Promise<IHttpResponse> {
+    return this.execute(command);
+  }
+}
+
+class SourceHeaderRequestCommand extends RequestCommand<
+  IHttpHeader,
+  undefined,
+  undefined,
+  undefined
+> {
+  public override readonly operationId = "SourceHeaderRequest";
+  public override readonly method = HttpMethod.GET;
+  public override readonly path = "/source-header-request";
+  public override readonly param = undefined;
+  public override readonly query = undefined;
+  public override readonly body = undefined;
+
+  public constructor(public override readonly header: IHttpHeader) {
+    super();
+  }
+
+  public override processResponse(response: IHttpResponse): IHttpResponse {
+    return response;
+  }
+}
+
+class SourceFileContentRequestCommand extends RequestCommand<
+  undefined,
+  Record<string, string>,
+  undefined,
+  undefined
+> {
+  public override readonly operationId = "SourceFileContentRequest";
+  public override readonly method = HttpMethod.GET;
+  public override readonly path = "/files/:fileId/content";
+  public override readonly header = undefined;
+  public override readonly query = undefined;
+  public override readonly body = undefined;
+  public override readonly param: Record<string, string>;
+
+  public constructor(fileId: string) {
+    super();
+
+    this.param = { fileId };
+  }
+
+  public override processResponse(response: IHttpResponse): IHttpResponse {
+    return response;
+  }
 }
 
 describe("RequestCommand operationId", () => {
@@ -1331,6 +1394,27 @@ describe("ApiClient Native Body Passthrough", () => {
 });
 
 describe("ApiClient Request Header Flattening", () => {
+  test("source ApiClient omits undefined headers while preserving empty strings and defined values", async () => {
+    const mockFetch = createRawMockFetch(204, null);
+    const client = new SourceApiClient(mockFetch);
+    const header = {
+      "X-Empty-Value": "",
+      "X-Multi-Value": ["first", "second"],
+      "X-Scalar-Value": "present",
+      "X-Undefined-Value": undefined,
+    } as Record<string, string | string[] | undefined> as IHttpHeader;
+    const command = new SourceHeaderRequestCommand(header);
+
+    await client.send(command);
+
+    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
+    expect(callArgs.headers).toStrictEqual({
+      "X-Empty-Value": "",
+      "X-Multi-Value": "first, second",
+      "X-Scalar-Value": "present",
+    });
+  });
+
   test("array header values are joined with comma separator", async () => {
     const mockFetch = createRawMockFetch(200, "{}", {
       "content-type": "application/json",
@@ -1392,6 +1476,26 @@ describe("ApiClient Request Header Flattening", () => {
 });
 
 describe("ApiClient Path Parameter Validation", () => {
+  test.each([".", ".."] as const)(
+    "rejects source path parameter dot-segment %s before fetch",
+    async (fileId) => {
+      const mockFetch = vi.fn<typeof globalThis.fetch>();
+      const client = new SourceApiClient(mockFetch);
+      const command = new SourceFileContentRequestCommand(fileId);
+
+      await expect(client.send(command)).rejects.toSatisfy(
+        (error: unknown) => {
+          return (
+            error instanceof SourcePathParameterError &&
+            error.paramName === "fileId" &&
+            error.path === "/files/:fileId/content"
+          );
+        }
+      );
+      expect(mockFetch).not.toHaveBeenCalled();
+    }
+  );
+
   test("throws PathParameterError when key not found in template", async () => {
     const mockFetch = createRawMockFetch(200, "{}", {
       "content-type": "application/json",
