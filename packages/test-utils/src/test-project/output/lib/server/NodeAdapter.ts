@@ -177,14 +177,14 @@ function createRequestUrl(req: IncomingMessage): URL | undefined {
 
   try {
     const url = new URL(rawUrl);
-    return isAbsoluteRequestHostAllowed(url, req.headers.host) ? url : undefined;
+    return isAbsoluteRequestHostAllowed(url, req) ? url : undefined;
   } catch (error) {
     if (!(error instanceof TypeError) || !rawUrl.startsWith("/")) {
       throw error;
     }
   }
 
-  const host = parseHostHeader(req.headers.host, ORIGIN_FORM_BASE_URL_PROTOCOL);
+  const host = parseRequestHostHeader(req, ORIGIN_FORM_BASE_URL_PROTOCOL);
   if (host === undefined) {
     return undefined;
   }
@@ -197,7 +197,7 @@ function createAsteriskFormRequestUrl(req: IncomingMessage): URL | undefined {
     return undefined;
   }
 
-  const host = parseHostHeader(req.headers.host, ORIGIN_FORM_BASE_URL_PROTOCOL);
+  const host = parseRequestHostHeader(req, ORIGIN_FORM_BASE_URL_PROTOCOL);
   if (host === undefined) {
     return undefined;
   }
@@ -214,9 +214,9 @@ function hasAuthorityLikeRequestTargetPrefix(rawUrl: string): boolean {
 
 function isAbsoluteRequestHostAllowed(
   url: URL,
-  hostHeader: IncomingMessage["headers"]["host"],
+  req: IncomingMessage,
 ): boolean {
-  const host = parseHostHeader(hostHeader, url.protocol);
+  const host = parseRequestHostHeader(req, url.protocol);
   if (host === undefined) {
     return false;
   }
@@ -226,6 +226,52 @@ function isAbsoluteRequestHostAllowed(
     host.hostname.toLowerCase() === urlAuthority.hostname.toLowerCase() &&
     host.port === urlAuthority.port
   );
+}
+
+function parseRequestHostHeader(
+  req: IncomingMessage,
+  protocol: string,
+): ParsedAuthority | undefined {
+  if (!hasExactlyOneHostHeaderLine(req)) {
+    return undefined;
+  }
+
+  return parseHostHeader(req.headers.host, protocol);
+}
+
+function hasExactlyOneHostHeaderLine(req: IncomingMessage): boolean {
+  const headersDistinctHostCount = getHeadersDistinctHostCount(req);
+  if (headersDistinctHostCount !== undefined && headersDistinctHostCount !== 1) {
+    return false;
+  }
+
+  const rawHostHeaderCount = countRawHostHeaderLines(req.rawHeaders);
+  if (rawHostHeaderCount > 0) {
+    return rawHostHeaderCount === 1;
+  }
+
+  return headersDistinctHostCount === 1;
+}
+
+function getHeadersDistinctHostCount(req: IncomingMessage): number | undefined {
+  const hostHeader = req.headersDistinct?.host;
+  if (hostHeader === undefined) {
+    return undefined;
+  }
+
+  return Array.isArray(hostHeader) ? hostHeader.length : 1;
+}
+
+function countRawHostHeaderLines(rawHeaders: readonly string[]): number {
+  let count = 0;
+
+  for (let index = 0; index < rawHeaders.length; index += 2) {
+    if (rawHeaders[index]?.toLowerCase() === "host") {
+      count += 1;
+    }
+  }
+
+  return count;
 }
 
 function parseHostHeader(

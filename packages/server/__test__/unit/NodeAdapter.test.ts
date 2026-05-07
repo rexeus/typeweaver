@@ -14,14 +14,16 @@ import {
 } from "../../src/lib/Errors.js";
 import { nodeAdapter } from "../../src/lib/NodeAdapter.js";
 import { TypeweaverApp } from "../../src/lib/TypeweaverApp.js";
-import {
-  setTypeweaverAppRuntimeContext,
-} from "../../src/lib/TypeweaverInternals.js";
+import { setTypeweaverAppRuntimeContext } from "../../src/lib/TypeweaverInternals.js";
 import {
   awaitResponse,
+  applyNodeRequestWireMetadata,
   createMockIncomingMessage,
   createMockServerResponse,
-  type NodeRequestHeaders,
+} from "../node-helpers.js";
+import type {
+  NodeRequestHeaders,
+  NodeRequestWireMetadata,
 } from "../node-helpers.js";
 
 type FakeApp = TypeweaverApp<any> & {
@@ -104,9 +106,11 @@ function responseWithThrowingCancelableBody(
     headers: { "x-suppressed": "yes" },
   });
   Object.defineProperty(response, "status", { value: status });
-  const cancelSpy = vi.spyOn(response.body!, "cancel").mockImplementation(() => {
-    throw cancelError;
-  });
+  const cancelSpy = vi
+    .spyOn(response.body!, "cancel")
+    .mockImplementation(() => {
+      throw cancelError;
+    });
 
   return { cancelSpy, response };
 }
@@ -114,13 +118,15 @@ function responseWithThrowingCancelableBody(
 function createControlledIncomingMessage(
   method: string,
   url: string | undefined,
-  headers: NodeRequestHeaders = {}
+  headers: NodeRequestHeaders = {},
+  wireMetadata?: NodeRequestWireMetadata
 ): IncomingMessage {
   const socket = new Socket();
   const req = new IncomingMessage(socket);
   req.method = method;
   req.url = url;
   req.headers = { host: "localhost:3000", ...headers };
+  applyNodeRequestWireMetadata(req, req.headers, wireMetadata);
   return req;
 }
 
@@ -154,6 +160,7 @@ type InvokeNodeAdapterOptions = {
   readonly url: string | undefined;
   readonly headers?: NodeRequestHeaders;
   readonly body?: string | Buffer;
+  readonly wireMetadata?: NodeRequestWireMetadata;
   readonly adapterOptions?: Parameters<typeof nodeAdapter>[1];
 };
 
@@ -165,14 +172,16 @@ async function invokeNodeAdapter(options: InvokeNodeAdapterOptions) {
     options.method,
     options.url,
     options.headers,
-    options.body
+    options.body,
+    options.wireMetadata
   );
   const res = createMockServerResponse(req);
 
   handler(req, res);
   await awaitResponse(res);
 
-  const receivedRequests = (app as unknown as Partial<FakeApp>).receivedRequests;
+  const receivedRequests = (app as unknown as Partial<FakeApp>)
+    .receivedRequests;
   const request = receivedRequests?.[0];
   return { app, request, receivedRequests, res };
 }
@@ -372,6 +381,92 @@ describe("nodeAdapter", () => {
     });
 
     test.each([
+      { scenario: "origin-form URLs", url: "/items?filter=active" },
+      {
+        scenario: "absolute-form URLs",
+        url: "http://localhost:3000/items?filter=active",
+      },
+    ])(
+      "returns bad request for $scenario when rawHeaders contains duplicate host lines",
+      async ({ url }) => {
+        const { receivedRequests, res } = await invokeNodeAdapter({
+          method: "GET",
+          url,
+          headers: { host: "localhost:3000" },
+          wireMetadata: {
+            rawHeaders: ["Host", "localhost:3000", "hOSt", "localhost:3001"],
+          },
+          response: new Response(""),
+        });
+
+        expect(res.writtenStatus).toBe(400);
+        expect(JSON.parse(res.writtenBody)).toEqual({
+          code: badRequestDefaultError.code,
+          message: badRequestDefaultError.message,
+        });
+        expect(receivedRequests).toHaveLength(0);
+      }
+    );
+
+    test("returns bad request for origin-form URLs when headersDistinct contains duplicate host values", async () => {
+      const { receivedRequests, res } = await invokeNodeAdapter({
+        method: "GET",
+        url: "/items?filter=active",
+        headers: { host: "localhost:3000" },
+        wireMetadata: {
+          rawHeaders: ["Host", "localhost:3000"],
+          headersDistinct: { host: ["localhost:3000", "localhost:3001"] },
+        },
+        response: new Response(""),
+      });
+
+      expect(res.writtenStatus).toBe(400);
+      expect(JSON.parse(res.writtenBody)).toEqual({
+        code: badRequestDefaultError.code,
+        message: badRequestDefaultError.message,
+      });
+      expect(receivedRequests).toHaveLength(0);
+    });
+
+    test("returns bad request for absolute-form URLs when headersDistinct contains duplicate host values", async () => {
+      const { receivedRequests, res } = await invokeNodeAdapter({
+        method: "GET",
+        url: "http://localhost:3000/items?filter=active",
+        headers: { host: "localhost:3000" },
+        wireMetadata: {
+          rawHeaders: ["Host", "localhost:3000"],
+          headersDistinct: { host: ["localhost:3000", "localhost:3001"] },
+        },
+        response: new Response(""),
+      });
+
+      expect(res.writtenStatus).toBe(400);
+      expect(JSON.parse(res.writtenBody)).toEqual({
+        code: badRequestDefaultError.code,
+        message: badRequestDefaultError.message,
+      });
+      expect(receivedRequests).toHaveLength(0);
+    });
+
+    test("accepts origin-form URLs when headersDistinct has no host value and rawHeaders contains one host line", async () => {
+      const { request, res } = await invokeNodeAdapter({
+        method: "GET",
+        url: "/items?filter=active",
+        headers: { host: "localhost:3000" },
+        wireMetadata: {
+          rawHeaders: ["Host", "localhost:3000"],
+          headersDistinct: {},
+        },
+        response: new Response(""),
+      });
+
+      expect(res.writtenStatus).toBe(200);
+      expect(expectRequest(request).url).toBe(
+        "http://localhost:3000/items?filter=active"
+      );
+    });
+
+    test.each([
       { scenario: "double slashes", url: "//attacker.example/path" },
       { scenario: "slash then backslash", url: "/\\attacker.example/path" },
       { scenario: "double backslashes", url: "\\\\attacker.example/path" },
@@ -407,6 +502,25 @@ describe("nodeAdapter", () => {
       expect(expectRequest(request).url).toBe("http://localhost:3000/*");
       expect(expectRequest(request).method).toBe("OPTIONS");
       expect(receivedRequests).toHaveLength(1);
+    });
+
+    test("returns bad request for OPTIONS asterisk-form request targets when rawHeaders contains duplicate host lines", async () => {
+      const { receivedRequests, res } = await invokeNodeAdapter({
+        method: "OPTIONS",
+        url: "*",
+        headers: { host: "localhost:3000" },
+        wireMetadata: {
+          rawHeaders: ["Host", "localhost:3000", "hOSt", "localhost:3001"],
+        },
+        response: new Response(null, { status: 204 }),
+      });
+
+      expect(res.writtenStatus).toBe(400);
+      expect(JSON.parse(res.writtenBody)).toEqual({
+        code: badRequestDefaultError.code,
+        message: badRequestDefaultError.message,
+      });
+      expect(receivedRequests).toHaveLength(0);
     });
 
     test("returns bad request for non-OPTIONS asterisk-form request targets", async () => {
@@ -573,9 +687,7 @@ describe("nodeAdapter", () => {
       });
 
       expect(res.writtenStatus).toBe(200);
-      expect(expectRequest(request).url).toBe(
-        "https://api.example.test/items"
-      );
+      expect(expectRequest(request).url).toBe("https://api.example.test/items");
     });
 
     test("accepts HTTPS absolute-form request URLs when the host header matches a non-default port", async () => {
@@ -791,23 +903,13 @@ describe("nodeAdapter", () => {
         { "content-length": "5" },
         "hello"
       );
-      const chunks: Buffer[] = [];
-      req.on("data", chunk => {
-        chunks.push(Buffer.from(chunk));
-      });
-      const endListener = vi.fn();
-      req.on("end", endListener);
-      const endPromise = new Promise<void>(resolve => {
-        req.on("end", () => resolve());
-      });
+      const drainedBody = captureDrainedRequestBody(req);
       const res = createMockServerResponse(req);
 
       handler(req, res);
       await awaitResponse(res);
-      await endPromise;
 
-      expect(Buffer.concat(chunks).toString()).toBe("hello");
-      expect(endListener).toHaveBeenCalledTimes(1);
+      expect(await drainedBody).toBe("hello");
     });
 
     test("drains skipped GET request bodies identified only by transfer-encoding", async () => {
@@ -956,7 +1058,7 @@ describe("nodeAdapter", () => {
       expect(req.destroyed).toBe(true);
     });
 
-    test("returns 413 when skipped GET body drain times out before dispatching to the app", async () => {
+    test("returns 413 before destroying timed-out skipped GET bodies during cleanup", async () => {
       vi.useFakeTimers();
       try {
         const onError = vi.fn();
@@ -1111,7 +1213,9 @@ describe("nodeAdapter", () => {
     });
 
     test("omits response body for HEAD requests at the Node boundary", async () => {
-      const app = fakeAppReturning(new Response("body that must not be written"));
+      const app = fakeAppReturning(
+        new Response("body that must not be written")
+      );
 
       const handler = nodeAdapter(app);
       const req = createMockIncomingMessage("HEAD", "/download");
