@@ -4,7 +4,10 @@ import {
   internalServerErrorDefaultError,
   ResponseValidationError,
 } from "@rexeus/typeweaver-core";
-import type { IHttpResponse, ITypedHttpResponse } from "@rexeus/typeweaver-core";
+import type {
+  IHttpResponse,
+  ITypedHttpResponse,
+} from "@rexeus/typeweaver-core";
 import {
   createCreateTodoRequest,
   createDeleteTodoRequest,
@@ -13,13 +16,6 @@ import {
   createOptionsTodoSuccessResponse,
   TodoHono,
 } from "test-utils";
-import type {
-  CreateTodoResponse,
-  DeleteTodoResponse,
-  HonoResponseValidationErrorHandler,
-  HonoTodoApiHandler,
-  OptionsTodoResponse,
-} from "test-utils";
 import { describe, expect, test } from "vitest";
 import {
   aCreateTodoSuccessResponseWithBody,
@@ -27,6 +23,13 @@ import {
   expectErrorResponse,
   prepareRequestData,
 } from "../../helpers.js";
+import type {
+  CreateTodoResponse,
+  DeleteTodoResponse,
+  HonoResponseValidationErrorHandler,
+  HonoTodoApiHandler,
+  OptionsTodoResponse,
+} from "test-utils";
 
 type TodoHonoTestOptions = Omit<
   ConstructorParameters<typeof TodoHono>[0],
@@ -311,7 +314,8 @@ describe("Response Validation (Hono)", () => {
     });
 
     test("passes status validation details to a custom response-validation handler", async () => {
-      const { handler, getCapturedCall } = captureResponseValidationHandlerCall();
+      const { handler, getCapturedCall } =
+        captureResponseValidationHandlerCall();
       const unknownStatusResponse: ITypedHttpResponse = {
         type: "CreateTodoSuccess" as const,
         statusCode: 299 as HttpStatusCode,
@@ -342,7 +346,8 @@ describe("Response Validation (Hono)", () => {
   describe("custom response-validation handlers", () => {
     test("passes normalized invalid responses and Hono context to custom handlers", async () => {
       const invalidBody = { id: 12345, title: true };
-      const { handler, getCapturedCall } = captureResponseValidationHandlerCall();
+      const { handler, getCapturedCall } =
+        captureResponseValidationHandlerCall();
       const invalidResponse: ITypedHttpResponse = {
         type: "CreateTodoSuccess" as const,
         statusCode: 201,
@@ -538,7 +543,9 @@ describe("Response Validation (Hono)", () => {
         header: undefined,
         body: { accidental: "body" },
       };
-      const app = createDeleteTodoRouteReturning(headerlessResponseWithWrongType);
+      const app = createDeleteTodoRouteReturning(
+        headerlessResponseWithWrongType
+      );
 
       const response = await requestDeleteTodo(app);
 

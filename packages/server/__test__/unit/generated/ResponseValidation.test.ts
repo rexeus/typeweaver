@@ -14,7 +14,6 @@ import {
   TypeweaverApp,
 } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
-import type { CreateTodoResponse, ServerTodoApiHandler } from "test-utils";
 import {
   BASE_URL,
   buildCreateTodoSuccess,
@@ -22,6 +21,7 @@ import {
   expectErrorResponse,
   expectJson,
 } from "../../helpers.js";
+import type { CreateTodoResponse, ServerTodoApiHandler } from "test-utils";
 
 const unhandledServerTodoRequest = async (): Promise<never> => {
   throw new Error("Unexpected test route invocation");

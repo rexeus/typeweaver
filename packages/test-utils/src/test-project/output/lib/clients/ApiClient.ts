@@ -258,7 +258,9 @@ export abstract class ApiClient {
   private isJsonContentType(contentType: string | null): boolean {
     if (!contentType) return false;
     const normalizedContentType = contentType.toLowerCase();
-    return normalizedContentType.includes("application/json") || normalizedContentType.includes("+json");
+    return (
+      normalizedContentType.includes("application/json") || normalizedContentType.includes("+json")
+    );
   }
 
   private buildFullUrl(relativePath: string): string {

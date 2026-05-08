@@ -27,7 +27,7 @@ function aGeneratorContextWith({
 
 function expectedIndexFile(indexPaths: readonly string[]): string {
   const exports = indexPaths
-    .map((indexPath) => `\nexport * from "${indexPath}";\n`)
+    .map(indexPath => `\nexport * from "${indexPath}";\n`)
     .join("");
 
   return `/* eslint-disable */
@@ -152,9 +152,9 @@ describe("generateIndexFiles", () => {
     expect(readOutputFile(outputDir, "lib", "index.ts")).toBe(
       "export const ownedByPlugin = true;\n"
     );
-    expect(fs.existsSync(path.join(outputDir, "lib", "index", "index.ts"))).toBe(
-      false
-    );
+    expect(
+      fs.existsSync(path.join(outputDir, "lib", "index", "index.ts"))
+    ).toBe(false);
     expect(readOutputFile(outputDir, "lib", "clients", "index.ts")).toBe(
       expectedIndexFile(["./BaseClient.js"])
     );
@@ -181,10 +181,7 @@ describe("generateIndexFiles", () => {
       templateDir,
       aGeneratorContextWith({
         outputDir,
-        generatedFiles: [
-          "lib/clients/index.ts",
-          "lib/clients/BaseClient.ts",
-        ],
+        generatedFiles: ["lib/clients/index.ts", "lib/clients/BaseClient.ts"],
       })
     );
 

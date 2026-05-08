@@ -1,16 +1,6 @@
 import assert from "node:assert";
 import type { IHttpRequest } from "@rexeus/typeweaver-core";
 import { HttpMethod, RequestValidationError } from "@rexeus/typeweaver-core";
-import type {
-  ICreateTodoRequest,
-  IDeleteTodoRequest,
-  IGetTodoRequest,
-  IListSubTodosRequest,
-  IListTodosRequest,
-  IOptionsTodoRequest,
-  IQuerySubTodoRequest,
-  IUploadFileRequest,
-} from "test-utils";
 import {
   captureError,
   CreateTodoRequestValidator,
@@ -23,6 +13,16 @@ import {
   UploadFileRequestValidator,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
+import type {
+  ICreateTodoRequest,
+  IDeleteTodoRequest,
+  IGetTodoRequest,
+  IListSubTodosRequest,
+  IListTodosRequest,
+  IOptionsTodoRequest,
+  IQuerySubTodoRequest,
+  IUploadFileRequest,
+} from "test-utils";
 
 const TODO_ID = "01K0W0Y49HZVW1QTN6RZJJY203";
 const OTHER_TODO_ID = "01K0W0ZJA0DQE5D3CB5MP2FGKT";
@@ -183,22 +183,23 @@ const withoutRuntimePart = (
 const issuePaths = (issues: RequestValidationError["bodyIssues"]) =>
   issues.map(issue => issue.path);
 
-const querySubTodoRequestWithInvalidBodyHeaderParamAndQuery = (): IHttpRequest =>
-  requestWithRuntimePart(
+const querySubTodoRequestWithInvalidBodyHeaderParamAndQuery =
+  (): IHttpRequest =>
     requestWithRuntimePart(
       requestWithRuntimePart(
-        requestWithRuntimePart(validQuerySubTodoRequest(), "body", {
-          status: "BLOCKED",
-        }),
-        "header",
-        { Accept: "text/plain" }
+        requestWithRuntimePart(
+          requestWithRuntimePart(validQuerySubTodoRequest(), "body", {
+            status: "BLOCKED",
+          }),
+          "header",
+          { Accept: "text/plain" }
+        ),
+        "param",
+        { todoId: "not-a-ulid" }
       ),
-      "param",
-      { todoId: "not-a-ulid" }
-    ),
-    "query",
-    { sortBy: "updatedAt" }
-  );
+      "query",
+      { sortBy: "updatedAt" }
+    );
 
 describe("Generated RequestValidator", () => {
   describe("safeValidate and validate contracts", () => {
@@ -375,7 +376,11 @@ describe("Generated RequestValidator", () => {
 
     test("accepts an empty object for an all-optional body schema", () => {
       const validator = new QuerySubTodoRequestValidator();
-      const request = requestWithRuntimePart(validQuerySubTodoRequest(), "body", {});
+      const request = requestWithRuntimePart(
+        validQuerySubTodoRequest(),
+        "body",
+        {}
+      );
 
       const result = validator.safeValidate(request);
       expect(result.isValid).toBe(true);
@@ -423,25 +428,36 @@ describe("Generated RequestValidator", () => {
     test.each([
       { scenario: "Uint8Array", body: new Uint8Array([1, 2, 3]) },
       { scenario: "string", body: "raw file contents" },
-    ])("accepts a non-object $scenario body for a z.any upload payload", ({ body }) => {
-      const validator = new UploadFileRequestValidator();
-      const request = requestWithRuntimePart(validUploadFileRequest(), "body", body);
+    ])(
+      "accepts a non-object $scenario body for a z.any upload payload",
+      ({ body }) => {
+        const validator = new UploadFileRequestValidator();
+        const request = requestWithRuntimePart(
+          validUploadFileRequest(),
+          "body",
+          body
+        );
 
-      const result = validator.safeValidate(request);
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
+        const result = validator.safeValidate(request);
+        expect(result.isValid).toBe(true);
+        assert(result.isValid);
 
-      expect(result.data.body).toEqual(body);
-    });
+        expect(result.data.body).toEqual(body);
+      }
+    );
   });
 
   describe("header contracts", () => {
     test("reports headerIssues when Authorization is missing", () => {
       const validator = new CreateTodoRequestValidator();
-      const request = requestWithRuntimePart(validCreateTodoRequest(), "header", {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      });
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "header",
+        {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        }
+      );
 
       const result = validator.safeValidate(request);
       expect(result.isValid).toBe(false);
@@ -470,12 +486,16 @@ describe("Generated RequestValidator", () => {
 
     test("strips unknown header keys", () => {
       const validator = new CreateTodoRequestValidator();
-      const request = requestWithRuntimePart(validCreateTodoRequest(), "header", {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: AUTHORIZATION,
-        "X-Unknown-Header": "strip me",
-      });
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "header",
+        {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: AUTHORIZATION,
+          "X-Unknown-Header": "strip me",
+        }
+      );
 
       const result = validator.safeValidate(request);
       expect(result.isValid).toBe(true);
@@ -490,11 +510,15 @@ describe("Generated RequestValidator", () => {
 
     test("matches header keys case-insensitively and returns schema casing", () => {
       const validator = new CreateTodoRequestValidator();
-      const request = requestWithRuntimePart(validCreateTodoRequest(), "header", {
-        "content-type": "application/json",
-        accept: "application/json",
-        authorization: AUTHORIZATION,
-      });
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "header",
+        {
+          "content-type": "application/json",
+          accept: "application/json",
+          authorization: AUTHORIZATION,
+        }
+      );
 
       const result = validator.safeValidate(request);
       expect(result.isValid).toBe(true);
@@ -509,12 +533,16 @@ describe("Generated RequestValidator", () => {
 
     test("wraps a singleton header value when the schema expects an array", () => {
       const validator = new CreateTodoRequestValidator();
-      const request = requestWithRuntimePart(validCreateTodoRequest(), "header", {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: AUTHORIZATION,
-        "X-Multi-Value": "one",
-      });
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "header",
+        {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: AUTHORIZATION,
+          "X-Multi-Value": "one",
+        }
+      );
 
       const result = validator.safeValidate(request);
       expect(result.isValid).toBe(true);
@@ -525,11 +553,15 @@ describe("Generated RequestValidator", () => {
 
     test("unwraps a single-element header array when the schema expects a scalar", () => {
       const validator = new CreateTodoRequestValidator();
-      const request = requestWithRuntimePart(validCreateTodoRequest(), "header", {
-        "Content-Type": ["application/json"],
-        Accept: ["application/json"],
-        Authorization: [AUTHORIZATION],
-      });
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "header",
+        {
+          "Content-Type": ["application/json"],
+          Accept: ["application/json"],
+          Authorization: [AUTHORIZATION],
+        }
+      );
 
       const result = validator.safeValidate(request);
       expect(result.isValid).toBe(true);
@@ -544,11 +576,15 @@ describe("Generated RequestValidator", () => {
 
     test("rejects a multi-element header array when the schema expects a scalar", () => {
       const validator = new CreateTodoRequestValidator();
-      const request = requestWithRuntimePart(validCreateTodoRequest(), "header", {
-        "Content-Type": "application/json",
-        Accept: ["application/json", "text/plain"],
-        Authorization: AUTHORIZATION,
-      });
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "header",
+        {
+          "Content-Type": "application/json",
+          Accept: ["application/json", "text/plain"],
+          Authorization: AUTHORIZATION,
+        }
+      );
 
       const result = validator.safeValidate(request);
       expect(result.isValid).toBe(false);
@@ -559,12 +595,16 @@ describe("Generated RequestValidator", () => {
 
     test("rejects duplicate singleton headers with different casing", () => {
       const validator = new CreateTodoRequestValidator();
-      const request = requestWithRuntimePart(validCreateTodoRequest(), "header", {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        accept: "application/json",
-        Authorization: AUTHORIZATION,
-      });
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "header",
+        {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          accept: "application/json",
+          Authorization: AUTHORIZATION,
+        }
+      );
 
       const result = validator.safeValidate(request);
       expect(result.isValid).toBe(false);
@@ -575,12 +615,16 @@ describe("Generated RequestValidator", () => {
 
     test("merges duplicate array headers with different casing", () => {
       const validator = new OptionsTodoRequestValidator();
-      const request = requestWithRuntimePart(validOptionsTodoRequest(), "header", {
-        Accept: "application/json",
-        Authorization: AUTHORIZATION,
-        "Access-Control-Request-Headers": "Content-Type",
-        "access-control-request-headers": "Authorization",
-      });
+      const request = requestWithRuntimePart(
+        validOptionsTodoRequest(),
+        "header",
+        {
+          Accept: "application/json",
+          Authorization: AUTHORIZATION,
+          "Access-Control-Request-Headers": "Content-Type",
+          "access-control-request-headers": "Authorization",
+        }
+      );
 
       const result = validator.safeValidate(request);
       expect(result.isValid).toBe(true);
@@ -594,11 +638,15 @@ describe("Generated RequestValidator", () => {
 
     test("splits comma-separated strings only for array header fields", () => {
       const validator = new OptionsTodoRequestValidator();
-      const request = requestWithRuntimePart(validOptionsTodoRequest(), "header", {
-        Accept: "application/json",
-        Authorization: "Bearer token,with-comma",
-        "Access-Control-Request-Headers": " Content-Type, , Authorization, ",
-      });
+      const request = requestWithRuntimePart(
+        validOptionsTodoRequest(),
+        "header",
+        {
+          Accept: "application/json",
+          Authorization: "Bearer token,with-comma",
+          "Access-Control-Request-Headers": " Content-Type, , Authorization, ",
+        }
+      );
 
       const result = validator.safeValidate(request);
       expect(result.isValid).toBe(true);
@@ -613,11 +661,15 @@ describe("Generated RequestValidator", () => {
 
     test("does not re-split header values already represented as arrays", () => {
       const validator = new OptionsTodoRequestValidator();
-      const request = requestWithRuntimePart(validOptionsTodoRequest(), "header", {
-        Accept: "application/json",
-        Authorization: AUTHORIZATION,
-        "Access-Control-Request-Headers": ["Content-Type, Authorization"],
-      });
+      const request = requestWithRuntimePart(
+        validOptionsTodoRequest(),
+        "header",
+        {
+          Accept: "application/json",
+          Authorization: AUTHORIZATION,
+          "Access-Control-Request-Headers": ["Content-Type, Authorization"],
+        }
+      );
 
       const result = validator.safeValidate(request);
       expect(result.isValid).toBe(true);
@@ -725,17 +777,26 @@ describe("Generated RequestValidator", () => {
     });
 
     test.each([
-      { scenario: "missing", request: withoutRuntimePart(validListTodosRequest(), "query") },
-      { scenario: "empty", request: requestWithRuntimePart(validListTodosRequest(), "query", {}) },
-    ])("accepts a $scenario query for an all-optional query schema", ({ request }) => {
-      const validator = new ListTodosRequestValidator();
+      {
+        scenario: "missing",
+        request: withoutRuntimePart(validListTodosRequest(), "query"),
+      },
+      {
+        scenario: "empty",
+        request: requestWithRuntimePart(validListTodosRequest(), "query", {}),
+      },
+    ])(
+      "accepts a $scenario query for an all-optional query schema",
+      ({ request }) => {
+        const validator = new ListTodosRequestValidator();
 
-      const result = validator.safeValidate(request);
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
+        const result = validator.safeValidate(request);
+        expect(result.isValid).toBe(true);
+        assert(result.isValid);
 
-      expect(result.data.query).toEqual({});
-    });
+        expect(result.data.query).toEqual({});
+      }
+    );
 
     test("returns an empty object for a missing optional query object", () => {
       const validator = new ListSubTodosRequestValidator();
@@ -829,7 +890,11 @@ describe("Generated RequestValidator", () => {
 
     test("reports pathParamIssues when a required parameter is missing", () => {
       const validator = new GetTodoRequestValidator();
-      const request = requestWithRuntimePart(validGetTodoRequest(), "param", {});
+      const request = requestWithRuntimePart(
+        validGetTodoRequest(),
+        "param",
+        {}
+      );
 
       const result = validator.safeValidate(request);
       expect(result.isValid).toBe(false);
@@ -844,23 +909,26 @@ describe("Generated RequestValidator", () => {
       { scenario: "null", param: null },
       { scenario: "primitive", param: "not params" },
       { scenario: "array", param: [TODO_ID] },
-    ])("reports pathParamIssues for a malformed $scenario parameter object", ({ param }) => {
-      const validator = new GetTodoRequestValidator();
-      const request = requestWithRuntimePart(
-        validGetTodoRequest(),
-        "param",
-        param
-      );
+    ])(
+      "reports pathParamIssues for a malformed $scenario parameter object",
+      ({ param }) => {
+        const validator = new GetTodoRequestValidator();
+        const request = requestWithRuntimePart(
+          validGetTodoRequest(),
+          "param",
+          param
+        );
 
-      const result = validator.safeValidate(request);
+        const result = validator.safeValidate(request);
 
-      expect(result.isValid).toBe(false);
-      assert(!result.isValid);
-      expect(result.error.pathParamIssues.length).toBeGreaterThan(0);
-      expect(result.error.bodyIssues).toHaveLength(0);
-      expect(result.error.headerIssues).toHaveLength(0);
-      expect(result.error.queryIssues).toHaveLength(0);
-    });
+        expect(result.isValid).toBe(false);
+        assert(!result.isValid);
+        expect(result.error.pathParamIssues.length).toBeGreaterThan(0);
+        expect(result.error.bodyIssues).toHaveLength(0);
+        expect(result.error.headerIssues).toHaveLength(0);
+        expect(result.error.queryIssues).toHaveLength(0);
+      }
+    );
 
     test("strips unknown path parameters", () => {
       const validator = new GetTodoRequestValidator();
@@ -924,9 +992,13 @@ describe("Generated RequestValidator", () => {
 
     test("ignores supplied queries for queryless operations", () => {
       const validator = new CreateTodoRequestValidator();
-      const request = requestWithRuntimePart(validCreateTodoRequest(), "query", {
-        status: "DONE",
-      });
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "query",
+        {
+          status: "DONE",
+        }
+      );
 
       const result = validator.safeValidate(request);
       expect(result.isValid).toBe(true);
@@ -937,9 +1009,13 @@ describe("Generated RequestValidator", () => {
 
     test("ignores supplied parameters for parameterless operations", () => {
       const validator = new CreateTodoRequestValidator();
-      const request = requestWithRuntimePart(validCreateTodoRequest(), "param", {
-        todoId: TODO_ID,
-      });
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "param",
+        {
+          todoId: TODO_ID,
+        }
+      );
 
       const result = validator.safeValidate(request);
       expect(result.isValid).toBe(true);
@@ -977,9 +1053,13 @@ describe("Generated RequestValidator", () => {
 
     test("does not expose partial validated data on failure", () => {
       const validator = new QuerySubTodoRequestValidator();
-      const request = requestWithRuntimePart(validQuerySubTodoRequest(), "query", {
-        format: "full",
-      });
+      const request = requestWithRuntimePart(
+        validQuerySubTodoRequest(),
+        "query",
+        {
+          format: "full",
+        }
+      );
 
       const result = validator.safeValidate(request);
 

@@ -1,4 +1,3 @@
-import type { AddressInfo } from "node:net";
 import type {
   IHttpResponse,
   ITypedHttpResponse,
@@ -12,6 +11,7 @@ import { AuthHandlers } from "./handlers/AuthHandlers.js";
 import { TodoHandlers } from "./handlers/TodoHandlers.js";
 import type { TypeweaverHonoOptions } from "../test-project/output/lib/hono/index.js";
 import type { ServerType } from "@hono/node-server";
+import type { AddressInfo } from "node:net";
 
 /**
  * Configuration options for Hono-based test servers.

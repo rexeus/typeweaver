@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import { createServer } from "node:http";
-import type { ServerResponse } from "node:http";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import {
   createGetTodoRequest,
@@ -14,6 +13,7 @@ import {
   TodoClient,
 } from "test-utils";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import type { ServerResponse } from "node:http";
 import type { CreateTestServerResult } from "test-utils";
 
 type ClosableServer = {

@@ -59,7 +59,9 @@ class TestRequestCommand extends RequestCommand {
   }
 }
 
-function resolvedFetch(response: Response = new Response(null, { status: 204 })) {
+function resolvedFetch(
+  response: Response = new Response(null, { status: 204 })
+) {
   return vi.fn<typeof globalThis.fetch>().mockResolvedValue(response);
 }
 
@@ -147,9 +149,7 @@ describe("ApiClient constructor", () => {
   test("rejects a missing baseUrl with the validation error", () => {
     const props = { fetchFn: resolvedFetch() } as unknown as ApiClientProps;
 
-    expect(() => new TestApiClient(props)).toThrow(
-      "Base URL must be provided"
-    );
+    expect(() => new TestApiClient(props)).toThrow("Base URL must be provided");
   });
 
   test("rejects a non-string baseUrl with the validation error", () => {
@@ -158,9 +158,7 @@ describe("ApiClient constructor", () => {
       fetchFn: resolvedFetch(),
     } satisfies ApiClientProps;
 
-    expect(() => new TestApiClient(props)).toThrow(
-      "Base URL must be provided"
-    );
+    expect(() => new TestApiClient(props)).toThrow("Base URL must be provided");
   });
 
   test.each([
@@ -326,7 +324,7 @@ describe("ApiClient path parameters", () => {
 
   test.each([".", ".."] as const)(
     "rejects dot-segment path parameter value %s before fetch",
-    async (fileId) => {
+    async fileId => {
       const mockFetch = resolvedFetch();
       const client = createClient(mockFetch);
       const command = new TestRequestCommand({
@@ -552,19 +550,22 @@ describe("ApiClient response parsing", () => {
   test.each([
     { case: "204 No Content", status: 204 },
     { case: "304 Not Modified", status: 304 },
-  ])("returns undefined body for $case even with content-type", async ({ status }) => {
-    const mockFetch = resolvedFetch(
-      new Response(null, {
-        status,
-        headers: { "content-type": "application/json" },
-      })
-    );
-    const client = createClient(mockFetch);
+  ])(
+    "returns undefined body for $case even with content-type",
+    async ({ status }) => {
+      const mockFetch = resolvedFetch(
+        new Response(null, {
+          status,
+          headers: { "content-type": "application/json" },
+        })
+      );
+      const client = createClient(mockFetch);
 
-    const result = await client.send(new TestRequestCommand());
+      const result = await client.send(new TestRequestCommand());
 
-    expect(result.body).toBeUndefined();
-  });
+      expect(result.body).toBeUndefined();
+    }
+  );
 
   test("returns undefined body for empty text responses", async () => {
     const mockFetch = resolvedFetch(new Response("", { status: 200 }));
@@ -779,7 +780,9 @@ describe("ApiClient response headers", () => {
     const headers = new Headers({ "content-type": "application/json" });
     headers.append("x-custom", "first");
     headers.append("x-custom", "second");
-    const mockFetch = resolvedFetch(new Response("{}", { status: 200, headers }));
+    const mockFetch = resolvedFetch(
+      new Response("{}", { status: 200, headers })
+    );
     const client = createClient(mockFetch);
 
     const result = await client.send(new TestRequestCommand());

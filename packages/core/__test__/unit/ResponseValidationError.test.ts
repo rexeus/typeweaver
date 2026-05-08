@@ -71,8 +71,8 @@ describe("ResponseValidationError", () => {
     expectTypeOf<
       InvalidStatusCodeIssue["invalidStatusCode"]
     >().toEqualTypeOf<unknown>();
-    expectTypeOf<
-      InvalidStatusCodeIssue["expectedStatusCodes"]
-    >().toEqualTypeOf<HttpStatusCode[]>();
+    expectTypeOf<InvalidStatusCodeIssue["expectedStatusCodes"]>().toEqualTypeOf<
+      HttpStatusCode[]
+    >();
   });
 });

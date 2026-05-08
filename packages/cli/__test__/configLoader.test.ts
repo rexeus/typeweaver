@@ -32,10 +32,7 @@ describe("configLoader", () => {
     const tempDir = createTempDir();
     const configPath = path.join(tempDir, `typeweaver.config${extension}`);
 
-    fs.writeFileSync(
-      path.join(tempDir, "package.json"),
-      '{"type":"module"}\n'
-    );
+    fs.writeFileSync(path.join(tempDir, "package.json"), '{"type":"module"}\n');
 
     fs.writeFileSync(configPath, `${contents.trim()}\n`);
 

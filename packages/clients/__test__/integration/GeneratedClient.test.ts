@@ -234,7 +234,9 @@ describe("Generated Client", () => {
       const requestData = createGetTodoRequest();
       const command = new GetTodoRequestCommand(requestData);
 
-      const error = await captureUnknownResponseError(() => client.send(command));
+      const error = await captureUnknownResponseError(() =>
+        client.send(command)
+      );
 
       expect(error.statusCode).toBe(200);
       expect(error.header).toMatchObject({
@@ -259,7 +261,9 @@ describe("Generated Client", () => {
       const requestData = createGetTodoRequest();
       const command = new GetTodoRequestCommand(requestData);
 
-      const error = await captureUnknownResponseError(() => client.send(command));
+      const error = await captureUnknownResponseError(() =>
+        client.send(command)
+      );
 
       expect(error.statusCode).toBe(418);
       expect(error.header).toMatchObject({

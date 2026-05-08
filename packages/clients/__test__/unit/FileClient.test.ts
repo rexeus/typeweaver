@@ -484,14 +484,19 @@ describe("FileClient unknown and parse failures", () => {
           new GetFileMetadataRequestCommand(createGetFileMetadataRequest())
         ),
     },
-  ])("rejects unknown response statuses for $scenario commands", async scenario => {
-    const mockFetch = createJsonMockFetch(418, { message: "short and stout" });
-    const client = createFileClient(mockFetch);
+  ])(
+    "rejects unknown response statuses for $scenario commands",
+    async scenario => {
+      const mockFetch = createJsonMockFetch(418, {
+        message: "short and stout",
+      });
+      const client = createFileClient(mockFetch);
 
-    await expect(scenario.send(client)).rejects.toSatisfy((error: unknown) =>
-      expectUnknownResponse(error, 418)
-    );
-  });
+      await expect(scenario.send(client)).rejects.toSatisfy((error: unknown) =>
+        expectUnknownResponse(error, 418)
+      );
+    }
+  );
 
   test("rejects download success responses with JSON content", async () => {
     const body = { message: "not binary content" };

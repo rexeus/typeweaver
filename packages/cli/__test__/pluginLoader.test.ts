@@ -116,7 +116,9 @@ describe("pluginLoader", () => {
     );
 
     if (!(failure instanceof PluginLoadingFailure)) {
-      throw new Error("Expected plugin loading to fail with PluginLoadingFailure");
+      throw new Error(
+        "Expected plugin loading to fail with PluginLoadingFailure"
+      );
     }
 
     return failure;
