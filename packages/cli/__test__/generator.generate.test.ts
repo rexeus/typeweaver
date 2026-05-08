@@ -399,7 +399,7 @@ describe("Generator.generate", () => {
         },
         packageDirectory
       )
-    ).rejects.toThrow(/inferred workspace root/);
+    ).rejects.toThrow(/protected workspace root/);
 
     expectFileExists(sentinelFile);
   });

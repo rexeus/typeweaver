@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { HttpStatusCode, isTypedHttpResponse } from "../../src/index.js";
+import { TestApplicationError, TestObjectTrapError } from "../errors/index.js";
 import type { ITypedHttpResponse } from "../../src/index.js";
 
 const valuesThatAreNotTypedResponses: readonly {
@@ -257,7 +258,7 @@ describe("isTypedHttpResponse", () => {
   );
 
   test("rejects an Error instance with response-looking own fields", () => {
-    const response = Object.assign(new Error("boom"), {
+    const response = Object.assign(new TestApplicationError("boom"), {
       type: "ErrorResponse",
       statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
       header: { "X-Request-Id": "request-1" },
@@ -325,7 +326,7 @@ describe("isTypedHttpResponse", () => {
     const response = Object.defineProperty({ type: "Success" }, "statusCode", {
       enumerable: true,
       get() {
-        throw new Error("statusCode getter");
+        throw new TestObjectTrapError("statusCode getter");
       },
     });
 
@@ -339,7 +340,7 @@ describe("isTypedHttpResponse", () => {
       {
         enumerable: true,
         get() {
-          throw new Error("header getter");
+          throw new TestObjectTrapError("header getter");
         },
       }
     );
@@ -352,7 +353,7 @@ describe("isTypedHttpResponse", () => {
       {},
       {
         ownKeys() {
-          throw new Error("proxy ownKeys");
+          throw new TestObjectTrapError("proxy ownKeys");
         },
       }
     );

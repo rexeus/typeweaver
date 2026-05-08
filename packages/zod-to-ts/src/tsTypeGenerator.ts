@@ -43,6 +43,8 @@ import {
   $ZodUnknown,
   $ZodVoid,
 } from "zod/v4/core";
+import { EmptyZodLiteralError } from "./errors/EmptyZodLiteralError.js";
+import { UnsupportedLiteralValueError } from "./errors/UnsupportedLiteralValueError.js";
 import type {
   Identifier,
   StringLiteral,
@@ -308,7 +310,7 @@ function fromZodSet(zodSet: $ZodSet): TypeNode {
 
 function fromZodLiteral(zodLiteral: $ZodLiteral): TypeNode {
   if (zodLiteral._zod.def.values.length === 0) {
-    throw new Error("ZodLiteral has no values");
+    throw new EmptyZodLiteralError("ZodLiteral");
   }
   const types = zodLiteral._zod.def.values.map(fromLiteralValue);
 
@@ -346,7 +348,7 @@ function fromLiteralValue(value: LiteralValue): TypeNode {
     return factory.createKeywordTypeNode(SyntaxKind.UndefinedKeyword);
   }
 
-  throw new Error(`Unsupported literal type: ${typeof value}`);
+  throw new UnsupportedLiteralValueError(typeof value);
 }
 
 function fromZodEnum(zodEnum: $ZodEnum): TypeNode {

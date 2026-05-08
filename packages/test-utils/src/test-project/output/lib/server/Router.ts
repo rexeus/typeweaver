@@ -14,6 +14,10 @@ import type {
   RequestValidationError,
   ResponseValidationError,
 } from "@rexeus/typeweaver-core";
+import {
+  ConflictingPathParameterNameError,
+  DuplicateRouteRegistrationError,
+} from "./errors/index.js";
 import type { RequestHandler } from "./RequestHandler.js";
 import type { ServerContext } from "./ServerContext.js";
 
@@ -142,8 +146,10 @@ export class Router {
       if (segment.startsWith(":")) {
         const paramName = segment.slice(1);
         if (current.paramChild && current.paramChild.name !== paramName) {
-          throw new Error(
-            `Conflicting path parameter names at "${definition.path}": ":${current.paramChild.name}" vs ":${paramName}"`,
+          throw new ConflictingPathParameterNameError(
+            definition.path,
+            current.paramChild.name,
+            paramName,
           );
         }
         if (!current.paramChild) {
@@ -161,7 +167,7 @@ export class Router {
     }
 
     if (current.methods.has(method)) {
-      throw new Error(`Route conflict: ${method} ${definition.path} is already registered`);
+      throw new DuplicateRouteRegistrationError(method, definition.path);
     }
 
     current.methods.set(method, normalizedDefinition);

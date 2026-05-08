@@ -591,7 +591,11 @@ describe("SpecLoader", () => {
       "spec.ts",
       `
         export const spec = (() => {
-          throw new Error("Spec evaluation failed");
+          class SpecEvaluationError extends Error {
+            name = "SpecEvaluationError";
+          }
+
+          throw new SpecEvaluationError("Spec evaluation failed");
         })();
       `
     );

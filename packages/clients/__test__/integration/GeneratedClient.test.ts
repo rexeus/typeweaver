@@ -22,6 +22,7 @@ import {
   UpdateTodoRequestCommand,
 } from "test-utils";
 import { afterEach, describe, expect, test } from "vitest";
+import { TestAssertionError } from "../errors/index.js";
 import { runClientCleanup, setupClientTest } from "./clientSetup.js";
 
 async function captureUnknownResponseError(
@@ -35,7 +36,7 @@ async function captureUnknownResponseError(
     return error;
   }
 
-  throw new Error("Expected UnknownResponseError to be thrown");
+  throw new TestAssertionError("Expected UnknownResponseError to be thrown");
 }
 
 describe("Generated Client", () => {

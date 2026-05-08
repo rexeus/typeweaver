@@ -6,6 +6,7 @@
  */
 
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
+import { MiddlewareNextAlreadyCalledError } from "./errors/index.js";
 import type { ServerContext } from "./ServerContext.js";
 
 /**
@@ -52,7 +53,7 @@ export async function executeMiddlewarePipeline(
 
       return middlewares[currentIndex]!(ctx, async (state) => {
         if (called) {
-          throw new Error("next() called multiple times");
+          throw new MiddlewareNextAlreadyCalledError(currentIndex);
         }
         called = true;
 

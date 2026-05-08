@@ -32,6 +32,10 @@ import {
   TodoHono,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
+import {
+  TestApplicationError,
+  TestAssertionError,
+} from "../../errors/index.js";
 import { expectErrorResponse, prepareRequestData } from "../../helpers.js";
 import type { Context } from "hono";
 import type {
@@ -64,7 +68,9 @@ function createTodoHonoWithHandlers(
     get: (target, prop) => {
       if (prop in target) return target[prop as keyof HonoTodoApiHandler];
       return async () => {
-        throw new Error(`Missing Hono test handler: ${String(prop)}`);
+        throw new TestAssertionError(
+          `Missing Hono test handler: ${String(prop)}`
+        );
       };
     },
   });
@@ -1297,7 +1303,7 @@ describe("Generated Hono Router", () => {
 
     test("returns sanitized 500 for unknown handler errors by default", async () => {
       const app = createTestHono({
-        throwTodoError: new Error("Something went wrong"),
+        throwTodoError: new TestApplicationError("Something went wrong"),
       });
       const requestData = createCreateTodoRequest();
 
@@ -1311,7 +1317,7 @@ describe("Generated Hono Router", () => {
 
     test("delegates thrown plain errors to Hono fallback behavior when unknown error handling is disabled", async () => {
       const app = createTestHono({
-        throwTodoError: new Error("boom"),
+        throwTodoError: new TestApplicationError("boom"),
         handleUnknownErrors: false,
       });
       const requestData = createCreateTodoRequest();
@@ -1326,7 +1332,7 @@ describe("Generated Hono Router", () => {
     });
 
     test("passes unknown handler errors and Hono context to custom handlers", async () => {
-      const unknownError = new Error("Something went wrong");
+      const unknownError = new TestApplicationError("Something went wrong");
       let capturedError: unknown;
       let capturedOperationId: string | undefined;
       const app = createTestHono({
@@ -1359,9 +1365,9 @@ describe("Generated Hono Router", () => {
 
     test("delegates thrown custom unknown error handlers to Hono fallback behavior", async () => {
       const app = createTestHono({
-        throwTodoError: new Error("boom"),
+        throwTodoError: new TestApplicationError("boom"),
         handleUnknownErrors: () => {
-          throw new Error("unknown handler failed");
+          throw new TestApplicationError("unknown handler failed");
         },
       });
       const requestData = createCreateTodoRequest();
@@ -1378,7 +1384,7 @@ describe("Generated Hono Router", () => {
     test("returns sanitized 500 when the request validation error handler throws", async () => {
       const app = createTestHono({
         handleRequestValidationErrors: () => {
-          throw new Error("Validation handler failed");
+          throw new TestApplicationError("Validation handler failed");
         },
       });
       const requestData = createCreateTodoRequest({
@@ -1398,7 +1404,7 @@ describe("Generated Hono Router", () => {
     test("returns sanitized 500 when the request validation error handler rejects", async () => {
       const app = createTestHono({
         handleRequestValidationErrors: async () => {
-          throw new Error("Validation handler rejected");
+          throw new TestApplicationError("Validation handler rejected");
         },
       });
       const requestData = createCreateTodoRequest({
@@ -1466,7 +1472,7 @@ describe("Generated Hono Router", () => {
         validateResponses: false,
         throwTodoError: originalError,
         handleHttpResponseErrors: () => {
-          throw new Error("HTTP handler failed");
+          throw new TestApplicationError("HTTP handler failed");
         },
       });
       const requestData = createCreateTodoRequest();

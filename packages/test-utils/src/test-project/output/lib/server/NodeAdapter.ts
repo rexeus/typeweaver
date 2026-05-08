@@ -17,7 +17,12 @@ import {
   markRequestBodyPrevalidated,
   parseContentLength,
 } from "./BodyLimitPolicy.js";
-import { PayloadTooLargeError, RequestBodyDrainTimeoutError } from "./Errors.js";
+import {
+  PayloadTooLargeError,
+  RequestBodyClosedBeforeEndError,
+  RequestBodyDrainTimeoutError,
+  RequestBodyReadAbortedError,
+} from "./errors/index.js";
 import {
   getTypeweaverAppErrorReporter,
   getTypeweaverAppRuntimeContext,
@@ -612,12 +617,12 @@ function collectBody(req: IncomingMessage, maxBodySize: number): Promise<ArrayBu
     };
 
     const handleAborted = (): void => {
-      rejectOnce(new Error("Request aborted while reading body"));
+      rejectOnce(new RequestBodyReadAbortedError(totalBytes, maxBodySize));
     };
 
     const handleClose = (): void => {
       if (!req.readableEnded) {
-        rejectOnce(new Error("Request closed before body was fully read"));
+        rejectOnce(new RequestBodyClosedBeforeEndError(totalBytes, maxBodySize));
       }
     };
 

@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
+import { EmptyZodLiteralError } from "../../src/errors/EmptyZodLiteralError.js";
+import { UnsupportedLiteralValueError } from "../../src/errors/UnsupportedLiteralValueError.js";
 import { fromZod } from "../../src/tsTypeGenerator.js";
 import { print } from "../../src/tsTypePrinter.js";
 
@@ -231,6 +233,22 @@ describe("literal and enum schemas", () => {
     }
 
     expect(toTs(z.enum(Status))).toBe('"draft" | 1');
+  });
+
+  test("rejects empty Zod literal value sets", () => {
+    const schema = z.literal("value");
+    Object.defineProperty(schema._zod.def, "values", { value: [] });
+
+    expect(() => fromZod(schema)).toThrow(EmptyZodLiteralError);
+  });
+
+  test("rejects unsupported Zod literal value types", () => {
+    const schema = z.literal("value");
+    Object.defineProperty(schema._zod.def, "values", {
+      value: [Symbol("unsupported")],
+    });
+
+    expect(() => fromZod(schema)).toThrow(UnsupportedLiteralValueError);
   });
 });
 

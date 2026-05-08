@@ -8,10 +8,16 @@ import type {
 } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
 import { ApiClient } from "../../src/lib/ApiClient.js";
+import { ApiClientConfigurationError } from "../../src/lib/errors/ApiClientConfigurationError.js";
 import { NetworkError } from "../../src/lib/NetworkError.js";
 import { PathParameterError } from "../../src/lib/PathParameterError.js";
 import { RequestCommand } from "../../src/lib/RequestCommand.js";
 import { ResponseParseError } from "../../src/lib/ResponseParseError.js";
+import {
+  NamedTestError,
+  TestAssertionError,
+  TestIoError,
+} from "../errors/index.js";
 import type { ApiClientProps } from "../../src/lib/ApiClient.js";
 import type { NetworkErrorCode } from "../../src/lib/NetworkError.js";
 
@@ -86,7 +92,7 @@ function getFetchCall(mockFetch: typeof globalThis.fetch): {
 } {
   const call = vi.mocked(mockFetch).mock.calls[0];
   if (!call) {
-    throw new Error("Expected fetch to have been called");
+    throw new TestAssertionError("Expected fetch to have been called");
   }
 
   return {
@@ -155,7 +161,7 @@ describe("ApiClient constructor", () => {
     { case: "data", baseUrl: "data:text/plain,hello" },
   ])("rejects absolute non-http(s) $case baseUrl", ({ baseUrl }) => {
     expect(() => createClient(resolvedFetch(), { baseUrl })).toThrow(
-      "Absolute base URLs must use http(s); relative base URLs are allowed"
+      ApiClientConfigurationError
     );
   });
 
@@ -174,7 +180,7 @@ describe("ApiClient constructor", () => {
     },
   ])("rejects $case baseUrl", ({ baseUrl }) => {
     expect(() => createClient(resolvedFetch(), { baseUrl })).toThrow(
-      "Absolute base URLs must use http(s); relative base URLs are allowed"
+      ApiClientConfigurationError
     );
   });
 
@@ -183,14 +189,14 @@ describe("ApiClient constructor", () => {
     { case: "whitespace-only", baseUrl: "   \t\n" },
   ])("rejects $case baseUrl", ({ baseUrl }) => {
     expect(() => createClient(resolvedFetch(), { baseUrl })).toThrow(
-      "Base URL must be provided"
+      ApiClientConfigurationError
     );
   });
 
   test("rejects a missing baseUrl with the validation error", () => {
     const props = { fetchFn: resolvedFetch() } as unknown as ApiClientProps;
 
-    expect(() => new TestApiClient(props)).toThrow("Base URL must be provided");
+    expect(() => new TestApiClient(props)).toThrow(ApiClientConfigurationError);
   });
 
   test("rejects a non-string baseUrl with the validation error", () => {
@@ -199,7 +205,7 @@ describe("ApiClient constructor", () => {
       fetchFn: resolvedFetch(),
     } satisfies ApiClientProps;
 
-    expect(() => new TestApiClient(props)).toThrow("Base URL must be provided");
+    expect(() => new TestApiClient(props)).toThrow(ApiClientConfigurationError);
   });
 
   test.each([
@@ -209,7 +215,30 @@ describe("ApiClient constructor", () => {
     { case: "Infinity", timeoutMs: Infinity },
   ])("rejects $case timeoutMs", ({ timeoutMs }) => {
     expect(() => createClient(resolvedFetch(), { timeoutMs })).toThrow(
-      "timeoutMs must be a positive finite number"
+      ApiClientConfigurationError
+    );
+  });
+
+  test("exposes baseUrl details for unsupported absolute URL schemes", () => {
+    const baseUrl = "ftp://api.example.com";
+
+    expect(() => createClient(resolvedFetch(), { baseUrl })).toThrowError(
+      expect.objectContaining({
+        baseUrl,
+        field: "baseUrl",
+        reason: "unsupported-base-url-scheme",
+        scheme: "ftp",
+      })
+    );
+  });
+
+  test("exposes timeout details for invalid timeout values", () => {
+    expect(() => createClient(resolvedFetch(), { timeoutMs: 0 })).toThrowError(
+      expect.objectContaining({
+        field: "timeoutMs",
+        reason: "invalid-timeout",
+        timeoutMs: 0,
+      })
     );
   });
 
@@ -781,7 +810,7 @@ describe("ApiClient response parsing", () => {
   });
 
   test("wraps response body read failures as ResponseParseError", async () => {
-    const cause = new Error("body stream interrupted");
+    const cause = new TestIoError("body stream interrupted");
     const response = new Response("body", {
       status: 200,
       headers: { "content-type": "text/plain" },
@@ -804,7 +833,7 @@ describe("ApiClient response parsing", () => {
   });
 
   test("wraps binary response body read failures as ResponseParseError", async () => {
-    const cause = new Error("binary stream interrupted");
+    const cause = new TestIoError("binary stream interrupted");
     const response = new Response(new Uint8Array([1]), {
       status: 206,
       headers: { "content-type": "application/octet-stream" },
@@ -998,8 +1027,7 @@ describe("ApiClient network errors and timeout signals", () => {
   ] as const)(
     "maps non-DOM $case fetch failures to $code NetworkError",
     async ({ name, code }) => {
-      const cause = new Error("request failed");
-      cause.name = name;
+      const cause = new NamedTestError(name, "request failed");
       const client = createClient(rejectedFetch(cause));
 
       await expect(client.send(new TestRequestCommand())).rejects.toSatisfy(
@@ -1043,7 +1071,9 @@ describe("ApiClient network errors and timeout signals", () => {
     const mockFetch = vi.fn<typeof globalThis.fetch>((_input, init) => {
       const signal = init?.signal;
       if (signal == null) {
-        return Promise.reject(new Error("Expected fetch to receive a signal"));
+        return Promise.reject(
+          new TestAssertionError("Expected fetch to receive a signal")
+        );
       }
 
       return new Promise<Response>((_resolve, reject) => {
@@ -1104,7 +1134,7 @@ describe("ApiClient error classes", () => {
   });
 
   test("PathParameterError exposes name, message, metadata, and cause", () => {
-    const cause = new Error("underlying issue");
+    const cause = new TestIoError("underlying issue");
     const error = new PathParameterError(
       "Path parameter 'slug' is not found in path '/posts/:id'",
       "slug",

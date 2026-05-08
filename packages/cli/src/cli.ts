@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { Command } from "commander";
 import { getResolvedConfigPath, loadConfig } from "./configLoader.js";
+import { MissingGenerateOptionError } from "./errors/MissingGenerateOptionError.js";
 import { Generator } from "./generators/Generator.js";
 import type { CommandOptions as CommanderOptions } from "commander";
 
@@ -69,14 +70,10 @@ program
     const outputDir = options.output ?? config.output;
     // Validate required options
     if (!inputPath) {
-      throw new Error(
-        "No input spec entrypoint provided. Use --input or specify in config file."
-      );
+      throw new MissingGenerateOptionError("input", "--input", "input");
     }
     if (!outputDir) {
-      throw new Error(
-        "No output directory provided. Use --output or specify in config file."
-      );
+      throw new MissingGenerateOptionError("output", "--output", "output");
     }
 
     // Resolve paths

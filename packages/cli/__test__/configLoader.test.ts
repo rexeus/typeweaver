@@ -7,6 +7,9 @@ import {
   getResolvedConfigPath,
   loadConfig,
 } from "../src/configLoader.js";
+import { InvalidConfigExportError } from "../src/errors/InvalidConfigExportError.js";
+import { UnsupportedConfigExtensionError } from "../src/errors/UnsupportedConfigExtensionError.js";
+import { UnsupportedTypeScriptConfigError } from "../src/errors/UnsupportedTypeScriptConfigError.js";
 
 describe("configLoader", () => {
   const tempDirs: string[] = [];
@@ -68,9 +71,12 @@ describe("configLoader", () => {
     { extension: ".mts" },
     { extension: ".cts" },
   ])("rejects $extension TypeScript config paths", ({ extension }) => {
-    expect(() =>
+    const assertion = expect(() =>
       assertSupportedConfigPath(`typeweaver.config${extension}`)
-    ).toThrow(/TypeScript config files are no longer supported/);
+    );
+
+    assertion.toThrow(UnsupportedTypeScriptConfigError);
+    assertion.toThrow(/TypeScript config files are not supported/);
   });
 
   test.each([
@@ -78,9 +84,10 @@ describe("configLoader", () => {
     { configPath: "typeweaver.config.toml", scenario: ".toml" },
     { configPath: "typeweaver-config", scenario: "extensionless" },
   ])("rejects $scenario config paths as unsupported", ({ configPath }) => {
-    expect(() => assertSupportedConfigPath(configPath)).toThrow(
-      /only accepts \.js, \.mjs, or \.cjs/
-    );
+    const assertion = expect(() => assertSupportedConfigPath(configPath));
+
+    assertion.toThrow(UnsupportedConfigExtensionError);
+    assertion.toThrow(/accepts only these config extensions/);
   });
 
   test("leaves absolute config paths unchanged", () => {
@@ -204,9 +211,12 @@ describe("configLoader", () => {
       `
     );
 
-    await expect(loadConfig(configPath)).rejects.toThrow(
-      /must choose a single export style/
-    );
+    const configLoad = loadConfig(configPath);
+
+    await expect(configLoad).rejects.toBeInstanceOf(InvalidConfigExportError);
+    await expect(configLoad).rejects.toMatchObject({
+      reason: "both-default-and-named-config",
+    });
   });
 
   test.each([
@@ -228,9 +238,12 @@ describe("configLoader", () => {
         `
       );
 
-      await expect(loadConfig(configPath)).rejects.toThrow(
-        /default export must be the config object itself/
-      );
+      const configLoad = loadConfig(configPath);
+
+      await expect(configLoad).rejects.toBeInstanceOf(InvalidConfigExportError);
+      await expect(configLoad).rejects.toMatchObject({
+        reason: "default-namespace-wrapper",
+      });
     }
   );
 
@@ -242,8 +255,8 @@ describe("configLoader", () => {
       `
     );
 
-    await expect(loadConfig(configPath)).rejects.toThrow(
-      /Unsupported config file extension.*only accepts \.js, \.mjs, or \.cjs/
+    await expect(loadConfig(configPath)).rejects.toBeInstanceOf(
+      UnsupportedConfigExtensionError
     );
   });
 
@@ -256,9 +269,12 @@ describe("configLoader", () => {
       `
     );
 
-    await expect(loadConfig(configPath)).rejects.toThrow(
-      /must export its config via 'export default' or 'export const config = \.\.\.'/
-    );
+    const configLoad = loadConfig(configPath);
+
+    await expect(configLoad).rejects.toBeInstanceOf(InvalidConfigExportError);
+    await expect(configLoad).rejects.toMatchObject({
+      reason: "missing-config-export",
+    });
   });
 
   test.each([
@@ -275,17 +291,22 @@ describe("configLoader", () => {
       `export default ${exportExpression};`
     );
 
-    await expect(loadConfig(configPath)).rejects.toThrow(
-      /must export a config object via 'export default' or 'export const config = \.\.\.'/
-    );
+    const configLoad = loadConfig(configPath);
+
+    await expect(configLoad).rejects.toBeInstanceOf(InvalidConfigExportError);
+    await expect(configLoad).rejects.toMatchObject({
+      reason: "non-object-config",
+    });
   });
 
   test("propagates errors thrown while evaluating config modules", async () => {
     const configPath = writeConfigModule(
       ".mjs",
       `
-        const originalError = new Error("config evaluation failed");
-        originalError.name = "ConfigEvaluationError";
+        class ConfigEvaluationError extends Error {
+          name = "ConfigEvaluationError";
+        }
+        const originalError = new ConfigEvaluationError("config evaluation failed");
         throw originalError;
       `
     );

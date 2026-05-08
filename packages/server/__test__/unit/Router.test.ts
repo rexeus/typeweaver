@@ -1,5 +1,9 @@
 import type { HttpMethod } from "@rexeus/typeweaver-core";
 import { assert, describe, expect, test } from "vitest";
+import {
+  ConflictingPathParameterNameError,
+  DuplicateRouteRegistrationError,
+} from "../../src/lib/errors/index.js";
 import { Router } from "../../src/lib/Router.js";
 import { noopResponseValidator, noopValidator } from "../helpers.js";
 import type {
@@ -659,7 +663,7 @@ describe("Router", () => {
       router.add(route("GET", "/todos"));
 
       expect(() => router.add(route("GET", "/todos"))).toThrow(
-        /Route conflict: GET \/todos is already registered/
+        DuplicateRouteRegistrationError
       );
     });
 
@@ -669,7 +673,7 @@ describe("Router", () => {
 
       expect(() =>
         router.add(routeWithRegisteredMethod("get", "/todos"))
-      ).toThrow(/Route conflict: GET \/todos is already registered/);
+      ).toThrow(DuplicateRouteRegistrationError);
     });
 
     test("rejects duplicate parameterized routes", () => {
@@ -677,7 +681,7 @@ describe("Router", () => {
       router.add(route("GET", "/todos/:todoId"));
 
       expect(() => router.add(route("GET", "/todos/:todoId"))).toThrow(
-        /Route conflict: GET \/todos\/:todoId is already registered/
+        DuplicateRouteRegistrationError
       );
     });
 
@@ -699,7 +703,7 @@ describe("Router", () => {
         router.add(route("GET", registeredPath));
 
         expect(() => router.add(route("GET", duplicatePath))).toThrow(
-          /Route conflict: GET .* is already registered/
+          DuplicateRouteRegistrationError
         );
       }
     );
@@ -729,7 +733,7 @@ describe("Router", () => {
       router.add(route("GET", "/users/:userId"));
 
       expect(() => router.add(route("GET", "/users/:id/profile"))).toThrow(
-        /Conflicting path parameter names.*":userId" vs ":id"/
+        ConflictingPathParameterNameError
       );
     });
 
@@ -738,7 +742,7 @@ describe("Router", () => {
       router.add(route("GET", "/users/:userId"));
 
       expect(() => router.add(route("POST", "/users/:id"))).toThrow(
-        /Conflicting path parameter names.*":userId" vs ":id"/
+        ConflictingPathParameterNameError
       );
     });
   });

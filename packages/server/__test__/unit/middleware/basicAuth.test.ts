@@ -3,6 +3,7 @@ import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
 import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
 import { basicAuth } from "../../../src/lib/middleware/basicAuth.js";
+import { TestIoError } from "../../errors/index.js";
 import { createServerContext } from "../../helpers.js";
 import type { BasicAuthOptions } from "../../../src/lib/middleware/basicAuth.js";
 import type { ServerContext } from "../../../src/lib/ServerContext.js";
@@ -179,7 +180,7 @@ describe("basicAuth", () => {
     const response = await executeBasicAuth({
       header: { authorization: basicAuthorizationHeader("admin:secret") },
       verifyCredentials: () => {
-        throw new Error("DB error");
+        throw new TestIoError("DB error");
       },
     });
 
@@ -191,7 +192,7 @@ describe("basicAuth", () => {
 
     const response = await executeBasicAuth({
       header: { authorization: basicAuthorizationHeader("admin:secret") },
-      verifyCredentials: () => Promise.reject(new Error("DB error")),
+      verifyCredentials: () => Promise.reject(new TestIoError("DB error")),
       finalHandler,
     });
 
@@ -206,12 +207,12 @@ describe("basicAuth", () => {
     {
       case: "the credentials verifier throws",
       verifyCredentials: () => {
-        throw new Error("DB error");
+        throw new TestIoError("DB error");
       },
     },
     {
       case: "the credentials verifier rejects",
-      verifyCredentials: () => Promise.reject(new Error("DB error")),
+      verifyCredentials: () => Promise.reject(new TestIoError("DB error")),
     },
   ])(
     "uses the unauthorized callback when $case",

@@ -1,5 +1,6 @@
 import { execFileSync, spawn } from "node:child_process";
 import { resolve } from "node:path";
+import { TestSetupError } from "../errors/index.js";
 import type { ChildProcess } from "node:child_process";
 
 export const TEST_UTILS_ROOT = resolve(
@@ -81,7 +82,7 @@ export function spawnRuntimeServer(
       startupSettled = true;
       if (timeout !== undefined) clearTimeout(timeout);
       child.kill("SIGKILL");
-      reject(new Error(message));
+      reject(new TestSetupError(message));
     };
 
     const finishStartup = (): void => {

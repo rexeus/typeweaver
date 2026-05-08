@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 import { HttpStatusCode } from "../../src/HttpStatusCode.js";
 import { ResponseValidationError } from "../../src/ResponseValidationError.js";
+import { TestObjectTrapError } from "../errors/index.js";
 import type { InvalidStatusCodeIssue } from "../../src/ResponseValidationError.js";
 
 describe("ResponseValidationError", () => {
@@ -43,10 +44,12 @@ describe("ResponseValidationError", () => {
   test("constructs with a hostile object status code and preserves the raw diagnostic", () => {
     const statusCode = {
       [Symbol.toPrimitive]: () => {
-        throw new Error("status code coercion should not run");
+        throw new TestObjectTrapError("status code coercion should not run");
       },
       toString: () => {
-        throw new Error("status code stringification should not run");
+        throw new TestObjectTrapError(
+          "status code stringification should not run"
+        );
       },
     };
     const expectedStatusCodes = [HttpStatusCode.CREATED];

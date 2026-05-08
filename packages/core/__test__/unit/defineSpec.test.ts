@@ -6,6 +6,7 @@ import { defineSpec } from "../../src/defineSpec.js";
 import { DuplicateResponseNameError } from "../../src/DuplicateResponseNameError.js";
 import { HttpMethod } from "../../src/HttpMethod.js";
 import { HttpStatusCode } from "../../src/HttpStatusCode.js";
+import { TestAssertionError } from "../errors/index.js";
 import type { OperationDefinition } from "../../src/defineOperation.js";
 import type { ResponseDefinition } from "../../src/defineResponse.js";
 
@@ -75,7 +76,7 @@ const captureThrownError = (act: () => void): unknown => {
     return error;
   }
 
-  throw new Error("Expected defineSpec to throw.");
+  throw new TestAssertionError("Expected defineSpec to throw.");
 };
 
 describe("defineSpec", () => {

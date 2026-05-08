@@ -18,6 +18,10 @@ type PostBuildContext = {
   readonly packageDir: string;
 };
 
+class TestBuildConfigError extends Error {
+  public override readonly name = "TestBuildConfigError";
+}
+
 const tempDirectories: string[] = [];
 
 function createPackageFixture(
@@ -329,7 +333,11 @@ const hasSharedArtifact = fs.existsSync(
 );
 
 if (!hasSharedArtifact) {
-  throw new Error("missing shared artifact");
+  class MissingSharedArtifactError extends Error {
+    name = "MissingSharedArtifactError";
+  }
+
+  throw new MissingSharedArtifactError("missing shared artifact");
 }
 
 fs.writeFileSync(
@@ -371,7 +379,7 @@ fs.writeFileSync(
       packageDir,
       postBuildSteps: [
         async () => {
-          throw new Error("post-build failed");
+          throw new TestBuildConfigError("post-build failed");
         },
       ],
       onSuccess: async () => {
@@ -391,7 +399,7 @@ fs.writeFileSync(
     const config = createPackageBuildConfig({
       packageDir,
       onSuccess: async () => {
-        throw new Error("caller failed");
+        throw new TestBuildConfigError("caller failed");
       },
     });
 

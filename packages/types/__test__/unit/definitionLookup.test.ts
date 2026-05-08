@@ -15,6 +15,8 @@ import {
   getOperationDefinition,
   getResponseDefinition,
 } from "../../src/lib/definitionLookup.js";
+import { MissingOperationDefinitionError } from "../../src/lib/errors/MissingOperationDefinitionError.js";
+import { MissingResponseDefinitionError } from "../../src/lib/errors/MissingResponseDefinitionError.js";
 
 const createTodoSuccess = defineResponse({
   name: "CreateTodoSuccess",
@@ -136,19 +138,19 @@ describe("definitionLookup", () => {
 
       expect(() =>
         getOperationDefinition(spec, "archive", "create")
-      ).toThrowError("Missing operation definition 'archive.create'.");
+      ).toThrowError(MissingOperationDefinitionError);
     });
 
     test("reports the requested resource and operation when the operation is missing", () => {
       expect(() =>
         getOperationDefinition(todoAndProjectSpec, "todo", "delete")
-      ).toThrowError("Missing operation definition 'todo.delete'.");
+      ).toThrowError(MissingOperationDefinitionError);
     });
 
     test("reports the requested resource when another resource has the operation", () => {
       expect(() =>
         getOperationDefinition(todoAndProjectSpec, "todo", "archive")
-      ).toThrowError("Missing operation definition 'todo.archive'.");
+      ).toThrowError(MissingOperationDefinitionError);
     });
   });
 
@@ -184,7 +186,7 @@ describe("definitionLookup", () => {
 
       expect(() =>
         getResponseDefinition(responses, "ValidationError")
-      ).toThrowError("Missing response definition 'ValidationError'.");
+      ).toThrowError(MissingResponseDefinitionError);
     });
 
     test("matches response names with exact casing", () => {
@@ -192,7 +194,7 @@ describe("definitionLookup", () => {
 
       expect(() =>
         getResponseDefinition(responses, "notFoundError")
-      ).toThrowError("Missing response definition 'notFoundError'.");
+      ).toThrowError(MissingResponseDefinitionError);
     });
 
     test("reports the requested response when the response array is empty", () => {
@@ -200,7 +202,7 @@ describe("definitionLookup", () => {
 
       expect(() =>
         getResponseDefinition(responses, "CreateTodoSuccess")
-      ).toThrowError("Missing response definition 'CreateTodoSuccess'.");
+      ).toThrowError(MissingResponseDefinitionError);
     });
   });
 });

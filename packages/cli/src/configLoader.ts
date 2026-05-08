@@ -1,8 +1,14 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
+import { InvalidConfigExportError } from "./errors/InvalidConfigExportError.js";
+import { UnsupportedConfigExtensionError } from "./errors/UnsupportedConfigExtensionError.js";
+import { UnsupportedTypeScriptConfigError } from "./errors/UnsupportedTypeScriptConfigError.js";
 
-const SUPPORTED_CONFIG_EXTENSIONS = new Set([".js", ".mjs", ".cjs"]);
+const SUPPORTED_CONFIG_EXTENSIONS = [".js", ".mjs", ".cjs"] as const;
+const SUPPORTED_CONFIG_EXTENSION_SET = new Set<string>(
+  SUPPORTED_CONFIG_EXTENSIONS
+);
 const UNSUPPORTED_TYPESCRIPT_CONFIG_EXTENSIONS = new Set([
   ".ts",
   ".mts",
@@ -22,14 +28,14 @@ export const assertSupportedConfigPath = (configPath: string): void => {
   const extension = path.extname(configPath).toLowerCase();
 
   if (UNSUPPORTED_TYPESCRIPT_CONFIG_EXTENSIONS.has(extension)) {
-    throw new Error(
-      `TypeScript config files are no longer supported: '${configPath}'. Convert the config to .js, .mjs, or .cjs, or compile it before passing --config.`
-    );
+    throw new UnsupportedTypeScriptConfigError(configPath, extension);
   }
 
-  if (!SUPPORTED_CONFIG_EXTENSIONS.has(extension)) {
-    throw new Error(
-      `Unsupported config file extension for '${configPath}'. TypeWeaver only accepts .js, .mjs, or .cjs config files.`
+  if (!SUPPORTED_CONFIG_EXTENSION_SET.has(extension)) {
+    throw new UnsupportedConfigExtensionError(
+      configPath,
+      extension,
+      SUPPORTED_CONFIG_EXTENSIONS
     );
   }
 };
@@ -45,9 +51,7 @@ export const loadConfig = async (
   const loadedConfig = getConfigExport(configModule, configPath);
 
   if (!isConfigObject(loadedConfig)) {
-    throw new Error(
-      `Configuration file '${configPath}' must export a config object via 'export default' or 'export const config = ...'.`
-    );
+    throw new InvalidConfigExportError(configPath, "non-object-config");
   }
 
   return loadedConfig;
@@ -61,15 +65,17 @@ const getConfigExport = (
   const hasNamedConfigExport = Object.hasOwn(configModule, "config");
 
   if (hasDefaultExport && hasNamedConfigExport) {
-    throw new Error(
-      `Configuration file '${configPath}' must choose a single export style: either 'export default' or 'export const config = ...', but not both.`
+    throw new InvalidConfigExportError(
+      configPath,
+      "both-default-and-named-config"
     );
   }
 
   if (hasDefaultExport) {
     if (isNamespaceLikeConfigExport(configModule.default)) {
-      throw new Error(
-        `Configuration file '${configPath}' default export must be the config object itself, not a module namespace-like wrapper. Export the config directly with 'export default { ... }' or use 'export const config = ...'.`
+      throw new InvalidConfigExportError(
+        configPath,
+        "default-namespace-wrapper"
       );
     }
 
@@ -80,9 +86,7 @@ const getConfigExport = (
     return configModule.config;
   }
 
-  throw new Error(
-    `Configuration file '${configPath}' must export its config via 'export default' or 'export const config = ...'.`
-  );
+  throw new InvalidConfigExportError(configPath, "missing-config-export");
 };
 
 const isConfigObject = (value: unknown): value is Partial<TypeweaverConfig> => {

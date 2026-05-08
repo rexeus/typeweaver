@@ -1,6 +1,8 @@
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
+import { MiddlewareNextAlreadyCalledError } from "../../src/lib/errors/index.js";
 import { executeMiddlewarePipeline } from "../../src/lib/Middleware.js";
+import { TestApplicationError } from "../errors/index.js";
 import { createServerContext } from "../helpers.js";
 import type { Middleware } from "../../src/lib/Middleware.js";
 
@@ -234,7 +236,7 @@ describe("middleware pipeline", () => {
     const ctx = createServerContext();
 
     const errorMiddleware: Middleware = async () => {
-      throw new Error("Middleware exploded");
+      throw new TestApplicationError("Middleware exploded");
     };
 
     await expect(
@@ -249,7 +251,7 @@ describe("middleware pipeline", () => {
 
     await expect(
       executeMiddlewarePipeline([], ctx, async () => {
-        throw new Error("Handler exploded");
+        throw new TestApplicationError("Handler exploded");
       })
     ).rejects.toThrow("Handler exploded");
   });
@@ -266,7 +268,7 @@ describe("middleware pipeline", () => {
       executeMiddlewarePipeline([doubleCallMiddleware], ctx, async () =>
         okResponse()
       )
-    ).rejects.toThrow("next() called multiple times");
+    ).rejects.toThrow(MiddlewareNextAlreadyCalledError);
   });
 
   test("allows separate middleware instances to each call next once", async () => {

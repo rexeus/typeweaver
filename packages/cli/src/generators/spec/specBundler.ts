@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { build } from "rolldown";
+import { SpecBundleOutputMissingError } from "./errors/SpecBundleOutputMissingError.js";
 
 const WINDOWS_ABSOLUTE_PATH_PATTERN = /^[A-Za-z]:[\\/]/;
 const WINDOWS_UNC_PATH_PATTERN = /^\\\\/;
@@ -88,8 +89,10 @@ export async function bundle(config: SpecBundlerConfig): Promise<string> {
   }
 
   if (!fs.existsSync(bundledSpecFile)) {
-    throw new Error(
-      `Failed to bundle spec entrypoint '${config.inputFile}' to '${bundledSpecFile}'.`
+    throw new SpecBundleOutputMissingError(
+      config.inputFile,
+      bundledSpecFile,
+      config.specOutputDir
     );
   }
 

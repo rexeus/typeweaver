@@ -29,6 +29,7 @@ import {
   normalizeSpec,
   PathParameterMismatchError,
 } from "../src/index.js";
+import { TestAssertionError } from "./errors/index.js";
 
 type ResponseBaseOverrides = {
   readonly statusCode?: HttpStatusCode;
@@ -114,7 +115,9 @@ const theOnlyOperationIn = (
   const operation = normalizedSpec.resources[0]?.operations[0];
 
   if (operation === undefined) {
-    throw new Error("Expected the normalized spec to contain one operation.");
+    throw new TestAssertionError(
+      "Expected the normalized spec to contain one operation."
+    );
   }
 
   return operation;

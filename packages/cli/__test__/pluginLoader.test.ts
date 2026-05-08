@@ -10,6 +10,7 @@ import type {
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { PluginLoadingFailure } from "../src/generators/errors/PluginLoadingFailure.js";
 import { loadPlugins } from "../src/generators/pluginLoader.js";
+import { TestAssertionError } from "./errors/index.js";
 import type { PluginRegistrar } from "../src/generators/pluginLoader.js";
 
 type RegisteredPlugin = {
@@ -116,7 +117,7 @@ describe("pluginLoader", () => {
     );
 
     if (!(failure instanceof PluginLoadingFailure)) {
-      throw new Error(
+      throw new TestAssertionError(
         "Expected plugin loading to fail with PluginLoadingFailure"
       );
     }
@@ -467,7 +468,10 @@ describe("pluginLoader", () => {
 
   test("captures module evaluation failures in plugin loading attempts", async () => {
     const pluginPath = writePluginModule([
-      'throw new Error("evaluation failed");',
+      "class PluginEvaluationError extends Error {",
+      '  name = "PluginEvaluationError";',
+      "}",
+      'throw new PluginEvaluationError("evaluation failed");',
     ]);
     const { registry } = createRegistry();
 
@@ -516,7 +520,10 @@ describe("pluginLoader", () => {
     const pluginPath = writePluginModule([
       "export class BrokenPlugin {",
       "  constructor() {",
-      '    throw new Error("constructor failed");',
+      "    class PluginConstructorError extends Error {",
+      '      name = "PluginConstructorError";',
+      "    }",
+      '    throw new PluginConstructorError("constructor failed");',
       "  }",
       "}",
     ]);

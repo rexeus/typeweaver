@@ -13,6 +13,7 @@ import { pascalCase } from "polycase";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import { generate } from "../../src/responseGenerator.js";
+import { TestAssertionError } from "../errors/index.js";
 import type { ResponseGenerationContext } from "../../src/responseGenerator.js";
 
 function aCanonicalResponse(
@@ -193,7 +194,7 @@ function renderCanonicalResponseSource(response: NormalizedResponse): string {
   );
 
   if (source === undefined) {
-    throw new Error(
+    throw new TestAssertionError(
       `Expected ${response.name} response source to be generated`
     );
   }
@@ -216,7 +217,9 @@ function renderOperationResponseSource(
   const source = writtenFiles.get("todos/CreateTodoResponse.ts");
 
   if (source === undefined) {
-    throw new Error("Expected createTodo response source to be generated");
+    throw new TestAssertionError(
+      "Expected createTodo response source to be generated"
+    );
   }
 
   return source;
@@ -228,7 +231,7 @@ function parseGeneratedData(
 ): unknown {
   const content = writtenFiles.get(relativePath);
   if (content === undefined) {
-    throw new Error(`Expected ${relativePath} to be generated`);
+    throw new TestAssertionError(`Expected ${relativePath} to be generated`);
   }
 
   return JSON.parse(content);
@@ -240,7 +243,7 @@ function getGeneratedSource(
 ): string {
   const content = writtenFiles.get(relativePath);
   if (content === undefined) {
-    throw new Error(`Expected ${relativePath} to be generated`);
+    throw new TestAssertionError(`Expected ${relativePath} to be generated`);
   }
 
   return content;

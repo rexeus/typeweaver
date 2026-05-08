@@ -13,6 +13,7 @@ import {
   TodoClient,
 } from "test-utils";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { TestSetupError } from "../errors/index.js";
 import type { ServerResponse } from "node:http";
 import type { CreateTestServerResult } from "test-utils";
 
@@ -105,7 +106,9 @@ async function createRecordingListTodosServer(
 
   const address = server.address();
   if (address === null || typeof address === "string") {
-    throw new Error("Expected recording server to listen on a TCP port");
+    throw new TestSetupError(
+      "Expected recording server to listen on a TCP port"
+    );
   }
 
   const result = {
