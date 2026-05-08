@@ -1,12 +1,14 @@
 import { spawnSync } from "node:child_process";
 
 const generatedFixturePath = "packages/test-utils/src/test-project/output";
+const GIT_STATUS_MAX_BUFFER_BYTES = 10 * 1024 * 1024;
 
 const result = spawnSync(
   "git",
   ["status", "--porcelain", "--", generatedFixturePath],
   {
     encoding: "utf8",
+    maxBuffer: GIT_STATUS_MAX_BUFFER_BYTES,
   }
 );
 
