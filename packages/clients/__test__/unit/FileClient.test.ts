@@ -16,10 +16,10 @@ import {
   GetFileMetadataRequestCommand,
   PathParameterError,
   ResponseParseError,
+  TestAssertionError,
   UploadFileRequestCommand,
 } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
-import { TestAssertionError } from "../errors/index.js";
 import { createRawMockFetch } from "../helpers.js";
 
 type FetchCallDetails = {

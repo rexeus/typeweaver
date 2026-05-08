@@ -10,10 +10,10 @@ import {
   createTodoNotFoundErrorResponse,
   GetTodoRequestCommand,
   ListTodosRequestCommand,
+  TestSetupError,
   TodoClient,
 } from "test-utils";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { TestSetupError } from "../errors/index.js";
 import type { ServerResponse } from "node:http";
 import type { CreateTestServerResult } from "test-utils";
 

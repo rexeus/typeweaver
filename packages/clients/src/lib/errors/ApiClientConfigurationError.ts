@@ -9,6 +9,7 @@ export type ApiClientConfigurationField = "baseUrl" | "timeoutMs";
 
 export type ApiClientConfigurationReason =
   | "missing-base-url"
+  | "malformed-base-url"
   | "unsupported-base-url-scheme"
   | "invalid-timeout";
 
@@ -35,7 +36,7 @@ export class ApiClientConfigurationError extends Error {
 }
 
 const getApiClientConfigurationMessage = (
-  field: ApiClientConfigurationField,
+  _field: ApiClientConfigurationField,
   reason: ApiClientConfigurationReason,
   options: {
     readonly baseUrl?: string;
@@ -43,13 +44,18 @@ const getApiClientConfigurationMessage = (
     readonly timeoutMs?: number;
   }
 ): string => {
-  if (field === "baseUrl" && reason === "missing-base-url") {
-    return "ApiClient requires a non-empty baseUrl string.";
+  switch (reason) {
+    case "missing-base-url":
+      return "ApiClient requires a non-empty baseUrl string.";
+    case "malformed-base-url":
+      return `ApiClient baseUrl '${options.baseUrl ?? ""}' is not a valid absolute URL. Use http://, https://, or a relative base URL.`;
+    case "unsupported-base-url-scheme":
+      return `ApiClient baseUrl '${options.baseUrl ?? ""}' uses unsupported scheme '${options.scheme ?? "unknown"}'. Use http://, https://, or a relative base URL.`;
+    case "invalid-timeout":
+      return `ApiClient timeoutMs must be a positive finite number when provided; received ${String(options.timeoutMs)}.`;
+    default: {
+      const exhaustiveCheck: never = reason;
+      return exhaustiveCheck;
+    }
   }
-
-  if (field === "baseUrl" && reason === "unsupported-base-url-scheme") {
-    return `ApiClient baseUrl '${options.baseUrl ?? ""}' uses unsupported scheme '${options.scheme ?? "unknown"}'. Use http://, https://, or a relative base URL.`;
-  }
-
-  return `ApiClient timeoutMs must be a positive finite number when provided; received ${String(options.timeoutMs)}.`;
 };

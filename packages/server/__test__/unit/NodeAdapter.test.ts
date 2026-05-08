@@ -1,3 +1,5 @@
+/* oxlint-disable import/max-dependencies */
+
 import { IncomingMessage } from "node:http";
 import { Socket } from "node:net";
 import {
@@ -6,6 +8,11 @@ import {
   notFoundDefaultError,
   payloadTooLargeDefaultError,
 } from "@rexeus/typeweaver-core";
+import {
+  TestApplicationError,
+  TestAssertionError,
+  TestIoError,
+} from "test-utils";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createNodeBodyLimitPolicy } from "../../src/lib/BodyLimitPolicy.js";
 import {
@@ -31,18 +38,6 @@ import type {
 type FakeApp = TypeweaverApp<any> & {
   readonly receivedRequests: readonly Request[];
 };
-
-class NodeAdapterAssertionError extends Error {
-  public override readonly name = "NodeAdapterAssertionError";
-}
-
-class NodeAdapterApplicationError extends Error {
-  public override readonly name = "NodeAdapterApplicationError";
-}
-
-class NodeAdapterIoError extends Error {
-  public override readonly name = "NodeAdapterIoError";
-}
 
 function fakeAppReturning(response: Response): FakeApp {
   const receivedRequests: Request[] = [];
@@ -202,9 +197,7 @@ async function invokeNodeAdapter(options: InvokeNodeAdapterOptions) {
 
 function expectRequest(request: Request | undefined): Request {
   if (request === undefined) {
-    throw new NodeAdapterAssertionError(
-      "Expected app.fetch to receive a Request"
-    );
+    throw new TestAssertionError("Expected app.fetch to receive a Request");
   }
 
   return request;
@@ -1031,7 +1024,7 @@ describe("nodeAdapter", () => {
       handler(req, res);
       await drainStarted;
       req.push(Buffer.from("hello"));
-      req.emit("error", new NodeAdapterIoError("drain failed"));
+      req.emit("error", new TestIoError("drain failed"));
       req.push(null);
       await responseFinished;
 
@@ -1293,7 +1286,7 @@ describe("nodeAdapter", () => {
     ])(
       "reports the suppressed body cancellation error without preventing the response for $scenario",
       async ({ method, status }) => {
-        const cancelError = new NodeAdapterIoError("cancel failed");
+        const cancelError = new TestIoError("cancel failed");
         const { cancelSpy, response } = responseWithRejectingCancelableBody(
           status,
           cancelError
@@ -1327,9 +1320,7 @@ describe("nodeAdapter", () => {
     ])(
       "reports a synchronous suppressed body cancellation error without preventing the response for $scenario",
       async ({ method, status }) => {
-        const cancelError = new NodeAdapterIoError(
-          "cancel failed synchronously"
-        );
+        const cancelError = new TestIoError("cancel failed synchronously");
         const { cancelSpy, response } = responseWithThrowingCancelableBody(
           status,
           cancelError
@@ -1357,8 +1348,8 @@ describe("nodeAdapter", () => {
     );
 
     test("logs reporter failures during suppressed body cancellation without preventing the response", async () => {
-      const cancelError = new NodeAdapterIoError("cancel failed");
-      const reporterError = new NodeAdapterApplicationError("reporter failed");
+      const cancelError = new TestIoError("cancel failed");
+      const reporterError = new TestApplicationError("reporter failed");
       const { cancelSpy, response } = responseWithRejectingCancelableBody(
         200,
         cancelError
@@ -1411,7 +1402,7 @@ describe("nodeAdapter", () => {
 
   describe("error handling", () => {
     test("returns 500 JSON when app.fetch rejects", async () => {
-      const app = fakeAppRejecting(new NodeAdapterApplicationError("boom"));
+      const app = fakeAppRejecting(new TestApplicationError("boom"));
       vi.spyOn(console, "error").mockImplementation(vi.fn());
 
       const handler = nodeAdapter(app);
@@ -1430,7 +1421,7 @@ describe("nodeAdapter", () => {
     });
 
     test("omits the error body for HEAD requests when app.fetch rejects", async () => {
-      const app = fakeAppRejecting(new NodeAdapterApplicationError("boom"));
+      const app = fakeAppRejecting(new TestApplicationError("boom"));
       vi.spyOn(console, "error").mockImplementation(vi.fn());
 
       const handler = nodeAdapter(app);
@@ -1486,7 +1477,7 @@ describe("nodeAdapter", () => {
     });
 
     test("returns default 500 when the error reporter throws", async () => {
-      const reporterError = new NodeAdapterApplicationError("reporter failed");
+      const reporterError = new TestApplicationError("reporter failed");
       const app = new TypeweaverApp({
         onError: () => {
           throw reporterError;
@@ -1511,7 +1502,7 @@ describe("nodeAdapter", () => {
     });
 
     test("logs the reporter failure with the original error when the error reporter throws", async () => {
-      const reporterError = new NodeAdapterApplicationError("reporter failed");
+      const reporterError = new TestApplicationError("reporter failed");
       let originalError: unknown;
       const app = new TypeweaverApp({
         onError: error => {
@@ -1542,7 +1533,7 @@ describe("nodeAdapter", () => {
     });
 
     test("returns default 500 when the response body cannot be read", async () => {
-      const error = new NodeAdapterIoError("response stream failed");
+      const error = new TestIoError("response stream failed");
       const stream = new ReadableStream({
         start(controller) {
           controller.error(error);
@@ -1570,7 +1561,7 @@ describe("nodeAdapter", () => {
     });
 
     test("returns default 500 when POST body reading fails before app dispatch", async () => {
-      const error = new NodeAdapterIoError("request stream failed");
+      const error = new TestIoError("request stream failed");
       const onError = vi.fn();
       const app = fakeAppWithErrorReporter(
         fakeAppReturning(new Response("ok")),
@@ -1663,7 +1654,7 @@ describe("nodeAdapter", () => {
     });
 
     test("logs error to console.error", async () => {
-      const error = new NodeAdapterApplicationError("something broke");
+      const error = new TestApplicationError("something broke");
       const app = fakeAppRejecting(error);
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
 
@@ -1903,7 +1894,7 @@ describe("nodeAdapter", () => {
       handler(req, res);
       req.push(Buffer.from("hello"));
       await responseFinished;
-      req.emit("error", new NodeAdapterIoError("drain failed"));
+      req.emit("error", new TestIoError("drain failed"));
       req.push(null);
 
       expect(res.writtenStatus).toBe(413);

@@ -44,6 +44,21 @@ const configWithoutPlugins = (): TypeweaverConfig => ({
 const importPathForFile = (filePath: string): string =>
   pathToFileURL(filePath).href;
 
+const createThrowingModuleSource = (options: {
+  readonly errorName: string;
+  readonly message: string;
+  readonly indent?: string;
+}): string[] => {
+  const indent = options.indent ?? "";
+
+  return [
+    `${indent}class ${options.errorName} extends Error {`,
+    `${indent}  name = "${options.errorName}";`,
+    `${indent}}`,
+    `${indent}throw new ${options.errorName}(${JSON.stringify(options.message)});`,
+  ];
+};
+
 function createRegistry(): {
   readonly registry: PluginRegistrar;
   readonly registeredPlugins: RegisteredPlugin[];
@@ -467,12 +482,12 @@ describe("pluginLoader", () => {
   });
 
   test("captures module evaluation failures in plugin loading attempts", async () => {
-    const pluginPath = writePluginModule([
-      "class PluginEvaluationError extends Error {",
-      '  name = "PluginEvaluationError";',
-      "}",
-      'throw new PluginEvaluationError("evaluation failed");',
-    ]);
+    const pluginPath = writePluginModule(
+      createThrowingModuleSource({
+        errorName: "PluginEvaluationError",
+        message: "evaluation failed",
+      })
+    );
     const { registry } = createRegistry();
 
     const failure = await capturePluginLoadingFailure(
@@ -520,10 +535,11 @@ describe("pluginLoader", () => {
     const pluginPath = writePluginModule([
       "export class BrokenPlugin {",
       "  constructor() {",
-      "    class PluginConstructorError extends Error {",
-      '      name = "PluginConstructorError";',
-      "    }",
-      '    throw new PluginConstructorError("constructor failed");',
+      ...createThrowingModuleSource({
+        errorName: "PluginConstructorError",
+        message: "constructor failed",
+        indent: "    ",
+      }),
       "  }",
       "}",
     ]);

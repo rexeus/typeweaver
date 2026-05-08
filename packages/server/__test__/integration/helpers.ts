@@ -1,6 +1,6 @@
 import { execFileSync, spawn } from "node:child_process";
 import { resolve } from "node:path";
-import { TestSetupError } from "../errors/index.js";
+import { TestSetupError } from "test-utils";
 import type { ChildProcess } from "node:child_process";
 
 export const TEST_UTILS_ROOT = resolve(

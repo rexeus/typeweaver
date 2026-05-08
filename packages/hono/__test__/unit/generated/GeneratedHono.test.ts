@@ -29,13 +29,11 @@ import {
   createUpdateSubTodoRequest,
   createUpdateTodoRequest,
   createUpdateTodoStatusRequest,
+  TestApplicationError,
+  TestAssertionError,
   TodoHono,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import {
-  TestApplicationError,
-  TestAssertionError,
-} from "../../errors/index.js";
 import { expectErrorResponse, prepareRequestData } from "../../helpers.js";
 import type { Context } from "hono";
 import type {

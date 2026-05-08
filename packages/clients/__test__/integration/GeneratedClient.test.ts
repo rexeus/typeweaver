@@ -19,10 +19,10 @@ import {
   HeadTodoRequestCommand,
   OptionsTodoRequestCommand,
   PutTodoRequestCommand,
+  TestAssertionError,
   UpdateTodoRequestCommand,
 } from "test-utils";
 import { afterEach, describe, expect, test } from "vitest";
-import { TestAssertionError } from "../errors/index.js";
 import { runClientCleanup, setupClientTest } from "./clientSetup.js";
 
 async function captureUnknownResponseError(

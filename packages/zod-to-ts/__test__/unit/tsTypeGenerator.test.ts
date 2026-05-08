@@ -9,6 +9,16 @@ function toTs(schema: z.ZodType): string {
   return print(fromZod(schema));
 }
 
+const captureError = (action: () => void): unknown => {
+  try {
+    action();
+  } catch (error) {
+    return error;
+  }
+
+  return undefined;
+};
+
 describe("primitive schemas", () => {
   test.each([
     { scenario: "z.string()", schema: z.string(), expected: "string" },
@@ -239,7 +249,13 @@ describe("literal and enum schemas", () => {
     const schema = z.literal("value");
     Object.defineProperty(schema._zod.def, "values", { value: [] });
 
-    expect(() => fromZod(schema)).toThrow(EmptyZodLiteralError);
+    const error = captureError(() => fromZod(schema));
+
+    expect(error).toBeInstanceOf(EmptyZodLiteralError);
+    if (!(error instanceof EmptyZodLiteralError)) return;
+    expect(error.message).toBe(
+      "ZodLiteral must contain at least one literal value."
+    );
   });
 
   test("rejects unsupported Zod literal value types", () => {
@@ -248,7 +264,14 @@ describe("literal and enum schemas", () => {
       value: [Symbol("unsupported")],
     });
 
-    expect(() => fromZod(schema)).toThrow(UnsupportedLiteralValueError);
+    const error = captureError(() => fromZod(schema));
+
+    expect(error).toBeInstanceOf(UnsupportedLiteralValueError);
+    expect(error).toEqual(
+      expect.objectContaining({
+        valueType: "symbol",
+      })
+    );
   });
 });
 

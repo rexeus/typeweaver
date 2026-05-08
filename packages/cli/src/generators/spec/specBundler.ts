@@ -12,6 +12,11 @@ export type SpecBundlerConfig = {
   readonly specOutputDir: string;
 };
 
+export type SpecBundlerDeps = {
+  readonly build?: typeof build;
+  readonly existsSync?: (filePath: string) => boolean;
+};
+
 export function createWrapperImportSpecifier(
   wrapperFile: string,
   inputFile: string
@@ -39,7 +44,10 @@ export function createWrapperImportSpecifier(
   return `./${relativeInputFile}`;
 }
 
-export async function bundle(config: SpecBundlerConfig): Promise<string> {
+export async function bundle(
+  config: SpecBundlerConfig,
+  deps: SpecBundlerDeps = {}
+): Promise<string> {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), "typeweaver-spec-loader-")
   );
@@ -65,7 +73,7 @@ export async function bundle(config: SpecBundlerConfig): Promise<string> {
   );
 
   try {
-    await build({
+    await (deps.build ?? build)({
       cwd: tempDir,
       input: wrapperFile,
       treeshake: true,
@@ -88,7 +96,7 @@ export async function bundle(config: SpecBundlerConfig): Promise<string> {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
 
-  if (!fs.existsSync(bundledSpecFile)) {
+  if (!(deps.existsSync ?? fs.existsSync)(bundledSpecFile)) {
     throw new SpecBundleOutputMissingError(
       config.inputFile,
       bundledSpecFile,

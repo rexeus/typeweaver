@@ -6,6 +6,12 @@ import type {
   IHttpQuery,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
+import {
+  captureError,
+  NamedTestError,
+  TestAssertionError,
+  TestIoError,
+} from "test-utils";
 import { describe, expect, test, vi } from "vitest";
 import { ApiClient } from "../../src/lib/ApiClient.js";
 import { ApiClientConfigurationError } from "../../src/lib/errors/ApiClientConfigurationError.js";
@@ -13,11 +19,6 @@ import { NetworkError } from "../../src/lib/NetworkError.js";
 import { PathParameterError } from "../../src/lib/PathParameterError.js";
 import { RequestCommand } from "../../src/lib/RequestCommand.js";
 import { ResponseParseError } from "../../src/lib/ResponseParseError.js";
-import {
-  NamedTestError,
-  TestAssertionError,
-  TestIoError,
-} from "../errors/index.js";
 import type { ApiClientProps } from "../../src/lib/ApiClient.js";
 import type { NetworkErrorCode } from "../../src/lib/NetworkError.js";
 
@@ -84,6 +85,20 @@ function createClient(
     fetchFn: mockFetch,
     ...props,
   });
+}
+
+function captureApiClientConfigurationError(
+  action: () => void
+): ApiClientConfigurationError {
+  const error = captureError(action);
+
+  if (!(error instanceof ApiClientConfigurationError)) {
+    throw new TestAssertionError(
+      "Expected ApiClientConfigurationError to be thrown"
+    );
+  }
+
+  return error;
 }
 
 function getFetchCall(mockFetch: typeof globalThis.fetch): {
@@ -160,8 +175,17 @@ describe("ApiClient constructor", () => {
     { case: "javascript", baseUrl: "javascript:alert(1)" },
     { case: "data", baseUrl: "data:text/plain,hello" },
   ])("rejects absolute non-http(s) $case baseUrl", ({ baseUrl }) => {
-    expect(() => createClient(resolvedFetch(), { baseUrl })).toThrow(
-      ApiClientConfigurationError
+    const error = captureApiClientConfigurationError(() =>
+      createClient(resolvedFetch(), { baseUrl })
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        baseUrl,
+        field: "baseUrl",
+        reason: "unsupported-base-url-scheme",
+        scheme: baseUrl.split(":", 1)[0]?.toLowerCase(),
+      })
     );
   });
 
@@ -178,9 +202,52 @@ describe("ApiClient constructor", () => {
       case: "carriage return inserted after an FTP scheme",
       baseUrl: "ftp:\r//api.example.com",
     },
+    {
+      case: "malformed HTTP absolute URL",
+      baseUrl: "http://%",
+    },
   ])("rejects $case baseUrl", ({ baseUrl }) => {
-    expect(() => createClient(resolvedFetch(), { baseUrl })).toThrow(
-      ApiClientConfigurationError
+    const error = captureApiClientConfigurationError(() =>
+      createClient(resolvedFetch(), { baseUrl })
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        baseUrl,
+        field: "baseUrl",
+        reason: "malformed-base-url",
+      })
+    );
+  });
+
+  test("classifies a malformed absolute URL with a visible scheme as malformed", () => {
+    const error = captureApiClientConfigurationError(() =>
+      createClient(resolvedFetch(), { baseUrl: "ftp://%" })
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        baseUrl: "ftp://%",
+        field: "baseUrl",
+        reason: "malformed-base-url",
+        scheme: "ftp",
+      })
+    );
+  });
+
+  test("classifies a relative base URL with ASCII control characters as malformed", () => {
+    const baseUrl = "/api\nv1";
+
+    const error = captureApiClientConfigurationError(() =>
+      createClient(resolvedFetch(), { baseUrl })
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        baseUrl,
+        field: "baseUrl",
+        reason: "malformed-base-url",
+      })
     );
   });
 
@@ -188,15 +255,32 @@ describe("ApiClient constructor", () => {
     { case: "empty", baseUrl: "" },
     { case: "whitespace-only", baseUrl: "   \t\n" },
   ])("rejects $case baseUrl", ({ baseUrl }) => {
-    expect(() => createClient(resolvedFetch(), { baseUrl })).toThrow(
-      ApiClientConfigurationError
+    const error = captureApiClientConfigurationError(() =>
+      createClient(resolvedFetch(), { baseUrl })
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        baseUrl,
+        field: "baseUrl",
+        reason: "missing-base-url",
+      })
     );
   });
 
   test("rejects a missing baseUrl with the validation error", () => {
     const props = { fetchFn: resolvedFetch() } as unknown as ApiClientProps;
 
-    expect(() => new TestApiClient(props)).toThrow(ApiClientConfigurationError);
+    const error = captureApiClientConfigurationError(
+      () => new TestApiClient(props)
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        field: "baseUrl",
+        reason: "missing-base-url",
+      })
+    );
   });
 
   test("rejects a non-string baseUrl with the validation error", () => {
@@ -205,7 +289,17 @@ describe("ApiClient constructor", () => {
       fetchFn: resolvedFetch(),
     } satisfies ApiClientProps;
 
-    expect(() => new TestApiClient(props)).toThrow(ApiClientConfigurationError);
+    const error = captureApiClientConfigurationError(
+      () => new TestApiClient(props)
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        baseUrl: props.baseUrl,
+        field: "baseUrl",
+        reason: "missing-base-url",
+      })
+    );
   });
 
   test.each([
@@ -214,30 +308,15 @@ describe("ApiClient constructor", () => {
     { case: "NaN", timeoutMs: Number.NaN },
     { case: "Infinity", timeoutMs: Infinity },
   ])("rejects $case timeoutMs", ({ timeoutMs }) => {
-    expect(() => createClient(resolvedFetch(), { timeoutMs })).toThrow(
-      ApiClientConfigurationError
+    const error = captureApiClientConfigurationError(() =>
+      createClient(resolvedFetch(), { timeoutMs })
     );
-  });
 
-  test("exposes baseUrl details for unsupported absolute URL schemes", () => {
-    const baseUrl = "ftp://api.example.com";
-
-    expect(() => createClient(resolvedFetch(), { baseUrl })).toThrowError(
-      expect.objectContaining({
-        baseUrl,
-        field: "baseUrl",
-        reason: "unsupported-base-url-scheme",
-        scheme: "ftp",
-      })
-    );
-  });
-
-  test("exposes timeout details for invalid timeout values", () => {
-    expect(() => createClient(resolvedFetch(), { timeoutMs: 0 })).toThrowError(
+    expect(error).toEqual(
       expect.objectContaining({
         field: "timeoutMs",
         reason: "invalid-timeout",
-        timeoutMs: 0,
+        timeoutMs,
       })
     );
   });

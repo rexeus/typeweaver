@@ -14,13 +14,11 @@ import {
   createDeleteTodoSuccessResponse,
   createOptionsTodoRequest,
   createOptionsTodoSuccessResponse,
+  TestApplicationError,
+  TestAssertionError,
   TodoHono,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import {
-  TestApplicationError,
-  TestAssertionError,
-} from "../../errors/index.js";
 import {
   aCreateTodoSuccessResponseWithBody,
   buildCreateTodoSuccess,

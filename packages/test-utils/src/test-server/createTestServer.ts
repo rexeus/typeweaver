@@ -4,7 +4,7 @@ import type {
 } from "@rexeus/typeweaver-core";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import { AccountHono, AuthHono, TodoHono } from "..//index.js";
+import { AccountHono, AuthHono, TodoHono } from "../index.js";
 import { HonoAdapter } from "../test-project/output/lib/hono/index.js";
 import { TestServerSetupError } from "./errors/TestServerSetupError.js";
 import { AccountHandlers } from "./handlers/AccountApiHandler.js";

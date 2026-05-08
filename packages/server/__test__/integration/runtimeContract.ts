@@ -1,7 +1,7 @@
 import { payloadTooLargeDefaultError } from "@rexeus/typeweaver-core";
 import getPort from "get-port";
+import { TestAssertionError } from "test-utils";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { TestAssertionError } from "../errors/index.js";
 import { isRuntimeAvailable, spawnRuntimeServer } from "./helpers.js";
 import type { RuntimeConfig, RuntimeServer } from "./helpers.js";
 

@@ -10,14 +10,12 @@ import {
   createCreateTodoSuccessResponse,
   createCreateTodoSuccessResponseBody,
   createTestApp,
+  TestApplicationError,
+  TestAssertionError,
   TodoRouter,
   TypeweaverApp,
 } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
-import {
-  TestApplicationError,
-  TestAssertionError,
-} from "../../errors/index.js";
 import {
   BASE_URL,
   buildCreateTodoSuccess,

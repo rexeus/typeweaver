@@ -1,9 +1,9 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
+import { TestApplicationError } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
 import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
 import { logger } from "../../../src/lib/middleware/logger.js";
-import { TestApplicationError } from "../../errors/index.js";
 import { createServerContext } from "../../helpers.js";
 import type {
   LogData,

@@ -17,9 +17,9 @@ import {
   createUpdateTodoRequest,
   createUpdateTodoStatusRequest,
   defineMiddleware,
+  TestApplicationError,
 } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
-import { TestApplicationError } from "../../errors/index.js";
 import {
   BASE_URL,
   buildFetchRequest,

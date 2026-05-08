@@ -1,8 +1,8 @@
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
+import { TestApplicationError, TestAssertionError } from "test-utils";
 import { describe, expect, test } from "vitest";
 import { MiddlewareNextAlreadyCalledError } from "../../src/lib/errors/index.js";
 import { executeMiddlewarePipeline } from "../../src/lib/Middleware.js";
-import { TestApplicationError } from "../errors/index.js";
 import { createServerContext } from "../helpers.js";
 import type { Middleware } from "../../src/lib/Middleware.js";
 
@@ -19,6 +19,23 @@ const recordingMiddleware =
     order.push(`${name}-after`);
     return response;
   };
+
+const captureMiddlewareNextAlreadyCalledError = async (
+  promise: Promise<unknown>
+): Promise<MiddlewareNextAlreadyCalledError> => {
+  const error = await promise.then(
+    () => undefined,
+    caughtError => caughtError
+  );
+
+  if (!(error instanceof MiddlewareNextAlreadyCalledError)) {
+    throw new TestAssertionError(
+      "Expected MiddlewareNextAlreadyCalledError to be thrown"
+    );
+  }
+
+  return error;
+};
 
 describe("middleware pipeline", () => {
   test("calls the final handler when no middleware is registered", async () => {
@@ -264,11 +281,41 @@ describe("middleware pipeline", () => {
       return next();
     };
 
-    await expect(
+    const error = await captureMiddlewareNextAlreadyCalledError(
       executeMiddlewarePipeline([doubleCallMiddleware], ctx, async () =>
         okResponse()
       )
-    ).rejects.toThrow(MiddlewareNextAlreadyCalledError);
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        middlewareIndex: 0,
+      })
+    );
+  });
+
+  test("reports the non-zero middleware index that calls next twice", async () => {
+    const ctx = createServerContext();
+
+    const passThroughMiddleware: Middleware = async (_ctx, next) => next();
+    const doubleCallMiddleware: Middleware = async (_ctx, next) => {
+      await next();
+      return next();
+    };
+
+    const error = await captureMiddlewareNextAlreadyCalledError(
+      executeMiddlewarePipeline(
+        [passThroughMiddleware, doubleCallMiddleware],
+        ctx,
+        async () => okResponse()
+      )
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        middlewareIndex: 1,
+      })
+    );
   });
 
   test("allows separate middleware instances to each call next once", async () => {

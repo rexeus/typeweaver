@@ -56,6 +56,26 @@ describe("configLoader", () => {
     return configPath;
   };
 
+  const createThrowingModuleSource = (options: {
+    readonly errorName: string;
+    readonly message: string;
+  }): string => `
+    class ${options.errorName} extends Error {
+      name = "${options.errorName}";
+    }
+    throw new ${options.errorName}(${JSON.stringify(options.message)});
+  `;
+
+  const captureConfigPathError = (action: () => void): unknown => {
+    try {
+      action();
+    } catch (error) {
+      return error;
+    }
+
+    return undefined;
+  };
+
   test.each([
     { extension: ".js" },
     { extension: ".mjs" },
@@ -71,12 +91,18 @@ describe("configLoader", () => {
     { extension: ".mts" },
     { extension: ".cts" },
   ])("rejects $extension TypeScript config paths", ({ extension }) => {
-    const assertion = expect(() =>
-      assertSupportedConfigPath(`typeweaver.config${extension}`)
+    const configPath = `typeweaver.config${extension}`;
+    const error = captureConfigPathError(() =>
+      assertSupportedConfigPath(configPath)
     );
 
-    assertion.toThrow(UnsupportedTypeScriptConfigError);
-    assertion.toThrow(/TypeScript config files are not supported/);
+    expect(error).toBeInstanceOf(UnsupportedTypeScriptConfigError);
+    expect(error).toEqual(
+      expect.objectContaining({
+        configPath,
+        extension,
+      })
+    );
   });
 
   test.each([
@@ -84,10 +110,18 @@ describe("configLoader", () => {
     { configPath: "typeweaver.config.toml", scenario: ".toml" },
     { configPath: "typeweaver-config", scenario: "extensionless" },
   ])("rejects $scenario config paths as unsupported", ({ configPath }) => {
-    const assertion = expect(() => assertSupportedConfigPath(configPath));
+    const error = captureConfigPathError(() =>
+      assertSupportedConfigPath(configPath)
+    );
 
-    assertion.toThrow(UnsupportedConfigExtensionError);
-    assertion.toThrow(/accepts only these config extensions/);
+    expect(error).toBeInstanceOf(UnsupportedConfigExtensionError);
+    expect(error).toEqual(
+      expect.objectContaining({
+        configPath,
+        extension: path.extname(configPath).toLowerCase(),
+        supportedExtensions: [".js", ".mjs", ".cjs"],
+      })
+    );
   });
 
   test("leaves absolute config paths unchanged", () => {
@@ -302,13 +336,10 @@ describe("configLoader", () => {
   test("propagates errors thrown while evaluating config modules", async () => {
     const configPath = writeConfigModule(
       ".mjs",
-      `
-        class ConfigEvaluationError extends Error {
-          name = "ConfigEvaluationError";
-        }
-        const originalError = new ConfigEvaluationError("config evaluation failed");
-        throw originalError;
-      `
+      createThrowingModuleSource({
+        errorName: "ConfigEvaluationError",
+        message: "config evaluation failed",
+      })
     );
     const configLoad = loadConfig(configPath);
 

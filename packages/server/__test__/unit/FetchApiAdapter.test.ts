@@ -1,3 +1,4 @@
+import { TestAssertionError, TestIoError, TestSetupError } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
 import {
   createNodeBodyLimitPolicy,
@@ -9,11 +10,6 @@ import {
   ResponseSerializationError,
 } from "../../src/lib/Errors.js";
 import { FetchApiAdapter } from "../../src/lib/FetchApiAdapter.js";
-import {
-  TestAssertionError,
-  TestIoError,
-  TestSetupError,
-} from "../errors/index.js";
 import { BASE_URL } from "../helpers.js";
 
 function createAdapterRequest(path: string, init?: RequestInit): Request {

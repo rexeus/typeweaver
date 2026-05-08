@@ -84,13 +84,16 @@ export abstract class ApiClient {
       });
     }
 
-    if (!this.isAllowedBaseUrl(props.baseUrl)) {
+    const baseUrlValidationError = this.getBaseUrlValidationError(
+      props.baseUrl
+    );
+    if (baseUrlValidationError !== undefined) {
       throw new ApiClientConfigurationError(
         "baseUrl",
-        "unsupported-base-url-scheme",
+        baseUrlValidationError.reason,
         {
           baseUrl: props.baseUrl,
-          scheme: this.getBaseUrlScheme(props.baseUrl),
+          scheme: baseUrlValidationError.scheme,
         }
       );
     }
@@ -355,22 +358,33 @@ export abstract class ApiClient {
     return `${base}${path}`;
   }
 
-  private isAllowedBaseUrl(baseUrl: string): boolean {
+  private getBaseUrlValidationError(baseUrl: string):
+    | {
+        readonly reason: "malformed-base-url" | "unsupported-base-url-scheme";
+        readonly scheme?: string;
+      }
+    | undefined {
+    const scheme = this.getBaseUrlScheme(baseUrl);
+
     if (hasAsciiControlCharacter(baseUrl)) {
-      return false;
+      return { reason: "malformed-base-url", scheme };
     }
 
     const normalizedBaseUrl = baseUrl.trim();
     if (!LEADING_URI_SCHEME_PATTERN.test(normalizedBaseUrl)) {
-      return true;
+      return undefined;
     }
 
     if (!URL.canParse(normalizedBaseUrl)) {
-      return false;
+      return { reason: "malformed-base-url", scheme };
     }
 
     const url = new URL(normalizedBaseUrl);
-    return url.protocol === "http:" || url.protocol === "https:";
+    if (url.protocol === "http:" || url.protocol === "https:") {
+      return undefined;
+    }
+
+    return { reason: "unsupported-base-url-scheme", scheme };
   }
 
   private getBaseUrlScheme(baseUrl: string): string | undefined {

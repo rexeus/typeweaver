@@ -310,7 +310,7 @@ function fromZodSet(zodSet: $ZodSet): TypeNode {
 
 function fromZodLiteral(zodLiteral: $ZodLiteral): TypeNode {
   if (zodLiteral._zod.def.values.length === 0) {
-    throw new EmptyZodLiteralError("ZodLiteral");
+    throw new EmptyZodLiteralError();
   }
   const types = zodLiteral._zod.def.values.map(fromLiteralValue);
 

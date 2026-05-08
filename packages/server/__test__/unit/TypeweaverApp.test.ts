@@ -15,6 +15,11 @@ import type {
   IResponseValidator,
   ITypedHttpResponse,
 } from "@rexeus/typeweaver-core";
+import {
+  captureError,
+  TestApplicationError,
+  TestAssertionError,
+} from "test-utils";
 import { describe, expect, test, vi } from "vitest";
 import {
   MissingRouterForPrefixedMountError,
@@ -24,7 +29,6 @@ import {
 import { defineMiddleware } from "../../src/lib/TypedMiddleware.js";
 import { TypeweaverApp } from "../../src/lib/TypeweaverApp.js";
 import { TypeweaverRouter } from "../../src/lib/TypeweaverRouter.js";
-import { TestApplicationError } from "../errors/index.js";
 import {
   BASE_URL,
   del,
@@ -1812,9 +1816,20 @@ describe("TypeweaverApp", () => {
   describe("Defensive Validation", () => {
     test("should throw when route() is called with prefix but no router", () => {
       const app = new TypeweaverApp();
+
       // @ts-expect-error — testing runtime guard
-      expect(() => app.route("/prefix")).toThrow(
-        MissingRouterForPrefixedMountError
+      const error = captureError(() => app.route("/prefix"));
+
+      if (!(error instanceof MissingRouterForPrefixedMountError)) {
+        throw new TestAssertionError(
+          "Expected MissingRouterForPrefixedMountError to be thrown"
+        );
+      }
+
+      expect(error).toEqual(
+        expect.objectContaining({
+          prefix: "/prefix",
+        })
       );
     });
   });

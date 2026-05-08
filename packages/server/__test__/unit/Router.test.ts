@@ -1,4 +1,5 @@
 import type { HttpMethod } from "@rexeus/typeweaver-core";
+import { captureError, TestAssertionError } from "test-utils";
 import { assert, describe, expect, test } from "vitest";
 import {
   ConflictingPathParameterNameError,
@@ -52,6 +53,34 @@ const routeWithRegisteredMethod = (
   ...route(method, path, operationId),
   method: method as HttpMethod,
 });
+
+const captureDuplicateRouteRegistrationError = (
+  action: () => void
+): DuplicateRouteRegistrationError => {
+  const error = captureError(action);
+
+  if (!(error instanceof DuplicateRouteRegistrationError)) {
+    throw new TestAssertionError(
+      "Expected DuplicateRouteRegistrationError to be thrown"
+    );
+  }
+
+  return error;
+};
+
+const captureConflictingPathParameterNameError = (
+  action: () => void
+): ConflictingPathParameterNameError => {
+  const error = captureError(action);
+
+  if (!(error instanceof ConflictingPathParameterNameError)) {
+    throw new TestAssertionError(
+      "Expected ConflictingPathParameterNameError to be thrown"
+    );
+  }
+
+  return error;
+};
 
 const expectMatch = (
   router: Router,
@@ -662,8 +691,15 @@ describe("Router", () => {
       const router = new Router();
       router.add(route("GET", "/todos"));
 
-      expect(() => router.add(route("GET", "/todos"))).toThrow(
-        DuplicateRouteRegistrationError
+      const error = captureDuplicateRouteRegistrationError(() =>
+        router.add(route("GET", "/todos"))
+      );
+
+      expect(error).toEqual(
+        expect.objectContaining({
+          method: "GET",
+          path: "/todos",
+        })
       );
     });
 
@@ -671,17 +707,31 @@ describe("Router", () => {
       const router = new Router();
       router.add(route("GET", "/todos"));
 
-      expect(() =>
+      const error = captureDuplicateRouteRegistrationError(() =>
         router.add(routeWithRegisteredMethod("get", "/todos"))
-      ).toThrow(DuplicateRouteRegistrationError);
+      );
+
+      expect(error).toEqual(
+        expect.objectContaining({
+          method: "GET",
+          path: "/todos",
+        })
+      );
     });
 
     test("rejects duplicate parameterized routes", () => {
       const router = new Router();
       router.add(route("GET", "/todos/:todoId"));
 
-      expect(() => router.add(route("GET", "/todos/:todoId"))).toThrow(
-        DuplicateRouteRegistrationError
+      const error = captureDuplicateRouteRegistrationError(() =>
+        router.add(route("GET", "/todos/:todoId"))
+      );
+
+      expect(error).toEqual(
+        expect.objectContaining({
+          method: "GET",
+          path: "/todos/:todoId",
+        })
       );
     });
 
@@ -702,8 +752,15 @@ describe("Router", () => {
         const router = new Router();
         router.add(route("GET", registeredPath));
 
-        expect(() => router.add(route("GET", duplicatePath))).toThrow(
-          DuplicateRouteRegistrationError
+        const error = captureDuplicateRouteRegistrationError(() =>
+          router.add(route("GET", duplicatePath))
+        );
+
+        expect(error).toEqual(
+          expect.objectContaining({
+            method: "GET",
+            path: duplicatePath,
+          })
         );
       }
     );
@@ -732,8 +789,16 @@ describe("Router", () => {
       const router = new Router();
       router.add(route("GET", "/users/:userId"));
 
-      expect(() => router.add(route("GET", "/users/:id/profile"))).toThrow(
-        ConflictingPathParameterNameError
+      const error = captureConflictingPathParameterNameError(() =>
+        router.add(route("GET", "/users/:id/profile"))
+      );
+
+      expect(error).toEqual(
+        expect.objectContaining({
+          path: "/users/:id/profile",
+          existingParameterName: "userId",
+          conflictingParameterName: "id",
+        })
       );
     });
 
@@ -741,8 +806,16 @@ describe("Router", () => {
       const router = new Router();
       router.add(route("GET", "/users/:userId"));
 
-      expect(() => router.add(route("POST", "/users/:id"))).toThrow(
-        ConflictingPathParameterNameError
+      const error = captureConflictingPathParameterNameError(() =>
+        router.add(route("POST", "/users/:id"))
+      );
+
+      expect(error).toEqual(
+        expect.objectContaining({
+          path: "/users/:id",
+          existingParameterName: "userId",
+          conflictingParameterName: "id",
+        })
       );
     });
   });

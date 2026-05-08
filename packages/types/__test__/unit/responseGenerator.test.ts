@@ -10,10 +10,10 @@ import type {
   NormalizedSpec,
 } from "@rexeus/typeweaver-gen";
 import { pascalCase } from "polycase";
+import { TestAssertionError } from "test-utils";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import { generate } from "../../src/responseGenerator.js";
-import { TestAssertionError } from "../errors/index.js";
 import type { ResponseGenerationContext } from "../../src/responseGenerator.js";
 
 function aCanonicalResponse(

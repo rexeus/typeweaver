@@ -15,10 +15,10 @@ import {
   DeleteTodoResponseValidator,
   OptionsTodoResponseValidator,
   ResponseValidator,
+  TestObjectTrapError,
 } from "test-utils";
 import { describe, expect, expectTypeOf, test } from "vitest";
 import { z } from "zod";
-import { TestObjectTrapError } from "../../errors/index.js";
 import type {
   CreateTodoResponse,
   DeleteTodoResponse,

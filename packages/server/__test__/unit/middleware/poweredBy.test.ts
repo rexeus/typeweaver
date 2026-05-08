@@ -1,8 +1,8 @@
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
+import { TestApplicationError } from "test-utils";
 import { describe, expect, test } from "vitest";
 import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
 import { poweredBy } from "../../../src/lib/middleware/poweredBy.js";
-import { TestApplicationError } from "../../errors/index.js";
 import { createServerContext } from "../../helpers.js";
 import type { PoweredByOptions } from "../../../src/lib/middleware/poweredBy.js";
 

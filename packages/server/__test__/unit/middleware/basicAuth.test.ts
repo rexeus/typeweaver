@@ -1,9 +1,9 @@
 import { unauthorizedDefaultError } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
+import { TestIoError } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
 import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
 import { basicAuth } from "../../../src/lib/middleware/basicAuth.js";
-import { TestIoError } from "../../errors/index.js";
 import { createServerContext } from "../../helpers.js";
 import type { BasicAuthOptions } from "../../../src/lib/middleware/basicAuth.js";
 import type { ServerContext } from "../../../src/lib/ServerContext.js";
