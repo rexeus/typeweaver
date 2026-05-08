@@ -3,9 +3,14 @@ import path from "node:path";
 import { renderTemplate } from "@rexeus/typeweaver-gen";
 import type { GeneratorContext } from "@rexeus/typeweaver-gen";
 
+export type IndexFileGenerationContext = Pick<
+  GeneratorContext,
+  "outputDir" | "getGeneratedFiles"
+>;
+
 export function generateIndexFiles(
   templateDir: string,
-  context: GeneratorContext
+  context: IndexFileGenerationContext
 ): void {
   const templateFilePath = path.join(templateDir, "Index.ejs");
   const template = fs.readFileSync(templateFilePath, "utf8");
@@ -21,12 +26,21 @@ export function generateIndexFiles(
     const stripped = normalizedFile.replace(/\.ts$/, "");
     const firstSlash = stripped.indexOf("/");
 
+    if (stripped === "index") {
+      continue;
+    }
+
     if (firstSlash === -1) {
       rootFiles.add(`./${withJsExt}`);
       continue;
     }
 
     const firstSegment = stripped.slice(0, firstSlash);
+
+    if (stripped === "lib/index") {
+      existingBarrels.add("lib");
+      continue;
+    }
 
     if (firstSegment === "lib") {
       const secondSlash = stripped.indexOf("/", firstSlash + 1);

@@ -15,7 +15,7 @@ export const getResolvedConfigPath = (
 ): string => {
   return path.isAbsolute(configPath)
     ? configPath
-    : path.join(currentWorkingDirectory, configPath);
+    : path.resolve(currentWorkingDirectory, configPath);
 };
 
 export const assertSupportedConfigPath = (configPath: string): void => {
