@@ -168,10 +168,8 @@ function isPreflightCorsRequest(request: CorsRequest): boolean {
   return (
     request.method === "OPTIONS" &&
     request.origin !== undefined &&
-    readSingletonHeader(
-      request.header,
-      "access-control-request-method"
-    ) !== undefined
+    readSingletonHeader(request.header, "access-control-request-method") !==
+      undefined
   );
 }
 

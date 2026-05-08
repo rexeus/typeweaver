@@ -1,10 +1,10 @@
 import { HttpStatusCode } from "./HttpStatusCode.js";
+import type { IHttpHeader } from "./HttpHeader.js";
 import type {
   IHttpResponse,
   ITypedHttpResponse,
   ITypedHttpResponseHeader,
 } from "./HttpResponse.js";
-import type { IHttpHeader } from "./HttpHeader.js";
 
 const allowedHttpStatusCodes = new Set(
   Object.values(HttpStatusCode).filter(
