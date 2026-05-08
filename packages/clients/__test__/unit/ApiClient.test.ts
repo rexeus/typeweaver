@@ -6,8 +6,15 @@ import type {
   IHttpQuery,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
+import {
+  captureError,
+  NamedTestError,
+  TestAssertionError,
+  TestIoError,
+} from "test-utils";
 import { describe, expect, test, vi } from "vitest";
 import { ApiClient } from "../../src/lib/ApiClient.js";
+import { ApiClientConfigurationError } from "../../src/lib/errors/ApiClientConfigurationError.js";
 import { NetworkError } from "../../src/lib/NetworkError.js";
 import { PathParameterError } from "../../src/lib/PathParameterError.js";
 import { RequestCommand } from "../../src/lib/RequestCommand.js";
@@ -80,13 +87,27 @@ function createClient(
   });
 }
 
+function captureApiClientConfigurationError(
+  action: () => void
+): ApiClientConfigurationError {
+  const error = captureError(action);
+
+  if (!(error instanceof ApiClientConfigurationError)) {
+    throw new TestAssertionError(
+      "Expected ApiClientConfigurationError to be thrown"
+    );
+  }
+
+  return error;
+}
+
 function getFetchCall(mockFetch: typeof globalThis.fetch): {
   readonly url: string;
   readonly init: RequestInit;
 } {
   const call = vi.mocked(mockFetch).mock.calls[0];
   if (!call) {
-    throw new Error("Expected fetch to have been called");
+    throw new TestAssertionError("Expected fetch to have been called");
   }
 
   return {
@@ -154,8 +175,17 @@ describe("ApiClient constructor", () => {
     { case: "javascript", baseUrl: "javascript:alert(1)" },
     { case: "data", baseUrl: "data:text/plain,hello" },
   ])("rejects absolute non-http(s) $case baseUrl", ({ baseUrl }) => {
-    expect(() => createClient(resolvedFetch(), { baseUrl })).toThrow(
-      "Absolute base URLs must use http(s); relative base URLs are allowed"
+    const error = captureApiClientConfigurationError(() =>
+      createClient(resolvedFetch(), { baseUrl })
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        baseUrl,
+        field: "baseUrl",
+        reason: "unsupported-base-url-scheme",
+        scheme: baseUrl.split(":", 1)[0]?.toLowerCase(),
+      })
     );
   });
 
@@ -172,9 +202,52 @@ describe("ApiClient constructor", () => {
       case: "carriage return inserted after an FTP scheme",
       baseUrl: "ftp:\r//api.example.com",
     },
+    {
+      case: "malformed HTTP absolute URL",
+      baseUrl: "http://%",
+    },
   ])("rejects $case baseUrl", ({ baseUrl }) => {
-    expect(() => createClient(resolvedFetch(), { baseUrl })).toThrow(
-      "Absolute base URLs must use http(s); relative base URLs are allowed"
+    const error = captureApiClientConfigurationError(() =>
+      createClient(resolvedFetch(), { baseUrl })
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        baseUrl,
+        field: "baseUrl",
+        reason: "malformed-base-url",
+      })
+    );
+  });
+
+  test("classifies a malformed absolute URL with a visible scheme as malformed", () => {
+    const error = captureApiClientConfigurationError(() =>
+      createClient(resolvedFetch(), { baseUrl: "ftp://%" })
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        baseUrl: "ftp://%",
+        field: "baseUrl",
+        reason: "malformed-base-url",
+        scheme: "ftp",
+      })
+    );
+  });
+
+  test("classifies a relative base URL with ASCII control characters as malformed", () => {
+    const baseUrl = "/api\nv1";
+
+    const error = captureApiClientConfigurationError(() =>
+      createClient(resolvedFetch(), { baseUrl })
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        baseUrl,
+        field: "baseUrl",
+        reason: "malformed-base-url",
+      })
     );
   });
 
@@ -182,15 +255,32 @@ describe("ApiClient constructor", () => {
     { case: "empty", baseUrl: "" },
     { case: "whitespace-only", baseUrl: "   \t\n" },
   ])("rejects $case baseUrl", ({ baseUrl }) => {
-    expect(() => createClient(resolvedFetch(), { baseUrl })).toThrow(
-      "Base URL must be provided"
+    const error = captureApiClientConfigurationError(() =>
+      createClient(resolvedFetch(), { baseUrl })
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        baseUrl,
+        field: "baseUrl",
+        reason: "missing-base-url",
+      })
     );
   });
 
   test("rejects a missing baseUrl with the validation error", () => {
     const props = { fetchFn: resolvedFetch() } as unknown as ApiClientProps;
 
-    expect(() => new TestApiClient(props)).toThrow("Base URL must be provided");
+    const error = captureApiClientConfigurationError(
+      () => new TestApiClient(props)
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        field: "baseUrl",
+        reason: "missing-base-url",
+      })
+    );
   });
 
   test("rejects a non-string baseUrl with the validation error", () => {
@@ -199,7 +289,17 @@ describe("ApiClient constructor", () => {
       fetchFn: resolvedFetch(),
     } satisfies ApiClientProps;
 
-    expect(() => new TestApiClient(props)).toThrow("Base URL must be provided");
+    const error = captureApiClientConfigurationError(
+      () => new TestApiClient(props)
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        baseUrl: props.baseUrl,
+        field: "baseUrl",
+        reason: "missing-base-url",
+      })
+    );
   });
 
   test.each([
@@ -208,8 +308,16 @@ describe("ApiClient constructor", () => {
     { case: "NaN", timeoutMs: Number.NaN },
     { case: "Infinity", timeoutMs: Infinity },
   ])("rejects $case timeoutMs", ({ timeoutMs }) => {
-    expect(() => createClient(resolvedFetch(), { timeoutMs })).toThrow(
-      "timeoutMs must be a positive finite number"
+    const error = captureApiClientConfigurationError(() =>
+      createClient(resolvedFetch(), { timeoutMs })
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        field: "timeoutMs",
+        reason: "invalid-timeout",
+        timeoutMs,
+      })
     );
   });
 
@@ -781,7 +889,7 @@ describe("ApiClient response parsing", () => {
   });
 
   test("wraps response body read failures as ResponseParseError", async () => {
-    const cause = new Error("body stream interrupted");
+    const cause = new TestIoError("body stream interrupted");
     const response = new Response("body", {
       status: 200,
       headers: { "content-type": "text/plain" },
@@ -804,7 +912,7 @@ describe("ApiClient response parsing", () => {
   });
 
   test("wraps binary response body read failures as ResponseParseError", async () => {
-    const cause = new Error("binary stream interrupted");
+    const cause = new TestIoError("binary stream interrupted");
     const response = new Response(new Uint8Array([1]), {
       status: 206,
       headers: { "content-type": "application/octet-stream" },
@@ -998,8 +1106,7 @@ describe("ApiClient network errors and timeout signals", () => {
   ] as const)(
     "maps non-DOM $case fetch failures to $code NetworkError",
     async ({ name, code }) => {
-      const cause = new Error("request failed");
-      cause.name = name;
+      const cause = new NamedTestError(name, "request failed");
       const client = createClient(rejectedFetch(cause));
 
       await expect(client.send(new TestRequestCommand())).rejects.toSatisfy(
@@ -1043,7 +1150,9 @@ describe("ApiClient network errors and timeout signals", () => {
     const mockFetch = vi.fn<typeof globalThis.fetch>((_input, init) => {
       const signal = init?.signal;
       if (signal == null) {
-        return Promise.reject(new Error("Expected fetch to receive a signal"));
+        return Promise.reject(
+          new TestAssertionError("Expected fetch to receive a signal")
+        );
       }
 
       return new Promise<Response>((_resolve, reject) => {
@@ -1104,7 +1213,7 @@ describe("ApiClient error classes", () => {
   });
 
   test("PathParameterError exposes name, message, metadata, and cause", () => {
-    const cause = new Error("underlying issue");
+    const cause = new TestIoError("underlying issue");
     const error = new PathParameterError(
       "Path parameter 'slug' is not found in path '/posts/:id'",
       "slug",

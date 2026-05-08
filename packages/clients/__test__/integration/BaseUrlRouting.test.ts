@@ -10,6 +10,7 @@ import {
   createTodoNotFoundErrorResponse,
   GetTodoRequestCommand,
   ListTodosRequestCommand,
+  TestSetupError,
   TodoClient,
 } from "test-utils";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -105,7 +106,9 @@ async function createRecordingListTodosServer(
 
   const address = server.address();
   if (address === null || typeof address === "string") {
-    throw new Error("Expected recording server to listen on a TCP port");
+    throw new TestSetupError(
+      "Expected recording server to listen on a TCP port"
+    );
   }
 
   const result = {

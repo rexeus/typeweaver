@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { afterEach, describe, expect, test } from "vitest";
+import { MissingCanonicalResponseError } from "../src/plugins/errors/MissingCanonicalResponseError.js";
 import { createPluginContextBuilder } from "../src/plugins/pluginContext.js";
 import type {
   NormalizedResponse,
@@ -212,8 +213,9 @@ describe("createPluginContextBuilder", () => {
     const readMissingResponse = () =>
       generatorContext.getCanonicalResponse("unauthorized");
 
+    expect(readMissingResponse).toThrowError(MissingCanonicalResponseError);
     expect(readMissingResponse).toThrowError(
-      "Missing canonical response 'unauthorized'."
+      "Missing canonical response 'unauthorized' in the normalized spec."
     );
   });
 

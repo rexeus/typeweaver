@@ -15,6 +15,7 @@ import {
   DeleteTodoResponseValidator,
   OptionsTodoResponseValidator,
   ResponseValidator,
+  TestObjectTrapError,
 } from "test-utils";
 import { describe, expect, expectTypeOf, test } from "vitest";
 import { z } from "zod";
@@ -512,7 +513,7 @@ describe("Generated ResponseValidator", () => {
       const response = Object.defineProperty({}, "statusCode", {
         enumerable: true,
         get() {
-          throw new Error("statusCode getter");
+          throw new TestObjectTrapError("statusCode getter");
         },
       });
 

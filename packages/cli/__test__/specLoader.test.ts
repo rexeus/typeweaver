@@ -2,8 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { afterEach, describe, expect, test } from "vitest";
+import { SpecBundleOutputMissingError } from "../src/generators/spec/errors/SpecBundleOutputMissingError.js";
 import { InvalidSpecEntrypointError } from "../src/generators/spec/InvalidSpecEntrypointError.js";
-import { createWrapperImportSpecifier } from "../src/generators/spec/specBundler.js";
+import {
+  bundle,
+  createWrapperImportSpecifier,
+} from "../src/generators/spec/specBundler.js";
 import { isSpecDefinition } from "../src/generators/spec/specGuards.js";
 import { loadSpec } from "../src/generators/specLoader.js";
 
@@ -78,6 +82,19 @@ describe("SpecLoader", () => {
       specOutputDir: project.outputDir,
     });
   };
+
+  const createThrowingModuleSource = (options: {
+    readonly errorName: string;
+    readonly message: string;
+  }): string => `
+    export const spec = (() => {
+      class ${options.errorName} extends Error {
+        name = "${options.errorName}";
+      }
+
+      throw new ${options.errorName}(${JSON.stringify(options.message)});
+    })();
+  `;
 
   const expectBundledArtifacts = (outputDir: string): void => {
     expect(fs.readdirSync(outputDir).sort()).toEqual(["spec.d.ts", "spec.js"]);
@@ -437,6 +454,29 @@ describe("SpecLoader", () => {
     ).toBe("../spec source/spec.ts");
   });
 
+  test("rejects successful spec builds that do not create the bundled output", async () => {
+    const project = createTempProject();
+    const inputFile = path.join(project.projectDir, "spec.ts");
+
+    const bundling = bundle(
+      {
+        inputFile,
+        specOutputDir: project.outputDir,
+      },
+      {
+        build: async () => undefined,
+        existsSync: () => false,
+      }
+    );
+
+    await expect(bundling).rejects.toBeInstanceOf(SpecBundleOutputMissingError);
+    await expect(bundling).rejects.toMatchObject({
+      inputFile,
+      bundledSpecFile: path.join(project.outputDir, "spec.js"),
+      specOutputDir: project.outputDir,
+    });
+  });
+
   test("loads TypeScript specs with extensionless relative imports", async () => {
     const project = createTempProject();
 
@@ -589,11 +629,10 @@ describe("SpecLoader", () => {
     const specFile = writeSpecEntrypoint(
       project,
       "spec.ts",
-      `
-        export const spec = (() => {
-          throw new Error("Spec evaluation failed");
-        })();
-      `
+      createThrowingModuleSource({
+        errorName: "SpecEvaluationError",
+        message: "Spec evaluation failed",
+      })
     );
 
     await expect(loadProjectSpec(project, specFile)).rejects.toThrow(

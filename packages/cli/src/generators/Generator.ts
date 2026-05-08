@@ -7,6 +7,7 @@ import {
 } from "@rexeus/typeweaver-gen";
 import type { PluginConfig, TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { TypesPlugin } from "@rexeus/typeweaver-types";
+import { UnsafeCleanTargetError } from "./errors/UnsafeCleanTargetError.js";
 import { formatCode } from "./formatter.js";
 import { generateIndexFiles } from "./indexFileGenerator.js";
 import { loadPlugins } from "./pluginLoader.js";
@@ -21,9 +22,7 @@ export const assertSafeCleanTarget = (
 ): void => {
   const trimmedOutputDir = outputDir.trim();
   if (trimmedOutputDir.length === 0) {
-    throw new Error(
-      "Refusing to clean an empty output directory path. Pass a dedicated generated output directory instead."
-    );
+    throw new UnsafeCleanTargetError(outputDir, "empty-path");
   }
 
   const resolvedWorkingDirectory = path.resolve(currentWorkingDirectory);
@@ -38,18 +37,21 @@ export const assertSafeCleanTarget = (
   const filesystemRoot = path.parse(canonicalOutputDir).root;
 
   if (canonicalOutputDir === filesystemRoot) {
-    throw new Error(
-      `Refusing to clean '${outputDir}' because it resolves to the filesystem root.`
-    );
+    throw new UnsafeCleanTargetError(outputDir, "filesystem-root", {
+      resolvedOutputDir,
+      currentWorkingDirectory: resolvedWorkingDirectory,
+      filesystemRoot,
+    });
   }
 
   if (
     resolvedOutputDir === resolvedWorkingDirectory ||
     canonicalOutputDir === canonicalWorkingDirectory
   ) {
-    throw new Error(
-      `Refusing to clean '${outputDir}' because it resolves to the current working directory.`
-    );
+    throw new UnsafeCleanTargetError(outputDir, "current-working-directory", {
+      resolvedOutputDir,
+      currentWorkingDirectory: resolvedWorkingDirectory,
+    });
   }
 
   const logicalProtectedWorkspaceRoot = findProtectedWorkspaceRoot(
@@ -69,9 +71,11 @@ export const assertSafeCleanTarget = (
   );
 
   if (protectedWorkspaceRootTarget !== undefined) {
-    throw new Error(
-      `Refusing to clean '${outputDir}' because it resolves to the inferred workspace root '${protectedWorkspaceRootTarget}'. Choose a dedicated output subdirectory instead.`
-    );
+    throw new UnsafeCleanTargetError(outputDir, "workspace-root", {
+      resolvedOutputDir,
+      currentWorkingDirectory: resolvedWorkingDirectory,
+      protectedWorkspaceRoot: protectedWorkspaceRootTarget,
+    });
   }
 
   if (
@@ -79,8 +83,13 @@ export const assertSafeCleanTarget = (
     (isSameOrDescendantOf(resolvedWorkingDirectory, resolvedOutputDir) ||
       isSameOrDescendantOf(canonicalWorkingDirectory, canonicalOutputDir))
   ) {
-    throw new Error(
-      `Refusing to clean '${outputDir}' because it resolves to an ancestor directory of the current working directory. Choose a dedicated output subdirectory instead.`
+    throw new UnsafeCleanTargetError(
+      outputDir,
+      "ancestor-of-current-working-directory",
+      {
+        resolvedOutputDir,
+        currentWorkingDirectory: resolvedWorkingDirectory,
+      }
     );
   }
 };

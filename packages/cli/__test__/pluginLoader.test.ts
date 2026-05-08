@@ -10,6 +10,7 @@ import type {
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { PluginLoadingFailure } from "../src/generators/errors/PluginLoadingFailure.js";
 import { loadPlugins } from "../src/generators/pluginLoader.js";
+import { TestAssertionError } from "./errors/index.js";
 import type { PluginRegistrar } from "../src/generators/pluginLoader.js";
 
 type RegisteredPlugin = {
@@ -42,6 +43,21 @@ const configWithoutPlugins = (): TypeweaverConfig => ({
 
 const importPathForFile = (filePath: string): string =>
   pathToFileURL(filePath).href;
+
+const createThrowingModuleSource = (options: {
+  readonly errorName: string;
+  readonly message: string;
+  readonly indent?: string;
+}): string[] => {
+  const indent = options.indent ?? "";
+
+  return [
+    `${indent}class ${options.errorName} extends Error {`,
+    `${indent}  name = "${options.errorName}";`,
+    `${indent}}`,
+    `${indent}throw new ${options.errorName}(${JSON.stringify(options.message)});`,
+  ];
+};
 
 function createRegistry(): {
   readonly registry: PluginRegistrar;
@@ -116,7 +132,7 @@ describe("pluginLoader", () => {
     );
 
     if (!(failure instanceof PluginLoadingFailure)) {
-      throw new Error(
+      throw new TestAssertionError(
         "Expected plugin loading to fail with PluginLoadingFailure"
       );
     }
@@ -466,9 +482,12 @@ describe("pluginLoader", () => {
   });
 
   test("captures module evaluation failures in plugin loading attempts", async () => {
-    const pluginPath = writePluginModule([
-      'throw new Error("evaluation failed");',
-    ]);
+    const pluginPath = writePluginModule(
+      createThrowingModuleSource({
+        errorName: "PluginEvaluationError",
+        message: "evaluation failed",
+      })
+    );
     const { registry } = createRegistry();
 
     const failure = await capturePluginLoadingFailure(
@@ -516,7 +535,11 @@ describe("pluginLoader", () => {
     const pluginPath = writePluginModule([
       "export class BrokenPlugin {",
       "  constructor() {",
-      '    throw new Error("constructor failed");',
+      ...createThrowingModuleSource({
+        errorName: "PluginConstructorError",
+        message: "constructor failed",
+        indent: "    ",
+      }),
       "  }",
       "}",
     ]);

@@ -7,6 +7,9 @@ import {
   getResolvedConfigPath,
   loadConfig,
 } from "../src/configLoader.js";
+import { InvalidConfigExportError } from "../src/errors/InvalidConfigExportError.js";
+import { UnsupportedConfigExtensionError } from "../src/errors/UnsupportedConfigExtensionError.js";
+import { UnsupportedTypeScriptConfigError } from "../src/errors/UnsupportedTypeScriptConfigError.js";
 
 describe("configLoader", () => {
   const tempDirs: string[] = [];
@@ -53,6 +56,26 @@ describe("configLoader", () => {
     return configPath;
   };
 
+  const createThrowingModuleSource = (options: {
+    readonly errorName: string;
+    readonly message: string;
+  }): string => `
+    class ${options.errorName} extends Error {
+      name = "${options.errorName}";
+    }
+    throw new ${options.errorName}(${JSON.stringify(options.message)});
+  `;
+
+  const captureConfigPathError = (action: () => void): unknown => {
+    try {
+      action();
+    } catch (error) {
+      return error;
+    }
+
+    return undefined;
+  };
+
   test.each([
     { extension: ".js" },
     { extension: ".mjs" },
@@ -68,9 +91,18 @@ describe("configLoader", () => {
     { extension: ".mts" },
     { extension: ".cts" },
   ])("rejects $extension TypeScript config paths", ({ extension }) => {
-    expect(() =>
-      assertSupportedConfigPath(`typeweaver.config${extension}`)
-    ).toThrow(/TypeScript config files are no longer supported/);
+    const configPath = `typeweaver.config${extension}`;
+    const error = captureConfigPathError(() =>
+      assertSupportedConfigPath(configPath)
+    );
+
+    expect(error).toBeInstanceOf(UnsupportedTypeScriptConfigError);
+    expect(error).toEqual(
+      expect.objectContaining({
+        configPath,
+        extension,
+      })
+    );
   });
 
   test.each([
@@ -78,8 +110,17 @@ describe("configLoader", () => {
     { configPath: "typeweaver.config.toml", scenario: ".toml" },
     { configPath: "typeweaver-config", scenario: "extensionless" },
   ])("rejects $scenario config paths as unsupported", ({ configPath }) => {
-    expect(() => assertSupportedConfigPath(configPath)).toThrow(
-      /only accepts \.js, \.mjs, or \.cjs/
+    const error = captureConfigPathError(() =>
+      assertSupportedConfigPath(configPath)
+    );
+
+    expect(error).toBeInstanceOf(UnsupportedConfigExtensionError);
+    expect(error).toEqual(
+      expect.objectContaining({
+        configPath,
+        extension: path.extname(configPath).toLowerCase(),
+        supportedExtensions: [".js", ".mjs", ".cjs"],
+      })
     );
   });
 
@@ -204,9 +245,12 @@ describe("configLoader", () => {
       `
     );
 
-    await expect(loadConfig(configPath)).rejects.toThrow(
-      /must choose a single export style/
-    );
+    const configLoad = loadConfig(configPath);
+
+    await expect(configLoad).rejects.toBeInstanceOf(InvalidConfigExportError);
+    await expect(configLoad).rejects.toMatchObject({
+      reason: "both-default-and-named-config",
+    });
   });
 
   test.each([
@@ -228,9 +272,12 @@ describe("configLoader", () => {
         `
       );
 
-      await expect(loadConfig(configPath)).rejects.toThrow(
-        /default export must be the config object itself/
-      );
+      const configLoad = loadConfig(configPath);
+
+      await expect(configLoad).rejects.toBeInstanceOf(InvalidConfigExportError);
+      await expect(configLoad).rejects.toMatchObject({
+        reason: "default-namespace-wrapper",
+      });
     }
   );
 
@@ -242,8 +289,8 @@ describe("configLoader", () => {
       `
     );
 
-    await expect(loadConfig(configPath)).rejects.toThrow(
-      /Unsupported config file extension.*only accepts \.js, \.mjs, or \.cjs/
+    await expect(loadConfig(configPath)).rejects.toBeInstanceOf(
+      UnsupportedConfigExtensionError
     );
   });
 
@@ -256,9 +303,12 @@ describe("configLoader", () => {
       `
     );
 
-    await expect(loadConfig(configPath)).rejects.toThrow(
-      /must export its config via 'export default' or 'export const config = \.\.\.'/
-    );
+    const configLoad = loadConfig(configPath);
+
+    await expect(configLoad).rejects.toBeInstanceOf(InvalidConfigExportError);
+    await expect(configLoad).rejects.toMatchObject({
+      reason: "missing-config-export",
+    });
   });
 
   test.each([
@@ -275,19 +325,21 @@ describe("configLoader", () => {
       `export default ${exportExpression};`
     );
 
-    await expect(loadConfig(configPath)).rejects.toThrow(
-      /must export a config object via 'export default' or 'export const config = \.\.\.'/
-    );
+    const configLoad = loadConfig(configPath);
+
+    await expect(configLoad).rejects.toBeInstanceOf(InvalidConfigExportError);
+    await expect(configLoad).rejects.toMatchObject({
+      reason: "non-object-config",
+    });
   });
 
   test("propagates errors thrown while evaluating config modules", async () => {
     const configPath = writeConfigModule(
       ".mjs",
-      `
-        const originalError = new Error("config evaluation failed");
-        originalError.name = "ConfigEvaluationError";
-        throw originalError;
-      `
+      createThrowingModuleSource({
+        errorName: "ConfigEvaluationError",
+        message: "config evaluation failed",
+      })
     );
     const configLoad = loadConfig(configPath);
 

@@ -16,6 +16,7 @@ import {
   GetFileMetadataRequestCommand,
   PathParameterError,
   ResponseParseError,
+  TestAssertionError,
   UploadFileRequestCommand,
 } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
@@ -49,7 +50,7 @@ function getFetchCall(mockFetch: typeof globalThis.fetch): FetchCallDetails {
 
   expect(call).toBeDefined();
   if (call === undefined) {
-    throw new Error("Expected fetch to be called");
+    throw new TestAssertionError("Expected fetch to be called");
   }
 
   const [url, init] = call;
@@ -57,7 +58,9 @@ function getFetchCall(mockFetch: typeof globalThis.fetch): FetchCallDetails {
   expect(init).toBeDefined();
 
   if (typeof url !== "string" || init === undefined) {
-    throw new Error("Expected fetch to be called with a URL and init");
+    throw new TestAssertionError(
+      "Expected fetch to be called with a URL and init"
+    );
   }
 
   return { url, init };
@@ -72,7 +75,7 @@ function expectResponseType<
 ): Extract<TResponse, { readonly type: TType }> {
   expect(result.type).toBe(expectedType);
   if (result.type !== expectedType) {
-    throw new Error(`Expected response type ${expectedType}`);
+    throw new TestAssertionError(`Expected response type ${expectedType}`);
   }
   return result as Extract<TResponse, { readonly type: TType }>;
 }

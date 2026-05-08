@@ -1,5 +1,6 @@
 import { payloadTooLargeDefaultError } from "@rexeus/typeweaver-core";
 import getPort from "get-port";
+import { TestAssertionError } from "test-utils";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { isRuntimeAvailable, spawnRuntimeServer } from "./helpers.js";
 import type { RuntimeConfig, RuntimeServer } from "./helpers.js";
@@ -257,7 +258,7 @@ function titleForJsonTodoBodyWithByteLength(targetBytes: number): string {
   const titleBytes = targetBytes - emptyTitleBodyBytes;
 
   if (titleBytes < 0) {
-    throw new Error(
+    throw new TestAssertionError(
       `Cannot build a todo JSON body with title in ${targetBytes} bytes`
     );
   }

@@ -1,5 +1,6 @@
 import { unauthorizedDefaultError } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
+import { TestIoError } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
 import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
 import { bearerAuth } from "../../../src/lib/middleware/bearerAuth.js";
@@ -154,7 +155,7 @@ describe("bearerAuth", () => {
     const response = await executeBearerAuth({
       header: { authorization: "Bearer some-token" },
       verifyToken: () => {
-        throw new Error("DB connection failed");
+        throw new TestIoError("DB connection failed");
       },
     });
 
@@ -166,7 +167,8 @@ describe("bearerAuth", () => {
 
     const response = await executeBearerAuth({
       header: { authorization: "Bearer some-token" },
-      verifyToken: () => Promise.reject(new Error("DB connection failed")),
+      verifyToken: () =>
+        Promise.reject(new TestIoError("DB connection failed")),
       finalHandler,
     });
 
@@ -181,12 +183,13 @@ describe("bearerAuth", () => {
     {
       case: "the token verifier throws",
       verifyToken: () => {
-        throw new Error("DB connection failed");
+        throw new TestIoError("DB connection failed");
       },
     },
     {
       case: "the token verifier rejects",
-      verifyToken: () => Promise.reject(new Error("DB connection failed")),
+      verifyToken: () =>
+        Promise.reject(new TestIoError("DB connection failed")),
     },
   ])("uses the unauthorized callback when $case", async ({ verifyToken }) => {
     const finalHandler = vi.fn(finalHandlerShouldNotRun);

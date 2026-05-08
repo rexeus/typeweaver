@@ -4,8 +4,9 @@ import type {
 } from "@rexeus/typeweaver-core";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import { AccountHono, AuthHono, TodoHono } from "..//index.js";
+import { AccountHono, AuthHono, TodoHono } from "../index.js";
 import { HonoAdapter } from "../test-project/output/lib/hono/index.js";
+import { TestServerSetupError } from "./errors/TestServerSetupError.js";
 import { AccountHandlers } from "./handlers/AccountApiHandler.js";
 import { AuthHandlers } from "./handlers/AuthHandlers.js";
 import { TodoHandlers } from "./handlers/TodoHandlers.js";
@@ -88,7 +89,9 @@ function getServerPort(server: ServerType): number {
   const address = server.address();
 
   if (address === null || typeof address === "string") {
-    throw new Error("Expected test server to listen on a TCP port");
+    throw new TestServerSetupError(
+      "Expected test server to listen on a TCP port"
+    );
   }
 
   return (address as AddressInfo).port;

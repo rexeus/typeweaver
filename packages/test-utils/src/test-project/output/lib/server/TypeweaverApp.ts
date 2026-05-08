@@ -21,7 +21,11 @@ import {
   validationDefaultError,
 } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
-import { BodyParseError, PayloadTooLargeError } from "./Errors.js";
+import {
+  BodyParseError,
+  MissingRouterForPrefixedMountError,
+  PayloadTooLargeError,
+} from "./errors/index.js";
 import { executeMiddlewarePipeline } from "./Middleware.js";
 import { Router } from "./Router.js";
 import { StateMap } from "./StateMap.js";
@@ -144,7 +148,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
   ): this {
     if (typeof prefixOrRouter === "string") {
       if (!router) {
-        throw new Error("Router is required when mounting with a prefix");
+        throw new MissingRouterForPrefixedMountError(prefixOrRouter);
       }
       return this.mountRouter(router, prefixOrRouter);
     }

@@ -5,6 +5,7 @@ import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { Command } from "commander";
 import { getResolvedConfigPath, loadConfig } from "./configLoader.js";
 import { Generator } from "./generators/Generator.js";
+import { resolveGenerateOptions } from "./resolveGenerateOptions.js";
 import type { CommandOptions as CommanderOptions } from "commander";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
@@ -64,53 +65,18 @@ program
       }
     }
 
-    // Override with CLI options
-    const inputPath = options.input ?? config.input;
-    const outputDir = options.output ?? config.output;
-    // Validate required options
-    if (!inputPath) {
-      throw new Error(
-        "No input spec entrypoint provided. Use --input or specify in config file."
-      );
-    }
-    if (!outputDir) {
-      throw new Error(
-        "No output directory provided. Use --output or specify in config file."
-      );
-    }
-
-    // Resolve paths
-    const resolvedInputPath = path.isAbsolute(inputPath)
-      ? inputPath
-      : path.join(execDir, inputPath);
-    const resolvedOutputDir = path.isAbsolute(outputDir)
-      ? outputDir
-      : path.join(execDir, outputDir);
-
-    // Build final configuration
-    const finalConfig: TypeweaverConfig = {
-      input: resolvedInputPath,
-      output: resolvedOutputDir,
-      format: options.format ?? config.format ?? true,
-      clean: options.clean ?? config.clean ?? true,
-    };
-
-    // Handle plugins
-    if (options.plugins) {
-      // Parse comma-separated plugins from CLI
-      finalConfig.plugins = options.plugins.split(",").map(p => p.trim());
-    } else if (config.plugins) {
-      // Use plugins from config file
-      finalConfig.plugins = config.plugins;
-    }
-    // If no plugins specified, Generator will use defaults
+    const resolvedGenerateOptions = resolveGenerateOptions(
+      options,
+      config,
+      execDir
+    );
 
     // Run generation
     const generator = new Generator();
     return generator.generate(
-      resolvedInputPath,
-      resolvedOutputDir,
-      finalConfig,
+      resolvedGenerateOptions.inputPath,
+      resolvedGenerateOptions.outputDir,
+      resolvedGenerateOptions.config,
       execDir
     );
   });

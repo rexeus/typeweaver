@@ -9,12 +9,15 @@ import type {
   ResponseDefinition,
   SpecDefinition,
 } from "@rexeus/typeweaver-core";
+import { captureError, TestAssertionError } from "test-utils";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import {
   getOperationDefinition,
   getResponseDefinition,
 } from "../../src/lib/definitionLookup.js";
+import { MissingOperationDefinitionError } from "../../src/lib/errors/MissingOperationDefinitionError.js";
+import { MissingResponseDefinitionError } from "../../src/lib/errors/MissingResponseDefinitionError.js";
 
 const createTodoSuccess = defineResponse({
   name: "CreateTodoSuccess",
@@ -95,6 +98,34 @@ const todoAndProjectSpec = defineSpec({
   },
 });
 
+const captureMissingOperationDefinitionError = (
+  action: () => void
+): MissingOperationDefinitionError => {
+  const error = captureError(action);
+
+  if (!(error instanceof MissingOperationDefinitionError)) {
+    throw new TestAssertionError(
+      "Expected MissingOperationDefinitionError to be thrown"
+    );
+  }
+
+  return error;
+};
+
+const captureMissingResponseDefinitionError = (
+  action: () => void
+): MissingResponseDefinitionError => {
+  const error = captureError(action);
+
+  if (!(error instanceof MissingResponseDefinitionError)) {
+    throw new TestAssertionError(
+      "Expected MissingResponseDefinitionError to be thrown"
+    );
+  }
+
+  return error;
+};
+
 describe("definitionLookup", () => {
   describe("getOperationDefinition", () => {
     test("returns the matching operation from the requested resource", () => {
@@ -134,21 +165,42 @@ describe("definitionLookup", () => {
     test("reports the requested resource and operation when the resource is missing", () => {
       const spec = todoAndProjectSpec as unknown as SpecDefinition;
 
-      expect(() =>
+      const error = captureMissingOperationDefinitionError(() =>
         getOperationDefinition(spec, "archive", "create")
-      ).toThrowError("Missing operation definition 'archive.create'.");
+      );
+
+      expect(error).toEqual(
+        expect.objectContaining({
+          resourceName: "archive",
+          operationId: "create",
+        })
+      );
     });
 
     test("reports the requested resource and operation when the operation is missing", () => {
-      expect(() =>
+      const error = captureMissingOperationDefinitionError(() =>
         getOperationDefinition(todoAndProjectSpec, "todo", "delete")
-      ).toThrowError("Missing operation definition 'todo.delete'.");
+      );
+
+      expect(error).toEqual(
+        expect.objectContaining({
+          resourceName: "todo",
+          operationId: "delete",
+        })
+      );
     });
 
     test("reports the requested resource when another resource has the operation", () => {
-      expect(() =>
+      const error = captureMissingOperationDefinitionError(() =>
         getOperationDefinition(todoAndProjectSpec, "todo", "archive")
-      ).toThrowError("Missing operation definition 'todo.archive'.");
+      );
+
+      expect(error).toEqual(
+        expect.objectContaining({
+          resourceName: "todo",
+          operationId: "archive",
+        })
+      );
     });
   });
 
@@ -182,25 +234,43 @@ describe("definitionLookup", () => {
     test("reports the requested response when no response matches", () => {
       const responses = [createTodoSuccess, notFoundError] as const;
 
-      expect(() =>
+      const error = captureMissingResponseDefinitionError(() =>
         getResponseDefinition(responses, "ValidationError")
-      ).toThrowError("Missing response definition 'ValidationError'.");
+      );
+
+      expect(error).toEqual(
+        expect.objectContaining({
+          responseName: "ValidationError",
+        })
+      );
     });
 
     test("matches response names with exact casing", () => {
       const responses = [notFoundError] as const;
 
-      expect(() =>
+      const error = captureMissingResponseDefinitionError(() =>
         getResponseDefinition(responses, "notFoundError")
-      ).toThrowError("Missing response definition 'notFoundError'.");
+      );
+
+      expect(error).toEqual(
+        expect.objectContaining({
+          responseName: "notFoundError",
+        })
+      );
     });
 
     test("reports the requested response when the response array is empty", () => {
       const responses = [] as readonly ResponseDefinition[];
 
-      expect(() =>
+      const error = captureMissingResponseDefinitionError(() =>
         getResponseDefinition(responses, "CreateTodoSuccess")
-      ).toThrowError("Missing response definition 'CreateTodoSuccess'.");
+      );
+
+      expect(error).toEqual(
+        expect.objectContaining({
+          responseName: "CreateTodoSuccess",
+        })
+      );
     });
   });
 });

@@ -1,5 +1,6 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
+import { TestApplicationError } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
 import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
 import { logger } from "../../../src/lib/middleware/logger.js";
@@ -134,7 +135,7 @@ describe("logger", () => {
       executeLogger({
         options: { logFn },
         finalHandler: async () => {
-          throw new Error("downstream failed");
+          throw new TestApplicationError("downstream failed");
         },
       })
     ).rejects.toThrow("downstream failed");
@@ -147,7 +148,7 @@ describe("logger", () => {
     const logFn = vi.fn();
     const format = () => {
       order.push("format");
-      throw new Error("format failed");
+      throw new TestApplicationError("format failed");
     };
 
     await expect(
@@ -172,7 +173,7 @@ describe("logger", () => {
     };
     const logFn = vi.fn((message: string) => {
       order.push(`log:${message}`);
-      throw new Error("log failed");
+      throw new TestApplicationError("log failed");
     });
 
     await expect(

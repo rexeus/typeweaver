@@ -14,6 +14,8 @@ import {
   createDeleteTodoSuccessResponse,
   createOptionsTodoRequest,
   createOptionsTodoSuccessResponse,
+  TestApplicationError,
+  TestAssertionError,
   TodoHono,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
@@ -45,7 +47,7 @@ type CapturedResponseValidationCall = {
 const unhandledHonoTodoRequest = async (
   handlerName: string
 ): Promise<never> => {
-  throw new Error(`Missing Hono test handler: ${handlerName}`);
+  throw new TestAssertionError(`Missing Hono test handler: ${handlerName}`);
 };
 
 function createTodoHonoWithHandlers(
@@ -187,7 +189,9 @@ function captureResponseValidationHandlerCall(
     },
     getCapturedCall: () => {
       if (capturedCall === undefined) {
-        throw new Error("Expected response-validation handler to be called");
+        throw new TestAssertionError(
+          "Expected response-validation handler to be called"
+        );
       }
 
       return capturedCall;
@@ -398,7 +402,7 @@ describe("Response Validation (Hono)", () => {
 
     test("fails closed with a sanitized 500 when the custom handler throws", async () => {
       const handler: HonoResponseValidationErrorHandler = () => {
-        throw new Error("handler crashed");
+        throw new TestApplicationError("handler crashed");
       };
       const app = createCreateTodoRouteReturning(
         aCreateTodoSuccessResponseWithBody({
@@ -416,7 +420,7 @@ describe("Response Validation (Hono)", () => {
 
     test("fails closed with a sanitized 500 when the custom handler rejects", async () => {
       const handler: HonoResponseValidationErrorHandler = async () => {
-        throw new Error("async handler crashed");
+        throw new TestApplicationError("async handler crashed");
       };
       const app = createCreateTodoRouteReturning(
         aCreateTodoSuccessResponseWithBody({

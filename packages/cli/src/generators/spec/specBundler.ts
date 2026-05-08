@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { build } from "rolldown";
+import { SpecBundleOutputMissingError } from "./errors/SpecBundleOutputMissingError.js";
 
 const WINDOWS_ABSOLUTE_PATH_PATTERN = /^[A-Za-z]:[\\/]/;
 const WINDOWS_UNC_PATH_PATTERN = /^\\\\/;
@@ -9,6 +10,11 @@ const WINDOWS_UNC_PATH_PATTERN = /^\\\\/;
 export type SpecBundlerConfig = {
   readonly inputFile: string;
   readonly specOutputDir: string;
+};
+
+export type SpecBundlerDeps = {
+  readonly build?: typeof build;
+  readonly existsSync?: (filePath: string) => boolean;
 };
 
 export function createWrapperImportSpecifier(
@@ -38,7 +44,10 @@ export function createWrapperImportSpecifier(
   return `./${relativeInputFile}`;
 }
 
-export async function bundle(config: SpecBundlerConfig): Promise<string> {
+export async function bundle(
+  config: SpecBundlerConfig,
+  deps: SpecBundlerDeps = {}
+): Promise<string> {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), "typeweaver-spec-loader-")
   );
@@ -64,7 +73,7 @@ export async function bundle(config: SpecBundlerConfig): Promise<string> {
   );
 
   try {
-    await build({
+    await (deps.build ?? build)({
       cwd: tempDir,
       input: wrapperFile,
       treeshake: true,
@@ -87,9 +96,11 @@ export async function bundle(config: SpecBundlerConfig): Promise<string> {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
 
-  if (!fs.existsSync(bundledSpecFile)) {
-    throw new Error(
-      `Failed to bundle spec entrypoint '${config.inputFile}' to '${bundledSpecFile}'.`
+  if (!(deps.existsSync ?? fs.existsSync)(bundledSpecFile)) {
+    throw new SpecBundleOutputMissingError(
+      config.inputFile,
+      bundledSpecFile,
+      config.specOutputDir
     );
   }
 

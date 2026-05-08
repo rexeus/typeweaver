@@ -9,6 +9,8 @@ import type {
   ResponseDefinition,
   SpecDefinition,
 } from "@rexeus/typeweaver-core";
+import { MissingOperationDefinitionError } from "./errors/MissingOperationDefinitionError.js";
+import { MissingResponseDefinitionError } from "./errors/MissingResponseDefinitionError.js";
 
 type MatchedOperationDefinition<
   TSpec extends SpecDefinition,
@@ -32,8 +34,9 @@ export const getOperationDefinition = <
   );
 
   if (operation === undefined) {
-    throw new Error(
-      `Missing operation definition '${String(resourceName)}.${String(operationId)}'.`
+    throw new MissingOperationDefinitionError(
+      String(resourceName),
+      String(operationId)
     );
   }
 
@@ -49,7 +52,7 @@ export const getResponseDefinition = <
   const response = responses.find(candidate => candidate.name === responseName);
 
   if (response === undefined) {
-    throw new Error(`Missing response definition '${String(responseName)}'.`);
+    throw new MissingResponseDefinitionError(String(responseName));
   }
 
   return response as MatchedResponseDefinition<TResponses>;

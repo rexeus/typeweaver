@@ -1,4 +1,5 @@
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
+import { TestAssertionError } from "test-utils";
 import { describe, expect, test } from "vitest";
 import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
 import { requestId } from "../../../src/lib/middleware/requestId.js";
@@ -108,7 +109,7 @@ describe("requestId", () => {
     const response = await executeRequestId({
       options: {
         generator: () => {
-          throw new Error("generator should not run");
+          throw new TestAssertionError("generator should not run");
         },
       },
       ctx,

@@ -1,3 +1,4 @@
+import { TestAssertionError, TestIoError, TestSetupError } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
 import {
   createNodeBodyLimitPolicy,
@@ -161,7 +162,7 @@ function createPrevalidatedRequestWithUnreadableText(
 
 function createRequiredTestFile(): File {
   if (typeof File === "undefined") {
-    throw new Error("The Node 22+ test runtime must provide File.");
+    throw new TestSetupError("The Node 22+ test runtime must provide File.");
   }
 
   return new File(["file contents"], "todo.txt", { type: "text/plain" });
@@ -191,7 +192,7 @@ function captureResponseSerializationError(
     throw error;
   }
 
-  throw new Error("Expected response body serialization to fail");
+  throw new TestAssertionError("Expected response body serialization to fail");
 }
 
 describe("FetchApiAdapter", () => {
@@ -569,7 +570,7 @@ describe("FetchApiAdapter", () => {
     test("throws BodyParseError when text body reads fail", async () => {
       const request = createPrevalidatedRequestWithUnreadableText(
         "text/plain",
-        new Error("read failed")
+        new TestIoError("read failed")
       );
 
       await expectBodyParseError(request, "Failed to read text request body");
@@ -578,7 +579,7 @@ describe("FetchApiAdapter", () => {
     test("throws BodyParseError when form-urlencoded body reads fail", async () => {
       const request = createPrevalidatedRequestWithUnreadableText(
         "application/x-www-form-urlencoded",
-        new Error("read failed")
+        new TestIoError("read failed")
       );
 
       await expectBodyParseError(
@@ -590,14 +591,16 @@ describe("FetchApiAdapter", () => {
     test("throws BodyParseError when raw body reads fail", async () => {
       const request = createPrevalidatedRequestWithUnreadableText(
         undefined,
-        new Error("read failed")
+        new TestIoError("read failed")
       );
 
       await expectBodyParseError(request, "Failed to read request body");
     });
 
     test("cancels oversized request streams without masking the original error", async () => {
-      const cancel = vi.fn().mockRejectedValue(new Error("cancel failed"));
+      const cancel = vi
+        .fn()
+        .mockRejectedValue(new TestIoError("cancel failed"));
       const actualBodySize = 6;
       const maxBodySize = 4;
       const body = createSixByteStream(cancel);
@@ -618,7 +621,9 @@ describe("FetchApiAdapter", () => {
     });
 
     test("cancels oversized multipart request streams without masking the size-limit error", async () => {
-      const cancel = vi.fn().mockRejectedValue(new Error("cancel failed"));
+      const cancel = vi
+        .fn()
+        .mockRejectedValue(new TestIoError("cancel failed"));
       const actualBodySize = 6;
       const maxBodySize = 4;
       const body = createSixByteStream(cancel);
@@ -639,8 +644,10 @@ describe("FetchApiAdapter", () => {
     });
 
     test("cancels multipart request streams after body read failures without masking the original error", async () => {
-      const readFailure = new Error("read failed");
-      const cancel = vi.fn().mockRejectedValue(new Error("cancel failed"));
+      const readFailure = new TestIoError("read failed");
+      const cancel = vi
+        .fn()
+        .mockRejectedValue(new TestIoError("cancel failed"));
       const body = createFailingBodyReadStream(readFailure, cancel);
       const request = createAdapterRequestWithStream(
         "/upload",

@@ -15,11 +15,17 @@ import type {
   IResponseValidator,
   ITypedHttpResponse,
 } from "@rexeus/typeweaver-core";
+import {
+  captureError,
+  TestApplicationError,
+  TestAssertionError,
+} from "test-utils";
 import { describe, expect, test, vi } from "vitest";
 import {
+  MissingRouterForPrefixedMountError,
   PayloadTooLargeError,
   ResponseSerializationError,
-} from "../../src/lib/Errors.js";
+} from "../../src/lib/errors/index.js";
 import { defineMiddleware } from "../../src/lib/TypedMiddleware.js";
 import { TypeweaverApp } from "../../src/lib/TypeweaverApp.js";
 import { TypeweaverRouter } from "../../src/lib/TypeweaverRouter.js";
@@ -959,7 +965,7 @@ describe("TypeweaverApp", () => {
         undefined,
         {
           handleGetTodos: async () => {
-            throw new Error("Unexpected failure");
+            throw new TestApplicationError("Unexpected failure");
           },
         },
         { onError }
@@ -986,7 +992,7 @@ describe("TypeweaverApp", () => {
         },
         {
           handleGetTodos: async () => {
-            throw new Error("Boom");
+            throw new TestApplicationError("Boom");
           },
         }
       );
@@ -1004,7 +1010,7 @@ describe("TypeweaverApp", () => {
         { handleUnknownErrors: false },
         {
           handleGetTodos: async () => {
-            throw new Error("Unhandled");
+            throw new TestApplicationError("Unhandled");
           },
         },
         { onError }
@@ -1067,7 +1073,7 @@ describe("TypeweaverApp", () => {
     test("should return 500 when error handler throws", async () => {
       const app = createValidatingApp({
         handleRequestValidationErrors: () => {
-          throw new Error("Handler crashed");
+          throw new TestApplicationError("Handler crashed");
         },
       });
 
@@ -1081,12 +1087,12 @@ describe("TypeweaverApp", () => {
         undefined,
         {
           handleGetTodos: async () => {
-            throw new Error("Unexpected failure");
+            throw new TestApplicationError("Unexpected failure");
           },
         },
         {
           onError: () => {
-            throw new Error("Observer crashed");
+            throw new TestApplicationError("Observer crashed");
           },
         }
       );
@@ -1097,8 +1103,8 @@ describe("TypeweaverApp", () => {
     });
 
     test("logs through console.error as a last resort when onError throws in the safety net", async () => {
-      const originalError = new Error("Unexpected failure");
-      const onErrorFailure = new Error("Observer crashed");
+      const originalError = new TestApplicationError("Unexpected failure");
+      const onErrorFailure = new TestApplicationError("Observer crashed");
       const app = createApp(
         undefined,
         {
@@ -1124,8 +1130,8 @@ describe("TypeweaverApp", () => {
     });
 
     test("logs through console.error as a last resort when onError throws in the unknown-error handler", async () => {
-      const originalError = new Error("Handler failure");
-      const onErrorFailure = new Error("onError crashed");
+      const originalError = new TestApplicationError("Handler failure");
+      const onErrorFailure = new TestApplicationError("onError crashed");
       const app = createApp(
         undefined,
         {
@@ -1208,7 +1214,7 @@ describe("TypeweaverApp", () => {
     test("should default onError to console.error", async () => {
       const app = createApp(undefined, {
         handleGetTodos: async () => {
-          throw new Error("should be logged");
+          throw new TestApplicationError("should be logged");
         },
       });
 
@@ -1269,7 +1275,7 @@ describe("TypeweaverApp", () => {
       const onError = vi.fn();
       const app = createApp(undefined, undefined, { onError });
       const boom = defineMiddleware(async () => {
-        throw new Error("middleware boom");
+        throw new TestApplicationError("middleware boom");
       });
 
       app.use(boom);
@@ -1457,7 +1463,7 @@ describe("TypeweaverApp", () => {
     test("should use core default descriptors for built-in runtime errors", async () => {
       const app = createApp(undefined, {
         handleGetTodos: async () => {
-          throw new Error("Unexpected failure");
+          throw new TestApplicationError("Unexpected failure");
         },
       });
 
@@ -1718,7 +1724,9 @@ describe("TypeweaverApp", () => {
 
     test("returns a sanitized 500 when the custom response validation handler throws", async () => {
       const onError = vi.fn();
-      const handlerFailure = new Error("response validation handler failed");
+      const handlerFailure = new TestApplicationError(
+        "response validation handler failed"
+      );
       const app = createResponseValidatingApp(
         {
           handleResponseValidationErrors: () => {
@@ -1742,7 +1750,9 @@ describe("TypeweaverApp", () => {
 
     test("reports onError when the custom response validation handler throws", async () => {
       const onError = vi.fn();
-      const handlerFailure = new Error("response validation handler failed");
+      const handlerFailure = new TestApplicationError(
+        "response validation handler failed"
+      );
       const app = createResponseValidatingApp(
         {
           handleResponseValidationErrors: () => {
@@ -1806,9 +1816,20 @@ describe("TypeweaverApp", () => {
   describe("Defensive Validation", () => {
     test("should throw when route() is called with prefix but no router", () => {
       const app = new TypeweaverApp();
+
       // @ts-expect-error — testing runtime guard
-      expect(() => app.route("/prefix")).toThrow(
-        "Router is required when mounting with a prefix"
+      const error = captureError(() => app.route("/prefix"));
+
+      if (!(error instanceof MissingRouterForPrefixedMountError)) {
+        throw new TestAssertionError(
+          "Expected MissingRouterForPrefixedMountError to be thrown"
+        );
+      }
+
+      expect(error).toEqual(
+        expect.objectContaining({
+          prefix: "/prefix",
+        })
       );
     });
   });
@@ -1872,12 +1893,12 @@ describe("TypeweaverApp", () => {
         undefined,
         {
           handleGetTodos: async () => {
-            throw new Error("Handler failure");
+            throw new TestApplicationError("Handler failure");
           },
         },
         {
           onError: () => {
-            throw new Error("onError also failed");
+            throw new TestApplicationError("onError also failed");
           },
         }
       );
@@ -1934,7 +1955,7 @@ describe("TypeweaverApp", () => {
       const app = createApp(undefined, undefined, { onError });
       const postNextError = defineMiddleware(async (_ctx, next) => {
         await next();
-        throw new Error("Post-next failure");
+        throw new TestApplicationError("Post-next failure");
       });
 
       app.use(postNextError);

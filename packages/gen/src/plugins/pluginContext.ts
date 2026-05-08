@@ -3,6 +3,7 @@ import path from "node:path";
 import { pascalCase } from "polycase";
 import { relative } from "../helpers/path.js";
 import { renderTemplate } from "../helpers/templateEngine.js";
+import { MissingCanonicalResponseError } from "./errors/MissingCanonicalResponseError.js";
 import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec.js";
 import type { GeneratorContext, PluginConfig, PluginContext } from "./types.js";
 
@@ -94,7 +95,7 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
       const response = canonicalResponsesByName.get(responseName);
 
       if (response === undefined) {
-        throw new Error(`Missing canonical response '${responseName}'.`);
+        throw new MissingCanonicalResponseError(responseName);
       }
 
       return response;

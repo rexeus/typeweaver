@@ -19,6 +19,7 @@ import {
   HeadTodoRequestCommand,
   OptionsTodoRequestCommand,
   PutTodoRequestCommand,
+  TestAssertionError,
   UpdateTodoRequestCommand,
 } from "test-utils";
 import { afterEach, describe, expect, test } from "vitest";
@@ -35,7 +36,7 @@ async function captureUnknownResponseError(
     return error;
   }
 
-  throw new Error("Expected UnknownResponseError to be thrown");
+  throw new TestAssertionError("Expected UnknownResponseError to be thrown");
 }
 
 describe("Generated Client", () => {

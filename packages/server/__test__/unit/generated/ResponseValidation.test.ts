@@ -10,6 +10,8 @@ import {
   createCreateTodoSuccessResponse,
   createCreateTodoSuccessResponseBody,
   createTestApp,
+  TestApplicationError,
+  TestAssertionError,
   TodoRouter,
   TypeweaverApp,
 } from "test-utils";
@@ -24,7 +26,7 @@ import {
 import type { CreateTodoResponse, ServerTodoApiHandler } from "test-utils";
 
 const unhandledServerTodoRequest = async (): Promise<never> => {
-  throw new Error("Unexpected test route invocation");
+  throw new TestAssertionError("Unexpected test route invocation");
 };
 
 const createServerTodoHandlersReturning = (
@@ -465,7 +467,7 @@ describe("Response Validation (Server)", () => {
       const app = createTestApp({
         validateResponses: true,
         handleResponseValidationErrors: () => {
-          throw new Error("handler crashed");
+          throw new TestApplicationError("handler crashed");
         },
         throwTodoError: invalidResponse,
       });
@@ -493,7 +495,7 @@ describe("Response Validation (Server)", () => {
       const app = createTestApp({
         validateResponses: true,
         handleResponseValidationErrors: async () => {
-          throw new Error("async crash");
+          throw new TestApplicationError("async crash");
         },
         throwTodoError: invalidResponse,
       });
@@ -517,7 +519,7 @@ describe("Response Validation (Server)", () => {
   describe("non-typed errors with validateResponses enabled", () => {
     test("should route non-typed errors to error handler, not response validation", async () => {
       // Arrange
-      const plainError = new Error("handler crashed");
+      const plainError = new TestApplicationError("handler crashed");
       const app = createTestApp({
         validateResponses: true,
         throwTodoError: plainError,

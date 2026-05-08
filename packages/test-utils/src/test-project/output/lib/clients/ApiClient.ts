@@ -6,6 +6,7 @@
  */
 
 import type { IHttpHeader, IHttpParam, IHttpQuery, IHttpResponse } from "@rexeus/typeweaver-core";
+import { ApiClientConfigurationError } from "./errors/ApiClientConfigurationError.js";
 import { NetworkError } from "./NetworkError.js";
 import { PathParameterError } from "./PathParameterError.js";
 import { RequestCommand } from "./RequestCommand.js";
@@ -65,11 +66,17 @@ export abstract class ApiClient {
     this.fetchFn = props.fetchFn ?? globalThis.fetch.bind(globalThis);
 
     if (typeof props.baseUrl !== "string" || props.baseUrl.trim().length === 0) {
-      throw new Error("Base URL must be provided");
+      throw new ApiClientConfigurationError("baseUrl", "missing-base-url", {
+        baseUrl: props.baseUrl,
+      });
     }
 
-    if (!this.isAllowedBaseUrl(props.baseUrl)) {
-      throw new Error("Absolute base URLs must use http(s); relative base URLs are allowed");
+    const baseUrlValidationError = this.getBaseUrlValidationError(props.baseUrl);
+    if (baseUrlValidationError !== undefined) {
+      throw new ApiClientConfigurationError("baseUrl", baseUrlValidationError.reason, {
+        baseUrl: props.baseUrl,
+        scheme: baseUrlValidationError.scheme,
+      });
     }
 
     this.baseUrl = props.baseUrl;
@@ -78,7 +85,9 @@ export abstract class ApiClient {
       props.timeoutMs !== undefined &&
       (props.timeoutMs <= 0 || !Number.isFinite(props.timeoutMs))
     ) {
-      throw new Error("timeoutMs must be a positive finite number");
+      throw new ApiClientConfigurationError("timeoutMs", "invalid-timeout", {
+        timeoutMs: props.timeoutMs,
+      });
     }
 
     this.timeoutMs = props.timeoutMs;
@@ -287,18 +296,44 @@ export abstract class ApiClient {
     return `${base}${path}`;
   }
 
-  private isAllowedBaseUrl(baseUrl: string): boolean {
+  private getBaseUrlValidationError(baseUrl: string):
+    | {
+        readonly reason: "malformed-base-url" | "unsupported-base-url-scheme";
+        readonly scheme?: string;
+      }
+    | undefined {
+    const scheme = this.getBaseUrlScheme(baseUrl);
+
     if (hasAsciiControlCharacter(baseUrl)) {
-      return false;
+      return { reason: "malformed-base-url", scheme };
     }
 
     const normalizedBaseUrl = baseUrl.trim();
     if (!LEADING_URI_SCHEME_PATTERN.test(normalizedBaseUrl)) {
-      return true;
+      return undefined;
+    }
+
+    if (!URL.canParse(normalizedBaseUrl)) {
+      return { reason: "malformed-base-url", scheme };
     }
 
     const url = new URL(normalizedBaseUrl);
-    return url.protocol === "http:" || url.protocol === "https:";
+    if (url.protocol === "http:" || url.protocol === "https:") {
+      return undefined;
+    }
+
+    return { reason: "unsupported-base-url-scheme", scheme };
+  }
+
+  private getBaseUrlScheme(baseUrl: string): string | undefined {
+    const normalizedBaseUrl = baseUrl.trim();
+    const schemeMatch = LEADING_URI_SCHEME_PATTERN.exec(normalizedBaseUrl);
+
+    if (schemeMatch?.[0] === undefined) {
+      return undefined;
+    }
+
+    return schemeMatch[0].slice(0, -1).toLowerCase();
   }
 
   private createPath(path: string, param?: IHttpParam): string {

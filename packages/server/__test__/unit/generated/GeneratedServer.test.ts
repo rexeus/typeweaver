@@ -17,6 +17,7 @@ import {
   createUpdateTodoRequest,
   createUpdateTodoStatusRequest,
   defineMiddleware,
+  TestApplicationError,
 } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
 import {
@@ -700,7 +701,7 @@ describe("Generated Server Router", () => {
 
     test("returns the default 500 response for unknown errors", async () => {
       const app = createTestApp({
-        throwTodoError: new Error("Something went wrong"),
+        throwTodoError: new TestApplicationError("Something went wrong"),
       });
       const requestData = createCreateTodoRequest();
 
@@ -713,7 +714,7 @@ describe("Generated Server Router", () => {
 
     test("uses a custom unknown error handler when provided", async () => {
       const app = createTestApp({
-        throwTodoError: new Error("Something went wrong"),
+        throwTodoError: new TestApplicationError("Something went wrong"),
         handleUnknownErrors: () => ({
           statusCode: 500,
           body: { customUnknownError: "Custom unknown error handling" },
@@ -732,7 +733,7 @@ describe("Generated Server Router", () => {
     test("returns the default 500 response when the request validation error handler throws", async () => {
       const app = createTestApp({
         handleRequestValidationErrors: () => {
-          throw new Error("Validation handler failed");
+          throw new TestApplicationError("Validation handler failed");
         },
       });
       const requestData = createCreateTodoRequest({
@@ -756,7 +757,7 @@ describe("Generated Server Router", () => {
           body: { code: "TODO_NOT_FOUND", message: "Todo not found" },
         } satisfies ITypedHttpResponse,
         handleHttpResponseErrors: () => {
-          throw new Error("HTTP handler failed");
+          throw new TestApplicationError("HTTP handler failed");
         },
       });
       const requestData = createCreateTodoRequest();
