@@ -2,11 +2,21 @@ import { pathMatcher } from "../PathMatcher.js";
 import { defineMiddleware } from "../TypedMiddleware.js";
 import type { TypedMiddleware } from "../TypedMiddleware.js";
 
-type NoProvidedKeys<TProvides extends Record<string, unknown>> = [
+/** Rejects middleware that would provide state from a conditional branch. */
+type RejectsProvidedState<TProvides extends Record<string, unknown>> = [
   keyof TProvides,
 ] extends [never]
   ? unknown
   : never;
+
+/**
+ * scoped/except middleware may be skipped, so it cannot safely provide
+ * downstream state; any upstream state requirements remain part of its type.
+ */
+type StateNeutralMiddleware<
+  TProvides extends Record<string, unknown>,
+  TRequires extends Record<string, unknown>,
+> = TypedMiddleware<TProvides, TRequires> & RejectsProvidedState<TProvides>;
 
 /**
  * Restricts a middleware to only run on paths matching the given patterns.
@@ -30,7 +40,7 @@ export function scoped<
   TRequires extends Record<string, unknown>,
 >(
   paths: readonly string[],
-  middleware: TypedMiddleware<TProvides, TRequires> & NoProvidedKeys<TProvides>
+  middleware: StateNeutralMiddleware<TProvides, TRequires>
 ): TypedMiddleware<TProvides, TRequires> {
   const matchers = paths.map(pathMatcher);
 
@@ -58,7 +68,7 @@ export function except<
   TRequires extends Record<string, unknown>,
 >(
   paths: readonly string[],
-  middleware: TypedMiddleware<TProvides, TRequires> & NoProvidedKeys<TProvides>
+  middleware: StateNeutralMiddleware<TProvides, TRequires>
 ): TypedMiddleware<TProvides, TRequires> {
   const matchers = paths.map(pathMatcher);
 

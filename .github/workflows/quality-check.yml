@@ -76,6 +76,12 @@ jobs:
           pnpm run test:gen
           echo "::endgroup::"
 
+      - name: Verify generated fixture freshness
+        run: |
+          echo "::group::Verifying generated fixtures"
+          pnpm run verify:generated
+          echo "::endgroup::"
+
       - name: Run multi-runtime bundle tests
         run: |
           echo "::group::Running bundle tests on Node.js, Deno, and Bun"

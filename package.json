@@ -12,6 +12,7 @@
     "format:check": "oxfmt --check",
     "test": "turbo test:gen && turbo test",
     "test:gen": "turbo test:gen",
+    "verify:generated": "node scripts/verify-generated.mjs",
     "publish:dry": "pnpm publish -r --dry-run --no-git-checks",
     "ci:publish": "pnpm publish -r --provenance",
     "prepare:commit": "pnpm run format && pnpm run lint:fix && pnpm run typecheck && pnpm run build && pnpm run test"
