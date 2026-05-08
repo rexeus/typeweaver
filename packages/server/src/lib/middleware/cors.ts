@@ -1,4 +1,4 @@
-import type { IHttpResponse } from "@rexeus/typeweaver-core";
+import type { IHttpRequest, IHttpResponse } from "@rexeus/typeweaver-core";
 import { defineMiddleware } from "../TypedMiddleware.js";
 import {
   hasHeaderName,
@@ -36,6 +36,33 @@ const POLICY_CONTROLLED_CORS_HEADERS = new Set([
   "access-control-max-age",
 ]);
 
+type NormalizedCorsOptions = {
+  readonly origin: CorsOptions["origin"];
+  readonly allowMethods: string;
+  readonly allowHeaders: readonly string[] | undefined;
+  readonly exposeHeaders: string | undefined;
+  readonly maxAge: string | undefined;
+  readonly credentials: boolean;
+};
+
+type CorsRequest = {
+  readonly header: IHttpRequest["header"];
+  readonly method: IHttpRequest["method"];
+  readonly hasOrigin: boolean;
+  readonly origin: string | undefined;
+};
+
+function normalizeCorsOptions(options?: CorsOptions): NormalizedCorsOptions {
+  return {
+    origin: options?.origin,
+    allowMethods: (options?.allowMethods ?? DEFAULT_METHODS).join(", "),
+    allowHeaders: options?.allowHeaders,
+    exposeHeaders: options?.exposeHeaders?.join(", "),
+    maxAge: options?.maxAge?.toString(),
+    credentials: options?.credentials ?? false,
+  };
+}
+
 function resolveOrigin(
   configOrigin: CorsOptions["origin"],
   requestOrigin: string | undefined,
@@ -65,6 +92,15 @@ function getRequestOrigin(
   return readSingletonHeader(header, "origin");
 }
 
+function readCorsRequest(request: IHttpRequest): CorsRequest {
+  return {
+    header: request.header,
+    method: request.method,
+    hasOrigin: hasHeaderName(request.header, "origin"),
+    origin: getRequestOrigin(request.header),
+  };
+}
+
 function isOriginDependentWithoutRequestOrigin(
   configOrigin: CorsOptions["origin"],
   credentials: boolean
@@ -74,6 +110,99 @@ function isOriginDependentWithoutRequestOrigin(
     Array.isArray(configOrigin) ||
     ((configOrigin === undefined || configOrigin === "*") && credentials)
   );
+}
+
+function resolveRequestOrigin(
+  options: NormalizedCorsOptions,
+  request: CorsRequest
+): string | undefined {
+  if (request.hasOrigin && request.origin === undefined) {
+    return undefined;
+  }
+
+  const resolvedOrigin = resolveOrigin(
+    options.origin,
+    request.origin,
+    options.credentials
+  );
+
+  return options.credentials && resolvedOrigin === "*"
+    ? undefined
+    : resolvedOrigin;
+}
+
+function shouldVaryDeniedCorsResponse(
+  options: NormalizedCorsOptions,
+  request: CorsRequest
+): boolean {
+  return (
+    request.hasOrigin ||
+    isOriginDependentWithoutRequestOrigin(options.origin, options.credentials)
+  );
+}
+
+function buildSimpleCorsHeaders(
+  options: NormalizedCorsOptions,
+  origin: string
+): Record<string, string> {
+  const corsHeaders: Record<string, string> = {
+    "access-control-allow-origin": origin,
+  };
+
+  if (options.credentials) {
+    corsHeaders["access-control-allow-credentials"] = "true";
+  }
+
+  if (origin !== "*") {
+    corsHeaders["vary"] = "Origin";
+  }
+
+  if (options.exposeHeaders) {
+    corsHeaders["access-control-expose-headers"] = options.exposeHeaders;
+  }
+
+  return corsHeaders;
+}
+
+function isPreflightCorsRequest(request: CorsRequest): boolean {
+  return (
+    request.method === "OPTIONS" &&
+    request.origin !== undefined &&
+    readSingletonHeader(
+      request.header,
+      "access-control-request-method"
+    ) !== undefined
+  );
+}
+
+function buildPreflightCorsHeaders(
+  options: NormalizedCorsOptions,
+  request: CorsRequest,
+  simpleCorsHeaders: Record<string, string>
+): Record<string, string> {
+  const corsHeaders = { ...simpleCorsHeaders };
+  corsHeaders["access-control-allow-methods"] = options.allowMethods;
+
+  if (options.allowHeaders !== undefined) {
+    if (options.allowHeaders.length > 0) {
+      corsHeaders["access-control-allow-headers"] =
+        options.allowHeaders.join(", ");
+    }
+  } else {
+    const requestedHeaders = readSingletonHeader(
+      request.header,
+      "access-control-request-headers"
+    );
+    if (typeof requestedHeaders === "string") {
+      corsHeaders["access-control-allow-headers"] = requestedHeaders;
+    }
+  }
+
+  if (options.maxAge !== undefined) {
+    corsHeaders["access-control-max-age"] = options.maxAge;
+  }
+
+  return corsHeaders;
 }
 
 function splitHeaderValues(values: readonly string[]): readonly string[] {
@@ -131,97 +260,50 @@ function mergeResponseHeaders(
   return { ...result, ...mergedCorsHeaders };
 }
 
-export function cors(options?: CorsOptions) {
-  const credentials = options?.credentials ?? false;
+function mergeCorsHeadersIntoResponse(
+  response: IHttpResponse,
+  corsHeaders: Record<string, string>
+): IHttpResponse {
+  return {
+    ...response,
+    header: mergeResponseHeaders(response.header, corsHeaders),
+  };
+}
 
-  const methods = (options?.allowMethods ?? DEFAULT_METHODS).join(", ");
-  const exposeHeaders = options?.exposeHeaders?.join(", ");
-  const maxAge = options?.maxAge?.toString();
+export function cors(options?: CorsOptions) {
+  const normalizedOptions = normalizeCorsOptions(options);
 
   return defineMiddleware(async (ctx, next) => {
-    const requestOrigin = getRequestOrigin(ctx.request.header);
-    const hasOrigin = hasHeaderName(ctx.request.header, "origin");
-    const resolvedOrigin =
-      hasOrigin && requestOrigin === undefined
-        ? undefined
-        : resolveOrigin(options?.origin, requestOrigin, credentials);
-    const origin =
-      credentials && resolvedOrigin === "*" ? undefined : resolvedOrigin;
+    const corsRequest = readCorsRequest(ctx.request);
+    const origin = resolveRequestOrigin(normalizedOptions, corsRequest);
 
     if (origin === undefined) {
       const response = await next();
 
-      if (
-        !hasOrigin &&
-        !isOriginDependentWithoutRequestOrigin(options?.origin, credentials)
-      ) {
+      if (!shouldVaryDeniedCorsResponse(normalizedOptions, corsRequest)) {
         return response;
       }
 
-      return {
-        ...response,
-        header: mergeResponseHeaders(response.header, { vary: "Origin" }),
-      } satisfies IHttpResponse;
+      return mergeCorsHeadersIntoResponse(response, { vary: "Origin" });
     }
 
-    const corsHeaders: Record<string, string> = {
-      "access-control-allow-origin": origin,
-    };
+    const corsHeaders = buildSimpleCorsHeaders(normalizedOptions, origin);
 
-    if (credentials) {
-      corsHeaders["access-control-allow-credentials"] = "true";
-    }
-
-    if (origin !== "*") {
-      corsHeaders["vary"] = "Origin";
-    }
-
-    if (exposeHeaders) {
-      corsHeaders["access-control-expose-headers"] = exposeHeaders;
-    }
-
-    const isPreflight =
-      ctx.request.method === "OPTIONS" &&
-      requestOrigin !== undefined &&
-      readSingletonHeader(
-        ctx.request.header,
-        "access-control-request-method"
-      ) !== undefined;
-
-    if (isPreflight) {
-      corsHeaders["access-control-allow-methods"] = methods;
-
-      const configuredHeaders = options?.allowHeaders;
-      if (configuredHeaders !== undefined) {
-        if (configuredHeaders.length > 0) {
-          corsHeaders["access-control-allow-headers"] =
-            configuredHeaders.join(", ");
-        }
-      } else {
-        const requestedHeaders = readSingletonHeader(
-          ctx.request.header,
-          "access-control-request-headers"
-        );
-        if (typeof requestedHeaders === "string") {
-          corsHeaders["access-control-allow-headers"] = requestedHeaders;
-        }
-      }
-
-      if (maxAge) {
-        corsHeaders["access-control-max-age"] = maxAge;
-      }
+    if (isPreflightCorsRequest(corsRequest)) {
+      const preflightHeaders = buildPreflightCorsHeaders(
+        normalizedOptions,
+        corsRequest,
+        corsHeaders
+      );
 
       return {
         statusCode: 204,
-        header: corsHeaders,
+        header: preflightHeaders,
       } satisfies IHttpResponse;
     }
 
     const response = await next();
 
-    return {
-      ...response,
-      header: mergeResponseHeaders(response.header, corsHeaders),
-    } satisfies IHttpResponse;
+    return mergeCorsHeadersIntoResponse(response, corsHeaders);
   });
 }

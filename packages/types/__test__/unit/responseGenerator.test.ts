@@ -3,7 +3,6 @@ import path from "node:path";
 import { HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { renderTemplate } from "@rexeus/typeweaver-gen";
 import type {
-  GeneratorContext,
   NormalizedOperation,
   NormalizedResource,
   NormalizedResponse,
@@ -14,6 +13,7 @@ import { pascalCase } from "polycase";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import { generate } from "../../src/responseGenerator.js";
+import type { ResponseGenerationContext } from "../../src/responseGenerator.js";
 
 function aCanonicalResponse(
   overrides: Partial<NormalizedResponse> = {}
@@ -89,7 +89,7 @@ function aResourceWithOperationResponses(
 }
 
 type ResponseGeneratorTestContext = {
-  readonly context: GeneratorContext;
+  readonly context: ResponseGenerationContext;
   readonly writtenFiles: Map<string, string>;
 };
 
@@ -101,14 +101,8 @@ function createResponseGeneratorContext(
 
   const context = {
     outputDir: "/out",
-    inputDir: "/in",
-    config: {},
     normalizedSpec,
     coreDir: "@rexeus/typeweaver-core",
-    responsesOutputDir: "/out/responses",
-    specOutputDir: "/out/spec",
-    getCanonicalResponse: (name: string) =>
-      normalizedSpec.responses.find(response => response.name === name)!,
     getCanonicalResponseOutputFile: (responseName: string) => {
       return path.join(
         "/out/responses",
@@ -122,16 +116,6 @@ function createResponseGeneratorContext(
     }) => {
       return `../responses/${pascalCase(responseName)}Response`;
     },
-    getSpecImportPath: () => "../spec/spec",
-    getOperationDefinitionAccessor: ({
-      operationId,
-      resourceName,
-    }: {
-      readonly operationId: string;
-      readonly resourceName: string;
-    }) => {
-      return `spec.resources[${JSON.stringify(resourceName)}]!.operations.find(operation => operation.operationId === ${JSON.stringify(operationId)})!`;
-    },
     getOperationOutputPaths: ({
       operationId,
       resourceName,
@@ -141,38 +125,19 @@ function createResponseGeneratorContext(
     }) => {
       const outputDir = path.join("/out", resourceName);
       const fileBase = pascalCase(operationId);
-      const requestFileName = `${fileBase}Request.ts`;
       const responseFileName = `${fileBase}Response.ts`;
-      const requestValidationFileName = `${fileBase}RequestValidator.ts`;
-      const responseValidationFileName = `${fileBase}ResponseValidator.ts`;
-      const clientFileName = `${fileBase}Client.ts`;
 
       return {
         outputDir,
-        requestFile: path.join(outputDir, requestFileName),
-        requestFileName,
         responseFile: path.join(outputDir, responseFileName),
         responseFileName,
-        requestValidationFile: path.join(outputDir, requestValidationFileName),
-        requestValidationFileName,
-        responseValidationFile: path.join(
-          outputDir,
-          responseValidationFileName
-        ),
-        responseValidationFileName,
-        clientFile: path.join(outputDir, clientFileName),
-        clientFileName,
       };
     },
-    getResourceOutputDir: (resourceName: string) =>
-      path.join("/out", resourceName),
     writeFile: (relativePath: string, content: string) => {
       writtenFiles.set(relativePath, content);
     },
     renderTemplate: renderResponseTemplate,
-    addGeneratedFile: () => {},
-    getGeneratedFiles: () => [],
-  } satisfies GeneratorContext;
+  } satisfies ResponseGenerationContext;
 
   return { context, writtenFiles };
 }

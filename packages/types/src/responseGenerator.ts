@@ -6,11 +6,33 @@ import type {
   NormalizedOperation,
   NormalizedResource,
   NormalizedResponse,
+  OperationOutputPaths,
 } from "@rexeus/typeweaver-gen";
 import { fromZod, print } from "@rexeus/typeweaver-zod-to-ts";
 import { pascalCase } from "polycase";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+
+type ResponseOperationOutputPaths = Pick<
+  OperationOutputPaths,
+  "outputDir" | "responseFile" | "responseFileName"
+>;
+
+export type ResponseGenerationContext = Pick<
+  GeneratorContext,
+  | "normalizedSpec"
+  | "coreDir"
+  | "outputDir"
+  | "getCanonicalResponseOutputFile"
+  | "getCanonicalResponseImportPath"
+  | "renderTemplate"
+  | "writeFile"
+> & {
+  readonly getOperationOutputPaths: (params: {
+    readonly resourceName: string;
+    readonly operationId: string;
+  }) => ResponseOperationOutputPaths;
+};
 
 type OwnResponseTemplateData = {
   readonly identifierName: string;
@@ -41,7 +63,7 @@ type ImportedResponseTemplateData = {
   readonly path: string;
 };
 
-export function generate(context: GeneratorContext): void {
+export function generate(context: ResponseGenerationContext): void {
   const templateFile = path.join(moduleDir, "templates", "Response.ejs");
   const canonicalResponseTemplateFile = path.join(
     moduleDir,
@@ -81,7 +103,7 @@ function writeResponseType(
   responseFactoryTemplateFile: string,
   resource: NormalizedResource,
   operation: NormalizedOperation,
-  context: GeneratorContext
+  context: ResponseGenerationContext
 ): void {
   const outputPaths = context.getOperationOutputPaths({
     resourceName: resource.name,
@@ -132,7 +154,7 @@ function writeResponseType(
 function createOwnResponseTemplateData(
   response: NormalizedResponse,
   responseFactoryTemplateFile: string,
-  context: GeneratorContext
+  context: ResponseGenerationContext
 ): OwnResponseTemplateData {
   const hasHeader = response.header !== undefined;
   const hasBody = response.body !== undefined;
@@ -162,7 +184,7 @@ function writeCanonicalResponseType(
   templateFile: string,
   responseFactoryTemplateFile: string,
   response: NormalizedResponse,
-  context: GeneratorContext
+  context: ResponseGenerationContext
 ): void {
   const pascalCaseName = pascalCase(response.name);
   const headerTsType = response.header
@@ -200,7 +222,7 @@ function writeCanonicalResponseType(
 function renderResponseFactory(
   templateFile: string,
   data: ResponseFactoryTemplateData,
-  context: GeneratorContext,
+  context: ResponseGenerationContext,
   indentation: string
 ): string {
   return context.renderTemplate(templateFile, {
