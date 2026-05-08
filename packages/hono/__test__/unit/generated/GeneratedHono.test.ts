@@ -5,16 +5,22 @@ import {
   validationDefaultError,
 } from "@rexeus/typeweaver-core";
 import { Hono } from "hono";
+import type { Context } from "hono";
 import {
   createCreateSubTodoRequest,
   createCreateTodoRequest,
   createCreateTodoSuccessResponse,
+  createDeleteSubTodoRequest,
+  createDeleteSubTodoSuccessResponse,
   createDeleteTodoRequest,
   createGetTodoSuccessResponse,
   createHeadTodoRequest,
+  createListSubTodosRequest,
+  createListSubTodosSuccessResponse,
   createListTodosRequest,
   createListTodosSuccessResponse,
   createOptionsTodoRequest,
+  createOptionsTodoSuccessResponse,
   createPutTodoRequest,
   createQuerySubTodoRequest,
   createQuerySubTodoSuccessResponse,
@@ -26,15 +32,18 @@ import {
   createUpdateTodoStatusRequest,
   TodoHono,
 } from "test-utils";
-import { describe, expect, test } from "vitest";
-import { expectErrorResponse, prepareRequestData } from "../../helpers.js";
-import type { Context } from "hono";
 import type {
   HonoTodoApiHandler,
   IValidationErrorResponseBody,
 } from "test-utils";
+import { describe, expect, test } from "vitest";
+import { expectErrorResponse, prepareRequestData } from "../../helpers.js";
 
 type CreateTestHonoOptions = Parameters<typeof createTestHono>[0];
+type CreateTodoHonoOptions = Omit<
+  ConstructorParameters<typeof TodoHono>[0],
+  "requestHandlers"
+>;
 
 async function requestTestHono(
   url: string,
@@ -47,8 +56,9 @@ async function requestTestHono(
   );
 }
 
-function createUnvalidatedTodoHonoWithHandlers(
-  handlers: Partial<HonoTodoApiHandler>
+function createTodoHonoWithHandlers(
+  handlers: Partial<HonoTodoApiHandler>,
+  options?: CreateTodoHonoOptions
 ): TodoHono {
   const requestHandlers = new Proxy(handlers as HonoTodoApiHandler, {
     get: (target, prop) => {
@@ -60,7 +70,32 @@ function createUnvalidatedTodoHonoWithHandlers(
   });
 
   return new TodoHono({
+    ...options,
     requestHandlers,
+    validateResponses: options?.validateResponses ?? false,
+  });
+}
+
+function createCreateTodoRouteReturning(
+  response: ITypedHttpResponse,
+  options?: CreateTodoHonoOptions
+): TodoHono {
+  type CreateTodoRouteResponse = Awaited<
+    ReturnType<HonoTodoApiHandler["handleCreateTodoRequest"]>
+  >;
+
+  return createTodoHonoWithHandlers(
+    {
+      handleCreateTodoRequest: async () => response as CreateTodoRouteResponse,
+    },
+    options
+  );
+}
+
+function createUnvalidatedTodoHonoWithHandlers(
+  handlers: Partial<HonoTodoApiHandler>
+): TodoHono {
+  return createTodoHonoWithHandlers(handlers, {
     validateRequests: false,
     validateResponses: false,
   });
@@ -91,8 +126,8 @@ function aNestedJsonPrototypePollutionPayload(): string {
 }
 
 describe("Generated Hono Router", () => {
-  describe("Operation Registration & Handling", () => {
-    test("returns the generated todo list response for GET /todos", async () => {
+  describe("route dispatch and precedence", () => {
+    test("dispatches GET /todos to the list operation", async () => {
       const requestData = createListTodosRequest();
 
       const response = await requestTestHono(
@@ -106,7 +141,7 @@ describe("Generated Hono Router", () => {
       expect(data.nextToken).toEqual(expect.any(String));
     });
 
-    test("create route returns the request title, priority, and initial status", async () => {
+    test("dispatches POST /todos with the validated request body", async () => {
       const requestData = createCreateTodoRequest({
         body: {
           title: "ship hono hardening",
@@ -126,7 +161,7 @@ describe("Generated Hono Router", () => {
       expect(data.status).toBe("TODO");
     });
 
-    test("PUT routes propagate path params and body fields", async () => {
+    test("dispatches PUT /todos/:todoId with path params and body fields", async () => {
       const requestData = createPutTodoRequest({
         body: {
           title: "replace todo",
@@ -148,20 +183,7 @@ describe("Generated Hono Router", () => {
       expect(data.status).toBe("IN_PROGRESS");
     });
 
-    test("DELETE routes return no content", async () => {
-      const requestData = createDeleteTodoRequest();
-
-      const response = await requestTestHono(
-        `http://localhost/todos/${requestData.param.todoId}`,
-        requestData
-      );
-
-      expect(response.status).toBe(204);
-      const data = await response.text();
-      expect(data).toBe("");
-    });
-
-    test("PATCH routes propagate path params and body fields", async () => {
+    test("dispatches PATCH /todos/:todoId with path params and body fields", async () => {
       const requestData = createUpdateTodoRequest({
         body: {
           title: "patch todo",
@@ -181,7 +203,7 @@ describe("Generated Hono Router", () => {
       expect(data.priority).toBe("MEDIUM");
     });
 
-    test("status update route returns the requested status", async () => {
+    test("dispatches PUT /todos/:todoId/status with the requested status", async () => {
       const requestData = createUpdateTodoStatusRequest({
         body: { value: "DONE" },
       });
@@ -197,7 +219,19 @@ describe("Generated Hono Router", () => {
       expect(data.status).toBe("DONE");
     });
 
-    test("OPTIONS routes return the exact Allow header", async () => {
+    test("dispatches DELETE /todos/:todoId as a 204 empty response", async () => {
+      const requestData = createDeleteTodoRequest();
+
+      const response = await requestTestHono(
+        `http://localhost/todos/${requestData.param.todoId}`,
+        requestData
+      );
+
+      expect(response.status).toBe(204);
+      expect(await response.text()).toBe("");
+    });
+
+    test("dispatches OPTIONS /todos/:todoId and preserves the Allow header", async () => {
       const requestData = createOptionsTodoRequest();
 
       const response = await requestTestHono(
@@ -211,7 +245,7 @@ describe("Generated Hono Router", () => {
       );
     });
 
-    test("HEAD routes return no body", async () => {
+    test("returns 200 with an empty body for HEAD /todos/:todoId", async () => {
       const requestData = createHeadTodoRequest();
 
       const response = await requestTestHono(
@@ -220,55 +254,7 @@ describe("Generated Hono Router", () => {
       );
 
       expect(response.status).toBe(200);
-      const text = await response.text();
-      expect(text).toBe("");
-    });
-
-    test("query route reflects nextToken query parameters", async () => {
-      const nextToken = "next-page-token";
-      const requestData = createQueryTodoRequest({
-        query: { nextToken },
-      });
-      const app = createUnvalidatedTodoHonoWithHandlers({
-        handleQueryTodoRequest: async request =>
-          createQueryTodoSuccessResponse({
-            body: { results: [], nextToken: request.query.nextToken },
-          }),
-      });
-
-      const response = await app.request(
-        `http://localhost/todos/query?nextToken=${nextToken}`,
-        prepareRequestData(requestData)
-      );
-
-      expect(response.status).toBe(200);
-      const data = (await response.json()) as Record<string, unknown>;
-      expect(data.nextToken).toBe(nextToken);
-    });
-
-    test("preserves repeated empty query parameter values when validation is disabled", async () => {
-      let handlerQuery: Record<string, unknown> | undefined;
-      const app = createUnvalidatedTodoHonoWithHandlers({
-        handleQueryTodoRequest: async request => {
-          handlerQuery = request.query as Record<string, unknown>;
-          return createQueryTodoSuccessResponse({
-            body: {
-              results: [],
-              nextToken: handlerQuery.nextToken as string,
-            },
-          });
-        },
-      });
-
-      const response = await app.request(
-        "http://localhost/todos/query?nextToken=&nextToken=second",
-        { method: "POST" }
-      );
-
-      expect(response.status).toBe(200);
-      const data = (await response.json()) as Record<string, unknown>;
-      expect(data.nextToken).toEqual(["", "second"]);
-      expect(handlerQuery?.nextToken).toEqual(["", "second"]);
+      expect(await response.text()).toBe("");
     });
 
     test("static todo query route wins over the dynamic todo route", async () => {
@@ -308,6 +294,27 @@ describe("Generated Hono Router", () => {
       expect(data.parentId).toBe(requestData.param.todoId);
       expect(data.title).toBe("create nested item");
       expect(data.priority).toBe("HIGH");
+    });
+
+    test("dispatches GET /todos/:todoId/subtodos with the parent todo id", async () => {
+      let capturedTodoId: string | undefined;
+      const requestData = createListSubTodosRequest();
+      const app = createUnvalidatedTodoHonoWithHandlers({
+        handleListSubTodosRequest: async request => {
+          capturedTodoId = request.param.todoId;
+          return createListSubTodosSuccessResponse({ body: { results: [] } });
+        },
+      });
+
+      const response = await app.request(
+        `http://localhost/todos/${requestData.param.todoId}/subtodos`,
+        prepareRequestData(requestData)
+      );
+
+      expect(response.status).toBe(200);
+      expect(capturedTodoId).toBe(requestData.param.todoId);
+      const data = (await response.json()) as Record<string, unknown>;
+      expect(data.results).toEqual([]);
     });
 
     test("nested subtodo update routes propagate parent and subtodo ids", async () => {
@@ -353,6 +360,32 @@ describe("Generated Hono Router", () => {
       expect(capturedTodoId).toBe(requestData.param.todoId);
     });
 
+    test("dispatches DELETE /todos/:todoId/subtodos/:subtodoId with parent and subtodo ids", async () => {
+      let capturedTodoId: string | undefined;
+      let capturedSubtodoId: string | undefined;
+      const requestData = createDeleteSubTodoRequest();
+      const app = createUnvalidatedTodoHonoWithHandlers({
+        handleDeleteSubTodoRequest: async request => {
+          capturedTodoId = request.param.todoId;
+          capturedSubtodoId = request.param.subtodoId;
+          return createDeleteSubTodoSuccessResponse({
+            body: { message: "deleted subtodo" },
+          });
+        },
+      });
+
+      const response = await app.request(
+        `http://localhost/todos/${requestData.param.todoId}/subtodos/${requestData.param.subtodoId}`,
+        prepareRequestData(requestData)
+      );
+
+      expect(response.status).toBe(200);
+      const data = (await response.json()) as Record<string, unknown>;
+      expect(data.message).toBe("deleted subtodo");
+      expect(capturedTodoId).toBe(requestData.param.todoId);
+      expect(capturedSubtodoId).toBe(requestData.param.subtodoId);
+    });
+
     test("unknown paths use Hono's public 404 behavior", async () => {
       const response = await createTestHono().request(
         "http://localhost/not-a-generated-route",
@@ -363,12 +396,10 @@ describe("Generated Hono Router", () => {
       expect(await response.text()).toBe("404 Not Found");
     });
 
-    test("unsupported methods on known paths use Hono-owned behavior", async () => {
+    test("returns 404 without Allow for unsupported methods on known paths", async () => {
       const response = await createTestHono().request(
         "http://localhost/todos",
-        {
-          method: "PUT",
-        }
+        { method: "PUT" }
       );
 
       expect(response.status).toBe(404);
@@ -376,31 +407,11 @@ describe("Generated Hono Router", () => {
     });
   });
 
-  describe("Request Validation", () => {
-    test("accepts a schema-valid create todo request", async () => {
-      const requestData = createCreateTodoRequest({
-        body: {
-          title: "schema-valid create request",
-          priority: "MEDIUM",
-        },
-      });
-
-      const response = await requestTestHono(
-        "http://localhost/todos",
-        requestData
-      );
-
-      expect(response.status).toBe(201);
-      const data = (await response.json()) as Record<string, unknown>;
-      expect(data.title).toBe("schema-valid create request");
-      expect(data.priority).toBe("MEDIUM");
-      expect(data.status).toBe("TODO");
-    });
-
+  describe("request validation", () => {
     test("rejects invalid request body", async () => {
       const requestData = createCreateTodoRequest({
         body: {
-          priority: "INVALID_PRIORITY" as any, // Invalid priority
+          priority: "INVALID_PRIORITY" as any,
         },
       });
 
@@ -411,87 +422,137 @@ describe("Generated Hono Router", () => {
 
       expect(response.status).toBe(400);
       const data = (await response.json()) as IValidationErrorResponseBody;
+      expect(data.code).toBe(validationDefaultError.code);
+      expect(data.message).toBe(validationDefaultError.message);
       expect(data.issues.body).toHaveLength(1);
     });
 
     test("rejects invalid request headers", async () => {
-      // Arrange
-      const app = createTestHono();
       const requestData = createCreateTodoRequest({
         header: {
-          "Content-Type": "text/plain" as any, // Invalid content type
+          "Content-Type": "text/plain" as any,
         },
       });
 
-      // Act
-      const response = await app.request(
+      const response = await requestTestHono(
         "http://localhost/todos",
-        prepareRequestData(requestData)
+        requestData
       );
 
-      // Assert
       expect(response.status).toBe(400);
       const data = (await response.json()) as IValidationErrorResponseBody;
       expect(data.issues.header).toHaveLength(1);
     });
 
     test("rejects invalid path parameters", async () => {
-      // Arrange
-      const app = createTestHono();
       const requestData = createUpdateTodoRequest();
 
-      // Act
-      const response = await app.request(
+      const response = await createTestHono().request(
         "http://localhost/todos/invalid-uuid-format",
         prepareRequestData(requestData)
       );
 
-      // Assert
       expect(response.status).toBe(400);
       const data = (await response.json()) as IValidationErrorResponseBody;
       expect(data.issues.param).toHaveLength(1);
     });
 
     test("rejects invalid query parameters", async () => {
-      // Arrange
-      const app = createTestHono();
       const requestData = createListTodosRequest();
 
-      // Act
-      const response = await app.request(
+      const response = await createTestHono().request(
         "http://localhost/todos?status=INVALID_STATUS",
         prepareRequestData(requestData)
       );
 
-      // Assert
       expect(response.status).toBe(400);
       const data = (await response.json()) as IValidationErrorResponseBody;
       expect(data.issues.query).toHaveLength(1);
     });
 
     test("bypasses validation when validateRequests is disabled", async () => {
-      // Arrange
-      const app = createTestHono({
-        validateRequests: false,
-      });
       const requestData = createCreateTodoRequest({
         body: {
-          title: "", // Empty title is invalid
+          title: "",
         },
       });
 
-      // Act
+      const response = await createTestHono({
+        validateRequests: false,
+      }).request("http://localhost/todos", prepareRequestData(requestData));
+
+      expect(response.status).toBe(201);
+      expect(await response.json()).toBeDefined();
+    });
+
+    test("passes request validation errors and Hono context to custom handlers", async () => {
+      let capturedError: unknown;
+      let capturedOperationId: string | undefined;
+      const app = createTestHono({
+        handleRequestValidationErrors: (error, context) => {
+          capturedError = error;
+          capturedOperationId = context.get("operationId");
+          return {
+            statusCode: 422,
+            header: {
+              "Content-Type": "application/json",
+            },
+            body: {
+              code: "CUSTOM_REQUEST_VALIDATION",
+              bodyIssueCount: error.bodyIssues.length,
+            },
+          };
+        },
+      });
+      const requestData = createCreateTodoRequest({
+        body: {
+          priority: "INVALID_PRIORITY" as any,
+        },
+      });
+
       const response = await app.request(
         "http://localhost/todos",
         prepareRequestData(requestData)
       );
 
-      // Assert
-      expect(response.status).toBe(201);
-      const data = await response.json();
-      expect(data).toBeDefined();
+      expect(response.status).toBe(422);
+      const errorData = (await response.json()) as Record<string, unknown>;
+      expect(errorData.code).toBe("CUSTOM_REQUEST_VALIDATION");
+      expect(errorData.bodyIssueCount).toBe(1);
+      expect(capturedError).toBeInstanceOf(RequestValidationError);
+      expect((capturedError as RequestValidationError).bodyIssues).toHaveLength(
+        1
+      );
+      expect(capturedOperationId).toBe("CreateTodo");
     });
 
+    test("does not invoke route handlers for schema-invalid requests", async () => {
+      let handlerInvoked = false;
+      const app = createTodoHonoWithHandlers({
+        handleCreateTodoRequest: async () => {
+          handlerInvoked = true;
+          return createCreateTodoSuccessResponse();
+        },
+      });
+      const requestData = createCreateTodoRequest({
+        body: {
+          priority: "INVALID_PRIORITY" as any,
+        },
+      });
+
+      const response = await app.request(
+        "http://localhost/todos",
+        prepareRequestData(requestData)
+      );
+
+      expect(response.status).toBe(400);
+      const data = (await response.json()) as IValidationErrorResponseBody;
+      expect(data.issues.body).toHaveLength(1);
+      expect(handlerInvoked).toBe(false);
+    });
+  });
+
+  describe("request adaptation and body parsing", () => {
     test("returns sanitized BAD_REQUEST for malformed JSON request bodies", async () => {
       const response = await createTestHono().request(
         "http://localhost/todos",
@@ -743,6 +804,31 @@ describe("Generated Hono Router", () => {
       expect(Object.getPrototypeOf(handlerBody!)).toBeNull();
     });
 
+    test("preserves repeated empty query parameter values when validation is disabled", async () => {
+      let handlerQuery: Record<string, unknown> | undefined;
+      const app = createUnvalidatedTodoHonoWithHandlers({
+        handleQueryTodoRequest: async request => {
+          handlerQuery = request.query as Record<string, unknown>;
+          return createQueryTodoSuccessResponse({
+            body: {
+              results: [],
+              nextToken: handlerQuery.nextToken as string,
+            },
+          });
+        },
+      });
+
+      const response = await app.request(
+        "http://localhost/todos/query?nextToken=&nextToken=second",
+        { method: "POST" }
+      );
+
+      expect(response.status).toBe(200);
+      const data = (await response.json()) as Record<string, unknown>;
+      expect(data.nextToken).toEqual(["", "second"]);
+      expect(handlerQuery?.nextToken).toEqual(["", "second"]);
+    });
+
     test("does not pollute Object.prototype from form-url-encoded __proto__ fields", async () => {
       let handlerBody: Record<string, unknown> | undefined;
       const app = createUnvalidatedTodoHonoWithHandlers({
@@ -762,6 +848,7 @@ describe("Generated Hono Router", () => {
 
       expect(response.status).toBe(201);
       expect(handlerBody?.title).toBe("safe");
+      expect(Object.getPrototypeOf(handlerBody!)).toBeNull();
       expect(({} as Record<string, unknown>).polluted).toBeUndefined();
     });
 
@@ -786,148 +873,77 @@ describe("Generated Hono Router", () => {
       expect(Object.getPrototypeOf(handlerQuery!)).toBeNull();
       expect(({} as Record<string, unknown>).polluted).toBeUndefined();
     });
-
-    test("passes request validation errors and Hono context to custom handlers", async () => {
-      let capturedError: unknown;
-      let capturedOperationId: string | undefined;
-      const app = createTestHono({
-        handleRequestValidationErrors: (error, context) => {
-          capturedError = error;
-          capturedOperationId = context.get("operationId");
-          return {
-            statusCode: 422,
-            header: {
-              "Content-Type": "application/json",
-            },
-            body: {
-              code: "CUSTOM_REQUEST_VALIDATION",
-              bodyIssueCount: error.bodyIssues.length,
-            },
-          };
-        },
-      });
-      const requestData = createCreateTodoRequest({
-        body: {
-          priority: "INVALID_PRIORITY" as any,
-        },
-      });
-
-      const response = await app.request(
-        "http://localhost/todos",
-        prepareRequestData(requestData)
-      );
-
-      expect(response.status).toBe(422);
-      const errorData = (await response.json()) as Record<string, unknown>;
-      expect(errorData.code).toBe("CUSTOM_REQUEST_VALIDATION");
-      expect(errorData.bodyIssueCount).toBe(1);
-      expect(capturedError).toBeInstanceOf(RequestValidationError);
-      expect((capturedError as RequestValidationError).bodyIssues).toHaveLength(
-        1
-      );
-      expect(capturedOperationId).toBe("CreateTodo");
-    });
-
-    test("returns custom request validation handler responses to clients", async () => {
-      const customValidationMessage = "Custom validation error";
-      const app = createTestHono({
-        handleRequestValidationErrors: () => ({
-          statusCode: 400,
-          header: {
-            "Content-Type": "application/json",
-          },
-          body: {
-            message: customValidationMessage,
-          },
-        }),
-      });
-      const requestData = createCreateTodoRequest({
-        body: {
-          priority: "INVALID_PRIORITY" as any,
-        },
-      });
-
-      const response = await app.request(
-        "http://localhost/todos",
-        prepareRequestData(requestData)
-      );
-
-      expect(response.status).toBe(400);
-      const errorData = (await response.json()) as Record<string, unknown>;
-      expect(errorData.message).toBe(customValidationMessage);
-    });
   });
 
-  describe("Response Handling", () => {
-    test("returns JSON response bodies with the generated todo fields", async () => {
-      // Arrange
-      const app = createTestHono();
-      const requestData = createCreateTodoRequest();
+  describe("response serialization", () => {
+    test("serializes typed responses returned by route handlers as JSON", async () => {
+      const requestData = createCreateTodoRequest({
+        body: {
+          title: "serialize typed response",
+          priority: "HIGH",
+        },
+      });
+      const app = createTodoHonoWithHandlers(
+        {
+          handleCreateTodoRequest: async request =>
+            createCreateTodoSuccessResponse({
+              body: {
+                title: request.body.title,
+                priority: request.body.priority,
+                status: "TODO",
+              },
+            }),
+        },
+        { validateResponses: true }
+      );
 
-      // Act
       const response = await app.request(
         "http://localhost/todos",
         prepareRequestData(requestData)
       );
 
-      // Assert
       expect(response.status).toBe(201);
       expect(response.headers.get("Content-Type")).toBe("application/json");
-
-      const data = (await response.json()) as any;
-      expect(data).toBeDefined();
-      expect(typeof data).toBe("object");
-      expect(data.id).toBeDefined();
-      expect(data.title).toBe(requestData.body.title);
+      const data = (await response.json()) as Record<string, unknown>;
+      expect(data.title).toBe("serialize typed response");
+      expect(data.priority).toBe("HIGH");
+      expect(data.status).toBe("TODO");
     });
 
     test("returns string response bodies unchanged", async () => {
-      // Arrange
       const customStringResponse = "This is a plain text response";
-      const app = createTestHono({
-        validateResponses: false,
-        throwTodoError: {
-          type: "CustomStringResponse" as const,
-          statusCode: 200,
-          header: { "Content-Type": "text/plain" },
-          body: customStringResponse,
-        },
+      const app = createCreateTodoRouteReturning({
+        type: "CustomStringResponse" as const,
+        statusCode: 200,
+        header: { "Content-Type": "text/plain" },
+        body: customStringResponse,
       });
       const requestData = createCreateTodoRequest();
 
-      // Act
       const response = await app.request(
         "http://localhost/todos",
         prepareRequestData(requestData)
       );
 
-      // Assert
       expect(response.status).toBe(200);
-      const text = await response.text();
-      expect(text).toBe(customStringResponse);
+      expect(await response.text()).toBe(customStringResponse);
     });
 
     test("returns ArrayBuffer response bodies with octet-stream headers and preserved bytes", async () => {
-      // Arrange
       const body = new TextEncoder().encode("binary data").buffer;
-      const app = createTestHono({
-        validateResponses: false,
-        throwTodoError: {
-          type: "CustomArrayBufferResponse" as const,
-          statusCode: 200,
-          header: { "Content-Type": "application/octet-stream" },
-          body,
-        },
+      const app = createCreateTodoRouteReturning({
+        type: "CustomArrayBufferResponse" as const,
+        statusCode: 200,
+        header: { "Content-Type": "application/octet-stream" },
+        body,
       });
       const requestData = createCreateTodoRequest();
 
-      // Act
       const response = await app.request(
         "http://localhost/todos",
         prepareRequestData(requestData)
       );
 
-      // Assert
       expect(response.status).toBe(200);
       expect(response.headers.get("content-type")).toBe(
         "application/octet-stream"
@@ -938,33 +954,26 @@ describe("Generated Hono Router", () => {
     });
 
     test("returns Blob response bodies with their configured content type", async () => {
-      // Arrange
       const blob = new Blob(["binary data"], {
         type: "application/octet-stream",
       });
-      const app = createTestHono({
-        validateResponses: false,
-        throwTodoError: {
-          type: "CustomBlobResponse" as const,
-          statusCode: 200,
-          header: { "Content-Type": "application/octet-stream" },
-          body: blob,
-        },
+      const app = createCreateTodoRouteReturning({
+        type: "CustomBlobResponse" as const,
+        statusCode: 200,
+        header: { "Content-Type": "application/octet-stream" },
+        body: blob,
       });
       const requestData = createCreateTodoRequest();
 
-      // Act
       const response = await app.request(
         "http://localhost/todos",
         prepareRequestData(requestData)
       );
 
-      // Assert
       expect(response.status).toBe(200);
       expect(response.headers.get("content-type")).toBe(
         "application/octet-stream"
       );
-
       const responseBlob = await response.blob();
       expect(responseBlob.size).toBe(blob.size);
     });
@@ -973,14 +982,11 @@ describe("Generated Hono Router", () => {
       const blob = new Blob(["data"], {
         type: "application/custom-binary",
       });
-      const app = createTestHono({
-        validateResponses: false,
-        throwTodoError: {
-          type: "CustomBlobResponse" as const,
-          statusCode: 200,
-          header: undefined,
-          body: blob,
-        },
+      const app = createCreateTodoRouteReturning({
+        type: "CustomBlobResponse" as const,
+        statusCode: 200,
+        header: undefined,
+        body: blob,
       });
       const requestData = createCreateTodoRequest();
 
@@ -996,35 +1002,15 @@ describe("Generated Hono Router", () => {
       expect(await response.text()).toBe("data");
     });
 
-    test("returns empty response bodies with no content", async () => {
-      // Arrange
-      const app = createTestHono();
-      const requestData = createDeleteTodoRequest();
-
-      // Act
-      const response = await app.request(
-        `http://localhost/todos/${requestData.param.todoId}`,
-        prepareRequestData(requestData)
-      );
-
-      // Assert
-      expect(response.status).toBe(204);
-      const text = await response.text();
-      expect(text).toBe("");
-    });
-
     test("preserves custom single-value response headers", async () => {
-      const app = createTestHono({
-        validateResponses: false,
-        throwTodoError: {
-          type: "CreateTodoSuccess" as const,
-          statusCode: 201,
-          header: {
-            "Content-Type": "application/json",
-            "X-Test-Header": "single",
-          },
-          body: { ok: true },
+      const app = createCreateTodoRouteReturning({
+        type: "CreateTodoSuccess" as const,
+        statusCode: 201,
+        header: {
+          "Content-Type": "application/json",
+          "X-Test-Header": "single",
         },
+        body: { ok: true },
       });
       const requestData = createCreateTodoRequest();
 
@@ -1038,17 +1024,14 @@ describe("Generated Hono Router", () => {
     });
 
     test("joins array-valued response headers into comma-separated Fetch headers", async () => {
-      const app = createTestHono({
-        validateResponses: false,
-        throwTodoError: {
-          type: "CreateTodoSuccess" as const,
-          statusCode: 201,
-          header: {
-            "Content-Type": "application/json",
-            "X-Multi-Value": ["first", "second"],
-          },
-          body: { ok: true },
+      const app = createCreateTodoRouteReturning({
+        type: "CreateTodoSuccess" as const,
+        statusCode: 201,
+        header: {
+          "Content-Type": "application/json",
+          "X-Multi-Value": ["first", "second"],
         },
+        body: { ok: true },
       });
       const requestData = createCreateTodoRequest();
 
@@ -1062,17 +1045,14 @@ describe("Generated Hono Router", () => {
     });
 
     test("exposes repeated Set-Cookie response headers when response validation is disabled", async () => {
-      const app = createTestHono({
-        validateResponses: false,
-        throwTodoError: {
-          type: "CreateTodoSuccess" as const,
-          statusCode: 201,
-          header: {
-            "Content-Type": "application/json",
-            "Set-Cookie": ["a=1", "b=2"],
-          },
-          body: { ok: true },
+      const app = createCreateTodoRouteReturning({
+        type: "CreateTodoSuccess" as const,
+        statusCode: 201,
+        header: {
+          "Content-Type": "application/json",
+          "Set-Cookie": ["a=1", "b=2"],
         },
+        body: { ok: true },
       });
       const requestData = createCreateTodoRequest();
 
@@ -1089,26 +1069,10 @@ describe("Generated Hono Router", () => {
     });
   });
 
-  describe("Route Metadata (operationId)", () => {
-    test("sets operationId on Hono context before handler runs", async () => {
-      let capturedOperationId: string | undefined;
-      const app = createUnvalidatedTodoHonoWithHandlers({
-        handleListTodosRequest: async (_request, context) => {
-          capturedOperationId = context.get("operationId");
-          return createListTodosSuccessResponse();
-        },
-      });
-
-      const response = await app.request("http://localhost/todos?status=TODO", {
-        method: "GET",
-      });
-
-      expect(response.status).toBe(200);
-      expect(capturedOperationId).toBe("ListTodos");
-    });
-
+  describe("operation metadata", () => {
     test.each([
       {
+        scenario: "GET /todos",
         route: "http://localhost/todos",
         method: "GET",
         handlerName: "handleListTodosRequest",
@@ -1117,6 +1081,7 @@ describe("Generated Hono Router", () => {
         responseFactory: createListTodosSuccessResponse,
       },
       {
+        scenario: "POST /todos",
         route: "http://localhost/todos",
         method: "POST",
         handlerName: "handleCreateTodoRequest",
@@ -1125,6 +1090,7 @@ describe("Generated Hono Router", () => {
         responseFactory: createCreateTodoSuccessResponse,
       },
       {
+        scenario: "GET /todos/:todoId",
         route: "http://localhost/todos/t1",
         method: "GET",
         handlerName: "handleGetTodoRequest",
@@ -1132,8 +1098,17 @@ describe("Generated Hono Router", () => {
         expectedStatus: 200,
         responseFactory: createGetTodoSuccessResponse,
       },
+      {
+        scenario: "OPTIONS /todos/:todoId",
+        route: "http://localhost/todos/t1",
+        method: "OPTIONS",
+        handlerName: "handleOptionsTodoRequest",
+        expectedOperationId: "optionsTodo",
+        expectedStatus: 200,
+        responseFactory: createOptionsTodoSuccessResponse,
+      },
     ] as const)(
-      "sets $expectedOperationId operationId on the matched route",
+      "sets $expectedOperationId operationId for $scenario",
       async ({
         route,
         method,
@@ -1158,7 +1133,7 @@ describe("Generated Hono Router", () => {
     );
   });
 
-  describe("Hono middleware composition", () => {
+  describe("middleware composition", () => {
     test("app middleware can short-circuit before generated validation", async () => {
       const requestData = createCreateTodoRequest({
         body: { priority: "INVALID_PRIORITY" as any },
@@ -1205,9 +1180,8 @@ describe("Generated Hono Router", () => {
     });
   });
 
-  describe("Error Handling", () => {
-    test("returns thrown typed HTTP responses unchanged by default", async () => {
-      // Arrange
+  describe("error handling", () => {
+    test("serializes thrown typed HTTP responses with the default HTTP response error handler", async () => {
       const errorResponse = {
         type: "TodoNotFoundError" as const,
         statusCode: 404,
@@ -1222,20 +1196,17 @@ describe("Generated Hono Router", () => {
       });
       const requestData = createCreateTodoRequest();
 
-      // Act
       const response = await app.request(
         "http://localhost/todos",
         prepareRequestData(requestData)
       );
 
-      // Assert
       expect(response.status).toBe(404);
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as Record<string, unknown>;
       expect(data.errorCode).toBe("TODO_NOT_FOUND");
     });
 
-    test("returns the custom HTTP response error handler response", async () => {
-      // Arrange
+    test("passes typed HTTP response errors and Hono context to custom handlers", async () => {
       const errorResponse = {
         type: "TodoNotFoundError" as const,
         statusCode: 404,
@@ -1244,102 +1215,48 @@ describe("Generated Hono Router", () => {
           errorCode: "TODO_NOT_FOUND",
         },
       };
-      const customMessage = "Custom error handling";
+      let capturedError: ITypedHttpResponse | undefined;
+      let capturedOperationId: string | undefined;
       const app = createTestHono({
         validateResponses: false,
         throwTodoError: errorResponse,
-        handleHttpResponseErrors: (error: ITypedHttpResponse) => ({
-          statusCode: 404,
-          header: {},
-          body: {
-            ...error.body.customError,
-            customMessage,
-          },
-        }),
+        handleHttpResponseErrors: (error, context) => {
+          capturedError = error;
+          capturedOperationId = context.get("operationId");
+          return {
+            statusCode: 409,
+            header: { "Content-Type": "application/json" },
+            body: {
+              code: "CUSTOM_HTTP_RESPONSE_ERROR",
+            },
+          };
+        },
       });
       const requestData = createCreateTodoRequest();
 
-      // Act
       const response = await app.request(
         "http://localhost/todos",
         prepareRequestData(requestData)
       );
 
-      // Assert
-      expect(response.status).toBe(404);
-      const data = (await response.json()) as any;
-      expect(data.customMessage).toBe(customMessage);
-    });
-
-    test("returns the default validation error response for invalid requests", async () => {
-      // Arrange
-      const app = createTestHono();
-      const requestData = createCreateTodoRequest({
-        body: {
-          priority: "INVALID_PRIORITY" as any, // Invalid priority to trigger validation error
-        },
-      });
-
-      // Act
-      const response = await app.request(
-        "http://localhost/todos",
-        prepareRequestData(requestData)
-      );
-
-      // Assert
-      expect(response.status).toBe(400);
-      const data = (await response.json()) as any;
-      expect(data.code).toBe(validationDefaultError.code);
-      expect(data.message).toBe(validationDefaultError.message);
-      expect(data.issues).toBeDefined();
-      expect(data.issues.body).toHaveLength(1);
-    });
-
-    test("returns the custom request validation error handler response", async () => {
-      // Arrange
-      const customValidationMessage = "Custom validation error handling";
-      const app = createTestHono({
-        handleRequestValidationErrors: () => ({
-          statusCode: 404,
-          header: {},
-          body: {
-            customValidationError: customValidationMessage,
-          },
-        }),
-      });
-      const requestData = createCreateTodoRequest({
-        body: {
-          priority: "INVALID_PRIORITY" as any, // Invalid priority to trigger validation error
-        },
-      });
-
-      // Act
-      const response = await app.request(
-        "http://localhost/todos",
-        prepareRequestData(requestData)
-      );
-
-      // Assert
-      expect(response.status).toBe(404);
-      const data = (await response.json()) as any;
-      expect(data.customValidationError).toBe(customValidationMessage);
+      expect(response.status).toBe(409);
+      const data = (await response.json()) as Record<string, unknown>;
+      expect(data.code).toBe("CUSTOM_HTTP_RESPONSE_ERROR");
+      expect(capturedError).toBe(errorResponse);
+      expect(capturedOperationId).toBe("CreateTodo");
     });
 
     test("returns sanitized 500 for unknown handler errors by default", async () => {
-      // Arrange
-      const unknownError = new Error("Something went wrong");
       const app = createTestHono({
-        throwTodoError: unknownError,
+        throwTodoError: new Error("Something went wrong"),
       });
       const requestData = createCreateTodoRequest();
 
-      // Act
       const response = await app.request(
         "http://localhost/todos",
         prepareRequestData(requestData)
       );
 
-      // Assert
       await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
     });
 
@@ -1359,33 +1276,36 @@ describe("Generated Hono Router", () => {
       expect(await response.text()).toBe("Internal Server Error");
     });
 
-    test("returns the custom unknown error handler response", async () => {
-      // Arrange
+    test("passes unknown handler errors and Hono context to custom handlers", async () => {
       const unknownError = new Error("Something went wrong");
-      const customUnknownMessage = "Custom unknown error handling";
-
+      let capturedError: unknown;
+      let capturedOperationId: string | undefined;
       const app = createTestHono({
         throwTodoError: unknownError,
-        handleUnknownErrors: () => ({
-          statusCode: 500,
-          header: {},
-          body: {
-            customUnknownError: customUnknownMessage,
-          },
-        }),
+        handleUnknownErrors: (error, context) => {
+          capturedError = error;
+          capturedOperationId = context.get("operationId");
+          return {
+            statusCode: 500,
+            header: { "Content-Type": "application/json" },
+            body: {
+              code: "CUSTOM_UNKNOWN_ERROR",
+            },
+          };
+        },
       });
       const requestData = createCreateTodoRequest();
 
-      // Act
       const response = await app.request(
         "http://localhost/todos",
         prepareRequestData(requestData)
       );
 
-      // Assert
       expect(response.status).toBe(500);
-      const data = (await response.json()) as any;
-      expect(data.customUnknownError).toBe(customUnknownMessage);
+      const data = (await response.json()) as Record<string, unknown>;
+      expect(data.code).toBe("CUSTOM_UNKNOWN_ERROR");
+      expect(capturedError).toBe(unknownError);
+      expect(capturedOperationId).toBe("CreateTodo");
     });
 
     test("delegates thrown custom unknown error handlers to Hono fallback behavior", async () => {
@@ -1407,25 +1327,22 @@ describe("Generated Hono Router", () => {
     });
 
     test("returns sanitized 500 when the request validation error handler throws", async () => {
-      // Arrange
       const app = createTestHono({
         handleRequestValidationErrors: () => {
-          throw new Error("Validation handler failed"); // Custom handler throws exception
+          throw new Error("Validation handler failed");
         },
       });
       const requestData = createCreateTodoRequest({
         body: {
-          priority: "INVALID_PRIORITY" as any, // Invalid priority to trigger validation error
+          priority: "INVALID_PRIORITY" as any,
         },
       });
 
-      // Act
       const response = await app.request(
         "http://localhost/todos",
         prepareRequestData(requestData)
       );
 
-      // Assert
       await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
     });
 
@@ -1449,7 +1366,7 @@ describe("Generated Hono Router", () => {
       await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
     });
 
-    test("returns sanitized 500 for invalid requests when request validation error handling is disabled", async () => {
+    test("falls through to the unknown error handler when request validation error handling is disabled", async () => {
       const app = createTestHono({
         handleRequestValidationErrors: false,
       });
@@ -1467,7 +1384,7 @@ describe("Generated Hono Router", () => {
       await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
     });
 
-    test("returns sanitized 500 for thrown typed responses when HTTP response error handling is disabled", async () => {
+    test("falls through to the unknown error handler when HTTP response error handling is disabled", async () => {
       const originalError = {
         type: "TodoNotFoundError" as const,
         statusCode: 404,
@@ -1490,31 +1407,26 @@ describe("Generated Hono Router", () => {
     });
 
     test("returns sanitized 500 when the HTTP response error handler throws", async () => {
-      // Arrange
       const originalError = {
         type: "TodoNotFoundError" as const,
         statusCode: 404,
         header: {},
         body: { code: "TODO_NOT_FOUND", message: "Todo not found" },
       };
-
       const app = createTestHono({
         validateResponses: false,
         throwTodoError: originalError,
         handleHttpResponseErrors: () => {
-          throw new Error("HTTP handler failed"); // Custom handler throws exception
+          throw new Error("HTTP handler failed");
         },
-        // Fallback to default unknown error handler
       });
       const requestData = createCreateTodoRequest();
 
-      // Act
       const response = await app.request(
         "http://localhost/todos",
         prepareRequestData(requestData)
       );
 
-      // Assert - Should fall back to default unknown error handler
       await expectErrorResponse(response, 500, "INTERNAL_SERVER_ERROR");
     });
   });
