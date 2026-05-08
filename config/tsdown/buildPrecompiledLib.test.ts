@@ -24,6 +24,14 @@ function writeFile(filePath: string, content: string): void {
   fs.writeFileSync(filePath, content);
 }
 
+function readPackageFile(packageDir: string, relativePath: string): string {
+  return fs.readFileSync(path.join(packageDir, relativePath), "utf8");
+}
+
+function packageFileExists(packageDir: string, relativePath: string): boolean {
+  return fs.existsSync(path.join(packageDir, relativePath));
+}
+
 afterEach(() => {
   while (tempDirectories.length > 0) {
     const tempDirectory = tempDirectories.pop();
@@ -54,19 +62,23 @@ describe("getTypeScriptFiles", () => {
 
     expect(getTypeScriptFiles(runtimeSourceDir)).toEqual([
       "index.ts",
-      "nested/value.ts",
+      path.join("nested", "value.ts"),
     ]);
+  });
+
+  test("returns an empty list when the source directory is missing", () => {
+    const packageDir = createPackageFixture("missing-source");
+
+    const files = getTypeScriptFiles(path.join(packageDir, "src", "lib"));
+
+    expect(files).toEqual([]);
   });
 });
 
 describe("buildPrecompiledLib", () => {
-  test("transpiles runtime files, preserves index.ts, and copies declaration overlays", () => {
-    const packageDir = createPackageFixture("build");
+  test("transpiles runtime TypeScript files to JavaScript output", () => {
+    const packageDir = createPackageFixture("runtime-transpile");
 
-    writeFile(
-      path.join(packageDir, "src", "lib", "index.ts"),
-      "export * from './nested/value.js';\n"
-    );
     writeFile(
       path.join(packageDir, "src", "lib", "runtime.ts"),
       "export const greet = (name: string): string => `hello ${name}`;\n"
@@ -75,6 +87,54 @@ describe("buildPrecompiledLib", () => {
       path.join(packageDir, "src", "lib", "nested", "value.ts"),
       "export const value: number = 42;\n"
     );
+
+    buildPrecompiledLib({
+      packageDir,
+      runtimeSourceDir: "src/lib",
+      outputDir: "dist/lib",
+    });
+
+    const runtimeOutput = readPackageFile(
+      packageDir,
+      path.join("dist", "lib", "runtime.js")
+    );
+    const nestedOutput = readPackageFile(
+      packageDir,
+      path.join("dist", "lib", "nested", "value.js")
+    );
+
+    expect(runtimeOutput).toContain(
+      "export const greet = (name) => `hello ${name}`;"
+    );
+    expect(runtimeOutput).not.toContain(": string");
+    expect(nestedOutput).toContain("export const value = 42;");
+    expect(
+      packageFileExists(packageDir, path.join("dist", "lib", "runtime.ts"))
+    ).toBe(false);
+  });
+
+  test("preserves the root index.ts entrypoint in the output", () => {
+    const packageDir = createPackageFixture("root-index");
+
+    writeFile(
+      path.join(packageDir, "src", "lib", "index.ts"),
+      "export * from './nested/value.js';\n"
+    );
+
+    buildPrecompiledLib({
+      packageDir,
+      runtimeSourceDir: "src/lib",
+      outputDir: "dist/lib",
+    });
+
+    expect(
+      readPackageFile(packageDir, path.join("dist", "lib", "index.ts"))
+    ).toBe("export * from './nested/value.js';\n");
+  });
+
+  test("copies declaration overlays into the output tree", () => {
+    const packageDir = createPackageFixture("declaration-overlays");
+
     writeFile(
       path.join(packageDir, "src", "types", "runtime.d.ts"),
       "export declare const greet: (name: string) => string;\n"
@@ -92,37 +152,81 @@ describe("buildPrecompiledLib", () => {
     });
 
     expect(
-      fs.readFileSync(path.join(packageDir, "dist", "lib", "index.ts"), "utf8")
-    ).toBe("export * from './nested/value.js';\n");
-
-    const runtimeOutput = fs.readFileSync(
-      path.join(packageDir, "dist", "lib", "runtime.js"),
-      "utf8"
-    );
-    const nestedOutput = fs.readFileSync(
-      path.join(packageDir, "dist", "lib", "nested", "value.js"),
-      "utf8"
-    );
-
-    expect(runtimeOutput).toContain(
-      "export const greet = (name) => `hello ${name}`;"
-    );
-    expect(runtimeOutput).not.toContain(": string");
-    expect(nestedOutput).toContain("export const value = 42;");
-    expect(
-      fs.existsSync(path.join(packageDir, "dist", "lib", "runtime.ts"))
-    ).toBe(false);
-    expect(
-      fs.readFileSync(
-        path.join(packageDir, "dist", "lib", "runtime.d.ts"),
-        "utf8"
-      )
+      readPackageFile(packageDir, path.join("dist", "lib", "runtime.d.ts"))
     ).toBe("export declare const greet: (name: string) => string;\n");
     expect(
-      fs.readFileSync(
-        path.join(packageDir, "dist", "lib", "nested", "value.d.ts"),
-        "utf8"
+      readPackageFile(
+        packageDir,
+        path.join("dist", "lib", "nested", "value.d.ts")
       )
     ).toBe("export declare const value: number;\n");
+  });
+
+  test("creates the output directory when runtime and declaration sources are missing", () => {
+    const packageDir = createPackageFixture("empty-build");
+
+    buildPrecompiledLib({
+      packageDir,
+      runtimeSourceDir: "src/lib",
+      declarationSourceDir: "src/types",
+      outputDir: "dist/lib",
+    });
+
+    expect(packageFileExists(packageDir, path.join("dist", "lib"))).toBe(true);
+  });
+
+  test("copies declaration overlays even when runtime sources are missing", () => {
+    const packageDir = createPackageFixture("declaration-only");
+
+    writeFile(
+      path.join(packageDir, "src", "types", "runtime.d.ts"),
+      "export declare const runtime: string;\n"
+    );
+
+    buildPrecompiledLib({
+      packageDir,
+      runtimeSourceDir: "src/lib",
+      declarationSourceDir: "src/types",
+      outputDir: "dist/lib",
+    });
+
+    expect(
+      readPackageFile(packageDir, path.join("dist", "lib", "runtime.d.ts"))
+    ).toBe("export declare const runtime: string;\n");
+  });
+
+  test("transpiles nested index files and only preserves the root index.ts", () => {
+    const packageDir = createPackageFixture("nested-index");
+
+    writeFile(
+      path.join(packageDir, "src", "lib", "index.ts"),
+      "export * from './nested/index.js';\n"
+    );
+    writeFile(
+      path.join(packageDir, "src", "lib", "nested", "index.ts"),
+      "export const nested: string = 'nested';\n"
+    );
+
+    buildPrecompiledLib({
+      packageDir,
+      runtimeSourceDir: "src/lib",
+      outputDir: "dist/lib",
+    });
+
+    expect(
+      readPackageFile(packageDir, path.join("dist", "lib", "index.ts"))
+    ).toBe("export * from './nested/index.js';\n");
+    expect(
+      readPackageFile(
+        packageDir,
+        path.join("dist", "lib", "nested", "index.js")
+      )
+    ).toContain("export const nested = 'nested';");
+    expect(
+      packageFileExists(
+        packageDir,
+        path.join("dist", "lib", "nested", "index.ts")
+      )
+    ).toBe(false);
   });
 });

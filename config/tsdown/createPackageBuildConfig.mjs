@@ -1,16 +1,21 @@
+import { exec } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { promisify } from "node:util";
 
 const REPOSITORY_ARTIFACTS = ["LICENSE", "NOTICE"];
+const execAsync = promisify(exec);
 
-const DEFAULT_BUILD_OPTIONS = {
-  format: ["esm", "cjs"],
-  dts: true,
-  clean: true,
-  target: "esnext",
-  platform: "node",
-  treeshake: true,
-};
+function createDefaultBuildOptions() {
+  return {
+    format: ["esm", "cjs"],
+    dts: true,
+    clean: true,
+    target: "esnext",
+    platform: "node",
+    treeshake: true,
+  };
+}
 
 export function createPackageBuildConfig(options) {
   const {
@@ -26,15 +31,15 @@ export function createPackageBuildConfig(options) {
 
   if (!runSharedPostBuild) {
     return {
-      ...DEFAULT_BUILD_OPTIONS,
+      ...createDefaultBuildOptions(),
       ...config,
     };
   }
 
   return {
-    ...DEFAULT_BUILD_OPTIONS,
+    ...createDefaultBuildOptions(),
     ...config,
-    onSuccess: async () => {
+    onSuccess: async (resolvedConfig, signal) => {
       const distDir = path.join(packageDir, "dist");
       fs.mkdirSync(distDir, { recursive: true });
 
@@ -57,9 +62,23 @@ export function createPackageBuildConfig(options) {
         await postBuildStep({ packageDir, distDir });
       }
 
-      await callerOnSuccess?.();
+      await runCallerOnSuccess(callerOnSuccess, resolvedConfig, signal);
     },
   };
+}
+
+async function runCallerOnSuccess(callerOnSuccess, resolvedConfig, signal) {
+  if (typeof callerOnSuccess === "function") {
+    await callerOnSuccess(resolvedConfig, signal);
+    return;
+  }
+
+  if (typeof callerOnSuccess === "string") {
+    await execAsync(callerOnSuccess, {
+      cwd: resolvedConfig?.cwd,
+      signal,
+    });
+  }
 }
 
 function copyDirectoryIfPresent({ packageDir, sourceDir, destinationDir }) {
