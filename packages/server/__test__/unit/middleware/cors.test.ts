@@ -329,26 +329,29 @@ describe("cors", () => {
         case: "credentials combined with a wildcard origin",
         options: { origin: "*", credentials: true },
       },
-    ])("fails closed without a request Origin for $case", async ({ options }) => {
-      const response = await executeCors({
-        options,
-        finalHandler: async () =>
-          downstreamResponseWithPermissiveCorsPolicy({
-            statusCode: 202,
-            header: {
-              vary: "Accept-Encoding",
-              "x-custom": "kept",
-            },
-            body: { passedThrough: true },
-          }),
-      });
+    ])(
+      "fails closed without a request Origin for $case",
+      async ({ options }) => {
+        const response = await executeCors({
+          options,
+          finalHandler: async () =>
+            downstreamResponseWithPermissiveCorsPolicy({
+              statusCode: 202,
+              header: {
+                vary: "Accept-Encoding",
+                "x-custom": "kept",
+              },
+              body: { passedThrough: true },
+            }),
+        });
 
-      expect(response.statusCode).toBe(202);
-      expect(response.body).toEqual({ passedThrough: true });
-      expect(response.header?.["x-custom"]).toBe("kept");
-      expect(response.header?.["vary"]).toBe("Accept-Encoding, Origin");
-      expectNoPolicyControlledCorsHeaders(response);
-    });
+        expect(response.statusCode).toBe(202);
+        expect(response.body).toEqual({ passedThrough: true });
+        expect(response.header?.["x-custom"]).toBe("kept");
+        expect(response.header?.["vary"]).toBe("Accept-Encoding, Origin");
+        expectNoPolicyControlledCorsHeaders(response);
+      }
+    );
 
     test("sets exposed response headers", async () => {
       const response = await executeCors({
@@ -781,28 +784,31 @@ describe("cors", () => {
         case: "a credentialed function origin resolver returning a wildcard",
         options: { origin: () => "*", credentials: true },
       },
-    ])("fails closed for preflight requests with $case", async ({ options }) => {
-      const response = await executeCors({
-        options,
-        method: HttpMethod.OPTIONS,
-        header: {
-          origin: "https://app.com",
-          "access-control-request-method": "POST",
-        },
-        finalHandler: async () =>
-          downstreamResponseWithPermissiveCorsPolicy({
-            statusCode: 202,
-            header: { "x-custom": "kept" },
-            body: { passedThrough: true },
-          }),
-      });
+    ])(
+      "fails closed for preflight requests with $case",
+      async ({ options }) => {
+        const response = await executeCors({
+          options,
+          method: HttpMethod.OPTIONS,
+          header: {
+            origin: "https://app.com",
+            "access-control-request-method": "POST",
+          },
+          finalHandler: async () =>
+            downstreamResponseWithPermissiveCorsPolicy({
+              statusCode: 202,
+              header: { "x-custom": "kept" },
+              body: { passedThrough: true },
+            }),
+        });
 
-      expect(response.statusCode).toBe(202);
-      expect(response.body).toEqual({ passedThrough: true });
-      expect(response.header?.["x-custom"]).toBe("kept");
-      expect(response.header?.["vary"]).toBe("Origin");
-      expectNoPolicyControlledCorsHeaders(response);
-    });
+        expect(response.statusCode).toBe(202);
+        expect(response.body).toEqual({ passedThrough: true });
+        expect(response.header?.["x-custom"]).toBe("kept");
+        expect(response.header?.["vary"]).toBe("Origin");
+        expectNoPolicyControlledCorsHeaders(response);
+      }
+    );
 
     test("reflects requested headers when allowed headers are not configured", async () => {
       const response = await executeCors({
