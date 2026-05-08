@@ -31,6 +31,8 @@ const NETWORK_ERROR_MESSAGES: Readonly<Partial<Record<NetworkErrorCode, string>>
   ETIMEDOUT: "Connection timed out",
 };
 
+const PATH_PARAMETER_PATTERN = /:([A-Za-z0-9_]+)/g;
+
 /**
  * Abstract base class for type-safe API clients.
  *
@@ -47,11 +49,12 @@ export abstract class ApiClient {
 
   protected constructor(props: ApiClientProps) {
     this.fetchFn = props.fetchFn ?? globalThis.fetch.bind(globalThis);
-    this.baseUrl = props.baseUrl;
 
-    if (!this.baseUrl) {
+    if (typeof props.baseUrl !== "string" || props.baseUrl.trim().length === 0) {
       throw new Error("Base URL must be provided");
     }
+
+    this.baseUrl = props.baseUrl;
 
     if (
       props.timeoutMs !== undefined &&
@@ -100,7 +103,7 @@ export abstract class ApiClient {
 
     if (typeof response.headers.getSetCookie === "function") {
       const cookies = response.headers.getSetCookie();
-      if (cookies.length > 1) {
+      if (cookies.length > 0) {
         header["set-cookie"] = cookies;
       }
     }
@@ -171,7 +174,7 @@ export abstract class ApiClient {
 
   private isTextContentType(contentType: string | null): boolean {
     if (!contentType) return false;
-    return contentType.includes("text/");
+    return contentType.toLowerCase().includes("text/");
   }
 
   private createNetworkError(error: unknown, method: string, url: string): NetworkError {
@@ -254,7 +257,8 @@ export abstract class ApiClient {
 
   private isJsonContentType(contentType: string | null): boolean {
     if (!contentType) return false;
-    return contentType.includes("application/json") || contentType.includes("+json");
+    const normalizedContentType = contentType.toLowerCase();
+    return normalizedContentType.includes("application/json") || normalizedContentType.includes("+json");
   }
 
   private buildFullUrl(relativePath: string): string {
@@ -264,23 +268,54 @@ export abstract class ApiClient {
   }
 
   private createPath(path: string, param?: IHttpParam): string {
-    if (!param) {
+    const pathParameterNames: string[] = [];
+    for (const match of path.matchAll(PATH_PARAMETER_PATTERN)) {
+      const name = match[1];
+      if (name !== undefined) {
+        pathParameterNames.push(name);
+      }
+    }
+
+    if (pathParameterNames.length === 0) {
+      if (param) {
+        const [extraParamName] = Object.keys(param);
+        if (extraParamName !== undefined) {
+          throw new PathParameterError(
+            `Path parameter '${extraParamName}' is not found in path '${path}'`,
+            extraParamName,
+            path,
+          );
+        }
+      }
       return path;
     }
 
-    return Object.entries(param).reduce((acc, [key, value]) => {
-      const result = acc.replace(`:${key}`, this.encodePathParameter(key, value, path));
+    const pathParameterSet = new Set(pathParameterNames);
+    const parameters = param ?? {};
 
-      if (result === acc) {
+    for (const key of Object.keys(parameters)) {
+      if (!pathParameterSet.has(key)) {
         throw new PathParameterError(
           `Path parameter '${key}' is not found in path '${path}'`,
           key,
           path,
         );
       }
+    }
 
-      return result;
-    }, path);
+    for (const key of pathParameterSet) {
+      if (!Object.hasOwn(parameters, key) || parameters[key] === undefined) {
+        throw new PathParameterError(
+          `Path parameter '${key}' is missing for path '${path}'`,
+          key,
+          path,
+        );
+      }
+    }
+
+    return path.replace(PATH_PARAMETER_PATTERN, (_placeholder, key: string) =>
+      this.encodePathParameter(key, parameters[key]!, path),
+    );
   }
 
   private encodePathParameter(key: string, value: string, path: string): string {

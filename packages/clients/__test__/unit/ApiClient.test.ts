@@ -1,71 +1,32 @@
-import { HttpMethod, UnknownResponseError } from "@rexeus/typeweaver-core";
-import type { IHttpHeader, IHttpResponse } from "@rexeus/typeweaver-core";
-import {
-  createCreateTodoRequest,
-  createCreateTodoSuccessResponseBody,
-  createDeleteTodoRequest,
-  createGetTodoRequest,
-  createListTodosRequest,
-  createUnauthorizedErrorResponse,
-  CreateTodoRequestCommand,
-  DeleteTodoRequestCommand,
-  GetTodoRequestCommand,
-  ListTodosRequestCommand,
-  NetworkError,
-  PathParameterError,
-  PutTodoRequestCommand,
-  createPutTodoRequest,
-  ResponseParseError,
-  TodoClient,
-} from "test-utils";
+import { HttpMethod } from "@rexeus/typeweaver-core";
+import type {
+  IHttpBody,
+  IHttpHeader,
+  IHttpParam,
+  IHttpQuery,
+  IHttpResponse,
+} from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
-import {
-  createRawMockFetch,
-  sendAndExtractRawResponse,
-  sendIgnoringValidation,
-} from "../helpers.js";
 import { ApiClient } from "../../src/lib/ApiClient.js";
-import {
-  PathParameterError as SourcePathParameterError,
-} from "../../src/lib/PathParameterError.js";
+import { NetworkError } from "../../src/lib/NetworkError.js";
+import { PathParameterError } from "../../src/lib/PathParameterError.js";
 import { RequestCommand } from "../../src/lib/RequestCommand.js";
+import { ResponseParseError } from "../../src/lib/ResponseParseError.js";
+import type { ApiClientProps } from "../../src/lib/ApiClient.js";
+import type { NetworkErrorCode } from "../../src/lib/NetworkError.js";
 
-function createMockFetch(
-  status: number,
-  body: unknown,
-  headers: Record<string, string> = { "content-type": "application/json" }
-): typeof globalThis.fetch {
-  return vi.fn<typeof globalThis.fetch>().mockResolvedValue(
-    new Response(body !== undefined ? JSON.stringify(body) : null, {
-      status,
-      headers,
-    })
-  );
-}
+type TestRequestCommandProps = {
+  readonly method?: HttpMethod;
+  readonly path?: string;
+  readonly header?: IHttpHeader;
+  readonly param?: IHttpParam;
+  readonly query?: IHttpQuery;
+  readonly body?: IHttpBody;
+};
 
-function createClientWithMockFetch(baseUrl: string) {
-  const mockFetch = createMockFetch(200, {
-    id: "test",
-    title: "Test",
-    completed: false,
-  });
-  const client = new TodoClient({
-    baseUrl,
-    fetchFn: mockFetch,
-  });
-  return { client, mockFetch };
-}
-
-function createPassthroughClient(mockFetch: typeof globalThis.fetch) {
-  return new TodoClient({
-    fetchFn: mockFetch,
-    baseUrl: "http://localhost:3000",
-  });
-}
-
-class SourceApiClient extends ApiClient {
-  public constructor(mockFetch: typeof globalThis.fetch) {
-    super({ fetchFn: mockFetch, baseUrl: "http://localhost:3000" });
+class TestApiClient extends ApiClient {
+  public constructor(props: ApiClientProps) {
+    super(props);
   }
 
   public send(command: RequestCommand): Promise<IHttpResponse> {
@@ -73,21 +34,24 @@ class SourceApiClient extends ApiClient {
   }
 }
 
-class SourceHeaderRequestCommand extends RequestCommand<
-  IHttpHeader,
-  undefined,
-  undefined,
-  undefined
-> {
-  public override readonly operationId = "SourceHeaderRequest";
-  public override readonly method = HttpMethod.GET;
-  public override readonly path = "/source-header-request";
-  public override readonly param = undefined;
-  public override readonly query = undefined;
-  public override readonly body = undefined;
+class TestRequestCommand extends RequestCommand {
+  public override readonly operationId = "TestRequest";
+  public override readonly method: HttpMethod;
+  public override readonly path: string;
+  public override readonly header: IHttpHeader;
+  public override readonly param: IHttpParam;
+  public override readonly query: IHttpQuery;
+  public override readonly body: IHttpBody;
 
-  public constructor(public override readonly header: IHttpHeader) {
+  public constructor(props: TestRequestCommandProps = {}) {
     super();
+
+    this.method = props.method ?? HttpMethod.GET;
+    this.path = props.path ?? "/todos";
+    this.header = props.header;
+    this.param = props.param;
+    this.query = props.query;
+    this.body = props.body;
   }
 
   public override processResponse(response: IHttpResponse): IHttpResponse {
@@ -95,1532 +59,1008 @@ class SourceHeaderRequestCommand extends RequestCommand<
   }
 }
 
-class SourceFileContentRequestCommand extends RequestCommand<
-  undefined,
-  Record<string, string>,
-  undefined,
-  undefined
-> {
-  public override readonly operationId = "SourceFileContentRequest";
-  public override readonly method = HttpMethod.GET;
-  public override readonly path = "/files/:fileId/content";
-  public override readonly header = undefined;
-  public override readonly query = undefined;
-  public override readonly body = undefined;
-  public override readonly param: Record<string, string>;
-
-  public constructor(fileId: string) {
-    super();
-
-    this.param = { fileId };
-  }
-
-  public override processResponse(response: IHttpResponse): IHttpResponse {
-    return response;
-  }
+function resolvedFetch(response: Response = new Response(null, { status: 204 })) {
+  return vi.fn<typeof globalThis.fetch>().mockResolvedValue(response);
 }
 
-describe("RequestCommand operationId", () => {
-  test("should expose operationId from the API definition", () => {
-    const command = new ListTodosRequestCommand(createListTodosRequest());
+function rejectedFetch(error: unknown) {
+  return vi.fn<typeof globalThis.fetch>().mockRejectedValue(error);
+}
 
-    expect(command.operationId).toBe("ListTodos");
+function createClient(
+  mockFetch: typeof globalThis.fetch = resolvedFetch(),
+  props: Partial<ApiClientProps> = {}
+): TestApiClient {
+  return new TestApiClient({
+    baseUrl: "http://localhost:3000",
+    fetchFn: mockFetch,
+    ...props,
   });
+}
 
-  test("should expose correct operationId for different commands", () => {
-    const get = new GetTodoRequestCommand(createGetTodoRequest());
-    const create = new CreateTodoRequestCommand(createCreateTodoRequest());
-    const put = new PutTodoRequestCommand(createPutTodoRequest());
-
-    expect(get.operationId).toBe("GetTodo");
-    expect(create.operationId).toBe("CreateTodo");
-    expect(put.operationId).toBe("PutTodo");
-  });
-});
-
-describe("RequestCommand.processResponse", () => {
-  test("should return success response from the union", () => {
-    // Arrange
-    const command = new CreateTodoRequestCommand(createCreateTodoRequest());
-    const body = createCreateTodoSuccessResponseBody();
-    const mockResponse = {
-      statusCode: 201,
-      header: { "Content-Type": "application/json" },
-      body,
-    };
-
-    // Act
-    const result = command.processResponse(mockResponse);
-
-    // Assert
-    expect(result.type).toBe("CreateTodoSuccess");
-    expect(result.statusCode).toBe(201);
-  });
-
-  test("should return error response from the union instead of throwing", () => {
-    // Arrange
-    const command = new CreateTodoRequestCommand(createCreateTodoRequest());
-    const errorResponse = createUnauthorizedErrorResponse();
-    const mockResponse = {
-      statusCode: errorResponse.statusCode,
-      header: errorResponse.header,
-      body: errorResponse.body,
-    };
-
-    // Act
-    const result = command.processResponse(mockResponse);
-
-    // Assert
-    expect(result.type).toBe("UnauthorizedError");
-    expect(result.statusCode).toBe(401);
-  });
-
-  test("should throw UnknownResponseError for unrecognized status code", () => {
-    // Arrange
-    const command = new CreateTodoRequestCommand(createCreateTodoRequest());
-    const mockResponse = { statusCode: 418, header: undefined, body: {} };
-
-    // Act & Assert
-    expect(() => command.processResponse(mockResponse)).toThrow(
-      UnknownResponseError
-    );
-  });
-});
-
-describe("ApiClient URL Construction", () => {
-  function createCommand(todoId: string) {
-    const requestData = createGetTodoRequest({ param: { todoId } });
-    return new GetTodoRequestCommand(requestData);
+function getFetchCall(mockFetch: typeof globalThis.fetch): {
+  readonly url: string;
+  readonly init: RequestInit;
+} {
+  const call = vi.mocked(mockFetch).mock.calls[0];
+  if (!call) {
+    throw new Error("Expected fetch to have been called");
   }
 
-  test("base URL without path preserves origin", async () => {
-    const { client, mockFetch } = createClientWithMockFetch(
-      "http://localhost:3000"
-    );
-    const command = createCommand("abc123");
+  return {
+    url: call[0] as string,
+    init: call[1] ?? {},
+  };
+}
 
-    await sendIgnoringValidation(client, command);
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:3000/todos/abc123",
-      expect.objectContaining({ method: "GET" })
-    );
-  });
-
-  test("base URL with path segment preserves the path", async () => {
-    const { client, mockFetch } = createClientWithMockFetch(
-      "http://localhost/api"
-    );
-    const command = createCommand("abc123");
-
-    await sendIgnoringValidation(client, command);
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost/api/todos/abc123",
-      expect.objectContaining({ method: "GET" })
+async function expectPathParameterRejection(
+  promise: Promise<unknown>,
+  expected: { readonly paramName: string; readonly path: string }
+): Promise<void> {
+  await expect(promise).rejects.toSatisfy((error: unknown) => {
+    return (
+      error instanceof PathParameterError &&
+      error.paramName === expected.paramName &&
+      error.path === expected.path
     );
   });
+}
 
-  test("base URL with trailing slash preserves the path", async () => {
-    const { client, mockFetch } = createClientWithMockFetch(
-      "http://localhost/api/"
-    );
-    const command = createCommand("abc123");
+async function sendRaw(
+  commandProps: TestRequestCommandProps,
+  clientProps: Partial<ApiClientProps> = {}
+): Promise<{
+  readonly result: IHttpResponse;
+  readonly mockFetch: typeof globalThis.fetch;
+}> {
+  const mockFetch = resolvedFetch(
+    new Response("{}", {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    })
+  );
+  const client = createClient(mockFetch, clientProps);
 
-    await sendIgnoringValidation(client, command);
+  const result = await client.send(new TestRequestCommand(commandProps));
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost/api/todos/abc123",
-      expect.objectContaining({ method: "GET" })
-    );
+  return { result, mockFetch };
+}
+
+describe("ApiClient constructor", () => {
+  test.each([
+    { case: "HTTP absolute base URL", baseUrl: "http://localhost:3000" },
+    { case: "HTTPS absolute base URL", baseUrl: "https://api.example.com" },
+    { case: "relative base path", baseUrl: "/api" },
+  ])("accepts $case", ({ baseUrl }) => {
+    expect(() => createClient(resolvedFetch(), { baseUrl })).not.toThrow();
   });
 
-  test("nested base path is fully preserved", async () => {
-    const { client, mockFetch } = createClientWithMockFetch(
-      "http://localhost/api/v1"
-    );
-    const command = createCommand("abc123");
-
-    await sendIgnoringValidation(client, command);
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost/api/v1/todos/abc123",
-      expect.objectContaining({ method: "GET" })
-    );
-  });
-
-  test("custom fetchFn is used when provided", async () => {
-    const mockFetch = createMockFetch(200, {
-      id: "test",
-      title: "Test",
-      completed: false,
-    });
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost/api",
-    });
-
-    const command = createCommand("abc123");
-    await sendIgnoringValidation(client, command);
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost/api/todos/abc123",
-      expect.objectContaining({ method: "GET" })
-    );
-  });
-
-  test("two clients with same fetchFn do not interfere", async () => {
-    const sharedFetch = createMockFetch(200, {
-      id: "test",
-      title: "Test",
-      completed: false,
-    });
-
-    const clientA = new TodoClient({
-      fetchFn: sharedFetch,
-      baseUrl: "http://localhost/api",
-    });
-    const clientB = new TodoClient({
-      fetchFn: sharedFetch,
-      baseUrl: "http://localhost/api",
-    });
-
-    expect(clientA.baseUrl).toBe("http://localhost/api");
-    expect(clientB.baseUrl).toBe("http://localhost/api");
-
-    const command = createCommand("abc123");
-    await sendIgnoringValidation(clientA, command);
-
-    expect(sharedFetch).toHaveBeenCalledWith(
-      "http://localhost/api/todos/abc123",
-      expect.objectContaining({ method: "GET" })
-    );
-  });
-
-  test("relative base path works without host", async () => {
-    const { client, mockFetch } = createClientWithMockFetch("/api");
-    const command = createCommand("abc123");
-
-    await sendIgnoringValidation(client, command);
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      "/api/todos/abc123",
-      expect.objectContaining({ method: "GET" })
-    );
-  });
-
-  test("path parameters with special characters are percent-encoded", async () => {
-    const { client, mockFetch } = createClientWithMockFetch(
-      "http://localhost:3000"
-    );
-    const command = createCommand("hello world");
-
-    await sendIgnoringValidation(client, command);
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:3000/todos/hello%20world",
-      expect.objectContaining({ method: "GET" })
-    );
-  });
-});
-
-describe("ApiClient Query String Construction", () => {
-  test("single query value appends to URL", async () => {
-    const { client, mockFetch } = createClientWithMockFetch(
-      "http://localhost:3000"
-    );
-    const request = createListTodosRequest({ query: { status: "TODO" } });
-    const command = new ListTodosRequestCommand(request);
-
-    await sendIgnoringValidation(client, command);
-
-    const calledUrl = vi.mocked(mockFetch).mock.calls[0]![0] as string;
-    expect(calledUrl).toContain("?");
-    expect(calledUrl).toContain("status=TODO");
-  });
-
-  test("array query values repeat the key", async () => {
-    const { client, mockFetch } = createClientWithMockFetch(
-      "http://localhost:3000"
-    );
-    const request = createListTodosRequest({ query: { tags: ["a", "b"] } });
-    const command = new ListTodosRequestCommand(request);
-
-    await sendIgnoringValidation(client, command);
-
-    const calledUrl = vi.mocked(mockFetch).mock.calls[0]![0] as string;
-    expect(calledUrl).toContain("tags=a");
-    expect(calledUrl).toContain("tags=b");
-  });
-
-  test("undefined query values are skipped", async () => {
-    const { client, mockFetch } = createClientWithMockFetch(
-      "http://localhost:3000"
-    );
-    const request = createListTodosRequest({ query: { status: "TODO" } });
-    const command = new ListTodosRequestCommand({
-      header: request.header,
-      query: { status: "TODO", priority: undefined },
-    });
-
-    await sendIgnoringValidation(client, command);
-
-    const calledUrl = vi.mocked(mockFetch).mock.calls[0]![0] as string;
-    expect(calledUrl).toContain("status=TODO");
-    expect(calledUrl).not.toContain("priority");
-  });
-
-  test("query combined with base URL path produces correct URL", async () => {
-    const { client, mockFetch } = createClientWithMockFetch(
-      "http://localhost/api"
-    );
-    const request = createListTodosRequest({ query: { status: "DONE" } });
-    const command = new ListTodosRequestCommand(request);
-
-    await sendIgnoringValidation(client, command);
-
-    const calledUrl = vi.mocked(mockFetch).mock.calls[0]![0] as string;
-    expect(calledUrl).toMatch(/^http:\/\/localhost\/api\/todos\?/);
-    expect(calledUrl).toContain("status=DONE");
-  });
-
-  test("no query produces URL without question mark", async () => {
-    const { client, mockFetch } = createClientWithMockFetch(
-      "http://localhost:3000"
-    );
-    const request = createGetTodoRequest({ param: { todoId: "abc" } });
-    const command = new GetTodoRequestCommand(request);
-
-    await sendIgnoringValidation(client, command);
-
-    const calledUrl = vi.mocked(mockFetch).mock.calls[0]![0] as string;
-    expect(calledUrl).toBe("http://localhost:3000/todos/abc");
-    expect(calledUrl).not.toContain("?");
-  });
-});
-
-describe("ApiClient Constructor Validation", () => {
-  test("throws on empty base URL", () => {
-    expect(() => new TodoClient({ baseUrl: "" })).toThrow(
+  test.each([
+    { case: "empty", baseUrl: "" },
+    { case: "whitespace-only", baseUrl: "   \t\n" },
+  ])("rejects $case baseUrl", ({ baseUrl }) => {
+    expect(() => createClient(resolvedFetch(), { baseUrl })).toThrow(
       "Base URL must be provided"
     );
   });
 
-  test("accepts valid HTTP URL", () => {
-    expect(
-      () => new TodoClient({ baseUrl: "http://localhost:3000" })
-    ).not.toThrow();
+  test("rejects a missing baseUrl with the validation error", () => {
+    const props = { fetchFn: resolvedFetch() } as unknown as ApiClientProps;
+
+    expect(() => new TestApiClient(props)).toThrow(
+      "Base URL must be provided"
+    );
   });
 
-  test("accepts relative base path", () => {
-    expect(() => new TodoClient({ baseUrl: "/api" })).not.toThrow();
+  test("rejects a non-string baseUrl with the validation error", () => {
+    const props = {
+      baseUrl: 123 as unknown as string,
+      fetchFn: resolvedFetch(),
+    } satisfies ApiClientProps;
+
+    expect(() => new TestApiClient(props)).toThrow(
+      "Base URL must be provided"
+    );
   });
 
-  test("throws on timeoutMs: 0", () => {
-    expect(
-      () => new TodoClient({ baseUrl: "http://localhost:3000", timeoutMs: 0 })
-    ).toThrow("timeoutMs must be a positive finite number");
-  });
-
-  test("throws on timeoutMs: -1", () => {
-    expect(
-      () => new TodoClient({ baseUrl: "http://localhost:3000", timeoutMs: -1 })
-    ).toThrow("timeoutMs must be a positive finite number");
-  });
-
-  test("throws on timeoutMs: NaN", () => {
-    expect(
-      () => new TodoClient({ baseUrl: "http://localhost:3000", timeoutMs: NaN })
-    ).toThrow("timeoutMs must be a positive finite number");
-  });
-
-  test("throws on timeoutMs: Infinity", () => {
-    expect(
-      () =>
-        new TodoClient({
-          baseUrl: "http://localhost:3000",
-          timeoutMs: Infinity,
-        })
-    ).toThrow("timeoutMs must be a positive finite number");
-  });
-
-  test("accepts valid timeoutMs", () => {
-    expect(
-      () =>
-        new TodoClient({ baseUrl: "http://localhost:3000", timeoutMs: 5000 })
-    ).not.toThrow();
-  });
-});
-
-describe("ApiClient Network Error Handling", () => {
   test.each([
-    ["ECONNREFUSED", "Connection refused"],
-    ["ECONNRESET", "Connection reset by peer"],
-    ["ENOTFOUND", "DNS lookup failed"],
-    ["ETIMEDOUT", "Connection timed out"],
-  ] as const)("maps %s to '%s'", async (code, expectedMessage) => {
-    const mockFetch = vi.fn<typeof globalThis.fetch>().mockRejectedValue(
-      Object.assign(new TypeError("fetch failed"), {
-        cause: { code },
-      })
+    { case: "zero", timeoutMs: 0 },
+    { case: "negative", timeoutMs: -1 },
+    { case: "NaN", timeoutMs: Number.NaN },
+    { case: "Infinity", timeoutMs: Infinity },
+  ])("rejects $case timeoutMs", ({ timeoutMs }) => {
+    expect(() => createClient(resolvedFetch(), { timeoutMs })).toThrow(
+      "timeoutMs must be a positive finite number"
     );
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    await expect(client.send(command)).rejects.toSatisfy((error: unknown) => {
-      return (
-        error instanceof NetworkError &&
-        error.code === code &&
-        error.method === "GET" &&
-        error.url === "http://localhost:3000/todos/abc" &&
-        error.message.includes(expectedMessage)
-      );
-    });
   });
 
-  test("maps unknown TypeError to generic network error", async () => {
-    const mockFetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockRejectedValue(new TypeError("fetch failed"));
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    await expect(client.send(command)).rejects.toSatisfy((error: unknown) => {
-      return (
-        error instanceof NetworkError &&
-        error.code === "UNKNOWN" &&
-        error.message.includes("fetch failed")
-      );
-    });
+  test("accepts positive timeoutMs", () => {
+    expect(() => createClient(resolvedFetch(), { timeoutMs: 1 })).not.toThrow();
   });
 
-  test("maps non-Error throw to string network error", async () => {
-    const mockFetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockRejectedValue("something broke");
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
+  test("uses global fetch when fetchFn is omitted", async () => {
+    const originalFetch = globalThis.fetch;
+    const globalFetch = resolvedFetch(new Response(null, { status: 204 }));
+    globalThis.fetch = globalFetch;
 
-    await expect(client.send(command)).rejects.toSatisfy((error: unknown) => {
-      return (
-        error instanceof NetworkError &&
-        error.code === "UNKNOWN" &&
-        error.message.includes("something broke") &&
-        error.cause === "something broke"
-      );
-    });
-  });
+    try {
+      const client = new TestApiClient({ baseUrl: "http://localhost:3000" });
 
-  test("preserves original error as cause", async () => {
-    const originalError = Object.assign(new TypeError("fetch failed"), {
-      cause: { code: "ECONNREFUSED" },
-    });
-    const mockFetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockRejectedValue(originalError);
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
+      await client.send(new TestRequestCommand({ method: HttpMethod.DELETE }));
 
-    await expect(client.send(command)).rejects.toSatisfy((error: unknown) => {
-      return error instanceof NetworkError && error.cause === originalError;
-    });
+      const call = getFetchCall(globalFetch);
+      expect(call.url).toBe("http://localhost:3000/todos");
+      expect(call.init).toMatchObject({ method: HttpMethod.DELETE });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });
 
-describe("ApiClient Response Body Parsing", () => {
-  test("204 No Content returns undefined body", async () => {
-    const mockFetch = createRawMockFetch(204, null, {
-      "content-type": "application/json",
-    });
-    const client = new TodoClient({
-      fetchFn: mockFetch,
+describe("ApiClient URL construction", () => {
+  test.each([
+    {
+      case: "origin-only base URL with leading slash path",
       baseUrl: "http://localhost:3000",
-    });
-    const command = new DeleteTodoRequestCommand(createDeleteTodoRequest());
+      path: "/todos",
+      expectedUrl: "http://localhost:3000/todos",
+    },
+    {
+      case: "base URL path without trailing slash",
+      baseUrl: "http://localhost:3000/api",
+      path: "/todos",
+      expectedUrl: "http://localhost:3000/api/todos",
+    },
+    {
+      case: "base URL path with trailing slash",
+      baseUrl: "http://localhost:3000/api/",
+      path: "/todos",
+      expectedUrl: "http://localhost:3000/api/todos",
+    },
+    {
+      case: "relative base path",
+      baseUrl: "/api",
+      path: "/todos",
+      expectedUrl: "/api/todos",
+    },
+    {
+      case: "command path without leading slash",
+      baseUrl: "http://localhost:3000/api",
+      path: "todos",
+      expectedUrl: "http://localhost:3000/api/todos",
+    },
+  ])("joins $case", async ({ baseUrl, path, expectedUrl }) => {
+    const { mockFetch } = await sendRaw({ path }, { baseUrl });
 
-    const result = await client.send(command);
-
-    expect(result.type).toBe("DeleteTodoSuccess");
-    expect(result.body).toBeUndefined();
-  });
-
-  test("304 Not Modified returns undefined body", async () => {
-    const mockFetch = createRawMockFetch(304, null);
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(result.body).toBeUndefined();
-  });
-
-  test("304 with content-type application/json returns undefined body", async () => {
-    const mockFetch = createRawMockFetch(304, null, {
-      "content-type": "application/json",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(result.body).toBeUndefined();
-  });
-
-  test("empty response text returns undefined body", async () => {
-    const mockFetch = createRawMockFetch(200, "");
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(result.body).toBeUndefined();
-  });
-
-  test("valid JSON with application/json header is parsed", async () => {
-    const mockFetch = createRawMockFetch(200, '{"key":"value"}', {
-      "content-type": "application/json",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(result.body).toEqual({ key: "value" });
-  });
-
-  test("invalid JSON with application/json header throws ResponseParseError", async () => {
-    const mockFetch = createRawMockFetch(200, "not{json", {
-      "content-type": "application/json",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    await expect(client.send(command)).rejects.toSatisfy((error: unknown) => {
-      return (
-        error instanceof ResponseParseError &&
-        error.statusCode === 200 &&
-        error.bodyPreview === "not{json" &&
-        error.message === "Failed to parse JSON response"
-      );
-    });
-  });
-
-  test("JSON parse failure includes body preview truncated to 200 chars", async () => {
-    const longBody = "x".repeat(300);
-    const mockFetch = createRawMockFetch(200, longBody, {
-      "content-type": "application/json",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    await expect(client.send(command)).rejects.toSatisfy((error: unknown) => {
-      return (
-        error instanceof ResponseParseError &&
-        error.bodyPreview === "x".repeat(200) &&
-        error.bodyPreview.length === 200
-      );
-    });
-  });
-
-  test("text/plain content is returned as string", async () => {
-    const mockFetch = createRawMockFetch(200, "plain text", {
-      "content-type": "text/plain",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(result.body).toBe("plain text");
-  });
-
-  test("no Content-Type header returns raw text", async () => {
-    const mockFetch = createRawMockFetch(200, "raw content");
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(result.body).toBe("raw content");
-  });
-
-  test("JSON with charset=utf-8 in Content-Type is parsed", async () => {
-    const mockFetch = createRawMockFetch(200, '{"a":1}', {
-      "content-type": "application/json; charset=utf-8",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(result.body).toEqual({ a: 1 });
-  });
-
-  test("application/problem+json is parsed as JSON", async () => {
-    const mockFetch = createRawMockFetch(
-      400,
-      '{"type":"about:blank","title":"Bad Request"}',
-      {
-        "content-type": "application/problem+json",
-      }
-    );
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(result.body).toEqual({ type: "about:blank", title: "Bad Request" });
-  });
-
-  test("application/vnd.api+json is parsed as JSON", async () => {
-    const mockFetch = createRawMockFetch(200, '{"data":{"id":"1"}}', {
-      "content-type": "application/vnd.api+json",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(result.body).toEqual({ data: { id: "1" } });
-  });
-
-  test("application/problem+json with charset is parsed as JSON", async () => {
-    const mockFetch = createRawMockFetch(400, '{"type":"about:blank"}', {
-      "content-type": "application/problem+json; charset=utf-8",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(result.body).toEqual({ type: "about:blank" });
-  });
-
-  test("invalid JSON with +json content type throws ResponseParseError", async () => {
-    const mockFetch = createRawMockFetch(400, "not{json", {
-      "content-type": "application/problem+json",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    await expect(client.send(command)).rejects.toSatisfy((error: unknown) => {
-      return (
-        error instanceof ResponseParseError &&
-        error.statusCode === 400 &&
-        error.message === "Failed to parse JSON response"
-      );
-    });
-  });
-
-  test("application/octet-stream returns ArrayBuffer", async () => {
-    const binaryData = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
-    const mockFetch = createRawMockFetch(200, binaryData, {
-      "content-type": "application/octet-stream",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(result.body).toBeInstanceOf(ArrayBuffer);
-  });
-
-  test("image/png returns ArrayBuffer", async () => {
-    const binaryData = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
-    const mockFetch = createRawMockFetch(200, binaryData, {
-      "content-type": "image/png",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(result.body).toBeInstanceOf(ArrayBuffer);
-  });
-
-  test("application/pdf returns ArrayBuffer", async () => {
-    const binaryData = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
-    const mockFetch = createRawMockFetch(200, binaryData, {
-      "content-type": "application/pdf",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(result.body).toBeInstanceOf(ArrayBuffer);
-  });
-
-  test("audio/mpeg returns ArrayBuffer", async () => {
-    const binaryData = new Uint8Array([0xff, 0xfb, 0x90, 0x00]);
-    const mockFetch = createRawMockFetch(200, binaryData, {
-      "content-type": "audio/mpeg",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(result.body).toBeInstanceOf(ArrayBuffer);
-  });
-
-  test("text/html returns string", async () => {
-    const mockFetch = createRawMockFetch(200, "<h1>Hello</h1>", {
-      "content-type": "text/html",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(typeof result.body).toBe("string");
-    expect(result.body).toBe("<h1>Hello</h1>");
-  });
-
-  test("text/xml returns string", async () => {
-    const mockFetch = createRawMockFetch(200, "<root/>", {
-      "content-type": "text/xml",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(typeof result.body).toBe("string");
-    expect(result.body).toBe("<root/>");
-  });
-
-  test("binary response with empty body returns empty ArrayBuffer", async () => {
-    const mockFetch = createRawMockFetch(200, new Uint8Array(0), {
-      "content-type": "application/octet-stream",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(result.body).toBeInstanceOf(ArrayBuffer);
-    expect((result.body as ArrayBuffer).byteLength).toBe(0);
+    expect(getFetchCall(mockFetch).url).toBe(expectedUrl);
   });
 });
 
-describe("ApiClient Response Header Handling", () => {
-  test("single header is stored as string", async () => {
-    const mockFetch = createRawMockFetch(200, "{}", {
-      "content-type": "application/json",
-      "x-request-id": "abc123",
+describe("ApiClient query string construction", () => {
+  test("appends scalar query values", async () => {
+    const { mockFetch } = await sendRaw({
+      path: "/todos",
+      query: { status: "TODO", page: "2" },
     });
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
+
+    expect(getFetchCall(mockFetch).url).toBe(
+      "http://localhost:3000/todos?status=TODO&page=2"
     );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(
-      (result.header as Record<string, string | string[]>)["x-request-id"]
-    ).toBe("abc123");
   });
 
-  test("multi-value headers are comma-joined by native Headers", async () => {
-    const headers = new Headers();
-    headers.append("x-custom", "first");
-    headers.append("x-custom", "second");
-    headers.append("content-type", "application/json");
-
-    const mockFetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockResolvedValue(new Response("{}", { status: 200, headers }));
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect(
-      (result.header as Record<string, string | string[]>)["x-custom"]
-    ).toBe("first, second");
-  });
-
-  test("multiple distinct headers are preserved", async () => {
-    const mockFetch = createRawMockFetch(200, "{}", {
-      "content-type": "application/json",
-      "x-a": "1",
-      "x-b": "2",
+  test("repeats array query keys in order", async () => {
+    const { mockFetch } = await sendRaw({
+      path: "/todos",
+      query: { tag: ["api", "client"] },
     });
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
 
-    const result = await sendAndExtractRawResponse(client, command);
-
-    expect((result.header as Record<string, string | string[]>)["x-a"]).toBe(
-      "1"
-    );
-    expect((result.header as Record<string, string | string[]>)["x-b"]).toBe(
-      "2"
+    expect(getFetchCall(mockFetch).url).toBe(
+      "http://localhost:3000/todos?tag=api&tag=client"
     );
   });
 
-  test("preserves multiple Set-Cookie headers as array", async () => {
-    const headers = new Headers();
-    headers.append("set-cookie", "a=1; Path=/");
-    headers.append("set-cookie", "b=2; Path=/");
-    headers.append("content-type", "application/json");
+  test("skips undefined scalar values and undefined array items", async () => {
+    const query = {
+      status: "TODO",
+      priority: undefined,
+      tag: ["api", undefined, "client"],
+    } as unknown as IHttpQuery;
 
-    const mockFetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockResolvedValue(new Response("{}", { status: 200, headers }));
-    const client = createPassthroughClient(mockFetch);
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
+    const { mockFetch } = await sendRaw({ path: "/todos", query });
+
+    expect(getFetchCall(mockFetch).url).toBe(
+      "http://localhost:3000/todos?status=TODO&tag=api&tag=client"
     );
+  });
 
-    const result = await sendAndExtractRawResponse(client, command);
+  test("encodes special characters, spaces, and unicode through URLSearchParams", async () => {
+    const { mockFetch } = await sendRaw({
+      path: "/search",
+      query: { q: "hello world/ä+?", marker: "#☃" },
+    });
 
-    expect(
-      (result.header as Record<string, string | string[]>)["set-cookie"]
-    ).toEqual(["a=1; Path=/", "b=2; Path=/"]);
+    expect(getFetchCall(mockFetch).url).toBe(
+      "http://localhost:3000/search?q=hello+world%2F%C3%A4%2B%3F&marker=%23%E2%98%83"
+    );
+  });
+
+  test("omits trailing question mark when query is absent", async () => {
+    const { mockFetch } = await sendRaw({ path: "/todos" });
+
+    expect(getFetchCall(mockFetch).url).toBe("http://localhost:3000/todos");
+  });
+
+  test("omits trailing question mark when serialized query is empty", async () => {
+    const query = {
+      priority: undefined,
+      emptyTags: [],
+      skippedTags: [undefined, undefined],
+    } as unknown as IHttpQuery;
+
+    const { mockFetch } = await sendRaw({ path: "/todos", query });
+
+    expect(getFetchCall(mockFetch).url).toBe("http://localhost:3000/todos");
   });
 });
 
-describe("ApiClient Request Options Passthrough", () => {
-  test("POST body is JSON.stringify'd", async () => {
-    const mockFetch = createMockFetch(201, {
-      id: "new",
-      title: "Test",
-      completed: false,
+describe("ApiClient path parameters", () => {
+  test("percent-encodes reserved characters, spaces, percent signs, plus signs, and unicode", async () => {
+    const { mockFetch } = await sendRaw({
+      path: "/files/:fileId/content",
+      param: { fileId: "a b/c?#%+☃" },
     });
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const requestData = createCreateTodoRequest();
-    const command = new CreateTodoRequestCommand(requestData);
 
-    await sendIgnoringValidation(client, command);
-
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    expect(callArgs.body).toBe(JSON.stringify(requestData.body));
-  });
-
-  test("string body is sent as-is without extra quotes", async () => {
-    const mockFetch = createRawMockFetch(200, "ok", {
-      "content-type": "text/plain",
-    });
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const requestData = createCreateTodoRequest({ body: {} });
-    (requestData as { body: unknown }).body = "hello";
-    const command = new CreateTodoRequestCommand(requestData);
-
-    await sendIgnoringValidation(client, command);
-
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    expect(callArgs.body).toBe("hello");
-  });
-
-  test("GET has undefined body", async () => {
-    const mockFetch = createRawMockFetch(200, "{}", {
-      "content-type": "application/json",
-    });
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
+    expect(getFetchCall(mockFetch).url).toBe(
+      "http://localhost:3000/files/a%20b%2Fc%3F%23%25%2B%E2%98%83/content"
     );
-
-    await sendIgnoringValidation(client, command);
-
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    expect(callArgs.body).toBeUndefined();
   });
 
-  test("null body is not sent as the string 'null'", async () => {
-    const mockFetch = createRawMockFetch(200, "{}", {
-      "content-type": "application/json",
+  test("preserves an empty string path parameter value", async () => {
+    const { mockFetch } = await sendRaw({
+      path: "/todos/:todoId",
+      param: { todoId: "" },
     });
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const requestData = createCreateTodoRequest({ body: {} });
-    (requestData as { body: unknown }).body = null;
-    const command = new CreateTodoRequestCommand(requestData);
 
-    await sendIgnoringValidation(client, command);
-
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    expect(callArgs.body).toBeUndefined();
+    expect(getFetchCall(mockFetch).url).toBe("http://localhost:3000/todos/");
   });
 
-  test("string headers are passed unchanged", async () => {
-    const mockFetch = createRawMockFetch(200, "{}", {
-      "content-type": "application/json",
-    });
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const requestData = createGetTodoRequest({ param: { todoId: "abc" } });
-    const command = new GetTodoRequestCommand(requestData);
+  test.each([".", ".."] as const)(
+    "rejects dot-segment path parameter value %s before fetch",
+    async (fileId) => {
+      const mockFetch = resolvedFetch();
+      const client = createClient(mockFetch);
+      const command = new TestRequestCommand({
+        path: "/files/:fileId/content",
+        param: { fileId },
+      });
 
-    await sendIgnoringValidation(client, command);
+      await expectPathParameterRejection(client.send(command), {
+        paramName: "fileId",
+        path: "/files/:fileId/content",
+      });
+      expect(mockFetch).not.toHaveBeenCalled();
+    }
+  );
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    expect(callArgs.headers).toEqual(requestData.header);
+  test("rejects extra path parameter not present in the template before fetch", async () => {
+    const mockFetch = resolvedFetch();
+    const client = createClient(mockFetch);
+    const command = new TestRequestCommand({
+      path: "/todos/:todoId",
+      param: { todoId: "abc", extra: "ignored" },
+    });
+
+    await expectPathParameterRejection(client.send(command), {
+      paramName: "extra",
+      path: "/todos/:todoId",
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  test("HTTP method is passed correctly", async () => {
-    const mockFetch = createMockFetch(201, {
-      id: "new",
-      title: "Test",
-      completed: false,
-    });
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const command = new CreateTodoRequestCommand(createCreateTodoRequest());
+  test("rejects a missing path parameter before fetch", async () => {
+    const mockFetch = resolvedFetch();
+    const client = createClient(mockFetch);
+    const command = new TestRequestCommand({ path: "/todos/:todoId" });
 
-    await sendIgnoringValidation(client, command);
+    await expectPathParameterRejection(client.send(command), {
+      paramName: "todoId",
+      path: "/todos/:todoId",
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    expect(callArgs.method).toBe("POST");
+  test("rejects an own undefined path parameter before fetch", async () => {
+    const mockFetch = resolvedFetch();
+    const client = createClient(mockFetch);
+    const param = { todoId: undefined } as unknown as IHttpParam;
+    const command = new TestRequestCommand({
+      path: "/todos/:todoId",
+      param,
+    });
+
+    await expectPathParameterRejection(client.send(command), {
+      paramName: "todoId",
+      path: "/todos/:todoId",
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  test("rejects an inherited path parameter before fetch", async () => {
+    const inheritedParam = Object.create({ todoId: "abc" }) as IHttpParam;
+    const mockFetch = resolvedFetch();
+    const client = createClient(mockFetch);
+    const command = new TestRequestCommand({
+      path: "/todos/:todoId",
+      param: inheritedParam,
+    });
+
+    await expectPathParameterRejection(client.send(command), {
+      paramName: "todoId",
+      path: "/todos/:todoId",
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  test("rejects an incomplete path parameter map before fetch", async () => {
+    const mockFetch = resolvedFetch();
+    const client = createClient(mockFetch);
+    const command = new TestRequestCommand({
+      path: "/orgs/:orgId/todos/:todoId",
+      param: { orgId: "org_123" },
+    });
+
+    await expectPathParameterRejection(client.send(command), {
+      paramName: "todoId",
+      path: "/orgs/:orgId/todos/:todoId",
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  test("replaces repeated placeholders with the same encoded value", async () => {
+    const { mockFetch } = await sendRaw({
+      path: "/orgs/:orgId/items/:orgId",
+      param: { orgId: "rexeus/api" },
+    });
+
+    expect(getFetchCall(mockFetch).url).toBe(
+      "http://localhost:3000/orgs/rexeus%2Fapi/items/rexeus%2Fapi"
+    );
+  });
+
+  test("does not partially replace longer placeholder names", async () => {
+    const mockFetch = resolvedFetch();
+    const client = createClient(mockFetch);
+    const command = new TestRequestCommand({
+      path: "/items/:idPart",
+      param: { id: "abc" },
+    });
+
+    await expectPathParameterRejection(client.send(command), {
+      paramName: "id",
+      path: "/items/:idPart",
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  test("rejects path parameters when the path has no placeholders before fetch", async () => {
+    const mockFetch = resolvedFetch();
+    const client = createClient(mockFetch);
+    const command = new TestRequestCommand({
+      path: "/todos",
+      param: { todoId: "abc" },
+    });
+
+    await expectPathParameterRejection(client.send(command), {
+      paramName: "todoId",
+      path: "/todos",
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 });
 
-describe("ApiClient Request Timeout", () => {
-  test("request is aborted after timeout", async () => {
-    const mockFetch = vi.fn<typeof globalThis.fetch>().mockImplementation(
-      (_url, init) =>
-        new Promise((resolve, reject) => {
-          const timer = setTimeout(
-            () => resolve(new Response("{}", { status: 200 })),
-            5000
-          );
-          init?.signal?.addEventListener("abort", () => {
-            clearTimeout(timer);
-            reject(new DOMException("The operation timed out", "TimeoutError"));
-          });
-        })
-    );
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-      timeoutMs: 50,
-    });
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
+describe("ApiClient request serialization", () => {
+  test.each([
+    { case: "undefined", body: undefined },
+    { case: "null", body: null },
+  ])("omits $case request bodies", async ({ body }) => {
+    const { mockFetch } = await sendRaw({ method: HttpMethod.POST, body });
 
-    await expect(client.send(command)).rejects.toSatisfy((error: unknown) => {
-      return (
-        error instanceof NetworkError &&
-        error.code === "TIMEOUT" &&
-        error.method === "GET" &&
-        error.url === "http://localhost:3000/todos/abc"
-      );
-    });
+    expect(getFetchCall(mockFetch).init.body).toBeUndefined();
   });
 
-  test("fast response succeeds within timeout", async () => {
-    const mockFetch = createRawMockFetch(204, null, {
-      "content-type": "application/json",
+  test("sends string bodies as-is", async () => {
+    const { mockFetch } = await sendRaw({
+      method: HttpMethod.POST,
+      body: "hello",
     });
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-      timeoutMs: 5000,
-    });
-    const command = new DeleteTodoRequestCommand(createDeleteTodoRequest());
 
-    const result = await client.send(command);
-
-    expect(result.type).toBe("DeleteTodoSuccess");
+    expect(getFetchCall(mockFetch).init.body).toBe("hello");
   });
 
-  test("no signal is passed without timeoutMs", async () => {
-    const mockFetch = createRawMockFetch(204, null, {
-      "content-type": "application/json",
-    });
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const command = new DeleteTodoRequestCommand(createDeleteTodoRequest());
+  test("JSON-stringifies plain object bodies", async () => {
+    const body = { title: "Write tests", completed: false };
 
-    await sendIgnoringValidation(client, command);
+    const { mockFetch } = await sendRaw({ method: HttpMethod.POST, body });
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    expect(callArgs.signal).toBeUndefined();
+    expect(getFetchCall(mockFetch).init.body).toBe(JSON.stringify(body));
   });
 
-  test("signal is present when timeoutMs is set", async () => {
-    const mockFetch = createRawMockFetch(204, null, {
-      "content-type": "application/json",
-    });
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-      timeoutMs: 1000,
-    });
-    const command = new DeleteTodoRequestCommand(createDeleteTodoRequest());
-
-    await sendIgnoringValidation(client, command);
-
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    expect(callArgs.signal).toBeInstanceOf(AbortSignal);
-  });
-
-  test("Node.js AbortError without timeout is classified as aborted", async () => {
-    const abortError = new Error("The operation was aborted");
-    abortError.name = "AbortError";
-
-    const mockFetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockRejectedValue(abortError);
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    await expect(client.send(command)).rejects.toSatisfy((error: unknown) => {
-      return (
-        error instanceof NetworkError &&
-        error.code === "ABORT" &&
-        error.method === "GET" &&
-        error.url === "http://localhost:3000/todos/abc"
-      );
-    });
-  });
-});
-
-describe("ApiClient Serialization Error Isolation", () => {
-  test("circular reference body throws TypeError, not network error", async () => {
-    const mockFetch = createMockFetch(200, {});
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
+  test("throws native TypeError for circular object bodies before fetch", async () => {
+    const mockFetch = resolvedFetch();
+    const client = createClient(mockFetch);
     const circular: Record<string, unknown> = {};
     circular.self = circular;
-    const requestData = createCreateTodoRequest();
-    // Override body after factory construction to avoid deepmerge hitting circular ref
-    (requestData as { body: unknown }).body = circular;
-    const command = new CreateTodoRequestCommand(requestData);
-
-    await expect(client.send(command)).rejects.toSatisfy((error: Error) => {
-      return (
-        error instanceof TypeError &&
-        !error.message.startsWith("Network error:")
-      );
+    const command = new TestRequestCommand({
+      method: HttpMethod.POST,
+      body: circular,
     });
+
+    await expect(client.send(command)).rejects.toSatisfy((error: unknown) => {
+      return error instanceof TypeError && !(error instanceof NetworkError);
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    { case: "Blob", body: new Blob(["hello"], { type: "text/plain" }) },
+    { case: "ArrayBuffer", body: new ArrayBuffer(8) },
+    { case: "Uint8Array", body: new Uint8Array([1, 2, 3]) },
+    { case: "FormData", body: new FormData() },
+    { case: "URLSearchParams", body: new URLSearchParams({ key: "value" }) },
+    {
+      case: "ReadableStream",
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(new Uint8Array([1, 2, 3]));
+          controller.close();
+        },
+      }),
+    },
+  ])("passes native $case bodies through as-is", async ({ body }) => {
+    const { mockFetch } = await sendRaw({ method: HttpMethod.POST, body });
+
+    expect(getFetchCall(mockFetch).init.body).toBe(body);
   });
 });
 
-describe("ApiClient Body Read Error Isolation", () => {
-  test("JSON-branch text() failure wraps as ResponseParseError", async () => {
-    const originalError = new Error("body stream interrupted");
-    const mockResponse = new Response("body", {
-      status: 200,
-      headers: { "content-type": "application/json" },
-    });
-    vi.spyOn(mockResponse, "text").mockRejectedValue(originalError);
-    const mockFetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockResolvedValue(mockResponse);
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
+describe("ApiClient request header flattening", () => {
+  test("passes undefined headers as undefined", async () => {
+    const { mockFetch } = await sendRaw({ header: undefined });
 
-    await expect(client.send(command)).rejects.toSatisfy((error: unknown) => {
-      return (
-        error instanceof ResponseParseError &&
-        error.statusCode === 200 &&
-        error.message.includes("Failed to read response body") &&
-        error.message.includes("GET") &&
-        error.cause === originalError
-      );
-    });
+    expect(getFetchCall(mockFetch).init.headers).toBeUndefined();
   });
 
-  test("text-branch text() failure wraps as ResponseParseError", async () => {
-    const originalError = new Error("stream closed");
-    const mockResponse = new Response("body", {
-      status: 200,
-      headers: { "content-type": "text/plain" },
-    });
-    vi.spyOn(mockResponse, "text").mockRejectedValue(originalError);
-    const mockFetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockResolvedValue(mockResponse);
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    await expect(client.send(command)).rejects.toSatisfy((error: unknown) => {
-      return (
-        error instanceof ResponseParseError &&
-        error.statusCode === 200 &&
-        error.message.includes("Failed to read response body") &&
-        error.cause === originalError
-      );
-    });
-  });
-
-  test("arrayBuffer() failure wraps as ResponseParseError", async () => {
-    const originalError = new Error("connection dropped");
-    const mockResponse = new Response(new Uint8Array([1, 2, 3]), {
-      status: 200,
-      headers: { "content-type": "application/octet-stream" },
-    });
-    vi.spyOn(mockResponse, "arrayBuffer").mockRejectedValue(originalError);
-    const mockFetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockResolvedValue(mockResponse);
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const command = new GetTodoRequestCommand(
-      createGetTodoRequest({ param: { todoId: "abc" } })
-    );
-
-    await expect(client.send(command)).rejects.toSatisfy((error: unknown) => {
-      return (
-        error instanceof ResponseParseError &&
-        error.statusCode === 200 &&
-        error.message.includes("Failed to read response body") &&
-        error.cause === originalError
-      );
-    });
-  });
-});
-
-describe("ApiClient Native Body Passthrough", () => {
-  test("Blob body is passed to fetch as-is", async () => {
-    const mockFetch = createRawMockFetch(200, "{}", {
-      "content-type": "application/json",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const blob = new Blob(["hello"], { type: "text/plain" });
-    const requestData = createCreateTodoRequest({ body: {} });
-    (requestData as { body: unknown }).body = blob;
-    const command = new CreateTodoRequestCommand(requestData);
-
-    await sendIgnoringValidation(client, command);
-
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    expect(callArgs.body).toBe(blob);
-  });
-
-  test("ArrayBuffer body is passed to fetch as-is", async () => {
-    const mockFetch = createRawMockFetch(200, "{}", {
-      "content-type": "application/json",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const buffer = new ArrayBuffer(8);
-    const requestData = createCreateTodoRequest({ body: {} });
-    (requestData as { body: unknown }).body = buffer;
-    const command = new CreateTodoRequestCommand(requestData);
-
-    await sendIgnoringValidation(client, command);
-
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    expect(callArgs.body).toBe(buffer);
-  });
-
-  test("FormData body is passed to fetch as-is", async () => {
-    const mockFetch = createRawMockFetch(200, "{}", {
-      "content-type": "application/json",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const formData = new FormData();
-    formData.append("file", new Blob(["data"]), "test.txt");
-    const requestData = createCreateTodoRequest({ body: {} });
-    (requestData as { body: unknown }).body = formData;
-    const command = new CreateTodoRequestCommand(requestData);
-
-    await sendIgnoringValidation(client, command);
-
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    expect(callArgs.body).toBe(formData);
-  });
-
-  test("URLSearchParams body is passed to fetch as-is", async () => {
-    const mockFetch = createRawMockFetch(200, "{}", {
-      "content-type": "application/json",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const params = new URLSearchParams({ key: "value" });
-    const requestData = createCreateTodoRequest({ body: {} });
-    (requestData as { body: unknown }).body = params;
-    const command = new CreateTodoRequestCommand(requestData);
-
-    await sendIgnoringValidation(client, command);
-
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    expect(callArgs.body).toBe(params);
-  });
-
-  test("Uint8Array body is passed to fetch as-is", async () => {
-    const mockFetch = createRawMockFetch(200, "{}", {
-      "content-type": "application/json",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const bytes = new Uint8Array([1, 2, 3]);
-    const requestData = createCreateTodoRequest({ body: {} });
-    (requestData as { body: unknown }).body = bytes;
-    const command = new CreateTodoRequestCommand(requestData);
-
-    await sendIgnoringValidation(client, command);
-
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    expect(callArgs.body).toBe(bytes);
-  });
-
-  test("ReadableStream body is passed to fetch as-is", async () => {
-    const mockFetch = createRawMockFetch(200, "{}", {
-      "content-type": "application/json",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const stream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(new Uint8Array([1, 2, 3]));
-        controller.close();
-      },
-    });
-    const requestData = createCreateTodoRequest({ body: {} });
-    (requestData as { body: unknown }).body = stream;
-    const command = new CreateTodoRequestCommand(requestData);
-
-    await sendIgnoringValidation(client, command);
-
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    expect(callArgs.body).toBe(stream);
-  });
-
-  test("plain object body still gets JSON.stringify'd", async () => {
-    const mockFetch = createRawMockFetch(200, "{}", {
-      "content-type": "application/json",
-    });
-    const client = createPassthroughClient(mockFetch);
-    const requestData = createCreateTodoRequest();
-    const command = new CreateTodoRequestCommand(requestData);
-
-    await sendIgnoringValidation(client, command);
-
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    expect(callArgs.body).toBe(JSON.stringify(requestData.body));
-  });
-});
-
-describe("ApiClient Request Header Flattening", () => {
-  test("source ApiClient omits undefined headers while preserving empty strings and defined values", async () => {
-    const mockFetch = createRawMockFetch(204, null);
-    const client = new SourceApiClient(mockFetch);
+  test("omits undefined header values while preserving empty strings, scalars, and arrays", async () => {
     const header = {
       "X-Empty-Value": "",
-      "X-Multi-Value": ["first", "second"],
       "X-Scalar-Value": "present",
+      "X-Multi-Value": ["first", "second"],
       "X-Undefined-Value": undefined,
-    } as Record<string, string | string[] | undefined> as IHttpHeader;
-    const command = new SourceHeaderRequestCommand(header);
+    } as unknown as IHttpHeader;
 
-    await client.send(command);
+    const { mockFetch } = await sendRaw({ header });
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    expect(callArgs.headers).toStrictEqual({
+    expect(getFetchCall(mockFetch).init.headers).toStrictEqual({
       "X-Empty-Value": "",
       "X-Multi-Value": "first, second",
       "X-Scalar-Value": "present",
     });
   });
+});
 
-  test("array header values are joined with comma separator", async () => {
-    const mockFetch = createRawMockFetch(200, "{}", {
-      "content-type": "application/json",
-    });
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const requestData = createGetTodoRequest({ param: { todoId: "abc" } });
-    (requestData as { header: Record<string, string | string[]> }).header = {
-      Accept: "application/json",
-      "X-Multi-Value": ["first", "second"],
-    };
-    const command = new GetTodoRequestCommand(requestData);
+describe("ApiClient response parsing", () => {
+  test.each([
+    { case: "204 No Content", status: 204 },
+    { case: "304 Not Modified", status: 304 },
+  ])("returns undefined body for $case even with content-type", async ({ status }) => {
+    const mockFetch = resolvedFetch(
+      new Response(null, {
+        status,
+        headers: { "content-type": "application/json" },
+      })
+    );
+    const client = createClient(mockFetch);
 
-    await sendIgnoringValidation(client, command);
+    const result = await client.send(new TestRequestCommand());
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    const headers = callArgs.headers as Record<string, string>;
-    expect(headers["X-Multi-Value"]).toBe("first, second");
-    expect(headers["Accept"]).toBe("application/json");
+    expect(result.body).toBeUndefined();
   });
 
-  test("single string headers pass through unchanged", async () => {
-    const mockFetch = createRawMockFetch(200, "{}", {
-      "content-type": "application/json",
-    });
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const requestData = createGetTodoRequest({ param: { todoId: "abc" } });
-    const command = new GetTodoRequestCommand(requestData);
+  test("returns undefined body for empty text responses", async () => {
+    const mockFetch = resolvedFetch(new Response("", { status: 200 }));
+    const client = createClient(mockFetch);
 
-    await sendIgnoringValidation(client, command);
+    const result = await client.send(new TestRequestCommand());
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    const headers = callArgs.headers as Record<string, string>;
-    expect(headers["Accept"]).toBe("application/json");
+    expect(result.body).toBeUndefined();
   });
 
-  test("undefined header is passed as undefined", async () => {
-    const mockFetch = createRawMockFetch(200, "{}", {
-      "content-type": "application/json",
-    });
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const requestData = createGetTodoRequest({ param: { todoId: "abc" } });
-    (requestData as unknown as { header: undefined }).header = undefined;
-    const command = new GetTodoRequestCommand(requestData);
+  test("returns undefined body for empty JSON responses", async () => {
+    const mockFetch = resolvedFetch(
+      new Response("", {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })
+    );
+    const client = createClient(mockFetch);
 
-    await sendIgnoringValidation(client, command);
+    const result = await client.send(new TestRequestCommand());
 
-    const callArgs = vi.mocked(mockFetch).mock.calls[0]![1]!;
-    expect(callArgs.headers).toBeUndefined();
+    expect(result.body).toBeUndefined();
+  });
+
+  test.each([
+    { case: "application/json", contentType: "application/json" },
+    {
+      case: "application/json with charset",
+      contentType: "application/json; charset=utf-8",
+    },
+    { case: "+json media type", contentType: "application/problem+json" },
+    { case: "case-insensitive JSON", contentType: "Application/JSON" },
+    {
+      case: "case-insensitive +json",
+      contentType: "APPLICATION/PROBLEM+JSON",
+    },
+  ])("parses $case responses as JSON", async ({ contentType }) => {
+    const mockFetch = resolvedFetch(
+      new Response('{"ok":true}', {
+        status: 200,
+        headers: { "content-type": contentType },
+      })
+    );
+    const client = createClient(mockFetch);
+
+    const result = await client.send(new TestRequestCommand());
+
+    expect(result.body).toEqual({ ok: true });
+  });
+
+  test("throws ResponseParseError with status, bounded preview, and cause for invalid JSON", async () => {
+    const body = `{${"x".repeat(250)}`;
+    const mockFetch = resolvedFetch(
+      new Response(body, {
+        status: 502,
+        headers: { "content-type": "application/json" },
+      })
+    );
+    const client = createClient(mockFetch);
+
+    await expect(client.send(new TestRequestCommand())).rejects.toSatisfy(
+      (error: unknown) => {
+        return (
+          error instanceof ResponseParseError &&
+          error.statusCode === 502 &&
+          error.bodyPreview === body.slice(0, 200) &&
+          error.bodyPreview.length === 200 &&
+          error.cause instanceof SyntaxError
+        );
+      }
+    );
+  });
+
+  test("returns text/plain responses as strings", async () => {
+    const mockFetch = resolvedFetch(
+      new Response("plain text", {
+        status: 200,
+        headers: { "content-type": "text/plain" },
+      })
+    );
+    const client = createClient(mockFetch);
+
+    const result = await client.send(new TestRequestCommand());
+
+    expect(result.body).toBe("plain text");
+  });
+
+  test("returns case-insensitive text content types as strings", async () => {
+    const mockFetch = resolvedFetch(
+      new Response("plain text", {
+        status: 200,
+        headers: { "content-type": "TEXT/PLAIN; charset=UTF-8" },
+      })
+    );
+    const client = createClient(mockFetch);
+
+    const result = await client.send(new TestRequestCommand());
+
+    expect(result.body).toBe("plain text");
+  });
+
+  test("returns responses with no content-type as strings", async () => {
+    const mockFetch = resolvedFetch(new Response("raw text", { status: 200 }));
+    const client = createClient(mockFetch);
+
+    const result = await client.send(new TestRequestCommand());
+
+    expect(result.body).toBe("raw text");
+  });
+
+  test("returns application/octet-stream responses as ArrayBuffer", async () => {
+    const mockFetch = resolvedFetch(
+      new Response(new Uint8Array([1, 2, 3]), {
+        status: 200,
+        headers: { "content-type": "application/octet-stream" },
+      })
+    );
+    const client = createClient(mockFetch);
+
+    const result = await client.send(new TestRequestCommand());
+
+    expect(result.body).toBeInstanceOf(ArrayBuffer);
+    expect(Array.from(new Uint8Array(result.body as ArrayBuffer))).toEqual([
+      1, 2, 3,
+    ]);
+  });
+
+  test("returns empty application/octet-stream responses as zero-length ArrayBuffer", async () => {
+    const mockFetch = resolvedFetch(
+      new Response(new Uint8Array([]), {
+        status: 200,
+        headers: { "content-type": "application/octet-stream" },
+      })
+    );
+    const client = createClient(mockFetch);
+
+    const result = await client.send(new TestRequestCommand());
+
+    expect(result.body).toBeInstanceOf(ArrayBuffer);
+    expect((result.body as ArrayBuffer).byteLength).toBe(0);
+  });
+
+  test("wraps response body read failures as ResponseParseError", async () => {
+    const cause = new Error("body stream interrupted");
+    const response = new Response("body", {
+      status: 200,
+      headers: { "content-type": "text/plain" },
+    });
+    vi.spyOn(response, "text").mockRejectedValue(cause);
+    const mockFetch = resolvedFetch(response);
+    const client = createClient(mockFetch);
+
+    await expect(client.send(new TestRequestCommand())).rejects.toSatisfy(
+      (error: unknown) => {
+        return (
+          error instanceof ResponseParseError &&
+          error.statusCode === 200 &&
+          error.bodyPreview === "" &&
+          error.cause === cause &&
+          error.message.includes("Failed to read response body")
+        );
+      }
+    );
+  });
+
+  test("wraps binary response body read failures as ResponseParseError", async () => {
+    const cause = new Error("binary stream interrupted");
+    const response = new Response(new Uint8Array([1]), {
+      status: 206,
+      headers: { "content-type": "application/octet-stream" },
+    });
+    vi.spyOn(response, "arrayBuffer").mockRejectedValue(cause);
+    const mockFetch = resolvedFetch(response);
+    const client = createClient(mockFetch);
+
+    await expect(client.send(new TestRequestCommand())).rejects.toSatisfy(
+      (error: unknown) => {
+        return (
+          error instanceof ResponseParseError &&
+          error.statusCode === 206 &&
+          error.bodyPreview === "" &&
+          error.cause === cause &&
+          error.message.includes("Failed to read response body")
+        );
+      }
+    );
   });
 });
 
-describe("ApiClient Path Parameter Validation", () => {
-  test.each([".", ".."] as const)(
-    "rejects source path parameter dot-segment %s before fetch",
-    async (fileId) => {
-      const mockFetch = vi.fn<typeof globalThis.fetch>();
-      const client = new SourceApiClient(mockFetch);
-      const command = new SourceFileContentRequestCommand(fileId);
+describe("ApiClient response headers", () => {
+  test("copies response headers into a plain object", async () => {
+    const mockFetch = resolvedFetch(
+      new Response("{}", {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          "x-request-id": "req_123",
+        },
+      })
+    );
+    const client = createClient(mockFetch);
 
-      await expect(client.send(command)).rejects.toSatisfy(
-        (error: unknown) => {
-          return (
-            error instanceof SourcePathParameterError &&
-            error.paramName === "fileId" &&
-            error.path === "/files/:fileId/content"
-          );
-        }
-      );
-      expect(mockFetch).not.toHaveBeenCalled();
+    const result = await client.send(new TestRequestCommand());
+
+    expect(result.header).toStrictEqual({
+      "content-type": "application/json",
+      "x-request-id": "req_123",
+    });
+  });
+
+  test("preserves native Headers comma-join behavior for repeated non-cookie headers", async () => {
+    const headers = new Headers({ "content-type": "application/json" });
+    headers.append("x-custom", "first");
+    headers.append("x-custom", "second");
+    const mockFetch = resolvedFetch(new Response("{}", { status: 200, headers }));
+    const client = createClient(mockFetch);
+
+    const result = await client.send(new TestRequestCommand());
+
+    expect(result.header?.["x-custom"]).toBe("first, second");
+  });
+
+  test("preserves native getSetCookie values as a string array when available", async () => {
+    const response = new Response("{}", {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+    Object.defineProperty(response.headers, "getSetCookie", {
+      value: () => ["a=1; Path=/", "b=2; Path=/"],
+    });
+    const mockFetch = resolvedFetch(response);
+    const client = createClient(mockFetch);
+
+    const result = await client.send(new TestRequestCommand());
+
+    expect(result.header?.["set-cookie"]).toStrictEqual([
+      "a=1; Path=/",
+      "b=2; Path=/",
+    ]);
+  });
+
+  test("preserves a single native getSetCookie value as a string array", async () => {
+    const response = new Response("{}", {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+    Object.defineProperty(response.headers, "getSetCookie", {
+      value: () => ["sid=abc; Path=/"],
+    });
+    const mockFetch = resolvedFetch(response);
+    const client = createClient(mockFetch);
+
+    const result = await client.send(new TestRequestCommand());
+
+    expect(result.header?.["set-cookie"]).toStrictEqual(["sid=abc; Path=/"]);
+  });
+});
+
+describe("ApiClient network errors and timeout signals", () => {
+  test.each([
+    { code: "ECONNREFUSED", message: "Connection refused" },
+    { code: "ECONNRESET", message: "Connection reset by peer" },
+    { code: "ENOTFOUND", message: "DNS lookup failed" },
+    { code: "ETIMEDOUT", message: "Connection timed out" },
+  ] satisfies ReadonlyArray<{
+    readonly code: NetworkErrorCode;
+    readonly message: string;
+  }>)(
+    "maps Node-like $code fetch failures to NetworkError",
+    async ({ code, message }) => {
+      const cause = Object.assign(new TypeError("fetch failed"), {
+        cause: { code },
+      });
+      const client = createClient(rejectedFetch(cause));
+
+      await expect(
+        client.send(
+          new TestRequestCommand({
+            path: "/todos/:todoId",
+            param: { todoId: "abc" },
+          })
+        )
+      ).rejects.toSatisfy((error: unknown) => {
+        return (
+          error instanceof NetworkError &&
+          error.code === code &&
+          error.method === "GET" &&
+          error.url === "http://localhost:3000/todos/abc" &&
+          error.cause === cause &&
+          error.message ===
+            `Network error: ${message} (GET http://localhost:3000/todos/abc)`
+        );
+      });
     }
   );
 
-  test("throws PathParameterError when key not found in template", async () => {
-    const mockFetch = createRawMockFetch(200, "{}", {
-      "content-type": "application/json",
-    });
-    const client = new TodoClient({
-      fetchFn: mockFetch,
-      baseUrl: "http://localhost:3000",
-    });
-    const requestData = createGetTodoRequest({ param: { todoId: "abc" } });
-    (requestData as { param: Record<string, string> }).param = {
-      todoId: "abc",
-      nonExistent: "value",
-    };
-    const command = new GetTodoRequestCommand(requestData);
+  test("maps unknown TypeError fetch failures to UNKNOWN NetworkError", async () => {
+    const cause = new TypeError("fetch failed");
+    const client = createClient(rejectedFetch(cause));
 
-    await expect(client.send(command)).rejects.toSatisfy((error: unknown) => {
-      return (
-        error instanceof PathParameterError &&
-        error.paramName === "nonExistent" &&
-        error.path === "/todos/:todoId" &&
-        error.message.includes(
-          "Path parameter 'nonExistent' is not found in path"
-        )
+    await expect(client.send(new TestRequestCommand())).rejects.toSatisfy(
+      (error: unknown) => {
+        return (
+          error instanceof NetworkError &&
+          error.code === "UNKNOWN" &&
+          error.cause === cause &&
+          error.message ===
+            "Network error: fetch failed (GET http://localhost:3000/todos)"
+        );
+      }
+    );
+  });
+
+  test("maps non-Error fetch rejections to UNKNOWN NetworkError", async () => {
+    const client = createClient(rejectedFetch("something broke"));
+
+    await expect(client.send(new TestRequestCommand())).rejects.toSatisfy(
+      (error: unknown) => {
+        return (
+          error instanceof NetworkError &&
+          error.code === "UNKNOWN" &&
+          error.cause === "something broke" &&
+          error.message ===
+            "Network error: something broke (GET http://localhost:3000/todos)"
+        );
+      }
+    );
+  });
+
+  test.each([
+    { case: "AbortError", name: "AbortError", code: "ABORT" },
+    { case: "TimeoutError", name: "TimeoutError", code: "TIMEOUT" },
+  ] as const)(
+    "maps $case fetch failures to $code NetworkError",
+    async ({ name, code }) => {
+      const cause = new DOMException("request failed", name);
+      const client = createClient(rejectedFetch(cause));
+
+      await expect(client.send(new TestRequestCommand())).rejects.toSatisfy(
+        (error: unknown) => {
+          return (
+            error instanceof NetworkError &&
+            error.code === code &&
+            error.cause === cause &&
+            error.method === "GET" &&
+            error.url === "http://localhost:3000/todos"
+          );
+        }
       );
+    }
+  );
+
+  test.each([
+    { case: "AbortError", name: "AbortError", code: "ABORT" },
+    { case: "TimeoutError", name: "TimeoutError", code: "TIMEOUT" },
+  ] as const)(
+    "maps non-DOM $case fetch failures to $code NetworkError",
+    async ({ name, code }) => {
+      const cause = new Error("request failed");
+      cause.name = name;
+      const client = createClient(rejectedFetch(cause));
+
+      await expect(client.send(new TestRequestCommand())).rejects.toSatisfy(
+        (error: unknown) => {
+          return (
+            error instanceof NetworkError &&
+            error.code === code &&
+            error.cause === cause &&
+            error.method === "GET" &&
+            error.url === "http://localhost:3000/todos"
+          );
+        }
+      );
+    }
+  );
+
+  test("omits the abort signal when timeoutMs is not configured", async () => {
+    const mockFetch = resolvedFetch();
+    const client = createClient(mockFetch);
+
+    await client.send(new TestRequestCommand());
+
+    expect(getFetchCall(mockFetch).init.signal).toBeUndefined();
+  });
+
+  test("passes an abort signal when timeoutMs is configured", async () => {
+    const mockFetch = resolvedFetch();
+    const client = createClient(mockFetch, { timeoutMs: 1000 });
+
+    await client.send(new TestRequestCommand());
+
+    expect(getFetchCall(mockFetch).init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  test("aborts an in-flight request when timeoutMs elapses", async () => {
+    const cause = new DOMException("timed out", "TimeoutError");
+    const timeoutController = new AbortController();
+    const timeoutSpy = vi
+      .spyOn(AbortSignal, "timeout")
+      .mockReturnValue(timeoutController.signal);
+    const mockFetch = vi.fn<typeof globalThis.fetch>((_input, init) => {
+      const signal = init?.signal;
+      if (signal == null) {
+        return Promise.reject(new Error("Expected fetch to receive a signal"));
+      }
+
+      return new Promise<Response>((_resolve, reject) => {
+        if (signal.aborted) {
+          reject(cause);
+          return;
+        }
+
+        signal.addEventListener("abort", () => reject(cause), { once: true });
+      });
     });
+    const client = createClient(mockFetch, { timeoutMs: 50 });
+
+    try {
+      const request = client.send(
+        new TestRequestCommand({
+          path: "/todos/:todoId",
+          param: { todoId: "abc" },
+        })
+      );
+      timeoutController.abort(cause);
+
+      await expect(request).rejects.toSatisfy((error: unknown) => {
+        return (
+          error instanceof NetworkError &&
+          error.code === "TIMEOUT" &&
+          error.method === "GET" &&
+          error.url === "http://localhost:3000/todos/abc" &&
+          error.cause === cause
+        );
+      });
+      expect(timeoutSpy).toHaveBeenCalledWith(50);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    } finally {
+      timeoutSpy.mockRestore();
+    }
   });
 });
 
-describe("NetworkError", () => {
-  test("is instanceof Error", () => {
-    const error = new NetworkError("test", "TIMEOUT", "GET", "/api");
-    expect(error).toBeInstanceOf(Error);
-  });
-
-  test("has name 'NetworkError'", () => {
-    const error = new NetworkError("test", "TIMEOUT", "GET", "/api");
-    expect(error.name).toBe("NetworkError");
-  });
-
-  test("exposes code, method, url", () => {
+describe("ApiClient error classes", () => {
+  test("NetworkError exposes name, message, metadata, and cause", () => {
+    const cause = new TypeError("fetch failed");
     const error = new NetworkError(
       "Connection refused",
       "ECONNREFUSED",
       "POST",
-      "http://localhost:3000/api"
+      "http://localhost:3000/api",
+      { cause }
     );
 
+    expect(error).toBeInstanceOf(Error);
+    expect(error.name).toBe("NetworkError");
+    expect(error.message).toBe("Connection refused");
     expect(error.code).toBe("ECONNREFUSED");
     expect(error.method).toBe("POST");
     expect(error.url).toBe("http://localhost:3000/api");
-    expect(error.message).toBe("Connection refused");
-  });
-
-  test("preserves cause", () => {
-    const cause = new TypeError("fetch failed");
-    const error = new NetworkError("test", "UNKNOWN", "GET", "/api", {
-      cause,
-    });
-
     expect(error.cause).toBe(cause);
   });
-});
 
-describe("PathParameterError", () => {
-  test("is instanceof Error", () => {
-    const error = new PathParameterError("test", "id", "/users/:id");
-    expect(error).toBeInstanceOf(Error);
-  });
-
-  test("has name 'PathParameterError'", () => {
-    const error = new PathParameterError("test", "id", "/users/:id");
-    expect(error.name).toBe("PathParameterError");
-  });
-
-  test("exposes paramName and path", () => {
+  test("PathParameterError exposes name, message, metadata, and cause", () => {
+    const cause = new Error("underlying issue");
     const error = new PathParameterError(
       "Path parameter 'slug' is not found in path '/posts/:id'",
       "slug",
-      "/posts/:id"
+      "/posts/:id",
+      { cause }
     );
 
-    expect(error.paramName).toBe("slug");
-    expect(error.path).toBe("/posts/:id");
+    expect(error).toBeInstanceOf(Error);
+    expect(error.name).toBe("PathParameterError");
     expect(error.message).toBe(
       "Path parameter 'slug' is not found in path '/posts/:id'"
     );
-  });
-
-  test("preserves cause", () => {
-    const cause = new Error("underlying issue");
-    const error = new PathParameterError("test", "id", "/users/:id", {
-      cause,
-    });
-
+    expect(error.paramName).toBe("slug");
+    expect(error.path).toBe("/posts/:id");
     expect(error.cause).toBe(cause);
   });
-});
 
-describe("ResponseParseError", () => {
-  test("is instanceof Error", () => {
-    const error = new ResponseParseError("test", 200, "body");
-    expect(error).toBeInstanceOf(Error);
-  });
-
-  test("has name 'ResponseParseError'", () => {
-    const error = new ResponseParseError("test", 200, "body");
-    expect(error.name).toBe("ResponseParseError");
-  });
-
-  test("exposes statusCode and bodyPreview", () => {
+  test("ResponseParseError exposes name, message, metadata, and cause", () => {
+    const cause = new SyntaxError("Unexpected token");
     const error = new ResponseParseError(
       "Failed to parse",
       502,
-      "<html>Bad Gateway</html>"
+      "<html>Bad Gateway</html>",
+      { cause }
     );
 
+    expect(error).toBeInstanceOf(Error);
+    expect(error.name).toBe("ResponseParseError");
+    expect(error.message).toBe("Failed to parse");
     expect(error.statusCode).toBe(502);
     expect(error.bodyPreview).toBe("<html>Bad Gateway</html>");
-    expect(error.message).toBe("Failed to parse");
-  });
-
-  test("preserves cause", () => {
-    const cause = new SyntaxError("Unexpected token");
-    const error = new ResponseParseError("test", 200, "body", { cause });
-
     expect(error.cause).toBe(cause);
   });
 });
