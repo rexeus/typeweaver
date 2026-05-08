@@ -32,6 +32,20 @@ const NETWORK_ERROR_MESSAGES: Readonly<Partial<Record<NetworkErrorCode, string>>
 };
 
 const PATH_PARAMETER_PATTERN = /:([A-Za-z0-9_]+)/g;
+const LEADING_URI_SCHEME_PATTERN = /^[A-Za-z][A-Za-z0-9+.-]*:/;
+const DELETE_CONTROL_CHARACTER_CODE = 0x7f;
+const SPACE_CHARACTER_CODE = 0x20;
+
+function hasAsciiControlCharacter(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const characterCode = value.charCodeAt(index);
+    if (characterCode < SPACE_CHARACTER_CODE || characterCode === DELETE_CONTROL_CHARACTER_CODE) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 /**
  * Abstract base class for type-safe API clients.
@@ -52,6 +66,10 @@ export abstract class ApiClient {
 
     if (typeof props.baseUrl !== "string" || props.baseUrl.trim().length === 0) {
       throw new Error("Base URL must be provided");
+    }
+
+    if (!this.isAllowedBaseUrl(props.baseUrl)) {
+      throw new Error("Absolute base URLs must use http(s); relative base URLs are allowed");
     }
 
     this.baseUrl = props.baseUrl;
@@ -267,6 +285,20 @@ export abstract class ApiClient {
     const base = this.baseUrl.endsWith("/") ? this.baseUrl.slice(0, -1) : this.baseUrl;
     const path = relativePath.startsWith("/") ? relativePath : `/${relativePath}`;
     return `${base}${path}`;
+  }
+
+  private isAllowedBaseUrl(baseUrl: string): boolean {
+    if (hasAsciiControlCharacter(baseUrl)) {
+      return false;
+    }
+
+    const normalizedBaseUrl = baseUrl.trim();
+    if (!LEADING_URI_SCHEME_PATTERN.test(normalizedBaseUrl)) {
+      return true;
+    }
+
+    const url = new URL(normalizedBaseUrl);
+    return url.protocol === "http:" || url.protocol === "https:";
   }
 
   private createPath(path: string, param?: IHttpParam): string {

@@ -506,6 +506,20 @@ describe("Generated ResponseValidator", () => {
       expect(thrownError).toBeInstanceOf(ResponseValidationError);
       expect(thrownError?.issues).toEqual(safeResult.error.issues);
     });
+
+    test("propagates errors thrown by a hostile statusCode getter", () => {
+      const validator = new CreateTodoResponseValidator();
+      const response = Object.defineProperty({}, "statusCode", {
+        enumerable: true,
+        get() {
+          throw new Error("statusCode getter");
+        },
+      });
+
+      expect(() => validator.safeValidate(asHttpResponse(response))).toThrow(
+        "statusCode getter"
+      );
+    });
   });
 
   describe("response type discriminants", () => {

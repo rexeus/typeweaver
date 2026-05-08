@@ -88,18 +88,15 @@ function aResourceWithOperationResponses(
   };
 }
 
-type ResponseGeneratorContextOptions = {
-  readonly normalizedSpec: NormalizedSpec;
-  readonly renderSource?: boolean;
-};
-
-function aResponseGeneratorContext({
-  normalizedSpec,
-  renderSource = false,
-}: ResponseGeneratorContextOptions): {
+type ResponseGeneratorTestContext = {
   readonly context: GeneratorContext;
   readonly writtenFiles: Map<string, string>;
-} {
+};
+
+function createResponseGeneratorContext(
+  normalizedSpec: NormalizedSpec,
+  renderResponseTemplate: (templatePath: string, data: unknown) => string
+): ResponseGeneratorTestContext {
   const writtenFiles = new Map<string, string>();
 
   const context = {
@@ -172,16 +169,7 @@ function aResponseGeneratorContext({
     writeFile: (relativePath: string, content: string) => {
       writtenFiles.set(relativePath, content);
     },
-    renderTemplate: (templatePath: string, data: unknown) => {
-      if (!renderSource) {
-        return JSON.stringify(data);
-      }
-
-      return renderTemplate(
-        readFileSync(templatePath, "utf8"),
-        (data ?? {}) as Record<string, unknown>
-      );
-    },
+    renderTemplate: renderResponseTemplate,
     addGeneratedFile: () => {},
     getGeneratedFiles: () => [],
   } satisfies GeneratorContext;
@@ -189,14 +177,41 @@ function aResponseGeneratorContext({
   return { context, writtenFiles };
 }
 
-function generateResponses(
-  normalizedSpec: NormalizedSpec,
-  options: { readonly renderSource?: boolean } = {}
+function aDataCapturingResponseGeneratorContext(
+  normalizedSpec: NormalizedSpec
+): ResponseGeneratorTestContext {
+  return createResponseGeneratorContext(normalizedSpec, (_templatePath, data) =>
+    JSON.stringify(data)
+  );
+}
+
+function aTemplateRenderingResponseGeneratorContext(
+  normalizedSpec: NormalizedSpec
+): ResponseGeneratorTestContext {
+  return createResponseGeneratorContext(normalizedSpec, (templatePath, data) =>
+    renderTemplate(
+      readFileSync(templatePath, "utf8"),
+      (data ?? {}) as Record<string, unknown>
+    )
+  );
+}
+
+function captureResponseGeneratorData(
+  normalizedSpec: NormalizedSpec
 ): Map<string, string> {
-  const { context, writtenFiles } = aResponseGeneratorContext({
-    normalizedSpec,
-    renderSource: options.renderSource,
-  });
+  const { context, writtenFiles } =
+    aDataCapturingResponseGeneratorContext(normalizedSpec);
+
+  generate(context);
+
+  return writtenFiles;
+}
+
+function renderResponseSources(
+  normalizedSpec: NormalizedSpec
+): Map<string, string> {
+  const { context, writtenFiles } =
+    aTemplateRenderingResponseGeneratorContext(normalizedSpec);
 
   generate(context);
 
@@ -204,13 +219,10 @@ function generateResponses(
 }
 
 function renderCanonicalResponseSource(response: NormalizedResponse): string {
-  const writtenFiles = generateResponses(
-    {
-      responses: [response],
-      resources: [],
-    },
-    { renderSource: true }
-  );
+  const writtenFiles = renderResponseSources({
+    responses: [response],
+    resources: [],
+  });
   const source = writtenFiles.get(
     `responses/${pascalCase(response.name)}Response.ts`
   );
@@ -227,18 +239,15 @@ function renderCanonicalResponseSource(response: NormalizedResponse): string {
 function renderOperationResponseSource(
   responses: NormalizedOperation["responses"]
 ): string {
-  const writtenFiles = generateResponses(
-    {
-      responses: [],
-      resources: [
-        {
-          name: "todos",
-          operations: [anOperationWithResponses(responses)],
-        },
-      ],
-    },
-    { renderSource: true }
-  );
+  const writtenFiles = renderResponseSources({
+    responses: [],
+    resources: [
+      {
+        name: "todos",
+        operations: [anOperationWithResponses(responses)],
+      },
+    ],
+  });
   const source = writtenFiles.get("todos/CreateTodoResponse.ts");
 
   if (source === undefined) {
@@ -291,7 +300,7 @@ describe("ResponseGenerator", () => {
       ],
     };
 
-    const writtenFiles = generateResponses(normalizedSpec);
+    const writtenFiles = captureResponseGeneratorData(normalizedSpec);
 
     expect(writtenFiles.has("responses/SharedErrorResponse.ts")).toBe(true);
     expect(writtenFiles.has("responses/CreateTodoSuccessResponse.ts")).toBe(
@@ -343,9 +352,7 @@ describe("ResponseGenerator", () => {
       ],
     };
 
-    const writtenFiles = generateResponses(normalizedSpec, {
-      renderSource: true,
-    });
+    const writtenFiles = renderResponseSources(normalizedSpec);
     const source = getGeneratedSource(
       writtenFiles,
       "todos/CreateTodoResponse.ts"
@@ -388,9 +395,7 @@ describe("ResponseGenerator", () => {
       ],
     };
 
-    const writtenFiles = generateResponses(normalizedSpec, {
-      renderSource: true,
-    });
+    const writtenFiles = renderResponseSources(normalizedSpec);
     const todoResponse = getGeneratedSource(
       writtenFiles,
       "todos/CreateTodoResponse.ts"
@@ -427,9 +432,7 @@ describe("ResponseGenerator", () => {
       ],
     };
 
-    const writtenFiles = generateResponses(normalizedSpec, {
-      renderSource: true,
-    });
+    const writtenFiles = renderResponseSources(normalizedSpec);
 
     const sharedResponse = writtenFiles.get(
       "responses/ValidationErrorResponse.ts"
@@ -460,13 +463,10 @@ describe("ResponseGenerator", () => {
       body: z.object({ message: z.string(), todoId: z.string() }),
     });
 
-    const writtenFiles = generateResponses(
-      {
-        responses: [todoNotFoundError],
-        resources: [],
-      },
-      { renderSource: true }
-    );
+    const writtenFiles = renderResponseSources({
+      responses: [todoNotFoundError],
+      resources: [],
+    });
     const source = getGeneratedSource(
       writtenFiles,
       "responses/TodoNotFoundErrorResponse.ts"
@@ -508,9 +508,7 @@ describe("ResponseGenerator", () => {
       ],
     };
 
-    const writtenFiles = generateResponses(normalizedSpec, {
-      renderSource: true,
-    });
+    const writtenFiles = renderResponseSources(normalizedSpec);
     const source = getGeneratedSource(
       writtenFiles,
       "todos/CreateTodoResponse.ts"
@@ -540,17 +538,14 @@ describe("ResponseGenerator", () => {
       body: z.object({ code: z.literal("VALIDATION_ERROR") }),
     });
 
-    const writtenFiles = generateResponses(
-      {
-        responses: [validationError],
-        resources: [
-          aResourceWithOperationResponses([
-            aCanonicalResponseUsage(validationError.name),
-          ]),
-        ],
-      },
-      { renderSource: true }
-    );
+    const writtenFiles = renderResponseSources({
+      responses: [validationError],
+      resources: [
+        aResourceWithOperationResponses([
+          aCanonicalResponseUsage(validationError.name),
+        ]),
+      ],
+    });
     const sharedResponse = getGeneratedSource(
       writtenFiles,
       "responses/ValidationErrorResponse.ts"
@@ -588,9 +583,7 @@ describe("ResponseGenerator", () => {
       ],
     };
 
-    const writtenFiles = generateResponses(normalizedSpec, {
-      renderSource: true,
-    });
+    const writtenFiles = renderResponseSources(normalizedSpec);
     const source = getGeneratedSource(
       writtenFiles,
       "todos/CreateTodoResponse.ts"

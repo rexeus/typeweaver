@@ -653,6 +653,55 @@ describe("Generated Hono Router", () => {
       expect(({} as Record<string, unknown>).polluted).toBeUndefined();
     });
 
+    test("preserves top-level JSON array request bodies when validation is disabled", async () => {
+      let handlerBody: unknown;
+      let bodyIsArray = false;
+      const app = createUnvalidatedTodoHonoWithHandlers({
+        handleCreateTodoRequest: async request => {
+          handlerBody = request.body;
+          bodyIsArray = Array.isArray(request.body);
+          return createCreateTodoSuccessResponse();
+        },
+      });
+
+      const response = await app.request("http://localhost/todos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: '[{"value":"x"},{"value":"y"}]',
+      });
+
+      expect(response.status).toBe(201);
+      expect(bodyIsArray).toBe(true);
+      expect(handlerBody).toEqual([{ value: "x" }, { value: "y" }]);
+    });
+
+    test("strips __proto__ keys from top-level JSON array elements without polluting Object.prototype", async () => {
+      let elementUnsafeKey = true;
+      let elementPollution: unknown = true;
+      const app = createUnvalidatedTodoHonoWithHandlers({
+        handleCreateTodoRequest: async request => {
+          const [first] = request.body as unknown as Record<string, unknown>[];
+          elementUnsafeKey = Object.prototype.hasOwnProperty.call(
+            first,
+            "__proto__"
+          );
+          elementPollution = ({} as Record<string, unknown>).polluted;
+          return createCreateTodoSuccessResponse();
+        },
+      });
+
+      const response = await app.request("http://localhost/todos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: '[{"__proto__":{"polluted":true},"value":"x"}]',
+      });
+
+      expect(response.status).toBe(201);
+      expect(elementUnsafeKey).toBe(false);
+      expect(elementPollution).toBeUndefined();
+      expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    });
+
     test("parses vendor JSON media types when request validation is disabled", async () => {
       let handlerBody: Record<string, unknown> | undefined;
       const app = createUnvalidatedTodoHonoWithHandlers({

@@ -90,3 +90,31 @@ export const isTypedHttpResponse = (
       isTypedHttpResponseHeader(candidate.header))
   );
 };
+
+export const toHttpHeader = (
+  header: ITypedHttpResponse["header"]
+): IHttpHeader => {
+  if (!header) return undefined;
+
+  const normalizedHeader: NonNullable<IHttpHeader> = {};
+  for (const [key, value] of Object.entries(header)) {
+    if (value !== undefined) normalizedHeader[key] = value;
+  }
+
+  return Object.keys(normalizedHeader).length > 0
+    ? normalizedHeader
+    : undefined;
+};
+
+export const toHttpResponse = (
+  response: ITypedHttpResponse
+): IHttpResponse => ({
+  statusCode: response.statusCode,
+  header: toHttpHeader(response.header),
+  body: response.body,
+});
+
+export const normalizeHttpResponse = (
+  response: IHttpResponse | ITypedHttpResponse
+): IHttpResponse =>
+  isTypedHttpResponse(response) ? toHttpResponse(response) : response;

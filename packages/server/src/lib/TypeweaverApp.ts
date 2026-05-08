@@ -13,16 +13,14 @@ import {
   internalServerErrorDefaultError,
   isTypedHttpResponse,
   methodNotAllowedDefaultError,
+  normalizeHttpResponse,
   notFoundDefaultError,
   payloadTooLargeDefaultError,
   RequestValidationError,
+  toHttpResponse,
   validationDefaultError,
 } from "@rexeus/typeweaver-core";
-import type {
-  IHttpHeader,
-  IHttpResponse,
-  ITypedHttpResponse,
-} from "@rexeus/typeweaver-core";
+import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { BodyParseError, PayloadTooLargeError } from "./Errors.js";
 import { executeMiddlewarePipeline } from "./Middleware.js";
 import { Router } from "./Router.js";
@@ -246,7 +244,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
         const response = await this.executeHandler(routeCtx, match.route);
         return await this.validateResponse(
           match.route,
-          TypeweaverApp.normalizeHttpResponse(response),
+          normalizeHttpResponse(response),
           routeCtx
         );
       } catch (error) {
@@ -256,7 +254,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
         ) {
           return await this.validateResponse(
             match.route,
-            TypeweaverApp.toHttpResponse(error),
+            toHttpResponse(error),
             routeCtx
           );
         }
@@ -320,7 +318,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
     const result = route.responseValidator.safeValidate(response);
 
     if (result.isValid) {
-      return TypeweaverApp.normalizeHttpResponse(result.data);
+      return normalizeHttpResponse(result.data);
     }
 
     const handler = this.resolveErrorHandler<ResponseValidationErrorHandler>(
@@ -451,37 +449,6 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
     return issues.map(({ message, path }) => ({ message, path }));
   }
 
-  private static toHttpResponse(response: ITypedHttpResponse): IHttpResponse {
-    return {
-      statusCode: response.statusCode,
-      header: TypeweaverApp.toHttpHeader(response.header),
-      body: response.body,
-    };
-  }
-
-  private static normalizeHttpResponse(
-    response: IHttpResponse | ITypedHttpResponse
-  ): IHttpResponse {
-    return isTypedHttpResponse(response)
-      ? TypeweaverApp.toHttpResponse(response)
-      : response;
-  }
-
-  private static toHttpHeader(
-    header: ITypedHttpResponse["header"]
-  ): IHttpHeader {
-    if (!header) return undefined;
-
-    const normalizedHeader: NonNullable<IHttpHeader> = {};
-    for (const [key, value] of Object.entries(header)) {
-      if (value !== undefined) normalizedHeader[key] = value;
-    }
-
-    return Object.keys(normalizedHeader).length > 0
-      ? normalizedHeader
-      : undefined;
-  }
-
   private static defaultRequestValidationHandler: RequestValidationErrorHandler =
     (err): IHttpResponse => {
       const issues: Record<string, unknown> = Object.create(null);
@@ -511,7 +478,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
 
   private static defaultHttpResponseHandler: HttpResponseErrorHandler = (
     err
-  ): IHttpResponse => TypeweaverApp.toHttpResponse(err);
+  ): IHttpResponse => toHttpResponse(err);
 
   private readonly defaultUnknownHandler: UnknownErrorHandler = (
     error

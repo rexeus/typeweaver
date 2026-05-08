@@ -1,5 +1,5 @@
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
 import { except, scoped } from "../../../src/lib/middleware/scoped.js";
 import { defineMiddleware } from "../../../src/lib/TypedMiddleware.js";
@@ -399,6 +399,22 @@ describe("scoped and excluded middleware type-level safety checked by TypeScript
     new TypeweaverApp().use(auth).use(scoped(["/api/*"], requiresUser));
   });
 
+  test("typecheck preserves scoped middleware requirements without provided state", () => {
+    const requiresUser = defineMiddleware<{}, { userId: string }>(
+      async (ctx, next) => {
+        ctx.state.get("userId");
+        return next();
+      }
+    );
+
+    const middleware = scoped(["/api/*"], requiresUser);
+
+    expectTypeOf(middleware._brand.provides).toEqualTypeOf<{}>();
+    expectTypeOf(middleware._brand.requires).toEqualTypeOf<{
+      userId: string;
+    }>();
+  });
+
   test("typecheck rejects scoped middleware requiring upstream state before it is provided", () => {
     const requiresUser = defineMiddleware<{}, { userId: string }>(
       async (ctx, next) => {
@@ -423,6 +439,19 @@ describe("scoped and excluded middleware type-level safety checked by TypeScript
 
     void emptyStateIsAccepted;
     void phantomUserState;
+  });
+
+  test("typecheck allows later middleware to provide userId after scoped pass-through middleware", () => {
+    const passThrough = defineMiddleware(async (_ctx, next) => next());
+    const auth = defineMiddleware<{ userId: string }>(async (_ctx, next) =>
+      next({ userId: "u_1" })
+    );
+    const app = new TypeweaverApp()
+      .use(scoped(["/api/*"], passThrough))
+      .use(auth);
+
+    type State = InferState<typeof app>;
+    expectTypeOf<State>().toEqualTypeOf<{ userId: string }>();
   });
 
   test("typecheck infers scoped requirement-preserving middleware without phantom provided state", () => {
@@ -482,6 +511,22 @@ describe("scoped and excluded middleware type-level safety checked by TypeScript
     new TypeweaverApp().use(auth).use(except(["/health"], requiresUser));
   });
 
+  test("typecheck preserves except middleware requirements without provided state", () => {
+    const requiresUser = defineMiddleware<{}, { userId: string }>(
+      async (ctx, next) => {
+        ctx.state.get("userId");
+        return next();
+      }
+    );
+
+    const middleware = except(["/health"], requiresUser);
+
+    expectTypeOf(middleware._brand.provides).toEqualTypeOf<{}>();
+    expectTypeOf(middleware._brand.requires).toEqualTypeOf<{
+      userId: string;
+    }>();
+  });
+
   test("typecheck rejects except middleware requiring upstream state before it is provided", () => {
     const requiresUser = defineMiddleware<{}, { userId: string }>(
       async (ctx, next) => {
@@ -506,6 +551,19 @@ describe("scoped and excluded middleware type-level safety checked by TypeScript
 
     void emptyStateIsAccepted;
     void phantomUserState;
+  });
+
+  test("typecheck allows later middleware to provide userId after except pass-through middleware", () => {
+    const passThrough = defineMiddleware(async (_ctx, next) => next());
+    const auth = defineMiddleware<{ userId: string }>(async (_ctx, next) =>
+      next({ userId: "u_1" })
+    );
+    const app = new TypeweaverApp()
+      .use(except(["/health"], passThrough))
+      .use(auth);
+
+    type State = InferState<typeof app>;
+    expectTypeOf<State>().toEqualTypeOf<{ userId: string }>();
   });
 
   test("typecheck infers except requirement-preserving middleware without phantom provided state", () => {

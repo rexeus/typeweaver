@@ -28,7 +28,6 @@ function resolveOrigin(
   credentials: boolean,
 ): string | undefined {
   if (configOrigin === undefined || configOrigin === "*") {
-    if (credentials && requestOrigin) return requestOrigin;
     if (credentials) return undefined;
     return "*";
   }
@@ -113,6 +112,7 @@ function mergeResponseHeaders(
 
 export function cors(options?: CorsOptions) {
   const credentials = options?.credentials ?? false;
+
   const methods = (options?.allowMethods ?? DEFAULT_METHODS).join(", ");
   const exposeHeaders = options?.exposeHeaders?.join(", ");
   const maxAge = options?.maxAge?.toString();
@@ -120,10 +120,11 @@ export function cors(options?: CorsOptions) {
   return defineMiddleware(async (ctx, next) => {
     const requestOrigin = getRequestOrigin(ctx.request.header);
     const hasOrigin = hasHeaderName(ctx.request.header, "origin");
-    const origin =
+    const resolvedOrigin =
       hasOrigin && requestOrigin === undefined
         ? undefined
         : resolveOrigin(options?.origin, requestOrigin, credentials);
+    const origin = credentials && resolvedOrigin === "*" ? undefined : resolvedOrigin;
 
     if (origin === undefined) {
       const response = await next();

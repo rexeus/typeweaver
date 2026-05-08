@@ -321,4 +321,48 @@ describe("isTypedHttpResponse", () => {
 
     expect(typedStatusLabel(response)).toBe("TodoCreated:201");
   });
+
+  test("propagates errors from a throwing statusCode getter", () => {
+    const response = Object.defineProperty({ type: "Success" }, "statusCode", {
+      enumerable: true,
+      get() {
+        throw new Error("statusCode getter");
+      },
+    });
+
+    expect(() => isTypedHttpResponse(response)).toThrow("statusCode getter");
+  });
+
+  test("propagates errors from a throwing header getter", () => {
+    const response = Object.defineProperty(
+      { type: "Success", statusCode: HttpStatusCode.OK },
+      "header",
+      {
+        enumerable: true,
+        get() {
+          throw new Error("header getter");
+        },
+      }
+    );
+
+    expect(() => isTypedHttpResponse(response)).toThrow("header getter");
+  });
+
+  test("propagates errors from a header Proxy that throws on iteration", () => {
+    const header = new Proxy(
+      {},
+      {
+        ownKeys() {
+          throw new Error("proxy ownKeys");
+        },
+      }
+    );
+    const response = {
+      type: "Success",
+      statusCode: HttpStatusCode.OK,
+      header,
+    };
+
+    expect(() => isTypedHttpResponse(response)).toThrow("proxy ownKeys");
+  });
 });

@@ -2,7 +2,11 @@ import { pathMatcher } from "../PathMatcher.js";
 import { defineMiddleware } from "../TypedMiddleware.js";
 import type { TypedMiddleware } from "../TypedMiddleware.js";
 
-type NoProvidedState = Record<string, never>;
+type NoProvidedKeys<TProvides extends Record<string, unknown>> = [
+  keyof TProvides,
+] extends [never]
+  ? unknown
+  : never;
 
 /**
  * Restricts a middleware to only run on paths matching the given patterns.
@@ -21,10 +25,13 @@ type NoProvidedState = Record<string, never>;
  * app.use(scoped(["/api/*"], cors({ origin: "https://app.com" })));
  * ```
  */
-export function scoped<TRequires extends Record<string, unknown>>(
+export function scoped<
+  TProvides extends Record<string, unknown>,
+  TRequires extends Record<string, unknown>,
+>(
   paths: readonly string[],
-  middleware: TypedMiddleware<NoProvidedState, TRequires>
-): TypedMiddleware<{}, TRequires> {
+  middleware: TypedMiddleware<TProvides, TRequires> & NoProvidedKeys<TProvides>
+): TypedMiddleware<TProvides, TRequires> {
   const matchers = paths.map(pathMatcher);
 
   return defineMiddleware<{}, TRequires>(async (ctx, next) => {
@@ -32,7 +39,7 @@ export function scoped<TRequires extends Record<string, unknown>>(
       return next();
     }
     return middleware.handler(ctx, next);
-  });
+  }) as TypedMiddleware<TProvides, TRequires>;
 }
 
 /**
@@ -46,10 +53,13 @@ export function scoped<TRequires extends Record<string, unknown>>(
  * app.use(except(["/health", "/ready"], logger()));
  * ```
  */
-export function except<TRequires extends Record<string, unknown>>(
+export function except<
+  TProvides extends Record<string, unknown>,
+  TRequires extends Record<string, unknown>,
+>(
   paths: readonly string[],
-  middleware: TypedMiddleware<NoProvidedState, TRequires>
-): TypedMiddleware<{}, TRequires> {
+  middleware: TypedMiddleware<TProvides, TRequires> & NoProvidedKeys<TProvides>
+): TypedMiddleware<TProvides, TRequires> {
   const matchers = paths.map(pathMatcher);
 
   return defineMiddleware<{}, TRequires>(async (ctx, next) => {
@@ -57,5 +67,5 @@ export function except<TRequires extends Record<string, unknown>>(
       return next();
     }
     return middleware.handler(ctx, next);
-  });
+  }) as TypedMiddleware<TProvides, TRequires>;
 }

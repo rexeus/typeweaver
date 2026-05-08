@@ -132,9 +132,50 @@ describe("ApiClient constructor", () => {
   test.each([
     { case: "HTTP absolute base URL", baseUrl: "http://localhost:3000" },
     { case: "HTTPS absolute base URL", baseUrl: "https://api.example.com" },
+    {
+      case: "mixed-case HTTP absolute base URL",
+      baseUrl: "HTTP://localhost:3000",
+    },
+    {
+      case: "mixed-case HTTPS absolute base URL",
+      baseUrl: "HtTpS://api.example.com",
+    },
     { case: "relative base path", baseUrl: "/api" },
+    { case: "relative base path with colon", baseUrl: "/api:v1" },
+    { case: "relative base path without leading slash", baseUrl: "api" },
   ])("accepts $case", ({ baseUrl }) => {
     expect(() => createClient(resolvedFetch(), { baseUrl })).not.toThrow();
+  });
+
+  test.each([
+    { case: "FTP", baseUrl: "ftp://api.example.com" },
+    { case: "file", baseUrl: "file:///tmp/api" },
+    { case: "mailto", baseUrl: "mailto:user@example.com" },
+    { case: "javascript", baseUrl: "javascript:alert(1)" },
+    { case: "data", baseUrl: "data:text/plain,hello" },
+  ])("rejects absolute non-http(s) $case baseUrl", ({ baseUrl }) => {
+    expect(() => createClient(resolvedFetch(), { baseUrl })).toThrow(
+      "Absolute base URLs must use http(s); relative base URLs are allowed"
+    );
+  });
+
+  test.each([
+    {
+      case: "newline inserted into a javascript scheme",
+      baseUrl: "java\nscript:alert(1)",
+    },
+    {
+      case: "leading tab before a data scheme",
+      baseUrl: "\tdata:text/plain,hello",
+    },
+    {
+      case: "carriage return inserted after an FTP scheme",
+      baseUrl: "ftp:\r//api.example.com",
+    },
+  ])("rejects $case baseUrl", ({ baseUrl }) => {
+    expect(() => createClient(resolvedFetch(), { baseUrl })).toThrow(
+      "Absolute base URLs must use http(s); relative base URLs are allowed"
+    );
   });
 
   test.each([
@@ -339,6 +380,37 @@ describe("ApiClient path parameters", () => {
       expect(mockFetch).not.toHaveBeenCalled();
     }
   );
+
+  test.each(["%2E", "%2E%2E", "%2e%2e"] as const)(
+    "double-encodes percent-encoded dot-segment %s rather than rejecting",
+    async fileId => {
+      const { mockFetch } = await sendRaw({
+        path: "/files/:fileId/content",
+        param: { fileId },
+      });
+
+      const url = getFetchCall(mockFetch).url;
+      expect(url).toBe(
+        `http://localhost:3000/files/${encodeURIComponent(fileId)}/content`
+      );
+      expect(url).not.toMatch(/\/\.\.?\//);
+    }
+  );
+
+  test("rejects a __proto__ path parameter without an own value before fetch", async () => {
+    const mockFetch = resolvedFetch();
+    const client = createClient(mockFetch);
+    const command = new TestRequestCommand({
+      path: "/items/:__proto__",
+      param: {} as IHttpParam,
+    });
+
+    await expectPathParameterRejection(client.send(command), {
+      paramName: "__proto__",
+      path: "/items/:__proto__",
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
 
   test("rejects extra path parameter not present in the template before fetch", async () => {
     const mockFetch = resolvedFetch();

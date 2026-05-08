@@ -11,11 +11,12 @@ import {
   createDefaultErrorResponse,
   internalServerErrorDefaultError,
   isTypedHttpResponse,
+  normalizeHttpResponse,
   RequestValidationError,
+  toHttpResponse,
   validationDefaultError,
 } from "@rexeus/typeweaver-core";
 import type {
-  IHttpHeader,
   IHttpRequest,
   IHttpResponse,
   IRequestValidator,
@@ -217,7 +218,7 @@ export abstract class TypeweaverHono<
       createDefaultErrorResponse(badRequestDefaultError),
 
     httpResponse: (error: ITypedHttpResponse): IHttpResponse =>
-      TypeweaverHono.toHttpResponse(error),
+      toHttpResponse(error),
 
     unknown: (): IHttpResponse =>
       createDefaultErrorResponse(internalServerErrorDefaultError),
@@ -394,7 +395,7 @@ export abstract class TypeweaverHono<
       return this.adapter.toResponse(
         await this.validateResponse(
           responseValidator,
-          TypeweaverHono.normalizeHttpResponse(httpResponse),
+          normalizeHttpResponse(httpResponse),
           context
         )
       );
@@ -404,7 +405,7 @@ export abstract class TypeweaverHono<
       }
 
       if (isTypedHttpResponse(error) && this.config.validateResponses) {
-        const httpResponse = TypeweaverHono.toHttpResponse(error);
+        const httpResponse = toHttpResponse(error);
         const validated = await this.validateResponse(
           responseValidator,
           httpResponse,
@@ -443,7 +444,7 @@ export abstract class TypeweaverHono<
     const result = responseValidator.safeValidate(response);
 
     if (result.isValid) {
-      return TypeweaverHono.normalizeHttpResponse(result.data);
+      return normalizeHttpResponse(result.data);
     }
 
     if (this.config.errorHandlers.responseValidation) {
@@ -460,36 +461,5 @@ export abstract class TypeweaverHono<
     }
 
     return response;
-  }
-
-  private static toHttpResponse(response: ITypedHttpResponse): IHttpResponse {
-    return {
-      statusCode: response.statusCode,
-      header: TypeweaverHono.toHttpHeader(response.header),
-      body: response.body,
-    };
-  }
-
-  private static normalizeHttpResponse(
-    response: IHttpResponse | ITypedHttpResponse
-  ): IHttpResponse {
-    return isTypedHttpResponse(response)
-      ? TypeweaverHono.toHttpResponse(response)
-      : response;
-  }
-
-  private static toHttpHeader(
-    header: ITypedHttpResponse["header"]
-  ): IHttpHeader {
-    if (!header) return undefined;
-
-    const normalizedHeader: NonNullable<IHttpHeader> = {};
-    for (const [key, value] of Object.entries(header)) {
-      if (value !== undefined) normalizedHeader[key] = value;
-    }
-
-    return Object.keys(normalizedHeader).length > 0
-      ? normalizedHeader
-      : undefined;
   }
 }

@@ -180,6 +180,25 @@ describe("cors", () => {
       );
     });
 
+    test("fails closed when a credentialed function origin resolver returns a wildcard", async () => {
+      const response = await executeCors({
+        options: { origin: () => "*", credentials: true },
+        header: { origin: "https://app.com" },
+        finalHandler: async () =>
+          downstreamResponseWithPermissiveCorsPolicy({
+            statusCode: 202,
+            header: { "x-custom": "kept" },
+            body: { passedThrough: true },
+          }),
+      });
+
+      expect(response.statusCode).toBe(202);
+      expect(response.body).toEqual({ passedThrough: true });
+      expect(response.header?.["x-custom"]).toBe("kept");
+      expect(response.header?.["vary"]).toBe("Origin");
+      expectNoPolicyControlledCorsHeaders(response);
+    });
+
     test("removes downstream CORS headers when a function origin resolver rejects the request", async () => {
       const response = await executeCors({
         options: {
@@ -222,9 +241,9 @@ describe("cors", () => {
       expectNoPolicyControlledCorsHeaders(response);
     });
 
-    test("sets credentials when enabled", async () => {
+    test("sets credentials when enabled with an explicit origin", async () => {
       const response = await executeCors({
-        options: { credentials: true },
+        options: { origin: "https://app.com", credentials: true },
         header: { origin: "https://app.com" },
       });
 
@@ -233,56 +252,102 @@ describe("cors", () => {
       );
     });
 
-    test("preserves the downstream response without wildcard credentials when credentials are enabled and Origin is absent", async () => {
+    test("sets credentials for a credentialed function origin allowlist", async () => {
       const response = await executeCors({
-        options: { credentials: true },
-        finalHandler: async () => ({
-          statusCode: 201,
-          header: { "x-custom": "value" },
-          body: { created: true },
-        }),
-      });
-
-      expect(response.statusCode).toBe(201);
-      expect(response.body).toEqual({ created: true });
-      expect(response.header?.["x-custom"]).toBe("value");
-      expect(response.header?.["access-control-allow-origin"]).toBeUndefined();
-      expect(
-        response.header?.["access-control-allow-credentials"]
-      ).toBeUndefined();
-    });
-
-    test("strips downstream CORS headers and varies on Origin when wildcard credentials have no request Origin", async () => {
-      const response = await executeCors({
-        options: { origin: "*", credentials: true },
-        finalHandler: async () =>
-          downstreamResponseWithPermissiveCorsPolicy({
-            statusCode: 201,
-            header: { "x-custom": "value" },
-            body: { created: true },
-          }),
-      });
-
-      expect(response.statusCode).toBe(201);
-      expect(response.body).toEqual({ created: true });
-      expect(response.header?.["x-custom"]).toBe("value");
-      expect(response.header?.["vary"]).toBe("Origin");
-      expectNoPolicyControlledCorsHeaders(response);
-    });
-
-    test("reflects the request origin for explicit wildcard origins with credentials", async () => {
-      const response = await executeCors({
-        options: { origin: "*", credentials: true },
-        header: { origin: "https://my-app.com" },
+        options: {
+          origin: origin => (origin === "https://app.com" ? origin : undefined),
+          credentials: true,
+        },
+        header: { origin: "https://app.com" },
       });
 
       expect(response.header?.["access-control-allow-origin"]).toBe(
-        "https://my-app.com"
+        "https://app.com"
       );
       expect(response.header?.["access-control-allow-credentials"]).toBe(
         "true"
       );
-      expect(response.header?.["vary"]).toBe("Origin");
+    });
+
+    test("sets credentials for a credentialed origin array allowlist", async () => {
+      const response = await executeCors({
+        options: { origin: ["https://app.com"], credentials: true },
+        header: { origin: "https://app.com" },
+      });
+
+      expect(response.header?.["access-control-allow-origin"]).toBe(
+        "https://app.com"
+      );
+      expect(response.header?.["access-control-allow-credentials"]).toBe(
+        "true"
+      );
+    });
+
+    test.each<{
+      readonly case: string;
+      readonly options: CorsOptions;
+    }>([
+      {
+        case: "credentials without an origin allowlist",
+        options: { credentials: true },
+      },
+      {
+        case: "credentials combined with a wildcard origin",
+        options: { origin: "*", credentials: true },
+      },
+    ])("fails closed at request time for $case", async ({ options }) => {
+      const response = await executeCors({
+        options,
+        header: { origin: "https://app.com" },
+        finalHandler: async () =>
+          downstreamResponseWithPermissiveCorsPolicy({
+            statusCode: 202,
+            header: {
+              vary: "Accept-Encoding",
+              "x-custom": "kept",
+            },
+            body: { passedThrough: true },
+          }),
+      });
+
+      expect(response.statusCode).toBe(202);
+      expect(response.body).toEqual({ passedThrough: true });
+      expect(response.header?.["x-custom"]).toBe("kept");
+      expect(response.header?.["vary"]).toBe("Accept-Encoding, Origin");
+      expectNoPolicyControlledCorsHeaders(response);
+    });
+
+    test.each<{
+      readonly case: string;
+      readonly options: CorsOptions;
+    }>([
+      {
+        case: "credentials without an origin allowlist",
+        options: { credentials: true },
+      },
+      {
+        case: "credentials combined with a wildcard origin",
+        options: { origin: "*", credentials: true },
+      },
+    ])("fails closed without a request Origin for $case", async ({ options }) => {
+      const response = await executeCors({
+        options,
+        finalHandler: async () =>
+          downstreamResponseWithPermissiveCorsPolicy({
+            statusCode: 202,
+            header: {
+              vary: "Accept-Encoding",
+              "x-custom": "kept",
+            },
+            body: { passedThrough: true },
+          }),
+      });
+
+      expect(response.statusCode).toBe(202);
+      expect(response.body).toEqual({ passedThrough: true });
+      expect(response.header?.["x-custom"]).toBe("kept");
+      expect(response.header?.["vary"]).toBe("Accept-Encoding, Origin");
+      expectNoPolicyControlledCorsHeaders(response);
     });
 
     test("sets exposed response headers", async () => {
@@ -680,7 +745,7 @@ describe("cors", () => {
 
     test("reflects Origin and credentials for credentialed preflight responses", async () => {
       const response = await executeCors({
-        options: { credentials: true },
+        options: { origin: "https://app.com", credentials: true },
         method: HttpMethod.OPTIONS,
         header: {
           origin: "https://app.com",
@@ -698,6 +763,45 @@ describe("cors", () => {
         "true"
       );
       expect(response.header?.["vary"]).toBe("Origin");
+    });
+
+    test.each<{
+      readonly case: string;
+      readonly options: CorsOptions;
+    }>([
+      {
+        case: "credentials without an origin allowlist",
+        options: { credentials: true },
+      },
+      {
+        case: "credentials combined with a wildcard origin",
+        options: { origin: "*", credentials: true },
+      },
+      {
+        case: "a credentialed function origin resolver returning a wildcard",
+        options: { origin: () => "*", credentials: true },
+      },
+    ])("fails closed for preflight requests with $case", async ({ options }) => {
+      const response = await executeCors({
+        options,
+        method: HttpMethod.OPTIONS,
+        header: {
+          origin: "https://app.com",
+          "access-control-request-method": "POST",
+        },
+        finalHandler: async () =>
+          downstreamResponseWithPermissiveCorsPolicy({
+            statusCode: 202,
+            header: { "x-custom": "kept" },
+            body: { passedThrough: true },
+          }),
+      });
+
+      expect(response.statusCode).toBe(202);
+      expect(response.body).toEqual({ passedThrough: true });
+      expect(response.header?.["x-custom"]).toBe("kept");
+      expect(response.header?.["vary"]).toBe("Origin");
+      expectNoPolicyControlledCorsHeaders(response);
     });
 
     test("reflects requested headers when allowed headers are not configured", async () => {

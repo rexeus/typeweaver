@@ -26,8 +26,9 @@ Notable fixes include:
   failures for hostile response status values while preserving diagnostics.
 - `@rexeus/typeweaver-clients`: validate base URLs and path parameters before requests reach the
   fetch boundary, including generated file-client transport paths.
-- `@rexeus/typeweaver-server` and `@rexeus/typeweaver-hono`: fail closed on malformed JSON,
-  response-validation handler failures, unsafe headers, and response normalization edge cases.
+- `@rexeus/typeweaver-server` and `@rexeus/typeweaver-hono`: fail closed on credentialed CORS
+  wildcards, malformed JSON, response-validation handler failures, unsafe headers, and response
+  normalization edge cases.
 - `@rexeus/typeweaver`: harden CLI config/plugin/spec loading, stale dynamic imports, generated
   index files, and shared `tsdown` post-build `onSuccess` handling.
 - `@rexeus/typeweaver-zod-to-ts`: improve TypeScript output for bigint literals, multi-value
