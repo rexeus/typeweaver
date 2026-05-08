@@ -43,6 +43,19 @@ export function buildCreateTodoSuccess(
   };
 }
 
+export function aCreateTodoSuccessResponseWithBody(
+  body: unknown,
+  overrides: Partial<ITypedHttpResponse> = {}
+): ITypedHttpResponse {
+  return {
+    type: "CreateTodoSuccess" as const,
+    statusCode: 201,
+    header: { "Content-Type": "application/json" },
+    body,
+    ...overrides,
+  };
+}
+
 export async function expectErrorResponse(
   response: Response,
   status: number,

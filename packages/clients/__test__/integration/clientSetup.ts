@@ -1,7 +1,23 @@
 import { createTestServer, TodoClient } from "test-utils";
+import type { CreateTestServerResult } from "test-utils";
 import type { ApiClientProps } from "test-utils/src/test-project/output/lib/clients/index.js";
 
 const cleanupFunctions: (() => void | Promise<void>)[] = [];
+
+async function closeTestServer(
+  testServer: CreateTestServerResult
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    testServer.server.close((error?: Error) => {
+      if (error !== undefined) {
+        reject(error);
+        return;
+      }
+
+      resolve();
+    });
+  });
+}
 
 export async function setupClientTest(
   serverConfig: Parameters<typeof createTestServer>[0] = {},
@@ -14,16 +30,31 @@ export async function setupClientTest(
   });
 
   // Auto-register cleanup function
-  cleanupFunctions.push(() => {
-    testServer.server.close();
-  });
+  cleanupFunctions.push(() => closeTestServer(testServer));
 
   return { client };
 }
 
 export async function runClientCleanup() {
-  for (const cleanup of cleanupFunctions) {
-    await cleanup();
+  const pendingCleanupFunctions = cleanupFunctions.splice(0);
+  const cleanupErrors: unknown[] = [];
+
+  for (const cleanup of pendingCleanupFunctions) {
+    try {
+      await cleanup();
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
   }
-  cleanupFunctions.length = 0;
+
+  if (cleanupErrors.length === 1) {
+    throw cleanupErrors[0];
+  }
+
+  if (cleanupErrors.length > 1) {
+    throw new AggregateError(
+      cleanupErrors,
+      "Multiple client cleanup functions failed"
+    );
+  }
 }

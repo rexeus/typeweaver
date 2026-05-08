@@ -117,7 +117,7 @@ export abstract class Validator {
     shape: $ZodShape,
     caseSensitive: boolean
   ): unknown {
-    if (typeof data !== "object" || data === null) {
+    if (typeof data !== "object" || data === null || Array.isArray(data)) {
       return data;
     }
 
@@ -221,6 +221,9 @@ export abstract class Validator {
   protected coerceHeaderToSchema(header: unknown, shape: $ZodShape): unknown {
     if (typeof header !== "object" || header === null) {
       return this.coerceToSchema(header ?? {}, shape, false);
+    }
+    if (Array.isArray(header)) {
+      return header;
     }
 
     const preprocessed = this.splitCommaDelimitedValues(header, shape);

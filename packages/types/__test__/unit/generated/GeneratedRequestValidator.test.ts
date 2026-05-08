@@ -1,591 +1,1070 @@
 import assert from "node:assert";
-import { RequestValidationError } from "@rexeus/typeweaver-core";
+import type { IHttpRequest } from "@rexeus/typeweaver-core";
+import { HttpMethod, RequestValidationError } from "@rexeus/typeweaver-core";
 import {
   captureError,
-  createCreateTodoRequest,
-  createGetTodoRequest,
-  createListTodosRequest,
-  createOptionsTodoRequest,
-  createQuerySubTodoRequest,
   CreateTodoRequestValidator,
+  DeleteTodoRequestValidator,
   GetTodoRequestValidator,
+  ListSubTodosRequestValidator,
   ListTodosRequestValidator,
   OptionsTodoRequestValidator,
   QuerySubTodoRequestValidator,
+  UploadFileRequestValidator,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
+import type {
+  ICreateTodoRequest,
+  IDeleteTodoRequest,
+  IGetTodoRequest,
+  IListSubTodosRequest,
+  IListTodosRequest,
+  IOptionsTodoRequest,
+  IQuerySubTodoRequest,
+  IUploadFileRequest,
+} from "test-utils";
+
+const TODO_ID = "01K0W0Y49HZVW1QTN6RZJJY203";
+const OTHER_TODO_ID = "01K0W0ZJA0DQE5D3CB5MP2FGKT";
+const AUTHORIZATION = "Bearer reference-token";
+
+const validCreateTodoRequest = (): ICreateTodoRequest => ({
+  method: HttpMethod.POST,
+  path: "/todos",
+  header: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    Authorization: AUTHORIZATION,
+  },
+  body: {
+    title: "Write reference request validator specs",
+    description: "Cover the generated request validator public contract.",
+    dueDate: "2026-06-01T00:00:00.000Z",
+    tags: ["testing", "contracts"],
+    priority: "HIGH",
+  },
+});
+
+const validGetTodoRequest = (): IGetTodoRequest => ({
+  method: HttpMethod.GET,
+  path: `/todos/${TODO_ID}`,
+  header: {
+    Accept: "application/json",
+    Authorization: AUTHORIZATION,
+  },
+  param: {
+    todoId: TODO_ID,
+  },
+});
+
+const validListTodosRequest = (): IListTodosRequest => ({
+  method: HttpMethod.GET,
+  path: "/todos",
+  header: {
+    Accept: "application/json",
+    Authorization: AUTHORIZATION,
+  },
+  query: {
+    status: "TODO",
+    priority: "MEDIUM",
+    tags: ["testing", "contracts"],
+    limit: "25",
+    nextToken: "next-page-token",
+    sortBy: "createdAt",
+    sortOrder: "desc",
+    search: "validator",
+    dateFrom: "2026-05-01",
+    dateTo: "2026-05-31",
+  },
+});
+
+const validOptionsTodoRequest = (): IOptionsTodoRequest => ({
+  method: HttpMethod.OPTIONS,
+  path: `/todos/${TODO_ID}`,
+  header: {
+    Accept: "application/json",
+    Authorization: AUTHORIZATION,
+    "Access-Control-Request-Method": "POST",
+    "Access-Control-Request-Headers": ["Content-Type", "Authorization"],
+  },
+  param: {
+    todoId: TODO_ID,
+  },
+});
+
+const validQuerySubTodoRequest = (): IQuerySubTodoRequest => ({
+  method: HttpMethod.POST,
+  path: `/todos/${TODO_ID}/subtodos/query`,
+  header: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    Authorization: AUTHORIZATION,
+  },
+  param: {
+    todoId: TODO_ID,
+  },
+  query: {
+    limit: "10",
+    sortBy: "createdAt",
+    sortOrder: "asc",
+    format: "summary",
+  },
+  body: {
+    searchText: "reference",
+    status: "TODO",
+    priority: "LOW",
+    dateRange: {
+      from: "2026-05-01",
+      to: "2026-05-31",
+    },
+    tags: ["testing"],
+  },
+});
+
+const validListSubTodosRequest = (): IListSubTodosRequest => ({
+  method: HttpMethod.GET,
+  path: `/todos/${TODO_ID}/subtodos`,
+  header: {
+    Accept: "application/json",
+    Authorization: AUTHORIZATION,
+  },
+  param: {
+    todoId: TODO_ID,
+  },
+  query: {
+    limit: "10",
+    nextToken: "next-page-token",
+    sortBy: "createdAt",
+    sortOrder: "asc",
+  },
+});
+
+const validDeleteTodoRequest = (): IDeleteTodoRequest => ({
+  method: HttpMethod.DELETE,
+  path: `/todos/${TODO_ID}`,
+  header: {
+    Accept: "application/json",
+    Authorization: AUTHORIZATION,
+  },
+  param: {
+    todoId: TODO_ID,
+  },
+});
+
+const validUploadFileRequest = (): IUploadFileRequest => ({
+  method: HttpMethod.POST,
+  path: "/files",
+  header: {
+    "Content-Type": "application/octet-stream",
+    Authorization: AUTHORIZATION,
+    "X-File-Name": "reference.txt",
+  },
+  body: new Uint8Array([1, 2, 3]),
+});
+
+const requestWithRuntimePart = (
+  request: IHttpRequest,
+  part: "body" | "header" | "param" | "query",
+  value: unknown
+): IHttpRequest => ({
+  ...request,
+  [part]: value,
+});
+
+const withoutRuntimePart = (
+  request: IHttpRequest,
+  part: "body" | "header" | "param" | "query"
+): IHttpRequest => {
+  const clone = { ...request };
+  delete clone[part];
+  return clone;
+};
+
+const issuePaths = (issues: RequestValidationError["bodyIssues"]) =>
+  issues.map(issue => issue.path);
+
+const querySubTodoRequestWithInvalidBodyHeaderParamAndQuery =
+  (): IHttpRequest =>
+    requestWithRuntimePart(
+      requestWithRuntimePart(
+        requestWithRuntimePart(
+          requestWithRuntimePart(validQuerySubTodoRequest(), "body", {
+            status: "BLOCKED",
+          }),
+          "header",
+          { Accept: "text/plain" }
+        ),
+        "param",
+        { todoId: "not-a-ulid" }
+      ),
+      "query",
+      { sortBy: "updatedAt" }
+    );
 
 describe("Generated RequestValidator", () => {
-  describe("Body Validation", () => {
-    test("should validate correct body schema", () => {
-      // Arrange
+  describe("safeValidate and validate contracts", () => {
+    test("returns success with normalized data for a valid create todo request", () => {
       const validator = new CreateTodoRequestValidator();
-      const validRequest = createCreateTodoRequest();
+      const request = validCreateTodoRequest();
 
-      // Act
-      const result = validator.safeValidate(validRequest);
+      const result = validator.safeValidate(request);
 
-      // Assert
       expect(result.isValid).toBe(true);
       assert(result.isValid);
-      expect(result.data.body).toEqual(validRequest.body);
+      expect(result.data).toEqual(request);
     });
 
-    test("should reject invalid body schema", () => {
-      // Arrange
+    test("returns success with normalized data for a valid get todo request", () => {
+      const validator = new GetTodoRequestValidator();
+      const request = validGetTodoRequest();
+
+      const result = validator.safeValidate(request);
+
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data).toEqual(request);
+    });
+
+    test("returns success with normalized data for a valid list todos request", () => {
+      const validator = new ListTodosRequestValidator();
+      const request = validListTodosRequest();
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data).toEqual(request);
+    });
+
+    test("returns bodyIssues without throwing when the title has the wrong type", () => {
       const validator = new CreateTodoRequestValidator();
-      const invalidRequest = createCreateTodoRequest({
-        body: {
-          title: 123 as any, // Should be a string
-        },
+      const request = requestWithRuntimePart(validCreateTodoRequest(), "body", {
+        title: 123,
       });
 
-      // Act
-      const result = validator.safeValidate(invalidRequest);
+      const result = validator.safeValidate(request);
 
-      // Assert
       expect(result.isValid).toBe(false);
       assert(!result.isValid);
-      expect(result.error.hasIssues()).toBe(true);
+      expect(result.error).toBeInstanceOf(RequestValidationError);
       expect(result.error.bodyIssues).toHaveLength(1);
     });
 
-    test("should strip additional fields from request body", () => {
-      // Arrange
-      const validator = new CreateTodoRequestValidator();
-      const requestWithExtraFields = createCreateTodoRequest({
-        body: {
-          title: "Valid title",
-          description: "Valid description",
-          extraField: "should be stripped",
-          anotherExtraField: 123,
-        } as any,
-      });
-
-      // Act
-      const result = validator.safeValidate(requestWithExtraFields);
-
-      // Assert
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
-      expect(result.data.body).not.toHaveProperty("extraField");
-      expect(result.data.body).not.toHaveProperty("anotherExtraField");
-    });
-  });
-
-  describe("Header Validation", () => {
-    test("should validate correct headers", () => {
-      // Arrange
-      const validator = new CreateTodoRequestValidator();
-      const validRequest = createCreateTodoRequest();
-
-      // Act
-      const result = validator.safeValidate(validRequest);
-
-      // Assert
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
-      expect(result.data.header).toEqual(validRequest.header);
-    });
-
-    test("should reject invalid headers", () => {
-      // Arrange
-      const validator = new CreateTodoRequestValidator();
-      const invalidRequest = createCreateTodoRequest({
-        header: {
-          Accept: "invalid/accept-type" as any, // Invalid Accept header
-        },
-      });
-
-      // Act
-      const result = validator.safeValidate(invalidRequest);
-
-      // Assert
-      expect(result.isValid).toBe(false);
-      assert(!result.isValid);
-      expect(result.error.hasIssues()).toBe(true);
-      expect(result.error.headerIssues).toHaveLength(1);
-    });
-
-    test("should strip additional fields from request headers", () => {
-      // Arrange
-      const validator = new CreateTodoRequestValidator();
-      const requestWithExtraHeaders = createCreateTodoRequest({
-        header: {
-          Accept: "application/json",
-          "Extra-Header": "should be stripped",
-          "Another-Extra": "also stripped",
-        } as any,
-      });
-
-      // Act
-      const result = validator.safeValidate(requestWithExtraHeaders);
-
-      // Assert
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
-      expect(result.data.header).not.toHaveProperty("Extra-Header");
-      expect(result.data.header).not.toHaveProperty("Another-Extra");
-    });
-
-    test("should coerce header keys to match schema case-insensitively", () => {
-      // Arrange
-      const validator = new CreateTodoRequestValidator();
-      const requestWithMixedCaseHeaders = createCreateTodoRequest({
-        header: {
-          // @ts-expect-error Wrong case for testing
-          accept: "application/json" as any, // Should match schema's "Accept"
-          authorization: "Bearer token123" as any, // Should match schema's "Authorization"
-          "CONTENT-TYPE": "application/json" as any, // Should match schema's "Content-Type"
-        },
-      });
-      // Remove the headers in correct casing to test coercion
-      delete (requestWithMixedCaseHeaders.header as any)["Accept"];
-      delete (requestWithMixedCaseHeaders.header as any)["Authorization"];
-      delete (requestWithMixedCaseHeaders.header as any)["Content-Type"];
-
-      // Act
-      const result = validator.safeValidate(requestWithMixedCaseHeaders);
-
-      // Assert
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
-      expect(result.data.header.Accept).toBe("application/json");
-      expect(result.data.header.Authorization).toBe("Bearer token123");
-      expect(result.data.header["Content-Type"]).toBe("application/json");
-      expect(result.data.header).not.toHaveProperty("accept");
-      expect(result.data.header).not.toHaveProperty("authorization");
-      expect(result.data.header).not.toHaveProperty("CONTENT-TYPE");
-    });
-
-    test("should split comma-separated header string into array when schema expects array", () => {
-      // Arrange
-      const validator = new OptionsTodoRequestValidator();
-      const request = createOptionsTodoRequest({
-        header: {
-          "Access-Control-Request-Headers":
-            "Content-Type, Authorization" as any,
-        },
-      });
-
-      // Act
-      const result = validator.safeValidate(request);
-
-      // Assert
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
-      expect(result.data.header["Access-Control-Request-Headers"]).toEqual([
-        "Content-Type",
-        "Authorization",
-      ]);
-    });
-
-    test("should not split comma in non-array header field", () => {
-      // Arrange
-      const validator = new OptionsTodoRequestValidator();
-      const tokenWithComma = "Bearer eyJhbGciOiJIUzI1NiJ9,extra";
-      const request = createOptionsTodoRequest({
-        header: {
-          Authorization: tokenWithComma,
-        },
-      });
-
-      // Act
-      const result = validator.safeValidate(request);
-
-      // Assert
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
-      expect(result.data.header.Authorization).toBe(tokenWithComma);
-    });
-
-    test("should split comma-separated header string without spaces", () => {
-      // Arrange
-      const validator = new OptionsTodoRequestValidator();
-      const request = createOptionsTodoRequest({
-        header: {
-          "Access-Control-Request-Headers": "Content-Type,Authorization" as any,
-        },
-      });
-
-      // Act
-      const result = validator.safeValidate(request);
-
-      // Assert
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
-      expect(result.data.header["Access-Control-Request-Headers"]).toEqual([
-        "Content-Type",
-        "Authorization",
-      ]);
-    });
-
-    test("should not re-split header value that is already an array", () => {
-      // Arrange
-      const validator = new OptionsTodoRequestValidator();
-      const request = createOptionsTodoRequest({
-        header: {
-          "Access-Control-Request-Headers": ["Content-Type", "Authorization"],
-        },
-      });
-
-      // Act
-      const result = validator.safeValidate(request);
-
-      // Assert
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
-      expect(result.data.header["Access-Control-Request-Headers"]).toEqual([
-        "Content-Type",
-        "Authorization",
-      ]);
-    });
-
-    test("should coerce single header value to array when schema expects array", () => {
-      // Arrange
-      const validator = new CreateTodoRequestValidator();
-      const requestWithSingleEncoding = createCreateTodoRequest({
-        header: {
-          Accept: "application/json",
-          "X-Multi-Value": "my-value" as any, // Schema expects array, provide single value
-        },
-      });
-
-      // Act
-      const result = validator.safeValidate(requestWithSingleEncoding);
-
-      // Assert
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
-      expect(result.data.header.Accept).toBe("application/json");
-      expect(result.data.header["X-Multi-Value"]).toEqual(["my-value"]);
-    });
-
-    test("should coerce array header value to single when schema expects single", () => {
-      // Arrange
-      const validator = new CreateTodoRequestValidator();
-      const requestWithArrayHeaders = createCreateTodoRequest({
-        header: {
-          Accept: ["application/json"] as any, // Schema expects single string, provide array
-          Authorization: ["Bearer token123"] as any, // Schema expects single string, provide array
-          "Content-Type": "application/json", // This should remain single
-        },
-      });
-
-      // Act
-      const result = validator.safeValidate(requestWithArrayHeaders);
-
-      // Assert
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
-      expect(result.data.header.Accept).toBe("application/json");
-      expect(result.data.header.Authorization).toBe("Bearer token123");
-      expect(result.data.header["Content-Type"]).toBe("application/json");
-    });
-  });
-
-  describe("Path Parameter Validation", () => {
-    test("should validate correct path parameters", () => {
-      // Arrange
-      const validator = new GetTodoRequestValidator();
-      const validRequest = createGetTodoRequest();
-
-      // Act
-      const result = validator.safeValidate(validRequest);
-
-      // Assert
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
-      expect(result.data.param).toEqual(validRequest.param);
-    });
-
-    test("should reject invalid path parameters", () => {
-      // Arrange
-      const validator = new GetTodoRequestValidator();
-      const invalidRequest = createGetTodoRequest({
-        param: {
-          todoId: "invalid-ulid-format" as any, // Invalid ULID format
-        },
-      });
-
-      // Act
-      const result = validator.safeValidate(invalidRequest);
-
-      // Assert
-      expect(result.isValid).toBe(false);
-      assert(!result.isValid);
-      expect(result.error.hasIssues()).toBe(true);
-      expect(result.error.pathParamIssues).toHaveLength(1);
-    });
-
-    test("should strip additional fields from path parameters", () => {
-      // Arrange
-      const validator = new GetTodoRequestValidator();
-      const requestWithExtraParams = createGetTodoRequest({
-        param: {
-          todoId: "01K0W0Y49HZVW1QTN6RZJJY203",
-          extraPathParam: "should be stripped",
-          anotherPathParam: 789,
-        } as any,
-      });
-
-      // Act
-      const result = validator.safeValidate(requestWithExtraParams);
-
-      // Assert
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
-      expect(result.data.param).not.toHaveProperty("extraPathParam");
-      expect(result.data.param).not.toHaveProperty("anotherPathParam");
-    });
-  });
-
-  describe("Query Parameter Validation", () => {
-    test("should validate correct query parameters", () => {
-      // Arrange
+    test("returns the same normalized data from validate as safeValidate", () => {
       const validator = new ListTodosRequestValidator();
-      const validRequest = createListTodosRequest();
-
-      // Act
-      const result = validator.safeValidate(validRequest);
-
-      // Assert
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
-      expect(result.data.query).toEqual(validRequest.query);
-    });
-
-    test("should reject invalid query parameters", () => {
-      // Arrange
-      const validator = new ListTodosRequestValidator();
-      const invalidRequest = createListTodosRequest({
-        query: {
-          status: "INVALID_STATUS" as any,
-        },
+      const request = requestWithRuntimePart(validListTodosRequest(), "query", {
+        limit: ["25"],
+        tags: "contracts",
       });
 
-      // Act
-      const result = validator.safeValidate(invalidRequest);
+      const safeResult = validator.safeValidate(request);
+      const directResult = validator.validate(request);
 
-      // Assert
-      expect(result.isValid).toBe(false);
-      assert(!result.isValid);
-      expect(result.error.hasIssues()).toBe(true);
-      expect(result.error.queryIssues).toHaveLength(1);
-    });
-
-    test("should strip additional fields from query parameters", () => {
-      // Arrange
-      const validator = new ListTodosRequestValidator();
-      const requestWithExtraQuery = createListTodosRequest({
-        query: {
-          status: "TODO",
-          extraParam: "should be stripped",
-          anotherParam: 456,
-        } as any,
-      });
-
-      // Act
-      const result = validator.safeValidate(requestWithExtraQuery);
-
-      // Assert
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
-      expect(result.data.query).not.toHaveProperty("extraParam");
-      expect(result.data.query).not.toHaveProperty("anotherParam");
-    });
-
-    test("should coerce single query value to array when schema expects array", () => {
-      // Arrange
-      const validator = new ListTodosRequestValidator();
-      const requestWithSingleValues = createListTodosRequest({
-        query: {
-          limit: "10",
-          tags: "personal" as any, // Schema expects array, provide single value
-        },
-      });
-
-      // Act
-      const result = validator.safeValidate(requestWithSingleValues);
-
-      // Assert
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
-      expect(result.data.query?.tags).toEqual(["personal"]);
-      expect(result.data.query?.limit).toBe("10");
-    });
-
-    test("should coerce array query value to single when schema expects single", () => {
-      // Arrange
-      const validator = new ListTodosRequestValidator();
-      const requestWithArrayValues = createListTodosRequest({
-        query: {
-          tags: ["work", "urgent"] as any,
-          limit: ["10"] as any, // Schema expects single string, provide array
-        },
-      });
-
-      // Act
-      const result = validator.safeValidate(requestWithArrayValues);
-
-      // Assert
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
-      expect(result.data.query?.limit).toBe("10");
-      expect(result.data.query?.tags).toEqual(["work", "urgent"]);
-    });
-
-    test("should preserve exact case for query parameter keys", () => {
-      // Arrange
-      const validator = new ListTodosRequestValidator();
-      const requestWithMixedCase = createListTodosRequest({
-        query: {
-          // @ts-expect-error Wrong case for testing
-          LIMIT: "20" as any, // Wrong case - should be stripped
-          sortBy: "priority", // Correct case - should be preserved
-        },
-      });
-
-      // Act
-      const result = validator.safeValidate(requestWithMixedCase);
-
-      // Assert
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
-      expect(result.data.query).not.toHaveProperty("LIMIT");
-      expect(result.data.query?.sortBy).toEqual("priority");
-      expect(result.data.query.limit).toEqual(requestWithMixedCase.query.limit);
-    });
-  });
-
-  describe("Cross-Component Validation", () => {
-    test("should accumulate multiple validation errors", () => {
-      // Arrange
-      const validator = new CreateTodoRequestValidator();
-      const invalidRequest = createCreateTodoRequest({
-        body: {
-          title: 123 as any, // Invalid body
-        },
-        header: {
-          Accept: "invalid/accept-type" as any,
-        },
-      });
-
-      // Act
-      const result = validator.safeValidate(invalidRequest);
-
-      // Assert
-      expect(result.isValid).toBe(false);
-      assert(!result.isValid);
-      expect(result.error.hasIssues()).toBe(true);
-      expect(result.error.bodyIssues).toHaveLength(1);
-      expect(result.error.headerIssues).toHaveLength(1);
-    });
-
-    test("should accumulate errors across all components", () => {
-      // Arrange
-      const validator = new QuerySubTodoRequestValidator();
-      const invalidRequest = createQuerySubTodoRequest({
-        header: {
-          Accept: "invalid/accept-type" as any,
-        },
-        param: {
-          todoId: "invalid-ulid-format" as any,
-        },
-        query: {
-          sortBy: "invalid_sort" as any,
-        },
-        body: {
-          status: "INVALID_STATUS" as any,
-        },
-      });
-
-      // Act
-      const result = validator.safeValidate(invalidRequest);
-
-      // Assert
-      expect(result.isValid).toBe(false);
-      assert(!result.isValid);
-      expect(result.error.hasIssues()).toBe(true);
-      expect(result.error.headerIssues).toHaveLength(1);
-      expect(result.error.pathParamIssues).toHaveLength(1);
-      expect(result.error.queryIssues).toHaveLength(1);
-      expect(result.error.bodyIssues).toHaveLength(1);
-    });
-
-    test("should strip additional fields from all request components", () => {
-      // Arrange
-      const validator = new QuerySubTodoRequestValidator();
-      const requestWithExtraFieldsEverywhere = createQuerySubTodoRequest({
-        header: {
-          Accept: "application/json",
-          "Extra-Header": "stripped",
-        } as any,
-        param: {
-          todoId: "01K0W0ZJA0DQE5D3CB5MP2FGKT",
-          extraParam: "stripped",
-        } as any,
-        query: {
-          sortBy: "createdAt",
-          extraQuery: "stripped",
-        } as any,
-        body: {
-          status: "TODO",
-          extraBody: "stripped",
-        } as any,
-      });
-
-      // Act
-      const result = validator.safeValidate(requestWithExtraFieldsEverywhere);
-
-      // Assert
-      expect(result.isValid).toBe(true);
-      assert(result.isValid);
-      expect(result.data.header).not.toHaveProperty("Extra-Header");
-      expect(result.data.param).not.toHaveProperty("extraParam");
-      expect(result.data.query).not.toHaveProperty("extraQuery");
-      expect(result.data.body).not.toHaveProperty("extraBody");
-    });
-  });
-
-  describe("Method Variants", () => {
-    test("both methods should return consistent results on success", () => {
-      // Arrange
-      const validator = new CreateTodoRequestValidator();
-      const validRequest = createCreateTodoRequest();
-
-      // Act
-      const safeResult = validator.safeValidate(validRequest);
-      const directResult = validator.validate(validRequest);
-
-      // Assert
       expect(safeResult.isValid).toBe(true);
       assert(safeResult.isValid);
-      expect(safeResult.data).toEqual(directResult);
+      expect(directResult).toEqual(safeResult.data);
     });
 
-    test("both methods should return consistent results on failure", () => {
-      // Arrange
-      const validator = new CreateTodoRequestValidator();
-      const invalidRequest = createCreateTodoRequest({
-        body: {
-          title: 123 as any,
-        },
+    test("throws RequestValidationError for an invalid path parameter", () => {
+      const validator = new GetTodoRequestValidator();
+      const request = requestWithRuntimePart(validGetTodoRequest(), "param", {
+        todoId: "not-a-ulid",
       });
 
-      // Act
-      const safeResult = validator.safeValidate(invalidRequest);
+      expect(() => validator.validate(request)).toThrow(RequestValidationError);
+    });
+
+    test("preserves safeValidate issue categories on the thrown error", () => {
+      const validator = new QuerySubTodoRequestValidator();
+      const request = querySubTodoRequestWithInvalidBodyHeaderParamAndQuery();
+
+      const safeResult = validator.safeValidate(request);
       const thrownError = captureError<RequestValidationError>(() =>
-        validator.validate(invalidRequest)
+        validator.validate(request)
       );
 
-      // Assert
       expect(safeResult.isValid).toBe(false);
       assert(!safeResult.isValid);
-      expect(thrownError).toBeDefined();
-      expect(safeResult.error.hasIssues()).toBe(true);
-      expect(thrownError?.hasIssues()).toBe(true);
-      expect(safeResult.error.bodyIssues).toEqual(thrownError?.bodyIssues);
+      expect(thrownError).toBeInstanceOf(RequestValidationError);
+      assert(thrownError instanceof RequestValidationError);
+      expect(thrownError.bodyIssues).toEqual(safeResult.error.bodyIssues);
+      expect(thrownError.headerIssues).toEqual(safeResult.error.headerIssues);
+      expect(thrownError.pathParamIssues).toEqual(
+        safeResult.error.pathParamIssues
+      );
+      expect(thrownError.queryIssues).toEqual(safeResult.error.queryIssues);
+    });
+
+    test("preserves input method and path without route matching", () => {
+      const validator = new GetTodoRequestValidator();
+      const request: IHttpRequest = {
+        ...validGetTodoRequest(),
+        method: HttpMethod.POST,
+        path: "/not-the-todo-route",
+      };
+
+      const result = validator.safeValidate(request);
+
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.method).toBe(HttpMethod.POST);
+      expect(result.data.path).toBe("/not-the-todo-route");
+    });
+  });
+
+  describe("body contracts", () => {
+    test("strips unknown top-level body fields from a valid body", () => {
+      const validator = new CreateTodoRequestValidator();
+      const request = requestWithRuntimePart(validCreateTodoRequest(), "body", {
+        title: "Only known body fields remain",
+        description: "Unknown fields are not part of the contract.",
+        extraBodyField: "strip me",
+      });
+
+      const result = validator.safeValidate(request);
+
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.body).toEqual({
+        title: "Only known body fields remain",
+        description: "Unknown fields are not part of the contract.",
+      });
+    });
+
+    test("reports bodyIssues when a required body field is missing", () => {
+      const validator = new CreateTodoRequestValidator();
+      const request = requestWithRuntimePart(validCreateTodoRequest(), "body", {
+        description: "The required title is missing.",
+      });
+
+      const result = validator.safeValidate(request);
+
+      expect(result.isValid).toBe(false);
+      assert(!result.isValid);
+      expect(issuePaths(result.error.bodyIssues)).toContainEqual(["title"]);
+      expect(result.error.headerIssues).toHaveLength(0);
+    });
+
+    test("accepts a body with optional fields omitted", () => {
+      const validator = new CreateTodoRequestValidator();
+      const request = requestWithRuntimePart(validCreateTodoRequest(), "body", {
+        title: "Minimal todo",
+      });
+
+      const result = validator.safeValidate(request);
+
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+      expect(result.data.body).toEqual({ title: "Minimal todo" });
+    });
+
+    test("reports bodyIssues when an optional enum has an invalid value", () => {
+      const validator = new CreateTodoRequestValidator();
+      const request = requestWithRuntimePart(validCreateTodoRequest(), "body", {
+        title: "Invalid priority",
+        priority: "URGENT",
+      });
+
+      const result = validator.safeValidate(request);
+
+      expect(result.isValid).toBe(false);
+      assert(!result.isValid);
+      expect(issuePaths(result.error.bodyIssues)).toContainEqual(["priority"]);
+      expect(result.error.headerIssues).toHaveLength(0);
+    });
+
+    test("accepts an empty object for an all-optional body schema", () => {
+      const validator = new QuerySubTodoRequestValidator();
+      const request = requestWithRuntimePart(
+        validQuerySubTodoRequest(),
+        "body",
+        {}
+      );
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data.body).toEqual({});
+    });
+
+    test.each([
+      { scenario: "null", body: null },
+      { scenario: "primitive string", body: "not an object" },
+      { scenario: "primitive number", body: 42 },
+      { scenario: "array", body: ["not", "a", "body"] },
+    ])("reports bodyIssues for a malformed $scenario body", ({ body }) => {
+      const validator = new CreateTodoRequestValidator();
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "body",
+        body
+      );
+
+      const result = validator.safeValidate(request);
+
+      expect(result.isValid).toBe(false);
+      assert(!result.isValid);
+      expect(result.error.bodyIssues.length).toBeGreaterThan(0);
+      expect(result.error.headerIssues).toHaveLength(0);
+    });
+
+    test("reports bodyIssues without coercion when a body array field receives a singleton", () => {
+      const validator = new CreateTodoRequestValidator();
+      const request = requestWithRuntimePart(validCreateTodoRequest(), "body", {
+        title: "Do not coerce body arrays",
+        tags: "testing",
+      });
+
+      const result = validator.safeValidate(request);
+
+      expect(result.isValid).toBe(false);
+      assert(!result.isValid);
+      expect(issuePaths(result.error.bodyIssues)).toContainEqual(["tags"]);
+      expect(result.error.headerIssues).toHaveLength(0);
+    });
+
+    test.each([
+      { scenario: "Uint8Array", body: new Uint8Array([1, 2, 3]) },
+      { scenario: "string", body: "raw file contents" },
+    ])(
+      "accepts a non-object $scenario body for a z.any upload payload",
+      ({ body }) => {
+        const validator = new UploadFileRequestValidator();
+        const request = requestWithRuntimePart(
+          validUploadFileRequest(),
+          "body",
+          body
+        );
+
+        const result = validator.safeValidate(request);
+        expect(result.isValid).toBe(true);
+        assert(result.isValid);
+
+        expect(result.data.body).toEqual(body);
+      }
+    );
+  });
+
+  describe("header contracts", () => {
+    test("reports headerIssues when Authorization is missing", () => {
+      const validator = new CreateTodoRequestValidator();
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "header",
+        {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        }
+      );
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(false);
+      assert(!result.isValid);
+
+      expect(issuePaths(result.error.headerIssues)).toContainEqual([
+        "Authorization",
+      ]);
+      expect(result.error.bodyIssues).toHaveLength(0);
+    });
+
+    test("accepts a header with optional fields absent", () => {
+      const validator = new CreateTodoRequestValidator();
+      const request = validCreateTodoRequest();
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data.header).toEqual({
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: AUTHORIZATION,
+      });
+    });
+
+    test("strips unknown header keys", () => {
+      const validator = new CreateTodoRequestValidator();
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "header",
+        {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: AUTHORIZATION,
+          "X-Unknown-Header": "strip me",
+        }
+      );
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data.header).toEqual({
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: AUTHORIZATION,
+      });
+    });
+
+    test("matches header keys case-insensitively and returns schema casing", () => {
+      const validator = new CreateTodoRequestValidator();
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "header",
+        {
+          "content-type": "application/json",
+          accept: "application/json",
+          authorization: AUTHORIZATION,
+        }
+      );
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data.header).toEqual({
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: AUTHORIZATION,
+      });
+    });
+
+    test("wraps a singleton header value when the schema expects an array", () => {
+      const validator = new CreateTodoRequestValidator();
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "header",
+        {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: AUTHORIZATION,
+          "X-Multi-Value": "one",
+        }
+      );
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data.header["X-Multi-Value"]).toEqual(["one"]);
+    });
+
+    test("unwraps a single-element header array when the schema expects a scalar", () => {
+      const validator = new CreateTodoRequestValidator();
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "header",
+        {
+          "Content-Type": ["application/json"],
+          Accept: ["application/json"],
+          Authorization: [AUTHORIZATION],
+        }
+      );
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data.header).toEqual({
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: AUTHORIZATION,
+      });
+    });
+
+    test("rejects a multi-element header array when the schema expects a scalar", () => {
+      const validator = new CreateTodoRequestValidator();
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "header",
+        {
+          "Content-Type": "application/json",
+          Accept: ["application/json", "text/plain"],
+          Authorization: AUTHORIZATION,
+        }
+      );
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(false);
+      assert(!result.isValid);
+
+      expect(issuePaths(result.error.headerIssues)).toContainEqual(["Accept"]);
+    });
+
+    test("rejects duplicate singleton headers with different casing", () => {
+      const validator = new CreateTodoRequestValidator();
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "header",
+        {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          accept: "application/json",
+          Authorization: AUTHORIZATION,
+        }
+      );
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(false);
+      assert(!result.isValid);
+
+      expect(issuePaths(result.error.headerIssues)).toContainEqual(["Accept"]);
+    });
+
+    test("merges duplicate array headers with different casing", () => {
+      const validator = new OptionsTodoRequestValidator();
+      const request = requestWithRuntimePart(
+        validOptionsTodoRequest(),
+        "header",
+        {
+          Accept: "application/json",
+          Authorization: AUTHORIZATION,
+          "Access-Control-Request-Headers": "Content-Type",
+          "access-control-request-headers": "Authorization",
+        }
+      );
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data.header["Access-Control-Request-Headers"]).toEqual([
+        "Content-Type",
+        "Authorization",
+      ]);
+    });
+
+    test("splits comma-separated strings only for array header fields", () => {
+      const validator = new OptionsTodoRequestValidator();
+      const request = requestWithRuntimePart(
+        validOptionsTodoRequest(),
+        "header",
+        {
+          Accept: "application/json",
+          Authorization: "Bearer token,with-comma",
+          "Access-Control-Request-Headers": " Content-Type, , Authorization, ",
+        }
+      );
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data.header.Authorization).toBe("Bearer token,with-comma");
+      expect(result.data.header["Access-Control-Request-Headers"]).toEqual([
+        "Content-Type",
+        "Authorization",
+      ]);
+    });
+
+    test("does not re-split header values already represented as arrays", () => {
+      const validator = new OptionsTodoRequestValidator();
+      const request = requestWithRuntimePart(
+        validOptionsTodoRequest(),
+        "header",
+        {
+          Accept: "application/json",
+          Authorization: AUTHORIZATION,
+          "Access-Control-Request-Headers": ["Content-Type, Authorization"],
+        }
+      );
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data.header["Access-Control-Request-Headers"]).toEqual([
+        "Content-Type, Authorization",
+      ]);
+    });
+
+    test.each([
+      { scenario: "undefined", header: undefined },
+      { scenario: "null", header: null },
+      { scenario: "primitive", header: "not headers" },
+      { scenario: "array", header: ["not", "headers"] },
+    ])(
+      "reports headerIssues for a malformed $scenario header shape",
+      ({ header }) => {
+        const validator = new CreateTodoRequestValidator();
+        const request = requestWithRuntimePart(
+          validCreateTodoRequest(),
+          "header",
+          header
+        );
+
+        const result = validator.safeValidate(request);
+        expect(result.isValid).toBe(false);
+        assert(!result.isValid);
+        expect(result.error.headerIssues.length).toBeGreaterThan(0);
+        expect(result.error.bodyIssues).toHaveLength(0);
+      }
+    );
+  });
+
+  describe("query contracts", () => {
+    test("strips unknown query keys from a valid query", () => {
+      const validator = new ListTodosRequestValidator();
+      const request = requestWithRuntimePart(validListTodosRequest(), "query", {
+        status: "DONE",
+        limit: "50",
+        extraQuery: "strip me",
+      });
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data.query).toEqual({
+        status: "DONE",
+        limit: "50",
+      });
+    });
+
+    test("matches query keys case-sensitively", () => {
+      const validator = new ListTodosRequestValidator();
+      const request = requestWithRuntimePart(validListTodosRequest(), "query", {
+        STATUS: "DONE",
+        sortBy: "priority",
+      });
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data.query).toEqual({ sortBy: "priority" });
+    });
+
+    test("wraps a singleton query value when the schema expects an array", () => {
+      const validator = new ListTodosRequestValidator();
+      const request = requestWithRuntimePart(validListTodosRequest(), "query", {
+        tags: "contracts",
+      });
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data.query.tags).toEqual(["contracts"]);
+    });
+
+    test("unwraps a single-element query array when the schema expects a scalar", () => {
+      const validator = new ListTodosRequestValidator();
+      const request = requestWithRuntimePart(validListTodosRequest(), "query", {
+        limit: ["25"],
+      });
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data.query.limit).toBe("25");
+    });
+
+    test("rejects a multi-element query array when the schema expects a scalar", () => {
+      const validator = new ListTodosRequestValidator();
+      const request = requestWithRuntimePart(validListTodosRequest(), "query", {
+        limit: ["25", "50"],
+      });
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(false);
+      assert(!result.isValid);
+
+      expect(issuePaths(result.error.queryIssues)).toContainEqual(["limit"]);
+    });
+
+    test.each([
+      {
+        scenario: "missing",
+        request: withoutRuntimePart(validListTodosRequest(), "query"),
+      },
+      {
+        scenario: "empty",
+        request: requestWithRuntimePart(validListTodosRequest(), "query", {}),
+      },
+    ])(
+      "accepts a $scenario query for an all-optional query schema",
+      ({ request }) => {
+        const validator = new ListTodosRequestValidator();
+
+        const result = validator.safeValidate(request);
+        expect(result.isValid).toBe(true);
+        assert(result.isValid);
+
+        expect(result.data.query).toEqual({});
+      }
+    );
+
+    test("returns an empty object for a missing optional query object", () => {
+      const validator = new ListSubTodosRequestValidator();
+      const request = withoutRuntimePart(validListSubTodosRequest(), "query");
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data.query).toEqual({});
+    });
+
+    test("treats a null optional query object as absent", () => {
+      const validator = new ListSubTodosRequestValidator();
+      const request = requestWithRuntimePart(
+        validListSubTodosRequest(),
+        "query",
+        null
+      );
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data.query).toEqual({});
+    });
+
+    test("rejects a query array instead of normalizing it to an empty object", () => {
+      const validator = new ListTodosRequestValidator();
+      const request = requestWithRuntimePart(validListTodosRequest(), "query", [
+        "not",
+        "a",
+        "query",
+      ]);
+
+      const result = validator.safeValidate(request);
+
+      expect(result.isValid).toBe(false);
+      assert(!result.isValid);
+      expect(result.error.queryIssues.length).toBeGreaterThan(0);
+    });
+
+    test.each([
+      { scenario: "primitive string", query: "not a query" },
+      { scenario: "primitive number", query: 42 },
+    ])("reports queryIssues for a malformed $scenario query", ({ query }) => {
+      const validator = new ListTodosRequestValidator();
+      const request = requestWithRuntimePart(
+        validListTodosRequest(),
+        "query",
+        query
+      );
+
+      const result = validator.safeValidate(request);
+
+      expect(result.isValid).toBe(false);
+      assert(!result.isValid);
+      expect(result.error.queryIssues.length).toBeGreaterThan(0);
+      expect(result.error.bodyIssues).toHaveLength(0);
+      expect(result.error.headerIssues).toHaveLength(0);
+      expect(result.error.pathParamIssues).toHaveLength(0);
+    });
+  });
+
+  describe("path parameter contracts", () => {
+    test("accepts a valid path parameter", () => {
+      const validator = new GetTodoRequestValidator();
+      const request = validGetTodoRequest();
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data.param).toEqual({ todoId: TODO_ID });
+    });
+
+    test("reports pathParamIssues for an invalid ULID parameter", () => {
+      const validator = new GetTodoRequestValidator();
+      const request = requestWithRuntimePart(validGetTodoRequest(), "param", {
+        todoId: "not-a-ulid",
+      });
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(false);
+      assert(!result.isValid);
+
+      expect(issuePaths(result.error.pathParamIssues)).toContainEqual([
+        "todoId",
+      ]);
+    });
+
+    test("reports pathParamIssues when a required parameter is missing", () => {
+      const validator = new GetTodoRequestValidator();
+      const request = requestWithRuntimePart(
+        validGetTodoRequest(),
+        "param",
+        {}
+      );
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(false);
+      assert(!result.isValid);
+
+      expect(issuePaths(result.error.pathParamIssues)).toContainEqual([
+        "todoId",
+      ]);
+    });
+
+    test.each([
+      { scenario: "null", param: null },
+      { scenario: "primitive", param: "not params" },
+      { scenario: "array", param: [TODO_ID] },
+    ])(
+      "reports pathParamIssues for a malformed $scenario parameter object",
+      ({ param }) => {
+        const validator = new GetTodoRequestValidator();
+        const request = requestWithRuntimePart(
+          validGetTodoRequest(),
+          "param",
+          param
+        );
+
+        const result = validator.safeValidate(request);
+
+        expect(result.isValid).toBe(false);
+        assert(!result.isValid);
+        expect(result.error.pathParamIssues.length).toBeGreaterThan(0);
+        expect(result.error.bodyIssues).toHaveLength(0);
+        expect(result.error.headerIssues).toHaveLength(0);
+        expect(result.error.queryIssues).toHaveLength(0);
+      }
+    );
+
+    test("strips unknown path parameters", () => {
+      const validator = new GetTodoRequestValidator();
+      const request = requestWithRuntimePart(validGetTodoRequest(), "param", {
+        todoId: TODO_ID,
+        extraParam: "strip me",
+      });
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data.param).toEqual({ todoId: TODO_ID });
+    });
+
+    test("does not unwrap array path parameter values", () => {
+      const validator = new GetTodoRequestValidator();
+      const request = requestWithRuntimePart(validGetTodoRequest(), "param", {
+        todoId: [TODO_ID],
+      });
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(false);
+      assert(!result.isValid);
+
+      expect(issuePaths(result.error.pathParamIssues)).toContainEqual([
+        "todoId",
+      ]);
+    });
+
+    test("accepts a request whose path string and path parameters disagree", () => {
+      const validator = new GetTodoRequestValidator();
+      const request: IHttpRequest = {
+        ...validGetTodoRequest(),
+        path: `/todos/${OTHER_TODO_ID}`,
+        param: { todoId: TODO_ID },
+      };
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect(result.data.path).toBe(`/todos/${OTHER_TODO_ID}`);
+      expect(result.data.param).toEqual({ todoId: TODO_ID });
+    });
+  });
+
+  describe("operations missing request parts", () => {
+    test("ignores supplied bodies for bodyless operations", () => {
+      const validator = new GetTodoRequestValidator();
+      const request = requestWithRuntimePart(validGetTodoRequest(), "body", {
+        title: "Ignored body",
+      });
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect((result.data as IHttpRequest).body).toBeUndefined();
+    });
+
+    test("ignores supplied queries for queryless operations", () => {
+      const validator = new CreateTodoRequestValidator();
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "query",
+        {
+          status: "DONE",
+        }
+      );
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect((result.data as IHttpRequest).query).toBeUndefined();
+    });
+
+    test("ignores supplied parameters for parameterless operations", () => {
+      const validator = new CreateTodoRequestValidator();
+      const request = requestWithRuntimePart(
+        validCreateTodoRequest(),
+        "param",
+        {
+          todoId: TODO_ID,
+        }
+      );
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect((result.data as IHttpRequest).param).toBeUndefined();
+    });
+
+    test("returns undefined for absent query schemas", () => {
+      const validator = new DeleteTodoRequestValidator();
+      const request = validDeleteTodoRequest();
+
+      const result = validator.safeValidate(request);
+      expect(result.isValid).toBe(true);
+      assert(result.isValid);
+
+      expect((result.data as IHttpRequest).query).toBeUndefined();
+    });
+  });
+
+  describe("accumulated errors", () => {
+    test("accumulates body, header, path parameter, and query issues", () => {
+      const validator = new QuerySubTodoRequestValidator();
+      const request = querySubTodoRequestWithInvalidBodyHeaderParamAndQuery();
+
+      const result = validator.safeValidate(request);
+
+      expect(result.isValid).toBe(false);
+      assert(!result.isValid);
+      expect(issuePaths(result.error.bodyIssues)).toEqual([["status"]]);
+      expect(issuePaths(result.error.headerIssues)).toContainEqual(["Accept"]);
+      expect(issuePaths(result.error.pathParamIssues)).toEqual([["todoId"]]);
+      expect(issuePaths(result.error.queryIssues)).toEqual([["sortBy"]]);
+    });
+
+    test("does not expose partial validated data on failure", () => {
+      const validator = new QuerySubTodoRequestValidator();
+      const request = requestWithRuntimePart(
+        validQuerySubTodoRequest(),
+        "query",
+        {
+          format: "full",
+        }
+      );
+
+      const result = validator.safeValidate(request);
+
+      expect(result.isValid).toBe(false);
+      expect("data" in result).toBe(false);
     });
   });
 });

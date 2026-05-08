@@ -11,7 +11,7 @@ import {
   TypeweaverHono,
   type HonoRequestHandler,
   type TypeweaverHonoOptions,
-} from "./../lib/hono/index.js";
+} from "../lib/hono/index.js";
 
 import type { IRegisterAccountRequest } from "./RegisterAccountRequest.js";
 import { RegisterAccountRequestValidator } from "./RegisterAccountRequestValidator.js";

@@ -100,25 +100,52 @@ export const validateDerivedResponseGraph = (
   canonicalResponses: ReadonlyMap<string, ResponseDefinition>
 ): void => {
   for (const response of canonicalResponses.values()) {
-    if (response.derived === undefined) {
-      continue;
-    }
+    validateDerivedResponseAgainstCanonicalGraph(response, canonicalResponses);
+  }
+};
 
-    const chain = getDerivedResponseChain(response, canonicalResponses);
-    const materializedLineage = chain.slice(1);
+const validateDerivedResponseAgainstCanonicalGraph = (
+  response: ResponseDefinition,
+  canonicalResponses: ReadonlyMap<string, ResponseDefinition>
+): void => {
+  if (response.derived === undefined) {
+    return;
+  }
 
-    if (response.derived.depth !== materializedLineage.length) {
-      throw new InvalidDerivedResponseError(response.name);
-    }
+  const chain = getDerivedResponseChain(response, canonicalResponses);
+  const materializedLineage = chain.slice(1);
 
-    if (
-      materializedLineage.length !== response.derived.lineage.length ||
-      materializedLineage.some(
-        (lineageEntry, index) =>
-          lineageEntry !== response.derived?.lineage[index]
-      )
-    ) {
-      throw new InvalidDerivedResponseError(response.name);
+  if (response.derived.depth !== materializedLineage.length) {
+    throw new InvalidDerivedResponseError(response.name);
+  }
+
+  if (
+    materializedLineage.length !== response.derived.lineage.length ||
+    materializedLineage.some(
+      (lineageEntry, index) => lineageEntry !== response.derived?.lineage[index]
+    )
+  ) {
+    throw new InvalidDerivedResponseError(response.name);
+  }
+};
+
+const validateInlineDerivedResponses = (
+  definition: SpecDefinition,
+  canonicalResponses: ReadonlyMap<string, ResponseDefinition>
+): void => {
+  for (const resource of Object.values(definition.resources)) {
+    for (const operation of resource.operations) {
+      for (const response of operation.responses) {
+        if (isNamedResponseDefinition(response)) {
+          continue;
+        }
+
+        validateDerivedResponseMetadata(response);
+        validateDerivedResponseAgainstCanonicalGraph(
+          response,
+          canonicalResponses
+        );
+      }
     }
   }
 };
@@ -147,6 +174,7 @@ export const collectCanonicalResponses = (
     collectCanonicalResponseDefinitions(definition);
 
   validateDerivedResponseGraph(canonicalResponseDefinitions);
+  validateInlineDerivedResponses(definition, canonicalResponseDefinitions);
 
   return new Map(
     Array.from(

@@ -10,7 +10,7 @@ export type InvalidResponseIssue = {
 
 export type InvalidStatusCodeIssue = {
   readonly type: "INVALID_STATUS_CODE";
-  readonly invalidStatusCode: HttpStatusCode;
+  readonly invalidStatusCode: unknown;
   readonly expectedStatusCodes: HttpStatusCode[];
 };
 
@@ -20,15 +20,17 @@ export type ResponseValidationErrorInput = {
   readonly issues?: ValidationIssue[];
 };
 
+const RESPONSE_VALIDATION_ERROR_MESSAGE = "Response validation failed";
+
 export class ResponseValidationError extends Error {
   public override readonly message: string;
   public readonly issues: ValidationIssue[];
 
   public constructor(
-    public readonly statusCode: HttpStatusCode,
+    public readonly statusCode: unknown,
     input?: ResponseValidationErrorInput
   ) {
-    const message = `Response validation failed for status code '${statusCode}'`;
+    const message = RESPONSE_VALIDATION_ERROR_MESSAGE;
     super(message);
 
     this.message = message;

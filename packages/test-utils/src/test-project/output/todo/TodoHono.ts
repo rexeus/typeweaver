@@ -11,7 +11,7 @@ import {
   TypeweaverHono,
   type HonoRequestHandler,
   type TypeweaverHonoOptions,
-} from "./../lib/hono/index.js";
+} from "../lib/hono/index.js";
 
 import type { IListTodosRequest } from "./ListTodosRequest.js";
 import { ListTodosRequestValidator } from "./ListTodosRequestValidator.js";

@@ -131,6 +131,9 @@ export class Router {
    * Register a route in the radix tree.
    */
   public add(definition: RouteDefinition): void {
+    const method = definition.method.toUpperCase();
+    const normalizedDefinition =
+      definition.method === method ? definition : { ...definition, method: method as HttpMethod };
     const segments = Router.toSegments(definition.path);
 
     let current = this.root;
@@ -157,13 +160,11 @@ export class Router {
       }
     }
 
-    if (current.methods.has(definition.method)) {
-      throw new Error(
-        `Route conflict: ${definition.method} ${definition.path} is already registered`,
-      );
+    if (current.methods.has(method)) {
+      throw new Error(`Route conflict: ${method} ${definition.path} is already registered`);
     }
 
-    current.methods.set(definition.method, definition);
+    current.methods.set(method, normalizedDefinition);
   }
 
   /**
@@ -276,7 +277,9 @@ export class Router {
   private static decodePathSegment(segment: string): string {
     try {
       const decoded = decodeURIComponent(segment);
-      if (decoded === ".." || decoded === ".") return segment;
+      if (decoded === ".." || decoded === "." || decoded.includes("/") || decoded.includes("\\")) {
+        return segment;
+      }
       return decoded;
     } catch {
       return segment;

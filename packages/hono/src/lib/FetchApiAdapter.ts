@@ -13,6 +13,7 @@ import type {
   IHttpRequest,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
+import { BodyParseError } from "./Errors.js";
 import { HttpAdapter } from "./HttpAdapter.js";
 
 /**
@@ -73,7 +74,7 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
     value: string
   ): void {
     const existing = record[key];
-    if (existing) {
+    if (existing !== undefined) {
       if (Array.isArray(existing)) {
         existing.push(value);
       } else {
@@ -85,8 +86,7 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
   }
 
   private extractHeaders(headers: Headers): IHttpHeader {
-    if (!headers) return undefined;
-    const result: Record<string, string | string[]> = {};
+    const result: Record<string, string | string[]> = Object.create(null);
     headers.forEach((value, key) => {
       if (!value) return;
       this.addMultiValue(result, key, value);
@@ -95,7 +95,7 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
   }
 
   private extractQueryParams(url: URL): IHttpQuery {
-    const result: Record<string, string | string[]> = {};
+    const result: Record<string, string | string[]> = Object.create(null);
     url.searchParams.forEach((value, key) => {
       this.addMultiValue(result, key, value);
     });
@@ -107,12 +107,8 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
 
     const contentType = request.headers.get("content-type");
 
-    if (contentType?.includes("application/json")) {
-      try {
-        return await request.json();
-      } catch {
-        return undefined;
-      }
+    if (this.isJsonContentType(contentType)) {
+      return await this.parseJsonBody(request);
     }
 
     if (contentType?.includes("text/")) {
@@ -122,7 +118,7 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
     if (contentType?.includes("application/x-www-form-urlencoded")) {
       const text = await request.text();
       const formData = new URLSearchParams(text);
-      const formObject: Record<string, string | string[]> = {};
+      const formObject: Record<string, string | string[]> = Object.create(null);
       formData.forEach((value, key) => {
         this.addMultiValue(formObject, key, value);
       });
@@ -131,6 +127,42 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
 
     const rawBody = await request.text();
     return rawBody || undefined;
+  }
+
+  private isJsonContentType(contentType: string | null): boolean {
+    const mediaType = contentType?.split(";")[0]?.trim().toLowerCase();
+    return (
+      mediaType === "application/json" || mediaType?.endsWith("+json") === true
+    );
+  }
+
+  private async parseJsonBody(request: Request): Promise<IHttpBody> {
+    try {
+      const text = await request.text();
+      return this.toSafeJsonValue(JSON.parse(text)) as IHttpBody;
+    } catch (error) {
+      throw new BodyParseError("Invalid JSON in request body", {
+        cause: error,
+      });
+    }
+  }
+
+  private toSafeJsonValue(value: unknown): unknown {
+    if (Array.isArray(value)) {
+      return value.map(item => this.toSafeJsonValue(item));
+    }
+
+    if (value !== null && typeof value === "object") {
+      const result: Record<string, unknown> = Object.create(null);
+      Object.entries(value).forEach(([key, nestedValue]) => {
+        if (key !== "__proto__") {
+          result[key] = this.toSafeJsonValue(nestedValue);
+        }
+      });
+      return result;
+    }
+
+    return value;
   }
 
   private buildResponseBody(body: any): string | ArrayBuffer | Blob | null {

@@ -218,13 +218,21 @@ export class ServerTodoHandlers implements ServerTodoApiHandler {
   }
 
   public async handleQueryTodoRequest(
-    _request: IQueryTodoRequest
+    request: IQueryTodoRequest
   ): Promise<QueryTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
 
-    return createQueryTodoSuccessResponse();
+    const nextToken = request.query?.nextToken;
+
+    if (nextToken === undefined) {
+      return createQueryTodoSuccessResponse();
+    }
+
+    return createQueryTodoSuccessResponse({
+      body: { nextToken },
+    });
   }
 
   public async handleOptionsTodoRequest(

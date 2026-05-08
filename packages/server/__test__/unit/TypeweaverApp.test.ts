@@ -6,14 +6,20 @@ import {
   notFoundDefaultError,
   payloadTooLargeDefaultError,
   RequestValidationError,
+  ResponseValidationError,
   validationDefaultError,
 } from "@rexeus/typeweaver-core";
 import type {
+  IHttpResponse,
   IRequestValidator,
+  IResponseValidator,
   ITypedHttpResponse,
 } from "@rexeus/typeweaver-core";
 import { describe, expect, test, vi } from "vitest";
-import { PayloadTooLargeError } from "../../src/lib/Errors.js";
+import {
+  PayloadTooLargeError,
+  ResponseSerializationError,
+} from "../../src/lib/Errors.js";
 import { defineMiddleware } from "../../src/lib/TypedMiddleware.js";
 import { TypeweaverApp } from "../../src/lib/TypeweaverApp.js";
 import { TypeweaverRouter } from "../../src/lib/TypeweaverRouter.js";
@@ -31,6 +37,7 @@ import {
   put,
 } from "../helpers.js";
 import type { RequestHandler } from "../../src/lib/RequestHandler.js";
+import type { ResponseValidationErrorHandler } from "../../src/lib/Router.js";
 import type { TypeweaverAppOptions } from "../../src/lib/TypeweaverApp.js";
 import type { TypeweaverRouterOptions } from "../../src/lib/TypeweaverRouter.js";
 
@@ -65,6 +72,20 @@ const bodyOnlyFailingValidator: IRequestValidator = {
     isValid: false,
     error: new RequestValidationError(),
   }),
+};
+
+const invalidResponseValidator: IResponseValidator = {
+  validate: (response: IHttpResponse) => {
+    throw new ResponseValidationError(response.statusCode);
+  },
+  safeValidate: (response: IHttpResponse) => ({
+    isValid: false,
+    error: new ResponseValidationError(response.statusCode),
+  }),
+};
+
+type ConsoleErrorSpy = {
+  mockRestore: () => void;
 };
 
 type TestHandlers = {
@@ -136,6 +157,97 @@ class BodyOnlyValidatingRouter extends TypeweaverRouter<TestHandlers> {
   }
 }
 
+class ResponseValidatingRouter extends TypeweaverRouter<TestHandlers> {
+  constructor(options: TypeweaverRouterOptions<TestHandlers>) {
+    super(options);
+
+    this.route(
+      "listTodos",
+      HttpMethod.GET,
+      "/todos",
+      noopValidator,
+      invalidResponseValidator,
+      async (req, ctx) => this.requestHandlers.handleGetTodos(req, ctx)
+    );
+
+    this.route(
+      "createTodo",
+      HttpMethod.POST,
+      "/todos",
+      noopValidator,
+      invalidResponseValidator,
+      async (req, ctx) => this.requestHandlers.handleCreateTodo(req, ctx)
+    );
+  }
+}
+
+class CustomResponseValidatingRouter extends TypeweaverRouter<TestHandlers> {
+  constructor(
+    options: TypeweaverRouterOptions<TestHandlers> & {
+      readonly responseValidator: IResponseValidator;
+    }
+  ) {
+    super(options);
+
+    this.route(
+      "listTodos",
+      HttpMethod.GET,
+      "/todos",
+      noopValidator,
+      options.responseValidator,
+      async (req, ctx) => this.requestHandlers.handleGetTodos(req, ctx)
+    );
+  }
+}
+
+type HeadAwareHandlers = {
+  handleGetTodos: RequestHandler;
+  handleHeadTodos: RequestHandler;
+};
+
+class HeadAwareRouter extends TypeweaverRouter<HeadAwareHandlers> {
+  constructor(options: TypeweaverRouterOptions<HeadAwareHandlers>) {
+    super(options);
+
+    this.route(
+      "listTodos",
+      HttpMethod.GET,
+      "/todos",
+      noopValidator,
+      noopResponseValidator,
+      async (req, ctx) => this.requestHandlers.handleGetTodos(req, ctx)
+    );
+
+    this.route(
+      "headTodos",
+      HttpMethod.HEAD,
+      "/todos",
+      noopValidator,
+      noopResponseValidator,
+      async (req, ctx) => this.requestHandlers.handleHeadTodos(req, ctx)
+    );
+  }
+}
+
+type PostOnlyHandlers = {
+  handleCreateTodo: RequestHandler;
+};
+
+class PostOnlyRouter extends TypeweaverRouter<PostOnlyHandlers> {
+  constructor(options: TypeweaverRouterOptions<PostOnlyHandlers>) {
+    super(options);
+
+    this.route(
+      "createTodo",
+      HttpMethod.POST,
+      "/todos",
+      noopValidator,
+      noopResponseValidator,
+      async (req, ctx) => this.requestHandlers.handleCreateTodo(req, ctx)
+    );
+  }
+}
+
 function defaultHandlers(overrides: Partial<TestHandlers> = {}): TestHandlers {
   return {
     handleGetTodos: async () => ({
@@ -173,6 +285,16 @@ function createApp(
   return app;
 }
 
+function createAppMountedAt(prefix: string): TypeweaverApp {
+  const app = new TypeweaverApp();
+  const router = new TestRouter({
+    validateRequests: false,
+    requestHandlers: defaultHandlers(),
+  });
+  app.route(prefix, router);
+  return app;
+}
+
 function createValidatingApp(
   routerOptions?: Partial<TypeweaverRouterOptions<TestHandlers>>,
   handlerOverrides?: Partial<TestHandlers>,
@@ -185,6 +307,73 @@ function createValidatingApp(
   });
   app.route(router);
   return app;
+}
+
+function createResponseValidatingApp(
+  routerOptions?: Partial<TypeweaverRouterOptions<TestHandlers>>,
+  handlerOverrides?: Partial<TestHandlers>,
+  appOptions?: TypeweaverAppOptions
+): TypeweaverApp {
+  const app = new TypeweaverApp(appOptions);
+  const router = new ResponseValidatingRouter({
+    validateRequests: false,
+    requestHandlers: defaultHandlers(handlerOverrides),
+    ...routerOptions,
+  });
+  app.route(router);
+  return app;
+}
+
+async function expectNoBody(res: Response): Promise<void> {
+  expect(await res.text()).toBe("");
+}
+
+function expectAllow(res: Response, methods: readonly string[]): void {
+  const allow = res.headers.get("allow");
+  expect(allow).not.toBeNull();
+  expect(
+    allow!
+      .split(",")
+      .map(method => method.trim())
+      .sort()
+  ).toEqual([...methods].sort());
+}
+
+async function expectInternalError(res: Response): Promise<any> {
+  return expectErrorResponse(
+    res,
+    internalServerErrorDefaultError.statusCode,
+    internalServerErrorDefaultError.code
+  );
+}
+
+async function withConsoleErrorSpy<T>(
+  fn: (spy: ConsoleErrorSpy) => Promise<T> | T
+): Promise<T> {
+  const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  try {
+    return await fn(spy);
+  } finally {
+    spy.mockRestore();
+  }
+}
+
+function createRequestBarrier(participantCount: number): {
+  readonly wait: () => Promise<void>;
+} {
+  let arrived = 0;
+  let release: () => void = () => undefined;
+  const released = new Promise<void>(resolve => {
+    release = resolve;
+  });
+
+  return {
+    wait: async () => {
+      arrived += 1;
+      if (arrived === participantCount) release();
+      await released;
+    },
+  };
 }
 
 describe("TypeweaverApp", () => {
@@ -229,7 +418,7 @@ describe("TypeweaverApp", () => {
       expect(data.message).toBe(notFoundDefaultError.message);
     });
 
-    test("should return 405 for wrong HTTP method on existing path", async () => {
+    test("returns 405 with allowed methods for an unsupported method on a registered path", async () => {
       const app = createApp();
 
       const res = await app.fetch(del("/todos"));
@@ -240,10 +429,7 @@ describe("TypeweaverApp", () => {
         methodNotAllowedDefaultError.code
       );
       expect(data.message).toBe(methodNotAllowedDefaultError.message);
-      const allow = res.headers.get("allow");
-      expect(allow).toContain("GET");
-      expect(allow).toContain("POST");
-      expect(allow).toContain("HEAD");
+      expectAllow(res, ["GET", "HEAD", "POST"]);
     });
 
     test("should return 405 with correct Allow header for parameterized paths", async () => {
@@ -252,9 +438,7 @@ describe("TypeweaverApp", () => {
       const res = await app.fetch(put("/todos/t1"));
 
       expect(res.status).toBe(405);
-      const allow = res.headers.get("allow");
-      expect(allow).toContain("GET");
-      expect(allow).toContain("HEAD");
+      expectAllow(res, ["GET", "HEAD"]);
     });
   });
 
@@ -265,8 +449,32 @@ describe("TypeweaverApp", () => {
       const res = await app.fetch(head("/todos"));
 
       expect(res.status).toBe(200);
-      const body = await res.text();
-      expect(body).toBe("");
+      await expectNoBody(res);
+    });
+
+    test("uses an explicit HEAD route instead of GET fallback at the fetch boundary", async () => {
+      const app = new TypeweaverApp();
+      const router = new HeadAwareRouter({
+        requestHandlers: {
+          handleGetTodos: async () => ({
+            statusCode: 200,
+            header: { "x-route": "get" },
+            body: { source: "get" },
+          }),
+          handleHeadTodos: async () => ({
+            statusCode: 200,
+            header: { "x-route": "head" },
+            body: { source: "head" },
+          }),
+        },
+      });
+      app.route(router);
+
+      const res = await app.fetch(head("/todos"));
+
+      expect(res.status).toBe(200);
+      expect(res.headers.get("x-route")).toBe("head");
+      await expectNoBody(res);
     });
 
     test("should handle HEAD request for parameterized paths", async () => {
@@ -275,8 +483,7 @@ describe("TypeweaverApp", () => {
       const res = await app.fetch(head("/todos/t1"));
 
       expect(res.status).toBe(200);
-      const body = await res.text();
-      expect(body).toBe("");
+      await expectNoBody(res);
     });
 
     test("should preserve response headers for HEAD request", async () => {
@@ -292,8 +499,24 @@ describe("TypeweaverApp", () => {
 
       expect(res.status).toBe(200);
       expect(res.headers.get("x-custom")).toBe("value");
-      const body = await res.text();
-      expect(body).toBe("");
+      await expectNoBody(res);
+    });
+
+    test("returns 405 with only POST allowed for HEAD on a POST-only route", async () => {
+      const app = new TypeweaverApp();
+      const router = new PostOnlyRouter({
+        validateRequests: false,
+        requestHandlers: {
+          handleCreateTodo: async () => ({ statusCode: 201, body: {} }),
+        },
+      });
+      app.route(router);
+
+      const res = await app.fetch(head("/todos"));
+
+      expect(res.status).toBe(405);
+      expectAllow(res, ["POST"]);
+      await expectNoBody(res);
     });
 
     test("should return 404 for HEAD request on nonexistent path", async () => {
@@ -379,6 +602,40 @@ describe("TypeweaverApp", () => {
 
       const data = await expectJson(res, 200);
       expect(data.userId).toBe("user-99");
+    });
+
+    test("ignores middleware state keys that could pollute object prototypes", async () => {
+      const suspiciousState = JSON.parse(
+        '{"__proto__":{"polluted":true},"constructor":"bad","prototype":"bad","safe":"ok"}'
+      ) as Record<string, unknown>;
+      const suspiciousMiddleware = defineMiddleware<Record<string, unknown>>(
+        async (_ctx, next) => next(suspiciousState)
+      );
+      const app = new TypeweaverApp();
+      const router = new TestRouter({
+        validateRequests: false,
+        requestHandlers: {
+          ...defaultHandlers(),
+          handleGetTodos: async (_req, ctx) => ({
+            statusCode: 200,
+            body: {
+              safe: ctx.state.get("safe"),
+              hasPoisonKeys:
+                ctx.state.has("__proto__") ||
+                ctx.state.has("constructor") ||
+                ctx.state.has("prototype"),
+              polluted: ({} as { polluted?: unknown }).polluted,
+            },
+          }),
+        },
+      });
+      app.use(suspiciousMiddleware).route(router);
+
+      const res = await app.fetch(get("/todos"));
+
+      const data = await expectJson(res, 200);
+      expect(data).toEqual({ safe: "ok", hasPoisonKeys: false });
+      expect(({} as { polluted?: unknown }).polluted).toBeUndefined();
     });
 
     test("should execute global middleware even for 404 requests", async () => {
@@ -467,13 +724,7 @@ describe("TypeweaverApp", () => {
 
   describe("Router Prefix", () => {
     test("should mount router with prefix", async () => {
-      const app = new TypeweaverApp();
-      const router = new TestRouter({
-        validateRequests: false,
-        requestHandlers: defaultHandlers(),
-      });
-
-      app.route("/api/v1", router);
+      const app = createAppMountedAt("/api/v1");
 
       const res = await app.fetch(get("/api/v1/todos"));
 
@@ -482,13 +733,7 @@ describe("TypeweaverApp", () => {
     });
 
     test("should not match unprefixed path when prefix is used", async () => {
-      const app = new TypeweaverApp();
-      const router = new TestRouter({
-        validateRequests: false,
-        requestHandlers: defaultHandlers(),
-      });
-
-      app.route("/api/v1", router);
+      const app = createAppMountedAt("/api/v1");
 
       const res = await app.fetch(get("/todos"));
 
@@ -496,13 +741,7 @@ describe("TypeweaverApp", () => {
     });
 
     test("should extract path params with prefix", async () => {
-      const app = new TypeweaverApp();
-      const router = new TestRouter({
-        validateRequests: false,
-        requestHandlers: defaultHandlers(),
-      });
-
-      app.route("/api", router);
+      const app = createAppMountedAt("/api");
 
       const res = await app.fetch(get("/api/todos/my-todo"));
 
@@ -511,17 +750,43 @@ describe("TypeweaverApp", () => {
     });
 
     test("should normalize trailing slashes on prefix", async () => {
-      const app = new TypeweaverApp();
-      const router = new TestRouter({
-        validateRequests: false,
-        requestHandlers: defaultHandlers(),
-      });
-
-      app.route("/api/v1/", router);
+      const app = createAppMountedAt("/api/v1/");
 
       const res = await app.fetch(get("/api/v1/todos"));
 
       expect(res.status).toBe(200);
+    });
+
+    test("treats a root prefix like no prefix", async () => {
+      const app = createAppMountedAt("/");
+
+      const res = await app.fetch(get("/todos"));
+
+      expect(res.status).toBe(200);
+    });
+
+    test("treats an empty prefix like no prefix", async () => {
+      const app = createAppMountedAt("");
+
+      const res = await app.fetch(get("/todos"));
+
+      expect(res.status).toBe(200);
+    });
+
+    test("matches a route when the prefix and route path both include a slash boundary", async () => {
+      const app = createAppMountedAt("/api/");
+
+      const res = await app.fetch(get("/api/todos"));
+
+      expect(res.status).toBe(200);
+    });
+
+    test("does not match string prefixes without a path segment boundary", async () => {
+      const app = createAppMountedAt("/api");
+
+      const res = await app.fetch(get("/apiary/todos"));
+
+      expect(res.status).toBe(404);
     });
   });
 
@@ -702,7 +967,8 @@ describe("TypeweaverApp", () => {
 
       const res = await app.fetch(get("/todos"));
 
-      await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
+      const data = await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
+      expect(JSON.stringify(data)).not.toContain("Unexpected failure");
       expect(onError).toHaveBeenCalledOnce();
       expect(onError).toHaveBeenCalledWith(expect.any(Error));
     });
@@ -830,8 +1096,7 @@ describe("TypeweaverApp", () => {
       await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
     });
 
-    test("should call console.error as last-resort when onError throws in safety net", async () => {
-      const spy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+    test("logs through console.error as a last resort when onError throws in the safety net", async () => {
       const originalError = new Error("Unexpected failure");
       const onErrorFailure = new Error("Observer crashed");
       const app = createApp(
@@ -848,17 +1113,17 @@ describe("TypeweaverApp", () => {
         }
       );
 
-      await app.fetch(get("/todos"));
+      await withConsoleErrorSpy(async spy => {
+        await app.fetch(get("/todos"));
 
-      expect(spy).toHaveBeenCalledWith(
-        "TypeweaverApp: onError callback threw while handling error",
-        { onErrorFailure, originalError }
-      );
-      spy.mockRestore();
+        expect(spy).toHaveBeenCalledWith(
+          "TypeweaverApp: onError callback threw while handling error",
+          expect.objectContaining({ onErrorFailure, originalError })
+        );
+      });
     });
 
-    test("should call console.error as last-resort when onError throws in defaultUnknownHandler", async () => {
-      const spy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+    test("logs through console.error as a last resort when onError throws in the unknown-error handler", async () => {
       const originalError = new Error("Handler failure");
       const onErrorFailure = new Error("onError crashed");
       const app = createApp(
@@ -875,14 +1140,15 @@ describe("TypeweaverApp", () => {
         }
       );
 
-      const res = await app.fetch(get("/todos"));
+      await withConsoleErrorSpy(async spy => {
+        const res = await app.fetch(get("/todos"));
 
-      expect(res.status).toBe(500);
-      expect(spy).toHaveBeenCalledWith(
-        "TypeweaverApp: onError callback threw while handling error",
-        { onErrorFailure, originalError }
-      );
-      spy.mockRestore();
+        expect(res.status).toBe(500);
+        expect(spy).toHaveBeenCalledWith(
+          "TypeweaverApp: onError callback threw while handling error",
+          expect.objectContaining({ onErrorFailure, originalError })
+        );
+      });
     });
 
     test("should return 500 for completely malformed request URL", async () => {
@@ -940,17 +1206,63 @@ describe("TypeweaverApp", () => {
     });
 
     test("should default onError to console.error", async () => {
-      const spy = vi.spyOn(console, "error").mockImplementation(vi.fn());
       const app = createApp(undefined, {
         handleGetTodos: async () => {
           throw new Error("should be logged");
         },
       });
 
+      await withConsoleErrorSpy(async spy => {
+        await app.fetch(get("/todos"));
+
+        expect(spy).toHaveBeenCalledOnce();
+      });
+    });
+
+    test("returns a sanitized 500 when response serialization fails", async () => {
+      const circularBody: Record<string, unknown> = {
+        secret: "circular serialization details",
+      };
+      circularBody.self = circularBody;
+      const app = createApp(
+        undefined,
+        {
+          handleGetTodos: async () => ({
+            statusCode: 200,
+            body: circularBody,
+          }),
+        },
+        { onError: vi.fn() }
+      );
+
+      const res = await app.fetch(get("/todos"));
+
+      const data = await expectInternalError(res);
+      expect(JSON.stringify(data)).not.toContain(
+        "circular serialization details"
+      );
+    });
+
+    test("reports onError when response serialization fails", async () => {
+      const onError = vi.fn();
+      const circularBody: Record<string, unknown> = {};
+      circularBody.self = circularBody;
+      const app = createApp(
+        undefined,
+        {
+          handleGetTodos: async () => ({
+            statusCode: 200,
+            body: circularBody,
+          }),
+        },
+        { onError }
+      );
+
       await app.fetch(get("/todos"));
 
-      expect(spy).toHaveBeenCalledOnce();
-      spy.mockRestore();
+      expect(onError).toHaveBeenCalledWith(
+        expect.any(ResponseSerializationError)
+      );
     });
 
     test("should handle errors thrown inside middleware", async () => {
@@ -1053,7 +1365,7 @@ describe("TypeweaverApp", () => {
       expect(data.message).toBe(payloadTooLargeDefaultError.message);
     });
 
-    test("should accept normal bodies within the limit", async () => {
+    test("passes a body within the configured limit to the handler", async () => {
       const app = createApp(undefined, undefined, {
         maxBodySize: 10000,
         onError: vi.fn(),
@@ -1061,15 +1373,61 @@ describe("TypeweaverApp", () => {
 
       const res = await app.fetch(post("/todos", { title: "New Todo" }));
 
-      expect(res.status).toBe(201);
+      const data = await expectJson(res, 201);
+      expect(data.title).toBe("New Todo");
     });
 
-    test("should use 1 MB default when maxBodySize is not configured", async () => {
-      const app = createApp();
+    test("accepts a body exactly at the configured limit", async () => {
+      const app = createApp(
+        undefined,
+        {
+          handleCreateTodo: async req => ({
+            statusCode: 201,
+            body: { size: String(req.body).length },
+          }),
+        },
+        { maxBodySize: 8, onError: vi.fn() }
+      );
 
-      const res = await app.fetch(post("/todos", { title: "Large" }));
+      const res = await app.fetch(
+        postRaw("/todos", "x".repeat(8), "text/plain")
+      );
 
-      expect(res.status).toBe(201);
+      const data = await expectJson(res, 201);
+      expect(data.size).toBe(8);
+    });
+
+    test("returns 413 when the body exceeds the 1 MB default limit", async () => {
+      const app = createApp(undefined, undefined, { onError: vi.fn() });
+      const oneByteOverDefaultLimit = "x".repeat(1_048_577);
+
+      const res = await app.fetch(
+        postRaw("/todos", oneByteOverDefaultLimit, "text/plain")
+      );
+
+      const data = await expectErrorResponse(
+        res,
+        payloadTooLargeDefaultError.statusCode,
+        payloadTooLargeDefaultError.code
+      );
+      expect(data.message).toBe(payloadTooLargeDefaultError.message);
+    });
+
+    test("accepts a body exactly at the 1 MB default limit", async () => {
+      const app = createApp(undefined, {
+        handleCreateTodo: async req => ({
+          statusCode: 201,
+          body: { size: String(req.body).length },
+        }),
+      });
+      const defaultLimitBody = "x".repeat(1_048_576);
+
+      const res = await app.fetch(
+        postRaw("/todos", defaultLimitBody, "text/plain")
+      );
+
+      const data = await expectJson(res, 201);
+      expect(data.size).toBe(1_048_576);
     });
 
     test("should return 413 for oversized body without Content-Length header", async () => {
@@ -1170,6 +1528,281 @@ describe("TypeweaverApp", () => {
     });
   });
 
+  describe("Response Validation", () => {
+    const anInvalidTodosResponse = (): IHttpResponse => ({
+      statusCode: 200,
+      header: { "x-invalid": "yes" },
+      body: { invalid: true },
+    });
+
+    test("returns validated response data when response validation transforms the handler response", async () => {
+      const responseValidator: IResponseValidator = {
+        validate: response => ({
+          ...response,
+          header: { "x-response-source": "validator" },
+          body: { title: "validated todo" },
+        }),
+        safeValidate: response => ({
+          isValid: true,
+          data: {
+            ...response,
+            header: { "x-response-source": "validator" },
+            body: { title: "validated todo" },
+          },
+        }),
+      };
+      const app = new TypeweaverApp();
+      const router = new CustomResponseValidatingRouter({
+        validateRequests: false,
+        responseValidator,
+        requestHandlers: defaultHandlers({
+          handleGetTodos: async () => ({
+            statusCode: 200,
+            header: { "x-response-source": "handler" },
+            body: {
+              title: "raw todo",
+              sensitive: "handler-only response detail",
+            },
+          }),
+        }),
+      });
+      app.route(router);
+
+      const res = await app.fetch(get("/todos"));
+
+      const data = await expectJson(res, 200);
+      expect(data).toEqual({ title: "validated todo" });
+      expect(res.headers.get("x-response-source")).toBe("validator");
+    });
+
+    test("returns the handler response unchanged when response validation is disabled", async () => {
+      const handlerResponse: IHttpResponse = {
+        statusCode: 200,
+        header: { "x-response-source": "handler" },
+        body: { source: "handler" },
+      };
+      const responseValidator: IResponseValidator = {
+        validate: () => {
+          throw new ResponseValidationError(418);
+        },
+        safeValidate: response => {
+          return {
+            isValid: true,
+            data: {
+              ...response,
+              statusCode: 202,
+              header: { "x-response-source": "validator" },
+              body: { source: "validator" },
+            },
+          };
+        },
+      };
+      const app = new TypeweaverApp();
+      const router = new CustomResponseValidatingRouter({
+        validateRequests: false,
+        validateResponses: false,
+        responseValidator,
+        requestHandlers: defaultHandlers({
+          handleGetTodos: async () => handlerResponse,
+        }),
+      });
+      app.route(router);
+
+      const res = await app.fetch(get("/todos"));
+
+      const data = await expectJson(res, 200);
+      expect(data).toEqual({ source: "handler" });
+      expect(res.headers.get("x-response-source")).toBe("handler");
+    });
+
+    test("returns a sanitized 500 when the default response validation handler handles an invalid response", async () => {
+      const app = createResponseValidatingApp(undefined, {
+        handleGetTodos: async () => ({
+          statusCode: 200,
+          body: { leaked: "response validation internals" },
+        }),
+      });
+
+      const res = await app.fetch(get("/todos"));
+
+      const data = await expectInternalError(res);
+      expect(data.message).toBe(internalServerErrorDefaultError.message);
+      expect(JSON.stringify(data)).not.toContain(
+        "response validation internals"
+      );
+    });
+
+    test("returns the custom response validation handler response when a response is invalid", async () => {
+      const handler: ResponseValidationErrorHandler = (
+        _error,
+        _response,
+        ctx
+      ) => {
+        return {
+          statusCode: 422,
+          body: {
+            code: "INVALID_RESPONSE",
+            operationId: ctx.route?.operationId,
+          },
+        };
+      };
+      const app = createResponseValidatingApp(
+        { handleResponseValidationErrors: handler },
+        { handleGetTodos: async () => anInvalidTodosResponse() }
+      );
+
+      const res = await app.fetch(get("/todos"));
+
+      const data = await expectJson(res, 422);
+      expect(data).toEqual({
+        code: "INVALID_RESPONSE",
+        operationId: "listTodos",
+      });
+    });
+
+    test("passes the validation error, original response, and route metadata to the custom response validation handler", async () => {
+      const invalidResponse = anInvalidTodosResponse();
+      let captured:
+        | {
+            readonly error: ResponseValidationError;
+            readonly response: IHttpResponse;
+            readonly route: unknown;
+          }
+        | undefined;
+      const handler: ResponseValidationErrorHandler = (
+        error,
+        response,
+        ctx
+      ) => {
+        captured = { error, response, route: ctx.route };
+        return {
+          statusCode: 422,
+          body: { code: "INVALID_RESPONSE" },
+        };
+      };
+      const app = createResponseValidatingApp(
+        { handleResponseValidationErrors: handler },
+        { handleGetTodos: async () => invalidResponse }
+      );
+
+      await app.fetch(get("/todos"));
+
+      expect(captured?.error).toBeInstanceOf(ResponseValidationError);
+      expect(captured?.error.statusCode).toBe(200);
+      expect(captured?.response).toEqual(invalidResponse);
+      expect(captured?.route).toEqual({
+        operationId: "listTodos",
+        method: "GET",
+        path: "/todos",
+      });
+    });
+
+    test("returns the original invalid response when response validation handling is disabled", async () => {
+      const app = createResponseValidatingApp(
+        { handleResponseValidationErrors: false },
+        {
+          handleGetTodos: async () => ({
+            statusCode: 200,
+            header: { "x-invalid": "yes" },
+            body: { invalid: true },
+          }),
+        }
+      );
+
+      const res = await app.fetch(get("/todos"));
+
+      const data = await expectJson(res, 200);
+      expect(data).toEqual({ invalid: true });
+      expect(res.headers.get("x-invalid")).toBe("yes");
+    });
+
+    test("returns a sanitized 500 when the custom response validation handler throws", async () => {
+      const onError = vi.fn();
+      const handlerFailure = new Error("response validation handler failed");
+      const app = createResponseValidatingApp(
+        {
+          handleResponseValidationErrors: () => {
+            throw handlerFailure;
+          },
+        },
+        {
+          handleGetTodos: async () => ({
+            statusCode: 200,
+            body: { secret: "invalid response detail" },
+          }),
+        },
+        { onError }
+      );
+
+      const res = await app.fetch(get("/todos"));
+
+      const data = await expectInternalError(res);
+      expect(JSON.stringify(data)).not.toContain("invalid response detail");
+    });
+
+    test("reports onError when the custom response validation handler throws", async () => {
+      const onError = vi.fn();
+      const handlerFailure = new Error("response validation handler failed");
+      const app = createResponseValidatingApp(
+        {
+          handleResponseValidationErrors: () => {
+            throw handlerFailure;
+          },
+        },
+        {
+          handleGetTodos: async () => ({
+            statusCode: 200,
+            body: { invalid: true },
+          }),
+        },
+        { onError }
+      );
+
+      await app.fetch(get("/todos"));
+
+      expect(onError).toHaveBeenCalledWith(handlerFailure);
+    });
+
+    test("validates a thrown typed HTTP response before the HTTP response handler handles it", async () => {
+      const typedInvalidResponse = {
+        type: "ConflictError",
+        statusCode: 409,
+        header: {},
+        body: { code: "CONFLICT" },
+      } satisfies ITypedHttpResponse;
+      const app = createResponseValidatingApp(
+        {
+          handleHttpResponseErrors: () => ({
+            statusCode: 409,
+            body: { code: "HTTP_RESPONSE_HANDLER" },
+          }),
+          handleResponseValidationErrors: (_error, response, ctx) => ({
+            statusCode: 422,
+            body: {
+              code: "INVALID_THROWN_RESPONSE",
+              originalStatus: response.statusCode,
+              operationId: ctx.route?.operationId,
+            },
+          }),
+        },
+        {
+          handleGetTodos: async () => {
+            throw typedInvalidResponse;
+          },
+        }
+      );
+
+      const res = await app.fetch(get("/todos"));
+
+      const data = await expectJson(res, 422);
+      expect(data).toEqual({
+        code: "INVALID_THROWN_RESPONSE",
+        originalStatus: 409,
+        operationId: "listTodos",
+      });
+    });
+  });
+
   describe("Defensive Validation", () => {
     test("should throw when route() is called with prefix but no router", () => {
       const app = new TypeweaverApp();
@@ -1235,7 +1868,6 @@ describe("TypeweaverApp", () => {
     });
 
     test("should return 500 via handler path when defaultUnknownHandler onError throws", async () => {
-      const spy = vi.spyOn(console, "error").mockImplementation(vi.fn());
       const app = createApp(
         undefined,
         {
@@ -1250,16 +1882,19 @@ describe("TypeweaverApp", () => {
         }
       );
 
-      const res = await app.fetch(get("/todos"));
+      await withConsoleErrorSpy(async spy => {
+        const res = await app.fetch(get("/todos"));
 
-      await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
-      expect(spy).toHaveBeenCalled();
-      spy.mockRestore();
+        await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
+        expect(spy).toHaveBeenCalled();
+      });
     });
   });
 
   describe("Concurrent Request Isolation", () => {
     test("should isolate state across concurrent requests", async () => {
+      const requestCount = 10;
+      const allRequestsHaveSetState = createRequestBarrier(requestCount);
       const app = new TypeweaverApp();
       const router = new TestRouter({
         validateRequests: false,
@@ -1268,7 +1903,7 @@ describe("TypeweaverApp", () => {
           handleGetTodo: async (_req, ctx) => {
             const id = _req.param?.todoId ?? "unknown";
             ctx.state.set("id", id);
-            await new Promise(r => setTimeout(r, 5));
+            await allRequestsHaveSetState.wait();
             return {
               statusCode: 200,
               body: { id, stateId: ctx.state.get("id") },
@@ -1279,14 +1914,14 @@ describe("TypeweaverApp", () => {
       app.route(router);
 
       const results = await Promise.all(
-        Array.from({ length: 10 }, (_, i) =>
+        Array.from({ length: requestCount }, (_, i) =>
           app
             .fetch(get(`/todos/todo-${i}`))
             .then(r => r.json() as Promise<{ id: string; stateId: string }>)
         )
       );
 
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < requestCount; i++) {
         expect(results[i]!.id).toBe(`todo-${i}`);
         expect(results[i]!.stateId).toBe(`todo-${i}`);
       }

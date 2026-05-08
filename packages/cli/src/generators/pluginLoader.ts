@@ -1,17 +1,29 @@
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import type {
-  PluginRegistryApi,
+  PluginConfig,
+  PluginConstructor,
   TypeweaverConfig,
   TypeweaverPlugin,
 } from "@rexeus/typeweaver-gen";
-import { TypesPlugin } from "@rexeus/typeweaver-types";
 import { PluginLoadingFailure } from "./errors/PluginLoadingFailure.js";
 import type { PluginLoadError } from "./errors/PluginLoadingFailure.js";
 
 export type PluginResolutionStrategy = "npm" | "local" | "scoped";
 
+export type PluginRegistrar = {
+  readonly register: (plugin: TypeweaverPlugin, config?: unknown) => void;
+};
+
 export type PluginLoadResult = {
-  plugin: TypeweaverPlugin;
-  source: string;
+  readonly plugin: TypeweaverPlugin;
+  readonly source: string;
+  readonly config?: PluginConfig;
+};
+
+type PluginCandidate = {
+  readonly exportName: string;
+  readonly constructor: PluginConstructor;
 };
 
 type LoadResult<T, E> =
@@ -19,9 +31,9 @@ type LoadResult<T, E> =
   | { success: false; error: E };
 
 export async function loadPlugins(
-  registry: PluginRegistryApi,
-  requiredPlugins: [TypesPlugin],
-  strategies: PluginResolutionStrategy[],
+  registry: PluginRegistrar,
+  requiredPlugins: readonly TypeweaverPlugin[],
+  strategies: readonly PluginResolutionStrategy[],
   config?: TypeweaverConfig
 ): Promise<void> {
   for (const requiredPlugin of requiredPlugins) {
@@ -35,12 +47,9 @@ export async function loadPlugins(
   const successful: PluginLoadResult[] = [];
 
   for (const plugin of config.plugins) {
-    let result: LoadResult<PluginLoadResult, PluginLoadError>;
-    if (typeof plugin === "string") {
-      result = await loadPlugin(plugin, strategies);
-    } else {
-      result = await loadPlugin(plugin[0], strategies);
-    }
+    const pluginName = typeof plugin === "string" ? plugin : plugin[0];
+    const pluginConfig = typeof plugin === "string" ? undefined : plugin[1];
+    const result = await loadPlugin(pluginName, strategies, pluginConfig);
 
     if (result.success === false) {
       throw new PluginLoadingFailure(
@@ -50,7 +59,7 @@ export async function loadPlugins(
     }
 
     successful.push(result.value);
-    registry.register(result.value.plugin);
+    registry.register(result.value.plugin, result.value.config);
   }
 
   reportSuccessfulLoads(successful);
@@ -58,7 +67,8 @@ export async function loadPlugins(
 
 async function loadPlugin(
   pluginName: string,
-  strategies: PluginResolutionStrategy[]
+  strategies: readonly PluginResolutionStrategy[],
+  pluginConfig?: PluginConfig
 ): Promise<LoadResult<PluginLoadResult, PluginLoadError>> {
   const possiblePaths = generatePluginPaths(pluginName, strategies);
   const attempts: { path: string; error: string }[] = [];
@@ -66,19 +76,20 @@ async function loadPlugin(
   for (const possiblePath of possiblePaths) {
     try {
       const pluginPackage = await import(possiblePath);
-      const PluginClass = findPluginConstructor(pluginPackage);
-      if (PluginClass) {
+      const plugin = createPluginInstance(pluginPackage, pluginConfig);
+      if (plugin.success) {
         return {
           success: true,
           value: {
-            plugin: new PluginClass(),
+            plugin: plugin.value,
             source: possiblePath,
+            config: pluginConfig,
           },
         };
       }
       attempts.push({
         path: possiblePath,
-        error: "No plugin class export found",
+        error: plugin.error,
       });
     } catch (error) {
       attempts.push({
@@ -97,27 +108,87 @@ async function loadPlugin(
   };
 }
 
-function findPluginConstructor(
+function createPluginInstance(
+  pluginModule: Record<string, unknown>,
+  pluginConfig?: PluginConfig
+): LoadResult<TypeweaverPlugin, string> {
+  const candidates = findPluginConstructorCandidates(pluginModule);
+  if (candidates.length === 0) {
+    return {
+      success: false,
+      error: "No plugin constructor export found",
+    };
+  }
+
+  const errors: string[] = [];
+  for (const candidate of candidates) {
+    try {
+      const plugin = new candidate.constructor(pluginConfig);
+      if (isTypeweaverPlugin(plugin)) {
+        return {
+          success: true,
+          value: plugin,
+        };
+      }
+
+      errors.push(
+        `Export '${candidate.exportName}' did not produce a valid plugin with a string name`
+      );
+    } catch (error) {
+      errors.push(
+        `Export '${candidate.exportName}' could not be instantiated: ${formatError(error)}`
+      );
+    }
+  }
+
+  return {
+    success: false,
+    error: errors.join("; "),
+  };
+}
+
+function findPluginConstructorCandidates(
   pluginModule: Record<string, unknown>
-): (new () => TypeweaverPlugin) | undefined {
+): PluginCandidate[] {
+  const candidates: PluginCandidate[] = [];
+
   for (const [key, value] of Object.entries(pluginModule)) {
     if (key !== "default" && typeof value === "function") {
-      return value as new () => TypeweaverPlugin;
+      candidates.push({
+        exportName: key,
+        constructor: value as PluginConstructor,
+      });
     }
   }
 
   // Fall back to default export for third-party plugin compatibility
   const defaultExport = pluginModule.default;
   if (typeof defaultExport === "function") {
-    return defaultExport as new () => TypeweaverPlugin;
+    candidates.push({
+      exportName: "default",
+      constructor: defaultExport as PluginConstructor,
+    });
   }
 
-  return undefined;
+  return candidates;
+}
+
+function isTypeweaverPlugin(value: unknown): value is TypeweaverPlugin {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { readonly name?: unknown }).name === "string" &&
+    (value as { readonly name: string }).name.length > 0
+  );
+}
+
+function formatError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function generatePluginPaths(
   pluginName: string,
-  strategies: PluginResolutionStrategy[]
+  strategies: readonly PluginResolutionStrategy[]
 ): string[] {
   const paths: string[] = [];
 
@@ -128,12 +199,27 @@ function generatePluginPaths(
         paths.push(`@rexeus/${pluginName}`);
         break;
       case "local":
+        paths.push(toLocalImportSpecifier(pluginName));
+        break;
+      case "scoped":
         paths.push(pluginName);
         break;
     }
   }
 
   return paths;
+}
+
+function toLocalImportSpecifier(pluginName: string): string {
+  if (pluginName.startsWith("file:")) {
+    return pluginName;
+  }
+
+  if (path.isAbsolute(pluginName)) {
+    return pathToFileURL(pluginName).href;
+  }
+
+  return pluginName;
 }
 
 function reportSuccessfulLoads(successful: PluginLoadResult[]): void {

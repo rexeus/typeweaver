@@ -6,11 +6,14 @@
  */
 
 import {
+  badRequestDefaultError,
   createDefaultErrorBody,
   createDefaultErrorResponse,
   internalServerErrorDefaultError,
   isTypedHttpResponse,
+  normalizeHttpResponse,
   RequestValidationError,
+  toHttpResponse,
   validationDefaultError,
 } from "@rexeus/typeweaver-core";
 import type {
@@ -22,6 +25,7 @@ import type {
   ResponseValidationError,
 } from "@rexeus/typeweaver-core";
 import { Hono } from "hono";
+import { BodyParseError } from "./Errors.js";
 import { HonoAdapter } from "./HonoAdapter.js";
 import type { HonoRequestHandler } from "./HonoRequestHandler.js";
 import type { Context } from "hono";
@@ -210,7 +214,11 @@ export abstract class TypeweaverHono<
     responseValidation: (): IHttpResponse =>
       createDefaultErrorResponse(internalServerErrorDefaultError),
 
-    httpResponse: (error: ITypedHttpResponse): IHttpResponse => error,
+    bodyParse: (): IHttpResponse =>
+      createDefaultErrorResponse(badRequestDefaultError),
+
+    httpResponse: (error: ITypedHttpResponse): IHttpResponse =>
+      toHttpResponse(error),
 
     unknown: (): IHttpResponse =>
       createDefaultErrorResponse(internalServerErrorDefaultError),
@@ -385,13 +393,22 @@ export abstract class TypeweaverHono<
 
       const httpResponse = await handler(validatedRequest, context);
       return this.adapter.toResponse(
-        await this.validateResponse(responseValidator, httpResponse, context)
+        await this.validateResponse(
+          responseValidator,
+          normalizeHttpResponse(httpResponse),
+          context
+        )
       );
     } catch (error) {
+      if (error instanceof BodyParseError) {
+        return this.adapter.toResponse(this.defaultHandlers.bodyParse());
+      }
+
       if (isTypedHttpResponse(error) && this.config.validateResponses) {
+        const httpResponse = toHttpResponse(error);
         const validated = await this.validateResponse(
           responseValidator,
-          error,
+          httpResponse,
           context
         );
         return this.adapter.toResponse(validated);
@@ -408,7 +425,7 @@ export abstract class TypeweaverHono<
    * - `validateResponses: true` (default) → runs validation:
    *   - Valid response → returns the stripped response (extra fields removed).
    *   - Invalid response + handler configured → calls the handler safely.
-   *     If the handler throws, falls back to the original response.
+   *     If the handler throws, fails closed with a sanitized 500 response.
    *   - Invalid response + `handleResponseValidationErrors: false` → returns
    *     the original (invalid) response as-is.
    *
@@ -426,7 +443,9 @@ export abstract class TypeweaverHono<
 
     const result = responseValidator.safeValidate(response);
 
-    if (result.isValid) return result.data;
+    if (result.isValid) {
+      return normalizeHttpResponse(result.data);
+    }
 
     if (this.config.errorHandlers.responseValidation) {
       const handlerResponse = await this.safelyExecuteErrorHandler(() =>
@@ -438,6 +457,7 @@ export abstract class TypeweaverHono<
       );
 
       if (handlerResponse) return handlerResponse;
+      return this.defaultHandlers.responseValidation();
     }
 
     return response;

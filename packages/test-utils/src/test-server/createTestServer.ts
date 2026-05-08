@@ -3,7 +3,6 @@ import type {
   ITypedHttpResponse,
 } from "@rexeus/typeweaver-core";
 import { serve } from "@hono/node-server";
-import getPort, { portNumbers } from "get-port";
 import { Hono } from "hono";
 import { AccountHono, AuthHono, TodoHono } from "..//index.js";
 import { HonoAdapter } from "../test-project/output/lib/hono/index.js";
@@ -12,6 +11,7 @@ import { AuthHandlers } from "./handlers/AuthHandlers.js";
 import { TodoHandlers } from "./handlers/TodoHandlers.js";
 import type { TypeweaverHonoOptions } from "../test-project/output/lib/hono/index.js";
 import type { ServerType } from "@hono/node-server";
+import type { AddressInfo } from "node:net";
 
 /**
  * Configuration options for Hono-based test servers.
@@ -84,6 +84,16 @@ export function createTestHono(options?: TestServerOptions): Hono {
   return app;
 }
 
+function getServerPort(server: ServerType): number {
+  const address = server.address();
+
+  if (address === null || typeof address === "string") {
+    throw new Error("Expected test server to listen on a TCP port");
+  }
+
+  return (address as AddressInfo).port;
+}
+
 /**
  * Starts a Hono-based test HTTP server on a random available port.
  *
@@ -96,14 +106,13 @@ export function createTestHono(options?: TestServerOptions): Hono {
 export async function createTestServer(
   options?: TestServerOptions
 ): Promise<CreateTestServerResult> {
-  const port = await getPort({ port: portNumbers(3000, 3100) });
-
   const app = createTestHono(options);
 
   const server = serve({
     fetch: app.fetch,
-    port,
+    port: 0,
   });
+  const port = getServerPort(server);
 
   return {
     server,
@@ -124,13 +133,12 @@ export async function createPrefixedTestServer(
   prefix: string,
   options?: TestServerOptions
 ): Promise<CreateTestServerResult> {
-  const port = await getPort({ port: portNumbers(3000, 3100) });
-
   const root = new Hono();
   const testHono = createTestHono(options);
   root.route(prefix, testHono);
 
-  const server = serve({ fetch: root.fetch, port });
+  const server = serve({ fetch: root.fetch, port: 0 });
+  const port = getServerPort(server);
 
   return {
     server,

@@ -9,6 +9,15 @@ import type {
 } from "@rexeus/typeweaver-gen";
 import { pascalCase } from "polycase";
 
+export type RouterGenerationContext = Pick<
+  GeneratorContext,
+  | "normalizedSpec"
+  | "outputDir"
+  | "getResourceOutputDir"
+  | "renderTemplate"
+  | "writeFile"
+>;
+
 type OperationData = {
   readonly operationId: string;
   readonly className: string;
@@ -29,7 +38,7 @@ type OperationData = {
  *
  * @param context - The generator context containing resources, templates, and output configuration
  */
-export function generate(context: GeneratorContext): void {
+export function generate(context: RouterGenerationContext): void {
   const moduleDir = path.dirname(fileURLToPath(import.meta.url));
   const templateFile = path.join(moduleDir, "templates", "Router.ejs");
 
@@ -41,7 +50,7 @@ export function generate(context: GeneratorContext): void {
 function writeRouter(
   resource: NormalizedResource,
   templateFile: string,
-  context: GeneratorContext
+  context: RouterGenerationContext
 ): void {
   const pascalCaseEntityName = pascalCase(resource.name);
   const outputDir = context.getResourceOutputDir(resource.name);

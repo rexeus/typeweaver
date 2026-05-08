@@ -23,7 +23,7 @@ export type RuntimeConfig = {
 
 export type RuntimeServer = {
   readonly baseUrl: string;
-  readonly kill: () => void;
+  readonly kill: () => Promise<void>;
 };
 
 export function isRuntimeAvailable(command: string): boolean {
@@ -48,58 +48,86 @@ export function spawnRuntimeServer(
     });
 
     let stderr = "";
+    let startupSettled = false;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
     child.stderr?.on("data", (chunk: Buffer) => {
       stderr += chunk.toString();
     });
 
-    const timeout = setTimeout(() => {
+    const exitPromise = new Promise<void>(resolveExit => {
+      child.once("exit", () => {
+        resolveExit();
+      });
+    });
+
+    const stopServer = async (): Promise<void> => {
+      if (child.exitCode === null && !child.killed) {
+        child.kill("SIGTERM");
+      }
+
+      const forceKill = setTimeout(() => {
+        if (child.exitCode === null) {
+          child.kill("SIGKILL");
+        }
+      }, 1_000);
+
+      await exitPromise.finally(() => {
+        clearTimeout(forceKill);
+      });
+    };
+
+    const failStartup = (message: string): void => {
+      if (startupSettled) return;
+      startupSettled = true;
+      if (timeout !== undefined) clearTimeout(timeout);
       child.kill("SIGKILL");
-      reject(
-        new Error(
-          `${config.name} server failed to start within ${SPAWN_TIMEOUT_MS}ms.\nstderr: ${stderr}`
-        )
+      reject(new Error(message));
+    };
+
+    const finishStartup = (): void => {
+      if (startupSettled) return;
+      startupSettled = true;
+      if (timeout !== undefined) clearTimeout(timeout);
+      resolve({
+        baseUrl: `http://localhost:${port}`,
+        kill: stopServer,
+      });
+    };
+
+    timeout = setTimeout(() => {
+      failStartup(
+        `${config.name} server failed to start within ${SPAWN_TIMEOUT_MS}ms.\nstderr: ${stderr}`
       );
     }, SPAWN_TIMEOUT_MS);
 
     child.stdout?.on("data", (chunk: Buffer) => {
       if (chunk.toString().includes("READY")) {
-        clearTimeout(timeout);
-        resolve({
-          baseUrl: `http://localhost:${port}`,
-          kill: () => child.kill("SIGKILL"),
-        });
+        finishStartup();
       }
     });
 
     child.on("error", err => {
-      clearTimeout(timeout);
-      reject(
-        new Error(
-          `Failed to spawn ${config.name}: ${err.message}\nstderr: ${stderr}`
-        )
+      failStartup(
+        `Failed to spawn ${config.name}: ${err.message}\nstderr: ${stderr}`
       );
     });
 
-    child.on("exit", code => {
-      clearTimeout(timeout);
-      if (code !== null && code !== 0) {
-        reject(
-          new Error(
-            `${config.name} server exited with code ${code}.\nstderr: ${stderr}`
-          )
+    child.on("exit", (code, signal) => {
+      if (!startupSettled) {
+        failStartup(
+          `${config.name} server exited before readiness with ${formatExit(
+            code,
+            signal
+          )}.\nstderr: ${stderr}`
         );
       }
     });
   });
 }
 
-export async function fetchJson(
-  url: string,
-  init?: RequestInit
-): Promise<{ status: number; body: any; headers: Headers }> {
-  const res = await fetch(url, init);
-  const body = res.headers.get("content-type")?.includes("json")
-    ? await res.json()
-    : null;
-  return { status: res.status, body, headers: res.headers };
+function formatExit(
+  code: number | null,
+  signal: NodeJS.Signals | null
+): string {
+  return code !== null ? `code ${code}` : `signal ${signal ?? "unknown"}`;
 }

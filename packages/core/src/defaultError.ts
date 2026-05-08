@@ -16,10 +16,10 @@ export type DefaultErrorBody<
   Descriptor extends DefaultErrorDescriptor,
   AdditionalBody extends Record<string, unknown> = {},
 > = Readonly<
-  {
+  Omit<AdditionalBody, "code" | "message"> & {
     code: Descriptor["code"];
     message: Descriptor["message"];
-  } & AdditionalBody
+  }
 >;
 
 export type DefaultErrorResponse<
@@ -132,9 +132,9 @@ export const createDefaultErrorBody = <
   additionalBody?: AdditionalBody
 ): DefaultErrorBody<Descriptor, AdditionalBody> =>
   ({
+    ...additionalBody,
     code: descriptor.code,
     message: descriptor.message,
-    ...additionalBody,
   }) as DefaultErrorBody<Descriptor, AdditionalBody>;
 
 export const createDefaultErrorResponse = <

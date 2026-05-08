@@ -1,4 +1,9 @@
-import { factory, SyntaxKind } from "typescript";
+import {
+  factory,
+  isParenthesizedTypeNode,
+  isUnionTypeNode,
+  SyntaxKind,
+} from "typescript";
 import {
   $ZodAny,
   $ZodArray,
@@ -40,7 +45,6 @@ import {
 } from "zod/v4/core";
 import type {
   Identifier,
-  Node,
   StringLiteral,
   TypeElement,
   TypeNode,
@@ -238,8 +242,7 @@ function fromZodObject(zodObject: $ZodObject): TypeNode {
         }
       );
     }
-    const { type: nextZodNodeTypeName } = nextZodNode._zod?.def ?? {};
-    const isOptional = nextZodNodeTypeName === "optional";
+    const isOptional = nextZodNode._zod?.optout === "optional";
 
     const propertySignature = factory.createPropertySignature(
       undefined,
@@ -267,6 +270,14 @@ function fromZodIntersection(zodIntersection: $ZodIntersection): TypeNode {
 
 function fromZodTuple(zodTuple: $ZodTuple): TypeNode {
   const elements = zodTuple._zod.def.items.map(fromZod);
+  const { rest } = zodTuple._zod.def;
+
+  if (rest) {
+    elements.push(
+      factory.createRestTypeNode(factory.createArrayTypeNode(fromZod(rest)))
+    );
+  }
+
   return factory.createTupleTypeNode(elements);
 }
 
@@ -299,8 +310,19 @@ function fromZodLiteral(zodLiteral: $ZodLiteral): TypeNode {
   if (zodLiteral._zod.def.values.length === 0) {
     throw new Error("ZodLiteral has no values");
   }
-  const value = zodLiteral._zod.def.values[0];
+  const types = zodLiteral._zod.def.values.map(fromLiteralValue);
 
+  const [type] = types;
+  if (types.length === 1 && type) {
+    return type;
+  }
+
+  return factory.createUnionTypeNode(types);
+}
+
+type LiteralValue = string | number | boolean | bigint | null | undefined;
+
+function fromLiteralValue(value: LiteralValue): TypeNode {
   if (typeof value === "string") {
     return factory.createLiteralTypeNode(factory.createStringLiteral(value));
   }
@@ -314,7 +336,7 @@ function fromZodLiteral(zodLiteral: $ZodLiteral): TypeNode {
   }
   if (typeof value === "bigint") {
     return factory.createLiteralTypeNode(
-      factory.createBigIntLiteral(value.toString())
+      factory.createBigIntLiteral(`${value.toString()}n`)
     );
   }
   if (value === null) {
@@ -328,11 +350,21 @@ function fromZodLiteral(zodLiteral: $ZodLiteral): TypeNode {
 }
 
 function fromZodEnum(zodEnum: $ZodEnum): TypeNode {
-  const entries = Object.entries(zodEnum._zod.def.entries);
-  const types = entries.map(([key, _value]) => {
-    return factory.createLiteralTypeNode(factory.createStringLiteral(key));
-  });
+  const values = getZodEnumValues(zodEnum._zod.def.entries);
+  const types = values.map(fromLiteralValue);
   return factory.createUnionTypeNode(types);
+}
+
+function getZodEnumValues(
+  entries: Record<string, string | number>
+): Array<string | number> {
+  const numericValues = Object.values(entries).filter(
+    (value): value is number => typeof value === "number"
+  );
+
+  return Object.entries(entries)
+    .filter(([key]) => !numericValues.includes(Number(key)))
+    .map(([, value]) => value);
 }
 
 function fromZodPromise(zodPromise: $ZodPromise): TypeNode {
@@ -357,18 +389,34 @@ function fromZodOptional(zodOptional: $ZodOptional): TypeNode {
 
 function fromZodDefault(zodDefault: $ZodDefault): TypeNode {
   const innerType = fromZod(zodDefault._zod.def.innerType);
+  return withoutUndefined(innerType);
+}
 
-  const filteredNodes: Node[] = [];
-  innerType.forEachChild(node => {
-    if (node.kind !== SyntaxKind.UndefinedKeyword) {
-      filteredNodes.push(node);
-    }
-  });
+function withoutUndefined(type: TypeNode): TypeNode {
+  if (isParenthesizedTypeNode(type)) {
+    return withoutUndefined(type.type);
+  }
 
-  // TODO: is TsTypeNode correct?
-  // @ts-expect-error needed to set children
-  innerType.types = filteredNodes;
-  return innerType;
+  if (!isUnionTypeNode(type)) {
+    return type;
+  }
+
+  const types = type.types
+    .map(withoutUndefined)
+    .flatMap(nextType =>
+      isUnionTypeNode(nextType) ? Array.from(nextType.types) : [nextType]
+    )
+    .filter(nextType => nextType.kind !== SyntaxKind.UndefinedKeyword);
+
+  const [singleType] = types;
+  if (types.length === 0) {
+    return type;
+  }
+  if (types.length === 1 && singleType) {
+    return singleType;
+  }
+
+  return factory.createUnionTypeNode(types);
 }
 
 function fromZodTemplateLiteral(

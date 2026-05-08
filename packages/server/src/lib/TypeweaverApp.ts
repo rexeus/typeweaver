@@ -13,9 +13,11 @@ import {
   internalServerErrorDefaultError,
   isTypedHttpResponse,
   methodNotAllowedDefaultError,
+  normalizeHttpResponse,
   notFoundDefaultError,
   payloadTooLargeDefaultError,
   RequestValidationError,
+  toHttpResponse,
   validationDefaultError,
 } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
@@ -240,13 +242,21 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
       const routeCtx = this.withPathParams(ctx, match.params);
       try {
         const response = await this.executeHandler(routeCtx, match.route);
-        return await this.validateResponse(match.route, response, routeCtx);
+        return await this.validateResponse(
+          match.route,
+          normalizeHttpResponse(response),
+          routeCtx
+        );
       } catch (error) {
         if (
           isTypedHttpResponse(error) &&
           match.route.routerConfig.validateResponses
         ) {
-          return await this.validateResponse(match.route, error, routeCtx);
+          return await this.validateResponse(
+            match.route,
+            toHttpResponse(error),
+            routeCtx
+          );
         }
         return this.handleError(error, routeCtx, match.route);
       }
@@ -289,7 +299,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
    * - `validateResponses: true` (default) → runs validation:
    *   - Valid response → returns the stripped response (extra fields removed).
    *   - Invalid response + handler configured → calls the handler safely.
-   *     If the handler throws, falls back to the original response.
+   *     If the handler throws, fails closed with a sanitized 500 response.
    *   - Invalid response + `handleResponseValidationErrors: false` → returns
    *     the original (invalid) response as-is.
    *
@@ -307,7 +317,9 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
 
     const result = route.responseValidator.safeValidate(response);
 
-    if (result.isValid) return result.data;
+    if (result.isValid) {
+      return normalizeHttpResponse(result.data);
+    }
 
     const handler = this.resolveErrorHandler<ResponseValidationErrorHandler>(
       route.routerConfig.handleResponseValidationErrors,
@@ -319,6 +331,11 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
         handler(result.error, response, ctx)
       );
       if (handlerResponse) return handlerResponse;
+      return TypeweaverApp.defaultResponseValidationHandler(
+        result.error,
+        response,
+        ctx
+      );
     }
 
     return response;
@@ -461,7 +478,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
 
   private static defaultHttpResponseHandler: HttpResponseErrorHandler = (
     err
-  ): IHttpResponse => err;
+  ): IHttpResponse => toHttpResponse(err);
 
   private readonly defaultUnknownHandler: UnknownErrorHandler = (
     error

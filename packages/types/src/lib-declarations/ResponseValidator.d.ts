@@ -20,7 +20,7 @@ export declare abstract class ResponseValidator<
   TResponse extends ITypedHttpResponse = ITypedHttpResponse,
 >
   extends Validator
-  implements IResponseValidator
+  implements IResponseValidator<TResponse>
 {
   protected abstract readonly responseEntries: readonly ResponseEntry[];
   protected abstract readonly expectedStatusCodes: readonly number[];

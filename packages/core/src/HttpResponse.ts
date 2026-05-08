@@ -1,6 +1,6 @@
+import { HttpStatusCode } from "./HttpStatusCode.js";
 import type { IHttpBody } from "./HttpBody.js";
 import type { IHttpHeader } from "./HttpHeader.js";
-import type { HttpStatusCode } from "./HttpStatusCode.js";
 
 export type IHttpResponse<
   Header extends IHttpHeader = IHttpHeader,
@@ -11,10 +11,14 @@ export type IHttpResponse<
   readonly body?: Body;
 };
 
+export type ITypedHttpResponseHeader =
+  | Record<string, string | string[] | undefined>
+  | undefined;
+
 export type ITypedHttpResponse<
   TypeName extends string = string,
   StatusCode extends HttpStatusCode = HttpStatusCode,
-  Header extends IHttpHeader | undefined = IHttpHeader | undefined,
+  Header extends ITypedHttpResponseHeader = ITypedHttpResponseHeader,
   Body extends IHttpBody | undefined = IHttpBody | undefined,
 > = {
   readonly type: TypeName;
@@ -23,12 +27,94 @@ export type ITypedHttpResponse<
   readonly body: Body;
 };
 
+const allowedHttpStatusCodes = new Set(
+  Object.values(HttpStatusCode).filter(
+    (value): value is HttpStatusCode => typeof value === "number"
+  )
+);
+
+const hasOwnProperty = (value: object, property: PropertyKey): boolean => {
+  return Object.prototype.hasOwnProperty.call(value, property);
+};
+
+const isRegisteredHttpStatusCode = (
+  value: unknown
+): value is HttpStatusCode => {
+  return typeof value === "number" && allowedHttpStatusCodes.has(value);
+};
+
+const isHttpHeaderValue = (
+  value: unknown
+): value is string | string[] | undefined => {
+  return (
+    value === undefined ||
+    typeof value === "string" ||
+    (Array.isArray(value) && value.every(item => typeof item === "string"))
+  );
+};
+
+const isRecordObject = (value: unknown): value is Record<string, unknown> => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+
+  return prototype === Object.prototype || prototype === null;
+};
+
+const isTypedHttpResponseHeader = (
+  value: unknown
+): value is ITypedHttpResponseHeader => {
+  return (
+    value === undefined ||
+    (isRecordObject(value) && Object.values(value).every(isHttpHeaderValue))
+  );
+};
+
 export const isTypedHttpResponse = (
   value: unknown
-): value is ITypedHttpResponse =>
-  typeof value === "object" &&
-  value !== null &&
-  "type" in value &&
-  typeof (value as Record<string, unknown>).type === "string" &&
-  "statusCode" in value &&
-  typeof (value as Record<string, unknown>).statusCode === "number";
+): value is ITypedHttpResponse => {
+  if (!isRecordObject(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<PropertyKey, unknown>;
+
+  return (
+    hasOwnProperty(candidate, "type") &&
+    typeof candidate.type === "string" &&
+    hasOwnProperty(candidate, "statusCode") &&
+    isRegisteredHttpStatusCode(candidate.statusCode) &&
+    (!hasOwnProperty(candidate, "header") ||
+      isTypedHttpResponseHeader(candidate.header))
+  );
+};
+
+export const toHttpHeader = (
+  header: ITypedHttpResponse["header"]
+): IHttpHeader => {
+  if (!header) return undefined;
+
+  const normalizedHeader: NonNullable<IHttpHeader> = {};
+  for (const [key, value] of Object.entries(header)) {
+    if (value !== undefined) normalizedHeader[key] = value;
+  }
+
+  return Object.keys(normalizedHeader).length > 0
+    ? normalizedHeader
+    : undefined;
+};
+
+export const toHttpResponse = (
+  response: ITypedHttpResponse
+): IHttpResponse => ({
+  statusCode: response.statusCode,
+  header: toHttpHeader(response.header),
+  body: response.body,
+});
+
+export const normalizeHttpResponse = (
+  response: IHttpResponse | ITypedHttpResponse
+): IHttpResponse =>
+  isTypedHttpResponse(response) ? toHttpResponse(response) : response;

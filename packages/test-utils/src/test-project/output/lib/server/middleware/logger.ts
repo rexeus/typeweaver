@@ -10,6 +10,7 @@ export type LogData = {
 export type LoggerOptions = {
   readonly logFn?: (message: string) => void;
   readonly format?: (data: LogData) => string;
+  readonly nowMs?: () => number;
 };
 
 const defaultFormat = (data: LogData): string =>
@@ -18,11 +19,12 @@ const defaultFormat = (data: LogData): string =>
 export function logger(options?: LoggerOptions) {
   const logFn = options?.logFn ?? console.log;
   const format = options?.format ?? defaultFormat;
+  const nowMs = options?.nowMs ?? (() => performance.now());
 
   return defineMiddleware(async (ctx, next) => {
-    const start = performance.now();
+    const start = nowMs();
     const response = await next();
-    const durationMs = Math.round(performance.now() - start);
+    const durationMs = Math.round(nowMs() - start);
 
     logFn(
       format({

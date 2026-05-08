@@ -1,5 +1,6 @@
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { defineMiddleware } from "../TypedMiddleware.js";
+import { omitHeaders } from "./header.js";
 
 export type SecureHeadersOptions = {
   readonly contentTypeOptions?: string | false;
@@ -42,10 +43,11 @@ export function secureHeaders(options?: SecureHeadersOptions) {
 
   return defineMiddleware(async (_ctx, next) => {
     const response = await next();
+    const header = omitHeaders(response.header, Object.keys(headers));
 
     return {
       ...response,
-      header: { ...headers, ...response.header },
+      header: { ...header, ...headers },
     } satisfies IHttpResponse;
   });
 }

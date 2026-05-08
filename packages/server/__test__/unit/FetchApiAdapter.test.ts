@@ -1,5 +1,9 @@
 import { describe, expect, test, vi } from "vitest";
 import {
+  createNodeBodyLimitPolicy,
+  markRequestBodyPrevalidated,
+} from "../../src/lib/BodyLimitPolicy.js";
+import {
   BodyParseError,
   PayloadTooLargeError,
   ResponseSerializationError,
@@ -25,14 +29,44 @@ function parseRequest(request: Request, url?: URL) {
   return new FetchApiAdapter().toRequest(request, url);
 }
 
-function createOversizedStream(
+function createByteStream(
+  chunks: readonly Uint8Array[],
   cancel: () => Promise<void>
 ): ReadableStream<Uint8Array> {
-  const chunks = [new Uint8Array([1, 2, 3]), new Uint8Array([4, 5, 6])];
+  const queuedChunks = [...chunks];
 
   return new ReadableStream<Uint8Array>({
     pull(controller) {
-      const chunk = chunks.shift();
+      const chunk = queuedChunks.shift();
+      if (chunk) {
+        controller.enqueue(chunk);
+        return;
+      }
+      controller.close();
+    },
+    cancel,
+  });
+}
+
+function createSixByteStream(
+  cancel: () => Promise<void>
+): ReadableStream<Uint8Array> {
+  return createByteStream(
+    [new Uint8Array([1, 2, 3]), new Uint8Array([4, 5, 6])],
+    cancel
+  );
+}
+
+function createBodyStream(
+  chunks: readonly string[],
+  cancel: () => Promise<void> = async () => {}
+): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  const encodedChunks = chunks.map(chunk => encoder.encode(chunk));
+
+  return new ReadableStream<Uint8Array>({
+    pull(controller) {
+      const chunk = encodedChunks.shift();
       if (chunk) {
         controller.enqueue(chunk);
         return;
@@ -96,16 +130,90 @@ async function expectPayloadTooLargeError(
   });
 }
 
+function createPrevalidatedRequest(
+  path: string,
+  init: RequestInit,
+  maxBodySize = 1_048_576
+): Request {
+  const request = createAdapterRequest(path, init);
+  markRequestBodyPrevalidated(request, createNodeBodyLimitPolicy(maxBodySize));
+  return request;
+}
+
+function createPrevalidatedRequestWithUnreadableText(
+  contentType: string | undefined,
+  error: Error
+): Request {
+  const request = createPrevalidatedRequest(
+    "/todos",
+    {
+      method: "POST",
+      headers: contentType ? { "Content-Type": contentType } : undefined,
+      body: new TextEncoder().encode("unreadable"),
+    },
+    64
+  );
+  Object.defineProperty(request, "text", {
+    value: () => Promise.reject(error),
+  });
+  return request;
+}
+
+function createRequiredTestFile(): File {
+  if (typeof File === "undefined") {
+    throw new Error("The Node 22+ test runtime must provide File.");
+  }
+
+  return new File(["file contents"], "todo.txt", { type: "text/plain" });
+}
+
+function anUntypedResponseWithHeaders(
+  header: Record<string, unknown>
+): Parameters<FetchApiAdapter["toResponse"]>[0] {
+  return {
+    statusCode: 200,
+    header,
+    body: "ok",
+  } as Parameters<FetchApiAdapter["toResponse"]>[0];
+}
+
+function captureResponseSerializationError(
+  body: unknown
+): ResponseSerializationError {
+  const adapter = new FetchApiAdapter();
+
+  try {
+    adapter.toResponse({ statusCode: 200, body });
+  } catch (error) {
+    if (error instanceof ResponseSerializationError) {
+      return error;
+    }
+    throw error;
+  }
+
+  throw new Error("Expected response body serialization to fail");
+}
+
 describe("FetchApiAdapter", () => {
   describe("toRequest", () => {
-    test("should extract method and path", async () => {
+    test("extracts method and path", async () => {
       const result = await parseRequest(createAdapterRequest("/todos"));
 
       expect(result.method).toBe("GET");
       expect(result.path).toBe("/todos");
     });
 
-    test("should extract query parameters", async () => {
+    test("normalizes lowercase custom request methods to uppercase", async () => {
+      const request = createAdapterRequest("/todos", {
+        method: "custommethod",
+      });
+
+      const result = await parseRequest(request);
+
+      expect(result.method).toBe("CUSTOMMETHOD");
+    });
+
+    test("extracts query parameters", async () => {
       const result = await parseRequest(
         createAdapterRequest("/todos?status=TODO&limit=10")
       );
@@ -113,7 +221,7 @@ describe("FetchApiAdapter", () => {
       expect(result.query).toEqual({ status: "TODO", limit: "10" });
     });
 
-    test("should handle multi-value query parameters", async () => {
+    test("preserves repeated query parameters as arrays", async () => {
       const adapter = new FetchApiAdapter();
       const request = new Request(`${BASE_URL}/todos?tag=a&tag=b`);
 
@@ -122,7 +230,7 @@ describe("FetchApiAdapter", () => {
       expect(result.query).toEqual({ tag: ["a", "b"] });
     });
 
-    test("should return undefined query when no params present", async () => {
+    test("omits query when no query parameters are present", async () => {
       const adapter = new FetchApiAdapter();
       const request = new Request(`${BASE_URL}/todos`);
 
@@ -131,7 +239,7 @@ describe("FetchApiAdapter", () => {
       expect(result.query).toBeUndefined();
     });
 
-    test("should extract headers", async () => {
+    test("extracts request headers by lowercase name", async () => {
       const adapter = new FetchApiAdapter();
       const request = new Request(`${BASE_URL}/todos`, {
         headers: {
@@ -146,21 +254,16 @@ describe("FetchApiAdapter", () => {
       expect(result.header?.["x-custom"]).toBe("value");
     });
 
-    test("should return undefined header when no explicit headers provided", async () => {
+    test("omits headers when no request headers are present", async () => {
       const adapter = new FetchApiAdapter();
       const request = new Request(`${BASE_URL}/todos`);
 
       const result = await adapter.toRequest(request);
 
-      // Fetch API may inject default headers; the adapter returns
-      // undefined when no meaningful headers are present, or an object
-      // containing only runtime-injected defaults.
-      if (result.header !== undefined) {
-        expect(typeof result.header).toBe("object");
-      }
+      expect(result.header).toBeUndefined();
     });
 
-    test("should preserve headers with empty string values", async () => {
+    test("preserves request headers with empty string values", async () => {
       const adapter = new FetchApiAdapter();
       const request = new Request(`${BASE_URL}/todos`, {
         headers: { "X-Empty": "" },
@@ -171,7 +274,7 @@ describe("FetchApiAdapter", () => {
       expect(result.header?.["x-empty"]).toBe("");
     });
 
-    test("should not include path params at adapter level", async () => {
+    test("omits path params at adapter level", async () => {
       const adapter = new FetchApiAdapter();
       const request = new Request(`${BASE_URL}/todos/t1`);
 
@@ -180,7 +283,7 @@ describe("FetchApiAdapter", () => {
       expect(result.param).toBeUndefined();
     });
 
-    test("should parse JSON body", async () => {
+    test("parses JSON request bodies", async () => {
       const adapter = new FetchApiAdapter();
       const request = new Request(`${BASE_URL}/todos`, {
         method: "POST",
@@ -193,7 +296,7 @@ describe("FetchApiAdapter", () => {
       expect(result.body).toEqual({ title: "New Todo" });
     });
 
-    test("should parse +json content types (RFC 6839)", async () => {
+    test("parses structured +json request bodies", async () => {
       const adapter = new FetchApiAdapter();
       const request = new Request(`${BASE_URL}/todos`, {
         method: "PATCH",
@@ -206,7 +309,7 @@ describe("FetchApiAdapter", () => {
       expect(result.body).toEqual({ title: "Updated" });
     });
 
-    test("should parse vendor +json content types (RFC 6839)", async () => {
+    test("parses vendor +json request bodies with charset parameters", async () => {
       const adapter = new FetchApiAdapter();
       const request = new Request(`${BASE_URL}/todos`, {
         method: "POST",
@@ -223,7 +326,7 @@ describe("FetchApiAdapter", () => {
       });
     });
 
-    test("should throw BodyParseError for malformed JSON and preserve cause", async () => {
+    test("throws BodyParseError for malformed JSON and preserves the cause", async () => {
       const request = createAdapterRequest("/todos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -233,7 +336,7 @@ describe("FetchApiAdapter", () => {
       await expectBodyParseError(request, "Invalid JSON");
     });
 
-    test("should throw BodyParseError for malformed +json body and preserve cause", async () => {
+    test("throws BodyParseError for malformed +json bodies and preserves the cause", async () => {
       const request = createAdapterRequest("/todos", {
         method: "PATCH",
         headers: { "Content-Type": "application/merge-patch+json" },
@@ -243,7 +346,57 @@ describe("FetchApiAdapter", () => {
       await expectBodyParseError(request, "Invalid JSON");
     });
 
-    test("should parse text body", async () => {
+    test("parses application/problem+json request bodies as JSON", async () => {
+      const adapter = new FetchApiAdapter();
+      const request = createAdapterRequest("/todos", {
+        method: "POST",
+        headers: { "Content-Type": "application/problem+json" },
+        body: JSON.stringify({ title: "Invalid todo", status: 422 }),
+      });
+
+      const result = await adapter.toRequest(request);
+
+      expect(result.body).toEqual({ title: "Invalid todo", status: 422 });
+    });
+
+    test("throws BodyParseError for malformed JSON with charset parameters", async () => {
+      const request = createAdapterRequest("/todos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+        body: "{ invalid json !!!",
+      });
+
+      await expectBodyParseError(request, "Invalid JSON");
+    });
+
+    test.each([
+      { scenario: "null", body: "null", expected: null },
+      { scenario: "array", body: "[1,2,3]", expected: [1, 2, 3] },
+      { scenario: "string", body: '"hello"', expected: "hello" },
+    ])("parses JSON $scenario request bodies", async ({ body, expected }) => {
+      const adapter = new FetchApiAdapter();
+      const request = createAdapterRequest("/todos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+
+      const result = await adapter.toRequest(request);
+
+      expect(result.body).toEqual(expected);
+    });
+
+    test("throws BodyParseError for empty JSON request bodies", async () => {
+      const request = createAdapterRequest("/todos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "",
+      });
+
+      await expectBodyParseError(request, "Invalid JSON");
+    });
+
+    test("parses text request bodies", async () => {
       const adapter = new FetchApiAdapter();
       const request = new Request(`${BASE_URL}/todos`, {
         method: "POST",
@@ -256,7 +409,33 @@ describe("FetchApiAdapter", () => {
       expect(result.body).toBe("Hello World");
     });
 
-    test("should parse form-urlencoded body", async () => {
+    test("parses bodies without Content-Type as raw text", async () => {
+      const adapter = new FetchApiAdapter();
+      const request = createAdapterRequestWithStream(
+        "/todos",
+        {},
+        createBodyStream(["raw body"])
+      );
+
+      const result = await adapter.toRequest(request);
+
+      expect(result.body).toBe("raw body");
+    });
+
+    test("parses bodies with empty Content-Type as raw text", async () => {
+      const adapter = new FetchApiAdapter();
+      const request = createAdapterRequest("/todos", {
+        method: "POST",
+        headers: { "Content-Type": "" },
+        body: new TextEncoder().encode("raw body"),
+      });
+
+      const result = await adapter.toRequest(request);
+
+      expect(result.body).toBe("raw body");
+    });
+
+    test("parses form-urlencoded request bodies", async () => {
       const adapter = new FetchApiAdapter();
       const request = new Request(`${BASE_URL}/todos`, {
         method: "POST",
@@ -274,7 +453,25 @@ describe("FetchApiAdapter", () => {
       });
     });
 
-    test("should return undefined body for bodyless requests", async () => {
+    test("preserves repeated form-urlencoded keys as arrays", async () => {
+      const adapter = new FetchApiAdapter();
+      const request = createAdapterRequest("/todos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: "tag=one&tag=two&title=New+Todo",
+      });
+
+      const result = await adapter.toRequest(request);
+
+      expect(result.body).toEqual({
+        tag: ["one", "two"],
+        title: "New Todo",
+      });
+    });
+
+    test("omits body for bodyless requests", async () => {
       const adapter = new FetchApiAdapter();
       const request = new Request(`${BASE_URL}/todos`);
 
@@ -283,18 +480,18 @@ describe("FetchApiAdapter", () => {
       expect(result.body).toBeUndefined();
     });
 
-    test("should accept pre-parsed URL to avoid double parsing", async () => {
+    test("uses the supplied parsed URL when converting the request", async () => {
       const adapter = new FetchApiAdapter();
-      const request = new Request(`${BASE_URL}/todos?status=TODO`);
-      const url = new URL(request.url);
+      const request = new Request(`${BASE_URL}/ignored?status=IGNORED`);
+      const url = new URL(`${BASE_URL}/todos?status=TODO&tag=supplied`);
 
       const result = await adapter.toRequest(request, url);
 
       expect(result.path).toBe("/todos");
-      expect(result.query).toEqual({ status: "TODO" });
+      expect(result.query).toEqual({ status: "TODO", tag: "supplied" });
     });
 
-    test("should parse multipart/form-data body", async () => {
+    test("parses multipart form fields", async () => {
       const adapter = new FetchApiAdapter();
       const formData = new FormData();
       formData.append("title", "Test Todo");
@@ -312,7 +509,28 @@ describe("FetchApiAdapter", () => {
       expect(result.body.tags).toEqual(["tag1", "tag2"]);
     });
 
-    test("should throw BodyParseError for malformed multipart/form-data", async () => {
+    test("preserves multipart File values", async () => {
+      const adapter = new FetchApiAdapter();
+      const formData = new FormData();
+      const file = createRequiredTestFile();
+      formData.append("attachment", file);
+
+      const request = createAdapterRequest("/todos", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await adapter.toRequest(request);
+
+      expect(result.body.attachment).toBeInstanceOf(File);
+      expect(result.body.attachment.name).toBe("todo.txt");
+      expect(result.body.attachment.type).toBe("text/plain");
+      await expect(result.body.attachment.text()).resolves.toBe(
+        "file contents"
+      );
+    });
+
+    test("throws BodyParseError for malformed multipart form bodies", async () => {
       const request = createAdapterRequest("/todos", {
         method: "POST",
         headers: { "Content-Type": "multipart/form-data; boundary=invalid" },
@@ -322,7 +540,7 @@ describe("FetchApiAdapter", () => {
       await expectBodyParseError(request, "multipart/form-data");
     });
 
-    test("should fall back to raw text for unknown content types", async () => {
+    test("falls back to raw text for unknown content types", async () => {
       const adapter = new FetchApiAdapter();
       const request = new Request(`${BASE_URL}/todos`, {
         method: "POST",
@@ -335,7 +553,7 @@ describe("FetchApiAdapter", () => {
       expect(result.body).toBe("raw binary-ish data");
     });
 
-    test("should return undefined body for unknown content type with empty body text", async () => {
+    test("omits raw body when an unknown content type has empty body text", async () => {
       const adapter = new FetchApiAdapter();
       const request = new Request(`${BASE_URL}/todos`, {
         method: "POST",
@@ -345,36 +563,77 @@ describe("FetchApiAdapter", () => {
 
       const result = await adapter.toRequest(request);
 
-      // Source: `rawBody || undefined` — empty string returns undefined
       expect(result.body).toBeUndefined();
+    });
+
+    test("throws BodyParseError when text body reads fail", async () => {
+      const request = createPrevalidatedRequestWithUnreadableText(
+        "text/plain",
+        new Error("read failed")
+      );
+
+      await expectBodyParseError(request, "Failed to read text request body");
+    });
+
+    test("throws BodyParseError when form-urlencoded body reads fail", async () => {
+      const request = createPrevalidatedRequestWithUnreadableText(
+        "application/x-www-form-urlencoded",
+        new Error("read failed")
+      );
+
+      await expectBodyParseError(
+        request,
+        "Failed to read form-urlencoded request body"
+      );
+    });
+
+    test("throws BodyParseError when raw body reads fail", async () => {
+      const request = createPrevalidatedRequestWithUnreadableText(
+        undefined,
+        new Error("read failed")
+      );
+
+      await expectBodyParseError(request, "Failed to read request body");
     });
 
     test("cancels oversized request streams without masking the original error", async () => {
       const cancel = vi.fn().mockRejectedValue(new Error("cancel failed"));
-      const body = createOversizedStream(cancel);
+      const actualBodySize = 6;
+      const maxBodySize = 4;
+      const body = createSixByteStream(cancel);
       const request = createAdapterRequestWithStream(
         "/upload",
         { "Content-Type": "application/octet-stream" },
         body
       );
-      const adapter = new FetchApiAdapter({ maxBodySize: 4 });
+      const adapter = new FetchApiAdapter({ maxBodySize });
 
-      await expectPayloadTooLargeError(adapter.toRequest(request), 6, 4);
+      await expectPayloadTooLargeError(
+        adapter.toRequest(request),
+        actualBodySize,
+        maxBodySize
+      );
 
       expect(cancel).toHaveBeenCalledTimes(1);
     });
 
     test("cancels oversized multipart request streams without masking the size-limit error", async () => {
       const cancel = vi.fn().mockRejectedValue(new Error("cancel failed"));
-      const body = createOversizedStream(cancel);
+      const actualBodySize = 6;
+      const maxBodySize = 4;
+      const body = createSixByteStream(cancel);
       const request = createAdapterRequestWithStream(
         "/upload",
         { "Content-Type": "multipart/form-data; boundary=typeweaver-test" },
         body
       );
-      const adapter = new FetchApiAdapter({ maxBodySize: 4 });
+      const adapter = new FetchApiAdapter({ maxBodySize });
 
-      await expectPayloadTooLargeError(adapter.toRequest(request), 6, 4);
+      await expectPayloadTooLargeError(
+        adapter.toRequest(request),
+        actualBodySize,
+        maxBodySize
+      );
 
       expect(cancel).toHaveBeenCalledTimes(1);
     });
@@ -396,22 +655,22 @@ describe("FetchApiAdapter", () => {
     });
 
     describe("Content-Type Matching", () => {
-      test("should parse application/vnd.api+json with charset as JSON", async () => {
+      test("parses JSON media types with surrounding whitespace and parameters", async () => {
         const adapter = new FetchApiAdapter();
         const request = new Request(`${BASE_URL}/todos`, {
           method: "POST",
           headers: {
-            "Content-Type": "application/vnd.api+json; charset=utf-8",
+            "Content-Type": " application/json ; charset=utf-8 ",
           },
-          body: JSON.stringify({ title: "Test" }),
+          body: JSON.stringify({ title: "Whitespace Test" }),
         });
 
         const result = await adapter.toRequest(request);
 
-        expect(result.body).toEqual({ title: "Test" });
+        expect(result.body).toEqual({ title: "Whitespace Test" });
       });
 
-      test("should not parse text/html+json-not-really as JSON", async () => {
+      test("treats text/html+json-not-really as raw text", async () => {
         const adapter = new FetchApiAdapter();
         const request = new Request(`${BASE_URL}/todos`, {
           method: "POST",
@@ -424,7 +683,7 @@ describe("FetchApiAdapter", () => {
         expect(result.body).toBe("not json");
       });
 
-      test("should parse text/html as text, not as JSON even if body looks like JSON", async () => {
+      test("parses text/html as text when the body looks like JSON", async () => {
         const adapter = new FetchApiAdapter();
         const request = new Request(`${BASE_URL}/todos`, {
           method: "POST",
@@ -437,7 +696,7 @@ describe("FetchApiAdapter", () => {
         expect(result.body).toBe('{"title": "test"}');
       });
 
-      test("should strip charset parameter before matching content type", async () => {
+      test("strips charset parameters before matching content type", async () => {
         const adapter = new FetchApiAdapter();
         const request = new Request(`${BASE_URL}/todos`, {
           method: "POST",
@@ -450,7 +709,7 @@ describe("FetchApiAdapter", () => {
         expect(result.body).toEqual({ title: "Charset Test" });
       });
 
-      test("should handle case-insensitive content type matching", async () => {
+      test("matches content type case-insensitively", async () => {
         const adapter = new FetchApiAdapter();
         const request = new Request(`${BASE_URL}/todos`, {
           method: "POST",
@@ -463,7 +722,7 @@ describe("FetchApiAdapter", () => {
         expect(result.body).toEqual({ title: "Case Test" });
       });
 
-      test("should parse application/x-www-form-urlencoded with charset as form data", async () => {
+      test("parses form-urlencoded bodies with charset parameters", async () => {
         const adapter = new FetchApiAdapter();
         const request = new Request(`${BASE_URL}/todos`, {
           method: "POST",
@@ -480,7 +739,7 @@ describe("FetchApiAdapter", () => {
     });
 
     describe("Prototype Pollution Protection", () => {
-      test("should store __proto__ as a regular property in query params", async () => {
+      test("stores __proto__ as a regular property in query params", async () => {
         const adapter = new FetchApiAdapter();
         const request = new Request(`${BASE_URL}/todos?__proto__=polluted`);
         const before = ({} as any).__proto__;
@@ -492,20 +751,21 @@ describe("FetchApiAdapter", () => {
         expect(Object.prototype).not.toHaveProperty("polluted");
       });
 
-      test("should store multi-value __proto__ keys safely in query params", async () => {
+      test("stores repeated __proto__ query params without polluting safe keys", async () => {
         const adapter = new FetchApiAdapter();
         const request = new Request(
-          `${BASE_URL}/todos?__proto__=a&__proto__=b`
+          `${BASE_URL}/todos?title=safe&__proto__=a&__proto__=b`
         );
 
         const result = await adapter.toRequest(request);
 
+        expect(result.query?.["title"]).toBe("safe");
         expect(result.query?.["__proto__"]).toEqual(["a", "b"]);
         expect(Object.prototype).not.toHaveProperty("a");
         expect(Object.prototype).not.toHaveProperty("b");
       });
 
-      test("should store __proto__ as a regular property in multipart/form-data", async () => {
+      test("stores __proto__ as a regular property in multipart form data", async () => {
         const adapter = new FetchApiAdapter();
         const formData = new FormData();
         formData.append("__proto__", "polluted");
@@ -524,7 +784,7 @@ describe("FetchApiAdapter", () => {
         expect(({} as any).__proto__).toBe(before);
       });
 
-      test("should store __proto__ as a regular property in form-urlencoded body", async () => {
+      test("stores __proto__ as a regular property in form-urlencoded bodies", async () => {
         const adapter = new FetchApiAdapter();
         const request = new Request(`${BASE_URL}/todos`, {
           method: "POST",
@@ -542,27 +802,42 @@ describe("FetchApiAdapter", () => {
         expect(({} as any).__proto__).toBe(before);
       });
 
-      test("should strip __proto__ from JSON body to prevent prototype pollution", async () => {
+      test("stores repeated __proto__ form keys without polluting safe values", async () => {
+        const adapter = new FetchApiAdapter();
+        const request = createAdapterRequest("/todos", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: "title=safe&__proto__=a&__proto__=b",
+        });
+
+        const result = await adapter.toRequest(request);
+
+        expect(result.body?.["title"]).toBe("safe");
+        expect(result.body?.["__proto__"]).toEqual(["a", "b"]);
+        expect(Object.prototype).not.toHaveProperty("a");
+        expect(Object.prototype).not.toHaveProperty("b");
+      });
+
+      test("strips top-level __proto__ from raw JSON request bodies", async () => {
         const adapter = new FetchApiAdapter();
         const request = new Request(`${BASE_URL}/todos`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: "legit",
-            __proto__: { isAdmin: true },
-          }),
+          body: '{"title":"legit","__proto__":{"isAdmin":true}}',
         });
         const before = ({} as any).__proto__;
 
         const result = await adapter.toRequest(request);
 
         expect(result.body.title).toBe("legit");
-        expect(result.body).not.toHaveProperty("__proto__");
+        expect(Object.hasOwn(result.body, "__proto__")).toBe(false);
         expect(({} as any).__proto__).toBe(before);
         expect(({} as any).isAdmin).toBeUndefined();
       });
 
-      test("should strip nested __proto__ from JSON body", async () => {
+      test("strips nested __proto__ from JSON request bodies", async () => {
         const adapter = new FetchApiAdapter();
         const body =
           '{"user": {"__proto__": {"isAdmin": true}, "name": "test"}}';
@@ -575,11 +850,26 @@ describe("FetchApiAdapter", () => {
         const result = await adapter.toRequest(request);
 
         expect(result.body.user.name).toBe("test");
-        expect(result.body.user).not.toHaveProperty("__proto__");
+        expect(Object.hasOwn(result.body.user, "__proto__")).toBe(false);
         expect(({} as any).isAdmin).toBeUndefined();
       });
 
-      test("should allow constructor and prototype as regular JSON keys", async () => {
+      test("strips __proto__ recursively from objects inside JSON arrays", async () => {
+        const adapter = new FetchApiAdapter();
+        const request = createAdapterRequest("/todos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: '[{"title":"safe","__proto__":{"isAdmin":true}}]',
+        });
+
+        const result = await adapter.toRequest(request);
+
+        expect(result.body).toEqual([{ title: "safe" }]);
+        expect(Object.hasOwn(result.body[0], "__proto__")).toBe(false);
+        expect(({} as any).isAdmin).toBeUndefined();
+      });
+
+      test("allows constructor and prototype as regular JSON keys", async () => {
         const adapter = new FetchApiAdapter();
         const request = new Request(`${BASE_URL}/todos`, {
           method: "POST",
@@ -595,7 +885,7 @@ describe("FetchApiAdapter", () => {
     });
 
     describe("Body Size Limit", () => {
-      test("should throw PayloadTooLargeError with correct properties when Content-Length exceeds limit", async () => {
+      test("rejects requests when Content-Length exceeds the limit", async () => {
         const adapter = new FetchApiAdapter({ maxBodySize: 100 });
         const body = "x".repeat(200);
         const request = new Request(`${BASE_URL}/todos`, {
@@ -610,7 +900,7 @@ describe("FetchApiAdapter", () => {
         await expectPayloadTooLargeError(adapter.toRequest(request), 200, 100);
       });
 
-      test("should accept bodies within the limit", async () => {
+      test("accepts requests when Content-Length is within the limit", async () => {
         const adapter = new FetchApiAdapter({ maxBodySize: 1000 });
         const body = "hello";
         const request = new Request(`${BASE_URL}/todos`, {
@@ -627,7 +917,7 @@ describe("FetchApiAdapter", () => {
         expect(result.body).toBe("hello");
       });
 
-      test("should ignore invalid Content-Length header gracefully", async () => {
+      test("accepts valid bodies when Content-Length is invalid", async () => {
         const adapter = new FetchApiAdapter({ maxBodySize: 100 });
         const request = new Request(`${BASE_URL}/todos`, {
           method: "POST",
@@ -643,7 +933,21 @@ describe("FetchApiAdapter", () => {
         expect(result.body).toBe("hello");
       });
 
-      test("should fall back to streaming validation for negative Content-Length", async () => {
+      test("rejects oversized requests with invalid Content-Length by reading the body", async () => {
+        const adapter = new FetchApiAdapter({ maxBodySize: 4 });
+        const request = createAdapterRequest("/todos", {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/plain",
+            "Content-Length": "not-a-number",
+          },
+          body: "hello",
+        });
+
+        await expectPayloadTooLargeError(adapter.toRequest(request), 5, 4);
+      });
+
+      test("falls back to streaming validation for negative Content-Length", async () => {
         const adapter = new FetchApiAdapter({ maxBodySize: 100 });
         const request = new Request(`${BASE_URL}/todos`, {
           method: "POST",
@@ -659,7 +963,7 @@ describe("FetchApiAdapter", () => {
         expect(result.body).toEqual({ ok: true });
       });
 
-      test("should handle null body gracefully in streaming validation", async () => {
+      test("omits null bodies during streaming validation", async () => {
         const adapter = new FetchApiAdapter({ maxBodySize: 100 });
         const request = new Request(`${BASE_URL}/todos`, {
           method: "POST",
@@ -671,7 +975,7 @@ describe("FetchApiAdapter", () => {
         expect(result.body).toBeUndefined();
       });
 
-      test("should accept body at exact maxBodySize boundary", async () => {
+      test("accepts bodies at the exact Content-Length limit", async () => {
         const adapter = new FetchApiAdapter({ maxBodySize: 100 });
         const body = "x".repeat(100);
         const request = new Request(`${BASE_URL}/todos`, {
@@ -688,7 +992,7 @@ describe("FetchApiAdapter", () => {
         expect(result.body).toBe(body);
       });
 
-      test("should use 1 MB default when maxBodySize is not configured", async () => {
+      test("uses the default body size limit when maxBodySize is not configured", async () => {
         const adapter = new FetchApiAdapter();
         const body = "x".repeat(10000);
         const request = new Request(`${BASE_URL}/todos`, {
@@ -705,7 +1009,7 @@ describe("FetchApiAdapter", () => {
         expect(result.body).toBe(body);
       });
 
-      test("should reject oversized body when Content-Length header is missing", async () => {
+      test("rejects oversized bodies when Content-Length is missing", async () => {
         const adapter = new FetchApiAdapter({ maxBodySize: 50 });
         const request = new Request(`${BASE_URL}/todos`, {
           method: "POST",
@@ -720,23 +1024,111 @@ describe("FetchApiAdapter", () => {
 
       test("rejects under-declared Content-Length streams and cancels the stream", async () => {
         const cancel = vi.fn().mockResolvedValue(undefined);
-        const body = createOversizedStream(cancel);
+        const actualBodySize = 6;
+        const maxBodySize = 4;
+        const body = createSixByteStream(cancel);
         const request = createAdapterRequestWithStream(
           "/todos",
           {
             "Content-Type": "application/octet-stream",
-            "Content-Length": "4",
+            "Content-Length": String(maxBodySize),
           },
           body
         );
-        const adapter = new FetchApiAdapter({ maxBodySize: 4 });
+        const adapter = new FetchApiAdapter({ maxBodySize });
 
-        await expectPayloadTooLargeError(adapter.toRequest(request), 6, 4);
+        await expectPayloadTooLargeError(
+          adapter.toRequest(request),
+          actualBodySize,
+          maxBodySize
+        );
 
         expect(cancel).toHaveBeenCalledTimes(1);
       });
 
-      test("should accept body within limit when Content-Length header is missing", async () => {
+      test("accepts stream chunks that exactly reach the body limit", async () => {
+        const cancel = vi.fn().mockResolvedValue(undefined);
+        const body = createBodyStream(["he", "llo"], cancel);
+        const request = createAdapterRequestWithStream(
+          "/todos",
+          { "Content-Type": "text/plain" },
+          body
+        );
+        const adapter = new FetchApiAdapter({ maxBodySize: 5 });
+
+        const result = await adapter.toRequest(request);
+
+        expect(result.body).toBe("hello");
+        expect(cancel).not.toHaveBeenCalled();
+      });
+
+      test("rejects stream chunks one byte over the body limit and cancels the stream", async () => {
+        const cancel = vi.fn().mockResolvedValue(undefined);
+        const body = createBodyStream(["he", "ll", "o"], cancel);
+        const request = createAdapterRequestWithStream(
+          "/todos",
+          { "Content-Type": "text/plain" },
+          body
+        );
+        const adapter = new FetchApiAdapter({ maxBodySize: 4 });
+
+        await expectPayloadTooLargeError(adapter.toRequest(request), 5, 4);
+
+        expect(cancel).toHaveBeenCalledTimes(1);
+      });
+
+      test("does not cancel streams that finish within the body limit", async () => {
+        const cancel = vi.fn().mockResolvedValue(undefined);
+        const body = createBodyStream(["safe"], cancel);
+        const request = createAdapterRequestWithStream(
+          "/todos",
+          { "Content-Type": "text/plain" },
+          body
+        );
+        const adapter = new FetchApiAdapter({ maxBodySize: 4 });
+
+        const result = await adapter.toRequest(request);
+
+        expect(result.body).toBe("safe");
+        expect(cancel).not.toHaveBeenCalled();
+      });
+
+      test("trusts satisfied prevalidated request bodies without duplicate streaming rejection", async () => {
+        const bodyThatWouldFailIfReread = "hello";
+        const fetchMaxBodySize = 4;
+        const request = createPrevalidatedRequest(
+          "/todos",
+          {
+            method: "POST",
+            headers: { "Content-Type": "text/plain" },
+            body: bodyThatWouldFailIfReread,
+          },
+          fetchMaxBodySize
+        );
+        const adapter = new FetchApiAdapter({ maxBodySize: fetchMaxBodySize });
+
+        const result = await adapter.toRequest(request);
+
+        expect(result.body).toBe(bodyThatWouldFailIfReread);
+      });
+
+      test("revalidates looser prevalidated request bodies through the stream", async () => {
+        const cancel = vi.fn().mockResolvedValue(undefined);
+        const body = createBodyStream(["hello"], cancel);
+        const request = createAdapterRequestWithStream(
+          "/todos",
+          { "Content-Type": "text/plain" },
+          body
+        );
+        markRequestBodyPrevalidated(request, createNodeBodyLimitPolicy(8));
+        const adapter = new FetchApiAdapter({ maxBodySize: 4 });
+
+        await expectPayloadTooLargeError(adapter.toRequest(request), 5, 4);
+
+        expect(cancel).toHaveBeenCalledTimes(1);
+      });
+
+      test("accepts bodies within the limit when Content-Length is missing", async () => {
         const adapter = new FetchApiAdapter({ maxBodySize: 200 });
         const request = new Request(`${BASE_URL}/todos`, {
           method: "POST",
@@ -750,7 +1142,7 @@ describe("FetchApiAdapter", () => {
         expect(result.body).toEqual({ title: "Hello" });
       });
 
-      test("should accept body at exact limit when Content-Length header is missing", async () => {
+      test("accepts bodies at the exact limit when Content-Length is missing", async () => {
         const body = "x".repeat(50);
         const adapter = new FetchApiAdapter({ maxBodySize: 50 });
         const request = new Request(`${BASE_URL}/todos`, {
@@ -765,21 +1157,47 @@ describe("FetchApiAdapter", () => {
         expect(result.body).toBe(body);
       });
 
-      test("should reject oversized multipart body when Content-Length header is missing", async () => {
-        const adapter = new FetchApiAdapter({ maxBodySize: 4 });
+      test("rejects oversized multipart bodies when Content-Length is missing", async () => {
+        const actualBodySize = 6;
+        const maxBodySize = 4;
+        const adapter = new FetchApiAdapter({ maxBodySize });
         const request = createAdapterRequestWithStream(
           "/todos",
           { "Content-Type": "multipart/form-data; boundary=typeweaver-test" },
-          createOversizedStream(vi.fn())
+          createSixByteStream(vi.fn())
         );
 
-        await expectPayloadTooLargeError(adapter.toRequest(request), 6, 4);
+        await expectPayloadTooLargeError(
+          adapter.toRequest(request),
+          actualBodySize,
+          maxBodySize
+        );
+      });
+
+      test("uses explicit bodyLimitPolicy instead of maxBodySize", async () => {
+        const actualBodySize = 5;
+        const maxBodySize = 4;
+        const adapter = new FetchApiAdapter({
+          maxBodySize: 10,
+          bodyLimitPolicy: createNodeBodyLimitPolicy(maxBodySize),
+        });
+        const request = createAdapterRequest("/todos", {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: "x".repeat(actualBodySize),
+        });
+
+        await expectPayloadTooLargeError(
+          adapter.toRequest(request),
+          actualBodySize,
+          maxBodySize
+        );
       });
     });
   });
 
   describe("toResponse", () => {
-    test("should convert status code", () => {
+    test("converts status code", () => {
       const adapter = new FetchApiAdapter();
 
       const response = adapter.toResponse({ statusCode: 201 });
@@ -787,7 +1205,7 @@ describe("FetchApiAdapter", () => {
       expect(response.status).toBe(201);
     });
 
-    test("should convert JSON body and auto-set content-type", () => {
+    test("returns object response bodies as JSON with a JSON content type", async () => {
       const adapter = new FetchApiAdapter();
 
       const response = adapter.toResponse({
@@ -795,11 +1213,29 @@ describe("FetchApiAdapter", () => {
         body: { id: "1", title: "Todo" },
       });
 
+      const text = await response.text();
       expect(response.status).toBe(200);
       expect(response.headers.get("content-type")).toBe("application/json");
+      expect(text).toBe('{"id":"1","title":"Todo"}');
     });
 
-    test("should handle string body without auto content-type", async () => {
+    test.each([
+      { scenario: "false", body: false, expected: "false" },
+      { scenario: "zero", body: 0, expected: "0" },
+    ])(
+      "returns $scenario response bodies as JSON with a JSON content type",
+      async ({ body, expected }) => {
+        const adapter = new FetchApiAdapter();
+
+        const response = adapter.toResponse({ statusCode: 200, body });
+
+        const text = await response.text();
+        expect(response.headers.get("content-type")).toBe("application/json");
+        expect(text).toBe(expected);
+      }
+    );
+
+    test("preserves string bodies without defaulting content-type to JSON", async () => {
       const adapter = new FetchApiAdapter();
 
       const response = adapter.toResponse({
@@ -812,7 +1248,7 @@ describe("FetchApiAdapter", () => {
       expect(response.headers.get("content-type")).not.toBe("application/json");
     });
 
-    test("should handle undefined body", async () => {
+    test("returns an empty response body for undefined bodies", async () => {
       const adapter = new FetchApiAdapter();
 
       const response = adapter.toResponse({ statusCode: 204 });
@@ -821,7 +1257,7 @@ describe("FetchApiAdapter", () => {
       expect(text).toBe("");
     });
 
-    test("should handle explicit null body", async () => {
+    test("returns an empty response body for explicit null bodies", async () => {
       const adapter = new FetchApiAdapter();
 
       const response = adapter.toResponse({ statusCode: 204, body: null });
@@ -830,7 +1266,7 @@ describe("FetchApiAdapter", () => {
       expect(text).toBe("");
     });
 
-    test("should handle Blob body without auto content-type", async () => {
+    test("uses Blob content-type when no explicit header is present", async () => {
       const adapter = new FetchApiAdapter();
       const blob = new Blob(["binary data"], {
         type: "application/octet-stream",
@@ -848,7 +1284,7 @@ describe("FetchApiAdapter", () => {
       expect(result.size).toBe(blob.size);
     });
 
-    test("should not infer content-type for Blob body without type", async () => {
+    test("does not infer content-type for Blob bodies without a type", async () => {
       const adapter = new FetchApiAdapter();
       const blob = new Blob(["binary data"]);
 
@@ -862,7 +1298,7 @@ describe("FetchApiAdapter", () => {
       expect(result.size).toBe(blob.size);
     });
 
-    test("should prefer explicit Content-Type header over Blob type", async () => {
+    test("preserves explicit Content-Type headers over Blob types", async () => {
       const adapter = new FetchApiAdapter();
       const blob = new Blob(["binary data"], {
         type: "application/octet-stream",
@@ -879,7 +1315,7 @@ describe("FetchApiAdapter", () => {
       expect(result.size).toBe(blob.size);
     });
 
-    test("should handle ArrayBuffer body without auto content-type", async () => {
+    test("preserves ArrayBuffer bodies without defaulting content-type to JSON", async () => {
       const adapter = new FetchApiAdapter();
       const buffer = new TextEncoder().encode("binary data").buffer;
 
@@ -893,7 +1329,7 @@ describe("FetchApiAdapter", () => {
       expect(result.byteLength).toBe(buffer.byteLength);
     });
 
-    test("should JSON.stringify non-string, non-binary bodies", async () => {
+    test("serializes non-string and non-binary bodies as JSON", async () => {
       const adapter = new FetchApiAdapter();
 
       const response = adapter.toResponse({
@@ -906,7 +1342,7 @@ describe("FetchApiAdapter", () => {
       expect(text).toBe("[1,2,3]");
     });
 
-    test("should set single-value response headers", () => {
+    test("sets single-value response headers", () => {
       const adapter = new FetchApiAdapter();
 
       const response = adapter.toResponse({
@@ -918,7 +1354,7 @@ describe("FetchApiAdapter", () => {
       expect(response.headers.get("x-request-id")).toBe("abc");
     });
 
-    test("should set multi-value response headers", () => {
+    test("sets multi-value response headers", () => {
       const adapter = new FetchApiAdapter();
 
       const response = adapter.toResponse({
@@ -927,12 +1363,10 @@ describe("FetchApiAdapter", () => {
         body: {},
       });
 
-      const cookies = response.headers.get("set-cookie");
-      expect(cookies).toContain("a=1");
-      expect(cookies).toContain("b=2");
+      expect(response.headers.getSetCookie()).toEqual(["a=1", "b=2"]);
     });
 
-    test("should not override explicit Content-Type header", () => {
+    test("preserves explicit Content-Type headers for JSON response bodies", async () => {
       const adapter = new FetchApiAdapter();
 
       const response = adapter.toResponse({
@@ -941,10 +1375,39 @@ describe("FetchApiAdapter", () => {
         body: { html: true },
       });
 
+      const text = await response.text();
+
       expect(response.headers.get("content-type")).toBe("text/html");
+      expect(text).toBe('{"html":true}');
     });
 
-    test("should throw ResponseSerializationError for non-serializable response body", () => {
+    test("ignores undefined response headers from untyped callers", () => {
+      const adapter = new FetchApiAdapter();
+
+      const response = adapter.toResponse(
+        anUntypedResponseWithHeaders({
+          "X-Skipped": undefined,
+          "X-Kept": "kept",
+        })
+      );
+
+      expect(response.headers.has("x-skipped")).toBe(false);
+      expect(response.headers.get("x-kept")).toBe("kept");
+    });
+
+    test("coerces numeric response headers from untyped callers", () => {
+      const adapter = new FetchApiAdapter();
+
+      const response = adapter.toResponse(
+        anUntypedResponseWithHeaders({
+          "X-Count": 42,
+        })
+      );
+
+      expect(response.headers.get("x-count")).toBe("42");
+    });
+
+    test("throws ResponseSerializationError for circular response bodies", () => {
       const adapter = new FetchApiAdapter();
       const circular: Record<string, unknown> = {};
       circular.self = circular;
@@ -953,5 +1416,26 @@ describe("FetchApiAdapter", () => {
         adapter.toResponse({ statusCode: 200, body: circular })
       ).toThrow(ResponseSerializationError);
     });
+
+    test("throws ResponseSerializationError for BigInt response bodies", () => {
+      const adapter = new FetchApiAdapter();
+
+      expect(() =>
+        adapter.toResponse({ statusCode: 200, body: BigInt(1) })
+      ).toThrow(ResponseSerializationError);
+    });
+
+    test.each([
+      { scenario: "function", body: () => "not serializable" },
+      { scenario: "symbol", body: Symbol("not serializable") },
+      { scenario: "toJSON undefined", body: { toJSON: () => undefined } },
+    ])(
+      "throws ResponseSerializationError for unserializable $scenario response bodies",
+      ({ body }) => {
+        const error = captureResponseSerializationError(body);
+
+        expect(error.cause).toBeInstanceOf(TypeError);
+      }
+    );
   });
 });

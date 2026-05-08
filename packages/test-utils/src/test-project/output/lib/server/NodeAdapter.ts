@@ -6,6 +6,7 @@
  */
 
 import {
+  badRequestDefaultError,
   createDefaultErrorBody,
   internalServerErrorDefaultError,
   payloadTooLargeDefaultError,
@@ -36,6 +37,15 @@ type DrainRequestOptions = {
 };
 
 const REQUEST_DRAIN_TIMEOUT_MS = 5_000;
+const ORIGIN_FORM_BASE_URL_PROTOCOL = "http:";
+const AUTHORITY_LIKE_REQUEST_TARGET_PREFIX = /^[\\/]{2}/;
+const ASTERISK_FORM_REQUEST_TARGET = "*";
+
+type ParsedAuthority = {
+  readonly host: string;
+  readonly hostname: string;
+  readonly port: string;
+};
 
 /**
  * Adapts a `TypeweaverApp` to Node.js `http.createServer`.
@@ -78,12 +88,16 @@ async function handleRequest(
   reportError: (error: unknown) => void,
 ): Promise<void> {
   try {
-    const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
+    const url = createRequestUrl(req);
+    if (url === undefined) {
+      writeBadRequestResponse(req, res, bodyLimitPolicy.maxBodySize);
+      return;
+    }
     const shouldValidateBody = shouldValidateRequestBody(req.method);
 
     enforceContentLengthLimit(req, bodyLimitPolicy.maxBodySize);
 
-    if (!shouldValidateBody) {
+    if (!shouldValidateBody && hasReadableRequestBody(req)) {
       const drainResult = await drainRequest(req, bodyLimitPolicy.maxBodySize, {
         destroyOnLimitExceeded: false,
       });
@@ -104,7 +118,7 @@ async function handleRequest(
 
     const request = new Request(url, {
       method: req.method,
-      headers: req.headers as Record<string, string>,
+      headers: createRequestHeaders(req.headers),
       body,
     });
     if (shouldValidateBody) {
@@ -112,6 +126,7 @@ async function handleRequest(
     }
 
     const response = await app.fetch(request);
+    const responseBody = await readWritableResponseBody(req.method, response, reportError);
 
     response.headers.forEach((value, key) => {
       if (key.toLowerCase() !== "set-cookie") {
@@ -123,25 +138,268 @@ async function handleRequest(
       res.setHeader("set-cookie", cookies);
     }
     res.writeHead(response.status);
-    res.end(Buffer.from(await response.arrayBuffer()));
+    res.end(responseBody);
   } catch (error) {
     reportError(error);
 
     if (isRequestBodyLimitError(error)) {
-      writeDefaultErrorResponse(res, payloadTooLargeDefaultError, () => {
-        void drainRequest(req, bodyLimitPolicy.maxBodySize, {
-          destroyOnLimitExceeded: true,
-        });
+      writeDefaultErrorResponse(res, payloadTooLargeDefaultError, {
+        method: req.method,
+        onFinished: () => {
+          void drainRequest(req, bodyLimitPolicy.maxBodySize, {
+            destroyOnLimitExceeded: true,
+          });
+        },
       });
       return;
     }
 
-    writeDefaultErrorResponse(res, internalServerErrorDefaultError);
+    writeDefaultErrorResponse(res, internalServerErrorDefaultError, {
+      method: req.method,
+    });
+  }
+}
+
+function createRequestUrl(req: IncomingMessage): URL | undefined {
+  const rawUrl = req.url ?? "/";
+
+  if (rawUrl === ASTERISK_FORM_REQUEST_TARGET) {
+    return createAsteriskFormRequestUrl(req);
+  }
+
+  if (hasAuthorityLikeRequestTargetPrefix(rawUrl)) {
+    return undefined;
+  }
+
+  try {
+    const url = new URL(rawUrl);
+    return isAbsoluteRequestHostAllowed(url, req) ? url : undefined;
+  } catch (error) {
+    if (!(error instanceof TypeError) || !rawUrl.startsWith("/")) {
+      throw error;
+    }
+  }
+
+  const host = parseRequestHostHeader(req, ORIGIN_FORM_BASE_URL_PROTOCOL);
+  if (host === undefined) {
+    return undefined;
+  }
+
+  return new URL(rawUrl, `${ORIGIN_FORM_BASE_URL_PROTOCOL}//${host.host}`);
+}
+
+function createAsteriskFormRequestUrl(req: IncomingMessage): URL | undefined {
+  if (req.method !== "OPTIONS") {
+    return undefined;
+  }
+
+  const host = parseRequestHostHeader(req, ORIGIN_FORM_BASE_URL_PROTOCOL);
+  if (host === undefined) {
+    return undefined;
+  }
+
+  return new URL(ASTERISK_FORM_REQUEST_TARGET, `${ORIGIN_FORM_BASE_URL_PROTOCOL}//${host.host}/`);
+}
+
+function hasAuthorityLikeRequestTargetPrefix(rawUrl: string): boolean {
+  return AUTHORITY_LIKE_REQUEST_TARGET_PREFIX.test(rawUrl);
+}
+
+function isAbsoluteRequestHostAllowed(url: URL, req: IncomingMessage): boolean {
+  const host = parseRequestHostHeader(req, url.protocol);
+  if (host === undefined) {
+    return false;
+  }
+
+  const urlAuthority = getUrlAuthority(url);
+  return (
+    host.hostname.toLowerCase() === urlAuthority.hostname.toLowerCase() &&
+    host.port === urlAuthority.port
+  );
+}
+
+function parseRequestHostHeader(
+  req: IncomingMessage,
+  protocol: string,
+): ParsedAuthority | undefined {
+  if (!hasExactlyOneHostHeaderLine(req)) {
+    return undefined;
+  }
+
+  return parseHostHeader(req.headers.host, protocol);
+}
+
+function hasExactlyOneHostHeaderLine(req: IncomingMessage): boolean {
+  const headersDistinctHostCount = getHeadersDistinctHostCount(req);
+  if (headersDistinctHostCount !== undefined && headersDistinctHostCount !== 1) {
+    return false;
+  }
+
+  const rawHostHeaderCount = countRawHostHeaderLines(req.rawHeaders);
+  if (rawHostHeaderCount > 0) {
+    return rawHostHeaderCount === 1;
+  }
+
+  return headersDistinctHostCount === 1;
+}
+
+function getHeadersDistinctHostCount(req: IncomingMessage): number | undefined {
+  const hostHeader = req.headersDistinct?.host;
+  if (hostHeader === undefined) {
+    return undefined;
+  }
+
+  return Array.isArray(hostHeader) ? hostHeader.length : 1;
+}
+
+function countRawHostHeaderLines(rawHeaders: readonly string[]): number {
+  let count = 0;
+
+  for (let index = 0; index < rawHeaders.length; index += 2) {
+    if (rawHeaders[index]?.toLowerCase() === "host") {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
+function parseHostHeader(
+  hostHeader: IncomingMessage["headers"]["host"],
+  protocol: string,
+): ParsedAuthority | undefined {
+  if (hostHeader === undefined || Array.isArray(hostHeader)) {
+    return undefined;
+  }
+
+  const host = hostHeader.trim();
+  if (host === "" || host !== hostHeader) {
+    return undefined;
+  }
+
+  try {
+    const parsed = new URL(`${protocol}//${host}`);
+    if (
+      parsed.username !== "" ||
+      parsed.password !== "" ||
+      parsed.pathname !== "/" ||
+      parsed.search !== "" ||
+      parsed.hash !== ""
+    ) {
+      return undefined;
+    }
+
+    return getUrlAuthority(parsed);
+  } catch {
+    return undefined;
+  }
+}
+
+function getUrlAuthority(url: URL): ParsedAuthority {
+  return {
+    host: url.host,
+    hostname: url.hostname,
+    port: getEffectivePort(url),
+  };
+}
+
+function getEffectivePort(url: URL): string {
+  return url.port === "" ? getDefaultPort(url.protocol) : url.port;
+}
+
+function getDefaultPort(protocol: string): string {
+  switch (protocol) {
+    case "http:":
+    case "ws:":
+      return "80";
+    case "https:":
+    case "wss:":
+      return "443";
+    case "ftp:":
+      return "21";
+    default:
+      return "";
   }
 }
 
 function shouldValidateRequestBody(method?: string): boolean {
   return method !== "GET" && method !== "HEAD";
+}
+
+function shouldWriteResponseBody(method: string | undefined, status: number): boolean {
+  return method !== "HEAD" && status !== 204 && status !== 304;
+}
+
+async function readWritableResponseBody(
+  method: string | undefined,
+  response: Response,
+  reportError: (error: unknown) => void,
+): Promise<Buffer | undefined> {
+  if (shouldWriteResponseBody(method, response.status)) {
+    return Buffer.from(await response.arrayBuffer());
+  }
+
+  cancelSuppressedResponseBody(response, reportError);
+  return undefined;
+}
+
+function cancelSuppressedResponseBody(
+  response: Response,
+  reportError: (error: unknown) => void,
+): void {
+  try {
+    void response.body?.cancel().catch((error) => {
+      reportSuppressedResponseBodyCancelError(error, reportError);
+    });
+  } catch (error) {
+    reportSuppressedResponseBodyCancelError(error, reportError);
+  }
+}
+
+function reportSuppressedResponseBodyCancelError(
+  error: unknown,
+  reportError: (error: unknown) => void,
+): void {
+  try {
+    reportError(error);
+  } catch (onErrorFailure) {
+    console.error("TypeweaverApp: onError callback threw while handling error", {
+      onErrorFailure,
+      originalError: error,
+    });
+  }
+}
+
+function hasReadableRequestBody(req: IncomingMessage): boolean {
+  return (
+    req.headers["content-length"] !== undefined || req.headers["transfer-encoding"] !== undefined
+  );
+}
+
+function createRequestHeaders(headers: IncomingMessage["headers"]): Headers {
+  const requestHeaders = new Headers();
+
+  for (const [name, value] of Object.entries(headers)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      if (name.toLowerCase() === "cookie") {
+        requestHeaders.set(name, value.join("; "));
+        continue;
+      }
+
+      for (const item of value) {
+        requestHeaders.append(name, item);
+      }
+      continue;
+    }
+
+    requestHeaders.set(name, value);
+  }
+
+  return requestHeaders;
 }
 
 function isRequestBodyLimitError(
@@ -163,8 +421,14 @@ function enforceContentLengthLimit(req: IncomingMessage, maxBodySize: number): v
 
 function writeDefaultErrorResponse(
   res: ServerResponse,
-  error: typeof payloadTooLargeDefaultError | typeof internalServerErrorDefaultError,
-  onFinished?: () => void,
+  error:
+    | typeof badRequestDefaultError
+    | typeof payloadTooLargeDefaultError
+    | typeof internalServerErrorDefaultError,
+  options: {
+    readonly method?: string;
+    readonly onFinished?: () => void;
+  } = {},
 ): void {
   if (!res.headersSent) {
     res.writeHead(error.statusCode, {
@@ -172,11 +436,44 @@ function writeDefaultErrorResponse(
     });
   }
 
-  if (onFinished !== undefined) {
-    res.once("finish", onFinished);
+  if (options.onFinished !== undefined) {
+    res.once("finish", options.onFinished);
   }
 
-  res.end(JSON.stringify(createDefaultErrorBody(error)));
+  const body = shouldWriteResponseBody(options.method, error.statusCode)
+    ? JSON.stringify(createDefaultErrorBody(error))
+    : undefined;
+  res.end(body);
+}
+
+function writeBadRequestResponse(
+  req: IncomingMessage,
+  res: ServerResponse,
+  maxBodySize: number,
+): void {
+  writeDefaultErrorResponse(res, badRequestDefaultError, {
+    method: req.method,
+    onFinished: createRejectedRequestBodyCleanup(req, maxBodySize),
+  });
+}
+
+function createRejectedRequestBodyCleanup(
+  req: IncomingMessage,
+  maxBodySize: number,
+): (() => void) | undefined {
+  if (!hasReadableRequestBody(req)) {
+    return undefined;
+  }
+
+  return () => {
+    const contentLength = parseContentLength(req.headers["content-length"]);
+    if (contentLength !== undefined && isBodySizeOverLimit(contentLength, maxBodySize)) {
+      req.destroy();
+      return;
+    }
+
+    void drainRequest(req, maxBodySize, { destroyOnLimitExceeded: true });
+  };
 }
 
 async function drainRequest(

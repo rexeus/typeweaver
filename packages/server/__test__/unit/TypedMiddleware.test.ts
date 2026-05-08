@@ -1,27 +1,97 @@
+import { HttpMethod } from "@rexeus/typeweaver-core";
+import type { IHttpRequest, IHttpResponse } from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
 import { StateMap } from "../../src/lib/StateMap.js";
 import { defineMiddleware } from "../../src/lib/TypedMiddleware.js";
 import { TypeweaverApp } from "../../src/lib/TypeweaverApp.js";
-import { createServerContext } from "../helpers.js";
+import { TypeweaverRouter } from "../../src/lib/TypeweaverRouter.js";
+import {
+  createServerContext,
+  noopResponseValidator,
+  noopValidator,
+} from "../helpers.js";
+import type { RequestHandler } from "../../src/lib/RequestHandler.js";
 import type { InferState } from "../../src/lib/TypedMiddleware.js";
+import type { TypeweaverRouterOptions } from "../../src/lib/TypeweaverRouter.js";
 
-describe("TypedMiddleware", () => {
+type AuthState = { readonly userId: string };
+type PermissionsState = { readonly permissions: readonly string[] };
+type AuthResponseBody = {
+  readonly userId: string;
+  readonly permissions?: readonly string[];
+};
+type StateEchoHandlers<TState extends AuthState> = {
+  readonly handleGet: RequestHandler<IHttpRequest, IHttpResponse, TState>;
+};
+
+class StateEchoRouter<TState extends AuthState> extends TypeweaverRouter<
+  StateEchoHandlers<TState>
+> {
+  public constructor(
+    options: TypeweaverRouterOptions<StateEchoHandlers<TState>>
+  ) {
+    super(options);
+    this.route(
+      "getTest",
+      HttpMethod.GET,
+      "/test",
+      noopValidator,
+      noopResponseValidator,
+      this.requestHandlers.handleGet
+    );
+  }
+}
+
+function createAppThatEchoesMiddlewareState<TState extends AuthState>(
+  app: TypeweaverApp<TState>,
+  handleGet: StateEchoHandlers<TState>["handleGet"]
+): TypeweaverApp<TState> {
+  return app.route(
+    new StateEchoRouter<TState>({
+      validateRequests: false,
+      requestHandlers: { handleGet },
+    })
+  );
+}
+
+const echoAuthState: StateEchoHandlers<AuthState>["handleGet"] = async (
+  _req,
+  ctx
+) => ({
+  statusCode: 200,
+  body: { userId: ctx.state.get("userId") },
+});
+
+const echoAuthAndPermissionsState: StateEchoHandlers<
+  AuthState & PermissionsState
+>["handleGet"] = async (_req, ctx) => ({
+  statusCode: 200,
+  body: {
+    userId: ctx.state.get("userId"),
+    permissions: ctx.state.get("permissions"),
+  },
+});
+
+async function readAuthResponseBody(
+  response: Response
+): Promise<AuthResponseBody> {
+  return (await response.json()) as AuthResponseBody;
+}
+
+describe("typed middleware", () => {
   describe("defineMiddleware", () => {
-    test("should create a middleware descriptor with a handler", () => {
+    test("creates a middleware descriptor with a callable handler", () => {
       const mw = defineMiddleware<{ userId: string }>(async (_ctx, next) =>
         next({ userId: "u_1" })
       );
 
-      expect(mw).toHaveProperty("handler");
-      expect(mw).toHaveProperty("_brand");
       expect(typeof mw.handler).toBe("function");
     });
 
-    test("handler should pass state through next() and make it available downstream", async () => {
+    test("passes provided state through next to downstream handlers", async () => {
       const mw = defineMiddleware<{ userId: string }>(async (_ctx, next) => {
         return next({ userId: "u_42" });
       });
-
       const ctx = createServerContext();
 
       const response = await mw.handler(ctx, async state => {
@@ -32,97 +102,77 @@ describe("TypedMiddleware", () => {
         };
       });
 
-      expect(response.statusCode).toBe(200);
       expect(response.body).toEqual({ userId: "u_42" });
     });
 
-    test("pass-through middleware should not require state arg", () => {
+    test("allows pass-through middleware to call next without state", async () => {
       const mw = defineMiddleware(async (_ctx, next) => next());
+      const ctx = createServerContext();
 
-      expect(typeof mw.handler).toBe("function");
+      const response = await mw.handler(ctx, async () => ({
+        statusCode: 200,
+        body: { reached: true },
+      }));
+
+      expect(response.body).toEqual({ reached: true });
     });
   });
 
-  describe("TypeweaverApp typed use()", () => {
-    test("should accept typed middleware via use()", () => {
-      const auth = defineMiddleware<{ userId: string }>(async (_ctx, next) =>
-        next({ userId: "u_1" })
-      );
-
-      const app = new TypeweaverApp().use(auth);
-      expect(app).toBeInstanceOf(TypeweaverApp);
-    });
-
-    test("should chain multiple typed middlewares", () => {
-      const auth = defineMiddleware<{ userId: string }>(async (_ctx, next) =>
-        next({ userId: "u_1" })
-      );
-
-      const permissions = defineMiddleware<
-        { permissions: string[] },
-        { userId: string }
-      >(async (_ctx, next) => next({ permissions: ["read"] }));
-
-      const app = new TypeweaverApp().use(auth).use(permissions);
-      expect(app).toBeInstanceOf(TypeweaverApp);
-    });
-
-    test("should execute typed middleware at runtime", async () => {
-      const { TypeweaverRouter } =
-        await import("../../src/lib/TypeweaverRouter.js");
-      const { HttpMethod } = await import("@rexeus/typeweaver-core");
-      const { noopValidator, noopResponseValidator } =
-        await import("../helpers.js");
-
-      const auth = defineMiddleware<{ userId: string }>(async (_ctx, next) =>
+  describe("TypeweaverApp typed middleware", () => {
+    test("delivers middleware-provided state to mounted route handlers through fetch", async () => {
+      const auth = defineMiddleware<AuthState>(async (_ctx, next) =>
         next({ userId: "u_runtime" })
       );
-
-      type Handlers = { handleGet: any };
-      class TestRouter extends TypeweaverRouter<Handlers> {
-        public constructor(options: any) {
-          super(options);
-          this.route(
-            "getTest",
-            HttpMethod.GET,
-            "/test",
-            noopValidator,
-            noopResponseValidator,
-            async (req, ctx) => this.requestHandlers.handleGet(req, ctx)
-          );
-        }
-      }
-
-      const app = new TypeweaverApp().use(auth).route(
-        new TestRouter({
-          validateRequests: false,
-          requestHandlers: {
-            handleGet: async (_req: any, ctx: any) => ({
-              statusCode: 200,
-              body: { userId: ctx.state.get("userId") },
-            }),
-          },
-        })
+      const app = createAppThatEchoesMiddlewareState(
+        new TypeweaverApp().use(auth),
+        echoAuthState
       );
 
       const res = await app.fetch(new Request("http://localhost/test"));
-      const data = (await res.json()) as { userId: string };
-      expect(data.userId).toBe("u_runtime");
+      const data = await readAuthResponseBody(res);
+
+      expect(res.status).toBe(200);
+      expect(data).toEqual({ userId: "u_runtime" });
+    });
+
+    test("delivers state derived from upstream middleware to mounted route handlers", async () => {
+      const auth = defineMiddleware<AuthState>(async (_ctx, next) =>
+        next({ userId: "u_runtime" })
+      );
+      const permissions = defineMiddleware<PermissionsState, AuthState>(
+        async (ctx, next) => {
+          const userId = ctx.state.get("userId");
+          return next({ permissions: [`read:${userId}`] });
+        }
+      );
+      const app = createAppThatEchoesMiddlewareState(
+        new TypeweaverApp().use(auth).use(permissions),
+        echoAuthAndPermissionsState
+      );
+
+      const res = await app.fetch(new Request("http://localhost/test"));
+      const data = await readAuthResponseBody(res);
+
+      expect(res.status).toBe(200);
+      expect(data).toEqual({
+        userId: "u_runtime",
+        permissions: ["read:u_runtime"],
+      });
     });
   });
 
-  describe("Type-level safety", () => {
-    test("should reject wrong middleware ordering at compile time", () => {
+  describe("type-level safety checked by TypeScript", () => {
+    test("typecheck rejects middleware whose required state is missing", () => {
       const permissions = defineMiddleware<
         { permissions: string[] },
         { userId: string }
       >(async (_ctx, next) => next({ permissions: [] }));
 
-      // @ts-expect-error — requirements not met: userId is not in the initial empty state
+      // @ts-expect-error — userId is required before permissions can run.
       new TypeweaverApp().use(permissions);
     });
 
-    test("should accept middleware when requirements are met", () => {
+    test("typecheck accepts middleware whose required state is already available", () => {
       const auth = defineMiddleware<{ userId: string }>(async (_ctx, next) =>
         next({ userId: "u_1" })
       );
@@ -131,43 +181,44 @@ describe("TypedMiddleware", () => {
         { userId: string }
       >(async (_ctx, next) => next({ permissions: [] }));
 
-      // No error — auth provides userId before permissions requires it
       new TypeweaverApp().use(auth).use(permissions);
     });
 
-    test("should reject accessing non-existent state key at compile time", () => {
+    test("typecheck rejects access to unknown state keys", () => {
       const state = new StateMap<{ userId: string }>();
-      // @ts-expect-error — "nonExistent" is not a key of { userId: string }
+
+      // @ts-expect-error — nonExistent is not a key of the typed state.
       state.get("nonExistent");
     });
 
-    test("should reject wrong value type in state.set() at compile time", () => {
+    test("typecheck rejects state values with the wrong type", () => {
       const state = new StateMap<{ userId: string }>();
-      // @ts-expect-error — number is not assignable to string
+
+      // @ts-expect-error — userId must be a string.
       state.set("userId", 123);
     });
 
-    test("InferState should extract accumulated state type", () => {
+    test("typecheck infers accumulated state from a typed app", () => {
       const auth = defineMiddleware<{ userId: string }>(async (_ctx, next) =>
         next({ userId: "test" })
       );
       const app = new TypeweaverApp().use(auth);
 
       type State = InferState<typeof app>;
+      const inferredState: State = { userId: "test" };
 
-      // Verify the inferred type structurally by creating a conforming value
-      const _check: State = { userId: "test" };
-      expect(_check.userId).toBe("test");
+      void inferredState;
     });
 
-    test("should require state argument when TProvides has keys", () => {
-      // @ts-expect-error — next() requires { userId: string } argument
+    test("typecheck requires next state when middleware declares provided keys", () => {
+      // @ts-expect-error — next must receive the declared userId state.
       defineMiddleware<{ userId: string }>(async (_ctx, next) => next());
     });
 
-    test("should allow next() without argument when TProvides is empty", () => {
-      // No error — pass-through middleware doesn't provide state
-      defineMiddleware(async (_ctx, next) => next());
+    test("typecheck allows next without state for pass-through middleware", () => {
+      const passThrough = defineMiddleware(async (_ctx, next) => next());
+
+      void passThrough;
     });
   });
 });

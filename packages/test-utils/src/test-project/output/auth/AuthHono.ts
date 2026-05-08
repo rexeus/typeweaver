@@ -11,7 +11,7 @@ import {
   TypeweaverHono,
   type HonoRequestHandler,
   type TypeweaverHonoOptions,
-} from "./../lib/hono/index.js";
+} from "../lib/hono/index.js";
 
 import type { IAccessTokenRequest } from "./AccessTokenRequest.js";
 import { AccessTokenRequestValidator } from "./AccessTokenRequestValidator.js";

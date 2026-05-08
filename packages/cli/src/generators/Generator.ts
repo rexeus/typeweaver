@@ -27,34 +27,60 @@ export const assertSafeCleanTarget = (
   }
 
   const resolvedWorkingDirectory = path.resolve(currentWorkingDirectory);
+  const canonicalWorkingDirectory = fs.realpathSync.native(
+    resolvedWorkingDirectory
+  );
   const resolvedOutputDir = path.resolve(
     resolvedWorkingDirectory,
     trimmedOutputDir
   );
-  const filesystemRoot = path.parse(resolvedOutputDir).root;
+  const canonicalOutputDir = canonicalizePathForContainment(resolvedOutputDir);
+  const filesystemRoot = path.parse(canonicalOutputDir).root;
 
-  if (resolvedOutputDir === filesystemRoot) {
+  if (canonicalOutputDir === filesystemRoot) {
     throw new Error(
       `Refusing to clean '${outputDir}' because it resolves to the filesystem root.`
     );
   }
 
-  if (resolvedOutputDir === resolvedWorkingDirectory) {
+  if (
+    resolvedOutputDir === resolvedWorkingDirectory ||
+    canonicalOutputDir === canonicalWorkingDirectory
+  ) {
     throw new Error(
       `Refusing to clean '${outputDir}' because it resolves to the current working directory.`
     );
   }
 
-  const protectedWorkspaceRoot = findProtectedWorkspaceRoot(
+  const logicalProtectedWorkspaceRoot = findProtectedWorkspaceRoot(
     resolvedWorkingDirectory
   );
+  const canonicalProtectedWorkspaceRoot = findProtectedWorkspaceRoot(
+    canonicalWorkingDirectory
+  );
+  const protectedWorkspaceRoots = [
+    logicalProtectedWorkspaceRoot,
+    canonicalProtectedWorkspaceRoot,
+  ].filter((root): root is string => root !== undefined);
+  const protectedWorkspaceRootTarget = protectedWorkspaceRoots.find(
+    protectedWorkspaceRoot =>
+      resolvedOutputDir === protectedWorkspaceRoot ||
+      canonicalOutputDir === fs.realpathSync.native(protectedWorkspaceRoot)
+  );
+
+  if (protectedWorkspaceRootTarget !== undefined) {
+    throw new Error(
+      `Refusing to clean '${outputDir}' because it resolves to the inferred workspace root '${protectedWorkspaceRootTarget}'. Choose a dedicated output subdirectory instead.`
+    );
+  }
 
   if (
-    protectedWorkspaceRoot !== undefined &&
-    resolvedOutputDir === protectedWorkspaceRoot
+    protectedWorkspaceRoots.length > 0 &&
+    (isSameOrDescendantOf(resolvedWorkingDirectory, resolvedOutputDir) ||
+      isSameOrDescendantOf(canonicalWorkingDirectory, canonicalOutputDir))
   ) {
     throw new Error(
-      `Refusing to clean '${outputDir}' because it resolves to the inferred workspace root '${protectedWorkspaceRoot}'. Choose a dedicated output subdirectory instead.`
+      `Refusing to clean '${outputDir}' because it resolves to an ancestor directory of the current working directory. Choose a dedicated output subdirectory instead.`
     );
   }
 };
@@ -216,5 +242,35 @@ const findProtectedWorkspaceRoot = (
 const hasWorkspaceMarker = (directory: string): boolean => {
   return ["pnpm-workspace.yaml", ".git"].some(marker =>
     fs.existsSync(path.join(directory, marker))
+  );
+};
+
+const canonicalizePathForContainment = (targetPath: string): string => {
+  const remainingSegments: string[] = [];
+  let nearestExistingPath = path.resolve(targetPath);
+
+  while (!fs.existsSync(nearestExistingPath)) {
+    const parentPath = path.dirname(nearestExistingPath);
+    if (parentPath === nearestExistingPath) {
+      break;
+    }
+
+    remainingSegments.unshift(path.basename(nearestExistingPath));
+    nearestExistingPath = parentPath;
+  }
+
+  const canonicalExistingPath = fs.realpathSync.native(nearestExistingPath);
+
+  return path.join(canonicalExistingPath, ...remainingSegments);
+};
+
+const isSameOrDescendantOf = (directory: string, ancestor: string): boolean => {
+  const relativePath = path.relative(ancestor, directory);
+  const parentTraversalPrefix = `..${path.sep}`;
+  const escapesAncestor =
+    relativePath === ".." || relativePath.startsWith(parentTraversalPrefix);
+
+  return (
+    relativePath === "" || (!escapesAncestor && !path.isAbsolute(relativePath))
   );
 };

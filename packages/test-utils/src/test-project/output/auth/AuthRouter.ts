@@ -11,7 +11,7 @@ import {
   TypeweaverRouter,
   type RequestHandler,
   type TypeweaverRouterOptions,
-} from "./../lib/server/index.js";
+} from "../lib/server/index.js";
 
 import type { IAccessTokenRequest } from "./AccessTokenRequest.js";
 import { AccessTokenRequestValidator } from "./AccessTokenRequestValidator.js";

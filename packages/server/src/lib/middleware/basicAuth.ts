@@ -4,6 +4,7 @@ import {
 } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { defineMiddleware } from "../TypedMiddleware.js";
+import { readSingletonHeader } from "./header.js";
 import type { ServerContext } from "../ServerContext.js";
 
 export type BasicAuthOptions = {
@@ -31,10 +32,18 @@ export function basicAuth(options: BasicAuthOptions) {
     options.onUnauthorized?.(ctx) ?? defaultResponse;
 
   return defineMiddleware<{ username: string }>(async (ctx, next) => {
-    const authorization = ctx.request.header?.["authorization"];
+    const authorization = readSingletonHeader(
+      ctx.request.header,
+      "authorization"
+    );
     if (typeof authorization !== "string") return deny(ctx);
 
-    if (!authorization.startsWith(BASIC_PREFIX)) return deny(ctx);
+    if (
+      authorization.slice(0, BASIC_PREFIX.length).toLowerCase() !==
+      BASIC_PREFIX.toLowerCase()
+    ) {
+      return deny(ctx);
+    }
 
     const encoded = authorization.slice(BASIC_PREFIX.length);
     if (encoded.length === 0) return deny(ctx);
