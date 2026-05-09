@@ -41,6 +41,9 @@ export type IQuerySubTodoRequestBody = {
   tags?: string[] | undefined;
 };
 
+/**
+ * Query subtodos for a specific todo
+ */
 export type IQuerySubTodoRequest = {
   path: string;
   method: HttpMethod.POST;

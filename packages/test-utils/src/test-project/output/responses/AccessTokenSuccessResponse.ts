@@ -20,6 +20,9 @@ export type IAccessTokenSuccessResponseBody = {
   refreshToken: string;
 };
 
+/**
+ * Access token created successfully
+ */
 export type IAccessTokenSuccessResponse = ITypedHttpResponse<
   "AccessTokenSuccess",
   HttpStatusCode.OK,
@@ -27,6 +30,9 @@ export type IAccessTokenSuccessResponse = ITypedHttpResponse<
   IAccessTokenSuccessResponseBody
 >;
 
+/**
+ * Access token created successfully
+ */
 export const createAccessTokenSuccessResponse = (input: {
   header: IAccessTokenSuccessResponseHeader;
   body: IAccessTokenSuccessResponseBody;

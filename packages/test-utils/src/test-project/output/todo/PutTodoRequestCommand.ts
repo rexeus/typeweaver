@@ -27,6 +27,20 @@ import type { PutTodoResponse } from "./PutTodoResponse.js";
 const definition = getOperationDefinition(spec, "todo", "PutTodo");
 const responseValidator = new PutTodoResponseValidator();
 
+const defaultHeader = {
+  Accept: "application/json",
+
+  "Content-Type": "application/json",
+} as const;
+
+export type PutTodoRequestCommandInput = Omit<IPutTodoRequest, "method" | "path" | "header"> & {
+  readonly header: Omit<IPutTodoRequestHeader, "Accept" | "Content-Type"> &
+    Partial<Pick<IPutTodoRequestHeader, "Accept" | "Content-Type">>;
+};
+
+/**
+ * Replace todo completely
+ */
 export class PutTodoRequestCommand extends RequestCommand implements IPutTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.PUT;
@@ -37,10 +51,10 @@ export class PutTodoRequestCommand extends RequestCommand implements IPutTodoReq
   declare public readonly query: undefined;
   public override readonly body: IPutTodoRequestBody;
 
-  public constructor(input: Omit<IPutTodoRequest, "method" | "path">) {
+  public constructor(input: PutTodoRequestCommandInput) {
     super();
 
-    this.header = input.header;
+    this.header = { ...input.header, ...defaultHeader };
 
     this.param = input.param;
 

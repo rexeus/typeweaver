@@ -27,6 +27,21 @@ import type { ListSubTodosResponse } from "./ListSubTodosResponse.js";
 const definition = getOperationDefinition(spec, "todo", "ListSubTodos");
 const responseValidator = new ListSubTodosResponseValidator();
 
+const defaultHeader = {
+  Accept: "application/json",
+} as const;
+
+export type ListSubTodosRequestCommandInput = Omit<
+  IListSubTodosRequest,
+  "method" | "path" | "header"
+> & {
+  readonly header: Omit<IListSubTodosRequestHeader, "Accept"> &
+    Partial<Pick<IListSubTodosRequestHeader, "Accept">>;
+};
+
+/**
+ * List subtodos for a specific todo
+ */
 export class ListSubTodosRequestCommand extends RequestCommand implements IListSubTodosRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.GET;
@@ -37,10 +52,10 @@ export class ListSubTodosRequestCommand extends RequestCommand implements IListS
   public override readonly query: IListSubTodosRequestQuery;
   declare public readonly body: undefined;
 
-  public constructor(input: Omit<IListSubTodosRequest, "method" | "path">) {
+  public constructor(input: ListSubTodosRequestCommandInput) {
     super();
 
-    this.header = input.header;
+    this.header = { ...input.header, ...defaultHeader };
 
     this.param = input.param;
 

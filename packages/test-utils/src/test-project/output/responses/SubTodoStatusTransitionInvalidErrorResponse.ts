@@ -32,6 +32,9 @@ export type ISubTodoStatusTransitionInvalidErrorResponseBody = {
   };
 };
 
+/**
+ * SubTodo status transition is conflicting with its status or parent todo status
+ */
 export type ISubTodoStatusTransitionInvalidErrorResponse = ITypedHttpResponse<
   "SubTodoStatusTransitionInvalidError",
   HttpStatusCode.CONFLICT,
@@ -39,6 +42,9 @@ export type ISubTodoStatusTransitionInvalidErrorResponse = ITypedHttpResponse<
   ISubTodoStatusTransitionInvalidErrorResponseBody
 >;
 
+/**
+ * SubTodo status transition is conflicting with its status or parent todo status
+ */
 export const createSubTodoStatusTransitionInvalidErrorResponse = (input: {
   header: ISubTodoStatusTransitionInvalidErrorResponseHeader;
   body: ISubTodoStatusTransitionInvalidErrorResponseBody;

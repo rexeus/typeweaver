@@ -20,6 +20,9 @@ export type IDeleteSubTodoRequestParam = {
   subtodoId: string;
 };
 
+/**
+ * Delete subtodo
+ */
 export type IDeleteSubTodoRequest = {
   path: string;
   method: HttpMethod.DELETE;

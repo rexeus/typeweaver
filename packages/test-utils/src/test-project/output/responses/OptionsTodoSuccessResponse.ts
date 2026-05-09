@@ -17,6 +17,9 @@ export type IOptionsTodoSuccessResponseHeader = {
   "Access-Control-Max-Age"?: string | undefined;
 };
 
+/**
+ * Allowed methods for todo resource
+ */
 export type IOptionsTodoSuccessResponse = ITypedHttpResponse<
   "OptionsTodoSuccess",
   HttpStatusCode.OK,
@@ -24,6 +27,9 @@ export type IOptionsTodoSuccessResponse = ITypedHttpResponse<
   undefined
 >;
 
+/**
+ * Allowed methods for todo resource
+ */
 export const createOptionsTodoSuccessResponse = (input: {
   header: IOptionsTodoSuccessResponseHeader;
 }): IOptionsTodoSuccessResponse => ({

@@ -26,6 +26,18 @@ import type { GetTodoResponse } from "./GetTodoResponse.js";
 const definition = getOperationDefinition(spec, "todo", "GetTodo");
 const responseValidator = new GetTodoResponseValidator();
 
+const defaultHeader = {
+  Accept: "application/json",
+} as const;
+
+export type GetTodoRequestCommandInput = Omit<IGetTodoRequest, "method" | "path" | "header"> & {
+  readonly header: Omit<IGetTodoRequestHeader, "Accept"> &
+    Partial<Pick<IGetTodoRequestHeader, "Accept">>;
+};
+
+/**
+ * Get todo
+ */
 export class GetTodoRequestCommand extends RequestCommand implements IGetTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.GET;
@@ -36,10 +48,10 @@ export class GetTodoRequestCommand extends RequestCommand implements IGetTodoReq
   declare public readonly query: undefined;
   declare public readonly body: undefined;
 
-  public constructor(input: Omit<IGetTodoRequest, "method" | "path">) {
+  public constructor(input: GetTodoRequestCommandInput) {
     super();
 
-    this.header = input.header;
+    this.header = { ...input.header, ...defaultHeader };
 
     this.param = input.param;
   }

@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { HttpStatusCode, isTypedHttpResponse } from "../../src/index.js";
+import {
+  HttpStatusCode,
+  isTypedHttpResponse,
+  toHttpResponse,
+} from "../../src/index.js";
 import { TestApplicationError, TestObjectTrapError } from "../errors/index.js";
 import type { ITypedHttpResponse } from "../../src/index.js";
 
@@ -156,6 +160,38 @@ describe("isTypedHttpResponse", () => {
     };
 
     expect(isTypedHttpResponse(response)).toBe(true);
+  });
+
+  test("accepts a typed HTTP response without header when the header type is undefined", () => {
+    const response = {
+      type: "Success",
+      statusCode: HttpStatusCode.OK,
+      body: { ok: true },
+    } satisfies ITypedHttpResponse<
+      "Success",
+      HttpStatusCode.OK,
+      undefined,
+      { readonly ok: true }
+    >;
+
+    expect(isTypedHttpResponse(response)).toBe(true);
+  });
+
+  test("normalizes an omitted typed HTTP response header to undefined", () => {
+    const response = {
+      type: "Success",
+      statusCode: HttpStatusCode.OK,
+      body: { ok: true },
+    } satisfies ITypedHttpResponse<
+      "Success",
+      HttpStatusCode.OK,
+      undefined,
+      { readonly ok: true }
+    >;
+
+    const normalized = toHttpResponse(response);
+
+    expect(normalized.header).toBeUndefined();
   });
 
   test("accepts a typed HTTP response with explicit empty payload fields", () => {

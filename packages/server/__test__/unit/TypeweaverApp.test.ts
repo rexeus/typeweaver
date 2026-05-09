@@ -1,6 +1,7 @@
 import {
   badRequestDefaultError,
   HttpMethod,
+  HttpStatusCode,
   internalServerErrorDefaultError,
   methodNotAllowedDefaultError,
   notFoundDefaultError,
@@ -90,6 +91,40 @@ const invalidResponseValidator: IResponseValidator = {
   }),
 };
 
+function aConflictTypedResponse(): ITypedHttpResponse<
+  "ConflictError",
+  HttpStatusCode.CONFLICT,
+  undefined,
+  { readonly code: string }
+> {
+  return {
+    type: "ConflictError",
+    statusCode: HttpStatusCode.CONFLICT,
+    body: { code: "CONFLICT" },
+  };
+}
+
+function aPassThroughResponseValidator(): IResponseValidator {
+  return {
+    validate: response => response,
+    safeValidate: response => ({ isValid: true, data: response }),
+  };
+}
+
+function aValidatorThatMarksResponsesAsValidated(): IResponseValidator {
+  return {
+    validate: response => response,
+    safeValidate: response => ({
+      isValid: true,
+      data: {
+        ...response,
+        header: { "x-response-source": "validator" },
+        body: { source: "validated" },
+      },
+    }),
+  };
+}
+
 type ConsoleErrorSpy = {
   mockRestore: () => void;
 };
@@ -98,6 +133,15 @@ type TestHandlers = {
   handleGetTodos: RequestHandler;
   handleCreateTodo: RequestHandler;
   handleGetTodo: RequestHandler;
+};
+
+type TypedResponseValidationAppOptions = {
+  readonly typedResponse?: ITypedHttpResponse;
+  readonly responseValidator?: IResponseValidator;
+  readonly handleHttpResponseErrors?: TypeweaverRouterOptions<TestHandlers>["handleHttpResponseErrors"];
+  readonly handleUnknownErrors?: TypeweaverRouterOptions<TestHandlers>["handleUnknownErrors"];
+  readonly handleResponseValidationErrors?: TypeweaverRouterOptions<TestHandlers>["handleResponseValidationErrors"];
+  readonly onError?: TypeweaverAppOptions["onError"];
 };
 
 class TestRouter extends TypeweaverRouter<TestHandlers> {
@@ -326,6 +370,38 @@ function createResponseValidatingApp(
     requestHandlers: defaultHandlers(handlerOverrides),
     ...routerOptions,
   });
+  app.route(router);
+  return app;
+}
+
+function createTypedResponseValidationApp({
+  typedResponse = aConflictTypedResponse(),
+  responseValidator = aPassThroughResponseValidator(),
+  handleHttpResponseErrors,
+  handleUnknownErrors,
+  handleResponseValidationErrors,
+  onError,
+}: TypedResponseValidationAppOptions = {}): TypeweaverApp {
+  const app = new TypeweaverApp(
+    onError === undefined ? undefined : { onError }
+  );
+  const router = new CustomResponseValidatingRouter({
+    validateRequests: false,
+    responseValidator,
+    requestHandlers: defaultHandlers({
+      handleGetTodos: async () => {
+        throw typedResponse;
+      },
+    }),
+    ...(handleHttpResponseErrors === undefined
+      ? {}
+      : { handleHttpResponseErrors }),
+    ...(handleUnknownErrors === undefined ? {} : { handleUnknownErrors }),
+    ...(handleResponseValidationErrors === undefined
+      ? {}
+      : { handleResponseValidationErrors }),
+  });
+
   app.route(router);
   return app;
 }
@@ -1002,6 +1078,86 @@ describe("TypeweaverApp", () => {
       const data = await expectJson(res, 500);
       expect(data.custom).toBe(true);
       expect(data.message).toBe("Boom");
+    });
+
+    test("does not call onError when a custom unknown error handler returns a response", async () => {
+      const onError = vi.fn();
+      const app = createApp(
+        {
+          handleUnknownErrors: error => ({
+            statusCode: 500,
+            body: {
+              code: "CUSTOM_UNKNOWN",
+              message: error instanceof Error ? error.message : "Unknown",
+            },
+          }),
+        },
+        {
+          handleGetTodos: async () => {
+            throw new TestApplicationError("custom handler owns reporting");
+          },
+        },
+        { onError }
+      );
+
+      const res = await app.fetch(get("/todos"));
+
+      const data = await expectJson(res, 500);
+      expect(data).toEqual({
+        code: "CUSTOM_UNKNOWN",
+        message: "custom handler owns reporting",
+      });
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    test("reports custom unknown handler failures to onError", async () => {
+      const onError = vi.fn();
+      const handlerFailure = new TestApplicationError(
+        "custom unknown handler failed"
+      );
+      const app = createApp(
+        {
+          handleUnknownErrors: () => {
+            throw handlerFailure;
+          },
+        },
+        {
+          handleGetTodos: async () => {
+            throw new TestApplicationError("unexpected failure");
+          },
+        },
+        { onError }
+      );
+
+      const res = await app.fetch(get("/todos"));
+
+      await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
+      expect(onError).toHaveBeenCalledWith(handlerFailure);
+    });
+
+    test("falls through to the safety net when the custom unknown handler throws", async () => {
+      const onError = vi.fn();
+      const routeFailure = new TestApplicationError("unexpected failure");
+      const app = createApp(
+        {
+          handleUnknownErrors: () => {
+            throw new TestApplicationError("custom unknown handler failed");
+          },
+        },
+        {
+          handleGetTodos: async () => {
+            throw routeFailure;
+          },
+        },
+        { onError }
+      );
+
+      const res = await app.fetch(get("/todos"));
+
+      await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: routeFailure.message })
+      );
     });
 
     test("should call onError for errors that escape to the safety net", async () => {
@@ -1773,43 +1929,168 @@ describe("TypeweaverApp", () => {
       expect(onError).toHaveBeenCalledWith(handlerFailure);
     });
 
-    test("validates a thrown typed HTTP response before the HTTP response handler handles it", async () => {
-      const typedInvalidResponse = {
-        type: "ConflictError",
-        statusCode: 409,
-        header: {},
-        body: { code: "CONFLICT" },
-      } satisfies ITypedHttpResponse;
-      const app = createResponseValidatingApp(
-        {
-          handleHttpResponseErrors: () => ({
-            statusCode: 409,
-            body: { code: "HTTP_RESPONSE_HANDLER" },
-          }),
-          handleResponseValidationErrors: (_error, response, ctx) => ({
-            statusCode: 422,
-            body: {
-              code: "INVALID_THROWN_RESPONSE",
-              originalStatus: response.statusCode,
-              operationId: ctx.route?.operationId,
-            },
-          }),
-        },
-        {
-          handleGetTodos: async () => {
-            throw typedInvalidResponse;
-          },
-        }
+    test("calls the custom HTTP response handler for thrown typed responses when response validation is enabled", async () => {
+      const typedResponse = aConflictTypedResponse();
+      const httpResponseHandler = vi.fn(() => ({
+        statusCode: 200,
+        body: { handled: true },
+      }));
+      const app = createTypedResponseValidationApp({
+        typedResponse,
+        handleHttpResponseErrors: httpResponseHandler,
+      });
+
+      const res = await app.fetch(get("/todos"));
+
+      const data = await expectJson(res, 200);
+      expect(data).toEqual({ handled: true });
+      expect(httpResponseHandler).toHaveBeenCalledWith(
+        typedResponse,
+        expect.anything()
       );
+    });
+
+    test("validates the transformed typed response handler result before sending it", async () => {
+      const app = createTypedResponseValidationApp({
+        responseValidator: aValidatorThatMarksResponsesAsValidated(),
+        handleHttpResponseErrors: () => ({
+          statusCode: 200,
+          header: { "x-response-source": "handler" },
+          body: { source: "handler", stripped: true },
+        }),
+      });
+
+      const res = await app.fetch(get("/todos"));
+
+      const data = await expectJson(res, 200);
+      expect(data).toEqual({ source: "validated" });
+      expect(res.headers.get("x-response-source")).toBe("validator");
+    });
+
+    test("invokes the response validation handler when a transformed thrown typed response is invalid", async () => {
+      const app = createTypedResponseValidationApp({
+        responseValidator: invalidResponseValidator,
+        handleHttpResponseErrors: () => ({
+          statusCode: 409,
+          body: { code: "HTTP_RESPONSE_HANDLER" },
+        }),
+        handleResponseValidationErrors: (_error, response, ctx) => ({
+          statusCode: 422,
+          body: {
+            code: "INVALID_TRANSFORMED_RESPONSE",
+            originalStatus: response.statusCode,
+            operationId: ctx.route?.operationId,
+          },
+        }),
+      });
 
       const res = await app.fetch(get("/todos"));
 
       const data = await expectJson(res, 422);
       expect(data).toEqual({
-        code: "INVALID_THROWN_RESPONSE",
+        code: "INVALID_TRANSFORMED_RESPONSE",
         originalStatus: 409,
         operationId: "listTodos",
       });
+    });
+
+    test("falls through to the unknown handler when a typed response handler throws", async () => {
+      const typedResponse = aConflictTypedResponse();
+      const onError = vi.fn();
+      const handlerFailure = new TestApplicationError(
+        "typed response handler failed"
+      );
+      const unknownHandler = vi.fn(() => ({
+        statusCode: 500,
+        body: { code: "CUSTOM_UNKNOWN", message: "typed response escaped" },
+      }));
+      const app = createTypedResponseValidationApp({
+        typedResponse,
+        handleHttpResponseErrors: () => {
+          throw handlerFailure;
+        },
+        handleUnknownErrors: unknownHandler,
+        onError,
+      });
+
+      const res = await app.fetch(get("/todos"));
+
+      const data = await expectJson(res, 500);
+      expect(data).toEqual({
+        code: "CUSTOM_UNKNOWN",
+        message: "typed response escaped",
+      });
+      expect(onError).toHaveBeenCalledWith(handlerFailure);
+      expect(unknownHandler).toHaveBeenCalledWith(
+        typedResponse,
+        expect.anything()
+      );
+    });
+
+    test("strips HEAD bodies after validating transformed thrown typed responses", async () => {
+      const app = createTypedResponseValidationApp({
+        responseValidator: aValidatorThatMarksResponsesAsValidated(),
+        handleHttpResponseErrors: () => ({
+          statusCode: 200,
+          header: { "x-response-source": "handler" },
+          body: { source: "handler" },
+        }),
+      });
+
+      const res = await app.fetch(head("/todos"));
+
+      expect(res.status).toBe(200);
+      expect(res.headers.get("x-response-source")).toBe("validator");
+      await expectNoBody(res);
+    });
+
+    test("returns invalid transformed typed responses when response validation handling is disabled", async () => {
+      const app = createTypedResponseValidationApp({
+        responseValidator: invalidResponseValidator,
+        handleHttpResponseErrors: () => ({
+          statusCode: 409,
+          header: { "x-response-source": "handler" },
+          body: { code: "HTTP_RESPONSE_HANDLER" },
+        }),
+        handleResponseValidationErrors: false,
+      });
+
+      const res = await app.fetch(get("/todos"));
+
+      const data = await expectJson(res, 409);
+      expect(data).toEqual({ code: "HTTP_RESPONSE_HANDLER" });
+      expect(res.headers.get("x-response-source")).toBe("handler");
+    });
+
+    test("falls through to the unknown handler for thrown typed responses when HTTP response handling is disabled with response validation enabled", async () => {
+      const unknownHandler = vi.fn(() => ({
+        statusCode: 500,
+        body: { code: "CUSTOM_UNKNOWN" },
+      }));
+      const app = createTypedResponseValidationApp({
+        handleHttpResponseErrors: false,
+        handleUnknownErrors: unknownHandler,
+      });
+
+      const res = await app.fetch(get("/todos"));
+
+      await expectErrorResponse(res, 500, "CUSTOM_UNKNOWN");
+      expect(unknownHandler).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "ConflictError", statusCode: 409 }),
+        expect.anything()
+      );
+    });
+
+    test("keeps default typed response handling silent for onError when response validation is enabled", async () => {
+      const onError = vi.fn();
+      const app = createTypedResponseValidationApp({
+        onError,
+      });
+
+      const res = await app.fetch(get("/todos"));
+
+      await expectErrorResponse(res, 409, "CONFLICT");
+      expect(onError).not.toHaveBeenCalled();
     });
   });
 

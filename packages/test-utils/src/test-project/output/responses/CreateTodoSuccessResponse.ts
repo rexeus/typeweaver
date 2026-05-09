@@ -31,6 +31,9 @@ export type ICreateTodoSuccessResponseBody = {
   modifiedBy: string;
 };
 
+/**
+ * Todo created successfully
+ */
 export type ICreateTodoSuccessResponse = ITypedHttpResponse<
   "CreateTodoSuccess",
   HttpStatusCode.CREATED,
@@ -38,6 +41,9 @@ export type ICreateTodoSuccessResponse = ITypedHttpResponse<
   ICreateTodoSuccessResponseBody
 >;
 
+/**
+ * Todo created successfully
+ */
 export const createCreateTodoSuccessResponse = (input: {
   header: ICreateTodoSuccessResponseHeader;
   body: ICreateTodoSuccessResponseBody;

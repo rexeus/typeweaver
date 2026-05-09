@@ -34,6 +34,9 @@ export type IQuerySubTodoSuccessResponseBody = {
   nextToken?: string | undefined;
 };
 
+/**
+ * Subtodos query results
+ */
 export type IQuerySubTodoSuccessResponse = ITypedHttpResponse<
   "QuerySubTodoSuccess",
   HttpStatusCode.OK,
@@ -41,6 +44,9 @@ export type IQuerySubTodoSuccessResponse = ITypedHttpResponse<
   IQuerySubTodoSuccessResponseBody
 >;
 
+/**
+ * Subtodos query results
+ */
 export const createQuerySubTodoSuccessResponse = (input: {
   header: IQuerySubTodoSuccessResponseHeader;
   body: IQuerySubTodoSuccessResponseBody;

@@ -26,6 +26,18 @@ import type { HeadTodoResponse } from "./HeadTodoResponse.js";
 const definition = getOperationDefinition(spec, "todo", "HeadTodo");
 const responseValidator = new HeadTodoResponseValidator();
 
+const defaultHeader = {
+  Accept: "application/json",
+} as const;
+
+export type HeadTodoRequestCommandInput = Omit<IHeadTodoRequest, "method" | "path" | "header"> & {
+  readonly header: Omit<IHeadTodoRequestHeader, "Accept"> &
+    Partial<Pick<IHeadTodoRequestHeader, "Accept">>;
+};
+
+/**
+ * Check if todo exists
+ */
 export class HeadTodoRequestCommand extends RequestCommand implements IHeadTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.HEAD;
@@ -36,10 +48,10 @@ export class HeadTodoRequestCommand extends RequestCommand implements IHeadTodoR
   declare public readonly query: undefined;
   declare public readonly body: undefined;
 
-  public constructor(input: Omit<IHeadTodoRequest, "method" | "path">) {
+  public constructor(input: HeadTodoRequestCommandInput) {
     super();
 
-    this.header = input.header;
+    this.header = { ...input.header, ...defaultHeader };
 
     this.param = input.param;
   }

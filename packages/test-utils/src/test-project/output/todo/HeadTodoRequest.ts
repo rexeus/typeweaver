@@ -19,6 +19,9 @@ export type IHeadTodoRequestParam = {
   todoId: string;
 };
 
+/**
+ * Check if todo exists
+ */
 export type IHeadTodoRequest = {
   path: string;
   method: HttpMethod.HEAD;

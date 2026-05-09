@@ -663,6 +663,72 @@ describe("ApiClient request serialization", () => {
     expect(getFetchCall(mockFetch).init.body).toBe(JSON.stringify(body));
   });
 
+  test.each([
+    { case: "plain object", body: { title: "Write tests" } },
+    { case: "array", body: [{ title: "Write tests" }] },
+  ])(
+    "adds application/json content-type for JSON-stringified $case bodies",
+    async ({ body }) => {
+      const { mockFetch } = await sendRaw({ method: HttpMethod.POST, body });
+
+      expect(getFetchCall(mockFetch).init.headers).toStrictEqual({
+        "Content-Type": "application/json",
+      });
+    }
+  );
+
+  test("preserves unrelated headers when adding JSON content-type", async () => {
+    const { mockFetch } = await sendRaw({
+      method: HttpMethod.POST,
+      header: { Authorization: "Bearer token" },
+      body: { title: "Write tests" },
+    });
+
+    expect(getFetchCall(mockFetch).init.headers).toStrictEqual({
+      Authorization: "Bearer token",
+      "Content-Type": "application/json",
+    });
+  });
+
+  test.each([
+    { case: "true boolean", body: true, expectedBody: "true" },
+    { case: "positive number", body: 42, expectedBody: "42" },
+    { case: "zero", body: 0, expectedBody: "0" },
+  ])(
+    "adds application/json content-type for JSON-stringified $case bodies",
+    async ({ body, expectedBody }) => {
+      const { mockFetch } = await sendRaw({ method: HttpMethod.POST, body });
+
+      const { init } = getFetchCall(mockFetch);
+      expect(init.body).toBe(expectedBody);
+      expect(init.headers).toStrictEqual({
+        "Content-Type": "application/json",
+      });
+    }
+  );
+
+  test.each([
+    {
+      case: "canonical",
+      header: { "Content-Type": "application/vnd.api+json" } as IHttpHeader,
+    },
+    {
+      case: "lowercase",
+      header: { "content-type": "application/vnd.api+json" } as IHttpHeader,
+    },
+  ])(
+    "preserves user-provided $case content-type for JSON bodies",
+    async ({ header }) => {
+      const { mockFetch } = await sendRaw({
+        method: HttpMethod.POST,
+        header,
+        body: { title: "Write tests" },
+      });
+
+      expect(getFetchCall(mockFetch).init.headers).toStrictEqual(header);
+    }
+  );
+
   test("throws native TypeError for circular object bodies before fetch", async () => {
     const mockFetch = resolvedFetch();
     const client = createClient(mockFetch);
@@ -698,6 +764,30 @@ describe("ApiClient request serialization", () => {
     const { mockFetch } = await sendRaw({ method: HttpMethod.POST, body });
 
     expect(getFetchCall(mockFetch).init.body).toBe(body);
+  });
+
+  test.each([
+    { case: "undefined", body: undefined },
+    { case: "null", body: null },
+    { case: "string", body: "hello" },
+    { case: "Blob", body: new Blob(["hello"], { type: "text/plain" }) },
+    { case: "ArrayBuffer", body: new ArrayBuffer(8) },
+    { case: "Uint8Array", body: new Uint8Array([1, 2, 3]) },
+    { case: "FormData", body: new FormData() },
+    { case: "URLSearchParams", body: new URLSearchParams({ key: "value" }) },
+    {
+      case: "ReadableStream",
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(new Uint8Array([1, 2, 3]));
+          controller.close();
+        },
+      }),
+    },
+  ])("does not add content-type for $case bodies", async ({ body }) => {
+    const { mockFetch } = await sendRaw({ method: HttpMethod.POST, body });
+
+    expect(getFetchCall(mockFetch).init.headers).toBeUndefined();
   });
 });
 

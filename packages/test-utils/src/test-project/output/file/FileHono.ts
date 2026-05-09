@@ -29,13 +29,22 @@ import type { DownloadFileContentResponse } from "./DownloadFileContentResponse.
 import { DownloadFileContentResponseValidator } from "./DownloadFileContentResponseValidator.js";
 
 export type HonoFileApiHandler = {
+  /**
+   * Upload a file
+   */
   handleUploadFileRequest: HonoRequestHandler<IUploadFileRequest, UploadFileResponse>;
 
+  /**
+   * Get file metadata
+   */
   handleGetFileMetadataRequest: HonoRequestHandler<
     IGetFileMetadataRequest,
     GetFileMetadataResponse
   >;
 
+  /**
+   * Download file content
+   */
   handleDownloadFileContentRequest: HonoRequestHandler<
     IDownloadFileContentRequest,
     DownloadFileContentResponse

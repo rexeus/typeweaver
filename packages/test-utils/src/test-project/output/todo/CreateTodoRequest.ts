@@ -24,6 +24,9 @@ export type ICreateTodoRequestBody = {
   priority?: ("LOW" | "MEDIUM" | "HIGH") | undefined;
 };
 
+/**
+ * Create new todo
+ */
 export type ICreateTodoRequest = {
   path: string;
   method: HttpMethod.POST;

@@ -23,6 +23,9 @@ export type ITypedHttpResponse<
 > = {
   readonly type: TypeName;
   readonly statusCode: StatusCode;
-  readonly header: Header;
   readonly body: Body;
-};
+} & ([Header] extends [undefined]
+  ? { readonly header?: undefined }
+  : [ITypedHttpResponseHeader] extends [Header]
+    ? { readonly header?: Header }
+    : { readonly header: Header });

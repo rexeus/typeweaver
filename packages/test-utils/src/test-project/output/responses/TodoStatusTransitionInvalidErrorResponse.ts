@@ -30,6 +30,9 @@ export type ITodoStatusTransitionInvalidErrorResponseBody = {
   };
 };
 
+/**
+ * Todo status transition is conflicting with current status
+ */
 export type ITodoStatusTransitionInvalidErrorResponse = ITypedHttpResponse<
   "TodoStatusTransitionInvalidError",
   HttpStatusCode.CONFLICT,
@@ -37,6 +40,9 @@ export type ITodoStatusTransitionInvalidErrorResponse = ITypedHttpResponse<
   ITodoStatusTransitionInvalidErrorResponseBody
 >;
 
+/**
+ * Todo status transition is conflicting with current status
+ */
 export const createTodoStatusTransitionInvalidErrorResponse = (input: {
   header: ITodoStatusTransitionInvalidErrorResponseHeader;
   body: ITodoStatusTransitionInvalidErrorResponseBody;

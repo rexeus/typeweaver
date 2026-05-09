@@ -26,6 +26,23 @@ import type { AccessTokenResponse } from "./AccessTokenResponse.js";
 const definition = getOperationDefinition(spec, "auth", "AccessToken");
 const responseValidator = new AccessTokenResponseValidator();
 
+const defaultHeader = {
+  Accept: "application/json",
+
+  "Content-Type": "application/json",
+} as const;
+
+export type AccessTokenRequestCommandInput = Omit<
+  IAccessTokenRequest,
+  "method" | "path" | "header"
+> & {
+  readonly header?: Omit<IAccessTokenRequestHeader, "Accept" | "Content-Type"> &
+    Partial<Pick<IAccessTokenRequestHeader, "Accept" | "Content-Type">>;
+};
+
+/**
+ * Get access token by email and password
+ */
 export class AccessTokenRequestCommand extends RequestCommand implements IAccessTokenRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.POST;
@@ -36,10 +53,10 @@ export class AccessTokenRequestCommand extends RequestCommand implements IAccess
   declare public readonly query: undefined;
   public override readonly body: IAccessTokenRequestBody;
 
-  public constructor(input: Omit<IAccessTokenRequest, "method" | "path">) {
+  public constructor(input: AccessTokenRequestCommandInput) {
     super();
 
-    this.header = input.header;
+    this.header = { ...input.header, ...defaultHeader };
 
     this.body = input.body;
   }

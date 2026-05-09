@@ -24,6 +24,9 @@ export type IRegisterAccountSuccessResponseBody = {
   modifiedBy: string;
 };
 
+/**
+ * Account created successfully
+ */
 export type IRegisterAccountSuccessResponse = ITypedHttpResponse<
   "RegisterAccountSuccess",
   HttpStatusCode.CREATED,
@@ -31,6 +34,9 @@ export type IRegisterAccountSuccessResponse = ITypedHttpResponse<
   IRegisterAccountSuccessResponseBody
 >;
 
+/**
+ * Account created successfully
+ */
 export const createRegisterAccountSuccessResponse = (input: {
   header: IRegisterAccountSuccessResponseHeader;
   body: IRegisterAccountSuccessResponseBody;

@@ -762,4 +762,43 @@ describe("ResponseGenerator", () => {
     expect(source).toMatch(/ITypedHttpResponse<\s*"createdTodo"/);
     expect(source).toContain('type: "createdTodo"');
   });
+
+  test("renders response descriptions as JSDoc above response aliases and factories", () => {
+    const source = renderCanonicalResponseSource(
+      aCanonicalResponse({
+        name: "documentedResponse",
+        description: "Documented response",
+      })
+    );
+
+    expect(source).toContain(
+      "/**\n * Documented response\n */\nexport type IDocumentedResponseResponse"
+    );
+    expect(source).toContain(
+      "/**\n * Documented response\n */\nexport const createDocumentedResponseResponse"
+    );
+  });
+
+  test("preserves multiline response descriptions in generated JSDoc", () => {
+    const source = renderCanonicalResponseSource(
+      aCanonicalResponse({
+        name: "multilineResponse",
+        description: "First line\n\nSecond line",
+      })
+    );
+
+    expect(source).toContain("/**\n * First line\n * \n * Second line\n */");
+  });
+
+  test("sanitizes response descriptions before emitting generated JSDoc", () => {
+    const source = renderCanonicalResponseSource(
+      aCanonicalResponse({
+        name: "sanitizedResponse",
+        description: "Do not close */ comments",
+      })
+    );
+
+    expect(source).toContain("Do not close *\\/ comments");
+    expect(source).not.toContain("Do not close */ comments");
+  });
 });

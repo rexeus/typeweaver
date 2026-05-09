@@ -70,9 +70,7 @@ export const isTypedHttpResponse = (
   );
 };
 
-export const toHttpHeader = (
-  header: ITypedHttpResponse["header"]
-): IHttpHeader => {
+export const toHttpHeader = (header: ITypedHttpResponseHeader): IHttpHeader => {
   if (!header) return undefined;
 
   const normalizedHeader: NonNullable<IHttpHeader> = {};

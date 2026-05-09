@@ -34,6 +34,9 @@ export type IQueryTodoSuccessResponseBody = {
   nextToken?: string | undefined;
 };
 
+/**
+ * Todos query results
+ */
 export type IQueryTodoSuccessResponse = ITypedHttpResponse<
   "QueryTodoSuccess",
   HttpStatusCode.OK,
@@ -41,6 +44,9 @@ export type IQueryTodoSuccessResponse = ITypedHttpResponse<
   IQueryTodoSuccessResponseBody
 >;
 
+/**
+ * Todos query results
+ */
 export const createQueryTodoSuccessResponse = (input: {
   header: IQueryTodoSuccessResponseHeader;
   body: IQueryTodoSuccessResponseBody;

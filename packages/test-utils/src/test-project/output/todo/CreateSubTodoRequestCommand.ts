@@ -27,6 +27,23 @@ import type { CreateSubTodoResponse } from "./CreateSubTodoResponse.js";
 const definition = getOperationDefinition(spec, "todo", "CreateSubTodo");
 const responseValidator = new CreateSubTodoResponseValidator();
 
+const defaultHeader = {
+  Accept: "application/json",
+
+  "Content-Type": "application/json",
+} as const;
+
+export type CreateSubTodoRequestCommandInput = Omit<
+  ICreateSubTodoRequest,
+  "method" | "path" | "header"
+> & {
+  readonly header: Omit<ICreateSubTodoRequestHeader, "Accept" | "Content-Type"> &
+    Partial<Pick<ICreateSubTodoRequestHeader, "Accept" | "Content-Type">>;
+};
+
+/**
+ * Create new subtodo
+ */
 export class CreateSubTodoRequestCommand extends RequestCommand implements ICreateSubTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.POST;
@@ -37,10 +54,10 @@ export class CreateSubTodoRequestCommand extends RequestCommand implements ICrea
   declare public readonly query: undefined;
   public override readonly body: ICreateSubTodoRequestBody;
 
-  public constructor(input: Omit<ICreateSubTodoRequest, "method" | "path">) {
+  public constructor(input: CreateSubTodoRequestCommandInput) {
     super();
 
-    this.header = input.header;
+    this.header = { ...input.header, ...defaultHeader };
 
     this.param = input.param;
 

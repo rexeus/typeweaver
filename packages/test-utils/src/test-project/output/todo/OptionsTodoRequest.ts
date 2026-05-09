@@ -21,6 +21,9 @@ export type IOptionsTodoRequestParam = {
   todoId: string;
 };
 
+/**
+ * Get allowed methods for todo resource
+ */
 export type IOptionsTodoRequest = {
   path: string;
   method: HttpMethod.OPTIONS;

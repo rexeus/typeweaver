@@ -30,14 +30,23 @@ import { DownloadFileContentResponseValidator } from "./DownloadFileContentRespo
 
 export type ServerFileApiHandler<TState extends Record<string, unknown> = Record<string, unknown>> =
   {
+    /**
+     * Upload a file
+     */
     handleUploadFileRequest: RequestHandler<IUploadFileRequest, UploadFileResponse, TState>;
 
+    /**
+     * Get file metadata
+     */
     handleGetFileMetadataRequest: RequestHandler<
       IGetFileMetadataRequest,
       GetFileMetadataResponse,
       TState
     >;
 
+    /**
+     * Download file content
+     */
     handleDownloadFileContentRequest: RequestHandler<
       IDownloadFileContentRequest,
       DownloadFileContentResponse,

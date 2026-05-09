@@ -12,11 +12,17 @@ import { type AwsHttpApiGatewayRoute, AwsHttpApiGatewayRoutes } from "../lib/aws
 export class AuthHttpApiRoutes extends AwsHttpApiGatewayRoutes {
   private routes: AwsHttpApiGatewayRoute[] = [
     {
+      /**
+       * POST: Get access token by email and password
+       */
       path: "/auth/access-token",
       methods: [HttpMethod.POST],
     },
 
     {
+      /**
+       * POST: Refresh access token by refresh token
+       */
       path: "/auth/refresh-token",
       methods: [HttpMethod.POST],
     },

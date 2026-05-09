@@ -14,10 +14,11 @@ import {
 
 export class <%= pascalCaseEntityName %>HttpApiRoutes extends AwsHttpApiGatewayRoutes {
   private routes: AwsHttpApiGatewayRoute[] = [
-<% for(const [path, methods] of Object.entries(routes)) { %>
+<% for(const [path, route] of Object.entries(routes)) { %>
     {
-      path: "<%= path %>",
-      methods: [<% for(const method of methods) { %>HttpMethod.<%= method %>,<% } %>],
+<% if (route.jsDoc) { %><%- route.jsDoc %>
+<% } %>      path: "<%= path %>",
+      methods: [<% for(const method of route.methods) { %>HttpMethod.<%= method %>,<% } %>],
     },
 <% } %>
   ];

@@ -28,6 +28,9 @@ export type IUpdateTodoRequestBody = {
   priority?: (("LOW" | "MEDIUM" | "HIGH") | undefined) | undefined;
 };
 
+/**
+ * Update todo
+ */
 export type IUpdateTodoRequest = {
   path: string;
   method: HttpMethod.PATCH;

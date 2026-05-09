@@ -27,6 +27,9 @@ export type ITodoNotChangeableErrorResponseBody = {
   };
 };
 
+/**
+ * Todo in current status cannot be changed
+ */
 export type ITodoNotChangeableErrorResponse = ITypedHttpResponse<
   "TodoNotChangeableError",
   HttpStatusCode.CONFLICT,
@@ -34,6 +37,9 @@ export type ITodoNotChangeableErrorResponse = ITypedHttpResponse<
   ITodoNotChangeableErrorResponseBody
 >;
 
+/**
+ * Todo in current status cannot be changed
+ */
 export const createTodoNotChangeableErrorResponse = (input: {
   header: ITodoNotChangeableErrorResponseHeader;
   body: ITodoNotChangeableErrorResponseBody;

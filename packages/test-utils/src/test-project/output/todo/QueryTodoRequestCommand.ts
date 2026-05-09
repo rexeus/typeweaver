@@ -27,6 +27,20 @@ import type { QueryTodoResponse } from "./QueryTodoResponse.js";
 const definition = getOperationDefinition(spec, "todo", "QueryTodo");
 const responseValidator = new QueryTodoResponseValidator();
 
+const defaultHeader = {
+  Accept: "application/json",
+
+  "Content-Type": "application/json",
+} as const;
+
+export type QueryTodoRequestCommandInput = Omit<IQueryTodoRequest, "method" | "path" | "header"> & {
+  readonly header: Omit<IQueryTodoRequestHeader, "Accept" | "Content-Type"> &
+    Partial<Pick<IQueryTodoRequestHeader, "Accept" | "Content-Type">>;
+};
+
+/**
+ * Query todos with advanced search criteria
+ */
 export class QueryTodoRequestCommand extends RequestCommand implements IQueryTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.POST;
@@ -37,10 +51,10 @@ export class QueryTodoRequestCommand extends RequestCommand implements IQueryTod
   public override readonly query: IQueryTodoRequestQuery;
   public override readonly body: IQueryTodoRequestBody;
 
-  public constructor(input: Omit<IQueryTodoRequest, "method" | "path">) {
+  public constructor(input: QueryTodoRequestCommandInput) {
     super();
 
-    this.header = input.header;
+    this.header = { ...input.header, ...defaultHeader };
 
     this.query = input.query;
 

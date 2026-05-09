@@ -26,6 +26,21 @@ import type { OptionsTodoResponse } from "./OptionsTodoResponse.js";
 const definition = getOperationDefinition(spec, "todo", "optionsTodo");
 const responseValidator = new OptionsTodoResponseValidator();
 
+const defaultHeader = {
+  Accept: "application/json",
+} as const;
+
+export type OptionsTodoRequestCommandInput = Omit<
+  IOptionsTodoRequest,
+  "method" | "path" | "header"
+> & {
+  readonly header: Omit<IOptionsTodoRequestHeader, "Accept"> &
+    Partial<Pick<IOptionsTodoRequestHeader, "Accept">>;
+};
+
+/**
+ * Get allowed methods for todo resource
+ */
 export class OptionsTodoRequestCommand extends RequestCommand implements IOptionsTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.OPTIONS;
@@ -36,10 +51,10 @@ export class OptionsTodoRequestCommand extends RequestCommand implements IOption
   declare public readonly query: undefined;
   declare public readonly body: undefined;
 
-  public constructor(input: Omit<IOptionsTodoRequest, "method" | "path">) {
+  public constructor(input: OptionsTodoRequestCommandInput) {
     super();
 
-    this.header = input.header;
+    this.header = { ...input.header, ...defaultHeader };
 
     this.param = input.param;
   }

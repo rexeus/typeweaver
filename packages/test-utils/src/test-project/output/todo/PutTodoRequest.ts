@@ -31,6 +31,9 @@ export type IPutTodoRequestBody = {
   priority?: ("LOW" | "MEDIUM" | "HIGH") | undefined;
 };
 
+/**
+ * Replace todo completely
+ */
 export type IPutTodoRequest = {
   path: string;
   method: HttpMethod.PUT;

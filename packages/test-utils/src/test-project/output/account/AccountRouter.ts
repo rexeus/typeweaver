@@ -21,6 +21,9 @@ import { RegisterAccountResponseValidator } from "./RegisterAccountResponseValid
 export type ServerAccountApiHandler<
   TState extends Record<string, unknown> = Record<string, unknown>,
 > = {
+  /**
+   * Register new account
+   */
   handleRegisterAccountRequest: RequestHandler<
     IRegisterAccountRequest,
     RegisterAccountResponse,

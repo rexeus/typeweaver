@@ -20,6 +20,9 @@ export type IRefreshTokenSuccessResponseBody = {
   refreshToken: string;
 };
 
+/**
+ * Refreshed token successfully
+ */
 export type IRefreshTokenSuccessResponse = ITypedHttpResponse<
   "RefreshTokenSuccess",
   HttpStatusCode.OK,
@@ -27,6 +30,9 @@ export type IRefreshTokenSuccessResponse = ITypedHttpResponse<
   IRefreshTokenSuccessResponseBody
 >;
 
+/**
+ * Refreshed token successfully
+ */
 export const createRefreshTokenSuccessResponse = (input: {
   header: IRefreshTokenSuccessResponseHeader;
   body: IRefreshTokenSuccessResponseBody;

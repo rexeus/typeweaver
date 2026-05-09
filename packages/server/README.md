@@ -294,10 +294,10 @@ Each middleware is documented in detail — click the links above.
 
 `TypeweaverApp` accepts an optional options object:
 
-| Option        | Type                       | Default            | Description                                                 |
-| ------------- | -------------------------- | ------------------ | ----------------------------------------------------------- |
-| `maxBodySize` | `number`                   | `1_048_576` (1 MB) | Max request body size in bytes. Exceeding returns `413`.    |
-| `onError`     | `(error: unknown) => void` | `console.error`    | Error callback. Falls back to `console.error` if it throws. |
+| Option        | Type                       | Default            | Description                                                                                                           |
+| ------------- | -------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| `maxBodySize` | `number`                   | `1_048_576` (1 MB) | Max request body size in bytes. Exceeding returns `413`.                                                              |
+| `onError`     | `(error: unknown) => void` | `console.error`    | Reports errors from the default unknown handler and top-level safety net. Falls back to `console.error` if it throws. |
 
 ```ts
 const app = new TypeweaverApp({
@@ -325,7 +325,7 @@ errors fall through to the next handler in the chain (except `handleResponseVali
 `false` means the invalid response is returned as-is — validation still runs for field stripping,
 but invalid responses pass through unchanged). When set to a function, it receives the error and
 `ServerContext` and must return an `IHttpResponse`. If a custom error handler throws, the framework
-catches the exception and falls through gracefully to the next handler.
+reports that handler failure through `onError` and falls through gracefully to the next handler.
 
 ### 🚨 Error Handling
 
@@ -430,6 +430,12 @@ new UserRouter({
   },
 });
 ```
+
+The default unknown-error handler calls `onError` before returning a sanitized 500 response. A
+custom `handleUnknownErrors` function replaces that default reporting strategy; if you need logging
+or metrics with a custom unknown handler, perform that reporting inside the custom handler. If the
+custom unknown handler throws, Typeweaver reports the handler failure through `onError` and then
+falls through to the top-level safety net.
 
 ### 📋 Error Responses
 

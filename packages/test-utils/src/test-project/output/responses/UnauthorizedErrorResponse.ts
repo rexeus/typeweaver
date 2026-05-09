@@ -20,6 +20,9 @@ export type IUnauthorizedErrorResponseBody = {
   code: "UNAUTHORIZED_ERROR";
 };
 
+/**
+ * Unauthorized request
+ */
 export type IUnauthorizedErrorResponse = ITypedHttpResponse<
   "UnauthorizedError",
   HttpStatusCode.UNAUTHORIZED,
@@ -27,6 +30,9 @@ export type IUnauthorizedErrorResponse = ITypedHttpResponse<
   IUnauthorizedErrorResponseBody
 >;
 
+/**
+ * Unauthorized request
+ */
 export const createUnauthorizedErrorResponse = (input: {
   header: IUnauthorizedErrorResponseHeader;
   body: IUnauthorizedErrorResponseBody;

@@ -26,6 +26,21 @@ import type { DeleteTodoResponse } from "./DeleteTodoResponse.js";
 const definition = getOperationDefinition(spec, "todo", "DeleteTodo");
 const responseValidator = new DeleteTodoResponseValidator();
 
+const defaultHeader = {
+  Accept: "application/json",
+} as const;
+
+export type DeleteTodoRequestCommandInput = Omit<
+  IDeleteTodoRequest,
+  "method" | "path" | "header"
+> & {
+  readonly header: Omit<IDeleteTodoRequestHeader, "Accept"> &
+    Partial<Pick<IDeleteTodoRequestHeader, "Accept">>;
+};
+
+/**
+ * Delete todo
+ */
 export class DeleteTodoRequestCommand extends RequestCommand implements IDeleteTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.DELETE;
@@ -36,10 +51,10 @@ export class DeleteTodoRequestCommand extends RequestCommand implements IDeleteT
   declare public readonly query: undefined;
   declare public readonly body: undefined;
 
-  public constructor(input: Omit<IDeleteTodoRequest, "method" | "path">) {
+  public constructor(input: DeleteTodoRequestCommandInput) {
     super();
 
-    this.header = input.header;
+    this.header = { ...input.header, ...defaultHeader };
 
     this.param = input.param;
   }

@@ -19,6 +19,9 @@ export type IGetTodoRequestParam = {
   todoId: string;
 };
 
+/**
+ * Get todo
+ */
 export type IGetTodoRequest = {
   path: string;
   method: HttpMethod.GET;

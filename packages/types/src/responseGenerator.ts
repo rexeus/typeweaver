@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
+import { createJSDocComment } from "@rexeus/typeweaver-gen";
 import type {
   GeneratorContext,
   NormalizedOperation,
@@ -44,6 +45,7 @@ type OwnResponseTemplateData = {
   readonly hasHeader: boolean;
   readonly hasBody: boolean;
   readonly factory: string;
+  readonly jsDoc?: string;
 };
 
 type ResponseFactoryTemplateData = {
@@ -52,6 +54,7 @@ type ResponseFactoryTemplateData = {
   readonly statusCodeKey: string;
   readonly hasHeader: boolean;
   readonly hasBody: boolean;
+  readonly jsDoc?: string;
 };
 
 type RenderResponseFactoryTemplateData = ResponseFactoryTemplateData & {
@@ -164,6 +167,7 @@ function createOwnResponseTemplateData(
     statusCodeKey: HttpStatusCode[response.statusCode],
     hasHeader,
     hasBody,
+    jsDoc: createJSDocComment(response.description),
   };
 
   return {
@@ -197,6 +201,7 @@ function writeCanonicalResponseType(
     statusCodeKey: HttpStatusCode[response.statusCode],
     hasHeader: response.header !== undefined,
     hasBody: response.body !== undefined,
+    jsDoc: createJSDocComment(response.description),
   };
 
   const content = context.renderTemplate(templateFile, {

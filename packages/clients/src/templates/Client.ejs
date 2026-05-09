@@ -29,7 +29,8 @@ export class <%= pascalCaseEntityName %>Client extends ApiClient {
     }
 
     <% for (const operation of operations) { %>
-    public async send(command: <%= operation.pascalCaseOperationId %>RequestCommand): Promise<<%= operation.pascalCaseOperationId %>Response>;
+    <% if (operation.jsDoc) { %><%- operation.jsDoc %>
+    <% } %>public async send(command: <%= operation.pascalCaseOperationId %>RequestCommand): Promise<<%= operation.pascalCaseOperationId %>Response>;
     <% } %>
     public async send(command: <%= pascalCaseEntityName %>RequestCommands): Promise<<%= pascalCaseEntityName %>Responses> {
         const response = await this.execute(command);

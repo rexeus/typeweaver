@@ -19,6 +19,9 @@ export type IRefreshTokenRequestBody = {
   refreshToken: string;
 };
 
+/**
+ * Refresh access token by refresh token
+ */
 export type IRefreshTokenRequest = {
   path: string;
   method: HttpMethod.POST;

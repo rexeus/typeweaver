@@ -26,6 +26,9 @@ export type IUnsupportedMediaTypeErrorResponseBody = {
   };
 };
 
+/**
+ * Unsupported media type
+ */
 export type IUnsupportedMediaTypeErrorResponse = ITypedHttpResponse<
   "UnsupportedMediaTypeError",
   HttpStatusCode.UNSUPPORTED_MEDIA_TYPE,
@@ -33,6 +36,9 @@ export type IUnsupportedMediaTypeErrorResponse = ITypedHttpResponse<
   IUnsupportedMediaTypeErrorResponseBody
 >;
 
+/**
+ * Unsupported media type
+ */
 export const createUnsupportedMediaTypeErrorResponse = (input: {
   header: IUnsupportedMediaTypeErrorResponseHeader;
   body: IUnsupportedMediaTypeErrorResponseBody;

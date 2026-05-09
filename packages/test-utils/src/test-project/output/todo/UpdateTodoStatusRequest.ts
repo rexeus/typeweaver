@@ -24,6 +24,9 @@ export type IUpdateTodoStatusRequestBody = {
   value: "TODO" | "IN_PROGRESS" | "DONE" | "ARCHIVED";
 };
 
+/**
+ * Update todo status
+ */
 export type IUpdateTodoStatusRequest = {
   path: string;
   method: HttpMethod.PUT;

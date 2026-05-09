@@ -31,6 +31,9 @@ export type IPutTodoSuccessResponseBody = {
   modifiedBy: string;
 };
 
+/**
+ * Todo replaced successfully
+ */
 export type IPutTodoSuccessResponse = ITypedHttpResponse<
   "PutTodoSuccess",
   HttpStatusCode.OK,
@@ -38,6 +41,9 @@ export type IPutTodoSuccessResponse = ITypedHttpResponse<
   IPutTodoSuccessResponseBody
 >;
 
+/**
+ * Todo replaced successfully
+ */
 export const createPutTodoSuccessResponse = (input: {
   header: IPutTodoSuccessResponseHeader;
   body: IPutTodoSuccessResponseBody;

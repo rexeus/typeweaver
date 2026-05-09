@@ -19,6 +19,9 @@ export type IGetFileMetadataRequestParam = {
   fileId: string;
 };
 
+/**
+ * Get file metadata
+ */
 export type IGetFileMetadataRequest = {
   path: string;
   method: HttpMethod.GET;

@@ -19,6 +19,9 @@ export type IDeleteTodoRequestParam = {
   todoId: string;
 };
 
+/**
+ * Delete todo
+ */
 export type IDeleteTodoRequest = {
   path: string;
   method: HttpMethod.DELETE;

@@ -28,6 +28,9 @@ export type IListTodosRequestQuery = {
   dateTo?: string | undefined;
 };
 
+/**
+ * List todos with filtering, pagination, and search
+ */
 export type IListTodosRequest = {
   path: string;
   method: HttpMethod.GET;

@@ -26,6 +26,9 @@ import type { DownloadFileContentResponse } from "./DownloadFileContentResponse.
 const definition = getOperationDefinition(spec, "file", "DownloadFileContent");
 const responseValidator = new DownloadFileContentResponseValidator();
 
+/**
+ * Download file content
+ */
 export class DownloadFileContentRequestCommand
   extends RequestCommand
   implements IDownloadFileContentRequest

@@ -31,6 +31,9 @@ export type IGetTodoSuccessResponseBody = {
   modifiedBy: string;
 };
 
+/**
+ * Todo retrieved successfully
+ */
 export type IGetTodoSuccessResponse = ITypedHttpResponse<
   "GetTodoSuccess",
   HttpStatusCode.OK,
@@ -38,6 +41,9 @@ export type IGetTodoSuccessResponse = ITypedHttpResponse<
   IGetTodoSuccessResponseBody
 >;
 
+/**
+ * Todo retrieved successfully
+ */
 export const createGetTodoSuccessResponse = (input: {
   header: IGetTodoSuccessResponseHeader;
   body: IGetTodoSuccessResponseBody;

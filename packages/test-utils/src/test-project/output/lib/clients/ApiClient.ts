@@ -25,6 +25,11 @@ export type ApiClientProps = {
   readonly timeoutMs?: number;
 };
 
+type SerializedBody = {
+  readonly body: NonNullable<RequestInit["body"]> | undefined;
+  readonly isJsonSerialized: boolean;
+};
+
 const NETWORK_ERROR_MESSAGES: Readonly<Partial<Record<NetworkErrorCode, string>>> = {
   ECONNREFUSED: "Connection refused",
   ECONNRESET: "Connection reset by peer",
@@ -100,10 +105,16 @@ export abstract class ApiClient {
     const relativeUrl = this.createUrl(pathWithParam, query);
     const fullUrl = this.buildFullUrl(relativeUrl);
 
+    const serializedBody = this.serializeBody(body);
+    const headers = this.createRequestHeaders(
+      this.flattenHeaders(header),
+      serializedBody.isJsonSerialized,
+    );
+
     const response = await this.performFetch(method, fullUrl, {
       method,
-      headers: this.flattenHeaders(header),
-      body: this.serializeBody(body),
+      headers,
+      body: serializedBody.body,
       signal: this.timeoutMs !== undefined ? AbortSignal.timeout(this.timeoutMs) : undefined,
     });
 
@@ -264,11 +275,36 @@ export abstract class ApiClient {
     return flattened;
   }
 
-  private serializeBody(body: unknown): NonNullable<RequestInit["body"]> | undefined {
-    if (body === null || body === undefined) return undefined;
-    if (typeof body === "string") return body;
-    if (this.isNativeBody(body)) return body as NonNullable<RequestInit["body"]>;
-    return JSON.stringify(body);
+  private createRequestHeaders(
+    headers: Record<string, string> | undefined,
+    isJsonSerialized: boolean,
+  ): Record<string, string> | undefined {
+    if (!isJsonSerialized) return headers;
+
+    const requestHeaders = headers ? { ...headers } : {};
+    if (!this.hasContentTypeHeader(requestHeaders)) {
+      requestHeaders["Content-Type"] = "application/json";
+    }
+    return requestHeaders;
+  }
+
+  private hasContentTypeHeader(headers: Record<string, string>): boolean {
+    return Object.keys(headers).some((key) => key.toLowerCase() === "content-type");
+  }
+
+  private serializeBody(body: unknown): SerializedBody {
+    if (body === null || body === undefined) {
+      return { body: undefined, isJsonSerialized: false };
+    }
+    if (typeof body === "string") {
+      return { body, isJsonSerialized: false };
+    }
+    if (this.isNativeBody(body))
+      return {
+        body: body as NonNullable<RequestInit["body"]>,
+        isJsonSerialized: false,
+      };
+    return { body: JSON.stringify(body), isJsonSerialized: true };
   }
 
   private isNativeBody(body: unknown): boolean {

@@ -28,6 +28,9 @@ export type IListSubTodosRequestQuery =
     }
   | undefined;
 
+/**
+ * List subtodos for a specific todo
+ */
 export type IListSubTodosRequest = {
   path: string;
   method: HttpMethod.GET;

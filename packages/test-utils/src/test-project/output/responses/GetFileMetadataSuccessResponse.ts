@@ -23,6 +23,9 @@ export type IGetFileMetadataSuccessResponseBody = {
   createdAt: string;
 };
 
+/**
+ * File metadata retrieved successfully
+ */
 export type IGetFileMetadataSuccessResponse = ITypedHttpResponse<
   "GetFileMetadataSuccess",
   HttpStatusCode.OK,
@@ -30,6 +33,9 @@ export type IGetFileMetadataSuccessResponse = ITypedHttpResponse<
   IGetFileMetadataSuccessResponseBody
 >;
 
+/**
+ * File metadata retrieved successfully
+ */
 export const createGetFileMetadataSuccessResponse = (input: {
   header: IGetFileMetadataSuccessResponseHeader;
   body: IGetFileMetadataSuccessResponseBody;

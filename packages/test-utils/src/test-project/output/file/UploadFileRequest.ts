@@ -16,6 +16,9 @@ export type IUploadFileRequestHeader = {
 
 export type IUploadFileRequestBody = any;
 
+/**
+ * Upload a file
+ */
 export type IUploadFileRequest = {
   path: string;
   method: HttpMethod.POST;
