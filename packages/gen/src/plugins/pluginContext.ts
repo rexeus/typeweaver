@@ -127,10 +127,7 @@ function assertPathStatsIsNotSymlink(
     return;
   }
 
-  throwUnsafeGeneratedFilePath(
-    requestedPath,
-    "path contains a symbolic link"
-  );
+  throwUnsafeGeneratedFilePath(requestedPath, "path contains a symbolic link");
 }
 
 function getExistingPathStats(absolutePath: string): fs.Stats | undefined {
@@ -150,9 +147,7 @@ function isMissingPathError(error: unknown): boolean {
     return false;
   }
 
-  return ["ENOENT", "ENOTDIR"].includes(
-    (error as FileSystemError).code ?? ""
-  );
+  return ["ENOENT", "ENOTDIR"].includes((error as FileSystemError).code ?? "");
 }
 
 function isStrictlyInsidePath(childPath: string, parentPath: string): boolean {
