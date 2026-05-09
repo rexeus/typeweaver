@@ -178,6 +178,19 @@ importers:
         specifier: file:../test-utils
         version: link:../test-utils
 
+  packages/openapi:
+    dependencies:
+      '@rexeus/typeweaver-zod-to-json-schema':
+        specifier: workspace:^
+        version: link:../zod-to-json-schema
+    devDependencies:
+      '@rexeus/typeweaver-gen':
+        specifier: workspace:^
+        version: link:../gen
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
+
   packages/server:
     dependencies:
       polycase:
