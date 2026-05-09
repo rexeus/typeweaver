@@ -1,5 +1,18 @@
 # @rexeus/typeweaver
 
+## 0.10.5
+
+### Patch Changes
+
+- Updated dependencies [c6a1542]
+  - @rexeus/typeweaver-core@0.10.5
+  - @rexeus/typeweaver-gen@0.10.5
+  - @rexeus/typeweaver-types@0.10.5
+  - @rexeus/typeweaver-clients@0.10.5
+  - @rexeus/typeweaver-server@0.10.5
+  - @rexeus/typeweaver-hono@0.10.5
+  - @rexeus/typeweaver-aws-cdk@0.10.5
+
 ## 0.10.4
 
 ### Patch Changes
