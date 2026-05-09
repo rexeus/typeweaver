@@ -45,11 +45,11 @@ export type <%= pascalCaseOperationId %>RequestCommandInput = Omit<I<%= pascalCa
     public <%= queryTsType ? `override` : `declare` %> readonly query: <%= queryTsType ? `I${pascalCaseOperationId}RequestQuery` : `undefined` %>;
     public <%= bodyTsType ? `override` : `declare` %> readonly body: <%= bodyTsType ? `I${pascalCaseOperationId}RequestBody` : `undefined` %>;
 
-    public constructor(input: <%- hasHeaderDefaults ? `${pascalCaseOperationId}RequestCommandInput` : `Omit<I${pascalCaseOperationId}Request, "method" | "path">` %>) {
+    public constructor(<%- hasRequestInput ? `input: ${hasHeaderDefaults ? `${pascalCaseOperationId}RequestCommandInput` : `Omit<I${pascalCaseOperationId}Request, "method" | "path">`}` : `_input?: Omit<I${pascalCaseOperationId}Request, "method" | "path">` %>) {
         super();
 
         <% if (headerTsType) { %>
-        this.header = <% if (hasHeaderDefaults) { %>{ ...input.header, ...defaultHeader }<% } else { %>input.header<% } %>;
+        this.header = <% if (hasHeaderDefaults) { %>{ ...defaultHeader, ...input.header }<% } else { %>input.header<% } %>;
         <% } %>
 
         <% if (paramTsType) { %>

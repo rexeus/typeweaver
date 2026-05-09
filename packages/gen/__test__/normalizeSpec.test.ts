@@ -978,6 +978,26 @@ describe("normalizeSpec", () => {
       expect(() => normalizeSpec(spec)).toThrowError(DerivedResponseCycleError);
     });
 
+    test("rejects frozen authored responses with cyclic derived metadata", () => {
+      const cyclicResponse = defineResponse(
+        Object.freeze({
+          name: "FrozenCyclicResponse",
+          statusCode: HttpStatusCode.OK,
+          description: "Frozen cyclic response",
+          derived: {
+            parentName: "FrozenCyclicResponse",
+            lineage: ["FrozenCyclicResponse"],
+            depth: 1,
+          },
+        })
+      );
+      const spec = aSpec({
+        todos: { operations: [anOperation({ responses: [cyclicResponse] })] },
+      });
+
+      expect(() => normalizeSpec(spec)).toThrowError(DerivedResponseCycleError);
+    });
+
     test("rejects derived responses whose lineage metadata disagrees with the graph", () => {
       const parentResponse = aCanonicalResponse("ParentResponse");
       const childResponse = withDerivedMetadata(

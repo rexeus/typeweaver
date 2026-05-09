@@ -57,7 +57,7 @@ export class CreateSubTodoRequestCommand extends RequestCommand implements ICrea
   public constructor(input: CreateSubTodoRequestCommandInput) {
     super();
 
-    this.header = { ...input.header, ...defaultHeader };
+    this.header = { ...defaultHeader, ...input.header };
 
     this.param = input.param;
 

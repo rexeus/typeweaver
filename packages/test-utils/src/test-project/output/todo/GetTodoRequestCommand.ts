@@ -51,7 +51,7 @@ export class GetTodoRequestCommand extends RequestCommand implements IGetTodoReq
   public constructor(input: GetTodoRequestCommandInput) {
     super();
 
-    this.header = { ...input.header, ...defaultHeader };
+    this.header = { ...defaultHeader, ...input.header };
 
     this.param = input.param;
   }

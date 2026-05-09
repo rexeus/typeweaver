@@ -126,14 +126,48 @@ const attachResponseDefinitionMetadata = <TResponse extends ResponseDefinition>(
   response: TResponse,
   metadata: ResponseDefinitionMetadata
 ): TResponse => {
+  try {
+    defineResponseDefinitionMetadata(response, metadata);
+    return response;
+  } catch (error) {
+    if (!(error instanceof TypeError)) {
+      throw error;
+    }
+  }
+
+  const clonedResponse = cloneResponseDefinitionWithoutMetadata(response);
+  defineResponseDefinitionMetadata(clonedResponse, metadata);
+
+  return clonedResponse;
+};
+
+const defineResponseDefinitionMetadata = (
+  response: ResponseDefinition,
+  metadata: ResponseDefinitionMetadata
+): void => {
   Object.defineProperty(response, responseDefinitionMetadataSymbol, {
     value: metadata,
     enumerable: false,
     configurable: false,
     writable: false,
   });
+};
 
-  return response;
+const cloneResponseDefinitionWithoutMetadata = <
+  TResponse extends ResponseDefinition,
+>(
+  response: TResponse
+): TResponse => {
+  const descriptors = Object.fromEntries(
+    Reflect.ownKeys(response)
+      .filter(key => key !== responseDefinitionMetadataSymbol)
+      .map(key => [key, Object.getOwnPropertyDescriptor(response, key)!])
+  );
+
+  return Object.create(
+    Object.getPrototypeOf(response),
+    descriptors
+  ) as TResponse;
 };
 
 export const getResponseDefinitionMetadata = (

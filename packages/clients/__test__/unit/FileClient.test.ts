@@ -59,6 +59,26 @@ function anUploadCommandWithoutDefaultContentType(props: {
   });
 }
 
+function anUploadCommandWithCallerContentType(props: {
+  readonly authorization: string;
+  readonly contentType: string;
+  readonly fileName: string;
+  readonly body: Blob;
+}): UploadFileRequestCommand {
+  type UploadFileRequestHeader = ConstructorParameters<
+    typeof UploadFileRequestCommand
+  >[0]["header"];
+
+  return new UploadFileRequestCommand({
+    header: {
+      Authorization: props.authorization,
+      "Content-Type": props.contentType,
+      "X-File-Name": props.fileName,
+    } as unknown as UploadFileRequestHeader,
+    body: props.body,
+  });
+}
+
 function aMetadataCommandWithoutDefaultAccept(props: {
   readonly authorization: string;
   readonly fileId: string;
@@ -143,21 +163,17 @@ describe("FileClient transport contract", () => {
     expect(init.body).toBe(body);
   });
 
-  test("uses generated literal header defaults over runtime command input", async () => {
+  test("sends a caller-supplied Content-Type instead of the generated upload default", async () => {
     const metadata = createUploadFileSuccessResponseBody();
     const mockFetch = createJsonMockFetch(201, metadata);
     const client = createFileClient(mockFetch);
     const body = new Blob([new Uint8Array([1, 2, 3])], {
       type: "application/octet-stream",
     });
-    const command = new UploadFileRequestCommand({
-      header: {
-        Authorization: "Bearer upload-token",
-        "Content-Type": "text/plain",
-        "X-File-Name": "report.pdf",
-      } as unknown as ConstructorParameters<
-        typeof UploadFileRequestCommand
-      >[0]["header"],
+    const command = anUploadCommandWithCallerContentType({
+      authorization: "Bearer upload-token",
+      contentType: "text/plain",
+      fileName: "report.pdf",
       body,
     });
 
@@ -165,8 +181,23 @@ describe("FileClient transport contract", () => {
 
     const { init } = getFetchCall(mockFetch);
     expect(init.headers).toMatchObject({
-      "Content-Type": "application/octet-stream",
+      "Content-Type": "text/plain",
     });
+  });
+
+  test("preserves a caller-supplied Content-Type on upload commands", () => {
+    const body = new Blob([new Uint8Array([1, 2, 3])], {
+      type: "application/octet-stream",
+    });
+
+    const command = anUploadCommandWithCallerContentType({
+      authorization: "Bearer upload-token",
+      contentType: "text/plain",
+      fileName: "report.pdf",
+      body,
+    });
+
+    expect(command.header["Content-Type"]).toBe("text/plain");
   });
 
   test("sends download requests to the encoded file content URL", async () => {

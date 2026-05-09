@@ -57,7 +57,7 @@ export class UpdateTodoRequestCommand extends RequestCommand implements IUpdateT
   public constructor(input: UpdateTodoRequestCommandInput) {
     super();
 
-    this.header = { ...input.header, ...defaultHeader };
+    this.header = { ...defaultHeader, ...input.header };
 
     this.param = input.param;
 
