@@ -58,7 +58,7 @@ export class QuerySubTodoRequestCommand extends RequestCommand implements IQuery
   public constructor(input: QuerySubTodoRequestCommandInput) {
     super();
 
-    this.header = { ...input.header, ...defaultHeader };
+    this.header = { ...defaultHeader, ...input.header };
 
     this.param = input.param;
 

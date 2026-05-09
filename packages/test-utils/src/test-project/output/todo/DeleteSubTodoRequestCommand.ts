@@ -54,7 +54,7 @@ export class DeleteSubTodoRequestCommand extends RequestCommand implements IDele
   public constructor(input: DeleteSubTodoRequestCommandInput) {
     super();
 
-    this.header = { ...input.header, ...defaultHeader };
+    this.header = { ...defaultHeader, ...input.header };
 
     this.param = input.param;
   }

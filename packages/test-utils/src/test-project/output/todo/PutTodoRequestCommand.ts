@@ -54,7 +54,7 @@ export class PutTodoRequestCommand extends RequestCommand implements IPutTodoReq
   public constructor(input: PutTodoRequestCommandInput) {
     super();
 
-    this.header = { ...input.header, ...defaultHeader };
+    this.header = { ...defaultHeader, ...input.header };
 
     this.param = input.param;
 

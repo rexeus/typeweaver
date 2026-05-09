@@ -54,7 +54,7 @@ export class QueryTodoRequestCommand extends RequestCommand implements IQueryTod
   public constructor(input: QueryTodoRequestCommandInput) {
     super();
 
-    this.header = { ...input.header, ...defaultHeader };
+    this.header = { ...defaultHeader, ...input.header };
 
     this.query = input.query;
 

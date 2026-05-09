@@ -1080,8 +1080,11 @@ describe("TypeweaverApp", () => {
       expect(data.message).toBe("Boom");
     });
 
-    test("does not call onError when a custom unknown error handler returns a response", async () => {
+    test("reports unknown route errors once when a custom unknown error handler returns a response", async () => {
       const onError = vi.fn();
+      const routeFailure = new TestApplicationError(
+        "custom handler owns response"
+      );
       const app = createApp(
         {
           handleUnknownErrors: error => ({
@@ -1094,7 +1097,7 @@ describe("TypeweaverApp", () => {
         },
         {
           handleGetTodos: async () => {
-            throw new TestApplicationError("custom handler owns reporting");
+            throw routeFailure;
           },
         },
         { onError }
@@ -1105,16 +1108,18 @@ describe("TypeweaverApp", () => {
       const data = await expectJson(res, 500);
       expect(data).toEqual({
         code: "CUSTOM_UNKNOWN",
-        message: "custom handler owns reporting",
+        message: "custom handler owns response",
       });
-      expect(onError).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledOnce();
+      expect(onError).toHaveBeenCalledWith(routeFailure);
     });
 
-    test("reports custom unknown handler failures to onError", async () => {
+    test("reports both the custom unknown handler failure and original route failure to onError in order", async () => {
       const onError = vi.fn();
       const handlerFailure = new TestApplicationError(
         "custom unknown handler failed"
       );
+      const routeFailure = new TestApplicationError("unexpected failure");
       const app = createApp(
         {
           handleUnknownErrors: () => {
@@ -1123,7 +1128,7 @@ describe("TypeweaverApp", () => {
         },
         {
           handleGetTodos: async () => {
-            throw new TestApplicationError("unexpected failure");
+            throw routeFailure;
           },
         },
         { onError }
@@ -1132,7 +1137,9 @@ describe("TypeweaverApp", () => {
       const res = await app.fetch(get("/todos"));
 
       await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
-      expect(onError).toHaveBeenCalledWith(handlerFailure);
+      expect(onError).toHaveBeenCalledTimes(2);
+      expect(onError).toHaveBeenNthCalledWith(1, handlerFailure);
+      expect(onError).toHaveBeenNthCalledWith(2, routeFailure);
     });
 
     test("falls through to the safety net when the custom unknown handler throws", async () => {

@@ -51,7 +51,7 @@ export class ListTodosRequestCommand extends RequestCommand implements IListTodo
   public constructor(input: ListTodosRequestCommandInput) {
     super();
 
-    this.header = { ...input.header, ...defaultHeader };
+    this.header = { ...defaultHeader, ...input.header };
 
     this.query = input.query;
   }

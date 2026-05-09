@@ -54,7 +54,7 @@ export class DeleteTodoRequestCommand extends RequestCommand implements IDeleteT
   public constructor(input: DeleteTodoRequestCommandInput) {
     super();
 
-    this.header = { ...input.header, ...defaultHeader };
+    this.header = { ...defaultHeader, ...input.header };
 
     this.param = input.param;
   }

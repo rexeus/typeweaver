@@ -56,7 +56,7 @@ export class AccessTokenRequestCommand extends RequestCommand implements IAccess
   public constructor(input: AccessTokenRequestCommandInput) {
     super();
 
-    this.header = { ...input.header, ...defaultHeader };
+    this.header = { ...defaultHeader, ...input.header };
 
     this.body = input.body;
   }

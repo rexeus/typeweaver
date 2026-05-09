@@ -51,7 +51,7 @@ export class HeadTodoRequestCommand extends RequestCommand implements IHeadTodoR
   public constructor(input: HeadTodoRequestCommandInput) {
     super();
 
-    this.header = { ...input.header, ...defaultHeader };
+    this.header = { ...defaultHeader, ...input.header };
 
     this.param = input.param;
   }

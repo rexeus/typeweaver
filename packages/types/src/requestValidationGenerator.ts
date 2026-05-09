@@ -36,6 +36,11 @@ function writeRequestValidator(
 ): void {
   const { operationId, request } = operation;
   const { body, query, param, header } = request ?? {};
+  const hasRequestSchema =
+    body !== undefined ||
+    header !== undefined ||
+    param !== undefined ||
+    query !== undefined;
   const outputPaths = context.getOperationOutputPaths({
     resourceName,
     operationId,
@@ -56,6 +61,7 @@ function writeRequestValidator(
     query,
     param,
     header,
+    hasRequestSchema,
     z,
   });
 

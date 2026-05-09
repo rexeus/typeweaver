@@ -55,7 +55,7 @@ export class ListSubTodosRequestCommand extends RequestCommand implements IListS
   public constructor(input: ListSubTodosRequestCommandInput) {
     super();
 
-    this.header = { ...input.header, ...defaultHeader };
+    this.header = { ...defaultHeader, ...input.header };
 
     this.param = input.param;
 

@@ -63,6 +63,76 @@ describe("defineResponse", () => {
     expect(isNamedResponseDefinition(response)).toBe(true);
   });
 
+  test("mutable authored responses receive metadata on the supplied object", () => {
+    const definition = {
+      name: "MutableResponse",
+      statusCode: HttpStatusCode.OK,
+      description: "Mutable",
+    };
+
+    const response = defineResponse(definition);
+
+    expect(response).toBe(definition);
+    expect(isNamedResponseDefinition(response)).toBe(true);
+  });
+
+  test("frozen authored responses receive metadata on a clone", () => {
+    const body = z.object({ id: z.string() });
+    const derived = {
+      parentName: "ParentResponse",
+      lineage: ["FrozenResponse"],
+      depth: 1,
+    } as const;
+    const definition = Object.freeze({
+      name: "FrozenResponse",
+      statusCode: HttpStatusCode.OK,
+      description: "Frozen",
+      body,
+      derived,
+    });
+
+    const response = defineResponse(definition);
+
+    expect(response).not.toBe(definition);
+    expect(isNamedResponseDefinition(response)).toBe(true);
+    expect(isNamedResponseDefinition(definition)).toBe(false);
+    expect(response.body).toBe(body);
+    expect(response.derived).toBe(derived);
+    expect(responseDefinitionMetadataSymbol in definition).toBe(false);
+  });
+
+  test.each([
+    {
+      scenario: "sealed",
+      createDefinition: () =>
+        Object.seal({
+          name: "SealedResponse",
+          statusCode: HttpStatusCode.OK,
+          description: "Sealed",
+        }),
+    },
+    {
+      scenario: "non-extensible",
+      createDefinition: () =>
+        Object.preventExtensions({
+          name: "NonExtensibleResponse",
+          statusCode: HttpStatusCode.OK,
+          description: "Non-extensible",
+        }),
+    },
+  ])("$scenario authored responses receive metadata on a clone", scenario => {
+    const definition = scenario.createDefinition();
+
+    const response = defineResponse(definition);
+
+    expect(response).not.toBe(definition);
+    expect(isNamedResponseDefinition(response)).toBe(true);
+    expect(isNamedResponseDefinition(definition)).toBe(false);
+    expect(response.name).toBe(definition.name);
+    expect(response.statusCode).toBe(definition.statusCode);
+    expect(response.description).toBe(definition.description);
+  });
+
   test("plain object literals are not recognized as named responses", () => {
     const plainObj = {
       name: "Foo",
