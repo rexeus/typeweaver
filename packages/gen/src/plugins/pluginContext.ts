@@ -7,6 +7,223 @@ import { MissingCanonicalResponseError } from "./errors/MissingCanonicalResponse
 import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec.js";
 import type { GeneratorContext, PluginConfig, PluginContext } from "./types.js";
 
+type SafeGeneratedFilePath = {
+  readonly fullPath: string;
+  readonly generatedPath: string;
+};
+
+type FileSystemError = Error & {
+  readonly code?: string;
+};
+
+const WINDOWS_DRIVE_PREFIX_PATTERN = /^[a-zA-Z]:/;
+
+function resolveSafeGeneratedFilePath(
+  outputDir: string,
+  requestedPath: string
+): SafeGeneratedFilePath {
+  if (requestedPath.length === 0) {
+    throwUnsafeGeneratedFilePath(requestedPath, "path must not be empty");
+  }
+
+  const projectPath = requestedPath.replace(/\\/g, "/");
+
+  if (
+    path.isAbsolute(requestedPath) ||
+    path.posix.isAbsolute(projectPath) ||
+    path.win32.isAbsolute(requestedPath) ||
+    path.win32.isAbsolute(projectPath) ||
+    WINDOWS_DRIVE_PREFIX_PATTERN.test(requestedPath)
+  ) {
+    throwUnsafeGeneratedFilePath(
+      requestedPath,
+      "absolute paths are not allowed"
+    );
+  }
+
+  const generatedPath = path.posix.normalize(projectPath);
+
+  if (generatedPath === ".") {
+    throwUnsafeGeneratedFilePath(
+      requestedPath,
+      "path must name a file inside the output directory"
+    );
+  }
+
+  if (generatedPath.split("/").includes("..")) {
+    throwUnsafeGeneratedFilePath(
+      requestedPath,
+      "path contains parent-directory traversal"
+    );
+  }
+
+  const outputRoot = path.resolve(outputDir);
+  const fullPath = path.resolve(outputRoot, toNativePath(generatedPath));
+
+  if (!isStrictlyInsidePath(fullPath, outputRoot)) {
+    throwUnsafeGeneratedFilePath(
+      requestedPath,
+      "path escapes the output directory"
+    );
+  }
+
+  assertGeneratedPathHasNoSymlinkComponents({
+    outputRoot,
+    generatedPath,
+    requestedPath,
+  });
+
+  return { fullPath, generatedPath };
+}
+
+function toNativePath(projectPath: string): string {
+  return projectPath.split("/").join(path.sep);
+}
+
+function assertGeneratedPathHasNoSymlinkComponents(config: {
+  readonly outputRoot: string;
+  readonly generatedPath: string;
+  readonly requestedPath: string;
+}): void {
+  assertExistingPathIsNotSymlink(config.outputRoot, config.requestedPath);
+
+  let currentPath = config.outputRoot;
+
+  for (const segment of config.generatedPath.split("/")) {
+    currentPath = path.join(currentPath, segment);
+
+    const pathStats = getExistingPathStats(currentPath);
+
+    if (pathStats === undefined) {
+      return;
+    }
+
+    assertPathStatsIsNotSymlink(pathStats, config.requestedPath);
+
+    if (!pathStats.isDirectory()) {
+      return;
+    }
+  }
+}
+
+function assertExistingPathIsNotSymlink(
+  absolutePath: string,
+  requestedPath: string
+): void {
+  const pathStats = getExistingPathStats(absolutePath);
+
+  if (pathStats === undefined) {
+    return;
+  }
+
+  assertPathStatsIsNotSymlink(pathStats, requestedPath);
+}
+
+function assertPathStatsIsNotSymlink(
+  pathStats: fs.Stats,
+  requestedPath: string
+): void {
+  if (!pathStats.isSymbolicLink()) {
+    return;
+  }
+
+  throwUnsafeGeneratedFilePath(
+    requestedPath,
+    "path contains a symbolic link"
+  );
+}
+
+function getExistingPathStats(absolutePath: string): fs.Stats | undefined {
+  try {
+    return fs.lstatSync(absolutePath);
+  } catch (error) {
+    if (isMissingPathError(error)) {
+      return undefined;
+    }
+
+    throw error;
+  }
+}
+
+function isMissingPathError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return ["ENOENT", "ENOTDIR"].includes(
+    (error as FileSystemError).code ?? ""
+  );
+}
+
+function isStrictlyInsidePath(childPath: string, parentPath: string): boolean {
+  const relativePath = path.relative(parentPath, childPath);
+
+  return (
+    relativePath !== "" &&
+    relativePath !== ".." &&
+    !relativePath.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relativePath)
+  );
+}
+
+function throwUnsafeGeneratedFilePath(
+  requestedPath: string,
+  reason: string
+): never {
+  throw new Error(
+    `Unsafe generated file path '${requestedPath}': ${reason}. ` +
+      `Generated writes must stay inside the output directory.`
+  );
+}
+
+function revalidateGeneratedWritePathAfterMkdir(
+  outputDir: string,
+  generatedPath: string
+): SafeGeneratedFilePath {
+  // Parent directory creation can expose a symlink inserted in the write path;
+  // validate again immediately before writeFile follows the filesystem path.
+  return resolveSafeGeneratedFilePath(outputDir, generatedPath);
+}
+
+function writeGeneratedFileByReplacingDestination(config: {
+  readonly outputDir: string;
+  readonly generatedPath: string;
+  readonly fullPath: string;
+  readonly content: string;
+}): SafeGeneratedFilePath {
+  const destinationDir = path.dirname(config.fullPath);
+  const existingFileMode = getExistingFileMode(config.fullPath);
+  const tempDir = fs.mkdtempSync(path.join(destinationDir, ".typeweaver-"));
+  const tempFile = path.join(tempDir, "generated.tmp");
+
+  try {
+    fs.writeFileSync(tempFile, config.content, {
+      flag: "wx",
+      mode: existingFileMode ?? 0o666,
+    });
+
+    const writablePath = revalidateGeneratedWritePathAfterMkdir(
+      config.outputDir,
+      config.generatedPath
+    );
+    fs.renameSync(tempFile, writablePath.fullPath);
+
+    return writablePath;
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
+function getExistingFileMode(absolutePath: string): number | undefined {
+  const pathStats = getExistingPathStats(absolutePath);
+
+  if (pathStats?.isFile() !== true) {
+    return undefined;
+  }
+
+  return pathStats.mode & 0o777;
+}
+
 export type PluginContextBuilderApi = {
   readonly createPluginContext: (params: {
     outputDir: string;
@@ -144,14 +361,26 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
       getResourceOutputDir,
 
       writeFile: (relativePath: string, content: string) => {
-        const fullPath = path.join(params.outputDir, relativePath);
-        const dir = path.dirname(fullPath);
+        const safePath = resolveSafeGeneratedFilePath(
+          params.outputDir,
+          relativePath
+        );
+        const dir = path.dirname(safePath.fullPath);
 
         fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(fullPath, content);
-        generatedFiles.add(relativePath);
+        const writablePath = revalidateGeneratedWritePathAfterMkdir(
+          params.outputDir,
+          safePath.generatedPath
+        );
+        const generatedFile = writeGeneratedFileByReplacingDestination({
+          outputDir: params.outputDir,
+          generatedPath: writablePath.generatedPath,
+          fullPath: writablePath.fullPath,
+          content,
+        });
+        generatedFiles.add(generatedFile.generatedPath);
 
-        console.info(`Generated: ${relativePath}`);
+        console.info(`Generated: ${generatedFile.generatedPath}`);
       },
 
       renderTemplate: (templatePath: string, data: unknown) => {
@@ -167,7 +396,12 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
       },
 
       addGeneratedFile: (relativePath: string) => {
-        generatedFiles.add(relativePath);
+        const safePath = resolveSafeGeneratedFilePath(
+          params.outputDir,
+          relativePath
+        );
+
+        generatedFiles.add(safePath.generatedPath);
       },
 
       getGeneratedFiles: () => {
