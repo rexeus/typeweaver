@@ -49,17 +49,19 @@ The library provides complete TypeScript type generation for the following Zod s
 - **Objects**: `z.object()` with nested properties and optional fields
 - **Unions**: `z.union()`
 - **Intersections**: `z.intersection()`
-- **Modifiers**: `z.optional()`, `z.nullable()`, `z.default()`
-- **Special types**: `z.unknown()`, `z.any()`, `z.void()`, `z.never()`, `z.null()`, `z.undefined()`
+- **Modifiers**: `z.optional()`, `z.nullable()`, `z.default()`, `z.nonoptional()`, `z.readonly()`,
+  `z.catch()`
+- **Special types**: `z.unknown()`, `z.any()`, `z.void()`, `z.never()`, `z.null()`, `z.undefined()`,
+  `z.nan()`, `z.file()`, `z.success()`
 - **Async types**: `z.promise()`
+- **Pipes**: `z.pipe()` outputs the pipe output schema type; unsupported output schemas still fall
+  back to `unknown`
 
 ### ⚠️ Unsupported Types
 
 The following Zod types are not yet implemented and will fall back to `unknown` type:
 
-- **Advanced types**: `z.lazy()`, `z.templateLiteral()`, `z.custom()`, `z.transform()`, `z.pipe()`
-- **Modifiers**: `z.nonoptional()`, `z.readonly()`, `z.catch()`
-- **Special types**: `z.nan()`, `z.file()`, `z.success()`
+- **Advanced types**: `z.lazy()`, `z.templateLiteral()`, `z.custom()`, `z.transform()`
 
 > **Note**: When encountering unsupported Zod types, the library gracefully falls back to
 > TypeScript's `unknown` type to maintain type safety.
