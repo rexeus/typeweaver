@@ -25,7 +25,7 @@ import type {
   ResponseValidationError,
 } from "@rexeus/typeweaver-core";
 import { Hono } from "hono";
-import { BodyParseError } from "./Errors.js";
+import { HonoBodyParseError } from "./Errors.js";
 import { HonoAdapter } from "./HonoAdapter.js";
 import type { HonoRequestHandler } from "./HonoRequestHandler.js";
 import type { Context } from "hono";
@@ -51,6 +51,17 @@ export type HonoHttpResponseErrorHandler = (
  */
 export type HonoRequestValidationErrorHandler = (
   error: RequestValidationError,
+  context: Context
+) => Promise<IHttpResponse> | IHttpResponse;
+
+/**
+ * Handles request body parse errors.
+ * @param error - The body parse error thrown while reading the request body
+ * @param context - The Hono context for the current request
+ * @returns The HTTP response to send to the client
+ */
+export type HonoBodyParseErrorHandler = (
+  error: HonoBodyParseError,
   context: Context
 ) => Promise<IHttpResponse> | IHttpResponse;
 
@@ -120,6 +131,15 @@ export type TypeweaverHonoOptions<
     | boolean;
 
   /**
+   * Configure handling of request body parse errors.
+   * - `true`: Use default handler (sanitized 400 Bad Request)
+   * - `false`: Let errors flow to the unknown error handler or bubble to Hono
+   * - `function`: Use custom body parse error handler
+   * @default true
+   */
+  readonly handleBodyParseErrors?: HonoBodyParseErrorHandler | boolean;
+
+  /**
    * Configure handling of response validation errors.
    * - `true`: Use default handler (500 Internal Server Error)
    * - `false`: Disable response validation error handling (return response as-is)
@@ -186,6 +206,7 @@ export abstract class TypeweaverHono<
     readonly validateResponses: boolean;
     readonly errorHandlers: {
       readonly requestValidation: HonoRequestValidationErrorHandler | undefined;
+      readonly bodyParse: HonoBodyParseErrorHandler | undefined;
       readonly responseValidation:
         | HonoResponseValidationErrorHandler
         | undefined;
@@ -214,7 +235,7 @@ export abstract class TypeweaverHono<
     responseValidation: (): IHttpResponse =>
       createDefaultErrorResponse(internalServerErrorDefaultError),
 
-    bodyParse: (): IHttpResponse =>
+    bodyParse: (_error?: HonoBodyParseError): IHttpResponse =>
       createDefaultErrorResponse(badRequestDefaultError),
 
     httpResponse: (error: ITypedHttpResponse): IHttpResponse =>
@@ -232,6 +253,7 @@ export abstract class TypeweaverHono<
    * @param options.validateRequests - Whether to validate requests (default: true)
    * @param options.handleHttpResponseErrors - Handler or boolean for HTTP errors (default: true)
    * @param options.handleRequestValidationErrors - Handler or boolean for request validation errors (default: true)
+   * @param options.handleBodyParseErrors - Handler or boolean for body parse errors (default: true)
    * @param options.handleUnknownErrors - Handler or boolean for unknown errors (default: true)
    */
   public constructor(options: TypeweaverHonoOptions<RequestHandlers, HonoEnv>) {
@@ -241,6 +263,7 @@ export abstract class TypeweaverHono<
       validateResponses = true,
       handleHttpResponseErrors,
       handleRequestValidationErrors,
+      handleBodyParseErrors,
       handleResponseValidationErrors,
       handleUnknownErrors,
       ...honoOptions
@@ -258,6 +281,9 @@ export abstract class TypeweaverHono<
         requestValidation: this.resolveErrorHandler(
           handleRequestValidationErrors,
           error => this.defaultHandlers.requestValidation(error)
+        ),
+        bodyParse: this.resolveErrorHandler(handleBodyParseErrors, error =>
+          this.defaultHandlers.bodyParse(error)
         ),
         responseValidation: this.resolveErrorHandler(
           handleResponseValidationErrors,
@@ -400,8 +426,15 @@ export abstract class TypeweaverHono<
         )
       );
     } catch (error) {
-      if (error instanceof BodyParseError) {
-        return this.adapter.toResponse(this.defaultHandlers.bodyParse());
+      if (error instanceof HonoBodyParseError) {
+        if (this.config.errorHandlers.bodyParse) {
+          const response = await this.safelyExecuteErrorHandler(() =>
+            this.config.errorHandlers.bodyParse!(error, context)
+          );
+          return this.adapter.toResponse(
+            response ?? this.defaultHandlers.bodyParse(error)
+          );
+        }
       }
 
       if (isTypedHttpResponse(error) && this.config.validateResponses) {
