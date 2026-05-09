@@ -93,6 +93,7 @@ const userRouter = new UserHono({
   validateRequests: true, // default, validates requests
   validateResponses: true, // default, validates responses and strips extra fields
   handleRequestValidationErrors: true, // default: returns 400 with issues
+  handleBodyParseErrors: true, // default: returns sanitized 400 for malformed bodies
   handleResponseValidationErrors: true, // default: returns 500
   handleHttpResponseErrors: true, // default: returns thrown typed HTTP responses as-is
   handleUnknownErrors: true, // default: returns 500
@@ -120,6 +121,16 @@ serve({ fetch: app.fetch, port: 3000 }, () => {
   - If `false`, disables this handler (errors fall through to the unknown error handler)
   - If function, calls the function with the error and context, expects an `IHttpResponse` to
     return, so you can customize the response in the way you want
+- `handleBodyParseErrors`: `true` | `false` | `(err, c) => IHttpResponse | Promise<IHttpResponse>`
+  - If `true` (default), malformed request bodies (including invalid JSON and vendor JSON media
+    types) return a sanitized `400 Bad Request` response
+  - If `false`, disables this special handling. Body parse errors fall through to
+    `handleUnknownErrors` when configured, or propagate to Hono's error handling when unknown error
+    handling is disabled.
+  - If function, calls the function with the body parse error and Hono context. Import
+    `HonoBodyParseError` from the generated Hono runtime barrel when you need an `instanceof` check.
+    If the custom handler throws, the router falls back to the default sanitized `400 Bad Request`
+    response.
 - `handleResponseValidationErrors`: `true` | `false` |
   `(err, response, c) => IHttpResponse | Promise<IHttpResponse>`
   - If `true` (default), returns `500 Internal Server Error`

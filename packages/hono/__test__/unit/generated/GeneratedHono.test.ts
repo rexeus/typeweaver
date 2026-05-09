@@ -33,6 +33,7 @@ import {
   TestAssertionError,
   TodoHono,
 } from "test-utils";
+import { HonoBodyParseError } from "test-utils/src/test-project/output/lib/hono/index.js";
 import { describe, expect, test } from "vitest";
 import { expectErrorResponse, prepareRequestData } from "../../helpers.js";
 import type { Context } from "hono";
@@ -127,6 +128,23 @@ function aNestedJsonPrototypePollutionPayload(): string {
     '"items":[{"value":"array nested","__proto__":{"polluted":true}}],' +
     '"__proto__":{"polluted":true}}'
   );
+}
+
+async function requestCreateTodoWithMalformedJson(
+  app: Pick<ReturnType<typeof createTestHono>, "request">,
+  initOverrides?: RequestInit
+): Promise<Response> {
+  const headers = new Headers(initOverrides?.headers);
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  return await app.request("http://localhost/todos", {
+    ...initOverrides,
+    method: initOverrides?.method ?? "POST",
+    headers,
+    body: initOverrides?.body ?? "{",
+  });
 }
 
 describe("Generated Hono Router", () => {
@@ -558,18 +576,8 @@ describe("Generated Hono Router", () => {
 
   describe("request adaptation and body parsing", () => {
     test("returns sanitized BAD_REQUEST for malformed JSON request bodies", async () => {
-      const response = await createTestHono().request(
-        "http://localhost/todos",
-        {
-          method: "POST",
-          headers: {
-            Accept: "application/json",
-            Authorization: "Bearer token",
-            "Content-Type": "application/json",
-          },
-          body: "{",
-        }
-      );
+      const response =
+        await requestCreateTodoWithMalformedJson(createTestHono());
 
       const data = await expectErrorResponse(
         response,
@@ -577,6 +585,206 @@ describe("Generated Hono Router", () => {
         badRequestDefaultError.code
       );
       expect(data.message).toBe(badRequestDefaultError.message);
+    });
+
+    test("explicit body parse handling preserves the default sanitized response before unknown handlers", async () => {
+      let unknownHandlerInvoked = false;
+      const app = createTestHono({
+        handleBodyParseErrors: true,
+        handleUnknownErrors: () => {
+          unknownHandlerInvoked = true;
+          return {
+            statusCode: 500,
+            body: { code: "CUSTOM_UNKNOWN" },
+          };
+        },
+      });
+
+      const response = await requestCreateTodoWithMalformedJson(app);
+
+      const data = await expectErrorResponse(
+        response,
+        badRequestDefaultError.statusCode,
+        badRequestDefaultError.code
+      );
+      expect(data.message).toBe(badRequestDefaultError.message);
+      expect(unknownHandlerInvoked).toBe(false);
+    });
+
+    test("passes body parse errors and Hono context to custom handlers", async () => {
+      let capturedError: unknown;
+      let capturedOperationId: string | undefined;
+      const app = createTestHono({
+        handleBodyParseErrors: (error, context) => {
+          capturedError = error;
+          capturedOperationId = context.get("operationId");
+          return {
+            statusCode: 422,
+            header: {
+              "Content-Type": "application/json",
+              "X-Body-Parse-Handled": "yes",
+            },
+            body: {
+              code: "CUSTOM_BODY_PARSE",
+              message: error.message,
+            },
+          };
+        },
+      });
+
+      const response = await requestCreateTodoWithMalformedJson(app);
+
+      expect(response.status).toBe(422);
+      expect(response.headers.get("X-Body-Parse-Handled")).toBe("yes");
+      const data = (await response.json()) as Record<string, unknown>;
+      expect(data).toEqual({
+        code: "CUSTOM_BODY_PARSE",
+        message: "Invalid JSON in request body",
+      });
+      expect(capturedError).toBeInstanceOf(HonoBodyParseError);
+      expect(capturedOperationId).toBe("CreateTodo");
+    });
+
+    test("routes malformed vendor JSON bodies to custom body parse handlers", async () => {
+      let capturedError: unknown;
+      let capturedOperationId: string | undefined;
+      const app = createTestHono({
+        handleBodyParseErrors: (error, context) => {
+          capturedError = error;
+          capturedOperationId = context.get("operationId");
+          return {
+            statusCode: 422,
+            header: { "Content-Type": "application/json" },
+            body: { code: "CUSTOM_VENDOR_JSON_PARSE" },
+          };
+        },
+      });
+
+      const response = await requestCreateTodoWithMalformedJson(app, {
+        headers: { "Content-Type": "application/vnd.api+json; charset=utf-8" },
+      });
+
+      expect(response.status).toBe(422);
+      const data = (await response.json()) as Record<string, unknown>;
+      expect(data.code).toBe("CUSTOM_VENDOR_JSON_PARSE");
+      expect(capturedError).toBeInstanceOf(HonoBodyParseError);
+      expect(capturedOperationId).toBe("CreateTodo");
+    });
+
+    test("uses custom body parse handlers before route handlers when request validation is disabled", async () => {
+      let routeHandlerInvoked = false;
+      const app = createTodoHonoWithHandlers(
+        {
+          handleCreateTodoRequest: async () => {
+            routeHandlerInvoked = true;
+            return createCreateTodoSuccessResponse();
+          },
+        },
+        {
+          validateRequests: false,
+          handleBodyParseErrors: () => ({
+            statusCode: 422,
+            header: { "Content-Type": "application/json" },
+            body: { code: "CUSTOM_BODY_PARSE_WITHOUT_VALIDATION" },
+          }),
+        }
+      );
+
+      const response = await requestCreateTodoWithMalformedJson(app);
+
+      expect(response.status).toBe(422);
+      const data = (await response.json()) as Record<string, unknown>;
+      expect(data.code).toBe("CUSTOM_BODY_PARSE_WITHOUT_VALIDATION");
+      expect(routeHandlerInvoked).toBe(false);
+    });
+
+    test("preserves async custom body parse handler status headers and body", async () => {
+      const app = createTestHono({
+        handleBodyParseErrors: async () => ({
+          statusCode: 409,
+          header: {
+            "Content-Type": "application/json",
+            "X-Async-Body-Parse-Handled": "yes",
+          },
+          body: { code: "ASYNC_BODY_PARSE", retryable: false },
+        }),
+      });
+
+      const response = await requestCreateTodoWithMalformedJson(app);
+
+      expect(response.status).toBe(409);
+      expect(response.headers.get("X-Async-Body-Parse-Handled")).toBe("yes");
+      const data = (await response.json()) as Record<string, unknown>;
+      expect(data).toEqual({
+        code: "ASYNC_BODY_PARSE",
+        retryable: false,
+      });
+    });
+
+    test("falls back to sanitized BAD_REQUEST when the custom body parse error handler throws", async () => {
+      const app = createTestHono({
+        handleBodyParseErrors: () => {
+          throw new TestApplicationError("body parse handler failed");
+        },
+      });
+
+      const response = await requestCreateTodoWithMalformedJson(app);
+
+      const data = await expectErrorResponse(
+        response,
+        badRequestDefaultError.statusCode,
+        badRequestDefaultError.code
+      );
+      expect(data.message).toBe(badRequestDefaultError.message);
+    });
+
+    test("routes body parse errors to the unknown error handler when body parse handling is disabled", async () => {
+      let capturedError: unknown;
+      let capturedOperationId: string | undefined;
+      const app = createTestHono({
+        handleBodyParseErrors: false,
+        handleUnknownErrors: (error, context) => {
+          capturedError = error;
+          capturedOperationId = context.get("operationId");
+          return {
+            statusCode: 418,
+            header: { "Content-Type": "application/json" },
+            body: { code: "CUSTOM_UNKNOWN_BODY_PARSE" },
+          };
+        },
+      });
+
+      const response = await requestCreateTodoWithMalformedJson(app);
+
+      expect(response.status).toBe(418);
+      const data = (await response.json()) as Record<string, unknown>;
+      expect(data.code).toBe("CUSTOM_UNKNOWN_BODY_PARSE");
+      expect(capturedError).toBeInstanceOf(HonoBodyParseError);
+      expect(capturedOperationId).toBe("CreateTodo");
+    });
+
+    test("passes body parse errors to Hono error handling when body and unknown handlers are disabled", async () => {
+      let capturedError: unknown;
+      let capturedOperationId: string | undefined;
+      const app = createTestHono({
+        handleBodyParseErrors: false,
+        handleUnknownErrors: false,
+      });
+      app.onError((error, context) => {
+        capturedError = error;
+        const operationId = (context as Context).get("operationId");
+        capturedOperationId =
+          typeof operationId === "string" ? operationId : undefined;
+        return context.json({ code: "HONO_ERROR" }, 502);
+      });
+
+      const response = await requestCreateTodoWithMalformedJson(app);
+
+      expect(response.status).toBe(502);
+      const data = (await response.json()) as Record<string, unknown>;
+      expect(data.code).toBe("HONO_ERROR");
+      expect(capturedError).toBeInstanceOf(HonoBodyParseError);
+      expect(capturedOperationId).toBe("CreateTodo");
     });
 
     test("passes JSON request bodies to handlers as null-prototype records when request validation is disabled", async () => {
@@ -729,13 +937,16 @@ describe("Generated Hono Router", () => {
     });
 
     test("returns sanitized BAD_REQUEST for malformed vendor JSON request bodies", async () => {
-      const response = await createTestHono({
-        validateRequests: false,
-      }).request("http://localhost/todos", {
-        method: "POST",
-        headers: { "Content-Type": "application/vnd.api+json; charset=utf-8" },
-        body: "{",
-      });
+      const response = await requestCreateTodoWithMalformedJson(
+        createTestHono({
+          validateRequests: false,
+        }),
+        {
+          headers: {
+            "Content-Type": "application/vnd.api+json; charset=utf-8",
+          },
+        }
+      );
 
       await expectErrorResponse(
         response,
@@ -753,11 +964,7 @@ describe("Generated Hono Router", () => {
         },
       });
 
-      const response = await app.request("http://localhost/todos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: "{",
-      });
+      const response = await requestCreateTodoWithMalformedJson(app);
 
       await expectErrorResponse(
         response,
@@ -768,16 +975,14 @@ describe("Generated Hono Router", () => {
     });
 
     test("keeps malformed JSON as BAD_REQUEST when a custom unknown error handler is configured", async () => {
-      const response = await createTestHono({
-        handleUnknownErrors: () => ({
-          statusCode: 500,
-          body: { code: "CUSTOM_UNKNOWN" },
-        }),
-      }).request("http://localhost/todos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: "{",
-      });
+      const response = await requestCreateTodoWithMalformedJson(
+        createTestHono({
+          handleUnknownErrors: () => ({
+            statusCode: 500,
+            body: { code: "CUSTOM_UNKNOWN" },
+          }),
+        })
+      );
 
       await expectErrorResponse(
         response,
@@ -925,6 +1130,32 @@ describe("Generated Hono Router", () => {
       expect(handlerQuery?.nextToken).toBe("safe");
       expect(Object.getPrototypeOf(handlerQuery!)).toBeNull();
       expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    });
+  });
+
+  describe("generated runtime exports", () => {
+    test("exports HonoBodyParseError from the generated Hono lib barrel without the plain server error name", async () => {
+      let capturedError: unknown;
+      const app = createTestHono({
+        handleBodyParseErrors: error => {
+          capturedError = error;
+          return {
+            statusCode: 422,
+            body: { code: "CUSTOM_BODY_PARSE" },
+          };
+        },
+      });
+      const honoRuntime =
+        await import("test-utils/src/test-project/output/lib/hono/index.js");
+      const error = new HonoBodyParseError("Invalid JSON in request body");
+
+      const response = await requestCreateTodoWithMalformedJson(app);
+
+      expect(response.status).toBe(422);
+      expect(error).toBeInstanceOf(HonoBodyParseError);
+      expect(error.name).toBe("HonoBodyParseError");
+      expect(capturedError).toBeInstanceOf(HonoBodyParseError);
+      expect("BodyParseError" in honoRuntime).toBe(false);
     });
   });
 

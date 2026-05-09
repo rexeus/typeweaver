@@ -13,7 +13,7 @@ import type {
   IHttpRequest,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
-import { BodyParseError } from "./Errors.js";
+import { HonoBodyParseError } from "./Errors.js";
 import { HttpAdapter } from "./HttpAdapter.js";
 
 /**
@@ -136,7 +136,7 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
       const text = await request.text();
       return this.toSafeJsonValue(JSON.parse(text)) as IHttpBody;
     } catch (error) {
-      throw new BodyParseError("Invalid JSON in request body", {
+      throw new HonoBodyParseError("Invalid JSON in request body", {
         cause: error,
       });
     }

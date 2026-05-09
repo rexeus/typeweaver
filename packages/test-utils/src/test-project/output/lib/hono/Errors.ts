@@ -6,9 +6,9 @@
  */
 
 /**
- * Error thrown when the request body cannot be parsed.
- * Caught by TypeweaverHono to return a 400 Bad Request response.
+ * Hono body parse error thrown when the request body cannot be parsed.
+ * Caught by TypeweaverHono for configurable body parse error handling.
  */
-export class BodyParseError extends Error {
-  public override readonly name = "BodyParseError";
+export class HonoBodyParseError extends Error {
+  public override readonly name = "HonoBodyParseError";
 }
