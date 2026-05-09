@@ -26,6 +26,23 @@ import type { RefreshTokenResponse } from "./RefreshTokenResponse.js";
 const definition = getOperationDefinition(spec, "auth", "RefreshToken");
 const responseValidator = new RefreshTokenResponseValidator();
 
+const defaultHeader = {
+  Accept: "application/json",
+
+  "Content-Type": "application/json",
+} as const;
+
+export type RefreshTokenRequestCommandInput = Omit<
+  IRefreshTokenRequest,
+  "method" | "path" | "header"
+> & {
+  readonly header?: Omit<IRefreshTokenRequestHeader, "Accept" | "Content-Type"> &
+    Partial<Pick<IRefreshTokenRequestHeader, "Accept" | "Content-Type">>;
+};
+
+/**
+ * Refresh access token by refresh token
+ */
 export class RefreshTokenRequestCommand extends RequestCommand implements IRefreshTokenRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.POST;
@@ -36,10 +53,10 @@ export class RefreshTokenRequestCommand extends RequestCommand implements IRefre
   declare public readonly query: undefined;
   public override readonly body: IRefreshTokenRequestBody;
 
-  public constructor(input: Omit<IRefreshTokenRequest, "method" | "path">) {
+  public constructor(input: RefreshTokenRequestCommandInput) {
     super();
 
-    this.header = input.header;
+    this.header = { ...input.header, ...defaultHeader };
 
     this.body = input.body;
   }

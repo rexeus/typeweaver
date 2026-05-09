@@ -19,6 +19,9 @@ import type { RegisterAccountResponse } from "./RegisterAccountResponse.js";
 import { RegisterAccountResponseValidator } from "./RegisterAccountResponseValidator.js";
 
 export type HonoAccountApiHandler = {
+  /**
+   * Register new account
+   */
   handleRegisterAccountRequest: HonoRequestHandler<
     IRegisterAccountRequest,
     RegisterAccountResponse

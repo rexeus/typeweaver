@@ -32,12 +32,21 @@ export class FileClient extends ApiClient {
     super(props);
   }
 
+  /**
+   * Upload a file
+   */
   public async send(command: UploadFileRequestCommand): Promise<UploadFileResponse>;
 
+  /**
+   * Download file content
+   */
   public async send(
     command: DownloadFileContentRequestCommand,
   ): Promise<DownloadFileContentResponse>;
 
+  /**
+   * Get file metadata
+   */
   public async send(command: GetFileMetadataRequestCommand): Promise<GetFileMetadataResponse>;
 
   public async send(command: FileRequestCommands): Promise<FileResponses> {

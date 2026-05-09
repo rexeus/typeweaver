@@ -15,6 +15,9 @@ export type IDeleteTodoSuccessResponseHeader = {
   "X-Multi-Value"?: string[] | undefined;
 };
 
+/**
+ * Todo deleted successfully
+ */
 export type IDeleteTodoSuccessResponse = ITypedHttpResponse<
   "DeleteTodoSuccess",
   HttpStatusCode.NO_CONTENT,
@@ -22,6 +25,9 @@ export type IDeleteTodoSuccessResponse = ITypedHttpResponse<
   undefined
 >;
 
+/**
+ * Todo deleted successfully
+ */
 export const createDeleteTodoSuccessResponse = (input: {
   header: IDeleteTodoSuccessResponseHeader;
 }): IDeleteTodoSuccessResponse => ({

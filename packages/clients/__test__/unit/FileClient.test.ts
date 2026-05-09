@@ -45,6 +45,30 @@ function createJsonMockFetch(
   return createRawMockFetch(status, JSON.stringify(body), headers);
 }
 
+function anUploadCommandWithoutDefaultContentType(props: {
+  readonly authorization: string;
+  readonly fileName: string;
+  readonly body: Blob;
+}): UploadFileRequestCommand {
+  return new UploadFileRequestCommand({
+    header: {
+      Authorization: props.authorization,
+      "X-File-Name": props.fileName,
+    },
+    body: props.body,
+  });
+}
+
+function aMetadataCommandWithoutDefaultAccept(props: {
+  readonly authorization: string;
+  readonly fileId: string;
+}): GetFileMetadataRequestCommand {
+  return new GetFileMetadataRequestCommand({
+    header: { Authorization: props.authorization },
+    param: { fileId: props.fileId },
+  });
+}
+
 function getFetchCall(mockFetch: typeof globalThis.fetch): FetchCallDetails {
   const call = vi.mocked(mockFetch).mock.calls[0];
 
@@ -87,7 +111,7 @@ function expectUnknownResponse(error: unknown, statusCode: number): boolean {
 }
 
 describe("FileClient transport contract", () => {
-  test("sends upload requests as the original binary body", async () => {
+  test("sends upload requests with the generated default Content-Type and original binary body", async () => {
     const metadata = createUploadFileSuccessResponseBody({
       id: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
       name: "report.pdf",
@@ -100,14 +124,11 @@ describe("FileClient transport contract", () => {
     const body = new Blob([new Uint8Array([1, 2, 3])], {
       type: "application/octet-stream",
     });
-    const request = createUploadFileRequest({
-      header: {
-        Authorization: "Bearer upload-token",
-        "X-File-Name": "report.pdf",
-      },
+    const command = anUploadCommandWithoutDefaultContentType({
+      authorization: "Bearer upload-token",
+      fileName: "report.pdf",
+      body,
     });
-    request.body = body;
-    const command = new UploadFileRequestCommand(request);
 
     await client.send(command);
 
@@ -120,6 +141,32 @@ describe("FileClient transport contract", () => {
       "X-File-Name": "report.pdf",
     });
     expect(init.body).toBe(body);
+  });
+
+  test("uses generated literal header defaults over runtime command input", async () => {
+    const metadata = createUploadFileSuccessResponseBody();
+    const mockFetch = createJsonMockFetch(201, metadata);
+    const client = createFileClient(mockFetch);
+    const body = new Blob([new Uint8Array([1, 2, 3])], {
+      type: "application/octet-stream",
+    });
+    const command = new UploadFileRequestCommand({
+      header: {
+        Authorization: "Bearer upload-token",
+        "Content-Type": "text/plain",
+        "X-File-Name": "report.pdf",
+      } as unknown as ConstructorParameters<
+        typeof UploadFileRequestCommand
+      >[0]["header"],
+      body,
+    });
+
+    await client.send(command);
+
+    const { init } = getFetchCall(mockFetch);
+    expect(init.headers).toMatchObject({
+      "Content-Type": "application/octet-stream",
+    });
   });
 
   test("sends download requests to the encoded file content URL", async () => {
@@ -215,6 +262,30 @@ describe("FileClient transport contract", () => {
       "X-Multi-Value": "a, b",
     });
     expect(init.body).toBeUndefined();
+  });
+
+  test("sends metadata requests with the generated default Accept header when the command input omits it", async () => {
+    const metadata = createGetFileMetadataSuccessResponseBody({
+      id: "01ARZ3NDEKTSV4RRFFQ69G5FBA",
+      name: "default-accept.txt",
+      mimeType: "text/plain",
+      size: 1_024,
+      createdAt: "2025-06-07T08:09:10.000Z",
+    });
+    const mockFetch = createJsonMockFetch(200, metadata);
+    const client = createFileClient(mockFetch);
+    const command = aMetadataCommandWithoutDefaultAccept({
+      authorization: "Bearer metadata-token",
+      fileId: "folder/default accept.txt",
+    });
+
+    await client.send(command);
+
+    const { init } = getFetchCall(mockFetch);
+    expect(init.headers).toEqual({
+      Accept: "application/json",
+      Authorization: "Bearer metadata-token",
+    });
   });
 
   test("omits only optional metadata headers explicitly set to undefined", async () => {

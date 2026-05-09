@@ -38,6 +38,9 @@ export type IQueryTodoRequestBody = {
   hasParent?: boolean | undefined;
 };
 
+/**
+ * Query todos with advanced search criteria
+ */
 export type IQueryTodoRequest = {
   path: string;
   method: HttpMethod.POST;

@@ -25,8 +25,14 @@ import { RefreshTokenResponseValidator } from "./RefreshTokenResponseValidator.j
 
 export type ServerAuthApiHandler<TState extends Record<string, unknown> = Record<string, unknown>> =
   {
+    /**
+     * Get access token by email and password
+     */
     handleAccessTokenRequest: RequestHandler<IAccessTokenRequest, AccessTokenResponse, TState>;
 
+    /**
+     * Refresh access token by refresh token
+     */
     handleRefreshTokenRequest: RequestHandler<IRefreshTokenRequest, RefreshTokenResponse, TState>;
   };
 

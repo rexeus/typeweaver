@@ -20,6 +20,9 @@ export type IRegisterAccountRequestBody = {
   password: string;
 };
 
+/**
+ * Register new account
+ */
 export type IRegisterAccountRequest = {
   path: string;
   method: HttpMethod.POST;

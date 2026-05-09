@@ -23,6 +23,9 @@ export type ITodoNotFoundErrorResponseBody = {
   };
 };
 
+/**
+ * Todo not found
+ */
 export type ITodoNotFoundErrorResponse = ITypedHttpResponse<
   "TodoNotFoundError",
   HttpStatusCode.NOT_FOUND,
@@ -30,6 +33,9 @@ export type ITodoNotFoundErrorResponse = ITypedHttpResponse<
   ITodoNotFoundErrorResponseBody
 >;
 
+/**
+ * Todo not found
+ */
 export const createTodoNotFoundErrorResponse = (input: {
   header: ITodoNotFoundErrorResponseHeader;
   body: ITodoNotFoundErrorResponseBody;

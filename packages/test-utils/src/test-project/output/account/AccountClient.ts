@@ -20,6 +20,9 @@ export class AccountClient extends ApiClient {
     super(props);
   }
 
+  /**
+   * Register new account
+   */
   public async send(command: RegisterAccountRequestCommand): Promise<RegisterAccountResponse>;
 
   public async send(command: AccountRequestCommands): Promise<AccountResponses> {

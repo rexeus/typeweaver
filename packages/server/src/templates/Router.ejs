@@ -18,7 +18,8 @@ export type Server<%- pascalCaseEntityName %>ApiHandler<
   TState extends Record<string, unknown> = Record<string, unknown>,
 > = {
 <% for (const operation of operations) { %>
-  <%- operation.handlerName %>: RequestHandler<I<%- operation.className %>Request, <%- operation.className %>Response, TState>;
+<% if (operation.jsDoc) { %><%- operation.jsDoc %>
+<% } %>  <%- operation.handlerName %>: RequestHandler<I<%- operation.className %>Request, <%- operation.className %>Response, TState>;
 <% } %>
 };
 

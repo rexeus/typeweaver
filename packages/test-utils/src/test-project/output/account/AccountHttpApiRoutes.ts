@@ -12,6 +12,9 @@ import { type AwsHttpApiGatewayRoute, AwsHttpApiGatewayRoutes } from "../lib/aws
 export class AccountHttpApiRoutes extends AwsHttpApiGatewayRoutes {
   private routes: AwsHttpApiGatewayRoute[] = [
     {
+      /**
+       * POST: Register new account
+       */
       path: "/accounts",
       methods: [HttpMethod.POST],
     },

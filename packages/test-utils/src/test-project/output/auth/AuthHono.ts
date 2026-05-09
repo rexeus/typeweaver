@@ -24,8 +24,14 @@ import type { RefreshTokenResponse } from "./RefreshTokenResponse.js";
 import { RefreshTokenResponseValidator } from "./RefreshTokenResponseValidator.js";
 
 export type HonoAuthApiHandler = {
+  /**
+   * Get access token by email and password
+   */
   handleAccessTokenRequest: HonoRequestHandler<IAccessTokenRequest, AccessTokenResponse>;
 
+  /**
+   * Refresh access token by refresh token
+   */
   handleRefreshTokenRequest: HonoRequestHandler<IRefreshTokenRequest, RefreshTokenResponse>;
 };
 

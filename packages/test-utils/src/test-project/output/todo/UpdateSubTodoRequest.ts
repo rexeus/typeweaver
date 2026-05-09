@@ -30,6 +30,9 @@ export type IUpdateSubTodoRequestBody = {
   priority?: (("LOW" | "MEDIUM" | "HIGH") | undefined) | undefined;
 };
 
+/**
+ * Update subtodo
+ */
 export type IUpdateSubTodoRequest = {
   path: string;
   method: HttpMethod.PUT;

@@ -26,6 +26,18 @@ import type { ListTodosResponse } from "./ListTodosResponse.js";
 const definition = getOperationDefinition(spec, "todo", "ListTodos");
 const responseValidator = new ListTodosResponseValidator();
 
+const defaultHeader = {
+  Accept: "application/json",
+} as const;
+
+export type ListTodosRequestCommandInput = Omit<IListTodosRequest, "method" | "path" | "header"> & {
+  readonly header: Omit<IListTodosRequestHeader, "Accept"> &
+    Partial<Pick<IListTodosRequestHeader, "Accept">>;
+};
+
+/**
+ * List todos with filtering, pagination, and search
+ */
 export class ListTodosRequestCommand extends RequestCommand implements IListTodosRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.GET;
@@ -36,10 +48,10 @@ export class ListTodosRequestCommand extends RequestCommand implements IListTodo
   public override readonly query: IListTodosRequestQuery;
   declare public readonly body: undefined;
 
-  public constructor(input: Omit<IListTodosRequest, "method" | "path">) {
+  public constructor(input: ListTodosRequestCommandInput) {
     super();
 
-    this.header = input.header;
+    this.header = { ...input.header, ...defaultHeader };
 
     this.query = input.query;
   }

@@ -26,6 +26,23 @@ import type { CreateTodoResponse } from "./CreateTodoResponse.js";
 const definition = getOperationDefinition(spec, "todo", "CreateTodo");
 const responseValidator = new CreateTodoResponseValidator();
 
+const defaultHeader = {
+  Accept: "application/json",
+
+  "Content-Type": "application/json",
+} as const;
+
+export type CreateTodoRequestCommandInput = Omit<
+  ICreateTodoRequest,
+  "method" | "path" | "header"
+> & {
+  readonly header: Omit<ICreateTodoRequestHeader, "Accept" | "Content-Type"> &
+    Partial<Pick<ICreateTodoRequestHeader, "Accept" | "Content-Type">>;
+};
+
+/**
+ * Create new todo
+ */
 export class CreateTodoRequestCommand extends RequestCommand implements ICreateTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.POST;
@@ -36,10 +53,10 @@ export class CreateTodoRequestCommand extends RequestCommand implements ICreateT
   declare public readonly query: undefined;
   public override readonly body: ICreateTodoRequestBody;
 
-  public constructor(input: Omit<ICreateTodoRequest, "method" | "path">) {
+  public constructor(input: CreateTodoRequestCommandInput) {
     super();
 
-    this.header = input.header;
+    this.header = { ...input.header, ...defaultHeader };
 
     this.body = input.body;
   }

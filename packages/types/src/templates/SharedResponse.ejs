@@ -17,7 +17,8 @@ import type { ITypedHttpResponse } from "<%= coreDir %>";
     export type I<%= identifierName %>ResponseBody = <%- bodyTsType %>;
 <% } %>
 
-export type I<%= identifierName %>Response = ITypedHttpResponse<
+<% if (jsDoc) { %><%- jsDoc %>
+<% } %>export type I<%= identifierName %>Response = ITypedHttpResponse<
 "<%= typeValue %>",
 HttpStatusCode.<%= statusCodeKey %>,
 <%= hasHeader ? `I${identifierName}ResponseHeader` : 'undefined' %>,

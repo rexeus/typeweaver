@@ -22,8 +22,20 @@ import type { <%= pascalCaseOperationId %>Response } from "<%= responseFile %>";
 
 const definition = getOperationDefinition(spec, "<%= resourceName %>", "<%= operationId %>");
 const responseValidator = new <%= pascalCaseOperationId %>ResponseValidator();
+<% if (hasHeaderDefaults) { %>
+const defaultHeader = {
+<% for (const entry of headerDefaultEntries) { %>
+    <%- JSON.stringify(entry.key) %>: <%- JSON.stringify(entry.value) %>,
+<% } %>
+} as const;
 
-export class <%= pascalCaseOperationId %>RequestCommand extends RequestCommand implements I<%= pascalCaseOperationId %>Request {
+export type <%= pascalCaseOperationId %>RequestCommandInput = Omit<I<%= pascalCaseOperationId %>Request, "method" | "path" | "header"> & {
+    readonly header<%= isHeaderInputOptional ? "?" : "" %>: Omit<I<%= pascalCaseOperationId %>RequestHeader, <%- optionalHeaderKeys.map(key => JSON.stringify(key)).join(" | ") %>> & Partial<Pick<I<%= pascalCaseOperationId %>RequestHeader, <%- optionalHeaderKeys.map(key => JSON.stringify(key)).join(" | ") %>>>;
+};
+<% } %>
+
+<% if (requestJsDoc) { %><%- requestJsDoc %>
+<% } %>export class <%= pascalCaseOperationId %>RequestCommand extends RequestCommand implements I<%= pascalCaseOperationId %>Request {
     public override readonly operationId = definition.operationId;
     public override readonly method = definition.method as HttpMethod.<%= method %>;
     public override readonly path = definition.path;
@@ -33,11 +45,11 @@ export class <%= pascalCaseOperationId %>RequestCommand extends RequestCommand i
     public <%= queryTsType ? `override` : `declare` %> readonly query: <%= queryTsType ? `I${pascalCaseOperationId}RequestQuery` : `undefined` %>;
     public <%= bodyTsType ? `override` : `declare` %> readonly body: <%= bodyTsType ? `I${pascalCaseOperationId}RequestBody` : `undefined` %>;
 
-    public constructor(input: Omit<I<%= pascalCaseOperationId %>Request, "method" | "path">) {
+    public constructor(input: <%- hasHeaderDefaults ? `${pascalCaseOperationId}RequestCommandInput` : `Omit<I${pascalCaseOperationId}Request, "method" | "path">` %>) {
         super();
 
         <% if (headerTsType) { %>
-        this.header = input.header;
+        this.header = <% if (hasHeaderDefaults) { %>{ ...input.header, ...defaultHeader }<% } else { %>input.header<% } %>;
         <% } %>
 
         <% if (paramTsType) { %>

@@ -23,8 +23,14 @@ export class AuthClient extends ApiClient {
     super(props);
   }
 
+  /**
+   * Get access token by email and password
+   */
   public async send(command: AccessTokenRequestCommand): Promise<AccessTokenResponse>;
 
+  /**
+   * Refresh access token by refresh token
+   */
   public async send(command: RefreshTokenRequestCommand): Promise<RefreshTokenResponse>;
 
   public async send(command: AuthRequestCommands): Promise<AuthResponses> {

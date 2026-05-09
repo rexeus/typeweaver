@@ -15,6 +15,7 @@ type RouterOperationData = {
   readonly path: string;
   readonly handlerName: string;
   readonly className: string;
+  readonly jsDoc?: string;
 };
 
 type RouterTemplateData = {
@@ -215,6 +216,20 @@ describe("RouterGenerator", () => {
       assert(result[0]);
       expect(result[0].className).toBe("UpdateTodoStatus");
       expect(result[0].handlerName).toBe("handleUpdateTodoStatusRequest");
+    });
+
+    test("emits sanitized operation summaries as handler JSDoc", () => {
+      const result = getOperationOrder([
+        {
+          ...anOperation("createTodo", HttpMethod.POST, "/todos"),
+          summary: "Create todo */ safely",
+        },
+      ]);
+
+      assert(result[0]);
+      expect(result[0].jsDoc).toBe(
+        "  /**\n   * Create todo *\\/ safely\n   */"
+      );
     });
 
     test("preserves method path and operation id associations after sorting", () => {

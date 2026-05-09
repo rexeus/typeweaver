@@ -15,6 +15,9 @@ export type IDownloadFileContentSuccessResponseHeader = {
 
 export type IDownloadFileContentSuccessResponseBody = any;
 
+/**
+ * File content retrieved successfully
+ */
 export type IDownloadFileContentSuccessResponse = ITypedHttpResponse<
   "DownloadFileContentSuccess",
   HttpStatusCode.OK,
@@ -22,6 +25,9 @@ export type IDownloadFileContentSuccessResponse = ITypedHttpResponse<
   IDownloadFileContentSuccessResponseBody
 >;
 
+/**
+ * File content retrieved successfully
+ */
 export const createDownloadFileContentSuccessResponse = (input: {
   header: IDownloadFileContentSuccessResponseHeader;
   body: IDownloadFileContentSuccessResponseBody;

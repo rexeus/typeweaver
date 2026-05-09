@@ -1,5 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createJSDocComment } from "@rexeus/typeweaver-gen";
 import type {
   GeneratorContext,
   NormalizedOperation,
@@ -35,6 +36,7 @@ function writeRequestType(
   const content = context.renderTemplate(templateFilePath, {
     pascalCaseOperationId: pascalCase(operationId),
     method,
+    requestJsDoc: createJSDocComment(operation.summary),
     headerTsType: header ? print(fromZod(header)) : undefined,
     queryTsType: query ? print(fromZod(query)) : undefined,
     paramTsType: param ? print(fromZod(param)) : undefined,

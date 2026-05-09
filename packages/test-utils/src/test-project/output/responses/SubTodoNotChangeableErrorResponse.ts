@@ -30,6 +30,9 @@ export type ISubTodoNotChangeableErrorResponseBody = {
   };
 };
 
+/**
+ * SubTodo in current status or because of parent todo status cannot be changed
+ */
 export type ISubTodoNotChangeableErrorResponse = ITypedHttpResponse<
   "SubTodoNotChangeableError",
   HttpStatusCode.CONFLICT,
@@ -37,6 +40,9 @@ export type ISubTodoNotChangeableErrorResponse = ITypedHttpResponse<
   ISubTodoNotChangeableErrorResponseBody
 >;
 
+/**
+ * SubTodo in current status or because of parent todo status cannot be changed
+ */
 export const createSubTodoNotChangeableErrorResponse = (input: {
   header: ISubTodoNotChangeableErrorResponseHeader;
   body: ISubTodoNotChangeableErrorResponseBody;

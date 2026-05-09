@@ -2,6 +2,8 @@ import assert from "node:assert";
 import { HttpMethod, UnknownResponseError } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import {
+  AccessTokenRequestCommand,
+  createAccessTokenRequest,
   createCreateTodoRequest,
   createDeleteTodoRequest,
   createForbiddenErrorResponse,
@@ -62,6 +64,22 @@ describe("Generated Client", () => {
       const { client } = await setupClientTest();
       const requestData = createCreateTodoRequest();
       const command = new CreateTodoRequestCommand(requestData);
+
+      const response = await client.send(command);
+
+      expect(response.type).toBe("CreateTodoSuccess");
+      assert(response.type === "CreateTodoSuccess");
+      expect(response.statusCode).toBe(201);
+      expect(response.body.title).toBe(requestData.body.title);
+    });
+
+    test("routes generated JSON commands when literal request headers are omitted", async () => {
+      const { client } = await setupClientTest();
+      const requestData = createCreateTodoRequest();
+      const command = new CreateTodoRequestCommand({
+        header: { Authorization: requestData.header.Authorization },
+        body: requestData.body,
+      });
 
       const response = await client.send(command);
 
@@ -138,6 +156,17 @@ describe("Generated Client", () => {
   });
 
   describe("Generated command metadata", () => {
+    test("makes generated headers optional when every required header has a literal default", () => {
+      const requestData = createAccessTokenRequest();
+
+      const command = new AccessTokenRequestCommand({ body: requestData.body });
+
+      expect(command.header).toEqual({
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      });
+    });
+
     test.each([
       {
         scenario: "GET by id",

@@ -34,6 +34,9 @@ export type IListSubTodosSuccessResponseBody = {
   nextToken?: string | undefined;
 };
 
+/**
+ * Subtodos retrieved successfully
+ */
 export type IListSubTodosSuccessResponse = ITypedHttpResponse<
   "ListSubTodosSuccess",
   HttpStatusCode.OK,
@@ -41,6 +44,9 @@ export type IListSubTodosSuccessResponse = ITypedHttpResponse<
   IListSubTodosSuccessResponseBody
 >;
 
+/**
+ * Subtodos retrieved successfully
+ */
 export const createListSubTodosSuccessResponse = (input: {
   header: IListSubTodosSuccessResponseHeader;
   body: IListSubTodosSuccessResponseBody;

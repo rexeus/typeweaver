@@ -28,6 +28,23 @@ import type { QuerySubTodoResponse } from "./QuerySubTodoResponse.js";
 const definition = getOperationDefinition(spec, "todo", "QuerySubTodo");
 const responseValidator = new QuerySubTodoResponseValidator();
 
+const defaultHeader = {
+  Accept: "application/json",
+
+  "Content-Type": "application/json",
+} as const;
+
+export type QuerySubTodoRequestCommandInput = Omit<
+  IQuerySubTodoRequest,
+  "method" | "path" | "header"
+> & {
+  readonly header: Omit<IQuerySubTodoRequestHeader, "Accept" | "Content-Type"> &
+    Partial<Pick<IQuerySubTodoRequestHeader, "Accept" | "Content-Type">>;
+};
+
+/**
+ * Query subtodos for a specific todo
+ */
 export class QuerySubTodoRequestCommand extends RequestCommand implements IQuerySubTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.POST;
@@ -38,10 +55,10 @@ export class QuerySubTodoRequestCommand extends RequestCommand implements IQuery
   public override readonly query: IQuerySubTodoRequestQuery;
   public override readonly body: IQuerySubTodoRequestBody;
 
-  public constructor(input: Omit<IQuerySubTodoRequest, "method" | "path">) {
+  public constructor(input: QuerySubTodoRequestCommandInput) {
     super();
 
-    this.header = input.header;
+    this.header = { ...input.header, ...defaultHeader };
 
     this.param = input.param;
 

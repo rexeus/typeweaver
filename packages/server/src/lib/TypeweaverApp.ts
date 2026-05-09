@@ -252,16 +252,6 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
           routeCtx
         );
       } catch (error) {
-        if (
-          isTypedHttpResponse(error) &&
-          match.route.routerConfig.validateResponses
-        ) {
-          return await this.validateResponse(
-            match.route,
-            toHttpResponse(error),
-            routeCtx
-          );
-        }
         return this.handleError(error, routeCtx, match.route);
       }
     }
@@ -399,7 +389,13 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
         const response = await this.safelyExecuteErrorHandler(() =>
           handler(error, ctx)
         );
-        if (response) return response;
+        if (response) {
+          return await this.validateResponse(
+            route,
+            normalizeHttpResponse(response),
+            ctx
+          );
+        }
       }
     }
 

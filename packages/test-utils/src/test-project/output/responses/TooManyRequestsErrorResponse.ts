@@ -20,6 +20,9 @@ export type ITooManyRequestsErrorResponseBody = {
   code: "TOO_MANY_REQUESTS_ERROR";
 };
 
+/**
+ * Too many requests
+ */
 export type ITooManyRequestsErrorResponse = ITypedHttpResponse<
   "TooManyRequestsError",
   HttpStatusCode.TOO_MANY_REQUESTS,
@@ -27,6 +30,9 @@ export type ITooManyRequestsErrorResponse = ITypedHttpResponse<
   ITooManyRequestsErrorResponseBody
 >;
 
+/**
+ * Too many requests
+ */
 export const createTooManyRequestsErrorResponse = (input: {
   header: ITooManyRequestsErrorResponseHeader;
   body: ITooManyRequestsErrorResponseBody;

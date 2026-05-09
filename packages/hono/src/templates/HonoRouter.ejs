@@ -17,7 +17,8 @@ import { <%- operation.className %>ResponseValidator } from "./<%- operation.cla
 
 export type Hono<%- pascalCaseEntityName %>ApiHandler = {
 <% for (const operation of operations) { %>
-  <%- operation.handlerName %>: HonoRequestHandler<I<%- operation.className %>Request, <%- operation.className %>Response>;
+<% if (operation.jsDoc) { %><%- operation.jsDoc %>
+<% } %>  <%- operation.handlerName %>: HonoRequestHandler<I<%- operation.className %>Request, <%- operation.className %>Response>;
 <% } %>
 };
 

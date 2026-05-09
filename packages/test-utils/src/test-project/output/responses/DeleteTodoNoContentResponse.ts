@@ -9,6 +9,9 @@
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 
+/**
+ * No content response
+ */
 export type IDeleteTodoNoContentResponse = ITypedHttpResponse<
   "DeleteTodoNoContent",
   HttpStatusCode.NO_CONTENT,
@@ -16,6 +19,9 @@ export type IDeleteTodoNoContentResponse = ITypedHttpResponse<
   undefined
 >;
 
+/**
+ * No content response
+ */
 export const createDeleteTodoNoContentResponse = (): IDeleteTodoNoContentResponse => ({
   type: "DeleteTodoNoContent",
   statusCode: HttpStatusCode.NO_CONTENT,

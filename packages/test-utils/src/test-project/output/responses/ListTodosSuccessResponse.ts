@@ -34,6 +34,9 @@ export type IListTodosSuccessResponseBody = {
   nextToken?: string | undefined;
 };
 
+/**
+ * List todos successfully
+ */
 export type IListTodosSuccessResponse = ITypedHttpResponse<
   "ListTodosSuccess",
   HttpStatusCode.OK,
@@ -41,6 +44,9 @@ export type IListTodosSuccessResponse = ITypedHttpResponse<
   IListTodosSuccessResponseBody
 >;
 
+/**
+ * List todos successfully
+ */
 export const createListTodosSuccessResponse = (input: {
   header: IListTodosSuccessResponseHeader;
   body: IListTodosSuccessResponseBody;

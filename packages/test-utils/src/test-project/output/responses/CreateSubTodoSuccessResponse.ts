@@ -31,6 +31,9 @@ export type ICreateSubTodoSuccessResponseBody = {
   modifiedBy: string;
 };
 
+/**
+ * SubTodo created successfully
+ */
 export type ICreateSubTodoSuccessResponse = ITypedHttpResponse<
   "CreateSubTodoSuccess",
   HttpStatusCode.CREATED,
@@ -38,6 +41,9 @@ export type ICreateSubTodoSuccessResponse = ITypedHttpResponse<
   ICreateSubTodoSuccessResponseBody
 >;
 
+/**
+ * SubTodo created successfully
+ */
 export const createCreateSubTodoSuccessResponse = (input: {
   header: ICreateSubTodoSuccessResponseHeader;
   body: ICreateSubTodoSuccessResponseBody;

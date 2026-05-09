@@ -24,7 +24,8 @@ export type I<%= pascalCaseOperationId %>RequestQuery = <%- queryTsType %>
 export type I<%= pascalCaseOperationId %>RequestBody = <%- bodyTsType %>
 <% } %>
 
-export type I<%= pascalCaseOperationId %>Request = {
+<% if (requestJsDoc) { %><%- requestJsDoc %>
+<% } %>export type I<%= pascalCaseOperationId %>Request = {
     path: string;
     method: HttpMethod.<%= method %>;
     <%= headerTsType ? `header: I${pascalCaseOperationId}RequestHeader;` : "" %>
@@ -32,4 +33,3 @@ export type I<%= pascalCaseOperationId %>Request = {
     <%= queryTsType ? `query: I${pascalCaseOperationId}RequestQuery;` : "" %>
     <%= bodyTsType ? `body: I${pascalCaseOperationId}RequestBody;` : "" %>
 };
-

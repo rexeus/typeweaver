@@ -26,7 +26,8 @@ import type { I<%= entityResponse.identifierName %>Response } from "<%= entityRe
         export type I<%= ownResponse.identifierName %>ResponseBody = <%- ownResponse.body %>;
     <% } %>
 
-    export type I<%= ownResponse.identifierName %>Response = ITypedHttpResponse<
+    <% if (ownResponse.jsDoc) { %><%- ownResponse.jsDoc.split('\n').map(line => `    ${line}`).join('\n') %>
+    <% } %>export type I<%= ownResponse.identifierName %>Response = ITypedHttpResponse<
             "<%= ownResponse.typeValue %>",
             HttpStatusCode.<%= ownResponse.statusCodeKey %>,
             <%= ownResponse.hasHeader ? `I${ownResponse.identifierName}ResponseHeader` : 'undefined' %>,

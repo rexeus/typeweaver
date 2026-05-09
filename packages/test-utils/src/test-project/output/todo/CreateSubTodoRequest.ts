@@ -28,6 +28,9 @@ export type ICreateSubTodoRequestBody = {
   priority?: ("LOW" | "MEDIUM" | "HIGH") | undefined;
 };
 
+/**
+ * Create new subtodo
+ */
 export type ICreateSubTodoRequest = {
   path: string;
   method: HttpMethod.POST;

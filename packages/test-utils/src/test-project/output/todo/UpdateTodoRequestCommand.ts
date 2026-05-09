@@ -27,6 +27,23 @@ import type { UpdateTodoResponse } from "./UpdateTodoResponse.js";
 const definition = getOperationDefinition(spec, "todo", "UpdateTodo");
 const responseValidator = new UpdateTodoResponseValidator();
 
+const defaultHeader = {
+  Accept: "application/json",
+
+  "Content-Type": "application/json",
+} as const;
+
+export type UpdateTodoRequestCommandInput = Omit<
+  IUpdateTodoRequest,
+  "method" | "path" | "header"
+> & {
+  readonly header: Omit<IUpdateTodoRequestHeader, "Accept" | "Content-Type"> &
+    Partial<Pick<IUpdateTodoRequestHeader, "Accept" | "Content-Type">>;
+};
+
+/**
+ * Update todo
+ */
 export class UpdateTodoRequestCommand extends RequestCommand implements IUpdateTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.PATCH;
@@ -37,10 +54,10 @@ export class UpdateTodoRequestCommand extends RequestCommand implements IUpdateT
   declare public readonly query: undefined;
   public override readonly body: IUpdateTodoRequestBody;
 
-  public constructor(input: Omit<IUpdateTodoRequest, "method" | "path">) {
+  public constructor(input: UpdateTodoRequestCommandInput) {
     super();
 
-    this.header = input.header;
+    this.header = { ...input.header, ...defaultHeader };
 
     this.param = input.param;
 

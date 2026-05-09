@@ -20,6 +20,9 @@ export type IForbiddenErrorResponseBody = {
   code: "FORBIDDEN_ERROR";
 };
 
+/**
+ * Forbidden request
+ */
 export type IForbiddenErrorResponse = ITypedHttpResponse<
   "ForbiddenError",
   HttpStatusCode.FORBIDDEN,
@@ -27,6 +30,9 @@ export type IForbiddenErrorResponse = ITypedHttpResponse<
   IForbiddenErrorResponseBody
 >;
 
+/**
+ * Forbidden request
+ */
 export const createForbiddenErrorResponse = (input: {
   header: IForbiddenErrorResponseHeader;
   body: IForbiddenErrorResponseBody;

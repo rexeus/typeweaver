@@ -26,6 +26,21 @@ import type { UploadFileResponse } from "./UploadFileResponse.js";
 const definition = getOperationDefinition(spec, "file", "UploadFile");
 const responseValidator = new UploadFileResponseValidator();
 
+const defaultHeader = {
+  "Content-Type": "application/octet-stream",
+} as const;
+
+export type UploadFileRequestCommandInput = Omit<
+  IUploadFileRequest,
+  "method" | "path" | "header"
+> & {
+  readonly header: Omit<IUploadFileRequestHeader, "Content-Type"> &
+    Partial<Pick<IUploadFileRequestHeader, "Content-Type">>;
+};
+
+/**
+ * Upload a file
+ */
 export class UploadFileRequestCommand extends RequestCommand implements IUploadFileRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.POST;
@@ -36,10 +51,10 @@ export class UploadFileRequestCommand extends RequestCommand implements IUploadF
   declare public readonly query: undefined;
   public override readonly body: IUploadFileRequestBody;
 
-  public constructor(input: Omit<IUploadFileRequest, "method" | "path">) {
+  public constructor(input: UploadFileRequestCommandInput) {
     super();
 
-    this.header = input.header;
+    this.header = { ...input.header, ...defaultHeader };
 
     this.body = input.body;
   }

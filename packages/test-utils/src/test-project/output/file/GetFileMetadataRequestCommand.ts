@@ -26,6 +26,21 @@ import type { GetFileMetadataResponse } from "./GetFileMetadataResponse.js";
 const definition = getOperationDefinition(spec, "file", "GetFileMetadata");
 const responseValidator = new GetFileMetadataResponseValidator();
 
+const defaultHeader = {
+  Accept: "application/json",
+} as const;
+
+export type GetFileMetadataRequestCommandInput = Omit<
+  IGetFileMetadataRequest,
+  "method" | "path" | "header"
+> & {
+  readonly header: Omit<IGetFileMetadataRequestHeader, "Accept"> &
+    Partial<Pick<IGetFileMetadataRequestHeader, "Accept">>;
+};
+
+/**
+ * Get file metadata
+ */
 export class GetFileMetadataRequestCommand
   extends RequestCommand
   implements IGetFileMetadataRequest
@@ -39,10 +54,10 @@ export class GetFileMetadataRequestCommand
   declare public readonly query: undefined;
   declare public readonly body: undefined;
 
-  public constructor(input: Omit<IGetFileMetadataRequest, "method" | "path">) {
+  public constructor(input: GetFileMetadataRequestCommandInput) {
     super();
 
-    this.header = input.header;
+    this.header = { ...input.header, ...defaultHeader };
 
     this.param = input.param;
   }

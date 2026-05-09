@@ -1,5 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createJSDocComment } from "@rexeus/typeweaver-gen";
 import type {
   GeneratorContext,
   NormalizedOperation,
@@ -7,6 +8,7 @@ import type {
 } from "@rexeus/typeweaver-gen";
 import { fromZod, print } from "@rexeus/typeweaver-zod-to-ts";
 import { pascalCase } from "polycase";
+import { getRequestHeaderDefaults } from "./requestHeaderDefaults.js";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -41,6 +43,7 @@ function writeClient(
     return {
       operationId: operation.operationId,
       pascalCaseOperationId: pascalCase(operation.operationId),
+      jsDoc: createJSDocComment(operation.summary, { indentation: "    " }),
       requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}.js`,
       responseValidatorFile: `./${path.basename(outputPaths.responseValidationFileName, ".ts")}.js`,
       responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}.js`,
@@ -90,6 +93,7 @@ function writeRequestCommand(
   const paramTsType = request.param ? print(fromZod(request.param)) : undefined;
   const queryTsType = request.query ? print(fromZod(request.query)) : undefined;
   const bodyTsType = request.body ? print(fromZod(request.body)) : undefined;
+  const headerDefaults = getRequestHeaderDefaults(operation.request);
 
   const content = context.renderTemplate(templateFilePath, {
     resourceName,
@@ -103,6 +107,11 @@ function writeRequestCommand(
     paramTsType,
     queryTsType,
     bodyTsType,
+    requestJsDoc: createJSDocComment(operation.summary),
+    headerDefaultEntries: headerDefaults?.entries ?? [],
+    optionalHeaderKeys: headerDefaults?.optionalHeaderKeys ?? [],
+    hasHeaderDefaults: headerDefaults !== undefined,
+    isHeaderInputOptional: headerDefaults?.isHeaderInputOptional ?? false,
     requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}.js`,
     responseValidatorFile: `./${path.basename(outputPaths.responseValidationFileName, ".ts")}.js`,
     responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}.js`,

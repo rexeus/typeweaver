@@ -15,6 +15,9 @@ export type IHeadTodoSuccessResponseHeader = {
   "X-Multi-Value"?: string[] | undefined;
 };
 
+/**
+ * Todo exists
+ */
 export type IHeadTodoSuccessResponse = ITypedHttpResponse<
   "HeadTodoSuccess",
   HttpStatusCode.OK,
@@ -22,6 +25,9 @@ export type IHeadTodoSuccessResponse = ITypedHttpResponse<
   undefined
 >;
 
+/**
+ * Todo exists
+ */
 export const createHeadTodoSuccessResponse = (input: {
   header: IHeadTodoSuccessResponseHeader;
 }): IHeadTodoSuccessResponse => ({

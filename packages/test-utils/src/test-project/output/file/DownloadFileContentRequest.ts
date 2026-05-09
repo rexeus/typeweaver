@@ -16,6 +16,9 @@ export type IDownloadFileContentRequestParam = {
   fileId: string;
 };
 
+/**
+ * Download file content
+ */
 export type IDownloadFileContentRequest = {
   path: string;
   method: HttpMethod.GET;

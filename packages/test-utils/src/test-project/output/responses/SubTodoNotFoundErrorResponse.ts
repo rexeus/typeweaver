@@ -26,6 +26,9 @@ export type ISubTodoNotFoundErrorResponseBody = {
   };
 };
 
+/**
+ * SubTodo not found
+ */
 export type ISubTodoNotFoundErrorResponse = ITypedHttpResponse<
   "SubTodoNotFoundError",
   HttpStatusCode.NOT_FOUND,
@@ -33,6 +36,9 @@ export type ISubTodoNotFoundErrorResponse = ITypedHttpResponse<
   ISubTodoNotFoundErrorResponseBody
 >;
 
+/**
+ * SubTodo not found
+ */
 export const createSubTodoNotFoundErrorResponse = (input: {
   header: ISubTodoNotFoundErrorResponseHeader;
   body: ISubTodoNotFoundErrorResponseBody;

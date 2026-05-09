@@ -84,35 +84,77 @@ import type { DeleteSubTodoResponse } from "./DeleteSubTodoResponse.js";
 import { DeleteSubTodoResponseValidator } from "./DeleteSubTodoResponseValidator.js";
 
 export type HonoTodoApiHandler = {
+  /**
+   * List todos with filtering, pagination, and search
+   */
   handleListTodosRequest: HonoRequestHandler<IListTodosRequest, ListTodosResponse>;
 
+  /**
+   * Create new todo
+   */
   handleCreateTodoRequest: HonoRequestHandler<ICreateTodoRequest, CreateTodoResponse>;
 
+  /**
+   * Query todos with advanced search criteria
+   */
   handleQueryTodoRequest: HonoRequestHandler<IQueryTodoRequest, QueryTodoResponse>;
 
+  /**
+   * Get todo
+   */
   handleGetTodoRequest: HonoRequestHandler<IGetTodoRequest, GetTodoResponse>;
 
+  /**
+   * Replace todo completely
+   */
   handlePutTodoRequest: HonoRequestHandler<IPutTodoRequest, PutTodoResponse>;
 
+  /**
+   * Update todo
+   */
   handleUpdateTodoRequest: HonoRequestHandler<IUpdateTodoRequest, UpdateTodoResponse>;
 
+  /**
+   * Delete todo
+   */
   handleDeleteTodoRequest: HonoRequestHandler<IDeleteTodoRequest, DeleteTodoResponse>;
 
+  /**
+   * Get allowed methods for todo resource
+   */
   handleOptionsTodoRequest: HonoRequestHandler<IOptionsTodoRequest, OptionsTodoResponse>;
 
+  /**
+   * Update todo status
+   */
   handleUpdateTodoStatusRequest: HonoRequestHandler<
     IUpdateTodoStatusRequest,
     UpdateTodoStatusResponse
   >;
 
+  /**
+   * List subtodos for a specific todo
+   */
   handleListSubTodosRequest: HonoRequestHandler<IListSubTodosRequest, ListSubTodosResponse>;
 
+  /**
+   * Create new subtodo
+   */
   handleCreateSubTodoRequest: HonoRequestHandler<ICreateSubTodoRequest, CreateSubTodoResponse>;
 
+  /**
+   * Query subtodos for a specific todo
+   */
   handleQuerySubTodoRequest: HonoRequestHandler<IQuerySubTodoRequest, QuerySubTodoResponse>;
 
+  /**
+   * Update subtodo
+   */
   handleUpdateSubTodoRequest: HonoRequestHandler<IUpdateSubTodoRequest, UpdateSubTodoResponse>;
 
+  /**
+   * Delete subtodo
+   */
   handleDeleteSubTodoRequest: HonoRequestHandler<IDeleteSubTodoRequest, DeleteSubTodoResponse>;
 };
 

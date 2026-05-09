@@ -85,44 +85,86 @@ import { DeleteSubTodoResponseValidator } from "./DeleteSubTodoResponseValidator
 
 export type ServerTodoApiHandler<TState extends Record<string, unknown> = Record<string, unknown>> =
   {
+    /**
+     * List todos with filtering, pagination, and search
+     */
     handleListTodosRequest: RequestHandler<IListTodosRequest, ListTodosResponse, TState>;
 
+    /**
+     * Create new todo
+     */
     handleCreateTodoRequest: RequestHandler<ICreateTodoRequest, CreateTodoResponse, TState>;
 
+    /**
+     * Query todos with advanced search criteria
+     */
     handleQueryTodoRequest: RequestHandler<IQueryTodoRequest, QueryTodoResponse, TState>;
 
+    /**
+     * Get todo
+     */
     handleGetTodoRequest: RequestHandler<IGetTodoRequest, GetTodoResponse, TState>;
 
+    /**
+     * Replace todo completely
+     */
     handlePutTodoRequest: RequestHandler<IPutTodoRequest, PutTodoResponse, TState>;
 
+    /**
+     * Update todo
+     */
     handleUpdateTodoRequest: RequestHandler<IUpdateTodoRequest, UpdateTodoResponse, TState>;
 
+    /**
+     * Delete todo
+     */
     handleDeleteTodoRequest: RequestHandler<IDeleteTodoRequest, DeleteTodoResponse, TState>;
 
+    /**
+     * Get allowed methods for todo resource
+     */
     handleOptionsTodoRequest: RequestHandler<IOptionsTodoRequest, OptionsTodoResponse, TState>;
 
+    /**
+     * Update todo status
+     */
     handleUpdateTodoStatusRequest: RequestHandler<
       IUpdateTodoStatusRequest,
       UpdateTodoStatusResponse,
       TState
     >;
 
+    /**
+     * List subtodos for a specific todo
+     */
     handleListSubTodosRequest: RequestHandler<IListSubTodosRequest, ListSubTodosResponse, TState>;
 
+    /**
+     * Create new subtodo
+     */
     handleCreateSubTodoRequest: RequestHandler<
       ICreateSubTodoRequest,
       CreateSubTodoResponse,
       TState
     >;
 
+    /**
+     * Query subtodos for a specific todo
+     */
     handleQuerySubTodoRequest: RequestHandler<IQuerySubTodoRequest, QuerySubTodoResponse, TState>;
 
+    /**
+     * Update subtodo
+     */
     handleUpdateSubTodoRequest: RequestHandler<
       IUpdateSubTodoRequest,
       UpdateSubTodoResponse,
       TState
     >;
 
+    /**
+     * Delete subtodo
+     */
     handleDeleteSubTodoRequest: RequestHandler<
       IDeleteSubTodoRequest,
       DeleteSubTodoResponse,

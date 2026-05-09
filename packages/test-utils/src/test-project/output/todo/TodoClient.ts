@@ -92,34 +92,79 @@ export class TodoClient extends ApiClient {
     super(props);
   }
 
+  /**
+   * Create new subtodo
+   */
   public async send(command: CreateSubTodoRequestCommand): Promise<CreateSubTodoResponse>;
 
+  /**
+   * Create new todo
+   */
   public async send(command: CreateTodoRequestCommand): Promise<CreateTodoResponse>;
 
+  /**
+   * Delete subtodo
+   */
   public async send(command: DeleteSubTodoRequestCommand): Promise<DeleteSubTodoResponse>;
 
+  /**
+   * Delete todo
+   */
   public async send(command: DeleteTodoRequestCommand): Promise<DeleteTodoResponse>;
 
+  /**
+   * Get todo
+   */
   public async send(command: GetTodoRequestCommand): Promise<GetTodoResponse>;
 
+  /**
+   * Check if todo exists
+   */
   public async send(command: HeadTodoRequestCommand): Promise<HeadTodoResponse>;
 
+  /**
+   * List subtodos for a specific todo
+   */
   public async send(command: ListSubTodosRequestCommand): Promise<ListSubTodosResponse>;
 
+  /**
+   * List todos with filtering, pagination, and search
+   */
   public async send(command: ListTodosRequestCommand): Promise<ListTodosResponse>;
 
+  /**
+   * Get allowed methods for todo resource
+   */
   public async send(command: OptionsTodoRequestCommand): Promise<OptionsTodoResponse>;
 
+  /**
+   * Replace todo completely
+   */
   public async send(command: PutTodoRequestCommand): Promise<PutTodoResponse>;
 
+  /**
+   * Query subtodos for a specific todo
+   */
   public async send(command: QuerySubTodoRequestCommand): Promise<QuerySubTodoResponse>;
 
+  /**
+   * Query todos with advanced search criteria
+   */
   public async send(command: QueryTodoRequestCommand): Promise<QueryTodoResponse>;
 
+  /**
+   * Update subtodo
+   */
   public async send(command: UpdateSubTodoRequestCommand): Promise<UpdateSubTodoResponse>;
 
+  /**
+   * Update todo
+   */
   public async send(command: UpdateTodoRequestCommand): Promise<UpdateTodoResponse>;
 
+  /**
+   * Update todo status
+   */
   public async send(command: UpdateTodoStatusRequestCommand): Promise<UpdateTodoStatusResponse>;
 
   public async send(command: TodoRequestCommands): Promise<TodoResponses> {

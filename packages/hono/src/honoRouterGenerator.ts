@@ -1,7 +1,11 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { compareRoutes, relative } from "@rexeus/typeweaver-gen";
+import {
+  compareRoutes,
+  createJSDocComment,
+  relative,
+} from "@rexeus/typeweaver-gen";
 import type {
   GeneratorContext,
   NormalizedOperation,
@@ -48,11 +52,13 @@ function createOperationData(operation: NormalizedOperation) {
   const operationId = operation.operationId;
   const className = pascalCase(operationId);
   const handlerName = `handle${className}Request`;
+  const jsDoc = createJSDocComment(operation.summary, { indentation: "  " });
 
   return {
     operationId,
     className,
     handlerName,
+    ...(jsDoc ? { jsDoc } : {}),
     method: operation.method,
     path: operation.path,
   };

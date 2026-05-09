@@ -26,6 +26,23 @@ import type { RegisterAccountResponse } from "./RegisterAccountResponse.js";
 const definition = getOperationDefinition(spec, "account", "RegisterAccount");
 const responseValidator = new RegisterAccountResponseValidator();
 
+const defaultHeader = {
+  Accept: "application/json",
+
+  "Content-Type": "application/json",
+} as const;
+
+export type RegisterAccountRequestCommandInput = Omit<
+  IRegisterAccountRequest,
+  "method" | "path" | "header"
+> & {
+  readonly header?: Omit<IRegisterAccountRequestHeader, "Accept" | "Content-Type"> &
+    Partial<Pick<IRegisterAccountRequestHeader, "Accept" | "Content-Type">>;
+};
+
+/**
+ * Register new account
+ */
 export class RegisterAccountRequestCommand
   extends RequestCommand
   implements IRegisterAccountRequest
@@ -39,10 +56,10 @@ export class RegisterAccountRequestCommand
   declare public readonly query: undefined;
   public override readonly body: IRegisterAccountRequestBody;
 
-  public constructor(input: Omit<IRegisterAccountRequest, "method" | "path">) {
+  public constructor(input: RegisterAccountRequestCommandInput) {
     super();
 
-    this.header = input.header;
+    this.header = { ...input.header, ...defaultHeader };
 
     this.body = input.body;
   }

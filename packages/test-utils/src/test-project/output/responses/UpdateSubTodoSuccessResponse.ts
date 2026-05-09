@@ -31,6 +31,9 @@ export type IUpdateSubTodoSuccessResponseBody = {
   modifiedBy: string;
 };
 
+/**
+ * SubTodo updated successfully
+ */
 export type IUpdateSubTodoSuccessResponse = ITypedHttpResponse<
   "UpdateSubTodoSuccess",
   HttpStatusCode.OK,
@@ -38,6 +41,9 @@ export type IUpdateSubTodoSuccessResponse = ITypedHttpResponse<
   IUpdateSubTodoSuccessResponseBody
 >;
 
+/**
+ * SubTodo updated successfully
+ */
 export const createUpdateSubTodoSuccessResponse = (input: {
   header: IUpdateSubTodoSuccessResponseHeader;
   body: IUpdateSubTodoSuccessResponseBody;

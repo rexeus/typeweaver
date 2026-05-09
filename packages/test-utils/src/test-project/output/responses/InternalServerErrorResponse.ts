@@ -20,6 +20,9 @@ export type IInternalServerErrorResponseBody = {
   code: "INTERNAL_SERVER_ERROR";
 };
 
+/**
+ * Internal server error occurred
+ */
 export type IInternalServerErrorResponse = ITypedHttpResponse<
   "InternalServerError",
   HttpStatusCode.INTERNAL_SERVER_ERROR,
@@ -27,6 +30,9 @@ export type IInternalServerErrorResponse = ITypedHttpResponse<
   IInternalServerErrorResponseBody
 >;
 
+/**
+ * Internal server error occurred
+ */
 export const createInternalServerErrorResponse = (input: {
   header: IInternalServerErrorResponseHeader;
   body: IInternalServerErrorResponseBody;

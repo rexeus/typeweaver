@@ -26,6 +26,9 @@ export type IValidationErrorResponseBody = {
   };
 };
 
+/**
+ * Validation error
+ */
 export type IValidationErrorResponse = ITypedHttpResponse<
   "ValidationError",
   HttpStatusCode.BAD_REQUEST,
@@ -33,6 +36,9 @@ export type IValidationErrorResponse = ITypedHttpResponse<
   IValidationErrorResponseBody
 >;
 
+/**
+ * Validation error
+ */
 export const createValidationErrorResponse = (input: {
   header: IValidationErrorResponseHeader;
   body: IValidationErrorResponseBody;

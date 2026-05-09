@@ -13,6 +13,9 @@ export type IDeleteTodoBodyOnlyResponseBody = {
   message: string;
 };
 
+/**
+ * Success with body only
+ */
 export type IDeleteTodoBodyOnlyResponse = ITypedHttpResponse<
   "DeleteTodoBodyOnly",
   HttpStatusCode.OK,
@@ -20,6 +23,9 @@ export type IDeleteTodoBodyOnlyResponse = ITypedHttpResponse<
   IDeleteTodoBodyOnlyResponseBody
 >;
 
+/**
+ * Success with body only
+ */
 export const createDeleteTodoBodyOnlyResponse = (input: {
   body: IDeleteTodoBodyOnlyResponseBody;
 }): IDeleteTodoBodyOnlyResponse => ({

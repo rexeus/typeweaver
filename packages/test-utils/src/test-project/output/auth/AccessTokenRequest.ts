@@ -20,6 +20,9 @@ export type IAccessTokenRequestBody = {
   password: string;
 };
 
+/**
+ * Get access token by email and password
+ */
 export type IAccessTokenRequest = {
   path: string;
   method: HttpMethod.POST;

@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { HttpMethod } from "@rexeus/typeweaver-core";
+import { createJSDocComment } from "@rexeus/typeweaver-gen";
 import type {
   GeneratorContext,
   NormalizedResource,
@@ -22,7 +23,13 @@ function writeHttpApiRoutes(
   templateFile: string,
   context: GeneratorContext
 ): void {
-  const routes: Record<string, HttpMethod[]> = {};
+  const routes: Record<
+    string,
+    {
+      readonly methods: HttpMethod[];
+      readonly methodSummaries: string[];
+    }
+  > = {};
   const pascalCaseEntityName = pascalCase(resource.name);
   const outputDir = context.getResourceOutputDir(resource.name);
   const outputFile = path.join(
@@ -34,16 +41,36 @@ function writeHttpApiRoutes(
     const routePath = createRoutePath(operation.path);
 
     if (!routes[routePath]) {
-      routes[routePath] = [];
+      routes[routePath] = {
+        methods: [],
+        methodSummaries: [],
+      };
     }
 
-    routes[routePath]!.push(operation.method);
+    routes[routePath]!.methods.push(operation.method);
+    routes[routePath]!.methodSummaries.push(
+      operation.summary
+        ? `${operation.method}: ${operation.summary}`
+        : operation.method
+    );
   }
+
+  const routesWithDocs = Object.fromEntries(
+    Object.entries(routes).map(([routePath, route]) => [
+      routePath,
+      {
+        methods: route.methods,
+        jsDoc: createJSDocComment(route.methodSummaries.join("\n"), {
+          indentation: "      ",
+        }),
+      },
+    ])
+  );
 
   const content = context.renderTemplate(templateFile, {
     entityName: resource.name,
     pascalCaseEntityName,
-    routes,
+    routes: routesWithDocs,
     coreDir: context.coreDir,
   });
 

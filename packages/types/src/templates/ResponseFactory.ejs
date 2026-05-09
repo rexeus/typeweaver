@@ -1,4 +1,5 @@
-<%= indentation %>export const create<%= identifierName %>Response = <% if (hasHeader || hasBody) { %>(
+<% if (jsDoc) { %><%- jsDoc.split('\n').map(line => `${indentation}${line}`).join('\n') %>
+<% } %><%= indentation %>export const create<%= identifierName %>Response = <% if (hasHeader || hasBody) { %>(
 <%= indentation %>input: {
 <% if (hasHeader) { %><%= indentation %>  header: I<%= identifierName %>ResponseHeader;
 <% } %><% if (hasBody) { %><%= indentation %>  body: I<%= identifierName %>ResponseBody;

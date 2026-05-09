@@ -19,6 +19,9 @@ export type IDeleteSubTodoSuccessResponseBody = {
   message: string;
 };
 
+/**
+ * SubTodo deleted successfully
+ */
 export type IDeleteSubTodoSuccessResponse = ITypedHttpResponse<
   "DeleteSubTodoSuccess",
   HttpStatusCode.OK,
@@ -26,6 +29,9 @@ export type IDeleteSubTodoSuccessResponse = ITypedHttpResponse<
   IDeleteSubTodoSuccessResponseBody
 >;
 
+/**
+ * SubTodo deleted successfully
+ */
 export const createDeleteSubTodoSuccessResponse = (input: {
   header: IDeleteSubTodoSuccessResponseHeader;
   body: IDeleteSubTodoSuccessResponseBody;

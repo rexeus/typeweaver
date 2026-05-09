@@ -12,21 +12,41 @@ import { type AwsHttpApiGatewayRoute, AwsHttpApiGatewayRoutes } from "../lib/aws
 export class TodoHttpApiRoutes extends AwsHttpApiGatewayRoutes {
   private routes: AwsHttpApiGatewayRoute[] = [
     {
+      /**
+       * POST: Create new subtodo
+       * GET: List subtodos for a specific todo
+       */
       path: "/todos/{todoId}/subtodos",
       methods: [HttpMethod.POST, HttpMethod.GET],
     },
 
     {
+      /**
+       * POST: Create new todo
+       * GET: List todos with filtering, pagination, and search
+       */
       path: "/todos",
       methods: [HttpMethod.POST, HttpMethod.GET],
     },
 
     {
+      /**
+       * DELETE: Delete subtodo
+       * PUT: Update subtodo
+       */
       path: "/todos/{todoId}/subtodos/{subtodoId}",
       methods: [HttpMethod.DELETE, HttpMethod.PUT],
     },
 
     {
+      /**
+       * DELETE: Delete todo
+       * GET: Get todo
+       * HEAD: Check if todo exists
+       * OPTIONS: Get allowed methods for todo resource
+       * PUT: Replace todo completely
+       * PATCH: Update todo
+       */
       path: "/todos/{todoId}",
       methods: [
         HttpMethod.DELETE,
@@ -39,16 +59,25 @@ export class TodoHttpApiRoutes extends AwsHttpApiGatewayRoutes {
     },
 
     {
+      /**
+       * POST: Query subtodos for a specific todo
+       */
       path: "/todos/{todoId}/subtodos/query",
       methods: [HttpMethod.POST],
     },
 
     {
+      /**
+       * POST: Query todos with advanced search criteria
+       */
       path: "/todos/query",
       methods: [HttpMethod.POST],
     },
 
     {
+      /**
+       * PUT: Update todo status
+       */
       path: "/todos/{todoId}/status",
       methods: [HttpMethod.PUT],
     },

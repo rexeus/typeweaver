@@ -27,6 +27,23 @@ import type { UpdateSubTodoResponse } from "./UpdateSubTodoResponse.js";
 const definition = getOperationDefinition(spec, "todo", "UpdateSubTodo");
 const responseValidator = new UpdateSubTodoResponseValidator();
 
+const defaultHeader = {
+  Accept: "application/json",
+
+  "Content-Type": "application/json",
+} as const;
+
+export type UpdateSubTodoRequestCommandInput = Omit<
+  IUpdateSubTodoRequest,
+  "method" | "path" | "header"
+> & {
+  readonly header: Omit<IUpdateSubTodoRequestHeader, "Accept" | "Content-Type"> &
+    Partial<Pick<IUpdateSubTodoRequestHeader, "Accept" | "Content-Type">>;
+};
+
+/**
+ * Update subtodo
+ */
 export class UpdateSubTodoRequestCommand extends RequestCommand implements IUpdateSubTodoRequest {
   public override readonly operationId = definition.operationId;
   public override readonly method = definition.method as HttpMethod.PUT;
@@ -37,10 +54,10 @@ export class UpdateSubTodoRequestCommand extends RequestCommand implements IUpda
   declare public readonly query: undefined;
   public override readonly body: IUpdateSubTodoRequestBody;
 
-  public constructor(input: Omit<IUpdateSubTodoRequest, "method" | "path">) {
+  public constructor(input: UpdateSubTodoRequestCommandInput) {
     super();
 
-    this.header = input.header;
+    this.header = { ...input.header, ...defaultHeader };
 
     this.param = input.param;
 

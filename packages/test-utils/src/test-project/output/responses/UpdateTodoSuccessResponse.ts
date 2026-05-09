@@ -31,6 +31,9 @@ export type IUpdateTodoSuccessResponseBody = {
   modifiedBy: string;
 };
 
+/**
+ * Todo updated successfully
+ */
 export type IUpdateTodoSuccessResponse = ITypedHttpResponse<
   "UpdateTodoSuccess",
   HttpStatusCode.OK,
@@ -38,6 +41,9 @@ export type IUpdateTodoSuccessResponse = ITypedHttpResponse<
   IUpdateTodoSuccessResponseBody
 >;
 
+/**
+ * Todo updated successfully
+ */
 export const createUpdateTodoSuccessResponse = (input: {
   header: IUpdateTodoSuccessResponseHeader;
   body: IUpdateTodoSuccessResponseBody;

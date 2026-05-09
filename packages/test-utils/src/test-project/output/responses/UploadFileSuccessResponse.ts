@@ -23,6 +23,9 @@ export type IUploadFileSuccessResponseBody = {
   createdAt: string;
 };
 
+/**
+ * File uploaded successfully
+ */
 export type IUploadFileSuccessResponse = ITypedHttpResponse<
   "UploadFileSuccess",
   HttpStatusCode.CREATED,
@@ -30,6 +33,9 @@ export type IUploadFileSuccessResponse = ITypedHttpResponse<
   IUploadFileSuccessResponseBody
 >;
 
+/**
+ * File uploaded successfully
+ */
 export const createUploadFileSuccessResponse = (input: {
   header: IUploadFileSuccessResponseHeader;
   body: IUploadFileSuccessResponseBody;
