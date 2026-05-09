@@ -1,7 +1,15 @@
 import {
   factory,
+  isArrayTypeNode,
+  isIdentifier,
+  isIdentifierPart,
+  isIdentifierStart,
+  isLiteralTypeNode,
   isParenthesizedTypeNode,
+  isTupleTypeNode,
+  isTypeReferenceNode,
   isUnionTypeNode,
+  ScriptTarget,
   SyntaxKind,
 } from "typescript";
 import {
@@ -394,9 +402,16 @@ function fromZodDefault(zodDefault: $ZodDefault): TypeNode {
   return withoutUndefined(innerType);
 }
 
-function withoutUndefined(type: TypeNode): TypeNode {
+function withoutUndefined(
+  type: TypeNode,
+  fallbackType: TypeNode = type
+): TypeNode {
   if (isParenthesizedTypeNode(type)) {
-    return withoutUndefined(type.type);
+    return withoutUndefined(type.type, fallbackType);
+  }
+
+  if (type.kind === SyntaxKind.UndefinedKeyword) {
+    return fallbackType;
   }
 
   if (!isUnionTypeNode(type)) {
@@ -404,7 +419,7 @@ function withoutUndefined(type: TypeNode): TypeNode {
   }
 
   const types = type.types
-    .map(withoutUndefined)
+    .map(nextType => withoutUndefined(nextType))
     .flatMap(nextType =>
       isUnionTypeNode(nextType) ? Array.from(nextType.types) : [nextType]
     )
@@ -412,7 +427,7 @@ function withoutUndefined(type: TypeNode): TypeNode {
 
   const [singleType] = types;
   if (types.length === 0) {
-    return type;
+    return fallbackType;
   }
   if (types.length === 1 && singleType) {
     return singleType;
@@ -438,52 +453,206 @@ function fromZodTransform(_zodTransform: $ZodTransform): TypeNode {
   return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
 }
 
-function fromZodNonOptional(_zodNonOptional: $ZodNonOptional): TypeNode {
-  // TODO: handle zodNonOptional
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+function fromZodNonOptional(zodNonOptional: $ZodNonOptional): TypeNode {
+  const innerType = fromZod(zodNonOptional._zod.def.innerType);
+  return withoutUndefined(
+    innerType,
+    factory.createKeywordTypeNode(SyntaxKind.NeverKeyword)
+  );
 }
 
-function fromZodReadonly(_zodReadonly: $ZodReadonly): TypeNode {
-  // TODO: handle zodReadonly
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+function fromZodReadonly(zodReadonly: $ZodReadonly): TypeNode {
+  return createReadonlyType(fromZod(zodReadonly._zod.def.innerType));
 }
 
 function fromZodNaN(_zodNaN: $ZodNaN): TypeNode {
-  // TODO: handle zodNaN
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+  return factory.createKeywordTypeNode(SyntaxKind.NumberKeyword);
 }
 
-function fromZodPipe(_zodPipe: $ZodPipe): TypeNode {
-  // TODO: handle zodPipe
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+function fromZodPipe(zodPipe: $ZodPipe): TypeNode {
+  return fromZod(zodPipe._zod.def.out);
 }
 
 function fromZodSuccess(_zodSuccess: $ZodSuccess): TypeNode {
-  // TODO: handle zodSuccess
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+  return factory.createKeywordTypeNode(SyntaxKind.BooleanKeyword);
 }
 
-function fromZodCatch(_zodCatch: $ZodCatch): TypeNode {
-  // TODO: handle zodCatch
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+function fromZodCatch(zodCatch: $ZodCatch): TypeNode {
+  return fromZod(zodCatch._zod.def.innerType);
 }
 
 function fromZodFile(_zodFile: $ZodFile): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+  return factory.createTypeReferenceNode(factory.createIdentifier("File"));
 }
 
-/**
- * Returns a TypeScript AST node representing the property key.
- * If the key is a valid JavaScript identifier, returns an Identifier node.
- * Otherwise, returns a StringLiteral node.
- *
- * @param {string} key - The property key to convert.
- * @returns {Identifier | StringLiteral} The corresponding AST node for the property key.
- */
+function createReadonlyType(type: TypeNode): TypeNode {
+  if (isParenthesizedTypeNode(type)) {
+    return createReadonlyType(type.type);
+  }
+
+  if (isUnionTypeNode(type)) {
+    return factory.createUnionTypeNode(type.types.map(createReadonlyType));
+  }
+
+  if (isArrayTypeNode(type) || isTupleTypeNode(type)) {
+    return factory.createTypeOperatorNode(SyntaxKind.ReadonlyKeyword, type);
+  }
+
+  if (isReadonlyPrimitiveType(type) || isLiteralTypeNode(type)) {
+    return type;
+  }
+
+  if (isTypeReferenceNode(type)) {
+    const typeName = isIdentifier(type.typeName)
+      ? type.typeName.escapedText.toString()
+      : undefined;
+
+    if (typeName === "Map") {
+      return factory.createTypeReferenceNode(
+        factory.createIdentifier("ReadonlyMap"),
+        type.typeArguments
+      );
+    }
+
+    if (typeName === "Set") {
+      return factory.createTypeReferenceNode(
+        factory.createIdentifier("ReadonlySet"),
+        type.typeArguments
+      );
+    }
+
+    if (typeName === "Date" || typeName === "Promise") {
+      return type;
+    }
+  }
+
+  return factory.createTypeReferenceNode(factory.createIdentifier("Readonly"), [
+    type,
+  ]);
+}
+
+function isReadonlyPrimitiveType(type: TypeNode): boolean {
+  return [
+    SyntaxKind.AnyKeyword,
+    SyntaxKind.BigIntKeyword,
+    SyntaxKind.BooleanKeyword,
+    SyntaxKind.NeverKeyword,
+    SyntaxKind.NumberKeyword,
+    SyntaxKind.StringKeyword,
+    SyntaxKind.SymbolKeyword,
+    SyntaxKind.UndefinedKeyword,
+    SyntaxKind.UnknownKeyword,
+    SyntaxKind.VoidKeyword,
+  ].includes(type.kind);
+}
+
+const RESERVED_IDENTIFIER_NAMES = new Set([
+  "abstract",
+  "accessor",
+  "any",
+  "as",
+  "asserts",
+  "async",
+  "await",
+  "bigint",
+  "boolean",
+  "break",
+  "case",
+  "catch",
+  "class",
+  "const",
+  "constructor",
+  "continue",
+  "debugger",
+  "declare",
+  "default",
+  "delete",
+  "do",
+  "else",
+  "enum",
+  "export",
+  "extends",
+  "false",
+  "finally",
+  "for",
+  "from",
+  "function",
+  "get",
+  "global",
+  "if",
+  "implements",
+  "import",
+  "in",
+  "infer",
+  "instanceof",
+  "interface",
+  "intrinsic",
+  "is",
+  "keyof",
+  "let",
+  "module",
+  "namespace",
+  "never",
+  "new",
+  "null",
+  "number",
+  "object",
+  "of",
+  "out",
+  "override",
+  "package",
+  "private",
+  "protected",
+  "public",
+  "readonly",
+  "require",
+  "return",
+  "satisfies",
+  "set",
+  "static",
+  "string",
+  "super",
+  "switch",
+  "symbol",
+  "this",
+  "throw",
+  "true",
+  "try",
+  "type",
+  "typeof",
+  "undefined",
+  "unique",
+  "unknown",
+  "using",
+  "var",
+  "void",
+  "while",
+  "with",
+  "yield",
+]);
+
 function createTsAstPropertyKey(key: string): Identifier | StringLiteral {
-  // TODO: is TsTypeNode correct or required anymore?
-  if (/^[$A-Z_a-z][\w$]*$/.test(key)) {
+  if (isSafePropertyIdentifier(key)) {
     return factory.createIdentifier(key);
   }
   return factory.createStringLiteral(key);
+}
+
+function isSafePropertyIdentifier(key: string): boolean {
+  return isIdentifierName(key) && !RESERVED_IDENTIFIER_NAMES.has(key);
+}
+
+function isIdentifierName(value: string): boolean {
+  const [firstCharacter] = value;
+
+  if (!firstCharacter) {
+    return false;
+  }
+
+  return (
+    isIdentifierStart(firstCharacter.codePointAt(0)!, ScriptTarget.Latest) &&
+    Array.from(value.slice(firstCharacter.length)).every(character =>
+      isIdentifierPart(character.codePointAt(0)!, ScriptTarget.Latest)
+    )
+  );
 }
