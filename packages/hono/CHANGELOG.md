@@ -1,5 +1,14 @@
 # @rexeus/typeweaver-hono
 
+## 0.10.5
+
+### Patch Changes
+
+- c6a1542: Fix generated literal request headers, align typed response header optionality with runtime behavior, emit sanitized generated JSDoc, and validate transformed thrown typed HTTP responses after `handleHttpResponseErrors`. Clarify custom unknown error reporting semantics.
+- Updated dependencies [c6a1542]
+  - @rexeus/typeweaver-core@0.10.5
+  - @rexeus/typeweaver-gen@0.10.5
+
 ## 0.10.4
 
 ### Patch Changes
