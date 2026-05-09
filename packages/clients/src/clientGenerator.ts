@@ -94,6 +94,11 @@ function writeRequestCommand(
   const queryTsType = request.query ? print(fromZod(request.query)) : undefined;
   const bodyTsType = request.body ? print(fromZod(request.body)) : undefined;
   const headerDefaults = getRequestHeaderDefaults(operation.request);
+  const hasRequestInput =
+    headerTsType !== undefined ||
+    paramTsType !== undefined ||
+    queryTsType !== undefined ||
+    bodyTsType !== undefined;
 
   const content = context.renderTemplate(templateFilePath, {
     resourceName,
@@ -107,6 +112,7 @@ function writeRequestCommand(
     paramTsType,
     queryTsType,
     bodyTsType,
+    hasRequestInput,
     requestJsDoc: createJSDocComment(operation.summary),
     headerDefaultEntries: headerDefaults?.entries ?? [],
     optionalHeaderKeys: headerDefaults?.optionalHeaderKeys ?? [],

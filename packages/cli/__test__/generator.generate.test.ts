@@ -1,7 +1,13 @@
+import { execFile } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
+import { promisify } from "node:util";
 import { afterEach, describe, expect, test } from "vitest";
 import { Generator } from "../src/generators/Generator.js";
+
+const require = createRequire(import.meta.url);
+const execFileAsync = promisify(execFile);
 
 describe("Generator.generate", () => {
   const tempDirs: string[] = [];
@@ -53,6 +59,52 @@ describe("Generator.generate", () => {
         "            param: z.object({ itemId: z.string() }),",
         "          },",
         "          responses: [itemLoaded],",
+        "        }),",
+        "      ],",
+        "    },",
+        "  },",
+        "});",
+        "",
+      ].join("\n")
+    );
+
+    return specFile;
+  };
+
+  const writeSchemaLessSpec = (workspace: string): string => {
+    const specFile = path.join(workspace, "spec", "index.ts");
+
+    fs.mkdirSync(path.dirname(specFile), { recursive: true });
+    fs.writeFileSync(
+      specFile,
+      [
+        'import { defineOperation, defineResponse, defineSpec, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";',
+        "",
+        "const pingOk = defineResponse({",
+        '  name: "PingOk",',
+        "  statusCode: HttpStatusCode.OK,",
+        '  description: "Ping succeeded",',
+        "});",
+        "",
+        "export const spec = defineSpec({",
+        "  resources: {",
+        "    health: {",
+        "      operations: [",
+        "        defineOperation({",
+        '          operationId: "ping",',
+        '          path: "/ping",',
+        "          method: HttpMethod.GET,",
+        '          summary: "Ping",',
+        "          request: {},",
+        "          responses: [pingOk],",
+        "        }),",
+        "        defineOperation({",
+        '          operationId: "status",',
+        '          path: "/status",',
+        "          method: HttpMethod.GET,",
+        '          summary: "Status",',
+        "          request: {},",
+        "          responses: [pingOk],",
         "        }),",
         "      ],",
         "    },",
@@ -285,6 +337,72 @@ describe("Generator.generate", () => {
     return fs.readFileSync(filePath, "utf8");
   };
 
+  const writeStrictGeneratedTsConfig = (workspace: string): string => {
+    const tsconfigFile = path.join(workspace, "tsconfig.generated-strict.json");
+
+    fs.writeFileSync(
+      tsconfigFile,
+      JSON.stringify(
+        {
+          compilerOptions: {
+            target: "ESNext",
+            module: "NodeNext",
+            moduleResolution: "NodeNext",
+            strict: true,
+            noUnusedLocals: true,
+            noUnusedParameters: true,
+            verbatimModuleSyntax: true,
+            skipLibCheck: true,
+            isolatedModules: true,
+            esModuleInterop: true,
+            types: ["node"],
+            noEmit: true,
+          },
+          include: [
+            "consumer.ts",
+            "generated/output/**/*.ts",
+            "generated/output/**/*.d.ts",
+          ],
+        },
+        null,
+        2
+      )
+    );
+
+    return tsconfigFile;
+  };
+
+  const writeSchemaLessCommandConsumer = (workspace: string): void => {
+    fs.writeFileSync(
+      path.join(workspace, "consumer.ts"),
+      [
+        'import { PingRequestCommand } from "./generated/output/health/PingRequestCommand.js";',
+        'import { StatusRequestCommand } from "./generated/output/health/StatusRequestCommand.js";',
+        "",
+        "export const commands = [",
+        "  new PingRequestCommand(),",
+        "  new PingRequestCommand({}),",
+        "  new StatusRequestCommand(),",
+        "  new StatusRequestCommand({}),",
+        "];",
+        "",
+      ].join("\n")
+    );
+  };
+
+  const runGeneratedTypecheck = async (
+    workspace: string,
+    tsconfigFile: string
+  ): Promise<void> => {
+    const tscPath = require.resolve("typescript/bin/tsc");
+
+    await execFileAsync(
+      process.execPath,
+      [tscPath, "--noEmit", "-p", tsconfigFile, "--pretty", "false"],
+      { cwd: workspace }
+    );
+  };
+
   test("generates TypeWeaver output from paths relative to the provided working directory", async () => {
     const workspace = createTempWorkspace();
     writeTinySpec(workspace);
@@ -322,13 +440,92 @@ describe("Generator.generate", () => {
       "export type IGetItemRequestParam"
     );
     expectFileContains(
-      path.join(outputDir, "item", "GetItemResponseValidator.ts"),
-      'getOperationDefinition(spec, "item", "getItem")'
-    );
-    expectFileContains(
       path.join(outputDir, "responses", "ItemLoadedResponse.ts"),
       "export type IItemLoadedResponse"
     );
+  });
+
+  test("imports operation definitions in validators generated for schema-backed requests and responses", async () => {
+    const workspace = createTempWorkspace();
+    writeTinySpec(workspace);
+
+    const outputDir = await generateTypesInWorkspace(workspace);
+    const requestValidator = readFile(
+      path.join(outputDir, "item", "GetItemRequestValidator.ts")
+    );
+    const responseValidator = readFile(
+      path.join(outputDir, "item", "GetItemResponseValidator.ts")
+    );
+
+    expect(requestValidator).toContain(
+      'import { spec } from "../spec/spec.js";'
+    );
+    expect(requestValidator).toContain(
+      'getOperationDefinition(spec, "item", "getItem")'
+    );
+    expect(responseValidator).toContain(
+      'import { spec } from "../spec/spec.js";'
+    );
+    expect(responseValidator).toContain(
+      'getOperationDefinition(spec, "item", "getItem")'
+    );
+  });
+
+  test("strict-compiles generated client commands and validators for requests without schemas", async () => {
+    const workspace = createTempWorkspace();
+    writeSchemaLessSpec(workspace);
+    writeSchemaLessCommandConsumer(workspace);
+    const tsconfigFile = writeStrictGeneratedTsConfig(workspace);
+
+    await new Generator().generate(
+      "spec/index.ts",
+      "generated/output",
+      {
+        input: "spec/index.ts",
+        output: "generated/output",
+        format: false,
+        plugins: ["clients"],
+      },
+      workspace
+    );
+
+    await runGeneratedTypecheck(workspace, tsconfigFile);
+  });
+
+  test("omits operation-definition imports and lookups from request validators without schemas", async () => {
+    const workspace = createTempWorkspace();
+    writeSchemaLessSpec(workspace);
+    const outputDir = path.join(workspace, "generated", "output");
+
+    await new Generator().generate(
+      "spec/index.ts",
+      "generated/output",
+      {
+        input: "spec/index.ts",
+        output: "generated/output",
+        format: false,
+        plugins: ["clients"],
+      },
+      workspace
+    );
+
+    const pingRequestValidator = readFile(
+      path.join(outputDir, "health", "PingRequestValidator.ts")
+    );
+    const statusRequestValidator = readFile(
+      path.join(outputDir, "health", "StatusRequestValidator.ts")
+    );
+
+    for (const requestValidator of [
+      pingRequestValidator,
+      statusRequestValidator,
+    ]) {
+      expect(requestValidator).not.toContain("import { spec }");
+      expect(requestValidator).not.toContain("getOperationDefinition");
+      expect(requestValidator).not.toContain(
+        "const definition = getOperationDefinition"
+      );
+    }
   });
 
   test("removes stale output before generating by default", async () => {

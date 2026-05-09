@@ -1,5 +1,14 @@
 # @rexeus/typeweaver-hono
 
+## 0.11.0
+
+### Patch Changes
+
+- Updated dependencies [b0197e1]
+- Updated dependencies [357c14b]
+  - @rexeus/typeweaver-gen@0.11.0
+  - @rexeus/typeweaver-core@0.11.0
+
 ## 0.10.5
 
 ### Patch Changes

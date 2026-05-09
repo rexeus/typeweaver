@@ -56,7 +56,7 @@ export class RefreshTokenRequestCommand extends RequestCommand implements IRefre
   public constructor(input: RefreshTokenRequestCommandInput) {
     super();
 
-    this.header = { ...input.header, ...defaultHeader };
+    this.header = { ...defaultHeader, ...input.header };
 
     this.body = input.body;
   }

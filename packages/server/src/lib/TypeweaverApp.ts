@@ -407,7 +407,10 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
       const response = await this.safelyExecuteErrorHandler(() =>
         handler(error, ctx)
       );
-      if (response) return response;
+      if (response) {
+        this.safeOnError(error);
+        return response;
+      }
     }
 
     throw error;
@@ -481,9 +484,8 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
   ): IHttpResponse => toHttpResponse(err);
 
   private readonly defaultUnknownHandler: UnknownErrorHandler = (
-    error
+    _error
   ): IHttpResponse => {
-    this.safeOnError(error);
     return {
       statusCode: internalServerErrorDefaultError.statusCode,
       body: TypeweaverApp.INTERNAL_SERVER_ERROR_BODY,

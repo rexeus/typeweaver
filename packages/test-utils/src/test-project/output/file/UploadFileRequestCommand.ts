@@ -54,7 +54,7 @@ export class UploadFileRequestCommand extends RequestCommand implements IUploadF
   public constructor(input: UploadFileRequestCommandInput) {
     super();
 
-    this.header = { ...input.header, ...defaultHeader };
+    this.header = { ...defaultHeader, ...input.header };
 
     this.body = input.body;
   }

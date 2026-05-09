@@ -59,7 +59,7 @@ export class RegisterAccountRequestCommand
   public constructor(input: RegisterAccountRequestCommandInput) {
     super();
 
-    this.header = { ...input.header, ...defaultHeader };
+    this.header = { ...defaultHeader, ...input.header };
 
     this.body = input.body;
   }

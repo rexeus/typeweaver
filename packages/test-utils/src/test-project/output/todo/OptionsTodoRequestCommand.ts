@@ -54,7 +54,7 @@ export class OptionsTodoRequestCommand extends RequestCommand implements IOption
   public constructor(input: OptionsTodoRequestCommandInput) {
     super();
 
-    this.header = { ...input.header, ...defaultHeader };
+    this.header = { ...defaultHeader, ...input.header };
 
     this.param = input.param;
   }
