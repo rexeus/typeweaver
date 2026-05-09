@@ -12,7 +12,9 @@
   type SafeRequestValidationResult,
   RequestValidationError
 } from "@rexeus/typeweaver-core";
-import { <%= hasRequestSchema ? "getOperationDefinition, " : "" %>RequestValidator } from "../lib/types/index.js";
+<% if (hasRequestSchema) { %>import { getOperationDefinition, RequestValidator } from "../lib/types/index.js";
+<% } else { %>import { RequestValidator } from "../lib/types/index.js";
+<% } %>
 import type { I<%= pascalCaseOperationId %>Request } from "<%= requestFile %>";
 
 <% if (hasRequestSchema) { %>

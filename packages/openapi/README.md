@@ -2,6 +2,33 @@
 
 Pure OpenAPI 3.1.1 document builder for Typeweaver normalized specs.
 
+## Generator plugin
+
+Use the `openapi` plugin to emit `openapi/openapi.json` during Typeweaver generation:
+
+```js
+export default {
+  input: "./api/spec/index.ts",
+  output: "./api/generated",
+  plugins: [
+    [
+      "openapi",
+      {
+        info: { title: "Todo API", version: "1.0.0" },
+        servers: [{ url: "https://api.example.com" }],
+        outputPath: "openapi/openapi.json",
+      },
+    ],
+  ],
+};
+```
+
+All options are optional. Defaults are `info: { title: "Typeweaver API", version: "0.0.0" }`, no
+servers, and `outputPath: "openapi/openapi.json"`. Build warnings are printed to stderr and are not
+embedded in the OpenAPI document.
+
+## Document builder
+
 ```ts
 import { buildOpenApiDocument } from "@rexeus/typeweaver-openapi";
 

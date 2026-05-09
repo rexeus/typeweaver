@@ -83,6 +83,9 @@ importers:
       '@rexeus/typeweaver-hono':
         specifier: workspace:^
         version: link:../hono
+      '@rexeus/typeweaver-openapi':
+        specifier: workspace:^
+        version: link:../openapi
       '@rexeus/typeweaver-server':
         specifier: workspace:^
         version: link:../server

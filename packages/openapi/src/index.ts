@@ -1,4 +1,6 @@
 export { buildOpenApiDocument } from "./buildOpenApiDocument.js";
+export { OpenApiPlugin } from "./OpenApiPlugin.js";
+export type { OpenApiPluginOptions } from "./OpenApiPlugin.js";
 export type {
   BuildOpenApiDocumentOptions,
   OpenApiBuildResult,

@@ -59,6 +59,7 @@ Now you are ready to start building! Check out [Quickstart](#-get-started)
 | [@rexeus/typeweaver-server](https://github.com/rexeus/typeweaver/tree/main/packages/server/README.md)   | Plugin for a zero-dependency, Fetch API-native server with built-in routing and middleware                  | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-server)  |
 | [@rexeus/typeweaver-hono](https://github.com/rexeus/typeweaver/tree/main/packages/hono/README.md)       | Plugin for Hono routers                                                                                     | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)    |
 | [@rexeus/typeweaver-aws-cdk](https://github.com/rexeus/typeweaver/tree/main/packages/aws-cdk/README.md) | Plugin for AWS CDK constructs for API Gateway V2                                                            | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
+| [@rexeus/typeweaver-openapi](https://github.com/rexeus/typeweaver/tree/main/packages/openapi/README.md) | Plugin for OpenAPI 3.1.1 JSON documents                                                                     | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-openapi) |
 
 More plugins are planned. If you want to build your own, check out the plugin system
 
@@ -106,7 +107,7 @@ configurations:
 export default {
   input: "./api/spec/index.ts",
   output: "./api/generated",
-  plugins: ["clients", "hono", "aws-cdk"],
+  plugins: ["clients", "hono", "aws-cdk", "openapi"],
   format: true,
   clean: true,
 };
