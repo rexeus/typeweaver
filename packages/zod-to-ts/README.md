@@ -49,13 +49,13 @@ The library provides complete TypeScript type generation for the following Zod s
 - **Objects**: `z.object()` with nested properties and optional fields
 - **Unions**: `z.union()`
 - **Intersections**: `z.intersection()`
-- **Modifiers**: `z.optional()`, `z.nullable()`, `z.default()`, `z.nonoptional()`,
-  `z.readonly()`, `z.catch()`
-- **Special types**: `z.unknown()`, `z.any()`, `z.void()`, `z.never()`, `z.null()`,
-  `z.undefined()`, `z.nan()`, `z.file()`, `z.success()`
+- **Modifiers**: `z.optional()`, `z.nullable()`, `z.default()`, `z.nonoptional()`, `z.readonly()`,
+  `z.catch()`
+- **Special types**: `z.unknown()`, `z.any()`, `z.void()`, `z.never()`, `z.null()`, `z.undefined()`,
+  `z.nan()`, `z.file()`, `z.success()`
 - **Async types**: `z.promise()`
-- **Pipes**: `z.pipe()` outputs the pipe output schema type; unsupported output schemas
-  still fall back to `unknown`
+- **Pipes**: `z.pipe()` outputs the pipe output schema type; unsupported output schemas still fall
+  back to `unknown`
 
 ### ⚠️ Unsupported Types
 

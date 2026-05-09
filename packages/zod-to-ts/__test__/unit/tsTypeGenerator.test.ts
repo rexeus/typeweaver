@@ -436,9 +436,7 @@ describe("wrapper schemas", () => {
   });
 
   test("maps pipe schemas with unsupported outputs to unknown", () => {
-    expect(toTs(z.string().pipe(z.transform((value) => value)))).toBe(
-      "unknown"
-    );
+    expect(toTs(z.string().pipe(z.transform(value => value)))).toBe("unknown");
   });
 
   test("maps pipe object fields to optional properties from optional outputs", () => {
@@ -449,7 +447,7 @@ describe("wrapper schemas", () => {
 
   test("maps pipe object fields with unsupported outputs to unknown", () => {
     expect(
-      toTs(z.object({ value: z.string().pipe(z.transform((value) => value)) }))
+      toTs(z.object({ value: z.string().pipe(z.transform(value => value)) }))
     ).toBe(["{", "    value: unknown;", "}"].join("\n"));
   });
 
@@ -573,7 +571,7 @@ describe("unsupported schemas", () => {
     { scenario: "z.custom()", schema: z.custom() },
     {
       scenario: "z.transform()",
-      schema: z.string().transform((value) => value.length),
+      schema: z.string().transform(value => value.length),
     },
   ])(
     "falls back to unknown for unsupported $scenario schemas",
