@@ -18,6 +18,18 @@ type FileSystemError = Error & {
 
 const WINDOWS_DRIVE_PREFIX_PATTERN = /^[a-zA-Z]:/;
 
+function pathContainsParentTraversal(projectPath: string): boolean {
+  return projectPath.split("/").includes("..");
+}
+
+function pathEndsWithDirectorySeparator(projectPath: string): boolean {
+  return projectPath.endsWith("/");
+}
+
+function pathNamesCurrentDirectory(projectPath: string): boolean {
+  return projectPath === "." || projectPath.endsWith("/.");
+}
+
 function resolveSafeGeneratedFilePath(
   outputDir: string,
   requestedPath: string
@@ -41,6 +53,27 @@ function resolveSafeGeneratedFilePath(
     );
   }
 
+  if (pathContainsParentTraversal(projectPath)) {
+    throwUnsafeGeneratedFilePath(
+      requestedPath,
+      "path contains parent-directory traversal"
+    );
+  }
+
+  if (pathEndsWithDirectorySeparator(projectPath)) {
+    throwUnsafeGeneratedFilePath(
+      requestedPath,
+      "path must name a file inside the output directory"
+    );
+  }
+
+  if (pathNamesCurrentDirectory(projectPath)) {
+    throwUnsafeGeneratedFilePath(
+      requestedPath,
+      "path must name a file inside the output directory"
+    );
+  }
+
   const generatedPath = path.posix.normalize(projectPath);
 
   if (generatedPath === ".") {
@@ -50,7 +83,7 @@ function resolveSafeGeneratedFilePath(
     );
   }
 
-  if (generatedPath.split("/").includes("..")) {
+  if (pathContainsParentTraversal(generatedPath)) {
     throwUnsafeGeneratedFilePath(
       requestedPath,
       "path contains parent-directory traversal"
@@ -171,33 +204,43 @@ function throwUnsafeGeneratedFilePath(
   );
 }
 
-function revalidateGeneratedWritePathAfterMkdir(
+function revalidateGeneratedWritePath(
   outputDir: string,
   generatedPath: string
 ): SafeGeneratedFilePath {
-  // Parent directory creation can expose a symlink inserted in the write path;
-  // validate again immediately before writeFile follows the filesystem path.
   return resolveSafeGeneratedFilePath(outputDir, generatedPath);
 }
 
 function writeGeneratedFileByReplacingDestination(config: {
   readonly outputDir: string;
   readonly generatedPath: string;
-  readonly fullPath: string;
   readonly content: string;
 }): SafeGeneratedFilePath {
-  const destinationDir = path.dirname(config.fullPath);
-  const existingFileMode = getExistingFileMode(config.fullPath);
+  const existingPath = revalidateGeneratedWritePath(
+    config.outputDir,
+    config.generatedPath
+  );
+  const existingFileMode = getExistingFileMode(existingPath.fullPath);
+  const tempParentPath = revalidateGeneratedWritePath(
+    config.outputDir,
+    config.generatedPath
+  );
+  const destinationDir = path.dirname(tempParentPath.fullPath);
   const tempDir = fs.mkdtempSync(path.join(destinationDir, ".typeweaver-"));
   const tempFile = path.join(tempDir, "generated.tmp");
 
   try {
+    revalidateGeneratedWritePath(config.outputDir, config.generatedPath);
     fs.writeFileSync(tempFile, config.content, {
       flag: "wx",
       mode: existingFileMode ?? 0o666,
     });
 
-    const writablePath = revalidateGeneratedWritePathAfterMkdir(
+    if (existingFileMode !== undefined) {
+      fs.chmodSync(tempFile, existingFileMode);
+    }
+
+    const writablePath = revalidateGeneratedWritePath(
       config.outputDir,
       config.generatedPath
     );
@@ -363,14 +406,13 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
         const dir = path.dirname(safePath.fullPath);
 
         fs.mkdirSync(dir, { recursive: true });
-        const writablePath = revalidateGeneratedWritePathAfterMkdir(
+        const writablePath = revalidateGeneratedWritePath(
           params.outputDir,
           safePath.generatedPath
         );
         const generatedFile = writeGeneratedFileByReplacingDestination({
           outputDir: params.outputDir,
           generatedPath: writablePath.generatedPath,
-          fullPath: writablePath.fullPath,
           content,
         });
         generatedFiles.add(generatedFile.generatedPath);

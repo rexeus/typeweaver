@@ -72,48 +72,46 @@ const aTempDir = (): string => {
   return tempDir;
 };
 
+const nativeGeneratedFilePath = (
+  outputDir: string,
+  generatedFile: string
+): string => path.join(outputDir, ...generatedFile.split("/"));
+
 type FileSystemError = Error & {
   readonly code?: string;
 };
 
-const isSymlinkUnsupportedError = (error: unknown): boolean => {
+const UNSUPPORTED_FILESYSTEM_OPERATION_CODES = [
+  "EACCES",
+  "EINVAL",
+  "ENOSYS",
+  "ENOTSUP",
+  "EOPNOTSUPP",
+  "EPERM",
+] as const;
+
+const isUnsupportedFilesystemOperationError = (error: unknown): boolean => {
   if (!(error instanceof Error)) {
     return false;
   }
 
-  return ["EACCES", "EINVAL", "ENOTSUP", "EPERM"].includes(
-    (error as FileSystemError).code ?? ""
+  const errorCode = (error as FileSystemError).code;
+
+  return UNSUPPORTED_FILESYSTEM_OPERATION_CODES.some(
+    unsupportedCode => unsupportedCode === errorCode
   );
 };
 
-const isHardlinkUnsupportedError = (error: unknown): boolean => {
-  if (!(error instanceof Error)) {
-    return false;
-  }
+const isSymlinkUnsupportedError = (error: unknown): boolean => {
+  return isUnsupportedFilesystemOperationError(error);
+};
 
-  return [
-    "EACCES",
-    "EINVAL",
-    "ENOSYS",
-    "ENOTSUP",
-    "EOPNOTSUPP",
-    "EPERM",
-  ].includes((error as FileSystemError).code ?? "");
+const isHardlinkUnsupportedError = (error: unknown): boolean => {
+  return isUnsupportedFilesystemOperationError(error);
 };
 
 const isFileModeUnsupportedError = (error: unknown): boolean => {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-
-  return [
-    "EACCES",
-    "EINVAL",
-    "ENOSYS",
-    "ENOTSUP",
-    "EOPNOTSUPP",
-    "EPERM",
-  ].includes((error as FileSystemError).code ?? "");
+  return isUnsupportedFilesystemOperationError(error);
 };
 
 type SymlinkCapability =
@@ -522,11 +520,12 @@ describe("createPluginContextBuilder", () => {
   test("writes files relative to the generator output directory and records them", () => {
     const outputDir = aTempDir();
     const generatorContext = aGeneratedProjectContext({ outputDir });
-    const generatedFile = path.join("todo", "GetTodoClient.ts");
+    const generatedFile = "todo/GetTodoClient.ts";
+    const generatedFilePath = nativeGeneratedFilePath(outputDir, generatedFile);
 
     generatorContext.writeFile(generatedFile, "export const client = true;\n");
 
-    expect(fs.readFileSync(path.join(outputDir, generatedFile), "utf8")).toBe(
+    expect(fs.readFileSync(generatedFilePath, "utf8")).toBe(
       "export const client = true;\n"
     );
     expect(generatorContext.getGeneratedFiles()).toEqual([generatedFile]);
@@ -535,8 +534,8 @@ describe("createPluginContextBuilder", () => {
   test("overwrites existing generated files and records them", () => {
     const outputDir = aTempDir();
     const generatorContext = aGeneratedProjectContext({ outputDir });
-    const generatedFile = path.join("todo", "GetTodoClient.ts");
-    const generatedFilePath = path.join(outputDir, generatedFile);
+    const generatedFile = "todo/GetTodoClient.ts";
+    const generatedFilePath = nativeGeneratedFilePath(outputDir, generatedFile);
     fs.mkdirSync(path.dirname(generatedFilePath), { recursive: true });
     fs.writeFileSync(generatedFilePath, "export const client = false;\n");
 
@@ -553,8 +552,11 @@ describe("createPluginContextBuilder", () => {
     () => {
       const outputDir = aTempDir();
       const generatorContext = aGeneratedProjectContext({ outputDir });
-      const generatedFile = path.join("todo", "GetTodoClient.ts");
-      const generatedFilePath = path.join(outputDir, generatedFile);
+      const generatedFile = "todo/GetTodoClient.ts";
+      const generatedFilePath = nativeGeneratedFilePath(
+        outputDir,
+        generatedFile
+      );
       fs.mkdirSync(path.dirname(generatedFilePath), { recursive: true });
       fs.writeFileSync(generatedFilePath, "export const client = false;\n");
       fs.chmodSync(generatedFilePath, 0o600);
@@ -579,8 +581,11 @@ describe("createPluginContextBuilder", () => {
       const workspaceDir = aTempDir();
       const outputDir = path.join(workspaceDir, "generated");
       const externalDir = path.join(workspaceDir, "external");
-      const generatedFile = path.join("todo", "Generated.ts");
-      const generatedFilePath = path.join(outputDir, generatedFile);
+      const generatedFile = "todo/Generated.ts";
+      const generatedFilePath = nativeGeneratedFilePath(
+        outputDir,
+        generatedFile
+      );
       const externalFilePath = path.join(externalDir, "shared.ts");
       fs.mkdirSync(path.dirname(generatedFilePath), { recursive: true });
       fs.mkdirSync(externalDir);
@@ -607,14 +612,32 @@ describe("createPluginContextBuilder", () => {
   test("normalizes current-directory segments before writing and recording generated files", () => {
     const outputDir = aTempDir();
     const generatorContext = aGeneratedProjectContext({ outputDir });
-    const generatedFile = path.join("todo", "GetTodoClient.ts");
+    const generatedFile = "todo/GetTodoClient.ts";
+    const generatedFilePath = nativeGeneratedFilePath(outputDir, generatedFile);
 
     generatorContext.writeFile(
       "todo/./GetTodoClient.ts",
       "export const client = true;\n"
     );
 
-    expect(fs.readFileSync(path.join(outputDir, generatedFile), "utf8")).toBe(
+    expect(fs.readFileSync(generatedFilePath, "utf8")).toBe(
+      "export const client = true;\n"
+    );
+    expect(generatorContext.getGeneratedFiles()).toEqual([generatedFile]);
+  });
+
+  test("normalizes Windows separators before writing and recording generated files", () => {
+    const outputDir = aTempDir();
+    const generatorContext = aGeneratedProjectContext({ outputDir });
+    const generatedFile = "todo/GetTodoClient.ts";
+    const generatedFilePath = nativeGeneratedFilePath(outputDir, generatedFile);
+
+    generatorContext.writeFile(
+      "todo\\GetTodoClient.ts",
+      "export const client = true;\n"
+    );
+
+    expect(fs.readFileSync(generatedFilePath, "utf8")).toBe(
       "export const client = true;\n"
     );
     expect(generatorContext.getGeneratedFiles()).toEqual([generatedFile]);
@@ -624,11 +647,12 @@ describe("createPluginContextBuilder", () => {
     const workspaceDir = aTempDir();
     const outputDir = path.join(workspaceDir, "generated");
     const generatorContext = aGeneratedProjectContext({ outputDir });
-    const generatedFile = path.join("todo", "GetTodoClient.ts");
+    const generatedFile = "todo/GetTodoClient.ts";
+    const generatedFilePath = nativeGeneratedFilePath(outputDir, generatedFile);
 
     generatorContext.writeFile(generatedFile, "export const client = true;\n");
 
-    expect(fs.readFileSync(path.join(outputDir, generatedFile), "utf8")).toBe(
+    expect(fs.readFileSync(generatedFilePath, "utf8")).toBe(
       "export const client = true;\n"
     );
     expect(generatorContext.getGeneratedFiles()).toEqual([generatedFile]);
@@ -669,6 +693,59 @@ describe("createPluginContextBuilder", () => {
     expect(fs.existsSync(outsideFile)).toBe(false);
     expect(generatorContext.getGeneratedFiles()).toEqual([]);
   });
+
+  test.each([
+    { scenario: "POSIX separators", generatedPath: "todo/../File.ts" },
+    { scenario: "Windows separators", generatedPath: "todo\\..\\File.ts" },
+  ])(
+    "rejects $scenario traversal paths that normalize back inside before writing",
+    ({ generatedPath }) => {
+      const outputDir = aTempDir();
+      const generatorContext = aGeneratedProjectContext({ outputDir });
+      const normalizedTargetFile = path.join(outputDir, "File.ts");
+      const nestedTargetFile = path.join(outputDir, "todo", "File.ts");
+
+      const writeNormalizedInsidePath = () =>
+        generatorContext.writeFile(
+          generatedPath,
+          "export const file = true;\n"
+        );
+
+      expectUnsafeGeneratedFilePath(writeNormalizedInsidePath);
+      expect(fs.existsSync(normalizedTargetFile)).toBe(false);
+      expect(fs.existsSync(nestedTargetFile)).toBe(false);
+      expect(generatorContext.getGeneratedFiles()).toEqual([]);
+    }
+  );
+
+  test.each([
+    { scenario: "POSIX trailing slash", generatedPath: "todo/" },
+    { scenario: "Windows trailing slash", generatedPath: "todo\\" },
+    {
+      scenario: "POSIX final current-directory segment",
+      generatedPath: "todo/.",
+    },
+    {
+      scenario: "Windows final current-directory segment",
+      generatedPath: "todo\\.",
+    },
+  ])(
+    "rejects $scenario directory-like paths before writing",
+    ({ generatedPath }) => {
+      const outputDir = aTempDir();
+      const generatorContext = aGeneratedProjectContext({ outputDir });
+
+      const writeDirectoryLikePath = () =>
+        generatorContext.writeFile(
+          generatedPath,
+          "export const directoryLike = true;\n"
+        );
+
+      expectUnsafeGeneratedFilePath(writeDirectoryLikePath);
+      expect(fs.existsSync(path.join(outputDir, "todo"))).toBe(false);
+      expect(generatorContext.getGeneratedFiles()).toEqual([]);
+    }
+  );
 
   test.each([
     {
@@ -978,6 +1055,83 @@ describe("createPluginContextBuilder", () => {
   });
 
   test.each([
+    { scenario: "empty", generatedPath: "" },
+    { scenario: "current-directory", generatedPath: "." },
+    { scenario: "current-directory segment", generatedPath: "./" },
+    {
+      scenario: "directory that normalizes to current",
+      generatedPath: "todo/..",
+    },
+  ])(
+    "rejects $scenario generated file paths before tracking",
+    ({ generatedPath }) => {
+      const outputDir = aTempDir();
+      const generatorContext = aGeneratedProjectContext({ outputDir });
+
+      const trackOutputRoot = () =>
+        generatorContext.addGeneratedFile(generatedPath);
+
+      expectUnsafeGeneratedFilePath(trackOutputRoot);
+      expect(generatorContext.getGeneratedFiles()).toEqual([]);
+    }
+  );
+
+  test("rejects absolute POSIX paths before tracking generated files", () => {
+    const workspaceDir = aTempDir();
+    const outputDir = path.join(workspaceDir, "generated");
+    fs.mkdirSync(outputDir);
+    const outsideFile = path.join(workspaceDir, "outside.ts");
+    const generatorContext = aGeneratedProjectContext({ outputDir });
+
+    const trackOutside = () => generatorContext.addGeneratedFile(outsideFile);
+
+    expectUnsafeGeneratedFilePath(trackOutside);
+    expect(generatorContext.getGeneratedFiles()).toEqual([]);
+  });
+
+  test.each([
+    { scenario: "POSIX separators", generatedPath: "todo/../File.ts" },
+    { scenario: "Windows separators", generatedPath: "todo\\..\\File.ts" },
+  ])(
+    "rejects $scenario traversal paths that normalize back inside before tracking generated files",
+    ({ generatedPath }) => {
+      const outputDir = aTempDir();
+      const generatorContext = aGeneratedProjectContext({ outputDir });
+
+      const trackNormalizedInsidePath = () =>
+        generatorContext.addGeneratedFile(generatedPath);
+
+      expectUnsafeGeneratedFilePath(trackNormalizedInsidePath);
+      expect(generatorContext.getGeneratedFiles()).toEqual([]);
+    }
+  );
+
+  test.each([
+    { scenario: "POSIX trailing slash", generatedPath: "todo/" },
+    { scenario: "Windows trailing slash", generatedPath: "todo\\" },
+    {
+      scenario: "POSIX final current-directory segment",
+      generatedPath: "todo/.",
+    },
+    {
+      scenario: "Windows final current-directory segment",
+      generatedPath: "todo\\.",
+    },
+  ])(
+    "rejects $scenario directory-like paths before tracking generated files",
+    ({ generatedPath }) => {
+      const outputDir = aTempDir();
+      const generatorContext = aGeneratedProjectContext({ outputDir });
+
+      const trackDirectoryLikePath = () =>
+        generatorContext.addGeneratedFile(generatedPath);
+
+      expectUnsafeGeneratedFilePath(trackDirectoryLikePath);
+      expect(generatorContext.getGeneratedFiles()).toEqual([]);
+    }
+  );
+
+  test.each([
     {
       scenario: "POSIX separators",
       pathFromOutputParent: (outputDirName: string) =>
@@ -1016,6 +1170,17 @@ describe("createPluginContextBuilder", () => {
     const generatorContext = aGeneratedProjectContext({ outputDir });
 
     generatorContext.addGeneratedFile("todo/./GetTodoClient.ts");
+
+    expect(generatorContext.getGeneratedFiles()).toEqual([
+      "todo/GetTodoClient.ts",
+    ]);
+  });
+
+  test("normalizes Windows separators before tracking generated files", () => {
+    const outputDir = aTempDir();
+    const generatorContext = aGeneratedProjectContext({ outputDir });
+
+    generatorContext.addGeneratedFile("todo\\GetTodoClient.ts");
 
     expect(generatorContext.getGeneratedFiles()).toEqual([
       "todo/GetTodoClient.ts",
