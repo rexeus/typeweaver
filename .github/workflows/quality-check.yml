@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 0 # Fetch all history for all branches
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v5.0.0
+        uses: pnpm/action-setup@v6.0.6
         with:
           version: ${{ env.PNPM_VERSION }}
           run_install: false
