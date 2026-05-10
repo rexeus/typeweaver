@@ -41,7 +41,7 @@ jobs:
         run: pnpm run build
 
       - name: Create and publish versions
-        uses: changesets/action@v1.7.0
+        uses: changesets/action@v1.8.0
         with:
           commit: "chore: version packages"
           title: "chore: version packages"
