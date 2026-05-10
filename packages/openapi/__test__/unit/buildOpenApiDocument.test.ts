@@ -19,6 +19,7 @@ describe("buildOpenApiDocument", () => {
     expect(result).toEqual({
       document: {
         openapi: "3.1.1",
+        jsonSchemaDialect: "https://json-schema.org/draft/2020-12/schema",
         info: { title: "Todo API", version: "1.0.0" },
         tags: [],
         paths: {},
@@ -130,6 +131,28 @@ describe("buildOpenApiDocument", () => {
         },
       },
     });
+    expect(result.warnings).toEqual([]);
+  });
+
+  test("emits literal request body schemas as single-value enums", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          operationId: "uploadJson",
+          method: "POST" as NormalizedOperation["method"],
+          request: { body: z.literal("application/json") },
+          responses: [anInlineResponseUsage(aResponseWith())],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+    expect(
+      result.document.paths["/todos"]?.post?.requestBody?.content[
+        "application/json"
+      ]?.schema
+    ).toEqual({ type: "string", enum: ["application/json"] });
     expect(result.warnings).toEqual([]);
   });
 

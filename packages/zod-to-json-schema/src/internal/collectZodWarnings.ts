@@ -244,7 +244,11 @@ function collectNestedWarnings(
       return;
     case "map":
       collectChild(def.keyType, collector, [...path, "x-typeweaver", "mapKey"]);
-      collectChild(def.valueType, collector, [...path, "x-typeweaver", "mapValue"]);
+      collectChild(def.valueType, collector, [
+        ...path,
+        "x-typeweaver",
+        "mapValue",
+      ]);
       return;
     case "set":
       collectChild(def.valueType, collector, [...path, "items"]);

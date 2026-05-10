@@ -16,6 +16,7 @@ export type OpenApiBuildResult = {
 
 export type OpenApiDocument = {
   readonly openapi: "3.1.1";
+  readonly jsonSchemaDialect: "https://json-schema.org/draft/2020-12/schema";
   readonly info: OpenApiInfoObject;
   readonly servers?: readonly OpenApiServerObject[];
   readonly tags: readonly OpenApiTagObject[];

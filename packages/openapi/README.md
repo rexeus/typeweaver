@@ -43,6 +43,12 @@ console.log(result.warnings);
 The builder has no filesystem side effects. It returns the OpenAPI document and deterministic
 warnings for schemas or Typeweaver constructs that cannot be represented exactly.
 
+## Schema dialect and normalization
+
+Emitted OpenAPI documents set `jsonSchemaDialect` to JSON Schema Draft 2020-12. To improve validator
+and tooling compatibility, JSON Schema `const` values are emitted as single-value `enum` arrays;
+this preserves the same accepted value semantics.
+
 ## Warning model
 
 `buildOpenApiDocument` is deterministic and non-throwing for representability issues: it emits the

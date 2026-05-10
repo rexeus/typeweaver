@@ -20,10 +20,27 @@
       "inputs": ["$TURBO_DEFAULT$", "src/**", "__test__/**", "vitest.config.ts", "package.json"],
       "outputs": []
     },
+    "@rexeus/typeweaver-openapi#test": {
+      "dependsOn": ["build", "^build", "test-utils#test:gen"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "src/**",
+        "__test__/**",
+        "vitest.config.ts",
+        "package.json",
+        "$TURBO_ROOT$/packages/test-utils/src/test-project/output/openapi/openapi.json"
+      ],
+      "outputs": []
+    },
     "test:gen": {
       "dependsOn": ["build", "^build"],
       "inputs": ["$TURBO_DEFAULT$", "src/**", "test/**"],
       "outputs": ["test/outputs/**"]
+    },
+    "test-utils#test:gen": {
+      "dependsOn": ["build", "^build"],
+      "inputs": ["src/test-project/spec/**", "package.json"],
+      "outputs": ["src/test-project/output/**"]
     },
     "lint": {
       "cache": false

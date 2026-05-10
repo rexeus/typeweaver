@@ -56,6 +56,7 @@ export function buildOpenApiDocument(
 
   const document: OpenApiDocument = {
     openapi: "3.1.1",
+    jsonSchemaDialect: "https://json-schema.org/draft/2020-12/schema",
     info: { ...options.info },
     ...(options.servers === undefined ? {} : { servers: [...options.servers] }),
     tags: normalizedSpec.resources.map(resource => ({ name: resource.name })),

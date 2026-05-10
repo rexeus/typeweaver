@@ -5,6 +5,7 @@ import type {
 } from "@rexeus/typeweaver-zod-to-json-schema";
 import { z } from "zod";
 import { appendJsonPointer, escapeJsonPointerSegment } from "./jsonPointer.js";
+import { normalizeOpenApiSchema } from "./openApiSchemaNormalization.js";
 import type {
   OpenApiSchemaConversionWarning,
   OpenApiWarningLocation,
@@ -32,11 +33,12 @@ export function convertSchema(
 ): SchemaConversionResult {
   const result = fromZod(schema);
   const shouldRebaseLocalRefs = options.rebaseLocalRefs ?? true;
+  const openApiSchema = normalizeOpenApiSchema(result.schema);
 
   return {
     schema: shouldRebaseLocalRefs
-      ? rebaseLocalJsonSchemaRefs(result.schema, documentPath)
-      : result.schema,
+      ? rebaseLocalJsonSchemaRefs(openApiSchema, documentPath)
+      : openApiSchema,
     warnings: result.warnings.map(warning => ({
       origin: "schema-conversion",
       code: warning.code,

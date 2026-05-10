@@ -270,9 +270,9 @@ describe("fromZod", () => {
         items: {},
         minItems: 1,
       });
-      expect(
-        Object.prototype.hasOwnProperty.call(result.schema, "items")
-      ).toBe(true);
+      expect(Object.prototype.hasOwnProperty.call(result.schema, "items")).toBe(
+        true
+      );
       expect(
         Object.prototype.hasOwnProperty.call(result.schema, "maxItems")
       ).toBe(false);
@@ -481,19 +481,22 @@ describe("fromZod", () => {
         code: "unsupported-schema",
         path: "/properties/a~1b",
         schemaType: "custom",
-        message: "Zod custom falls back to a broader JSON Schema representation.",
+        message:
+          "Zod custom falls back to a broader JSON Schema representation.",
       },
       {
         code: "unsupported-schema",
         path: "/properties/a~0b",
         schemaType: "custom",
-        message: "Zod custom falls back to a broader JSON Schema representation.",
+        message:
+          "Zod custom falls back to a broader JSON Schema representation.",
       },
       {
         code: "unsupported-schema",
         path: "/properties/a.b",
         schemaType: "custom",
-        message: "Zod custom falls back to a broader JSON Schema representation.",
+        message:
+          "Zod custom falls back to a broader JSON Schema representation.",
       },
     ]);
   });
@@ -546,7 +549,8 @@ describe("fromZod", () => {
           code: "unsupported-schema",
           path: "",
           schemaType: "map",
-          message: "Zod map falls back to a broader JSON Schema representation.",
+          message:
+            "Zod map falls back to a broader JSON Schema representation.",
         },
         {
           code: "unsupported-check",
@@ -599,7 +603,8 @@ describe("fromZod", () => {
         code: "unsupported-schema",
         path: "/properties/first",
         schemaType: "custom",
-        message: "Zod custom falls back to a broader JSON Schema representation.",
+        message:
+          "Zod custom falls back to a broader JSON Schema representation.",
       },
     ]);
   });
@@ -651,7 +656,8 @@ describe("fromZod", () => {
         code: "unsupported-schema",
         path: "/properties/metadata",
         schemaType: "custom",
-        message: "Zod custom falls back to a broader JSON Schema representation.",
+        message:
+          "Zod custom falls back to a broader JSON Schema representation.",
       },
     ]);
     expect(result.schema).toEqual({
