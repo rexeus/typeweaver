@@ -2,16 +2,21 @@ import type {
   NormalizedResponse,
   NormalizedResponseUsage,
 } from "@rexeus/typeweaver-gen";
+import type { JsonSchema } from "@rexeus/typeweaver-zod-to-json-schema";
+import { pascalCase } from "polycase";
 import { escapeJsonPointerSegment, jsonPointer } from "./jsonPointer.js";
 import { buildHeaderObjects } from "./parameters.js";
-import { convertSchema, unwrapRootOptional } from "./schemaConversion.js";
+import { buildMergedHeaders } from "./responseHeaderMerge.js";
 import type {
   OpenApiBuildWarning,
   OpenApiDiagnosticWarning,
+  OpenApiReferenceObject,
   OpenApiResponseObject,
   OpenApiResponsesObject,
+  OpenApiWarningLocation,
 } from "../types.js";
 import type { OperationContext } from "./parameters.js";
+import type { SchemaRegistry } from "./schemaRegistry.js";
 
 export type ComponentsResponsesResult = {
   readonly responses: Record<string, OpenApiResponseObject>;
@@ -24,7 +29,8 @@ export type OperationResponsesResult = {
 };
 
 export function buildComponentsResponses(
-  responses: readonly NormalizedResponse[]
+  responses: readonly NormalizedResponse[],
+  schemaRegistry: SchemaRegistry
 ): ComponentsResponsesResult {
   const warnings: OpenApiBuildWarning[] = [];
   const componentsResponses = Object.fromEntries(
@@ -35,9 +41,11 @@ export function buildComponentsResponses(
         response.name,
       ]);
       const built = buildResponseObject(response, {
+        schemaRegistry,
         responseName: response.name,
         statusCode: String(response.statusCode),
         responsePointer,
+        bodyBaseName: `${response.name}Body`,
       });
 
       warnings.push(...built.warnings);
@@ -52,65 +60,31 @@ export function buildComponentsResponses(
 export function buildOperationResponses(
   usages: readonly NormalizedResponseUsage[],
   canonicalResponsesByName: ReadonlyMap<string, NormalizedResponse>,
-  context: OperationContext
+  context: OperationContext,
+  schemaRegistry: SchemaRegistry
 ): OperationResponsesResult {
-  const warnings: OpenApiBuildWarning[] = [];
+  const responsesPointer = operationResponsesPointer(context);
+  const resolved = resolveResponseVariants(usages, {
+    canonicalResponsesByName,
+    context,
+    responsesPointer,
+  });
+  const warnings: OpenApiBuildWarning[] = [...resolved.warnings];
   const responses: OpenApiResponsesObject = {};
-  const responsesPointer = jsonPointer([
-    "paths",
-    context.openApiPath,
-    context.method,
-    "responses",
-  ]);
 
-  for (const usage of usages) {
-    const response = resolveResponse(usage, canonicalResponsesByName);
-
-    if (response === undefined) {
-      warnings.push(
-        createBuilderWarning({
-          code: "missing-canonical-response",
-          message: `Canonical response '${usage.responseName}' is not defined.`,
-          documentPath: responsesPointer,
-          context,
-          part: "response",
-          responseName: usage.responseName,
-        })
-      );
-      continue;
-    }
-
-    const statusCode = String(response.statusCode);
-
-    if (Object.prototype.hasOwnProperty.call(responses, statusCode)) {
-      warnings.push(
-        createBuilderWarning({
-          code: "duplicate-response-status",
-          message: `Response status '${statusCode}' is already defined for this operation.`,
-          documentPath: `${responsesPointer}/${statusCode}`,
-          context,
-          part: "response",
-          responseName: usage.responseName,
-          statusCode,
-        })
-      );
-      continue;
-    }
-
-    if (usage.source === "canonical") {
-      responses[statusCode] = {
-        $ref: `#/components/responses/${escapeJsonPointerSegment(usage.responseName)}`,
-      };
-      continue;
-    }
-
-    const responsePointer = `${responsesPointer}/${statusCode}`;
-    const built = buildResponseObject(response, {
+  for (const [statusCode, variants] of groupResponsesByStatus(
+    resolved.variants
+  )) {
+    const built = buildResponseForStatus(variants, {
+      schemaRegistry,
       context,
-      responseName: usage.responseName,
       statusCode,
-      responsePointer,
+      responsePointer: `${responsesPointer}/${statusCode}`,
     });
+
+    if (built === undefined) {
+      continue;
+    }
 
     responses[statusCode] = built.response;
     warnings.push(...built.warnings);
@@ -119,30 +93,166 @@ export function buildOperationResponses(
   return { responses, warnings };
 }
 
+type ResolvedResponseVariant = {
+  readonly response: NormalizedResponse;
+  readonly usage: NormalizedResponseUsage;
+  readonly statusCode: string;
+};
+
+type ResolvedResponseVariantsResult = {
+  readonly variants: readonly ResolvedResponseVariant[];
+  readonly warnings: readonly OpenApiBuildWarning[];
+};
+
+type BuiltOperationResponse = {
+  readonly response: OpenApiResponsesObject[string];
+  readonly warnings: readonly OpenApiBuildWarning[];
+};
+
+function operationResponsesPointer(context: OperationContext): string {
+  return jsonPointer([
+    "paths",
+    context.openApiPath,
+    context.method,
+    "responses",
+  ]);
+}
+
+function resolveResponseVariants(
+  usages: readonly NormalizedResponseUsage[],
+  options: {
+    readonly canonicalResponsesByName: ReadonlyMap<string, NormalizedResponse>;
+    readonly context: OperationContext;
+    readonly responsesPointer: string;
+  }
+): ResolvedResponseVariantsResult {
+  const warnings: OpenApiBuildWarning[] = [];
+  const variants: ResolvedResponseVariant[] = [];
+
+  for (const usage of usages) {
+    const response = resolveResponse(usage, options.canonicalResponsesByName);
+
+    if (response === undefined) {
+      warnings.push(
+        createBuilderWarning({
+          code: "missing-canonical-response",
+          message: `Canonical response '${usage.responseName}' is not defined.`,
+          documentPath: options.responsesPointer,
+          context: options.context,
+          part: "response",
+          responseName: usage.responseName,
+        })
+      );
+      continue;
+    }
+
+    variants.push({
+      response,
+      usage,
+      statusCode: String(response.statusCode),
+    });
+  }
+
+  return { variants, warnings };
+}
+
+function buildResponseForStatus(
+  variants: readonly ResolvedResponseVariant[],
+  options: {
+    readonly schemaRegistry: SchemaRegistry;
+    readonly context: OperationContext;
+    readonly statusCode: string;
+    readonly responsePointer: string;
+  }
+): BuiltOperationResponse | undefined {
+  if (variants.length === 1) {
+    const variant = variants[0];
+
+    return variant === undefined
+      ? undefined
+      : buildSingleResponseVariant(variant, options);
+  }
+
+  return buildMergedResponseObject(variants, {
+    schemaRegistry: options.schemaRegistry,
+    context: options.context,
+    statusCode: options.statusCode,
+    responsePointer: options.responsePointer,
+  });
+}
+
+function buildSingleResponseVariant(
+  variant: ResolvedResponseVariant,
+  options: {
+    readonly schemaRegistry: SchemaRegistry;
+    readonly context: OperationContext;
+    readonly statusCode: string;
+    readonly responsePointer: string;
+  }
+): BuiltOperationResponse {
+  if (variant.usage.source === "canonical") {
+    return {
+      response: {
+        $ref: `#/components/responses/${escapeJsonPointerSegment(
+          variant.usage.responseName
+        )}`,
+      },
+      warnings: [],
+    };
+  }
+
+  const built = buildResponseObject(variant.response, {
+    schemaRegistry: options.schemaRegistry,
+    context: options.context,
+    responseName: variant.usage.responseName,
+    statusCode: options.statusCode,
+    responsePointer: options.responsePointer,
+    bodyBaseName: inlineResponseBodyBaseName(
+      options.context,
+      variant.usage.responseName
+    ),
+  });
+
+  return { response: built.response, warnings: built.warnings };
+}
+
+function groupResponsesByStatus(
+  variants: readonly ResolvedResponseVariant[]
+): ReadonlyMap<string, readonly ResolvedResponseVariant[]> {
+  const groups = new Map<string, ResolvedResponseVariant[]>();
+
+  for (const variant of variants) {
+    const group = groups.get(variant.statusCode);
+
+    if (group === undefined) {
+      groups.set(variant.statusCode, [variant]);
+      continue;
+    }
+
+    group.push(variant);
+  }
+
+  return groups;
+}
+
 function resolveResponse(
   usage: NormalizedResponseUsage,
   canonicalResponsesByName: ReadonlyMap<string, NormalizedResponse>
 ): NormalizedResponse | undefined {
-  if (usage.source === "inline") {
-    return usage.response;
-  }
-
-  const response = canonicalResponsesByName.get(usage.responseName);
-
-  if (response !== undefined) {
-    return response;
-  }
-
-  return undefined;
+  return usage.source === "inline"
+    ? usage.response
+    : canonicalResponsesByName.get(usage.responseName);
 }
 
 function buildResponseObject(
   response: NormalizedResponse,
   options: {
+    readonly schemaRegistry: SchemaRegistry;
     readonly context?: OperationContext;
     readonly responseName: string;
     readonly statusCode: string;
     readonly responsePointer: string;
+    readonly bodyBaseName: string;
   }
 ): {
   readonly response: OpenApiResponseObject;
@@ -157,10 +267,11 @@ function buildResponseObject(
     headersPointer: `${options.responsePointer}/headers`,
   });
   const body = buildResponseBody(response, {
+    schemaRegistry: options.schemaRegistry,
     context,
     responseName: options.responseName,
     statusCode: options.statusCode,
-    schemaPointer: `${options.responsePointer}/content/application~1json/schema`,
+    baseName: options.bodyBaseName,
   });
 
   return {
@@ -178,10 +289,11 @@ function buildResponseObject(
 function buildResponseBody(
   response: NormalizedResponse,
   options: {
+    readonly schemaRegistry: SchemaRegistry;
     readonly context: OperationContext;
     readonly responseName: string;
     readonly statusCode: string;
-    readonly schemaPointer: string;
+    readonly baseName: string;
   }
 ): {
   readonly content?: OpenApiResponseObject["content"];
@@ -191,26 +303,167 @@ function buildResponseBody(
     return { warnings: [] };
   }
 
-  const schema = unwrapRootOptional(response.body).schema;
-  const converted = convertSchema(schema, options.schemaPointer, {
-    resourceName: options.context.resourceName,
-    operationId: options.context.operation.operationId,
-    method: options.context.operation.method,
-    path: options.context.operation.path,
-    openApiPath: options.context.openApiPath,
-    part: "response.body",
+  const registration = registerResponseBody(response.body, {
+    schemaRegistry: options.schemaRegistry,
+    context: options.context,
     responseName: options.responseName,
     statusCode: options.statusCode,
+    baseName: options.baseName,
   });
 
   return {
     content: {
       "application/json": {
-        schema: converted.schema,
+        schema: registration.ref,
       },
     },
-    warnings: converted.warnings,
+    warnings: registration.warnings,
   };
+}
+
+function buildMergedResponseObject(
+  variants: readonly ResolvedResponseVariant[],
+  options: {
+    readonly schemaRegistry: SchemaRegistry;
+    readonly context: OperationContext;
+    readonly statusCode: string;
+    readonly responsePointer: string;
+  }
+): {
+  readonly response: OpenApiResponseObject;
+  readonly warnings: readonly OpenApiBuildWarning[];
+} {
+  const body = buildMergedResponseBody(variants, options);
+  const headers = buildMergedHeaders(variants, options);
+
+  return {
+    response: {
+      description: variants
+        .map(
+          variant =>
+            `${variant.usage.responseName}: ${variant.response.description}`
+        )
+        .join("\n\n"),
+      ...(Object.keys(headers.headers).length > 0
+        ? { headers: headers.headers }
+        : {}),
+      ...(body.content === undefined ? {} : { content: body.content }),
+    },
+    warnings: [...body.warnings, ...headers.warnings],
+  };
+}
+
+function buildMergedResponseBody(
+  variants: readonly ResolvedResponseVariant[],
+  options: {
+    readonly schemaRegistry: SchemaRegistry;
+    readonly context: OperationContext;
+    readonly statusCode: string;
+  }
+): {
+  readonly content?: OpenApiResponseObject["content"];
+  readonly warnings: readonly OpenApiBuildWarning[];
+} {
+  const warnings: OpenApiBuildWarning[] = [];
+  const refs: OpenApiReferenceObject[] = [];
+
+  for (const variant of variants) {
+    if (variant.response.body === undefined) {
+      continue;
+    }
+
+    const registration = registerResponseBody(variant.response.body, {
+      schemaRegistry: options.schemaRegistry,
+      context: options.context,
+      baseName: responseBodyBaseName(options.context, variant.usage),
+      responseName: variant.usage.responseName,
+      statusCode: options.statusCode,
+    });
+
+    refs.push(registration.ref);
+    warnings.push(...registration.warnings);
+  }
+
+  const distinctRefs = distinctBy(refs, ref => ref.$ref);
+
+  if (distinctRefs.length === 0) {
+    return { warnings };
+  }
+
+  const schema =
+    distinctRefs.length === 1
+      ? distinctRefs[0]
+      : ({ oneOf: distinctRefs } as JsonSchema);
+
+  if (schema === undefined) {
+    return { warnings };
+  }
+
+  return {
+    content: {
+      "application/json": { schema },
+    },
+    warnings,
+  };
+}
+
+function registerResponseBody(
+  body: NonNullable<NormalizedResponse["body"]>,
+  options: {
+    readonly schemaRegistry: SchemaRegistry;
+    readonly context: OperationContext;
+    readonly responseName: string;
+    readonly statusCode: string;
+    readonly baseName: string;
+  }
+) {
+  return options.schemaRegistry.register({
+    schema: body,
+    baseName: options.baseName,
+    location: createResponseLocation({
+      context: options.context,
+      part: "response.body",
+      responseName: options.responseName,
+      statusCode: options.statusCode,
+    }),
+  });
+}
+
+function responseBodyBaseName(
+  context: OperationContext,
+  usage: NormalizedResponseUsage
+): string {
+  return usage.source === "canonical"
+    ? `${usage.responseName}Body`
+    : inlineResponseBodyBaseName(context, usage.responseName);
+}
+
+function inlineResponseBodyBaseName(
+  context: OperationContext,
+  responseName: string
+): string {
+  return `${pascalCase(context.operation.operationId)}${responseName}Body`;
+}
+
+function distinctBy<T>(
+  values: readonly T[],
+  keyForValue: (value: T) => string
+): readonly T[] {
+  const seen = new Set<string>();
+  const distinctValues: T[] = [];
+
+  for (const value of values) {
+    const key = keyForValue(value);
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    distinctValues.push(value);
+  }
+
+  return distinctValues;
 }
 
 function createComponentResponseContext(
@@ -242,15 +495,24 @@ function createBuilderWarning(options: {
     code: options.code,
     message: options.message,
     documentPath: options.documentPath,
-    location: {
-      resourceName: options.context.resourceName,
-      operationId: options.context.operation.operationId,
-      method: options.context.operation.method,
-      path: options.context.operation.path,
-      openApiPath: options.context.openApiPath,
-      part: options.part,
-      responseName: options.responseName,
-      statusCode: options.statusCode,
-    },
+    location: createResponseLocation(options),
+  };
+}
+
+function createResponseLocation(options: {
+  readonly context: OperationContext;
+  readonly part: string;
+  readonly responseName?: string;
+  readonly statusCode?: string;
+}): OpenApiWarningLocation {
+  return {
+    resourceName: options.context.resourceName,
+    operationId: options.context.operation.operationId,
+    method: options.context.operation.method,
+    path: options.context.operation.path,
+    openApiPath: options.context.openApiPath,
+    part: options.part,
+    responseName: options.responseName,
+    statusCode: options.statusCode,
   };
 }

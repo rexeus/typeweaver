@@ -24,6 +24,8 @@ type PackageJsonWithBin = {
 
 type OpenApiFixture = {
   readonly openapi?: unknown;
+  readonly components?: unknown;
+  readonly paths?: unknown;
 };
 
 type ValidatorCommandOutput = {
@@ -49,9 +51,140 @@ describe("generated OpenAPI fixture", () => {
     ) as OpenApiFixture;
 
     expect(fixture.openapi).toBe("3.1.1");
+    const schemas = componentsSchemas(fixture);
+
+    expect(
+      requestBodySchemaAt(fixture, "/todos/{todoId}/status", "put"),
+      "UpdateTodoStatus request body should reference a component schema"
+    ).toEqual({ $ref: "#/components/schemas/UpdateTodoStatusRequestBody" });
+    expect(
+      schemas.UpdateTodoStatusRequestBody,
+      "UpdateTodoStatusRequestBody component should exist for the request body ref"
+    ).toEqual({
+      type: "object",
+      properties: {
+        value: {
+          type: "string",
+          enum: ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"],
+        },
+      },
+      required: ["value"],
+      additionalProperties: false,
+    });
+    expect(
+      responseSchemaAt(fixture, "/todos/{todoId}/status", "put", "409"),
+      "UpdateTodoStatus 409 should merge duplicate-status bodies as oneOf refs"
+    ).toEqual({
+      oneOf: [
+        { $ref: "#/components/schemas/TodoStatusTransitionInvalidErrorBody" },
+        { $ref: "#/components/schemas/TodoNotChangeableErrorBody" },
+      ],
+    });
+    expect(
+      schemas.TodoStatusTransitionInvalidErrorBody,
+      "TodoStatusTransitionInvalidErrorBody component should exist for the 409 oneOf ref"
+    ).toMatchObject({
+      type: "object",
+      properties: {
+        message: {
+          type: "string",
+          enum: ["Todo status transition is conflicting with current status"],
+        },
+        code: {
+          type: "string",
+          enum: ["TODO_STATUS_TRANSITION_INVALID_ERROR"],
+        },
+      },
+    });
+    expect(
+      schemas.TodoNotChangeableErrorBody,
+      "TodoNotChangeableErrorBody component should exist for the 409 oneOf ref"
+    ).toMatchObject({
+      type: "object",
+      properties: {
+        message: {
+          type: "string",
+          enum: ["Todo in current status cannot be changed"],
+        },
+        code: { type: "string", enum: ["TODO_NOT_CHANGEABLE_ERROR"] },
+      },
+    });
     await validateOpenApiFixture(FIXTURE_PATH);
   });
 });
+
+function componentsSchemas(fixture: OpenApiFixture): Record<string, unknown> {
+  if (!isRecord(fixture.components)) {
+    throw new Error("Fixture is missing components.");
+  }
+
+  const schemas = fixture.components.schemas;
+
+  if (!isRecord(schemas) || Object.keys(schemas).length === 0) {
+    throw new Error("Fixture is missing non-empty components.schemas.");
+  }
+
+  return schemas;
+}
+
+function requestBodySchemaAt(
+  fixture: OpenApiFixture,
+  path: string,
+  method: string
+): unknown {
+  if (!isRecord(fixture.paths)) {
+    return undefined;
+  }
+
+  const pathItem = fixture.paths[path];
+  if (!isRecord(pathItem)) {
+    return undefined;
+  }
+
+  const operation = pathItem[method];
+  if (!isRecord(operation) || !isRecord(operation.requestBody)) {
+    return undefined;
+  }
+
+  const requestBody = operation.requestBody;
+  if (!isRecord(requestBody.content)) {
+    return undefined;
+  }
+
+  const mediaType = requestBody.content["application/json"];
+
+  return isRecord(mediaType) ? mediaType.schema : undefined;
+}
+
+function responseSchemaAt(
+  fixture: OpenApiFixture,
+  path: string,
+  method: string,
+  statusCode: string
+): unknown {
+  if (!isRecord(fixture.paths)) {
+    return undefined;
+  }
+
+  const pathItem = fixture.paths[path];
+  if (!isRecord(pathItem)) {
+    return undefined;
+  }
+
+  const operation = pathItem[method];
+  if (!isRecord(operation) || !isRecord(operation.responses)) {
+    return undefined;
+  }
+
+  const response = operation.responses[statusCode];
+  if (!isRecord(response) || !isRecord(response.content)) {
+    return undefined;
+  }
+
+  const mediaType = response.content["application/json"];
+
+  return isRecord(mediaType) ? mediaType.schema : undefined;
+}
 
 async function validateOpenApiFixture(fixturePath: string): Promise<void> {
   const rulesetDirectory = await mkdtemp(

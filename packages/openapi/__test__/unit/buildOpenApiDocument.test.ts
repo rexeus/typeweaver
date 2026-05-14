@@ -1,12 +1,17 @@
-import type {
-  NormalizedOperation,
-  NormalizedResponse,
-  NormalizedResponseUsage,
-  NormalizedSpec,
-} from "@rexeus/typeweaver-gen";
+import type { NormalizedOperation } from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import { buildOpenApiDocument } from "../../src/index.js";
+import {
+  aNormalizedSpecWith,
+  anInlineResponseUsage,
+  anOperationWith,
+  aQuerySchemaForBuilder,
+  aRecursiveTreeNodeSchema,
+  aResponseWith,
+  aTodoSpecWith,
+  todoApiInfo,
+} from "./buildOpenApiDocument.helpers.js";
 
 describe("buildOpenApiDocument", () => {
   test("builds an OpenAPI 3.1.1 document shell for an empty spec", () => {
@@ -92,13 +97,16 @@ describe("buildOpenApiDocument", () => {
       required: true,
       content: {
         "application/json": {
-          schema: {
-            type: "object",
-            properties: { title: { type: "string" } },
-            required: ["title"],
-            additionalProperties: false,
-          },
+          schema: { $ref: "#/components/schemas/CreateTodoRequestBody" },
         },
+      },
+    });
+    expect(result.document.components?.schemas).toEqual({
+      CreateTodoRequestBody: {
+        type: "object",
+        properties: { title: { type: "string" } },
+        required: ["title"],
+        additionalProperties: false,
       },
     });
     expect(result.warnings).toEqual([]);
@@ -122,13 +130,16 @@ describe("buildOpenApiDocument", () => {
       required: false,
       content: {
         "application/json": {
-          schema: {
-            type: "object",
-            properties: { title: { type: "string" } },
-            required: ["title"],
-            additionalProperties: false,
-          },
+          schema: { $ref: "#/components/schemas/CreateTodoRequestBody" },
         },
+      },
+    });
+    expect(result.document.components?.schemas).toEqual({
+      CreateTodoRequestBody: {
+        type: "object",
+        properties: { title: { type: "string" } },
+        required: ["title"],
+        additionalProperties: false,
       },
     });
     expect(result.warnings).toEqual([]);
@@ -148,148 +159,15 @@ describe("buildOpenApiDocument", () => {
 
     const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
 
+    expect(result.document.components?.schemas?.UploadJsonRequestBody).toEqual({
+      type: "string",
+      enum: ["application/json"],
+    });
     expect(
       result.document.paths["/todos"]?.post?.requestBody?.content[
         "application/json"
       ]?.schema
-    ).toEqual({ type: "string", enum: ["application/json"] });
-    expect(result.warnings).toEqual([]);
-  });
-
-  test("maps canonical response references", () => {
-    const successResponse = aResponseWith({
-      name: "TodoResponse",
-      statusCode: 200 as NormalizedResponse["statusCode"],
-      description: "Todo found",
-      body: z.object({ id: z.string() }),
-    });
-    const normalizedSpec = aTodoSpecWith({
-      responses: [successResponse],
-      operations: [
-        anOperationWith({
-          operationId: "getTodo",
-          path: "/todos/:id",
-          request: { param: z.object({ id: z.string() }) },
-          responses: [{ responseName: "TodoResponse", source: "canonical" }],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
-
-    expect(result.document.components?.responses).toEqual({
-      TodoResponse: {
-        description: "Todo found",
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: { id: { type: "string" } },
-              required: ["id"],
-              additionalProperties: false,
-            },
-          },
-        },
-      },
-    });
-    expect(result.document.paths["/todos/{id}"]?.get?.responses).toEqual({
-      "200": { $ref: "#/components/responses/TodoResponse" },
-    });
-    expect(result.warnings).toEqual([]);
-  });
-
-  test("escapes canonical response references without changing component keys", () => {
-    const successResponse = aResponseWith({
-      name: "Todo/Success~Response",
-      statusCode: 200 as NormalizedResponse["statusCode"],
-    });
-    const normalizedSpec = aTodoSpecWith({
-      responses: [successResponse],
-      operations: [
-        anOperationWith({
-          responses: [
-            { responseName: "Todo/Success~Response", source: "canonical" },
-          ],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
-
-    expect(result.document.components?.responses).toEqual({
-      "Todo/Success~Response": { description: "OK" },
-    });
-    expect(result.document.paths["/todos"]?.get?.responses).toEqual({
-      "200": { $ref: "#/components/responses/Todo~1Success~0Response" },
-    });
-    expect(result.warnings).toEqual([]);
-  });
-
-  test("maps inline response bodies", () => {
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWith({
-          responses: [
-            anInlineResponseUsage(
-              aResponseWith({
-                description: "Todo found",
-                body: z.object({ id: z.string() }),
-              })
-            ),
-          ],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
-
-    expect(result.document.paths["/todos"]?.get?.responses).toEqual({
-      "200": {
-        description: "Todo found",
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: { id: { type: "string" } },
-              required: ["id"],
-              additionalProperties: false,
-            },
-          },
-        },
-      },
-    });
-    expect(result.warnings).toEqual([]);
-  });
-
-  test("maps required and optional inline response headers", () => {
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWith({
-          responses: [
-            anInlineResponseUsage(
-              aResponseWith({
-                header: z.object({
-                  etag: z.string(),
-                  "x-cache": z.string().optional(),
-                }),
-              })
-            ),
-          ],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
-
-    expect(result.document.paths["/todos"]?.get?.responses).toEqual({
-      "200": {
-        description: "OK",
-        headers: {
-          etag: { required: true, schema: { type: "string" } },
-          "x-cache": { required: false, schema: { type: "string" } },
-        },
-      },
-    });
+    ).toEqual({ $ref: "#/components/schemas/UploadJsonRequestBody" });
     expect(result.warnings).toEqual([]);
   });
 
@@ -486,75 +364,6 @@ describe("buildOpenApiDocument", () => {
     ]);
   });
 
-  test("omits missing canonical response usages and emits a diagnostic", () => {
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWith({
-          responses: [{ responseName: "MissingResponse", source: "canonical" }],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
-
-    expect(result.document.paths["/todos"]?.get?.responses).toEqual({});
-    expect(result.warnings).toEqual([
-      {
-        origin: "openapi-builder",
-        code: "missing-canonical-response",
-        message: "Canonical response 'MissingResponse' is not defined.",
-        documentPath: "/paths/~1todos/get/responses",
-        location: {
-          resourceName: "Todos",
-          operationId: "getTodo",
-          method: "GET",
-          path: "/todos",
-          openApiPath: "/todos",
-          part: "response",
-          responseName: "MissingResponse",
-          statusCode: undefined,
-        },
-      },
-    ]);
-  });
-
-  test("keeps the first response when duplicate status codes are used", () => {
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWith({
-          responses: [
-            anInlineResponseUsage(aResponseWith({ description: "First" })),
-            anInlineResponseUsage(aResponseWith({ description: "Second" })),
-          ],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
-
-    expect(result.document.paths["/todos"]?.get?.responses).toEqual({
-      "200": { description: "First" },
-    });
-    expect(result.warnings).toEqual([
-      {
-        origin: "openapi-builder",
-        code: "duplicate-response-status",
-        message: "Response status '200' is already defined for this operation.",
-        documentPath: "/paths/~1todos/get/responses/200",
-        location: {
-          resourceName: "Todos",
-          operationId: "getTodo",
-          method: "GET",
-          path: "/todos",
-          openApiPath: "/todos",
-          part: "response",
-          responseName: "OkResponse",
-          statusCode: "200",
-        },
-      },
-    ]);
-  });
-
   test("warns when record query parameters cannot be represented", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
@@ -697,7 +506,7 @@ describe("buildOpenApiDocument", () => {
         schemaType: "custom",
         schemaPath: "/properties/value",
         documentPath:
-          "/paths/~1todos/post/requestBody/content/application~1json/schema/properties/value",
+          "/components/schemas/CreateTodoRequestBody/properties/value",
         location: {
           resourceName: "Todos",
           operationId: "createTodo",
@@ -705,125 +514,6 @@ describe("buildOpenApiDocument", () => {
           path: "/todos",
           openApiPath: "/todos",
           part: "request.body",
-        },
-      },
-    ]);
-  });
-
-  test("rebases schema conversion warnings for canonical component response bodies", () => {
-    const warningResponse = aResponseWith({
-      name: "WarningResponse",
-      body: z.object({ value: z.custom<string>() }),
-    });
-    const normalizedSpec = aTodoSpecWith({ responses: [warningResponse] });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
-
-    expect(result.warnings).toEqual([
-      {
-        origin: "schema-conversion",
-        code: "unsupported-schema",
-        message:
-          "Zod custom falls back to a broader JSON Schema representation.",
-        schemaType: "custom",
-        schemaPath: "/properties/value",
-        documentPath:
-          "/components/responses/WarningResponse/content/application~1json/schema/properties/value",
-        location: {
-          resourceName: "components.responses",
-          operationId: "WarningResponse",
-          method: "components",
-          path: "#/components/responses",
-          openApiPath: "#/components/responses",
-          part: "response.body",
-          responseName: "WarningResponse",
-          statusCode: "200",
-        },
-      },
-    ]);
-  });
-
-  test("rebases schema conversion warnings for inline response bodies", () => {
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWith({
-          responses: [
-            anInlineResponseUsage(
-              aResponseWith({ body: z.object({ value: z.custom<string>() }) })
-            ),
-          ],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
-
-    expect(result.warnings).toEqual([
-      {
-        origin: "schema-conversion",
-        code: "unsupported-schema",
-        message:
-          "Zod custom falls back to a broader JSON Schema representation.",
-        schemaType: "custom",
-        schemaPath: "/properties/value",
-        documentPath:
-          "/paths/~1todos/get/responses/200/content/application~1json/schema/properties/value",
-        location: {
-          resourceName: "Todos",
-          operationId: "getTodo",
-          method: "GET",
-          path: "/todos",
-          openApiPath: "/todos",
-          part: "response.body",
-          responseName: "OkResponse",
-          statusCode: "200",
-        },
-      },
-    ]);
-  });
-
-  test("rebases response header schema warnings to the specific header schema", () => {
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWith({
-          responses: [
-            anInlineResponseUsage(
-              aResponseWith({
-                header: z.object({
-                  id: z.string(),
-                  identifier: z
-                    .string()
-                    .refine(value => value.startsWith("ok")),
-                }),
-              })
-            ),
-          ],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
-
-    expect(result.warnings).toEqual([
-      {
-        origin: "schema-conversion",
-        code: "unsupported-check",
-        message:
-          "Zod string check custom cannot be represented exactly in JSON Schema.",
-        schemaType: "string",
-        schemaPath: "/properties/identifier",
-        documentPath:
-          "/paths/~1todos/get/responses/200/headers/identifier/schema",
-        location: {
-          resourceName: "Todos",
-          operationId: "getTodo",
-          method: "GET",
-          path: "/todos",
-          openApiPath: "/todos",
-          part: "response.header",
-          parameterName: "identifier",
-          responseName: "OkResponse",
-          statusCode: "200",
         },
       },
     ]);
@@ -866,89 +556,6 @@ describe("buildOpenApiDocument", () => {
         },
       },
     ]);
-  });
-
-  test("rebases local JSON Schema refs in recursive request bodies", () => {
-    const treeNodeSchema = aRecursiveTreeNodeSchema();
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWith({
-          operationId: "createTree",
-          method: "POST" as NormalizedOperation["method"],
-          path: "/trees",
-          request: { body: treeNodeSchema },
-          responses: [anInlineResponseUsage(aResponseWith())],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
-
-    expect(result.document.paths["/trees"]?.post?.requestBody).toEqual({
-      required: true,
-      content: {
-        "application/json": {
-          schema: {
-            type: "object",
-            properties: {
-              name: { type: "string" },
-              children: {
-                type: "array",
-                items: {
-                  $ref: "#/paths/~1trees/post/requestBody/content/application~1json/schema",
-                },
-              },
-            },
-            required: ["name", "children"],
-            additionalProperties: false,
-          },
-        },
-      },
-    });
-    expect(result.warnings).toEqual([]);
-  });
-
-  test("rebases local JSON Schema refs in recursive inline response bodies", () => {
-    const treeNodeSchema = aRecursiveTreeNodeSchema();
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWith({
-          operationId: "getTree",
-          path: "/trees/:id",
-          request: { param: z.object({ id: z.string() }) },
-          responses: [
-            anInlineResponseUsage(aResponseWith({ body: treeNodeSchema })),
-          ],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
-
-    expect(result.document.paths["/trees/{id}"]?.get?.responses["200"]).toEqual(
-      {
-        description: "OK",
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                name: { type: "string" },
-                children: {
-                  type: "array",
-                  items: {
-                    $ref: "#/paths/~1trees~1{id}/get/responses/200/content/application~1json/schema",
-                  },
-                },
-              },
-              required: ["name", "children"],
-              additionalProperties: false,
-            },
-          },
-        },
-      }
-    );
-    expect(result.warnings).toEqual([]);
   });
 
   test("preserves root definitions used by recursive query parameter schemas", () => {
@@ -994,58 +601,6 @@ describe("buildOpenApiDocument", () => {
         },
       },
     ]);
-    expect(result.warnings).toEqual([]);
-  });
-
-  test("preserves root definitions used by recursive response header schemas", () => {
-    const treeNodeSchema = aRecursiveTreeNodeSchema();
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWith({
-          operationId: "getTree",
-          path: "/trees",
-          responses: [
-            anInlineResponseUsage(
-              aResponseWith({
-                header: aHeaderSchemaForBuilder(
-                  z.object({ "x-tree": treeNodeSchema })
-                ),
-              })
-            ),
-          ],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
-
-    expect(result.document.paths["/trees"]?.get?.responses["200"]).toEqual({
-      description: "OK",
-      headers: {
-        "x-tree": {
-          required: true,
-          schema: {
-            $ref: "#/paths/~1trees/get/responses/200/headers/x-tree/schema/$defs/__schema0",
-            $defs: {
-              __schema0: {
-                type: "object",
-                properties: {
-                  name: { type: "string" },
-                  children: {
-                    type: "array",
-                    items: {
-                      $ref: "#/paths/~1trees/get/responses/200/headers/x-tree/schema/$defs/__schema0",
-                    },
-                  },
-                },
-                required: ["name", "children"],
-                additionalProperties: false,
-              },
-            },
-          },
-        },
-      },
-    });
     expect(result.warnings).toEqual([]);
   });
 
@@ -1102,92 +657,3 @@ describe("buildOpenApiDocument", () => {
     });
   });
 });
-
-type TreeNode = {
-  readonly name: string;
-  readonly children: readonly TreeNode[];
-};
-
-function todoApiInfo() {
-  return { info: { title: "Todo API", version: "1.0.0" } };
-}
-
-function aTodoSpecWith(
-  overrides: {
-    readonly operations?: readonly NormalizedOperation[];
-    readonly responses?: readonly NormalizedResponse[];
-  } = {}
-): NormalizedSpec {
-  return aNormalizedSpecWith({
-    resources: [{ name: "Todos", operations: overrides.operations ?? [] }],
-    responses: overrides.responses ?? [],
-  });
-}
-
-function aNormalizedSpecWith(
-  overrides: Partial<NormalizedSpec> = {}
-): NormalizedSpec {
-  return {
-    resources: [],
-    responses: [],
-    ...overrides,
-  };
-}
-
-function anOperationWith(
-  overrides: Partial<NormalizedOperation> = {}
-): NormalizedOperation {
-  return {
-    operationId: "getTodo",
-    method: "GET" as NormalizedOperation["method"],
-    path: "/todos",
-    summary: "",
-    responses: [],
-    ...overrides,
-  };
-}
-
-function aResponseWith(
-  overrides: Partial<NormalizedResponse> = {}
-): NormalizedResponse {
-  return {
-    name: "OkResponse",
-    statusCode: 200 as NormalizedResponse["statusCode"],
-    statusCodeName: "Ok",
-    description: "OK",
-    kind: "response",
-    ...overrides,
-  };
-}
-
-function anInlineResponseUsage(
-  response: NormalizedResponse
-): NormalizedResponseUsage {
-  return {
-    responseName: response.name,
-    source: "inline",
-    response,
-  };
-}
-
-function aQuerySchemaForBuilder(
-  schema: z.core.$ZodType
-): NonNullable<NormalizedOperation["request"]>["query"] {
-  return schema as unknown as NonNullable<
-    NormalizedOperation["request"]
-  >["query"];
-}
-
-function aHeaderSchemaForBuilder(
-  schema: z.core.$ZodType
-): NormalizedResponse["header"] {
-  return schema as unknown as NormalizedResponse["header"];
-}
-
-function aRecursiveTreeNodeSchema(): z.ZodType<TreeNode> {
-  const treeNodeSchema: z.ZodType<TreeNode> = z.lazy(() =>
-    z.object({ name: z.string(), children: z.array(treeNodeSchema) })
-  );
-
-  return treeNodeSchema;
-}

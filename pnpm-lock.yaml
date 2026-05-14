@@ -186,6 +186,9 @@ importers:
       '@rexeus/typeweaver-zod-to-json-schema':
         specifier: workspace:^
         version: link:../zod-to-json-schema
+      polycase:
+        specifier: ^1.1.0
+        version: 1.1.0
     devDependencies:
       '@rexeus/typeweaver-gen':
         specifier: workspace:^

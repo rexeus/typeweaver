@@ -53,7 +53,8 @@
   },
   "homepage": "https://github.com/rexeus/typeweaver#readme",
   "dependencies": {
-    "@rexeus/typeweaver-zod-to-json-schema": "workspace:^"
+    "@rexeus/typeweaver-zod-to-json-schema": "workspace:^",
+    "polycase": "^1.1.0"
   },
   "peerDependencies": {
     "@rexeus/typeweaver-gen": "workspace:^",

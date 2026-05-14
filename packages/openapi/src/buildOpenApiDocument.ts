@@ -1,15 +1,14 @@
 import type { NormalizedSpec } from "@rexeus/typeweaver-gen";
-import { jsonPointer } from "./internal/jsonPointer.js";
+import { pascalCase } from "polycase";
 import { toOpenApiPath } from "./internal/openApiPath.js";
 import { buildRequestParameters } from "./internal/parameters.js";
 import {
   buildComponentsResponses,
   buildOperationResponses,
 } from "./internal/responses.js";
-import {
-  convertSchema,
-  unwrapRootOptional,
-} from "./internal/schemaConversion.js";
+import { unwrapRootOptional } from "./internal/schemaConversion.js";
+import { createSchemaRegistry } from "./internal/schemaRegistry.js";
+import type { SchemaRegistry } from "./internal/schemaRegistry.js";
 import type {
   BuildOpenApiDocumentOptions,
   OpenApiBuildResult,
@@ -26,7 +25,11 @@ export function buildOpenApiDocument(
   options: BuildOpenApiDocumentOptions
 ): OpenApiBuildResult {
   const warnings: OpenApiBuildWarning[] = [];
-  const canonicalResponses = buildComponentsResponses(normalizedSpec.responses);
+  const schemaRegistry = createSchemaRegistry();
+  const canonicalResponses = buildComponentsResponses(
+    normalizedSpec.responses,
+    schemaRegistry
+  );
   const canonicalResponsesByName = new Map(
     normalizedSpec.responses.map(response => [response.name, response])
   );
@@ -44,6 +47,7 @@ export function buildOpenApiDocument(
         openApiPath,
         method,
         canonicalResponsesByName,
+        schemaRegistry,
       });
 
       paths[openApiPath] = {
@@ -54,6 +58,10 @@ export function buildOpenApiDocument(
     }
   }
 
+  const schemas = schemaRegistry.components();
+  const responses = canonicalResponses.responses;
+  const hasResponses = Object.keys(responses).length > 0;
+  const hasSchemas = Object.keys(schemas).length > 0;
   const document: OpenApiDocument = {
     openapi: "3.1.1",
     jsonSchemaDialect: "https://json-schema.org/draft/2020-12/schema",
@@ -61,9 +69,14 @@ export function buildOpenApiDocument(
     ...(options.servers === undefined ? {} : { servers: [...options.servers] }),
     tags: normalizedSpec.resources.map(resource => ({ name: resource.name })),
     paths,
-    ...(normalizedSpec.responses.length === 0
+    ...(!hasResponses && !hasSchemas
       ? {}
-      : { components: { responses: canonicalResponses.responses } }),
+      : {
+          components: {
+            ...(hasResponses ? { responses } : {}),
+            ...(hasSchemas ? { schemas } : {}),
+          },
+        }),
   };
 
   return { document, warnings };
@@ -78,6 +91,7 @@ function buildOperationObject(options: {
     string,
     NormalizedSpec["responses"][number]
   >;
+  readonly schemaRegistry: SchemaRegistry;
 }): {
   readonly operation: OpenApiOperationObject;
   readonly warnings: readonly OpenApiBuildWarning[];
@@ -89,11 +103,12 @@ function buildOperationObject(options: {
     method: options.method,
   };
   const parameters = buildRequestParameters(context);
-  const requestBody = buildRequestBody(context);
+  const requestBody = buildRequestBody(context, options.schemaRegistry);
   const responses = buildOperationResponses(
     options.operation.responses,
     options.canonicalResponsesByName,
-    context
+    context,
+    options.schemaRegistry
   );
 
   return {
@@ -119,12 +134,15 @@ function buildOperationObject(options: {
   };
 }
 
-function buildRequestBody(context: {
-  readonly resourceName: string;
-  readonly operation: NormalizedSpec["resources"][number]["operations"][number];
-  readonly openApiPath: string;
-  readonly method: OpenApiHttpMethod;
-}): {
+function buildRequestBody(
+  context: {
+    readonly resourceName: string;
+    readonly operation: NormalizedSpec["resources"][number]["operations"][number];
+    readonly openApiPath: string;
+    readonly method: OpenApiHttpMethod;
+  },
+  schemaRegistry: SchemaRegistry
+): {
   readonly requestBody?: OpenApiRequestBodyObject;
   readonly warnings: readonly OpenApiBuildWarning[];
 } {
@@ -134,23 +152,18 @@ function buildRequestBody(context: {
     return { warnings: [] };
   }
 
-  const schemaPointer = jsonPointer([
-    "paths",
-    context.openApiPath,
-    context.method,
-    "requestBody",
-    "content",
-    "application/json",
-    "schema",
-  ]);
   const optionalSchema = unwrapRootOptional(body);
-  const converted = convertSchema(optionalSchema.schema, schemaPointer, {
-    resourceName: context.resourceName,
-    operationId: context.operation.operationId,
-    method: context.operation.method,
-    path: context.operation.path,
-    openApiPath: context.openApiPath,
-    part: "request.body",
+  const registration = schemaRegistry.register({
+    schema: optionalSchema.schema,
+    baseName: `${pascalCase(context.operation.operationId)}RequestBody`,
+    location: {
+      resourceName: context.resourceName,
+      operationId: context.operation.operationId,
+      method: context.operation.method,
+      path: context.operation.path,
+      openApiPath: context.openApiPath,
+      part: "request.body",
+    },
   });
 
   return {
@@ -158,10 +171,10 @@ function buildRequestBody(context: {
       required: !optionalSchema.isOptional,
       content: {
         "application/json": {
-          schema: converted.schema,
+          schema: registration.ref,
         },
       },
     },
-    warnings: converted.warnings,
+    warnings: registration.warnings,
   };
 }

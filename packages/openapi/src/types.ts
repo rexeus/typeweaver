@@ -102,12 +102,14 @@ export type OpenApiResponseObject = {
 };
 
 export type OpenApiHeaderObject = {
+  readonly description?: string;
   readonly required: boolean;
   readonly schema: JsonSchema;
 };
 
 export type OpenApiComponentsObject = {
   readonly responses?: Record<string, OpenApiResponseObject>;
+  readonly schemas?: Record<string, JsonSchema>;
 };
 
 export type OpenApiSchemaConversionWarningCode = ZodToJsonSchemaWarningCode;
@@ -127,7 +129,6 @@ export type OpenApiDiagnosticWarningCode =
   | "unrepresentable-parameter-additional-properties"
   | "missing-path-parameter-schema"
   | "unused-path-parameter-schema"
-  | "duplicate-response-status"
   | "missing-canonical-response";
 
 export type OpenApiDiagnosticWarning = {

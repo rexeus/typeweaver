@@ -117,13 +117,18 @@ export function buildHeaderObjects(
       const headerPointer = `${responseContext.headersPointer}/${escapeJsonPointerSegment(
         name
       )}/schema`;
+      const description = headerDescription(headerSchema);
 
       return [
         name,
         {
+          ...(description === undefined ? {} : { description }),
           required:
             !container.isRootOptional && container.requiredNames.has(name),
-          schema: rebaseLocalJsonSchemaRefs(headerSchema, headerPointer),
+          schema: rebaseLocalJsonSchemaRefs(
+            schemaWithoutDescription(headerSchema),
+            headerPointer
+          ),
         },
       ];
     })
@@ -137,6 +142,19 @@ export function buildHeaderObjects(
       responseContext.headersPointer
     ),
   };
+}
+
+function headerDescription(schema: JsonSchema): string | undefined {
+  return typeof schema.description === "string" &&
+    schema.description.trim() !== ""
+    ? schema.description
+    : undefined;
+}
+
+function schemaWithoutDescription(schema: JsonSchema): JsonSchema {
+  return Object.fromEntries(
+    Object.entries(schema).filter(([key]) => key !== "description")
+  ) as JsonSchema;
 }
 
 function buildPathParameters(

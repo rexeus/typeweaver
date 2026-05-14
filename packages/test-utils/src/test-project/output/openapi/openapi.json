@@ -69,21 +69,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "email": {
-                    "type": "string",
-                    "maxLength": 256,
-                    "format": "email",
-                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                  },
-                  "password": {
-                    "type": "string",
-                    "maxLength": 256
-                  }
-                },
-                "required": ["email", "password"],
-                "additionalProperties": false
+                "$ref": "#/components/schemas/RegisterAccountRequestBody"
               }
             }
           }
@@ -162,21 +148,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "email": {
-                    "type": "string",
-                    "maxLength": 256,
-                    "format": "email",
-                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                  },
-                  "password": {
-                    "type": "string",
-                    "maxLength": 256
-                  }
-                },
-                "required": ["email", "password"],
-                "additionalProperties": false
+                "$ref": "#/components/schemas/AccessTokenRequestBody"
               }
             }
           }
@@ -255,15 +227,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "refreshToken": {
-                    "type": "string",
-                    "maxLength": 1028
-                  }
-                },
-                "required": ["refreshToken"],
-                "additionalProperties": false
+                "$ref": "#/components/schemas/RefreshTokenRequestBody"
               }
             }
           }
@@ -329,7 +293,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {}
+              "schema": {
+                "$ref": "#/components/schemas/UploadFileRequestBody"
+              }
             }
           }
         },
@@ -553,30 +519,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "title": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "dueDate": {
-                    "type": "string"
-                  },
-                  "tags": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "priority": {
-                    "type": "string",
-                    "enum": ["LOW", "MEDIUM", "HIGH"]
-                  }
-                },
-                "required": ["title"],
-                "additionalProperties": false
+                "$ref": "#/components/schemas/CreateSubTodoRequestBody"
               }
             }
           }
@@ -779,30 +722,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "title": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "dueDate": {
-                    "type": "string"
-                  },
-                  "tags": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "priority": {
-                    "type": "string",
-                    "enum": ["LOW", "MEDIUM", "HIGH"]
-                  }
-                },
-                "required": ["title"],
-                "additionalProperties": false
+                "$ref": "#/components/schemas/CreateTodoRequestBody"
               }
             }
           }
@@ -1062,7 +982,45 @@
             "$ref": "#/components/responses/ForbiddenError"
           },
           "404": {
-            "$ref": "#/components/responses/SubTodoNotFoundError"
+            "description": "SubTodoNotFoundError: SubTodo not found\n\nTodoNotFoundError: Todo not found",
+            "headers": {
+              "Content-Type": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "enum": ["application/json"]
+                }
+              },
+              "X-Single-Value": {
+                "required": false,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Multi-Value": {
+                "required": false,
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SubTodoNotFoundErrorBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TodoNotFoundErrorBody"
+                    }
+                  ]
+                }
+              }
+            }
           },
           "415": {
             "$ref": "#/components/responses/UnsupportedMediaTypeError"
@@ -1151,33 +1109,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "title": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "status": {
-                    "type": "string",
-                    "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                  },
-                  "dueDate": {
-                    "type": "string"
-                  },
-                  "tags": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "priority": {
-                    "type": "string",
-                    "enum": ["LOW", "MEDIUM", "HIGH"]
-                  }
-                },
-                "additionalProperties": false
+                "$ref": "#/components/schemas/UpdateSubTodoRequestBody"
               }
             }
           }
@@ -1196,10 +1128,86 @@
             "$ref": "#/components/responses/ForbiddenError"
           },
           "404": {
-            "$ref": "#/components/responses/SubTodoNotFoundError"
+            "description": "SubTodoNotFoundError: SubTodo not found\n\nTodoNotFoundError: Todo not found",
+            "headers": {
+              "Content-Type": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "enum": ["application/json"]
+                }
+              },
+              "X-Single-Value": {
+                "required": false,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Multi-Value": {
+                "required": false,
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SubTodoNotFoundErrorBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TodoNotFoundErrorBody"
+                    }
+                  ]
+                }
+              }
+            }
           },
           "409": {
-            "$ref": "#/components/responses/SubTodoNotChangeableError"
+            "description": "SubTodoNotChangeableError: SubTodo in current status or because of parent todo status cannot be changed\n\nSubTodoStatusTransitionInvalidError: SubTodo status transition is conflicting with its status or parent todo status",
+            "headers": {
+              "Content-Type": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "enum": ["application/json"]
+                }
+              },
+              "X-Single-Value": {
+                "required": false,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Multi-Value": {
+                "required": false,
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SubTodoNotChangeableErrorBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SubTodoStatusTransitionInvalidErrorBody"
+                    }
+                  ]
+                }
+              }
+            }
           },
           "415": {
             "$ref": "#/components/responses/UnsupportedMediaTypeError"
@@ -1271,7 +1279,31 @@
             "$ref": "#/components/responses/DeleteTodoBodyOnly"
           },
           "204": {
-            "$ref": "#/components/responses/DeleteTodoSuccess"
+            "description": "DeleteTodoSuccess: Todo deleted successfully\n\nDeleteTodoNoContent: No content response",
+            "headers": {
+              "Content-Type": {
+                "required": false,
+                "schema": {
+                  "type": "string",
+                  "enum": ["application/json"]
+                }
+              },
+              "X-Single-Value": {
+                "required": false,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Multi-Value": {
+                "required": false,
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
           },
           "400": {
             "$ref": "#/components/responses/ValidationError"
@@ -1618,44 +1650,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "accountId": {
-                    "type": "string",
-                    "format": "ulid",
-                    "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                  },
-                  "parentId": {
-                    "type": "string",
-                    "format": "ulid",
-                    "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                  },
-                  "title": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "status": {
-                    "type": "string",
-                    "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                  },
-                  "dueDate": {
-                    "type": "string"
-                  },
-                  "tags": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "priority": {
-                    "type": "string",
-                    "enum": ["LOW", "MEDIUM", "HIGH"]
-                  }
-                },
-                "required": ["accountId", "title", "status"],
-                "additionalProperties": false
+                "$ref": "#/components/schemas/PutTodoRequestBody"
               }
             }
           }
@@ -1756,29 +1751,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "title": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "dueDate": {
-                    "type": "string"
-                  },
-                  "tags": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "priority": {
-                    "type": "string",
-                    "enum": ["LOW", "MEDIUM", "HIGH"]
-                  }
-                },
-                "additionalProperties": false
+                "$ref": "#/components/schemas/UpdateTodoRequestBody"
               }
             }
           }
@@ -1924,39 +1897,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "searchText": {
-                    "type": "string"
-                  },
-                  "status": {
-                    "type": "string",
-                    "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                  },
-                  "priority": {
-                    "type": "string",
-                    "enum": ["LOW", "MEDIUM", "HIGH"]
-                  },
-                  "dateRange": {
-                    "type": "object",
-                    "properties": {
-                      "from": {
-                        "type": "string"
-                      },
-                      "to": {
-                        "type": "string"
-                      }
-                    },
-                    "additionalProperties": false
-                  },
-                  "tags": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "additionalProperties": false
+                "$ref": "#/components/schemas/QuerySubTodoRequestBody"
               }
             }
           }
@@ -2080,47 +2021,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "searchText": {
-                    "type": "string"
-                  },
-                  "accountId": {
-                    "type": "string",
-                    "format": "ulid",
-                    "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                  },
-                  "status": {
-                    "type": "string",
-                    "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                  },
-                  "priority": {
-                    "type": "string",
-                    "enum": ["LOW", "MEDIUM", "HIGH"]
-                  },
-                  "dateRange": {
-                    "type": "object",
-                    "properties": {
-                      "from": {
-                        "type": "string"
-                      },
-                      "to": {
-                        "type": "string"
-                      }
-                    },
-                    "additionalProperties": false
-                  },
-                  "tags": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "hasParent": {
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": false
+                "$ref": "#/components/schemas/QueryTodoRequestBody"
               }
             }
           }
@@ -2217,15 +2118,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "value": {
-                    "type": "string",
-                    "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                  }
-                },
-                "required": ["value"],
-                "additionalProperties": false
+                "$ref": "#/components/schemas/UpdateTodoStatusRequestBody"
               }
             }
           }
@@ -2247,7 +2140,45 @@
             "$ref": "#/components/responses/TodoNotFoundError"
           },
           "409": {
-            "$ref": "#/components/responses/TodoStatusTransitionInvalidError"
+            "description": "TodoStatusTransitionInvalidError: Todo status transition is conflicting with current status\n\nTodoNotChangeableError: Todo in current status cannot be changed",
+            "headers": {
+              "Content-Type": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "enum": ["application/json"]
+                }
+              },
+              "X-Single-Value": {
+                "required": false,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Multi-Value": {
+                "required": false,
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/TodoStatusTransitionInvalidErrorBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TodoNotChangeableErrorBody"
+                    }
+                  ]
+                }
+              }
+            }
           },
           "415": {
             "$ref": "#/components/responses/UnsupportedMediaTypeError"
@@ -2293,33 +2224,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "maxLength": 256
-                },
-                "email": {
-                  "type": "string",
-                  "maxLength": 256,
-                  "format": "email",
-                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                },
-                "createdAt": {
-                  "type": "string"
-                },
-                "modifiedAt": {
-                  "type": "string"
-                },
-                "createdBy": {
-                  "type": "string"
-                },
-                "modifiedBy": {
-                  "type": "string"
-                }
-              },
-              "required": ["id", "email", "createdAt", "modifiedAt", "createdBy", "modifiedBy"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/RegisterAccountSuccessBody"
             }
           }
         }
@@ -2353,19 +2258,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "message": {
-                  "type": "string",
-                  "enum": ["Forbidden request"]
-                },
-                "code": {
-                  "type": "string",
-                  "enum": ["FORBIDDEN_ERROR"]
-                }
-              },
-              "required": ["message", "code"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/ForbiddenErrorBody"
             }
           }
         }
@@ -2399,19 +2292,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "message": {
-                  "type": "string",
-                  "enum": ["Internal server error occurred"]
-                },
-                "code": {
-                  "type": "string",
-                  "enum": ["INTERNAL_SERVER_ERROR"]
-                }
-              },
-              "required": ["message", "code"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/InternalServerErrorBody"
             }
           }
         }
@@ -2445,19 +2326,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "message": {
-                  "type": "string",
-                  "enum": ["Too many requests"]
-                },
-                "code": {
-                  "type": "string",
-                  "enum": ["TOO_MANY_REQUESTS_ERROR"]
-                }
-              },
-              "required": ["message", "code"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/TooManyRequestsErrorBody"
             }
           }
         }
@@ -2491,19 +2360,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "message": {
-                  "type": "string",
-                  "enum": ["Unauthorized request"]
-                },
-                "code": {
-                  "type": "string",
-                  "enum": ["UNAUTHORIZED_ERROR"]
-                }
-              },
-              "required": ["message", "code"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/UnauthorizedErrorBody"
             }
           }
         }
@@ -2537,48 +2394,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "message": {
-                  "type": "string",
-                  "enum": ["Unsupported media type"]
-                },
-                "code": {
-                  "type": "string",
-                  "enum": ["UNSUPPORTED_MEDIA_TYPE_ERROR"]
-                },
-                "context": {
-                  "type": "object",
-                  "properties": {
-                    "contentType": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["contentType"],
-                  "additionalProperties": false
-                },
-                "expectedValues": {
-                  "type": "object",
-                  "properties": {
-                    "contentTypes": {
-                      "type": "array",
-                      "prefixItems": [
-                        {
-                          "type": "string",
-                          "enum": ["application/json"]
-                        }
-                      ],
-                      "items": {},
-                      "minItems": 1,
-                      "maxItems": 1
-                    }
-                  },
-                  "required": ["contentTypes"],
-                  "additionalProperties": false
-                }
-              },
-              "required": ["message", "code", "context", "expectedValues"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/UnsupportedMediaTypeErrorBody"
             }
           }
         }
@@ -2612,41 +2428,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "message": {
-                  "type": "string",
-                  "enum": ["Request is invalid"]
-                },
-                "code": {
-                  "type": "string",
-                  "enum": ["VALIDATION_ERROR"]
-                },
-                "issues": {
-                  "type": "object",
-                  "properties": {
-                    "body": {
-                      "type": "array",
-                      "items": {}
-                    },
-                    "query": {
-                      "type": "array",
-                      "items": {}
-                    },
-                    "param": {
-                      "type": "array",
-                      "items": {}
-                    },
-                    "header": {
-                      "type": "array",
-                      "items": {}
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              },
-              "required": ["message", "code", "issues"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/ValidationErrorBody"
             }
           }
         }
@@ -2680,19 +2462,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "accessToken": {
-                  "type": "string",
-                  "maxLength": 1028
-                },
-                "refreshToken": {
-                  "type": "string",
-                  "maxLength": 1028
-                }
-              },
-              "required": ["accessToken", "refreshToken"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/AccessTokenSuccessBody"
             }
           }
         }
@@ -2726,19 +2496,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "accessToken": {
-                  "type": "string",
-                  "maxLength": 1028
-                },
-                "refreshToken": {
-                  "type": "string",
-                  "maxLength": 1028
-                }
-              },
-              "required": ["accessToken", "refreshToken"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/RefreshTokenSuccessBody"
             }
           }
         }
@@ -2772,28 +2530,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "name": {
-                  "type": "string"
-                },
-                "size": {
-                  "type": "number"
-                },
-                "mimeType": {
-                  "type": "string"
-                },
-                "createdAt": {
-                  "type": "string"
-                }
-              },
-              "required": ["id", "name", "size", "mimeType", "createdAt"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/UploadFileSuccessBody"
             }
           }
         }
@@ -2811,7 +2548,9 @@
         },
         "content": {
           "application/json": {
-            "schema": {}
+            "schema": {
+              "$ref": "#/components/schemas/DownloadFileContentSuccessBody"
+            }
           }
         }
       },
@@ -2844,28 +2583,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "name": {
-                  "type": "string"
-                },
-                "size": {
-                  "type": "number"
-                },
-                "mimeType": {
-                  "type": "string"
-                },
-                "createdAt": {
-                  "type": "string"
-                }
-              },
-              "required": ["id", "name", "size", "mimeType", "createdAt"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/UploadFileSuccessBody"
             }
           }
         }
@@ -2899,70 +2617,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "accountId": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "parentId": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "title": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string"
-                },
-                "status": {
-                  "type": "string",
-                  "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                },
-                "dueDate": {
-                  "type": "string"
-                },
-                "tags": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "priority": {
-                  "type": "string",
-                  "enum": ["LOW", "MEDIUM", "HIGH"]
-                },
-                "createdAt": {
-                  "type": "string"
-                },
-                "modifiedAt": {
-                  "type": "string"
-                },
-                "createdBy": {
-                  "type": "string"
-                },
-                "modifiedBy": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "id",
-                "accountId",
-                "title",
-                "status",
-                "createdAt",
-                "modifiedAt",
-                "createdBy",
-                "modifiedBy"
-              ],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/CreateSubTodoSuccessBody"
             }
           }
         }
@@ -2996,31 +2651,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "message": {
-                  "type": "string",
-                  "enum": ["Todo not found"]
-                },
-                "code": {
-                  "type": "string",
-                  "enum": ["TODO_NOT_FOUND_ERROR"]
-                },
-                "actualValues": {
-                  "type": "object",
-                  "properties": {
-                    "todoId": {
-                      "type": "string",
-                      "format": "ulid",
-                      "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                    }
-                  },
-                  "required": ["todoId"],
-                  "additionalProperties": false
-                }
-              },
-              "required": ["message", "code", "actualValues"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/TodoNotFoundErrorBody"
             }
           }
         }
@@ -3054,70 +2685,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "accountId": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "parentId": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "title": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string"
-                },
-                "status": {
-                  "type": "string",
-                  "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                },
-                "dueDate": {
-                  "type": "string"
-                },
-                "tags": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "priority": {
-                  "type": "string",
-                  "enum": ["LOW", "MEDIUM", "HIGH"]
-                },
-                "createdAt": {
-                  "type": "string"
-                },
-                "modifiedAt": {
-                  "type": "string"
-                },
-                "createdBy": {
-                  "type": "string"
-                },
-                "modifiedBy": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "id",
-                "accountId",
-                "title",
-                "status",
-                "createdAt",
-                "modifiedAt",
-                "createdBy",
-                "modifiedBy"
-              ],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/CreateSubTodoSuccessBody"
             }
           }
         }
@@ -3151,14 +2719,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "message": {
-                  "type": "string"
-                }
-              },
-              "required": ["message"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/DeleteSubTodoSuccessBody"
             }
           }
         }
@@ -3192,43 +2753,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "message": {
-                  "type": "string",
-                  "enum": ["SubTodo not found"]
-                },
-                "code": {
-                  "type": "string",
-                  "enum": ["SUBTODO_NOT_FOUND_ERROR"]
-                },
-                "context": {
-                  "type": "object",
-                  "properties": {
-                    "todoId": {
-                      "type": "string",
-                      "format": "ulid",
-                      "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                    }
-                  },
-                  "required": ["todoId"],
-                  "additionalProperties": false
-                },
-                "actualValues": {
-                  "type": "object",
-                  "properties": {
-                    "subtodoId": {
-                      "type": "string",
-                      "format": "ulid",
-                      "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                    }
-                  },
-                  "required": ["subtodoId"],
-                  "additionalProperties": false
-                }
-              },
-              "required": ["message", "code", "context", "actualValues"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/SubTodoNotFoundErrorBody"
             }
           }
         }
@@ -3265,14 +2790,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "message": {
-                  "type": "string"
-                }
-              },
-              "required": ["message"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/DeleteTodoBodyOnlyBody"
             }
           }
         }
@@ -3309,70 +2827,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "accountId": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "parentId": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "title": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string"
-                },
-                "status": {
-                  "type": "string",
-                  "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                },
-                "dueDate": {
-                  "type": "string"
-                },
-                "tags": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "priority": {
-                  "type": "string",
-                  "enum": ["LOW", "MEDIUM", "HIGH"]
-                },
-                "createdAt": {
-                  "type": "string"
-                },
-                "modifiedAt": {
-                  "type": "string"
-                },
-                "createdBy": {
-                  "type": "string"
-                },
-                "modifiedBy": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "id",
-                "accountId",
-                "title",
-                "status",
-                "createdAt",
-                "modifiedAt",
-                "createdBy",
-                "modifiedBy"
-              ],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/CreateSubTodoSuccessBody"
             }
           }
         }
@@ -3433,83 +2888,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "results": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "ulid",
-                        "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                      },
-                      "accountId": {
-                        "type": "string",
-                        "format": "ulid",
-                        "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                      },
-                      "parentId": {
-                        "type": "string",
-                        "format": "ulid",
-                        "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                      },
-                      "title": {
-                        "type": "string"
-                      },
-                      "description": {
-                        "type": "string"
-                      },
-                      "status": {
-                        "type": "string",
-                        "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                      },
-                      "dueDate": {
-                        "type": "string"
-                      },
-                      "tags": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      },
-                      "priority": {
-                        "type": "string",
-                        "enum": ["LOW", "MEDIUM", "HIGH"]
-                      },
-                      "createdAt": {
-                        "type": "string"
-                      },
-                      "modifiedAt": {
-                        "type": "string"
-                      },
-                      "createdBy": {
-                        "type": "string"
-                      },
-                      "modifiedBy": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "accountId",
-                      "title",
-                      "status",
-                      "createdAt",
-                      "modifiedAt",
-                      "createdBy",
-                      "modifiedBy"
-                    ],
-                    "additionalProperties": false
-                  }
-                },
-                "nextToken": {
-                  "type": "string"
-                }
-              },
-              "required": ["results"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/ListSubTodosSuccessBody"
             }
           }
         }
@@ -3543,83 +2922,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "results": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "ulid",
-                        "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                      },
-                      "accountId": {
-                        "type": "string",
-                        "format": "ulid",
-                        "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                      },
-                      "parentId": {
-                        "type": "string",
-                        "format": "ulid",
-                        "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                      },
-                      "title": {
-                        "type": "string"
-                      },
-                      "description": {
-                        "type": "string"
-                      },
-                      "status": {
-                        "type": "string",
-                        "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                      },
-                      "dueDate": {
-                        "type": "string"
-                      },
-                      "tags": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      },
-                      "priority": {
-                        "type": "string",
-                        "enum": ["LOW", "MEDIUM", "HIGH"]
-                      },
-                      "createdAt": {
-                        "type": "string"
-                      },
-                      "modifiedAt": {
-                        "type": "string"
-                      },
-                      "createdBy": {
-                        "type": "string"
-                      },
-                      "modifiedBy": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "accountId",
-                      "title",
-                      "status",
-                      "createdAt",
-                      "modifiedAt",
-                      "createdBy",
-                      "modifiedBy"
-                    ],
-                    "additionalProperties": false
-                  }
-                },
-                "nextToken": {
-                  "type": "string"
-                }
-              },
-              "required": ["results"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/ListTodosSuccessBody"
             }
           }
         }
@@ -3697,70 +3000,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "accountId": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "parentId": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "title": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string"
-                },
-                "status": {
-                  "type": "string",
-                  "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                },
-                "dueDate": {
-                  "type": "string"
-                },
-                "tags": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "priority": {
-                  "type": "string",
-                  "enum": ["LOW", "MEDIUM", "HIGH"]
-                },
-                "createdAt": {
-                  "type": "string"
-                },
-                "modifiedAt": {
-                  "type": "string"
-                },
-                "createdBy": {
-                  "type": "string"
-                },
-                "modifiedBy": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "id",
-                "accountId",
-                "title",
-                "status",
-                "createdAt",
-                "modifiedAt",
-                "createdBy",
-                "modifiedBy"
-              ],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/CreateSubTodoSuccessBody"
             }
           }
         }
@@ -3794,49 +3034,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "message": {
-                  "type": "string",
-                  "enum": ["Todo in current status cannot be changed"]
-                },
-                "code": {
-                  "type": "string",
-                  "enum": ["TODO_NOT_CHANGEABLE_ERROR"]
-                },
-                "context": {
-                  "type": "object",
-                  "properties": {
-                    "todoId": {
-                      "type": "string",
-                      "format": "ulid",
-                      "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                    },
-                    "currentStatus": {
-                      "type": "string",
-                      "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                    }
-                  },
-                  "required": ["todoId", "currentStatus"],
-                  "additionalProperties": false
-                },
-                "expectedValues": {
-                  "type": "object",
-                  "properties": {
-                    "allowedStatuses": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                      }
-                    }
-                  },
-                  "required": ["allowedStatuses"],
-                  "additionalProperties": false
-                }
-              },
-              "required": ["message", "code", "context", "expectedValues"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/TodoNotChangeableErrorBody"
             }
           }
         }
@@ -3870,83 +3068,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "results": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "ulid",
-                        "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                      },
-                      "accountId": {
-                        "type": "string",
-                        "format": "ulid",
-                        "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                      },
-                      "parentId": {
-                        "type": "string",
-                        "format": "ulid",
-                        "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                      },
-                      "title": {
-                        "type": "string"
-                      },
-                      "description": {
-                        "type": "string"
-                      },
-                      "status": {
-                        "type": "string",
-                        "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                      },
-                      "dueDate": {
-                        "type": "string"
-                      },
-                      "tags": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      },
-                      "priority": {
-                        "type": "string",
-                        "enum": ["LOW", "MEDIUM", "HIGH"]
-                      },
-                      "createdAt": {
-                        "type": "string"
-                      },
-                      "modifiedAt": {
-                        "type": "string"
-                      },
-                      "createdBy": {
-                        "type": "string"
-                      },
-                      "modifiedBy": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "accountId",
-                      "title",
-                      "status",
-                      "createdAt",
-                      "modifiedAt",
-                      "createdBy",
-                      "modifiedBy"
-                    ],
-                    "additionalProperties": false
-                  }
-                },
-                "nextToken": {
-                  "type": "string"
-                }
-              },
-              "required": ["results"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/QuerySubTodoSuccessBody"
             }
           }
         }
@@ -3980,83 +3102,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "results": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "ulid",
-                        "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                      },
-                      "accountId": {
-                        "type": "string",
-                        "format": "ulid",
-                        "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                      },
-                      "parentId": {
-                        "type": "string",
-                        "format": "ulid",
-                        "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                      },
-                      "title": {
-                        "type": "string"
-                      },
-                      "description": {
-                        "type": "string"
-                      },
-                      "status": {
-                        "type": "string",
-                        "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                      },
-                      "dueDate": {
-                        "type": "string"
-                      },
-                      "tags": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      },
-                      "priority": {
-                        "type": "string",
-                        "enum": ["LOW", "MEDIUM", "HIGH"]
-                      },
-                      "createdAt": {
-                        "type": "string"
-                      },
-                      "modifiedAt": {
-                        "type": "string"
-                      },
-                      "createdBy": {
-                        "type": "string"
-                      },
-                      "modifiedBy": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "accountId",
-                      "title",
-                      "status",
-                      "createdAt",
-                      "modifiedAt",
-                      "createdBy",
-                      "modifiedBy"
-                    ],
-                    "additionalProperties": false
-                  }
-                },
-                "nextToken": {
-                  "type": "string"
-                }
-              },
-              "required": ["results"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/QueryTodoSuccessBody"
             }
           }
         }
@@ -4090,70 +3136,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "accountId": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "parentId": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "title": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string"
-                },
-                "status": {
-                  "type": "string",
-                  "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                },
-                "dueDate": {
-                  "type": "string"
-                },
-                "tags": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "priority": {
-                  "type": "string",
-                  "enum": ["LOW", "MEDIUM", "HIGH"]
-                },
-                "createdAt": {
-                  "type": "string"
-                },
-                "modifiedAt": {
-                  "type": "string"
-                },
-                "createdBy": {
-                  "type": "string"
-                },
-                "modifiedBy": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "id",
-                "accountId",
-                "title",
-                "status",
-                "createdAt",
-                "modifiedAt",
-                "createdBy",
-                "modifiedBy"
-              ],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/CreateSubTodoSuccessBody"
             }
           }
         }
@@ -4187,67 +3170,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "message": {
-                  "type": "string",
-                  "enum": [
-                    "SubTodo in current status or because of parent todo status cannot be changed"
-                  ]
-                },
-                "code": {
-                  "type": "string",
-                  "enum": ["SUBTODO_NOT_CHANGEABLE_ERROR"]
-                },
-                "context": {
-                  "type": "object",
-                  "properties": {
-                    "todoId": {
-                      "type": "string",
-                      "format": "ulid",
-                      "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                    },
-                    "subtodoId": {
-                      "type": "string",
-                      "format": "ulid",
-                      "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                    },
-                    "currentTodoStatus": {
-                      "type": "string",
-                      "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                    },
-                    "currentSubtodoStatus": {
-                      "type": "string",
-                      "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                    }
-                  },
-                  "required": ["todoId", "subtodoId", "currentTodoStatus", "currentSubtodoStatus"],
-                  "additionalProperties": false
-                },
-                "expectedValues": {
-                  "type": "object",
-                  "properties": {
-                    "allowedTodoStatuses": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                      }
-                    },
-                    "allowedSubtodoStatuses": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                      }
-                    }
-                  },
-                  "required": ["allowedTodoStatuses", "allowedSubtodoStatuses"],
-                  "additionalProperties": false
-                }
-              },
-              "required": ["message", "code", "context", "expectedValues"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/SubTodoNotChangeableErrorBody"
             }
           }
         }
@@ -4281,71 +3204,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "message": {
-                  "type": "string",
-                  "enum": [
-                    "SubTodo status transition is conflicting with its status or parent todo status"
-                  ]
-                },
-                "code": {
-                  "type": "string",
-                  "enum": ["SUBTODO_STATUS_TRANSITION_INVALID_ERROR"]
-                },
-                "context": {
-                  "type": "object",
-                  "properties": {
-                    "todoId": {
-                      "type": "string",
-                      "format": "ulid",
-                      "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                    },
-                    "subtodoId": {
-                      "type": "string",
-                      "format": "ulid",
-                      "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                    },
-                    "currentTodoStatus": {
-                      "type": "string",
-                      "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                    },
-                    "currentSubtodoStatus": {
-                      "type": "string",
-                      "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                    }
-                  },
-                  "required": ["todoId", "subtodoId", "currentTodoStatus", "currentSubtodoStatus"],
-                  "additionalProperties": false
-                },
-                "actualValues": {
-                  "type": "object",
-                  "properties": {
-                    "requestedSubtodoStatus": {
-                      "type": "string",
-                      "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                    }
-                  },
-                  "required": ["requestedSubtodoStatus"],
-                  "additionalProperties": false
-                },
-                "expectedValues": {
-                  "type": "object",
-                  "properties": {
-                    "allowedSubtodoStatuses": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                      }
-                    }
-                  },
-                  "required": ["allowedSubtodoStatuses"],
-                  "additionalProperties": false
-                }
-              },
-              "required": ["message", "code", "context", "actualValues", "expectedValues"],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/SubTodoStatusTransitionInvalidErrorBody"
             }
           }
         }
@@ -4379,70 +3238,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "accountId": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "parentId": {
-                  "type": "string",
-                  "format": "ulid",
-                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                },
-                "title": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string"
-                },
-                "status": {
-                  "type": "string",
-                  "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                },
-                "dueDate": {
-                  "type": "string"
-                },
-                "tags": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "priority": {
-                  "type": "string",
-                  "enum": ["LOW", "MEDIUM", "HIGH"]
-                },
-                "createdAt": {
-                  "type": "string"
-                },
-                "modifiedAt": {
-                  "type": "string"
-                },
-                "createdBy": {
-                  "type": "string"
-                },
-                "modifiedBy": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "id",
-                "accountId",
-                "title",
-                "status",
-                "createdAt",
-                "modifiedAt",
-                "createdBy",
-                "modifiedBy"
-              ],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/CreateSubTodoSuccessBody"
             }
           }
         }
@@ -4476,6 +3272,430 @@
         "content": {
           "application/json": {
             "schema": {
+              "$ref": "#/components/schemas/CreateSubTodoSuccessBody"
+            }
+          }
+        }
+      },
+      "TodoStatusTransitionInvalidError": {
+        "description": "Todo status transition is conflicting with current status",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["application/json"]
+            }
+          },
+          "X-Single-Value": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-Multi-Value": {
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/TodoStatusTransitionInvalidErrorBody"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "RegisterAccountSuccessBody": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 256,
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "modifiedAt": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "modifiedBy": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "email", "createdAt", "modifiedAt", "createdBy", "modifiedBy"],
+        "additionalProperties": false
+      },
+      "ForbiddenErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "enum": ["Forbidden request"]
+          },
+          "code": {
+            "type": "string",
+            "enum": ["FORBIDDEN_ERROR"]
+          }
+        },
+        "required": ["message", "code"],
+        "additionalProperties": false
+      },
+      "InternalServerErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "enum": ["Internal server error occurred"]
+          },
+          "code": {
+            "type": "string",
+            "enum": ["INTERNAL_SERVER_ERROR"]
+          }
+        },
+        "required": ["message", "code"],
+        "additionalProperties": false
+      },
+      "TooManyRequestsErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "enum": ["Too many requests"]
+          },
+          "code": {
+            "type": "string",
+            "enum": ["TOO_MANY_REQUESTS_ERROR"]
+          }
+        },
+        "required": ["message", "code"],
+        "additionalProperties": false
+      },
+      "UnauthorizedErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "enum": ["Unauthorized request"]
+          },
+          "code": {
+            "type": "string",
+            "enum": ["UNAUTHORIZED_ERROR"]
+          }
+        },
+        "required": ["message", "code"],
+        "additionalProperties": false
+      },
+      "UnsupportedMediaTypeErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "enum": ["Unsupported media type"]
+          },
+          "code": {
+            "type": "string",
+            "enum": ["UNSUPPORTED_MEDIA_TYPE_ERROR"]
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "contentType": {
+                "type": "string"
+              }
+            },
+            "required": ["contentType"],
+            "additionalProperties": false
+          },
+          "expectedValues": {
+            "type": "object",
+            "properties": {
+              "contentTypes": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "type": "string",
+                    "enum": ["application/json"]
+                  }
+                ],
+                "items": {},
+                "minItems": 1,
+                "maxItems": 1
+              }
+            },
+            "required": ["contentTypes"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["message", "code", "context", "expectedValues"],
+        "additionalProperties": false
+      },
+      "ValidationErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "enum": ["Request is invalid"]
+          },
+          "code": {
+            "type": "string",
+            "enum": ["VALIDATION_ERROR"]
+          },
+          "issues": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "array",
+                "items": {}
+              },
+              "query": {
+                "type": "array",
+                "items": {}
+              },
+              "param": {
+                "type": "array",
+                "items": {}
+              },
+              "header": {
+                "type": "array",
+                "items": {}
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": ["message", "code", "issues"],
+        "additionalProperties": false
+      },
+      "AccessTokenSuccessBody": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "maxLength": 1028
+          },
+          "refreshToken": {
+            "type": "string",
+            "maxLength": 1028
+          }
+        },
+        "required": ["accessToken", "refreshToken"],
+        "additionalProperties": false
+      },
+      "RefreshTokenSuccessBody": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "maxLength": 1028
+          },
+          "refreshToken": {
+            "type": "string",
+            "maxLength": 1028
+          }
+        },
+        "required": ["accessToken", "refreshToken"],
+        "additionalProperties": false
+      },
+      "UploadFileSuccessBody": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "number"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "name", "size", "mimeType", "createdAt"],
+        "additionalProperties": false
+      },
+      "DownloadFileContentSuccessBody": {},
+      "CreateSubTodoSuccessBody": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["LOW", "MEDIUM", "HIGH"]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "modifiedAt": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "modifiedBy": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "title",
+          "status",
+          "createdAt",
+          "modifiedAt",
+          "createdBy",
+          "modifiedBy"
+        ],
+        "additionalProperties": false
+      },
+      "TodoNotFoundErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "enum": ["Todo not found"]
+          },
+          "code": {
+            "type": "string",
+            "enum": ["TODO_NOT_FOUND_ERROR"]
+          },
+          "actualValues": {
+            "type": "object",
+            "properties": {
+              "todoId": {
+                "type": "string",
+                "format": "ulid",
+                "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+              }
+            },
+            "required": ["todoId"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["message", "code", "actualValues"],
+        "additionalProperties": false
+      },
+      "DeleteSubTodoSuccessBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["message"],
+        "additionalProperties": false
+      },
+      "SubTodoNotFoundErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "enum": ["SubTodo not found"]
+          },
+          "code": {
+            "type": "string",
+            "enum": ["SUBTODO_NOT_FOUND_ERROR"]
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "todoId": {
+                "type": "string",
+                "format": "ulid",
+                "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+              }
+            },
+            "required": ["todoId"],
+            "additionalProperties": false
+          },
+          "actualValues": {
+            "type": "object",
+            "properties": {
+              "subtodoId": {
+                "type": "string",
+                "format": "ulid",
+                "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+              }
+            },
+            "required": ["subtodoId"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["message", "code", "context", "actualValues"],
+        "additionalProperties": false
+      },
+      "DeleteTodoBodyOnlyBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["message"],
+        "additionalProperties": false
+      },
+      "ListSubTodosSuccessBody": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
               "type": "object",
               "properties": {
                 "id": {
@@ -4541,95 +3761,760 @@
               ],
               "additionalProperties": false
             }
+          },
+          "nextToken": {
+            "type": "string"
           }
-        }
+        },
+        "required": ["results"],
+        "additionalProperties": false
       },
-      "TodoStatusTransitionInvalidError": {
-        "description": "Todo status transition is conflicting with current status",
-        "headers": {
-          "Content-Type": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": ["application/json"]
+      "ListTodosSuccessBody": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "accountId": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "parentId": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+                },
+                "dueDate": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "priority": {
+                  "type": "string",
+                  "enum": ["LOW", "MEDIUM", "HIGH"]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "modifiedAt": {
+                  "type": "string"
+                },
+                "createdBy": {
+                  "type": "string"
+                },
+                "modifiedBy": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "accountId",
+                "title",
+                "status",
+                "createdAt",
+                "modifiedAt",
+                "createdBy",
+                "modifiedBy"
+              ],
+              "additionalProperties": false
             }
           },
-          "X-Single-Value": {
-            "required": false,
-            "schema": {
+          "nextToken": {
+            "type": "string"
+          }
+        },
+        "required": ["results"],
+        "additionalProperties": false
+      },
+      "TodoNotChangeableErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "enum": ["Todo in current status cannot be changed"]
+          },
+          "code": {
+            "type": "string",
+            "enum": ["TODO_NOT_CHANGEABLE_ERROR"]
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "todoId": {
+                "type": "string",
+                "format": "ulid",
+                "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+              },
+              "currentStatus": {
+                "type": "string",
+                "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+              }
+            },
+            "required": ["todoId", "currentStatus"],
+            "additionalProperties": false
+          },
+          "expectedValues": {
+            "type": "object",
+            "properties": {
+              "allowedStatuses": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+                }
+              }
+            },
+            "required": ["allowedStatuses"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["message", "code", "context", "expectedValues"],
+        "additionalProperties": false
+      },
+      "QuerySubTodoSuccessBody": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "accountId": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "parentId": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+                },
+                "dueDate": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "priority": {
+                  "type": "string",
+                  "enum": ["LOW", "MEDIUM", "HIGH"]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "modifiedAt": {
+                  "type": "string"
+                },
+                "createdBy": {
+                  "type": "string"
+                },
+                "modifiedBy": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "accountId",
+                "title",
+                "status",
+                "createdAt",
+                "modifiedAt",
+                "createdBy",
+                "modifiedBy"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "nextToken": {
+            "type": "string"
+          }
+        },
+        "required": ["results"],
+        "additionalProperties": false
+      },
+      "QueryTodoSuccessBody": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "accountId": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "parentId": {
+                  "type": "string",
+                  "format": "ulid",
+                  "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+                },
+                "dueDate": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "priority": {
+                  "type": "string",
+                  "enum": ["LOW", "MEDIUM", "HIGH"]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "modifiedAt": {
+                  "type": "string"
+                },
+                "createdBy": {
+                  "type": "string"
+                },
+                "modifiedBy": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "accountId",
+                "title",
+                "status",
+                "createdAt",
+                "modifiedAt",
+                "createdBy",
+                "modifiedBy"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "nextToken": {
+            "type": "string"
+          }
+        },
+        "required": ["results"],
+        "additionalProperties": false
+      },
+      "SubTodoNotChangeableErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "enum": ["SubTodo in current status or because of parent todo status cannot be changed"]
+          },
+          "code": {
+            "type": "string",
+            "enum": ["SUBTODO_NOT_CHANGEABLE_ERROR"]
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "todoId": {
+                "type": "string",
+                "format": "ulid",
+                "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+              },
+              "subtodoId": {
+                "type": "string",
+                "format": "ulid",
+                "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+              },
+              "currentTodoStatus": {
+                "type": "string",
+                "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+              },
+              "currentSubtodoStatus": {
+                "type": "string",
+                "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+              }
+            },
+            "required": ["todoId", "subtodoId", "currentTodoStatus", "currentSubtodoStatus"],
+            "additionalProperties": false
+          },
+          "expectedValues": {
+            "type": "object",
+            "properties": {
+              "allowedTodoStatuses": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+                }
+              },
+              "allowedSubtodoStatuses": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+                }
+              }
+            },
+            "required": ["allowedTodoStatuses", "allowedSubtodoStatuses"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["message", "code", "context", "expectedValues"],
+        "additionalProperties": false
+      },
+      "SubTodoStatusTransitionInvalidErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "enum": [
+              "SubTodo status transition is conflicting with its status or parent todo status"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "enum": ["SUBTODO_STATUS_TRANSITION_INVALID_ERROR"]
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "todoId": {
+                "type": "string",
+                "format": "ulid",
+                "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+              },
+              "subtodoId": {
+                "type": "string",
+                "format": "ulid",
+                "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+              },
+              "currentTodoStatus": {
+                "type": "string",
+                "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+              },
+              "currentSubtodoStatus": {
+                "type": "string",
+                "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+              }
+            },
+            "required": ["todoId", "subtodoId", "currentTodoStatus", "currentSubtodoStatus"],
+            "additionalProperties": false
+          },
+          "actualValues": {
+            "type": "object",
+            "properties": {
+              "requestedSubtodoStatus": {
+                "type": "string",
+                "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+              }
+            },
+            "required": ["requestedSubtodoStatus"],
+            "additionalProperties": false
+          },
+          "expectedValues": {
+            "type": "object",
+            "properties": {
+              "allowedSubtodoStatuses": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+                }
+              }
+            },
+            "required": ["allowedSubtodoStatuses"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["message", "code", "context", "actualValues", "expectedValues"],
+        "additionalProperties": false
+      },
+      "TodoStatusTransitionInvalidErrorBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "enum": ["Todo status transition is conflicting with current status"]
+          },
+          "code": {
+            "type": "string",
+            "enum": ["TODO_STATUS_TRANSITION_INVALID_ERROR"]
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "todoId": {
+                "type": "string",
+                "format": "ulid",
+                "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+              },
+              "currentStatus": {
+                "type": "string",
+                "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+              }
+            },
+            "required": ["todoId", "currentStatus"],
+            "additionalProperties": false
+          },
+          "actualValues": {
+            "type": "object",
+            "properties": {
+              "requestedStatus": {
+                "type": "string",
+                "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+              }
+            },
+            "required": ["requestedStatus"],
+            "additionalProperties": false
+          },
+          "expectedValues": {
+            "type": "object",
+            "properties": {
+              "allowedStatuses": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+                }
+              }
+            },
+            "required": ["allowedStatuses"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["message", "code", "context", "actualValues", "expectedValues"],
+        "additionalProperties": false
+      },
+      "RegisterAccountRequestBody": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 256,
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "required": ["email", "password"],
+        "additionalProperties": false
+      },
+      "AccessTokenRequestBody": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 256,
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "required": ["email", "password"],
+        "additionalProperties": false
+      },
+      "RefreshTokenRequestBody": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "maxLength": 1028
+          }
+        },
+        "required": ["refreshToken"],
+        "additionalProperties": false
+      },
+      "UploadFileRequestBody": {},
+      "CreateSubTodoRequestBody": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
               "type": "string"
             }
           },
-          "X-Multi-Value": {
-            "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
+          "priority": {
+            "type": "string",
+            "enum": ["LOW", "MEDIUM", "HIGH"]
+          }
+        },
+        "required": ["title"],
+        "additionalProperties": false
+      },
+      "CreateTodoRequestBody": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["LOW", "MEDIUM", "HIGH"]
+          }
+        },
+        "required": ["title"],
+        "additionalProperties": false
+      },
+      "PutTodoRequestBody": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["LOW", "MEDIUM", "HIGH"]
+          }
+        },
+        "required": ["accountId", "title", "status"],
+        "additionalProperties": false
+      },
+      "QuerySubTodoRequestBody": {
+        "type": "object",
+        "properties": {
+          "searchText": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["LOW", "MEDIUM", "HIGH"]
+          },
+          "dateRange": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "to": {
                 "type": "string"
               }
+            },
+            "additionalProperties": false
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           }
         },
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "properties": {
-                "message": {
-                  "type": "string",
-                  "enum": ["Todo status transition is conflicting with current status"]
-                },
-                "code": {
-                  "type": "string",
-                  "enum": ["TODO_STATUS_TRANSITION_INVALID_ERROR"]
-                },
-                "context": {
-                  "type": "object",
-                  "properties": {
-                    "todoId": {
-                      "type": "string",
-                      "format": "ulid",
-                      "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
-                    },
-                    "currentStatus": {
-                      "type": "string",
-                      "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                    }
-                  },
-                  "required": ["todoId", "currentStatus"],
-                  "additionalProperties": false
-                },
-                "actualValues": {
-                  "type": "object",
-                  "properties": {
-                    "requestedStatus": {
-                      "type": "string",
-                      "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                    }
-                  },
-                  "required": ["requestedStatus"],
-                  "additionalProperties": false
-                },
-                "expectedValues": {
-                  "type": "object",
-                  "properties": {
-                    "allowedStatuses": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
-                      }
-                    }
-                  },
-                  "required": ["allowedStatuses"],
-                  "additionalProperties": false
-                }
+        "additionalProperties": false
+      },
+      "QueryTodoRequestBody": {
+        "type": "object",
+        "properties": {
+          "searchText": {
+            "type": "string"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "ulid",
+            "pattern": "^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["LOW", "MEDIUM", "HIGH"]
+          },
+          "dateRange": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string"
               },
-              "required": ["message", "code", "context", "actualValues", "expectedValues"],
-              "additionalProperties": false
+              "to": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
+          },
+          "hasParent": {
+            "type": "boolean"
           }
-        }
+        },
+        "additionalProperties": false
+      },
+      "UpdateSubTodoRequestBody": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["LOW", "MEDIUM", "HIGH"]
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateTodoRequestBody": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["LOW", "MEDIUM", "HIGH"]
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateTodoStatusRequestBody": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "enum": ["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]
+          }
+        },
+        "required": ["value"],
+        "additionalProperties": false
       }
     }
   }
