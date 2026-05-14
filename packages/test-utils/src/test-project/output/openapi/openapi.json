@@ -1010,7 +1010,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "oneOf": [
+                  "anyOf": [
                     {
                       "$ref": "#/components/schemas/SubTodoNotFoundErrorBody"
                     },
@@ -1156,7 +1156,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "oneOf": [
+                  "anyOf": [
                     {
                       "$ref": "#/components/schemas/SubTodoNotFoundErrorBody"
                     },
@@ -1197,7 +1197,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "oneOf": [
+                  "anyOf": [
                     {
                       "$ref": "#/components/schemas/SubTodoNotChangeableErrorBody"
                     },
@@ -2168,7 +2168,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "oneOf": [
+                  "anyOf": [
                     {
                       "$ref": "#/components/schemas/TodoStatusTransitionInvalidErrorBody"
                     },

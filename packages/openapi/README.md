@@ -62,7 +62,7 @@ into one inline OpenAPI response. The merged response description lists each var
 - If no variant has a body schema, the merged response omits `content`.
 - If exactly one distinct body schema `$ref` is present, the merged response uses that `$ref`
   directly.
-- If multiple distinct body schema `$ref`s are present, the merged response uses `oneOf`.
+- If multiple distinct body schema `$ref`s are present, the merged response uses `anyOf`.
 - Headers merge by emitted header name and are included when present in at least one variant.
 - A merged header is `required: true` only when the header appears in every response variant and is
   required in every variant; otherwise it is `required: false`.

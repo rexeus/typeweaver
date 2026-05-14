@@ -3,15 +3,15 @@ import type {
   NormalizedResponseUsage,
 } from "@rexeus/typeweaver-gen";
 import type { JsonSchema } from "@rexeus/typeweaver-zod-to-json-schema";
+import { buildHeaderObjects } from "./headerObjects.js";
 import { escapeJsonPointerSegment } from "./jsonPointer.js";
-import { buildHeaderObjects } from "./parameters.js";
+import type { OperationContext } from "./operationContext.js";
 import {
   isWarningDocumentPathAtOrBelow,
   rebaseSchemaDocumentRefs,
   rebaseWarningDocumentPath,
 } from "./schemaRebasing.js";
 import type { OpenApiBuildWarning, OpenApiHeaderObject } from "../types.js";
-import type { OperationContext } from "./parameters.js";
 
 export type ResponseHeaderMergeVariant = {
   readonly response: Pick<NormalizedResponse, "header">;

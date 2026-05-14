@@ -28,10 +28,8 @@ export class OpenApiPlugin extends BasePlugin {
   private readonly options: NormalizedOpenApiPluginOptions;
 
   public constructor(options: OpenApiPluginOptions = {}) {
-    const validatedOptions = validateOptions(options);
-
-    super(validatedOptions as Record<string, unknown>);
-    this.options = normalizeOptions(validatedOptions);
+    super({});
+    this.options = normalizeOptions(validateOptions(options));
   }
 
   public override generate(context: GeneratorContext): void {

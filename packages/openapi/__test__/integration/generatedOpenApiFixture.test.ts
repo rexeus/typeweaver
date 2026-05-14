@@ -73,16 +73,16 @@ describe("generated OpenAPI fixture", () => {
     });
     expect(
       responseSchemaAt(fixture, "/todos/{todoId}/status", "put", "409"),
-      "UpdateTodoStatus 409 should merge duplicate-status bodies as oneOf refs"
+      "UpdateTodoStatus 409 should merge duplicate-status bodies as anyOf refs"
     ).toEqual({
-      oneOf: [
+      anyOf: [
         { $ref: "#/components/schemas/TodoStatusTransitionInvalidErrorBody" },
         { $ref: "#/components/schemas/TodoNotChangeableErrorBody" },
       ],
     });
     expect(
       schemas.TodoStatusTransitionInvalidErrorBody,
-      "TodoStatusTransitionInvalidErrorBody component should exist for the 409 oneOf ref"
+      "TodoStatusTransitionInvalidErrorBody component should exist for the 409 anyOf ref"
     ).toMatchObject({
       type: "object",
       properties: {
@@ -98,7 +98,7 @@ describe("generated OpenAPI fixture", () => {
     });
     expect(
       schemas.TodoNotChangeableErrorBody,
-      "TodoNotChangeableErrorBody component should exist for the 409 oneOf ref"
+      "TodoNotChangeableErrorBody component should exist for the 409 anyOf ref"
     ).toMatchObject({
       type: "object",
       properties: {

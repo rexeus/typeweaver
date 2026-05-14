@@ -4,8 +4,10 @@ import type {
 } from "@rexeus/typeweaver-gen";
 import type { JsonSchema } from "@rexeus/typeweaver-zod-to-json-schema";
 import { pascalCase } from "polycase";
+import { buildHeaderObjects } from "./headerObjects.js";
 import { escapeJsonPointerSegment, jsonPointer } from "./jsonPointer.js";
-import { buildHeaderObjects } from "./parameters.js";
+import { createOperationLocation } from "./operationContext.js";
+import type { OperationContext } from "./operationContext.js";
 import { buildMergedHeaders } from "./responseHeaderMerge.js";
 import type {
   OpenApiBuildWarning,
@@ -13,9 +15,7 @@ import type {
   OpenApiReferenceObject,
   OpenApiResponseObject,
   OpenApiResponsesObject,
-  OpenApiWarningLocation,
 } from "../types.js";
-import type { OperationContext } from "./parameters.js";
 import type { SchemaRegistry } from "./schemaRegistry.js";
 
 export type ComponentsResponsesResult = {
@@ -385,19 +385,14 @@ function buildMergedResponseBody(
   }
 
   const distinctRefs = distinctBy(refs, ref => ref.$ref);
+  const [firstRef, ...otherRefs] = distinctRefs;
 
-  if (distinctRefs.length === 0) {
+  if (firstRef === undefined) {
     return { warnings };
   }
 
-  const schema =
-    distinctRefs.length === 1
-      ? distinctRefs[0]
-      : ({ oneOf: distinctRefs } as JsonSchema);
-
-  if (schema === undefined) {
-    return { warnings };
-  }
+  const schema: JsonSchema =
+    otherRefs.length === 0 ? firstRef : { anyOf: distinctRefs };
 
   return {
     content: {
@@ -420,7 +415,7 @@ function registerResponseBody(
   return options.schemaRegistry.register({
     schema: body,
     baseName: options.baseName,
-    location: createResponseLocation({
+    location: createOperationLocation({
       context: options.context,
       part: "response.body",
       responseName: options.responseName,
@@ -495,24 +490,6 @@ function createBuilderWarning(options: {
     code: options.code,
     message: options.message,
     documentPath: options.documentPath,
-    location: createResponseLocation(options),
-  };
-}
-
-function createResponseLocation(options: {
-  readonly context: OperationContext;
-  readonly part: string;
-  readonly responseName?: string;
-  readonly statusCode?: string;
-}): OpenApiWarningLocation {
-  return {
-    resourceName: options.context.resourceName,
-    operationId: options.context.operation.operationId,
-    method: options.context.operation.method,
-    path: options.context.operation.path,
-    openApiPath: options.context.openApiPath,
-    part: options.part,
-    responseName: options.responseName,
-    statusCode: options.statusCode,
+    location: createOperationLocation(options),
   };
 }

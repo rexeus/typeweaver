@@ -1,7 +1,6 @@
 import type {
   JsonSchema,
   JsonSchemaValue,
-  ZodToJsonSchemaWarningCode,
 } from "@rexeus/typeweaver-zod-to-json-schema";
 
 export type BuildOpenApiDocumentOptions = {
@@ -112,7 +111,10 @@ export type OpenApiComponentsObject = {
   readonly schemas?: Record<string, JsonSchema>;
 };
 
-export type OpenApiSchemaConversionWarningCode = ZodToJsonSchemaWarningCode;
+export type OpenApiSchemaConversionWarningCode =
+  | "unsupported-schema"
+  | "unsupported-check"
+  | "conversion-error";
 
 export type OpenApiSchemaConversionWarning = {
   readonly origin: "schema-conversion";
@@ -129,7 +131,8 @@ export type OpenApiDiagnosticWarningCode =
   | "unrepresentable-parameter-additional-properties"
   | "missing-path-parameter-schema"
   | "unused-path-parameter-schema"
-  | "missing-canonical-response";
+  | "missing-canonical-response"
+  | "duplicate-canonical-response";
 
 export type OpenApiDiagnosticWarning = {
   readonly origin: "openapi-builder";

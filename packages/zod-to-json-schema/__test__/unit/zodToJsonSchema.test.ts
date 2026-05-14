@@ -672,7 +672,7 @@ describe("fromZod", () => {
     });
   });
 
-  test("returns a conversion warning when Zod conversion throws", () => {
+  test("does not duplicate root conversion warnings when root lazy conversion throws", () => {
     const failingSchema = z.lazy(() => {
       throw new Error("schema failed");
     });
@@ -710,7 +710,35 @@ describe("fromZod", () => {
     });
   });
 
-  test("preserves collected warnings when conversion later throws", () => {
+  test("adds a root fallback warning when a nested lazy schema throws", () => {
+    const result = fromZod(
+      z.object({
+        broken: z.lazy(() => {
+          throw "schema failed";
+        }),
+      })
+    );
+
+    expect(result).toEqual({
+      schema: {},
+      warnings: [
+        {
+          code: "conversion-error",
+          schemaType: "lazy",
+          path: "/properties/broken",
+          message: "Failed to convert schema to JSON Schema.",
+        },
+        {
+          code: "conversion-error",
+          schemaType: "object",
+          path: "",
+          message: "Failed to convert schema to JSON Schema.",
+        },
+      ],
+    });
+  });
+
+  test("preserves earlier warnings when nested lazy conversion throws", () => {
     const result = fromZod(
       z.object({
         fallback: z.custom<string>(),
@@ -729,6 +757,12 @@ describe("fromZod", () => {
           path: "/properties/fallback",
           message:
             "Zod custom falls back to a broader JSON Schema representation.",
+        },
+        {
+          code: "conversion-error",
+          schemaType: "lazy",
+          path: "/properties/broken",
+          message: "Failed to convert schema to JSON Schema.",
         },
         {
           code: "conversion-error",

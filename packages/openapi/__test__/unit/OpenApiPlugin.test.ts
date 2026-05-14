@@ -2,7 +2,6 @@ import type {
   GeneratorContext,
   NormalizedOperation,
   NormalizedResponse,
-  NormalizedResponseUsage,
   NormalizedSpec,
 } from "@rexeus/typeweaver-gen";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -12,6 +11,12 @@ import type {
   OpenApiInfoObject,
   OpenApiServerObject,
 } from "../../src/index.js";
+import {
+  aNormalizedSpecWith,
+  anInlineResponseUsage,
+  anOperationWith,
+  aResponseWith,
+} from "./buildOpenApiDocument.helpers.js";
 
 type WrittenFile = {
   readonly path: string;
@@ -28,7 +33,7 @@ describe("OpenApiPlugin", () => {
   });
 
   test("writes an OpenAPI document to the default output path", () => {
-    const context = anOpenApiGeneratorContextWith(aTodoSpecWith());
+    const context = anOpenApiGeneratorContextWith(anItemsSpec());
 
     new OpenApiPlugin().generate(context);
 
@@ -44,7 +49,7 @@ describe("OpenApiPlugin", () => {
   });
 
   test("writes custom OpenAPI metadata to the configured output path", () => {
-    const context = anOpenApiGeneratorContextWith(aTodoSpecWith());
+    const context = anOpenApiGeneratorContextWith(anItemsSpec());
 
     new OpenApiPlugin({
       info: { title: "Todo API", version: "1.0.0", summary: "Todos" },
@@ -67,9 +72,10 @@ describe("OpenApiPlugin", () => {
   test("warns without embedding builder warnings in the OpenAPI document", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const context = anOpenApiGeneratorContextWith(
-      aTodoSpecWith({
+      anItemsSpec({
         operations: [
           anOperationWith({
+            operationId: "getItem",
             path: "/items/:itemId",
             responses: [anInlineResponseUsage(aResponseWith())],
           }),
@@ -139,6 +145,39 @@ describe("OpenApiPlugin", () => {
   });
 });
 
+function anItemsSpec(
+  overrides: {
+    readonly operations?: readonly NormalizedOperation[];
+    readonly responses?: readonly NormalizedResponse[];
+  } = {}
+): NormalizedSpec {
+  return aNormalizedSpecWith({
+    resources: [
+      {
+        name: "Items",
+        operations: overrides.operations ?? [
+          anOperationWith({
+            operationId: "getItem",
+            path: "/items/:itemId",
+            summary: "Get item",
+            request: { param: z.object({ itemId: z.string() }) },
+            responses: [
+              anInlineResponseUsage(
+                aResponseWith({
+                  name: "ItemLoaded",
+                  description: "Item loaded",
+                  body: z.object({ id: z.string(), name: z.string() }),
+                })
+              ),
+            ],
+          }),
+        ],
+      },
+    ],
+    responses: overrides.responses ?? [],
+  });
+}
+
 function anOpenApiGeneratorContextWith(
   normalizedSpec: NormalizedSpec
 ): OpenApiGeneratorContext {
@@ -169,64 +208,5 @@ function anOpenApiGeneratorContextWith(
     addGeneratedFile: notImplemented,
     getGeneratedFiles: () => writtenFiles.map(file => file.path),
     writtenFiles,
-  };
-}
-
-function aTodoSpecWith(
-  overrides: {
-    readonly operations?: readonly NormalizedOperation[];
-    readonly responses?: readonly NormalizedResponse[];
-  } = {}
-): NormalizedSpec {
-  return {
-    resources: [
-      {
-        name: "Items",
-        operations: overrides.operations ?? [
-          anOperationWith({
-            request: { param: z.object({ itemId: z.string() }) },
-            responses: [anInlineResponseUsage(aResponseWith())],
-          }),
-        ],
-      },
-    ],
-    responses: overrides.responses ?? [],
-  };
-}
-
-function anOperationWith(
-  overrides: Partial<NormalizedOperation> = {}
-): NormalizedOperation {
-  return {
-    operationId: "getItem",
-    method: "GET" as NormalizedOperation["method"],
-    path: "/items/:itemId",
-    summary: "Get item",
-    responses: [],
-    ...overrides,
-  };
-}
-
-function aResponseWith(
-  overrides: Partial<NormalizedResponse> = {}
-): NormalizedResponse {
-  return {
-    name: "ItemLoaded",
-    statusCode: 200 as NormalizedResponse["statusCode"],
-    statusCodeName: "Ok",
-    description: "Item loaded",
-    kind: "response",
-    body: z.object({ id: z.string(), name: z.string() }),
-    ...overrides,
-  };
-}
-
-function anInlineResponseUsage(
-  response: NormalizedResponse
-): NormalizedResponseUsage {
-  return {
-    responseName: response.name,
-    source: "inline",
-    response,
   };
 }

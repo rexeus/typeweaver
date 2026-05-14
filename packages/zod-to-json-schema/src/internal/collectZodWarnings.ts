@@ -298,8 +298,18 @@ function collectLazyWarnings(
 ): void {
   try {
     collectChild(def.getter?.(), collector, path);
-  } catch {
-    return;
+  } catch (error) {
+    collector.warnings.push(
+      createWarning({
+        code: "conversion-error",
+        schemaType: "lazy",
+        path,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to convert schema to JSON Schema.",
+      })
+    );
   }
 }
 

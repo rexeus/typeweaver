@@ -656,4 +656,29 @@ describe("buildOpenApiDocument", () => {
       },
     });
   });
+
+  test("warns when two canonical responses share a name", () => {
+    const normalizedSpec = aTodoSpecWith({
+      responses: [
+        aResponseWith({ name: "TodoFound", description: "first" }),
+        aResponseWith({ name: "TodoFound", description: "second" }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+    expect(result.warnings).toEqual([
+      {
+        origin: "openapi-builder",
+        code: "duplicate-canonical-response",
+        message:
+          "Canonical response 'TodoFound' is defined more than once; the entry at index 1 overrides the entry at index 0.",
+        documentPath: "/components/responses/TodoFound",
+        location: {
+          responseName: "TodoFound",
+          part: "components.responses",
+        },
+      },
+    ]);
+  });
 });

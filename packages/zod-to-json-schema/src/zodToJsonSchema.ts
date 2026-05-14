@@ -5,7 +5,11 @@ import {
 } from "./internal/collectZodWarnings.js";
 import { normalizeJsonSchema } from "./internal/normalizeJsonSchema.js";
 import { getSchemaType } from "./internal/zodIntrospection.js";
-import type { JsonSchema, ZodToJsonSchemaResult } from "./types.js";
+import type {
+  JsonSchema,
+  ZodToJsonSchemaResult,
+  ZodToJsonSchemaWarning,
+} from "./types.js";
 
 export function fromZod(schema: z.core.$ZodType): ZodToJsonSchemaResult {
   const warnings = [...collectZodWarnings(schema)];
@@ -21,23 +25,29 @@ export function fromZod(schema: z.core.$ZodType): ZodToJsonSchemaResult {
       warnings,
     };
   } catch (error) {
-    warnings.push(
-      createWarning({
-        code: "conversion-error",
-        schemaType: getSchemaType(schema),
-        path: [],
-        message:
-          error instanceof Error
-            ? error.message
-            : "Failed to convert schema to JSON Schema.",
-      })
-    );
+    if (!warnings.some(isRootConversionWarning)) {
+      warnings.push(
+        createWarning({
+          code: "conversion-error",
+          schemaType: getSchemaType(schema),
+          path: [],
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to convert schema to JSON Schema.",
+        })
+      );
+    }
 
     return {
       schema: {},
       warnings,
     };
   }
+}
+
+function isRootConversionWarning(warning: ZodToJsonSchemaWarning): boolean {
+  return warning.code === "conversion-error" && warning.path === "";
 }
 
 function stripRootSchemaDialect(schema: JsonSchema): JsonSchema {

@@ -246,7 +246,7 @@ describe("buildOpenApiDocument responses", () => {
   });
 
   describe("duplicate response bodies", () => {
-    test("merges duplicate inline response bodies with oneOf", () => {
+    test("merges duplicate inline response bodies with anyOf", () => {
       const normalizedSpec = aTodoSpecWith({
         operations: [
           anOperationWithDuplicateOkResponses([
@@ -272,7 +272,7 @@ describe("buildOpenApiDocument responses", () => {
         content: {
           "application/json": {
             schema: {
-              oneOf: [
+              anyOf: [
                 { $ref: "#/components/schemas/GetTodoTodoFoundBody" },
                 { $ref: "#/components/schemas/GetTodoValidationErrorBody" },
               ],
@@ -283,7 +283,7 @@ describe("buildOpenApiDocument responses", () => {
       expect(result.warnings).toEqual([]);
     });
 
-    test("merges duplicate canonical response bodies with oneOf refs", () => {
+    test("merges duplicate canonical response bodies with anyOf refs", () => {
       const todoResponse = aCanonicalOkResponse({
         name: "TodoFound",
         description: "Todo found",
@@ -312,7 +312,7 @@ describe("buildOpenApiDocument responses", () => {
         content: {
           "application/json": {
             schema: {
-              oneOf: [
+              anyOf: [
                 { $ref: "#/components/schemas/TodoFoundBody" },
                 { $ref: "#/components/schemas/ValidationErrorBody" },
               ],
@@ -323,7 +323,7 @@ describe("buildOpenApiDocument responses", () => {
       expect(result.warnings).toEqual([]);
     });
 
-    test("merges mixed canonical and inline duplicate response bodies with oneOf refs", () => {
+    test("merges mixed canonical and inline duplicate response bodies with anyOf refs", () => {
       const todoResponse = aCanonicalOkResponse({
         name: "TodoFound",
         description: "Todo found",
@@ -351,7 +351,7 @@ describe("buildOpenApiDocument responses", () => {
         content: {
           "application/json": {
             schema: {
-              oneOf: [
+              anyOf: [
                 { $ref: "#/components/schemas/TodoFoundBody" },
                 { $ref: "#/components/schemas/GetTodoValidationErrorBody" },
               ],

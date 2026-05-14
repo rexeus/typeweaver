@@ -1,5 +1,9 @@
-import type { NormalizedSpec } from "@rexeus/typeweaver-gen";
+import type {
+  NormalizedResponse,
+  NormalizedSpec,
+} from "@rexeus/typeweaver-gen";
 import { pascalCase } from "polycase";
+import { jsonPointer } from "./internal/jsonPointer.js";
 import { toOpenApiPath } from "./internal/openApiPath.js";
 import { buildRequestParameters } from "./internal/parameters.js";
 import {
@@ -13,6 +17,7 @@ import type {
   BuildOpenApiDocumentOptions,
   OpenApiBuildResult,
   OpenApiBuildWarning,
+  OpenApiDiagnosticWarning,
   OpenApiDocument,
   OpenApiHttpMethod,
   OpenApiOperationObject,
@@ -24,7 +29,9 @@ export function buildOpenApiDocument(
   normalizedSpec: NormalizedSpec,
   options: BuildOpenApiDocumentOptions
 ): OpenApiBuildResult {
-  const warnings: OpenApiBuildWarning[] = [];
+  const warnings: OpenApiBuildWarning[] = [
+    ...duplicateCanonicalResponseWarnings(normalizedSpec.responses),
+  ];
   const schemaRegistry = createSchemaRegistry();
   const canonicalResponses = buildComponentsResponses(
     normalizedSpec.responses,
@@ -177,4 +184,30 @@ function buildRequestBody(
     },
     warnings: registration.warnings,
   };
+}
+
+function duplicateCanonicalResponseWarnings(
+  responses: readonly NormalizedResponse[]
+): readonly OpenApiDiagnosticWarning[] {
+  const firstSeenAt = new Map<string, number>();
+  const warnings: OpenApiDiagnosticWarning[] = [];
+
+  responses.forEach((response, index) => {
+    const previousIndex = firstSeenAt.get(response.name);
+
+    if (previousIndex === undefined) {
+      firstSeenAt.set(response.name, index);
+      return;
+    }
+
+    warnings.push({
+      origin: "openapi-builder",
+      code: "duplicate-canonical-response",
+      message: `Canonical response '${response.name}' is defined more than once; the entry at index ${index} overrides the entry at index ${previousIndex}.`,
+      documentPath: jsonPointer(["components", "responses", response.name]),
+      location: { responseName: response.name, part: "components.responses" },
+    });
+  });
+
+  return warnings;
 }
