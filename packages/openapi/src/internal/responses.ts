@@ -418,11 +418,13 @@ function mergedMediaTypeSchema(
     registrations,
     registration => registration.schemaKey
   ).map(registration => registration.schema);
-  const [firstSchema, ...otherSchemas] = distinctSchemas;
+  const firstSchema = distinctSchemas[0];
 
   if (firstSchema === undefined) {
     return {};
   }
+
+  const otherSchemas = distinctSchemas.slice(1);
 
   return otherSchemas.length === 0 ? firstSchema : { anyOf: distinctSchemas };
 }

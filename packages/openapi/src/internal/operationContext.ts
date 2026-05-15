@@ -18,11 +18,18 @@ export function createOperationLocation(options: {
   readonly responseName?: string;
   readonly statusCode?: string;
 }): OpenApiWarningLocation {
+  const isComponentResponseLocation =
+    options.context.resourceName === "components.responses";
+
   return {
     resourceName: options.context.resourceName,
     operationId: options.context.operation.operationId,
-    method: options.context.operation.method,
-    path: options.context.operation.path,
+    ...(isComponentResponseLocation
+      ? {}
+      : {
+          method: options.context.operation.method,
+          path: options.context.operation.path,
+        }),
     openApiPath: options.context.openApiPath,
     part: options.part,
     parameterName: options.parameterName,

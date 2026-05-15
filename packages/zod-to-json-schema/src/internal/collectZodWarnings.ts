@@ -1,4 +1,9 @@
-import { getSchemaType, getZodDef, isZodSchema } from "./zodIntrospection.js";
+import {
+  getSchemaType,
+  getZodDef,
+  isZodSchema,
+  isZodTransparentWrapperType,
+} from "./zodIntrospection.js";
 import type {
   ZodToJsonSchemaWarning,
   ZodToJsonSchemaWarningCode,
@@ -32,6 +37,7 @@ const SUPPORTED_SCHEMA_TYPES: ReadonlySet<string> = new Set([
   "number",
   "object",
   "optional",
+  "prefault",
   "record",
   "string",
   "tuple",
@@ -227,14 +233,6 @@ function collectNestedWarnings(
       collectChild(def.keyType, collector, [...path, "propertyNames"]);
       collectChild(def.valueType, collector, [...path, "additionalProperties"]);
       return;
-    case "optional":
-    case "nullable":
-    case "default":
-    case "catch":
-    case "readonly":
-    case "nonoptional":
-      collectChild(def.innerType, collector, path);
-      return;
     case "lazy":
       collectLazyWarnings(def, collector, path);
       return;
@@ -253,6 +251,10 @@ function collectNestedWarnings(
     case "set":
       collectChild(def.valueType, collector, [...path, "items"]);
       return;
+  }
+
+  if (isZodTransparentWrapperType(schemaType)) {
+    collectChild(def.innerType, collector, path);
   }
 }
 

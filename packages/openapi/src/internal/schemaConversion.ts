@@ -6,6 +6,7 @@ import type {
 import { z } from "zod";
 import { appendJsonPointer, escapeJsonPointerSegment } from "./jsonPointer.js";
 import { normalizeOpenApiSchema } from "./openApiSchemaNormalization.js";
+import { getSchemaDefinition } from "./zodIntrospection.js";
 import type {
   OpenApiSchemaConversionWarning,
   OpenApiWarningLocation,
@@ -61,11 +62,109 @@ export function rebaseLocalJsonSchemaRefs(
 export function unwrapRootOptional(
   schema: z.core.$ZodType
 ): OptionalSchemaResult {
-  if (!isZodOptional(schema)) {
-    return { schema, isOptional: false };
+  return {
+    schema: unwrapRootSchema(schema),
+    isOptional: omittedInputResult(schema) !== "rejects",
+  };
+}
+
+function unwrapRootSchema(schema: z.core.$ZodType): z.core.$ZodType {
+  const visitedSchemas = new Set<z.core.$ZodType>();
+  let current = schema;
+
+  while (!visitedSchemas.has(current)) {
+    visitedSchemas.add(current);
+
+    const definition = getSchemaDefinition(current);
+    const schemaType = definition?.type;
+
+    if (schemaType === "nullable") {
+      return current;
+    }
+
+    if (
+      schemaType === "optional" ||
+      schemaType === "default" ||
+      schemaType === "catch" ||
+      schemaType === "prefault" ||
+      schemaType === "readonly" ||
+      schemaType === "nonoptional"
+    ) {
+      const innerType = definition?.innerType;
+
+      if (innerType === undefined) {
+        return current;
+      }
+
+      current = innerType;
+      continue;
+    }
+
+    return current;
   }
 
-  return { schema: schema.unwrap(), isOptional: true };
+  return current;
+}
+
+type OmittedInputResult = "rejects" | "accepts-defined" | "accepts-undefined";
+
+function omittedInputResult(schema: z.core.$ZodType): OmittedInputResult {
+  const visitedSchemas = new Set<z.core.$ZodType>();
+  let current = schema;
+
+  while (!visitedSchemas.has(current)) {
+    visitedSchemas.add(current);
+
+    const definition = getSchemaDefinition(current);
+    const schemaType = definition?.type;
+
+    if (schemaType === "optional") {
+      return "accepts-undefined";
+    }
+
+    if (schemaType === "default" || schemaType === "prefault") {
+      return "accepts-defined";
+    }
+
+    if (schemaType === "catch") {
+      const innerType = definition?.innerType;
+
+      if (innerType === undefined) {
+        return "accepts-defined";
+      }
+
+      const innerResult = omittedInputResult(innerType);
+
+      return innerResult === "rejects" ? "accepts-defined" : innerResult;
+    }
+
+    if (schemaType === "nonoptional") {
+      const innerType = definition?.innerType;
+
+      if (innerType === undefined) {
+        return "rejects";
+      }
+
+      return omittedInputResult(innerType) === "accepts-defined"
+        ? "accepts-defined"
+        : "rejects";
+    }
+
+    if (schemaType === "nullable" || schemaType === "readonly") {
+      const innerType = definition?.innerType;
+
+      if (innerType === undefined) {
+        return "rejects";
+      }
+
+      current = innerType;
+      continue;
+    }
+
+    return "rejects";
+  }
+
+  return "rejects";
 }
 
 export function getObjectProperties(
@@ -302,10 +401,4 @@ function getReferencedRootDefinitionName(
 
 function unescapeJsonPointerSegment(segment: string): string {
   return segment.replaceAll("~1", "/").replaceAll("~0", "~");
-}
-
-function isZodOptional(
-  schema: z.core.$ZodType
-): schema is z.ZodOptional<z.ZodType> {
-  return schema instanceof z.ZodOptional;
 }

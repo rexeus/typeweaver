@@ -69,6 +69,43 @@ describe("OpenApiPlugin", () => {
     ]);
   });
 
+  test("preserves server variables in configured OpenAPI servers", () => {
+    const context = anOpenApiGeneratorContextWith(anItemsSpec());
+
+    new OpenApiPlugin({
+      servers: [
+        {
+          url: "https://{environment}.example.com/{basePath}",
+          description: "Environment server",
+          variables: {
+            environment: {
+              default: "api",
+              enum: ["api", "staging"],
+              description: "Deployment environment",
+            },
+            basePath: { default: "v1" },
+          },
+        },
+      ],
+    }).generate(context);
+
+    const document = JSON.parse(context.writtenFiles[0]?.content ?? "{}");
+    expect(document.servers).toEqual([
+      {
+        url: "https://{environment}.example.com/{basePath}",
+        description: "Environment server",
+        variables: {
+          environment: {
+            default: "api",
+            enum: ["api", "staging"],
+            description: "Deployment environment",
+          },
+          basePath: { default: "v1" },
+        },
+      },
+    ]);
+  });
+
   test("warns without embedding builder warnings in the OpenAPI document", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const context = anOpenApiGeneratorContextWith(

@@ -1,5 +1,11 @@
 import type { NormalizedHttpBody } from "@rexeus/typeweaver-gen";
 import type { JsonSchema } from "@rexeus/typeweaver-zod-to-json-schema";
+import {
+  getSchemaDefinition,
+  getSchemaType,
+  isZodTransparentWrapperType,
+} from "./zodIntrospection.js";
+import type { ZodTransparentWrapperType } from "./zodIntrospection.js";
 import type { z } from "zod";
 
 export type OpenApiBodySchemaResolution<TWarning> = {
@@ -12,6 +18,16 @@ const OPEN_API_BINARY_SCHEMA = {
   type: "string",
   format: "binary",
 } satisfies JsonSchema;
+const RAW_BODY_TRANSPARENT_WRAPPER_TYPES: ReadonlySet<ZodTransparentWrapperType> =
+  new Set([
+    "optional",
+    "nullable",
+    "default",
+    "catch",
+    "prefault",
+    "readonly",
+    "nonoptional",
+  ]);
 
 export function resolveOpenApiBodySchema<TWarning>(
   body: NormalizedHttpBody,
@@ -39,32 +55,47 @@ function mediaTypeEssence(mediaType: string): string {
   return mediaType.split(";")[0]?.trim().toLowerCase() ?? "";
 }
 
-function isAmbiguousRawSchema(schema: z.ZodType): boolean {
+function isAmbiguousRawSchema(schema: z.core.$ZodType): boolean {
   const schemaType = getSchemaType(unwrapTransparentSchema(schema));
 
   return schemaType === "any" || schemaType === "unknown";
 }
 
-function unwrapTransparentSchema(schema: z.ZodType): z.ZodType {
-  const visitedSchemas = new Set<z.ZodType>();
-  let current = schema;
+function unwrapTransparentSchema(
+  schema: z.core.$ZodType
+): z.core.$ZodType | undefined {
+  const visitedSchemas = new Set<z.core.$ZodType>();
+  let current: z.core.$ZodType | undefined = schema;
 
-  while (!visitedSchemas.has(current)) {
+  while (current !== undefined && !visitedSchemas.has(current)) {
     visitedSchemas.add(current);
 
     const definition = getSchemaDefinition(current);
-    const innerType = definition?.innerType;
+    const schemaType = definition?.type;
 
     if (
-      innerType !== undefined &&
-      (definition?.type === "optional" ||
-        definition?.type === "nullable" ||
-        definition?.type === "default" ||
-        definition?.type === "catch" ||
-        definition?.type === "prefault" ||
-        definition?.type === "readonly")
+      isZodTransparentWrapperType(
+        schemaType,
+        RAW_BODY_TRANSPARENT_WRAPPER_TYPES
+      )
     ) {
-      current = innerType;
+      current = definition?.innerType;
+      continue;
+    }
+
+    if (schemaType === "pipe") {
+      const outputType = getSchemaType(definition?.out);
+
+      if (outputType === undefined || outputType === "transform") {
+        return undefined;
+      }
+
+      current = definition?.out;
+      continue;
+    }
+
+    if (schemaType === "effects") {
+      current = definition?.schema;
       continue;
     }
 
@@ -72,30 +103,4 @@ function unwrapTransparentSchema(schema: z.ZodType): z.ZodType {
   }
 
   return current;
-}
-
-function getSchemaType(schema: z.ZodType | undefined): string | undefined {
-  return getSchemaDefinition(schema)?.type;
-}
-
-function getSchemaDefinition(schema: z.ZodType | undefined):
-  | {
-      readonly type?: string;
-      readonly innerType?: z.ZodType;
-    }
-  | undefined {
-  const schemaWithDefinition = schema as
-    | {
-        readonly def?: {
-          readonly type?: string;
-          readonly innerType?: z.ZodType;
-        };
-        readonly _def?: {
-          readonly type?: string;
-          readonly innerType?: z.ZodType;
-        };
-      }
-    | undefined;
-
-  return schemaWithDefinition?.def ?? schemaWithDefinition?._def;
 }

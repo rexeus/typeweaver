@@ -82,6 +82,41 @@ describe("buildOpenApiDocument", () => {
     expect(result.warnings).toEqual([]);
   });
 
+  test("maps embedded digit-prefixed path parameters in path order", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          operationId: "downloadFile",
+          path: "/files/:123id.:format",
+          request: {
+            param: z.object({ "123id": z.string(), format: z.string() }),
+          },
+          responses: [anInlineResponseUsage(aResponseWith())],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+    expect(
+      result.document.paths["/files/{123id}.{format}"]?.get?.parameters
+    ).toEqual([
+      {
+        name: "123id",
+        in: "path",
+        required: true,
+        schema: { type: "string" },
+      },
+      {
+        name: "format",
+        in: "path",
+        required: true,
+        schema: { type: "string" },
+      },
+    ]);
+    expect(result.warnings).toEqual([]);
+  });
+
   test("maps required request body schemas", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
@@ -281,6 +316,30 @@ describe("buildOpenApiDocument", () => {
       },
       {
         name: "commentId",
+        in: "path",
+        required: true,
+        schema: { type: "string" },
+      },
+    ]);
+    expect(result.warnings).toEqual([]);
+  });
+
+  test("maps Typeweaver path parameters that start with digits", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          path: "/todos/:123id",
+          request: { param: z.object({ "123id": z.string() }) },
+          responses: [anInlineResponseUsage(aResponseWith())],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+    expect(result.document.paths["/todos/{123id}"]?.get?.parameters).toEqual([
+      {
+        name: "123id",
         in: "path",
         required: true,
         schema: { type: "string" },
@@ -511,6 +570,251 @@ describe("buildOpenApiDocument", () => {
     ]);
   });
 
+  test.each([
+    {
+      scenario: "default",
+      body: z.string().default("fallback"),
+    },
+    {
+      scenario: "prefault",
+      body: z.string().prefault("fallback"),
+    },
+    {
+      scenario: "catch",
+      body: z.string().catch("fallback"),
+    },
+  ])(
+    "maps $scenario request body fallbacks to non-required inner schemas",
+    ({ body }) => {
+      const normalizedSpec = aTodoSpecWith({
+        operations: [
+          anOperationWith({
+            operationId: "createTodo",
+            method: "POST" as NormalizedOperation["method"],
+            request: { body },
+            responses: [anInlineResponseUsage(aResponseWith())],
+          }),
+        ],
+      });
+
+      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+      expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
+        required: false,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/CreateTodoRequestBody" },
+          },
+        },
+      });
+      expect(result.document.components?.schemas).toEqual({
+        CreateTodoRequestBody: { type: "string" },
+      });
+      expect(result.warnings).toEqual([]);
+    }
+  );
+
+  test("maps readonly default request bodies to non-required inner schemas", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          operationId: "createTodo",
+          method: "POST" as NormalizedOperation["method"],
+          request: { body: z.string().default("fallback").readonly() },
+          responses: [anInlineResponseUsage(aResponseWith())],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+    expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
+      required: false,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/CreateTodoRequestBody" },
+        },
+      },
+    });
+    expect(result.document.components?.schemas).toEqual({
+      CreateTodoRequestBody: { type: "string" },
+    });
+    expect(result.warnings).toEqual([]);
+  });
+
+  test("maps nonoptional default request bodies to non-required inner schemas", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          operationId: "createTodo",
+          method: "POST" as NormalizedOperation["method"],
+          request: { body: z.string().default("fallback").nonoptional() },
+          responses: [anInlineResponseUsage(aResponseWith())],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+    expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
+      required: false,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/CreateTodoRequestBody" },
+        },
+      },
+    });
+    expect(result.document.components?.schemas).toEqual({
+      CreateTodoRequestBody: { type: "string" },
+    });
+    expect(result.warnings).toEqual([]);
+  });
+
+  test("maps nullable optional request bodies to non-required nullable schemas", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          operationId: "createTodo",
+          method: "POST" as NormalizedOperation["method"],
+          request: { body: z.string().optional().nullable() },
+          responses: [anInlineResponseUsage(aResponseWith())],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+    expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
+      required: false,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/CreateTodoRequestBody" },
+        },
+      },
+    });
+    expect(result.document.components?.schemas).toEqual({
+      CreateTodoRequestBody: {
+        anyOf: [{ type: "string" }, { type: "null" }],
+      },
+    });
+    expect(result.warnings).toEqual([]);
+  });
+
+  test("keeps nullable request bodies required", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          operationId: "createTodo",
+          method: "POST" as NormalizedOperation["method"],
+          request: { body: z.string().nullable() },
+          responses: [anInlineResponseUsage(aResponseWith())],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+    expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
+      required: true,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/CreateTodoRequestBody" },
+        },
+      },
+    });
+    expect(result.document.components?.schemas).toEqual({
+      CreateTodoRequestBody: {
+        anyOf: [{ type: "string" }, { type: "null" }],
+      },
+    });
+    expect(result.warnings).toEqual([]);
+  });
+
+  test("keeps plain nonoptional request bodies required", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          operationId: "createTodo",
+          method: "POST" as NormalizedOperation["method"],
+          request: { body: z.string().nonoptional() },
+          responses: [anInlineResponseUsage(aResponseWith())],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+    expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
+      required: true,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/CreateTodoRequestBody" },
+        },
+      },
+    });
+    expect(result.document.components?.schemas).toEqual({
+      CreateTodoRequestBody: { type: "string" },
+    });
+    expect(result.warnings).toEqual([]);
+  });
+
+  test("marks query parameters from default containers as not required", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          request: {
+            query: aQuerySchemaForBuilder(
+              z.object({ search: z.string() }).default({ search: "all" })
+            ),
+          },
+          responses: [anInlineResponseUsage(aResponseWith())],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+    expect(result.document.paths["/todos"]?.get?.parameters).toEqual([
+      {
+        name: "search",
+        in: "query",
+        required: false,
+        schema: { type: "string" },
+      },
+    ]);
+    expect(result.warnings).toEqual([]);
+  });
+
+  test("marks request headers from nonoptional prefault containers as not required", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          request: {
+            header: aRequestHeaderSchemaForBuilder(
+              z
+                .object({ "x-trace-id": z.string() })
+                .prefault({ "x-trace-id": "trace" })
+                .nonoptional()
+            ),
+          },
+          responses: [anInlineResponseUsage(aResponseWith())],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+    expect(result.document.paths["/todos"]?.get?.parameters).toEqual([
+      {
+        name: "x-trace-id",
+        in: "header",
+        required: false,
+        schema: { type: "string" },
+      },
+    ]);
+    expect(result.warnings).toEqual([]);
+  });
+
   test("rebases schema conversion warnings to the OpenAPI request body path", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
@@ -581,6 +885,62 @@ describe("buildOpenApiDocument", () => {
           openApiPath: "/todos",
           part: "request.query",
           parameterName: "identifier",
+        },
+      },
+    ]);
+  });
+
+  test("keeps root query container warnings at the parameter list boundary", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          request: {
+            query: aQuerySchemaForBuilder(z.custom<Record<string, string>>()),
+          },
+          responses: [anInlineResponseUsage(aResponseWith())],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+    expect(result.warnings).toEqual([
+      {
+        origin: "schema-conversion",
+        code: "unsupported-schema",
+        message:
+          "Zod custom falls back to a broader JSON Schema representation.",
+        schemaType: "custom",
+        schemaPath: "",
+        documentPath: "/paths/~1todos/get/parameters",
+        location: {
+          resourceName: "Todos",
+          operationId: "getTodo",
+          method: "GET",
+          path: "/todos",
+          openApiPath: "/todos",
+          part: "request.query",
+          parameterName: undefined,
+          responseName: undefined,
+          statusCode: undefined,
+        },
+      },
+      {
+        origin: "openapi-builder",
+        code: "unrepresentable-parameter-container",
+        message:
+          "request.query must be a finite object schema to become OpenAPI parameters.",
+        documentPath: "/paths/~1todos/get/parameters",
+        location: {
+          resourceName: "Todos",
+          operationId: "getTodo",
+          method: "GET",
+          path: "/todos",
+          openApiPath: "/todos",
+          part: "request.query",
+          parameterName: undefined,
+          responseName: undefined,
+          statusCode: undefined,
         },
       },
     ]);
@@ -718,4 +1078,12 @@ function aTextBody(schema: z.ZodType, mediaType: string): NormalizedHttpBody {
     mediaTypeSource: "content-type-header",
     transport: "text",
   };
+}
+
+function aRequestHeaderSchemaForBuilder(
+  schema: z.core.$ZodType
+): NonNullable<NormalizedOperation["request"]>["header"] {
+  return schema as unknown as NonNullable<
+    NormalizedOperation["request"]
+  >["header"];
 }

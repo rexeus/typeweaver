@@ -12,7 +12,7 @@ export function getPathParameterNames(path: string): readonly string[] {
   );
 }
 
-const pathParameterPattern = /:([A-Za-z_][A-Za-z0-9_]*)/g;
+const pathParameterPattern = /:([A-Za-z0-9_]+)/g;
 
 function normalizePathSegments(path: string): readonly string[] {
   return path.split("/").filter(segment => segment.length > 0);

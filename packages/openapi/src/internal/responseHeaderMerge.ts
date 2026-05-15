@@ -2,7 +2,10 @@ import type {
   NormalizedResponse,
   NormalizedResponseUsage,
 } from "@rexeus/typeweaver-gen";
-import type { JsonSchema } from "@rexeus/typeweaver-zod-to-json-schema";
+import type {
+  JsonSchema,
+  JsonSchemaValue,
+} from "@rexeus/typeweaver-zod-to-json-schema";
 import { buildHeaderObjects } from "./headerObjects.js";
 import { escapeJsonPointerSegment } from "./jsonPointer.js";
 import {
@@ -209,7 +212,7 @@ function headerAppearancesFor(
         responseName: variant.responseName,
         header: headerEntry.header,
         warnings,
-        schemaKey: JSON.stringify(headerEntry.header.schema),
+        schemaKey: stableStringifyJsonSchema(headerEntry.header.schema),
       };
     });
   });
@@ -306,22 +309,19 @@ function headerSchemaPointer(responsePointer: string, name: string): string {
 function mergedHeaderDescription(
   appearances: readonly HeaderAppearance[]
 ): string | undefined {
-  const firstDescription = appearances[0]?.header.description;
   const describedAppearances = appearances.filter(
     appearance => appearance.header.description !== undefined
   );
+  const distinctDescriptions = new Set(
+    describedAppearances.map(appearance => appearance.header.description)
+  );
 
-  if (
-    firstDescription !== undefined &&
-    appearances.every(
-      appearance => appearance.header.description === firstDescription
-    )
-  ) {
-    return firstDescription;
+  if (distinctDescriptions.size === 0) {
+    return undefined;
   }
 
-  if (describedAppearances.length === 0) {
-    return undefined;
+  if (distinctDescriptions.size === 1) {
+    return describedAppearances[0]?.header.description;
   }
 
   return [
@@ -331,4 +331,28 @@ function mergedHeaderDescription(
         `- ${appearance.responseName}: ${appearance.header.description ?? ""}`
     ),
   ].join("\n");
+}
+
+function stableStringifyJsonSchema(schema: JsonSchema): string {
+  return JSON.stringify(canonicalizeJsonSchemaValue(schema));
+}
+
+function canonicalizeJsonSchemaValue(value: JsonSchemaValue): JsonSchemaValue {
+  if (Array.isArray(value)) {
+    return value.map(canonicalizeJsonSchemaValue);
+  }
+
+  if (!isJsonSchemaObject(value)) {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+      .map(([key, child]) => [key, canonicalizeJsonSchemaValue(child)])
+  ) as JsonSchema;
+}
+
+function isJsonSchemaObject(value: JsonSchemaValue): value is JsonSchema {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

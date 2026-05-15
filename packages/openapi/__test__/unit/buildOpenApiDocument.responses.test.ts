@@ -189,6 +189,193 @@ describe("buildOpenApiDocument responses", () => {
       expect(result.warnings).toEqual([]);
     });
 
+    test("emits a binary octet-stream schema for raw pipes with broad outputs", () => {
+      const normalizedSpec = aTodoSpecWith({
+        operations: [
+          anOperationWith({
+            operationId: "downloadFile",
+            responses: [
+              anInlineOkResponse({
+                description: "File downloaded",
+                body: anOctetStreamBody(z.string().pipe(z.any())),
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+      expect(result.document.paths["/todos"]?.get?.responses).toEqual({
+        "200": {
+          description: "File downloaded",
+          content: {
+            "application/octet-stream": {
+              schema: { type: "string", format: "binary" },
+            },
+          },
+        },
+      });
+      expect(result.document.components).toBeUndefined();
+      expect(result.warnings).toEqual([]);
+    });
+
+    test("registers concrete raw pipe outputs for octet-stream responses", () => {
+      const normalizedSpec = aTodoSpecWith({
+        operations: [
+          anOperationWith({
+            operationId: "downloadFile",
+            responses: [
+              anInlineOkResponse({
+                description: "File downloaded",
+                body: anOctetStreamBody(z.any().pipe(z.string())),
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+      expect(result.document.paths["/todos"]?.get?.responses).toEqual({
+        "200": {
+          description: "File downloaded",
+          content: {
+            "application/octet-stream": {
+              schema: {
+                $ref: "#/components/schemas/DownloadFileOkResponseBody",
+              },
+            },
+          },
+        },
+      });
+      expect(result.document.components?.schemas).toEqual({
+        DownloadFileOkResponseBody: { type: "string" },
+      });
+      expect(result.warnings).toEqual([
+        {
+          origin: "schema-conversion",
+          code: "unsupported-schema",
+          message:
+            "Zod pipe falls back to a broader JSON Schema representation.",
+          schemaType: "pipe",
+          schemaPath: "",
+          documentPath: "/components/schemas/DownloadFileOkResponseBody",
+          location: {
+            resourceName: "Todos",
+            operationId: "downloadFile",
+            method: "GET",
+            path: "/todos",
+            openApiPath: "/todos",
+            parameterName: undefined,
+            part: "response.body",
+            responseName: "OkResponse",
+            statusCode: "200",
+          },
+        },
+      ]);
+    });
+
+    test("registers transform raw pipe outputs without binary fallback", () => {
+      const normalizedSpec = aTodoSpecWith({
+        operations: [
+          anOperationWith({
+            operationId: "downloadFile",
+            responses: [
+              anInlineOkResponse({
+                description: "File downloaded",
+                body: anOctetStreamBody(
+                  z.any().pipe(z.string().transform(value => value.length))
+                ),
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+      expect(result.document.paths["/todos"]?.get?.responses).toEqual({
+        "200": {
+          description: "File downloaded",
+          content: {
+            "application/octet-stream": {
+              schema: {
+                $ref: "#/components/schemas/DownloadFileOkResponseBody",
+              },
+            },
+          },
+        },
+      });
+      expect(result.document.components?.schemas).toEqual({
+        DownloadFileOkResponseBody: {},
+      });
+      expect(result.warnings).toEqual([
+        {
+          origin: "schema-conversion",
+          code: "unsupported-schema",
+          message:
+            "Zod pipe falls back to a broader JSON Schema representation.",
+          schemaType: "pipe",
+          schemaPath: "",
+          documentPath: "/components/schemas/DownloadFileOkResponseBody",
+          location: {
+            resourceName: "Todos",
+            operationId: "downloadFile",
+            method: "GET",
+            path: "/todos",
+            openApiPath: "/todos",
+            parameterName: undefined,
+            part: "response.body",
+            responseName: "OkResponse",
+            statusCode: "200",
+          },
+        },
+        {
+          origin: "schema-conversion",
+          code: "unsupported-schema",
+          message:
+            "Zod pipe falls back to a broader JSON Schema representation.",
+          schemaType: "pipe",
+          schemaPath: "/x-typeweaver/pipeOut",
+          documentPath:
+            "/components/schemas/DownloadFileOkResponseBody/x-typeweaver/pipeOut",
+          location: {
+            resourceName: "Todos",
+            operationId: "downloadFile",
+            method: "GET",
+            path: "/todos",
+            openApiPath: "/todos",
+            parameterName: undefined,
+            part: "response.body",
+            responseName: "OkResponse",
+            statusCode: "200",
+          },
+        },
+        {
+          origin: "schema-conversion",
+          code: "unsupported-schema",
+          message:
+            "Zod transform falls back to a broader JSON Schema representation.",
+          schemaType: "transform",
+          schemaPath: "/x-typeweaver/pipeOut/x-typeweaver/pipeOut",
+          documentPath:
+            "/components/schemas/DownloadFileOkResponseBody/x-typeweaver/pipeOut/x-typeweaver/pipeOut",
+          location: {
+            resourceName: "Todos",
+            operationId: "downloadFile",
+            method: "GET",
+            path: "/todos",
+            openApiPath: "/todos",
+            parameterName: undefined,
+            part: "response.body",
+            responseName: "OkResponse",
+            statusCode: "200",
+          },
+        },
+      ]);
+    });
+
     test("maps required and optional inline response headers", () => {
       const normalizedSpec = aTodoSpecWith({
         operations: [
@@ -212,6 +399,36 @@ describe("buildOpenApiDocument responses", () => {
           description: "OK",
           headers: {
             etag: { required: true, schema: { type: "string" } },
+            "x-cache": { required: false, schema: { type: "string" } },
+          },
+        },
+      });
+      expect(result.warnings).toEqual([]);
+    });
+
+    test("marks response headers from catch containers as not required", () => {
+      const normalizedSpec = aTodoSpecWith({
+        operations: [
+          anOperationWith({
+            responses: [
+              anInlineOkResponse({
+                header: aHeaderSchemaForBuilder(
+                  z
+                    .object({ "x-cache": z.string() })
+                    .catch({ "x-cache": "miss" })
+                ),
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+      expect(result.document.paths["/todos"]?.get?.responses).toEqual({
+        "200": {
+          description: "OK",
+          headers: {
             "x-cache": { required: false, schema: { type: "string" } },
           },
         },
@@ -997,6 +1214,75 @@ describe("buildOpenApiDocument responses", () => {
       expect(result.warnings).toEqual([]);
     });
 
+    test("keeps a single merged header description direct when other variants omit it", () => {
+      const normalizedSpec = aTodoSpecWith({
+        operations: [
+          anOperationWithDuplicateOkResponses([
+            anInlineOkResponse({
+              name: "DescribedHeader",
+              header: z.object({
+                "x-correlation-id": z
+                  .string()
+                  .describe("Correlation ID for the response."),
+              }),
+            }),
+            anInlineOkResponse({
+              name: "UndescribedHeader",
+              header: z.object({ "x-correlation-id": z.string() }),
+            }),
+          ]),
+        ],
+      });
+
+      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+      expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
+        description: "DescribedHeader: OK\n\nUndescribedHeader: OK",
+        headers: {
+          "x-correlation-id": {
+            description: "Correlation ID for the response.",
+            required: true,
+            schema: { type: "string" },
+          },
+        },
+      });
+      expect(result.warnings).toEqual([]);
+    });
+
+    test("does not create anyOf for matching header schemas with different keyword order", () => {
+      const normalizedSpec = aTodoSpecWith({
+        operations: [
+          anOperationWithDuplicateOkResponses([
+            anInlineOkResponse({
+              name: "MinimumFirst",
+              header: aHeaderSchemaForBuilder(
+                z.object({ "x-limit": z.number().min(1).max(10) })
+              ),
+            }),
+            anInlineOkResponse({
+              name: "MaximumFirst",
+              header: aHeaderSchemaForBuilder(
+                z.object({ "x-limit": z.number().max(10).min(1) })
+              ),
+            }),
+          ]),
+        ],
+      });
+
+      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+      expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
+        description: "MinimumFirst: OK\n\nMaximumFirst: OK",
+        headers: {
+          "x-limit": {
+            required: true,
+            schema: { type: "number", minimum: 1, maximum: 10 },
+          },
+        },
+      });
+      expect(result.warnings).toEqual([]);
+    });
+
     test("marks a merged header optional when any variant emits it as optional", () => {
       const normalizedSpec = aTodoSpecWith({
         operations: [
@@ -1069,6 +1355,53 @@ describe("buildOpenApiDocument responses", () => {
       expect(result.warnings).toEqual([]);
     });
 
+    test("combines only described merged header variants with bullets", () => {
+      const normalizedSpec = aTodoSpecWith({
+        operations: [
+          anOperationWithDuplicateOkResponses([
+            anInlineOkResponse({
+              name: "OkResponse",
+              header: z.object({
+                "x-correlation-id": z
+                  .string()
+                  .describe("Correlation ID for successful responses."),
+              }),
+            }),
+            anInlineOkResponse({
+              name: "UndescribedResponse",
+              header: z.object({ "x-correlation-id": z.string() }),
+            }),
+            anInlineOkResponse({
+              name: "ValidationError",
+              header: z.object({
+                "x-correlation-id": z
+                  .string()
+                  .describe("Correlation ID for validation failures."),
+              }),
+            }),
+          ]),
+        ],
+      });
+
+      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+      expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
+        description:
+          "OkResponse: OK\n\nUndescribedResponse: OK\n\nValidationError: OK",
+        headers: {
+          "x-correlation-id": {
+            description:
+              "Header description merged from response variants:\n" +
+              "- OkResponse: Correlation ID for successful responses.\n" +
+              "- ValidationError: Correlation ID for validation failures.",
+            required: true,
+            schema: { type: "string" },
+          },
+        },
+      });
+      expect(result.warnings).toEqual([]);
+    });
+
     test("omits merged header descriptions when no variant describes the header", () => {
       const normalizedSpec = aTodoSpecWith({
         operations: [
@@ -1123,10 +1456,42 @@ describe("buildOpenApiDocument responses", () => {
           location: {
             resourceName: "components.responses",
             operationId: "WarningResponse",
-            method: "components",
-            path: "#/components/responses",
             openApiPath: "#/components/responses",
             part: "response.body",
+            responseName: "WarningResponse",
+            statusCode: "200",
+          },
+        },
+      ]);
+    });
+
+    test("rebases component response header warnings without operation path fields", () => {
+      const warningResponse = aCanonicalOkResponse({
+        name: "WarningResponse",
+        header: z.object({
+          "x-warning": z.string().refine(value => value.startsWith("ok")),
+        }),
+      });
+      const normalizedSpec = aTodoSpecWith({ responses: [warningResponse] });
+
+      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+      expect(result.warnings).toEqual([
+        {
+          origin: "schema-conversion",
+          code: "unsupported-check",
+          message:
+            "Zod string check custom cannot be represented exactly in JSON Schema.",
+          schemaType: "string",
+          schemaPath: "/properties/x-warning",
+          documentPath:
+            "/components/responses/WarningResponse/headers/x-warning/schema",
+          location: {
+            resourceName: "components.responses",
+            operationId: "WarningResponse",
+            openApiPath: "#/components/responses",
+            part: "response.header",
+            parameterName: "x-warning",
             responseName: "WarningResponse",
             statusCode: "200",
           },

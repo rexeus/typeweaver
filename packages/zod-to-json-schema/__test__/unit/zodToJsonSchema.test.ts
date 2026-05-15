@@ -227,6 +227,15 @@ describe("fromZod", () => {
     });
   });
 
+  test("converts prefault schemas without warnings", () => {
+    const result = fromZod(z.string().prefault("fallback"));
+
+    expect(result).toEqual({
+      schema: { type: "string" },
+      warnings: [],
+    });
+  });
+
   test("normalizes root tuples to fixed-length array schemas", () => {
     const result = fromZod(z.tuple([z.string(), z.number()]));
 
@@ -409,6 +418,30 @@ describe("fromZod", () => {
           schemaType: "string",
           message:
             "Zod string check custom cannot be represented exactly in JSON Schema.",
+        },
+      ],
+    });
+  });
+
+  test("preserves nested warnings through prefault schemas", () => {
+    const result = fromZod(
+      z.object({ value: z.custom<string>().prefault("fallback") })
+    );
+
+    expect(result).toEqual({
+      schema: {
+        type: "object",
+        properties: { value: {} },
+        required: ["value"],
+        additionalProperties: false,
+      },
+      warnings: [
+        {
+          code: "unsupported-schema",
+          path: "/properties/value",
+          schemaType: "custom",
+          message:
+            "Zod custom falls back to a broader JSON Schema representation.",
         },
       ],
     });

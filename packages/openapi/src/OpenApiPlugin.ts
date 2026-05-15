@@ -2,7 +2,11 @@ import path from "node:path";
 import { BasePlugin } from "@rexeus/typeweaver-gen";
 import type { GeneratorContext } from "@rexeus/typeweaver-gen";
 import { buildOpenApiDocument } from "./buildOpenApiDocument.js";
-import type { OpenApiInfoObject, OpenApiServerObject } from "./types.js";
+import type {
+  OpenApiBuildWarning,
+  OpenApiInfoObject,
+  OpenApiServerObject,
+} from "./types.js";
 
 const DEFAULT_INFO: OpenApiInfoObject = {
   title: "Typeweaver API",
@@ -94,11 +98,11 @@ function normalizeServers(
   }
 
   return servers.map((server, index) => {
-    if (!isPlainObject(server) || typeof server.url !== "string") {
+    if (!isOpenApiServerObject(server)) {
       throwConfigError(`servers[${index}].url must be a string`);
     }
 
-    return { ...server, url: server.url };
+    return { ...server };
   });
 }
 
@@ -138,17 +142,15 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isOpenApiServerObject(value: unknown): value is OpenApiServerObject {
+  return isPlainObject(value) && typeof value.url === "string";
+}
+
 function throwConfigError(message: string): never {
   throw new Error(`OpenApiPlugin config error: ${message}`);
 }
 
-function formatWarnings(
-  warnings: readonly {
-    readonly code: string;
-    readonly message: string;
-    readonly documentPath: string;
-  }[]
-): string {
+function formatWarnings(warnings: readonly OpenApiBuildWarning[]): string {
   const warningLines = warnings.map(
     warning => `- ${warning.code}: ${warning.message} (${warning.documentPath})`
   );

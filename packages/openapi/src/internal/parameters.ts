@@ -195,7 +195,12 @@ function rebaseParameterSchemaWarnings(options: {
     }
 
     const parameterName = options.parameterNames[parameterIndex];
-    const schemaPath = `/properties/${escapeJsonPointerSegment(parameterName ?? "")}`;
+
+    if (parameterName === undefined) {
+      return warning;
+    }
+
+    const schemaPath = `/properties/${escapeJsonPointerSegment(parameterName)}`;
     const suffix = warning.schemaPath.slice(schemaPath.length);
     const documentPath = `${jsonPointer([
       "paths",
