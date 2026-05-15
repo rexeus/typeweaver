@@ -238,7 +238,443 @@ describe("normalizeSpec", () => {
       expect(operation.request?.header).toBe(header);
       expect(operation.request?.param).toBe(param);
       expect(operation.request?.query).toBe(query);
-      expect(operation.request?.body).toBe(body);
+      expect(operation.request?.body?.schema).toBe(body);
+    });
+
+    test("uses an explicit request Content-Type literal as the body media type", () => {
+      const header = z.object({ "Content-Type": z.literal("text/csv") });
+      const body = z.string();
+      const spec = aSpec({
+        todos: {
+          operations: [anOperation({ request: { header, body } })],
+        },
+      });
+
+      const normalizedSpec = normalizeSpec(spec);
+      const operation = theOnlyOperationIn(normalizedSpec);
+
+      expect(operation.request?.body).toEqual({
+        schema: body,
+        mediaType: "text/csv",
+        mediaTypeSource: "content-type-header",
+        transport: "text",
+      });
+      expect(normalizedSpec.warnings).toEqual([]);
+    });
+
+    test("uses an explicit response Content-Type literal as the body media type", () => {
+      const header = z.object({ "Content-Type": z.literal("application/xml") });
+      const body = z.string();
+      const response = aCanonicalResponse("XmlResponse", { header, body });
+      const spec = aSpec({
+        todos: { operations: [anOperation({ responses: [response] })] },
+      });
+
+      const normalizedSpec = normalizeSpec(spec);
+
+      expect(normalizedSpec.responses[0]?.body).toEqual({
+        schema: body,
+        mediaType: "application/xml",
+        mediaTypeSource: "content-type-header",
+        transport: "raw",
+      });
+      expect(normalizedSpec.warnings).toEqual([]);
+    });
+
+    test("infers JSON transport for object bodies without Content-Type", () => {
+      const body = z.object({ title: z.string() });
+      const spec = aSpec({
+        todos: {
+          operations: [anOperation({ request: { body } })],
+        },
+      });
+
+      const normalizedSpec = normalizeSpec(spec);
+      const operation = theOnlyOperationIn(normalizedSpec);
+
+      expect(operation.request?.body).toEqual({
+        schema: body,
+        mediaType: "application/json",
+        mediaTypeSource: "body-schema",
+        transport: "json",
+      });
+      expect(normalizedSpec.warnings).toEqual([
+        expect.objectContaining({
+          code: "missing-content-type-header",
+          location: {
+            resourceName: "todos",
+            operationId: "getTodo",
+            part: "request.body",
+          },
+        }),
+      ]);
+    });
+
+    test("infers text transport for string bodies without Content-Type", () => {
+      const body = z.string();
+      const spec = aSpec({
+        todos: {
+          operations: [anOperation({ request: { body } })],
+        },
+      });
+
+      const normalizedSpec = normalizeSpec(spec);
+      const operation = theOnlyOperationIn(normalizedSpec);
+
+      expect(operation.request?.body).toEqual({
+        schema: body,
+        mediaType: "text/plain",
+        mediaTypeSource: "body-schema",
+        transport: "text",
+      });
+      expect(normalizedSpec.warnings).toEqual([
+        expect.objectContaining({ code: "missing-content-type-header" }),
+      ]);
+    });
+
+    test.each([
+      { scenario: "string literal", body: z.literal("ok") },
+      { scenario: "string enum", body: z.enum(["ok", "created"]) },
+    ])("infers text transport for $scenario bodies", ({ body }) => {
+      const spec = aSpec({
+        todos: {
+          operations: [anOperation({ request: { body } })],
+        },
+      });
+
+      const normalizedSpec = normalizeSpec(spec);
+      const operation = theOnlyOperationIn(normalizedSpec);
+
+      expect(operation.request?.body).toEqual({
+        schema: body,
+        mediaType: "text/plain",
+        mediaTypeSource: "body-schema",
+        transport: "text",
+      });
+      expect(normalizedSpec.warnings).toEqual([
+        expect.objectContaining({ code: "missing-content-type-header" }),
+      ]);
+    });
+
+    test.each([
+      { scenario: "number literal", body: z.literal(1) },
+      { scenario: "boolean literal", body: z.literal(true) },
+    ])("keeps $scenario bodies as JSON", ({ body }) => {
+      const spec = aSpec({
+        todos: {
+          operations: [anOperation({ request: { body } })],
+        },
+      });
+
+      const normalizedSpec = normalizeSpec(spec);
+      const operation = theOnlyOperationIn(normalizedSpec);
+
+      expect(operation.request?.body).toEqual({
+        schema: body,
+        mediaType: "application/json",
+        mediaTypeSource: "body-schema",
+        transport: "json",
+      });
+    });
+
+    test.each([
+      { scenario: "any", body: z.any() },
+      { scenario: "unknown", body: z.unknown() },
+    ])(
+      "falls back to raw transport for $scenario bodies without Content-Type",
+      ({ body }) => {
+        const spec = aSpec({
+          todos: {
+            operations: [anOperation({ request: { body } })],
+          },
+        });
+
+        const normalizedSpec = normalizeSpec(spec);
+        const operation = theOnlyOperationIn(normalizedSpec);
+
+        expect(operation.request?.body).toEqual({
+          schema: body,
+          mediaType: "application/octet-stream",
+          mediaTypeSource: "raw-fallback",
+          transport: "raw",
+        });
+        expect(normalizedSpec.warnings.map(warning => warning.code)).toEqual([
+          "missing-content-type-header",
+          "raw-body-media-type-fallback",
+        ]);
+      }
+    );
+
+    test("preserves custom explicit media types with raw transport", () => {
+      const body = z.object({ event: z.string() });
+      const spec = aSpec({
+        todos: {
+          operations: [
+            anOperation({
+              request: {
+                header: z.object({
+                  "content-type": z.literal("application/vnd.todo+custom"),
+                }),
+                body,
+              },
+            }),
+          ],
+        },
+      });
+
+      const normalizedSpec = normalizeSpec(spec);
+      const operation = theOnlyOperationIn(normalizedSpec);
+
+      expect(operation.request?.body).toEqual({
+        schema: body,
+        mediaType: "application/vnd.todo+custom",
+        mediaTypeSource: "content-type-header",
+        transport: "raw",
+      });
+      expect(normalizedSpec.warnings).toEqual([]);
+    });
+
+    test("does not mutate authored header schemas when Content-Type is inferred", () => {
+      const header = z.object({ authorization: z.string() });
+      const spec = aSpec({
+        todos: {
+          operations: [
+            anOperation({
+              request: { header, body: z.object({ title: z.string() }) },
+            }),
+          ],
+        },
+      });
+
+      const normalizedSpec = normalizeSpec(spec);
+      const operation = theOnlyOperationIn(normalizedSpec);
+
+      expect(operation.request?.header).toBe(header);
+      expect(Object.keys(header.shape)).toEqual(["authorization"]);
+      expect(operation.request?.body?.mediaType).toBe("application/json");
+    });
+
+    test("finds Content-Type headers case-insensitively", () => {
+      const body = z.string();
+      const spec = aSpec({
+        todos: {
+          operations: [
+            anOperation({
+              request: {
+                header: z.object({
+                  "cOnTeNt-TyPe": z.literal("text/markdown"),
+                }),
+                body,
+              },
+            }),
+          ],
+        },
+      });
+
+      const normalizedSpec = normalizeSpec(spec);
+      const operation = theOnlyOperationIn(normalizedSpec);
+
+      expect(operation.request?.body).toEqual({
+        schema: body,
+        mediaType: "text/markdown",
+        mediaTypeSource: "content-type-header",
+        transport: "text",
+      });
+    });
+
+    test("warns and infers media type for ambiguous Content-Type headers", () => {
+      const body = z.object({ title: z.string() });
+      const spec = aSpec({
+        todos: {
+          operations: [
+            anOperation({
+              request: {
+                header: z.object({
+                  "Content-Type": z.enum(["application/json", "text/plain"]),
+                }),
+                body,
+              },
+            }),
+          ],
+        },
+      });
+
+      const normalizedSpec = normalizeSpec(spec);
+      const operation = theOnlyOperationIn(normalizedSpec);
+
+      expect(operation.request?.body?.mediaType).toBe("application/json");
+      expect(normalizedSpec.warnings).toEqual([
+        expect.objectContaining({ code: "ambiguous-content-type-header" }),
+      ]);
+    });
+
+    test.each([
+      {
+        scenario: "optional object",
+        body: z.object({ title: z.string() }).optional(),
+        mediaType: "application/json",
+        transport: "json",
+      },
+      {
+        scenario: "nullable object",
+        body: z.object({ title: z.string() }).nullable(),
+        mediaType: "application/json",
+        transport: "json",
+      },
+      {
+        scenario: "default object",
+        body: z.object({ title: z.string() }).default({ title: "Untitled" }),
+        mediaType: "application/json",
+        transport: "json",
+      },
+      {
+        scenario: "readonly object",
+        body: z.object({ title: z.string() }).readonly(),
+        mediaType: "application/json",
+        transport: "json",
+      },
+      {
+        scenario: "optional string",
+        body: z.string().optional(),
+        mediaType: "text/plain",
+        transport: "text",
+      },
+      {
+        scenario: "nullable string",
+        body: z.string().nullable(),
+        mediaType: "text/plain",
+        transport: "text",
+      },
+      {
+        scenario: "default string",
+        body: z.string().default("Untitled"),
+        mediaType: "text/plain",
+        transport: "text",
+      },
+      {
+        scenario: "catch string",
+        body: z.string().catch("Untitled"),
+        mediaType: "text/plain",
+        transport: "text",
+      },
+      {
+        scenario: "prefault string",
+        body: z.string().prefault("Untitled"),
+        mediaType: "text/plain",
+        transport: "text",
+      },
+      {
+        scenario: "typed pipe string",
+        body: z.string().pipe(z.string()),
+        mediaType: "text/plain",
+        transport: "text",
+      },
+    ])(
+      "infers $mediaType for $scenario bodies without replacing the schema",
+      ({ body, mediaType, transport }) => {
+        const spec = aSpec({
+          todos: {
+            operations: [anOperation({ request: { body } })],
+          },
+        });
+
+        const normalizedSpec = normalizeSpec(spec);
+        const operation = theOnlyOperationIn(normalizedSpec);
+
+        expect(operation.request?.body).toEqual({
+          schema: body,
+          mediaType,
+          mediaTypeSource: "body-schema",
+          transport,
+        });
+        expect(operation.request?.body?.schema).toBe(body);
+        expect(normalizedSpec.warnings).toEqual([
+          expect.objectContaining({ code: "missing-content-type-header" }),
+        ]);
+      }
+    );
+
+    test.each([
+      {
+        scenario: "vendor JSON",
+        mediaType: "application/vnd.api+json",
+        transport: "json",
+      },
+      {
+        scenario: "parameterized JSON",
+        mediaType: "Application/JSON; charset=utf-8",
+        transport: "json",
+      },
+      {
+        scenario: "form-urlencoded",
+        mediaType: "application/x-www-form-urlencoded",
+        transport: "form-url-encoded",
+      },
+      {
+        scenario: "multipart",
+        mediaType: "multipart/form-data",
+        transport: "multipart",
+      },
+    ])(
+      "resolves $scenario explicit Content-Type to $transport transport",
+      ({ mediaType, transport }) => {
+        const body = z.any();
+        const spec = aSpec({
+          todos: {
+            operations: [
+              anOperation({
+                request: {
+                  header: z.object({ "Content-Type": z.literal(mediaType) }),
+                  body,
+                },
+              }),
+            ],
+          },
+        });
+
+        const normalizedSpec = normalizeSpec(spec);
+        const operation = theOnlyOperationIn(normalizedSpec);
+
+        expect(operation.request?.body).toEqual({
+          schema: body,
+          mediaType,
+          mediaTypeSource: "content-type-header",
+          transport,
+        });
+        expect(normalizedSpec.warnings).toEqual([]);
+      }
+    );
+
+    test("warns and infers media type for conflicting Content-Type header keys", () => {
+      const body = z.object({ title: z.string() });
+      const spec = aSpec({
+        todos: {
+          operations: [
+            anOperation({
+              request: {
+                header: z.object({
+                  "Content-Type": z.literal("application/json"),
+                  "content-type": z.literal("text/plain"),
+                }),
+                body,
+              },
+            }),
+          ],
+        },
+      });
+
+      const normalizedSpec = normalizeSpec(spec);
+      const operation = theOnlyOperationIn(normalizedSpec);
+
+      expect(operation.request?.body).toEqual({
+        schema: body,
+        mediaType: "application/json",
+        mediaTypeSource: "body-schema",
+        transport: "json",
+      });
+      expect(normalizedSpec.warnings).toEqual([
+        expect.objectContaining({ code: "ambiguous-content-type-header" }),
+      ]);
     });
 
     test("lists each canonical response once at the top level", () => {
@@ -329,7 +765,12 @@ describe("normalizeSpec", () => {
           statusCodeName: "BadRequest",
           description: "Validation failed",
           header,
-          body,
+          body: {
+            schema: body,
+            mediaType: "application/json",
+            mediaTypeSource: "body-schema",
+            transport: "json",
+          },
           kind: "response",
           derivedFrom: undefined,
           lineage: undefined,

@@ -15,11 +15,9 @@
 import { <%= hasRequestSchema ? "getOperationDefinition, " : "" %>RequestValidator } from "../lib/types/index.js";
 import type { I<%= pascalCaseOperationId %>Request } from "<%= requestFile %>";
 
-<% if (hasRequestSchema) { %>
-const definition = getOperationDefinition(spec, "<%= resourceName %>", "<%= operationId %>");
-<% } %>
+<% if (hasRequestSchema) { %>const definition = getOperationDefinition(spec, "<%= resourceName %>", "<%= operationId %>");
 
-export class <%= pascalCaseOperationId %>RequestValidator extends RequestValidator {
+<% } %>export class <%= pascalCaseOperationId %>RequestValidator extends RequestValidator {
     public safeValidate(request: IHttpRequest): SafeRequestValidationResult<I<%= pascalCaseOperationId %>Request> {
         const error = new RequestValidationError();
         const validatedRequest: IHttpRequest = {

@@ -471,6 +471,37 @@ describe("Generator.generate", () => {
     );
   });
 
+  test("generates OpenAPI JSON without adding it to TypeScript barrels", async () => {
+    const workspace = createTempWorkspace();
+    writeTinySpec(workspace);
+    const outputDir = path.join(workspace, "generated", "output");
+
+    await new Generator().generate(
+      "spec/index.ts",
+      "generated/output",
+      {
+        input: "spec/index.ts",
+        output: "generated/output",
+        format: false,
+        plugins: ["openapi"],
+      },
+      workspace
+    );
+
+    const openApiFile = path.join(outputDir, "openapi", "openapi.json");
+    const document = JSON.parse(readFile(openApiFile));
+    const rootIndex = readFile(path.join(outputDir, "index.ts"));
+
+    expectFileExists(openApiFile);
+    expect(document.openapi).toBe("3.1.1");
+    expect(document.paths).toHaveProperty("/items/{itemId}");
+    expect(rootIndex).not.toContain("openapi.json");
+    expect(rootIndex).not.toContain("./openapi/index.js");
+    expect(fs.existsSync(path.join(outputDir, "openapi", "index.ts"))).toBe(
+      false
+    );
+  });
+
   test("strict-compiles generated client commands and validators for requests without schemas", async () => {
     const workspace = createTempWorkspace();
     writeSchemaLessSpec(workspace);

@@ -84,6 +84,7 @@ Typeweaver is modular by design. Install only what you need.
 | [@rexeus/typeweaver-hono](./packages/hono/README.md)       | Generates type-safe Hono routers with validation and error handling         | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)    |
 | [@rexeus/typeweaver-server](./packages/server/README.md)   | Generates a lightweight, dependency-free server with routing and middleware | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-server)  |
 | [@rexeus/typeweaver-aws-cdk](./packages/aws-cdk/README.md) | AWS CDK constructs for API Gateway V2                                       | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
+| [@rexeus/typeweaver-openapi](./packages/openapi/README.md) | Generates OpenAPI 3.1.1 JSON documents                                      | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-openapi) |
 
 > **Server vs Hono?** The [Server plugin](./packages/server/README.md) is a dependency-free, Fetch
 > API-native server — ideal for Bun, Deno, and Cloudflare Workers. The

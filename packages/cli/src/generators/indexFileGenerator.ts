@@ -22,6 +22,11 @@ export function generateIndexFiles(
 
   for (const file of generatedFiles) {
     const normalizedFile = file.replace(/\\/g, "/");
+
+    if (!isBarrelEligibleTypeScriptSourceFile(normalizedFile)) {
+      continue;
+    }
+
     const withJsExt = normalizedFile.replace(/\.ts$/, ".js");
     const stripped = normalizedFile.replace(/\.ts$/, "");
     const firstSlash = stripped.indexOf("/");
@@ -98,4 +103,8 @@ export function generateIndexFiles(
   });
 
   fs.writeFileSync(path.join(context.outputDir, "index.ts"), rootContent);
+}
+
+function isBarrelEligibleTypeScriptSourceFile(filePath: string): boolean {
+  return filePath.endsWith(".ts") && !filePath.endsWith(".d.ts");
 }

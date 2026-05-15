@@ -5,46 +5,108 @@ on:
     branches:
       - main
 
-permissions:
-  id-token: write
-  pull-requests: write
-  contents: write
+# SECURITY: Deny everything by default. Each job re-grants only what it needs.
+permissions: {}
+
+# Prevent overlapping releases from racing on the same npm version.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "24"
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # version: When pending changesets exist, open / update the "version packages"
+  # PR. This job touches GitHub only (no npm, no OIDC). It MUST NOT have
+  # `id-token: write` and MUST NOT publish.
+  # ---------------------------------------------------------------------------
   version:
+    name: Create version PR
+    if: github.repository_owner == 'rexeus'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      has_changesets: ${{ steps.changesets.outputs.hasChangesets }}
     steps:
       - name: Checkout code repository
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v5.0.0
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
 
-      - name: Setup node.js
-        uses: actions/setup-node@v6.3.0
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
-          node-version: 24
+          node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
-      - name: Cache Turbo
-        uses: actions/cache@v5.0.4
+      - name: Create version PR
+        id: changesets
+        # NOTE: `publish` is intentionally omitted. This job never touches npm.
+        # Publication happens in the separate `publish` job below, which has no
+        # cache restore and thus cannot inherit any poisoned artefacts.
+        uses: changesets/action@6a0a831ff30acef54f2c6aa1cbbc1096b066edaf # v1.7.0
         with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            turbo-${{ runner.os }}-
+          commit: "chore: version packages"
+          title: "chore: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ---------------------------------------------------------------------------
+  # publish: When there are no pending changesets (i.e. the version PR was just
+  # merged), build the packages from a clean checkout and publish to npm with
+  # provenance via OIDC.
+  #
+  # Hardening invariants — do not relax without security review:
+  #   * No `actions/cache` step in this job. Cache restore combined with
+  #     `id-token: write` in the same job is a known supply-chain bridge:
+  #     a poisoned cache entry would execute in the OIDC-signing context.
+  #   * Top-level permissions are empty; this job grants only `id-token: write`
+  #     (for npm provenance) and `contents: read`.
+  #   * `persist-credentials: false` on checkout — we never need to push from
+  #     here, so the actions/checkout token should not be exposed on disk.
+  #   * Actions are pinned to immutable commit SHAs; floating tags can be
+  #     moved by a compromised maintainer.
+  # ---------------------------------------------------------------------------
+  publish:
+    name: Publish to npm
+    needs: version
+    if: needs.version.outputs.has_changesets == 'false' && github.repository_owner == 'rexeus'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout code repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          # Deliberately no `cache: "pnpm"` — see hardening invariants above.
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Build packages
         run: pnpm run build
 
-      - name: Create and publish versions
-        uses: changesets/action@v1.7.0
-        with:
-          commit: "chore: version packages"
-          title: "chore: version packages"
-          publish: pnpm ci:publish
+      - name: Publish to npm
+        run: pnpm ci:publish
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"

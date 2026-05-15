@@ -92,7 +92,9 @@ function writeRequestCommand(
     : undefined;
   const paramTsType = request.param ? print(fromZod(request.param)) : undefined;
   const queryTsType = request.query ? print(fromZod(request.query)) : undefined;
-  const bodyTsType = request.body ? print(fromZod(request.body)) : undefined;
+  const bodyTsType = request.body
+    ? print(fromZod(request.body.schema))
+    : undefined;
   const headerDefaults = getRequestHeaderDefaults(operation.request);
   const hasRequestInput =
     headerTsType !== undefined ||

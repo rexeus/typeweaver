@@ -6,12 +6,27 @@ import type {
   ResponseDefinition,
   SpecDefinition,
 } from "@rexeus/typeweaver-core";
+import { normalizeBody } from "../bodyNormalization.js";
 import {
   DerivedResponseCycleError,
   InvalidDerivedResponseError,
   MissingDerivedResponseParentError,
 } from "../errors/index.js";
-import type { NormalizedResponse } from "../NormalizedSpec.js";
+import type {
+  NormalizedResponse,
+  NormalizedSpecWarning,
+  NormalizedSpecWarningLocation,
+} from "../NormalizedSpec.js";
+
+export type NormalizeResponseDefinitionResult = {
+  readonly response: NormalizedResponse;
+  readonly warnings: readonly NormalizedSpecWarning[];
+};
+
+export type CollectCanonicalResponsesResult = {
+  readonly responses: Map<string, NormalizedResponse>;
+  readonly warnings: readonly NormalizedSpecWarning[];
+};
 
 export const validateDerivedResponseMetadata = (
   response: ResponseDefinition
@@ -151,38 +166,53 @@ const validateInlineDerivedResponses = (
 };
 
 export const normalizeResponseDefinition = (
-  response: ResponseDefinition
-): NormalizedResponse => {
+  response: ResponseDefinition,
+  location: Omit<NormalizedSpecWarningLocation, "part">
+): NormalizeResponseDefinitionResult => {
+  const body = normalizeBody({
+    bodySchema: response.body,
+    headerSchema: response.header,
+    location: { ...location, part: "response.body" },
+  });
+
   return {
-    name: response.name,
-    statusCode: response.statusCode,
-    statusCodeName: HttpStatusCodeNameMap[response.statusCode],
-    description: response.description,
-    header: response.header,
-    body: response.body,
-    kind: response.derived === undefined ? "response" : "derived-response",
-    derivedFrom: response.derived?.parentName,
-    lineage: response.derived?.lineage,
-    depth: response.derived?.depth,
+    response: {
+      name: response.name,
+      statusCode: response.statusCode,
+      statusCodeName: HttpStatusCodeNameMap[response.statusCode],
+      description: response.description,
+      header: response.header,
+      body: body.body,
+      kind: response.derived === undefined ? "response" : "derived-response",
+      derivedFrom: response.derived?.parentName,
+      lineage: response.derived?.lineage,
+      depth: response.derived?.depth,
+    },
+    warnings: body.warnings,
   };
 };
 
 export const collectCanonicalResponses = (
   definition: SpecDefinition
-): Map<string, NormalizedResponse> => {
+): CollectCanonicalResponsesResult => {
   const canonicalResponseDefinitions =
     collectCanonicalResponseDefinitions(definition);
+  const warnings: NormalizedSpecWarning[] = [];
 
   validateDerivedResponseGraph(canonicalResponseDefinitions);
   validateInlineDerivedResponses(definition, canonicalResponseDefinitions);
 
-  return new Map(
-    Array.from(
-      canonicalResponseDefinitions.entries(),
-      ([responseName, response]) => [
-        responseName,
-        normalizeResponseDefinition(response),
-      ]
-    )
-  );
+  const responses = new Map<string, NormalizedResponse>();
+
+  for (const [responseName, response] of canonicalResponseDefinitions) {
+    const normalized = normalizeResponseDefinition(response, {
+      responseName,
+      statusCode: response.statusCode,
+    });
+
+    responses.set(responseName, normalized.response);
+    warnings.push(...normalized.warnings);
+  }
+
+  return { responses, warnings };
 };

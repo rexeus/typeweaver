@@ -3,6 +3,7 @@ import path from "node:path";
 import { HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { renderTemplate } from "@rexeus/typeweaver-gen";
 import type {
+  NormalizedHttpBody,
   NormalizedOperation,
   NormalizedResource,
   NormalizedResponse,
@@ -16,31 +17,74 @@ import { z } from "zod";
 import { generate } from "../../src/responseGenerator.js";
 import type { ResponseGenerationContext } from "../../src/responseGenerator.js";
 
+type ResponseOverrides = Omit<Partial<NormalizedResponse>, "body"> & {
+  readonly body?: z.ZodType | NormalizedHttpBody;
+};
+
+function aJsonNormalizedBody(schema: z.ZodType): NormalizedHttpBody {
+  return {
+    schema,
+    mediaType: "application/json",
+    mediaTypeSource: "body-schema",
+    transport: "json",
+  };
+}
+
+function normalizeBodyForBuilder(
+  body: z.ZodType | NormalizedHttpBody | undefined
+): NormalizedHttpBody | undefined {
+  if (body === undefined) {
+    return undefined;
+  }
+
+  return "schema" in body ? body : aJsonNormalizedBody(body);
+}
+
+function hasBodyOverride(overrides: ResponseOverrides): boolean {
+  return Object.prototype.hasOwnProperty.call(overrides, "body");
+}
+
+function aNormalizedSpecWith(
+  overrides: Omit<NormalizedSpec, "warnings"> & {
+    readonly warnings?: NormalizedSpec["warnings"];
+  }
+): NormalizedSpec {
+  return { warnings: [], ...overrides };
+}
+
 function aCanonicalResponse(
-  overrides: Partial<NormalizedResponse> = {}
+  overrides: ResponseOverrides = {}
 ): NormalizedResponse {
+  const defaultBody = aJsonNormalizedBody(z.object({ message: z.string() }));
+
   return {
     name: "SharedError",
     kind: "response",
     statusCode: HttpStatusCode.BAD_REQUEST,
     statusCodeName: "BAD_REQUEST",
     description: "Shared error",
-    body: z.object({ message: z.string() }),
     ...overrides,
+    body: hasBodyOverride(overrides)
+      ? normalizeBodyForBuilder(overrides.body)
+      : defaultBody,
   };
 }
 
 function anInlineOperationResponse(
-  overrides: Partial<NormalizedResponse> = {}
+  overrides: ResponseOverrides = {}
 ): NormalizedResponse {
+  const defaultBody = aJsonNormalizedBody(z.object({ id: z.string() }));
+
   return {
     name: "CreateTodoSuccess",
     kind: "response",
     statusCode: HttpStatusCode.CREATED,
     statusCodeName: "CREATED",
     description: "Created",
-    body: z.object({ id: z.string() }),
     ...overrides,
+    body: hasBodyOverride(overrides)
+      ? normalizeBodyForBuilder(overrides.body)
+      : defaultBody,
   };
 }
 
@@ -185,10 +229,12 @@ function renderResponseSources(
 }
 
 function renderCanonicalResponseSource(response: NormalizedResponse): string {
-  const writtenFiles = renderResponseSources({
-    responses: [response],
-    resources: [],
-  });
+  const writtenFiles = renderResponseSources(
+    aNormalizedSpecWith({
+      responses: [response],
+      resources: [],
+    })
+  );
   const source = writtenFiles.get(
     `responses/${pascalCase(response.name)}Response.ts`
   );
@@ -205,15 +251,17 @@ function renderCanonicalResponseSource(response: NormalizedResponse): string {
 function renderOperationResponseSource(
   responses: NormalizedOperation["responses"]
 ): string {
-  const writtenFiles = renderResponseSources({
-    responses: [],
-    resources: [
-      {
-        name: "todos",
-        operations: [anOperationWithResponses(responses)],
-      },
-    ],
-  });
+  const writtenFiles = renderResponseSources(
+    aNormalizedSpecWith({
+      responses: [],
+      resources: [
+        {
+          name: "todos",
+          operations: [anOperationWithResponses(responses)],
+        },
+      ],
+    })
+  );
   const source = writtenFiles.get("todos/CreateTodoResponse.ts");
 
   if (source === undefined) {
@@ -253,7 +301,7 @@ describe("ResponseGenerator", () => {
   test("emits canonical responses separately from inline operation responses", () => {
     const sharedError = aCanonicalResponse();
     const createTodoSuccess = anInlineOperationResponse();
-    const normalizedSpec: NormalizedSpec = {
+    const normalizedSpec: NormalizedSpec = aNormalizedSpecWith({
       responses: [sharedError],
       resources: [
         {
@@ -266,7 +314,7 @@ describe("ResponseGenerator", () => {
           ],
         },
       ],
-    };
+    });
 
     const writtenFiles = captureResponseGeneratorData(normalizedSpec);
 
@@ -310,7 +358,7 @@ describe("ResponseGenerator", () => {
   test("renders operation response unions from inline and shared responses", () => {
     const sharedError = aCanonicalResponse();
     const createTodoSuccess = anInlineOperationResponse();
-    const normalizedSpec: NormalizedSpec = {
+    const normalizedSpec: NormalizedSpec = aNormalizedSpecWith({
       responses: [sharedError],
       resources: [
         aResourceWithOperationResponses([
@@ -318,7 +366,7 @@ describe("ResponseGenerator", () => {
           aCanonicalResponseUsage(sharedError.name),
         ]),
       ],
-    };
+    });
 
     const writtenFiles = renderResponseSources(normalizedSpec);
     const source = getGeneratedSource(
@@ -337,7 +385,7 @@ describe("ResponseGenerator", () => {
 
   test("reuses a canonical response across operation response unions", () => {
     const sharedError = aCanonicalResponse();
-    const normalizedSpec: NormalizedSpec = {
+    const normalizedSpec: NormalizedSpec = aNormalizedSpecWith({
       responses: [sharedError],
       resources: [
         {
@@ -361,7 +409,7 @@ describe("ResponseGenerator", () => {
           ],
         },
       ],
-    };
+    });
 
     const writtenFiles = renderResponseSources(normalizedSpec);
     const todoResponse = getGeneratedSource(
@@ -386,7 +434,7 @@ describe("ResponseGenerator", () => {
       header: z.object({ "Content-Type": z.literal("application/json") }),
       body: z.object({ code: z.literal("VALIDATION_ERROR") }),
     });
-    const normalizedSpec: NormalizedSpec = {
+    const normalizedSpec: NormalizedSpec = aNormalizedSpecWith({
       responses: [validationError],
       resources: [
         {
@@ -398,7 +446,7 @@ describe("ResponseGenerator", () => {
           ],
         },
       ],
-    };
+    });
 
     const writtenFiles = renderResponseSources(normalizedSpec);
 
@@ -431,10 +479,12 @@ describe("ResponseGenerator", () => {
       body: z.object({ message: z.string(), todoId: z.string() }),
     });
 
-    const writtenFiles = renderResponseSources({
-      responses: [todoNotFoundError],
-      resources: [],
-    });
+    const writtenFiles = renderResponseSources(
+      aNormalizedSpecWith({
+        responses: [todoNotFoundError],
+        resources: [],
+      })
+    );
     const source = getGeneratedSource(
       writtenFiles,
       "responses/TodoNotFoundErrorResponse.ts"
@@ -466,7 +516,7 @@ describe("ResponseGenerator", () => {
       header: z.object({ "x-reason": z.string() }),
       body: z.object({ message: z.string(), todoId: z.string() }),
     });
-    const normalizedSpec: NormalizedSpec = {
+    const normalizedSpec: NormalizedSpec = aNormalizedSpecWith({
       responses: [notFoundError],
       resources: [
         aResourceWithOperationResponses([
@@ -474,7 +524,7 @@ describe("ResponseGenerator", () => {
           anInlineResponseUsage(todoNotFoundError),
         ]),
       ],
-    };
+    });
 
     const writtenFiles = renderResponseSources(normalizedSpec);
     const source = getGeneratedSource(
@@ -506,14 +556,16 @@ describe("ResponseGenerator", () => {
       body: z.object({ code: z.literal("VALIDATION_ERROR") }),
     });
 
-    const writtenFiles = renderResponseSources({
-      responses: [validationError],
-      resources: [
-        aResourceWithOperationResponses([
-          aCanonicalResponseUsage(validationError.name),
-        ]),
-      ],
-    });
+    const writtenFiles = renderResponseSources(
+      aNormalizedSpecWith({
+        responses: [validationError],
+        resources: [
+          aResourceWithOperationResponses([
+            aCanonicalResponseUsage(validationError.name),
+          ]),
+        ],
+      })
+    );
     const sharedResponse = getGeneratedSource(
       writtenFiles,
       "responses/ValidationErrorResponse.ts"
@@ -541,7 +593,7 @@ describe("ResponseGenerator", () => {
       statusCode: HttpStatusCode.UNAUTHORIZED,
       statusCodeName: "UNAUTHORIZED",
     });
-    const normalizedSpec: NormalizedSpec = {
+    const normalizedSpec: NormalizedSpec = aNormalizedSpecWith({
       responses: [badRequest, unauthorized],
       resources: [
         aResourceWithOperationResponses([
@@ -549,7 +601,7 @@ describe("ResponseGenerator", () => {
           aCanonicalResponseUsage(unauthorized.name),
         ]),
       ],
-    };
+    });
 
     const writtenFiles = renderResponseSources(normalizedSpec);
     const source = getGeneratedSource(

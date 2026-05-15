@@ -9,6 +9,7 @@ import type {
   SpecDefinition,
 } from "@rexeus/typeweaver-core";
 import { z } from "zod";
+import { normalizeBody } from "./bodyNormalization.js";
 import {
   DuplicateOperationIdError,
   DuplicateRouteError,
@@ -37,7 +38,23 @@ import type {
   NormalizedRequest,
   NormalizedResponseUsage,
   NormalizedSpec,
+  NormalizedSpecWarning,
 } from "./NormalizedSpec.js";
+
+type ValidateRequestResult = {
+  readonly request?: NormalizedRequest;
+  readonly warnings: readonly NormalizedSpecWarning[];
+};
+
+type NormalizeOperationResponsesResult = {
+  readonly responses: readonly NormalizedResponseUsage[];
+  readonly warnings: readonly NormalizedSpecWarning[];
+};
+
+type NormalizeOperationResult = {
+  readonly operation: NormalizedOperation;
+  readonly warnings: readonly NormalizedSpecWarning[];
+};
 
 const isZodType = (schema: unknown): schema is z.ZodType => {
   return schema instanceof z.ZodType;
@@ -64,10 +81,11 @@ const validateRequestSchema = (
 };
 
 const validateRequest = (
+  resourceName: string,
   operationId: string,
   path: string,
   request: RequestDefinition
-): NormalizedRequest | undefined => {
+): ValidateRequestResult => {
   if (request.header !== undefined) {
     validateRequestSchema(operationId, "header", request.header);
   }
@@ -106,41 +124,65 @@ const validateRequest = (
     request.query === undefined &&
     request.body === undefined
   ) {
-    return undefined;
+    return { warnings: [] };
   }
 
+  const body = normalizeBody({
+    bodySchema: request.body,
+    headerSchema: request.header,
+    location: { resourceName, operationId, part: "request.body" },
+  });
+
   return {
-    header: request.header,
-    param: request.param,
-    query: request.query,
-    body: request.body,
+    request: {
+      header: request.header,
+      param: request.param,
+      query: request.query,
+      body: body.body,
+    },
+    warnings: body.warnings,
   };
 };
 
 const normalizeOperationResponses = (
+  resourceName: string,
+  operationId: string,
   responses: readonly ResponseDefinition[]
-): NormalizedResponseUsage[] => {
-  return responses.map(response => {
+): NormalizeOperationResponsesResult => {
+  const warnings: NormalizedSpecWarning[] = [];
+  const normalizedResponses = responses.map(response => {
     if (isNamedResponseDefinition(response)) {
       return {
         responseName: response.name,
         source: "canonical",
-      };
+      } satisfies NormalizedResponseUsage;
     }
+
+    const normalized = normalizeResponseDefinition(response, {
+      resourceName,
+      operationId,
+      responseName: response.name,
+      statusCode: response.statusCode,
+    });
+
+    warnings.push(...normalized.warnings);
 
     return {
       responseName: response.name,
       source: "inline",
-      response: normalizeResponseDefinition(response),
-    };
+      response: normalized.response,
+    } satisfies NormalizedResponseUsage;
   });
+
+  return { responses: normalizedResponses, warnings };
 };
 
 const normalizeOperation = (
+  resourceName: string,
   operationIds: Set<string>,
   routeKeys: Set<string>,
   operation: ResourceDefinition["operations"][number]
-): NormalizedOperation => {
+): NormalizeOperationResult => {
   if (!isSupportedOperationId(operation.operationId)) {
     throw new InvalidOperationIdError(operation.operationId);
   }
@@ -168,17 +210,28 @@ const normalizeOperation = (
     throw new EmptyOperationResponsesError(operation.operationId);
   }
 
+  const request = validateRequest(
+    resourceName,
+    operation.operationId,
+    operation.path,
+    operation.request
+  );
+  const responses = normalizeOperationResponses(
+    resourceName,
+    operation.operationId,
+    operation.responses
+  );
+
   return {
-    operationId: operation.operationId,
-    method: operation.method,
-    path: operation.path,
-    summary: operation.summary,
-    request: validateRequest(
-      operation.operationId,
-      operation.path,
-      operation.request
-    ),
-    responses: normalizeOperationResponses(operation.responses),
+    operation: {
+      operationId: operation.operationId,
+      method: operation.method,
+      path: operation.path,
+      summary: operation.summary,
+      request: request.request,
+      responses: responses.responses,
+    },
+    warnings: [...request.warnings, ...responses.warnings],
   };
 };
 
@@ -193,6 +246,7 @@ export const normalizeSpec = (definition: SpecDefinition): NormalizedSpec => {
   const canonicalResponses = collectCanonicalResponses(definition);
   const operationIds = new Set<string>();
   const routeKeys = new Set<string>();
+  const warnings: NormalizedSpecWarning[] = [...canonicalResponses.warnings];
 
   return {
     resources: resourceEntries.map(([resourceName, resource]) => {
@@ -206,11 +260,21 @@ export const normalizeSpec = (definition: SpecDefinition): NormalizedSpec => {
 
       return {
         name: resourceName,
-        operations: resource.operations.map(operation =>
-          normalizeOperation(operationIds, routeKeys, operation)
-        ),
+        operations: resource.operations.map(operation => {
+          const normalized = normalizeOperation(
+            resourceName,
+            operationIds,
+            routeKeys,
+            operation
+          );
+
+          warnings.push(...normalized.warnings);
+
+          return normalized.operation;
+        }),
       };
     }),
-    responses: Array.from(canonicalResponses.values()),
+    responses: Array.from(canonicalResponses.responses.values()),
+    warnings,
   };
 };

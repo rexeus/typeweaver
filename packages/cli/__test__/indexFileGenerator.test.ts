@@ -279,6 +279,51 @@ describe("generateIndexFiles", () => {
     );
   });
 
+  test("ignores generated JSON files when building TypeScript barrels", () => {
+    const outputDir = createTempOutputDir();
+
+    generateIndexFiles(
+      templateDir,
+      aGeneratorContextWith({
+        outputDir,
+        generatedFiles: ["openapi/openapi.json", "todo/GetTodoResponse.ts"],
+      })
+    );
+
+    expect(fs.existsSync(path.join(outputDir, "openapi", "index.ts"))).toBe(
+      false
+    );
+    expect(readOutputFile(outputDir, "todo", "index.ts")).toBe(
+      expectedIndexFile(["./GetTodoResponse.js"])
+    );
+    expect(readOutputFile(outputDir, "index.ts")).toBe(
+      expectedIndexFile(["./todo/index.js"])
+    );
+  });
+
+  test("writes an empty root barrel when only generated JSON files exist", () => {
+    const outputDir = createTempOutputDir();
+    const openApiFile = path.join(outputDir, "openapi", "openapi.json");
+    fs.mkdirSync(path.dirname(openApiFile), { recursive: true });
+    fs.writeFileSync(openApiFile, "{}\n");
+
+    generateIndexFiles(
+      templateDir,
+      aGeneratorContextWith({
+        outputDir,
+        generatedFiles: ["openapi/openapi.json"],
+      })
+    );
+
+    expect(fs.existsSync(path.join(outputDir, "openapi", "index.ts"))).toBe(
+      false
+    );
+    expect(readOutputFile(outputDir, "index.ts")).toBe(expectedIndexFile([]));
+    expect(fs.readdirSync(path.join(outputDir, "openapi"))).toEqual([
+      "openapi.json",
+    ]);
+  });
+
   test("writes an empty root barrel when no files were generated", () => {
     const outputDir = createTempOutputDir();
 

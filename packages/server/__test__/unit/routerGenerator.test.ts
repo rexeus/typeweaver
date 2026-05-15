@@ -60,6 +60,7 @@ function aCapturingGeneratorContext(resources: readonly NormalizedResource[]): {
   const normalizedSpec: NormalizedSpec = {
     resources,
     responses: [],
+    warnings: [],
   };
 
   const context = {
