@@ -1,6 +1,5 @@
 import type { JsonSchema } from "@rexeus/typeweaver-zod-to-json-schema";
 import { createOperationLocation } from "./operationContext.js";
-import type { OperationContext } from "./operationContext.js";
 import {
   convertSchema,
   getObjectProperties,
@@ -13,6 +12,7 @@ import type {
   OpenApiBuildWarning,
   OpenApiDiagnosticWarning,
 } from "../types.js";
+import type { OperationContext } from "./operationContext.js";
 import type { z } from "zod";
 
 export type ParameterContainerResult = {

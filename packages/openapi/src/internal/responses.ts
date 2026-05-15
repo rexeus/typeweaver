@@ -4,18 +4,18 @@ import type {
 } from "@rexeus/typeweaver-gen";
 import type { JsonSchema } from "@rexeus/typeweaver-zod-to-json-schema";
 import { pascalCase } from "polycase";
+import { resolveOpenApiBodySchema } from "./bodyContent.js";
 import { buildHeaderObjects } from "./headerObjects.js";
 import { escapeJsonPointerSegment, jsonPointer } from "./jsonPointer.js";
 import { createOperationLocation } from "./operationContext.js";
-import type { OperationContext } from "./operationContext.js";
 import { buildMergedHeaders } from "./responseHeaderMerge.js";
 import type {
   OpenApiBuildWarning,
   OpenApiDiagnosticWarning,
-  OpenApiReferenceObject,
   OpenApiResponseObject,
   OpenApiResponsesObject,
 } from "../types.js";
+import type { OperationContext } from "./operationContext.js";
 import type { SchemaRegistry } from "./schemaRegistry.js";
 
 export type ComponentsResponsesResult = {
@@ -106,6 +106,13 @@ type ResolvedResponseVariantsResult = {
 
 type BuiltOperationResponse = {
   readonly response: OpenApiResponsesObject[string];
+  readonly warnings: readonly OpenApiBuildWarning[];
+};
+
+type RegisteredBodySchema = {
+  readonly mediaType: string;
+  readonly schema: JsonSchema;
+  readonly schemaKey: string;
   readonly warnings: readonly OpenApiBuildWarning[];
 };
 
@@ -299,11 +306,13 @@ function buildResponseBody(
   readonly content?: OpenApiResponseObject["content"];
   readonly warnings: readonly OpenApiBuildWarning[];
 } {
-  if (response.body === undefined) {
+  const body = response.body;
+
+  if (body === undefined) {
     return { warnings: [] };
   }
 
-  const registration = registerResponseBody(response.body, {
+  const registration = registerResponseBody(body, {
     schemaRegistry: options.schemaRegistry,
     context: options.context,
     responseName: options.responseName,
@@ -313,8 +322,8 @@ function buildResponseBody(
 
   return {
     content: {
-      "application/json": {
-        schema: registration.ref,
+      [body.mediaType]: {
+        schema: registration.schema,
       },
     },
     warnings: registration.warnings,
@@ -365,41 +374,57 @@ function buildMergedResponseBody(
   readonly warnings: readonly OpenApiBuildWarning[];
 } {
   const warnings: OpenApiBuildWarning[] = [];
-  const refs: OpenApiReferenceObject[] = [];
+  const schemasByMediaType = new Map<string, RegisteredBodySchema[]>();
 
   for (const variant of variants) {
-    if (variant.response.body === undefined) {
+    const body = variant.response.body;
+
+    if (body === undefined) {
       continue;
     }
 
-    const registration = registerResponseBody(variant.response.body, {
+    const registration = registerResponseBody(body, {
       schemaRegistry: options.schemaRegistry,
       context: options.context,
       baseName: responseBodyBaseName(options.context, variant.usage),
       responseName: variant.usage.responseName,
       statusCode: options.statusCode,
     });
+    const schemas = schemasByMediaType.get(body.mediaType) ?? [];
 
-    refs.push(registration.ref);
+    schemasByMediaType.set(body.mediaType, [...schemas, registration]);
     warnings.push(...registration.warnings);
   }
 
-  const distinctRefs = distinctBy(refs, ref => ref.$ref);
-  const [firstRef, ...otherRefs] = distinctRefs;
-
-  if (firstRef === undefined) {
+  if (schemasByMediaType.size === 0) {
     return { warnings };
   }
 
-  const schema: JsonSchema =
-    otherRefs.length === 0 ? firstRef : { anyOf: distinctRefs };
-
   return {
-    content: {
-      "application/json": { schema },
-    },
+    content: Object.fromEntries(
+      Array.from(schemasByMediaType, ([mediaType, registrations]) => [
+        mediaType,
+        { schema: mergedMediaTypeSchema(registrations) },
+      ])
+    ),
     warnings,
   };
+}
+
+function mergedMediaTypeSchema(
+  registrations: readonly RegisteredBodySchema[]
+): JsonSchema {
+  const distinctSchemas = distinctBy(
+    registrations,
+    registration => registration.schemaKey
+  ).map(registration => registration.schema);
+  const [firstSchema, ...otherSchemas] = distinctSchemas;
+
+  if (firstSchema === undefined) {
+    return {};
+  }
+
+  return otherSchemas.length === 0 ? firstSchema : { anyOf: distinctSchemas };
 }
 
 function registerResponseBody(
@@ -411,17 +436,30 @@ function registerResponseBody(
     readonly statusCode: string;
     readonly baseName: string;
   }
-) {
-  return options.schemaRegistry.register({
-    schema: body,
-    baseName: options.baseName,
-    location: createOperationLocation({
-      context: options.context,
-      part: "response.body",
-      responseName: options.responseName,
-      statusCode: options.statusCode,
-    }),
-  });
+): RegisteredBodySchema {
+  const resolvedSchema = resolveOpenApiBodySchema<OpenApiBuildWarning>(
+    body,
+    () => {
+      const registration = options.schemaRegistry.register({
+        schema: body.schema,
+        baseName: options.baseName,
+        location: createOperationLocation({
+          context: options.context,
+          part: "response.body",
+          responseName: options.responseName,
+          statusCode: options.statusCode,
+        }),
+      });
+
+      return {
+        schema: registration.ref,
+        schemaKey: registration.ref.$ref,
+        warnings: registration.warnings,
+      };
+    }
+  );
+
+  return { mediaType: body.mediaType, ...resolvedSchema };
 }
 
 function responseBodyBaseName(

@@ -7,16 +7,16 @@ import type {
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 import { OpenApiPlugin } from "../../src/index.js";
-import type {
-  OpenApiInfoObject,
-  OpenApiServerObject,
-} from "../../src/index.js";
 import {
   aNormalizedSpecWith,
   anInlineResponseUsage,
   anOperationWith,
   aResponseWith,
 } from "./buildOpenApiDocument.helpers.js";
+import type {
+  OpenApiInfoObject,
+  OpenApiServerObject,
+} from "../../src/index.js";
 
 type WrittenFile = {
   readonly path: string;

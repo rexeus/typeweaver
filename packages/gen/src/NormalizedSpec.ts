@@ -10,6 +10,45 @@ import type {
 export type NormalizedSpec = {
   readonly resources: readonly NormalizedResource[];
   readonly responses: readonly NormalizedResponse[];
+  readonly warnings: readonly NormalizedSpecWarning[];
+};
+
+export type NormalizedBodyMediaTypeSource =
+  | "content-type-header"
+  | "body-schema"
+  | "raw-fallback";
+
+export type NormalizedBodyTransport =
+  | "json"
+  | "text"
+  | "form-url-encoded"
+  | "multipart"
+  | "raw";
+
+export type NormalizedHttpBody = {
+  readonly schema: HttpBodySchema;
+  readonly mediaType: string;
+  readonly mediaTypeSource: NormalizedBodyMediaTypeSource;
+  readonly transport: NormalizedBodyTransport;
+};
+
+export type NormalizedSpecWarningCode =
+  | "ambiguous-content-type-header"
+  | "missing-content-type-header"
+  | "raw-body-media-type-fallback";
+
+export type NormalizedSpecWarningLocation = {
+  readonly part: "request.body" | "response.body";
+  readonly resourceName?: string;
+  readonly operationId?: string;
+  readonly responseName?: string;
+  readonly statusCode?: HttpStatusCode;
+};
+
+export type NormalizedSpecWarning = {
+  readonly code: NormalizedSpecWarningCode;
+  readonly message: string;
+  readonly location: NormalizedSpecWarningLocation;
 };
 
 export type NormalizedResource = {
@@ -30,7 +69,7 @@ export type NormalizedRequest = {
   readonly header?: HttpHeaderSchema;
   readonly param?: HttpParamSchema;
   readonly query?: HttpQuerySchema;
-  readonly body?: HttpBodySchema;
+  readonly body?: NormalizedHttpBody;
 };
 
 export type NormalizedResponse = {
@@ -39,7 +78,7 @@ export type NormalizedResponse = {
   readonly statusCodeName: string;
   readonly description: string;
   readonly header?: HttpHeaderSchema;
-  readonly body?: HttpBodySchema;
+  readonly body?: NormalizedHttpBody;
   readonly kind: "response" | "derived-response";
   readonly derivedFrom?: string;
   readonly lineage?: readonly string[];

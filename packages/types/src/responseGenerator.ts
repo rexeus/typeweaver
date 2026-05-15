@@ -172,7 +172,7 @@ function createOwnResponseTemplateData(
 
   return {
     ...factoryData,
-    body: response.body ? print(fromZod(response.body)) : undefined,
+    body: response.body ? print(fromZod(response.body.schema)) : undefined,
     header: response.header ? print(fromZod(response.header)) : undefined,
     statusCode: response.statusCode,
     factory: renderResponseFactory(
@@ -194,7 +194,9 @@ function writeCanonicalResponseType(
   const headerTsType = response.header
     ? print(fromZod(response.header))
     : undefined;
-  const bodyTsType = response.body ? print(fromZod(response.body)) : undefined;
+  const bodyTsType = response.body
+    ? print(fromZod(response.body.schema))
+    : undefined;
   const factoryData: ResponseFactoryTemplateData = {
     identifierName: pascalCaseName,
     typeValue: response.name,

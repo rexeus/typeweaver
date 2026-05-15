@@ -39,6 +39,7 @@ const todoSpec: NormalizedSpec = {
     },
   ],
   responses: [validationErrorResponse],
+  warnings: [],
 };
 
 type GeneratorContextParams = Parameters<

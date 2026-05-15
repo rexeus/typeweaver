@@ -1,12 +1,12 @@
 import type { JsonSchema } from "@rexeus/typeweaver-zod-to-json-schema";
-import { extractParameterContainer } from "./parameterContainer.js";
 import {
   escapeJsonPointerSegment,
   isJsonPointerAtOrBelow,
 } from "./jsonPointer.js";
-import type { OperationContext } from "./operationContext.js";
+import { extractParameterContainer } from "./parameterContainer.js";
 import { rebaseLocalJsonSchemaRefs } from "./schemaConversion.js";
 import type { OpenApiBuildWarning, OpenApiHeaderObject } from "../types.js";
+import type { OperationContext } from "./operationContext.js";
 import type { z } from "zod";
 
 export type HeaderObjectResult = {

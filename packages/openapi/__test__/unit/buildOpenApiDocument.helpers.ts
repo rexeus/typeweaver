@@ -1,4 +1,5 @@
 import type {
+  NormalizedHttpBody,
   NormalizedOperation,
   NormalizedResponse,
   NormalizedResponseUsage,
@@ -10,6 +11,43 @@ type TreeNode = {
   readonly name: string;
   readonly children: readonly TreeNode[];
 };
+
+type RequestBuilder = Omit<
+  NonNullable<NormalizedOperation["request"]>,
+  "body"
+> & {
+  readonly body?: z.ZodType | NormalizedHttpBody;
+};
+
+type OperationBuilderOverrides = Omit<
+  Partial<NormalizedOperation>,
+  "request"
+> & {
+  readonly request?: RequestBuilder;
+};
+
+type ResponseBuilderOverrides = Omit<Partial<NormalizedResponse>, "body"> & {
+  readonly body?: z.ZodType | NormalizedHttpBody;
+};
+
+export function aJsonNormalizedBody(schema: z.ZodType): NormalizedHttpBody {
+  return {
+    schema,
+    mediaType: "application/json",
+    mediaTypeSource: "body-schema",
+    transport: "json",
+  };
+}
+
+function normalizeBodyForBuilder(
+  body: z.ZodType | NormalizedHttpBody | undefined
+): NormalizedHttpBody | undefined {
+  if (body === undefined) {
+    return undefined;
+  }
+
+  return "schema" in body ? body : aJsonNormalizedBody(body);
+}
 
 export function todoApiInfo() {
   return { info: { title: "Todo API", version: "1.0.0" } };
@@ -33,13 +71,16 @@ export function aNormalizedSpecWith(
   return {
     resources: [],
     responses: [],
+    warnings: [],
     ...overrides,
   };
 }
 
 export function anOperationWith(
-  overrides: Partial<NormalizedOperation> = {}
+  overrides: OperationBuilderOverrides = {}
 ): NormalizedOperation {
+  const request = overrides.request;
+
   return {
     operationId: "getTodo",
     method: "GET" as NormalizedOperation["method"],
@@ -47,11 +88,15 @@ export function anOperationWith(
     summary: "",
     responses: [],
     ...overrides,
+    request:
+      request === undefined
+        ? undefined
+        : { ...request, body: normalizeBodyForBuilder(request.body) },
   };
 }
 
 export function aResponseWith(
-  overrides: Partial<NormalizedResponse> = {}
+  overrides: ResponseBuilderOverrides = {}
 ): NormalizedResponse {
   return {
     name: "OkResponse",
@@ -60,6 +105,7 @@ export function aResponseWith(
     description: "OK",
     kind: "response",
     ...overrides,
+    body: normalizeBodyForBuilder(overrides.body),
   };
 }
 

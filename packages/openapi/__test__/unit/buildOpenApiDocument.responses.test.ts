@@ -1,4 +1,5 @@
 import type {
+  NormalizedHttpBody,
   NormalizedOperation,
   NormalizedResponse,
   NormalizedResponseUsage,
@@ -19,6 +20,7 @@ import {
 
 const OK_STATUS = 200 as NormalizedResponse["statusCode"];
 const NOT_FOUND_STATUS = 404 as NormalizedResponse["statusCode"];
+type ResponseBuilderOverrides = Parameters<typeof aResponseWith>[0];
 
 describe("buildOpenApiDocument responses", () => {
   describe("single responses and references", () => {
@@ -124,6 +126,66 @@ describe("buildOpenApiDocument responses", () => {
           additionalProperties: false,
         },
       });
+      expect(result.warnings).toEqual([]);
+    });
+
+    test("uses the normalized response body media type as the OpenAPI content key", () => {
+      const normalizedSpec = aTodoSpecWith({
+        operations: [
+          anOperationWith({
+            responses: [
+              anInlineOkResponse({
+                description: "Todo found",
+                body: aTextBody(z.string(), "text/plain"),
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+      expect(result.document.paths["/todos"]?.get?.responses).toEqual({
+        "200": {
+          description: "Todo found",
+          content: {
+            "text/plain": {
+              schema: { $ref: "#/components/schemas/GetTodoOkResponseBody" },
+            },
+          },
+        },
+      });
+      expect(result.warnings).toEqual([]);
+    });
+
+    test("emits binary schema for octet-stream raw file responses", () => {
+      const normalizedSpec = aTodoSpecWith({
+        operations: [
+          anOperationWith({
+            operationId: "downloadFile",
+            responses: [
+              anInlineOkResponse({
+                description: "File downloaded",
+                body: anOctetStreamBody(z.any()),
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+      expect(result.document.paths["/todos"]?.get?.responses).toEqual({
+        "200": {
+          description: "File downloaded",
+          content: {
+            "application/octet-stream": {
+              schema: { type: "string", format: "binary" },
+            },
+          },
+        },
+      });
+      expect(result.document.components).toBeUndefined();
       expect(result.warnings).toEqual([]);
     });
 
@@ -402,6 +464,76 @@ describe("buildOpenApiDocument responses", () => {
       expect(result.warnings).toEqual([]);
     });
 
+    test("emits separate content entries for duplicate responses with different media types", () => {
+      const normalizedSpec = aTodoSpecWith({
+        operations: [
+          anOperationWithDuplicateOkResponses([
+            anInlineOkResponse({
+              name: "TodoFound",
+              description: "Todo found",
+              body: z.object({ id: z.string() }),
+            }),
+            anInlineOkResponse({
+              name: "TodoText",
+              description: "Todo text",
+              body: aTextBody(z.string(), "text/plain"),
+            }),
+          ]),
+        ],
+      });
+
+      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+      expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
+        description: "TodoFound: Todo found\n\nTodoText: Todo text",
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/GetTodoTodoFoundBody" },
+          },
+          "text/plain": {
+            schema: { $ref: "#/components/schemas/GetTodoTodoTextBody" },
+          },
+        },
+      });
+      expect(result.warnings).toEqual([]);
+    });
+
+    test("keeps anyOf within one media type for duplicate responses with distinct schemas", () => {
+      const normalizedSpec = aTodoSpecWith({
+        operations: [
+          anOperationWithDuplicateOkResponses([
+            anInlineOkResponse({
+              name: "PlainText",
+              description: "Plain text",
+              body: aTextBody(z.string(), "text/plain"),
+            }),
+            anInlineOkResponse({
+              name: "StructuredText",
+              description: "Structured text",
+              body: aTextBody(z.object({ value: z.string() }), "text/plain"),
+            }),
+          ]),
+        ],
+      });
+
+      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+      expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
+        description: "PlainText: Plain text\n\nStructuredText: Structured text",
+        content: {
+          "text/plain": {
+            schema: {
+              anyOf: [
+                { $ref: "#/components/schemas/GetTodoPlainTextBody" },
+                { $ref: "#/components/schemas/GetTodoStructuredTextBody" },
+              ],
+            },
+          },
+        },
+      });
+      expect(result.warnings).toEqual([]);
+    });
+
     test("rebases schema conversion warnings for merged duplicate response bodies to the component schema", () => {
       const normalizedSpec = aTodoSpecWith({
         operations: [
@@ -520,6 +652,121 @@ describe("buildOpenApiDocument responses", () => {
             description: "Correlation ID for the response.",
             required: true,
             schema: { type: "string" },
+          },
+        },
+      });
+      expect(result.warnings).toEqual([]);
+    });
+
+    test("merges response header names case-insensitively using first casing", () => {
+      const normalizedSpec = aTodoSpecWith({
+        operations: [
+          anOperationWithDuplicateOkResponses([
+            anInlineOkResponse({
+              name: "UpperHeader",
+              header: z.object({ "X-Correlation-ID": z.string() }),
+            }),
+            anInlineOkResponse({
+              name: "LowerHeader",
+              header: z.object({ "x-correlation-id": z.string() }),
+            }),
+          ]),
+        ],
+      });
+
+      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+      expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
+        description: "UpperHeader: OK\n\nLowerHeader: OK",
+        headers: {
+          "X-Correlation-ID": {
+            required: true,
+            schema: { type: "string" },
+          },
+        },
+      });
+      expect(result.warnings).toEqual([]);
+    });
+
+    test("combines differently-cased response headers with differing schemas", () => {
+      const normalizedSpec = aTodoSpecWith({
+        operations: [
+          anOperationWithDuplicateOkResponses([
+            anInlineOkResponse({
+              name: "StringHeader",
+              header: z.object({ "X-Correlation-ID": z.string() }),
+            }),
+            anInlineOkResponse({
+              name: "NumberHeader",
+              header: aHeaderSchemaForBuilder(
+                z.object({ "x-correlation-id": z.number() })
+              ),
+            }),
+          ]),
+        ],
+      });
+
+      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+      expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
+        description: "StringHeader: OK\n\nNumberHeader: OK",
+        headers: {
+          "X-Correlation-ID": {
+            required: true,
+            schema: {
+              anyOf: [{ type: "string" }, { type: "number" }],
+            },
+          },
+        },
+      });
+      expect(result.warnings).toEqual([]);
+    });
+
+    test("merges same-variant response header casing collisions without dropping schemas", () => {
+      const normalizedSpec = aTodoSpecWith({
+        operations: [
+          anOperationWithDuplicateOkResponses([
+            anInlineOkResponse({
+              name: "DualHeader",
+              header: z.object({
+                "X-Correlation-ID": z
+                  .string()
+                  .describe("Primary correlation header."),
+                "x-correlation-id": z
+                  .array(z.string())
+                  .describe("Alternate correlation header."),
+              }),
+            }),
+            anInlineOkResponse({
+              name: "OtherHeader",
+              header: z.object({
+                "X-Correlation-ID": z
+                  .string()
+                  .describe("Primary correlation header."),
+              }),
+            }),
+          ]),
+        ],
+      });
+
+      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+      expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
+        description: "DualHeader: OK\n\nOtherHeader: OK",
+        headers: {
+          "X-Correlation-ID": {
+            description:
+              "Header description merged from response variants:\n" +
+              "- DualHeader: Primary correlation header.\n" +
+              "- DualHeader: Alternate correlation header.\n" +
+              "- OtherHeader: Primary correlation header.",
+            required: true,
+            schema: {
+              anyOf: [
+                { type: "string" },
+                { type: "array", items: { type: "string" } },
+              ],
+            },
           },
         },
       });
@@ -1026,7 +1273,7 @@ describe("buildOpenApiDocument responses", () => {
 });
 
 function anInlineOkResponse(
-  overrides: Partial<NormalizedResponse> = {}
+  overrides: ResponseBuilderOverrides = {}
 ): NormalizedResponseUsage {
   return anInlineResponseUsage(
     aResponseWith({ statusCode: OK_STATUS, ...overrides })
@@ -1034,7 +1281,7 @@ function anInlineOkResponse(
 }
 
 function aCanonicalOkResponse(
-  overrides: Partial<NormalizedResponse> = {}
+  overrides: ResponseBuilderOverrides = {}
 ): NormalizedResponse {
   return aResponseWith({ statusCode: OK_STATUS, ...overrides });
 }
@@ -1044,4 +1291,22 @@ function anOperationWithDuplicateOkResponses(
   overrides: Partial<NormalizedOperation> = {}
 ): NormalizedOperation {
   return anOperationWith({ ...overrides, responses });
+}
+
+function aTextBody(schema: z.ZodType, mediaType: string): NormalizedHttpBody {
+  return {
+    schema,
+    mediaType,
+    mediaTypeSource: "content-type-header",
+    transport: "text",
+  };
+}
+
+function anOctetStreamBody(schema: z.ZodType): NormalizedHttpBody {
+  return {
+    schema,
+    mediaType: "application/octet-stream",
+    mediaTypeSource: "content-type-header",
+    transport: "raw",
+  };
 }

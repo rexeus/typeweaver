@@ -40,7 +40,7 @@ function writeRequestType(
     headerTsType: header ? print(fromZod(header)) : undefined,
     queryTsType: query ? print(fromZod(query)) : undefined,
     paramTsType: param ? print(fromZod(param)) : undefined,
-    bodyTsType: body ? print(fromZod(body)) : undefined,
+    bodyTsType: body ? print(fromZod(body.schema)) : undefined,
   });
 
   const relativePath = path.relative(

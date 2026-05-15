@@ -5,7 +5,6 @@ import {
 } from "./jsonPointer.js";
 import { getPathParameterNames } from "./openApiPath.js";
 import { createOperationLocation } from "./operationContext.js";
-import type { OperationContext } from "./operationContext.js";
 import { extractParameterContainer } from "./parameterContainer.js";
 import { rebaseLocalJsonSchemaRefs } from "./schemaConversion.js";
 import type {
@@ -13,6 +12,7 @@ import type {
   OpenApiDiagnosticWarning,
   OpenApiParameterObject,
 } from "../types.js";
+import type { OperationContext } from "./operationContext.js";
 import type { z } from "zod";
 
 export type RequestParameterResult = {

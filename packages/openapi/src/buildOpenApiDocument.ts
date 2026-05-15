@@ -3,6 +3,7 @@ import type {
   NormalizedSpec,
 } from "@rexeus/typeweaver-gen";
 import { pascalCase } from "polycase";
+import { resolveOpenApiBodySchema } from "./internal/bodyContent.js";
 import { jsonPointer } from "./internal/jsonPointer.js";
 import { toOpenApiPath } from "./internal/openApiPath.js";
 import { buildRequestParameters } from "./internal/parameters.js";
@@ -159,30 +160,41 @@ function buildRequestBody(
     return { warnings: [] };
   }
 
-  const optionalSchema = unwrapRootOptional(body);
-  const registration = schemaRegistry.register({
-    schema: optionalSchema.schema,
-    baseName: `${pascalCase(context.operation.operationId)}RequestBody`,
-    location: {
-      resourceName: context.resourceName,
-      operationId: context.operation.operationId,
-      method: context.operation.method,
-      path: context.operation.path,
-      openApiPath: context.openApiPath,
-      part: "request.body",
-    },
-  });
+  const optionalSchema = unwrapRootOptional(body.schema);
+  const resolvedSchema = resolveOpenApiBodySchema<OpenApiBuildWarning>(
+    body,
+    () => {
+      const registration = schemaRegistry.register({
+        schema: optionalSchema.schema,
+        baseName: `${pascalCase(context.operation.operationId)}RequestBody`,
+        location: {
+          resourceName: context.resourceName,
+          operationId: context.operation.operationId,
+          method: context.operation.method,
+          path: context.operation.path,
+          openApiPath: context.openApiPath,
+          part: "request.body",
+        },
+      });
+
+      return {
+        schema: registration.ref,
+        schemaKey: registration.ref.$ref,
+        warnings: registration.warnings,
+      };
+    }
+  );
 
   return {
     requestBody: {
       required: !optionalSchema.isOptional,
       content: {
-        "application/json": {
-          schema: registration.ref,
+        [body.mediaType]: {
+          schema: resolvedSchema.schema,
         },
       },
     },
-    warnings: registration.warnings,
+    warnings: resolvedSchema.warnings,
   };
 }
 

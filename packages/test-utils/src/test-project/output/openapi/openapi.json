@@ -292,9 +292,10 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "application/octet-stream": {
               "schema": {
-                "$ref": "#/components/schemas/UploadFileRequestBody"
+                "type": "string",
+                "format": "binary"
               }
             }
           }
@@ -2547,9 +2548,10 @@
           }
         },
         "content": {
-          "application/json": {
+          "application/octet-stream": {
             "schema": {
-              "$ref": "#/components/schemas/DownloadFileContentSuccessBody"
+              "type": "string",
+              "format": "binary"
             }
           }
         }
@@ -3537,7 +3539,6 @@
         "required": ["id", "name", "size", "mimeType", "createdAt"],
         "additionalProperties": false
       },
-      "DownloadFileContentSuccessBody": {},
       "CreateSubTodoSuccessBody": {
         "type": "object",
         "properties": {
@@ -4280,7 +4281,6 @@
         "required": ["refreshToken"],
         "additionalProperties": false
       },
-      "UploadFileRequestBody": {},
       "CreateSubTodoRequestBody": {
         "type": "object",
         "properties": {

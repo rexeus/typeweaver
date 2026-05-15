@@ -1,4 +1,7 @@
-import type { NormalizedOperation } from "@rexeus/typeweaver-gen";
+import type {
+  NormalizedHttpBody,
+  NormalizedOperation,
+} from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import { buildOpenApiDocument } from "../../src/index.js";
@@ -110,6 +113,31 @@ describe("buildOpenApiDocument", () => {
       },
     });
     expect(result.warnings).toEqual([]);
+  });
+
+  test("uses the normalized request body media type as the OpenAPI content key", () => {
+    const body = z.string();
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          operationId: "uploadCsv",
+          method: "POST" as NormalizedOperation["method"],
+          request: { body: aTextBody(body, "text/csv") },
+          responses: [anInlineResponseUsage(aResponseWith())],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+    expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
+      required: true,
+      content: {
+        "text/csv": {
+          schema: { $ref: "#/components/schemas/UploadCsvRequestBody" },
+        },
+      },
+    });
   });
 
   test("maps optional request bodies to non-required unwrapped schemas", () => {
@@ -682,3 +710,12 @@ describe("buildOpenApiDocument", () => {
     ]);
   });
 });
+
+function aTextBody(schema: z.ZodType, mediaType: string): NormalizedHttpBody {
+  return {
+    schema,
+    mediaType,
+    mediaTypeSource: "content-type-header",
+    transport: "text",
+  };
+}

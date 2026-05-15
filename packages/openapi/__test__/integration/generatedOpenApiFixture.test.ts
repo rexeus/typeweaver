@@ -109,6 +109,14 @@ describe("generated OpenAPI fixture", () => {
         code: { type: "string", enum: ["TODO_NOT_CHANGEABLE_ERROR"] },
       },
     });
+    expect(
+      componentResponseSchemaAt(
+        fixture,
+        "DownloadFileContentSuccess",
+        "application/octet-stream"
+      ),
+      "DownloadFileContent 200 should expose an octet-stream binary response"
+    ).toEqual({ type: "string", format: "binary" });
     await validateOpenApiFixture(FIXTURE_PATH);
   });
 });
@@ -160,7 +168,8 @@ function responseSchemaAt(
   fixture: OpenApiFixture,
   path: string,
   method: string,
-  statusCode: string
+  statusCode: string,
+  mediaTypeName = "application/json"
 ): unknown {
   if (!isRecord(fixture.paths)) {
     return undefined;
@@ -181,7 +190,31 @@ function responseSchemaAt(
     return undefined;
   }
 
-  const mediaType = response.content["application/json"];
+  const mediaType = response.content[mediaTypeName];
+
+  return isRecord(mediaType) ? mediaType.schema : undefined;
+}
+
+function componentResponseSchemaAt(
+  fixture: OpenApiFixture,
+  responseName: string,
+  mediaTypeName = "application/json"
+): unknown {
+  if (!isRecord(fixture.components)) {
+    return undefined;
+  }
+
+  const responses = fixture.components.responses;
+  if (!isRecord(responses)) {
+    return undefined;
+  }
+
+  const response = responses[responseName];
+  if (!isRecord(response) || !isRecord(response.content)) {
+    return undefined;
+  }
+
+  const mediaType = response.content[mediaTypeName];
 
   return isRecord(mediaType) ? mediaType.schema : undefined;
 }

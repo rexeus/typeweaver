@@ -5,13 +5,13 @@ import type {
 import type { JsonSchema } from "@rexeus/typeweaver-zod-to-json-schema";
 import { buildHeaderObjects } from "./headerObjects.js";
 import { escapeJsonPointerSegment } from "./jsonPointer.js";
-import type { OperationContext } from "./operationContext.js";
 import {
   isWarningDocumentPathAtOrBelow,
   rebaseSchemaDocumentRefs,
   rebaseWarningDocumentPath,
 } from "./schemaRebasing.js";
 import type { OpenApiBuildWarning, OpenApiHeaderObject } from "../types.js";
+import type { OperationContext } from "./operationContext.js";
 
 export type ResponseHeaderMergeVariant = {
   readonly response: Pick<NormalizedResponse, "header">;
@@ -25,6 +25,7 @@ type VariantHeaders = {
 };
 
 type HeaderAppearance = {
+  readonly variantIndex: number;
   readonly responseName: string;
   readonly header: OpenApiHeaderObject;
   readonly warnings: readonly OpenApiBuildWarning[];
@@ -112,15 +113,19 @@ function warningsOutsideMergedHeaderSchemas(
 function headerNamesFrom(
   variants: readonly VariantHeaders[]
 ): readonly string[] {
-  const names = new Set<string>();
+  const namesByLowercase = new Map<string, string>();
 
   for (const variant of variants) {
     for (const name of Object.keys(variant.headers)) {
-      names.add(name);
+      const lowercaseName = name.toLowerCase();
+
+      if (!namesByLowercase.has(lowercaseName)) {
+        namesByLowercase.set(lowercaseName, name);
+      }
     }
   }
 
-  return [...names];
+  return [...namesByLowercase.values()];
 }
 
 function mergeHeader(
@@ -129,7 +134,12 @@ function mergeHeader(
   responsePointer: string
 ): MergedHeader {
   const schemaPointer = headerSchemaPointer(responsePointer, name);
-  const appearances = headerAppearancesFor(name, variants, schemaPointer);
+  const appearances = headerAppearancesFor(
+    name,
+    variants,
+    responsePointer,
+    schemaPointer
+  );
   const distinctSchemaAppearances =
     distinctHeaderSchemaAppearances(appearances);
   const schema = mergedHeaderSchema(distinctSchemaAppearances, schemaPointer);
@@ -153,8 +163,9 @@ function mergeHeader(
     header: {
       ...(description === undefined ? {} : { description }),
       required:
-        appearances.length === variants.length &&
-        appearances.every(appearance => appearance.header.required),
+        variants.every((_, index) =>
+          appearances.some(appearance => appearance.variantIndex === index)
+        ) && appearances.every(appearance => appearance.header.required),
       schema,
     },
     warnings,
@@ -164,35 +175,63 @@ function mergeHeader(
 function headerAppearancesFor(
   name: string,
   variants: readonly VariantHeaders[],
+  responsePointer: string,
   schemaPointer: string
 ): readonly HeaderAppearance[] {
-  return variants.flatMap(variant => {
-    const header = ownHeader(variant.headers, name);
+  return variants.flatMap((variant, variantIndex) => {
+    const headerEntries = headerEntriesFor(variant.headers, name);
 
-    if (header === undefined) {
+    if (headerEntries.length === 0) {
       return [];
     }
 
-    return [
-      {
+    return headerEntries.map(headerEntry => {
+      const originalSchemaPointer = headerSchemaPointer(
+        responsePointer,
+        headerEntry.name
+      );
+      const warnings = variant.warnings
+        .filter(warning =>
+          isWarningDocumentPathAtOrBelow(warning, originalSchemaPointer)
+        )
+        .map(warning =>
+          originalSchemaPointer === schemaPointer
+            ? warning
+            : rebaseWarningDocumentPath(
+                warning,
+                originalSchemaPointer,
+                schemaPointer
+              )
+        );
+
+      return {
+        variantIndex,
         responseName: variant.responseName,
-        header,
-        warnings: variant.warnings.filter(warning =>
-          isWarningDocumentPathAtOrBelow(warning, schemaPointer)
-        ),
-        schemaKey: JSON.stringify(header.schema),
-      },
-    ];
+        header: headerEntry.header,
+        warnings,
+        schemaKey: JSON.stringify(headerEntry.header.schema),
+      };
+    });
   });
 }
 
-function ownHeader(
+function headerEntriesFor(
   headers: Record<string, OpenApiHeaderObject>,
   name: string
-): OpenApiHeaderObject | undefined {
-  return Object.prototype.hasOwnProperty.call(headers, name)
-    ? headers[name]
-    : undefined;
+): readonly { readonly name: string; readonly header: OpenApiHeaderObject }[] {
+  const lowerName = name.toLowerCase();
+  const entries: {
+    readonly name: string;
+    readonly header: OpenApiHeaderObject;
+  }[] = [];
+
+  for (const [headerName, header] of Object.entries(headers)) {
+    if (headerName.toLowerCase() === lowerName) {
+      entries.push({ name: headerName, header });
+    }
+  }
+
+  return entries;
 }
 
 function distinctHeaderSchemaAppearances(
