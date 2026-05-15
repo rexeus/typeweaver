@@ -4,7 +4,31 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Supply-chain hardening: wait before pulling in fresh releases. Most
+    # compromised versions are caught and unpublished within a few days.
+    cooldown:
+      default-days: 5
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
+
+  # Dependabot understands SHA-pinned actions when they carry a
+  # `# vX.Y.Z` trailing comment and will bump both the SHA and the
+  # comment in one PR. Grouping keeps these updates auditable as a
+  # single change.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    # GitHub Actions are an even higher-value supply-chain target than npm
+    # packages because a malicious action runs with CI credentials on day
+    # one. Wait longer before adopting new releases.
+    cooldown:
+      default-days: 7
+      semver-major-days: 21
+      semver-minor-days: 10
+      semver-patch-days: 5

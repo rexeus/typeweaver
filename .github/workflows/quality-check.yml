@@ -1,11 +1,24 @@
 name: Quality Check
+
+# SECURITY: This workflow runs untrusted PR code, so it MUST use `pull_request`
+# (not `pull_request_target`). With `pull_request`:
+#   - The workflow runs in the PR's ref scope, not the base branch's.
+#   - Caches written here cannot be restored by workflows on `main`.
+#   - For PRs from forks, `secrets.GITHUB_TOKEN` is read-only and no other
+#     secrets are exposed. There is no privilege escalation path.
+# Do NOT switch back to `pull_request_target` — combined with a PR-head
+# checkout it lets untrusted PR code run in the base-branch context and is a
+# well-known supply-chain entry point.
 on:
   workflow_dispatch:
-  pull_request_target:
+  pull_request:
     types:
       - opened
       - synchronize
       - reopened
+
+# Default to zero permissions; jobs opt in to what they need.
+permissions: {}
 
 env:
   NODE_VERSION: "24"
@@ -13,37 +26,36 @@ env:
 
 jobs:
   quality-check:
-    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 5
     permissions:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0 # Fetch all history for all branches
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v5.0.0
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
         with:
           version: ${{ env.PNPM_VERSION }}
           run_install: false
 
       - name: Install Node.js
-        uses: actions/setup-node@v6.3.0
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
 
       - name: Install Deno
-        uses: denoland/setup-deno@v2.0.4
+        uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282 # v2.0.4
         with:
           deno-version: ">=2.6"
 
       - name: Install Bun
-        uses: oven-sh/setup-bun@v2.2.0
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: latest
 
@@ -51,12 +63,15 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Cache Turbo
-        uses: actions/cache@v5.0.4
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
+          # Key is namespaced `pr-` so it can never collide with a cache
+          # produced by the release workflow on `main`. Defence in depth on
+          # top of GitHub's per-ref cache scoping.
           path: .turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: turbo-pr-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            turbo-${{ runner.os }}-
+            turbo-pr-${{ runner.os }}-
 
       - name: Build all packages
         run: |
