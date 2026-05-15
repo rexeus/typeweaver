@@ -1,5 +1,17 @@
 # @rexeus/typeweaver-hono
 
+## 0.12.0
+
+### Patch Changes
+
+- 001fd6d: Make malformed request-body parsing configurable for generated Hono routers while preserving the default sanitized 400 Bad Request response.
+
+  The Hono runtime defines and exports the body parse error class as `HonoBodyParseError` so generated root barrels can coexist with server runtime exports without ambiguity.
+
+- Updated dependencies [c14059d]
+  - @rexeus/typeweaver-gen@0.12.0
+  - @rexeus/typeweaver-core@0.12.0
+
 ## 0.11.0
 
 ### Patch Changes

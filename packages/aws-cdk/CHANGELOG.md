@@ -1,5 +1,13 @@
 # @rexeus/typeweaver-aws-cdk
 
+## 0.12.0
+
+### Patch Changes
+
+- Updated dependencies [c14059d]
+  - @rexeus/typeweaver-gen@0.12.0
+  - @rexeus/typeweaver-core@0.12.0
+
 ## 0.11.0
 
 ### Patch Changes
