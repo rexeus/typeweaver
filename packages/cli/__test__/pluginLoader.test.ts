@@ -2,21 +2,21 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { PluginRegistry } from "@rexeus/typeweaver-gen";
 import type {
+  Plugin,
   PluginConfig,
   TypeweaverConfig,
-  TypeweaverPlugin,
 } from "@rexeus/typeweaver-gen";
+import { Cause, Effect, Exit, Layer, ManagedRuntime, Ref } from "effect";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { PluginLoadError } from "../src/generators/errors/PluginLoadError.js";
-
-import { loadPlugins } from "../src/generators/pluginLoader.js";
+import { PluginLoader } from "../src/services/PluginLoader.js";
 import { TestAssertionError } from "./errors/index.js";
-import type { PluginRegistrar } from "../src/generators/pluginLoader.js";
 
 type RegisteredPlugin = {
   readonly name: string;
-  readonly plugin: TypeweaverPlugin;
+  readonly plugin: Plugin;
   readonly config?: unknown;
 };
 
@@ -25,7 +25,7 @@ type SuccessfulLoadSummaryEntry = {
   readonly source: string;
 };
 
-const requiredTypesPlugin = (): TypeweaverPlugin => ({
+const requiredTypesPlugin = (): Plugin => ({
   name: "types",
 });
 
@@ -60,25 +60,78 @@ const createThrowingModuleSource = (options: {
   ];
 };
 
-function createRegistry(): {
-  readonly registry: PluginRegistrar;
-  readonly registeredPlugins: RegisteredPlugin[];
-} {
-  const registeredPlugins: RegisteredPlugin[] = [];
+const createRecordingPluginRegistryLayer = (
+  registeredPlugins: RegisteredPlugin[]
+): Layer.Layer<PluginRegistry> =>
+  Layer.scoped(
+    PluginRegistry,
+    Effect.gen(function* () {
+      const ref = yield* Ref.make(new Set<string>());
 
-  return {
-    registry: {
-      register: (plugin: TypeweaverPlugin, config?: unknown) => {
-        registeredPlugins.push({
-          name: plugin.name,
-          plugin,
-          config,
+      const register = (
+        plugin: Plugin,
+        config?: unknown
+      ): Effect.Effect<void> =>
+        Effect.gen(function* () {
+          const known = yield* Ref.get(ref);
+          if (known.has(plugin.name)) {
+            return;
+          }
+          yield* Ref.update(ref, set => {
+            const next = new Set(set);
+            next.add(plugin.name);
+            return next;
+          });
+          registeredPlugins.push({
+            name: plugin.name,
+            plugin,
+            config,
+          });
         });
-      },
-    },
-    registeredPlugins,
-  };
-}
+
+      return {
+        register,
+        getAll: Effect.succeed([] as never),
+        clear: Effect.sync(() => {
+          registeredPlugins.length = 0;
+        }),
+      } as unknown as PluginRegistry;
+    })
+  );
+
+const runLoadPlugins = async (params: {
+  readonly registeredPlugins: RegisteredPlugin[];
+  readonly requiredPlugins: readonly Plugin[];
+  readonly strategies: readonly ("npm" | "local" | "scoped")[];
+  readonly config?: TypeweaverConfig;
+}): Promise<void> => {
+  const recordingRegistry = createRecordingPluginRegistryLayer(
+    params.registeredPlugins
+  );
+  const layer = Layer.provide(
+    PluginLoader.DefaultWithoutDependencies,
+    recordingRegistry
+  );
+  const runtime = ManagedRuntime.make(layer);
+  try {
+    const exit = await runtime.runPromiseExit(
+      PluginLoader.loadAll({
+        requiredPlugins: params.requiredPlugins,
+        strategies: params.strategies,
+        config: params.config,
+      })
+    );
+    if (Exit.isFailure(exit)) {
+      const failureOption = Cause.failureOption(exit.cause);
+      if (failureOption._tag === "Some") {
+        throw failureOption.value;
+      }
+      throw new Error(Cause.pretty(exit.cause));
+    }
+  } finally {
+    await runtime.dispose();
+  }
+};
 
 describe("pluginLoader", () => {
   const tempDirs: string[] = [];
@@ -116,12 +169,10 @@ describe("pluginLoader", () => {
 
   const writeConfigurablePluginModule = (): string =>
     writePluginModule([
-      "export class ConfigurablePlugin {",
-      "  constructor(config) {",
-      '    this.name = "configurable-plugin";',
-      "    this.config = config;",
-      "  }",
-      "}",
+      'export const configurablePlugin = config => ({',
+      '  name: "configurable-plugin",',
+      "  config,",
+      "});",
     ]);
 
   const capturePluginLoadError = async (
@@ -134,7 +185,7 @@ describe("pluginLoader", () => {
 
     if (!(failure instanceof PluginLoadError)) {
       throw new TestAssertionError(
-        "Expected plugin loading to fail with PluginLoadError"
+        `Expected plugin loading to fail with PluginLoadError, received: ${failure instanceof Error ? failure.message : String(failure)}`
       );
     }
 
@@ -142,7 +193,9 @@ describe("pluginLoader", () => {
   };
 
   const expectNoSuccessfulLoadSummary = (): void => {
-    expect(vi.mocked(console.info)).not.toHaveBeenCalled();
+    expect(vi.mocked(console.info)).not.toHaveBeenCalledWith(
+      expect.stringMatching(/Successfully loaded/)
+    );
   };
 
   const expectSuccessfulLoadSummary = ({
@@ -169,38 +222,38 @@ describe("pluginLoader", () => {
   }): void => {
     const info = vi.mocked(console.info);
 
-    expect(info).toHaveBeenCalledTimes(entries.length + 1);
-    expect(info).toHaveBeenNthCalledWith(
-      1,
+    expect(info).toHaveBeenCalledWith(
       `Successfully loaded ${count} plugin(s):`
     );
-
-    entries.forEach((entry, index) => {
-      expect(info).toHaveBeenNthCalledWith(
-        index + 2,
+    for (const entry of entries) {
+      expect(info).toHaveBeenCalledWith(
         `  - ${entry.pluginName} (from ${entry.source})`
       );
-    });
+    }
   };
 
   test("registers required plugins when config is absent", async () => {
-    const { registry, registeredPlugins } = createRegistry();
+    const registeredPlugins: RegisteredPlugin[] = [];
 
-    await loadPlugins(registry, [requiredTypesPlugin()], ["local"]);
+    await runLoadPlugins({
+      registeredPlugins,
+      requiredPlugins: [requiredTypesPlugin()],
+      strategies: ["local"],
+    });
 
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual(["types"]);
     expectNoSuccessfulLoadSummary();
   });
 
   test("registers required plugins when plugins are omitted", async () => {
-    const { registry, registeredPlugins } = createRegistry();
+    const registeredPlugins: RegisteredPlugin[] = [];
 
-    await loadPlugins(
-      registry,
-      [requiredTypesPlugin()],
-      ["local"],
-      configWithoutPlugins()
-    );
+    await runLoadPlugins({
+      registeredPlugins,
+      requiredPlugins: [requiredTypesPlugin()],
+      strategies: ["local"],
+      config: configWithoutPlugins(),
+    });
 
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual(["types"]);
     expectNoSuccessfulLoadSummary();
@@ -208,16 +261,19 @@ describe("pluginLoader", () => {
 
   test("registers required plugins before configured plugins", async () => {
     const pluginPath = writePluginModule([
-      "export class LocalPlugin {",
-      '  name = "local-plugin";',
-      "}",
+      'export const localPlugin = { name: "local-plugin" };',
     ]);
-    const { registry, registeredPlugins } = createRegistry();
+    const registeredPlugins: RegisteredPlugin[] = [];
 
-    await loadPlugins(registry, [requiredTypesPlugin()], ["local"], {
-      input: "./spec.ts",
-      output: "./generated",
-      plugins: [pluginPath],
+    await runLoadPlugins({
+      registeredPlugins,
+      requiredPlugins: [requiredTypesPlugin()],
+      strategies: ["local"],
+      config: {
+        input: "./spec.ts",
+        output: "./generated",
+        plugins: [pluginPath],
+      },
     });
 
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
@@ -226,20 +282,18 @@ describe("pluginLoader", () => {
     ]);
   });
 
-  test("loads a named plugin class exported from an absolute local file path", async () => {
+  test("loads a named plugin record exported from an absolute local file path", async () => {
     const pluginPath = writePluginModule([
-      "export class NamedPlugin {",
-      '  name = "named-plugin";',
-      "}",
+      'export const namedPlugin = { name: "named-plugin" };',
     ]);
-    const { registry, registeredPlugins } = createRegistry();
+    const registeredPlugins: RegisteredPlugin[] = [];
 
-    await loadPlugins(
-      registry,
-      [requiredTypesPlugin()],
-      ["local"],
-      configWithPlugin(pluginPath)
-    );
+    await runLoadPlugins({
+      registeredPlugins,
+      requiredPlugins: [requiredTypesPlugin()],
+      strategies: ["local"],
+      config: configWithPlugin(pluginPath),
+    });
 
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
       "types",
@@ -249,18 +303,15 @@ describe("pluginLoader", () => {
 
   test("reports configured plugin count, name, and source", async () => {
     const pluginPath = writePluginModule([
-      "export class ReportedPlugin {",
-      '  name = "reported-plugin";',
-      "}",
+      'export const reportedPlugin = { name: "reported-plugin" };',
     ]);
-    const { registry } = createRegistry();
 
-    await loadPlugins(
-      registry,
-      [requiredTypesPlugin()],
-      ["local"],
-      configWithPlugin(pluginPath)
-    );
+    await runLoadPlugins({
+      registeredPlugins: [],
+      requiredPlugins: [requiredTypesPlugin()],
+      strategies: ["local"],
+      config: configWithPlugin(pluginPath),
+    });
 
     expectSuccessfulLoadSummary({
       count: 1,
@@ -271,21 +322,22 @@ describe("pluginLoader", () => {
 
   test("reports multiple configured plugins in config order", async () => {
     const firstPath = writePluginModule([
-      "export class FirstPlugin {",
-      '  name = "first-plugin";',
-      "}",
+      'export const firstPlugin = { name: "first-plugin" };',
     ]);
     const secondPath = writePluginModule([
-      "export class SecondPlugin {",
-      '  name = "second-plugin";',
-      "}",
+      'export const secondPlugin = { name: "second-plugin" };',
     ]);
-    const { registry, registeredPlugins } = createRegistry();
+    const registeredPlugins: RegisteredPlugin[] = [];
 
-    await loadPlugins(registry, [requiredTypesPlugin()], ["local"], {
-      input: "./spec.ts",
-      output: "./generated",
-      plugins: [firstPath, secondPath],
+    await runLoadPlugins({
+      registeredPlugins,
+      requiredPlugins: [requiredTypesPlugin()],
+      strategies: ["local"],
+      config: {
+        input: "./spec.ts",
+        output: "./generated",
+        plugins: [firstPath, secondPath],
+      },
     });
 
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
@@ -308,21 +360,19 @@ describe("pluginLoader", () => {
     });
   });
 
-  test("loads a named plugin class exported from a file URL", async () => {
+  test("loads a named plugin record exported from a file URL", async () => {
     const pluginPath = writePluginModule([
-      "export class FileUrlPlugin {",
-      '  name = "file-url-plugin";',
-      "}",
+      'export const fileUrlPlugin = { name: "file-url-plugin" };',
     ]);
     const pluginUrl = importPathForFile(pluginPath);
-    const { registry, registeredPlugins } = createRegistry();
+    const registeredPlugins: RegisteredPlugin[] = [];
 
-    await loadPlugins(
-      registry,
-      [requiredTypesPlugin()],
-      ["local"],
-      configWithPlugin(pluginUrl)
-    );
+    await runLoadPlugins({
+      registeredPlugins,
+      requiredPlugins: [requiredTypesPlugin()],
+      strategies: ["local"],
+      config: configWithPlugin(pluginUrl),
+    });
 
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
       "types",
@@ -337,18 +387,16 @@ describe("pluginLoader", () => {
 
   test("falls through failed npm attempts to load a local plugin", async () => {
     const pluginPath = writePluginModule([
-      "export class LocalFallbackPlugin {",
-      '  name = "local-fallback-plugin";',
-      "}",
+      'export const localFallbackPlugin = { name: "local-fallback-plugin" };',
     ]);
-    const { registry, registeredPlugins } = createRegistry();
+    const registeredPlugins: RegisteredPlugin[] = [];
 
-    await loadPlugins(
-      registry,
-      [requiredTypesPlugin()],
-      ["npm", "local"],
-      configWithPlugin(pluginPath)
-    );
+    await runLoadPlugins({
+      registeredPlugins,
+      requiredPlugins: [requiredTypesPlugin()],
+      strategies: ["npm", "local"],
+      config: configWithPlugin(pluginPath),
+    });
 
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
       "types",
@@ -361,20 +409,18 @@ describe("pluginLoader", () => {
     });
   });
 
-  test("falls back to a default plugin class export", async () => {
+  test("falls back to a default plugin record export", async () => {
     const pluginPath = writePluginModule([
-      "export default class DefaultPlugin {",
-      '  name = "default-plugin";',
-      "}",
+      'export default { name: "default-plugin" };',
     ]);
-    const { registry, registeredPlugins } = createRegistry();
+    const registeredPlugins: RegisteredPlugin[] = [];
 
-    await loadPlugins(
-      registry,
-      [requiredTypesPlugin()],
-      ["local"],
-      configWithPlugin(pluginPath)
-    );
+    await runLoadPlugins({
+      registeredPlugins,
+      requiredPlugins: [requiredTypesPlugin()],
+      strategies: ["local"],
+      config: configWithPlugin(pluginPath),
+    });
 
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
       "types",
@@ -382,17 +428,17 @@ describe("pluginLoader", () => {
     ]);
   });
 
-  test("passes tuple plugin options to the plugin constructor", async () => {
+  test("passes tuple plugin options to a plugin factory", async () => {
     const pluginPath = writeConfigurablePluginModule();
     const options = { marker: "from tuple" };
-    const { registry, registeredPlugins } = createRegistry();
+    const registeredPlugins: RegisteredPlugin[] = [];
 
-    await loadPlugins(
-      registry,
-      [requiredTypesPlugin()],
-      ["local"],
-      configWithPlugin([pluginPath, options])
-    );
+    await runLoadPlugins({
+      registeredPlugins,
+      requiredPlugins: [requiredTypesPlugin()],
+      strategies: ["local"],
+      config: configWithPlugin([pluginPath, options]),
+    });
 
     expect(registeredPlugins[1]?.plugin).toMatchObject({ config: options });
   });
@@ -400,35 +446,31 @@ describe("pluginLoader", () => {
   test("passes tuple plugin options to the registry registration", async () => {
     const pluginPath = writeConfigurablePluginModule();
     const options = { marker: "from tuple" };
-    const { registry, registeredPlugins } = createRegistry();
+    const registeredPlugins: RegisteredPlugin[] = [];
 
-    await loadPlugins(
-      registry,
-      [requiredTypesPlugin()],
-      ["local"],
-      configWithPlugin([pluginPath, options])
-    );
+    await runLoadPlugins({
+      registeredPlugins,
+      requiredPlugins: [requiredTypesPlugin()],
+      strategies: ["local"],
+      config: configWithPlugin([pluginPath, options]),
+    });
 
     expect(registeredPlugins[1]?.config).toEqual(options);
   });
 
-  test("skips helper exports and registers the first valid plugin shape", async () => {
+  test("skips non-plugin exports and registers the first valid plugin shape", async () => {
     const pluginPath = writePluginModule([
-      "export function Helper() {",
-      "  return { helper: true };",
-      "}",
-      "export class ValidPlugin {",
-      '  name = "valid-plugin";',
-      "}",
+      "export const helper = { helper: true };",
+      'export const validPlugin = { name: "valid-plugin" };',
     ]);
-    const { registry, registeredPlugins } = createRegistry();
+    const registeredPlugins: RegisteredPlugin[] = [];
 
-    await loadPlugins(
-      registry,
-      [requiredTypesPlugin()],
-      ["local"],
-      configWithPlugin(pluginPath)
-    );
+    await runLoadPlugins({
+      registeredPlugins,
+      requiredPlugins: [requiredTypesPlugin()],
+      strategies: ["local"],
+      config: configWithPlugin(pluginPath),
+    });
 
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
       "types",
@@ -437,15 +479,13 @@ describe("pluginLoader", () => {
   });
 
   test("reports attempted paths and errors when a plugin cannot be resolved", async () => {
-    const { registry } = createRegistry();
-
     const failure = await capturePluginLoadError(
-      loadPlugins(
-        registry,
-        [requiredTypesPlugin()],
-        ["local"],
-        configWithPlugin("missing-plugin")
-      )
+      runLoadPlugins({
+        registeredPlugins: [],
+        requiredPlugins: [requiredTypesPlugin()],
+        strategies: ["local"],
+        config: configWithPlugin("missing-plugin"),
+      })
     );
 
     expect(failure.pluginName).toBe("missing-plugin");
@@ -458,15 +498,13 @@ describe("pluginLoader", () => {
   });
 
   test("reports npm package attempts when a package plugin is missing", async () => {
-    const { registry } = createRegistry();
-
     const failure = await capturePluginLoadError(
-      loadPlugins(
-        registry,
-        [requiredTypesPlugin()],
-        ["npm"],
-        configWithPlugin("missing-plugin")
-      )
+      runLoadPlugins({
+        registeredPlugins: [],
+        requiredPlugins: [requiredTypesPlugin()],
+        strategies: ["npm"],
+        config: configWithPlugin("missing-plugin"),
+      })
     );
 
     expect(failure.pluginName).toBe("missing-plugin");
@@ -489,15 +527,14 @@ describe("pluginLoader", () => {
         message: "evaluation failed",
       })
     );
-    const { registry } = createRegistry();
 
     const failure = await capturePluginLoadError(
-      loadPlugins(
-        registry,
-        [requiredTypesPlugin()],
-        ["local"],
-        configWithPlugin(pluginPath)
-      )
+      runLoadPlugins({
+        registeredPlugins: [],
+        requiredPlugins: [requiredTypesPlugin()],
+        strategies: ["local"],
+        config: configWithPlugin(pluginPath),
+      })
     );
 
     expect(failure.pluginName).toBe(pluginPath);
@@ -509,98 +546,88 @@ describe("pluginLoader", () => {
     ]);
   });
 
-  test("reports no plugin constructor export when a module has no function exports", async () => {
-    const pluginPath = writePluginModule([
-      'export const name = "metadata-only";',
-    ]);
-    const { registry } = createRegistry();
+  test("reports no plugin export found when a module has no exports", async () => {
+    const pluginPath = writePluginModule(["// no exports"]);
 
     const failure = await capturePluginLoadError(
-      loadPlugins(
-        registry,
-        [requiredTypesPlugin()],
-        ["local"],
-        configWithPlugin(pluginPath)
-      )
+      runLoadPlugins({
+        registeredPlugins: [],
+        requiredPlugins: [requiredTypesPlugin()],
+        strategies: ["local"],
+        config: configWithPlugin(pluginPath),
+      })
     );
 
     expect(failure.attempts).toEqual([
       {
         path: importPathForFile(pluginPath),
-        error: "No plugin constructor export found",
+        error: "No plugin export found",
       },
     ]);
   });
 
-  test("captures constructor failures in plugin loading attempts", async () => {
+  test("captures factory failures in plugin loading attempts", async () => {
     const pluginPath = writePluginModule([
-      "export class BrokenPlugin {",
-      "  constructor() {",
+      "export const brokenPlugin = () => {",
       ...createThrowingModuleSource({
-        errorName: "PluginConstructorError",
-        message: "constructor failed",
-        indent: "    ",
+        errorName: "PluginFactoryError",
+        message: "factory failed",
+        indent: "  ",
       }),
-      "  }",
-      "}",
+      "};",
     ]);
-    const { registry } = createRegistry();
 
     const failure = await capturePluginLoadError(
-      loadPlugins(
-        registry,
-        [requiredTypesPlugin()],
-        ["local"],
-        configWithPlugin(pluginPath)
-      )
+      runLoadPlugins({
+        registeredPlugins: [],
+        requiredPlugins: [requiredTypesPlugin()],
+        strategies: ["local"],
+        config: configWithPlugin(pluginPath),
+      })
     );
 
     expect(failure.attempts).toEqual([
       {
         path: importPathForFile(pluginPath),
         error:
-          "Export 'BrokenPlugin' could not be instantiated: constructor failed",
+          "Export 'brokenPlugin' could not be instantiated: factory failed",
       },
     ]);
   });
 
-  test("rejects instantiated exports without a plugin name", async () => {
+  test("rejects exports without a plugin name", async () => {
     const pluginPath = writePluginModule([
-      "export class NamelessPlugin {",
-      "  generate() {}",
-      "}",
+      "export const namelessPlugin = { generate: () => {} };",
     ]);
-    const { registry, registeredPlugins } = createRegistry();
+    const registeredPlugins: RegisteredPlugin[] = [];
 
     const failure = await capturePluginLoadError(
-      loadPlugins(
-        registry,
-        [requiredTypesPlugin()],
-        ["local"],
-        configWithPlugin(pluginPath)
-      )
+      runLoadPlugins({
+        registeredPlugins,
+        requiredPlugins: [requiredTypesPlugin()],
+        strategies: ["local"],
+        config: configWithPlugin(pluginPath),
+      })
     );
 
     expect(failure.attempts).toEqual([
       {
         path: importPathForFile(pluginPath),
         error:
-          "Export 'NamelessPlugin' did not produce a valid plugin with a string name",
+          "Export 'namelessPlugin' did not produce a valid plugin with a string name",
       },
     ]);
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual(["types"]);
   });
 
   test("reports a scoped package attempt when the scoped strategy cannot load it", async () => {
-    const { registry } = createRegistry();
-
     const failure = await capturePluginLoadError(
-      loadPlugins(
-        registry,
-        [requiredTypesPlugin()],
-        ["scoped"],
-        configWithPlugin("@example/missing-plugin")
-      )
+      runLoadPlugins({
+        registeredPlugins: [],
+        requiredPlugins: [requiredTypesPlugin()],
+        strategies: ["scoped"],
+        config: configWithPlugin("@example/missing-plugin"),
+      })
     );
 
     expect(failure.pluginName).toBe("@example/missing-plugin");

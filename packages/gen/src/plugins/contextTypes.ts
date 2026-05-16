@@ -1,12 +1,12 @@
 import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec.js";
 
 /**
- * Configuration for a typeweaver plugin
+ * Configuration for a typeweaver plugin.
  */
 export type PluginConfig = Record<string, unknown>;
 
 /**
- * Context provided to plugins during initialization and finalization
+ * Context provided to plugins during initialization and finalization.
  */
 export type PluginContext = {
   readonly outputDir: string;
@@ -29,7 +29,7 @@ export type OperationOutputPaths = {
 };
 
 /**
- * Context provided to plugins during generation
+ * Context provided to plugins during generation.
  */
 export type GeneratorContext = PluginContext & {
   readonly normalizedSpec: NormalizedSpec;
@@ -62,7 +62,7 @@ export type GeneratorContext = PluginContext & {
 };
 
 /**
- * Plugin metadata
+ * Plugin metadata.
  */
 export type PluginMetadata = {
   readonly name: string;
@@ -70,59 +70,7 @@ export type PluginMetadata = {
 };
 
 /**
- * typeweaver plugin interface
- */
-export type TypeweaverPlugin = PluginMetadata & {
-  /**
-   * Initialize the plugin
-   * Called before any generation happens
-   */
-  initialize?(context: PluginContext): Promise<void> | void;
-
-  /**
-   * Collect and transform resources
-   * Allows plugins to modify the resource collection
-   */
-  collectResources?(
-    normalizedSpec: NormalizedSpec
-  ): Promise<NormalizedSpec> | NormalizedSpec;
-
-  /**
-   * Main generation logic
-   * Called with all resources and utilities
-   */
-  generate?(context: GeneratorContext): Promise<void> | void;
-
-  /**
-   * Finalize the plugin
-   * Called after all generation is complete
-   */
-  finalize?(context: PluginContext): Promise<void> | void;
-};
-
-/**
- * Plugin constructor type
- */
-export type PluginConstructor = new (config?: PluginConfig) => TypeweaverPlugin;
-
-/**
- * Plugin module export
- */
-export type PluginModule = {
-  default: PluginConstructor;
-};
-
-/**
- * Plugin registration entry
- */
-export type PluginRegistration = {
-  name: string;
-  plugin: TypeweaverPlugin;
-  config?: PluginConfig;
-};
-
-/**
- * typeweaver configuration
+ * typeweaver configuration.
  */
 export type TypeweaverConfig = {
   input: string;
@@ -131,4 +79,3 @@ export type TypeweaverConfig = {
   format?: boolean;
   clean?: boolean;
 };
-

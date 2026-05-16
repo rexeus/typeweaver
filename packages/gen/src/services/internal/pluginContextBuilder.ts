@@ -1,13 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pascalCase } from "polycase";
-import { relative } from "../helpers/path.js";
-import { resolveSafeGeneratedFilePath } from "../helpers/pathSafety.js";
-import type { SafeGeneratedFilePath } from "../helpers/pathSafety.js";
-import { renderTemplate } from "../helpers/templateEngine.js";
-import { MissingCanonicalResponseError } from "./errors/MissingCanonicalResponseError.js";
-import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec.js";
-import type { GeneratorContext, PluginConfig, PluginContext } from "./types.js";
+import { relative } from "../../helpers/path.js";
+import { resolveSafeGeneratedFilePath } from "../../helpers/pathSafety.js";
+import type { SafeGeneratedFilePath } from "../../helpers/pathSafety.js";
+import { renderTemplate } from "../../helpers/templateEngine.js";
+import { MissingCanonicalResponseError } from "../../plugins/errors/MissingCanonicalResponseError.js";
+import type {
+  GeneratorContext,
+  PluginConfig,
+  PluginContext,
+} from "../../plugins/contextTypes.js";
+import type {
+  NormalizedResponse,
+  NormalizedSpec,
+} from "../../NormalizedSpec.js";
 
 function writeGeneratedFileByReplacingDestination(config: {
   readonly safePath: SafeGeneratedFilePath;

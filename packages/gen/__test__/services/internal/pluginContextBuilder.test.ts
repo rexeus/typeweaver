@@ -3,12 +3,12 @@ import os from "node:os";
 import path from "node:path";
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { afterEach, describe, expect, test } from "vitest";
-import { MissingCanonicalResponseError } from "../src/plugins/errors/MissingCanonicalResponseError.js";
-import { createPluginContextBuilder } from "../src/plugins/pluginContext.js";
+import { MissingCanonicalResponseError } from "../../../src/plugins/errors/MissingCanonicalResponseError.js";
+import { createPluginContextBuilder } from "../../../src/services/internal/pluginContextBuilder.js";
 import type {
   NormalizedResponse,
   NormalizedSpec,
-} from "../src/NormalizedSpec.js";
+} from "../../../src/NormalizedSpec.js";
 
 const validationErrorResponse: NormalizedResponse = {
   name: "validationError",

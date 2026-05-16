@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { UnsafeCleanTargetError } from "../src/generators/errors/UnsafeCleanTargetError.js";
-import { assertSafeCleanTarget } from "../src/generators/Generator.js";
+import { assertSafeCleanTarget } from "../src/services/cleanTargetGuard.js";
 
 type WorkspaceMarker = ".git" | "pnpm-workspace.yaml";
 

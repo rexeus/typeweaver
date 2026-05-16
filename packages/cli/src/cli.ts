@@ -4,9 +4,9 @@ import { fileURLToPath } from "node:url";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { Command } from "commander";
 import { effectRuntime } from "./effectRuntime.js";
-import { Generator } from "./generators/Generator.js";
 import { resolveGenerateOptions } from "./resolveGenerateOptions.js";
 import { ConfigLoader, getResolvedConfigPath } from "./services/ConfigLoader.js";
+import { Generator } from "./services/Generator.js";
 import type { CommandOptions as CommanderOptions } from "commander";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
@@ -73,12 +73,13 @@ program
     );
 
     // Run generation
-    const generator = new Generator();
-    return generator.generate(
-      resolvedGenerateOptions.inputPath,
-      resolvedGenerateOptions.outputDir,
-      resolvedGenerateOptions.config,
-      execDir
+    await effectRuntime.runPromise(
+      Generator.generate({
+        inputFile: resolvedGenerateOptions.inputPath,
+        outputDir: resolvedGenerateOptions.outputDir,
+        config: resolvedGenerateOptions.config,
+        currentWorkingDirectory: execDir,
+      })
     );
   });
 

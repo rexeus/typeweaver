@@ -65,6 +65,9 @@ importers:
       '@rexeus/typeweaver-gen':
         specifier: workspace:^
         version: link:../gen
+      effect:
+        specifier: ^3.21.2
+        version: 3.21.2
 
   packages/cli:
     dependencies:
@@ -145,6 +148,9 @@ importers:
       '@rexeus/typeweaver-gen':
         specifier: workspace:^
         version: link:../gen
+      effect:
+        specifier: ^3.21.2
+        version: 3.21.2
       test-utils:
         specifier: file:../test-utils
         version: link:../test-utils
@@ -195,6 +201,9 @@ importers:
       '@rexeus/typeweaver-gen':
         specifier: workspace:^
         version: link:../gen
+      effect:
+        specifier: ^3.21.2
+        version: 3.21.2
       hono:
         specifier: ^4.12.9
         version: 4.12.9
@@ -214,6 +223,9 @@ importers:
       '@rexeus/typeweaver-gen':
         specifier: workspace:^
         version: link:../gen
+      effect:
+        specifier: ^3.21.2
+        version: 3.21.2
       ibm-openapi-validator:
         specifier: 1.37.13
         version: 1.37.13
@@ -233,6 +245,9 @@ importers:
       '@rexeus/typeweaver-gen':
         specifier: workspace:^
         version: link:../gen
+      effect:
+        specifier: ^3.21.2
+        version: 3.21.2
       get-port:
         specifier: ^7.2.0
         version: 7.2.0
@@ -300,6 +315,9 @@ importers:
       '@rexeus/typeweaver-gen':
         specifier: workspace:^
         version: link:../gen
+      effect:
+        specifier: ^3.21.2
+        version: 3.21.2
       test-utils:
         specifier: file:../test-utils
         version: link:../test-utils

@@ -1,19 +1,38 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { BasePlugin } from "@rexeus/typeweaver-gen";
-import type { GeneratorContext } from "@rexeus/typeweaver-gen";
+import {
+  copyPluginLibFiles,
+  definePlugin,
+  PluginExecutionError,
+} from "@rexeus/typeweaver-gen";
+import type { Plugin } from "@rexeus/typeweaver-gen";
+import { Effect } from "effect";
 import { generate as generateHonoRouters } from "./honoRouterGenerator.js";
 
+const PLUGIN_NAME = "hono";
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const libSourceDir = path.join(moduleDir, "lib");
 
-export class HonoPlugin extends BasePlugin {
-  public name = "hono";
-  public override depends = ["types"];
+export const honoPlugin: Plugin = definePlugin({
+  name: PLUGIN_NAME,
+  depends: ["types"],
+  generate: context =>
+    Effect.try({
+      try: () => {
+        copyPluginLibFiles({
+          context,
+          libSourceDir,
+          libNamespace: PLUGIN_NAME,
+        });
+        generateHonoRouters(context);
+      },
+      catch: cause =>
+        new PluginExecutionError({
+          pluginName: PLUGIN_NAME,
+          phase: "generate",
+          cause,
+        }),
+    }),
+});
 
-  public override generate(context: GeneratorContext): void {
-    const libSourceDir = path.join(moduleDir, "lib");
-    this.copyLibFiles(context, libSourceDir, this.name);
-
-    generateHonoRouters(context);
-  }
-}
+export default honoPlugin;

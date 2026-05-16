@@ -1,5 +1,10 @@
+export { assertSafeCleanTarget } from "./cleanTargetGuard.js";
 export { ConfigLoader, getResolvedConfigPath } from "./ConfigLoader.js";
 export { Formatter } from "./Formatter.js";
+export { Generator } from "./Generator.js";
+export type { GenerateFailure, GenerateParams } from "./generatorTypes.js";
+export { PluginLoader } from "./PluginLoader.js";
+export type { PluginResolutionStrategy } from "./PluginLoader.js";
 export { SpecBundler } from "./SpecBundler.js";
 export type {
   SpecBundlerConfig,

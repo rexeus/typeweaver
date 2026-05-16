@@ -1,6 +1,8 @@
 import {
+  ContextBuilder,
   GeneratedFiles,
   PathSafety,
+  PluginRegistry,
   TemplateRenderer,
 } from "@rexeus/typeweaver-gen";
 import { Effect } from "effect";
@@ -8,6 +10,8 @@ import { describe, expect, test } from "vitest";
 import { effectRuntime } from "../../src/effectRuntime.js";
 import { ConfigLoader } from "../../src/services/ConfigLoader.js";
 import { Formatter } from "../../src/services/Formatter.js";
+import { Generator } from "../../src/services/Generator.js";
+import { PluginLoader } from "../../src/services/PluginLoader.js";
 import { SpecLoader } from "../../src/services/SpecLoader.js";
 
 describe("ProductionLayer", () => {
@@ -21,6 +25,10 @@ describe("ProductionLayer", () => {
       yield* ConfigLoader;
       yield* Formatter;
       yield* SpecLoader;
+      yield* Generator;
+      yield* PluginLoader;
+      yield* PluginRegistry;
+      yield* ContextBuilder;
       yield* GeneratedFiles;
       yield* PathSafety;
       yield* TemplateRenderer;
