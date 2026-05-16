@@ -63,7 +63,7 @@
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
     "effect": "^3.21.2",
-    "hono": "^4.12.9",
+    "hono": "^4.12.18",
     "test-utils": "file:../test-utils"
   },
   "dependencies": {

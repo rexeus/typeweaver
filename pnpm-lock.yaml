@@ -121,8 +121,8 @@ importers:
         specifier: ^0.29.0
         version: 0.29.0(effect@3.21.2)(vitest@3.2.4(@types/node@25.5.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
       hono:
-        specifier: ^4.12.9
-        version: 4.12.9
+        specifier: ^4.12.18
+        version: 4.12.18
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
@@ -141,7 +141,7 @@ importers:
     devDependencies:
       '@hono/node-server':
         specifier: ^1.19.11
-        version: 1.19.11(hono@4.12.9)
+        version: 1.19.11(hono@4.12.18)
       '@rexeus/typeweaver-core':
         specifier: workspace:^
         version: link:../core
@@ -205,8 +205,8 @@ importers:
         specifier: ^3.21.2
         version: 3.21.2
       hono:
-        specifier: ^4.12.9
-        version: 4.12.9
+        specifier: ^4.12.18
+        version: 4.12.18
       test-utils:
         specifier: file:../test-utils
         version: link:../test-utils
@@ -262,7 +262,7 @@ importers:
     devDependencies:
       '@hono/node-server':
         specifier: ^1.19.11
-        version: 1.19.11(hono@4.12.9)
+        version: 1.19.11(hono@4.12.18)
       '@rexeus/typeweaver':
         specifier: workspace:^
         version: link:../cli
@@ -294,8 +294,8 @@ importers:
         specifier: ^7.2.0
         version: 7.2.0
       hono:
-        specifier: ^4.12.9
-        version: 4.12.9
+        specifier: ^4.12.18
+        version: 4.12.18
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -2490,8 +2490,8 @@ packages:
     resolution: {integrity: sha512-ej4AhfhfL2Q2zpMmLo7U1Uv9+PyhIZpgQLGT1F9miIGmiCJIoCgSmczFdrc97mWT4kVY72KA+WnnhJ5pghSvSg==}
     engines: {node: '>= 0.4'}
 
-  hono@4.12.9:
-    resolution: {integrity: sha512-wy3T8Zm2bsEvxKZM5w21VdHDDcwVS1yUFFY6i8UobSsKfFceT7TOwhbhfKsDyx7tYQlmRM5FLpIuYvNFyjctiA==}
+  hono@4.12.18:
+    resolution: {integrity: sha512-RWzP96k/yv0PQfyXnWjs6zot20TqfpfsNXhOnev8d1InAxubW93L11/oNUc3tQqn2G0bSdAOBpX+2uDFHV7kdQ==}
     engines: {node: '>=16.9.0'}
 
   hookable@6.1.0:
@@ -4051,9 +4051,9 @@ snapshots:
 
   '@faker-js/faker@10.4.0': {}
 
-  '@hono/node-server@1.19.11(hono@4.12.9)':
+  '@hono/node-server@1.19.11(hono@4.12.18)':
     dependencies:
-      hono: 4.12.9
+      hono: 4.12.18
 
   '@ibm-cloud/openapi-ruleset-utilities@1.9.1': {}
 
@@ -5718,7 +5718,7 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
 
-  hono@4.12.9: {}
+  hono@4.12.18: {}
 
   hookable@6.1.0: {}
 
