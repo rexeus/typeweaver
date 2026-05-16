@@ -1,15 +1,53 @@
 import fs from "node:fs";
 import path from "node:path";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
+import { Effect, Either } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
-import { SpecBundleOutputMissingError } from "../src/generators/spec/errors/SpecBundleOutputMissingError.js";
-import { InvalidSpecEntrypointError } from "../src/generators/spec/InvalidSpecEntrypointError.js";
 import {
-  bundle,
-  createWrapperImportSpecifier,
-} from "../src/generators/spec/specBundler.js";
+  InvalidSpecEntrypointError,
+  SpecBundleOutputMissingError,
+} from "../src/generators/spec/errors/index.js";
 import { isSpecDefinition } from "../src/generators/spec/specGuards.js";
-import { loadSpec } from "../src/generators/specLoader.js";
+import {
+  createWrapperImportSpecifier,
+  SpecBundler,
+} from "../src/services/SpecBundler.js";
+import type {
+  SpecBundlerConfig,
+  SpecBundlerDeps,
+} from "../src/services/SpecBundler.js";
+import { SpecLoader } from "../src/services/SpecLoader.js";
+import type {
+  LoadedSpec,
+  SpecLoaderConfig,
+} from "../src/services/SpecLoader.js";
+
+// Test shims that bridge the legacy sync/async API onto the new services.
+// `Effect.either` flattens typed failures into the success channel so
+// tests can `.rejects.toBeInstanceOf` against the underlying error rather
+// than against Effect's `FiberFailure` wrapper.
+const bundle = async (
+  config: SpecBundlerConfig,
+  deps?: SpecBundlerDeps
+): Promise<string> => {
+  const result = await Effect.runPromise(
+    Effect.either(SpecBundler.bundle(config, deps)).pipe(
+      Effect.provide(SpecBundler.Default)
+    )
+  );
+  if (Either.isLeft(result)) throw result.left;
+  return result.right;
+};
+
+const loadSpec = async (config: SpecLoaderConfig): Promise<LoadedSpec> => {
+  const result = await Effect.runPromise(
+    Effect.either(SpecLoader.load(config)).pipe(
+      Effect.provide(SpecLoader.Default)
+    )
+  );
+  if (Either.isLeft(result)) throw result.left;
+  return result.right;
+};
 
 const SPEC_DECLARATION = [
   'import type { SpecDefinition } from "@rexeus/typeweaver-core";',
@@ -21,8 +59,6 @@ type TempProject = {
   readonly projectDir: string;
   readonly outputDir: string;
 };
-
-type LoadedSpec = Awaited<ReturnType<typeof loadSpec>>;
 
 type TodoSpecExportStyle = "named" | "default";
 

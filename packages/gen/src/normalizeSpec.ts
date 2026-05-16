@@ -8,6 +8,7 @@ import type {
   ResponseDefinition,
   SpecDefinition,
 } from "@rexeus/typeweaver-core";
+import { Effect } from "effect";
 import { z } from "zod";
 import { normalizeBody } from "./bodyNormalization.js";
 import {
@@ -21,6 +22,7 @@ import {
   InvalidResourceNameError,
   PathParameterMismatchError,
 } from "./errors/index.js";
+import type { NormalizationError } from "./errors/NormalizationError.js";
 import {
   isSupportedOperationId,
   isSupportedResourceName,
@@ -239,7 +241,7 @@ const normalizeOperation = (
   };
 };
 
-export const normalizeSpec = (definition: SpecDefinition): NormalizedSpec => {
+const normalizeSpecSync = (definition: SpecDefinition): NormalizedSpec => {
   const resourceEntries = Object.entries(definition.resources);
 
   if (resourceEntries.length === 0) {
@@ -282,3 +284,19 @@ export const normalizeSpec = (definition: SpecDefinition): NormalizedSpec => {
     warnings,
   };
 };
+
+/**
+ * Normalize a SpecDefinition into the internal model used by every plugin.
+ *
+ * Internally a pure synchronous transform; exposed as an Effect so callers
+ * can compose with the rest of the pipeline, recover specific failures via
+ * `Effect.catchTag`, and stay type-aware of the closed set of normalization
+ * errors via the `NormalizationError` union.
+ */
+export const normalizeSpec = (
+  definition: SpecDefinition
+): Effect.Effect<NormalizedSpec, NormalizationError> =>
+  Effect.try({
+    try: () => normalizeSpecSync(definition),
+    catch: (error) => error as NormalizationError,
+  });

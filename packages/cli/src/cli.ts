@@ -3,9 +3,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { Command } from "commander";
-import { getResolvedConfigPath, loadConfig } from "./configLoader.js";
+import { effectRuntime } from "./effectRuntime.js";
 import { Generator } from "./generators/Generator.js";
 import { resolveGenerateOptions } from "./resolveGenerateOptions.js";
+import { ConfigLoader, getResolvedConfigPath } from "./services/ConfigLoader.js";
 import type { CommandOptions as CommanderOptions } from "commander";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
@@ -56,7 +57,7 @@ program
       const configPath = getResolvedConfigPath(options.config, execDir);
 
       try {
-        config = await loadConfig(configPath);
+        config = await effectRuntime.runPromise(ConfigLoader.load(configPath));
         console.info(`Loaded configuration from ${configPath}`);
       } catch (error) {
         console.error(`Failed to load configuration file: ${options.config}`);

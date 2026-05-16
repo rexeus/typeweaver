@@ -1,8 +1,12 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { Effect } from "effect";
 import { build } from "rolldown";
-import { SpecBundleOutputMissingError } from "./errors/SpecBundleOutputMissingError.js";
+import {
+  SpecBundleError,
+  SpecBundleOutputMissingError,
+} from "../generators/spec/errors/index.js";
 
 const WINDOWS_ABSOLUTE_PATH_PATTERN = /^[A-Za-z]:[\\/]/;
 const WINDOWS_UNC_PATH_PATTERN = /^\\\\/;
@@ -17,10 +21,10 @@ export type SpecBundlerDeps = {
   readonly existsSync?: (filePath: string) => boolean;
 };
 
-export function createWrapperImportSpecifier(
+export const createWrapperImportSpecifier = (
   wrapperFile: string,
   inputFile: string
-): string {
+): string => {
   const absoluteInputFile = resolveBundledInputFile(inputFile);
   const useWindowsPathSemantics = usesWindowsPathSemantics(
     wrapperFile,
@@ -42,12 +46,12 @@ export function createWrapperImportSpecifier(
   }
 
   return `./${relativeInputFile}`;
-}
+};
 
-export async function bundle(
+const bundleAsync = async (
   config: SpecBundlerConfig,
   deps: SpecBundlerDeps = {}
-): Promise<string> {
+): Promise<string> => {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), "typeweaver-spec-loader-")
   );
@@ -84,7 +88,6 @@ export async function bundle(
         if (source.startsWith("node:")) {
           return true;
         }
-
         return !source.startsWith(".") && !path.isAbsolute(source);
       },
       output: {
@@ -105,37 +108,67 @@ export async function bundle(
   }
 
   return bundledSpecFile;
-}
+};
 
-function resolveBundledInputFile(inputFile: string): string {
+const resolveBundledInputFile = (inputFile: string): string => {
   if (path.isAbsolute(inputFile)) {
     return inputFile;
   }
-
   if (WINDOWS_ABSOLUTE_PATH_PATTERN.test(inputFile)) {
     return path.win32.normalize(inputFile);
   }
-
   if (WINDOWS_UNC_PATH_PATTERN.test(inputFile)) {
     return path.win32.normalize(inputFile);
   }
-
   return path.resolve(inputFile);
-}
+};
 
-function usesWindowsPathSemantics(...filePaths: string[]): boolean {
-  return filePaths.some(filePath => {
-    return (
+const usesWindowsPathSemantics = (...filePaths: string[]): boolean =>
+  filePaths.some(
+    (filePath) =>
       WINDOWS_ABSOLUTE_PATH_PATTERN.test(filePath) ||
       WINDOWS_UNC_PATH_PATTERN.test(filePath)
-    );
-  });
-}
+  );
 
-function resolveRealFilePath(filePath: string): string {
+const resolveRealFilePath = (filePath: string): string => {
   if (!fs.existsSync(filePath)) {
     return filePath;
   }
-
   return fs.realpathSync.native(filePath);
-}
+};
+
+/**
+ * Bundles a SpecDefinition entrypoint into a single ESM file via rolldown.
+ *
+ * The wrapper file allows authors to expose the spec as a default export,
+ * a named `spec` export, or the module namespace itself. Filesystem errors
+ * from rolldown surface as `SpecBundleError`; a missing post-bundle output
+ * surfaces as `SpecBundleOutputMissingError`.
+ */
+export class SpecBundler extends Effect.Service<SpecBundler>()(
+  "typeweaver/SpecBundler",
+  {
+    succeed: {
+      bundle: (
+        config: SpecBundlerConfig,
+        deps: SpecBundlerDeps = {}
+      ): Effect.Effect<
+        string,
+        SpecBundleError | SpecBundleOutputMissingError
+      > =>
+        Effect.tryPromise({
+          try: () => bundleAsync(config, deps),
+          catch: (error) => {
+            if (error instanceof SpecBundleOutputMissingError) {
+              return error;
+            }
+            return new SpecBundleError({
+              inputFile: config.inputFile,
+              cause: error,
+            });
+          },
+        }),
+    },
+    accessors: true,
+  }
+) {}

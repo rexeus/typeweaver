@@ -8,10 +8,10 @@ import {
 import type { PluginConfig, TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { TypesPlugin } from "@rexeus/typeweaver-types";
 import { UnsafeCleanTargetError } from "./errors/UnsafeCleanTargetError.js";
-import { formatCode } from "./formatter.js";
 import { generateIndexFiles } from "./indexFileGenerator.js";
 import { loadPlugins } from "./pluginLoader.js";
-import { loadSpec } from "./specLoader.js";
+import { effectRuntime } from "../effectRuntime.js";
+import { Formatter, SpecLoader } from "../services/index.js";
 import type { PluginResolutionStrategy } from "./pluginLoader.js";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
@@ -160,10 +160,12 @@ export class Generator {
     console.info(
       `Bundling spec from '${this.inputFile}' to '${this.specOutputDir}'...`
     );
-    let { normalizedSpec } = await loadSpec({
-      inputFile: this.inputFile,
-      specOutputDir: this.specOutputDir,
-    });
+    let { normalizedSpec } = await effectRuntime.runPromise(
+      SpecLoader.load({
+        inputFile: this.inputFile,
+        specOutputDir: this.specOutputDir,
+      })
+    );
 
     const pluginContext = this.contextBuilder.createPluginContext({
       outputDir: this.outputDir,
@@ -215,7 +217,7 @@ export class Generator {
     }
 
     if (config?.format ?? true) {
-      await formatCode(this.outputDir);
+      await effectRuntime.runPromise(Formatter.format(this.outputDir));
     }
 
     console.info("Generation complete!");

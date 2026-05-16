@@ -6,6 +6,7 @@ import type {
   TypeweaverConfig,
   TypeweaverPlugin,
 } from "@rexeus/typeweaver-gen";
+import { Either } from "effect";
 import { PluginLoadError } from "./errors/PluginLoadError.js";
 
 export type PluginResolutionStrategy = "npm" | "local" | "scoped";
@@ -24,10 +25,6 @@ type PluginCandidate = {
   readonly exportName: string;
   readonly constructor: PluginConstructor;
 };
-
-type LoadResult<T, E> =
-  | { success: true; value: T }
-  | { success: false; error: E };
 
 export async function loadPlugins(
   registry: PluginRegistrar,
@@ -50,12 +47,12 @@ export async function loadPlugins(
     const pluginConfig = typeof plugin === "string" ? undefined : plugin[1];
     const result = await loadPlugin(pluginName, strategies, pluginConfig);
 
-    if (result.success === false) {
-      throw result.error;
+    if (Either.isLeft(result)) {
+      throw result.left;
     }
 
-    successful.push(result.value);
-    registry.register(result.value.plugin, result.value.config);
+    successful.push(result.right);
+    registry.register(result.right.plugin, result.right.config);
   }
 
   reportSuccessfulLoads(successful);
@@ -65,7 +62,7 @@ async function loadPlugin(
   pluginName: string,
   strategies: readonly PluginResolutionStrategy[],
   pluginConfig?: PluginConfig
-): Promise<LoadResult<PluginLoadResult, PluginLoadError>> {
+): Promise<Either.Either<PluginLoadResult, PluginLoadError>> {
   const possiblePaths = generatePluginPaths(pluginName, strategies);
   const attempts: { path: string; error: string }[] = [];
 
@@ -73,19 +70,16 @@ async function loadPlugin(
     try {
       const pluginPackage = await import(possiblePath);
       const plugin = createPluginInstance(pluginPackage, pluginConfig);
-      if (plugin.success) {
-        return {
-          success: true,
-          value: {
-            plugin: plugin.value,
-            source: possiblePath,
-            config: pluginConfig,
-          },
-        };
+      if (Either.isRight(plugin)) {
+        return Either.right({
+          plugin: plugin.right,
+          source: possiblePath,
+          config: pluginConfig,
+        });
       }
       attempts.push({
         path: possiblePath,
-        error: plugin.error,
+        error: plugin.left,
       });
     } catch (error) {
       attempts.push({
@@ -95,22 +89,16 @@ async function loadPlugin(
     }
   }
 
-  return {
-    success: false,
-    error: new PluginLoadError({ pluginName, attempts }),
-  };
+  return Either.left(new PluginLoadError({ pluginName, attempts }));
 }
 
 function createPluginInstance(
   pluginModule: Record<string, unknown>,
   pluginConfig?: PluginConfig
-): LoadResult<TypeweaverPlugin, string> {
+): Either.Either<TypeweaverPlugin, string> {
   const candidates = findPluginConstructorCandidates(pluginModule);
   if (candidates.length === 0) {
-    return {
-      success: false,
-      error: "No plugin constructor export found",
-    };
+    return Either.left("No plugin constructor export found");
   }
 
   const errors: string[] = [];
@@ -118,10 +106,7 @@ function createPluginInstance(
     try {
       const plugin = new candidate.constructor(pluginConfig);
       if (isTypeweaverPlugin(plugin)) {
-        return {
-          success: true,
-          value: plugin,
-        };
+        return Either.right(plugin);
       }
 
       errors.push(
@@ -134,10 +119,7 @@ function createPluginInstance(
     }
   }
 
-  return {
-    success: false,
-    error: errors.join("; "),
-  };
+  return Either.left(errors.join("; "));
 }
 
 function findPluginConstructorCandidates(
