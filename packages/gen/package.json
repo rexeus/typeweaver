@@ -61,6 +61,7 @@
   "devDependencies": {
     "@effect/vitest": "^0.29.0",
     "@rexeus/typeweaver-core": "workspace:^",
+    "fast-check": "^3.23.2",
     "zod": "^4.3.6"
   },
   "dependencies": {
