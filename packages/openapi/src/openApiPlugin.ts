@@ -1,7 +1,4 @@
-import {
-  definePlugin,
-  PluginExecutionError,
-} from "@rexeus/typeweaver-gen";
+import { definePlugin, PluginExecutionError } from "@rexeus/typeweaver-gen";
 import type { Plugin } from "@rexeus/typeweaver-gen";
 import { Effect } from "effect";
 import { buildOpenApiDocument } from "./buildOpenApiDocument.js";

@@ -1,11 +1,9 @@
-import type { PlatformError } from "@effect/platform/Error";
 import type {
   NormalizationError,
   PluginDependencyError,
   PluginExecutionError,
   TypeweaverConfig,
 } from "@rexeus/typeweaver-gen";
-import type { IndexFileGenerationError } from "./errors/IndexFileGenerationError.js";
 import type { PluginLoadError } from "../generators/errors/PluginLoadError.js";
 import type { UnsafeCleanTargetError } from "../generators/errors/UnsafeCleanTargetError.js";
 import type {
@@ -14,6 +12,8 @@ import type {
   SpecBundleOutputMissingError,
   SpecOutputWriteError,
 } from "../generators/spec/errors/index.js";
+import type { IndexFileGenerationError } from "./errors/IndexFileGenerationError.js";
+import type { PlatformError } from "@effect/platform/Error";
 
 export type GenerateParams = {
   readonly inputFile: string;

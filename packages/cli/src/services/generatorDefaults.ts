@@ -1,11 +1,11 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { FileSystem } from "@effect/platform";
-import type { PlatformError } from "@effect/platform/Error";
-import { typesPlugin } from "@rexeus/typeweaver-types";
 import type { Plugin } from "@rexeus/typeweaver-gen";
+import { typesPlugin } from "@rexeus/typeweaver-types";
+import { FileSystem } from "@effect/platform";
 import { Effect } from "effect";
 import type { PluginResolutionStrategy } from "./PluginLoader.js";
+import type { PlatformError } from "@effect/platform/Error";
 
 export const CORE_DIR = "@rexeus/typeweaver-core";
 

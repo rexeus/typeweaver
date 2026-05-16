@@ -12,10 +12,7 @@ export class Formatter extends Effect.Service<Formatter>()(
   "typeweaver/Formatter",
   {
     succeed: {
-      format: (
-        outputDir: string,
-        startDir?: string
-      ): Effect.Effect<void> =>
+      format: (outputDir: string, startDir?: string): Effect.Effect<void> =>
         Effect.promise(() => formatCode(outputDir, startDir)),
     },
     accessors: true,

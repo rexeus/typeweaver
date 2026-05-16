@@ -1,8 +1,8 @@
 import { FileSystem } from "@effect/platform";
-import type { PlatformError } from "@effect/platform/Error";
 import { Effect } from "effect";
 import { UnsafeCleanTargetError } from "../generators/errors/UnsafeCleanTargetError.js";
 import { assertSafeCleanTarget } from "./cleanTargetGuard.js";
+import type { PlatformError } from "@effect/platform/Error";
 
 const isUnsafeCleanTargetError = (
   error: unknown
@@ -30,7 +30,7 @@ export const assertSafeCleanTargetEffect = (
 ): Effect.Effect<void, UnsafeCleanTargetError> =>
   Effect.try({
     try: () => assertSafeCleanTarget(outputDir, currentWorkingDirectory),
-    catch: (error) => {
+    catch: error => {
       if (isUnsafeCleanTargetError(error)) {
         return error;
       }
@@ -63,4 +63,3 @@ export const ensureOutputDirectories = (params: {
     });
     yield* fileSystem.makeDirectory(params.specOutputDir, { recursive: true });
   });
-

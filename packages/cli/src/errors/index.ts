@@ -5,9 +5,9 @@ export { UnsupportedConfigExtensionError } from "./UnsupportedConfigExtensionErr
 export { UnsupportedTypeScriptConfigError } from "./UnsupportedTypeScriptConfigError.js";
 
 import { InvalidConfigExportError } from "./InvalidConfigExportError.js";
-import type { MissingGenerateOptionError } from "./MissingGenerateOptionError.js";
 import { UnsupportedConfigExtensionError } from "./UnsupportedConfigExtensionError.js";
 import { UnsupportedTypeScriptConfigError } from "./UnsupportedTypeScriptConfigError.js";
+import type { MissingGenerateOptionError } from "./MissingGenerateOptionError.js";
 
 export type ConfigError =
   | InvalidConfigExportError

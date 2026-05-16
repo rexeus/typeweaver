@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { TemplateRenderer } from "@rexeus/typeweaver-gen";
 import { Effect } from "effect";
-import { generateIndexFiles } from "./internal/indexFileGeneration.js";
 import { IndexFileGenerationError } from "./errors/IndexFileGenerationError.js";
+import { generateIndexFiles } from "./internal/indexFileGeneration.js";
 
 export type IndexFileGenerationParams = {
   readonly templateDir: string;
@@ -36,7 +36,7 @@ export class IndexFileGenerator extends Effect.Service<IndexFileGenerator>()(
           const templateFilePath = path.join(params.templateDir, "Index.ejs");
           const template = yield* Effect.try({
             try: () => fs.readFileSync(templateFilePath, "utf8"),
-            catch: (cause) =>
+            catch: cause =>
               new IndexFileGenerationError({
                 outputDir: params.outputDir,
                 cause,
@@ -48,10 +48,10 @@ export class IndexFileGenerator extends Effect.Service<IndexFileGenerator>()(
               generateIndexFiles({
                 generatedFiles: params.generatedFiles,
                 writeFile: params.writeFile,
-                renderTemplate: (data) =>
+                renderTemplate: data =>
                   Effect.runSync(templateRenderer.render(template, data)),
               }),
-            catch: (cause) =>
+            catch: cause =>
               new IndexFileGenerationError({
                 outputDir: params.outputDir,
                 cause,

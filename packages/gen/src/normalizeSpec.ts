@@ -23,7 +23,6 @@ import {
   PathParameterMismatchError,
 } from "./errors/index.js";
 import { isNormalizationError } from "./errors/NormalizationError.js";
-import type { NormalizationError } from "./errors/NormalizationError.js";
 import {
   isSupportedOperationId,
   isSupportedResourceName,
@@ -36,6 +35,7 @@ import {
   collectCanonicalResponses,
   normalizeResponseDefinition,
 } from "./validation/index.js";
+import type { NormalizationError } from "./errors/NormalizationError.js";
 import type {
   NormalizedOperation,
   NormalizedRequest,
@@ -299,7 +299,7 @@ export const normalizeSpec = (
 ): Effect.Effect<NormalizedSpec, NormalizationError> =>
   Effect.try({
     try: () => normalizeSpecSync(definition),
-    catch: (error) => {
+    catch: error => {
       if (isNormalizationError(error)) {
         return error;
       }

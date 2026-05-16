@@ -13,8 +13,8 @@ export type CleanTargetFs = {
 };
 
 const defaultCleanTargetFs: CleanTargetFs = {
-  exists: (probePath) => fs.existsSync(probePath),
-  realPath: (probePath) => fs.realpathSync.native(probePath),
+  exists: probePath => fs.existsSync(probePath),
+  realPath: probePath => fs.realpathSync.native(probePath),
 };
 
 const findProtectedWorkspaceRoot = (
@@ -41,7 +41,7 @@ const hasWorkspaceMarker = (
   directory: string,
   fileSystem: CleanTargetFs
 ): boolean => {
-  return ["pnpm-workspace.yaml", ".git"].some((marker) =>
+  return ["pnpm-workspace.yaml", ".git"].some(marker =>
     fileSystem.exists(path.join(directory, marker))
   );
 };
@@ -153,7 +153,7 @@ export const assertSafeCleanTargetWith = (
     canonicalProtectedWorkspaceRoot,
   ].filter((root): root is string => root !== undefined);
   const protectedWorkspaceRootTarget = protectedWorkspaceRoots.find(
-    (protectedWorkspaceRoot) =>
+    protectedWorkspaceRoot =>
       resolvedOutputDir === protectedWorkspaceRoot ||
       canonicalOutputDir === fileSystem.realPath(protectedWorkspaceRoot)
   );

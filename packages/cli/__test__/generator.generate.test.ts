@@ -315,16 +315,16 @@ describe("Generator.generate", () => {
     const outputDir = path.join(workspace, "generated", "output");
 
     await runGenerator({
-        inputFile: "spec/index.ts",
-        outputDir: "generated/output",
-        config: {
+      inputFile: "spec/index.ts",
+      outputDir: "generated/output",
+      config: {
         input: "spec/index.ts",
         output: "generated/output",
         format: false,
         ...config,
       },
-        currentWorkingDirectory: workspace,
-      });
+      currentWorkingDirectory: workspace,
+    });
 
     return outputDir;
   };
@@ -413,14 +413,14 @@ describe("Generator.generate", () => {
     const outputDir = path.join(workspace, "generated", "output");
 
     await runGenerator({
-        inputFile: "spec/index.ts",
-        outputDir: "generated/output",
-        config: {
+      inputFile: "spec/index.ts",
+      outputDir: "generated/output",
+      config: {
         input: "spec/index.ts",
         output: "generated/output",
       },
-        currentWorkingDirectory: workspace,
-      });
+      currentWorkingDirectory: workspace,
+    });
 
     expectFileExists(outputDir);
     expectFileExists(path.join(outputDir, "spec", "spec.js"));
@@ -481,16 +481,16 @@ describe("Generator.generate", () => {
     const outputDir = path.join(workspace, "generated", "output");
 
     await runGenerator({
-        inputFile: "spec/index.ts",
-        outputDir: "generated/output",
-        config: {
+      inputFile: "spec/index.ts",
+      outputDir: "generated/output",
+      config: {
         input: "spec/index.ts",
         output: "generated/output",
         format: false,
         plugins: ["openapi"],
       },
-        currentWorkingDirectory: workspace,
-      });
+      currentWorkingDirectory: workspace,
+    });
 
     const openApiFile = path.join(outputDir, "openapi", "openapi.json");
     const document = JSON.parse(readFile(openApiFile));
@@ -513,16 +513,16 @@ describe("Generator.generate", () => {
     const tsconfigFile = writeStrictGeneratedTsConfig(workspace);
 
     await runGenerator({
-        inputFile: "spec/index.ts",
-        outputDir: "generated/output",
-        config: {
+      inputFile: "spec/index.ts",
+      outputDir: "generated/output",
+      config: {
         input: "spec/index.ts",
         output: "generated/output",
         format: false,
         plugins: ["clients"],
       },
-        currentWorkingDirectory: workspace,
-      });
+      currentWorkingDirectory: workspace,
+    });
 
     await runGeneratedTypecheck(workspace, tsconfigFile);
   });
@@ -533,16 +533,16 @@ describe("Generator.generate", () => {
     const outputDir = path.join(workspace, "generated", "output");
 
     await runGenerator({
-        inputFile: "spec/index.ts",
-        outputDir: "generated/output",
-        config: {
+      inputFile: "spec/index.ts",
+      outputDir: "generated/output",
+      config: {
         input: "spec/index.ts",
         output: "generated/output",
         format: false,
         plugins: ["clients"],
       },
-        currentWorkingDirectory: workspace,
-      });
+      currentWorkingDirectory: workspace,
+    });
 
     const pingRequestValidator = readFile(
       path.join(outputDir, "health", "PingRequestValidator.ts")
@@ -600,11 +600,11 @@ describe("Generator.generate", () => {
     const outputDir = path.join(workspace, "generated", "output");
 
     await runGenerator({
-        inputFile: "spec/index.ts",
-        outputDir: "generated/output",
-        config: undefined,
-        currentWorkingDirectory: workspace,
-      });
+      inputFile: "spec/index.ts",
+      outputDir: "generated/output",
+      config: undefined,
+      currentWorkingDirectory: workspace,
+    });
 
     expect(fs.existsSync(staleFile)).toBe(false);
     expectFileExists(path.join(outputDir, "item", "GetItemRequest.ts"));
@@ -643,15 +643,15 @@ describe("Generator.generate", () => {
     const outputDir = path.join(workspace, "generated", "output");
 
     await runGenerator({
-        inputFile: "spec/index.ts",
-        outputDir: "generated/output",
-        config: {
+      inputFile: "spec/index.ts",
+      outputDir: "generated/output",
+      config: {
         input: "spec/index.ts",
         output: "generated/output",
         plugins: [[pluginFile, { marker: "configured locally" }]],
       },
-        currentWorkingDirectory: workspace,
-      });
+      currentWorkingDirectory: workspace,
+    });
 
     expectFileExists(path.join(outputDir, "item", "GetItemRequest.ts"));
     expectFileContains(
@@ -687,15 +687,15 @@ describe("Generator.generate", () => {
     const outputDir = path.join(workspace, "generated", "output");
 
     await runGenerator({
-        inputFile: "spec/index.ts",
-        outputDir: "generated/output",
-        config: {
+      inputFile: "spec/index.ts",
+      outputDir: "generated/output",
+      config: {
         input: "spec/index.ts",
         output: "generated/output",
         plugins: [pluginFile],
       },
-        currentWorkingDirectory: workspace,
-      });
+      currentWorkingDirectory: workspace,
+    });
 
     expect(readFile(path.join(outputDir, "plugin", "Formatted.ts"))).toBe(
       formattedPluginOutput
@@ -709,16 +709,16 @@ describe("Generator.generate", () => {
     const outputDir = path.join(workspace, "generated", "output");
 
     await runGenerator({
-        inputFile: "spec/index.ts",
-        outputDir: "generated/output",
-        config: {
+      inputFile: "spec/index.ts",
+      outputDir: "generated/output",
+      config: {
         input: "spec/index.ts",
         output: "generated/output",
         format: false,
         plugins: [pluginFile],
       },
-        currentWorkingDirectory: workspace,
-      });
+      currentWorkingDirectory: workspace,
+    });
 
     expect(readFile(path.join(outputDir, "plugin", "Formatted.ts"))).toBe(
       unformattedPluginOutput
@@ -732,16 +732,16 @@ describe("Generator.generate", () => {
     const eventLogFile = path.join(workspace, "phase-events.log");
 
     await runGenerator({
-        inputFile: "spec/index.ts",
-        outputDir: "generated/output",
-        config: {
+      inputFile: "spec/index.ts",
+      outputDir: "generated/output",
+      config: {
         input: "spec/index.ts",
         output: "generated/output",
         format: false,
         plugins: [pluginFile],
       },
-        currentWorkingDirectory: workspace,
-      });
+      currentWorkingDirectory: workspace,
+    });
 
     expect(readFile(eventLogFile).trim().split("\n")).toEqual([
       "initialize",
@@ -758,15 +758,15 @@ describe("Generator.generate", () => {
     const outputDir = path.join(workspace, "generated", "output");
 
     await runGenerator({
-        inputFile: "spec/index.ts",
-        outputDir: "generated/output",
-        config: {
+      inputFile: "spec/index.ts",
+      outputDir: "generated/output",
+      config: {
         input: "spec/index.ts",
         output: "generated/output",
         plugins: [pluginFile],
       },
-        currentWorkingDirectory: workspace,
-      });
+      currentWorkingDirectory: workspace,
+    });
 
     expectFileExists(
       path.join(outputDir, "pluginItem", "GetPluginItemRequest.ts")

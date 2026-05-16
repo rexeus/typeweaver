@@ -26,9 +26,9 @@ function aFakeIndexContextWith(
       writeFile: (relativePath, content) => {
         writes.push({ path: relativePath, content });
       },
-      renderTemplate: (data) => {
-        const indexPaths = ((data ?? {}) as { indexPaths?: readonly string[] })
-          .indexPaths ?? [];
+      renderTemplate: data => {
+        const indexPaths =
+          ((data ?? {}) as { indexPaths?: readonly string[] }).indexPaths ?? [];
         return formatIndexFile(indexPaths);
       },
     },
@@ -36,16 +36,16 @@ function aFakeIndexContextWith(
 }
 
 function formatIndexFile(indexPaths: readonly string[]): string {
-  return indexPaths.map((indexPath) => `export * from "${indexPath}";`).join(
-    "\n"
-  );
+  return indexPaths
+    .map(indexPath => `export * from "${indexPath}";`)
+    .join("\n");
 }
 
 function getWriteAt(
   fake: FakeIndexContext,
   relativePath: string
 ): WrittenFile | undefined {
-  return fake.writes.find((entry) => entry.path === relativePath);
+  return fake.writes.find(entry => entry.path === relativePath);
 }
 
 describe("generateIndexFiles", () => {
@@ -190,10 +190,7 @@ describe("generateIndexFiles", () => {
   });
 
   test("does not export the root barrel from itself", () => {
-    const fake = aFakeIndexContextWith([
-      "index.ts",
-      "todo/GetTodoResponse.ts",
-    ]);
+    const fake = aFakeIndexContextWith(["index.ts", "todo/GetTodoResponse.ts"]);
 
     generateIndexFiles(fake.context);
 

@@ -1,6 +1,6 @@
-import { describe, expect } from "vitest";
 import { it } from "@effect/vitest";
 import { Effect, Layer } from "effect";
+import { describe, expect } from "vitest";
 import { MainLayer } from "../src/runtime/MainLayer.js";
 
 describe("MainLayer", () => {

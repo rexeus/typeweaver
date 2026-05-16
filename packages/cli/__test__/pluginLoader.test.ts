@@ -177,7 +177,7 @@ describe("pluginLoader", () => {
 
   const writeConfigurablePluginModule = (): string =>
     writePluginModule([
-      'export const configurablePlugin = config => ({',
+      "export const configurablePlugin = config => ({",
       '  name: "configurable-plugin",',
       "  config,",
       "});",

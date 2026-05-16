@@ -1,8 +1,5 @@
 import path from "node:path";
-import type {
-  OpenApiInfoObject,
-  OpenApiServerObject,
-} from "../types.js";
+import type { OpenApiInfoObject, OpenApiServerObject } from "../types.js";
 
 const DEFAULT_INFO: OpenApiInfoObject = {
   title: "Typeweaver API",

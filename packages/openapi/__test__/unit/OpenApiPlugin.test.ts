@@ -66,7 +66,9 @@ describe("openApiPlugin", () => {
     runGenerate(
       {
         info: { title: "Todo API", version: "1.0.0", summary: "Todos" },
-        servers: [{ url: "https://api.example.com", description: "Production" }],
+        servers: [
+          { url: "https://api.example.com", description: "Production" },
+        ],
         outputPath: "docs/openapi.json",
       },
       context

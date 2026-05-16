@@ -2,9 +2,6 @@ import path from "node:path";
 import { ContextBuilder, PluginRegistry } from "@rexeus/typeweaver-gen";
 import { Effect } from "effect";
 import { Formatter } from "./Formatter.js";
-import { IndexFileGenerator } from "./IndexFileGenerator.js";
-import { PluginLoader } from "./PluginLoader.js";
-import { SpecLoader } from "./SpecLoader.js";
 import {
   CORE_DIR,
   DEFAULT_PLUGIN_RESOLUTION_STRATEGIES,
@@ -16,6 +13,9 @@ import {
   ensureOutputDirectories,
   removeOutputDir,
 } from "./generatorIO.js";
+import { IndexFileGenerator } from "./IndexFileGenerator.js";
+import { PluginLoader } from "./PluginLoader.js";
+import { SpecLoader } from "./SpecLoader.js";
 import type { GenerateParams } from "./generatorTypes.js";
 
 /**
@@ -49,10 +49,7 @@ export class Generator extends Effect.Service<Generator>()(
           const responsesOutputDir = path.join(outputDir, "responses");
           const specOutputDir = path.join(outputDir, "spec");
           const inputDir = path.dirname(inputFile);
-          const pluginConfig = (params.config ?? {}) as Record<
-            string,
-            unknown
-          >;
+          const pluginConfig = (params.config ?? {}) as Record<string, unknown>;
 
           yield* Effect.logInfo("Starting generation...");
 
@@ -103,9 +100,8 @@ export class Generator extends Effect.Service<Generator>()(
           yield* Effect.logInfo("Collecting resources...");
           for (const registration of initial) {
             if (registration.plugin.collectResources) {
-              normalizedSpec = yield* registration.plugin.collectResources(
-                normalizedSpec
-              );
+              normalizedSpec =
+                yield* registration.plugin.collectResources(normalizedSpec);
             }
           }
 

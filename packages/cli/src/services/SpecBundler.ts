@@ -63,7 +63,7 @@ const resolveBundledInputFile = (inputFile: string): string => {
 
 const usesWindowsPathSemantics = (...filePaths: string[]): boolean =>
   filePaths.some(
-    (filePath) =>
+    filePath =>
       WINDOWS_ABSOLUTE_PATH_PATTERN.test(filePath) ||
       WINDOWS_UNC_PATH_PATTERN.test(filePath)
   );
@@ -126,7 +126,7 @@ export class SpecBundler extends Effect.Service<SpecBundler>()(
               .makeTempDirectoryScoped({ prefix: "typeweaver-spec-loader-" })
               .pipe(
                 Effect.mapError(
-                  (cause) =>
+                  cause =>
                     new SpecBundleError({
                       inputFile: config.inputFile,
                       cause,
@@ -148,7 +148,7 @@ export class SpecBundler extends Effect.Service<SpecBundler>()(
               )
               .pipe(
                 Effect.mapError(
-                  (cause) =>
+                  cause =>
                     new SpecBundleError({
                       inputFile: config.inputFile,
                       cause,
@@ -169,16 +169,14 @@ export class SpecBundler extends Effect.Service<SpecBundler>()(
                     if (source.startsWith("node:")) {
                       return true;
                     }
-                    return (
-                      !source.startsWith(".") && !path.isAbsolute(source)
-                    );
+                    return !source.startsWith(".") && !path.isAbsolute(source);
                   },
                   output: {
                     file: bundledSpecFile,
                     format: "esm",
                   },
                 }),
-              catch: (cause) =>
+              catch: cause =>
                 new SpecBundleError({ inputFile: config.inputFile, cause }),
             });
 
@@ -187,7 +185,7 @@ export class SpecBundler extends Effect.Service<SpecBundler>()(
                 ? deps.existsSync(bundledSpecFile)
                 : yield* fileSystem.exists(bundledSpecFile).pipe(
                     Effect.mapError(
-                      (cause) =>
+                      cause =>
                         new SpecBundleError({
                           inputFile: config.inputFile,
                           cause,

@@ -3,7 +3,7 @@ import { Logger } from "effect";
 const renderMessage = (message: unknown): string => {
   if (Array.isArray(message)) {
     return message
-      .map((part) => (typeof part === "string" ? part : String(part)))
+      .map(part => (typeof part === "string" ? part : String(part)))
       .join(" ");
   }
   return typeof message === "string" ? message : String(message);

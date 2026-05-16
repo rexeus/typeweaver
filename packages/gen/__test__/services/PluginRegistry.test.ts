@@ -38,12 +38,16 @@ const runRegistryExpectingFailure = <E>(
   );
 
   if (Exit.isSuccess(exit)) {
-    throw new Error(`Expected a failure but got success: ${String(exit.value)}`);
+    throw new Error(
+      `Expected a failure but got success: ${String(exit.value)}`
+    );
   }
 
   const failure = Cause.failureOption(exit.cause);
   if (failure._tag !== "Some") {
-    throw new Error(`Expected typed failure but got: ${Cause.pretty(exit.cause)}`);
+    throw new Error(
+      `Expected typed failure but got: ${Cause.pretty(exit.cause)}`
+    );
   }
   return failure.value;
 };
@@ -96,7 +100,9 @@ describe("PluginRegistry", () => {
     const registrations = runRegistry(registry =>
       Effect.gen(function* () {
         yield* registry.register(aPluginNamed("clients", ["types"]));
-        yield* registry.register(aPluginNamed("analytics", ["clients", "hono"]));
+        yield* registry.register(
+          aPluginNamed("analytics", ["clients", "hono"])
+        );
         yield* registry.register(aPluginNamed("types"));
         yield* registry.register(aPluginNamed("hono", ["types"]));
         return yield* registry.getAll;
@@ -139,7 +145,9 @@ describe("PluginRegistry", () => {
     expect((failure as PluginDependencyError).message).toContain(
       "Detected plugin dependency cycle: analytics -> types -> clients -> analytics"
     );
-    expect((failure as PluginDependencyError).missingDependency).toBeUndefined();
+    expect(
+      (failure as PluginDependencyError).missingDependency
+    ).toBeUndefined();
   });
 
   test("reports a self-dependency as a dependency cycle", () => {
@@ -154,7 +162,9 @@ describe("PluginRegistry", () => {
     expect((failure as PluginDependencyError).message).toContain(
       "Detected plugin dependency cycle: types -> types"
     );
-    expect((failure as PluginDependencyError).missingDependency).toBeUndefined();
+    expect(
+      (failure as PluginDependencyError).missingDependency
+    ).toBeUndefined();
   });
 
   test("does not duplicate sorted registrations for duplicate dependency names", () => {

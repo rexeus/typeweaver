@@ -1,9 +1,9 @@
 import { Effect } from "effect";
 import { copyPluginLibFiles } from "./copyPluginLibFiles.js";
-import { definePlugin } from "./Plugin.js";
-import type { Plugin } from "./Plugin.js";
 import { PluginExecutionError } from "./errors/PluginExecutionError.js";
+import { definePlugin } from "./Plugin.js";
 import type { GeneratorContext } from "./contextTypes.js";
+import type { Plugin } from "./Plugin.js";
 
 /**
  * Build a plugin whose `generate` phase copies a `lib/` directory into the
@@ -33,7 +33,7 @@ export const definePluginWithLibCopy = (params: {
   definePlugin({
     name: params.name,
     ...(params.depends === undefined ? {} : { depends: params.depends }),
-    generate: (context) =>
+    generate: context =>
       Effect.try({
         try: () => {
           copyPluginLibFiles({
@@ -45,7 +45,7 @@ export const definePluginWithLibCopy = (params: {
             run(context);
           }
         },
-        catch: (cause) =>
+        catch: cause =>
           new PluginExecutionError({
             pluginName: params.name,
             phase: "generate",

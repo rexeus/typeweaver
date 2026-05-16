@@ -61,7 +61,7 @@ const isMissingPathError = (error: unknown): boolean => {
 };
 
 const defaultPathSafetyFs: PathSafetyFs = {
-  lstat: (absolutePath) => {
+  lstat: absolutePath => {
     try {
       const stats = fs.lstatSync(absolutePath);
       return {

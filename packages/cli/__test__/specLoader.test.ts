@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { NodeFileSystem } from "@effect/platform-node";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
+import { NodeFileSystem } from "@effect/platform-node";
 import { Effect, Either, Layer } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import {
@@ -13,11 +13,11 @@ import {
   createWrapperImportSpecifier,
   SpecBundler,
 } from "../src/services/SpecBundler.js";
+import { SpecLoader } from "../src/services/SpecLoader.js";
 import type {
   SpecBundlerConfig,
   SpecBundlerDeps,
 } from "../src/services/SpecBundler.js";
-import { SpecLoader } from "../src/services/SpecLoader.js";
 import type {
   LoadedSpec,
   SpecLoaderConfig,
@@ -49,9 +49,7 @@ const bundle = async (
 
 const loadSpec = async (config: SpecLoaderConfig): Promise<LoadedSpec> => {
   const result = await Effect.runPromise(
-    Effect.either(SpecLoader.load(config)).pipe(
-      Effect.provide(SpecLoaderLayer)
-    )
+    Effect.either(SpecLoader.load(config)).pipe(Effect.provide(SpecLoaderLayer))
   );
   if (Either.isLeft(result)) throw result.left;
   return result.right;

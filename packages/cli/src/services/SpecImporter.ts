@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
-import { FileSystem } from "@effect/platform";
 import type { SpecDefinition } from "@rexeus/typeweaver-core";
+import { FileSystem } from "@effect/platform";
 import { Effect } from "effect";
 import {
   InvalidSpecEntrypointError,
@@ -33,7 +33,7 @@ export class SpecImporter extends Effect.Service<SpecImporter>()(
             .readFileString(bundledSpecFile)
             .pipe(
               Effect.mapError(
-                (cause) =>
+                cause =>
                   new SpecBundleError({
                     inputFile: bundledSpecFile,
                     cause,
@@ -65,7 +65,7 @@ export class SpecImporter extends Effect.Service<SpecImporter>()(
 
               return definition;
             },
-            catch: (error) => {
+            catch: error => {
               if (error instanceof InvalidSpecEntrypointError) {
                 return error;
               }

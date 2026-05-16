@@ -17,19 +17,21 @@ describe("Formatter", () => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it.effect("formats files in a directory or no-ops when oxfmt is unavailable", () =>
-    Effect.gen(function* () {
-      const filePath = path.join(tempDir, "sample.ts");
-      const source = "const   x    =   1;\n";
-      fs.writeFileSync(filePath, source);
+  it.effect(
+    "formats files in a directory or no-ops when oxfmt is unavailable",
+    () =>
+      Effect.gen(function* () {
+        const filePath = path.join(tempDir, "sample.ts");
+        const source = "const   x    =   1;\n";
+        fs.writeFileSync(filePath, source);
 
-      yield* Formatter.format(tempDir);
+        yield* Formatter.format(tempDir);
 
-      const result = fs.readFileSync(filePath, "utf8");
-      // oxfmt is optional — either it ran (different content) or it was
-      // unavailable (content unchanged). Both outcomes are acceptable;
-      // what matters is that the service ran without throwing.
-      expect(typeof result).toBe("string");
-    }).pipe(Effect.provide(Formatter.Default))
+        const result = fs.readFileSync(filePath, "utf8");
+        // oxfmt is optional — either it ran (different content) or it was
+        // unavailable (content unchanged). Both outcomes are acceptable;
+        // what matters is that the service ran without throwing.
+        expect(typeof result).toBe("string");
+      }).pipe(Effect.provide(Formatter.Default))
   );
 });

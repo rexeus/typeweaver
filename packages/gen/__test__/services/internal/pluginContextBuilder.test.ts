@@ -3,9 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { afterEach, describe, expect, test } from "vitest";
-import { MissingCanonicalResponseError } from "../../../src/plugins/errors/MissingCanonicalResponseError.js";
 import { resolveSafeGeneratedFilePath } from "../../../src/helpers/pathSafety.js";
 import { renderTemplate as renderTemplateString } from "../../../src/helpers/templateEngine.js";
+import { MissingCanonicalResponseError } from "../../../src/plugins/errors/MissingCanonicalResponseError.js";
 import { createPluginContextBuilder } from "../../../src/services/internal/pluginContextBuilder.js";
 import type {
   NormalizedResponse,
@@ -1265,9 +1265,7 @@ describe("createPluginContextBuilder", () => {
 
     firstContext.addGeneratedFile("todo/GetTodoClient.ts");
 
-    expect(firstBuilder.getGeneratedFiles()).toEqual([
-      "todo/GetTodoClient.ts",
-    ]);
+    expect(firstBuilder.getGeneratedFiles()).toEqual(["todo/GetTodoClient.ts"]);
     expect(secondBuilder.getGeneratedFiles()).toEqual([]);
     expect(secondContext.getGeneratedFiles()).toEqual([]);
   });

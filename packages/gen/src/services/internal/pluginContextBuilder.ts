@@ -3,18 +3,18 @@ import path from "node:path";
 import { Effect, Either } from "effect";
 import { pascalCase } from "polycase";
 import { relative } from "../../helpers/path.js";
-import type { SafeGeneratedFilePath } from "../../helpers/pathSafety.js";
 import { MissingCanonicalResponseError } from "../../plugins/errors/MissingCanonicalResponseError.js";
+import type { UnsafeGeneratedPathError } from "../../errors/UnsafeGeneratedPathError.js";
+import type { SafeGeneratedFilePath } from "../../helpers/pathSafety.js";
+import type {
+  NormalizedResponse,
+  NormalizedSpec,
+} from "../../NormalizedSpec.js";
 import type {
   GeneratorContext,
   PluginConfig,
   PluginContext,
 } from "../../plugins/contextTypes.js";
-import type {
-  NormalizedResponse,
-  NormalizedSpec,
-} from "../../NormalizedSpec.js";
-import type { UnsafeGeneratedPathError } from "../../errors/UnsafeGeneratedPathError.js";
 
 /**
  * Per-call tracker over the set of generated file paths. Each
@@ -29,7 +29,7 @@ type GeneratedFilesTracker = {
 const createGeneratedFilesTracker = (): GeneratedFilesTracker => {
   const generatedFiles = new Set<string>();
   return {
-    add: (filePath) => generatedFiles.add(filePath),
+    add: filePath => generatedFiles.add(filePath),
     snapshot: () => Array.from(generatedFiles).sort(),
   };
 };
@@ -63,10 +63,7 @@ type PathSafetyService = {
 };
 
 type TemplateRendererService = {
-  readonly render: (
-    template: string,
-    data: unknown
-  ) => Effect.Effect<string>;
+  readonly render: (template: string, data: unknown) => Effect.Effect<string>;
 };
 
 /**
@@ -78,7 +75,7 @@ type TemplateRendererService = {
 export const toPathSafetyShape = (
   pathSafety: PathSafetyService
 ): PathSafetyShape => ({
-  validateGeneratedPath: (params) => {
+  validateGeneratedPath: params => {
     const result = Effect.runSync(
       Effect.either(pathSafety.validateGeneratedPath(params))
     );
@@ -224,10 +221,7 @@ export function createPluginContextBuilder(
   }): GeneratorContext => {
     const pluginContext = createPluginContext(params);
     const canonicalResponsesByName = new Map<string, NormalizedResponse>(
-      params.normalizedSpec.responses.map((response) => [
-        response.name,
-        response,
-      ])
+      params.normalizedSpec.responses.map(response => [response.name, response])
     );
 
     const getResourceOutputDir = (resourceName: string): string => {
@@ -289,7 +283,7 @@ export function createPluginContextBuilder(
       specOutputDir: params.specOutputDir,
       getCanonicalResponse,
       getCanonicalResponseOutputFile,
-      getCanonicalResponseImportPath: (config) => {
+      getCanonicalResponseImportPath: config => {
         return relative(
           config.importerDir,
           getCanonicalResponseOutputFile(config.responseName).replace(
@@ -298,13 +292,13 @@ export function createPluginContextBuilder(
           )
         );
       },
-      getSpecImportPath: (config) => {
+      getSpecImportPath: config => {
         return relative(
           config.importerDir,
           path.join(params.specOutputDir, "spec.js")
         );
       },
-      getOperationDefinitionAccessor: (config) => {
+      getOperationDefinitionAccessor: config => {
         return (
           `getOperationDefinition(` +
           `spec, ` +

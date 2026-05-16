@@ -2,10 +2,10 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { Effect } from "effect";
+import { isConfigError } from "../errors/index.js";
 import { InvalidConfigExportError } from "../errors/InvalidConfigExportError.js";
 import { UnsupportedConfigExtensionError } from "../errors/UnsupportedConfigExtensionError.js";
 import { UnsupportedTypeScriptConfigError } from "../errors/UnsupportedTypeScriptConfigError.js";
-import { isConfigError } from "../errors/index.js";
 import type { ConfigError } from "../errors/index.js";
 
 const SUPPORTED_CONFIG_EXTENSIONS = [".js", ".mjs", ".cjs"] as const;
@@ -130,7 +130,7 @@ export class ConfigLoader extends Effect.Service<ConfigLoader>()(
       ): Effect.Effect<void, ConfigError> =>
         Effect.try({
           try: () => assertSupportedConfigPathSync(configPath),
-          catch: (error) => {
+          catch: error => {
             if (isConfigError(error)) {
               return error;
             }
@@ -143,7 +143,7 @@ export class ConfigLoader extends Effect.Service<ConfigLoader>()(
       ): Effect.Effect<Partial<TypeweaverConfig>, ConfigError | Error> =>
         Effect.tryPromise({
           try: () => loadConfigAsync(configPath),
-          catch: (error) => {
+          catch: error => {
             if (isConfigError(error)) {
               return error;
             }

@@ -1,7 +1,7 @@
-import type { Effect } from "effect";
 import { PluginExecutionError } from "./errors/PluginExecutionError.js";
 import type { NormalizedSpec } from "../NormalizedSpec.js";
 import type { GeneratorContext, PluginContext } from "./contextTypes.js";
+import type { Effect } from "effect";
 
 /**
  * Effect-native plugin. Plugin authors return Effects from each

@@ -6,12 +6,12 @@ import {
 } from "./internal/pluginContextBuilder.js";
 import { PathSafety } from "./PathSafety.js";
 import { TemplateRenderer } from "./TemplateRenderer.js";
+import type { NormalizedSpec } from "../NormalizedSpec.js";
 import type {
   GeneratorContext,
   PluginConfig,
   PluginContext,
 } from "../plugins/contextTypes.js";
-import type { NormalizedSpec } from "../NormalizedSpec.js";
 
 export type PluginContextParams = {
   readonly outputDir: string;
@@ -55,9 +55,7 @@ export class ContextBuilder extends Effect.Service<ContextBuilder>()(
       const templateRendererService = yield* TemplateRenderer;
 
       const pathSafety = toPathSafetyShape(pathSafetyService);
-      const templateRenderer = toTemplateRendererShape(
-        templateRendererService
-      );
+      const templateRenderer = toTemplateRendererShape(templateRendererService);
 
       const buildPluginContext = (
         params: PluginContextParams

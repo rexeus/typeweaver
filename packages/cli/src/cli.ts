@@ -1,94 +1,133 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
-import { Command } from "commander";
-import { effectRuntime } from "./effectRuntime.js";
-import { resolveGenerateOptions } from "./resolveGenerateOptions.js";
-import { ConfigLoader, getResolvedConfigPath } from "./services/ConfigLoader.js";
-import { Generator } from "./services/Generator.js";
-import type { CommandOptions as CommanderOptions } from "commander";
+import { Command, Options, ValidationError } from "@effect/cli";
+import { NodeRuntime } from "@effect/platform-node";
+import { Cause, Chunk, Effect } from "effect";
+import { ProductionLayer } from "./effectRuntime.js";
+import { formatErrorForCli } from "./formatErrorForCli.js";
+import { runGenerate } from "./runGenerate.js";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const packageJson = JSON.parse(
   fs.readFileSync(path.join(moduleDir, "../package.json"), "utf-8")
-) as {
-  readonly version: string;
-  readonly name: string;
-  readonly description: string;
-};
+) as { readonly version: string };
 
-type CommandOptions = CommanderOptions & {
-  input?: string;
-  output?: string;
-  config?: string;
-  plugins?: string;
-  format?: boolean;
-  clean?: boolean;
-};
+const inputOption = Options.text("input").pipe(
+  Options.withAlias("i"),
+  Options.withDescription("path to spec entrypoint file"),
+  Options.optional
+);
 
-const program = new Command();
-const execDir = process.cwd();
+const outputOption = Options.text("output").pipe(
+  Options.withAlias("o"),
+  Options.withDescription("output directory for generated files"),
+  Options.optional
+);
 
-program
-  .name("@rexeus/typeweaver")
-  .description("Type-safe API framework with code generation for TypeScript")
-  .version(packageJson.version);
+const configOption = Options.text("config").pipe(
+  Options.withAlias("c"),
+  Options.withDescription("path to a .js, .mjs, or .cjs configuration file"),
+  Options.optional
+);
 
-program
-  .command("generate")
-  .description("Generate types, validators, and clients from an API spec")
-  .option("-i, --input <inputPath>", "path to spec entrypoint file")
-  .option("-o, --output <outputDir>", "output directory for generated files")
-  .option(
-    "-c, --config <configFile>",
-    "path to a .js, .mjs, or .cjs configuration file"
+const pluginsOption = Options.text("plugins").pipe(
+  Options.withAlias("p"),
+  Options.withDescription("comma-separated list of plugins to use"),
+  Options.optional
+);
+
+// `Options.boolean(name, { negationNames })` has a known bug in
+// @effect/cli@0.75.x where the inner `withDefault(!ifPresent)` short-circuits
+// the outer `withDefault`. Model `--format` / `--no-format` as two flags and
+// compute the effective value in the handler instead.
+const formatOption = Options.boolean("format", { ifPresent: true }).pipe(
+  Options.withDescription("format generated code with oxfmt (default: true)"),
+  Options.optional
+);
+
+const noFormatOption = Options.boolean("no-format", { ifPresent: true }).pipe(
+  Options.withDescription("disable code formatting"),
+  Options.optional
+);
+
+const cleanOption = Options.boolean("clean", { ifPresent: true }).pipe(
+  Options.withDescription(
+    "clean output directory before generation (default: true)"
+  ),
+  Options.optional
+);
+
+const noCleanOption = Options.boolean("no-clean", { ifPresent: true }).pipe(
+  Options.withDescription("disable cleaning output directory"),
+  Options.optional
+);
+
+const generateCommand = Command.make(
+  "generate",
+  {
+    input: inputOption,
+    output: outputOption,
+    config: configOption,
+    plugins: pluginsOption,
+    format: formatOption,
+    "no-format": noFormatOption,
+    clean: cleanOption,
+    "no-clean": noCleanOption,
+  },
+  runGenerate
+).pipe(
+  Command.withDescription(
+    "Generate types, validators, and clients from an API spec"
   )
-  .option("-p, --plugins <plugins>", "comma-separated list of plugins to use")
-  .option("--format", "format generated code with oxfmt (default: true)")
-  .option("--no-format", "disable code formatting")
-  .option("--clean", "clean output directory before generation (default: true)")
-  .option("--no-clean", "disable cleaning output directory")
-  .action(async (options: CommandOptions) => {
-    let config: Partial<TypeweaverConfig> = {};
+);
 
-    // Load configuration file if provided
-    if (options.config) {
-      const configPath = getResolvedConfigPath(options.config, execDir);
+const initCommand = Command.make("init", {}, () =>
+  Effect.logInfo("The init command is coming soon!")
+).pipe(
+  Command.withDescription("Initialize a new typeweaver project (coming soon)")
+);
 
-      try {
-        config = await effectRuntime.runPromise(ConfigLoader.load(configPath));
-        console.info(`Loaded configuration from ${configPath}`);
-      } catch (error) {
-        console.error(`Failed to load configuration file: ${options.config}`);
-        console.error(error);
-        process.exit(1);
-      }
+const cli = Command.make("typeweaver").pipe(
+  Command.withDescription(
+    "Type-safe API framework with code generation for TypeScript"
+  ),
+  Command.withSubcommands([generateCommand, initCommand])
+);
+
+const run = Command.run(cli, {
+  name: "typeweaver",
+  version: packageJson.version,
+});
+
+const program = run(process.argv).pipe(
+  // @effect/cli surfaces help requests and validation issues as
+  // `ValidationError`. The framework already prints a friendly message and
+  // sets the exit code for those — skip the custom formatter so we do not
+  // double-print. All other failures (tagged domain errors, plain Error,
+  // defects) are rendered via `formatErrorForCli` before bubbling up to
+  // `NodeRuntime.runMain`, which exits non-zero on failure.
+  Effect.tapErrorCause(cause => {
+    const failures = Chunk.toReadonlyArray(Cause.failures(cause));
+    const defects = Chunk.toReadonlyArray(Cause.defects(cause));
+    const hasOnlyValidationErrors =
+      failures.length + defects.length > 0 &&
+      failures.every(failure => ValidationError.isValidationError(failure)) &&
+      defects.every(defect => ValidationError.isValidationError(defect));
+
+    if (hasOnlyValidationErrors) {
+      return Effect.void;
     }
 
-    const resolvedGenerateOptions = resolveGenerateOptions(
-      options,
-      config,
-      execDir
-    );
+    return Effect.sync(() => {
+      // eslint-disable-next-line no-console
+      console.error(formatErrorForCli(cause));
+    });
+  }),
+  Effect.provide(ProductionLayer)
+);
 
-    // Run generation
-    await effectRuntime.runPromise(
-      Generator.generate({
-        inputFile: resolvedGenerateOptions.inputPath,
-        outputDir: resolvedGenerateOptions.outputDir,
-        config: resolvedGenerateOptions.config,
-        currentWorkingDirectory: execDir,
-      })
-    );
-  });
-
-// Add future commands placeholder
-program
-  .command("init")
-  .description("Initialize a new typeweaver project (coming soon)")
-  .action(() => {
-    console.log("The init command is coming soon!");
-  });
-
-program.parse(process.argv);
+NodeRuntime.runMain(program, {
+  disableErrorReporting: true,
+  disablePrettyLogger: true,
+});

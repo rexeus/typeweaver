@@ -15,7 +15,7 @@ const inMemoryPluginModuleLoader = (
   modules: ReadonlyMap<string, Record<string, unknown>>
 ): Layer.Layer<PluginModuleLoader> =>
   Layer.succeed(PluginModuleLoader, {
-    load: (specifier) => {
+    load: specifier => {
       const moduleRecord = modules.get(specifier);
       if (moduleRecord === undefined) {
         return Effect.fail(

@@ -1,7 +1,7 @@
 import { Effect, Ref } from "effect";
 import { PluginDependencyError } from "../plugins/errors/index.js";
-import type { Plugin } from "../plugins/Plugin.js";
 import type { PluginConfig } from "../plugins/contextTypes.js";
+import type { Plugin } from "../plugins/Plugin.js";
 
 export type PluginRegistration = {
   readonly name: string;
@@ -125,7 +125,7 @@ export class PluginRegistry extends Effect.Service<PluginRegistry>()(
             return;
           }
 
-          yield* Ref.update(ref, (current) => {
+          yield* Ref.update(ref, current => {
             const next = new Map(current);
             next.set(plugin.name, { name: plugin.name, plugin, config });
             return next;

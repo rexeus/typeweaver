@@ -1,20 +1,20 @@
 import path from "node:path";
-import { FileSystem } from "@effect/platform";
 import type { SpecDefinition } from "@rexeus/typeweaver-core";
 import type {
   NormalizationError,
   NormalizedSpec,
 } from "@rexeus/typeweaver-gen";
 import { normalizeSpec } from "@rexeus/typeweaver-gen";
+import { FileSystem } from "@effect/platform";
 import { Effect } from "effect";
 import { SpecOutputWriteError } from "../generators/spec/errors/index.js";
+import { SpecBundler } from "./SpecBundler.js";
+import { SpecImporter } from "./SpecImporter.js";
 import type {
   InvalidSpecEntrypointError,
   SpecBundleError,
   SpecBundleOutputMissingError,
 } from "../generators/spec/errors/index.js";
-import { SpecBundler } from "./SpecBundler.js";
-import { SpecImporter } from "./SpecImporter.js";
 
 export type SpecLoaderConfig = {
   readonly inputFile: string;
@@ -62,7 +62,7 @@ export class SpecLoader extends Effect.Service<SpecLoader>()(
             .makeDirectory(config.specOutputDir, { recursive: true })
             .pipe(
               Effect.mapError(
-                (cause) =>
+                cause =>
                   new SpecOutputWriteError({
                     path: config.specOutputDir,
                     cause,
@@ -77,7 +77,7 @@ export class SpecLoader extends Effect.Service<SpecLoader>()(
             .writeFileString(declarationPath, SPEC_DECLARATION_CONTENT)
             .pipe(
               Effect.mapError(
-                (cause) =>
+                cause =>
                   new SpecOutputWriteError({ path: declarationPath, cause })
               )
             );

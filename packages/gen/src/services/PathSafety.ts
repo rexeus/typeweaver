@@ -29,7 +29,7 @@ export class PathSafety extends Effect.Service<PathSafety>()(
               params.outputDir,
               params.requestedPath
             ),
-          catch: (error) => {
+          catch: error => {
             if (error instanceof UnsafeGeneratedPathError) {
               return error;
             }
