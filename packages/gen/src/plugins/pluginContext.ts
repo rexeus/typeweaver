@@ -2,214 +2,18 @@ import fs from "node:fs";
 import path from "node:path";
 import { pascalCase } from "polycase";
 import { relative } from "../helpers/path.js";
+import { resolveSafeGeneratedFilePath } from "../helpers/pathSafety.js";
+import type { SafeGeneratedFilePath } from "../helpers/pathSafety.js";
 import { renderTemplate } from "../helpers/templateEngine.js";
 import { MissingCanonicalResponseError } from "./errors/MissingCanonicalResponseError.js";
 import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec.js";
 import type { GeneratorContext, PluginConfig, PluginContext } from "./types.js";
 
-type SafeGeneratedFilePath = {
-  readonly fullPath: string;
-  readonly generatedPath: string;
-};
-
-type FileSystemError = Error & {
-  readonly code?: string;
-};
-
-const WINDOWS_DRIVE_PREFIX_PATTERN = /^[a-zA-Z]:/;
-
-function pathContainsParentTraversal(projectPath: string): boolean {
-  return projectPath.split("/").includes("..");
-}
-
-function pathEndsWithDirectorySeparator(projectPath: string): boolean {
-  return projectPath.endsWith("/");
-}
-
-function pathNamesCurrentDirectory(projectPath: string): boolean {
-  return projectPath === "." || projectPath.endsWith("/.");
-}
-
-function resolveSafeGeneratedFilePath(
-  outputDir: string,
-  requestedPath: string
-): SafeGeneratedFilePath {
-  if (requestedPath.length === 0) {
-    throwUnsafeGeneratedFilePath(requestedPath, "path must not be empty");
-  }
-
-  const projectPath = requestedPath.replace(/\\/g, "/");
-
-  if (
-    path.isAbsolute(requestedPath) ||
-    path.posix.isAbsolute(projectPath) ||
-    path.win32.isAbsolute(requestedPath) ||
-    path.win32.isAbsolute(projectPath) ||
-    WINDOWS_DRIVE_PREFIX_PATTERN.test(requestedPath)
-  ) {
-    throwUnsafeGeneratedFilePath(
-      requestedPath,
-      "absolute paths are not allowed"
-    );
-  }
-
-  if (pathContainsParentTraversal(projectPath)) {
-    throwUnsafeGeneratedFilePath(
-      requestedPath,
-      "path contains parent-directory traversal"
-    );
-  }
-
-  if (pathEndsWithDirectorySeparator(projectPath)) {
-    throwUnsafeGeneratedFilePath(
-      requestedPath,
-      "path must name a file inside the output directory"
-    );
-  }
-
-  if (pathNamesCurrentDirectory(projectPath)) {
-    throwUnsafeGeneratedFilePath(
-      requestedPath,
-      "path must name a file inside the output directory"
-    );
-  }
-
-  const generatedPath = path.posix.normalize(projectPath);
-
-  if (generatedPath === ".") {
-    throwUnsafeGeneratedFilePath(
-      requestedPath,
-      "path must name a file inside the output directory"
-    );
-  }
-
-  if (pathContainsParentTraversal(generatedPath)) {
-    throwUnsafeGeneratedFilePath(
-      requestedPath,
-      "path contains parent-directory traversal"
-    );
-  }
-
-  const outputRoot = path.resolve(outputDir);
-  const fullPath = path.resolve(outputRoot, toNativePath(generatedPath));
-
-  if (!isStrictlyInsidePath(fullPath, outputRoot)) {
-    throwUnsafeGeneratedFilePath(
-      requestedPath,
-      "path escapes the output directory"
-    );
-  }
-
-  assertGeneratedPathHasNoSymlinkComponents({
-    outputRoot,
-    generatedPath,
-    requestedPath,
-  });
-
-  return { fullPath, generatedPath };
-}
-
-function toNativePath(projectPath: string): string {
-  return projectPath.split("/").join(path.sep);
-}
-
-function assertGeneratedPathHasNoSymlinkComponents(config: {
-  readonly outputRoot: string;
-  readonly generatedPath: string;
-  readonly requestedPath: string;
-}): void {
-  assertExistingPathIsNotSymlink(config.outputRoot, config.requestedPath);
-
-  let currentPath = config.outputRoot;
-
-  for (const segment of config.generatedPath.split("/")) {
-    currentPath = path.join(currentPath, segment);
-
-    const pathStats = getExistingPathStats(currentPath);
-
-    if (pathStats === undefined) {
-      return;
-    }
-
-    assertPathStatsIsNotSymlink(pathStats, config.requestedPath);
-
-    if (!pathStats.isDirectory()) {
-      return;
-    }
-  }
-}
-
-function assertExistingPathIsNotSymlink(
-  absolutePath: string,
-  requestedPath: string
-): void {
-  const pathStats = getExistingPathStats(absolutePath);
-
-  if (pathStats === undefined) {
-    return;
-  }
-
-  assertPathStatsIsNotSymlink(pathStats, requestedPath);
-}
-
-function assertPathStatsIsNotSymlink(
-  pathStats: fs.Stats,
-  requestedPath: string
-): void {
-  if (!pathStats.isSymbolicLink()) {
-    return;
-  }
-
-  throwUnsafeGeneratedFilePath(requestedPath, "path contains a symbolic link");
-}
-
-function getExistingPathStats(absolutePath: string): fs.Stats | undefined {
-  try {
-    return fs.lstatSync(absolutePath);
-  } catch (error) {
-    if (isMissingPathError(error)) {
-      return undefined;
-    }
-
-    throw error;
-  }
-}
-
-function isMissingPathError(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-
-  return ["ENOENT", "ENOTDIR"].includes((error as FileSystemError).code ?? "");
-}
-
-function isStrictlyInsidePath(childPath: string, parentPath: string): boolean {
-  const relativePath = path.relative(parentPath, childPath);
-
-  return (
-    relativePath !== "" &&
-    relativePath !== ".." &&
-    !relativePath.startsWith(`..${path.sep}`) &&
-    !path.isAbsolute(relativePath)
-  );
-}
-
-function throwUnsafeGeneratedFilePath(
-  requestedPath: string,
-  reason: string
-): never {
-  throw new Error(
-    `Unsafe generated file path '${requestedPath}': ${reason}. ` +
-      `Generated writes must stay inside the output directory.`
-  );
-}
-
-function revalidateGeneratedWritePath(
+const revalidateGeneratedWritePath = (
   outputDir: string,
   generatedPath: string
-): SafeGeneratedFilePath {
-  return resolveSafeGeneratedFilePath(outputDir, generatedPath);
-}
+): SafeGeneratedFilePath =>
+  resolveSafeGeneratedFilePath(outputDir, generatedPath);
 
 function writeGeneratedFileByReplacingDestination(config: {
   readonly outputDir: string;
@@ -253,9 +57,22 @@ function writeGeneratedFileByReplacingDestination(config: {
 }
 
 function getExistingFileMode(absolutePath: string): number | undefined {
-  const pathStats = getExistingPathStats(absolutePath);
+  let pathStats: fs.Stats;
+  try {
+    pathStats = fs.lstatSync(absolutePath);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      ["ENOENT", "ENOTDIR"].includes(
+        (error as Error & { code?: string }).code ?? ""
+      )
+    ) {
+      return undefined;
+    }
+    throw error;
+  }
 
-  if (pathStats?.isFile() !== true) {
+  if (!pathStats.isFile()) {
     return undefined;
   }
 

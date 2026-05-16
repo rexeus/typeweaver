@@ -1,14 +1,21 @@
 import { Layer } from "effect";
+import { GeneratedFiles } from "../services/GeneratedFiles.js";
+import { PathSafety } from "../services/PathSafety.js";
+import { TemplateRenderer } from "../services/TemplateRenderer.js";
 
 /**
- * Composition root for typeweaver's Effect services.
+ * Composition root for typeweaver's gen-side Effect services.
  *
- * Currently empty; services accrete here as the migration progresses
- * (TemplateRenderer, Formatter, GeneratedFiles, PluginRegistry, ...).
+ * Pure services that do not need platform bindings live here:
+ *   - `TemplateRenderer` (wraps the EJS-like renderer)
+ *   - `PathSafety`       (Effect facade over the sync path-traversal guard)
+ *   - `GeneratedFiles`   (Ref<SortedSet<string>>; deterministic snapshots)
  *
- * Platform bindings (FileSystem, Path) are *not* included here — they are
- * provided at the entrypoint (`@rexeus/typeweaver/runtime` for the CLI,
- * test layers for tests). This keeps the gen package free of a node-only
- * dependency on `@effect/platform-node`.
+ * Platform-backed services (`FileSystem`, `Path`, `Formatter`) are layered
+ * on top at the consumer entrypoint — see `@rexeus/typeweaver/effectRuntime`.
  */
-export const MainLayer = Layer.empty;
+export const MainLayer = Layer.mergeAll(
+  TemplateRenderer.Default,
+  PathSafety.Default,
+  GeneratedFiles.Default
+);
