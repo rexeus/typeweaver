@@ -11,8 +11,11 @@ import { TemplateRenderer } from "../services/TemplateRenderer.js";
  *   - `PathSafety`       (Effect facade over the sync path-traversal guard)
  *   - `GeneratedFiles`   (Ref<SortedSet<string>>; deterministic snapshots)
  *
- * Platform-backed services (`FileSystem`, `Path`, `Formatter`) are layered
- * on top at the consumer entrypoint — see `@rexeus/typeweaver/effectRuntime`.
+ * Platform bindings (FileSystem, Path) and CLI-only services (Formatter,
+ * ConfigLoader, SpecLoader) are stacked on top by the consumer entrypoint
+ * — see `packages/cli/src/effectRuntime.ts`. Keeping this layer free of a
+ * node-only dependency on `@effect/platform-node` lets the gen package
+ * stay platform-agnostic.
  */
 export const MainLayer = Layer.mergeAll(
   TemplateRenderer.Default,

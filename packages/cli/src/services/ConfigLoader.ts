@@ -5,6 +5,7 @@ import { Effect } from "effect";
 import { InvalidConfigExportError } from "../errors/InvalidConfigExportError.js";
 import { UnsupportedConfigExtensionError } from "../errors/UnsupportedConfigExtensionError.js";
 import { UnsupportedTypeScriptConfigError } from "../errors/UnsupportedTypeScriptConfigError.js";
+import { isConfigError } from "../errors/index.js";
 import type { ConfigError } from "../errors/index.js";
 
 const SUPPORTED_CONFIG_EXTENSIONS = [".js", ".mjs", ".cjs"] as const;
@@ -113,9 +114,12 @@ const isNamespaceLikeConfigExport = (value: unknown): boolean => {
 /**
  * Loads a TypeWeaver config from a `.js`, `.mjs`, or `.cjs` module.
  *
- * `assertSupportedPath` and `load` map their sync/promise throws into
- * tagged `ConfigError` instances so callers can `Effect.catchTag` on the
- * precise failure reason.
+ * `assertSupportedPath` rejects with the precise tagged `ConfigError`.
+ * `load` additionally propagates errors raised while evaluating the user's
+ * config module (syntax errors, missing imports, custom throws) as plain
+ * `Error` — the failure channel is `ConfigError | Error` so callers can
+ * narrow tagged variants via `Effect.catchTag` and still observe the
+ * underlying evaluation error class through `Effect.catchAll`.
  */
 export class ConfigLoader extends Effect.Service<ConfigLoader>()(
   "typeweaver/ConfigLoader",
@@ -126,15 +130,28 @@ export class ConfigLoader extends Effect.Service<ConfigLoader>()(
       ): Effect.Effect<void, ConfigError> =>
         Effect.try({
           try: () => assertSupportedConfigPathSync(configPath),
-          catch: (error) => error as ConfigError,
+          catch: (error) => {
+            if (isConfigError(error)) {
+              return error;
+            }
+            throw error;
+          },
         }),
 
       load: (
         configPath: string
-      ): Effect.Effect<Partial<TypeweaverConfig>, ConfigError> =>
+      ): Effect.Effect<Partial<TypeweaverConfig>, ConfigError | Error> =>
         Effect.tryPromise({
           try: () => loadConfigAsync(configPath),
-          catch: (error) => error as ConfigError,
+          catch: (error) => {
+            if (isConfigError(error)) {
+              return error;
+            }
+            if (error instanceof Error) {
+              return error;
+            }
+            throw error;
+          },
         }),
     },
     accessors: true,

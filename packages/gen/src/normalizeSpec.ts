@@ -22,6 +22,7 @@ import {
   InvalidResourceNameError,
   PathParameterMismatchError,
 } from "./errors/index.js";
+import { isNormalizationError } from "./errors/NormalizationError.js";
 import type { NormalizationError } from "./errors/NormalizationError.js";
 import {
   isSupportedOperationId,
@@ -298,5 +299,12 @@ export const normalizeSpec = (
 ): Effect.Effect<NormalizedSpec, NormalizationError> =>
   Effect.try({
     try: () => normalizeSpecSync(definition),
-    catch: (error) => error as NormalizationError,
+    catch: (error) => {
+      if (isNormalizationError(error)) {
+        return error;
+      }
+      // Anything else (programming bug, unexpected throw) propagates as a
+      // defect rather than getting falsely stamped as a NormalizationError.
+      throw error;
+    },
   });

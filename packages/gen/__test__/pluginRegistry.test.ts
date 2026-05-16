@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { createPluginRegistry } from "../src/plugins/pluginRegistry.js";
-import { PluginDependencyError } from "../src/plugins/types.js";
+import { PluginDependencyError } from "../src/plugins/errors/index.js";
 import type { TypeweaverPlugin } from "../src/plugins/types.js";
 
 const aPluginNamed = (

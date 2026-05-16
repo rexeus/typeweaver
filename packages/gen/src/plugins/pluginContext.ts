@@ -9,32 +9,16 @@ import { MissingCanonicalResponseError } from "./errors/MissingCanonicalResponse
 import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec.js";
 import type { GeneratorContext, PluginConfig, PluginContext } from "./types.js";
 
-const revalidateGeneratedWritePath = (
-  outputDir: string,
-  generatedPath: string
-): SafeGeneratedFilePath =>
-  resolveSafeGeneratedFilePath(outputDir, generatedPath);
-
 function writeGeneratedFileByReplacingDestination(config: {
-  readonly outputDir: string;
-  readonly generatedPath: string;
+  readonly safePath: SafeGeneratedFilePath;
   readonly content: string;
-}): SafeGeneratedFilePath {
-  const existingPath = revalidateGeneratedWritePath(
-    config.outputDir,
-    config.generatedPath
-  );
-  const existingFileMode = getExistingFileMode(existingPath.fullPath);
-  const tempParentPath = revalidateGeneratedWritePath(
-    config.outputDir,
-    config.generatedPath
-  );
-  const destinationDir = path.dirname(tempParentPath.fullPath);
+}): void {
+  const existingFileMode = getExistingFileMode(config.safePath.fullPath);
+  const destinationDir = path.dirname(config.safePath.fullPath);
   const tempDir = fs.mkdtempSync(path.join(destinationDir, ".typeweaver-"));
   const tempFile = path.join(tempDir, "generated.tmp");
 
   try {
-    revalidateGeneratedWritePath(config.outputDir, config.generatedPath);
     fs.writeFileSync(tempFile, config.content, {
       flag: "wx",
       mode: existingFileMode ?? 0o666,
@@ -44,13 +28,7 @@ function writeGeneratedFileByReplacingDestination(config: {
       fs.chmodSync(tempFile, existingFileMode);
     }
 
-    const writablePath = revalidateGeneratedWritePath(
-      config.outputDir,
-      config.generatedPath
-    );
-    fs.renameSync(tempFile, writablePath.fullPath);
-
-    return writablePath;
+    fs.renameSync(tempFile, config.safePath.fullPath);
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
@@ -220,21 +198,12 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
           params.outputDir,
           relativePath
         );
-        const dir = path.dirname(safePath.fullPath);
 
-        fs.mkdirSync(dir, { recursive: true });
-        const writablePath = revalidateGeneratedWritePath(
-          params.outputDir,
-          safePath.generatedPath
-        );
-        const generatedFile = writeGeneratedFileByReplacingDestination({
-          outputDir: params.outputDir,
-          generatedPath: writablePath.generatedPath,
-          content,
-        });
-        generatedFiles.add(generatedFile.generatedPath);
+        fs.mkdirSync(path.dirname(safePath.fullPath), { recursive: true });
+        writeGeneratedFileByReplacingDestination({ safePath, content });
+        generatedFiles.add(safePath.generatedPath);
 
-        console.info(`Generated: ${generatedFile.generatedPath}`);
+        console.info(`Generated: ${safePath.generatedPath}`);
       },
 
       renderTemplate: (templatePath: string, data: unknown) => {

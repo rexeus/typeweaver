@@ -7,6 +7,7 @@ import type {
 } from "@rexeus/typeweaver-gen";
 import { normalizeSpec } from "@rexeus/typeweaver-gen";
 import { Effect } from "effect";
+import { SpecOutputWriteError } from "../generators/spec/errors/index.js";
 import type {
   InvalidSpecEntrypointError,
   SpecBundleError,
@@ -53,20 +54,25 @@ export class SpecLoader extends Effect.Service<SpecLoader>()(
         | NormalizationError
         | SpecBundleError
         | SpecBundleOutputMissingError
+        | SpecOutputWriteError
       > =>
         Effect.gen(function* () {
-          yield* Effect.sync(() =>
-            fs.mkdirSync(config.specOutputDir, { recursive: true })
-          );
+          yield* Effect.try({
+            try: () =>
+              fs.mkdirSync(config.specOutputDir, { recursive: true }),
+            catch: (cause) =>
+              new SpecOutputWriteError({ path: config.specOutputDir, cause }),
+          });
 
           const bundledSpecFile = yield* bundler.bundle(config);
 
-          yield* Effect.sync(() =>
-            fs.writeFileSync(
-              path.join(config.specOutputDir, "spec.d.ts"),
-              SPEC_DECLARATION_CONTENT
-            )
-          );
+          const declarationPath = path.join(config.specOutputDir, "spec.d.ts");
+          yield* Effect.try({
+            try: () =>
+              fs.writeFileSync(declarationPath, SPEC_DECLARATION_CONTENT),
+            catch: (cause) =>
+              new SpecOutputWriteError({ path: declarationPath, cause }),
+          });
 
           const definition = yield* importer.importDefinition(bundledSpecFile);
           const normalizedSpec = yield* normalizeSpec(definition);

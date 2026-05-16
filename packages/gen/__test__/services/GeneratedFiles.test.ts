@@ -41,4 +41,26 @@ describe("GeneratedFiles", () => {
       expect(here).toEqual(["only-here.ts"]);
     }).pipe(Effect.provide(GeneratedFiles.Default))
   );
+
+  it.effect(
+    "snapshot is deterministic under unbounded concurrent adds",
+    () =>
+      Effect.gen(function* () {
+        const paths = Array.from(
+          { length: 50 },
+          (_, i) => `concurrent/${String(i).padStart(2, "0")}.ts`
+        );
+        // Shuffle deterministically so insertion order would diverge
+        // from sorted order if iteration were insertion-based.
+        const shuffled = [...paths].reverse();
+
+        yield* Effect.forEach(shuffled, GeneratedFiles.add, {
+          concurrency: "unbounded",
+          discard: true,
+        });
+
+        const snapshot = yield* GeneratedFiles.snapshot;
+        expect(snapshot).toEqual([...paths].sort());
+      }).pipe(Effect.provide(GeneratedFiles.Default))
+  );
 });
