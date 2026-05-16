@@ -2,6 +2,7 @@ import path from "node:path";
 import { ContextBuilder, PluginRegistry } from "@rexeus/typeweaver-gen";
 import { Effect } from "effect";
 import { Formatter } from "./Formatter.js";
+import { IndexFileGenerator } from "./IndexFileGenerator.js";
 import { PluginLoader } from "./PluginLoader.js";
 import { SpecLoader } from "./SpecLoader.js";
 import {
@@ -15,7 +16,6 @@ import {
   ensureOutputDirectories,
   removeOutputDir,
 } from "./generatorIO.js";
-import { generateIndexFiles } from "../generators/indexFileGenerator.js";
 import type { GenerateFailure, GenerateParams } from "./generatorTypes.js";
 
 const TEMPLATE_DIR = resolveTemplateDir();
@@ -40,6 +40,7 @@ export class Generator extends Effect.Service<Generator>()(
       const pluginLoader = yield* PluginLoader;
       const specLoader = yield* SpecLoader;
       const formatter = yield* Formatter;
+      const indexFileGenerator = yield* IndexFileGenerator;
 
       const generate = (
         params: GenerateParams
@@ -59,7 +60,6 @@ export class Generator extends Effect.Service<Generator>()(
           console.info("Starting generation...");
 
           yield* registry.clear;
-          yield* contextBuilder.reset;
 
           if (params.config?.clean !== false) {
             yield* assertSafeCleanTargetEffect(outputDir, cwd);
@@ -110,16 +110,17 @@ export class Generator extends Effect.Service<Generator>()(
             }
           }
 
-          const generatorContext = yield* contextBuilder.buildGeneratorContext({
-            outputDir,
-            inputDir,
-            config: pluginConfig,
-            normalizedSpec,
-            templateDir: TEMPLATE_DIR,
-            coreDir: CORE_DIR,
-            responsesOutputDir,
-            specOutputDir,
-          });
+          const { context: generatorContext, getGeneratedFiles } =
+            yield* contextBuilder.buildGeneratorContext({
+              outputDir,
+              inputDir,
+              config: pluginConfig,
+              normalizedSpec,
+              templateDir: TEMPLATE_DIR,
+              coreDir: CORE_DIR,
+              responsesOutputDir,
+              specOutputDir,
+            });
 
           console.info("Generating code...");
           for (const registration of initial) {
@@ -129,9 +130,12 @@ export class Generator extends Effect.Service<Generator>()(
             }
           }
 
-          yield* Effect.sync(() =>
-            generateIndexFiles(TEMPLATE_DIR, generatorContext)
-          );
+          yield* indexFileGenerator.generate({
+            templateDir: TEMPLATE_DIR,
+            outputDir,
+            generatedFiles: getGeneratedFiles(),
+            writeFile: generatorContext.writeFile,
+          });
 
           console.info("Finalizing plugins...");
           for (const registration of initial) {
@@ -144,7 +148,7 @@ export class Generator extends Effect.Service<Generator>()(
             yield* formatter.format(outputDir);
           }
 
-          const generatedFiles = yield* contextBuilder.getGeneratedFiles;
+          const generatedFiles = getGeneratedFiles();
           console.info("Generation complete!");
           console.info(`Generated files: ${generatedFiles.length}`);
         }).pipe(
@@ -161,6 +165,7 @@ export class Generator extends Effect.Service<Generator>()(
     dependencies: [
       ContextBuilder.Default,
       Formatter.Default,
+      IndexFileGenerator.Default,
       PluginLoader.Default,
       PluginRegistry.Default,
       SpecLoader.Default,

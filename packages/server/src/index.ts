@@ -1,17 +1,10 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  copyPluginLibFiles,
-  definePlugin,
-  PluginExecutionError,
-} from "@rexeus/typeweaver-gen";
+import { definePluginWithLibCopy } from "@rexeus/typeweaver-gen";
 import type { Plugin } from "@rexeus/typeweaver-gen";
-import { Effect } from "effect";
 import { generate as generateRouters } from "./routerGenerator.js";
 
-const PLUGIN_NAME = "server";
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-const libSourceDir = path.join(moduleDir, "lib");
 
 /**
  * Typeweaver plugin that generates a lightweight, dependency-free server
@@ -21,26 +14,11 @@ const libSourceDir = path.join(moduleDir, "lib");
  * `Router`, `Middleware`, etc.) and generates typed router classes for
  * each resource.
  */
-export const serverPlugin: Plugin = definePlugin({
-  name: PLUGIN_NAME,
+export const serverPlugin: Plugin = definePluginWithLibCopy({
+  name: "server",
   depends: ["types"],
-  generate: context =>
-    Effect.try({
-      try: () => {
-        copyPluginLibFiles({
-          context,
-          libSourceDir,
-          libNamespace: PLUGIN_NAME,
-        });
-        generateRouters(context);
-      },
-      catch: cause =>
-        new PluginExecutionError({
-          pluginName: PLUGIN_NAME,
-          phase: "generate",
-          cause,
-        }),
-    }),
+  libSourceDir: path.join(moduleDir, "lib"),
+  generators: [generateRouters],
 });
 
 export default serverPlugin;

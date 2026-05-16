@@ -1,26 +1,26 @@
-import fs from "node:fs";
-import path from "node:path";
-import { renderTemplate } from "@rexeus/typeweaver-gen";
-import type { GeneratorContext } from "@rexeus/typeweaver-gen";
+/**
+ * Pure barrel-computation logic for typeweaver index files.
+ *
+ * Promotes the per-domain `index.ts` and root `index.ts` from raw
+ * `fs.writeFileSync` calls to writes that flow through the supplied
+ * `writeFile` callback — so every generated file follows the same
+ * atomic-replace + tracking path as plugin-written files. The
+ * accompanying `IndexFileGenerator` service supplies the production
+ * `writeFile` and `renderTemplate` implementations; tests supply
+ * lightweight fakes.
+ */
+export type IndexFileGenerationContext = {
+  readonly generatedFiles: readonly string[];
+  readonly writeFile: (relativePath: string, content: string) => void;
+  readonly renderTemplate: (data: unknown) => string;
+};
 
-export type IndexFileGenerationContext = Pick<
-  GeneratorContext,
-  "outputDir" | "getGeneratedFiles"
->;
-
-export function generateIndexFiles(
-  templateDir: string,
-  context: IndexFileGenerationContext
-): void {
-  const templateFilePath = path.join(templateDir, "Index.ejs");
-  const template = fs.readFileSync(templateFilePath, "utf8");
-
-  const generatedFiles = context.getGeneratedFiles();
+export function generateIndexFiles(context: IndexFileGenerationContext): void {
   const groups = new Map<string, Set<string>>();
   const rootFiles = new Set<string>();
   const existingBarrels = new Set<string>();
 
-  for (const file of generatedFiles) {
+  for (const file of context.generatedFiles) {
     const normalizedFile = file.replace(/\\/g, "/");
 
     if (!isBarrelEligibleTypeScriptSourceFile(normalizedFile)) {
@@ -83,13 +83,11 @@ export function generateIndexFiles(
     }
 
     const entries = groups.get(groupKey)!;
-    const domainBarrelContent = renderTemplate(template, {
+    const domainBarrelContent = context.renderTemplate({
       indexPaths: Array.from(entries).sort(),
     });
 
-    const domainIndexPath = path.join(context.outputDir, groupKey, "index.ts");
-    fs.mkdirSync(path.dirname(domainIndexPath), { recursive: true });
-    fs.writeFileSync(domainIndexPath, domainBarrelContent);
+    context.writeFile(`${groupKey}/index.ts`, domainBarrelContent);
   }
 
   const rootIndexPaths = new Set<string>(rootFiles);
@@ -100,11 +98,11 @@ export function generateIndexFiles(
     rootIndexPaths.add(`./${barrelKey}/index.js`);
   }
 
-  const rootContent = renderTemplate(template, {
+  const rootContent = context.renderTemplate({
     indexPaths: Array.from(rootIndexPaths).sort(),
   });
 
-  fs.writeFileSync(path.join(context.outputDir, "index.ts"), rootContent);
+  context.writeFile("index.ts", rootContent);
 }
 
 function isBarrelEligibleTypeScriptSourceFile(filePath: string): boolean {

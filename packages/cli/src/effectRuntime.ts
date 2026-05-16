@@ -4,6 +4,7 @@ import { Layer, ManagedRuntime } from "effect";
 import { ConfigLoader } from "./services/ConfigLoader.js";
 import { Formatter } from "./services/Formatter.js";
 import { Generator } from "./services/Generator.js";
+import { IndexFileGenerator } from "./services/IndexFileGenerator.js";
 import { PluginLoader } from "./services/PluginLoader.js";
 import { SpecLoader } from "./services/SpecLoader.js";
 
@@ -28,6 +29,7 @@ export const ProductionLayer = Layer.mergeAll(
   MainLayer,
   ConfigLoader.Default,
   Formatter.Default,
+  IndexFileGenerator.Default,
   SpecLoader.Default,
   PluginLoader.Default,
   Generator.Default

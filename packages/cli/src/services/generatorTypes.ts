@@ -4,6 +4,7 @@ import type {
   PluginExecutionError,
   TypeweaverConfig,
 } from "@rexeus/typeweaver-gen";
+import type { IndexFileGenerationError } from "./errors/IndexFileGenerationError.js";
 import type { PluginLoadError } from "../generators/errors/PluginLoadError.js";
 import type { UnsafeCleanTargetError } from "../generators/errors/UnsafeCleanTargetError.js";
 import type {
@@ -29,4 +30,5 @@ export type GenerateFailure =
   | NormalizationError
   | SpecBundleError
   | SpecBundleOutputMissingError
-  | SpecOutputWriteError;
+  | SpecOutputWriteError
+  | IndexFileGenerationError;

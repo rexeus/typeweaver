@@ -55,28 +55,28 @@ const bundleAsync = async (
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), "typeweaver-spec-loader-")
   );
-  const wrapperFile = path.join(tempDir, "spec-entrypoint.ts");
-  const bundledSpecFile = path.join(config.specOutputDir, "spec.js");
-  const wrapperImportSpecifier = createWrapperImportSpecifier(
-    wrapperFile,
-    config.inputFile
-  );
-
-  fs.writeFileSync(
-    wrapperFile,
-    [
-      `import * as specModule from ${JSON.stringify(wrapperImportSpecifier)};`,
-      "const resolvedSpec =",
-      '  Reflect.get(specModule, "spec") ??',
-      '  Reflect.get(specModule, "default") ??',
-      "  specModule;",
-      "",
-      "export const spec = resolvedSpec;",
-      "",
-    ].join("\n")
-  );
-
   try {
+    const wrapperFile = path.join(tempDir, "spec-entrypoint.ts");
+    const bundledSpecFile = path.join(config.specOutputDir, "spec.js");
+    const wrapperImportSpecifier = createWrapperImportSpecifier(
+      wrapperFile,
+      config.inputFile
+    );
+
+    fs.writeFileSync(
+      wrapperFile,
+      [
+        `import * as specModule from ${JSON.stringify(wrapperImportSpecifier)};`,
+        "const resolvedSpec =",
+        '  Reflect.get(specModule, "spec") ??',
+        '  Reflect.get(specModule, "default") ??',
+        "  specModule;",
+        "",
+        "export const spec = resolvedSpec;",
+        "",
+      ].join("\n")
+    );
+
     await (deps.build ?? build)({
       cwd: tempDir,
       input: wrapperFile,
@@ -95,19 +95,19 @@ const bundleAsync = async (
         format: "esm",
       },
     });
+
+    if (!(deps.existsSync ?? fs.existsSync)(bundledSpecFile)) {
+      throw new SpecBundleOutputMissingError({
+        inputFile: config.inputFile,
+        bundledSpecFile,
+        specOutputDir: config.specOutputDir,
+      });
+    }
+
+    return bundledSpecFile;
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
-
-  if (!(deps.existsSync ?? fs.existsSync)(bundledSpecFile)) {
-    throw new SpecBundleOutputMissingError({
-      inputFile: config.inputFile,
-      bundledSpecFile,
-      specOutputDir: config.specOutputDir,
-    });
-  }
-
-  return bundledSpecFile;
 };
 
 const resolveBundledInputFile = (inputFile: string): string => {
