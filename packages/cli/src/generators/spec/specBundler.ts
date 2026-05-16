@@ -97,11 +97,11 @@ export async function bundle(
   }
 
   if (!(deps.existsSync ?? fs.existsSync)(bundledSpecFile)) {
-    throw new SpecBundleOutputMissingError(
-      config.inputFile,
+    throw new SpecBundleOutputMissingError({
+      inputFile: config.inputFile,
       bundledSpecFile,
-      config.specOutputDir
-    );
+      specOutputDir: config.specOutputDir,
+    });
   }
 
   return bundledSpecFile;

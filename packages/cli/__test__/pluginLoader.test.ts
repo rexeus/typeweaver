@@ -8,7 +8,8 @@ import type {
   TypeweaverPlugin,
 } from "@rexeus/typeweaver-gen";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { PluginLoadingFailure } from "../src/generators/errors/PluginLoadingFailure.js";
+import { PluginLoadError } from "../src/generators/errors/PluginLoadError.js";
+
 import { loadPlugins } from "../src/generators/pluginLoader.js";
 import { TestAssertionError } from "./errors/index.js";
 import type { PluginRegistrar } from "../src/generators/pluginLoader.js";
@@ -123,17 +124,17 @@ describe("pluginLoader", () => {
       "}",
     ]);
 
-  const capturePluginLoadingFailure = async (
+  const capturePluginLoadError = async (
     load: Promise<void>
-  ): Promise<PluginLoadingFailure> => {
+  ): Promise<PluginLoadError> => {
     const failure = await load.then(
       () => undefined,
       error => error
     );
 
-    if (!(failure instanceof PluginLoadingFailure)) {
+    if (!(failure instanceof PluginLoadError)) {
       throw new TestAssertionError(
-        "Expected plugin loading to fail with PluginLoadingFailure"
+        "Expected plugin loading to fail with PluginLoadError"
       );
     }
 
@@ -438,7 +439,7 @@ describe("pluginLoader", () => {
   test("reports attempted paths and errors when a plugin cannot be resolved", async () => {
     const { registry } = createRegistry();
 
-    const failure = await capturePluginLoadingFailure(
+    const failure = await capturePluginLoadError(
       loadPlugins(
         registry,
         [requiredTypesPlugin()],
@@ -459,7 +460,7 @@ describe("pluginLoader", () => {
   test("reports npm package attempts when a package plugin is missing", async () => {
     const { registry } = createRegistry();
 
-    const failure = await capturePluginLoadingFailure(
+    const failure = await capturePluginLoadError(
       loadPlugins(
         registry,
         [requiredTypesPlugin()],
@@ -490,7 +491,7 @@ describe("pluginLoader", () => {
     );
     const { registry } = createRegistry();
 
-    const failure = await capturePluginLoadingFailure(
+    const failure = await capturePluginLoadError(
       loadPlugins(
         registry,
         [requiredTypesPlugin()],
@@ -514,7 +515,7 @@ describe("pluginLoader", () => {
     ]);
     const { registry } = createRegistry();
 
-    const failure = await capturePluginLoadingFailure(
+    const failure = await capturePluginLoadError(
       loadPlugins(
         registry,
         [requiredTypesPlugin()],
@@ -545,7 +546,7 @@ describe("pluginLoader", () => {
     ]);
     const { registry } = createRegistry();
 
-    const failure = await capturePluginLoadingFailure(
+    const failure = await capturePluginLoadError(
       loadPlugins(
         registry,
         [requiredTypesPlugin()],
@@ -571,7 +572,7 @@ describe("pluginLoader", () => {
     ]);
     const { registry, registeredPlugins } = createRegistry();
 
-    const failure = await capturePluginLoadingFailure(
+    const failure = await capturePluginLoadError(
       loadPlugins(
         registry,
         [requiredTypesPlugin()],
@@ -593,7 +594,7 @@ describe("pluginLoader", () => {
   test("reports a scoped package attempt when the scoped strategy cannot load it", async () => {
     const { registry } = createRegistry();
 
-    const failure = await capturePluginLoadingFailure(
+    const failure = await capturePluginLoadError(
       loadPlugins(
         registry,
         [requiredTypesPlugin()],

@@ -10,3 +10,4 @@ export { InvalidRequestSchemaError } from "./InvalidRequestSchemaError.js";
 export { InvalidResourceNameError } from "./InvalidResourceNameError.js";
 export { MissingDerivedResponseParentError } from "./MissingDerivedResponseParentError.js";
 export { PathParameterMismatchError } from "./PathParameterMismatchError.js";
+export type { NormalizationError } from "./NormalizationError.js";

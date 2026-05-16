@@ -6,8 +6,7 @@ import type {
   TypeweaverConfig,
   TypeweaverPlugin,
 } from "@rexeus/typeweaver-gen";
-import { PluginLoadingFailure } from "./errors/PluginLoadingFailure.js";
-import type { PluginLoadError } from "./errors/PluginLoadingFailure.js";
+import { PluginLoadError } from "./errors/PluginLoadError.js";
 
 export type PluginResolutionStrategy = "npm" | "local" | "scoped";
 
@@ -52,10 +51,7 @@ export async function loadPlugins(
     const result = await loadPlugin(pluginName, strategies, pluginConfig);
 
     if (result.success === false) {
-      throw new PluginLoadingFailure(
-        result.error.pluginName,
-        result.error.attempts
-      );
+      throw result.error;
     }
 
     successful.push(result.value);
@@ -101,10 +97,7 @@ async function loadPlugin(
 
   return {
     success: false,
-    error: {
-      pluginName,
-      attempts,
-    },
+    error: new PluginLoadError({ pluginName, attempts }),
   };
 }
 

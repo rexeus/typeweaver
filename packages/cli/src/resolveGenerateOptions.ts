@@ -25,11 +25,19 @@ export const resolveGenerateOptions = (
   const outputDir = options.output ?? config.output;
 
   if (!inputPath) {
-    throw new MissingGenerateOptionError("input", "--input", "input");
+    throw new MissingGenerateOptionError({
+      optionName: "input",
+      flag: "--input",
+      configKey: "input",
+    });
   }
 
   if (!outputDir) {
-    throw new MissingGenerateOptionError("output", "--output", "output");
+    throw new MissingGenerateOptionError({
+      optionName: "output",
+      flag: "--output",
+      configKey: "output",
+    });
   }
 
   const resolvedInputPath = path.isAbsolute(inputPath)

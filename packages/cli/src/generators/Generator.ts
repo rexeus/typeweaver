@@ -22,7 +22,10 @@ export const assertSafeCleanTarget = (
 ): void => {
   const trimmedOutputDir = outputDir.trim();
   if (trimmedOutputDir.length === 0) {
-    throw new UnsafeCleanTargetError(outputDir, "empty-path");
+    throw new UnsafeCleanTargetError({
+      outputDir,
+      reason: "empty-path",
+    });
   }
 
   const resolvedWorkingDirectory = path.resolve(currentWorkingDirectory);
@@ -37,7 +40,9 @@ export const assertSafeCleanTarget = (
   const filesystemRoot = path.parse(canonicalOutputDir).root;
 
   if (canonicalOutputDir === filesystemRoot) {
-    throw new UnsafeCleanTargetError(outputDir, "filesystem-root", {
+    throw new UnsafeCleanTargetError({
+      outputDir,
+      reason: "filesystem-root",
       resolvedOutputDir,
       currentWorkingDirectory: resolvedWorkingDirectory,
       filesystemRoot,
@@ -48,7 +53,9 @@ export const assertSafeCleanTarget = (
     resolvedOutputDir === resolvedWorkingDirectory ||
     canonicalOutputDir === canonicalWorkingDirectory
   ) {
-    throw new UnsafeCleanTargetError(outputDir, "current-working-directory", {
+    throw new UnsafeCleanTargetError({
+      outputDir,
+      reason: "current-working-directory",
       resolvedOutputDir,
       currentWorkingDirectory: resolvedWorkingDirectory,
     });
@@ -71,7 +78,9 @@ export const assertSafeCleanTarget = (
   );
 
   if (protectedWorkspaceRootTarget !== undefined) {
-    throw new UnsafeCleanTargetError(outputDir, "workspace-root", {
+    throw new UnsafeCleanTargetError({
+      outputDir,
+      reason: "workspace-root",
       resolvedOutputDir,
       currentWorkingDirectory: resolvedWorkingDirectory,
       protectedWorkspaceRoot: protectedWorkspaceRootTarget,
@@ -83,14 +92,12 @@ export const assertSafeCleanTarget = (
     (isSameOrDescendantOf(resolvedWorkingDirectory, resolvedOutputDir) ||
       isSameOrDescendantOf(canonicalWorkingDirectory, canonicalOutputDir))
   ) {
-    throw new UnsafeCleanTargetError(
+    throw new UnsafeCleanTargetError({
       outputDir,
-      "ancestor-of-current-working-directory",
-      {
-        resolvedOutputDir,
-        currentWorkingDirectory: resolvedWorkingDirectory,
-      }
-    );
+      reason: "ancestor-of-current-working-directory",
+      resolvedOutputDir,
+      currentWorkingDirectory: resolvedWorkingDirectory,
+    });
   }
 };
 

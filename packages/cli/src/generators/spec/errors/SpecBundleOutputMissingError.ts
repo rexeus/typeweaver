@@ -1,13 +1,13 @@
-export class SpecBundleOutputMissingError extends Error {
-  public override readonly name = "SpecBundleOutputMissingError";
+import { Data } from "effect";
 
-  public constructor(
-    public readonly inputFile: string,
-    public readonly bundledSpecFile: string,
-    public readonly specOutputDir: string
-  ) {
-    super(
-      `Spec bundling completed but did not create the expected output '${bundledSpecFile}' for entrypoint '${inputFile}'. Expected the bundle inside '${specOutputDir}'.`
-    );
+export class SpecBundleOutputMissingError extends Data.TaggedError(
+  "SpecBundleOutputMissingError"
+)<{
+  readonly inputFile: string;
+  readonly bundledSpecFile: string;
+  readonly specOutputDir: string;
+}> {
+  public override get message(): string {
+    return `Spec bundling completed but did not create the expected output '${this.bundledSpecFile}' for entrypoint '${this.inputFile}'. Expected the bundle inside '${this.specOutputDir}'.`;
   }
 }

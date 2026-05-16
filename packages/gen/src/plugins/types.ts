@@ -132,32 +132,3 @@ export type TypeweaverConfig = {
   clean?: boolean;
 };
 
-/**
- * Plugin loading error
- */
-export class PluginLoadError extends Error {
-  constructor(
-    public pluginName: string,
-    message: string
-  ) {
-    super(`Failed to load plugin '${pluginName}': ${message}`);
-    this.name = "PluginLoadError";
-  }
-}
-
-/**
- * Plugin dependency error
- */
-export class PluginDependencyError extends Error {
-  constructor(
-    public pluginName: string,
-    public missingDependency: string,
-    message?: string
-  ) {
-    super(
-      message ??
-        `Plugin '${pluginName}' depends on '${missingDependency}' which is not loaded`
-    );
-    this.name = "PluginDependencyError";
-  }
-}

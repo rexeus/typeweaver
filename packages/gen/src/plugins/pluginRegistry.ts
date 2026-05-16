@@ -1,4 +1,4 @@
-import { PluginDependencyError } from "./types.js";
+import { PluginDependencyError } from "./errors/index.js";
 import type { PluginRegistration, TypeweaverPlugin } from "./types.js";
 
 export type PluginRegistryApi = {
@@ -105,11 +105,11 @@ function visitPlugin(params: {
 
   if (visiting.has(registration.name)) {
     const cyclePath = [...dependencyPath, registration.name].join(" -> ");
-    throw new PluginDependencyError(
-      registration.name,
-      registration.name,
-      `Detected plugin dependency cycle: ${cyclePath}`
-    );
+    throw new PluginDependencyError({
+      pluginName: registration.name,
+      missingDependency: registration.name,
+      cyclePath: `Detected plugin dependency cycle: ${cyclePath}`,
+    });
   }
 
   visiting.add(registration.name);
@@ -121,7 +121,10 @@ function visitPlugin(params: {
   for (const dependencyName of alphabeticallyOrderedDependencies) {
     const dependency = registrationsByName.get(dependencyName);
     if (dependency === undefined) {
-      throw new PluginDependencyError(registration.name, dependencyName);
+      throw new PluginDependencyError({
+        pluginName: registration.name,
+        missingDependency: dependencyName,
+      });
     }
 
     visitPlugin({

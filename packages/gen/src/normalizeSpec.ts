@@ -72,11 +72,11 @@ const validateRequestSchema = (
   schema: unknown
 ): void => {
   if (!isZodType(schema)) {
-    throw new InvalidRequestSchemaError(operationId, requestPart);
+    throw new InvalidRequestSchemaError({ operationId, requestPart });
   }
 
   if (requestPart === "param" && !isZodObject(schema)) {
-    throw new InvalidRequestSchemaError(operationId, requestPart);
+    throw new InvalidRequestSchemaError({ operationId, requestPart });
   }
 };
 
@@ -110,12 +110,12 @@ const validateRequest = (
     pathParams.length !== requestParams.length ||
     pathParams.some(pathParam => !requestParams.includes(pathParam))
   ) {
-    throw new PathParameterMismatchError(
+    throw new PathParameterMismatchError({
       operationId,
       path,
       pathParams,
-      requestParams
-    );
+      requestParams,
+    });
   }
 
   if (
@@ -184,11 +184,13 @@ const normalizeOperation = (
   operation: ResourceDefinition["operations"][number]
 ): NormalizeOperationResult => {
   if (!isSupportedOperationId(operation.operationId)) {
-    throw new InvalidOperationIdError(operation.operationId);
+    throw new InvalidOperationIdError({ operationId: operation.operationId });
   }
 
   if (operationIds.has(operation.operationId)) {
-    throw new DuplicateOperationIdError(operation.operationId);
+    throw new DuplicateOperationIdError({
+      operationId: operation.operationId,
+    });
   }
 
   operationIds.add(operation.operationId);
@@ -197,17 +199,19 @@ const normalizeOperation = (
   const routeKey = `${operation.method}:${normalizedPath}`;
 
   if (routeKeys.has(routeKey)) {
-    throw new DuplicateRouteError(
-      operation.method,
-      operation.path,
-      normalizedPath
-    );
+    throw new DuplicateRouteError({
+      method: operation.method,
+      path: operation.path,
+      normalizedPath,
+    });
   }
 
   routeKeys.add(routeKey);
 
   if (operation.responses.length === 0) {
-    throw new EmptyOperationResponsesError(operation.operationId);
+    throw new EmptyOperationResponsesError({
+      operationId: operation.operationId,
+    });
   }
 
   const request = validateRequest(
@@ -251,11 +255,11 @@ export const normalizeSpec = (definition: SpecDefinition): NormalizedSpec => {
   return {
     resources: resourceEntries.map(([resourceName, resource]) => {
       if (!isSupportedResourceName(resourceName)) {
-        throw new InvalidResourceNameError(resourceName);
+        throw new InvalidResourceNameError({ resourceName });
       }
 
       if (resource.operations.length === 0) {
-        throw new EmptyResourceOperationsError(resourceName);
+        throw new EmptyResourceOperationsError({ resourceName });
       }
 
       return {

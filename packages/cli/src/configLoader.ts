@@ -28,15 +28,15 @@ export const assertSupportedConfigPath = (configPath: string): void => {
   const extension = path.extname(configPath).toLowerCase();
 
   if (UNSUPPORTED_TYPESCRIPT_CONFIG_EXTENSIONS.has(extension)) {
-    throw new UnsupportedTypeScriptConfigError(configPath, extension);
+    throw new UnsupportedTypeScriptConfigError({ configPath, extension });
   }
 
   if (!SUPPORTED_CONFIG_EXTENSION_SET.has(extension)) {
-    throw new UnsupportedConfigExtensionError(
+    throw new UnsupportedConfigExtensionError({
       configPath,
       extension,
-      SUPPORTED_CONFIG_EXTENSIONS
-    );
+      supportedExtensions: SUPPORTED_CONFIG_EXTENSIONS,
+    });
   }
 };
 
@@ -51,7 +51,10 @@ export const loadConfig = async (
   const loadedConfig = getConfigExport(configModule, configPath);
 
   if (!isConfigObject(loadedConfig)) {
-    throw new InvalidConfigExportError(configPath, "non-object-config");
+    throw new InvalidConfigExportError({
+      configPath,
+      reason: "non-object-config",
+    });
   }
 
   return loadedConfig;
@@ -65,18 +68,18 @@ const getConfigExport = (
   const hasNamedConfigExport = Object.hasOwn(configModule, "config");
 
   if (hasDefaultExport && hasNamedConfigExport) {
-    throw new InvalidConfigExportError(
+    throw new InvalidConfigExportError({
       configPath,
-      "both-default-and-named-config"
-    );
+      reason: "both-default-and-named-config",
+    });
   }
 
   if (hasDefaultExport) {
     if (isNamespaceLikeConfigExport(configModule.default)) {
-      throw new InvalidConfigExportError(
+      throw new InvalidConfigExportError({
         configPath,
-        "default-namespace-wrapper"
-      );
+        reason: "default-namespace-wrapper",
+      });
     }
 
     return configModule.default;
@@ -86,7 +89,10 @@ const getConfigExport = (
     return configModule.config;
   }
 
-  throw new InvalidConfigExportError(configPath, "missing-config-export");
+  throw new InvalidConfigExportError({
+    configPath,
+    reason: "missing-config-export",
+  });
 };
 
 const isConfigObject = (value: unknown): value is Partial<TypeweaverConfig> => {

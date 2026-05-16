@@ -350,7 +350,7 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
       const response = canonicalResponsesByName.get(responseName);
 
       if (response === undefined) {
-        throw new MissingCanonicalResponseError(responseName);
+        throw new MissingCanonicalResponseError({ responseName });
       }
 
       return response;
