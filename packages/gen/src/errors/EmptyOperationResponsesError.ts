@@ -1,6 +1,11 @@
-export class EmptyOperationResponsesError extends Error {
-  public constructor(operationId: string) {
-    super(`Operation '${operationId}' must declare at least one response.`);
-    this.name = "EmptyOperationResponsesError";
+import { Data } from "effect";
+
+export class EmptyOperationResponsesError extends Data.TaggedError(
+  "EmptyOperationResponsesError"
+)<{
+  readonly operationId: string;
+}> {
+  public override get message(): string {
+    return `Operation '${this.operationId}' must declare at least one response.`;
   }
 }

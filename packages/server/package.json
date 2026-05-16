@@ -56,11 +56,13 @@
   "homepage": "https://github.com/rexeus/typeweaver#readme",
   "peerDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
-    "@rexeus/typeweaver-gen": "workspace:^"
+    "@rexeus/typeweaver-gen": "workspace:^",
+    "effect": "^3.21.2"
   },
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
+    "effect": "^3.21.2",
     "get-port": "^7.2.0",
     "test-utils": "file:../test-utils",
     "tsx": "^4.21.0"

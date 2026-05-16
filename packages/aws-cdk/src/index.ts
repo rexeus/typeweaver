@@ -1,20 +1,16 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { BasePlugin } from "@rexeus/typeweaver-gen";
-import type { GeneratorContext } from "@rexeus/typeweaver-gen";
+import { definePluginWithLibCopy } from "@rexeus/typeweaver-gen";
+import type { Plugin } from "@rexeus/typeweaver-gen";
 import { generate as generateHttpApiRoutes } from "./httpApiRouterGenerator.js";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
-export class AwsCdkPlugin extends BasePlugin {
-  public name = "aws-cdk";
-  public override depends = ["types"];
+export const awsCdkPlugin: Plugin = definePluginWithLibCopy({
+  name: "aws-cdk",
+  depends: ["types"],
+  libSourceDir: path.join(moduleDir, "lib"),
+  generators: [generateHttpApiRoutes],
+});
 
-  public override generate(context: GeneratorContext): Promise<void> | void {
-    // Copy lib files to lib/aws-cdk/ from dist folder
-    const libDir = path.join(moduleDir, "lib");
-    this.copyLibFiles(context, libDir, "aws-cdk");
-
-    generateHttpApiRoutes(context);
-  }
-}
+export default awsCdkPlugin;

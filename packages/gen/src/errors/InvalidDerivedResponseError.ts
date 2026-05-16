@@ -1,8 +1,11 @@
-export class InvalidDerivedResponseError extends Error {
-  public constructor(responseName: string) {
-    super(
-      `Derived response '${responseName}' contains invalid lineage metadata.`
-    );
-    this.name = "InvalidDerivedResponseError";
+import { Data } from "effect";
+
+export class InvalidDerivedResponseError extends Data.TaggedError(
+  "InvalidDerivedResponseError"
+)<{
+  readonly responseName: string;
+}> {
+  public override get message(): string {
+    return `Derived response '${this.responseName}' contains invalid lineage metadata.`;
   }
 }
