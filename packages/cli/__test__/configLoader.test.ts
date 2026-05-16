@@ -1,15 +1,41 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
+import { Effect, Either } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
-import {
-  assertSupportedConfigPath,
-  getResolvedConfigPath,
-  loadConfig,
-} from "../src/configLoader.js";
 import { InvalidConfigExportError } from "../src/errors/InvalidConfigExportError.js";
 import { UnsupportedConfigExtensionError } from "../src/errors/UnsupportedConfigExtensionError.js";
 import { UnsupportedTypeScriptConfigError } from "../src/errors/UnsupportedTypeScriptConfigError.js";
+import {
+  ConfigLoader,
+  getResolvedConfigPath,
+} from "../src/services/ConfigLoader.js";
+
+// Test shims that bridge the legacy sync/async API onto ConfigLoader.
+// `Effect.either` flattens typed failures into the success channel so
+// tests can `.rejects.toBeInstanceOf` against the underlying error rather
+// than against Effect's `FiberFailure` wrapper.
+const assertSupportedConfigPath = (configPath: string): void => {
+  const result = Effect.runSync(
+    Effect.either(ConfigLoader.assertSupportedPath(configPath)).pipe(
+      Effect.provide(ConfigLoader.Default)
+    )
+  );
+  if (Either.isLeft(result)) throw result.left;
+};
+
+const loadConfig = async (
+  configPath: string
+): Promise<Partial<TypeweaverConfig>> => {
+  const result = await Effect.runPromise(
+    Effect.either(ConfigLoader.load(configPath)).pipe(
+      Effect.provide(ConfigLoader.Default)
+    )
+  );
+  if (Either.isLeft(result)) throw result.left;
+  return result.right;
+};
 
 describe("configLoader", () => {
   const tempDirs: string[] = [];

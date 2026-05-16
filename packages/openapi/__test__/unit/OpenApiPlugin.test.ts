@@ -4,9 +4,10 @@ import type {
   NormalizedResponse,
   NormalizedSpec,
 } from "@rexeus/typeweaver-gen";
+import { Effect } from "effect";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
-import { OpenApiPlugin } from "../../src/index.js";
+import { openApiPlugin } from "../../src/index.js";
 import {
   aNormalizedSpecWith,
   anInlineResponseUsage,
@@ -27,7 +28,18 @@ type OpenApiGeneratorContext = GeneratorContext & {
   readonly writtenFiles: readonly WrittenFile[];
 };
 
-describe("OpenApiPlugin", () => {
+const runGenerate = (
+  options: unknown,
+  context: OpenApiGeneratorContext
+): void => {
+  const plugin = openApiPlugin(options);
+  if (plugin.generate === undefined) {
+    throw new Error("openApiPlugin must define a generate stage");
+  }
+  Effect.runSync(plugin.generate(context));
+};
+
+describe("openApiPlugin", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -35,7 +47,7 @@ describe("OpenApiPlugin", () => {
   test("writes an OpenAPI document to the default output path", () => {
     const context = anOpenApiGeneratorContextWith(anItemsSpec());
 
-    new OpenApiPlugin().generate(context);
+    runGenerate({}, context);
 
     const document = JSON.parse(context.writtenFiles[0]?.content ?? "{}");
     expect(context.writtenFiles).toHaveLength(1);
@@ -51,11 +63,14 @@ describe("OpenApiPlugin", () => {
   test("writes custom OpenAPI metadata to the configured output path", () => {
     const context = anOpenApiGeneratorContextWith(anItemsSpec());
 
-    new OpenApiPlugin({
-      info: { title: "Todo API", version: "1.0.0", summary: "Todos" },
-      servers: [{ url: "https://api.example.com", description: "Production" }],
-      outputPath: "docs/openapi.json",
-    }).generate(context);
+    runGenerate(
+      {
+        info: { title: "Todo API", version: "1.0.0", summary: "Todos" },
+        servers: [{ url: "https://api.example.com", description: "Production" }],
+        outputPath: "docs/openapi.json",
+      },
+      context
+    );
 
     const document = JSON.parse(context.writtenFiles[0]?.content ?? "{}");
     expect(context.writtenFiles[0]?.path).toBe("docs/openapi.json");
@@ -72,22 +87,25 @@ describe("OpenApiPlugin", () => {
   test("preserves server variables in configured OpenAPI servers", () => {
     const context = anOpenApiGeneratorContextWith(anItemsSpec());
 
-    new OpenApiPlugin({
-      servers: [
-        {
-          url: "https://{environment}.example.com/{basePath}",
-          description: "Environment server",
-          variables: {
-            environment: {
-              default: "api",
-              enum: ["api", "staging"],
-              description: "Deployment environment",
+    runGenerate(
+      {
+        servers: [
+          {
+            url: "https://{environment}.example.com/{basePath}",
+            description: "Environment server",
+            variables: {
+              environment: {
+                default: "api",
+                enum: ["api", "staging"],
+                description: "Deployment environment",
+              },
+              basePath: { default: "v1" },
             },
-            basePath: { default: "v1" },
           },
-        },
-      ],
-    }).generate(context);
+        ],
+      },
+      context
+    );
 
     const document = JSON.parse(context.writtenFiles[0]?.content ?? "{}");
     expect(document.servers).toEqual([
@@ -120,7 +138,7 @@ describe("OpenApiPlugin", () => {
       })
     );
 
-    new OpenApiPlugin().generate(context);
+    runGenerate({}, context);
 
     const document = JSON.parse(context.writtenFiles[0]?.content ?? "{}");
     expect(warn).toHaveBeenCalledWith(
@@ -178,7 +196,7 @@ describe("OpenApiPlugin", () => {
       message: /outputPath must not contain parent directory segments/,
     },
   ])("rejects invalid config for $scenario", ({ options, message }) => {
-    expect(() => new OpenApiPlugin(options)).toThrow(message);
+    expect(() => openApiPlugin(options)).toThrow(message);
   });
 });
 
@@ -220,7 +238,7 @@ function anOpenApiGeneratorContextWith(
 ): OpenApiGeneratorContext {
   const writtenFiles: WrittenFile[] = [];
   const notImplemented = (): never => {
-    throw new Error("Not implemented by the OpenApiPlugin test context");
+    throw new Error("Not implemented by the openApiPlugin test context");
   };
 
   return {

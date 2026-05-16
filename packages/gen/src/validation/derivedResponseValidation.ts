@@ -38,27 +38,27 @@ export const validateDerivedResponseMetadata = (
   }
 
   if (derived.parentName === response.name) {
-    throw new DerivedResponseCycleError(response.name);
+    throw new DerivedResponseCycleError({ responseName: response.name });
   }
 
   if (derived.lineage.length === 0) {
-    throw new InvalidDerivedResponseError(response.name);
+    throw new InvalidDerivedResponseError({ responseName: response.name });
   }
 
   if (derived.lineage.at(-1) !== response.name) {
-    throw new InvalidDerivedResponseError(response.name);
+    throw new InvalidDerivedResponseError({ responseName: response.name });
   }
 
   if (derived.lineage.length !== derived.depth) {
-    throw new InvalidDerivedResponseError(response.name);
+    throw new InvalidDerivedResponseError({ responseName: response.name });
   }
 
   if (new Set(derived.lineage).size !== derived.lineage.length) {
-    throw new DerivedResponseCycleError(response.name);
+    throw new DerivedResponseCycleError({ responseName: response.name });
   }
 
   if (derived.depth > 1 && derived.lineage.at(-2) !== derived.parentName) {
-    throw new InvalidDerivedResponseError(response.name);
+    throw new InvalidDerivedResponseError({ responseName: response.name });
   }
 };
 
@@ -94,13 +94,16 @@ export const getDerivedResponseChain = (
 
   while (parentName !== undefined) {
     if (visitedResponseNames.has(parentName)) {
-      throw new DerivedResponseCycleError(response.name);
+      throw new DerivedResponseCycleError({ responseName: response.name });
     }
 
     const parentResponse = canonicalResponses.get(parentName);
 
     if (parentResponse === undefined) {
-      throw new MissingDerivedResponseParentError(response.name, parentName);
+      throw new MissingDerivedResponseParentError({
+        responseName: response.name,
+        parentName,
+      });
     }
 
     chain.unshift(parentResponse.name);
@@ -131,7 +134,7 @@ const validateDerivedResponseAgainstCanonicalGraph = (
   const materializedLineage = chain.slice(1);
 
   if (response.derived.depth !== materializedLineage.length) {
-    throw new InvalidDerivedResponseError(response.name);
+    throw new InvalidDerivedResponseError({ responseName: response.name });
   }
 
   if (
@@ -140,7 +143,7 @@ const validateDerivedResponseAgainstCanonicalGraph = (
       (lineageEntry, index) => lineageEntry !== response.derived?.lineage[index]
     )
   ) {
-    throw new InvalidDerivedResponseError(response.name);
+    throw new InvalidDerivedResponseError({ responseName: response.name });
   }
 };
 
