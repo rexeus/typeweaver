@@ -442,7 +442,7 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
       },
 
       getGeneratedFiles: () => {
-        return Array.from(generatedFiles);
+        return Array.from(generatedFiles).sort();
       },
     };
   };
@@ -450,7 +450,7 @@ export function createPluginContextBuilder(): PluginContextBuilderApi {
   return {
     createPluginContext,
     createGeneratorContext,
-    getGeneratedFiles: () => Array.from(generatedFiles),
+    getGeneratedFiles: () => Array.from(generatedFiles).sort(),
     clearGeneratedFiles: () => generatedFiles.clear(),
   };
 }

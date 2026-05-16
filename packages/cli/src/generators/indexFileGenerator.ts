@@ -76,11 +76,13 @@ export function generateIndexFiles(
     }
   }
 
-  for (const [groupKey, entries] of groups) {
+  const sortedGroupKeys = Array.from(groups.keys()).sort();
+  for (const groupKey of sortedGroupKeys) {
     if (existingBarrels.has(groupKey)) {
       continue;
     }
 
+    const entries = groups.get(groupKey)!;
     const domainBarrelContent = renderTemplate(template, {
       indexPaths: Array.from(entries).sort(),
     });
@@ -91,10 +93,10 @@ export function generateIndexFiles(
   }
 
   const rootIndexPaths = new Set<string>(rootFiles);
-  for (const groupKey of groups.keys()) {
+  for (const groupKey of sortedGroupKeys) {
     rootIndexPaths.add(`./${groupKey}/index.js`);
   }
-  for (const barrelKey of existingBarrels) {
+  for (const barrelKey of Array.from(existingBarrels).sort()) {
     rootIndexPaths.add(`./${barrelKey}/index.js`);
   }
 

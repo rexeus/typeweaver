@@ -44,7 +44,7 @@ describe("createPluginRegistry", () => {
     expect(registry.has("types")).toBe(true);
   });
 
-  test("returns independent plugins in registration order", () => {
+  test("returns independent plugins in alphabetical order regardless of registration order", () => {
     const registry = createPluginRegistry();
     const typesPlugin = aPluginNamed("types");
     const clientsPlugin = aPluginNamed("clients");
@@ -55,8 +55,8 @@ describe("createPluginRegistry", () => {
     const registrations = registry.getAll();
 
     expect(registrations.map(registration => registration.name)).toEqual([
-      "types",
       "clients",
+      "types",
     ]);
   });
 
@@ -102,7 +102,7 @@ describe("createPluginRegistry", () => {
 
     expect(readRegistrations).toThrowError(PluginDependencyError);
     expect(readRegistrations).toThrowError(
-      "Detected plugin dependency cycle: types -> clients -> analytics -> types"
+      "Detected plugin dependency cycle: analytics -> types -> clients -> analytics"
     );
   });
 

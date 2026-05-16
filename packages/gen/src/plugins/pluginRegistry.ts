@@ -64,7 +64,11 @@ function sortPluginRegistrations(
   const visited = new Set<string>();
   const sorted: PluginRegistration[] = [];
 
-  for (const registration of registrations) {
+  const alphabeticallyOrderedRegistrations = [...registrations].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+
+  for (const registration of alphabeticallyOrderedRegistrations) {
     visitPlugin({
       registration,
       registrationsByName,
@@ -110,7 +114,11 @@ function visitPlugin(params: {
 
   visiting.add(registration.name);
 
-  for (const dependencyName of registration.plugin.depends ?? []) {
+  const alphabeticallyOrderedDependencies = [
+    ...(registration.plugin.depends ?? []),
+  ].sort((a, b) => a.localeCompare(b));
+
+  for (const dependencyName of alphabeticallyOrderedDependencies) {
     const dependency = registrationsByName.get(dependencyName);
     if (dependency === undefined) {
       throw new PluginDependencyError(registration.name, dependencyName);
