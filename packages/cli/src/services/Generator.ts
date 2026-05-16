@@ -16,20 +16,19 @@ import {
   ensureOutputDirectories,
   removeOutputDir,
 } from "./generatorIO.js";
-import type { GenerateFailure, GenerateParams } from "./generatorTypes.js";
-
-const TEMPLATE_DIR = resolveTemplateDir();
+import type { GenerateParams } from "./generatorTypes.js";
 
 /**
  * Effect-native generator orchestrator. Owns the full pipeline from spec
- * bundling through plugin lifecycle to optional formatting. State (plugin
- * registrations, generated-file tracker) is reset at the start of every
- * `generate(...)` call so the long-lived service preserves the per-call
- * semantics of the previous `new Generator()` instance.
+ * bundling through plugin lifecycle to optional formatting. The plugin
+ * registry is cleared at the start of every `generate(...)` call so the
+ * long-lived service preserves the per-call semantics of the previous
+ * `new Generator()` instance. The generated-file tracker is per-call by
+ * construction (built fresh inside `ContextBuilder.buildGeneratorContext`).
  *
- * Pipeline ordering — and every `console.info` along the way — is held
- * byte-stable so the generated test-project output stays unchanged and
- * the existing test expectations keep passing.
+ * Pipeline ordering and the log lines along the way are held byte-stable
+ * so the generated test-project output stays unchanged and the existing
+ * test expectations keep passing.
  */
 export class Generator extends Effect.Service<Generator>()(
   "typeweaver/Generator",
@@ -42,9 +41,7 @@ export class Generator extends Effect.Service<Generator>()(
       const formatter = yield* Formatter;
       const indexFileGenerator = yield* IndexFileGenerator;
 
-      const generate = (
-        params: GenerateParams
-      ): Effect.Effect<void, GenerateFailure> =>
+      const generate = (params: GenerateParams) =>
         Effect.gen(function* () {
           const cwd = params.currentWorkingDirectory ?? process.cwd();
           const inputFile = path.resolve(cwd, params.inputFile);
@@ -57,13 +54,15 @@ export class Generator extends Effect.Service<Generator>()(
             unknown
           >;
 
-          console.info("Starting generation...");
+          yield* Effect.logInfo("Starting generation...");
 
           yield* registry.clear;
 
+          const templateDir = yield* resolveTemplateDir();
+
           if (params.config?.clean !== false) {
             yield* assertSafeCleanTargetEffect(outputDir, cwd);
-            console.info("Cleaning output directory...");
+            yield* Effect.logInfo("Cleaning output directory...");
             yield* removeOutputDir(outputDir);
           }
 
@@ -79,7 +78,7 @@ export class Generator extends Effect.Service<Generator>()(
             config: params.config,
           });
 
-          console.info(
+          yield* Effect.logInfo(
             `Bundling spec from '${inputFile}' to '${specOutputDir}'...`
           );
           let normalizedSpec = (yield* specLoader.load({
@@ -93,7 +92,7 @@ export class Generator extends Effect.Service<Generator>()(
             config: pluginConfig,
           });
 
-          console.info("Initializing plugins...");
+          yield* Effect.logInfo("Initializing plugins...");
           const initial = yield* registry.getAll;
           for (const registration of initial) {
             if (registration.plugin.initialize) {
@@ -101,7 +100,7 @@ export class Generator extends Effect.Service<Generator>()(
             }
           }
 
-          console.info("Collecting resources...");
+          yield* Effect.logInfo("Collecting resources...");
           for (const registration of initial) {
             if (registration.plugin.collectResources) {
               normalizedSpec = yield* registration.plugin.collectResources(
@@ -116,28 +115,30 @@ export class Generator extends Effect.Service<Generator>()(
               inputDir,
               config: pluginConfig,
               normalizedSpec,
-              templateDir: TEMPLATE_DIR,
+              templateDir,
               coreDir: CORE_DIR,
               responsesOutputDir,
               specOutputDir,
             });
 
-          console.info("Generating code...");
+          yield* Effect.logInfo("Generating code...");
           for (const registration of initial) {
-            console.info(`Running plugin: ${registration.plugin.name}`);
+            yield* Effect.logInfo(
+              `Running plugin: ${registration.plugin.name}`
+            );
             if (registration.plugin.generate) {
               yield* registration.plugin.generate(generatorContext);
             }
           }
 
           yield* indexFileGenerator.generate({
-            templateDir: TEMPLATE_DIR,
+            templateDir,
             outputDir,
             generatedFiles: getGeneratedFiles(),
             writeFile: generatorContext.writeFile,
           });
 
-          console.info("Finalizing plugins...");
+          yield* Effect.logInfo("Finalizing plugins...");
           for (const registration of initial) {
             if (registration.plugin.finalize) {
               yield* registration.plugin.finalize(pluginContext);
@@ -149,8 +150,8 @@ export class Generator extends Effect.Service<Generator>()(
           }
 
           const generatedFiles = getGeneratedFiles();
-          console.info("Generation complete!");
-          console.info(`Generated files: ${generatedFiles.length}`);
+          yield* Effect.logInfo("Generation complete!");
+          yield* Effect.logInfo(`Generated files: ${generatedFiles.length}`);
         }).pipe(
           Effect.withSpan("typeweaver.generate", {
             attributes: {

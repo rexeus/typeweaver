@@ -1,5 +1,5 @@
-import fs from "node:fs";
 import path from "node:path";
+import { FileSystem } from "@effect/platform";
 import type { SpecDefinition } from "@rexeus/typeweaver-core";
 import type {
   NormalizationError,
@@ -45,6 +45,7 @@ export class SpecLoader extends Effect.Service<SpecLoader>()(
     effect: Effect.gen(function* () {
       const bundler = yield* SpecBundler;
       const importer = yield* SpecImporter;
+      const fileSystem = yield* FileSystem.FileSystem;
 
       const load = (
         config: SpecLoaderConfig
@@ -57,22 +58,29 @@ export class SpecLoader extends Effect.Service<SpecLoader>()(
         | SpecOutputWriteError
       > =>
         Effect.gen(function* () {
-          yield* Effect.try({
-            try: () =>
-              fs.mkdirSync(config.specOutputDir, { recursive: true }),
-            catch: (cause) =>
-              new SpecOutputWriteError({ path: config.specOutputDir, cause }),
-          });
+          yield* fileSystem
+            .makeDirectory(config.specOutputDir, { recursive: true })
+            .pipe(
+              Effect.mapError(
+                (cause) =>
+                  new SpecOutputWriteError({
+                    path: config.specOutputDir,
+                    cause,
+                  })
+              )
+            );
 
           const bundledSpecFile = yield* bundler.bundle(config);
 
           const declarationPath = path.join(config.specOutputDir, "spec.d.ts");
-          yield* Effect.try({
-            try: () =>
-              fs.writeFileSync(declarationPath, SPEC_DECLARATION_CONTENT),
-            catch: (cause) =>
-              new SpecOutputWriteError({ path: declarationPath, cause }),
-          });
+          yield* fileSystem
+            .writeFileString(declarationPath, SPEC_DECLARATION_CONTENT)
+            .pipe(
+              Effect.mapError(
+                (cause) =>
+                  new SpecOutputWriteError({ path: declarationPath, cause })
+              )
+            );
 
           const definition = yield* importer.importDefinition(bundledSpecFile);
           const normalizedSpec = yield* normalizeSpec(definition);

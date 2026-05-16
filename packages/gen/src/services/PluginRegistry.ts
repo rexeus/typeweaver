@@ -62,7 +62,6 @@ const visitPlugin = (params: {
     const cyclePath = [...dependencyPath, registration.name].join(" -> ");
     throw new PluginDependencyError({
       pluginName: registration.name,
-      missingDependency: registration.name,
       cyclePath: `Detected plugin dependency cycle: ${cyclePath}`,
     });
   }
@@ -116,18 +115,23 @@ export class PluginRegistry extends Effect.Service<PluginRegistry>()(
         plugin: Plugin,
         config?: PluginConfig
       ): Effect.Effect<void> =>
-        Ref.update(ref, plugins => {
+        Effect.gen(function* () {
+          const plugins = yield* Ref.get(ref);
+
           if (plugins.has(plugin.name)) {
-            console.info(
-              `Skipping duplicate registration of required plugin: ${plugin.name}`
+            yield* Effect.logWarning(
+              `Plugin '${plugin.name}' is already registered; keeping the first registration`
             );
-            return plugins;
+            return;
           }
 
-          const next = new Map(plugins);
-          next.set(plugin.name, { name: plugin.name, plugin, config });
-          console.info(`Registered plugin: ${plugin.name}`);
-          return next;
+          yield* Ref.update(ref, (current) => {
+            const next = new Map(current);
+            next.set(plugin.name, { name: plugin.name, plugin, config });
+            return next;
+          });
+
+          yield* Effect.logInfo(`Registered plugin: ${plugin.name}`);
         });
 
       const getAll: Effect.Effect<

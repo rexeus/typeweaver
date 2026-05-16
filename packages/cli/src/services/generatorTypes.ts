@@ -1,3 +1,4 @@
+import type { PlatformError } from "@effect/platform/Error";
 import type {
   NormalizationError,
   PluginDependencyError,
@@ -31,4 +32,5 @@ export type GenerateFailure =
   | SpecBundleError
   | SpecBundleOutputMissingError
   | SpecOutputWriteError
-  | IndexFileGenerationError;
+  | IndexFileGenerationError
+  | PlatformError;

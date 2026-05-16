@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+import { NodeFileSystem } from "@effect/platform-node";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { Effect, Either } from "effect";
+import { Effect, Either, Layer } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import {
   InvalidSpecEntrypointError,
@@ -26,13 +27,20 @@ import type {
 // `Effect.either` flattens typed failures into the success channel so
 // tests can `.rejects.toBeInstanceOf` against the underlying error rather
 // than against Effect's `FiberFailure` wrapper.
+const SpecBundlerLayer = SpecBundler.Default.pipe(
+  Layer.provide(NodeFileSystem.layer)
+);
+const SpecLoaderLayer = SpecLoader.Default.pipe(
+  Layer.provide(NodeFileSystem.layer)
+);
+
 const bundle = async (
   config: SpecBundlerConfig,
   deps?: SpecBundlerDeps
 ): Promise<string> => {
   const result = await Effect.runPromise(
     Effect.either(SpecBundler.bundle(config, deps)).pipe(
-      Effect.provide(SpecBundler.Default)
+      Effect.provide(SpecBundlerLayer)
     )
   );
   if (Either.isLeft(result)) throw result.left;
@@ -42,7 +50,7 @@ const bundle = async (
 const loadSpec = async (config: SpecLoaderConfig): Promise<LoadedSpec> => {
   const result = await Effect.runPromise(
     Effect.either(SpecLoader.load(config)).pipe(
-      Effect.provide(SpecLoader.Default)
+      Effect.provide(SpecLoaderLayer)
     )
   );
   if (Either.isLeft(result)) throw result.left;

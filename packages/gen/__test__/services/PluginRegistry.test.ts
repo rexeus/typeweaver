@@ -139,6 +139,7 @@ describe("PluginRegistry", () => {
     expect((failure as PluginDependencyError).message).toContain(
       "Detected plugin dependency cycle: analytics -> types -> clients -> analytics"
     );
+    expect((failure as PluginDependencyError).missingDependency).toBeUndefined();
   });
 
   test("reports a self-dependency as a dependency cycle", () => {
@@ -153,6 +154,7 @@ describe("PluginRegistry", () => {
     expect((failure as PluginDependencyError).message).toContain(
       "Detected plugin dependency cycle: types -> types"
     );
+    expect((failure as PluginDependencyError).missingDependency).toBeUndefined();
   });
 
   test("does not duplicate sorted registrations for duplicate dependency names", () => {

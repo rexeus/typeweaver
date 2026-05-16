@@ -4,11 +4,34 @@ import path from "node:path";
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { afterEach, describe, expect, test } from "vitest";
 import { MissingCanonicalResponseError } from "../../../src/plugins/errors/MissingCanonicalResponseError.js";
+import { resolveSafeGeneratedFilePath } from "../../../src/helpers/pathSafety.js";
+import { renderTemplate as renderTemplateString } from "../../../src/helpers/templateEngine.js";
 import { createPluginContextBuilder } from "../../../src/services/internal/pluginContextBuilder.js";
 import type {
   NormalizedResponse,
   NormalizedSpec,
 } from "../../../src/NormalizedSpec.js";
+
+/**
+ * Real-deps factory for the sync plugin-context builder. Wires the pure
+ * path-safety guard and the project's hand-rolled template engine — the
+ * same algorithms the production `ContextBuilder` service hands off to
+ * via its sync `validateGeneratedPath` / `render` shapes.
+ */
+const realPluginContextBuilderDeps = {
+  pathSafety: {
+    validateGeneratedPath: (params: {
+      readonly outputDir: string;
+      readonly requestedPath: string;
+    }) => resolveSafeGeneratedFilePath(params.outputDir, params.requestedPath),
+  },
+  templateRenderer: {
+    render: (template: string, data: unknown) =>
+      renderTemplateString(template, (data ?? {}) as Record<string, unknown>),
+  },
+};
+
+const aBuilder = () => createPluginContextBuilder(realPluginContextBuilderDeps);
 
 const validationErrorResponse: NormalizedResponse = {
   name: "validationError",
@@ -60,7 +83,7 @@ const generatedProjectParams: GeneratorContextParams = {
 const aGeneratedProjectContext = (
   overrides: Partial<GeneratorContextParams> = {}
 ) =>
-  createPluginContextBuilder().createGeneratorContext({
+  aBuilder().createGeneratorContext({
     ...generatedProjectParams,
     ...overrides,
   });
@@ -286,7 +309,7 @@ describe("createPluginContextBuilder", () => {
   });
 
   test("creates plugin contexts with the configured directories and config", () => {
-    const pluginContext = createPluginContextBuilder().createPluginContext({
+    const pluginContext = aBuilder().createPluginContext({
       outputDir: path.join("project", "generated"),
       inputDir: path.join("project", "definitions"),
       config: { emitRuntimeTypes: true },
@@ -1229,21 +1252,24 @@ describe("createPluginContextBuilder", () => {
     ]);
   });
 
-  test("builder-level clearGeneratedFiles clears files added through a context", () => {
-    const pluginContextBuilder = createPluginContextBuilder();
-    const generatorContext = pluginContextBuilder.createGeneratorContext(
+  test("isolates the generated-file tracker across builder instances", () => {
+    const firstBuilder = aBuilder();
+    const secondBuilder = aBuilder();
+
+    const firstContext = firstBuilder.createGeneratorContext(
+      generatedProjectParams
+    );
+    const secondContext = secondBuilder.createGeneratorContext(
       generatedProjectParams
     );
 
-    generatorContext.addGeneratedFile("todo/GetTodoClient.ts");
-    expect(pluginContextBuilder.getGeneratedFiles()).toEqual([
+    firstContext.addGeneratedFile("todo/GetTodoClient.ts");
+
+    expect(firstBuilder.getGeneratedFiles()).toEqual([
       "todo/GetTodoClient.ts",
     ]);
-
-    pluginContextBuilder.clearGeneratedFiles();
-
-    expect(generatorContext.getGeneratedFiles()).toEqual([]);
-    expect(pluginContextBuilder.getGeneratedFiles()).toEqual([]);
+    expect(secondBuilder.getGeneratedFiles()).toEqual([]);
+    expect(secondContext.getGeneratedFiles()).toEqual([]);
   });
 
   test("renders relative template paths from the configured template directory", () => {

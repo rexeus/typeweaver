@@ -11,7 +11,11 @@ import type {
 import { Cause, Effect, Exit, Layer, ManagedRuntime, Ref } from "effect";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { PluginLoadError } from "../src/generators/errors/PluginLoadError.js";
-import { PluginLoader } from "../src/services/PluginLoader.js";
+import {
+  CliLoggerLayer,
+  PluginLoader,
+  PluginModuleLoader,
+} from "../src/services/index.js";
 import { TestAssertionError } from "./errors/index.js";
 
 type RegisteredPlugin = {
@@ -110,7 +114,11 @@ const runLoadPlugins = async (params: {
   );
   const layer = Layer.provide(
     PluginLoader.DefaultWithoutDependencies,
-    recordingRegistry
+    Layer.mergeAll(
+      recordingRegistry,
+      PluginModuleLoader.Default,
+      CliLoggerLayer
+    )
   );
   const runtime = ManagedRuntime.make(layer);
   try {

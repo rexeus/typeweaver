@@ -2,13 +2,29 @@ import fs from "node:fs";
 import path from "node:path";
 import { UnsafeCleanTargetError } from "../generators/errors/UnsafeCleanTargetError.js";
 
+/**
+ * Filesystem probes the clean-target guard depends on. Kept narrow so tests
+ * and Effect-native callers can substitute fakes (the FileSystem service)
+ * without dragging in unrelated `fs` surface.
+ */
+export type CleanTargetFs = {
+  readonly exists: (probePath: string) => boolean;
+  readonly realPath: (probePath: string) => string;
+};
+
+const defaultCleanTargetFs: CleanTargetFs = {
+  exists: (probePath) => fs.existsSync(probePath),
+  realPath: (probePath) => fs.realpathSync.native(probePath),
+};
+
 const findProtectedWorkspaceRoot = (
-  startDirectory: string
+  startDirectory: string,
+  fileSystem: CleanTargetFs
 ): string | undefined => {
   let currentDirectory = startDirectory;
 
   while (true) {
-    if (hasWorkspaceMarker(currentDirectory)) {
+    if (hasWorkspaceMarker(currentDirectory, fileSystem)) {
       return currentDirectory;
     }
 
@@ -21,17 +37,23 @@ const findProtectedWorkspaceRoot = (
   }
 };
 
-const hasWorkspaceMarker = (directory: string): boolean => {
-  return ["pnpm-workspace.yaml", ".git"].some(marker =>
-    fs.existsSync(path.join(directory, marker))
+const hasWorkspaceMarker = (
+  directory: string,
+  fileSystem: CleanTargetFs
+): boolean => {
+  return ["pnpm-workspace.yaml", ".git"].some((marker) =>
+    fileSystem.exists(path.join(directory, marker))
   );
 };
 
-const canonicalizePathForContainment = (targetPath: string): string => {
+const canonicalizePathForContainment = (
+  targetPath: string,
+  fileSystem: CleanTargetFs
+): string => {
   const remainingSegments: string[] = [];
   let nearestExistingPath = path.resolve(targetPath);
 
-  while (!fs.existsSync(nearestExistingPath)) {
+  while (!fileSystem.exists(nearestExistingPath)) {
     const parentPath = path.dirname(nearestExistingPath);
     if (parentPath === nearestExistingPath) {
       break;
@@ -41,7 +63,7 @@ const canonicalizePathForContainment = (targetPath: string): string => {
     nearestExistingPath = parentPath;
   }
 
-  const canonicalExistingPath = fs.realpathSync.native(nearestExistingPath);
+  const canonicalExistingPath = fileSystem.realPath(nearestExistingPath);
 
   return path.join(canonicalExistingPath, ...remainingSegments);
 };
@@ -58,7 +80,8 @@ const isSameOrDescendantOf = (directory: string, ancestor: string): boolean => {
 };
 
 /**
- * Guard the destructive clean step against catastrophic targets:
+ * Guard the destructive clean step against catastrophic targets. Inject
+ * filesystem probes via `fileSystem` to keep the algorithm pure-core:
  *   - empty / whitespace-only paths
  *   - filesystem root
  *   - the current working directory itself
@@ -68,9 +91,10 @@ const isSameOrDescendantOf = (directory: string, ancestor: string): boolean => {
  * Symlinks are resolved before comparison so a symlinked output directory
  * pointing at a protected location is still rejected.
  */
-export const assertSafeCleanTarget = (
+export const assertSafeCleanTargetWith = (
   outputDir: string,
-  currentWorkingDirectory: string
+  currentWorkingDirectory: string,
+  fileSystem: CleanTargetFs
 ): void => {
   const trimmedOutputDir = outputDir.trim();
   if (trimmedOutputDir.length === 0) {
@@ -81,14 +105,17 @@ export const assertSafeCleanTarget = (
   }
 
   const resolvedWorkingDirectory = path.resolve(currentWorkingDirectory);
-  const canonicalWorkingDirectory = fs.realpathSync.native(
+  const canonicalWorkingDirectory = fileSystem.realPath(
     resolvedWorkingDirectory
   );
   const resolvedOutputDir = path.resolve(
     resolvedWorkingDirectory,
     trimmedOutputDir
   );
-  const canonicalOutputDir = canonicalizePathForContainment(resolvedOutputDir);
+  const canonicalOutputDir = canonicalizePathForContainment(
+    resolvedOutputDir,
+    fileSystem
+  );
   const filesystemRoot = path.parse(canonicalOutputDir).root;
 
   if (canonicalOutputDir === filesystemRoot) {
@@ -114,19 +141,21 @@ export const assertSafeCleanTarget = (
   }
 
   const logicalProtectedWorkspaceRoot = findProtectedWorkspaceRoot(
-    resolvedWorkingDirectory
+    resolvedWorkingDirectory,
+    fileSystem
   );
   const canonicalProtectedWorkspaceRoot = findProtectedWorkspaceRoot(
-    canonicalWorkingDirectory
+    canonicalWorkingDirectory,
+    fileSystem
   );
   const protectedWorkspaceRoots = [
     logicalProtectedWorkspaceRoot,
     canonicalProtectedWorkspaceRoot,
   ].filter((root): root is string => root !== undefined);
   const protectedWorkspaceRootTarget = protectedWorkspaceRoots.find(
-    protectedWorkspaceRoot =>
+    (protectedWorkspaceRoot) =>
       resolvedOutputDir === protectedWorkspaceRoot ||
-      canonicalOutputDir === fs.realpathSync.native(protectedWorkspaceRoot)
+      canonicalOutputDir === fileSystem.realPath(protectedWorkspaceRoot)
   );
 
   if (protectedWorkspaceRootTarget !== undefined) {
@@ -152,3 +181,17 @@ export const assertSafeCleanTarget = (
     });
   }
 };
+
+/**
+ * Convenience wrapper that uses the real Node filesystem. Preferred by
+ * unit tests that exercise the guard against real on-disk fixtures.
+ */
+export const assertSafeCleanTarget = (
+  outputDir: string,
+  currentWorkingDirectory: string
+): void =>
+  assertSafeCleanTargetWith(
+    outputDir,
+    currentWorkingDirectory,
+    defaultCleanTargetFs
+  );

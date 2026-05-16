@@ -1,5 +1,11 @@
 import { Effect } from "effect";
-import { createPluginContextBuilder } from "./internal/pluginContextBuilder.js";
+import {
+  createPluginContextBuilder,
+  toPathSafetyShape,
+  toTemplateRendererShape,
+} from "./internal/pluginContextBuilder.js";
+import { PathSafety } from "./PathSafety.js";
+import { TemplateRenderer } from "./TemplateRenderer.js";
 import type {
   GeneratorContext,
   PluginConfig,
@@ -37,33 +43,50 @@ export type BuiltGeneratorContext = {
  * another's tracker state — eliminating the singleton-builder race that the
  * previous `reset()`-based design exposed.
  *
- * Sync helpers exposed via the context records (writeFile, addGeneratedFile,
- * etc.) are preserved for plugin-author compatibility; their `Effect.try`
- * boundary inside `Plugin.generate` continues to catch any throws.
+ * The injected `FileSystem`, `PathSafety`, and `TemplateRenderer` services
+ * route every sync `writeFile` / `addGeneratedFile` / `renderTemplate` call
+ * through the same Effect-native plumbing the rest of the pipeline uses.
  */
 export class ContextBuilder extends Effect.Service<ContextBuilder>()(
   "typeweaver/ContextBuilder",
   {
-    succeed: {
-      buildPluginContext: (
+    effect: Effect.gen(function* () {
+      const pathSafetyService = yield* PathSafety;
+      const templateRendererService = yield* TemplateRenderer;
+
+      const pathSafety = toPathSafetyShape(pathSafetyService);
+      const templateRenderer = toTemplateRendererShape(
+        templateRendererService
+      );
+
+      const buildPluginContext = (
         params: PluginContextParams
       ): Effect.Effect<PluginContext> =>
         Effect.sync(() =>
-          createPluginContextBuilder().createPluginContext(params)
-        ),
+          createPluginContextBuilder({
+            pathSafety,
+            templateRenderer,
+          }).createPluginContext(params)
+        );
 
-      buildGeneratorContext: (
+      const buildGeneratorContext = (
         params: GeneratorContextParams
       ): Effect.Effect<BuiltGeneratorContext> =>
         Effect.sync(() => {
-          const builder = createPluginContextBuilder();
+          const builder = createPluginContextBuilder({
+            pathSafety,
+            templateRenderer,
+          });
           const context = builder.createGeneratorContext(params);
           return {
             context,
             getGeneratedFiles: builder.getGeneratedFiles,
           };
-        }),
-    },
+        });
+
+      return { buildPluginContext, buildGeneratorContext } as const;
+    }),
+    dependencies: [PathSafety.Default, TemplateRenderer.Default],
     accessors: true,
   }
 ) {}

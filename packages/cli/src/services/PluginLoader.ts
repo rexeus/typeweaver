@@ -8,6 +8,7 @@ import type {
 } from "@rexeus/typeweaver-gen";
 import { Effect, Either } from "effect";
 import { PluginLoadError } from "../generators/errors/PluginLoadError.js";
+import { PluginModuleLoader } from "./PluginModuleLoader.js";
 
 export type PluginResolutionStrategy = "npm" | "local" | "scoped";
 
@@ -133,15 +134,22 @@ const resolveModuleToPlugin = (
   return Either.left(errors.join("; "));
 };
 
-const reportSuccessfulLoads = (successful: readonly PluginLoadResult[]): void => {
-  if (successful.length === 0) {
-    return;
-  }
-  console.info(`Successfully loaded ${successful.length} plugin(s):`);
-  for (const result of successful) {
-    console.info(`  - ${result.plugin.name} (from ${result.source})`);
-  }
-};
+const reportSuccessfulLoads = (
+  successful: readonly PluginLoadResult[]
+): Effect.Effect<void> =>
+  Effect.gen(function* () {
+    if (successful.length === 0) {
+      return;
+    }
+    yield* Effect.logInfo(
+      `Successfully loaded ${successful.length} plugin(s):`
+    );
+    for (const result of successful) {
+      yield* Effect.logInfo(
+        `  - ${result.plugin.name} (from ${result.source})`
+      );
+    }
+  });
 
 type LoadParams = {
   readonly requiredPlugins: readonly Plugin[];
@@ -150,6 +158,7 @@ type LoadParams = {
 };
 
 const loadConfiguredPlugin = (
+  moduleLoader: PluginModuleLoader,
   pluginName: string,
   strategies: readonly PluginResolutionStrategy[],
   pluginConfig?: PluginConfig
@@ -159,13 +168,15 @@ const loadConfiguredPlugin = (
     const attempts: { path: string; error: string }[] = [];
 
     for (const possiblePath of possiblePaths) {
-      const importResult = yield* Effect.tryPromise({
-        try: () => import(possiblePath),
-        catch: error => formatError(error),
-      }).pipe(Effect.either);
+      const importResult = yield* moduleLoader
+        .load(possiblePath)
+        .pipe(Effect.either);
 
       if (Either.isLeft(importResult)) {
-        attempts.push({ path: possiblePath, error: importResult.left });
+        attempts.push({
+          path: possiblePath,
+          error: formatError(importResult.left.cause),
+        });
         continue;
       }
 
@@ -197,6 +208,7 @@ export class PluginLoader extends Effect.Service<PluginLoader>()(
   {
     effect: Effect.gen(function* () {
       const registry = yield* PluginRegistry;
+      const moduleLoader = yield* PluginModuleLoader;
 
       const loadAll = (
         params: LoadParams
@@ -219,6 +231,7 @@ export class PluginLoader extends Effect.Service<PluginLoader>()(
               typeof pluginEntry === "string" ? undefined : pluginEntry[1];
 
             const result = yield* loadConfiguredPlugin(
+              moduleLoader,
               pluginName,
               params.strategies,
               pluginConfig
@@ -228,12 +241,12 @@ export class PluginLoader extends Effect.Service<PluginLoader>()(
             yield* registry.register(result.plugin, result.config);
           }
 
-          reportSuccessfulLoads(successful);
+          yield* reportSuccessfulLoads(successful);
         });
 
       return { loadAll } as const;
     }),
-    dependencies: [PluginRegistry.Default],
+    dependencies: [PluginRegistry.Default, PluginModuleLoader.Default],
     accessors: true,
   }
 ) {}

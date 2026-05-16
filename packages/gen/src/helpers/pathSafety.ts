@@ -7,6 +7,20 @@ export type SafeGeneratedFilePath = {
   readonly generatedPath: string;
 };
 
+/**
+ * Filesystem probe used for symlink rejection. Returns `undefined` for
+ * ENOENT/ENOTDIR (the path simply does not exist yet). Tests and the
+ * Effect-native `PathSafety` service can substitute fakes.
+ */
+export type PathSafetyStat = {
+  readonly isSymbolicLink: () => boolean;
+  readonly isDirectory: () => boolean;
+};
+
+export type PathSafetyFs = {
+  readonly lstat: (absolutePath: string) => PathSafetyStat | undefined;
+};
+
 type FileSystemError = Error & {
   readonly code?: string;
 };
@@ -46,19 +60,25 @@ const isMissingPathError = (error: unknown): boolean => {
   return ["ENOENT", "ENOTDIR"].includes((error as FileSystemError).code ?? "");
 };
 
-const getExistingPathStats = (absolutePath: string): fs.Stats | undefined => {
-  try {
-    return fs.lstatSync(absolutePath);
-  } catch (error) {
-    if (isMissingPathError(error)) {
-      return undefined;
+const defaultPathSafetyFs: PathSafetyFs = {
+  lstat: (absolutePath) => {
+    try {
+      const stats = fs.lstatSync(absolutePath);
+      return {
+        isSymbolicLink: () => stats.isSymbolicLink(),
+        isDirectory: () => stats.isDirectory(),
+      };
+    } catch (error) {
+      if (isMissingPathError(error)) {
+        return undefined;
+      }
+      throw error;
     }
-    throw error;
-  }
+  },
 };
 
 const assertPathStatsIsNotSymlink = (
-  pathStats: fs.Stats,
+  pathStats: PathSafetyStat,
   requestedPath: string
 ): void => {
   if (pathStats.isSymbolicLink()) {
@@ -71,9 +91,10 @@ const assertPathStatsIsNotSymlink = (
 
 const assertExistingPathIsNotSymlink = (
   absolutePath: string,
-  requestedPath: string
+  requestedPath: string,
+  fileSystem: PathSafetyFs
 ): void => {
-  const pathStats = getExistingPathStats(absolutePath);
+  const pathStats = fileSystem.lstat(absolutePath);
   if (pathStats === undefined) {
     return;
   }
@@ -84,15 +105,20 @@ const assertGeneratedPathHasNoSymlinkComponents = (config: {
   readonly outputRoot: string;
   readonly generatedPath: string;
   readonly requestedPath: string;
+  readonly fileSystem: PathSafetyFs;
 }): void => {
-  assertExistingPathIsNotSymlink(config.outputRoot, config.requestedPath);
+  assertExistingPathIsNotSymlink(
+    config.outputRoot,
+    config.requestedPath,
+    config.fileSystem
+  );
 
   let currentPath = config.outputRoot;
 
   for (const segment of config.generatedPath.split("/")) {
     currentPath = path.join(currentPath, segment);
 
-    const pathStats = getExistingPathStats(currentPath);
+    const pathStats = config.fileSystem.lstat(currentPath);
 
     if (pathStats === undefined) {
       return;
@@ -112,10 +138,14 @@ const assertGeneratedPathHasNoSymlinkComponents = (config: {
  * on success; throws `UnsafeGeneratedPathError` on any policy violation.
  *
  * Security-critical: every plugin write must funnel through this guard.
+ * Filesystem probes are routed through the injectable `fileSystem` deps so
+ * tests can substitute fakes; production callers (via the `PathSafety`
+ * Effect service) use the real Node `fs.lstatSync` implementation.
  */
 export const resolveSafeGeneratedFilePath = (
   outputDir: string,
-  requestedPath: string
+  requestedPath: string,
+  fileSystem: PathSafetyFs = defaultPathSafetyFs
 ): SafeGeneratedFilePath => {
   if (requestedPath.length === 0) {
     throw new UnsafeGeneratedPathError({ requestedPath, reason: "empty-path" });
@@ -187,6 +217,7 @@ export const resolveSafeGeneratedFilePath = (
     outputRoot,
     generatedPath,
     requestedPath,
+    fileSystem,
   });
 
   return { fullPath, generatedPath };

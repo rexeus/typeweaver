@@ -1,6 +1,6 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
+import { FileSystem } from "@effect/platform";
 import { Effect } from "effect";
 import { build } from "rolldown";
 import {
@@ -48,68 +48,6 @@ export const createWrapperImportSpecifier = (
   return `./${relativeInputFile}`;
 };
 
-const bundleAsync = async (
-  config: SpecBundlerConfig,
-  deps: SpecBundlerDeps = {}
-): Promise<string> => {
-  const tempDir = fs.mkdtempSync(
-    path.join(os.tmpdir(), "typeweaver-spec-loader-")
-  );
-  try {
-    const wrapperFile = path.join(tempDir, "spec-entrypoint.ts");
-    const bundledSpecFile = path.join(config.specOutputDir, "spec.js");
-    const wrapperImportSpecifier = createWrapperImportSpecifier(
-      wrapperFile,
-      config.inputFile
-    );
-
-    fs.writeFileSync(
-      wrapperFile,
-      [
-        `import * as specModule from ${JSON.stringify(wrapperImportSpecifier)};`,
-        "const resolvedSpec =",
-        '  Reflect.get(specModule, "spec") ??',
-        '  Reflect.get(specModule, "default") ??',
-        "  specModule;",
-        "",
-        "export const spec = resolvedSpec;",
-        "",
-      ].join("\n")
-    );
-
-    await (deps.build ?? build)({
-      cwd: tempDir,
-      input: wrapperFile,
-      treeshake: true,
-      experimental: {
-        attachDebugInfo: "none",
-      },
-      external: (source: string) => {
-        if (source.startsWith("node:")) {
-          return true;
-        }
-        return !source.startsWith(".") && !path.isAbsolute(source);
-      },
-      output: {
-        file: bundledSpecFile,
-        format: "esm",
-      },
-    });
-
-    if (!(deps.existsSync ?? fs.existsSync)(bundledSpecFile)) {
-      throw new SpecBundleOutputMissingError({
-        inputFile: config.inputFile,
-        bundledSpecFile,
-        specOutputDir: config.specOutputDir,
-      });
-    }
-
-    return bundledSpecFile;
-  } finally {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
-};
-
 const resolveBundledInputFile = (inputFile: string): string => {
   if (path.isAbsolute(inputFile)) {
     return inputFile;
@@ -130,12 +68,32 @@ const usesWindowsPathSemantics = (...filePaths: string[]): boolean =>
       WINDOWS_UNC_PATH_PATTERN.test(filePath)
   );
 
+/**
+ * Resolves the real path of a file synchronously. Used inside
+ * `createWrapperImportSpecifier` which is shared with sync path utilities
+ * — the FileSystem service is async-Effect and cannot satisfy that call
+ * site without restructuring the entire bundler. The sync `fs.realpathSync`
+ * is acceptable here because it runs at bundle time on user-supplied input
+ * paths only.
+ */
 const resolveRealFilePath = (filePath: string): string => {
   if (!fs.existsSync(filePath)) {
     return filePath;
   }
   return fs.realpathSync.native(filePath);
 };
+
+const buildWrapperSource = (wrapperImportSpecifier: string): string =>
+  [
+    `import * as specModule from ${JSON.stringify(wrapperImportSpecifier)};`,
+    "const resolvedSpec =",
+    '  Reflect.get(specModule, "spec") ??',
+    '  Reflect.get(specModule, "default") ??',
+    "  specModule;",
+    "",
+    "export const spec = resolvedSpec;",
+    "",
+  ].join("\n");
 
 /**
  * Bundles a SpecDefinition entrypoint into a single ESM file via rolldown.
@@ -144,31 +102,115 @@ const resolveRealFilePath = (filePath: string): string => {
  * a named `spec` export, or the module namespace itself. Filesystem errors
  * from rolldown surface as `SpecBundleError`; a missing post-bundle output
  * surfaces as `SpecBundleOutputMissingError`.
+ *
+ * Uses `FileSystem.makeTempDirectoryScoped` so the temp wrapper directory
+ * is removed automatically when the surrounding Effect.Scope closes — even
+ * if rolldown throws.
  */
 export class SpecBundler extends Effect.Service<SpecBundler>()(
   "typeweaver/SpecBundler",
   {
-    succeed: {
-      bundle: (
+    effect: Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+
+      const bundle = (
         config: SpecBundlerConfig,
         deps: SpecBundlerDeps = {}
       ): Effect.Effect<
         string,
         SpecBundleError | SpecBundleOutputMissingError
       > =>
-        Effect.tryPromise({
-          try: () => bundleAsync(config, deps),
-          catch: (error) => {
-            if (error instanceof SpecBundleOutputMissingError) {
-              return error;
-            }
-            return new SpecBundleError({
-              inputFile: config.inputFile,
-              cause: error,
+        Effect.scoped(
+          Effect.gen(function* () {
+            const tempDir = yield* fileSystem
+              .makeTempDirectoryScoped({ prefix: "typeweaver-spec-loader-" })
+              .pipe(
+                Effect.mapError(
+                  (cause) =>
+                    new SpecBundleError({
+                      inputFile: config.inputFile,
+                      cause,
+                    })
+                )
+              );
+
+            const wrapperFile = path.join(tempDir, "spec-entrypoint.ts");
+            const bundledSpecFile = path.join(config.specOutputDir, "spec.js");
+            const wrapperImportSpecifier = createWrapperImportSpecifier(
+              wrapperFile,
+              config.inputFile
+            );
+
+            yield* fileSystem
+              .writeFileString(
+                wrapperFile,
+                buildWrapperSource(wrapperImportSpecifier)
+              )
+              .pipe(
+                Effect.mapError(
+                  (cause) =>
+                    new SpecBundleError({
+                      inputFile: config.inputFile,
+                      cause,
+                    })
+                )
+              );
+
+            yield* Effect.tryPromise({
+              try: () =>
+                (deps.build ?? build)({
+                  cwd: tempDir,
+                  input: wrapperFile,
+                  treeshake: true,
+                  experimental: {
+                    attachDebugInfo: "none",
+                  },
+                  external: (source: string) => {
+                    if (source.startsWith("node:")) {
+                      return true;
+                    }
+                    return (
+                      !source.startsWith(".") && !path.isAbsolute(source)
+                    );
+                  },
+                  output: {
+                    file: bundledSpecFile,
+                    format: "esm",
+                  },
+                }),
+              catch: (cause) =>
+                new SpecBundleError({ inputFile: config.inputFile, cause }),
             });
-          },
-        }),
-    },
+
+            const bundleExists =
+              deps.existsSync !== undefined
+                ? deps.existsSync(bundledSpecFile)
+                : yield* fileSystem.exists(bundledSpecFile).pipe(
+                    Effect.mapError(
+                      (cause) =>
+                        new SpecBundleError({
+                          inputFile: config.inputFile,
+                          cause,
+                        })
+                    )
+                  );
+
+            if (!bundleExists) {
+              return yield* Effect.fail(
+                new SpecBundleOutputMissingError({
+                  inputFile: config.inputFile,
+                  bundledSpecFile,
+                  specOutputDir: config.specOutputDir,
+                })
+              );
+            }
+
+            return bundledSpecFile;
+          })
+        );
+
+      return { bundle } as const;
+    }),
     accessors: true,
   }
 ) {}
