@@ -12,6 +12,7 @@ import type {
   ResponseDefinition,
   SpecDefinition,
 } from "@rexeus/typeweaver-core";
+import { Cause, Effect, Either } from "effect";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import {
@@ -26,10 +27,21 @@ import {
   InvalidRequestSchemaError,
   InvalidResourceNameError,
   MissingDerivedResponseParentError,
-  normalizeSpec,
+  normalizeSpec as normalizeSpecEffect,
   PathParameterMismatchError,
 } from "../src/index.js";
+import type { NormalizedSpec } from "../src/index.js";
 import { TestAssertionError } from "./errors/index.js";
+
+// Test shim that bridges the legacy sync call surface onto the new Effect
+// API. `Effect.either` flattens typed failures into the success channel
+// so the existing `toThrowError` / `instanceof` assertions keep working
+// against the underlying error rather than Effect's `FiberFailure` wrapper.
+const normalizeSpec = (spec: SpecDefinition): NormalizedSpec => {
+  const result = Effect.runSync(Effect.either(normalizeSpecEffect(spec)));
+  if (Either.isLeft(result)) throw result.left;
+  return result.right;
+};
 
 type ResponseBaseOverrides = {
   readonly statusCode?: HttpStatusCode;
@@ -1486,6 +1498,72 @@ describe("normalizeSpec", () => {
       expect(() => normalizeSpec(spec)).toThrowError(
         MissingDerivedResponseParentError
       );
+    });
+  });
+
+  // The legacy tests above use a sync shim for parity with the pre-Effect
+  // API. The cases below demonstrate the Effect-native shape that new code
+  // and reviewers should reach for: tagged-error matching via Cause inspection,
+  // recoverable handling via `Effect.catchTag`, etc.
+  describe("effect-native error channel", () => {
+    test("typed failure carries the offending operation ID", async () => {
+      const sharedResponse = aCanonicalResponse("SharedResponse");
+      const spec = aSpec({
+        todos: {
+          operations: [
+            anOperation({
+              operationId: "duplicate",
+              path: "/a",
+              responses: [sharedResponse],
+            }),
+          ],
+        },
+        accounts: {
+          operations: [
+            anOperation({
+              operationId: "duplicate",
+              path: "/b",
+              responses: [sharedResponse],
+            }),
+          ],
+        },
+      });
+
+      const exit = await Effect.runPromise(
+        Effect.exit(normalizeSpecEffect(spec))
+      );
+
+      if (exit._tag !== "Failure") {
+        throw new TestAssertionError("expected normalize to fail");
+      }
+
+      const failureOption = Cause.failureOption(exit.cause);
+      if (failureOption._tag !== "Some") {
+        throw new TestAssertionError("expected a Cause.Fail");
+      }
+
+      const failure = failureOption.value;
+      expect(failure._tag).toBe("DuplicateOperationIdError");
+      if (!(failure instanceof DuplicateOperationIdError)) {
+        throw new TestAssertionError(
+          "expected DuplicateOperationIdError instance"
+        );
+      }
+      expect(failure.operationId).toBe("duplicate");
+    });
+
+    test("Effect.catchTag recovers from a specific normalization error", async () => {
+      const spec = aSpec({});
+
+      const recovered = await Effect.runPromise(
+        normalizeSpecEffect(spec).pipe(
+          Effect.catchTag("EmptySpecResourcesError", () =>
+            Effect.succeed("empty-fallback" as const)
+          )
+        )
+      );
+
+      expect(recovered).toBe("empty-fallback");
     });
   });
 });

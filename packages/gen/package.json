@@ -59,10 +59,13 @@
     "zod": "^4.3.0"
   },
   "devDependencies": {
+    "@effect/vitest": "^0.29.0",
     "@rexeus/typeweaver-core": "workspace:^",
     "zod": "^4.3.6"
   },
   "dependencies": {
+    "@effect/platform": "^0.96.1",
+    "effect": "^3.21.2",
     "polycase": "^1.1.0"
   }
 }
