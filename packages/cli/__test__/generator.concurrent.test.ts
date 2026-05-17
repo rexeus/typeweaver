@@ -152,4 +152,69 @@ describe("Generator.generate (concurrent invocations)", () => {
       Promise.all([run(workspaceA), run(workspaceB)])
     ).resolves.not.toThrow();
   });
+
+  test("two concurrent generations with disjoint plugin sets each emit only their own plugin's files", async () => {
+    // This is the registry-isolation regression: each generate call yields
+    // a fresh PluginRegistry instance via `PluginRegistry.createInstance`. If the
+    // registry were shared across calls, fiber B's plugin set would leak
+    // into fiber A's pipeline (and vice versa), so the workspace
+    // configured for `clients` would also emit Hono routers and the
+    // workspace configured for `hono` would also emit HTTP clients.
+    const workspaceClients = createTempWorkspace("clients-only");
+    const workspaceHono = createTempWorkspace("hono-only");
+    writeTinySpec(workspaceClients, "alpha");
+    writeTinySpec(workspaceHono, "alpha");
+
+    const callClients = Effect.promise(() =>
+      effectRuntime.runPromise(
+        Generator.generate({
+          inputFile: "spec/index.ts",
+          outputDir: "generated/output",
+          config: {
+            input: "spec/index.ts",
+            output: "generated/output",
+            plugins: ["clients"],
+            format: false,
+          },
+          currentWorkingDirectory: workspaceClients,
+        })
+      )
+    );
+
+    const callHono = Effect.promise(() =>
+      effectRuntime.runPromise(
+        Generator.generate({
+          inputFile: "spec/index.ts",
+          outputDir: "generated/output",
+          config: {
+            input: "spec/index.ts",
+            output: "generated/output",
+            plugins: ["hono"],
+            format: false,
+          },
+          currentWorkingDirectory: workspaceHono,
+        })
+      )
+    );
+
+    await Effect.runPromise(
+      Effect.all([callClients, callHono], { concurrency: "unbounded" })
+    );
+
+    const outputClients = path.join(workspaceClients, "generated", "output");
+    const outputHono = path.join(workspaceHono, "generated", "output");
+
+    expect(
+      fs.existsSync(path.join(outputClients, "alpha", "AlphaClient.ts"))
+    ).toBe(true);
+    expect(
+      fs.existsSync(path.join(outputClients, "alpha", "AlphaHono.ts"))
+    ).toBe(false);
+    expect(fs.existsSync(path.join(outputHono, "alpha", "AlphaHono.ts"))).toBe(
+      true
+    );
+    expect(
+      fs.existsSync(path.join(outputHono, "alpha", "AlphaClient.ts"))
+    ).toBe(false);
+  });
 });

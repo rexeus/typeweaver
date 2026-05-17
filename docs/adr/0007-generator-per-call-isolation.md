@@ -33,15 +33,19 @@ restoring per-call isolation.
 
 ## Decision
 
-`Generator.generate` clears the plugin registry at the top of every invocation:
+`Generator.generate` yields a **fresh** plugin registry instance at the top of every invocation via
+`PluginRegistry.createInstance`. The `PluginRegistry` service exposes only that factory; each call
+closes over its own `Ref<Map>` so two concurrent fibers cannot observe or overwrite one another's
+registrations.
 
 ```ts
 // packages/cli/src/services/Generator.ts
 const generate = (params: GenerateParams) =>
   Effect.gen(function* () {
     // ...
-    yield* registry.clear;
-    // ... rest of the pipeline ...
+    const registry = yield* PluginRegistry.createInstance();
+    yield* pluginLoader.loadAll({ registry /* ... */ });
+    // ... rest of the pipeline uses `registry` ...
   });
 ```
 
@@ -85,13 +89,15 @@ every call gets its own root span — concurrent calls trace independently.
 
 ### Negative
 
-- The `registry.clear` call is load-bearing and easy to remove without understanding why. The test
-  in `generator.concurrent.test.ts` and the comment above the call in `Generator.ts` document the
-  intent; a future contributor who deletes the clear will see the concurrent test fail.
+- The `PluginRegistry.createInstance` call is load-bearing and easy to forget when extending the
+  pipeline. The disjoint-plugin-set test in `generator.concurrent.test.ts` and the comment above the
+  call in `Generator.ts` document the intent; a future contributor who reverts the factory pattern
+  to a shared `Ref` will see the concurrent test fail.
 - Per-call state inside a long-lived service is a pattern that needs to be applied consistently. ADR
   0005 codifies the `succeed:` vs `effect:` rule; this ADR codifies the per-call-state rule.
   Services that hold per-call state must either build it inside the call (the `ContextBuilder`
-  pattern) or clear it explicitly at the call boundary (the `PluginRegistry` pattern).
+  pattern) or expose a per-call factory the caller invokes once per invocation (the
+  `PluginRegistry.createInstance` pattern).
 
 ### Follow-up
 
@@ -101,9 +107,11 @@ the nested layer drops in when the trace export pipeline is wired to a backend.
 
 ## Reference Files
 
-- `packages/cli/src/services/Generator.ts` — orchestrator with `registry.clear`
+- `packages/cli/src/services/Generator.ts` — orchestrator that yields
+  `PluginRegistry.createInstance` per call
 - `packages/gen/src/services/ContextBuilder.ts` — per-call tracker construction
 - `packages/gen/src/services/internal/pluginContextBuilder.ts` — context factory invoked by
   `ContextBuilder`
 - `packages/cli/__test__/generator.concurrent.test.ts` — concurrent-isolation regression test
-- `packages/gen/src/services/PluginRegistry.ts` — `clear` semantics
+- `packages/gen/src/services/PluginRegistry.ts` — `createInstance` factory backing per-call
+  instances

@@ -1,5 +1,4 @@
 export { assertSafeCleanTarget } from "./cleanTargetGuard.js";
-export { CliLoggerLayer, cliLogger } from "../cliLogger.js";
 export { ConfigLoader, getResolvedConfigPath } from "./ConfigLoader.js";
 export { Formatter } from "./Formatter.js";
 export { Generator } from "./Generator.js";

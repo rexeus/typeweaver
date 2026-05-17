@@ -1,8 +1,8 @@
 import { MainLayer } from "@rexeus/typeweaver-gen";
 import { NodeContext } from "@effect/platform-node";
 import { Layer, ManagedRuntime } from "effect";
+import { CliLoggerLayer } from "./cliLogger.js";
 import {
-  CliLoggerLayer,
   ConfigLoader,
   Formatter,
   Generator,

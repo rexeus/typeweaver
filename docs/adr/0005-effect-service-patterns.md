@@ -39,18 +39,19 @@ service body.
 - `PluginModuleLoader` (`packages/cli/src/services/PluginModuleLoader.ts`)
 - `PathSafety` (`packages/gen/src/services/PathSafety.ts`)
 - `TemplateRenderer` (`packages/gen/src/services/TemplateRenderer.ts`)
+- `PluginRegistry` (`packages/gen/src/services/PluginRegistry.ts`) — stateless factory; returns a
+  fresh `PluginRegistryInstance` per call, each instance owning its own
+  `Ref<Map<string, PluginRegistration>>` for per-call isolation
 
 `effect:` — yields other services or holds state:
 
 - `Generator` (`packages/cli/src/services/Generator.ts`) — composes six dependencies
 - `SpecLoader` (`packages/cli/src/services/SpecLoader.ts`) — yields `SpecBundler`, `SpecImporter`
 - `SpecBundler`, `SpecImporter` — yield `FileSystem`
-- `PluginLoader` (`packages/cli/src/services/PluginLoader.ts`) — yields `PluginRegistry`,
-  `PluginModuleLoader`
+- `PluginLoader` (`packages/cli/src/services/PluginLoader.ts`) — yields `PluginModuleLoader`;
+  receives the per-call `PluginRegistryInstance` via `LoadParams`
 - `IndexFileGenerator` (`packages/cli/src/services/IndexFileGenerator.ts`) — yields
   `TemplateRenderer`
-- `PluginRegistry` (`packages/gen/src/services/PluginRegistry.ts`) — holds a
-  `Ref<Map<string, PluginRegistration>>`
 - `ContextBuilder` (`packages/gen/src/services/ContextBuilder.ts`) — yields `PathSafety`,
   `TemplateRenderer`, `PluginRegistry`
 

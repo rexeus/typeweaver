@@ -80,7 +80,8 @@ messages.
   `Failed in plugin 'openapi' (generate): ...` instead of a stack trace.
 - Higher-order constructors like `definePluginWithLibCopy`
   (`packages/gen/src/plugins/definePluginWithLibCopy.ts`) deduplicate the byte-equivalent
-  boilerplate across the five first-party plugins (`types`, `clients`, `server`, `hono`, `aws-cdk`).
+  boilerplate across the five first-party plugins (`types`, `clients`, `server`, `hono`, `aws-cdk` —
+  `openapi` uses `definePlugin` directly).
 - The `GeneratorContext` sync helpers (`writeFile`, `renderTemplate`, `addGeneratedFile`) remain
   sync; plugin authors continue to call them inside the `try` block of their `Effect.try` boundary.
 - Lifecycle failure semantics mirror `try/finally`: failures in `initialize`, `collectResources`,

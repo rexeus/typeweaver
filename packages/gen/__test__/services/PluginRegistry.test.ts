@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { PluginDependencyError } from "../../src/plugins/errors/index.js";
 import { PluginRegistry } from "../../src/services/PluginRegistry.js";
 import type { Plugin } from "../../src/plugins/Plugin.js";
+import type { PluginRegistryInstance } from "../../src/services/PluginRegistry.js";
 
 type CapturedLog = {
   readonly level: string;
@@ -31,15 +32,11 @@ const silentLoggerLayer = Logger.replace(
 );
 
 const runRegistry = <A, E>(
-  program: (registry: {
-    readonly register: (typeof PluginRegistry)["register"];
-    readonly getAll: (typeof PluginRegistry)["getAll"];
-    readonly clear: (typeof PluginRegistry)["clear"];
-  }) => Effect.Effect<A, E, PluginRegistry>
+  program: (registry: PluginRegistryInstance) => Effect.Effect<A, E>
 ): A =>
   Effect.runSync(
     Effect.gen(function* () {
-      const registry = yield* PluginRegistry;
+      const registry = yield* PluginRegistry.createInstance();
       return yield* program(registry);
     }).pipe(
       Effect.provide(PluginRegistry.Default),
@@ -48,15 +45,11 @@ const runRegistry = <A, E>(
   );
 
 const runRegistryExpectingFailure = <E>(
-  program: (registry: {
-    readonly register: (typeof PluginRegistry)["register"];
-    readonly getAll: (typeof PluginRegistry)["getAll"];
-    readonly clear: (typeof PluginRegistry)["clear"];
-  }) => Effect.Effect<unknown, E, PluginRegistry>
+  program: (registry: PluginRegistryInstance) => Effect.Effect<unknown, E>
 ): E => {
   const exit = Effect.runSyncExit(
     Effect.gen(function* () {
-      const registry = yield* PluginRegistry;
+      const registry = yield* PluginRegistry.createInstance();
       return yield* program(registry);
     }).pipe(
       Effect.provide(PluginRegistry.Default),
@@ -274,6 +267,31 @@ describe("PluginRegistry", () => {
     ]);
   });
 
+  test("two instances created from the same service share no state", () => {
+    const result = Effect.runSync(
+      Effect.gen(function* () {
+        const first = yield* PluginRegistry.createInstance();
+        const second = yield* PluginRegistry.createInstance();
+
+        yield* first.register(aPluginNamed("types"));
+        yield* second.register(aPluginNamed("hono"));
+
+        const firstRegistrations = yield* first.getAll;
+        const secondRegistrations = yield* second.getAll;
+        return {
+          firstNames: firstRegistrations.map(r => r.name),
+          secondNames: secondRegistrations.map(r => r.name),
+        };
+      }).pipe(
+        Effect.provide(PluginRegistry.Default),
+        Effect.provide(silentLoggerLayer)
+      )
+    );
+
+    expect(result.firstNames).toEqual(["types"]);
+    expect(result.secondNames).toEqual(["hono"]);
+  });
+
   describe("characterization: duplicate plugin names", () => {
     test("keeps the first registration when a duplicate name is registered (characterization)", () => {
       const originalPlugin = aPluginNamed("types");
@@ -301,7 +319,7 @@ describe("PluginRegistry", () => {
 
     Effect.runSync(
       Effect.gen(function* () {
-        const registry = yield* PluginRegistry;
+        const registry = yield* PluginRegistry.createInstance();
         yield* registry.register(aPluginNamed("types"), { source: "original" });
         yield* registry.register(aPluginNamed("types"), {
           source: "duplicate",
@@ -328,7 +346,7 @@ describe("PluginRegistry", () => {
 
     const registrations = Effect.runSync(
       Effect.gen(function* () {
-        const registry = yield* PluginRegistry;
+        const registry = yield* PluginRegistry.createInstance();
         yield* Effect.all(
           plugins.map(entry => registry.register(entry.plugin, entry.config)),
           { concurrency: "unbounded" }

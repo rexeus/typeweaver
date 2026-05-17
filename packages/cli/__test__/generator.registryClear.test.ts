@@ -74,7 +74,7 @@ const capturingLogger = (sink: CapturedLog[]) =>
     })
   );
 
-describe("Generator.generate (registry-clear-per-call invariant)", () => {
+describe("Generator.generate (fresh-registry-per-call invariant)", () => {
   afterEach(() => {
     for (const tempDir of tempDirs) {
       fs.rmSync(tempDir, { recursive: true, force: true });
@@ -112,10 +112,10 @@ describe("Generator.generate (registry-clear-per-call invariant)", () => {
     expect(logsFirst.some(isDuplicateRegistrationWarning)).toBe(false);
     expect(logsSecond.some(isDuplicateRegistrationWarning)).toBe(false);
 
-    // Also assert: the second run still registers plugins (i.e. the
-    // registry was cleared first; otherwise the second `register` would
-    // short-circuit on the same names and emit no "Registered plugin"
-    // info lines).
+    // Also assert: the second run still registers plugins (i.e. each
+    // invocation yields a fresh registry instance; otherwise the second
+    // `register` would short-circuit on the same names and emit no
+    // "Registered plugin" info lines).
     const registeredCount = (sink: CapturedLog[]): number =>
       sink.filter(
         entry =>

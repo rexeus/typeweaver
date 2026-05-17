@@ -11,6 +11,7 @@ import { describe, expect, test } from "vitest";
 import { PluginDependencyError } from "../../src/plugins/errors/index.js";
 import { PluginRegistry } from "../../src/services/PluginRegistry.js";
 import type { Plugin } from "../../src/plugins/Plugin.js";
+import type { PluginRegistryInstance } from "../../src/services/PluginRegistry.js";
 import type { Arbitrary } from "fast-check";
 
 const aPluginNamed = (name: string, depends?: readonly string[]): Plugin => ({
@@ -24,13 +25,11 @@ const silentLoggerLayer = Logger.replace(
 );
 
 const runWithRegistry = <A, E>(
-  program: (
-    registry: typeof PluginRegistry.Service
-  ) => Effect.Effect<A, E, PluginRegistry>
+  program: (registry: PluginRegistryInstance) => Effect.Effect<A, E>
 ): Exit.Exit<A, E> =>
   Effect.runSyncExit(
     Effect.gen(function* () {
-      const registry = yield* PluginRegistry;
+      const registry = yield* PluginRegistry.createInstance();
       return yield* program(registry);
     }).pipe(
       Effect.provide(PluginRegistry.Default),

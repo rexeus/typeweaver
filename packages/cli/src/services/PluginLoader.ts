@@ -1,9 +1,9 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { PluginRegistry } from "@rexeus/typeweaver-gen";
 import type {
   Plugin,
   PluginConfig,
+  PluginRegistryInstance,
   TypeweaverConfig,
 } from "@rexeus/typeweaver-gen";
 import { Effect, Either } from "effect";
@@ -152,6 +152,7 @@ const reportSuccessfulLoads = (
   });
 
 type LoadParams = {
+  readonly registry: PluginRegistryInstance;
   readonly requiredPlugins: readonly Plugin[];
   readonly strategies: readonly PluginResolutionStrategy[];
   readonly config?: TypeweaverConfig;
@@ -200,14 +201,15 @@ const loadConfiguredPlugin = (
  * resolves each configured plugin against the requested strategies and
  * registers it with its constructor options.
  *
- * Plugins are V2 records (`Plugin`) or factory functions returning records.
- * The runtime treats both uniformly via `PluginRegistry`.
+ * The registry is supplied by the caller (one fresh instance per
+ * `Generator.generate` call) so concurrent generations see fully isolated
+ * registrations. Plugins are V2 records (`Plugin`) or factory functions
+ * returning records; the runtime treats both uniformly.
  */
 export class PluginLoader extends Effect.Service<PluginLoader>()(
   "typeweaver/PluginLoader",
   {
     effect: Effect.gen(function* () {
-      const registry = yield* PluginRegistry;
       const moduleLoader = yield* PluginModuleLoader;
 
       const loadAll = (
@@ -215,7 +217,7 @@ export class PluginLoader extends Effect.Service<PluginLoader>()(
       ): Effect.Effect<void, PluginLoadError> =>
         Effect.gen(function* () {
           for (const requiredPlugin of params.requiredPlugins) {
-            yield* registry.register(requiredPlugin);
+            yield* params.registry.register(requiredPlugin);
           }
 
           if (params.config?.plugins === undefined) {
@@ -238,7 +240,7 @@ export class PluginLoader extends Effect.Service<PluginLoader>()(
             );
 
             successful.push(result);
-            yield* registry.register(result.plugin, result.config);
+            yield* params.registry.register(result.plugin, result.config);
           }
 
           yield* reportSuccessfulLoads(successful);
@@ -246,7 +248,7 @@ export class PluginLoader extends Effect.Service<PluginLoader>()(
 
       return { loadAll } as const;
     }),
-    dependencies: [PluginRegistry.Default, PluginModuleLoader.Default],
+    dependencies: [PluginModuleLoader.Default],
     accessors: true,
   }
 ) {}

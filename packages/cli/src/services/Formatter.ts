@@ -1,9 +1,64 @@
+import fs from "node:fs";
+import path from "node:path";
 import { Effect } from "effect";
-import { formatCode } from "../generators/formatter.js";
+
+type FormatFn = (filename: string, source: string) => Promise<{ code: string }>;
+
+const loadFormatter = (): Effect.Effect<FormatFn | undefined> =>
+  Effect.gen(function* () {
+    const loaded = yield* Effect.tryPromise({
+      try: () => import("oxfmt"),
+      catch: error => error,
+    }).pipe(Effect.either);
+
+    if (loaded._tag === "Left") {
+      yield* Effect.logWarning(
+        "oxfmt not installed - skipping formatting. Install with: npm install -D oxfmt"
+      );
+      return undefined;
+    }
+
+    return loaded.right.format;
+  });
+
+const formatDirectory = async (
+  targetDir: string,
+  format: FormatFn
+): Promise<void> => {
+  const contents = fs
+    .readdirSync(targetDir, { withFileTypes: true })
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+
+  for (const content of contents) {
+    if (content.isFile()) {
+      const filePath = path.join(targetDir, content.name);
+      const unformatted = fs.readFileSync(filePath, "utf8");
+      const { code } = await format(filePath, unformatted);
+      fs.writeFileSync(filePath, code);
+    } else if (content.isDirectory()) {
+      await formatDirectory(path.join(targetDir, content.name), format);
+    }
+  }
+};
+
+const formatOutputDir = (
+  outputDir: string,
+  startDir?: string
+): Effect.Effect<void> =>
+  Effect.gen(function* () {
+    const format = yield* loadFormatter();
+    if (format === undefined) {
+      return;
+    }
+    const targetDir = startDir ?? outputDir;
+    yield* Effect.promise(() => formatDirectory(targetDir, format));
+  });
 
 /**
- * Effect-native facade over `oxfmt`. Delegates to the existing async
- * `formatCode` helper, which silently skips when `oxfmt` is not installed.
+ * Effect-native `oxfmt` facade. The missing-tool warning routes through
+ * `Effect.logWarning` so it lands in the same logger pipeline as the rest
+ * of the run (ADR 0006), and the recursive filesystem walk is wrapped in
+ * `Effect.promise` so callers compose it like any other effect.
  *
  * Filesystem failures (read/write/readdir) propagate as defects — the
  * formatter is best-effort and has no recovery path.
@@ -13,7 +68,7 @@ export class Formatter extends Effect.Service<Formatter>()(
   {
     succeed: {
       format: (outputDir: string, startDir?: string): Effect.Effect<void> =>
-        Effect.promise(() => formatCode(outputDir, startDir)),
+        formatOutputDir(outputDir, startDir),
     },
     accessors: true,
   }

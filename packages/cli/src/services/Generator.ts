@@ -20,11 +20,12 @@ import type { GenerateParams } from "./generatorTypes.js";
 
 /**
  * Effect-native generator orchestrator. Owns the full pipeline from spec
- * bundling through plugin lifecycle to optional formatting. The plugin
- * registry is cleared at the start of every `generate(...)` call so the
- * long-lived service preserves the per-call semantics of the previous
- * `new Generator()` instance. The generated-file tracker is per-call by
- * construction (built fresh inside `ContextBuilder.buildGeneratorContext`).
+ * bundling through plugin lifecycle to optional formatting. A fresh plugin
+ * registry instance is yielded at the start of every `generate(...)` call
+ * via `PluginRegistry.createInstance` so two concurrent generations on the same
+ * long-lived runtime see fully isolated registrations. The generated-file
+ * tracker is per-call by construction (built fresh inside
+ * `ContextBuilder.buildGeneratorContext`).
  *
  * Pipeline ordering and the log lines along the way are held byte-stable
  * so the generated test-project output stays unchanged and the existing
@@ -34,7 +35,6 @@ export class Generator extends Effect.Service<Generator>()(
   "typeweaver/Generator",
   {
     effect: Effect.gen(function* () {
-      const registry = yield* PluginRegistry;
       const contextBuilder = yield* ContextBuilder;
       const pluginLoader = yield* PluginLoader;
       const specLoader = yield* SpecLoader;
@@ -53,7 +53,7 @@ export class Generator extends Effect.Service<Generator>()(
 
           yield* Effect.logInfo("Starting generation...");
 
-          yield* registry.clear;
+          const registry = yield* PluginRegistry.createInstance();
 
           const templateDir = yield* resolveTemplateDir();
 
@@ -70,6 +70,7 @@ export class Generator extends Effect.Service<Generator>()(
           });
 
           yield* pluginLoader.loadAll({
+            registry,
             requiredPlugins: defaultRequiredPlugins(),
             strategies: DEFAULT_PLUGIN_RESOLUTION_STRATEGIES,
             config: params.config,

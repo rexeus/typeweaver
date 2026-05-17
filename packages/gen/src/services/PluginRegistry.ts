@@ -9,6 +9,23 @@ export type PluginRegistration = {
   readonly config?: PluginConfig;
 };
 
+/**
+ * Per-call view of the plugin registry. Each call to
+ * `PluginRegistry.createInstance` closes over its own `Ref<Map>` so concurrent
+ * `Generator.generate` invocations cannot observe one another's registrations.
+ */
+export type PluginRegistryInstance = {
+  readonly register: (
+    plugin: Plugin,
+    config?: PluginConfig
+  ) => Effect.Effect<void>;
+  readonly getAll: Effect.Effect<
+    readonly PluginRegistration[],
+    PluginDependencyError
+  >;
+  readonly clear: Effect.Effect<void>;
+};
+
 const sortPluginRegistrations = (
   registrations: readonly PluginRegistration[]
 ): PluginRegistration[] => {
@@ -97,9 +114,74 @@ const visitPlugin = (params: {
 };
 
 /**
- * Effect-native registry of V2 plugins. Backed by a `Ref<Map>` so that the
- * service can be shared across an entire generation run while remaining
- * resettable between runs.
+ * Creates a fresh registry instance backed by an isolated `Ref<Map>`. Each
+ * `Generator.generate` call yields its own instance so two concurrent runs
+ * cannot leak registrations into one another.
+ */
+const createInstance = (): Effect.Effect<PluginRegistryInstance> =>
+  Effect.gen(function* () {
+    const ref = yield* Ref.make(new Map<string, PluginRegistration>());
+
+    const register = (
+      plugin: Plugin,
+      config?: PluginConfig
+    ): Effect.Effect<void> =>
+      Effect.gen(function* () {
+        // `Ref.modify` runs the transition atomically, closing the
+        // check-then-update race two concurrent fibers would otherwise
+        // hit on the same plugin name. The first registration wins; the
+        // outcome tag drives the post-modification log.
+        const outcome = yield* Ref.modify(ref, current => {
+          if (current.has(plugin.name)) {
+            return ["duplicate" as const, current];
+          }
+          const next = new Map(current);
+          next.set(plugin.name, { name: plugin.name, plugin, config });
+          return ["registered" as const, next];
+        });
+
+        if (outcome === "duplicate") {
+          yield* Effect.logWarning(
+            `Plugin '${plugin.name}' is already registered; keeping the first registration`
+          );
+          return;
+        }
+
+        yield* Effect.logInfo(`Registered plugin: ${plugin.name}`);
+      });
+
+    const getAll: Effect.Effect<
+      readonly PluginRegistration[],
+      PluginDependencyError
+    > = Effect.gen(function* () {
+      const plugins = yield* Ref.get(ref);
+      const registrations = Array.from(plugins.values());
+
+      return yield* Effect.try({
+        try: () => sortPluginRegistrations(registrations),
+        catch: error => {
+          if (error instanceof PluginDependencyError) {
+            return error;
+          }
+          throw error;
+        },
+      });
+    });
+
+    const clear: Effect.Effect<void> = Ref.set(
+      ref,
+      new Map<string, PluginRegistration>()
+    );
+
+    return { register, getAll, clear } as const;
+  });
+
+/**
+ * Effect-native factory of V2 plugin registries. The service exposes a
+ * single `createInstance` effect that constructs a fresh
+ * `PluginRegistryInstance` backed by its own `Ref<Map>`. `Generator.generate`
+ * yields a new instance per call so concurrent generations have fully
+ * isolated registrations.
  *
  * Alphabetical visit order and dependency toposort are intentionally
  * stable: generated output depends on the order in which plugins execute,
@@ -108,62 +190,7 @@ const visitPlugin = (params: {
 export class PluginRegistry extends Effect.Service<PluginRegistry>()(
   "typeweaver/PluginRegistry",
   {
-    effect: Effect.gen(function* () {
-      const ref = yield* Ref.make(new Map<string, PluginRegistration>());
-
-      const register = (
-        plugin: Plugin,
-        config?: PluginConfig
-      ): Effect.Effect<void> =>
-        Effect.gen(function* () {
-          // `Ref.modify` runs the transition atomically, closing the
-          // check-then-update race two concurrent fibers would otherwise
-          // hit on the same plugin name. The first registration wins; the
-          // outcome tag drives the post-modification log.
-          const outcome = yield* Ref.modify(ref, current => {
-            if (current.has(plugin.name)) {
-              return ["duplicate" as const, current];
-            }
-            const next = new Map(current);
-            next.set(plugin.name, { name: plugin.name, plugin, config });
-            return ["registered" as const, next];
-          });
-
-          if (outcome === "duplicate") {
-            yield* Effect.logWarning(
-              `Plugin '${plugin.name}' is already registered; keeping the first registration`
-            );
-            return;
-          }
-
-          yield* Effect.logInfo(`Registered plugin: ${plugin.name}`);
-        });
-
-      const getAll: Effect.Effect<
-        readonly PluginRegistration[],
-        PluginDependencyError
-      > = Effect.gen(function* () {
-        const plugins = yield* Ref.get(ref);
-        const registrations = Array.from(plugins.values());
-
-        return yield* Effect.try({
-          try: () => sortPluginRegistrations(registrations),
-          catch: error => {
-            if (error instanceof PluginDependencyError) {
-              return error;
-            }
-            throw error;
-          },
-        });
-      });
-
-      const clear: Effect.Effect<void> = Ref.set(
-        ref,
-        new Map<string, PluginRegistration>()
-      );
-
-      return { register, getAll, clear } as const;
-    }),
+    succeed: { createInstance },
     accessors: true,
   }
 ) {}

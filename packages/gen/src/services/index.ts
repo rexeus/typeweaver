@@ -6,4 +6,8 @@ export type {
 export { PathSafety } from "./PathSafety.js";
 export type { SafeGeneratedFilePath } from "./PathSafety.js";
 export { PluginRegistry } from "./PluginRegistry.js";
+export type {
+  PluginRegistration,
+  PluginRegistryInstance,
+} from "./PluginRegistry.js";
 export { TemplateRenderer } from "./TemplateRenderer.js";

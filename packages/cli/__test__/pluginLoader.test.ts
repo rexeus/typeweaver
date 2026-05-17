@@ -1,7 +1,7 @@
-import { PluginRegistry } from "@rexeus/typeweaver-gen";
 import type {
   Plugin,
   PluginConfig,
+  PluginRegistryInstance,
   TypeweaverConfig,
 } from "@rexeus/typeweaver-gen";
 import { Cause, Effect, Exit, Layer, ManagedRuntime, Ref } from "effect";
@@ -60,44 +60,38 @@ const aConfigurablePluginModule = (
   [exportName]: (config: unknown) => ({ name, config }),
 });
 
-const createRecordingPluginRegistryLayer = (
+const createRecordingPluginRegistry = (
   registeredPlugins: RegisteredPlugin[]
-): Layer.Layer<PluginRegistry> =>
-  Layer.scoped(
-    PluginRegistry,
-    Effect.gen(function* () {
-      const ref = yield* Ref.make(new Set<string>());
+): Effect.Effect<PluginRegistryInstance> =>
+  Effect.gen(function* () {
+    const ref = yield* Ref.make(new Set<string>());
 
-      const register = (
-        plugin: Plugin,
-        config?: unknown
-      ): Effect.Effect<void> =>
-        Effect.gen(function* () {
-          const known = yield* Ref.get(ref);
-          if (known.has(plugin.name)) {
-            return;
-          }
-          yield* Ref.update(ref, set => {
-            const next = new Set(set);
-            next.add(plugin.name);
-            return next;
-          });
-          registeredPlugins.push({
-            name: plugin.name,
-            plugin,
-            config,
-          });
+    const register = (plugin: Plugin, config?: unknown): Effect.Effect<void> =>
+      Effect.gen(function* () {
+        const known = yield* Ref.get(ref);
+        if (known.has(plugin.name)) {
+          return;
+        }
+        yield* Ref.update(ref, set => {
+          const next = new Set(set);
+          next.add(plugin.name);
+          return next;
         });
+        registeredPlugins.push({
+          name: plugin.name,
+          plugin,
+          config,
+        });
+      });
 
-      return {
-        register,
-        getAll: Effect.succeed([] as never),
-        clear: Effect.sync(() => {
-          registeredPlugins.length = 0;
-        }),
-      } as unknown as PluginRegistry;
-    })
-  );
+    return {
+      register,
+      getAll: Effect.succeed([] as never),
+      clear: Effect.sync(() => {
+        registeredPlugins.length = 0;
+      }),
+    } satisfies PluginRegistryInstance;
+  });
 
 type RunParams = {
   readonly registeredPlugins: RegisteredPlugin[];
@@ -113,24 +107,27 @@ type RunResult = {
 };
 
 const runLoadPlugins = async (params: RunParams): Promise<RunResult> => {
-  const recordingRegistry = createRecordingPluginRegistryLayer(
-    params.registeredPlugins
-  );
   const moduleLoaderLayer = params.useRealModuleLoader
     ? PluginModuleLoader.Default
     : inMemoryPluginModuleLoader(params.modules ?? new Map());
   const layer = Layer.provide(
     PluginLoader.DefaultWithoutDependencies,
-    Layer.mergeAll(recordingRegistry, moduleLoaderLayer)
+    moduleLoaderLayer
   );
   const runtime = ManagedRuntime.make(layer);
   try {
     const exit = await runtime.runPromiseExit(
       withCapturedLogs(
-        PluginLoader.loadAll({
-          requiredPlugins: params.requiredPlugins,
-          strategies: params.strategies,
-          config: params.config,
+        Effect.gen(function* () {
+          const registry = yield* createRecordingPluginRegistry(
+            params.registeredPlugins
+          );
+          yield* PluginLoader.loadAll({
+            registry,
+            requiredPlugins: params.requiredPlugins,
+            strategies: params.strategies,
+            config: params.config,
+          });
         })
       )
     );
