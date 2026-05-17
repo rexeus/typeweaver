@@ -6,7 +6,8 @@ export type UnsafeCleanTargetReason =
   | "current-working-directory"
   | "workspace-root"
   | "ancestor-of-current-working-directory"
-  | "target-carries-workspace-marker";
+  | "target-carries-workspace-marker"
+  | "contains-input-file";
 
 export class UnsafeCleanTargetError extends Data.TaggedError(
   "UnsafeCleanTargetError"
@@ -17,6 +18,7 @@ export class UnsafeCleanTargetError extends Data.TaggedError(
   readonly currentWorkingDirectory?: string;
   readonly protectedWorkspaceRoot?: string;
   readonly filesystemRoot?: string;
+  readonly inputFile?: string;
 }> {
   public override get message(): string {
     const targetDescription = `Refusing to clean '${this.outputDir}'`;
@@ -35,6 +37,8 @@ export class UnsafeCleanTargetError extends Data.TaggedError(
         return `${targetDescription} because it resolves to an ancestor directory of the current working directory '${this.currentWorkingDirectory ?? ""}'. ${suffix}`;
       case "target-carries-workspace-marker":
         return `${targetDescription} because the target itself contains a workspace marker (one of '.git', 'pnpm-workspace.yaml', 'lerna.json', 'nx.json', 'turbo.json', 'rush.json', or a 'package.json' declaring workspaces) and would erase the workspace. ${suffix}`;
+      case "contains-input-file":
+        return `${targetDescription} because it contains the spec input file '${this.inputFile ?? ""}'; cleaning would delete the source. ${suffix}`;
     }
   }
 }

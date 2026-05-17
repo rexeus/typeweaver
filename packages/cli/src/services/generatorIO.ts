@@ -26,10 +26,12 @@ const isUnsafeCleanTargetError = (
  */
 export const assertSafeCleanTargetEffect = (
   outputDir: string,
-  currentWorkingDirectory: string
+  currentWorkingDirectory: string,
+  inputFile?: string
 ): Effect.Effect<void, UnsafeCleanTargetError> =>
   Effect.try({
-    try: () => assertSafeCleanTarget(outputDir, currentWorkingDirectory),
+    try: () =>
+      assertSafeCleanTarget(outputDir, currentWorkingDirectory, inputFile),
     catch: error => {
       if (isUnsafeCleanTargetError(error)) {
         return error;

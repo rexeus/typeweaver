@@ -58,7 +58,7 @@ export class Generator extends Effect.Service<Generator>()(
           const templateDir = yield* resolveTemplateDir();
 
           if (params.config?.clean !== false) {
-            yield* assertSafeCleanTargetEffect(outputDir, cwd);
+            yield* assertSafeCleanTargetEffect(outputDir, cwd, inputFile);
             yield* Effect.logInfo("Cleaning output directory...");
             yield* removeOutputDir(outputDir);
           }
@@ -91,55 +91,82 @@ export class Generator extends Effect.Service<Generator>()(
 
           yield* Effect.logInfo("Initializing plugins...");
           const initial = yield* registry.getAll;
+          const initialized: (typeof initial)[number][] = [];
           for (const registration of initial) {
             if (registration.plugin.initialize) {
               yield* registration.plugin.initialize(pluginContext);
             }
+            initialized.push(registration);
           }
 
-          yield* Effect.logInfo("Collecting resources...");
-          for (const registration of initial) {
-            if (registration.plugin.collectResources) {
-              normalizedSpec =
-                yield* registration.plugin.collectResources(normalizedSpec);
-            }
-          }
+          let getGeneratedFiles: () => readonly string[] = () => [];
 
-          const { context: generatorContext, getGeneratedFiles } =
-            yield* contextBuilder.buildGeneratorContext({
-              outputDir,
-              inputDir,
-              config: pluginConfig,
-              normalizedSpec,
-              templateDir,
-              coreDir: CORE_DIR,
-              responsesOutputDir,
-              specOutputDir,
-            });
+          // Run the post-initialize pipeline, capture its exit, then always
+          // run finalize for every plugin that successfully initialized
+          // (Plugin contract advertises lifecycle cleanup). On a clean
+          // happy-path success the finalize errors propagate as usual; on
+          // failure the inner exit is restored after finalize so callers
+          // still see the original `PluginExecutionError`. The finalize log
+          // line and per-plugin ordering stay byte-identical to the prior
+          // sequential loop, preserving the golden-gate output.
+          //
+          // Each finalize call is wrapped so a failure cannot short-circuit
+          // the loop or replace the inner exit. Finalize failures are not
+          // silently swallowed — they surface at WARN with the plugin name
+          // and tagged-error message so operators can investigate.
+          const inner = yield* Effect.exit(
+            Effect.gen(function* () {
+              yield* Effect.logInfo("Collecting resources...");
+              for (const registration of initial) {
+                if (registration.plugin.collectResources) {
+                  normalizedSpec =
+                    yield* registration.plugin.collectResources(normalizedSpec);
+                }
+              }
 
-          yield* Effect.logInfo("Generating code...");
-          for (const registration of initial) {
-            yield* Effect.logInfo(
-              `Running plugin: ${registration.plugin.name}`
-            );
-            if (registration.plugin.generate) {
-              yield* registration.plugin.generate(generatorContext);
-            }
-          }
+              const built = yield* contextBuilder.buildGeneratorContext({
+                outputDir,
+                inputDir,
+                config: pluginConfig,
+                normalizedSpec,
+                templateDir,
+                coreDir: CORE_DIR,
+                responsesOutputDir,
+                specOutputDir,
+              });
+              getGeneratedFiles = built.getGeneratedFiles;
 
-          yield* indexFileGenerator.generate({
-            templateDir,
-            outputDir,
-            generatedFiles: getGeneratedFiles(),
-            writeFile: generatorContext.writeFile,
-          });
+              yield* Effect.logInfo("Generating code...");
+              for (const registration of initial) {
+                yield* Effect.logInfo(
+                  `Running plugin: ${registration.plugin.name}`
+                );
+                if (registration.plugin.generate) {
+                  yield* registration.plugin.generate(built.context);
+                }
+              }
+
+              yield* indexFileGenerator.generate({
+                templateDir,
+                outputDir,
+                generatedFiles: getGeneratedFiles(),
+                writeFile: built.context.writeFile,
+              });
+            })
+          );
 
           yield* Effect.logInfo("Finalizing plugins...");
-          for (const registration of initial) {
+          for (const registration of initialized) {
             if (registration.plugin.finalize) {
-              yield* registration.plugin.finalize(pluginContext);
+              yield* registration.plugin
+                .finalize(pluginContext)
+                .pipe(
+                  Effect.catchAll(cause => Effect.logWarning(cause.message))
+                );
             }
           }
+
+          yield* inner;
 
           if (params.config?.format !== false) {
             yield* formatter.format(outputDir);

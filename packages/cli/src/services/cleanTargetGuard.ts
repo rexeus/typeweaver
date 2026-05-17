@@ -131,7 +131,8 @@ const isSameOrDescendantOf = (directory: string, ancestor: string): boolean => {
 export const assertSafeCleanTargetWith = (
   outputDir: string,
   currentWorkingDirectory: string,
-  fileSystem: CleanTargetFs
+  fileSystem: CleanTargetFs,
+  inputFile?: string
 ): void => {
   const trimmedOutputDir = outputDir.trim();
   if (trimmedOutputDir.length === 0) {
@@ -218,6 +219,25 @@ export const assertSafeCleanTargetWith = (
     });
   }
 
+  // Reject when the spec input file lives inside the clean target. Without
+  // this check, `typeweaver generate --input spec/index.ts --output spec`
+  // deletes the source before bundling runs.
+  if (inputFile !== undefined) {
+    const canonicalInputFile = canonicalizePathForContainment(
+      path.resolve(resolvedWorkingDirectory, inputFile),
+      fileSystem
+    );
+    if (isSameOrDescendantOf(canonicalInputFile, canonicalOutputDir)) {
+      throw new UnsafeCleanTargetError({
+        outputDir,
+        reason: "contains-input-file",
+        resolvedOutputDir,
+        currentWorkingDirectory: resolvedWorkingDirectory,
+        inputFile: canonicalInputFile,
+      });
+    }
+  }
+
   // Defense in depth: a target outside the workspace inferred from cwd is
   // not necessarily safe. If the target directory itself carries a workspace
   // marker, cleaning it would destroy a workspace — reject before any rm
@@ -239,10 +259,12 @@ export const assertSafeCleanTargetWith = (
  */
 export const assertSafeCleanTarget = (
   outputDir: string,
-  currentWorkingDirectory: string
+  currentWorkingDirectory: string,
+  inputFile?: string
 ): void =>
   assertSafeCleanTargetWith(
     outputDir,
     currentWorkingDirectory,
-    defaultCleanTargetFs
+    defaultCleanTargetFs,
+    inputFile
   );

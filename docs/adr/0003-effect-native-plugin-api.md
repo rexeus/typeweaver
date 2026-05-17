@@ -83,6 +83,9 @@ messages.
   boilerplate across the five first-party plugins (`types`, `clients`, `server`, `hono`, `aws-cdk`).
 - The `GeneratorContext` sync helpers (`writeFile`, `renderTemplate`, `addGeneratedFile`) remain
   sync; plugin authors continue to call them inside the `try` block of their `Effect.try` boundary.
+- Lifecycle failure semantics mirror `try/finally`: failures in `initialize`, `collectResources`,
+  and `generate` abort the run with a `PluginExecutionError`; failures in `finalize` are demoted to
+  a WARN log and the run completes. Cleanup work should not fail an otherwise-successful operation.
 
 ### Negative
 
@@ -102,6 +105,14 @@ A thinner wrapper that kept the class shape and added an `effect:` lifecycle met
 `Promise`-based one was rejected: it leaves two parallel code paths that the orchestrator must
 maintain and that authors must reason about. A clean cut is cheaper than a long deprecation window
 for a pre-1.0 project.
+
+### Version pinning
+
+Every Effect dependency is pinned to `^3.21.x`. Effect v4 was still in beta at migration time and
+its `@effect/platform` / `@effect/cli` peers track 3.x; pinning the ecosystem to one minor line
+keeps `Layer.provide`, `Effect.Service`, and `@effect/cli` integration on the same release train.
+The pin is mirrored across every first-party plugin (`peerDependencies.effect: "^3.21.x"`) so
+external users see one consistent range.
 
 ## Reference Files
 

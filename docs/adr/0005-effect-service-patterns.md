@@ -77,6 +77,18 @@ The rule says nothing about which services _should_ hold state or have dependenc
 guarantees the construction shape reflects the answer. Architectural decisions about state ownership
 and dependency graphs live in the other ADRs (e.g., ADR 0007 on per-call isolation in `Generator`).
 
+### Alternatives Considered
+
+`Effect.Service` with an inline `dependencies: [...]` array was chosen over explicit `Layer.provide`
+/ `Layer.mergeAll` composition for each service. With `Effect.Service`, a service declares its
+dependencies once, in the same record where the service body lives, and the runtime resolves them at
+composition time. Explicit Layer chains require the dependency list to be repeated in a wiring file
+far from the service definition and introduce ordering hazards (the order of `Layer.mergeAll`
+arguments leaks into the resolution graph). One concrete benefit: `Generator` composes six
+dependencies (`ContextBuilder`, `Formatter`, `IndexFileGenerator`, `PluginLoader`, `PluginRegistry`,
+`SpecLoader`) in a single `dependencies:` array; the equivalent layer chain would fragment that
+declaration across `effectRuntime.ts` and lose locality with the service body.
+
 ## Reference Files
 
 - CLI services: `packages/cli/src/services/*.ts`

@@ -48,7 +48,9 @@ const formatOption = Options.boolean("format", { ifPresent: true }).pipe(
 );
 
 const noFormatOption = Options.boolean("no-format", { ifPresent: true }).pipe(
-  Options.withDescription("disable code formatting"),
+  Options.withDescription(
+    "disable code formatting (takes precedence if both --format and --no-format are passed)"
+  ),
   Options.optional
 );
 
@@ -60,7 +62,9 @@ const cleanOption = Options.boolean("clean", { ifPresent: true }).pipe(
 );
 
 const noCleanOption = Options.boolean("no-clean", { ifPresent: true }).pipe(
-  Options.withDescription("disable cleaning output directory"),
+  Options.withDescription(
+    "disable cleaning output directory (takes precedence if both --clean and --no-clean are passed)"
+  ),
   Options.optional
 );
 

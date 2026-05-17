@@ -54,6 +54,16 @@ The CLI entrypoint (`packages/cli/src/cli.ts`) calls
 flags suppress the platform's default formatters so the only output the user sees comes from
 `CliLoggerLayer` (for logs) and the CLI's own `formatErrorForCli` pipeline (for failures).
 
+### Boolean flag pairs (`--format` / `--no-format`, `--clean` / `--no-clean`)
+
+`@effect/cli@0.75.x` ships a known bug in `Options.boolean({ negationNames })`: the inner
+`withDefault(!ifPresent)` short-circuits the outer `withDefault`, so a single combined flag cannot
+distinguish "user passed `--no-format`" from "user did not pass the flag at all". The CLI models
+each pair as two independent `Options.boolean(..., { ifPresent: true })` flags and resolves the
+effective value in the handler (`resolveBooleanFlag` in `packages/cli/src/runGenerate.ts`, with the
+`negative` flag winning ties). The duplication is documented inline in `packages/cli/src/cli.ts`
+(lines 42-44) so the next contributor reading the file sees the constraint immediately.
+
 ### `validationErrorFilter`
 
 `@effect/cli` already renders its own usage and help output when a flag is invalid; the failure it

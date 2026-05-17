@@ -36,6 +36,8 @@ The V1 class hierarchy is gone:
   the `ContextBuilder` service; it is no longer part of the package's public API.
 - Plugins are now records returned by `definePlugin(...)`. Lifecycle stages return
   `Effect<void, PluginExecutionError>` instead of `Promise<void> | void`.
+- Plugin `finalize` failures now surface as WARN logs instead of failing the run. If your plugin
+  runs hard-fail work in finalize, move it to `generate`.
 
 **Before (0.12.x) — class-based plugin:**
 

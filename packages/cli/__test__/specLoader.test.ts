@@ -6,6 +6,7 @@ import { Effect, Either, Layer } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import {
   InvalidSpecEntrypointError,
+  SpecBundleError,
   SpecBundleOutputMissingError,
 } from "../src/services/errors/specErrors.js";
 import { isSpecDefinition } from "../src/services/internal/specGuards.js";
@@ -663,6 +664,9 @@ describe("SpecLoader", () => {
 
     await expect(loadProjectSpec(project, specFile)).rejects.toThrow(
       /missingHelper/
+    );
+    await expect(loadProjectSpec(project, specFile)).rejects.toBeInstanceOf(
+      SpecBundleError
     );
   });
 

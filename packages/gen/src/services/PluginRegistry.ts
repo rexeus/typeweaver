@@ -20,7 +20,7 @@ const sortPluginRegistrations = (
   const sorted: PluginRegistration[] = [];
 
   const alphabeticallyOrderedRegistrations = [...registrations].sort((a, b) =>
-    a.name.localeCompare(b.name)
+    a.name < b.name ? -1 : a.name > b.name ? 1 : 0
   );
 
   for (const registration of alphabeticallyOrderedRegistrations) {
@@ -70,7 +70,7 @@ const visitPlugin = (params: {
 
   const alphabeticallyOrderedDependencies = [
     ...(registration.plugin.depends ?? []),
-  ].sort((a, b) => a.localeCompare(b));
+  ].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 
   for (const dependencyName of alphabeticallyOrderedDependencies) {
     const dependency = registrationsByName.get(dependencyName);
@@ -116,20 +116,25 @@ export class PluginRegistry extends Effect.Service<PluginRegistry>()(
         config?: PluginConfig
       ): Effect.Effect<void> =>
         Effect.gen(function* () {
-          const plugins = yield* Ref.get(ref);
+          // `Ref.modify` runs the transition atomically, closing the
+          // check-then-update race two concurrent fibers would otherwise
+          // hit on the same plugin name. The first registration wins; the
+          // outcome tag drives the post-modification log.
+          const outcome = yield* Ref.modify(ref, current => {
+            if (current.has(plugin.name)) {
+              return ["duplicate" as const, current];
+            }
+            const next = new Map(current);
+            next.set(plugin.name, { name: plugin.name, plugin, config });
+            return ["registered" as const, next];
+          });
 
-          if (plugins.has(plugin.name)) {
+          if (outcome === "duplicate") {
             yield* Effect.logWarning(
               `Plugin '${plugin.name}' is already registered; keeping the first registration`
             );
             return;
           }
-
-          yield* Ref.update(ref, current => {
-            const next = new Map(current);
-            next.set(plugin.name, { name: plugin.name, plugin, config });
-            return next;
-          });
 
           yield* Effect.logInfo(`Registered plugin: ${plugin.name}`);
         });

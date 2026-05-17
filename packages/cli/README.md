@@ -104,6 +104,7 @@ Create a JavaScript config file (for example `typeweaver.config.mjs`) for more c
 configurations:
 
 ```js
+/** @type {import("@rexeus/typeweaver-gen").TypeweaverConfig} */
 export default {
   input: "./api/spec/index.ts",
   output: "./api/generated",
@@ -112,6 +113,9 @@ export default {
   clean: true,
 };
 ```
+
+The loader accepts either a default export or a named `config` export — pick whichever fits your
+project's style.
 
 Then run:
 

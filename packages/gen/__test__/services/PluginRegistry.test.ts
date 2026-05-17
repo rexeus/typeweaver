@@ -1,8 +1,24 @@
-import { Cause, Effect, Exit, Logger } from "effect";
+import { Cause, Effect, Exit, Layer, Logger } from "effect";
 import { describe, expect, test } from "vitest";
 import { PluginDependencyError } from "../../src/plugins/errors/index.js";
 import { PluginRegistry } from "../../src/services/PluginRegistry.js";
 import type { Plugin } from "../../src/plugins/Plugin.js";
+
+type CapturedLog = {
+  readonly level: string;
+  readonly message: string;
+};
+
+const capturingLoggerLayer = (sink: CapturedLog[]): Layer.Layer<never> =>
+  Logger.replace(
+    Logger.defaultLogger,
+    Logger.make<unknown, void>(({ message, logLevel }) => {
+      const text = Array.isArray(message)
+        ? message.map(String).join(" ")
+        : String(message);
+      sink.push({ level: logLevel.label, message: text });
+    })
+  );
 
 const aPluginNamed = (name: string, depends?: readonly string[]): Plugin => ({
   name,
@@ -278,5 +294,60 @@ describe("PluginRegistry", () => {
         config: { source: "original" },
       });
     });
+  });
+
+  test("emits a warning log when a duplicate registration is rejected", () => {
+    const logs: CapturedLog[] = [];
+
+    Effect.runSync(
+      Effect.gen(function* () {
+        const registry = yield* PluginRegistry;
+        yield* registry.register(aPluginNamed("types"), { source: "original" });
+        yield* registry.register(aPluginNamed("types"), {
+          source: "duplicate",
+        });
+      }).pipe(
+        Effect.provide(PluginRegistry.Default),
+        Effect.provide(capturingLoggerLayer(logs))
+      )
+    );
+
+    const warnings = logs.filter(entry => entry.level === "WARN");
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]?.message).toContain(
+      "Plugin 'types' is already registered; keeping the first registration"
+    );
+  });
+
+  test("registers exactly one entry under concurrent duplicate registrations and keeps the first config", () => {
+    const plugins: { readonly plugin: Plugin; readonly config: unknown }[] =
+      Array.from({ length: 50 }, (_, idx) => ({
+        plugin: aPluginNamed("types"),
+        config: { idx },
+      }));
+
+    const registrations = Effect.runSync(
+      Effect.gen(function* () {
+        const registry = yield* PluginRegistry;
+        yield* Effect.all(
+          plugins.map(entry => registry.register(entry.plugin, entry.config)),
+          { concurrency: "unbounded" }
+        );
+        return yield* registry.getAll;
+      }).pipe(
+        Effect.provide(PluginRegistry.Default),
+        Effect.provide(silentLoggerLayer)
+      )
+    );
+
+    expect(registrations).toHaveLength(1);
+    const winning = registrations[0];
+    expect(winning?.name).toBe("types");
+
+    const winningSource = plugins.find(
+      entry => entry.plugin === winning?.plugin
+    );
+    expect(winningSource).toBeDefined();
+    expect(winning?.config).toBe(winningSource?.config);
   });
 });

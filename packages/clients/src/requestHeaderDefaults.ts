@@ -49,7 +49,7 @@ export function getRequestHeaderDefaults(
       const value = getStringLiteralValue(schema);
       return value === undefined ? [] : [{ key, value }];
     })
-    .sort((a, b) => a.key.localeCompare(b.key));
+    .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
 
   if (entries.length === 0) return undefined;
 

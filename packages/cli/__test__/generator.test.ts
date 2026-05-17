@@ -3,7 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { UnsafeCleanTargetError } from "../src/generators/errors/UnsafeCleanTargetError.js";
-import { assertSafeCleanTarget } from "../src/services/cleanTargetGuard.js";
+import {
+  assertSafeCleanTarget,
+  assertSafeCleanTargetWith,
+} from "../src/services/cleanTargetGuard.js";
+import type { CleanTargetFs } from "../src/services/cleanTargetGuard.js";
 
 type WorkspaceMarker = ".git" | "pnpm-workspace.yaml";
 
@@ -590,6 +594,40 @@ describe("Generator clean safety", () => {
 
     expect(() =>
       assertSafeCleanTarget(foreignTarget, currentWorkingDirectory)
+    ).not.toThrow();
+  });
+
+  test("rejects clean targets that contain the spec input file", () => {
+    const workspace = createTempDir();
+    const specDir = path.join(workspace, "spec");
+    const specFile = path.join(specDir, "index.ts");
+    const knownPaths = new Set([workspace, specDir, specFile]);
+
+    const fakeFs: CleanTargetFs = {
+      exists: probePath => knownPaths.has(probePath),
+      realPath: probePath => probePath,
+    };
+
+    const error = captureUnsafeCleanTargetError(() =>
+      assertSafeCleanTargetWith(specDir, workspace, fakeFs, specFile)
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        outputDir: specDir,
+        reason: "contains-input-file",
+        inputFile: specFile,
+      })
+    );
+  });
+
+  test("allows clean targets that do not contain the spec input file", () => {
+    const workspace = createTempDir();
+    const specFile = path.join(workspace, "spec", "index.ts");
+    const generatedDir = path.join(workspace, "generated");
+
+    expect(() =>
+      assertSafeCleanTarget(generatedDir, workspace, specFile)
     ).not.toThrow();
   });
 });

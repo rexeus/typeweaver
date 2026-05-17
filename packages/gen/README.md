@@ -102,12 +102,12 @@ type Plugin = {
 };
 ```
 
-| Stage              | When                                         | Use it for                                                      |
-| ------------------ | -------------------------------------------- | --------------------------------------------------------------- |
-| `initialize`       | After plugin discovery, before normalization | Setup that needs the resolved output directory but not the spec |
-| `collectResources` | After normalization, before emission         | Transforming the normalized spec (e.g. injecting derived ops)   |
-| `generate`         | Once the spec is final                       | Writing files via `context.writeFile`                           |
-| `finalize`         | After every plugin has generated             | Post-processing, summary output                                 |
+| Stage              | When                                         | Use it for                                                                            |
+| ------------------ | -------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `initialize`       | After plugin discovery, before normalization | Setup that needs the resolved output directory but not the spec                       |
+| `collectResources` | After normalization, before emission         | Transforming the normalized spec (e.g. injecting derived ops)                         |
+| `generate`         | Once the spec is final                       | Writing files via `context.writeFile`                                                 |
+| `finalize`         | After every plugin has generated             | Post-processing, summary output. Failures surface as WARN — they do not fail the run. |
 
 `depends` declares a topological ordering: a plugin with `depends: ["types"]` will not run a stage
 until `types`'s same stage has completed.
@@ -125,6 +125,8 @@ until `types`'s same stage has completed.
   `NormalizedResponse`, `NormalizedResponseUsage` — the validated API model delivered to plugins.
 - **Services:** `PluginRegistry`, `TemplateRenderer`, `PathSafety`, `ContextBuilder` — composed by
   the CLI runtime; plugin authors rarely need to reference them directly.
+- **Configuration types:** `TypeweaverConfig` — the shape of the optional
+  `typeweaver.config.{js,mjs,cjs}` file, useful for `@type` JSDoc annotations on JavaScript configs.
 
 ## 📚 Authoring a plugin
 

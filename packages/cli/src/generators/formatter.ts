@@ -34,7 +34,7 @@ async function formatDirectory(
 ): Promise<void> {
   const contents = fs
     .readdirSync(targetDir, { withFileTypes: true })
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 
   for (const content of contents) {
     if (content.isFile()) {

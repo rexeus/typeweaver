@@ -1,4 +1,11 @@
-import { describe, expect, test } from "vitest";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { Cause, Effect, Exit, Option } from "effect";
+import { afterEach, describe, expect, test } from "vitest";
+import { effectRuntime } from "../src/effectRuntime.js";
+import { IndexFileGenerationError } from "../src/services/errors/IndexFileGenerationError.js";
+import { IndexFileGenerator } from "../src/services/IndexFileGenerator.js";
 import { generateIndexFiles } from "../src/services/internal/indexFileGeneration.js";
 
 type WrittenFile = {
@@ -233,5 +240,50 @@ describe("generateIndexFiles", () => {
     expect(fake.writes).toEqual([
       { path: "index.ts", content: formatIndexFile([]) },
     ]);
+  });
+});
+
+describe("IndexFileGenerator service", () => {
+  const tempDirs: string[] = [];
+
+  afterEach(() => {
+    for (const tempDir of tempDirs) {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+    tempDirs.length = 0;
+  });
+
+  const createTempDir = (): string => {
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "typeweaver-index-gen-")
+    );
+    tempDirs.push(tempDir);
+    return tempDir;
+  };
+
+  test("fails with IndexFileGenerationError when the Index.ejs template is missing", async () => {
+    const emptyTemplateDir = createTempDir();
+    const outputDir = createTempDir();
+
+    const exit = await effectRuntime.runPromiseExit(
+      IndexFileGenerator.generate({
+        templateDir: emptyTemplateDir,
+        outputDir,
+        generatedFiles: ["todo/GetTodoResponse.ts"],
+        writeFile: () => undefined,
+      })
+    );
+
+    expect(Exit.isFailure(exit)).toBe(true);
+    if (!Exit.isFailure(exit)) return;
+    const failure = Cause.failureOption(exit.cause);
+    expect(Option.isSome(failure)).toBe(true);
+    if (!Option.isSome(failure)) return;
+
+    expect(failure.value).toBeInstanceOf(IndexFileGenerationError);
+    const error = failure.value as IndexFileGenerationError;
+    expect(error.outputDir).toBe(outputDir);
+    const cause = error.cause as { readonly code?: string } | undefined;
+    expect(cause?.code).toBe("ENOENT");
   });
 });

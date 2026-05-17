@@ -66,12 +66,12 @@ type Plugin = {
 
 The four lifecycle stages run in this order, once per `typeweaver generate` invocation:
 
-| Stage              | When                                         | Use it for                                                      |
-| ------------------ | -------------------------------------------- | --------------------------------------------------------------- |
-| `initialize`       | After plugin discovery, before normalization | Setup that needs the resolved output directory but not the spec |
-| `collectResources` | After normalization, before emission         | Transforming the normalized spec (e.g. injecting derived ops)   |
-| `generate`         | Once the spec is final                       | Writing files via `context.writeFile`                           |
-| `finalize`         | After every plugin has generated             | Post-processing, summary output                                 |
+| Stage              | When                                         | Use it for                                                                            |
+| ------------------ | -------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `initialize`       | After plugin discovery, before normalization | Setup that needs the resolved output directory but not the spec                       |
+| `collectResources` | After normalization, before emission         | Transforming the normalized spec (e.g. injecting derived ops)                         |
+| `generate`         | Once the spec is final                       | Writing files via `context.writeFile`                                                 |
+| `finalize`         | After every plugin has generated             | Post-processing, summary output. Failures surface as WARN — they do not fail the run. |
 
 All four are optional. The first-party plugins (`types`, `clients`, `server`, `hono`, `aws-cdk`,
 `openapi`) only implement `generate`.

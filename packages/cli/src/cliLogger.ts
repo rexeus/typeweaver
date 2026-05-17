@@ -12,9 +12,11 @@ const renderMessage = (message: unknown): string => {
 /**
  * Friendly CLI logger: drops timestamps and the `level=` prefix; only
  * tags warnings and errors. Mirrors the bare-line `console.log` output
- * the CLI has emitted since the imperative-runtime days, while routing
- * everything through Effect's logging surface so tests can capture log
- * lines without spying on `console.*`.
+ * the CLI has emitted since the imperative-runtime days.
+ *
+ * Adapter unit tests target the `console` boundary via `vi.spyOn(console, ...)`.
+ * Consumer-code tests should provide a capturing logger layer
+ * (`withCapturedLogs`) and assert on captured records instead.
  */
 export const cliLogger = Logger.make<unknown, void>(({ message, logLevel }) => {
   const text = renderMessage(message);
