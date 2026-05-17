@@ -151,6 +151,10 @@ export const resolveSafeGeneratedFilePath = (
     throw new UnsafeGeneratedPathError({ requestedPath, reason: "empty-path" });
   }
 
+  if (requestedPath.includes("\0")) {
+    throw new UnsafeGeneratedPathError({ requestedPath, reason: "nul-byte" });
+  }
+
   const projectPath = requestedPath.replace(/\\/g, "/");
 
   if (

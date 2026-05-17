@@ -7,14 +7,14 @@ import type {
 import { normalizeSpec } from "@rexeus/typeweaver-gen";
 import { FileSystem } from "@effect/platform";
 import { Effect } from "effect";
-import { SpecOutputWriteError } from "../generators/spec/errors/index.js";
+import { SpecOutputWriteError } from "./errors/specErrors.js";
 import { SpecBundler } from "./SpecBundler.js";
 import { SpecImporter } from "./SpecImporter.js";
 import type {
   InvalidSpecEntrypointError,
   SpecBundleError,
   SpecBundleOutputMissingError,
-} from "../generators/spec/errors/index.js";
+} from "./errors/specErrors.js";
 
 export type SpecLoaderConfig = {
   readonly inputFile: string;

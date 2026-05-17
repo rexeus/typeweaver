@@ -7,8 +7,8 @@ import { afterEach, describe, expect, test } from "vitest";
 import {
   InvalidSpecEntrypointError,
   SpecBundleOutputMissingError,
-} from "../src/generators/spec/errors/index.js";
-import { isSpecDefinition } from "../src/generators/spec/specGuards.js";
+} from "../src/services/errors/specErrors.js";
+import { isSpecDefinition } from "../src/services/internal/specGuards.js";
 import {
   createWrapperImportSpecifier,
   SpecBundler,

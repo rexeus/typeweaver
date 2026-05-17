@@ -5,7 +5,8 @@ export type UnsafeCleanTargetReason =
   | "filesystem-root"
   | "current-working-directory"
   | "workspace-root"
-  | "ancestor-of-current-working-directory";
+  | "ancestor-of-current-working-directory"
+  | "target-carries-workspace-marker";
 
 export class UnsafeCleanTargetError extends Data.TaggedError(
   "UnsafeCleanTargetError"
@@ -32,6 +33,8 @@ export class UnsafeCleanTargetError extends Data.TaggedError(
         return `${targetDescription} because it resolves to the protected workspace root '${this.protectedWorkspaceRoot ?? this.resolvedOutputDir ?? this.outputDir}'. ${suffix}`;
       case "ancestor-of-current-working-directory":
         return `${targetDescription} because it resolves to an ancestor directory of the current working directory '${this.currentWorkingDirectory ?? ""}'. ${suffix}`;
+      case "target-carries-workspace-marker":
+        return `${targetDescription} because the target itself contains a workspace marker (one of '.git', 'pnpm-workspace.yaml', 'lerna.json', 'nx.json', 'turbo.json', 'rush.json', or a 'package.json' declaring workspaces) and would erase the workspace. ${suffix}`;
     }
   }
 }

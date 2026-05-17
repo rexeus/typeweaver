@@ -6,8 +6,8 @@ import { Effect } from "effect";
 import {
   InvalidSpecEntrypointError,
   SpecBundleError,
-} from "../generators/spec/errors/index.js";
-import { isSpecDefinition } from "../generators/spec/specGuards.js";
+} from "./errors/specErrors.js";
+import { isSpecDefinition } from "./internal/specGuards.js";
 
 /**
  * Loads a bundled spec module and verifies it exposes a SpecDefinition via

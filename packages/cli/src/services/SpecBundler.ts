@@ -6,7 +6,7 @@ import { build } from "rolldown";
 import {
   SpecBundleError,
   SpecBundleOutputMissingError,
-} from "../generators/spec/errors/index.js";
+} from "./errors/specErrors.js";
 
 const WINDOWS_ABSOLUTE_PATH_PATTERN = /^[A-Za-z]:[\\/]/;
 const WINDOWS_UNC_PATH_PATTERN = /^\\\\/;

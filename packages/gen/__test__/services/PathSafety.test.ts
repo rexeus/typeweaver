@@ -103,15 +103,8 @@ describe("PathSafety", () => {
       }).pipe(Effect.provide(PathSafety.Default))
   );
 
-  // Characterization: the current implementation does NOT explicitly reject
-  // NUL bytes. The rule set passes the path through, and the symlink-check
-  // step ultimately invokes Node's `fs.lstatSync`, which throws a TypeError
-  // ("path must be ... without null bytes"). This surfaces as a defect, not
-  // a typed `UnsafeGeneratedPathError`. Locking this behavior flags the gap
-  // to downstream agents: a future change should reject NUL bytes
-  // explicitly (e.g. reason `"nul-byte"`) before any FS probe runs.
   it.effect(
-    "currently surfaces a defect (TypeError) for requestedPath containing a NUL byte (characterization)",
+    "fails with nul-byte reason for requestedPath containing a NUL byte",
     () =>
       Effect.gen(function* () {
         const requestedPath = `foo${String.fromCharCode(0)}bar.ts`;
@@ -121,13 +114,7 @@ describe("PathSafety", () => {
             requestedPath,
           })
         );
-
-        expect(Exit.isFailure(exit)).toBe(true);
-        if (!Exit.isFailure(exit)) return;
-        const defects = Array.from(Cause.defects(exit.cause));
-        expect(defects.length).toBeGreaterThan(0);
-        expect(defects[0]).toBeInstanceOf(TypeError);
-        expect((defects[0] as Error).message).toMatch(/null bytes/i);
+        expectFailureWithReason(exit, "nul-byte");
       }).pipe(Effect.provide(PathSafety.Default))
   );
 

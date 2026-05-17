@@ -6,13 +6,13 @@ import type {
 } from "@rexeus/typeweaver-gen";
 import type { PluginLoadError } from "../generators/errors/PluginLoadError.js";
 import type { UnsafeCleanTargetError } from "../generators/errors/UnsafeCleanTargetError.js";
+import type { IndexFileGenerationError } from "./errors/IndexFileGenerationError.js";
 import type {
   InvalidSpecEntrypointError,
   SpecBundleError,
   SpecBundleOutputMissingError,
   SpecOutputWriteError,
-} from "../generators/spec/errors/index.js";
-import type { IndexFileGenerationError } from "./errors/IndexFileGenerationError.js";
+} from "./errors/specErrors.js";
 import type { PlatformError } from "@effect/platform/Error";
 
 export type GenerateParams = {

@@ -37,13 +37,48 @@ const findProtectedWorkspaceRoot = (
   }
 };
 
+const fileOnlyWorkspaceMarkers = [
+  ".git",
+  "pnpm-workspace.yaml",
+  "lerna.json",
+  "nx.json",
+  "turbo.json",
+  "rush.json",
+] as const;
+
+const hasWorkspacesField = (packageJsonPath: string): boolean => {
+  try {
+    const contents = fs.readFileSync(packageJsonPath, "utf8");
+    const parsed: unknown = JSON.parse(contents);
+    if (typeof parsed !== "object" || parsed === null) {
+      return false;
+    }
+
+    return Boolean((parsed as { workspaces?: unknown }).workspaces);
+  } catch {
+    // A malformed package.json does not make a directory a workspace root
+    // for the purposes of this guard. Treat parse failure as "no marker".
+    return false;
+  }
+};
+
 const hasWorkspaceMarker = (
   directory: string,
   fileSystem: CleanTargetFs
 ): boolean => {
-  return ["pnpm-workspace.yaml", ".git"].some(marker =>
+  const hasFileMarker = fileOnlyWorkspaceMarkers.some(marker =>
     fileSystem.exists(path.join(directory, marker))
   );
+  if (hasFileMarker) {
+    return true;
+  }
+
+  const packageJsonPath = path.join(directory, "package.json");
+  if (!fileSystem.exists(packageJsonPath)) {
+    return false;
+  }
+
+  return hasWorkspacesField(packageJsonPath);
 };
 
 const canonicalizePathForContainment = (
@@ -85,7 +120,9 @@ const isSameOrDescendantOf = (directory: string, ancestor: string): boolean => {
  *   - empty / whitespace-only paths
  *   - filesystem root
  *   - the current working directory itself
- *   - an inferred workspace root (`.git` or `pnpm-workspace.yaml`)
+ *   - an inferred workspace root (`.git`, `pnpm-workspace.yaml`, `lerna.json`,
+ *     `nx.json`, `turbo.json`, `rush.json`, or a `package.json` declaring
+ *     workspaces)
  *   - any ancestor of the current working directory within the workspace
  *
  * Symlinks are resolved before comparison so a symlinked output directory
@@ -178,6 +215,20 @@ export const assertSafeCleanTargetWith = (
       reason: "ancestor-of-current-working-directory",
       resolvedOutputDir,
       currentWorkingDirectory: resolvedWorkingDirectory,
+    });
+  }
+
+  // Defense in depth: a target outside the workspace inferred from cwd is
+  // not necessarily safe. If the target directory itself carries a workspace
+  // marker, cleaning it would destroy a workspace — reject before any rm
+  // runs.
+  if (hasWorkspaceMarker(canonicalOutputDir, fileSystem)) {
+    throw new UnsafeCleanTargetError({
+      outputDir,
+      reason: "target-carries-workspace-marker",
+      resolvedOutputDir,
+      currentWorkingDirectory: resolvedWorkingDirectory,
+      protectedWorkspaceRoot: canonicalOutputDir,
     });
   }
 };

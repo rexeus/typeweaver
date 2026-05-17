@@ -488,4 +488,108 @@ describe("Generator clean safety", () => {
       assertSafeCleanTarget("..", currentWorkingDirectory)
     ).not.toThrow();
   });
+
+  test("rejects clean targets that themselves contain a .git workspace marker", () => {
+    const currentWorkingDirectory = createTempDir();
+    const foreignWorkspaceRoot = createTempDir();
+    fs.mkdirSync(path.join(foreignWorkspaceRoot, ".git"), { recursive: true });
+
+    const error = captureUnsafeCleanTargetError(() =>
+      assertSafeCleanTarget(foreignWorkspaceRoot, currentWorkingDirectory)
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        outputDir: foreignWorkspaceRoot,
+        reason: "target-carries-workspace-marker",
+      })
+    );
+    expect(fs.realpathSync.native(error.protectedWorkspaceRoot ?? "")).toBe(
+      fs.realpathSync.native(foreignWorkspaceRoot)
+    );
+  });
+
+  test("rejects clean targets that themselves contain a pnpm-workspace.yaml marker", () => {
+    const currentWorkingDirectory = createTempDir();
+    const foreignWorkspaceRoot = createTempDir();
+    fs.writeFileSync(
+      path.join(foreignWorkspaceRoot, "pnpm-workspace.yaml"),
+      "packages:\n  - packages/*\n"
+    );
+
+    const error = captureUnsafeCleanTargetError(() =>
+      assertSafeCleanTarget(foreignWorkspaceRoot, currentWorkingDirectory)
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        outputDir: foreignWorkspaceRoot,
+        reason: "target-carries-workspace-marker",
+      })
+    );
+    expect(fs.realpathSync.native(error.protectedWorkspaceRoot ?? "")).toBe(
+      fs.realpathSync.native(foreignWorkspaceRoot)
+    );
+  });
+
+  // Representative of the file-only markers (lerna.json, nx.json, turbo.json,
+  // rush.json). One test covers the shape; the guard treats them uniformly.
+  test("rejects clean targets that themselves contain a lerna.json workspace marker", () => {
+    const currentWorkingDirectory = createTempDir();
+    const foreignWorkspaceRoot = createTempDir();
+    fs.writeFileSync(
+      path.join(foreignWorkspaceRoot, "lerna.json"),
+      '{"version": "independent"}\n'
+    );
+
+    const error = captureUnsafeCleanTargetError(() =>
+      assertSafeCleanTarget(foreignWorkspaceRoot, currentWorkingDirectory)
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        outputDir: foreignWorkspaceRoot,
+        reason: "target-carries-workspace-marker",
+      })
+    );
+    expect(fs.realpathSync.native(error.protectedWorkspaceRoot ?? "")).toBe(
+      fs.realpathSync.native(foreignWorkspaceRoot)
+    );
+  });
+
+  test("rejects clean targets that themselves contain a package.json declaring workspaces", () => {
+    const currentWorkingDirectory = createTempDir();
+    const foreignWorkspaceRoot = createTempDir();
+    fs.writeFileSync(
+      path.join(foreignWorkspaceRoot, "package.json"),
+      JSON.stringify({ name: "foreign-workspace", workspaces: ["packages/*"] })
+    );
+
+    const error = captureUnsafeCleanTargetError(() =>
+      assertSafeCleanTarget(foreignWorkspaceRoot, currentWorkingDirectory)
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        outputDir: foreignWorkspaceRoot,
+        reason: "target-carries-workspace-marker",
+      })
+    );
+    expect(fs.realpathSync.native(error.protectedWorkspaceRoot ?? "")).toBe(
+      fs.realpathSync.native(foreignWorkspaceRoot)
+    );
+  });
+
+  test("allows clean targets whose package.json has no workspaces field", () => {
+    const currentWorkingDirectory = createTempDir();
+    const foreignTarget = createTempDir();
+    fs.writeFileSync(
+      path.join(foreignTarget, "package.json"),
+      JSON.stringify({ name: "lone-package", version: "1.0.0" })
+    );
+
+    expect(() =>
+      assertSafeCleanTarget(foreignTarget, currentWorkingDirectory)
+    ).not.toThrow();
+  });
 });

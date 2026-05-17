@@ -7,7 +7,8 @@ export type UnsafeGeneratedPathReason =
   | "trailing-separator"
   | "current-directory"
   | "escapes-output"
-  | "symlink-component";
+  | "symlink-component"
+  | "nul-byte";
 
 export class UnsafeGeneratedPathError extends Data.TaggedError(
   "UnsafeGeneratedPathError"
@@ -38,5 +39,7 @@ const reasonText = (reason: UnsafeGeneratedPathReason): string => {
       return "path escapes the output directory";
     case "symlink-component":
       return "path contains a symbolic link";
+    case "nul-byte":
+      return "path must not contain NUL bytes";
   }
 };
