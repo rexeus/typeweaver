@@ -9,9 +9,12 @@ import {
   resolveTemplateDir,
 } from "./generatorDefaults.js";
 import {
+  acquireOutputLock,
   assertSafeCleanTargetEffect,
+  cleanOutputDirPreservingLock,
   ensureOutputDirectories,
-  removeOutputDir,
+  releaseOutputLock,
+  sweepOrphanTempdirs,
 } from "./generatorIO.js";
 import { IndexFileGenerator } from "./IndexFileGenerator.js";
 import { PluginLoader } from "./PluginLoader.js";
@@ -26,6 +29,13 @@ import type { GenerateParams } from "./generatorTypes.js";
  * long-lived runtime see fully isolated registrations. The generated-file
  * tracker is per-call by construction (built fresh inside
  * `ContextBuilder.buildGeneratorContext`).
+ *
+ * Each invocation acquires an exclusive lock at
+ * `outputDir/.typeweaver-lock/` via `Effect.acquireUseRelease`, so two
+ * `typeweaver generate` processes pointed at the same `outputDir` fail
+ * fast with a `ConcurrentGenerationError` rather than racing the
+ * clean+write sequence. The lock is released on success, on typed
+ * failure, and on interrupt (e.g. Ctrl+C).
  *
  * Pipeline ordering and the log lines along the way are held byte-stable
  * so the generated test-project output stays unchanged and the existing
@@ -56,133 +66,181 @@ export class Generator extends Effect.Service<Generator>()(
           const userConfig = (params.config ?? {}) as Record<string, unknown>;
 
           yield* Effect.logInfo("Starting generation...");
+          yield* Effect.logDebug(
+            `Input file: '${inputFile}'; output dir: '${outputDir}'`
+          );
 
           const registry = yield* PluginRegistry.createInstance();
 
           const templateDir = yield* resolveTemplateDir();
 
-          if (params.config?.clean !== false) {
-            yield* assertSafeCleanTargetEffect(outputDir, cwd, inputFile);
-            yield* Effect.logInfo("Cleaning output directory...");
-            yield* removeOutputDir(outputDir);
-          }
-
+          // The lock dir lives inside outputDir, so outputDir must exist
+          // before we can `mkdir` the lock. Make the base directories now;
+          // the subdirectories are recreated inside the lock scope if the
+          // clean step removes them.
           yield* ensureOutputDirectories({
             outputDir,
             responsesOutputDir,
             specOutputDir,
           });
 
-          yield* pluginLoader.loadAll({
-            registry,
-            requiredPlugins: defaultRequiredPlugins(),
-            strategies: DEFAULT_PLUGIN_RESOLUTION_STRATEGIES,
-            config: params.config,
-          });
+          const pipeline = Effect.gen(function* () {
+            // Reclaim any `.typeweaver-XXXX` tempdirs left behind by a
+            // prior run that died between `mkdtempSync` and the
+            // `try/finally` cleanup. The sweep is cheap and idempotent;
+            // it runs even with `--no-clean` so the Formatter never walks
+            // into orphan tempdirs and rewrites their `.tmp` content.
+            yield* sweepOrphanTempdirs(outputDir);
 
-          yield* Effect.logInfo(
-            `Bundling spec from '${inputFile}' to '${specOutputDir}'...`
-          );
-          let normalizedSpec = (yield* specLoader.load({
-            inputFile,
-            specOutputDir,
-          })).normalizedSpec;
-
-          const pluginContext = yield* contextBuilder.buildPluginContext({
-            outputDir,
-            inputDir,
-            config: userConfig,
-          });
-
-          yield* Effect.logInfo("Initializing plugins...");
-          const initial = yield* registry.getAll;
-          const initialized: (typeof initial)[number][] = [];
-          for (const registration of initial) {
-            if (registration.plugin.initialize) {
-              yield* registration.plugin.initialize(pluginContext);
-            }
-            initialized.push(registration);
-          }
-
-          let getGeneratedFiles: () => readonly string[] = () => [];
-
-          // Run the post-initialize pipeline, capture its exit, then always
-          // run finalize for every plugin that successfully initialized
-          // (Plugin contract advertises lifecycle cleanup). On a clean
-          // happy-path success the finalize errors propagate as usual; on
-          // failure the inner exit is restored after finalize so callers
-          // still see the original `PluginExecutionError`. The finalize log
-          // line and per-plugin ordering stay byte-identical to the prior
-          // sequential loop, preserving the golden-gate output.
-          //
-          // Typed failures from `finalize` are demoted to WARN logs so a
-          // single misbehaving plugin's finalize cannot mask a generate
-          // failure. Defects (programming bugs that throw synchronously
-          // instead of via `Effect.fail`) intentionally propagate —
-          // `Effect.catchAll` does not catch defects, and the Plugin
-          // contract labels them as bugs that should halt the run with
-          // the operator's attention.
-          const inner = yield* Effect.exit(
-            Effect.gen(function* () {
-              yield* Effect.logInfo("Collecting resources...");
-              for (const registration of initial) {
-                if (registration.plugin.collectResources) {
-                  normalizedSpec =
-                    yield* registration.plugin.collectResources(normalizedSpec);
-                }
-              }
-
-              const built = yield* contextBuilder.buildGeneratorContext({
+            if (params.config?.clean !== false) {
+              yield* assertSafeCleanTargetEffect(outputDir, cwd, inputFile);
+              yield* Effect.logInfo("Cleaning output directory...");
+              yield* cleanOutputDirPreservingLock(outputDir);
+              // The clean removed `responses/` and `spec/` (we preserve
+              // only the lock dir); recreate them before the pipeline
+              // bundles into them.
+              yield* ensureOutputDirectories({
                 outputDir,
-                inputDir,
-                config: userConfig,
-                normalizedSpec,
-                templateDir,
-                coreDir: CORE_DIR,
                 responsesOutputDir,
                 specOutputDir,
               });
-              getGeneratedFiles = built.getGeneratedFiles;
-
-              yield* Effect.logInfo("Generating code...");
-              for (const registration of initial) {
-                yield* Effect.logInfo(
-                  `Running plugin: ${registration.plugin.name}`
-                );
-                if (registration.plugin.generate) {
-                  yield* registration.plugin.generate(built.context);
-                }
-              }
-
-              yield* indexFileGenerator.generate({
-                templateDir,
-                outputDir,
-                generatedFiles: getGeneratedFiles(),
-                writeFile: built.context.writeFile,
-              });
-            })
-          );
-
-          yield* Effect.logInfo("Finalizing plugins...");
-          for (const registration of initialized) {
-            if (registration.plugin.finalize) {
-              yield* registration.plugin
-                .finalize(pluginContext)
-                .pipe(
-                  Effect.catchAll(cause => Effect.logWarning(cause.message))
-                );
             }
-          }
 
-          yield* inner;
+            yield* pluginLoader.loadAll({
+              registry,
+              requiredPlugins: defaultRequiredPlugins(),
+              strategies: DEFAULT_PLUGIN_RESOLUTION_STRATEGIES,
+              config: params.config,
+            });
 
-          if (params.config?.format !== false) {
-            yield* formatter.format(outputDir);
-          }
+            yield* Effect.logInfo(
+              `Bundling spec from '${inputFile}' to '${specOutputDir}'...`
+            );
+            let normalizedSpec = (yield* specLoader.load({
+              inputFile,
+              specOutputDir,
+            })).normalizedSpec;
 
-          const generatedFiles = getGeneratedFiles();
-          yield* Effect.logInfo("Generation complete!");
-          yield* Effect.logInfo(`Generated files: ${generatedFiles.length}`);
+            const pluginContext = yield* contextBuilder.buildPluginContext({
+              outputDir,
+              inputDir,
+              config: userConfig,
+            });
+
+            yield* Effect.logInfo("Initializing plugins...");
+            const initial = yield* registry.getAll;
+            const initialized: (typeof initial)[number][] = [];
+            for (const registration of initial) {
+              yield* Effect.logDebug(
+                `Initializing plugin: ${registration.plugin.name}`
+              );
+              if (registration.plugin.initialize) {
+                yield* registration.plugin.initialize(pluginContext);
+              }
+              initialized.push(registration);
+            }
+
+            let getGeneratedFiles: () => readonly string[] = () => [];
+
+            // Run the post-initialize pipeline, capture its exit, then always
+            // run finalize for every plugin that successfully initialized
+            // (Plugin contract advertises lifecycle cleanup). On a clean
+            // happy-path success the finalize errors propagate as usual; on
+            // failure the inner exit is restored after finalize so callers
+            // still see the original `PluginExecutionError`. The finalize log
+            // line and per-plugin ordering stay byte-identical to the prior
+            // sequential loop, preserving the golden-gate output.
+            //
+            // Typed failures from `finalize` are demoted to WARN logs so a
+            // single misbehaving plugin's finalize cannot mask a generate
+            // failure. Defects (programming bugs that throw synchronously
+            // instead of via `Effect.fail`) intentionally propagate —
+            // `Effect.catchAll` does not catch defects, and the Plugin
+            // contract labels them as bugs that should halt the run with
+            // the operator's attention.
+            const inner = yield* Effect.exit(
+              Effect.gen(function* () {
+                yield* Effect.logInfo("Collecting resources...");
+                for (const registration of initial) {
+                  if (registration.plugin.collectResources) {
+                    normalizedSpec =
+                      yield* registration.plugin.collectResources(
+                        normalizedSpec
+                      );
+                  }
+                }
+
+                const built = yield* contextBuilder.buildGeneratorContext({
+                  outputDir,
+                  inputDir,
+                  config: userConfig,
+                  normalizedSpec,
+                  templateDir,
+                  coreDir: CORE_DIR,
+                  responsesOutputDir,
+                  specOutputDir,
+                });
+                getGeneratedFiles = built.getGeneratedFiles;
+
+                yield* Effect.logInfo("Generating code...");
+                for (const registration of initial) {
+                  yield* Effect.logInfo(
+                    `Running plugin: ${registration.plugin.name}`
+                  );
+                  if (registration.plugin.generate) {
+                    yield* registration.plugin.generate(built.context);
+                  }
+                }
+
+                yield* indexFileGenerator.generate({
+                  templateDir,
+                  outputDir,
+                  generatedFiles: getGeneratedFiles(),
+                  writeFile: built.context.writeFile,
+                });
+              })
+            );
+
+            yield* Effect.logInfo("Finalizing plugins...");
+            for (const registration of initialized) {
+              if (registration.plugin.finalize) {
+                yield* registration.plugin
+                  .finalize(pluginContext)
+                  .pipe(
+                    Effect.catchAll(cause => Effect.logWarning(cause.message))
+                  );
+              }
+            }
+
+            yield* inner;
+
+            if (params.config?.format !== false) {
+              yield* formatter.format(outputDir);
+            }
+
+            const generatedFiles = getGeneratedFiles();
+            yield* Effect.logInfo("Generation complete!");
+            yield* Effect.logInfo(`Generated files: ${generatedFiles.length}`);
+          });
+
+          yield* Effect.acquireUseRelease(
+            Effect.gen(function* () {
+              const lockDir = yield* acquireOutputLock({
+                outputDir,
+                inputFile,
+              });
+              yield* Effect.logDebug(
+                `Acquired output lock at '${lockDir}' (pid ${process.pid})`
+              );
+              return lockDir;
+            }),
+            () => pipeline,
+            lockDir =>
+              Effect.gen(function* () {
+                yield* releaseOutputLock(lockDir);
+                yield* Effect.logDebug(`Released output lock at '${lockDir}'`);
+              })
+          );
         }).pipe(
           Effect.withSpan("typeweaver.generate", {
             attributes: {

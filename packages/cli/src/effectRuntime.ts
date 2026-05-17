@@ -1,7 +1,7 @@
 import { MainLayer } from "@rexeus/typeweaver-gen";
 import { NodeContext } from "@effect/platform-node";
-import { Layer, ManagedRuntime } from "effect";
-import { CliLoggerLayer } from "./cliLogger.js";
+import { Layer, Logger, LogLevel, ManagedRuntime } from "effect";
+import { CliLoggerLayer, VerboseCliLoggerLayer } from "./cliLogger.js";
 import {
   ConfigLoader,
   Formatter,
@@ -44,6 +44,33 @@ const CliServices = Layer.mergeAll(
 
 export const ProductionLayer = Layer.provideMerge(
   CliServices,
+  NodeContext.layer
+);
+
+/**
+ * Verbose flavor of the production runtime. Replaces the `Info`-default
+ * logger with one that accepts `Debug`-level records and lifts the
+ * minimum log level to `Debug` so `Effect.logDebug(...)` calls along
+ * high-value seams (lock acquire/release, plugin lifecycle entries,
+ * input/output paths) are routed to the console.
+ *
+ * Chosen by `cli.ts` when `--verbose` / `-V` is present in `process.argv`.
+ */
+const VerboseCliServices = Layer.mergeAll(
+  MainLayer,
+  ConfigLoader.Default,
+  Formatter.Default,
+  IndexFileGenerator.Default,
+  SpecLoader.Default,
+  PluginModuleLoader.Default,
+  PluginLoader.Default,
+  Generator.Default,
+  VerboseCliLoggerLayer,
+  Logger.minimumLogLevel(LogLevel.Debug)
+);
+
+export const VerboseLayer = Layer.provideMerge(
+  VerboseCliServices,
   NodeContext.layer
 );
 

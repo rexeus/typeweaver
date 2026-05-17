@@ -17,6 +17,10 @@ export type GenerateHandlerInput = {
   readonly "no-format": Option.Option<boolean>;
   readonly clean: Option.Option<boolean>;
   readonly "no-clean": Option.Option<boolean>;
+  // `--verbose` is consumed at runtime-layer selection time in `cli.ts`,
+  // so the handler simply ignores it. Declared here to satisfy the parsed
+  // shape from `@effect/cli`.
+  readonly verbose: Option.Option<boolean>;
 };
 
 const resolveBooleanFlag = (

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { Command, Options } from "@effect/cli";
 import { NodeRuntime } from "@effect/platform-node";
 import { Effect } from "effect";
-import { ProductionLayer } from "./effectRuntime.js";
+import { ProductionLayer, VerboseLayer } from "./effectRuntime.js";
 import { formatErrorForCli } from "./formatErrorForCli.js";
 import { runGenerate } from "./runGenerate.js";
 import { isOnlyValidationErrorCause } from "./validationErrorFilter.js";
@@ -68,6 +68,14 @@ const noCleanOption = Options.boolean("no-clean", { ifPresent: true }).pipe(
   Options.optional
 );
 
+const verboseOption = Options.boolean("verbose", { ifPresent: true }).pipe(
+  Options.withAlias("V"),
+  Options.withDescription(
+    "enable debug-level logging (effect spans, plugin attempts, lock acquire/release)"
+  ),
+  Options.optional
+);
+
 const generateCommand = Command.make(
   "generate",
   {
@@ -79,6 +87,7 @@ const generateCommand = Command.make(
     "no-format": noFormatOption,
     clean: cleanOption,
     "no-clean": noCleanOption,
+    verbose: verboseOption,
   },
   runGenerate
 ).pipe(
@@ -105,6 +114,15 @@ const run = Command.run(cli, {
   version: packageJson.version,
 });
 
+// `@effect/cli` scopes options to commands, but the chosen Layer is fixed
+// at program-construction time — there is no per-command Layer swap. We
+// detect `--verbose` / `-V` here so the right runtime is provided before
+// the command parser ever runs. The option is also declared on `generate`
+// so it shows up in `--help` and gets parsed cleanly (the flag is benign
+// to the handler).
+const isVerbose = process.argv.some(arg => arg === "--verbose" || arg === "-V");
+const runtimeLayer = isVerbose ? VerboseLayer : ProductionLayer;
+
 const program = run(process.argv).pipe(
   // @effect/cli surfaces help requests and validation issues as
   // `ValidationError`. The framework already prints a friendly message and
@@ -122,7 +140,7 @@ const program = run(process.argv).pipe(
       console.error(formatErrorForCli(cause));
     });
   }),
-  Effect.provide(ProductionLayer)
+  Effect.provide(runtimeLayer)
 );
 
 NodeRuntime.runMain(program, {

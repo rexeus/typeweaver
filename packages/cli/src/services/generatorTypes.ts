@@ -4,8 +4,9 @@ import type {
   PluginExecutionError,
   TypeweaverConfig,
 } from "@rexeus/typeweaver-gen";
-import type { PluginLoadError } from "../generators/errors/PluginLoadError.js";
-import type { UnsafeCleanTargetError } from "../generators/errors/UnsafeCleanTargetError.js";
+import type { ConcurrentGenerationError } from "../errors/ConcurrentGenerationError.js";
+import type { PluginLoadError } from "../errors/PluginLoadError.js";
+import type { UnsafeCleanTargetError } from "../errors/UnsafeCleanTargetError.js";
 import type { IndexFileGenerationError } from "./errors/IndexFileGenerationError.js";
 import type {
   InvalidSpecEntrypointError,
@@ -23,6 +24,7 @@ export type GenerateParams = {
 };
 
 export type GenerateFailure =
+  | ConcurrentGenerationError
   | UnsafeCleanTargetError
   | PluginLoadError
   | PluginDependencyError

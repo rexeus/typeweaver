@@ -97,6 +97,8 @@ bunx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --
   for all plugins)
 - `--format / --no-format`: Enable/disable code formatting with oxfmt (default: true)
 - `--clean / --no-clean`: Enable/disable output directory cleaning (default: true)
+- `--verbose, -V`: Enable debug-level logging (effect spans, plugin loader attempts, lock
+  acquire/release). Useful when triaging unexpected behavior.
 
 ### 📝 Configuration File
 

@@ -1,9 +1,17 @@
-import { Effect } from "effect";
+import { Effect, Logger, LogLevel } from "effect";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { CliLoggerLayer } from "../src/cliLogger.js";
+import { CliLoggerLayer, VerboseCliLoggerLayer } from "../src/cliLogger.js";
 
 const runWithCliLogger = (effect: Effect.Effect<void>): Promise<void> =>
   Effect.runPromise(effect.pipe(Effect.provide(CliLoggerLayer)));
+
+const runWithVerboseCliLogger = (effect: Effect.Effect<void>): Promise<void> =>
+  Effect.runPromise(
+    effect.pipe(
+      Effect.provide(VerboseCliLoggerLayer),
+      Logger.withMinimumLogLevel(LogLevel.Debug)
+    )
+  );
 
 describe("cliLogger", () => {
   beforeEach(() => {
@@ -58,5 +66,33 @@ describe("cliLogger", () => {
     );
     expect(vi.mocked(console.info)).not.toHaveBeenCalled();
     expect(vi.mocked(console.warn)).not.toHaveBeenCalled();
+  });
+});
+
+describe("verboseCliLogger", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test("prefixes a Debug-level message with [DEBUG] and routes it to console.info", async () => {
+    await runWithVerboseCliLogger(Effect.logDebug("Acquired output lock"));
+
+    expect(vi.mocked(console.info)).toHaveBeenCalledWith(
+      "[DEBUG] Acquired output lock"
+    );
+    expect(vi.mocked(console.warn)).not.toHaveBeenCalled();
+    expect(vi.mocked(console.error)).not.toHaveBeenCalled();
+  });
+
+  test("emits an Info-level message without the [DEBUG] tag", async () => {
+    await runWithVerboseCliLogger(Effect.logInfo("Starting generation"));
+
+    expect(vi.mocked(console.info)).toHaveBeenCalledWith("Starting generation");
   });
 });

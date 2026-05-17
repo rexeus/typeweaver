@@ -27,6 +27,6 @@ export default defineConfig([
     },
     nodeProtocol: true,
     libSourceDir: false,
-    templateSourceDir: "src/generators/templates",
+    templateSourceDir: "src/templates",
   }),
 ]);

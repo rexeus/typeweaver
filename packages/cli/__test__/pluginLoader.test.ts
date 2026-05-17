@@ -6,7 +6,7 @@ import type {
 } from "@rexeus/typeweaver-gen";
 import { Cause, Effect, Exit, Layer, ManagedRuntime, Ref } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
-import { PluginLoadError } from "../src/generators/errors/PluginLoadError.js";
+import { PluginLoadError } from "../src/errors/PluginLoadError.js";
 import { PluginLoader, PluginModuleLoader } from "../src/services/index.js";
 import { TestAssertionError } from "./errors/index.js";
 import {

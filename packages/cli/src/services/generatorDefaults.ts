@@ -14,15 +14,12 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 /**
  * Candidates for locating the EJS template directory. The CLI is bundled
  * to `dist/` in production but executed via `tsx` in development; the
- * template lives in `src/generators/templates/` either way, copied across
- * by the build to `dist/generators/templates/`.
+ * template lives in `src/templates/` either way, copied across by the
+ * build to `dist/templates/`.
  */
 const TEMPLATE_DIR_CANDIDATES = [
-  path.join(moduleDir, "..", "generators", "templates"),
-  path.join(moduleDir, "generators", "templates"),
-  path.join(moduleDir, "templates"),
   path.join(moduleDir, "..", "templates"),
-  path.join(moduleDir, "..", "..", "src", "generators", "templates"),
+  path.join(moduleDir, "..", "..", "src", "templates"),
 ] as const;
 
 /**

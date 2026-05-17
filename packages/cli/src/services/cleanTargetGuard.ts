@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { UnsafeCleanTargetError } from "../generators/errors/UnsafeCleanTargetError.js";
+import { UnsafeCleanTargetError } from "../errors/UnsafeCleanTargetError.js";
 
 /**
  * Filesystem probes the clean-target guard depends on. Kept narrow so tests

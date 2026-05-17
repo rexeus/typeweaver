@@ -53,7 +53,7 @@ Current sync leaves, by category:
 - `packages/gen/src/services/internal/pluginContextBuilder.ts` — `writeFile` and `renderTemplate`
   (the helpers exposed on `GeneratorContext`). Called inside the plugin author's `Effect.try`.
 - `packages/gen/src/plugins/copyPluginLibFiles.ts` — copy step of `definePluginWithLibCopy`.
-- `packages/cli/src/generators/formatter.ts` — `fs.readdirSync` / `fs.readFileSync` /
+- `packages/cli/src/services/Formatter.ts` — `fs.readdirSync` / `fs.readFileSync` /
   `fs.writeFileSync` in the format-pass body wrapped by the `Formatter` service.
 
 **Runs before the runtime (rule 2):**
@@ -90,9 +90,9 @@ implementation; tests pass an in-memory double.
   `packages/cli/src/services/`) holds code consumed by services in the same package — not part of
   the public service surface — keeping shared service plumbing out of consumer imports.
 - The errors directories split by layer: `services/errors/` holds domain errors raised from inside a
-  service (e.g. `SpecBundleError`, `IndexFileGenerationError`); `generators/errors/` holds errors
-  raised from the generation pipeline orchestration layer (`PluginLoadError`,
-  `UnsafeCleanTargetError`).
+  service (e.g. `SpecBundleError`, `IndexFileGenerationError`); the top-level `errors/` folder holds
+  errors raised from the generation pipeline orchestration layer (`PluginLoadError`,
+  `UnsafeCleanTargetError`, `ConcurrentGenerationError`).
 
 ### Negative
 
@@ -115,7 +115,7 @@ single pass. The seams already align with the service's surface (`writeFileStrin
   `packages/cli/src/services/SpecLoader.ts`, `packages/cli/src/services/SpecBundler.ts`,
   `packages/cli/src/services/SpecImporter.ts`, `packages/cli/src/services/generatorDefaults.ts`
 - Sync leaves: `packages/gen/src/services/internal/pluginContextBuilder.ts`,
-  `packages/gen/src/plugins/copyPluginLibFiles.ts`, `packages/cli/src/generators/formatter.ts`,
+  `packages/gen/src/plugins/copyPluginLibFiles.ts`, `packages/cli/src/services/Formatter.ts`,
   `packages/cli/src/services/cleanTargetGuard.ts`,
   `packages/cli/src/services/IndexFileGenerator.ts`, `packages/cli/src/services/SpecBundler.ts`
   (`createWrapperImportSpecifier` only)

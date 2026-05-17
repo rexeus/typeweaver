@@ -10,8 +10,8 @@ import { resolveTemplateDir } from "../../src/services/generatorDefaults.js";
  * `resolveTemplateDir` probes a fixed list of candidate directories for an
  * `Index.ejs` marker and returns the first match. The candidate list is
  * derived from `import.meta.url` of the production source, so the candidates
- * align with where the build copies templates (`dist/generators/templates/`)
- * and where tsx runs them (`src/generators/templates/`).
+ * align with where the build copies templates (`dist/templates/`) and where
+ * tsx runs them (`src/templates/`).
  */
 const moduleDir = path.dirname(
   fileURLToPath(
@@ -20,11 +20,9 @@ const moduleDir = path.dirname(
 );
 
 const TEMPLATE_DIR_CANDIDATES = [
-  path.join(moduleDir, "..", "generators", "templates"),
-  path.join(moduleDir, "generators", "templates"),
-  path.join(moduleDir, "templates"),
   path.join(moduleDir, "..", "templates"),
-  path.join(moduleDir, "..", "..", "src", "generators", "templates"),
+  path.join(moduleDir, "templates"),
+  path.join(moduleDir, "..", "..", "src", "templates"),
 ] as const;
 
 describe("resolveTemplateDir", () => {

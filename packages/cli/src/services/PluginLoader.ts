@@ -7,7 +7,7 @@ import type {
   TypeweaverConfig,
 } from "@rexeus/typeweaver-gen";
 import { Effect, Either } from "effect";
-import { PluginLoadError } from "../generators/errors/PluginLoadError.js";
+import { PluginLoadError } from "../errors/PluginLoadError.js";
 import { PluginModuleLoader } from "./PluginModuleLoader.js";
 
 export type PluginResolutionStrategy = "npm" | "local" | "scoped";
@@ -169,14 +169,21 @@ const loadConfiguredPlugin = (
     const attempts: { path: string; error: string }[] = [];
 
     for (const possiblePath of possiblePaths) {
+      yield* Effect.logDebug(
+        `Plugin '${pluginName}': attempting to load from '${possiblePath}'`
+      );
       const importResult = yield* moduleLoader
         .load(possiblePath)
         .pipe(Effect.either);
 
       if (Either.isLeft(importResult)) {
+        const errorMessage = formatError(importResult.left.cause);
+        yield* Effect.logDebug(
+          `Plugin '${pluginName}': '${possiblePath}' failed: ${errorMessage}`
+        );
         attempts.push({
           path: possiblePath,
-          error: formatError(importResult.left.cause),
+          error: errorMessage,
         });
         continue;
       }

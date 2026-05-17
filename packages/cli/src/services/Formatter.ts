@@ -30,6 +30,15 @@ const formatDirectory = async (
     .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 
   for (const content of contents) {
+    // Skip atomic-write tempdirs and the lockfile sentinel — both are
+    // hidden coordination artifacts, not user-facing output. Walking
+    // into them would re-read/rewrite in-flight content from another
+    // run (`.typeweaver-XXXX/generated.tmp`) or the live lockfile
+    // metadata (`.typeweaver-lock/info.json`).
+    if (content.name.startsWith(".typeweaver-")) {
+      continue;
+    }
+
     if (content.isFile()) {
       const filePath = path.join(targetDir, content.name);
       const unformatted = fs.readFileSync(filePath, "utf8");
