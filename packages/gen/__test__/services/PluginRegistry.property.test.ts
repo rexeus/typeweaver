@@ -151,6 +151,104 @@ describe("PluginRegistry (properties)", () => {
     );
   });
 
+  test("self-dependency fails with PluginDependencyError regardless of where it is registered", () => {
+    assert(
+      property(
+        uniqueArray(pluginNameArb, { minLength: 1, maxLength: 6 }),
+        pluginNameArb,
+        (siblingNames, selfDependentName) => {
+          const allNames = [...siblingNames, selfDependentName];
+          const uniqueNames = Array.from(new Set(allNames));
+          if (uniqueNames.length < 2) {
+            return;
+          }
+
+          const siblings = uniqueNames
+            .filter(name => name !== selfDependentName)
+            .map(name => aPluginNamed(name));
+          const selfDependent = aPluginNamed(selfDependentName, [
+            selfDependentName,
+          ]);
+
+          // Interleave: self-dependent plugin first, last, and middle
+          const orderings: readonly (readonly Plugin[])[] = [
+            [selfDependent, ...siblings],
+            [...siblings, selfDependent],
+            [
+              ...siblings.slice(0, Math.floor(siblings.length / 2)),
+              selfDependent,
+              ...siblings.slice(Math.floor(siblings.length / 2)),
+            ],
+          ];
+
+          for (const plugins of orderings) {
+            const exit = runWithRegistry(registry =>
+              Effect.gen(function* () {
+                for (const plugin of plugins) {
+                  yield* registry.register(plugin);
+                }
+                return yield* registry.getAll;
+              })
+            );
+
+            if (Exit.isSuccess(exit)) {
+              throw new Error(
+                `Expected cycle detection, got order: ${exit.value.map(r => r.name).join(",")}`
+              );
+            }
+
+            const failure = Cause.failureOption(exit.cause);
+            expect(failure._tag).toBe("Some");
+            if (failure._tag === "Some") {
+              expect(failure.value).toBeInstanceOf(PluginDependencyError);
+            }
+          }
+        }
+      )
+    );
+  });
+
+  test("toposort of a diamond DAG places the shared dependency first regardless of registration order", () => {
+    // Fixed diamond: a -> b, c; b -> d; c -> d.
+    // Expected toposort with alphabetical tie-break: d, b, c, a.
+    const diamond: readonly Plugin[] = [
+      aPluginNamed("a", ["b", "c"]),
+      aPluginNamed("b", ["d"]),
+      aPluginNamed("c", ["d"]),
+      aPluginNamed("d"),
+    ];
+
+    assert(
+      property(subarray(["a", "b", "c", "d"]), () => {
+        // Re-register the same plugin set in two extreme orders (forward and
+        // reversed) and assert the toposort output is invariant.
+        const forward = [...diamond];
+        const reversed = [...diamond].reverse();
+
+        const runOrdering = (plugins: readonly Plugin[]): readonly string[] => {
+          const exit = runWithRegistry(registry =>
+            Effect.gen(function* () {
+              for (const plugin of plugins) {
+                yield* registry.register(plugin);
+              }
+              return yield* registry.getAll;
+            })
+          );
+          if (Exit.isFailure(exit)) {
+            throw new Error(
+              `Expected success, got: ${Cause.pretty(exit.cause)}`
+            );
+          }
+          return exit.value.map(registration => registration.name);
+        };
+
+        const expected = ["d", "b", "c", "a"];
+        expect(runOrdering(forward)).toEqual(expected);
+        expect(runOrdering(reversed)).toEqual(expected);
+      })
+    );
+  });
+
   test("registries with a dependency cycle fail with PluginDependencyError", () => {
     assert(
       property(
@@ -184,6 +282,45 @@ describe("PluginRegistry (properties)", () => {
           }
         }
       )
+    );
+  });
+
+  test("an empty registry produces an empty getAll result", () => {
+    const exit = runWithRegistry(registry => registry.getAll);
+
+    if (Exit.isFailure(exit)) {
+      throw new Error(`Expected success, got: ${Cause.pretty(exit.cause)}`);
+    }
+    expect(exit.value).toEqual([]);
+  });
+
+  test("registration order does not affect the toposort output for any DAG", () => {
+    assert(
+      property(pluginDagArb, plugins => {
+        const reversed = [...plugins].reverse();
+
+        const runOrdering = (
+          orderedPlugins: readonly Plugin[]
+        ): readonly string[] => {
+          const exit = runWithRegistry(registry =>
+            Effect.gen(function* () {
+              for (const plugin of orderedPlugins) {
+                yield* registry.register(plugin);
+              }
+              return yield* registry.getAll;
+            })
+          );
+
+          if (Exit.isFailure(exit)) {
+            throw new Error(
+              `Expected success, got: ${Cause.pretty(exit.cause)}`
+            );
+          }
+          return exit.value.map(registration => registration.name);
+        };
+
+        expect(runOrdering(plugins)).toEqual(runOrdering(reversed));
+      })
     );
   });
 });

@@ -1,12 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { Command, Options, ValidationError } from "@effect/cli";
+import { Command, Options } from "@effect/cli";
 import { NodeRuntime } from "@effect/platform-node";
-import { Cause, Chunk, Effect } from "effect";
+import { Effect } from "effect";
 import { ProductionLayer } from "./effectRuntime.js";
 import { formatErrorForCli } from "./formatErrorForCli.js";
 import { runGenerate } from "./runGenerate.js";
+import { isOnlyValidationErrorCause } from "./validationErrorFilter.js";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const packageJson = JSON.parse(
@@ -108,14 +109,7 @@ const program = run(process.argv).pipe(
   // defects) are rendered via `formatErrorForCli` before bubbling up to
   // `NodeRuntime.runMain`, which exits non-zero on failure.
   Effect.tapErrorCause(cause => {
-    const failures = Chunk.toReadonlyArray(Cause.failures(cause));
-    const defects = Chunk.toReadonlyArray(Cause.defects(cause));
-    const hasOnlyValidationErrors =
-      failures.length + defects.length > 0 &&
-      failures.every(failure => ValidationError.isValidationError(failure)) &&
-      defects.every(defect => ValidationError.isValidationError(defect));
-
-    if (hasOnlyValidationErrors) {
+    if (isOnlyValidationErrorCause(cause)) {
       return Effect.void;
     }
 

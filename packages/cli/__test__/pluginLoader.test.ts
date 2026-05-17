@@ -509,6 +509,25 @@ describe("pluginLoader", () => {
     ]);
   });
 
+  test("wraps PluginModuleNotFoundError into the attempts[].error message", async () => {
+    const failure = await capturePluginLoadError(
+      runLoadPlugins({
+        registeredPlugins: [],
+        requiredPlugins: [requiredTypesPlugin()],
+        strategies: ["local"],
+        modules: new Map(),
+        config: configWithPlugin("missing"),
+      })
+    );
+
+    expect(failure.pluginName).toBe("missing");
+    expect(failure.attempts).toHaveLength(1);
+    expect(failure.attempts[0]).toEqual({
+      path: "missing",
+      error: "Cannot find module 'missing' imported from in-memory map",
+    });
+  });
+
   test("reports npm package attempts when a package plugin is missing", async () => {
     // Real-fs scenario: exercises the npm-strategy path resolution
     // (`@rexeus/typeweaver-X` + `@rexeus/X`) against Node's actual import

@@ -181,6 +181,26 @@ export const makeInMemoryFileSystem = (): InMemoryFileSystemHandle => {
           return Effect.void;
         }
 
+        // Non-recursive removal of a directory: match Node's `rm` semantics
+        // and refuse when the directory still contains files or child dirs.
+        const hasChildren =
+          Array.from(files.keys()).some(key => key.startsWith(prefix)) ||
+          Array.from(directories).some(
+            dir => dir !== normalized && dir.startsWith(prefix)
+          );
+
+        if (hasChildren) {
+          return Effect.fail(
+            new SystemError({
+              reason: "AlreadyExists",
+              module: "FileSystem",
+              method: "remove",
+              pathOrDescriptor: filePath,
+              description: `In-memory filesystem: directory '${filePath}' is not empty; pass { recursive: true } to remove it`,
+            })
+          );
+        }
+
         directories.delete(normalized);
         return Effect.void;
       }),

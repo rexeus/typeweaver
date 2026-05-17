@@ -122,4 +122,33 @@ describe("Generator span emission", () => {
 
     expect(spans.some(s => s.name === "typeweaver.generate")).toBe(true);
   });
+
+  /**
+   * Characterization: the generator currently emits only the top-level
+   * `typeweaver.generate` span — no nested phase spans. This locks the
+   * current behavior so that any future PR adding nested spans
+   * (e.g. `typeweaver.generate.bundle`, `typeweaver.generate.plugins`) must
+   * intentionally update this expectation. Until then, observability of
+   * sub-phase timing depends on log messages alone.
+   */
+  test("currently emits only the top-level span and no children (characterization)", async () => {
+    const workspace = createTempWorkspace();
+    const inputFile = writeTinySpec(workspace);
+    const outputDir = path.join(workspace, "generated");
+    const spans: CapturedSpan[] = [];
+
+    await effectRuntime.runPromise(
+      Generator.generate({
+        inputFile,
+        outputDir,
+        currentWorkingDirectory: workspace,
+        config: { input: inputFile, output: outputDir, format: false },
+      }).pipe(Effect.withTracer(makeCapturingTracer(spans)))
+    );
+
+    const childSpans = spans.filter(
+      s => s.parentName === "typeweaver.generate"
+    );
+    expect(childSpans).toEqual([]);
+  });
 });

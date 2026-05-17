@@ -64,4 +64,99 @@ describe("PathSafety", () => {
       expectFailureWithReason(exit, "empty-path");
     }).pipe(Effect.provide(PathSafety.Default))
   );
+
+  it.effect("fails with current-directory reason for requestedPath '.'", () =>
+    Effect.gen(function* () {
+      const exit = yield* Effect.exit(
+        PathSafety.validateGeneratedPath({
+          outputDir: "/tmp/output",
+          requestedPath: ".",
+        })
+      );
+      expectFailureWithReason(exit, "current-directory");
+    }).pipe(Effect.provide(PathSafety.Default))
+  );
+
+  it.effect("fails with parent-traversal reason for requestedPath '..'", () =>
+    Effect.gen(function* () {
+      const exit = yield* Effect.exit(
+        PathSafety.validateGeneratedPath({
+          outputDir: "/tmp/output",
+          requestedPath: "..",
+        })
+      );
+      expectFailureWithReason(exit, "parent-traversal");
+    }).pipe(Effect.provide(PathSafety.Default))
+  );
+
+  it.effect(
+    "fails with trailing-separator reason for requestedPath ending with '/'",
+    () =>
+      Effect.gen(function* () {
+        const exit = yield* Effect.exit(
+          PathSafety.validateGeneratedPath({
+            outputDir: "/tmp/output",
+            requestedPath: "domain/entity.ts/",
+          })
+        );
+        expectFailureWithReason(exit, "trailing-separator");
+      }).pipe(Effect.provide(PathSafety.Default))
+  );
+
+  // Characterization: the current implementation does NOT explicitly reject
+  // NUL bytes. The rule set passes the path through, and the symlink-check
+  // step ultimately invokes Node's `fs.lstatSync`, which throws a TypeError
+  // ("path must be ... without null bytes"). This surfaces as a defect, not
+  // a typed `UnsafeGeneratedPathError`. Locking this behavior flags the gap
+  // to downstream agents: a future change should reject NUL bytes
+  // explicitly (e.g. reason `"nul-byte"`) before any FS probe runs.
+  it.effect(
+    "currently surfaces a defect (TypeError) for requestedPath containing a NUL byte (characterization)",
+    () =>
+      Effect.gen(function* () {
+        const requestedPath = `foo${String.fromCharCode(0)}bar.ts`;
+        const exit = yield* Effect.exit(
+          PathSafety.validateGeneratedPath({
+            outputDir: "/tmp/output",
+            requestedPath,
+          })
+        );
+
+        expect(Exit.isFailure(exit)).toBe(true);
+        if (!Exit.isFailure(exit)) return;
+        const defects = Array.from(Cause.defects(exit.cause));
+        expect(defects.length).toBeGreaterThan(0);
+        expect(defects[0]).toBeInstanceOf(TypeError);
+        expect((defects[0] as Error).message).toMatch(/null bytes/i);
+      }).pipe(Effect.provide(PathSafety.Default))
+  );
+
+  it.effect(
+    "accepts an outputDir with a trailing slash and produces the same fullPath as without",
+    () =>
+      Effect.gen(function* () {
+        const withTrailing = yield* PathSafety.validateGeneratedPath({
+          outputDir: "/tmp/output/",
+          requestedPath: "domain/entity.ts",
+        });
+        const withoutTrailing = yield* PathSafety.validateGeneratedPath({
+          outputDir: "/tmp/output",
+          requestedPath: "domain/entity.ts",
+        });
+
+        expect(withTrailing.fullPath).toBe(withoutTrailing.fullPath);
+      }).pipe(Effect.provide(PathSafety.Default))
+  );
+
+  it.effect("accepts an outputDir that does not yet exist on disk", () =>
+    Effect.gen(function* () {
+      const result = yield* PathSafety.validateGeneratedPath({
+        outputDir: "/does-not-exist-on-disk-12345/output",
+        requestedPath: "fresh/entity.ts",
+      });
+
+      expect(result.generatedPath).toBe("fresh/entity.ts");
+      expect(result.fullPath.endsWith("fresh/entity.ts")).toBe(true);
+    }).pipe(Effect.provide(PathSafety.Default))
+  );
 });

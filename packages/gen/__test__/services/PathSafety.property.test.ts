@@ -123,6 +123,23 @@ describe("PathSafety (properties)", () => {
     );
   });
 
+  test("outputDir with a trailing slash produces the same fullPath as without", () => {
+    assert(
+      property(safeRelativePathArb, requested => {
+        const withTrailing = runValidate("/safe/output/", requested);
+        const withoutTrailing = runValidate("/safe/output", requested);
+
+        // If one rejects, both must reject for the same input — the trailing
+        // slash on outputDir is not a per-input policy concern.
+        if (!withTrailing.ok || !withoutTrailing.ok) {
+          return;
+        }
+
+        expect(withTrailing.fullPath).toBe(withoutTrailing.fullPath);
+      })
+    );
+  });
+
   test("the empty string is always rejected with UnsafeGeneratedPathError", () => {
     const program = PathSafety.validateGeneratedPath({
       outputDir: "/safe/output",

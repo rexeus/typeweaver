@@ -1252,6 +1252,23 @@ describe("createPluginContextBuilder", () => {
     ]);
   });
 
+  test("returns generated file paths in stable alphabetical order regardless of write order", () => {
+    const outputDir = aTempDir();
+    const generatorContext = aGeneratedProjectContext({ outputDir });
+
+    // Track in reverse alphabetical order to surface any insertion-order
+    // dependency.
+    generatorContext.addGeneratedFile("todo/Z.ts");
+    generatorContext.addGeneratedFile("todo/M.ts");
+    generatorContext.addGeneratedFile("todo/A.ts");
+
+    expect(generatorContext.getGeneratedFiles()).toEqual([
+      "todo/A.ts",
+      "todo/M.ts",
+      "todo/Z.ts",
+    ]);
+  });
+
   test("isolates the generated-file tracker across builder instances", () => {
     const firstBuilder = aBuilder();
     const secondBuilder = aBuilder();

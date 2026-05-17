@@ -98,6 +98,7 @@
   "devDependencies": {
     "@effect/vitest": "^0.29.0",
     "hono": "^4.12.9",
+    "test-utils": "file:../test-utils",
     "tsx": "^4.21.0",
     "zod": "^4.3.6"
   }

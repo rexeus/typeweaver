@@ -112,4 +112,19 @@ describe("resolveGenerateOptions", () => {
       })
     );
   });
+
+  test("reports input as the first missing option when both input and output are absent", () => {
+    const error = captureError(() =>
+      resolveGenerateOptions({}, {}, "/workspace")
+    );
+
+    expect(error).toBeInstanceOf(MissingGenerateOptionError);
+    expect(error).toEqual(
+      expect.objectContaining({
+        optionName: "input",
+        flag: "--input",
+        configKey: "input",
+      })
+    );
+  });
 });
