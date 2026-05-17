@@ -9,14 +9,14 @@ import { TemplateRenderer } from "./TemplateRenderer.js";
 import type { NormalizedSpec } from "../NormalizedSpec.js";
 import type {
   GeneratorContext,
-  PluginConfig,
   PluginContext,
+  TypeweaverUserConfig,
 } from "../plugins/contextTypes.js";
 
 export type PluginContextParams = {
   readonly outputDir: string;
   readonly inputDir: string;
-  readonly config: PluginConfig;
+  readonly config: TypeweaverUserConfig;
 };
 
 export type GeneratorContextParams = PluginContextParams & {

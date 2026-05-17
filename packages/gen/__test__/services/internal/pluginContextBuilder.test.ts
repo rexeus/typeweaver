@@ -446,6 +446,17 @@ describe("createPluginContextBuilder", () => {
     expect(readMissingResponse).toThrowError(
       "Missing canonical response 'unauthorized' in the normalized spec."
     );
+
+    // Discriminating field assertion: the tagged error carries the missing
+    // response name so a downstream handler can report which key was
+    // requested, not just that something was missing.
+    let captured: MissingCanonicalResponseError | undefined;
+    try {
+      readMissingResponse();
+    } catch (error) {
+      if (error instanceof MissingCanonicalResponseError) captured = error;
+    }
+    expect(captured?.responseName).toBe("unauthorized");
   });
 
   describe("getOperationOutputPaths", () => {

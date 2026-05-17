@@ -12,8 +12,8 @@ import type {
 } from "../../NormalizedSpec.js";
 import type {
   GeneratorContext,
-  PluginConfig,
   PluginContext,
+  TypeweaverUserConfig,
 } from "../../plugins/contextTypes.js";
 
 /**
@@ -158,12 +158,12 @@ export type PluginContextBuilderApi = {
   readonly createPluginContext: (params: {
     outputDir: string;
     inputDir: string;
-    config: PluginConfig;
+    config: TypeweaverUserConfig;
   }) => PluginContext;
   readonly createGeneratorContext: (params: {
     readonly outputDir: string;
     readonly inputDir: string;
-    readonly config: PluginConfig;
+    readonly config: TypeweaverUserConfig;
     readonly normalizedSpec: NormalizedSpec;
     readonly templateDir: string;
     readonly coreDir: string;
@@ -200,7 +200,7 @@ export function createPluginContextBuilder(
   const createPluginContext = (params: {
     outputDir: string;
     inputDir: string;
-    config: PluginConfig;
+    config: TypeweaverUserConfig;
   }): PluginContext => {
     return {
       outputDir: params.outputDir,
@@ -212,7 +212,7 @@ export function createPluginContextBuilder(
   const createGeneratorContext = (params: {
     readonly outputDir: string;
     readonly inputDir: string;
-    readonly config: PluginConfig;
+    readonly config: TypeweaverUserConfig;
     readonly normalizedSpec: NormalizedSpec;
     readonly templateDir: string;
     readonly coreDir: string;

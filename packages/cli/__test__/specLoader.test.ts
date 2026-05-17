@@ -668,6 +668,15 @@ describe("SpecLoader", () => {
     await expect(loadProjectSpec(project, specFile)).rejects.toBeInstanceOf(
       SpecBundleError
     );
+    // Discriminating field assertion: the error must carry a non-empty
+    // inputFile reference so operators (and the structured logs) can
+    // identify which spec entrypoint failed to bundle. The bundler stores
+    // the path relative to the cwd it was invoked with, so this asserts
+    // the path ends with the spec's basename rather than full equality.
+    const error = (await loadProjectSpec(project, specFile).catch(
+      (e: unknown) => e
+    )) as { readonly inputFile: string };
+    expect(error.inputFile).toMatch(/spec\.ts$/);
   });
 
   test("propagates errors thrown while importing bundled specs", async () => {

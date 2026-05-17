@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { resolveSafeGeneratedFilePath } from "../helpers/pathSafety.js";
 import type { GeneratorContext } from "./contextTypes.js";
 
 /**
@@ -24,11 +25,22 @@ export const copyPluginLibFiles = (params: {
 }): void => {
   if (!fs.existsSync(params.libSourceDir)) return;
 
-  const libDir = path.join(
+  // Funnel the destination through the same path-safety guard used by
+  // `writeFile` / `addGeneratedFile` so a malicious or typo'd plugin name
+  // (`name: "../escape"`) cannot scribble outside `outputDir`. The path is
+  // built by plain concatenation — `path.posix.join` would silently
+  // normalize away the very `..` segments the guard is meant to catch.
+  // The guard throws `UnsafeGeneratedPathError`, which the surrounding
+  // `Effect.try` in `definePluginWithLibCopy` translates to
+  // `PluginExecutionError`.
+  const requestedLibPath = `lib/${params.libNamespace}/.cp`;
+  const safeLibDir = resolveSafeGeneratedFilePath(
     params.context.outputDir,
-    "lib",
-    params.libNamespace
+    requestedLibPath
   );
+  // The `.cp` suffix is a synthetic leaf so the guard validates a
+  // file-shaped path; the actual destination is the parent directory.
+  const libDir = path.dirname(safeLibDir.fullPath);
 
   fs.cpSync(params.libSourceDir, libDir, { recursive: true });
 

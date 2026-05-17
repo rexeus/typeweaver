@@ -211,6 +211,9 @@ export const resolveSafeGeneratedFilePath = (
   const fullPath = path.resolve(outputRoot, toNativePath(generatedPath));
 
   if (!isStrictlyInsidePath(fullPath, outputRoot)) {
+    // Defense-in-depth — currently unreachable from the public API because
+    // the earlier `absolute-path` and `parent-traversal` guards short-circuit
+    // every input that could otherwise resolve outside `outputRoot`.
     throw new UnsafeGeneratedPathError({
       requestedPath,
       reason: "escapes-output",

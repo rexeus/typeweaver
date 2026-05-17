@@ -49,7 +49,11 @@ export class Generator extends Effect.Service<Generator>()(
           const responsesOutputDir = path.join(outputDir, "responses");
           const specOutputDir = path.join(outputDir, "spec");
           const inputDir = path.dirname(inputFile);
-          const pluginConfig = (params.config ?? {}) as Record<string, unknown>;
+          // The plugin context exposes the full Typeweaver user config so
+          // plugins can read whatever top-level keys they document; the type
+          // alias `TypeweaverUserConfig` (a permissive Record) names this
+          // contract for plugin authors.
+          const userConfig = (params.config ?? {}) as Record<string, unknown>;
 
           yield* Effect.logInfo("Starting generation...");
 
@@ -87,7 +91,7 @@ export class Generator extends Effect.Service<Generator>()(
           const pluginContext = yield* contextBuilder.buildPluginContext({
             outputDir,
             inputDir,
-            config: pluginConfig,
+            config: userConfig,
           });
 
           yield* Effect.logInfo("Initializing plugins...");
@@ -111,10 +115,13 @@ export class Generator extends Effect.Service<Generator>()(
           // line and per-plugin ordering stay byte-identical to the prior
           // sequential loop, preserving the golden-gate output.
           //
-          // Each finalize call is wrapped so a failure cannot short-circuit
-          // the loop or replace the inner exit. Finalize failures are not
-          // silently swallowed — they surface at WARN with the plugin name
-          // and tagged-error message so operators can investigate.
+          // Typed failures from `finalize` are demoted to WARN logs so a
+          // single misbehaving plugin's finalize cannot mask a generate
+          // failure. Defects (programming bugs that throw synchronously
+          // instead of via `Effect.fail`) intentionally propagate —
+          // `Effect.catchAll` does not catch defects, and the Plugin
+          // contract labels them as bugs that should halt the run with
+          // the operator's attention.
           const inner = yield* Effect.exit(
             Effect.gen(function* () {
               yield* Effect.logInfo("Collecting resources...");
@@ -128,7 +135,7 @@ export class Generator extends Effect.Service<Generator>()(
               const built = yield* contextBuilder.buildGeneratorContext({
                 outputDir,
                 inputDir,
-                config: pluginConfig,
+                config: userConfig,
                 normalizedSpec,
                 templateDir,
                 coreDir: CORE_DIR,

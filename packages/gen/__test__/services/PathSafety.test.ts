@@ -175,12 +175,4 @@ describe("PathSafety", () => {
       }) as unknown as Error
     );
   });
-
-  // The `escapes-output` reason in `resolveSafeGeneratedFilePath` is
-  // defense-in-depth: the earlier `absolute-path` and `parent-traversal`
-  // checks catch every input that could otherwise reach the final
-  // `isStrictlyInsidePath` test. The seam is intentionally unreachable from
-  // the public API — leaving the branch exercised only by code review keeps
-  // the test from baking in a contradiction.
-  test.skip("rejects paths that escape the output root via the final containment check", () => {});
 });

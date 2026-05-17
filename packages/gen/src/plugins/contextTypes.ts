@@ -1,9 +1,21 @@
 import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec.js";
 
 /**
- * Configuration for a typeweaver plugin.
+ * Per-plugin configuration passed in the tuple form
+ * `plugins: [["clients", { someOption: true }]]`. Plugins receive this value
+ * as their factory argument (`(cfg?: PluginConfig) => Plugin`).
  */
 export type PluginConfig = Record<string, unknown>;
+
+/**
+ * The full Typeweaver user config object, surfaced to plugin authors through
+ * `PluginContext.config`. Plugins should read whatever top-level keys are
+ * relevant to them (e.g. `output`, `plugins`, custom keys added by a
+ * plugin's documentation). This is intentionally typed as a permissive
+ * record so plugin authors can extend the config without TypeScript
+ * complaints at the consumer boundary.
+ */
+export type TypeweaverUserConfig = Record<string, unknown>;
 
 /**
  * Context provided to plugins during initialization and finalization.
@@ -11,7 +23,7 @@ export type PluginConfig = Record<string, unknown>;
 export type PluginContext = {
   readonly outputDir: string;
   readonly inputDir: string;
-  readonly config: PluginConfig;
+  readonly config: TypeweaverUserConfig;
 };
 
 export type OperationOutputPaths = {

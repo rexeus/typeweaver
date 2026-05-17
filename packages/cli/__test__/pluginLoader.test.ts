@@ -87,9 +87,6 @@ const createRecordingPluginRegistry = (
     return {
       register,
       getAll: Effect.succeed([] as never),
-      clear: Effect.sync(() => {
-        registeredPlugins.length = 0;
-      }),
     } satisfies PluginRegistryInstance;
   });
 

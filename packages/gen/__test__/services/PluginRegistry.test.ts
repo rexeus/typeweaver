@@ -250,23 +250,6 @@ describe("PluginRegistry", () => {
     );
   });
 
-  test("clear removes registrations and previous ordering", () => {
-    const registrations = runRegistry(registry =>
-      Effect.gen(function* () {
-        yield* registry.register(aPluginNamed("clients", ["types"]));
-        yield* registry.register(aPluginNamed("types"));
-        yield* registry.getAll;
-        yield* registry.clear;
-        yield* registry.register(aPluginNamed("analytics"));
-        return yield* registry.getAll;
-      })
-    );
-
-    expect(registrations.map(registration => registration.name)).toEqual([
-      "analytics",
-    ]);
-  });
-
   test("two instances created from the same service share no state", () => {
     const result = Effect.runSync(
       Effect.gen(function* () {

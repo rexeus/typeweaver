@@ -3,6 +3,7 @@ import path from "node:path";
 import type { PluginExecutionPhase } from "@rexeus/typeweaver-gen";
 import { PluginExecutionError } from "@rexeus/typeweaver-gen";
 import { Cause, Effect, Exit, Option } from "effect";
+import { withCapturedLogs } from "test-utils";
 import { afterEach, describe, expect, test } from "vitest";
 import { effectRuntime } from "../src/effectRuntime.js";
 import { Generator } from "../src/services/Generator.js";
@@ -156,7 +157,39 @@ describe("Generator.generate treats finalize as best-effort cleanup", () => {
   afterEach(cleanupTempDirs);
 
   test("does not fail the run when only finalize fails; the failure surfaces via the WARN log", async () => {
-    const exit = await runPhaseFailingGeneration("finalize");
+    const workspace = createTempWorkspace();
+    const pluginFile = writePhaseFailingPlugin(workspace, "finalize");
+    writeTinySpec(workspace);
+
+    const { result: exit, logs } = await effectRuntime.runPromise(
+      withCapturedLogs(
+        Effect.exit(
+          Generator.generate({
+            inputFile: "spec/index.ts",
+            outputDir: "generated/output",
+            config: {
+              input: "spec/index.ts",
+              output: "generated/output",
+              format: false,
+              plugins: [pluginFile],
+            },
+            currentWorkingDirectory: workspace,
+          })
+        )
+      )
+    );
+
     expect(Exit.isSuccess(exit)).toBe(true);
+
+    // The finalize failure must not be silently swallowed: a single WARN
+    // record carries the plugin name and original error message so the
+    // operator can investigate.
+    const finalizeWarnings = logs.filter(
+      log =>
+        log.level === "WARN" &&
+        log.message.includes("phase-failing-plugin") &&
+        log.message.includes("boom")
+    );
+    expect(finalizeWarnings).toHaveLength(1);
   });
 });

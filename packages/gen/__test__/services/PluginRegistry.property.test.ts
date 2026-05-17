@@ -2,7 +2,7 @@ import { Cause, Effect, Exit, Logger } from "effect";
 import {
   assert,
   property,
-  stringMatching,
+  string,
   subarray,
   tuple,
   uniqueArray,
@@ -38,11 +38,11 @@ const runWithRegistry = <A, E>(
   );
 
 /**
- * Arbitrary that generates a non-empty plugin name made of lowercase
- * letters. Restricting the alphabet keeps the test names readable when
- * fast-check reports a counter-example.
+ * Arbitrary that generates a non-empty plugin name from the broader string
+ * space. Broader than the original `^[a-z]{1,8}$` alphabet so unicode and
+ * case-sensitivity assumptions surface as fast-check counter-examples.
  */
-const pluginNameArb = stringMatching(/^[a-z]{1,8}$/).filter(
+const pluginNameArb = string({ minLength: 1, maxLength: 16 }).filter(
   name => name.length > 0
 );
 
@@ -115,8 +115,15 @@ describe("PluginRegistry (properties)", () => {
           }
 
           const observed = exit.value.map(registration => registration.name);
-          const alphabetical = [...names].sort((a, b) => a.localeCompare(b));
-          expect(observed).toEqual(alphabetical);
+          // The registry compares with `<`/`>` (UTF-16 code-unit ordering),
+          // not `localeCompare`. Matching the comparator here keeps the
+          // property aligned with the production sort: the broader name
+          // alphabet (now including unicode and mixed case) would otherwise
+          // diverge from a locale-aware comparator.
+          const lexicographic = [...names].sort((a, b) =>
+            a < b ? -1 : a > b ? 1 : 0
+          );
+          expect(observed).toEqual(lexicographic);
         }
       )
     );

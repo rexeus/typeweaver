@@ -23,7 +23,6 @@ export type PluginRegistryInstance = {
     readonly PluginRegistration[],
     PluginDependencyError
   >;
-  readonly clear: Effect.Effect<void>;
 };
 
 const sortPluginRegistrations = (
@@ -168,12 +167,7 @@ const createInstance = (): Effect.Effect<PluginRegistryInstance> =>
       });
     });
 
-    const clear: Effect.Effect<void> = Ref.set(
-      ref,
-      new Map<string, PluginRegistration>()
-    );
-
-    return { register, getAll, clear } as const;
+    return { register, getAll } as const;
   });
 
 /**

@@ -43,6 +43,17 @@ const normalizeSpec = (spec: SpecDefinition): NormalizedSpec => {
   return result.right;
 };
 
+// Capture the typed failure from `normalizeSpecEffect` without rethrowing
+// so tests can assert on discriminating fields (resourceName, operationId,
+// etc.) — not just the error class.
+const captureNormalizeError = (spec: SpecDefinition): unknown => {
+  const result = Effect.runSync(Effect.either(normalizeSpecEffect(spec)));
+  if (Either.isRight(result)) {
+    throw new Error("Expected normalization to fail but it succeeded");
+  }
+  return result.left;
+};
+
 type ResponseBaseOverrides = {
   readonly statusCode?: HttpStatusCode;
   readonly description?: string;
@@ -802,18 +813,24 @@ describe("normalizeSpec", () => {
     test("rejects resources without operations", () => {
       const spec = aSpec({ todos: { operations: [] } });
 
-      expect(() => normalizeSpec(spec)).toThrowError(
-        EmptyResourceOperationsError
+      const error = captureNormalizeError(spec);
+      expect(error).toBeInstanceOf(EmptyResourceOperationsError);
+      expect((error as EmptyResourceOperationsError).resourceName).toBe(
+        "todos"
       );
     });
 
     test("rejects operations without responses", () => {
       const spec = aSpec({
-        todos: { operations: [anOperation({ responses: [] })] },
+        todos: {
+          operations: [anOperation({ operationId: "noResp", responses: [] })],
+        },
       });
 
-      expect(() => normalizeSpec(spec)).toThrowError(
-        EmptyOperationResponsesError
+      const error = captureNormalizeError(spec);
+      expect(error).toBeInstanceOf(EmptyOperationResponsesError);
+      expect((error as EmptyOperationResponsesError).operationId).toBe(
+        "noResp"
       );
     });
   });
@@ -850,7 +867,9 @@ describe("normalizeSpec", () => {
         todos: { operations: [anOperation({ operationId })] },
       });
 
-      expect(() => normalizeSpec(spec)).toThrowError(InvalidOperationIdError);
+      const error = captureNormalizeError(spec);
+      expect(error).toBeInstanceOf(InvalidOperationIdError);
+      expect((error as InvalidOperationIdError).operationId).toBe(operationId);
     });
 
     test.each([
@@ -862,7 +881,11 @@ describe("normalizeSpec", () => {
         [resourceName]: { operations: [anOperation()] },
       });
 
-      expect(() => normalizeSpec(spec)).toThrowError(InvalidResourceNameError);
+      const error = captureNormalizeError(spec);
+      expect(error).toBeInstanceOf(InvalidResourceNameError);
+      expect((error as InvalidResourceNameError).resourceName).toBe(
+        resourceName
+      );
     });
 
     test("rejects duplicate canonical response names", () => {

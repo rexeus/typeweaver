@@ -92,4 +92,33 @@ describe("PluginModuleLoader", () => {
       "Failed to load plugin module 'broken-plugin': string-cause"
     );
   });
+
+  test("Default layer fails with PluginModuleNotFoundError when the specifier cannot be resolved by Node", async () => {
+    // Exercises the real `import(specifier)` seam (not the in-memory fake)
+    // so the `tryPromise` -> `catch` mapping in `PluginModuleLoader.Default`
+    // is covered end-to-end. The specifier is intentionally bizarre so no
+    // package manager could ever satisfy it.
+    const unresolvableSpecifier = "definitely-not-a-real-package-xyz123";
+
+    const runtime = ManagedRuntime.make(PluginModuleLoader.Default);
+    try {
+      const result = await runtime.runPromise(
+        Effect.either(PluginModuleLoader.load(unresolvableSpecifier))
+      );
+
+      if (!Either.isLeft(result)) {
+        throw new Error(
+          "Expected the real loader to fail for an unresolvable specifier"
+        );
+      }
+
+      expect(result.left).toBeInstanceOf(PluginModuleNotFoundError);
+      expect(result.left.specifier).toBe(unresolvableSpecifier);
+      // The underlying Node module-not-found error must be preserved on the
+      // `cause` field so operators can inspect what Node actually reported.
+      expect(result.left.cause).toBeDefined();
+    } finally {
+      await runtime.dispose();
+    }
+  });
 });

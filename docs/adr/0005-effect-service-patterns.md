@@ -52,8 +52,10 @@ service body.
   receives the per-call `PluginRegistryInstance` via `LoadParams`
 - `IndexFileGenerator` (`packages/cli/src/services/IndexFileGenerator.ts`) — yields
   `TemplateRenderer`
-- `ContextBuilder` (`packages/gen/src/services/ContextBuilder.ts`) — yields `PathSafety`,
-  `TemplateRenderer`, `PluginRegistry`
+- `ContextBuilder` (`packages/gen/src/services/ContextBuilder.ts`) — yields `PathSafety` and
+  `TemplateRenderer`. `PluginRegistry` is invoked per-call from `Generator` and is not yielded by
+  `ContextBuilder`; the asymmetry keeps the per-call registry instance owned by the orchestrator
+  rather than the context factory.
 
 ## Consequences
 
