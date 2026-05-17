@@ -5,7 +5,8 @@ import type {
   NormalizedSpec,
 } from "@rexeus/typeweaver-gen";
 import { Effect } from "effect";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { withCapturedLogs } from "test-utils";
+import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import { openApiPlugin } from "../../src/index.js";
 import {
@@ -18,6 +19,7 @@ import type {
   OpenApiInfoObject,
   OpenApiServerObject,
 } from "../../src/index.js";
+import type { CapturedLog } from "test-utils";
 
 type WrittenFile = {
   readonly path: string;
@@ -39,11 +41,19 @@ const runGenerate = (
   Effect.runSync(plugin.generate(context));
 };
 
-describe("openApiPlugin", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+const runGenerateCapturingLogs = (
+  options: unknown,
+  context: OpenApiGeneratorContext
+): readonly CapturedLog[] => {
+  const plugin = openApiPlugin(options);
+  if (plugin.generate === undefined) {
+    throw new Error("openApiPlugin must define a generate stage");
+  }
+  const { logs } = Effect.runSync(withCapturedLogs(plugin.generate(context)));
+  return logs;
+};
 
+describe("openApiPlugin", () => {
   test("writes an OpenAPI document to the default output path", () => {
     const context = anOpenApiGeneratorContextWith(anItemsSpec());
 
@@ -127,7 +137,6 @@ describe("openApiPlugin", () => {
   });
 
   test("warns without embedding builder warnings in the OpenAPI document", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const context = anOpenApiGeneratorContextWith(
       anItemsSpec({
         operations: [
@@ -140,22 +149,21 @@ describe("openApiPlugin", () => {
       })
     );
 
-    runGenerate({}, context);
+    const logs = runGenerateCapturingLogs({}, context);
 
     const document = JSON.parse(context.writtenFiles[0]?.content ?? "{}");
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("OpenAPI generation completed with 1 warning(s).")
+    const warningLogs = logs.filter(entry => entry.level === "WARN");
+    expect(warningLogs).toHaveLength(1);
+    const warningMessage = warningLogs[0]?.message ?? "";
+    expect(warningMessage).toContain(
+      "OpenAPI generation completed with 1 warning(s)."
     );
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("missing-path-parameter-schema")
+    expect(warningMessage).toContain("missing-path-parameter-schema");
+    expect(warningMessage).toContain(
+      "Path parameter 'itemId' is missing a schema."
     );
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("Path parameter 'itemId' is missing a schema.")
-    );
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining(
-        "/paths/~1items~1{itemId}/get/parameters/0/schema"
-      )
+    expect(warningMessage).toContain(
+      "/paths/~1items~1{itemId}/get/parameters/0/schema"
     );
     expect(document).not.toHaveProperty("warnings");
   });

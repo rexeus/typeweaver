@@ -235,6 +235,9 @@ importers:
       ibm-openapi-validator:
         specifier: 1.37.13
         version: 1.37.13
+      test-utils:
+        specifier: file:../test-utils
+        version: link:../test-utils
       zod:
         specifier: ^4.3.6
         version: 4.3.6

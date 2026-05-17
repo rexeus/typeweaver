@@ -47,9 +47,10 @@ service body.
 - `SpecBundler`, `SpecImporter` — yield `FileSystem`
 - `PluginLoader` (`packages/cli/src/services/PluginLoader.ts`) — yields `PluginRegistry`,
   `PluginModuleLoader`
-- `IndexFileGenerator` (`packages/cli/src/services/IndexFileGenerator.ts`) — yields `PathSafety`
+- `IndexFileGenerator` (`packages/cli/src/services/IndexFileGenerator.ts`) — yields
+  `TemplateRenderer`
 - `PluginRegistry` (`packages/gen/src/services/PluginRegistry.ts`) — holds a
-  `Ref<readonly PluginRegistration[]>`
+  `Ref<Map<string, PluginRegistration>>`
 - `ContextBuilder` (`packages/gen/src/services/ContextBuilder.ts`) — yields `PathSafety`,
   `TemplateRenderer`, `PluginRegistry`
 

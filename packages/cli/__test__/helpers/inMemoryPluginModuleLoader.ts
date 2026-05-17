@@ -1,8 +1,6 @@
 import { Effect, Layer } from "effect";
-import {
-  PluginModuleLoader,
-  PluginModuleNotFoundError,
-} from "../../src/services/PluginModuleLoader.js";
+import { PluginModuleNotFoundError } from "../../src/services/errors/PluginModuleNotFoundError.js";
+import { PluginModuleLoader } from "../../src/services/PluginModuleLoader.js";
 
 /**
  * Builds a test layer for `PluginModuleLoader` that resolves specifiers

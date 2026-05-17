@@ -1,9 +1,7 @@
 import { Effect, Either, Layer, ManagedRuntime } from "effect";
 import { describe, expect, test } from "vitest";
-import {
-  PluginModuleLoader,
-  PluginModuleNotFoundError,
-} from "../../src/services/PluginModuleLoader.js";
+import { PluginModuleNotFoundError } from "../../src/services/errors/PluginModuleNotFoundError.js";
+import { PluginModuleLoader } from "../../src/services/PluginModuleLoader.js";
 
 /**
  * Builds a `PluginModuleLoader` layer backed by an in-memory map of

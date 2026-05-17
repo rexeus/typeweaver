@@ -7,10 +7,8 @@ export type { GenerateFailure, GenerateParams } from "./generatorTypes.js";
 export { IndexFileGenerator } from "./IndexFileGenerator.js";
 export { PluginLoader } from "./PluginLoader.js";
 export type { PluginResolutionStrategy } from "./PluginLoader.js";
-export {
-  PluginModuleLoader,
-  PluginModuleNotFoundError,
-} from "./PluginModuleLoader.js";
+export { PluginModuleLoader } from "./PluginModuleLoader.js";
+export { PluginModuleNotFoundError } from "./errors/PluginModuleNotFoundError.js";
 export { SpecBundler } from "./SpecBundler.js";
 export type { SpecBundlerConfig, SpecBundlerDeps } from "./SpecBundler.js";
 export { SpecImporter } from "./SpecImporter.js";

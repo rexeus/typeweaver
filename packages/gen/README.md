@@ -10,170 +10,134 @@ clients, validators, routers, and more ✨
 
 ## 📝 Generation Package
 
-Provides the core components for generating code with typeweaver. This package forms the basis for
-all plugins.
+Core building blocks for authoring typeweaver plugins: the `Plugin` type, the `definePlugin` and
+`definePluginWithLibCopy` constructors, the normalized resource model, and the lifecycle context
+types consumed by the CLI orchestrator.
 
 ---
 
 ## 📥 Installation
 
 ```bash
-npm install -D @rexeus/typeweaver-gen
+npm install -D @rexeus/typeweaver-gen effect
 ```
+
+`effect` is a peer dependency — match the CLI's version (`^3.21.x`).
 
 ## 💡 How to use
 
-Most users don’t depend on this package directly — use the CLI instead:
+Most users don't depend on this package directly — use the CLI instead:
 [`@rexeus/typeweaver`](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md). If
-you’re writing a plugin, start here.
+you're writing a plugin, start here.
 
 ### 🚀 Minimal plugin
 
+A plugin is a value returned from `definePlugin(...)`. Each lifecycle stage returns an `Effect`
+whose error channel is narrowed to `PluginExecutionError`. The orchestrator does not catch raw
+throws — wrap synchronous emission in `Effect.try` so thrown exceptions become typed failures:
+
 ```ts
-import { BasePlugin, type GeneratorContext } from "@rexeus/typeweaver-gen";
+import { definePlugin, PluginExecutionError } from "@rexeus/typeweaver-gen";
+import type { Plugin } from "@rexeus/typeweaver-gen";
+import { Effect } from "effect";
 
-export class MyPlugin extends BasePlugin {
-  // Give your plugin a unique name
-  name = "my-plugin";
+export const helloPlugin: Plugin = definePlugin({
+  name: "hello",
+  generate: context =>
+    Effect.try({
+      try: () => {
+        context.writeFile("hello.txt", "hello from a typeweaver plugin\n");
+      },
+      catch: cause =>
+        new PluginExecutionError({
+          pluginName: "hello",
+          phase: "generate",
+          cause,
+        }),
+    }),
+});
 
-  // Use the generate phase to render templates and write files
-  async generate(context: GeneratorContext) {
-    for (const resource of context.normalizedSpec.resources) {
-      const content = context.renderTemplate("Entity.ejs", {
-        resource,
-        operations: resource.operations,
-        coreDir: context.coreDir,
-      });
-      context.writeFile(`${resource.name}/${resource.name}Stuff.ts`, content);
-    }
-  }
-}
+export default helloPlugin;
 ```
 
-Templates live under your plugin’s `src/templates`. They receive your data object as EJS locals.
+### 📦 Emit-and-copy plugins
 
-## 🔧 What it provides
+When a plugin ships static runtime support code under `src/lib/`, use `definePluginWithLibCopy`. It
+copies the lib directory into `output/lib/{pluginName}/` and runs one or more synchronous emitter
+functions inside a shared `Effect.try` boundary:
 
-- Base classes: `BasePlugin`, `BaseTemplatePlugin` for lifecycle defaults, EJS helpers, and lib
-  copying.
-- Types & contexts: `TypeweaverPlugin`, `PluginContext`, `GeneratorContext` with `writeFile`,
-  `renderTemplate`, and file tracking.
-- Registry: `PluginRegistry` to register and query plugins; the CLI orchestrates lifecycle
-  execution.
-- Resource model: `NormalizedSpec`, `NormalizedResource`, `NormalizedOperation`,
-  `NormalizedResponse`, and `NormalizedResponseUsage`, representing the normalized API data derived
-  from your spec entrypoint.
+```ts
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { definePluginWithLibCopy } from "@rexeus/typeweaver-gen";
+import type { Plugin } from "@rexeus/typeweaver-gen";
+import { generate as generateRequests } from "./requestGenerator.js";
+import { generate as generateResponses } from "./responseGenerator.js";
+
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+
+export const typesPlugin: Plugin = definePluginWithLibCopy({
+  name: "types",
+  libSourceDir: path.join(moduleDir, "lib"),
+  generators: [generateRequests, generateResponses],
+});
+
+export default typesPlugin;
+```
 
 ## 🔌 Plugin lifecycle
 
-The lifecycle keeps concerns separated and makes it easy to compose multiple plugins. Implement only
-what you need.
+The orchestrator runs four optional stages once per `typeweaver generate` invocation:
 
 ```ts
-type TypeweaverPlugin = {
-  name: string;
-  initialize?(context: PluginContext): Promise<void> | void;
-  collectResources?(normalizedSpec: NormalizedSpec): Promise<NormalizedSpec> | NormalizedSpec;
-  generate?(context: GeneratorContext): Promise<void> | void;
-  finalize?(context: PluginContext): Promise<void> | void;
+type Plugin = {
+  readonly name: string;
+  readonly depends?: readonly string[];
+  readonly initialize?: (ctx: PluginContext) => Effect.Effect<void, PluginExecutionError>;
+  readonly collectResources?: (
+    spec: NormalizedSpec
+  ) => Effect.Effect<NormalizedSpec, PluginExecutionError>;
+  readonly generate?: (ctx: GeneratorContext) => Effect.Effect<void, PluginExecutionError>;
+  readonly finalize?: (ctx: PluginContext) => Effect.Effect<void, PluginExecutionError>;
 };
 ```
 
-- Initialize phase (`initialize`): Load and validate plugin configuration, check prerequisites.
-- Collect Resources phase (`collectResources`): Inspect the normalized API model; derive or enrich
-  metadata (naming, groupings), filter or reorder resources, and share derived artifacts across
-  plugins if needed.
-- Generate phase (`generate`): Render templates and emit code using `context.writeFile` (tracked);
-  copy or produce any runtime libraries required by the generated code.
-- Finalize phase (`finalize`): Post-process outputs, clean stale generated files, and perform final
-  organization steps.
+| Stage              | When                                         | Use it for                                                      |
+| ------------------ | -------------------------------------------- | --------------------------------------------------------------- |
+| `initialize`       | After plugin discovery, before normalization | Setup that needs the resolved output directory but not the spec |
+| `collectResources` | After normalization, before emission         | Transforming the normalized spec (e.g. injecting derived ops)   |
+| `generate`         | Once the spec is final                       | Writing files via `context.writeFile`                           |
+| `finalize`         | After every plugin has generated             | Post-processing, summary output                                 |
 
-## 🧰 Generator context
+`depends` declares a topological ordering: a plugin with `depends: ["types"]` will not run a stage
+until `types`'s same stage has completed.
 
-The `GeneratorContext` is passed to your plugin's `generate` method. It gives you everything you
-need to emit files: the normalized spec, resolved paths, and helpers for imports, templates, and
-file tracking.
+## 🔧 What it exports
 
-### Properties
+- **Plugin authoring:** `definePlugin`, `definePluginWithLibCopy`, `copyPluginLibFiles`, the
+  `Plugin` type.
+- **Lifecycle contexts:** `PluginContext`, `GeneratorContext` — the records passed to each stage,
+  with helpers for `writeFile`, `renderTemplate`, `addGeneratedFile`, and per-resource path
+  resolution.
+- **Tagged errors:** `PluginExecutionError`, `PluginDependencyError`, `UnsafeGeneratedPathError` —
+  raised at the plugin boundary and the orchestrator.
+- **Normalized resource model:** `NormalizedSpec`, `NormalizedResource`, `NormalizedOperation`,
+  `NormalizedResponse`, `NormalizedResponseUsage` — the validated API model delivered to plugins.
+- **Services:** `PluginRegistry`, `TemplateRenderer`, `PathSafety`, `ContextBuilder` — composed by
+  the CLI runtime; plugin authors rarely need to reference them directly.
 
-| Property             | Description                                                                                                                                    |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `normalizedSpec`     | The fully validated and normalized API spec — resources, operations, and responses ready for generation.                                       |
-| `templateDir`        | Absolute path to your plugin's compiled EJS templates (`dist/templates/`). Pass template names relative to this directory to `renderTemplate`. |
-| `coreDir`            | The import specifier for `@rexeus/typeweaver-core` — use in templates so generated code imports core types correctly.                          |
-| `responsesOutputDir` | Absolute path to the shared `responses/` output directory where canonical response files are written.                                          |
-| `specOutputDir`      | Absolute path to the `spec/` output directory containing the bundled spec and shim files.                                                      |
+## 📚 Authoring a plugin
 
-### Methods
+The README covers the minimum surface. For the full guide — `GeneratorContext` helpers, factory
+plugins with options, higher-order constructors that resolve services at composition time, lib-copy
+internals, the `depends` ordering rules, and a testable fake-context pattern — see
+[`docs/plugin-authoring.md`](https://github.com/rexeus/typeweaver/tree/main/docs/plugin-authoring.md).
 
-| Method                                                          | Description                                                                                              |
-| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `getCanonicalResponse(name)`                                    | Look up a canonical (shared) response by name. Throws if the response does not exist.                    |
-| `getCanonicalResponseOutputFile(name)`                          | Get the absolute output file path for a canonical response.                                              |
-| `getCanonicalResponseImportPath({ importerDir, responseName })` | Compute the relative import path from a generated file to a canonical response file.                     |
-| `getSpecImportPath({ importerDir })`                            | Compute the relative import path from a generated `spec.ts` consumer to the bundled spec shim.           |
-| `getOperationOutputPaths({ resourceName, operationId })`        | Get all output file paths for a given operation (request, response, validators, etc.).                   |
-| `getResourceOutputDir(name)`                                    | Get the absolute output directory for a resource (e.g. `<output>/todo/`).                                |
-| `writeFile(rel, content)`                                       | Write a file relative to the output root. Creates directories as needed and tracks the file for cleanup. |
-| `renderTemplate(tplPath, data)`                                 | Render an EJS template from `templateDir` with the given data object. Returns the rendered string.       |
-| `addGeneratedFile(rel)`                                         | Mark a file as generated (for tracking) without writing it. Useful when another tool produces the file.  |
-| `getGeneratedFiles()`                                           | List all file paths tracked during this generation run.                                                  |
+Background reading on the API shape:
 
-### Example: using the context in a plugin
-
-```ts
-async generate(context: GeneratorContext) {
-  for (const resource of context.normalizedSpec.resources) {
-    const outputDir = context.getResourceOutputDir(resource.name);
-
-    for (const operation of resource.operations) {
-      // Render a template with operation data
-      const content = context.renderTemplate("MyTemplate.ejs", {
-        coreDir: context.coreDir,
-        operation,
-      });
-
-      // Write the result — directories are created automatically
-      context.writeFile(`${resource.name}/${operation.operationId}Custom.ts`, content);
-    }
-  }
-}
-```
-
-### 📦 Shipping runtime helpers
-
-Sometimes your generated code needs small reusable runtime pieces (e.g., abstract classes, adapters,
-validators, utils etc.). Ship them with your plugin and copy them into the consumer’s generated
-output.
-
-- Where to put them: Place TypeScript files under your plugin’s `src/lib`. They will compile to
-  `dist/lib` when you build the plugin.
-- Copy them:
-
-  ```ts
-  import path from "node:path";
-  import { fileURLToPath } from "node:url";
-  import { BasePlugin, type GeneratorContext } from "@rexeus/typeweaver-gen";
-
-  // Resolve the directory of the current module
-  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-
-  export class MyPlugin extends BasePlugin {
-    name = "my-plugin";
-
-    generate(context: GeneratorContext) {
-      const libSourceDir = path.join(moduleDir, "lib");
-      this.copyLibFiles(context, libSourceDir, this.name); // -> <output>/lib/my-plugin
-    }
-  }
-  ```
-
-## 📌 Notes
-
-- Plugins are configured and executed by the CLI (`@rexeus/typeweaver`). See the CLI options
-  [here](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md#️-options).
-- Keep plugins focused: one concern per plugin (clients, routers, infra).
-- Prefer `GeneratorContext.writeFile` over manual fs writes for tracking and directory setup.
+- [ADR 0003: Effect-native plugin API](https://github.com/rexeus/typeweaver/tree/main/docs/adr/0003-effect-native-plugin-api.md)
+- [ADR 0004: FileSystem service adoption](https://github.com/rexeus/typeweaver/tree/main/docs/adr/0004-filesystem-service-adoption.md)
+- [ADR 0007: Generator per-call isolation](https://github.com/rexeus/typeweaver/tree/main/docs/adr/0007-generator-per-call-isolation.md)
 
 ### 🏷️ Spec naming validation
 
@@ -186,6 +150,14 @@ The normalization pipeline validates supported naming formats before generation:
   `authSession`.
 - Plural and PascalCase `resourceName` values are supported.
 - snake_case and kebab-case `resourceName` values are rejected during normalization.
+
+## 📌 Notes
+
+- Plugins are configured and executed by the CLI (`@rexeus/typeweaver`). See the CLI options
+  [here](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md#️-options).
+- Keep plugins focused: one concern per plugin (clients, routers, infra).
+- Prefer `GeneratorContext.writeFile` over manual `fs` writes — it routes through the path-safety
+  guard, registers paths with the tracker, and uses an atomic temp-file + rename.
 
 ## 📄 License
 

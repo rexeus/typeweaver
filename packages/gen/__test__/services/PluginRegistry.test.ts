@@ -1,5 +1,5 @@
-import { Effect, Exit, Cause } from "effect";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { Cause, Effect, Exit, Logger } from "effect";
+import { describe, expect, test } from "vitest";
 import { PluginDependencyError } from "../../src/plugins/errors/index.js";
 import { PluginRegistry } from "../../src/services/PluginRegistry.js";
 import type { Plugin } from "../../src/plugins/Plugin.js";
@@ -8,6 +8,11 @@ const aPluginNamed = (name: string, depends?: readonly string[]): Plugin => ({
   name,
   ...(depends !== undefined ? { depends } : {}),
 });
+
+const silentLoggerLayer = Logger.replace(
+  Logger.defaultLogger,
+  Logger.make<unknown, void>(() => {})
+);
 
 const runRegistry = <A, E>(
   program: (registry: {
@@ -20,7 +25,10 @@ const runRegistry = <A, E>(
     Effect.gen(function* () {
       const registry = yield* PluginRegistry;
       return yield* program(registry);
-    }).pipe(Effect.provide(PluginRegistry.Default))
+    }).pipe(
+      Effect.provide(PluginRegistry.Default),
+      Effect.provide(silentLoggerLayer)
+    )
   );
 
 const runRegistryExpectingFailure = <E>(
@@ -34,7 +42,10 @@ const runRegistryExpectingFailure = <E>(
     Effect.gen(function* () {
       const registry = yield* PluginRegistry;
       return yield* program(registry);
-    }).pipe(Effect.provide(PluginRegistry.Default))
+    }).pipe(
+      Effect.provide(PluginRegistry.Default),
+      Effect.provide(silentLoggerLayer)
+    )
   );
 
   if (Exit.isSuccess(exit)) {
@@ -53,10 +64,6 @@ const runRegistryExpectingFailure = <E>(
 };
 
 describe("PluginRegistry", () => {
-  beforeEach(() => {
-    vi.spyOn(console, "info").mockImplementation(() => {});
-  });
-
   test("returns an empty registration list when no plugins are registered", () => {
     const registrations = runRegistry(registry => registry.getAll);
 

@@ -19,27 +19,30 @@ export const openApiPlugin = (options: unknown = {}): Plugin => {
   return definePlugin({
     name: PLUGIN_NAME,
     generate: context =>
-      Effect.try({
-        try: () => {
-          const result = buildOpenApiDocument(context.normalizedSpec, {
-            info: normalized.info,
-            ...(normalized.servers !== undefined
-              ? { servers: normalized.servers }
-              : {}),
-          });
-          const json = `${JSON.stringify(result.document, null, 2)}\n`;
-          context.writeFile(normalized.outputPath, json);
+      Effect.gen(function* () {
+        const result = yield* Effect.try({
+          try: () => {
+            const built = buildOpenApiDocument(context.normalizedSpec, {
+              info: normalized.info,
+              ...(normalized.servers !== undefined
+                ? { servers: normalized.servers }
+                : {}),
+            });
+            const json = `${JSON.stringify(built.document, null, 2)}\n`;
+            context.writeFile(normalized.outputPath, json);
+            return built;
+          },
+          catch: cause =>
+            new PluginExecutionError({
+              pluginName: PLUGIN_NAME,
+              phase: "generate",
+              cause,
+            }),
+        });
 
-          if (result.warnings.length > 0) {
-            console.warn(formatWarnings(result.warnings));
-          }
-        },
-        catch: cause =>
-          new PluginExecutionError({
-            pluginName: PLUGIN_NAME,
-            phase: "generate",
-            cause,
-          }),
+        if (result.warnings.length > 0) {
+          yield* Effect.logWarning(formatWarnings(result.warnings));
+        }
       }),
   });
 };

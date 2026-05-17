@@ -65,6 +65,7 @@
     "@rexeus/typeweaver-gen": "workspace:^",
     "effect": "^3.21.2",
     "ibm-openapi-validator": "1.37.13",
+    "test-utils": "file:../test-utils",
     "zod": "^4.3.6"
   }
 }
