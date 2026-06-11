@@ -42,6 +42,12 @@ service body.
 - `PluginRegistry` (`packages/gen/src/services/PluginRegistry.ts`) — stateless factory; returns a
   fresh `PluginRegistryInstance` per call, each instance owning its own
   `Ref<Map<string, PluginRegistration>>` for per-call isolation
+- `ContextBuilder` (`packages/gen/src/services/ContextBuilder.ts`) — stateless factory; each
+  `buildGeneratorContext` call constructs a fresh builder over the sync cores
+  (`livePathSafetyShape`, `liveTemplateRendererShape`) shared with the `PathSafety` and
+  `TemplateRenderer` services. `PluginRegistry` is invoked per-call from `Generator` and is not
+  consumed by `ContextBuilder`; the asymmetry keeps the per-call registry instance owned by the
+  orchestrator rather than the context factory.
 
 `effect:` — yields other services or holds state:
 
@@ -52,10 +58,6 @@ service body.
   receives the per-call `PluginRegistryInstance` via `LoadParams`
 - `IndexFileGenerator` (`packages/cli/src/services/IndexFileGenerator.ts`) — yields
   `TemplateRenderer`
-- `ContextBuilder` (`packages/gen/src/services/ContextBuilder.ts`) — yields `PathSafety` and
-  `TemplateRenderer`. `PluginRegistry` is invoked per-call from `Generator` and is not yielded by
-  `ContextBuilder`; the asymmetry keeps the per-call registry instance owned by the orchestrator
-  rather than the context factory.
 
 ## Consequences
 

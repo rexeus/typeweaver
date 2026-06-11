@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import { Effect, Either } from "effect";
 import { pascalCase } from "polycase";
 import { relative } from "../../helpers/path.js";
+import { resolveSafeGeneratedFilePath } from "../../helpers/pathSafety.js";
+import { renderTemplate } from "../../helpers/templateEngine.js";
 import { MissingCanonicalResponseError } from "../../plugins/errors/MissingCanonicalResponseError.js";
-import type { UnsafeGeneratedPathError } from "../../errors/UnsafeGeneratedPathError.js";
 import type { SafeGeneratedFilePath } from "../../helpers/pathSafety.js";
 import type {
   NormalizedResponse,
@@ -20,26 +20,43 @@ import type {
  * Per-call tracker over the set of generated file paths. Each
  * `createGeneratorContext` invocation gets its own tracker so concurrent
  * generation runs cannot observe one another's state.
+ *
+ * `drainPendingWriteLogs` returns (and clears) the paths written via
+ * `writeFile` since the previous drain. The Effect-native orchestrator
+ * flushes this queue through `Effect.logInfo` after each plugin's
+ * `generate` stage — the sync write callback itself runs outside any
+ * Effect runtime, so it cannot log through the configured logger directly.
  */
 type GeneratedFilesTracker = {
   readonly add: (filePath: string) => void;
+  readonly recordWrite: (filePath: string) => void;
   readonly snapshot: () => readonly string[];
+  readonly drainPendingWriteLogs: () => readonly string[];
 };
 
 const createGeneratedFilesTracker = (): GeneratedFilesTracker => {
   const generatedFiles = new Set<string>();
+  let pendingWriteLogs: string[] = [];
   return {
     add: filePath => generatedFiles.add(filePath),
+    recordWrite: filePath => {
+      generatedFiles.add(filePath);
+      pendingWriteLogs.push(filePath);
+    },
     snapshot: () => Array.from(generatedFiles).sort(),
+    drainPendingWriteLogs: () => {
+      const drained = pendingWriteLogs;
+      pendingWriteLogs = [];
+      return drained;
+    },
   };
 };
 
 /**
  * Narrowed PathSafety surface: a sync function that validates a requested
  * generated path against path-traversal/symlink-escape attacks and returns
- * the resolved absolute + project-relative pair. The wrapping caller
- * supplies an implementation that runs the `PathSafety` Effect via
- * `Effect.runSync`; tests can substitute a pure stand-in.
+ * the resolved absolute + project-relative pair. Production wiring uses
+ * `livePathSafetyShape`; tests can substitute a pure stand-in.
  */
 export type PathSafetyShape = {
   readonly validateGeneratedPath: (params: {
@@ -55,45 +72,27 @@ export type TemplateRendererShape = {
   readonly render: (template: string, data: unknown) => string;
 };
 
-type PathSafetyService = {
-  readonly validateGeneratedPath: (params: {
-    readonly outputDir: string;
-    readonly requestedPath: string;
-  }) => Effect.Effect<SafeGeneratedFilePath, UnsafeGeneratedPathError>;
-};
-
-type TemplateRendererService = {
-  readonly render: (template: string, data: unknown) => Effect.Effect<string>;
+/**
+ * Production `PathSafetyShape`: the sync path-traversal guard, shared with
+ * the Effect-native `PathSafety` service. Throws `UnsafeGeneratedPathError`,
+ * which the surrounding `Effect.try` in `Plugin.generate` observes directly.
+ */
+export const livePathSafetyShape: PathSafetyShape = {
+  validateGeneratedPath: params =>
+    resolveSafeGeneratedFilePath(params.outputDir, params.requestedPath),
 };
 
 /**
- * Adapt the `PathSafety` service to the sync shape consumed by the plugin
- * context callbacks. Tagged failures unwrap to the bare error so the
- * surrounding `Effect.try` in `Plugin.generate` observes
- * `UnsafeGeneratedPathError` directly — not a `FiberFailure` wrapper.
+ * Production `TemplateRendererShape`: the sync EJS-like renderer, shared
+ * with the Effect-native `TemplateRenderer` service.
  */
-export const toPathSafetyShape = (
-  pathSafety: PathSafetyService
-): PathSafetyShape => ({
-  validateGeneratedPath: params => {
-    const result = Effect.runSync(
-      Effect.either(pathSafety.validateGeneratedPath(params))
-    );
-    if (Either.isLeft(result)) throw result.left;
-    return result.right;
-  },
-});
-
-/**
- * Adapt the `TemplateRenderer` service to the sync shape consumed by the
- * plugin context callbacks.
- */
-export const toTemplateRendererShape = (
-  templateRenderer: TemplateRendererService
-): TemplateRendererShape => ({
+export const liveTemplateRendererShape: TemplateRendererShape = {
   render: (template, data) =>
-    Effect.runSync(templateRenderer.render(template, data)),
-});
+    // Plugin authors pass arbitrary template data; the engine scopes its
+    // `with(data)` lookup over a plain record. Non-record values have never
+    // been supported — the widening cast preserves the existing contract.
+    renderTemplate(template, (data ?? {}) as Record<string, unknown>),
+};
 
 type PluginContextBuilderDeps = {
   readonly pathSafety: PathSafetyShape;
@@ -171,6 +170,7 @@ export type PluginContextBuilderApi = {
     readonly specOutputDir: string;
   }) => GeneratorContext;
   readonly getGeneratedFiles: () => readonly string[];
+  readonly drainPendingWriteLogs: () => readonly string[];
 };
 
 /**
@@ -178,16 +178,16 @@ export type PluginContextBuilderApi = {
  *
  * The `pathSafety` and `templateRenderer` deps are injected so the
  * security-critical path guard and the rendering engine can both be
- * substituted in tests, and the Effect-native versions of those services
- * (which back the production callers) reuse the exact same algorithms.
+ * substituted in tests. Production wiring passes `livePathSafetyShape` /
+ * `liveTemplateRendererShape` — the same sync cores that back the
+ * Effect-native `PathSafety` and `TemplateRenderer` services, with no
+ * `Effect.runSync` bridging in between.
  *
  * Filesystem I/O for the atomic-replace write, directory creation, and
  * template-file reads remains on `node:fs` because the plugin-author API
- * contract is sync end-to-end. `@effect/platform`'s `FileSystem` is async
- * by every method, so `Effect.runSync` over it raises an
- * `AsyncFiberException`. The tradeoff: the I/O here is contained to a
- * well-audited file (this module), every write is gated by
- * `pathSafety.validateGeneratedPath`, and tests can substitute the
+ * contract is sync end-to-end (ADR 0003/0004). The tradeoff: the I/O here
+ * is contained to a well-audited file (this module), every write is gated
+ * by `pathSafety.validateGeneratedPath`, and tests can substitute the
  * `pathSafety` and `templateRenderer` shapes to exercise the
  * orchestration logic without writing real files.
  */
@@ -318,15 +318,12 @@ export function createPluginContextBuilder(
 
         fs.mkdirSync(path.dirname(safePath.fullPath), { recursive: true });
         writeFileViaTempReplace({ safePath, content });
-        tracker.add(safePath.generatedPath);
-
-        // The sync `writeFile` callback runs inside `Effect.runSync` deep
-        // in plugin code; `Effect.logInfo` from inside `runSync` does not
-        // route through the production logger because no layer is in
-        // scope. `console.info` is the byte-stable choice for this
-        // sync-only surface, and it matches what the rest of the CLI
-        // logger emits at INFO.
-        console.info(`Generated: ${safePath.generatedPath}`);
+        // Queue the `Generated: <path>` log instead of printing here: the
+        // sync callback runs outside any Effect runtime, so the orchestrator
+        // drains the queue through `Effect.logInfo` after each plugin's
+        // `generate` stage — keeping the lines inside the configured logger
+        // pipeline (verbose flavor, captured-log tests, future telemetry).
+        tracker.recordWrite(safePath.generatedPath);
       },
 
       renderTemplate: (templatePath: string, data: unknown) => {
@@ -357,5 +354,6 @@ export function createPluginContextBuilder(
     createPluginContext,
     createGeneratorContext,
     getGeneratedFiles: () => tracker.snapshot(),
+    drainPendingWriteLogs: () => tracker.drainPendingWriteLogs(),
   };
 }

@@ -195,22 +195,41 @@ export class Generator extends Effect.Service<Generator>()(
                 });
                 getGeneratedFiles = built.getGeneratedFiles;
 
+                // The sync `writeFile` callback runs outside any Effect
+                // runtime and queues its `Generated: <path>` lines on the
+                // per-call builder. Flushing through `Effect.logInfo` after
+                // each plugin keeps the lines inside the configured logger
+                // pipeline; `Effect.onExit` flushes even when a plugin
+                // fails or is interrupted, so files already written are
+                // still reported.
+                const flushGeneratedFileLogs = Effect.suspend(() =>
+                  Effect.forEach(
+                    built.drainPendingWriteLogs(),
+                    filePath => Effect.logInfo(`Generated: ${filePath}`),
+                    { discard: true }
+                  )
+                );
+
                 yield* Effect.logInfo("Generating code...");
                 for (const registration of initial) {
                   yield* Effect.logInfo(
                     `Running plugin: ${registration.plugin.name}`
                   );
                   if (registration.plugin.generate) {
-                    yield* registration.plugin.generate(built.context);
+                    yield* registration.plugin
+                      .generate(built.context)
+                      .pipe(Effect.onExit(() => flushGeneratedFileLogs));
                   }
                 }
 
-                yield* indexFileGenerator.generate({
-                  templateDir,
-                  outputDir,
-                  generatedFiles: getGeneratedFiles(),
-                  writeFile: built.context.writeFile,
-                });
+                yield* indexFileGenerator
+                  .generate({
+                    templateDir,
+                    outputDir,
+                    generatedFiles: getGeneratedFiles(),
+                    writeFile: built.context.writeFile,
+                  })
+                  .pipe(Effect.onExit(() => flushGeneratedFileLogs));
               })
             );
 

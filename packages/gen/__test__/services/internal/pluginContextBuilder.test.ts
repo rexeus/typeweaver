@@ -3,32 +3,25 @@ import os from "node:os";
 import path from "node:path";
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { afterEach, describe, expect, test } from "vitest";
-import { resolveSafeGeneratedFilePath } from "../../../src/helpers/pathSafety.js";
-import { renderTemplate as renderTemplateString } from "../../../src/helpers/templateEngine.js";
 import { MissingCanonicalResponseError } from "../../../src/plugins/errors/MissingCanonicalResponseError.js";
-import { createPluginContextBuilder } from "../../../src/services/internal/pluginContextBuilder.js";
+import {
+  createPluginContextBuilder,
+  livePathSafetyShape,
+  liveTemplateRendererShape,
+} from "../../../src/services/internal/pluginContextBuilder.js";
 import type {
   NormalizedResponse,
   NormalizedSpec,
 } from "../../../src/NormalizedSpec.js";
 
 /**
- * Real-deps factory for the sync plugin-context builder. Wires the pure
- * path-safety guard and the project's hand-rolled template engine — the
- * same algorithms the production `ContextBuilder` service hands off to
- * via its sync `validateGeneratedPath` / `render` shapes.
+ * Real-deps factory for the sync plugin-context builder: the exact live
+ * shapes the production `ContextBuilder` service wires in — the pure
+ * path-safety guard and the project's hand-rolled template engine.
  */
 const realPluginContextBuilderDeps = {
-  pathSafety: {
-    validateGeneratedPath: (params: {
-      readonly outputDir: string;
-      readonly requestedPath: string;
-    }) => resolveSafeGeneratedFilePath(params.outputDir, params.requestedPath),
-  },
-  templateRenderer: {
-    render: (template: string, data: unknown) =>
-      renderTemplateString(template, (data ?? {}) as Record<string, unknown>),
-  },
+  pathSafety: livePathSafetyShape,
+  templateRenderer: liveTemplateRendererShape,
 };
 
 const aBuilder = () => createPluginContextBuilder(realPluginContextBuilderDeps);
@@ -564,6 +557,31 @@ describe("createPluginContextBuilder", () => {
       "export const client = true;\n"
     );
     expect(generatorContext.getGeneratedFiles()).toEqual([generatedFile]);
+  });
+
+  test("queues Generated log lines per write and drains them once", () => {
+    const outputDir = aTempDir();
+    const builder = aBuilder();
+    const context = builder.createGeneratorContext({
+      ...generatedProjectParams,
+      outputDir,
+    });
+
+    context.writeFile("todo/GetTodoClient.ts", "export const client = true;\n");
+    context.writeFile(
+      "todo/GetTodoRequest.ts",
+      "export const request = true;\n"
+    );
+
+    expect(builder.drainPendingWriteLogs()).toEqual([
+      "todo/GetTodoClient.ts",
+      "todo/GetTodoRequest.ts",
+    ]);
+    expect(builder.drainPendingWriteLogs()).toEqual([]);
+    expect(context.getGeneratedFiles()).toEqual([
+      "todo/GetTodoClient.ts",
+      "todo/GetTodoRequest.ts",
+    ]);
   });
 
   test("overwrites existing generated files and records them", () => {

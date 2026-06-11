@@ -8,13 +8,14 @@ import { TemplateRenderer } from "../services/TemplateRenderer.js";
  * Composition root for typeweaver's gen-side Effect services.
  *
  * Pure services that do not need platform bindings live here:
- *   - `TemplateRenderer` (wraps the EJS-like renderer)
+ *   - `TemplateRenderer` (Effect facade over the sync EJS-like renderer;
+ *                         typed `TemplateRenderError` on malformed input)
  *   - `PathSafety`       (Effect facade over the sync path-traversal guard)
  *   - `PluginRegistry`   (Ref<Map<string, V2Registration>>; toposorted)
- *   - `ContextBuilder`   (per-run plugin/generator context fabric;
- *                         consumes `FileSystem`, `PathSafety`, and
- *                         `TemplateRenderer` to keep plugin-author sync
- *                         callbacks routed through Effect services)
+ *   - `ContextBuilder`   (per-run plugin/generator context fabric; wires
+ *                         the same sync cores that back `PathSafety` and
+ *                         `TemplateRenderer` into the sync plugin-author
+ *                         callbacks — no `Effect.runSync` bridging)
  *
  * Platform bindings (FileSystem, Path) and CLI-only services (Formatter,
  * ConfigLoader, SpecLoader) are stacked on top by the consumer entrypoint

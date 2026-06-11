@@ -80,9 +80,10 @@ export type GeneratorContext = PluginContext & {
    *   `UnsafeGeneratedPathError`.
    * - Registers the resolved generated path with the run's file tracker so
    *   barrel emission picks it up.
-   * - Emits `Generated: <path>` on stdout for parity with the previous
-   *   imperative pipeline; downstream agents (and the regression suite) rely
-   *   on these log lines staying stable.
+   * - Queues a `Generated: <path>` log line that the orchestrator flushes
+   *   through `Effect.logInfo` after the plugin's `generate` stage — the
+   *   lines flow through the configured logger pipeline and their relative
+   *   order stays stable.
    */
   readonly writeFile: (relativePath: string, content: string) => void;
 

@@ -38,9 +38,11 @@ Sync `node:fs` is permitted at a leaf where **any** of the following hold:
    `context.renderTemplate`) and the sync `generate` body of `definePluginWithLibCopy` are
    contractually sync (ADR 0003). The `FileSystem` service is async-Effect and cannot satisfy that
    contract without flipping the plugin API.
-2. **The caller runs before the Effect runtime exists.** The clean-target guard inspects the
-   workspace _before_ the runtime is established, to refuse unsafe target directories regardless of
-   whether the rest of the run ever started.
+2. **The algorithm is synchronous end-to-end.** The clean-target guard's probe sequence (existence
+   checks, `realpath` canonicalization) is a sync algorithm wrapped once at its Effect boundary
+   (`assertSafeCleanTargetEffect`). Routing each probe through the async `FileSystem` service would
+   force the whole guard async for no testability gain — its `CleanTargetFs` seam already
+   substitutes fakes.
 3. **The value is read once at startup and never mutated.** Reading an EJS template into memory once
    per generation run, or resolving a real path during bundler input wiring, satisfies this.
 
@@ -52,14 +54,20 @@ Current sync leaves, by category:
 
 - `packages/gen/src/services/internal/pluginContextBuilder.ts` — `writeFile` and `renderTemplate`
   (the helpers exposed on `GeneratorContext`). Called inside the plugin author's `Effect.try`.
+  Production wiring injects the sync cores directly (`livePathSafetyShape`,
+  `liveTemplateRendererShape`) — the same algorithms backing the Effect-native `PathSafety` and
+  `TemplateRenderer` services, with no `Effect.runSync` bridging. The `Generated: <path>` log lines
+  are queued on the per-call builder and flushed through `Effect.logInfo` by the orchestrator, so
+  they stay inside the configured logger pipeline.
 - `packages/gen/src/plugins/copyPluginLibFiles.ts` — copy step of `definePluginWithLibCopy`.
 - `packages/cli/src/services/Formatter.ts` — `fs.readdirSync` / `fs.readFileSync` /
   `fs.writeFileSync` in the format-pass body wrapped by the `Formatter` service.
 
-**Runs before the runtime (rule 2):**
+**Sync algorithm wrapped once at its Effect boundary (rule 2):**
 
-- `packages/cli/src/services/cleanTargetGuard.ts` — `assertSafeCleanTargetWith`, executed by the CLI
-  entrypoint before any layer is provided.
+- `packages/cli/src/services/cleanTargetGuard.ts` — `assertSafeCleanTargetWith`, wrapped by
+  `assertSafeCleanTargetEffect` and executed by `Generator.generate` before any filesystem
+  mutation of the output target.
 
 **Read-once-at-startup (rule 3):**
 

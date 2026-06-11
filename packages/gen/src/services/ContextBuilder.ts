@@ -1,11 +1,9 @@
 import { Effect } from "effect";
 import {
   createPluginContextBuilder,
-  toPathSafetyShape,
-  toTemplateRendererShape,
+  livePathSafetyShape,
+  liveTemplateRendererShape,
 } from "./internal/pluginContextBuilder.js";
-import { PathSafety } from "./PathSafety.js";
-import { TemplateRenderer } from "./TemplateRenderer.js";
 import type { NormalizedSpec } from "../NormalizedSpec.js";
 import type {
   GeneratorContext,
@@ -28,13 +26,20 @@ export type GeneratorContextParams = PluginContextParams & {
 };
 
 /**
- * Result of building a generator context. The accompanying `getGeneratedFiles`
- * snapshot is bound to the same per-call builder as `context` — concurrent
- * `generate(...)` invocations cannot leak file-tracking state between runs.
+ * Result of building a generator context. The accompanying
+ * `getGeneratedFiles` snapshot and `drainPendingWriteLogs` queue are bound
+ * to the same per-call builder as `context` — concurrent `generate(...)`
+ * invocations cannot leak file-tracking state between runs.
+ *
+ * `drainPendingWriteLogs` returns (and clears) the paths written via
+ * `context.writeFile` since the previous drain. The orchestrator flushes
+ * it through `Effect.logInfo` after each plugin's `generate` stage so the
+ * `Generated: <path>` lines flow through the configured logger pipeline.
  */
 export type BuiltGeneratorContext = {
   readonly context: GeneratorContext;
   readonly getGeneratedFiles: () => readonly string[];
+  readonly drainPendingWriteLogs: () => readonly string[];
 };
 
 /**
@@ -43,48 +48,42 @@ export type BuiltGeneratorContext = {
  * another's tracker state — eliminating the singleton-builder race that the
  * previous `reset()`-based design exposed.
  *
- * The injected `FileSystem`, `PathSafety`, and `TemplateRenderer` services
- * route every sync `writeFile` / `addGeneratedFile` / `renderTemplate` call
- * through the same Effect-native plumbing the rest of the pipeline uses.
+ * The builder consumes the sync cores (`livePathSafetyShape`,
+ * `liveTemplateRendererShape`) directly — the same algorithms that back the
+ * Effect-native `PathSafety` and `TemplateRenderer` services, without any
+ * `Effect.runSync` bridging. The plugin-author surface stays sync end-to-end
+ * (ADR 0003); Effect-native callers use the service facades instead.
  */
 export class ContextBuilder extends Effect.Service<ContextBuilder>()(
   "typeweaver/ContextBuilder",
   {
-    effect: Effect.gen(function* () {
-      const pathSafetyService = yield* PathSafety;
-      const templateRendererService = yield* TemplateRenderer;
-
-      const pathSafety = toPathSafetyShape(pathSafetyService);
-      const templateRenderer = toTemplateRendererShape(templateRendererService);
-
-      const buildPluginContext = (
+    succeed: {
+      buildPluginContext: (
         params: PluginContextParams
       ): Effect.Effect<PluginContext> =>
         Effect.sync(() =>
           createPluginContextBuilder({
-            pathSafety,
-            templateRenderer,
+            pathSafety: livePathSafetyShape,
+            templateRenderer: liveTemplateRendererShape,
           }).createPluginContext(params)
-        );
+        ),
 
-      const buildGeneratorContext = (
+      buildGeneratorContext: (
         params: GeneratorContextParams
       ): Effect.Effect<BuiltGeneratorContext> =>
         Effect.sync(() => {
           const builder = createPluginContextBuilder({
-            pathSafety,
-            templateRenderer,
+            pathSafety: livePathSafetyShape,
+            templateRenderer: liveTemplateRendererShape,
           });
           const context = builder.createGeneratorContext(params);
           return {
             context,
             getGeneratedFiles: builder.getGeneratedFiles,
+            drainPendingWriteLogs: builder.drainPendingWriteLogs,
           };
-        });
-
-      return { buildPluginContext, buildGeneratorContext } as const;
-    }),
-    dependencies: [PathSafety.Default, TemplateRenderer.Default],
+        }),
+    },
     accessors: true,
   }
 ) {}

@@ -47,6 +47,13 @@ The function returns `string`; the caller prints it and chooses the exit code.
 The layer is included in `ProductionLayer` so every Effect emitted from the CLI uses the friendly
 format.
 
+Every CLI log line flows through this logger — including the `Generated: <path>` lines for
+plugin-written files. The sync `writeFile` plugin callback runs outside any Effect runtime, so it
+queues its log lines on the per-call context builder; the `Generator` orchestrator drains the queue
+through `Effect.logInfo` after each plugin's `generate` stage (and after barrel emission). The
+relative ordering of `Running plugin: X` and that plugin's `Generated:` lines is unchanged, and
+capturing-logger test layers observe the lines like any other log record.
+
 ### `NodeRuntime.runMain` configuration
 
 The CLI entrypoint (`packages/cli/src/cli.ts`) calls

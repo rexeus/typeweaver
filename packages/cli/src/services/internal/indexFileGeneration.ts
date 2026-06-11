@@ -1,26 +1,40 @@
 /**
  * Pure barrel-computation logic for typeweaver index files.
  *
- * Promotes the per-domain `index.ts` and root `index.ts` from raw
- * `fs.writeFileSync` calls to writes that flow through the supplied
- * `writeFile` callback — so every generated file follows the same
- * atomic-replace + tracking path as plugin-written files. The
- * accompanying `IndexFileGenerator` service supplies the production
- * `writeFile` and `renderTemplate` implementations; tests supply
- * lightweight fakes.
+ * `planIndexFiles` derives the full set of barrel writes (per-domain
+ * `index.ts` plus the root `index.ts`) from the generated-file list — no
+ * I/O, no rendering. The `IndexFileGenerator` service renders each planned
+ * barrel through the Effect-native `TemplateRenderer` and routes the write
+ * through the run's `writeFile` callback, so every barrel follows the same
+ * atomic-replace + tracking path as plugin-written files.
+ *
+ * `generateIndexFiles` is the sync convenience wrapper over the plan,
+ * preserved for callers (and tests) that supply sync `renderTemplate` /
+ * `writeFile` callbacks.
  */
+export type IndexFileTemplateData = {
+  readonly indexPaths: readonly string[];
+};
+
+export type PlannedIndexFile = {
+  readonly path: string;
+  readonly data: IndexFileTemplateData;
+};
+
 export type IndexFileGenerationContext = {
   readonly generatedFiles: readonly string[];
   readonly writeFile: (relativePath: string, content: string) => void;
-  readonly renderTemplate: (data: unknown) => string;
+  readonly renderTemplate: (data: IndexFileTemplateData) => string;
 };
 
-export function generateIndexFiles(context: IndexFileGenerationContext): void {
+export function planIndexFiles(
+  generatedFiles: readonly string[]
+): readonly PlannedIndexFile[] {
   const groups = new Map<string, Set<string>>();
   const rootFiles = new Set<string>();
   const existingBarrels = new Set<string>();
 
-  for (const file of context.generatedFiles) {
+  for (const file of generatedFiles) {
     const normalizedFile = file.replace(/\\/g, "/");
 
     if (!isBarrelEligibleTypeScriptSourceFile(normalizedFile)) {
@@ -76,6 +90,8 @@ export function generateIndexFiles(context: IndexFileGenerationContext): void {
     }
   }
 
+  const planned: PlannedIndexFile[] = [];
+
   const sortedGroupKeys = Array.from(groups.keys()).sort();
   for (const groupKey of sortedGroupKeys) {
     if (existingBarrels.has(groupKey)) {
@@ -83,11 +99,10 @@ export function generateIndexFiles(context: IndexFileGenerationContext): void {
     }
 
     const entries = groups.get(groupKey)!;
-    const domainBarrelContent = context.renderTemplate({
-      indexPaths: Array.from(entries).sort(),
+    planned.push({
+      path: `${groupKey}/index.ts`,
+      data: { indexPaths: Array.from(entries).sort() },
     });
-
-    context.writeFile(`${groupKey}/index.ts`, domainBarrelContent);
   }
 
   const rootIndexPaths = new Set<string>(rootFiles);
@@ -98,11 +113,18 @@ export function generateIndexFiles(context: IndexFileGenerationContext): void {
     rootIndexPaths.add(`./${barrelKey}/index.js`);
   }
 
-  const rootContent = context.renderTemplate({
-    indexPaths: Array.from(rootIndexPaths).sort(),
+  planned.push({
+    path: "index.ts",
+    data: { indexPaths: Array.from(rootIndexPaths).sort() },
   });
 
-  context.writeFile("index.ts", rootContent);
+  return planned;
+}
+
+export function generateIndexFiles(context: IndexFileGenerationContext): void {
+  for (const planned of planIndexFiles(context.generatedFiles)) {
+    context.writeFile(planned.path, context.renderTemplate(planned.data));
+  }
 }
 
 function isBarrelEligibleTypeScriptSourceFile(filePath: string): boolean {
