@@ -1,4 +1,4 @@
-import { Effect, Ref } from "effect";
+import { Effect, Either, Ref } from "effect";
 import { PluginDependencyError } from "../plugins/errors/index.js";
 import type { PluginConfig } from "../plugins/contextTypes.js";
 import type { Plugin } from "../plugins/Plugin.js";
@@ -25,9 +25,15 @@ export type PluginRegistryInstance = {
   >;
 };
 
+/**
+ * Pure toposort over the registration set. Returns `Either` instead of
+ * throwing: the failure is part of the function's contract, and `Either`
+ * is yieldable so `getAll` lifts it straight into the Effect error channel
+ * without a throw/catch round-trip.
+ */
 const sortPluginRegistrations = (
   registrations: readonly PluginRegistration[]
-): PluginRegistration[] => {
+): Either.Either<PluginRegistration[], PluginDependencyError> => {
   const registrationsByName = new Map(
     registrations.map(registration => [registration.name, registration])
   );
@@ -40,7 +46,7 @@ const sortPluginRegistrations = (
   );
 
   for (const registration of alphabeticallyOrderedRegistrations) {
-    visitPlugin({
+    const failure = visitPlugin({
       registration,
       registrationsByName,
       visiting,
@@ -48,9 +54,12 @@ const sortPluginRegistrations = (
       sorted,
       dependencyPath: [],
     });
+    if (failure !== undefined) {
+      return Either.left(failure);
+    }
   }
 
-  return sorted;
+  return Either.right(sorted);
 };
 
 const visitPlugin = (params: {
@@ -60,7 +69,7 @@ const visitPlugin = (params: {
   readonly visited: Set<string>;
   readonly sorted: PluginRegistration[];
   readonly dependencyPath: readonly string[];
-}): void => {
+}): PluginDependencyError | undefined => {
   const {
     registration,
     registrationsByName,
@@ -71,12 +80,12 @@ const visitPlugin = (params: {
   } = params;
 
   if (visited.has(registration.name)) {
-    return;
+    return undefined;
   }
 
   if (visiting.has(registration.name)) {
     const cyclePath = [...dependencyPath, registration.name].join(" -> ");
-    throw new PluginDependencyError({
+    return new PluginDependencyError({
       pluginName: registration.name,
       cyclePath: `Detected plugin dependency cycle: ${cyclePath}`,
     });
@@ -91,13 +100,13 @@ const visitPlugin = (params: {
   for (const dependencyName of alphabeticallyOrderedDependencies) {
     const dependency = registrationsByName.get(dependencyName);
     if (dependency === undefined) {
-      throw new PluginDependencyError({
+      return new PluginDependencyError({
         pluginName: registration.name,
         missingDependency: dependencyName,
       });
     }
 
-    visitPlugin({
+    const failure = visitPlugin({
       registration: dependency,
       registrationsByName,
       visiting,
@@ -105,11 +114,15 @@ const visitPlugin = (params: {
       sorted,
       dependencyPath: [...dependencyPath, registration.name],
     });
+    if (failure !== undefined) {
+      return failure;
+    }
   }
 
   visiting.delete(registration.name);
   visited.add(registration.name);
   sorted.push(registration);
+  return undefined;
 };
 
 /**
@@ -154,17 +167,7 @@ const createInstance = (): Effect.Effect<PluginRegistryInstance> =>
       PluginDependencyError
     > = Effect.gen(function* () {
       const plugins = yield* Ref.get(ref);
-      const registrations = Array.from(plugins.values());
-
-      return yield* Effect.try({
-        try: () => sortPluginRegistrations(registrations),
-        catch: error => {
-          if (error instanceof PluginDependencyError) {
-            return error;
-          }
-          throw error;
-        },
-      });
+      return yield* sortPluginRegistrations(Array.from(plugins.values()));
     });
 
     return { register, getAll } as const;

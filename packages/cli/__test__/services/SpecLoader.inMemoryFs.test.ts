@@ -9,7 +9,7 @@ import type { SpecDefinition } from "@rexeus/typeweaver-core";
 import { MainLayer } from "@rexeus/typeweaver-gen";
 import { FileSystem } from "@effect/platform";
 import { SystemError } from "@effect/platform/Error";
-import { Effect, Either, Layer } from "effect";
+import { Cause, Effect, Either, Layer } from "effect";
 import { makeInMemoryFileSystem } from "test-utils";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
@@ -171,9 +171,17 @@ describe("SpecLoader against InMemoryFileSystem", () => {
 
     expect(Either.isLeft(either)).toBe(true);
     if (!Either.isLeft(either)) return;
-    expect(either.left).toBeInstanceOf(SpecOutputWriteError);
-    const error = either.left as SpecOutputWriteError;
+    // `SpecLoader.load` is span-wrapped (Effect.fn), and failures crossing
+    // a traced boundary are re-wrapped for trace attribution — reference
+    // identity on `cause` does not survive. Unwrap the captured instance
+    // and assert the underlying SystemError structurally instead.
+    const original = Cause.originalError(either.left);
+    expect(original).toBeInstanceOf(SpecOutputWriteError);
+    const error = original as SpecOutputWriteError;
     expect(error.path).toBe("/out/spec/spec.d.ts");
-    expect(error.cause).toBe(writeFailure);
+    const cause = error.cause as Partial<typeof writeFailure>;
+    expect(cause?.reason).toBe("PermissionDenied");
+    expect(cause?.method).toBe("writeFileString");
+    expect(cause?.pathOrDescriptor).toBe("/out/spec/spec.d.ts");
   });
 });

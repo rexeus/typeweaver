@@ -123,15 +123,7 @@ describe("Generator span emission", () => {
     expect(spans.some(s => s.name === "typeweaver.generate")).toBe(true);
   });
 
-  /**
-   * Characterization: the generator currently emits only the top-level
-   * `typeweaver.generate` span — no nested phase spans. This locks the
-   * current behavior so that any future PR adding nested spans
-   * (e.g. `typeweaver.generate.bundle`, `typeweaver.generate.plugins`) must
-   * intentionally update this expectation. Until then, observability of
-   * sub-phase timing depends on log messages alone.
-   */
-  test("currently emits only the top-level span and no children (characterization)", async () => {
+  test("nests pipeline and plugin-phase spans under 'typeweaver.generate'", async () => {
     const workspace = createTempWorkspace();
     const inputFile = writeTinySpec(workspace);
     const outputDir = path.join(workspace, "generated");
@@ -146,9 +138,24 @@ describe("Generator span emission", () => {
       }).pipe(Effect.withTracer(makeCapturingTracer(spans)))
     );
 
-    const childSpans = spans.filter(
-      s => s.parentName === "typeweaver.generate"
+    const childNames = spans
+      .filter(s => s.parentName === "typeweaver.generate")
+      .map(s => s.name);
+
+    // Service operations defined via Effect.fn parent under the run span.
+    expect(childNames).toContain("typeweaver.PluginLoader.loadAll");
+    expect(childNames).toContain("typeweaver.SpecLoader.load");
+    expect(childNames).toContain("typeweaver.IndexFileGenerator.generate");
+    // The tiny spec runs the required `types` plugin's generate phase.
+    expect(childNames).toContain("typeweaver.plugin.generate");
+
+    // Spec bundling and import nest under the SpecLoader span, not the root.
+    const specLoadChildren = spans
+      .filter(s => s.parentName === "typeweaver.SpecLoader.load")
+      .map(s => s.name);
+    expect(specLoadChildren).toContain("typeweaver.SpecBundler.bundle");
+    expect(specLoadChildren).toContain(
+      "typeweaver.SpecImporter.importDefinition"
     );
-    expect(childSpans).toEqual([]);
   });
 });

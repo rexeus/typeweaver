@@ -1,4 +1,5 @@
 import {
+  DuplicateResponseNameError as CoreDuplicateResponseNameError,
   isNamedResponseDefinition,
   validateUniqueResponseNames,
 } from "@rexeus/typeweaver-core";
@@ -13,6 +14,7 @@ import { z } from "zod";
 import { normalizeBody } from "./bodyNormalization.js";
 import {
   DuplicateOperationIdError,
+  DuplicateResponseNameError,
   DuplicateRouteError,
   EmptyOperationResponsesError,
   EmptyResourceOperationsError,
@@ -249,7 +251,20 @@ const normalizeSpecSync = (definition: SpecDefinition): NormalizedSpec => {
     throw new EmptySpecResourcesError();
   }
 
-  validateUniqueResponseNames(definition.resources);
+  // The core validator throws a plain Error (the core package stays free of
+  // an effect dependency — the same error fires from `defineSpec` in user
+  // authoring code). Wrap it here so the `NormalizationError` union stays a
+  // homogeneous set of tagged errors.
+  try {
+    validateUniqueResponseNames(definition.resources);
+  } catch (error) {
+    if (error instanceof CoreDuplicateResponseNameError) {
+      throw new DuplicateResponseNameError({
+        responseName: error.responseName,
+      });
+    }
+    throw error;
+  }
   const canonicalResponses = collectCanonicalResponses(definition);
   const operationIds = new Set<string>();
   const routeKeys = new Set<string>();

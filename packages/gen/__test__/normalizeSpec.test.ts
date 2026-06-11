@@ -1,5 +1,4 @@
 import {
-  DuplicateResponseNameError,
   defineDerivedResponse,
   defineOperation,
   defineResponse,
@@ -18,6 +17,7 @@ import { z } from "zod";
 import {
   DerivedResponseCycleError,
   DuplicateOperationIdError,
+  DuplicateResponseNameError,
   DuplicateRouteError,
   EmptyOperationResponsesError,
   EmptyResourceOperationsError,

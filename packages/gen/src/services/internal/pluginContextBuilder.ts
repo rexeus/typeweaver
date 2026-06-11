@@ -137,9 +137,8 @@ const getExistingFileMode = (absolutePath: string): number | undefined => {
   } catch (error) {
     if (
       error instanceof Error &&
-      ["ENOENT", "ENOTDIR"].includes(
-        (error as Error & { code?: string }).code ?? ""
-      )
+      "code" in error &&
+      (error.code === "ENOENT" || error.code === "ENOTDIR")
     ) {
       return undefined;
     }

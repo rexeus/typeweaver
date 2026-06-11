@@ -22,7 +22,10 @@ with friendly single-line error formatting and structured log lines.
 The spec authoring API (`defineSpec`, `defineOperation`, `defineResponse`) and Zod schemas are
 unchanged — existing specs keep working byte-for-byte.
 
-- `@rexeus/typeweaver-core` re-exports the new `DuplicateResponseNameError` tagged error; no behavior change.
+- `@rexeus/typeweaver-core`'s `DuplicateResponseNameError` stays a plain `Error` (the authoring
+  package carries no effect dependency) and now exposes the offending `responseName`.
+  `@rexeus/typeweaver-gen` wraps it at the normalization boundary into a tagged
+  `DuplicateResponseNameError`, so the `NormalizationError` union is fully `catchTag`-addressable.
 
 Breaking changes are documented in [MIGRATION.md](../MIGRATION.md#migrating-from-012x-to-013x).
 Background on the design decisions:

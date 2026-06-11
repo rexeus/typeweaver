@@ -1,5 +1,6 @@
 export { DerivedResponseCycleError } from "./DerivedResponseCycleError.js";
 export { DuplicateOperationIdError } from "./DuplicateOperationIdError.js";
+export { DuplicateResponseNameError } from "./DuplicateResponseNameError.js";
 export { DuplicateRouteError } from "./DuplicateRouteError.js";
 export { EmptyOperationResponsesError } from "./EmptyOperationResponsesError.js";
 export { EmptyResourceOperationsError } from "./EmptyResourceOperationsError.js";

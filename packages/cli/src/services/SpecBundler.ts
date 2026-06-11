@@ -113,99 +113,106 @@ export class SpecBundler extends Effect.Service<SpecBundler>()(
     effect: Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
 
-      const bundle = (
+      const bundle: (
         config: SpecBundlerConfig,
-        deps: SpecBundlerDeps = {}
-      ): Effect.Effect<
+        deps?: SpecBundlerDeps
+      ) => Effect.Effect<
         string,
         SpecBundleError | SpecBundleOutputMissingError
-      > =>
-        Effect.scoped(
-          Effect.gen(function* () {
-            const tempDir = yield* fileSystem
-              .makeTempDirectoryScoped({ prefix: "typeweaver-spec-loader-" })
-              .pipe(
-                Effect.mapError(
-                  cause =>
-                    new SpecBundleError({
-                      inputFile: config.inputFile,
-                      cause,
-                    })
-                )
+      > = Effect.fn("typeweaver.SpecBundler.bundle")(
+        (config: SpecBundlerConfig, deps: SpecBundlerDeps = {}) =>
+          Effect.scoped(
+            Effect.gen(function* () {
+              const tempDir = yield* fileSystem
+                .makeTempDirectoryScoped({ prefix: "typeweaver-spec-loader-" })
+                .pipe(
+                  Effect.mapError(
+                    cause =>
+                      new SpecBundleError({
+                        inputFile: config.inputFile,
+                        cause,
+                      })
+                  )
+                );
+
+              const wrapperFile = path.join(tempDir, "spec-entrypoint.ts");
+              const bundledSpecFile = path.join(
+                config.specOutputDir,
+                "spec.js"
               );
-
-            const wrapperFile = path.join(tempDir, "spec-entrypoint.ts");
-            const bundledSpecFile = path.join(config.specOutputDir, "spec.js");
-            const wrapperImportSpecifier = createWrapperImportSpecifier(
-              wrapperFile,
-              config.inputFile
-            );
-
-            yield* fileSystem
-              .writeFileString(
+              const wrapperImportSpecifier = createWrapperImportSpecifier(
                 wrapperFile,
-                buildWrapperSource(wrapperImportSpecifier)
-              )
-              .pipe(
-                Effect.mapError(
-                  cause =>
-                    new SpecBundleError({
-                      inputFile: config.inputFile,
-                      cause,
-                    })
+                config.inputFile
+              );
+
+              yield* fileSystem
+                .writeFileString(
+                  wrapperFile,
+                  buildWrapperSource(wrapperImportSpecifier)
                 )
-              );
+                .pipe(
+                  Effect.mapError(
+                    cause =>
+                      new SpecBundleError({
+                        inputFile: config.inputFile,
+                        cause,
+                      })
+                  )
+                );
 
-            yield* Effect.tryPromise({
-              try: () =>
-                (deps.build ?? build)({
-                  cwd: tempDir,
-                  input: wrapperFile,
-                  treeshake: true,
-                  experimental: {
-                    attachDebugInfo: "none",
-                  },
-                  external: (source: string) => {
-                    if (source.startsWith("node:")) {
-                      return true;
-                    }
-                    return !source.startsWith(".") && !path.isAbsolute(source);
-                  },
-                  output: {
-                    file: bundledSpecFile,
-                    format: "esm",
-                  },
-                }),
-              catch: cause =>
-                new SpecBundleError({ inputFile: config.inputFile, cause }),
-            });
+              yield* Effect.tryPromise({
+                try: () =>
+                  (deps.build ?? build)({
+                    cwd: tempDir,
+                    input: wrapperFile,
+                    treeshake: true,
+                    experimental: {
+                      attachDebugInfo: "none",
+                    },
+                    external: (source: string) => {
+                      if (source.startsWith("node:")) {
+                        return true;
+                      }
+                      return (
+                        !source.startsWith(".") && !path.isAbsolute(source)
+                      );
+                    },
+                    output: {
+                      file: bundledSpecFile,
+                      format: "esm",
+                    },
+                  }),
+                catch: cause =>
+                  new SpecBundleError({ inputFile: config.inputFile, cause }),
+              });
 
-            const bundleExists =
-              deps.existsSync !== undefined
-                ? deps.existsSync(bundledSpecFile)
-                : yield* fileSystem.exists(bundledSpecFile).pipe(
-                    Effect.mapError(
-                      cause =>
-                        new SpecBundleError({
-                          inputFile: config.inputFile,
-                          cause,
-                        })
-                    )
-                  );
+              const bundleExists =
+                deps.existsSync !== undefined
+                  ? deps.existsSync(bundledSpecFile)
+                  : yield* fileSystem.exists(bundledSpecFile).pipe(
+                      Effect.mapError(
+                        cause =>
+                          new SpecBundleError({
+                            inputFile: config.inputFile,
+                            cause,
+                          })
+                      )
+                    );
 
-            if (!bundleExists) {
-              return yield* Effect.fail(
-                new SpecBundleOutputMissingError({
-                  inputFile: config.inputFile,
-                  bundledSpecFile,
-                  specOutputDir: config.specOutputDir,
-                })
-              );
-            }
+              if (!bundleExists) {
+                return yield* Effect.fail(
+                  new SpecBundleOutputMissingError({
+                    inputFile: config.inputFile,
+                    bundledSpecFile,
+                    specOutputDir: config.specOutputDir,
+                  })
+                );
+              }
 
-            return bundledSpecFile;
-          })
-        );
+              return bundledSpecFile;
+            })
+          )
+      );
 
       return { bundle } as const;
     }),

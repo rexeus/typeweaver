@@ -62,8 +62,11 @@ export class Generator extends Effect.Service<Generator>()(
           // The plugin context exposes the full Typeweaver user config so
           // plugins can read whatever top-level keys they document; the type
           // alias `TypeweaverUserConfig` (a permissive Record) names this
-          // contract for plugin authors.
-          const userConfig = (params.config ?? {}) as Record<string, unknown>;
+          // contract for plugin authors. The spread widens the known config
+          // shape into that record without an unsafe cast.
+          const userConfig: Record<string, unknown> = {
+            ...(params.config ?? {}),
+          };
 
           yield* Effect.logInfo("Starting generation...");
           yield* Effect.logDebug(
@@ -148,7 +151,11 @@ export class Generator extends Effect.Service<Generator>()(
                 `Initializing plugin: ${registration.plugin.name}`
               );
               if (registration.plugin.initialize) {
-                yield* registration.plugin.initialize(pluginContext);
+                yield* registration.plugin.initialize(pluginContext).pipe(
+                  Effect.withSpan("typeweaver.plugin.initialize", {
+                    attributes: { plugin: registration.plugin.name },
+                  })
+                );
               }
               initialized.push(registration);
             }
@@ -176,9 +183,12 @@ export class Generator extends Effect.Service<Generator>()(
                 yield* Effect.logInfo("Collecting resources...");
                 for (const registration of initial) {
                   if (registration.plugin.collectResources) {
-                    normalizedSpec =
-                      yield* registration.plugin.collectResources(
-                        normalizedSpec
+                    normalizedSpec = yield* registration.plugin
+                      .collectResources(normalizedSpec)
+                      .pipe(
+                        Effect.withSpan("typeweaver.plugin.collectResources", {
+                          attributes: { plugin: registration.plugin.name },
+                        })
                       );
                   }
                 }
@@ -216,9 +226,15 @@ export class Generator extends Effect.Service<Generator>()(
                     `Running plugin: ${registration.plugin.name}`
                   );
                   if (registration.plugin.generate) {
-                    yield* registration.plugin
-                      .generate(built.context)
-                      .pipe(Effect.onExit(() => flushGeneratedFileLogs));
+                    // `onExit` stays inside the span so the flushed
+                    // `Generated:` log records carry the plugin's span
+                    // context.
+                    yield* registration.plugin.generate(built.context).pipe(
+                      Effect.onExit(() => flushGeneratedFileLogs),
+                      Effect.withSpan("typeweaver.plugin.generate", {
+                        attributes: { plugin: registration.plugin.name },
+                      })
+                    );
                   }
                 }
 
@@ -236,11 +252,22 @@ export class Generator extends Effect.Service<Generator>()(
             yield* Effect.logInfo("Finalizing plugins...");
             for (const registration of initialized) {
               if (registration.plugin.finalize) {
-                yield* registration.plugin
-                  .finalize(pluginContext)
-                  .pipe(
-                    Effect.catchAll(cause => Effect.logWarning(cause.message))
-                  );
+                yield* registration.plugin.finalize(pluginContext).pipe(
+                  Effect.withSpan("typeweaver.plugin.finalize", {
+                    attributes: { plugin: registration.plugin.name },
+                  }),
+                  // The WARN line stays byte-stable (`cause.message`); the
+                  // full error object rides along as a log annotation for
+                  // structured consumers.
+                  Effect.catchAll(cause =>
+                    Effect.logWarning(cause.message).pipe(
+                      Effect.annotateLogs({
+                        plugin: registration.plugin.name,
+                        cause,
+                      })
+                    )
+                  )
+                );
               }
             }
 

@@ -22,60 +22,61 @@ export class SpecImporter extends Effect.Service<SpecImporter>()(
     effect: Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
 
-      const importDefinition = (
+      const importDefinition: (
         bundledSpecFile: string
-      ): Effect.Effect<
+      ) => Effect.Effect<
         SpecDefinition,
         InvalidSpecEntrypointError | SpecBundleError
-      > =>
-        Effect.gen(function* () {
-          const bundleContents = yield* fileSystem
-            .readFileString(bundledSpecFile)
-            .pipe(
-              Effect.mapError(
-                cause =>
-                  new SpecBundleError({
-                    inputFile: bundledSpecFile,
-                    cause,
-                  })
-              )
-            );
+      > = Effect.fn("typeweaver.SpecImporter.importDefinition")(function* (
+        bundledSpecFile: string
+      ) {
+        const bundleContents = yield* fileSystem
+          .readFileString(bundledSpecFile)
+          .pipe(
+            Effect.mapError(
+              cause =>
+                new SpecBundleError({
+                  inputFile: bundledSpecFile,
+                  cause,
+                })
+            )
+          );
 
-          const contentHash = createHash("sha256")
-            .update(bundleContents)
-            .digest("hex");
-          const moduleUrl = pathToFileURL(bundledSpecFile);
+        const contentHash = createHash("sha256")
+          .update(bundleContents)
+          .digest("hex");
+        const moduleUrl = pathToFileURL(bundledSpecFile);
 
-          moduleUrl.searchParams.set("content", contentHash);
+        moduleUrl.searchParams.set("content", contentHash);
 
-          return yield* Effect.tryPromise({
-            try: async () => {
-              const specModule = (await import(moduleUrl.toString())) as {
-                readonly spec?: unknown;
-                readonly default?: unknown;
-              };
-              const definition =
-                specModule.spec ?? specModule.default ?? specModule;
+        return yield* Effect.tryPromise({
+          try: async () => {
+            const specModule = (await import(moduleUrl.toString())) as {
+              readonly spec?: unknown;
+              readonly default?: unknown;
+            };
+            const definition =
+              specModule.spec ?? specModule.default ?? specModule;
 
-              if (!isSpecDefinition(definition)) {
-                throw new InvalidSpecEntrypointError({
-                  specEntrypoint: bundledSpecFile,
-                });
-              }
-
-              return definition;
-            },
-            catch: error => {
-              if (error instanceof InvalidSpecEntrypointError) {
-                return error;
-              }
-              return new SpecBundleError({
-                inputFile: bundledSpecFile,
-                cause: error,
+            if (!isSpecDefinition(definition)) {
+              throw new InvalidSpecEntrypointError({
+                specEntrypoint: bundledSpecFile,
               });
-            },
-          });
+            }
+
+            return definition;
+          },
+          catch: error => {
+            if (error instanceof InvalidSpecEntrypointError) {
+              return error;
+            }
+            return new SpecBundleError({
+              inputFile: bundledSpecFile,
+              cause: error,
+            });
+          },
         });
+      });
 
       return { importDefinition } as const;
     }),

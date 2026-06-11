@@ -30,43 +30,44 @@ export class IndexFileGenerator extends Effect.Service<IndexFileGenerator>()(
     effect: Effect.gen(function* () {
       const templateRenderer = yield* TemplateRenderer;
 
-      const generate = (
+      const generate: (
         params: IndexFileGenerationParams
-      ): Effect.Effect<void, IndexFileGenerationError> =>
-        Effect.gen(function* () {
-          const templateFilePath = path.join(params.templateDir, "Index.ejs");
-          const template = yield* Effect.try({
-            try: () => fs.readFileSync(templateFilePath, "utf8"),
+      ) => Effect.Effect<void, IndexFileGenerationError> = Effect.fn(
+        "typeweaver.IndexFileGenerator.generate"
+      )(function* (params: IndexFileGenerationParams) {
+        const templateFilePath = path.join(params.templateDir, "Index.ejs");
+        const template = yield* Effect.try({
+          try: () => fs.readFileSync(templateFilePath, "utf8"),
+          catch: cause =>
+            new IndexFileGenerationError({
+              outputDir: params.outputDir,
+              cause,
+            }),
+        });
+
+        for (const planned of planIndexFiles(params.generatedFiles)) {
+          const content = yield* templateRenderer
+            .render(template, planned.data)
+            .pipe(
+              Effect.mapError(
+                cause =>
+                  new IndexFileGenerationError({
+                    outputDir: params.outputDir,
+                    cause,
+                  })
+              )
+            );
+
+          yield* Effect.try({
+            try: () => params.writeFile(planned.path, content),
             catch: cause =>
               new IndexFileGenerationError({
                 outputDir: params.outputDir,
                 cause,
               }),
           });
-
-          for (const planned of planIndexFiles(params.generatedFiles)) {
-            const content = yield* templateRenderer
-              .render(template, planned.data)
-              .pipe(
-                Effect.mapError(
-                  cause =>
-                    new IndexFileGenerationError({
-                      outputDir: params.outputDir,
-                      cause,
-                    })
-                )
-              );
-
-            yield* Effect.try({
-              try: () => params.writeFile(planned.path, content),
-              catch: cause =>
-                new IndexFileGenerationError({
-                  outputDir: params.outputDir,
-                  cause,
-                }),
-            });
-          }
-        });
+        }
+      });
 
       return { generate } as const;
     }),

@@ -219,39 +219,40 @@ export class PluginLoader extends Effect.Service<PluginLoader>()(
     effect: Effect.gen(function* () {
       const moduleLoader = yield* PluginModuleLoader;
 
-      const loadAll = (
+      const loadAll: (
         params: LoadParams
-      ): Effect.Effect<void, PluginLoadError> =>
-        Effect.gen(function* () {
-          for (const requiredPlugin of params.requiredPlugins) {
-            yield* params.registry.register(requiredPlugin);
-          }
+      ) => Effect.Effect<void, PluginLoadError> = Effect.fn(
+        "typeweaver.PluginLoader.loadAll"
+      )(function* (params: LoadParams) {
+        for (const requiredPlugin of params.requiredPlugins) {
+          yield* params.registry.register(requiredPlugin);
+        }
 
-          if (params.config?.plugins === undefined) {
-            return;
-          }
+        if (params.config?.plugins === undefined) {
+          return;
+        }
 
-          const successful: PluginLoadResult[] = [];
+        const successful: PluginLoadResult[] = [];
 
-          for (const pluginEntry of params.config.plugins) {
-            const pluginName =
-              typeof pluginEntry === "string" ? pluginEntry : pluginEntry[0];
-            const pluginConfig =
-              typeof pluginEntry === "string" ? undefined : pluginEntry[1];
+        for (const pluginEntry of params.config.plugins) {
+          const pluginName =
+            typeof pluginEntry === "string" ? pluginEntry : pluginEntry[0];
+          const pluginConfig =
+            typeof pluginEntry === "string" ? undefined : pluginEntry[1];
 
-            const result = yield* loadConfiguredPlugin(
-              moduleLoader,
-              pluginName,
-              params.strategies,
-              pluginConfig
-            );
+          const result = yield* loadConfiguredPlugin(
+            moduleLoader,
+            pluginName,
+            params.strategies,
+            pluginConfig
+          );
 
-            successful.push(result);
-            yield* params.registry.register(result.plugin, result.config);
-          }
+          successful.push(result);
+          yield* params.registry.register(result.plugin, result.config);
+        }
 
-          yield* reportSuccessfulLoads(successful);
-        });
+        yield* reportSuccessfulLoads(successful);
+      });
 
       return { loadAll } as const;
     }),

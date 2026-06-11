@@ -1,7 +1,7 @@
-import { DuplicateResponseNameError } from "@rexeus/typeweaver-core";
 import {
   DerivedResponseCycleError,
   DuplicateOperationIdError,
+  DuplicateResponseNameError,
   DuplicateRouteError,
   EmptyOperationResponsesError,
   EmptyResourceOperationsError,
@@ -15,13 +15,14 @@ import {
 } from "./index.js";
 
 /**
- * Tagged union of every error the spec normalizer may raise.
+ * Tagged union of every error the spec normalizer may raise. All 13
+ * variants are `Data.TaggedError` instances, so callers can address each
+ * one via `Effect.catchTag` / `Effect.catchTags`.
  *
- * Includes `DuplicateResponseNameError` from `@rexeus/typeweaver-core` —
- * thrown by `validateUniqueResponseNames` during normalization. It is a
- * plain `Error` (part of the public Zod-facing API surface), so callers
- * narrowing via `Effect.catchTag` can address the 12 tagged variants and
- * must use `Effect.catchAll` / `Effect.catchIf` for this one.
+ * `DuplicateResponseNameError` is the normalizer-side tagged counterpart
+ * of the plain core error thrown by `validateUniqueResponseNames` — the
+ * normalizer wraps the core error at its boundary so this union stays
+ * homogeneous.
  */
 export type NormalizationError =
   | DerivedResponseCycleError

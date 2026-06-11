@@ -113,6 +113,14 @@ type LockInfo = {
   readonly inputFile: string;
 };
 
+const errnoCode = (error: unknown): string | undefined =>
+  typeof error === "object" &&
+  error !== null &&
+  "code" in error &&
+  typeof error.code === "string"
+    ? error.code
+    : undefined;
+
 const isProcessAlive = (pid: number): boolean => {
   try {
     // Signal 0 performs error checking without sending a signal. Returns
@@ -123,8 +131,7 @@ const isProcessAlive = (pid: number): boolean => {
   } catch (error) {
     // EPERM means the process exists but is owned by another user — still
     // alive, just not signal-able. ESRCH means the PID has no live process.
-    const code = (error as NodeJS.ErrnoException).code;
-    return code === "EPERM";
+    return errnoCode(error) === "EPERM";
   }
 };
 
@@ -167,7 +174,7 @@ const tryCreateLockDir = (lockDir: string): boolean => {
     fs.mkdirSync(lockDir);
     return true;
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+    if (errnoCode(error) === "EEXIST") {
       return false;
     }
     throw error;

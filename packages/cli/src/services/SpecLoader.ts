@@ -47,46 +47,47 @@ export class SpecLoader extends Effect.Service<SpecLoader>()(
       const importer = yield* SpecImporter;
       const fileSystem = yield* FileSystem.FileSystem;
 
-      const load = (
+      const load: (
         config: SpecLoaderConfig
-      ): Effect.Effect<
+      ) => Effect.Effect<
         LoadedSpec,
         | InvalidSpecEntrypointError
         | NormalizationError
         | SpecBundleError
         | SpecBundleOutputMissingError
         | SpecOutputWriteError
-      > =>
-        Effect.gen(function* () {
-          yield* fileSystem
-            .makeDirectory(config.specOutputDir, { recursive: true })
-            .pipe(
-              Effect.mapError(
-                cause =>
-                  new SpecOutputWriteError({
-                    path: config.specOutputDir,
-                    cause,
-                  })
-              )
-            );
+      > = Effect.fn("typeweaver.SpecLoader.load")(function* (
+        config: SpecLoaderConfig
+      ) {
+        yield* fileSystem
+          .makeDirectory(config.specOutputDir, { recursive: true })
+          .pipe(
+            Effect.mapError(
+              cause =>
+                new SpecOutputWriteError({
+                  path: config.specOutputDir,
+                  cause,
+                })
+            )
+          );
 
-          const bundledSpecFile = yield* bundler.bundle(config);
+        const bundledSpecFile = yield* bundler.bundle(config);
 
-          const declarationPath = path.join(config.specOutputDir, "spec.d.ts");
-          yield* fileSystem
-            .writeFileString(declarationPath, SPEC_DECLARATION_CONTENT)
-            .pipe(
-              Effect.mapError(
-                cause =>
-                  new SpecOutputWriteError({ path: declarationPath, cause })
-              )
-            );
+        const declarationPath = path.join(config.specOutputDir, "spec.d.ts");
+        yield* fileSystem
+          .writeFileString(declarationPath, SPEC_DECLARATION_CONTENT)
+          .pipe(
+            Effect.mapError(
+              cause =>
+                new SpecOutputWriteError({ path: declarationPath, cause })
+            )
+          );
 
-          const definition = yield* importer.importDefinition(bundledSpecFile);
-          const normalizedSpec = yield* normalizeSpec(definition);
+        const definition = yield* importer.importDefinition(bundledSpecFile);
+        const normalizedSpec = yield* normalizeSpec(definition);
 
-          return { definition, normalizedSpec };
-        });
+        return { definition, normalizedSpec };
+      });
 
       return { load } as const;
     }),
