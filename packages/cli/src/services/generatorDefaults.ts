@@ -16,8 +16,14 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
  * to `dist/` in production but executed via `tsx` in development; the
  * template lives in `src/templates/` either way, copied across by the
  * build to `dist/templates/`.
+ *
+ * The production bundle is flat — `cli.mjs`/`entry.mjs` sit directly in
+ * `dist/`, so `moduleDir` is `dist/` itself and the template resolves to
+ * `dist/templates/` (first candidate). The remaining candidates cover the
+ * `tsx` dev run, where `moduleDir` is `src/services/`.
  */
 const TEMPLATE_DIR_CANDIDATES = [
+  path.join(moduleDir, "templates"),
   path.join(moduleDir, "..", "templates"),
   path.join(moduleDir, "..", "..", "src", "templates"),
 ] as const;
