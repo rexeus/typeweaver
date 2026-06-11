@@ -4,9 +4,12 @@ import path from "node:path";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { Effect, Either } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
-import { InvalidConfigExportError } from "../src/errors/InvalidConfigExportError.js";
-import { UnsupportedConfigExtensionError } from "../src/errors/UnsupportedConfigExtensionError.js";
-import { UnsupportedTypeScriptConfigError } from "../src/errors/UnsupportedTypeScriptConfigError.js";
+import {
+  ConfigModuleEvaluationError,
+  InvalidConfigExportError,
+  UnsupportedConfigExtensionError,
+  UnsupportedTypeScriptConfigError,
+} from "../src/errors/index.js";
 import {
   ConfigLoader,
   getResolvedConfigPath,
@@ -359,7 +362,7 @@ describe("configLoader", () => {
     });
   });
 
-  test("propagates errors thrown while evaluating config modules", async () => {
+  test("wraps errors thrown while evaluating config modules in ConfigModuleEvaluationError", async () => {
     const configPath = writeConfigModule(
       ".mjs",
       createThrowingModuleSource({
@@ -369,13 +372,17 @@ describe("configLoader", () => {
     );
     const configLoad = loadConfig(configPath);
 
+    await expect(configLoad).rejects.toBeInstanceOf(
+      ConfigModuleEvaluationError
+    );
     await expect(configLoad).rejects.toMatchObject({
-      name: "ConfigEvaluationError",
+      configPath,
+      cause: expect.objectContaining({ name: "ConfigEvaluationError" }),
     });
     await expect(configLoad).rejects.toThrow(/config evaluation failed/);
   });
 
-  test("propagates missing dependency failures from config modules", async () => {
+  test("wraps missing dependency failures from config modules", async () => {
     const missingDependency = "definitely-missing-typeweaver-config-dependency";
     const configPath = writeConfigModule(
       ".mjs",
@@ -385,11 +392,15 @@ describe("configLoader", () => {
         export default { output: "./generated" };
       `
     );
+    const configLoad = loadConfig(configPath);
 
-    await expect(loadConfig(configPath)).rejects.toThrow(missingDependency);
+    await expect(configLoad).rejects.toBeInstanceOf(
+      ConfigModuleEvaluationError
+    );
+    await expect(configLoad).rejects.toThrow(missingDependency);
   });
 
-  test("propagates syntax errors from config modules", async () => {
+  test("wraps syntax errors from config modules", async () => {
     const configPath = writeConfigModule(
       ".mjs",
       `
@@ -399,6 +410,9 @@ describe("configLoader", () => {
     );
     const configLoad = loadConfig(configPath);
 
+    await expect(configLoad).rejects.toBeInstanceOf(
+      ConfigModuleEvaluationError
+    );
     await expect(configLoad).rejects.toThrow(
       /parse|syntax|Unexpected|Invalid|missing|end/i
     );

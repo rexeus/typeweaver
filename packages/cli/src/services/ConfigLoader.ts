@@ -2,7 +2,8 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { Effect } from "effect";
-import { isConfigError } from "../errors/index.js";
+import { ConfigModuleEvaluationError } from "../errors/ConfigModuleEvaluationError.js";
+import { isStructuralConfigError } from "../errors/index.js";
 import { InvalidConfigExportError } from "../errors/InvalidConfigExportError.js";
 import { UnsupportedConfigExtensionError } from "../errors/UnsupportedConfigExtensionError.js";
 import { UnsupportedTypeScriptConfigError } from "../errors/UnsupportedTypeScriptConfigError.js";
@@ -114,12 +115,12 @@ const isNamespaceLikeConfigExport = (value: unknown): boolean => {
 /**
  * Loads a TypeWeaver config from a `.js`, `.mjs`, or `.cjs` module.
  *
- * `assertSupportedPath` rejects with the precise tagged `ConfigError`.
- * `load` additionally propagates errors raised while evaluating the user's
- * config module (syntax errors, missing imports, custom throws) as plain
- * `Error` — the failure channel is `ConfigError | Error` so callers can
- * narrow tagged variants via `Effect.catchTag` and still observe the
- * underlying evaluation error class through `Effect.catchAll`.
+ * `assertSupportedPath` rejects with the precise structural tagged error.
+ * `load` wraps errors raised while evaluating the user's config module
+ * (syntax errors, missing imports, custom throws) in
+ * `ConfigModuleEvaluationError`, preserving the original failure on
+ * `cause`. The failure channel is the closed `ConfigError` union, so every
+ * variant is addressable via `Effect.catchTag`.
  */
 export class ConfigLoader extends Effect.Service<ConfigLoader>()(
   "typeweaver/ConfigLoader",
@@ -131,7 +132,7 @@ export class ConfigLoader extends Effect.Service<ConfigLoader>()(
         Effect.try({
           try: () => assertSupportedConfigPathSync(configPath),
           catch: error => {
-            if (isConfigError(error)) {
+            if (isStructuralConfigError(error)) {
               return error;
             }
             throw error;
@@ -140,17 +141,17 @@ export class ConfigLoader extends Effect.Service<ConfigLoader>()(
 
       load: (
         configPath: string
-      ): Effect.Effect<Partial<TypeweaverConfig>, ConfigError | Error> =>
+      ): Effect.Effect<Partial<TypeweaverConfig>, ConfigError> =>
         Effect.tryPromise({
           try: () => loadConfigAsync(configPath),
           catch: error => {
-            if (isConfigError(error)) {
+            if (isStructuralConfigError(error)) {
               return error;
             }
-            if (error instanceof Error) {
-              return error;
-            }
-            throw error;
+            return new ConfigModuleEvaluationError({
+              configPath,
+              cause: error,
+            });
           },
         }),
     },
