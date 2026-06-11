@@ -3,6 +3,7 @@
   "private": true,
   "description": "Type-safe API framework with code generation for TypeScript",
   "scripts": {
+    "prepare": "./scripts/prepare-effect.sh",
     "typecheck": "turbo typecheck",
     "build": "turbo build && pnpm size",
     "size": "size-limit",

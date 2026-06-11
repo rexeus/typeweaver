@@ -32,3 +32,6 @@ coverage/
 
 # Turborepo
 .turbo
+
+# Vendored Effect source (skill research; bootstrapped via `pnpm prepare`)
+.repos/effect
