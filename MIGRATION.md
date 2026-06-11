@@ -121,6 +121,14 @@ npx typeweaver generate \
 
 See [ADR 0006](./docs/adr/0006-cli-error-and-log-formatting.md) for the formatting pipeline.
 
+One behavioral tightening: the output-target safety guard now runs on **every** generation —
+including `--no-clean` — before anything touches the filesystem. Pointing `--output` at the current
+working directory, a workspace root, or any directory carrying a workspace marker (`.git`,
+`pnpm-workspace.yaml`, …) is rejected up front. Previously `--no-clean` skipped the guard entirely.
+Generating next to the spec source (e.g. `--output spec` with `--input spec/index.ts`) remains
+allowed with `--no-clean`; only the destructive clean step refuses targets that contain the input
+file.
+
 ### 3. Internal API changes (informational; only programmatic consumers)
 
 If you imported the generator programmatically rather than through the CLI:

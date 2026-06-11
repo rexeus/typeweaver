@@ -21,12 +21,12 @@ export class UnsafeCleanTargetError extends Data.TaggedError(
   readonly inputFile?: string;
 }> {
   public override get message(): string {
-    const targetDescription = `Refusing to clean '${this.outputDir}'`;
+    const targetDescription = `Refusing to use '${this.outputDir}' as the generated output directory`;
     const suffix = "Use a dedicated generated output directory instead.";
 
     switch (this.reason) {
       case "empty-path":
-        return `Refusing to clean an empty output directory path. ${suffix}`;
+        return `Refusing to use an empty output directory path. ${suffix}`;
       case "filesystem-root":
         return `${targetDescription} because it resolves to the filesystem root '${this.filesystemRoot ?? this.resolvedOutputDir ?? this.outputDir}'. ${suffix}`;
       case "current-working-directory":
@@ -38,7 +38,7 @@ export class UnsafeCleanTargetError extends Data.TaggedError(
       case "target-carries-workspace-marker":
         return `${targetDescription} because the target itself contains a workspace marker (one of '.git', 'pnpm-workspace.yaml', 'lerna.json', 'nx.json', 'turbo.json', 'rush.json', or a 'package.json' declaring workspaces) and would erase the workspace. ${suffix}`;
       case "contains-input-file":
-        return `${targetDescription} because it contains the spec input file '${this.inputFile ?? ""}'; cleaning would delete the source. ${suffix}`;
+        return `Refusing to clean '${this.outputDir}' because it contains the spec input file '${this.inputFile ?? ""}'; cleaning would delete the source. ${suffix}`;
     }
   }
 }

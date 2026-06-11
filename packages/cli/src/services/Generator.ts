@@ -74,6 +74,20 @@ export class Generator extends Effect.Service<Generator>()(
 
           const templateDir = yield* resolveTemplateDir();
 
+          // Validate the output target before anything touches the
+          // filesystem. When the clean step will run, the full guard
+          // applies (including the input-file containment rule). With
+          // `--no-clean` the structural rules still apply: the
+          // orphan-tempdir sweep deletes `.typeweaver-*` entries and
+          // `ensureOutputDirectories` creates directories under
+          // `outputDir`, so catastrophic targets (filesystem root, cwd,
+          // workspace root) must be rejected before either runs.
+          yield* assertSafeCleanTargetEffect(
+            outputDir,
+            cwd,
+            params.config?.clean !== false ? inputFile : undefined
+          );
+
           // The lock dir lives inside outputDir, so outputDir must exist
           // before we can `mkdir` the lock. Make the base directories now;
           // the subdirectories are recreated inside the lock scope if the
@@ -93,7 +107,6 @@ export class Generator extends Effect.Service<Generator>()(
             yield* sweepOrphanTempdirs(outputDir);
 
             if (params.config?.clean !== false) {
-              yield* assertSafeCleanTargetEffect(outputDir, cwd, inputFile);
               yield* Effect.logInfo("Cleaning output directory...");
               yield* cleanOutputDirPreservingLock(outputDir);
               // The clean removed `responses/` and `spec/` (we preserve

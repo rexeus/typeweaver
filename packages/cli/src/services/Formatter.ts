@@ -60,7 +60,13 @@ const formatOutputDir = (
       return;
     }
     const targetDir = startDir ?? outputDir;
-    yield* Effect.promise(() => formatDirectory(targetDir, format));
+    // The walk can reject (fs errors, oxfmt throwing on malformed input).
+    // Both indicate generator bugs or a corrupted output tree — there is
+    // no recovery path here, so the failure is explicitly promoted to a
+    // defect rather than silently relying on `Effect.promise` semantics.
+    yield* Effect.tryPromise(() => formatDirectory(targetDir, format)).pipe(
+      Effect.orDie
+    );
   });
 
 /**

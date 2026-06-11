@@ -3,6 +3,7 @@ import path from "node:path";
 import { FileSystem } from "@effect/platform";
 import { Effect } from "effect";
 import { ConcurrentGenerationError } from "../errors/ConcurrentGenerationError.js";
+import { OutputCleanError } from "../errors/OutputCleanError.js";
 import { UnsafeCleanTargetError } from "../errors/UnsafeCleanTargetError.js";
 import { assertSafeCleanTarget } from "./cleanTargetGuard.js";
 import type { PlatformError } from "@effect/platform/Error";
@@ -15,9 +16,11 @@ const isUnsafeCleanTargetError = (
   (error as { readonly _tag?: unknown })._tag === "UnsafeCleanTargetError";
 
 /**
- * Effect-wrapped clean-target check. Tagged `UnsafeCleanTargetError` is
+ * Effect-wrapped output-target check. Tagged `UnsafeCleanTargetError` is
  * surfaced on the failure channel; any other thrown error escapes as a
- * defect (programming bug).
+ * defect (programming bug). Pass `inputFile` only when the clean step will
+ * run — the containment rule guards against cleaning the spec source, and
+ * does not apply to no-clean runs.
  *
  * The guard's filesystem probes (`exists`, `realpathSync.native`) stay on
  * `node:fs` rather than the Effect-native `FileSystem` service because the
@@ -59,24 +62,32 @@ export const removeOutputDir = (
  * Clean every entry inside `outputDir` except the lockfile sentinel.
  * Used by the run-time clean step so the per-process lock survives the
  * destructive sweep. Idempotent — a missing `outputDir` is a no-op.
+ *
+ * Filesystem failures (e.g. `EACCES` on a read-only entry) surface as a
+ * typed `OutputCleanError` rather than a defect: the operator can act on
+ * them (fix permissions, close the file handle) and the run must abort
+ * either way before generation writes into a half-cleaned target.
  */
 export const cleanOutputDirPreservingLock = (
   outputDir: string
-): Effect.Effect<void> =>
-  Effect.sync(() => {
-    if (!fs.existsSync(outputDir)) {
-      return;
-    }
-    const entries = fs.readdirSync(outputDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (entry.name === LOCK_DIR_NAME) {
-        continue;
+): Effect.Effect<void, OutputCleanError> =>
+  Effect.try({
+    try: () => {
+      if (!fs.existsSync(outputDir)) {
+        return;
       }
-      fs.rmSync(path.join(outputDir, entry.name), {
-        recursive: true,
-        force: true,
-      });
-    }
+      const entries = fs.readdirSync(outputDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.name === LOCK_DIR_NAME) {
+          continue;
+        }
+        fs.rmSync(path.join(outputDir, entry.name), {
+          recursive: true,
+          force: true,
+        });
+      }
+    },
+    catch: cause => new OutputCleanError({ outputDir, cause }),
   });
 
 export const ensureOutputDirectories = (params: {
@@ -233,11 +244,24 @@ export const acquireOutputLock = (params: {
  * Release the lock created by `acquireOutputLock`. Idempotent — a missing
  * lock directory (e.g. removed by a clean step run during the lifetime of
  * the lock) is a no-op rather than a failure.
+ *
+ * A failing release (e.g. `EACCES`) is demoted to a WARN log instead of
+ * failing the effect: this runs in the release slot of
+ * `Effect.acquireUseRelease`, where a defect would mask the pipeline's own
+ * outcome. A leftover lock dir is self-healing — the next run's stale-PID
+ * probe reclaims it.
  */
 export const releaseOutputLock = (lockDir: string): Effect.Effect<void> =>
-  Effect.sync(() => {
+  Effect.try(() => {
     fs.rmSync(lockDir, { recursive: true, force: true });
-  });
+  }).pipe(
+    Effect.catchAll(failure =>
+      Effect.logWarning(
+        `Failed to release output lock at '${lockDir}': ${failure.message}. ` +
+          `The next run will reclaim it via the stale-PID probe.`
+      )
+    )
+  );
 
 /**
  * Sweep orphaned `.typeweaver-*` tempdirs from a prior run that was killed
@@ -249,14 +273,24 @@ export const releaseOutputLock = (lockDir: string): Effect.Effect<void> =>
  * or contains no orphans, the sweep is a no-op. The current lock dir
  * (`.typeweaver-lock`) is preserved — only the atomic-write artifacts
  * (`.typeweaver-XXXX`) are pruned.
+ *
+ * Best-effort: a failing `rm` (e.g. `EACCES` on crash debris owned by
+ * another user) is demoted to a WARN log — an unremovable orphan must not
+ * block generation, and the formatter skips `.typeweaver-*` entries anyway.
  */
 export const sweepOrphanTempdirs = (outputDir: string): Effect.Effect<void> =>
-  Effect.sync(() => {
+  Effect.try(() => {
     if (!fs.existsSync(outputDir)) {
       return;
     }
     sweepOrphanTempdirsAt(outputDir);
-  });
+  }).pipe(
+    Effect.catchAll(failure =>
+      Effect.logWarning(
+        `Failed to sweep orphan tempdirs under '${outputDir}': ${failure.message}`
+      )
+    )
+  );
 
 const sweepOrphanTempdirsAt = (directory: string): void => {
   let entries: fs.Dirent[];

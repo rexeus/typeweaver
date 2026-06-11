@@ -115,8 +115,13 @@ const isSameOrDescendantOf = (directory: string, ancestor: string): boolean => {
 };
 
 /**
- * Guard the destructive clean step against catastrophic targets. Inject
- * filesystem probes via `fileSystem` to keep the algorithm pure-core:
+ * Guard every destructive or filesystem-touching use of the output
+ * directory against catastrophic targets. `Generator.generate` runs this
+ * before anything writes to or deletes from `outputDir` — including with
+ * `--no-clean`, where the orphan-tempdir sweep and directory creation
+ * still apply (the input-file containment rule is clean-specific and only
+ * checked when `inputFile` is passed). Inject filesystem probes via
+ * `fileSystem` to keep the algorithm pure-core:
  *   - empty / whitespace-only paths
  *   - filesystem root
  *   - the current working directory itself
