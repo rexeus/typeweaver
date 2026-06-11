@@ -118,7 +118,10 @@ describe("generated OpenAPI fixture", () => {
       "DownloadFileContent 200 should expose an octet-stream binary response"
     ).toEqual({ type: "string", format: "binary" });
     await validateOpenApiFixture(FIXTURE_PATH);
-  });
+    // Spawns the IBM OpenAPI validator as a child process (see the 30s
+    // execFile timeout below); the 5s vitest default is unrealistic for an
+    // out-of-process Spectral run under parallel CI load.
+  }, 30_000);
 });
 
 function componentsSchemas(fixture: OpenApiFixture): Record<string, unknown> {
