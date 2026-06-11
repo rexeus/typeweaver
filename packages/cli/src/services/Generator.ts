@@ -64,9 +64,7 @@ export class Generator extends Effect.Service<Generator>()(
           // alias `TypeweaverUserConfig` (a permissive Record) names this
           // contract for plugin authors. The spread widens the known config
           // shape into that record without an unsafe cast.
-          const userConfig: Record<string, unknown> = {
-            ...(params.config ?? {}),
-          };
+          const userConfig: Record<string, unknown> = { ...params.config };
 
           yield* Effect.logInfo("Starting generation...");
           yield* Effect.logDebug(
