@@ -66,8 +66,8 @@ Current sync leaves, by category:
 **Sync algorithm wrapped once at its Effect boundary (rule 2):**
 
 - `packages/cli/src/services/cleanTargetGuard.ts` — `assertSafeCleanTargetWith`, wrapped by
-  `assertSafeCleanTargetEffect` and executed by `Generator.generate` before any filesystem
-  mutation of the output target.
+  `assertSafeCleanTargetEffect` and executed by `Generator.generate` before any filesystem mutation
+  of the output target.
 
 **Read-once-at-startup (rule 3):**
 
