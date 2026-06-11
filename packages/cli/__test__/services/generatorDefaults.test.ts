@@ -20,8 +20,8 @@ const moduleDir = path.dirname(
 );
 
 const TEMPLATE_DIR_CANDIDATES = [
-  path.join(moduleDir, "..", "templates"),
   path.join(moduleDir, "templates"),
+  path.join(moduleDir, "..", "templates"),
   path.join(moduleDir, "..", "..", "src", "templates"),
 ] as const;
 
