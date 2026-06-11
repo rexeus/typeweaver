@@ -106,6 +106,13 @@ const buildWrapperSource = (wrapperImportSpecifier: string): string =>
  * Uses `FileSystem.makeTempDirectoryScoped` so the temp wrapper directory
  * is removed automatically when the surrounding Effect.Scope closes — even
  * if rolldown throws.
+ *
+ * The optional `deps` parameter is a deliberate test seam for the two
+ * bindings that live outside the `FileSystem` service: rolldown's `build`
+ * and the post-bundle existence probe. Wrapping rolldown in a dedicated
+ * service tag would add a one-method service with a single production
+ * implementation; the parameter keeps the seam local to the only call
+ * site that needs substitution.
  */
 export class SpecBundler extends Effect.Service<SpecBundler>()(
   "typeweaver/SpecBundler",

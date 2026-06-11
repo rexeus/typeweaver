@@ -74,4 +74,13 @@ export const VerboseLayer = Layer.provideMerge(
   NodeContext.layer
 );
 
+/**
+ * Shared `ManagedRuntime` over the production layer. The CLI binary does
+ * NOT use it — `cli.ts` provides its layer once via `NodeRuntime.runMain`,
+ * which owns the lifecycle. This runtime exists for embedders and tests
+ * that need to run individual service operations against the production
+ * graph. Construction is lazy (the layer builds on first `run*` call);
+ * test workers reclaim it on process exit, and long-lived embedders should
+ * call `effectRuntime.dispose()` when finished.
+ */
 export const effectRuntime = ManagedRuntime.make(ProductionLayer);
