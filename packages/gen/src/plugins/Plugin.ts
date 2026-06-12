@@ -28,8 +28,11 @@ export type Plugin = {
     context: GeneratorContext
   ) => Effect.Effect<void, PluginExecutionError>;
   /**
-   * Finalize failures are demoted to WARN logs and do not fail the run.
-   * Use `generate` for any work whose failure must abort generation.
+   * Lifecycle cleanup. Runs for every plugin whose `initialize` succeeded —
+   * even when a later plugin's `initialize`, `collectResources`, or
+   * `generate` fails, mirroring `try/finally`. Failures here are demoted
+   * to WARN logs and do not fail the run. Use `generate` for any work
+   * whose failure must abort generation.
    */
   readonly finalize?: (
     context: PluginContext

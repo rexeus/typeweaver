@@ -69,7 +69,7 @@ const buildGeneratorContext = (params: BuildGeneratorContextParams) =>
   });
 ```
 
-The entire generation pipeline runs inside `Effect.withSpan("typeweaver.generate", { ... })` so
+The entire generation pipeline runs inside the `typeweaver.Generator.generate` span (`Effect.fn`) so
 every call gets its own root span — concurrent calls trace independently.
 
 ## Consequences
@@ -83,9 +83,10 @@ every call gets its own root span — concurrent calls trace independently.
   different output directories at the same runtime instance and asserts no cross-contamination.
 - `IndexFileGenerator` receives a slice of the per-call tracker, not a reference to a shared list.
   Index files reflect exactly the files this call produced.
-- The pipeline is observable: `typeweaver.generate` spans show up in trace exports, and nested
-  per-phase spans (bundle, normalize, generate per plugin) are a follow-up that drops in cleanly
-  under the root span.
+- The pipeline is observable: `typeweaver.Generator.generate` spans show up in trace exports, with
+  nested service-operation spans (`typeweaver.SpecLoader.load`, `typeweaver.SpecBundler.bundle`,
+  `typeweaver.PluginLoader.loadAll`, `typeweaver.IndexFileGenerator.generate`) and per-plugin
+  lifecycle spans (`typeweaver.plugin.{phase}` tagged with the plugin name) underneath.
 
 ### Negative
 
@@ -101,9 +102,9 @@ every call gets its own root span — concurrent calls trace independently.
 
 ### Follow-up
 
-Nested per-phase spans (`typeweaver.generate.bundle`, `typeweaver.generate.normalize`,
-`typeweaver.generate.plugin.{name}`) are scaffolded but not yet emitted. The root span is in place;
-the nested layer drops in when the trace export pipeline is wired to a backend.
+Nested per-phase and per-plugin spans are emitted (see Positive above and
+`packages/cli/__test__/services/Generator.spans.test.ts` for the asserted topology); wiring a trace
+export backend remains the open follow-up.
 
 ## Reference Files
 

@@ -105,7 +105,7 @@ describe("Generator span emission", () => {
     return tempDir;
   };
 
-  test("emits the top-level 'typeweaver.generate' span when generating a spec", async () => {
+  test("emits the top-level 'typeweaver.Generator.generate' span when generating a spec", async () => {
     const workspace = createTempWorkspace();
     const inputFile = writeTinySpec(workspace);
     const outputDir = path.join(workspace, "generated");
@@ -120,10 +120,12 @@ describe("Generator span emission", () => {
       }).pipe(Effect.withTracer(makeCapturingTracer(spans)))
     );
 
-    expect(spans.some(s => s.name === "typeweaver.generate")).toBe(true);
+    expect(spans.some(s => s.name === "typeweaver.Generator.generate")).toBe(
+      true
+    );
   });
 
-  test("nests pipeline and plugin-phase spans under 'typeweaver.generate'", async () => {
+  test("nests pipeline and plugin-phase spans under 'typeweaver.Generator.generate'", async () => {
     const workspace = createTempWorkspace();
     const inputFile = writeTinySpec(workspace);
     const outputDir = path.join(workspace, "generated");
@@ -139,7 +141,7 @@ describe("Generator span emission", () => {
     );
 
     const childNames = spans
-      .filter(s => s.parentName === "typeweaver.generate")
+      .filter(s => s.parentName === "typeweaver.Generator.generate")
       .map(s => s.name);
 
     // Service operations defined via Effect.fn parent under the run span.

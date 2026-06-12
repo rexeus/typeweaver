@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { FileSystem } from "@effect/platform";
 import { Effect } from "effect";
-import { makeInMemoryFileSystem } from "test-utils";
+import { makeInMemoryFileSystem } from "test-utils/src/effect/index.js";
 import { describe, expect, test } from "vitest";
 import { resolveTemplateDir } from "../../src/services/generatorDefaults.js";
 

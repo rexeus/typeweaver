@@ -231,6 +231,51 @@ const writeFailingFinalizeOnlyPlugin = (
   return pluginFile;
 };
 
+const writeFailingInitializePlugin = (workspace: string): string => {
+  const eventsFile = path.join(workspace, "lifecycle-events.log");
+  if (!fs.existsSync(eventsFile)) fs.writeFileSync(eventsFile, "");
+
+  // Named so it sorts AFTER the recording plugins (alpha, beta) in the
+  // registry's alphabetical order — its initialize failure must hit once
+  // earlier plugins have already initialized successfully.
+  const pluginFile = path.join(workspace, "plugins", "omega-failing-init.mjs");
+  fs.mkdirSync(path.dirname(pluginFile), { recursive: true });
+  fs.writeFileSync(
+    pluginFile,
+    [
+      'import fs from "node:fs";',
+      'import { Effect } from "effect";',
+      'import { PluginExecutionError } from "@rexeus/typeweaver-gen";',
+      "",
+      `const eventsFile = ${JSON.stringify(eventsFile)};`,
+      "",
+      "const record = stage =>",
+      "  Effect.sync(() => {",
+      "    fs.appendFileSync(eventsFile, `${stage}:omega-failing-init\\n`);",
+      "  });",
+      "",
+      "export const omegaFailingInitPlugin = {",
+      '  name: "omega-failing-init",',
+      "  initialize: _ctx =>",
+      "    Effect.gen(function* () {",
+      '      yield* record("initialize");',
+      "      return yield* Effect.fail(",
+      "        new PluginExecutionError({",
+      '          pluginName: "omega-failing-init",',
+      '          phase: "initialize",',
+      '          cause: new Error("intentional initialize failure"),',
+      "        })",
+      "      );",
+      "    }),",
+      '  generate: _ctx => record("generate"),',
+      '  finalize: _ctx => record("finalize"),',
+      "};",
+      "",
+    ].join("\n")
+  );
+  return pluginFile;
+};
+
 const readEvents = (workspace: string): readonly string[] => {
   const file = path.join(workspace, "lifecycle-events.log");
   if (!fs.existsSync(file)) return [];
@@ -340,6 +385,55 @@ describe("Generator.generate (plugin lifecycle ordering)", () => {
     const finIdx = events.indexOf("finalize:failing-finalize-plugin");
     expect(initIdx).toBeLessThan(genIdx);
     expect(genIdx).toBeLessThan(finIdx);
+  });
+
+  test("runs finalize for already-initialized plugins when a later plugin's initialize fails", async () => {
+    const workspace = createTempWorkspace("init-failure");
+    writeTinySpec(workspace);
+    const recordingPlugins = writeRecordingPlugins(workspace);
+    const failingPlugin = writeFailingInitializePlugin(workspace);
+
+    const exit = await effectRuntime.runPromiseExit(
+      Generator.generate({
+        inputFile: "spec/index.ts",
+        outputDir: "generated/output",
+        config: {
+          input: "spec/index.ts",
+          output: "generated/output",
+          format: false,
+          plugins: [...recordingPlugins, failingPlugin],
+        },
+        currentWorkingDirectory: workspace,
+      })
+    );
+
+    expect(Exit.isFailure(exit)).toBe(true);
+    if (Exit.isFailure(exit)) {
+      const failure = Cause.failureOption(exit.cause);
+      expect(failure._tag).toBe("Some");
+      if (failure._tag === "Some") {
+        expect(failure.value).toMatchObject({
+          pluginName: "omega-failing-init",
+          phase: "initialize",
+        });
+      }
+    }
+
+    const events = readEvents(workspace);
+    // alpha and beta initialized before omega's initialize failed...
+    expect(events).toContain("initialize:alpha");
+    expect(events).toContain("initialize:beta");
+    expect(events).toContain("initialize:omega-failing-init");
+    // ...so their finalize cleanup must still run (try/finally semantics).
+    expect(events).toContain("finalize:alpha");
+    expect(events).toContain("finalize:beta");
+    // The plugin whose own initialize failed never initialized
+    // successfully — no finalize for it, and no later stage ran at all.
+    expect(events).not.toContain("finalize:omega-failing-init");
+    expect(events.some(event => event.startsWith("collectResources:"))).toBe(
+      false
+    );
+    expect(events.some(event => event.startsWith("generate:"))).toBe(false);
   });
 
   test("surfaces the original generate failure and logs a WARN when a sibling plugin's finalize also fails", async () => {

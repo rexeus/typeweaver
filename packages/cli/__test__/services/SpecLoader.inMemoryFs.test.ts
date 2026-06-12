@@ -10,7 +10,7 @@ import { MainLayer } from "@rexeus/typeweaver-gen";
 import { FileSystem } from "@effect/platform";
 import { SystemError } from "@effect/platform/Error";
 import { Cause, Effect, Either, Layer } from "effect";
-import { makeInMemoryFileSystem } from "test-utils";
+import { makeInMemoryFileSystem } from "test-utils/src/effect/index.js";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import { SpecOutputWriteError } from "../../src/services/errors/SpecOutputWriteError.js";

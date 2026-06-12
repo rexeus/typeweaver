@@ -16,7 +16,7 @@
       "outputs": []
     },
     "test": {
-      "dependsOn": ["build", "^build"],
+      "dependsOn": ["build", "^build", "test-utils#test:gen"],
       "inputs": ["$TURBO_DEFAULT$", "src/**", "__test__/**", "vitest.config.ts", "package.json"],
       "outputs": []
     },

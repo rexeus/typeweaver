@@ -1,6 +1,6 @@
 import { FileSystem } from "@effect/platform";
 import { Effect } from "effect";
-import { makeInMemoryFileSystem } from "test-utils";
+import { makeInMemoryFileSystem } from "test-utils/src/effect/index.js";
 import { describe, expect, test } from "vitest";
 import {
   ensureOutputDirectories,

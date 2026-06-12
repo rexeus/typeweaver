@@ -3,7 +3,7 @@ import path from "node:path";
 import type { PluginExecutionPhase } from "@rexeus/typeweaver-gen";
 import { PluginExecutionError } from "@rexeus/typeweaver-gen";
 import { Cause, Effect, Exit, Option } from "effect";
-import { withCapturedLogs } from "test-utils";
+import { withCapturedLogs } from "test-utils/src/effect/index.js";
 import { afterEach, describe, expect, test } from "vitest";
 import { effectRuntime } from "../src/effectRuntime.js";
 import { Generator } from "../src/services/Generator.js";

@@ -6,7 +6,7 @@ import {
 import type { NormalizedSpec } from "@rexeus/typeweaver-gen";
 import { FileSystem } from "@effect/platform";
 import { Effect, Either, Layer } from "effect";
-import { makeInMemoryFileSystem } from "test-utils";
+import { makeInMemoryFileSystem } from "test-utils/src/effect/index.js";
 import { describe, expect, test } from "vitest";
 
 const emptySpec: NormalizedSpec = {

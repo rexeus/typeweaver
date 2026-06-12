@@ -1,5 +1,5 @@
 import { Cause, Effect, Exit, Layer } from "effect";
-import { makeInMemoryFileSystem } from "test-utils";
+import { makeInMemoryFileSystem } from "test-utils/src/effect/index.js";
 import { describe, expect, test } from "vitest";
 import { SpecBundler } from "../../src/services/SpecBundler.js";
 
