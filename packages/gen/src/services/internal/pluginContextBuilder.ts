@@ -2,9 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { pascalCase } from "polycase";
 import { relative } from "../../helpers/path.js";
-import { resolveSafeGeneratedFilePath } from "../../helpers/pathSafety.js";
-import { renderTemplate } from "../../helpers/templateEngine.js";
 import { MissingCanonicalResponseError } from "../../plugins/errors/MissingCanonicalResponseError.js";
+import { makeEffectContextIO } from "./pluginContextEffectIO.js";
 import type { SafeGeneratedFilePath } from "../../helpers/pathSafety.js";
 import type {
   NormalizedResponse,
@@ -15,6 +14,20 @@ import type {
   PluginContext,
   TypeweaverUserConfig,
 } from "../../plugins/contextTypes.js";
+import type {
+  FileSystem,
+  PathSafetyShape,
+  TemplateRendererShape,
+} from "./pluginContextEffectIO.js";
+
+export {
+  livePathSafetyShape,
+  liveTemplateRendererShape,
+} from "./pluginContextEffectIO.js";
+export type {
+  PathSafetyShape,
+  TemplateRendererShape,
+} from "./pluginContextEffectIO.js";
 
 /**
  * Per-call tracker over the set of generated file paths. Each
@@ -52,63 +65,28 @@ const createGeneratedFilesTracker = (): GeneratedFilesTracker => {
   };
 };
 
-/**
- * Narrowed PathSafety surface: a sync function that validates a requested
- * generated path against path-traversal/symlink-escape attacks and returns
- * the resolved absolute + project-relative pair. Production wiring uses
- * `livePathSafetyShape`; tests can substitute a pure stand-in.
- */
-export type PathSafetyShape = {
-  readonly validateGeneratedPath: (params: {
-    readonly outputDir: string;
-    readonly requestedPath: string;
-  }) => SafeGeneratedFilePath;
-};
-
-/**
- * Narrowed TemplateRenderer surface. Mirrors `PathSafetyShape`.
- */
-export type TemplateRendererShape = {
-  readonly render: (template: string, data: unknown) => string;
-};
-
-/**
- * Production `PathSafetyShape`: the sync path-traversal guard, shared with
- * the Effect-native `PathSafety` service. Throws `UnsafeGeneratedPathError`,
- * which the surrounding `Effect.try` in `Plugin.generate` observes directly.
- */
-export const livePathSafetyShape: PathSafetyShape = {
-  validateGeneratedPath: params =>
-    resolveSafeGeneratedFilePath(params.outputDir, params.requestedPath),
-};
-
-/**
- * Production `TemplateRendererShape`: the sync EJS-like renderer, shared
- * with the Effect-native `TemplateRenderer` service.
- */
-export const liveTemplateRendererShape: TemplateRendererShape = {
-  render: (template, data) =>
-    // Plugin authors pass arbitrary template data; the engine scopes its
-    // `with(data)` lookup over a plain record. Non-record values have never
-    // been supported — the widening cast preserves the existing contract.
-    renderTemplate(template, (data ?? {}) as Record<string, unknown>),
-};
-
 type PluginContextBuilderDeps = {
   readonly pathSafety: PathSafetyShape;
   readonly templateRenderer: TemplateRendererShape;
+  /**
+   * Backs the Effect-native context surface (`writeFileEffect`,
+   * `renderTemplateEffect`). Captured at construction time so plugin
+   * lifecycle stages keep `R = never` (ADR 0003) while their writes route
+   * through the platform `FileSystem` service.
+   */
+  readonly fileSystem: FileSystem.FileSystem;
 };
 
 const writeFileViaTempReplace = (config: {
   readonly safePath: SafeGeneratedFilePath;
   readonly content: string;
 }): void => {
-  // The atomic-replace pattern (mkdtemp + writeFile + rename) plus chmod
-  // preservation is not yet expressible through @effect/platform's
-  // FileSystem (no `rename`, no `chmod`). We keep the well-audited
-  // `node:fs` implementation here. Every plugin write still funnels
-  // through `pathSafety.validateGeneratedPath(...)` above, so path
-  // traversal cannot reach this surface.
+  // Sync twin of `writeFileViaTempReplaceEffect` for the contractually
+  // sync plugin-author surface (ADR 0003/0004). Same atomic-replace
+  // pattern (mkdtemp + write + chmod preservation + rename) on `node:fs`.
+  // Every plugin write still funnels through
+  // `pathSafety.validateGeneratedPath(...)`, so path traversal cannot
+  // reach this surface.
   const existingFileMode = getExistingFileMode(config.safePath.fullPath);
   const destinationDir = path.dirname(config.safePath.fullPath);
   const tempDir = fs.mkdtempSync(path.join(destinationDir, ".typeweaver-"));
@@ -194,7 +172,7 @@ export function createPluginContextBuilder(
   deps: PluginContextBuilderDeps
 ): PluginContextBuilderApi {
   const tracker = createGeneratedFilesTracker();
-  const { pathSafety, templateRenderer } = deps;
+  const { pathSafety, templateRenderer, fileSystem } = deps;
 
   const createPluginContext = (params: {
     outputDir: string;
@@ -346,6 +324,20 @@ export function createPluginContextBuilder(
       getGeneratedFiles: () => {
         return [...tracker.snapshot()];
       },
+
+      // The Effect-native slice shares the tracker (and thereby the
+      // `Generated:` log queue) with the sync helpers above; the
+      // `FileSystem` was captured at construction time so lifecycle
+      // stages keep `R = never`.
+      ...makeEffectContextIO({
+        fileSystem,
+        pathSafety,
+        templateRenderer,
+        outputDir: params.outputDir,
+        templateDir: params.templateDir,
+        trackWrite: generatedPath => tracker.recordWrite(generatedPath),
+        trackGenerated: generatedPath => tracker.add(generatedPath),
+      }),
     };
   };
 

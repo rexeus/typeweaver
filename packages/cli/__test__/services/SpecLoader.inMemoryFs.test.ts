@@ -76,10 +76,15 @@ describe("SpecLoader against InMemoryFileSystem", () => {
     const { layer: fileSystemLayer, state } = makeInMemoryFileSystem();
     const layer = Layer.provide(
       SpecLoader.DefaultWithoutDependencies,
-      Layer.mergeAll(
-        stubSpecBundlerLayer("/out/spec/spec.js"),
-        stubSpecImporterLayer(aMinimalSpec()),
-        MainLayer,
+      // `provideMerge` feeds the in-memory FileSystem into MainLayer
+      // (ContextBuilder consumes the tag) while keeping it exposed for
+      // SpecLoader's own writes.
+      Layer.provideMerge(
+        Layer.mergeAll(
+          stubSpecBundlerLayer("/out/spec/spec.js"),
+          stubSpecImporterLayer(aMinimalSpec()),
+          MainLayer
+        ),
         fileSystemLayer
       )
     );
@@ -103,10 +108,12 @@ describe("SpecLoader against InMemoryFileSystem", () => {
     const { layer: fileSystemLayer, state } = makeInMemoryFileSystem();
     const layer = Layer.provide(
       SpecLoader.DefaultWithoutDependencies,
-      Layer.mergeAll(
-        stubSpecBundlerLayer("/out/nested/spec/spec.js"),
-        stubSpecImporterLayer(aMinimalSpec()),
-        MainLayer,
+      Layer.provideMerge(
+        Layer.mergeAll(
+          stubSpecBundlerLayer("/out/nested/spec/spec.js"),
+          stubSpecImporterLayer(aMinimalSpec()),
+          MainLayer
+        ),
         fileSystemLayer
       )
     );
@@ -149,10 +156,12 @@ describe("SpecLoader against InMemoryFileSystem", () => {
 
     const layer = Layer.provide(
       SpecLoader.DefaultWithoutDependencies,
-      Layer.mergeAll(
-        stubSpecBundlerLayer("/out/spec/spec.js"),
-        stubSpecImporterLayer(aMinimalSpec()),
-        MainLayer,
+      Layer.provideMerge(
+        Layer.mergeAll(
+          stubSpecBundlerLayer("/out/spec/spec.js"),
+          stubSpecImporterLayer(aMinimalSpec()),
+          MainLayer
+        ),
         failingFsLayer
       )
     );

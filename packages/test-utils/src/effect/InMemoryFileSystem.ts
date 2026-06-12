@@ -1,7 +1,7 @@
 import path from "node:path";
 import { FileSystem } from "@effect/platform";
 import { SystemError } from "@effect/platform/Error";
-import { Effect, Layer } from "effect";
+import { Effect, Layer, Option } from "effect";
 
 /**
  * Handle for inspecting an `InMemoryFileSystem`'s internal state from tests.
@@ -11,6 +11,7 @@ import { Effect, Layer } from "effect";
 export type InMemoryFsState = {
   readonly readFile: (filePath: string) => string | undefined;
   readonly hasFile: (filePath: string) => boolean;
+  readonly fileMode: (filePath: string) => number | undefined;
   readonly listFiles: () => readonly string[];
   readonly listDirectories: () => readonly string[];
   readonly reset: () => void;
@@ -54,7 +55,8 @@ const notFound = (
  * Supports the operations typeweaver's services actually use:
  *   - `makeDirectory`, `writeFileString`, `readFileString`
  *   - `remove`, `exists`, `realPath`
- *   - `makeTempDirectoryScoped`
+ *   - `rename`, `stat`, `chmod` (atomic-replace write path)
+ *   - `makeTempDirectoryScoped` (honors the `directory` option)
  *
  * Unsupported methods inherit no-op stubs from `FileSystem.makeNoop`. Use
  * this layer in tests to substitute for `NodeFileSystem.layer`:
@@ -67,6 +69,8 @@ const notFound = (
 export const makeInMemoryFileSystem = (): InMemoryFileSystemHandle => {
   const files = new Map<string, Uint8Array>();
   const directories = new Set<string>(["/"]);
+  const fileModes = new Map<string, number>();
+  const DEFAULT_FILE_MODE = 0o644;
   let tempCounter = 0;
 
   const ensureParentDirectories = (filePath: string): void => {
@@ -81,11 +85,16 @@ export const makeInMemoryFileSystem = (): InMemoryFileSystemHandle => {
       return bytes === undefined ? undefined : decoder.decode(bytes);
     },
     hasFile: filePath => files.has(normalize(filePath)),
+    fileMode: filePath =>
+      files.has(normalize(filePath))
+        ? (fileModes.get(normalize(filePath)) ?? DEFAULT_FILE_MODE)
+        : undefined,
     listFiles: () => Array.from(files.keys()).sort(),
     listDirectories: () => Array.from(directories).sort(),
     reset: () => {
       files.clear();
       directories.clear();
+      fileModes.clear();
       directories.add("/");
       tempCounter = 0;
     },
@@ -163,6 +172,7 @@ export const makeInMemoryFileSystem = (): InMemoryFileSystemHandle => {
 
         if (isFile) {
           files.delete(normalized);
+          fileModes.delete(normalized);
           return Effect.void;
         }
 
@@ -207,14 +217,76 @@ export const makeInMemoryFileSystem = (): InMemoryFileSystemHandle => {
 
     realPath: filePath => Effect.succeed(normalize(filePath)),
 
+    rename: (oldPath, newPath) =>
+      Effect.suspend(() => {
+        const normalizedOld = normalize(oldPath);
+        const normalizedNew = normalize(newPath);
+        const bytes = files.get(normalizedOld);
+        if (bytes === undefined) {
+          return Effect.fail(notFound("rename", oldPath));
+        }
+        files.delete(normalizedOld);
+        files.set(normalizedNew, bytes);
+        const mode = fileModes.get(normalizedOld);
+        fileModes.delete(normalizedOld);
+        if (mode !== undefined) {
+          fileModes.set(normalizedNew, mode);
+        }
+        ensureParentDirectories(normalizedNew);
+        return Effect.void;
+      }),
+
+    chmod: (filePath, mode) =>
+      Effect.suspend(() => {
+        const normalized = normalize(filePath);
+        if (!files.has(normalized) && !directories.has(normalized)) {
+          return Effect.fail(notFound("chmod", filePath));
+        }
+        fileModes.set(normalized, mode);
+        return Effect.void;
+      }),
+
+    stat: filePath =>
+      Effect.suspend(() => {
+        const normalized = normalize(filePath);
+        const isFile = files.has(normalized);
+        const isDirectory = directories.has(normalized);
+        if (!isFile && !isDirectory) {
+          return Effect.fail(notFound("stat", filePath));
+        }
+        const size = isFile
+          ? BigInt(files.get(normalized)?.length ?? 0)
+          : BigInt(0);
+        return Effect.succeed({
+          type: isFile ? ("File" as const) : ("Directory" as const),
+          mtime: Option.none(),
+          atime: Option.none(),
+          birthtime: Option.none(),
+          dev: 0,
+          ino: Option.none(),
+          mode: fileModes.get(normalized) ?? DEFAULT_FILE_MODE,
+          nlink: Option.none(),
+          uid: Option.none(),
+          gid: Option.none(),
+          rdev: Option.none(),
+          size: FileSystem.Size(size),
+          blksize: Option.none(),
+          blocks: Option.none(),
+        });
+      }),
+
     makeTempDirectoryScoped: options =>
       Effect.acquireRelease(
         Effect.sync(() => {
           tempCounter += 1;
           const prefix = options?.prefix ?? "tmp-";
-          const tmpPath = `/.tmp/${prefix}${tempCounter}`;
-          directories.add("/.tmp");
+          const baseDir = options?.directory
+            ? normalize(options.directory)
+            : "/.tmp";
+          const tmpPath = `${baseDir}/${prefix}${tempCounter}`;
+          directories.add(baseDir);
           directories.add(tmpPath);
+          ensureParentDirectories(tmpPath);
           return tmpPath;
         }),
         tmpPath =>
@@ -223,6 +295,7 @@ export const makeInMemoryFileSystem = (): InMemoryFileSystemHandle => {
             for (const key of Array.from(files.keys())) {
               if (key.startsWith(prefix)) {
                 files.delete(key);
+                fileModes.delete(key);
               }
             }
             for (const dir of Array.from(directories)) {

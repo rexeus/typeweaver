@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { HttpMethod } from "@rexeus/typeweaver-core";
+import { FileSystem } from "@effect/platform";
 import { afterEach, describe, expect, test } from "vitest";
 import { MissingCanonicalResponseError } from "../../../src/plugins/errors/MissingCanonicalResponseError.js";
 import {
@@ -17,11 +18,16 @@ import type {
 /**
  * Real-deps factory for the sync plugin-context builder: the exact live
  * shapes the production `ContextBuilder` service wires in — the pure
- * path-safety guard and the project's hand-rolled template engine.
+ * path-safety guard and the project's hand-rolled template engine. The
+ * Effect-native context surface is exercised separately against an
+ * in-memory `FileSystem` (see the cli-side
+ * `pluginContextEffect.inMemoryFs.test.ts`); the no-op implementation here
+ * only satisfies the builder's dependency shape.
  */
 const realPluginContextBuilderDeps = {
   pathSafety: livePathSafetyShape,
   templateRenderer: liveTemplateRendererShape,
+  fileSystem: FileSystem.makeNoop({}),
 };
 
 const aBuilder = () => createPluginContextBuilder(realPluginContextBuilderDeps);

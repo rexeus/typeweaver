@@ -244,6 +244,51 @@ paths throw `UnsafeGeneratedPathError`, which becomes a `PluginExecutionError` a
 
 ---
 
+## The Effect-native context surface
+
+If you prefer to write your plugin in Effect style — no `Effect.try` boundary, typed errors all the
+way — the context also exposes Effect-returning counterparts of the I/O helpers:
+
+| Helper                                     | Error channel                               |
+| ------------------------------------------ | ------------------------------------------- |
+| `writeFileEffect(path, content)`           | `UnsafeGeneratedPathError \| PlatformError` |
+| `renderTemplateEffect(templatePath, data)` | `TemplateRenderError \| PlatformError`      |
+| `addGeneratedFileEffect(path)`             | `UnsafeGeneratedPathError`                  |
+
+These provide the **same guarantees** as the sync helpers — path-traversal guard, atomic temp-file +
+rename replace, file-mode preservation, tracker registration, queued `Generated:` log line — but the
+I/O routes through `@effect/platform`'s `FileSystem` service. The service is captured when the
+context is built, so your lifecycle stages keep `R = never`. Map the typed failures into
+`PluginExecutionError` before returning:
+
+```ts
+export const myPlugin = definePlugin({
+  name: "my-plugin",
+  generate: context =>
+    Effect.gen(function* () {
+      const source = yield* context.renderTemplateEffect("MyTemplate.ejs", {
+        items: context.normalizedSpec.resources,
+      });
+      yield* context.writeFileEffect("my-plugin/output.ts", source);
+    }).pipe(
+      Effect.mapError(
+        cause =>
+          new PluginExecutionError({
+            pluginName: "my-plugin",
+            phase: "generate",
+            cause,
+          })
+      )
+    ),
+});
+```
+
+Both surfaces share one file tracker and one log queue, so a plugin may freely mix sync and Effect
+helpers. A practical benefit of the Effect surface: your plugin tests can run against the in-memory
+`FileSystem` layer from `test-utils` (`makeInMemoryFileSystem()`) without touching disk.
+
+---
+
 ## Higher-order plugin constructors
 
 If your plugin needs a service (an HTTP client, a config loader, a clock), the V2 contract still

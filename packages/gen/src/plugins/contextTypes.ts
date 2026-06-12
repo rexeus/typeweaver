@@ -1,4 +1,8 @@
+import type { TemplateRenderError } from "../errors/TemplateRenderError.js";
+import type { UnsafeGeneratedPathError } from "../errors/UnsafeGeneratedPathError.js";
 import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec.js";
+import type { PlatformError } from "@effect/platform/Error";
+import type { Effect } from "effect";
 
 /**
  * Per-plugin configuration passed in the tuple form
@@ -113,6 +117,53 @@ export type GeneratorContext = PluginContext & {
    * run, sorted lexicographically for determinism. Pure read-only accessor.
    */
   readonly getGeneratedFiles: () => string[];
+
+  /**
+   * Effect-native counterpart of `writeFile` for plugins written in Effect
+   * style. Same guarantees as the sync path — path-traversal guard, atomic
+   * temp-file + rename replace, mode preservation, file tracking, queued
+   * `Generated: <path>` log line — but expressed over the platform
+   * `FileSystem` service, with a closed typed error channel instead of a
+   * throw caught by `Effect.try`.
+   *
+   * The `FileSystem` is captured when the context is built, so lifecycle
+   * stages keep `R = never` (ADR 0003). Map failures into
+   * `PluginExecutionError` before returning them from a lifecycle stage:
+   *
+   * ```ts
+   * yield* context
+   *   .writeFileEffect("todo/GetTodo.ts", source)
+   *   .pipe(
+   *     Effect.mapError(
+   *       cause => new PluginExecutionError({ pluginName, phase: "generate", cause })
+   *     )
+   *   );
+   * ```
+   */
+  readonly writeFileEffect: (
+    relativePath: string,
+    content: string
+  ) => Effect.Effect<void, UnsafeGeneratedPathError | PlatformError>;
+
+  /**
+   * Effect-native counterpart of `renderTemplate`. Reads the template file
+   * through the platform `FileSystem` service (typed `PlatformError`
+   * instead of a thrown `ENOENT`) and surfaces malformed templates as
+   * `TemplateRenderError`.
+   */
+  readonly renderTemplateEffect: (
+    templatePath: string,
+    data: unknown
+  ) => Effect.Effect<string, TemplateRenderError | PlatformError>;
+
+  /**
+   * Effect-native counterpart of `addGeneratedFile`: registers an
+   * externally-produced file with the run's tracker, rejecting unsafe
+   * paths on the typed error channel.
+   */
+  readonly addGeneratedFileEffect: (
+    relativePath: string
+  ) => Effect.Effect<void, UnsafeGeneratedPathError>;
 };
 
 /**

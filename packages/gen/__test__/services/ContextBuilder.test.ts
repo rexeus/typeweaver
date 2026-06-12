@@ -1,4 +1,5 @@
-import { Effect } from "effect";
+import { FileSystem } from "@effect/platform";
+import { Effect, Layer } from "effect";
 import { describe, expect, test } from "vitest";
 import { ContextBuilder } from "../../src/services/ContextBuilder.js";
 
@@ -10,7 +11,11 @@ const aBuildPluginContextProgram = (params: {
   Effect.gen(function* () {
     const builder = yield* ContextBuilder;
     return yield* builder.buildPluginContext(params);
-  }).pipe(Effect.provide(ContextBuilder.Default));
+  }).pipe(
+    Effect.provide(
+      ContextBuilder.Default.pipe(Layer.provide(FileSystem.layerNoop({})))
+    )
+  );
 
 describe("ContextBuilder", () => {
   test("buildPluginContext returns a context populated from the supplied params", async () => {

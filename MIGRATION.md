@@ -89,8 +89,10 @@ Plugin packages must declare `effect ^3.21.x` as a `peerDependency`:
 
 `GeneratorContext.writeFile`, `renderTemplate`, and `addGeneratedFile` remain synchronous. Plugin
 authors wrap their sync work in `Effect.try` and map thrown causes to `PluginExecutionError` — the
-orchestrator does **not** catch raw throws. See
-[`docs/plugin-authoring.md`](./docs/plugin-authoring.md) for the full V2 contract and
+orchestrator does **not** catch raw throws. Plugins written in Effect style can use the additive
+Effect-native counterparts (`writeFileEffect`, `renderTemplateEffect`, `addGeneratedFileEffect`)
+instead — same guarantees, typed error channels, I/O through `@effect/platform`'s `FileSystem`
+service. See [`docs/plugin-authoring.md`](./docs/plugin-authoring.md) for the full V2 contract and
 [ADR 0003](./docs/adr/0003-effect-native-plugin-api.md) for the design rationale.
 
 ### 2. CLI on `@effect/cli` (BREAKING for invocation in scripts)
@@ -140,6 +142,10 @@ If you imported the generator programmatically rather than through the CLI:
 - `createPluginRegistry` is deleted; the runtime composes the equivalent service.
   `createPluginContextBuilder` is no longer exported — it lives under `services/internal/` as
   implementation detail of the `ContextBuilder` service.
+- `MainLayer` (from `@rexeus/typeweaver-gen`) now requires the platform-agnostic `FileSystem` tag
+  from `@effect/platform` — `ContextBuilder` captures it for the Effect-native plugin context
+  surface. Provide `NodeContext.layer` (production) or an in-memory/no-op `FileSystem` layer (tests)
+  beneath it.
 - Errors are now `Data.TaggedError` instances throughout. Inspect the `_tag` field for typed
   branching (`UnsafeGeneratedPathError`, `PluginExecutionError`, `SpecBundleError`, etc.).
 

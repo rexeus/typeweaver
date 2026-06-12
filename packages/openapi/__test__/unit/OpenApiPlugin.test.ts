@@ -272,6 +272,12 @@ function anOpenApiGeneratorContextWith(
     renderTemplate: notImplemented,
     addGeneratedFile: notImplemented,
     getGeneratedFiles: () => writtenFiles.map(file => file.path),
+    writeFileEffect: () =>
+      Effect.die("Not implemented by the openApiPlugin test context"),
+    renderTemplateEffect: () =>
+      Effect.die("Not implemented by the openApiPlugin test context"),
+    addGeneratedFileEffect: () =>
+      Effect.die("Not implemented by the openApiPlugin test context"),
     writtenFiles,
   };
 }

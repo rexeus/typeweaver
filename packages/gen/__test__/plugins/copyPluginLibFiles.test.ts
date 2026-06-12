@@ -46,6 +46,9 @@ const aMinimalGeneratorContext = (outputDir: string): GeneratorContext =>
     renderTemplate: () => "",
     addGeneratedFile: () => {},
     getGeneratedFiles: () => [],
+    writeFileEffect: () => Effect.die("not used"),
+    renderTemplateEffect: () => Effect.die("not used"),
+    addGeneratedFileEffect: () => Effect.die("not used"),
   }) satisfies GeneratorContext;
 
 describe("definePluginWithLibCopy path-safety guard", () => {

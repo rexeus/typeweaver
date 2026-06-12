@@ -84,6 +84,14 @@ messages.
   `openapi` uses `definePlugin` directly).
 - The `GeneratorContext` sync helpers (`writeFile`, `renderTemplate`, `addGeneratedFile`) remain
   sync; plugin authors continue to call them inside the `try` block of their `Effect.try` boundary.
+- An **additive Effect-native context surface** exists alongside the sync helpers:
+  `writeFileEffect`, `renderTemplateEffect`, and `addGeneratedFileEffect` express the same
+  guarantees (path-traversal guard, atomic temp-file + rename replace, mode preservation, file
+  tracking, queued `Generated:` log line) over the platform `FileSystem` service, with closed typed
+  error channels (`UnsafeGeneratedPathError | PlatformError`, `TemplateRenderError`). The
+  `FileSystem` is captured when the context is built, so lifecycle stages keep `R = never`; authors
+  map failures into `PluginExecutionError` via `Effect.mapError` instead of `Effect.try`. Both
+  surfaces share one tracker and one log queue, so mixing them in a single plugin is safe.
 - Lifecycle failure semantics mirror `try/finally`: failures in `initialize`, `collectResources`,
   and `generate` abort the run with a `PluginExecutionError`; failures in `finalize` are demoted to
   a WARN log and the run completes. Cleanup work should not fail an otherwise-successful operation.

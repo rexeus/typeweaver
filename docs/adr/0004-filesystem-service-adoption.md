@@ -112,10 +112,16 @@ implementation; tests pass an in-memory double.
 
 ### Migration Path
 
-If the plugin author contract ever flips to Effect-yielding helpers (`context.writeFile` returning
-`Effect<void, PlatformError>`), the rule-1 sync leaves can switch to the `FileSystem` service in a
-single pass. The seams already align with the service's surface (`writeFileString`,
-`readFileString`, `makeDirectory`); a flip is a refactor, not a redesign.
+Partially realized: the `GeneratorContext` now carries an **additive Effect-native surface**
+(`writeFileEffect`, `renderTemplateEffect`, `addGeneratedFileEffect`) that expresses the same
+atomic-replace write (temp dir next to the destination, mode preservation via `stat`/`chmod`,
+`rename`) entirely over the `FileSystem` service — `ContextBuilder` captures the platform-agnostic
+tag at construction time, so plugin lifecycle stages keep `R = never`. Plugins written in Effect
+style incur no raw `node:fs` at all and are fully testable against `InMemoryFileSystem`.
+
+The rule-1 sync leaves remain for the sync contract (the sync helpers are still the
+`Effect.try`-friendly surface for procedural emitters); if that contract is ever retired, the
+remaining sync leaves can switch to the service in a single pass.
 
 ## Reference Files
 

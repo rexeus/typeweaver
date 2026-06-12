@@ -15,7 +15,15 @@ import { TemplateRenderer } from "../services/TemplateRenderer.js";
  *   - `ContextBuilder`   (per-run plugin/generator context fabric; wires
  *                         the same sync cores that back `PathSafety` and
  *                         `TemplateRenderer` into the sync plugin-author
- *                         callbacks — no `Effect.runSync` bridging)
+ *                         callbacks — no `Effect.runSync` bridging — and
+ *                         captures the platform-agnostic `FileSystem` tag
+ *                         for the Effect-native context surface)
+ *
+ * Because `ContextBuilder` consumes `FileSystem`, this layer requires the
+ * `FileSystem` tag from `@effect/platform` (platform-agnostic — no
+ * `@effect/platform-node` dependency here). Consumers provide it at the
+ * edge: `NodeContext.layer` in production, `InMemoryFileSystem` (or
+ * `FileSystem.layerNoop`) in tests.
  *
  * Platform bindings (FileSystem, Path) and CLI-only services (Formatter,
  * ConfigLoader, SpecLoader) are stacked on top by the consumer entrypoint

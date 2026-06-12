@@ -1,3 +1,4 @@
+import { FileSystem } from "@effect/platform";
 import { Effect } from "effect";
 import {
   createPluginContextBuilder,
@@ -32,9 +33,10 @@ export type GeneratorContextParams = PluginContextParams & {
  * invocations cannot leak file-tracking state between runs.
  *
  * `drainPendingWriteLogs` returns (and clears) the paths written via
- * `context.writeFile` since the previous drain. The orchestrator flushes
- * it through `Effect.logInfo` after each plugin's `generate` stage so the
- * `Generated: <path>` lines flow through the configured logger pipeline.
+ * `context.writeFile` / `context.writeFileEffect` since the previous
+ * drain. The orchestrator flushes it through `Effect.logInfo` after each
+ * plugin's `generate` stage so the `Generated: <path>` lines flow through
+ * the configured logger pipeline.
  */
 export type BuiltGeneratorContext = {
   readonly context: GeneratorContext;
@@ -48,33 +50,43 @@ export type BuiltGeneratorContext = {
  * another's tracker state — eliminating the singleton-builder race that the
  * previous `reset()`-based design exposed.
  *
- * The builder consumes the sync cores (`livePathSafetyShape`,
- * `liveTemplateRendererShape`) directly — the same algorithms that back the
- * Effect-native `PathSafety` and `TemplateRenderer` services, without any
- * `Effect.runSync` bridging. The plugin-author surface stays sync end-to-end
- * (ADR 0003); Effect-native callers use the service facades instead.
+ * The sync plugin-author callbacks consume the sync cores
+ * (`livePathSafetyShape`, `liveTemplateRendererShape`) directly — the same
+ * algorithms that back the Effect-native `PathSafety` and `TemplateRenderer`
+ * services, without any `Effect.runSync` bridging. The Effect-native context
+ * surface (`writeFileEffect`, `renderTemplateEffect`) closes over the
+ * platform `FileSystem` service captured here, so plugin lifecycle stages
+ * keep `R = never` (ADR 0003) while their I/O routes through the service.
+ *
+ * The `FileSystem` requirement is the platform-agnostic tag from
+ * `@effect/platform` — consumers provide `NodeContext.layer` in production
+ * and `InMemoryFileSystem` in tests.
  */
 export class ContextBuilder extends Effect.Service<ContextBuilder>()(
   "typeweaver/ContextBuilder",
   {
-    succeed: {
-      buildPluginContext: (
+    effect: Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+
+      const buildPluginContext = (
         params: PluginContextParams
       ): Effect.Effect<PluginContext> =>
         Effect.sync(() =>
           createPluginContextBuilder({
             pathSafety: livePathSafetyShape,
             templateRenderer: liveTemplateRendererShape,
+            fileSystem,
           }).createPluginContext(params)
-        ),
+        );
 
-      buildGeneratorContext: (
+      const buildGeneratorContext = (
         params: GeneratorContextParams
       ): Effect.Effect<BuiltGeneratorContext> =>
         Effect.sync(() => {
           const builder = createPluginContextBuilder({
             pathSafety: livePathSafetyShape,
             templateRenderer: liveTemplateRendererShape,
+            fileSystem,
           });
           const context = builder.createGeneratorContext(params);
           return {
@@ -82,8 +94,10 @@ export class ContextBuilder extends Effect.Service<ContextBuilder>()(
             getGeneratedFiles: builder.getGeneratedFiles,
             drainPendingWriteLogs: builder.drainPendingWriteLogs,
           };
-        }),
-    },
+        });
+
+      return { buildPluginContext, buildGeneratorContext } as const;
+    }),
     accessors: true,
   }
 ) {}
