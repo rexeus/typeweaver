@@ -5,7 +5,16 @@ import type {
   PluginRegistryInstance,
   TypeweaverConfig,
 } from "@rexeus/typeweaver-gen";
-import { Cause, Data, Effect, Exit, Layer, ManagedRuntime, Ref } from "effect";
+import {
+  Cause,
+  Data,
+  Effect,
+  Exit,
+  Layer,
+  ManagedRuntime,
+  Option,
+  Ref,
+} from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { PluginLoadError } from "../src/errors/PluginLoadError.js";
 import { PluginLoader, PluginModuleLoader } from "../src/services/index.js";
@@ -135,7 +144,7 @@ type RunResult = {
   readonly logs: readonly CapturedLog[];
 };
 
-const runLoadPlugins = async (params: RunParams): Promise<RunResult> => {
+const runLoadPluginsExit = async (params: RunParams) => {
   const moduleLoaderLayer = params.useRealModuleLoader
     ? PluginModuleLoader.Default
     : inMemoryPluginModuleLoader(params.modules ?? new Map());
@@ -145,7 +154,7 @@ const runLoadPlugins = async (params: RunParams): Promise<RunResult> => {
   );
   const runtime = ManagedRuntime.make(layer);
   try {
-    const exit = await runtime.runPromiseExit(
+    return await runtime.runPromiseExit(
       withCapturedLogs(
         Effect.gen(function* () {
           const registry = yield* createRecordingPluginRegistry(
@@ -160,17 +169,23 @@ const runLoadPlugins = async (params: RunParams): Promise<RunResult> => {
         })
       )
     );
-    if (Exit.isFailure(exit)) {
-      const failureOption = Cause.failureOption(exit.cause);
-      if (failureOption._tag === "Some") {
-        throw failureOption.value;
-      }
-      throw new Error(Cause.pretty(exit.cause));
-    }
-    return { logs: exit.value.logs };
   } finally {
     await runtime.dispose();
   }
+};
+
+const runLoadPlugins = async (params: RunParams): Promise<RunResult> => {
+  const exit = await runLoadPluginsExit(params);
+
+  if (Exit.isFailure(exit)) {
+    const failureOption = Cause.failureOption(exit.cause);
+    if (Option.isSome(failureOption)) {
+      throw failureOption.value;
+    }
+    throw new Error(Cause.pretty(exit.cause));
+  }
+
+  return { logs: exit.value.logs };
 };
 
 describe("pluginLoader", () => {
@@ -944,10 +959,128 @@ describe("pluginLoader", () => {
       {
         path: "nameless-plugin",
         error:
-          "Export 'namelessPlugin' did not produce a valid plugin with a string name",
+          "Export 'namelessPlugin' has invalid plugin field 'name': expected a non-empty string, received undefined",
       },
     ]);
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual(["types"]);
+  });
+
+  test.each(
+    [
+      { field: "name", invalidValue: undefined, omitField: true },
+      { field: "name", invalidValue: "", omitField: false },
+      { field: "name", invalidValue: "   ", omitField: false },
+      { field: "name", invalidValue: 42, omitField: false },
+      { field: "depends", invalidValue: "valid-dependency", omitField: false },
+      {
+        field: "depends",
+        invalidValue: ["valid-dependency", 42],
+        omitField: false,
+      },
+      { field: "initialize", invalidValue: 42, omitField: false },
+      { field: "collectResources", invalidValue: 42, omitField: false },
+      { field: "generate", invalidValue: 42, omitField: false },
+      { field: "finalize", invalidValue: 42, omitField: false },
+    ].flatMap(invalidField => [
+      { ...invalidField, exportKind: "record" },
+      { ...invalidField, exportKind: "factory result" },
+    ])
+  )(
+    "rejects invalid $field on a plugin $exportKind before registration",
+    async ({ exportKind, field, invalidValue, omitField = false }) => {
+      let factoryInvocations = 0;
+      let lifecycleInvocations = 0;
+      const lifecycleTripwire = () => {
+        lifecycleInvocations += 1;
+        return Effect.die("invalid plugin lifecycle must never run");
+      };
+      const invalidPlugin: Record<string, unknown> = {
+        name: "invalid-plugin",
+        initialize: lifecycleTripwire,
+        collectResources: lifecycleTripwire,
+        generate: lifecycleTripwire,
+        finalize: lifecycleTripwire,
+      };
+      if (omitField) {
+        delete invalidPlugin[field];
+      } else {
+        invalidPlugin[field] = invalidValue;
+      }
+      const exportedValue =
+        exportKind === "record"
+          ? invalidPlugin
+          : () => {
+              factoryInvocations += 1;
+              return invalidPlugin;
+            };
+      const registeredPlugins: RegisteredPlugin[] = [];
+
+      const exit = await runLoadPluginsExit({
+        registeredPlugins,
+        requiredPlugins: [],
+        strategies: ["local"],
+        modules: new Map([["invalid-plugin", { default: exportedValue }]]),
+        config: configWithPlugin("invalid-plugin"),
+      });
+
+      expect(Exit.isFailure(exit)).toBe(true);
+      if (Exit.isFailure(exit)) {
+        expect(Cause.defects(exit.cause)).toHaveLength(0);
+        const failure = Cause.failureOption(exit.cause);
+        expect(Option.isSome(failure)).toBe(true);
+        if (Option.isSome(failure)) {
+          expect(failure.value).toBeInstanceOf(PluginLoadError);
+        }
+        if (
+          Option.isSome(failure) &&
+          failure.value instanceof PluginLoadError
+        ) {
+          expect(failure.value.attempts).toEqual([
+            {
+              path: "invalid-plugin",
+              error: expect.stringContaining(`field '${field}'`),
+            },
+          ]);
+        }
+      }
+      expect(registeredPlugins).toEqual([]);
+      expect(lifecycleInvocations).toBe(0);
+      expect(factoryInvocations).toBe(exportKind === "record" ? 0 : 1);
+    }
+  );
+
+  test("rejects an invalid default export from a real module before registration", async () => {
+    const pluginPath = writePluginModule([
+      'export default { name: "invalid-plugin", generate: 42 };',
+    ]);
+    const registeredPlugins: RegisteredPlugin[] = [];
+
+    const exit = await runLoadPluginsExit({
+      registeredPlugins,
+      requiredPlugins: [],
+      strategies: ["local"],
+      config: configWithPlugin(pluginPath),
+      useRealModuleLoader: true,
+    });
+
+    expect(Exit.isFailure(exit)).toBe(true);
+    if (Exit.isFailure(exit)) {
+      expect(Cause.defects(exit.cause)).toHaveLength(0);
+      const failure = Cause.failureOption(exit.cause);
+      expect(Option.isSome(failure)).toBe(true);
+      if (Option.isSome(failure)) {
+        expect(failure.value).toBeInstanceOf(PluginLoadError);
+      }
+      if (Option.isSome(failure) && failure.value instanceof PluginLoadError) {
+        expect(failure.value.attempts).toEqual([
+          {
+            path: importPathForFile(pluginPath),
+            error: expect.stringContaining("field 'generate'"),
+          },
+        ]);
+      }
+    }
+    expect(registeredPlugins).toEqual([]);
   });
 
   test("reports a scoped package attempt when the scoped strategy cannot load it", async () => {

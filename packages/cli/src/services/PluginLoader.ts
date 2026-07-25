@@ -25,11 +25,157 @@ type PluginLoadResult = {
   readonly config?: PluginConfig;
 };
 
-const isPlugin = (value: unknown): value is Plugin =>
-  typeof value === "object" &&
-  value !== null &&
-  typeof (value as { readonly name?: unknown }).name === "string" &&
-  (value as { readonly name: string }).name.length > 0;
+type PluginFactory = (config?: PluginConfig) => unknown;
+
+type PluginShapeIssue =
+  | {
+      readonly _tag: "NotRecord";
+      readonly actual: string;
+    }
+  | {
+      readonly _tag: "InvalidField";
+      readonly field: keyof Plugin;
+      readonly expected: string;
+      readonly actual: string;
+      readonly detail?: string;
+    };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isPluginFactory = (value: unknown): value is PluginFactory =>
+  typeof value === "function";
+
+const isInitializeHook = (
+  value: unknown
+): value is NonNullable<Plugin["initialize"]> => typeof value === "function";
+
+const isCollectResourcesHook = (
+  value: unknown
+): value is NonNullable<Plugin["collectResources"]> =>
+  typeof value === "function";
+
+const isGenerateHook = (
+  value: unknown
+): value is NonNullable<Plugin["generate"]> => typeof value === "function";
+
+const isFinalizeHook = (
+  value: unknown
+): value is NonNullable<Plugin["finalize"]> => typeof value === "function";
+
+const describeValue = (value: unknown): string => {
+  if (value === null) {
+    return "null";
+  }
+  if (Array.isArray(value)) {
+    return "array";
+  }
+  if (typeof value === "string") {
+    return JSON.stringify(value);
+  }
+  return typeof value;
+};
+
+const formatPluginShapeIssue = (
+  exportName: string,
+  issue: PluginShapeIssue
+): string => {
+  switch (issue._tag) {
+    case "NotRecord":
+      return `Export '${exportName}' must be a plugin record, received ${issue.actual}`;
+    case "InvalidField": {
+      const detail = issue.detail === undefined ? "" : ` ${issue.detail}`;
+      return `Export '${exportName}' has invalid plugin field '${issue.field}'${detail}: expected ${issue.expected}, received ${issue.actual}`;
+    }
+  }
+};
+
+const invalidField = (
+  field: keyof Plugin,
+  expected: string,
+  actual: unknown,
+  detail?: string
+): Either.Either<never, PluginShapeIssue> =>
+  Either.left({
+    _tag: "InvalidField",
+    field,
+    expected,
+    actual: describeValue(actual),
+    ...(detail === undefined ? {} : { detail }),
+  });
+
+const decodePlugin = (
+  value: unknown
+): Either.Either<Plugin, PluginShapeIssue> => {
+  if (!isRecord(value)) {
+    return Either.left({
+      _tag: "NotRecord",
+      actual: describeValue(value),
+    });
+  }
+
+  const name = value.name;
+  if (typeof name !== "string" || name.trim().length === 0) {
+    return invalidField("name", "a non-empty string", name);
+  }
+
+  let depends: readonly string[] | undefined;
+  if ("depends" in value) {
+    const candidate = value.depends;
+    if (!Array.isArray(candidate)) {
+      return invalidField("depends", "an array of strings", candidate);
+    }
+
+    const decodedDependencies: string[] = [];
+    for (const [index, dependency] of candidate.entries()) {
+      if (typeof dependency !== "string") {
+        return invalidField(
+          "depends",
+          "a string",
+          dependency,
+          `at index ${index}`
+        );
+      }
+      decodedDependencies.push(dependency);
+    }
+    depends = decodedDependencies;
+  }
+
+  const initialize = value.initialize;
+  if ("initialize" in value && !isInitializeHook(initialize)) {
+    return invalidField("initialize", "a function", initialize);
+  }
+
+  const collectResources = value.collectResources;
+  if (
+    "collectResources" in value &&
+    !isCollectResourcesHook(collectResources)
+  ) {
+    return invalidField("collectResources", "a function", collectResources);
+  }
+
+  const generate = value.generate;
+  if ("generate" in value && !isGenerateHook(generate)) {
+    return invalidField("generate", "a function", generate);
+  }
+
+  const finalize = value.finalize;
+  if ("finalize" in value && !isFinalizeHook(finalize)) {
+    return invalidField("finalize", "a function", finalize);
+  }
+
+  const plugin = {
+    ...value,
+    name,
+    ...(depends === undefined ? {} : { depends }),
+    ...(isInitializeHook(initialize) ? { initialize } : {}),
+    ...(isCollectResourcesHook(collectResources) ? { collectResources } : {}),
+    ...(isGenerateHook(generate) ? { generate } : {}),
+    ...(isFinalizeHook(finalize) ? { finalize } : {}),
+  } satisfies Plugin;
+
+  return Either.right(plugin);
+};
 
 const formatError = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
@@ -99,16 +245,10 @@ const resolveCandidateToPlugin = (
   candidate: PluginCandidate,
   config: PluginConfig | undefined
 ): Either.Either<Plugin, CandidateFailure> => {
-  if (typeof candidate.value === "function") {
+  if (isPluginFactory(candidate.value)) {
     try {
-      const result = (candidate.value as (cfg?: PluginConfig) => unknown)(
-        config
-      );
-      if (isPlugin(result)) {
-        return Either.right(result);
-      }
-      return Either.left(
-        `Export '${candidate.exportName}' did not produce a valid plugin with a string name`
+      return Either.mapLeft(decodePlugin(candidate.value(config)), issue =>
+        formatPluginShapeIssue(candidate.exportName, issue)
       );
     } catch (error) {
       if (isPluginConfigError(error)) {
@@ -120,12 +260,8 @@ const resolveCandidateToPlugin = (
     }
   }
 
-  if (isPlugin(candidate.value)) {
-    return Either.right(candidate.value);
-  }
-
-  return Either.left(
-    `Export '${candidate.exportName}' did not produce a valid plugin with a string name`
+  return Either.mapLeft(decodePlugin(candidate.value), issue =>
+    formatPluginShapeIssue(candidate.exportName, issue)
   );
 };
 

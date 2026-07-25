@@ -98,7 +98,7 @@ progress log.
   - valid custom top-level keys survive parsing;
   - `pnpm --filter @rexeus/typeweaver test -- ConfigLoader` exits 0.
 
-- [ ] **4. Imported plugins are structurally decoded before registration.**
+- [x] **4. Imported plugins are structurally decoded before registration.**
 
   A plugin requires a non-empty name; `depends` is absent or a string array; and every present
   lifecycle hook is a function. Invalid default exports and factory results fail as a detailed
@@ -451,6 +451,20 @@ change: Added an Effect 3.22 Schema decoder for every known config field, preser
 evidence: config loader suite 40/40 including 40 generated cases; complete CLI suite 239/239;
           root lint and format check green; CLI typecheck and build green; git diff check green.
 next: Criterion 4, structurally decode imported plugins before registration.
+```
+
+```text
+[iteration 4 | 2026-07-25]
+criterion: 4. Imported plugins are structurally decoded before registration.
+before: Sixteen new assertions failed: twelve invalid depends/hook shapes were registered as
+        plugins, while four invalid-name cases lacked field-specific diagnostics.
+change: Replaced the name-only type predicate and factory cast with a cast-free decoder that
+        constructs Plugin only after validating a non-blank name, every dependency entry, and all
+        lifecycle hooks; added detailed field/index diagnostics and record/factory tripwire tests.
+evidence: plugin loader suite 48/48 with 20 invalid-shape matrix cases and a real .mjs boundary
+          fixture; complete CLI suite 260/260; root lint and format check green; CLI typecheck and
+          build green.
+next: Criterion 5, make the documented plugin-construction contract executable and singular.
 ```
 
 ## Stop conditions
