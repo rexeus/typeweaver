@@ -56,6 +56,28 @@ const run = ({ args, cwd }) => {
   return result.stdout;
 };
 
+const runNode = ({ args, cwd }) => {
+  const result = spawnSync(process.execPath, args, {
+    cwd,
+    encoding: "utf8",
+    env: process.env,
+    maxBuffer: 20 * 1024 * 1024,
+  });
+  assert.equal(
+    result.status,
+    0,
+    [
+      `node ${args.join(" ")} failed with exit code ${String(result.status)}`,
+      result.stdout.trim(),
+      result.stderr.trim(),
+    ]
+      .filter(Boolean)
+      .join("\n")
+  );
+  assert.equal(result.stderr, "");
+  return result.stdout;
+};
+
 const collectPublishablePackages = () =>
   readdirSync(packageRoot, { withFileTypes: true })
     .filter(entry => entry.isDirectory())
@@ -194,6 +216,32 @@ const writeConsumerSources = fixtureRoot => {
       "",
     ].join("\n")
   );
+  writeFileSync(
+    path.join(fixtureRoot, "programmatic.ts"),
+    [
+      'import { Generator, effectRuntime } from "@rexeus/typeweaver";',
+      'import type { GenerateFailure, GenerateParams } from "@rexeus/typeweaver";',
+      'import type { Effect } from "effect";',
+      "",
+      "const params = {",
+      '  inputFile: "./spec/index.ts",',
+      '  outputDir: "./generated",',
+      "} satisfies GenerateParams;",
+      "",
+      "const program = Generator.generate(params);",
+      "type ProgramFailure = Effect.Effect.Error<typeof program>;",
+      "type ExactFailure =",
+      "  [ProgramFailure] extends [GenerateFailure]",
+      "    ? [GenerateFailure] extends [ProgramFailure]",
+      "      ? true",
+      "      : false",
+      "    : false;",
+      "const exactFailure: ExactFailure = true;",
+      "void exactFailure;",
+      "void effectRuntime;",
+      "",
+    ].join("\n")
+  );
   writeJson(path.join(fixtureRoot, "tsconfig.json"), {
     compilerOptions: {
       allowJs: true,
@@ -205,7 +253,7 @@ const writeConsumerSources = fixtureRoot => {
       strict: true,
       target: "ES2024",
     },
-    include: ["plugin/index.mjs", "spec/index.ts"],
+    include: ["plugin/index.mjs", "programmatic.ts", "spec/index.ts"],
   });
 };
 
@@ -448,6 +496,27 @@ const verifySupportedConsumer = ({
     args: ["exec", "tsc", "--project", "tsconfig.json"],
     cwd: fixtureRoot,
   });
+  assert.equal(
+    runNode({
+      args: [
+        "--input-type=module",
+        "--eval",
+        'const api = await import("@rexeus/typeweaver"); if (typeof api.Generator?.generate !== "function" || typeof api.effectRuntime?.runPromise !== "function") throw new Error("missing programmatic API"); if (process.exitCode !== undefined) throw new Error("package import changed process.exitCode"); process.stdout.write("import-ok\\n");',
+      ],
+      cwd: fixtureRoot,
+    }),
+    "import-ok\n"
+  );
+  assert.equal(
+    runNode({
+      args: [
+        "--eval",
+        'const api = require("@rexeus/typeweaver"); if (typeof api.Generator?.generate !== "function" || typeof api.effectRuntime?.runPromise !== "function") throw new Error("missing programmatic API"); if (process.exitCode !== undefined) throw new Error("package require changed process.exitCode"); process.stdout.write("require-ok\\n");',
+      ],
+      cwd: fixtureRoot,
+    }),
+    "require-ok\n"
+  );
 
   const { configPath, outputRoot } = writeRuntimeConfig(fixtureRoot);
   const output = run({

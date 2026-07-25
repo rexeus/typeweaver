@@ -239,14 +239,14 @@ const findPluginCandidates = (
 ): PluginCandidate[] => {
   const candidates: PluginCandidate[] = [];
 
+  if ("default" in pluginModule) {
+    candidates.push({ exportName: "default", value: pluginModule.default });
+  }
+
   for (const [key, value] of Object.entries(pluginModule)) {
     if (key !== "default") {
       candidates.push({ exportName: key, value });
     }
-  }
-
-  if ("default" in pluginModule) {
-    candidates.push({ exportName: "default", value: pluginModule.default });
   }
 
   return candidates;

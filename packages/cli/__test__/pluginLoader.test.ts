@@ -524,6 +524,31 @@ describe("pluginLoader factory options and export fallback", () => {
     expect(registeredPlugins[1]?.config).toEqual(options);
   });
 
+  test("prefers a valid default export over other valid named exports", async () => {
+    const registeredPlugins: RegisteredPlugin[] = [];
+
+    await runLoadPlugins({
+      registeredPlugins,
+      requiredPlugins: [requiredTypesPlugin()],
+      strategies: ["local"],
+      modules: new Map([
+        [
+          "mixed-plugin",
+          {
+            namedPlugin: { name: "unexpected-named-plugin" },
+            default: { name: "expected-default-plugin" },
+          },
+        ],
+      ]),
+      config: configWithPlugin("mixed-plugin"),
+    });
+
+    expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
+      "types",
+      "expected-default-plugin",
+    ]);
+  });
+
   test("skips non-plugin exports and registers the first valid plugin shape", async () => {
     const registeredPlugins: RegisteredPlugin[] = [];
 
