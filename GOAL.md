@@ -971,6 +971,27 @@ next: Commit and push the repair under the human's explicit authorization, then 
       Ubuntu and Windows run on the exact new commit.
 ```
 
+```text
+[iteration 23 | 2026-07-25 | Windows documentation-contract runner repair]
+criterion: 16 and 17 remote completion evidence.
+before: Quality Check run 30174849254 proved Ubuntu fully green and confirmed that the packaged CLI
+        file-URL repair works on Windows. Windows then reached 128 passing CLI contracts but the
+        exact documented plugin typecheck alone failed because Node's execFile cannot resolve the
+        extensionless `pnpm` shim on Windows.
+change: Resolve the installed TypeScript CLI as a module and invoke it through process.execPath,
+        avoiding shell-dependent pnpm shim resolution and any reliance on npm lifecycle variables.
+evidence: The failing log identifies one independent failure at
+          pluginAuthoring.serviceFixture.test.ts:97 with `spawn pnpm ENOENT`; the same run proves the
+          packaged CLI process and every other selected Windows CLI contract pass. The repaired
+          documentation contract passes both directly and within the expanded local Windows gate;
+          that gate passes Gen 104/104 and CLI 128/128 applicable tests. The complete
+          `pnpm verify:effect-migration` umbrella remains green with zero Effect diagnostics, all
+          2,378 workspace tests, 225 exact generated fixtures, packed consumers, and an unchanged
+          authored worktree.
+next: Commit and push the portable test runner, then require fresh green Ubuntu and Windows
+      evidence on the exact final commit.
+```
+
 ## Stop conditions
 
 - **Done:** all 18 criteria are checked with recorded evidence, the final local command block is
