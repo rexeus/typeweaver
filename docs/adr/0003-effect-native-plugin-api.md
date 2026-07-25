@@ -130,7 +130,7 @@ plugin constructor and throw `PluginConfigError` on rejection. The lifecycle sta
   surface — `BasePlugin`, `TypeweaverPlugin`, `createPluginRegistry`, and `legacyAdapter` — is gone.
   `createPluginContextBuilder` was preserved as a `services/internal/` implementation detail backing
   `ContextBuilder`; it is no longer exported from the package's public API.
-- Plugin packages must now declare `effect >=3.21.2 <4` as a `peerDependency` (mirrored across all
+- Plugin packages must now declare `effect >=3.22.0 <4` as a `peerDependency` (mirrored across all
   six first-party plugins).
 - Authors who previously relied on `Promise`-based lifecycle methods have to learn enough Effect to
   wrap their work in `Effect.try`. The migration guide (`docs/plugin-authoring.md`) documents the
@@ -146,7 +146,7 @@ for a pre-1.0 project.
 ### Version contract
 
 Development and tests run on Effect 3.22.0. Every first-party plugin publishes the intentional
-compatibility range `peerDependencies.effect: ">=3.21.2 <4"` so supported Effect 3 consumers are not
+compatibility range `peerDependencies.effect: ">=3.22.0 <4"` so supported Effect 3 consumers are not
 forced onto the development minor. `config/effect-baseline.json` records both values; ADR 0008
 documents the pinned source reference and language-service gate.
 

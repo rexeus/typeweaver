@@ -274,17 +274,20 @@ progress log.
 
 ### P3 — packaged consumers and release evidence
 
-- [ ] **15. Packaged consumers prove dependency compatibility.**
+- [x] **15. Packaged consumers prove dependency compatibility.**
 
   Pack the publishable workspaces into isolated fixtures. A minimal plugin author imports public
-  types, compiles, loads through the CLI, and generates output with Effect 3.22 and with the
-  documented lowest supported peer version. The test must fail on duplicate/incompatible Effect
-  identities.
+  types, compiles, loads through the CLI, and generates output with the contracted Effect runtime
+  and documented lowest supported peer version. When runtime and lower bound are the same release,
+  one positive fixture represents both contracts. The test must fail on duplicate/incompatible
+  Effect identities.
 
   Verified by:
 
   - isolated installs use packed tarballs, not workspace symlinks;
-  - both supported-version fixtures typecheck and execute;
+  - every distinct supported-version contract typechecks and executes;
+  - the packed generator declares the Effect range as a peer and has no Effect runtime dependency;
+  - an incompatible duplicate Effect installation is rejected;
   - `pnpm publish:dry` exits 0.
 
 - [ ] **16. Security-sensitive behavior runs on Windows CI.**
@@ -760,6 +763,32 @@ evidence: Reference verification rejects v4, prepares the exact detached pin twi
           are green. Independent Effect, Test-Mastery, and TypeScript-Mastery reviews found no
           remaining K14 blocker.
 next: Criterion 15, prove packaged consumer compatibility across supported dependency versions.
+```
+
+```text
+[iteration 15 | 2026-07-25]
+criterion: 15. Packaged consumers prove dependency compatibility.
+before: The documented >=3.21.2 Effect peer lower bound was incompatible with the current
+        @effect/* packages, which require ^3.22.0. An isolated 3.21.2 consumer therefore installed
+        physical Effect 3.21.2 and 3.22.0 identities and failed the public Plugin type contract with
+        nominal Effect TypeId incompatibilities. No packed-consumer gate protected artifact
+        provenance, public declaration compatibility, CLI loading, or physical Effect identity.
+change: Raised the honest Effect peer contract to >=3.22.0 <4, moved Gen's Effect requirement from
+        a production dependency to peer plus development dependency, and synchronized docs, ADRs,
+        Changeset, skill guidance, and version guards. Added a release-version-stable isolated
+        matrix that packs all 11 public workspaces, blocks registry fallback, verifies tarball
+        manifests and lock provenance, compiles a real public plugin with skipLibCheck disabled,
+        runs it through the packed CLI, and rejects a deliberate 3.21.2/3.22.0 identity split.
+        Added the packed-consumer gate to Ubuntu CI.
+evidence: The positive Effect 3.22.0 fixture represents both the runtime and current lower-bound
+          contracts, resolves exactly one physical Effect identity, typechecks, loads, and writes
+          its exact generated output. The negative fixture is rejected for multiple realpath-based
+          Effect identities. The packed Gen manifest is asserted to expose the configured Effect
+          peer and no Effect production dependency. Docs/version contracts, Effect diagnostics,
+          Gen 298/298, CLI 340/340, full workspace tests 23/23, root typecheck/build 23/23, size
+          gate, Oxlint, Oxfmt, publish dry-run, and git diff check are green. Independent Effect,
+          Test-Mastery, and TypeScript-Mastery reviews found no remaining K15 blocker.
+next: Criterion 16, run the security-sensitive path and locking contracts on Windows CI.
 ```
 
 ## Stop conditions

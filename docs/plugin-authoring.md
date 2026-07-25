@@ -374,14 +374,15 @@ plugins:
   "main": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "peerDependencies": {
-    "@rexeus/typeweaver-gen": "workspace:^",
-    "effect": ">=3.21.2 <4"
+    "@rexeus/typeweaver-gen": "^0.12.0",
+    "effect": ">=3.22.0 <4"
   }
 }
 ```
 
-TypeWeaver develops and tests against Effect 3.22.0. The broader peer range is intentional: plugin
-packages accept supported Effect 3 consumers without admitting Effect 4.
+TypeWeaver develops and tests against Effect 3.22.0. The peer range accepts later compatible Effect
+3 releases without admitting Effect 4. Its 3.22 lower bound is required by the current `@effect/*`
+package family and keeps the plugin and generator on one Effect identity.
 
 Export your plugin as one of the following — `PluginLoader` checks each in order:
 

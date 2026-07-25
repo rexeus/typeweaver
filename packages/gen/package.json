@@ -56,17 +56,18 @@
   "homepage": "https://github.com/rexeus/typeweaver#readme",
   "peerDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
+    "effect": "catalog:peers",
     "zod": "catalog:peers"
   },
   "devDependencies": {
     "@effect/vitest": "^0.30.0",
     "@rexeus/typeweaver-core": "workspace:^",
+    "effect": "^3.22.0",
     "fast-check": "^4.9.0",
     "zod": "^4.4.3"
   },
   "dependencies": {
     "@effect/platform": "^0.97.0",
-    "effect": "^3.22.0",
     "polycase": "^1.1.0"
   }
 }

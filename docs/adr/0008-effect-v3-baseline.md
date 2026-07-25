@@ -7,7 +7,7 @@ Accepted
 ## Context
 
 The repository develops and tests against **Effect 3.22.0**. Published TypeWeaver packages expose
-the intentionally broader peer range **`>=3.21.2 <4`**, so compatible Effect 3 consumers are not
+the intentionally broader peer range **`>=3.22.0 <4`**, so compatible Effect 3 consumers are not
 forced onto the development minor.
 
 The upstream `effect-ts` skill under `.agents/skills/effect-ts/` was originally written for Effect 4
@@ -23,8 +23,10 @@ APIs whose shape differs.
 
 1. **Effect 3.22.0 is the development and source-reference baseline.** A v4 migration is outside
    this change and must be deliberate.
-2. **The published peer contract remains `>=3.21.2 <4`.** The lower bound is compatibility policy,
-   not the version used for development or source review.
+2. **The published peer contract is `>=3.22.0 <4`.** The current `@effect/*` runtime family peers on
+   `effect ^3.22.0`; a 3.21.2 consumer therefore creates incompatible 3.21 and 3.22 identities.
+   Packaged-consumer evidence sets the lower bound, while later compatible Effect 3 releases remain
+   allowed.
 3. **`config/effect-baseline.json` is the machine-readable version authority.** It records the
    runtime version, peer range, language-service version, official source repository, tag, and exact
    commit.
@@ -43,7 +45,7 @@ APIs whose shape differs.
 
 | v4-oriented guide says                       | Use in this repository                                                              |
 | -------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Install the Effect 4 beta                    | Develop with Effect 3.22.0; publish peers as `>=3.21.2 <4`                          |
+| Install the Effect 4 beta                    | Develop with Effect 3.22.0; publish peers as `>=3.22.0 <4`                          |
 | `Schema.TaggedErrorClass` for errors         | `Data.TaggedError` with a `message` getter (the established TypeWeaver error style) |
 | `Context.Service<Self, Shape>()("Name")`     | `Effect.Service<Self>()("Name", { succeed: ... \| effect: ... })` — see ADR 0005    |
 | `Effect.service(Tag)`                        | `yield* Tag` inside `Effect.gen`, or generated statics with `accessors: true`       |

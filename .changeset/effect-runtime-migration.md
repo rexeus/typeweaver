@@ -49,6 +49,11 @@ configuration to plugin contexts.
 The spec authoring API (`defineSpec`, `defineOperation`, `defineResponse`) and Zod schemas are
 unchanged — existing specs keep working byte-for-byte.
 
+- Effect-native plugin packages and `@rexeus/typeweaver-gen` now expose
+  `peerDependencies.effect: ">=3.22.0 <4"`. The 3.22 lower bound matches the current `@effect/*`
+  runtime family; 3.21.2 would install a second nominally incompatible Effect identity. Plugin
+  authors must install one Effect 3 version satisfying that range.
+
 - `@rexeus/typeweaver-core`'s `DuplicateResponseNameError` stays a plain `Error` (the authoring
   package carries no effect dependency) and now exposes the offending `responseName`.
   `@rexeus/typeweaver-gen` wraps it at the normalization boundary into a tagged

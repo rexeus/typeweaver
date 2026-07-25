@@ -27,7 +27,7 @@ env:
 jobs:
   quality-check:
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -145,6 +145,12 @@ jobs:
         run: |
           echo "::group::Dry run publishing all packages"
           pnpm run publish:dry
+          echo "::endgroup::"
+
+      - name: Verify packed consumers
+        run: |
+          echo "::group::Packed Effect consumer compatibility"
+          pnpm run verify:packed-consumers
           echo "::endgroup::"
 
       - name: Run tests

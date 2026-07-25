@@ -3,7 +3,7 @@ packages:
 
 catalogs:
   peers:
-    effect: ">=3.21.2 <4"
+    effect: ">=3.22.0 <4"
     hono: ">=4.11.0 <5"
     oxfmt: ">=0.30.0 <1"
     zod: ">=4.3.0 <5"

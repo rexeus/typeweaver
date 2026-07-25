@@ -34,4 +34,4 @@ pnpm verify:effect-reference
 - Do not continue Effect-specific work until the reference guard passes.
 - Use the Effect 3.22 source under `./.repos/effect` for source-level confirmation.
 - The public plugin peer range is intentionally broader than the development reference:
-  `>=3.21.2 <4`.
+  `>=3.22.0 <4`.

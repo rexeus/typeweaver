@@ -76,14 +76,14 @@ export const typesPlugin: Plugin = definePluginWithLibCopy({
 export default typesPlugin;
 ```
 
-Plugin packages must declare the supported Effect 3 range `>=3.21.2 <4` as a `peerDependency`.
+Plugin packages must declare the supported Effect 3 range `>=3.22.0 <4` as a `peerDependency`.
 TypeWeaver itself develops and tests against Effect 3.22.0:
 
 ```json
 {
   "peerDependencies": {
-    "@rexeus/typeweaver-gen": "workspace:^",
-    "effect": ">=3.21.2 <4"
+    "@rexeus/typeweaver-gen": "^0.12.0",
+    "effect": ">=3.22.0 <4"
   }
 }
 ```
@@ -197,7 +197,7 @@ For **plugin authors**:
 - [ ] Replace `extends BasePlugin` with `definePlugin(...)` or `definePluginWithLibCopy(...)`.
 - [ ] Wrap sync emitter bodies in `Effect.try` with `PluginExecutionError` mapping (or use
       `definePluginWithLibCopy`, which does it for you).
-- [ ] Declare `effect >=3.21.2 <4` as a `peerDependency`.
+- [ ] Declare `effect >=3.22.0 <4` as a `peerDependency`.
 - [ ] Run plugin tests through `Effect.runSync(plugin.generate(context))` against a fake context
       (see [`docs/plugin-authoring.md`](./docs/plugin-authoring.md) for the pattern).
 - [ ] Verify your plugin is discoverable: a named export matching the plugin name, a default export

@@ -24,7 +24,7 @@ Before reading API guidance or changing Effect code:
 4. Verify `./.repos/effect` with `pnpm verify:effect-reference` when exact APIs or behavior matter.
 
 This repository develops against **Effect 3.22.0** and publishes the intentional peer range
-**`>=3.21.2 <4`**. Effect 4 APIs must not be introduced unless a separate migration explicitly
+**`>=3.22.0 <4`**. Effect 4 APIs must not be introduced unless a separate migration explicitly
 changes that contract.
 
 ## Research Strategy
@@ -106,7 +106,7 @@ This repository deliberately targets Effect 3.22.0. The generic upstream v4-beta
 guidance does not apply here. Treat `config/effect-baseline.json` as the version authority.
 
 - use `effect@3.22.0` for development and test dependencies
-- use the intentional public peer range `>=3.21.2 <4` for TypeWeaver plugin packages
+- use the intentional public peer range `>=3.22.0 <4` for TypeWeaver plugin packages
 - keep all `@effect/*` packages on aligned versions
 - install only the packages needed for the user's runtime and actual task
 
@@ -114,7 +114,7 @@ guidance does not apply here. Treat `config/effect-baseline.json` as the version
 
 - do not install `effect@beta` or Effect 4 in this repository
 - `effect` development dependencies should resolve to Effect 3.22.0
-- published Effect peer dependencies should use `>=3.21.2 <4`
+- published Effect peer dependencies should use `>=3.22.0 <4`
 - if you install any `@effect/*` package, make sure all `@effect/*` packages use matching versions
 - do not mix unrelated `@effect/*` versions in the same project
 

@@ -1,6 +1,6 @@
 {
   "runtimeVersion": "3.22.0",
-  "peerRange": ">=3.21.2 <4",
+  "peerRange": ">=3.22.0 <4",
   "referenceRepository": "https://github.com/Effect-TS/effect.git",
   "referenceTag": "effect@3.22.0",
   "referenceCommit": "e670e0f6befb959b84208d5f77631276521020ae",

@@ -5,7 +5,7 @@ This is the active API guide for Effect work in TypeWeaver.
 ## Version Authority
 
 - development and test runtime: `effect@3.22.0`
-- published plugin peer range: `>=3.21.2 <4`
+- published plugin peer range: `>=3.22.0 <4`
 - source reference: official `Effect-TS/effect` tag `effect@3.22.0`
 - exact source commit: `e670e0f6befb959b84208d5f77631276521020ae`
 

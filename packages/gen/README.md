@@ -23,7 +23,8 @@ npm install -D @rexeus/typeweaver-gen effect
 ```
 
 `effect` is a peer dependency. TypeWeaver develops and tests with Effect 3.22.0; published plugins
-support the intentional range `>=3.21.2 <4`.
+support the intentional range `>=3.22.0 <4`. The 3.22 lower bound matches the current `@effect/*`
+package family and prevents plugin authors from loading a second, incompatible Effect identity.
 
 ## 💡 How to use
 
