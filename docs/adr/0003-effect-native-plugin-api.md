@@ -70,6 +70,25 @@ The orchestrator (`packages/cli/src/services/Generator.ts`) drives the lifecycle
 up to the CLI boundary, where `formatErrorForCli` translates them into single-line user-facing
 messages.
 
+### Plugin construction-time validation
+
+Plugins with options (today: `openapi`) validate their inputs eagerly when the plugin record is
+constructed — for example `openApiPlugin({...})` rejects an unsafe `outputPath` before the Effect
+lifecycle ever runs. Construction happens at composition time, outside any Effect, so the failure
+mode is a **synchronous throw**, not an Effect failure.
+
+The throw is itself a `Data.TaggedError`: `PluginConfigError`
+(`packages/gen/src/plugins/errors/PluginConfigError.ts`), carrying the plugin name and the specific
+reason. The `PluginLoader` (`packages/cli/src/services/PluginLoader.ts`) recognises the tag inside
+its candidate-resolution `try/catch` and short-circuits the load with the `PluginConfigError`
+directly, instead of folding the message into a generic `PluginLoadError`. The CLI boundary
+therefore distinguishes "this plugin is misconfigured" from "we could not load this plugin at all" —
+two failure shapes that deserve two error tags.
+
+Plugin authors who introduce their own options follow the same pattern: validate eagerly in the
+plugin constructor and throw `PluginConfigError` on rejection. The lifecycle stages stay
+`Effect`-native; only the constructor's options check is sync.
+
 ## Consequences
 
 ### Positive
@@ -127,8 +146,12 @@ external users see one consistent range.
 
 - `packages/gen/src/plugins/Plugin.ts` — the V2 contract
 - `packages/gen/src/plugins/definePluginWithLibCopy.ts` — first-party HOC
-- `packages/gen/src/plugins/errors/PluginExecutionError.ts` — the typed error
+- `packages/gen/src/plugins/errors/PluginExecutionError.ts` — lifecycle-phase typed error
+- `packages/gen/src/plugins/errors/PluginConfigError.ts` — construction-time typed error
+- `packages/cli/src/services/PluginLoader.ts` — recognises `PluginConfigError` and short-circuits
 - `packages/types/src/index.ts`, `packages/clients/src/index.ts`, `packages/server/src/index.ts`,
   `packages/hono/src/index.ts`, `packages/aws-cdk/src/index.ts` — minimal `definePluginWithLibCopy`
   plugins
 - `packages/openapi/src/openApiPlugin.ts` — factory plugin with normalized options
+- `packages/openapi/src/internal/normalizeOptions.ts` — construction-time validation raising
+  `PluginConfigError`

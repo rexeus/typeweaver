@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { Cause, Effect, Exit, Option } from "effect";
+import { Cause, Exit, Option } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { effectRuntime } from "../src/effectRuntime.js";
 import { IndexFileGenerationError } from "../src/services/errors/IndexFileGenerationError.js";

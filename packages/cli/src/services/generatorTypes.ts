@@ -1,5 +1,6 @@
 import type {
   NormalizationError,
+  PluginConfigError,
   PluginDependencyError,
   PluginExecutionError,
   TypeweaverConfig,
@@ -27,6 +28,7 @@ export type GenerateFailure =
   | ConcurrentGenerationError
   | UnsafeCleanTargetError
   | PluginLoadError
+  | PluginConfigError
   | PluginDependencyError
   | PluginExecutionError
   | InvalidSpecEntrypointError

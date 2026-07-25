@@ -1,5 +1,8 @@
 import path from "node:path";
+import { PluginConfigError } from "@rexeus/typeweaver-gen";
 import type { OpenApiInfoObject, OpenApiServerObject } from "../types.js";
+
+const PLUGIN_NAME = "openapi";
 
 const DEFAULT_INFO: OpenApiInfoObject = {
   title: "Typeweaver API",
@@ -123,6 +126,6 @@ function isOpenApiServerObject(value: unknown): value is OpenApiServerObject {
   return isPlainObject(value) && typeof value.url === "string";
 }
 
-function throwConfigError(message: string): never {
-  throw new Error(`OpenApiPlugin config error: ${message}`);
+function throwConfigError(reason: string): never {
+  throw new PluginConfigError({ pluginName: PLUGIN_NAME, reason });
 }

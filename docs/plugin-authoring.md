@@ -186,6 +186,38 @@ export default {
 };
 ```
 
+### Reporting misconfiguration: `PluginConfigError`
+
+Construction-time validation lives outside any `Effect`, so it cannot fail an Effect channel. Raise
+misconfiguration as a synchronous throw of `PluginConfigError`:
+
+```ts
+import { PluginConfigError } from "@rexeus/typeweaver-gen";
+
+const PLUGIN_NAME = "openapi";
+
+export const openApiPlugin = (options: unknown = {}): Plugin => {
+  if (typeof options !== "object" || options === null) {
+    throw new PluginConfigError({
+      pluginName: PLUGIN_NAME,
+      reason: "options must be an object",
+    });
+  }
+  // ... further validation ...
+
+  return definePlugin({ name: PLUGIN_NAME, generate: ... });
+};
+```
+
+`PluginConfigError` is itself a `Data.TaggedError`, so the `PluginLoader` recognises it and surfaces
+it directly to the CLI boundary as a typed failure — the user sees
+`Plugin 'openapi' is misconfigured: ...` rather than a generic "plugin failed to load" wrapper. A
+`PluginConfigError` short-circuits every remaining resolution strategy for the same plugin name,
+because misconfiguration is the same regardless of which specifier resolved the module.
+
+Keep lifecycle-stage failures on the `Effect` channel as `PluginExecutionError`; reserve
+`PluginConfigError` strictly for construction-time options rejection.
+
 ---
 
 ## The `Effect.try` boundary

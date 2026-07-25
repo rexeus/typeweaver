@@ -1,5 +1,6 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { PluginConfigError } from "@rexeus/typeweaver-gen";
 import type {
   Plugin,
   PluginConfig,
@@ -8,6 +9,7 @@ import type {
 } from "@rexeus/typeweaver-gen";
 import { Effect, Either } from "effect";
 import { PluginLoadError } from "../errors/PluginLoadError.js";
+import { isPluginConfigError } from "./isPluginConfigError.js";
 import { PluginModuleLoader } from "./PluginModuleLoader.js";
 
 export type PluginResolutionStrategy = "npm" | "local" | "scoped";
@@ -82,10 +84,21 @@ const findPluginCandidates = (
   return candidates;
 };
 
+/**
+ * A candidate resolution either succeeds, fails with a plain message
+ * (export shape mismatch, module didn't expose a Plugin, etc.), or
+ * fails with a tagged `PluginConfigError` (the plugin constructor
+ * validated its options and rejected them). The tagged variant
+ * short-circuits the load: misconfiguration is the same across every
+ * resolution strategy, and the user deserves a typed error at the CLI
+ * boundary rather than a string folded into a `PluginLoadError`.
+ */
+type CandidateFailure = string | PluginConfigError;
+
 const resolveCandidateToPlugin = (
   candidate: PluginCandidate,
   config: PluginConfig | undefined
-): Either.Either<Plugin, string> => {
+): Either.Either<Plugin, CandidateFailure> => {
   if (typeof candidate.value === "function") {
     try {
       const result = (candidate.value as (cfg?: PluginConfig) => unknown)(
@@ -98,6 +111,9 @@ const resolveCandidateToPlugin = (
         `Export '${candidate.exportName}' did not produce a valid plugin with a string name`
       );
     } catch (error) {
+      if (isPluginConfigError(error)) {
+        return Either.left(error);
+      }
       return Either.left(
         `Export '${candidate.exportName}' could not be instantiated: ${formatError(error)}`
       );
@@ -116,7 +132,7 @@ const resolveCandidateToPlugin = (
 const resolveModuleToPlugin = (
   pluginModule: Record<string, unknown>,
   pluginConfig: PluginConfig | undefined
-): Either.Either<Plugin, string> => {
+): Either.Either<Plugin, CandidateFailure> => {
   const candidates = findPluginCandidates(pluginModule);
   if (candidates.length === 0) {
     return Either.left("No plugin export found");
@@ -126,6 +142,9 @@ const resolveModuleToPlugin = (
   for (const candidate of candidates) {
     const resolved = resolveCandidateToPlugin(candidate, pluginConfig);
     if (Either.isRight(resolved)) {
+      return resolved;
+    }
+    if (isPluginConfigError(resolved.left)) {
       return resolved;
     }
     errors.push(resolved.left);
@@ -163,7 +182,7 @@ const loadConfiguredPlugin = (
   pluginName: string,
   strategies: readonly PluginResolutionStrategy[],
   pluginConfig?: PluginConfig
-): Effect.Effect<PluginLoadResult, PluginLoadError> =>
+): Effect.Effect<PluginLoadResult, PluginLoadError | PluginConfigError> =>
   Effect.gen(function* () {
     const possiblePaths = generatePluginPaths(pluginName, strategies);
     const attempts: { path: string; error: string }[] = [];
@@ -177,6 +196,9 @@ const loadConfiguredPlugin = (
         .pipe(Effect.either);
 
       if (Either.isLeft(importResult)) {
+        if (isPluginConfigError(importResult.left)) {
+          return yield* Effect.fail(importResult.left);
+        }
         const errorMessage = formatError(importResult.left.cause);
         yield* Effect.logDebug(
           `Plugin '${pluginName}': '${possiblePath}' failed: ${errorMessage}`
@@ -195,6 +217,10 @@ const loadConfiguredPlugin = (
           source: possiblePath,
           config: pluginConfig,
         };
+      }
+
+      if (isPluginConfigError(resolved.left)) {
+        return yield* Effect.fail(resolved.left);
       }
 
       attempts.push({ path: possiblePath, error: resolved.left });
@@ -221,7 +247,7 @@ export class PluginLoader extends Effect.Service<PluginLoader>()(
 
       const loadAll: (
         params: LoadParams
-      ) => Effect.Effect<void, PluginLoadError> = Effect.fn(
+      ) => Effect.Effect<void, PluginLoadError | PluginConfigError> = Effect.fn(
         "typeweaver.PluginLoader.loadAll"
       )(function* (params: LoadParams) {
         for (const requiredPlugin of params.requiredPlugins) {

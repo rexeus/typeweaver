@@ -15,12 +15,13 @@ Migrate the runtime, plugin API, and CLI to Effect.
 
 The plugin API moves from class-based `BasePlugin` extension to V2 records returned by
 `definePlugin(...)` and `definePluginWithLibCopy(...)`. Lifecycle stages return
-`Effect<void, PluginExecutionError>` instead of `Promise<void> | void`. Every error surface is now
-a `Data.TaggedError` (21 tagged errors across the packages). The CLI is built on `@effect/cli`,
-with friendly single-line error formatting and structured log lines. The `GeneratorContext`
-additionally exposes an Effect-native surface (`writeFileEffect`, `renderTemplateEffect`,
-`addGeneratedFileEffect`) with the same path-safety and atomic-write guarantees, routed through
-`@effect/platform`'s `FileSystem` service.
+`Effect<void, PluginExecutionError>` instead of `Promise<void> | void`. Error surfaces in the
+Effect-enabled packages use `Data.TaggedError`, including lifecycle failures
+(`PluginExecutionError`) and construction-time misconfiguration (`PluginConfigError`). The CLI is
+built on `@effect/cli`, with friendly single-line error formatting and structured log lines. The
+`GeneratorContext` additionally exposes an Effect-native surface (`writeFileEffect`,
+`renderTemplateEffect`, `addGeneratedFileEffect`) with the same path-safety and atomic-write
+guarantees, routed through `@effect/platform`'s `FileSystem` service.
 
 The spec authoring API (`defineSpec`, `defineOperation`, `defineResponse`) and Zod schemas are
 unchanged — existing specs keep working byte-for-byte.

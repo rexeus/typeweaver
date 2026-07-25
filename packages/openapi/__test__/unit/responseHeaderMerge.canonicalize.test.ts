@@ -14,12 +14,12 @@ describe("stableStringifyJsonSchema (canonical key sort)", () => {
       İnput: 3,
       ınput: 4,
       Input: 5,
-    } as unknown as JsonSchema;
+    } as JsonSchema;
 
     const serialized = stableStringifyJsonSchema(schema);
-    const orderedKeys = (JSON.parse(serialized) as Record<string, number>)
-      ? Object.keys(JSON.parse(serialized) as Record<string, number>)
-      : [];
+    const orderedKeys = Object.keys(
+      JSON.parse(serialized) as Record<string, number>
+    );
 
     expect(orderedKeys).toEqual(
       [...orderedKeys].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
@@ -28,8 +28,8 @@ describe("stableStringifyJsonSchema (canonical key sort)", () => {
   });
 
   test("produces byte-identical output for schemas that differ only in input key order", () => {
-    const a = { foo: 1, bar: 2, baz: 3 } as unknown as JsonSchema;
-    const b = { baz: 3, foo: 1, bar: 2 } as unknown as JsonSchema;
+    const a = { foo: 1, bar: 2, baz: 3 } as JsonSchema;
+    const b = { baz: 3, foo: 1, bar: 2 } as JsonSchema;
 
     expect(stableStringifyJsonSchema(a)).toBe(stableStringifyJsonSchema(b));
   });

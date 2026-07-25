@@ -1,6 +1,10 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { Effect, Either, Layer, ManagedRuntime } from "effect";
 import { describe, expect, test } from "vitest";
 import { PluginModuleNotFoundError } from "../../src/services/errors/PluginModuleNotFoundError.js";
+import { isPluginConfigError } from "../../src/services/isPluginConfigError.js";
 import { PluginModuleLoader } from "../../src/services/PluginModuleLoader.js";
 
 /**
@@ -119,6 +123,48 @@ describe("PluginModuleLoader", () => {
       expect(result.left.cause).toBeDefined();
     } finally {
       await runtime.dispose();
+    }
+  });
+
+  test("Default layer preserves PluginConfigError thrown during module evaluation", async () => {
+    const tempDir = await mkdtemp(
+      path.join(process.cwd(), "plugin-module-loader-")
+    );
+    const pluginPath = path.join(tempDir, "misconfigured-plugin.mjs");
+    await writeFile(
+      pluginPath,
+      [
+        'import { PluginConfigError } from "@rexeus/typeweaver-gen";',
+        "throw new PluginConfigError({",
+        '  pluginName: "misconfigured-plugin",',
+        '  reason: "outputPath must end with .json",',
+        "});",
+      ].join("\n")
+    );
+
+    const runtime = ManagedRuntime.make(PluginModuleLoader.Default);
+    try {
+      const result = await runtime.runPromise(
+        Effect.either(PluginModuleLoader.load(pathToFileURL(pluginPath).href))
+      );
+
+      if (!Either.isLeft(result)) {
+        throw new Error(
+          "Expected the real loader to fail for a misconfigured plugin module"
+        );
+      }
+
+      expect(result.left).not.toBeInstanceOf(PluginModuleNotFoundError);
+      expect(isPluginConfigError(result.left)).toBe(true);
+      if (!isPluginConfigError(result.left)) {
+        throw new Error("Expected a tagged PluginConfigError");
+      }
+      expect(result.left._tag).toBe("PluginConfigError");
+      expect(result.left.pluginName).toBe("misconfigured-plugin");
+      expect(result.left.reason).toBe("outputPath must end with .json");
+    } finally {
+      await runtime.dispose();
+      await rm(tempDir, { recursive: true, force: true });
     }
   });
 });

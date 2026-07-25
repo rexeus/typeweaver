@@ -1,6 +1,36 @@
 import { Effect, Layer } from "effect";
 import { PluginModuleNotFoundError } from "../../src/services/errors/PluginModuleNotFoundError.js";
+import { isPluginConfigError } from "../../src/services/isPluginConfigError.js";
 import { PluginModuleLoader } from "../../src/services/PluginModuleLoader.js";
+
+const MODULE_IMPORT_FAILURE_FIXTURE: unique symbol = Symbol(
+  "ModuleImportFailureFixture"
+);
+
+export type ModuleImportFailureFixture = {
+  readonly [MODULE_IMPORT_FAILURE_FIXTURE]: true;
+  readonly error: unknown;
+};
+
+export type ModuleFixture =
+  | Record<string, unknown>
+  | ModuleImportFailureFixture;
+
+export const aModuleImportFailure = (
+  error: unknown
+): ModuleImportFailureFixture => ({
+  [MODULE_IMPORT_FAILURE_FIXTURE]: true,
+  error,
+});
+
+const isFailedImportFixture = (
+  fixture: ModuleFixture
+): fixture is ModuleImportFailureFixture =>
+  typeof fixture === "object" &&
+  fixture !== null &&
+  (fixture as { readonly [MODULE_IMPORT_FAILURE_FIXTURE]?: unknown })[
+    MODULE_IMPORT_FAILURE_FIXTURE
+  ] === true;
 
 /**
  * Builds a test layer for `PluginModuleLoader` that resolves specifiers
@@ -14,7 +44,7 @@ import { PluginModuleLoader } from "../../src/services/PluginModuleLoader.js";
  * failure.
  */
 export const inMemoryPluginModuleLoader = (
-  modules: ReadonlyMap<string, Record<string, unknown>>
+  modules: ReadonlyMap<string, ModuleFixture>
 ): Layer.Layer<PluginModuleLoader> =>
   Layer.succeed(PluginModuleLoader, {
     load: specifier => {
@@ -26,6 +56,17 @@ export const inMemoryPluginModuleLoader = (
             cause: new Error(
               `Cannot find module '${specifier}' imported from in-memory map`
             ),
+          })
+        );
+      }
+      if (isFailedImportFixture(moduleRecord)) {
+        if (isPluginConfigError(moduleRecord.error)) {
+          return Effect.fail(moduleRecord.error);
+        }
+        return Effect.fail(
+          new PluginModuleNotFoundError({
+            specifier,
+            cause: moduleRecord.error,
           })
         );
       }

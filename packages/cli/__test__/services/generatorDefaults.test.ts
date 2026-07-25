@@ -46,6 +46,24 @@ describe("resolveTemplateDir", () => {
     expect(result).toBe(targetCandidate);
   });
 
+  test("returns the bundled templates candidate when only its Index.ejs exists", async () => {
+    const { layer } = makeInMemoryFileSystem();
+    const targetCandidate = TEMPLATE_DIR_CANDIDATES[0];
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        yield* fileSystem.writeFileString(
+          path.join(targetCandidate, "Index.ejs"),
+          "marker"
+        );
+        return yield* resolveTemplateDir();
+      }).pipe(Effect.provide(layer))
+    );
+
+    expect(result).toBe(targetCandidate);
+  });
+
   test("falls back to the first candidate when no Index.ejs is present", async () => {
     const { layer } = makeInMemoryFileSystem();
 

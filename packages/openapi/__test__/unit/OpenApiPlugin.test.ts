@@ -30,6 +30,13 @@ type OpenApiGeneratorContext = GeneratorContext & {
   readonly writtenFiles: readonly WrittenFile[];
 };
 
+type CapturedPluginConfigError = {
+  readonly _tag: "PluginConfigError";
+  readonly pluginName: string;
+  readonly reason: string;
+  readonly message?: string;
+};
+
 const runGenerate = (
   options: unknown,
   context: OpenApiGeneratorContext
@@ -52,6 +59,35 @@ const runGenerateCapturingLogs = (
   const { logs } = Effect.runSync(withCapturedLogs(plugin.generate(context)));
   return logs;
 };
+
+const captureOpenApiPluginConfigError = (
+  options: unknown
+): CapturedPluginConfigError => {
+  try {
+    openApiPlugin(options);
+  } catch (error) {
+    expect(error).toMatchObject({
+      _tag: "PluginConfigError",
+      pluginName: "openapi",
+      reason: expect.any(String),
+    });
+    if (isCapturedPluginConfigError(error)) {
+      return error;
+    }
+    throw new Error("Expected openApiPlugin to throw a PluginConfigError");
+  }
+
+  throw new Error("Expected openApiPlugin to reject invalid config");
+};
+
+const isCapturedPluginConfigError = (
+  error: unknown
+): error is CapturedPluginConfigError =>
+  typeof error === "object" &&
+  error !== null &&
+  (error as { readonly _tag?: unknown })._tag === "PluginConfigError" &&
+  (error as { readonly pluginName?: unknown }).pluginName === "openapi" &&
+  typeof (error as { readonly reason?: unknown }).reason === "string";
 
 describe("openApiPlugin", () => {
   test("writes an OpenAPI document to the default output path", () => {
@@ -94,6 +130,15 @@ describe("openApiPlugin", () => {
     expect(document.servers).toEqual([
       { url: "https://api.example.com", description: "Production" },
     ]);
+  });
+
+  test("normalizes a safe backslash output path before writing", () => {
+    const context = anOpenApiGeneratorContextWith(anItemsSpec());
+
+    runGenerateCapturingLogs({ outputPath: "docs\\.\\openapi.json" }, context);
+
+    expect(context.writtenFiles).toHaveLength(1);
+    expect(context.writtenFiles[0]?.path).toBe("docs/openapi.json");
   });
 
   test("preserves server variables in configured OpenAPI servers", () => {
@@ -172,12 +217,12 @@ describe("openApiPlugin", () => {
     {
       scenario: "null top-level config",
       options: null as never,
-      message: /OpenApiPlugin config error: options must be an object/,
+      reason: /options must be an object/,
     },
     {
       scenario: "missing info version",
       options: { info: { title: "Todo API" } as OpenApiInfoObject },
-      message: /info\.title and info\.version must be strings/,
+      reason: /info\.title and info\.version must be strings/,
     },
     {
       scenario: "non-array servers",
@@ -186,27 +231,55 @@ describe("openApiPlugin", () => {
           url: "https://api.example.com",
         } as unknown as readonly OpenApiServerObject[],
       },
-      message: /servers must be an array/,
+      reason: /servers must be an array/,
     },
     {
       scenario: "server without url",
       options: {
         servers: [{ description: "Production" } as OpenApiServerObject],
       },
-      message: /servers\[0\]\.url must be a string/,
+      reason: /servers\[0\]\.url must be a string/,
     },
     {
       scenario: "non-json output path",
       options: { outputPath: "openapi/openapi.yaml" },
-      message: /outputPath must end with \.json/,
+      reason: /outputPath must end with \.json/,
+    },
+    {
+      scenario: "empty output path",
+      options: { outputPath: "" },
+      reason: /outputPath must be a non-empty relative \.json path/,
+    },
+    {
+      scenario: "non-string output path",
+      options: { outputPath: 42 as never },
+      reason: /outputPath must be a non-empty relative \.json path/,
+    },
+    {
+      scenario: "null-byte output path",
+      options: { outputPath: "openapi\0openapi.json" },
+      reason: /outputPath must not contain null bytes/,
+    },
+    {
+      scenario: "POSIX absolute output path",
+      options: { outputPath: "/tmp/openapi.json" },
+      reason: /outputPath must be relative/,
+    },
+    {
+      scenario: "Windows absolute output path",
+      options: { outputPath: "C:\\tmp\\openapi.json" },
+      reason: /outputPath must be relative/,
     },
     {
       scenario: "unsafe output path",
       options: { outputPath: "../openapi.json" },
-      message: /outputPath must not contain parent directory segments/,
+      reason: /outputPath must not contain parent directory segments/,
     },
-  ])("rejects invalid config for $scenario", ({ options, message }) => {
-    expect(() => openApiPlugin(options)).toThrow(message);
+  ])("rejects invalid config for $scenario", ({ options, reason }) => {
+    const caught = captureOpenApiPluginConfigError(options);
+
+    expect(caught.reason).toMatch(reason);
+    expect(caught.message).toMatch(/^Plugin 'openapi' is misconfigured: /);
   });
 });
 

@@ -1,20 +1,25 @@
+import { PluginConfigError } from "@rexeus/typeweaver-gen";
 import type {
   Plugin,
   PluginConfig,
   PluginRegistryInstance,
   TypeweaverConfig,
 } from "@rexeus/typeweaver-gen";
-import { Cause, Effect, Exit, Layer, ManagedRuntime, Ref } from "effect";
+import { Cause, Data, Effect, Exit, Layer, ManagedRuntime, Ref } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { PluginLoadError } from "../src/errors/PluginLoadError.js";
 import { PluginLoader, PluginModuleLoader } from "../src/services/index.js";
+import { isPluginConfigError } from "../src/services/isPluginConfigError.js";
 import { TestAssertionError } from "./errors/index.js";
 import {
+  aModuleImportFailure,
   createPluginFixtureWorkspace,
   importPathForFile,
   inMemoryPluginModuleLoader,
   withCapturedLogs,
 } from "./helpers/index.js";
+import type { TaggedPluginConfigError } from "../src/services/isPluginConfigError.js";
+import type { ModuleFixture } from "./helpers/index.js";
 
 type CapturedLog = {
   readonly level: string;
@@ -30,6 +35,10 @@ type RegisteredPlugin = {
 type SuccessfulLoadSummaryEntry = {
   readonly pluginName: string;
   readonly source: string;
+};
+
+type CapturedPluginConfigError = TaggedPluginConfigError & {
+  readonly message?: string;
 };
 
 const requiredTypesPlugin = (): Plugin => ({
@@ -58,6 +67,29 @@ const aConfigurablePluginModule = (
   name: string
 ): Record<string, unknown> => ({
   [exportName]: (config: unknown) => ({ name, config }),
+});
+
+const aForeignPluginConfigError = (options: {
+  readonly pluginName: string;
+  readonly reason: string;
+}): CapturedPluginConfigError => {
+  class ForeignPluginConfigError extends Data.TaggedError("PluginConfigError")<{
+    readonly pluginName: string;
+    readonly reason: string;
+  }> {
+    public override get message(): string {
+      return `Plugin '${this.pluginName}' is misconfigured: ${this.reason}`;
+    }
+  }
+
+  return new ForeignPluginConfigError(options);
+};
+
+const anIncompletePluginConfigTag = (
+  pluginName: string
+): { readonly _tag: "PluginConfigError"; readonly pluginName: string } => ({
+  _tag: "PluginConfigError",
+  pluginName,
 });
 
 const createRecordingPluginRegistry = (
@@ -95,7 +127,7 @@ type RunParams = {
   readonly requiredPlugins: readonly Plugin[];
   readonly strategies: readonly ("npm" | "local" | "scoped")[];
   readonly config?: TypeweaverConfig;
-  readonly modules?: ReadonlyMap<string, Record<string, unknown>>;
+  readonly modules?: ReadonlyMap<string, ModuleFixture>;
   readonly useRealModuleLoader?: boolean;
 };
 
@@ -175,6 +207,23 @@ describe("pluginLoader", () => {
     if (!(failure instanceof PluginLoadError)) {
       throw new TestAssertionError(
         `Expected plugin loading to fail with PluginLoadError, received: ${failure instanceof Error ? failure.message : String(failure)}`
+      );
+    }
+
+    return failure;
+  };
+
+  const captureTaggedPluginConfigError = async (
+    load: Promise<RunResult>
+  ): Promise<CapturedPluginConfigError> => {
+    const failure = await load.then(
+      () => undefined,
+      error => error
+    );
+
+    if (!isPluginConfigError(failure)) {
+      throw new TestAssertionError(
+        `Expected plugin loading to fail with PluginConfigError, received: ${failure instanceof Error ? failure.message : String(failure)}`
       );
     }
 
@@ -625,6 +674,250 @@ describe("pluginLoader", () => {
           "Export 'brokenPlugin' could not be instantiated: factory failed",
       },
     ]);
+  });
+
+  test("surfaces plugin configuration failures from factories without wrapping them as load failures", async () => {
+    const failure = await captureTaggedPluginConfigError(
+      runLoadPlugins({
+        registeredPlugins: [],
+        requiredPlugins: [requiredTypesPlugin()],
+        strategies: ["local"],
+        modules: new Map([
+          [
+            "misconfigured-plugin",
+            {
+              misconfiguredPlugin: () => {
+                throw new PluginConfigError({
+                  pluginName: "misconfigured-plugin",
+                  reason: "outputPath must end with .json",
+                });
+              },
+            },
+          ],
+        ]),
+        config: configWithPlugin("misconfigured-plugin"),
+      })
+    );
+
+    expect(failure.pluginName).toBe("misconfigured-plugin");
+    expect(failure.reason).toBe("outputPath must end with .json");
+    expect(failure.message).toBe(
+      "Plugin 'misconfigured-plugin' is misconfigured: outputPath must end with .json"
+    );
+  });
+
+  test("stops inspecting fallback exports after a plugin factory rejects its configuration", async () => {
+    let fallbackExportInvoked = false;
+
+    const failure = await captureTaggedPluginConfigError(
+      runLoadPlugins({
+        registeredPlugins: [],
+        requiredPlugins: [requiredTypesPlugin()],
+        strategies: ["local"],
+        modules: new Map([
+          [
+            "misconfigured-plugin",
+            {
+              misconfiguredPlugin: () => {
+                throw new PluginConfigError({
+                  pluginName: "misconfigured-plugin",
+                  reason: "outputPath must end with .json",
+                });
+              },
+              fallbackPlugin: () => {
+                fallbackExportInvoked = true;
+                return { name: "misconfigured-plugin" };
+              },
+            },
+          ],
+        ]),
+        config: configWithPlugin("misconfigured-plugin"),
+      })
+    );
+
+    expect(failure.pluginName).toBe("misconfigured-plugin");
+    expect(failure.reason).toBe("outputPath must end with .json");
+    expect(fallbackExportInvoked).toBe(false);
+  });
+
+  test("continues to fallback exports when a factory throws an incomplete configuration tag", async () => {
+    let fallbackExportInvoked = false;
+    const registeredPlugins: RegisteredPlugin[] = [];
+
+    await runLoadPlugins({
+      registeredPlugins,
+      requiredPlugins: [requiredTypesPlugin()],
+      strategies: ["local"],
+      modules: new Map([
+        [
+          "misconfigured-plugin",
+          {
+            misconfiguredPlugin: () => {
+              throw anIncompletePluginConfigTag("misconfigured-plugin");
+            },
+            fallbackPlugin: () => {
+              fallbackExportInvoked = true;
+              return { name: "misconfigured-plugin" };
+            },
+          },
+        ],
+      ]),
+      config: configWithPlugin("misconfigured-plugin"),
+    });
+
+    expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
+      "types",
+      "misconfigured-plugin",
+    ]);
+    expect(fallbackExportInvoked).toBe(true);
+  });
+
+  test("preserves configuration failures thrown from another package realm", async () => {
+    /*
+     * Simulates a plugin loaded against a *different copy* of
+     * `@rexeus/typeweaver-gen` than the CLI — e.g., a peer-dep mismatch
+     * or a hoisting failure in the consumer's node_modules. The class
+     * identity differs from the imported `PluginConfigError`, but the
+     * `_tag` is stable. The loader must recognise this by tag, not by
+     * `instanceof`. Without this test, a regression from the tag-based
+     * detector back to `instanceof` would go unnoticed.
+     */
+    const foreignPluginConfigError = aForeignPluginConfigError({
+      pluginName: "misconfigured-plugin",
+      reason: "outputPath must end with .json",
+    });
+
+    const failure = await captureTaggedPluginConfigError(
+      runLoadPlugins({
+        registeredPlugins: [],
+        requiredPlugins: [requiredTypesPlugin()],
+        strategies: ["local"],
+        modules: new Map([
+          [
+            "misconfigured-plugin",
+            {
+              misconfiguredPlugin: () => {
+                throw foreignPluginConfigError;
+              },
+            },
+          ],
+        ]),
+        config: configWithPlugin("misconfigured-plugin"),
+      })
+    );
+
+    expect(failure._tag).toBe("PluginConfigError");
+    expect(failure.pluginName).toBe("misconfigured-plugin");
+    expect(failure.reason).toBe("outputPath must end with .json");
+  });
+
+  test("stops trying npm fallbacks after a local plugin rejects its configuration", async () => {
+    let fallbackAttempted = false;
+
+    const failure = await captureTaggedPluginConfigError(
+      runLoadPlugins({
+        registeredPlugins: [],
+        requiredPlugins: [requiredTypesPlugin()],
+        strategies: ["local", "npm"],
+        modules: new Map<string, Record<string, unknown>>([
+          [
+            "misconfigured-plugin",
+            {
+              misconfiguredPlugin: () => {
+                throw new PluginConfigError({
+                  pluginName: "misconfigured-plugin",
+                  reason: "outputPath must end with .json",
+                });
+              },
+            },
+          ],
+          [
+            "@rexeus/misconfigured-plugin",
+            {
+              misconfiguredPlugin: () => {
+                fallbackAttempted = true;
+                return { name: "misconfigured-plugin" };
+              },
+            },
+          ],
+        ]),
+        config: configWithPlugin("misconfigured-plugin"),
+      })
+    );
+
+    expect(failure.pluginName).toBe("misconfigured-plugin");
+    expect(fallbackAttempted).toBe(false);
+  });
+
+  test("stops trying later resolution strategies when module evaluation rejects plugin configuration", async () => {
+    let fallbackAttempted = false;
+    const foreignPluginConfigError = aForeignPluginConfigError({
+      pluginName: "misconfigured-plugin",
+      reason: "outputPath must end with .json",
+    });
+
+    const failure = await captureTaggedPluginConfigError(
+      runLoadPlugins({
+        registeredPlugins: [],
+        requiredPlugins: [requiredTypesPlugin()],
+        strategies: ["local", "npm"],
+        modules: new Map<string, ModuleFixture>([
+          [
+            "misconfigured-plugin",
+            aModuleImportFailure(foreignPluginConfigError),
+          ],
+          [
+            "@rexeus/misconfigured-plugin",
+            {
+              misconfiguredPlugin: () => {
+                fallbackAttempted = true;
+                return { name: "misconfigured-plugin" };
+              },
+            },
+          ],
+        ]),
+        config: configWithPlugin("misconfigured-plugin"),
+      })
+    );
+
+    expect(failure.pluginName).toBe("misconfigured-plugin");
+    expect(failure.reason).toBe("outputPath must end with .json");
+    expect(fallbackAttempted).toBe(false);
+  });
+
+  test("continues to npm fallback when module evaluation throws an incomplete configuration tag", async () => {
+    let fallbackAttempted = false;
+    const registeredPlugins: RegisteredPlugin[] = [];
+
+    await runLoadPlugins({
+      registeredPlugins,
+      requiredPlugins: [requiredTypesPlugin()],
+      strategies: ["local", "npm"],
+      modules: new Map<string, ModuleFixture>([
+        [
+          "misconfigured-plugin",
+          aModuleImportFailure(
+            anIncompletePluginConfigTag("misconfigured-plugin")
+          ),
+        ],
+        [
+          "@rexeus/typeweaver-misconfigured-plugin",
+          {
+            misconfiguredPlugin: () => {
+              fallbackAttempted = true;
+              return { name: "misconfigured-plugin" };
+            },
+          },
+        ],
+      ]),
+      config: configWithPlugin("misconfigured-plugin"),
+    });
+
+    expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
+      "types",
+      "misconfigured-plugin",
+    ]);
+    expect(fallbackAttempted).toBe(true);
   });
 
   test("rejects exports without a plugin name", async () => {
