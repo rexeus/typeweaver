@@ -148,6 +148,13 @@ If you imported the generator programmatically rather than through the CLI:
   beneath it.
 - Errors are now `Data.TaggedError` instances throughout. Inspect the `_tag` field for typed
   branching (`UnsafeGeneratedPathError`, `PluginExecutionError`, `SpecBundleError`, etc.).
+- Fiber interruption waits for a running Rolldown bundle to settle before the generator releases its
+  output lock. Rolldown has no cancellation signal, so the CLI stages the bundle beside its
+  destination and publishes it only after a successful build. This can delay interruption by the
+  remaining bundle time, but prevents detached writes after cleanup or lock release.
+- Atomic generator writes record a successfully published file before attempting fallible temp
+  cleanup. A cleanup error can still fail the operation, but the generated-file tracker and pending
+  log queue remain consistent with the filesystem.
 - Multi-mode errors use nested discriminants instead of optional field bags:
   `PluginDependencyError.issue.kind` distinguishes `missing-dependency` from `dependency-cycle`,
   while `UnsafeCleanTargetError.details.reason` selects the exact clean-target payload. Update

@@ -68,6 +68,7 @@ const createGeneratedFilesTracker = (): GeneratedFilesTracker => {
 type PluginContextBuilderDeps = {
   readonly pathSafety: PathSafetyShape;
   readonly templateRenderer: TemplateRendererShape;
+  readonly syncAtomicFileSystem?: SyncAtomicFileSystem;
   /**
    * Backs the Effect-native context surface (`writeFileEffect`,
    * `renderTemplateEffect`). Captured at construction time so plugin
@@ -77,57 +78,109 @@ type PluginContextBuilderDeps = {
   readonly fileSystem: FileSystem.FileSystem;
 };
 
-const writeFileViaTempReplace = (config: {
-  readonly safePath: SafeGeneratedFilePath;
-  readonly content: string;
-}): void => {
+/**
+ * Narrow sync filesystem port for the contractually synchronous plugin writer.
+ * It stays internal to `@rexeus/typeweaver-gen`: plugin authors continue to
+ * consume only `GeneratorContext.writeFile`.
+ */
+export type SyncAtomicFileSystem = {
+  readonly getExistingFileMode: (absolutePath: string) => number | undefined;
+  readonly makeTempDirectory: (prefixPath: string) => string;
+  readonly writeFileExclusive: (
+    filePath: string,
+    content: string,
+    mode: number
+  ) => void;
+  readonly chmod: (filePath: string, mode: number) => void;
+  readonly rename: (oldPath: string, newPath: string) => void;
+  readonly removeDirectory: (dirPath: string) => void;
+};
+
+export const liveSyncAtomicFileSystem: SyncAtomicFileSystem = {
+  getExistingFileMode: absolutePath => {
+    let pathStats: fs.Stats;
+    try {
+      pathStats = fs.lstatSync(absolutePath);
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        "code" in error &&
+        (error.code === "ENOENT" || error.code === "ENOTDIR")
+      ) {
+        return undefined;
+      }
+      throw error;
+    }
+
+    if (!pathStats.isFile()) {
+      return undefined;
+    }
+
+    return pathStats.mode & 0o777;
+  },
+  makeTempDirectory: prefixPath => fs.mkdtempSync(prefixPath),
+  writeFileExclusive: (filePath, content, mode) =>
+    fs.writeFileSync(filePath, content, {
+      flag: "wx",
+      mode,
+    }),
+  chmod: (filePath, mode) => fs.chmodSync(filePath, mode),
+  rename: (oldPath, newPath) => fs.renameSync(oldPath, newPath),
+  removeDirectory: dirPath =>
+    fs.rmSync(dirPath, { recursive: true, force: true }),
+};
+
+const writeFileViaTempReplaceWith = (
+  fileSystem: SyncAtomicFileSystem,
+  config: {
+    readonly safePath: SafeGeneratedFilePath;
+    readonly content: string;
+    readonly onCommit: () => void;
+  }
+): void => {
   // Sync twin of `writeFileViaTempReplaceEffect` for the contractually
   // sync plugin-author surface (ADR 0003/0004). Same atomic-replace
-  // pattern (mkdtemp + write + chmod preservation + rename) on `node:fs`.
+  // pattern (mkdtemp + write + chmod preservation + rename).
   // Every plugin write still funnels through
   // `pathSafety.validateGeneratedPath(...)`, so path traversal cannot
   // reach this surface.
-  const existingFileMode = getExistingFileMode(config.safePath.fullPath);
+  const existingFileMode = fileSystem.getExistingFileMode(
+    config.safePath.fullPath
+  );
   const destinationDir = path.dirname(config.safePath.fullPath);
-  const tempDir = fs.mkdtempSync(path.join(destinationDir, ".typeweaver-"));
+  const tempDir = fileSystem.makeTempDirectory(
+    path.join(destinationDir, ".typeweaver-")
+  );
   const tempFile = path.join(tempDir, "generated.tmp");
 
   try {
-    fs.writeFileSync(tempFile, config.content, {
-      flag: "wx",
-      mode: existingFileMode ?? 0o666,
-    });
+    fileSystem.writeFileExclusive(
+      tempFile,
+      config.content,
+      existingFileMode ?? 0o666
+    );
 
     if (existingFileMode !== undefined) {
-      fs.chmodSync(tempFile, existingFileMode);
+      fileSystem.chmod(tempFile, existingFileMode);
     }
 
-    fs.renameSync(tempFile, config.safePath.fullPath);
-  } finally {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
-};
-
-const getExistingFileMode = (absolutePath: string): number | undefined => {
-  let pathStats: fs.Stats;
-  try {
-    pathStats = fs.lstatSync(absolutePath);
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      "code" in error &&
-      (error.code === "ENOENT" || error.code === "ENOTDIR")
-    ) {
-      return undefined;
+    // Both operations are synchronous: once rename publishes the destination,
+    // record the write before any fallible cleanup can run. A cleanup-only
+    // failure may still be reported, but it cannot leave a committed file
+    // absent from the generated-file tracker and pending log queue.
+    fileSystem.rename(tempFile, config.safePath.fullPath);
+    config.onCommit();
+  } catch (operationError) {
+    try {
+      fileSystem.removeDirectory(tempDir);
+    } catch {
+      // Preserve the writer's original failure: a cleanup error is secondary
+      // and must not erase the rename/write defect callers need to diagnose.
     }
-    throw error;
+    throw operationError;
   }
 
-  if (!pathStats.isFile()) {
-    return undefined;
-  }
-
-  return pathStats.mode & 0o777;
+  fileSystem.removeDirectory(tempDir);
 };
 
 export type PluginContextBuilderApi = {
@@ -160,19 +213,23 @@ export type PluginContextBuilderApi = {
  * Effect-native `PathSafety` and `TemplateRenderer` services, with no
  * `Effect.runSync` bridging in between.
  *
- * Filesystem I/O for the atomic-replace write, directory creation, and
- * template-file reads remains on `node:fs` because the plugin-author API
- * contract is sync end-to-end (ADR 0003/0004). The tradeoff: the I/O here
- * is contained to a well-audited file (this module), every write is gated
- * by `pathSafety.validateGeneratedPath`, and tests can substitute the
- * `pathSafety` and `templateRenderer` shapes to exercise the
- * orchestration logic without writing real files.
+ * The sync atomic-replace operations are captured behind
+ * `SyncAtomicFileSystem`; production delegates that narrow port to `node:fs`,
+ * while tests can inject deterministic rename/cleanup failures. Directory
+ * creation and template reads remain direct `node:fs` calls because the
+ * plugin-author API is sync end-to-end (ADR 0003/0004). Every write remains
+ * gated by `pathSafety.validateGeneratedPath`.
  */
 export function createPluginContextBuilder(
   deps: PluginContextBuilderDeps
 ): PluginContextBuilderApi {
   const tracker = createGeneratedFilesTracker();
-  const { pathSafety, templateRenderer, fileSystem } = deps;
+  const {
+    pathSafety,
+    templateRenderer,
+    syncAtomicFileSystem = liveSyncAtomicFileSystem,
+    fileSystem,
+  } = deps;
 
   const createPluginContext = (params: {
     outputDir: string;
@@ -294,13 +351,11 @@ export function createPluginContextBuilder(
         });
 
         fs.mkdirSync(path.dirname(safePath.fullPath), { recursive: true });
-        writeFileViaTempReplace({ safePath, content });
-        // Queue the `Generated: <path>` log instead of printing here: the
-        // sync callback runs outside any Effect runtime, so the orchestrator
-        // drains the queue through `Effect.logInfo` after each plugin's
-        // `generate` stage — keeping the lines inside the configured logger
-        // pipeline (verbose flavor, captured-log tests, future telemetry).
-        tracker.recordWrite(safePath.generatedPath);
+        writeFileViaTempReplaceWith(syncAtomicFileSystem, {
+          safePath,
+          content,
+          onCommit: () => tracker.recordWrite(safePath.generatedPath),
+        });
       },
 
       renderTemplate: (templatePath: string, data: unknown) => {

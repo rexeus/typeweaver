@@ -24,6 +24,13 @@ composite causes, plus structured log lines. The
 `renderTemplateEffect`, `addGeneratedFileEffect`) with the same path-safety and atomic-write
 guarantees, routed through `@effect/platform`'s `FileSystem` service.
 
+Generator recovery now keeps publication and cleanup boundaries consistent under defects and Fiber
+interruption. Spec bundles are written to a scoped staging directory and renamed into place only
+after Rolldown settles successfully. Because Rolldown does not expose cancellation, an interrupted
+bundle waits for that Promise to settle before releasing its scope and output lock. Generated-file
+replacement and tracking form one commit, so a cleanup failure cannot leave a published but
+untracked file.
+
 Error payloads that represent multiple failure modes are now discriminated:
 `PluginDependencyError.issue` distinguishes a missing dependency from a structured dependency-cycle
 path, and `UnsafeCleanTargetError.details` carries only the fields required by its reason. The

@@ -8,12 +8,14 @@ import { MissingCanonicalResponseError } from "../../../src/plugins/errors/Missi
 import {
   createPluginContextBuilder,
   livePathSafetyShape,
+  liveSyncAtomicFileSystem,
   liveTemplateRendererShape,
 } from "../../../src/services/internal/pluginContextBuilder.js";
 import type {
   NormalizedResponse,
   NormalizedSpec,
 } from "../../../src/NormalizedSpec.js";
+import type { SyncAtomicFileSystem } from "../../../src/services/internal/pluginContextBuilder.js";
 
 /**
  * Real-deps factory for the sync plugin-context builder: the exact live
@@ -27,10 +29,17 @@ import type {
 const realPluginContextBuilderDeps = {
   pathSafety: livePathSafetyShape,
   templateRenderer: liveTemplateRendererShape,
+  syncAtomicFileSystem: liveSyncAtomicFileSystem,
   fileSystem: FileSystem.makeNoop({}),
 };
 
-const aBuilder = () => createPluginContextBuilder(realPluginContextBuilderDeps);
+const aBuilder = (
+  syncAtomicFileSystem: SyncAtomicFileSystem = liveSyncAtomicFileSystem
+) =>
+  createPluginContextBuilder({
+    ...realPluginContextBuilderDeps,
+    syncAtomicFileSystem,
+  });
 
 const validationErrorResponse: NormalizedResponse = {
   name: "validationError",
@@ -733,6 +742,65 @@ describe("createPluginContextBuilder", () => {
         isDirectory: entry.isDirectory(),
       }))
     ).toEqual([{ name: "todo", isDirectory: true }]);
+  });
+
+  test("preserves a sync rename defect when temp cleanup also defects", () => {
+    const renameDefect = new Error("rename defect");
+    const cleanupDefect = new Error("cleanup defect");
+    const cleanupCalls: string[] = [];
+    const syncAtomicFileSystem = {
+      getExistingFileMode: () => undefined,
+      makeTempDirectory: prefixPath => `${prefixPath}test`,
+      writeFileExclusive: () => undefined,
+      chmod: () => undefined,
+      rename: () => {
+        throw renameDefect;
+      },
+      removeDirectory: dirPath => {
+        cleanupCalls.push(dirPath);
+        throw cleanupDefect;
+      },
+    } satisfies SyncAtomicFileSystem;
+    const outputDir = aTempDir();
+    const builder = aBuilder(syncAtomicFileSystem);
+    const generatorContext = builder.createGeneratorContext({
+      ...generatedProjectParams,
+      outputDir,
+    });
+
+    const writeGeneratedFile = () =>
+      generatorContext.writeFile("todo/GetTodoClient.ts", "generated");
+
+    expect(catchThrownError(writeGeneratedFile)).toBe(renameDefect);
+    expect(cleanupCalls).toHaveLength(1);
+    expect(generatorContext.getGeneratedFiles()).toEqual([]);
+    expect(builder.drainPendingWriteLogs()).toEqual([]);
+  });
+
+  test("tracks a committed sync rename before surfacing a cleanup defect", () => {
+    const cleanupDefect = new Error("cleanup defect after commit");
+    const syncAtomicFileSystem = {
+      ...liveSyncAtomicFileSystem,
+      removeDirectory: () => {
+        throw cleanupDefect;
+      },
+    } satisfies SyncAtomicFileSystem;
+    const outputDir = aTempDir();
+    const builder = aBuilder(syncAtomicFileSystem);
+    const generatorContext = builder.createGeneratorContext({
+      ...generatedProjectParams,
+      outputDir,
+    });
+    const generatedFile = "todo/GetTodoClient.ts";
+    const generatedFilePath = nativeGeneratedFilePath(outputDir, generatedFile);
+
+    const writeGeneratedFile = () =>
+      generatorContext.writeFile(generatedFile, "generated");
+
+    expect(catchThrownError(writeGeneratedFile)).toBe(cleanupDefect);
+    expect(fs.readFileSync(generatedFilePath, "utf8")).toBe("generated");
+    expect(generatorContext.getGeneratedFiles()).toEqual([generatedFile]);
+    expect(builder.drainPendingWriteLogs()).toEqual([generatedFile]);
   });
 
   test("rejects parent traversal paths before writing outside the output directory", () => {

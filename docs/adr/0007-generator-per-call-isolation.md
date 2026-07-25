@@ -87,6 +87,12 @@ every call gets its own root span — concurrent calls trace independently.
   nested service-operation spans (`typeweaver.SpecLoader.load`, `typeweaver.SpecBundler.bundle`,
   `typeweaver.PluginLoader.loadAll`, `typeweaver.IndexFileGenerator.generate`) and per-plugin
   lifecycle spans (`typeweaver.plugin.{phase}` tagged with the plugin name) underneath.
+- Successful plugin initialization and registration on the finalizer stack form one masked
+  transition. Initialization remains interruptible; once success reaches the orchestrator boundary,
+  a pending interruption cannot skip that plugin's finalizer.
+- Spec bundles and generated files publish atomically. Rolldown writes to a scoped staging directory
+  and must settle before the scope and output lock are released; file replacement and generated-file
+  tracking commit before fallible temp cleanup.
 
 ### Negative
 
@@ -99,6 +105,9 @@ every call gets its own root span — concurrent calls trace independently.
   Services that hold per-call state must either build it inside the call (the `ContextBuilder`
   pattern) or expose a per-call factory the caller invokes once per invocation (the
   `PluginRegistry.createInstance` pattern).
+- Rolldown does not expose a cancellation signal. Interruption therefore waits for an active build
+  Promise to settle rather than releasing the scope and output lock while detached build work can
+  still mutate staging output.
 
 ### Follow-up
 
@@ -114,5 +123,9 @@ export backend remains the open follow-up.
 - `packages/gen/src/services/internal/pluginContextBuilder.ts` — context factory invoked by
   `ContextBuilder`
 - `packages/cli/__test__/generator.concurrent.test.ts` — concurrent-isolation regression test
+- `packages/cli/__test__/generator.recovery.test.ts` — deterministic failure, interruption, cleanup,
+  and same-runtime retry matrix
+- `packages/cli/__test__/services/SpecBundler.lifecycle.test.ts` — staged bundle publication and
+  cleanup contract
 - `packages/gen/src/services/PluginRegistry.ts` — `createInstance` factory backing per-call
   instances

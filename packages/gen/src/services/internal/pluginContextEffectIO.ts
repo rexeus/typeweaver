@@ -113,7 +113,8 @@ const getExistingFileModeEffect = (
 const writeFileViaTempReplaceEffect = (
   fileSystem: FileSystem.FileSystem,
   safePath: SafeGeneratedFilePath,
-  content: string
+  content: string,
+  trackWrite: (generatedPath: string) => void
 ): Effect.Effect<void, PlatformError> =>
   Effect.scoped(
     Effect.gen(function* () {
@@ -132,7 +133,15 @@ const writeFileViaTempReplaceEffect = (
       if (existingFileMode !== undefined) {
         yield* fileSystem.chmod(tempFile, existingFileMode);
       }
-      yield* fileSystem.rename(tempFile, safePath.fullPath);
+      yield* Effect.uninterruptible(
+        fileSystem.rename(tempFile, safePath.fullPath).pipe(
+          Effect.tap(() =>
+            // Rename publishes the new file. Tracking belongs to the same
+            // commit section so interruption cannot expose an untracked file.
+            Effect.sync(() => trackWrite(safePath.generatedPath))
+          )
+        )
+      );
     })
   );
 
@@ -184,13 +193,8 @@ export const makeEffectContextIO = (config: {
         writeFileViaTempReplaceEffect(
           config.fileSystem,
           safePath,
-          content
-        ).pipe(
-          Effect.tap(() =>
-            // Trusted in-memory tracker mutation after the typed filesystem
-            // write succeeded; no user callback or operational I/O runs here.
-            Effect.sync(() => config.trackWrite(safePath.generatedPath))
-          )
+          content,
+          config.trackWrite
         )
       )
     ),

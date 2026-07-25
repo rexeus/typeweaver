@@ -104,9 +104,13 @@ const buildWrapperSource = (wrapperImportSpecifier: string): string =>
  * from rolldown surface as `SpecBundleError`; a missing post-bundle output
  * surfaces as `SpecBundleOutputMissingError`.
  *
- * Uses `FileSystem.makeTempDirectoryScoped` so the temp wrapper directory
- * is removed automatically when the surrounding Effect.Scope closes — even
- * if rolldown throws.
+ * Rolldown writes into a scoped staging directory beside the final bundle.
+ * Its Promise is awaited uninterruptibly because Rolldown does not expose a
+ * cancellation signal: releasing the Scope earlier would allow a detached
+ * build to keep writing after the caller's output lock has been released.
+ * Only a settled, successful build is atomically renamed into place through
+ * the Effect `FileSystem`; the scoped wrapper/staging directory is removed on
+ * every Exit.
  *
  * The optional `deps` parameter is a deliberate test seam for the two
  * bindings that live outside the `FileSystem` service: rolldown's `build`
@@ -131,8 +135,23 @@ export class SpecBundler extends Effect.Service<SpecBundler>()(
         (config: SpecBundlerConfig, deps: SpecBundlerDeps = {}) =>
           Effect.scoped(
             Effect.gen(function* () {
+              yield* fileSystem
+                .makeDirectory(config.specOutputDir, { recursive: true })
+                .pipe(
+                  Effect.mapError(
+                    cause =>
+                      new SpecBundleError({
+                        inputFile: config.inputFile,
+                        cause,
+                      })
+                  )
+                );
+
               const tempDir = yield* fileSystem
-                .makeTempDirectoryScoped({ prefix: "typeweaver-spec-loader-" })
+                .makeTempDirectoryScoped({
+                  directory: config.specOutputDir,
+                  prefix: ".typeweaver-spec-loader-",
+                })
                 .pipe(
                   Effect.mapError(
                     cause =>
@@ -144,6 +163,7 @@ export class SpecBundler extends Effect.Service<SpecBundler>()(
                 );
 
               const wrapperFile = path.join(tempDir, "spec-entrypoint.ts");
+              const stagedSpecFile = path.join(tempDir, "spec.js");
               const bundledSpecFile = path.join(
                 config.specOutputDir,
                 "spec.js"
@@ -168,36 +188,41 @@ export class SpecBundler extends Effect.Service<SpecBundler>()(
                   )
                 );
 
-              yield* Effect.tryPromise({
-                try: () =>
-                  (deps.build ?? build)({
-                    cwd: tempDir,
-                    input: wrapperFile,
-                    treeshake: true,
-                    experimental: {
-                      attachDebugInfo: "none",
-                    },
-                    external: (source: string) => {
-                      if (source.startsWith("node:")) {
-                        return true;
-                      }
-                      return (
-                        !source.startsWith(".") && !path.isAbsolute(source)
-                      );
-                    },
-                    output: {
-                      file: bundledSpecFile,
-                      format: "esm",
-                    },
-                  }),
-                catch: cause =>
-                  new SpecBundleError({ inputFile: config.inputFile, cause }),
-              });
+              yield* Effect.uninterruptible(
+                Effect.tryPromise({
+                  try: () =>
+                    (deps.build ?? build)({
+                      cwd: tempDir,
+                      input: wrapperFile,
+                      treeshake: true,
+                      experimental: {
+                        attachDebugInfo: "none",
+                      },
+                      external: (source: string) => {
+                        if (source.startsWith("node:")) {
+                          return true;
+                        }
+                        return (
+                          !source.startsWith(".") && !path.isAbsolute(source)
+                        );
+                      },
+                      output: {
+                        file: stagedSpecFile,
+                        format: "esm",
+                      },
+                    }),
+                  catch: cause =>
+                    new SpecBundleError({
+                      inputFile: config.inputFile,
+                      cause,
+                    }),
+                })
+              );
 
               const bundleExists =
                 deps.existsSync !== undefined
-                  ? deps.existsSync(bundledSpecFile)
-                  : yield* fileSystem.exists(bundledSpecFile).pipe(
+                  ? deps.existsSync(stagedSpecFile)
+                  : yield* fileSystem.exists(stagedSpecFile).pipe(
                       Effect.mapError(
                         cause =>
                           new SpecBundleError({
@@ -216,6 +241,21 @@ export class SpecBundler extends Effect.Service<SpecBundler>()(
                   })
                 );
               }
+
+              // Node's rename callback cannot be cancelled. Keep this atomic
+              // publication step uninterruptible so Scope/lock release cannot
+              // race a rename that is still mutating the final output path.
+              yield* Effect.uninterruptible(
+                fileSystem.rename(stagedSpecFile, bundledSpecFile).pipe(
+                  Effect.mapError(
+                    cause =>
+                      new SpecBundleError({
+                        inputFile: config.inputFile,
+                        cause,
+                      })
+                  )
+                )
+              );
 
               return bundledSpecFile;
             })

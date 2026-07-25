@@ -196,14 +196,32 @@ export class Generator extends Effect.Service<Generator>()(
               yield* Effect.logDebug(
                 `Initializing plugin: ${registration.plugin.name}`
               );
-              if (registration.plugin.initialize) {
-                yield* registration.plugin.initialize(pluginContext).pipe(
-                  Effect.withSpan("typeweaver.plugin.initialize", {
-                    attributes: { plugin: registration.plugin.name },
-                  })
-                );
-              }
-              initialized.push(registration);
+              const initialize =
+                registration.plugin.initialize === undefined
+                  ? Effect.void
+                  : registration.plugin.initialize(pluginContext).pipe(
+                      Effect.withSpan("typeweaver.plugin.initialize", {
+                        attributes: { plugin: registration.plugin.name },
+                      })
+                    );
+
+              // Initialization remains interruptible, but once it succeeds
+              // the transition into the finalizer stack is atomic. This is
+              // the same mask/restore shape Effect uses for interruptible
+              // resource acquisition followed by finalizer registration. If
+              // a plugin masks interruption internally, acquires partially,
+              // and then observes a pending interrupt before returning, no
+              // success reaches this boundary; that plugin must scope its
+              // partial acquisition internally.
+              yield* Effect.uninterruptibleMask(restore =>
+                restore(initialize).pipe(
+                  Effect.tap(() =>
+                    Effect.sync(() => {
+                      initialized.push(registration);
+                    })
+                  )
+                )
+              );
             }
 
             yield* Effect.logInfo("Collecting resources...");

@@ -196,7 +196,7 @@ progress log.
     path;
   - `pnpm --filter @rexeus/typeweaver build` and the process test suite exit 0.
 
-- [ ] **10. Interruption and defect recovery is proven across resources.**
+- [x] **10. Interruption and defect recovery is proven across resources.**
 
   Deterministic tests interrupt or defect during bundling, initialization, transformation,
   generation, formatting, and atomic output replacement. The output lock, scoped temp directories,
@@ -641,6 +641,29 @@ evidence: Three consecutive fresh-build process runs passed 16/16; a fourth 16/1
           root typecheck, Oxlint, Oxfmt, and git diff check are green. Independent Effect,
           Test-Mastery, and TypeScript-Mastery reviews found no remaining blocker.
 next: Criterion 10, prove interruption and defect recovery across every owned resource.
+```
+
+```text
+[iteration 10 | 2026-07-25]
+criterion: 10. Interruption and defect recovery is proven across resources.
+before: Bundling wrote directly to its published output and a cancelled Rolldown Promise could keep
+        mutating files after scope and lock release. Successful plugin initialization could be
+        interrupted before finalizer registration, and atomic rename could publish a file before
+        generated-file tracking. Recovery coverage did not span every pipeline phase or the
+        documented private Layer.buildWithScope plugin pattern.
+change: Staged spec bundles beside their destination, waited uninterruptibly for non-cancellable
+        Rolldown work, and atomically published only successful output. Masked the successful
+        initialize-to-finalizer transition and made rename plus generated-file tracking one commit
+        for both Effect-native and sync writers. Added deterministic recovery matrices for
+        bundling, initialization, resource transformation, generation, formatting, atomic output
+        replacement, scoped-service adverse paths, and concurrent private scopes, with cleanup and
+        same-runtime retry assertions after every injected failure or interruption.
+evidence: Gen passed 305/305 and CLI passed 330/330. The five targeted lifecycle, lock, bundler,
+          generator-recovery, and scoped-service suites passed 40/40 on 20 consecutive combined
+          runs (800/800). CLI and Gen builds/typechecks, root Oxlint/Oxfmt, and git diff check are
+          green. Independent Effect, Test-Mastery, and TypeScript-Mastery reviews found no
+          remaining K10 blocker.
+next: Criterion 11, split Generator orchestration at stable domain seams.
 ```
 
 ## Stop conditions
