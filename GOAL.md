@@ -992,6 +992,32 @@ next: Commit and push the portable test runner, then require fresh green Ubuntu 
       evidence on the exact final commit.
 ```
 
+```text
+[iteration 24 | 2026-07-25 | final security and review closure]
+criterion: 16 and 17 remote completion evidence.
+before: Quality Check run 30175139657 made Ubuntu and Windows green on ae6a5e12, but the aggregate
+        CodeQL gate reported two high-severity polynomial-regex alerts in the template parser. The
+        final thread audit also found that orphan cleanup could delete user-owned
+        `.typeweaver-*` directories, `-V` no longer printed the version despite the migration's
+        compatibility claim, three fixture strings still triggered code-quality findings, and
+        Vitest 3.2.4 remained below its critical-CVE patch.
+change: Replaced regex tag discovery with an index-based linear scanner and an adversarial
+        unterminated-prefix regression; restricted orphan removal to Node's exact six-character
+        mkdtemp artifact shape while proving user directories survive; restored `-V` as a normalized
+        version alias and kept verbose logging on `--verbose`; emitted generated fixture strings
+        through ordinary concatenation; upgraded Vitest and coverage to the latest Effect-compatible
+        3.2.7 and Turbo to 2.10.7.
+evidence: Frozen install, Actionlint, Oxfmt, Oxlint, workspace typecheck, all-package build, and size
+          limits pass. Targeted template, orphan-cleanup, concurrency, lifecycle, and all 13 built
+          CLI process contracts pass. `pnpm verify:effect-migration` passes with zero Effect
+          diagnostics, all 2,379 workspace tests, 225 exact generated fixtures, packed Effect 3.22
+          consumers, duplicate-identity rejection, and an unchanged authored worktree. Vitest 4 is
+          intentionally excluded because @effect/vitest 0.30.0 requires Vitest ^3.2.0.
+next: Commit and push the cohesive final-review repairs, require every exact-head CI and security
+      check to pass, update the stale PR description, resolve only verified review threads, record
+      the final remote evidence, and perform the final merge-readiness audit without merging.
+```
+
 ## Stop conditions
 
 - **Done:** all 18 criteria are checked with recorded evidence, the final local command block is
