@@ -143,7 +143,7 @@ export const assertSafeCleanTargetWith = (
   if (trimmedOutputDir.length === 0) {
     throw new UnsafeCleanTargetError({
       outputDir,
-      reason: "empty-path",
+      details: { reason: "empty-path" },
     });
   }
 
@@ -164,10 +164,12 @@ export const assertSafeCleanTargetWith = (
   if (canonicalOutputDir === filesystemRoot) {
     throw new UnsafeCleanTargetError({
       outputDir,
-      reason: "filesystem-root",
-      resolvedOutputDir,
-      currentWorkingDirectory: resolvedWorkingDirectory,
-      filesystemRoot,
+      details: {
+        reason: "filesystem-root",
+        resolvedOutputDir,
+        currentWorkingDirectory: resolvedWorkingDirectory,
+        filesystemRoot,
+      },
     });
   }
 
@@ -177,9 +179,11 @@ export const assertSafeCleanTargetWith = (
   ) {
     throw new UnsafeCleanTargetError({
       outputDir,
-      reason: "current-working-directory",
-      resolvedOutputDir,
-      currentWorkingDirectory: resolvedWorkingDirectory,
+      details: {
+        reason: "current-working-directory",
+        resolvedOutputDir,
+        currentWorkingDirectory: resolvedWorkingDirectory,
+      },
     });
   }
 
@@ -204,10 +208,12 @@ export const assertSafeCleanTargetWith = (
   if (protectedWorkspaceRootTarget !== undefined) {
     throw new UnsafeCleanTargetError({
       outputDir,
-      reason: "workspace-root",
-      resolvedOutputDir,
-      currentWorkingDirectory: resolvedWorkingDirectory,
-      protectedWorkspaceRoot: protectedWorkspaceRootTarget,
+      details: {
+        reason: "workspace-root",
+        resolvedOutputDir,
+        currentWorkingDirectory: resolvedWorkingDirectory,
+        protectedWorkspaceRoot: protectedWorkspaceRootTarget,
+      },
     });
   }
 
@@ -218,9 +224,11 @@ export const assertSafeCleanTargetWith = (
   ) {
     throw new UnsafeCleanTargetError({
       outputDir,
-      reason: "ancestor-of-current-working-directory",
-      resolvedOutputDir,
-      currentWorkingDirectory: resolvedWorkingDirectory,
+      details: {
+        reason: "ancestor-of-current-working-directory",
+        resolvedOutputDir,
+        currentWorkingDirectory: resolvedWorkingDirectory,
+      },
     });
   }
 
@@ -235,10 +243,12 @@ export const assertSafeCleanTargetWith = (
     if (isSameOrDescendantOf(canonicalInputFile, canonicalOutputDir)) {
       throw new UnsafeCleanTargetError({
         outputDir,
-        reason: "contains-input-file",
-        resolvedOutputDir,
-        currentWorkingDirectory: resolvedWorkingDirectory,
-        inputFile: canonicalInputFile,
+        details: {
+          reason: "contains-input-file",
+          resolvedOutputDir,
+          currentWorkingDirectory: resolvedWorkingDirectory,
+          inputFile: canonicalInputFile,
+        },
       });
     }
   }
@@ -250,10 +260,12 @@ export const assertSafeCleanTargetWith = (
   if (hasWorkspaceMarker(canonicalOutputDir, fileSystem)) {
     throw new UnsafeCleanTargetError({
       outputDir,
-      reason: "target-carries-workspace-marker",
-      resolvedOutputDir,
-      currentWorkingDirectory: resolvedWorkingDirectory,
-      protectedWorkspaceRoot: canonicalOutputDir,
+      details: {
+        reason: "target-carries-workspace-marker",
+        resolvedOutputDir,
+        currentWorkingDirectory: resolvedWorkingDirectory,
+        protectedWorkspaceRoot: canonicalOutputDir,
+      },
     });
   }
 };

@@ -1,32 +1,34 @@
 import { Data } from "effect";
 
+export type PluginDependencyIssue =
+  | {
+      readonly kind: "missing-dependency";
+      readonly dependencyName: string;
+    }
+  | {
+      readonly kind: "dependency-cycle";
+      readonly path: readonly string[];
+    };
+
 /**
  * Raised when the plugin dependency graph cannot be resolved. Exactly one
  * of two scenarios applies:
  *
- *   - **Missing dependency.** `missingDependency` carries the unresolved
- *     plugin name; `cyclePath` is `undefined`.
- *   - **Cycle.** `cyclePath` carries the human-readable cycle string;
- *     `missingDependency` is `undefined`.
- *
- * Programmatic consumers should branch on `cyclePath !== undefined` rather
- * than inspecting `missingDependency` for cycles — the previous code
- * inverted that contract by re-using `missingDependency` to store the
- * cycle's start node.
+ *   - `issue.kind: "missing-dependency"` carries `dependencyName`.
+ *   - `issue.kind: "dependency-cycle"` carries the structured plugin path.
  */
 export class PluginDependencyError extends Data.TaggedError(
   "PluginDependencyError"
 )<{
   readonly pluginName: string;
-  readonly missingDependency?: string;
-  readonly cyclePath?: string;
+  readonly issue: PluginDependencyIssue;
 }> {
   public override get message(): string {
-    if (this.cyclePath !== undefined) {
-      return this.cyclePath;
+    switch (this.issue.kind) {
+      case "missing-dependency":
+        return `Plugin '${this.pluginName}' depends on '${this.issue.dependencyName}' which is not loaded`;
+      case "dependency-cycle":
+        return `Detected plugin dependency cycle: ${this.issue.path.join(" -> ")}`;
     }
-    return `Plugin '${this.pluginName}' depends on '${
-      this.missingDependency ?? "<unknown>"
-    }' which is not loaded`;
   }
 }

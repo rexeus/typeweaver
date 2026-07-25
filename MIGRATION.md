@@ -148,6 +148,13 @@ If you imported the generator programmatically rather than through the CLI:
   beneath it.
 - Errors are now `Data.TaggedError` instances throughout. Inspect the `_tag` field for typed
   branching (`UnsafeGeneratedPathError`, `PluginExecutionError`, `SpecBundleError`, etc.).
+- Multi-mode errors use nested discriminants instead of optional field bags:
+  `PluginDependencyError.issue.kind` distinguishes `missing-dependency` from `dependency-cycle`,
+  while `UnsafeCleanTargetError.details.reason` selects the exact clean-target payload. Update
+  programmatic field access accordingly.
+- `GenerateFailure` is the canonical generator error union and is derived from
+  `Generator.generate`'s Effect error channel. The incomplete duplicate `GenerationError` type was
+  removed.
 
 ### 4. Spec authoring API: UNCHANGED
 

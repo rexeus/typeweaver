@@ -142,9 +142,14 @@ describe("PluginRegistry", () => {
     );
 
     expect(failure).toBeInstanceOf(PluginDependencyError);
-    expect((failure as PluginDependencyError).message).toContain(
+    const dependencyError = failure as PluginDependencyError;
+    expect(dependencyError.message).toContain(
       "Plugin 'clients' depends on 'types' which is not loaded"
     );
+    expect(dependencyError.issue).toEqual({
+      kind: "missing-dependency",
+      dependencyName: "types",
+    });
   });
 
   test("reports the dependency path when plugin dependencies contain a cycle", () => {
@@ -158,12 +163,14 @@ describe("PluginRegistry", () => {
     );
 
     expect(failure).toBeInstanceOf(PluginDependencyError);
-    expect((failure as PluginDependencyError).message).toContain(
+    const dependencyError = failure as PluginDependencyError;
+    expect(dependencyError.message).toContain(
       "Detected plugin dependency cycle: analytics -> types -> clients -> analytics"
     );
-    expect(
-      (failure as PluginDependencyError).missingDependency
-    ).toBeUndefined();
+    expect(dependencyError.issue).toEqual({
+      kind: "dependency-cycle",
+      path: ["analytics", "types", "clients", "analytics"],
+    });
   });
 
   test("reports a self-dependency as a dependency cycle", () => {
@@ -175,12 +182,14 @@ describe("PluginRegistry", () => {
     );
 
     expect(failure).toBeInstanceOf(PluginDependencyError);
-    expect((failure as PluginDependencyError).message).toContain(
+    const dependencyError = failure as PluginDependencyError;
+    expect(dependencyError.message).toContain(
       "Detected plugin dependency cycle: types -> types"
     );
-    expect(
-      (failure as PluginDependencyError).missingDependency
-    ).toBeUndefined();
+    expect(dependencyError.issue).toEqual({
+      kind: "dependency-cycle",
+      path: ["types", "types"],
+    });
   });
 
   test("does not duplicate sorted registrations for duplicate dependency names", () => {

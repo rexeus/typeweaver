@@ -23,6 +23,12 @@ built on `@effect/cli`, with friendly single-line error formatting and structure
 `renderTemplateEffect`, `addGeneratedFileEffect`) with the same path-safety and atomic-write
 guarantees, routed through `@effect/platform`'s `FileSystem` service.
 
+Error payloads that represent multiple failure modes are now discriminated:
+`PluginDependencyError.issue` distinguishes a missing dependency from a structured dependency-cycle
+path, and `UnsafeCleanTargetError.details` carries only the fields required by its reason. The
+generator's `GenerateFailure` type is derived from the actual Effect error channel so cleanup
+failures cannot silently drift out of the public contract.
+
 The spec authoring API (`defineSpec`, `defineOperation`, `defineResponse`) and Zod schemas are
 unchanged — existing specs keep working byte-for-byte.
 

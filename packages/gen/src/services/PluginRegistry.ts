@@ -84,10 +84,12 @@ const visitPlugin = (params: {
   }
 
   if (visiting.has(registration.name)) {
-    const cyclePath = [...dependencyPath, registration.name].join(" -> ");
     return new PluginDependencyError({
       pluginName: registration.name,
-      cyclePath: `Detected plugin dependency cycle: ${cyclePath}`,
+      issue: {
+        kind: "dependency-cycle",
+        path: [...dependencyPath, registration.name],
+      },
     });
   }
 
@@ -102,7 +104,10 @@ const visitPlugin = (params: {
     if (dependency === undefined) {
       return new PluginDependencyError({
         pluginName: registration.name,
-        missingDependency: dependencyName,
+        issue: {
+          kind: "missing-dependency",
+          dependencyName,
+        },
       });
     }
 

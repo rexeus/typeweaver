@@ -133,7 +133,7 @@ progress log.
 
 ### P1 — explicit type and failure contracts
 
-- [ ] **6. Public error types cannot drift from runtime behavior.**
+- [x] **6. Public error types cannot drift from runtime behavior.**
 
   `GenerateFailure` is derived from or checked for exact equality with the actual
   `Generator.generate` error channel and includes `OutputCleanError`. The public CLI error export is
@@ -536,6 +536,24 @@ evidence: initial criterion fixture 3/3 red; complete CLI suite 263/263; final P
           root lint, format check, and git diff check all green. Independent Effect review confirmed
           the Effect 3.22 ownership transfer and found no remaining blocking semantic mismatch.
 next: Criterion 6, bind public error types exactly to runtime behavior and remove CLI API drift.
+```
+
+```text
+[iteration 6 | 2026-07-25]
+criterion: 6. Public error types cannot drift from runtime behavior.
+before: Compile-time probes showed that the handwritten GenerateFailure union differed from the
+        actual Generator.generate error channel and omitted OutputCleanError; optional error bags
+        also accepted impossible dependency and clean-target payloads.
+change: Derived GenerateFailure from Generator.generate, removed the incomplete GenerationError
+        duplicate, replaced PluginDependencyError and UnsafeCleanTargetError field bags with nested
+        discriminated payloads, retained read-only clean-target compatibility accessors, and
+        documented the breaking contract. Added positive, negative, exact-equality, and runtime
+        assertions for the resulting public types.
+evidence: Initial contract probes failed with TS2344 and unused TS2578 directives; removing one
+          negative-test directive subsequently failed with TS2322. Final contract typecheck green;
+          gen suite 296/296 and CLI suite 263/263; gen and CLI builds, workspace typecheck, Oxlint,
+          Oxfmt, and git diff check all green.
+next: Criterion 7, make test TypeScript and negative public contracts a root and CI compiler gate.
 ```
 
 ## Stop conditions

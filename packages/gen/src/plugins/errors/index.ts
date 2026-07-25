@@ -1,6 +1,7 @@
 export { MissingCanonicalResponseError } from "./MissingCanonicalResponseError.js";
 export { PluginConfigError } from "./PluginConfigError.js";
 export { PluginDependencyError } from "./PluginDependencyError.js";
+export type { PluginDependencyIssue } from "./PluginDependencyError.js";
 export { PluginExecutionError } from "./PluginExecutionError.js";
 export type { PluginExecutionPhase } from "./PluginExecutionError.js";
 

@@ -1,21 +1,6 @@
-import type {
-  NormalizationError,
-  PluginConfigError,
-  PluginDependencyError,
-  PluginExecutionError,
-  TypeweaverConfig,
-} from "@rexeus/typeweaver-gen";
-import type { ConcurrentGenerationError } from "../errors/ConcurrentGenerationError.js";
-import type { PluginLoadError } from "../errors/PluginLoadError.js";
-import type { UnsafeCleanTargetError } from "../errors/UnsafeCleanTargetError.js";
-import type { IndexFileGenerationError } from "./errors/IndexFileGenerationError.js";
-import type {
-  InvalidSpecEntrypointError,
-  SpecBundleError,
-  SpecBundleOutputMissingError,
-  SpecOutputWriteError,
-} from "./errors/specErrors.js";
-import type { PlatformError } from "@effect/platform/Error";
+import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
+import type { Generator } from "./Generator.js";
+import type { Effect } from "effect";
 
 export type GenerateParams = {
   readonly inputFile: string;
@@ -24,17 +9,6 @@ export type GenerateParams = {
   readonly currentWorkingDirectory?: string;
 };
 
-export type GenerateFailure =
-  | ConcurrentGenerationError
-  | UnsafeCleanTargetError
-  | PluginLoadError
-  | PluginConfigError
-  | PluginDependencyError
-  | PluginExecutionError
-  | InvalidSpecEntrypointError
-  | NormalizationError
-  | SpecBundleError
-  | SpecBundleOutputMissingError
-  | SpecOutputWriteError
-  | IndexFileGenerationError
-  | PlatformError;
+export type GenerateFailure = Effect.Effect.Error<
+  ReturnType<typeof Generator.generate>
+>;

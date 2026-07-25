@@ -113,6 +113,12 @@ describe("Generator clean safety", () => {
         filesystemRoot: outputDir,
       })
     );
+    expect(error.details).toEqual({
+      reason: "filesystem-root",
+      resolvedOutputDir: outputDir,
+      currentWorkingDirectory: process.cwd(),
+      filesystemRoot: outputDir,
+    });
   });
 
   test.each([
