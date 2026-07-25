@@ -233,13 +233,11 @@ export class SpecBundler extends Effect.Service<SpecBundler>()(
                     );
 
               if (!bundleExists) {
-                return yield* Effect.fail(
-                  new SpecBundleOutputMissingError({
-                    inputFile: config.inputFile,
-                    bundledSpecFile,
-                    specOutputDir: config.specOutputDir,
-                  })
-                );
+                return yield* new SpecBundleOutputMissingError({
+                  inputFile: config.inputFile,
+                  bundledSpecFile,
+                  specOutputDir: config.specOutputDir,
+                });
               }
 
               // Node's rename callback cannot be cancelled. Keep this atomic

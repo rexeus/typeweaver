@@ -3,9 +3,10 @@ name: effect-ts
 description: Use this skill whenever working in a repository that uses Effect, even if the current task is in a new file or the user does not explicitly ask for Effect help. Apply it to any work that should follow the repository's Effect patterns, conventions, architecture, or supporting tooling. Also use it for questions about Effect patterns, services, layers, schemas, streams, runtimes, or typed error handling.
 ---
 
-# Effect Expert
+# Effect 3 Expert for TypeWeaver
 
-Expert guidance for programming with the Effect library, covering error handling, dependency injection, composability, and testing patterns.
+Repository-specific guidance for programming against TypeWeaver's pinned Effect 3 baseline,
+covering error handling, dependency injection, composability, and testing patterns.
 
 ## Prerequisite
 
@@ -13,24 +14,38 @@ Before doing any other Effect-related work, check that `./.repos/effect` exists 
 
 If it does not exist, stop and prompt the user with the setup task documented in `./references/setup.md`.
 
+## Mandatory Version Contract
+
+Before reading API guidance or changing Effect code:
+
+1. Read `config/effect-baseline.json`.
+2. Read `docs/adr/0008-effect-v3-baseline.md`.
+3. Read `./references/typeweaver-effect-3.md`.
+4. Verify `./.repos/effect` with `pnpm verify:effect-reference` when exact APIs or behavior matter.
+
+This repository develops against **Effect 3.22.0** and publishes the intentional peer range
+**`>=3.21.2 <4`**. Effect 4 APIs must not be introduced unless a separate migration explicitly
+changes that contract.
+
 ## Research Strategy
 
 Effect has many ways to accomplish the same task. Proactively research best practices when working with Effect patterns, especially for moderate to high complexity tasks.
 
-Use the local guides in `./references/` first. They are the preferred source for best practices, conventions, and common implementation patterns.
-
-Only go directly to the vendored Effect repo when:
-
-- the guides do not cover the question
-- you need exact API details or signatures
-- you need deeper implementation details
-- you need to verify a behavior against the source
+Use the TypeWeaver v3 guide, existing repository patterns, and the pinned Effect 3.22 source as
+implementation authorities. The generic upstream guides in `./references/guide-*.md` and
+`./references/features.md` were authored for Effect 4 beta. They are archived conceptual material,
+not active API guidance. Never copy an API name or snippet from them without first confirming the
+exact Effect 3.22 form in `./.repos/effect`.
 
 ### Research Sources
 
-1. Local skill guides first. Start with the relevant files in `./references/` before doing deeper research.
-2. Codebase patterns second. Examine similar patterns in the current project before implementing. If Effect patterns already exist, follow them for consistency. If no patterns exist, skip this step.
-3. Effect source code last. For gaps in the guides, complex type errors, unclear behavior, or implementation details, examine the vendored Effect source at `./.repos/effect/packages/effect/src/`.
+1. Version contract first: `config/effect-baseline.json`,
+   `docs/adr/0008-effect-v3-baseline.md`, and `./references/typeweaver-effect-3.md`.
+2. Codebase patterns second. Examine similar TypeWeaver code and its ADRs before implementing.
+3. Pinned Effect 3.22 source third. For exact APIs, type signatures, complex type errors, or unclear
+   behavior, examine `./.repos/effect/packages/effect/src/` and the matching tests.
+4. Archived generic guides last, and only for conceptual background after confirming every API
+   against the pinned source.
 
 ### When To Research
 
@@ -64,27 +79,22 @@ If no Effect patterns exist in the codebase, proceed using canonical patterns fr
 
 ### Feature Discovery
 
-When you need to discover available Effect modules, packages, or capabilities, search `./references/features.md` first.
+When you need to discover available Effect modules, packages, or capabilities, search the pinned
+Effect 3.22 source and its package manifests.
 
-- Use it to identify the right package or module for a task.
-- Use the listed repo paths to jump directly into the vendored source under `./.repos/effect`.
-- Use it before inventing custom abstractions when Effect may already provide the functionality.
+- Use source exports to identify the right module or package.
+- Search source tests for supported usage.
+- Check existing TypeWeaver dependencies before adding a package.
+- Do not use `./references/features.md` as an API inventory; it describes a different Effect major.
 
 ### Guide Discovery
 
-When the task touches one of these areas, consult the matching guide before implementing:
+For every Effect task, consult `./references/typeweaver-effect-3.md`. Then use the matching
+TypeWeaver implementation and the pinned source module or test.
 
-- `./references/guide-effect.md` for core `Effect` usage patterns, common constructors, composition, provisioning, and runtime boundaries
-- `./references/guide-error-handling.md` for defining errors, schema-based errors, failure handling, defects, and interrupts
-- `./references/guide-layers.md` for services, layer construction, composition, and provisioning patterns
-- `./references/guide-observability.md` for `Effect.fn`, spans, logging, metrics, and telemetry wiring
-- `./references/guide-retries.md` for retry policies, retry conditions, fallback strategies, and `ExecutionPlan`
-- `./references/guide-schedule.md` for retries, repeats, backoff, polling, cron, and schedule composition
-- `./references/guide-schema.md` for schema design, transformations, unions, recursion, opaque/branded types, and schema best practices
-- `./references/guide-sql.md` for Effect SQL usage, transactions, resolvers, schema-aware SQL, and migrations
-- `./references/guide-testing.md` for detailed `@effect/vitest` usage, layered test setup, property tests, and test services
-
-These guides should be treated as the default implementation guidance. Do not skip them and jump straight to `./.repos/effect` unless you need source-level confirmation or the guides do not answer the question.
+The generic `guide-*.md` files may help explain concepts, but their API-specific recommendations,
+examples, imports, and source paths are inactive for this repository. A statement such as
+"preferred", "default", or "use" inside an archived guide does not override this contract.
 
 ## Effect Principles
 
@@ -92,15 +102,19 @@ Apply these core principles when writing Effect code.
 
 ## Installation
 
-When installing Effect packages in a user repository:
+This repository deliberately targets Effect 3.22.0. The generic upstream v4-beta installation
+guidance does not apply here. Treat `config/effect-baseline.json` as the version authority.
 
-- use `effect@beta`
+- use `effect@3.22.0` for development and test dependencies
+- use the intentional public peer range `>=3.21.2 <4` for TypeWeaver plugin packages
 - keep all `@effect/*` packages on aligned versions
 - install only the packages needed for the user's runtime and actual task
 
 ### Version Rules
 
-- `effect` should be installed as `effect@beta`
+- do not install `effect@beta` or Effect 4 in this repository
+- `effect` development dependencies should resolve to Effect 3.22.0
+- published Effect peer dependencies should use `>=3.21.2 <4`
 - if you install any `@effect/*` package, make sure all `@effect/*` packages use matching versions
 - do not mix unrelated `@effect/*` versions in the same project
 
@@ -108,7 +122,7 @@ When installing Effect packages in a user repository:
 
 Choose packages based on the runtime and the work being done.
 
-- core library: `effect@beta`
+- core library: `effect@3.22.0`
 - Node.js runtime needs: install the matching `@effect/platform-node`
 - browser runtime needs: install the matching `@effect/platform-browser`
 - Bun runtime needs: install the matching `@effect/platform-bun`
@@ -119,7 +133,7 @@ Install additional `@effect/*` packages only when the user task actually needs t
 
 ### Practical Rule
 
-- start with `effect@beta`
+- start with the version contract in `config/effect-baseline.json`
 - add `@effect/*` packages as needed by runtime and features
 - keep the full installed Effect package set version-aligned
 
@@ -127,8 +141,9 @@ Install additional `@effect/*` packages only when the user task actually needs t
 
 - Use Effect's typed error system instead of throwing exceptions.
 - Define descriptive error types with proper error propagation.
-- Prefer `Schema.TaggedErrorClass` when the error can be schema-defined.
-- Use `Effect.fail`, `Effect.catchTag`, and `Effect.catch` for error control flow.
+- Follow the established TypeWeaver pattern: `Data.TaggedError` plus a meaningful `message` getter.
+- Use `Effect.fail`, `Effect.catchTag`, and the Effect 3.22 recovery operators confirmed in the
+  pinned source for error control flow.
 
 ### Dependency Injection
 
@@ -170,7 +185,8 @@ Install additional `@effect/*` packages only when the user task actually needs t
 - Use `Effect.gen` for readable sequential code.
 - Implement proper testing patterns using Effect testing utilities.
 - Prefer existing Effect primitives before introducing custom helpers.
-- Prefer `Schema.Class` / `Schema.TaggedClass` variants over plain `Schema.Struct` for named reusable schemas when possible.
+- Follow existing TypeWeaver schema conventions and confirm exact constructors in the pinned Effect
+  3.22 `Schema.ts` before introducing a new schema abstraction.
 
 ### Explaining Solutions
 
@@ -178,14 +194,8 @@ When providing solutions, explain the Effect concepts being used and why they fi
 
 ## References
 
-- `./references/features.md`
-- `./references/guide-effect.md`
-- `./references/guide-error-handling.md`
-- `./references/guide-layers.md`
-- `./references/guide-observability.md`
-- `./references/guide-retries.md`
-- `./references/guide-schedule.md`
-- `./references/guide-schema.md`
-- `./references/guide-sql.md`
-- `./references/guide-testing.md`
+- Active Effect 3 guidance: `./references/typeweaver-effect-3.md`
 - `./references/setup.md`
+- Version and v4-to-v3 mapping: `docs/adr/0008-effect-v3-baseline.md`
+- Archived conceptual material only: `./references/features.md` and
+  `./references/guide-*.md`

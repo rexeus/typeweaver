@@ -375,10 +375,13 @@ plugins:
   "types": "dist/index.d.ts",
   "peerDependencies": {
     "@rexeus/typeweaver-gen": "workspace:^",
-    "effect": "^3.21.2"
+    "effect": ">=3.21.2 <4"
   }
 }
 ```
+
+TypeWeaver develops and tests against Effect 3.22.0. The broader peer range is intentional: plugin
+packages accept supported Effect 3 consumers without admitting Effect 4.
 
 Export your plugin as one of the following — `PluginLoader` checks each in order:
 

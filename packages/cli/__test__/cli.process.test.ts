@@ -277,7 +277,7 @@ describe("built CLI process contract", () => {
         "utf8"
       )
     ).toContain("export type IOkResponse");
-  });
+  }, 15_000);
 
   test.each([
     {

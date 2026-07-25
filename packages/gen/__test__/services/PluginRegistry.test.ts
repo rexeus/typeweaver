@@ -28,6 +28,11 @@ const silentLoggerLayer = Logger.replace(
   Logger.make<unknown, void>(() => {})
 );
 
+const registryTestLayer = Layer.merge(
+  PluginRegistry.Default,
+  silentLoggerLayer
+);
+
 const runRegistry = <A, E>(
   program: (registry: PluginRegistryInstance) => Effect.Effect<A, E>
 ): A =>
@@ -35,10 +40,7 @@ const runRegistry = <A, E>(
     Effect.gen(function* () {
       const registry = yield* PluginRegistry.createInstance();
       return yield* program(registry);
-    }).pipe(
-      Effect.provide(PluginRegistry.Default),
-      Effect.provide(silentLoggerLayer)
-    )
+    }).pipe(Effect.provide(registryTestLayer))
   );
 
 const runRegistryExpectingFailure = <E>(
@@ -48,10 +50,7 @@ const runRegistryExpectingFailure = <E>(
     Effect.gen(function* () {
       const registry = yield* PluginRegistry.createInstance();
       return yield* program(registry);
-    }).pipe(
-      Effect.provide(PluginRegistry.Default),
-      Effect.provide(silentLoggerLayer)
-    )
+    }).pipe(Effect.provide(registryTestLayer))
   );
 
   if (Exit.isSuccess(exit)) {
@@ -271,10 +270,7 @@ describe("PluginRegistry", () => {
           firstNames: firstRegistrations.map(r => r.name),
           secondNames: secondRegistrations.map(r => r.name),
         };
-      }).pipe(
-        Effect.provide(PluginRegistry.Default),
-        Effect.provide(silentLoggerLayer)
-      )
+      }).pipe(Effect.provide(registryTestLayer))
     );
 
     expect(result.firstNames).toEqual(["types"]);
@@ -314,8 +310,9 @@ describe("PluginRegistry", () => {
           source: "duplicate",
         });
       }).pipe(
-        Effect.provide(PluginRegistry.Default),
-        Effect.provide(capturingLoggerLayer(logs))
+        Effect.provide(
+          Layer.merge(PluginRegistry.Default, capturingLoggerLayer(logs))
+        )
       )
     );
 
@@ -343,10 +340,7 @@ describe("PluginRegistry", () => {
           { concurrency: "unbounded" }
         );
         return yield* registry.getAll;
-      }).pipe(
-        Effect.provide(PluginRegistry.Default),
-        Effect.provide(silentLoggerLayer)
-      )
+      }).pipe(Effect.provide(registryTestLayer))
     );
 
     expect(registrations).toHaveLength(1);

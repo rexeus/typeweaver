@@ -49,42 +49,37 @@ const loadFormatter = (
   Effect.gen(function* () {
     const loaded = yield* Effect.tryPromise({
       try: loadModule,
-      catch: cause => cause,
+      catch: cause =>
+        new FormatterLoadError({
+          moduleName: "oxfmt",
+          cause,
+        }),
     }).pipe(Effect.either);
 
     if (Either.isLeft(loaded)) {
-      if (isMissingOptionalFormatter(loaded.left)) {
+      if (isMissingOptionalFormatter(loaded.left.cause)) {
         yield* Effect.logWarning(
           "oxfmt not installed - skipping formatting. Install with: npm install -D oxfmt"
         );
         return undefined;
       }
 
-      return yield* Effect.fail(
-        new FormatterLoadError({
-          moduleName: "oxfmt",
-          cause: loaded.left,
-        })
-      );
+      return yield* loaded.left;
     }
 
     if (typeof loaded.right !== "object" || loaded.right === null) {
-      return yield* Effect.fail(
-        new FormatterLoadError({
-          moduleName: "oxfmt",
-          cause: new TypeError("Module did not export an object"),
-        })
-      );
+      return yield* new FormatterLoadError({
+        moduleName: "oxfmt",
+        cause: new TypeError("Module did not export an object"),
+      });
     }
 
     const format = Reflect.get(loaded.right, "format");
     if (!isFormatFn(format)) {
-      return yield* Effect.fail(
-        new FormatterLoadError({
-          moduleName: "oxfmt",
-          cause: new TypeError("Module did not export a format function"),
-        })
-      );
+      return yield* new FormatterLoadError({
+        moduleName: "oxfmt",
+        cause: new TypeError("Module did not export a format function"),
+      });
     }
 
     return format;
@@ -149,21 +144,17 @@ const formatDirectory: (
           catch: cause => new FormatterExecutionError({ filePath, cause }),
         });
         if (typeof formatted !== "object" || formatted === null) {
-          return yield* Effect.fail(
-            new FormatterExecutionError({
-              filePath,
-              cause: new TypeError("Formatter did not return an object"),
-            })
-          );
+          return yield* new FormatterExecutionError({
+            filePath,
+            cause: new TypeError("Formatter did not return an object"),
+          });
         }
         const code = Reflect.get(formatted, "code");
         if (typeof code !== "string") {
-          return yield* Effect.fail(
-            new FormatterExecutionError({
-              filePath,
-              cause: new TypeError("Formatter did not return a string code"),
-            })
-          );
+          return yield* new FormatterExecutionError({
+            filePath,
+            cause: new TypeError("Formatter did not return a string code"),
+          });
         }
         yield* fileSystem
           .writeFileString(filePath, code)
@@ -236,7 +227,7 @@ const makeFormatter = (
 ): FormatterShape => {
   const formatOperation = Effect.fn("typeweaver.Formatter.format", {
     captureStackTrace: false,
-  })((outputDir, startDir) =>
+  })((outputDir: string, startDir?: string) =>
     formatOutputDir(fileSystem, loadModule, outputDir, startDir).pipe(
       Effect.mapError(error => new FormatterOperationFailure({ error }))
     )

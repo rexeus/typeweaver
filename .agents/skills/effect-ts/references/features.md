@@ -1,5 +1,10 @@
 # Features
 
+> **Archived Effect 4 material — inactive for TypeWeaver APIs.** This file may be used for
+> conceptual discovery only. Before using any module, package, path, API name, signature, or
+> example, follow `../SKILL.md`, read `typeweaver-effect-3.md`, and confirm it in the pinned Effect
+> 3.22 source. Any "use" or "preferred" wording below is superseded by that contract.
+
 Public package and module surface area to be aware of when researching or implementing a solution. Each module entry includes its vendored repo path so it can be located quickly.
 
 ## `effect` Package

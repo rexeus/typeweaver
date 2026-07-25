@@ -22,6 +22,9 @@ importers:
       '@changesets/cli':
         specifier: 2.31.1
         version: 2.31.1(@types/node@26.1.1)
+      '@effect/language-service':
+        specifier: 0.87.1
+        version: 0.87.1
       '@faker-js/faker':
         specifier: ^10.5.0
         version: 10.5.0
@@ -507,6 +510,10 @@ packages:
         optional: true
       lmdb:
         optional: true
+
+  '@effect/language-service@0.87.1':
+    resolution: {integrity: sha512-kcljlJmEgqg5mFAM6UShJYJjMqJb3TbHHxrK8Qoubvwugc0aVWpRkbdgQvK5b17puOt3BKXXKOmcV+oQt0oQqQ==}
+    hasBin: true
 
   '@effect/platform-node-shared@0.61.0':
     resolution: {integrity: sha512-68KbcnItrKFgDinFOmBVSABjcXBjp4vZbOUI3piFh87ZK/55vQ8+bwKGU4X7R9Vz1lSehyz5m2e7hwWVq3GNrg==}
@@ -4097,6 +4104,8 @@ snapshots:
       '@effect/platform': 0.97.0(effect@3.22.0)
       effect: 3.22.0
       uuid: 11.1.1
+
+  '@effect/language-service@0.87.1': {}
 
   '@effect/platform-node-shared@0.61.0(@effect/cluster@0.60.0(@effect/platform@0.97.0(effect@3.22.0))(@effect/rpc@0.76.0(@effect/platform@0.97.0(effect@3.22.0))(effect@3.22.0))(@effect/sql@0.52.0(@effect/experimental@0.61.0(@effect/platform@0.97.0(effect@3.22.0))(effect@3.22.0))(@effect/platform@0.97.0(effect@3.22.0))(effect@3.22.0))(@effect/workflow@0.19.0(@effect/experimental@0.61.0(@effect/platform@0.97.0(effect@3.22.0))(effect@3.22.0))(@effect/platform@0.97.0(effect@3.22.0))(@effect/rpc@0.76.0(@effect/platform@0.97.0(effect@3.22.0))(effect@3.22.0))(effect@3.22.0))(effect@3.22.0))(@effect/platform@0.97.0(effect@3.22.0))(@effect/rpc@0.76.0(@effect/platform@0.97.0(effect@3.22.0))(effect@3.22.0))(@effect/sql@0.52.0(@effect/experimental@0.61.0(@effect/platform@0.97.0(effect@3.22.0))(effect@3.22.0))(@effect/platform@0.97.0(effect@3.22.0))(effect@3.22.0))(effect@3.22.0)':
     dependencies:

@@ -172,10 +172,10 @@ const createInstance: () => Effect.Effect<PluginRegistryInstance> = Effect.fn(
   const getAll: Effect.Effect<
     readonly PluginRegistration[],
     PluginDependencyError
-  > = Effect.fn("typeweaver.PluginRegistry.getAll")(function* () {
+  > = Effect.gen(function* () {
     const plugins = yield* Ref.get(ref);
     return yield* sortPluginRegistrations(Array.from(plugins.values()));
-  })();
+  }).pipe(Effect.withSpan("typeweaver.PluginRegistry.getAll"));
 
   return { register, getAll } as const;
 });

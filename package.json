@@ -14,6 +14,9 @@
     "test": "turbo test:gen && turbo test",
     "test:gen": "turbo test:gen",
     "verify:generated": "node scripts/verify-generated.mjs",
+    "verify:effect-reference": "node scripts/verify-effect-reference.mjs && node scripts/test-effect-reference-guard.mjs",
+    "effect:diagnostics": "node scripts/test-effect-diagnostics.mjs && node scripts/run-effect-diagnostics.mjs",
+    "docs:check": "node scripts/test-effect-version-contract.mjs && node scripts/check-effect-version-contract.mjs && node scripts/check-markdown-links.mjs",
     "publish:dry": "pnpm publish -r --dry-run --no-git-checks",
     "ci:publish": "pnpm publish -r --provenance",
     "prepare:commit": "pnpm run format && pnpm run lint:fix && pnpm run typecheck && pnpm run build && pnpm run test"
@@ -43,6 +46,7 @@
   "packageManager": "pnpm@10.34.5",
   "devDependencies": {
     "@changesets/cli": "2.31.1",
+    "@effect/language-service": "0.87.1",
     "@faker-js/faker": "^10.5.0",
     "@size-limit/file": "^13.0.1",
     "@types/node": "^26.1.1",

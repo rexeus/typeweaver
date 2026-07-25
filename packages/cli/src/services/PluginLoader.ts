@@ -333,7 +333,7 @@ const loadConfiguredPlugin = (
 
       if (Either.isLeft(importResult)) {
         if (isPluginConfigError(importResult.left)) {
-          return yield* Effect.fail(importResult.left);
+          return yield* importResult.left;
         }
         const errorMessage = formatError(importResult.left.cause);
         yield* Effect.logDebug(
@@ -356,13 +356,13 @@ const loadConfiguredPlugin = (
       }
 
       if (isPluginConfigError(resolved.left)) {
-        return yield* Effect.fail(resolved.left);
+        return yield* resolved.left;
       }
 
       attempts.push({ path: possiblePath, error: resolved.left });
     }
 
-    return yield* Effect.fail(new PluginLoadError({ pluginName, attempts }));
+    return yield* new PluginLoadError({ pluginName, attempts });
   });
 
 /**

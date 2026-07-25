@@ -1,5 +1,14 @@
 import { FileSystem } from "@effect/platform";
-import { Cause, Deferred, Effect, Exit, Fiber, Layer, Option } from "effect";
+import {
+  Cause,
+  Deferred,
+  Effect,
+  Exit,
+  Fiber,
+  Layer,
+  Option,
+  Runtime,
+} from "effect";
 import { makeInMemoryFileSystem } from "test-utils/src/effect/index.js";
 import { describe, expect, test } from "vitest";
 import { SpecBundler } from "../../src/services/SpecBundler.js";
@@ -98,11 +107,13 @@ describe("SpecBundler temp directory lifecycle", () => {
         const entered = yield* Deferred.make<void>();
         const release = yield* Deferred.make<void>();
         const settled = yield* Deferred.make<void>();
+        const runtime = yield* Effect.runtime<FileSystem.FileSystem>();
+        const runPromise = Runtime.runPromise(runtime);
         let tempDirAtBuildTime: string | undefined;
 
         const controlledBuild = (config: BuildOptions): Promise<unknown> => {
           tempDirAtBuildTime = config.cwd;
-          return Effect.runPromise(
+          return runPromise(
             Deferred.succeed(entered, undefined).pipe(
               Effect.zipRight(Deferred.await(release)),
               Effect.zipRight(

@@ -1,4 +1,4 @@
-import { Cause, Effect, Exit, Logger } from "effect";
+import { Cause, Effect, Exit, Layer, Logger } from "effect";
 import {
   assert,
   property,
@@ -20,6 +20,11 @@ const silentLoggerLayer = Logger.replace(
   Logger.make<unknown, void>(() => {})
 );
 
+const registryTestLayer = Layer.merge(
+  PluginRegistry.Default,
+  silentLoggerLayer
+);
+
 const runWithRegistry = <A, E>(
   program: (registry: PluginRegistryInstance) => Effect.Effect<A, E>
 ): Exit.Exit<A, E> =>
@@ -27,10 +32,7 @@ const runWithRegistry = <A, E>(
     Effect.gen(function* () {
       const registry = yield* PluginRegistry.createInstance();
       return yield* program(registry);
-    }).pipe(
-      Effect.provide(PluginRegistry.Default),
-      Effect.provide(silentLoggerLayer)
-    )
+    }).pipe(Effect.provide(registryTestLayer))
   );
 
 /**

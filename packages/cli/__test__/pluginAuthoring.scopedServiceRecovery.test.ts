@@ -14,6 +14,7 @@ import { assert, describe, it } from "@effect/vitest";
 import {
   Cause,
   Context,
+  Data,
   Deferred,
   Effect,
   Exit,
@@ -51,6 +52,10 @@ type ProbeRuntime = {
   readonly scope: Scope.CloseableScope;
   readonly services: Context.Context<ResourceProbe>;
 };
+
+class ProbeLayerBuildError extends Data.TaggedError("ProbeLayerBuildError")<{
+  readonly detail: string;
+}> {}
 
 const ProbeResource = Context.GenericTag<ResourceProbe>(
   "typeweaver/tests/ProbeResource"
@@ -137,7 +142,7 @@ const makeResourceLayer = (config: {
   readonly state: ProbeState;
   readonly afterAcquire: (
     resource: ResourceProbe
-  ) => Effect.Effect<void, Error>;
+  ) => Effect.Effect<void, ProbeLayerBuildError>;
 }) =>
   Layer.scoped(
     ProbeResource,
@@ -147,7 +152,7 @@ const makeResourceLayer = (config: {
   );
 
 const makeScopedProbePlugin = (config: {
-  readonly resourceLayer: Layer.Layer<ResourceProbe, Error>;
+  readonly resourceLayer: Layer.Layer<ResourceProbe, ProbeLayerBuildError>;
   readonly onGenerate: (
     resource: ResourceProbe
   ) => Effect.Effect<void, PluginExecutionError>;
@@ -307,7 +312,9 @@ const runAdverseScenario = (scenario: AdverseScenario) =>
             Effect.suspend(() => {
               if (claim("layer-build-failure")) {
                 return Effect.fail(
-                  new Error("intentional layer-build failure")
+                  new ProbeLayerBuildError({
+                    detail: "intentional layer-build failure",
+                  })
                 );
               }
               if (claim("initialize-interruption")) {

@@ -1,5 +1,10 @@
 # Observability Guide
 
+> **Archived Effect 4 material — inactive for TypeWeaver APIs.** This file is conceptual background
+> only. Its API-specific recommendations and examples must not be followed until they are confirmed
+> against `typeweaver-effect-3.md` and the pinned Effect 3.22 source. Any "use" or "preferred"
+> wording below is superseded by the active repository contract in `../SKILL.md`.
+
 This guide is based on the vendored Effect source in `./.repos/effect`.
 
 Key source files:

@@ -80,8 +80,7 @@ describe("generator preflight and lock workflow", () => {
             plan,
             Effect.sync(() => {
               expect(fs.existsSync(lockPath)).toBe(true);
-              throw workflowFailure;
-            })
+            }).pipe(Effect.zipRight(Effect.die(workflowFailure)))
           )
         );
 

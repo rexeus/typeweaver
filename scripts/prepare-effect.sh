@@ -2,12 +2,6 @@
 
 set -eu
 
-repo_dir=".repos/effect"
-repo_url="https://github.com/Effect-TS/effect-smol"
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
-if [ -d "$repo_dir/.git" ]; then
-  exit 0
-fi
-
-mkdir -p ".repos"
-git clone "$repo_url" "$repo_dir"
+exec node "$script_dir/prepare-effect-reference.mjs" "$@"

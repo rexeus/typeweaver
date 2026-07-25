@@ -254,7 +254,7 @@ progress log.
     rationale;
   - all package tests exit 0.
 
-- [ ] **14. Effect tooling and reference sources are version-correct.**
+- [x] **14. Effect tooling and reference sources are version-correct.**
 
   The repo must not silently review Effect 3.22 production code against an unpinned Effect 4 beta
   checkout. Make the reference strategy reproducible and add a guard that detects a major/version
@@ -733,6 +733,33 @@ evidence: Gen passed 298/298 and CLI passed 340/340 tests; the lower Gen count r
           no-new-unsafe-test-pattern scan, and git diff check are green. Independent Effect,
           Test-Mastery, and TypeScript-Mastery reviews found no remaining K13 blocker.
 next: Criterion 14, make Effect tooling and reference sources version-correct.
+```
+
+```text
+[iteration 14 | 2026-07-25]
+criterion: 14. Effect tooling and reference sources are version-correct.
+before: Production and tests used Effect 3.22 while the repo-local skill prepared an unpinned
+        Effect 4 beta reference and actively preferred v4-only APIs. The repository had no strict
+        Effect language-service gate, and no machine guard bound package manifests, installed
+        resolution, source checkout, documentation, and skill guidance to one version contract.
+change: Added a machine-readable Effect 3.22 contract and a dirty-safe, idempotent checkout of the
+        official effect@3.22.0 tag at its exact commit. Pinned and configured the compatible Effect
+        language service with strict diagnostics plus a negative sentinel. Routed the local skill
+        through a new TypeWeaver v3 guide and pinned source, marked every generic v4 guide inactive,
+        and guarded the routing and skill hash. Added documentation/link checks and a package
+        contract that verifies every Effect manifest plus its real Node resolution; an isolated
+        Effect 4 fixture proves both wrong specifications and wrong installed runtimes fail.
+evidence: Reference verification rejects v4, prepares the exact detached pin twice, and preserves
+          dirty work. Effect diagnostics rejected its implicit-any sentinel and checked nine
+          package programs with 0 errors, 0 warnings, and 0 messages. The package mutation fixture
+          rejected ^4.0.0 and resolved 4.0.0, while all nine workspace packages resolve 3.22.0.
+          Docs check passed 84 tracked Markdown files; the remaining 3.21/Effect 4 grep hits are
+          intentional peer-range or historical comparison text. Gen passed 298/298, CLI passed
+          340/340, and the full workspace test graph passed 23/23 tasks. Root typecheck passed
+          23/23 tasks; build/size, generated-output verification, Oxlint, Oxfmt, and git diff check
+          are green. Independent Effect, Test-Mastery, and TypeScript-Mastery reviews found no
+          remaining K14 blocker.
+next: Criterion 15, prove packaged consumer compatibility across supported dependency versions.
 ```
 
 ## Stop conditions

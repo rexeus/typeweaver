@@ -22,7 +22,7 @@ permissions: {}
 
 env:
   NODE_VERSION: "24"
-  PNPM_VERSION: "10.12.1"
+  PNPM_VERSION: "10.34.5"
 
 jobs:
   quality-check:
@@ -61,6 +61,12 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Verify Effect source reference
+        run: |
+          echo "::group::Verifying pinned Effect 3.22 source"
+          pnpm run verify:effect-reference
+          echo "::endgroup::"
 
       - name: Cache Turbo
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
@@ -109,6 +115,18 @@ jobs:
         run: |
           echo "::group::TypeScript type checking"
           pnpm run typecheck
+          echo "::endgroup::"
+
+      - name: Run Effect diagnostics
+        run: |
+          echo "::group::Effect language-service diagnostics"
+          pnpm run effect:diagnostics
+          echo "::endgroup::"
+
+      - name: Check documentation
+        run: |
+          echo "::group::Effect version contract and local Markdown links"
+          pnpm run docs:check
           echo "::endgroup::"
 
       - name: Check formatting

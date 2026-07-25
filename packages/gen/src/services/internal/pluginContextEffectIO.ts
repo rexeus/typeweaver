@@ -98,7 +98,7 @@ const getExistingFileModeEffect = (
     Effect.map(info => (info.type === "File" ? info.mode & 0o777 : undefined)),
     Effect.catchTag("SystemError", error =>
       error.reason === "NotFound"
-        ? Effect.succeed(undefined)
+        ? Effect.as(Effect.void, undefined)
         : Effect.fail(error)
     )
   );

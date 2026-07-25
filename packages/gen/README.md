@@ -22,7 +22,8 @@ types consumed by the CLI orchestrator.
 npm install -D @rexeus/typeweaver-gen effect
 ```
 
-`effect` is a peer dependency — match the CLI's version (`^3.21.x`).
+`effect` is a peer dependency. TypeWeaver develops and tests with Effect 3.22.0; published plugins
+support the intentional range `>=3.21.2 <4`.
 
 ## 💡 How to use
 
