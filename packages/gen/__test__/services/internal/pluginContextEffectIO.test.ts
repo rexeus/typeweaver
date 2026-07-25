@@ -1,3 +1,4 @@
+import path from "node:path";
 import { FileSystem } from "@effect/platform";
 import { SystemError } from "@effect/platform/Error";
 import { it } from "@effect/vitest";
@@ -8,11 +9,11 @@ import { UnsafeGeneratedPathError } from "../../../src/errors/UnsafeGeneratedPat
 import { makeEffectContextIO } from "../../../src/services/internal/pluginContextEffectIO.js";
 import type { PathSafetyShape } from "../../../src/services/internal/pluginContextEffectIO.js";
 
-const outputDir = "/project/generated";
+const outputDir = path.resolve("project", "generated");
 const generatedPath = "todo/GetTodoClient.ts";
-const destinationPath = `${outputDir}/${generatedPath}`;
-const tempDir = `${outputDir}/todo/.typeweaver-test`;
-const tempFile = `${tempDir}/generated.tmp`;
+const destinationPath = path.join(outputDir, generatedPath);
+const tempDir = path.join(outputDir, "todo", ".typeweaver-test");
+const tempFile = path.join(tempDir, "generated.tmp");
 
 const missingTarget = new SystemError({
   reason: "NotFound",
@@ -74,7 +75,7 @@ const makeAtomicContextIO = (config: {
       validateGeneratedPath:
         config.validateGeneratedPath ??
         (({ requestedPath }) => ({
-          fullPath: `${outputDir}/${requestedPath}`,
+          fullPath: path.join(outputDir, requestedPath),
           generatedPath: requestedPath,
         })),
     },
@@ -110,7 +111,7 @@ describe("makeEffectContextIO failure channels", () => {
             throw unsafePath;
           }
           return {
-            fullPath: `${outputDir}/${requestedPath}`,
+            fullPath: path.join(outputDir, requestedPath),
             generatedPath: requestedPath,
           };
         },
