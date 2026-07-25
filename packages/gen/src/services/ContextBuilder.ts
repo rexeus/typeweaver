@@ -68,9 +68,11 @@ export class ContextBuilder extends Effect.Service<ContextBuilder>()(
     effect: Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
 
-      const buildPluginContext = (
+      const buildPluginContext: (
         params: PluginContextParams
-      ): Effect.Effect<PluginContext> =>
+      ) => Effect.Effect<PluginContext> = Effect.fn(
+        "typeweaver.ContextBuilder.buildPluginContext"
+      )((params: PluginContextParams) =>
         // Pure builder/closure allocation over already-captured services; no
         // filesystem operation or user callback runs inside this sync region.
         Effect.sync(() =>
@@ -79,11 +81,14 @@ export class ContextBuilder extends Effect.Service<ContextBuilder>()(
             templateRenderer: liveTemplateRendererShape,
             fileSystem,
           }).createPluginContext(params)
-        );
+        )
+      );
 
-      const buildGeneratorContext = (
+      const buildGeneratorContext: (
         params: GeneratorContextParams
-      ): Effect.Effect<BuiltGeneratorContext> =>
+      ) => Effect.Effect<BuiltGeneratorContext> = Effect.fn(
+        "typeweaver.ContextBuilder.buildGeneratorContext"
+      )((params: GeneratorContextParams) =>
         // Pure per-generation tracker and closure allocation. Expected I/O
         // begins only when the returned context operations are executed.
         Effect.sync(() => {
@@ -98,7 +103,8 @@ export class ContextBuilder extends Effect.Service<ContextBuilder>()(
             getGeneratedFiles: builder.getGeneratedFiles,
             drainPendingWriteLogs: builder.drainPendingWriteLogs,
           };
-        });
+        })
+      );
 
       return { buildPluginContext, buildGeneratorContext } as const;
     }),

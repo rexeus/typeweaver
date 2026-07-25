@@ -14,19 +14,21 @@ export class PluginModuleLoader extends Effect.Service<PluginModuleLoader>()(
   "typeweaver/PluginModuleLoader",
   {
     succeed: {
-      load: (
-        specifier: string
-      ): Effect.Effect<
-        Record<string, unknown>,
-        PluginModuleNotFoundError | PluginConfigError
-      > =>
-        Effect.tryPromise({
-          try: async () => (await import(specifier)) as Record<string, unknown>,
-          catch: cause =>
-            isPluginConfigError(cause)
-              ? cause
-              : new PluginModuleNotFoundError({ specifier, cause }),
-        }),
+      load: Effect.fn("typeweaver.PluginModuleLoader.load")(
+        (
+          specifier: string
+        ): Effect.Effect<
+          Record<string, unknown>,
+          PluginModuleNotFoundError | PluginConfigError
+        > =>
+          Effect.tryPromise({
+            try: () => import(specifier),
+            catch: cause =>
+              isPluginConfigError(cause)
+                ? cause
+                : new PluginModuleNotFoundError({ specifier, cause }),
+          })
+      ),
     },
     accessors: true,
   }

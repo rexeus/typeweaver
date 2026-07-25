@@ -224,7 +224,7 @@ progress log.
   - no public API or generation fixture changes unless explicitly documented;
   - lint, typecheck, generation fixtures, and lifecycle tests exit 0.
 
-- [ ] **12. Effect observability and first-party usage match the architecture.**
+- [x] **12. Effect observability and first-party usage match the architecture.**
 
   Reusable service operations have stable `Effect.fn` names. At least one first-party plugin is the
   reference implementation for the Effect-native context I/O surface; synchronous compatibility
@@ -334,10 +334,12 @@ progress log.
   and TypeScript files, using Oxlint's native implementations for the compatible core rules and its
   `jsPlugins` compatibility layer for the required SonarJS rules. Do not install ESLint, add an
   ESLint config, allow `eslint` to enter the resolved dependency graph through automatic peer
-  installation, or introduce a second lint command. `eslint-plugin-sonarjs` may be installed solely
-  as an Oxlint JS plugin. Integrate the resulting Oxlint gate into CI and `verify:effect-migration`.
-  Exclude only generated output, build artifacts, vendored/reference sources, and dependency
-  directories.
+  installation, or introduce a second lint command. SonarJS-compatible rules must be executed by
+  Oxlint. `eslint-plugin-sonarjs` is only an optional compatibility source if it can be installed
+  with automatic peer installation disabled and the resolved dependency graph remains free of the
+  `eslint` package; otherwise provide the missing rules as a local Oxlint JS plugin. Integrate the
+  resulting Oxlint gate into CI and `verify:effect-migration`. Exclude only generated output, build
+  artifacts, vendored/reference sources, and dependency directories.
 
   The maintainability config must enforce the requested limits without weakening them:
 
@@ -682,7 +684,30 @@ evidence: Focused workflow suites pass 9/9 and the complete CLI suite passes 339
           fixtures regenerated with no tracked diff. Root typecheck/build completed 23/23 tasks;
           Oxlint, Oxfmt, and git diff check are green. Independent Effect, Test-Mastery, and
           TypeScript-Mastery reviews found no remaining K11 blocker.
-next: Criterion 12, prove clean-room packaging and runtime smoke tests from packed tarballs.
+next: Criterion 12, align Effect observability and first-party Effect-native I/O usage.
+```
+
+```text
+[iteration 12 | 2026-07-25]
+criterion: 12. Effect observability and first-party usage match the architecture.
+before: Several reusable Effect service operations had no stable operation name, the span contract
+        accepted missing attributes and incorrectly parented duplicate spans, and no first-party
+        plugin integration test exercised the real Effect-native render/write path. The first
+        Formatter tracing attempt also converted failures to successful Exit values inside the
+        named span, producing false-success telemetry.
+change: Added stable typeweaver.<Service>.<operation> Effect.fn names while preserving typed errors
+        and unexpected defect identity. Strengthened exact span occurrence, parent, lifecycle,
+        plugin-attribute, and failure-status assertions. Made Hono the first-party Effect-native
+        reference and proved its real ContextBuilder render, atomic write, tracking, log queue, and
+        cleanup behavior against the in-memory FileSystem. Kept Formatter errors inside a private
+        carrier until its span records Failure, then restored the public tagged error and nested
+        cause identity outside the span. Documented the observable hierarchy and reference plugin.
+evidence: Gen passed 305/305, CLI passed 340/340, and Hono passed 100/100 tests. The Hono generation
+          fixture remained unchanged. Root typecheck/build completed 23/23 tasks; Oxlint, Oxfmt,
+          runtime-edge grep, and git diff check are green. Production has no local runPromise or
+          runSync and only the approved central ManagedRuntime.make edge. Independent Effect,
+          Test-Mastery, and TypeScript-Mastery reviews found no remaining K12 blocker.
+next: Criterion 13, replace weak tests instead of accumulating them.
 ```
 
 ## Stop conditions

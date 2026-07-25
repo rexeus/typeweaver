@@ -317,7 +317,10 @@ export const myPlugin = definePlugin({
 
 Both surfaces share one file tracker and one log queue, so a plugin may freely mix sync and Effect
 helpers. A practical benefit of the Effect surface: your plugin tests can run against the in-memory
-`FileSystem` layer from `test-utils` (`makeInMemoryFileSystem()`) without touching disk.
+`FileSystem` layer from `test-utils` (`makeInMemoryFileSystem()`) without touching disk. The
+first-party Hono router generator is the repository's reference implementation: it renders and
+writes generated routers exclusively through `renderTemplateEffect` and `writeFileEffect`, mapping
+their typed failures once at the plugin boundary.
 
 ---
 

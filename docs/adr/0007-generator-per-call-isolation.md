@@ -99,6 +99,10 @@ direct children of `typeweaver.Generator.generate`.
   nested service-operation spans (`typeweaver.SpecLoader.load`, `typeweaver.SpecBundler.bundle`,
   `typeweaver.PluginLoader.loadAll`, `typeweaver.IndexFileGenerator.generate`) and per-plugin
   lifecycle spans (`typeweaver.plugin.{phase}` tagged with the plugin name) underneath.
+- Reusable service operations carry stable `typeweaver.<Service>.<operation>` names through
+  `Effect.fn`, including operations that complete synchronously and may be optimized out of a
+  particular trace export. The span contract asserts the observable parent hierarchy and plugin
+  attributes rather than assuming every named operation emits a runtime span.
 - Successful plugin initialization and registration on the finalizer stack form one masked
   transition. Initialization remains interruptible; once success reaches the orchestrator boundary,
   a pending interruption cannot skip that plugin's finalizer.

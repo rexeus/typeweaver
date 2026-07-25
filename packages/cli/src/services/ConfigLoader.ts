@@ -162,36 +162,42 @@ export class ConfigLoader extends Effect.Service<ConfigLoader>()(
   "typeweaver/ConfigLoader",
   {
     succeed: {
-      assertSupportedPath: (
-        configPath: string
-      ): Effect.Effect<void, ConfigError> =>
-        Effect.try({
-          try: () => assertSupportedConfigPathSync(configPath),
-          catch: error => {
-            if (isStructuralConfigError(error)) {
-              return error;
-            }
-            throw error;
-          },
-        }),
+      assertSupportedPath: Effect.fn(
+        "typeweaver.ConfigLoader.assertSupportedPath"
+      )(
+        (configPath: string): Effect.Effect<void, ConfigError> =>
+          Effect.try({
+            try: () => assertSupportedConfigPathSync(configPath),
+            catch: error => {
+              if (isStructuralConfigError(error)) {
+                return error;
+              }
+              throw error;
+            },
+          })
+      ),
 
-      load: (
-        configPath: string
-      ): Effect.Effect<Partial<TypeweaverConfig>, ConfigError> =>
-        Effect.tryPromise({
-          try: () => loadConfigAsync(configPath),
-          catch: error => {
-            if (isStructuralConfigError(error)) {
-              return error;
-            }
-            return new ConfigModuleEvaluationError({
-              configPath,
-              cause: error,
-            });
-          },
-        }).pipe(
-          Effect.flatMap(loadedConfig => decodeConfig(configPath, loadedConfig))
-        ),
+      load: Effect.fn("typeweaver.ConfigLoader.load")(
+        (
+          configPath: string
+        ): Effect.Effect<Partial<TypeweaverConfig>, ConfigError> =>
+          Effect.tryPromise({
+            try: () => loadConfigAsync(configPath),
+            catch: error => {
+              if (isStructuralConfigError(error)) {
+                return error;
+              }
+              return new ConfigModuleEvaluationError({
+                configPath,
+                cause: error,
+              });
+            },
+          }).pipe(
+            Effect.flatMap(loadedConfig =>
+              decodeConfig(configPath, loadedConfig)
+            )
+          )
+      ),
     },
     accessors: true,
   }

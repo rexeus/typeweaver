@@ -1,6 +1,6 @@
 import path from "node:path";
 import { FileSystem } from "@effect/platform";
-import { Effect, Either, Layer } from "effect";
+import { Cause, Data, Effect, Either, Layer } from "effect";
 import {
   FormatterExecutionError,
   FormatterFileSystemError,
@@ -104,74 +104,77 @@ const formatDirectory: (
   targetDir: string,
   canonicalTargetDir: string,
   format: FormatFn
-) => Effect.Effect<void, FormatterError> = Effect.fn(
-  "typeweaver.Formatter.formatDirectory"
-)(function* (
-  fileSystem: FileSystem.FileSystem,
-  targetDir: string,
-  canonicalTargetDir: string,
-  format: FormatFn
-) {
-  const contents = yield* fileSystem.readDirectory(targetDir).pipe(
-    Effect.mapError(mapFileSystemError("readDirectory", targetDir)),
-    Effect.map(entries => entries.sort())
-  );
+) => Effect.Effect<void, FormatterError> = (
+  fileSystem,
+  targetDir,
+  canonicalTargetDir,
+  format
+) =>
+  Effect.gen(function* () {
+    const contents = yield* fileSystem.readDirectory(targetDir).pipe(
+      Effect.mapError(mapFileSystemError("readDirectory", targetDir)),
+      Effect.map(entries => entries.sort())
+    );
 
-  for (const content of contents) {
-    // Skip atomic-write tempdirs and the lockfile sentinel — both are
-    // hidden coordination artifacts, not user-facing output. Walking
-    // into them would re-read/rewrite in-flight content from another
-    // run (`.typeweaver-XXXX/generated.tmp`) or the live lockfile
-    // metadata (`.typeweaver-lock/info.json`).
-    if (content.startsWith(".typeweaver-")) {
-      continue;
-    }
-
-    const filePath = path.join(targetDir, content);
-    const canonicalFilePath = yield* fileSystem
-      .realPath(filePath)
-      .pipe(Effect.mapError(mapFileSystemError("realPath", filePath)));
-    if (canonicalFilePath !== path.join(canonicalTargetDir, content)) {
-      continue;
-    }
-
-    const info = yield* fileSystem
-      .stat(filePath)
-      .pipe(Effect.mapError(mapFileSystemError("stat", filePath)));
-
-    if (info.type === "File") {
-      const unformatted = yield* fileSystem
-        .readFileString(filePath)
-        .pipe(Effect.mapError(mapFileSystemError("readFileString", filePath)));
-      const formatted = yield* Effect.tryPromise({
-        try: () => format(filePath, unformatted),
-        catch: cause => new FormatterExecutionError({ filePath, cause }),
-      });
-      if (typeof formatted !== "object" || formatted === null) {
-        return yield* Effect.fail(
-          new FormatterExecutionError({
-            filePath,
-            cause: new TypeError("Formatter did not return an object"),
-          })
-        );
+    for (const content of contents) {
+      // Skip atomic-write tempdirs and the lockfile sentinel — both are
+      // hidden coordination artifacts, not user-facing output. Walking
+      // into them would re-read/rewrite in-flight content from another
+      // run (`.typeweaver-XXXX/generated.tmp`) or the live lockfile
+      // metadata (`.typeweaver-lock/info.json`).
+      if (content.startsWith(".typeweaver-")) {
+        continue;
       }
-      const code = Reflect.get(formatted, "code");
-      if (typeof code !== "string") {
-        return yield* Effect.fail(
-          new FormatterExecutionError({
-            filePath,
-            cause: new TypeError("Formatter did not return a string code"),
-          })
-        );
+
+      const filePath = path.join(targetDir, content);
+      const canonicalFilePath = yield* fileSystem
+        .realPath(filePath)
+        .pipe(Effect.mapError(mapFileSystemError("realPath", filePath)));
+      if (canonicalFilePath !== path.join(canonicalTargetDir, content)) {
+        continue;
       }
-      yield* fileSystem
-        .writeFileString(filePath, code)
-        .pipe(Effect.mapError(mapFileSystemError("writeFileString", filePath)));
-    } else if (info.type === "Directory") {
-      yield* formatDirectory(fileSystem, filePath, canonicalFilePath, format);
+
+      const info = yield* fileSystem
+        .stat(filePath)
+        .pipe(Effect.mapError(mapFileSystemError("stat", filePath)));
+
+      if (info.type === "File") {
+        const unformatted = yield* fileSystem
+          .readFileString(filePath)
+          .pipe(
+            Effect.mapError(mapFileSystemError("readFileString", filePath))
+          );
+        const formatted = yield* Effect.tryPromise({
+          try: () => format(filePath, unformatted),
+          catch: cause => new FormatterExecutionError({ filePath, cause }),
+        });
+        if (typeof formatted !== "object" || formatted === null) {
+          return yield* Effect.fail(
+            new FormatterExecutionError({
+              filePath,
+              cause: new TypeError("Formatter did not return an object"),
+            })
+          );
+        }
+        const code = Reflect.get(formatted, "code");
+        if (typeof code !== "string") {
+          return yield* Effect.fail(
+            new FormatterExecutionError({
+              filePath,
+              cause: new TypeError("Formatter did not return a string code"),
+            })
+          );
+        }
+        yield* fileSystem
+          .writeFileString(filePath, code)
+          .pipe(
+            Effect.mapError(mapFileSystemError("writeFileString", filePath))
+          );
+      } else if (info.type === "Directory") {
+        yield* formatDirectory(fileSystem, filePath, canonicalFilePath, format);
+      }
     }
-  }
-});
+  });
 
 const formatOutputDir = (
   fileSystem: FileSystem.FileSystem,
@@ -198,13 +201,57 @@ type FormatterShape = {
   ) => Effect.Effect<void, FormatterError>;
 };
 
+class FormatterOperationFailure extends Data.TaggedError(
+  "FormatterOperationFailure"
+)<{
+  readonly error: FormatterError;
+}> {}
+
+const restoreFormatterError = (error: FormatterError): FormatterError => {
+  const original = Cause.originalError(error);
+
+  switch (original._tag) {
+    case "FormatterExecutionError":
+      return new FormatterExecutionError({
+        filePath: original.filePath,
+        cause: Cause.originalError(original.cause),
+      });
+    case "FormatterFileSystemError":
+      return new FormatterFileSystemError({
+        operation: original.operation,
+        path: original.path,
+        cause: Cause.originalError(original.cause),
+      });
+    case "FormatterLoadError":
+      return new FormatterLoadError({
+        moduleName: original.moduleName,
+        cause: Cause.originalError(original.cause),
+      });
+  }
+};
+
 const makeFormatter = (
   fileSystem: FileSystem.FileSystem,
   loadModule: FormatterModuleLoader
-): FormatterShape => ({
-  format: (outputDir, startDir) =>
-    formatOutputDir(fileSystem, loadModule, outputDir, startDir),
-});
+): FormatterShape => {
+  const formatOperation = Effect.fn("typeweaver.Formatter.format", {
+    captureStackTrace: false,
+  })((outputDir, startDir) =>
+    formatOutputDir(fileSystem, loadModule, outputDir, startDir).pipe(
+      Effect.mapError(error => new FormatterOperationFailure({ error }))
+    )
+  );
+
+  return {
+    format: (outputDir, startDir) =>
+      formatOperation(outputDir, startDir).pipe(
+        Effect.catchTag("FormatterOperationFailure", failure => {
+          const originalFailure = Cause.originalError(failure);
+          return Effect.fail(restoreFormatterError(originalFailure.error));
+        })
+      ),
+  };
+};
 
 /**
  * Effect-native `oxfmt` facade. The missing-tool warning routes through

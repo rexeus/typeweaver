@@ -2,6 +2,18 @@ import { Effect } from "effect";
 import { TemplateRenderError } from "../errors/TemplateRenderError.js";
 import { liveTemplateRendererShape } from "./internal/pluginContextBuilder.js";
 
+const render: (
+  template: string,
+  data: unknown
+) => Effect.Effect<string, TemplateRenderError> = Effect.fn(
+  "typeweaver.TemplateRenderer.render"
+)((template: string, data: unknown) =>
+  Effect.try({
+    try: () => liveTemplateRendererShape.render(template, data),
+    catch: cause => new TemplateRenderError({ cause }),
+  })
+);
+
 /**
  * Renders an EJS-like template against a data context.
  *
@@ -16,16 +28,7 @@ import { liveTemplateRendererShape } from "./internal/pluginContextBuilder.js";
 export class TemplateRenderer extends Effect.Service<TemplateRenderer>()(
   "typeweaver/TemplateRenderer",
   {
-    succeed: {
-      render: (
-        template: string,
-        data: unknown
-      ): Effect.Effect<string, TemplateRenderError> =>
-        Effect.try({
-          try: () => liveTemplateRendererShape.render(template, data),
-          catch: cause => new TemplateRenderError({ cause }),
-        }),
-    },
+    succeed: { render },
     accessors: true,
   }
 ) {}

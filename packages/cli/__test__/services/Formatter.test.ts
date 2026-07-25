@@ -4,7 +4,7 @@ import path from "node:path";
 import { FileSystem } from "@effect/platform";
 import { NodeContext } from "@effect/platform-node";
 import { SystemError } from "@effect/platform/Error";
-import { Cause, Effect, Exit, Layer } from "effect";
+import { Cause, Effect, Exit, Layer, Tracer } from "effect";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import {
   FormatterExecutionError,
@@ -29,6 +29,38 @@ const formatterLayerAgainst = (
   loadModule: () => Promise<unknown> = successfulFormatterModule
 ): Layer.Layer<Formatter> =>
   formatterLayerWith(loadModule).pipe(Layer.provide(fileSystemLayer));
+
+type EndedSpan = {
+  readonly name: string;
+  readonly exit: "Failure" | "Success";
+};
+
+const makeEndingTracer = (ended: EndedSpan[]): Tracer.Tracer => {
+  let nextSpanId = 0;
+
+  return Tracer.make({
+    span: (name, parent, context, links, startTime, kind) => ({
+      _tag: "Span",
+      name,
+      spanId: String(++nextSpanId),
+      traceId: "formatter-test-trace",
+      parent,
+      context,
+      status: { _tag: "Started", startTime },
+      attributes: new Map(),
+      links,
+      sampled: true,
+      kind,
+      end: (_endTime, exit) => {
+        ended.push({ name, exit: exit._tag });
+      },
+      attribute: () => undefined,
+      event: () => undefined,
+      addLinks: () => undefined,
+    }),
+    context: (f, _fiber) => f(),
+  });
+};
 
 const expectTypedFailure = async <E>(
   effect: Effect.Effect<void, E>,
@@ -108,6 +140,40 @@ describe("Formatter", () => {
       _tag: "FormatterLoadError",
       moduleName: "oxfmt",
       cause: bindingFailure,
+    });
+  });
+
+  test("ends the formatter span as failed when formatting fails publicly", async () => {
+    const loadFailure = new Error("formatter module failed to load");
+    const endedSpans: EndedSpan[] = [];
+    const layer = formatterLayerAgainst(NodeContext.layer, () =>
+      Promise.reject(loadFailure)
+    );
+
+    const exit = await Effect.runPromise(
+      provideFormatter(Formatter.format(tempDir), layer).pipe(
+        Effect.withTracer(makeEndingTracer(endedSpans)),
+        Effect.exit
+      )
+    );
+
+    expect(Exit.isFailure(exit)).toBe(true);
+    if (!Exit.isFailure(exit)) {
+      throw new Error("Expected Formatter effect to fail");
+    }
+
+    const failures = Array.from(Cause.failures(exit.cause));
+    expect(failures).toHaveLength(1);
+    const failure = failures[0];
+    expect(failure).toBeInstanceOf(FormatterLoadError);
+    if (!(failure instanceof FormatterLoadError)) {
+      throw new Error("Expected a FormatterLoadError");
+    }
+
+    expect(failure.cause).toBe(loadFailure);
+    expect(endedSpans).toContainEqual({
+      name: "typeweaver.Formatter.format",
+      exit: "Failure",
     });
   });
 
