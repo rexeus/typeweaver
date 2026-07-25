@@ -3,6 +3,7 @@ import type { Plugin } from "@rexeus/typeweaver-gen";
 import { Effect } from "effect";
 import { buildOpenApiDocument } from "./buildOpenApiDocument.js";
 import { normalizeOpenApiPluginOptions } from "./internal/normalizeOptions.js";
+import type { OpenApiPluginOptions } from "./internal/normalizeOptions.js";
 import type { OpenApiBuildWarning } from "./types.js";
 
 export type { OpenApiPluginOptions } from "./internal/normalizeOptions.js";
@@ -13,7 +14,7 @@ const PLUGIN_NAME = "openapi";
  * Build an OpenAPI plugin. Options are validated and normalized eagerly so
  * misconfiguration surfaces at composition time, not during generation.
  */
-export const openApiPlugin = (options: unknown = {}): Plugin => {
+export const openApiPlugin = (options: OpenApiPluginOptions = {}): Plugin => {
   const normalized = normalizeOpenApiPluginOptions(options);
 
   return definePlugin({

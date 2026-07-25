@@ -13,6 +13,12 @@ import type { Effect } from "effect";
 export type PluginConfig = Record<string, unknown>;
 
 /**
+ * Named values exposed to an EJS-like template during rendering. `null` and
+ * `undefined` intentionally render with an empty data object.
+ */
+export type TemplateData = Readonly<Record<string, unknown>> | null | undefined;
+
+/**
  * The full Typeweaver user config object, surfaced to plugin authors through
  * `PluginContext.config`. Plugins should read whatever top-level keys are
  * relevant to them (e.g. `output`, `plugins`, custom keys added by a
@@ -93,15 +99,15 @@ export type GeneratorContext = PluginContext & {
   readonly writeFile: (relativePath: string, content: string) => void;
 
   /**
-   * Render an EJS-like template to a string. Synchronous and pure (no I/O);
-   * the only failure mode is a malformed template, which throws and is caught
-   * by the outer `Effect.try` boundary.
+   * Read and render an EJS-like template to a string. Synchronous filesystem
+   * and template-evaluation failures throw and are caught by the outer
+   * `Effect.try` boundary.
    *
    * `templatePath` may be absolute, or relative to the plugin's
    * `templateDir`. The template engine resolves `<%- %>` (raw output) and
    * `<%= %>` (escaped output) per the project's hand-rolled renderer.
    */
-  readonly renderTemplate: (templatePath: string, data: unknown) => string;
+  readonly renderTemplate: (templatePath: string, data: TemplateData) => string;
 
   /**
    * Register a generated file without writing it (the file was produced by
@@ -157,7 +163,7 @@ export type GeneratorContext = PluginContext & {
    */
   readonly renderTemplateEffect: (
     templatePath: string,
-    data: unknown
+    data: TemplateData
   ) => Effect.Effect<string, TemplateRenderError | PlatformError>;
 
   /**

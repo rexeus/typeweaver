@@ -1,3 +1,5 @@
+import type { TemplateData } from "../plugins/contextTypes.js";
+
 function escapeHtml(input: string): string {
   return input
     .replaceAll("&", "&amp;")
@@ -15,10 +17,8 @@ function stringifyTemplateValue(value: unknown): string {
   return String(value);
 }
 
-export function renderTemplate(
-  template: string,
-  data: Record<string, unknown>
-): string {
+export function renderTemplate(template: string, data: TemplateData): string {
+  const templateData = data ?? {};
   const outputChunks: string[] = [];
   const expressionPattern = /<%[=-]?[\s\S]*?%>/g;
   let currentIndex = 0;
@@ -60,10 +60,10 @@ export function renderTemplate(
     // (including names like `name` or `toString`) must win over outer built-ins.
     `const __output = []; with (data) { ${outputChunks.join("\n")} } return __output.join("");`
   ) as (
-    data: Record<string, unknown>,
+    data: NonNullable<TemplateData>,
     escape: typeof escapeHtml,
     stringify: typeof stringifyTemplateValue
   ) => string;
 
-  return render(data, escapeHtml, stringifyTemplateValue);
+  return render(templateData, escapeHtml, stringifyTemplateValue);
 }

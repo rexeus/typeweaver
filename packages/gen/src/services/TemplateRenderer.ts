@@ -1,13 +1,14 @@
 import { Effect } from "effect";
 import { TemplateRenderError } from "../errors/TemplateRenderError.js";
 import { liveTemplateRendererShape } from "./internal/pluginContextBuilder.js";
+import type { TemplateData } from "../plugins/contextTypes.js";
 
 const render: (
   template: string,
-  data: unknown
+  data: TemplateData
 ) => Effect.Effect<string, TemplateRenderError> = Effect.fn(
   "typeweaver.TemplateRenderer.render"
-)((template: string, data: unknown) =>
+)((template: string, data: TemplateData) =>
   Effect.try({
     try: () => liveTemplateRendererShape.render(template, data),
     catch: cause => new TemplateRenderError({ cause }),

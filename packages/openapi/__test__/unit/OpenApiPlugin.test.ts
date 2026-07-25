@@ -17,6 +17,7 @@ import {
 } from "./buildOpenApiDocument.helpers.js";
 import type {
   OpenApiInfoObject,
+  OpenApiPluginOptions,
   OpenApiServerObject,
 } from "../../src/index.js";
 import type { CapturedLog } from "test-utils";
@@ -41,7 +42,7 @@ const runGenerate = (
   options: unknown,
   context: OpenApiGeneratorContext
 ): void => {
-  const plugin = openApiPlugin(options);
+  const plugin = openApiPlugin(options as OpenApiPluginOptions);
   if (plugin.generate === undefined) {
     throw new Error("openApiPlugin must define a generate stage");
   }
@@ -52,7 +53,7 @@ const runGenerateCapturingLogs = (
   options: unknown,
   context: OpenApiGeneratorContext
 ): readonly CapturedLog[] => {
-  const plugin = openApiPlugin(options);
+  const plugin = openApiPlugin(options as OpenApiPluginOptions);
   if (plugin.generate === undefined) {
     throw new Error("openApiPlugin must define a generate stage");
   }
@@ -64,7 +65,7 @@ const captureOpenApiPluginConfigError = (
   options: unknown
 ): CapturedPluginConfigError => {
   try {
-    openApiPlugin(options);
+    openApiPlugin(options as OpenApiPluginOptions);
   } catch (error) {
     expect(error).toMatchObject({
       _tag: "PluginConfigError",

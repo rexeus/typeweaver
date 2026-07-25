@@ -8,6 +8,7 @@ import {
 import { resolveSafeGeneratedFilePath } from "../../helpers/pathSafety.js";
 import { renderTemplate } from "../../helpers/templateEngine.js";
 import type { SafeGeneratedFilePath } from "../../helpers/pathSafety.js";
+import type { TemplateData } from "../../plugins/contextTypes.js";
 import type { FileSystem } from "@effect/platform";
 import type { PlatformError } from "@effect/platform/Error";
 
@@ -31,7 +32,7 @@ export type PathSafetyShape = {
  * Narrowed TemplateRenderer surface. Mirrors `PathSafetyShape`.
  */
 export type TemplateRendererShape = {
-  readonly render: (template: string, data: unknown) => string;
+  readonly render: (template: string, data: TemplateData) => string;
 };
 
 /**
@@ -50,11 +51,7 @@ export const livePathSafetyShape: PathSafetyShape = {
  * with the Effect-native `TemplateRenderer` service.
  */
 export const liveTemplateRendererShape: TemplateRendererShape = {
-  render: (template, data) =>
-    // Plugin authors pass arbitrary template data; the engine scopes its
-    // `with(data)` lookup over a plain record. Non-record values have never
-    // been supported — the widening cast preserves the existing contract.
-    renderTemplate(template, (data ?? {}) as Record<string, unknown>),
+  render: (template, data) => renderTemplate(template, data),
 };
 
 /**
@@ -161,7 +158,7 @@ export type EffectContextIO = {
   >;
   readonly renderTemplateEffect: (
     templatePath: string,
-    data: unknown
+    data: TemplateData
   ) => Effect.Effect<string, TemplateRenderError | PlatformError>;
   readonly addGeneratedFileEffect: (
     relativePath: string

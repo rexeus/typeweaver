@@ -12,6 +12,7 @@ import type {
 import type {
   GeneratorContext,
   PluginContext,
+  TemplateData,
   TypeweaverUserConfig,
 } from "../../plugins/contextTypes.js";
 import type {
@@ -323,7 +324,7 @@ const createSyncContextIO = (
       onCommit: () => tracker.recordWrite(safePath.generatedPath),
     });
   },
-  renderTemplate: (templatePath: string, data: unknown): string => {
+  renderTemplate: (templatePath: string, data: TemplateData): string => {
     const fullTemplatePath = path.isAbsolute(templatePath)
       ? templatePath
       : path.join(params.templateDir, templatePath);
