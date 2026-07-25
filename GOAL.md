@@ -952,6 +952,25 @@ next: Commit and push the cohesive repairs under the human's explicit authorizat
       commit and the final PR review has no unresolved blocker.
 ```
 
+```text
+[iteration 22 | 2026-07-25 | Windows packaged-CLI repair]
+criterion: 16 and 17 remote completion evidence.
+before: Quality Check run 30174570753 proved the complete Ubuntu quality-check job green on
+        69b6bee4, but the Windows security job failed every built CLI process that reached the
+        package bin. The bin imported an absolute Windows path such as D:\...\dist\entry.mjs
+        directly, which Node's ESM loader interpreted as the unsupported URL protocol `d:`.
+change: Convert the resolved built entry path through pathToFileURL before dynamic import so the
+        published bin uses a valid file URL on POSIX and Windows.
+evidence: The package builds under Node 24; Prettier accepts the bin; the expanded local Windows
+          gate passes Gen 104/104 and CLI 128/128 applicable tests, including all 13 built CLI
+          process contracts and the exact documented scoped-service example. The full
+          `pnpm verify:effect-migration` umbrella passes with zero Effect diagnostics, all 2,378
+          workspace tests, 225 exact generated fixtures, the packed consumer matrix, and an
+          unchanged authored worktree; Oxfmt, Oxlint, and git diff check are also green.
+next: Commit and push the repair under the human's explicit authorization, then require a fresh
+      Ubuntu and Windows run on the exact new commit.
+```
+
 ## Stop conditions
 
 - **Done:** all 18 criteria are checked with recorded evidence, the final local command block is
