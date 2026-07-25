@@ -1,10 +1,11 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import { ConfigModuleEvaluationError } from "../errors/ConfigModuleEvaluationError.js";
 import { isStructuralConfigError } from "../errors/index.js";
 import { InvalidConfigExportError } from "../errors/InvalidConfigExportError.js";
+import { InvalidConfigValueError } from "../errors/InvalidConfigValueError.js";
 import { UnsupportedConfigExtensionError } from "../errors/UnsupportedConfigExtensionError.js";
 import { UnsupportedTypeScriptConfigError } from "../errors/UnsupportedTypeScriptConfigError.js";
 import type { ConfigError } from "../errors/index.js";
@@ -18,6 +19,29 @@ const UNSUPPORTED_TYPESCRIPT_CONFIG_EXTENSIONS = new Set([
   ".mts",
   ".cts",
 ]);
+
+const PluginConfigSchema = Schema.mutable(
+  Schema.Record({
+    key: Schema.String,
+    value: Schema.Unknown,
+  })
+);
+
+const PluginTupleSchema = Schema.mutable(
+  Schema.Tuple(Schema.NonEmptyString, PluginConfigSchema)
+);
+
+const PluginsSchema = Schema.mutable(
+  Schema.Array(Schema.Union(Schema.NonEmptyString, PluginTupleSchema))
+);
+
+const TypeweaverConfigSchema = Schema.Struct({
+  input: Schema.NonEmptyString,
+  output: Schema.NonEmptyString,
+  plugins: PluginsSchema,
+  format: Schema.Boolean,
+  clean: Schema.Boolean,
+}).pipe(Schema.partialWith({ exact: true }), Schema.mutable);
 
 /**
  * Resolve a possibly-relative config path against the current working
@@ -49,7 +73,7 @@ const assertSupportedConfigPathSync = (configPath: string): void => {
 
 const loadConfigAsync = async (
   configPath: string
-): Promise<Partial<TypeweaverConfig>> => {
+): Promise<Record<string, unknown>> => {
   assertSupportedConfigPathSync(configPath);
 
   const resolvedPath = path.resolve(configPath);
@@ -102,7 +126,7 @@ const getConfigExport = (
   });
 };
 
-const isConfigObject = (value: unknown): value is Partial<TypeweaverConfig> =>
+const isConfigObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 const isNamespaceLikeConfigExport = (value: unknown): boolean => {
@@ -111,6 +135,18 @@ const isNamespaceLikeConfigExport = (value: unknown): boolean => {
   }
   return Object.hasOwn(value, "default") || Object.hasOwn(value, "config");
 };
+
+const decodeConfig = Effect.fn("typeweaver.ConfigLoader.decode")(
+  (configPath: string, loadedConfig: Record<string, unknown>) =>
+    Schema.decodeUnknown(TypeweaverConfigSchema, {
+      errors: "all",
+      onExcessProperty: "preserve",
+    })(loadedConfig).pipe(
+      Effect.mapError(
+        cause => new InvalidConfigValueError({ configPath, cause })
+      )
+    )
+);
 
 /**
  * Loads a TypeWeaver config from a `.js`, `.mjs`, or `.cjs` module.
@@ -153,7 +189,9 @@ export class ConfigLoader extends Effect.Service<ConfigLoader>()(
               cause: error,
             });
           },
-        }),
+        }).pipe(
+          Effect.flatMap(loadedConfig => decodeConfig(configPath, loadedConfig))
+        ),
     },
     accessors: true,
   }

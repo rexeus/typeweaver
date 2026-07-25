@@ -1,6 +1,6 @@
 import path from "node:path";
 import { ContextBuilder, PluginRegistry } from "@rexeus/typeweaver-gen";
-import { Effect } from "effect";
+import { Cause, Effect, Exit } from "effect";
 import { Formatter } from "./Formatter.js";
 import {
   CORE_DIR,
@@ -84,7 +84,7 @@ export class Generator extends Effect.Service<Generator>()(
         // filesystem. When the clean step will run, the full guard
         // applies (including the input-file containment rule). With
         // `--no-clean` the structural rules still apply: the
-        // orphan-tempdir sweep deletes `.typeweaver-*` entries and
+        // orphan-tempdir sweep deletes atomic-write temp entries and
         // `ensureOutputDirectories` creates directories under
         // `outputDir`, so catastrophic targets (filesystem root, cwd,
         // workspace root) must be rejected before either runs.
@@ -116,7 +116,7 @@ export class Generator extends Effect.Service<Generator>()(
             yield* Effect.logInfo("Cleaning output directory...");
             yield* cleanOutputDirPreservingLock(outputDir);
             // The clean removed `responses/` and `spec/` (we preserve
-            // only the lock dir); recreate them before the pipeline
+            // only lock coordination artifacts); recreate them before the pipeline
             // bundles into them.
             yield* ensureOutputDirectories({
               outputDir,
@@ -151,134 +151,128 @@ export class Generator extends Effect.Service<Generator>()(
 
           let getGeneratedFiles: () => readonly string[] = () => [];
 
-          // Run the lifecycle pipeline (initialize onward), capture its
-          // exit, then always run finalize for every plugin that
-          // successfully initialized (Plugin contract advertises
-          // lifecycle cleanup) — including when a LATER plugin's
-          // initialize fails, which is why the initialize loop lives
-          // inside this exit capture. On a clean happy-path success the
-          // finalize errors propagate as usual; on failure the inner
-          // exit is restored after finalize so callers still see the
-          // original `PluginExecutionError`. The log lines and
-          // per-plugin ordering stay byte-identical to the prior
-          // sequential loop, preserving the golden-gate output.
-          //
-          // Typed failures from `finalize` are demoted to WARN logs so a
-          // single misbehaving plugin's finalize cannot mask a generate
-          // failure. Defects (programming bugs that throw synchronously
-          // instead of via `Effect.fail`) intentionally propagate —
-          // `Effect.catchAll` does not catch defects, and the Plugin
-          // contract labels them as bugs that should halt the run with
-          // the operator's attention.
-          const inner = yield* Effect.exit(
-            Effect.gen(function* () {
-              yield* Effect.logInfo("Initializing plugins...");
-              for (const registration of initial) {
-                yield* Effect.logDebug(
-                  `Initializing plugin: ${registration.plugin.name}`
-                );
-                if (registration.plugin.initialize) {
-                  yield* registration.plugin.initialize(pluginContext).pipe(
-                    Effect.withSpan("typeweaver.plugin.initialize", {
-                      attributes: { plugin: registration.plugin.name },
-                    })
-                  );
-                }
-                initialized.push(registration);
+          const finalizeInitializedPlugins = Effect.fn(
+            "typeweaver.Generator.finalizePlugins"
+          )(function* () {
+            yield* Effect.logInfo("Finalizing plugins...");
+            let finalizerDefects: Cause.Cause<never> | undefined;
+
+            for (const registration of [...initialized].reverse()) {
+              if (!registration.plugin.finalize) {
+                continue;
               }
 
-              yield* Effect.logInfo("Collecting resources...");
-              for (const registration of initial) {
-                if (registration.plugin.collectResources) {
-                  normalizedSpec = yield* registration.plugin
-                    .collectResources(normalizedSpec)
-                    .pipe(
-                      Effect.withSpan("typeweaver.plugin.collectResources", {
-                        attributes: { plugin: registration.plugin.name },
+              const finalizerExit = yield* Effect.exit(
+                registration.plugin.finalize(pluginContext).pipe(
+                  Effect.withSpan("typeweaver.plugin.finalize", {
+                    attributes: { plugin: registration.plugin.name },
+                  }),
+                  Effect.catchAll(cause =>
+                    Effect.logWarning(cause.message).pipe(
+                      Effect.annotateLogs({
+                        plugin: registration.plugin.name,
+                        cause,
                       })
-                    );
-                }
-              }
-
-              const built = yield* contextBuilder.buildGeneratorContext({
-                outputDir,
-                inputDir,
-                config: userConfig,
-                normalizedSpec,
-                templateDir,
-                coreDir: CORE_DIR,
-                responsesOutputDir,
-                specOutputDir,
-              });
-              getGeneratedFiles = built.getGeneratedFiles;
-
-              // The sync `writeFile` callback runs outside any Effect
-              // runtime and queues its `Generated: <path>` lines on the
-              // per-call builder. Flushing through `Effect.logInfo` after
-              // each plugin keeps the lines inside the configured logger
-              // pipeline; `Effect.onExit` flushes even when a plugin
-              // fails or is interrupted, so files already written are
-              // still reported.
-              const flushGeneratedFileLogs = Effect.suspend(() =>
-                Effect.forEach(
-                  built.drainPendingWriteLogs(),
-                  filePath => Effect.logInfo(`Generated: ${filePath}`),
-                  { discard: true }
-                )
-              );
-
-              yield* Effect.logInfo("Generating code...");
-              for (const registration of initial) {
-                yield* Effect.logInfo(
-                  `Running plugin: ${registration.plugin.name}`
-                );
-                if (registration.plugin.generate) {
-                  // `onExit` stays inside the span so the flushed
-                  // `Generated:` log records carry the plugin's span
-                  // context.
-                  yield* registration.plugin.generate(built.context).pipe(
-                    Effect.onExit(() => flushGeneratedFileLogs),
-                    Effect.withSpan("typeweaver.plugin.generate", {
-                      attributes: { plugin: registration.plugin.name },
-                    })
-                  );
-                }
-              }
-
-              yield* indexFileGenerator
-                .generate({
-                  templateDir,
-                  outputDir,
-                  generatedFiles: getGeneratedFiles(),
-                  writeFile: built.context.writeFile,
-                })
-                .pipe(Effect.onExit(() => flushGeneratedFileLogs));
-            })
-          );
-
-          yield* Effect.logInfo("Finalizing plugins...");
-          for (const registration of initialized) {
-            if (registration.plugin.finalize) {
-              yield* registration.plugin.finalize(pluginContext).pipe(
-                Effect.withSpan("typeweaver.plugin.finalize", {
-                  attributes: { plugin: registration.plugin.name },
-                }),
-                // The WARN line stays byte-stable (`cause.message`); the
-                // full error object rides along as a log annotation for
-                // structured consumers.
-                Effect.catchAll(cause =>
-                  Effect.logWarning(cause.message).pipe(
-                    Effect.annotateLogs({
-                      plugin: registration.plugin.name,
-                      cause,
-                    })
+                    )
                   )
                 )
               );
+              if (Exit.isFailure(finalizerExit)) {
+                finalizerDefects =
+                  finalizerDefects === undefined
+                    ? finalizerExit.cause
+                    : Cause.sequential(finalizerDefects, finalizerExit.cause);
+              }
             }
-          }
 
-          yield* inner;
+            if (finalizerDefects !== undefined) {
+              return yield* Effect.failCause(finalizerDefects);
+            }
+          });
+
+          yield* Effect.gen(function* () {
+            yield* Effect.logInfo("Initializing plugins...");
+            for (const registration of initial) {
+              yield* Effect.logDebug(
+                `Initializing plugin: ${registration.plugin.name}`
+              );
+              if (registration.plugin.initialize) {
+                yield* registration.plugin.initialize(pluginContext).pipe(
+                  Effect.withSpan("typeweaver.plugin.initialize", {
+                    attributes: { plugin: registration.plugin.name },
+                  })
+                );
+              }
+              initialized.push(registration);
+            }
+
+            yield* Effect.logInfo("Collecting resources...");
+            for (const registration of initial) {
+              if (registration.plugin.collectResources) {
+                normalizedSpec = yield* registration.plugin
+                  .collectResources(normalizedSpec)
+                  .pipe(
+                    Effect.withSpan("typeweaver.plugin.collectResources", {
+                      attributes: { plugin: registration.plugin.name },
+                    })
+                  );
+              }
+            }
+
+            const built = yield* contextBuilder.buildGeneratorContext({
+              outputDir,
+              inputDir,
+              config: userConfig,
+              normalizedSpec,
+              templateDir,
+              coreDir: CORE_DIR,
+              responsesOutputDir,
+              specOutputDir,
+            });
+            getGeneratedFiles = built.getGeneratedFiles;
+
+            // The sync `writeFile` callback runs outside any Effect
+            // runtime and queues its `Generated: <path>` lines on the
+            // per-call builder. Flushing through `Effect.logInfo` after
+            // each plugin keeps the lines inside the configured logger
+            // pipeline; `Effect.onExit` flushes even when a plugin
+            // fails or is interrupted, so files already written are
+            // still reported.
+            const flushGeneratedFileLogs = Effect.suspend(() =>
+              Effect.forEach(
+                built.drainPendingWriteLogs(),
+                filePath => Effect.logInfo(`Generated: ${filePath}`),
+                { discard: true }
+              )
+            );
+
+            yield* Effect.logInfo("Generating code...");
+            for (const registration of initial) {
+              yield* Effect.logInfo(
+                `Running plugin: ${registration.plugin.name}`
+              );
+              if (registration.plugin.generate) {
+                // `onExit` stays inside the span so the flushed
+                // `Generated:` log records carry the plugin's span
+                // context.
+                yield* registration.plugin.generate(built.context).pipe(
+                  Effect.onExit(() => flushGeneratedFileLogs),
+                  Effect.withSpan("typeweaver.plugin.generate", {
+                    attributes: { plugin: registration.plugin.name },
+                  })
+                );
+              }
+            }
+
+            yield* indexFileGenerator
+              .generate({
+                templateDir,
+                outputDir,
+                generatedFiles: getGeneratedFiles(),
+                writeFile: built.context.writeFile,
+              })
+              .pipe(Effect.onExit(() => flushGeneratedFileLogs));
+          }).pipe(Effect.onExit(() => finalizeInitializedPlugins()));
 
           if (params.config?.format !== false) {
             yield* formatter.format(outputDir);
@@ -291,20 +285,22 @@ export class Generator extends Effect.Service<Generator>()(
 
         yield* Effect.acquireUseRelease(
           Effect.gen(function* () {
-            const lockDir = yield* acquireOutputLock({
+            const outputLock = yield* acquireOutputLock({
               outputDir,
               inputFile,
             });
             yield* Effect.logDebug(
-              `Acquired output lock at '${lockDir}' (pid ${process.pid})`
+              `Acquired output lock at '${outputLock.path}' (pid ${process.pid})`
             );
-            return lockDir;
+            return outputLock;
           }),
           () => pipeline,
-          lockDir =>
+          outputLock =>
             Effect.gen(function* () {
-              yield* releaseOutputLock(lockDir);
-              yield* Effect.logDebug(`Released output lock at '${lockDir}'`);
+              yield* releaseOutputLock(outputLock);
+              yield* Effect.logDebug(
+                `Released output lock at '${outputLock.path}'`
+              );
             })
         );
       });

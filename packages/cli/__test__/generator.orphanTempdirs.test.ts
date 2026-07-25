@@ -119,9 +119,9 @@ describe("Generator orphan tempdir hygiene", () => {
     // belt-and-braces for tempdirs created by concurrent atomic-replace
     // writes. Pre-seed an orphan that survives any sweep window and assert
     // the formatter does not crash on its `.tmp` content. Tempdirs that
-    // start with `.typeweaver-` (other than the lock dir) are pruned by
-    // the sweep before formatting runs, so the assertion is that the run
-    // completes without throwing.
+    // start with `.typeweaver-` (other than lock coordination artifacts)
+    // are pruned by the sweep before formatting runs, so the assertion is
+    // that the run completes without throwing.
     const workspace = createTempWorkspace("formatter-skip");
     writeTinySpec(workspace);
     const outputDir = path.join(workspace, "generated", "output");

@@ -105,6 +105,7 @@
   },
   "devDependencies": {
     "@effect/vitest": "^0.30.0",
+    "fast-check": "^4.9.0",
     "hono": "^4.12.32",
     "test-utils": "file:../test-utils",
     "tsx": "^4.23.1",

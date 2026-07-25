@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { Cause, Effect, Exit } from "effect";
+import { Cause, Effect, Exit, Fiber } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { effectRuntime } from "../src/effectRuntime.js";
 import { Generator } from "../src/services/Generator.js";
@@ -76,6 +76,7 @@ const writeRecordingPlugins = (workspace: string): readonly string[] => {
         "",
         `export const ${name}Plugin = {`,
         "  name: pluginName,",
+        ...(name === "beta" ? ['  depends: ["alpha"],'] : []),
         '  initialize: _ctx => record("initialize"),',
         "  collectResources: spec =>",
         "    Effect.gen(function* () {",
@@ -133,6 +134,111 @@ const writeFailingFinalizePlugin = (workspace: string): string => {
       "      );",
       "    }),",
       '  finalize: _ctx => record("finalize"),',
+      "};",
+      "",
+    ].join("\n")
+  );
+  return pluginFile;
+};
+
+const writeDefectingGeneratePlugin = (workspace: string): string => {
+  const eventsFile = path.join(workspace, "lifecycle-events.log");
+  const pluginFile = path.join(workspace, "plugins", "omega-defect.mjs");
+  fs.mkdirSync(path.dirname(pluginFile), { recursive: true });
+  fs.writeFileSync(
+    pluginFile,
+    [
+      'import fs from "node:fs";',
+      'import { Effect } from "effect";',
+      "",
+      `const eventsFile = ${JSON.stringify(eventsFile)};`,
+      "const record = stage =>",
+      "  Effect.sync(() => {",
+      "    fs.appendFileSync(eventsFile, `${stage}:omega-defect\\n`);",
+      "  });",
+      "",
+      "export const omegaDefectPlugin = {",
+      '  name: "omega-defect",',
+      '  depends: ["beta"],',
+      '  initialize: _ctx => record("initialize"),',
+      "  generate: _ctx =>",
+      "    Effect.gen(function* () {",
+      '      yield* record("generate");',
+      '      return yield* Effect.die(new Error("intentional generate defect"));',
+      "    }),",
+      '  finalize: _ctx => record("finalize"),',
+      "};",
+      "",
+    ].join("\n")
+  );
+  return pluginFile;
+};
+
+const writeInterruptibleGeneratePlugin = (
+  workspace: string,
+  enteredEvent: string
+): string => {
+  const eventsFile = path.join(workspace, "lifecycle-events.log");
+  const pluginFile = path.join(workspace, "plugins", "omega-interrupt.mjs");
+  fs.mkdirSync(path.dirname(pluginFile), { recursive: true });
+  fs.writeFileSync(
+    pluginFile,
+    [
+      'import fs from "node:fs";',
+      'import { Effect } from "effect";',
+      "",
+      `const eventsFile = ${JSON.stringify(eventsFile)};`,
+      `const enteredEvent = ${JSON.stringify(enteredEvent)};`,
+      "const record = stage =>",
+      "  Effect.sync(() => {",
+      "    fs.appendFileSync(eventsFile, `${stage}:omega-interrupt\\n`);",
+      "  });",
+      "",
+      "export const omegaInterruptPlugin = {",
+      '  name: "omega-interrupt",',
+      '  depends: ["beta"],',
+      '  initialize: _ctx => record("initialize"),',
+      "  generate: _ctx =>",
+      "    Effect.sync(() => {",
+      '      fs.appendFileSync(eventsFile, "generate:omega-interrupt\\n");',
+      "      process.emit(enteredEvent);",
+      "    }).pipe(Effect.zipRight(Effect.never)),",
+      '  finalize: _ctx => record("finalize"),',
+      "};",
+      "",
+    ].join("\n")
+  );
+  return pluginFile;
+};
+
+const writeDefectingFinalizePlugin = (workspace: string): string => {
+  const eventsFile = path.join(workspace, "lifecycle-events.log");
+  const pluginFile = path.join(
+    workspace,
+    "plugins",
+    "omega-finalize-defect.mjs"
+  );
+  fs.mkdirSync(path.dirname(pluginFile), { recursive: true });
+  fs.writeFileSync(
+    pluginFile,
+    [
+      'import fs from "node:fs";',
+      'import { Effect } from "effect";',
+      "",
+      `const eventsFile = ${JSON.stringify(eventsFile)};`,
+      "const record = stage =>",
+      "  Effect.sync(() => {",
+      "    fs.appendFileSync(eventsFile, `${stage}:omega-finalize-defect\\n`);",
+      "  });",
+      "",
+      "export const omegaFinalizeDefectPlugin = {",
+      '  name: "omega-finalize-defect",',
+      '  depends: ["beta"],',
+      '  initialize: _ctx => record("initialize"),',
+      "  finalize: _ctx =>",
+      '    record("finalize").pipe(',
+      '      Effect.zipRight(Effect.die(new Error("intentional finalize defect")))',
+      "    ),",
       "};",
       "",
     ].join("\n")
@@ -348,6 +454,10 @@ describe("Generator.generate (plugin lifecycle ordering)", () => {
     expect(lastInitialize).toBeLessThan(firstCollect);
     expect(lastCollect).toBeLessThan(firstGenerate);
     expect(lastGenerate).toBeLessThan(firstFinalize);
+    expect(events.filter(event => event.startsWith("finalize:"))).toEqual([
+      "finalize:beta",
+      "finalize:alpha",
+    ]);
   });
 
   test("runs finalize for plugins that initialized even when a later plugin's generate fails", async () => {
@@ -430,6 +540,10 @@ describe("Generator.generate (plugin lifecycle ordering)", () => {
     // The plugin whose own initialize failed never initialized
     // successfully — no finalize for it, and no later stage ran at all.
     expect(events).not.toContain("finalize:omega-failing-init");
+    expect(events.filter(event => event.startsWith("finalize:"))).toEqual([
+      "finalize:beta",
+      "finalize:alpha",
+    ]);
     expect(events.some(event => event.startsWith("collectResources:"))).toBe(
       false
     );
@@ -493,5 +607,105 @@ describe("Generator.generate (plugin lifecycle ordering)", () => {
         log.message.includes("failed during finalize")
     );
     expect(finalizeWarn).toBeDefined();
+  });
+
+  test("finalizes every initialized plugin in reverse dependency order after a defect", async () => {
+    const workspace = createTempWorkspace("finalize-on-defect");
+    writeTinySpec(workspace);
+    const recordingPlugins = writeRecordingPlugins(workspace);
+    const defectingPlugin = writeDefectingGeneratePlugin(workspace);
+
+    const exit = await effectRuntime.runPromiseExit(
+      Generator.generate({
+        inputFile: "spec/index.ts",
+        outputDir: "generated/output",
+        config: {
+          input: "spec/index.ts",
+          output: "generated/output",
+          format: false,
+          plugins: [...recordingPlugins, defectingPlugin],
+        },
+        currentWorkingDirectory: workspace,
+      })
+    );
+
+    expect(Exit.isFailure(exit)).toBe(true);
+    if (Exit.isFailure(exit)) {
+      expect(Cause.defects(exit.cause)).toHaveLength(1);
+    }
+    expect(
+      readEvents(workspace).filter(event => event.startsWith("finalize:"))
+    ).toEqual(["finalize:omega-defect", "finalize:beta", "finalize:alpha"]);
+  });
+
+  test("finalizes every initialized plugin in reverse dependency order after interruption", async () => {
+    const workspace = createTempWorkspace("finalize-on-interrupt");
+    writeTinySpec(workspace);
+    const recordingPlugins = writeRecordingPlugins(workspace);
+    const enteredEvent = `typeweaver-test-interrupt-${process.pid}-${Date.now()}`;
+    const interruptiblePlugin = writeInterruptibleGeneratePlugin(
+      workspace,
+      enteredEvent
+    );
+    const enteredGenerate = new Promise<void>(resolve => {
+      process.once(enteredEvent, () => resolve());
+    });
+
+    const fiber = effectRuntime.runFork(
+      Generator.generate({
+        inputFile: "spec/index.ts",
+        outputDir: "generated/output",
+        config: {
+          input: "spec/index.ts",
+          output: "generated/output",
+          format: false,
+          plugins: [...recordingPlugins, interruptiblePlugin],
+        },
+        currentWorkingDirectory: workspace,
+      })
+    );
+    await enteredGenerate;
+    const interrupted = await Effect.runPromise(Fiber.interrupt(fiber));
+
+    expect(Exit.isFailure(interrupted)).toBe(true);
+    if (Exit.isFailure(interrupted)) {
+      expect(Cause.isInterruptedOnly(interrupted.cause)).toBe(true);
+    }
+    expect(
+      readEvents(workspace).filter(event => event.startsWith("finalize:"))
+    ).toEqual(["finalize:omega-interrupt", "finalize:beta", "finalize:alpha"]);
+  });
+
+  test("attempts every finalizer before surfacing a finalizer defect", async () => {
+    const workspace = createTempWorkspace("finalizer-defect");
+    writeTinySpec(workspace);
+    const recordingPlugins = writeRecordingPlugins(workspace);
+    const defectingFinalizer = writeDefectingFinalizePlugin(workspace);
+
+    const exit = await effectRuntime.runPromiseExit(
+      Generator.generate({
+        inputFile: "spec/index.ts",
+        outputDir: "generated/output",
+        config: {
+          input: "spec/index.ts",
+          output: "generated/output",
+          format: false,
+          plugins: [...recordingPlugins, defectingFinalizer],
+        },
+        currentWorkingDirectory: workspace,
+      })
+    );
+
+    expect(Exit.isFailure(exit)).toBe(true);
+    if (Exit.isFailure(exit)) {
+      expect(Cause.defects(exit.cause)).toHaveLength(1);
+    }
+    expect(
+      readEvents(workspace).filter(event => event.startsWith("finalize:"))
+    ).toEqual([
+      "finalize:omega-finalize-defect",
+      "finalize:beta",
+      "finalize:alpha",
+    ]);
   });
 });

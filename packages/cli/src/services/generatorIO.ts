@@ -1,3 +1,4 @@
+import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { FileSystem } from "@effect/platform";
@@ -59,9 +60,10 @@ export const removeOutputDir = (
   });
 
 /**
- * Clean every entry inside `outputDir` except the lockfile sentinel.
- * Used by the run-time clean step so the per-process lock survives the
- * destructive sweep. Idempotent — a missing `outputDir` is a no-op.
+ * Clean every entry inside `outputDir` except the active lock and stale
+ * ownership fences. The fences prevent a delayed stale-lock reclaimer
+ * from moving or deleting a replacement owner's lock. Idempotent — a
+ * missing `outputDir` is a no-op.
  *
  * Filesystem failures (e.g. `EACCES` on a read-only entry) surface as a
  * typed `OutputCleanError` rather than a defect: the operator can act on
@@ -78,7 +80,7 @@ export const cleanOutputDirPreservingLock = (
       }
       const entries = fs.readdirSync(outputDir, { withFileTypes: true });
       for (const entry of entries) {
-        if (entry.name === LOCK_DIR_NAME) {
+        if (isOutputLockArtifact(entry.name)) {
           continue;
         }
         fs.rmSync(path.join(outputDir, entry.name), {
@@ -105,13 +107,38 @@ export const ensureOutputDirectories = (params: {
   });
 
 const LOCK_DIR_NAME = ".typeweaver-lock";
+const LOCK_FENCE_PREFIX = `${LOCK_DIR_NAME}.fence-`;
 const LOCK_INFO_FILE = "info.json";
 
 type LockInfo = {
   readonly pid: number;
   readonly startedAt: string;
   readonly inputFile: string;
+  readonly ownerToken?: string;
 };
+
+export type OutputLock = {
+  readonly path: string;
+  readonly ownerToken: string;
+};
+
+type OutputLockReleaseStatus =
+  | { readonly _tag: "Released" }
+  | { readonly _tag: "AlreadyAbsent" }
+  | { readonly _tag: "OwnershipChanged" };
+
+type OutputLockAcquisitionHooks = {
+  readonly onLockDirectoryCreated: (lockDir: string) => void;
+  readonly onBeforeStaleLockMove: (lockDir: string) => void;
+};
+
+const NO_OUTPUT_LOCK_HOOKS: OutputLockAcquisitionHooks = {
+  onLockDirectoryCreated: () => undefined,
+  onBeforeStaleLockMove: () => undefined,
+};
+
+const isOutputLockArtifact = (entryName: string): boolean =>
+  entryName === LOCK_DIR_NAME || entryName.startsWith(LOCK_FENCE_PREFIX);
 
 const errnoCode = (error: unknown): string | undefined =>
   typeof error === "object" &&
@@ -147,15 +174,20 @@ const readLockInfo = (lockDir: string): LockInfo | undefined => {
     ) {
       return undefined;
     }
-    const { pid, startedAt, inputFile } = parsed as {
+    const { pid, startedAt, inputFile, ownerToken } = parsed as {
       pid: number;
       startedAt: string;
       inputFile?: unknown;
+      ownerToken?: unknown;
     };
+    if (ownerToken !== undefined && typeof ownerToken !== "string") {
+      return undefined;
+    }
     return {
       pid,
       startedAt,
       inputFile: typeof inputFile === "string" ? inputFile : "",
+      ...(ownerToken === undefined ? {} : { ownerToken }),
     };
   } catch {
     return undefined;
@@ -163,10 +195,15 @@ const readLockInfo = (lockDir: string): LockInfo | undefined => {
 };
 
 const writeLockInfo = (lockDir: string, info: LockInfo): void => {
-  fs.writeFileSync(
-    path.join(lockDir, LOCK_INFO_FILE),
-    JSON.stringify(info, null, 2)
-  );
+  const candidatePath = path.join(lockDir, `.${info.ownerToken}.json`);
+  try {
+    fs.writeFileSync(candidatePath, JSON.stringify(info, null, 2), {
+      flag: "wx",
+    });
+    fs.renameSync(candidatePath, path.join(lockDir, LOCK_INFO_FILE));
+  } finally {
+    fs.rmSync(candidatePath, { force: true });
+  }
 };
 
 const tryCreateLockDir = (lockDir: string): boolean => {
@@ -181,63 +218,166 @@ const tryCreateLockDir = (lockDir: string): boolean => {
   }
 };
 
+const sameLockInfo = (left: LockInfo, right: LockInfo): boolean =>
+  left.pid === right.pid &&
+  left.startedAt === right.startedAt &&
+  left.ownerToken === right.ownerToken;
+
+const lockFencePath = (lockDir: string, info: LockInfo): string => {
+  const identity =
+    info.ownerToken ??
+    `${info.pid}\u0000${info.startedAt}\u0000${info.inputFile}`;
+  const digest = createHash("sha256")
+    .update(identity)
+    .digest("hex")
+    .slice(0, 24);
+  return `${lockDir}.fence-${digest}`;
+};
+
+const moveStaleLockToFence = (
+  lockDir: string,
+  expected: LockInfo,
+  hooks: OutputLockAcquisitionHooks
+): boolean => {
+  const current = readLockInfo(lockDir);
+  if (current === undefined || !sameLockInfo(current, expected)) {
+    return false;
+  }
+  const fencePath = lockFencePath(lockDir, expected);
+  hooks.onBeforeStaleLockMove(lockDir);
+  try {
+    fs.renameSync(lockDir, fencePath);
+  } catch (error) {
+    const code = errnoCode(error);
+    if (code === "EEXIST" || code === "ENOTEMPTY" || code === "ENOENT") {
+      return false;
+    }
+    throw error;
+  }
+
+  const fenced = readLockInfo(fencePath);
+  if (fenced === undefined || !sameLockInfo(fenced, expected)) {
+    if (!fs.existsSync(lockDir)) {
+      fs.renameSync(fencePath, lockDir);
+    }
+    return false;
+  }
+  return true;
+};
+
+const rollbackLockAcquisition = (lockDir: string, ownerToken: string): void => {
+  const current = readLockInfo(lockDir);
+  if (current !== undefined && current.ownerToken !== ownerToken) {
+    return;
+  }
+  fs.rmSync(lockDir, { recursive: true, force: true });
+};
+
+const tryAcquireNewOutputLock = (
+  params: {
+    readonly outputDir: string;
+    readonly inputFile: string;
+  },
+  hooks: OutputLockAcquisitionHooks
+): OutputLock | undefined => {
+  const lockDir = path.join(params.outputDir, LOCK_DIR_NAME);
+  if (!tryCreateLockDir(lockDir)) {
+    return undefined;
+  }
+
+  const ownerToken = randomUUID();
+  try {
+    hooks.onLockDirectoryCreated(lockDir);
+    writeLockInfo(lockDir, {
+      pid: process.pid,
+      startedAt: new Date().toISOString(),
+      inputFile: params.inputFile,
+      ownerToken,
+    });
+    return { path: lockDir, ownerToken };
+  } catch (error) {
+    rollbackLockAcquisition(lockDir, ownerToken);
+    throw error;
+  }
+};
+
 /**
  * Acquire an exclusive lock on `outputDir` by creating a `.typeweaver-lock/`
  * directory. `mkdir` is atomic and fails with `EEXIST` if the directory
- * already exists, so it doubles as a lockfile primitive without an extra
- * dependency. If the lock is held by a dead PID (crashed prior run), the
- * stale lock is reclaimed and the acquire is retried once.
+ * already exists. Ownership metadata is published atomically and contains
+ * a unique token. Missing or malformed metadata fails closed so another
+ * process cannot reclaim a lock while its owner is still publishing it.
+ * If complete metadata belongs to a dead PID, the stale lock is reclaimed
+ * only while those metadata remain unchanged.
  *
- * Pair via `Effect.acquireRelease`: the release step removes the lock dir
- * unconditionally, so a SIGINT or interrupt during generation does not
- * leave the lock behind for the next run to trip over.
+ * Pair via `Effect.acquireRelease`: release verifies the ownership token,
+ * so a delayed finalizer cannot remove a replacement owner's lock.
  */
-export const acquireOutputLock = (params: {
-  readonly outputDir: string;
-  readonly inputFile: string;
-}): Effect.Effect<string, ConcurrentGenerationError> =>
+export const acquireOutputLockWith = (
+  params: {
+    readonly outputDir: string;
+    readonly inputFile: string;
+  },
+  hooks: OutputLockAcquisitionHooks
+): Effect.Effect<OutputLock, ConcurrentGenerationError> =>
   Effect.try({
     try: () => {
       const lockDir = path.join(params.outputDir, LOCK_DIR_NAME);
 
-      if (tryCreateLockDir(lockDir)) {
-        writeLockInfo(lockDir, {
-          pid: process.pid,
-          startedAt: new Date().toISOString(),
-          inputFile: params.inputFile,
-        });
-        return lockDir;
+      const acquired = tryAcquireNewOutputLock(params, hooks);
+      if (acquired !== undefined) {
+        return acquired;
       }
 
       const holder = readLockInfo(lockDir);
-      if (holder !== undefined && isProcessAlive(holder.pid)) {
+      if (holder === undefined) {
         throw new ConcurrentGenerationError({
           outputDir: params.outputDir,
-          holderPid: holder.pid,
-          holderStartedAt: holder.startedAt,
+          holder: { _tag: "Unknown" },
+        });
+      }
+      if (isProcessAlive(holder.pid)) {
+        throw new ConcurrentGenerationError({
+          outputDir: params.outputDir,
+          holder: {
+            _tag: "Known",
+            pid: holder.pid,
+            startedAt: holder.startedAt,
+          },
         });
       }
 
-      // Stale lock: prior holder is dead (or the info.json is unreadable —
-      // treat both as crash debris). Reclaim and retry once.
-      fs.rmSync(lockDir, { recursive: true, force: true });
-      if (!tryCreateLockDir(lockDir)) {
-        // Lost the race against another process that re-acquired between
-        // our cleanup and re-create. Surface it with whatever metadata we
-        // can read from the new holder.
+      if (!moveStaleLockToFence(lockDir, holder, hooks)) {
         const reHolder = readLockInfo(lockDir);
         throw new ConcurrentGenerationError({
           outputDir: params.outputDir,
-          holderPid: reHolder?.pid ?? -1,
-          holderStartedAt: reHolder?.startedAt ?? new Date().toISOString(),
+          holder:
+            reHolder === undefined
+              ? { _tag: "Unknown" }
+              : {
+                  _tag: "Known",
+                  pid: reHolder.pid,
+                  startedAt: reHolder.startedAt,
+                },
         });
       }
-      writeLockInfo(lockDir, {
-        pid: process.pid,
-        startedAt: new Date().toISOString(),
-        inputFile: params.inputFile,
+
+      const reclaimed = tryAcquireNewOutputLock(params, hooks);
+      if (reclaimed !== undefined) {
+        return reclaimed;
+      }
+      const reHolder = readLockInfo(lockDir);
+      throw new ConcurrentGenerationError({
+        outputDir: params.outputDir,
+        holder:
+          reHolder === undefined
+            ? { _tag: "Unknown" }
+            : {
+                _tag: "Known",
+                pid: reHolder.pid,
+                startedAt: reHolder.startedAt,
+              },
       });
-      return lockDir;
     },
     catch: error => {
       if (error instanceof ConcurrentGenerationError) {
@@ -247,25 +387,43 @@ export const acquireOutputLock = (params: {
     },
   });
 
+export const acquireOutputLock = (params: {
+  readonly outputDir: string;
+  readonly inputFile: string;
+}): Effect.Effect<OutputLock, ConcurrentGenerationError> =>
+  acquireOutputLockWith(params, NO_OUTPUT_LOCK_HOOKS);
+
 /**
  * Release the lock created by `acquireOutputLock`. Idempotent — a missing
  * lock directory (e.g. removed by a clean step run during the lifetime of
  * the lock) is a no-op rather than a failure.
  *
- * A failing release (e.g. `EACCES`) is demoted to a WARN log instead of
- * failing the effect: this runs in the release slot of
- * `Effect.acquireUseRelease`, where a defect would mask the pipeline's own
- * outcome. A leftover lock dir is self-healing — the next run's stale-PID
- * probe reclaims it.
+ * Release removes the directory only when its published token still
+ * matches the acquired handle. A failing release is demoted to a WARN log
+ * instead of masking the pipeline's own outcome.
  */
-export const releaseOutputLock = (lockDir: string): Effect.Effect<void> =>
+export const releaseOutputLock = (lock: OutputLock): Effect.Effect<void> =>
   Effect.try(() => {
-    fs.rmSync(lockDir, { recursive: true, force: true });
+    if (!fs.existsSync(lock.path)) {
+      return { _tag: "AlreadyAbsent" } as const;
+    }
+    const holder = readLockInfo(lock.path);
+    if (holder?.ownerToken !== lock.ownerToken) {
+      return { _tag: "OwnershipChanged" } as const;
+    }
+    fs.rmSync(lock.path, { recursive: true, force: true });
+    return { _tag: "Released" } as const;
   }).pipe(
+    Effect.flatMap((status: OutputLockReleaseStatus) =>
+      status._tag === "OwnershipChanged"
+        ? Effect.logWarning(
+            `Skipped release of output lock at '${lock.path}' because its ownership changed.`
+          )
+        : Effect.void
+    ),
     Effect.catchAll(failure =>
       Effect.logWarning(
-        `Failed to release output lock at '${lockDir}': ${failure.message}. ` +
-          `The next run will reclaim it via the stale-PID probe.`
+        `Failed to release output lock at '${lock.path}': ${failure.message}.`
       )
     )
   );
@@ -278,8 +436,8 @@ export const releaseOutputLock = (lockDir: string): Effect.Effect<void> =>
  *
  * Cheap and idempotent: if the output directory does not exist (first run)
  * or contains no orphans, the sweep is a no-op. The current lock dir
- * (`.typeweaver-lock`) is preserved — only the atomic-write artifacts
- * (`.typeweaver-XXXX`) are pruned.
+ * (`.typeweaver-lock`) and stale-ownership fences are preserved — only the
+ * atomic-write artifacts (`.typeweaver-XXXX`) are pruned.
  *
  * Best-effort: a failing `rm` (e.g. `EACCES` on crash debris owned by
  * another user) is demoted to a WARN log — an unremovable orphan must not
@@ -311,7 +469,7 @@ const sweepOrphanTempdirsAt = (directory: string): void => {
     if (!entry.isDirectory()) {
       continue;
     }
-    if (entry.name === LOCK_DIR_NAME) {
+    if (isOutputLockArtifact(entry.name)) {
       continue;
     }
     const entryPath = path.join(directory, entry.name);

@@ -2,6 +2,7 @@ export { ConcurrentGenerationError } from "./ConcurrentGenerationError.js";
 export { ConfigModuleEvaluationError } from "./ConfigModuleEvaluationError.js";
 export { InvalidConfigExportError } from "./InvalidConfigExportError.js";
 export type { InvalidConfigExportReason } from "./InvalidConfigExportError.js";
+export { InvalidConfigValueError } from "./InvalidConfigValueError.js";
 export { MissingGenerateOptionError } from "./MissingGenerateOptionError.js";
 export { OutputCleanError } from "./OutputCleanError.js";
 export { PluginLoadError } from "./PluginLoadError.js";
@@ -16,6 +17,7 @@ import { UnsupportedConfigExtensionError } from "./UnsupportedConfigExtensionErr
 import { UnsupportedTypeScriptConfigError } from "./UnsupportedTypeScriptConfigError.js";
 import type { ConcurrentGenerationError } from "./ConcurrentGenerationError.js";
 import type { ConfigModuleEvaluationError } from "./ConfigModuleEvaluationError.js";
+import type { InvalidConfigValueError } from "./InvalidConfigValueError.js";
 import type { MissingGenerateOptionError } from "./MissingGenerateOptionError.js";
 import type { OutputCleanError } from "./OutputCleanError.js";
 import type { PluginLoadError } from "./PluginLoadError.js";
@@ -24,6 +26,7 @@ import type { UnsafeCleanTargetError } from "./UnsafeCleanTargetError.js";
 export type ConfigError =
   | ConfigModuleEvaluationError
   | InvalidConfigExportError
+  | InvalidConfigValueError
   | UnsupportedConfigExtensionError
   | UnsupportedTypeScriptConfigError;
 
