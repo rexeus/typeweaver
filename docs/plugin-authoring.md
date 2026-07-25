@@ -281,11 +281,11 @@ paths throw `UnsafeGeneratedPathError`, which becomes a `PluginExecutionError` a
 If you prefer to write your plugin in Effect style — no `Effect.try` boundary, typed errors all the
 way — the context also exposes Effect-returning counterparts of the I/O helpers:
 
-| Helper                                     | Error channel                               |
-| ------------------------------------------ | ------------------------------------------- |
-| `writeFileEffect(path, content)`           | `UnsafeGeneratedPathError \| PlatformError` |
-| `renderTemplateEffect(templatePath, data)` | `TemplateRenderError \| PlatformError`      |
-| `addGeneratedFileEffect(path)`             | `UnsafeGeneratedPathError`                  |
+| Helper                                     | Error channel                                                          |
+| ------------------------------------------ | ---------------------------------------------------------------------- |
+| `writeFileEffect(path, content)`           | `GeneratedPathProbeError \| UnsafeGeneratedPathError \| PlatformError` |
+| `renderTemplateEffect(templatePath, data)` | `TemplateRenderError \| PlatformError`                                 |
+| `addGeneratedFileEffect(path)`             | `GeneratedPathProbeError \| UnsafeGeneratedPathError`                  |
 
 These provide the **same guarantees** as the sync helpers — path-traversal guard, atomic temp-file +
 rename replace, file-mode preservation, tracker registration, queued `Generated:` log line — but the

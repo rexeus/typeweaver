@@ -79,6 +79,9 @@ export const makeInMemoryFileSystem = (): InMemoryFileSystemHandle => {
     }
   };
 
+  const parentExists = (filePath: string): boolean =>
+    directories.has(path.posix.dirname(filePath));
+
   const state: InMemoryFsState = {
     readFile: filePath => {
       const bytes = files.get(normalize(filePath));
@@ -102,13 +105,12 @@ export const makeInMemoryFileSystem = (): InMemoryFileSystemHandle => {
 
   const overrides: Partial<FileSystem.FileSystem> = {
     makeDirectory: (dirPath, options) =>
-      Effect.sync(() => {
+      Effect.suspend(() => {
         const normalized = normalize(dirPath);
-        if (
-          options?.recursive !== true &&
-          !directories.has(path.posix.dirname(normalized))
-        ) {
-          throw notFound("makeDirectory", path.posix.dirname(normalized));
+        if (options?.recursive !== true && !parentExists(normalized)) {
+          return Effect.fail(
+            notFound("makeDirectory", path.posix.dirname(normalized))
+          );
         }
         directories.add(normalized);
         if (options?.recursive === true) {
@@ -116,20 +118,27 @@ export const makeInMemoryFileSystem = (): InMemoryFileSystemHandle => {
             directories.add(dir);
           }
         }
+        return Effect.void;
       }),
 
     writeFileString: (filePath, content) =>
-      Effect.sync(() => {
+      Effect.suspend(() => {
         const normalized = normalize(filePath);
+        if (!parentExists(normalized)) {
+          return Effect.fail(notFound("writeFileString", filePath));
+        }
         files.set(normalized, encoder.encode(content));
-        ensureParentDirectories(normalized);
+        return Effect.void;
       }),
 
     writeFile: (filePath, data) =>
-      Effect.sync(() => {
+      Effect.suspend(() => {
         const normalized = normalize(filePath);
+        if (!parentExists(normalized)) {
+          return Effect.fail(notFound("writeFile", filePath));
+        }
         files.set(normalized, Uint8Array.from(data));
-        ensureParentDirectories(normalized);
+        return Effect.void;
       }),
 
     readFileString: filePath =>
@@ -150,6 +159,30 @@ export const makeInMemoryFileSystem = (): InMemoryFileSystemHandle => {
           return Effect.fail(notFound("readFile", filePath));
         }
         return Effect.succeed(bytes);
+      }),
+
+    readDirectory: dirPath =>
+      Effect.suspend(() => {
+        const normalized = normalize(dirPath);
+        if (!directories.has(normalized)) {
+          return Effect.fail(notFound("readDirectory", dirPath));
+        }
+
+        const entries = new Set<string>();
+        for (const filePath of files.keys()) {
+          if (path.posix.dirname(filePath) === normalized) {
+            entries.add(path.posix.basename(filePath));
+          }
+        }
+        for (const directory of directories) {
+          if (
+            directory !== normalized &&
+            path.posix.dirname(directory) === normalized
+          ) {
+            entries.add(path.posix.basename(directory));
+          }
+        }
+        return Effect.succeed(Array.from(entries).sort());
       }),
 
     exists: filePath =>
@@ -181,6 +214,7 @@ export const makeInMemoryFileSystem = (): InMemoryFileSystemHandle => {
           for (const key of Array.from(files.keys())) {
             if (key.startsWith(prefix)) {
               files.delete(key);
+              fileModes.delete(key);
             }
           }
           for (const dir of Array.from(directories)) {
@@ -215,7 +249,14 @@ export const makeInMemoryFileSystem = (): InMemoryFileSystemHandle => {
         return Effect.void;
       }),
 
-    realPath: filePath => Effect.succeed(normalize(filePath)),
+    realPath: filePath =>
+      Effect.suspend(() => {
+        const normalized = normalize(filePath);
+        if (!files.has(normalized) && !directories.has(normalized)) {
+          return Effect.fail(notFound("realPath", filePath));
+        }
+        return Effect.succeed(normalized);
+      }),
 
     rename: (oldPath, newPath) =>
       Effect.suspend(() => {
@@ -225,6 +266,11 @@ export const makeInMemoryFileSystem = (): InMemoryFileSystemHandle => {
         if (bytes === undefined) {
           return Effect.fail(notFound("rename", oldPath));
         }
+        if (!parentExists(normalizedNew)) {
+          return Effect.fail(
+            notFound("rename", path.posix.dirname(normalizedNew))
+          );
+        }
         files.delete(normalizedOld);
         files.set(normalizedNew, bytes);
         const mode = fileModes.get(normalizedOld);
@@ -232,7 +278,6 @@ export const makeInMemoryFileSystem = (): InMemoryFileSystemHandle => {
         if (mode !== undefined) {
           fileModes.set(normalizedNew, mode);
         }
-        ensureParentDirectories(normalizedNew);
         return Effect.void;
       }),
 
@@ -277,17 +322,22 @@ export const makeInMemoryFileSystem = (): InMemoryFileSystemHandle => {
 
     makeTempDirectoryScoped: options =>
       Effect.acquireRelease(
-        Effect.sync(() => {
+        Effect.suspend(() => {
           tempCounter += 1;
           const prefix = options?.prefix ?? "tmp-";
           const baseDir = options?.directory
             ? normalize(options.directory)
             : "/.tmp";
+          if (options?.directory && !directories.has(baseDir)) {
+            return Effect.fail(
+              notFound("makeTempDirectoryScoped", options.directory)
+            );
+          }
           const tmpPath = `${baseDir}/${prefix}${tempCounter}`;
           directories.add(baseDir);
           directories.add(tmpPath);
           ensureParentDirectories(tmpPath);
-          return tmpPath;
+          return Effect.succeed(tmpPath);
         }),
         tmpPath =>
           Effect.sync(() => {

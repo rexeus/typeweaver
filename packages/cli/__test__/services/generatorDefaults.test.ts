@@ -35,6 +35,7 @@ describe("resolveTemplateDir", () => {
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
+        yield* fileSystem.makeDirectory(targetCandidate, { recursive: true });
         yield* fileSystem.writeFileString(
           path.join(targetCandidate, "Index.ejs"),
           "marker"
@@ -53,6 +54,7 @@ describe("resolveTemplateDir", () => {
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
+        yield* fileSystem.makeDirectory(targetCandidate, { recursive: true });
         yield* fileSystem.writeFileString(
           path.join(targetCandidate, "Index.ejs"),
           "marker"

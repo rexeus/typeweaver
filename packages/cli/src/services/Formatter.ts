@@ -1,33 +1,121 @@
-import fs from "node:fs";
 import path from "node:path";
-import { Effect } from "effect";
+import { FileSystem } from "@effect/platform";
+import { Effect, Either, Layer } from "effect";
+import {
+  FormatterExecutionError,
+  FormatterFileSystemError,
+  FormatterLoadError,
+} from "./errors/FormatterError.js";
+import type {
+  FormatterError,
+  FormatterFileSystemOperation,
+} from "./errors/FormatterError.js";
+import type { PlatformError } from "@effect/platform/Error";
 
-type FormatFn = (filename: string, source: string) => Promise<{ code: string }>;
+type FormatFn = (filename: string, source: string) => Promise<unknown>;
 
-const loadFormatter = (): Effect.Effect<FormatFn | undefined> =>
+type FormatterModuleLoader = () => Promise<unknown>;
+
+const loadOxfmtModule: FormatterModuleLoader = () => import("oxfmt");
+
+const isFormatFn = (value: unknown): value is FormatFn =>
+  typeof value === "function";
+
+const isMissingOptionalFormatter = (cause: unknown): boolean => {
+  if (typeof cause !== "object" || cause === null) {
+    return false;
+  }
+
+  const code = Reflect.get(cause, "code");
+  const message = Reflect.get(cause, "message");
+  if (
+    (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND") ||
+    typeof message !== "string"
+  ) {
+    return false;
+  }
+
+  return (
+    message.includes("Cannot find package 'oxfmt'") ||
+    message.includes('Cannot find package "oxfmt"') ||
+    message.includes("Cannot find module 'oxfmt'") ||
+    message.includes('Cannot find module "oxfmt"')
+  );
+};
+
+const loadFormatter = (
+  loadModule: FormatterModuleLoader
+): Effect.Effect<FormatFn | undefined, FormatterLoadError> =>
   Effect.gen(function* () {
     const loaded = yield* Effect.tryPromise({
-      try: () => import("oxfmt"),
-      catch: error => error,
+      try: loadModule,
+      catch: cause => cause,
     }).pipe(Effect.either);
 
-    if (loaded._tag === "Left") {
-      yield* Effect.logWarning(
-        "oxfmt not installed - skipping formatting. Install with: npm install -D oxfmt"
+    if (Either.isLeft(loaded)) {
+      if (isMissingOptionalFormatter(loaded.left)) {
+        yield* Effect.logWarning(
+          "oxfmt not installed - skipping formatting. Install with: npm install -D oxfmt"
+        );
+        return undefined;
+      }
+
+      return yield* Effect.fail(
+        new FormatterLoadError({
+          moduleName: "oxfmt",
+          cause: loaded.left,
+        })
       );
-      return undefined;
     }
 
-    return loaded.right.format;
+    if (typeof loaded.right !== "object" || loaded.right === null) {
+      return yield* Effect.fail(
+        new FormatterLoadError({
+          moduleName: "oxfmt",
+          cause: new TypeError("Module did not export an object"),
+        })
+      );
+    }
+
+    const format = Reflect.get(loaded.right, "format");
+    if (!isFormatFn(format)) {
+      return yield* Effect.fail(
+        new FormatterLoadError({
+          moduleName: "oxfmt",
+          cause: new TypeError("Module did not export a format function"),
+        })
+      );
+    }
+
+    return format;
   });
 
-const formatDirectory = async (
+const mapFileSystemError =
+  (operation: FormatterFileSystemOperation, targetPath: string) =>
+  (cause: PlatformError) =>
+    new FormatterFileSystemError({
+      operation,
+      path: targetPath,
+      cause,
+    });
+
+const formatDirectory: (
+  fileSystem: FileSystem.FileSystem,
   targetDir: string,
+  canonicalTargetDir: string,
   format: FormatFn
-): Promise<void> => {
-  const contents = fs
-    .readdirSync(targetDir, { withFileTypes: true })
-    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+) => Effect.Effect<void, FormatterError> = Effect.fn(
+  "typeweaver.Formatter.formatDirectory"
+)(function* (
+  fileSystem: FileSystem.FileSystem,
+  targetDir: string,
+  canonicalTargetDir: string,
+  format: FormatFn
+) {
+  const contents = yield* fileSystem.readDirectory(targetDir).pipe(
+    Effect.mapError(mapFileSystemError("readDirectory", targetDir)),
+    Effect.map(entries => entries.sort())
+  );
 
   for (const content of contents) {
     // Skip atomic-write tempdirs and the lockfile sentinel — both are
@@ -35,56 +123,120 @@ const formatDirectory = async (
     // into them would re-read/rewrite in-flight content from another
     // run (`.typeweaver-XXXX/generated.tmp`) or the live lockfile
     // metadata (`.typeweaver-lock/info.json`).
-    if (content.name.startsWith(".typeweaver-")) {
+    if (content.startsWith(".typeweaver-")) {
       continue;
     }
 
-    if (content.isFile()) {
-      const filePath = path.join(targetDir, content.name);
-      const unformatted = fs.readFileSync(filePath, "utf8");
-      const { code } = await format(filePath, unformatted);
-      fs.writeFileSync(filePath, code);
-    } else if (content.isDirectory()) {
-      await formatDirectory(path.join(targetDir, content.name), format);
+    const filePath = path.join(targetDir, content);
+    const canonicalFilePath = yield* fileSystem
+      .realPath(filePath)
+      .pipe(Effect.mapError(mapFileSystemError("realPath", filePath)));
+    if (canonicalFilePath !== path.join(canonicalTargetDir, content)) {
+      continue;
+    }
+
+    const info = yield* fileSystem
+      .stat(filePath)
+      .pipe(Effect.mapError(mapFileSystemError("stat", filePath)));
+
+    if (info.type === "File") {
+      const unformatted = yield* fileSystem
+        .readFileString(filePath)
+        .pipe(Effect.mapError(mapFileSystemError("readFileString", filePath)));
+      const formatted = yield* Effect.tryPromise({
+        try: () => format(filePath, unformatted),
+        catch: cause => new FormatterExecutionError({ filePath, cause }),
+      });
+      if (typeof formatted !== "object" || formatted === null) {
+        return yield* Effect.fail(
+          new FormatterExecutionError({
+            filePath,
+            cause: new TypeError("Formatter did not return an object"),
+          })
+        );
+      }
+      const code = Reflect.get(formatted, "code");
+      if (typeof code !== "string") {
+        return yield* Effect.fail(
+          new FormatterExecutionError({
+            filePath,
+            cause: new TypeError("Formatter did not return a string code"),
+          })
+        );
+      }
+      yield* fileSystem
+        .writeFileString(filePath, code)
+        .pipe(Effect.mapError(mapFileSystemError("writeFileString", filePath)));
+    } else if (info.type === "Directory") {
+      yield* formatDirectory(fileSystem, filePath, canonicalFilePath, format);
     }
   }
-};
+});
 
 const formatOutputDir = (
+  fileSystem: FileSystem.FileSystem,
+  loadModule: FormatterModuleLoader,
   outputDir: string,
   startDir?: string
-): Effect.Effect<void> =>
+): Effect.Effect<void, FormatterError> =>
   Effect.gen(function* () {
-    const format = yield* loadFormatter();
+    const format = yield* loadFormatter(loadModule);
     if (format === undefined) {
       return;
     }
     const targetDir = startDir ?? outputDir;
-    // The walk can reject (fs errors, oxfmt throwing on malformed input).
-    // Both indicate generator bugs or a corrupted output tree — there is
-    // no recovery path here, so the failure is explicitly promoted to a
-    // defect rather than silently relying on `Effect.promise` semantics.
-    yield* Effect.tryPromise(() => formatDirectory(targetDir, format)).pipe(
-      Effect.orDie
-    );
+    const canonicalTargetDir = yield* fileSystem
+      .realPath(targetDir)
+      .pipe(Effect.mapError(mapFileSystemError("realPath", targetDir)));
+    yield* formatDirectory(fileSystem, targetDir, canonicalTargetDir, format);
   });
+
+type FormatterShape = {
+  readonly format: (
+    outputDir: string,
+    startDir?: string
+  ) => Effect.Effect<void, FormatterError>;
+};
+
+const makeFormatter = (
+  fileSystem: FileSystem.FileSystem,
+  loadModule: FormatterModuleLoader
+): FormatterShape => ({
+  format: (outputDir, startDir) =>
+    formatOutputDir(fileSystem, loadModule, outputDir, startDir),
+});
 
 /**
  * Effect-native `oxfmt` facade. The missing-tool warning routes through
  * `Effect.logWarning` so it lands in the same logger pipeline as the rest
- * of the run (ADR 0006), and the recursive filesystem walk is wrapped in
- * `Effect.promise` so callers compose it like any other effect.
+ * of the run (ADR 0006). Directory walking and file reads/writes use the
+ * platform FileSystem service.
  *
- * Filesystem failures (read/write/readdir) propagate as defects — the
- * formatter is best-effort and has no recovery path.
+ * A genuinely missing optional `oxfmt` package is a documented no-op.
+ * Package-load failures, formatter rejections, and filesystem failures remain
+ * in the typed `FormatterError` channel.
  */
 export class Formatter extends Effect.Service<Formatter>()(
   "typeweaver/Formatter",
   {
-    succeed: {
-      format: (outputDir: string, startDir?: string): Effect.Effect<void> =>
-        formatOutputDir(outputDir, startDir),
-    },
+    effect: Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      return makeFormatter(fileSystem, loadOxfmtModule);
+    }),
     accessors: true,
   }
 ) {}
+
+/**
+ * Test seam for deterministic module-load and formatter-failure scenarios.
+ * Production uses `Formatter.Default`.
+ */
+export const formatterLayerWith = (
+  loadModule: FormatterModuleLoader
+): Layer.Layer<Formatter, never, FileSystem.FileSystem> =>
+  Layer.effect(
+    Formatter,
+    Effect.map(FileSystem.FileSystem, fileSystem =>
+      Formatter.make(makeFormatter(fileSystem, loadModule))
+    )
+  );

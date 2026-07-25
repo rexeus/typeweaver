@@ -9,11 +9,13 @@ import { UnsafeCleanTargetError } from "../errors/UnsafeCleanTargetError.js";
  */
 export type CleanTargetFs = {
   readonly exists: (probePath: string) => boolean;
+  readonly readFileString: (probePath: string) => string;
   readonly realPath: (probePath: string) => string;
 };
 
 const defaultCleanTargetFs: CleanTargetFs = {
   exists: probePath => fs.existsSync(probePath),
+  readFileString: probePath => fs.readFileSync(probePath, "utf8"),
   realPath: probePath => fs.realpathSync.native(probePath),
 };
 
@@ -46,19 +48,25 @@ const fileOnlyWorkspaceMarkers = [
   "rush.json",
 ] as const;
 
-const hasWorkspacesField = (packageJsonPath: string): boolean => {
+const hasWorkspacesField = (
+  packageJsonPath: string,
+  fileSystem: CleanTargetFs
+): boolean => {
   try {
-    const contents = fs.readFileSync(packageJsonPath, "utf8");
+    const contents = fileSystem.readFileString(packageJsonPath);
     const parsed: unknown = JSON.parse(contents);
     if (typeof parsed !== "object" || parsed === null) {
       return false;
     }
 
     return Boolean((parsed as { workspaces?: unknown }).workspaces);
-  } catch {
+  } catch (error) {
     // A malformed package.json does not make a directory a workspace root
     // for the purposes of this guard. Treat parse failure as "no marker".
-    return false;
+    if (error instanceof SyntaxError) {
+      return false;
+    }
+    throw error;
   }
 };
 
@@ -78,7 +86,7 @@ const hasWorkspaceMarker = (
     return false;
   }
 
-  return hasWorkspacesField(packageJsonPath);
+  return hasWorkspacesField(packageJsonPath, fileSystem);
 };
 
 const canonicalizePathForContainment = (

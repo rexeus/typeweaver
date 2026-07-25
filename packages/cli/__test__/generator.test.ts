@@ -611,6 +611,7 @@ describe("Generator clean safety", () => {
 
     const fakeFs: CleanTargetFs = {
       exists: probePath => knownPaths.has(probePath),
+      readFileString: () => "{}",
       realPath: probePath => probePath,
     };
 

@@ -1,3 +1,4 @@
+export { CleanTargetInspectionError } from "./CleanTargetInspectionError.js";
 export { ConcurrentGenerationError } from "./ConcurrentGenerationError.js";
 export { ConfigModuleEvaluationError } from "./ConfigModuleEvaluationError.js";
 export { InvalidConfigExportError } from "./InvalidConfigExportError.js";
@@ -5,6 +6,8 @@ export type { InvalidConfigExportReason } from "./InvalidConfigExportError.js";
 export { InvalidConfigValueError } from "./InvalidConfigValueError.js";
 export { MissingGenerateOptionError } from "./MissingGenerateOptionError.js";
 export { OutputCleanError } from "./OutputCleanError.js";
+export { OutputLockError } from "./OutputLockError.js";
+export type { OutputLockOperation } from "./OutputLockError.js";
 export { PluginLoadError } from "./PluginLoadError.js";
 export type { PluginLoadAttempt } from "./PluginLoadError.js";
 export { UnsafeCleanTargetError } from "./UnsafeCleanTargetError.js";

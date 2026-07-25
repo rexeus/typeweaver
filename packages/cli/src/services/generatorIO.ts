@@ -3,23 +3,40 @@ import fs from "node:fs";
 import path from "node:path";
 import { FileSystem } from "@effect/platform";
 import { Effect } from "effect";
-import { ConcurrentGenerationError } from "../errors/ConcurrentGenerationError.js";
-import { OutputCleanError } from "../errors/OutputCleanError.js";
-import { UnsafeCleanTargetError } from "../errors/UnsafeCleanTargetError.js";
-import { assertSafeCleanTarget } from "./cleanTargetGuard.js";
+import {
+  CleanTargetInspectionError,
+  ConcurrentGenerationError,
+  OutputCleanError,
+  OutputLockError,
+  UnsafeCleanTargetError,
+} from "../errors/index.js";
+import {
+  assertSafeCleanTarget,
+  assertSafeCleanTargetWith,
+} from "./cleanTargetGuard.js";
+import type { CleanTargetFs } from "./cleanTargetGuard.js";
 import type { PlatformError } from "@effect/platform/Error";
 
-const isUnsafeCleanTargetError = (
-  error: unknown
-): error is UnsafeCleanTargetError =>
-  typeof error === "object" &&
-  error !== null &&
-  (error as { readonly _tag?: unknown })._tag === "UnsafeCleanTargetError";
+const isExpectedNodeSystemError = (error: unknown): boolean => {
+  const code = errnoCode(error);
+  if (code === undefined || !(error instanceof Error)) {
+    return false;
+  }
+
+  // Node filesystem errors carry the failing syscall and/or a numeric errno.
+  // This structural check covers platform-specific libuv codes (for example
+  // EISDIR) without misclassifying arbitrary application errors that merely
+  // happen to expose a string `code`.
+  return (
+    ("syscall" in error && typeof error.syscall === "string") ||
+    ("errno" in error && typeof error.errno === "number")
+  );
+};
 
 /**
- * Effect-wrapped output-target check. Tagged `UnsafeCleanTargetError` is
- * surfaced on the failure channel; any other thrown error escapes as a
- * defect (programming bug). Pass `inputFile` only when the clean step will
+ * Effect-wrapped output-target check. Safety violations and expected Node
+ * filesystem probe errors are surfaced on the failure channel; unexpected
+ * throws remain defects. Pass `inputFile` only when the clean step will
  * run — the containment rule guards against cleaning the spec source, and
  * does not apply to no-clean runs.
  *
@@ -35,13 +52,41 @@ export const assertSafeCleanTargetEffect = (
   outputDir: string,
   currentWorkingDirectory: string,
   inputFile?: string
-): Effect.Effect<void, UnsafeCleanTargetError> =>
+): Effect.Effect<void, UnsafeCleanTargetError | CleanTargetInspectionError> =>
   Effect.try({
     try: () =>
       assertSafeCleanTarget(outputDir, currentWorkingDirectory, inputFile),
     catch: error => {
-      if (isUnsafeCleanTargetError(error)) {
+      if (error instanceof UnsafeCleanTargetError) {
         return error;
+      }
+      if (isExpectedNodeSystemError(error)) {
+        return new CleanTargetInspectionError({ outputDir, cause: error });
+      }
+      throw error;
+    },
+  });
+
+export const assertSafeCleanTargetEffectWith = (
+  outputDir: string,
+  currentWorkingDirectory: string,
+  fileSystem: CleanTargetFs,
+  inputFile?: string
+): Effect.Effect<void, UnsafeCleanTargetError | CleanTargetInspectionError> =>
+  Effect.try({
+    try: () =>
+      assertSafeCleanTargetWith(
+        outputDir,
+        currentWorkingDirectory,
+        fileSystem,
+        inputFile
+      ),
+    catch: error => {
+      if (error instanceof UnsafeCleanTargetError) {
+        return error;
+      }
+      if (isExpectedNodeSystemError(error)) {
+        return new CleanTargetInspectionError({ outputDir, cause: error });
       }
       throw error;
     },
@@ -89,7 +134,12 @@ export const cleanOutputDirPreservingLock = (
         });
       }
     },
-    catch: cause => new OutputCleanError({ outputDir, cause }),
+    catch: cause => {
+      if (isExpectedNodeSystemError(cause)) {
+        return new OutputCleanError({ outputDir, cause });
+      }
+      throw cause;
+    },
   });
 
 export const ensureOutputDirectories = (params: {
@@ -189,8 +239,15 @@ const readLockInfo = (lockDir: string): LockInfo | undefined => {
       inputFile: typeof inputFile === "string" ? inputFile : "",
       ...(ownerToken === undefined ? {} : { ownerToken }),
     };
-  } catch {
-    return undefined;
+  } catch (error) {
+    if (
+      error instanceof SyntaxError ||
+      errnoCode(error) === "ENOENT" ||
+      errnoCode(error) === "ENOTDIR"
+    ) {
+      return undefined;
+    }
+    throw error;
   }
 };
 
@@ -319,7 +376,7 @@ export const acquireOutputLockWith = (
     readonly inputFile: string;
   },
   hooks: OutputLockAcquisitionHooks
-): Effect.Effect<OutputLock, ConcurrentGenerationError> =>
+): Effect.Effect<OutputLock, ConcurrentGenerationError | OutputLockError> =>
   Effect.try({
     try: () => {
       const lockDir = path.join(params.outputDir, LOCK_DIR_NAME);
@@ -383,6 +440,14 @@ export const acquireOutputLockWith = (
       if (error instanceof ConcurrentGenerationError) {
         return error;
       }
+      if (isExpectedNodeSystemError(error)) {
+        return new OutputLockError({
+          outputDir: params.outputDir,
+          lockPath: path.join(params.outputDir, LOCK_DIR_NAME),
+          operation: "acquire",
+          cause: error,
+        });
+      }
       throw error;
     },
   });
@@ -390,7 +455,7 @@ export const acquireOutputLockWith = (
 export const acquireOutputLock = (params: {
   readonly outputDir: string;
   readonly inputFile: string;
-}): Effect.Effect<OutputLock, ConcurrentGenerationError> =>
+}): Effect.Effect<OutputLock, ConcurrentGenerationError | OutputLockError> =>
   acquireOutputLockWith(params, NO_OUTPUT_LOCK_HOOKS);
 
 /**
@@ -399,20 +464,35 @@ export const acquireOutputLock = (params: {
  * the lock) is a no-op rather than a failure.
  *
  * Release removes the directory only when its published token still
- * matches the acquired handle. A failing release is demoted to a WARN log
- * instead of masking the pipeline's own outcome.
+ * matches the acquired handle. This strict operation retains expected
+ * filesystem failures as `OutputLockError`.
  */
-export const releaseOutputLock = (lock: OutputLock): Effect.Effect<void> =>
-  Effect.try(() => {
-    if (!fs.existsSync(lock.path)) {
-      return { _tag: "AlreadyAbsent" } as const;
-    }
-    const holder = readLockInfo(lock.path);
-    if (holder?.ownerToken !== lock.ownerToken) {
-      return { _tag: "OwnershipChanged" } as const;
-    }
-    fs.rmSync(lock.path, { recursive: true, force: true });
-    return { _tag: "Released" } as const;
+export const releaseOutputLockStrict = (
+  lock: OutputLock
+): Effect.Effect<void, OutputLockError> =>
+  Effect.try({
+    try: () => {
+      if (!fs.existsSync(lock.path)) {
+        return { _tag: "AlreadyAbsent" } as const;
+      }
+      const holder = readLockInfo(lock.path);
+      if (holder?.ownerToken !== lock.ownerToken) {
+        return { _tag: "OwnershipChanged" } as const;
+      }
+      fs.rmSync(lock.path, { recursive: true, force: true });
+      return { _tag: "Released" } as const;
+    },
+    catch: cause => {
+      if (isExpectedNodeSystemError(cause)) {
+        return new OutputLockError({
+          outputDir: path.dirname(lock.path),
+          lockPath: lock.path,
+          operation: "release",
+          cause,
+        });
+      }
+      throw cause;
+    },
   }).pipe(
     Effect.flatMap((status: OutputLockReleaseStatus) =>
       status._tag === "OwnershipChanged"
@@ -420,10 +500,19 @@ export const releaseOutputLock = (lock: OutputLock): Effect.Effect<void> =>
             `Skipped release of output lock at '${lock.path}' because its ownership changed.`
           )
         : Effect.void
-    ),
+    )
+  );
+
+/**
+ * Finalizer-safe release policy. Generator cleanup cannot add a typed error
+ * channel, so the strict operation is deliberately downgraded to a warning
+ * here rather than masking the pipeline's own outcome.
+ */
+export const releaseOutputLock = (lock: OutputLock): Effect.Effect<void> =>
+  releaseOutputLockStrict(lock).pipe(
     Effect.catchAll(failure =>
       Effect.logWarning(
-        `Failed to release output lock at '${lock.path}': ${failure.message}.`
+        `Failed to release output lock at '${lock.path}': ${failure.message}`
       )
     )
   );
@@ -461,8 +550,11 @@ const sweepOrphanTempdirsAt = (directory: string): void => {
   let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(directory, { withFileTypes: true });
-  } catch {
-    return;
+  } catch (error) {
+    if (errnoCode(error) === "ENOENT") {
+      return;
+    }
+    throw error;
   }
 
   for (const entry of entries) {

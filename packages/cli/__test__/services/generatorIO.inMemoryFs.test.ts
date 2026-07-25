@@ -52,6 +52,7 @@ describe("generatorIO against InMemoryFileSystem", () => {
       yield* fileSystem.makeDirectory("/project/generated", {
         recursive: true,
       });
+      yield* fileSystem.makeDirectory("/project/generated/spec");
       yield* fileSystem.writeFileString(
         "/project/generated/spec/spec.d.ts",
         "export declare const spec: unknown;\n"
@@ -68,6 +69,7 @@ describe("generatorIO against InMemoryFileSystem", () => {
   test("writeFileString followed by readFileString returns the original content", async () => {
     const program = Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
+      yield* fileSystem.makeDirectory("/project", { recursive: true });
       yield* fileSystem.writeFileString(
         "/project/spec.d.ts",
         "export declare const spec: SpecDefinition;\n"

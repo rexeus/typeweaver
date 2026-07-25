@@ -29,6 +29,12 @@ path, and `UnsafeCleanTargetError.details` carries only the fields required by i
 generator's `GenerateFailure` type is derived from the actual Effect error channel so cleanup
 failures cannot silently drift out of the public contract.
 
+Expected formatter and filesystem failures now stay on Effect's typed error channel. Formatter
+module loading, formatting, output traversal, clean-target inspection, output-lock I/O, and
+generated-path probes expose dedicated tagged errors; unexpected programming failures remain
+defects. The test-only in-memory filesystem follows the same missing-path, parent-directory,
+rename, realpath, directory-listing, and scoped-temp semantics as the Node filesystem layer.
+
 The spec authoring API (`defineSpec`, `defineOperation`, `defineResponse`) and Zod schemas are
 unchanged — existing specs keep working byte-for-byte.
 

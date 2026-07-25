@@ -1,6 +1,7 @@
 import path from "node:path";
 import { Effect } from "effect";
 import {
+  GeneratedPathProbeError,
   TemplateRenderError,
   UnsafeGeneratedPathError,
 } from "../../errors/index.js";
@@ -16,7 +17,8 @@ export type { FileSystem } from "@effect/platform";
  * Narrowed PathSafety surface: a sync function that validates a requested
  * generated path against path-traversal/symlink-escape attacks and returns
  * the resolved absolute + project-relative pair. Production wiring uses
- * `livePathSafetyShape`; tests can substitute a pure stand-in.
+ * `livePathSafetyShape`; tests can substitute a pure stand-in. Implementations
+ * may throw `UnsafeGeneratedPathError` or `GeneratedPathProbeError`.
  */
 export type PathSafetyShape = {
   readonly validateGeneratedPath: (params: {
@@ -34,8 +36,9 @@ export type TemplateRendererShape = {
 
 /**
  * Production `PathSafetyShape`: the sync path-traversal guard, shared with
- * the Effect-native `PathSafety` service. Throws `UnsafeGeneratedPathError`,
- * which the surrounding `Effect.try` in `Plugin.generate` observes directly.
+ * the Effect-native `PathSafety` service. Throws `UnsafeGeneratedPathError`
+ * for policy violations and `GeneratedPathProbeError` for recognized Node
+ * filesystem failures.
  */
 export const livePathSafetyShape: PathSafetyShape = {
   validateGeneratedPath: params =>
@@ -55,9 +58,9 @@ export const liveTemplateRendererShape: TemplateRendererShape = {
 };
 
 /**
- * Lift the sync path-safety guard into the Effect error channel. Anything
- * other than `UnsafeGeneratedPathError` is a programming bug and escapes
- * as a defect — mirroring the `PathSafety` service.
+ * Lift the sync path-safety guard into the Effect error channel.
+ * `UnsafeGeneratedPathError` and `GeneratedPathProbeError` are expected;
+ * anything else escapes as a defect, mirroring the `PathSafety` service.
  */
 const validateGeneratedPathEffect = (
   pathSafety: PathSafetyShape,
@@ -65,11 +68,17 @@ const validateGeneratedPathEffect = (
     readonly outputDir: string;
     readonly requestedPath: string;
   }
-): Effect.Effect<SafeGeneratedFilePath, UnsafeGeneratedPathError> =>
+): Effect.Effect<
+  SafeGeneratedFilePath,
+  GeneratedPathProbeError | UnsafeGeneratedPathError
+> =>
   Effect.try({
     try: () => pathSafety.validateGeneratedPath(params),
     catch: error => {
-      if (error instanceof UnsafeGeneratedPathError) {
+      if (
+        error instanceof GeneratedPathProbeError ||
+        error instanceof UnsafeGeneratedPathError
+      ) {
         return error;
       }
       throw error;
@@ -137,14 +146,17 @@ export type EffectContextIO = {
   readonly writeFileEffect: (
     relativePath: string,
     content: string
-  ) => Effect.Effect<void, UnsafeGeneratedPathError | PlatformError>;
+  ) => Effect.Effect<
+    void,
+    GeneratedPathProbeError | UnsafeGeneratedPathError | PlatformError
+  >;
   readonly renderTemplateEffect: (
     templatePath: string,
     data: unknown
   ) => Effect.Effect<string, TemplateRenderError | PlatformError>;
   readonly addGeneratedFileEffect: (
     relativePath: string
-  ) => Effect.Effect<void, UnsafeGeneratedPathError>;
+  ) => Effect.Effect<void, GeneratedPathProbeError | UnsafeGeneratedPathError>;
 };
 
 /**
@@ -175,6 +187,8 @@ export const makeEffectContextIO = (config: {
           content
         ).pipe(
           Effect.tap(() =>
+            // Trusted in-memory tracker mutation after the typed filesystem
+            // write succeeded; no user callback or operational I/O runs here.
             Effect.sync(() => config.trackWrite(safePath.generatedPath))
           )
         )

@@ -71,6 +71,9 @@ describe("Effect-native plugin context surface against InMemoryFileSystem", () =
     await Effect.runPromise(
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
+        yield* fileSystem.makeDirectory("/project/generated/todo", {
+          recursive: true,
+        });
         yield* fileSystem.writeFileString(
           "/project/generated/todo/GetTodoClient.ts",
           "export const client = false;\n"
@@ -117,6 +120,9 @@ describe("Effect-native plugin context surface against InMemoryFileSystem", () =
     await Effect.runPromise(
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
+        yield* fileSystem.makeDirectory("/project/templates", {
+          recursive: true,
+        });
         yield* fileSystem.writeFileString(
           "/project/templates/Greeting.ejs",
           "Hello <%= name %>!"
@@ -149,6 +155,9 @@ describe("Effect-native plugin context surface against InMemoryFileSystem", () =
     await Effect.runPromise(
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
+        yield* fileSystem.makeDirectory("/project/templates", {
+          recursive: true,
+        });
         yield* fileSystem.writeFileString(
           "/project/templates/Broken.ejs",
           "<%= callsSomethingUndefined() %>"

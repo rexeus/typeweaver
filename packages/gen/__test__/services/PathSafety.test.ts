@@ -1,13 +1,14 @@
 import { it } from "@effect/vitest";
 import { Cause, Effect, Exit, Option } from "effect";
 import { describe, expect, test } from "vitest";
+import { GeneratedPathProbeError } from "../../src/errors/GeneratedPathProbeError.js";
 import { UnsafeGeneratedPathError } from "../../src/errors/UnsafeGeneratedPathError.js";
 import { resolveSafeGeneratedFilePath } from "../../src/helpers/pathSafety.js";
-import { PathSafety } from "../../src/services/PathSafety.js";
+import { makePathSafety, PathSafety } from "../../src/services/PathSafety.js";
 import type { PathSafetyFs } from "../../src/helpers/pathSafety.js";
 
 const expectFailureWithReason = (
-  exit: Exit.Exit<unknown, UnsafeGeneratedPathError>,
+  exit: Exit.Exit<unknown, GeneratedPathProbeError | UnsafeGeneratedPathError>,
   reason: UnsafeGeneratedPathError["reason"]
 ): void => {
   expect(Exit.isFailure(exit)).toBe(true);
@@ -16,8 +17,16 @@ const expectFailureWithReason = (
   expect(Option.isSome(failure)).toBe(true);
   if (!Option.isSome(failure)) return;
   expect(failure.value).toBeInstanceOf(UnsafeGeneratedPathError);
+  if (!(failure.value instanceof UnsafeGeneratedPathError)) return;
   expect(failure.value.reason).toBe(reason);
 };
+
+const accessDeniedError = (): NodeJS.ErrnoException =>
+  Object.assign(new Error("permission denied"), {
+    code: "EACCES",
+    errno: -13,
+    syscall: "lstat",
+  });
 
 describe("PathSafety", () => {
   it.effect("returns a safe descriptor for a valid relative path", () =>
@@ -148,6 +157,98 @@ describe("PathSafety", () => {
       expect(result.fullPath.endsWith("fresh/entity.ts")).toBe(true);
     }).pipe(Effect.provide(PathSafety.Default))
   );
+
+  it.effect(
+    "exposes EACCES path probes as GeneratedPathProbeError without defects",
+    () => {
+      const cause = accessDeniedError();
+      const pathSafety = makePathSafety({
+        lstat: () => {
+          throw cause;
+        },
+      });
+
+      return Effect.gen(function* () {
+        const exit = yield* Effect.exit(
+          pathSafety.validateGeneratedPath({
+            outputDir: "/tmp/output",
+            requestedPath: "domain/entity.ts",
+          })
+        );
+
+        expect(Exit.isFailure(exit)).toBe(true);
+        if (!Exit.isFailure(exit)) return;
+
+        expect(Array.from(Cause.defects(exit.cause))).toEqual([]);
+
+        const failure = Cause.failureOption(exit.cause);
+        expect(Option.isSome(failure)).toBe(true);
+        if (!Option.isSome(failure)) return;
+
+        expect(failure.value).toBeInstanceOf(GeneratedPathProbeError);
+        if (!(failure.value instanceof GeneratedPathProbeError)) return;
+
+        expect(failure.value).toMatchObject({
+          _tag: "GeneratedPathProbeError",
+          operation: "lstat",
+          requestedPath: "domain/entity.ts",
+          probedPath: "/tmp/output",
+          code: "EACCES",
+          cause,
+        });
+      });
+    }
+  );
+
+  it.effect("keeps non-system path-probe throws as defects", () => {
+    const bug = new TypeError("broken path-safety adapter");
+    const pathSafety = makePathSafety({
+      lstat: () => {
+        throw bug;
+      },
+    });
+
+    return Effect.gen(function* () {
+      const exit = yield* Effect.exit(
+        pathSafety.validateGeneratedPath({
+          outputDir: "/tmp/output",
+          requestedPath: "domain/entity.ts",
+        })
+      );
+
+      expect(Exit.isFailure(exit)).toBe(true);
+      if (!Exit.isFailure(exit)) return;
+
+      expect(Option.isNone(Cause.failureOption(exit.cause))).toBe(true);
+      expect(Array.from(Cause.defects(exit.cause))).toEqual([bug]);
+    });
+  });
+
+  it.effect("keeps coded programming errors as defects", () => {
+    const bug = Object.assign(new TypeError("invalid path argument"), {
+      code: "ERR_INVALID_ARG_TYPE",
+    });
+    const pathSafety = makePathSafety({
+      lstat: () => {
+        throw bug;
+      },
+    });
+
+    return Effect.gen(function* () {
+      const exit = yield* Effect.exit(
+        pathSafety.validateGeneratedPath({
+          outputDir: "/tmp/output",
+          requestedPath: "domain/entity.ts",
+        })
+      );
+
+      expect(Exit.isFailure(exit)).toBe(true);
+      if (!Exit.isFailure(exit)) return;
+
+      expect(Option.isNone(Cause.failureOption(exit.cause))).toBe(true);
+      expect(Array.from(Cause.defects(exit.cause))).toEqual([bug]);
+    });
+  });
 
   test("rejects paths whose intermediate components are symlinks", () => {
     const outputDir = "/tmp/sandbox";

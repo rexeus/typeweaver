@@ -1,3 +1,4 @@
+import type { GeneratedPathProbeError } from "../errors/GeneratedPathProbeError.js";
 import type { TemplateRenderError } from "../errors/TemplateRenderError.js";
 import type { UnsafeGeneratedPathError } from "../errors/UnsafeGeneratedPathError.js";
 import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec.js";
@@ -143,7 +144,10 @@ export type GeneratorContext = PluginContext & {
   readonly writeFileEffect: (
     relativePath: string,
     content: string
-  ) => Effect.Effect<void, UnsafeGeneratedPathError | PlatformError>;
+  ) => Effect.Effect<
+    void,
+    GeneratedPathProbeError | UnsafeGeneratedPathError | PlatformError
+  >;
 
   /**
    * Effect-native counterpart of `renderTemplate`. Reads the template file
@@ -163,7 +167,7 @@ export type GeneratorContext = PluginContext & {
    */
   readonly addGeneratedFileEffect: (
     relativePath: string
-  ) => Effect.Effect<void, UnsafeGeneratedPathError>;
+  ) => Effect.Effect<void, GeneratedPathProbeError | UnsafeGeneratedPathError>;
 };
 
 /**

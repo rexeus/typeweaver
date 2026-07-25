@@ -135,6 +135,8 @@ const program = run(process.argv).pipe(
       return Effect.void;
     }
 
+    // Final runtime edge: stderr rendering must preserve the original Cause.
+    // A console failure is a broken process invariant, not recoverable I/O.
     return Effect.sync(() => {
       // eslint-disable-next-line no-console
       console.error(formatErrorForCli(cause));

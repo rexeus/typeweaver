@@ -71,6 +71,8 @@ export class ContextBuilder extends Effect.Service<ContextBuilder>()(
       const buildPluginContext = (
         params: PluginContextParams
       ): Effect.Effect<PluginContext> =>
+        // Pure builder/closure allocation over already-captured services; no
+        // filesystem operation or user callback runs inside this sync region.
         Effect.sync(() =>
           createPluginContextBuilder({
             pathSafety: livePathSafetyShape,
@@ -82,6 +84,8 @@ export class ContextBuilder extends Effect.Service<ContextBuilder>()(
       const buildGeneratorContext = (
         params: GeneratorContextParams
       ): Effect.Effect<BuiltGeneratorContext> =>
+        // Pure per-generation tracker and closure allocation. Expected I/O
+        // begins only when the returned context operations are executed.
         Effect.sync(() => {
           const builder = createPluginContextBuilder({
             pathSafety: livePathSafetyShape,

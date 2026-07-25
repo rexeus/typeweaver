@@ -155,6 +155,10 @@ If you imported the generator programmatically rather than through the CLI:
 - `GenerateFailure` is the canonical generator error union and is derived from
   `Generator.generate`'s Effect error channel. The incomplete duplicate `GenerationError` type was
   removed.
+- Expected operational failures remain typed rather than becoming Effect defects. Programmatic
+  callers can branch on formatter load/execution/filesystem errors, `CleanTargetInspectionError`,
+  `OutputLockError`, and `GeneratedPathProbeError`; the underlying cause and affected path or
+  operation are retained.
 
 ### 4. Spec authoring API: UNCHANGED
 

@@ -1,7 +1,11 @@
 import { Effect } from "effect";
+import { GeneratedPathProbeError } from "../errors/GeneratedPathProbeError.js";
 import { UnsafeGeneratedPathError } from "../errors/UnsafeGeneratedPathError.js";
 import { resolveSafeGeneratedFilePath } from "../helpers/pathSafety.js";
-import type { SafeGeneratedFilePath } from "../helpers/pathSafety.js";
+import type {
+  PathSafetyFs,
+  SafeGeneratedFilePath,
+} from "../helpers/pathSafety.js";
 
 export type { SafeGeneratedFilePath } from "../helpers/pathSafety.js";
 
@@ -12,31 +16,44 @@ export type { SafeGeneratedFilePath } from "../helpers/pathSafety.js";
  * existing sync `writeFile` path. This service exposes the same guarantees
  * to Effect-native callers without duplicating the security-critical logic.
  *
- * Anything other than `UnsafeGeneratedPathError` (e.g. filesystem `EACCES`)
- * becomes a defect — those failures are not recoverable at this boundary.
+ * Recognized Node filesystem failures (e.g. `EACCES`) are exposed as
+ * `GeneratedPathProbeError`; unexpected throws remain defects.
  */
+export const makePathSafety = (
+  fileSystem?: PathSafetyFs
+): {
+  readonly validateGeneratedPath: (params: {
+    readonly outputDir: string;
+    readonly requestedPath: string;
+  }) => Effect.Effect<
+    SafeGeneratedFilePath,
+    GeneratedPathProbeError | UnsafeGeneratedPathError
+  >;
+} => ({
+  validateGeneratedPath: params =>
+    Effect.try({
+      try: () =>
+        resolveSafeGeneratedFilePath(
+          params.outputDir,
+          params.requestedPath,
+          fileSystem
+        ),
+      catch: error => {
+        if (
+          error instanceof GeneratedPathProbeError ||
+          error instanceof UnsafeGeneratedPathError
+        ) {
+          return error;
+        }
+        throw error;
+      },
+    }),
+});
+
 export class PathSafety extends Effect.Service<PathSafety>()(
   "typeweaver/PathSafety",
   {
-    succeed: {
-      validateGeneratedPath: (params: {
-        readonly outputDir: string;
-        readonly requestedPath: string;
-      }): Effect.Effect<SafeGeneratedFilePath, UnsafeGeneratedPathError> =>
-        Effect.try({
-          try: () =>
-            resolveSafeGeneratedFilePath(
-              params.outputDir,
-              params.requestedPath
-            ),
-          catch: error => {
-            if (error instanceof UnsafeGeneratedPathError) {
-              return error;
-            }
-            throw error;
-          },
-        }),
-    },
+    succeed: makePathSafety(),
     accessors: true,
   }
 ) {}

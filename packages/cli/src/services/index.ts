@@ -1,6 +1,15 @@
 export { assertSafeCleanTarget } from "./cleanTargetGuard.js";
 export { ConfigLoader, getResolvedConfigPath } from "./ConfigLoader.js";
 export { Formatter } from "./Formatter.js";
+export {
+  FormatterExecutionError,
+  FormatterFileSystemError,
+  FormatterLoadError,
+} from "./errors/FormatterError.js";
+export type {
+  FormatterError,
+  FormatterFileSystemOperation,
+} from "./errors/FormatterError.js";
 export { Generator } from "./Generator.js";
 export type { GenerateFailure, GenerateParams } from "./generatorTypes.js";
 export { IndexFileGenerator } from "./IndexFileGenerator.js";

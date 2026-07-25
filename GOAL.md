@@ -161,7 +161,7 @@ progress log.
   - CI invokes the script;
   - the script and `pnpm typecheck` exit 0.
 
-- [ ] **8. Expected formatter and filesystem failures remain typed.**
+- [x] **8. Expected formatter and filesystem failures remain typed.**
 
   Operational formatter errors and expected in-memory/Node filesystem errors are represented in the
   typed failure channel. `orDie`/throwing `Effect.sync` is reserved for documented broken
@@ -579,6 +579,30 @@ evidence: The compiler inventory now includes all 124 publishable package test/t
           check are green. Independent Test-Mastery review found no blocker and confirmed the
           Query/Zod contracts were preserved.
 next: Criterion 8, keep expected formatter and filesystem failures in the typed Effect channel.
+```
+
+```text
+[iteration 8 | 2026-07-25]
+criterion: 8. Expected formatter and filesystem failures remain typed.
+before: Formatter missing-path and execution failures crossed `Effect.orDie` as UnknownException
+        defects; the in-memory FileSystem threw from makeDirectory and silently created parents
+        for writes/renames; path probes, clean-target inspection, and output-lock I/O either became
+        defects, contention, or swallowed errors. A fixed errno allowlist and indiscriminate clean
+        wrapping were additionally caught by the independent Effect review.
+change: Ported Formatter traversal to the platform FileSystem and added decoded load, execution,
+        and filesystem errors. Added GeneratedPathProbeError, CleanTargetInspectionError, and
+        OutputLockError while preserving unexpected throws as defects; split strict typed lock
+        release from its finalizer-safe warning policy. Aligned the in-memory adapter with Node for
+        directory listing, missing parents, rename, realpath, and scoped temp cleanup. Replaced the
+        errno allowlist with structural Node syscall/errno recognition and limited OutputCleanError
+        to those operational failures. Documented every remaining pure/runtime-edge Effect.sync.
+evidence: Shared Node/InMemory FileSystem contract 16/16; Formatter 8/8; generator I/O error suite
+          8/8; lock suite 11/11; PathSafety/context I/O 16/16. Complete CLI suite 294/294 and gen
+          suite 301/301; root typecheck, CLI/gen builds, Oxlint, Oxfmt, and git diff check green.
+          `rg "Effect\\.(orDie|sync)" packages/cli/src packages/gen/src` finds no orDie and only four
+          documented non-operational sync regions. Independent Effect, Test-Mastery, and TypeScript
+          reviews found no remaining blocker.
+next: Criterion 9, prove the built CLI process contract end to end.
 ```
 
 ## Stop conditions
