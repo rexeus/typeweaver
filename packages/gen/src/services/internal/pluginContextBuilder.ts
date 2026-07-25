@@ -134,9 +134,9 @@ export const liveSyncAtomicFileSystem: SyncAtomicFileSystem = {
 const writeFileViaTempReplaceWith = (
   fileSystem: SyncAtomicFileSystem,
   config: {
-    readonly safePath: SafeGeneratedFilePath;
     readonly content: string;
-    readonly onCommit: () => void;
+    readonly revalidateDestination: () => SafeGeneratedFilePath;
+    readonly onCommit: (generatedPath: string) => void;
   }
 ): void => {
   // Sync twin of `writeFileViaTempReplaceEffect` for the contractually
@@ -145,10 +145,9 @@ const writeFileViaTempReplaceWith = (
   // Every plugin write still funnels through
   // `pathSafety.validateGeneratedPath(...)`, so path traversal cannot
   // reach this surface.
-  const existingFileMode = fileSystem.getExistingFileMode(
-    config.safePath.fullPath
-  );
-  const destinationDir = path.dirname(config.safePath.fullPath);
+  const stagingPath = config.revalidateDestination();
+  const existingFileMode = fileSystem.getExistingFileMode(stagingPath.fullPath);
+  const destinationDir = path.dirname(stagingPath.fullPath);
   const tempDir = fileSystem.makeTempDirectory(
     path.join(destinationDir, ".typeweaver-")
   );
@@ -165,12 +164,17 @@ const writeFileViaTempReplaceWith = (
       fileSystem.chmod(tempFile, existingFileMode);
     }
 
+    // Re-probe immediately before publication. This rejects ancestor symlink
+    // swaps visible at check time and narrows the unavoidable race window of
+    // Node's pathname-based rename API.
+    const publishPath = config.revalidateDestination();
+
     // Both operations are synchronous: once rename publishes the destination,
     // record the write before any fallible cleanup can run. A cleanup-only
     // failure may still be reported, but it cannot leave a committed file
     // absent from the generated-file tracker and pending log queue.
-    fileSystem.rename(tempFile, config.safePath.fullPath);
-    config.onCommit();
+    fileSystem.rename(tempFile, publishPath.fullPath);
+    config.onCommit(publishPath.generatedPath);
   } catch (operationError) {
     try {
       fileSystem.removeDirectory(tempDir);
@@ -311,35 +315,38 @@ const createSyncContextIO = (
   params: GeneratorContextParams,
   deps: GeneratorContextDeps,
   tracker: GeneratedFilesTracker
-) => ({
-  writeFile: (relativePath: string, content: string): void => {
-    const safePath = deps.pathSafety.validateGeneratedPath({
-      outputDir: params.outputDir,
-      requestedPath: relativePath,
+) => {
+  const outputRoot = path.resolve(params.outputDir);
+  const validateDestination = (requestedPath: string) =>
+    deps.pathSafety.validateGeneratedPath({
+      outputDir: outputRoot,
+      requestedPath,
     });
-    fs.mkdirSync(path.dirname(safePath.fullPath), { recursive: true });
-    writeFileViaTempReplaceWith(deps.syncAtomicFileSystem, {
-      safePath,
-      content,
-      onCommit: () => tracker.recordWrite(safePath.generatedPath),
-    });
-  },
-  renderTemplate: (templatePath: string, data: TemplateData): string => {
-    const fullTemplatePath = path.isAbsolute(templatePath)
-      ? templatePath
-      : path.join(params.templateDir, templatePath);
-    const template = fs.readFileSync(fullTemplatePath, "utf8");
-    return deps.templateRenderer.render(template, data);
-  },
-  addGeneratedFile: (relativePath: string): void => {
-    const safePath = deps.pathSafety.validateGeneratedPath({
-      outputDir: params.outputDir,
-      requestedPath: relativePath,
-    });
-    tracker.add(safePath.generatedPath);
-  },
-  getGeneratedFiles: (): string[] => [...tracker.snapshot()],
-});
+
+  return {
+    writeFile: (relativePath: string, content: string): void => {
+      const safePath = validateDestination(relativePath);
+      fs.mkdirSync(path.dirname(safePath.fullPath), { recursive: true });
+      writeFileViaTempReplaceWith(deps.syncAtomicFileSystem, {
+        content,
+        revalidateDestination: () => validateDestination(relativePath),
+        onCommit: generatedPath => tracker.recordWrite(generatedPath),
+      });
+    },
+    renderTemplate: (templatePath: string, data: TemplateData): string => {
+      const fullTemplatePath = path.isAbsolute(templatePath)
+        ? templatePath
+        : path.join(params.templateDir, templatePath);
+      const template = fs.readFileSync(fullTemplatePath, "utf8");
+      return deps.templateRenderer.render(template, data);
+    },
+    addGeneratedFile: (relativePath: string): void => {
+      const safePath = validateDestination(relativePath);
+      tracker.add(safePath.generatedPath);
+    },
+    getGeneratedFiles: (): string[] => [...tracker.snapshot()],
+  };
+};
 
 const createEffectContextIO = (
   params: GeneratorContextParams,

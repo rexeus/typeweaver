@@ -4,7 +4,9 @@ import { it } from "@effect/vitest";
 import { Cause, Deferred, Effect, Exit, Fiber, Option, Ref } from "effect";
 import { describe, expect } from "vitest";
 import { GeneratedPathProbeError } from "../../../src/errors/GeneratedPathProbeError.js";
+import { UnsafeGeneratedPathError } from "../../../src/errors/UnsafeGeneratedPathError.js";
 import { makeEffectContextIO } from "../../../src/services/internal/pluginContextEffectIO.js";
+import type { PathSafetyShape } from "../../../src/services/internal/pluginContextEffectIO.js";
 
 const outputDir = "/project/generated";
 const generatedPath = "todo/GetTodoClient.ts";
@@ -44,6 +46,7 @@ const makeAtomicContextIO = (config: {
   readonly tempExists: Ref.Ref<boolean>;
   readonly cleanupCount: Ref.Ref<number>;
   readonly trackedWrites: string[];
+  readonly validateGeneratedPath?: PathSafetyShape["validateGeneratedPath"];
 }) =>
   makeEffectContextIO({
     fileSystem: FileSystem.makeNoop({
@@ -68,10 +71,12 @@ const makeAtomicContextIO = (config: {
       rename: config.rename,
     }),
     pathSafety: {
-      validateGeneratedPath: ({ requestedPath }) => ({
-        fullPath: `${outputDir}/${requestedPath}`,
-        generatedPath: requestedPath,
-      }),
+      validateGeneratedPath:
+        config.validateGeneratedPath ??
+        (({ requestedPath }) => ({
+          fullPath: `${outputDir}/${requestedPath}`,
+          generatedPath: requestedPath,
+        })),
     },
     templateRenderer: {
       render: () => "",
@@ -83,6 +88,50 @@ const makeAtomicContextIO = (config: {
   });
 
 describe("makeEffectContextIO failure channels", () => {
+  it.effect("revalidates the destination after staging and before rename", () =>
+    Effect.gen(function* () {
+      const unsafePath = new UnsafeGeneratedPathError({
+        requestedPath: generatedPath,
+        reason: "symlink-component",
+      });
+      const tempExists = yield* Ref.make(false);
+      const cleanupCount = yield* Ref.make(0);
+      const renameCount = yield* Ref.make(0);
+      const trackedWrites: string[] = [];
+      let validationCount = 0;
+      const contextIO = makeAtomicContextIO({
+        tempExists,
+        cleanupCount,
+        trackedWrites,
+        rename: () => Ref.update(renameCount, count => count + 1),
+        validateGeneratedPath: ({ requestedPath }) => {
+          validationCount += 1;
+          if (validationCount === 3) {
+            throw unsafePath;
+          }
+          return {
+            fullPath: `${outputDir}/${requestedPath}`,
+            generatedPath: requestedPath,
+          };
+        },
+      });
+
+      const exit = yield* Effect.exit(
+        contextIO.writeFileEffect(generatedPath, "generated")
+      );
+
+      expect(Exit.isFailure(exit)).toBe(true);
+      if (!Exit.isFailure(exit)) return;
+      expect(Array.from(Cause.defects(exit.cause))).toEqual([]);
+      expect(Cause.failureOption(exit.cause)).toEqual(Option.some(unsafePath));
+      expect(validationCount).toBe(3);
+      expect(yield* Ref.get(renameCount)).toBe(0);
+      expect(trackedWrites).toEqual([]);
+      expect(yield* Ref.get(tempExists)).toBe(false);
+      expect(yield* Ref.get(cleanupCount)).toBe(1);
+    })
+  );
+
   it.effect(
     "keeps EACCES path-probe failures in the typed channel without defects",
     () => {

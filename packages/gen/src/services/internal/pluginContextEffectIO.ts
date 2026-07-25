@@ -109,35 +109,53 @@ const getExistingFileModeEffect = (
  */
 const writeFileViaTempReplaceEffect = (
   fileSystem: FileSystem.FileSystem,
-  safePath: SafeGeneratedFilePath,
-  content: string,
-  trackWrite: (generatedPath: string) => void
-): Effect.Effect<void, PlatformError> =>
+  config: {
+    readonly safePath: SafeGeneratedFilePath;
+    readonly content: string;
+    readonly revalidateDestination: () => Effect.Effect<
+      SafeGeneratedFilePath,
+      GeneratedPathProbeError | UnsafeGeneratedPathError
+    >;
+    readonly trackWrite: (generatedPath: string) => void;
+  }
+): Effect.Effect<
+  void,
+  GeneratedPathProbeError | PlatformError | UnsafeGeneratedPathError
+> =>
   Effect.scoped(
     Effect.gen(function* () {
-      const destinationDir = path.dirname(safePath.fullPath);
+      const initialDestinationDir = path.dirname(config.safePath.fullPath);
+      yield* fileSystem.makeDirectory(initialDestinationDir, {
+        recursive: true,
+      });
+      const stagingPath = yield* config.revalidateDestination();
+      const destinationDir = path.dirname(stagingPath.fullPath);
       const existingFileMode = yield* getExistingFileModeEffect(
         fileSystem,
-        safePath.fullPath
+        stagingPath.fullPath
       );
-      yield* fileSystem.makeDirectory(destinationDir, { recursive: true });
       const tempDir = yield* fileSystem.makeTempDirectoryScoped({
         directory: destinationDir,
         prefix: ".typeweaver-",
       });
       const tempFile = path.join(tempDir, "generated.tmp");
-      yield* fileSystem.writeFileString(tempFile, content);
+      yield* fileSystem.writeFileString(tempFile, config.content);
       if (existingFileMode !== undefined) {
         yield* fileSystem.chmod(tempFile, existingFileMode);
       }
       yield* Effect.uninterruptible(
-        fileSystem.rename(tempFile, safePath.fullPath).pipe(
-          Effect.tap(() =>
+        Effect.gen(function* () {
+          // Re-probe immediately before publication. This rejects ancestor
+          // symlink swaps visible at check time and narrows the unavoidable
+          // race window of the pathname-based FileSystem.rename operation.
+          const publishPath = yield* config.revalidateDestination();
+          yield* fileSystem.rename(tempFile, publishPath.fullPath);
+          yield* Effect.sync(() =>
             // Rename publishes the new file. Tracking belongs to the same
             // commit section so interruption cannot expose an untracked file.
-            Effect.sync(() => trackWrite(safePath.generatedPath))
-          )
-        )
+            config.trackWrite(publishPath.generatedPath)
+          );
+        })
       );
     })
   );
@@ -180,44 +198,47 @@ export const makeEffectContextIO = (config: {
   readonly templateDir: string;
   readonly trackWrite: (generatedPath: string) => void;
   readonly trackGenerated: (generatedPath: string) => void;
-}): EffectContextIO => ({
-  writeFileEffect: (relativePath, content) =>
+}): EffectContextIO => {
+  const outputRoot = path.resolve(config.outputDir);
+  const validateDestination = (requestedPath: string) =>
     validateGeneratedPathEffect(config.pathSafety, {
-      outputDir: config.outputDir,
-      requestedPath: relativePath,
-    }).pipe(
-      Effect.flatMap(safePath =>
-        writeFileViaTempReplaceEffect(
-          config.fileSystem,
-          safePath,
-          content,
-          config.trackWrite
+      outputDir: outputRoot,
+      requestedPath,
+    });
+
+  return {
+    writeFileEffect: (relativePath, content) =>
+      validateDestination(relativePath).pipe(
+        Effect.flatMap(safePath =>
+          writeFileViaTempReplaceEffect(config.fileSystem, {
+            safePath,
+            content,
+            revalidateDestination: () => validateDestination(relativePath),
+            trackWrite: config.trackWrite,
+          })
         )
-      )
-    ),
+      ),
 
-  renderTemplateEffect: (templatePath, data) =>
-    Effect.gen(function* () {
-      const fullTemplatePath = path.isAbsolute(templatePath)
-        ? templatePath
-        : path.join(config.templateDir, templatePath);
+    renderTemplateEffect: (templatePath, data) =>
+      Effect.gen(function* () {
+        const fullTemplatePath = path.isAbsolute(templatePath)
+          ? templatePath
+          : path.join(config.templateDir, templatePath);
 
-      const template =
-        yield* config.fileSystem.readFileString(fullTemplatePath);
+        const template =
+          yield* config.fileSystem.readFileString(fullTemplatePath);
 
-      return yield* Effect.try({
-        try: () => config.templateRenderer.render(template, data),
-        catch: cause => new TemplateRenderError({ cause }),
-      });
-    }),
+        return yield* Effect.try({
+          try: () => config.templateRenderer.render(template, data),
+          catch: cause => new TemplateRenderError({ cause }),
+        });
+      }),
 
-  addGeneratedFileEffect: relativePath =>
-    validateGeneratedPathEffect(config.pathSafety, {
-      outputDir: config.outputDir,
-      requestedPath: relativePath,
-    }).pipe(
-      Effect.map(safePath => {
-        config.trackGenerated(safePath.generatedPath);
-      })
-    ),
-});
+    addGeneratedFileEffect: relativePath =>
+      validateDestination(relativePath).pipe(
+        Effect.map(safePath => {
+          config.trackGenerated(safePath.generatedPath);
+        })
+      ),
+  };
+};

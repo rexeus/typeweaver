@@ -4,6 +4,7 @@ import path from "node:path";
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { FileSystem } from "@effect/platform";
 import { afterEach, describe, expect, test } from "vitest";
+import { UnsafeGeneratedPathError } from "../../../src/errors/UnsafeGeneratedPathError.js";
 import { MissingCanonicalResponseError } from "../../../src/plugins/errors/MissingCanonicalResponseError.js";
 import {
   createPluginContextBuilder,
@@ -729,6 +730,88 @@ describe("createPluginContextBuilder normalized output paths", () => {
       "export const client = true;\n"
     );
     expect(generatorContext.getGeneratedFiles()).toEqual([generatedFile]);
+  });
+});
+
+describe("createPluginContextBuilder destination revalidation", () => {
+  test("revalidates the destination after staging and before sync rename", () => {
+    const outputDir = aTempDir();
+    const generatedFile = "todo/GetTodoClient.ts";
+    const generatedFilePath = nativeGeneratedFilePath(outputDir, generatedFile);
+    const unsafePath = new UnsafeGeneratedPathError({
+      requestedPath: generatedFile,
+      reason: "symlink-component",
+    });
+    let validationCount = 0;
+    const builder = createPluginContextBuilder({
+      ...realPluginContextBuilderDeps,
+      pathSafety: {
+        validateGeneratedPath: params => {
+          validationCount += 1;
+          if (validationCount === 3) {
+            throw unsafePath;
+          }
+          return livePathSafetyShape.validateGeneratedPath(params);
+        },
+      },
+    });
+    const generatorContext = builder.createGeneratorContext({
+      ...generatedProjectParams,
+      outputDir,
+    });
+
+    const writeGeneratedFile = () =>
+      generatorContext.writeFile(generatedFile, "generated");
+
+    expect(catchThrownError(writeGeneratedFile)).toBe(unsafePath);
+    expect(validationCount).toBe(3);
+    expect(fs.existsSync(generatedFilePath)).toBe(false);
+    expect(generatorContext.getGeneratedFiles()).toEqual([]);
+    expect(builder.drainPendingWriteLogs()).toEqual([]);
+  });
+
+  test("rejects an ancestor symlink swap before sync publication", () => {
+    const workspaceDir = aTempDir();
+    const outputDir = path.join(workspaceDir, "generated");
+    const externalDir = path.join(workspaceDir, "external");
+    const resourceDir = path.join(outputDir, "todo");
+    const stagedResourceDir = path.join(outputDir, "todo-staged");
+    const generatedFile = "todo/GetTodoClient.ts";
+    fs.mkdirSync(outputDir);
+    fs.mkdirSync(externalDir);
+    let renameCount = 0;
+    const syncAtomicFileSystem = {
+      ...liveSyncAtomicFileSystem,
+      writeFileExclusive: (filePath, content, mode) => {
+        liveSyncAtomicFileSystem.writeFileExclusive(filePath, content, mode);
+        fs.renameSync(resourceDir, stagedResourceDir);
+        fs.symlinkSync(
+          externalDir,
+          resourceDir,
+          process.platform === "win32" ? "junction" : "dir"
+        );
+      },
+      rename: (oldPath, newPath) => {
+        renameCount += 1;
+        liveSyncAtomicFileSystem.rename(oldPath, newPath);
+      },
+    } satisfies SyncAtomicFileSystem;
+    const builder = aBuilder(syncAtomicFileSystem);
+    const generatorContext = builder.createGeneratorContext({
+      ...generatedProjectParams,
+      outputDir,
+    });
+
+    const writeGeneratedFile = () =>
+      generatorContext.writeFile(generatedFile, "generated");
+
+    expectUnsafeGeneratedFilePath(writeGeneratedFile);
+    expect(renameCount).toBe(0);
+    expect(fs.existsSync(path.join(externalDir, "GetTodoClient.ts"))).toBe(
+      false
+    );
+    expect(generatorContext.getGeneratedFiles()).toEqual([]);
+    expect(builder.drainPendingWriteLogs()).toEqual([]);
   });
 });
 
