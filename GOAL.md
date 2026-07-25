@@ -1,6 +1,6 @@
 # Effect migration: merge-ready completion contract
 
-Status: active
+Status: complete
 
 Audit baseline: `feat/use-effect` at `7488f6d2`, reviewed 2026-07-25
 
@@ -292,28 +292,23 @@ progress log.
   - an incompatible duplicate Effect installation is rejected;
   - `pnpm publish:dry` exits 0.
 
-- [ ] **16. Security-sensitive behavior runs on Windows CI.**
+- [x] **16. Security-sensitive behavior runs on Windows CI.**
 
   Add a Windows job covering clean-target guards, path safety, output locking, and a built-CLI smoke
   test. Keep the complete existing Ubuntu runtime matrix.
 
-  Local implementation and evidence are complete. Final completion remains blocked only on a
-  human-authorized push and green Ubuntu plus Windows remote jobs.
-
   Verified by:
 
   - workflow validation exits 0 locally;
-  - after human-authorized push, both Ubuntu and Windows quality jobs are green;
+  - after the human-authorized push, Quality Check run `30175595732` is green on `51f9d893`,
+    including both `quality-check` and `windows-security`;
   - no platform test is skipped merely because path semantics differ.
 
-- [ ] **17. One reproducible migration gate proves the final state.**
+- [x] **17. One reproducible migration gate proves the final state.**
 
   Add `pnpm verify:effect-migration` as a non-mutating umbrella check used by CI. It must run the
   migration-specific type contracts, unit/integration/process tests, generated-fixture verification,
   and version/reference checks.
-
-  Local implementation and evidence are complete. Final completion remains blocked only on the
-  human-authorized remote CI evidence shared with criterion 16.
 
   Final local evidence:
 
@@ -335,7 +330,10 @@ progress log.
 
   Completion also requires all human-authorized remote CI jobs to be green and every audit finding
   above to be closed by code/test evidence or an explicit human-approved scope decision recorded in
-  this file.
+  this file. On `51f9d893`, Quality Check run `30175595732`, CodeQL runs `30175593636` and
+  `30175593858`, the aggregate CodeQL gate, and both Socket checks are green. PR #190 has no
+  unresolved review thread, and its description states the current Effect, CLI, dependency, Oxlint,
+  documentation, and verification contracts.
 
 ### P4 — final Oxlint maintainability hardening
 
@@ -1016,6 +1014,22 @@ evidence: Frozen install, Actionlint, Oxfmt, Oxlint, workspace typecheck, all-pa
 next: Commit and push the cohesive final-review repairs, require every exact-head CI and security
       check to pass, update the stale PR description, resolve only verified review threads, record
       the final remote evidence, and perform the final merge-readiness audit without merging.
+```
+
+```text
+[completion evidence | 2026-07-25 | exact reviewed code state]
+criterion: 16 and 17.
+before: The final implementation and security repairs were locally green but still needed remote
+        execution and a complete review-thread audit.
+change: Pushed the six cohesive repair commits through 51f9d893, updated the stale PR description,
+        inspected every remaining review thread against its implementation and regression evidence,
+        and resolved exactly the five verified outstanding threads.
+evidence: Quality Check run 30175595732 is green on 51f9d893: the Ubuntu quality-check and Windows
+          security jobs both pass. CodeQL runs 30175593636 and 30175593858, the aggregate CodeQL
+          gate, and both Socket checks pass. PR #190 reports zero unresolved review threads. The
+          branch is mergeable, and no merge or release was performed.
+next: Commit and push this append-only completion record, then require every check to pass once more
+      on that evidence-only final commit before handing the PR back as merge-ready.
 ```
 
 ## Stop conditions
