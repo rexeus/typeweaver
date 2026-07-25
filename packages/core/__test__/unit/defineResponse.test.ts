@@ -10,7 +10,7 @@ import {
 } from "../../src/defineResponse.js";
 import { HttpStatusCode } from "../../src/HttpStatusCode.js";
 
-describe("defineResponse", () => {
+describe("defineResponse authored metadata", () => {
   test("authored responses preserve supplied fields and schema identities", () => {
     const body = z.object({ id: z.string() });
     const header = z.object({ "x-request-id": z.string() });
@@ -62,7 +62,9 @@ describe("defineResponse", () => {
 
     expect(isNamedResponseDefinition(response)).toBe(true);
   });
+});
 
+describe("defineResponse object identity", () => {
   test("mutable authored responses receive metadata on the supplied object", () => {
     const definition = {
       name: "MutableResponse",
@@ -144,7 +146,7 @@ describe("defineResponse", () => {
   });
 });
 
-describe("defineDerivedResponse", () => {
+describe("defineDerivedResponse metadata and lineage", () => {
   test("derived responses expose define-derived-response metadata", () => {
     const base = defineResponse({
       name: "BaseResponse",
@@ -213,7 +215,9 @@ describe("defineDerivedResponse", () => {
       depth: 2,
     });
   });
+});
 
+describe("defineDerivedResponse scalar inheritance", () => {
   test("derived responses inherit parent description when only status is overridden", () => {
     const base = defineResponse({
       name: "BaseError",
@@ -258,7 +262,9 @@ describe("defineDerivedResponse", () => {
 
     expect(child.statusCode).toBe(HttpStatusCode.UNPROCESSABLE_ENTITY);
   });
+});
 
+describe("defineDerivedResponse body and field merging", () => {
   test("derived responses merge object body schemas across derivation levels", () => {
     const base = defineResponse({
       name: "BaseError",
@@ -343,7 +349,9 @@ describe("defineDerivedResponse", () => {
       false
     );
   });
+});
 
+describe("defineDerivedResponse optional header merging", () => {
   test("derived responses merge optional object header schemas", () => {
     const base = defineResponse({
       name: "BaseError",
@@ -410,7 +418,9 @@ describe("defineDerivedResponse", () => {
       }).success
     ).toBe(true);
   });
+});
 
+describe("defineDerivedResponse required header merging", () => {
   test("derived responses merge required object header schemas", () => {
     const base = defineResponse({
       name: "BaseError",
@@ -473,7 +483,9 @@ describe("defineDerivedResponse", () => {
       }).success
     ).toBe(true);
   });
+});
 
+describe("defineDerivedResponse omitted fields", () => {
   test("inherits parent statusCode and description when not overridden", () => {
     const base = defineResponse({
       name: "ParentResponse",
@@ -552,7 +564,9 @@ describe("defineDerivedResponse", () => {
 
     expect(child.header).toBe(header);
   });
+});
 
+describe("defineDerivedResponse incompatible schema replacement", () => {
   test("replaces parent ZodObject body when child provides non-object schema", () => {
     const base = defineResponse({
       name: "ObjectBodyResponse",

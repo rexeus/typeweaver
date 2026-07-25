@@ -119,14 +119,14 @@ const writeRecordingPlugin = (
   return pluginFile;
 };
 
-describe("Generator.generate (concurrent invocations)", () => {
-  afterEach(() => {
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-    tempDirs.length = 0;
-  });
+afterEach(() => {
+  for (const tempDir of tempDirs) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+  tempDirs.length = 0;
+});
 
+describe("Generator isolated concurrent invocations", () => {
   test("produces disjoint outputs for parallel runs on isolated workspaces", async () => {
     const workspaceA = createTempWorkspace("alpha");
     const workspaceB = createTempWorkspace("beta");
@@ -187,7 +187,9 @@ describe("Generator.generate (concurrent invocations)", () => {
     expect(rootIndexB).toMatch(/beta/);
     expect(rootIndexB).not.toMatch(/alpha/);
   });
+});
 
+describe("Generator shared-runtime concurrent invocations", () => {
   test("avoids PluginDependencyError when the shared runtime executes two parallel generations", async () => {
     const workspaceA = createTempWorkspace("first");
     const workspaceB = createTempWorkspace("second");
@@ -212,7 +214,9 @@ describe("Generator.generate (concurrent invocations)", () => {
       Promise.all([run(workspaceA), run(workspaceB)])
     ).resolves.not.toThrow();
   });
+});
 
+describe("Generator concurrent plugin-registry isolation", () => {
   test("two concurrent generations with disjoint plugin sets each emit only their own plugin's files", async () => {
     // This is the registry-isolation regression: each generate call yields
     // a fresh PluginRegistry instance via `PluginRegistry.createInstance`. If

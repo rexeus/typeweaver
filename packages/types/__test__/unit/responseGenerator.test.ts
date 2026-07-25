@@ -297,7 +297,7 @@ function getGeneratedSource(
   return content;
 }
 
-describe("ResponseGenerator", () => {
+describe("ResponseGenerator file placement and operation unions", () => {
   test("emits canonical responses separately from inline operation responses", () => {
     const sharedError = aCanonicalResponse();
     const createTodoSuccess = anInlineOperationResponse();
@@ -382,7 +382,9 @@ describe("ResponseGenerator", () => {
       /export type CreateTodoResponse =\s*\| ICreateTodoSuccessResponse\s*\| ISharedErrorResponse\s*;/
     );
   });
+});
 
+describe("ResponseGenerator canonical response identity", () => {
   test("reuses a canonical response across operation response unions", () => {
     const sharedError = aCanonicalResponse();
     const normalizedSpec: NormalizedSpec = aNormalizedSpecWith({
@@ -465,7 +467,9 @@ describe("ResponseGenerator", () => {
     );
     expect(operationResponse).toContain("| IValidationErrorResponse");
   });
+});
 
+describe("ResponseGenerator derived responses", () => {
   test("renders canonical derived responses as shared response files", () => {
     const todoNotFoundError = aCanonicalResponse({
       name: "TodoNotFoundError",
@@ -547,7 +551,9 @@ describe("ResponseGenerator", () => {
       false
     );
   });
+});
 
+describe("ResponseGenerator shared response naming and unions", () => {
   test("uses PascalCase exports and raw discriminants for non-identifier response names", () => {
     const validationError = aCanonicalResponse({
       name: "validation-error",
@@ -620,7 +626,9 @@ describe("ResponseGenerator", () => {
       /export type CreateTodoResponse =\s*\| IBadRequestErrorResponse\s*\| IUnauthorizedErrorResponse\s*;/
     );
   });
+});
 
+describe("ResponseGenerator canonical response factories", () => {
   test("renders a header-and-body response factory with typed input and payload mapping", () => {
     const response = aCanonicalResponse({
       name: "headerAndBody",
@@ -710,7 +718,9 @@ describe("ResponseGenerator", () => {
     expect(source).toContain("header: undefined");
     expect(source).toContain("body: undefined");
   });
+});
 
+describe("ResponseGenerator inline response factories", () => {
   test.each([
     {
       case: "header-and-body",
@@ -797,7 +807,9 @@ describe("ResponseGenerator", () => {
       }
     }
   );
+});
 
+describe("ResponseGenerator response names and documentation", () => {
   test("uses PascalCase exports and raw discriminants for camelCase inline responses", () => {
     const source = renderOperationResponseSource([
       anInlineResponseUsage(

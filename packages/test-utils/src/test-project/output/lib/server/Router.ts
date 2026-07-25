@@ -131,13 +131,18 @@ type RadixNode = {
 export class Router {
   private readonly root: RadixNode = Router.createNode();
 
+  private static normalizeDefinition(definition: RouteDefinition, method: string): RouteDefinition {
+    return definition.method === method
+      ? definition
+      : { ...definition, method: method as HttpMethod };
+  }
+
   /**
    * Register a route in the radix tree.
    */
   public add(definition: RouteDefinition): void {
     const method = definition.method.toUpperCase();
-    const normalizedDefinition =
-      definition.method === method ? definition : { ...definition, method: method as HttpMethod };
+    const normalizedDefinition = Router.normalizeDefinition(definition, method);
     const segments = Router.toSegments(definition.path);
 
     let current = this.root;

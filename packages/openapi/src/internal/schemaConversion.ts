@@ -26,6 +26,15 @@ export type ConvertSchemaOptions = {
   readonly rebaseLocalRefs?: boolean;
 };
 
+const ROOT_TRANSPARENT_WRAPPER_TYPES = new Set([
+  "optional",
+  "default",
+  "catch",
+  "prefault",
+  "readonly",
+  "nonoptional",
+]);
+
 export function convertSchema(
   schema: z.core.$ZodType,
   documentPath: string,
@@ -83,12 +92,8 @@ function unwrapRootSchema(schema: z.core.$ZodType): z.core.$ZodType {
     }
 
     if (
-      schemaType === "optional" ||
-      schemaType === "default" ||
-      schemaType === "catch" ||
-      schemaType === "prefault" ||
-      schemaType === "readonly" ||
-      schemaType === "nonoptional"
+      schemaType !== undefined &&
+      ROOT_TRANSPARENT_WRAPPER_TYPES.has(schemaType)
     ) {
       const innerType = definition?.innerType;
 
@@ -108,6 +113,61 @@ function unwrapRootSchema(schema: z.core.$ZodType): z.core.$ZodType {
 
 type OmittedInputResult = "rejects" | "accepts-defined" | "accepts-undefined";
 
+function catchOmittedInputResult(
+  innerType: z.core.$ZodType | undefined
+): OmittedInputResult {
+  if (innerType === undefined) {
+    return "accepts-defined";
+  }
+
+  const innerResult = omittedInputResult(innerType);
+  return innerResult === "rejects" ? "accepts-defined" : innerResult;
+}
+
+function nonOptionalOmittedInputResult(
+  innerType: z.core.$ZodType | undefined
+): OmittedInputResult {
+  if (innerType === undefined) {
+    return "rejects";
+  }
+
+  return omittedInputResult(innerType) === "accepts-defined"
+    ? "accepts-defined"
+    : "rejects";
+}
+
+type OmittedInputStep =
+  | { readonly _tag: "Done"; readonly result: OmittedInputResult }
+  | { readonly _tag: "Continue"; readonly schema: z.core.$ZodType };
+
+type OmittedInputHandler = (
+  innerType: z.core.$ZodType | undefined
+) => OmittedInputStep;
+
+const done = (result: OmittedInputResult): OmittedInputStep => ({
+  _tag: "Done",
+  result,
+});
+
+const continueWithInner = (
+  innerType: z.core.$ZodType | undefined
+): OmittedInputStep =>
+  innerType === undefined
+    ? done("rejects")
+    : { _tag: "Continue", schema: innerType };
+
+const omittedInputHandlers: Readonly<
+  Partial<Record<string, OmittedInputHandler>>
+> = {
+  optional: () => done("accepts-undefined"),
+  default: () => done("accepts-defined"),
+  prefault: () => done("accepts-defined"),
+  catch: innerType => done(catchOmittedInputResult(innerType)),
+  nonoptional: innerType => done(nonOptionalOmittedInputResult(innerType)),
+  nullable: continueWithInner,
+  readonly: continueWithInner,
+};
+
 function omittedInputResult(schema: z.core.$ZodType): OmittedInputResult {
   const visitedSchemas = new Set<z.core.$ZodType>();
   let current = schema;
@@ -117,51 +177,17 @@ function omittedInputResult(schema: z.core.$ZodType): OmittedInputResult {
 
     const definition = getSchemaDefinition(current);
     const schemaType = definition?.type;
-
-    if (schemaType === "optional") {
-      return "accepts-undefined";
+    const handler =
+      schemaType === undefined ? undefined : omittedInputHandlers[schemaType];
+    if (handler === undefined) {
+      return "rejects";
     }
 
-    if (schemaType === "default" || schemaType === "prefault") {
-      return "accepts-defined";
+    const step = handler(definition?.innerType);
+    if (step._tag === "Done") {
+      return step.result;
     }
-
-    if (schemaType === "catch") {
-      const innerType = definition?.innerType;
-
-      if (innerType === undefined) {
-        return "accepts-defined";
-      }
-
-      const innerResult = omittedInputResult(innerType);
-
-      return innerResult === "rejects" ? "accepts-defined" : innerResult;
-    }
-
-    if (schemaType === "nonoptional") {
-      const innerType = definition?.innerType;
-
-      if (innerType === undefined) {
-        return "rejects";
-      }
-
-      return omittedInputResult(innerType) === "accepts-defined"
-        ? "accepts-defined"
-        : "rejects";
-    }
-
-    if (schemaType === "nullable" || schemaType === "readonly") {
-      const innerType = definition?.innerType;
-
-      if (innerType === undefined) {
-        return "rejects";
-      }
-
-      current = innerType;
-      continue;
-    }
-
-    return "rejects";
+    current = step.schema;
   }
 
   return "rejects";

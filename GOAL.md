@@ -337,7 +337,7 @@ progress log.
 
 ### P4 — final Oxlint maintainability hardening
 
-- [ ] **18. Oxlint and SonarJS-compatible rules enforce bounded code complexity.**
+- [x] **18. Oxlint and SonarJS-compatible rules enforce bounded code complexity.**
 
   Keep Oxlint as the repository's only linter. Extend `.oxlintrc.json` for all authored JavaScript
   and TypeScript files, using Oxlint's native implementations for the compatible core rules and its
@@ -852,6 +852,34 @@ evidence: `pnpm verify:effect-migration` passes under Node 24 with 0 Effect diag
           Ubuntu and Windows proof remains pending, so criterion 17 intentionally stays unchecked.
 next: Commit the locally complete umbrella gate, then implement criterion 18 exclusively through
       Oxlint and add its final lint contract to verify:effect-migration.
+```
+
+```text
+[iteration 18 | 2026-07-25]
+criterion: 18. Oxlint and SonarJS-compatible rules enforce bounded code complexity.
+before: Oxlint had no bounded-complexity contract. Enabling the requested exact thresholds produced
+        203 findings: 133 max-lines, 29 cyclomatic, 18 nested-callback, 9 parameter, 8 cognitive,
+        4 statement, and 2 expression-complexity violations across tests, production, and tooling.
+change: Pinned Oxlint 1.75.0 and loaded SonarJS 4.2.0 only through Oxlint's jsPlugins path with
+        automatic peer installation disabled and no ESLint runtime. Added all nine exact rules,
+        recorded the initial inventory, and split long control flow and suites at domain/behavior
+        seams without disabling tests or rules. Long argument lists became typed options objects
+        where appropriate, with generated templates, fixtures, Changeset, and the 1.0 migration
+        guide synchronized. Added a real-root-lint mutation matrix for every boundary plus durable
+        guards for rule options, ignores, overrides, disable directives, scripts, configs, lockfile,
+        and the installed dependency graph; wired it into verify:effect-migration.
+evidence: Frozen offline install is reproducible; pnpm why eslint and physical-store checks find no
+          ESLint package. The mutation gate rejects exactly one invalid fixture for each of all
+          nine rules and the authored repository has zero lint findings. Format, docs, workspace
+          typecheck, build and size gates are green. All 2,376 workspace tests pass, including Gen
+          298/298, CLI 341/341 plus 2 skips, and Server 833/833; all 225 generated files match fresh
+          isolated output. Packed Effect 3.22 consumers pass and duplicate identity is rejected.
+          Node, Deno, and Bun bundle generation each emits 162 files; publish dry-run and git diff
+          check are green. The final umbrella preserves the authored worktree. Independent Effect,
+          Test-Mastery, and TypeScript-Mastery reviews found and then confirmed closure of every
+          K18 finding.
+next: Commit K18. Criteria 16 and 17 then remain blocked only on a human-authorized push and green
+      Ubuntu plus Windows remote CI; stop before that irreversible action.
 ```
 
 ## Stop conditions

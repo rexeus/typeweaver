@@ -183,24 +183,200 @@ const writeFileViaTempReplaceWith = (
   fileSystem.removeDirectory(tempDir);
 };
 
+type PluginContextParams = {
+  readonly outputDir: string;
+  readonly inputDir: string;
+  readonly config: TypeweaverUserConfig;
+};
+
+type GeneratorContextParams = PluginContextParams & {
+  readonly normalizedSpec: NormalizedSpec;
+  readonly templateDir: string;
+  readonly coreDir: string;
+  readonly responsesOutputDir: string;
+  readonly specOutputDir: string;
+};
+
 export type PluginContextBuilderApi = {
-  readonly createPluginContext: (params: {
-    outputDir: string;
-    inputDir: string;
-    config: TypeweaverUserConfig;
-  }) => PluginContext;
-  readonly createGeneratorContext: (params: {
-    readonly outputDir: string;
-    readonly inputDir: string;
-    readonly config: TypeweaverUserConfig;
-    readonly normalizedSpec: NormalizedSpec;
-    readonly templateDir: string;
-    readonly coreDir: string;
-    readonly responsesOutputDir: string;
-    readonly specOutputDir: string;
-  }) => GeneratorContext;
+  readonly createPluginContext: (params: PluginContextParams) => PluginContext;
+  readonly createGeneratorContext: (
+    params: GeneratorContextParams
+  ) => GeneratorContext;
   readonly getGeneratedFiles: () => readonly string[];
   readonly drainPendingWriteLogs: () => readonly string[];
+};
+
+type GeneratorContextDeps = {
+  readonly pathSafety: PathSafetyShape;
+  readonly templateRenderer: TemplateRendererShape;
+  readonly syncAtomicFileSystem: SyncAtomicFileSystem;
+  readonly fileSystem: FileSystem.FileSystem;
+};
+
+const createPluginContext = (params: PluginContextParams): PluginContext => ({
+  outputDir: params.outputDir,
+  inputDir: params.inputDir,
+  config: params.config,
+});
+
+const createCanonicalResponseHelpers = (params: GeneratorContextParams) => {
+  const canonicalResponsesByName = new Map<string, NormalizedResponse>(
+    params.normalizedSpec.responses.map(response => [response.name, response])
+  );
+  const getCanonicalResponse = (responseName: string): NormalizedResponse => {
+    const response = canonicalResponsesByName.get(responseName);
+    if (response === undefined) {
+      throw new MissingCanonicalResponseError({ responseName });
+    }
+    return response;
+  };
+  const getCanonicalResponseOutputFile = (responseName: string): string =>
+    path.join(
+      params.responsesOutputDir,
+      `${pascalCase(responseName)}Response.ts`
+    );
+  return { getCanonicalResponse, getCanonicalResponseOutputFile };
+};
+
+const createImportPathHelpers = (
+  params: GeneratorContextParams,
+  getCanonicalResponseOutputFile: (responseName: string) => string
+) => ({
+  getCanonicalResponseImportPath: (config: {
+    readonly importerDir: string;
+    readonly responseName: string;
+  }): string =>
+    relative(
+      config.importerDir,
+      getCanonicalResponseOutputFile(config.responseName).replace(
+        /\.ts$/,
+        ".js"
+      )
+    ),
+  getSpecImportPath: (config: { readonly importerDir: string }): string =>
+    relative(config.importerDir, path.join(params.specOutputDir, "spec.js")),
+});
+
+const getOperationDefinitionAccessor = (config: {
+  readonly resourceName: string;
+  readonly operationId: string;
+}): string =>
+  `getOperationDefinition(` +
+  `spec, ` +
+  `${JSON.stringify(config.resourceName)}, ` +
+  `${JSON.stringify(config.operationId)}` +
+  `)`;
+
+const makeOperationFileNames = (operationId: string) => {
+  const fileBase = pascalCase(operationId);
+  return {
+    requestFileName: `${fileBase}Request.ts`,
+    responseFileName: `${fileBase}Response.ts`,
+    requestValidationFileName: `${fileBase}RequestValidator.ts`,
+    responseValidationFileName: `${fileBase}ResponseValidator.ts`,
+    clientFileName: `${fileBase}Client.ts`,
+  };
+};
+
+const createOutputPathHelpers = (params: GeneratorContextParams) => {
+  const getResourceOutputDir = (resourceName: string): string =>
+    path.join(params.outputDir, resourceName);
+  const getOperationOutputPaths = (config: {
+    readonly resourceName: string;
+    readonly operationId: string;
+  }) => {
+    const outputDir = getResourceOutputDir(config.resourceName);
+    const fileNames = makeOperationFileNames(config.operationId);
+    return {
+      outputDir,
+      ...fileNames,
+      requestFile: path.join(outputDir, fileNames.requestFileName),
+      responseFile: path.join(outputDir, fileNames.responseFileName),
+      requestValidationFile: path.join(
+        outputDir,
+        fileNames.requestValidationFileName
+      ),
+      responseValidationFile: path.join(
+        outputDir,
+        fileNames.responseValidationFileName
+      ),
+      clientFile: path.join(outputDir, fileNames.clientFileName),
+    };
+  };
+  return { getOperationOutputPaths, getResourceOutputDir };
+};
+
+const createSyncContextIO = (
+  params: GeneratorContextParams,
+  deps: GeneratorContextDeps,
+  tracker: GeneratedFilesTracker
+) => ({
+  writeFile: (relativePath: string, content: string): void => {
+    const safePath = deps.pathSafety.validateGeneratedPath({
+      outputDir: params.outputDir,
+      requestedPath: relativePath,
+    });
+    fs.mkdirSync(path.dirname(safePath.fullPath), { recursive: true });
+    writeFileViaTempReplaceWith(deps.syncAtomicFileSystem, {
+      safePath,
+      content,
+      onCommit: () => tracker.recordWrite(safePath.generatedPath),
+    });
+  },
+  renderTemplate: (templatePath: string, data: unknown): string => {
+    const fullTemplatePath = path.isAbsolute(templatePath)
+      ? templatePath
+      : path.join(params.templateDir, templatePath);
+    const template = fs.readFileSync(fullTemplatePath, "utf8");
+    return deps.templateRenderer.render(template, data);
+  },
+  addGeneratedFile: (relativePath: string): void => {
+    const safePath = deps.pathSafety.validateGeneratedPath({
+      outputDir: params.outputDir,
+      requestedPath: relativePath,
+    });
+    tracker.add(safePath.generatedPath);
+  },
+  getGeneratedFiles: (): string[] => [...tracker.snapshot()],
+});
+
+const createEffectContextIO = (
+  params: GeneratorContextParams,
+  deps: GeneratorContextDeps,
+  tracker: GeneratedFilesTracker
+) =>
+  makeEffectContextIO({
+    fileSystem: deps.fileSystem,
+    pathSafety: deps.pathSafety,
+    templateRenderer: deps.templateRenderer,
+    outputDir: params.outputDir,
+    templateDir: params.templateDir,
+    trackWrite: generatedPath => tracker.recordWrite(generatedPath),
+    trackGenerated: generatedPath => tracker.add(generatedPath),
+  });
+
+const createGeneratorContext = (
+  params: GeneratorContextParams,
+  deps: GeneratorContextDeps,
+  tracker: GeneratedFilesTracker
+): GeneratorContext => {
+  const canonicalResponseHelpers = createCanonicalResponseHelpers(params);
+  return {
+    ...createPluginContext(params),
+    normalizedSpec: params.normalizedSpec,
+    coreDir: params.coreDir,
+    responsesOutputDir: params.responsesOutputDir,
+    specOutputDir: params.specOutputDir,
+    ...canonicalResponseHelpers,
+    ...createImportPathHelpers(
+      params,
+      canonicalResponseHelpers.getCanonicalResponseOutputFile
+    ),
+    getOperationDefinitionAccessor,
+    ...createOutputPathHelpers(params),
+    ...createSyncContextIO(params, deps, tracker),
+    ...createEffectContextIO(params, deps, tracker),
+  };
 };
 
 /**
@@ -224,181 +400,17 @@ export function createPluginContextBuilder(
   deps: PluginContextBuilderDeps
 ): PluginContextBuilderApi {
   const tracker = createGeneratedFilesTracker();
-  const {
-    pathSafety,
-    templateRenderer,
-    syncAtomicFileSystem = liveSyncAtomicFileSystem,
-    fileSystem,
-  } = deps;
-
-  const createPluginContext = (params: {
-    outputDir: string;
-    inputDir: string;
-    config: TypeweaverUserConfig;
-  }): PluginContext => {
-    return {
-      outputDir: params.outputDir,
-      inputDir: params.inputDir,
-      config: params.config,
-    };
-  };
-
-  const createGeneratorContext = (params: {
-    readonly outputDir: string;
-    readonly inputDir: string;
-    readonly config: TypeweaverUserConfig;
-    readonly normalizedSpec: NormalizedSpec;
-    readonly templateDir: string;
-    readonly coreDir: string;
-    readonly responsesOutputDir: string;
-    readonly specOutputDir: string;
-  }): GeneratorContext => {
-    const pluginContext = createPluginContext(params);
-    const canonicalResponsesByName = new Map<string, NormalizedResponse>(
-      params.normalizedSpec.responses.map(response => [response.name, response])
-    );
-
-    const getResourceOutputDir = (resourceName: string): string => {
-      return path.join(params.outputDir, resourceName);
-    };
-
-    const getOperationOutputPaths = (config: {
-      readonly resourceName: string;
-      readonly operationId: string;
-    }) => {
-      const outputDir = getResourceOutputDir(config.resourceName);
-      const fileBase = pascalCase(config.operationId);
-      const requestFileName = `${fileBase}Request.ts`;
-      const responseFileName = `${fileBase}Response.ts`;
-      const requestValidationFileName = `${fileBase}RequestValidator.ts`;
-      const responseValidationFileName = `${fileBase}ResponseValidator.ts`;
-      const clientFileName = `${fileBase}Client.ts`;
-
-      return {
-        outputDir,
-        requestFile: path.join(outputDir, requestFileName),
-        requestFileName,
-        responseFile: path.join(outputDir, responseFileName),
-        responseFileName,
-        requestValidationFile: path.join(outputDir, requestValidationFileName),
-        requestValidationFileName,
-        responseValidationFile: path.join(
-          outputDir,
-          responseValidationFileName
-        ),
-        responseValidationFileName,
-        clientFile: path.join(outputDir, clientFileName),
-        clientFileName,
-      };
-    };
-
-    const getCanonicalResponse = (responseName: string): NormalizedResponse => {
-      const response = canonicalResponsesByName.get(responseName);
-
-      if (response === undefined) {
-        throw new MissingCanonicalResponseError({ responseName });
-      }
-
-      return response;
-    };
-
-    const getCanonicalResponseOutputFile = (responseName: string): string => {
-      return path.join(
-        params.responsesOutputDir,
-        `${pascalCase(responseName)}Response.ts`
-      );
-    };
-
-    return {
-      ...pluginContext,
-      normalizedSpec: params.normalizedSpec,
-      coreDir: params.coreDir,
-      responsesOutputDir: params.responsesOutputDir,
-      specOutputDir: params.specOutputDir,
-      getCanonicalResponse,
-      getCanonicalResponseOutputFile,
-      getCanonicalResponseImportPath: config => {
-        return relative(
-          config.importerDir,
-          getCanonicalResponseOutputFile(config.responseName).replace(
-            /\.ts$/,
-            ".js"
-          )
-        );
-      },
-      getSpecImportPath: config => {
-        return relative(
-          config.importerDir,
-          path.join(params.specOutputDir, "spec.js")
-        );
-      },
-      getOperationDefinitionAccessor: config => {
-        return (
-          `getOperationDefinition(` +
-          `spec, ` +
-          `${JSON.stringify(config.resourceName)}, ` +
-          `${JSON.stringify(config.operationId)}` +
-          `)`
-        );
-      },
-      getOperationOutputPaths,
-      getResourceOutputDir,
-
-      writeFile: (relativePath: string, content: string) => {
-        const safePath = pathSafety.validateGeneratedPath({
-          outputDir: params.outputDir,
-          requestedPath: relativePath,
-        });
-
-        fs.mkdirSync(path.dirname(safePath.fullPath), { recursive: true });
-        writeFileViaTempReplaceWith(syncAtomicFileSystem, {
-          safePath,
-          content,
-          onCommit: () => tracker.recordWrite(safePath.generatedPath),
-        });
-      },
-
-      renderTemplate: (templatePath: string, data: unknown) => {
-        const fullTemplatePath = path.isAbsolute(templatePath)
-          ? templatePath
-          : path.join(params.templateDir, templatePath);
-
-        const template = fs.readFileSync(fullTemplatePath, "utf8");
-        return templateRenderer.render(template, data);
-      },
-
-      addGeneratedFile: (relativePath: string) => {
-        const safePath = pathSafety.validateGeneratedPath({
-          outputDir: params.outputDir,
-          requestedPath: relativePath,
-        });
-
-        tracker.add(safePath.generatedPath);
-      },
-
-      getGeneratedFiles: () => {
-        return [...tracker.snapshot()];
-      },
-
-      // The Effect-native slice shares the tracker (and thereby the
-      // `Generated:` log queue) with the sync helpers above; the
-      // `FileSystem` was captured at construction time so lifecycle
-      // stages keep `R = never`.
-      ...makeEffectContextIO({
-        fileSystem,
-        pathSafety,
-        templateRenderer,
-        outputDir: params.outputDir,
-        templateDir: params.templateDir,
-        trackWrite: generatedPath => tracker.recordWrite(generatedPath),
-        trackGenerated: generatedPath => tracker.add(generatedPath),
-      }),
-    };
+  const generatorContextDeps: GeneratorContextDeps = {
+    pathSafety: deps.pathSafety,
+    templateRenderer: deps.templateRenderer,
+    syncAtomicFileSystem: deps.syncAtomicFileSystem ?? liveSyncAtomicFileSystem,
+    fileSystem: deps.fileSystem,
   };
 
   return {
     createPluginContext,
-    createGeneratorContext,
+    createGeneratorContext: params =>
+      createGeneratorContext(params, generatorContextDeps, tracker),
     getGeneratedFiles: () => tracker.snapshot(),
     drainPendingWriteLogs: () => tracker.drainPendingWriteLogs(),
   };

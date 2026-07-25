@@ -58,10 +58,32 @@ import type {
   StringLiteral,
   TypeElement,
   TypeNode,
+  TypeReferenceNode,
 } from "@typescript/typescript6";
 import type { $ZodType } from "zod/v4/core";
 
+type ZodTypeHandler = (zodType: $ZodType) => TypeNode | undefined;
+
+const ZOD_TYPE_HANDLERS: readonly ZodTypeHandler[] = [
+  fromZodPrimitive,
+  fromZodIntrinsic,
+  fromZodStructure,
+  fromZodValue,
+  fromZodTransformation,
+];
+
 export function fromZod(zodType: $ZodType): TypeNode {
+  for (const handler of ZOD_TYPE_HANDLERS) {
+    const type = handler(zodType);
+    if (type !== undefined) {
+      return type;
+    }
+  }
+
+  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+}
+
+function fromZodPrimitive(zodType: $ZodType): TypeNode | undefined {
   if (zodType instanceof $ZodString) {
     return fromZodString(zodType);
   }
@@ -83,12 +105,14 @@ export function fromZod(zodType: $ZodType): TypeNode {
   if (zodType instanceof $ZodUndefined) {
     return fromZodUndefined(zodType);
   }
-  if (zodType instanceof $ZodNullable) {
-    return fromZodNullable(zodType);
-  }
   if (zodType instanceof $ZodNull) {
     return fromZodNull(zodType);
   }
+
+  return undefined;
+}
+
+function fromZodIntrinsic(zodType: $ZodType): TypeNode | undefined {
   if (zodType instanceof $ZodAny) {
     return fromZodAny(zodType);
   }
@@ -101,6 +125,20 @@ export function fromZod(zodType: $ZodType): TypeNode {
   if (zodType instanceof $ZodVoid) {
     return fromZodVoid(zodType);
   }
+  if (zodType instanceof $ZodNaN) {
+    return fromZodNaN(zodType);
+  }
+  if (zodType instanceof $ZodSuccess) {
+    return fromZodSuccess(zodType);
+  }
+  if (zodType instanceof $ZodFile) {
+    return fromZodFile(zodType);
+  }
+
+  return undefined;
+}
+
+function fromZodStructure(zodType: $ZodType): TypeNode | undefined {
   if (zodType instanceof $ZodArray) {
     return fromZodArray(zodType);
   }
@@ -125,6 +163,14 @@ export function fromZod(zodType: $ZodType): TypeNode {
   if (zodType instanceof $ZodSet) {
     return fromZodSet(zodType);
   }
+
+  return undefined;
+}
+
+function fromZodValue(zodType: $ZodType): TypeNode | undefined {
+  if (zodType instanceof $ZodNullable) {
+    return fromZodNullable(zodType);
+  }
   if (zodType instanceof $ZodLiteral) {
     return fromZodLiteral(zodType);
   }
@@ -146,6 +192,11 @@ export function fromZod(zodType: $ZodType): TypeNode {
   if (zodType instanceof $ZodTemplateLiteral) {
     return fromZodTemplateLiteral(zodType);
   }
+
+  return undefined;
+}
+
+function fromZodTransformation(zodType: $ZodType): TypeNode | undefined {
   if (zodType instanceof $ZodCustom) {
     return fromZodCustom(zodType);
   }
@@ -158,23 +209,14 @@ export function fromZod(zodType: $ZodType): TypeNode {
   if (zodType instanceof $ZodReadonly) {
     return fromZodReadonly(zodType);
   }
-  if (zodType instanceof $ZodNaN) {
-    return fromZodNaN(zodType);
-  }
   if (zodType instanceof $ZodPipe) {
     return fromZodPipe(zodType);
-  }
-  if (zodType instanceof $ZodSuccess) {
-    return fromZodSuccess(zodType);
   }
   if (zodType instanceof $ZodCatch) {
     return fromZodCatch(zodType);
   }
-  if (zodType instanceof $ZodFile) {
-    return fromZodFile(zodType);
-  }
 
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+  return undefined;
 }
 
 function fromZodString(_zodString: $ZodString): TypeNode {
@@ -503,29 +545,39 @@ function createReadonlyType(type: TypeNode): TypeNode {
   }
 
   if (isTypeReferenceNode(type)) {
-    const typeName = isIdentifier(type.typeName)
-      ? type.typeName.escapedText.toString()
-      : undefined;
-
-    if (typeName === "Map") {
-      return factory.createTypeReferenceNode(
-        factory.createIdentifier("ReadonlyMap"),
-        type.typeArguments
-      );
-    }
-
-    if (typeName === "Set") {
-      return factory.createTypeReferenceNode(
-        factory.createIdentifier("ReadonlySet"),
-        type.typeArguments
-      );
-    }
-
-    if (typeName === "Date" || typeName === "Promise") {
-      return type;
-    }
+    return createReadonlyReferenceType(type);
   }
 
+  return wrapInReadonly(type);
+}
+
+function createReadonlyReferenceType(type: TypeReferenceNode): TypeNode {
+  const typeName = isIdentifier(type.typeName)
+    ? type.typeName.escapedText.toString()
+    : undefined;
+
+  if (typeName === "Map") {
+    return factory.createTypeReferenceNode(
+      factory.createIdentifier("ReadonlyMap"),
+      type.typeArguments
+    );
+  }
+
+  if (typeName === "Set") {
+    return factory.createTypeReferenceNode(
+      factory.createIdentifier("ReadonlySet"),
+      type.typeArguments
+    );
+  }
+
+  if (typeName === "Date" || typeName === "Promise") {
+    return type;
+  }
+
+  return wrapInReadonly(type);
+}
+
+function wrapInReadonly(type: TypeNode): TypeNode {
   return factory.createTypeReferenceNode(factory.createIdentifier("Readonly"), [
     type,
   ]);

@@ -104,6 +104,55 @@ const invalidField = (
     ...(detail === undefined ? {} : { detail }),
   });
 
+const decodePluginName = (
+  value: Record<string, unknown>
+): Either.Either<string, PluginShapeIssue> => {
+  const name = value.name;
+  return typeof name === "string" && name.trim().length > 0
+    ? Either.right(name)
+    : invalidField("name", "a non-empty string", name);
+};
+
+const decodeDependencies = (
+  value: Record<string, unknown>
+): Either.Either<readonly string[] | undefined, PluginShapeIssue> => {
+  if (!("depends" in value)) {
+    return Either.right(undefined);
+  }
+  if (!Array.isArray(value.depends)) {
+    return invalidField("depends", "an array of strings", value.depends);
+  }
+
+  const dependencies: string[] = [];
+  for (const [index, dependency] of value.depends.entries()) {
+    if (typeof dependency !== "string") {
+      return invalidField(
+        "depends",
+        "a string",
+        dependency,
+        `at index ${index}`
+      );
+    }
+    dependencies.push(dependency);
+  }
+  return Either.right(dependencies);
+};
+
+const decodeOptionalHook = <THook>(
+  value: Record<string, unknown>,
+  field: keyof Plugin,
+  isHook: (candidate: unknown) => candidate is THook
+): Either.Either<THook | undefined, PluginShapeIssue> => {
+  if (!(field in value)) {
+    return Either.right(undefined);
+  }
+
+  const candidate = value[field];
+  return isHook(candidate)
+    ? Either.right(candidate)
+    : invalidField(field, "a function", candidate);
+};
+
 const decodePlugin = (
   value: unknown
 ): Either.Either<Plugin, PluginShapeIssue> => {
@@ -114,67 +163,40 @@ const decodePlugin = (
     });
   }
 
-  const name = value.name;
-  if (typeof name !== "string" || name.trim().length === 0) {
-    return invalidField("name", "a non-empty string", name);
-  }
+  return Either.gen(function* () {
+    const name = yield* decodePluginName(value);
+    const depends = yield* decodeDependencies(value);
+    const initialize = yield* decodeOptionalHook(
+      value,
+      "initialize",
+      isInitializeHook
+    );
+    const collectResources = yield* decodeOptionalHook(
+      value,
+      "collectResources",
+      isCollectResourcesHook
+    );
+    const generate = yield* decodeOptionalHook(
+      value,
+      "generate",
+      isGenerateHook
+    );
+    const finalize = yield* decodeOptionalHook(
+      value,
+      "finalize",
+      isFinalizeHook
+    );
 
-  let depends: readonly string[] | undefined;
-  if ("depends" in value) {
-    const candidate = value.depends;
-    if (!Array.isArray(candidate)) {
-      return invalidField("depends", "an array of strings", candidate);
-    }
-
-    const decodedDependencies: string[] = [];
-    for (const [index, dependency] of candidate.entries()) {
-      if (typeof dependency !== "string") {
-        return invalidField(
-          "depends",
-          "a string",
-          dependency,
-          `at index ${index}`
-        );
-      }
-      decodedDependencies.push(dependency);
-    }
-    depends = decodedDependencies;
-  }
-
-  const initialize = value.initialize;
-  if ("initialize" in value && !isInitializeHook(initialize)) {
-    return invalidField("initialize", "a function", initialize);
-  }
-
-  const collectResources = value.collectResources;
-  if (
-    "collectResources" in value &&
-    !isCollectResourcesHook(collectResources)
-  ) {
-    return invalidField("collectResources", "a function", collectResources);
-  }
-
-  const generate = value.generate;
-  if ("generate" in value && !isGenerateHook(generate)) {
-    return invalidField("generate", "a function", generate);
-  }
-
-  const finalize = value.finalize;
-  if ("finalize" in value && !isFinalizeHook(finalize)) {
-    return invalidField("finalize", "a function", finalize);
-  }
-
-  const plugin = {
-    ...value,
-    name,
-    ...(depends === undefined ? {} : { depends }),
-    ...(isInitializeHook(initialize) ? { initialize } : {}),
-    ...(isCollectResourcesHook(collectResources) ? { collectResources } : {}),
-    ...(isGenerateHook(generate) ? { generate } : {}),
-    ...(isFinalizeHook(finalize) ? { finalize } : {}),
-  } satisfies Plugin;
-
-  return Either.right(plugin);
+    return {
+      ...value,
+      name,
+      ...(depends === undefined ? {} : { depends }),
+      ...(initialize === undefined ? {} : { initialize }),
+      ...(collectResources === undefined ? {} : { collectResources }),
+      ...(generate === undefined ? {} : { generate }),
+      ...(finalize === undefined ? {} : { finalize }),
+    } satisfies Plugin;
+  });
 };
 
 const formatError = (error: unknown): string =>

@@ -153,7 +153,9 @@ describe("generateIndexFiles", () => {
       formatIndexFile(["./rootClient.js", "./todo/index.js"])
     );
   });
+});
 
+describe("generateIndexFiles path normalization and empty output", () => {
   test("normalizes Windows-style generated paths to POSIX export specifiers", () => {
     const fake = aFakeIndexContextWith([
       "rootClient.ts",

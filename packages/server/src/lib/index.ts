@@ -10,6 +10,7 @@
 export { TypeweaverApp, type TypeweaverAppOptions } from "./TypeweaverApp.js";
 export {
   TypeweaverRouter,
+  type TypeweaverRouteOptions,
   type TypeweaverRouterOptions,
 } from "./TypeweaverRouter.js";
 export { HttpMethod } from "@rexeus/typeweaver-core";

@@ -96,6 +96,159 @@ const buildWrapperSource = (wrapperImportSpecifier: string): string =>
     "",
   ].join("\n");
 
+type BundlePaths = {
+  readonly bundledSpecFile: string;
+  readonly stagedSpecFile: string;
+  readonly wrapperFile: string;
+  readonly wrapperImportSpecifier: string;
+};
+
+type BundleOperation = {
+  readonly config: SpecBundlerConfig;
+  readonly deps: SpecBundlerDeps;
+  readonly fileSystem: FileSystem.FileSystem;
+  readonly paths: BundlePaths;
+};
+
+const makeBundleError =
+  (inputFile: string) =>
+  (cause: unknown): SpecBundleError =>
+    new SpecBundleError({ inputFile, cause });
+
+const makeBundlePaths = (
+  config: SpecBundlerConfig,
+  tempDir: string
+): BundlePaths => {
+  const wrapperFile = path.join(tempDir, "spec-entrypoint.ts");
+  return {
+    wrapperFile,
+    stagedSpecFile: path.join(tempDir, "spec.js"),
+    bundledSpecFile: path.join(config.specOutputDir, "spec.js"),
+    wrapperImportSpecifier: createWrapperImportSpecifier(
+      wrapperFile,
+      config.inputFile
+    ),
+  };
+};
+
+const prepareBundleDirectory = Effect.fn(function* (params: {
+  readonly config: SpecBundlerConfig;
+  readonly fileSystem: FileSystem.FileSystem;
+}) {
+  const mapError = makeBundleError(params.config.inputFile);
+  yield* params.fileSystem
+    .makeDirectory(params.config.specOutputDir, { recursive: true })
+    .pipe(Effect.mapError(mapError));
+  return yield* params.fileSystem
+    .makeTempDirectoryScoped({
+      directory: params.config.specOutputDir,
+      prefix: ".typeweaver-spec-loader-",
+    })
+    .pipe(Effect.mapError(mapError));
+});
+
+const writeBundleWrapper = Effect.fn(function* (operation: BundleOperation) {
+  yield* operation.fileSystem
+    .writeFileString(
+      operation.paths.wrapperFile,
+      buildWrapperSource(operation.paths.wrapperImportSpecifier)
+    )
+    .pipe(Effect.mapError(makeBundleError(operation.config.inputFile)));
+});
+
+const isExternalModule = (source: string): boolean => {
+  if (source.startsWith("node:")) {
+    return true;
+  }
+  return !source.startsWith(".") && !path.isAbsolute(source);
+};
+
+const makeBuildOptions = (
+  tempDir: string,
+  paths: BundlePaths
+): BuildOptions => ({
+  cwd: tempDir,
+  input: paths.wrapperFile,
+  treeshake: true,
+  experimental: {
+    attachDebugInfo: "none",
+  },
+  external: isExternalModule,
+  output: {
+    file: paths.stagedSpecFile,
+    format: "esm",
+  },
+});
+
+const runRolldownBuild = Effect.fn(function* (params: {
+  readonly build: (options: BuildOptions) => Promise<unknown>;
+  readonly inputFile: string;
+  readonly options: BuildOptions;
+}) {
+  yield* Effect.uninterruptible(
+    Effect.tryPromise({
+      try: () => params.build(params.options),
+      catch: makeBundleError(params.inputFile),
+    })
+  );
+});
+
+const bundleOutputExists = Effect.fn(function* (operation: BundleOperation) {
+  const existsSync = operation.deps.existsSync;
+  if (existsSync !== undefined) {
+    return yield* Effect.sync(() => existsSync(operation.paths.stagedSpecFile));
+  }
+  return yield* operation.fileSystem
+    .exists(operation.paths.stagedSpecFile)
+    .pipe(Effect.mapError(makeBundleError(operation.config.inputFile)));
+});
+
+const assertBundleOutputExists = Effect.fn(function* (
+  operation: BundleOperation
+) {
+  if (yield* bundleOutputExists(operation)) {
+    return;
+  }
+  return yield* new SpecBundleOutputMissingError({
+    inputFile: operation.config.inputFile,
+    bundledSpecFile: operation.paths.bundledSpecFile,
+    specOutputDir: operation.config.specOutputDir,
+  });
+});
+
+const publishBundle = Effect.fn(function* (operation: BundleOperation) {
+  yield* Effect.uninterruptible(
+    operation.fileSystem
+      .rename(operation.paths.stagedSpecFile, operation.paths.bundledSpecFile)
+      .pipe(Effect.mapError(makeBundleError(operation.config.inputFile)))
+  );
+});
+
+const bundleSpec = Effect.fn(function* (
+  fileSystem: FileSystem.FileSystem,
+  config: SpecBundlerConfig,
+  deps: SpecBundlerDeps = {}
+) {
+  return yield* Effect.scoped(
+    Effect.gen(function* () {
+      const tempDir = yield* prepareBundleDirectory({ config, fileSystem });
+      const paths = makeBundlePaths(config, tempDir);
+      const operation = { config, deps, fileSystem, paths };
+
+      yield* writeBundleWrapper(operation);
+      yield* runRolldownBuild({
+        build: deps.build ?? build,
+        inputFile: config.inputFile,
+        options: makeBuildOptions(tempDir, paths),
+      });
+      yield* assertBundleOutputExists(operation);
+      yield* publishBundle(operation);
+
+      return paths.bundledSpecFile;
+    })
+  );
+});
+
 /**
  * Bundles a SpecDefinition entrypoint into a single ESM file via rolldown.
  *
@@ -133,131 +286,7 @@ export class SpecBundler extends Effect.Service<SpecBundler>()(
         SpecBundleError | SpecBundleOutputMissingError
       > = Effect.fn("typeweaver.SpecBundler.bundle")(
         (config: SpecBundlerConfig, deps: SpecBundlerDeps = {}) =>
-          Effect.scoped(
-            Effect.gen(function* () {
-              yield* fileSystem
-                .makeDirectory(config.specOutputDir, { recursive: true })
-                .pipe(
-                  Effect.mapError(
-                    cause =>
-                      new SpecBundleError({
-                        inputFile: config.inputFile,
-                        cause,
-                      })
-                  )
-                );
-
-              const tempDir = yield* fileSystem
-                .makeTempDirectoryScoped({
-                  directory: config.specOutputDir,
-                  prefix: ".typeweaver-spec-loader-",
-                })
-                .pipe(
-                  Effect.mapError(
-                    cause =>
-                      new SpecBundleError({
-                        inputFile: config.inputFile,
-                        cause,
-                      })
-                  )
-                );
-
-              const wrapperFile = path.join(tempDir, "spec-entrypoint.ts");
-              const stagedSpecFile = path.join(tempDir, "spec.js");
-              const bundledSpecFile = path.join(
-                config.specOutputDir,
-                "spec.js"
-              );
-              const wrapperImportSpecifier = createWrapperImportSpecifier(
-                wrapperFile,
-                config.inputFile
-              );
-
-              yield* fileSystem
-                .writeFileString(
-                  wrapperFile,
-                  buildWrapperSource(wrapperImportSpecifier)
-                )
-                .pipe(
-                  Effect.mapError(
-                    cause =>
-                      new SpecBundleError({
-                        inputFile: config.inputFile,
-                        cause,
-                      })
-                  )
-                );
-
-              yield* Effect.uninterruptible(
-                Effect.tryPromise({
-                  try: () =>
-                    (deps.build ?? build)({
-                      cwd: tempDir,
-                      input: wrapperFile,
-                      treeshake: true,
-                      experimental: {
-                        attachDebugInfo: "none",
-                      },
-                      external: (source: string) => {
-                        if (source.startsWith("node:")) {
-                          return true;
-                        }
-                        return (
-                          !source.startsWith(".") && !path.isAbsolute(source)
-                        );
-                      },
-                      output: {
-                        file: stagedSpecFile,
-                        format: "esm",
-                      },
-                    }),
-                  catch: cause =>
-                    new SpecBundleError({
-                      inputFile: config.inputFile,
-                      cause,
-                    }),
-                })
-              );
-
-              const bundleExists =
-                deps.existsSync !== undefined
-                  ? deps.existsSync(stagedSpecFile)
-                  : yield* fileSystem.exists(stagedSpecFile).pipe(
-                      Effect.mapError(
-                        cause =>
-                          new SpecBundleError({
-                            inputFile: config.inputFile,
-                            cause,
-                          })
-                      )
-                    );
-
-              if (!bundleExists) {
-                return yield* new SpecBundleOutputMissingError({
-                  inputFile: config.inputFile,
-                  bundledSpecFile,
-                  specOutputDir: config.specOutputDir,
-                });
-              }
-
-              // Node's rename callback cannot be cancelled. Keep this atomic
-              // publication step uninterruptible so Scope/lock release cannot
-              // race a rename that is still mutating the final output path.
-              yield* Effect.uninterruptible(
-                fileSystem.rename(stagedSpecFile, bundledSpecFile).pipe(
-                  Effect.mapError(
-                    cause =>
-                      new SpecBundleError({
-                        inputFile: config.inputFile,
-                        cause,
-                      })
-                  )
-                )
-              );
-
-              return bundledSpecFile;
-            })
-          )
+          bundleSpec(fileSystem, config, deps)
       );
 
       return { bundle } as const;

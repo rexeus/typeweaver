@@ -63,96 +63,140 @@ const pluginDagArb: Arbitrary<readonly Plugin[]> = uniqueArray(pluginNameArb, {
   )
 );
 
-describe("PluginRegistry (properties)", () => {
-  test("toposort places every dependency before its dependents", () => {
-    assert(
-      property(pluginDagArb, plugins => {
-        const exit = runWithRegistry(registry =>
-          Effect.gen(function* () {
-            for (const plugin of plugins) {
-              yield* registry.register(plugin);
-            }
-            return yield* registry.getAll;
-          })
-        );
+const registerPlugins = (plugins: readonly Plugin[]) =>
+  runWithRegistry(registry =>
+    Effect.gen(function* () {
+      for (const plugin of plugins) {
+        yield* registry.register(plugin);
+      }
+      return yield* registry.getAll;
+    })
+  );
 
-        if (Exit.isFailure(exit)) {
-          throw new Error(`Expected success, got: ${Cause.pretty(exit.cause)}`);
-        }
+const expectSuccessfulOrder = (
+  plugins: readonly Plugin[]
+): readonly string[] => {
+  const exit = registerPlugins(plugins);
+  if (Exit.isFailure(exit)) {
+    throw new Error(`Expected success, got: ${Cause.pretty(exit.cause)}`);
+  }
+  return exit.value.map(registration => registration.name);
+};
 
-        const order = exit.value.map(registration => registration.name);
-        for (const plugin of plugins) {
-          const index = order.indexOf(plugin.name);
-          for (const dep of plugin.depends ?? []) {
-            expect(order.indexOf(dep)).toBeLessThan(index);
-          }
-        }
-      })
+const verifyDependencyOrder = (plugins: readonly Plugin[]): void => {
+  const order = expectSuccessfulOrder(plugins);
+  for (const plugin of plugins) {
+    const index = order.indexOf(plugin.name);
+    for (const dependency of plugin.depends ?? []) {
+      expect(order.indexOf(dependency)).toBeLessThan(index);
+    }
+  }
+};
+
+const comparePluginNames = (left: string, right: string): number =>
+  left < right ? -1 : left > right ? 1 : 0;
+
+const verifyAlphabeticalOrder = (names: readonly string[]): void => {
+  const plugins = [...names].reverse().map(name => aPluginNamed(name));
+  expect(expectSuccessfulOrder(plugins)).toEqual(
+    [...names].sort(comparePluginNames)
+  );
+};
+
+const verifyDuplicateRegistration = (name: string): void => {
+  const original = aPluginNamed(name);
+  const duplicate = aPluginNamed(name);
+  const exit = runWithRegistry(registry =>
+    Effect.gen(function* () {
+      yield* registry.register(original, { tag: "first" });
+      yield* registry.register(duplicate, { tag: "second" });
+      return yield* registry.getAll;
+    })
+  );
+
+  if (Exit.isFailure(exit)) {
+    throw new Error(`Expected success, got: ${Cause.pretty(exit.cause)}`);
+  }
+  expect(exit.value).toHaveLength(1);
+  expect(exit.value[0]).toMatchObject({
+    name,
+    plugin: original,
+    config: { tag: "first" },
+  });
+};
+
+const expectPluginDependencyFailure = (plugins: readonly Plugin[]): void => {
+  const exit = registerPlugins(plugins);
+  if (Exit.isSuccess(exit)) {
+    throw new Error(
+      `Expected cycle detection, got order: ${exit.value.map(registration => registration.name).join(",")}`
     );
+  }
+
+  const failure = Cause.failureOption(exit.cause);
+  expect(failure._tag).toBe("Some");
+  if (failure._tag === "Some") {
+    expect(failure.value).toBeInstanceOf(PluginDependencyError);
+  }
+};
+
+const verifySelfDependency = (
+  siblingNames: readonly string[],
+  selfDependentName: string
+): void => {
+  const uniqueNames = Array.from(new Set([...siblingNames, selfDependentName]));
+  if (uniqueNames.length < 2) return;
+
+  const siblings = uniqueNames
+    .filter(name => name !== selfDependentName)
+    .map(name => aPluginNamed(name));
+  const selfDependent = aPluginNamed(selfDependentName, [selfDependentName]);
+  const middle = Math.floor(siblings.length / 2);
+  const orderings: readonly (readonly Plugin[])[] = [
+    [selfDependent, ...siblings],
+    [...siblings, selfDependent],
+    [...siblings.slice(0, middle), selfDependent, ...siblings.slice(middle)],
+  ];
+
+  for (const plugins of orderings) {
+    expectPluginDependencyFailure(plugins);
+  }
+};
+
+const verifyCycle = (names: readonly string[]): void => {
+  const plugins = names.map((name, index) => {
+    const next = names[(index + 1) % names.length] ?? name;
+    return aPluginNamed(name, [next]);
+  });
+  expectPluginDependencyFailure(plugins);
+};
+
+const verifyRegistrationOrderIndependence = (
+  plugins: readonly Plugin[]
+): void => {
+  expect(expectSuccessfulOrder(plugins)).toEqual(
+    expectSuccessfulOrder([...plugins].reverse())
+  );
+};
+
+describe("PluginRegistry dependency properties", () => {
+  test("toposort places every dependency before its dependents", () => {
+    assert(property(pluginDagArb, verifyDependencyOrder));
   });
 
   test("plugins with no shared dependencies appear in alphabetical order regardless of registration order", () => {
     assert(
       property(
         uniqueArray(pluginNameArb, { minLength: 1, maxLength: 8 }),
-        names => {
-          const shuffled = [...names].reverse();
-          const exit = runWithRegistry(registry =>
-            Effect.gen(function* () {
-              for (const name of shuffled) {
-                yield* registry.register(aPluginNamed(name));
-              }
-              return yield* registry.getAll;
-            })
-          );
-
-          if (Exit.isFailure(exit)) {
-            throw new Error(
-              `Expected success, got: ${Cause.pretty(exit.cause)}`
-            );
-          }
-
-          const observed = exit.value.map(registration => registration.name);
-          // The registry compares with `<`/`>` (UTF-16 code-unit ordering),
-          // not `localeCompare`. Matching the comparator here keeps the
-          // property aligned with the production sort: the broader name
-          // alphabet (now including unicode and mixed case) would otherwise
-          // diverge from a locale-aware comparator.
-          const lexicographic = [...names].sort((a, b) =>
-            a < b ? -1 : a > b ? 1 : 0
-          );
-          expect(observed).toEqual(lexicographic);
-        }
+        verifyAlphabeticalOrder
       )
     );
   });
+});
 
+describe("PluginRegistry registration properties", () => {
   test("registering the same plugin name twice keeps the first registration", () => {
-    assert(
-      property(pluginNameArb, name => {
-        const original = aPluginNamed(name);
-        const duplicate = aPluginNamed(name);
-
-        const exit = runWithRegistry(registry =>
-          Effect.gen(function* () {
-            yield* registry.register(original, { tag: "first" });
-            yield* registry.register(duplicate, { tag: "second" });
-            return yield* registry.getAll;
-          })
-        );
-
-        if (Exit.isFailure(exit)) {
-          throw new Error(`Expected success, got: ${Cause.pretty(exit.cause)}`);
-        }
-
-        expect(exit.value).toHaveLength(1);
-        expect(exit.value[0]).toMatchObject({
-          name,
-          plugin: original,
-          config: { tag: "first" },
-        });
-      })
-    );
+    assert(property(pluginNameArb, verifyDuplicateRegistration));
   });
 
   test("self-dependency fails with PluginDependencyError regardless of where it is registered", () => {
@@ -160,90 +204,18 @@ describe("PluginRegistry (properties)", () => {
       property(
         uniqueArray(pluginNameArb, { minLength: 1, maxLength: 6 }),
         pluginNameArb,
-        (siblingNames, selfDependentName) => {
-          const allNames = [...siblingNames, selfDependentName];
-          const uniqueNames = Array.from(new Set(allNames));
-          if (uniqueNames.length < 2) {
-            return;
-          }
-
-          const siblings = uniqueNames
-            .filter(name => name !== selfDependentName)
-            .map(name => aPluginNamed(name));
-          const selfDependent = aPluginNamed(selfDependentName, [
-            selfDependentName,
-          ]);
-
-          // Interleave: self-dependent plugin first, last, and middle
-          const orderings: readonly (readonly Plugin[])[] = [
-            [selfDependent, ...siblings],
-            [...siblings, selfDependent],
-            [
-              ...siblings.slice(0, Math.floor(siblings.length / 2)),
-              selfDependent,
-              ...siblings.slice(Math.floor(siblings.length / 2)),
-            ],
-          ];
-
-          for (const plugins of orderings) {
-            const exit = runWithRegistry(registry =>
-              Effect.gen(function* () {
-                for (const plugin of plugins) {
-                  yield* registry.register(plugin);
-                }
-                return yield* registry.getAll;
-              })
-            );
-
-            if (Exit.isSuccess(exit)) {
-              throw new Error(
-                `Expected cycle detection, got order: ${exit.value.map(r => r.name).join(",")}`
-              );
-            }
-
-            const failure = Cause.failureOption(exit.cause);
-            expect(failure._tag).toBe("Some");
-            if (failure._tag === "Some") {
-              expect(failure.value).toBeInstanceOf(PluginDependencyError);
-            }
-          }
-        }
+        verifySelfDependency
       )
     );
   });
+});
 
+describe("PluginRegistry cycle properties", () => {
   test("registries with a dependency cycle fail with PluginDependencyError", () => {
     assert(
       property(
         uniqueArray(pluginNameArb, { minLength: 2, maxLength: 6 }),
-        names => {
-          // Build a strict cycle: a -> b -> c -> ... -> a
-          const plugins = names.map((name, index) => {
-            const next = names[(index + 1) % names.length] ?? name;
-            return aPluginNamed(name, [next]);
-          });
-
-          const exit = runWithRegistry(registry =>
-            Effect.gen(function* () {
-              for (const plugin of plugins) {
-                yield* registry.register(plugin);
-              }
-              return yield* registry.getAll;
-            })
-          );
-
-          if (Exit.isSuccess(exit)) {
-            throw new Error(
-              `Expected cycle detection, got order: ${exit.value.map(r => r.name).join(",")}`
-            );
-          }
-
-          const failure = Cause.failureOption(exit.cause);
-          expect(failure._tag).toBe("Some");
-          if (failure._tag === "Some") {
-            expect(failure.value).toBeInstanceOf(PluginDependencyError);
-          }
-        }
+        verifyCycle
       )
     );
   });
@@ -258,32 +230,6 @@ describe("PluginRegistry (properties)", () => {
   });
 
   test("registration order does not affect the toposort output for any DAG", () => {
-    assert(
-      property(pluginDagArb, plugins => {
-        const reversed = [...plugins].reverse();
-
-        const runOrdering = (
-          orderedPlugins: readonly Plugin[]
-        ): readonly string[] => {
-          const exit = runWithRegistry(registry =>
-            Effect.gen(function* () {
-              for (const plugin of orderedPlugins) {
-                yield* registry.register(plugin);
-              }
-              return yield* registry.getAll;
-            })
-          );
-
-          if (Exit.isFailure(exit)) {
-            throw new Error(
-              `Expected success, got: ${Cause.pretty(exit.cause)}`
-            );
-          }
-          return exit.value.map(registration => registration.name);
-        };
-
-        expect(runOrdering(plugins)).toEqual(runOrdering(reversed));
-      })
-    );
+    assert(property(pluginDagArb, verifyRegistrationOrderIndependence));
   });
 });

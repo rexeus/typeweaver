@@ -46,6 +46,12 @@ rename, realpath, directory-listing, and scoped-temp semantics as the Node files
 CLI option resolution now preserves custom top-level configuration keys when forwarding the final
 configuration to plugin contexts.
 
+Programmatic extension APIs with long positional argument lists now use named options objects.
+Construct `NetworkError` with `new NetworkError(message, { code, method, url, cause })`. Custom
+`TypeweaverRouter` subclasses pass one exported `TypeweaverRouteOptions` object to `route`, and
+custom `TypeweaverHono` subclasses pass one exported `TypeweaverHonoRequestOptions` object to
+`handleRequest`.
+
 The spec authoring API (`defineSpec`, `defineOperation`, `defineResponse`) and Zod schemas are
 unchanged — existing specs keep working byte-for-byte.
 
@@ -59,7 +65,7 @@ unchanged — existing specs keep working byte-for-byte.
   `@rexeus/typeweaver-gen` wraps it at the normalization boundary into a tagged
   `DuplicateResponseNameError`, so the `NormalizationError` union is fully `catchTag`-addressable.
 
-Breaking changes are documented in [MIGRATION.md](../MIGRATION.md#migrating-from-012x-to-013x).
+Breaking changes are documented in [MIGRATION.md](../MIGRATION.md#migrating-from-012x-to-10x).
 Background on the design decisions:
 
 - ADR 0003 — Effect-native plugin API (V2)

@@ -39,25 +39,28 @@ const makeEndingTracer = (ended: EndedSpan[]): Tracer.Tracer => {
   let nextSpanId = 0;
 
   return Tracer.make({
-    span: (name, parent, context, links, startTime, kind) => ({
-      _tag: "Span",
-      name,
-      spanId: String(++nextSpanId),
-      traceId: "formatter-test-trace",
-      parent,
-      context,
-      status: { _tag: "Started", startTime },
-      attributes: new Map(),
-      links,
-      sampled: true,
-      kind,
-      end: (_endTime, exit) => {
-        ended.push({ name, exit: exit._tag });
-      },
-      attribute: () => undefined,
-      event: () => undefined,
-      addLinks: () => undefined,
-    }),
+    span: (...args: Parameters<Tracer.Tracer["span"]>) => {
+      const [name, parent, context, links, startTime, kind] = args;
+      return {
+        _tag: "Span",
+        name,
+        spanId: String(++nextSpanId),
+        traceId: "formatter-test-trace",
+        parent,
+        context,
+        status: { _tag: "Started", startTime },
+        attributes: new Map(),
+        links,
+        sampled: true,
+        kind,
+        end: (_endTime, exit) => {
+          ended.push({ name, exit: exit._tag });
+        },
+        attribute: () => undefined,
+        event: () => undefined,
+        addLinks: () => undefined,
+      };
+    },
     context: (f, _fiber) => f(),
   });
 };
@@ -83,17 +86,17 @@ const expectTypedFailure = async <E>(
   return failure;
 };
 
-describe("Formatter", () => {
-  let tempDir: string;
+let tempDir: string;
 
-  beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "typeweaver-fmt-"));
-  });
+beforeEach(() => {
+  tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "typeweaver-fmt-"));
+});
 
-  afterEach(() => {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  });
+afterEach(() => {
+  fs.rmSync(tempDir, { recursive: true, force: true });
+});
 
+describe("Formatter loading and tracing", () => {
   test("formats files through the platform FileSystem service", async () => {
     const filePath = path.join(tempDir, "sample.ts");
     fs.writeFileSync(filePath, "unformatted\n");
@@ -176,7 +179,9 @@ describe("Formatter", () => {
       exit: "Failure",
     });
   });
+});
 
+describe("Formatter filesystem failures", () => {
   test("rejects an incompatible formatter module shape without defects", async () => {
     const layer = formatterLayerAgainst(NodeContext.layer, () =>
       Promise.resolve({ format: "not-a-function" })
@@ -245,7 +250,9 @@ describe("Formatter", () => {
       cause: permissionFailure,
     });
   });
+});
 
+describe("Formatter execution failures", () => {
   test("surfaces a formatter rejection without defects", async () => {
     const filePath = path.join(tempDir, "broken.ts");
     fs.writeFileSync(filePath, "unformatted\n");

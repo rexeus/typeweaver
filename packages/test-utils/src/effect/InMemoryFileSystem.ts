@@ -49,6 +49,377 @@ const notFound = (
     description: `In-memory filesystem: path '${filePath}' does not exist`,
   });
 
+const directoryNotEmpty = (
+  filePath: string
+): InstanceType<typeof SystemError> =>
+  new SystemError({
+    reason: "AlreadyExists",
+    module: "FileSystem",
+    method: "remove",
+    pathOrDescriptor: filePath,
+    description: `In-memory filesystem: directory '${filePath}' is not empty; pass { recursive: true } to remove it`,
+  });
+
+const DEFAULT_FILE_MODE = 0o644;
+
+type InMemoryStore = {
+  readonly files: Map<string, Uint8Array>;
+  readonly directories: Set<string>;
+  readonly fileModes: Map<string, number>;
+  tempCounter: number;
+};
+
+const createStore = (): InMemoryStore => ({
+  files: new Map(),
+  directories: new Set(["/"]),
+  fileModes: new Map(),
+  tempCounter: 0,
+});
+
+const ensureParentDirectories = (
+  store: InMemoryStore,
+  filePath: string
+): void => {
+  for (const directory of parents(filePath)) {
+    store.directories.add(directory);
+  }
+};
+
+const parentExists = (store: InMemoryStore, filePath: string): boolean =>
+  store.directories.has(path.posix.dirname(filePath));
+
+const deleteFile = (store: InMemoryStore, filePath: string): void => {
+  store.files.delete(filePath);
+  store.fileModes.delete(filePath);
+};
+
+const deleteDirectoryTree = (
+  store: InMemoryStore,
+  directoryPath: string
+): void => {
+  const prefix = directoryPath.endsWith("/")
+    ? directoryPath
+    : `${directoryPath}/`;
+  for (const filePath of Array.from(store.files.keys())) {
+    if (filePath.startsWith(prefix)) {
+      deleteFile(store, filePath);
+    }
+  }
+  for (const storedDirectory of Array.from(store.directories)) {
+    if (
+      storedDirectory === directoryPath ||
+      storedDirectory.startsWith(prefix)
+    ) {
+      store.directories.delete(storedDirectory);
+    }
+  }
+};
+
+const hasDirectoryChildren = (
+  store: InMemoryStore,
+  directoryPath: string
+): boolean => {
+  const prefix = directoryPath.endsWith("/")
+    ? directoryPath
+    : `${directoryPath}/`;
+  const hasFiles = Array.from(store.files.keys()).some(filePath =>
+    filePath.startsWith(prefix)
+  );
+  return (
+    hasFiles ||
+    Array.from(store.directories).some(
+      storedDirectory =>
+        storedDirectory !== directoryPath && storedDirectory.startsWith(prefix)
+    )
+  );
+};
+
+const createState = (store: InMemoryStore): InMemoryFsState => ({
+  readFile: filePath => {
+    const bytes = store.files.get(normalize(filePath));
+    return bytes === undefined ? undefined : decoder.decode(bytes);
+  },
+  hasFile: filePath => store.files.has(normalize(filePath)),
+  fileMode: filePath =>
+    store.files.has(normalize(filePath))
+      ? (store.fileModes.get(normalize(filePath)) ?? DEFAULT_FILE_MODE)
+      : undefined,
+  listFiles: () => Array.from(store.files.keys()).sort(),
+  listDirectories: () => Array.from(store.directories).sort(),
+  reset: () => {
+    store.files.clear();
+    store.directories.clear();
+    store.fileModes.clear();
+    store.directories.add("/");
+    store.tempCounter = 0;
+  },
+});
+
+const makeDirectoryOverride =
+  (store: InMemoryStore): FileSystem.FileSystem["makeDirectory"] =>
+  (dirPath, options) =>
+    Effect.suspend(() => {
+      const normalized = normalize(dirPath);
+      if (options?.recursive !== true && !parentExists(store, normalized)) {
+        return Effect.fail(
+          notFound("makeDirectory", path.posix.dirname(normalized))
+        );
+      }
+      store.directories.add(normalized);
+      if (options?.recursive === true) {
+        ensureParentDirectories(store, normalized);
+      }
+      return Effect.void;
+    });
+
+const makeWriteFileStringOverride =
+  (store: InMemoryStore): FileSystem.FileSystem["writeFileString"] =>
+  (filePath, content) =>
+    Effect.suspend(() => {
+      const normalized = normalize(filePath);
+      if (!parentExists(store, normalized)) {
+        return Effect.fail(notFound("writeFileString", filePath));
+      }
+      store.files.set(normalized, encoder.encode(content));
+      return Effect.void;
+    });
+
+const makeWriteFileOverride =
+  (store: InMemoryStore): FileSystem.FileSystem["writeFile"] =>
+  (filePath, data) =>
+    Effect.suspend(() => {
+      const normalized = normalize(filePath);
+      if (!parentExists(store, normalized)) {
+        return Effect.fail(notFound("writeFile", filePath));
+      }
+      store.files.set(normalized, Uint8Array.from(data));
+      return Effect.void;
+    });
+
+const makeReadFileStringOverride =
+  (store: InMemoryStore): FileSystem.FileSystem["readFileString"] =>
+  filePath =>
+    Effect.suspend(() => {
+      const bytes = store.files.get(normalize(filePath));
+      if (bytes === undefined) {
+        return Effect.fail(notFound("readFileString", filePath));
+      }
+      return Effect.succeed(decoder.decode(bytes));
+    });
+
+const makeReadFileOverride =
+  (store: InMemoryStore): FileSystem.FileSystem["readFile"] =>
+  filePath =>
+    Effect.suspend(() => {
+      const bytes = store.files.get(normalize(filePath));
+      if (bytes === undefined) {
+        return Effect.fail(notFound("readFile", filePath));
+      }
+      return Effect.succeed(bytes);
+    });
+
+const listDirectoryEntries = (
+  store: InMemoryStore,
+  directoryPath: string
+): string[] => {
+  const entries = new Set<string>();
+  for (const filePath of store.files.keys()) {
+    if (path.posix.dirname(filePath) === directoryPath) {
+      entries.add(path.posix.basename(filePath));
+    }
+  }
+  for (const storedDirectory of store.directories) {
+    if (
+      storedDirectory !== directoryPath &&
+      path.posix.dirname(storedDirectory) === directoryPath
+    ) {
+      entries.add(path.posix.basename(storedDirectory));
+    }
+  }
+  return Array.from(entries).sort();
+};
+
+const makeReadDirectoryOverride =
+  (store: InMemoryStore): FileSystem.FileSystem["readDirectory"] =>
+  dirPath =>
+    Effect.suspend(() => {
+      const normalized = normalize(dirPath);
+      if (!store.directories.has(normalized)) {
+        return Effect.fail(notFound("readDirectory", dirPath));
+      }
+      return Effect.succeed(listDirectoryEntries(store, normalized));
+    });
+
+const makeExistsOverride =
+  (store: InMemoryStore): FileSystem.FileSystem["exists"] =>
+  filePath =>
+    Effect.sync(() => {
+      const normalized = normalize(filePath);
+      return store.files.has(normalized) || store.directories.has(normalized);
+    });
+
+const makeRemoveOverride =
+  (store: InMemoryStore): FileSystem.FileSystem["remove"] =>
+  (filePath, options) =>
+    Effect.suspend(() => {
+      const normalized = normalize(filePath);
+      const isFile = store.files.has(normalized);
+      const isDirectory = store.directories.has(normalized);
+      if (!isFile && !isDirectory) {
+        return options?.force === true
+          ? Effect.void
+          : Effect.fail(notFound("remove", filePath));
+      }
+      if (isFile) {
+        deleteFile(store, normalized);
+        return Effect.void;
+      }
+      if (options?.recursive === true) {
+        deleteDirectoryTree(store, normalized);
+        return Effect.void;
+      }
+      if (hasDirectoryChildren(store, normalized)) {
+        return Effect.fail(directoryNotEmpty(filePath));
+      }
+      store.directories.delete(normalized);
+      return Effect.void;
+    });
+
+const makeRealPathOverride =
+  (store: InMemoryStore): FileSystem.FileSystem["realPath"] =>
+  filePath =>
+    Effect.suspend(() => {
+      const normalized = normalize(filePath);
+      if (!store.files.has(normalized) && !store.directories.has(normalized)) {
+        return Effect.fail(notFound("realPath", filePath));
+      }
+      return Effect.succeed(normalized);
+    });
+
+const moveFileMode = (
+  store: InMemoryStore,
+  oldPath: string,
+  newPath: string
+): void => {
+  const mode = store.fileModes.get(oldPath);
+  store.fileModes.delete(oldPath);
+  if (mode !== undefined) {
+    store.fileModes.set(newPath, mode);
+  }
+};
+
+const makeRenameOverride =
+  (store: InMemoryStore): FileSystem.FileSystem["rename"] =>
+  (oldPath, newPath) =>
+    Effect.suspend(() => {
+      const normalizedOld = normalize(oldPath);
+      const normalizedNew = normalize(newPath);
+      const bytes = store.files.get(normalizedOld);
+      if (bytes === undefined) {
+        return Effect.fail(notFound("rename", oldPath));
+      }
+      if (!parentExists(store, normalizedNew)) {
+        return Effect.fail(
+          notFound("rename", path.posix.dirname(normalizedNew))
+        );
+      }
+      store.files.delete(normalizedOld);
+      store.files.set(normalizedNew, bytes);
+      moveFileMode(store, normalizedOld, normalizedNew);
+      return Effect.void;
+    });
+
+const makeChmodOverride =
+  (store: InMemoryStore): FileSystem.FileSystem["chmod"] =>
+  (filePath, mode) =>
+    Effect.suspend(() => {
+      const normalized = normalize(filePath);
+      if (!store.files.has(normalized) && !store.directories.has(normalized)) {
+        return Effect.fail(notFound("chmod", filePath));
+      }
+      store.fileModes.set(normalized, mode);
+      return Effect.void;
+    });
+
+const makeStatOverride =
+  (store: InMemoryStore): FileSystem.FileSystem["stat"] =>
+  filePath =>
+    Effect.suspend(() => {
+      const normalized = normalize(filePath);
+      const isFile = store.files.has(normalized);
+      const isDirectory = store.directories.has(normalized);
+      if (!isFile && !isDirectory) {
+        return Effect.fail(notFound("stat", filePath));
+      }
+      const size = isFile
+        ? BigInt(store.files.get(normalized)?.length ?? 0)
+        : BigInt(0);
+      return Effect.succeed({
+        type: isFile ? ("File" as const) : ("Directory" as const),
+        mtime: Option.none(),
+        atime: Option.none(),
+        birthtime: Option.none(),
+        dev: 0,
+        ino: Option.none(),
+        mode: store.fileModes.get(normalized) ?? DEFAULT_FILE_MODE,
+        nlink: Option.none(),
+        uid: Option.none(),
+        gid: Option.none(),
+        rdev: Option.none(),
+        size: FileSystem.Size(size),
+        blksize: Option.none(),
+        blocks: Option.none(),
+      });
+    });
+
+const acquireTempDirectory = (
+  store: InMemoryStore,
+  options: Parameters<FileSystem.FileSystem["makeTempDirectoryScoped"]>[0]
+) =>
+  Effect.suspend(() => {
+    store.tempCounter += 1;
+    const prefix = options?.prefix ?? "tmp-";
+    const baseDir =
+      options?.directory === undefined ? "/.tmp" : normalize(options.directory);
+    if (options?.directory !== undefined && !store.directories.has(baseDir)) {
+      return Effect.fail(
+        notFound("makeTempDirectoryScoped", options.directory)
+      );
+    }
+    const tempPath = `${baseDir}/${prefix}${store.tempCounter}`;
+    store.directories.add(baseDir);
+    store.directories.add(tempPath);
+    ensureParentDirectories(store, tempPath);
+    return Effect.succeed(tempPath);
+  });
+
+const makeTempDirectoryScopedOverride =
+  (store: InMemoryStore): FileSystem.FileSystem["makeTempDirectoryScoped"] =>
+  options =>
+    Effect.acquireRelease(acquireTempDirectory(store, options), tempPath =>
+      Effect.sync(() => {
+        deleteDirectoryTree(store, tempPath);
+      })
+    );
+
+const createOverrides = (
+  store: InMemoryStore
+): Partial<FileSystem.FileSystem> => ({
+  makeDirectory: makeDirectoryOverride(store),
+  writeFileString: makeWriteFileStringOverride(store),
+  writeFile: makeWriteFileOverride(store),
+  readFileString: makeReadFileStringOverride(store),
+  readFile: makeReadFileOverride(store),
+  readDirectory: makeReadDirectoryOverride(store),
+  exists: makeExistsOverride(store),
+  remove: makeRemoveOverride(store),
+  realPath: makeRealPathOverride(store),
+  rename: makeRenameOverride(store),
+  chmod: makeChmodOverride(store),
+  stat: makeStatOverride(store),
+  makeTempDirectoryScoped: makeTempDirectoryScopedOverride(store),
+});
+
 /**
  * Test-only `FileSystem.FileSystem` layer backed by an in-memory `Map`.
  *
@@ -67,298 +438,12 @@ const notFound = (
  * The `state` handle exposes the underlying map for assertions.
  */
 export const makeInMemoryFileSystem = (): InMemoryFileSystemHandle => {
-  const files = new Map<string, Uint8Array>();
-  const directories = new Set<string>(["/"]);
-  const fileModes = new Map<string, number>();
-  const DEFAULT_FILE_MODE = 0o644;
-  let tempCounter = 0;
-
-  const ensureParentDirectories = (filePath: string): void => {
-    for (const dir of parents(filePath)) {
-      directories.add(dir);
-    }
-  };
-
-  const parentExists = (filePath: string): boolean =>
-    directories.has(path.posix.dirname(filePath));
-
-  const state: InMemoryFsState = {
-    readFile: filePath => {
-      const bytes = files.get(normalize(filePath));
-      return bytes === undefined ? undefined : decoder.decode(bytes);
-    },
-    hasFile: filePath => files.has(normalize(filePath)),
-    fileMode: filePath =>
-      files.has(normalize(filePath))
-        ? (fileModes.get(normalize(filePath)) ?? DEFAULT_FILE_MODE)
-        : undefined,
-    listFiles: () => Array.from(files.keys()).sort(),
-    listDirectories: () => Array.from(directories).sort(),
-    reset: () => {
-      files.clear();
-      directories.clear();
-      fileModes.clear();
-      directories.add("/");
-      tempCounter = 0;
-    },
-  };
-
-  const overrides: Partial<FileSystem.FileSystem> = {
-    makeDirectory: (dirPath, options) =>
-      Effect.suspend(() => {
-        const normalized = normalize(dirPath);
-        if (options?.recursive !== true && !parentExists(normalized)) {
-          return Effect.fail(
-            notFound("makeDirectory", path.posix.dirname(normalized))
-          );
-        }
-        directories.add(normalized);
-        if (options?.recursive === true) {
-          for (const dir of parents(normalized)) {
-            directories.add(dir);
-          }
-        }
-        return Effect.void;
-      }),
-
-    writeFileString: (filePath, content) =>
-      Effect.suspend(() => {
-        const normalized = normalize(filePath);
-        if (!parentExists(normalized)) {
-          return Effect.fail(notFound("writeFileString", filePath));
-        }
-        files.set(normalized, encoder.encode(content));
-        return Effect.void;
-      }),
-
-    writeFile: (filePath, data) =>
-      Effect.suspend(() => {
-        const normalized = normalize(filePath);
-        if (!parentExists(normalized)) {
-          return Effect.fail(notFound("writeFile", filePath));
-        }
-        files.set(normalized, Uint8Array.from(data));
-        return Effect.void;
-      }),
-
-    readFileString: filePath =>
-      Effect.suspend(() => {
-        const normalized = normalize(filePath);
-        const bytes = files.get(normalized);
-        if (bytes === undefined) {
-          return Effect.fail(notFound("readFileString", filePath));
-        }
-        return Effect.succeed(decoder.decode(bytes));
-      }),
-
-    readFile: filePath =>
-      Effect.suspend(() => {
-        const normalized = normalize(filePath);
-        const bytes = files.get(normalized);
-        if (bytes === undefined) {
-          return Effect.fail(notFound("readFile", filePath));
-        }
-        return Effect.succeed(bytes);
-      }),
-
-    readDirectory: dirPath =>
-      Effect.suspend(() => {
-        const normalized = normalize(dirPath);
-        if (!directories.has(normalized)) {
-          return Effect.fail(notFound("readDirectory", dirPath));
-        }
-
-        const entries = new Set<string>();
-        for (const filePath of files.keys()) {
-          if (path.posix.dirname(filePath) === normalized) {
-            entries.add(path.posix.basename(filePath));
-          }
-        }
-        for (const directory of directories) {
-          if (
-            directory !== normalized &&
-            path.posix.dirname(directory) === normalized
-          ) {
-            entries.add(path.posix.basename(directory));
-          }
-        }
-        return Effect.succeed(Array.from(entries).sort());
-      }),
-
-    exists: filePath =>
-      Effect.sync(() => {
-        const normalized = normalize(filePath);
-        return files.has(normalized) || directories.has(normalized);
-      }),
-
-    remove: (filePath, options) =>
-      Effect.suspend(() => {
-        const normalized = normalize(filePath);
-        const isFile = files.has(normalized);
-        const isDir = directories.has(normalized);
-
-        if (!isFile && !isDir) {
-          return options?.force === true
-            ? Effect.void
-            : Effect.fail(notFound("remove", filePath));
-        }
-
-        if (isFile) {
-          files.delete(normalized);
-          fileModes.delete(normalized);
-          return Effect.void;
-        }
-
-        const prefix = normalized.endsWith("/") ? normalized : `${normalized}/`;
-        if (options?.recursive === true) {
-          for (const key of Array.from(files.keys())) {
-            if (key.startsWith(prefix)) {
-              files.delete(key);
-              fileModes.delete(key);
-            }
-          }
-          for (const dir of Array.from(directories)) {
-            if (dir === normalized || dir.startsWith(prefix)) {
-              directories.delete(dir);
-            }
-          }
-          return Effect.void;
-        }
-
-        // Non-recursive removal of a directory: match Node's `rm` semantics
-        // and refuse when the directory still contains files or child dirs.
-        const hasChildren =
-          Array.from(files.keys()).some(key => key.startsWith(prefix)) ||
-          Array.from(directories).some(
-            dir => dir !== normalized && dir.startsWith(prefix)
-          );
-
-        if (hasChildren) {
-          return Effect.fail(
-            new SystemError({
-              reason: "AlreadyExists",
-              module: "FileSystem",
-              method: "remove",
-              pathOrDescriptor: filePath,
-              description: `In-memory filesystem: directory '${filePath}' is not empty; pass { recursive: true } to remove it`,
-            })
-          );
-        }
-
-        directories.delete(normalized);
-        return Effect.void;
-      }),
-
-    realPath: filePath =>
-      Effect.suspend(() => {
-        const normalized = normalize(filePath);
-        if (!files.has(normalized) && !directories.has(normalized)) {
-          return Effect.fail(notFound("realPath", filePath));
-        }
-        return Effect.succeed(normalized);
-      }),
-
-    rename: (oldPath, newPath) =>
-      Effect.suspend(() => {
-        const normalizedOld = normalize(oldPath);
-        const normalizedNew = normalize(newPath);
-        const bytes = files.get(normalizedOld);
-        if (bytes === undefined) {
-          return Effect.fail(notFound("rename", oldPath));
-        }
-        if (!parentExists(normalizedNew)) {
-          return Effect.fail(
-            notFound("rename", path.posix.dirname(normalizedNew))
-          );
-        }
-        files.delete(normalizedOld);
-        files.set(normalizedNew, bytes);
-        const mode = fileModes.get(normalizedOld);
-        fileModes.delete(normalizedOld);
-        if (mode !== undefined) {
-          fileModes.set(normalizedNew, mode);
-        }
-        return Effect.void;
-      }),
-
-    chmod: (filePath, mode) =>
-      Effect.suspend(() => {
-        const normalized = normalize(filePath);
-        if (!files.has(normalized) && !directories.has(normalized)) {
-          return Effect.fail(notFound("chmod", filePath));
-        }
-        fileModes.set(normalized, mode);
-        return Effect.void;
-      }),
-
-    stat: filePath =>
-      Effect.suspend(() => {
-        const normalized = normalize(filePath);
-        const isFile = files.has(normalized);
-        const isDirectory = directories.has(normalized);
-        if (!isFile && !isDirectory) {
-          return Effect.fail(notFound("stat", filePath));
-        }
-        const size = isFile
-          ? BigInt(files.get(normalized)?.length ?? 0)
-          : BigInt(0);
-        return Effect.succeed({
-          type: isFile ? ("File" as const) : ("Directory" as const),
-          mtime: Option.none(),
-          atime: Option.none(),
-          birthtime: Option.none(),
-          dev: 0,
-          ino: Option.none(),
-          mode: fileModes.get(normalized) ?? DEFAULT_FILE_MODE,
-          nlink: Option.none(),
-          uid: Option.none(),
-          gid: Option.none(),
-          rdev: Option.none(),
-          size: FileSystem.Size(size),
-          blksize: Option.none(),
-          blocks: Option.none(),
-        });
-      }),
-
-    makeTempDirectoryScoped: options =>
-      Effect.acquireRelease(
-        Effect.suspend(() => {
-          tempCounter += 1;
-          const prefix = options?.prefix ?? "tmp-";
-          const baseDir = options?.directory
-            ? normalize(options.directory)
-            : "/.tmp";
-          if (options?.directory && !directories.has(baseDir)) {
-            return Effect.fail(
-              notFound("makeTempDirectoryScoped", options.directory)
-            );
-          }
-          const tmpPath = `${baseDir}/${prefix}${tempCounter}`;
-          directories.add(baseDir);
-          directories.add(tmpPath);
-          ensureParentDirectories(tmpPath);
-          return Effect.succeed(tmpPath);
-        }),
-        tmpPath =>
-          Effect.sync(() => {
-            const prefix = tmpPath.endsWith("/") ? tmpPath : `${tmpPath}/`;
-            for (const key of Array.from(files.keys())) {
-              if (key.startsWith(prefix)) {
-                files.delete(key);
-                fileModes.delete(key);
-              }
-            }
-            for (const dir of Array.from(directories)) {
-              if (dir === tmpPath || dir.startsWith(prefix)) {
-                directories.delete(dir);
-              }
-            }
-          })
-      ),
-  };
-
+  const store = createStore();
   return {
-    layer: Layer.succeed(FileSystem.FileSystem, FileSystem.makeNoop(overrides)),
-    state,
+    layer: Layer.succeed(
+      FileSystem.FileSystem,
+      FileSystem.makeNoop(createOverrides(store))
+    ),
+    state: createState(store),
   };
 };

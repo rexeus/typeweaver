@@ -39,6 +39,27 @@ export type NormalizationError =
   | MissingDerivedResponseParentError
   | PathParameterMismatchError;
 
+type NormalizationErrorConstructor = abstract new (
+  ...args: never[]
+) => NormalizationError;
+
+const normalizationErrorConstructors: readonly NormalizationErrorConstructor[] =
+  [
+    DerivedResponseCycleError,
+    DuplicateOperationIdError,
+    DuplicateResponseNameError,
+    DuplicateRouteError,
+    EmptyOperationResponsesError,
+    EmptyResourceOperationsError,
+    EmptySpecResourcesError,
+    InvalidDerivedResponseError,
+    InvalidOperationIdError,
+    InvalidRequestSchemaError,
+    InvalidResourceNameError,
+    MissingDerivedResponseParentError,
+    PathParameterMismatchError,
+  ];
+
 /**
  * Predicate that recognises every error the normalizer is allowed to surface.
  * Lets `Effect.try` catch handlers narrow safely instead of casting blindly.
@@ -46,16 +67,6 @@ export type NormalizationError =
 export const isNormalizationError = (
   error: unknown
 ): error is NormalizationError =>
-  error instanceof DerivedResponseCycleError ||
-  error instanceof DuplicateOperationIdError ||
-  error instanceof DuplicateResponseNameError ||
-  error instanceof DuplicateRouteError ||
-  error instanceof EmptyOperationResponsesError ||
-  error instanceof EmptyResourceOperationsError ||
-  error instanceof EmptySpecResourcesError ||
-  error instanceof InvalidDerivedResponseError ||
-  error instanceof InvalidOperationIdError ||
-  error instanceof InvalidRequestSchemaError ||
-  error instanceof InvalidResourceNameError ||
-  error instanceof MissingDerivedResponseParentError ||
-  error instanceof PathParameterMismatchError;
+  normalizationErrorConstructors.some(
+    ErrorConstructor => error instanceof ErrorConstructor
+  );

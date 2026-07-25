@@ -97,7 +97,9 @@ describe("compareRoutes", () => {
   ])("sorts $scenario alphabetically", ({ earlier, later }) => {
     expectRouteToSortBefore(earlier, later);
   });
+});
 
+describe("compareRoutes method ordering and equivalence", () => {
   test.each([
     {
       scenario: "single parameter segment",

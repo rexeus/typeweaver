@@ -122,6 +122,192 @@ const isSameOrDescendantOf = (directory: string, ancestor: string): boolean => {
   );
 };
 
+type CleanTargetContext = {
+  readonly outputDir: string;
+  readonly fileSystem: CleanTargetFs;
+  readonly resolvedWorkingDirectory: string;
+  readonly canonicalWorkingDirectory: string;
+  readonly resolvedOutputDir: string;
+  readonly canonicalOutputDir: string;
+  readonly filesystemRoot: string;
+};
+
+const resolveCleanTargetContext = (
+  outputDir: string,
+  currentWorkingDirectory: string,
+  fileSystem: CleanTargetFs
+): CleanTargetContext => {
+  const trimmedOutputDir = outputDir.trim();
+  if (trimmedOutputDir.length === 0) {
+    throw new UnsafeCleanTargetError({
+      outputDir,
+      details: { reason: "empty-path" },
+    });
+  }
+
+  const resolvedWorkingDirectory = path.resolve(currentWorkingDirectory);
+  const canonicalWorkingDirectory = fileSystem.realPath(
+    resolvedWorkingDirectory
+  );
+  const resolvedOutputDir = path.resolve(
+    resolvedWorkingDirectory,
+    trimmedOutputDir
+  );
+  const canonicalOutputDir = canonicalizePathForContainment(
+    resolvedOutputDir,
+    fileSystem
+  );
+
+  return {
+    outputDir,
+    fileSystem,
+    resolvedWorkingDirectory,
+    canonicalWorkingDirectory,
+    resolvedOutputDir,
+    canonicalOutputDir,
+    filesystemRoot: path.parse(canonicalOutputDir).root,
+  };
+};
+
+const assertNotFilesystemRoot = (context: CleanTargetContext): void => {
+  if (context.canonicalOutputDir !== context.filesystemRoot) {
+    return;
+  }
+  throw new UnsafeCleanTargetError({
+    outputDir: context.outputDir,
+    details: {
+      reason: "filesystem-root",
+      resolvedOutputDir: context.resolvedOutputDir,
+      currentWorkingDirectory: context.resolvedWorkingDirectory,
+      filesystemRoot: context.filesystemRoot,
+    },
+  });
+};
+
+const assertNotWorkingDirectory = (context: CleanTargetContext): void => {
+  const isWorkingDirectory =
+    context.resolvedOutputDir === context.resolvedWorkingDirectory ||
+    context.canonicalOutputDir === context.canonicalWorkingDirectory;
+  if (!isWorkingDirectory) {
+    return;
+  }
+  throw new UnsafeCleanTargetError({
+    outputDir: context.outputDir,
+    details: {
+      reason: "current-working-directory",
+      resolvedOutputDir: context.resolvedOutputDir,
+      currentWorkingDirectory: context.resolvedWorkingDirectory,
+    },
+  });
+};
+
+const getProtectedWorkspaceRoots = (
+  context: CleanTargetContext
+): readonly string[] =>
+  [
+    findProtectedWorkspaceRoot(
+      context.resolvedWorkingDirectory,
+      context.fileSystem
+    ),
+    findProtectedWorkspaceRoot(
+      context.canonicalWorkingDirectory,
+      context.fileSystem
+    ),
+  ].filter((root): root is string => root !== undefined);
+
+const assertNotWorkspaceRoot = (
+  context: CleanTargetContext,
+  protectedWorkspaceRoots: readonly string[]
+): void => {
+  const target = protectedWorkspaceRoots.find(
+    protectedWorkspaceRoot =>
+      context.resolvedOutputDir === protectedWorkspaceRoot ||
+      context.canonicalOutputDir ===
+        context.fileSystem.realPath(protectedWorkspaceRoot)
+  );
+  if (target === undefined) {
+    return;
+  }
+  throw new UnsafeCleanTargetError({
+    outputDir: context.outputDir,
+    details: {
+      reason: "workspace-root",
+      resolvedOutputDir: context.resolvedOutputDir,
+      currentWorkingDirectory: context.resolvedWorkingDirectory,
+      protectedWorkspaceRoot: target,
+    },
+  });
+};
+
+const assertNotAncestorOfWorkingDirectory = (
+  context: CleanTargetContext,
+  protectedWorkspaceRoots: readonly string[]
+): void => {
+  const isProtectedAncestor =
+    protectedWorkspaceRoots.length > 0 &&
+    (isSameOrDescendantOf(
+      context.resolvedWorkingDirectory,
+      context.resolvedOutputDir
+    ) ||
+      isSameOrDescendantOf(
+        context.canonicalWorkingDirectory,
+        context.canonicalOutputDir
+      ));
+  if (!isProtectedAncestor) {
+    return;
+  }
+  throw new UnsafeCleanTargetError({
+    outputDir: context.outputDir,
+    details: {
+      reason: "ancestor-of-current-working-directory",
+      resolvedOutputDir: context.resolvedOutputDir,
+      currentWorkingDirectory: context.resolvedWorkingDirectory,
+    },
+  });
+};
+
+const assertDoesNotContainInputFile = (
+  context: CleanTargetContext,
+  inputFile: string | undefined
+): void => {
+  if (inputFile === undefined) {
+    return;
+  }
+  const canonicalInputFile = canonicalizePathForContainment(
+    path.resolve(context.resolvedWorkingDirectory, inputFile),
+    context.fileSystem
+  );
+  if (!isSameOrDescendantOf(canonicalInputFile, context.canonicalOutputDir)) {
+    return;
+  }
+  throw new UnsafeCleanTargetError({
+    outputDir: context.outputDir,
+    details: {
+      reason: "contains-input-file",
+      resolvedOutputDir: context.resolvedOutputDir,
+      currentWorkingDirectory: context.resolvedWorkingDirectory,
+      inputFile: canonicalInputFile,
+    },
+  });
+};
+
+const assertTargetHasNoWorkspaceMarker = (
+  context: CleanTargetContext
+): void => {
+  if (!hasWorkspaceMarker(context.canonicalOutputDir, context.fileSystem)) {
+    return;
+  }
+  throw new UnsafeCleanTargetError({
+    outputDir: context.outputDir,
+    details: {
+      reason: "target-carries-workspace-marker",
+      resolvedOutputDir: context.resolvedOutputDir,
+      currentWorkingDirectory: context.resolvedWorkingDirectory,
+      protectedWorkspaceRoot: context.canonicalOutputDir,
+    },
+  });
+};
+
 /**
  * Guard every destructive or filesystem-touching use of the output
  * directory against catastrophic targets. `Generator.generate` runs this
@@ -147,135 +333,28 @@ export const assertSafeCleanTargetWith = (
   fileSystem: CleanTargetFs,
   inputFile?: string
 ): void => {
-  const trimmedOutputDir = outputDir.trim();
-  if (trimmedOutputDir.length === 0) {
-    throw new UnsafeCleanTargetError({
-      outputDir,
-      details: { reason: "empty-path" },
-    });
-  }
-
-  const resolvedWorkingDirectory = path.resolve(currentWorkingDirectory);
-  const canonicalWorkingDirectory = fileSystem.realPath(
-    resolvedWorkingDirectory
-  );
-  const resolvedOutputDir = path.resolve(
-    resolvedWorkingDirectory,
-    trimmedOutputDir
-  );
-  const canonicalOutputDir = canonicalizePathForContainment(
-    resolvedOutputDir,
+  const context = resolveCleanTargetContext(
+    outputDir,
+    currentWorkingDirectory,
     fileSystem
   );
-  const filesystemRoot = path.parse(canonicalOutputDir).root;
+  assertNotFilesystemRoot(context);
+  assertNotWorkingDirectory(context);
 
-  if (canonicalOutputDir === filesystemRoot) {
-    throw new UnsafeCleanTargetError({
-      outputDir,
-      details: {
-        reason: "filesystem-root",
-        resolvedOutputDir,
-        currentWorkingDirectory: resolvedWorkingDirectory,
-        filesystemRoot,
-      },
-    });
-  }
-
-  if (
-    resolvedOutputDir === resolvedWorkingDirectory ||
-    canonicalOutputDir === canonicalWorkingDirectory
-  ) {
-    throw new UnsafeCleanTargetError({
-      outputDir,
-      details: {
-        reason: "current-working-directory",
-        resolvedOutputDir,
-        currentWorkingDirectory: resolvedWorkingDirectory,
-      },
-    });
-  }
-
-  const logicalProtectedWorkspaceRoot = findProtectedWorkspaceRoot(
-    resolvedWorkingDirectory,
-    fileSystem
-  );
-  const canonicalProtectedWorkspaceRoot = findProtectedWorkspaceRoot(
-    canonicalWorkingDirectory,
-    fileSystem
-  );
-  const protectedWorkspaceRoots = [
-    logicalProtectedWorkspaceRoot,
-    canonicalProtectedWorkspaceRoot,
-  ].filter((root): root is string => root !== undefined);
-  const protectedWorkspaceRootTarget = protectedWorkspaceRoots.find(
-    protectedWorkspaceRoot =>
-      resolvedOutputDir === protectedWorkspaceRoot ||
-      canonicalOutputDir === fileSystem.realPath(protectedWorkspaceRoot)
-  );
-
-  if (protectedWorkspaceRootTarget !== undefined) {
-    throw new UnsafeCleanTargetError({
-      outputDir,
-      details: {
-        reason: "workspace-root",
-        resolvedOutputDir,
-        currentWorkingDirectory: resolvedWorkingDirectory,
-        protectedWorkspaceRoot: protectedWorkspaceRootTarget,
-      },
-    });
-  }
-
-  if (
-    protectedWorkspaceRoots.length > 0 &&
-    (isSameOrDescendantOf(resolvedWorkingDirectory, resolvedOutputDir) ||
-      isSameOrDescendantOf(canonicalWorkingDirectory, canonicalOutputDir))
-  ) {
-    throw new UnsafeCleanTargetError({
-      outputDir,
-      details: {
-        reason: "ancestor-of-current-working-directory",
-        resolvedOutputDir,
-        currentWorkingDirectory: resolvedWorkingDirectory,
-      },
-    });
-  }
+  const protectedWorkspaceRoots = getProtectedWorkspaceRoots(context);
+  assertNotWorkspaceRoot(context, protectedWorkspaceRoots);
+  assertNotAncestorOfWorkingDirectory(context, protectedWorkspaceRoots);
 
   // Reject when the spec input file lives inside the clean target. Without
   // this check, `typeweaver generate --input spec/index.ts --output spec`
   // deletes the source before bundling runs.
-  if (inputFile !== undefined) {
-    const canonicalInputFile = canonicalizePathForContainment(
-      path.resolve(resolvedWorkingDirectory, inputFile),
-      fileSystem
-    );
-    if (isSameOrDescendantOf(canonicalInputFile, canonicalOutputDir)) {
-      throw new UnsafeCleanTargetError({
-        outputDir,
-        details: {
-          reason: "contains-input-file",
-          resolvedOutputDir,
-          currentWorkingDirectory: resolvedWorkingDirectory,
-          inputFile: canonicalInputFile,
-        },
-      });
-    }
-  }
+  assertDoesNotContainInputFile(context, inputFile);
 
   // Defense in depth: a target outside the workspace inferred from cwd is
   // not necessarily safe. If the target directory itself carries a workspace
   // marker, cleaning it would destroy a workspace — reject before any rm
   // runs.
-  if (hasWorkspaceMarker(canonicalOutputDir, fileSystem)) {
-    throw new UnsafeCleanTargetError({
-      outputDir,
-      details: {
-        reason: "target-carries-workspace-marker",
-        resolvedOutputDir,
-        currentWorkingDirectory: resolvedWorkingDirectory,
-        protectedWorkspaceRoot: canonicalOutputDir,
-      },
-    });
-  }
+  assertTargetHasNoWorkspaceMarker(context);
 };
 
 /**

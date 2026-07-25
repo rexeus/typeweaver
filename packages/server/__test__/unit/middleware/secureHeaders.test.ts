@@ -166,7 +166,7 @@ const expectDefaultSecurityHeaders = (response: IHttpResponse): void => {
   }
 };
 
-describe("secureHeaders", () => {
+describe("secureHeaders defaults", () => {
   test("sets the default security headers", async () => {
     const response = await executeSecureHeaders();
 
@@ -195,7 +195,9 @@ describe("secureHeaders", () => {
       expect(response.header?.[headerName]).toBeUndefined();
     }
   });
+});
 
+describe("secureHeaders configuration", () => {
   test("applies configured security header values", async () => {
     const response = await executeSecureHeaders({
       options: {
@@ -229,7 +231,9 @@ describe("secureHeaders", () => {
       expect(response.header?.[unrelatedHeaderName]).toBe(unrelatedValue);
     }
   );
+});
 
+describe("secureHeaders downstream overrides", () => {
   test("configured security headers override conflicting downstream values case-insensitively", async () => {
     const response = await executeSecureHeaders({
       options: { frameOptions: "DENY" },
@@ -287,7 +291,9 @@ describe("secureHeaders", () => {
     expect(response.header?.["X-Frame-Options"]).toBeUndefined();
     expect(response.header?.["x-custom"]).toBe("value");
   });
+});
 
+describe("secureHeaders disabled policy", () => {
   test("lets disabled security headers pass through from downstream", async () => {
     const response = await executeSecureHeaders({
       options: { frameOptions: false },

@@ -8,7 +8,11 @@
 /* oxlint-disable import/max-dependencies */
 
 export { TypeweaverApp, type TypeweaverAppOptions } from "./TypeweaverApp.js";
-export { TypeweaverRouter, type TypeweaverRouterOptions } from "./TypeweaverRouter.js";
+export {
+  TypeweaverRouter,
+  type TypeweaverRouteOptions,
+  type TypeweaverRouterOptions,
+} from "./TypeweaverRouter.js";
 export { HttpMethod } from "@rexeus/typeweaver-core";
 export type {
   HttpResponseErrorHandler,

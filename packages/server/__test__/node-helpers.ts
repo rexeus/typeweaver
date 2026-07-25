@@ -9,6 +9,11 @@ export type NodeRequestWireMetadata = {
   readonly headersDistinct?: NodeRequestHeaders;
 };
 
+export type MockIncomingMessageOptions = {
+  readonly body?: string | Buffer;
+  readonly wireMetadata?: NodeRequestWireMetadata;
+};
+
 export type MockServerResponse = ServerResponse & {
   readonly writtenStatus: number | undefined;
   readonly writtenHeaders: Record<string, string>;
@@ -21,19 +26,26 @@ export function createMockIncomingMessage(
   method: string,
   url: string | undefined,
   headers: NodeRequestHeaders = {},
-  body?: string | Buffer,
-  wireMetadata?: NodeRequestWireMetadata
+  bodyOrOptions?: string | Buffer | MockIncomingMessageOptions
 ): IncomingMessage {
+  const options =
+    typeof bodyOrOptions === "string" || Buffer.isBuffer(bodyOrOptions)
+      ? { body: bodyOrOptions }
+      : (bodyOrOptions ?? {});
   const socket = new Socket();
   const req = new IncomingMessage(socket);
   req.method = method;
   req.url = url;
   req.headers = { host: "localhost:3000", ...headers };
-  applyNodeRequestWireMetadata(req, req.headers, wireMetadata);
+  applyNodeRequestWireMetadata(req, req.headers, options.wireMetadata);
 
-  if (body !== undefined) {
+  if (options.body !== undefined) {
     process.nextTick(() => {
-      req.push(Buffer.isBuffer(body) ? body : Buffer.from(body));
+      req.push(
+        Buffer.isBuffer(options.body)
+          ? options.body
+          : Buffer.from(options.body ?? "")
+      );
       req.push(null);
     });
   } else {

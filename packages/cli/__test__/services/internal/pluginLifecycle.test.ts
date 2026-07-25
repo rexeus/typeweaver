@@ -113,6 +113,152 @@ const registration = (plugin: Plugin): PluginRegistration => ({
   plugin,
 });
 
+const failureScenarios = [
+  "initialize-failure",
+  "generate-failure",
+  "generate-interruption",
+] as const;
+
+type FailureScenario = (typeof failureScenarios)[number];
+
+type LifecycleFailureFixture = {
+  readonly events: string[];
+  readonly failureCause: Error;
+  readonly failure: PluginExecutionError;
+  readonly interruptEntered: Deferred.Deferred<void>;
+  readonly lifecycle: Effect.Effect<unknown, unknown>;
+  readonly getIndexRuns: () => number;
+};
+
+const createLifecycleFailureFixture = Effect.fn(function* (
+  scenario: FailureScenario
+) {
+  const events: string[] = [];
+  const interruptEntered = yield* Deferred.make<void>();
+  const neverRelease = yield* Deferred.make<void>();
+  const failureCause = new Error(`intentional ${scenario}`);
+  const failure = new PluginExecutionError({
+    pluginName: "beta",
+    phase: scenario === "initialize-failure" ? "initialize" : "generate",
+    cause: failureCause,
+  });
+
+  const makePlugin = (name: "alpha" | "beta" | "omega"): Plugin => ({
+    name,
+    initialize: () =>
+      Effect.sync(() => {
+        events.push(`initialize:${name}`);
+      }).pipe(
+        Effect.zipRight(
+          name === "beta" && scenario === "initialize-failure"
+            ? Effect.fail(failure)
+            : Effect.void
+        )
+      ),
+    generate: () =>
+      Effect.sync(() => {
+        events.push(`generate:${name}`);
+      }).pipe(
+        Effect.zipRight(
+          name !== "beta"
+            ? Effect.void
+            : scenario === "generate-failure"
+              ? Effect.fail(failure)
+              : Deferred.succeed(interruptEntered, undefined).pipe(
+                  Effect.zipRight(Deferred.await(neverRelease))
+                )
+        )
+      ),
+    finalize: () =>
+      Effect.sync(() => {
+        events.push(`finalize:${name}`);
+      }),
+  });
+  const plugins = [
+    makePlugin("alpha"),
+    makePlugin("beta"),
+    makePlugin("omega"),
+  ];
+  const contextBuilder = ContextBuilder.make({
+    buildPluginContext: () => Effect.succeed(pluginContext),
+    buildGeneratorContext: params =>
+      Effect.succeed(makeBuiltContext(params.normalizedSpec)),
+  });
+  let indexRuns = 0;
+  const indexFileGenerator = IndexFileGenerator.make({
+    generate: () =>
+      Effect.sync(() => {
+        indexRuns += 1;
+      }),
+  });
+  const lifecycle = runPluginLifecycle(
+    {
+      plan,
+      initial: plugins.map(registration),
+      normalizedSpec: emptyNormalizedSpec(),
+      pluginContext,
+    },
+    { contextBuilder, indexFileGenerator }
+  );
+  return {
+    events,
+    failureCause,
+    failure,
+    interruptEntered,
+    lifecycle,
+    getIndexRuns: () => indexRuns,
+  };
+});
+
+const runFailureScenario = Effect.fn(function* (
+  scenario: FailureScenario,
+  fixture: LifecycleFailureFixture
+) {
+  if (scenario !== "generate-interruption") {
+    return yield* Effect.exit(fixture.lifecycle);
+  }
+  const fiber = yield* Effect.fork(fixture.lifecycle);
+  yield* Deferred.await(fixture.interruptEntered);
+  return yield* Fiber.interrupt(fiber);
+});
+
+const assertFailureExit = (
+  scenario: FailureScenario,
+  fixture: LifecycleFailureFixture,
+  exit: Exit.Exit<unknown, unknown>
+): void => {
+  expect(Exit.isFailure(exit)).toBe(true);
+  if (!Exit.isFailure(exit)) return;
+  if (scenario === "generate-interruption") {
+    expect(Cause.isInterruptedOnly(exit.cause)).toBe(true);
+    return;
+  }
+  const observedFailure = Cause.failureOption(exit.cause);
+  expect(Option.isSome(observedFailure)).toBe(true);
+  if (!Option.isSome(observedFailure)) return;
+  expect(observedFailure.value).toBeInstanceOf(PluginExecutionError);
+  if (!(observedFailure.value instanceof PluginExecutionError)) return;
+  expect(observedFailure.value.pluginName).toBe("beta");
+  expect(observedFailure.value.phase).toBe(fixture.failure.phase);
+  expect(Cause.originalError(observedFailure.value.cause)).toBe(
+    fixture.failureCause
+  );
+};
+
+const lifecycleFailureScenario = Effect.fn(function* (
+  scenario: FailureScenario
+) {
+  const fixture = yield* createLifecycleFailureFixture(scenario);
+  const exit = yield* runFailureScenario(scenario, fixture);
+  assertFailureExit(scenario, fixture, exit);
+  expect(fixture.events.filter(event => event.startsWith("finalize:"))).toEqual(
+    scenario === "initialize-failure"
+      ? ["finalize:alpha"]
+      : ["finalize:omega", "finalize:beta", "finalize:alpha"]
+  );
+  expect(fixture.getIndexRuns()).toBe(0);
+});
+
 describe("runPluginLifecycle", () => {
   it.effect(
     "preserves phase barriers, forwards the transformed spec, indexes the final snapshot, and finalizes in reverse order",
@@ -208,122 +354,11 @@ describe("runPluginLifecycle", () => {
         expect(result.generatedFiles).toEqual(["alpha.ts", "index.ts"]);
       })
   );
+});
 
-  describe.each([
-    "initialize-failure",
-    "generate-failure",
-    "generate-interruption",
-  ] as const)("%s", scenario => {
-    it.effect(
-      "finalizes only successfully initialized plugins exactly once and preserves the original exit",
-      () =>
-        Effect.gen(function* () {
-          const events: string[] = [];
-          const interruptEntered = yield* Deferred.make<void>();
-          const neverRelease = yield* Deferred.make<void>();
-          const failureCause = new Error(`intentional ${scenario}`);
-          const failure = new PluginExecutionError({
-            pluginName: "beta",
-            phase:
-              scenario === "initialize-failure" ? "initialize" : "generate",
-            cause: failureCause,
-          });
-
-          const makePlugin = (name: "alpha" | "beta" | "omega"): Plugin => ({
-            name,
-            initialize: () =>
-              Effect.sync(() => {
-                events.push(`initialize:${name}`);
-              }).pipe(
-                Effect.zipRight(
-                  name === "beta" && scenario === "initialize-failure"
-                    ? Effect.fail(failure)
-                    : Effect.void
-                )
-              ),
-            generate: () =>
-              Effect.sync(() => {
-                events.push(`generate:${name}`);
-              }).pipe(
-                Effect.zipRight(
-                  name !== "beta"
-                    ? Effect.void
-                    : scenario === "generate-failure"
-                      ? Effect.fail(failure)
-                      : scenario === "generate-interruption"
-                        ? Deferred.succeed(interruptEntered, undefined).pipe(
-                            Effect.zipRight(Deferred.await(neverRelease))
-                          )
-                        : Effect.void
-                )
-              ),
-            finalize: () =>
-              Effect.sync(() => {
-                events.push(`finalize:${name}`);
-              }),
-          });
-          const plugins = [
-            makePlugin("alpha"),
-            makePlugin("beta"),
-            makePlugin("omega"),
-          ];
-          const contextBuilder = ContextBuilder.make({
-            buildPluginContext: () => Effect.succeed(pluginContext),
-            buildGeneratorContext: params =>
-              Effect.succeed(makeBuiltContext(params.normalizedSpec)),
-          });
-          let indexRuns = 0;
-          const indexFileGenerator = IndexFileGenerator.make({
-            generate: () =>
-              Effect.sync(() => {
-                indexRuns += 1;
-              }),
-          });
-          const lifecycle = runPluginLifecycle(
-            {
-              plan,
-              initial: plugins.map(registration),
-              normalizedSpec: emptyNormalizedSpec(),
-              pluginContext,
-            },
-            { contextBuilder, indexFileGenerator }
-          );
-
-          const exit =
-            scenario === "generate-interruption"
-              ? yield* Effect.gen(function* () {
-                  const fiber = yield* Effect.fork(lifecycle);
-                  yield* Deferred.await(interruptEntered);
-                  return yield* Fiber.interrupt(fiber);
-                })
-              : yield* Effect.exit(lifecycle);
-
-          expect(Exit.isFailure(exit)).toBe(true);
-          if (!Exit.isFailure(exit)) return;
-          if (scenario === "generate-interruption") {
-            expect(Cause.isInterruptedOnly(exit.cause)).toBe(true);
-          } else {
-            const observedFailure = Cause.failureOption(exit.cause);
-            expect(Option.isSome(observedFailure)).toBe(true);
-            if (!Option.isSome(observedFailure)) return;
-            expect(observedFailure.value).toBeInstanceOf(PluginExecutionError);
-            if (!(observedFailure.value instanceof PluginExecutionError)) {
-              return;
-            }
-            expect(observedFailure.value.pluginName).toBe("beta");
-            expect(observedFailure.value.phase).toBe(failure.phase);
-            expect(Cause.originalError(observedFailure.value.cause)).toBe(
-              failureCause
-            );
-          }
-
-          expect(events.filter(event => event.startsWith("finalize:"))).toEqual(
-            scenario === "initialize-failure"
-              ? ["finalize:alpha"]
-              : ["finalize:omega", "finalize:beta", "finalize:alpha"]
-          );
-          expect(indexRuns).toBe(0);
-        })
-    );
-  });
+describe.each(failureScenarios)("runPluginLifecycle %s", scenario => {
+  it.effect(
+    "finalizes only successfully initialized plugins exactly once and preserves the original exit",
+    () => lifecycleFailureScenario(scenario)
+  );
 });

@@ -73,7 +73,7 @@ function expectDefaultUnauthorized(response: IHttpResponse): void {
   );
 }
 
-describe("basicAuth", () => {
+describe("basicAuth malformed credentials", () => {
   test.each<{
     readonly case: string;
     readonly header?: Record<string, string | string[]>;
@@ -153,7 +153,9 @@ describe("basicAuth", () => {
     expect(verifyCredentials).not.toHaveBeenCalled();
     expect(finalHandler).not.toHaveBeenCalled();
   });
+});
 
+describe("basicAuth verification failures", () => {
   test("short-circuits downstream handlers when credentials are rejected", async () => {
     const finalHandler = vi.fn(finalHandlerShouldNotRun);
 
@@ -234,7 +236,9 @@ describe("basicAuth", () => {
       expect(finalHandler).not.toHaveBeenCalled();
     }
   );
+});
 
+describe("basicAuth successful credentials", () => {
   test("passes decoded credentials and the request context to the verifier", async () => {
     const verifyCredentials = vi.fn(alwaysValid);
 
@@ -324,7 +328,9 @@ describe("basicAuth", () => {
     expect(response.statusCode).toBe(200);
     expect(response.body).toEqual({ ok: true });
   });
+});
 
+describe("basicAuth unauthorized responses", () => {
   test("uses the configured realm in the default challenge", async () => {
     const response = await executeBasicAuth({
       realm: "Admin Panel",

@@ -113,7 +113,9 @@ describe("Effect-native plugin context surface against InMemoryFileSystem", () =
     expect(either.left).toMatchObject({ reason: "parent-traversal" });
     expect(state.listFiles()).toEqual([]);
   });
+});
 
+describe("Effect-native template context against InMemoryFileSystem", () => {
   test("renderTemplateEffect reads the template through the FileSystem service", async () => {
     const { built, layer } = await buildContext();
 
@@ -173,7 +175,9 @@ describe("Effect-native plugin context surface against InMemoryFileSystem", () =
     if (!Either.isLeft(either)) return;
     expect(either.left).toBeInstanceOf(TemplateRenderError);
   });
+});
 
+describe("Effect-native generated-file tracking against InMemoryFileSystem", () => {
   test("addGeneratedFileEffect tracks without writing and rejects unsafe paths", async () => {
     const { built, state } = await buildContext();
 

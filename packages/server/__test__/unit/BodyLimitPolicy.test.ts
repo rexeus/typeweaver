@@ -18,7 +18,7 @@ function aPostRequest(): Request {
   });
 }
 
-describe("BodyLimitPolicy", () => {
+describe("BodyLimitPolicy construction", () => {
   test("creates a fetch policy with the default limit", () => {
     expect(createFetchBodyLimitPolicy()).toEqual({
       maxBodySize: DEFAULT_MAX_BODY_SIZE,
@@ -46,88 +46,90 @@ describe("BodyLimitPolicy", () => {
       capability: "prevalidated-request-body",
     });
   });
+});
 
-  describe("resolveMaxBodySize", () => {
-    test("uses the default limit when no limit is configured", () => {
-      expect(resolveMaxBodySize()).toBe(DEFAULT_MAX_BODY_SIZE);
-    });
-
-    test("uses the configured limit when a limit is provided", () => {
-      expect(resolveMaxBodySize(128)).toBe(128);
-    });
-
-    test("preserves an explicit zero-byte limit", () => {
-      expect(resolveMaxBodySize(0)).toBe(0);
-    });
+describe("BodyLimitPolicy resolveMaxBodySize", () => {
+  test("uses the default limit when no limit is configured", () => {
+    expect(resolveMaxBodySize()).toBe(DEFAULT_MAX_BODY_SIZE);
   });
 
-  describe("parseContentLength", () => {
-    test.each([
-      { scenario: "undefined", value: undefined },
-      { scenario: "null", value: null },
-    ] as const)(
-      "returns undefined for a $scenario content-length",
-      ({ value }) => {
-        expect(parseContentLength(value)).toBeUndefined();
-      }
-    );
-
-    test("uses the first value when content-length is an array", () => {
-      expect(parseContentLength(["128", "256"])).toBe(128);
-    });
-
-    test("returns undefined when content-length is an empty array", () => {
-      expect(parseContentLength([])).toBeUndefined();
-    });
-
-    test("uses only the first content-length value when it is invalid", () => {
-      expect(parseContentLength(["abc", "128"])).toBeUndefined();
-    });
-
-    test("parses a valid integer content-length", () => {
-      expect(parseContentLength("128")).toBe(128);
-    });
-
-    test("trims whitespace around an integer content-length", () => {
-      expect(parseContentLength(" 128 ")).toBe(128);
-    });
-
-    test("returns undefined for a digit-only content-length that exceeds finite numbers", () => {
-      expect(parseContentLength("9".repeat(400))).toBeUndefined();
-    });
-
-    test.each([
-      { scenario: "invalid", value: "abc" },
-      { scenario: "negative", value: "-1" },
-      { scenario: "decimal", value: "10.5" },
-      { scenario: "exponent", value: "1e3" },
-      { scenario: "hex-like", value: "0x10" },
-      { scenario: "empty", value: "" },
-      { scenario: "whitespace-only", value: "   " },
-      { scenario: "NaN", value: "NaN" },
-      { scenario: "non-finite", value: "Infinity" },
-    ] as const)(
-      "returns undefined for a $scenario content-length",
-      ({ value }) => {
-        expect(parseContentLength(value)).toBeUndefined();
-      }
-    );
+  test("uses the configured limit when a limit is provided", () => {
+    expect(resolveMaxBodySize(128)).toBe(128);
   });
 
-  describe("isBodySizeOverLimit", () => {
-    test("keeps a body below the limit within policy", () => {
-      expect(isBodySizeOverLimit(63, 64)).toBe(false);
-    });
+  test("preserves an explicit zero-byte limit", () => {
+    expect(resolveMaxBodySize(0)).toBe(0);
+  });
+});
 
-    test("keeps a body exactly at the limit within policy", () => {
-      expect(isBodySizeOverLimit(64, 64)).toBe(false);
-    });
+describe("BodyLimitPolicy parseContentLength", () => {
+  test.each([
+    { scenario: "undefined", value: undefined },
+    { scenario: "null", value: null },
+  ] as const)(
+    "returns undefined for a $scenario content-length",
+    ({ value }) => {
+      expect(parseContentLength(value)).toBeUndefined();
+    }
+  );
 
-    test("rejects a body one byte over the limit", () => {
-      expect(isBodySizeOverLimit(65, 64)).toBe(true);
-    });
+  test("uses the first value when content-length is an array", () => {
+    expect(parseContentLength(["128", "256"])).toBe(128);
   });
 
+  test("returns undefined when content-length is an empty array", () => {
+    expect(parseContentLength([])).toBeUndefined();
+  });
+
+  test("uses only the first content-length value when it is invalid", () => {
+    expect(parseContentLength(["abc", "128"])).toBeUndefined();
+  });
+
+  test("parses a valid integer content-length", () => {
+    expect(parseContentLength("128")).toBe(128);
+  });
+
+  test("trims whitespace around an integer content-length", () => {
+    expect(parseContentLength(" 128 ")).toBe(128);
+  });
+
+  test("returns undefined for a digit-only content-length that exceeds finite numbers", () => {
+    expect(parseContentLength("9".repeat(400))).toBeUndefined();
+  });
+
+  test.each([
+    { scenario: "invalid", value: "abc" },
+    { scenario: "negative", value: "-1" },
+    { scenario: "decimal", value: "10.5" },
+    { scenario: "exponent", value: "1e3" },
+    { scenario: "hex-like", value: "0x10" },
+    { scenario: "empty", value: "" },
+    { scenario: "whitespace-only", value: "   " },
+    { scenario: "NaN", value: "NaN" },
+    { scenario: "non-finite", value: "Infinity" },
+  ] as const)(
+    "returns undefined for a $scenario content-length",
+    ({ value }) => {
+      expect(parseContentLength(value)).toBeUndefined();
+    }
+  );
+});
+
+describe("BodyLimitPolicy isBodySizeOverLimit", () => {
+  test("keeps a body below the limit within policy", () => {
+    expect(isBodySizeOverLimit(63, 64)).toBe(false);
+  });
+
+  test("keeps a body exactly at the limit within policy", () => {
+    expect(isBodySizeOverLimit(64, 64)).toBe(false);
+  });
+
+  test("rejects a body one byte over the limit", () => {
+    expect(isBodySizeOverLimit(65, 64)).toBe(true);
+  });
+});
+
+describe("BodyLimitPolicy request prevalidation", () => {
   test("marks request prevalidation for prevalidated policies", () => {
     const request = aPostRequest();
     const policy = createNodeBodyLimitPolicy(64);

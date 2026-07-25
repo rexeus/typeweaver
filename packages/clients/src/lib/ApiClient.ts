@@ -35,19 +35,24 @@ type SerializedBody = {
   readonly isJsonSerialized: boolean;
 };
 
-const NETWORK_ERROR_MESSAGES: Readonly<
-  Partial<Record<NetworkErrorCode, string>>
-> = {
+const NETWORK_ERROR_MESSAGES = {
   ECONNREFUSED: "Connection refused",
   ECONNRESET: "Connection reset by peer",
   ENOTFOUND: "DNS lookup failed",
   ETIMEDOUT: "Connection timed out",
-};
+} as const satisfies Partial<Record<NetworkErrorCode, string>>;
 
 const PATH_PARAMETER_PATTERN = /:([A-Za-z0-9_]+)/g;
 const LEADING_URI_SCHEME_PATTERN = /^[A-Za-z][A-Za-z0-9+.-]*:/;
 const DELETE_CONTROL_CHARACTER_CODE = 0x7f;
 const SPACE_CHARACTER_CODE = 0x20;
+
+type NetworkFailure = {
+  readonly code: NetworkErrorCode;
+  readonly description: string;
+};
+
+type PathParameters = NonNullable<IHttpParam>;
 
 function hasAsciiControlCharacter(value: string): boolean {
   for (let index = 0; index < value.length; index += 1) {
@@ -61,6 +66,73 @@ function hasAsciiControlCharacter(value: string): boolean {
   }
 
   return false;
+}
+
+function hasErrorName(error: unknown, name: string): boolean {
+  return (
+    (error instanceof DOMException || error instanceof Error) &&
+    error.name === name
+  );
+}
+
+function isKnownNetworkErrorCode(
+  code: string
+): code is keyof typeof NETWORK_ERROR_MESSAGES {
+  return Object.hasOwn(NETWORK_ERROR_MESSAGES, code);
+}
+
+function getNodeNetworkErrorCode(
+  error: unknown
+): keyof typeof NETWORK_ERROR_MESSAGES | undefined {
+  if (!(error instanceof TypeError)) {
+    return undefined;
+  }
+
+  const cause = error.cause;
+  if (
+    typeof cause !== "object" ||
+    cause === null ||
+    !("code" in cause) ||
+    typeof cause.code !== "string"
+  ) {
+    return undefined;
+  }
+
+  return isKnownNetworkErrorCode(cause.code) ? cause.code : undefined;
+}
+
+function classifyNetworkFailure(error: unknown): NetworkFailure {
+  if (hasErrorName(error, "TimeoutError")) {
+    return { code: "TIMEOUT", description: "Request timed out" };
+  }
+
+  if (hasErrorName(error, "AbortError")) {
+    return { code: "ABORT", description: "Request aborted" };
+  }
+
+  const nodeErrorCode = getNodeNetworkErrorCode(error);
+  if (nodeErrorCode !== undefined) {
+    return {
+      code: nodeErrorCode,
+      description: NETWORK_ERROR_MESSAGES[nodeErrorCode],
+    };
+  }
+
+  return {
+    code: "UNKNOWN",
+    description: error instanceof Error ? error.message : String(error),
+  };
+}
+
+function getPathParameterNames(path: string): readonly string[] {
+  const names: string[] = [];
+  for (const match of path.matchAll(PATH_PARAMETER_PATTERN)) {
+    const name = match[1];
+    if (name !== undefined) {
+      names.push(name);
+    }
+  }
+  return names;
 }
 
 /**
@@ -261,56 +333,17 @@ export abstract class ApiClient {
     method: string,
     url: string
   ): NetworkError {
+    const failure = classifyNetworkFailure(error);
     const context = `(${method} ${url})`;
 
-    if (
-      (error instanceof DOMException || error instanceof Error) &&
-      error.name === "TimeoutError"
-    ) {
-      return new NetworkError(
-        `Network error: Request timed out ${context}`,
-        "TIMEOUT",
-        method,
-        url,
-        { cause: error }
-      );
-    }
-
-    if (
-      (error instanceof DOMException || error instanceof Error) &&
-      error.name === "AbortError"
-    ) {
-      return new NetworkError(
-        `Network error: Request aborted ${context}`,
-        "ABORT",
-        method,
-        url,
-        { cause: error }
-      );
-    }
-
-    if (error instanceof TypeError) {
-      const cause = (error as TypeError & { cause?: { code?: string } }).cause;
-      const code = cause?.code;
-
-      if (code && code in NETWORK_ERROR_MESSAGES) {
-        const message = NETWORK_ERROR_MESSAGES[code as NetworkErrorCode];
-        return new NetworkError(
-          `Network error: ${message} ${context}`,
-          code as NetworkErrorCode,
-          method,
-          url,
-          { cause: error }
-        );
-      }
-    }
-
     return new NetworkError(
-      `Network error: ${error instanceof Error ? error.message : String(error)} ${context}`,
-      "UNKNOWN",
-      method,
-      url,
-      { cause: error }
+      `Network error: ${failure.description} ${context}`,
+      {
+        cause: error,
+        code: failure.code,
+        method,
+        url,
+      }
     );
   }
 
@@ -434,33 +467,24 @@ export abstract class ApiClient {
   }
 
   private createPath(path: string, param?: IHttpParam): string {
-    const pathParameterNames: string[] = [];
-    for (const match of path.matchAll(PATH_PARAMETER_PATTERN)) {
-      const name = match[1];
-      if (name !== undefined) {
-        pathParameterNames.push(name);
-      }
-    }
+    const pathParameterSet = new Set(getPathParameterNames(path));
+    const parameters: PathParameters = param ?? {};
 
-    if (pathParameterNames.length === 0) {
-      if (param) {
-        const [extraParamName] = Object.keys(param);
-        if (extraParamName !== undefined) {
-          throw new PathParameterError(
-            `Path parameter '${extraParamName}' is not found in path '${path}'`,
-            extraParamName,
-            path
-          );
-        }
-      }
-      return path;
-    }
+    this.assertNoUnexpectedPathParameters(path, pathParameterSet, parameters);
+    this.assertNoMissingPathParameters(path, pathParameterSet, parameters);
 
-    const pathParameterSet = new Set(pathParameterNames);
-    const parameters = param ?? {};
+    return path.replace(PATH_PARAMETER_PATTERN, (_placeholder, key: string) =>
+      this.encodePathParameter(key, parameters[key]!, path)
+    );
+  }
 
+  private assertNoUnexpectedPathParameters(
+    path: string,
+    pathParameterNames: ReadonlySet<string>,
+    parameters: PathParameters
+  ): void {
     for (const key of Object.keys(parameters)) {
-      if (!pathParameterSet.has(key)) {
+      if (!pathParameterNames.has(key)) {
         throw new PathParameterError(
           `Path parameter '${key}' is not found in path '${path}'`,
           key,
@@ -468,8 +492,14 @@ export abstract class ApiClient {
         );
       }
     }
+  }
 
-    for (const key of pathParameterSet) {
+  private assertNoMissingPathParameters(
+    path: string,
+    pathParameterNames: ReadonlySet<string>,
+    parameters: PathParameters
+  ): void {
+    for (const key of pathParameterNames) {
       if (!Object.hasOwn(parameters, key) || parameters[key] === undefined) {
         throw new PathParameterError(
           `Path parameter '${key}' is missing for path '${path}'`,
@@ -478,10 +508,6 @@ export abstract class ApiClient {
         );
       }
     }
-
-    return path.replace(PATH_PARAMETER_PATTERN, (_placeholder, key: string) =>
-      this.encodePathParameter(key, parameters[key]!, path)
-    );
   }
 
   private encodePathParameter(

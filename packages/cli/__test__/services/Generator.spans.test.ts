@@ -19,7 +19,8 @@ type CapturedSpan = {
 const makeCapturingTracer = (recorded: CapturedSpan[]): Tracer.Tracer => {
   const spans = new Map<string, Tracer.Span>();
   return Tracer.make({
-    span: (name, parent, context, links, startTime, kind) => {
+    span: (...args: Parameters<Tracer.Tracer["span"]>) => {
+      const [name, parent, context, links, startTime, kind] = args;
       const spanId = String(spans.size + 1);
       const attributes = new Map<string, unknown>();
       const parentName =
@@ -150,24 +151,24 @@ const expectSpanHierarchy = (
   expect(named.length).toBeGreaterThan(0);
 };
 
-describe("Generator span emission", () => {
-  const tempDirs: string[] = [];
+const tempDirs: string[] = [];
 
-  afterEach(() => {
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-    tempDirs.length = 0;
-  });
+afterEach(() => {
+  for (const tempDir of tempDirs) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+  tempDirs.length = 0;
+});
 
-  const createTempWorkspace = (): string => {
-    const tempDir = fs.mkdtempSync(
-      path.join(process.cwd(), ".typeweaver-spans-")
-    );
-    tempDirs.push(tempDir);
-    return tempDir;
-  };
+const createTempWorkspace = (): string => {
+  const tempDir = fs.mkdtempSync(
+    path.join(process.cwd(), ".typeweaver-spans-")
+  );
+  tempDirs.push(tempDir);
+  return tempDir;
+};
 
+describe("Generator root span emission", () => {
   test("emits the top-level 'typeweaver.Generator.generate' span when generating a spec", async () => {
     const workspace = createTempWorkspace();
     const inputFile = writeTinySpec(workspace);
@@ -189,7 +190,9 @@ describe("Generator span emission", () => {
       occurrences: 1,
     });
   });
+});
 
+describe("Generator child span emission", () => {
   test("nests pipeline and plugin-phase spans under 'typeweaver.Generator.generate'", async () => {
     const workspace = createTempWorkspace();
     const inputFile = writeTinySpec(workspace);

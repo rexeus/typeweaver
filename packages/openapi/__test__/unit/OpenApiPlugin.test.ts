@@ -89,7 +89,7 @@ const isCapturedPluginConfigError = (
   (error as { readonly pluginName?: unknown }).pluginName === "openapi" &&
   typeof (error as { readonly reason?: unknown }).reason === "string";
 
-describe("openApiPlugin", () => {
+describe("openApiPlugin output", () => {
   test("writes an OpenAPI document to the default output path", () => {
     const context = anOpenApiGeneratorContextWith(anItemsSpec());
 
@@ -131,7 +131,9 @@ describe("openApiPlugin", () => {
       { url: "https://api.example.com", description: "Production" },
     ]);
   });
+});
 
+describe("openApiPlugin diagnostics", () => {
   test("normalizes a safe backslash output path before writing", () => {
     const context = anOpenApiGeneratorContextWith(anItemsSpec());
 
@@ -212,7 +214,9 @@ describe("openApiPlugin", () => {
     );
     expect(document).not.toHaveProperty("warnings");
   });
+});
 
+describe("openApiPlugin configuration errors", () => {
   test.each([
     {
       scenario: "null top-level config",

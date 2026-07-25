@@ -82,7 +82,7 @@ const makeAtomicContextIO = (config: {
     trackGenerated: () => undefined,
   });
 
-describe("makeEffectContextIO", () => {
+describe("makeEffectContextIO failure channels", () => {
   it.effect(
     "keeps EACCES path-probe failures in the typed channel without defects",
     () => {
@@ -135,7 +135,9 @@ describe("makeEffectContextIO", () => {
       expect(Array.from(Cause.defects(exit.cause))).toEqual([bug]);
     });
   });
+});
 
+describe("makeEffectContextIO interrupt safety", () => {
   it.effect(
     "commits rename and tracking before observing an interrupt already pending at rename",
     () =>
@@ -189,7 +191,9 @@ describe("makeEffectContextIO", () => {
         expect(yield* Ref.get(cleanupCount)).toBe(2);
       })
   );
+});
 
+describe("makeEffectContextIO retry safety", () => {
   it.effect(
     "cleans temp state after a rename defect and lets the same context retry",
     () =>

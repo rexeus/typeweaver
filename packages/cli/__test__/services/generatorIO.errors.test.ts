@@ -46,15 +46,15 @@ const expectTypedFailureWithoutDefects = <E extends { readonly _tag: string }>(
   return failure.value;
 };
 
-describe("generator filesystem errors", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-    tempDirs.length = 0;
-  });
+afterEach(() => {
+  vi.restoreAllMocks();
+  for (const tempDir of tempDirs) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+  tempDirs.length = 0;
+});
 
+describe("generator filesystem errors", () => {
   test("reports clean-target permission failures without defects", () => {
     const outputDir = "/workspace/generated";
     const cause = expectedSystemError("EACCES");
@@ -140,7 +140,9 @@ describe("generator filesystem errors", () => {
       expect(Array.from(Cause.defects(exit.cause))).toEqual([programmingError]);
     }
   });
+});
 
+describe("generator output-lock filesystem errors", () => {
   test("reports lock acquisition permission failures without defects", () => {
     const outputDir = createTempDir();
     const cause = expectedSystemError("EACCES");
@@ -193,7 +195,9 @@ describe("generator filesystem errors", () => {
       })
     );
   });
+});
 
+describe("generator output-lock release errors", () => {
   test("recognizes platform-specific filesystem errors outside a fixed allowlist", () => {
     const outputDir = createTempDir();
     const lockPath = path.join(outputDir, ".typeweaver-lock");

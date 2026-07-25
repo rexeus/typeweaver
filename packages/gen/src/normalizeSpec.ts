@@ -85,6 +85,19 @@ const validateRequestSchema = (
   }
 };
 
+const hasNoRequestParts = (request: RequestDefinition): boolean =>
+  request.header === undefined &&
+  request.param === undefined &&
+  request.query === undefined &&
+  request.body === undefined;
+
+const pathParametersMatch = (
+  pathParams: readonly string[],
+  requestParams: readonly string[]
+): boolean =>
+  pathParams.length === requestParams.length &&
+  pathParams.every(pathParam => requestParams.includes(pathParam));
+
 const validateRequest = (
   resourceName: string,
   operationId: string,
@@ -111,10 +124,7 @@ const validateRequest = (
   const requestParams =
     request.param === undefined ? [] : Object.keys(request.param.shape);
 
-  if (
-    pathParams.length !== requestParams.length ||
-    pathParams.some(pathParam => !requestParams.includes(pathParam))
-  ) {
+  if (!pathParametersMatch(pathParams, requestParams)) {
     throw new PathParameterMismatchError({
       operationId,
       path,
@@ -123,12 +133,7 @@ const validateRequest = (
     });
   }
 
-  if (
-    request.header === undefined &&
-    request.param === undefined &&
-    request.query === undefined &&
-    request.body === undefined
-  ) {
+  if (hasNoRequestParts(request)) {
     return { warnings: [] };
   }
 

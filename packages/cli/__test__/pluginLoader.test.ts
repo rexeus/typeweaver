@@ -185,107 +185,105 @@ const runLoadPlugins = async (params: RunParams): Promise<RunResult> => {
   return { logs: exit.value.logs };
 };
 
-describe("pluginLoader", () => {
-  const fixtures = createPluginFixtureWorkspace();
-  const writePluginModule = fixtures.writePluginModule;
+const fixtures = createPluginFixtureWorkspace();
+const writePluginModule = fixtures.writePluginModule;
 
-  afterEach(() => {
-    fixtures.cleanup();
+afterEach(() => {
+  fixtures.cleanup();
+});
+
+const createThrowingModuleSource = (options: {
+  readonly errorName: string;
+  readonly message: string;
+  readonly indent?: string;
+}): string[] => {
+  const indent = options.indent ?? "";
+
+  return [
+    `${indent}class ${options.errorName} extends Error {`,
+    `${indent}  name = "${options.errorName}";`,
+    `${indent}}`,
+    `${indent}throw new ${options.errorName}(${JSON.stringify(options.message)});`,
+  ];
+};
+
+const capturePluginLoadError = async (
+  load: Promise<RunResult>
+): Promise<PluginLoadError> => {
+  const failure = await load.then(
+    () => undefined,
+    error => error
+  );
+
+  if (!(failure instanceof PluginLoadError)) {
+    throw new TestAssertionError(
+      `Expected plugin loading to fail with PluginLoadError, received: ${failure instanceof Error ? failure.message : String(failure)}`
+    );
+  }
+
+  return failure;
+};
+
+const captureTaggedPluginConfigError = async (
+  load: Promise<RunResult>
+): Promise<CapturedPluginConfigError> => {
+  const failure = await load.then(
+    () => undefined,
+    error => error
+  );
+
+  if (!isPluginConfigError(failure)) {
+    throw new TestAssertionError(
+      `Expected plugin loading to fail with PluginConfigError, received: ${failure instanceof Error ? failure.message : String(failure)}`
+    );
+  }
+
+  return failure;
+};
+
+const messages = (logs: readonly CapturedLog[]): readonly string[] =>
+  logs.map(log => log.message);
+
+const expectNoSuccessfulLoadSummary = (logs: readonly CapturedLog[]): void => {
+  expect(messages(logs)).not.toEqual(
+    expect.arrayContaining([expect.stringMatching(/Successfully loaded/)])
+  );
+};
+
+const expectSuccessfulLoadSummary = (
+  logs: readonly CapturedLog[],
+  expected: {
+    readonly count: number;
+    readonly pluginName: string;
+    readonly source: string;
+  }
+): void => {
+  expectSuccessfulLoadSummaryEntries(logs, {
+    count: expected.count,
+    entries: [{ pluginName: expected.pluginName, source: expected.source }],
   });
+};
 
-  const createThrowingModuleSource = (options: {
-    readonly errorName: string;
-    readonly message: string;
-    readonly indent?: string;
-  }): string[] => {
-    const indent = options.indent ?? "";
+const expectSuccessfulLoadSummaryEntries = (
+  logs: readonly CapturedLog[],
+  expected: {
+    readonly count: number;
+    readonly entries: readonly SuccessfulLoadSummaryEntry[];
+  }
+): void => {
+  const observed = messages(logs);
 
-    return [
-      `${indent}class ${options.errorName} extends Error {`,
-      `${indent}  name = "${options.errorName}";`,
-      `${indent}}`,
-      `${indent}throw new ${options.errorName}(${JSON.stringify(options.message)});`,
-    ];
-  };
-
-  const capturePluginLoadError = async (
-    load: Promise<RunResult>
-  ): Promise<PluginLoadError> => {
-    const failure = await load.then(
-      () => undefined,
-      error => error
-    );
-
-    if (!(failure instanceof PluginLoadError)) {
-      throw new TestAssertionError(
-        `Expected plugin loading to fail with PluginLoadError, received: ${failure instanceof Error ? failure.message : String(failure)}`
-      );
-    }
-
-    return failure;
-  };
-
-  const captureTaggedPluginConfigError = async (
-    load: Promise<RunResult>
-  ): Promise<CapturedPluginConfigError> => {
-    const failure = await load.then(
-      () => undefined,
-      error => error
-    );
-
-    if (!isPluginConfigError(failure)) {
-      throw new TestAssertionError(
-        `Expected plugin loading to fail with PluginConfigError, received: ${failure instanceof Error ? failure.message : String(failure)}`
-      );
-    }
-
-    return failure;
-  };
-
-  const messages = (logs: readonly CapturedLog[]): readonly string[] =>
-    logs.map(log => log.message);
-
-  const expectNoSuccessfulLoadSummary = (
-    logs: readonly CapturedLog[]
-  ): void => {
-    expect(messages(logs)).not.toEqual(
-      expect.arrayContaining([expect.stringMatching(/Successfully loaded/)])
-    );
-  };
-
-  const expectSuccessfulLoadSummary = (
-    logs: readonly CapturedLog[],
-    expected: {
-      readonly count: number;
-      readonly pluginName: string;
-      readonly source: string;
-    }
-  ): void => {
-    expectSuccessfulLoadSummaryEntries(logs, {
-      count: expected.count,
-      entries: [{ pluginName: expected.pluginName, source: expected.source }],
-    });
-  };
-
-  const expectSuccessfulLoadSummaryEntries = (
-    logs: readonly CapturedLog[],
-    expected: {
-      readonly count: number;
-      readonly entries: readonly SuccessfulLoadSummaryEntry[];
-    }
-  ): void => {
-    const observed = messages(logs);
-
+  expect(observed).toContain(
+    `Successfully loaded ${expected.count} plugin(s):`
+  );
+  for (const entry of expected.entries) {
     expect(observed).toContain(
-      `Successfully loaded ${expected.count} plugin(s):`
+      `  - ${entry.pluginName} (from ${entry.source})`
     );
-    for (const entry of expected.entries) {
-      expect(observed).toContain(
-        `  - ${entry.pluginName} (from ${entry.source})`
-      );
-    }
-  };
+  }
+};
 
+describe("pluginLoader required plugin registration", () => {
   test("registers required plugins when config is absent", async () => {
     const registeredPlugins: RegisteredPlugin[] = [];
 
@@ -333,7 +331,9 @@ describe("pluginLoader", () => {
       "local-plugin",
     ]);
   });
+});
 
+describe("pluginLoader configured plugin reporting", () => {
   test("loads a named plugin record from an in-memory specifier", async () => {
     const registeredPlugins: RegisteredPlugin[] = [];
 
@@ -400,7 +400,9 @@ describe("pluginLoader", () => {
       ],
     });
   });
+});
 
+describe("pluginLoader module resolution", () => {
   test("loads a named plugin class exported from a file URL", async () => {
     // Real-fs scenario: this test exercises the absolute-path -> file URL
     // conversion in `toLocalImportSpecifier`, which is module-resolution
@@ -473,7 +475,9 @@ describe("pluginLoader", () => {
       "default-plugin",
     ]);
   });
+});
 
+describe("pluginLoader factory options and export fallback", () => {
   test("passes tuple plugin options to a plugin factory", async () => {
     const options = { marker: "from tuple" };
     const registeredPlugins: RegisteredPlugin[] = [];
@@ -544,7 +548,9 @@ describe("pluginLoader", () => {
       "valid-plugin",
     ]);
   });
+});
 
+describe("pluginLoader resolution failures", () => {
   test("reports attempted paths and errors when a plugin cannot be resolved", async () => {
     const failure = await capturePluginLoadError(
       runLoadPlugins({
@@ -639,7 +645,9 @@ describe("pluginLoader", () => {
       },
     ]);
   });
+});
 
+describe("pluginLoader factory failures", () => {
   test("reports no plugin export found when a module has no exports", async () => {
     const failure = await capturePluginLoadError(
       runLoadPlugins({
@@ -687,7 +695,9 @@ describe("pluginLoader", () => {
       },
     ]);
   });
+});
 
+describe("pluginLoader configuration failures", () => {
   test("surfaces plugin configuration failures from factories without wrapping them as load failures", async () => {
     const failure = await captureTaggedPluginConfigError(
       runLoadPlugins({
@@ -751,7 +761,9 @@ describe("pluginLoader", () => {
     expect(failure.reason).toBe("outputPath must end with .json");
     expect(fallbackExportInvoked).toBe(false);
   });
+});
 
+describe("pluginLoader cross-realm configuration failures", () => {
   test("continues to fallback exports when a factory throws an incomplete configuration tag", async () => {
     let fallbackExportInvoked = false;
     const registeredPlugins: RegisteredPlugin[] = [];
@@ -822,7 +834,9 @@ describe("pluginLoader", () => {
     expect(failure.pluginName).toBe("misconfigured-plugin");
     expect(failure.reason).toBe("outputPath must end with .json");
   });
+});
 
+describe("pluginLoader resolution strategy short-circuiting", () => {
   test("stops trying npm fallbacks after a local plugin rejects its configuration", async () => {
     let fallbackAttempted = false;
 
@@ -896,7 +910,9 @@ describe("pluginLoader", () => {
     expect(failure.reason).toBe("outputPath must end with .json");
     expect(fallbackAttempted).toBe(false);
   });
+});
 
+describe("pluginLoader invalid plugin exports", () => {
   test("continues to npm fallback when module evaluation throws an incomplete configuration tag", async () => {
     let fallbackAttempted = false;
     const registeredPlugins: RegisteredPlugin[] = [];
@@ -961,7 +977,9 @@ describe("pluginLoader", () => {
     ]);
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual(["types"]);
   });
+});
 
+describe("pluginLoader plugin shape validation", () => {
   test.each(
     [
       { field: "name", invalidValue: undefined, omitField: true },
@@ -1045,7 +1063,9 @@ describe("pluginLoader", () => {
       expect(factoryInvocations).toBe(exportKind === "record" ? 0 : 1);
     }
   );
+});
 
+describe("pluginLoader real-module validation", () => {
   test("rejects an invalid default export from a real module before registration", async () => {
     const pluginPath = writePluginModule([
       'export default { name: "invalid-plugin", generate: 42 };',

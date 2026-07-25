@@ -13,9 +13,9 @@ const captureError = (action: () => void): unknown => {
   return undefined;
 };
 
-describe("resolveGenerateOptions", () => {
-  const workspacePath = path.join(path.parse(process.cwd()).root, "workspace");
+const workspacePath = path.join(path.parse(process.cwd()).root, "workspace");
 
+describe("resolveGenerateOptions", () => {
   test("resolves generate options from config when CLI flags are omitted", () => {
     const options = resolveGenerateOptions(
       {},
@@ -82,7 +82,9 @@ describe("resolveGenerateOptions", () => {
 
     expect(options.config.plugins).toEqual(["clients", "hono", "server"]);
   });
+});
 
+describe("resolveGenerateOptions validation", () => {
   test("preserves custom top-level config for plugin contexts", () => {
     const options = resolveGenerateOptions(
       {},

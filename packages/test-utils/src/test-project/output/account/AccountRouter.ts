@@ -40,13 +40,13 @@ export class AccountRouter<
   }
 
   protected setupRoutes(): void {
-    this.route(
-      "RegisterAccount",
-      HttpMethod.POST,
-      "/accounts",
-      new RegisterAccountRequestValidator(),
-      new RegisterAccountResponseValidator(),
-      this.requestHandlers.handleRegisterAccountRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "RegisterAccount",
+      method: HttpMethod.POST,
+      path: "/accounts",
+      requestValidator: new RegisterAccountRequestValidator(),
+      responseValidator: new RegisterAccountResponseValidator(),
+      handler: this.requestHandlers.handleRegisterAccountRequest.bind(this.requestHandlers),
+    });
   }
 }

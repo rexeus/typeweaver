@@ -12,7 +12,7 @@ import {
   todoApiInfo,
 } from "./buildOpenApiDocument.helpers.js";
 
-describe("buildOpenApiDocument schema registry", () => {
+describe("buildOpenApiDocument schema registry reuse", () => {
   test("reuses one schema component when the same Zod schema object appears in multiple bodies", () => {
     const todoBody = z.object({ id: z.string() });
     const normalizedSpec = aTodoSpecWith({
@@ -44,7 +44,9 @@ describe("buildOpenApiDocument schema registry", () => {
     ).toEqual({ $ref: "#/components/schemas/TodoResponseBody" });
     expect(result.warnings).toEqual([]);
   });
+});
 
+describe("buildOpenApiDocument schema registry collisions", () => {
   test("suffixes colliding sanitized schema component base names and points refs to each component", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
@@ -114,91 +116,91 @@ describe("buildOpenApiDocument schema registry", () => {
     });
     expect(result.warnings).toEqual([]);
   });
+});
 
-  describe("local refs", () => {
-    test("rebases local JSON Schema refs in recursive request bodies", () => {
-      const treeNodeSchema = aRecursiveTreeNodeSchema();
-      const normalizedSpec = aTodoSpecWith({
-        operations: [
-          anOperationWith({
-            operationId: "createTree",
-            method: "POST" as NormalizedOperation["method"],
-            path: "/trees",
-            request: { body: treeNodeSchema },
-            responses: [anInlineResponseUsage(aResponseWith())],
-          }),
-        ],
-      });
-
-      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
-
-      expect(result.document.paths["/trees"]?.post?.requestBody).toEqual({
-        required: true,
-        content: {
-          "application/json": {
-            schema: { $ref: "#/components/schemas/CreateTreeRequestBody" },
-          },
-        },
-      });
-      expect(result.document.components?.schemas).toEqual({
-        CreateTreeRequestBody: {
-          type: "object",
-          properties: {
-            name: { type: "string" },
-            children: {
-              type: "array",
-              items: { $ref: "#/components/schemas/CreateTreeRequestBody" },
-            },
-          },
-          required: ["name", "children"],
-          additionalProperties: false,
-        },
-      });
-      expect(result.warnings).toEqual([]);
+describe("buildOpenApiDocument schema registry local refs", () => {
+  test("rebases local JSON Schema refs in recursive request bodies", () => {
+    const treeNodeSchema = aRecursiveTreeNodeSchema();
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          operationId: "createTree",
+          method: "POST" as NormalizedOperation["method"],
+          path: "/trees",
+          request: { body: treeNodeSchema },
+          responses: [anInlineResponseUsage(aResponseWith())],
+        }),
+      ],
     });
 
-    test("rebases local JSON Schema refs in recursive inline response bodies", () => {
-      const treeNodeSchema = aRecursiveTreeNodeSchema();
-      const normalizedSpec = aTodoSpecWith({
-        operations: [
-          anOperationWith({
-            operationId: "getTree",
-            path: "/trees/:id",
-            request: { param: z.object({ id: z.string() }) },
-            responses: [
-              anInlineResponseUsage(aResponseWith({ body: treeNodeSchema })),
-            ],
-          }),
-        ],
-      });
+    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
 
-      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    expect(result.document.paths["/trees"]?.post?.requestBody).toEqual({
+      required: true,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/CreateTreeRequestBody" },
+        },
+      },
+    });
+    expect(result.document.components?.schemas).toEqual({
+      CreateTreeRequestBody: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          children: {
+            type: "array",
+            items: { $ref: "#/components/schemas/CreateTreeRequestBody" },
+          },
+        },
+        required: ["name", "children"],
+        additionalProperties: false,
+      },
+    });
+    expect(result.warnings).toEqual([]);
+  });
 
-      expect(
-        result.document.paths["/trees/{id}"]?.get?.responses["200"]
-      ).toEqual({
+  test("rebases local JSON Schema refs in recursive inline response bodies", () => {
+    const treeNodeSchema = aRecursiveTreeNodeSchema();
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          operationId: "getTree",
+          path: "/trees/:id",
+          request: { param: z.object({ id: z.string() }) },
+          responses: [
+            anInlineResponseUsage(aResponseWith({ body: treeNodeSchema })),
+          ],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+
+    expect(result.document.paths["/trees/{id}"]?.get?.responses["200"]).toEqual(
+      {
         description: "OK",
         content: {
           "application/json": {
             schema: { $ref: "#/components/schemas/GetTreeOkResponseBody" },
           },
         },
-      });
-      expect(result.document.components?.schemas).toEqual({
-        GetTreeOkResponseBody: {
-          type: "object",
-          properties: {
-            name: { type: "string" },
-            children: {
-              type: "array",
-              items: { $ref: "#/components/schemas/GetTreeOkResponseBody" },
-            },
+      }
+    );
+    expect(result.document.components?.schemas).toEqual({
+      GetTreeOkResponseBody: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          children: {
+            type: "array",
+            items: { $ref: "#/components/schemas/GetTreeOkResponseBody" },
           },
-          required: ["name", "children"],
-          additionalProperties: false,
         },
-      });
-      expect(result.warnings).toEqual([]);
+        required: ["name", "children"],
+        additionalProperties: false,
+      },
     });
+    expect(result.warnings).toEqual([]);
   });
 });

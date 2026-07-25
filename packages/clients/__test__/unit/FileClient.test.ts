@@ -199,7 +199,9 @@ describe("FileClient transport contract", () => {
 
     expect(command.header["Content-Type"]).toBe("text/plain");
   });
+});
 
+describe("FileClient download path contract", () => {
   test("sends download requests to the encoded file content URL", async () => {
     const mockFetch = createRawMockFetch(200, new Uint8Array([0x01, 0x02]), {
       "content-type": "application/octet-stream",
@@ -259,7 +261,9 @@ describe("FileClient transport contract", () => {
     });
     expect(mockFetch).not.toHaveBeenCalled();
   });
+});
 
+describe("FileClient metadata transport contract", () => {
   test("sends metadata requests with scalar and multi-value headers", async () => {
     const metadata = createGetFileMetadataSuccessResponseBody({
       id: "01ARZ3NDEKTSV4RRFFQ69G5FAW",
@@ -425,28 +429,11 @@ describe("FileClient success responses", () => {
   });
 });
 
-describe("FileClient shared generated error responses", () => {
-  test.each([
-    {
-      scenario: "400 validation error",
-      response: createValidationErrorResponse({
-        body: {
-          message: "Request is invalid",
-          code: "VALIDATION_ERROR",
-          issues: {
-            body: [
-              {
-                path: ["file"],
-                message: "File is required",
-                code: "invalid_type",
-              },
-            ],
-          },
-        },
-      }),
-      expectedType: "ValidationError",
-      expectedStatusCode: 400,
-      expectedBody: {
+const uploadErrorScenarios = [
+  {
+    scenario: "400 validation error",
+    response: createValidationErrorResponse({
+      body: {
         message: "Request is invalid",
         code: "VALIDATION_ERROR",
         issues: {
@@ -459,82 +446,106 @@ describe("FileClient shared generated error responses", () => {
           ],
         },
       },
-    },
-    {
-      scenario: "401 unauthorized error",
-      response: createUnauthorizedErrorResponse(),
-      expectedType: "UnauthorizedError",
-      expectedStatusCode: 401,
-      expectedBody: {
-        message: "Unauthorized request",
-        code: "UNAUTHORIZED_ERROR",
+    }),
+    expectedType: "ValidationError",
+    expectedStatusCode: 400,
+    expectedBody: {
+      message: "Request is invalid",
+      code: "VALIDATION_ERROR",
+      issues: {
+        body: [
+          {
+            path: ["file"],
+            message: "File is required",
+            code: "invalid_type",
+          },
+        ],
       },
     },
-    {
-      scenario: "403 forbidden error",
-      response: createForbiddenErrorResponse(),
-      expectedType: "ForbiddenError",
-      expectedStatusCode: 403,
-      expectedBody: {
-        message: "Forbidden request",
-        code: "FORBIDDEN_ERROR",
-      },
+  },
+  {
+    scenario: "401 unauthorized error",
+    response: createUnauthorizedErrorResponse(),
+    expectedType: "UnauthorizedError",
+    expectedStatusCode: 401,
+    expectedBody: {
+      message: "Unauthorized request",
+      code: "UNAUTHORIZED_ERROR",
     },
-    {
-      scenario: "415 unsupported media type error",
-      response: createUnsupportedMediaTypeErrorResponse({
-        body: {
-          message: "Unsupported media type",
-          code: "UNSUPPORTED_MEDIA_TYPE_ERROR",
-          context: { contentType: "text/plain" },
-          expectedValues: { contentTypes: ["application/json"] },
-        },
-      }),
-      expectedType: "UnsupportedMediaTypeError",
-      expectedStatusCode: 415,
-      expectedBody: {
+  },
+  {
+    scenario: "403 forbidden error",
+    response: createForbiddenErrorResponse(),
+    expectedType: "ForbiddenError",
+    expectedStatusCode: 403,
+    expectedBody: {
+      message: "Forbidden request",
+      code: "FORBIDDEN_ERROR",
+    },
+  },
+  {
+    scenario: "415 unsupported media type error",
+    response: createUnsupportedMediaTypeErrorResponse({
+      body: {
         message: "Unsupported media type",
         code: "UNSUPPORTED_MEDIA_TYPE_ERROR",
         context: { contentType: "text/plain" },
         expectedValues: { contentTypes: ["application/json"] },
       },
+    }),
+    expectedType: "UnsupportedMediaTypeError",
+    expectedStatusCode: 415,
+    expectedBody: {
+      message: "Unsupported media type",
+      code: "UNSUPPORTED_MEDIA_TYPE_ERROR",
+      context: { contentType: "text/plain" },
+      expectedValues: { contentTypes: ["application/json"] },
     },
-    {
-      scenario: "429 too many requests error",
-      response: createTooManyRequestsErrorResponse(),
-      expectedType: "TooManyRequestsError",
-      expectedStatusCode: 429,
-      expectedBody: {
-        message: "Too many requests",
-        code: "TOO_MANY_REQUESTS_ERROR",
-      },
+  },
+  {
+    scenario: "429 too many requests error",
+    response: createTooManyRequestsErrorResponse(),
+    expectedType: "TooManyRequestsError",
+    expectedStatusCode: 429,
+    expectedBody: {
+      message: "Too many requests",
+      code: "TOO_MANY_REQUESTS_ERROR",
     },
-    {
-      scenario: "500 internal server error",
-      response: createInternalServerErrorResponse(),
-      expectedType: "InternalServerError",
-      expectedStatusCode: 500,
-      expectedBody: {
-        message: "Internal server error occurred",
-        code: "INTERNAL_SERVER_ERROR",
-      },
+  },
+  {
+    scenario: "500 internal server error",
+    response: createInternalServerErrorResponse(),
+    expectedType: "InternalServerError",
+    expectedStatusCode: 500,
+    expectedBody: {
+      message: "Internal server error occurred",
+      code: "INTERNAL_SERVER_ERROR",
     },
-  ])("returns $scenario for upload commands", async scenario => {
-    const mockFetch = createJsonMockFetch(
-      scenario.response.statusCode,
-      scenario.response.body
-    );
-    const client = createFileClient(mockFetch);
-    const command = new UploadFileRequestCommand(createUploadFileRequest());
+  },
+];
 
-    const result = await client.send(command);
+describe("FileClient shared generated error responses", () => {
+  test.each(uploadErrorScenarios)(
+    "returns $scenario for upload commands",
+    async scenario => {
+      const mockFetch = createJsonMockFetch(
+        scenario.response.statusCode,
+        scenario.response.body
+      );
+      const client = createFileClient(mockFetch);
+      const command = new UploadFileRequestCommand(createUploadFileRequest());
 
-    expect(result.type).toBe(scenario.expectedType);
-    expect(result.statusCode).toBe(scenario.expectedStatusCode);
-    expect(result.header).toEqual({ "Content-Type": "application/json" });
-    expect(result.body).toStrictEqual(scenario.expectedBody);
-  });
+      const result = await client.send(command);
 
+      expect(result.type).toBe(scenario.expectedType);
+      expect(result.statusCode).toBe(scenario.expectedStatusCode);
+      expect(result.header).toEqual({ "Content-Type": "application/json" });
+      expect(result.body).toStrictEqual(scenario.expectedBody);
+    }
+  );
+});
+
+describe("FileClient shared generated authorization errors", () => {
   test("returns unauthorized errors for download commands", async () => {
     const errorResponse = createUnauthorizedErrorResponse();
     const mockFetch = createJsonMockFetch(401, errorResponse.body);

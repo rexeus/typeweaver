@@ -108,7 +108,7 @@ const customDefaultError = {
   "Custom conflict"
 >;
 
-describe("defaultError", () => {
+describe("defaultError descriptors and bodies", () => {
   test.each(defaultErrorDescriptorCases)(
     "exposes the stable $case default error descriptor",
     ({ descriptor, expected, registryKey }) => {
@@ -162,7 +162,9 @@ describe("defaultError", () => {
     expectTypeOf(body.message).toEqualTypeOf<"Invalid request">();
     expectTypeOf(body.requestId).toEqualTypeOf<string>();
   });
+});
 
+describe("defaultError standard responses", () => {
   test("creates default error responses with matching status and non-validation body detail", () => {
     const response = createDefaultErrorResponse(
       internalServerErrorDefaultError,
@@ -223,7 +225,9 @@ describe("defaultError", () => {
       response.statusCode
     ).toEqualTypeOf<HttpStatusCode.METHOD_NOT_ALLOWED>();
   });
+});
 
+describe("defaultError caller-authored descriptors", () => {
   test("creates bodies from caller-authored default error descriptors", () => {
     const body = createDefaultErrorBody(customDefaultError, {
       requestId: "req-1",

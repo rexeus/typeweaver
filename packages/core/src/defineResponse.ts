@@ -228,6 +228,13 @@ const isZodObjectLike = (
   return schema instanceof z.ZodObject || isOptionalZodObject(schema);
 };
 
+const isZodRecordLike = (schema: HttpHeaderSchema): boolean => {
+  return (
+    schema instanceof z.ZodRecord ||
+    (schema instanceof z.ZodOptional && schema.unwrap() instanceof z.ZodRecord)
+  );
+};
+
 const getZodObjectShape = (
   schema:
     | z.ZodObject<z.core.$ZodShape>
@@ -270,13 +277,7 @@ const mergeHeaderSchemas = <
     return parent as MergeHeaderSchemas<TParent, TChild>;
   }
 
-  if (
-    parent instanceof z.ZodRecord ||
-    child instanceof z.ZodRecord ||
-    (parent instanceof z.ZodOptional &&
-      parent.unwrap() instanceof z.ZodRecord) ||
-    (child instanceof z.ZodOptional && child.unwrap() instanceof z.ZodRecord)
-  ) {
+  if (isZodRecordLike(parent) || isZodRecordLike(child)) {
     throw new ResponseDefinitionMergeError(
       `Cannot derive response '${responseName}' because ZodRecord headers cannot be merged.`
     );

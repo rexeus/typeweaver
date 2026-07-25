@@ -120,18 +120,18 @@ const expectedFirstRunFinalizers = (
       ? ["finalize:alpha"]
       : ["finalize:omega", "finalize:alpha"];
 
-const makeRecoveryLayer = (params: {
+type RecoveryLayerParams = {
   readonly recoveryCase: RecoveryCase;
   readonly entered: Deferred.Deferred<void>;
   readonly release: Deferred.Deferred<void>;
   readonly armed: Ref.Ref<boolean>;
   readonly events: Ref.Ref<readonly string[]>;
   readonly defect: Error;
-}) => {
-  const record = (event: string): Effect.Effect<void> =>
-    Ref.update(params.events, current => [...current, event]);
+};
 
-  const failFirstRunAt = (phase: RecoveryPhase): Effect.Effect<void, never> => {
+const makeFailureTrigger =
+  (params: RecoveryLayerParams) =>
+  (phase: RecoveryPhase): Effect.Effect<void, never> => {
     if (phase !== params.recoveryCase.phase) {
       return Effect.void;
     }
@@ -151,6 +151,11 @@ const makeRecoveryLayer = (params: {
     });
   };
 
+const makeRecoveryPlugins = (
+  params: RecoveryLayerParams,
+  record: (event: string) => Effect.Effect<void>,
+  failFirstRunAt: (phase: RecoveryPhase) => Effect.Effect<void, never>
+): readonly [Plugin, Plugin] => {
   const alpha = {
     name: "alpha",
     initialize: () => record("initialize:alpha"),
@@ -192,13 +197,21 @@ const makeRecoveryLayer = (params: {
     finalize: () => record("finalize:omega"),
   } satisfies Plugin;
 
+  return [alpha, omega];
+};
+
+const makeRecoveryLayer = (params: RecoveryLayerParams) => {
+  const record = (event: string): Effect.Effect<void> =>
+    Ref.update(params.events, current => [...current, event]);
+  const failFirstRunAt = makeFailureTrigger(params);
+  const plugins = makeRecoveryPlugins(params, record, failFirstRunAt);
   const pluginLoaderLayer = Layer.succeed(
     PluginLoader,
     PluginLoader.make({
-      loadAll: params =>
+      loadAll: loadParams =>
         Effect.forEach(
-          [alpha, omega],
-          plugin => params.registry.register(plugin),
+          plugins,
+          plugin => loadParams.registry.register(plugin),
           {
             discard: true,
           }

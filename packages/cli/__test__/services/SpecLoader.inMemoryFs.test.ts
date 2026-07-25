@@ -139,7 +139,9 @@ describe("SpecLoader against InMemoryFileSystem", () => {
     );
     expect(state.hasFile("/out/nested/spec/spec.d.ts")).toBe(true);
   });
+});
 
+describe("SpecLoader declaration write failures", () => {
   test("wraps a write failure of spec.d.ts in SpecOutputWriteError", async () => {
     const { layer: baseFileSystemLayer } = makeInMemoryFileSystem();
     const writeFailure = new SystemError({

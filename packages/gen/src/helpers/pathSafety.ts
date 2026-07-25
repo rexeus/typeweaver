@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { GeneratedPathProbeError } from "../errors/GeneratedPathProbeError.js";
 import { UnsafeGeneratedPathError } from "../errors/UnsafeGeneratedPathError.js";
+import type { UnsafeGeneratedPathReason } from "../errors/UnsafeGeneratedPathError.js";
 
 export type SafeGeneratedFilePath = {
   readonly fullPath: string;
@@ -33,6 +34,38 @@ const pathEndsWithDirectorySeparator = (projectPath: string): boolean =>
 
 const pathNamesCurrentDirectory = (projectPath: string): boolean =>
   projectPath === "." || projectPath.endsWith("/.");
+
+const isAbsoluteGeneratedPath = (
+  requestedPath: string,
+  projectPath: string
+): boolean =>
+  path.isAbsolute(requestedPath) ||
+  path.posix.isAbsolute(projectPath) ||
+  path.win32.isAbsolute(requestedPath) ||
+  path.win32.isAbsolute(projectPath) ||
+  WINDOWS_DRIVE_PREFIX_PATTERN.test(requestedPath);
+
+const getLexicalPathViolation = (
+  requestedPath: string,
+  projectPath: string
+): UnsafeGeneratedPathReason | undefined => {
+  if (requestedPath.length === 0) return "empty-path";
+  if (requestedPath.includes("\0")) return "nul-byte";
+  if (isAbsoluteGeneratedPath(requestedPath, projectPath))
+    return "absolute-path";
+  if (pathContainsParentTraversal(projectPath)) return "parent-traversal";
+  if (pathEndsWithDirectorySeparator(projectPath)) return "trailing-separator";
+  if (pathNamesCurrentDirectory(projectPath)) return "current-directory";
+  return undefined;
+};
+
+const getNormalizedPathViolation = (
+  generatedPath: string
+): UnsafeGeneratedPathReason | undefined => {
+  if (generatedPath === ".") return "current-directory";
+  if (pathContainsParentTraversal(generatedPath)) return "parent-traversal";
+  return undefined;
+};
 
 const toNativePath = (projectPath: string): string =>
   projectPath.split("/").join(path.sep);
@@ -183,63 +216,21 @@ export const resolveSafeGeneratedFilePath = (
   requestedPath: string,
   fileSystem: PathSafetyFs = defaultPathSafetyFs
 ): SafeGeneratedFilePath => {
-  if (requestedPath.length === 0) {
-    throw new UnsafeGeneratedPathError({ requestedPath, reason: "empty-path" });
-  }
-
-  if (requestedPath.includes("\0")) {
-    throw new UnsafeGeneratedPathError({ requestedPath, reason: "nul-byte" });
-  }
-
   const projectPath = requestedPath.replace(/\\/g, "/");
-
-  if (
-    path.isAbsolute(requestedPath) ||
-    path.posix.isAbsolute(projectPath) ||
-    path.win32.isAbsolute(requestedPath) ||
-    path.win32.isAbsolute(projectPath) ||
-    WINDOWS_DRIVE_PREFIX_PATTERN.test(requestedPath)
-  ) {
+  const lexicalViolation = getLexicalPathViolation(requestedPath, projectPath);
+  if (lexicalViolation !== undefined) {
     throw new UnsafeGeneratedPathError({
       requestedPath,
-      reason: "absolute-path",
-    });
-  }
-
-  if (pathContainsParentTraversal(projectPath)) {
-    throw new UnsafeGeneratedPathError({
-      requestedPath,
-      reason: "parent-traversal",
-    });
-  }
-
-  if (pathEndsWithDirectorySeparator(projectPath)) {
-    throw new UnsafeGeneratedPathError({
-      requestedPath,
-      reason: "trailing-separator",
-    });
-  }
-
-  if (pathNamesCurrentDirectory(projectPath)) {
-    throw new UnsafeGeneratedPathError({
-      requestedPath,
-      reason: "current-directory",
+      reason: lexicalViolation,
     });
   }
 
   const generatedPath = path.posix.normalize(projectPath);
-
-  if (generatedPath === ".") {
+  const normalizedViolation = getNormalizedPathViolation(generatedPath);
+  if (normalizedViolation !== undefined) {
     throw new UnsafeGeneratedPathError({
       requestedPath,
-      reason: "current-directory",
-    });
-  }
-
-  if (pathContainsParentTraversal(generatedPath)) {
-    throw new UnsafeGeneratedPathError({
-      requestedPath,
-      reason: "parent-traversal",
+      reason: normalizedViolation,
     });
   }
 

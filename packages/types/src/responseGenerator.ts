@@ -66,6 +66,14 @@ type ImportedResponseTemplateData = {
   readonly path: string;
 };
 
+type WriteResponseTypeOptions = {
+  readonly templateFile: string;
+  readonly responseFactoryTemplateFile: string;
+  readonly resource: NormalizedResource;
+  readonly operation: NormalizedOperation;
+  readonly context: ResponseGenerationContext;
+};
+
 export function generate(context: ResponseGenerationContext): void {
   const templateFile = path.join(moduleDir, "templates", "Response.ejs");
   const canonicalResponseTemplateFile = path.join(
@@ -90,24 +98,24 @@ export function generate(context: ResponseGenerationContext): void {
 
   for (const resource of context.normalizedSpec.resources) {
     for (const operation of resource.operations) {
-      writeResponseType(
+      writeResponseType({
         templateFile,
         responseFactoryTemplateFile,
         resource,
         operation,
-        context
-      );
+        context,
+      });
     }
   }
 }
 
-function writeResponseType(
-  templateFile: string,
-  responseFactoryTemplateFile: string,
-  resource: NormalizedResource,
-  operation: NormalizedOperation,
-  context: ResponseGenerationContext
-): void {
+function writeResponseType({
+  templateFile,
+  responseFactoryTemplateFile,
+  resource,
+  operation,
+  context,
+}: WriteResponseTypeOptions): void {
   const outputPaths = context.getOperationOutputPaths({
     resourceName: resource.name,
     operationId: operation.operationId,

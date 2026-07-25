@@ -236,14 +236,14 @@ const writeEmptySpec = (workspace: string): string => {
   return specPath;
 };
 
-describe("built CLI process contract", () => {
-  afterEach(() => {
-    for (const workspace of workspaces) {
-      fs.rmSync(workspace, { recursive: true, force: true });
-    }
-    workspaces.length = 0;
-  });
+afterEach(() => {
+  for (const workspace of workspaces) {
+    fs.rmSync(workspace, { recursive: true, force: true });
+  }
+  workspaces.length = 0;
+});
 
+describe("built CLI generation process contract", () => {
   test("generates files and owns success output on stdout", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
@@ -278,7 +278,9 @@ describe("built CLI process contract", () => {
       )
     ).toContain("export type IOkResponse");
   }, 15_000);
+});
 
+describe("built CLI configuration diagnostics", () => {
   test.each([
     {
       scenario: "input",
@@ -342,7 +344,9 @@ describe("built CLI process contract", () => {
     expect(result.stderr).not.toMatch(/\n\s+at /);
     expect(fs.existsSync(path.join(workspace, "generated"))).toBe(false);
   });
+});
 
+describe("built CLI custom configuration", () => {
   test("preserves custom config keys through runGenerate", async () => {
     const workspace = createWorkspace();
     const inputPath = writeSpec(workspace);
@@ -382,7 +386,9 @@ describe("built CLI process contract", () => {
     ).toBe("true\n");
     expect(fs.existsSync(path.join(workspace, "wrong-output"))).toBe(false);
   });
+});
 
+describe("built CLI informational commands", () => {
   test.each([
     {
       scenario: "duplicate operation ID",
@@ -418,7 +424,9 @@ describe("built CLI process contract", () => {
       expect(result.stderr).not.toContain("FiberFailure");
     }
   );
+});
 
+describe("built CLI plugin failure rendering", () => {
   test("renders a typed plugin failure once on stderr with exit code 1", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
@@ -467,7 +475,9 @@ describe("built CLI process contract", () => {
     expect(result.stderr).toBe("process plugin defect\n");
     expect(result.stderr).not.toContain("FiberFailure");
   });
+});
 
+describe("built CLI flag and verbosity handling", () => {
   test("gives negative flags precedence when conflicting flags are present", async () => {
     const workspace = createWorkspace();
     await expect(import("oxfmt")).resolves.toEqual(
@@ -538,7 +548,9 @@ describe("built CLI process contract", () => {
     expect(result).toMatchObject({ code: 0, signal: null, stderr: "" });
     expect(result.stdout).toContain("[DEBUG] Input file:");
   });
+});
 
+describe("built CLI parser diagnostics", () => {
   test("keeps parser validation diagnostics out of the custom error formatter", async () => {
     const workspace = createWorkspace();
 

@@ -245,41 +245,58 @@ const unwrapMediaInferenceSchema = (
   while (current !== undefined && !visitedSchemas.has(current)) {
     visitedSchemas.add(current);
 
-    const definition = getSchemaDefinition(current);
-    const schemaType = definition?.type;
-
-    if (
-      schemaType === "optional" ||
-      schemaType === "nullable" ||
-      schemaType === "default" ||
-      schemaType === "catch" ||
-      schemaType === "prefault" ||
-      schemaType === "readonly"
-    ) {
-      current = definition?.innerType;
-      continue;
+    const step = unwrapMediaInferenceStep(current);
+    if (step._tag === "Done") {
+      return step.schema;
     }
-
-    if (schemaType === "pipe") {
-      const outputType = getSchemaType(definition?.out);
-
-      if (outputType === undefined || outputType === "transform") {
-        return undefined;
-      }
-
-      current = definition?.out;
-      continue;
-    }
-
-    if (schemaType === "effects") {
-      current = definition?.schema;
-      continue;
-    }
-
-    return current;
+    current = step.schema;
   }
 
   return current;
+};
+
+type MediaInferenceStep =
+  | { readonly _tag: "Continue"; readonly schema?: z.ZodType }
+  | { readonly _tag: "Done"; readonly schema?: z.ZodType };
+
+const MEDIA_INFERENCE_WRAPPER_TYPES = new Set([
+  "optional",
+  "nullable",
+  "default",
+  "catch",
+  "prefault",
+  "readonly",
+]);
+
+const isOpaqueMediaInferenceOutput = (
+  outputType: string | undefined
+): boolean => outputType === undefined || outputType === "transform";
+
+const isMediaInferenceWrapper = (schemaType: string | undefined): boolean =>
+  schemaType !== undefined && MEDIA_INFERENCE_WRAPPER_TYPES.has(schemaType);
+
+const unwrapMediaInferencePipe = (
+  definition: ZodTypeDefinition | undefined
+): MediaInferenceStep =>
+  isOpaqueMediaInferenceOutput(getSchemaType(definition?.out))
+    ? { _tag: "Done" }
+    : { _tag: "Continue", schema: definition?.out };
+
+const unwrapMediaInferenceStep = (schema: z.ZodType): MediaInferenceStep => {
+  const definition = getSchemaDefinition(schema);
+  const schemaType = definition?.type;
+
+  if (isMediaInferenceWrapper(schemaType)) {
+    return { _tag: "Continue", schema: definition?.innerType };
+  }
+
+  if (schemaType === "pipe") {
+    return unwrapMediaInferencePipe(definition);
+  }
+
+  return schemaType === "effects"
+    ? { _tag: "Continue", schema: definition?.schema }
+    : { _tag: "Done", schema };
 };
 
 const unwrapOptional = <TSchema extends z.ZodType>(
@@ -342,11 +359,22 @@ const enumSchemaValues = (
       }
     | undefined;
 
-  return (
-    enumSchema?.options ??
-    enumSchema?.def?.values ??
-    Object.values(enumSchema?.def?.entries ?? enumSchema?.enum ?? {})
-  );
+  if (enumSchema === undefined) {
+    return [];
+  }
+  if (enumSchema.options !== undefined) {
+    return enumSchema.options;
+  }
+  if (enumSchema.def?.values !== undefined) {
+    return enumSchema.def.values;
+  }
+  if (enumSchema.def?.entries !== undefined) {
+    return Object.values(enumSchema.def.entries);
+  }
+  if (enumSchema.enum !== undefined) {
+    return Object.values(enumSchema.enum);
+  }
+  return [];
 };
 
 const getSchemaType = (schema: z.ZodType | undefined): string | undefined => {

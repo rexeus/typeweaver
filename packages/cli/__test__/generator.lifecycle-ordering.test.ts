@@ -391,14 +391,14 @@ const readEvents = (workspace: string): readonly string[] => {
     .filter(line => line.length > 0);
 };
 
-describe("Generator.generate (plugin lifecycle ordering)", () => {
-  afterEach(() => {
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-    tempDirs.length = 0;
-  });
+afterEach(() => {
+  for (const tempDir of tempDirs) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+  tempDirs.length = 0;
+});
 
+describe("Generator plugin lifecycle phase ordering", () => {
   test("runs every plugin through each phase before advancing to the next phase", async () => {
     const workspace = createTempWorkspace("ordering");
     writeTinySpec(workspace);
@@ -459,7 +459,9 @@ describe("Generator.generate (plugin lifecycle ordering)", () => {
       "finalize:alpha",
     ]);
   });
+});
 
+describe("Generator plugin lifecycle recovery", () => {
   test("runs finalize for plugins that initialized even when a later plugin's generate fails", async () => {
     const workspace = createTempWorkspace("finalize-on-failure");
     writeTinySpec(workspace);
@@ -549,7 +551,9 @@ describe("Generator.generate (plugin lifecycle ordering)", () => {
     );
     expect(events.some(event => event.startsWith("generate:"))).toBe(false);
   });
+});
 
+describe("Generator plugin lifecycle failure reporting", () => {
   test("surfaces the original generate failure and logs a WARN when a sibling plugin's finalize also fails", async () => {
     const workspace = createTempWorkspace("finalize-failure-after-generate");
     writeTinySpec(workspace);
@@ -608,7 +612,9 @@ describe("Generator.generate (plugin lifecycle ordering)", () => {
     );
     expect(finalizeWarn).toBeDefined();
   });
+});
 
+describe("Generator plugin lifecycle finalization", () => {
   test("finalizes every initialized plugin in reverse dependency order after a defect", async () => {
     const workspace = createTempWorkspace("finalize-on-defect");
     writeTinySpec(workspace);

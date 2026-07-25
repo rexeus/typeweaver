@@ -68,7 +68,10 @@ const runRegistryExpectingFailure = <E>(
   return failure.value;
 };
 
-describe("PluginRegistry", () => {
+const registrationName = (registration: { readonly name: string }): string =>
+  registration.name;
+
+describe("PluginRegistry registration and ordering", () => {
   test("returns an empty registration list when no plugins are registered", () => {
     const registrations = runRegistry(registry => registry.getAll);
 
@@ -102,10 +105,7 @@ describe("PluginRegistry", () => {
       })
     );
 
-    expect(registrations.map(registration => registration.name)).toEqual([
-      "clients",
-      "types",
-    ]);
+    expect(registrations.map(registrationName)).toEqual(["clients", "types"]);
   });
 
   test("orders a diamond DAG dependencies-first with an alphabetical tie-break", () => {
@@ -121,14 +121,16 @@ describe("PluginRegistry", () => {
       })
     );
 
-    expect(registrations.map(registration => registration.name)).toEqual([
+    expect(registrations.map(registrationName)).toEqual([
       "types",
       "clients",
       "hono",
       "analytics",
     ]);
   });
+});
 
+describe("PluginRegistry dependency errors", () => {
   test("reports the plugin and dependency names when a dependency is missing", () => {
     const failure = runRegistryExpectingFailure(registry =>
       Effect.gen(function* () {
@@ -197,12 +199,11 @@ describe("PluginRegistry", () => {
       })
     );
 
-    expect(registrations.map(registration => registration.name)).toEqual([
-      "types",
-      "clients",
-    ]);
+    expect(registrations.map(registrationName)).toEqual(["types", "clients"]);
   });
+});
 
+describe("PluginRegistry cached reads", () => {
   test("returns a fresh ordered array for each read", () => {
     const reads = runRegistry(registry =>
       Effect.gen(function* () {
@@ -229,7 +230,7 @@ describe("PluginRegistry", () => {
       })
     );
 
-    expect(registrations.map(registration => registration.name)).toEqual([
+    expect(registrations.map(registrationName)).toEqual([
       "types",
       "clients",
       "analytics",
@@ -241,7 +242,7 @@ describe("PluginRegistry", () => {
       Effect.gen(function* () {
         yield* registry.register(aPluginNamed("types"));
         const firstRead = yield* registry.getAll;
-        if (firstRead.map(r => r.name).join() !== "types") {
+        if (firstRead.map(registrationName).join() !== "types") {
           throw new Error("preconditional read failed");
         }
         yield* registry.register(aPluginNamed("clients", ["hono"]));
@@ -254,7 +255,9 @@ describe("PluginRegistry", () => {
       "Plugin 'clients' depends on 'hono' which is not loaded"
     );
   });
+});
 
+describe("PluginRegistry instance isolation", () => {
   test("two instances created from the same service share no state", () => {
     const result = Effect.runSync(
       Effect.gen(function* () {
@@ -267,8 +270,8 @@ describe("PluginRegistry", () => {
         const firstRegistrations = yield* first.getAll;
         const secondRegistrations = yield* second.getAll;
         return {
-          firstNames: firstRegistrations.map(r => r.name),
-          secondNames: secondRegistrations.map(r => r.name),
+          firstNames: firstRegistrations.map(registrationName),
+          secondNames: secondRegistrations.map(registrationName),
         };
       }).pipe(Effect.provide(registryTestLayer))
     );
@@ -276,26 +279,26 @@ describe("PluginRegistry", () => {
     expect(result.firstNames).toEqual(["types"]);
     expect(result.secondNames).toEqual(["hono"]);
   });
+});
 
-  describe("characterization: duplicate plugin names", () => {
-    test("keeps the first registration when a duplicate name is registered (characterization)", () => {
-      const originalPlugin = aPluginNamed("types");
-      const duplicatePlugin = aPluginNamed("types", ["clients"]);
+describe("PluginRegistry duplicate plugin names", () => {
+  test("keeps the first registration when a duplicate name is registered (characterization)", () => {
+    const originalPlugin = aPluginNamed("types");
+    const duplicatePlugin = aPluginNamed("types", ["clients"]);
 
-      const registrations = runRegistry(registry =>
-        Effect.gen(function* () {
-          yield* registry.register(originalPlugin, { source: "original" });
-          yield* registry.register(duplicatePlugin, { source: "duplicate" });
-          return yield* registry.getAll;
-        })
-      );
+    const registrations = runRegistry(registry =>
+      Effect.gen(function* () {
+        yield* registry.register(originalPlugin, { source: "original" });
+        yield* registry.register(duplicatePlugin, { source: "duplicate" });
+        return yield* registry.getAll;
+      })
+    );
 
-      expect(registrations).toHaveLength(1);
-      expect(registrations[0]).toMatchObject({
-        name: "types",
-        plugin: originalPlugin,
-        config: { source: "original" },
-      });
+    expect(registrations).toHaveLength(1);
+    expect(registrations[0]).toMatchObject({
+      name: "types",
+      plugin: originalPlugin,
+      config: { source: "original" },
     });
   });
 

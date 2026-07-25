@@ -174,7 +174,9 @@ describe("createPackageBuildConfig", () => {
     expect(config).not.toHaveProperty("onSuccess");
     expect(packageFileExists(packageDir, "dist")).toBe(false);
   });
+});
 
+describe("createPackageBuildConfig callback composition", () => {
   test("preserves caller onSuccess when shared post-build work is disabled", async () => {
     const { packageDir } = createPackageFixture("disabled-caller-on-success");
     const resolvedConfig = { cwd: packageDir };
@@ -258,7 +260,9 @@ describe("createPackageBuildConfig", () => {
 
     await expect(config.onSuccess?.()).rejects.toThrow("LICENSE");
   });
+});
 
+describe("createPackageBuildConfig execution order", () => {
   test("runs shared work, post-build steps, and caller onSuccess in order", async () => {
     const { packageDir } = createPackageFixture("execution-order");
     const order: string[] = [];
@@ -357,7 +361,9 @@ fs.writeFileSync(
       "after-shared"
     );
   });
+});
 
+describe("createPackageBuildConfig failure handling", () => {
   test("rejects when string onSuccess exits non-zero after shared work completes", async () => {
     const { packageDir } = createPackageFixture("string-on-success-failure");
     const onSuccess = [process.execPath, "-e", "process.exit(1)"]

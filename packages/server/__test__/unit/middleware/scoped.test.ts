@@ -146,7 +146,9 @@ describe("scoped middleware", () => {
     expect(response.statusCode).toBe(200);
     expect(response.body).toEqual({ userId: "u_1" });
   });
+});
 
+describe("scoped wildcard and parameterized middleware", () => {
   test.each([
     { case: "exact prefix", path: "/api" },
     { case: "direct child", path: "/api/users" },
@@ -365,7 +367,7 @@ describe("excluded middleware", () => {
   );
 });
 
-describe("scoped and excluded middleware type-level safety checked by TypeScript", () => {
+describe("scoped middleware type-level requirements", () => {
   test("typecheck rejects state-providing middleware passed to scoped", () => {
     const auth = defineMiddleware<{ userId: string }>(async (_ctx, next) =>
       next({ userId: "u_1" })
@@ -426,7 +428,9 @@ describe("scoped and excluded middleware type-level safety checked by TypeScript
     // @ts-expect-error — scoped must preserve wrapped middleware requirements.
     new TypeweaverApp().use(scoped(["/api/*"], requiresUser));
   });
+});
 
+describe("scoped middleware inferred state", () => {
   test("typecheck infers scoped pass-through middleware without phantom provided state", () => {
     const passThrough = defineMiddleware(async (_ctx, next) => next());
     const app = new TypeweaverApp().use(scoped(["/api/*"], passThrough));
@@ -477,7 +481,9 @@ describe("scoped and excluded middleware type-level safety checked by TypeScript
     void validState;
     void downstreamOnlyState;
   });
+});
 
+describe("excluded middleware type-level requirements", () => {
   test("typecheck rejects state-providing middleware passed to except", () => {
     const auth = defineMiddleware<{ userId: string }>(async (_ctx, next) =>
       next({ userId: "u_1" })
@@ -538,7 +544,9 @@ describe("scoped and excluded middleware type-level safety checked by TypeScript
     // @ts-expect-error — except must preserve wrapped middleware requirements.
     new TypeweaverApp().use(except(["/health"], requiresUser));
   });
+});
 
+describe("excluded middleware inferred state", () => {
   test("typecheck infers excluded pass-through middleware without phantom provided state", () => {
     const passThrough = defineMiddleware(async (_ctx, next) => next());
     const app = new TypeweaverApp().use(except(["/health"], passThrough));

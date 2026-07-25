@@ -29,7 +29,7 @@ const accessDeniedError = (): NodeJS.ErrnoException =>
     syscall: "lstat",
   });
 
-describe("PathSafety", () => {
+describe("PathSafety relative path validation", () => {
   it.effect("returns a safe descriptor for a valid relative path", () =>
     Effect.gen(function* () {
       const result = yield* PathSafety.validateGeneratedPath({
@@ -102,7 +102,9 @@ describe("PathSafety", () => {
       expectFailureWithReason(exit, "parent-traversal");
     }).pipe(Effect.provide(PathSafety.Default))
   );
+});
 
+describe("PathSafety path normalization", () => {
   it.effect(
     "fails with trailing-separator reason for requestedPath ending with '/'",
     () =>
@@ -162,7 +164,9 @@ describe("PathSafety", () => {
       );
     }).pipe(Effect.provide(PathSafety.Default))
   );
+});
 
+describe("PathSafety probe failures", () => {
   it.effect(
     "exposes EACCES path probes as GeneratedPathProbeError without defects",
     () => {
@@ -254,7 +258,9 @@ describe("PathSafety", () => {
       expect(Array.from(Cause.defects(exit.cause))).toEqual([bug]);
     });
   });
+});
 
+describe("PathSafety symlink protection", () => {
   test("rejects paths whose intermediate components are symlinks", () => {
     const outputDir = path.resolve("/tmp/sandbox");
     // The fake reports that `domain` is a symlink directory: the guard walks

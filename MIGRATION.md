@@ -7,21 +7,23 @@ releases.
 
 ## Table of Contents
 
-- [Migrating from 0.12.x to 0.13.x](#migrating-from-012x-to-013x)
+- [Migrating from 0.12.x to 1.0.x](#migrating-from-012x-to-10x)
 - [Migrating from 0.7.x to 0.8.x](#migrating-from-07x-to-08x)
 - [Migrating from 0.8.x to 0.9.x](#migrating-from-08x-to-09x)
 
 ---
 
-## Migrating from 0.12.x to 0.13.x
+## Migrating from 0.12.x to 1.0.x
 
-Version 0.13.0 completes the migration to **Effect** as typeweaver's runtime foundation. The change
-is internal-architectural but breaks two surfaces:
+Version 1.0.0 completes the migration to **Effect** as typeweaver's runtime foundation. The change
+is internal-architectural but breaks three surfaces:
 
 1. The **plugin API** (V1 class-based → V2 Effect-native records). Affects anyone who built a custom
    plugin.
 2. The **CLI surface** (now built on `@effect/cli`). Affects scripts that parsed CLI output or
    relied on the previous error format.
+3. A small set of **programmatic extension APIs** now use options objects. This affects direct
+   `NetworkError` construction and custom subclasses of the generated server and Hono router bases.
 
 The **spec authoring API** (`defineSpec` / `defineOperation` / `defineResponse`) is **unchanged**.
 Existing specs and Zod schemas keep working byte-for-byte.
@@ -56,7 +58,7 @@ export class TypesPlugin extends BasePlugin {
 }
 ```
 
-**After (0.13.x) — V2 plugin:**
+**After (1.0.x) — V2 plugin:**
 
 ```ts
 import path from "node:path";
@@ -82,7 +84,7 @@ TypeWeaver itself develops and tests against Effect 3.22.0:
 ```json
 {
   "peerDependencies": {
-    "@rexeus/typeweaver-gen": "^0.12.0",
+    "@rexeus/typeweaver-gen": "^1.0.0",
     "effect": ">=3.22.0 <4"
   }
 }
@@ -169,28 +171,36 @@ If you imported the generator programmatically rather than through the CLI:
   operation are retained.
 - Custom top-level configuration keys survive CLI flag resolution and remain available to plugins
   through `context.config`.
+- `NetworkError` now receives its metadata through a `NetworkErrorOptions` object. Replace
+  `new NetworkError(message, code, method, url, { cause })` with
+  `new NetworkError(message, { code, method, url, cause })`.
+- Custom `TypeweaverRouter` subclasses now call the protected `route` method with one exported
+  `TypeweaverRouteOptions` object instead of the previous positional arguments.
+- Custom `TypeweaverHono` subclasses now call the protected `handleRequest` method with one exported
+  `TypeweaverHonoRequestOptions` object instead of the previous five positional arguments.
 
 ### 4. Spec authoring API: UNCHANGED
 
-The functional spec API introduced in 0.9.0 is unchanged in 0.13.0:
+The functional spec API introduced in 0.9.0 is unchanged in 1.0.0:
 
 - `defineSpec({ resources: { ... } })`
 - `defineOperation({ ... })`
 - `defineResponse({ ... })`
 - `defineDerivedResponse(base, overrides)`
 
-Zod schemas continue to be authored the same way. Generated output for the shipped first-party
-plugins is **byte-identical** to 0.12.x — the `test-utils/src/test-project/output` golden fixture
-verifies this on every build.
+Zod schemas continue to be authored the same way. Regeneration updates the generated client, server,
+and Hono support code to the options-object APIs described above, so expect source diffs. The
+generated request, response, validation, and runtime behavior remain compatible. The
+`test-utils/src/test-project/output` golden fixture verifies the exact 1.0 output on every build.
 
-### 5. Migration Checklist (0.12.x to 0.13.x)
+### 5. Migration Checklist (0.12.x to 1.0.x)
 
 For **end users** (you use the CLI but don't author plugins):
 
 - [ ] Update any scripts that parsed the previous CLI error format.
 - [ ] Update any scripts that parsed log lines (timestamps and fiber tags are gone).
-- [ ] Regenerate output with `npx typeweaver generate`. Output is byte-stable so this is a no-op for
-      clean working trees — but it confirms the new CLI runs against your spec.
+- [ ] Regenerate output with `npx typeweaver generate` and review the expected options-object source
+      diffs in the generated client, server, and Hono support code.
 
 For **plugin authors**:
 

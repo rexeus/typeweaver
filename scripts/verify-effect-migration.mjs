@@ -59,6 +59,10 @@ const commands = [
     args: ["run", "docs:check"],
   },
   {
+    label: "Oxlint maintainability contracts",
+    args: ["run", "test:maintainability-lint"],
+  },
+  {
     label: "Effect language-service diagnostics",
     args: ["run", "effect:diagnostics"],
   },

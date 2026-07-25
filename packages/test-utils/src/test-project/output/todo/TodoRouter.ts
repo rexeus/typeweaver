@@ -181,130 +181,130 @@ export class TodoRouter<
   }
 
   protected setupRoutes(): void {
-    this.route(
-      "ListTodos",
-      HttpMethod.GET,
-      "/todos",
-      new ListTodosRequestValidator(),
-      new ListTodosResponseValidator(),
-      this.requestHandlers.handleListTodosRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "ListTodos",
+      method: HttpMethod.GET,
+      path: "/todos",
+      requestValidator: new ListTodosRequestValidator(),
+      responseValidator: new ListTodosResponseValidator(),
+      handler: this.requestHandlers.handleListTodosRequest.bind(this.requestHandlers),
+    });
 
-    this.route(
-      "CreateTodo",
-      HttpMethod.POST,
-      "/todos",
-      new CreateTodoRequestValidator(),
-      new CreateTodoResponseValidator(),
-      this.requestHandlers.handleCreateTodoRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "CreateTodo",
+      method: HttpMethod.POST,
+      path: "/todos",
+      requestValidator: new CreateTodoRequestValidator(),
+      responseValidator: new CreateTodoResponseValidator(),
+      handler: this.requestHandlers.handleCreateTodoRequest.bind(this.requestHandlers),
+    });
 
-    this.route(
-      "QueryTodo",
-      HttpMethod.POST,
-      "/todos/query",
-      new QueryTodoRequestValidator(),
-      new QueryTodoResponseValidator(),
-      this.requestHandlers.handleQueryTodoRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "QueryTodo",
+      method: HttpMethod.POST,
+      path: "/todos/query",
+      requestValidator: new QueryTodoRequestValidator(),
+      responseValidator: new QueryTodoResponseValidator(),
+      handler: this.requestHandlers.handleQueryTodoRequest.bind(this.requestHandlers),
+    });
 
-    this.route(
-      "GetTodo",
-      HttpMethod.GET,
-      "/todos/:todoId",
-      new GetTodoRequestValidator(),
-      new GetTodoResponseValidator(),
-      this.requestHandlers.handleGetTodoRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "GetTodo",
+      method: HttpMethod.GET,
+      path: "/todos/:todoId",
+      requestValidator: new GetTodoRequestValidator(),
+      responseValidator: new GetTodoResponseValidator(),
+      handler: this.requestHandlers.handleGetTodoRequest.bind(this.requestHandlers),
+    });
 
-    this.route(
-      "PutTodo",
-      HttpMethod.PUT,
-      "/todos/:todoId",
-      new PutTodoRequestValidator(),
-      new PutTodoResponseValidator(),
-      this.requestHandlers.handlePutTodoRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "PutTodo",
+      method: HttpMethod.PUT,
+      path: "/todos/:todoId",
+      requestValidator: new PutTodoRequestValidator(),
+      responseValidator: new PutTodoResponseValidator(),
+      handler: this.requestHandlers.handlePutTodoRequest.bind(this.requestHandlers),
+    });
 
-    this.route(
-      "UpdateTodo",
-      HttpMethod.PATCH,
-      "/todos/:todoId",
-      new UpdateTodoRequestValidator(),
-      new UpdateTodoResponseValidator(),
-      this.requestHandlers.handleUpdateTodoRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "UpdateTodo",
+      method: HttpMethod.PATCH,
+      path: "/todos/:todoId",
+      requestValidator: new UpdateTodoRequestValidator(),
+      responseValidator: new UpdateTodoResponseValidator(),
+      handler: this.requestHandlers.handleUpdateTodoRequest.bind(this.requestHandlers),
+    });
 
-    this.route(
-      "DeleteTodo",
-      HttpMethod.DELETE,
-      "/todos/:todoId",
-      new DeleteTodoRequestValidator(),
-      new DeleteTodoResponseValidator(),
-      this.requestHandlers.handleDeleteTodoRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "DeleteTodo",
+      method: HttpMethod.DELETE,
+      path: "/todos/:todoId",
+      requestValidator: new DeleteTodoRequestValidator(),
+      responseValidator: new DeleteTodoResponseValidator(),
+      handler: this.requestHandlers.handleDeleteTodoRequest.bind(this.requestHandlers),
+    });
 
-    this.route(
-      "optionsTodo",
-      HttpMethod.OPTIONS,
-      "/todos/:todoId",
-      new OptionsTodoRequestValidator(),
-      new OptionsTodoResponseValidator(),
-      this.requestHandlers.handleOptionsTodoRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "optionsTodo",
+      method: HttpMethod.OPTIONS,
+      path: "/todos/:todoId",
+      requestValidator: new OptionsTodoRequestValidator(),
+      responseValidator: new OptionsTodoResponseValidator(),
+      handler: this.requestHandlers.handleOptionsTodoRequest.bind(this.requestHandlers),
+    });
 
-    this.route(
-      "UpdateTodoStatus",
-      HttpMethod.PUT,
-      "/todos/:todoId/status",
-      new UpdateTodoStatusRequestValidator(),
-      new UpdateTodoStatusResponseValidator(),
-      this.requestHandlers.handleUpdateTodoStatusRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "UpdateTodoStatus",
+      method: HttpMethod.PUT,
+      path: "/todos/:todoId/status",
+      requestValidator: new UpdateTodoStatusRequestValidator(),
+      responseValidator: new UpdateTodoStatusResponseValidator(),
+      handler: this.requestHandlers.handleUpdateTodoStatusRequest.bind(this.requestHandlers),
+    });
 
-    this.route(
-      "ListSubTodos",
-      HttpMethod.GET,
-      "/todos/:todoId/subtodos",
-      new ListSubTodosRequestValidator(),
-      new ListSubTodosResponseValidator(),
-      this.requestHandlers.handleListSubTodosRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "ListSubTodos",
+      method: HttpMethod.GET,
+      path: "/todos/:todoId/subtodos",
+      requestValidator: new ListSubTodosRequestValidator(),
+      responseValidator: new ListSubTodosResponseValidator(),
+      handler: this.requestHandlers.handleListSubTodosRequest.bind(this.requestHandlers),
+    });
 
-    this.route(
-      "CreateSubTodo",
-      HttpMethod.POST,
-      "/todos/:todoId/subtodos",
-      new CreateSubTodoRequestValidator(),
-      new CreateSubTodoResponseValidator(),
-      this.requestHandlers.handleCreateSubTodoRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "CreateSubTodo",
+      method: HttpMethod.POST,
+      path: "/todos/:todoId/subtodos",
+      requestValidator: new CreateSubTodoRequestValidator(),
+      responseValidator: new CreateSubTodoResponseValidator(),
+      handler: this.requestHandlers.handleCreateSubTodoRequest.bind(this.requestHandlers),
+    });
 
-    this.route(
-      "QuerySubTodo",
-      HttpMethod.POST,
-      "/todos/:todoId/subtodos/query",
-      new QuerySubTodoRequestValidator(),
-      new QuerySubTodoResponseValidator(),
-      this.requestHandlers.handleQuerySubTodoRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "QuerySubTodo",
+      method: HttpMethod.POST,
+      path: "/todos/:todoId/subtodos/query",
+      requestValidator: new QuerySubTodoRequestValidator(),
+      responseValidator: new QuerySubTodoResponseValidator(),
+      handler: this.requestHandlers.handleQuerySubTodoRequest.bind(this.requestHandlers),
+    });
 
-    this.route(
-      "UpdateSubTodo",
-      HttpMethod.PUT,
-      "/todos/:todoId/subtodos/:subtodoId",
-      new UpdateSubTodoRequestValidator(),
-      new UpdateSubTodoResponseValidator(),
-      this.requestHandlers.handleUpdateSubTodoRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "UpdateSubTodo",
+      method: HttpMethod.PUT,
+      path: "/todos/:todoId/subtodos/:subtodoId",
+      requestValidator: new UpdateSubTodoRequestValidator(),
+      responseValidator: new UpdateSubTodoResponseValidator(),
+      handler: this.requestHandlers.handleUpdateSubTodoRequest.bind(this.requestHandlers),
+    });
 
-    this.route(
-      "DeleteSubTodo",
-      HttpMethod.DELETE,
-      "/todos/:todoId/subtodos/:subtodoId",
-      new DeleteSubTodoRequestValidator(),
-      new DeleteSubTodoResponseValidator(),
-      this.requestHandlers.handleDeleteSubTodoRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "DeleteSubTodo",
+      method: HttpMethod.DELETE,
+      path: "/todos/:todoId/subtodos/:subtodoId",
+      requestValidator: new DeleteSubTodoRequestValidator(),
+      responseValidator: new DeleteSubTodoResponseValidator(),
+      handler: this.requestHandlers.handleDeleteSubTodoRequest.bind(this.requestHandlers),
+    });
   }
 }

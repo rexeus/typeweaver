@@ -16,7 +16,7 @@ import {
   todoApiInfo,
 } from "./buildOpenApiDocument.helpers.js";
 
-describe("buildOpenApiDocument", () => {
+describe("buildOpenApiDocument shell and request parameters", () => {
   test("builds an OpenAPI 3.1.1 document shell for an empty spec", () => {
     const normalizedSpec = aNormalizedSpecWith();
 
@@ -81,7 +81,9 @@ describe("buildOpenApiDocument", () => {
     ]);
     expect(result.warnings).toEqual([]);
   });
+});
 
+describe("buildOpenApiDocument embedded path parameters", () => {
   test("maps embedded digit-prefixed path parameters in path order", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
@@ -116,7 +118,9 @@ describe("buildOpenApiDocument", () => {
     ]);
     expect(result.warnings).toEqual([]);
   });
+});
 
+describe("buildOpenApiDocument required request bodies", () => {
   test("maps required request body schemas", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
@@ -174,7 +178,9 @@ describe("buildOpenApiDocument", () => {
       },
     });
   });
+});
 
+describe("buildOpenApiDocument optional request bodies", () => {
   test("maps optional request bodies to non-required unwrapped schemas", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
@@ -233,7 +239,9 @@ describe("buildOpenApiDocument", () => {
     ).toEqual({ $ref: "#/components/schemas/UploadJsonRequestBody" });
     expect(result.warnings).toEqual([]);
   });
+});
 
+describe("buildOpenApiDocument operation and path ordering", () => {
   test("merges operations on the same normalized path without overwriting methods", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
@@ -323,7 +331,9 @@ describe("buildOpenApiDocument", () => {
     ]);
     expect(result.warnings).toEqual([]);
   });
+});
 
+describe("buildOpenApiDocument Typeweaver path syntax", () => {
   test("maps Typeweaver path parameters that start with digits", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
@@ -380,7 +390,9 @@ describe("buildOpenApiDocument", () => {
     ]);
     expect(result.warnings).toEqual([]);
   });
+});
 
+describe("buildOpenApiDocument missing path schemas", () => {
   test("emits a required path parameter with an empty schema when its schema is missing", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
@@ -450,7 +462,9 @@ describe("buildOpenApiDocument", () => {
       },
     ]);
   });
+});
 
+describe("buildOpenApiDocument query catchalls", () => {
   test("warns when record query parameters cannot be represented", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
@@ -525,7 +539,9 @@ describe("buildOpenApiDocument", () => {
       },
     ]);
   });
+});
 
+describe("buildOpenApiDocument header catchalls", () => {
   test("emits finite header parameters when header catchall entries are not representable", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
@@ -569,7 +585,9 @@ describe("buildOpenApiDocument", () => {
       },
     ]);
   });
+});
 
+describe("buildOpenApiDocument request body wrappers", () => {
   test.each([
     {
       scenario: "default",
@@ -613,7 +631,9 @@ describe("buildOpenApiDocument", () => {
       expect(result.warnings).toEqual([]);
     }
   );
+});
 
+describe("buildOpenApiDocument default request bodies", () => {
   test("maps readonly default request bodies to non-required inner schemas", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
@@ -699,7 +719,9 @@ describe("buildOpenApiDocument", () => {
     });
     expect(result.warnings).toEqual([]);
   });
+});
 
+describe("buildOpenApiDocument required body semantics", () => {
   test("keeps nullable request bodies required", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
@@ -757,7 +779,9 @@ describe("buildOpenApiDocument", () => {
     });
     expect(result.warnings).toEqual([]);
   });
+});
 
+describe("buildOpenApiDocument optional parameter containers", () => {
   test("marks query parameters from default containers as not required", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
@@ -814,7 +838,9 @@ describe("buildOpenApiDocument", () => {
     ]);
     expect(result.warnings).toEqual([]);
   });
+});
 
+describe("buildOpenApiDocument nested warning paths", () => {
   test("rebases schema conversion warnings to the OpenAPI request body path", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
@@ -889,7 +915,9 @@ describe("buildOpenApiDocument", () => {
       },
     ]);
   });
+});
 
+describe("buildOpenApiDocument root warning paths", () => {
   test("keeps root query container warnings at the parameter list boundary", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
@@ -945,7 +973,9 @@ describe("buildOpenApiDocument", () => {
       },
     ]);
   });
+});
 
+describe("buildOpenApiDocument recursive schemas and determinism", () => {
   test("preserves root definitions used by recursive query parameter schemas", () => {
     const treeNodeSchema = aRecursiveTreeNodeSchema();
     const normalizedSpec = aTodoSpecWith({
@@ -1021,7 +1051,9 @@ describe("buildOpenApiDocument", () => {
     expect(normalizedSpec.resources[0]?.operations[0]).toBe(operation);
     expect(operation.path).toBe("/todos//");
   });
+});
 
+describe("buildOpenApiDocument normalized paths and canonical responses", () => {
   test("normalizes duplicate and trailing path slashes", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [

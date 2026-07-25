@@ -1,5 +1,6 @@
 import type {
   ContextBuilder,
+  GeneratorContext,
   NormalizedSpec,
   PluginContext,
   PluginRegistration,
@@ -21,9 +22,194 @@ type PluginLifecycleParams = {
   readonly pluginContext: PluginContext;
 };
 
+type InitializePluginsParams = {
+  readonly registrations: readonly PluginRegistration[];
+  readonly pluginContext: PluginContext;
+  readonly initialized: PluginRegistration[];
+};
+
+type FinalizePluginsParams = {
+  readonly registrations: readonly PluginRegistration[];
+  readonly pluginContext: PluginContext;
+};
+
+type GeneratePluginsParams = {
+  readonly registrations: readonly PluginRegistration[];
+  readonly context: GeneratorContext;
+  readonly flushGeneratedFileLogs: Effect.Effect<void>;
+};
+
+type GeneratedFileLogSource = {
+  readonly drainPendingWriteLogs: () => readonly string[];
+};
+
 export type GenerationResult = {
   readonly generatedFiles: readonly string[];
 };
+
+const initializePlugin = Effect.fn(function* (params: {
+  readonly registration: PluginRegistration;
+  readonly pluginContext: PluginContext;
+  readonly initialized: PluginRegistration[];
+}) {
+  const initialize =
+    params.registration.plugin.initialize === undefined
+      ? Effect.void
+      : params.registration.plugin.initialize(params.pluginContext).pipe(
+          Effect.withSpan("typeweaver.plugin.initialize", {
+            attributes: { plugin: params.registration.plugin.name },
+          })
+        );
+
+  yield* Effect.logDebug(
+    `Initializing plugin: ${params.registration.plugin.name}`
+  );
+  yield* Effect.uninterruptibleMask(restore =>
+    restore(initialize).pipe(
+      Effect.tap(() =>
+        Effect.sync(() => {
+          params.initialized.push(params.registration);
+        })
+      )
+    )
+  );
+});
+
+const initializePlugins = Effect.fn(function* (
+  params: InitializePluginsParams
+) {
+  yield* Effect.logInfo("Initializing plugins...");
+  yield* Effect.forEach(
+    params.registrations,
+    registration =>
+      initializePlugin({
+        registration,
+        pluginContext: params.pluginContext,
+        initialized: params.initialized,
+      }),
+    { discard: true }
+  );
+});
+
+const collectPluginResources = Effect.fn(function* (params: {
+  readonly registration: PluginRegistration;
+  readonly normalizedSpec: NormalizedSpec;
+}) {
+  const collectResources = params.registration.plugin.collectResources;
+  if (collectResources === undefined) {
+    return params.normalizedSpec;
+  }
+  return yield* collectResources(params.normalizedSpec).pipe(
+    Effect.withSpan("typeweaver.plugin.collectResources", {
+      attributes: { plugin: params.registration.plugin.name },
+    })
+  );
+});
+
+const collectResources = Effect.fn(function* (
+  registrations: readonly PluginRegistration[],
+  initialSpec: NormalizedSpec
+) {
+  yield* Effect.logInfo("Collecting resources...");
+  return yield* Effect.reduce(
+    registrations,
+    initialSpec,
+    (normalizedSpec, registration) =>
+      collectPluginResources({ registration, normalizedSpec })
+  );
+});
+
+const makeFlushGeneratedFileLogs = (
+  built: GeneratedFileLogSource
+): Effect.Effect<void> =>
+  Effect.suspend(() =>
+    Effect.forEach(
+      built.drainPendingWriteLogs(),
+      filePath => Effect.logInfo(`Generated: ${filePath}`),
+      { discard: true }
+    )
+  );
+
+const generatePlugin = Effect.fn(function* (params: {
+  readonly registration: PluginRegistration;
+  readonly context: GeneratorContext;
+  readonly flushGeneratedFileLogs: Effect.Effect<void>;
+}) {
+  yield* Effect.logInfo(`Running plugin: ${params.registration.plugin.name}`);
+  const generate = params.registration.plugin.generate;
+  if (generate === undefined) {
+    return;
+  }
+  yield* generate(params.context).pipe(
+    Effect.onExit(() => params.flushGeneratedFileLogs),
+    Effect.withSpan("typeweaver.plugin.generate", {
+      attributes: { plugin: params.registration.plugin.name },
+    })
+  );
+});
+
+const generatePlugins = Effect.fn(function* (params: GeneratePluginsParams) {
+  yield* Effect.logInfo("Generating code...");
+  yield* Effect.forEach(
+    params.registrations,
+    registration =>
+      generatePlugin({
+        registration,
+        context: params.context,
+        flushGeneratedFileLogs: params.flushGeneratedFileLogs,
+      }),
+    { discard: true }
+  );
+});
+
+const finalizePlugin = Effect.fn(function* (params: {
+  readonly registration: PluginRegistration;
+  readonly pluginContext: PluginContext;
+}) {
+  const finalize = params.registration.plugin.finalize;
+  if (finalize === undefined) {
+    return;
+  }
+  yield* finalize(params.pluginContext).pipe(
+    Effect.withSpan("typeweaver.plugin.finalize", {
+      attributes: { plugin: params.registration.plugin.name },
+    }),
+    Effect.catchAll(cause =>
+      Effect.logWarning(cause.message).pipe(
+        Effect.annotateLogs({
+          plugin: params.registration.plugin.name,
+          cause,
+        })
+      )
+    )
+  );
+});
+
+const finalizePlugins = Effect.fn("typeweaver.Generator.finalizePlugins")(
+  function* (params: FinalizePluginsParams) {
+    yield* Effect.logInfo("Finalizing plugins...");
+    let finalizerDefects: Cause.Cause<never> | undefined;
+
+    for (const registration of [...params.registrations].reverse()) {
+      const finalizerExit = yield* Effect.exit(
+        finalizePlugin({
+          registration,
+          pluginContext: params.pluginContext,
+        })
+      );
+      if (Exit.isFailure(finalizerExit)) {
+        finalizerDefects =
+          finalizerDefects === undefined
+            ? finalizerExit.cause
+            : Cause.sequential(finalizerDefects, finalizerExit.cause);
+      }
+    }
+
+    if (finalizerDefects !== undefined) {
+      return yield* Effect.failCause(finalizerDefects);
+    }
+  }
+);
 
 export const runPluginLifecycle = (
   params: PluginLifecycleParams,
@@ -31,88 +217,18 @@ export const runPluginLifecycle = (
 ) =>
   Effect.gen(function* () {
     const initialized: PluginRegistration[] = [];
-    let normalizedSpec = params.normalizedSpec;
     let getGeneratedFiles: () => readonly string[] = () => [];
 
-    const finalizeInitializedPlugins = Effect.fn(
-      "typeweaver.Generator.finalizePlugins"
-    )(function* () {
-      yield* Effect.logInfo("Finalizing plugins...");
-      let finalizerDefects: Cause.Cause<never> | undefined;
-
-      for (const registration of [...initialized].reverse()) {
-        if (!registration.plugin.finalize) {
-          continue;
-        }
-
-        const finalizerExit = yield* Effect.exit(
-          registration.plugin.finalize(params.pluginContext).pipe(
-            Effect.withSpan("typeweaver.plugin.finalize", {
-              attributes: { plugin: registration.plugin.name },
-            }),
-            Effect.catchAll(cause =>
-              Effect.logWarning(cause.message).pipe(
-                Effect.annotateLogs({
-                  plugin: registration.plugin.name,
-                  cause,
-                })
-              )
-            )
-          )
-        );
-        if (Exit.isFailure(finalizerExit)) {
-          finalizerDefects =
-            finalizerDefects === undefined
-              ? finalizerExit.cause
-              : Cause.sequential(finalizerDefects, finalizerExit.cause);
-        }
-      }
-
-      if (finalizerDefects !== undefined) {
-        return yield* Effect.failCause(finalizerDefects);
-      }
-    });
-
     yield* Effect.gen(function* () {
-      yield* Effect.logInfo("Initializing plugins...");
-      for (const registration of params.initial) {
-        yield* Effect.logDebug(
-          `Initializing plugin: ${registration.plugin.name}`
-        );
-        const initialize =
-          registration.plugin.initialize === undefined
-            ? Effect.void
-            : registration.plugin.initialize(params.pluginContext).pipe(
-                Effect.withSpan("typeweaver.plugin.initialize", {
-                  attributes: { plugin: registration.plugin.name },
-                })
-              );
-
-        // Initialization remains interruptible, while successful return and
-        // finalizer registration form one masked ownership transition.
-        yield* Effect.uninterruptibleMask(restore =>
-          restore(initialize).pipe(
-            Effect.tap(() =>
-              Effect.sync(() => {
-                initialized.push(registration);
-              })
-            )
-          )
-        );
-      }
-
-      yield* Effect.logInfo("Collecting resources...");
-      for (const registration of params.initial) {
-        if (registration.plugin.collectResources) {
-          normalizedSpec = yield* registration.plugin
-            .collectResources(normalizedSpec)
-            .pipe(
-              Effect.withSpan("typeweaver.plugin.collectResources", {
-                attributes: { plugin: registration.plugin.name },
-              })
-            );
-        }
-      }
+      yield* initializePlugins({
+        registrations: params.initial,
+        pluginContext: params.pluginContext,
+        initialized,
+      });
+      const normalizedSpec = yield* collectResources(
+        params.initial,
+        params.normalizedSpec
+      );
 
       const built = yield* deps.contextBuilder.buildGeneratorContext({
         outputDir: params.plan.outputDir,
@@ -126,28 +242,12 @@ export const runPluginLifecycle = (
       });
       getGeneratedFiles = built.getGeneratedFiles;
 
-      const flushGeneratedFileLogs = Effect.suspend(() =>
-        Effect.forEach(
-          built.drainPendingWriteLogs(),
-          filePath => Effect.logInfo(`Generated: ${filePath}`),
-          { discard: true }
-        )
-      );
-
-      yield* Effect.logInfo("Generating code...");
-      for (const registration of params.initial) {
-        yield* Effect.logInfo(`Running plugin: ${registration.plugin.name}`);
-        if (registration.plugin.generate) {
-          // Flush inside the plugin span on every Exit so writes completed
-          // before a failure or interruption still reach the logger.
-          yield* registration.plugin.generate(built.context).pipe(
-            Effect.onExit(() => flushGeneratedFileLogs),
-            Effect.withSpan("typeweaver.plugin.generate", {
-              attributes: { plugin: registration.plugin.name },
-            })
-          );
-        }
-      }
+      const flushGeneratedFileLogs = makeFlushGeneratedFileLogs(built);
+      yield* generatePlugins({
+        registrations: params.initial,
+        context: built.context,
+        flushGeneratedFileLogs,
+      });
 
       yield* deps.indexFileGenerator
         .generate({
@@ -157,7 +257,14 @@ export const runPluginLifecycle = (
           writeFile: built.context.writeFile,
         })
         .pipe(Effect.onExit(() => flushGeneratedFileLogs));
-    }).pipe(Effect.onExit(() => finalizeInitializedPlugins()));
+    }).pipe(
+      Effect.onExit(() =>
+        finalizePlugins({
+          registrations: initialized,
+          pluginContext: params.pluginContext,
+        })
+      )
+    );
 
     return { generatedFiles: getGeneratedFiles() } satisfies GenerationResult;
   });

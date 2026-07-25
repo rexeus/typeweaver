@@ -37,7 +37,7 @@ const captureMiddlewareNextAlreadyCalledError = async (
   return error;
 };
 
-describe("middleware pipeline", () => {
+describe("middleware pipeline invocation", () => {
   test("calls the final handler when no middleware is registered", async () => {
     const ctx = createServerContext();
 
@@ -86,7 +86,9 @@ describe("middleware pipeline", () => {
       "mw1-after",
     ]);
   });
+});
 
+describe("middleware pipeline short circuits", () => {
   test("returns a short-circuit response without calling the final handler", async () => {
     const ctx = createServerContext();
     let handlerCalled = false;
@@ -141,7 +143,9 @@ describe("middleware pipeline", () => {
     expect(response.statusCode).toBe(403);
     expect(reached).toEqual(["mw1", "mw2"]);
   });
+});
 
+describe("middleware pipeline response and state", () => {
   test("preserves existing response fields when middleware adds headers", async () => {
     const ctx = createServerContext();
 
@@ -205,7 +209,9 @@ describe("middleware pipeline", () => {
 
     expect(response.body).toEqual({ userId: "u_1", role: "admin" });
   });
+});
 
+describe("middleware pipeline state composition", () => {
   test("lets downstream middleware read upstream state before the final handler", async () => {
     const ctx = createServerContext();
 
@@ -248,7 +254,9 @@ describe("middleware pipeline", () => {
 
     expect(response.body).toEqual({ userId: "u_1", role: "admin" });
   });
+});
 
+describe("middleware pipeline failures", () => {
   test("propagates errors thrown by middleware", async () => {
     const ctx = createServerContext();
 

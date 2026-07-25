@@ -27,98 +27,131 @@ export type IndexFileGenerationContext = {
   readonly renderTemplate: (data: IndexFileTemplateData) => string;
 };
 
+type IndexFileCandidate =
+  | { readonly _tag: "Ignored" }
+  | { readonly _tag: "RootFile"; readonly path: string }
+  | { readonly _tag: "ExistingBarrel"; readonly group: string }
+  | {
+      readonly _tag: "GroupEntry";
+      readonly group: string;
+      readonly path: string;
+    };
+
+type IndexFileState = {
+  readonly groups: Map<string, Set<string>>;
+  readonly rootFiles: Set<string>;
+  readonly existingBarrels: Set<string>;
+};
+
+function classifyIndexFile(file: string): IndexFileCandidate {
+  const normalizedFile = file.replace(/\\/g, "/");
+  if (!isBarrelEligibleTypeScriptSourceFile(normalizedFile)) {
+    return { _tag: "Ignored" };
+  }
+
+  const withJsExt = normalizedFile.replace(/\.ts$/, ".js");
+  const stripped = normalizedFile.replace(/\.ts$/, "");
+  if (stripped === "index") {
+    return { _tag: "Ignored" };
+  }
+
+  const firstSlash = stripped.indexOf("/");
+  if (firstSlash === -1) {
+    return { _tag: "RootFile", path: `./${withJsExt}` };
+  }
+
+  const firstSegment = stripped.slice(0, firstSlash);
+  if (stripped === "lib/index") {
+    return { _tag: "ExistingBarrel", group: "lib" };
+  }
+
+  const secondSlash = stripped.indexOf("/", firstSlash + 1);
+  const group =
+    firstSegment === "lib"
+      ? secondSlash === -1
+        ? stripped
+        : stripped.slice(0, secondSlash)
+      : firstSegment;
+  const entryName = stripped.slice(group.length + 1);
+  return entryName === "index"
+    ? { _tag: "ExistingBarrel", group }
+    : { _tag: "GroupEntry", group, path: `./${entryName}.js` };
+}
+
+function addGroupEntry(
+  groups: Map<string, Set<string>>,
+  group: string,
+  entryPath: string
+): void {
+  const entries = groups.get(group) ?? new Set<string>();
+  entries.add(entryPath);
+  groups.set(group, entries);
+}
+
+function recordIndexFileCandidate(
+  state: IndexFileState,
+  candidate: IndexFileCandidate
+): void {
+  switch (candidate._tag) {
+    case "Ignored":
+      return;
+    case "RootFile":
+      state.rootFiles.add(candidate.path);
+      return;
+    case "ExistingBarrel":
+      state.existingBarrels.add(candidate.group);
+      return;
+    case "GroupEntry":
+      addGroupEntry(state.groups, candidate.group, candidate.path);
+  }
+}
+
+function planGroupIndexes(
+  groups: Map<string, Set<string>>,
+  existingBarrels: ReadonlySet<string>
+): readonly PlannedIndexFile[] {
+  return Array.from(groups.keys())
+    .sort()
+    .filter(group => !existingBarrels.has(group))
+    .map(group => ({
+      path: `${group}/index.ts`,
+      data: { indexPaths: Array.from(groups.get(group)!).sort() },
+    }));
+}
+
+function planRootIndex(
+  groups: Map<string, Set<string>>,
+  rootFiles: ReadonlySet<string>,
+  existingBarrels: ReadonlySet<string>
+): PlannedIndexFile {
+  const groupedIndexes = [...groups.keys(), ...existingBarrels]
+    .sort()
+    .map(group => `./${group}/index.js`);
+  return {
+    path: "index.ts",
+    data: {
+      indexPaths: Array.from(new Set([...rootFiles, ...groupedIndexes])).sort(),
+    },
+  };
+}
+
 export function planIndexFiles(
   generatedFiles: readonly string[]
 ): readonly PlannedIndexFile[] {
-  const groups = new Map<string, Set<string>>();
-  const rootFiles = new Set<string>();
-  const existingBarrels = new Set<string>();
+  const state: IndexFileState = {
+    groups: new Map(),
+    rootFiles: new Set(),
+    existingBarrels: new Set(),
+  };
 
   for (const file of generatedFiles) {
-    const normalizedFile = file.replace(/\\/g, "/");
-
-    if (!isBarrelEligibleTypeScriptSourceFile(normalizedFile)) {
-      continue;
-    }
-
-    const withJsExt = normalizedFile.replace(/\.ts$/, ".js");
-    const stripped = normalizedFile.replace(/\.ts$/, "");
-    const firstSlash = stripped.indexOf("/");
-
-    if (stripped === "index") {
-      continue;
-    }
-
-    if (firstSlash === -1) {
-      rootFiles.add(`./${withJsExt}`);
-      continue;
-    }
-
-    const firstSegment = stripped.slice(0, firstSlash);
-
-    if (stripped === "lib/index") {
-      existingBarrels.add("lib");
-      continue;
-    }
-
-    if (firstSegment === "lib") {
-      const secondSlash = stripped.indexOf("/", firstSlash + 1);
-      const groupKey =
-        secondSlash === -1 ? stripped : stripped.slice(0, secondSlash);
-
-      const entryName = stripped.slice(groupKey.length + 1);
-
-      if (entryName === "index") {
-        existingBarrels.add(groupKey);
-      } else {
-        if (!groups.has(groupKey)) {
-          groups.set(groupKey, new Set());
-        }
-        groups.get(groupKey)!.add(`./${entryName}.js`);
-      }
-    } else {
-      const entryName = stripped.slice(firstSlash + 1);
-
-      if (entryName === "index") {
-        existingBarrels.add(firstSegment);
-      } else {
-        if (!groups.has(firstSegment)) {
-          groups.set(firstSegment, new Set());
-        }
-        groups.get(firstSegment)!.add(`./${entryName}.js`);
-      }
-    }
+    recordIndexFileCandidate(state, classifyIndexFile(file));
   }
 
-  const planned: PlannedIndexFile[] = [];
-
-  const sortedGroupKeys = Array.from(groups.keys()).sort();
-  for (const groupKey of sortedGroupKeys) {
-    if (existingBarrels.has(groupKey)) {
-      continue;
-    }
-
-    const entries = groups.get(groupKey)!;
-    planned.push({
-      path: `${groupKey}/index.ts`,
-      data: { indexPaths: Array.from(entries).sort() },
-    });
-  }
-
-  const rootIndexPaths = new Set<string>(rootFiles);
-  for (const groupKey of sortedGroupKeys) {
-    rootIndexPaths.add(`./${groupKey}/index.js`);
-  }
-  for (const barrelKey of Array.from(existingBarrels).sort()) {
-    rootIndexPaths.add(`./${barrelKey}/index.js`);
-  }
-
-  planned.push({
-    path: "index.ts",
-    data: { indexPaths: Array.from(rootIndexPaths).sort() },
-  });
-
-  return planned;
+  return [
+    ...planGroupIndexes(state.groups, state.existingBarrels),
+    planRootIndex(state.groups, state.rootFiles, state.existingBarrels),
+  ];
 }
 
 export function generateIndexFiles(context: IndexFileGenerationContext): void {

@@ -37,6 +37,17 @@ const writeBuildOutput = (
     fileSystem.writeFileString(getBuildOutputFile(config), contents)
   );
 
+const makeRejectedBuild =
+  (fileSystem: FileSystem.FileSystem) =>
+  async (config: BuildOptions): Promise<unknown> => {
+    await writeBuildOutput(
+      fileSystem,
+      config,
+      "export const partial = true;\n"
+    );
+    throw new Error("rolldown crashed");
+  };
+
 const runWithBundler = async <A, E>(
   build: (
     state: StateHandle
@@ -98,7 +109,9 @@ describe("SpecBundler temp directory lifecycle", () => {
       "export const spec = {};\n"
     );
   });
+});
 
+describe("SpecBundler interruption lifecycle", () => {
   test("interruption waits for build settlement, discards staged output, cleans the temp directory, and permits retry", async () => {
     const { exit, state } = await runWithBundler(() =>
       Effect.gen(function* () {
@@ -199,7 +212,9 @@ describe("SpecBundler temp directory lifecycle", () => {
         .filter(directory => directory.includes("typeweaver-spec-loader-"))
     ).toEqual([]);
   });
+});
 
+describe("SpecBundler rejected-build lifecycle", () => {
   test("a rejected build cannot replace the previous bundle, cleans staging, and permits retry", async () => {
     const { exit, state } = await runWithBundler(() =>
       Effect.gen(function* () {
@@ -218,12 +233,7 @@ describe("SpecBundler temp directory lifecycle", () => {
               specOutputDir: "/out/spec",
             },
             {
-              build: (config: BuildOptions) =>
-                writeBuildOutput(
-                  fileSystem,
-                  config,
-                  "export const partial = true;\n"
-                ).then(() => Promise.reject(new Error("rolldown crashed"))),
+              build: makeRejectedBuild(fileSystem),
             }
           )
         );
@@ -265,7 +275,9 @@ describe("SpecBundler temp directory lifecycle", () => {
         .filter(directory => directory.includes("typeweaver-spec-loader-"))
     ).toEqual([]);
   });
+});
 
+describe("SpecBundler post-build defect lifecycle", () => {
   test("a post-build defect cannot publish staged output, cleans staging, and permits retry", async () => {
     const probeDefect = new Error("existence probe defect");
     const { exit, state } = await runWithBundler(() =>

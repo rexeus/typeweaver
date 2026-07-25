@@ -58,54 +58,54 @@ const captureUnsafeCleanTargetError = (
   throw new Error("Expected UnsafeCleanTargetError to be thrown");
 };
 
-describe("Generator clean safety", () => {
-  const tempDirs: string[] = [];
+const tempDirs: string[] = [];
 
+afterEach(() => {
+  for (const tempDir of tempDirs) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+
+  tempDirs.length = 0;
+});
+
+const createTempDir = (): string => {
+  const tempDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), "typeweaver-generator-")
+  );
+  tempDirs.push(tempDir);
+
+  return tempDir;
+};
+
+const createWorkspaceWithPackageDirectory = (
+  marker: WorkspaceMarker = ".git"
+): {
+  readonly workspaceRoot: string;
+  readonly packageDirectory: string;
+} => {
+  const workspaceRoot = createTempDir();
+  const packageDirectory = path.join(workspaceRoot, "packages", "cli");
+
+  if (marker === ".git") {
+    fs.mkdirSync(path.join(workspaceRoot, marker), { recursive: true });
+  } else {
+    fs.writeFileSync(
+      path.join(workspaceRoot, marker),
+      "packages:\n  - packages/*\n"
+    );
+  }
+  fs.mkdirSync(packageDirectory, { recursive: true });
+
+  return { workspaceRoot, packageDirectory };
+};
+
+describe("Generator filesystem and working-directory clean safety", () => {
   test.runIf(process.platform === "win32")(
     "provides the junction capability required by Windows clean-target tests",
     () => {
       expect(canCreateDirectorySymlinks()).toBe(true);
     }
   );
-
-  afterEach(() => {
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-
-    tempDirs.length = 0;
-  });
-
-  const createTempDir = (): string => {
-    const tempDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "typeweaver-generator-")
-    );
-    tempDirs.push(tempDir);
-
-    return tempDir;
-  };
-
-  const createWorkspaceWithPackageDirectory = (
-    marker: WorkspaceMarker = ".git"
-  ): {
-    readonly workspaceRoot: string;
-    readonly packageDirectory: string;
-  } => {
-    const workspaceRoot = createTempDir();
-    const packageDirectory = path.join(workspaceRoot, "packages", "cli");
-
-    if (marker === ".git") {
-      fs.mkdirSync(path.join(workspaceRoot, marker), { recursive: true });
-    } else {
-      fs.writeFileSync(
-        path.join(workspaceRoot, marker),
-        "packages:\n  - packages/*\n"
-      );
-    }
-    fs.mkdirSync(packageDirectory, { recursive: true });
-
-    return { workspaceRoot, packageDirectory };
-  };
 
   test("rejects filesystem root clean targets", () => {
     const outputDir = path.parse(process.cwd()).root;
@@ -204,7 +204,9 @@ describe("Generator clean safety", () => {
       })
     );
   });
+});
 
+describe("Generator inferred workspace-root clean safety", () => {
   test("rejects clean targets that resolve to the inferred workspace root", () => {
     const { workspaceRoot, packageDirectory } =
       createWorkspaceWithPackageDirectory();
@@ -267,7 +269,9 @@ describe("Generator clean safety", () => {
       );
     }
   );
+});
 
+describe("Generator workspace ancestor clean safety", () => {
   test("rejects workspace roots discovered by pnpm-workspace.yaml", () => {
     const { workspaceRoot, packageDirectory } =
       createWorkspaceWithPackageDirectory("pnpm-workspace.yaml");
@@ -343,7 +347,9 @@ describe("Generator clean safety", () => {
       })
     );
   });
+});
 
+describe("Generator platform-specific ancestor clean safety", () => {
   test.skipIf(process.platform === "win32")(
     "rejects ancestors when a POSIX child segment contains a literal backslash after dot-dot",
     () => {
@@ -400,7 +406,9 @@ describe("Generator clean safety", () => {
       );
     }
   );
+});
 
+describe("Generator symlinked output clean safety", () => {
   test.skipIf(!canCreateDirectorySymlinks())(
     "rejects ancestors reached through a symlinked workspace alias",
     () => {
@@ -484,7 +492,9 @@ describe("Generator clean safety", () => {
       );
     }
   );
+});
 
+describe("Generator clean-target containment", () => {
   test("rejects clean targets above the workspace root that contain the current working directory", () => {
     const { workspaceRoot, packageDirectory } =
       createWorkspaceWithPackageDirectory();
@@ -534,7 +544,9 @@ describe("Generator clean safety", () => {
       assertSafeCleanTarget("..", currentWorkingDirectory)
     ).not.toThrow();
   });
+});
 
+describe("Generator clean-target workspace markers", () => {
   test("rejects clean targets that themselves contain a .git workspace marker", () => {
     const currentWorkingDirectory = createTempDir();
     const foreignWorkspaceRoot = createTempDir();
@@ -602,7 +614,9 @@ describe("Generator clean safety", () => {
       fs.realpathSync.native(foreignWorkspaceRoot)
     );
   });
+});
 
+describe("Generator clean-target package markers", () => {
   test("rejects clean targets that themselves contain a package.json declaring workspaces", () => {
     const currentWorkingDirectory = createTempDir();
     const foreignWorkspaceRoot = createTempDir();
@@ -638,7 +652,9 @@ describe("Generator clean safety", () => {
       assertSafeCleanTarget(foreignTarget, currentWorkingDirectory)
     ).not.toThrow();
   });
+});
 
+describe("Generator clean-target input containment", () => {
   test("rejects clean targets that contain the spec input file", () => {
     const workspace = createTempDir();
     const specDir = path.join(workspace, "spec");

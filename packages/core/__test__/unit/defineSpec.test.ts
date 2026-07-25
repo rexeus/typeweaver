@@ -79,7 +79,7 @@ const captureThrownError = (act: () => void): unknown => {
   throw new TestAssertionError("Expected defineSpec to throw.");
 };
 
-describe("defineSpec", () => {
+describe("defineSpec authored identity", () => {
   test("returns the authored spec definition instance", () => {
     const { definition } = anAuthoredUserSpec();
 
@@ -127,7 +127,9 @@ describe("defineSpec", () => {
       spec.resources.users.operations[0].responses[0].name
     ).toEqualTypeOf<"GetUserSuccess">();
   });
+});
 
+describe("defineSpec accepted resource shapes", () => {
   test("accepts a spec with no resources", () => {
     const spec = defineSpec({ resources: {} });
 
@@ -187,7 +189,9 @@ describe("defineSpec", () => {
       })
     ).not.toThrow();
   });
+});
 
+describe("defineSpec duplicate names within a resource", () => {
   test("rejects duplicate response names within a single operation", () => {
     const error = captureThrownError(() => {
       defineSpec({
@@ -239,7 +243,9 @@ describe("defineSpec", () => {
       "Response name 'SharedError' must be globally unique within a spec."
     );
   });
+});
 
+describe("defineSpec duplicate names across resources", () => {
   test("rejects duplicate response names across resources", () => {
     const error = captureThrownError(() => {
       defineSpec({
@@ -297,7 +303,9 @@ describe("defineSpec", () => {
       "Response name 'SharedError' must be globally unique within a spec."
     );
   });
+});
 
+describe("defineSpec shared response identity", () => {
   test("allows reusing the same named response definition", () => {
     const sharedResponse = aResponseNamed("SharedError", {
       statusCode: HttpStatusCode.BAD_REQUEST,

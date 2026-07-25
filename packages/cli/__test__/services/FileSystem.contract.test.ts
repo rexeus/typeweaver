@@ -83,6 +83,21 @@ const assertNotFoundWithoutDefects = (
   }
 };
 
+const writeScopedTempFile = Effect.fn(function* (
+  harness: FileSystemHarness,
+  fileSystem: FileSystem.FileSystem
+) {
+  const tempDirectory = yield* fileSystem.makeTempDirectoryScoped({
+    directory: harness.root,
+    prefix: ".typeweaver-contract-",
+  });
+  const tempFile = harness.join(tempDirectory, "output.ts");
+  yield* fileSystem.writeFileString(tempFile, "export {};\n");
+  assert.isTrue(yield* fileSystem.exists(tempDirectory));
+  assert.isTrue(yield* fileSystem.exists(tempFile));
+  return { tempDirectory, tempFile };
+});
+
 describe.each(variants)("$name contract", variant => {
   it.effect(
     "supports the generated-file lifecycle through observable filesystem state",
@@ -197,7 +212,9 @@ describe.each(variants)("$name contract", variant => {
         })
       )
   );
+});
 
+describe.each(variants)("$name scoped and canonical path contract", variant => {
   it.effect(
     "fails realPath on a missing path as typed NotFound without defects",
     () =>
@@ -222,17 +239,7 @@ describe.each(variants)("$name contract", variant => {
         yield* fileSystem.makeDirectory(harness.root, { recursive: true });
 
         const scopedPaths = yield* Effect.scoped(
-          Effect.gen(function* () {
-            const tempDirectory = yield* fileSystem.makeTempDirectoryScoped({
-              directory: harness.root,
-              prefix: ".typeweaver-contract-",
-            });
-            const tempFile = harness.join(tempDirectory, "output.ts");
-            yield* fileSystem.writeFileString(tempFile, "export {};\n");
-            assert.isTrue(yield* fileSystem.exists(tempDirectory));
-            assert.isTrue(yield* fileSystem.exists(tempFile));
-            return { tempDirectory, tempFile };
-          })
+          writeScopedTempFile(harness, fileSystem)
         );
 
         assert.isFalse(yield* fileSystem.exists(scopedPaths.tempDirectory));

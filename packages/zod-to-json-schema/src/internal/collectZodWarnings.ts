@@ -22,6 +22,32 @@ type WarningInput = {
   readonly message: string;
 };
 
+type CheckDescriptor = {
+  readonly checkType: string;
+  readonly format: string | undefined;
+};
+
+type ChildSchemaField =
+  | "element"
+  | "in"
+  | "keyType"
+  | "left"
+  | "out"
+  | "right"
+  | "valueType";
+
+type ChildTraversal = {
+  readonly field: ChildSchemaField;
+  readonly path: readonly string[];
+};
+
+type NestedWarningPlan =
+  | { readonly kind: "children"; readonly children: readonly ChildTraversal[] }
+  | { readonly kind: "lazy" }
+  | { readonly kind: "object" }
+  | { readonly kind: "options"; readonly keyword: "anyOf" }
+  | { readonly kind: "tuple" };
+
 const SUPPORTED_SCHEMA_TYPES: ReadonlySet<string> = new Set([
   "any",
   "array",
@@ -91,6 +117,67 @@ const SUPPORTED_STRING_FORMATS: ReadonlySet<string> = new Set([
   "uuid",
 ]);
 
+const NESTED_WARNING_PLANS: ReadonlyMap<string, NestedWarningPlan> = new Map([
+  ["object", { kind: "object" }],
+  [
+    "array",
+    {
+      kind: "children",
+      children: [{ field: "element", path: ["items"] }],
+    },
+  ],
+  ["union", { kind: "options", keyword: "anyOf" }],
+  [
+    "intersection",
+    {
+      kind: "children",
+      children: [
+        { field: "left", path: ["allOf", "0"] },
+        { field: "right", path: ["allOf", "1"] },
+      ],
+    },
+  ],
+  ["tuple", { kind: "tuple" }],
+  [
+    "record",
+    {
+      kind: "children",
+      children: [
+        { field: "keyType", path: ["propertyNames"] },
+        { field: "valueType", path: ["additionalProperties"] },
+      ],
+    },
+  ],
+  ["lazy", { kind: "lazy" }],
+  [
+    "pipe",
+    {
+      kind: "children",
+      children: [
+        { field: "in", path: ["x-typeweaver", "pipeIn"] },
+        { field: "out", path: ["x-typeweaver", "pipeOut"] },
+      ],
+    },
+  ],
+  [
+    "map",
+    {
+      kind: "children",
+      children: [
+        { field: "keyType", path: ["x-typeweaver", "mapKey"] },
+        { field: "valueType", path: ["x-typeweaver", "mapValue"] },
+      ],
+    },
+  ],
+  [
+    "set",
+    {
+      kind: "children",
+      children: [{ field: "valueType", path: ["items"] }],
+    },
+  ],
+]);
+
 export function collectZodWarnings(
   schema: ZodSchema
 ): readonly ZodToJsonSchemaWarning[] {
@@ -147,9 +234,7 @@ function collectCheckWarnings(
   }
 
   for (const check of getChecks(def)) {
-    const checkDef = check._zod?.def;
-    const checkType = checkDef?.check ?? checkDef?.type ?? "unknown";
-    const format = checkDef?.format;
+    const { checkType, format } = describeCheck(check);
 
     if (isSupportedCheck(checkType, format)) {
       continue;
@@ -164,6 +249,15 @@ function collectCheckWarnings(
       })
     );
   }
+}
+
+function describeCheck(check: ZodCheck): CheckDescriptor {
+  const checkDef = check._zod?.def;
+
+  return {
+    checkType: checkDef?.check ?? checkDef?.type ?? "unknown",
+    format: checkDef?.format,
+  };
 }
 
 function isSupportedCheck(
@@ -212,49 +306,51 @@ function collectNestedWarnings(
   collector: WarningCollector,
   path: readonly string[]
 ): void {
-  switch (schemaType) {
-    case "object":
-      collectObjectWarnings(def, collector, path);
-      return;
-    case "array":
-      collectChild(def.element, collector, [...path, "items"]);
-      return;
-    case "union":
-      collectOptionWarnings(def.options, collector, path, "anyOf");
-      return;
-    case "intersection":
-      collectChild(def.left, collector, [...path, "allOf", "0"]);
-      collectChild(def.right, collector, [...path, "allOf", "1"]);
-      return;
-    case "tuple":
-      collectTupleWarnings(def, collector, path);
-      return;
-    case "record":
-      collectChild(def.keyType, collector, [...path, "propertyNames"]);
-      collectChild(def.valueType, collector, [...path, "additionalProperties"]);
-      return;
-    case "lazy":
-      collectLazyWarnings(def, collector, path);
-      return;
-    case "pipe":
-      collectChild(def.in, collector, [...path, "x-typeweaver", "pipeIn"]);
-      collectChild(def.out, collector, [...path, "x-typeweaver", "pipeOut"]);
-      return;
-    case "map":
-      collectChild(def.keyType, collector, [...path, "x-typeweaver", "mapKey"]);
-      collectChild(def.valueType, collector, [
-        ...path,
-        "x-typeweaver",
-        "mapValue",
-      ]);
-      return;
-    case "set":
-      collectChild(def.valueType, collector, [...path, "items"]);
-      return;
+  const plan = NESTED_WARNING_PLANS.get(schemaType);
+
+  if (plan !== undefined) {
+    collectPlannedNestedWarnings(plan, def, collector, path);
+    return;
   }
 
   if (isZodTransparentWrapperType(schemaType)) {
     collectChild(def.innerType, collector, path);
+  }
+}
+
+function collectPlannedNestedWarnings(
+  plan: NestedWarningPlan,
+  def: ZodDef,
+  collector: WarningCollector,
+  path: readonly string[]
+): void {
+  switch (plan.kind) {
+    case "object":
+      collectObjectWarnings(def, collector, path);
+      return;
+    case "options":
+      collectOptionWarnings(def.options, collector, path, plan.keyword);
+      return;
+    case "tuple":
+      collectTupleWarnings(def, collector, path);
+      return;
+    case "lazy":
+      collectLazyWarnings(def, collector, path);
+      return;
+    case "children":
+      collectPlannedChildren(plan.children, def, collector, path);
+      return;
+  }
+}
+
+function collectPlannedChildren(
+  children: readonly ChildTraversal[],
+  def: ZodDef,
+  collector: WarningCollector,
+  path: readonly string[]
+): void {
+  for (const child of children) {
+    collectChild(def[child.field], collector, [...path, ...child.path]);
   }
 }
 

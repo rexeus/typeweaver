@@ -36,7 +36,7 @@ const executeLogger = ({
   return executeMiddlewarePipeline([mw.handler], ctx, finalHandler);
 };
 
-describe("logger", () => {
+describe("logger output", () => {
   test("logs requests with the default format", async () => {
     const logFn = vi.fn();
     const ctx = createServerContext({ method: HttpMethod.GET, path: "/users" });
@@ -91,7 +91,9 @@ describe("logger", () => {
 
     expect(response).toEqual(downstreamResponse);
   });
+});
 
+describe("logger sequencing and failures", () => {
   test("logs after the downstream response is produced", async () => {
     const order: string[] = [];
     const logFn = vi.fn(() => order.push("logged"));

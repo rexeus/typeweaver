@@ -72,7 +72,11 @@ describe("generated OpenAPI fixture", () => {
       additionalProperties: false,
     });
     expect(
-      responseSchemaAt(fixture, "/todos/{todoId}/status", "put", "409"),
+      responseSchemaAt(fixture, {
+        path: "/todos/{todoId}/status",
+        method: "put",
+        statusCode: "409",
+      }),
       "UpdateTodoStatus 409 should merge duplicate-status bodies as anyOf refs"
     ).toEqual({
       anyOf: [
@@ -169,31 +173,34 @@ function requestBodySchemaAt(
 
 function responseSchemaAt(
   fixture: OpenApiFixture,
-  path: string,
-  method: string,
-  statusCode: string,
-  mediaTypeName = "application/json"
+  location: {
+    readonly path: string;
+    readonly method: string;
+    readonly statusCode: string;
+    readonly mediaTypeName?: string;
+  }
 ): unknown {
   if (!isRecord(fixture.paths)) {
     return undefined;
   }
 
-  const pathItem = fixture.paths[path];
+  const pathItem = fixture.paths[location.path];
   if (!isRecord(pathItem)) {
     return undefined;
   }
 
-  const operation = pathItem[method];
+  const operation = pathItem[location.method];
   if (!isRecord(operation) || !isRecord(operation.responses)) {
     return undefined;
   }
 
-  const response = operation.responses[statusCode];
+  const response = operation.responses[location.statusCode];
   if (!isRecord(response) || !isRecord(response.content)) {
     return undefined;
   }
 
-  const mediaType = response.content[mediaTypeName];
+  const mediaType =
+    response.content[location.mediaTypeName ?? "application/json"];
 
   return isRecord(mediaType) ? mediaType.schema : undefined;
 }

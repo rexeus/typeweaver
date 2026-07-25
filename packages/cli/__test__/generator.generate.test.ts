@@ -20,393 +20,389 @@ const runGenerator = async (params: {
 const require = createRequire(import.meta.url);
 const execFileAsync = promisify(execFile);
 
-describe("Generator.generate", () => {
-  const tempDirs: string[] = [];
+const tempDirs: string[] = [];
 
-  afterEach(() => {
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
+afterEach(() => {
+  for (const tempDir of tempDirs) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
 
-    tempDirs.length = 0;
+  tempDirs.length = 0;
+});
+
+const createTempWorkspace = (): string => {
+  const tempDir = fs.mkdtempSync(
+    path.join(process.cwd(), ".typeweaver-generate-test-")
+  );
+  tempDirs.push(tempDir);
+
+  return tempDir;
+};
+
+const writeTinySpec = (workspace: string): string => {
+  const specFile = path.join(workspace, "spec", "index.ts");
+
+  fs.mkdirSync(path.dirname(specFile), { recursive: true });
+  fs.writeFileSync(
+    specFile,
+    [
+      'import { defineOperation, defineResponse, defineSpec, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";',
+      'import { z } from "zod";',
+      "",
+      "const itemLoaded = defineResponse({",
+      '  name: "ItemLoaded",',
+      "  statusCode: HttpStatusCode.OK,",
+      '  description: "Item loaded",',
+      "  body: z.object({ id: z.string(), name: z.string() }),",
+      "});",
+      "",
+      "export const spec = defineSpec({",
+      "  resources: {",
+      "    item: {",
+      "      operations: [",
+      "        defineOperation({",
+      '          operationId: "getItem",',
+      '          path: "/items/:itemId",',
+      "          method: HttpMethod.GET,",
+      '          summary: "Get item",',
+      "          request: {",
+      "            param: z.object({ itemId: z.string() }),",
+      "          },",
+      "          responses: [itemLoaded],",
+      "        }),",
+      "      ],",
+      "    },",
+      "  },",
+      "});",
+      "",
+    ].join("\n")
+  );
+
+  return specFile;
+};
+
+const writeSchemaLessSpec = (workspace: string): string => {
+  const specFile = path.join(workspace, "spec", "index.ts");
+
+  fs.mkdirSync(path.dirname(specFile), { recursive: true });
+  fs.writeFileSync(
+    specFile,
+    [
+      'import { defineOperation, defineResponse, defineSpec, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";',
+      "",
+      "const pingOk = defineResponse({",
+      '  name: "PingOk",',
+      "  statusCode: HttpStatusCode.OK,",
+      '  description: "Ping succeeded",',
+      "});",
+      "",
+      "export const spec = defineSpec({",
+      "  resources: {",
+      "    health: {",
+      "      operations: [",
+      "        defineOperation({",
+      '          operationId: "ping",',
+      '          path: "/ping",',
+      "          method: HttpMethod.GET,",
+      '          summary: "Ping",',
+      "          request: {},",
+      "          responses: [pingOk],",
+      "        }),",
+      "        defineOperation({",
+      '          operationId: "status",',
+      '          path: "/status",',
+      "          method: HttpMethod.GET,",
+      '          summary: "Status",',
+      "          request: {},",
+      "          responses: [pingOk],",
+      "        }),",
+      "      ],",
+      "    },",
+      "  },",
+      "});",
+      "",
+    ].join("\n")
+  );
+
+  return specFile;
+};
+
+const writeConfiguredLocalPlugin = (workspace: string): string => {
+  const pluginFile = path.join(workspace, "plugins", "marker-plugin.mjs");
+
+  fs.mkdirSync(path.dirname(pluginFile), { recursive: true });
+  fs.writeFileSync(
+    pluginFile,
+    [
+      'import fs from "node:fs";',
+      'import path from "node:path";',
+      'import { Effect } from "effect";',
+      "",
+      "const getMarker = config => {",
+      "  const configuredPlugin = config.plugins.find(plugin =>",
+      "    Array.isArray(plugin) && plugin[0] === import.meta.filename",
+      "  );",
+      '  return configuredPlugin?.[1]?.marker ?? "missing marker";',
+      "};",
+      "",
+      "const writeMarker = (context, fileName) => {",
+      '  const outputDir = path.join(context.outputDir, "plugin");',
+      "  fs.mkdirSync(outputDir, { recursive: true });",
+      "  fs.writeFileSync(",
+      "    path.join(outputDir, fileName),",
+      "    JSON.stringify({",
+      "      marker: getMarker(context.config),",
+      "      inputDir: context.inputDir,",
+      "      outputDir: context.outputDir,",
+      "    }, null, 2)",
+      "  );",
+      "};",
+      "",
+      "export const markerPlugin = {",
+      '  name: "marker-plugin",',
+      "  initialize: context =>",
+      '    Effect.sync(() => writeMarker(context, "initialize.json")),',
+      "  generate: context =>",
+      "    Effect.sync(() => {",
+      '      context.writeFile("plugin/Marker.ts",',
+      '        "export const marker = " + JSON.stringify(getMarker(context.config)) + ";\\n" +',
+      '        "export const generatedFrom = " + JSON.stringify(context.inputDir) + ";\\n"',
+      "      );",
+      "    }),",
+      "  finalize: context =>",
+      '    Effect.sync(() => writeMarker(context, "finalize.json")),',
+      "};",
+      "",
+    ].join("\n")
+  );
+
+  return pluginFile;
+};
+
+const writeResourceCollectingLocalPlugin = (workspace: string): string => {
+  const pluginFile = path.join(workspace, "plugins", "resource-plugin.mjs");
+
+  fs.mkdirSync(path.dirname(pluginFile), { recursive: true });
+  fs.writeFileSync(
+    pluginFile,
+    [
+      'import { Effect } from "effect";',
+      "",
+      "export const resourcePlugin = {",
+      '  name: "resource-plugin",',
+      "  collectResources: normalizedSpec =>",
+      "    Effect.sync(() => {",
+      "      const existingResource = normalizedSpec.resources[0];",
+      "      const existingOperation = existingResource.operations[0];",
+      "      const existingResponse = normalizedSpec.responses[0];",
+      "      const pluginResponse = {",
+      "        ...existingResponse,",
+      '        name: "PluginLoaded",',
+      '        description: "Plugin-loaded response",',
+      "      };",
+      "",
+      "      return {",
+      "        ...normalizedSpec,",
+      "        responses: [...normalizedSpec.responses, pluginResponse],",
+      "        resources: [",
+      "          ...normalizedSpec.resources,",
+      "          {",
+      '            name: "pluginItem",',
+      "            operations: [",
+      "              {",
+      "                ...existingOperation,",
+      '                operationId: "getPluginItem",',
+      '                path: "/plugin-items",',
+      '                summary: "Get plugin item",',
+      "                request: undefined,",
+      "                responses: [",
+      '                  { responseName: "PluginLoaded", source: "canonical" },',
+      "                ],",
+      "              },",
+      "            ],",
+      "          },",
+      "        ],",
+      "      };",
+      "    }),",
+      "};",
+      "",
+    ].join("\n")
+  );
+
+  return pluginFile;
+};
+
+const unformattedPluginOutput =
+  'export const formatted={name:"plugin",enabled:true};\n';
+const formattedPluginOutput =
+  'export const formatted = { name: "plugin", enabled: true };\n';
+
+const writeFormattingLocalPlugin = (workspace: string): string => {
+  const pluginFile = path.join(workspace, "plugins", "formatting-plugin.mjs");
+
+  fs.mkdirSync(path.dirname(pluginFile), { recursive: true });
+  fs.writeFileSync(
+    pluginFile,
+    [
+      'import { Effect } from "effect";',
+      "",
+      "export const formattingPlugin = {",
+      '  name: "formatting-plugin",',
+      "  generate: context =>",
+      "    Effect.sync(() => {",
+      "      context.writeFile(",
+      '        "plugin/Formatted.ts",',
+      `        ${JSON.stringify(unformattedPluginOutput)}`,
+      "      );",
+      "    }),",
+      "};",
+      "",
+    ].join("\n")
+  );
+
+  return pluginFile;
+};
+
+const writePhaseOrderingLocalPlugin = (workspace: string): string => {
+  const pluginFile = path.join(workspace, "plugins", "phase-order-plugin.mjs");
+
+  fs.mkdirSync(path.dirname(pluginFile), { recursive: true });
+  fs.writeFileSync(
+    pluginFile,
+    [
+      'import fs from "node:fs";',
+      'import path from "node:path";',
+      'import { fileURLToPath } from "node:url";',
+      'import { Effect } from "effect";',
+      "",
+      "const eventLogFile = path.join(",
+      "  path.dirname(fileURLToPath(import.meta.url)),",
+      '  "..",',
+      '  "phase-events.log"',
+      ");",
+      "",
+      "const appendEvent = eventName => {",
+      "  fs.appendFileSync(eventLogFile, `${eventName}\\n`);",
+      "};",
+      "",
+      "export const phaseOrderPlugin = {",
+      '  name: "phase-order-plugin",',
+      '  initialize: () => Effect.sync(() => appendEvent("initialize")),',
+      "  collectResources: normalizedSpec =>",
+      "    Effect.sync(() => {",
+      '      appendEvent("collectResources");',
+      "      return normalizedSpec;",
+      "    }),",
+      '  generate: () => Effect.sync(() => appendEvent("generate")),',
+      '  finalize: () => Effect.sync(() => appendEvent("finalize")),',
+      "};",
+      "",
+    ].join("\n")
+  );
+
+  return pluginFile;
+};
+
+const generateTypesInWorkspace = async (
+  workspace: string,
+  config: { readonly clean?: boolean } = {}
+): Promise<string> => {
+  const outputDir = path.join(workspace, "generated", "output");
+
+  await runGenerator({
+    inputFile: "spec/index.ts",
+    outputDir: "generated/output",
+    config: {
+      input: "spec/index.ts",
+      output: "generated/output",
+      format: false,
+      ...config,
+    },
+    currentWorkingDirectory: workspace,
   });
 
-  const createTempWorkspace = (): string => {
-    const tempDir = fs.mkdtempSync(
-      path.join(process.cwd(), ".typeweaver-generate-test-")
-    );
-    tempDirs.push(tempDir);
+  return outputDir;
+};
 
-    return tempDir;
-  };
+const expectFileExists = (filePath: string): void => {
+  expect(fs.existsSync(filePath), filePath).toBe(true);
+};
 
-  const writeTinySpec = (workspace: string): string => {
-    const specFile = path.join(workspace, "spec", "index.ts");
+const expectFileContains = (filePath: string, expected: string): void => {
+  expect(fs.readFileSync(filePath, "utf8")).toContain(expected);
+};
 
-    fs.mkdirSync(path.dirname(specFile), { recursive: true });
-    fs.writeFileSync(
-      specFile,
-      [
-        'import { defineOperation, defineResponse, defineSpec, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";',
-        'import { z } from "zod";',
-        "",
-        "const itemLoaded = defineResponse({",
-        '  name: "ItemLoaded",',
-        "  statusCode: HttpStatusCode.OK,",
-        '  description: "Item loaded",',
-        "  body: z.object({ id: z.string(), name: z.string() }),",
-        "});",
-        "",
-        "export const spec = defineSpec({",
-        "  resources: {",
-        "    item: {",
-        "      operations: [",
-        "        defineOperation({",
-        '          operationId: "getItem",',
-        '          path: "/items/:itemId",',
-        "          method: HttpMethod.GET,",
-        '          summary: "Get item",',
-        "          request: {",
-        "            param: z.object({ itemId: z.string() }),",
-        "          },",
-        "          responses: [itemLoaded],",
-        "        }),",
-        "      ],",
-        "    },",
-        "  },",
-        "});",
-        "",
-      ].join("\n")
-    );
+const readFile = (filePath: string): string => {
+  return fs.readFileSync(filePath, "utf8");
+};
 
-    return specFile;
-  };
+const writeStrictGeneratedTsConfig = (workspace: string): string => {
+  const tsconfigFile = path.join(workspace, "tsconfig.generated-strict.json");
 
-  const writeSchemaLessSpec = (workspace: string): string => {
-    const specFile = path.join(workspace, "spec", "index.ts");
-
-    fs.mkdirSync(path.dirname(specFile), { recursive: true });
-    fs.writeFileSync(
-      specFile,
-      [
-        'import { defineOperation, defineResponse, defineSpec, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";',
-        "",
-        "const pingOk = defineResponse({",
-        '  name: "PingOk",',
-        "  statusCode: HttpStatusCode.OK,",
-        '  description: "Ping succeeded",',
-        "});",
-        "",
-        "export const spec = defineSpec({",
-        "  resources: {",
-        "    health: {",
-        "      operations: [",
-        "        defineOperation({",
-        '          operationId: "ping",',
-        '          path: "/ping",',
-        "          method: HttpMethod.GET,",
-        '          summary: "Ping",',
-        "          request: {},",
-        "          responses: [pingOk],",
-        "        }),",
-        "        defineOperation({",
-        '          operationId: "status",',
-        '          path: "/status",',
-        "          method: HttpMethod.GET,",
-        '          summary: "Status",',
-        "          request: {},",
-        "          responses: [pingOk],",
-        "        }),",
-        "      ],",
-        "    },",
-        "  },",
-        "});",
-        "",
-      ].join("\n")
-    );
-
-    return specFile;
-  };
-
-  const writeConfiguredLocalPlugin = (workspace: string): string => {
-    const pluginFile = path.join(workspace, "plugins", "marker-plugin.mjs");
-
-    fs.mkdirSync(path.dirname(pluginFile), { recursive: true });
-    fs.writeFileSync(
-      pluginFile,
-      [
-        'import fs from "node:fs";',
-        'import path from "node:path";',
-        'import { Effect } from "effect";',
-        "",
-        "const getMarker = config => {",
-        "  const configuredPlugin = config.plugins.find(plugin =>",
-        "    Array.isArray(plugin) && plugin[0] === import.meta.filename",
-        "  );",
-        '  return configuredPlugin?.[1]?.marker ?? "missing marker";',
-        "};",
-        "",
-        "const writeMarker = (context, fileName) => {",
-        '  const outputDir = path.join(context.outputDir, "plugin");',
-        "  fs.mkdirSync(outputDir, { recursive: true });",
-        "  fs.writeFileSync(",
-        "    path.join(outputDir, fileName),",
-        "    JSON.stringify({",
-        "      marker: getMarker(context.config),",
-        "      inputDir: context.inputDir,",
-        "      outputDir: context.outputDir,",
-        "    }, null, 2)",
-        "  );",
-        "};",
-        "",
-        "export const markerPlugin = {",
-        '  name: "marker-plugin",',
-        "  initialize: context =>",
-        '    Effect.sync(() => writeMarker(context, "initialize.json")),',
-        "  generate: context =>",
-        "    Effect.sync(() => {",
-        '      context.writeFile("plugin/Marker.ts",',
-        '        "export const marker = " + JSON.stringify(getMarker(context.config)) + ";\\n" +',
-        '        "export const generatedFrom = " + JSON.stringify(context.inputDir) + ";\\n"',
-        "      );",
-        "    }),",
-        "  finalize: context =>",
-        '    Effect.sync(() => writeMarker(context, "finalize.json")),',
-        "};",
-        "",
-      ].join("\n")
-    );
-
-    return pluginFile;
-  };
-
-  const writeResourceCollectingLocalPlugin = (workspace: string): string => {
-    const pluginFile = path.join(workspace, "plugins", "resource-plugin.mjs");
-
-    fs.mkdirSync(path.dirname(pluginFile), { recursive: true });
-    fs.writeFileSync(
-      pluginFile,
-      [
-        'import { Effect } from "effect";',
-        "",
-        "export const resourcePlugin = {",
-        '  name: "resource-plugin",',
-        "  collectResources: normalizedSpec =>",
-        "    Effect.sync(() => {",
-        "      const existingResource = normalizedSpec.resources[0];",
-        "      const existingOperation = existingResource.operations[0];",
-        "      const existingResponse = normalizedSpec.responses[0];",
-        "      const pluginResponse = {",
-        "        ...existingResponse,",
-        '        name: "PluginLoaded",',
-        '        description: "Plugin-loaded response",',
-        "      };",
-        "",
-        "      return {",
-        "        ...normalizedSpec,",
-        "        responses: [...normalizedSpec.responses, pluginResponse],",
-        "        resources: [",
-        "          ...normalizedSpec.resources,",
-        "          {",
-        '            name: "pluginItem",',
-        "            operations: [",
-        "              {",
-        "                ...existingOperation,",
-        '                operationId: "getPluginItem",',
-        '                path: "/plugin-items",',
-        '                summary: "Get plugin item",',
-        "                request: undefined,",
-        "                responses: [",
-        '                  { responseName: "PluginLoaded", source: "canonical" },',
-        "                ],",
-        "              },",
-        "            ],",
-        "          },",
-        "        ],",
-        "      };",
-        "    }),",
-        "};",
-        "",
-      ].join("\n")
-    );
-
-    return pluginFile;
-  };
-
-  const unformattedPluginOutput =
-    'export const formatted={name:"plugin",enabled:true};\n';
-  const formattedPluginOutput =
-    'export const formatted = { name: "plugin", enabled: true };\n';
-
-  const writeFormattingLocalPlugin = (workspace: string): string => {
-    const pluginFile = path.join(workspace, "plugins", "formatting-plugin.mjs");
-
-    fs.mkdirSync(path.dirname(pluginFile), { recursive: true });
-    fs.writeFileSync(
-      pluginFile,
-      [
-        'import { Effect } from "effect";',
-        "",
-        "export const formattingPlugin = {",
-        '  name: "formatting-plugin",',
-        "  generate: context =>",
-        "    Effect.sync(() => {",
-        "      context.writeFile(",
-        '        "plugin/Formatted.ts",',
-        `        ${JSON.stringify(unformattedPluginOutput)}`,
-        "      );",
-        "    }),",
-        "};",
-        "",
-      ].join("\n")
-    );
-
-    return pluginFile;
-  };
-
-  const writePhaseOrderingLocalPlugin = (workspace: string): string => {
-    const pluginFile = path.join(
-      workspace,
-      "plugins",
-      "phase-order-plugin.mjs"
-    );
-
-    fs.mkdirSync(path.dirname(pluginFile), { recursive: true });
-    fs.writeFileSync(
-      pluginFile,
-      [
-        'import fs from "node:fs";',
-        'import path from "node:path";',
-        'import { fileURLToPath } from "node:url";',
-        'import { Effect } from "effect";',
-        "",
-        "const eventLogFile = path.join(",
-        "  path.dirname(fileURLToPath(import.meta.url)),",
-        '  "..",',
-        '  "phase-events.log"',
-        ");",
-        "",
-        "const appendEvent = eventName => {",
-        "  fs.appendFileSync(eventLogFile, `${eventName}\\n`);",
-        "};",
-        "",
-        "export const phaseOrderPlugin = {",
-        '  name: "phase-order-plugin",',
-        '  initialize: () => Effect.sync(() => appendEvent("initialize")),',
-        "  collectResources: normalizedSpec =>",
-        "    Effect.sync(() => {",
-        '      appendEvent("collectResources");',
-        "      return normalizedSpec;",
-        "    }),",
-        '  generate: () => Effect.sync(() => appendEvent("generate")),',
-        '  finalize: () => Effect.sync(() => appendEvent("finalize")),',
-        "};",
-        "",
-      ].join("\n")
-    );
-
-    return pluginFile;
-  };
-
-  const generateTypesInWorkspace = async (
-    workspace: string,
-    config: { readonly clean?: boolean } = {}
-  ): Promise<string> => {
-    const outputDir = path.join(workspace, "generated", "output");
-
-    await runGenerator({
-      inputFile: "spec/index.ts",
-      outputDir: "generated/output",
-      config: {
-        input: "spec/index.ts",
-        output: "generated/output",
-        format: false,
-        ...config,
-      },
-      currentWorkingDirectory: workspace,
-    });
-
-    return outputDir;
-  };
-
-  const expectFileExists = (filePath: string): void => {
-    expect(fs.existsSync(filePath), filePath).toBe(true);
-  };
-
-  const expectFileContains = (filePath: string, expected: string): void => {
-    expect(fs.readFileSync(filePath, "utf8")).toContain(expected);
-  };
-
-  const readFile = (filePath: string): string => {
-    return fs.readFileSync(filePath, "utf8");
-  };
-
-  const writeStrictGeneratedTsConfig = (workspace: string): string => {
-    const tsconfigFile = path.join(workspace, "tsconfig.generated-strict.json");
-
-    fs.writeFileSync(
-      tsconfigFile,
-      JSON.stringify(
-        {
-          compilerOptions: {
-            target: "ESNext",
-            module: "NodeNext",
-            moduleResolution: "NodeNext",
-            strict: true,
-            noUnusedLocals: true,
-            noUnusedParameters: true,
-            verbatimModuleSyntax: true,
-            skipLibCheck: true,
-            isolatedModules: true,
-            esModuleInterop: true,
-            types: ["node"],
-            noEmit: true,
-          },
-          include: [
-            "consumer.ts",
-            "generated/output/**/*.ts",
-            "generated/output/**/*.d.ts",
-          ],
+  fs.writeFileSync(
+    tsconfigFile,
+    JSON.stringify(
+      {
+        compilerOptions: {
+          target: "ESNext",
+          module: "NodeNext",
+          moduleResolution: "NodeNext",
+          strict: true,
+          noUnusedLocals: true,
+          noUnusedParameters: true,
+          verbatimModuleSyntax: true,
+          skipLibCheck: true,
+          isolatedModules: true,
+          esModuleInterop: true,
+          types: ["node"],
+          noEmit: true,
         },
-        null,
-        2
-      )
-    );
+        include: [
+          "consumer.ts",
+          "generated/output/**/*.ts",
+          "generated/output/**/*.d.ts",
+        ],
+      },
+      null,
+      2
+    )
+  );
 
-    return tsconfigFile;
-  };
+  return tsconfigFile;
+};
 
-  const writeSchemaLessCommandConsumer = (workspace: string): void => {
-    fs.writeFileSync(
-      path.join(workspace, "consumer.ts"),
-      [
-        'import { PingRequestCommand } from "./generated/output/health/PingRequestCommand.js";',
-        'import { StatusRequestCommand } from "./generated/output/health/StatusRequestCommand.js";',
-        "",
-        "export const commands = [",
-        "  new PingRequestCommand(),",
-        "  new PingRequestCommand({}),",
-        "  new StatusRequestCommand(),",
-        "  new StatusRequestCommand({}),",
-        "];",
-        "",
-      ].join("\n")
-    );
-  };
+const writeSchemaLessCommandConsumer = (workspace: string): void => {
+  fs.writeFileSync(
+    path.join(workspace, "consumer.ts"),
+    [
+      'import { PingRequestCommand } from "./generated/output/health/PingRequestCommand.js";',
+      'import { StatusRequestCommand } from "./generated/output/health/StatusRequestCommand.js";',
+      "",
+      "export const commands = [",
+      "  new PingRequestCommand(),",
+      "  new PingRequestCommand({}),",
+      "  new StatusRequestCommand(),",
+      "  new StatusRequestCommand({}),",
+      "];",
+      "",
+    ].join("\n")
+  );
+};
 
-  const runGeneratedTypecheck = async (
-    workspace: string,
-    tsconfigFile: string
-  ): Promise<void> => {
-    const tscPath = require.resolve("typescript/bin/tsc6");
+const runGeneratedTypecheck = async (
+  workspace: string,
+  tsconfigFile: string
+): Promise<void> => {
+  const tscPath = require.resolve("typescript/bin/tsc6");
 
-    await execFileAsync(
-      process.execPath,
-      [tscPath, "--noEmit", "-p", tsconfigFile, "--pretty", "false"],
-      { cwd: workspace }
-    );
-  };
+  await execFileAsync(
+    process.execPath,
+    [tscPath, "--noEmit", "-p", tsconfigFile, "--pretty", "false"],
+    { cwd: workspace }
+  );
+};
 
+describe("Generator output contract", () => {
   test("generates TypeWeaver output from paths relative to the provided working directory", async () => {
     const workspace = createTempWorkspace();
     writeTinySpec(workspace);
@@ -448,7 +444,9 @@ describe("Generator.generate", () => {
       "export type IItemLoadedResponse"
     );
   });
+});
 
+describe("Generator validator and OpenAPI output", () => {
   test("imports operation definitions in validators generated for schema-backed requests and responses", async () => {
     const workspace = createTempWorkspace();
     writeTinySpec(workspace);
@@ -505,7 +503,9 @@ describe("Generator.generate", () => {
       false
     );
   });
+});
 
+describe("Generator generated TypeScript compatibility", () => {
   test("strict-compiles generated client commands and validators for requests without schemas", async () => {
     const workspace = createTempWorkspace();
     writeSchemaLessSpec(workspace);
@@ -562,7 +562,9 @@ describe("Generator.generate", () => {
       );
     }
   });
+});
 
+describe("Generator output cleanup", () => {
   test("removes stale output before generating by default", async () => {
     const workspace = createTempWorkspace();
     const staleFile = path.join(workspace, "generated", "output", "stale.txt");
@@ -635,7 +637,9 @@ describe("Generator.generate", () => {
 
     expectFileExists(sentinelFile);
   });
+});
 
+describe("Generator local plugin output", () => {
   test("runs configured local plugins alongside required type generation", async () => {
     const workspace = createTempWorkspace();
     const pluginFile = writeConfiguredLocalPlugin(workspace);
@@ -724,7 +728,9 @@ describe("Generator.generate", () => {
       unformattedPluginOutput
     );
   });
+});
 
+describe("Generator local plugin lifecycle", () => {
   test("runs local plugin phases in lifecycle order", async () => {
     const workspace = createTempWorkspace();
     const pluginFile = writePhaseOrderingLocalPlugin(workspace);

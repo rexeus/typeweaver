@@ -98,7 +98,9 @@ describe("PluginModuleLoader", () => {
       "Failed to load plugin module 'broken-plugin': string-cause"
     );
   });
+});
 
+describe("PluginModuleLoader default layer", () => {
   test("Default layer fails with PluginModuleNotFoundError when the specifier cannot be resolved by Node", async () => {
     // Exercises the real `import(specifier)` seam (not the in-memory fake)
     // so the `tryPromise` -> `catch` mapping in `PluginModuleLoader.Default`

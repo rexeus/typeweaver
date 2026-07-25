@@ -201,7 +201,9 @@ describe("object schemas", () => {
       ["{", '    "x-id"?: string | undefined;', "}"].join("\n")
     );
   });
+});
 
+describe("nested object schemas", () => {
   test("maps nested objects with arrays to nested TypeScript object output", () => {
     expect(
       toTs(z.object({ user: z.object({ tags: z.array(z.string()) }) }))
@@ -485,7 +487,9 @@ describe("wrapper schemas", () => {
       toTs(z.object({ name: z.string().default("x").catch("fallback") }))
     ).toBe(["{", "    name: string;", "}"].join("\n"));
   });
+});
 
+describe("file and readonly wrapper schemas", () => {
   test("maps file schemas to File", () => {
     expect(toTs(z.file())).toBe("File");
   });

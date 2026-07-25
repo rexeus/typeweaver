@@ -198,6 +198,9 @@ const errnoCode = (error: unknown): string | undefined =>
     ? error.code
     : undefined;
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
 const isProcessAlive = (pid: number): boolean => {
   try {
     // Signal 0 performs error checking without sending a signal. Returns
@@ -213,39 +216,47 @@ const isProcessAlive = (pid: number): boolean => {
   }
 };
 
+const decodeLockInfo = (parsed: unknown): LockInfo | undefined => {
+  if (!isRecord(parsed)) {
+    return undefined;
+  }
+
+  const candidate = parsed;
+  if (
+    typeof candidate.pid !== "number" ||
+    typeof candidate.startedAt !== "string"
+  ) {
+    return undefined;
+  }
+  if (
+    candidate.ownerToken !== undefined &&
+    typeof candidate.ownerToken !== "string"
+  ) {
+    return undefined;
+  }
+
+  return {
+    pid: candidate.pid,
+    startedAt: candidate.startedAt,
+    inputFile:
+      typeof candidate.inputFile === "string" ? candidate.inputFile : "",
+    ...(candidate.ownerToken === undefined
+      ? {}
+      : { ownerToken: candidate.ownerToken }),
+  };
+};
+
+const isUnavailableLockInfo = (error: unknown): boolean =>
+  error instanceof SyntaxError ||
+  errnoCode(error) === "ENOENT" ||
+  errnoCode(error) === "ENOTDIR";
+
 const readLockInfo = (lockDir: string): LockInfo | undefined => {
   try {
     const raw = fs.readFileSync(path.join(lockDir, LOCK_INFO_FILE), "utf8");
-    const parsed = JSON.parse(raw) as unknown;
-    if (
-      typeof parsed !== "object" ||
-      parsed === null ||
-      typeof (parsed as { pid?: unknown }).pid !== "number" ||
-      typeof (parsed as { startedAt?: unknown }).startedAt !== "string"
-    ) {
-      return undefined;
-    }
-    const { pid, startedAt, inputFile, ownerToken } = parsed as {
-      pid: number;
-      startedAt: string;
-      inputFile?: unknown;
-      ownerToken?: unknown;
-    };
-    if (ownerToken !== undefined && typeof ownerToken !== "string") {
-      return undefined;
-    }
-    return {
-      pid,
-      startedAt,
-      inputFile: typeof inputFile === "string" ? inputFile : "",
-      ...(ownerToken === undefined ? {} : { ownerToken }),
-    };
+    return decodeLockInfo(JSON.parse(raw) as unknown);
   } catch (error) {
-    if (
-      error instanceof SyntaxError ||
-      errnoCode(error) === "ENOENT" ||
-      errnoCode(error) === "ENOTDIR"
-    ) {
+    if (isUnavailableLockInfo(error)) {
       return undefined;
     }
     throw error;

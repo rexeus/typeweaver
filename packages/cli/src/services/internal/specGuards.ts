@@ -11,16 +11,22 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 };
 
+const hasNonEmptyString = (
+  value: Record<string, unknown>,
+  key: string
+): boolean => {
+  const field = value[key];
+  return typeof field === "string" && field.length > 0;
+};
+
 const isResponseDefinition = (value: unknown): boolean => {
   if (!isRecord(value)) {
     return false;
   }
 
   return (
-    typeof value.name === "string" &&
-    value.name.length > 0 &&
-    typeof value.description === "string" &&
-    value.description.length > 0 &&
+    hasNonEmptyString(value, "name") &&
+    hasNonEmptyString(value, "description") &&
     validHttpStatusCodes.has(value.statusCode as HttpStatusCode)
   );
 };
@@ -31,12 +37,9 @@ const isOperationDefinition = (value: unknown): boolean => {
   }
 
   return (
-    typeof value.operationId === "string" &&
-    value.operationId.length > 0 &&
-    typeof value.path === "string" &&
-    value.path.length > 0 &&
-    typeof value.summary === "string" &&
-    value.summary.length > 0 &&
+    ["operationId", "path", "summary"].every(key =>
+      hasNonEmptyString(value, key)
+    ) &&
     Object.values(HttpMethod).includes(value.method as HttpMethod) &&
     isRecord(value.request) &&
     value.responses.length > 0 &&

@@ -129,14 +129,14 @@ const extractFailure = (exit: Exit.Exit<void, unknown>): unknown => {
   return failure.value;
 };
 
-describe("Generator output lock", () => {
-  afterEach(() => {
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-    tempDirs.length = 0;
-  });
+afterEach(() => {
+  for (const tempDir of tempDirs) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+  tempDirs.length = 0;
+});
 
+describe("Generator output-lock ownership", () => {
   test("releases the lock after a successful run so a follow-up run can re-acquire it", async () => {
     const workspace = createTempWorkspace("happy");
     writeTinySpec(workspace);
@@ -230,7 +230,9 @@ describe("Generator output lock", () => {
 
     expect(fs.existsSync(lockDir)).toBe(true);
   });
+});
 
+describe("Generator output-lock metadata", () => {
   test("does not reclaim a lock whose ownership metadata is not yet published", async () => {
     const workspace = createTempWorkspace("acquiring");
     const outputDir = path.join(workspace, "generated", "output");
@@ -280,7 +282,9 @@ describe("Generator output lock", () => {
       '{"pid":'
     );
   });
+});
 
+describe("Generator output-lock acquisition rollback", () => {
   test("rolls back its lock directory when metadata publication fails", async () => {
     const workspace = createTempWorkspace("publication-failure");
     const outputDir = path.join(workspace, "generated", "output");
@@ -344,7 +348,9 @@ describe("Generator output lock", () => {
       })
     );
   });
+});
 
+describe("Generator output-lock acquisition races", () => {
   test("allows exactly one winner while ownership metadata is being published", async () => {
     const workspace = createTempWorkspace("publication-race");
     const outputDir = path.join(workspace, "generated", "output");
@@ -371,7 +377,9 @@ describe("Generator output lock", () => {
     expect(fs.existsSync(path.join(winner.path, "info.json"))).toBe(true);
     await Effect.runPromise(releaseOutputLock(winner));
   });
+});
 
+describe("Generator output-lock replacement races", () => {
   test("does not remove a replacement lock when stale reclaimers interleave", async () => {
     const workspace = createTempWorkspace("stale-reclaim-race");
     const outputDir = path.join(workspace, "generated", "output");
@@ -447,7 +455,9 @@ describe("Generator output lock", () => {
       JSON.parse(fs.readFileSync(path.join(original.path, "info.json"), "utf8"))
     ).toEqual(expect.objectContaining({ ownerToken: "replacement-owner" }));
   });
+});
 
+describe("Generator output-lock diagnostics", () => {
   test("formats the user-facing message with the holder PID and start time", () => {
     const error = new ConcurrentGenerationError({
       outputDir: "/tmp/typeweaver-out",

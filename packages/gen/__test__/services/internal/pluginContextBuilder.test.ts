@@ -309,13 +309,13 @@ const outputDirWithInternalSymlink = (): {
   return { outputDir, targetDir };
 };
 
-describe("createPluginContextBuilder", () => {
-  afterEach(() => {
-    for (const tempDir of tempDirs.splice(0)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-  });
+afterEach(() => {
+  for (const tempDir of tempDirs.splice(0)) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
 
+describe("createPluginContextBuilder context metadata and imports", () => {
   test("creates plugin contexts with the configured directories and config", () => {
     const pluginContext = aBuilder().createPluginContext({
       outputDir: path.join("project", "generated"),
@@ -419,7 +419,9 @@ describe("createPluginContextBuilder", () => {
       expect(responseImportPath).not.toContain("\\");
     }
   );
+});
 
+describe("createPluginContextBuilder canonical response metadata", () => {
   test("names canonical response output files with PascalCase response names under the responses output directory", () => {
     const generatorContext = aGeneratedProjectContext();
 
@@ -466,79 +468,78 @@ describe("createPluginContextBuilder", () => {
     }
     expect(captured?.responseName).toBe("unauthorized");
   });
+});
 
-  describe("getOperationOutputPaths", () => {
-    test.each([
-      {
-        scenario: "camelCase operation id",
-        operationId: "getTodo",
-        fileBase: "GetTodo",
-      },
-      {
-        scenario: "PascalCase operation id",
-        operationId: "GetTodo",
-        fileBase: "GetTodo",
-      },
-      {
-        scenario: "operation id with numeric segment",
-        operationId: "getV2Todo",
-        fileBase: "GetV2Todo",
-      },
-    ])(
-      "names $scenario outputs with PascalCase TypeScript file names",
-      ({ operationId, fileBase }) => {
-        const paths = aGeneratedProjectContext().getOperationOutputPaths({
-          resourceName: "todo",
-          operationId,
-        });
-
-        expect({
-          requestFileName: paths.requestFileName,
-          responseFileName: paths.responseFileName,
-          requestValidationFileName: paths.requestValidationFileName,
-          responseValidationFileName: paths.responseValidationFileName,
-          clientFileName: paths.clientFileName,
-        }).toEqual({
-          requestFileName: `${fileBase}Request.ts`,
-          responseFileName: `${fileBase}Response.ts`,
-          requestValidationFileName: `${fileBase}RequestValidator.ts`,
-          responseValidationFileName: `${fileBase}ResponseValidator.ts`,
-          clientFileName: `${fileBase}Client.ts`,
-        });
-      }
-    );
-
-    test("places operation output files under the resource output directory", () => {
+describe("createPluginContextBuilder operation output paths", () => {
+  test.each([
+    {
+      scenario: "camelCase operation id",
+      operationId: "getTodo",
+      fileBase: "GetTodo",
+    },
+    {
+      scenario: "PascalCase operation id",
+      operationId: "GetTodo",
+      fileBase: "GetTodo",
+    },
+    {
+      scenario: "operation id with numeric segment",
+      operationId: "getV2Todo",
+      fileBase: "GetV2Todo",
+    },
+  ])(
+    "names $scenario outputs with PascalCase TypeScript file names",
+    ({ operationId, fileBase }) => {
       const paths = aGeneratedProjectContext().getOperationOutputPaths({
         resourceName: "todo",
-        operationId: "getTodo",
+        operationId,
       });
 
-      const outputDir = path.join("project", "generated", "todo");
       expect({
-        outputDir: paths.outputDir,
-        requestFile: paths.requestFile,
-        responseFile: paths.responseFile,
-        requestValidationFile: paths.requestValidationFile,
-        responseValidationFile: paths.responseValidationFile,
-        clientFile: paths.clientFile,
+        requestFileName: paths.requestFileName,
+        responseFileName: paths.responseFileName,
+        requestValidationFileName: paths.requestValidationFileName,
+        responseValidationFileName: paths.responseValidationFileName,
+        clientFileName: paths.clientFileName,
       }).toEqual({
-        outputDir,
-        requestFile: path.join(outputDir, "GetTodoRequest.ts"),
-        responseFile: path.join(outputDir, "GetTodoResponse.ts"),
-        requestValidationFile: path.join(
-          outputDir,
-          "GetTodoRequestValidator.ts"
-        ),
-        responseValidationFile: path.join(
-          outputDir,
-          "GetTodoResponseValidator.ts"
-        ),
-        clientFile: path.join(outputDir, "GetTodoClient.ts"),
+        requestFileName: `${fileBase}Request.ts`,
+        responseFileName: `${fileBase}Response.ts`,
+        requestValidationFileName: `${fileBase}RequestValidator.ts`,
+        responseValidationFileName: `${fileBase}ResponseValidator.ts`,
+        clientFileName: `${fileBase}Client.ts`,
       });
+    }
+  );
+
+  test("places operation output files under the resource output directory", () => {
+    const paths = aGeneratedProjectContext().getOperationOutputPaths({
+      resourceName: "todo",
+      operationId: "getTodo",
+    });
+
+    const outputDir = path.join("project", "generated", "todo");
+    expect({
+      outputDir: paths.outputDir,
+      requestFile: paths.requestFile,
+      responseFile: paths.responseFile,
+      requestValidationFile: paths.requestValidationFile,
+      responseValidationFile: paths.responseValidationFile,
+      clientFile: paths.clientFile,
+    }).toEqual({
+      outputDir,
+      requestFile: path.join(outputDir, "GetTodoRequest.ts"),
+      responseFile: path.join(outputDir, "GetTodoResponse.ts"),
+      requestValidationFile: path.join(outputDir, "GetTodoRequestValidator.ts"),
+      responseValidationFile: path.join(
+        outputDir,
+        "GetTodoResponseValidator.ts"
+      ),
+      clientFile: path.join(outputDir, "GetTodoClient.ts"),
     });
   });
+});
 
+describe("createPluginContextBuilder basic writes", () => {
   test("returns resource output directories under the generator output directory", () => {
     const generatorContext = aGeneratedProjectContext();
 
@@ -614,7 +615,9 @@ describe("createPluginContextBuilder", () => {
     );
     expect(generatorContext.getGeneratedFiles()).toEqual([generatedFile]);
   });
+});
 
+describe("createPluginContextBuilder existing target replacement", () => {
   test.skipIf(!fileModeCapability.supported)(
     `preserves existing generated file mode when replacing it${fileModeSkipReason}`,
     () => {
@@ -676,7 +679,9 @@ describe("createPluginContextBuilder", () => {
       expect(generatorContext.getGeneratedFiles()).toEqual([generatedFile]);
     }
   );
+});
 
+describe("createPluginContextBuilder normalized output paths", () => {
   test("normalizes current-directory segments before writing and recording generated files", () => {
     const outputDir = aTempDir();
     const generatorContext = aGeneratedProjectContext({ outputDir });
@@ -725,7 +730,9 @@ describe("createPluginContextBuilder", () => {
     );
     expect(generatorContext.getGeneratedFiles()).toEqual([generatedFile]);
   });
+});
 
+describe("createPluginContextBuilder atomic write failures", () => {
   test("leaves output unchanged when replacing an existing directory target fails", () => {
     const outputDir = aTempDir();
     const generatorContext = aGeneratedProjectContext({ outputDir });
@@ -802,7 +809,9 @@ describe("createPluginContextBuilder", () => {
     expect(generatorContext.getGeneratedFiles()).toEqual([generatedFile]);
     expect(builder.drainPendingWriteLogs()).toEqual([generatedFile]);
   });
+});
 
+describe("createPluginContextBuilder traversal write rejection", () => {
   test("rejects parent traversal paths before writing outside the output directory", () => {
     const workspaceDir = aTempDir();
     const outputDir = path.join(workspaceDir, "generated");
@@ -910,7 +919,9 @@ describe("createPluginContextBuilder", () => {
       expect(generatorContext.getGeneratedFiles()).toEqual([]);
     }
   );
+});
 
+describe("createPluginContextBuilder absolute write rejection", () => {
   test("rejects absolute POSIX paths before writing outside the output directory", () => {
     const workspaceDir = aTempDir();
     const outputDir = path.join(workspaceDir, "generated");
@@ -969,7 +980,9 @@ describe("createPluginContextBuilder", () => {
     expectUnsafeGeneratedFilePath(writeOutputRoot);
     expect(generatorContext.getGeneratedFiles()).toEqual([]);
   });
+});
 
+describe("createPluginContextBuilder normalized traversal write rejection", () => {
   test("rejects traversal paths that normalize outside the output directory", () => {
     const workspaceDir = aTempDir();
     const outputDir = path.join(workspaceDir, "generated");
@@ -1014,7 +1027,9 @@ describe("createPluginContextBuilder", () => {
     expect(fs.existsSync(outsideFile)).toBe(false);
     expect(generatorContext.getGeneratedFiles()).toEqual([]);
   });
+});
 
+describe("createPluginContextBuilder symlink component rejection", () => {
   test.skipIf(!symlinkCapability.supported)(
     `rejects symlink directory components before writing outside the output directory${symlinkSkipReason}`,
     () => {
@@ -1091,7 +1106,9 @@ describe("createPluginContextBuilder", () => {
       expect(generatorContext.getGeneratedFiles()).toEqual([]);
     }
   );
+});
 
+describe("createPluginContextBuilder symlink root rejection", () => {
   test.skipIf(!symlinkCapability.supported)(
     `rejects safe internal directory symlinks before writing inside the output directory${symlinkSkipReason}`,
     () => {
@@ -1169,7 +1186,9 @@ describe("createPluginContextBuilder", () => {
       expect(generatorContext.getGeneratedFiles()).toEqual([]);
     }
   );
+});
 
+describe("createPluginContextBuilder unsafe generated-file tracking", () => {
   test("rejects unsafe generated file tracking paths", () => {
     const outputDir = aTempDir();
     const generatorContext = aGeneratedProjectContext({ outputDir });
@@ -1202,7 +1221,9 @@ describe("createPluginContextBuilder", () => {
       expect(generatorContext.getGeneratedFiles()).toEqual([]);
     }
   );
+});
 
+describe("createPluginContextBuilder absolute and traversal tracking rejection", () => {
   test("rejects absolute POSIX paths before tracking generated files", () => {
     const workspaceDir = aTempDir();
     const outputDir = path.join(workspaceDir, "generated");
@@ -1291,7 +1312,9 @@ describe("createPluginContextBuilder", () => {
       expect(generatorContext.getGeneratedFiles()).toEqual([]);
     }
   );
+});
 
+describe("createPluginContextBuilder normalized generated-file tracking", () => {
   test("normalizes current-directory segments before tracking generated files", () => {
     const outputDir = aTempDir();
     const generatorContext = aGeneratedProjectContext({ outputDir });
@@ -1341,7 +1364,9 @@ describe("createPluginContextBuilder", () => {
       expect(generatorContext.getGeneratedFiles()).toEqual([]);
     }
   );
+});
 
+describe("createPluginContextBuilder generated-file tracker semantics", () => {
   test("returns defensive arrays for generated file tracking", () => {
     const generatorContext = aGeneratedProjectContext();
 
@@ -1389,7 +1414,9 @@ describe("createPluginContextBuilder", () => {
     expect(secondBuilder.getGeneratedFiles()).toEqual([]);
     expect(secondContext.getGeneratedFiles()).toEqual([]);
   });
+});
 
+describe("createPluginContextBuilder template rendering", () => {
   test("renders relative template paths from the configured template directory", () => {
     const templateDir = aTempDir();
     fs.writeFileSync(
