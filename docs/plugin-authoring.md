@@ -79,6 +79,23 @@ All four are optional. The first-party plugins (`types`, `clients`, `server`, `h
 `depends` declares a topological ordering: a plugin with `depends: ["types"]` will not run a stage
 until `types`'s same stage has completed.
 
+### Supported lifecycle boundary
+
+The V2 API is designed for deterministic code generators and exit-independent resources:
+
+- every hook returns an Effect with `R = never`; plugins provide their own services before returning
+  from a hook;
+- work whose failure must fail generation belongs in `initialize`, `collectResources`, or
+  `generate`;
+- `finalize` is best-effort cleanup: typed failures are logged as warnings, while defects still
+  propagate after every eligible finalizer has been attempted;
+- `finalize` does not receive the pipeline's original `Exit`, so commit-versus-rollback transactions
+  are not supported by V2.
+
+The [scoped service pattern](#exit-independent-scoped-services-inside-a-synchronous-factory) below
+shows the supported resource lifetime. If a plugin requires exit-dependent transaction semantics,
+that needs a future lifecycle contract rather than a local workaround.
+
 ---
 
 ## `definePlugin` vs `definePluginWithLibCopy`
@@ -163,7 +180,7 @@ A plugin that takes configuration exports a function that validates the options 
 
 ```ts
 // packages/openapi/src/openApiPlugin.ts
-export const openApiPlugin = (options: unknown = {}): Plugin => {
+export const openApiPlugin = (options: OpenApiPluginOptions = {}): Plugin => {
   const normalized = normalizeOpenApiPluginOptions(options);
 
   return definePlugin({
@@ -258,7 +275,7 @@ the surrounding `Effect.try` converts the throw into a `PluginExecutionError`.
 | Helper                                    | Purpose                                                                   |
 | ----------------------------------------- | ------------------------------------------------------------------------- |
 | `writeFile(path, content)`                | Atomic temp-file + rename write; registers the path with the tracker.     |
-| `renderTemplate(templatePath, data)`      | Renders an EJS-like template to a string. Pure, no I/O.                   |
+| `renderTemplate(templatePath, data)`      | Reads and renders an EJS-like template; throws on I/O or render failure.  |
 | `addGeneratedFile(path)`                  | Registers a path without writing (for files produced by `copyLibFiles`).  |
 | `getGeneratedFiles()`                     | Snapshot of every registered path so far, sorted lexicographically.       |
 | `getResourceOutputDir(name)`              | Output directory for a normalized resource.                               |
@@ -269,10 +286,11 @@ the surrounding `Effect.try` converts the throw into a `PluginExecutionError`.
 | `getOperationDefinitionAccessor({ ... })` | TypeScript accessor for an operation's bundled spec definition.           |
 | `getSpecImportPath({ importerDir })`      | Relative import path to the bundled spec module.                          |
 
-All paths returned by these helpers are forward-slash, project-relative or absolute as documented in
-`packages/gen/src/plugins/contextTypes.ts`. The `writeFile` and `addGeneratedFile` helpers run the
-requested path through the path-safety guard (see `packages/gen/src/helpers/pathSafety.ts`); unsafe
-paths throw `UnsafeGeneratedPathError`, which becomes a `PluginExecutionError` at your boundary.
+Filesystem paths returned by output helpers use the host platform's separators. Helpers intended for
+generated TypeScript imports return forward-slash module specifiers. The `writeFile` and
+`addGeneratedFile` helpers run the requested path through the path-safety guard (see
+`packages/gen/src/helpers/pathSafety.ts`); unsafe paths throw `UnsafeGeneratedPathError`, which
+becomes a `PluginExecutionError` at your boundary.
 
 ---
 
@@ -316,11 +334,11 @@ export const myPlugin = definePlugin({
 ```
 
 Both surfaces share one file tracker and one log queue, so a plugin may freely mix sync and Effect
-helpers. A practical benefit of the Effect surface: your plugin tests can run against the in-memory
-`FileSystem` layer from `test-utils` (`makeInMemoryFileSystem()`) without touching disk. The
-first-party Hono router generator is the repository's reference implementation: it renders and
-writes generated routers exclusively through `renderTemplateEffect` and `writeFileEffect`, mapping
-their typed failures once at the plugin boundary.
+helpers. Keep emission logic dependent on the smallest `Pick<GeneratorContext, ...>` it needs; this
+makes plugin tests independent of filesystem and orchestration details. The first-party Hono router
+generator is the repository's reference implementation: it renders and writes generated routers
+exclusively through `renderTemplateEffect` and `writeFileEffect`, mapping their typed failures once
+at the plugin boundary.
 
 ---
 
@@ -374,7 +392,7 @@ plugins:
   "main": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "peerDependencies": {
-    "@rexeus/typeweaver-gen": "^0.12.0",
+    "@rexeus/typeweaver-gen": "^1.0.0",
     "effect": ">=3.22.0 <4"
   }
 }
@@ -384,11 +402,15 @@ TypeWeaver develops and tests against Effect 3.22.0. The peer range accepts late
 3 releases without admitting Effect 4. Its 3.22 lower bound is required by the current `@effect/*`
 package family and keeps the plugin and generator on one Effect identity.
 
-Export your plugin as one of the following — `PluginLoader` checks each in order:
+Export your plugin in one of these forms:
 
-1. **Named export** matching the plugin's name (`export const myPlugin`).
-2. **Default export** that is a `Plugin` record.
-3. **Default export** that is a `(options?) => Plugin` factory.
+1. **Default export** that is a `Plugin` record.
+2. **Default export** that is a synchronous `(options?) => Plugin` factory.
+3. **Named export** containing either form when no valid default exists.
+
+`PluginLoader` prefers `default`, then checks named exports in module order until it finds the first
+valid plugin shape. Export one plugin value per module; helper functions may be exported alongside
+it because a valid default always wins.
 
 The CLI loads plugins by name. A plugin named `my-plugin` is loaded from a package whose
 `package.json` `name` is `@rexeus/typeweaver-my-plugin` or `typeweaver-plugin-my-plugin`, or by
@@ -398,49 +420,52 @@ explicit absolute path in `typeweaver.config.js`.
 
 ## Testing plugins
 
-The V2 contract is testable without a real runtime. Build a fake `GeneratorContext` that records
-writes, then `Effect.runSync` the plugin's `generate`:
+The V2 contract is testable without a real runtime. Put emission logic behind the narrowest context
+slice it needs, then test that function with a complete fake for that small contract:
 
 ```ts
+import { definePlugin, PluginExecutionError } from "@rexeus/typeweaver-gen";
+import type { GeneratorContext } from "@rexeus/typeweaver-gen";
 import { Effect } from "effect";
 import { describe, expect, test } from "vitest";
-import { openApiPlugin } from "../../src/index.js";
 
-const aFakeContext = () => {
-  const writtenFiles: { path: string; content: string }[] = [];
-  return {
-    outputDir: "/tmp/test",
-    inputDir: "/tmp/test/spec",
-    config: {},
-    normalizedSpec: { resources: [], responses: [] },
-    coreDir: "@rexeus/typeweaver-core",
-    responsesOutputDir: "/tmp/test/responses",
-    specOutputDir: "/tmp/test/spec-out",
-    writeFile: (path: string, content: string) => writtenFiles.push({ path, content }),
-    renderTemplate: () => {
-      throw new Error("not used in this test");
-    },
-    addGeneratedFile: () => undefined,
-    getGeneratedFiles: () => writtenFiles.map(f => f.path),
-    // ... rest of the GeneratorContext surface ...
-    writtenFiles,
-  };
+type HelloContext = Pick<GeneratorContext, "writeFile">;
+
+export const generateHello = (context: HelloContext): void => {
+  context.writeFile("hello.txt", "hello from a typeweaver plugin\n");
 };
 
-describe("openApiPlugin", () => {
-  test("writes an OpenAPI document to the default output path", () => {
-    const context = aFakeContext();
-    const plugin = openApiPlugin({});
+export const helloPlugin = definePlugin({
+  name: "hello",
+  generate: context =>
+    Effect.try({
+      try: () => generateHello(context),
+      catch: cause =>
+        new PluginExecutionError({
+          pluginName: "hello",
+          phase: "generate",
+          cause,
+        }),
+    }),
+});
 
-    Effect.runSync(plugin.generate!(context));
+describe("generateHello", () => {
+  test("writes the greeting", () => {
+    const writtenFiles: Array<{ path: string; content: string }> = [];
+    const context: HelloContext = {
+      writeFile: (path, content) => {
+        writtenFiles.push({ path, content });
+      },
+    };
 
-    expect(context.writtenFiles).toHaveLength(1);
-    expect(context.writtenFiles[0].path).toBe("openapi/openapi.json");
+    generateHello(context);
+
+    expect(writtenFiles).toEqual([
+      { path: "hello.txt", content: "hello from a typeweaver plugin\n" },
+    ]);
   });
 });
 ```
-
-For a complete example, see `packages/openapi/__test__/unit/OpenApiPlugin.test.ts`.
 
 The pattern keeps your tests fast (no disk I/O), deterministic (no real runtime), and focused on the
 plugin's behavior rather than the orchestration around it.

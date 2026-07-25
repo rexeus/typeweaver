@@ -35,7 +35,6 @@ service body.
 `succeed:` — stateless, dependency-free:
 
 - `ConfigLoader` (`packages/cli/src/services/ConfigLoader.ts`)
-- `Formatter` (`packages/cli/src/services/Formatter.ts`)
 - `PluginModuleLoader` (`packages/cli/src/services/PluginModuleLoader.ts`)
 - `PathSafety` (`packages/gen/src/services/PathSafety.ts`)
 - `TemplateRenderer` (`packages/gen/src/services/TemplateRenderer.ts`)
@@ -46,6 +45,8 @@ service body.
 `effect:` — yields other services or holds state:
 
 - `Generator` (`packages/cli/src/services/Generator.ts`) — composes six dependencies
+- `Formatter` (`packages/cli/src/services/Formatter.ts`) — yields `FileSystem` so formatting can
+  read and atomically replace generated files through the platform service
 - `ContextBuilder` (`packages/gen/src/services/ContextBuilder.ts`) — yields the platform-agnostic
   `FileSystem` tag, captured for the Effect-native context surface
   (`writeFileEffect`/`renderTemplateEffect`); each `buildGeneratorContext` call constructs a fresh

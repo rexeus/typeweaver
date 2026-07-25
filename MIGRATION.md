@@ -139,9 +139,28 @@ file.
 If you imported the generator programmatically rather than through the CLI:
 
 - The imperative `Generator` class is replaced by an `Effect.Service` that lives inside a
-  `ManagedRuntime`. Construct via the runtime, not via `new Generator()`. See
-  `packages/cli/src/effectRuntime.ts` and
+  `ManagedRuntime`. Import the public runtime and service from `@rexeus/typeweaver`, then dispose
+  the runtime when the embedding process no longer needs it:
+
+  ```ts
+  import { effectRuntime, Generator } from "@rexeus/typeweaver";
+
+  try {
+    await effectRuntime.runPromise(
+      Generator.generate({
+        inputFile: "./api/spec/index.ts",
+        outputDir: "./api/generated",
+      })
+    );
+  } finally {
+    await effectRuntime.dispose();
+  }
+  ```
+
+  The package-root import is side-effect-free: only the `typeweaver` binary parses argv or starts
+  the CLI. See `packages/cli/src/effectRuntime.ts` and
   [ADR 0007](./docs/adr/0007-generator-per-call-isolation.md).
+
 - `createPluginRegistry` is deleted; the runtime composes the equivalent service.
   `createPluginContextBuilder` is no longer exported — it lives under `services/internal/` as
   implementation detail of the `ContextBuilder` service.

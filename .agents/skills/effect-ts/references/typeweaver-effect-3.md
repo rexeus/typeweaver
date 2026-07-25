@@ -26,7 +26,9 @@ material. Their API snippets are not implementation guidance for TypeWeaver.
 ### Typed errors
 
 Use `Data.TaggedError` for expected failures and expose a meaningful `message`. Fail or yield these
-errors through the typed error channel. Do not throw them.
+errors through the typed error channel. Do not throw them from Effect programs. Synchronous
+construction boundaries such as plugin factories may throw `PluginConfigError` before an Effect
+exists; the loader decodes that boundary into its typed failure channel.
 
 Representative code:
 
@@ -47,7 +49,7 @@ Representative code:
 - `packages/gen/src/services/PluginRegistry.ts`
 - `packages/cli/src/services/Formatter.ts`
 - `packages/cli/src/services/Generator.ts`
-- `docs/adr/0005-effect-service-shapes.md`
+- `docs/adr/0005-effect-service-patterns.md`
 
 Do not use Effect 4's `Context.Service` or `Effect.service`.
 
@@ -59,9 +61,9 @@ runtime per generated artifact or individual service call.
 
 Representative code:
 
-- `packages/gen/src/runtime.ts`
+- `packages/gen/src/runtime/MainLayer.ts`
 - `packages/cli/src/services/SpecBundler.ts`
-- `docs/adr/0007-plugin-runtime-isolation.md`
+- `docs/adr/0007-generator-per-call-isolation.md`
 
 ### Cause inspection
 

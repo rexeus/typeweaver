@@ -97,9 +97,8 @@ Typeweaver is modular by design. Install only what you need.
 | --------------------------------------------- | ------------------------------------------------- |
 | [test-utils](./packages/test-utils/README.md) | Shared test utilities, fixtures, and test servers |
 
-More plugins are planned. Want to build your own? Check out the plugin system
-
-[Plugin system](./packages/gen/README.md#-how-to-use).
+More plugins are planned. Want to build your own? Start with the
+[Plugin authoring guide](./docs/plugin-authoring.md).
 
 ---
 
