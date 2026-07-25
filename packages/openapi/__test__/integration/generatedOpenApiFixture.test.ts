@@ -253,7 +253,7 @@ async function runOpenApiValidator(
   rulesetPath: string
 ): Promise<ValidatorCommandOutput> {
   const args = validatorArgs(fixturePath, rulesetPath);
-  const cliPath = resolveLintOpenApiCliPath();
+  const cliPath = resolveSpectralCliPath();
 
   try {
     if (cliPath !== undefined) {
@@ -267,7 +267,7 @@ async function runOpenApiValidator(
     }
 
     return stringifyExecFileOutput(
-      await execFileAsync("pnpm", ["exec", "lint-openapi", ...args], {
+      await execFileAsync("pnpm", ["exec", "spectral", ...args], {
         encoding: "utf8",
         maxBuffer: 10 * 1024 * 1024,
         timeout: 30_000,
@@ -276,7 +276,7 @@ async function runOpenApiValidator(
   } catch (error) {
     const output = commandOutput(error);
     throw new Error(
-      `IBM OpenAPI Validator rejected ${fixturePath}\nstdout:\n${output.stdout}\nstderr:\n${output.stderr}`,
+      `Spectral rejected ${fixturePath}\nstdout:\n${output.stdout}\nstderr:\n${output.stderr}`,
       { cause: error }
     );
   }
@@ -286,7 +286,16 @@ function validatorArgs(
   fixturePath: string,
   rulesetPath: string
 ): readonly string[] {
-  return ["--json", "--ruleset", rulesetPath, "--no-colors", fixturePath];
+  return [
+    "lint",
+    "--format",
+    "json",
+    "--ruleset",
+    rulesetPath,
+    "--fail-severity",
+    "error",
+    fixturePath,
+  ];
 }
 
 function assertValidatorOutputHasNoErrors(
@@ -327,7 +336,7 @@ function parseValidatorOutput(
     return JSON.parse(trimmedStdout) as unknown;
   } catch (error) {
     throw new Error(
-      `IBM OpenAPI Validator returned non-JSON output for ${fixturePath}\nstdout:\n${stdout}`,
+      `Spectral returned non-JSON output for ${fixturePath}\nstdout:\n${stdout}`,
       { cause: error }
     );
   }
@@ -381,17 +390,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function validatorFailureMessage(fixturePath: string, stdout: string): string {
-  return `IBM OpenAPI Validator reported OpenAPI validity errors for ${fixturePath}\nstdout:\n${stdout}`;
+  return `Spectral reported OpenAPI validity errors for ${fixturePath}\nstdout:\n${stdout}`;
 }
 
-function resolveLintOpenApiCliPath(): string | undefined {
+function resolveSpectralCliPath(): string | undefined {
   try {
     const packageJsonPath =
-      require.resolve("ibm-openapi-validator/package.json");
+      require.resolve("@stoplight/spectral-cli/package.json");
     const packageJson = JSON.parse(
       readFileSync(packageJsonPath, "utf8")
     ) as PackageJsonWithBin;
-    const binPath = lintOpenApiBinPath(packageJson);
+    const binPath = spectralBinPath(packageJson);
 
     return binPath === undefined
       ? undefined
@@ -401,14 +410,12 @@ function resolveLintOpenApiCliPath(): string | undefined {
   }
 }
 
-function lintOpenApiBinPath(
-  packageJson: PackageJsonWithBin
-): string | undefined {
+function spectralBinPath(packageJson: PackageJsonWithBin): string | undefined {
   if (typeof packageJson.bin === "string") {
     return packageJson.bin;
   }
 
-  return packageJson.bin?.["lint-openapi"];
+  return packageJson.bin?.spectral;
 }
 
 function commandOutput(error: unknown): {

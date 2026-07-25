@@ -398,7 +398,7 @@ describe("Generator.generate", () => {
     workspace: string,
     tsconfigFile: string
   ): Promise<void> => {
-    const tscPath = require.resolve("typescript/bin/tsc");
+    const tscPath = require.resolve("typescript/bin/tsc6");
 
     await execFileAsync(
       process.execPath,

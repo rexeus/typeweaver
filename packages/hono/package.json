@@ -56,14 +56,14 @@
   "peerDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "effect": "^3.21.2",
-    "hono": "^4.11.0"
+    "effect": "catalog:peers",
+    "hono": "catalog:peers"
   },
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "effect": "^3.21.2",
-    "hono": "^4.12.9",
+    "effect": "^3.22.0",
+    "hono": "^4.12.32",
     "test-utils": "file:../test-utils"
   },
   "dependencies": {

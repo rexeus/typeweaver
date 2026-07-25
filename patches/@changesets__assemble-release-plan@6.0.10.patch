@@ -6,7 +6,7 @@ index e07ba6e793021b6cfdec898afca517e293386ddb..fc74453f5087dcba783098d56f242190
    preInfo,
    onlyUpdatePeerDependentsWhenOutOfRange
  }) {
-+  // Temporary fix for: https://github.com/changesets/changesets/pull/1132
++  // Temporary fix until https://github.com/changesets/changesets/pull/2090 reaches stable.
 +  if (depType === "peerDependencies") {
 +    return false;
 +  }
@@ -22,7 +22,7 @@ index ea2be567403c4ef94a65f3218ccb683cf5cb4bc1..66b8ae59415c67e9bbf5ca94411436d1
    preInfo,
    onlyUpdatePeerDependentsWhenOutOfRange
  }) {
-+  // Temporary fix for: https://github.com/changesets/changesets/pull/1132
++  // Temporary fix until https://github.com/changesets/changesets/pull/2090 reaches stable.
 +  if (depType === "peerDependencies") {
 +    return false;
 +  }

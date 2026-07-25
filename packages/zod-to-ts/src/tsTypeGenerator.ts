@@ -11,7 +11,7 @@ import {
   isUnionTypeNode,
   ScriptTarget,
   SyntaxKind,
-} from "typescript";
+} from "@typescript/typescript6";
 import {
   $ZodAny,
   $ZodArray,
@@ -58,7 +58,7 @@ import type {
   StringLiteral,
   TypeElement,
   TypeNode,
-} from "typescript";
+} from "@typescript/typescript6";
 import type { $ZodType } from "zod/v4/core";
 
 export function fromZod(zodType: $ZodType): TypeNode {

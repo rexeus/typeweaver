@@ -54,12 +54,12 @@
   },
   "homepage": "https://github.com/rexeus/typeweaver#readme",
   "dependencies": {
-    "typescript": "^6.0.2"
+    "@typescript/typescript6": "^6.0.2"
   },
   "peerDependencies": {
-    "zod": "^4.3.0"
+    "zod": "catalog:peers"
   },
   "devDependencies": {
-    "zod": "^4.3.6"
+    "zod": "^4.4.3"
   }
 }

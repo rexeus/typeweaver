@@ -57,12 +57,12 @@
   "peerDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "effect": "^3.21.2"
+    "effect": "catalog:peers"
   },
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
-    "effect": "^3.21.2",
+    "effect": "^3.22.0",
     "test-utils": "file:../test-utils"
   },
   "dependencies": {

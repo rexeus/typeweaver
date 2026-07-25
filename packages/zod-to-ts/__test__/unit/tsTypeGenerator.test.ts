@@ -228,9 +228,9 @@ describe("object schemas", () => {
     );
   });
 
-  test("maps object fields unioned with undefined to optional TypeScript properties", () => {
+  test("maps object fields unioned with undefined to required TypeScript properties", () => {
     expect(toTs(z.object({ code: z.union([z.string(), z.undefined()]) }))).toBe(
-      ["{", "    code?: string | undefined;", "}"].join("\n")
+      ["{", "    code: string | undefined;", "}"].join("\n")
     );
   });
 });
