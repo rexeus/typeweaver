@@ -1,6 +1,6 @@
 # Effect migration: merge-ready completion contract
 
-Status: active
+Status: complete
 
 Audit baseline: `feat/use-effect` at `7488f6d2`, reviewed 2026-07-25
 
@@ -1056,6 +1056,36 @@ next: Commit and push the two real repairs plus this reopened checkpoint, requir
       Ubuntu/Windows/CodeQL/Socket checks, resolve the implementation threads only after the push,
       and trigger a new final-head Codex review. Return status to complete only when that review has
       no unresolved finding and the exact head is green.
+```
+
+```text
+[final review closure | 2026-07-26 | exact green implementation state]
+criterion: 16, 17, and 18.
+before: Repeated exact-head Codex reviews exposed residual output-boundary issues after the first
+        completion record: generated-path publication races, crashed staging debris, long-lived
+        lock poisoning, symlinked clean targets, lexical/canonical containment gaps, name-only
+        orphan ownership, over-broad formatter exclusions, and an untyped SpecBundler realpath
+        probe. One final review suggestion incorrectly claimed the full workspace suites were absent
+        from CI.
+change: Added pre-publish path revalidation; token-safe rename-first lock release and exact-owner
+        recovery; under-lock clean-target revalidation; exact lexical and canonical containment;
+        a versioned regular-file ownership marker for atomic-writer and SpecBundler staging; shared
+        lock/fence recognition; format-visible user `.typeweaver-*` output; and typed realpath
+        failures. Added real filesystem, interruption, crash-recovery, replacement-owner, POSIX,
+        Windows, marker-symlink, formatter, and plugin integration regressions. Verified that
+        `verify:effect-migration` already executes every package test script recursively, so no
+        duplicate Ubuntu test step was added.
+evidence: Local Oxfmt, Oxlint, workspace typecheck, Effect diagnostics, the complete
+          `pnpm verify:effect-migration` umbrella, and the expanded Windows-security gate pass.
+          The latter passes 112 Gen contracts and 144 applicable CLI contracts with two expected
+          local platform skips. Quality Check run 30178831792 is green on 6bc2105d, including the
+          recursive workspace unit/integration/process-test command. CodeQL run 30178831034, the
+          aggregate CodeQL gate, both Socket checks, and Windows security are green. PR #190 has
+          zero unresolved review threads; the final repeated review on the unchanged implementation
+          head produced no new finding. The branch is mergeable, and no merge or release occurred.
+next: Push this evidence-only completion commit, then require green exact-head CI/security and a
+      clean final Codex review before handoff. Repository protection still requires one independent
+      approving human review before merge.
 ```
 
 ## Stop conditions
