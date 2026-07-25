@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, test } from "vitest";
@@ -18,6 +19,10 @@ const servicePluginTsconfig = path.join(
   "examples",
   "tsconfig.json"
 );
+const requireFromRepository = createRequire(
+  path.join(repositoryDirectory, "package.json")
+);
+const typescriptCli = requireFromRepository.resolve("typescript/lib/tsc.js");
 const pluginAuthoringGuide = path.join(
   repositoryDirectory,
   "docs",
@@ -88,8 +93,8 @@ describe("documented scoped-service plugin", () => {
   test("typechecks the exact service-plugin example linked from the guide", async () => {
     await expect(
       execFileAsync(
-        "pnpm",
-        ["exec", "tsc", "--project", servicePluginTsconfig],
+        process.execPath,
+        [typescriptCli, "--project", servicePluginTsconfig],
         {
           cwd: repositoryDirectory,
         }
