@@ -102,7 +102,7 @@ describe("Generator orphan tempdir hygiene", () => {
     writeTinySpec(workspace);
     const outputDir = path.join(workspace, "generated", "output");
 
-    const buriedOrphan = path.join(outputDir, "item", ".typeweaver-stale-7777");
+    const buriedOrphan = path.join(outputDir, "item", ".typeweaver-a1B2c3");
     fs.mkdirSync(buriedOrphan, { recursive: true });
     fs.writeFileSync(
       path.join(buriedOrphan, "generated.tmp"),
@@ -114,14 +114,14 @@ describe("Generator orphan tempdir hygiene", () => {
     expect(fs.existsSync(buriedOrphan)).toBe(false);
   });
 
-  test("Generator tolerates pre-existing `.typeweaver-` orphans without crashing", async () => {
+  test("preserves user-owned `.typeweaver-*` directories while formatting", async () => {
     // Even though the sweep runs first, the Formatter's own guard is the
     // belt-and-braces for tempdirs created by concurrent atomic-replace
     // writes. Pre-seed an orphan that survives any sweep window and assert
     // the formatter does not crash on its `.tmp` content. Tempdirs that
-    // start with `.typeweaver-` (other than lock coordination artifacts)
-    // are pruned by the sweep before formatting runs, so the assertion is
-    // that the run completes without throwing.
+    // use the reserved prefix without matching the exact six-character
+    // mkdtemp artifact shape, so the assertion covers both formatter safety
+    // and preservation of user-owned content.
     const workspace = createTempWorkspace("formatter-skip");
     writeTinySpec(workspace);
     const outputDir = path.join(workspace, "generated", "output");
@@ -135,5 +135,9 @@ describe("Generator orphan tempdir hygiene", () => {
     );
 
     await expect(runGenerate(workspace, false)).resolves.toBeUndefined();
+    expect(fs.existsSync(orphanDir)).toBe(true);
+    expect(fs.readFileSync(path.join(orphanDir, "generated.tmp"), "utf8")).toBe(
+      "this content would crash a formatter that walks .tmp files\n"
+    );
   });
 });

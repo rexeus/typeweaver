@@ -159,6 +159,8 @@ export const ensureOutputDirectories = (params: {
 const LOCK_DIR_NAME = ".typeweaver-lock";
 const LOCK_FENCE_PREFIX = `${LOCK_DIR_NAME}.fence-`;
 const LOCK_INFO_FILE = "info.json";
+const TEMP_DIR_PREFIX = ".typeweaver-";
+const TEMP_DIR_RANDOM_SUFFIX_LENGTH = 6;
 
 type LockInfo = {
   readonly pid: number;
@@ -189,6 +191,31 @@ const NO_OUTPUT_LOCK_HOOKS: OutputLockAcquisitionHooks = {
 
 const isOutputLockArtifact = (entryName: string): boolean =>
   entryName === LOCK_DIR_NAME || entryName.startsWith(LOCK_FENCE_PREFIX);
+
+const isAsciiAlphaNumeric = (character: string): boolean => {
+  const code = character.charCodeAt(0);
+  return (
+    (code >= 48 && code <= 57) ||
+    (code >= 65 && code <= 90) ||
+    (code >= 97 && code <= 122)
+  );
+};
+
+const isAtomicWriteTempDirectory = (entryName: string): boolean => {
+  if (
+    !entryName.startsWith(TEMP_DIR_PREFIX) ||
+    entryName.length !== TEMP_DIR_PREFIX.length + TEMP_DIR_RANDOM_SUFFIX_LENGTH
+  ) {
+    return false;
+  }
+
+  for (const character of entryName.slice(TEMP_DIR_PREFIX.length)) {
+    if (!isAsciiAlphaNumeric(character)) {
+      return false;
+    }
+  }
+  return true;
+};
 
 const errnoCode = (error: unknown): string | undefined =>
   typeof error === "object" &&
@@ -577,7 +604,7 @@ const sweepOrphanTempdirsAt = (directory: string): void => {
       continue;
     }
     const entryPath = path.join(directory, entry.name);
-    if (entry.name.startsWith(".typeweaver-")) {
+    if (isAtomicWriteTempDirectory(entry.name)) {
       fs.rmSync(entryPath, { recursive: true, force: true });
       continue;
     }
