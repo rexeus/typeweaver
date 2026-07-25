@@ -63,6 +63,14 @@ export const prepareGeneration = (paths: GenerationPaths) =>
 
 const prepareLockedOutput = (plan: GenerationPlan) =>
   Effect.gen(function* () {
+    // Revalidate after lock acquisition so a target swapped between the
+    // initial preflight and mutation cannot redirect the orphan sweep or
+    // clean step through a symlink.
+    yield* assertSafeCleanTargetEffect(
+      plan.outputDir,
+      plan.cwd,
+      plan.params.config?.clean !== false ? plan.inputFile : undefined
+    );
     yield* sweepOrphanTempdirs(plan.outputDir);
 
     if (plan.params.config?.clean === false) {

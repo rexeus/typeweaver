@@ -27,6 +27,12 @@ export type UnsafeCleanTargetDetails =
       readonly currentWorkingDirectory: string;
     }
   | {
+      readonly reason: "symbolic-link";
+      readonly resolvedOutputDir: string;
+      readonly canonicalOutputDir: string;
+      readonly currentWorkingDirectory: string;
+    }
+  | {
       readonly reason: "target-carries-workspace-marker";
       readonly resolvedOutputDir: string;
       readonly currentWorkingDirectory: string;
@@ -63,6 +69,12 @@ export class UnsafeCleanTargetError extends Data.TaggedError(
       : undefined;
   }
 
+  public get canonicalOutputDir(): string | undefined {
+    return "canonicalOutputDir" in this.details
+      ? this.details.canonicalOutputDir
+      : undefined;
+  }
+
   public get protectedWorkspaceRoot(): string | undefined {
     return "protectedWorkspaceRoot" in this.details
       ? this.details.protectedWorkspaceRoot
@@ -94,6 +106,8 @@ export class UnsafeCleanTargetError extends Data.TaggedError(
         return `${targetDescription} because it resolves to the protected workspace root '${this.details.protectedWorkspaceRoot}'. ${suffix}`;
       case "ancestor-of-current-working-directory":
         return `${targetDescription} because it resolves to an ancestor directory of the current working directory '${this.details.currentWorkingDirectory}'. ${suffix}`;
+      case "symbolic-link":
+        return `${targetDescription} because the output directory itself is a symbolic link. Output preparation traverses this path for operations such as orphan-tempdir cleanup and could delete files outside the requested path, even when full output cleaning is disabled. ${suffix}`;
       case "target-carries-workspace-marker":
         return `${targetDescription} because the target itself contains a workspace marker (one of '.git', 'pnpm-workspace.yaml', 'lerna.json', 'nx.json', 'turbo.json', 'rush.json', or a 'package.json' declaring workspaces) and would erase the workspace. ${suffix}`;
       case "contains-input-file":

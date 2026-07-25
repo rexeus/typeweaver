@@ -1,12 +1,44 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
-import { Cause, Exit, Option } from "effect";
+import { Cause, Effect, Exit, Option } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { effectRuntime } from "../src/effectRuntime.js";
 import { UnsafeCleanTargetError } from "../src/errors/UnsafeCleanTargetError.js";
 import { Generator } from "../src/services/Generator.js";
+import {
+  prepareGeneration,
+  resolveGenerationPaths,
+  withGenerationLock,
+} from "../src/services/internal/generatorPreflight.js";
 
 const tempDirs: string[] = [];
+const directorySymlinkType = process.platform === "win32" ? "junction" : "dir";
+
+const canCreateDirectorySymlinks = (): boolean => {
+  const tempDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), "typeweaver-clean-symlink-support-")
+  );
+  const targetDirectory = path.join(tempDir, "target");
+  const symlinkDirectory = path.join(tempDir, "link");
+
+  try {
+    fs.mkdirSync(targetDirectory);
+    fs.symlinkSync(targetDirectory, symlinkDirectory, directorySymlinkType);
+    return true;
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      ["EACCES", "EINVAL", "ENOTSUP", "EPERM"].includes(String(error.code))
+    ) {
+      return false;
+    }
+    throw error;
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+};
 
 const createTempWorkspace = (suffix: string): string => {
   const tempDir = fs.mkdtempSync(
@@ -56,14 +88,15 @@ const writeTinySpec = (workspace: string): void => {
 const runGenerateExit = (
   workspace: string,
   outputDir: string,
-  clean: boolean
+  clean: boolean,
+  inputFile = "spec/index.ts"
 ): Promise<Exit.Exit<unknown, unknown>> =>
   effectRuntime.runPromiseExit(
     Generator.generate({
-      inputFile: "spec/index.ts",
+      inputFile,
       outputDir,
       config: {
-        input: "spec/index.ts",
+        input: inputFile,
         output: outputDir,
         format: false,
         clean,
@@ -75,12 +108,18 @@ const runGenerateExit = (
 const expectUnsafeCleanTargetFailure = (
   exit: Exit.Exit<unknown, unknown>,
   reason: string
-): void => {
+): UnsafeCleanTargetError => {
   expect(Exit.isFailure(exit)).toBe(true);
-  if (!Exit.isFailure(exit)) return;
+  if (!Exit.isFailure(exit)) {
+    throw new Error("Expected generation to fail");
+  }
   const failure = Option.getOrUndefined(Cause.failureOption(exit.cause));
   expect(failure).toBeInstanceOf(UnsafeCleanTargetError);
-  expect(failure).toMatchObject({ reason });
+  if (!(failure instanceof UnsafeCleanTargetError)) {
+    throw new Error("Expected an UnsafeCleanTargetError");
+  }
+  expect(failure.reason).toBe(reason);
+  return failure;
 };
 
 describe("Generator output-target guard ordering", () => {
@@ -144,4 +183,137 @@ describe("Generator output-target guard ordering", () => {
     expectUnsafeCleanTargetFailure(exit, "contains-input-file");
     expect(fs.existsSync(path.join(workspace, "spec", "index.ts"))).toBe(true);
   });
+
+  test.skipIf(!canCreateDirectorySymlinks())(
+    "rejects an input path reached through a symlink inside the clean target before deleting the link",
+    async () => {
+      const workspace = createTempWorkspace("input-symlink");
+      const externalSourceDirectory = createTempWorkspace(
+        "input-symlink-source"
+      );
+      writeTinySpec(externalSourceDirectory);
+
+      const outputDir = path.join(workspace, "generated", "output");
+      const inputLink = path.join(outputDir, "source-link");
+      fs.mkdirSync(outputDir, { recursive: true });
+      fs.symlinkSync(
+        path.join(externalSourceDirectory, "spec"),
+        inputLink,
+        directorySymlinkType
+      );
+
+      const exit = await runGenerateExit(
+        workspace,
+        "generated/output",
+        true,
+        "generated/output/source-link/index.ts"
+      );
+
+      expectUnsafeCleanTargetFailure(exit, "contains-input-file");
+      expect(fs.lstatSync(inputLink).isSymbolicLink()).toBe(true);
+      expect(
+        fs.existsSync(path.join(externalSourceDirectory, "spec", "index.ts"))
+      ).toBe(true);
+    }
+  );
+
+  test.skipIf(!canCreateDirectorySymlinks())(
+    "rejects a symlinked output directory before cleaning its external target",
+    async () => {
+      const workspace = createTempWorkspace("output-symlink");
+      const externalOutputDirectory = createTempWorkspace(
+        "output-symlink-target"
+      );
+      writeTinySpec(workspace);
+
+      const sentinel = path.join(externalOutputDirectory, "keep.txt");
+      fs.writeFileSync(sentinel, "must survive");
+      const outputLink = path.join(workspace, "generated", "output");
+      fs.mkdirSync(path.dirname(outputLink), { recursive: true });
+      fs.symlinkSync(externalOutputDirectory, outputLink, directorySymlinkType);
+
+      const exit = await runGenerateExit(workspace, "generated/output", true);
+
+      expectUnsafeCleanTargetFailure(exit, "symbolic-link");
+      expect(fs.lstatSync(outputLink).isSymbolicLink()).toBe(true);
+      expect(fs.readFileSync(sentinel, "utf8")).toBe("must survive");
+    }
+  );
+});
+
+describe("Generator output-target symlink revalidation", () => {
+  afterEach(() => {
+    for (const tempDir of tempDirs) {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+    tempDirs.length = 0;
+  });
+
+  test.skipIf(!canCreateDirectorySymlinks())(
+    "rejects a dangling output symlink even though existsSync reports false",
+    async () => {
+      const workspace = createTempWorkspace("dangling-output-symlink");
+      writeTinySpec(workspace);
+
+      const missingTarget = path.join(workspace, "missing-target");
+      const outputLink = path.join(workspace, "generated", "output");
+      fs.mkdirSync(path.dirname(outputLink), { recursive: true });
+      fs.symlinkSync(missingTarget, outputLink, directorySymlinkType);
+      expect(fs.existsSync(outputLink)).toBe(false);
+
+      const exit = await runGenerateExit(workspace, "generated/output", false);
+
+      expectUnsafeCleanTargetFailure(exit, "symbolic-link");
+      expect(fs.lstatSync(outputLink).isSymbolicLink()).toBe(true);
+    }
+  );
+
+  test.skipIf(!canCreateDirectorySymlinks())(
+    "revalidates a swapped output root under lock before the no-clean orphan sweep",
+    async () => {
+      const workspace = createTempWorkspace("output-root-swap");
+      const externalOutputDirectory = createTempWorkspace(
+        "output-root-swap-target"
+      );
+      writeTinySpec(workspace);
+
+      const params = {
+        inputFile: "spec/index.ts",
+        outputDir: "generated/output",
+        config: {
+          input: "spec/index.ts",
+          output: "generated/output",
+          format: false,
+          clean: false,
+        },
+        currentWorkingDirectory: workspace,
+      };
+      const plan = await effectRuntime.runPromise(
+        prepareGeneration(resolveGenerationPaths(params))
+      );
+
+      fs.rmSync(plan.outputDir, { recursive: true });
+      const orphanDir = path.join(
+        externalOutputDirectory,
+        ".typeweaver-ABC123"
+      );
+      const sentinel = path.join(orphanDir, "keep.txt");
+      fs.mkdirSync(orphanDir);
+      fs.writeFileSync(sentinel, "must survive");
+      fs.symlinkSync(
+        externalOutputDirectory,
+        plan.outputDir,
+        directorySymlinkType
+      );
+
+      const exit = await effectRuntime.runPromiseExit(
+        withGenerationLock(plan, Effect.void)
+      );
+
+      const failure = expectUnsafeCleanTargetFailure(exit, "symbolic-link");
+      expect(failure.message).toContain("Output preparation");
+      expect(failure.message).toContain("orphan-tempdir cleanup");
+      expect(fs.readFileSync(sentinel, "utf8")).toBe("must survive");
+    }
+  );
 });

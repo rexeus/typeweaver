@@ -17,7 +17,7 @@ import {
 import type { CleanTargetFs } from "./cleanTargetGuard.js";
 import type { PlatformError } from "@effect/platform/Error";
 
-const isExpectedNodeSystemError = (error: unknown): boolean => {
+const isExpectedNodeSystemError = (error: unknown): error is Error => {
   const code = errnoCode(error);
   if (code === undefined || !(error instanceof Error)) {
     return false;
@@ -175,10 +175,61 @@ export type OutputLock = {
   readonly ownerToken: string;
 };
 
+/**
+ * A long-lived runtime can survive a transient release failure while the
+ * on-disk lock still names its live PID. Remember only the exact ownership
+ * token whose finalizer release failed so a later acquisition in this process
+ * can distinguish that abandoned lock from a genuinely active concurrent run.
+ */
+const failedOutputLockReleases = new Map<string, string>();
+
+const outputLockReleaseKey = (lockPath: string): string =>
+  path.resolve(lockPath);
+
+const rememberFailedOutputLockRelease = (lock: OutputLock): void => {
+  failedOutputLockReleases.set(
+    outputLockReleaseKey(lock.path),
+    lock.ownerToken
+  );
+};
+
+const forgetFailedOutputLockRelease = (lock: OutputLock): void => {
+  const key = outputLockReleaseKey(lock.path);
+  if (failedOutputLockReleases.get(key) === lock.ownerToken) {
+    failedOutputLockReleases.delete(key);
+  }
+};
+
+const forgetFailedOutputLockReleaseAt = (lockPath: string): void => {
+  failedOutputLockReleases.delete(outputLockReleaseKey(lockPath));
+};
+
+const isFailedOutputLockRelease = (
+  lockPath: string,
+  holder: LockInfo
+): boolean =>
+  holder.pid === process.pid &&
+  holder.ownerToken !== undefined &&
+  failedOutputLockReleases.get(outputLockReleaseKey(lockPath)) ===
+    holder.ownerToken;
+
+const isActiveOutputLock = (lockPath: string, holder: LockInfo): boolean =>
+  !isFailedOutputLockRelease(lockPath, holder) && isProcessAlive(holder.pid);
+
+type OutputLockDetachStatus =
+  | { readonly _tag: "Detached"; readonly fencePath: string }
+  | { readonly _tag: "AlreadyAbsent" }
+  | { readonly _tag: "OwnershipChanged" };
+
 type OutputLockReleaseStatus =
   | { readonly _tag: "Released" }
   | { readonly _tag: "AlreadyAbsent" }
-  | { readonly _tag: "OwnershipChanged" };
+  | { readonly _tag: "OwnershipChanged" }
+  | {
+      readonly _tag: "FenceCleanupFailed";
+      readonly fencePath: string;
+      readonly cause: Error;
+    };
 
 type OutputLockAcquisitionHooks = {
   readonly onLockDirectoryCreated: (lockDir: string) => void;
@@ -430,6 +481,7 @@ export const acquireOutputLockWith = (
 
       const acquired = tryAcquireNewOutputLock(params, hooks);
       if (acquired !== undefined) {
+        forgetFailedOutputLockReleaseAt(lockDir);
         return acquired;
       }
 
@@ -440,7 +492,7 @@ export const acquireOutputLockWith = (
           holder: { _tag: "Unknown" },
         });
       }
-      if (isProcessAlive(holder.pid)) {
+      if (isActiveOutputLock(lockDir, holder)) {
         throw new ConcurrentGenerationError({
           outputDir: params.outputDir,
           holder: {
@@ -453,6 +505,9 @@ export const acquireOutputLockWith = (
 
       if (!moveStaleLockToFence(lockDir, holder, hooks)) {
         const reHolder = readLockInfo(lockDir);
+        if (reHolder?.ownerToken !== holder.ownerToken) {
+          forgetFailedOutputLockReleaseAt(lockDir);
+        }
         throw new ConcurrentGenerationError({
           outputDir: params.outputDir,
           holder:
@@ -465,6 +520,7 @@ export const acquireOutputLockWith = (
                 },
         });
       }
+      forgetFailedOutputLockReleaseAt(lockDir);
 
       const reclaimed = tryAcquireNewOutputLock(params, hooks);
       if (reclaimed !== undefined) {
@@ -505,30 +561,88 @@ export const acquireOutputLock = (params: {
 }): Effect.Effect<OutputLock, ConcurrentGenerationError | OutputLockError> =>
   acquireOutputLockWith(params, NO_OUTPUT_LOCK_HOOKS);
 
+const detachOutputLock = (lock: OutputLock): OutputLockDetachStatus => {
+  if (fs.lstatSync(lock.path, { throwIfNoEntry: false }) === undefined) {
+    return { _tag: "AlreadyAbsent" };
+  }
+
+  const holder = readLockInfo(lock.path);
+  if (holder?.ownerToken !== lock.ownerToken) {
+    return { _tag: "OwnershipChanged" };
+  }
+
+  const fencePath = lockFencePath(lock.path, holder);
+  fs.renameSync(lock.path, fencePath);
+
+  const fenced = readLockInfo(fencePath);
+  if (fenced !== undefined && sameLockInfo(fenced, holder)) {
+    return { _tag: "Detached", fencePath };
+  }
+
+  // A replacement raced with the detach. Restore it when the canonical lock
+  // name is still free and never remove a fence whose ownership is uncertain.
+  if (!fs.existsSync(lock.path)) {
+    fs.renameSync(fencePath, lock.path);
+  }
+  return { _tag: "OwnershipChanged" };
+};
+
+const removeDetachedOutputLock = (
+  fencePath: string
+): OutputLockReleaseStatus => {
+  try {
+    fs.rmSync(fencePath, { recursive: true, force: true });
+    return { _tag: "Released" };
+  } catch (cause) {
+    if (isExpectedNodeSystemError(cause)) {
+      return { _tag: "FenceCleanupFailed", fencePath, cause };
+    }
+    throw cause;
+  }
+};
+
+const releaseOutputLockSync = (lock: OutputLock): OutputLockReleaseStatus => {
+  const detached = detachOutputLock(lock);
+  return detached._tag === "Detached"
+    ? removeDetachedOutputLock(detached.fencePath)
+    : detached;
+};
+
+const logOutputLockReleaseStatus = (
+  lock: OutputLock,
+  status: OutputLockReleaseStatus
+): Effect.Effect<void> => {
+  switch (status._tag) {
+    case "OwnershipChanged":
+      return Effect.logWarning(
+        `Skipped release of output lock at '${lock.path}' because its ownership changed.`
+      );
+    case "FenceCleanupFailed":
+      return Effect.logWarning(
+        `Detached output lock at '${lock.path}', but failed to remove fence '${status.fencePath}': ${status.cause.message}`
+      );
+    case "AlreadyAbsent":
+    case "Released":
+      return Effect.void;
+  }
+};
+
 /**
  * Release the lock created by `acquireOutputLock`. Idempotent — a missing
  * lock directory (e.g. removed by a clean step run during the lifetime of
  * the lock) is a no-op rather than a failure.
  *
- * Release removes the directory only when its published token still
- * matches the acquired handle. This strict operation retains expected
- * filesystem failures as `OutputLockError`.
+ * Release first atomically detaches the canonical directory into its
+ * token-bound fence, then removes that fence best-effort. A cleanup failure
+ * cannot leave the live PID blocking the canonical lock path; detach failures
+ * remain typed `OutputLockError`s so the finalizer can remember the exact
+ * abandoned token for a later retry.
  */
 export const releaseOutputLockStrict = (
   lock: OutputLock
 ): Effect.Effect<void, OutputLockError> =>
   Effect.try({
-    try: () => {
-      if (!fs.existsSync(lock.path)) {
-        return { _tag: "AlreadyAbsent" } as const;
-      }
-      const holder = readLockInfo(lock.path);
-      if (holder?.ownerToken !== lock.ownerToken) {
-        return { _tag: "OwnershipChanged" } as const;
-      }
-      fs.rmSync(lock.path, { recursive: true, force: true });
-      return { _tag: "Released" } as const;
-    },
+    try: () => releaseOutputLockSync(lock),
     catch: cause => {
       if (isExpectedNodeSystemError(cause)) {
         return new OutputLockError({
@@ -540,15 +654,7 @@ export const releaseOutputLockStrict = (
       }
       throw cause;
     },
-  }).pipe(
-    Effect.flatMap((status: OutputLockReleaseStatus) =>
-      status._tag === "OwnershipChanged"
-        ? Effect.logWarning(
-            `Skipped release of output lock at '${lock.path}' because its ownership changed.`
-          )
-        : Effect.void
-    )
-  );
+  }).pipe(Effect.flatMap(status => logOutputLockReleaseStatus(lock, status)));
 
 /**
  * Finalizer-safe release policy. Generator cleanup cannot add a typed error
@@ -557,9 +663,20 @@ export const releaseOutputLockStrict = (
  */
 export const releaseOutputLock = (lock: OutputLock): Effect.Effect<void> =>
   releaseOutputLockStrict(lock).pipe(
-    Effect.catchAll(failure =>
-      Effect.logWarning(
-        `Failed to release output lock at '${lock.path}': ${failure.message}`
+    Effect.tap(() =>
+      Effect.sync(() => {
+        forgetFailedOutputLockRelease(lock);
+      })
+    ),
+    Effect.catchTag("OutputLockError", failure =>
+      Effect.sync(() => {
+        rememberFailedOutputLockRelease(lock);
+      }).pipe(
+        Effect.zipRight(
+          Effect.logWarning(
+            `Failed to release output lock at '${lock.path}': ${failure.message}`
+          )
+        )
       )
     )
   );

@@ -106,6 +106,15 @@ new UnsafeCleanTargetError({
   },
 });
 new UnsafeCleanTargetError({
+  outputDir: "/workspace/generated",
+  details: {
+    reason: "symbolic-link",
+    resolvedOutputDir: "/workspace/generated",
+    canonicalOutputDir: "/external/generated",
+    currentWorkingDirectory: "/workspace",
+  },
+});
+new UnsafeCleanTargetError({
   outputDir: "/other-workspace",
   details: {
     reason: "target-carries-workspace-marker",
@@ -161,6 +170,15 @@ new UnsafeCleanTargetError({
   details: {
     reason: "ancestor-of-current-working-directory",
     resolvedOutputDir: "/workspace/packages",
+  },
+});
+new UnsafeCleanTargetError({
+  outputDir: "/workspace/generated",
+  // @ts-expect-error symbolic-link requires canonicalOutputDir.
+  details: {
+    reason: "symbolic-link",
+    resolvedOutputDir: "/workspace/generated",
+    currentWorkingDirectory: "/workspace",
   },
 });
 new UnsafeCleanTargetError({

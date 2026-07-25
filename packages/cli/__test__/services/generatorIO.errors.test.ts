@@ -60,6 +60,7 @@ describe("generator filesystem errors", () => {
     const cause = expectedSystemError("EACCES");
     const fileSystem: CleanTargetFs = {
       exists: () => true,
+      isSymbolicLink: () => false,
       readFileString: () => "{}",
       realPath: () => {
         throw cause;
@@ -87,6 +88,7 @@ describe("generator filesystem errors", () => {
     const programmingError = new Error("broken fake");
     const fileSystem: CleanTargetFs = {
       exists: () => true,
+      isSymbolicLink: () => false,
       readFileString: () => "{}",
       realPath: () => {
         throw programmingError;
@@ -139,6 +141,38 @@ describe("generator filesystem errors", () => {
       expect(Array.from(Cause.failures(exit.cause))).toEqual([]);
       expect(Array.from(Cause.defects(exit.cause))).toEqual([programmingError]);
     }
+  });
+});
+
+describe("generator clean-target symlink inspection errors", () => {
+  test("reports output-symlink inspection failures without defects", () => {
+    const outputDir = "/workspace/generated";
+    const cause = expectedSystemError("EACCES");
+    const knownPaths = new Set(["/workspace", outputDir]);
+    const fileSystem: CleanTargetFs = {
+      exists: probePath => knownPaths.has(probePath),
+      isSymbolicLink: () => {
+        throw cause;
+      },
+      readFileString: () => "{}",
+      realPath: probePath => probePath,
+    };
+
+    const exit = Effect.runSyncExit(
+      assertSafeCleanTargetEffectWith(outputDir, "/workspace", fileSystem)
+    );
+    const failure = expectTypedFailureWithoutDefects(
+      exit,
+      "CleanTargetInspectionError"
+    );
+
+    expect(failure).toEqual(
+      expect.objectContaining({
+        outputDir,
+        cause,
+        _tag: "CleanTargetInspectionError",
+      })
+    );
   });
 });
 
@@ -226,7 +260,7 @@ describe("generator output-lock release errors", () => {
     );
   });
 
-  test("reports strict lock release permission failures without defects", () => {
+  test("reports strict lock detach permission failures without defects", () => {
     const outputDir = createTempDir();
     const lockPath = path.join(outputDir, ".typeweaver-lock");
     const lock: OutputLock = { path: lockPath, ownerToken: "owned" };
@@ -241,7 +275,7 @@ describe("generator output-lock release errors", () => {
       })
     );
     const cause = expectedSystemError("EPERM");
-    vi.spyOn(fs, "rmSync").mockImplementationOnce(() => {
+    vi.spyOn(fs, "renameSync").mockImplementationOnce(() => {
       throw cause;
     });
 

@@ -9,12 +9,16 @@ import { UnsafeCleanTargetError } from "../errors/UnsafeCleanTargetError.js";
  */
 export type CleanTargetFs = {
   readonly exists: (probePath: string) => boolean;
+  readonly isSymbolicLink: (probePath: string) => boolean;
   readonly readFileString: (probePath: string) => string;
   readonly realPath: (probePath: string) => string;
 };
 
 const defaultCleanTargetFs: CleanTargetFs = {
   exists: probePath => fs.existsSync(probePath),
+  isSymbolicLink: probePath =>
+    fs.lstatSync(probePath, { throwIfNoEntry: false })?.isSymbolicLink() ??
+    false,
   readFileString: probePath => fs.readFileSync(probePath, "utf8"),
   realPath: probePath => fs.realpathSync.native(probePath),
 };
@@ -266,6 +270,21 @@ const assertNotAncestorOfWorkingDirectory = (
   });
 };
 
+const assertTargetIsNotSymbolicLink = (context: CleanTargetContext): void => {
+  if (!context.fileSystem.isSymbolicLink(context.resolvedOutputDir)) {
+    return;
+  }
+  throw new UnsafeCleanTargetError({
+    outputDir: context.outputDir,
+    details: {
+      reason: "symbolic-link",
+      resolvedOutputDir: context.resolvedOutputDir,
+      canonicalOutputDir: context.canonicalOutputDir,
+      currentWorkingDirectory: context.resolvedWorkingDirectory,
+    },
+  });
+};
+
 const assertDoesNotContainInputFile = (
   context: CleanTargetContext,
   inputFile: string | undefined
@@ -273,11 +292,23 @@ const assertDoesNotContainInputFile = (
   if (inputFile === undefined) {
     return;
   }
+  const resolvedInputFile = path.resolve(
+    context.resolvedWorkingDirectory,
+    inputFile
+  );
   const canonicalInputFile = canonicalizePathForContainment(
-    path.resolve(context.resolvedWorkingDirectory, inputFile),
+    resolvedInputFile,
     context.fileSystem
   );
-  if (!isSameOrDescendantOf(canonicalInputFile, context.canonicalOutputDir)) {
+  let containedInputFile: string | undefined;
+  if (isSameOrDescendantOf(resolvedInputFile, context.resolvedOutputDir)) {
+    containedInputFile = resolvedInputFile;
+  } else if (
+    isSameOrDescendantOf(canonicalInputFile, context.canonicalOutputDir)
+  ) {
+    containedInputFile = canonicalInputFile;
+  }
+  if (containedInputFile === undefined) {
     return;
   }
   throw new UnsafeCleanTargetError({
@@ -286,7 +317,7 @@ const assertDoesNotContainInputFile = (
       reason: "contains-input-file",
       resolvedOutputDir: context.resolvedOutputDir,
       currentWorkingDirectory: context.resolvedWorkingDirectory,
-      inputFile: canonicalInputFile,
+      inputFile: containedInputFile,
     },
   });
 };
@@ -323,6 +354,7 @@ const assertTargetHasNoWorkspaceMarker = (
  *     `nx.json`, `turbo.json`, `rush.json`, or a `package.json` declaring
  *     workspaces)
  *   - any ancestor of the current working directory within the workspace
+ *   - an output path that is itself a symbolic link, including dangling links
  *
  * Symlinks are resolved before comparison so a symlinked output directory
  * pointing at a protected location is still rejected.
@@ -344,6 +376,7 @@ export const assertSafeCleanTargetWith = (
   const protectedWorkspaceRoots = getProtectedWorkspaceRoots(context);
   assertNotWorkspaceRoot(context, protectedWorkspaceRoots);
   assertNotAncestorOfWorkingDirectory(context, protectedWorkspaceRoots);
+  assertTargetIsNotSymbolicLink(context);
 
   // Reject when the spec input file lives inside the clean target. Without
   // this check, `typeweaver generate --input spec/index.ts --output spec`

@@ -663,6 +663,7 @@ describe("Generator clean-target input containment", () => {
 
     const fakeFs: CleanTargetFs = {
       exists: probePath => knownPaths.has(probePath),
+      isSymbolicLink: () => false,
       readFileString: () => "{}",
       realPath: probePath => probePath,
     };
