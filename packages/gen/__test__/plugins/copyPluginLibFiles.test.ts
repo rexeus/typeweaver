@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { Effect, Exit } from "effect";
+import { Cause, Effect, Exit, Option } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { UnsafeGeneratedPathError } from "../../src/errors/UnsafeGeneratedPathError.js";
 import { definePluginWithLibCopy } from "../../src/plugins/definePluginWithLibCopy.js";
@@ -27,7 +27,8 @@ const aMinimalGeneratorContext = (outputDir: string): GeneratorContext =>
     normalizedSpec: {
       resources: [],
       responses: [],
-    } as unknown as GeneratorContext["normalizedSpec"],
+      warnings: [],
+    },
     coreDir: "",
     responsesOutputDir: "",
     specOutputDir: "",
@@ -83,21 +84,17 @@ describe("definePluginWithLibCopy path-safety guard", () => {
     // The outer Effect.try wraps the throw as PluginExecutionError; the
     // tagged-error class carries the originating cause so operators see the
     // path-safety reason rather than a bare PluginExecutionError.
-    const failure = exit.cause as unknown as {
-      readonly _tag: string;
-      readonly error?: PluginExecutionError;
-    };
-    const pluginError =
-      failure._tag === "Fail" && failure.error instanceof PluginExecutionError
-        ? failure.error
-        : undefined;
+    const failure = Cause.failureOption(exit.cause);
+    expect(Option.isSome(failure)).toBe(true);
+    if (!Option.isSome(failure)) return;
+    const pluginError = failure.value;
     expect(pluginError).toBeInstanceOf(PluginExecutionError);
-    if (pluginError === undefined) return;
+    if (!(pluginError instanceof PluginExecutionError)) return;
     expect(pluginError.phase).toBe("generate");
     expect(pluginError.pluginName).toBe("../escape");
     expect(pluginError.cause).toBeInstanceOf(UnsafeGeneratedPathError);
-    const innerCause = pluginError.cause as UnsafeGeneratedPathError;
-    expect(innerCause.reason).toBe("parent-traversal");
+    if (!(pluginError.cause instanceof UnsafeGeneratedPathError)) return;
+    expect(pluginError.cause.reason).toBe("parent-traversal");
 
     // Defense-in-depth: nothing was copied outside outputDir.
     const escapedDestination = path.resolve(outputDir, "..", "escape");

@@ -238,7 +238,7 @@ progress log.
   - `rg "runPromise|runSync|ManagedRuntime\\.make" packages/*/src` shows only approved runtime-edge
     occurrences.
 
-- [ ] **13. Weak tests are replaced, not accumulated.**
+- [x] **13. Weak tests are replaced, not accumulated.**
 
   Replace the fixed-case "diamond" property test with a generated graph property or a focused
   example. Remove or strengthen MainLayer tests that only restate type construction. Introduce
@@ -708,6 +708,31 @@ evidence: Gen passed 305/305, CLI passed 340/340, and Hono passed 100/100 tests.
           runSync and only the approved central ManagedRuntime.make edge. Independent Effect,
           Test-Mastery, and TypeScript-Mastery reviews found no remaining K12 blocker.
 next: Criterion 13, replace weak tests instead of accumulating them.
+```
+
+```text
+[iteration 13 | 2026-07-25]
+criterion: 13. Weak tests are replaced, not accumulated.
+before: A fixed diamond graph was wrapped in a property whose generated subarray was ignored, four
+        MainLayer tests exercised only Effect primitives or Layer.isLayer, and several PathSafety
+        properties could return early or accept an unspecified failure without proving their named
+        invariant. Small plugin/spec fixtures were duplicated, and four migration-scope tests used
+        avoidable double casts.
+change: Removed the fake diamond property while retaining an exact focused dependency/tie-break
+        example. Replaced the MainLayer smoke tests with one behavior-based composition test for all
+        four gen services. Rebuilt traversal, safe-relative, Windows-absolute, and symlink
+        properties so every generated value drives setup and an exact typed assertion; removed
+        tautological duplicates. Shared only three narrow plugin/spec factories, kept
+        contract-specific context fixtures local, and replaced the four double casts with complete
+        fixtures plus Cause/instanceof narrowing.
+evidence: Gen passed 298/298 and CLI passed 340/340 tests; the lower Gen count reflects seven weak
+          or duplicate tests removed and replaced by stronger contracts. Three transient mutations
+          were killed: reversed registry insertion failed 6 tests, forward finalization failed 8,
+          and removal of the raw parent-traversal guard failed the generated path property. No
+          production mutation remained. Root typecheck/build completed 23/23 tasks; Oxlint, Oxfmt,
+          no-new-unsafe-test-pattern scan, and git diff check are green. Independent Effect,
+          Test-Mastery, and TypeScript-Mastery reviews found no remaining K13 blocker.
+next: Criterion 14, make Effect tooling and reference sources version-correct.
 ```
 
 ## Stop conditions

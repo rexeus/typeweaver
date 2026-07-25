@@ -2,6 +2,7 @@ import { Cause, Effect, Exit, Layer, Logger } from "effect";
 import { describe, expect, test } from "vitest";
 import { PluginDependencyError } from "../../src/plugins/errors/index.js";
 import { PluginRegistry } from "../../src/services/PluginRegistry.js";
+import { aPluginNamed } from "../helpers/pluginFixtures.js";
 import type { PluginConfig } from "../../src/plugins/contextTypes.js";
 import type { Plugin } from "../../src/plugins/Plugin.js";
 import type { PluginRegistryInstance } from "../../src/services/PluginRegistry.js";
@@ -21,11 +22,6 @@ const capturingLoggerLayer = (sink: CapturedLog[]): Layer.Layer<never> =>
       sink.push({ level: logLevel.label, message: text });
     })
   );
-
-const aPluginNamed = (name: string, depends?: readonly string[]): Plugin => ({
-  name,
-  ...(depends !== undefined ? { depends } : {}),
-});
 
 const silentLoggerLayer = Logger.replace(
   Logger.defaultLogger,
@@ -113,7 +109,7 @@ describe("PluginRegistry", () => {
     ]);
   });
 
-  test("orders plugin dependencies before their dependents", () => {
+  test("orders a diamond DAG dependencies-first with an alphabetical tie-break", () => {
     const registrations = runRegistry(registry =>
       Effect.gen(function* () {
         yield* registry.register(aPluginNamed("clients", ["types"]));

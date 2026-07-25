@@ -11,13 +11,8 @@ import { Cause, Deferred, Effect, Exit, Fiber, Option } from "effect";
 import { describe, expect } from "vitest";
 import { IndexFileGenerator } from "../../../src/services/IndexFileGenerator.js";
 import { runPluginLifecycle } from "../../../src/services/internal/pluginLifecycle.js";
+import { emptyNormalizedSpec } from "../../helpers/generatorFixtures.js";
 import type { GenerationPlan } from "../../../src/services/internal/generatorPreflight.js";
-
-const emptySpec = (): NormalizedSpec => ({
-  resources: [],
-  responses: [],
-  warnings: [],
-});
 
 const plan: GenerationPlan = {
   params: {
@@ -124,8 +119,8 @@ describe("runPluginLifecycle", () => {
     () =>
       Effect.gen(function* () {
         const events: string[] = [];
-        const initialSpec = emptySpec();
-        const transformedSpec: NormalizedSpec = emptySpec();
+        const initialSpec = emptyNormalizedSpec();
+        const transformedSpec: NormalizedSpec = emptyNormalizedSpec();
 
         const alpha = {
           name: "alpha",
@@ -288,7 +283,7 @@ describe("runPluginLifecycle", () => {
             {
               plan,
               initial: plugins.map(registration),
-              normalizedSpec: emptySpec(),
+              normalizedSpec: emptyNormalizedSpec(),
               pluginContext,
             },
             { contextBuilder, indexFileGenerator }

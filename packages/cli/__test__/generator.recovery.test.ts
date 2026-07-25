@@ -7,11 +7,7 @@ import {
   PluginExecutionError,
   PluginRegistry,
 } from "@rexeus/typeweaver-gen";
-import type {
-  GeneratorContext,
-  NormalizedSpec,
-  Plugin,
-} from "@rexeus/typeweaver-gen";
+import type { GeneratorContext, Plugin } from "@rexeus/typeweaver-gen";
 import { NodeContext } from "@effect/platform-node";
 import { assert, describe, it } from "@effect/vitest";
 import { Cause, Deferred, Effect, Exit, Fiber, Layer, Ref } from "effect";
@@ -22,6 +18,7 @@ import {
   PluginLoader,
   SpecLoader,
 } from "../src/services/index.js";
+import { emptyNormalizedSpec } from "./helpers/generatorFixtures.js";
 
 type RecoveryPhase =
   | "bundling"
@@ -52,12 +49,6 @@ const recoveryCases: readonly RecoveryCase[] = [
 ];
 
 const emptyDefinition = defineSpec({ resources: {} });
-
-const emptyNormalizedSpec: NormalizedSpec = {
-  resources: [],
-  responses: [],
-  warnings: [],
-};
 
 const createWorkspace = (): string => {
   const workspace = fs.mkdtempSync(
@@ -223,7 +214,7 @@ const makeRecoveryLayer = (params: {
           Effect.zipRight(failFirstRunAt("bundling")),
           Effect.as({
             definition: emptyDefinition,
-            normalizedSpec: emptyNormalizedSpec,
+            normalizedSpec: emptyNormalizedSpec(),
           })
         ),
     })

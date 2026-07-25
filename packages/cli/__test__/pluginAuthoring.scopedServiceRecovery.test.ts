@@ -8,7 +8,7 @@ import {
   PluginRegistry,
   definePlugin,
 } from "@rexeus/typeweaver-gen";
-import type { NormalizedSpec, Plugin } from "@rexeus/typeweaver-gen";
+import type { Plugin } from "@rexeus/typeweaver-gen";
 import { NodeContext } from "@effect/platform-node";
 import { assert, describe, it } from "@effect/vitest";
 import {
@@ -28,6 +28,7 @@ import {
   PluginLoader,
   SpecLoader,
 } from "../src/services/index.js";
+import { emptyNormalizedSpec } from "./helpers/generatorFixtures.js";
 
 type AdverseScenario =
   | "layer-build-failure"
@@ -56,12 +57,6 @@ const ProbeResource = Context.GenericTag<ResourceProbe>(
 );
 
 const emptyDefinition = defineSpec({ resources: {} });
-
-const emptyNormalizedSpec: NormalizedSpec = {
-  resources: [],
-  responses: [],
-  warnings: [],
-};
 
 const createWorkspace = (): string =>
   fs.mkdtempSync(path.join(os.tmpdir(), "typeweaver-scoped-plugin-"));
@@ -236,7 +231,7 @@ const makeGeneratorLayer = (pluginFactory: () => Plugin) => {
       load: () =>
         Effect.succeed({
           definition: emptyDefinition,
-          normalizedSpec: emptyNormalizedSpec,
+          normalizedSpec: emptyNormalizedSpec(),
         }),
     })
   );

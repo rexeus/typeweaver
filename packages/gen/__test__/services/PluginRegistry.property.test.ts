@@ -10,14 +10,10 @@ import {
 import { describe, expect, test } from "vitest";
 import { PluginDependencyError } from "../../src/plugins/errors/index.js";
 import { PluginRegistry } from "../../src/services/PluginRegistry.js";
+import { aPluginNamed } from "../helpers/pluginFixtures.js";
 import type { Plugin } from "../../src/plugins/Plugin.js";
 import type { PluginRegistryInstance } from "../../src/services/PluginRegistry.js";
 import type { Arbitrary } from "fast-check";
-
-const aPluginNamed = (name: string, depends?: readonly string[]): Plugin => ({
-  name,
-  ...(depends !== undefined ? { depends } : {}),
-});
 
 const silentLoggerLayer = Logger.replace(
   Logger.defaultLogger,
@@ -211,47 +207,6 @@ describe("PluginRegistry (properties)", () => {
           }
         }
       )
-    );
-  });
-
-  test("toposort of a diamond DAG places the shared dependency first regardless of registration order", () => {
-    // Fixed diamond: a -> b, c; b -> d; c -> d.
-    // Expected toposort with alphabetical tie-break: d, b, c, a.
-    const diamond: readonly Plugin[] = [
-      aPluginNamed("a", ["b", "c"]),
-      aPluginNamed("b", ["d"]),
-      aPluginNamed("c", ["d"]),
-      aPluginNamed("d"),
-    ];
-
-    assert(
-      property(subarray(["a", "b", "c", "d"]), () => {
-        // Re-register the same plugin set in two extreme orders (forward and
-        // reversed) and assert the toposort output is invariant.
-        const forward = [...diamond];
-        const reversed = [...diamond].reverse();
-
-        const runOrdering = (plugins: readonly Plugin[]): readonly string[] => {
-          const exit = runWithRegistry(registry =>
-            Effect.gen(function* () {
-              for (const plugin of plugins) {
-                yield* registry.register(plugin);
-              }
-              return yield* registry.getAll;
-            })
-          );
-          if (Exit.isFailure(exit)) {
-            throw new Error(
-              `Expected success, got: ${Cause.pretty(exit.cause)}`
-            );
-          }
-          return exit.value.map(registration => registration.name);
-        };
-
-        const expected = ["d", "b", "c", "a"];
-        expect(runOrdering(forward)).toEqual(expected);
-        expect(runOrdering(reversed)).toEqual(expected);
-      })
     );
   });
 

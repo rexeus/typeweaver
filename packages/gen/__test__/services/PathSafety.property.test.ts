@@ -1,5 +1,5 @@
 import path from "node:path";
-import { Effect } from "effect";
+import { Cause, Effect, Exit, Option } from "effect";
 import {
   array,
   assert,
@@ -14,207 +14,119 @@ import { describe, expect, test } from "vitest";
 import { UnsafeGeneratedPathError } from "../../src/errors/UnsafeGeneratedPathError.js";
 import { resolveSafeGeneratedFilePath } from "../../src/helpers/pathSafety.js";
 import { PathSafety } from "../../src/services/PathSafety.js";
+import type { GeneratedPathProbeError } from "../../src/errors/GeneratedPathProbeError.js";
 import type { PathSafetyFs } from "../../src/helpers/pathSafety.js";
 
 const runValidate = (
   outputDir: string,
   requestedPath: string
-):
-  | { readonly ok: true; readonly fullPath: string }
-  | { readonly ok: false } => {
+): Exit.Exit<
+  {
+    readonly fullPath: string;
+    readonly generatedPath: string;
+  },
+  GeneratedPathProbeError | UnsafeGeneratedPathError
+> => {
   const program = PathSafety.validateGeneratedPath({
     outputDir,
     requestedPath,
   });
-  const exit = Effect.runSyncExit(
-    program.pipe(Effect.provide(PathSafety.Default))
-  );
-  if (exit._tag === "Success") {
-    return { ok: true, fullPath: exit.value.fullPath };
-  }
-  return { ok: false };
+  return Effect.runSyncExit(program.pipe(Effect.provide(PathSafety.Default)));
 };
 
-/**
- * Path segment arbitrary that exercises traversal, current-directory, and
- * normal name forms. Empty strings are filtered out because they map to
- * the join trivially and add no signal.
- */
-const segmentArb = oneof(
-  constant(".."),
-  constant("."),
-  stringMatching(/^[a-zA-Z0-9_-]{1,8}$/)
-);
+const expectUnsafeFailure = (
+  exit: Exit.Exit<unknown, GeneratedPathProbeError | UnsafeGeneratedPathError>,
+  expected: {
+    readonly requestedPath: string;
+    readonly reason: UnsafeGeneratedPathError["reason"];
+  }
+): void => {
+  expect(Exit.isFailure(exit)).toBe(true);
+  if (!Exit.isFailure(exit)) return;
 
-const traversalPathArb = array(segmentArb, { minLength: 1, maxLength: 6 })
-  .map(segments => segments.join("/"))
-  .filter(p => p.length > 0);
+  const failure = Cause.failureOption(exit.cause);
+  expect(Option.isSome(failure)).toBe(true);
+  if (!Option.isSome(failure)) return;
 
-/**
- * Generates a safe relative path (no `..`, no leading `/`, no trailing
- * separator, and not just `.`). Used to verify the normalization-stability
- * property.
- */
-const safeRelativePathArb = array(stringMatching(/^[a-zA-Z0-9_-]{1,8}$/), {
+  expect(failure.value).toBeInstanceOf(UnsafeGeneratedPathError);
+  if (!(failure.value instanceof UnsafeGeneratedPathError)) return;
+
+  expect(failure.value).toMatchObject(expected);
+};
+
+const safeSegmentArb = stringMatching(/^[a-zA-Z0-9_-]{1,8}$/);
+
+const safeRelativePathArb = array(safeSegmentArb, {
   minLength: 1,
   maxLength: 5,
-})
-  .map(segments => segments.join("/"))
-  .filter(p => p.length > 0 && p !== ".");
+}).map(segments => segments.join("/"));
+
+const traversalPathArb = tuple(
+  array(safeSegmentArb, { maxLength: 3 }),
+  array(safeSegmentArb, { maxLength: 3 })
+).map(([before, after]) => [...before, "..", ...after].join("/"));
 
 describe("PathSafety (properties)", () => {
-  test("any path containing '..' segments is either rejected or resolves strictly inside outputDir", () => {
+  test("every path containing a parent segment fails with its exact typed reason", () => {
     assert(
       property(traversalPathArb, requested => {
-        const outputDir = "/safe/output";
-        const result = runValidate(outputDir, requested);
+        const exit = runValidate("/safe/output", requested);
 
-        if (!result.ok) {
-          return;
-        }
-
-        const outputRoot = path.resolve(outputDir);
-        const inside =
-          result.fullPath !== outputRoot &&
-          result.fullPath.startsWith(`${outputRoot}${path.sep}`);
-        expect(inside).toBe(true);
+        expectUnsafeFailure(exit, {
+          requestedPath: requested,
+          reason: "parent-traversal",
+        });
       })
     );
   });
 
-  test("validating a safe relative path twice yields the same fullPath", () => {
+  test("every safe relative path preserves its generated path and resolves exactly inside outputDir", () => {
     assert(
       property(safeRelativePathArb, requested => {
         const outputDir = "/safe/output";
-        const first = runValidate(outputDir, requested);
-        const second = runValidate(outputDir, requested);
+        const exit = runValidate(outputDir, requested);
 
-        if (!first.ok || !second.ok) {
-          // Skip cases the validator legitimately rejects (e.g. shapes the
-          // arbitrary occasionally produces that violate other rules).
-          return;
-        }
+        expect(Exit.isSuccess(exit)).toBe(true);
+        if (!Exit.isSuccess(exit)) return;
 
-        expect(second.fullPath).toBe(first.fullPath);
+        expect(exit.value).toEqual({
+          generatedPath: requested,
+          fullPath: path.resolve(outputDir, requested),
+        });
       })
     );
-  });
-
-  test("absolute paths are always rejected with UnsafeGeneratedPathError", () => {
-    assert(
-      property(
-        array(stringMatching(/^[a-zA-Z0-9_-]{1,8}$/), {
-          minLength: 1,
-          maxLength: 4,
-        }).map(segments => `/${segments.join("/")}`),
-        requested => {
-          const program = PathSafety.validateGeneratedPath({
-            outputDir: "/safe/output",
-            requestedPath: requested,
-          });
-          const exit = Effect.runSyncExit(
-            program.pipe(Effect.provide(PathSafety.Default))
-          );
-
-          expect(exit._tag).toBe("Failure");
-          if (exit._tag === "Failure") {
-            const failure = exit.cause;
-            const message = String(failure);
-            expect(message).toMatch(/UnsafeGeneratedPathError|Unsafe/);
-          }
-        }
-      )
-    );
-  });
-
-  test("outputDir with a trailing slash produces the same fullPath as without", () => {
-    assert(
-      property(safeRelativePathArb, requested => {
-        const withTrailing = runValidate("/safe/output/", requested);
-        const withoutTrailing = runValidate("/safe/output", requested);
-
-        // If one rejects, both must reject for the same input — the trailing
-        // slash on outputDir is not a per-input policy concern.
-        if (!withTrailing.ok || !withoutTrailing.ok) {
-          return;
-        }
-
-        expect(withTrailing.fullPath).toBe(withoutTrailing.fullPath);
-      })
-    );
-  });
-
-  test("the empty string is always rejected with UnsafeGeneratedPathError", () => {
-    const program = PathSafety.validateGeneratedPath({
-      outputDir: "/safe/output",
-      requestedPath: "",
-    });
-    const exit = Effect.runSyncExit(
-      program.pipe(Effect.provide(PathSafety.Default))
-    );
-
-    expect(exit._tag).toBe("Failure");
-    if (exit._tag === "Failure") {
-      const isExpected =
-        exit.cause._tag === "Fail" &&
-        exit.cause.error instanceof UnsafeGeneratedPathError;
-      expect(isExpected).toBe(true);
-    }
   });
 });
 
 /**
- * Windows-flavoured path arbitrary: builds inputs mixing backslashes, drive
- * prefixes (`C:`, `c:`), and UNC roots (`\\server\share`). The guard must
- * reject every such input with `absolute-path` or `parent-traversal` —
- * the two reasons that catch absolute Windows roots before
- * `resolveSafeGeneratedFilePath` reaches the symlink walk.
+ * Every generated input is absolute according to Windows path semantics:
+ * drive-rooted, current-drive-rooted, or UNC-rooted.
  */
-const windowsSegmentArb = oneof(
-  constant("C:"),
-  constant("c:"),
-  constant("\\\\server\\share"),
-  constant("\\"),
-  stringMatching(/^[a-zA-Z0-9_-]{1,4}$/)
-);
-const windowsPathArb = array(windowsSegmentArb, {
+const windowsSegmentArb = stringMatching(/^[a-zA-Z0-9_-]{1,8}$/);
+const windowsPathTailArb = array(windowsSegmentArb, {
   minLength: 1,
   maxLength: 4,
 }).map(segments => segments.join("\\"));
+const windowsAbsolutePathArb = oneof(
+  tuple(constantFrom("C", "c", "Z"), windowsPathTailArb).map(
+    ([drive, tail]) => `${drive}:\\${tail}`
+  ),
+  windowsPathTailArb.map(tail => `\\${tail}`),
+  tuple(windowsSegmentArb, windowsSegmentArb, windowsPathTailArb).map(
+    ([server, share, tail]) => `\\\\${server}\\${share}\\${tail}`
+  )
+);
 
 describe("PathSafety (properties, Windows-flavoured inputs)", () => {
-  test("any Windows-shaped absolute or drive-prefixed path is rejected with absolute-path or parent-traversal", () => {
+  test("every absolute Windows path fails with the exact absolute-path reason", () => {
     assert(
-      property(windowsPathArb, requested => {
-        if (requested.length === 0) return;
-        // The arbitrary occasionally produces a bare relative segment that is
-        // legitimately safe (e.g. "foo"). Skip those — the property is about
-        // Windows-shaped inputs that should be rejected.
-        const looksWindowsAbsolute =
-          /^[a-zA-Z]:/.test(requested) ||
-          requested.startsWith("\\\\") ||
-          requested.startsWith("\\");
-        if (!looksWindowsAbsolute) return;
+      property(windowsAbsolutePathArb, requested => {
+        const exit = runValidate("/safe/output", requested);
 
-        const program = PathSafety.validateGeneratedPath({
-          outputDir: "/safe/output",
+        expectUnsafeFailure(exit, {
           requestedPath: requested,
+          reason: "absolute-path",
         });
-        const exit = Effect.runSyncExit(
-          program.pipe(Effect.provide(PathSafety.Default))
-        );
-
-        expect(exit._tag).toBe("Failure");
-        if (exit._tag !== "Failure") return;
-        if (exit.cause._tag !== "Fail") return;
-        expect(exit.cause.error).toBeInstanceOf(UnsafeGeneratedPathError);
-        const reason = (exit.cause.error as UnsafeGeneratedPathError).reason;
-        // `\\server\share` triggers `parent-traversal` because Node's posix
-        // normalization collapses backslashes and reads the leading
-        // sequence; the drive-prefixed and absolute forms trigger
-        // `absolute-path`. Either reason proves the input was rejected
-        // before any filesystem touch.
-        expect(["absolute-path", "parent-traversal"]).toContain(reason);
       })
     );
   });
@@ -261,18 +173,21 @@ describe("PathSafety (properties, symlink-component branch)", () => {
 
         const requestedPath = segments.join("/");
 
-        let caughtReason: string | undefined;
+        let caught: UnsafeGeneratedPathError | undefined;
         try {
           resolveSafeGeneratedFilePath(outputDir, requestedPath, fakeFs);
         } catch (error) {
           if (error instanceof UnsafeGeneratedPathError) {
-            caughtReason = error.reason;
+            caught = error;
           } else {
             throw error;
           }
         }
 
-        expect(caughtReason).toBe("symlink-component");
+        expect(caught).toMatchObject({
+          requestedPath,
+          reason: "symlink-component",
+        });
       })
     );
   });

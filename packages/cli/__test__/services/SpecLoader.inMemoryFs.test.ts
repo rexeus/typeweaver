@@ -54,7 +54,7 @@ const aMinimalSpec = (): SpecDefinition => {
         ],
       },
     },
-  }) as unknown as SpecDefinition;
+  });
 };
 
 const stubSpecBundlerLayer = (

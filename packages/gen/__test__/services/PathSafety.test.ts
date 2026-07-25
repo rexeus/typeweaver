@@ -266,14 +266,16 @@ describe("PathSafety", () => {
       },
     };
 
-    expect(() =>
-      resolveSafeGeneratedFilePath(outputDir, "domain/entity.ts", fakeFs)
-    ).toThrow(
-      expect.objectContaining({
-        _tag: "UnsafeGeneratedPathError",
-        reason: "symlink-component",
-        requestedPath: "domain/entity.ts",
-      }) as unknown as Error
-    );
+    let caughtError: unknown;
+    try {
+      resolveSafeGeneratedFilePath(outputDir, "domain/entity.ts", fakeFs);
+    } catch (error) {
+      caughtError = error;
+    }
+
+    expect(caughtError).toBeInstanceOf(UnsafeGeneratedPathError);
+    if (!(caughtError instanceof UnsafeGeneratedPathError)) return;
+    expect(caughtError.reason).toBe("symlink-component");
+    expect(caughtError.requestedPath).toBe("domain/entity.ts");
   });
 });

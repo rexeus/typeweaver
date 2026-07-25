@@ -3,6 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+export const aNamedPluginModule = (name: string): Record<string, unknown> => ({
+  [`${name}Plugin`]: { name },
+});
+
 /**
  * Returns the `file://` URL form of an absolute file path. Mirrors the
  * shape that `PluginLoader`'s `toLocalImportSpecifier` produces for

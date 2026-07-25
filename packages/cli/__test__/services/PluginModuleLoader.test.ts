@@ -6,6 +6,7 @@ import { describe, expect, test } from "vitest";
 import { PluginModuleNotFoundError } from "../../src/services/errors/PluginModuleNotFoundError.js";
 import { isPluginConfigError } from "../../src/services/isPluginConfigError.js";
 import { PluginModuleLoader } from "../../src/services/PluginModuleLoader.js";
+import { aNamedPluginModule } from "../helpers/pluginFixtures.js";
 
 /**
  * Builds a `PluginModuleLoader` layer backed by an in-memory map of
@@ -34,10 +35,6 @@ const inMemoryPluginModuleLoader = (
   return Layer.succeed(PluginModuleLoader, service);
 };
 
-const aNamedPluginModule = (): Record<string, unknown> => ({
-  namedPlugin: { name: "named-plugin" },
-});
-
 const runWithModules = async <A, E>(
   modules: ReadonlyMap<string, Record<string, unknown>>,
   effect: Effect.Effect<A, E, PluginModuleLoader>
@@ -52,7 +49,7 @@ const runWithModules = async <A, E>(
 
 describe("PluginModuleLoader", () => {
   test("resolves an in-memory specifier to its module record", async () => {
-    const namedPlugin = aNamedPluginModule();
+    const namedPlugin = aNamedPluginModule("named-plugin");
     const modules = new Map([["my-plugin", namedPlugin]]);
 
     const result = await runWithModules(

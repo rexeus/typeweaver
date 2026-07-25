@@ -22,6 +22,7 @@ import { isPluginConfigError } from "../src/services/isPluginConfigError.js";
 import { TestAssertionError } from "./errors/index.js";
 import {
   aModuleImportFailure,
+  aNamedPluginModule,
   createPluginFixtureWorkspace,
   importPathForFile,
   inMemoryPluginModuleLoader,
@@ -65,10 +66,6 @@ const configWithPlugin = (
 const configWithoutPlugins = (): TypeweaverConfig => ({
   input: "./spec.ts",
   output: "./generated",
-});
-
-const aNamedPluginModule = (name: string): Record<string, unknown> => ({
-  [`${name}Plugin`]: { name },
 });
 
 const aConfigurablePluginModule = (
