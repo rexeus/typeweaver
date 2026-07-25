@@ -507,55 +507,60 @@ describe("SpecLoader wrapper import specifiers", () => {
 });
 
 describe("SpecLoader bundler output contract", () => {
-  test("reports input disappearance between exists and realpath as a typed bundle failure", async () => {
-    const project = createTempProject();
-    const inputFile = writeSpecEntrypoint(
-      project,
-      "spec.ts",
-      "export const spec = { resources: {} };"
-    );
-    const probeFailure = Object.assign(
-      new Error("input disappeared before realpath"),
-      {
-        code: "ENOENT",
-      }
-    );
-    const realpathSync = fs.realpathSync.native;
-    let buildStarted = false;
-
-    const exit = await Effect.runPromiseExit(
-      SpecBundler.bundle(
+  test.skipIf(process.platform === "win32")(
+    "reports input disappearance between exists and realpath as a typed bundle failure",
+    async () => {
+      // Native Windows and UNC inputs intentionally use lexical win32 path
+      // semantics and never enter the POSIX realpath branch exercised here.
+      const project = createTempProject();
+      const inputFile = writeSpecEntrypoint(
+        project,
+        "spec.ts",
+        "export const spec = { resources: {} };"
+      );
+      const probeFailure = Object.assign(
+        new Error("input disappeared before realpath"),
         {
-          inputFile,
-          specOutputDir: project.outputDir,
-        },
-        {
-          build: async () => {
-            buildStarted = true;
-          },
-          realpathSync: filePath => {
-            if (filePath === inputFile) {
-              throw probeFailure;
-            }
-            return realpathSync(filePath);
-          },
+          code: "ENOENT",
         }
-      ).pipe(Effect.provide(SpecBundlerLayer))
-    );
+      );
+      const realpathSync = fs.realpathSync.native;
+      let buildStarted = false;
 
-    expect(buildStarted).toBe(false);
-    expect(Exit.isFailure(exit)).toBe(true);
-    if (!Exit.isFailure(exit)) return;
-    expect(Array.from(Cause.defects(exit.cause))).toEqual([]);
-    expect(Array.from(Cause.failures(exit.cause))).toEqual([
-      expect.objectContaining({
-        inputFile,
-        cause: probeFailure,
-        _tag: "SpecBundleError",
-      }),
-    ]);
-    expect(fs.readdirSync(project.outputDir)).toEqual([]);
-  });
+      const exit = await Effect.runPromiseExit(
+        SpecBundler.bundle(
+          {
+            inputFile,
+            specOutputDir: project.outputDir,
+          },
+          {
+            build: async () => {
+              buildStarted = true;
+            },
+            realpathSync: filePath => {
+              if (filePath === inputFile) {
+                throw probeFailure;
+              }
+              return realpathSync(filePath);
+            },
+          }
+        ).pipe(Effect.provide(SpecBundlerLayer))
+      );
+
+      expect(buildStarted).toBe(false);
+      expect(Exit.isFailure(exit)).toBe(true);
+      if (!Exit.isFailure(exit)) return;
+      expect(Array.from(Cause.defects(exit.cause))).toEqual([]);
+      expect(Array.from(Cause.failures(exit.cause))).toEqual([
+        expect.objectContaining({
+          inputFile,
+          cause: probeFailure,
+          _tag: "SpecBundleError",
+        }),
+      ]);
+      expect(fs.readdirSync(project.outputDir)).toEqual([]);
+    }
+  );
 
   test("rejects successful spec builds that do not create the bundled output", async () => {
     const project = createTempProject();
