@@ -27,14 +27,16 @@ const contract = JSON.parse(
 const rootPackage = JSON.parse(
   readFileSync(path.join(workspaceRoot, "package.json"), "utf8")
 );
+const pnpmCli = process.env.npm_execpath;
+assert(pnpmCli, "run this verification through pnpm");
 const archiveName = ({ name, version }) =>
   `${name.replace(/^@/, "").replaceAll("/", "-")}-${version}.tgz`;
 const readJson = filePath => JSON.parse(readFileSync(filePath, "utf8"));
 const writeJson = (filePath, value) =>
   writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 
-const run = ({ command, args, cwd }) => {
-  const result = spawnSync(command, args, {
+const run = ({ args, cwd }) => {
+  const result = spawnSync(process.execPath, [pnpmCli, ...args], {
     cwd,
     encoding: "utf8",
     env: process.env,
@@ -43,7 +45,7 @@ const run = ({ command, args, cwd }) => {
   if (result.status !== 0) {
     throw new Error(
       [
-        `${command} ${args.join(" ")} failed with exit code ${String(result.status)}`,
+        `pnpm ${args.join(" ")} failed with exit code ${String(result.status)}`,
         result.stdout.trim(),
         result.stderr.trim(),
       ]
@@ -86,12 +88,12 @@ const collectPublishablePackages = () =>
 
 const packWorkspace = ({ archiveRoot, packages }) => {
   run({
-    command: "pnpm",
     args: [
       "-r",
       "--filter",
       "./packages/**",
       "pack",
+      "--config.ignore-scripts=true",
       "--pack-destination",
       archiveRoot,
     ],
@@ -396,7 +398,6 @@ const assertSingleEffectIdentity = ({
 
 const installFixture = fixtureRoot => {
   run({
-    command: "pnpm",
     args: ["install", "--ignore-scripts"],
     cwd: fixtureRoot,
   });
@@ -444,14 +445,12 @@ const verifySupportedConsumer = ({
   assertGeneratorEffectPeerContract(fixtureRoot);
   assertSingleEffectIdentity({ effectVersion, fixtureRoot, packages });
   run({
-    command: "pnpm",
     args: ["exec", "tsc", "--project", "tsconfig.json"],
     cwd: fixtureRoot,
   });
 
   const { configPath, outputRoot } = writeRuntimeConfig(fixtureRoot);
   const output = run({
-    command: "pnpm",
     args: [
       "exec",
       "typeweaver",

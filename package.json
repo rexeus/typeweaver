@@ -19,6 +19,7 @@
     "effect:diagnostics": "node scripts/test-effect-diagnostics.mjs && node scripts/run-effect-diagnostics.mjs",
     "docs:check": "node scripts/test-effect-version-contract.mjs && node scripts/check-effect-version-contract.mjs && node scripts/check-markdown-links.mjs",
     "verify:packed-consumers": "node scripts/test-packed-consumers.mjs",
+    "verify:effect-migration": "node scripts/verify-effect-migration.mjs",
     "publish:dry": "pnpm publish -r --dry-run --no-git-checks",
     "ci:publish": "pnpm publish -r --provenance",
     "prepare:commit": "pnpm run format && pnpm run lint:fix && pnpm run typecheck && pnpm run build && pnpm run test"

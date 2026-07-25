@@ -310,6 +310,9 @@ progress log.
   migration-specific type contracts, unit/integration/process tests, generated-fixture verification,
   and version/reference checks.
 
+  Local implementation and evidence are complete. Final completion remains blocked only on the
+  human-authorized remote CI evidence shared with criterion 16.
+
   Final local evidence:
 
   ```sh
@@ -819,6 +822,36 @@ evidence: actionlint 1.7.12 accepts the workflow. The local Windows-targeted sel
           human-authorized push, so criterion 16 intentionally stays unchecked.
 next: Commit the locally complete Windows implementation, then proceed to criterion 17 while
       retaining the explicit remote-CI completion dependency.
+```
+
+```text
+[iteration 17 | 2026-07-25 | local implementation]
+criterion: 17. One reproducible migration gate proves the final state.
+before: Migration proof was spread across unrelated CI steps. Root `pnpm test` reached the tracked
+        test fixture through Turbo's test:gen dependency, `verify:generated` only inspected Git
+        status and therefore accepted a clean but stale committed fixture, and packed-consumer
+        verification invoked a platform-specific pnpm executable while prepack rebuilt workspace
+        artifacts. No single command proved the complete contract or guarded its own authored
+        worktree non-mutation.
+change: Added a shell-free Node orchestrator that resolves the active pnpm CLI and runs reference,
+        documentation/version, Effect diagnostics, migration type contracts, Gen and public-example
+        typechecks, fresh generated-fixture comparison, every workspace test, and packed-consumer
+        compatibility sequentially. Fixture freshness now generates into an isolated resolvable
+        directory and compares all paths and bytes. Packing uses the active pnpm CLI with lifecycle
+        scripts disabled. The umbrella fingerprints tracked diffs and untracked file contents before
+        and after. Ubuntu CI now calls the umbrella after build/relink and generates only ignored CLI
+        outputs beforehand; covered duplicate steps were removed.
+evidence: `pnpm verify:effect-migration` passes under Node 24 with 0 Effect diagnostic findings,
+          exact CLI/Gen/public-example type contracts, all 2,376 workspace tests including Gen
+          298/298 and CLI 341/341 applicable tests, all 225 committed generated fixture files
+          byte-identical to isolated fresh output, and the packed Effect 3.22 consumer plus duplicate
+          identity rejection. A deliberate stale edit to generated index.ts made verify:generated
+          fail on the exact changed file. The full umbrella reported an identical authored worktree
+          before and after. Actionlint, Oxlint, Oxfmt, and git diff check are green. Independent
+          Effect, Test-Mastery, and TypeScript-Mastery reviews found no local K17 blocker. Remote
+          Ubuntu and Windows proof remains pending, so criterion 17 intentionally stays unchecked.
+next: Commit the locally complete umbrella gate, then implement criterion 18 exclusively through
+      Oxlint and add its final lint contract to verify:effect-migration.
 ```
 
 ## Stop conditions
