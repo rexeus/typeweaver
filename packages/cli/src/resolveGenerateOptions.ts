@@ -47,6 +47,7 @@ export const resolveGenerateOptions = (
     ? outputDir
     : path.join(currentWorkingDirectory, outputDir);
   const finalConfig: TypeweaverConfig = {
+    ...config,
     input: resolvedInputPath,
     output: resolvedOutputDir,
     format: options.format ?? config.format ?? true,
@@ -57,8 +58,6 @@ export const resolveGenerateOptions = (
     finalConfig.plugins = options.plugins
       .split(",")
       .map(plugin => plugin.trim());
-  } else if (config.plugins) {
-    finalConfig.plugins = config.plugins;
   }
 
   return {

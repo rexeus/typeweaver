@@ -22,6 +22,10 @@ export const isOnlyValidationErrorCause = (
     return false;
   }
 
+  if (Cause.isInterrupted(cause)) {
+    return false;
+  }
+
   return (
     failures.every(failure => ValidationError.isValidationError(failure)) &&
     defects.every(defect => ValidationError.isValidationError(defect))

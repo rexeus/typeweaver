@@ -26,12 +26,13 @@ Three components shape the CLI's user-facing output.
 
 ### `formatErrorForCli`
 
-`packages/cli/src/formatErrorForCli.ts` translates any failure into a single user-facing line:
+`packages/cli/src/formatErrorForCli.ts` translates failures into concise user-facing messages:
 
 - Tagged errors (`Data.TaggedError` instances throughout the codebase) are rendered via their
   `message` getter.
 - Plain `Error` instances render their `message`.
-- `Cause` values are unwrapped to their first defect or failure.
+- `Cause` values render every failure and defect, newline-separated, so a finalizer defect cannot be
+  hidden behind an earlier typed failure.
 - Unknown causes render via `String(cause)`.
 
 The function returns `string`; the caller prints it and chooses the exit code.
@@ -83,9 +84,9 @@ preventing double-print.
 
 ### Positive
 
-- Users see a single-line error message tailored to the failure:
+- A simple failure remains a single tailored line:
   `Failed to bundle spec entrypoint '/path/to/spec.ts': Cannot find module '...'.` instead of a
-  fiber stack trace.
+  fiber stack trace. Composite causes retain every failure and defect as separate concise lines.
 - Log lines read like a CLI tool: `Bundling spec from '...' to '...'`, `Generation complete!`,
   `Generated files: 42`.
 - `@effect/cli`'s help and usage output passes through untouched. The filter recognizes

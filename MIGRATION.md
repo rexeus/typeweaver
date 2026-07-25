@@ -159,6 +159,8 @@ If you imported the generator programmatically rather than through the CLI:
   callers can branch on formatter load/execution/filesystem errors, `CleanTargetInspectionError`,
   `OutputLockError`, and `GeneratedPathProbeError`; the underlying cause and affected path or
   operation are retained.
+- Custom top-level configuration keys survive CLI flag resolution and remain available to plugins
+  through `context.config`.
 
 ### 4. Spec authoring API: UNCHANGED
 

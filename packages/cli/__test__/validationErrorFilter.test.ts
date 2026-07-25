@@ -1,5 +1,5 @@
 import { HelpDoc, ValidationError } from "@effect/cli";
-import { Cause } from "effect";
+import { Cause, FiberId } from "effect";
 import { describe, expect, test } from "vitest";
 import { MissingGenerateOptionError } from "../src/errors/MissingGenerateOptionError.js";
 import { isOnlyValidationErrorCause } from "../src/validationErrorFilter.js";
@@ -34,6 +34,14 @@ describe("isOnlyValidationErrorCause", () => {
     const cause = Cause.parallel(
       Cause.fail(aValidationError()),
       Cause.fail(aDomainError())
+    );
+    expect(isOnlyValidationErrorCause(cause)).toBe(false);
+  });
+
+  test("returns false when validation is combined with interruption", () => {
+    const cause = Cause.parallel(
+      Cause.fail(aValidationError()),
+      Cause.interrupt(FiberId.runtime(1, 0))
     );
     expect(isOnlyValidationErrorCause(cause)).toBe(false);
   });

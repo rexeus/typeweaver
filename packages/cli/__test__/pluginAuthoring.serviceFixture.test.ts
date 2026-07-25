@@ -23,6 +23,12 @@ const pluginAuthoringGuide = path.join(
   "docs",
   "plugin-authoring.md"
 );
+const serviceFixtureOutputsDirectory = path.join(
+  packageDirectory,
+  "test",
+  "outputs",
+  "scoped-service-plugin"
+);
 
 const writeTinySpec = (workspace: string): string => {
   const specPath = path.join(workspace, "spec", "index.ts");
@@ -92,8 +98,9 @@ describe("documented scoped-service plugin", () => {
   });
 
   test("acquires one resource and releases it after finalization through the built CLI", async () => {
+    fs.mkdirSync(serviceFixtureOutputsDirectory, { recursive: true });
     const workspace = fs.mkdtempSync(
-      path.join(packageDirectory, ".typeweaver-scoped-plugin-")
+      path.join(serviceFixtureOutputsDirectory, "workspace-")
     );
     workspaces.push(workspace);
 

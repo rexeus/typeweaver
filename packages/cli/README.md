@@ -90,8 +90,8 @@ bunx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --
 
 ### ⚙️ Options
 
-- `--input, -i <path>`: Spec entrypoint file (required)
-- `--output, -o <path>`: Output directory for generated code (required)
+- `--input, -i <path>`: Spec entrypoint file (required via flag or config)
+- `--output, -o <path>`: Output directory for generated code (required via flag or config)
 - `--config, -c <path>`: Configuration file path (`.js`, `.mjs`, or `.cjs`, optional)
 - `--plugins, -p <plugins>`: Comma-separated list of plugins to use (e.g., "clients,hono" or "all"
   for all plugins)
@@ -117,7 +117,8 @@ export default {
 ```
 
 The loader accepts either a default export or a named `config` export — pick whichever fits your
-project's style.
+project's style. Custom top-level keys are preserved and exposed to plugins through
+`context.config`.
 
 Then run:
 

@@ -83,6 +83,20 @@ describe("resolveGenerateOptions", () => {
     expect(options.config.plugins).toEqual(["clients", "hono", "server"]);
   });
 
+  test("preserves custom top-level config for plugin contexts", () => {
+    const options = resolveGenerateOptions(
+      {},
+      {
+        input: "./spec.ts",
+        output: "./generated",
+        customFeature: { enabled: true },
+      },
+      workspacePath
+    );
+
+    expect(options.config.customFeature).toEqual({ enabled: true });
+  });
+
   test("rejects missing input with option diagnostics", () => {
     const error = captureError(() =>
       resolveGenerateOptions({ output: "./generated" }, {}, "/workspace")

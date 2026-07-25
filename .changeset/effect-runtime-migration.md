@@ -18,7 +18,8 @@ The plugin API moves from class-based `BasePlugin` extension to V2 records retur
 `Effect<void, PluginExecutionError>` instead of `Promise<void> | void`. Error surfaces in the
 Effect-enabled packages use `Data.TaggedError`, including lifecycle failures
 (`PluginExecutionError`) and construction-time misconfiguration (`PluginConfigError`). The CLI is
-built on `@effect/cli`, with friendly single-line error formatting and structured log lines. The
+built on `@effect/cli`, with concise error formatting that preserves every failure and defect in
+composite causes, plus structured log lines. The
 `GeneratorContext` additionally exposes an Effect-native surface (`writeFileEffect`,
 `renderTemplateEffect`, `addGeneratedFileEffect`) with the same path-safety and atomic-write
 guarantees, routed through `@effect/platform`'s `FileSystem` service.
@@ -34,6 +35,9 @@ module loading, formatting, output traversal, clean-target inspection, output-lo
 generated-path probes expose dedicated tagged errors; unexpected programming failures remain
 defects. The test-only in-memory filesystem follows the same missing-path, parent-directory,
 rename, realpath, directory-listing, and scoped-temp semantics as the Node filesystem layer.
+
+CLI option resolution now preserves custom top-level configuration keys when forwarding the final
+configuration to plugin contexts.
 
 The spec authoring API (`defineSpec`, `defineOperation`, `defineResponse`) and Zod schemas are
 unchanged — existing specs keep working byte-for-byte.

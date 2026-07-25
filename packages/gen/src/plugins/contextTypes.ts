@@ -179,9 +179,10 @@ export type PluginMetadata = {
 };
 
 /**
- * typeweaver configuration.
+ * Typeweaver configuration. Known generator fields are strongly typed while
+ * custom top-level keys remain available to plugins through `context.config`.
  */
-export type TypeweaverConfig = {
+export type TypeweaverConfig = TypeweaverUserConfig & {
   input: string;
   output: string;
   plugins?: (string | [string, PluginConfig])[];

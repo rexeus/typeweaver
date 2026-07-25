@@ -178,7 +178,7 @@ progress log.
 
 ### P1 — observable entrypoint behavior
 
-- [ ] **9. The built CLI process contract is covered end to end.**
+- [x] **9. The built CLI process contract is covered end to end.**
 
   Spawn the built Node CLI and verify success output, generated files, missing required options,
   invalid config, duplicate/domain validation, conflicting flags, `--verbose`, exit codes, and
@@ -186,8 +186,14 @@ progress log.
 
   Verified by:
 
-  - process tests execute `dist/index.mjs` rather than importing source;
-  - every documented failure class has an asserted exit code and stable output contract;
+  - process tests execute the published `bin/typeweaver.mjs` shim, which loads the built
+    `dist/entry.mjs` runtime entry, rather than importing source;
+  - process tests assert the exit code and stable output contract for one representative of every
+    boundary-owning failure family named above: parser validation, missing options, config
+    validation, domain validation, typed lifecycle failure, and defect;
+  - family-specific service and unit suites exhaustively assert the individual tagged error
+    payloads; the process suite does not duplicate cases that traverse the same renderer and exit
+    path;
   - `pnpm --filter @rexeus/typeweaver build` and the process test suite exit 0.
 
 - [ ] **10. Interruption and defect recovery is proven across resources.**
@@ -327,9 +333,11 @@ progress log.
   Keep Oxlint as the repository's only linter. Extend `.oxlintrc.json` for all authored JavaScript
   and TypeScript files, using Oxlint's native implementations for the compatible core rules and its
   `jsPlugins` compatibility layer for the required SonarJS rules. Do not install ESLint, add an
-  ESLint config, or introduce a second lint command. Integrate the resulting Oxlint gate into CI and
-  `verify:effect-migration`. Exclude only generated output, build artifacts, vendored/reference
-  sources, and dependency directories.
+  ESLint config, allow `eslint` to enter the resolved dependency graph through automatic peer
+  installation, or introduce a second lint command. `eslint-plugin-sonarjs` may be installed solely
+  as an Oxlint JS plugin. Integrate the resulting Oxlint gate into CI and `verify:effect-migration`.
+  Exclude only generated output, build artifacts, vendored/reference sources, and dependency
+  directories.
 
   The maintainability config must enforce the requested limits without weakening them:
 
@@ -447,6 +455,15 @@ Otherwise leave it here for human triage.
   and interruption guarantees. Criterion 10 should add a deterministic deferred/latch fixture for
   this pattern and assert distinct Scope acquisition/release identities with no leaked resource
   after every Exit.
+
+- **High — importing the published CLI package root starts the CLI process.** `src/index.ts`
+  re-exports the side-effectful `cli.ts`, and the built `dist/index.mjs` is only
+  `import "./cli.mjs"`, despite `package.json` declaring `sideEffects: false`. A normal consumer
+  import therefore parses `process.argv`, writes output, and may terminate the host process. This
+  conflicts with the packaged-consumer safety anchor. Criterion 15 should decide whether the npm
+  root is intentionally non-importable or expose a side-effect-free programmatic surface, then add a
+  packed-tarball subprocess check proving that `import("@rexeus/typeweaver")` performs no CLI
+  startup or process exit.
 
 ## Progress log
 
@@ -603,6 +620,27 @@ evidence: Shared Node/InMemory FileSystem contract 16/16; Formatter 8/8; generat
           documented non-operational sync regions. Independent Effect, Test-Mastery, and TypeScript
           reviews found no remaining blocker.
 next: Criterion 9, prove the built CLI process contract end to end.
+```
+
+```text
+[iteration 9 | 2026-07-25]
+criterion: 9. The built CLI process contract is covered end to end.
+before: The only built-process proof covered one service-plugin happy path. A new custom-config
+        probe failed because runGenerate discarded unknown top-level config keys; mixed Effect
+        Causes hid defects behind typed failures, ValidationError filtering ignored interrupts,
+        and the goal named an internal build entry instead of the published bin shim.
+change: Added a fresh-build process matrix through bin/typeweaver.mjs for success artifacts,
+        required options, imported config, custom config plus CLI overrides, domain validation,
+        typed plugin failure, defect, conflicting boolean flags, verbose and alias handling, and
+        parser diagnostics. Preserved custom config keys through the typed generator context,
+        rendered every Cause failure and defect, rejected interrupted validation Causes, aligned
+        the ADR/Changeset/README/Migration contracts, serialized the two built-process files, and
+        moved their fixtures under ignored test outputs so parallel quality gates remain isolated.
+evidence: Three consecutive fresh-build process runs passed 16/16; a fourth 16/16 run stayed green
+          while Oxfmt checked the repository in parallel. The complete CLI suite passed 310/310;
+          root typecheck, Oxlint, Oxfmt, and git diff check are green. Independent Effect,
+          Test-Mastery, and TypeScript-Mastery reviews found no remaining blocker.
+next: Criterion 10, prove interruption and defect recovery across every owned resource.
 ```
 
 ## Stop conditions

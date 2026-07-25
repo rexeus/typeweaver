@@ -30,13 +30,13 @@ const isTaggedError = (
 
 const formatCause = (cause: Cause.Cause<unknown>): string => {
   const failures = Chunk.toReadonlyArray(Cause.failures(cause));
-  if (failures.length > 0) {
-    return failures.map(failure => formatErrorForCli(failure)).join("\n");
-  }
-
   const defects = Chunk.toReadonlyArray(Cause.defects(cause));
-  if (defects.length > 0) {
-    return defects.map(defect => formatErrorForCli(defect)).join("\n");
+  const renderedErrors = [
+    ...failures.map(failure => formatErrorForCli(failure)),
+    ...defects.map(defect => formatErrorForCli(defect)),
+  ];
+  if (renderedErrors.length > 0) {
+    return renderedErrors.join("\n");
   }
 
   return Cause.pretty(cause);

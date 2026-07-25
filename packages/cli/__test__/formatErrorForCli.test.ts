@@ -51,6 +51,21 @@ describe("formatErrorForCli", () => {
     ).toBe(`${a.message}\n${b.message}`);
   });
 
+  test("renders failures and defects from a mixed Cause", () => {
+    const failure = new MissingGenerateOptionError({
+      optionName: "input",
+      flag: "--input",
+      configKey: "input",
+    });
+    const defect = new Error("finalizer defect");
+
+    expect(
+      formatErrorForCli(
+        Cause.sequential(Cause.fail(failure), Cause.die(defect))
+      )
+    ).toBe(`${failure.message}\n${defect.message}`);
+  });
+
   test("stringifies unknown non-Error values", () => {
     expect(formatErrorForCli(42)).toBe("42");
     expect(formatErrorForCli(null)).toBe("null");
