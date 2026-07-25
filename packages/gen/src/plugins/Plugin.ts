@@ -1,6 +1,10 @@
 import { PluginExecutionError } from "./errors/PluginExecutionError.js";
 import type { NormalizedSpec } from "../NormalizedSpec.js";
-import type { GeneratorContext, PluginContext } from "./contextTypes.js";
+import type {
+  GeneratorContext,
+  PluginConfig,
+  PluginContext,
+} from "./contextTypes.js";
 import type { Effect } from "effect";
 
 /**
@@ -8,12 +12,10 @@ import type { Effect } from "effect";
  * lifecycle stage. The error channel is narrowed to PluginExecutionError;
  * other failures indicate programming bugs and propagate as defects.
  *
- * Plugins keep `R = never` on every lifecycle stage. Higher-order plugin
- * constructors (e.g. one that fetches a remote schema) take their config,
- * build any needed services inside `Effect.gen` at construction time, and
- * return a plain `Plugin` whose effects close over the resolved values.
- * The plugin author surface stays platform-agnostic; integrators write the
- * higher-order constructors.
+ * Plugins keep `R = never` on every lifecycle stage. A service-dependent
+ * plugin uses a synchronous `PluginFactory` to create per-generation state,
+ * acquires its private Layer/Scope in `initialize`, and releases that Scope
+ * from `finalize`. The standard loader never runs an Effect-returning factory.
  */
 export type Plugin = {
   readonly name: string;
@@ -38,5 +40,12 @@ export type Plugin = {
     context: PluginContext
   ) => Effect.Effect<void, PluginExecutionError>;
 };
+
+/**
+ * Public construction contract for configurable plugins. The loader calls
+ * this function once per generation. It must validate options and return the
+ * plugin synchronously; resource acquisition belongs in `initialize`.
+ */
+export type PluginFactory = (config?: PluginConfig) => Plugin;
 
 export const definePlugin = (plugin: Plugin): Plugin => plugin;

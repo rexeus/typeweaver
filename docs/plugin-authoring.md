@@ -321,45 +321,41 @@ helpers. A practical benefit of the Effect surface: your plugin tests can run ag
 
 ---
 
-## Higher-order plugin constructors
+## Exit-independent scoped services inside a synchronous factory
 
-If your plugin needs a service (an HTTP client, a config loader, a clock), the V2 contract still
-requires `Plugin.generate` to have `R = never`. Resolve the services at **construction time**,
-inside an `Effect.gen`, and close over the resolved values:
+The standard loader accepts a `Plugin` record or a synchronous `(options?: PluginConfig) => Plugin`
+factory. It does not execute Effect-returning factories. This keeps construction deterministic:
+validate options and create per-generation closure state in the factory, but perform no I/O and
+acquire no resources there.
 
-```ts
-import { Effect } from "effect";
-import { definePlugin } from "@rexeus/typeweaver-gen";
-import type { Plugin } from "@rexeus/typeweaver-gen";
+When a plugin needs a long-lived service whose cleanup is unconditional (an HTTP client, connection
+pool, cache, or watcher), keep every lifecycle method at `R = never` with this ownership pattern:
 
-export const remoteSchemaPlugin = (url: string): Effect.Effect<Plugin, never, HttpClient> =>
-  Effect.gen(function* () {
-    const http = yield* HttpClient;
-    const schema = yield* http.fetchJson(url);
+1. Export a synchronous `PluginFactory`. The loader creates one plugin instance per generation, so
+   its private state is not shared between concurrent runs.
+2. In `initialize`, create a private `Scope` and build the service `Layer` with
+   `Layer.buildWithScope`. If initialization fails or is interrupted, close the Scope before the
+   failure leaves `initialize`; otherwise retain the Scope and built service context in the
+   instance.
+3. In later hooks, provide the retained service context to the hook Effect.
+4. In `finalize`, finish the plugin's service-dependent work first and close the Scope in an
+   `Effect.ensuring` finalizer. The generator invokes `finalize` exactly once for every successfully
+   initialized plugin, including after failure, defect, or interruption elsewhere in the pipeline.
 
-    return definePlugin({
-      name: "remote-schema",
-      generate: context =>
-        Effect.try({
-          try: () => {
-            context.writeFile("remote-schema.json", JSON.stringify(schema, null, 2));
-          },
-          catch: cause =>
-            new PluginExecutionError({
-              pluginName: "remote-schema",
-              phase: "generate",
-              cause,
-            }),
-        }),
-    });
-  });
-```
+`Plugin.finalize` does not receive the generator's original `Exit`, so the private Scope is closed
+with `Exit.void`. This pattern is intentionally limited to **exit-independent resources**. Do not
+use it for a transaction or any resource whose finalizer must choose commit versus rollback from the
+pipeline outcome; supporting that would require a future plugin-lifecycle contract that carries the
+original `Exit`.
 
-The integrator decides where to compose this — typically inside a custom `Layer` that provides
-`HttpClient`. The plugin author surface (the returned `Plugin`) stays platform-agnostic.
+Do not provide the resource Layer independently to each lifecycle hook: that would acquire and
+release a different resource for every hook. Do not call `Effect.runSync`, `Effect.runPromise`, or
+create a local runtime inside the plugin.
 
-`definePluginWithLibCopy` is itself a higher-order constructor that resolves the lib-file directory
-at construction time and closes over it.
+The complete [`scoped-service-plugin.mjs`](../packages/cli/examples/scoped-service-plugin.mjs)
+example implements this pattern. It is JavaScript with `checkJs`, is compiled during verification,
+and is exercised through the built CLI. Its fixture proves the resource sequence
+`acquire → generate → finalize → release`.
 
 ---
 
@@ -450,8 +446,8 @@ plugin's behavior rather than the orchestration around it.
   V1 looked like
 - [ADR 0004: FileSystem service adoption](./adr/0004-filesystem-service-adoption.md) — why
   `context.writeFile` is sync
-- [ADR 0005: Effect.Service patterns](./adr/0005-effect-service-patterns.md) — `succeed:` vs
-  `effect:` when you build a higher-order constructor
+- [ADR 0005: Effect.Service patterns](./adr/0005-effect-service-patterns.md) — choosing `succeed:`
+  or `effect:` for application services
 - [ADR 0007: Generator per-call isolation](./adr/0007-generator-per-call-isolation.md) — why
   concurrent generation works
 - `packages/gen/src/plugins/Plugin.ts` — the `Plugin` type

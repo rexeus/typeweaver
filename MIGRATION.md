@@ -181,6 +181,12 @@ For **plugin authors**:
       (see [`docs/plugin-authoring.md`](./docs/plugin-authoring.md) for the pattern).
 - [ ] Verify your plugin is discoverable: a named export matching the plugin name, a default export
       of a `Plugin` record, or a default export of a `(options?) => Plugin` factory.
+- [ ] Keep configurable factories pure and synchronous. If the plugin owns a long-lived Effect
+      service, acquire its private Layer/Scope in `initialize`, retain the built service context in
+      that per-generation plugin instance, and close the Scope from `finalize` (see the
+      [scoped-service example](./packages/cli/examples/scoped-service-plugin.mjs)). This supports
+      exit-independent cleanup; `finalize` does not receive the generator's original `Exit`, so
+      transactional finalizers need a different integration boundary.
 
 ### Further reading
 

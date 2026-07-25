@@ -61,9 +61,14 @@ export const definePlugin = (plugin: Plugin): Plugin => plugin;
 
 `Plugin.generate` keeps `R = never` on every lifecycle stage. Plugin authors write platform-agnostic
 code: they wrap their sync work in `Effect.try` and map the thrown cause to a tagged
-`PluginExecutionError`. Higher-order plugin constructors that need services (e.g. a remote HTTP
-fetch) request them inside an `Effect.gen` at construction time, close over the resolved values, and
-return a plain `Plugin` whose effects still satisfy `R = never`.
+`PluginExecutionError`. The standard loader accepts a `Plugin` record or a pure, synchronous
+`PluginFactory`; it never executes an Effect-returning factory. A service-dependent factory creates
+per-generation closure state, builds its private Layer against a Scope in `initialize`, provides the
+retained service context to later hooks, and closes the Scope from `finalize`. The returned plugin's
+effects therefore still satisfy `R = never`, while resource acquisition and release stay inside the
+generator lifecycle. Because `finalize` does not receive the generator's original `Exit`, this
+internal-Scope pattern is limited to exit-independent resources and closes the Scope with a neutral
+`Exit.void`; transactional finalizers require a future lifecycle contract.
 
 The orchestrator (`packages/cli/src/services/Generator.ts`) drives the lifecycle through
 `yield* registration.plugin.generate(context)`. Failures propagate as typed `PluginExecutionError`s
@@ -97,10 +102,14 @@ plugin constructor and throw `PluginConfigError` on rejection. The lifecycle sta
   `Effect.gen`, `Effect.try`, `Effect.tap`.
 - Failures carry the plugin name and phase as structured data; the CLI surface prints
   `Failed in plugin 'openapi' (generate): ...` instead of a stack trace.
-- Higher-order constructors like `definePluginWithLibCopy`
+- Construction helpers like `definePluginWithLibCopy`
   (`packages/gen/src/plugins/definePluginWithLibCopy.ts`) deduplicate the byte-equivalent
   boilerplate across the five first-party plugins (`types`, `clients`, `server`, `hono`, `aws-cdk` —
   `openapi` uses `definePlugin` directly).
+- Service-dependent factories have one resource lifetime per generation. The factory itself remains
+  pure and synchronous; `initialize` acquires its private Layer/Scope and `finalize` releases it.
+  This path intentionally supports unconditional cleanup, not finalizers whose behavior depends on
+  the generator's `Exit`.
 - The `GeneratorContext` sync helpers (`writeFile`, `renderTemplate`, `addGeneratedFile`) remain
   sync; plugin authors continue to call them inside the `try` block of their `Effect.try` boundary.
 - An **additive Effect-native context surface** exists alongside the sync helpers:

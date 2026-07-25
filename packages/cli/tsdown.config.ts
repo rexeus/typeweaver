@@ -12,6 +12,11 @@ export default defineConfig([
     format: ["esm"],
     dts: false,
     clean: false,
+    // `entry.ts` intentionally starts the CLI through a dynamic import after
+    // reporting the detected runtime. The imported module's execution is the
+    // observable side effect, so this entry build must preserve it even though
+    // the package declares `sideEffects: false`.
+    treeshake: false,
     deps: {
       neverBundle: ["oxfmt", "rolldown"],
     },

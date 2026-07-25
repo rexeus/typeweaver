@@ -111,7 +111,7 @@ progress log.
   - each failure has an empty defect list;
   - `pnpm --filter @rexeus/typeweaver test -- PluginLoader` exits 0.
 
-- [ ] **5. The public plugin-construction contract has one executable truth.**
+- [x] **5. The public plugin-construction contract has one executable truth.**
 
   Decide and implement exactly one of these contracts:
 
@@ -396,6 +396,15 @@ Otherwise leave it here for human triage.
 
 <!-- Append discoveries below. Do not rewrite prior entries. -->
 
+- **Medium — the documented private-Scope pattern still needs adverse-path proof under
+  criterion 10.** The criterion-5 fixture proves the packaged happy path and the generic lifecycle
+  suites prove generator cleanup, but the exact example has not yet been exercised through
+  Layer-build failure, initialization interruption, downstream failure/defect/interruption,
+  finalizer defect, and two concurrent generations. This is directly related to the Goal's resource
+  and interruption guarantees. Criterion 10 should add a deterministic deferred/latch fixture for
+  this pattern and assert distinct Scope acquisition/release identities with no leaked resource
+  after every Exit.
+
 ## Progress log
 
 Append one entry per iteration:
@@ -465,6 +474,25 @@ evidence: plugin loader suite 48/48 with 20 invalid-shape matrix cases and a rea
           fixture; complete CLI suite 260/260; root lint and format check green; CLI typecheck and
           build green.
 next: Criterion 5, make the documented plugin-construction contract executable and singular.
+```
+
+```text
+[iteration 5 | 2026-07-25]
+criterion: 5. The public plugin-construction contract has one executable truth.
+before: The guide advertised an Effect-returning plugin factory the standard loader could not
+        execute; no service-owning example compiled or ran through the built CLI; the new fixture
+        also exposed that Rolldown tree-shook the dynamic CLI startup into a silent exit-0 no-op.
+change: Chose the pure synchronous PluginFactory contract, exported its public type, documented an
+        exit-independent private Layer/Scope lifecycle, added a checkJs example with typed expected
+        I/O failures, and verified one acquire/finalize/release sequence through the built CLI.
+        Disabled tree-shaking only for the side-effectful runtime entry build so the packaged CLI
+        actually starts. Explicitly excluded exit-sensitive transactional finalizers because the
+        current Plugin.finalize contract does not carry the generator Exit.
+evidence: initial criterion fixture 3/3 red; complete CLI suite 263/263; final PluginLoader plus
+          built-fixture suites 51/51; example checkJs compile, gen and CLI typecheck, CLI build,
+          root lint, format check, and git diff check all green. Independent Effect review confirmed
+          the Effect 3.22 ownership transfer and found no remaining blocking semantic mismatch.
+next: Criterion 6, bind public error types exactly to runtime behavior and remove CLI API drift.
 ```
 
 ## Stop conditions

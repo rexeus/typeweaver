@@ -114,8 +114,8 @@ until `types`'s same stage has completed.
 
 ## 🔧 What it exports
 
-- **Plugin authoring:** `definePlugin`, `definePluginWithLibCopy`, `copyPluginLibFiles`, the
-  `Plugin` type.
+- **Plugin authoring:** `definePlugin`, `definePluginWithLibCopy`, `copyPluginLibFiles`, and the
+  `Plugin` and `PluginFactory` types.
 - **Lifecycle contexts:** `PluginContext`, `GeneratorContext` — the records passed to each stage,
   with helpers for `writeFile`, `renderTemplate`, `addGeneratedFile`, and per-resource path
   resolution.
@@ -131,7 +131,7 @@ until `types`'s same stage has completed.
 ## 📚 Authoring a plugin
 
 The README covers the minimum surface. For the full guide — `GeneratorContext` helpers, factory
-plugins with options, higher-order constructors that resolve services at composition time, lib-copy
+plugins with options, exit-independent scoped services owned by a synchronous factory, lib-copy
 internals, the `depends` ordering rules, and a testable fake-context pattern — see
 [`docs/plugin-authoring.md`](https://github.com/rexeus/typeweaver/tree/main/docs/plugin-authoring.md).
 
