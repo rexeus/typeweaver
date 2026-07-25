@@ -61,6 +61,13 @@ const captureUnsafeCleanTargetError = (
 describe("Generator clean safety", () => {
   const tempDirs: string[] = [];
 
+  test.runIf(process.platform === "win32")(
+    "provides the junction capability required by Windows clean-target tests",
+    () => {
+      expect(canCreateDirectorySymlinks()).toBe(true);
+    }
+  );
+
   afterEach(() => {
     for (const tempDir of tempDirs) {
       fs.rmSync(tempDir, { recursive: true, force: true });
@@ -357,6 +364,35 @@ describe("Generator clean safety", () => {
       expect(error).toEqual(
         expect.objectContaining({
           outputDir: packagesDirectory,
+          reason: "ancestor-of-current-working-directory",
+          resolvedOutputDir: packagesDirectory,
+          currentWorkingDirectory: packageDirectory,
+        })
+      );
+    }
+  );
+
+  test.runIf(process.platform === "win32")(
+    "rejects ancestors addressed through native Windows separators",
+    () => {
+      const workspaceRoot = createTempDir();
+      const packagesDirectory = path.join(workspaceRoot, "packages");
+      const packageDirectory = path.join(
+        packagesDirectory,
+        "..generated",
+        "cli"
+      );
+      fs.mkdirSync(path.join(workspaceRoot, ".git"), { recursive: true });
+      fs.mkdirSync(packageDirectory, { recursive: true });
+
+      const nativeWindowsTarget = packagesDirectory.replaceAll("/", "\\");
+      const error = captureUnsafeCleanTargetError(() =>
+        assertSafeCleanTarget(nativeWindowsTarget, packageDirectory)
+      );
+
+      expect(error).toEqual(
+        expect.objectContaining({
+          outputDir: nativeWindowsTarget,
           reason: "ancestor-of-current-working-directory",
           resolvedOutputDir: packagesDirectory,
           currentWorkingDirectory: packageDirectory,

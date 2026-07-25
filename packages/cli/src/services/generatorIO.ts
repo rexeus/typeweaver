@@ -207,8 +207,9 @@ const isProcessAlive = (pid: number): boolean => {
     return true;
   } catch (error) {
     // EPERM means the process exists but is owned by another user — still
-    // alive, just not signal-able. ESRCH means the PID has no live process.
-    return errnoCode(error) === "EPERM";
+    // alive, just not signal-able. Only ESRCH proves that the PID has no live
+    // process. Unknown platform errors are treated conservatively as alive.
+    return errnoCode(error) !== "ESRCH";
   }
 };
 

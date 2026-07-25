@@ -108,6 +108,16 @@ const seedHeldLock = (
   return lockDir;
 };
 
+const mockProcessLookupError = (pid: number, code: string) =>
+  vi.spyOn(process, "kill").mockImplementation(candidatePid => {
+    if (candidatePid === pid) {
+      throw Object.assign(new Error(`process lookup failed with ${code}`), {
+        code,
+      });
+    }
+    return true;
+  });
+
 const extractFailure = (exit: Exit.Exit<void, unknown>): unknown => {
   if (Exit.isSuccess(exit)) {
     throw new Error("Expected generation to fail with the held lock");
@@ -174,12 +184,16 @@ describe("Generator output lock", () => {
     const workspace = createTempWorkspace("stale");
     writeTinySpec(workspace);
 
-    // PID 99_999_999 is well above the Linux default max-pid (~32k) and
-    // Darwin/Windows equivalents — guaranteed not to exist.
+    const deadPid = 99_999_999;
     const staleStartedAt = "2026-05-17T11:00:00.000Z";
-    seedHeldLock(workspace, { pid: 99_999_999, startedAt: staleStartedAt });
+    seedHeldLock(workspace, { pid: deadPid, startedAt: staleStartedAt });
+    const processLookup = mockProcessLookupError(deadPid, "ESRCH");
 
-    await expect(runGenerate(workspace)).resolves.toBeUndefined();
+    try {
+      await expect(runGenerate(workspace)).resolves.toBeUndefined();
+    } finally {
+      processLookup.mockRestore();
+    }
 
     const outputDir = path.join(workspace, "generated", "output");
     const lockDir = path.join(outputDir, ".typeweaver-lock");
@@ -195,6 +209,26 @@ describe("Generator output lock", () => {
         path.join(workspace, "generated", "output", "item", "GetItemRequest.ts")
       )
     ).toBe(true);
+  });
+
+  test("does not reclaim a lock when process liveness fails with an unknown platform error", async () => {
+    const workspace = createTempWorkspace("liveness-error");
+    writeTinySpec(workspace);
+    const holderPid = 424_242;
+    const lockDir = seedHeldLock(workspace, {
+      pid: holderPid,
+      startedAt: "2026-05-17T11:30:00.000Z",
+    });
+    const processLookup = mockProcessLookupError(holderPid, "EIO");
+
+    try {
+      const exit = await runGenerateExit(workspace);
+      expect(extractFailure(exit)).toBeInstanceOf(ConcurrentGenerationError);
+    } finally {
+      processLookup.mockRestore();
+    }
+
+    expect(fs.existsSync(lockDir)).toBe(true);
   });
 
   test("does not reclaim a lock whose ownership metadata is not yet published", async () => {
@@ -343,25 +377,32 @@ describe("Generator output lock", () => {
     const outputDir = path.join(workspace, "generated", "output");
     const inputFile = path.join(workspace, "spec", "index.ts");
     fs.mkdirSync(outputDir, { recursive: true });
+    const deadPid = 99_999_999;
     seedHeldLock(workspace, {
-      pid: 99_999_999,
+      pid: deadPid,
       startedAt: "2026-05-17T12:45:00.000Z",
     });
     let replacement: OutputLock | undefined;
+    const processLookup = mockProcessLookupError(deadPid, "ESRCH");
 
-    const staleContender = Effect.runSyncExit(
-      acquireOutputLockWith(
-        { outputDir, inputFile },
-        {
-          onLockDirectoryCreated: () => undefined,
-          onBeforeStaleLockMove: () => {
-            replacement = Effect.runSync(
-              acquireOutputLock({ outputDir, inputFile })
-            );
-          },
-        }
-      )
-    );
+    let staleContender: Exit.Exit<OutputLock, unknown>;
+    try {
+      staleContender = Effect.runSyncExit(
+        acquireOutputLockWith(
+          { outputDir, inputFile },
+          {
+            onLockDirectoryCreated: () => undefined,
+            onBeforeStaleLockMove: () => {
+              replacement = Effect.runSync(
+                acquireOutputLock({ outputDir, inputFile })
+              );
+            },
+          }
+        )
+      );
+    } finally {
+      processLookup.mockRestore();
+    }
 
     expect(Exit.isFailure(staleContender)).toBe(true);
     expect(replacement).toBeDefined();

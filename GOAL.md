@@ -295,6 +295,9 @@ progress log.
   Add a Windows job covering clean-target guards, path safety, output locking, and a built-CLI smoke
   test. Keep the complete existing Ubuntu runtime matrix.
 
+  Local implementation and evidence are complete. Final completion remains blocked only on a
+  human-authorized push and green Ubuntu plus Windows remote jobs.
+
   Verified by:
 
   - workflow validation exits 0 locally;
@@ -789,6 +792,33 @@ evidence: The positive Effect 3.22.0 fixture represents both the runtime and cur
           gate, Oxlint, Oxfmt, publish dry-run, and git diff check are green. Independent Effect,
           Test-Mastery, and TypeScript-Mastery reviews found no remaining K15 blocker.
 next: Criterion 16, run the security-sensitive path and locking contracts on Windows CI.
+```
+
+```text
+[iteration 16 | 2026-07-25 | local implementation]
+criterion: 16. Security-sensitive behavior runs on Windows CI.
+before: Quality CI ran only on Ubuntu, the root prepare lifecycle invoked a POSIX shell wrapper,
+        and no named gate exercised native clean-target, generated-path, NodeFileSystem, lock, spec
+        loading, and built-CLI behavior together. Several path expectations were POSIX-shaped, a
+        Windows junction capability failure could silently skip security tests, and stale-lock
+        tests inferred a dead process from an arbitrary high PID.
+change: Added a pinned windows-2025 job that performs frozen install, full build, relink, and a
+        serial package-owned security gate while preserving the complete Ubuntu job. Made prepare
+        invoke the platform-neutral Node implementation directly. Added native Windows path and
+        required-junction contracts, made PathSafety assertions platform-native, included
+        guard-before-mutation and interruption-safe preflight tests, and made process-liveness
+        handling fail closed unless ESRCH proves the holder dead. Added deterministic ESRCH and
+        unknown-platform-error lock tests plus actionlint configuration for the existing Blacksmith
+        runner.
+evidence: actionlint 1.7.12 accepts the workflow. The local Windows-targeted selection passes Gen
+          104/104 and CLI 100/100 applicable tests; the two local skips are the Windows-only
+          capability/semantics contracts, paired with the POSIX-only literal-backslash contract.
+          Root typecheck completes 23/23 tasks; Oxlint, Oxfmt, frozen install, and git diff check
+          are green. Independent Effect, Test-Mastery, and TypeScript-Mastery reviews found no
+          remaining local K16 blocker. Remote Ubuntu and Windows proof remains pending a
+          human-authorized push, so criterion 16 intentionally stays unchecked.
+next: Commit the locally complete Windows implementation, then proceed to criterion 17 while
+      retaining the explicit remote-CI completion dependency.
 ```
 
 ## Stop conditions

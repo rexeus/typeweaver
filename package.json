@@ -3,7 +3,7 @@
   "private": true,
   "description": "Type-safe API framework with code generation for TypeScript",
   "scripts": {
-    "prepare": "./scripts/prepare-effect.sh",
+    "prepare": "node scripts/prepare-effect-reference.mjs",
     "typecheck": "turbo typecheck",
     "build": "turbo build && pnpm size",
     "size": "size-limit",
@@ -12,6 +12,7 @@
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "test": "turbo test:gen && turbo test",
+    "test:windows-security": "pnpm -r --workspace-concurrency=1 --filter @rexeus/typeweaver-gen --filter @rexeus/typeweaver test:windows-security",
     "test:gen": "turbo test:gen",
     "verify:generated": "node scripts/verify-generated.mjs",
     "verify:effect-reference": "node scripts/verify-effect-reference.mjs && node scripts/test-effect-reference-guard.mjs",

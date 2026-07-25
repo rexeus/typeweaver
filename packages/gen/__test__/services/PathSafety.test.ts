@@ -1,3 +1,4 @@
+import path from "node:path";
 import { it } from "@effect/vitest";
 import { Cause, Effect, Exit, Option } from "effect";
 import { describe, expect, test } from "vitest";
@@ -36,7 +37,9 @@ describe("PathSafety", () => {
         requestedPath: "domain/entity.ts",
       });
       expect(result.generatedPath).toBe("domain/entity.ts");
-      expect(result.fullPath.endsWith("domain/entity.ts")).toBe(true);
+      expect(result.fullPath).toBe(
+        path.resolve("/tmp/output", "domain/entity.ts")
+      );
     }).pipe(Effect.provide(PathSafety.Default))
   );
 
@@ -154,7 +157,9 @@ describe("PathSafety", () => {
       });
 
       expect(result.generatedPath).toBe("fresh/entity.ts");
-      expect(result.fullPath.endsWith("fresh/entity.ts")).toBe(true);
+      expect(result.fullPath).toBe(
+        path.resolve("/does-not-exist-on-disk-12345/output", "fresh/entity.ts")
+      );
     }).pipe(Effect.provide(PathSafety.Default))
   );
 
@@ -192,7 +197,7 @@ describe("PathSafety", () => {
           _tag: "GeneratedPathProbeError",
           operation: "lstat",
           requestedPath: "domain/entity.ts",
-          probedPath: "/tmp/output",
+          probedPath: path.resolve("/tmp/output"),
           code: "EACCES",
           cause,
         });
@@ -251,7 +256,7 @@ describe("PathSafety", () => {
   });
 
   test("rejects paths whose intermediate components are symlinks", () => {
-    const outputDir = "/tmp/sandbox";
+    const outputDir = path.resolve("/tmp/sandbox");
     // The fake reports that `domain` is a symlink directory: the guard walks
     // segment-by-segment and rejects the first symlink it observes.
     const fakeFs: PathSafetyFs = {
@@ -259,7 +264,7 @@ describe("PathSafety", () => {
         if (absolutePath === outputDir) {
           return { isSymbolicLink: () => false, isDirectory: () => true };
         }
-        if (absolutePath === `${outputDir}/domain`) {
+        if (absolutePath === path.join(outputDir, "domain")) {
           return { isSymbolicLink: () => true, isDirectory: () => true };
         }
         return undefined;
