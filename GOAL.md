@@ -882,6 +882,26 @@ next: Commit K18. Criteria 16 and 17 then remain blocked only on a human-authori
       Ubuntu plus Windows remote CI; stop before that irreversible action.
 ```
 
+```text
+[iteration 19 | 2026-07-25 | pre-push checkpoint]
+criterion: 16 and 17 remote completion evidence.
+before: K18 was committed at df419897, while origin/feat/use-effect and PR #190 still pointed to
+        the audit baseline 7488f6d2. The latest remote Quality Check failed before installation
+        because its old workflow selected pnpm 10.12.1 while package.json selected pnpm 10.34.5.
+change: Fetched origin read-only and audited the open PR, its latest failed run, the current
+        workflow, and branch ancestry without mutating remote state. The local workflow and
+        packageManager now both select pnpm 10.34.5; origin/main is an ancestor of HEAD and the
+        branch has no remote-only commits.
+evidence: `git rev-list --left-right --count origin/feat/use-effect...HEAD` reports 0 18;
+          `git rev-list --left-right --count origin/main...HEAD` reports 0 54; PR #190 remains open
+          at 7488f6d2; run 30157080523 failed solely in pnpm/action-setup on the old 10.12.1 versus
+          10.34.5 mismatch. Current `.github/workflows/quality-check.yml` and package.json both pin
+          10.34.5. The authored worktree was clean before this append-only progress entry.
+next: Validate the committed workflow once more, commit this checkpoint, then stop before pushing.
+      Human approval is required to push the 19 local commits and obtain fresh Ubuntu plus Windows
+      CI evidence for criteria 16 and 17.
+```
+
 ## Stop conditions
 
 - **Done:** all 18 criteria are checked with recorded evidence, the final local command block is
