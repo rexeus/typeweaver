@@ -1,7 +1,9 @@
 # Effect migration: merge-ready completion contract
 
-Status: blocked — awaiting human-authorized push for remote Ubuntu and Windows CI evidence
-Audit baseline: `feat/use-effect` at `7488f6d2`, reviewed 2026-07-25  
+Status: active
+
+Audit baseline: `feat/use-effect` at `7488f6d2`, reviewed 2026-07-25
+
 Runtime baseline: Node 24, pnpm 10, Effect 3.22
 
 ## Goal
@@ -920,6 +922,34 @@ next: A human must explicitly authorize pushing feat/use-effect to origin. After
       PR #190 until the Ubuntu quality-check and Windows security jobs complete, diagnose and fix
       any failures, record the exact run evidence, check criteria 16 and 17, rerun the final
       completion audit, and only then mark the goal done.
+```
+
+```text
+[iteration 21 | 2026-07-25 | post-push CI and final-audit repair]
+criterion: 16 and 17 remote completion evidence.
+before: The human pushed 9b56a516. Quality Check run 30173547287 failed because the maintainability
+        sentinel parsed its own directive strings as comments and the PathSafety property fake used
+        a POSIX-only output root on Windows. The final Effect, Test-Mastery, and TypeScript-Mastery
+        audits also found a side-effectful package-root import, an unreachable documented
+        programmatic API, ambiguous plugin-export precedence, and several stale or untruthful public
+        documentation contracts.
+change: Switched directive discovery to TypeScript AST comment ranges with string-literal sentinels;
+        aligned the PathSafety fake with the production native absolute path; exposed the documented
+        Effect runtime and Generator through a side-effect-free package root; added strict packed
+        ESM, CommonJS, and programmatic type contracts; made default plugin exports deterministic;
+        typed template data without an unknown cast; typed direct OpenAPI options; corrected plugin
+        versions, path/I/O semantics, lifecycle limits, Effect reference paths, ADR allocation, and
+        testing guidance; and expanded the Windows job's lifecycle, recovery, scoped-resource, and
+        built-example coverage.
+evidence: Frozen install, actionlint, format, Oxlint, workspace typecheck, build, and size checks
+          pass. The expanded local Windows gate passes Gen 104/104 and CLI 128/128 applicable tests.
+          `pnpm verify:effect-migration` passes with zero Effect diagnostic findings, exact type
+          contracts, all 2,377 workspace tests, 225 fresh generated fixtures, packed Effect 3.22
+          ESM/CommonJS/programmatic consumers, duplicate-identity rejection, and an unchanged
+          authored worktree. The remaining proof is a fresh green remote run on the final commit.
+next: Commit and push the cohesive repairs under the human's explicit authorization, then monitor
+      PR #190. Mark criteria 16 and 17 only after Ubuntu and Windows are green on the exact final
+      commit and the final PR review has no unresolved blocker.
 ```
 
 ## Stop conditions
