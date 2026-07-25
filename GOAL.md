@@ -211,7 +211,7 @@ progress log.
 
 ### P2 — maintainability and representative architecture
 
-- [ ] **11. Generator orchestration is split at stable domain seams.**
+- [x] **11. Generator orchestration is split at stable domain seams.**
 
   Extract only the cohesive preflight/lock scope, plugin lifecycle, and postprocessing workflows
   needed to make their contracts independently readable and testable. Do not fragment the pipeline
@@ -664,6 +664,25 @@ evidence: Gen passed 305/305 and CLI passed 330/330. The five targeted lifecycle
           green. Independent Effect, Test-Mastery, and TypeScript-Mastery reviews found no
           remaining K10 blocker.
 next: Criterion 11, split Generator orchestration at stable domain seams.
+```
+
+```text
+[iteration 11 | 2026-07-25]
+criterion: 11. Generator orchestration is split at stable domain seams.
+before: Generator.ts held 338 lines and its generate operation mixed path resolution, target
+        validation, directory preparation, lock ownership, cleanup, plugin lifecycle, index
+        generation, formatting, and completion reporting across roughly 270 lines. The three
+        workflow contracts could only be tested through the full Generator layer.
+change: Extracted internal preflight/lock, plugin-lifecycle, and postprocessing workflows with
+        narrow parameter/result types while keeping Generator.generate as the only top-level
+        composer. Kept initialization masking, reverse finalization, index-before-finalize,
+        format-after-finalize, lock extent, log order, and existing span parentage unchanged.
+        Added focused state-, Exit-, event-, and log-based tests for all three contracts.
+evidence: Focused workflow suites pass 9/9 and the complete CLI suite passes 339/339. Generation
+          fixtures regenerated with no tracked diff. Root typecheck/build completed 23/23 tasks;
+          Oxlint, Oxfmt, and git diff check are green. Independent Effect, Test-Mastery, and
+          TypeScript-Mastery reviews found no remaining K11 blocker.
+next: Criterion 12, prove clean-room packaging and runtime smoke tests from packed tarballs.
 ```
 
 ## Stop conditions

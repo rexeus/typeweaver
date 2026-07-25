@@ -72,6 +72,18 @@ const buildGeneratorContext = (params: BuildGeneratorContextParams) =>
 The entire generation pipeline runs inside the `typeweaver.Generator.generate` span (`Effect.fn`) so
 every call gets its own root span — concurrent calls trace independently.
 
+The top-level service composes three internal workflow boundaries:
+
+- preflight and output-lock ownership;
+- plugin initialization, resource collection, generation, indexing, and finalization;
+- optional formatting and completion reporting.
+
+These workflows are internal functions rather than additional services. They receive the already
+captured service instances they need, so the runtime Layer and public API stay unchanged.
+`Generator.generate` remains the only operation that orders the complete pipeline. The workflow
+functions do not introduce spans of their own; existing service and plugin spans therefore remain
+direct children of `typeweaver.Generator.generate`.
+
 ## Consequences
 
 ### Positive
@@ -125,6 +137,8 @@ export backend remains the open follow-up.
 - `packages/cli/__test__/generator.concurrent.test.ts` — concurrent-isolation regression test
 - `packages/cli/__test__/generator.recovery.test.ts` — deterministic failure, interruption, cleanup,
   and same-runtime retry matrix
+- `packages/cli/__test__/services/internal/` — focused workflow contracts for preflight/locking,
+  plugin lifecycle, and postprocessing
 - `packages/cli/__test__/services/SpecBundler.lifecycle.test.ts` — staged bundle publication and
   cleanup contract
 - `packages/gen/src/services/PluginRegistry.ts` — `createInstance` factory backing per-call
