@@ -1,6 +1,6 @@
 # Effect migration: merge-ready completion contract
 
-Status: complete
+Status: active
 
 Audit baseline: `feat/use-effect` at `7488f6d2`, reviewed 2026-07-25
 
@@ -1030,6 +1030,32 @@ evidence: Quality Check run 30175595732 is green on 51f9d893: the Ubuntu quality
           branch is mergeable, and no merge or release was performed.
 next: Commit and push this append-only completion record, then require every check to pass once more
       on that evidence-only final commit before handing the PR back as merge-ready.
+```
+
+```text
+[post-completion review | 2026-07-25 | final-head Codex findings]
+criterion: 16 and 17 reopened for exact-head remote evidence.
+before: The evidence-only commit 65bcb421 passed every CI and security check, but the explicitly
+        requested final Codex review found two real residual issues: generated-file publication did
+        not re-probe path components after staging, and crash-left SpecBundler staging directories
+        survived `--no-clean`. It also suggested removing six apparently unused Effect packages.
+change: Stabilized the output root at context construction; revalidated sync and Effect-native
+        destinations before staging and immediately before rename; kept expected path failures
+        typed and cleanup scoped; added a real symlink-swap regression plus orchestration/cleanup
+        tests; recognized only exact six-character Node mkdtemp artifacts for both atomic writes and
+        SpecBundler staging; proved similarly named user directories survive; and expanded the
+        Windows security gate with both suites. Retained all six Effect packages after package
+        metadata, `pnpm why`, and built-output inspection proved they satisfy non-optional,
+        externalized peer chains while `auto-install-peers=false`.
+evidence: Oxfmt, Oxlint, workspace typecheck, focused suites, and the expanded local Windows gate
+          pass. Gen's Windows set passes 111/111; CLI's set passes 132 applicable tests with two
+          intentional non-Windows skips. `pnpm verify:effect-migration` passes with zero Effect
+          diagnostics, all 2,383 workspace tests, 225 exact generated fixtures, packed Effect 3.22
+          consumers, duplicate-identity rejection, and an unchanged authored worktree.
+next: Commit and push the two real repairs plus this reopened checkpoint, require fresh green
+      Ubuntu/Windows/CodeQL/Socket checks, resolve the implementation threads only after the push,
+      and trigger a new final-head Codex review. Return status to complete only when that review has
+      no unresolved finding and the exact head is green.
 ```
 
 ## Stop conditions
