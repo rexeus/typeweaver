@@ -151,7 +151,7 @@ describe("PathSafety (properties, symlink-component branch)", () => {
   test("a path whose component at any index is a symlink is rejected with symlink-component", () => {
     assert(
       property(symlinkScenarioArb, ([segments, symlinkIndex]) => {
-        const outputDir = "/safe/output";
+        const outputDir = path.resolve("safe", "output");
         const symlinkAbsolute = path.join(
           outputDir,
           ...segments.slice(0, symlinkIndex + 1)

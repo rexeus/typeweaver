@@ -10,6 +10,7 @@ import {
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 
 const workspaceRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -332,13 +333,70 @@ const isAuthoredLintSource = file =>
   !/(?:^|\/)(?:dist|node_modules|output|outputs)(?:\/|$)/u.test(file) &&
   !file.startsWith(".vscode/");
 
+const scriptKindFor = file => {
+  if (file.endsWith(".tsx")) return ts.ScriptKind.TSX;
+  if (file.endsWith(".jsx")) return ts.ScriptKind.JSX;
+  if (file.endsWith(".js")) return ts.ScriptKind.JS;
+  return ts.ScriptKind.TS;
+};
+
+const extractDisableDirectives = (source, file = "fixture.ts") => {
+  const sourceFile = ts.createSourceFile(
+    file,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    scriptKindFor(file)
+  );
+  const commentRanges = new Map();
+
+  const rememberRanges = ranges => {
+    for (const range of ranges ?? []) {
+      commentRanges.set(`${range.pos}:${range.end}`, range);
+    }
+  };
+
+  const visit = node => {
+    rememberRanges(ts.getLeadingCommentRanges(source, node.getFullStart()));
+    rememberRanges(ts.getTrailingCommentRanges(source, node.getEnd()));
+    for (const child of node.getChildren(sourceFile)) {
+      visit(child);
+    }
+  };
+  visit(sourceFile);
+
+  return [...commentRanges.values()]
+    .sort((left, right) => left.pos - right.pos)
+    .map(range => source.slice(range.pos, range.end).trim())
+    .filter(comment => /(?:oxlint|eslint)-(?:disable|enable)/u.test(comment));
+};
+
 const disableDirectives = file =>
-  readFileSync(path.join(workspaceRoot, file), "utf8")
-    .split(/\r?\n/u)
-    .map(line => line.trim())
-    .filter(line => /(?:oxlint|eslint)-(?:disable|enable)/u.test(line));
+  extractDisableDirectives(
+    readFileSync(path.join(workspaceRoot, file), "utf8"),
+    file
+  );
+
+const assertDisableDirectiveScanner = () => {
+  const actual = extractDisableDirectives(
+    [
+      'const literal = "// oxlint-disable no-console";',
+      "// oxlint-disable-next-line no-console",
+      'const secondLiteral = "/* eslint-disable complexity */";',
+      "const value = true; /* eslint-disable-line no-warning-comments */",
+    ].join("\n")
+  );
+  const expected = [
+    "// oxlint-disable-next-line no-console",
+    "/* eslint-disable-line no-warning-comments */",
+  ];
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error("Lint directive scanner does not distinguish comments");
+  }
+};
 
 const assertDisableDirectives = files => {
+  assertDisableDirectiveScanner();
   const actual = new Map(
     files
       .filter(isAuthoredLintSource)
