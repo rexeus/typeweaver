@@ -17,16 +17,42 @@ function stringifyTemplateValue(value: unknown): string {
   return String(value);
 }
 
+type TemplateTag = {
+  readonly end: number;
+  readonly start: number;
+  readonly value: string;
+};
+
+function findNextTemplateTag(
+  template: string,
+  fromIndex: number
+): TemplateTag | undefined {
+  const start = template.indexOf("<%", fromIndex);
+  if (start === -1) {
+    return undefined;
+  }
+
+  const closingStart = template.indexOf("%>", start + 2);
+  if (closingStart === -1) {
+    return undefined;
+  }
+
+  const end = closingStart + 2;
+  return {
+    start,
+    end,
+    value: template.slice(start, end),
+  };
+}
+
 export function renderTemplate(template: string, data: TemplateData): string {
   const templateData = data ?? {};
   const outputChunks: string[] = [];
-  const expressionPattern = /<%[=-]?[\s\S]*?%>/g;
   let currentIndex = 0;
-  let match: RegExpExecArray | null = expressionPattern.exec(template);
+  let tagLocation = findNextTemplateTag(template, currentIndex);
 
-  while (match !== null) {
-    const [tag] = match;
-    const tagStart = match.index;
+  while (tagLocation !== undefined) {
+    const { end: tagEnd, start: tagStart, value: tag } = tagLocation;
 
     outputChunks.push(
       `__output.push(${JSON.stringify(template.slice(currentIndex, tagStart))});`
@@ -42,8 +68,8 @@ export function renderTemplate(template: string, data: TemplateData): string {
       outputChunks.push(tag.slice(2, -2));
     }
 
-    currentIndex = tagStart + tag.length;
-    match = expressionPattern.exec(template);
+    currentIndex = tagEnd;
+    tagLocation = findNextTemplateTag(template, currentIndex);
   }
 
   outputChunks.push(

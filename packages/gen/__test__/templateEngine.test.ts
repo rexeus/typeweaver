@@ -192,6 +192,12 @@ describe("renderTemplate whitespace and failures", () => {
     expect(result).toBe("alpha \n  beta\n\tgamma  omega");
   });
 
+  test("preserves unterminated tag-like input without regex backtracking", () => {
+    const template = `<%${"<%-".repeat(25_000)}`;
+
+    expect(renderTemplate(template, {})).toBe(template);
+  });
+
   test("propagates template syntax errors instead of returning partial output", () => {
     const renderInvalidTemplate = () =>
       renderTemplate("<% if (enabled) { %>enabled", { enabled: true });
