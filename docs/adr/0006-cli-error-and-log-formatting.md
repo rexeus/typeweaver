@@ -98,10 +98,10 @@ preventing double-print.
 ### Negative
 
 - Diagnostic detail is lost from the default output. Users who need DEBUG-level detail opt in via
-  `--verbose` / `-V`, which swaps in `VerboseLayer` (see `packages/cli/src/effectRuntime.ts`). The
-  verbose layer lifts the minimum log level to `Debug` and routes `[DEBUG]`-tagged records to the
-  console alongside the regular Info output. High-value seams that emit debug records: lock
-  acquire/release, plugin-loader per-attempt traces, generator input/output paths.
+  `--verbose`, which swaps in `VerboseLayer` (see `packages/cli/src/effectRuntime.ts`). The verbose
+  layer lifts the minimum log level to `Debug` and routes `[DEBUG]`-tagged records to the console
+  alongside the regular Info output. High-value seams that emit debug records: lock acquire/release,
+  plugin-loader per-attempt traces, generator input/output paths.
 - Three layers of formatting interact (logger, error formatter, validation filter). A regression in
   any one can surface as silent output or a duplicated print. The test suite covers each
   independently: `cliLogger.test.ts`, `formatErrorForCli.test.ts`, `validationErrorFilter.test.ts`,

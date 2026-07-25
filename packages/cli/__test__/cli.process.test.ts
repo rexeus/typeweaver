@@ -531,22 +531,13 @@ describe("built CLI flag and verbosity handling", () => {
     expect(result.stdout).toContain("[DEBUG] Released output lock");
   });
 
-  test("supports the documented verbose alias", async () => {
+  test("preserves Commander's historical -V version alias", async () => {
     const workspace = createWorkspace();
-    writeSpec(workspace);
-
-    const result = await runCli(workspace, [
-      "generate",
-      "--input",
-      "spec/index.ts",
-      "--output",
-      "generated",
-      "--no-format",
-      "-V",
-    ]);
+    const result = await runCli(workspace, ["-V"]);
 
     expect(result).toMatchObject({ code: 0, signal: null, stderr: "" });
-    expect(result.stdout).toContain("[DEBUG] Input file:");
+    expect(result.stdout).toBe("Running on Node.js\n0.12.0\n\n");
+    expect(result.stdout).not.toContain("[DEBUG]");
   });
 });
 

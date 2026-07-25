@@ -69,7 +69,6 @@ const noCleanOption = Options.boolean("no-clean", { ifPresent: true }).pipe(
 );
 
 const verboseOption = Options.boolean("verbose", { ifPresent: true }).pipe(
-  Options.withAlias("V"),
   Options.withDescription(
     "enable debug-level logging (effect spans, plugin attempts, lock acquire/release)"
   ),
@@ -116,14 +115,17 @@ const run = Command.run(cli, {
 
 // `@effect/cli` scopes options to commands, but the chosen Layer is fixed
 // at program-construction time — there is no per-command Layer swap. We
-// detect `--verbose` / `-V` here so the right runtime is provided before
+// detect `--verbose` here so the right runtime is provided before
 // the command parser ever runs. The option is also declared on `generate`
 // so it shows up in `--help` and gets parsed cleanly (the flag is benign
 // to the handler).
-const isVerbose = process.argv.some(arg => arg === "--verbose" || arg === "-V");
+// @effect/cli exposes `--version` but not Commander's historical `-V` alias,
+// so normalize that public compatibility flag before parsing.
+const cliArgs = process.argv.map(arg => (arg === "-V" ? "--version" : arg));
+const isVerbose = cliArgs.some(arg => arg === "--verbose");
 const runtimeLayer = isVerbose ? VerboseLayer : ProductionLayer;
 
-const program = run(process.argv).pipe(
+const program = run(cliArgs).pipe(
   // @effect/cli surfaces help requests and validation issues as
   // `ValidationError`. The framework already prints a friendly message and
   // sets the exit code for those — skip the custom formatter so we do not
