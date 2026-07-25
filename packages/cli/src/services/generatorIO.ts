@@ -160,6 +160,7 @@ const LOCK_DIR_NAME = ".typeweaver-lock";
 const LOCK_FENCE_PREFIX = `${LOCK_DIR_NAME}.fence-`;
 const LOCK_INFO_FILE = "info.json";
 const TEMP_DIR_PREFIX = ".typeweaver-";
+const SPEC_BUNDLER_TEMP_DIR_PREFIX = ".typeweaver-spec-loader-";
 const TEMP_DIR_RANDOM_SUFFIX_LENGTH = 6;
 
 type LockInfo = {
@@ -201,21 +202,28 @@ const isAsciiAlphaNumeric = (character: string): boolean => {
   );
 };
 
-const isAtomicWriteTempDirectory = (entryName: string): boolean => {
+const hasNodeTempDirectoryShape = (
+  entryName: string,
+  prefix: string
+): boolean => {
   if (
-    !entryName.startsWith(TEMP_DIR_PREFIX) ||
-    entryName.length !== TEMP_DIR_PREFIX.length + TEMP_DIR_RANDOM_SUFFIX_LENGTH
+    !entryName.startsWith(prefix) ||
+    entryName.length !== prefix.length + TEMP_DIR_RANDOM_SUFFIX_LENGTH
   ) {
     return false;
   }
 
-  for (const character of entryName.slice(TEMP_DIR_PREFIX.length)) {
+  for (const character of entryName.slice(prefix.length)) {
     if (!isAsciiAlphaNumeric(character)) {
       return false;
     }
   }
   return true;
 };
+
+const isOwnedTempDirectory = (entryName: string): boolean =>
+  hasNodeTempDirectoryShape(entryName, TEMP_DIR_PREFIX) ||
+  hasNodeTempDirectoryShape(entryName, SPEC_BUNDLER_TEMP_DIR_PREFIX);
 
 const errnoCode = (error: unknown): string | undefined =>
   typeof error === "object" &&
@@ -565,7 +573,8 @@ export const releaseOutputLock = (lock: OutputLock): Effect.Effect<void> =>
  * Cheap and idempotent: if the output directory does not exist (first run)
  * or contains no orphans, the sweep is a no-op. The current lock dir
  * (`.typeweaver-lock`) and stale-ownership fences are preserved — only the
- * atomic-write artifacts (`.typeweaver-XXXX`) are pruned.
+ * atomic-write (`.typeweaver-XXXXXX`) and spec-bundler staging
+ * (`.typeweaver-spec-loader-XXXXXX`) artifacts are pruned.
  *
  * Best-effort: a failing `rm` (e.g. `EACCES` on crash debris owned by
  * another user) is demoted to a WARN log — an unremovable orphan must not
@@ -604,7 +613,7 @@ const sweepOrphanTempdirsAt = (directory: string): void => {
       continue;
     }
     const entryPath = path.join(directory, entry.name);
-    if (isAtomicWriteTempDirectory(entry.name)) {
+    if (isOwnedTempDirectory(entry.name)) {
       fs.rmSync(entryPath, { recursive: true, force: true });
       continue;
     }
