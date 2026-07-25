@@ -1,6 +1,6 @@
 # Effect migration: merge-ready completion contract
 
-Status: active  
+Status: blocked — awaiting human-authorized push for remote Ubuntu and Windows CI evidence
 Audit baseline: `feat/use-effect` at `7488f6d2`, reviewed 2026-07-25  
 Runtime baseline: Node 24, pnpm 10, Effect 3.22
 
@@ -900,6 +900,26 @@ evidence: `git rev-list --left-right --count origin/feat/use-effect...HEAD` repo
 next: Validate the committed workflow once more, commit this checkpoint, then stop before pushing.
       Human approval is required to push the 19 local commits and obtain fresh Ubuntu plus Windows
       CI evidence for criteria 16 and 17.
+```
+
+```text
+[iteration 20 | 2026-07-25 | blocked checkpoint]
+criterion: 16 and 17 remote completion evidence.
+before: The same human-approval boundary has remained the only blocker for three consecutive goal
+        turns. HEAD is 19 commits ahead of origin/feat/use-effect, the worktree is clean, and no
+        local implementation or verification gap remains that can produce the required remote
+        Ubuntu and Windows evidence.
+change: Re-read the complete completion contract and Effect 3.22 authority, rechecked the branch
+        divergence, and recorded the required blocked state without pushing or mutating PR #190.
+evidence: `.repos/effect` is present; Effect remains pinned to 3.22.0 with peer range >=3.22.0 <4;
+          `git rev-list --left-right --count origin/feat/use-effect...HEAD` still reports 0 19.
+          Iterations 18 and 19 already record the green local umbrella, actionlint validation, and
+          resolution of the old remote pnpm-version mismatch. Criteria 16 and 17 remain unchecked
+          solely because their contract explicitly requires fresh green remote jobs.
+next: A human must explicitly authorize pushing feat/use-effect to origin. After that push, monitor
+      PR #190 until the Ubuntu quality-check and Windows security jobs complete, diagnose and fix
+      any failures, record the exact run evidence, check criteria 16 and 17, rerun the final
+      completion audit, and only then mark the goal done.
 ```
 
 ## Stop conditions
