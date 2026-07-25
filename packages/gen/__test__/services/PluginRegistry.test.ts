@@ -2,6 +2,7 @@ import { Cause, Effect, Exit, Layer, Logger } from "effect";
 import { describe, expect, test } from "vitest";
 import { PluginDependencyError } from "../../src/plugins/errors/index.js";
 import { PluginRegistry } from "../../src/services/PluginRegistry.js";
+import type { PluginConfig } from "../../src/plugins/contextTypes.js";
 import type { Plugin } from "../../src/plugins/Plugin.js";
 import type { PluginRegistryInstance } from "../../src/services/PluginRegistry.js";
 
@@ -330,11 +331,13 @@ describe("PluginRegistry", () => {
   });
 
   test("registers exactly one entry under concurrent duplicate registrations and keeps the first config", () => {
-    const plugins: { readonly plugin: Plugin; readonly config: unknown }[] =
-      Array.from({ length: 50 }, (_, idx) => ({
-        plugin: aPluginNamed("types"),
-        config: { idx },
-      }));
+    const plugins: {
+      readonly plugin: Plugin;
+      readonly config: PluginConfig;
+    }[] = Array.from({ length: 50 }, (_, idx) => ({
+      plugin: aPluginNamed("types"),
+      config: { idx },
+    }));
 
     const registrations = Effect.runSync(
       Effect.gen(function* () {

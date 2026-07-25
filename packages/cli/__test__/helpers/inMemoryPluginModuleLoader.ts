@@ -45,9 +45,9 @@ const isFailedImportFixture = (
  */
 export const inMemoryPluginModuleLoader = (
   modules: ReadonlyMap<string, ModuleFixture>
-): Layer.Layer<PluginModuleLoader> =>
-  Layer.succeed(PluginModuleLoader, {
-    load: specifier => {
+): Layer.Layer<PluginModuleLoader> => {
+  const service = PluginModuleLoader.make({
+    load: (specifier: string) => {
       const moduleRecord = modules.get(specifier);
       if (moduleRecord === undefined) {
         return Effect.fail(
@@ -72,4 +72,7 @@ export const inMemoryPluginModuleLoader = (
       }
       return Effect.succeed(moduleRecord);
     },
-  } as PluginModuleLoader["Type"]);
+  });
+
+  return Layer.succeed(PluginModuleLoader, service);
+};

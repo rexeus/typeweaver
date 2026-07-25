@@ -212,6 +212,7 @@ describe("isTypedHttpResponse", () => {
       header: {
         "X-Optional": undefined,
       },
+      body: undefined,
     } satisfies ITypedHttpResponse;
 
     expect(isTypedHttpResponse(response)).toBe(true);
@@ -250,6 +251,7 @@ describe("isTypedHttpResponse", () => {
       header: {
         "Cache-Control": ["public", "max-age=60"],
       },
+      body: undefined,
     } satisfies ITypedHttpResponse;
 
     expect(isTypedHttpResponse(response)).toBe(true);

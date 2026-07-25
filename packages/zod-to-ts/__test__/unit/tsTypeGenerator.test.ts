@@ -441,7 +441,12 @@ describe("wrapper schemas", () => {
 
   test("maps pipe object fields to optional properties from optional outputs", () => {
     expect(
-      toTs(z.object({ value: z.string().pipe(z.string().optional()) }))
+      toTs(
+        z.object({
+          // @ts-expect-error Zod's invariant pipe target rejects a wider input although this required string can safely feed it.
+          value: z.string().pipe(z.string().optional()),
+        })
+      )
     ).toBe(["{", "    value?: string | undefined;", "}"].join("\n"));
   });
 

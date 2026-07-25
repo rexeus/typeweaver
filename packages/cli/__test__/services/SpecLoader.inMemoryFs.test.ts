@@ -59,17 +59,23 @@ const aMinimalSpec = (): SpecDefinition => {
 
 const stubSpecBundlerLayer = (
   bundledSpecFile: string
-): Layer.Layer<SpecBundler> =>
-  Layer.succeed(SpecBundler, {
+): Layer.Layer<SpecBundler> => {
+  const service = SpecBundler.make({
     bundle: () => Effect.succeed(bundledSpecFile),
-  } as SpecBundler["Type"]);
+  });
+
+  return Layer.succeed(SpecBundler, service);
+};
 
 const stubSpecImporterLayer = (
   definition: SpecDefinition
-): Layer.Layer<SpecImporter> =>
-  Layer.succeed(SpecImporter, {
+): Layer.Layer<SpecImporter> => {
+  const service = SpecImporter.make({
     importDefinition: () => Effect.succeed(definition),
-  } as SpecImporter["Type"]);
+  });
+
+  return Layer.succeed(SpecImporter, service);
+};
 
 describe("SpecLoader against InMemoryFileSystem", () => {
   test("writes the canonical spec.d.ts declaration into specOutputDir", async () => {

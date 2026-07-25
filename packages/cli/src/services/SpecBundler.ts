@@ -7,6 +7,7 @@ import {
   SpecBundleError,
   SpecBundleOutputMissingError,
 } from "./errors/specErrors.js";
+import type { BuildOptions } from "rolldown";
 
 const WINDOWS_ABSOLUTE_PATH_PATTERN = /^[A-Za-z]:[\\/]/;
 const WINDOWS_UNC_PATH_PATTERN = /^\\\\/;
@@ -17,7 +18,7 @@ export type SpecBundlerConfig = {
 };
 
 export type SpecBundlerDeps = {
-  readonly build?: typeof build;
+  readonly build?: (options: BuildOptions) => Promise<unknown>;
   readonly existsSync?: (filePath: string) => boolean;
 };
 

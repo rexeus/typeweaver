@@ -339,6 +339,11 @@ describe("SpecLoader", () => {
       },
     },
   };
+  const [validOperation] = validSpecDefinition.resources.todos.operations;
+
+  if (validOperation === undefined) {
+    throw new Error("Expected the valid spec fixture to contain an operation");
+  }
 
   test("accepts a structurally valid spec definition", () => {
     expect(isSpecDefinition(validSpecDefinition)).toBe(true);
@@ -363,8 +368,7 @@ describe("SpecLoader", () => {
                 method: "GET",
                 path: "/todos",
                 request: {},
-                responses:
-                  validSpecDefinition.resources.todos.operations[0].responses,
+                responses: validOperation.responses,
               },
             ],
           },

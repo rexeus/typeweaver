@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true
+  },
+  "exclude": [
+    // These launchers are compiled and executed by the native Deno/Bun process suite;
+    // their runtime globals intentionally do not enter the Node TypeScript program.
+    "src/test-server/runtimes/serve-bun.ts",
+    "src/test-server/runtimes/serve-deno.ts"
+  ]
+}

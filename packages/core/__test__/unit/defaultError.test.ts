@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { assert, describe, expect, expectTypeOf, test } from "vitest";
 import {
   badRequestDefaultError,
   createDefaultErrorBody,
@@ -196,6 +196,7 @@ describe("defaultError", () => {
       code: "INTERNAL_SERVER_ERROR",
       message: "Internal server error occurred",
     });
+    assert(response.body);
     expectTypeOf(
       response.statusCode
     ).toEqualTypeOf<HttpStatusCode.INTERNAL_SERVER_ERROR>();

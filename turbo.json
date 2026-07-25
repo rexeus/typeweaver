@@ -12,7 +12,15 @@
     },
     "typecheck": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "src/**", "__test__/**", "tsconfig.json", "package.json"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "src/**",
+        "__test__/**",
+        "type-tests/**",
+        "examples/**",
+        "tsconfig*.json",
+        "package.json"
+      ],
       "outputs": []
     },
     "test": {

@@ -242,7 +242,9 @@ describe("normalizeSpec", () => {
     test("preserves request schemas by identity", () => {
       const header = z.object({ authorization: z.string() });
       const param = z.object({ todoId: z.string() });
-      const query = z.object({ includeDone: z.coerce.boolean().optional() });
+      const query = z.object({
+        includeDone: z.enum(["true", "false"]).optional(),
+      });
       const body = z.object({ title: z.string() });
       const spec = aSpec({
         todos: {

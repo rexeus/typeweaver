@@ -34,7 +34,7 @@
     "cli": "tsx src/cli.ts",
     "cli:deno": "deno run -A src/entry.ts",
     "cli:bun": "bun run src/entry.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json && tsc --noEmit -p examples/tsconfig.json",
     "typecheck:contracts": "tsc --noEmit -p tsconfig.type-tests.json",
     "format": "oxfmt",
     "build": "tsdown",

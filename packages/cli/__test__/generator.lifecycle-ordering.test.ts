@@ -412,7 +412,7 @@ describe("Generator.generate (plugin lifecycle ordering)", () => {
           input: "spec/index.ts",
           output: "generated/output",
           format: false,
-          plugins: pluginFiles,
+          plugins: [...pluginFiles],
         },
         currentWorkingDirectory: workspace,
       })

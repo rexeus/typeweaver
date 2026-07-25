@@ -27,7 +27,7 @@
     "NOTICE"
   ],
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "format": "oxfmt",
     "build": "tsdown",
     "test": "vitest run",

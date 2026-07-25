@@ -15,9 +15,9 @@ import { PluginModuleLoader } from "../../src/services/PluginModuleLoader.js";
  */
 const inMemoryPluginModuleLoader = (
   modules: ReadonlyMap<string, Record<string, unknown>>
-): Layer.Layer<PluginModuleLoader> =>
-  Layer.succeed(PluginModuleLoader, {
-    load: specifier => {
+): Layer.Layer<PluginModuleLoader> => {
+  const service = PluginModuleLoader.make({
+    load: (specifier: string) => {
       const moduleRecord = modules.get(specifier);
       if (moduleRecord === undefined) {
         return Effect.fail(
@@ -29,16 +29,19 @@ const inMemoryPluginModuleLoader = (
       }
       return Effect.succeed(moduleRecord);
     },
-  } as PluginModuleLoader["Type"]);
+  });
+
+  return Layer.succeed(PluginModuleLoader, service);
+};
 
 const aNamedPluginModule = (): Record<string, unknown> => ({
   namedPlugin: { name: "named-plugin" },
 });
 
-const runWithModules = async (
+const runWithModules = async <A, E>(
   modules: ReadonlyMap<string, Record<string, unknown>>,
-  effect: Effect.Effect<unknown, unknown, PluginModuleLoader>
-): Promise<unknown> => {
+  effect: Effect.Effect<A, E, PluginModuleLoader>
+): Promise<A> => {
   const runtime = ManagedRuntime.make(inMemoryPluginModuleLoader(modules));
   try {
     return await runtime.runPromise(effect);
@@ -70,7 +73,9 @@ describe("PluginModuleLoader", () => {
       throw new Error("Expected loader to fail for an unknown specifier");
     }
 
-    expect(result.left).toBeInstanceOf(PluginModuleNotFoundError);
+    if (!(result.left instanceof PluginModuleNotFoundError)) {
+      throw new Error("Expected PluginModuleNotFoundError");
+    }
     expect(result.left.specifier).toBe("missing");
   });
 
@@ -116,7 +121,9 @@ describe("PluginModuleLoader", () => {
         );
       }
 
-      expect(result.left).toBeInstanceOf(PluginModuleNotFoundError);
+      if (!(result.left instanceof PluginModuleNotFoundError)) {
+        throw new Error("Expected PluginModuleNotFoundError");
+      }
       expect(result.left.specifier).toBe(unresolvableSpecifier);
       // The underlying Node module-not-found error must be preserved on the
       // `cause` field so operators can inspect what Node actually reported.

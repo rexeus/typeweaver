@@ -27,7 +27,7 @@
     "NOTICE"
   ],
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "test": "vitest --run",
     "format": "oxfmt",
     "build": "tsdown && cp ../../LICENSE ../../NOTICE ./dist/",

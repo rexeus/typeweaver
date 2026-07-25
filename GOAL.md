@@ -148,7 +148,7 @@ progress log.
   - a type-equality assertion binds `GenerateFailure` to the method channel;
   - `pnpm typecheck` exits 0.
 
-- [ ] **7. Test TypeScript is part of the compiler gate.**
+- [x] **7. Test TypeScript is part of the compiler gate.**
 
   Add package test TypeScript configurations or an equivalent type-test setup covering test sources,
   public plugin-author APIs, Effect requirements, error channels, and negative `@ts-expect-error`
@@ -554,6 +554,31 @@ evidence: Initial contract probes failed with TS2344 and unused TS2578 directive
           gen suite 296/296 and CLI suite 263/263; gen and CLI builds, workspace typecheck, Oxlint,
           Oxfmt, and git diff check all green.
 next: Criterion 7, make test TypeScript and negative public contracts a root and CI compiler gate.
+```
+
+```text
+[iteration 7 | 2026-07-25]
+criterion: 7. Test TypeScript is part of the compiler gate.
+before: The root compiler gate skipped all CLI, core, gen, and zod-to-ts tests, reached the CLI
+        error contracts only through an optional package command, and replaced the entire
+        test-utils typecheck with an echo. The first real test compile exposed invalid typed
+        fixtures, unchecked service-test casts, and stale private helpers.
+change: Added package test configs, included the CLI public error contracts and plugin-author
+        checkJs example in its normal typecheck, preserved Turbo dependency builds and made every
+        test/type-test/config input cache-significant. Replaced unsafe service-test casts with
+        Effect.Service.make, repaired fixture narrowing without weakening the tested behavior,
+        compiled the Node-compatible test-utils tree, and removed three unexported helpers whose
+        generated imports no longer existed. Deno and Bun launchers remain isolated from Node
+        globals and are covered by their native process suites.
+evidence: The compiler inventory now includes all 124 publishable package test/type-test files and
+          357/359 test-utils TypeScript files; only the two native launcher files are excluded.
+          Removing the missing-dependency @ts-expect-error made
+          `NODE_OPTIONS=--max-old-space-size=6144 pnpm typecheck --force` fail at the root with
+          TS2322; restoring it made the same command green. Core, zod-to-ts, gen 296/296, CLI
+          263/263, and native Node/Deno/Bun server 833/833 tests passed. Oxlint, Oxfmt, and git diff
+          check are green. Independent Test-Mastery review found no blocker and confirmed the
+          Query/Zod contracts were preserved.
+next: Criterion 8, keep expected formatter and filesystem failures in the typed Effect channel.
 ```
 
 ## Stop conditions
