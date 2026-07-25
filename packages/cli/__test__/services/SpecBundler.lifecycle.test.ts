@@ -1,3 +1,7 @@
+import {
+  coordinationArtifactMarkerSource,
+  TYPEWEAVER_COORDINATION_MARKER_FILE,
+} from "@rexeus/typeweaver-gen";
 import { FileSystem } from "@effect/platform";
 import {
   Cause,
@@ -69,6 +73,7 @@ describe("SpecBundler temp directory lifecycle", () => {
   test("the temp directory is present in the filesystem while build runs and absent after the scope closes", async () => {
     let tempDirAtBuildTime: string | undefined;
     let tempDirExistedAtBuildTime = false;
+    let markerSourceAtBuildTime: string | undefined;
 
     const { exit, state } = await runWithBundler(state =>
       Effect.gen(function* () {
@@ -80,6 +85,11 @@ describe("SpecBundler temp directory lifecycle", () => {
           tempDirExistedAtBuildTime =
             tempDirAtBuildTime !== undefined &&
             state.listDirectories().includes(tempDirAtBuildTime);
+          if (tempDirAtBuildTime !== undefined) {
+            markerSourceAtBuildTime = state.readFile(
+              `${tempDirAtBuildTime}/${TYPEWEAVER_COORDINATION_MARKER_FILE}`
+            );
+          }
           return writeBuildOutput(
             fileSystem,
             config,
@@ -102,6 +112,9 @@ describe("SpecBundler temp directory lifecycle", () => {
     expect(Exit.isSuccess(exit)).toBe(true);
     expect(tempDirAtBuildTime).toBeDefined();
     expect(tempDirExistedAtBuildTime).toBe(true);
+    expect(markerSourceAtBuildTime).toBe(
+      coordinationArtifactMarkerSource("spec-bundler-temp")
+    );
     if (tempDirAtBuildTime !== undefined) {
       expect(state.listDirectories()).not.toContain(tempDirAtBuildTime);
     }

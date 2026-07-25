@@ -6,6 +6,10 @@ import { Cause, Deferred, Effect, Exit, Fiber, Option, Ref } from "effect";
 import { describe, expect } from "vitest";
 import { GeneratedPathProbeError } from "../../../src/errors/GeneratedPathProbeError.js";
 import { UnsafeGeneratedPathError } from "../../../src/errors/UnsafeGeneratedPathError.js";
+import {
+  coordinationArtifactMarkerSource,
+  TYPEWEAVER_COORDINATION_MARKER_FILE,
+} from "../../../src/helpers/coordinationArtifact.js";
 import { makeEffectContextIO } from "../../../src/services/internal/pluginContextEffectIO.js";
 import type { PathSafetyShape } from "../../../src/services/internal/pluginContextEffectIO.js";
 
@@ -14,6 +18,8 @@ const generatedPath = "todo/GetTodoClient.ts";
 const destinationPath = path.join(outputDir, generatedPath);
 const tempDir = path.join(outputDir, "todo", ".typeweaver-test");
 const tempFile = path.join(tempDir, "generated.tmp");
+const markerFile = path.join(tempDir, TYPEWEAVER_COORDINATION_MARKER_FILE);
+const markerSource = coordinationArtifactMarkerSource("atomic-write-temp");
 
 const missingTarget = new SystemError({
   reason: "NotFound",
@@ -48,14 +54,20 @@ const makeAtomicContextIO = (config: {
   readonly cleanupCount: Ref.Ref<number>;
   readonly trackedWrites: string[];
   readonly validateGeneratedPath?: PathSafetyShape["validateGeneratedPath"];
-}) =>
-  makeEffectContextIO({
+}) => {
+  let markerWrittenForCurrentTemp = false;
+  return makeEffectContextIO({
     fileSystem: FileSystem.makeNoop({
       stat: () => Effect.fail(missingTarget),
       makeDirectory: () => Effect.void,
       makeTempDirectoryScoped: () =>
         Effect.acquireRelease(
-          Ref.set(config.tempExists, true).pipe(Effect.as(tempDir)),
+          Effect.sync(() => {
+            markerWrittenForCurrentTemp = false;
+          }).pipe(
+            Effect.zipRight(Ref.set(config.tempExists, true)),
+            Effect.as(tempDir)
+          ),
           () =>
             Ref.set(config.tempExists, false).pipe(
               Effect.zipRight(
@@ -63,12 +75,23 @@ const makeAtomicContextIO = (config: {
               )
             )
         ),
-      writeFileString: (filePath, content) =>
-        filePath === tempFile && content.length > 0
-          ? Effect.void
-          : Effect.die(
-              new Error("Atomic-writer test received an unexpected temp write")
-            ),
+      writeFileString: (filePath, content) => {
+        if (filePath === markerFile && content === markerSource) {
+          return Effect.sync(() => {
+            markerWrittenForCurrentTemp = true;
+          });
+        }
+        if (
+          filePath === tempFile &&
+          content.length > 0 &&
+          markerWrittenForCurrentTemp
+        ) {
+          return Effect.void;
+        }
+        return Effect.die(
+          new Error("Atomic-writer test received an unexpected temp write")
+        );
+      },
       rename: config.rename,
     }),
     pathSafety: {
@@ -87,6 +110,7 @@ const makeAtomicContextIO = (config: {
     trackWrite: path => config.trackedWrites.push(path),
     trackGenerated: () => undefined,
   });
+};
 
 describe("makeEffectContextIO failure channels", () => {
   it.effect("revalidates the destination after staging and before rename", () =>

@@ -18,6 +18,10 @@ import type {
 } from "../../../src/NormalizedSpec.js";
 import type { SyncAtomicFileSystem } from "../../../src/services/internal/pluginContextBuilder.js";
 
+const coordinationMarkerFile = ".typeweaver-coordination";
+const atomicWriteMarkerSource =
+  "typeweaver-coordination-artifact/v1\nkind=atomic-write-temp\n";
+
 /**
  * Real-deps factory for the sync plugin-context builder: the exact live
  * shapes the production `ContextBuilder` service wires in — the pure
@@ -784,6 +788,9 @@ describe("createPluginContextBuilder destination revalidation", () => {
       ...liveSyncAtomicFileSystem,
       writeFileExclusive: (filePath, content, mode) => {
         liveSyncAtomicFileSystem.writeFileExclusive(filePath, content, mode);
+        if (path.basename(filePath) !== "generated.tmp") {
+          return;
+        }
         fs.renameSync(resourceDir, stagedResourceDir);
         fs.symlinkSync(
           externalDir,
@@ -816,6 +823,33 @@ describe("createPluginContextBuilder destination revalidation", () => {
 });
 
 describe("createPluginContextBuilder atomic write failures", () => {
+  test("publishes the ownership marker before staging sync content", () => {
+    const outputDir = aTempDir();
+    let observedMarkerSource: string | undefined;
+    const syncAtomicFileSystem = {
+      ...liveSyncAtomicFileSystem,
+      writeFileExclusive: (filePath, content, mode) => {
+        if (path.basename(filePath) === "generated.tmp") {
+          observedMarkerSource = fs.readFileSync(
+            path.join(path.dirname(filePath), coordinationMarkerFile),
+            "utf8"
+          );
+        }
+        liveSyncAtomicFileSystem.writeFileExclusive(filePath, content, mode);
+      },
+    } satisfies SyncAtomicFileSystem;
+    const generatorContext = aBuilder(
+      syncAtomicFileSystem
+    ).createGeneratorContext({
+      ...generatedProjectParams,
+      outputDir,
+    });
+
+    generatorContext.writeFile("todo/GetTodoClient.ts", "generated");
+
+    expect(observedMarkerSource).toBe(atomicWriteMarkerSource);
+  });
+
   test("leaves output unchanged when replacing an existing directory target fails", () => {
     const outputDir = aTempDir();
     const generatorContext = aGeneratedProjectContext({ outputDir });

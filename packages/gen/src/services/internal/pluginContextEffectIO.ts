@@ -5,6 +5,11 @@ import {
   TemplateRenderError,
   UnsafeGeneratedPathError,
 } from "../../errors/index.js";
+import {
+  ATOMIC_WRITE_TEMP_DIRECTORY_PREFIX,
+  coordinationArtifactMarkerSource,
+  TYPEWEAVER_COORDINATION_MARKER_FILE,
+} from "../../helpers/coordinationArtifact.js";
 import { resolveSafeGeneratedFilePath } from "../../helpers/pathSafety.js";
 import { renderTemplate } from "../../helpers/templateEngine.js";
 import type { SafeGeneratedFilePath } from "../../helpers/pathSafety.js";
@@ -136,9 +141,17 @@ const writeFileViaTempReplaceEffect = (
       );
       const tempDir = yield* fileSystem.makeTempDirectoryScoped({
         directory: destinationDir,
-        prefix: ".typeweaver-",
+        prefix: ATOMIC_WRITE_TEMP_DIRECTORY_PREFIX,
       });
       const tempFile = path.join(tempDir, "generated.tmp");
+      yield* fileSystem.writeFileString(
+        path.join(tempDir, TYPEWEAVER_COORDINATION_MARKER_FILE),
+        coordinationArtifactMarkerSource("atomic-write-temp"),
+        {
+          flag: "wx",
+          mode: 0o600,
+        }
+      );
       yield* fileSystem.writeFileString(tempFile, config.content);
       if (existingFileMode !== undefined) {
         yield* fileSystem.chmod(tempFile, existingFileMode);

@@ -141,8 +141,7 @@ const resolveCleanTargetContext = (
   currentWorkingDirectory: string,
   fileSystem: CleanTargetFs
 ): CleanTargetContext => {
-  const trimmedOutputDir = outputDir.trim();
-  if (trimmedOutputDir.length === 0) {
+  if (outputDir.trim().length === 0) {
     throw new UnsafeCleanTargetError({
       outputDir,
       details: { reason: "empty-path" },
@@ -153,10 +152,7 @@ const resolveCleanTargetContext = (
   const canonicalWorkingDirectory = fileSystem.realPath(
     resolvedWorkingDirectory
   );
-  const resolvedOutputDir = path.resolve(
-    resolvedWorkingDirectory,
-    trimmedOutputDir
-  );
+  const resolvedOutputDir = path.resolve(resolvedWorkingDirectory, outputDir);
   const canonicalOutputDir = canonicalizePathForContainment(
     resolvedOutputDir,
     fileSystem
@@ -244,19 +240,17 @@ const assertNotWorkspaceRoot = (
 };
 
 const assertNotAncestorOfWorkingDirectory = (
-  context: CleanTargetContext,
-  protectedWorkspaceRoots: readonly string[]
+  context: CleanTargetContext
 ): void => {
   const isProtectedAncestor =
-    protectedWorkspaceRoots.length > 0 &&
-    (isSameOrDescendantOf(
+    isSameOrDescendantOf(
       context.resolvedWorkingDirectory,
       context.resolvedOutputDir
     ) ||
-      isSameOrDescendantOf(
-        context.canonicalWorkingDirectory,
-        context.canonicalOutputDir
-      ));
+    isSameOrDescendantOf(
+      context.canonicalWorkingDirectory,
+      context.canonicalOutputDir
+    );
   if (!isProtectedAncestor) {
     return;
   }
@@ -353,7 +347,8 @@ const assertTargetHasNoWorkspaceMarker = (
  *   - an inferred workspace root (`.git`, `pnpm-workspace.yaml`, `lerna.json`,
  *     `nx.json`, `turbo.json`, `rush.json`, or a `package.json` declaring
  *     workspaces)
- *   - any ancestor of the current working directory within the workspace
+ *   - any lexical or canonical ancestor of the current working directory,
+ *     regardless of workspace markers
  *   - an output path that is itself a symbolic link, including dangling links
  *
  * Symlinks are resolved before comparison so a symlinked output directory
@@ -375,7 +370,7 @@ export const assertSafeCleanTargetWith = (
 
   const protectedWorkspaceRoots = getProtectedWorkspaceRoots(context);
   assertNotWorkspaceRoot(context, protectedWorkspaceRoots);
-  assertNotAncestorOfWorkingDirectory(context, protectedWorkspaceRoots);
+  assertNotAncestorOfWorkingDirectory(context);
   assertTargetIsNotSymbolicLink(context);
 
   // Reject when the spec input file lives inside the clean target. Without

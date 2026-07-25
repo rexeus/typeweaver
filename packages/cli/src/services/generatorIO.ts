@@ -1,6 +1,11 @@
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import {
+  coordinationArtifactKindForTempDirectoryName,
+  matchesCoordinationArtifactMarker,
+  TYPEWEAVER_COORDINATION_MARKER_FILE,
+} from "@rexeus/typeweaver-gen";
 import { FileSystem } from "@effect/platform";
 import { Effect } from "effect";
 import {
@@ -14,6 +19,7 @@ import {
   assertSafeCleanTarget,
   assertSafeCleanTargetWith,
 } from "./cleanTargetGuard.js";
+import { isOutputLockArtifactName } from "./internal/outputCoordinationArtifact.js";
 import type { CleanTargetFs } from "./cleanTargetGuard.js";
 import type { PlatformError } from "@effect/platform/Error";
 
@@ -125,7 +131,7 @@ export const cleanOutputDirPreservingLock = (
       }
       const entries = fs.readdirSync(outputDir, { withFileTypes: true });
       for (const entry of entries) {
-        if (isOutputLockArtifact(entry.name)) {
+        if (isOutputLockArtifactName(entry.name)) {
           continue;
         }
         fs.rmSync(path.join(outputDir, entry.name), {
@@ -157,11 +163,7 @@ export const ensureOutputDirectories = (params: {
   });
 
 const LOCK_DIR_NAME = ".typeweaver-lock";
-const LOCK_FENCE_PREFIX = `${LOCK_DIR_NAME}.fence-`;
 const LOCK_INFO_FILE = "info.json";
-const TEMP_DIR_PREFIX = ".typeweaver-";
-const SPEC_BUNDLER_TEMP_DIR_PREFIX = ".typeweaver-spec-loader-";
-const TEMP_DIR_RANDOM_SUFFIX_LENGTH = 6;
 
 type LockInfo = {
   readonly pid: number;
@@ -241,40 +243,35 @@ const NO_OUTPUT_LOCK_HOOKS: OutputLockAcquisitionHooks = {
   onBeforeStaleLockMove: () => undefined,
 };
 
-const isOutputLockArtifact = (entryName: string): boolean =>
-  entryName === LOCK_DIR_NAME || entryName.startsWith(LOCK_FENCE_PREFIX);
-
-const isAsciiAlphaNumeric = (character: string): boolean => {
-  const code = character.charCodeAt(0);
-  return (
-    (code >= 48 && code <= 57) ||
-    (code >= 65 && code <= 90) ||
-    (code >= 97 && code <= 122)
-  );
-};
-
-const hasNodeTempDirectoryShape = (
-  entryName: string,
-  prefix: string
+const hasCoordinationArtifactMarker = (
+  directoryPath: string,
+  entryName: string
 ): boolean => {
-  if (
-    !entryName.startsWith(prefix) ||
-    entryName.length !== prefix.length + TEMP_DIR_RANDOM_SUFFIX_LENGTH
-  ) {
+  const kind = coordinationArtifactKindForTempDirectoryName(entryName);
+  if (kind === undefined) {
     return false;
   }
 
-  for (const character of entryName.slice(prefix.length)) {
-    if (!isAsciiAlphaNumeric(character)) {
+  const markerPath = path.join(
+    directoryPath,
+    TYPEWEAVER_COORDINATION_MARKER_FILE
+  );
+  try {
+    if (!fs.lstatSync(markerPath).isFile()) {
       return false;
     }
+    return matchesCoordinationArtifactMarker(
+      fs.readFileSync(markerPath, "utf8"),
+      kind
+    );
+  } catch (error) {
+    const code = errnoCode(error);
+    if (code === "ENOENT" || code === "ENOTDIR") {
+      return false;
+    }
+    throw error;
   }
-  return true;
 };
-
-const isOwnedTempDirectory = (entryName: string): boolean =>
-  hasNodeTempDirectoryShape(entryName, TEMP_DIR_PREFIX) ||
-  hasNodeTempDirectoryShape(entryName, SPEC_BUNDLER_TEMP_DIR_PREFIX);
 
 const errnoCode = (error: unknown): string | undefined =>
   typeof error === "object" &&
@@ -691,11 +688,14 @@ export const releaseOutputLock = (lock: OutputLock): Effect.Effect<void> =>
  * or contains no orphans, the sweep is a no-op. The current lock dir
  * (`.typeweaver-lock`) and stale-ownership fences are preserved — only the
  * atomic-write (`.typeweaver-XXXXXX`) and spec-bundler staging
- * (`.typeweaver-spec-loader-XXXXXX`) artifacts are pruned.
+ * (`.typeweaver-spec-loader-XXXXXX`) artifacts with an exact, versioned
+ * ownership marker are pruned. A matching name without that marker is
+ * user-owned and preserved.
  *
  * Best-effort: a failing `rm` (e.g. `EACCES` on crash debris owned by
  * another user) is demoted to a WARN log — an unremovable orphan must not
- * block generation, and the formatter skips `.typeweaver-*` entries anyway.
+ * block generation. The formatter independently recognizes the same
+ * name-plus-marker contract and skips only confirmed coordination artifacts.
  */
 export const sweepOrphanTempdirs = (outputDir: string): Effect.Effect<void> =>
   Effect.try(() => {
@@ -726,11 +726,11 @@ const sweepOrphanTempdirsAt = (directory: string): void => {
     if (!entry.isDirectory()) {
       continue;
     }
-    if (isOutputLockArtifact(entry.name)) {
+    if (isOutputLockArtifactName(entry.name)) {
       continue;
     }
     const entryPath = path.join(directory, entry.name);
-    if (isOwnedTempDirectory(entry.name)) {
+    if (hasCoordinationArtifactMarker(entryPath, entry.name)) {
       fs.rmSync(entryPath, { recursive: true, force: true });
       continue;
     }

@@ -1,6 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pascalCase } from "polycase";
+import {
+  ATOMIC_WRITE_TEMP_DIRECTORY_PREFIX,
+  coordinationArtifactMarkerSource,
+  TYPEWEAVER_COORDINATION_MARKER_FILE,
+} from "../../helpers/coordinationArtifact.js";
 import { relative } from "../../helpers/path.js";
 import { MissingCanonicalResponseError } from "../../plugins/errors/MissingCanonicalResponseError.js";
 import { makeEffectContextIO } from "./pluginContextEffectIO.js";
@@ -149,11 +154,16 @@ const writeFileViaTempReplaceWith = (
   const existingFileMode = fileSystem.getExistingFileMode(stagingPath.fullPath);
   const destinationDir = path.dirname(stagingPath.fullPath);
   const tempDir = fileSystem.makeTempDirectory(
-    path.join(destinationDir, ".typeweaver-")
+    path.join(destinationDir, ATOMIC_WRITE_TEMP_DIRECTORY_PREFIX)
   );
   const tempFile = path.join(tempDir, "generated.tmp");
 
   try {
+    fileSystem.writeFileExclusive(
+      path.join(tempDir, TYPEWEAVER_COORDINATION_MARKER_FILE),
+      coordinationArtifactMarkerSource("atomic-write-temp"),
+      0o600
+    );
     fileSystem.writeFileExclusive(
       tempFile,
       config.content,

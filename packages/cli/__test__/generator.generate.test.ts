@@ -251,7 +251,7 @@ const writeFormattingLocalPlugin = (workspace: string): string => {
       "  generate: context =>",
       "    Effect.sync(() => {",
       "      context.writeFile(",
-      '        "plugin/Formatted.ts",',
+      '        "plugin/.typeweaver-output.ts",',
       `        ${JSON.stringify(unformattedPluginOutput)}`,
       "      );",
       "    }),",
@@ -701,9 +701,9 @@ describe("Generator local plugin output", () => {
       currentWorkingDirectory: workspace,
     });
 
-    expect(readFile(path.join(outputDir, "plugin", "Formatted.ts"))).toBe(
-      formattedPluginOutput
-    );
+    expect(
+      readFile(path.join(outputDir, "plugin", ".typeweaver-output.ts"))
+    ).toBe(formattedPluginOutput);
   });
 
   test("leaves files emitted by local plugins unformatted when formatting is disabled", async () => {
@@ -724,9 +724,9 @@ describe("Generator local plugin output", () => {
       currentWorkingDirectory: workspace,
     });
 
-    expect(readFile(path.join(outputDir, "plugin", "Formatted.ts"))).toBe(
-      unformattedPluginOutput
-    );
+    expect(
+      readFile(path.join(outputDir, "plugin", ".typeweaver-output.ts"))
+    ).toBe(unformattedPluginOutput);
   });
 });
 

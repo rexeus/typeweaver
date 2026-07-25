@@ -532,7 +532,7 @@ describe("Generator clean-target containment", () => {
     ).not.toThrow();
   });
 
-  test("allows clean targets when no workspace markers exist above the current working directory", () => {
+  test("rejects ancestors when no workspace markers exist above the current working directory", () => {
     const currentWorkingDirectory = path.join(
       createTempDir(),
       "packages",
@@ -540,9 +540,18 @@ describe("Generator clean-target containment", () => {
     );
     fs.mkdirSync(currentWorkingDirectory, { recursive: true });
 
-    expect(() =>
+    const error = captureUnsafeCleanTargetError(() =>
       assertSafeCleanTarget("..", currentWorkingDirectory)
-    ).not.toThrow();
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        outputDir: "..",
+        reason: "ancestor-of-current-working-directory",
+        resolvedOutputDir: path.dirname(currentWorkingDirectory),
+        currentWorkingDirectory,
+      })
+    );
   });
 });
 

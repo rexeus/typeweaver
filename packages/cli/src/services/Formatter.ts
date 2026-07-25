@@ -1,4 +1,9 @@
 import path from "node:path";
+import {
+  coordinationArtifactKindForTempDirectoryName,
+  matchesCoordinationArtifactMarker,
+  TYPEWEAVER_COORDINATION_MARKER_FILE,
+} from "@rexeus/typeweaver-gen";
 import { FileSystem } from "@effect/platform";
 import { Cause, Data, Effect, Either, Layer } from "effect";
 import {
@@ -6,6 +11,7 @@ import {
   FormatterFileSystemError,
   FormatterLoadError,
 } from "./errors/FormatterError.js";
+import { isOutputLockArtifactName } from "./internal/outputCoordinationArtifact.js";
 import type {
   FormatterError,
   FormatterFileSystemOperation,
@@ -94,6 +100,88 @@ const mapFileSystemError =
       cause,
     });
 
+const hasCoordinationArtifactMarker = (
+  fileSystem: FileSystem.FileSystem,
+  directoryPath: string,
+  canonicalDirectoryPath: string,
+  entryName: string
+): Effect.Effect<boolean, FormatterFileSystemError> =>
+  Effect.gen(function* () {
+    const kind = coordinationArtifactKindForTempDirectoryName(entryName);
+    if (kind === undefined) {
+      return false;
+    }
+
+    const markerPath = path.join(
+      directoryPath,
+      TYPEWEAVER_COORDINATION_MARKER_FILE
+    );
+    const markerRealPath = yield* fileSystem
+      .realPath(markerPath)
+      .pipe(
+        Effect.mapError(mapFileSystemError("realPath", markerPath)),
+        Effect.either
+      );
+    if (Either.isLeft(markerRealPath)) {
+      if (
+        markerRealPath.left.cause._tag === "SystemError" &&
+        markerRealPath.left.cause.reason === "NotFound"
+      ) {
+        return false;
+      }
+      return yield* markerRealPath.left;
+    }
+    if (
+      markerRealPath.right !==
+      path.join(canonicalDirectoryPath, TYPEWEAVER_COORDINATION_MARKER_FILE)
+    ) {
+      return false;
+    }
+
+    const markerInfo = yield* fileSystem
+      .stat(markerPath)
+      .pipe(Effect.mapError(mapFileSystemError("stat", markerPath)));
+    if (markerInfo.type !== "File") {
+      return false;
+    }
+
+    const markerSource = yield* fileSystem
+      .readFileString(markerPath)
+      .pipe(Effect.mapError(mapFileSystemError("readFileString", markerPath)));
+    return matchesCoordinationArtifactMarker(markerSource, kind);
+  });
+
+const formatFile = (
+  fileSystem: FileSystem.FileSystem,
+  filePath: string,
+  format: FormatFn
+): Effect.Effect<void, FormatterError> =>
+  Effect.gen(function* () {
+    const unformatted = yield* fileSystem
+      .readFileString(filePath)
+      .pipe(Effect.mapError(mapFileSystemError("readFileString", filePath)));
+    const formatted = yield* Effect.tryPromise({
+      try: () => format(filePath, unformatted),
+      catch: cause => new FormatterExecutionError({ filePath, cause }),
+    });
+    if (typeof formatted !== "object" || formatted === null) {
+      return yield* new FormatterExecutionError({
+        filePath,
+        cause: new TypeError("Formatter did not return an object"),
+      });
+    }
+    const code = Reflect.get(formatted, "code");
+    if (typeof code !== "string") {
+      return yield* new FormatterExecutionError({
+        filePath,
+        cause: new TypeError("Formatter did not return a string code"),
+      });
+    }
+    yield* fileSystem
+      .writeFileString(filePath, code)
+      .pipe(Effect.mapError(mapFileSystemError("writeFileString", filePath)));
+  });
+
 const formatDirectory: (
   fileSystem: FileSystem.FileSystem,
   targetDir: string,
@@ -112,12 +200,11 @@ const formatDirectory: (
     );
 
     for (const content of contents) {
-      // Skip atomic-write tempdirs and the lockfile sentinel — both are
-      // hidden coordination artifacts, not user-facing output. Walking
-      // into them would re-read/rewrite in-flight content from another
-      // run (`.typeweaver-XXXX/generated.tmp`) or the live lockfile
-      // metadata (`.typeweaver-lock/info.json`).
-      if (content.startsWith(".typeweaver-")) {
+      // Exact lock names are reserved coordination artifacts. Atomic-write
+      // and bundler staging directories are skipped only when both their
+      // Node-mkdtemp name shape and exact, versioned marker agree. A prefix
+      // alone is user content and must remain format-visible.
+      if (isOutputLockArtifactName(content)) {
         continue;
       }
 
@@ -133,37 +220,28 @@ const formatDirectory: (
         .stat(filePath)
         .pipe(Effect.mapError(mapFileSystemError("stat", filePath)));
 
-      if (info.type === "File") {
-        const unformatted = yield* fileSystem
-          .readFileString(filePath)
-          .pipe(
-            Effect.mapError(mapFileSystemError("readFileString", filePath))
-          );
-        const formatted = yield* Effect.tryPromise({
-          try: () => format(filePath, unformatted),
-          catch: cause => new FormatterExecutionError({ filePath, cause }),
-        });
-        if (typeof formatted !== "object" || formatted === null) {
-          return yield* new FormatterExecutionError({
+      if (info.type === "Directory") {
+        if (
+          !(yield* hasCoordinationArtifactMarker(
+            fileSystem,
             filePath,
-            cause: new TypeError("Formatter did not return an object"),
-          });
-        }
-        const code = Reflect.get(formatted, "code");
-        if (typeof code !== "string") {
-          return yield* new FormatterExecutionError({
+            canonicalFilePath,
+            content
+          ))
+        ) {
+          yield* formatDirectory(
+            fileSystem,
             filePath,
-            cause: new TypeError("Formatter did not return a string code"),
-          });
-        }
-        yield* fileSystem
-          .writeFileString(filePath, code)
-          .pipe(
-            Effect.mapError(mapFileSystemError("writeFileString", filePath))
+            canonicalFilePath,
+            format
           );
-      } else if (info.type === "Directory") {
-        yield* formatDirectory(fileSystem, filePath, canonicalFilePath, format);
+        }
+        continue;
       }
+      if (info.type !== "File") {
+        continue;
+      }
+      yield* formatFile(fileSystem, filePath, format);
     }
   });
 

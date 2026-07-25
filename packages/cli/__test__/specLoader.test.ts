@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { NodeFileSystem } from "@effect/platform-node";
-import { Effect, Either, Layer } from "effect";
+import { Cause, Effect, Either, Exit, Layer } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import {
   InvalidSpecEntrypointError,
@@ -507,6 +507,56 @@ describe("SpecLoader wrapper import specifiers", () => {
 });
 
 describe("SpecLoader bundler output contract", () => {
+  test("reports input disappearance between exists and realpath as a typed bundle failure", async () => {
+    const project = createTempProject();
+    const inputFile = writeSpecEntrypoint(
+      project,
+      "spec.ts",
+      "export const spec = { resources: {} };"
+    );
+    const probeFailure = Object.assign(
+      new Error("input disappeared before realpath"),
+      {
+        code: "ENOENT",
+      }
+    );
+    const realpathSync = fs.realpathSync.native;
+    let buildStarted = false;
+
+    const exit = await Effect.runPromiseExit(
+      SpecBundler.bundle(
+        {
+          inputFile,
+          specOutputDir: project.outputDir,
+        },
+        {
+          build: async () => {
+            buildStarted = true;
+          },
+          realpathSync: filePath => {
+            if (filePath === inputFile) {
+              throw probeFailure;
+            }
+            return realpathSync(filePath);
+          },
+        }
+      ).pipe(Effect.provide(SpecBundlerLayer))
+    );
+
+    expect(buildStarted).toBe(false);
+    expect(Exit.isFailure(exit)).toBe(true);
+    if (!Exit.isFailure(exit)) return;
+    expect(Array.from(Cause.defects(exit.cause))).toEqual([]);
+    expect(Array.from(Cause.failures(exit.cause))).toEqual([
+      expect.objectContaining({
+        inputFile,
+        cause: probeFailure,
+        _tag: "SpecBundleError",
+      }),
+    ]);
+    expect(fs.readdirSync(project.outputDir)).toEqual([]);
+  });
+
   test("rejects successful spec builds that do not create the bundled output", async () => {
     const project = createTempProject();
     const inputFile = path.join(project.projectDir, "spec.ts");

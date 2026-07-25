@@ -13,6 +13,10 @@ import {
 } from "../../src/services/errors/FormatterError.js";
 import { Formatter, formatterLayerWith } from "../../src/services/Formatter.js";
 
+const coordinationMarkerFile = ".typeweaver-coordination";
+const atomicWriteMarkerSource =
+  "typeweaver-coordination-artifact/v1\nkind=atomic-write-temp\n";
+
 const successfulFormatterModule = () =>
   Promise.resolve({
     format: (_filename: string, source: string) =>
@@ -178,6 +182,64 @@ describe("Formatter loading and tracing", () => {
       name: "typeweaver.Formatter.format",
       exit: "Failure",
     });
+  });
+});
+
+describe("Formatter coordination-artifact ownership", () => {
+  test("formats a user file whose name starts with `.typeweaver-`", async () => {
+    const filePath = path.join(tempDir, ".typeweaver-output.ts");
+    fs.writeFileSync(filePath, "unformatted\n");
+    const layer = formatterLayerAgainst(NodeContext.layer);
+
+    await Effect.runPromise(provideFormatter(Formatter.format(tempDir), layer));
+
+    expect(fs.readFileSync(filePath, "utf8")).toBe("formatted\n");
+  });
+
+  test("formats an exact-shaped user directory without an ownership marker", async () => {
+    const userDirectory = path.join(tempDir, ".typeweaver-Ab12Z9");
+    const filePath = path.join(userDirectory, ".typeweaver-output.ts");
+    fs.mkdirSync(userDirectory);
+    fs.writeFileSync(filePath, "unformatted\n");
+    const layer = formatterLayerAgainst(NodeContext.layer);
+
+    await Effect.runPromise(provideFormatter(Formatter.format(tempDir), layer));
+
+    expect(fs.readFileSync(filePath, "utf8")).toBe("formatted\n");
+  });
+
+  test("does not format a marker-owned in-flight atomic-write directory", async () => {
+    const coordinationDirectory = path.join(tempDir, ".typeweaver-a1B2c3");
+    const filePath = path.join(coordinationDirectory, ".typeweaver-output.ts");
+    fs.mkdirSync(coordinationDirectory);
+    fs.writeFileSync(
+      path.join(coordinationDirectory, coordinationMarkerFile),
+      atomicWriteMarkerSource
+    );
+    fs.writeFileSync(filePath, "unformatted\n");
+    const layer = formatterLayerAgainst(NodeContext.layer);
+
+    await Effect.runPromise(provideFormatter(Formatter.format(tempDir), layer));
+
+    expect(fs.readFileSync(filePath, "utf8")).toBe("unformatted\n");
+  });
+
+  test("formats an exact-shaped user directory whose marker name is a symlink", async () => {
+    const coordinationDirectory = path.join(tempDir, ".typeweaver-Z9Y8X7");
+    const filePath = path.join(coordinationDirectory, ".typeweaver-output.ts");
+    const externalMarker = path.join(tempDir, "user-marker.txt");
+    fs.mkdirSync(coordinationDirectory);
+    fs.writeFileSync(externalMarker, atomicWriteMarkerSource);
+    fs.symlinkSync(
+      externalMarker,
+      path.join(coordinationDirectory, coordinationMarkerFile)
+    );
+    fs.writeFileSync(filePath, "unformatted\n");
+    const layer = formatterLayerAgainst(NodeContext.layer);
+
+    await Effect.runPromise(provideFormatter(Formatter.format(tempDir), layer));
+
+    expect(fs.readFileSync(filePath, "utf8")).toBe("formatted\n");
   });
 });
 

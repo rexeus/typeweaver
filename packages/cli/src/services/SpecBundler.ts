@@ -1,5 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+import {
+  coordinationArtifactMarkerSource,
+  SPEC_BUNDLER_TEMP_DIRECTORY_PREFIX,
+  TYPEWEAVER_COORDINATION_MARKER_FILE,
+} from "@rexeus/typeweaver-gen";
 import { FileSystem } from "@effect/platform";
 import { Effect } from "effect";
 import { build } from "rolldown";
@@ -20,11 +25,23 @@ export type SpecBundlerConfig = {
 export type SpecBundlerDeps = {
   readonly build?: (options: BuildOptions) => Promise<unknown>;
   readonly existsSync?: (filePath: string) => boolean;
+  readonly realpathSync?: (filePath: string) => string;
 };
 
 export const createWrapperImportSpecifier = (
   wrapperFile: string,
   inputFile: string
+): string =>
+  createWrapperImportSpecifierWith(
+    wrapperFile,
+    inputFile,
+    fs.realpathSync.native
+  );
+
+const createWrapperImportSpecifierWith = (
+  wrapperFile: string,
+  inputFile: string,
+  realpathSync: (filePath: string) => string
 ): string => {
   const absoluteInputFile = resolveBundledInputFile(inputFile);
   const useWindowsPathSemantics = usesWindowsPathSemantics(
@@ -34,10 +51,10 @@ export const createWrapperImportSpecifier = (
   const pathModule = useWindowsPathSemantics ? path.win32 : path.posix;
   const wrapperDir = useWindowsPathSemantics
     ? pathModule.dirname(wrapperFile)
-    : resolveRealFilePath(pathModule.dirname(wrapperFile));
+    : resolveRealFilePath(pathModule.dirname(wrapperFile), realpathSync);
   const resolvedInputFile = useWindowsPathSemantics
     ? absoluteInputFile
-    : resolveRealFilePath(absoluteInputFile);
+    : resolveRealFilePath(absoluteInputFile, realpathSync);
   const relativeInputFile = pathModule
     .relative(wrapperDir, resolvedInputFile)
     .replaceAll(pathModule.sep, "/");
@@ -77,11 +94,14 @@ const usesWindowsPathSemantics = (...filePaths: string[]): boolean =>
  * is acceptable here because it runs at bundle time on user-supplied input
  * paths only.
  */
-const resolveRealFilePath = (filePath: string): string => {
+const resolveRealFilePath = (
+  filePath: string,
+  realpathSync: (filePath: string) => string
+): string => {
   if (!fs.existsSync(filePath)) {
     return filePath;
   }
-  return fs.realpathSync.native(filePath);
+  return realpathSync(filePath);
 };
 
 const buildWrapperSource = (wrapperImportSpecifier: string): string =>
@@ -117,16 +137,18 @@ const makeBundleError =
 
 const makeBundlePaths = (
   config: SpecBundlerConfig,
-  tempDir: string
+  tempDir: string,
+  deps: SpecBundlerDeps
 ): BundlePaths => {
   const wrapperFile = path.join(tempDir, "spec-entrypoint.ts");
   return {
     wrapperFile,
     stagedSpecFile: path.join(tempDir, "spec.js"),
     bundledSpecFile: path.join(config.specOutputDir, "spec.js"),
-    wrapperImportSpecifier: createWrapperImportSpecifier(
+    wrapperImportSpecifier: createWrapperImportSpecifierWith(
       wrapperFile,
-      config.inputFile
+      config.inputFile,
+      deps.realpathSync ?? fs.realpathSync.native
     ),
   };
 };
@@ -139,12 +161,23 @@ const prepareBundleDirectory = Effect.fn(function* (params: {
   yield* params.fileSystem
     .makeDirectory(params.config.specOutputDir, { recursive: true })
     .pipe(Effect.mapError(mapError));
-  return yield* params.fileSystem
+  const tempDir = yield* params.fileSystem
     .makeTempDirectoryScoped({
       directory: params.config.specOutputDir,
-      prefix: ".typeweaver-spec-loader-",
+      prefix: SPEC_BUNDLER_TEMP_DIRECTORY_PREFIX,
     })
     .pipe(Effect.mapError(mapError));
+  yield* params.fileSystem
+    .writeFileString(
+      path.join(tempDir, TYPEWEAVER_COORDINATION_MARKER_FILE),
+      coordinationArtifactMarkerSource("spec-bundler-temp"),
+      {
+        flag: "wx",
+        mode: 0o600,
+      }
+    )
+    .pipe(Effect.mapError(mapError));
+  return tempDir;
 });
 
 const writeBundleWrapper = Effect.fn(function* (operation: BundleOperation) {
@@ -232,7 +265,10 @@ const bundleSpec = Effect.fn(function* (
   return yield* Effect.scoped(
     Effect.gen(function* () {
       const tempDir = yield* prepareBundleDirectory({ config, fileSystem });
-      const paths = makeBundlePaths(config, tempDir);
+      const paths = yield* Effect.try({
+        try: () => makeBundlePaths(config, tempDir, deps),
+        catch: makeBundleError(config.inputFile),
+      });
       const operation = { config, deps, fileSystem, paths };
 
       yield* writeBundleWrapper(operation);
@@ -254,8 +290,9 @@ const bundleSpec = Effect.fn(function* (
  *
  * The wrapper file allows authors to expose the spec as a default export,
  * a named `spec` export, or the module namespace itself. Filesystem errors
- * from rolldown surface as `SpecBundleError`; a missing post-bundle output
- * surfaces as `SpecBundleOutputMissingError`.
+ * while resolving the wrapper paths and from rolldown surface as
+ * `SpecBundleError`; a missing post-bundle output surfaces as
+ * `SpecBundleOutputMissingError`.
  *
  * Rolldown writes into a scoped staging directory beside the final bundle.
  * Its Promise is awaited uninterruptibly because Rolldown does not expose a
@@ -265,12 +302,12 @@ const bundleSpec = Effect.fn(function* (
  * the Effect `FileSystem`; the scoped wrapper/staging directory is removed on
  * every Exit.
  *
- * The optional `deps` parameter is a deliberate test seam for the two
- * bindings that live outside the `FileSystem` service: rolldown's `build`
- * and the post-bundle existence probe. Wrapping rolldown in a dedicated
- * service tag would add a one-method service with a single production
- * implementation; the parameter keeps the seam local to the only call
- * site that needs substitution.
+ * The optional `deps` parameter is a deliberate test seam for the three
+ * bindings that live outside the `FileSystem` service: rolldown's `build`,
+ * wrapper-path realpath resolution, and the post-bundle existence probe.
+ * Wrapping these in dedicated service tags would add one-method services
+ * with single production implementations; the parameter keeps the seams
+ * local to the only call site that needs substitution.
  */
 export class SpecBundler extends Effect.Service<SpecBundler>()(
   "typeweaver/SpecBundler",

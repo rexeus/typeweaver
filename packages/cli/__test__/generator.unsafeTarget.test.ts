@@ -14,6 +14,7 @@ import {
 
 const tempDirs: string[] = [];
 const directorySymlinkType = process.platform === "win32" ? "junction" : "dir";
+const trailingPathWhitespace = process.platform === "win32" ? "\u00a0" : " ";
 
 const canCreateDirectorySymlinks = (): boolean => {
   const tempDir = fs.mkdtempSync(
@@ -47,6 +48,21 @@ const createTempWorkspace = (suffix: string): string => {
   tempDirs.push(tempDir);
   return tempDir;
 };
+
+const createIsolatedTempDirectory = (suffix: string): string => {
+  const tempDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), `typeweaver-unsafe-${suffix}-`)
+  );
+  tempDirs.push(tempDir);
+  return tempDir;
+};
+
+afterEach(() => {
+  for (const tempDir of tempDirs) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+  tempDirs.length = 0;
+});
 
 const writeTinySpec = (workspace: string): void => {
   const specFile = path.join(workspace, "spec", "index.ts");
@@ -123,13 +139,6 @@ const expectUnsafeCleanTargetFailure = (
 };
 
 describe("Generator output-target guard ordering", () => {
-  afterEach(() => {
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-    tempDirs.length = 0;
-  });
-
   test("rejects the cwd as output target with --no-clean before sweeping or creating directories", async () => {
     const workspace = createTempWorkspace("cwd");
     writeTinySpec(workspace);
@@ -242,13 +251,6 @@ describe("Generator output-target guard ordering", () => {
 });
 
 describe("Generator output-target symlink revalidation", () => {
-  afterEach(() => {
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-    tempDirs.length = 0;
-  });
-
   test.skipIf(!canCreateDirectorySymlinks())(
     "rejects a dangling output symlink even though existsSync reports false",
     async () => {
@@ -313,6 +315,90 @@ describe("Generator output-target symlink revalidation", () => {
       const failure = expectUnsafeCleanTargetFailure(exit, "symbolic-link");
       expect(failure.message).toContain("Output preparation");
       expect(failure.message).toContain("orphan-tempdir cleanup");
+      expect(fs.readFileSync(sentinel, "utf8")).toBe("must survive");
+    }
+  );
+});
+
+describe("Generator exact output-path safety", () => {
+  test.skipIf(!canCreateDirectorySymlinks())(
+    "preserves leading and trailing whitespace when guarding the production output path",
+    async () => {
+      const workspace = createTempWorkspace("spaced-output");
+      const externalOutputDirectory = createIsolatedTempDirectory(
+        "spaced-output-target"
+      );
+      writeTinySpec(workspace);
+
+      // Win32 normalizes trailing ASCII spaces. NBSP is still trimmed by
+      // JavaScript but remains a real Windows filename character, preserving
+      // the same mismatch this regression guards on POSIX.
+      const outputName = ` output${trailingPathWhitespace}`;
+      const outputArgument = path.join("generated", outputName);
+      const outputLink = path.join(workspace, outputArgument);
+      fs.mkdirSync(path.dirname(outputLink), { recursive: true });
+      fs.symlinkSync(externalOutputDirectory, outputLink, directorySymlinkType);
+      const orphanDir = path.join(
+        externalOutputDirectory,
+        ".typeweaver-ABC123"
+      );
+      const sentinel = path.join(orphanDir, "keep.txt");
+      fs.mkdirSync(orphanDir);
+      fs.writeFileSync(sentinel, "must survive");
+
+      const exit = await runGenerateExit(workspace, outputArgument, false);
+
+      expectUnsafeCleanTargetFailure(exit, "symbolic-link");
+      expect(fs.lstatSync(outputLink).isSymbolicLink()).toBe(true);
+      expect(fs.readFileSync(sentinel, "utf8")).toBe("must survive");
+    }
+  );
+});
+
+describe("Generator markerless ancestor safety", () => {
+  test("rejects a lexical cwd ancestor before the no-clean orphan sweep", async () => {
+    const isolatedRoot = createIsolatedTempDirectory("lexical-ancestor");
+    const workspace = path.join(isolatedRoot, "workspace");
+    fs.mkdirSync(workspace);
+    writeTinySpec(workspace);
+
+    const orphanDir = path.join(isolatedRoot, ".typeweaver-ABC123");
+    const sentinel = path.join(orphanDir, "keep.txt");
+    fs.mkdirSync(orphanDir);
+    fs.writeFileSync(sentinel, "must survive");
+
+    const exit = await runGenerateExit(workspace, "..", false);
+
+    expectUnsafeCleanTargetFailure(
+      exit,
+      "ancestor-of-current-working-directory"
+    );
+    expect(fs.readFileSync(sentinel, "utf8")).toBe("must survive");
+  });
+
+  test.skipIf(!canCreateDirectorySymlinks())(
+    "rejects a canonical cwd ancestor before the no-clean orphan sweep",
+    async () => {
+      const canonicalRoot = createIsolatedTempDirectory("canonical-ancestor");
+      const canonicalWorkspace = path.join(canonicalRoot, "workspace");
+      fs.mkdirSync(canonicalWorkspace);
+      writeTinySpec(canonicalWorkspace);
+
+      const aliasRoot = createIsolatedTempDirectory("canonical-alias");
+      const workspaceAlias = path.join(aliasRoot, "workspace-link");
+      fs.symlinkSync(canonicalWorkspace, workspaceAlias, directorySymlinkType);
+
+      const orphanDir = path.join(canonicalRoot, ".typeweaver-ABC123");
+      const sentinel = path.join(orphanDir, "keep.txt");
+      fs.mkdirSync(orphanDir);
+      fs.writeFileSync(sentinel, "must survive");
+
+      const exit = await runGenerateExit(workspaceAlias, canonicalRoot, false);
+
+      expectUnsafeCleanTargetFailure(
+        exit,
+        "ancestor-of-current-working-directory"
+      );
       expect(fs.readFileSync(sentinel, "utf8")).toBe("must survive");
     }
   );
