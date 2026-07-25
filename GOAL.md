@@ -320,6 +320,49 @@ progress log.
   above to be closed by code/test evidence or an explicit human-approved scope decision recorded in
   this file.
 
+### P4 — final Oxlint maintainability hardening
+
+- [ ] **18. Oxlint and SonarJS-compatible rules enforce bounded code complexity.**
+
+  Keep Oxlint as the repository's only linter. Extend `.oxlintrc.json` for all authored JavaScript
+  and TypeScript files, using Oxlint's native implementations for the compatible core rules and its
+  `jsPlugins` compatibility layer for the required SonarJS rules. Do not install ESLint, add an
+  ESLint config, or introduce a second lint command. Integrate the resulting Oxlint gate into CI and
+  `verify:effect-migration`. Exclude only generated output, build artifacts, vendored/reference
+  sources, and dependency directories.
+
+  The maintainability config must enforce the requested limits without weakening them:
+
+  - classic cyclomatic `complexity` at 10;
+  - `sonarjs/cognitive-complexity` at 15;
+  - `max-depth` at 4;
+  - `max-params` at 4 with `countThis: "except-void"`;
+  - `max-nested-callbacks` at 4;
+  - `sonarjs/expression-complexity` at 6;
+  - `max-lines-per-function` at 100, excluding blank and comment-only lines;
+  - `max-statements` at 40;
+  - `sonarjs/no-nested-switch`.
+
+  Capture the initial violation inventory before refactoring. Close every finding by simplifying
+  control flow, extracting cohesive domain operations, replacing argument lists with parameter
+  objects where appropriate, and removing accidental nesting or expression density. Do not use
+  inline disables, blanket file ignores, threshold increases, or behavior-changing rewrites merely
+  to satisfy the numbers.
+
+  Verified by:
+
+  - the pinned Oxlint version accepts every native rule option, including `variant: "classic"` and
+    `countThis: "except-void"`;
+  - the pinned SonarJS-compatible integration runs through Oxlint's `jsPlugins` path without an
+    installed ESLint package; if upstream compatibility is incomplete, use an Oxlint-compatible
+    local implementation for the missing rules rather than adding ESLint;
+  - a fixture or mutation check proves each configured rule can fail `pnpm lint`;
+  - the dependency graph, config files, and scripts contain no ESLint installation or invocation;
+  - `pnpm lint` runs the complete Oxlint rule set and exits 0;
+  - `pnpm verify:effect-migration`, typecheck, build, all tests, generated-output verification, and
+    `git diff --check` exit 0 after the refactors;
+  - no new lint-disable comments or non-generated ignore patterns were added to evade findings.
+
 ## Constraints
 
 - Keep production on Effect 3.22; do not migrate to Effect 4 in this goal.
@@ -497,7 +540,7 @@ next: Criterion 6, bind public error types exactly to runtime behavior and remov
 
 ## Stop conditions
 
-- **Done:** all 17 criteria are checked with recorded evidence, the final local command block is
+- **Done:** all 18 criteria are checked with recorded evidence, the final local command block is
   green, and human-authorized remote CI is green.
 - **Iteration cap:** stop after 24 implementation iterations and report the remaining criteria,
   evidence, and recommended next sequence.
