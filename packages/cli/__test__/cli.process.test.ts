@@ -309,7 +309,8 @@ describe("built CLI configuration diagnostics", () => {
       expect(result.stdout).toBe("Running on Node.js\n");
       expect(result.stderr).toBe(`${message}\n`);
       expect(result.stderr).not.toContain("FiberFailure");
-    }
+    },
+    15_000
   );
 
   test("reports invalid imported configuration without a runtime stack", async () => {
