@@ -8,4 +8,7 @@
 export * from "./TypeweaverHono.js";
 export * from "./HonoRequestHandler.js";
 export * from "./HonoAdapter.js";
-export { HonoBodyParseError } from "./Errors.js";
+export {
+  HonoBodyParseError,
+  HonoResponseSerializationError,
+} from "./Errors.js";

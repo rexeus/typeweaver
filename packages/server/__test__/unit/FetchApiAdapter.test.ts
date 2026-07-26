@@ -30,6 +30,17 @@ function parseRequest(request: Request, url?: URL) {
   return new FetchApiAdapter().toRequest(request, url);
 }
 
+function isUnknownRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function requireUnknownRecord(value: unknown): Record<string, unknown> {
+  if (!isUnknownRecord(value)) {
+    throw new TestAssertionError("Expected an object body");
+  }
+  return value;
+}
+
 function createByteStream(
   chunks: readonly Uint8Array[],
   cancel: () => Promise<void>
@@ -510,9 +521,10 @@ describe("Fetch multipart request bodies", () => {
     });
 
     const result = await adapter.toRequest(request);
+    const body = requireUnknownRecord(result.body);
 
-    expect(result.body.title).toBe("Test Todo");
-    expect(result.body.tags).toEqual(["tag1", "tag2"]);
+    expect(body.title).toBe("Test Todo");
+    expect(body.tags).toEqual(["tag1", "tag2"]);
   });
 
   test("preserves multipart File values", async () => {
@@ -527,11 +539,16 @@ describe("Fetch multipart request bodies", () => {
     });
 
     const result = await adapter.toRequest(request);
+    const body = requireUnknownRecord(result.body);
+    const { attachment } = body;
 
-    expect(result.body.attachment).toBeInstanceOf(File);
-    expect(result.body.attachment.name).toBe("todo.txt");
-    expect(result.body.attachment.type).toBe("text/plain");
-    await expect(result.body.attachment.text()).resolves.toBe("file contents");
+    expect(attachment).toBeInstanceOf(File);
+    if (!(attachment instanceof File)) {
+      throw new TestAssertionError("Expected a File attachment");
+    }
+    expect(attachment.name).toBe("todo.txt");
+    expect(attachment.type).toBe("text/plain");
+    await expect(attachment.text()).resolves.toBe("file contents");
   });
 
   test("throws BodyParseError for malformed multipart form bodies", async () => {
@@ -787,9 +804,10 @@ describe("Fetch query and form prototype pollution protection", () => {
     const before = ({} as any).__proto__;
 
     const result = await adapter.toRequest(request);
+    const body = requireUnknownRecord(result.body);
 
-    expect(result.body?.["__proto__"]).toBe("polluted");
-    expect(result.body?.["constructor"]).toBe("evil");
+    expect(body["__proto__"]).toBe("polluted");
+    expect(body["constructor"]).toBe("evil");
     expect(({} as any).__proto__).toBe(before);
   });
 
@@ -805,9 +823,10 @@ describe("Fetch query and form prototype pollution protection", () => {
     const before = ({} as any).__proto__;
 
     const result = await adapter.toRequest(request);
+    const body = requireUnknownRecord(result.body);
 
-    expect(result.body?.["__proto__"]).toBe("polluted");
-    expect(result.body?.["constructor"]).toBe("evil");
+    expect(body["__proto__"]).toBe("polluted");
+    expect(body["constructor"]).toBe("evil");
     expect(({} as any).__proto__).toBe(before);
   });
 
@@ -822,9 +841,10 @@ describe("Fetch query and form prototype pollution protection", () => {
     });
 
     const result = await adapter.toRequest(request);
+    const body = requireUnknownRecord(result.body);
 
-    expect(result.body?.["title"]).toBe("safe");
-    expect(result.body?.["__proto__"]).toEqual(["a", "b"]);
+    expect(body["title"]).toBe("safe");
+    expect(body["__proto__"]).toEqual(["a", "b"]);
     expect(Object.prototype).not.toHaveProperty("a");
     expect(Object.prototype).not.toHaveProperty("b");
   });
@@ -841,9 +861,10 @@ describe("Fetch JSON prototype pollution protection", () => {
     const before = ({} as any).__proto__;
 
     const result = await adapter.toRequest(request);
+    const body = requireUnknownRecord(result.body);
 
-    expect(result.body.title).toBe("legit");
-    expect(Object.hasOwn(result.body, "__proto__")).toBe(false);
+    expect(body.title).toBe("legit");
+    expect(Object.hasOwn(body, "__proto__")).toBe(false);
     expect(({} as any).__proto__).toBe(before);
     expect(({} as any).isAdmin).toBeUndefined();
   });
@@ -858,9 +879,11 @@ describe("Fetch JSON prototype pollution protection", () => {
     });
 
     const result = await adapter.toRequest(request);
+    const responseBody = requireUnknownRecord(result.body);
+    const user = requireUnknownRecord(responseBody.user);
 
-    expect(result.body.user.name).toBe("test");
-    expect(Object.hasOwn(result.body.user, "__proto__")).toBe(false);
+    expect(user.name).toBe("test");
+    expect(Object.hasOwn(user, "__proto__")).toBe(false);
     expect(({} as any).isAdmin).toBeUndefined();
   });
 
@@ -875,7 +898,11 @@ describe("Fetch JSON prototype pollution protection", () => {
     const result = await adapter.toRequest(request);
 
     expect(result.body).toEqual([{ title: "safe" }]);
-    expect(Object.hasOwn(result.body[0], "__proto__")).toBe(false);
+    if (!Array.isArray(result.body)) {
+      throw new TestAssertionError("Expected an array body");
+    }
+    const firstItem = requireUnknownRecord(result.body[0]);
+    expect(Object.hasOwn(firstItem, "__proto__")).toBe(false);
     expect(({} as any).isAdmin).toBeUndefined();
   });
 
@@ -888,9 +915,10 @@ describe("Fetch JSON prototype pollution protection", () => {
     });
 
     const result = await adapter.toRequest(request);
+    const body = requireUnknownRecord(result.body);
 
-    expect(result.body.constructor).toBe("value");
-    expect(result.body.prototype).toBe("value");
+    expect(body.constructor).toBe("value");
+    expect(body.prototype).toBe("value");
   });
 });
 

@@ -13,7 +13,10 @@ import type {
   IHttpRequest,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
-import { HonoBodyParseError } from "./Errors.js";
+import {
+  HonoBodyParseError,
+  HonoResponseSerializationError,
+} from "./Errors.js";
 import { HttpAdapter } from "./HttpAdapter.js";
 
 /**
@@ -24,7 +27,11 @@ import { HttpAdapter } from "./HttpAdapter.js";
  * specification, which are available in modern JavaScript runtimes (browsers,
  * Node.js 18+, Deno, Bun, Cloudflare Workers, etc.).
  */
-export class FetchApiAdapter extends HttpAdapter<Request, Response> {
+export class FetchApiAdapter extends HttpAdapter<
+  Request,
+  Response,
+  Record<string, string>
+> {
   /**
    * Converts a Fetch API Request to an IHttpRequest.
    * Extracts headers, query parameters, and body from the Request object.
@@ -139,7 +146,7 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
   private async parseJsonBody(request: Request): Promise<IHttpBody> {
     try {
       const text = await request.text();
-      return this.toSafeJsonValue(JSON.parse(text)) as IHttpBody;
+      return this.toSafeJsonValue(JSON.parse(text));
     } catch (error) {
       throw new HonoBodyParseError("Invalid JSON in request body", {
         cause: error,
@@ -165,7 +172,7 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
     return value;
   }
 
-  private buildResponseBody(body: any): string | ArrayBuffer | Blob | null {
+  private buildResponseBody(body: unknown): string | ArrayBuffer | Blob | null {
     if (body === undefined) {
       return null;
     }
@@ -178,7 +185,18 @@ export class FetchApiAdapter extends HttpAdapter<Request, Response> {
       return body;
     }
 
-    return JSON.stringify(body);
+    try {
+      const serializedBody = JSON.stringify(body);
+      if (serializedBody === undefined) {
+        throw new TypeError("Response body cannot be serialized to JSON");
+      }
+      return serializedBody;
+    } catch (error) {
+      throw new HonoResponseSerializationError(
+        "Failed to serialize response body to JSON",
+        { cause: error }
+      );
+    }
   }
 
   private buildResponseHeaders(

@@ -81,6 +81,10 @@ const bodyOnlyFailingValidator: IRequestValidator = {
   }),
 };
 
+function isUnknownRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 const invalidResponseValidator: IResponseValidator = {
   validate: (response: IHttpResponse) => {
     throw new ResponseValidationError(response.statusCode);
@@ -320,11 +324,17 @@ function defaultHandlers(overrides: Partial<TestHandlers> = {}): TestHandlers {
         { id: "2", title: "Second" },
       ],
     }),
-    handleCreateTodo: async req => ({
-      statusCode: 201,
-      header: { "Content-Type": "application/json" },
-      body: { id: "3", title: req.body?.title ?? "Untitled" },
-    }),
+    handleCreateTodo: async req => {
+      const title =
+        isUnknownRecord(req.body) && typeof req.body.title === "string"
+          ? req.body.title
+          : "Untitled";
+      return {
+        statusCode: 201,
+        header: { "Content-Type": "application/json" },
+        body: { id: "3", title },
+      };
+    },
     handleGetTodo: async (req, _ctx) => ({
       statusCode: 200,
       body: { id: req.param?.todoId ?? "unknown", title: "A Todo" },

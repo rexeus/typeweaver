@@ -16,7 +16,7 @@ releases.
 ## Migrating from 0.12.x to 1.0.x
 
 Version 1.0.0 completes the migration to **Effect** as typeweaver's runtime foundation. The change
-is internal-architectural but breaks four surfaces:
+is internal-architectural but breaks five surfaces:
 
 1. The **plugin API** (V1 class-based → V2 Effect-native records). Affects anyone who built a custom
    plugin.
@@ -26,6 +26,7 @@ is internal-architectural but breaks four surfaces:
    `NetworkError` construction and custom subclasses of the generated server and Hono router bases.
 4. The **Zod-to-TypeScript converter** rejects unsupported schema shapes instead of silently
    generating `unknown`.
+5. The unvalidated **HTTP body boundary** is `unknown` instead of implicit `any`.
 
 The **spec authoring API** (`defineSpec` / `defineOperation` / `defineResponse`) is **unchanged**.
 Existing specs using supported Zod schemas keep working byte-for-byte.
@@ -238,7 +239,34 @@ try {
 Replace unsupported shapes with an equivalent supported schema before generation. `z.unknown()`
 remains supported and still generates TypeScript `unknown`.
 
-### 6. Migration Checklist (0.12.x to 1.0.x)
+### 6. Unvalidated HTTP bodies are unknown
+
+`IHttpBody` and the default body types of `IHttpRequest`, `IHttpResponse`, handlers, and generated
+Fetch/Hono adapters no longer resolve to `any`. Generated operation types remain schema-specific.
+Code using an unparameterized HTTP type must now narrow or validate its body:
+
+```ts
+function getMessage(response: IHttpResponse): string | undefined {
+  const body = response.body;
+  if (
+    body !== null &&
+    typeof body === "object" &&
+    "message" in body &&
+    typeof body.message === "string"
+  ) {
+    return body.message;
+  }
+  return undefined;
+}
+```
+
+Custom subclasses of the generated Hono `HttpAdapter` that relied on implicit `any` defaults should
+provide explicit request, response, and context type arguments. The Fetch-native server and Hono
+adapters continue to support JSON values, strings, `ArrayBuffer`, `Blob`, `null`, and `undefined`.
+Values that cannot be represented by `JSON.stringify` now fail explicitly; Hono exposes
+`HonoResponseSerializationError` for this case.
+
+### 7. Migration Checklist (0.12.x to 1.0.x)
 
 For **end users** (you use the CLI but don't author plugins):
 
@@ -248,6 +276,10 @@ For **end users** (you use the CLI but don't author plugins):
       diffs in the generated client, server, and Hono support code.
 - [ ] Replace any `z.lazy()`, `z.templateLiteral()`, `z.custom()`, or `z.transform()` schema that
       reaches TypeScript generation with a supported, statically inspectable schema.
+- [ ] Narrow `body` before reading it when using unparameterized `IHttpRequest` or `IHttpResponse`
+      types.
+- [ ] Add explicit request, response, and context generics to custom generated `HttpAdapter`
+      subclasses that previously relied on defaults.
 
 For **plugin authors**:
 

@@ -61,6 +61,22 @@ Imports and the parent response are included in the typechecked
   `ResponseValidationError` with structured issues.
 - **Utilities**: `UnknownResponseError` for unrecognized responses.
 
+### HTTP body boundary
+
+The unvalidated `IHttpBody` boundary is `unknown`. Generated request and response declarations
+replace it with the type derived from each operation's Zod schema. Code that handles a bare
+`IHttpRequest` or `IHttpResponse` must validate or narrow `body` before reading it:
+
+```ts
+function readTextBody(response: IHttpResponse): string | undefined {
+  return typeof response.body === "string" ? response.body : undefined;
+}
+```
+
+Fetch-native adapters preserve strings, `ArrayBuffer`, and `Blob` values and JSON-serialize other
+supported response values. They reject values that `JSON.stringify` cannot represent instead of
+silently producing an empty response.
+
 This package does not ship framework adapters. Use plugins like `@rexeus/typeweaver-hono` or
 `@rexeus/typeweaver-aws-cdk` for routers/integrations.
 

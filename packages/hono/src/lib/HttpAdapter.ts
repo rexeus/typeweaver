@@ -13,7 +13,11 @@ import type { IHttpRequest, IHttpResponse } from "@rexeus/typeweaver-core";
  * Provides a common interface for converting between different HTTP request/response
  * formats and the framework-agnostic IHttpRequest/IHttpResponse types.
  */
-export abstract class HttpAdapter<TRequest = any, TResponse = any> {
+export abstract class HttpAdapter<
+  TRequest = unknown,
+  TResponse = unknown,
+  TContext = unknown,
+> {
   /**
    * Converts a framework-specific request to an IHttpRequest.
    *
@@ -23,7 +27,7 @@ export abstract class HttpAdapter<TRequest = any, TResponse = any> {
    */
   public abstract toRequest(
     request: TRequest,
-    context?: any
+    context?: TContext
   ): Promise<IHttpRequest>;
 
   /**

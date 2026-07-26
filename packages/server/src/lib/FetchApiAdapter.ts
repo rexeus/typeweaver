@@ -318,7 +318,7 @@ export class FetchApiAdapter {
   }
 
   private static serializeResponseBody(
-    body: any
+    body: unknown
   ): string | ArrayBuffer | Blob | null {
     if (body === undefined || body === null) return null;
     if (typeof body === "string") return body;
@@ -341,7 +341,7 @@ export class FetchApiAdapter {
 
   private static buildResponseHeaders(
     header?: IHttpHeader,
-    body?: any
+    body?: unknown
   ): Headers {
     const headers = new Headers();
 
@@ -375,7 +375,7 @@ export class FetchApiAdapter {
     headers.set(key, String(value));
   }
 
-  private static isJsonBody(body: any): boolean {
+  private static isJsonBody(body: unknown): boolean {
     return (
       body !== undefined &&
       body !== null &&

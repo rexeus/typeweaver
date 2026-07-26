@@ -12,3 +12,10 @@
 export class HonoBodyParseError extends Error {
   public override readonly name = "HonoBodyParseError";
 }
+
+/**
+ * Error thrown when a response body cannot be serialized to JSON.
+ */
+export class HonoResponseSerializationError extends Error {
+  public override readonly name = "HonoResponseSerializationError";
+}
