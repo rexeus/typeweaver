@@ -13,33 +13,55 @@ import {
   type TypeweaverRouterOptions,
 } from "../lib/server/index.js";
 
-import type { IAccessTokenRequest } from "./AccessTokenRequest.js";
+import type { IAccessTokenRequest, IRawAccessTokenRequest } from "./AccessTokenRequest.js";
 import { AccessTokenRequestValidator } from "./AccessTokenRequestValidator.js";
 import type { AccessTokenResponse } from "./AccessTokenResponse.js";
 import { AccessTokenResponseValidator } from "./AccessTokenResponseValidator.js";
 
-import type { IRefreshTokenRequest } from "./RefreshTokenRequest.js";
+import type { IRefreshTokenRequest, IRawRefreshTokenRequest } from "./RefreshTokenRequest.js";
 import { RefreshTokenRequestValidator } from "./RefreshTokenRequestValidator.js";
 import type { RefreshTokenResponse } from "./RefreshTokenResponse.js";
 import { RefreshTokenResponseValidator } from "./RefreshTokenResponseValidator.js";
 
-export type ServerAuthApiHandler<TState extends Record<string, unknown> = Record<string, unknown>> =
-  {
-    /**
-     * Get access token by email and password
-     */
-    handleAccessTokenRequest: RequestHandler<IAccessTokenRequest, AccessTokenResponse, TState>;
+type HandlerRequest<TValidateRequests extends boolean, TValidated, TRaw> = [
+  TValidateRequests,
+] extends [true]
+  ? TValidated
+  : TRaw;
 
-    /**
-     * Refresh access token by refresh token
-     */
-    handleRefreshTokenRequest: RequestHandler<IRefreshTokenRequest, RefreshTokenResponse, TState>;
-  };
+export type ServerAuthApiHandler<
+  TState extends Record<string, unknown> = Record<string, unknown>,
+  TValidateRequests extends boolean = true,
+> = {
+  /**
+   * Get access token by email and password
+   */
+  handleAccessTokenRequest: RequestHandler<
+    HandlerRequest<TValidateRequests, IAccessTokenRequest, IRawAccessTokenRequest>,
+    AccessTokenResponse,
+    TState
+  >;
+
+  /**
+   * Refresh access token by refresh token
+   */
+  handleRefreshTokenRequest: RequestHandler<
+    HandlerRequest<TValidateRequests, IRefreshTokenRequest, IRawRefreshTokenRequest>,
+    RefreshTokenResponse,
+    TState
+  >;
+};
 
 export class AuthRouter<
   TState extends Record<string, unknown> = Record<string, unknown>,
-> extends TypeweaverRouter<ServerAuthApiHandler<TState>> {
-  public constructor(options: TypeweaverRouterOptions<ServerAuthApiHandler<TState>>) {
+  TValidateRequests extends boolean = true,
+> extends TypeweaverRouter<ServerAuthApiHandler<TState, TValidateRequests>, TValidateRequests> {
+  public constructor(
+    options: TypeweaverRouterOptions<
+      ServerAuthApiHandler<TState, TValidateRequests>,
+      TValidateRequests
+    >,
+  ) {
     super(options);
     this.setupRoutes();
   }

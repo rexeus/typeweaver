@@ -1,5 +1,6 @@
 import type { ResponseDefinition } from "./defineResponse.js";
 import type { HttpMethod } from "./HttpMethod.js";
+import type { HttpRequestBoundaryConstraint } from "./HttpRequestBoundary.js";
 import type { RequestDefinition } from "./RequestDefinition.js";
 import type { SecurityRequirements } from "./SecurityDefinition.js";
 
@@ -76,7 +77,8 @@ export type OperationDefinition<
  * ```
  */
 export const defineOperation = <const TDefinition extends OperationDefinition>(
-  definition: TDefinition
+  definition: TDefinition &
+    HttpRequestBoundaryConstraint<TDefinition["request"]>
 ): TDefinition => {
   return definition;
 };

@@ -20,6 +20,10 @@ export * from "./operations/DownloadFileContentCommand.js";
 
 export * from "./operations/GetFileMetadataCommand.js";
 
+export * from "./operations/GetMetricCommand.js";
+
+export * from "./operations/GetMetricLabelsCommand.js";
+
 export * from "./operations/GetTodoCommand.js";
 
 export * from "./operations/HeadTodoCommand.js";

@@ -17,14 +17,16 @@ import {
   CreateTodoRequestCommand,
   createUpdateTodoRequest,
   DeleteTodoRequestCommand,
+  GetMetricRequestCommand,
   GetTodoRequestCommand,
   HeadTodoRequestCommand,
+  MetricClient,
   OptionsTodoRequestCommand,
   PutTodoRequestCommand,
   TestAssertionError,
   UpdateTodoRequestCommand,
 } from "test-utils";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { runClientCleanup, setupClientTest } from "./clientSetup.js";
 
 async function captureUnknownResponseError(
@@ -113,6 +115,51 @@ describe("Generated Client HTTP methods", () => {
     expect(response.statusCode).toBe(200);
     expect(response.body.id).toBe(requestData.param.todoId);
     expect(response.body.title).toBe(requestData.body.title);
+  });
+});
+
+describe("Generated Client typed HTTP boundary serialization", () => {
+  test("accepts domain scalars and emits deterministic wire values", async () => {
+    const fetchFn = vi.fn<typeof globalThis.fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ metricId: 42, enabled: false }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+    const client = new MetricClient({
+      baseUrl: "https://api.example.test",
+      fetchFn,
+    });
+    const observedAt = new Date("2026-07-26T10:15:30.000Z");
+    const command = new GetMetricRequestCommand({
+      param: { metricId: 42 },
+      query: {
+        enabled: false,
+        truthy: false,
+        capturedAt: observedAt,
+        samples: [1.5, 2],
+      },
+      header: {
+        "X-Attempt": 3,
+        "X-Enabled": false,
+        "X-Observed-At": observedAt,
+      },
+    });
+
+    const response = await client.send(command);
+
+    expect(response.type).toBe("GetMetricSuccess");
+    expect(fetchFn).toHaveBeenCalledOnce();
+    const call = fetchFn.mock.calls[0];
+    assert(call);
+    expect(call[0]).toBe(
+      "https://api.example.test/metrics/42?enabled=false&truthy=false&capturedAt=2026-07-26T10%3A15%3A30.000Z&samples=1.5&samples=2"
+    );
+    expect(call[1]?.headers).toEqual({
+      "X-Attempt": "3",
+      "X-Enabled": "false",
+      "X-Observed-At": "2026-07-26T10:15:30.000Z",
+    });
   });
 });
 

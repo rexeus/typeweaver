@@ -8,25 +8,43 @@
 
 import { HttpMethod, TypeweaverRouter, type RequestHandler, type TypeweaverRouterOptions } from "<%- coreDir %>/lib/server/index.js";
 <% for (const operation of operations) { %>
-import type { I<%- operation.className %>Request } from "./<%- operation.className %>Request.js";
+import type { I<%- operation.className %>Request, IRaw<%- operation.className %>Request } from "./<%- operation.className %>Request.js";
 import { <%- operation.className %>RequestValidator } from "./<%- operation.className %>RequestValidator.js";
 import type { <%- operation.className %>Response } from "./<%- operation.className %>Response.js";
 import { <%- operation.className %>ResponseValidator } from "./<%- operation.className %>ResponseValidator.js";
 <% } %>
 
+type HandlerRequest<
+  TValidateRequests extends boolean,
+  TValidated,
+  TRaw,
+> = [TValidateRequests] extends [true] ? TValidated : TRaw;
+
 export type Server<%- pascalCaseEntityName %>ApiHandler<
   TState extends Record<string, unknown> = Record<string, unknown>,
+  TValidateRequests extends boolean = true,
 > = {
 <% for (const operation of operations) { %>
 <% if (operation.jsDoc) { %><%- operation.jsDoc %>
-<% } %>  <%- operation.handlerName %>: RequestHandler<I<%- operation.className %>Request, <%- operation.className %>Response, TState>;
+<% } %>  <%- operation.handlerName %>: RequestHandler<
+    HandlerRequest<TValidateRequests, I<%- operation.className %>Request, IRaw<%- operation.className %>Request>,
+    <%- operation.className %>Response,
+    TState
+  >;
 <% } %>
 };
 
 export class <%- pascalCaseEntityName %>Router<
   TState extends Record<string, unknown> = Record<string, unknown>,
-> extends TypeweaverRouter<Server<%- pascalCaseEntityName %>ApiHandler<TState>> {
-  public constructor(options: TypeweaverRouterOptions<Server<%- pascalCaseEntityName %>ApiHandler<TState>>) {
+  TValidateRequests extends boolean = true,
+> extends TypeweaverRouter<
+  Server<%- pascalCaseEntityName %>ApiHandler<TState, TValidateRequests>,
+  TValidateRequests
+> {
+  public constructor(options: TypeweaverRouterOptions<
+    Server<%- pascalCaseEntityName %>ApiHandler<TState, TValidateRequests>,
+    TValidateRequests
+  >) {
     super(options);
     this.setupRoutes();
   }

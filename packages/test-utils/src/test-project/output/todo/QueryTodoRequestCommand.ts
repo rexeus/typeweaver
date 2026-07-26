@@ -41,9 +41,17 @@ export type QueryTodoRequestCommandInput = Omit<IQueryTodoRequest, "method" | "p
 /**
  * Query todos with advanced search criteria
  */
-export class QueryTodoRequestCommand extends RequestCommand implements IQueryTodoRequest {
+export class QueryTodoRequestCommand
+  extends RequestCommand<
+    IQueryTodoRequestHeader,
+    undefined,
+    IQueryTodoRequestQuery,
+    IQueryTodoRequestBody
+  >
+  implements IQueryTodoRequest
+{
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.POST;
+  public override readonly method = HttpMethod.POST;
   public override readonly path = definition.path;
 
   public override readonly header: IQueryTodoRequestHeader;

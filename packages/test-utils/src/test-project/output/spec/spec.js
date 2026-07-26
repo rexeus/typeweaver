@@ -303,6 +303,64 @@ const GetFileMetadataDefinition = defineOperation({
     ...sharedResponses,
   ],
 });
+const GetMetricDefinition = defineOperation({
+  operationId: "GetMetric",
+  method: HttpMethod.GET,
+  path: "/metrics/:metricId",
+  summary: "Read a metric through typed HTTP request boundaries",
+  request: {
+    param: z.object({ metricId: z.coerce.number().int().positive() }),
+    query: z.object({
+      enabled: z.stringbool().optional(),
+      truthy: z.coerce.boolean().optional(),
+      capturedAt: z.coerce.date().optional(),
+      samples: z.array(z.coerce.number()).optional(),
+    }),
+    header: z.object({
+      "X-Attempt": z.coerce.number().int(),
+      "X-Enabled": z.stringbool().optional(),
+      "X-Flags": z.array(z.stringbool()).optional(),
+      "X-Note": z.string().optional(),
+      "X-Observed-At": z.coerce.date().optional(),
+    }),
+  },
+  responses: [
+    defineResponse({
+      name: "GetMetricSuccess",
+      statusCode: HttpStatusCode.OK,
+      description: "The requested metric",
+      header: z.object({ "Content-Type": z.literal("application/json") }),
+      body: z.object({
+        metricId: z.number().int().positive(),
+        enabled: z.boolean(),
+      }),
+    }),
+  ],
+});
+const GetMetricLabelsDefinition = defineOperation({
+  operationId: "GetMetricLabels",
+  method: HttpMethod.GET,
+  path: "/metrics/:metricId/labels",
+  summary: "Read dynamic metric label records",
+  request: {
+    param: z.object({ metricId: z.coerce.number().int().positive() }),
+    query: z.record(z.string(), z.coerce.number()).optional(),
+    header: z.record(z.string(), z.stringbool()).optional(),
+  },
+  responses: [
+    defineResponse({
+      name: "GetMetricLabelsSuccess",
+      statusCode: HttpStatusCode.OK,
+      description: "The parsed metric label records",
+      header: z.object({ "Content-Type": z.literal("application/json") }),
+      body: z.object({
+        metricId: z.number().int().positive(),
+        labels: z.record(z.string(), z.number()),
+        flags: z.record(z.string(), z.boolean()),
+      }),
+    }),
+  ],
+});
 const todoStatus = z.enum(["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]);
 const todoSchema = z.object({
   id: z.ulid(),
@@ -897,6 +955,10 @@ const spec$1 = defineSpec({
         description: "Binary file operations",
       },
       {
+        name: "metrics",
+        description: "Typed HTTP-boundary metrics",
+      },
+      {
         name: "todos",
         description: "Todo management",
       },
@@ -950,6 +1012,12 @@ const spec$1 = defineSpec({
       tags: ["files"],
       security: [{ apiKeyAuth: [] }],
       operations: [UploadFileDefinition, DownloadFileContentDefinition, GetFileMetadataDefinition],
+    },
+    metric: {
+      description: "Typed HTTP-boundary coercion and serialization",
+      tags: ["metrics"],
+      security: [],
+      operations: [GetMetricDefinition, GetMetricLabelsDefinition],
     },
     todo: {
       description: "Bearer-protected todo operations",

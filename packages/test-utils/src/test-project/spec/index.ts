@@ -7,6 +7,10 @@ import {
   UploadFileDefinition,
 } from "./file/index.js";
 import {
+  GetMetricDefinition,
+  GetMetricLabelsDefinition,
+} from "./metric/index.js";
+import {
   CreateSubTodoDefinition,
   CreateTodoDefinition,
   DeleteSubTodoDefinition,
@@ -34,6 +38,7 @@ export const spec = defineSpec({
       { name: "account", description: "Account registration" },
       { name: "auth", description: "Token lifecycle" },
       { name: "files", description: "Binary file operations" },
+      { name: "metrics", description: "Typed HTTP-boundary metrics" },
       { name: "todos", description: "Todo management" },
       { name: "read", description: "Read-only operations" },
     ],
@@ -88,6 +93,12 @@ export const spec = defineSpec({
         DownloadFileContentDefinition,
         GetFileMetadataDefinition,
       ],
+    },
+    metric: {
+      description: "Typed HTTP-boundary coercion and serialization",
+      tags: ["metrics"],
+      security: [],
+      operations: [GetMetricDefinition, GetMetricLabelsDefinition],
     },
     todo: {
       description: "Bearer-protected todo operations",

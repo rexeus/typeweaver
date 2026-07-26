@@ -41,9 +41,17 @@ export type DeleteSubTodoRequestCommandInput = Omit<
 /**
  * Delete subtodo
  */
-export class DeleteSubTodoRequestCommand extends RequestCommand implements IDeleteSubTodoRequest {
+export class DeleteSubTodoRequestCommand
+  extends RequestCommand<
+    IDeleteSubTodoRequestHeader,
+    IDeleteSubTodoRequestParam,
+    undefined,
+    undefined
+  >
+  implements IDeleteSubTodoRequest
+{
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.DELETE;
+  public override readonly method = HttpMethod.DELETE;
   public override readonly path = definition.path;
 
   public override readonly header: IDeleteSubTodoRequestHeader;

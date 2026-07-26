@@ -8,66 +8,63 @@
 
 import { spec } from "../spec/spec.js";
 import {
-  type IHttpRequest,
+  HttpMethod,
+  type IRawHttpRequest,
   type SafeRequestValidationResult,
   RequestValidationError,
 } from "@rexeus/typeweaver-core";
 import { getOperationDefinition, RequestValidator } from "../lib/types/index.js";
-import type { IListSubTodosRequest } from "./ListSubTodosRequest.js";
+import type {
+  IListSubTodosRequest,
+  IListSubTodosRequestHeader,
+  IListSubTodosRequestParam,
+  IListSubTodosRequestQuery,
+} from "./ListSubTodosRequest.js";
 
 const definition = getOperationDefinition(spec, "todo", "ListSubTodos");
 
-export class ListSubTodosRequestValidator extends RequestValidator {
-  public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IListSubTodosRequest> {
+export class ListSubTodosRequestValidator extends RequestValidator<IListSubTodosRequest> {
+  public safeValidate(request: IRawHttpRequest): SafeRequestValidationResult<IListSubTodosRequest> {
     const error = new RequestValidationError();
-    const validatedRequest: IHttpRequest = {
-      method: request.method,
-      path: request.path,
-      query: undefined,
-      header: undefined,
-      body: undefined,
-      param: undefined,
-    };
 
-    if (definition.request.header) {
-      const coercedHeader = this.coerceHeaderToSchema(
-        request.header,
-        this.getSchema(definition.request.header),
-      );
-      const result = definition.request.header.safeParse(coercedHeader);
-
-      if (!result.success) {
-        error.addHeaderIssues(result.error.issues);
-      } else {
-        validatedRequest.header = result.data as IHttpRequest["header"];
-      }
+    const headerSchema = this.requireRequestSchema(definition.request.header, "header");
+    const coercedHeader = this.coerceHeaderToSchema(request.header, headerSchema);
+    const headerMultiplicityIssues = this.findMultiplicityIssues(
+      request.header,
+      headerSchema,
+      false,
+    );
+    if (headerMultiplicityIssues.length > 0) {
+      error.addHeaderIssues(headerMultiplicityIssues);
+    }
+    const headerResult = this.safeParseAs<IListSubTodosRequestHeader>(headerSchema, coercedHeader);
+    if (!headerResult.success) {
+      error.addHeaderIssues(headerResult.error.issues);
     }
 
-    if (definition.request.param) {
-      const result = definition.request.param.safeParse(request.param);
-
-      if (!result.success) {
-        error.addPathParamIssues(result.error.issues);
-      } else {
-        validatedRequest.param = result.data;
-      }
+    const paramSchema = this.requireRequestSchema(definition.request.param, "param");
+    const paramResult = this.safeParseAs<IListSubTodosRequestParam>(paramSchema, request.param);
+    if (!paramResult.success) {
+      error.addPathParamIssues(paramResult.error.issues);
     }
 
-    if (definition.request.query) {
-      const coercedQuery = this.coerceQueryToSchema(
-        request.query,
-        this.getSchema(definition.request.query),
-      );
-      const result = definition.request.query.safeParse(coercedQuery);
-
-      if (!result.success) {
-        error.addQueryIssues(result.error.issues);
-      } else {
-        validatedRequest.query = result.data as IHttpRequest["query"];
-      }
+    const querySchema = this.requireRequestSchema(definition.request.query, "query");
+    const coercedQuery = this.coerceQueryToSchema(request.query, querySchema);
+    const queryMultiplicityIssues = this.findMultiplicityIssues(request.query, querySchema, true);
+    if (queryMultiplicityIssues.length > 0) {
+      error.addQueryIssues(queryMultiplicityIssues);
+    }
+    const queryResult = this.safeParseAs<IListSubTodosRequestQuery>(querySchema, coercedQuery);
+    if (!queryResult.success) {
+      error.addQueryIssues(queryResult.error.issues);
     }
 
-    if (error.hasIssues()) {
+    if (
+      error.hasIssues() ||
+      !headerResult.success ||
+      !paramResult.success ||
+      !queryResult.success
+    ) {
       return {
         isValid: false,
         error,
@@ -76,11 +73,18 @@ export class ListSubTodosRequestValidator extends RequestValidator {
 
     return {
       isValid: true,
-      data: validatedRequest as IListSubTodosRequest,
+      data: {
+        method: HttpMethod.GET,
+        path: request.path,
+
+        header: headerResult.data,
+        param: paramResult.data,
+        query: queryResult.data,
+      },
     };
   }
 
-  public validate(request: IHttpRequest): IListSubTodosRequest {
+  public validate(request: IRawHttpRequest): IListSubTodosRequest {
     const result = this.safeValidate(request);
 
     if (!result.isValid) {

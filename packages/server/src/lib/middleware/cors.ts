@@ -1,4 +1,4 @@
-import type { IHttpRequest, IHttpResponse } from "@rexeus/typeweaver-core";
+import type { IHttpResponse, IRawHttpRequest } from "@rexeus/typeweaver-core";
 import { defineMiddleware } from "../TypedMiddleware.js";
 import {
   hasHeaderName,
@@ -46,8 +46,8 @@ type NormalizedCorsOptions = {
 };
 
 type CorsRequest = {
-  readonly header: IHttpRequest["header"];
-  readonly method: IHttpRequest["method"];
+  readonly header: IRawHttpRequest["header"];
+  readonly method: IRawHttpRequest["method"];
   readonly hasOrigin: boolean;
   readonly origin: string | undefined;
 };
@@ -89,12 +89,12 @@ function resolveOrigin(
 }
 
 function getRequestOrigin(
-  header: Record<string, string | string[]> | undefined
+  header: IRawHttpRequest["header"]
 ): string | undefined {
   return readSingletonHeader(header, "origin");
 }
 
-function readCorsRequest(request: IHttpRequest): CorsRequest {
+function readCorsRequest(request: IRawHttpRequest): CorsRequest {
   return {
     header: request.header,
     method: request.method,

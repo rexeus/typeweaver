@@ -7,23 +7,47 @@
  */
 
 import type { Context } from "hono";
+import type { BlankEnv, BlankSchema } from "hono/types";
 import { TypeweaverHono, type HonoRequestHandler, type TypeweaverHonoOptions } from "<%- coreDir %>/lib/hono/index.js";
 <% for (const operation of operations) { %>
-import type { I<%- operation.className %>Request } from "./<%- operation.className %>Request.js";
+import type { I<%- operation.className %>Request, IRaw<%- operation.className %>Request } from "./<%- operation.className %>Request.js";
 import { <%- operation.className %>RequestValidator } from "./<%- operation.className %>RequestValidator.js";
 import type { <%- operation.className %>Response } from "./<%- operation.className %>Response.js";
 import { <%- operation.className %>ResponseValidator } from "./<%- operation.className %>ResponseValidator.js";
 <% } %>
 
-export type Hono<%- pascalCaseEntityName %>ApiHandler = {
+type HandlerRequest<
+  TValidateRequests extends boolean,
+  TValidated,
+  TRaw,
+> = [TValidateRequests] extends [true] ? TValidated : TRaw;
+
+export type Hono<%- pascalCaseEntityName %>ApiHandler<
+  TValidateRequests extends boolean = true,
+> = {
 <% for (const operation of operations) { %>
 <% if (operation.jsDoc) { %><%- operation.jsDoc %>
-<% } %>  <%- operation.handlerName %>: HonoRequestHandler<I<%- operation.className %>Request, <%- operation.className %>Response>;
+<% } %>  <%- operation.handlerName %>: HonoRequestHandler<
+    HandlerRequest<TValidateRequests, I<%- operation.className %>Request, IRaw<%- operation.className %>Request>,
+    <%- operation.className %>Response
+  >;
 <% } %>
 };
 
-export class <%- pascalCaseEntityName %>Hono extends TypeweaverHono<Hono<%- pascalCaseEntityName %>ApiHandler> {
-  public constructor(options: TypeweaverHonoOptions<Hono<%- pascalCaseEntityName %>ApiHandler>) {
+export class <%- pascalCaseEntityName %>Hono<
+  TValidateRequests extends boolean = true,
+> extends TypeweaverHono<
+  Hono<%- pascalCaseEntityName %>ApiHandler<TValidateRequests>,
+  BlankEnv,
+  BlankSchema,
+  "/",
+  TValidateRequests
+> {
+  public constructor(options: TypeweaverHonoOptions<
+    Hono<%- pascalCaseEntityName %>ApiHandler<TValidateRequests>,
+    BlankEnv,
+    TValidateRequests
+  >) {
     super(options);
     this.setupRoutes();
   }

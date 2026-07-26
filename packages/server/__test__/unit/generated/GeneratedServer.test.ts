@@ -1,10 +1,15 @@
-import type { IHttpRequest, ITypedHttpResponse } from "@rexeus/typeweaver-core";
+import type {
+  ITypedHttpResponse,
+  IValidatedHttpRequest,
+} from "@rexeus/typeweaver-core";
 import {
   createCreateSubTodoRequest,
   createCreateTodoRequest,
   createDeleteSubTodoRequest,
   createDeleteTodoRequest,
   createGetTodoRequest,
+  createGetMetricSuccessResponse,
+  createGetMetricLabelsSuccessResponse,
   createHeadTodoRequest,
   createListSubTodosRequest,
   createListTodosRequest,
@@ -17,7 +22,9 @@ import {
   createUpdateTodoRequest,
   createUpdateTodoStatusRequest,
   defineMiddleware,
+  MetricRouter,
   TestApplicationError,
+  TypeweaverApp,
 } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
 import {
@@ -27,7 +34,10 @@ import {
   expectJson,
   postRaw,
 } from "../../helpers.js";
-import type { IValidationErrorResponseBody } from "test-utils";
+import type {
+  IGetMetricRequest,
+  IValidationErrorResponseBody,
+} from "test-utils";
 
 async function expectNoBody(response: Response): Promise<void> {
   expect(await response.text()).toBe("");
@@ -47,7 +57,7 @@ async function expectValidationIssue(
 
 function buildRawBodyFetchRequest(
   url: string,
-  requestData: IHttpRequest,
+  requestData: IValidatedHttpRequest,
   body: string
 ): Request {
   return buildFetchRequest(url, { ...requestData, body });
@@ -158,6 +168,101 @@ describe("Generated Server request bodies and parameters", () => {
 
     const data = await expectJson(response, 200);
     expect(data.nextToken).toBe("runtime query+token");
+  });
+});
+
+describe("Generated Server typed HTTP boundary coercion", () => {
+  test("passes validated domain values to handlers by default", async () => {
+    let capturedRequest: IGetMetricRequest | undefined;
+    const app = new TypeweaverApp().route(
+      new MetricRouter({
+        requestHandlers: {
+          handleGetMetricRequest: async request => {
+            capturedRequest = request;
+            return createGetMetricSuccessResponse({
+              header: { "Content-Type": "application/json" },
+              body: {
+                metricId: request.param.metricId,
+                enabled: request.query.enabled ?? false,
+              },
+            });
+          },
+          handleGetMetricLabelsRequest: async request =>
+            createGetMetricLabelsSuccessResponse({
+              header: { "Content-Type": "application/json" },
+              body: {
+                metricId: request.param.metricId,
+                labels: request.query ?? {},
+                flags: request.header ?? {},
+              },
+            }),
+        },
+      })
+    );
+
+    const response = await app.fetch(
+      new Request(
+        `${BASE_URL}/metrics/42?enabled=false&truthy=false&samples=1.5&samples=2`,
+        {
+          headers: {
+            "X-Attempt": "3",
+            "X-Enabled": "false",
+            "X-Observed-At": "2026-07-26T10:15:30.000Z",
+          },
+        }
+      )
+    );
+
+    expect(response.status).toBe(200);
+    expect(capturedRequest).toEqual({
+      method: "GET",
+      path: "/metrics/42",
+      param: { metricId: 42 },
+      query: {
+        enabled: false,
+        truthy: true,
+        samples: [1.5, 2],
+      },
+      header: {
+        "X-Attempt": 3,
+        "X-Enabled": false,
+        "X-Observed-At": new Date("2026-07-26T10:15:30.000Z"),
+      },
+    });
+  });
+
+  test("returns a validation error for an invalid coerced path value", async () => {
+    const app = new TypeweaverApp().route(
+      new MetricRouter({
+        requestHandlers: {
+          handleGetMetricRequest: async request =>
+            createGetMetricSuccessResponse({
+              header: { "Content-Type": "application/json" },
+              body: {
+                metricId: request.param.metricId,
+                enabled: false,
+              },
+            }),
+          handleGetMetricLabelsRequest: async request =>
+            createGetMetricLabelsSuccessResponse({
+              header: { "Content-Type": "application/json" },
+              body: {
+                metricId: request.param.metricId,
+                labels: request.query ?? {},
+                flags: request.header ?? {},
+              },
+            }),
+        },
+      })
+    );
+
+    const response = await app.fetch(
+      new Request(`${BASE_URL}/metrics/not-a-number`, {
+        headers: { "X-Attempt": "3" },
+      })
+    );
+
+    await expectValidationIssue(response, "param");
   });
 });
 

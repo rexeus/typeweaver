@@ -1,4 +1,8 @@
-import type { IHttpRequest, ITypedHttpResponse } from "@rexeus/typeweaver-core";
+import type {
+  IRawHttpRequest,
+  ITypedHttpResponse,
+  IValidatedHttpRequest,
+} from "@rexeus/typeweaver-core";
 import {
   badRequestDefaultError,
   RequestValidationError,
@@ -13,6 +17,8 @@ import {
   createDeleteSubTodoSuccessResponse,
   createDeleteTodoRequest,
   createGetTodoSuccessResponse,
+  createGetMetricSuccessResponse,
+  createGetMetricLabelsSuccessResponse,
   createHeadTodoRequest,
   createListSubTodosRequest,
   createListSubTodosSuccessResponse,
@@ -29,6 +35,7 @@ import {
   createUpdateSubTodoRequest,
   createUpdateTodoRequest,
   createUpdateTodoStatusRequest,
+  MetricHono,
   TestApplicationError,
   TestAssertionError,
   TodoHono,
@@ -39,18 +46,19 @@ import { expectErrorResponse, prepareRequestData } from "../../helpers.js";
 import type { Context } from "hono";
 import type {
   HonoTodoApiHandler,
+  IGetMetricRequest,
   IValidationErrorResponseBody,
 } from "test-utils";
 
 type CreateTestHonoOptions = Parameters<typeof createTestHono>[0];
-type CreateTodoHonoOptions = Omit<
-  ConstructorParameters<typeof TodoHono>[0],
+type CreateTodoHonoOptions<TValidateRequests extends boolean = true> = Omit<
+  ConstructorParameters<typeof TodoHono<TValidateRequests>>[0],
   "requestHandlers"
 >;
 
 async function requestTestHono(
   url: string,
-  requestData: IHttpRequest,
+  requestData: IValidatedHttpRequest,
   options?: CreateTestHonoOptions
 ): Promise<Response> {
   return await createTestHono(options).request(
@@ -59,22 +67,26 @@ async function requestTestHono(
   );
 }
 
-function createTodoHonoWithHandlers(
-  handlers: Partial<HonoTodoApiHandler>,
-  options?: CreateTodoHonoOptions
-): TodoHono {
-  const requestHandlers = new Proxy(handlers as HonoTodoApiHandler, {
-    get: (target, prop) => {
-      if (prop in target) return target[prop as keyof HonoTodoApiHandler];
-      return async () => {
-        throw new TestAssertionError(
-          `Missing Hono test handler: ${String(prop)}`
-        );
-      };
-    },
-  });
+function createTodoHonoWithHandlers<TValidateRequests extends boolean = true>(
+  handlers: Partial<HonoTodoApiHandler<TValidateRequests>>,
+  options?: CreateTodoHonoOptions<TValidateRequests>
+): TodoHono<TValidateRequests> {
+  const requestHandlers = new Proxy(
+    handlers as HonoTodoApiHandler<TValidateRequests>,
+    {
+      get: (target, prop) => {
+        if (prop in target)
+          return target[prop as keyof HonoTodoApiHandler<TValidateRequests>];
+        return async () => {
+          throw new TestAssertionError(
+            `Missing Hono test handler: ${String(prop)}`
+          );
+        };
+      },
+    }
+  );
 
-  return new TodoHono({
+  return new TodoHono<TValidateRequests>({
     ...options,
     requestHandlers,
     validateResponses: options?.validateResponses ?? false,
@@ -98,9 +110,9 @@ function createCreateTodoRouteReturning(
 }
 
 function createUnvalidatedTodoHonoWithHandlers(
-  handlers: Partial<HonoTodoApiHandler>
-): TodoHono {
-  return createTodoHonoWithHandlers(handlers, {
+  handlers: Partial<HonoTodoApiHandler<false>>
+): TodoHono<false> {
+  return createTodoHonoWithHandlers<false>(handlers, {
     validateRequests: false,
     validateResponses: false,
   });
@@ -222,6 +234,101 @@ describe("Generated Hono route dispatch", () => {
     expect(data.id).toBe(requestData.param.todoId);
     expect(data.title).toBe("patch todo");
     expect(data.priority).toBe("MEDIUM");
+  });
+});
+
+describe("Generated Hono typed HTTP boundary coercion", () => {
+  test("passes validated domain values to handlers by default", async () => {
+    let capturedRequest: IGetMetricRequest | undefined;
+    const app = new MetricHono({
+      requestHandlers: {
+        handleGetMetricRequest: async request => {
+          capturedRequest = request;
+          return createGetMetricSuccessResponse({
+            header: { "Content-Type": "application/json" },
+            body: {
+              metricId: request.param.metricId,
+              enabled: request.query.enabled ?? false,
+            },
+          });
+        },
+        handleGetMetricLabelsRequest: async request =>
+          createGetMetricLabelsSuccessResponse({
+            header: { "Content-Type": "application/json" },
+            body: {
+              metricId: request.param.metricId,
+              labels: request.query ?? {},
+              flags: request.header ?? {},
+            },
+          }),
+      },
+    });
+
+    const response = await app.request(
+      "http://localhost/metrics/42?enabled=false&truthy=false&samples=1.5&samples=2",
+      {
+        headers: {
+          "X-Attempt": "3",
+          "X-Enabled": "false",
+          "X-Observed-At": "2026-07-26T10:15:30.000Z",
+        },
+      }
+    );
+
+    expect(response.status).toBe(200);
+    expect(capturedRequest).toEqual({
+      method: "GET",
+      path: "/metrics/42",
+      param: { metricId: 42 },
+      query: {
+        enabled: false,
+        truthy: true,
+        samples: [1.5, 2],
+      },
+      header: {
+        "X-Attempt": 3,
+        "X-Enabled": false,
+        "X-Observed-At": new Date("2026-07-26T10:15:30.000Z"),
+      },
+    });
+  });
+
+  test("returns a validation error for an invalid coerced path value", async () => {
+    const app = new MetricHono({
+      requestHandlers: {
+        handleGetMetricRequest: async request =>
+          createGetMetricSuccessResponse({
+            header: { "Content-Type": "application/json" },
+            body: {
+              metricId: request.param.metricId,
+              enabled: false,
+            },
+          }),
+        handleGetMetricLabelsRequest: async request =>
+          createGetMetricLabelsSuccessResponse({
+            header: { "Content-Type": "application/json" },
+            body: {
+              metricId: request.param.metricId,
+              labels: request.query ?? {},
+              flags: request.header ?? {},
+            },
+          }),
+      },
+    });
+
+    const response = await app.request(
+      "http://localhost/metrics/not-a-number",
+      {
+        headers: { "X-Attempt": "3" },
+      }
+    );
+
+    const data = (await expectErrorResponse(
+      response,
+      400,
+      "VALIDATION_ERROR"
+    )) as IValidationErrorResponseBody;
+    expect(data.issues.param).toHaveLength(1);
   });
 });
 
@@ -1424,11 +1531,11 @@ describe("Generated Hono operation metadata", () => {
     }) => {
       let capturedOperationId: string | undefined;
       const app = createUnvalidatedTodoHonoWithHandlers({
-        [handlerName]: async (_request: IHttpRequest, context: Context) => {
+        [handlerName]: async (_request: IRawHttpRequest, context: Context) => {
           capturedOperationId = context.get("operationId");
           return responseFactory();
         },
-      } as Partial<HonoTodoApiHandler>);
+      } as Partial<HonoTodoApiHandler<false>>);
 
       const response = await app.request(route, { method });
 

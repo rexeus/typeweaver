@@ -8,52 +8,46 @@
 
 import { spec } from "../spec/spec.js";
 import {
-  type IHttpRequest,
+  HttpMethod,
+  type IRawHttpRequest,
   type SafeRequestValidationResult,
   RequestValidationError,
 } from "@rexeus/typeweaver-core";
 import { getOperationDefinition, RequestValidator } from "../lib/types/index.js";
-import type { IDeleteTodoRequest } from "./DeleteTodoRequest.js";
+import type {
+  IDeleteTodoRequest,
+  IDeleteTodoRequestHeader,
+  IDeleteTodoRequestParam,
+} from "./DeleteTodoRequest.js";
 
 const definition = getOperationDefinition(spec, "todo", "DeleteTodo");
 
-export class DeleteTodoRequestValidator extends RequestValidator {
-  public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IDeleteTodoRequest> {
+export class DeleteTodoRequestValidator extends RequestValidator<IDeleteTodoRequest> {
+  public safeValidate(request: IRawHttpRequest): SafeRequestValidationResult<IDeleteTodoRequest> {
     const error = new RequestValidationError();
-    const validatedRequest: IHttpRequest = {
-      method: request.method,
-      path: request.path,
-      query: undefined,
-      header: undefined,
-      body: undefined,
-      param: undefined,
-    };
 
-    if (definition.request.header) {
-      const coercedHeader = this.coerceHeaderToSchema(
-        request.header,
-        this.getSchema(definition.request.header),
-      );
-      const result = definition.request.header.safeParse(coercedHeader);
-
-      if (!result.success) {
-        error.addHeaderIssues(result.error.issues);
-      } else {
-        validatedRequest.header = result.data as IHttpRequest["header"];
-      }
+    const headerSchema = this.requireRequestSchema(definition.request.header, "header");
+    const coercedHeader = this.coerceHeaderToSchema(request.header, headerSchema);
+    const headerMultiplicityIssues = this.findMultiplicityIssues(
+      request.header,
+      headerSchema,
+      false,
+    );
+    if (headerMultiplicityIssues.length > 0) {
+      error.addHeaderIssues(headerMultiplicityIssues);
+    }
+    const headerResult = this.safeParseAs<IDeleteTodoRequestHeader>(headerSchema, coercedHeader);
+    if (!headerResult.success) {
+      error.addHeaderIssues(headerResult.error.issues);
     }
 
-    if (definition.request.param) {
-      const result = definition.request.param.safeParse(request.param);
-
-      if (!result.success) {
-        error.addPathParamIssues(result.error.issues);
-      } else {
-        validatedRequest.param = result.data;
-      }
+    const paramSchema = this.requireRequestSchema(definition.request.param, "param");
+    const paramResult = this.safeParseAs<IDeleteTodoRequestParam>(paramSchema, request.param);
+    if (!paramResult.success) {
+      error.addPathParamIssues(paramResult.error.issues);
     }
 
-    if (error.hasIssues()) {
+    if (error.hasIssues() || !headerResult.success || !paramResult.success) {
       return {
         isValid: false,
         error,
@@ -62,11 +56,17 @@ export class DeleteTodoRequestValidator extends RequestValidator {
 
     return {
       isValid: true,
-      data: validatedRequest as IDeleteTodoRequest,
+      data: {
+        method: HttpMethod.DELETE,
+        path: request.path,
+
+        header: headerResult.data,
+        param: paramResult.data,
+      },
     };
   }
 
-  public validate(request: IHttpRequest): IDeleteTodoRequest {
+  public validate(request: IRawHttpRequest): IDeleteTodoRequest {
     const result = this.safeValidate(request);
 
     if (!result.isValid) {

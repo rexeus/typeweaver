@@ -1,5 +1,6 @@
 /* oxlint-disable import/max-dependencies */
 export * from "./HttpRequest.js";
+export * from "./HttpRequestBoundary.js";
 export * from "./HttpResponse.js";
 export * from "./HttpResponseNormalization.js";
 export * from "./HttpHeader.js";

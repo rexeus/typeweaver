@@ -17,11 +17,12 @@ import {
   validationDefaultError,
 } from "@rexeus/typeweaver-core";
 import type {
-  IHttpRequest,
   IHttpResponse,
+  IRawHttpRequest,
   IRequestValidator,
   IResponseValidator,
   ITypedHttpResponse,
+  IValidatedHttpRequest,
   ResponseValidationError,
 } from "@rexeus/typeweaver-core";
 import { Hono } from "hono";
@@ -98,6 +99,7 @@ export type HonoResponseValidationErrorHandler = (
 export type TypeweaverHonoOptions<
   RequestHandlers,
   HonoEnv extends Env = BlankEnv,
+  TValidateRequests extends boolean = boolean,
 > = HonoOptions<HonoEnv> & {
   /**
    * Request handler methods for each operation.
@@ -110,7 +112,7 @@ export type TypeweaverHonoOptions<
    * When false, requests are passed through without validation.
    * @default true
    */
-  readonly validateRequests?: boolean;
+  readonly validateRequests?: TValidateRequests;
 
   /**
    * Enable response validation using generated validators.
@@ -169,12 +171,12 @@ export type TypeweaverHonoOptions<
  * Inputs used by generated and custom Hono routers to handle one operation.
  */
 export type TypeweaverHonoRequestOptions<
-  TRequest extends IHttpRequest,
+  TRequest extends IRawHttpRequest | IValidatedHttpRequest,
   TResponse extends IHttpResponse,
 > = {
   readonly context: Context;
   readonly operationId: string;
-  readonly requestValidator: IRequestValidator;
+  readonly requestValidator: IRequestValidator<IValidatedHttpRequest>;
   readonly responseValidator: IResponseValidator;
   readonly handler: HonoRequestHandler<TRequest, TResponse>;
 };
@@ -197,6 +199,7 @@ export abstract class TypeweaverHono<
   HonoEnv extends Env = BlankEnv,
   HonoSchema extends Schema = BlankSchema,
   HonoBasePath extends string = "/",
+  TValidateRequests extends boolean = boolean,
 > extends Hono<HonoEnv, HonoSchema, HonoBasePath> {
   /**
    * Adapter for converting between Hono and typeweaver request/response formats.
@@ -262,7 +265,7 @@ export abstract class TypeweaverHono<
    * @param options.handleBodyParseErrors - Handler or boolean for body parse errors (default: true)
    * @param options.handleUnknownErrors - Handler or boolean for unknown errors (default: true)
    */
-  public constructor(options: TypeweaverHonoOptions<RequestHandlers, HonoEnv>) {
+  public constructor(options: TypeweaverHonoOptions<RequestHandlers, HonoEnv, TValidateRequests>) {
     const {
       requestHandlers,
       validateRequests = true,
@@ -389,7 +392,10 @@ export abstract class TypeweaverHono<
    * @param options - Hono context, operation metadata, validators, and handler
    * @returns Hono-compatible Response object
    */
-  protected async handleRequest<TRequest extends IHttpRequest, TResponse extends IHttpResponse>({
+  protected async handleRequest<
+    TRequest extends IRawHttpRequest | IValidatedHttpRequest,
+    TResponse extends IHttpResponse,
+  >({
     context,
     operationId,
     requestValidator,

@@ -5,19 +5,19 @@ import {
 } from "../../data/index.js";
 import type {
   AccessTokenResponse,
-  IAccessTokenRequest,
-  IRefreshTokenRequest,
+  IRawAccessTokenRequest,
+  IRawRefreshTokenRequest,
   RefreshTokenResponse,
 } from "../../index.js";
 import type { HonoAuthApiHandler } from "../../test-project/output/auth/AuthHono.js";
 
-export class AuthHandlers implements HonoAuthApiHandler {
+export class AuthHandlers implements HonoAuthApiHandler<boolean> {
   public constructor(private readonly throwError?: Error | ITypedHttpResponse) {
     //
   }
 
   public async handleAccessTokenRequest(
-    _request: IAccessTokenRequest
+    _request: IRawAccessTokenRequest
   ): Promise<AccessTokenResponse> {
     if (this.throwError) {
       throw this.throwError;
@@ -27,7 +27,7 @@ export class AuthHandlers implements HonoAuthApiHandler {
   }
 
   public async handleRefreshTokenRequest(
-    _request: IRefreshTokenRequest
+    _request: IRawRefreshTokenRequest
   ): Promise<RefreshTokenResponse> {
     if (this.throwError) {
       throw this.throwError;

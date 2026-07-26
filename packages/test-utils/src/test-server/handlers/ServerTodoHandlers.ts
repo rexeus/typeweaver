@@ -15,26 +15,34 @@ import {
   createUpdateTodoStatusSuccessResponse,
   createUpdateTodoSuccessResponse,
 } from "../../data/index.js";
+import {
+  CreateSubTodoDefinition,
+  CreateTodoDefinition,
+  PutTodoDefinition,
+  UpdateSubTodoDefinition,
+  UpdateTodoDefinition,
+  UpdateTodoStatusDefinition,
+} from "../../test-project/spec/todo/index.js";
 import type {
   CreateSubTodoResponse,
   CreateTodoResponse,
   DeleteSubTodoResponse,
   DeleteTodoResponse,
   GetTodoResponse,
-  ICreateSubTodoRequest,
-  ICreateTodoRequest,
-  IDeleteSubTodoRequest,
-  IDeleteTodoRequest,
-  IGetTodoRequest,
-  IListSubTodosRequest,
-  IListTodosRequest,
-  IOptionsTodoRequest,
-  IPutTodoRequest,
-  IQuerySubTodoRequest,
-  IQueryTodoRequest,
-  IUpdateSubTodoRequest,
-  IUpdateTodoRequest,
-  IUpdateTodoStatusRequest,
+  IRawCreateSubTodoRequest,
+  IRawCreateTodoRequest,
+  IRawDeleteSubTodoRequest,
+  IRawDeleteTodoRequest,
+  IRawGetTodoRequest,
+  IRawListSubTodosRequest,
+  IRawListTodosRequest,
+  IRawOptionsTodoRequest,
+  IRawPutTodoRequest,
+  IRawQuerySubTodoRequest,
+  IRawQueryTodoRequest,
+  IRawUpdateSubTodoRequest,
+  IRawUpdateTodoRequest,
+  IRawUpdateTodoStatusRequest,
   ListSubTodosResponse,
   ListTodosResponse,
   OptionsTodoResponse,
@@ -47,28 +55,32 @@ import type {
 } from "../../index.js";
 import type { ServerTodoApiHandler } from "../../test-project/output/todo/TodoRouter.js";
 
-export class ServerTodoHandlers implements ServerTodoApiHandler {
+export class ServerTodoHandlers implements ServerTodoApiHandler<
+  Record<string, unknown>,
+  boolean
+> {
   public constructor(private readonly throwError?: Error | ITypedHttpResponse) {
     //
   }
 
   public async handleCreateTodoRequest(
-    request: ICreateTodoRequest
+    request: IRawCreateTodoRequest
   ): Promise<CreateTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
+    const body = CreateTodoDefinition.request.body.parse(request.body);
 
     return createCreateTodoSuccessResponse({
       body: {
-        ...request.body,
+        ...body,
         status: "TODO",
       },
     });
   }
 
   public async handleDeleteTodoRequest(
-    _request: IDeleteTodoRequest
+    _request: IRawDeleteTodoRequest
   ): Promise<DeleteTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
@@ -78,58 +90,61 @@ export class ServerTodoHandlers implements ServerTodoApiHandler {
   }
 
   public async handlePutTodoRequest(
-    request: IPutTodoRequest
+    request: IRawPutTodoRequest
   ): Promise<PutTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
 
     const { todoId } = request.param;
+    const body = PutTodoDefinition.request.body.parse(request.body);
 
     return createPutTodoSuccessResponse({
       body: {
-        ...request.body,
+        ...body,
         id: todoId,
       },
     });
   }
 
   public async handleUpdateTodoRequest(
-    request: IUpdateTodoRequest
+    request: IRawUpdateTodoRequest
   ): Promise<UpdateTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
 
     const { todoId } = request.param;
+    const body = UpdateTodoDefinition.request.body.parse(request.body);
 
     return createUpdateTodoSuccessResponse({
       body: {
-        ...request.body,
+        ...body,
         id: todoId,
       },
     });
   }
 
   public async handleUpdateTodoStatusRequest(
-    request: IUpdateTodoStatusRequest
+    request: IRawUpdateTodoStatusRequest
   ): Promise<UpdateTodoStatusResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
 
     const { todoId } = request.param;
+    const body = UpdateTodoStatusDefinition.request.body.parse(request.body);
 
     return createUpdateTodoStatusSuccessResponse({
       body: {
         id: todoId,
-        status: request.body.value,
+        status: body.value,
       },
     });
   }
 
   public async handleGetTodoRequest(
-    request: IGetTodoRequest
+    request: IRawGetTodoRequest
   ): Promise<GetTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
@@ -143,7 +158,7 @@ export class ServerTodoHandlers implements ServerTodoApiHandler {
   }
 
   public async handleListTodosRequest(
-    _request: IListTodosRequest
+    _request: IRawListTodosRequest
   ): Promise<ListTodosResponse> {
     if (this.throwError) {
       throw this.throwError;
@@ -153,24 +168,25 @@ export class ServerTodoHandlers implements ServerTodoApiHandler {
   }
 
   public async handleCreateSubTodoRequest(
-    request: ICreateSubTodoRequest
+    request: IRawCreateSubTodoRequest
   ): Promise<CreateSubTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
 
     const { todoId } = request.param;
+    const body = CreateSubTodoDefinition.request.body.parse(request.body);
 
     return createCreateSubTodoSuccessResponse({
       body: {
-        ...request.body,
+        ...body,
         parentId: todoId,
       },
     });
   }
 
   public async handleDeleteSubTodoRequest(
-    _request: IDeleteSubTodoRequest
+    _request: IRawDeleteSubTodoRequest
   ): Promise<DeleteSubTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
@@ -180,17 +196,18 @@ export class ServerTodoHandlers implements ServerTodoApiHandler {
   }
 
   public async handleUpdateSubTodoRequest(
-    request: IUpdateSubTodoRequest
+    request: IRawUpdateSubTodoRequest
   ): Promise<UpdateSubTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
 
     const { todoId, subtodoId } = request.param;
+    const body = UpdateSubTodoDefinition.request.body.parse(request.body);
 
     return createUpdateSubTodoSuccessResponse({
       body: {
-        ...request.body,
+        ...body,
         id: subtodoId,
         parentId: todoId,
       },
@@ -198,7 +215,7 @@ export class ServerTodoHandlers implements ServerTodoApiHandler {
   }
 
   public async handleListSubTodosRequest(
-    _request: IListSubTodosRequest
+    _request: IRawListSubTodosRequest
   ): Promise<ListSubTodosResponse> {
     if (this.throwError) {
       throw this.throwError;
@@ -208,7 +225,7 @@ export class ServerTodoHandlers implements ServerTodoApiHandler {
   }
 
   public async handleQuerySubTodoRequest(
-    _request: IQuerySubTodoRequest
+    _request: IRawQuerySubTodoRequest
   ): Promise<QuerySubTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
@@ -218,7 +235,7 @@ export class ServerTodoHandlers implements ServerTodoApiHandler {
   }
 
   public async handleQueryTodoRequest(
-    request: IQueryTodoRequest
+    request: IRawQueryTodoRequest
   ): Promise<QueryTodoResponse> {
     if (this.throwError) {
       throw this.throwError;
@@ -236,7 +253,7 @@ export class ServerTodoHandlers implements ServerTodoApiHandler {
   }
 
   public async handleOptionsTodoRequest(
-    _request: IOptionsTodoRequest
+    _request: IRawOptionsTodoRequest
   ): Promise<OptionsTodoResponse> {
     if (this.throwError) {
       throw this.throwError;

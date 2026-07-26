@@ -38,9 +38,12 @@ export type GetTodoRequestCommandInput = Omit<IGetTodoRequest, "method" | "path"
 /**
  * Get todo
  */
-export class GetTodoRequestCommand extends RequestCommand implements IGetTodoRequest {
+export class GetTodoRequestCommand
+  extends RequestCommand<IGetTodoRequestHeader, IGetTodoRequestParam, undefined, undefined>
+  implements IGetTodoRequest
+{
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.GET;
+  public override readonly method = HttpMethod.GET;
   public override readonly path = definition.path;
 
   public override readonly header: IGetTodoRequestHeader;

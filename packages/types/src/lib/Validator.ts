@@ -10,7 +10,6 @@ import type {
   HttpQuerySchema,
 } from "@rexeus/typeweaver-core";
 import z from "zod";
-import { $ZodArray, $ZodOptional } from "zod/v4/core";
 import type { $ZodShape } from "zod/v4/core";
 
 type SchemaInfo = { readonly originalKey: string; readonly isArray: boolean };
@@ -68,16 +67,97 @@ export abstract class Validator {
   protected getSchema(
     headerSchema: HttpHeaderSchema | HttpQuerySchema
   ): $ZodShape {
-    if (headerSchema instanceof z.ZodObject) {
-      return headerSchema.shape;
+    return this.getObjectSchema(headerSchema)?.shape ?? {};
+  }
+
+  private getObjectSchema(
+    schema: HttpHeaderSchema | HttpQuerySchema
+  ): z.ZodObject | undefined {
+    if (schema instanceof z.ZodObject) {
+      return schema;
     }
-    if (headerSchema instanceof z.ZodOptional) {
-      const unwrapped = headerSchema.unwrap();
-      if (unwrapped instanceof z.ZodObject) {
-        return unwrapped.shape;
+    if (schema instanceof z.ZodOptional) {
+      const unwrapped = schema.unwrap();
+      return unwrapped instanceof z.ZodObject ? unwrapped : undefined;
+    }
+    return undefined;
+  }
+
+  /**
+   * Parse with a runtime-loaded schema while preserving the generated
+   * operation output type.
+   *
+   * The bundled specification intentionally exposes `SpecDefinition` rather
+   * than its complete source-level literal type. Successful Zod parsing is the
+   * runtime proof for this single, localized type bridge.
+   */
+  protected safeParseAs<TOutput>(
+    schema: z.ZodType,
+    input: unknown
+  ): z.ZodSafeParseResult<TOutput> {
+    return schema.safeParse(input) as z.ZodSafeParseResult<TOutput>;
+  }
+
+  protected requireRequestSchema<TSchema extends z.ZodType>(
+    schema: TSchema | undefined,
+    requestPart: "body" | "header" | "param" | "query"
+  ): TSchema {
+    if (schema === undefined) {
+      throw new TypeError(
+        `Generated request validator expected a ${requestPart} schema`
+      );
+    }
+    return schema;
+  }
+
+  protected findMultiplicityIssues(
+    data: unknown,
+    schema: HttpHeaderSchema | HttpQuerySchema,
+    caseSensitive: boolean
+  ): z.core.$ZodIssue[] {
+    if (typeof data !== "object" || data === null || Array.isArray(data)) {
+      return [];
+    }
+
+    const issues: z.core.$ZodIssue[] = [];
+
+    for (const [key, value] of Object.entries(data)) {
+      if (!Array.isArray(value) || value.length <= 1) {
+        continue;
+      }
+
+      if (this.fieldExpectsArray(schema, key, caseSensitive) === false) {
+        issues.push({
+          code: "custom",
+          input: value,
+          path: [key],
+          message: "Expected a single HTTP value but received multiple values",
+        });
       }
     }
-    return {};
+
+    return issues;
+  }
+
+  private fieldExpectsArray(
+    schema: HttpHeaderSchema | HttpQuerySchema,
+    key: string,
+    caseSensitive: boolean
+  ): boolean | undefined {
+    const container =
+      schema instanceof z.ZodOptional ? schema.unwrap() : schema;
+
+    if (container instanceof z.ZodObject) {
+      const lookupKey = caseSensitive ? key : key.toLowerCase();
+      return this.analyzeSchema(container.shape, caseSensitive).get(lookupKey)
+        ?.isArray;
+    }
+
+    if (container instanceof z.ZodRecord) {
+      return this.isArraySchema(container.valueType);
+    }
+
+    return undefined;
   }
 
   /**
@@ -92,15 +172,22 @@ export abstract class Validator {
     for (const [key, zodType] of Object.entries(shape)) {
       if (!zodType) continue;
 
-      const isArray =
-        zodType instanceof $ZodArray ||
-        (zodType instanceof $ZodOptional &&
-          zodType._zod.def.innerType instanceof $ZodArray);
+      const isArray = this.isArraySchema(zodType);
 
       const lookupKey = caseSensitive ? key : key.toLowerCase();
       schemaMap.set(lookupKey, { originalKey: key, isArray });
     }
     return schemaMap;
+  }
+
+  private isArraySchema(schema: z.core.$ZodType): boolean {
+    if (schema instanceof z.ZodArray) {
+      return true;
+    }
+    if (schema instanceof z.ZodOptional) {
+      return schema.unwrap() instanceof z.ZodArray;
+    }
+    return false;
   }
 
   /**
@@ -218,7 +305,18 @@ export abstract class Validator {
    * @param shape - The Zod schema shape for headers
    * @returns Coerced header object
    */
-  protected coerceHeaderToSchema(header: unknown, shape: $ZodShape): unknown {
+  protected coerceHeaderToSchema(
+    header: unknown,
+    schema: HttpHeaderSchema
+  ): unknown {
+    if (header === undefined && schema instanceof z.ZodOptional) {
+      return undefined;
+    }
+    const objectSchema = this.getObjectSchema(schema);
+    if (objectSchema === undefined) {
+      return header ?? {};
+    }
+    const shape = objectSchema.shape;
     if (typeof header !== "object" || header === null) {
       return this.coerceToSchema(header ?? {}, shape, false);
     }
@@ -265,7 +363,17 @@ export abstract class Validator {
    * @param shape - The Zod schema shape for query parameters
    * @returns Coerced query object
    */
-  protected coerceQueryToSchema(query: unknown, shape: $ZodShape): unknown {
-    return this.coerceToSchema(query ?? {}, shape, true); // case-sensitive
+  protected coerceQueryToSchema(
+    query: unknown,
+    schema: HttpQuerySchema
+  ): unknown {
+    if (query === undefined && schema instanceof z.ZodOptional) {
+      return undefined;
+    }
+    const objectSchema = this.getObjectSchema(schema);
+    if (objectSchema === undefined) {
+      return query ?? {};
+    }
+    return this.coerceToSchema(query ?? {}, objectSchema.shape, true);
   }
 }

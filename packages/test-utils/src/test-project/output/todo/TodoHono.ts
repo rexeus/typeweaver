@@ -7,159 +7,220 @@
  */
 
 import type { Context } from "hono";
+import type { BlankEnv, BlankSchema } from "hono/types";
 import {
   TypeweaverHono,
   type HonoRequestHandler,
   type TypeweaverHonoOptions,
 } from "../lib/hono/index.js";
 
-import type { IListTodosRequest } from "./ListTodosRequest.js";
+import type { IListTodosRequest, IRawListTodosRequest } from "./ListTodosRequest.js";
 import { ListTodosRequestValidator } from "./ListTodosRequestValidator.js";
 import type { ListTodosResponse } from "./ListTodosResponse.js";
 import { ListTodosResponseValidator } from "./ListTodosResponseValidator.js";
 
-import type { ICreateTodoRequest } from "./CreateTodoRequest.js";
+import type { ICreateTodoRequest, IRawCreateTodoRequest } from "./CreateTodoRequest.js";
 import { CreateTodoRequestValidator } from "./CreateTodoRequestValidator.js";
 import type { CreateTodoResponse } from "./CreateTodoResponse.js";
 import { CreateTodoResponseValidator } from "./CreateTodoResponseValidator.js";
 
-import type { IQueryTodoRequest } from "./QueryTodoRequest.js";
+import type { IQueryTodoRequest, IRawQueryTodoRequest } from "./QueryTodoRequest.js";
 import { QueryTodoRequestValidator } from "./QueryTodoRequestValidator.js";
 import type { QueryTodoResponse } from "./QueryTodoResponse.js";
 import { QueryTodoResponseValidator } from "./QueryTodoResponseValidator.js";
 
-import type { IGetTodoRequest } from "./GetTodoRequest.js";
+import type { IGetTodoRequest, IRawGetTodoRequest } from "./GetTodoRequest.js";
 import { GetTodoRequestValidator } from "./GetTodoRequestValidator.js";
 import type { GetTodoResponse } from "./GetTodoResponse.js";
 import { GetTodoResponseValidator } from "./GetTodoResponseValidator.js";
 
-import type { IPutTodoRequest } from "./PutTodoRequest.js";
+import type { IPutTodoRequest, IRawPutTodoRequest } from "./PutTodoRequest.js";
 import { PutTodoRequestValidator } from "./PutTodoRequestValidator.js";
 import type { PutTodoResponse } from "./PutTodoResponse.js";
 import { PutTodoResponseValidator } from "./PutTodoResponseValidator.js";
 
-import type { IUpdateTodoRequest } from "./UpdateTodoRequest.js";
+import type { IUpdateTodoRequest, IRawUpdateTodoRequest } from "./UpdateTodoRequest.js";
 import { UpdateTodoRequestValidator } from "./UpdateTodoRequestValidator.js";
 import type { UpdateTodoResponse } from "./UpdateTodoResponse.js";
 import { UpdateTodoResponseValidator } from "./UpdateTodoResponseValidator.js";
 
-import type { IDeleteTodoRequest } from "./DeleteTodoRequest.js";
+import type { IDeleteTodoRequest, IRawDeleteTodoRequest } from "./DeleteTodoRequest.js";
 import { DeleteTodoRequestValidator } from "./DeleteTodoRequestValidator.js";
 import type { DeleteTodoResponse } from "./DeleteTodoResponse.js";
 import { DeleteTodoResponseValidator } from "./DeleteTodoResponseValidator.js";
 
-import type { IOptionsTodoRequest } from "./OptionsTodoRequest.js";
+import type { IOptionsTodoRequest, IRawOptionsTodoRequest } from "./OptionsTodoRequest.js";
 import { OptionsTodoRequestValidator } from "./OptionsTodoRequestValidator.js";
 import type { OptionsTodoResponse } from "./OptionsTodoResponse.js";
 import { OptionsTodoResponseValidator } from "./OptionsTodoResponseValidator.js";
 
-import type { IUpdateTodoStatusRequest } from "./UpdateTodoStatusRequest.js";
+import type {
+  IUpdateTodoStatusRequest,
+  IRawUpdateTodoStatusRequest,
+} from "./UpdateTodoStatusRequest.js";
 import { UpdateTodoStatusRequestValidator } from "./UpdateTodoStatusRequestValidator.js";
 import type { UpdateTodoStatusResponse } from "./UpdateTodoStatusResponse.js";
 import { UpdateTodoStatusResponseValidator } from "./UpdateTodoStatusResponseValidator.js";
 
-import type { IListSubTodosRequest } from "./ListSubTodosRequest.js";
+import type { IListSubTodosRequest, IRawListSubTodosRequest } from "./ListSubTodosRequest.js";
 import { ListSubTodosRequestValidator } from "./ListSubTodosRequestValidator.js";
 import type { ListSubTodosResponse } from "./ListSubTodosResponse.js";
 import { ListSubTodosResponseValidator } from "./ListSubTodosResponseValidator.js";
 
-import type { ICreateSubTodoRequest } from "./CreateSubTodoRequest.js";
+import type { ICreateSubTodoRequest, IRawCreateSubTodoRequest } from "./CreateSubTodoRequest.js";
 import { CreateSubTodoRequestValidator } from "./CreateSubTodoRequestValidator.js";
 import type { CreateSubTodoResponse } from "./CreateSubTodoResponse.js";
 import { CreateSubTodoResponseValidator } from "./CreateSubTodoResponseValidator.js";
 
-import type { IQuerySubTodoRequest } from "./QuerySubTodoRequest.js";
+import type { IQuerySubTodoRequest, IRawQuerySubTodoRequest } from "./QuerySubTodoRequest.js";
 import { QuerySubTodoRequestValidator } from "./QuerySubTodoRequestValidator.js";
 import type { QuerySubTodoResponse } from "./QuerySubTodoResponse.js";
 import { QuerySubTodoResponseValidator } from "./QuerySubTodoResponseValidator.js";
 
-import type { IUpdateSubTodoRequest } from "./UpdateSubTodoRequest.js";
+import type { IUpdateSubTodoRequest, IRawUpdateSubTodoRequest } from "./UpdateSubTodoRequest.js";
 import { UpdateSubTodoRequestValidator } from "./UpdateSubTodoRequestValidator.js";
 import type { UpdateSubTodoResponse } from "./UpdateSubTodoResponse.js";
 import { UpdateSubTodoResponseValidator } from "./UpdateSubTodoResponseValidator.js";
 
-import type { IDeleteSubTodoRequest } from "./DeleteSubTodoRequest.js";
+import type { IDeleteSubTodoRequest, IRawDeleteSubTodoRequest } from "./DeleteSubTodoRequest.js";
 import { DeleteSubTodoRequestValidator } from "./DeleteSubTodoRequestValidator.js";
 import type { DeleteSubTodoResponse } from "./DeleteSubTodoResponse.js";
 import { DeleteSubTodoResponseValidator } from "./DeleteSubTodoResponseValidator.js";
 
-export type HonoTodoApiHandler = {
+type HandlerRequest<TValidateRequests extends boolean, TValidated, TRaw> = [
+  TValidateRequests,
+] extends [true]
+  ? TValidated
+  : TRaw;
+
+export type HonoTodoApiHandler<TValidateRequests extends boolean = true> = {
   /**
    * List todos with filtering, pagination, and search
    */
-  handleListTodosRequest: HonoRequestHandler<IListTodosRequest, ListTodosResponse>;
+  handleListTodosRequest: HonoRequestHandler<
+    HandlerRequest<TValidateRequests, IListTodosRequest, IRawListTodosRequest>,
+    ListTodosResponse
+  >;
 
   /**
    * Create new todo
    */
-  handleCreateTodoRequest: HonoRequestHandler<ICreateTodoRequest, CreateTodoResponse>;
+  handleCreateTodoRequest: HonoRequestHandler<
+    HandlerRequest<TValidateRequests, ICreateTodoRequest, IRawCreateTodoRequest>,
+    CreateTodoResponse
+  >;
 
   /**
    * Query todos with advanced search criteria
    */
-  handleQueryTodoRequest: HonoRequestHandler<IQueryTodoRequest, QueryTodoResponse>;
+  handleQueryTodoRequest: HonoRequestHandler<
+    HandlerRequest<TValidateRequests, IQueryTodoRequest, IRawQueryTodoRequest>,
+    QueryTodoResponse
+  >;
 
   /**
    * Get todo
    */
-  handleGetTodoRequest: HonoRequestHandler<IGetTodoRequest, GetTodoResponse>;
+  handleGetTodoRequest: HonoRequestHandler<
+    HandlerRequest<TValidateRequests, IGetTodoRequest, IRawGetTodoRequest>,
+    GetTodoResponse
+  >;
 
   /**
    * Replace todo completely
    */
-  handlePutTodoRequest: HonoRequestHandler<IPutTodoRequest, PutTodoResponse>;
+  handlePutTodoRequest: HonoRequestHandler<
+    HandlerRequest<TValidateRequests, IPutTodoRequest, IRawPutTodoRequest>,
+    PutTodoResponse
+  >;
 
   /**
    * Update todo
    */
-  handleUpdateTodoRequest: HonoRequestHandler<IUpdateTodoRequest, UpdateTodoResponse>;
+  handleUpdateTodoRequest: HonoRequestHandler<
+    HandlerRequest<TValidateRequests, IUpdateTodoRequest, IRawUpdateTodoRequest>,
+    UpdateTodoResponse
+  >;
 
   /**
    * Delete todo
    */
-  handleDeleteTodoRequest: HonoRequestHandler<IDeleteTodoRequest, DeleteTodoResponse>;
+  handleDeleteTodoRequest: HonoRequestHandler<
+    HandlerRequest<TValidateRequests, IDeleteTodoRequest, IRawDeleteTodoRequest>,
+    DeleteTodoResponse
+  >;
 
   /**
    * Get allowed methods for todo resource
    */
-  handleOptionsTodoRequest: HonoRequestHandler<IOptionsTodoRequest, OptionsTodoResponse>;
+  handleOptionsTodoRequest: HonoRequestHandler<
+    HandlerRequest<TValidateRequests, IOptionsTodoRequest, IRawOptionsTodoRequest>,
+    OptionsTodoResponse
+  >;
 
   /**
    * Update todo status
    */
   handleUpdateTodoStatusRequest: HonoRequestHandler<
-    IUpdateTodoStatusRequest,
+    HandlerRequest<TValidateRequests, IUpdateTodoStatusRequest, IRawUpdateTodoStatusRequest>,
     UpdateTodoStatusResponse
   >;
 
   /**
    * List subtodos for a specific todo
    */
-  handleListSubTodosRequest: HonoRequestHandler<IListSubTodosRequest, ListSubTodosResponse>;
+  handleListSubTodosRequest: HonoRequestHandler<
+    HandlerRequest<TValidateRequests, IListSubTodosRequest, IRawListSubTodosRequest>,
+    ListSubTodosResponse
+  >;
 
   /**
    * Create new subtodo
    */
-  handleCreateSubTodoRequest: HonoRequestHandler<ICreateSubTodoRequest, CreateSubTodoResponse>;
+  handleCreateSubTodoRequest: HonoRequestHandler<
+    HandlerRequest<TValidateRequests, ICreateSubTodoRequest, IRawCreateSubTodoRequest>,
+    CreateSubTodoResponse
+  >;
 
   /**
    * Query subtodos for a specific todo
    */
-  handleQuerySubTodoRequest: HonoRequestHandler<IQuerySubTodoRequest, QuerySubTodoResponse>;
+  handleQuerySubTodoRequest: HonoRequestHandler<
+    HandlerRequest<TValidateRequests, IQuerySubTodoRequest, IRawQuerySubTodoRequest>,
+    QuerySubTodoResponse
+  >;
 
   /**
    * Update subtodo
    */
-  handleUpdateSubTodoRequest: HonoRequestHandler<IUpdateSubTodoRequest, UpdateSubTodoResponse>;
+  handleUpdateSubTodoRequest: HonoRequestHandler<
+    HandlerRequest<TValidateRequests, IUpdateSubTodoRequest, IRawUpdateSubTodoRequest>,
+    UpdateSubTodoResponse
+  >;
 
   /**
    * Delete subtodo
    */
-  handleDeleteSubTodoRequest: HonoRequestHandler<IDeleteSubTodoRequest, DeleteSubTodoResponse>;
+  handleDeleteSubTodoRequest: HonoRequestHandler<
+    HandlerRequest<TValidateRequests, IDeleteSubTodoRequest, IRawDeleteSubTodoRequest>,
+    DeleteSubTodoResponse
+  >;
 };
 
-export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
-  public constructor(options: TypeweaverHonoOptions<HonoTodoApiHandler>) {
+export class TodoHono<TValidateRequests extends boolean = true> extends TypeweaverHono<
+  HonoTodoApiHandler<TValidateRequests>,
+  BlankEnv,
+  BlankSchema,
+  "/",
+  TValidateRequests
+> {
+  public constructor(
+    options: TypeweaverHonoOptions<
+      HonoTodoApiHandler<TValidateRequests>,
+      BlankEnv,
+      TValidateRequests
+    >,
+  ) {
     super(options);
     this.setupRoutes();
   }

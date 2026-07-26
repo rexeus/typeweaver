@@ -42,9 +42,17 @@ export type ListSubTodosRequestCommandInput = Omit<
 /**
  * List subtodos for a specific todo
  */
-export class ListSubTodosRequestCommand extends RequestCommand implements IListSubTodosRequest {
+export class ListSubTodosRequestCommand
+  extends RequestCommand<
+    IListSubTodosRequestHeader,
+    IListSubTodosRequestParam,
+    IListSubTodosRequestQuery,
+    undefined
+  >
+  implements IListSubTodosRequest
+{
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.GET;
+  public override readonly method = HttpMethod.GET;
   public override readonly path = definition.path;
 
   public override readonly header: IListSubTodosRequestHeader;

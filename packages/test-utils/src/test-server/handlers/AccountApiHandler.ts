@@ -1,25 +1,27 @@
 import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
-import { createRegisterAccountSuccessResponse } from "../../data/index.js";
+import { createRegisterAccountSuccessResponse } from "../../index.js";
+import { RegisterAccountDefinition } from "../../test-project/spec/account/index.js";
 import type {
-  IRegisterAccountRequest,
+  IRawRegisterAccountRequest,
   RegisterAccountResponse,
 } from "../../index.js";
 import type { HonoAccountApiHandler } from "../../test-project/output/account/AccountHono.js";
 
-export class AccountHandlers implements HonoAccountApiHandler {
+export class AccountHandlers implements HonoAccountApiHandler<boolean> {
   public constructor(private readonly throwError?: Error | ITypedHttpResponse) {
     //
   }
 
   public async handleRegisterAccountRequest(
-    request: IRegisterAccountRequest
+    request: IRawRegisterAccountRequest
   ): Promise<RegisterAccountResponse> {
     if (this.throwError) {
       throw this.throwError;
     }
+    const body = RegisterAccountDefinition.request.body.parse(request.body);
 
     return createRegisterAccountSuccessResponse({
-      body: request.body,
+      body: { email: body.email },
     });
   }
 }

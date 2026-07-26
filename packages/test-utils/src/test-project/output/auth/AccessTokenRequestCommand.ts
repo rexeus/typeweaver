@@ -43,9 +43,12 @@ export type AccessTokenRequestCommandInput = Omit<
 /**
  * Get access token by email and password
  */
-export class AccessTokenRequestCommand extends RequestCommand implements IAccessTokenRequest {
+export class AccessTokenRequestCommand
+  extends RequestCommand<IAccessTokenRequestHeader, undefined, undefined, IAccessTokenRequestBody>
+  implements IAccessTokenRequest
+{
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.POST;
+  public override readonly method = HttpMethod.POST;
   public override readonly path = definition.path;
 
   public override readonly header: IAccessTokenRequestHeader;

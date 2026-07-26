@@ -44,11 +44,16 @@ export type RegisterAccountRequestCommandInput = Omit<
  * Register new account
  */
 export class RegisterAccountRequestCommand
-  extends RequestCommand
+  extends RequestCommand<
+    IRegisterAccountRequestHeader,
+    undefined,
+    undefined,
+    IRegisterAccountRequestBody
+  >
   implements IRegisterAccountRequest
 {
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.POST;
+  public override readonly method = HttpMethod.POST;
   public override readonly path = definition.path;
 
   public override readonly header: IRegisterAccountRequestHeader;

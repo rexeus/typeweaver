@@ -30,11 +30,16 @@ const responseValidator = new DownloadFileContentResponseValidator();
  * Download file content
  */
 export class DownloadFileContentRequestCommand
-  extends RequestCommand
+  extends RequestCommand<
+    IDownloadFileContentRequestHeader,
+    IDownloadFileContentRequestParam,
+    undefined,
+    undefined
+  >
   implements IDownloadFileContentRequest
 {
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.GET;
+  public override readonly method = HttpMethod.GET;
   public override readonly path = definition.path;
 
   public override readonly header: IDownloadFileContentRequestHeader;

@@ -1,4 +1,7 @@
-import type { IHttpRequest, IHttpResponse } from "@rexeus/typeweaver-core";
+import type {
+  IHttpResponse,
+  IValidatedHttpRequest,
+} from "@rexeus/typeweaver-core";
 import {
   Cause,
   Chunk,
@@ -21,7 +24,7 @@ export type EffectHandlerContext = {
 };
 
 export type EffectRequestHandler<
-  TRequest extends IHttpRequest,
+  TRequest extends IValidatedHttpRequest,
   TResponse extends IHttpResponse,
   TError,
   TRequirements,
@@ -75,7 +78,7 @@ export class EffectHandlerInterruptedError extends Error {
 
 export type EffectHandlerRuntime<TRequirements> = {
   readonly run: <
-    TRequest extends IHttpRequest,
+    TRequest extends IValidatedHttpRequest,
     TResponse extends IHttpResponse,
     TError,
     TContext extends EffectHandlerContext,

@@ -5,19 +5,22 @@ import {
 } from "../../data/index.js";
 import type {
   AccessTokenResponse,
-  IAccessTokenRequest,
-  IRefreshTokenRequest,
+  IRawAccessTokenRequest,
+  IRawRefreshTokenRequest,
   RefreshTokenResponse,
 } from "../../index.js";
 import type { ServerAuthApiHandler } from "../../test-project/output/auth/AuthRouter.js";
 
-export class ServerAuthHandlers implements ServerAuthApiHandler {
+export class ServerAuthHandlers implements ServerAuthApiHandler<
+  Record<string, unknown>,
+  boolean
+> {
   public constructor(private readonly throwError?: Error | ITypedHttpResponse) {
     //
   }
 
   public async handleAccessTokenRequest(
-    _request: IAccessTokenRequest
+    _request: IRawAccessTokenRequest
   ): Promise<AccessTokenResponse> {
     if (this.throwError) {
       throw this.throwError;
@@ -27,7 +30,7 @@ export class ServerAuthHandlers implements ServerAuthApiHandler {
   }
 
   public async handleRefreshTokenRequest(
-    _request: IRefreshTokenRequest
+    _request: IRawRefreshTokenRequest
   ): Promise<RefreshTokenResponse> {
     if (this.throwError) {
       throw this.throwError;

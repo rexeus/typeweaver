@@ -34,7 +34,7 @@ import type {
 } from "test-utils";
 
 type TodoHonoTestOptions = Omit<
-  ConstructorParameters<typeof TodoHono>[0],
+  ConstructorParameters<typeof TodoHono<false>>[0],
   "requestHandlers"
 >;
 
@@ -51,17 +51,18 @@ const unhandledHonoTodoRequest = async (
 };
 
 function createTodoHonoWithHandlers(
-  handlers: Partial<HonoTodoApiHandler>,
+  handlers: Partial<HonoTodoApiHandler<false>>,
   options?: TodoHonoTestOptions
-): TodoHono {
-  const requestHandlers = new Proxy(handlers as HonoTodoApiHandler, {
+): TodoHono<false> {
+  const requestHandlers = new Proxy(handlers as HonoTodoApiHandler<false>, {
     get: (target, prop) => {
-      if (prop in target) return target[prop as keyof HonoTodoApiHandler];
+      if (prop in target)
+        return target[prop as keyof HonoTodoApiHandler<false>];
       return async () => unhandledHonoTodoRequest(String(prop));
     },
   });
 
-  return new TodoHono({
+  return new TodoHono<false>({
     validateRequests: false,
     validateResponses: true,
     ...options,
@@ -72,7 +73,7 @@ function createTodoHonoWithHandlers(
 function createCreateTodoRouteReturning(
   response: ITypedHttpResponse,
   options?: TodoHonoTestOptions
-): TodoHono {
+): TodoHono<false> {
   return createTodoHonoWithHandlers(
     {
       handleCreateTodoRequest: async () => response as CreateTodoResponse,
@@ -84,7 +85,7 @@ function createCreateTodoRouteReturning(
 function createCreateTodoRouteThrowing(
   response: ITypedHttpResponse,
   options?: TodoHonoTestOptions
-): TodoHono {
+): TodoHono<false> {
   return createTodoHonoWithHandlers(
     {
       handleCreateTodoRequest: async () => {
@@ -98,7 +99,7 @@ function createCreateTodoRouteThrowing(
 function createDeleteTodoRouteReturning(
   response: ITypedHttpResponse,
   options?: TodoHonoTestOptions
-): TodoHono {
+): TodoHono<false> {
   return createTodoHonoWithHandlers(
     {
       handleDeleteTodoRequest: async () => response as DeleteTodoResponse,
@@ -110,7 +111,7 @@ function createDeleteTodoRouteReturning(
 function createOptionsTodoRouteReturning(
   response: ITypedHttpResponse,
   options?: TodoHonoTestOptions
-): TodoHono {
+): TodoHono<false> {
   return createTodoHonoWithHandlers(
     {
       handleOptionsTodoRequest: async () => response as OptionsTodoResponse,
@@ -119,14 +120,14 @@ function createOptionsTodoRouteReturning(
   );
 }
 
-async function requestCreateTodo(app: TodoHono): Promise<Response> {
+async function requestCreateTodo(app: TodoHono<false>): Promise<Response> {
   return await app.request(
     "http://localhost/todos",
     prepareRequestData(createCreateTodoRequest())
   );
 }
 
-async function requestDeleteTodo(app: TodoHono): Promise<Response> {
+async function requestDeleteTodo(app: TodoHono<false>): Promise<Response> {
   const requestData = createDeleteTodoRequest();
   return await app.request(
     `http://localhost/todos/${requestData.param.todoId}`,
@@ -134,7 +135,7 @@ async function requestDeleteTodo(app: TodoHono): Promise<Response> {
   );
 }
 
-async function requestOptionsTodo(app: TodoHono): Promise<Response> {
+async function requestOptionsTodo(app: TodoHono<false>): Promise<Response> {
   const requestData = createOptionsTodoRequest();
   return await app.request(
     `http://localhost/todos/${requestData.param.todoId}`,

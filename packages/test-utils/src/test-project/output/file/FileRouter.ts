@@ -13,51 +13,75 @@ import {
   type TypeweaverRouterOptions,
 } from "../lib/server/index.js";
 
-import type { IUploadFileRequest } from "./UploadFileRequest.js";
+import type { IUploadFileRequest, IRawUploadFileRequest } from "./UploadFileRequest.js";
 import { UploadFileRequestValidator } from "./UploadFileRequestValidator.js";
 import type { UploadFileResponse } from "./UploadFileResponse.js";
 import { UploadFileResponseValidator } from "./UploadFileResponseValidator.js";
 
-import type { IGetFileMetadataRequest } from "./GetFileMetadataRequest.js";
+import type {
+  IGetFileMetadataRequest,
+  IRawGetFileMetadataRequest,
+} from "./GetFileMetadataRequest.js";
 import { GetFileMetadataRequestValidator } from "./GetFileMetadataRequestValidator.js";
 import type { GetFileMetadataResponse } from "./GetFileMetadataResponse.js";
 import { GetFileMetadataResponseValidator } from "./GetFileMetadataResponseValidator.js";
 
-import type { IDownloadFileContentRequest } from "./DownloadFileContentRequest.js";
+import type {
+  IDownloadFileContentRequest,
+  IRawDownloadFileContentRequest,
+} from "./DownloadFileContentRequest.js";
 import { DownloadFileContentRequestValidator } from "./DownloadFileContentRequestValidator.js";
 import type { DownloadFileContentResponse } from "./DownloadFileContentResponse.js";
 import { DownloadFileContentResponseValidator } from "./DownloadFileContentResponseValidator.js";
 
-export type ServerFileApiHandler<TState extends Record<string, unknown> = Record<string, unknown>> =
-  {
-    /**
-     * Upload a file
-     */
-    handleUploadFileRequest: RequestHandler<IUploadFileRequest, UploadFileResponse, TState>;
+type HandlerRequest<TValidateRequests extends boolean, TValidated, TRaw> = [
+  TValidateRequests,
+] extends [true]
+  ? TValidated
+  : TRaw;
 
-    /**
-     * Get file metadata
-     */
-    handleGetFileMetadataRequest: RequestHandler<
-      IGetFileMetadataRequest,
-      GetFileMetadataResponse,
-      TState
-    >;
+export type ServerFileApiHandler<
+  TState extends Record<string, unknown> = Record<string, unknown>,
+  TValidateRequests extends boolean = true,
+> = {
+  /**
+   * Upload a file
+   */
+  handleUploadFileRequest: RequestHandler<
+    HandlerRequest<TValidateRequests, IUploadFileRequest, IRawUploadFileRequest>,
+    UploadFileResponse,
+    TState
+  >;
 
-    /**
-     * Download file content
-     */
-    handleDownloadFileContentRequest: RequestHandler<
-      IDownloadFileContentRequest,
-      DownloadFileContentResponse,
-      TState
-    >;
-  };
+  /**
+   * Get file metadata
+   */
+  handleGetFileMetadataRequest: RequestHandler<
+    HandlerRequest<TValidateRequests, IGetFileMetadataRequest, IRawGetFileMetadataRequest>,
+    GetFileMetadataResponse,
+    TState
+  >;
+
+  /**
+   * Download file content
+   */
+  handleDownloadFileContentRequest: RequestHandler<
+    HandlerRequest<TValidateRequests, IDownloadFileContentRequest, IRawDownloadFileContentRequest>,
+    DownloadFileContentResponse,
+    TState
+  >;
+};
 
 export class FileRouter<
   TState extends Record<string, unknown> = Record<string, unknown>,
-> extends TypeweaverRouter<ServerFileApiHandler<TState>> {
-  public constructor(options: TypeweaverRouterOptions<ServerFileApiHandler<TState>>) {
+  TValidateRequests extends boolean = true,
+> extends TypeweaverRouter<ServerFileApiHandler<TState, TValidateRequests>, TValidateRequests> {
+  public constructor(
+    options: TypeweaverRouterOptions<
+      ServerFileApiHandler<TState, TValidateRequests>,
+      TValidateRequests
+    >,
+  ) {
     super(options);
     this.setupRoutes();
   }

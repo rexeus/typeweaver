@@ -1,12 +1,21 @@
 import type {
   IHttpRequest,
+  IRawHttpRequest,
   IRequestValidator,
+  IValidatedHttpRequest,
   SafeRequestValidationResult,
 } from "@rexeus/typeweaver-core";
 import { Validator } from "./Validator.js";
 
-export declare abstract class RequestValidator extends Validator implements IRequestValidator {
+export declare abstract class RequestValidator<
+  TValidatedRequest extends IValidatedHttpRequest = IHttpRequest,
+>
+  extends Validator
+  implements IRequestValidator<TValidatedRequest>
+{
   public constructor();
-  public abstract safeValidate(request: IHttpRequest): SafeRequestValidationResult<IHttpRequest>;
-  public abstract validate(request: IHttpRequest): IHttpRequest;
+  public abstract safeValidate(
+    request: IRawHttpRequest,
+  ): SafeRequestValidationResult<TValidatedRequest>;
+  public abstract validate(request: IRawHttpRequest): TValidatedRequest;
 }

@@ -35,9 +35,14 @@ export type <%= pascalCaseOperationId %>RequestCommandInput = Omit<I<%= pascalCa
 <% } %>
 
 <% if (requestJsDoc) { %><%- requestJsDoc %>
-<% } %>export class <%= pascalCaseOperationId %>RequestCommand extends RequestCommand implements I<%= pascalCaseOperationId %>Request {
+<% } %>export class <%= pascalCaseOperationId %>RequestCommand extends RequestCommand<
+    <%= headerTsType ? `I${pascalCaseOperationId}RequestHeader` : "undefined" %>,
+    <%= paramTsType ? `I${pascalCaseOperationId}RequestParam` : "undefined" %>,
+    <%= queryTsType ? `I${pascalCaseOperationId}RequestQuery` : "undefined" %>,
+    <%= bodyTsType ? `I${pascalCaseOperationId}RequestBody` : "undefined" %>
+> implements I<%= pascalCaseOperationId %>Request {
     public override readonly operationId = definition.operationId;
-    public override readonly method = definition.method as HttpMethod.<%= method %>;
+    public override readonly method = HttpMethod.<%= method %>;
     public override readonly path = definition.path;
 
     public <%= headerTsType ? `override` : `declare` %> readonly header: <%= headerTsType ? `I${pascalCaseOperationId}RequestHeader` : `undefined` %>;

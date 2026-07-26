@@ -1,9 +1,9 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import type {
+  ClientHttpHeader,
+  ClientHttpParam,
+  ClientHttpQuery,
   IHttpBody,
-  IHttpHeader,
-  IHttpParam,
-  IHttpQuery,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
 import {
@@ -18,6 +18,7 @@ import { ApiClientConfigurationError } from "../../src/lib/errors/ApiClientConfi
 import { NetworkError } from "../../src/lib/NetworkError.js";
 import { PathParameterError } from "../../src/lib/PathParameterError.js";
 import { RequestCommand } from "../../src/lib/RequestCommand.js";
+import { RequestSerializationError } from "../../src/lib/RequestSerializationError.js";
 import { ResponseParseError } from "../../src/lib/ResponseParseError.js";
 import type { ApiClientProps } from "../../src/lib/ApiClient.js";
 import type { NetworkErrorCode } from "../../src/lib/NetworkError.js";
@@ -25,9 +26,9 @@ import type { NetworkErrorCode } from "../../src/lib/NetworkError.js";
 type TestRequestCommandProps = {
   readonly method?: HttpMethod;
   readonly path?: string;
-  readonly header?: IHttpHeader;
-  readonly param?: IHttpParam;
-  readonly query?: IHttpQuery;
+  readonly header?: ClientHttpHeader;
+  readonly param?: ClientHttpParam;
+  readonly query?: ClientHttpQuery;
   readonly body?: IHttpBody;
 };
 
@@ -45,9 +46,9 @@ class TestRequestCommand extends RequestCommand {
   public override readonly operationId = "TestRequest";
   public override readonly method: HttpMethod;
   public override readonly path: string;
-  public override readonly header: IHttpHeader;
-  public override readonly param: IHttpParam;
-  public override readonly query: IHttpQuery;
+  public override readonly header: ClientHttpHeader;
+  public override readonly param: ClientHttpParam;
+  public override readonly query: ClientHttpQuery;
   public override readonly body: IHttpBody;
 
   public constructor(props: TestRequestCommandProps = {}) {
@@ -127,6 +128,34 @@ async function expectPathParameterRejection(
       error.path === expected.path
     );
   });
+}
+
+async function expectRequestSerializationFailure(
+  command: TestRequestCommandProps,
+  expected: {
+    readonly key: string;
+    readonly location: string;
+    readonly reason: string;
+    readonly valueType: string;
+  }
+): Promise<void> {
+  const mockFetch = resolvedFetch();
+  const client = createClient(mockFetch);
+
+  await expect(client.send(new TestRequestCommand(command))).rejects.toSatisfy(
+    (error: unknown) => {
+      return (
+        error instanceof RequestSerializationError &&
+        error.code === "REQUEST_SERIALIZATION_ERROR" &&
+        error.location === expected.location &&
+        error.key === expected.key &&
+        error.reason === expected.reason &&
+        error.valueType === expected.valueType &&
+        error.message.includes(expected.key)
+      );
+    }
+  );
+  expect(mockFetch).not.toHaveBeenCalled();
 }
 
 async function sendRaw(
@@ -415,7 +444,7 @@ describe("ApiClient query string construction", () => {
       status: "TODO",
       priority: undefined,
       tag: ["api", undefined, "client"],
-    } as unknown as IHttpQuery;
+    } as unknown as ClientHttpQuery;
 
     const { mockFetch } = await sendRaw({ path: "/todos", query });
 
@@ -446,7 +475,7 @@ describe("ApiClient query string construction", () => {
       priority: undefined,
       emptyTags: [],
       skippedTags: [undefined, undefined],
-    } as unknown as IHttpQuery;
+    } as unknown as ClientHttpQuery;
 
     const { mockFetch } = await sendRaw({ path: "/todos", query });
 
@@ -467,6 +496,181 @@ describe("ApiClient query string construction", () => {
     expect(getFetchCall(mockFetch).url).toBe(
       "http://localhost:3000/todos?apiKey=secret&page=2&filter=open"
     );
+  });
+});
+
+describe("ApiClient typed HTTP scalar serialization", () => {
+  test("serializes domain scalars consistently across path, query, and headers", async () => {
+    const capturedAt = new Date("2026-07-26T10:15:30.000Z");
+    const { mockFetch } = await sendRaw({
+      path: "/metrics/:metricId",
+      param: { metricId: 42 },
+      query: {
+        enabled: false,
+        count: 7,
+        sequence: 9007199254740993n,
+        capturedAt,
+        samples: [1.5, 2, true, 3n, capturedAt],
+        omitted: undefined,
+      },
+      header: {
+        "X-Attempt": 3,
+        "X-Enabled": false,
+        "X-Sequence": 9007199254740993n,
+        "X-Observed-At": capturedAt,
+        "X-Values": [1, false, 2n, capturedAt],
+        "X-Omitted": undefined,
+      },
+    });
+
+    const { url, init } = getFetchCall(mockFetch);
+    const parsedUrl = new URL(url);
+
+    expect(parsedUrl.pathname).toBe("/metrics/42");
+    expect([...parsedUrl.searchParams.entries()]).toEqual([
+      ["enabled", "false"],
+      ["count", "7"],
+      ["sequence", "9007199254740993"],
+      ["capturedAt", "2026-07-26T10:15:30.000Z"],
+      ["samples", "1.5"],
+      ["samples", "2"],
+      ["samples", "true"],
+      ["samples", "3"],
+      ["samples", "2026-07-26T10:15:30.000Z"],
+    ]);
+    expect(init.headers).toStrictEqual({
+      "X-Attempt": "3",
+      "X-Enabled": "false",
+      "X-Observed-At": "2026-07-26T10:15:30.000Z",
+      "X-Sequence": "9007199254740993",
+      "X-Values": "1, false, 2, 2026-07-26T10:15:30.000Z",
+    });
+  });
+});
+
+describe("ApiClient invalid scalar serialization", () => {
+  test.each([
+    {
+      case: "NaN query value",
+      command: {
+        query: { limit: Number.NaN },
+      },
+      expected: {
+        location: "query",
+        key: "limit",
+        reason: "non-finite-number",
+        valueType: "number",
+      },
+    },
+    {
+      case: "infinite header value",
+      command: {
+        header: { "X-Limit": Number.POSITIVE_INFINITY },
+      },
+      expected: {
+        location: "header",
+        key: "X-Limit",
+        reason: "non-finite-number",
+        valueType: "number",
+      },
+    },
+    {
+      case: "negative infinite query value",
+      command: {
+        query: { limit: Number.NEGATIVE_INFINITY },
+      },
+      expected: {
+        location: "query",
+        key: "limit",
+        reason: "non-finite-number",
+        valueType: "number",
+      },
+    },
+    {
+      case: "invalid Date path value",
+      command: {
+        path: "/metrics/:metricId",
+        param: { metricId: new Date(Number.NaN) },
+      },
+      expected: {
+        location: "path",
+        key: "metricId",
+        reason: "invalid-date",
+        valueType: "Date",
+      },
+    },
+  ])("rejects $case before fetch", async ({ command, expected }) => {
+    await expectRequestSerializationFailure(command, expected);
+  });
+});
+
+describe("ApiClient unsupported value serialization", () => {
+  test.each([
+    {
+      case: "null query value",
+      command: {
+        query: { filter: null } as unknown as ClientHttpQuery,
+      },
+      expected: {
+        location: "query",
+        key: "filter",
+        reason: "null-value",
+        valueType: "null",
+      },
+    },
+    {
+      case: "nested query array",
+      command: {
+        query: { filters: [["nested"]] } as unknown as ClientHttpQuery,
+      },
+      expected: {
+        location: "query",
+        key: "filters",
+        reason: "nested-array",
+        valueType: "array",
+      },
+    },
+    {
+      case: "object query value",
+      command: {
+        query: { filter: { status: "open" } } as unknown as ClientHttpQuery,
+      },
+      expected: {
+        location: "query",
+        key: "filter",
+        reason: "unsupported-type",
+        valueType: "object",
+      },
+    },
+    {
+      case: "function header value",
+      command: {
+        header: { "X-Value": () => "value" } as unknown as ClientHttpHeader,
+      },
+      expected: {
+        location: "header",
+        key: "X-Value",
+        reason: "unsupported-type",
+        valueType: "function",
+      },
+    },
+    {
+      case: "symbol path value",
+      command: {
+        path: "/metrics/:metricId",
+        param: {
+          metricId: Symbol("metric"),
+        } as unknown as ClientHttpParam,
+      },
+      expected: {
+        location: "path",
+        key: "metricId",
+        reason: "unsupported-type",
+        valueType: "symbol",
+      },
+    },
+  ])("rejects $case before fetch", async ({ command, expected }) => {
+    await expectRequestSerializationFailure(command, expected);
   });
 });
 
@@ -530,7 +734,7 @@ describe("ApiClient path parameters", () => {
     const client = createClient(mockFetch);
     const command = new TestRequestCommand({
       path: "/items/:__proto__",
-      param: {} as IHttpParam,
+      param: {} as ClientHttpParam,
     });
 
     await expectPathParameterRejection(client.send(command), {
@@ -572,7 +776,7 @@ describe("ApiClient path parameter invariants", () => {
   test("rejects an own undefined path parameter before fetch", async () => {
     const mockFetch = resolvedFetch();
     const client = createClient(mockFetch);
-    const param = { todoId: undefined } as unknown as IHttpParam;
+    const param = { todoId: undefined } as unknown as ClientHttpParam;
     const command = new TestRequestCommand({
       path: "/todos/:todoId",
       param,
@@ -586,7 +790,9 @@ describe("ApiClient path parameter invariants", () => {
   });
 
   test("rejects an inherited path parameter before fetch", async () => {
-    const inheritedParam = Object.create({ todoId: "abc" }) as IHttpParam;
+    const inheritedParam = Object.create({
+      todoId: "abc",
+    }) as ClientHttpParam;
     const mockFetch = resolvedFetch();
     const client = createClient(mockFetch);
     const command = new TestRequestCommand({
@@ -748,7 +954,9 @@ describe("ApiClient request serialization", () => {
       });
     }
   );
+});
 
+describe("ApiClient request content types", () => {
   test("preserves unrelated headers when adding JSON content-type", async () => {
     const { mockFetch } = await sendRaw({
       method: HttpMethod.POST,
@@ -782,11 +990,15 @@ describe("ApiClient request serialization", () => {
   test.each([
     {
       case: "canonical",
-      header: { "Content-Type": "application/vnd.api+json" } as IHttpHeader,
+      header: {
+        "Content-Type": "application/vnd.api+json",
+      } as ClientHttpHeader,
     },
     {
       case: "lowercase",
-      header: { "content-type": "application/vnd.api+json" } as IHttpHeader,
+      header: {
+        "content-type": "application/vnd.api+json",
+      } as ClientHttpHeader,
     },
   ])(
     "preserves user-provided $case content-type for JSON bodies",
@@ -890,7 +1102,7 @@ describe("ApiClient request header flattening", () => {
       "X-Scalar-Value": "present",
       "X-Multi-Value": ["first", "second"],
       "X-Undefined-Value": undefined,
-    } as unknown as IHttpHeader;
+    } as unknown as ClientHttpHeader;
 
     const { mockFetch } = await sendRaw({ header });
 

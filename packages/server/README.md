@@ -334,6 +334,16 @@ but invalid responses pass through unchanged). When set to a function, it receiv
 framework reports that handler failure through `onError` and falls through gracefully to the next
 handler.
 
+The `validateRequests` literal also controls handler types. Omitting it or passing literal `true`
+exposes the generated validated Zod-output request. Literal `false` exposes
+`IRaw<OperationId>Request`; a dynamic `boolean` fails closed to that raw type because validation is
+not statically guaranteed. Middleware and pre-validation context always see `IRawHttpRequest`.
+
+Raw adapters preserve repeated query values. Generated validators normalize one query value for an
+array schema, reject multiple values for scalar schemas, and match request-header names
+case-insensitively without splitting arbitrary scalar header values on commas. See the
+[typed HTTP boundary migration guide](../../docs/migrations/typed-http-boundaries.md).
+
 ### 🚨 Error Handling
 
 #### Throwing errors in handlers

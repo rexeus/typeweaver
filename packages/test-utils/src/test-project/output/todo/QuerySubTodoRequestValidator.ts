@@ -8,76 +8,71 @@
 
 import { spec } from "../spec/spec.js";
 import {
-  type IHttpRequest,
+  HttpMethod,
+  type IRawHttpRequest,
   type SafeRequestValidationResult,
   RequestValidationError,
 } from "@rexeus/typeweaver-core";
 import { getOperationDefinition, RequestValidator } from "../lib/types/index.js";
-import type { IQuerySubTodoRequest } from "./QuerySubTodoRequest.js";
+import type {
+  IQuerySubTodoRequest,
+  IQuerySubTodoRequestBody,
+  IQuerySubTodoRequestHeader,
+  IQuerySubTodoRequestParam,
+  IQuerySubTodoRequestQuery,
+} from "./QuerySubTodoRequest.js";
 
 const definition = getOperationDefinition(spec, "todo", "QuerySubTodo");
 
-export class QuerySubTodoRequestValidator extends RequestValidator {
-  public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IQuerySubTodoRequest> {
+export class QuerySubTodoRequestValidator extends RequestValidator<IQuerySubTodoRequest> {
+  public safeValidate(request: IRawHttpRequest): SafeRequestValidationResult<IQuerySubTodoRequest> {
     const error = new RequestValidationError();
-    const validatedRequest: IHttpRequest = {
-      method: request.method,
-      path: request.path,
-      query: undefined,
-      header: undefined,
-      body: undefined,
-      param: undefined,
-    };
 
-    if (definition.request.body) {
-      const result = definition.request.body.safeParse(request.body);
-
-      if (!result.success) {
-        error.addBodyIssues(result.error.issues);
-      } else {
-        validatedRequest.body = result.data;
-      }
+    const bodySchema = this.requireRequestSchema(definition.request.body, "body");
+    const bodyResult = this.safeParseAs<IQuerySubTodoRequestBody>(bodySchema, request.body);
+    if (!bodyResult.success) {
+      error.addBodyIssues(bodyResult.error.issues);
     }
 
-    if (definition.request.header) {
-      const coercedHeader = this.coerceHeaderToSchema(
-        request.header,
-        this.getSchema(definition.request.header),
-      );
-      const result = definition.request.header.safeParse(coercedHeader);
-
-      if (!result.success) {
-        error.addHeaderIssues(result.error.issues);
-      } else {
-        validatedRequest.header = result.data as IHttpRequest["header"];
-      }
+    const headerSchema = this.requireRequestSchema(definition.request.header, "header");
+    const coercedHeader = this.coerceHeaderToSchema(request.header, headerSchema);
+    const headerMultiplicityIssues = this.findMultiplicityIssues(
+      request.header,
+      headerSchema,
+      false,
+    );
+    if (headerMultiplicityIssues.length > 0) {
+      error.addHeaderIssues(headerMultiplicityIssues);
+    }
+    const headerResult = this.safeParseAs<IQuerySubTodoRequestHeader>(headerSchema, coercedHeader);
+    if (!headerResult.success) {
+      error.addHeaderIssues(headerResult.error.issues);
     }
 
-    if (definition.request.param) {
-      const result = definition.request.param.safeParse(request.param);
-
-      if (!result.success) {
-        error.addPathParamIssues(result.error.issues);
-      } else {
-        validatedRequest.param = result.data;
-      }
+    const paramSchema = this.requireRequestSchema(definition.request.param, "param");
+    const paramResult = this.safeParseAs<IQuerySubTodoRequestParam>(paramSchema, request.param);
+    if (!paramResult.success) {
+      error.addPathParamIssues(paramResult.error.issues);
     }
 
-    if (definition.request.query) {
-      const coercedQuery = this.coerceQueryToSchema(
-        request.query,
-        this.getSchema(definition.request.query),
-      );
-      const result = definition.request.query.safeParse(coercedQuery);
-
-      if (!result.success) {
-        error.addQueryIssues(result.error.issues);
-      } else {
-        validatedRequest.query = result.data as IHttpRequest["query"];
-      }
+    const querySchema = this.requireRequestSchema(definition.request.query, "query");
+    const coercedQuery = this.coerceQueryToSchema(request.query, querySchema);
+    const queryMultiplicityIssues = this.findMultiplicityIssues(request.query, querySchema, true);
+    if (queryMultiplicityIssues.length > 0) {
+      error.addQueryIssues(queryMultiplicityIssues);
+    }
+    const queryResult = this.safeParseAs<IQuerySubTodoRequestQuery>(querySchema, coercedQuery);
+    if (!queryResult.success) {
+      error.addQueryIssues(queryResult.error.issues);
     }
 
-    if (error.hasIssues()) {
+    if (
+      error.hasIssues() ||
+      !bodyResult.success ||
+      !headerResult.success ||
+      !paramResult.success ||
+      !queryResult.success
+    ) {
       return {
         isValid: false,
         error,
@@ -86,11 +81,18 @@ export class QuerySubTodoRequestValidator extends RequestValidator {
 
     return {
       isValid: true,
-      data: validatedRequest as IQuerySubTodoRequest,
+      data: {
+        method: HttpMethod.POST,
+        path: request.path,
+        body: bodyResult.data,
+        header: headerResult.data,
+        param: paramResult.data,
+        query: queryResult.data,
+      },
     };
   }
 
-  public validate(request: IHttpRequest): IQuerySubTodoRequest {
+  public validate(request: IRawHttpRequest): IQuerySubTodoRequest {
     const result = this.safeValidate(request);
 
     if (!result.isValid) {

@@ -13,19 +13,29 @@ import {
   type TypeweaverRouterOptions,
 } from "../lib/server/index.js";
 
-import type { IRegisterAccountRequest } from "./RegisterAccountRequest.js";
+import type {
+  IRegisterAccountRequest,
+  IRawRegisterAccountRequest,
+} from "./RegisterAccountRequest.js";
 import { RegisterAccountRequestValidator } from "./RegisterAccountRequestValidator.js";
 import type { RegisterAccountResponse } from "./RegisterAccountResponse.js";
 import { RegisterAccountResponseValidator } from "./RegisterAccountResponseValidator.js";
 
+type HandlerRequest<TValidateRequests extends boolean, TValidated, TRaw> = [
+  TValidateRequests,
+] extends [true]
+  ? TValidated
+  : TRaw;
+
 export type ServerAccountApiHandler<
   TState extends Record<string, unknown> = Record<string, unknown>,
+  TValidateRequests extends boolean = true,
 > = {
   /**
    * Register new account
    */
   handleRegisterAccountRequest: RequestHandler<
-    IRegisterAccountRequest,
+    HandlerRequest<TValidateRequests, IRegisterAccountRequest, IRawRegisterAccountRequest>,
     RegisterAccountResponse,
     TState
   >;
@@ -33,8 +43,14 @@ export type ServerAccountApiHandler<
 
 export class AccountRouter<
   TState extends Record<string, unknown> = Record<string, unknown>,
-> extends TypeweaverRouter<ServerAccountApiHandler<TState>> {
-  public constructor(options: TypeweaverRouterOptions<ServerAccountApiHandler<TState>>) {
+  TValidateRequests extends boolean = true,
+> extends TypeweaverRouter<ServerAccountApiHandler<TState, TValidateRequests>, TValidateRequests> {
+  public constructor(
+    options: TypeweaverRouterOptions<
+      ServerAccountApiHandler<TState, TValidateRequests>,
+      TValidateRequests
+    >,
+  ) {
     super(options);
     this.setupRoutes();
   }

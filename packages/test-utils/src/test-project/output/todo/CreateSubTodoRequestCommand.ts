@@ -44,9 +44,17 @@ export type CreateSubTodoRequestCommandInput = Omit<
 /**
  * Create new subtodo
  */
-export class CreateSubTodoRequestCommand extends RequestCommand implements ICreateSubTodoRequest {
+export class CreateSubTodoRequestCommand
+  extends RequestCommand<
+    ICreateSubTodoRequestHeader,
+    ICreateSubTodoRequestParam,
+    undefined,
+    ICreateSubTodoRequestBody
+  >
+  implements ICreateSubTodoRequest
+{
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.POST;
+  public override readonly method = HttpMethod.POST;
   public override readonly path = definition.path;
 
   public override readonly header: ICreateSubTodoRequestHeader;
