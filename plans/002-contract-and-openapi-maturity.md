@@ -224,6 +224,17 @@ Run the full gate, commit logical work packages, push, and open a ready PR again
 `feat/product-truth-and-type-safety`. Repair CI until green. Record the exact base, PR URL, head,
 and evidence in `GOAL.md`.
 
+## Work package evidence
+
+| Work package                                   | Status | Commit    | Evidence                                                                                                                                                                             |
+| ---------------------------------------------- | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1. Characterize and design the public contract | DONE   | `dc6251a` | Core type and Gen runtime characterizations failed before behavior changed; ADR 0009 fixes the accepted shape and inheritance table; Core 150/150, Gen 303/303, and docs checks pass |
+| 2. Authoring and normalized metadata/security  | TODO   |           |                                                                                                                                                                                      |
+| 3. Side-effect-free plugin validation          | TODO   |           |                                                                                                                                                                                      |
+| 4. Explicit OpenAPI target profiles            | TODO   |           |                                                                                                                                                                                      |
+| 5. Honest support matrix                       | TODO   |           |                                                                                                                                                                                      |
+| 6. Stacked stage delivery                      | TODO   |           |                                                                                                                                                                                      |
+
 ## Test plan
 
 - Core type/runtime tests for metadata/security shapes and inheritance.
