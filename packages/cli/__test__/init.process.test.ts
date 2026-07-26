@@ -123,32 +123,36 @@ afterEach(() => {
 });
 
 describe("built CLI init planning and safety", () => {
-  test("plans the complete project without writing under --dry-run", async () => {
-    const workspace = createWorkspace();
-    const target = path.join(workspace, "todo-api");
+  test(
+    "plans the complete project without writing under --dry-run",
+    async () => {
+      const workspace = createWorkspace();
+      const target = path.join(workspace, "todo-api");
 
-    const result = await runCli(workspace, [
-      "init",
-      "--target",
-      target,
-      "--dry-run",
-      "--json",
-    ]);
+      const result = await runCli(workspace, [
+        "init",
+        "--target",
+        target,
+        "--dry-run",
+        "--json",
+      ]);
 
-    expect(result.code).toBe(0);
-    expect(result.stderr).toBe("");
-    expect(parseReport(result.stdout)).toMatchObject({
-      success: true,
-      status: "planned",
-      dryRun: true,
-      targetDir: target,
-      configFile: "typeweaver.config.mjs",
-      overwrittenFiles: [],
-      preservedFiles: [],
-      diagnostics: [],
-    });
-    expect(fs.existsSync(target)).toBe(false);
-  });
+      expect(result.code).toBe(0);
+      expect(result.stderr).toBe("");
+      expect(parseReport(result.stdout)).toMatchObject({
+        success: true,
+        status: "planned",
+        dryRun: true,
+        targetDir: target,
+        configFile: "typeweaver.config.mjs",
+        overwrittenFiles: [],
+        preservedFiles: [],
+        diagnostics: [],
+      });
+      expect(fs.existsSync(target)).toBe(false);
+    },
+    PROCESS_TEST_TIMEOUT_MS
+  );
 
   test("rejects a non-empty target without changing it", async () => {
     const workspace = createWorkspace();
