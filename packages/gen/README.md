@@ -65,6 +65,11 @@ export const helloPlugin: Plugin = definePlugin({
 export default helloPlugin;
 ```
 
+<!-- docs-example: minimal-plugin -->
+
+This exact public surface is typechecked in the
+[minimal-plugin fixture](../cli/examples/documentation/minimal-plugin.ts).
+
 ### 📦 Emit-and-copy plugins
 
 When a plugin ships static runtime support code under `src/lib/`, use `definePluginWithLibCopy`. It

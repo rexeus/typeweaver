@@ -32,6 +32,24 @@ This package is typically consumed by generated code. You also use it when autho
 `defineSpec`, `defineOperation`, and `defineResponse`. To get started with generation, see
 [@rexeus/typeweaver](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md).
 
+Reusable responses can be specialized without duplicating their common contract:
+
+```ts
+const TodoNotFoundError = defineDerivedResponse(NotFoundError, {
+  name: "TodoNotFoundError",
+  description: "Todo not found",
+  body: z.object({
+    message: z.literal("Todo not found"),
+    actualValues: z.object({ todoId: z.string() }),
+  }),
+});
+```
+
+<!-- docs-example: core-response-derivation -->
+
+Imports and the parent response are included in the typechecked
+[response-derivation fixture](../cli/examples/documentation/core-response-derivation.ts).
+
 ## 🔧 What It Provides
 
 - **HTTP primitives**: `HttpMethod`, `HttpStatusCode`, `IHttpRequest`, `IHttpResponse`,

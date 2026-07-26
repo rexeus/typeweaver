@@ -38,6 +38,11 @@ export const helloPlugin: Plugin = definePlugin({
 export default helloPlugin;
 ```
 
+<!-- docs-example: minimal-plugin -->
+
+The complete snippet is typechecked in the
+[minimal-plugin fixture](../packages/cli/examples/documentation/minimal-plugin.ts).
+
 Three things to notice:
 
 1. `generate` returns an `Effect`. The error channel is narrowed to `PluginExecutionError`. The
@@ -377,6 +382,8 @@ The complete [`scoped-service-plugin.mjs`](../packages/cli/examples/scoped-servi
 example implements this pattern. It is JavaScript with `checkJs`, is compiled during verification,
 and is exercised through the built CLI. Its fixture proves the resource sequence
 `acquire → generate → finalize → release`.
+
+<!-- docs-example: scoped-service-plugin -->
 
 ---
 

@@ -233,6 +233,11 @@ if (response.type === "GetUserSuccess") {
 }
 ```
 
+<!-- docs-example: root-quickstart -->
+
+The complete source-contract version of this flow is typechecked in the
+[root quickstart fixture](./packages/cli/examples/documentation/root-quickstart.ts).
+
 &rarr; That's it! Start building your API. [Get started](./packages/cli/README.md#-get-started)
 
 ---

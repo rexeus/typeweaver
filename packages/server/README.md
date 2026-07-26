@@ -116,6 +116,11 @@ export const userHandlers: ServerUserApiHandler = {
 > Generated response factory functions (e.g. `createGetUserSuccessResponse`) are also available for
 > constructing typed responses with pre-set `type` and `statusCode` discriminators.
 
+<!-- docs-example: fetch-server-handler -->
+
+The Fetch-native handler signature and response factory are typechecked in the
+[server handler fixture](../cli/examples/documentation/fetch-server-handler.ts).
+
 ### Create the app
 
 ```ts

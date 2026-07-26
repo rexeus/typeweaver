@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "tsconfig": "packages/cli/examples/documentation/tsconfig.json",
+  "groups": [
+    {
+      "id": "root-quickstart",
+      "documents": ["README.md"],
+      "fixtures": ["packages/cli/examples/documentation/root-quickstart.ts"]
+    },
+    {
+      "id": "core-response-derivation",
+      "documents": ["packages/core/README.md"],
+      "fixtures": ["packages/cli/examples/documentation/core-response-derivation.ts"]
+    },
+    {
+      "id": "generation-cli-config",
+      "documents": ["packages/cli/README.md"],
+      "fixtures": ["packages/cli/examples/documentation/typeweaver.config.mjs"]
+    },
+    {
+      "id": "minimal-plugin",
+      "documents": ["packages/gen/README.md", "docs/plugin-authoring.md"],
+      "fixtures": ["packages/cli/examples/documentation/minimal-plugin.ts"]
+    },
+    {
+      "id": "scoped-service-plugin",
+      "documents": ["docs/plugin-authoring.md"],
+      "fixtures": ["packages/cli/examples/scoped-service-plugin.mjs"]
+    },
+    {
+      "id": "generated-client",
+      "documents": ["packages/clients/README.md"],
+      "fixtures": ["packages/cli/examples/documentation/generated-client.ts"]
+    },
+    {
+      "id": "hono-handler",
+      "documents": ["packages/hono/README.md"],
+      "fixtures": ["packages/cli/examples/documentation/hono-handler.ts"]
+    },
+    {
+      "id": "fetch-server-handler",
+      "documents": ["packages/server/README.md"],
+      "fixtures": ["packages/cli/examples/documentation/fetch-server-handler.ts"]
+    },
+    {
+      "id": "openapi-options",
+      "documents": ["packages/openapi/README.md"],
+      "fixtures": ["packages/cli/examples/documentation/openapi-options.ts"]
+    }
+  ]
+}
