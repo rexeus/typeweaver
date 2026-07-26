@@ -1,4 +1,5 @@
 export * from "./errors/index.js";
+export * from "./issues/index.js";
 export * from "./normalized/index.js";
 export * from "./plugins/index.js";
 export * from "./helpers/namingUtils.js";

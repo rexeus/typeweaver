@@ -1,22 +1,30 @@
 import {
+  ContradictorySecurityHeaderError,
   DerivedResponseCycleError,
   DuplicateOperationIdError,
   DuplicateResponseNameError,
   DuplicateRouteError,
+  DuplicateSecuritySchemeNameError,
+  DuplicateTagNameError,
   EmptyOperationResponsesError,
   EmptyResourceOperationsError,
   EmptySpecResourcesError,
+  InvalidApiMetadataError,
   InvalidDerivedResponseError,
   InvalidOperationIdError,
   InvalidRequestSchemaError,
   InvalidResourceNameError,
+  InvalidSecurityRequirementError,
+  InvalidSecuritySchemeError,
   MissingDerivedResponseParentError,
   PathParameterMismatchError,
+  UnknownSecuritySchemeError,
+  UnknownTagError,
 } from "./index.js";
 
 /**
- * Tagged union of every error the spec normalizer may raise. All 13
- * variants are `Data.TaggedError` instances, so callers can address each
+ * Tagged union of every error the spec normalizer may raise. Every variant
+ * is a `Data.TaggedError` instance, so callers can address each
  * one via `Effect.catchTag` / `Effect.catchTags`.
  *
  * `DuplicateResponseNameError` is the normalizer-side tagged counterpart
@@ -25,19 +33,27 @@ import {
  * homogeneous.
  */
 export type NormalizationError =
+  | ContradictorySecurityHeaderError
   | DerivedResponseCycleError
   | DuplicateOperationIdError
   | DuplicateResponseNameError
   | DuplicateRouteError
+  | DuplicateSecuritySchemeNameError
+  | DuplicateTagNameError
   | EmptyOperationResponsesError
   | EmptyResourceOperationsError
   | EmptySpecResourcesError
+  | InvalidApiMetadataError
   | InvalidDerivedResponseError
   | InvalidOperationIdError
   | InvalidRequestSchemaError
   | InvalidResourceNameError
+  | InvalidSecurityRequirementError
+  | InvalidSecuritySchemeError
   | MissingDerivedResponseParentError
-  | PathParameterMismatchError;
+  | PathParameterMismatchError
+  | UnknownSecuritySchemeError
+  | UnknownTagError;
 
 type NormalizationErrorConstructor = abstract new (
   ...args: never[]
@@ -45,19 +61,27 @@ type NormalizationErrorConstructor = abstract new (
 
 const normalizationErrorConstructors: readonly NormalizationErrorConstructor[] =
   [
+    ContradictorySecurityHeaderError,
     DerivedResponseCycleError,
     DuplicateOperationIdError,
     DuplicateResponseNameError,
     DuplicateRouteError,
+    DuplicateSecuritySchemeNameError,
+    DuplicateTagNameError,
     EmptyOperationResponsesError,
     EmptyResourceOperationsError,
     EmptySpecResourcesError,
+    InvalidApiMetadataError,
     InvalidDerivedResponseError,
     InvalidOperationIdError,
     InvalidRequestSchemaError,
     InvalidResourceNameError,
+    InvalidSecurityRequirementError,
+    InvalidSecuritySchemeError,
     MissingDerivedResponseParentError,
     PathParameterMismatchError,
+    UnknownSecuritySchemeError,
+    UnknownTagError,
   ];
 
 /**

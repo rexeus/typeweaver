@@ -219,6 +219,7 @@ const writeTodoSpecEntrypoint = (
         import { todoResponse } from ${JSON.stringify(options.responseImport)};
 
         ${specExport}({
+          metadata: { title: "Todo API", version: "1.0.0" },
           resources: {
             todos: {
               operations: [
@@ -251,6 +252,7 @@ const writeTodoResourcesEntrypoint = (
         import { defineOperation, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
         import { z } from "zod";
 
+        export const metadata = { title: "Todo API", version: "1.0.0" };
         export const resources = {
           todos: {
             operations: [
@@ -291,6 +293,7 @@ const writeTodoSpecWithOperation = (
     options.fileName,
     `
         export const spec = {
+          metadata: { title: "Todo API", version: "1.0.0" },
           resources: {
             todos: {
               operations: [
@@ -317,6 +320,7 @@ const writeTodoSpecWithOperation = (
 };
 
 const validSpecDefinition = {
+  metadata: { title: "Todo API", version: "1.0.0" },
   resources: {
     todos: {
       operations: [
@@ -347,6 +351,10 @@ if (validOperation === undefined) {
 const invalidSpecDefinitions = [
   { scenario: "null spec", value: null },
   { scenario: "non-object spec", value: "not a spec" },
+  {
+    scenario: "missing metadata",
+    value: { resources: validSpecDefinition.resources },
+  },
   { scenario: "non-object resources", value: { resources: [1, 2] } },
   {
     scenario: "resource without operations array",

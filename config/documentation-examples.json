@@ -13,6 +13,11 @@
       "fixtures": ["packages/cli/examples/documentation/core-response-derivation.ts"]
     },
     {
+      "id": "metadata-security-contract",
+      "documents": ["MIGRATION.md", "packages/core/README.md", "packages/gen/README.md"],
+      "fixtures": ["packages/cli/examples/documentation/metadata-security.ts"]
+    },
+    {
       "id": "generation-cli-config",
       "documents": ["packages/cli/README.md"],
       "fixtures": ["packages/cli/examples/documentation/typeweaver.config.mjs"]

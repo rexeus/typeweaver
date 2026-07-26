@@ -109,6 +109,7 @@ const GetTodo = defineOperation({
 });
 
 export const spec = defineSpec({
+  metadata: { title: "Todo API", version: "1.0.0" },
   resources: {
     todo: { operations: [GetTodo] },
   },

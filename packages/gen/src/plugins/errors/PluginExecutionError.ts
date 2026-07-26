@@ -1,6 +1,7 @@
 import { Data } from "effect";
 
 export type PluginExecutionPhase =
+  | "validate"
   | "initialize"
   | "collectResources"
   | "generate"

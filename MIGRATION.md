@@ -15,8 +15,8 @@ lines.
 
 ## Migrating from 0.12.x to 0.13.x
 
-Version 0.13.0 completes the migration to **Effect** as TypeWeaver's runtime foundation. The change
-is internal-architectural but breaks five surfaces:
+Version 0.13.0 completes the migration to **Effect** as TypeWeaver's runtime foundation and matures
+the executable API contract. The release breaks seven surfaces:
 
 1. The **plugin API** (V1 class-based → V2 Effect-native records). Affects anyone who built a custom
    plugin.
@@ -27,9 +27,10 @@ is internal-architectural but breaks five surfaces:
 4. The **Zod-to-TypeScript converter** rejects unsupported schema shapes instead of silently
    generating `unknown`.
 5. The unvalidated **HTTP body boundary** is `unknown` instead of implicit `any`.
-
-The **spec authoring API** (`defineSpec` / `defineOperation` / `defineResponse`) is **unchanged**.
-Existing specs using supported Zod schemas keep working byte-for-byte.
+6. The **spec authoring API** requires API metadata and can declare generator-neutral security,
+   descriptions, tags, and deprecation.
+7. The **OpenAPI projection** moves from hard-coded 3.1.1 output to explicit 3.1.2 and 3.2.0 target
+   profiles, with API identity sourced from the spec.
 
 ### 1. Plugin API V1 → V2 (BREAKING — third-party plugin authors)
 
@@ -41,6 +42,13 @@ The V1 class hierarchy is gone:
   the `ContextBuilder` service; it is no longer part of the package's public API.
 - Plugins are now records returned by `definePlugin(...)`. Lifecycle stages return
   `Effect<void, PluginExecutionError>` instead of `Promise<void> | void`.
+- Plugins may add an optional `validate(normalizedSpec, context)` hook returning
+  `Effect<readonly Issue[], PluginExecutionError>`. Its `PluginValidationContext` is intentionally
+  write-incapable: it has no output directory, writer, template renderer, or generated-file tracker.
+  Existing plugins do not need to add the hook.
+- Normalize errors now map exhaustively to stable `TW-SPEC-001` through `TW-SPEC-021` entries via
+  `SPEC_ISSUE_REGISTRY`; use `normalizationErrorToIssue` for structured reports instead of parsing
+  English error messages.
 - Plugin `finalize` failures now surface as WARN logs instead of failing the run. If your plugin
   runs hard-fail work in finalize, move it to `generate`.
 
@@ -201,21 +209,106 @@ If you imported the generator programmatically rather than through the CLI:
 - Custom `TypeweaverHono` subclasses now call the protected `handleRequest` method with one exported
   `TypeweaverHonoRequestOptions` object instead of the previous five positional arguments.
 
-### 4. Spec authoring API: UNCHANGED
+### 4. API metadata and security contract (BREAKING for spec authors)
 
-The functional spec API introduced in 0.9.0 is unchanged in 0.13.0:
+Every spec now owns its API identity. Add `metadata.title` and `metadata.version` to each
+`defineSpec` call:
 
-- `defineSpec({ resources: { ... } })`
-- `defineOperation({ ... })`
-- `defineResponse({ ... })`
-- `defineDerivedResponse(base, overrides)`
+```ts
+// Before (0.12.x)
+export const spec = defineSpec({ resources });
 
-Zod schemas continue to be authored the same way. Regeneration updates the generated client, server,
-and Hono support code to the options-object APIs described above, so expect source diffs. The
-generated request, response, validation, and runtime behavior remain compatible. The
-`test-utils/src/test-project/output` golden fixture verifies the exact 0.13 output on every build.
+// After (0.13.x)
+export const spec = defineSpec({
+  metadata: {
+    title: "Todo API",
+    version: "1.0.0",
+    description: "Contract for todo clients and servers",
+    tags: [{ name: "todos", description: "Todo management" }],
+  },
+  resources,
+});
+```
 
-### 5. Unsupported Zod schemas fail explicitly
+Security is descriptive and generator-neutral; TypeWeaver does not authenticate requests. Schemes
+are named once and requirements use AND within one object and OR between array entries:
+
+```ts
+export const spec = defineSpec({
+  metadata: {
+    title: "Service API",
+    version: "1.0.0",
+    tags: [{ name: "health", description: "Service health" }],
+  },
+  securitySchemes: [
+    { name: "bearerAuth", kind: "http", scheme: "bearer" },
+    {
+      name: "apiKeyAuth",
+      kind: "apiKey",
+      credentialName: "X-API-Key",
+      location: "header",
+    },
+  ],
+  security: [{ bearerAuth: [] }],
+  resources: {
+    health: {
+      tags: ["health"],
+      security: [{ bearerAuth: [], apiKeyAuth: [] }],
+      operations: [GetHealth],
+    },
+  },
+});
+```
+
+`security: undefined` inherits the enclosing declaration, `security: []` is explicitly public, and a
+non-empty array replaces the inherited requirement. Resources add optional `description`, `tags`,
+and `security`; operations add optional `description`, `deprecated`, `tags`, and `security`. Tags
+referenced by resources or operations must be declared in `metadata.tags`. In the complete fixture,
+`GetHealth` declares `security: []` to override the resource requirement.
+
+<!-- docs-example: metadata-security-contract -->
+
+The complete metadata/security migration shape is typechecked in the
+[metadata/security fixture](./packages/cli/examples/documentation/metadata-security.ts).
+
+Plugin authors consuming `NormalizedSpec` must add `metadata`, `securitySchemes`, and resolved
+`security` fields to manually constructed fixtures. Normalized resources and operations likewise
+contain resolved tags/security, while operations always contain a boolean `deprecated`. Prefer
+calling the public normalization pipeline instead of assembling normalized objects by hand.
+
+Zod request and response schemas continue to be authored the same way. Regeneration updates the
+generated client, server, and Hono support code to the options-object APIs described above, so
+expect source diffs. The test-project golden fixture verifies the exact 0.13 output on every build.
+
+### 5. OpenAPI target profiles and spec-owned identity (BREAKING)
+
+`@rexeus/typeweaver-openapi` now defaults to OpenAPI 3.1.2 and accepts an explicit `target` of
+`"3.1.2"` or `"3.2.0"`. Existing users that require the compatibility profile may omit the option;
+users that require 3.2 select it explicitly:
+
+```ts
+openApiPlugin({
+  target: "3.2.0",
+  outputPath: "openapi/openapi.json",
+});
+```
+
+Remove `info` from OpenAPI plugin and builder options. Title, version, description, and reusable
+tags now come from `defineSpec({ metadata: ... })`, so every generator consumes one API identity.
+Servers, the output path, and the projection target remain OpenAPI options.
+
+Regeneration changes the emitted `openapi` field from `3.1.1` to `3.1.2` by default and projects
+contract security into `components.securitySchemes`, root `security`, and effective operation
+`security`. Explicitly public operations emit `security: []`. Builder representability warnings are
+available as stable `TW-PLUGIN-OPENAPI-*` issues through the plugin's write-incapable `validate`
+hook rather than generation-time warning logs.
+
+<!-- docs-example: openapi-options -->
+
+The supported option shapes are typechecked in the
+[OpenAPI options fixture](./packages/cli/examples/documentation/openapi-options.ts).
+
+### 6. Unsupported Zod schemas fail explicitly
 
 <!-- docs-example: zod-to-ts -->
 
@@ -241,7 +334,7 @@ try {
 Replace unsupported shapes with an equivalent supported schema before generation. `z.unknown()`
 remains supported and still generates TypeScript `unknown`.
 
-### 6. Unvalidated HTTP bodies are unknown
+### 7. Unvalidated HTTP bodies are unknown
 
 `IHttpBody` and the default body types of `IHttpRequest`, `IHttpResponse`, handlers, and generated
 Fetch/Hono adapters no longer resolve to `any`. Generated operation types remain schema-specific.
@@ -268,7 +361,7 @@ adapters continue to support JSON values, strings, `ArrayBuffer`, `Blob`, `null`
 Values that cannot be represented by `JSON.stringify` now fail explicitly; Hono exposes
 `HonoResponseSerializationError` for this case.
 
-### 7. Migration Checklist (0.12.x to 0.13.x)
+### 8. Migration Checklist (0.12.x to 0.13.x)
 
 For **end users** (you use the CLI but don't author plugins):
 
@@ -282,6 +375,12 @@ For **end users** (you use the CLI but don't author plugins):
       types.
 - [ ] Add explicit request, response, and context generics to custom generated `HttpAdapter`
       subclasses that previously relied on defaults.
+- [ ] Add `metadata.title` and `metadata.version` to every `defineSpec` call.
+- [ ] Move reusable API tags and security schemes into the generator-neutral spec contract.
+- [ ] Use `security: []` for operations or resources that must remain explicitly public under an
+      inherited security requirement.
+- [ ] Remove `info` from OpenAPI plugin options and select `target: "3.2.0"` only when consumers
+      support that profile; otherwise use the 3.1.2 default.
 
 For **plugin authors**:
 
@@ -299,6 +398,8 @@ For **plugin authors**:
       [scoped-service example](./packages/cli/examples/scoped-service-plugin.mjs)). This supports
       exit-independent cleanup; `finalize` does not receive the generator's original `Exit`, so
       transactional finalizers need a different integration boundary.
+- [ ] Update manually constructed `NormalizedSpec`, resource, and operation fixtures with metadata,
+      resolved security, tags, and deprecation defaults.
 
 ### Further reading
 
@@ -307,6 +408,7 @@ For **plugin authors**:
 - [ADR 0005: Effect.Service patterns (succeed vs effect)](./docs/adr/0005-effect-service-patterns.md)
 - [ADR 0006: CLI error and log formatting](./docs/adr/0006-cli-error-and-log-formatting.md)
 - [ADR 0007: Generator per-call isolation](./docs/adr/0007-generator-per-call-isolation.md)
+- [ADR 0009: API metadata and security contract](./docs/adr/0009-api-metadata-and-security-contract.md)
 - [Plugin authoring guide](./docs/plugin-authoring.md)
 
 ---

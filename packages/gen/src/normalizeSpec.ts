@@ -13,6 +13,11 @@ import { Effect } from "effect";
 import { z } from "zod";
 import { normalizeBody } from "./bodyNormalization.js";
 import {
+  normalizeContractRoot,
+  normalizeOperationContract,
+  normalizeResourceContract,
+} from "./contractNormalization.js";
+import {
   DuplicateOperationIdError,
   DuplicateResponseNameError,
   DuplicateRouteError,
@@ -22,9 +27,9 @@ import {
   InvalidOperationIdError,
   InvalidRequestSchemaError,
   InvalidResourceNameError,
+  isNormalizationError,
   PathParameterMismatchError,
 } from "./errors/index.js";
-import { isNormalizationError } from "./errors/NormalizationError.js";
 import {
   isSupportedOperationId,
   isSupportedResourceName,
@@ -37,7 +42,8 @@ import {
   collectCanonicalResponses,
   normalizeResponseDefinition,
 } from "./validation/index.js";
-import type { NormalizationError } from "./errors/NormalizationError.js";
+import type { NormalizedResourceContract } from "./contractNormalization.js";
+import type { NormalizationError } from "./errors/index.js";
 import type {
   NormalizedOperation,
   NormalizedRequest,
@@ -59,6 +65,14 @@ type NormalizeOperationResponsesResult = {
 type NormalizeOperationResult = {
   readonly operation: NormalizedOperation;
   readonly warnings: readonly NormalizedSpecWarning[];
+};
+
+type OperationNormalizationContext = {
+  readonly resourceName: string;
+  readonly resourceContract: NormalizedResourceContract;
+  readonly contractRoot: ReturnType<typeof normalizeContractRoot>;
+  readonly operationIds: Set<string>;
+  readonly routeKeys: Set<string>;
 };
 
 const isZodType = (schema: unknown): schema is z.ZodType => {
@@ -188,11 +202,16 @@ const normalizeOperationResponses = (
 };
 
 const normalizeOperation = (
-  resourceName: string,
-  operationIds: Set<string>,
-  routeKeys: Set<string>,
+  context: OperationNormalizationContext,
   operation: ResourceDefinition["operations"][number]
 ): NormalizeOperationResult => {
+  const {
+    resourceName,
+    resourceContract,
+    contractRoot,
+    operationIds,
+    routeKeys,
+  } = context;
   if (!isSupportedOperationId(operation.operationId)) {
     throw new InvalidOperationIdError({ operationId: operation.operationId });
   }
@@ -235,6 +254,12 @@ const normalizeOperation = (
     operation.operationId,
     operation.responses
   );
+  const contract = normalizeOperationContract(
+    resourceName,
+    resourceContract,
+    operation,
+    contractRoot
+  );
 
   return {
     operation: {
@@ -242,6 +267,10 @@ const normalizeOperation = (
       method: operation.method,
       path: operation.path,
       summary: operation.summary,
+      description: contract.description,
+      deprecated: contract.deprecated,
+      tags: contract.tags,
+      security: contract.security,
       request: request.request,
       responses: responses.responses,
     },
@@ -255,6 +284,7 @@ const normalizeSpecSync = (definition: SpecDefinition): NormalizedSpec => {
   if (resourceEntries.length === 0) {
     throw new EmptySpecResourcesError();
   }
+  const contractRoot = normalizeContractRoot(definition);
 
   // The core validator throws a plain Error (the core package stays free of
   // an effect dependency — the same error fires from `defineSpec` in user
@@ -276,6 +306,9 @@ const normalizeSpecSync = (definition: SpecDefinition): NormalizedSpec => {
   const warnings: NormalizedSpecWarning[] = [...canonicalResponses.warnings];
 
   return {
+    metadata: contractRoot.metadata,
+    securitySchemes: contractRoot.securitySchemes,
+    security: contractRoot.security,
     resources: resourceEntries.map(([resourceName, resource]) => {
       if (!isSupportedResourceName(resourceName)) {
         throw new InvalidResourceNameError({ resourceName });
@@ -284,16 +317,26 @@ const normalizeSpecSync = (definition: SpecDefinition): NormalizedSpec => {
       if (resource.operations.length === 0) {
         throw new EmptyResourceOperationsError({ resourceName });
       }
+      const resourceContract = normalizeResourceContract(
+        resourceName,
+        resource,
+        contractRoot
+      );
+      const operationContext: OperationNormalizationContext = {
+        resourceName,
+        resourceContract,
+        contractRoot,
+        operationIds,
+        routeKeys,
+      };
 
       return {
         name: resourceName,
+        description: resourceContract.description,
+        tags: resourceContract.tags,
+        security: resourceContract.security,
         operations: resource.operations.map(operation => {
-          const normalized = normalizeOperation(
-            resourceName,
-            operationIds,
-            routeKeys,
-            operation
-          );
+          const normalized = normalizeOperation(operationContext, operation);
 
           warnings.push(...normalized.warnings);
 

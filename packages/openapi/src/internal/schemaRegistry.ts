@@ -1,4 +1,5 @@
 import type { JsonSchema } from "@rexeus/typeweaver-zod-to-json-schema";
+import { pascalCase } from "polycase";
 import { escapeJsonPointerSegment, jsonPointer } from "./jsonPointer.js";
 import { convertSchema, unwrapRootOptional } from "./schemaConversion.js";
 import type {
@@ -22,6 +23,9 @@ export type SchemaRegistration = {
   readonly ref: OpenApiReferenceObject;
   readonly warnings: readonly OpenApiBuildWarning[];
 };
+
+export const requestBodyComponentName = (operationId: string): string =>
+  `${pascalCase(operationId)}RequestBody`;
 
 type SchemaRegistryEntry = {
   readonly name: string;

@@ -23,6 +23,9 @@ export const OptionsTodoDefinition = defineOperation({
   },
   method: HttpMethod.OPTIONS,
   summary: "Get allowed methods for todo resource",
+  description: "Public compatibility endpoint retained for existing consumers.",
+  deprecated: true,
+  security: [],
   path: "/todos/:todoId",
   responses: [
     defineResponse({

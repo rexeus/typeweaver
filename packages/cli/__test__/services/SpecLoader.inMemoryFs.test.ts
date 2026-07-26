@@ -40,6 +40,7 @@ const aMinimalSpec = (): SpecDefinition => {
   });
 
   return defineSpec({
+    metadata: { title: "Items API", version: "1.0.0" },
     resources: {
       item: {
         operations: [

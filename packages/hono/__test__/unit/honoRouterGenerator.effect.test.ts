@@ -9,15 +9,23 @@ import type { HonoGenerationContext } from "../../src/honoRouterGenerator.js";
 describe("Hono Effect-native generator reference", () => {
   test("renders and writes a router through the Effect context surface", async () => {
     const normalizedSpec: NormalizedSpec = {
+      metadata: { title: "Todo API", version: "1.0.0" },
+      securitySchemes: [],
+      security: { requirements: [], source: "none" },
       resources: [
         {
           name: "todo",
+          tags: [],
+          security: { requirements: [], source: "none" },
           operations: [
             {
               operationId: "getTodo",
               method: HttpMethod.GET,
               path: "/todos/:todoId",
               summary: "Get a todo",
+              deprecated: false,
+              tags: [],
+              security: { requirements: [], source: "none" },
               responses: [],
             },
           ],

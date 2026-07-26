@@ -1,6 +1,9 @@
 # @rexeus/typeweaver-openapi
 
-Pure OpenAPI 3.1.1 document builder for Typeweaver normalized specs.
+Deterministic, validated OpenAPI 3.1.2 and 3.2.0 projection for TypeWeaver normalized specs.
+
+`3.1.2` is the default compatibility profile. Select `target: "3.2.0"` when every downstream tool
+explicitly supports OpenAPI 3.2.
 
 ## Generator plugin
 
@@ -14,7 +17,7 @@ export default {
     [
       "openapi",
       {
-        info: { title: "Todo API", version: "1.0.0" },
+        target: "3.2.0",
         servers: [{ url: "https://api.example.com" }],
         outputPath: "openapi/openapi.json",
       },
@@ -23,9 +26,9 @@ export default {
 };
 ```
 
-All options are optional. Defaults are `info: { title: "Typeweaver API", version: "0.0.0" }`, no
-servers, and `outputPath: "openapi/openapi.json"`. Build warnings are printed to stderr and are not
-embedded in the OpenAPI document.
+All options are optional. The defaults are `target: "3.1.2"`, no `servers`, and
+`outputPath: "openapi/openapi.json"`. API title, version, description, and reusable tag definitions
+come from the generator-neutral `defineSpec({ metadata: ... })` contract, not plugin options.
 
 ## Document builder
 
@@ -33,7 +36,7 @@ embedded in the OpenAPI document.
 import { buildOpenApiDocument } from "@rexeus/typeweaver-openapi";
 
 const result = buildOpenApiDocument(normalizedSpec, {
-  info: { title: "Todo API", version: "1.0.0" },
+  target: "3.2.0",
 });
 
 console.log(result.document);
@@ -47,6 +50,69 @@ Plugin options and the side-effect-free builder call are typechecked in the
 
 The builder has no filesystem side effects. It returns the OpenAPI document and deterministic
 warnings for schemas or Typeweaver constructs that cannot be represented exactly.
+
+## Profile support
+
+| Target  | Selection                | Validation                                                                                  | Emitted vocabulary                                                   |
+| ------- | ------------------------ | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `3.1.2` | Default                  | Official OpenAPI 3.1 schema plus Spectral's OAS rules against the generated project fixture | OpenAPI 3.1.2 with JSON Schema Draft 2020-12                         |
+| `3.2.0` | `target: "3.2.0"` opt-in | Independent version-aware validation against the official OpenAPI 3.2 schema                | OpenAPI 3.2.0 using the feature subset shared with the 3.1.2 profile |
+
+Both profiles project the same TypeWeaver contract. The 3.1.2 profile never emits 3.2-only fields.
+The current 3.2.0 profile changes the declared OpenAPI version but intentionally does not invent
+3.2-only data that has no TypeWeaver contract source.
+
+OpenAPI 3.1.1 output is replaced by the 3.1.2 compatibility default. Remove `info` from plugin or
+builder options, move that identity into spec metadata, and use `target` only when selecting 3.2.0.
+See the
+[migration guide](../../MIGRATION.md#5-openapi-target-profiles-and-spec-owned-identity-breaking).
+
+## Support matrix
+
+### Supported
+
+| TypeWeaver contract feature                        | OpenAPI projection                                                                             |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| metadata title, version, and description           | root `info`                                                                                    |
+| reusable tag names and descriptions                | root `tags`                                                                                    |
+| operation summary, description, tags, deprecation  | Operation Object fields                                                                        |
+| HTTP basic and bearer security                     | `components.securitySchemes` with optional bearer format                                       |
+| API keys in headers, query parameters, and cookies | `components.securitySchemes` type `apiKey`                                                     |
+| OAuth2 flows and declared scopes                   | `components.securitySchemes` type `oauth2`                                                     |
+| OpenID Connect discovery URLs                      | `components.securitySchemes` type `openIdConnect`                                              |
+| inherited or overridden security requirements      | root and operation `security`; AND within an object, OR between array entries                  |
+| explicitly public operations                       | operation `security: []`                                                                       |
+| path, query, and header parameters                 | ordered Parameter Objects                                                                      |
+| request and response bodies                        | media-type content with schemas under `components.schemas`                                     |
+| canonical and inline responses                     | response components/references; duplicate inline status variants merge deterministically       |
+| server URLs and variables                          | root `servers`, supplied as a projection option                                                |
+| supported Zod-to-JSON-Schema constructs            | JSON Schema Draft 2020-12; reusable schemas use deterministic component names and local `$ref` |
+
+### Lossy with diagnostics
+
+These cases still produce the best deterministic document available. The builder returns a warning,
+and the plugin's side-effect-free `validate` hook maps it to a stable `TW-PLUGIN-OPENAPI-*` issue
+without writing files.
+
+| Contract or schema shape                             | Projection behavior                                      | Stable issue                |
+| ---------------------------------------------------- | -------------------------------------------------------- | --------------------------- |
+| resource description spanning multiple paths         | description is omitted; operation descriptions remain    | `TW-PLUGIN-OPENAPI-010`     |
+| non-finite path/query/header parameter container     | container cannot become a finite parameter list          | `TW-PLUGIN-OPENAPI-001`     |
+| parameter object with additional properties          | named properties project; catch-all entries do not       | `TW-PLUGIN-OPENAPI-002`     |
+| missing or unused path-parameter schema              | best available path parameter list is emitted            | `TW-PLUGIN-OPENAPI-003/004` |
+| missing or duplicated canonical response declaration | available response shape is retained deterministically   | `TW-PLUGIN-OPENAPI-005/006` |
+| unsupported schema, check, or conversion failure     | JSON Schema is broadened only as reported by the warning | `TW-PLUGIN-OPENAPI-007–009` |
+
+### Out of scope
+
+- TypeWeaver does not import OpenAPI documents.
+- TypeWeaver does not provide bidirectional Zod/OpenAPI/Effect Schema round-tripping.
+- Callbacks, webhooks, links, arbitrary OpenAPI extensions, and 3.2-specific additions without a
+  generator-neutral TypeWeaver source are not generated.
+- Authentication providers and authorization enforcement are not generated. Security declarations
+  describe the contract only.
+- Arbitrary `Authorization` headers are not guessed into security schemes. Declare security once in
+  `defineSpec`.
 
 ## Schema dialect and normalization
 
@@ -80,21 +146,22 @@ into one inline OpenAPI response. The merged response description lists each var
   descriptions, such as `- ValidationError: Correlation ID for validation failures.`
 - If no variant describes the header, the merged header omits `description`.
 
-Security schemes are not inferred yet. The current plugin does not derive
-`components.securitySchemes` or operation `security` from `Authorization` headers; consumers that
-need those fields can post-process the generated document for now.
-
 ## Warning model
 
 `buildOpenApiDocument` is deterministic and non-throwing for representability issues: it emits the
-best OpenAPI document it can and returns warnings beside the document.
+best OpenAPI document it can and returns warnings beside the document. `openApiPlugin().validate`
+maps those warnings to structured issues; `generate` writes only the document and does not duplicate
+validation results as ad-hoc log text.
 
 - Schema-conversion warnings have `origin: "schema-conversion"` and reuse
   `OpenApiSchemaConversionWarningCode` from the Zod-to-JSON-Schema converter: `unsupported-schema`,
   `unsupported-check`, or `conversion-error`.
 - Builder diagnostics have `origin: "openapi-builder"` and use `OpenApiDiagnosticWarningCode`:
   `unrepresentable-parameter-container`, `unrepresentable-parameter-additional-properties`,
-  `missing-path-parameter-schema`, `unused-path-parameter-schema`, or `missing-canonical-response`.
+  `missing-path-parameter-schema`, `unused-path-parameter-schema`, `missing-canonical-response`,
+  `duplicate-canonical-response`, or `unrepresentable-resource-description`.
+- `OPENAPI_WARNING_ISSUE_REGISTRY` maps every exported warning code exhaustively to stable
+  `TW-PLUGIN-OPENAPI-001` through `TW-PLUGIN-OPENAPI-010` codes.
 - `schemaPath` is the JSON Pointer inside the converted JSON Schema where a schema-conversion
   warning originated. `documentPath` is the JSON Pointer to the emitted OpenAPI document location
   affected by the warning.

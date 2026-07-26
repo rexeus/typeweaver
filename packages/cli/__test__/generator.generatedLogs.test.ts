@@ -32,6 +32,7 @@ const writeTinySpec = (workspace: string): void => {
       "});",
       "",
       "export const spec = defineSpec({",
+      '  metadata: { title: "Items API", version: "1.0.0" },',
       "  resources: {",
       "    item: {",
       "      operations: [",

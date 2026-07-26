@@ -55,15 +55,23 @@ const validationErrorResponse: NormalizedResponse = {
 };
 
 const todoSpec: NormalizedSpec = {
+  metadata: { title: "Todo Test API", version: "1.0.0" },
+  securitySchemes: [],
+  security: { requirements: [], source: "none" },
   resources: [
     {
       name: "todo",
+      tags: [],
+      security: { requirements: [], source: "none" },
       operations: [
         {
           operationId: "getTodo",
           method: HttpMethod.GET,
           path: "/todos/{todoId}",
           summary: "Get a todo item.",
+          deprecated: false,
+          tags: [],
+          security: { requirements: [], source: "none" },
           responses: [
             {
               source: "canonical",

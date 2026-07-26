@@ -7,7 +7,7 @@
 ## Status
 
 - **Stage:** 1
-- **Status:** IN PROGRESS
+- **Status:** DONE
 - **Priority:** P1
 - **Effort:** L
 - **Risk:** MED
@@ -202,13 +202,13 @@ the PR URL and evidence in `GOAL.md`.
 
 ## Work package evidence
 
-| Work package                           | Status      | Commit     | Evidence                                                                                                                                                                                 |
-| -------------------------------------- | ----------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Product vision and repository truth | DONE        | `62856a3d` | `pnpm docs:check`, `pnpm format:check`, and `pnpm lint` pass; both required stale-state searches return no matches                                                                       |
-| 2. Executable public documentation     | DONE        | `31ad8594` | Ten declared fixture groups plus invalid-example and malformed-manifest self-tests pass through `pnpm docs:check`; `pnpm typecheck` passes 23/23 tasks                                   |
-| 3. Honest unsupported-schema failures  | DONE        | `6c78fba8` | Six formerly silent fallback cases now throw the exported stable error; 121/121 tests and package typecheck pass; 225 generated fixtures are unchanged                                   |
-| 4. Public HTTP body boundary           | DONE        | `450408d5` | `IsAny` contracts, 150 Core/833 Server/112 Hono tests, 225 deterministic fixtures, root typecheck, and Node/Deno/Bun bundle gates pass                                                   |
-| 5. Stage reconciliation and delivery   | IN PROGRESS |            | Live issues #193/#198/#200 remain open but are implemented here; #199 is superseded by the pinned Effect 3.22 tooling; the complete local Node 24 gate passes with an empty final status |
+| Work package                           | Status | Commit     | Evidence                                                                                                                                                                                |
+| -------------------------------------- | ------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Product vision and repository truth | DONE   | `62856a3d` | `pnpm docs:check`, `pnpm format:check`, and `pnpm lint` pass; both required stale-state searches return no matches                                                                      |
+| 2. Executable public documentation     | DONE   | `31ad8594` | Ten declared fixture groups plus invalid-example and manifest-contract self-tests pass through `pnpm docs:check`; `pnpm typecheck` passes 23/23 tasks                                   |
+| 3. Honest unsupported-schema failures  | DONE   | `6c78fba8` | Six formerly silent fallback cases now throw the exported stable error; 121/121 tests and package typecheck pass; 225 generated fixtures are unchanged                                  |
+| 4. Public HTTP body boundary           | DONE   | `450408d5` | `IsAny` contracts, 150 Core/833 Server/112 Hono tests, 225 deterministic fixtures, root typecheck, and Node/Deno/Bun bundle gates pass                                                  |
+| 5. Stage reconciliation and delivery   | DONE   | `b8861460` | Live issues were reconciled without mutation; the complete local gate and all PR #209 checks passed, and merge commit `81aab076` integrated the final reviewed Stage 1 head into `main` |
 
 ## Test plan
 
@@ -221,15 +221,15 @@ the PR URL and evidence in `GOAL.md`.
 
 ## Done criteria
 
-- [ ] Work packages 1 through 5 are complete with evidence.
+- [x] Work packages 1 through 5 are complete with evidence.
 - [x] No unchecked public code example is presented as supported.
 - [x] No false performance claim remains.
 - [x] Unsupported schema generation fails with stable diagnostics.
 - [x] Public HTTP body defaults are not `any`.
 - [x] Breaking public changes have Changesets and migration notes.
-- [ ] Full local gate and all GitHub checks pass.
-- [ ] Stage 1 PR targets `main`, is open, green, and unmerged.
-- [ ] `GOAL.md` and `plans/README.md` record Stage 1 evidence.
+- [x] Full local gate and all GitHub checks pass.
+- [x] Stage 1 PR targets `main`, is open, green, and unmerged.
+- [x] `GOAL.md` and `plans/README.md` record Stage 1 evidence.
 
 ## STOP conditions
 

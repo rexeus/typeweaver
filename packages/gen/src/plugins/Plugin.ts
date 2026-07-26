@@ -1,9 +1,11 @@
 import { PluginExecutionError } from "./errors/PluginExecutionError.js";
+import type { Issue } from "../issues/Issue.js";
 import type { NormalizedSpec } from "../NormalizedSpec.js";
 import type {
   GeneratorContext,
   PluginConfig,
   PluginContext,
+  PluginValidationContext,
 } from "./contextTypes.js";
 import type { Effect } from "effect";
 
@@ -20,6 +22,10 @@ import type { Effect } from "effect";
 export type Plugin = {
   readonly name: string;
   readonly depends?: readonly string[];
+  readonly validate?: (
+    normalizedSpec: NormalizedSpec,
+    context: PluginValidationContext
+  ) => Effect.Effect<readonly Issue[], PluginExecutionError>;
   readonly initialize?: (
     context: PluginContext
   ) => Effect.Effect<void, PluginExecutionError>;

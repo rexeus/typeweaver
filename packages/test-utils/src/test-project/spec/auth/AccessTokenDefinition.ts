@@ -15,6 +15,8 @@ export const AccessTokenDefinition = defineOperation({
   operationId: "AccessToken",
   path: "/auth/access-token",
   summary: "Get access token by email and password",
+  description: "Exchanges public credentials for an access and refresh token.",
+  security: [],
   method: HttpMethod.POST,
   request: {
     body: z.object({

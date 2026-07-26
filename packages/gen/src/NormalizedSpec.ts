@@ -1,16 +1,33 @@
 import type {
+  ApiMetadataDefinition,
   HttpBodySchema,
   HttpHeaderSchema,
   HttpMethod,
   HttpParamSchema,
   HttpQuerySchema,
   HttpStatusCode,
+  SecurityRequirements,
+  SecuritySchemeDefinition,
 } from "@rexeus/typeweaver-core";
 
 export type NormalizedSpec = {
+  readonly metadata: ApiMetadataDefinition;
+  readonly securitySchemes: readonly SecuritySchemeDefinition[];
+  readonly security: NormalizedSecurity;
   readonly resources: readonly NormalizedResource[];
   readonly responses: readonly NormalizedResponse[];
   readonly warnings: readonly NormalizedSpecWarning[];
+};
+
+export type NormalizedSecuritySource =
+  | "none"
+  | "spec"
+  | "resource"
+  | "operation";
+
+export type NormalizedSecurity = {
+  readonly requirements: SecurityRequirements;
+  readonly source: NormalizedSecuritySource;
 };
 
 export type NormalizedBodyMediaTypeSource =
@@ -53,6 +70,9 @@ export type NormalizedSpecWarning = {
 
 export type NormalizedResource = {
   readonly name: string;
+  readonly description?: string;
+  readonly tags: readonly string[];
+  readonly security: NormalizedSecurity;
   readonly operations: readonly NormalizedOperation[];
 };
 
@@ -61,6 +81,10 @@ export type NormalizedOperation = {
   readonly method: HttpMethod;
   readonly path: string;
   readonly summary: string;
+  readonly description?: string;
+  readonly deprecated: boolean;
+  readonly tags: readonly string[];
+  readonly security: NormalizedSecurity;
   readonly request?: NormalizedRequest;
   readonly responses: readonly NormalizedResponseUsage[];
 };

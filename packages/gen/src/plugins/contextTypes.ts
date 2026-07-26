@@ -37,6 +37,15 @@ export type PluginContext = {
   readonly config: TypeweaverUserConfig;
 };
 
+/**
+ * Read-only context provided during plugin validation. It intentionally has
+ * no output directory, writer, template renderer, or generated-file tracker.
+ */
+export type PluginValidationContext = {
+  readonly inputDir: string;
+  readonly config: TypeweaverUserConfig;
+};
+
 export type OperationOutputPaths = {
   readonly outputDir: string;
   readonly requestFile: string;

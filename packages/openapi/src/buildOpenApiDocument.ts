@@ -2,8 +2,8 @@ import type {
   NormalizedResponse,
   NormalizedSpec,
 } from "@rexeus/typeweaver-gen";
-import { pascalCase } from "polycase";
 import { resolveOpenApiBodySchema } from "./internal/bodyContent.js";
+import { assembleOpenApiDocument } from "./internal/document.js";
 import { jsonPointer } from "./internal/jsonPointer.js";
 import { toOpenApiPath } from "./internal/openApiPath.js";
 import { buildRequestParameters } from "./internal/parameters.js";
@@ -12,14 +12,16 @@ import {
   buildOperationResponses,
 } from "./internal/responses.js";
 import { unwrapRootOptional } from "./internal/schemaConversion.js";
-import { createSchemaRegistry } from "./internal/schemaRegistry.js";
+import {
+  createSchemaRegistry,
+  requestBodyComponentName,
+} from "./internal/schemaRegistry.js";
 import type { SchemaRegistry } from "./internal/schemaRegistry.js";
 import type {
   BuildOpenApiDocumentOptions,
   OpenApiBuildResult,
   OpenApiBuildWarning,
   OpenApiDiagnosticWarning,
-  OpenApiDocument,
   OpenApiHttpMethod,
   OpenApiOperationObject,
   OpenApiPathsObject,
@@ -28,10 +30,11 @@ import type {
 
 export function buildOpenApiDocument(
   normalizedSpec: NormalizedSpec,
-  options: BuildOpenApiDocumentOptions
+  options: BuildOpenApiDocumentOptions = {}
 ): OpenApiBuildResult {
   const warnings: OpenApiBuildWarning[] = [
     ...duplicateCanonicalResponseWarnings(normalizedSpec.responses),
+    ...resourceDescriptionWarnings(normalizedSpec.resources),
   ];
   const schemaRegistry = createSchemaRegistry();
   const canonicalResponses = buildComponentsResponses(
@@ -68,26 +71,31 @@ export function buildOpenApiDocument(
 
   const schemas = schemaRegistry.components();
   const responses = canonicalResponses.responses;
-  const hasResponses = Object.keys(responses).length > 0;
-  const hasSchemas = Object.keys(schemas).length > 0;
-  const document: OpenApiDocument = {
-    openapi: "3.1.1",
-    jsonSchemaDialect: "https://json-schema.org/draft/2020-12/schema",
-    info: { ...options.info },
-    ...(options.servers === undefined ? {} : { servers: [...options.servers] }),
-    tags: normalizedSpec.resources.map(resource => ({ name: resource.name })),
+  const document = assembleOpenApiDocument(normalizedSpec, options, {
     paths,
-    ...(!hasResponses && !hasSchemas
-      ? {}
-      : {
-          components: {
-            ...(hasResponses ? { responses } : {}),
-            ...(hasSchemas ? { schemas } : {}),
-          },
-        }),
-  };
+    responses,
+    schemas,
+  });
 
   return { document, warnings };
+}
+
+function resourceDescriptionWarnings(
+  resources: NormalizedSpec["resources"]
+): readonly OpenApiDiagnosticWarning[] {
+  const warnings: OpenApiDiagnosticWarning[] = [];
+  for (const resource of resources) {
+    if (resource.description !== undefined) {
+      warnings.push({
+        origin: "openapi-builder",
+        code: "unrepresentable-resource-description",
+        message: `Resource '${resource.name}' description cannot be projected losslessly because one resource may span multiple OpenAPI paths.`,
+        documentPath: "/paths",
+        location: { resourceName: resource.name, part: "resource.description" },
+      });
+    }
+  }
+  return warnings;
 }
 
 function buildOperationObject(options: {
@@ -125,7 +133,11 @@ function buildOperationObject(options: {
       ...(options.operation.summary.trim() === ""
         ? {}
         : { summary: options.operation.summary }),
-      tags: [options.resourceName],
+      ...(options.operation.description === undefined
+        ? {}
+        : { description: options.operation.description }),
+      ...(options.operation.deprecated ? { deprecated: true } : {}),
+      tags: [...options.operation.tags],
       ...(parameters.parameters.length === 0
         ? {}
         : { parameters: parameters.parameters }),
@@ -133,6 +145,9 @@ function buildOperationObject(options: {
         ? {}
         : { requestBody: requestBody.requestBody }),
       responses: responses.responses,
+      ...(options.operation.security.source === "none"
+        ? {}
+        : { security: options.operation.security.requirements }),
     },
     warnings: [
       ...parameters.warnings,
@@ -166,7 +181,7 @@ function buildRequestBody(
     () => {
       const registration = schemaRegistry.register({
         schema: optionalSchema.schema,
-        baseName: `${pascalCase(context.operation.operationId)}RequestBody`,
+        baseName: requestBodyComponentName(context.operation.operationId),
         location: {
           resourceName: context.resourceName,
           operationId: context.operation.operationId,

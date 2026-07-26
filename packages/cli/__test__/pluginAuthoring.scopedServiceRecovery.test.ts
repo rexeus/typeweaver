@@ -61,7 +61,10 @@ const ProbeResource = Context.GenericTag<ResourceProbe>(
   "typeweaver/tests/ProbeResource"
 );
 
-const emptyDefinition = defineSpec({ resources: {} });
+const emptyDefinition = defineSpec({
+  metadata: { title: "Empty API", version: "1.0.0" },
+  resources: {},
+});
 
 const createWorkspace = (): string =>
   fs.mkdtempSync(path.join(os.tmpdir(), "typeweaver-scoped-plugin-"));

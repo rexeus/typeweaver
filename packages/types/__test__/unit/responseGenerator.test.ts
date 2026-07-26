@@ -45,11 +45,17 @@ function hasBodyOverride(overrides: ResponseOverrides): boolean {
 }
 
 function aNormalizedSpecWith(
-  overrides: Omit<NormalizedSpec, "warnings"> & {
-    readonly warnings?: NormalizedSpec["warnings"];
-  }
+  overrides: Partial<NormalizedSpec> = {}
 ): NormalizedSpec {
-  return { warnings: [], ...overrides };
+  return {
+    metadata: { title: "Response API", version: "1.0.0" },
+    securitySchemes: [],
+    security: { requirements: [], source: "none" },
+    resources: [],
+    responses: [],
+    warnings: [],
+    ...overrides,
+  };
 }
 
 function aCanonicalResponse(
@@ -97,6 +103,12 @@ function anOperationWithResponses(
     method: HttpMethod.POST,
     path: "/todos",
     summary: "Create todo",
+    deprecated: overrides.deprecated ?? false,
+    tags: overrides.tags ?? [],
+    security: overrides.security ?? {
+      requirements: [],
+      source: "none" as const,
+    },
     request: undefined,
     responses,
     ...overrides,
@@ -128,6 +140,11 @@ function aResourceWithOperationResponses(
 ): NormalizedResource {
   return {
     name: "todos",
+    tags: overrides.tags ?? [],
+    security: overrides.security ?? {
+      requirements: [],
+      source: "none" as const,
+    },
     operations: [anOperationWithResponses(responses)],
     ...overrides,
   };
@@ -257,6 +274,8 @@ function renderOperationResponseSource(
       resources: [
         {
           name: "todos",
+          tags: [],
+          security: { requirements: [], source: "none" },
           operations: [anOperationWithResponses(responses)],
         },
       ],
@@ -306,6 +325,8 @@ describe("ResponseGenerator file placement and operation unions", () => {
       resources: [
         {
           name: "todos",
+          tags: [],
+          security: { requirements: [], source: "none" },
           operations: [
             anOperationWithResponses([
               aCanonicalResponseUsage(sharedError.name),
@@ -392,6 +413,8 @@ describe("ResponseGenerator canonical response identity", () => {
       resources: [
         {
           name: "todos",
+          tags: [],
+          security: { requirements: [], source: "none" },
           operations: [
             anOperationWithResponses([
               aCanonicalResponseUsage(sharedError.name),
@@ -400,6 +423,8 @@ describe("ResponseGenerator canonical response identity", () => {
         },
         {
           name: "projects",
+          tags: [],
+          security: { requirements: [], source: "none" },
           operations: [
             anOperationWithResponses(
               [aCanonicalResponseUsage(sharedError.name)],
@@ -441,6 +466,8 @@ describe("ResponseGenerator canonical response identity", () => {
       resources: [
         {
           name: "todos",
+          tags: [],
+          security: { requirements: [], source: "none" },
           operations: [
             anOperationWithResponses([
               aCanonicalResponseUsage(validationError.name),

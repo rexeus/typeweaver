@@ -198,6 +198,7 @@ const writeConsumerSources = fixtureRoot => {
       "});",
       "",
       "export const spec = defineSpec({",
+      '  metadata: { title: "Health API", version: "1.0.0" },',
       "  resources: {",
       "    health: {",
       "      operations: [",

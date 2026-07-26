@@ -50,6 +50,10 @@ const isInitializeHook = (
   value: unknown
 ): value is NonNullable<Plugin["initialize"]> => typeof value === "function";
 
+const isValidateHook = (
+  value: unknown
+): value is NonNullable<Plugin["validate"]> => typeof value === "function";
+
 const isCollectResourcesHook = (
   value: unknown
 ): value is NonNullable<Plugin["collectResources"]> =>
@@ -171,6 +175,11 @@ const decodePlugin = (
       "initialize",
       isInitializeHook
     );
+    const validate = yield* decodeOptionalHook(
+      value,
+      "validate",
+      isValidateHook
+    );
     const collectResources = yield* decodeOptionalHook(
       value,
       "collectResources",
@@ -192,6 +201,7 @@ const decodePlugin = (
       name,
       ...(depends === undefined ? {} : { depends }),
       ...(initialize === undefined ? {} : { initialize }),
+      ...(validate === undefined ? {} : { validate }),
       ...(collectResources === undefined ? {} : { collectResources }),
       ...(generate === undefined ? {} : { generate }),
       ...(finalize === undefined ? {} : { finalize }),

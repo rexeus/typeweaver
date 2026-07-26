@@ -17,6 +17,17 @@ types consumed by the CLI orchestrator.
 The normalized model is the generator-neutral center of Typeweaver's
 [one-contract, many-projections](../../VISION.md#one-contract-many-projections) product promise.
 
+Normalization validates API metadata, reusable tags, and named security schemes before plugins run.
+Each normalized resource and operation receives its effective tags and security plus a source
+(`none`, `spec`, `resource`, or `operation`). This preserves the distinction between absent
+security, inherited security, an explicit public `[]`, and a non-empty override.
+
+<!-- docs-example: metadata-security-contract -->
+
+The public authoring input behind this normalized shape is typechecked in the
+[metadata/security fixture](../cli/examples/documentation/metadata-security.ts) and defined by
+[ADR 0009](../../docs/adr/0009-api-metadata-and-security-contract.md).
+
 ---
 
 ## 📥 Installation
@@ -97,12 +108,17 @@ export default typesPlugin;
 
 ## 🔌 Plugin lifecycle
 
-The orchestrator runs four optional stages once per `typeweaver generate` invocation:
+The plugin contract exposes five optional stages. Validation is invoked through the per-call
+`PluginRegistry` before a caller enters write-capable generation:
 
 ```ts
 type Plugin = {
   readonly name: string;
   readonly depends?: readonly string[];
+  readonly validate?: (
+    spec: NormalizedSpec,
+    ctx: PluginValidationContext
+  ) => Effect.Effect<readonly Issue[], PluginExecutionError>;
   readonly initialize?: (ctx: PluginContext) => Effect.Effect<void, PluginExecutionError>;
   readonly collectResources?: (
     spec: NormalizedSpec
@@ -112,23 +128,31 @@ type Plugin = {
 };
 ```
 
-| Stage              | When                                         | Use it for                                                                            |
-| ------------------ | -------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `initialize`       | After plugin discovery, before normalization | Setup that needs the resolved output directory but not the spec                       |
-| `collectResources` | After normalization, before emission         | Transforming the normalized spec (e.g. injecting derived ops)                         |
-| `generate`         | Once the spec is final                       | Writing files via `context.writeFile`                                                 |
-| `finalize`         | After every plugin has generated             | Post-processing, summary output. Failures surface as WARN — they do not fail the run. |
+| Stage              | When                                           | Use it for                                                                            |
+| ------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `validate`         | After normalization, without an output context | Returning structured, stable, side-effect-free diagnostics                            |
+| `initialize`       | After plugin discovery, before normalization   | Setup that needs the resolved output directory but not the spec                       |
+| `collectResources` | After normalization, before emission           | Transforming the normalized spec (e.g. injecting derived ops)                         |
+| `generate`         | Once the spec is final                         | Writing files via `context.writeFile`                                                 |
+| `finalize`         | After every plugin has generated               | Post-processing, summary output. Failures surface as WARN — they do not fail the run. |
 
 `depends` declares a topological ordering: a plugin with `depends: ["types"]` will not run a stage
 until `types`'s same stage has completed.
+
+`PluginValidationContext` contains only `inputDir` and the read-only user configuration. It has no
+`outputDir`, writer, template renderer, or generated-file tracker. Validation returns `Issue`
+records with a stable code, severity, message, JSON Pointer, optional source location and hint, and
+fixability metadata. Spec-normalization failures use the exhaustive `SPEC_ISSUE_REGISTRY`
+`TW-SPEC-001` through `TW-SPEC-021` namespace.
 
 ## 🔧 What it exports
 
 - **Plugin authoring:** `definePlugin`, `definePluginWithLibCopy`, `copyPluginLibFiles`, and the
   `Plugin` and `PluginFactory` types.
-- **Lifecycle contexts:** `PluginContext`, `GeneratorContext` — the records passed to each stage,
-  with helpers for `writeFile`, `renderTemplate`, `addGeneratedFile`, and per-resource path
-  resolution.
+- **Lifecycle contexts:** the write-incapable `PluginValidationContext`, plus `PluginContext` and
+  `GeneratorContext` for write-capable stages and per-resource path resolution.
+- **Diagnostics:** `Issue`, `Severity`, `SPEC_ISSUE_REGISTRY`, `getSpecErrorEntry`, and
+  `normalizationErrorToIssue`.
 - **Tagged errors:** `PluginExecutionError`, `PluginDependencyError`, `UnsafeGeneratedPathError` —
   raised at the plugin boundary and the orchestrator.
 - **Normalized resource model:** `NormalizedSpec`, `NormalizedResource`, `NormalizedOperation`,

@@ -35,6 +35,9 @@ function anOperation(
     path: routePath,
     method,
     summary: "",
+    deprecated: false,
+    tags: [],
+    security: { requirements: [], source: "none" },
     request: undefined,
     responses: [],
   };
@@ -46,6 +49,8 @@ function aResource(
 ): NormalizedResource {
   return {
     name,
+    tags: [],
+    security: { requirements: [], source: "none" },
     operations,
   };
 }
@@ -58,6 +63,9 @@ function aCapturingGeneratorContext(resources: readonly NormalizedResource[]): {
   const writtenFiles = new Map<string, string>();
   const renderedRouters = new Map<string, RouterTemplateData>();
   const normalizedSpec: NormalizedSpec = {
+    metadata: { title: "Router API", version: "1.0.0" },
+    securitySchemes: [],
+    security: { requirements: [], source: "none" },
     resources,
     responses: [],
     warnings: [],

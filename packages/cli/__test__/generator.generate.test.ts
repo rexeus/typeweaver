@@ -57,6 +57,7 @@ const writeTinySpec = (workspace: string): string => {
       "});",
       "",
       "export const spec = defineSpec({",
+      '  metadata: { title: "Items API", version: "1.0.0" },',
       "  resources: {",
       "    item: {",
       "      operations: [",
@@ -97,6 +98,7 @@ const writeSchemaLessSpec = (workspace: string): string => {
       "});",
       "",
       "export const spec = defineSpec({",
+      '  metadata: { title: "Health API", version: "1.0.0" },',
       "  resources: {",
       "    health: {",
       "      operations: [",
@@ -495,7 +497,7 @@ describe("Generator validator and OpenAPI output", () => {
     const rootIndex = readFile(path.join(outputDir, "index.ts"));
 
     expectFileExists(openApiFile);
-    expect(document.openapi).toBe("3.1.1");
+    expect(document.openapi).toBe("3.1.2");
     expect(document.paths).toHaveProperty("/items/{itemId}");
     expect(rootIndex).not.toContain("openapi.json");
     expect(rootIndex).not.toContain("./openapi/index.js");

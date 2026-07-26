@@ -1,22 +1,31 @@
 {
-  "openapi": "3.1.1",
+  "openapi": "3.1.2",
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
   "info": {
-    "title": "Typeweaver API",
-    "version": "0.0.0"
+    "title": "TypeWeaver Test API",
+    "version": "1.0.0",
+    "description": "Executable fixture for metadata, security, transport, and generator contracts."
   },
   "tags": [
     {
-      "name": "account"
+      "name": "account",
+      "description": "Account registration"
     },
     {
-      "name": "auth"
+      "name": "auth",
+      "description": "Token lifecycle"
     },
     {
-      "name": "file"
+      "name": "files",
+      "description": "Binary file operations"
     },
     {
-      "name": "todo"
+      "name": "todos",
+      "description": "Todo management"
+    },
+    {
+      "name": "read",
+      "description": "Read-only operations"
     }
   ],
   "paths": {
@@ -96,13 +105,15 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": []
       }
     },
     "/auth/access-token": {
       "post": {
         "operationId": "AccessToken",
         "summary": "Get access token by email and password",
+        "description": "Exchanges public credentials for an access and refresh token.",
         "tags": ["auth"],
         "parameters": [
           {
@@ -175,7 +186,8 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": []
       }
     },
     "/auth/refresh-token": {
@@ -254,14 +266,19 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": [
+          {
+            "oauth2Auth": ["tokens:write"]
+          }
+        ]
       }
     },
     "/files": {
       "post": {
         "operationId": "UploadFile",
         "summary": "Upload a file",
-        "tags": ["file"],
+        "tags": ["files"],
         "parameters": [
           {
             "name": "Content-Type",
@@ -322,14 +339,19 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ]
       }
     },
     "/files/{fileId}/content": {
       "get": {
         "operationId": "DownloadFileContent",
         "summary": "Download file content",
-        "tags": ["file"],
+        "tags": ["files"],
         "parameters": [
           {
             "name": "fileId",
@@ -372,14 +394,19 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ]
       }
     },
     "/files/{fileId}": {
       "get": {
         "operationId": "GetFileMetadata",
         "summary": "Get file metadata",
-        "tags": ["file"],
+        "tags": ["files"],
         "parameters": [
           {
             "name": "fileId",
@@ -450,14 +477,19 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ]
       }
     },
     "/todos/{todoId}/subtodos": {
       "post": {
         "operationId": "CreateSubTodo",
         "summary": "Create new subtodo",
-        "tags": ["todo"],
+        "tags": ["todos"],
         "parameters": [
           {
             "name": "todoId",
@@ -550,12 +582,17 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "get": {
         "operationId": "ListSubTodos",
         "summary": "List subtodos for a specific todo",
-        "tags": ["todo"],
+        "tags": ["todos"],
         "parameters": [
           {
             "name": "todoId",
@@ -663,14 +700,19 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/todos": {
       "post": {
         "operationId": "CreateTodo",
         "summary": "Create new todo",
-        "tags": ["todo"],
+        "tags": ["todos"],
         "parameters": [
           {
             "name": "Content-Type",
@@ -750,12 +792,17 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "get": {
         "operationId": "ListTodos",
         "summary": "List todos with filtering, pagination, and search",
-        "tags": ["todo"],
+        "tags": ["todos"],
         "parameters": [
           {
             "name": "status",
@@ -903,14 +950,19 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/todos/{todoId}/subtodos/{subtodoId}": {
       "delete": {
         "operationId": "DeleteSubTodo",
         "summary": "Delete subtodo",
-        "tags": ["todo"],
+        "tags": ["todos"],
         "parameters": [
           {
             "name": "todoId",
@@ -1032,12 +1084,17 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "put": {
         "operationId": "UpdateSubTodo",
         "summary": "Update subtodo",
-        "tags": ["todo"],
+        "tags": ["todos"],
         "parameters": [
           {
             "name": "todoId",
@@ -1219,14 +1276,19 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/todos/{todoId}": {
       "delete": {
         "operationId": "DeleteTodo",
         "summary": "Delete todo",
-        "tags": ["todo"],
+        "tags": ["todos"],
         "parameters": [
           {
             "name": "todoId",
@@ -1327,12 +1389,18 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "get": {
         "operationId": "GetTodo",
         "summary": "Get todo",
-        "tags": ["todo"],
+        "description": "Returns one todo using an AND-combined bearer and API-key requirement.",
+        "tags": ["todos", "read"],
         "parameters": [
           {
             "name": "todoId",
@@ -1406,12 +1474,18 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": [],
+            "apiKeyAuth": []
+          }
+        ]
       },
       "head": {
         "operationId": "HeadTodo",
         "summary": "Check if todo exists",
-        "tags": ["todo"],
+        "tags": ["todos"],
         "parameters": [
           {
             "name": "todoId",
@@ -1485,12 +1559,19 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "options": {
         "operationId": "optionsTodo",
         "summary": "Get allowed methods for todo resource",
-        "tags": ["todo"],
+        "description": "Public compatibility endpoint retained for existing consumers.",
+        "deprecated": true,
+        "tags": ["todos"],
         "parameters": [
           {
             "name": "todoId",
@@ -1583,12 +1664,13 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": []
       },
       "put": {
         "operationId": "PutTodo",
         "summary": "Replace todo completely",
-        "tags": ["todo"],
+        "tags": ["todos"],
         "parameters": [
           {
             "name": "todoId",
@@ -1684,12 +1766,17 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "patch": {
         "operationId": "UpdateTodo",
         "summary": "Update todo",
-        "tags": ["todo"],
+        "tags": ["todos"],
         "parameters": [
           {
             "name": "todoId",
@@ -1785,14 +1872,19 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/todos/{todoId}/subtodos/query": {
       "post": {
         "operationId": "QuerySubTodo",
         "summary": "Query subtodos for a specific todo",
-        "tags": ["todo"],
+        "tags": ["todos"],
         "parameters": [
           {
             "name": "todoId",
@@ -1928,14 +2020,19 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/todos/query": {
       "post": {
         "operationId": "QueryTodo",
         "summary": "Query todos with advanced search criteria",
-        "tags": ["todo"],
+        "tags": ["todos"],
         "parameters": [
           {
             "name": "limit",
@@ -2049,14 +2146,19 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/todos/{todoId}/status": {
       "put": {
         "operationId": "UpdateTodoStatus",
         "summary": "Update todo status",
-        "tags": ["todo"],
+        "tags": ["todos"],
         "parameters": [
           {
             "name": "todoId",
@@ -2190,10 +2292,20 @@
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     }
   },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
   "components": {
     "responses": {
       "RegisterAccountSuccess": {
@@ -4515,6 +4627,30 @@
         },
         "required": ["value"],
         "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "name": "X-API-Key",
+        "in": "header"
+      },
+      "oauth2Auth": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://identity.example.test/authorize",
+            "tokenUrl": "https://identity.example.test/token",
+            "scopes": {
+              "tokens:write": "Create and refresh access tokens"
+            }
+          }
+        }
       }
     }
   }

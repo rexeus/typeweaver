@@ -32,6 +32,23 @@ This package is typically consumed by generated code. You also use it when autho
 `defineSpec`, `defineOperation`, and `defineResponse`. To get started with generation, see
 [@rexeus/typeweaver](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md).
 
+### API metadata and security
+
+Every `defineSpec` call declares `metadata.title` and `metadata.version`; it may also declare a
+description and reusable tags. Security schemes are generator-neutral discriminated unions for HTTP
+basic/bearer, API keys, OAuth2, and OpenID Connect.
+
+Security requirements use AND within one object and OR between array entries. An omitted resource or
+operation security declaration inherits its parent, `security: []` makes that scope explicitly
+public, and a non-empty array replaces the inherited requirement. These declarations describe the
+contract; they do not enforce authentication.
+
+<!-- docs-example: metadata-security-contract -->
+
+The full authoring shape is typechecked in the
+[metadata/security fixture](../cli/examples/documentation/metadata-security.ts) and specified by
+[ADR 0009](../../docs/adr/0009-api-metadata-and-security-contract.md).
+
 Reusable responses can be specialized without duplicating their common contract:
 
 ```ts
@@ -54,8 +71,8 @@ Imports and the parent response are included in the typechecked
 
 - **HTTP primitives**: `HttpMethod`, `HttpStatusCode`, `IHttpRequest`, `IHttpResponse`,
   `ITypedHttpResponse`.
-- **Spec authoring**: `defineSpec`, `defineOperation`, `defineResponse`, `defineDerivedResponse` —
-  the functional API for declaring your API contracts.
+- **Spec authoring**: `defineSpec`, `defineOperation`, `defineResponse`, `defineDerivedResponse`,
+  metadata, tags, and generator-neutral security declarations.
 - **Type guards**: `isTypedHttpResponse` for runtime discrimination of typed response objects.
 - **Validation**: `IRequestValidator`, `IResponseValidator`, plus `RequestValidationError` and
   `ResponseValidationError` with structured issues.

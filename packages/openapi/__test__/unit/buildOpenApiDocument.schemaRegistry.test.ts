@@ -9,7 +9,7 @@ import {
   aRecursiveTreeNodeSchema,
   aResponseWith,
   aTodoSpecWith,
-  todoApiInfo,
+  todoApiOptions,
 } from "./buildOpenApiDocument.helpers.js";
 
 describe("buildOpenApiDocument schema registry reuse", () => {
@@ -27,7 +27,7 @@ describe("buildOpenApiDocument schema registry reuse", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.components?.schemas).toEqual({
       TodoResponseBody: {
@@ -68,7 +68,7 @@ describe("buildOpenApiDocument schema registry collisions", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
       required: true,
@@ -133,7 +133,7 @@ describe("buildOpenApiDocument schema registry local refs", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/trees"]?.post?.requestBody).toEqual({
       required: true,
@@ -175,7 +175,7 @@ describe("buildOpenApiDocument schema registry local refs", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/trees/{id}"]?.get?.responses["200"]).toEqual(
       {

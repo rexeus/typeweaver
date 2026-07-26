@@ -60,6 +60,10 @@ Three things to notice:
 type Plugin = {
   readonly name: string;
   readonly depends?: readonly string[];
+  readonly validate?: (
+    spec: NormalizedSpec,
+    ctx: PluginValidationContext
+  ) => Effect<readonly Issue[], PluginExecutionError>;
   readonly initialize?: (ctx: PluginContext) => Effect<void, PluginExecutionError>;
   readonly collectResources?: (
     spec: NormalizedSpec
@@ -69,17 +73,22 @@ type Plugin = {
 };
 ```
 
-The four lifecycle stages run in this order, once per `typeweaver generate` invocation:
+The contract exposes five lifecycle stages. Validation is run through the isolated per-call plugin
+registry before a caller enters write-capable generation:
 
-| Stage              | When                                         | Use it for                                                                            |
-| ------------------ | -------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `initialize`       | After plugin discovery, before normalization | Setup that needs the resolved output directory but not the spec                       |
-| `collectResources` | After normalization, before emission         | Transforming the normalized spec (e.g. injecting derived ops)                         |
-| `generate`         | Once the spec is final                       | Writing files via `context.writeFile`                                                 |
-| `finalize`         | After every plugin has generated             | Post-processing, summary output. Failures surface as WARN — they do not fail the run. |
+| Stage              | When                                           | Use it for                                                                            |
+| ------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `validate`         | After normalization, without an output context | Returning structured, stable, side-effect-free diagnostics                            |
+| `initialize`       | After plugin discovery, before normalization   | Setup that needs the resolved output directory but not the spec                       |
+| `collectResources` | After normalization, before emission           | Transforming the normalized spec (e.g. injecting derived ops)                         |
+| `generate`         | Once the spec is final                         | Writing files via `context.writeFile`                                                 |
+| `finalize`         | After every plugin has generated               | Post-processing, summary output. Failures surface as WARN — they do not fail the run. |
 
-All four are optional. The first-party plugins (`types`, `clients`, `server`, `hono`, `aws-cdk`,
-`openapi`) only implement `generate`.
+All five are optional. Existing plugins that only implement `generate` remain source compatible.
+`PluginValidationContext` contains `inputDir` and the read-only user configuration, but deliberately
+has no output directory, writer, template renderer, or generated-file tracker. A validation hook
+returns `Issue` records with a stable code, severity, message, JSON Pointer, optional source
+location and hint, and fixability metadata.
 
 `depends` declares a topological ordering: a plugin with `depends: ["types"]` will not run a stage
 until `types`'s same stage has completed.
@@ -90,6 +99,8 @@ The V2 API is designed for deterministic code generators and exit-independent re
 
 - every hook returns an Effect with `R = never`; plugins provide their own services before returning
   from a hook;
+- contract diagnostics belong in `validate`; failures of the validation process use
+  `PluginExecutionError` with phase `validate`;
 - work whose failure must fail generation belongs in `initialize`, `collectResources`, or
   `generate`;
 - `finalize` is best-effort cleanup: typed failures are logged as warnings, while defects still

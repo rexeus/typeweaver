@@ -1,7 +1,7 @@
 import { openApiPlugin } from "../src/index.js";
 
 openApiPlugin({
-  info: { title: "Typed API", version: "1.0.0" },
+  target: "3.2.0",
   outputPath: "docs/openapi.json",
 });
 
@@ -10,3 +10,6 @@ openApiPlugin("invalid");
 
 // @ts-expect-error The output path is a string when present.
 openApiPlugin({ outputPath: 42 });
+
+// @ts-expect-error Only the documented OpenAPI profiles are accepted.
+openApiPlugin({ target: "3.1.1" });
