@@ -95,7 +95,7 @@ the progress log with the relevant commit or artifact.
       with stable diagnostic codes.
   - Verify: both generated profiles pass the declared validator matrix; warning registry
     exhaustiveness tests pass.
-- [ ] OpenAPI's documented support matrix explicitly distinguishes supported, lossy, and
+- [x] OpenAPI's documented support matrix explicitly distinguishes supported, lossy, and
       out-of-scope features. It does not claim bidirectional Zod/OpenAPI/Effect Schema
       round-tripping.
   - Verify: `pnpm docs:check` and the OpenAPI package tests pass.
@@ -253,6 +253,7 @@ into general repository gardening.
 | Scoped-service documentation process tests inherit Vitest's 5-second timeout and fail under full-workspace contention | Baseline `pnpm test` timed out at `packages/cli/__test__/pluginAuthoring.serviceFixture.test.ts:93`; the same test passed sequentially in 2.228 seconds                  | Run the focused test, the root `pnpm test`, and the complete baseline gate under Node 24 | 1     | DONE   |
 | Contributor guidance was ignored and therefore absent from clean checkouts                                            | `.gitignore` explicitly listed `AGENTS.md`; `git check-ignore -v AGENTS.md` resolved to `.gitignore:8`                                                                   | Track `AGENTS.md` and make `pnpm docs:check` verify its manifest-derived toolchain facts | 1     | DONE   |
 | The public client example passed an unsupported request field                                                         | The new TypeScript fixture rejected `CreateTodoRequestCommand.body.status`; the generated request accepts `title`, `description`, `dueDate`, `tags`, and `priority` only | Typecheck the corrected example against regenerated integration output                   | 1     | DONE   |
+| OpenAPI contract assertions exceeded the integration test function-size limit                                         | `pnpm lint` reported `max-lines-per-function` at `generatedOpenApiFixture.test.ts:46-47` after adding metadata/security fixture assertions                               | Extract a focused contract-projection assertion helper; rerun OpenAPI tests and lint     | 2     | DONE   |
 
 ## Stop conditions
 
@@ -314,3 +315,4 @@ Append one line after every iteration. Never rewrite earlier entries.
 | 11        | Stage 2  | Completed Plan 002 Work Package 2 at `a83c79b4`                                 | Core 151/151 and Gen 318/318 tests, 14/14 generated-project tasks, 225-file generated-fixture verification, 23/23 workspace typecheck tasks, docs, lint, format, Effect diagnostics, and Changeset status pass                                                                | Add the side-effect-free plugin validation phase with stable structured issues                    |
 | 12        | Stage 2  | Completed Plan 002 Work Package 3 at `f4fd035b`                                 | Gen 325/325 tests and package typecheck pass; the negative tsc fixture rejects `writeFile`; registry coverage proves dependency order, issue order, typed failure, spans, isolation, optional hooks, and sequential `TW-SPEC-*` codes                                         | Add explicit, independently validated OpenAPI 3.1.2 and 3.2.0 target profiles                     |
 | 13        | Stage 2  | Completed Plan 002 Work Package 4 at `567724ef`                                 | OpenAPI 126/126 tests and package typecheck pass; both profiles validate against the version-aware official-schema validator, the 3.1.2 generated fixture also passes Spectral, 225 fixtures reproduce, and docs, lint, format, Effect diagnostics, and Changeset status pass | Publish the honest OpenAPI support matrix and executable profile documentation                    |
+| 14        | Stage 2  | Completed Plan 002 Work Package 5 at `f91399f1`                                 | Documentation characterization failed on stale 3.1.1, missing boundary tables, and absent non-goals before the change; afterward docs checks, all 129 OpenAPI tests, lint, and format pass, including the extracted fixture assertion helper                                  | Run the complete Stage 2 local gate, then deliver the stacked PR                                  |

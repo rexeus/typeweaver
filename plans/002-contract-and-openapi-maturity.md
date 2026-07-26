@@ -232,7 +232,7 @@ and evidence in `GOAL.md`.
 | 2. Authoring and normalized metadata/security  | DONE   | `a83c79b` | Core 151/151 and Gen 318/318 tests pass; generated 225-file fixture is reproducible; workspace typecheck, docs, lint, format, Effect diagnostics, and Changeset status pass               |
 | 3. Side-effect-free plugin validation          | DONE   | `f4fd035` | Gen 325/325 and package typecheck pass; negative tsc fixture rejects write access; registry tests prove deterministic ordering, typed failures, spans, isolation, and stable codes        |
 | 4. Explicit OpenAPI target profiles            | DONE   | `567724e` | OpenAPI 126/126 tests and package typecheck pass; both profiles pass the official-schema validator, the 3.1.2 generated fixture passes Spectral, and all 225 generated fixtures reproduce |
-| 5. Honest support matrix                       | TODO   |           |                                                                                                                                                                                           |
+| 5. Honest support matrix                       | DONE   | `f91399f` | Documentation characterization failed before the change; afterward docs checks and all 129 OpenAPI tests pass with supported, lossy-with-diagnostic, and out-of-scope boundaries enforced |
 | 6. Stacked stage delivery                      | TODO   |           |                                                                                                                                                                                           |
 
 ## Test plan
@@ -253,7 +253,7 @@ and evidence in `GOAL.md`.
 - [x] Plugin validation is Effect-native, deterministic, and write-incapable.
 - [x] Stable issue registries are exhaustive.
 - [x] Both OpenAPI targets pass an honest validator matrix.
-- [ ] Docs state the support boundary without overclaiming.
+- [x] Docs state the support boundary without overclaiming.
 - [x] Public changes have Changesets and migrations.
 - [ ] Full local gate and all GitHub checks pass.
 - [ ] Stage 2 PR targets the Stage 1 branch, is open, green, and unmerged.
