@@ -329,8 +329,10 @@ When set to `true`, error handlers use sensible defaults (400/500 responses). Wh
 errors fall through to the next handler in the chain (except `handleResponseValidationErrors`, where
 `false` means the invalid response is returned as-is — validation still runs for field stripping,
 but invalid responses pass through unchanged). When set to a function, it receives the error and
-`ServerContext` and must return an `IHttpResponse`. If a custom error handler throws, the framework
-reports that handler failure through `onError` and falls through gracefully to the next handler.
+`ServerContext` and must return an `IHttpResponse`. The context exposes the incoming Fetch
+`AbortSignal` as `ctx.signal` for cancellation-aware work. If a custom error handler throws, the
+framework reports that handler failure through `onError` and falls through gracefully to the next
+handler.
 
 ### 🚨 Error Handling
 

@@ -1083,6 +1083,28 @@ describe("TypeweaverApp typed response error handling", () => {
   });
 });
 
+describe("TypeweaverApp request cancellation context", () => {
+  test("forwards the Fetch request signal to the matched handler", async () => {
+    let observedSignal: AbortSignal | undefined;
+    const controller = new AbortController();
+    const app = createApp(undefined, {
+      handleGetTodos: async (_request, context) => {
+        observedSignal = context.signal;
+        return { statusCode: 200, body: [] };
+      },
+    });
+
+    const response = await app.fetch(
+      new Request(`${BASE_URL}/todos`, { signal: controller.signal })
+    );
+
+    expect(response.status).toBe(200);
+    expect(observedSignal?.aborted).toBe(false);
+    controller.abort();
+    expect(observedSignal?.aborted).toBe(true);
+  });
+});
+
 describe("TypeweaverApp unknown error handling", () => {
   test("should handle unknown errors with custom handler", async () => {
     const app = createApp(

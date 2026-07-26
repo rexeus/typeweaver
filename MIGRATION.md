@@ -248,6 +248,9 @@ If you imported the generator programmatically rather than through the CLI:
 - Generated client `ApiClientProps` add optional `defaultHeaders`, `defaultQuery`, and `signal`
   fields. They require no migration; command values override defaults, and an external signal is
   combined with `timeoutMs` when both are present.
+- Generated server `ServerContext` now includes the incoming Fetch request's `signal`. Existing
+  handlers require no migration; cancellation-aware handlers and adapters can forward this
+  `AbortSignal` to their runtime boundary.
 - Custom `TypeweaverRouter` subclasses now call the protected `route` method with one exported
   `TypeweaverRouteOptions` object instead of the previous positional arguments.
 - Custom `TypeweaverHono` subclasses now call the protected `handleRequest` method with one exported

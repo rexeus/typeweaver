@@ -38,6 +38,7 @@ export function createServerContext(
       ...(overrides.header ? { header: overrides.header } : {}),
       ...(overrides.query ? { query: overrides.query } : {}),
     },
+    signal: new AbortController().signal,
     state: new StateMap(),
     route: undefined,
   };

@@ -187,6 +187,10 @@ in a temporary consumer.
 
 ### 4. Add optional Effect-native server handlers
 
+**Status:** IN PROGRESS — the Fetch-native server now exposes request cancellation through
+`ServerContext.signal`; the optional adapter package, generated handler types, lifecycle behavior,
+and external-consumer proof remain in progress.
+
 Create `packages/effect` published as `@rexeus/typeweaver-effect`. Build on the existing
 server/router contract rather than generating a second server stack. The public handler shape should
 preserve request/response specificity and expose typed failure and service requirements:

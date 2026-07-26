@@ -50,6 +50,9 @@ export type ServerContext<
   /** The incoming HTTP request in typeweaver format. */
   readonly request: IHttpRequest;
 
+  /** The Fetch request signal for cancellation-aware handlers and adapters. */
+  readonly signal: AbortSignal;
+
   /** Type-safe key-value store for sharing data between middleware and handlers. */
   readonly state: StateMap<TState>;
 
