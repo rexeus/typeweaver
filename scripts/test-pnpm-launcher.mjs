@@ -56,6 +56,21 @@ assert.deepEqual(
   }
 );
 
+const environmentSelectedLauncher = spawnPnpmSync({
+  args: ["--version"],
+  encoding: "utf8",
+  env: {
+    ...process.env,
+    npm_execpath: process.execPath,
+  },
+});
+assert.equal(
+  environmentSelectedLauncher.status,
+  0,
+  environmentSelectedLauncher.stderr
+);
+assert.equal(environmentSelectedLauncher.stdout.trim(), process.version);
+
 const activePnpm = spawnPnpmSync({
   args: ["--version"],
   encoding: "utf8",

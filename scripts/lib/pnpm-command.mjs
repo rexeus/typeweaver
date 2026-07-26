@@ -32,7 +32,10 @@ export const resolvePnpmInvocation = ({
 };
 
 export const spawnPnpmSync = ({ args, ...options }) => {
-  const invocation = resolvePnpmInvocation({ args });
+  const invocation = resolvePnpmInvocation({
+    args,
+    npmExecPath: options.env?.npm_execpath ?? process.env.npm_execpath,
+  });
   return spawnSync(invocation.command, invocation.args, {
     ...options,
     shell: invocation.shell,
