@@ -16,7 +16,7 @@ releases.
 ## Migrating from 0.12.x to 1.0.x
 
 Version 1.0.0 completes the migration to **Effect** as typeweaver's runtime foundation. The change
-is internal-architectural but breaks three surfaces:
+is internal-architectural but breaks four surfaces:
 
 1. The **plugin API** (V1 class-based → V2 Effect-native records). Affects anyone who built a custom
    plugin.
@@ -24,9 +24,11 @@ is internal-architectural but breaks three surfaces:
    relied on the previous error format.
 3. A small set of **programmatic extension APIs** now use options objects. This affects direct
    `NetworkError` construction and custom subclasses of the generated server and Hono router bases.
+4. The **Zod-to-TypeScript converter** rejects unsupported schema shapes instead of silently
+   generating `unknown`.
 
 The **spec authoring API** (`defineSpec` / `defineOperation` / `defineResponse`) is **unchanged**.
-Existing specs and Zod schemas keep working byte-for-byte.
+Existing specs using supported Zod schemas keep working byte-for-byte.
 
 ### 1. Plugin API V1 → V2 (BREAKING — third-party plugin authors)
 
@@ -212,7 +214,31 @@ and Hono support code to the options-object APIs described above, so expect sour
 generated request, response, validation, and runtime behavior remain compatible. The
 `test-utils/src/test-project/output` golden fixture verifies the exact 1.0 output on every build.
 
-### 5. Migration Checklist (0.12.x to 1.0.x)
+### 5. Unsupported Zod schemas fail explicitly
+
+`@rexeus/typeweaver-zod-to-ts` previously converted `z.lazy()`, `z.templateLiteral()`, `z.custom()`,
+and `z.transform()` to TypeScript `unknown`. This hid contract loss in generated output. These
+schemas now throw the exported `UnsupportedZodTypeError`, including when one is nested or used as a
+pipe output.
+
+The error has stable fields for programmatic handling:
+
+```ts
+import { TsTypeNode, UnsupportedZodTypeError } from "@rexeus/typeweaver-zod-to-ts";
+
+try {
+  TsTypeNode.fromZod(schema);
+} catch (error: unknown) {
+  if (error instanceof UnsupportedZodTypeError) {
+    console.error(error.code, error.schemaKind, error.reason);
+  }
+}
+```
+
+Replace unsupported shapes with an equivalent supported schema before generation. `z.unknown()`
+remains supported and still generates TypeScript `unknown`.
+
+### 6. Migration Checklist (0.12.x to 1.0.x)
 
 For **end users** (you use the CLI but don't author plugins):
 
@@ -220,6 +246,8 @@ For **end users** (you use the CLI but don't author plugins):
 - [ ] Update any scripts that parsed log lines (timestamps and fiber tags are gone).
 - [ ] Regenerate output with `npx typeweaver generate` and review the expected options-object source
       diffs in the generated client, server, and Hono support code.
+- [ ] Replace any `z.lazy()`, `z.templateLiteral()`, `z.custom()`, or `z.transform()` schema that
+      reaches TypeScript generation with a supported, statically inspectable schema.
 
 For **plugin authors**:
 

@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import { EmptyZodLiteralError } from "../../src/errors/EmptyZodLiteralError.js";
 import { UnsupportedLiteralValueError } from "../../src/errors/UnsupportedLiteralValueError.js";
+import { UnsupportedZodTypeError } from "../../src/index.js";
 import { fromZod } from "../../src/tsTypeGenerator.js";
 import { print } from "../../src/tsTypePrinter.js";
 
@@ -437,8 +438,10 @@ describe("wrapper schemas", () => {
     expect(toTs(z.string().pipe(z.coerce.number()))).toBe("number");
   });
 
-  test("maps pipe schemas with unsupported outputs to unknown", () => {
-    expect(toTs(z.string().pipe(z.transform(value => value)))).toBe("unknown");
+  test("rejects pipe schemas with unsupported transform outputs", () => {
+    expect(() =>
+      toTs(z.string().pipe(z.transform(value => value)))
+    ).toThrowError(UnsupportedZodTypeError);
   });
 
   test("maps pipe object fields to optional properties from optional outputs", () => {
@@ -452,10 +455,10 @@ describe("wrapper schemas", () => {
     ).toBe(["{", "    value?: string | undefined;", "}"].join("\n"));
   });
 
-  test("maps pipe object fields with unsupported outputs to unknown", () => {
-    expect(
+  test("rejects object fields with unsupported transform outputs", () => {
+    expect(() =>
       toTs(z.object({ value: z.string().pipe(z.transform(value => value)) }))
-    ).toBe(["{", "    value: unknown;", "}"].join("\n"));
+    ).toThrowError(UnsupportedZodTypeError);
   });
 
   test("maps success schemas to boolean", () => {
@@ -572,20 +575,53 @@ describe("file and readonly wrapper schemas", () => {
 
 describe("unsupported schemas", () => {
   test.each([
-    { scenario: "z.lazy()", schema: z.lazy(() => z.string()) },
+    {
+      scenario: "z.lazy()",
+      schema: z.lazy(() => z.string()),
+      schemaKind: "lazy",
+      reason: "recursive schemas require named TypeScript declarations",
+    },
     {
       scenario: "z.templateLiteral()",
       schema: z.templateLiteral(["hello ", z.string()]),
+      schemaKind: "template-literal",
+      reason: "template-literal schemas are not represented",
     },
-    { scenario: "z.custom()", schema: z.custom() },
+    {
+      scenario: "z.custom()",
+      schema: z.custom(),
+      schemaKind: "custom",
+      reason: "custom validators do not expose",
+    },
     {
       scenario: "z.transform()",
       schema: z.string().transform(value => value.length),
+      schemaKind: "transform",
+      reason: "transforms do not expose",
     },
   ])(
-    "falls back to unknown for unsupported $scenario schemas",
-    ({ schema }) => {
-      expect(toTs(schema)).toBe("unknown");
+    "$scenario throws a stable actionable error",
+    ({ schema, schemaKind, reason }) => {
+      const error = captureError(() => toTs(schema));
+
+      expect(error).toBeInstanceOf(UnsupportedZodTypeError);
+      expect(error).toEqual(
+        expect.objectContaining({
+          code: "UNSUPPORTED_ZOD_TYPE",
+          schemaKind,
+          reason: expect.stringContaining(reason),
+        })
+      );
+      if (!(error instanceof UnsupportedZodTypeError)) {
+        throw new Error("Expected UnsupportedZodTypeError");
+      }
+      expect(error.message).toContain(
+        "Restructure the schema to a supported shape"
+      );
     }
   );
+
+  test("continues to support intentional z.unknown()", () => {
+    expect(toTs(z.unknown())).toBe("unknown");
+  });
 });

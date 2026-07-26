@@ -53,6 +53,7 @@ import {
 } from "zod/v4/core";
 import { EmptyZodLiteralError } from "./errors/EmptyZodLiteralError.js";
 import { UnsupportedLiteralValueError } from "./errors/UnsupportedLiteralValueError.js";
+import { UnsupportedZodTypeError } from "./errors/UnsupportedZodTypeError.js";
 import type {
   Identifier,
   StringLiteral,
@@ -427,8 +428,10 @@ function fromZodPromise(zodPromise: $ZodPromise): TypeNode {
 }
 
 function fromZodLazy(_zodLazy: $ZodLazy): TypeNode {
-  // TODO: handle zodLazy
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+  throw new UnsupportedZodTypeError(
+    "lazy",
+    "recursive schemas require named TypeScript declarations, which this converter does not emit"
+  );
 }
 
 function fromZodOptional(zodOptional: $ZodOptional): TypeNode {
@@ -481,18 +484,24 @@ function withoutUndefined(
 function fromZodTemplateLiteral(
   _zodTemplateLiteral: $ZodTemplateLiteral
 ): TypeNode {
-  // TODO: handle zodTemplateLiteral
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+  throw new UnsupportedZodTypeError(
+    "template-literal",
+    "template-literal schemas are not represented by the current TypeScript AST generator"
+  );
 }
 
 function fromZodCustom(_zodCustom: $ZodCustom): TypeNode {
-  // TODO: handle zodCustom
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+  throw new UnsupportedZodTypeError(
+    "custom",
+    "custom validators do not expose a statically inspectable output type"
+  );
 }
 
 function fromZodTransform(_zodTransform: $ZodTransform): TypeNode {
-  // TODO: handle zodTransform
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
+  throw new UnsupportedZodTypeError(
+    "transform",
+    "transforms do not expose a statically inspectable output type"
+  );
 }
 
 function fromZodNonOptional(zodNonOptional: $ZodNonOptional): TypeNode {
