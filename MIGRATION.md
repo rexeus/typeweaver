@@ -15,7 +15,7 @@ lines.
 
 ## Migrating from 0.12.x to 0.13.x
 
-Version 0.13.0 completes the migration to **Effect** as typeweaver's runtime foundation. The change
+Version 0.13.0 completes the migration to **Effect** as TypeWeaver's runtime foundation. The change
 is internal-architectural but breaks three surfaces:
 
 1. The **plugin API** (V1 class-based → V2 Effect-native records). Affects anyone who built a custom
