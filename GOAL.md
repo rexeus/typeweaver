@@ -82,11 +82,11 @@ the progress log with the relevant commit or artifact.
 
 ### Stage 2: Contract and OpenAPI maturity
 
-- [ ] The authoring and normalized models expose generator-neutral API metadata and a first-class
+- [x] The authoring and normalized models expose generator-neutral API metadata and a first-class
       security contract with documented inheritance and explicit public-operation semantics.
   - Verify: core/gen unit tests, type tests, generated fixtures, and the accepted contract ADR from
     Plan 002 all agree.
-- [ ] The plugin contract has a side-effect-free validation phase with stable, structured issues and
+- [x] The plugin contract has a side-effect-free validation phase with stable, structured issues and
       no write-capable validation context.
   - Verify: compile-time context tests and PluginRegistry lifecycle tests pass; existing plugins
     remain source compatible unless a documented breaking change is intentional.
@@ -312,3 +312,4 @@ Append one line after every iteration. Never rewrite earlier entries.
 | 9         | Stage 1  | Delivered Stage 1 as open ready PR #209 at exact head `4be4d317`                | The PR targets `main`, remains unmerged, and quality-check, windows-security, CodeQL, and both Socket checks passed at the recorded head                                                                                                  | Start Plan 002 Work Package 1 from the exact Stage 1 head                                         |
 | 10        | Stage 2  | Accepted the generator-neutral metadata and security contract in ADR 0009       | Core type characterization failed on the absent public fields/types and Gen runtime characterization failed on absent normalized metadata/security before behavior changed; Core 150/150, Gen 303/303, and docs checks pass after the ADR | Implement the accepted authoring and normalized contract with the characterized inheritance tests |
 | 11        | Stage 2  | Completed Plan 002 Work Package 2 at `a83c79b4`                                 | Core 151/151 and Gen 318/318 tests, 14/14 generated-project tasks, 225-file generated-fixture verification, 23/23 workspace typecheck tasks, docs, lint, format, Effect diagnostics, and Changeset status pass                            | Add the side-effect-free plugin validation phase with stable structured issues                    |
+| 12        | Stage 2  | Completed Plan 002 Work Package 3 at `f4fd035b`                                 | Gen 325/325 tests and package typecheck pass; the negative tsc fixture rejects `writeFile`; registry coverage proves dependency order, issue order, typed failure, spans, isolation, optional hooks, and sequential `TW-SPEC-*` codes     | Add explicit, independently validated OpenAPI 3.1.2 and 3.2.0 target profiles                     |

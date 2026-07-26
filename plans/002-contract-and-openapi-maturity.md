@@ -230,7 +230,7 @@ and evidence in `GOAL.md`.
 | ---------------------------------------------- | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 1. Characterize and design the public contract | DONE   | `dc6251a` | Core type and Gen runtime characterizations failed before behavior changed; ADR 0009 fixes the accepted shape and inheritance table; Core 150/150, Gen 303/303, and docs checks pass |
 | 2. Authoring and normalized metadata/security  | DONE   | `a83c79b` | Core 151/151 and Gen 318/318 tests pass; generated 225-file fixture is reproducible; workspace typecheck, docs, lint, format, Effect diagnostics, and Changeset status pass          |
-| 3. Side-effect-free plugin validation          | TODO   |           |                                                                                                                                                                                      |
+| 3. Side-effect-free plugin validation          | DONE   | `f4fd035` | Gen 325/325 and package typecheck pass; negative tsc fixture rejects write access; registry tests prove deterministic ordering, typed failures, spans, isolation, and stable codes   |
 | 4. Explicit OpenAPI target profiles            | TODO   |           |                                                                                                                                                                                      |
 | 5. Honest support matrix                       | TODO   |           |                                                                                                                                                                                      |
 | 6. Stacked stage delivery                      | TODO   |           |                                                                                                                                                                                      |
@@ -250,7 +250,7 @@ and evidence in `GOAL.md`.
 
 - [x] The accepted ADR and implementation agree on all target-contract semantics.
 - [x] Security is generator-neutral and normalized once.
-- [ ] Plugin validation is Effect-native, deterministic, and write-incapable.
+- [x] Plugin validation is Effect-native, deterministic, and write-incapable.
 - [ ] Stable issue registries are exhaustive.
 - [ ] Both OpenAPI targets pass an honest validator matrix.
 - [ ] Docs state the support boundary without overclaiming.
