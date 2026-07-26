@@ -4,6 +4,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import {
   parseChangesetReleases,
+  validateReleasePolicy,
   validateReleaseVersionContract,
 } from "./lib/release-version-contract.mjs";
 
@@ -57,11 +58,7 @@ const failures = validateReleaseVersionContract({
   changesets,
 });
 
-if (policy.breakingChangeBump !== "minor") {
-  failures.push(
-    "breakingChangeBump must remain minor while TypeWeaver follows a pre-1.0 release line"
-  );
-}
+failures.push(...validateReleasePolicy(policy));
 
 if (failures.length > 0) {
   process.stderr.write(`${failures.join("\n")}\n`);

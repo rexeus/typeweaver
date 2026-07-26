@@ -39,14 +39,27 @@ const validateChangeset = ({
 }) =>
   changeset.releases.flatMap(release => {
     const currentMajor = packageMajors.get(release.name);
-    return release.type === "major" &&
-      currentMajor !== undefined &&
-      currentMajor + 1 > maximumPublishedMajor
+    if (currentMajor === undefined) {
+      return [
+        `${changeset.fileName} references unknown package ${release.name}`,
+      ];
+    }
+    return release.type === "major" && currentMajor + 1 > maximumPublishedMajor
       ? [
           `${changeset.fileName} requests a major release for ${release.name}; use a minor changeset while the release line is capped at ${String(maximumPublishedMajor)}.x`,
         ]
       : [];
   });
+
+export const validateReleasePolicy = ({
+  maximumPublishedMajor,
+  breakingChangeBump,
+}) =>
+  maximumPublishedMajor === 0 && breakingChangeBump !== "minor"
+    ? [
+        "breakingChangeBump must remain minor while TypeWeaver follows a pre-1.0 release line",
+      ]
+    : [];
 
 export const parseChangesetReleases = ({ fileName, content }) => {
   const frontmatter = changesetFrontmatterPattern.exec(content);

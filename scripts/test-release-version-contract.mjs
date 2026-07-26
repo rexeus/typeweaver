@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   parseChangesetReleases,
+  validateReleasePolicy,
   validateReleaseVersionContract,
 } from "./lib/release-version-contract.mjs";
 
@@ -10,12 +11,12 @@ const packages = [
     version: "0.12.0",
   },
 ];
-const changeset = type => ({
+const changeset = (type, name = "@rexeus/typeweaver") => ({
   fileName: "fixture.md",
   releases: parseChangesetReleases({
     fileName: "fixture.md",
     content: `---
-"@rexeus/typeweaver": ${type}
+"${name}": ${type}
 ---
 
 Fixture release.
@@ -53,6 +54,15 @@ assert.match(
 );
 
 assert.match(
+  validateReleaseVersionContract({
+    maximumPublishedMajor: 0,
+    packages,
+    changesets: [changeset("major", "@rexeus/missing")],
+  }).join("\n"),
+  /references unknown package @rexeus\/missing/u
+);
+
+assert.match(
   validatePackageVersion("1.0.0").join("\n"),
   /exceeds the configured release line 0\.x/u
 );
@@ -79,6 +89,22 @@ assert.deepEqual(
     maximumPublishedMajor: 1,
     packages,
     changesets: [changeset("major")],
+  }),
+  []
+);
+
+assert.match(
+  validateReleasePolicy({
+    maximumPublishedMajor: 0,
+    breakingChangeBump: "major",
+  }).join("\n"),
+  /must remain minor/u
+);
+
+assert.deepEqual(
+  validateReleasePolicy({
+    maximumPublishedMajor: 1,
+    breakingChangeBump: "major",
   }),
   []
 );
