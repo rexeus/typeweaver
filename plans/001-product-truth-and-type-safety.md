@@ -200,13 +200,13 @@ the PR URL and evidence in `GOAL.md`.
 
 ## Work package evidence
 
-| Work package                           | Status | Commit     | Evidence                                                                                                                           |
-| -------------------------------------- | ------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Product vision and repository truth | DONE   | `62856a3d` | `pnpm docs:check`, `pnpm format:check`, and `pnpm lint` pass; both required stale-state searches return no matches                 |
-| 2. Executable public documentation     | DONE   | `31ad8594` | Nine declared fixture groups and the invalid-example self-test pass through `pnpm docs:check`; `pnpm typecheck` passes 23/23 tasks |
-| 3. Honest unsupported-schema failures  | TODO   |            |                                                                                                                                    |
-| 4. Public HTTP body boundary           | TODO   |            |                                                                                                                                    |
-| 5. Stage reconciliation and delivery   | TODO   |            |                                                                                                                                    |
+| Work package                           | Status | Commit     | Evidence                                                                                                                                               |
+| -------------------------------------- | ------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1. Product vision and repository truth | DONE   | `62856a3d` | `pnpm docs:check`, `pnpm format:check`, and `pnpm lint` pass; both required stale-state searches return no matches                                     |
+| 2. Executable public documentation     | DONE   | `31ad8594` | Nine declared fixture groups and the invalid-example self-test pass through `pnpm docs:check`; `pnpm typecheck` passes 23/23 tasks                     |
+| 3. Honest unsupported-schema failures  | DONE   | `6c78fba8` | Six formerly silent fallback cases now throw the exported stable error; 121/121 tests and package typecheck pass; 225 generated fixtures are unchanged |
+| 4. Public HTTP body boundary           | TODO   |            |                                                                                                                                                        |
+| 5. Stage reconciliation and delivery   | TODO   |            |                                                                                                                                                        |
 
 ## Test plan
 
@@ -222,7 +222,7 @@ the PR URL and evidence in `GOAL.md`.
 - [ ] Work packages 1 through 5 are complete with evidence.
 - [ ] No unchecked public code example is presented as supported.
 - [ ] No false performance claim remains.
-- [ ] Unsupported schema generation fails with stable diagnostics.
+- [x] Unsupported schema generation fails with stable diagnostics.
 - [ ] Public HTTP body defaults are not `any`.
 - [ ] Breaking public changes have Changesets and migration notes.
 - [ ] Full local gate and all GitHub checks pass.
