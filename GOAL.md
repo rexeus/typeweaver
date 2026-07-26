@@ -248,9 +248,9 @@ Promote a finding into a stage only when it:
 Otherwise leave it for human review. Discovery must deepen the agreed product milestone, not turn it
 into general repository gardening.
 
-| Finding    | Evidence | Proposed verification | Stage | Status |
-| ---------- | -------- | --------------------- | ----- | ------ |
-| _None yet_ |          |                       |       |        |
+| Finding                                                                                                               | Evidence                                                                                                                                                | Proposed verification                                                                    | Stage | Status      |
+| --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ----- | ----------- |
+| Scoped-service documentation process tests inherit Vitest's 5-second timeout and fail under full-workspace contention | Baseline `pnpm test` timed out at `packages/cli/__test__/pluginAuthoring.serviceFixture.test.ts:93`; the same test passed sequentially in 2.228 seconds | Run the focused test, the root `pnpm test`, and the complete baseline gate under Node 24 | 1     | IN PROGRESS |
 
 ## Stop conditions
 
@@ -284,11 +284,11 @@ Human approval is required. Never execute autonomously:
 
 ## Stage evidence
 
-| Stage | Status | Branch                               | Head | PR  | Required checks | Evidence report |
-| ----- | ------ | ------------------------------------ | ---- | --- | --------------- | --------------- |
-| 1     | TODO   | `feat/product-truth-and-type-safety` |      |     |                 |                 |
-| 2     | TODO   | `feat/contract-and-openapi-maturity` |      |     |                 |                 |
-| 3     | TODO   | `feat/developer-surfaces`            |      |     |                 |                 |
+| Stage | Status      | Branch                               | Head | PR  | Required checks | Evidence report |
+| ----- | ----------- | ------------------------------------ | ---- | --- | --------------- | --------------- |
+| 1     | IN PROGRESS | `feat/product-truth-and-type-safety` |      |     |                 |                 |
+| 2     | TODO        | `feat/contract-and-openapi-maturity` |      |     |                 |                 |
+| 3     | TODO        | `feat/developer-surfaces`            |      |     |                 |                 |
 
 Status values: `TODO`, `IN PROGRESS`, `DONE`, or `BLOCKED: <reason>`.
 
@@ -296,6 +296,8 @@ Status values: `TODO`, `IN PROGRESS`, `DONE`, or `BLOCKED: <reason>`.
 
 Append one line after every iteration. Never rewrite earlier entries.
 
-| Iteration | Stage    | Change                                             | Evidence                                                | Next action                                                   |
-| --------- | -------- | -------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------- |
-| 0         | Planning | Goal and three-stage roadmap created at `3c97d402` | Planning artifacts only; implementation has not started | Merge the planning PR, then start Stage 1 from updated `main` |
+| Iteration | Stage    | Change                                                                          | Evidence                                                                                                                                                                          | Next action                                                                                     |
+| --------- | -------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 0         | Planning | Goal and three-stage roadmap created at `3c97d402`                              | Planning artifacts only; implementation has not started                                                                                                                           | Merge the planning PR, then start Stage 1 from updated `main`                                   |
+| 1         | Stage 1  | Started baseline recovery for process-backed scoped-service documentation tests | Full baseline reached `pnpm test`; the scoped-service typecheck exceeded Vitest's default 5-second timeout under workspace contention after passing sequentially in 2.228 seconds | Apply the existing 15-second CLI process-test budget and rerun focused and full baseline gates  |
+| 2         | Stage 1  | Applied the established 15-second budget to both scoped-service process tests   | Focused suite passed 3/3 tests; the previously failing root `pnpm test` passed all 23 Turbo tasks                                                                                 | Commit the baseline repair and reproduce the complete baseline gate from the clean stage branch |
