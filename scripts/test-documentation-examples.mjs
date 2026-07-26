@@ -83,6 +83,28 @@ try {
     `${groupId}: documents must be an array`,
     `${groupId}: fixtures must be an array`,
   ]);
+
+  for (const invalidTsconfig of [undefined, 42]) {
+    writeJson(manifestPath, {
+      version: 1,
+      ...(invalidTsconfig === undefined ? {} : { tsconfig: invalidTsconfig }),
+      groups: [
+        {
+          id: groupId,
+          documents: ["README.md"],
+          fixtures: ["examples/invalid.ts"],
+        },
+      ],
+    });
+    const invalidTsconfigResult = verifyDocumentationExamples({
+      workspaceRoot: fixtureRoot,
+      manifestPath,
+      requiredGroupIds: [groupId],
+    });
+    assert.deepEqual(invalidTsconfigResult.failures, [
+      `${manifestPath}: tsconfig must be a non-empty string`,
+    ]);
+  }
 } finally {
   rmSync(fixtureRoot, { recursive: true });
 }

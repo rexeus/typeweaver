@@ -79,6 +79,12 @@ const validateManifest = (manifest, manifestPath, requiredGroupIds) => {
     manifest.version === 1
       ? []
       : [`${manifestPath} has unsupported version ${String(manifest.version)}`];
+  const tsconfig = isNonEmptyString(manifest.tsconfig)
+    ? manifest.tsconfig
+    : undefined;
+  if (tsconfig === undefined) {
+    failures.push(`${manifestPath}: tsconfig must be a non-empty string`);
+  }
   const validatedGroups = Array.isArray(manifest.groups)
     ? manifest.groups.map(validateGroup)
     : [];
@@ -107,7 +113,7 @@ const validateManifest = (manifest, manifestPath, requiredGroupIds) => {
       )
   );
 
-  return { failures, groups };
+  return { failures, groups, tsconfig };
 };
 
 const validateGroupFiles = (group, workspaceRoot) => {
@@ -128,8 +134,8 @@ const validateGroupFiles = (group, workspaceRoot) => {
   return [...documentFailures, ...fixtureFailures];
 };
 
-const parseTypeScriptConfig = (workspaceRoot, manifest) => {
-  const tsconfigPath = path.resolve(workspaceRoot, manifest.tsconfig);
+const parseTypeScriptConfig = (workspaceRoot, tsconfig) => {
+  const tsconfigPath = path.resolve(workspaceRoot, tsconfig);
   const configFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
   if (configFile.error !== undefined) {
     return {
@@ -156,7 +162,7 @@ const parseTypeScriptConfig = (workspaceRoot, manifest) => {
 const validateFixtureInclusion = (
   groups,
   workspaceRoot,
-  manifest,
+  tsconfig,
   parsedConfig
 ) => {
   const compiledFiles = new Set(
@@ -169,7 +175,7 @@ const validateFixtureInclusion = (
       )
       .map(
         fixture =>
-          `${group.id}: fixture is not included by ${manifest.tsconfig}: ${fixture}`
+          `${group.id}: fixture is not included by ${tsconfig}: ${fixture}`
       )
   );
 };
@@ -202,7 +208,14 @@ export const verifyDocumentationExamples = ({
       validateGroupFiles(group, workspaceRoot)
     ),
   ];
-  const configResult = parseTypeScriptConfig(workspaceRoot, manifest);
+  if (manifestValidation.tsconfig === undefined) {
+    return { failures, groups: manifestValidation.groups };
+  }
+
+  const configResult = parseTypeScriptConfig(
+    workspaceRoot,
+    manifestValidation.tsconfig
+  );
   failures.push(...configResult.failures);
 
   if (configResult.parsedConfig === undefined) {
@@ -213,7 +226,7 @@ export const verifyDocumentationExamples = ({
     ...validateFixtureInclusion(
       manifestValidation.groups,
       workspaceRoot,
-      manifest,
+      manifestValidation.tsconfig,
       configResult.parsedConfig
     )
   );
