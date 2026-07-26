@@ -51,6 +51,11 @@
       "id": "openapi-options",
       "documents": ["packages/openapi/README.md"],
       "fixtures": ["packages/cli/examples/documentation/openapi-options.ts"]
+    },
+    {
+      "id": "zod-to-ts",
+      "documents": ["MIGRATION.md", "packages/zod-to-ts/README.md"],
+      "fixtures": ["packages/cli/examples/documentation/zod-to-ts.ts"]
     }
   ]
 }

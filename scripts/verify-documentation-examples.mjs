@@ -17,6 +17,7 @@ const requiredGroupIds = [
   "hono-handler",
   "fetch-server-handler",
   "openapi-options",
+  "zod-to-ts",
 ];
 const result = verifyDocumentationExamples({
   workspaceRoot,

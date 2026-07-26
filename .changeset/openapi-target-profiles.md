@@ -1,5 +1,5 @@
 ---
-"@rexeus/typeweaver-openapi": major
+"@rexeus/typeweaver-openapi": minor
 ---
 
 Replace the hard-coded OpenAPI 3.1.1 output with explicit `3.1.2` and `3.2.0` target profiles,

@@ -1,6 +1,6 @@
 ---
-"@rexeus/typeweaver-core": major
-"@rexeus/typeweaver-gen": major
+"@rexeus/typeweaver-core": minor
+"@rexeus/typeweaver-gen": minor
 ---
 
 Require generator-neutral API metadata in `defineSpec`, add first-class HTTP, API-key, OAuth2, and

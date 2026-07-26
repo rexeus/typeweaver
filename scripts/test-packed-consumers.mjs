@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { spawnPnpmSync } from "./lib/pnpm-command.mjs";
 
 const workspaceRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -27,8 +28,6 @@ const contract = JSON.parse(
 const rootPackage = JSON.parse(
   readFileSync(path.join(workspaceRoot, "package.json"), "utf8")
 );
-const pnpmCli = process.env.npm_execpath;
-assert(pnpmCli, "run this verification through pnpm");
 const archiveName = ({ name, version }) =>
   `${name.replace(/^@/, "").replaceAll("/", "-")}-${version}.tgz`;
 const readJson = filePath => JSON.parse(readFileSync(filePath, "utf8"));
@@ -36,7 +35,8 @@ const writeJson = (filePath, value) =>
   writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 
 const run = ({ args, cwd }) => {
-  const result = spawnSync(process.execPath, [pnpmCli, ...args], {
+  const result = spawnPnpmSync({
+    args,
     cwd,
     encoding: "utf8",
     env: process.env,
