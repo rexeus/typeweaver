@@ -48,7 +48,10 @@ const recoveryCases: readonly RecoveryCase[] = [
   { phase: "format", mode: "defect" },
 ];
 
-const emptyDefinition = defineSpec({ resources: {} });
+const emptyDefinition = defineSpec({
+  metadata: { title: "Empty API", version: "1.0.0" },
+  resources: {},
+});
 
 const createWorkspace = (): string => {
   const workspace = fs.mkdtempSync(

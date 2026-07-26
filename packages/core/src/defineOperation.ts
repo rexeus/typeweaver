@@ -1,6 +1,7 @@
 import type { ResponseDefinition } from "./defineResponse.js";
 import type { HttpMethod } from "./HttpMethod.js";
 import type { RequestDefinition } from "./RequestDefinition.js";
+import type { SecurityRequirements } from "./SecurityDefinition.js";
 
 export type OperationDefinition<
   TOperationId extends string = string,
@@ -10,6 +11,12 @@ export type OperationDefinition<
   TRequest extends RequestDefinition = RequestDefinition,
   TResponses extends readonly ResponseDefinition[] =
     readonly ResponseDefinition[],
+  TDescription extends string | undefined = string | undefined,
+  TDeprecated extends boolean | undefined = boolean | undefined,
+  TTags extends readonly string[] | undefined = readonly string[] | undefined,
+  TSecurity extends SecurityRequirements | undefined =
+    | SecurityRequirements
+    | undefined,
 > = {
   /**
    * Must be globally unique within a spec. Used as the base name for
@@ -31,6 +38,10 @@ export type OperationDefinition<
    * Appears in generated OpenAPI descriptions and code comments
    */
   readonly summary: TSummary;
+  readonly description?: TDescription;
+  readonly deprecated?: TDeprecated;
+  readonly tags?: TTags;
+  readonly security?: TSecurity;
   /**
    * Zod schemas defining the shape of incoming data. All parts (header,
    * param, query, body) are optional; omit a key to indicate no constraint
@@ -64,29 +75,8 @@ export type OperationDefinition<
  * });
  * ```
  */
-export const defineOperation = <
-  TOperationId extends string,
-  TPath extends string,
-  TMethod extends HttpMethod,
-  TSummary extends string,
-  TRequest extends RequestDefinition,
-  TResponses extends readonly ResponseDefinition[],
->(
-  definition: OperationDefinition<
-    TOperationId,
-    TPath,
-    TMethod,
-    TSummary,
-    TRequest,
-    TResponses
-  >
-): OperationDefinition<
-  TOperationId,
-  TPath,
-  TMethod,
-  TSummary,
-  TRequest,
-  TResponses
-> => {
+export const defineOperation = <const TDefinition extends OperationDefinition>(
+  definition: TDefinition
+): TDefinition => {
   return definition;
 };

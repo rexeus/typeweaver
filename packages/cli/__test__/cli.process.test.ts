@@ -109,6 +109,7 @@ const writeSpec = (
       "});",
       "",
       "export const spec = defineSpec({",
+      '  metadata: { title: "Health API", version: "1.0.0" },',
       "  resources: {",
       "    health: {",
       "      operations: [",
@@ -229,7 +230,7 @@ const writeEmptySpec = (workspace: string): string => {
     [
       'import { defineSpec } from "@rexeus/typeweaver-core";',
       "",
-      "export const spec = defineSpec({ resources: {} });",
+      'export const spec = defineSpec({ metadata: { title: "Empty API", version: "1.0.0" }, resources: {} });',
       "",
     ].join("\n")
   );

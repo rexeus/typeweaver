@@ -1042,7 +1042,14 @@ describe("buildOpenApiDocument recursive schemas and determinism", () => {
       path: "/todos//",
       responses: [anInlineResponseUsage(aResponseWith())],
     });
-    const resources = [{ name: "Todos", operations: [operation] }];
+    const resources = [
+      {
+        name: "Todos",
+        tags: [],
+        security: { requirements: [], source: "none" as const },
+        operations: [operation],
+      },
+    ];
     const normalizedSpec = aNormalizedSpecWith({ resources });
 
     buildOpenApiDocument(normalizedSpec, todoApiInfo());

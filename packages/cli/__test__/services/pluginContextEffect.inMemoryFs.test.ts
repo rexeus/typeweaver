@@ -10,6 +10,9 @@ import { makeInMemoryFileSystem } from "test-utils/src/effect/index.js";
 import { describe, expect, test } from "vitest";
 
 const emptySpec: NormalizedSpec = {
+  metadata: { title: "Empty API", version: "1.0.0" },
+  securitySchemes: [],
+  security: { requirements: [], source: "none" },
   resources: [],
   responses: [],
   warnings: [],

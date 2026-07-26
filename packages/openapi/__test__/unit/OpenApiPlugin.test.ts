@@ -298,6 +298,8 @@ function anItemsSpec(
     resources: [
       {
         name: "Items",
+        tags: [],
+        security: { requirements: [], source: "none" },
         operations: overrides.operations ?? [
           anOperationWith({
             operationId: "getItem",

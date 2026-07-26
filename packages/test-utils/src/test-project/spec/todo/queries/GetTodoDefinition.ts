@@ -23,6 +23,10 @@ export const GetTodoDefinition = defineOperation({
   },
   method: HttpMethod.GET,
   summary: "Get todo",
+  description:
+    "Returns one todo using an AND-combined bearer and API-key requirement.",
+  tags: ["read"],
+  security: [{ bearerAuth: [], apiKeyAuth: [] }],
   path: "/todos/:todoId",
   responses: [
     defineResponse({

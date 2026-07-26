@@ -17,6 +17,17 @@ types consumed by the CLI orchestrator.
 The normalized model is the generator-neutral center of Typeweaver's
 [one-contract, many-projections](../../VISION.md#one-contract-many-projections) product promise.
 
+Normalization validates API metadata, reusable tags, and named security schemes before plugins run.
+Each normalized resource and operation receives its effective tags and security plus a source
+(`none`, `spec`, `resource`, or `operation`). This preserves the distinction between absent
+security, inherited security, an explicit public `[]`, and a non-empty override.
+
+<!-- docs-example: metadata-security-contract -->
+
+The public authoring input behind this normalized shape is typechecked in the
+[metadata/security fixture](../cli/examples/documentation/metadata-security.ts) and defined by
+[ADR 0009](../../docs/adr/0009-api-metadata-and-security-contract.md).
+
 ---
 
 ## 📥 Installation

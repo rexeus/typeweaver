@@ -25,6 +25,9 @@ const aMinimalGeneratorContext = (outputDir: string): GeneratorContext =>
     inputDir: outputDir,
     config: {},
     normalizedSpec: {
+      metadata: { title: "Plugin Test API", version: "1.0.0" },
+      securitySchemes: [],
+      security: { requirements: [], source: "none" },
       resources: [],
       responses: [],
       warnings: [],

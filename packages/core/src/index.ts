@@ -8,6 +8,8 @@ export * from "./HttpParam.js";
 export * from "./HttpQuery.js";
 export * from "./HttpMethod.js";
 export * from "./HttpStatusCode.js";
+export * from "./ApiMetadata.js";
+export * from "./SecurityDefinition.js";
 export * from "./DuplicateResponseNameError.js";
 export * from "./RequestDefinition.js";
 export * from "./RequestValidationError.js";

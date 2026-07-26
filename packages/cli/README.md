@@ -212,6 +212,7 @@ import { defineSpec } from "@rexeus/typeweaver-core";
 import { GetUserDefinition } from "./user/GetUserDefinition";
 
 export const spec = defineSpec({
+  metadata: { title: "Users API", version: "1.0.0" },
   resources: {
     user: {
       operations: [GetUserDefinition],

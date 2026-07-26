@@ -10,6 +10,11 @@ import { TestAssertionError } from "../errors/index.js";
 import type { OperationDefinition } from "../../src/defineOperation.js";
 import type { ResponseDefinition } from "../../src/defineResponse.js";
 
+const testMetadata = {
+  title: "Core Test API",
+  version: "1.0.0",
+} as const;
+
 const aResponseNamed = (
   name: string,
   overrides: Partial<
@@ -59,6 +64,7 @@ const anAuthoredUserSpec = () => {
     responses: [response] as const,
   });
   const definition = {
+    metadata: testMetadata,
     resources: {
       users: {
         operations: [operation] as const,
@@ -131,13 +137,14 @@ describe("defineSpec authored identity", () => {
 
 describe("defineSpec accepted resource shapes", () => {
   test("accepts a spec with no resources", () => {
-    const spec = defineSpec({ resources: {} });
+    const spec = defineSpec({ metadata: testMetadata, resources: {} });
 
     expect(spec.resources).toEqual({});
   });
 
   test("accepts resources with no operations", () => {
     const spec = defineSpec({
+      metadata: testMetadata,
       resources: {
         users: { operations: [] },
       },
@@ -158,6 +165,7 @@ describe("defineSpec accepted resource shapes", () => {
     });
 
     const spec = defineSpec({
+      metadata: testMetadata,
       resources: {
         users: { operations: [operation] as const },
       },
@@ -169,6 +177,7 @@ describe("defineSpec accepted resource shapes", () => {
   test("accepts globally unique response names across resources", () => {
     expect(() =>
       defineSpec({
+        metadata: testMetadata,
         resources: {
           users: {
             operations: [
@@ -195,6 +204,7 @@ describe("defineSpec duplicate names within a resource", () => {
   test("rejects duplicate response names within a single operation", () => {
     const error = captureThrownError(() => {
       defineSpec({
+        metadata: testMetadata,
         resources: {
           users: {
             operations: [
@@ -221,6 +231,7 @@ describe("defineSpec duplicate names within a resource", () => {
   test("rejects duplicate response names across operations in one resource", () => {
     const error = captureThrownError(() => {
       defineSpec({
+        metadata: testMetadata,
         resources: {
           users: {
             operations: [
@@ -249,6 +260,7 @@ describe("defineSpec duplicate names across resources", () => {
   test("rejects duplicate response names across resources", () => {
     const error = captureThrownError(() => {
       defineSpec({
+        metadata: testMetadata,
         resources: {
           users: {
             operations: [
@@ -279,6 +291,7 @@ describe("defineSpec duplicate names across resources", () => {
   test("rejects distinct but structurally identical response definitions with the same name", () => {
     const error = captureThrownError(() => {
       defineSpec({
+        metadata: testMetadata,
         resources: {
           users: {
             operations: [
@@ -312,6 +325,7 @@ describe("defineSpec shared response identity", () => {
     });
 
     const spec = defineSpec({
+      metadata: testMetadata,
       resources: {
         users: {
           operations: [anOperationReturning("getUser", sharedResponse)],

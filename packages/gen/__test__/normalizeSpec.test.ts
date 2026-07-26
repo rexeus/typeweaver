@@ -122,14 +122,19 @@ const anOperation = (overrides: OperationOverrides = {}) => {
   });
 };
 
+const testMetadata = {
+  title: "Normalization Test API",
+  version: "1.0.0",
+} as const;
+
 const aSpec = (resources: SpecDefinition["resources"]): SpecDefinition => {
-  return defineSpec({ resources });
+  return defineSpec({ metadata: testMetadata, resources });
 };
 
 const aMalformedSpec = (
   resources: SpecDefinition["resources"]
 ): SpecDefinition => {
-  return { resources };
+  return { metadata: testMetadata, resources };
 };
 
 const theOnlyOperationIn = (

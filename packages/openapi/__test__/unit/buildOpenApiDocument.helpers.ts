@@ -60,7 +60,14 @@ export function aTodoSpecWith(
   } = {}
 ): NormalizedSpec {
   return aNormalizedSpecWith({
-    resources: [{ name: "Todos", operations: overrides.operations ?? [] }],
+    resources: [
+      {
+        name: "Todos",
+        tags: [],
+        security: { requirements: [], source: "none" },
+        operations: overrides.operations ?? [],
+      },
+    ],
     responses: overrides.responses ?? [],
   });
 }
@@ -69,6 +76,9 @@ export function aNormalizedSpecWith(
   overrides: Partial<NormalizedSpec> = {}
 ): NormalizedSpec {
   return {
+    metadata: { title: "Todo API", version: "1.0.0" },
+    securitySchemes: [],
+    security: { requirements: [], source: "none" },
     resources: [],
     responses: [],
     warnings: [],
@@ -86,6 +96,12 @@ export function anOperationWith(
     method: "GET" as NormalizedOperation["method"],
     path: "/todos",
     summary: "",
+    deprecated: overrides.deprecated ?? false,
+    tags: overrides.tags ?? [],
+    security: overrides.security ?? {
+      requirements: [],
+      source: "none" as const,
+    },
     responses: [],
     ...overrides,
     request:

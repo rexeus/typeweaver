@@ -51,6 +51,7 @@ export const GetUserDefinition = defineOperation({
 });
 
 export const spec = defineSpec({
+  metadata: { title: "Users API", version: "1.0.0" },
   resources: {
     user: {
       operations: [GetUserDefinition],

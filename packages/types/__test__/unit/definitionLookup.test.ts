@@ -88,6 +88,7 @@ const archiveProject = defineOperation({
 });
 
 const todoAndProjectSpec = defineSpec({
+  metadata: { title: "Todo and Project API", version: "1.0.0" },
   resources: {
     todo: {
       operations: [createTodo, getTodo] as const,
@@ -145,6 +146,7 @@ describe("definitionLookup getOperationDefinition", () => {
 
   test("preserves the exact operation object from the operation array", () => {
     const spec = defineSpec({
+      metadata: { title: "Ordered API", version: "1.0.0" },
       resources: {
         ordered: {
           operations: [createTodo, getTodo] as const,
