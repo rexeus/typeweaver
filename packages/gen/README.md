@@ -14,6 +14,9 @@ Core building blocks for authoring typeweaver plugins: the `Plugin` type, the `d
 `definePluginWithLibCopy` constructors, the normalized resource model, and the lifecycle context
 types consumed by the CLI orchestrator.
 
+The normalized model is the generator-neutral center of Typeweaver's
+[one-contract, many-projections](../../VISION.md#one-contract-many-projections) product promise.
+
 ---
 
 ## 📥 Installation

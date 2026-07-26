@@ -14,6 +14,10 @@ Core runtime and authoring types for typeweaver. This package provides the HTTP 
 functional spec helpers, validators, and error types that all generators and plugins build on.
 Generated code imports these runtime utilities.
 
+The authored spec is the source contract described in the repository
+[vision](../../VISION.md#one-contract-many-projections); normalization and generation live in
+`@rexeus/typeweaver-gen`.
+
 ---
 
 ## 📥 Installation

@@ -19,6 +19,7 @@ Of these findings, 144 were in tests, 55 were in package source code, and 4 were
 tooling. This inventory records the starting point only. It is not a suppression baseline: the
 enforced target is zero violations.
 
-Oxlint provides the six `eslint/*` rules natively. The three `sonarjs/*` rules are loaded through
-Oxlint's JavaScript plugin support. Automatic pnpm peer installation is disabled so that
-`eslint-plugin-sonarjs` cannot install its `eslint` peer; ESLint is neither declared nor installed.
+Oxlint provides the six compatibility-namespaced rules natively. The three `sonarjs/*` rules are
+loaded through Oxlint's JavaScript plugin support. Automatic pnpm peer installation is disabled so
+that the SonarJS plugin cannot pull in its optional legacy linter peer; that separate linter is
+neither declared nor installed.
