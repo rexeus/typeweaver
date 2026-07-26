@@ -256,9 +256,9 @@ section. Every code path joins `docs:check`.
 **Status:** DONE — `docs/reviews/product-maturity-evidence.md` maps every criterion through the
 reviewed Stage 3 source head and records the fresh cross-dimensional review. Both high-impact
 findings, all three actionable findings from the first Copilot pass, and both later authentication
-findings are resolved. The post-review complete local gate passed at `3791257d`; ready PR #212
-targets `main`, remains open and unmerged, and all required checks passed at that exact delivered
-source head.
+findings are resolved. The final warning-location and command-name findings are also resolved. The
+post-review complete local gate passed at `b539a81a`; ready PR #212 targets `main`, remains open and
+unmerged, and all required checks passed at that exact delivered source head.
 
 Create an English evidence report under `docs/reviews/` that maps every `GOAL.md` criterion to:
 
