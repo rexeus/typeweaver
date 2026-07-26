@@ -22,6 +22,17 @@ Fixture release.
 `,
   }),
 });
+const validatePackageVersion = version =>
+  validateReleaseVersionContract({
+    maximumPublishedMajor: 0,
+    packages: [
+      {
+        name: "@rexeus/typeweaver",
+        version,
+      },
+    ],
+    changesets: [],
+  });
 
 assert.deepEqual(
   validateReleaseVersionContract({
@@ -42,18 +53,26 @@ assert.match(
 );
 
 assert.match(
-  validateReleaseVersionContract({
-    maximumPublishedMajor: 0,
-    packages: [
-      {
-        name: "@rexeus/typeweaver",
-        version: "1.0.0",
-      },
-    ],
-    changesets: [],
-  }).join("\n"),
+  validatePackageVersion("1.0.0").join("\n"),
   /exceeds the configured release line 0\.x/u
 );
+
+for (const invalidVersion of [
+  "0.12.0-",
+  "0.12.0+",
+  "0.12.0-alpha..1",
+  "0.12.0+build..1",
+  "0.12.0+build_1",
+  "0.12.0-01",
+]) {
+  assert.match(
+    validatePackageVersion(invalidVersion).join("\n"),
+    /has an invalid semantic version/u,
+    `${invalidVersion} must be rejected`
+  );
+}
+
+assert.deepEqual(validatePackageVersion("0.12.0-alpha.1+build.007"), []);
 
 assert.deepEqual(
   validateReleaseVersionContract({
