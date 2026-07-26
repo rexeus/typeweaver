@@ -162,6 +162,13 @@ project output. Its `--json` mode emits a versioned report accepted by the publi
 `ValidationReportSchema`; `--fail-on` and `--strict` control the deterministic exit threshold.
 Existing `generate` invocations do not need to change.
 
+The additive `typeweaver doctor` command checks the supported runtime and package-manager workflow,
+configuration and spec resolution, plugin availability, output safety, Effect compatibility, and
+optional formatter availability. `--deep` performs the same scoped no-output validation used by
+`validate`. Human and JSON reports use stable `TW-DOCTOR-*` codes; JSON output is accepted by the
+public `DoctorReportSchema`. Warnings retain exit code 0, while any failed check exits 1. Existing
+scripts do not need to change unless they choose to add this preflight.
+
 ### 3. Internal API changes (informational; only programmatic consumers)
 
 If you imported the generator programmatically rather than through the CLI:

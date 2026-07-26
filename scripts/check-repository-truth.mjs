@@ -11,6 +11,7 @@ const read = relativePath =>
   readFileSync(path.join(workspaceRoot, relativePath), "utf8");
 const packageManifest = JSON.parse(read("package.json"));
 const agentGuidance = read("AGENTS.md");
+const cliReadme = read("packages/cli/README.md");
 const failures = [];
 
 const toolContracts = [
@@ -41,6 +42,12 @@ for (const obsoleteTool of ["pkgroll", "Prettier", "ESLint"]) {
   if (agentGuidance.includes(obsoleteTool)) {
     failures.push(`AGENTS.md still names obsolete tool: ${obsoleteTool}`);
   }
+}
+
+if (cliReadme.includes("OpenAPI 3.1.1")) {
+  failures.push(
+    "packages/cli/README.md still claims the obsolete OpenAPI 3.1.1 profile"
+  );
 }
 
 if (failures.length > 0) {

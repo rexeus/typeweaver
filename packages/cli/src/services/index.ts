@@ -27,6 +27,8 @@ export type {
   ValidateProjectParams,
   ValidateProjectResult,
 } from "./ProjectValidator.js";
+export { ProjectDoctor } from "./ProjectDoctor.js";
+export type { DiagnoseProjectParams } from "./ProjectDoctor.js";
 export { SpecBundler } from "./SpecBundler.js";
 export type { SpecBundlerConfig, SpecBundlerDeps } from "./SpecBundler.js";
 export { SpecImporter } from "./SpecImporter.js";

@@ -59,7 +59,7 @@ Now you are ready to start building! Check out [Quickstart](#-get-started)
 | [@rexeus/typeweaver-server](https://github.com/rexeus/typeweaver/tree/main/packages/server/README.md)   | Plugin for a zero-dependency, Fetch API-native server with built-in routing and middleware                  | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-server)  |
 | [@rexeus/typeweaver-hono](https://github.com/rexeus/typeweaver/tree/main/packages/hono/README.md)       | Plugin for Hono routers                                                                                     | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)    |
 | [@rexeus/typeweaver-aws-cdk](https://github.com/rexeus/typeweaver/tree/main/packages/aws-cdk/README.md) | Plugin for AWS CDK constructs for API Gateway V2                                                            | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
-| [@rexeus/typeweaver-openapi](https://github.com/rexeus/typeweaver/tree/main/packages/openapi/README.md) | Plugin for OpenAPI 3.1.1 JSON documents                                                                     | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-openapi) |
+| [@rexeus/typeweaver-openapi](https://github.com/rexeus/typeweaver/tree/main/packages/openapi/README.md) | Plugin for OpenAPI 3.1.2 (default) and explicit 3.2.0 JSON documents                                        | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-openapi) |
 
 More plugins are planned. If you want to build your own, start with the
 [Plugin authoring guide](https://github.com/rexeus/typeweaver/tree/main/docs/plugin-authoring.md).
@@ -124,6 +124,29 @@ The default exit threshold is `error`. Use `--fail-on warning`, `--fail-on info`
 one did. Normalization failures retain their stable `TW-SPEC-*` codes, normalized contract warnings
 use `TW-SPEC-101` through `TW-SPEC-103`, and plugin validation issues retain the plugin's declared
 code.
+
+### Diagnose a project
+
+Run deterministic environment and project checks without generating output:
+
+```bash
+npx typeweaver doctor \
+  --input ./api/spec/index.ts \
+  --output ./api/generated
+
+npx typeweaver doctor --config ./typeweaver.config.mjs --deep --json
+```
+
+The standard checks cover runtime detection, Node.js 24, the pnpm 10.34.5 repository workflow,
+configuration and spec resolution, plugin availability, output safety and permissions, the supported
+Effect range, and optional oxfmt availability. `--deep` additionally bundles, normalizes, and
+validates the spec through a scoped temporary directory that is removed before exit.
+
+Human output gives every check a stable `TW-DOCTOR-001` through `TW-DOCTOR-010` code and a `pass`,
+`warn`, `fail`, or `skip` outcome. `--json` emits exactly one versioned `DoctorReport` on stdout;
+automation can validate it with the public `DoctorReportSchema`. Exit code 0 means no check failed
+(warnings are advisory); exit code 1 means at least one check failed. Neither mode writes project
+output.
 
 ### ⚙️ Generate options
 

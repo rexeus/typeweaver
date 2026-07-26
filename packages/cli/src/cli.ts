@@ -5,11 +5,14 @@ import {
   cliPackageVersion,
   pluginScaffoldTemplateDirectory,
 } from "./cliMetadata.js";
+import {
+  runAddPlugin,
+  runDoctor,
+  runGenerate,
+  runValidate,
+} from "./commands.js";
 import { ProductionLayer, VerboseLayer } from "./effectRuntime.js";
 import { formatErrorForCli } from "./formatErrorForCli.js";
-import { runAddPlugin } from "./runAddPlugin.js";
-import { runGenerate } from "./runGenerate.js";
-import { runValidate } from "./runValidate.js";
 import { isOnlyValidationErrorCause } from "./validationErrorFilter.js";
 
 const inputOption = Options.text("input").pipe(
@@ -102,6 +105,13 @@ const failOnOption = Options.choice("fail-on", [
   Options.optional
 );
 
+const deepOption = Options.boolean("deep", { ifPresent: true }).pipe(
+  Options.withDescription(
+    "bundle, normalize, and validate the spec without writing project output"
+  ),
+  Options.optional
+);
+
 const generateCommand = Command.make(
   "generate",
   {
@@ -145,6 +155,23 @@ const validateCommand = Command.make(
   )
 );
 
+const doctorCommand = Command.make(
+  "doctor",
+  {
+    input: inputOption,
+    output: outputOption,
+    config: configOption,
+    plugins: pluginsOption,
+    deep: deepOption,
+    json: jsonOption,
+  },
+  runDoctor
+).pipe(
+  Command.withDescription(
+    "Diagnose the runtime, project configuration, plugins, and output safety"
+  )
+);
+
 const addPluginCommand = Command.make(
   "plugin",
   {
@@ -176,6 +203,7 @@ const cli = Command.make("typeweaver").pipe(
     generateCommand,
     initCommand,
     validateCommand,
+    doctorCommand,
     addCommand,
   ])
 );

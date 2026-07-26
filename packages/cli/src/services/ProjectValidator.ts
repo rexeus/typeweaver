@@ -33,6 +33,7 @@ export class ProjectValidator extends Effect.Service<ProjectValidator>()(
     effect: Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const pluginLoader = yield* PluginLoader;
+      const pluginRegistry = yield* PluginRegistry;
       const specLoader = yield* SpecLoader;
 
       const validate = Effect.fn("typeweaver.ProjectValidator.validate")(
@@ -48,7 +49,7 @@ export class ProjectValidator extends Effect.Service<ProjectValidator>()(
                   directory: params.currentWorkingDirectory,
                   prefix: ".typeweaver-validate-",
                 });
-              const registry = yield* PluginRegistry.createInstance();
+              const registry = yield* pluginRegistry.createInstance();
 
               yield* pluginLoader.loadAll({
                 registry,
