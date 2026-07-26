@@ -1,9 +1,11 @@
-export class MissingCanonicalResponseError extends Error {
-  public override readonly name = "MissingCanonicalResponseError";
+import { Data } from "effect";
 
-  public constructor(public readonly responseName: string) {
-    super(
-      `Missing canonical response '${responseName}' in the normalized spec.`
-    );
+export class MissingCanonicalResponseError extends Data.TaggedError(
+  "MissingCanonicalResponseError"
+)<{
+  readonly responseName: string;
+}> {
+  public override get message(): string {
+    return `Missing canonical response '${this.responseName}' in the normalized spec.`;
   }
 }

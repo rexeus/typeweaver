@@ -61,9 +61,8 @@ Now you are ready to start building! Check out [Quickstart](#-get-started)
 | [@rexeus/typeweaver-aws-cdk](https://github.com/rexeus/typeweaver/tree/main/packages/aws-cdk/README.md) | Plugin for AWS CDK constructs for API Gateway V2                                                            | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
 | [@rexeus/typeweaver-openapi](https://github.com/rexeus/typeweaver/tree/main/packages/openapi/README.md) | Plugin for OpenAPI 3.1.1 JSON documents                                                                     | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-openapi) |
 
-More plugins are planned. If you want to build your own, check out the plugin system
-
-[Plugin system](https://github.com/rexeus/typeweaver/tree/main/packages/gen/README.md#-how-to-use).
+More plugins are planned. If you want to build your own, start with the
+[Plugin authoring guide](https://github.com/rexeus/typeweaver/tree/main/docs/plugin-authoring.md).
 
 ---
 
@@ -90,13 +89,16 @@ bunx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --
 
 ### ⚙️ Options
 
-- `--input, -i <path>`: Spec entrypoint file (required)
-- `--output, -o <path>`: Output directory for generated code (required)
+- `--input, -i <path>`: Spec entrypoint file (required via flag or config)
+- `--output, -o <path>`: Output directory for generated code (required via flag or config)
 - `--config, -c <path>`: Configuration file path (`.js`, `.mjs`, or `.cjs`, optional)
 - `--plugins, -p <plugins>`: Comma-separated list of plugins to use (e.g., "clients,hono" or "all"
   for all plugins)
 - `--format / --no-format`: Enable/disable code formatting with oxfmt (default: true)
 - `--clean / --no-clean`: Enable/disable output directory cleaning (default: true)
+- `--verbose`: Enable debug-level logging (effect spans, plugin loader attempts, lock
+  acquire/release). Useful when triaging unexpected behavior.
+- `--version, -V`: Print the CLI version.
 
 ### 📝 Configuration File
 
@@ -104,6 +106,7 @@ Create a JavaScript config file (for example `typeweaver.config.mjs`) for more c
 configurations:
 
 ```js
+/** @type {import("@rexeus/typeweaver-gen").TypeweaverConfig} */
 export default {
   input: "./api/spec/index.ts",
   output: "./api/generated",
@@ -112,6 +115,10 @@ export default {
   clean: true,
 };
 ```
+
+The loader accepts either a default export or a named `config` export — pick whichever fits your
+project's style. Custom top-level keys are preserved and exposed to plugins through
+`context.config`.
 
 Then run:
 

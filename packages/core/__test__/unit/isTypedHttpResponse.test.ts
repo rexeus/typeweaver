@@ -145,7 +145,7 @@ const withObjectPrototypeProperties = <T>(
   }
 };
 
-describe("isTypedHttpResponse", () => {
+describe("isTypedHttpResponse basic shapes", () => {
   test.each(valuesThatAreNotTypedResponses)(
     "rejects $case as a typed HTTP response",
     ({ value }) => {
@@ -212,11 +212,14 @@ describe("isTypedHttpResponse", () => {
       header: {
         "X-Optional": undefined,
       },
+      body: undefined,
     } satisfies ITypedHttpResponse;
 
     expect(isTypedHttpResponse(response)).toBe(true);
   });
+});
 
+describe("isTypedHttpResponse header shapes", () => {
   test("accepts a null-prototype typed HTTP response", () => {
     const response = Object.assign(Object.create(null), {
       type: "NullPrototypeResponse",
@@ -250,6 +253,7 @@ describe("isTypedHttpResponse", () => {
       header: {
         "Cache-Control": ["public", "max-age=60"],
       },
+      body: undefined,
     } satisfies ITypedHttpResponse;
 
     expect(isTypedHttpResponse(response)).toBe(true);
@@ -280,7 +284,9 @@ describe("isTypedHttpResponse", () => {
       expect(isTypedHttpResponse(response)).toBe(false);
     }
   );
+});
 
+describe("isTypedHttpResponse status and object identity", () => {
   test.each(registeredStatusCodesAcrossClasses)(
     "accepts a registered $case status code",
     ({ statusCode }) => {
@@ -357,7 +363,9 @@ describe("isTypedHttpResponse", () => {
 
     expect(typedStatusLabel(response)).toBe("TodoCreated:201");
   });
+});
 
+describe("isTypedHttpResponse property access failures", () => {
   test("propagates errors from a throwing statusCode getter", () => {
     const response = Object.defineProperty({ type: "Success" }, "statusCode", {
       enumerable: true,

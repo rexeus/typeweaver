@@ -1,13 +1,13 @@
-export class UnsupportedConfigExtensionError extends Error {
-  public override readonly name = "UnsupportedConfigExtensionError";
+import { Data } from "effect";
 
-  public constructor(
-    public readonly configPath: string,
-    public readonly extension: string,
-    public readonly supportedExtensions: readonly string[]
-  ) {
-    super(
-      `Unsupported config file extension '${extension}' for '${configPath}'. TypeWeaver accepts only these config extensions: ${supportedExtensions.join(", ")}.`
-    );
+export class UnsupportedConfigExtensionError extends Data.TaggedError(
+  "UnsupportedConfigExtensionError"
+)<{
+  readonly configPath: string;
+  readonly extension: string;
+  readonly supportedExtensions: readonly string[];
+}> {
+  public override get message(): string {
+    return `Unsupported config file extension '${this.extension}' for '${this.configPath}'. TypeWeaver accepts only these config extensions: ${this.supportedExtensions.join(", ")}.`;
   }
 }

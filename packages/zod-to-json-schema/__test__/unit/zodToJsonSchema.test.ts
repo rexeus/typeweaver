@@ -97,7 +97,9 @@ describe("fromZod", () => {
       warnings: [],
     });
   });
+});
 
+describe("fromZod collections and checks", () => {
   test("converts array schemas with item schemas", () => {
     const result = fromZod(z.array(z.string()));
 
@@ -176,7 +178,9 @@ describe("fromZod", () => {
       warnings: [],
     });
   });
+});
 
+describe("fromZod compositions", () => {
   test("converts intersection schemas to allOf", () => {
     const result = fromZod(
       z.intersection(
@@ -250,7 +254,9 @@ describe("fromZod", () => {
       warnings: [],
     });
   });
+});
 
+describe("fromZod tuple normalization", () => {
   test("normalizes rest tuples without fixed-length array bounds", () => {
     const result = fromZod(z.tuple([z.string()]).rest(z.number()));
 
@@ -343,7 +349,9 @@ describe("fromZod", () => {
       ],
     });
   });
+});
 
+describe("fromZod transforms and refinements", () => {
   test("warns when transforms fall back to broad JSON Schema", () => {
     const result = fromZod(
       z.object({ count: z.string().transform(value => value.length) })
@@ -422,7 +430,9 @@ describe("fromZod", () => {
       ],
     });
   });
+});
 
+describe("fromZod nested warning preservation", () => {
   test("preserves nested warnings through prefault schemas", () => {
     const result = fromZod(
       z.object({ value: z.custom<string>().prefault("fallback") })
@@ -499,7 +509,9 @@ describe("fromZod", () => {
       });
     }
   );
+});
 
+describe("fromZod warning paths", () => {
   test("encodes warning paths as JSON Pointers", () => {
     const result = fromZod(
       z.object({
@@ -566,7 +578,9 @@ describe("fromZod", () => {
       ],
     });
   });
+});
 
+describe("fromZod collection warnings", () => {
   test("warns for unsupported map keys and values at Typeweaver extension paths", () => {
     const result = fromZod(
       z.map(
@@ -641,7 +655,9 @@ describe("fromZod", () => {
       },
     ]);
   });
+});
 
+describe("fromZod recursive schemas", () => {
   test("handles recursive lazy schemas without infinite traversal", () => {
     type TreeNode = {
       readonly name: string;
@@ -722,7 +738,9 @@ describe("fromZod", () => {
       },
     ]);
   });
+});
 
+describe("fromZod conversion failures", () => {
   test("returns a deterministic conversion warning for non-Error throws", () => {
     const failingSchema = z.lazy(() => {
       throw "schema failed";

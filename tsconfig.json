@@ -43,6 +43,17 @@
     "noUnusedParameters": true,
 
     /* Other Options */
-    "moduleDetection": "force"
+    "moduleDetection": "force",
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "diagnostics": true,
+        "diagnosticsName": true,
+        "diagnosticSeverity": {
+          "duplicatePackage": "error"
+        },
+        "effectFn": ["span"]
+      }
+    ]
   }
 }

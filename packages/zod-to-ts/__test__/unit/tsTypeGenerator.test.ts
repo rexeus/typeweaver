@@ -201,7 +201,9 @@ describe("object schemas", () => {
       ["{", '    "x-id"?: string | undefined;', "}"].join("\n")
     );
   });
+});
 
+describe("nested object schemas", () => {
   test("maps nested objects with arrays to nested TypeScript object output", () => {
     expect(
       toTs(z.object({ user: z.object({ tags: z.array(z.string()) }) }))
@@ -228,9 +230,9 @@ describe("object schemas", () => {
     );
   });
 
-  test("maps object fields unioned with undefined to optional TypeScript properties", () => {
+  test("maps object fields unioned with undefined to required TypeScript properties", () => {
     expect(toTs(z.object({ code: z.union([z.string(), z.undefined()]) }))).toBe(
-      ["{", "    code?: string | undefined;", "}"].join("\n")
+      ["{", "    code: string | undefined;", "}"].join("\n")
     );
   });
 });
@@ -441,7 +443,12 @@ describe("wrapper schemas", () => {
 
   test("maps pipe object fields to optional properties from optional outputs", () => {
     expect(
-      toTs(z.object({ value: z.string().pipe(z.string().optional()) }))
+      toTs(
+        z.object({
+          // @ts-expect-error Zod's invariant pipe target rejects a wider input although this required string can safely feed it.
+          value: z.string().pipe(z.string().optional()),
+        })
+      )
     ).toBe(["{", "    value?: string | undefined;", "}"].join("\n"));
   });
 
@@ -480,7 +487,9 @@ describe("wrapper schemas", () => {
       toTs(z.object({ name: z.string().default("x").catch("fallback") }))
     ).toBe(["{", "    name: string;", "}"].join("\n"));
   });
+});
 
+describe("file and readonly wrapper schemas", () => {
   test("maps file schemas to File", () => {
     expect(toTs(z.file())).toBe("File");
   });

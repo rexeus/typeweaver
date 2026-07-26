@@ -31,13 +31,13 @@ export class <%- pascalCaseEntityName %>Hono extends TypeweaverHono<Hono<%- pasc
   protected setupRoutes(): void {
 <% for (const operation of operations) { %>
     this.<%- operation.method.toLowerCase() %>('<%- operation.path %>', async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        '<%- operation.operationId %>',
-        new <%- operation.className %>RequestValidator(),
-        new <%- operation.className %>ResponseValidator(),
-        this.requestHandlers.<%- operation.handlerName %>.bind(this.requestHandlers)
-      ));
+        operationId: '<%- operation.operationId %>',
+        requestValidator: new <%- operation.className %>RequestValidator(),
+        responseValidator: new <%- operation.className %>ResponseValidator(),
+        handler: this.requestHandlers.<%- operation.handlerName %>.bind(this.requestHandlers),
+      }));
 
 <% } %>
   }

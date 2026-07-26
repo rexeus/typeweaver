@@ -1,0 +1,118 @@
+# ADR 0006: CLI Error and Log Formatting
+
+## Status
+
+Accepted
+
+## Context
+
+By default, an Effect runtime emits two kinds of output that are unsuitable for a developer-facing
+CLI:
+
+1. **FiberFailure traces** — when an Effect fails at the runtime boundary, the default reporter
+   prints a multi-line fiber trace with stack frames, cause chains, and runtime metadata. Useful for
+   debugging Effect itself; noisy when a user mistyped a CLI flag.
+2. **Structured log lines** — `Effect.logInfo("Bundling spec...")` produces
+   `timestamp=2026-05-16T10:23:14.123Z level=INFO fiber=#0 message="Bundling..."` in the default
+   format. A CLI user wants `Bundling spec from '...'`, not a logfmt record.
+
+The Task #9 migration to `@effect/cli` made the CLI's user-facing surface load-bearing: `--help`,
+validation errors, and runtime failures all flow through the same pipeline that the spec generation
+logic uses. A single unhandled `Cause` would print thirty lines where one was wanted.
+
+## Decision
+
+Three components shape the CLI's user-facing output.
+
+### `formatErrorForCli`
+
+`packages/cli/src/formatErrorForCli.ts` translates failures into concise user-facing messages:
+
+- Tagged errors (`Data.TaggedError` instances throughout the codebase) are rendered via their
+  `message` getter.
+- Plain `Error` instances render their `message`.
+- `Cause` values render every failure and defect, newline-separated, so a finalizer defect cannot be
+  hidden behind an earlier typed failure.
+- Unknown causes render via `String(cause)`.
+
+The function returns `string`; the caller prints it and chooses the exit code.
+
+### `CliLoggerLayer`
+
+`packages/cli/src/cliLogger.ts` replaces the default Effect logger with one that:
+
+- Drops timestamps and fiber identifiers from log lines.
+- Prefixes warnings with `[WARN]` and errors with `[ERROR]`.
+- Writes to `stdout` for info-level lines and `stderr` for warnings/errors.
+
+The layer is included in `ProductionLayer` so every Effect emitted from the CLI uses the friendly
+format.
+
+Every CLI log line flows through this logger — including the `Generated: <path>` lines for
+plugin-written files. The sync `writeFile` plugin callback runs outside any Effect runtime, so it
+queues its log lines on the per-call context builder; the `Generator` orchestrator drains the queue
+through `Effect.logInfo` after each plugin's `generate` stage (and after barrel emission). The
+relative ordering of `Running plugin: X` and that plugin's `Generated:` lines is unchanged, and
+capturing-logger test layers observe the lines like any other log record.
+
+### `NodeRuntime.runMain` configuration
+
+The CLI entrypoint (`packages/cli/src/cli.ts`) calls
+`NodeRuntime.runMain(effect, { disablePrettyLogger: true, disableErrorReporting: true })`. Both
+flags suppress the platform's default formatters so the only output the user sees comes from
+`CliLoggerLayer` (for logs) and the CLI's own `formatErrorForCli` pipeline (for failures).
+
+### Boolean flag pairs (`--format` / `--no-format`, `--clean` / `--no-clean`)
+
+`@effect/cli@0.75.x` ships a known bug in `Options.boolean({ negationNames })`: the inner
+`withDefault(!ifPresent)` short-circuits the outer `withDefault`, so a single combined flag cannot
+distinguish "user passed `--no-format`" from "user did not pass the flag at all". The CLI models
+each pair as two independent `Options.boolean(..., { ifPresent: true })` flags and resolves the
+effective value in the handler (`resolveBooleanFlag` in `packages/cli/src/runGenerate.ts`, with the
+`negative` flag winning ties). The duplication is documented inline in `packages/cli/src/cli.ts`
+(lines 42-44) so the next contributor reading the file sees the constraint immediately.
+
+### `validationErrorFilter`
+
+`@effect/cli` already renders its own usage and help output when a flag is invalid; the failure it
+raises (`ValidationError`) is decorative. The CLI pipes its failure stream through
+`Effect.tapErrorCause` with the filter in `packages/cli/src/validationErrorFilter.ts`. The filter
+detects already-rendered `ValidationError`s and short-circuits before `formatErrorForCli` runs,
+preventing double-print.
+
+## Consequences
+
+### Positive
+
+- A simple failure remains a single tailored line:
+  `Failed to bundle spec entrypoint '/path/to/spec.ts': Cannot find module '...'.` instead of a
+  fiber stack trace. Composite causes retain every failure and defect as separate concise lines.
+- Log lines read like a CLI tool: `Bundling spec from '...' to '...'`, `Generation complete!`,
+  `Generated files: 42`.
+- `@effect/cli`'s help and usage output passes through untouched. The filter recognizes
+  `ValidationError`'s already-rendered shape and skips the formatter.
+- Tests use `withCapturedLogs` (`packages/cli/__test__/helpers/`) to assert on log output at the
+  Effect-logger boundary, not via `console.spy` — keeping the assertions independent of `console`'s
+  real implementation.
+
+### Negative
+
+- Diagnostic detail is lost from the default output. Users who need DEBUG-level detail opt in via
+  `--verbose`, which swaps in `VerboseLayer` (see `packages/cli/src/effectRuntime.ts`). The verbose
+  layer lifts the minimum log level to `Debug` and routes `[DEBUG]`-tagged records to the console
+  alongside the regular Info output. High-value seams that emit debug records: lock acquire/release,
+  plugin-loader per-attempt traces, generator input/output paths.
+- Three layers of formatting interact (logger, error formatter, validation filter). A regression in
+  any one can surface as silent output or a duplicated print. The test suite covers each
+  independently: `cliLogger.test.ts`, `formatErrorForCli.test.ts`, `validationErrorFilter.test.ts`,
+  `effectRuntime.cliLogger.test.ts`.
+
+## Reference Files
+
+- `packages/cli/src/cli.ts` — `NodeRuntime.runMain` configuration
+- `packages/cli/src/formatErrorForCli.ts` — failure rendering
+- `packages/cli/src/cliLogger.ts` — `CliLoggerLayer`
+- `packages/cli/src/validationErrorFilter.ts` — help/usage suppression
+- `packages/cli/__test__/cliLogger.test.ts`, `packages/cli/__test__/formatErrorForCli.test.ts`,
+  `packages/cli/__test__/validationErrorFilter.test.ts`,
+  `packages/cli/__test__/effectRuntime.cliLogger.test.ts`

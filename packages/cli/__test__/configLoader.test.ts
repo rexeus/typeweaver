@@ -1,81 +1,150 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
+import { Cause, Effect, Either, Exit, Option } from "effect";
+import {
+  array,
+  assert,
+  asyncProperty,
+  boolean,
+  constant,
+  constantFrom,
+  integer,
+  oneof,
+  string,
+  tuple,
+} from "fast-check";
 import { afterEach, describe, expect, test } from "vitest";
 import {
-  assertSupportedConfigPath,
+  ConfigModuleEvaluationError,
+  InvalidConfigExportError,
+  InvalidConfigValueError,
+  UnsupportedConfigExtensionError,
+  UnsupportedTypeScriptConfigError,
+} from "../src/errors/index.js";
+import {
+  ConfigLoader,
   getResolvedConfigPath,
-  loadConfig,
-} from "../src/configLoader.js";
-import { InvalidConfigExportError } from "../src/errors/InvalidConfigExportError.js";
-import { UnsupportedConfigExtensionError } from "../src/errors/UnsupportedConfigExtensionError.js";
-import { UnsupportedTypeScriptConfigError } from "../src/errors/UnsupportedTypeScriptConfigError.js";
+} from "../src/services/ConfigLoader.js";
+import type { ConfigError } from "../src/errors/index.js";
 
-describe("configLoader", () => {
-  const tempDirs: string[] = [];
+// Test shims that bridge the legacy sync/async API onto ConfigLoader.
+// `Effect.either` flattens typed failures into the success channel so
+// tests can `.rejects.toBeInstanceOf` against the underlying error rather
+// than against Effect's `FiberFailure` wrapper.
+const assertSupportedConfigPath = (configPath: string): void => {
+  const result = Effect.runSync(
+    Effect.either(ConfigLoader.assertSupportedPath(configPath)).pipe(
+      Effect.provide(ConfigLoader.Default)
+    )
+  );
+  if (Either.isLeft(result)) throw result.left;
+};
 
-  afterEach(() => {
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
+const loadConfig = async (
+  configPath: string
+): Promise<Partial<TypeweaverConfig>> => {
+  const result = await Effect.runPromise(
+    Effect.either(ConfigLoader.load(configPath)).pipe(
+      Effect.provide(ConfigLoader.Default)
+    )
+  );
+  if (Either.isLeft(result)) throw result.left;
+  return result.right;
+};
 
-    tempDirs.length = 0;
-  });
+const loadConfigExit = (
+  configPath: string
+): Promise<Exit.Exit<Partial<TypeweaverConfig>, ConfigError>> =>
+  Effect.runPromiseExit(
+    ConfigLoader.load(configPath).pipe(Effect.provide(ConfigLoader.Default))
+  );
 
-  const createTempDir = (): string => {
-    const tempDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "typeweaver-config-")
-    );
-    tempDirs.push(tempDir);
+const expectInvalidConfigExit = (
+  exit: Exit.Exit<Partial<TypeweaverConfig>, ConfigError>,
+  configPath: string
+): void => {
+  expect(Exit.isFailure(exit)).toBe(true);
+  if (Exit.isSuccess(exit)) {
+    return;
+  }
 
-    return tempDir;
-  };
+  const failure = Cause.failureOption(exit.cause);
+  expect(Option.isSome(failure)).toBe(true);
+  if (Option.isSome(failure)) {
+    expect(failure.value).toBeInstanceOf(InvalidConfigValueError);
+    expect(failure.value).toMatchObject({
+      _tag: "InvalidConfigValueError",
+      configPath,
+    });
+  }
+  expect(Cause.defects(exit.cause)).toHaveLength(0);
+};
 
-  const writeConfigModule = (extension: string, contents: string): string => {
-    const tempDir = createTempDir();
-    const configPath = path.join(tempDir, `typeweaver.config${extension}`);
+const tempDirs: string[] = [];
 
-    fs.writeFileSync(path.join(tempDir, "package.json"), '{"type":"module"}\n');
+afterEach(() => {
+  for (const tempDir of tempDirs) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
 
-    fs.writeFileSync(configPath, `${contents.trim()}\n`);
+  tempDirs.length = 0;
+});
 
-    return configPath;
-  };
+const createTempDir = (): string => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "typeweaver-config-"));
+  tempDirs.push(tempDir);
 
-  const writeUnsupportedConfigFile = (
-    extension: string,
-    contents: string
-  ): string => {
-    const configPath = path.join(
-      createTempDir(),
-      `typeweaver.config${extension}`
-    );
+  return tempDir;
+};
 
-    fs.writeFileSync(configPath, `${contents.trim()}\n`);
+const writeConfigModule = (extension: string, contents: string): string => {
+  const tempDir = createTempDir();
+  const configPath = path.join(tempDir, `typeweaver.config${extension}`);
 
-    return configPath;
-  };
+  fs.writeFileSync(path.join(tempDir, "package.json"), '{"type":"module"}\n');
 
-  const createThrowingModuleSource = (options: {
-    readonly errorName: string;
-    readonly message: string;
-  }): string => `
+  fs.writeFileSync(configPath, `${contents.trim()}\n`);
+
+  return configPath;
+};
+
+const writeUnsupportedConfigFile = (
+  extension: string,
+  contents: string
+): string => {
+  const configPath = path.join(
+    createTempDir(),
+    `typeweaver.config${extension}`
+  );
+
+  fs.writeFileSync(configPath, `${contents.trim()}\n`);
+
+  return configPath;
+};
+
+const createThrowingModuleSource = (options: {
+  readonly errorName: string;
+  readonly message: string;
+}): string => `
     class ${options.errorName} extends Error {
       name = "${options.errorName}";
     }
     throw new ${options.errorName}(${JSON.stringify(options.message)});
   `;
 
-  const captureConfigPathError = (action: () => void): unknown => {
-    try {
-      action();
-    } catch (error) {
-      return error;
-    }
+const captureConfigPathError = (action: () => void): unknown => {
+  try {
+    action();
+  } catch (error) {
+    return error;
+  }
 
-    return undefined;
-  };
+  return undefined;
+};
 
+describe("configLoader path resolution", () => {
   test.each([
     { extension: ".js" },
     { extension: ".mjs" },
@@ -159,7 +228,9 @@ describe("configLoader", () => {
       )
     );
   });
+});
 
+describe("configLoader ESM exports", () => {
   test("loads ESM named config exports", async () => {
     const configPath = writeConfigModule(
       ".mjs",
@@ -202,6 +273,103 @@ describe("configLoader", () => {
     });
   });
 
+  test.each([
+    { field: "input", value: "123" },
+    { field: "input", value: '""' },
+    { field: "output", value: "[]" },
+    { field: "format", value: '"yes"' },
+    { field: "clean", value: "0" },
+    { field: "plugins", value: '"clients"' },
+    { field: "plugins", value: "[42]" },
+    { field: "plugins", value: '[["clients"]]' },
+    { field: "plugins", value: '[["clients", []]]' },
+    { field: "plugins", value: '[["", {}]]' },
+  ])(
+    "rejects an invalid $field config value without a defect",
+    async ({ field, value }) => {
+      const configPath = writeConfigModule(
+        ".mjs",
+        `export default { ${field}: ${value} };`
+      );
+
+      const exit = await loadConfigExit(configPath);
+
+      expectInvalidConfigExit(exit, configPath);
+    }
+  );
+});
+
+describe("configLoader value validation", () => {
+  test("rejects arbitrary invalid known-field values as typed failures", async () => {
+    const invalidPathValue = oneof(
+      constant(""),
+      integer(),
+      boolean(),
+      array(integer(), { maxLength: 4 })
+    );
+    const invalidBooleanValue = oneof(
+      string({ maxLength: 20 }),
+      integer(),
+      array(integer(), { maxLength: 4 })
+    );
+    const malformedPluginTuple = oneof(
+      tuple(string({ minLength: 1, maxLength: 20 })).map(value => [value]),
+      tuple(
+        string({ minLength: 1, maxLength: 20 }),
+        array(integer(), { maxLength: 4 })
+      ).map(value => [value])
+    );
+    const invalidPluginsValue = oneof(
+      string({ maxLength: 20 }),
+      integer(),
+      boolean(),
+      array(integer(), { minLength: 1, maxLength: 4 }),
+      malformedPluginTuple
+    );
+    const invalidKnownField = oneof(
+      tuple(constantFrom("input", "output"), invalidPathValue),
+      tuple(constantFrom("format", "clean"), invalidBooleanValue),
+      tuple(constant("plugins"), invalidPluginsValue)
+    );
+
+    await assert(
+      asyncProperty(invalidKnownField, async ([field, value]) => {
+        const configPath = writeConfigModule(
+          ".mjs",
+          `export default { ${field}: ${JSON.stringify(value)} };`
+        );
+
+        const exit = await loadConfigExit(configPath);
+
+        expectInvalidConfigExit(exit, configPath);
+      }),
+      { numRuns: 40 }
+    );
+  });
+
+  test("preserves valid plugin tuples and custom top-level configuration", async () => {
+    const configPath = writeConfigModule(
+      ".mjs",
+      `
+        export default {
+          input: "./spec/index.ts",
+          output: "./generated",
+          plugins: [["clients", { transport: "fetch" }]],
+          customFeature: { enabled: true },
+        };
+      `
+    );
+
+    await expect(loadConfig(configPath)).resolves.toEqual({
+      input: "./spec/index.ts",
+      output: "./generated",
+      plugins: [["clients", { transport: "fetch" }]],
+      customFeature: { enabled: true },
+    });
+  });
+});
+
+describe("configLoader module formats", () => {
   test("loads ESM .js default config files", async () => {
     const configPath = writeConfigModule(
       ".js",
@@ -235,7 +403,9 @@ describe("configLoader", () => {
       plugins: ["aws-cdk"],
     });
   });
+});
 
+describe("configLoader ambiguous exports", () => {
   test("rejects ESM modules that export both default and named config", async () => {
     const configPath = writeConfigModule(
       ".mjs",
@@ -280,7 +450,9 @@ describe("configLoader", () => {
       });
     }
   );
+});
 
+describe("configLoader invalid exports", () => {
   test("rejects unsupported extensions before evaluating config files", async () => {
     const configPath = writeUnsupportedConfigFile(
       ".json",
@@ -332,8 +504,10 @@ describe("configLoader", () => {
       reason: "non-object-config",
     });
   });
+});
 
-  test("propagates errors thrown while evaluating config modules", async () => {
+describe("configLoader evaluation failures", () => {
+  test("wraps errors thrown while evaluating config modules in ConfigModuleEvaluationError", async () => {
     const configPath = writeConfigModule(
       ".mjs",
       createThrowingModuleSource({
@@ -343,13 +517,17 @@ describe("configLoader", () => {
     );
     const configLoad = loadConfig(configPath);
 
+    await expect(configLoad).rejects.toBeInstanceOf(
+      ConfigModuleEvaluationError
+    );
     await expect(configLoad).rejects.toMatchObject({
-      name: "ConfigEvaluationError",
+      configPath,
+      cause: expect.objectContaining({ name: "ConfigEvaluationError" }),
     });
     await expect(configLoad).rejects.toThrow(/config evaluation failed/);
   });
 
-  test("propagates missing dependency failures from config modules", async () => {
+  test("wraps missing dependency failures from config modules", async () => {
     const missingDependency = "definitely-missing-typeweaver-config-dependency";
     const configPath = writeConfigModule(
       ".mjs",
@@ -359,11 +537,15 @@ describe("configLoader", () => {
         export default { output: "./generated" };
       `
     );
+    const configLoad = loadConfig(configPath);
 
-    await expect(loadConfig(configPath)).rejects.toThrow(missingDependency);
+    await expect(configLoad).rejects.toBeInstanceOf(
+      ConfigModuleEvaluationError
+    );
+    await expect(configLoad).rejects.toThrow(missingDependency);
   });
 
-  test("propagates syntax errors from config modules", async () => {
+  test("wraps syntax errors from config modules", async () => {
     const configPath = writeConfigModule(
       ".mjs",
       `
@@ -373,6 +555,9 @@ describe("configLoader", () => {
     );
     const configLoad = loadConfig(configPath);
 
+    await expect(configLoad).rejects.toBeInstanceOf(
+      ConfigModuleEvaluationError
+    );
     await expect(configLoad).rejects.toThrow(
       /parse|syntax|Unexpected|Invalid|missing|end/i
     );

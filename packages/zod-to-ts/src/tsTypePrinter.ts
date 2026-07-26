@@ -4,8 +4,8 @@ import {
   EmitHint,
   ScriptKind,
   ScriptTarget,
-} from "typescript";
-import type { TypeNode } from "typescript";
+} from "@typescript/typescript6";
+import type { TypeNode } from "@typescript/typescript6";
 
 export function print(tsType: TypeNode): string {
   const sourceFile = createSourceFile(

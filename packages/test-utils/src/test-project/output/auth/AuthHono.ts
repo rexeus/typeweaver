@@ -43,23 +43,23 @@ export class AuthHono extends TypeweaverHono<HonoAuthApiHandler> {
 
   protected setupRoutes(): void {
     this.post("/auth/access-token", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "AccessToken",
-        new AccessTokenRequestValidator(),
-        new AccessTokenResponseValidator(),
-        this.requestHandlers.handleAccessTokenRequest.bind(this.requestHandlers),
-      ),
+        operationId: "AccessToken",
+        requestValidator: new AccessTokenRequestValidator(),
+        responseValidator: new AccessTokenResponseValidator(),
+        handler: this.requestHandlers.handleAccessTokenRequest.bind(this.requestHandlers),
+      }),
     );
 
     this.post("/auth/refresh-token", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "RefreshToken",
-        new RefreshTokenRequestValidator(),
-        new RefreshTokenResponseValidator(),
-        this.requestHandlers.handleRefreshTokenRequest.bind(this.requestHandlers),
-      ),
+        operationId: "RefreshToken",
+        requestValidator: new RefreshTokenRequestValidator(),
+        responseValidator: new RefreshTokenResponseValidator(),
+        handler: this.requestHandlers.handleRefreshTokenRequest.bind(this.requestHandlers),
+      }),
     );
   }
 }

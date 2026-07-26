@@ -311,12 +311,7 @@ export class FetchApiAdapter {
 
     if (header) {
       for (const [key, value] of Object.entries(header)) {
-        if (value === undefined) continue;
-        if (Array.isArray(value)) {
-          for (const v of value) headers.append(key, v);
-        } else {
-          headers.set(key, String(value));
-        }
+        FetchApiAdapter.appendResponseHeader(headers, key, value);
       }
     }
 
@@ -329,6 +324,19 @@ export class FetchApiAdapter {
     }
 
     return headers;
+  }
+
+  private static appendResponseHeader(
+    headers: Headers,
+    key: string,
+    value: string | string[] | undefined,
+  ): void {
+    if (value === undefined) return;
+    if (Array.isArray(value)) {
+      for (const item of value) headers.append(key, item);
+      return;
+    }
+    headers.set(key, String(value));
   }
 
   private static isJsonBody(body: any): boolean {

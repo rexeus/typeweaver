@@ -1,0 +1,1105 @@
+# Effect migration: merge-ready completion contract
+
+Status: complete
+
+Audit baseline: `feat/use-effect` at `7488f6d2`, reviewed 2026-07-25
+
+Runtime baseline: Node 24, pnpm 10, Effect 3.22
+
+## Goal
+
+Make the Effect migration on `feat/use-effect` safe, internally consistent, and merge-ready: dynamic
+boundaries must be truthful, lifecycle and resource semantics must hold under concurrency, failure,
+defect, and interruption, and the public plugin/CLI contracts must be proven by tests against
+packaged artifacts.
+
+## Why
+
+This is a breaking architectural migration in a generator that reads external code and mutates
+output trees. Green unit tests alone are not enough: typed failures, exclusive ownership, cleanup,
+plugin lifecycle ordering, and consumer compatibility must be real runtime guarantees. When two
+implementation paths compete, prefer the smaller design that makes those guarantees mechanically
+provable without hiding failures or widening the public API accidentally.
+
+## Audit baseline
+
+The migration is substantial rather than a Promise-to-Effect wrapper:
+
+- services and dependencies are explicit and composed at the runtime edge;
+- per-generation plugin registry and file-tracker state are isolated;
+- output locking and temporary directories use Effect resource scopes;
+- domain failures are mostly typed and observable through tags;
+- plugin phases, logs, and spans are explicit;
+- normalization, concurrency, lifecycle, path safety, generated output, and consumer compilation
+  already have meaningful tests.
+
+The branch is not merge-ready yet. The review found no Critical issue, but the following High-risk
+contracts are not currently proven:
+
+- output-lock acquisition and release do not carry an ownership token, allowing a second process to
+  reclaim a live but not-yet-initialized lock;
+- dependent plugins are finalized in initialization order instead of reverse dependency order;
+- config imports and plugin modules are asserted to be typed after only shallow object/name checks;
+- the documented service-dependent plugin construction path is not executable through the standard
+  loader;
+- CLI process behavior and interrupt/defect cleanup are under-tested.
+
+Current diagnostic coverage is useful but is not a completion target:
+
+- `@rexeus/typeweaver-gen`: 296 tests; 88.91% lines, 91.33% branches;
+- `@rexeus/typeweaver`: 217 tests; 83.86% lines, 89.34% branches.
+
+Coverage percentages must not be raised by trivial tests. Completion is based on the risky behaviors
+below.
+
+## Done
+
+Complete these criteria in order. Mark an item `[x]` only after recording its evidence in the
+progress log.
+
+### P0 — safety and truthful boundaries
+
+- [x] **1. Output-lock ownership is race-safe.**
+
+  Acquisition assigns an unguessable ownership token, partial metadata is never treated as dead
+  crash debris while its owner may still be acquiring, failed acquisition rolls back only its own
+  state, and release removes only the lock owned by its token.
+
+  Verified by:
+
+  - deterministic tests pause between lock-directory creation and metadata publication and prove
+    that exactly one of two contenders can enter;
+  - tests prove that an old owner cannot release a replacement owner's lock;
+  - tests cover unreadable/partial metadata and acquisition-write failure;
+  - `pnpm --filter @rexeus/typeweaver exec vitest run __test__/generator.lockfile.test.ts` exits 0.
+
+- [x] **2. Plugin cleanup follows reverse successful initialization order.**
+
+  For `B depends on A`, initialization is `A, B` and finalization is `B, A`. Only successfully
+  initialized plugins are finalized, every such plugin gets one cleanup attempt, and cleanup still
+  runs after typed failure, defect, and Fiber interruption.
+
+  Verified by:
+
+  - dependency-chain tests assert the exact phase sequence;
+  - deterministic typed-failure, defect, and `Fiber.interrupt` tests assert the finalizer set and
+    order;
+  - `pnpm --filter @rexeus/typeweaver exec vitest run __test__/generator.lifecycle-ordering.test.ts`
+    exits 0.
+
+- [x] **3. Imported configuration is parsed instead of asserted.**
+
+  The import boundary validates all known fields (`input`, `output`, `format`, `clean`, and every
+  plugin entry/tuple) while preserving supported custom top-level plugin configuration. Invalid
+  known fields produce a precise typed config failure and no defect.
+
+  Verified by:
+
+  - table and property tests cover invalid primitive, array, tuple, path, and boolean/string shapes;
+  - each case asserts the error tag and `Cause.defects(cause).length === 0`;
+  - valid custom top-level keys survive parsing;
+  - `pnpm --filter @rexeus/typeweaver test -- ConfigLoader` exits 0.
+
+- [x] **4. Imported plugins are structurally decoded before registration.**
+
+  A plugin requires a non-empty name; `depends` is absent or a string array; and every present
+  lifecycle hook is a function. Invalid default exports and factory results fail as a detailed
+  `PluginLoadError`, never as a later defect or a silently skipped hook.
+
+  Verified by:
+
+  - loader tests cover every invalid field independently for records and factory results;
+  - invalid plugins are never registered or invoked;
+  - each failure has an empty defect list;
+  - `pnpm --filter @rexeus/typeweaver test -- PluginLoader` exits 0.
+
+- [x] **5. The public plugin-construction contract has one executable truth.**
+
+  Decide and implement exactly one of these contracts:
+
+  1. the standard loader supports Effect-returning factories with documented Layer/Scope lifetime;
+     or
+  2. factories remain pure and synchronous, lifecycle methods keep `R = never`, and the guide
+     demonstrates a tested internal Layer-provision path.
+
+  Documentation, types, examples, and runtime behavior must describe the same contract. Do not keep
+  both contradictory models.
+
+  Verified by:
+
+  - a fixture plugin using the documented service pattern loads and generates successfully through
+    the built CLI;
+  - its resource is acquired once and released after plugin finalization;
+  - the plugin-authoring examples compile in the documentation/consumer test;
+  - `pnpm --filter @rexeus/typeweaver test -- PluginLoader` and the built-CLI fixture test exit 0.
+
+### P1 — explicit type and failure contracts
+
+- [x] **6. Public error types cannot drift from runtime behavior.**
+
+  `GenerateFailure` is derived from or checked for exact equality with the actual
+  `Generator.generate` error channel and includes `OutputCleanError`. The public CLI error export is
+  either made accurate and side-effect-free or removed from the documented API.
+
+  `PluginDependencyError` and `UnsafeCleanTargetError` use discriminated payloads so impossible
+  field combinations cannot be constructed and message rendering needs no missing-field fallback.
+
+  Verified by:
+
+  - positive and negative compile-time tests prove the allowed payloads;
+  - a type-equality assertion binds `GenerateFailure` to the method channel;
+  - `pnpm typecheck` exits 0.
+
+- [x] **7. Test TypeScript is part of the compiler gate.**
+
+  Add package test TypeScript configurations or an equivalent type-test setup covering test sources,
+  public plugin-author APIs, Effect requirements, error channels, and negative `@ts-expect-error`
+  contracts.
+
+  Verified by:
+
+  - a root script typechecks production and test sources;
+  - removing one expected type error makes that script fail;
+  - CI invokes the script;
+  - the script and `pnpm typecheck` exit 0.
+
+- [x] **8. Expected formatter and filesystem failures remain typed.**
+
+  Operational formatter errors and expected in-memory/Node filesystem errors are represented in the
+  typed failure channel. `orDie`/throwing `Effect.sync` is reserved for documented broken
+  invariants.
+
+  Verified by:
+
+  - permission/missing-path/failing-formatter tests assert typed errors and zero defects;
+  - a shared filesystem contract suite runs against the in-memory test layer and the Node filesystem
+    layer;
+  - `rg "Effect\\.orDie|Effect\\.sync" packages/cli/src packages/gen/src` has no unexplained
+    expected-I/O conversion to defects;
+  - relevant CLI and gen tests exit 0.
+
+### P1 — observable entrypoint behavior
+
+- [x] **9. The built CLI process contract is covered end to end.**
+
+  Spawn the built Node CLI and verify success output, generated files, missing required options,
+  invalid config, duplicate/domain validation, conflicting flags, `--verbose`, exit codes, and
+  stderr/stdout ownership. Test `runGenerate` wiring rather than only service internals.
+
+  Verified by:
+
+  - process tests execute the published `bin/typeweaver.mjs` shim, which loads the built
+    `dist/entry.mjs` runtime entry, rather than importing source;
+  - process tests assert the exit code and stable output contract for one representative of every
+    boundary-owning failure family named above: parser validation, missing options, config
+    validation, domain validation, typed lifecycle failure, and defect;
+  - family-specific service and unit suites exhaustively assert the individual tagged error
+    payloads; the process suite does not duplicate cases that traverse the same renderer and exit
+    path;
+  - `pnpm --filter @rexeus/typeweaver build` and the process test suite exit 0.
+
+- [x] **10. Interruption and defect recovery is proven across resources.**
+
+  Deterministic tests interrupt or defect during bundling, initialization, transformation,
+  generation, formatting, and atomic output replacement. The output lock, scoped temp directories,
+  and initialized plugins are cleaned up, and a second generation in the same process succeeds.
+
+  Verified by:
+
+  - tests use latches/deferred synchronization, not timing sleeps;
+  - filesystem assertions prove no owned lock/temp artifact remains;
+  - a repeated run after every injected failure succeeds;
+  - targeted lifecycle, lock, and bundler suites pass 20 consecutive runs.
+
+### P2 — maintainability and representative architecture
+
+- [x] **11. Generator orchestration is split at stable domain seams.**
+
+  Extract only the cohesive preflight/lock scope, plugin lifecycle, and postprocessing workflows
+  needed to make their contracts independently readable and testable. Do not fragment the pipeline
+  into one-line wrappers.
+
+  Verified by:
+
+  - `Generator.generate` remains the single top-level orchestration operation;
+  - the three contracts above have focused unit tests;
+  - no public API or generation fixture changes unless explicitly documented;
+  - lint, typecheck, generation fixtures, and lifecycle tests exit 0.
+
+- [x] **12. Effect observability and first-party usage match the architecture.**
+
+  Reusable service operations have stable `Effect.fn` names. At least one first-party plugin is the
+  reference implementation for the Effect-native context I/O surface; synchronous compatibility
+  helpers remain separately tested.
+
+  Verified by:
+
+  - span tests assert stable service and plugin hierarchy;
+  - the reference plugin's integration test exercises Effect-native write and render operations;
+  - no production service creates or runs a local runtime;
+  - `rg "runPromise|runSync|ManagedRuntime\\.make" packages/*/src` shows only approved runtime-edge
+    occurrences.
+
+- [x] **13. Weak tests are replaced, not accumulated.**
+
+  Replace the fixed-case "diamond" property test with a generated graph property or a focused
+  example. Remove or strengthen MainLayer tests that only restate type construction. Introduce
+  shared factories to eliminate duplicated plugin/context fixtures where doing so preserves local
+  readability.
+
+  Verified by:
+
+  - every property-test generator influences the assertion;
+  - mutation of dependency ordering, finalizer ordering, or path validation causes a relevant test
+    to fail;
+  - no new unsafe test `any`, double cast, or compiler suppression exists without a line-level
+    rationale;
+  - all package tests exit 0.
+
+- [x] **14. Effect tooling and reference sources are version-correct.**
+
+  The repo must not silently review Effect 3.22 production code against an unpinned Effect 4 beta
+  checkout. Make the reference strategy reproducible and add a guard that detects a major/version
+  mismatch. Update ADR 0008, migration docs, package READMEs, and plugin-authoring docs to
+  consistently state Effect 3.22 and the intentional peer range.
+
+  Configure a compatible Effect language-service diagnostic command and run it in CI.
+
+  Verified by:
+
+  - `scripts/prepare-effect.sh` checks out a documented, reproducible reference;
+  - an automated version guard fails on an accidental Effect 4-only reference;
+  - `pnpm effect:diagnostics` exists and exits 0;
+  - `rg "3\\.21|Effect 4|effect@beta" docs MIGRATION.md README.md` returns only explicitly
+    historical or comparison text;
+  - docs build/link checks, lint, and typecheck exit 0.
+
+### P3 — packaged consumers and release evidence
+
+- [x] **15. Packaged consumers prove dependency compatibility.**
+
+  Pack the publishable workspaces into isolated fixtures. A minimal plugin author imports public
+  types, compiles, loads through the CLI, and generates output with the contracted Effect runtime
+  and documented lowest supported peer version. When runtime and lower bound are the same release,
+  one positive fixture represents both contracts. The test must fail on duplicate/incompatible
+  Effect identities.
+
+  Verified by:
+
+  - isolated installs use packed tarballs, not workspace symlinks;
+  - every distinct supported-version contract typechecks and executes;
+  - the packed generator declares the Effect range as a peer and has no Effect runtime dependency;
+  - an incompatible duplicate Effect installation is rejected;
+  - `pnpm publish:dry` exits 0.
+
+- [x] **16. Security-sensitive behavior runs on Windows CI.**
+
+  Add a Windows job covering clean-target guards, path safety, output locking, and a built-CLI smoke
+  test. Keep the complete existing Ubuntu runtime matrix.
+
+  Verified by:
+
+  - workflow validation exits 0 locally;
+  - after the human-authorized push, Quality Check run `30175595732` is green on `51f9d893`,
+    including both `quality-check` and `windows-security`;
+  - no platform test is skipped merely because path semantics differ.
+
+- [x] **17. One reproducible migration gate proves the final state.**
+
+  Add `pnpm verify:effect-migration` as a non-mutating umbrella check used by CI. It must run the
+  migration-specific type contracts, unit/integration/process tests, generated-fixture verification,
+  and version/reference checks.
+
+  Final local evidence:
+
+  ```sh
+  source /Users/denniswentzien/.nvm/nvm.sh
+  nvm use 24
+  pnpm install --frozen-lockfile
+  pnpm format:check
+  pnpm lint
+  pnpm typecheck
+  pnpm build
+  pnpm test
+  pnpm verify:generated
+  pnpm verify:effect-migration
+  pnpm --filter @rexeus/typeweaver test:bundle:all
+  pnpm publish:dry
+  git diff --check
+  ```
+
+  Completion also requires all human-authorized remote CI jobs to be green and every audit finding
+  above to be closed by code/test evidence or an explicit human-approved scope decision recorded in
+  this file. On `51f9d893`, Quality Check run `30175595732`, CodeQL runs `30175593636` and
+  `30175593858`, the aggregate CodeQL gate, and both Socket checks are green. PR #190 has no
+  unresolved review thread, and its description states the current Effect, CLI, dependency, Oxlint,
+  documentation, and verification contracts.
+
+### P4 — final Oxlint maintainability hardening
+
+- [x] **18. Oxlint and SonarJS-compatible rules enforce bounded code complexity.**
+
+  Keep Oxlint as the repository's only linter. Extend `.oxlintrc.json` for all authored JavaScript
+  and TypeScript files, using Oxlint's native implementations for the compatible core rules and its
+  `jsPlugins` compatibility layer for the required SonarJS rules. Do not install ESLint, add an
+  ESLint config, allow `eslint` to enter the resolved dependency graph through automatic peer
+  installation, or introduce a second lint command. SonarJS-compatible rules must be executed by
+  Oxlint. `eslint-plugin-sonarjs` is only an optional compatibility source if it can be installed
+  with automatic peer installation disabled and the resolved dependency graph remains free of the
+  `eslint` package; otherwise provide the missing rules as a local Oxlint JS plugin. Integrate the
+  resulting Oxlint gate into CI and `verify:effect-migration`. Exclude only generated output, build
+  artifacts, vendored/reference sources, and dependency directories.
+
+  The maintainability config must enforce the requested limits without weakening them:
+
+  - classic cyclomatic `complexity` at 10;
+  - `sonarjs/cognitive-complexity` at 15;
+  - `max-depth` at 4;
+  - `max-params` at 4 with `countThis: "except-void"`;
+  - `max-nested-callbacks` at 4;
+  - `sonarjs/expression-complexity` at 6;
+  - `max-lines-per-function` at 100, excluding blank and comment-only lines;
+  - `max-statements` at 40;
+  - `sonarjs/no-nested-switch`.
+
+  Capture the initial violation inventory before refactoring. Close every finding by simplifying
+  control flow, extracting cohesive domain operations, replacing argument lists with parameter
+  objects where appropriate, and removing accidental nesting or expression density. Do not use
+  inline disables, blanket file ignores, threshold increases, or behavior-changing rewrites merely
+  to satisfy the numbers.
+
+  Verified by:
+
+  - the pinned Oxlint version accepts every native rule option, including `variant: "classic"` and
+    `countThis: "except-void"`;
+  - the pinned SonarJS-compatible integration runs through Oxlint's `jsPlugins` path without an
+    installed ESLint package; if upstream compatibility is incomplete, use an Oxlint-compatible
+    local implementation for the missing rules rather than adding ESLint;
+  - a fixture or mutation check proves each configured rule can fail `pnpm lint`;
+  - the dependency graph, config files, and scripts contain no ESLint installation or invocation;
+  - `pnpm lint` runs the complete Oxlint rule set and exits 0;
+  - `pnpm verify:effect-migration`, typecheck, build, all tests, generated-output verification, and
+    `git diff --check` exit 0 after the refactors;
+  - no new lint-disable comments or non-generated ignore patterns were added to evade findings.
+
+## Constraints
+
+- Keep production on Effect 3.22; do not migrate to Effect 4 in this goal.
+- Preserve documented generated output and public behavior unless a deliberate breaking correction
+  has a Changeset, migration note, and consumer test.
+- Preserve the broad Effect peer range only if the packed-consumer matrix proves it. Evidence wins
+  over the desired range.
+- Never replace a typed expected failure with a defect to make signatures green.
+- Do not introduce unbounded `any`, blanket casts, disabled tests, lowered compiler strictness,
+  ignored lints, or reduced quality gates.
+- Do not use coverage percentage as a proxy for behavioral quality.
+- Keep changes inside the Effect-migration surface and its verification infrastructure; unrelated
+  cleanup is discovered work, not automatic scope.
+
+Verified on every iteration by the narrowest relevant checks, and before DONE by the complete
+command block in criterion 17.
+
+## Boundaries
+
+May change:
+
+- Effect migration code and tests in `packages/gen`, `packages/cli`, `packages/test-utils`, and
+  first-party plugin packages;
+- documentation describing configuration, plugins, lifecycle, Effect version, and CLI/programmatic
+  usage;
+- root/package TypeScript, test, lint, and Effect diagnostic configuration;
+- generation fixtures, consumer fixtures, scripts, and CI workflows needed to verify this goal;
+- Changesets required by an intentional public contract correction.
+
+Do not change without separate human approval:
+
+- unrelated feature behavior or generated schemas;
+- package names, repository ownership, release channels, or npm provenance;
+- application/site work outside the migration;
+- the base branch history.
+
+## Irreversible actions
+
+Human approval is required; never execute automatically:
+
+- push, force-push, branch deletion, or merge;
+- opening, updating, approving, or merging a pull request;
+- publishing packages or creating a release/tag;
+- deployment or external service mutation;
+- destructive cleanup outside explicit test fixtures.
+
+Local commits are allowed only when the human explicitly requests them.
+
+## Iteration policy
+
+1. Re-read this file at the start of every iteration.
+2. Take the first incomplete, non-blocked criterion.
+3. Record the current failing evidence before changing code.
+4. Make the smallest cohesive change that advances that criterion.
+5. Run the narrow verification first, then affected package gates.
+6. Mark the criterion complete only when all listed checks are green and append exact evidence
+   below.
+7. Do not switch criteria mid-iteration. Queue discoveries instead.
+8. Prefer encoding every repaired contract in a durable test or static check.
+
+## Discovered work
+
+New findings land here first with severity, evidence, relation to the Goal/Why, and a proposed
+machine check. Finish the current criterion before considering promotion.
+
+Promote a discovery into the ordered Done backlog only when:
+
+1. it protects the stated migration safety/contract anchor;
+2. it is reproducible;
+3. completion can be checked mechanically; and
+4. it fits the stated boundaries.
+
+Otherwise leave it here for human triage.
+
+<!-- Append discoveries below. Do not rewrite prior entries. -->
+
+- **Medium — the documented private-Scope pattern still needs adverse-path proof under
+  criterion 10.** The criterion-5 fixture proves the packaged happy path and the generic lifecycle
+  suites prove generator cleanup, but the exact example has not yet been exercised through
+  Layer-build failure, initialization interruption, downstream failure/defect/interruption,
+  finalizer defect, and two concurrent generations. This is directly related to the Goal's resource
+  and interruption guarantees. Criterion 10 should add a deterministic deferred/latch fixture for
+  this pattern and assert distinct Scope acquisition/release identities with no leaked resource
+  after every Exit.
+
+- **High — importing the published CLI package root starts the CLI process.** `src/index.ts`
+  re-exports the side-effectful `cli.ts`, and the built `dist/index.mjs` is only
+  `import "./cli.mjs"`, despite `package.json` declaring `sideEffects: false`. A normal consumer
+  import therefore parses `process.argv`, writes output, and may terminate the host process. This
+  conflicts with the packaged-consumer safety anchor. Criterion 15 should decide whether the npm
+  root is intentionally non-importable or expose a side-effect-free programmatic surface, then add a
+  packed-tarball subprocess check proving that `import("@rexeus/typeweaver")` performs no CLI
+  startup or process exit.
+
+## Progress log
+
+Append one entry per iteration:
+
+```text
+[iteration N | date]
+criterion:
+before:
+change:
+evidence:
+next:
+```
+
+<!-- Append progress below. Do not rewrite prior entries. -->
+
+```text
+[iteration 1 | 2026-07-25]
+criterion: 1. Output-lock ownership is race-safe.
+before: Two new regression tests failed: an unpublished lock was reclaimed and metadata-write
+        failure left the acquired directory behind.
+change: Added atomic candidate-to-info metadata publication, UUID ownership handles, fail-closed
+        unknown metadata, token-checked release, acquisition rollback, and token-derived stale-lock
+        fences that prevent delayed reclaimers from moving a replacement lock.
+evidence: lockfile suite 11/11; complete CLI suite 224/224; root lint green; CLI typecheck green;
+          CLI build green; format check and git diff check green.
+next: Criterion 2, reverse successful plugin finalization with failure/defect/interrupt cleanup.
+```
+
+```text
+[iteration 2 | 2026-07-25]
+criterion: 2. Plugin cleanup follows reverse successful initialization order.
+before: Four lifecycle assertions failed: finalizers ran dependency-first, and Fiber interruption
+        skipped plugin finalization entirely.
+change: Attached cleanup with Effect.onExit so it is uninterruptible across success, typed failure,
+        defect, and interruption; finalized the successful initialization stack in reverse order;
+        captured each finalizer Exit so one defect cannot skip the remaining cleanup attempts, then
+        replayed accumulated defects after every finalizer ran.
+evidence: lifecycle suite 7/7 including dependency-chain, typed failure, defect, interruption, and
+          finalizer-defect cases; complete CLI suite 227/227; root format and lint green; CLI
+          typecheck and build green; git diff check green.
+next: Criterion 3, parse imported configuration fields into a truthful typed boundary.
+```
+
+```text
+[iteration 3 | 2026-07-25]
+criterion: 3. Imported configuration is parsed instead of asserted.
+before: Ten known-field regression cases were accepted as Partial<TypeweaverConfig>; malformed
+        paths, booleans, plugin arrays, and plugin tuples crossed the import boundary without a
+        typed failure.
+change: Added an Effect 3.22 Schema decoder for every known config field, preserved supported
+        unknown top-level keys, introduced InvalidConfigValueError with the complete ParseError,
+        and added table plus fast-check coverage for invalid boundary values.
+evidence: config loader suite 40/40 including 40 generated cases; complete CLI suite 239/239;
+          root lint and format check green; CLI typecheck and build green; git diff check green.
+next: Criterion 4, structurally decode imported plugins before registration.
+```
+
+```text
+[iteration 4 | 2026-07-25]
+criterion: 4. Imported plugins are structurally decoded before registration.
+before: Sixteen new assertions failed: twelve invalid depends/hook shapes were registered as
+        plugins, while four invalid-name cases lacked field-specific diagnostics.
+change: Replaced the name-only type predicate and factory cast with a cast-free decoder that
+        constructs Plugin only after validating a non-blank name, every dependency entry, and all
+        lifecycle hooks; added detailed field/index diagnostics and record/factory tripwire tests.
+evidence: plugin loader suite 48/48 with 20 invalid-shape matrix cases and a real .mjs boundary
+          fixture; complete CLI suite 260/260; root lint and format check green; CLI typecheck and
+          build green.
+next: Criterion 5, make the documented plugin-construction contract executable and singular.
+```
+
+```text
+[iteration 5 | 2026-07-25]
+criterion: 5. The public plugin-construction contract has one executable truth.
+before: The guide advertised an Effect-returning plugin factory the standard loader could not
+        execute; no service-owning example compiled or ran through the built CLI; the new fixture
+        also exposed that Rolldown tree-shook the dynamic CLI startup into a silent exit-0 no-op.
+change: Chose the pure synchronous PluginFactory contract, exported its public type, documented an
+        exit-independent private Layer/Scope lifecycle, added a checkJs example with typed expected
+        I/O failures, and verified one acquire/finalize/release sequence through the built CLI.
+        Disabled tree-shaking only for the side-effectful runtime entry build so the packaged CLI
+        actually starts. Explicitly excluded exit-sensitive transactional finalizers because the
+        current Plugin.finalize contract does not carry the generator Exit.
+evidence: initial criterion fixture 3/3 red; complete CLI suite 263/263; final PluginLoader plus
+          built-fixture suites 51/51; example checkJs compile, gen and CLI typecheck, CLI build,
+          root lint, format check, and git diff check all green. Independent Effect review confirmed
+          the Effect 3.22 ownership transfer and found no remaining blocking semantic mismatch.
+next: Criterion 6, bind public error types exactly to runtime behavior and remove CLI API drift.
+```
+
+```text
+[iteration 6 | 2026-07-25]
+criterion: 6. Public error types cannot drift from runtime behavior.
+before: Compile-time probes showed that the handwritten GenerateFailure union differed from the
+        actual Generator.generate error channel and omitted OutputCleanError; optional error bags
+        also accepted impossible dependency and clean-target payloads.
+change: Derived GenerateFailure from Generator.generate, removed the incomplete GenerationError
+        duplicate, replaced PluginDependencyError and UnsafeCleanTargetError field bags with nested
+        discriminated payloads, retained read-only clean-target compatibility accessors, and
+        documented the breaking contract. Added positive, negative, exact-equality, and runtime
+        assertions for the resulting public types.
+evidence: Initial contract probes failed with TS2344 and unused TS2578 directives; removing one
+          negative-test directive subsequently failed with TS2322. Final contract typecheck green;
+          gen suite 296/296 and CLI suite 263/263; gen and CLI builds, workspace typecheck, Oxlint,
+          Oxfmt, and git diff check all green.
+next: Criterion 7, make test TypeScript and negative public contracts a root and CI compiler gate.
+```
+
+```text
+[iteration 7 | 2026-07-25]
+criterion: 7. Test TypeScript is part of the compiler gate.
+before: The root compiler gate skipped all CLI, core, gen, and zod-to-ts tests, reached the CLI
+        error contracts only through an optional package command, and replaced the entire
+        test-utils typecheck with an echo. The first real test compile exposed invalid typed
+        fixtures, unchecked service-test casts, and stale private helpers.
+change: Added package test configs, included the CLI public error contracts and plugin-author
+        checkJs example in its normal typecheck, preserved Turbo dependency builds and made every
+        test/type-test/config input cache-significant. Replaced unsafe service-test casts with
+        Effect.Service.make, repaired fixture narrowing without weakening the tested behavior,
+        compiled the Node-compatible test-utils tree, and removed three unexported helpers whose
+        generated imports no longer existed. Deno and Bun launchers remain isolated from Node
+        globals and are covered by their native process suites.
+evidence: The compiler inventory now includes all 124 publishable package test/type-test files and
+          357/359 test-utils TypeScript files; only the two native launcher files are excluded.
+          Removing the missing-dependency @ts-expect-error made
+          `NODE_OPTIONS=--max-old-space-size=6144 pnpm typecheck --force` fail at the root with
+          TS2322; restoring it made the same command green. Core, zod-to-ts, gen 296/296, CLI
+          263/263, and native Node/Deno/Bun server 833/833 tests passed. Oxlint, Oxfmt, and git diff
+          check are green. Independent Test-Mastery review found no blocker and confirmed the
+          Query/Zod contracts were preserved.
+next: Criterion 8, keep expected formatter and filesystem failures in the typed Effect channel.
+```
+
+```text
+[iteration 8 | 2026-07-25]
+criterion: 8. Expected formatter and filesystem failures remain typed.
+before: Formatter missing-path and execution failures crossed `Effect.orDie` as UnknownException
+        defects; the in-memory FileSystem threw from makeDirectory and silently created parents
+        for writes/renames; path probes, clean-target inspection, and output-lock I/O either became
+        defects, contention, or swallowed errors. A fixed errno allowlist and indiscriminate clean
+        wrapping were additionally caught by the independent Effect review.
+change: Ported Formatter traversal to the platform FileSystem and added decoded load, execution,
+        and filesystem errors. Added GeneratedPathProbeError, CleanTargetInspectionError, and
+        OutputLockError while preserving unexpected throws as defects; split strict typed lock
+        release from its finalizer-safe warning policy. Aligned the in-memory adapter with Node for
+        directory listing, missing parents, rename, realpath, and scoped temp cleanup. Replaced the
+        errno allowlist with structural Node syscall/errno recognition and limited OutputCleanError
+        to those operational failures. Documented every remaining pure/runtime-edge Effect.sync.
+evidence: Shared Node/InMemory FileSystem contract 16/16; Formatter 8/8; generator I/O error suite
+          8/8; lock suite 11/11; PathSafety/context I/O 16/16. Complete CLI suite 294/294 and gen
+          suite 301/301; root typecheck, CLI/gen builds, Oxlint, Oxfmt, and git diff check green.
+          `rg "Effect\\.(orDie|sync)" packages/cli/src packages/gen/src` finds no orDie and only four
+          documented non-operational sync regions. Independent Effect, Test-Mastery, and TypeScript
+          reviews found no remaining blocker.
+next: Criterion 9, prove the built CLI process contract end to end.
+```
+
+```text
+[iteration 9 | 2026-07-25]
+criterion: 9. The built CLI process contract is covered end to end.
+before: The only built-process proof covered one service-plugin happy path. A new custom-config
+        probe failed because runGenerate discarded unknown top-level config keys; mixed Effect
+        Causes hid defects behind typed failures, ValidationError filtering ignored interrupts,
+        and the goal named an internal build entry instead of the published bin shim.
+change: Added a fresh-build process matrix through bin/typeweaver.mjs for success artifacts,
+        required options, imported config, custom config plus CLI overrides, domain validation,
+        typed plugin failure, defect, conflicting boolean flags, verbose and alias handling, and
+        parser diagnostics. Preserved custom config keys through the typed generator context,
+        rendered every Cause failure and defect, rejected interrupted validation Causes, aligned
+        the ADR/Changeset/README/Migration contracts, serialized the two built-process files, and
+        moved their fixtures under ignored test outputs so parallel quality gates remain isolated.
+evidence: Three consecutive fresh-build process runs passed 16/16; a fourth 16/16 run stayed green
+          while Oxfmt checked the repository in parallel. The complete CLI suite passed 310/310;
+          root typecheck, Oxlint, Oxfmt, and git diff check are green. Independent Effect,
+          Test-Mastery, and TypeScript-Mastery reviews found no remaining blocker.
+next: Criterion 10, prove interruption and defect recovery across every owned resource.
+```
+
+```text
+[iteration 10 | 2026-07-25]
+criterion: 10. Interruption and defect recovery is proven across resources.
+before: Bundling wrote directly to its published output and a cancelled Rolldown Promise could keep
+        mutating files after scope and lock release. Successful plugin initialization could be
+        interrupted before finalizer registration, and atomic rename could publish a file before
+        generated-file tracking. Recovery coverage did not span every pipeline phase or the
+        documented private Layer.buildWithScope plugin pattern.
+change: Staged spec bundles beside their destination, waited uninterruptibly for non-cancellable
+        Rolldown work, and atomically published only successful output. Masked the successful
+        initialize-to-finalizer transition and made rename plus generated-file tracking one commit
+        for both Effect-native and sync writers. Added deterministic recovery matrices for
+        bundling, initialization, resource transformation, generation, formatting, atomic output
+        replacement, scoped-service adverse paths, and concurrent private scopes, with cleanup and
+        same-runtime retry assertions after every injected failure or interruption.
+evidence: Gen passed 305/305 and CLI passed 330/330. The five targeted lifecycle, lock, bundler,
+          generator-recovery, and scoped-service suites passed 40/40 on 20 consecutive combined
+          runs (800/800). CLI and Gen builds/typechecks, root Oxlint/Oxfmt, and git diff check are
+          green. Independent Effect, Test-Mastery, and TypeScript-Mastery reviews found no
+          remaining K10 blocker.
+next: Criterion 11, split Generator orchestration at stable domain seams.
+```
+
+```text
+[iteration 11 | 2026-07-25]
+criterion: 11. Generator orchestration is split at stable domain seams.
+before: Generator.ts held 338 lines and its generate operation mixed path resolution, target
+        validation, directory preparation, lock ownership, cleanup, plugin lifecycle, index
+        generation, formatting, and completion reporting across roughly 270 lines. The three
+        workflow contracts could only be tested through the full Generator layer.
+change: Extracted internal preflight/lock, plugin-lifecycle, and postprocessing workflows with
+        narrow parameter/result types while keeping Generator.generate as the only top-level
+        composer. Kept initialization masking, reverse finalization, index-before-finalize,
+        format-after-finalize, lock extent, log order, and existing span parentage unchanged.
+        Added focused state-, Exit-, event-, and log-based tests for all three contracts.
+evidence: Focused workflow suites pass 9/9 and the complete CLI suite passes 339/339. Generation
+          fixtures regenerated with no tracked diff. Root typecheck/build completed 23/23 tasks;
+          Oxlint, Oxfmt, and git diff check are green. Independent Effect, Test-Mastery, and
+          TypeScript-Mastery reviews found no remaining K11 blocker.
+next: Criterion 12, align Effect observability and first-party Effect-native I/O usage.
+```
+
+```text
+[iteration 12 | 2026-07-25]
+criterion: 12. Effect observability and first-party usage match the architecture.
+before: Several reusable Effect service operations had no stable operation name, the span contract
+        accepted missing attributes and incorrectly parented duplicate spans, and no first-party
+        plugin integration test exercised the real Effect-native render/write path. The first
+        Formatter tracing attempt also converted failures to successful Exit values inside the
+        named span, producing false-success telemetry.
+change: Added stable typeweaver.<Service>.<operation> Effect.fn names while preserving typed errors
+        and unexpected defect identity. Strengthened exact span occurrence, parent, lifecycle,
+        plugin-attribute, and failure-status assertions. Made Hono the first-party Effect-native
+        reference and proved its real ContextBuilder render, atomic write, tracking, log queue, and
+        cleanup behavior against the in-memory FileSystem. Kept Formatter errors inside a private
+        carrier until its span records Failure, then restored the public tagged error and nested
+        cause identity outside the span. Documented the observable hierarchy and reference plugin.
+evidence: Gen passed 305/305, CLI passed 340/340, and Hono passed 100/100 tests. The Hono generation
+          fixture remained unchanged. Root typecheck/build completed 23/23 tasks; Oxlint, Oxfmt,
+          runtime-edge grep, and git diff check are green. Production has no local runPromise or
+          runSync and only the approved central ManagedRuntime.make edge. Independent Effect,
+          Test-Mastery, and TypeScript-Mastery reviews found no remaining K12 blocker.
+next: Criterion 13, replace weak tests instead of accumulating them.
+```
+
+```text
+[iteration 13 | 2026-07-25]
+criterion: 13. Weak tests are replaced, not accumulated.
+before: A fixed diamond graph was wrapped in a property whose generated subarray was ignored, four
+        MainLayer tests exercised only Effect primitives or Layer.isLayer, and several PathSafety
+        properties could return early or accept an unspecified failure without proving their named
+        invariant. Small plugin/spec fixtures were duplicated, and four migration-scope tests used
+        avoidable double casts.
+change: Removed the fake diamond property while retaining an exact focused dependency/tie-break
+        example. Replaced the MainLayer smoke tests with one behavior-based composition test for all
+        four gen services. Rebuilt traversal, safe-relative, Windows-absolute, and symlink
+        properties so every generated value drives setup and an exact typed assertion; removed
+        tautological duplicates. Shared only three narrow plugin/spec factories, kept
+        contract-specific context fixtures local, and replaced the four double casts with complete
+        fixtures plus Cause/instanceof narrowing.
+evidence: Gen passed 298/298 and CLI passed 340/340 tests; the lower Gen count reflects seven weak
+          or duplicate tests removed and replaced by stronger contracts. Three transient mutations
+          were killed: reversed registry insertion failed 6 tests, forward finalization failed 8,
+          and removal of the raw parent-traversal guard failed the generated path property. No
+          production mutation remained. Root typecheck/build completed 23/23 tasks; Oxlint, Oxfmt,
+          no-new-unsafe-test-pattern scan, and git diff check are green. Independent Effect,
+          Test-Mastery, and TypeScript-Mastery reviews found no remaining K13 blocker.
+next: Criterion 14, make Effect tooling and reference sources version-correct.
+```
+
+```text
+[iteration 14 | 2026-07-25]
+criterion: 14. Effect tooling and reference sources are version-correct.
+before: Production and tests used Effect 3.22 while the repo-local skill prepared an unpinned
+        Effect 4 beta reference and actively preferred v4-only APIs. The repository had no strict
+        Effect language-service gate, and no machine guard bound package manifests, installed
+        resolution, source checkout, documentation, and skill guidance to one version contract.
+change: Added a machine-readable Effect 3.22 contract and a dirty-safe, idempotent checkout of the
+        official effect@3.22.0 tag at its exact commit. Pinned and configured the compatible Effect
+        language service with strict diagnostics plus a negative sentinel. Routed the local skill
+        through a new TypeWeaver v3 guide and pinned source, marked every generic v4 guide inactive,
+        and guarded the routing and skill hash. Added documentation/link checks and a package
+        contract that verifies every Effect manifest plus its real Node resolution; an isolated
+        Effect 4 fixture proves both wrong specifications and wrong installed runtimes fail.
+evidence: Reference verification rejects v4, prepares the exact detached pin twice, and preserves
+          dirty work. Effect diagnostics rejected its implicit-any sentinel and checked nine
+          package programs with 0 errors, 0 warnings, and 0 messages. The package mutation fixture
+          rejected ^4.0.0 and resolved 4.0.0, while all nine workspace packages resolve 3.22.0.
+          Docs check passed 84 tracked Markdown files; the remaining 3.21/Effect 4 grep hits are
+          intentional peer-range or historical comparison text. Gen passed 298/298, CLI passed
+          340/340, and the full workspace test graph passed 23/23 tasks. Root typecheck passed
+          23/23 tasks; build/size, generated-output verification, Oxlint, Oxfmt, and git diff check
+          are green. Independent Effect, Test-Mastery, and TypeScript-Mastery reviews found no
+          remaining K14 blocker.
+next: Criterion 15, prove packaged consumer compatibility across supported dependency versions.
+```
+
+```text
+[iteration 15 | 2026-07-25]
+criterion: 15. Packaged consumers prove dependency compatibility.
+before: The documented >=3.21.2 Effect peer lower bound was incompatible with the current
+        @effect/* packages, which require ^3.22.0. An isolated 3.21.2 consumer therefore installed
+        physical Effect 3.21.2 and 3.22.0 identities and failed the public Plugin type contract with
+        nominal Effect TypeId incompatibilities. No packed-consumer gate protected artifact
+        provenance, public declaration compatibility, CLI loading, or physical Effect identity.
+change: Raised the honest Effect peer contract to >=3.22.0 <4, moved Gen's Effect requirement from
+        a production dependency to peer plus development dependency, and synchronized docs, ADRs,
+        Changeset, skill guidance, and version guards. Added a release-version-stable isolated
+        matrix that packs all 11 public workspaces, blocks registry fallback, verifies tarball
+        manifests and lock provenance, compiles a real public plugin with skipLibCheck disabled,
+        runs it through the packed CLI, and rejects a deliberate 3.21.2/3.22.0 identity split.
+        Added the packed-consumer gate to Ubuntu CI.
+evidence: The positive Effect 3.22.0 fixture represents both the runtime and current lower-bound
+          contracts, resolves exactly one physical Effect identity, typechecks, loads, and writes
+          its exact generated output. The negative fixture is rejected for multiple realpath-based
+          Effect identities. The packed Gen manifest is asserted to expose the configured Effect
+          peer and no Effect production dependency. Docs/version contracts, Effect diagnostics,
+          Gen 298/298, CLI 340/340, full workspace tests 23/23, root typecheck/build 23/23, size
+          gate, Oxlint, Oxfmt, publish dry-run, and git diff check are green. Independent Effect,
+          Test-Mastery, and TypeScript-Mastery reviews found no remaining K15 blocker.
+next: Criterion 16, run the security-sensitive path and locking contracts on Windows CI.
+```
+
+```text
+[iteration 16 | 2026-07-25 | local implementation]
+criterion: 16. Security-sensitive behavior runs on Windows CI.
+before: Quality CI ran only on Ubuntu, the root prepare lifecycle invoked a POSIX shell wrapper,
+        and no named gate exercised native clean-target, generated-path, NodeFileSystem, lock, spec
+        loading, and built-CLI behavior together. Several path expectations were POSIX-shaped, a
+        Windows junction capability failure could silently skip security tests, and stale-lock
+        tests inferred a dead process from an arbitrary high PID.
+change: Added a pinned windows-2025 job that performs frozen install, full build, relink, and a
+        serial package-owned security gate while preserving the complete Ubuntu job. Made prepare
+        invoke the platform-neutral Node implementation directly. Added native Windows path and
+        required-junction contracts, made PathSafety assertions platform-native, included
+        guard-before-mutation and interruption-safe preflight tests, and made process-liveness
+        handling fail closed unless ESRCH proves the holder dead. Added deterministic ESRCH and
+        unknown-platform-error lock tests plus actionlint configuration for the existing Blacksmith
+        runner.
+evidence: actionlint 1.7.12 accepts the workflow. The local Windows-targeted selection passes Gen
+          104/104 and CLI 100/100 applicable tests; the two local skips are the Windows-only
+          capability/semantics contracts, paired with the POSIX-only literal-backslash contract.
+          Root typecheck completes 23/23 tasks; Oxlint, Oxfmt, frozen install, and git diff check
+          are green. Independent Effect, Test-Mastery, and TypeScript-Mastery reviews found no
+          remaining local K16 blocker. Remote Ubuntu and Windows proof remains pending a
+          human-authorized push, so criterion 16 intentionally stays unchecked.
+next: Commit the locally complete Windows implementation, then proceed to criterion 17 while
+      retaining the explicit remote-CI completion dependency.
+```
+
+```text
+[iteration 17 | 2026-07-25 | local implementation]
+criterion: 17. One reproducible migration gate proves the final state.
+before: Migration proof was spread across unrelated CI steps. Root `pnpm test` reached the tracked
+        test fixture through Turbo's test:gen dependency, `verify:generated` only inspected Git
+        status and therefore accepted a clean but stale committed fixture, and packed-consumer
+        verification invoked a platform-specific pnpm executable while prepack rebuilt workspace
+        artifacts. No single command proved the complete contract or guarded its own authored
+        worktree non-mutation.
+change: Added a shell-free Node orchestrator that resolves the active pnpm CLI and runs reference,
+        documentation/version, Effect diagnostics, migration type contracts, Gen and public-example
+        typechecks, fresh generated-fixture comparison, every workspace test, and packed-consumer
+        compatibility sequentially. Fixture freshness now generates into an isolated resolvable
+        directory and compares all paths and bytes. Packing uses the active pnpm CLI with lifecycle
+        scripts disabled. The umbrella fingerprints tracked diffs and untracked file contents before
+        and after. Ubuntu CI now calls the umbrella after build/relink and generates only ignored CLI
+        outputs beforehand; covered duplicate steps were removed.
+evidence: `pnpm verify:effect-migration` passes under Node 24 with 0 Effect diagnostic findings,
+          exact CLI/Gen/public-example type contracts, all 2,376 workspace tests including Gen
+          298/298 and CLI 341/341 applicable tests, all 225 committed generated fixture files
+          byte-identical to isolated fresh output, and the packed Effect 3.22 consumer plus duplicate
+          identity rejection. A deliberate stale edit to generated index.ts made verify:generated
+          fail on the exact changed file. The full umbrella reported an identical authored worktree
+          before and after. Actionlint, Oxlint, Oxfmt, and git diff check are green. Independent
+          Effect, Test-Mastery, and TypeScript-Mastery reviews found no local K17 blocker. Remote
+          Ubuntu and Windows proof remains pending, so criterion 17 intentionally stays unchecked.
+next: Commit the locally complete umbrella gate, then implement criterion 18 exclusively through
+      Oxlint and add its final lint contract to verify:effect-migration.
+```
+
+```text
+[iteration 18 | 2026-07-25]
+criterion: 18. Oxlint and SonarJS-compatible rules enforce bounded code complexity.
+before: Oxlint had no bounded-complexity contract. Enabling the requested exact thresholds produced
+        203 findings: 133 max-lines, 29 cyclomatic, 18 nested-callback, 9 parameter, 8 cognitive,
+        4 statement, and 2 expression-complexity violations across tests, production, and tooling.
+change: Pinned Oxlint 1.75.0 and loaded SonarJS 4.2.0 only through Oxlint's jsPlugins path with
+        automatic peer installation disabled and no ESLint runtime. Added all nine exact rules,
+        recorded the initial inventory, and split long control flow and suites at domain/behavior
+        seams without disabling tests or rules. Long argument lists became typed options objects
+        where appropriate, with generated templates, fixtures, Changeset, and the 1.0 migration
+        guide synchronized. Added a real-root-lint mutation matrix for every boundary plus durable
+        guards for rule options, ignores, overrides, disable directives, scripts, configs, lockfile,
+        and the installed dependency graph; wired it into verify:effect-migration.
+evidence: Frozen offline install is reproducible; pnpm why eslint and physical-store checks find no
+          ESLint package. The mutation gate rejects exactly one invalid fixture for each of all
+          nine rules and the authored repository has zero lint findings. Format, docs, workspace
+          typecheck, build and size gates are green. All 2,376 workspace tests pass, including Gen
+          298/298, CLI 341/341 plus 2 skips, and Server 833/833; all 225 generated files match fresh
+          isolated output. Packed Effect 3.22 consumers pass and duplicate identity is rejected.
+          Node, Deno, and Bun bundle generation each emits 162 files; publish dry-run and git diff
+          check are green. The final umbrella preserves the authored worktree. Independent Effect,
+          Test-Mastery, and TypeScript-Mastery reviews found and then confirmed closure of every
+          K18 finding.
+next: Commit K18. Criteria 16 and 17 then remain blocked only on a human-authorized push and green
+      Ubuntu plus Windows remote CI; stop before that irreversible action.
+```
+
+```text
+[iteration 19 | 2026-07-25 | pre-push checkpoint]
+criterion: 16 and 17 remote completion evidence.
+before: K18 was committed at df419897, while origin/feat/use-effect and PR #190 still pointed to
+        the audit baseline 7488f6d2. The latest remote Quality Check failed before installation
+        because its old workflow selected pnpm 10.12.1 while package.json selected pnpm 10.34.5.
+change: Fetched origin read-only and audited the open PR, its latest failed run, the current
+        workflow, and branch ancestry without mutating remote state. The local workflow and
+        packageManager now both select pnpm 10.34.5; origin/main is an ancestor of HEAD and the
+        branch has no remote-only commits.
+evidence: `git rev-list --left-right --count origin/feat/use-effect...HEAD` reports 0 18;
+          `git rev-list --left-right --count origin/main...HEAD` reports 0 54; PR #190 remains open
+          at 7488f6d2; run 30157080523 failed solely in pnpm/action-setup on the old 10.12.1 versus
+          10.34.5 mismatch. Current `.github/workflows/quality-check.yml` and package.json both pin
+          10.34.5. The authored worktree was clean before this append-only progress entry.
+next: Validate the committed workflow once more, commit this checkpoint, then stop before pushing.
+      Human approval is required to push the 19 local commits and obtain fresh Ubuntu plus Windows
+      CI evidence for criteria 16 and 17.
+```
+
+```text
+[iteration 20 | 2026-07-25 | blocked checkpoint]
+criterion: 16 and 17 remote completion evidence.
+before: The same human-approval boundary has remained the only blocker for three consecutive goal
+        turns. HEAD is 19 commits ahead of origin/feat/use-effect, the worktree is clean, and no
+        local implementation or verification gap remains that can produce the required remote
+        Ubuntu and Windows evidence.
+change: Re-read the complete completion contract and Effect 3.22 authority, rechecked the branch
+        divergence, and recorded the required blocked state without pushing or mutating PR #190.
+evidence: `.repos/effect` is present; Effect remains pinned to 3.22.0 with peer range >=3.22.0 <4;
+          `git rev-list --left-right --count origin/feat/use-effect...HEAD` still reports 0 19.
+          Iterations 18 and 19 already record the green local umbrella, actionlint validation, and
+          resolution of the old remote pnpm-version mismatch. Criteria 16 and 17 remain unchecked
+          solely because their contract explicitly requires fresh green remote jobs.
+next: A human must explicitly authorize pushing feat/use-effect to origin. After that push, monitor
+      PR #190 until the Ubuntu quality-check and Windows security jobs complete, diagnose and fix
+      any failures, record the exact run evidence, check criteria 16 and 17, rerun the final
+      completion audit, and only then mark the goal done.
+```
+
+```text
+[iteration 21 | 2026-07-25 | post-push CI and final-audit repair]
+criterion: 16 and 17 remote completion evidence.
+before: The human pushed 9b56a516. Quality Check run 30173547287 failed because the maintainability
+        sentinel parsed its own directive strings as comments and the PathSafety property fake used
+        a POSIX-only output root on Windows. The final Effect, Test-Mastery, and TypeScript-Mastery
+        audits also found a side-effectful package-root import, an unreachable documented
+        programmatic API, ambiguous plugin-export precedence, and several stale or untruthful public
+        documentation contracts.
+change: Switched directive discovery to TypeScript AST comment ranges with string-literal sentinels;
+        aligned the PathSafety fake with the production native absolute path; exposed the documented
+        Effect runtime and Generator through a side-effect-free package root; added strict packed
+        ESM, CommonJS, and programmatic type contracts; made default plugin exports deterministic;
+        typed template data without an unknown cast; typed direct OpenAPI options; corrected plugin
+        versions, path/I/O semantics, lifecycle limits, Effect reference paths, ADR allocation, and
+        testing guidance; and expanded the Windows job's lifecycle, recovery, scoped-resource, and
+        built-example coverage.
+evidence: Frozen install, actionlint, format, Oxlint, workspace typecheck, build, and size checks
+          pass. The expanded local Windows gate passes Gen 104/104 and CLI 128/128 applicable tests.
+          `pnpm verify:effect-migration` passes with zero Effect diagnostic findings, exact type
+          contracts, all 2,377 workspace tests, 225 fresh generated fixtures, packed Effect 3.22
+          ESM/CommonJS/programmatic consumers, duplicate-identity rejection, and an unchanged
+          authored worktree. The remaining proof is a fresh green remote run on the final commit.
+next: Commit and push the cohesive repairs under the human's explicit authorization, then monitor
+      PR #190. Mark criteria 16 and 17 only after Ubuntu and Windows are green on the exact final
+      commit and the final PR review has no unresolved blocker.
+```
+
+```text
+[iteration 22 | 2026-07-25 | Windows packaged-CLI repair]
+criterion: 16 and 17 remote completion evidence.
+before: Quality Check run 30174570753 proved the complete Ubuntu quality-check job green on
+        69b6bee4, but the Windows security job failed every built CLI process that reached the
+        package bin. The bin imported an absolute Windows path such as D:\...\dist\entry.mjs
+        directly, which Node's ESM loader interpreted as the unsupported URL protocol `d:`.
+change: Convert the resolved built entry path through pathToFileURL before dynamic import so the
+        published bin uses a valid file URL on POSIX and Windows.
+evidence: The package builds under Node 24; Prettier accepts the bin; the expanded local Windows
+          gate passes Gen 104/104 and CLI 128/128 applicable tests, including all 13 built CLI
+          process contracts and the exact documented scoped-service example. The full
+          `pnpm verify:effect-migration` umbrella passes with zero Effect diagnostics, all 2,378
+          workspace tests, 225 exact generated fixtures, the packed consumer matrix, and an
+          unchanged authored worktree; Oxfmt, Oxlint, and git diff check are also green.
+next: Commit and push the repair under the human's explicit authorization, then require a fresh
+      Ubuntu and Windows run on the exact new commit.
+```
+
+```text
+[iteration 23 | 2026-07-25 | Windows documentation-contract runner repair]
+criterion: 16 and 17 remote completion evidence.
+before: Quality Check run 30174849254 proved Ubuntu fully green and confirmed that the packaged CLI
+        file-URL repair works on Windows. Windows then reached 128 passing CLI contracts but the
+        exact documented plugin typecheck alone failed because Node's execFile cannot resolve the
+        extensionless `pnpm` shim on Windows.
+change: Resolve the installed TypeScript CLI as a module and invoke it through process.execPath,
+        avoiding shell-dependent pnpm shim resolution and any reliance on npm lifecycle variables.
+evidence: The failing log identifies one independent failure at
+          pluginAuthoring.serviceFixture.test.ts:97 with `spawn pnpm ENOENT`; the same run proves the
+          packaged CLI process and every other selected Windows CLI contract pass. The repaired
+          documentation contract passes both directly and within the expanded local Windows gate;
+          that gate passes Gen 104/104 and CLI 128/128 applicable tests. The complete
+          `pnpm verify:effect-migration` umbrella remains green with zero Effect diagnostics, all
+          2,378 workspace tests, 225 exact generated fixtures, packed consumers, and an unchanged
+          authored worktree.
+next: Commit and push the portable test runner, then require fresh green Ubuntu and Windows
+      evidence on the exact final commit.
+```
+
+```text
+[iteration 24 | 2026-07-25 | final security and review closure]
+criterion: 16 and 17 remote completion evidence.
+before: Quality Check run 30175139657 made Ubuntu and Windows green on ae6a5e12, but the aggregate
+        CodeQL gate reported two high-severity polynomial-regex alerts in the template parser. The
+        final thread audit also found that orphan cleanup could delete user-owned
+        `.typeweaver-*` directories, `-V` no longer printed the version despite the migration's
+        compatibility claim, three fixture strings still triggered code-quality findings, and
+        Vitest 3.2.4 remained below its critical-CVE patch.
+change: Replaced regex tag discovery with an index-based linear scanner and an adversarial
+        unterminated-prefix regression; restricted orphan removal to Node's exact six-character
+        mkdtemp artifact shape while proving user directories survive; restored `-V` as a normalized
+        version alias and kept verbose logging on `--verbose`; emitted generated fixture strings
+        through ordinary concatenation; upgraded Vitest and coverage to the latest Effect-compatible
+        3.2.7 and Turbo to 2.10.7.
+evidence: Frozen install, Actionlint, Oxfmt, Oxlint, workspace typecheck, all-package build, and size
+          limits pass. Targeted template, orphan-cleanup, concurrency, lifecycle, and all 13 built
+          CLI process contracts pass. `pnpm verify:effect-migration` passes with zero Effect
+          diagnostics, all 2,379 workspace tests, 225 exact generated fixtures, packed Effect 3.22
+          consumers, duplicate-identity rejection, and an unchanged authored worktree. Vitest 4 is
+          intentionally excluded because @effect/vitest 0.30.0 requires Vitest ^3.2.0.
+next: Commit and push the cohesive final-review repairs, require every exact-head CI and security
+      check to pass, update the stale PR description, resolve only verified review threads, record
+      the final remote evidence, and perform the final merge-readiness audit without merging.
+```
+
+```text
+[completion evidence | 2026-07-25 | exact reviewed code state]
+criterion: 16 and 17.
+before: The final implementation and security repairs were locally green but still needed remote
+        execution and a complete review-thread audit.
+change: Pushed the six cohesive repair commits through 51f9d893, updated the stale PR description,
+        inspected every remaining review thread against its implementation and regression evidence,
+        and resolved exactly the five verified outstanding threads.
+evidence: Quality Check run 30175595732 is green on 51f9d893: the Ubuntu quality-check and Windows
+          security jobs both pass. CodeQL runs 30175593636 and 30175593858, the aggregate CodeQL
+          gate, and both Socket checks pass. PR #190 reports zero unresolved review threads. The
+          branch is mergeable, and no merge or release was performed.
+next: Commit and push this append-only completion record, then require every check to pass once more
+      on that evidence-only final commit before handing the PR back as merge-ready.
+```
+
+```text
+[post-completion review | 2026-07-25 | final-head Codex findings]
+criterion: 16 and 17 reopened for exact-head remote evidence.
+before: The evidence-only commit 65bcb421 passed every CI and security check, but the explicitly
+        requested final Codex review found two real residual issues: generated-file publication did
+        not re-probe path components after staging, and crash-left SpecBundler staging directories
+        survived `--no-clean`. It also suggested removing six apparently unused Effect packages.
+change: Stabilized the output root at context construction; revalidated sync and Effect-native
+        destinations before staging and immediately before rename; kept expected path failures
+        typed and cleanup scoped; added a real symlink-swap regression plus orchestration/cleanup
+        tests; recognized only exact six-character Node mkdtemp artifacts for both atomic writes and
+        SpecBundler staging; proved similarly named user directories survive; and expanded the
+        Windows security gate with both suites. Retained all six Effect packages after package
+        metadata, `pnpm why`, and built-output inspection proved they satisfy non-optional,
+        externalized peer chains while `auto-install-peers=false`.
+evidence: Oxfmt, Oxlint, workspace typecheck, focused suites, and the expanded local Windows gate
+          pass. Gen's Windows set passes 111/111; CLI's set passes 132 applicable tests with two
+          intentional non-Windows skips. `pnpm verify:effect-migration` passes with zero Effect
+          diagnostics, all 2,383 workspace tests, 225 exact generated fixtures, packed Effect 3.22
+          consumers, duplicate-identity rejection, and an unchanged authored worktree.
+next: Commit and push the two real repairs plus this reopened checkpoint, require fresh green
+      Ubuntu/Windows/CodeQL/Socket checks, resolve the implementation threads only after the push,
+      and trigger a new final-head Codex review. Return status to complete only when that review has
+      no unresolved finding and the exact head is green.
+```
+
+```text
+[final review closure | 2026-07-26 | exact green implementation state]
+criterion: 16, 17, and 18.
+before: Repeated exact-head Codex reviews exposed residual output-boundary issues after the first
+        completion record: generated-path publication races, crashed staging debris, long-lived
+        lock poisoning, symlinked clean targets, lexical/canonical containment gaps, name-only
+        orphan ownership, over-broad formatter exclusions, and an untyped SpecBundler realpath
+        probe. One final review suggestion incorrectly claimed the full workspace suites were absent
+        from CI.
+change: Added pre-publish path revalidation; token-safe rename-first lock release and exact-owner
+        recovery; under-lock clean-target revalidation; exact lexical and canonical containment;
+        a versioned regular-file ownership marker for atomic-writer and SpecBundler staging; shared
+        lock/fence recognition; format-visible user `.typeweaver-*` output; and typed realpath
+        failures. Added real filesystem, interruption, crash-recovery, replacement-owner, POSIX,
+        Windows, marker-symlink, formatter, and plugin integration regressions. Verified that
+        `verify:effect-migration` already executes every package test script recursively, so no
+        duplicate Ubuntu test step was added.
+evidence: Local Oxfmt, Oxlint, workspace typecheck, Effect diagnostics, the complete
+          `pnpm verify:effect-migration` umbrella, and the expanded Windows-security gate pass.
+          The latter passes 112 Gen contracts and 144 applicable CLI contracts with two expected
+          local platform skips. Quality Check run 30178831792 is green on 6bc2105d, including the
+          recursive workspace unit/integration/process-test command. CodeQL run 30178831034, the
+          aggregate CodeQL gate, both Socket checks, and Windows security are green. PR #190 has
+          zero unresolved review threads; the final repeated review on the unchanged implementation
+          head produced no new finding. The branch is mergeable, and no merge or release occurred.
+next: Push this evidence-only completion commit, then require green exact-head CI/security and a
+      clean final Codex review before handoff. Repository protection still requires one independent
+      approving human review before merge.
+```
+
+## Stop conditions
+
+- **Done:** all 18 criteria are checked with recorded evidence, the final local command block is
+  green, and human-authorized remote CI is green.
+- **Iteration cap:** stop after 24 implementation iterations and report the remaining criteria,
+  evidence, and recommended next sequence.
+- **Budget:** use the runner-provided budget. Budget exhaustion is not completion; stop with
+  progress, blockers, and the next smallest useful step.
+- **No progress:** stop after two consecutive iterations that produce neither a code/evidence change
+  nor a newly reproducible blocker.
+- **Circuit breaker:** after three failures of the same tool or external resource, stop retrying it
+  and report the exact command, errors, and an alternative verification path.
+- **Blocked:** if no defensible in-boundary path remains, record attempted paths, evidence, the
+  blocker, and the concrete human input or external change that would unlock progress.
+- **Human checkpoint:** stop before every irreversible action listed above.

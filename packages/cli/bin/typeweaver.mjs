@@ -2,7 +2,7 @@
 
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const entry = resolve(__dirname, "../dist/entry.mjs");
@@ -15,4 +15,4 @@ if (!existsSync(entry)) {
   process.exit(1);
 }
 
-await import(entry);
+await import(pathToFileURL(entry).href);

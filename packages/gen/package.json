@@ -27,9 +27,10 @@
     "NOTICE"
   ],
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "format": "oxfmt",
     "test": "vitest run",
+    "test:windows-security": "vitest run __test__/services/PathSafety.test.ts __test__/services/PathSafety.property.test.ts __test__/services/internal/pluginContextBuilder.test.ts __test__/services/internal/pluginContextEffectIO.test.ts",
     "build": "tsdown",
     "prepack": "npm run build",
     "preversion": "npm run build"
@@ -56,13 +57,18 @@
   "homepage": "https://github.com/rexeus/typeweaver#readme",
   "peerDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
-    "zod": "^4.3.0"
+    "effect": "catalog:peers",
+    "zod": "catalog:peers"
   },
   "devDependencies": {
+    "@effect/vitest": "^0.30.0",
     "@rexeus/typeweaver-core": "workspace:^",
-    "zod": "^4.3.6"
+    "effect": "^3.22.0",
+    "fast-check": "^4.9.0",
+    "zod": "^4.4.3"
   },
   "dependencies": {
+    "@effect/platform": "^0.97.0",
     "polycase": "^1.1.0"
   }
 }

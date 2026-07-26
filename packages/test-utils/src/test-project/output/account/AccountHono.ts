@@ -36,13 +36,13 @@ export class AccountHono extends TypeweaverHono<HonoAccountApiHandler> {
 
   protected setupRoutes(): void {
     this.post("/accounts", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "RegisterAccount",
-        new RegisterAccountRequestValidator(),
-        new RegisterAccountResponseValidator(),
-        this.requestHandlers.handleRegisterAccountRequest.bind(this.requestHandlers),
-      ),
+        operationId: "RegisterAccount",
+        requestValidator: new RegisterAccountRequestValidator(),
+        responseValidator: new RegisterAccountResponseValidator(),
+        handler: this.requestHandlers.handleRegisterAccountRequest.bind(this.requestHandlers),
+      }),
     );
   }
 }

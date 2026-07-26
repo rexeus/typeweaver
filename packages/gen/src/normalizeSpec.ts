@@ -1,4 +1,5 @@
 import {
+  DuplicateResponseNameError as CoreDuplicateResponseNameError,
   isNamedResponseDefinition,
   validateUniqueResponseNames,
 } from "@rexeus/typeweaver-core";
@@ -8,10 +9,12 @@ import type {
   ResponseDefinition,
   SpecDefinition,
 } from "@rexeus/typeweaver-core";
+import { Effect } from "effect";
 import { z } from "zod";
 import { normalizeBody } from "./bodyNormalization.js";
 import {
   DuplicateOperationIdError,
+  DuplicateResponseNameError,
   DuplicateRouteError,
   EmptyOperationResponsesError,
   EmptyResourceOperationsError,
@@ -21,6 +24,7 @@ import {
   InvalidResourceNameError,
   PathParameterMismatchError,
 } from "./errors/index.js";
+import { isNormalizationError } from "./errors/NormalizationError.js";
 import {
   isSupportedOperationId,
   isSupportedResourceName,
@@ -33,6 +37,7 @@ import {
   collectCanonicalResponses,
   normalizeResponseDefinition,
 } from "./validation/index.js";
+import type { NormalizationError } from "./errors/NormalizationError.js";
 import type {
   NormalizedOperation,
   NormalizedRequest,
@@ -72,13 +77,26 @@ const validateRequestSchema = (
   schema: unknown
 ): void => {
   if (!isZodType(schema)) {
-    throw new InvalidRequestSchemaError(operationId, requestPart);
+    throw new InvalidRequestSchemaError({ operationId, requestPart });
   }
 
   if (requestPart === "param" && !isZodObject(schema)) {
-    throw new InvalidRequestSchemaError(operationId, requestPart);
+    throw new InvalidRequestSchemaError({ operationId, requestPart });
   }
 };
+
+const hasNoRequestParts = (request: RequestDefinition): boolean =>
+  request.header === undefined &&
+  request.param === undefined &&
+  request.query === undefined &&
+  request.body === undefined;
+
+const pathParametersMatch = (
+  pathParams: readonly string[],
+  requestParams: readonly string[]
+): boolean =>
+  pathParams.length === requestParams.length &&
+  pathParams.every(pathParam => requestParams.includes(pathParam));
 
 const validateRequest = (
   resourceName: string,
@@ -106,24 +124,16 @@ const validateRequest = (
   const requestParams =
     request.param === undefined ? [] : Object.keys(request.param.shape);
 
-  if (
-    pathParams.length !== requestParams.length ||
-    pathParams.some(pathParam => !requestParams.includes(pathParam))
-  ) {
-    throw new PathParameterMismatchError(
+  if (!pathParametersMatch(pathParams, requestParams)) {
+    throw new PathParameterMismatchError({
       operationId,
       path,
       pathParams,
-      requestParams
-    );
+      requestParams,
+    });
   }
 
-  if (
-    request.header === undefined &&
-    request.param === undefined &&
-    request.query === undefined &&
-    request.body === undefined
-  ) {
+  if (hasNoRequestParts(request)) {
     return { warnings: [] };
   }
 
@@ -184,11 +194,13 @@ const normalizeOperation = (
   operation: ResourceDefinition["operations"][number]
 ): NormalizeOperationResult => {
   if (!isSupportedOperationId(operation.operationId)) {
-    throw new InvalidOperationIdError(operation.operationId);
+    throw new InvalidOperationIdError({ operationId: operation.operationId });
   }
 
   if (operationIds.has(operation.operationId)) {
-    throw new DuplicateOperationIdError(operation.operationId);
+    throw new DuplicateOperationIdError({
+      operationId: operation.operationId,
+    });
   }
 
   operationIds.add(operation.operationId);
@@ -197,17 +209,19 @@ const normalizeOperation = (
   const routeKey = `${operation.method}:${normalizedPath}`;
 
   if (routeKeys.has(routeKey)) {
-    throw new DuplicateRouteError(
-      operation.method,
-      operation.path,
-      normalizedPath
-    );
+    throw new DuplicateRouteError({
+      method: operation.method,
+      path: operation.path,
+      normalizedPath,
+    });
   }
 
   routeKeys.add(routeKey);
 
   if (operation.responses.length === 0) {
-    throw new EmptyOperationResponsesError(operation.operationId);
+    throw new EmptyOperationResponsesError({
+      operationId: operation.operationId,
+    });
   }
 
   const request = validateRequest(
@@ -235,14 +249,27 @@ const normalizeOperation = (
   };
 };
 
-export const normalizeSpec = (definition: SpecDefinition): NormalizedSpec => {
+const normalizeSpecSync = (definition: SpecDefinition): NormalizedSpec => {
   const resourceEntries = Object.entries(definition.resources);
 
   if (resourceEntries.length === 0) {
     throw new EmptySpecResourcesError();
   }
 
-  validateUniqueResponseNames(definition.resources);
+  // The core validator throws a plain Error (the core package stays free of
+  // an effect dependency — the same error fires from `defineSpec` in user
+  // authoring code). Wrap it here so the `NormalizationError` union stays a
+  // homogeneous set of tagged errors.
+  try {
+    validateUniqueResponseNames(definition.resources);
+  } catch (error) {
+    if (error instanceof CoreDuplicateResponseNameError) {
+      throw new DuplicateResponseNameError({
+        responseName: error.responseName,
+      });
+    }
+    throw error;
+  }
   const canonicalResponses = collectCanonicalResponses(definition);
   const operationIds = new Set<string>();
   const routeKeys = new Set<string>();
@@ -251,11 +278,11 @@ export const normalizeSpec = (definition: SpecDefinition): NormalizedSpec => {
   return {
     resources: resourceEntries.map(([resourceName, resource]) => {
       if (!isSupportedResourceName(resourceName)) {
-        throw new InvalidResourceNameError(resourceName);
+        throw new InvalidResourceNameError({ resourceName });
       }
 
       if (resource.operations.length === 0) {
-        throw new EmptyResourceOperationsError(resourceName);
+        throw new EmptyResourceOperationsError({ resourceName });
       }
 
       return {
@@ -278,3 +305,26 @@ export const normalizeSpec = (definition: SpecDefinition): NormalizedSpec => {
     warnings,
   };
 };
+
+/**
+ * Normalize a SpecDefinition into the internal model used by every plugin.
+ *
+ * Internally a pure synchronous transform; exposed as an Effect so callers
+ * can compose with the rest of the pipeline, recover specific failures via
+ * `Effect.catchTag`, and stay type-aware of the closed set of normalization
+ * errors via the `NormalizationError` union.
+ */
+export const normalizeSpec = (
+  definition: SpecDefinition
+): Effect.Effect<NormalizedSpec, NormalizationError> =>
+  Effect.try({
+    try: () => normalizeSpecSync(definition),
+    catch: error => {
+      if (isNormalizationError(error)) {
+        return error;
+      }
+      // Anything else (programming bug, unexpected throw) propagates as a
+      // defect rather than getting falsely stamped as a NormalizationError.
+      throw error;
+    },
+  });

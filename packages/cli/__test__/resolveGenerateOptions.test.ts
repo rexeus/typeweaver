@@ -13,9 +13,9 @@ const captureError = (action: () => void): unknown => {
   return undefined;
 };
 
-describe("resolveGenerateOptions", () => {
-  const workspacePath = path.join(path.parse(process.cwd()).root, "workspace");
+const workspacePath = path.join(path.parse(process.cwd()).root, "workspace");
 
+describe("resolveGenerateOptions", () => {
   test("resolves generate options from config when CLI flags are omitted", () => {
     const options = resolveGenerateOptions(
       {},
@@ -82,6 +82,22 @@ describe("resolveGenerateOptions", () => {
 
     expect(options.config.plugins).toEqual(["clients", "hono", "server"]);
   });
+});
+
+describe("resolveGenerateOptions validation", () => {
+  test("preserves custom top-level config for plugin contexts", () => {
+    const options = resolveGenerateOptions(
+      {},
+      {
+        input: "./spec.ts",
+        output: "./generated",
+        customFeature: { enabled: true },
+      },
+      workspacePath
+    );
+
+    expect(options.config.customFeature).toEqual({ enabled: true });
+  });
 
   test("rejects missing input with option diagnostics", () => {
     const error = captureError(() =>
@@ -109,6 +125,21 @@ describe("resolveGenerateOptions", () => {
         optionName: "output",
         flag: "--output",
         configKey: "output",
+      })
+    );
+  });
+
+  test("reports input as the first missing option when both input and output are absent", () => {
+    const error = captureError(() =>
+      resolveGenerateOptions({}, {}, "/workspace")
+    );
+
+    expect(error).toBeInstanceOf(MissingGenerateOptionError);
+    expect(error).toEqual(
+      expect.objectContaining({
+        optionName: "input",
+        flag: "--input",
+        configKey: "input",
       })
     );
   });

@@ -104,285 +104,271 @@ function getOperationOrder(
   return getRenderedRouter(renderedRouters, "entity").operations;
 }
 
-describe("RouterGenerator", () => {
-  describe("Route Sorting", () => {
-    test("sorts shallow routes before deep routes", () => {
-      const result = getOperationOrder([
-        anOperation("getSubItem", HttpMethod.GET, "/items/:id/sub"),
-        anOperation("getItems", HttpMethod.GET, "/items"),
-      ]);
+describe("RouterGenerator route sorting", () => {
+  test("sorts shallow routes before deep routes", () => {
+    const result = getOperationOrder([
+      anOperation("getSubItem", HttpMethod.GET, "/items/:id/sub"),
+      anOperation("getItems", HttpMethod.GET, "/items"),
+    ]);
 
-      assert(result[0]);
-      assert(result[1]);
-      expect(result[0].path).toBe("/items");
-      expect(result[1].path).toBe("/items/:id/sub");
-    });
-
-    test("sorts static segments before param segments at the same depth", () => {
-      const result = getOperationOrder([
-        anOperation("getItem", HttpMethod.GET, "/items/:id"),
-        anOperation("getSpecial", HttpMethod.GET, "/items/special"),
-      ]);
-
-      assert(result[0]);
-      assert(result[1]);
-      expect(result[0].path).toBe("/items/special");
-      expect(result[1].path).toBe("/items/:id");
-    });
-
-    test("sorts by method priority when paths are identical", () => {
-      const result = getOperationOrder([
-        anOperation("deleteItem", HttpMethod.DELETE, "/items"),
-        anOperation("getItems", HttpMethod.GET, "/items"),
-        anOperation("createItem", HttpMethod.POST, "/items"),
-        anOperation("updateItem", HttpMethod.PUT, "/items"),
-        anOperation("patchItem", HttpMethod.PATCH, "/items"),
-      ]);
-
-      expect(result.map(r => r.method)).toEqual([
-        "GET",
-        "POST",
-        "PUT",
-        "PATCH",
-        "DELETE",
-      ]);
-    });
-
-    test("keeps OPTIONS operations while filtering HEAD operations", () => {
-      const result = getOperationOrder([
-        anOperation("getItems", HttpMethod.GET, "/items"),
-        anOperation("headItems", HttpMethod.HEAD, "/items"),
-        anOperation("createItem", HttpMethod.POST, "/items"),
-        anOperation("optionsItems", HttpMethod.OPTIONS, "/items"),
-      ]);
-
-      expect(result.map(r => r.method)).toEqual(["GET", "POST", "OPTIONS"]);
-    });
-
-    test("sorts alphabetically within the same segment type", () => {
-      const result = getOperationOrder([
-        anOperation("getUsers", HttpMethod.GET, "/users"),
-        anOperation("getTodos", HttpMethod.GET, "/todos"),
-        anOperation("getAccounts", HttpMethod.GET, "/accounts"),
-      ]);
-
-      expect(result.map(r => r.path)).toEqual([
-        "/accounts",
-        "/todos",
-        "/users",
-      ]);
-    });
-
-    test("sorts complex mixed routes by path shape and method priority", () => {
-      const result = getOperationOrder([
-        anOperation(
-          "deleteSubTodo",
-          HttpMethod.DELETE,
-          "/todos/:todoId/subtodos/:subtodoId"
-        ),
-        anOperation("createTodo", HttpMethod.POST, "/todos"),
-        anOperation("listTodos", HttpMethod.GET, "/todos"),
-        anOperation("queryTodos", HttpMethod.POST, "/todos/query"),
-        anOperation("getTodo", HttpMethod.GET, "/todos/:todoId"),
-        anOperation("listSubTodos", HttpMethod.GET, "/todos/:todoId/subtodos"),
-      ]);
-
-      expect(result.map(r => `${r.method} ${r.path}`)).toEqual([
-        "GET /todos",
-        "POST /todos",
-        "POST /todos/query",
-        "GET /todos/:todoId",
-        "GET /todos/:todoId/subtodos",
-        "DELETE /todos/:todoId/subtodos/:subtodoId",
-      ]);
-    });
+    assert(result[0]);
+    assert(result[1]);
+    expect(result[0].path).toBe("/items");
+    expect(result[1].path).toBe("/items/:id/sub");
   });
 
-  describe("Operation Data Generation", () => {
-    test("generates class and handler names from operation ids", () => {
-      const result = getOperationOrder([
-        anOperation("createTodo", HttpMethod.POST, "/todos"),
-      ]);
+  test("sorts static segments before param segments at the same depth", () => {
+    const result = getOperationOrder([
+      anOperation("getItem", HttpMethod.GET, "/items/:id"),
+      anOperation("getSpecial", HttpMethod.GET, "/items/special"),
+    ]);
 
-      assert(result[0]);
-      expect(result[0].className).toBe("CreateTodo");
-      expect(result[0].handlerName).toBe("handleCreateTodoRequest");
-    });
+    assert(result[0]);
+    assert(result[1]);
+    expect(result[0].path).toBe("/items/special");
+    expect(result[1].path).toBe("/items/:id");
+  });
 
-    test("generates class and handler names from multi-word operation ids", () => {
-      const result = getOperationOrder([
-        anOperation("updateTodoStatus", HttpMethod.PUT, "/todos/:id/status"),
-      ]);
+  test("sorts by method priority when paths are identical", () => {
+    const result = getOperationOrder([
+      anOperation("deleteItem", HttpMethod.DELETE, "/items"),
+      anOperation("getItems", HttpMethod.GET, "/items"),
+      anOperation("createItem", HttpMethod.POST, "/items"),
+      anOperation("updateItem", HttpMethod.PUT, "/items"),
+      anOperation("patchItem", HttpMethod.PATCH, "/items"),
+    ]);
 
-      assert(result[0]);
-      expect(result[0].className).toBe("UpdateTodoStatus");
-      expect(result[0].handlerName).toBe("handleUpdateTodoStatusRequest");
-    });
+    expect(result.map(r => r.method)).toEqual([
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+    ]);
+  });
 
-    test("emits sanitized operation summaries as handler JSDoc", () => {
-      const result = getOperationOrder([
-        {
-          ...anOperation("createTodo", HttpMethod.POST, "/todos"),
-          summary: "Create todo */ safely",
-        },
-      ]);
+  test("keeps OPTIONS operations while filtering HEAD operations", () => {
+    const result = getOperationOrder([
+      anOperation("getItems", HttpMethod.GET, "/items"),
+      anOperation("headItems", HttpMethod.HEAD, "/items"),
+      anOperation("createItem", HttpMethod.POST, "/items"),
+      anOperation("optionsItems", HttpMethod.OPTIONS, "/items"),
+    ]);
 
-      assert(result[0]);
-      expect(result[0].jsDoc).toBe(
-        "  /**\n   * Create todo *\\/ safely\n   */"
-      );
-    });
+    expect(result.map(r => r.method)).toEqual(["GET", "POST", "OPTIONS"]);
+  });
 
-    test("preserves method path and operation id associations after sorting", () => {
-      const result = getOperationOrder([
-        anOperation("createTodo", HttpMethod.POST, "/todos"),
+  test("sorts alphabetically within the same segment type", () => {
+    const result = getOperationOrder([
+      anOperation("getUsers", HttpMethod.GET, "/users"),
+      anOperation("getTodos", HttpMethod.GET, "/todos"),
+      anOperation("getAccounts", HttpMethod.GET, "/accounts"),
+    ]);
+
+    expect(result.map(r => r.path)).toEqual(["/accounts", "/todos", "/users"]);
+  });
+
+  test("sorts complex mixed routes by path shape and method priority", () => {
+    const result = getOperationOrder([
+      anOperation(
+        "deleteSubTodo",
+        HttpMethod.DELETE,
+        "/todos/:todoId/subtodos/:subtodoId"
+      ),
+      anOperation("createTodo", HttpMethod.POST, "/todos"),
+      anOperation("listTodos", HttpMethod.GET, "/todos"),
+      anOperation("queryTodos", HttpMethod.POST, "/todos/query"),
+      anOperation("getTodo", HttpMethod.GET, "/todos/:todoId"),
+      anOperation("listSubTodos", HttpMethod.GET, "/todos/:todoId/subtodos"),
+    ]);
+
+    expect(result.map(r => `${r.method} ${r.path}`)).toEqual([
+      "GET /todos",
+      "POST /todos",
+      "POST /todos/query",
+      "GET /todos/:todoId",
+      "GET /todos/:todoId/subtodos",
+      "DELETE /todos/:todoId/subtodos/:subtodoId",
+    ]);
+  });
+});
+
+describe("RouterGenerator operation data", () => {
+  test("generates class and handler names from operation ids", () => {
+    const result = getOperationOrder([
+      anOperation("createTodo", HttpMethod.POST, "/todos"),
+    ]);
+
+    assert(result[0]);
+    expect(result[0].className).toBe("CreateTodo");
+    expect(result[0].handlerName).toBe("handleCreateTodoRequest");
+  });
+
+  test("generates class and handler names from multi-word operation ids", () => {
+    const result = getOperationOrder([
+      anOperation("updateTodoStatus", HttpMethod.PUT, "/todos/:id/status"),
+    ]);
+
+    assert(result[0]);
+    expect(result[0].className).toBe("UpdateTodoStatus");
+    expect(result[0].handlerName).toBe("handleUpdateTodoStatusRequest");
+  });
+
+  test("emits sanitized operation summaries as handler JSDoc", () => {
+    const result = getOperationOrder([
+      {
+        ...anOperation("createTodo", HttpMethod.POST, "/todos"),
+        summary: "Create todo */ safely",
+      },
+    ]);
+
+    assert(result[0]);
+    expect(result[0].jsDoc).toBe("  /**\n   * Create todo *\\/ safely\n   */");
+  });
+
+  test("preserves method path and operation id associations after sorting", () => {
+    const result = getOperationOrder([
+      anOperation("createTodo", HttpMethod.POST, "/todos"),
+      anOperation("listAccounts", HttpMethod.GET, "/accounts"),
+      anOperation("deleteTodo", HttpMethod.DELETE, "/todos/:id"),
+    ]);
+
+    expect(result).toEqual([
+      {
+        operationId: "listAccounts",
+        method: "GET",
+        path: "/accounts",
+        handlerName: "handleListAccountsRequest",
+        className: "ListAccounts",
+      },
+      {
+        operationId: "createTodo",
+        method: "POST",
+        path: "/todos",
+        handlerName: "handleCreateTodoRequest",
+        className: "CreateTodo",
+      },
+      {
+        operationId: "deleteTodo",
+        method: "DELETE",
+        path: "/todos/:id",
+        handlerName: "handleDeleteTodoRequest",
+        className: "DeleteTodo",
+      },
+    ]);
+  });
+});
+
+describe("RouterGenerator file output", () => {
+  test("writes a router file with the expected resource path", () => {
+    const operations = [anOperation("getItems", HttpMethod.GET, "/items")];
+    const { context, writtenFiles } = aCapturingGeneratorContext([
+      aResource("entity", operations),
+    ]);
+
+    generate(context);
+
+    expect(writtenFiles.has("entity/EntityRouter.ts")).toBe(true);
+  });
+
+  test("writes one router file per resource", () => {
+    const { context, writtenFiles } = aCapturingGeneratorContext([
+      aResource("accounts", [
         anOperation("listAccounts", HttpMethod.GET, "/accounts"),
-        anOperation("deleteTodo", HttpMethod.DELETE, "/todos/:id"),
-      ]);
+      ]),
+      aResource("todos", [anOperation("listTodos", HttpMethod.GET, "/todos")]),
+    ]);
 
-      expect(result).toEqual([
-        {
-          operationId: "listAccounts",
-          method: "GET",
-          path: "/accounts",
-          handlerName: "handleListAccountsRequest",
-          className: "ListAccounts",
-        },
-        {
-          operationId: "createTodo",
-          method: "POST",
-          path: "/todos",
-          handlerName: "handleCreateTodoRequest",
-          className: "CreateTodo",
-        },
-        {
-          operationId: "deleteTodo",
-          method: "DELETE",
-          path: "/todos/:id",
-          handlerName: "handleDeleteTodoRequest",
-          className: "DeleteTodo",
-        },
-      ]);
-    });
+    generate(context);
+
+    expect([...writtenFiles.keys()].sort()).toEqual([
+      "accounts/AccountsRouter.ts",
+      "todos/TodosRouter.ts",
+    ]);
   });
 
-  describe("File Output", () => {
-    test("writes a router file with the expected resource path", () => {
-      const operations = [anOperation("getItems", HttpMethod.GET, "/items")];
-      const { context, writtenFiles } = aCapturingGeneratorContext([
-        aResource("entity", operations),
-      ]);
+  test("writes router files using PascalCase resource names", () => {
+    const { context, writtenFiles } = aCapturingGeneratorContext([
+      aResource("todoItem", [
+        anOperation("listTodoItems", HttpMethod.GET, "/todo-items"),
+      ]),
+    ]);
 
-      generate(context);
+    generate(context);
 
-      expect(writtenFiles.has("entity/EntityRouter.ts")).toBe(true);
-    });
+    expect(writtenFiles.has("todoItem/TodoItemRouter.ts")).toBe(true);
+  });
 
-    test("writes one router file per resource", () => {
-      const { context, writtenFiles } = aCapturingGeneratorContext([
-        aResource("accounts", [
-          anOperation("listAccounts", HttpMethod.GET, "/accounts"),
-        ]),
-        aResource("todos", [
-          anOperation("listTodos", HttpMethod.GET, "/todos"),
-        ]),
-      ]);
+  test("passes resource casing to the router template", () => {
+    const { context, renderedRouters } = aCapturingGeneratorContext([
+      aResource("todoItem", [
+        anOperation("listTodoItems", HttpMethod.GET, "/todo-items"),
+      ]),
+    ]);
 
-      generate(context);
+    generate(context);
 
-      expect([...writtenFiles.keys()].sort()).toEqual([
-        "accounts/AccountsRouter.ts",
-        "todos/TodosRouter.ts",
-      ]);
-    });
+    const routerData = getRenderedRouter(renderedRouters, "todoItem");
 
-    test("writes router files using PascalCase resource names", () => {
-      const { context, writtenFiles } = aCapturingGeneratorContext([
-        aResource("todoItem", [
-          anOperation("listTodoItems", HttpMethod.GET, "/todo-items"),
-        ]),
-      ]);
+    expect(routerData.entityName).toBe("todoItem");
+    expect(routerData.pascalCaseEntityName).toBe("TodoItem");
+  });
 
-      generate(context);
+  test("writes an empty router for a resource without operations", () => {
+    const { context, renderedRouters, writtenFiles } =
+      aCapturingGeneratorContext([aResource("empty", [])]);
 
-      expect(writtenFiles.has("todoItem/TodoItemRouter.ts")).toBe(true);
-    });
+    generate(context);
+    const routerData = getRenderedRouter(renderedRouters, "empty");
 
-    test("passes resource casing to the router template", () => {
-      const { context, renderedRouters } = aCapturingGeneratorContext([
-        aResource("todoItem", [
-          anOperation("listTodoItems", HttpMethod.GET, "/todo-items"),
-        ]),
-      ]);
+    expect(writtenFiles.has("empty/EmptyRouter.ts")).toBe(true);
+    expect(routerData.operations).toEqual([]);
+  });
 
-      generate(context);
+  test("writes empty router operations for a resource with only HEAD operations", () => {
+    const { context, renderedRouters } = aCapturingGeneratorContext([
+      aResource("items", [anOperation("headItems", HttpMethod.HEAD, "/items")]),
+    ]);
 
-      const routerData = getRenderedRouter(renderedRouters, "todoItem");
+    generate(context);
 
-      expect(routerData.entityName).toBe("todoItem");
-      expect(routerData.pascalCaseEntityName).toBe("TodoItem");
-    });
+    const routerData = getRenderedRouter(renderedRouters, "items");
 
-    test("writes an empty router for a resource without operations", () => {
-      const { context, renderedRouters, writtenFiles } =
-        aCapturingGeneratorContext([aResource("empty", [])]);
+    expect(routerData.operations).toEqual([]);
+  });
 
-      generate(context);
-      const routerData = getRenderedRouter(renderedRouters, "empty");
+  test("generates no files when there are no resources", () => {
+    const { context, writtenFiles } = aCapturingGeneratorContext([]);
 
-      expect(writtenFiles.has("empty/EmptyRouter.ts")).toBe(true);
-      expect(routerData.operations).toEqual([]);
-    });
+    generate(context);
 
-    test("writes empty router operations for a resource with only HEAD operations", () => {
-      const { context, renderedRouters } = aCapturingGeneratorContext([
-        aResource("items", [
-          anOperation("headItems", HttpMethod.HEAD, "/items"),
-        ]),
-      ]);
+    expect([...writtenFiles.keys()]).toEqual([]);
+  });
 
-      generate(context);
+  test("passes the relative core import path to the router template", () => {
+    const { context, renderedRouters } = aCapturingGeneratorContext([
+      aResource("entity", [anOperation("listItems", HttpMethod.GET, "/items")]),
+    ]);
 
-      const routerData = getRenderedRouter(renderedRouters, "items");
+    generate(context);
+    const routerData = getRenderedRouter(renderedRouters, "entity");
 
-      expect(routerData.operations).toEqual([]);
-    });
+    expect(routerData.coreDir).toBe("..");
+  });
 
-    test("generates no files when there are no resources", () => {
-      const { context, writtenFiles } = aCapturingGeneratorContext([]);
+  test("passes sorted operations to the router template", () => {
+    const { context, renderedRouters } = aCapturingGeneratorContext([
+      aResource("entity", [
+        anOperation("deleteItem", HttpMethod.DELETE, "/items/:id"),
+        anOperation("listItems", HttpMethod.GET, "/items"),
+      ]),
+    ]);
 
-      generate(context);
+    generate(context);
+    const routerData = getRenderedRouter(renderedRouters, "entity");
 
-      expect([...writtenFiles.keys()]).toEqual([]);
-    });
-
-    test("passes the relative core import path to the router template", () => {
-      const { context, renderedRouters } = aCapturingGeneratorContext([
-        aResource("entity", [
-          anOperation("listItems", HttpMethod.GET, "/items"),
-        ]),
-      ]);
-
-      generate(context);
-      const routerData = getRenderedRouter(renderedRouters, "entity");
-
-      expect(routerData.coreDir).toBe("..");
-    });
-
-    test("passes sorted operations to the router template", () => {
-      const { context, renderedRouters } = aCapturingGeneratorContext([
-        aResource("entity", [
-          anOperation("deleteItem", HttpMethod.DELETE, "/items/:id"),
-          anOperation("listItems", HttpMethod.GET, "/items"),
-        ]),
-      ]);
-
-      generate(context);
-      const routerData = getRenderedRouter(renderedRouters, "entity");
-
-      expect(
-        routerData.operations.map(operation => operation.operationId)
-      ).toEqual(["listItems", "deleteItem"]);
-    });
+    expect(
+      routerData.operations.map(operation => operation.operationId)
+    ).toEqual(["listItems", "deleteItem"]);
   });
 });

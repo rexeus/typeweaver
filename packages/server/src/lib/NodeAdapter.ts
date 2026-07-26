@@ -82,17 +82,37 @@ export function nodeAdapter(
   const reportError = getTypeweaverAppErrorReporter(app);
 
   return (req, res) => {
-    void handleRequest(app, req, res, bodyLimitPolicy, reportError);
+    void handleRequest({
+      app,
+      req,
+      res,
+      bodyLimitPolicy,
+      reportError,
+    });
   };
 }
 
-async function handleRequest(
-  app: TypeweaverApp<any>,
+type HandleRequestOptions = {
+  readonly app: TypeweaverApp<any>;
+  readonly req: IncomingMessage;
+  readonly res: ServerResponse;
+  readonly bodyLimitPolicy: ReturnType<typeof createNodeBodyLimitPolicy>;
+  readonly reportError: (error: unknown) => void;
+};
+
+async function readRequestBody(
   req: IncomingMessage,
-  res: ServerResponse,
-  bodyLimitPolicy: ReturnType<typeof createNodeBodyLimitPolicy>,
-  reportError: (error: unknown) => void
-): Promise<void> {
+  shouldValidateBody: boolean,
+  maxBodySize: number
+): Promise<ArrayBuffer | undefined> {
+  if (!shouldValidateBody) {
+    return undefined;
+  }
+  return collectBody(req, maxBodySize);
+}
+
+async function handleRequest(options: HandleRequestOptions): Promise<void> {
+  const { app, req, res, bodyLimitPolicy, reportError } = options;
   try {
     const url = createRequestUrl(req);
     if (url === undefined) {
@@ -121,9 +141,11 @@ async function handleRequest(
       }
     }
 
-    const body = !shouldValidateBody
-      ? undefined
-      : await collectBody(req, bodyLimitPolicy.maxBodySize);
+    const body = await readRequestBody(
+      req,
+      shouldValidateBody,
+      bodyLimitPolicy.maxBodySize
+    );
 
     const request = new Request(url, {
       method: req.method,
@@ -298,13 +320,7 @@ function parseHostHeader(
 
   try {
     const parsed = new URL(`${protocol}//${host}`);
-    if (
-      parsed.username !== "" ||
-      parsed.password !== "" ||
-      parsed.pathname !== "/" ||
-      parsed.search !== "" ||
-      parsed.hash !== ""
-    ) {
+    if (!isPlainAuthorityUrl(parsed)) {
       return undefined;
     }
 
@@ -312,6 +328,16 @@ function parseHostHeader(
   } catch {
     return undefined;
   }
+}
+
+function isPlainAuthorityUrl(url: URL): boolean {
+  return (
+    url.username === "" &&
+    url.password === "" &&
+    url.pathname === "/" &&
+    url.search === "" &&
+    url.hash === ""
+  );
 }
 
 function getUrlAuthority(url: URL): ParsedAuthority {

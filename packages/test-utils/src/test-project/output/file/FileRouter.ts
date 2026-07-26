@@ -63,31 +63,31 @@ export class FileRouter<
   }
 
   protected setupRoutes(): void {
-    this.route(
-      "UploadFile",
-      HttpMethod.POST,
-      "/files",
-      new UploadFileRequestValidator(),
-      new UploadFileResponseValidator(),
-      this.requestHandlers.handleUploadFileRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "UploadFile",
+      method: HttpMethod.POST,
+      path: "/files",
+      requestValidator: new UploadFileRequestValidator(),
+      responseValidator: new UploadFileResponseValidator(),
+      handler: this.requestHandlers.handleUploadFileRequest.bind(this.requestHandlers),
+    });
 
-    this.route(
-      "GetFileMetadata",
-      HttpMethod.GET,
-      "/files/:fileId",
-      new GetFileMetadataRequestValidator(),
-      new GetFileMetadataResponseValidator(),
-      this.requestHandlers.handleGetFileMetadataRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "GetFileMetadata",
+      method: HttpMethod.GET,
+      path: "/files/:fileId",
+      requestValidator: new GetFileMetadataRequestValidator(),
+      responseValidator: new GetFileMetadataResponseValidator(),
+      handler: this.requestHandlers.handleGetFileMetadataRequest.bind(this.requestHandlers),
+    });
 
-    this.route(
-      "DownloadFileContent",
-      HttpMethod.GET,
-      "/files/:fileId/content",
-      new DownloadFileContentRequestValidator(),
-      new DownloadFileContentResponseValidator(),
-      this.requestHandlers.handleDownloadFileContentRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "DownloadFileContent",
+      method: HttpMethod.GET,
+      path: "/files/:fileId/content",
+      requestValidator: new DownloadFileContentRequestValidator(),
+      responseValidator: new DownloadFileContentResponseValidator(),
+      handler: this.requestHandlers.handleDownloadFileContentRequest.bind(this.requestHandlers),
+    });
   }
 }

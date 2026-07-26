@@ -126,151 +126,145 @@ const captureMissingResponseDefinitionError = (
   return error;
 };
 
-describe("definitionLookup", () => {
-  describe("getOperationDefinition", () => {
-    test("returns the matching operation from the requested resource", () => {
-      const operation = getOperationDefinition(
-        todoAndProjectSpec,
-        "todo",
-        "get"
-      );
+describe("definitionLookup getOperationDefinition", () => {
+  test("returns the matching operation from the requested resource", () => {
+    const operation = getOperationDefinition(todoAndProjectSpec, "todo", "get");
 
-      expect(operation).toBe(getTodo);
-    });
-
-    test("returns the operation object from a different requested resource", () => {
-      const operation = getOperationDefinition(
-        todoAndProjectSpec,
-        "project",
-        "createProject"
-      );
-
-      expect(operation).toBe(createProject);
-    });
-
-    test("preserves the exact operation object from the operation array", () => {
-      const spec = defineSpec({
-        resources: {
-          ordered: {
-            operations: [createTodo, getTodo] as const,
-          },
-        },
-      });
-
-      const operation = getOperationDefinition(spec, "ordered", "get");
-
-      expect(operation).toBe(getTodo);
-    });
-
-    test("reports the requested resource and operation when the resource is missing", () => {
-      const spec = todoAndProjectSpec as unknown as SpecDefinition;
-
-      const error = captureMissingOperationDefinitionError(() =>
-        getOperationDefinition(spec, "archive", "create")
-      );
-
-      expect(error).toEqual(
-        expect.objectContaining({
-          resourceName: "archive",
-          operationId: "create",
-        })
-      );
-    });
-
-    test("reports the requested resource and operation when the operation is missing", () => {
-      const error = captureMissingOperationDefinitionError(() =>
-        getOperationDefinition(todoAndProjectSpec, "todo", "delete")
-      );
-
-      expect(error).toEqual(
-        expect.objectContaining({
-          resourceName: "todo",
-          operationId: "delete",
-        })
-      );
-    });
-
-    test("reports the requested resource when another resource has the operation", () => {
-      const error = captureMissingOperationDefinitionError(() =>
-        getOperationDefinition(todoAndProjectSpec, "todo", "archive")
-      );
-
-      expect(error).toEqual(
-        expect.objectContaining({
-          resourceName: "todo",
-          operationId: "archive",
-        })
-      );
-    });
+    expect(operation).toBe(getTodo);
   });
 
-  describe("getResponseDefinition", () => {
-    test("returns the matching response from a response array", () => {
-      const responses = [createTodoSuccess, notFoundError] as const;
+  test("returns the operation object from a different requested resource", () => {
+    const operation = getOperationDefinition(
+      todoAndProjectSpec,
+      "project",
+      "createProject"
+    );
 
-      const response = getResponseDefinition(responses, "NotFoundError");
+    expect(operation).toBe(createProject);
+  });
 
-      expect(response).toBe(notFoundError);
+  test("preserves the exact operation object from the operation array", () => {
+    const spec = defineSpec({
+      resources: {
+        ordered: {
+          operations: [createTodo, getTodo] as const,
+        },
+      },
     });
 
-    test("preserves the first matching response object in array order", () => {
-      const firstConflict = defineResponse({
-        name: "ConflictError",
-        statusCode: HttpStatusCode.CONFLICT,
-        description: "First conflict",
-      });
-      const secondConflict = defineResponse({
-        name: "ConflictError",
-        statusCode: HttpStatusCode.CONFLICT,
-        description: "Second conflict",
-      });
-      const responses = [firstConflict, secondConflict] as const;
+    const operation = getOperationDefinition(spec, "ordered", "get");
 
-      const response = getResponseDefinition(responses, "ConflictError");
+    expect(operation).toBe(getTodo);
+  });
 
-      expect(response).toBe(firstConflict);
+  test("reports the requested resource and operation when the resource is missing", () => {
+    const spec = todoAndProjectSpec as unknown as SpecDefinition;
+
+    const error = captureMissingOperationDefinitionError(() =>
+      getOperationDefinition(spec, "archive", "create")
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        resourceName: "archive",
+        operationId: "create",
+      })
+    );
+  });
+
+  test("reports the requested resource and operation when the operation is missing", () => {
+    const error = captureMissingOperationDefinitionError(() =>
+      getOperationDefinition(todoAndProjectSpec, "todo", "delete")
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        resourceName: "todo",
+        operationId: "delete",
+      })
+    );
+  });
+
+  test("reports the requested resource when another resource has the operation", () => {
+    const error = captureMissingOperationDefinitionError(() =>
+      getOperationDefinition(todoAndProjectSpec, "todo", "archive")
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        resourceName: "todo",
+        operationId: "archive",
+      })
+    );
+  });
+});
+
+describe("definitionLookup getResponseDefinition", () => {
+  test("returns the matching response from a response array", () => {
+    const responses = [createTodoSuccess, notFoundError] as const;
+
+    const response = getResponseDefinition(responses, "NotFoundError");
+
+    expect(response).toBe(notFoundError);
+  });
+
+  test("preserves the first matching response object in array order", () => {
+    const firstConflict = defineResponse({
+      name: "ConflictError",
+      statusCode: HttpStatusCode.CONFLICT,
+      description: "First conflict",
     });
-
-    test("reports the requested response when no response matches", () => {
-      const responses = [createTodoSuccess, notFoundError] as const;
-
-      const error = captureMissingResponseDefinitionError(() =>
-        getResponseDefinition(responses, "ValidationError")
-      );
-
-      expect(error).toEqual(
-        expect.objectContaining({
-          responseName: "ValidationError",
-        })
-      );
+    const secondConflict = defineResponse({
+      name: "ConflictError",
+      statusCode: HttpStatusCode.CONFLICT,
+      description: "Second conflict",
     });
+    const responses = [firstConflict, secondConflict] as const;
 
-    test("matches response names with exact casing", () => {
-      const responses = [notFoundError] as const;
+    const response = getResponseDefinition(responses, "ConflictError");
 
-      const error = captureMissingResponseDefinitionError(() =>
-        getResponseDefinition(responses, "notFoundError")
-      );
+    expect(response).toBe(firstConflict);
+  });
 
-      expect(error).toEqual(
-        expect.objectContaining({
-          responseName: "notFoundError",
-        })
-      );
-    });
+  test("reports the requested response when no response matches", () => {
+    const responses = [createTodoSuccess, notFoundError] as const;
 
-    test("reports the requested response when the response array is empty", () => {
-      const responses = [] as readonly ResponseDefinition[];
+    const error = captureMissingResponseDefinitionError(() =>
+      getResponseDefinition(responses, "ValidationError")
+    );
 
-      const error = captureMissingResponseDefinitionError(() =>
-        getResponseDefinition(responses, "CreateTodoSuccess")
-      );
+    expect(error).toEqual(
+      expect.objectContaining({
+        responseName: "ValidationError",
+      })
+    );
+  });
 
-      expect(error).toEqual(
-        expect.objectContaining({
-          responseName: "CreateTodoSuccess",
-        })
-      );
-    });
+  test("matches response names with exact casing", () => {
+    const responses = [notFoundError] as const;
+
+    const error = captureMissingResponseDefinitionError(() =>
+      getResponseDefinition(responses, "notFoundError")
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        responseName: "notFoundError",
+      })
+    );
+  });
+
+  test("reports the requested response when the response array is empty", () => {
+    const responses = [] as readonly ResponseDefinition[];
+
+    const error = captureMissingResponseDefinitionError(() =>
+      getResponseDefinition(responses, "CreateTodoSuccess")
+    );
+
+    expect(error).toEqual(
+      expect.objectContaining({
+        responseName: "CreateTodoSuccess",
+      })
+    );
   });
 });

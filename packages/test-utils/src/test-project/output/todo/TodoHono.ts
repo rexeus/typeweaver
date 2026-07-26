@@ -166,143 +166,143 @@ export class TodoHono extends TypeweaverHono<HonoTodoApiHandler> {
 
   protected setupRoutes(): void {
     this.get("/todos", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "ListTodos",
-        new ListTodosRequestValidator(),
-        new ListTodosResponseValidator(),
-        this.requestHandlers.handleListTodosRequest.bind(this.requestHandlers),
-      ),
+        operationId: "ListTodos",
+        requestValidator: new ListTodosRequestValidator(),
+        responseValidator: new ListTodosResponseValidator(),
+        handler: this.requestHandlers.handleListTodosRequest.bind(this.requestHandlers),
+      }),
     );
 
     this.post("/todos", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "CreateTodo",
-        new CreateTodoRequestValidator(),
-        new CreateTodoResponseValidator(),
-        this.requestHandlers.handleCreateTodoRequest.bind(this.requestHandlers),
-      ),
+        operationId: "CreateTodo",
+        requestValidator: new CreateTodoRequestValidator(),
+        responseValidator: new CreateTodoResponseValidator(),
+        handler: this.requestHandlers.handleCreateTodoRequest.bind(this.requestHandlers),
+      }),
     );
 
     this.post("/todos/query", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "QueryTodo",
-        new QueryTodoRequestValidator(),
-        new QueryTodoResponseValidator(),
-        this.requestHandlers.handleQueryTodoRequest.bind(this.requestHandlers),
-      ),
+        operationId: "QueryTodo",
+        requestValidator: new QueryTodoRequestValidator(),
+        responseValidator: new QueryTodoResponseValidator(),
+        handler: this.requestHandlers.handleQueryTodoRequest.bind(this.requestHandlers),
+      }),
     );
 
     this.get("/todos/:todoId", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "GetTodo",
-        new GetTodoRequestValidator(),
-        new GetTodoResponseValidator(),
-        this.requestHandlers.handleGetTodoRequest.bind(this.requestHandlers),
-      ),
+        operationId: "GetTodo",
+        requestValidator: new GetTodoRequestValidator(),
+        responseValidator: new GetTodoResponseValidator(),
+        handler: this.requestHandlers.handleGetTodoRequest.bind(this.requestHandlers),
+      }),
     );
 
     this.put("/todos/:todoId", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "PutTodo",
-        new PutTodoRequestValidator(),
-        new PutTodoResponseValidator(),
-        this.requestHandlers.handlePutTodoRequest.bind(this.requestHandlers),
-      ),
+        operationId: "PutTodo",
+        requestValidator: new PutTodoRequestValidator(),
+        responseValidator: new PutTodoResponseValidator(),
+        handler: this.requestHandlers.handlePutTodoRequest.bind(this.requestHandlers),
+      }),
     );
 
     this.patch("/todos/:todoId", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "UpdateTodo",
-        new UpdateTodoRequestValidator(),
-        new UpdateTodoResponseValidator(),
-        this.requestHandlers.handleUpdateTodoRequest.bind(this.requestHandlers),
-      ),
+        operationId: "UpdateTodo",
+        requestValidator: new UpdateTodoRequestValidator(),
+        responseValidator: new UpdateTodoResponseValidator(),
+        handler: this.requestHandlers.handleUpdateTodoRequest.bind(this.requestHandlers),
+      }),
     );
 
     this.delete("/todos/:todoId", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "DeleteTodo",
-        new DeleteTodoRequestValidator(),
-        new DeleteTodoResponseValidator(),
-        this.requestHandlers.handleDeleteTodoRequest.bind(this.requestHandlers),
-      ),
+        operationId: "DeleteTodo",
+        requestValidator: new DeleteTodoRequestValidator(),
+        responseValidator: new DeleteTodoResponseValidator(),
+        handler: this.requestHandlers.handleDeleteTodoRequest.bind(this.requestHandlers),
+      }),
     );
 
     this.options("/todos/:todoId", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "optionsTodo",
-        new OptionsTodoRequestValidator(),
-        new OptionsTodoResponseValidator(),
-        this.requestHandlers.handleOptionsTodoRequest.bind(this.requestHandlers),
-      ),
+        operationId: "optionsTodo",
+        requestValidator: new OptionsTodoRequestValidator(),
+        responseValidator: new OptionsTodoResponseValidator(),
+        handler: this.requestHandlers.handleOptionsTodoRequest.bind(this.requestHandlers),
+      }),
     );
 
     this.put("/todos/:todoId/status", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "UpdateTodoStatus",
-        new UpdateTodoStatusRequestValidator(),
-        new UpdateTodoStatusResponseValidator(),
-        this.requestHandlers.handleUpdateTodoStatusRequest.bind(this.requestHandlers),
-      ),
+        operationId: "UpdateTodoStatus",
+        requestValidator: new UpdateTodoStatusRequestValidator(),
+        responseValidator: new UpdateTodoStatusResponseValidator(),
+        handler: this.requestHandlers.handleUpdateTodoStatusRequest.bind(this.requestHandlers),
+      }),
     );
 
     this.get("/todos/:todoId/subtodos", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "ListSubTodos",
-        new ListSubTodosRequestValidator(),
-        new ListSubTodosResponseValidator(),
-        this.requestHandlers.handleListSubTodosRequest.bind(this.requestHandlers),
-      ),
+        operationId: "ListSubTodos",
+        requestValidator: new ListSubTodosRequestValidator(),
+        responseValidator: new ListSubTodosResponseValidator(),
+        handler: this.requestHandlers.handleListSubTodosRequest.bind(this.requestHandlers),
+      }),
     );
 
     this.post("/todos/:todoId/subtodos", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "CreateSubTodo",
-        new CreateSubTodoRequestValidator(),
-        new CreateSubTodoResponseValidator(),
-        this.requestHandlers.handleCreateSubTodoRequest.bind(this.requestHandlers),
-      ),
+        operationId: "CreateSubTodo",
+        requestValidator: new CreateSubTodoRequestValidator(),
+        responseValidator: new CreateSubTodoResponseValidator(),
+        handler: this.requestHandlers.handleCreateSubTodoRequest.bind(this.requestHandlers),
+      }),
     );
 
     this.post("/todos/:todoId/subtodos/query", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "QuerySubTodo",
-        new QuerySubTodoRequestValidator(),
-        new QuerySubTodoResponseValidator(),
-        this.requestHandlers.handleQuerySubTodoRequest.bind(this.requestHandlers),
-      ),
+        operationId: "QuerySubTodo",
+        requestValidator: new QuerySubTodoRequestValidator(),
+        responseValidator: new QuerySubTodoResponseValidator(),
+        handler: this.requestHandlers.handleQuerySubTodoRequest.bind(this.requestHandlers),
+      }),
     );
 
     this.put("/todos/:todoId/subtodos/:subtodoId", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "UpdateSubTodo",
-        new UpdateSubTodoRequestValidator(),
-        new UpdateSubTodoResponseValidator(),
-        this.requestHandlers.handleUpdateSubTodoRequest.bind(this.requestHandlers),
-      ),
+        operationId: "UpdateSubTodo",
+        requestValidator: new UpdateSubTodoRequestValidator(),
+        responseValidator: new UpdateSubTodoResponseValidator(),
+        handler: this.requestHandlers.handleUpdateSubTodoRequest.bind(this.requestHandlers),
+      }),
     );
 
     this.delete("/todos/:todoId/subtodos/:subtodoId", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "DeleteSubTodo",
-        new DeleteSubTodoRequestValidator(),
-        new DeleteSubTodoResponseValidator(),
-        this.requestHandlers.handleDeleteSubTodoRequest.bind(this.requestHandlers),
-      ),
+        operationId: "DeleteSubTodo",
+        requestValidator: new DeleteSubTodoRequestValidator(),
+        responseValidator: new DeleteSubTodoResponseValidator(),
+        handler: this.requestHandlers.handleDeleteSubTodoRequest.bind(this.requestHandlers),
+      }),
     );
   }
 }

@@ -219,7 +219,9 @@ describe("ApiClient constructor", () => {
       })
     );
   });
+});
 
+describe("ApiClient base URL validation", () => {
   test("classifies a malformed absolute URL with a visible scheme as malformed", () => {
     const error = captureApiClientConfigurationError(() =>
       createClient(resolvedFetch(), { baseUrl: "ftp://%" })
@@ -267,7 +269,9 @@ describe("ApiClient constructor", () => {
       })
     );
   });
+});
 
+describe("ApiClient option validation", () => {
   test("rejects a missing baseUrl with the validation error", () => {
     const props = { fetchFn: resolvedFetch() } as unknown as ApiClientProps;
 
@@ -519,7 +523,9 @@ describe("ApiClient path parameters", () => {
     });
     expect(mockFetch).not.toHaveBeenCalled();
   });
+});
 
+describe("ApiClient path parameter invariants", () => {
   test("rejects extra path parameter not present in the template before fetch", async () => {
     const mockFetch = resolvedFetch();
     const client = createClient(mockFetch);
@@ -593,7 +599,9 @@ describe("ApiClient path parameters", () => {
     });
     expect(mockFetch).not.toHaveBeenCalled();
   });
+});
 
+describe("ApiClient path parameter replacement", () => {
   test("replaces repeated placeholders with the same encoded value", async () => {
     const { mockFetch } = await sendRaw({
       path: "/orgs/:orgId/items/:orgId",
@@ -728,7 +736,9 @@ describe("ApiClient request serialization", () => {
       expect(getFetchCall(mockFetch).init.headers).toStrictEqual(header);
     }
   );
+});
 
+describe("ApiClient request serialization failures", () => {
   test("throws native TypeError for circular object bodies before fetch", async () => {
     const mockFetch = resolvedFetch();
     const client = createClient(mockFetch);
@@ -908,7 +918,9 @@ describe("ApiClient response parsing", () => {
       }
     );
   });
+});
 
+describe("ApiClient text and binary response parsing", () => {
   test("returns text/plain responses as strings", async () => {
     const mockFetch = resolvedFetch(
       new Response("plain text", {
@@ -977,7 +989,9 @@ describe("ApiClient response parsing", () => {
     expect(result.body).toBeInstanceOf(ArrayBuffer);
     expect((result.body as ArrayBuffer).byteLength).toBe(0);
   });
+});
 
+describe("ApiClient response body read failures", () => {
   test("wraps response body read failures as ResponseParseError", async () => {
     const cause = new TestIoError("body stream interrupted");
     const response = new Response("body", {
@@ -1150,7 +1164,9 @@ describe("ApiClient network errors and timeout signals", () => {
       }
     );
   });
+});
 
+describe("ApiClient unknown network errors", () => {
   test("maps non-Error fetch rejections to UNKNOWN NetworkError", async () => {
     const client = createClient(rejectedFetch("something broke"));
 
@@ -1212,7 +1228,9 @@ describe("ApiClient network errors and timeout signals", () => {
       );
     }
   );
+});
 
+describe("ApiClient timeout signals", () => {
   test("omits the abort signal when timeoutMs is not configured", async () => {
     const mockFetch = resolvedFetch();
     const client = createClient(mockFetch);
@@ -1285,13 +1303,12 @@ describe("ApiClient network errors and timeout signals", () => {
 describe("ApiClient error classes", () => {
   test("NetworkError exposes name, message, metadata, and cause", () => {
     const cause = new TypeError("fetch failed");
-    const error = new NetworkError(
-      "Connection refused",
-      "ECONNREFUSED",
-      "POST",
-      "http://localhost:3000/api",
-      { cause }
-    );
+    const error = new NetworkError("Connection refused", {
+      cause,
+      code: "ECONNREFUSED",
+      method: "POST",
+      url: "http://localhost:3000/api",
+    });
 
     expect(error).toBeInstanceOf(Error);
     expect(error.name).toBe("NetworkError");

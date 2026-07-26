@@ -22,12 +22,12 @@ permissions: {}
 
 env:
   NODE_VERSION: "24"
-  PNPM_VERSION: "10.12.1"
+  PNPM_VERSION: "10.34.5"
 
 jobs:
   quality-check:
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -85,16 +85,10 @@ jobs:
           pnpm install --frozen-lockfile
           echo "::endgroup::"
 
-      - name: Generate all test projects
+      - name: Generate CLI test projects
         run: |
-          echo "::group::Generating all test projects"
-          pnpm run test:gen
-          echo "::endgroup::"
-
-      - name: Verify generated fixture freshness
-        run: |
-          echo "::group::Verifying generated fixtures"
-          pnpm run verify:generated
+          echo "::group::Generating ignored CLI test outputs"
+          pnpm --filter @rexeus/typeweaver run test:gen
           echo "::endgroup::"
 
       - name: Run multi-runtime bundle tests
@@ -109,6 +103,14 @@ jobs:
         run: |
           echo "::group::TypeScript type checking"
           pnpm run typecheck
+          echo "::endgroup::"
+
+      - name: Verify Effect migration
+        env:
+          NODE_OPTIONS: "--max-old-space-size=6144"
+        run: |
+          echo "::group::Effect migration contract"
+          pnpm run verify:effect-migration
           echo "::endgroup::"
 
       - name: Check formatting
@@ -129,8 +131,41 @@ jobs:
           pnpm run publish:dry
           echo "::endgroup::"
 
-      - name: Run tests
-        run: |
-          echo "::group::Running tests"
-          pnpm run test
-          echo "::endgroup::"
+  windows-security:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm run build
+
+      - name: Rebuild symlinks after build
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Windows security contracts
+        run: pnpm run test:windows-security

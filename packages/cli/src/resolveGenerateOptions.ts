@@ -16,6 +16,17 @@ export type ResolvedGenerateOptions = {
   readonly config: TypeweaverConfig;
 };
 
+const resolvePath = (value: string, currentWorkingDirectory: string): string =>
+  path.isAbsolute(value) ? value : path.join(currentWorkingDirectory, value);
+
+const resolveBooleanOption = (
+  optionValue: boolean | undefined,
+  configValue: boolean | undefined
+): boolean => optionValue ?? configValue ?? true;
+
+const parsePlugins = (plugins: string): string[] =>
+  plugins.split(",").map(plugin => plugin.trim());
+
 export const resolveGenerateOptions = (
   options: GenerateCommandOptions,
   config: Partial<TypeweaverConfig>,
@@ -25,32 +36,33 @@ export const resolveGenerateOptions = (
   const outputDir = options.output ?? config.output;
 
   if (!inputPath) {
-    throw new MissingGenerateOptionError("input", "--input", "input");
+    throw new MissingGenerateOptionError({
+      optionName: "input",
+      flag: "--input",
+      configKey: "input",
+    });
   }
 
   if (!outputDir) {
-    throw new MissingGenerateOptionError("output", "--output", "output");
+    throw new MissingGenerateOptionError({
+      optionName: "output",
+      flag: "--output",
+      configKey: "output",
+    });
   }
 
-  const resolvedInputPath = path.isAbsolute(inputPath)
-    ? inputPath
-    : path.join(currentWorkingDirectory, inputPath);
-  const resolvedOutputDir = path.isAbsolute(outputDir)
-    ? outputDir
-    : path.join(currentWorkingDirectory, outputDir);
+  const resolvedInputPath = resolvePath(inputPath, currentWorkingDirectory);
+  const resolvedOutputDir = resolvePath(outputDir, currentWorkingDirectory);
   const finalConfig: TypeweaverConfig = {
+    ...config,
     input: resolvedInputPath,
     output: resolvedOutputDir,
-    format: options.format ?? config.format ?? true,
-    clean: options.clean ?? config.clean ?? true,
+    format: resolveBooleanOption(options.format, config.format),
+    clean: resolveBooleanOption(options.clean, config.clean),
   };
 
   if (options.plugins) {
-    finalConfig.plugins = options.plugins
-      .split(",")
-      .map(plugin => plugin.trim());
-  } else if (config.plugins) {
-    finalConfig.plugins = config.plugins;
+    finalConfig.plugins = parsePlugins(options.plugins);
   }
 
   return {

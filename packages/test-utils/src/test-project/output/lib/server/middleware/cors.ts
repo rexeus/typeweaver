@@ -38,14 +38,14 @@ type CorsRequest = {
   readonly origin: string | undefined;
 };
 
-function normalizeCorsOptions(options?: CorsOptions): NormalizedCorsOptions {
+function normalizeCorsOptions(options: CorsOptions = {}): NormalizedCorsOptions {
   return {
-    origin: options?.origin,
-    allowMethods: (options?.allowMethods ?? DEFAULT_METHODS).join(", "),
-    allowHeaders: options?.allowHeaders,
-    exposeHeaders: options?.exposeHeaders?.join(", "),
-    maxAge: options?.maxAge?.toString(),
-    credentials: options?.credentials ?? false,
+    origin: options.origin,
+    allowMethods: (options.allowMethods ?? DEFAULT_METHODS).join(", "),
+    allowHeaders: options.allowHeaders,
+    exposeHeaders: options.exposeHeaders?.join(", "),
+    maxAge: options.maxAge?.toString(),
+    credentials: options.credentials ?? false,
   };
 }
 

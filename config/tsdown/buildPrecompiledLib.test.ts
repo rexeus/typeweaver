@@ -131,7 +131,9 @@ describe("buildPrecompiledLib", () => {
       readPackageFile(packageDir, path.join("dist", "lib", "index.ts"))
     ).toBe("export * from './nested/value.js';\n");
   });
+});
 
+describe("buildPrecompiledLib declaration overlays", () => {
   test("copies declaration overlays into the output tree", () => {
     const packageDir = createPackageFixture("declaration-overlays");
 
@@ -194,7 +196,9 @@ describe("buildPrecompiledLib", () => {
       readPackageFile(packageDir, path.join("dist", "lib", "runtime.d.ts"))
     ).toBe("export declare const runtime: string;\n");
   });
+});
 
+describe("buildPrecompiledLib index handling", () => {
   test("transpiles nested index files and only preserves the root index.ts", () => {
     const packageDir = createPackageFixture("nested-index");
 

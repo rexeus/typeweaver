@@ -55,11 +55,13 @@
   "homepage": "https://github.com/rexeus/typeweaver#readme",
   "peerDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
-    "@rexeus/typeweaver-gen": "workspace:^"
+    "@rexeus/typeweaver-gen": "workspace:^",
+    "effect": "catalog:peers"
   },
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
-    "@rexeus/typeweaver-gen": "workspace:^"
+    "@rexeus/typeweaver-gen": "workspace:^",
+    "effect": "^3.22.0"
   },
   "dependencies": {
     "polycase": "^1.1.0"

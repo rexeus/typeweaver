@@ -1,0 +1,363 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { FileSystem } from "@effect/platform";
+import { NodeContext } from "@effect/platform-node";
+import { SystemError } from "@effect/platform/Error";
+import { Cause, Effect, Exit, Layer, Tracer } from "effect";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import {
+  FormatterExecutionError,
+  FormatterFileSystemError,
+  FormatterLoadError,
+} from "../../src/services/errors/FormatterError.js";
+import { Formatter, formatterLayerWith } from "../../src/services/Formatter.js";
+
+const coordinationMarkerFile = ".typeweaver-coordination";
+const atomicWriteMarkerSource =
+  "typeweaver-coordination-artifact/v1\nkind=atomic-write-temp\n";
+
+const successfulFormatterModule = () =>
+  Promise.resolve({
+    format: (_filename: string, source: string) =>
+      Promise.resolve({ code: source.replace("unformatted", "formatted") }),
+  });
+
+const provideFormatter = <A, E>(
+  effect: Effect.Effect<A, E, Formatter>,
+  formatterLayer: Layer.Layer<Formatter>
+): Effect.Effect<A, E> => effect.pipe(Effect.provide(formatterLayer));
+
+const formatterLayerAgainst = (
+  fileSystemLayer: Layer.Layer<FileSystem.FileSystem>,
+  loadModule: () => Promise<unknown> = successfulFormatterModule
+): Layer.Layer<Formatter> =>
+  formatterLayerWith(loadModule).pipe(Layer.provide(fileSystemLayer));
+
+type EndedSpan = {
+  readonly name: string;
+  readonly exit: "Failure" | "Success";
+};
+
+const makeEndingTracer = (ended: EndedSpan[]): Tracer.Tracer => {
+  let nextSpanId = 0;
+
+  return Tracer.make({
+    span: (...args: Parameters<Tracer.Tracer["span"]>) => {
+      const [name, parent, context, links, startTime, kind] = args;
+      return {
+        _tag: "Span",
+        name,
+        spanId: String(++nextSpanId),
+        traceId: "formatter-test-trace",
+        parent,
+        context,
+        status: { _tag: "Started", startTime },
+        attributes: new Map(),
+        links,
+        sampled: true,
+        kind,
+        end: (_endTime, exit) => {
+          ended.push({ name, exit: exit._tag });
+        },
+        attribute: () => undefined,
+        event: () => undefined,
+        addLinks: () => undefined,
+      };
+    },
+    context: (f, _fiber) => f(),
+  });
+};
+
+const expectTypedFailure = async <E>(
+  effect: Effect.Effect<void, E>,
+  expected: new (...args: never[]) => E
+): Promise<E> => {
+  const exit = await Effect.runPromiseExit(effect);
+  expect(Exit.isFailure(exit)).toBe(true);
+  if (!Exit.isFailure(exit)) {
+    throw new Error("Expected Formatter effect to fail");
+  }
+
+  expect(Array.from(Cause.defects(exit.cause))).toHaveLength(0);
+  const failures = Array.from(Cause.failures(exit.cause));
+  expect(failures).toHaveLength(1);
+  const failure = failures[0];
+  if (failure === undefined) {
+    throw new Error("Expected one typed Formatter failure");
+  }
+  expect(failure).toBeInstanceOf(expected);
+  return failure;
+};
+
+let tempDir: string;
+
+beforeEach(() => {
+  tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "typeweaver-fmt-"));
+});
+
+afterEach(() => {
+  fs.rmSync(tempDir, { recursive: true, force: true });
+});
+
+describe("Formatter loading and tracing", () => {
+  test("formats files through the platform FileSystem service", async () => {
+    const filePath = path.join(tempDir, "sample.ts");
+    fs.writeFileSync(filePath, "unformatted\n");
+    const layer = formatterLayerAgainst(NodeContext.layer);
+
+    await Effect.runPromise(provideFormatter(Formatter.format(tempDir), layer));
+
+    expect(fs.readFileSync(filePath, "utf8")).toBe("formatted\n");
+  });
+
+  test("treats only an exact missing-oxfmt module error as a no-op", async () => {
+    const missingModule = new Error(
+      "Cannot find package 'oxfmt' imported from /typeweaver/Formatter.mjs"
+    );
+    Object.defineProperty(missingModule, "code", {
+      value: "ERR_MODULE_NOT_FOUND",
+    });
+    const layer = formatterLayerAgainst(NodeContext.layer, () =>
+      Promise.reject(missingModule)
+    );
+
+    const exit = await Effect.runPromiseExit(
+      provideFormatter(Formatter.format("/path/that/must/not/be-read"), layer)
+    );
+
+    expect(Exit.isSuccess(exit)).toBe(true);
+  });
+
+  test("surfaces a non-missing module-load failure precisely without defects", async () => {
+    const bindingFailure = new Error("native oxfmt binding is incompatible");
+    Object.defineProperty(bindingFailure, "code", {
+      value: "ERR_DLOPEN_FAILED",
+    });
+    const layer = formatterLayerAgainst(NodeContext.layer, () =>
+      Promise.reject(bindingFailure)
+    );
+
+    const failure = await expectTypedFailure(
+      provideFormatter(Formatter.format(tempDir), layer),
+      FormatterLoadError
+    );
+
+    expect(failure).toMatchObject({
+      _tag: "FormatterLoadError",
+      moduleName: "oxfmt",
+      cause: bindingFailure,
+    });
+  });
+
+  test("ends the formatter span as failed when formatting fails publicly", async () => {
+    const loadFailure = new Error("formatter module failed to load");
+    const endedSpans: EndedSpan[] = [];
+    const layer = formatterLayerAgainst(NodeContext.layer, () =>
+      Promise.reject(loadFailure)
+    );
+
+    const exit = await Effect.runPromise(
+      provideFormatter(Formatter.format(tempDir), layer).pipe(
+        Effect.withTracer(makeEndingTracer(endedSpans)),
+        Effect.exit
+      )
+    );
+
+    expect(Exit.isFailure(exit)).toBe(true);
+    if (!Exit.isFailure(exit)) {
+      throw new Error("Expected Formatter effect to fail");
+    }
+
+    const failures = Array.from(Cause.failures(exit.cause));
+    expect(failures).toHaveLength(1);
+    const failure = failures[0];
+    expect(failure).toBeInstanceOf(FormatterLoadError);
+    if (!(failure instanceof FormatterLoadError)) {
+      throw new Error("Expected a FormatterLoadError");
+    }
+
+    expect(failure.cause).toBe(loadFailure);
+    expect(endedSpans).toContainEqual({
+      name: "typeweaver.Formatter.format",
+      exit: "Failure",
+    });
+  });
+});
+
+describe("Formatter coordination-artifact ownership", () => {
+  test("formats a user file whose name starts with `.typeweaver-`", async () => {
+    const filePath = path.join(tempDir, ".typeweaver-output.ts");
+    fs.writeFileSync(filePath, "unformatted\n");
+    const layer = formatterLayerAgainst(NodeContext.layer);
+
+    await Effect.runPromise(provideFormatter(Formatter.format(tempDir), layer));
+
+    expect(fs.readFileSync(filePath, "utf8")).toBe("formatted\n");
+  });
+
+  test("formats an exact-shaped user directory without an ownership marker", async () => {
+    const userDirectory = path.join(tempDir, ".typeweaver-Ab12Z9");
+    const filePath = path.join(userDirectory, ".typeweaver-output.ts");
+    fs.mkdirSync(userDirectory);
+    fs.writeFileSync(filePath, "unformatted\n");
+    const layer = formatterLayerAgainst(NodeContext.layer);
+
+    await Effect.runPromise(provideFormatter(Formatter.format(tempDir), layer));
+
+    expect(fs.readFileSync(filePath, "utf8")).toBe("formatted\n");
+  });
+
+  test("does not format a marker-owned in-flight atomic-write directory", async () => {
+    const coordinationDirectory = path.join(tempDir, ".typeweaver-a1B2c3");
+    const filePath = path.join(coordinationDirectory, ".typeweaver-output.ts");
+    fs.mkdirSync(coordinationDirectory);
+    fs.writeFileSync(
+      path.join(coordinationDirectory, coordinationMarkerFile),
+      atomicWriteMarkerSource
+    );
+    fs.writeFileSync(filePath, "unformatted\n");
+    const layer = formatterLayerAgainst(NodeContext.layer);
+
+    await Effect.runPromise(provideFormatter(Formatter.format(tempDir), layer));
+
+    expect(fs.readFileSync(filePath, "utf8")).toBe("unformatted\n");
+  });
+
+  test("formats an exact-shaped user directory whose marker name is a symlink", async () => {
+    const coordinationDirectory = path.join(tempDir, ".typeweaver-Z9Y8X7");
+    const filePath = path.join(coordinationDirectory, ".typeweaver-output.ts");
+    const externalMarker = path.join(tempDir, "user-marker.txt");
+    fs.mkdirSync(coordinationDirectory);
+    fs.writeFileSync(externalMarker, atomicWriteMarkerSource);
+    fs.symlinkSync(
+      externalMarker,
+      path.join(coordinationDirectory, coordinationMarkerFile)
+    );
+    fs.writeFileSync(filePath, "unformatted\n");
+    const layer = formatterLayerAgainst(NodeContext.layer);
+
+    await Effect.runPromise(provideFormatter(Formatter.format(tempDir), layer));
+
+    expect(fs.readFileSync(filePath, "utf8")).toBe("formatted\n");
+  });
+});
+
+describe("Formatter filesystem failures", () => {
+  test("rejects an incompatible formatter module shape without defects", async () => {
+    const layer = formatterLayerAgainst(NodeContext.layer, () =>
+      Promise.resolve({ format: "not-a-function" })
+    );
+
+    const failure = await expectTypedFailure(
+      provideFormatter(Formatter.format(tempDir), layer),
+      FormatterLoadError
+    );
+
+    expect(failure).toMatchObject({
+      _tag: "FormatterLoadError",
+      moduleName: "oxfmt",
+      cause: expect.objectContaining({
+        message: "Module did not export a format function",
+      }),
+    });
+  });
+
+  test("surfaces a missing target directory as typed filesystem failure without defects", async () => {
+    const missingPath = path.join(tempDir, "missing");
+    const layer = formatterLayerAgainst(NodeContext.layer);
+
+    const failure = await expectTypedFailure(
+      provideFormatter(Formatter.format(missingPath), layer),
+      FormatterFileSystemError
+    );
+
+    expect(failure).toMatchObject({
+      _tag: "FormatterFileSystemError",
+      operation: "realPath",
+      path: missingPath,
+      cause: {
+        _tag: "SystemError",
+        reason: "NotFound",
+      },
+    });
+  });
+
+  test("surfaces an injected permission error without defects", async () => {
+    const permissionFailure = new SystemError({
+      reason: "PermissionDenied",
+      module: "FileSystem",
+      method: "readDirectory",
+      pathOrDescriptor: tempDir,
+      description: "read access denied",
+    });
+    const fileSystemLayer = Layer.succeed(
+      FileSystem.FileSystem,
+      FileSystem.makeNoop({
+        realPath: targetPath => Effect.succeed(targetPath),
+        readDirectory: () => Effect.fail(permissionFailure),
+      })
+    );
+    const layer = formatterLayerAgainst(fileSystemLayer);
+
+    const failure = await expectTypedFailure(
+      provideFormatter(Formatter.format(tempDir), layer),
+      FormatterFileSystemError
+    );
+
+    expect(failure).toMatchObject({
+      _tag: "FormatterFileSystemError",
+      operation: "readDirectory",
+      path: tempDir,
+      cause: permissionFailure,
+    });
+  });
+});
+
+describe("Formatter execution failures", () => {
+  test("surfaces a formatter rejection without defects", async () => {
+    const filePath = path.join(tempDir, "broken.ts");
+    fs.writeFileSync(filePath, "unformatted\n");
+    const formatterFailure = new Error("formatter rejected source");
+    const layer = formatterLayerAgainst(NodeContext.layer, () =>
+      Promise.resolve({
+        format: () => Promise.reject(formatterFailure),
+      })
+    );
+
+    const failure = await expectTypedFailure(
+      provideFormatter(Formatter.format(tempDir), layer),
+      FormatterExecutionError
+    );
+
+    expect(failure).toMatchObject({
+      _tag: "FormatterExecutionError",
+      filePath,
+      cause: formatterFailure,
+    });
+  });
+
+  test("rejects an incompatible formatter result without defects", async () => {
+    const filePath = path.join(tempDir, "invalid-result.ts");
+    fs.writeFileSync(filePath, "unformatted\n");
+    const layer = formatterLayerAgainst(NodeContext.layer, () =>
+      Promise.resolve({
+        format: () => Promise.resolve({ code: 42 }),
+      })
+    );
+
+    const failure = await expectTypedFailure(
+      provideFormatter(Formatter.format(tempDir), layer),
+      FormatterExecutionError
+    );
+
+    expect(failure).toMatchObject({
+      _tag: "FormatterExecutionError",
+      filePath,
+      cause: expect.objectContaining({
+        message: "Formatter did not return a string code",
+      }),
+    });
+    expect(fs.readFileSync(filePath, "utf8")).toBe("unformatted\n");
+  });
+});

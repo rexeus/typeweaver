@@ -9,8 +9,30 @@ import type {
 import { fromZod, print } from "@rexeus/typeweaver-zod-to-ts";
 import { pascalCase } from "polycase";
 import { getRequestHeaderDefaults } from "./requestHeaderDefaults.js";
+import type { RequestHeaderDefaults } from "./requestHeaderDefaults.js";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+
+type RequestTypeTemplateData = {
+  readonly headerTsType: string | undefined;
+  readonly paramTsType: string | undefined;
+  readonly queryTsType: string | undefined;
+  readonly bodyTsType: string | undefined;
+  readonly hasRequestInput: boolean;
+};
+
+type WriteRequestCommandOptions = {
+  readonly templateFilePath: string;
+  readonly resourceName: string;
+  readonly operation: NormalizedOperation;
+  readonly context: GeneratorContext;
+};
+
+const EMPTY_REQUEST_HEADER_DEFAULTS: RequestHeaderDefaults = {
+  entries: [],
+  optionalHeaderKeys: [],
+  isHeaderInputOptional: false,
+};
 
 export function generate(context: GeneratorContext): void {
   const clientTemplatePath = path.join(moduleDir, "templates", "Client.ejs");
@@ -70,37 +92,61 @@ function writeRequestCommands(
   context: GeneratorContext
 ): void {
   resource.operations.forEach(operation => {
-    writeRequestCommand(templateFilePath, resource.name, operation, context);
+    writeRequestCommand({
+      templateFilePath,
+      resourceName: resource.name,
+      operation,
+      context,
+    });
   });
 }
 
-function writeRequestCommand(
-  templateFilePath: string,
-  resourceName: string,
-  operation: NormalizedOperation,
-  context: GeneratorContext
-): void {
+function createRequestTypeTemplateData(
+  operation: NormalizedOperation
+): RequestTypeTemplateData {
+  const request = operation.request;
+  const headerTsType = request?.header
+    ? print(fromZod(request.header))
+    : undefined;
+  const paramTsType = request?.param
+    ? print(fromZod(request.param))
+    : undefined;
+  const queryTsType = request?.query
+    ? print(fromZod(request.query))
+    : undefined;
+  const bodyTsType = request?.body
+    ? print(fromZod(request.body.schema))
+    : undefined;
+
+  return {
+    headerTsType,
+    paramTsType,
+    queryTsType,
+    bodyTsType,
+    hasRequestInput: [headerTsType, paramTsType, queryTsType, bodyTsType].some(
+      type => type !== undefined
+    ),
+  };
+}
+
+function writeRequestCommand({
+  templateFilePath,
+  resourceName,
+  operation,
+  context,
+}: WriteRequestCommandOptions): void {
   const outputPaths = context.getOperationOutputPaths({
     resourceName,
     operationId: operation.operationId,
   });
-  const request = operation.request ?? {};
   const pascalCaseOperationId = pascalCase(operation.operationId);
-
-  const headerTsType = request.header
-    ? print(fromZod(request.header))
-    : undefined;
-  const paramTsType = request.param ? print(fromZod(request.param)) : undefined;
-  const queryTsType = request.query ? print(fromZod(request.query)) : undefined;
-  const bodyTsType = request.body
-    ? print(fromZod(request.body.schema))
-    : undefined;
+  const requestTypeData = createRequestTypeTemplateData(operation);
   const headerDefaults = getRequestHeaderDefaults(operation.request);
-  const hasRequestInput =
-    headerTsType !== undefined ||
-    paramTsType !== undefined ||
-    queryTsType !== undefined ||
-    bodyTsType !== undefined;
+  const {
+    entries: headerDefaultEntries,
+    optionalHeaderKeys,
+    isHeaderInputOptional,
+  } = headerDefaults ?? EMPTY_REQUEST_HEADER_DEFAULTS;
 
   const content = context.renderTemplate(templateFilePath, {
     resourceName,
@@ -110,16 +156,12 @@ function writeRequestCommand(
     operationId: operation.operationId,
     pascalCaseOperationId,
     method: operation.method,
-    headerTsType,
-    paramTsType,
-    queryTsType,
-    bodyTsType,
-    hasRequestInput,
+    ...requestTypeData,
     requestJsDoc: createJSDocComment(operation.summary),
-    headerDefaultEntries: headerDefaults?.entries ?? [],
-    optionalHeaderKeys: headerDefaults?.optionalHeaderKeys ?? [],
+    headerDefaultEntries,
+    optionalHeaderKeys,
     hasHeaderDefaults: headerDefaults !== undefined,
-    isHeaderInputOptional: headerDefaults?.isHeaderInputOptional ?? false,
+    isHeaderInputOptional,
     requestFile: `./${path.basename(outputPaths.requestFileName, ".ts")}.js`,
     responseValidatorFile: `./${path.basename(outputPaths.responseValidationFileName, ".ts")}.js`,
     responseFile: `./${path.basename(outputPaths.responseFileName, ".ts")}.js`,

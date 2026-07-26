@@ -90,7 +90,9 @@ describe("normalizeJsonSchema", () => {
       },
     });
   });
+});
 
+describe("normalizeJsonSchema combinators", () => {
   test.each([
     { scenario: "anyOf", keyword: "anyOf" },
     { scenario: "oneOf", keyword: "oneOf" },
@@ -117,187 +119,189 @@ describe("normalizeJsonSchema", () => {
       ],
     });
   });
+});
 
-  const conditionalThenKeyword = ["th", "en"].join("");
-  const schemaContainerCases: ReadonlyArray<{
-    readonly scenario: string;
-    readonly input: JsonSchema;
-    readonly expected: JsonSchema;
-  }> = [
-    {
-      scenario: "additionalProperties",
-      input: {
-        type: "object",
-        additionalProperties: {
+const conditionalThenKeyword = ["th", "en"].join("");
+const schemaContainerCases: ReadonlyArray<{
+  readonly scenario: string;
+  readonly input: JsonSchema;
+  readonly expected: JsonSchema;
+}> = [
+  {
+    scenario: "additionalProperties",
+    input: {
+      type: "object",
+      additionalProperties: {
+        type: "array",
+        prefixItems: [{ type: "string" }],
+      },
+    },
+    expected: {
+      type: "object",
+      additionalProperties: {
+        type: "array",
+        prefixItems: [{ type: "string" }],
+        items: {},
+        minItems: 1,
+        maxItems: 1,
+      },
+    },
+  },
+  {
+    scenario: "patternProperties",
+    input: {
+      patternProperties: {
+        "^x-": {
           type: "array",
-          prefixItems: [{ type: "string" }],
+          prefixItems: [{ type: "number" }],
         },
       },
-      expected: {
-        type: "object",
-        additionalProperties: {
+    },
+    expected: {
+      patternProperties: {
+        "^x-": {
           type: "array",
-          prefixItems: [{ type: "string" }],
+          prefixItems: [{ type: "number" }],
           items: {},
           minItems: 1,
           maxItems: 1,
         },
       },
     },
-    {
-      scenario: "patternProperties",
-      input: {
-        patternProperties: {
-          "^x-": {
-            type: "array",
-            prefixItems: [{ type: "number" }],
-          },
-        },
-      },
-      expected: {
-        patternProperties: {
-          "^x-": {
-            type: "array",
-            prefixItems: [{ type: "number" }],
-            items: {},
-            minItems: 1,
-            maxItems: 1,
-          },
+  },
+  {
+    scenario: "$defs",
+    input: {
+      $defs: {
+        tuple: {
+          type: "array",
+          prefixItems: [{ type: "boolean" }],
         },
       },
     },
-    {
-      scenario: "$defs",
-      input: {
-        $defs: {
-          tuple: {
-            type: "array",
-            prefixItems: [{ type: "boolean" }],
-          },
-        },
-      },
-      expected: {
-        $defs: {
-          tuple: {
-            type: "array",
-            prefixItems: [{ type: "boolean" }],
-            items: {},
-            minItems: 1,
-            maxItems: 1,
-          },
-        },
-      },
-    },
-    {
-      scenario: "propertyNames",
-      input: {
-        propertyNames: {
+    expected: {
+      $defs: {
+        tuple: {
           type: "array",
-          prefixItems: [{ type: "string" }],
-        },
-      },
-      expected: {
-        propertyNames: {
-          type: "array",
-          prefixItems: [{ type: "string" }],
+          prefixItems: [{ type: "boolean" }],
           items: {},
           minItems: 1,
           maxItems: 1,
         },
       },
     },
-    {
-      scenario: "if",
-      input: {
-        if: {
-          type: "array",
-          prefixItems: [{ type: "string" }],
-        },
-      },
-      expected: {
-        if: {
-          type: "array",
-          prefixItems: [{ type: "string" }],
-          items: {},
-          minItems: 1,
-          maxItems: 1,
-        },
+  },
+  {
+    scenario: "propertyNames",
+    input: {
+      propertyNames: {
+        type: "array",
+        prefixItems: [{ type: "string" }],
       },
     },
-    {
-      scenario: "then",
-      input: {
-        [conditionalThenKeyword]: {
-          type: "array",
-          prefixItems: [{ type: "string" }],
-        },
-      },
-      expected: {
-        [conditionalThenKeyword]: {
-          type: "array",
-          prefixItems: [{ type: "string" }],
-          items: {},
-          minItems: 1,
-          maxItems: 1,
-        },
+    expected: {
+      propertyNames: {
+        type: "array",
+        prefixItems: [{ type: "string" }],
+        items: {},
+        minItems: 1,
+        maxItems: 1,
       },
     },
-    {
-      scenario: "else",
-      input: {
-        else: {
-          type: "array",
-          prefixItems: [{ type: "string" }],
-        },
-      },
-      expected: {
-        else: {
-          type: "array",
-          prefixItems: [{ type: "string" }],
-          items: {},
-          minItems: 1,
-          maxItems: 1,
-        },
+  },
+  {
+    scenario: "if",
+    input: {
+      if: {
+        type: "array",
+        prefixItems: [{ type: "string" }],
       },
     },
-    {
-      scenario: "not",
-      input: {
-        not: {
-          type: "array",
-          prefixItems: [{ type: "string" }],
-        },
-      },
-      expected: {
-        not: {
-          type: "array",
-          prefixItems: [{ type: "string" }],
-          items: {},
-          minItems: 1,
-          maxItems: 1,
-        },
+    expected: {
+      if: {
+        type: "array",
+        prefixItems: [{ type: "string" }],
+        items: {},
+        minItems: 1,
+        maxItems: 1,
       },
     },
-    {
-      scenario: "contains",
-      input: {
-        contains: {
-          type: "array",
-          prefixItems: [{ type: "string" }],
-        },
-      },
-      expected: {
-        contains: {
-          type: "array",
-          prefixItems: [{ type: "string" }],
-          items: {},
-          minItems: 1,
-          maxItems: 1,
-        },
+  },
+  {
+    scenario: "then",
+    input: {
+      [conditionalThenKeyword]: {
+        type: "array",
+        prefixItems: [{ type: "string" }],
       },
     },
-  ];
+    expected: {
+      [conditionalThenKeyword]: {
+        type: "array",
+        prefixItems: [{ type: "string" }],
+        items: {},
+        minItems: 1,
+        maxItems: 1,
+      },
+    },
+  },
+  {
+    scenario: "else",
+    input: {
+      else: {
+        type: "array",
+        prefixItems: [{ type: "string" }],
+      },
+    },
+    expected: {
+      else: {
+        type: "array",
+        prefixItems: [{ type: "string" }],
+        items: {},
+        minItems: 1,
+        maxItems: 1,
+      },
+    },
+  },
+  {
+    scenario: "not",
+    input: {
+      not: {
+        type: "array",
+        prefixItems: [{ type: "string" }],
+      },
+    },
+    expected: {
+      not: {
+        type: "array",
+        prefixItems: [{ type: "string" }],
+        items: {},
+        minItems: 1,
+        maxItems: 1,
+      },
+    },
+  },
+  {
+    scenario: "contains",
+    input: {
+      contains: {
+        type: "array",
+        prefixItems: [{ type: "string" }],
+      },
+    },
+    expected: {
+      contains: {
+        type: "array",
+        prefixItems: [{ type: "string" }],
+        items: {},
+        minItems: 1,
+        maxItems: 1,
+      },
+    },
+  },
+];
 
+describe("normalizeJsonSchema containers", () => {
   test.each(schemaContainerCases)(
     "normalizes tuples under $scenario",
     ({ input, expected }) => {

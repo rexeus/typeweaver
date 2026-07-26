@@ -1,8 +1,12 @@
-export class MissingDerivedResponseParentError extends Error {
-  public constructor(responseName: string, parentName: string) {
-    super(
-      `Derived response '${responseName}' references missing canonical parent '${parentName}'.`
-    );
-    this.name = "MissingDerivedResponseParentError";
+import { Data } from "effect";
+
+export class MissingDerivedResponseParentError extends Data.TaggedError(
+  "MissingDerivedResponseParentError"
+)<{
+  readonly responseName: string;
+  readonly parentName: string;
+}> {
+  public override get message(): string {
+    return `Derived response '${this.responseName}' references missing canonical parent '${this.parentName}'.`;
   }
 }

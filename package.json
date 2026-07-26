@@ -3,6 +3,7 @@
   "private": true,
   "description": "Type-safe API framework with code generation for TypeScript",
   "scripts": {
+    "prepare": "node scripts/prepare-effect-reference.mjs",
     "typecheck": "turbo typecheck",
     "build": "turbo build && pnpm size",
     "size": "size-limit",
@@ -11,8 +12,15 @@
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "test": "turbo test:gen && turbo test",
+    "test:windows-security": "pnpm -r --workspace-concurrency=1 --filter @rexeus/typeweaver-gen --filter @rexeus/typeweaver test:windows-security",
     "test:gen": "turbo test:gen",
+    "test:maintainability-lint": "node scripts/test-maintainability-lint.mjs",
     "verify:generated": "node scripts/verify-generated.mjs",
+    "verify:effect-reference": "node scripts/verify-effect-reference.mjs && node scripts/test-effect-reference-guard.mjs",
+    "effect:diagnostics": "node scripts/test-effect-diagnostics.mjs && node scripts/run-effect-diagnostics.mjs",
+    "docs:check": "node scripts/test-effect-version-contract.mjs && node scripts/check-effect-version-contract.mjs && node scripts/check-markdown-links.mjs",
+    "verify:packed-consumers": "node scripts/test-packed-consumers.mjs",
+    "verify:effect-migration": "node scripts/verify-effect-migration.mjs",
     "publish:dry": "pnpm publish -r --dry-run --no-git-checks",
     "ci:publish": "pnpm publish -r --provenance",
     "prepare:commit": "pnpm run format && pnpm run lint:fix && pnpm run typecheck && pnpm run build && pnpm run test"
@@ -39,23 +47,26 @@
   "engines": {
     "node": ">=24.0.0"
   },
-  "packageManager": "pnpm@10.12.1",
+  "packageManager": "pnpm@10.34.5",
   "devDependencies": {
-    "@changesets/cli": "2.29.6",
-    "@faker-js/faker": "^10.4.0",
-    "@size-limit/file": "^12.0.1",
-    "@types/node": "^25.5.0",
-    "@vitest/coverage-v8": "^4.1.2",
-    "oxfmt": "^0.42.0",
-    "oxlint": "^1.57.0",
-    "size-limit": "^12.0.1",
-    "tsdown": "0.21.7",
-    "turbo": "^2.8.21",
-    "typescript": "^6.0.2",
-    "vitest": "^4.1.2",
-    "zod": "^4.3.6"
+    "@changesets/cli": "2.31.1",
+    "@effect/language-service": "0.87.1",
+    "@faker-js/faker": "^10.5.0",
+    "@size-limit/file": "^13.0.1",
+    "@types/node": "^26.1.1",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "@vitest/coverage-v8": "^3.2.6",
+    "eslint-plugin-sonarjs": "4.2.0",
+    "oxfmt": "^0.60.0",
+    "oxlint": "1.75.0",
+    "size-limit": "^13.0.1",
+    "tsdown": "0.22.14",
+    "turbo": "^2.10.7",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "vitest": "^3.2.6",
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "zod": "^4.3.0"
+    "zod": "catalog:peers"
   }
 }

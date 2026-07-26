@@ -1,15 +1,16 @@
-export class PathParameterMismatchError extends Error {
-  public constructor(
-    operationId: string,
-    path: string,
-    pathParams: readonly string[],
-    requestParams: readonly string[]
-  ) {
-    super(
-      `Operation '${operationId}' has mismatched path parameters for '${path}'. Path params: [${pathParams.join(
-        ", "
-      )}], request.param keys: [${requestParams.join(", ")}].`
-    );
-    this.name = "PathParameterMismatchError";
+import { Data } from "effect";
+
+export class PathParameterMismatchError extends Data.TaggedError(
+  "PathParameterMismatchError"
+)<{
+  readonly operationId: string;
+  readonly path: string;
+  readonly pathParams: readonly string[];
+  readonly requestParams: readonly string[];
+}> {
+  public override get message(): string {
+    return `Operation '${this.operationId}' has mismatched path parameters for '${this.path}'. Path params: [${this.pathParams.join(
+      ", "
+    )}], request.param keys: [${this.requestParams.join(", ")}].`;
   }
 }

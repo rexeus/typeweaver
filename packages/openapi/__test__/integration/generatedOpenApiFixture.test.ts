@@ -72,7 +72,11 @@ describe("generated OpenAPI fixture", () => {
       additionalProperties: false,
     });
     expect(
-      responseSchemaAt(fixture, "/todos/{todoId}/status", "put", "409"),
+      responseSchemaAt(fixture, {
+        path: "/todos/{todoId}/status",
+        method: "put",
+        statusCode: "409",
+      }),
       "UpdateTodoStatus 409 should merge duplicate-status bodies as anyOf refs"
     ).toEqual({
       anyOf: [
@@ -118,7 +122,10 @@ describe("generated OpenAPI fixture", () => {
       "DownloadFileContent 200 should expose an octet-stream binary response"
     ).toEqual({ type: "string", format: "binary" });
     await validateOpenApiFixture(FIXTURE_PATH);
-  });
+    // Spawns the IBM OpenAPI validator as a child process (see the 30s
+    // execFile timeout below); the 5s vitest default is unrealistic for an
+    // out-of-process Spectral run under parallel CI load.
+  }, 30_000);
 });
 
 function componentsSchemas(fixture: OpenApiFixture): Record<string, unknown> {
@@ -166,31 +173,34 @@ function requestBodySchemaAt(
 
 function responseSchemaAt(
   fixture: OpenApiFixture,
-  path: string,
-  method: string,
-  statusCode: string,
-  mediaTypeName = "application/json"
+  location: {
+    readonly path: string;
+    readonly method: string;
+    readonly statusCode: string;
+    readonly mediaTypeName?: string;
+  }
 ): unknown {
   if (!isRecord(fixture.paths)) {
     return undefined;
   }
 
-  const pathItem = fixture.paths[path];
+  const pathItem = fixture.paths[location.path];
   if (!isRecord(pathItem)) {
     return undefined;
   }
 
-  const operation = pathItem[method];
+  const operation = pathItem[location.method];
   if (!isRecord(operation) || !isRecord(operation.responses)) {
     return undefined;
   }
 
-  const response = operation.responses[statusCode];
+  const response = operation.responses[location.statusCode];
   if (!isRecord(response) || !isRecord(response.content)) {
     return undefined;
   }
 
-  const mediaType = response.content[mediaTypeName];
+  const mediaType =
+    response.content[location.mediaTypeName ?? "application/json"];
 
   return isRecord(mediaType) ? mediaType.schema : undefined;
 }
@@ -250,7 +260,7 @@ async function runOpenApiValidator(
   rulesetPath: string
 ): Promise<ValidatorCommandOutput> {
   const args = validatorArgs(fixturePath, rulesetPath);
-  const cliPath = resolveLintOpenApiCliPath();
+  const cliPath = resolveSpectralCliPath();
 
   try {
     if (cliPath !== undefined) {
@@ -264,7 +274,7 @@ async function runOpenApiValidator(
     }
 
     return stringifyExecFileOutput(
-      await execFileAsync("pnpm", ["exec", "lint-openapi", ...args], {
+      await execFileAsync("pnpm", ["exec", "spectral", ...args], {
         encoding: "utf8",
         maxBuffer: 10 * 1024 * 1024,
         timeout: 30_000,
@@ -273,7 +283,7 @@ async function runOpenApiValidator(
   } catch (error) {
     const output = commandOutput(error);
     throw new Error(
-      `IBM OpenAPI Validator rejected ${fixturePath}\nstdout:\n${output.stdout}\nstderr:\n${output.stderr}`,
+      `Spectral rejected ${fixturePath}\nstdout:\n${output.stdout}\nstderr:\n${output.stderr}`,
       { cause: error }
     );
   }
@@ -283,7 +293,16 @@ function validatorArgs(
   fixturePath: string,
   rulesetPath: string
 ): readonly string[] {
-  return ["--json", "--ruleset", rulesetPath, "--no-colors", fixturePath];
+  return [
+    "lint",
+    "--format",
+    "json",
+    "--ruleset",
+    rulesetPath,
+    "--fail-severity",
+    "error",
+    fixturePath,
+  ];
 }
 
 function assertValidatorOutputHasNoErrors(
@@ -324,7 +343,7 @@ function parseValidatorOutput(
     return JSON.parse(trimmedStdout) as unknown;
   } catch (error) {
     throw new Error(
-      `IBM OpenAPI Validator returned non-JSON output for ${fixturePath}\nstdout:\n${stdout}`,
+      `Spectral returned non-JSON output for ${fixturePath}\nstdout:\n${stdout}`,
       { cause: error }
     );
   }
@@ -378,17 +397,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function validatorFailureMessage(fixturePath: string, stdout: string): string {
-  return `IBM OpenAPI Validator reported OpenAPI validity errors for ${fixturePath}\nstdout:\n${stdout}`;
+  return `Spectral reported OpenAPI validity errors for ${fixturePath}\nstdout:\n${stdout}`;
 }
 
-function resolveLintOpenApiCliPath(): string | undefined {
+function resolveSpectralCliPath(): string | undefined {
   try {
     const packageJsonPath =
-      require.resolve("ibm-openapi-validator/package.json");
+      require.resolve("@stoplight/spectral-cli/package.json");
     const packageJson = JSON.parse(
       readFileSync(packageJsonPath, "utf8")
     ) as PackageJsonWithBin;
-    const binPath = lintOpenApiBinPath(packageJson);
+    const binPath = spectralBinPath(packageJson);
 
     return binPath === undefined
       ? undefined
@@ -398,14 +417,12 @@ function resolveLintOpenApiCliPath(): string | undefined {
   }
 }
 
-function lintOpenApiBinPath(
-  packageJson: PackageJsonWithBin
-): string | undefined {
+function spectralBinPath(packageJson: PackageJsonWithBin): string | undefined {
   if (typeof packageJson.bin === "string") {
     return packageJson.bin;
   }
 
-  return packageJson.bin?.["lint-openapi"];
+  return packageJson.bin?.spectral;
 }
 
 function commandOutput(error: unknown): {

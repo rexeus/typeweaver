@@ -1,15 +1,60 @@
 import fs from "node:fs";
 import path from "node:path";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
+import { NodeFileSystem } from "@effect/platform-node";
+import { Cause, Effect, Either, Exit, Layer } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
-import { SpecBundleOutputMissingError } from "../src/generators/spec/errors/SpecBundleOutputMissingError.js";
-import { InvalidSpecEntrypointError } from "../src/generators/spec/InvalidSpecEntrypointError.js";
 import {
-  bundle,
+  InvalidSpecEntrypointError,
+  SpecBundleError,
+  SpecBundleOutputMissingError,
+} from "../src/services/errors/specErrors.js";
+import { isSpecDefinition } from "../src/services/internal/specGuards.js";
+import {
   createWrapperImportSpecifier,
-} from "../src/generators/spec/specBundler.js";
-import { isSpecDefinition } from "../src/generators/spec/specGuards.js";
-import { loadSpec } from "../src/generators/specLoader.js";
+  SpecBundler,
+} from "../src/services/SpecBundler.js";
+import { SpecLoader } from "../src/services/SpecLoader.js";
+import type {
+  SpecBundlerConfig,
+  SpecBundlerDeps,
+} from "../src/services/SpecBundler.js";
+import type {
+  LoadedSpec,
+  SpecLoaderConfig,
+} from "../src/services/SpecLoader.js";
+
+// Test shims that bridge the legacy sync/async API onto the new services.
+// `Effect.either` flattens typed failures into the success channel so
+// tests can `.rejects.toBeInstanceOf` against the underlying error rather
+// than against Effect's `FiberFailure` wrapper.
+const SpecBundlerLayer = SpecBundler.Default.pipe(
+  Layer.provide(NodeFileSystem.layer)
+);
+const SpecLoaderLayer = SpecLoader.Default.pipe(
+  Layer.provide(NodeFileSystem.layer)
+);
+
+const bundle = async (
+  config: SpecBundlerConfig,
+  deps?: SpecBundlerDeps
+): Promise<string> => {
+  const result = await Effect.runPromise(
+    Effect.either(SpecBundler.bundle(config, deps)).pipe(
+      Effect.provide(SpecBundlerLayer)
+    )
+  );
+  if (Either.isLeft(result)) throw result.left;
+  return result.right;
+};
+
+const loadSpec = async (config: SpecLoaderConfig): Promise<LoadedSpec> => {
+  const result = await Effect.runPromise(
+    Effect.either(SpecLoader.load(config)).pipe(Effect.provide(SpecLoaderLayer))
+  );
+  if (Either.isLeft(result)) throw result.left;
+  return result.right;
+};
 
 const SPEC_DECLARATION = [
   'import type { SpecDefinition } from "@rexeus/typeweaver-core";',
@@ -22,71 +67,68 @@ type TempProject = {
   readonly outputDir: string;
 };
 
-type LoadedSpec = Awaited<ReturnType<typeof loadSpec>>;
-
 type TodoSpecExportStyle = "named" | "default";
 
-describe("SpecLoader", () => {
-  const tempDirs: string[] = [];
+const tempDirs: string[] = [];
 
-  afterEach(() => {
-    for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
+afterEach(() => {
+  for (const tempDir of tempDirs) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
 
-    tempDirs.length = 0;
+  tempDirs.length = 0;
+});
+
+const createTempProject = (): TempProject => {
+  const tempDir = fs.mkdtempSync(
+    path.join(process.cwd(), ".typeweaver-spec-loader-")
+  );
+  const projectDir = path.join(tempDir, "project with spaces");
+
+  fs.mkdirSync(projectDir, { recursive: true });
+  tempDirs.push(tempDir);
+
+  return {
+    projectDir,
+    outputDir: path.join(projectDir, "generated spec"),
+  };
+};
+
+const writeProjectFile = (
+  project: TempProject,
+  relativePath: string,
+  contents: string
+): string => {
+  const filePath = path.join(project.projectDir, relativePath);
+
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${contents.trim()}\n`);
+
+  return filePath;
+};
+
+const writeSpecEntrypoint = (
+  project: TempProject,
+  relativePath: string,
+  contents: string
+): string => {
+  return writeProjectFile(project, relativePath, contents);
+};
+
+const loadProjectSpec = async (
+  project: TempProject,
+  inputFile: string
+): Promise<LoadedSpec> => {
+  return loadSpec({
+    inputFile: path.relative(process.cwd(), inputFile),
+    specOutputDir: project.outputDir,
   });
+};
 
-  const createTempProject = (): TempProject => {
-    const tempDir = fs.mkdtempSync(
-      path.join(process.cwd(), ".typeweaver-spec-loader-")
-    );
-    const projectDir = path.join(tempDir, "project with spaces");
-
-    fs.mkdirSync(projectDir, { recursive: true });
-    tempDirs.push(tempDir);
-
-    return {
-      projectDir,
-      outputDir: path.join(projectDir, "generated spec"),
-    };
-  };
-
-  const writeProjectFile = (
-    project: TempProject,
-    relativePath: string,
-    contents: string
-  ): string => {
-    const filePath = path.join(project.projectDir, relativePath);
-
-    fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, `${contents.trim()}\n`);
-
-    return filePath;
-  };
-
-  const writeSpecEntrypoint = (
-    project: TempProject,
-    relativePath: string,
-    contents: string
-  ): string => {
-    return writeProjectFile(project, relativePath, contents);
-  };
-
-  const loadProjectSpec = async (
-    project: TempProject,
-    inputFile: string
-  ): Promise<LoadedSpec> => {
-    return loadSpec({
-      inputFile: path.relative(process.cwd(), inputFile),
-      specOutputDir: project.outputDir,
-    });
-  };
-
-  const createThrowingModuleSource = (options: {
-    readonly errorName: string;
-    readonly message: string;
-  }): string => `
+const createThrowingModuleSource = (options: {
+  readonly errorName: string;
+  readonly message: string;
+}): string => `
     export const spec = (() => {
       class ${options.errorName} extends Error {
         name = "${options.errorName}";
@@ -96,37 +138,37 @@ describe("SpecLoader", () => {
     })();
   `;
 
-  const expectBundledArtifacts = (outputDir: string): void => {
-    expect(fs.readdirSync(outputDir).sort()).toEqual(["spec.d.ts", "spec.js"]);
-    expect(fs.readFileSync(path.join(outputDir, "spec.d.ts"), "utf8")).toBe(
-      SPEC_DECLARATION
-    );
-  };
+const expectBundledArtifacts = (outputDir: string): void => {
+  expect(fs.readdirSync(outputDir).sort()).toEqual(["spec.d.ts", "spec.js"]);
+  expect(fs.readFileSync(path.join(outputDir, "spec.d.ts"), "utf8")).toBe(
+    SPEC_DECLARATION
+  );
+};
 
-  const expectSingleTodoResource = (loadedSpec: LoadedSpec): void => {
-    expect(Object.keys(loadedSpec.definition.resources)).toEqual(["todos"]);
-    expect(loadedSpec.definition.resources.todos?.operations).toHaveLength(1);
-    expect(loadedSpec.normalizedSpec.resources).toEqual([
-      expect.objectContaining({
-        name: "todos",
-        operations: [
-          expect.objectContaining({
-            operationId: "getTodo",
-            path: "/todos/:todoId",
-          }),
-        ],
-      }),
-    ]);
-  };
+const expectSingleTodoResource = (loadedSpec: LoadedSpec): void => {
+  expect(Object.keys(loadedSpec.definition.resources)).toEqual(["todos"]);
+  expect(loadedSpec.definition.resources.todos?.operations).toHaveLength(1);
+  expect(loadedSpec.normalizedSpec.resources).toEqual([
+    expect.objectContaining({
+      name: "todos",
+      operations: [
+        expect.objectContaining({
+          operationId: "getTodo",
+          path: "/todos/:todoId",
+        }),
+      ],
+    }),
+  ]);
+};
 
-  const writeTodoResponseModule = (
-    project: TempProject,
-    options: { readonly fileName: string }
-  ): string => {
-    return writeProjectFile(
-      project,
-      options.fileName,
-      `
+const writeTodoResponseModule = (
+  project: TempProject,
+  options: { readonly fileName: string }
+): string => {
+  return writeProjectFile(
+    project,
+    options.fileName,
+    `
         import { defineResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
         import { z } from "zod";
 
@@ -137,27 +179,27 @@ describe("SpecLoader", () => {
           body: z.object({ id: z.string() }),
         });
       `
-    );
-  };
+  );
+};
 
-  const writeTodoSpecEntrypoint = (
-    project: TempProject,
-    options: {
-      readonly fileName: string;
-      readonly exportStyle: TodoSpecExportStyle;
-      readonly responseImport: string;
-      readonly includeNotFoundResponse?: boolean;
-    }
-  ): string => {
-    const specExport =
-      options.exportStyle === "default"
-        ? "export default defineSpec"
-        : "export const spec = defineSpec";
-    const coreImports = options.includeNotFoundResponse
-      ? "defineOperation, defineSpec, HttpMethod, HttpStatusCode"
-      : "defineOperation, defineSpec, HttpMethod";
-    const operationResponses = options.includeNotFoundResponse
-      ? `
+const writeTodoSpecEntrypoint = (
+  project: TempProject,
+  options: {
+    readonly fileName: string;
+    readonly exportStyle: TodoSpecExportStyle;
+    readonly responseImport: string;
+    readonly includeNotFoundResponse?: boolean;
+  }
+): string => {
+  const specExport =
+    options.exportStyle === "default"
+      ? "export default defineSpec"
+      : "export const spec = defineSpec";
+  const coreImports = options.includeNotFoundResponse
+    ? "defineOperation, defineSpec, HttpMethod, HttpStatusCode"
+    : "defineOperation, defineSpec, HttpMethod";
+  const operationResponses = options.includeNotFoundResponse
+    ? `
                     todoResponse,
                     {
                       name: "TodoNotFound",
@@ -166,12 +208,12 @@ describe("SpecLoader", () => {
                       body: z.object({ message: z.string() }),
                     },
                   `
-      : "todoResponse";
+    : "todoResponse";
 
-    return writeSpecEntrypoint(
-      project,
-      options.fileName,
-      `
+  return writeSpecEntrypoint(
+    project,
+    options.fileName,
+    `
         import { ${coreImports} } from "@rexeus/typeweaver-core";
         import { z } from "zod";
         import { todoResponse } from ${JSON.stringify(options.responseImport)};
@@ -195,17 +237,17 @@ describe("SpecLoader", () => {
           },
         });
       `
-    );
-  };
+  );
+};
 
-  const writeTodoResourcesEntrypoint = (
-    project: TempProject,
-    options: { readonly fileName: string }
-  ): string => {
-    return writeSpecEntrypoint(
-      project,
-      options.fileName,
-      `
+const writeTodoResourcesEntrypoint = (
+  project: TempProject,
+  options: { readonly fileName: string }
+): string => {
+  return writeSpecEntrypoint(
+    project,
+    options.fileName,
+    `
         import { defineOperation, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
         import { z } from "zod";
 
@@ -233,21 +275,21 @@ describe("SpecLoader", () => {
           },
         };
       `
-    );
-  };
+  );
+};
 
-  const writeTodoSpecWithOperation = (
-    project: TempProject,
-    options: {
-      readonly fileName: string;
-      readonly operationId: string;
-      readonly summary: string;
-    }
-  ): string => {
-    return writeSpecEntrypoint(
-      project,
-      options.fileName,
-      `
+const writeTodoSpecWithOperation = (
+  project: TempProject,
+  options: {
+    readonly fileName: string;
+    readonly operationId: string;
+    readonly summary: string;
+  }
+): string => {
+  return writeSpecEntrypoint(
+    project,
+    options.fileName,
+    `
         export const spec = {
           resources: {
             todos: {
@@ -271,153 +313,162 @@ describe("SpecLoader", () => {
           },
         };
       `
-    );
-  };
+  );
+};
 
-  const validSpecDefinition = {
-    resources: {
-      todos: {
-        operations: [
-          {
-            operationId: "listTodos",
-            method: "GET",
-            path: "/todos",
-            summary: "List todos",
-            request: {},
-            responses: [
-              {
-                name: "TodoResponse",
-                statusCode: HttpStatusCode.OK,
-                description: "Todo response",
-              },
-            ],
-          },
-        ],
+const validSpecDefinition = {
+  resources: {
+    todos: {
+      operations: [
+        {
+          operationId: "listTodos",
+          method: "GET",
+          path: "/todos",
+          summary: "List todos",
+          request: {},
+          responses: [
+            {
+              name: "TodoResponse",
+              statusCode: HttpStatusCode.OK,
+              description: "Todo response",
+            },
+          ],
+        },
+      ],
+    },
+  },
+};
+const [validOperation] = validSpecDefinition.resources.todos.operations;
+
+if (validOperation === undefined) {
+  throw new Error("Expected the valid spec fixture to contain an operation");
+}
+
+const invalidSpecDefinitions = [
+  { scenario: "null spec", value: null },
+  { scenario: "non-object spec", value: "not a spec" },
+  { scenario: "non-object resources", value: { resources: [1, 2] } },
+  {
+    scenario: "resource without operations array",
+    value: { resources: { todos: {} } },
+  },
+  {
+    scenario: "operation missing summary",
+    value: {
+      resources: {
+        todos: {
+          operations: [
+            {
+              operationId: "listTodos",
+              method: "GET",
+              path: "/todos",
+              request: {},
+              responses: validOperation.responses,
+            },
+          ],
+        },
       },
     },
-  };
+  },
+  {
+    scenario: "operation with undefined request",
+    value: {
+      resources: {
+        todos: {
+          operations: [
+            {
+              ...validSpecDefinition.resources.todos.operations[0],
+              request: undefined,
+            },
+          ],
+        },
+      },
+    },
+  },
+  {
+    scenario: "invalid HTTP method",
+    value: {
+      resources: {
+        todos: {
+          operations: [
+            {
+              ...validSpecDefinition.resources.todos.operations[0],
+              method: "FETCH",
+            },
+          ],
+        },
+      },
+    },
+  },
+  {
+    scenario: "empty responses array",
+    value: {
+      resources: {
+        todos: {
+          operations: [
+            {
+              ...validSpecDefinition.resources.todos.operations[0],
+              responses: [],
+            },
+          ],
+        },
+      },
+    },
+  },
+  {
+    scenario: "response missing status code",
+    value: {
+      resources: {
+        todos: {
+          operations: [
+            {
+              ...validSpecDefinition.resources.todos.operations[0],
+              responses: [
+                {
+                  name: "TodoResponse",
+                  description: "Todo response",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    },
+  },
+  {
+    scenario: "response with unregistered status code",
+    value: {
+      resources: {
+        todos: {
+          operations: [
+            {
+              ...validSpecDefinition.resources.todos.operations[0],
+              responses: [
+                {
+                  name: "TodoResponse",
+                  statusCode: 299,
+                  description: "Todo response",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    },
+  },
+] as const;
 
+describe("SpecLoader structural guards", () => {
   test("accepts a structurally valid spec definition", () => {
     expect(isSpecDefinition(validSpecDefinition)).toBe(true);
   });
 
-  test.each([
-    { scenario: "null spec", value: null },
-    { scenario: "non-object spec", value: "not a spec" },
-    { scenario: "non-object resources", value: { resources: [1, 2] } },
-    {
-      scenario: "resource without operations array",
-      value: { resources: { todos: {} } },
-    },
-    {
-      scenario: "operation missing summary",
-      value: {
-        resources: {
-          todos: {
-            operations: [
-              {
-                operationId: "listTodos",
-                method: "GET",
-                path: "/todos",
-                request: {},
-                responses:
-                  validSpecDefinition.resources.todos.operations[0].responses,
-              },
-            ],
-          },
-        },
-      },
-    },
-    {
-      scenario: "operation with undefined request",
-      value: {
-        resources: {
-          todos: {
-            operations: [
-              {
-                ...validSpecDefinition.resources.todos.operations[0],
-                request: undefined,
-              },
-            ],
-          },
-        },
-      },
-    },
-    {
-      scenario: "invalid HTTP method",
-      value: {
-        resources: {
-          todos: {
-            operations: [
-              {
-                ...validSpecDefinition.resources.todos.operations[0],
-                method: "FETCH",
-              },
-            ],
-          },
-        },
-      },
-    },
-    {
-      scenario: "empty responses array",
-      value: {
-        resources: {
-          todos: {
-            operations: [
-              {
-                ...validSpecDefinition.resources.todos.operations[0],
-                responses: [],
-              },
-            ],
-          },
-        },
-      },
-    },
-    {
-      scenario: "response missing status code",
-      value: {
-        resources: {
-          todos: {
-            operations: [
-              {
-                ...validSpecDefinition.resources.todos.operations[0],
-                responses: [
-                  {
-                    name: "TodoResponse",
-                    description: "Todo response",
-                  },
-                ],
-              },
-            ],
-          },
-        },
-      },
-    },
-    {
-      scenario: "response with unregistered status code",
-      value: {
-        resources: {
-          todos: {
-            operations: [
-              {
-                ...validSpecDefinition.resources.todos.operations[0],
-                responses: [
-                  {
-                    name: "TodoResponse",
-                    statusCode: 299,
-                    description: "Todo response",
-                  },
-                ],
-              },
-            ],
-          },
-        },
-      },
-    },
-  ])("rejects $scenario", ({ value }) => {
+  test.each(invalidSpecDefinitions)("rejects $scenario", ({ value }) => {
     expect(isSpecDefinition(value)).toBe(false);
   });
+});
 
+describe("SpecLoader wrapper import specifiers", () => {
   test("creates a relative wrapper import specifier for posix paths", () => {
     expect(
       createWrapperImportSpecifier(
@@ -453,6 +504,63 @@ describe("SpecLoader", () => {
       )
     ).toBe("../spec source/spec.ts");
   });
+});
+
+describe("SpecLoader bundler output contract", () => {
+  test.skipIf(process.platform === "win32")(
+    "reports input disappearance between exists and realpath as a typed bundle failure",
+    async () => {
+      // Native Windows and UNC inputs intentionally use lexical win32 path
+      // semantics and never enter the POSIX realpath branch exercised here.
+      const project = createTempProject();
+      const inputFile = writeSpecEntrypoint(
+        project,
+        "spec.ts",
+        "export const spec = { resources: {} };"
+      );
+      const probeFailure = Object.assign(
+        new Error("input disappeared before realpath"),
+        {
+          code: "ENOENT",
+        }
+      );
+      const realpathSync = fs.realpathSync.native;
+      let buildStarted = false;
+
+      const exit = await Effect.runPromiseExit(
+        SpecBundler.bundle(
+          {
+            inputFile,
+            specOutputDir: project.outputDir,
+          },
+          {
+            build: async () => {
+              buildStarted = true;
+            },
+            realpathSync: filePath => {
+              if (filePath === inputFile) {
+                throw probeFailure;
+              }
+              return realpathSync(filePath);
+            },
+          }
+        ).pipe(Effect.provide(SpecBundlerLayer))
+      );
+
+      expect(buildStarted).toBe(false);
+      expect(Exit.isFailure(exit)).toBe(true);
+      if (!Exit.isFailure(exit)) return;
+      expect(Array.from(Cause.defects(exit.cause))).toEqual([]);
+      expect(Array.from(Cause.failures(exit.cause))).toEqual([
+        expect.objectContaining({
+          inputFile,
+          cause: probeFailure,
+          _tag: "SpecBundleError",
+        }),
+      ]);
+      expect(fs.readdirSync(project.outputDir)).toEqual([]);
+    }
+  );
 
   test("rejects successful spec builds that do not create the bundled output", async () => {
     const project = createTempProject();
@@ -476,7 +584,9 @@ describe("SpecLoader", () => {
       specOutputDir: project.outputDir,
     });
   });
+});
 
+describe("SpecLoader supported spec modules", () => {
   test("loads TypeScript specs with extensionless relative imports", async () => {
     const project = createTempProject();
 
@@ -591,7 +701,9 @@ describe("SpecLoader", () => {
     ).toBe("getSecondTodo");
     expectBundledArtifacts(project.outputDir);
   });
+});
 
+describe("SpecLoader bundling and import failures", () => {
   test("rejects specs with missing imported helpers during bundling", async () => {
     const project = createTempProject();
     const specFile = writeSpecEntrypoint(
@@ -622,6 +734,18 @@ describe("SpecLoader", () => {
     await expect(loadProjectSpec(project, specFile)).rejects.toThrow(
       /missingHelper/
     );
+    await expect(loadProjectSpec(project, specFile)).rejects.toBeInstanceOf(
+      SpecBundleError
+    );
+    // Discriminating field assertion: the error must carry a non-empty
+    // inputFile reference so operators (and the structured logs) can
+    // identify which spec entrypoint failed to bundle. The bundler stores
+    // the path relative to the cwd it was invoked with, so this asserts
+    // the path ends with the spec's basename rather than full equality.
+    const error = (await loadProjectSpec(project, specFile).catch(
+      (e: unknown) => e
+    )) as { readonly inputFile: string };
+    expect(error.inputFile).toMatch(/spec\.ts$/);
   });
 
   test("propagates errors thrown while importing bundled specs", async () => {
@@ -639,7 +763,9 @@ describe("SpecLoader", () => {
       "Spec evaluation failed"
     );
   });
+});
 
+describe("SpecLoader invalid entrypoints", () => {
   test("rejects entrypoints whose exported spec is not a valid spec definition", async () => {
     const project = createTempProject();
     const specFile = writeSpecEntrypoint(

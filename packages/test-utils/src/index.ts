@@ -1,4 +1,5 @@
 export * from "./data/index.js";
+export * from "./effect/index.js";
 export * from "./errors/index.js";
 export * from "./test-project/index.js";
 export * from "./test-server/index.js";

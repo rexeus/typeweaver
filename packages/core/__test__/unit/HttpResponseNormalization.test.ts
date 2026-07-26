@@ -21,88 +21,88 @@ const aNullPrototypeRecordWith = (
   properties: Record<string, unknown>
 ): Record<string, unknown> => Object.assign(Object.create(null), properties);
 
-describe("HTTP response normalization", () => {
-  describe("typed response detection", () => {
-    test.each([
-      { case: "null", candidate: null },
-      { case: "array", candidate: [] },
-      {
-        case: "object missing type",
-        candidate: { statusCode: HttpStatusCode.CREATED },
-      },
-      {
-        case: "object with non-string type",
-        candidate: aTypedResponseWith({ type: 1 }),
-      },
-      {
-        case: "object missing statusCode",
-        candidate: { type: "Created" },
-      },
-      {
-        case: "object with unregistered numeric status",
-        candidate: aTypedResponseWith({ statusCode: 599 }),
-      },
-      {
-        case: "object with string status",
-        candidate: aTypedResponseWith({ statusCode: "201" }),
-      },
-    ])("rejects malformed candidates: $case", ({ candidate }) => {
-      const isTypedResponse = isTypedHttpResponse(candidate);
+describe("HTTP response normalization: typed response detection", () => {
+  test.each([
+    { case: "null", candidate: null },
+    { case: "array", candidate: [] },
+    {
+      case: "object missing type",
+      candidate: { statusCode: HttpStatusCode.CREATED },
+    },
+    {
+      case: "object with non-string type",
+      candidate: aTypedResponseWith({ type: 1 }),
+    },
+    {
+      case: "object missing statusCode",
+      candidate: { type: "Created" },
+    },
+    {
+      case: "object with unregistered numeric status",
+      candidate: aTypedResponseWith({ statusCode: 599 }),
+    },
+    {
+      case: "object with string status",
+      candidate: aTypedResponseWith({ statusCode: "201" }),
+    },
+  ])("rejects malformed candidates: $case", ({ candidate }) => {
+    const isTypedResponse = isTypedHttpResponse(candidate);
 
-      expect(isTypedResponse).toBe(false);
-    });
-
-    test.each([
-      {
-        case: "without a header property",
-        candidate: aTypedResponseWith(),
-      },
-      {
-        case: "with an undefined header",
-        candidate: aTypedResponseWith({ header: undefined }),
-      },
-      {
-        case: "with a string header value",
-        candidate: aTypedResponseWith({ header: { "X-Request-Id": "req-1" } }),
-      },
-      {
-        case: "with a string-array header value",
-        candidate: aTypedResponseWith({
-          header: { "Set-Cookie": ["session=abc", "theme=dark"] },
-        }),
-      },
-      {
-        case: "with null-prototype response and header objects",
-        candidate: aNullPrototypeRecordWith({
-          type: "Created",
-          statusCode: HttpStatusCode.CREATED,
-          header: aNullPrototypeRecordWith({ "X-Request-Id": "req-1" }),
-          body: { id: "todo-1" },
-        }),
-      },
-    ])("accepts valid typed-response variants: $case", ({ candidate }) => {
-      const isTypedResponse = isTypedHttpResponse(candidate);
-
-      expect(isTypedResponse).toBe(true);
-    });
-
-    test.each([
-      { case: "null header", header: null },
-      { case: "array header", header: [] },
-      { case: "number-valued header", header: { "X-Retry": 1 } },
-      {
-        case: "header array containing a non-string item",
-        header: { "Set-Cookie": ["session=abc", 1] },
-      },
-    ])("rejects invalid header shapes: $case", ({ header }) => {
-      const candidate = aTypedResponseWith({ header });
-
-      const isTypedResponse = isTypedHttpResponse(candidate);
-
-      expect(isTypedResponse).toBe(false);
-    });
+    expect(isTypedResponse).toBe(false);
   });
 
+  test.each([
+    {
+      case: "without a header property",
+      candidate: aTypedResponseWith(),
+    },
+    {
+      case: "with an undefined header",
+      candidate: aTypedResponseWith({ header: undefined }),
+    },
+    {
+      case: "with a string header value",
+      candidate: aTypedResponseWith({ header: { "X-Request-Id": "req-1" } }),
+    },
+    {
+      case: "with a string-array header value",
+      candidate: aTypedResponseWith({
+        header: { "Set-Cookie": ["session=abc", "theme=dark"] },
+      }),
+    },
+    {
+      case: "with null-prototype response and header objects",
+      candidate: aNullPrototypeRecordWith({
+        type: "Created",
+        statusCode: HttpStatusCode.CREATED,
+        header: aNullPrototypeRecordWith({ "X-Request-Id": "req-1" }),
+        body: { id: "todo-1" },
+      }),
+    },
+  ])("accepts valid typed-response variants: $case", ({ candidate }) => {
+    const isTypedResponse = isTypedHttpResponse(candidate);
+
+    expect(isTypedResponse).toBe(true);
+  });
+
+  test.each([
+    { case: "null header", header: null },
+    { case: "array header", header: [] },
+    { case: "number-valued header", header: { "X-Retry": 1 } },
+    {
+      case: "header array containing a non-string item",
+      header: { "Set-Cookie": ["session=abc", 1] },
+    },
+  ])("rejects invalid header shapes: $case", ({ header }) => {
+    const candidate = aTypedResponseWith({ header });
+
+    const isTypedResponse = isTypedHttpResponse(candidate);
+
+    expect(isTypedResponse).toBe(false);
+  });
+});
+
+describe("HTTP response normalization: conversion", () => {
   test("removes undefined typed response headers when converting to an HTTP response", () => {
     const response = {
       type: "Created",

@@ -7,8 +7,245 @@ releases.
 
 ## Table of Contents
 
+- [Migrating from 0.12.x to 1.0.x](#migrating-from-012x-to-10x)
 - [Migrating from 0.7.x to 0.8.x](#migrating-from-07x-to-08x)
 - [Migrating from 0.8.x to 0.9.x](#migrating-from-08x-to-09x)
+
+---
+
+## Migrating from 0.12.x to 1.0.x
+
+Version 1.0.0 completes the migration to **Effect** as typeweaver's runtime foundation. The change
+is internal-architectural but breaks three surfaces:
+
+1. The **plugin API** (V1 class-based → V2 Effect-native records). Affects anyone who built a custom
+   plugin.
+2. The **CLI surface** (now built on `@effect/cli`). Affects scripts that parsed CLI output or
+   relied on the previous error format.
+3. A small set of **programmatic extension APIs** now use options objects. This affects direct
+   `NetworkError` construction and custom subclasses of the generated server and Hono router bases.
+
+The **spec authoring API** (`defineSpec` / `defineOperation` / `defineResponse`) is **unchanged**.
+Existing specs and Zod schemas keep working byte-for-byte.
+
+### 1. Plugin API V1 → V2 (BREAKING — third-party plugin authors)
+
+The V1 class hierarchy is gone:
+
+- `BasePlugin` is deleted. Class-based plugins no longer load.
+- `TypeweaverPlugin`, `createPluginRegistry`, and `legacyAdapter` are deleted.
+  `createPluginContextBuilder` was preserved as a `services/internal/` implementation detail backing
+  the `ContextBuilder` service; it is no longer part of the package's public API.
+- Plugins are now records returned by `definePlugin(...)`. Lifecycle stages return
+  `Effect<void, PluginExecutionError>` instead of `Promise<void> | void`.
+- Plugin `finalize` failures now surface as WARN logs instead of failing the run. If your plugin
+  runs hard-fail work in finalize, move it to `generate`.
+
+**Before (0.12.x) — class-based plugin:**
+
+```ts
+import { BasePlugin } from "@rexeus/typeweaver-gen";
+import type { GeneratorContext } from "@rexeus/typeweaver-gen";
+import { generate as generateRequests } from "./requestGenerator.js";
+
+export class TypesPlugin extends BasePlugin {
+  public override readonly name = "types";
+
+  public override async generate(context: GeneratorContext): Promise<void> {
+    await this.copyLibFiles(context, "./lib");
+    generateRequests(context);
+  }
+}
+```
+
+**After (1.0.x) — V2 plugin:**
+
+```ts
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { definePluginWithLibCopy } from "@rexeus/typeweaver-gen";
+import type { Plugin } from "@rexeus/typeweaver-gen";
+import { generate as generateRequests } from "./requestGenerator.js";
+
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+
+export const typesPlugin: Plugin = definePluginWithLibCopy({
+  name: "types",
+  libSourceDir: path.join(moduleDir, "lib"),
+  generators: [generateRequests],
+});
+
+export default typesPlugin;
+```
+
+Plugin packages must declare the supported Effect 3 range `>=3.22.0 <4` as a `peerDependency`.
+TypeWeaver itself develops and tests against Effect 3.22.0:
+
+```json
+{
+  "peerDependencies": {
+    "@rexeus/typeweaver-gen": "^1.0.0",
+    "effect": ">=3.22.0 <4"
+  }
+}
+```
+
+`GeneratorContext.writeFile`, `renderTemplate`, and `addGeneratedFile` remain synchronous. Plugin
+authors wrap their sync work in `Effect.try` and map thrown causes to `PluginExecutionError` — the
+orchestrator does **not** catch raw throws. Plugins written in Effect style can use the additive
+Effect-native counterparts (`writeFileEffect`, `renderTemplateEffect`, `addGeneratedFileEffect`)
+instead — same guarantees, typed error channels, I/O through `@effect/platform`'s `FileSystem`
+service. See [`docs/plugin-authoring.md`](./docs/plugin-authoring.md) for the full V2 contract and
+[ADR 0003](./docs/adr/0003-effect-native-plugin-api.md) for the design rationale.
+
+### 2. CLI on `@effect/cli` (BREAKING for invocation in scripts)
+
+The CLI is now built on `@effect/cli`. Three observable changes:
+
+- **Help output** differs from the previous commander-based format. Flag names and exit codes are
+  preserved; the visual layout is new.
+- **Error messages** are now formatted via `formatErrorForCli`. A failure prints a single
+  user-facing line like
+  `Failed to bundle spec entrypoint '/path/to/spec.ts': Cannot find module '...'` instead of a
+  multi-line FiberFailure stack trace. Scripts that grepped the previous error text will need to
+  update their patterns.
+- **Log lines** drop timestamps and fiber identifiers. Info-level lines go to stdout; `[WARN]` and
+  `[ERROR]` lines go to stderr.
+
+CLI **flags and exit codes are unchanged**:
+
+```bash
+# Same as 0.12.x
+npx typeweaver generate \
+  --input ./api/spec/index.ts \
+  --output ./api/generated \
+  --plugins clients,hono \
+  --format \
+  --clean
+```
+
+See [ADR 0006](./docs/adr/0006-cli-error-and-log-formatting.md) for the formatting pipeline.
+
+One behavioral tightening: the output-target safety guard now runs on **every** generation —
+including `--no-clean` — before anything touches the filesystem. Pointing `--output` at the current
+working directory, a workspace root, or any directory carrying a workspace marker (`.git`,
+`pnpm-workspace.yaml`, …) is rejected up front. Previously `--no-clean` skipped the guard entirely.
+Generating next to the spec source (e.g. `--output spec` with `--input spec/index.ts`) remains
+allowed with `--no-clean`; only the destructive clean step refuses targets that contain the input
+file.
+
+### 3. Internal API changes (informational; only programmatic consumers)
+
+If you imported the generator programmatically rather than through the CLI:
+
+- The imperative `Generator` class is replaced by an `Effect.Service` that lives inside a
+  `ManagedRuntime`. Import the public runtime and service from `@rexeus/typeweaver`, then dispose
+  the runtime when the embedding process no longer needs it:
+
+  ```ts
+  import { effectRuntime, Generator } from "@rexeus/typeweaver";
+
+  try {
+    await effectRuntime.runPromise(
+      Generator.generate({
+        inputFile: "./api/spec/index.ts",
+        outputDir: "./api/generated",
+      })
+    );
+  } finally {
+    await effectRuntime.dispose();
+  }
+  ```
+
+  The package-root import is side-effect-free: only the `typeweaver` binary parses argv or starts
+  the CLI. See `packages/cli/src/effectRuntime.ts` and
+  [ADR 0007](./docs/adr/0007-generator-per-call-isolation.md).
+
+- `createPluginRegistry` is deleted; the runtime composes the equivalent service.
+  `createPluginContextBuilder` is no longer exported — it lives under `services/internal/` as
+  implementation detail of the `ContextBuilder` service.
+- `MainLayer` (from `@rexeus/typeweaver-gen`) now requires the platform-agnostic `FileSystem` tag
+  from `@effect/platform` — `ContextBuilder` captures it for the Effect-native plugin context
+  surface. Provide `NodeContext.layer` (production) or an in-memory/no-op `FileSystem` layer (tests)
+  beneath it.
+- Errors are now `Data.TaggedError` instances throughout. Inspect the `_tag` field for typed
+  branching (`UnsafeGeneratedPathError`, `PluginExecutionError`, `SpecBundleError`, etc.).
+- Fiber interruption waits for a running Rolldown bundle to settle before the generator releases its
+  output lock. Rolldown has no cancellation signal, so the CLI stages the bundle beside its
+  destination and publishes it only after a successful build. This can delay interruption by the
+  remaining bundle time, but prevents detached writes after cleanup or lock release.
+- Atomic generator writes record a successfully published file before attempting fallible temp
+  cleanup. A cleanup error can still fail the operation, but the generated-file tracker and pending
+  log queue remain consistent with the filesystem.
+- Multi-mode errors use nested discriminants instead of optional field bags:
+  `PluginDependencyError.issue.kind` distinguishes `missing-dependency` from `dependency-cycle`,
+  while `UnsafeCleanTargetError.details.reason` selects the exact clean-target payload. Update
+  programmatic field access accordingly.
+- `GenerateFailure` is the canonical generator error union and is derived from
+  `Generator.generate`'s Effect error channel. The incomplete duplicate `GenerationError` type was
+  removed.
+- Expected operational failures remain typed rather than becoming Effect defects. Programmatic
+  callers can branch on formatter load/execution/filesystem errors, `CleanTargetInspectionError`,
+  `OutputLockError`, and `GeneratedPathProbeError`; the underlying cause and affected path or
+  operation are retained.
+- Custom top-level configuration keys survive CLI flag resolution and remain available to plugins
+  through `context.config`.
+- `NetworkError` now receives its metadata through a `NetworkErrorOptions` object. Replace
+  `new NetworkError(message, code, method, url, { cause })` with
+  `new NetworkError(message, { code, method, url, cause })`.
+- Custom `TypeweaverRouter` subclasses now call the protected `route` method with one exported
+  `TypeweaverRouteOptions` object instead of the previous positional arguments.
+- Custom `TypeweaverHono` subclasses now call the protected `handleRequest` method with one exported
+  `TypeweaverHonoRequestOptions` object instead of the previous five positional arguments.
+
+### 4. Spec authoring API: UNCHANGED
+
+The functional spec API introduced in 0.9.0 is unchanged in 1.0.0:
+
+- `defineSpec({ resources: { ... } })`
+- `defineOperation({ ... })`
+- `defineResponse({ ... })`
+- `defineDerivedResponse(base, overrides)`
+
+Zod schemas continue to be authored the same way. Regeneration updates the generated client, server,
+and Hono support code to the options-object APIs described above, so expect source diffs. The
+generated request, response, validation, and runtime behavior remain compatible. The
+`test-utils/src/test-project/output` golden fixture verifies the exact 1.0 output on every build.
+
+### 5. Migration Checklist (0.12.x to 1.0.x)
+
+For **end users** (you use the CLI but don't author plugins):
+
+- [ ] Update any scripts that parsed the previous CLI error format.
+- [ ] Update any scripts that parsed log lines (timestamps and fiber tags are gone).
+- [ ] Regenerate output with `npx typeweaver generate` and review the expected options-object source
+      diffs in the generated client, server, and Hono support code.
+
+For **plugin authors**:
+
+- [ ] Replace `extends BasePlugin` with `definePlugin(...)` or `definePluginWithLibCopy(...)`.
+- [ ] Wrap sync emitter bodies in `Effect.try` with `PluginExecutionError` mapping (or use
+      `definePluginWithLibCopy`, which does it for you).
+- [ ] Declare `effect >=3.22.0 <4` as a `peerDependency`.
+- [ ] Run plugin tests through `Effect.runSync(plugin.generate(context))` against a fake context
+      (see [`docs/plugin-authoring.md`](./docs/plugin-authoring.md) for the pattern).
+- [ ] Verify your plugin is discoverable: a named export matching the plugin name, a default export
+      of a `Plugin` record, or a default export of a `(options?) => Plugin` factory.
+- [ ] Keep configurable factories pure and synchronous. If the plugin owns a long-lived Effect
+      service, acquire its private Layer/Scope in `initialize`, retain the built service context in
+      that per-generation plugin instance, and close the Scope from `finalize` (see the
+      [scoped-service example](./packages/cli/examples/scoped-service-plugin.mjs)). This supports
+      exit-independent cleanup; `finalize` does not receive the generator's original `Exit`, so
+      transactional finalizers need a different integration boundary.
+
+### Further reading
+
+- [ADR 0003: Effect-native plugin API (V2)](./docs/adr/0003-effect-native-plugin-api.md)
+- [ADR 0004: FileSystem service adoption strategy](./docs/adr/0004-filesystem-service-adoption.md)
+- [ADR 0005: Effect.Service patterns (succeed vs effect)](./docs/adr/0005-effect-service-patterns.md)
+- [ADR 0006: CLI error and log formatting](./docs/adr/0006-cli-error-and-log-formatting.md)
+- [ADR 0007: Generator per-call isolation](./docs/adr/0007-generator-per-call-isolation.md)
+- [Plugin authoring guide](./docs/plugin-authoring.md)
 
 ---
 

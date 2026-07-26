@@ -1,6 +1,8 @@
+import { openApiPlugin } from "./openApiPlugin.js";
+
 export { buildOpenApiDocument } from "./buildOpenApiDocument.js";
-export { OpenApiPlugin } from "./OpenApiPlugin.js";
-export type { OpenApiPluginOptions } from "./OpenApiPlugin.js";
+export { openApiPlugin } from "./openApiPlugin.js";
+export type { OpenApiPluginOptions } from "./openApiPlugin.js";
 export type {
   BuildOpenApiDocumentOptions,
   OpenApiBuildResult,
@@ -27,3 +29,5 @@ export type {
   OpenApiTagObject,
   OpenApiWarningLocation,
 } from "./types.js";
+
+export default openApiPlugin;

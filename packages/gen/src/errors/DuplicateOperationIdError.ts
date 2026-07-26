@@ -1,8 +1,11 @@
-export class DuplicateOperationIdError extends Error {
-  public constructor(operationId: string) {
-    super(
-      `Operation ID '${operationId}' must be globally unique within a spec.`
-    );
-    this.name = "DuplicateOperationIdError";
+import { Data } from "effect";
+
+export class DuplicateOperationIdError extends Data.TaggedError(
+  "DuplicateOperationIdError"
+)<{
+  readonly operationId: string;
+}> {
+  public override get message(): string {
+    return `Operation ID '${this.operationId}' must be globally unique within a spec.`;
   }
 }

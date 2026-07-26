@@ -33,7 +33,7 @@ const expectUuid = (value: string | string[] | undefined): void => {
   );
 };
 
-describe("requestId", () => {
+describe("requestId generation and propagation", () => {
   test("generates a UUID when no inbound request ID exists", async () => {
     const response = await executeRequestId();
 
@@ -125,7 +125,9 @@ describe("requestId", () => {
 
     expect(response.header?.["x-request-id"]).toBe("req-1");
   });
+});
 
+describe("requestId inbound validation", () => {
   test("rejects array-valued inbound request IDs", async () => {
     const ctx = createServerContext({
       header: { "x-request-id": ["first-id", "second-id"] },
@@ -210,7 +212,9 @@ describe("requestId", () => {
       expect(response.body).toEqual({ requestId: "generated-id" });
     }
   );
+});
 
+describe("requestId downstream headers", () => {
   test("overrides conflicting downstream request ID headers case-insensitively", async () => {
     const response = await executeRequestId({
       options: { generator: () => "generated-id" },

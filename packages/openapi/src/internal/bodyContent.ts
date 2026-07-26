@@ -61,6 +61,37 @@ function isAmbiguousRawSchema(schema: z.core.$ZodType): boolean {
   return schemaType === "any" || schemaType === "unknown";
 }
 
+type UnwrapSchemaStep =
+  | { readonly _tag: "Continue"; readonly schema?: z.core.$ZodType }
+  | { readonly _tag: "Done"; readonly schema?: z.core.$ZodType };
+
+const isOpaquePipeOutput = (outputType: string | undefined): boolean =>
+  outputType === undefined || outputType === "transform";
+
+function unwrapSchemaStep(schema: z.core.$ZodType): UnwrapSchemaStep {
+  const definition = getSchemaDefinition(schema);
+  const schemaType = definition?.type;
+
+  if (
+    isZodTransparentWrapperType(schemaType, RAW_BODY_TRANSPARENT_WRAPPER_TYPES)
+  ) {
+    return { _tag: "Continue", schema: definition?.innerType };
+  }
+
+  if (schemaType === "pipe") {
+    const outputType = getSchemaType(definition?.out);
+    return isOpaquePipeOutput(outputType)
+      ? { _tag: "Done" }
+      : { _tag: "Continue", schema: definition?.out };
+  }
+
+  if (schemaType === "effects") {
+    return { _tag: "Continue", schema: definition?.schema };
+  }
+
+  return { _tag: "Done", schema };
+}
+
 function unwrapTransparentSchema(
   schema: z.core.$ZodType
 ): z.core.$ZodType | undefined {
@@ -70,36 +101,11 @@ function unwrapTransparentSchema(
   while (current !== undefined && !visitedSchemas.has(current)) {
     visitedSchemas.add(current);
 
-    const definition = getSchemaDefinition(current);
-    const schemaType = definition?.type;
-
-    if (
-      isZodTransparentWrapperType(
-        schemaType,
-        RAW_BODY_TRANSPARENT_WRAPPER_TYPES
-      )
-    ) {
-      current = definition?.innerType;
-      continue;
+    const step = unwrapSchemaStep(current);
+    if (step._tag === "Done") {
+      return step.schema;
     }
-
-    if (schemaType === "pipe") {
-      const outputType = getSchemaType(definition?.out);
-
-      if (outputType === undefined || outputType === "transform") {
-        return undefined;
-      }
-
-      current = definition?.out;
-      continue;
-    }
-
-    if (schemaType === "effects") {
-      current = definition?.schema;
-      continue;
-    }
-
-    return current;
+    current = step.schema;
   }
 
   return current;

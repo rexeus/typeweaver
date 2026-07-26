@@ -1,10 +1,51 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["eslint", "typescript", "unicorn", "oxc", "import"],
+  "jsPlugins": ["eslint-plugin-sonarjs"],
   "categories": {
     "correctness": "error"
   },
   "rules": {
+    "eslint/complexity": [
+      "error",
+      {
+        "max": 10,
+        "variant": "classic"
+      }
+    ],
+    "eslint/max-depth": [
+      "error",
+      {
+        "max": 4
+      }
+    ],
+    "eslint/max-lines-per-function": [
+      "error",
+      {
+        "max": 100,
+        "skipBlankLines": true,
+        "skipComments": true
+      }
+    ],
+    "eslint/max-nested-callbacks": [
+      "error",
+      {
+        "max": 4
+      }
+    ],
+    "eslint/max-params": [
+      "error",
+      {
+        "max": 4,
+        "countThis": "except-void"
+      }
+    ],
+    "eslint/max-statements": [
+      "error",
+      {
+        "max": 40
+      }
+    ],
     "unicorn/prefer-node-protocol": "error",
     "typescript/consistent-type-definitions": ["error", "type"],
     "typescript/no-explicit-any": "off",
@@ -14,7 +55,15 @@
     "import/no-duplicates": "error",
     "import/no-named-default": "error",
     "import/no-namespace": "error",
-    "import/no-unassigned-import": "error"
+    "import/no-unassigned-import": "error",
+    "sonarjs/cognitive-complexity": ["error", 15],
+    "sonarjs/expression-complexity": [
+      "error",
+      {
+        "max": 6
+      }
+    ],
+    "sonarjs/no-nested-switch": "error"
   },
   "ignorePatterns": ["**/dist/**", "**/node_modules/**", ".vscode/**", "**/output/**", "**/outputs/**"]
 }

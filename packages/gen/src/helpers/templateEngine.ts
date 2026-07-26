@@ -1,3 +1,5 @@
+import type { TemplateData } from "../plugins/contextTypes.js";
+
 function escapeHtml(input: string): string {
   return input
     .replaceAll("&", "&amp;")
@@ -15,18 +17,42 @@ function stringifyTemplateValue(value: unknown): string {
   return String(value);
 }
 
-export function renderTemplate(
-  template: string,
-  data: Record<string, unknown>
-): string {
-  const outputChunks: string[] = [];
-  const expressionPattern = /<%[=-]?[\s\S]*?%>/g;
-  let currentIndex = 0;
-  let match: RegExpExecArray | null = expressionPattern.exec(template);
+type TemplateTag = {
+  readonly end: number;
+  readonly start: number;
+  readonly value: string;
+};
 
-  while (match !== null) {
-    const [tag] = match;
-    const tagStart = match.index;
+function findNextTemplateTag(
+  template: string,
+  fromIndex: number
+): TemplateTag | undefined {
+  const start = template.indexOf("<%", fromIndex);
+  if (start === -1) {
+    return undefined;
+  }
+
+  const closingStart = template.indexOf("%>", start + 2);
+  if (closingStart === -1) {
+    return undefined;
+  }
+
+  const end = closingStart + 2;
+  return {
+    start,
+    end,
+    value: template.slice(start, end),
+  };
+}
+
+export function renderTemplate(template: string, data: TemplateData): string {
+  const templateData = data ?? {};
+  const outputChunks: string[] = [];
+  let currentIndex = 0;
+  let tagLocation = findNextTemplateTag(template, currentIndex);
+
+  while (tagLocation !== undefined) {
+    const { end: tagEnd, start: tagStart, value: tag } = tagLocation;
 
     outputChunks.push(
       `__output.push(${JSON.stringify(template.slice(currentIndex, tagStart))});`
@@ -42,8 +68,8 @@ export function renderTemplate(
       outputChunks.push(tag.slice(2, -2));
     }
 
-    currentIndex = tagStart + tag.length;
-    match = expressionPattern.exec(template);
+    currentIndex = tagEnd;
+    tagLocation = findNextTemplateTag(template, currentIndex);
   }
 
   outputChunks.push(
@@ -60,10 +86,10 @@ export function renderTemplate(
     // (including names like `name` or `toString`) must win over outer built-ins.
     `const __output = []; with (data) { ${outputChunks.join("\n")} } return __output.join("");`
   ) as (
-    data: Record<string, unknown>,
+    data: NonNullable<TemplateData>,
     escape: typeof escapeHtml,
     stringify: typeof stringifyTemplateValue
   ) => string;
 
-  return render(data, escapeHtml, stringifyTemplateValue);
+  return render(templateData, escapeHtml, stringifyTemplateValue);
 }

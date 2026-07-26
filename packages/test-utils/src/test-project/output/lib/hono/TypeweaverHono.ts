@@ -166,6 +166,20 @@ export type TypeweaverHonoOptions<
 };
 
 /**
+ * Inputs used by generated and custom Hono routers to handle one operation.
+ */
+export type TypeweaverHonoRequestOptions<
+  TRequest extends IHttpRequest,
+  TResponse extends IHttpResponse,
+> = {
+  readonly context: Context;
+  readonly operationId: string;
+  readonly requestValidator: IRequestValidator;
+  readonly responseValidator: IResponseValidator;
+  readonly handler: HonoRequestHandler<TRequest, TResponse>;
+};
+
+/**
  * Abstract base class for typeweaver-generated Hono routers.
  *
  * Extends Hono with typeweaver-specific features:
@@ -372,20 +386,16 @@ export abstract class TypeweaverHono<
   /**
    * Handles a request with validation and type-safe response conversion.
    *
-   * @param context - Hono context for the current request
-   * @param operationId - Unique operation identifier from the API definition
-   * @param requestValidator - Request validator for the specific operation
-   * @param responseValidator - Response validator for the specific operation
-   * @param handler - Type-safe request handler function
+   * @param options - Hono context, operation metadata, validators, and handler
    * @returns Hono-compatible Response object
    */
-  protected async handleRequest<TRequest extends IHttpRequest, TResponse extends IHttpResponse>(
-    context: Context,
-    operationId: string,
-    requestValidator: IRequestValidator,
-    responseValidator: IResponseValidator,
-    handler: HonoRequestHandler<TRequest, TResponse>,
-  ): Promise<Response> {
+  protected async handleRequest<TRequest extends IHttpRequest, TResponse extends IHttpResponse>({
+    context,
+    operationId,
+    requestValidator,
+    responseValidator,
+    handler,
+  }: TypeweaverHonoRequestOptions<TRequest, TResponse>): Promise<Response> {
     try {
       context.set("operationId", operationId);
 

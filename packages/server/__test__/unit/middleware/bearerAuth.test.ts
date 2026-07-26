@@ -68,7 +68,7 @@ function expectDefaultUnauthorized(response: IHttpResponse): void {
   );
 }
 
-describe("bearerAuth", () => {
+describe("bearerAuth malformed tokens", () => {
   test.each<{
     readonly case: string;
     readonly header?: Record<string, string | string[]>;
@@ -128,7 +128,9 @@ describe("bearerAuth", () => {
     expect(verifyToken).not.toHaveBeenCalled();
     expect(finalHandler).not.toHaveBeenCalled();
   });
+});
 
+describe("bearerAuth verification failures", () => {
   test("short-circuits downstream handlers when tokens are rejected", async () => {
     const finalHandler = vi.fn(finalHandlerShouldNotRun);
 
@@ -208,7 +210,9 @@ describe("bearerAuth", () => {
     expect(response.body).toEqual({ denied: true });
     expect(finalHandler).not.toHaveBeenCalled();
   });
+});
 
+describe("bearerAuth successful tokens", () => {
   test("passes the bearer token and request context to the verifier", async () => {
     const verifyToken = vi.fn(alwaysValid);
 
@@ -263,7 +267,9 @@ describe("bearerAuth", () => {
     expect(response.statusCode).toBe(200);
     expect(response.body).toEqual({ ok: true });
   });
+});
 
+describe("bearerAuth unauthorized responses", () => {
   test("uses the configured realm in the default challenge", async () => {
     const response = await executeBearerAuth({
       realm: "API",

@@ -45,22 +45,22 @@ export class AuthRouter<
   }
 
   protected setupRoutes(): void {
-    this.route(
-      "AccessToken",
-      HttpMethod.POST,
-      "/auth/access-token",
-      new AccessTokenRequestValidator(),
-      new AccessTokenResponseValidator(),
-      this.requestHandlers.handleAccessTokenRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "AccessToken",
+      method: HttpMethod.POST,
+      path: "/auth/access-token",
+      requestValidator: new AccessTokenRequestValidator(),
+      responseValidator: new AccessTokenResponseValidator(),
+      handler: this.requestHandlers.handleAccessTokenRequest.bind(this.requestHandlers),
+    });
 
-    this.route(
-      "RefreshToken",
-      HttpMethod.POST,
-      "/auth/refresh-token",
-      new RefreshTokenRequestValidator(),
-      new RefreshTokenResponseValidator(),
-      this.requestHandlers.handleRefreshTokenRequest.bind(this.requestHandlers),
-    );
+    this.route({
+      operationId: "RefreshToken",
+      method: HttpMethod.POST,
+      path: "/auth/refresh-token",
+      requestValidator: new RefreshTokenRequestValidator(),
+      responseValidator: new RefreshTokenResponseValidator(),
+      handler: this.requestHandlers.handleRefreshTokenRequest.bind(this.requestHandlers),
+    });
   }
 }

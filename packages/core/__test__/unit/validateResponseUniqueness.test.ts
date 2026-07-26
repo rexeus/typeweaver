@@ -43,7 +43,7 @@ const aResourceWithOperations = (
   return { operations };
 };
 
-describe("validateUniqueResponseNames", () => {
+describe("validateUniqueResponseNames acceptance", () => {
   test("accepts an empty resource map", () => {
     expect(() => validateUniqueResponseNames({})).not.toThrow();
   });
@@ -82,7 +82,9 @@ describe("validateUniqueResponseNames", () => {
 
     expect(() => validateUniqueResponseNames(resources)).not.toThrow();
   });
+});
 
+describe("validateUniqueResponseNames within a resource", () => {
   test("rejects duplicate response names within one operation", () => {
     const resources = {
       users: aResourceWithOperations(
@@ -125,7 +127,9 @@ describe("validateUniqueResponseNames", () => {
       DuplicateResponseNameError
     );
   });
+});
 
+describe("validateUniqueResponseNames across resources", () => {
   test("rejects duplicate response names across resources", () => {
     const resources = {
       users: aResourceWithOperations(

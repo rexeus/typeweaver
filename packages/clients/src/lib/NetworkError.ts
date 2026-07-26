@@ -18,6 +18,15 @@ export type NetworkErrorCode =
   | "UNKNOWN";
 
 /**
+ * Context attached to a network-level failure.
+ */
+export type NetworkErrorOptions = ErrorOptions & {
+  readonly code: NetworkErrorCode;
+  readonly method: string;
+  readonly url: string;
+};
+
+/**
  * Typed error for network-level failures during HTTP requests.
  *
  * Provides a discriminated `code` property for programmatic error handling
@@ -26,14 +35,14 @@ export type NetworkErrorCode =
  */
 export class NetworkError extends Error {
   public override readonly name = "NetworkError";
+  public readonly code: NetworkErrorCode;
+  public readonly method: string;
+  public readonly url: string;
 
-  public constructor(
-    message: string,
-    public readonly code: NetworkErrorCode,
-    public readonly method: string,
-    public readonly url: string,
-    options?: ErrorOptions
-  ) {
+  public constructor(message: string, options: NetworkErrorOptions) {
     super(message, options);
+    this.code = options.code;
+    this.method = options.method;
+    this.url = options.url;
   }
 }

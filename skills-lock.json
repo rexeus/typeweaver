@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "effect-ts": {
+      "source": "effect-ts/skills",
+      "sourceType": "github",
+      "skillPath": "skills/effect-ts/SKILL.md",
+      "computedHash": "de2d19b74ebb3c14276bd673b325b2090779f5a84de2dc545f5bd1f3239165df"
+    },
+    "turborepo": {
+      "source": "vercel/turborepo",
+      "sourceType": "github",
+      "skillPath": "skills/turborepo/SKILL.md",
+      "computedHash": "91ca859d13834ab4103eff55bfd66ae43ef0823a8339664dd1cccc5a9ddfd7cb"
+    }
+  }
+}

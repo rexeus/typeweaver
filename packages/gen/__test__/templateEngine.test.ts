@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { renderTemplate } from "../src/helpers/templateEngine.js";
 
-describe("renderTemplate", () => {
+describe("renderTemplate interpolation and control flow", () => {
   test("escapes HTML-sensitive characters in escaped interpolation", () => {
     const template = "<%= unsafe %>";
 
@@ -101,7 +101,9 @@ describe("renderTemplate", () => {
 
     expect(result).toBe("first=alpha;second=beta;");
   });
+});
 
+describe("renderTemplate interpolated values", () => {
   test("renders nullish interpolated values as empty strings", () => {
     const template = "<%= undefinedValue %>|<%- nullValue %>|<%= present %>";
 
@@ -176,7 +178,9 @@ describe("renderTemplate", () => {
 
     expect(result).toBe(expected);
   });
+});
 
+describe("renderTemplate whitespace and failures", () => {
   test("preserves literal whitespace and newlines around template tags", () => {
     const template = "alpha \n  <%= value %>\n\t<%- raw %>  omega";
 
@@ -186,6 +190,12 @@ describe("renderTemplate", () => {
     });
 
     expect(result).toBe("alpha \n  beta\n\tgamma  omega");
+  });
+
+  test("preserves unterminated tag-like input without regex backtracking", () => {
+    const template = `<%${"<%-".repeat(25_000)}`;
+
+    expect(renderTemplate(template, {})).toBe(template);
   });
 
   test("propagates template syntax errors instead of returning partial output", () => {

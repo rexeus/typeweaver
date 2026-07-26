@@ -51,205 +51,238 @@ export function describeRuntimeContractSuite(
     : describe;
 
   describeRuntime(options.title, () => {
-    let server: RuntimeServer;
+    const environment: { server?: RuntimeServer } = {};
 
     beforeAll(async () => {
       const port = await getPort();
-      server = await spawnRuntimeServer(options.runtime, port);
+      environment.server = await spawnRuntimeServer(options.runtime, port);
     });
 
     afterAll(async () => {
-      await server?.kill();
+      await environment.server?.kill();
     });
 
-    test("serves the todo list as JSON", async () => {
-      const { body } = await expectJsonResponse<TodoListBody>(
-        fetch(`${server.baseUrl}/todos`),
-        200
-      );
+    registerGeneratedRequestTests(environment);
+    registerQueryAndEmptyResponseTests(environment);
+    registerRuntimeErrorTests(environment);
+  });
+}
 
-      expect(body.results).toEqual(expect.any(Array));
-    });
+type RuntimeEnvironment = {
+  readonly server?: RuntimeServer;
+};
 
-    test("passes JSON request bodies through generated handlers", async () => {
-      const { body } = await expectJsonResponse<TodoBody>(
-        postJson(`${server.baseUrl}/todos`, { title: "integration-test" }),
-        201
-      );
+function runtimeBaseUrl(environment: RuntimeEnvironment): string {
+  if (!environment.server) {
+    throw new TestAssertionError("Runtime server has not started");
+  }
+  return environment.server.baseUrl;
+}
 
-      expect(body.title).toBe("integration-test");
-      expect(body.status).toBe("TODO");
-    });
+function registerGeneratedRequestTests(environment: RuntimeEnvironment): void {
+  test("serves the todo list as JSON", async () => {
+    const baseUrl = runtimeBaseUrl(environment);
+    const { body } = await expectJsonResponse<TodoListBody>(
+      fetch(`${baseUrl}/todos`),
+      200
+    );
 
-    test("accepts runtime JSON bodies exactly at the size limit", async () => {
-      const title = titleForJsonTodoBodyWithByteLength(
-        RUNTIME_MAX_BODY_SIZE_BYTES
-      );
+    expect(body.results).toEqual(expect.any(Array));
+  });
 
-      const { body } = await expectJsonResponse<TodoBody>(
-        fetch(`${server.baseUrl}/todos`, {
-          method: "POST",
-          headers: { "Content-Type": JSON_CONTENT_TYPE },
-          body: jsonTodoBodyWithByteLength(title, RUNTIME_MAX_BODY_SIZE_BYTES),
-        }),
-        201
-      );
+  test("passes JSON request bodies through generated handlers", async () => {
+    const baseUrl = runtimeBaseUrl(environment);
+    const { body } = await expectJsonResponse<TodoBody>(
+      postJson(`${baseUrl}/todos`, { title: "integration-test" }),
+      201
+    );
 
-      expect(body.title).toBe(title);
-      expect(body.status).toBe("TODO");
-    });
+    expect(body.title).toBe("integration-test");
+    expect(body.status).toBe("TODO");
+  });
 
-    test("passes path parameters through generated handlers", async () => {
-      const { body } = await expectJsonResponse<TodoBody>(
-        fetch(`${server.baseUrl}/todos/abc-123`),
-        200
-      );
+  test("accepts runtime JSON bodies exactly at the size limit", async () => {
+    const baseUrl = runtimeBaseUrl(environment);
+    const title = titleForJsonTodoBodyWithByteLength(
+      RUNTIME_MAX_BODY_SIZE_BYTES
+    );
 
-      expect(body.id).toBe("abc-123");
-    });
+    const { body } = await expectJsonResponse<TodoBody>(
+      fetch(`${baseUrl}/todos`, {
+        method: "POST",
+        headers: { "Content-Type": JSON_CONTENT_TYPE },
+        body: jsonTodoBodyWithByteLength(title, RUNTIME_MAX_BODY_SIZE_BYTES),
+      }),
+      201
+    );
 
-    test("passes path parameters and JSON bodies through generated handlers", async () => {
-      const { body } = await expectJsonResponse<TodoBody>(
-        putJson(`${server.baseUrl}/todos/abc-123/status`, { value: "DONE" }),
-        200
-      );
+    expect(body.title).toBe(title);
+    expect(body.status).toBe("TODO");
+  });
 
-      expect(body).toMatchObject({ id: "abc-123", status: "DONE" });
-    });
+  test("passes path parameters through generated handlers", async () => {
+    const baseUrl = runtimeBaseUrl(environment);
+    const { body } = await expectJsonResponse<TodoBody>(
+      fetch(`${baseUrl}/todos/abc-123`),
+      200
+    );
 
-    test("passes PATCH JSON bodies and path parameters through generated handlers", async () => {
-      const { body } = await expectJsonResponse<TodoBody>(
-        patchJson(`${server.baseUrl}/todos/abc-123`, {
-          title: "patched-runtime-title",
-        }),
-        200
-      );
+    expect(body.id).toBe("abc-123");
+  });
 
-      expect(body).toMatchObject({
-        id: "abc-123",
+  test("passes path parameters and JSON bodies through generated handlers", async () => {
+    const baseUrl = runtimeBaseUrl(environment);
+    const { body } = await expectJsonResponse<TodoBody>(
+      putJson(`${baseUrl}/todos/abc-123/status`, { value: "DONE" }),
+      200
+    );
+
+    expect(body).toMatchObject({ id: "abc-123", status: "DONE" });
+  });
+
+  test("passes PATCH JSON bodies and path parameters through generated handlers", async () => {
+    const baseUrl = runtimeBaseUrl(environment);
+    const { body } = await expectJsonResponse<TodoBody>(
+      patchJson(`${baseUrl}/todos/abc-123`, {
         title: "patched-runtime-title",
-      });
+      }),
+      200
+    );
+
+    expect(body).toMatchObject({
+      id: "abc-123",
+      title: "patched-runtime-title",
+    });
+  });
+}
+
+function registerQueryAndEmptyResponseTests(
+  environment: RuntimeEnvironment
+): void {
+  test("passes nextToken query parameters through generated handlers", async () => {
+    const baseUrl = runtimeBaseUrl(environment);
+    const { body } = await expectJsonResponse<QueryTodoBody>(
+      postJson(`${baseUrl}/todos/query?nextToken=runtime-query-token`, {}),
+      200
+    );
+
+    expect(body.nextToken).toBe("runtime-query-token");
+  });
+
+  test("returns results when optional query parameters are omitted", async () => {
+    const baseUrl = runtimeBaseUrl(environment);
+    const { body } = await expectJsonResponse<QueryTodoBody>(
+      postJson(`${baseUrl}/todos/query`, {}),
+      200
+    );
+
+    expect(body.results).toEqual(expect.any(Array));
+  });
+
+  test("decodes encoded runtime query values before handlers receive them", async () => {
+    const baseUrl = runtimeBaseUrl(environment);
+    const { body } = await expectJsonResponse<QueryTodoBody>(
+      postJson(`${baseUrl}/todos/query?nextToken=runtime%20query%2Btoken`, {}),
+      200
+    );
+
+    expect(body.nextToken).toBe("runtime query+token");
+  });
+
+  test("returns no body for successful empty responses", async () => {
+    const baseUrl = runtimeBaseUrl(environment);
+    const response = await fetch(`${baseUrl}/todos/abc-123`, {
+      method: "DELETE",
     });
 
-    test("passes nextToken query parameters through generated handlers", async () => {
-      const { body } = await expectJsonResponse<QueryTodoBody>(
-        postJson(
-          `${server.baseUrl}/todos/query?nextToken=runtime-query-token`,
-          {}
+    await expectNoBody(response, 204);
+  });
+
+  test("returns no body for HEAD requests while preserving headers", async () => {
+    const baseUrl = runtimeBaseUrl(environment);
+    const response = await fetch(`${baseUrl}/todos/abc-123`, {
+      method: "HEAD",
+    });
+
+    await expectNoBody(response, 200);
+    expect(response.headers.get("content-type")).toContain(JSON_CONTENT_TYPE);
+  });
+}
+
+function registerRuntimeErrorTests(environment: RuntimeEnvironment): void {
+  test("returns NOT_FOUND for unknown runtime paths", async () => {
+    const baseUrl = runtimeBaseUrl(environment);
+    const { body } = await expectJsonResponse<ErrorBody>(
+      fetch(`${baseUrl}/nonexistent`),
+      404
+    );
+
+    expect(body.code).toBe("NOT_FOUND");
+  });
+
+  test("returns METHOD_NOT_ALLOWED with allowed runtime methods", async () => {
+    const baseUrl = runtimeBaseUrl(environment);
+    const { response, body } = await expectJsonResponse<ErrorBody>(
+      fetch(`${baseUrl}/todos`, { method: "DELETE" }),
+      405
+    );
+
+    expectAllow(response, ["GET", "HEAD", "POST"]);
+    expect(body.code).toBe("METHOD_NOT_ALLOWED");
+  });
+
+  test("returns the todo OPTIONS allow list in production order", async () => {
+    const baseUrl = runtimeBaseUrl(environment);
+    const response = await fetch(`${baseUrl}/todos/abc-123`, {
+      method: "OPTIONS",
+    });
+
+    expect(response.status).toBe(200);
+    expectAllow(response, [
+      "GET",
+      "HEAD",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "OPTIONS",
+    ]);
+  });
+
+  test("returns BAD_REQUEST for malformed runtime JSON bodies", async () => {
+    const baseUrl = runtimeBaseUrl(environment);
+    const { body } = await expectJsonResponse<ErrorBody>(
+      fetch(`${baseUrl}/todos`, {
+        method: "POST",
+        headers: { "Content-Type": JSON_CONTENT_TYPE },
+        body: "{invalid json",
+      }),
+      400
+    );
+
+    expect(body.code).toBe("BAD_REQUEST");
+  });
+
+  test("rejects runtime JSON bodies one byte over the size limit", async () => {
+    const baseUrl = runtimeBaseUrl(environment);
+    const title = titleForJsonTodoBodyWithByteLength(
+      ONE_BYTE_OVER_RUNTIME_MAX_BODY_SIZE_BYTES
+    );
+
+    const { body } = await expectJsonResponse<ErrorBody>(
+      fetch(`${baseUrl}/todos`, {
+        method: "POST",
+        headers: { "Content-Type": JSON_CONTENT_TYPE },
+        body: jsonTodoBodyWithByteLength(
+          title,
+          ONE_BYTE_OVER_RUNTIME_MAX_BODY_SIZE_BYTES
         ),
-        200
-      );
+      }),
+      413
+    );
 
-      expect(body.nextToken).toBe("runtime-query-token");
-    });
-
-    test("returns results when optional query parameters are omitted", async () => {
-      const { body } = await expectJsonResponse<QueryTodoBody>(
-        postJson(`${server.baseUrl}/todos/query`, {}),
-        200
-      );
-
-      expect(body.results).toEqual(expect.any(Array));
-    });
-
-    test("decodes encoded runtime query values before handlers receive them", async () => {
-      const { body } = await expectJsonResponse<QueryTodoBody>(
-        postJson(
-          `${server.baseUrl}/todos/query?nextToken=runtime%20query%2Btoken`,
-          {}
-        ),
-        200
-      );
-
-      expect(body.nextToken).toBe("runtime query+token");
-    });
-
-    test("returns no body for successful empty responses", async () => {
-      const response = await fetch(`${server.baseUrl}/todos/abc-123`, {
-        method: "DELETE",
-      });
-
-      await expectNoBody(response, 204);
-    });
-
-    test("returns no body for HEAD requests while preserving headers", async () => {
-      const response = await fetch(`${server.baseUrl}/todos/abc-123`, {
-        method: "HEAD",
-      });
-
-      await expectNoBody(response, 200);
-      expect(response.headers.get("content-type")).toContain(JSON_CONTENT_TYPE);
-    });
-
-    test("returns NOT_FOUND for unknown runtime paths", async () => {
-      const { body } = await expectJsonResponse<ErrorBody>(
-        fetch(`${server.baseUrl}/nonexistent`),
-        404
-      );
-
-      expect(body.code).toBe("NOT_FOUND");
-    });
-
-    test("returns METHOD_NOT_ALLOWED with allowed runtime methods", async () => {
-      const { response, body } = await expectJsonResponse<ErrorBody>(
-        fetch(`${server.baseUrl}/todos`, { method: "DELETE" }),
-        405
-      );
-
-      expectAllow(response, ["GET", "HEAD", "POST"]);
-      expect(body.code).toBe("METHOD_NOT_ALLOWED");
-    });
-
-    test("returns the todo OPTIONS allow list in production order", async () => {
-      const response = await fetch(`${server.baseUrl}/todos/abc-123`, {
-        method: "OPTIONS",
-      });
-
-      expect(response.status).toBe(200);
-      expectAllow(response, [
-        "GET",
-        "HEAD",
-        "POST",
-        "PUT",
-        "PATCH",
-        "DELETE",
-        "OPTIONS",
-      ]);
-    });
-
-    test("returns BAD_REQUEST for malformed runtime JSON bodies", async () => {
-      const { body } = await expectJsonResponse<ErrorBody>(
-        fetch(`${server.baseUrl}/todos`, {
-          method: "POST",
-          headers: { "Content-Type": JSON_CONTENT_TYPE },
-          body: "{invalid json",
-        }),
-        400
-      );
-
-      expect(body.code).toBe("BAD_REQUEST");
-    });
-
-    test("rejects runtime JSON bodies one byte over the size limit", async () => {
-      const title = titleForJsonTodoBodyWithByteLength(
-        ONE_BYTE_OVER_RUNTIME_MAX_BODY_SIZE_BYTES
-      );
-
-      const { body } = await expectJsonResponse<ErrorBody>(
-        fetch(`${server.baseUrl}/todos`, {
-          method: "POST",
-          headers: { "Content-Type": JSON_CONTENT_TYPE },
-          body: jsonTodoBodyWithByteLength(
-            title,
-            ONE_BYTE_OVER_RUNTIME_MAX_BODY_SIZE_BYTES
-          ),
-        }),
-        413
-      );
-
-      expect(body.code).toBe("PAYLOAD_TOO_LARGE");
-      expect(body.message).toBe(payloadTooLargeDefaultError.message);
-    });
+    expect(body.code).toBe("PAYLOAD_TOO_LARGE");
+    expect(body.message).toBe(payloadTooLargeDefaultError.message);
   });
 }
 

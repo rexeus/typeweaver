@@ -1,13 +1,13 @@
-export class MissingGenerateOptionError extends Error {
-  public override readonly name = "MissingGenerateOptionError";
+import { Data } from "effect";
 
-  public constructor(
-    public readonly optionName: string,
-    public readonly flag: string,
-    public readonly configKey: string
-  ) {
-    super(
-      `Missing required generate option '${optionName}'. Pass ${flag} or set '${configKey}' in the TypeWeaver config file.`
-    );
+export class MissingGenerateOptionError extends Data.TaggedError(
+  "MissingGenerateOptionError"
+)<{
+  readonly optionName: string;
+  readonly flag: string;
+  readonly configKey: string;
+}> {
+  public override get message(): string {
+    return `Missing required generate option '${this.optionName}'. Pass ${this.flag} or set '${this.configKey}' in the TypeWeaver config file.`;
   }
 }

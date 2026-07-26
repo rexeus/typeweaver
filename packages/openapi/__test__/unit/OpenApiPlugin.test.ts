@@ -4,9 +4,11 @@ import type {
   NormalizedResponse,
   NormalizedSpec,
 } from "@rexeus/typeweaver-gen";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { Effect } from "effect";
+import { withCapturedLogs } from "test-utils";
+import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { OpenApiPlugin } from "../../src/index.js";
+import { openApiPlugin } from "../../src/index.js";
 import {
   aNormalizedSpecWith,
   anInlineResponseUsage,
@@ -15,8 +17,10 @@ import {
 } from "./buildOpenApiDocument.helpers.js";
 import type {
   OpenApiInfoObject,
+  OpenApiPluginOptions,
   OpenApiServerObject,
 } from "../../src/index.js";
+import type { CapturedLog } from "test-utils";
 
 type WrittenFile = {
   readonly path: string;
@@ -27,15 +31,70 @@ type OpenApiGeneratorContext = GeneratorContext & {
   readonly writtenFiles: readonly WrittenFile[];
 };
 
-describe("OpenApiPlugin", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+type CapturedPluginConfigError = {
+  readonly _tag: "PluginConfigError";
+  readonly pluginName: string;
+  readonly reason: string;
+  readonly message?: string;
+};
 
+const runGenerate = (
+  options: unknown,
+  context: OpenApiGeneratorContext
+): void => {
+  const plugin = openApiPlugin(options as OpenApiPluginOptions);
+  if (plugin.generate === undefined) {
+    throw new Error("openApiPlugin must define a generate stage");
+  }
+  Effect.runSync(plugin.generate(context));
+};
+
+const runGenerateCapturingLogs = (
+  options: unknown,
+  context: OpenApiGeneratorContext
+): readonly CapturedLog[] => {
+  const plugin = openApiPlugin(options as OpenApiPluginOptions);
+  if (plugin.generate === undefined) {
+    throw new Error("openApiPlugin must define a generate stage");
+  }
+  const { logs } = Effect.runSync(withCapturedLogs(plugin.generate(context)));
+  return logs;
+};
+
+const captureOpenApiPluginConfigError = (
+  options: unknown
+): CapturedPluginConfigError => {
+  try {
+    openApiPlugin(options as OpenApiPluginOptions);
+  } catch (error) {
+    expect(error).toMatchObject({
+      _tag: "PluginConfigError",
+      pluginName: "openapi",
+      reason: expect.any(String),
+    });
+    if (isCapturedPluginConfigError(error)) {
+      return error;
+    }
+    throw new Error("Expected openApiPlugin to throw a PluginConfigError");
+  }
+
+  throw new Error("Expected openApiPlugin to reject invalid config");
+};
+
+const isCapturedPluginConfigError = (
+  error: unknown
+): error is CapturedPluginConfigError =>
+  typeof error === "object" &&
+  error !== null &&
+  (error as { readonly _tag?: unknown })._tag === "PluginConfigError" &&
+  (error as { readonly pluginName?: unknown }).pluginName === "openapi" &&
+  typeof (error as { readonly reason?: unknown }).reason === "string";
+
+describe("openApiPlugin output", () => {
   test("writes an OpenAPI document to the default output path", () => {
     const context = anOpenApiGeneratorContextWith(anItemsSpec());
 
-    new OpenApiPlugin().generate(context);
+    runGenerate({}, context);
 
     const document = JSON.parse(context.writtenFiles[0]?.content ?? "{}");
     expect(context.writtenFiles).toHaveLength(1);
@@ -51,11 +110,16 @@ describe("OpenApiPlugin", () => {
   test("writes custom OpenAPI metadata to the configured output path", () => {
     const context = anOpenApiGeneratorContextWith(anItemsSpec());
 
-    new OpenApiPlugin({
-      info: { title: "Todo API", version: "1.0.0", summary: "Todos" },
-      servers: [{ url: "https://api.example.com", description: "Production" }],
-      outputPath: "docs/openapi.json",
-    }).generate(context);
+    runGenerate(
+      {
+        info: { title: "Todo API", version: "1.0.0", summary: "Todos" },
+        servers: [
+          { url: "https://api.example.com", description: "Production" },
+        ],
+        outputPath: "docs/openapi.json",
+      },
+      context
+    );
 
     const document = JSON.parse(context.writtenFiles[0]?.content ?? "{}");
     expect(context.writtenFiles[0]?.path).toBe("docs/openapi.json");
@@ -68,26 +132,40 @@ describe("OpenApiPlugin", () => {
       { url: "https://api.example.com", description: "Production" },
     ]);
   });
+});
+
+describe("openApiPlugin diagnostics", () => {
+  test("normalizes a safe backslash output path before writing", () => {
+    const context = anOpenApiGeneratorContextWith(anItemsSpec());
+
+    runGenerateCapturingLogs({ outputPath: "docs\\.\\openapi.json" }, context);
+
+    expect(context.writtenFiles).toHaveLength(1);
+    expect(context.writtenFiles[0]?.path).toBe("docs/openapi.json");
+  });
 
   test("preserves server variables in configured OpenAPI servers", () => {
     const context = anOpenApiGeneratorContextWith(anItemsSpec());
 
-    new OpenApiPlugin({
-      servers: [
-        {
-          url: "https://{environment}.example.com/{basePath}",
-          description: "Environment server",
-          variables: {
-            environment: {
-              default: "api",
-              enum: ["api", "staging"],
-              description: "Deployment environment",
+    runGenerate(
+      {
+        servers: [
+          {
+            url: "https://{environment}.example.com/{basePath}",
+            description: "Environment server",
+            variables: {
+              environment: {
+                default: "api",
+                enum: ["api", "staging"],
+                description: "Deployment environment",
+              },
+              basePath: { default: "v1" },
             },
-            basePath: { default: "v1" },
           },
-        },
-      ],
-    }).generate(context);
+        ],
+      },
+      context
+    );
 
     const document = JSON.parse(context.writtenFiles[0]?.content ?? "{}");
     expect(document.servers).toEqual([
@@ -107,7 +185,6 @@ describe("OpenApiPlugin", () => {
   });
 
   test("warns without embedding builder warnings in the OpenAPI document", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const context = anOpenApiGeneratorContextWith(
       anItemsSpec({
         operations: [
@@ -120,36 +197,37 @@ describe("OpenApiPlugin", () => {
       })
     );
 
-    new OpenApiPlugin().generate(context);
+    const logs = runGenerateCapturingLogs({}, context);
 
     const document = JSON.parse(context.writtenFiles[0]?.content ?? "{}");
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("OpenAPI generation completed with 1 warning(s).")
+    const warningLogs = logs.filter(entry => entry.level === "WARN");
+    expect(warningLogs).toHaveLength(1);
+    const warningMessage = warningLogs[0]?.message ?? "";
+    expect(warningMessage).toContain(
+      "OpenAPI generation completed with 1 warning(s)."
     );
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("missing-path-parameter-schema")
+    expect(warningMessage).toContain("missing-path-parameter-schema");
+    expect(warningMessage).toContain(
+      "Path parameter 'itemId' is missing a schema."
     );
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("Path parameter 'itemId' is missing a schema.")
-    );
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining(
-        "/paths/~1items~1{itemId}/get/parameters/0/schema"
-      )
+    expect(warningMessage).toContain(
+      "/paths/~1items~1{itemId}/get/parameters/0/schema"
     );
     expect(document).not.toHaveProperty("warnings");
   });
+});
 
+describe("openApiPlugin configuration errors", () => {
   test.each([
     {
       scenario: "null top-level config",
       options: null as never,
-      message: /OpenApiPlugin config error: options must be an object/,
+      reason: /options must be an object/,
     },
     {
       scenario: "missing info version",
       options: { info: { title: "Todo API" } as OpenApiInfoObject },
-      message: /info\.title and info\.version must be strings/,
+      reason: /info\.title and info\.version must be strings/,
     },
     {
       scenario: "non-array servers",
@@ -158,27 +236,55 @@ describe("OpenApiPlugin", () => {
           url: "https://api.example.com",
         } as unknown as readonly OpenApiServerObject[],
       },
-      message: /servers must be an array/,
+      reason: /servers must be an array/,
     },
     {
       scenario: "server without url",
       options: {
         servers: [{ description: "Production" } as OpenApiServerObject],
       },
-      message: /servers\[0\]\.url must be a string/,
+      reason: /servers\[0\]\.url must be a string/,
     },
     {
       scenario: "non-json output path",
       options: { outputPath: "openapi/openapi.yaml" },
-      message: /outputPath must end with \.json/,
+      reason: /outputPath must end with \.json/,
+    },
+    {
+      scenario: "empty output path",
+      options: { outputPath: "" },
+      reason: /outputPath must be a non-empty relative \.json path/,
+    },
+    {
+      scenario: "non-string output path",
+      options: { outputPath: 42 as never },
+      reason: /outputPath must be a non-empty relative \.json path/,
+    },
+    {
+      scenario: "null-byte output path",
+      options: { outputPath: "openapi\0openapi.json" },
+      reason: /outputPath must not contain null bytes/,
+    },
+    {
+      scenario: "POSIX absolute output path",
+      options: { outputPath: "/tmp/openapi.json" },
+      reason: /outputPath must be relative/,
+    },
+    {
+      scenario: "Windows absolute output path",
+      options: { outputPath: "C:\\tmp\\openapi.json" },
+      reason: /outputPath must be relative/,
     },
     {
       scenario: "unsafe output path",
       options: { outputPath: "../openapi.json" },
-      message: /outputPath must not contain parent directory segments/,
+      reason: /outputPath must not contain parent directory segments/,
     },
-  ])("rejects invalid config for $scenario", ({ options, message }) => {
-    expect(() => new OpenApiPlugin(options)).toThrow(message);
+  ])("rejects invalid config for $scenario", ({ options, reason }) => {
+    const caught = captureOpenApiPluginConfigError(options);
+
+    expect(caught.reason).toMatch(reason);
+    expect(caught.message).toMatch(/^Plugin 'openapi' is misconfigured: /);
   });
 });
 
@@ -220,7 +326,7 @@ function anOpenApiGeneratorContextWith(
 ): OpenApiGeneratorContext {
   const writtenFiles: WrittenFile[] = [];
   const notImplemented = (): never => {
-    throw new Error("Not implemented by the OpenApiPlugin test context");
+    throw new Error("Not implemented by the openApiPlugin test context");
   };
 
   return {
@@ -244,6 +350,12 @@ function anOpenApiGeneratorContextWith(
     renderTemplate: notImplemented,
     addGeneratedFile: notImplemented,
     getGeneratedFiles: () => writtenFiles.map(file => file.path),
+    writeFileEffect: () =>
+      Effect.die("Not implemented by the openApiPlugin test context"),
+    renderTemplateEffect: () =>
+      Effect.die("Not implemented by the openApiPlugin test context"),
+    addGeneratedFileEffect: () =>
+      Effect.die("Not implemented by the openApiPlugin test context"),
     writtenFiles,
   };
 }

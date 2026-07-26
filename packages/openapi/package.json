@@ -58,11 +58,14 @@
   },
   "peerDependencies": {
     "@rexeus/typeweaver-gen": "workspace:^",
-    "zod": "^4.3.0"
+    "effect": "catalog:peers",
+    "zod": "catalog:peers"
   },
   "devDependencies": {
     "@rexeus/typeweaver-gen": "workspace:^",
-    "ibm-openapi-validator": "1.37.13",
-    "zod": "^4.3.6"
+    "@stoplight/spectral-cli": "6.16.2",
+    "effect": "^3.22.0",
+    "test-utils": "file:../test-utils",
+    "zod": "^4.4.3"
   }
 }

@@ -59,33 +59,33 @@ export class FileHono extends TypeweaverHono<HonoFileApiHandler> {
 
   protected setupRoutes(): void {
     this.post("/files", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "UploadFile",
-        new UploadFileRequestValidator(),
-        new UploadFileResponseValidator(),
-        this.requestHandlers.handleUploadFileRequest.bind(this.requestHandlers),
-      ),
+        operationId: "UploadFile",
+        requestValidator: new UploadFileRequestValidator(),
+        responseValidator: new UploadFileResponseValidator(),
+        handler: this.requestHandlers.handleUploadFileRequest.bind(this.requestHandlers),
+      }),
     );
 
     this.get("/files/:fileId", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "GetFileMetadata",
-        new GetFileMetadataRequestValidator(),
-        new GetFileMetadataResponseValidator(),
-        this.requestHandlers.handleGetFileMetadataRequest.bind(this.requestHandlers),
-      ),
+        operationId: "GetFileMetadata",
+        requestValidator: new GetFileMetadataRequestValidator(),
+        responseValidator: new GetFileMetadataResponseValidator(),
+        handler: this.requestHandlers.handleGetFileMetadataRequest.bind(this.requestHandlers),
+      }),
     );
 
     this.get("/files/:fileId/content", async (context: Context) =>
-      this.handleRequest(
+      this.handleRequest({
         context,
-        "DownloadFileContent",
-        new DownloadFileContentRequestValidator(),
-        new DownloadFileContentResponseValidator(),
-        this.requestHandlers.handleDownloadFileContentRequest.bind(this.requestHandlers),
-      ),
+        operationId: "DownloadFileContent",
+        requestValidator: new DownloadFileContentRequestValidator(),
+        responseValidator: new DownloadFileContentResponseValidator(),
+        handler: this.requestHandlers.handleDownloadFileContentRequest.bind(this.requestHandlers),
+      }),
     );
   }
 }
