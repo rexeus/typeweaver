@@ -3,6 +3,11 @@ import { fileURLToPath } from "node:url";
 import { definePluginWithLibCopy } from "@rexeus/typeweaver-gen";
 import type { Plugin } from "@rexeus/typeweaver-gen";
 import { generate as generateClients } from "./clientGenerator.js";
+export { getRequestHeaderDefaults } from "./requestHeaderDefaults.js";
+export type {
+  RequestHeaderDefaultEntry,
+  RequestHeaderDefaults,
+} from "./requestHeaderDefaults.js";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 

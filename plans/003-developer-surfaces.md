@@ -145,6 +145,9 @@ Expected: commands pass success/failure/process tests; the literal “coming soo
 
 ### 3. Generate command-line API clients
 
+**Status:** IN PROGRESS — the generated Fetch client now supports composable default headers/query
+values and external cancellation, establishing the shared transport boundary for the command plugin.
+
 Create `packages/command` published as `@rexeus/typeweaver-command`. It is a generator plugin
 consuming the normalized contract and generated Fetch client, not a second HTTP implementation.
 

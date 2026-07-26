@@ -236,6 +236,9 @@ If you imported the generator programmatically rather than through the CLI:
 - `NetworkError` now receives its metadata through a `NetworkErrorOptions` object. Replace
   `new NetworkError(message, code, method, url, { cause })` with
   `new NetworkError(message, { code, method, url, cause })`.
+- Generated client `ApiClientProps` add optional `defaultHeaders`, `defaultQuery`, and `signal`
+  fields. They require no migration; command values override defaults, and an external signal is
+  combined with `timeoutMs` when both are present.
 - Custom `TypeweaverRouter` subclasses now call the protected `route` method with one exported
   `TypeweaverRouteOptions` object instead of the previous positional arguments.
 - Custom `TypeweaverHono` subclasses now call the protected `handleRequest` method with one exported

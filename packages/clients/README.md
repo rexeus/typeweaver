@@ -65,9 +65,16 @@ import { TodoClient } from "path/to/generated/output";
 const client = new TodoClient({
   fetchFn: customFetch, // Custom fetch function (optional, defaults to globalThis.fetch)
   baseUrl: "https://api.example.com", // Base URL for all requests (required)
+  defaultHeaders: { Authorization: "Bearer token" }, // Applied unless a command overrides the key
+  defaultQuery: { apiKey: "secret" }, // Applied unless a command overrides the key
+  signal: abortController.signal, // Forward external cancellation (optional)
   timeoutMs: 30_000, // Request timeout in milliseconds (optional)
 });
 ```
+
+Default headers and query values are copied into each request without mutating the supplied objects.
+Command-specific values take precedence. When both `signal` and `timeoutMs` are present, the request
+is cancelled when either boundary aborts.
 
 ### ✉️ Request Commands
 

@@ -21,6 +21,12 @@ export type ApiClientProps = {
   readonly fetchFn?: typeof globalThis.fetch;
   /** Base URL for API requests */
   readonly baseUrl: string;
+  /** Headers applied to every request unless the command supplies the same key */
+  readonly defaultHeaders?: Readonly<Record<string, string>>;
+  /** Query values applied to every request unless the command supplies the same key */
+  readonly defaultQuery?: Readonly<Record<string, string>>;
+  /** External cancellation signal forwarded to every request */
+  readonly signal?: AbortSignal;
   /** Request timeout in milliseconds. When set, requests will be aborted after this duration */
   readonly timeoutMs?: number;
 };
@@ -132,6 +138,9 @@ function getPathParameterNames(path: string): readonly string[] {
 export abstract class ApiClient {
   private readonly fetchFn: typeof globalThis.fetch;
   public readonly baseUrl: string;
+  private readonly defaultHeaders: Readonly<Record<string, string>>;
+  private readonly defaultQuery: Readonly<Record<string, string>>;
+  private readonly signal: AbortSignal | undefined;
   private readonly timeoutMs: number | undefined;
 
   protected constructor(props: ApiClientProps) {
@@ -152,6 +161,9 @@ export abstract class ApiClient {
     }
 
     this.baseUrl = props.baseUrl;
+    this.defaultHeaders = props.defaultHeaders ?? {};
+    this.defaultQuery = props.defaultQuery ?? {};
+    this.signal = props.signal;
 
     if (
       props.timeoutMs !== undefined &&
@@ -174,7 +186,7 @@ export abstract class ApiClient {
 
     const serializedBody = this.serializeBody(body);
     const headers = this.createRequestHeaders(
-      this.flattenHeaders(header),
+      this.mergeRequestHeaders(this.flattenHeaders(header)),
       serializedBody.isJsonSerialized,
     );
 
@@ -182,7 +194,7 @@ export abstract class ApiClient {
       method,
       headers,
       body: serializedBody.body,
-      signal: this.timeoutMs !== undefined ? AbortSignal.timeout(this.timeoutMs) : undefined,
+      signal: this.createRequestSignal(),
     });
 
     return await this.createResponse(response, method, fullUrl);
@@ -318,6 +330,24 @@ export abstract class ApiClient {
       requestHeaders["Content-Type"] = "application/json";
     }
     return requestHeaders;
+  }
+
+  private mergeRequestHeaders(
+    headers: Record<string, string> | undefined,
+  ): Record<string, string> | undefined {
+    const hasDefaults = Object.keys(this.defaultHeaders).length > 0;
+    if (!hasDefaults) return headers;
+    return { ...this.defaultHeaders, ...headers };
+  }
+
+  private createRequestSignal(): AbortSignal | undefined {
+    if (this.signal === undefined) {
+      return this.timeoutMs === undefined ? undefined : AbortSignal.timeout(this.timeoutMs);
+    }
+    if (this.timeoutMs === undefined) {
+      return this.signal;
+    }
+    return AbortSignal.any([this.signal, AbortSignal.timeout(this.timeoutMs)]);
   }
 
   private hasContentTypeHeader(headers: Record<string, string>): boolean {
@@ -467,12 +497,17 @@ export abstract class ApiClient {
   }
 
   private buildQueryString(query?: IHttpQuery): string {
-    if (!query) {
+    const hasDefaults = Object.keys(this.defaultQuery).length > 0;
+    if (!query && !hasDefaults) {
       return "";
     }
 
     const params = new URLSearchParams();
-    for (const [key, value] of Object.entries(query)) {
+    const mergedQuery: IHttpQuery = {
+      ...this.defaultQuery,
+      ...query,
+    };
+    for (const [key, value] of Object.entries(mergedQuery)) {
       if (value === undefined) {
         continue;
       }
