@@ -35,7 +35,7 @@
     "cli:deno": "deno run -A src/entry.ts",
     "cli:bun": "bun run src/entry.ts",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json && tsc --noEmit -p examples/tsconfig.json",
-    "typecheck:contracts": "tsc --noEmit -p tsconfig.type-tests.json",
+    "typecheck:contracts": "tsc --noEmit -p tsconfig.type-tests.json && pnpm --filter @rexeus/typeweaver-core typecheck && pnpm --filter @rexeus/typeweaver-server typecheck && pnpm --filter @rexeus/typeweaver-hono typecheck",
     "format": "oxfmt",
     "build": "tsdown",
     "prepack": "npm run build",
@@ -109,6 +109,7 @@
   },
   "devDependencies": {
     "@effect/vitest": "^0.30.0",
+    "@rexeus/typeweaver-zod-to-ts": "workspace:^",
     "fast-check": "^4.9.0",
     "hono": "^4.12.32",
     "test-utils": "file:../test-utils",

@@ -287,7 +287,7 @@ export class FetchApiAdapter {
     return buffer.buffer as ArrayBuffer;
   }
 
-  private static serializeResponseBody(body: any): string | ArrayBuffer | Blob | null {
+  private static serializeResponseBody(body: unknown): string | ArrayBuffer | Blob | null {
     if (body === undefined || body === null) return null;
     if (typeof body === "string") return body;
     if (body instanceof ArrayBuffer) return body;
@@ -306,7 +306,7 @@ export class FetchApiAdapter {
     }
   }
 
-  private static buildResponseHeaders(header?: IHttpHeader, body?: any): Headers {
+  private static buildResponseHeaders(header?: IHttpHeader, body?: unknown): Headers {
     const headers = new Headers();
 
     if (header) {
@@ -339,7 +339,7 @@ export class FetchApiAdapter {
     headers.set(key, String(value));
   }
 
-  private static isJsonBody(body: any): boolean {
+  private static isJsonBody(body: unknown): boolean {
     return (
       body !== undefined &&
       body !== null &&

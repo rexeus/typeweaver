@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 import { afterEach, describe, expect, test } from "vitest";
 
 const execFileAsync = promisify(execFile);
+const PROCESS_TEST_TIMEOUT_MS = 15_000;
 const packageDirectory = path.resolve(import.meta.dirname, "..");
 const repositoryDirectory = path.resolve(packageDirectory, "../..");
 const cliEntry = path.join(packageDirectory, "dist", "entry.mjs");
@@ -90,65 +91,73 @@ describe("documented scoped-service plugin", () => {
     expect(guide).toContain("Exit.void");
   });
 
-  test("typechecks the exact service-plugin example linked from the guide", async () => {
-    await expect(
-      execFileAsync(
+  test(
+    "typechecks the exact service-plugin example linked from the guide",
+    async () => {
+      await expect(
+        execFileAsync(
+          process.execPath,
+          [typescriptCli, "--project", servicePluginTsconfig],
+          {
+            cwd: repositoryDirectory,
+          }
+        )
+      ).resolves.toMatchObject({ stderr: "" });
+    },
+    PROCESS_TEST_TIMEOUT_MS
+  );
+
+  test(
+    "acquires one resource and releases it after finalization through the built CLI",
+    async () => {
+      fs.mkdirSync(serviceFixtureOutputsDirectory, { recursive: true });
+      const workspace = fs.mkdtempSync(
+        path.join(serviceFixtureOutputsDirectory, "workspace-")
+      );
+      workspaces.push(workspace);
+
+      const inputPath = writeTinySpec(workspace);
+      const outputPath = path.join(workspace, "generated");
+      const eventsPath = path.join(workspace, "resource-events.log");
+      const configPath = path.join(workspace, "typeweaver.config.mjs");
+      fs.writeFileSync(
+        configPath,
+        [
+          "export default {",
+          `  input: ${JSON.stringify(inputPath)},`,
+          `  output: ${JSON.stringify(outputPath)},`,
+          `  plugins: [[${JSON.stringify(servicePluginExample)}, {`,
+          `    eventsPath: ${JSON.stringify(eventsPath)},`,
+          "  }]],",
+          "};",
+          "",
+        ].join("\n")
+      );
+
+      const result = await execFileAsync(
         process.execPath,
-        [typescriptCli, "--project", servicePluginTsconfig],
+        [cliEntry, "generate", "--config", configPath, "--no-format"],
         {
-          cwd: repositoryDirectory,
+          cwd: workspace,
         }
-      )
-    ).resolves.toMatchObject({ stderr: "" });
-  });
+      );
 
-  test("acquires one resource and releases it after finalization through the built CLI", async () => {
-    fs.mkdirSync(serviceFixtureOutputsDirectory, { recursive: true });
-    const workspace = fs.mkdtempSync(
-      path.join(serviceFixtureOutputsDirectory, "workspace-")
-    );
-    workspaces.push(workspace);
-
-    const inputPath = writeTinySpec(workspace);
-    const outputPath = path.join(workspace, "generated");
-    const eventsPath = path.join(workspace, "resource-events.log");
-    const configPath = path.join(workspace, "typeweaver.config.mjs");
-    fs.writeFileSync(
-      configPath,
-      [
-        "export default {",
-        `  input: ${JSON.stringify(inputPath)},`,
-        `  output: ${JSON.stringify(outputPath)},`,
-        `  plugins: [[${JSON.stringify(servicePluginExample)}, {`,
-        `    eventsPath: ${JSON.stringify(eventsPath)},`,
-        "  }]],",
-        "};",
-        "",
-      ].join("\n")
-    );
-
-    const result = await execFileAsync(
-      process.execPath,
-      [cliEntry, "generate", "--config", configPath, "--no-format"],
-      {
-        cwd: workspace,
-      }
-    );
-
-    expect(result.stderr).toBe("");
-    expect(result.stdout).toContain("Running on Node.js");
-    expect(result.stdout).toContain("Successfully loaded 1 plugin(s)");
-    expect(
-      fs.readFileSync(
-        path.join(outputPath, "scoped-service", "session.txt"),
-        "utf8"
-      )
-    ).toBe("generated through a scoped service\n");
-    expect(fs.readFileSync(eventsPath, "utf8").trim().split("\n")).toEqual([
-      "acquire",
-      "generate",
-      "finalize",
-      "release",
-    ]);
-  });
+      expect(result.stderr).toBe("");
+      expect(result.stdout).toContain("Running on Node.js");
+      expect(result.stdout).toContain("Successfully loaded 1 plugin(s)");
+      expect(
+        fs.readFileSync(
+          path.join(outputPath, "scoped-service", "session.txt"),
+          "utf8"
+        )
+      ).toBe("generated through a scoped service\n");
+      expect(fs.readFileSync(eventsPath, "utf8").trim().split("\n")).toEqual([
+        "acquire",
+        "generate",
+        "finalize",
+        "release",
+      ]);
+    },
+    PROCESS_TEST_TIMEOUT_MS
+  );
 });

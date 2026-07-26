@@ -107,6 +107,11 @@ serve({ fetch: app.fetch, port: 3000 }, () => {
 });
 ```
 
+<!-- docs-example: hono-handler -->
+
+The generated Hono handler signature and response factory are typechecked in the
+[Hono handler fixture](../cli/examples/documentation/hono-handler.ts).
+
 ### ⚙️ Configuration
 
 `TypeweaverHonoOptions<RequestHandlers>`

@@ -52,8 +52,8 @@ Construct `NetworkError` with `new NetworkError(message, { code, method, url, ca
 custom `TypeweaverHono` subclasses pass one exported `TypeweaverHonoRequestOptions` object to
 `handleRequest`.
 
-The spec authoring API (`defineSpec`, `defineOperation`, `defineResponse`) and Zod schemas are
-unchanged — existing specs keep working byte-for-byte.
+The spec authoring API (`defineSpec`, `defineOperation`, `defineResponse`) is unchanged. Existing
+specs that use supported Zod schemas keep working byte-for-byte.
 
 - Effect-native plugin packages and `@rexeus/typeweaver-gen` now expose
   `peerDependencies.effect: ">=3.22.0 <4"`. The 3.22 lower bound matches the current `@effect/*`

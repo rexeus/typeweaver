@@ -116,6 +116,12 @@ jobs:
           pnpm run verify:architecture-contracts
           echo "::endgroup::"
 
+      - name: Verify documentation
+        run: |
+          echo "::group::Documentation contracts and executable examples"
+          pnpm run docs:check
+          echo "::endgroup::"
+
       - name: Check formatting
         run: |
           echo "::group::oxfmt format checking"

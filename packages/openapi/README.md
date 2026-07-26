@@ -40,6 +40,11 @@ console.log(result.document);
 console.log(result.warnings);
 ```
 
+<!-- docs-example: openapi-options -->
+
+Plugin options and the side-effect-free builder call are typechecked in the
+[OpenAPI options fixture](../cli/examples/documentation/openapi-options.ts).
+
 The builder has no filesystem side effects. It returns the OpenAPI document and deterministic
 warnings for schemas or Typeweaver constructs that cannot be represented exactly.
 

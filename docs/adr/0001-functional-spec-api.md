@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -110,7 +110,7 @@ const GetTodo = defineOperation({
 
 export const spec = defineSpec({
   resources: {
-    todo: [GetTodo],
+    todo: { operations: [GetTodo] },
   },
 });
 ```
@@ -224,12 +224,26 @@ The following are explicitly not part of the initial design:
 - builder-style authoring APIs
 - preserving the old class-based definition model as a design constraint
 
-## Open Questions
+## Implemented Resolutions
 
-1. What exact normalized model shape should be exposed to built-in and third-party plugins?
-2. Which generated artifacts belong to a canonical response definition versus an operation-level
-   response union or wrapper?
-3. How should output paths for shared reusable artifacts be organized in a way that remains clear to
-   consumers without reintroducing old filesystem semantics?
-4. Should derived response chains be unrestricted, or should depth/shape validation be tightened
-   beyond V1?
+1. **Plugin-facing normalized model.** `@rexeus/typeweaver-gen` publicly exports `NormalizedSpec`,
+   its resource and operation types, normalized bodies and warnings, and the discriminated
+   `NormalizedResponseUsage` union through `packages/gen/src/index.ts` and
+   `packages/gen/src/normalized/index.ts`. The concrete contract is defined in
+   `packages/gen/src/NormalizedSpec.ts`; plugins receive it as `GeneratorContext.normalizedSpec` in
+   `packages/gen/src/plugins/contextTypes.ts`.
+2. **Canonical and operation artifacts.** Named definitions are collected once into
+   `NormalizedSpec.responses`; inline definitions remain embedded in an operation usage. The types
+   plugin emits one canonical response type and factory for every normalized canonical response,
+   while each operation receives its own request type, response union, and validators
+   (`packages/types/src/responseGenerator.ts` and
+   `packages/types/src/responseValidationGenerator.ts`).
+3. **Shared output topology.** Canonical response artifacts live under `<output>/responses/`.
+   `resolveGenerationPaths` in `packages/cli/src/services/internal/generatorPreflight.ts`
+   establishes that directory, while the helpers built in
+   `packages/gen/src/services/internal/pluginContextBuilder.ts` compute canonical output and import
+   paths independently of authoring file locations.
+4. **Derived-response validation.** Chains may have arbitrary depth, but their metadata must match
+   the materialized parent graph. Missing parents, cycles, inconsistent depth, and invalid lineage
+   fail before generation in `packages/gen/src/validation/derivedResponseValidation.ts`; no
+   arbitrary maximum depth is imposed.

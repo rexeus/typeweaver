@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -101,6 +101,7 @@ needs rather than by source layout.
 type NormalizedSpec = {
   readonly resources: readonly NormalizedResource[];
   readonly responses: readonly NormalizedResponse[];
+  readonly warnings: readonly NormalizedSpecWarning[];
 };
 
 type NormalizedResource = {
@@ -118,10 +119,10 @@ type NormalizedOperation = {
 };
 
 type NormalizedRequest = {
-  readonly header?: ZodType;
-  readonly param?: ZodType;
-  readonly query?: ZodType;
-  readonly body?: ZodType;
+  readonly header?: HttpHeaderSchema;
+  readonly param?: HttpParamSchema;
+  readonly query?: HttpQuerySchema;
+  readonly body?: NormalizedHttpBody;
 };
 
 type NormalizedResponse = {
@@ -129,17 +130,31 @@ type NormalizedResponse = {
   readonly statusCode: HttpStatusCode;
   readonly statusCodeName: string;
   readonly description: string;
-  readonly header?: ZodType;
-  readonly body?: ZodType;
+  readonly header?: HttpHeaderSchema;
+  readonly body?: NormalizedHttpBody;
   readonly kind: "response" | "derived-response";
   readonly derivedFrom?: string;
+  readonly lineage?: readonly string[];
+  readonly depth?: number;
 };
 
-type NormalizedResponseUsage = {
+type NormalizedCanonicalResponseUsage = {
   readonly responseName: string;
-  readonly source: "canonical" | "inline";
+  readonly source: "canonical";
 };
+
+type NormalizedInlineResponseUsage = {
+  readonly responseName: string;
+  readonly source: "inline";
+  readonly response: NormalizedResponse;
+};
+
+type NormalizedResponseUsage = NormalizedCanonicalResponseUsage | NormalizedInlineResponseUsage;
 ```
+
+`NormalizedHttpBody` records the schema plus normalized media type, media-type source, and
+transport. `NormalizedSpecWarning` carries a stable code, message, and contract location. The
+authoritative exported definitions live in `packages/gen/src/NormalizedSpec.ts`.
 
 ## Definition vs Usage
 
@@ -360,10 +375,19 @@ generated/
 - bundler implementation choice finalization
 - detailed template changes for each built-in generator
 
-## Follow-Up Decisions
+## Implemented Follow-Up Decisions
 
-1. Finalize the concrete TypeScript module layout for the new definition and normalization layers.
-2. Decide whether canonical response validators live next to canonical response types or are kept
-   fully operation-scoped.
-3. Decide whether `responses/` is the final output directory name or whether another name better
-   reflects generated artifacts.
+1. **Module layout.** Public definition types and helpers live in focused modules under
+   `packages/core/src/`, including `defineSpec.ts`, `defineOperation.ts`, and `defineResponse.ts`.
+   The normalized contract and normalization entrypoint live in `packages/gen/src/NormalizedSpec.ts`
+   and `packages/gen/src/normalizeSpec.ts`, and are publicly re-exported through
+   `packages/gen/src/normalized/index.ts` and `packages/gen/src/index.ts`.
+2. **Validator placement.** Canonical response types and factories are emitted once, but response
+   validators remain operation-scoped so they can validate the complete status-code union for an
+   operation. This is implemented by `packages/types/src/responseGenerator.ts` and
+   `packages/types/src/responseValidationGenerator.ts`.
+3. **Canonical directory name.** `responses/` is the accepted directory for canonical response
+   artifacts. `resolveGenerationPaths` in `packages/cli/src/services/internal/generatorPreflight.ts`
+   fixes `responsesOutputDir` to `<output>/responses`, and
+   `packages/gen/src/services/internal/pluginContextBuilder.ts` derives canonical response paths
+   from that value.

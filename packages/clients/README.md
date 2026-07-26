@@ -89,7 +89,7 @@ const client = new TodoClient({
 
 const command = new CreateTodoRequestCommand({
   header: { Authorization: "Bearer token" },
-  body: { title: "New Todo", status: "PENDING" },
+  body: { title: "New Todo" },
 });
 
 const response = await client.send(command);
@@ -104,6 +104,11 @@ if (response.type === "CreateTodoSuccess") {
 }
 // ... Handle other response types
 ```
+
+<!-- docs-example: generated-client -->
+
+The generated client and command signatures are checked against the regenerated integration project
+in the [client fixture](../cli/examples/documentation/generated-client.ts).
 
 ## 📄 License
 

@@ -33,14 +33,14 @@ export function prepareRequestData(requestData: IHttpRequest): RequestInit {
  */
 export function buildCreateTodoSuccess(
   bodyOverrides: Record<string, unknown> = {}
-): ITypedHttpResponse {
+) {
   const base = createCreateTodoSuccessResponseBody();
   return {
     type: "CreateTodoSuccess" as const,
     statusCode: 201,
     header: { "Content-Type": "application/json" },
     body: { ...base, ...bodyOverrides },
-  };
+  } satisfies ITypedHttpResponse;
 }
 
 export function aCreateTodoSuccessResponseWithBody(

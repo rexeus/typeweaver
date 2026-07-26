@@ -60,21 +60,21 @@ the progress log with the relevant commit or artifact.
 
 ### Stage 1: Product truth and type safety
 
-- [ ] `VISION.md` defines the product promise, users, principles, non-goals, north-star workflow,
+- [x] `VISION.md` defines the product promise, users, principles, non-goals, north-star workflow,
       and measurable success signals.
   - Verify: `pnpm docs:check` exits 0 and the required-section test introduced by Plan 001 passes.
-- [ ] Root, package, contributor, and architecture documentation matches the actual packages,
+- [x] Root, package, contributor, and architecture documentation matches the actual packages,
       Node/pnpm toolchain, tsdown, Oxlint/Oxfmt, CLI surface, Effect baseline, and implemented
       architecture.
   - Verify: repository truth checks introduced by Plan 001 pass; ADR 0001 and ADR 0002 no longer
     contain unresolved implemented decisions or invalid `defineSpec` examples.
-- [ ] Public documentation examples are executable or typechecked fixtures, not unchecked Markdown
+- [x] Public documentation examples are executable or typechecked fixtures, not unchecked Markdown
       claims.
   - Verify: the new documentation-example command exits 0 and is called by `pnpm docs:check` and CI.
-- [ ] Unsupported Zod schemas never silently become generated `unknown` types.
+- [x] Unsupported Zod schemas never silently become generated `unknown` types.
   - Verify: `@rexeus/typeweaver-zod-to-ts` tests cover every intentionally unsupported schema kind
     and assert stable actionable failures.
-- [ ] Public HTTP body contracts and generated server/Hono declarations contain no implicit `any`.
+- [x] Public HTTP body contracts and generated server/Hono declarations contain no implicit `any`.
   - Verify: public type-contract tests prove the body types are not `any`, and generated fixtures
     compile on Node, Deno, and Bun.
 - [ ] Stage 1 has a Changeset for every changed published contract, migration notes for breaking
@@ -248,9 +248,13 @@ Promote a finding into a stage only when it:
 Otherwise leave it for human review. Discovery must deepen the agreed product milestone, not turn it
 into general repository gardening.
 
-| Finding    | Evidence | Proposed verification | Stage | Status |
-| ---------- | -------- | --------------------- | ----- | ------ |
-| _None yet_ |          |                       |       |        |
+| Finding                                                                                                               | Evidence                                                                                                                                                                 | Proposed verification                                                                    | Stage | Status |
+| --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ----- | ------ |
+| Scoped-service documentation process tests inherit Vitest's 5-second timeout and fail under full-workspace contention | Baseline `pnpm test` timed out at `packages/cli/__test__/pluginAuthoring.serviceFixture.test.ts:93`; the same test passed sequentially in 2.228 seconds                  | Run the focused test, the root `pnpm test`, and the complete baseline gate under Node 24 | 1     | DONE   |
+| Contributor guidance was ignored and therefore absent from clean checkouts                                            | `.gitignore` explicitly listed `AGENTS.md`; `git check-ignore -v AGENTS.md` resolved to `.gitignore:8`                                                                   | Track `AGENTS.md` and make `pnpm docs:check` verify its manifest-derived toolchain facts | 1     | DONE   |
+| The public client example passed an unsupported request field                                                         | The new TypeScript fixture rejected `CreateTodoRequestCommand.body.status`; the generated request accepts `title`, `description`, `dueDate`, `tags`, and `priority` only | Typecheck the corrected example against regenerated integration output                   | 1     | DONE   |
+| Malformed documentation-example groups crashed the verifier                                                           | Omitting `documents` and `fixtures` raised a `TypeError` in `validateGroupFiles` instead of returning contract failures                                                  | Assert explicit failures for missing group arrays and run `pnpm docs:check`              | 1     | DONE   |
+| Zod-to-TypeScript docs used nonexistent namespace exports                                                             | `MIGRATION.md` and the package README called `TsTypeNode.fromZod`, while the package exports `fromZod` and `print`                                                       | Typecheck both documents through a public-package documentation fixture                  | 1     | DONE   |
 
 ## Stop conditions
 
@@ -284,11 +288,11 @@ Human approval is required. Never execute autonomously:
 
 ## Stage evidence
 
-| Stage | Status | Branch                               | Head | PR  | Required checks | Evidence report |
-| ----- | ------ | ------------------------------------ | ---- | --- | --------------- | --------------- |
-| 1     | TODO   | `feat/product-truth-and-type-safety` |      |     |                 |                 |
-| 2     | TODO   | `feat/contract-and-openapi-maturity` |      |     |                 |                 |
-| 3     | TODO   | `feat/developer-surfaces`            |      |     |                 |                 |
+| Stage | Status      | Branch                               | Head | PR  | Required checks | Evidence report |
+| ----- | ----------- | ------------------------------------ | ---- | --- | --------------- | --------------- |
+| 1     | IN PROGRESS | `feat/product-truth-and-type-safety` |      |     |                 |                 |
+| 2     | TODO        | `feat/contract-and-openapi-maturity` |      |     |                 |                 |
+| 3     | TODO        | `feat/developer-surfaces`            |      |     |                 |                 |
 
 Status values: `TODO`, `IN PROGRESS`, `DONE`, or `BLOCKED: <reason>`.
 
@@ -296,6 +300,15 @@ Status values: `TODO`, `IN PROGRESS`, `DONE`, or `BLOCKED: <reason>`.
 
 Append one line after every iteration. Never rewrite earlier entries.
 
-| Iteration | Stage    | Change                                             | Evidence                                                | Next action                                                   |
-| --------- | -------- | -------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------- |
-| 0         | Planning | Goal and three-stage roadmap created at `3c97d402` | Planning artifacts only; implementation has not started | Merge the planning PR, then start Stage 1 from updated `main` |
+| Iteration | Stage    | Change                                                                          | Evidence                                                                                                                                                                                                                           | Next action                                                                                     |
+| --------- | -------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 0         | Planning | Goal and three-stage roadmap created at `3c97d402`                              | Planning artifacts only; implementation has not started                                                                                                                                                                            | Merge the planning PR, then start Stage 1 from updated `main`                                   |
+| 1         | Stage 1  | Started baseline recovery for process-backed scoped-service documentation tests | Full baseline reached `pnpm test`; the scoped-service typecheck exceeded Vitest's default 5-second timeout under workspace contention after passing sequentially in 2.228 seconds                                                  | Apply the existing 15-second CLI process-test budget and rerun focused and full baseline gates  |
+| 2         | Stage 1  | Applied the established 15-second budget to both scoped-service process tests   | Focused suite passed 3/3 tests; the previously failing root `pnpm test` passed all 23 Turbo tasks                                                                                                                                  | Commit the baseline repair and reproduce the complete baseline gate from the clean stage branch |
+| 3         | Stage 1  | Reproduced the complete Node 24 baseline after commit `917ef13e`                | Every full-gate command through `pnpm publish:dry` exited 0; final `git status --short` was empty                                                                                                                                  | Start Plan 001 Work Package 1 with repository-truth characterization                            |
+| 4         | Stage 1  | Completed Plan 001 Work Package 1 at `62856a3d`                                 | `pnpm docs:check`, `pnpm format:check`, and `pnpm lint` exited 0; stale-tool and unresolved-ADR searches returned no matches; issues #198 and #200 were re-read and remain open                                                    | Start Work Package 2 by inventorying and characterizing every public documentation example      |
+| 5         | Stage 1  | Completed Plan 001 Work Package 2 at `31ad8594`                                 | `pnpm docs:check` verified nine declared example groups plus an invalid-fixture self-test; `pnpm typecheck` passed 23/23 tasks; CI now calls `docs:check`                                                                          | Start Work Package 3 by re-reading issue #193 and characterizing every unsupported Zod shape    |
+| 6         | Stage 1  | Completed Plan 001 Work Package 3 at `6c78fba8`                                 | Characterization failed in all six silent-fallback cases before the fix; afterward 121/121 package tests, package typecheck/build, and `pnpm verify:generated` passed with 225 fixtures unchanged                                  | Start Work Package 4 by characterizing every public HTTP body type and supported runtime body   |
+| 7         | Stage 1  | Completed Plan 001 Work Package 4 at `450408d5`                                 | `IsAny` characterization failed 4 Core, 3 Server, and 5 Hono contracts before the fix; afterward 150 Core, 833 Server, and 112 Hono tests passed, 225 fixtures reproduced, and Node/Deno/Bun bundle gates passed                   | Reconcile Stage 1 evidence and live issues, then run the complete stage gate                    |
+| 8         | Stage 1  | Reconciled live issues and completed the local Stage 1 gate at `54dd46e`        | Issues #193, #198, and #200 remain open but are implemented on this branch; #199 is superseded by the pinned Effect 3.22 reference tooling; every full-gate command exited 0 under Node 24 and the final status was empty          | Commit the local gate evidence, push normally, and open the ready Stage 1 PR against `main`     |
+| 9         | Stage 1  | Integrated current `main` and addressed PR #209 review feedback                 | The malformed-manifest characterization reproduced the crash before the fix; afterward all focused checks and the complete Node 24 Stage 1 gate through `pnpm publish:dry` exited 0, including ten executable documentation groups | Commit and push the review fixes, then require green PR checks                                  |

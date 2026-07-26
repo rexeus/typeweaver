@@ -116,6 +116,11 @@ export default {
 };
 ```
 
+<!-- docs-example: generation-cli-config -->
+
+The configuration shape and plugin options are checked in the executable
+[CLI configuration fixture](./examples/documentation/typeweaver.config.mjs).
+
 The loader accepts either a default export or a named `config` export — pick whichever fits your
 project's style. Custom top-level keys are preserved and exposed to plugins through
 `context.config`.

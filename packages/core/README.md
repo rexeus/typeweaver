@@ -14,6 +14,10 @@ Core runtime and authoring types for typeweaver. This package provides the HTTP 
 functional spec helpers, validators, and error types that all generators and plugins build on.
 Generated code imports these runtime utilities.
 
+The authored spec is the source contract described in the repository
+[vision](../../VISION.md#one-contract-many-projections); normalization and generation live in
+`@rexeus/typeweaver-gen`.
+
 ---
 
 ## 📥 Installation
@@ -28,6 +32,24 @@ This package is typically consumed by generated code. You also use it when autho
 `defineSpec`, `defineOperation`, and `defineResponse`. To get started with generation, see
 [@rexeus/typeweaver](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md).
 
+Reusable responses can be specialized without duplicating their common contract:
+
+```ts
+const TodoNotFoundError = defineDerivedResponse(NotFoundError, {
+  name: "TodoNotFoundError",
+  description: "Todo not found",
+  body: z.object({
+    message: z.literal("Todo not found"),
+    actualValues: z.object({ todoId: z.string() }),
+  }),
+});
+```
+
+<!-- docs-example: core-response-derivation -->
+
+Imports and the parent response are included in the typechecked
+[response-derivation fixture](../cli/examples/documentation/core-response-derivation.ts).
+
 ## 🔧 What It Provides
 
 - **HTTP primitives**: `HttpMethod`, `HttpStatusCode`, `IHttpRequest`, `IHttpResponse`,
@@ -38,6 +60,22 @@ This package is typically consumed by generated code. You also use it when autho
 - **Validation**: `IRequestValidator`, `IResponseValidator`, plus `RequestValidationError` and
   `ResponseValidationError` with structured issues.
 - **Utilities**: `UnknownResponseError` for unrecognized responses.
+
+### HTTP body boundary
+
+The unvalidated `IHttpBody` boundary is `unknown`. Generated request and response declarations
+replace it with the type derived from each operation's Zod schema. Code that handles a bare
+`IHttpRequest` or `IHttpResponse` must validate or narrow `body` before reading it:
+
+```ts
+function readTextBody(response: IHttpResponse): string | undefined {
+  return typeof response.body === "string" ? response.body : undefined;
+}
+```
+
+Fetch-native adapters preserve strings, `ArrayBuffer`, and `Blob` values and JSON-serialize other
+supported response values. They reject values that `JSON.stringify` cannot represent instead of
+silently producing an empty response.
 
 This package does not ship framework adapters. Use plugins like `@rexeus/typeweaver-hono` or
 `@rexeus/typeweaver-aws-cdk` for routers/integrations.

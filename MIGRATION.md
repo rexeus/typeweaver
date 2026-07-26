@@ -16,7 +16,7 @@ lines.
 ## Migrating from 0.12.x to 0.13.x
 
 Version 0.13.0 completes the migration to **Effect** as TypeWeaver's runtime foundation. The change
-is internal-architectural but breaks three surfaces:
+is internal-architectural but breaks five surfaces:
 
 1. The **plugin API** (V1 class-based → V2 Effect-native records). Affects anyone who built a custom
    plugin.
@@ -24,9 +24,12 @@ is internal-architectural but breaks three surfaces:
    relied on the previous error format.
 3. A small set of **programmatic extension APIs** now use options objects. This affects direct
    `NetworkError` construction and custom subclasses of the generated server and Hono router bases.
+4. The **Zod-to-TypeScript converter** rejects unsupported schema shapes instead of silently
+   generating `unknown`.
+5. The unvalidated **HTTP body boundary** is `unknown` instead of implicit `any`.
 
 The **spec authoring API** (`defineSpec` / `defineOperation` / `defineResponse`) is **unchanged**.
-Existing specs and Zod schemas keep working byte-for-byte.
+Existing specs using supported Zod schemas keep working byte-for-byte.
 
 ### 1. Plugin API V1 → V2 (BREAKING — third-party plugin authors)
 
@@ -212,7 +215,60 @@ and Hono support code to the options-object APIs described above, so expect sour
 generated request, response, validation, and runtime behavior remain compatible. The
 `test-utils/src/test-project/output` golden fixture verifies the exact 0.13 output on every build.
 
-### 5. Migration Checklist (0.12.x to 0.13.x)
+### 5. Unsupported Zod schemas fail explicitly
+
+<!-- docs-example: zod-to-ts -->
+
+`@rexeus/typeweaver-zod-to-ts` previously converted `z.lazy()`, `z.templateLiteral()`, `z.custom()`,
+and `z.transform()` to TypeScript `unknown`. This hid contract loss in generated output. These
+schemas now throw the exported `UnsupportedZodTypeError`, including when one is nested or used as a
+pipe output.
+
+The error has stable fields for programmatic handling:
+
+```ts
+import { fromZod, UnsupportedZodTypeError } from "@rexeus/typeweaver-zod-to-ts";
+
+try {
+  fromZod(schema);
+} catch (error: unknown) {
+  if (error instanceof UnsupportedZodTypeError) {
+    console.error(error.code, error.schemaKind, error.reason);
+  }
+}
+```
+
+Replace unsupported shapes with an equivalent supported schema before generation. `z.unknown()`
+remains supported and still generates TypeScript `unknown`.
+
+### 6. Unvalidated HTTP bodies are unknown
+
+`IHttpBody` and the default body types of `IHttpRequest`, `IHttpResponse`, handlers, and generated
+Fetch/Hono adapters no longer resolve to `any`. Generated operation types remain schema-specific.
+Code using an unparameterized HTTP type must now narrow or validate its body:
+
+```ts
+function getMessage(response: IHttpResponse): string | undefined {
+  const body = response.body;
+  if (
+    body !== null &&
+    typeof body === "object" &&
+    "message" in body &&
+    typeof body.message === "string"
+  ) {
+    return body.message;
+  }
+  return undefined;
+}
+```
+
+Custom subclasses of the generated Hono `HttpAdapter` that relied on implicit `any` defaults should
+provide explicit request, response, and context type arguments. The Fetch-native server and Hono
+adapters continue to support JSON values, strings, `ArrayBuffer`, `Blob`, `null`, and `undefined`.
+Values that cannot be represented by `JSON.stringify` now fail explicitly; Hono exposes
+`HonoResponseSerializationError` for this case.
+
+### 7. Migration Checklist (0.12.x to 0.13.x)
 
 For **end users** (you use the CLI but don't author plugins):
 
@@ -220,6 +276,12 @@ For **end users** (you use the CLI but don't author plugins):
 - [ ] Update any scripts that parsed log lines (timestamps and fiber tags are gone).
 - [ ] Regenerate output with `npx typeweaver generate` and review the expected options-object source
       diffs in the generated client, server, and Hono support code.
+- [ ] Replace any `z.lazy()`, `z.templateLiteral()`, `z.custom()`, or `z.transform()` schema that
+      reaches TypeScript generation with a supported, statically inspectable schema.
+- [ ] Narrow `body` before reading it when using unparameterized `IHttpRequest` or `IHttpResponse`
+      types.
+- [ ] Add explicit request, response, and context generics to custom generated `HttpAdapter`
+      subclasses that previously relied on defaults.
 
 For **plugin authors**:
 
