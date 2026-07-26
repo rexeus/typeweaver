@@ -111,6 +111,23 @@ describe("command plugin contract", () => {
     });
   });
 
+  test("allows an operation named version when the runtime has no version command", () => {
+    const spec = normalizedSpec([operation("version")]);
+    const outputDir = temporaryOutput();
+    const kit = createPluginTestKit({ normalizedSpec: spec, outputDir });
+
+    const result = Effect.runSync(kit.run(commandPlugin));
+
+    expect(result.issues).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "TW-PLUGIN-COMMAND-001" }),
+      ])
+    );
+    expect(result.generatedFiles).toContain(
+      "command/operations/VersionCommand.ts"
+    );
+  });
+
   test("reports command and flag collisions deterministically", () => {
     const spec = normalizedSpec([
       operation("getThing"),

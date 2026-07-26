@@ -116,8 +116,9 @@ request implementation.
 
 Path, query, and header inputs must be finite named object fields. Dynamic record/catch-all
 containers cannot become deterministic flags and produce stable `TW-PLUGIN-COMMAND-*` validation
-issues before generation. Reserved command names and command or flag collisions also fail through
-that structured validation phase.
+issues before generation. `help` is the only reserved command name; an API operation named `version`
+is valid because the generated runtime has no conflicting version command. Command or flag
+collisions also fail through the structured validation phase.
 
 The generated executable currently targets Node.js. The ordinary TypeWeaver CLI and non-command
 generated surfaces retain their documented Node.js, Deno, and Bun support.

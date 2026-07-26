@@ -100,8 +100,8 @@ export class ProjectValidator extends Effect.Service<ProjectValidator>()(
 
               return {
                 issues: [
-                  ...loaded.normalizedSpec.warnings.map(
-                    normalizedSpecWarningToIssue
+                  ...loaded.normalizedSpec.warnings.map(warning =>
+                    normalizedSpecWarningToIssue(warning, loaded.normalizedSpec)
                   ),
                   ...pluginIssues,
                 ],

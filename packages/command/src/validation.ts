@@ -2,7 +2,7 @@ import type { Issue, NormalizedSpec } from "@rexeus/typeweaver-gen";
 import { buildCommandOperationModels } from "./model.js";
 import type { CommandOperationModel } from "./model.js";
 
-const RESERVED_COMMAND_NAMES = new Set(["help", "version"]);
+const RESERVED_COMMAND_NAMES = new Set(["help"]);
 
 const operationPath = (model: CommandOperationModel): `/${string}` =>
   `/resources/${model.resourceIndex}/operations/${model.operationIndex}`;

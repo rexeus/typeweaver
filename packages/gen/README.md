@@ -143,7 +143,9 @@ until `types`'s same stage has completed.
 `outputDir`, writer, template renderer, or generated-file tracker. Validation returns `Issue`
 records with a stable code, severity, message, JSON Pointer, optional source location and hint, and
 fixability metadata. Spec-normalization failures use the exhaustive `SPEC_ISSUE_REGISTRY`
-`TW-SPEC-001` through `TW-SPEC-021` namespace.
+`TW-SPEC-001` through `TW-SPEC-021` namespace. Normalized body warnings retain concrete request,
+inline-response, or canonical-response JSON Pointers when a normalized spec is supplied to
+`normalizedSpecWarningToIssue`.
 
 ### Scoped services and public plugin tests
 

@@ -185,7 +185,8 @@ new plugin emits one command per operation, uses only declared contract security
 cancellation into the existing Fetch transport. Its executable is `command/cli.mts`; compile the
 generated NodeNext sources and run the emitted `command/cli.mjs`. See the
 [command package guide](./packages/command/README.md) for deterministic flags, body sources, output,
-exit codes, and representability limits.
+exit codes, and representability limits. An operation named `version` remains valid because the
+generated runtime has no version subcommand; only `help` is reserved.
 
 ### 3. Internal API changes (informational; only programmatic consumers)
 
@@ -247,8 +248,13 @@ If you imported the generator programmatically rather than through the CLI:
   `new NetworkError(message, code, method, url, { cause })` with
   `new NetworkError(message, { code, method, url, cause })`.
 - Generated client `ApiClientProps` add optional `defaultHeaders`, `defaultQuery`, and `signal`
-  fields. They require no migration; command values override defaults, and an external signal is
-  combined with `timeoutMs` when both are present.
+  fields. They require no migration; command values override defaults case-insensitively for HTTP
+  header names, and an external signal is combined with `timeoutMs` when both are present.
+- Generated command Basic credentials are UTF-8 encoded before Base64 conversion. This requires no
+  migration and permits non-Latin usernames and passwords without the former `btoa` failure.
+- `normalizedSpecWarningToIssue(warning, spec?)` accepts an optional normalized spec. Passing it
+  narrows body-warning paths to the affected request, inline response, or canonical response; the
+  one-argument call remains source-compatible.
 - Generated server `ServerContext` now includes the incoming Fetch request's `signal`. Existing
   handlers require no migration; cancellation-aware handlers and adapters can forward this
   `AbortSignal` to their runtime boundary.

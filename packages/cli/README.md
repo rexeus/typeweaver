@@ -157,7 +157,8 @@ The default exit threshold is `error`. Use `--fail-on warning`, `--fail-on info`
 (`warning`) to tighten CI. Exit code 0 means no issue met the threshold; exit code 1 means at least
 one did. Normalization failures retain their stable `TW-SPEC-*` codes, normalized contract warnings
 use `TW-SPEC-101` through `TW-SPEC-103`, and plugin validation issues retain the plugin's declared
-code.
+code. Body warnings point to the affected normalized request, inline response, or canonical response
+body.
 
 ### Diagnose a project
 

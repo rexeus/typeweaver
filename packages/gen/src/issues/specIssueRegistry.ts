@@ -1,6 +1,10 @@
 import { isNormalizationError } from "../errors/NormalizationError.js";
 import type { NormalizationError } from "../errors/NormalizationError.js";
-import type { NormalizedSpecWarning } from "../NormalizedSpec.js";
+import type {
+  NormalizedSpec,
+  NormalizedSpecWarning,
+  NormalizedSpecWarningLocation,
+} from "../NormalizedSpec.js";
 import type { Issue, JsonPointer } from "./Issue.js";
 
 type NormalizationErrorTag = NormalizationError["_tag"];
@@ -194,15 +198,82 @@ export const normalizationErrorToIssue = (
   };
 };
 
+const canonicalResponseWarningPath = (
+  location: NormalizedSpecWarningLocation,
+  spec: NormalizedSpec
+): JsonPointer | undefined => {
+  if (location.responseName === undefined) return undefined;
+  const responseIndex = spec.responses.findIndex(
+    response =>
+      response.name === location.responseName &&
+      (location.statusCode === undefined ||
+        response.statusCode === location.statusCode)
+  );
+  return responseIndex < 0 ? undefined : `/responses/${responseIndex}/body`;
+};
+
+const operationWarningPath = (
+  location: NormalizedSpecWarningLocation,
+  spec: NormalizedSpec
+): JsonPointer | undefined => {
+  if (
+    location.resourceName === undefined ||
+    location.operationId === undefined
+  ) {
+    return undefined;
+  }
+  const resourceIndex = spec.resources.findIndex(
+    resource => resource.name === location.resourceName
+  );
+  const resource = spec.resources[resourceIndex];
+  if (resource === undefined) return undefined;
+  const operationIndex = resource.operations.findIndex(
+    operation => operation.operationId === location.operationId
+  );
+  const operation = resource.operations[operationIndex];
+  if (operation === undefined) return undefined;
+  const operationPath: JsonPointer = `/resources/${resourceIndex}/operations/${operationIndex}`;
+  if (location.part === "request.body") {
+    return `${operationPath}/request/body`;
+  }
+  const responseIndex = operation.responses.findIndex(
+    response =>
+      response.source === "inline" &&
+      response.responseName === location.responseName &&
+      (location.statusCode === undefined ||
+        response.response.statusCode === location.statusCode)
+  );
+  return responseIndex < 0
+    ? undefined
+    : `${operationPath}/responses/${responseIndex}/response/body`;
+};
+
+const pathForNormalizedSpecWarning = (
+  warning: NormalizedSpecWarning,
+  spec: NormalizedSpec | undefined
+): JsonPointer => {
+  if (spec === undefined) {
+    return warning.location.part === "request.body"
+      ? "/resources"
+      : "/responses";
+  }
+  return (
+    operationWarningPath(warning.location, spec) ??
+    canonicalResponseWarningPath(warning.location, spec) ??
+    (warning.location.part === "request.body" ? "/resources" : "/responses")
+  );
+};
+
 export const normalizedSpecWarningToIssue = (
-  warning: NormalizedSpecWarning
+  warning: NormalizedSpecWarning,
+  spec?: NormalizedSpec
 ): Issue => {
   const entry = NORMALIZED_SPEC_WARNING_REGISTRY[warning.code];
   return {
     code: entry.code,
     severity: "warning",
     message: warning.message,
-    path: "/resources",
+    path: pathForNormalizedSpecWarning(warning, spec),
     hint: entry.hint,
     fixable: false,
   };
