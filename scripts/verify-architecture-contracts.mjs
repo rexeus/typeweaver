@@ -59,6 +59,10 @@ const commands = [
     args: ["run", "verify:effect-version"],
   },
   {
+    label: "Pre-1.0 release version contract",
+    args: ["run", "verify:release-version"],
+  },
+  {
     label: "Documentation link integrity",
     args: ["run", "docs:check"],
   },

@@ -1,21 +1,21 @@
 # TypeWeaver Migration Guide
 
-This document covers all breaking changes and required migration steps across major TypeWeaver
-releases.
+This document covers all breaking changes and required migration steps across TypeWeaver release
+lines.
 
 ---
 
 ## Table of Contents
 
-- [Migrating from 0.12.x to 1.0.x](#migrating-from-012x-to-10x)
+- [Migrating from 0.12.x to 0.13.x](#migrating-from-012x-to-013x)
 - [Migrating from 0.7.x to 0.8.x](#migrating-from-07x-to-08x)
 - [Migrating from 0.8.x to 0.9.x](#migrating-from-08x-to-09x)
 
 ---
 
-## Migrating from 0.12.x to 1.0.x
+## Migrating from 0.12.x to 0.13.x
 
-Version 1.0.0 completes the migration to **Effect** as typeweaver's runtime foundation. The change
+Version 0.13.0 completes the migration to **Effect** as TypeWeaver's runtime foundation. The change
 is internal-architectural but breaks three surfaces:
 
 1. The **plugin API** (V1 class-based → V2 Effect-native records). Affects anyone who built a custom
@@ -58,7 +58,7 @@ export class TypesPlugin extends BasePlugin {
 }
 ```
 
-**After (1.0.x) — V2 plugin:**
+**After (0.13.x) — V2 plugin:**
 
 ```ts
 import path from "node:path";
@@ -84,7 +84,7 @@ TypeWeaver itself develops and tests against Effect 3.22.0:
 ```json
 {
   "peerDependencies": {
-    "@rexeus/typeweaver-gen": "^1.0.0",
+    "@rexeus/typeweaver-gen": "^0.13.0",
     "effect": ">=3.22.0 <4"
   }
 }
@@ -200,7 +200,7 @@ If you imported the generator programmatically rather than through the CLI:
 
 ### 4. Spec authoring API: UNCHANGED
 
-The functional spec API introduced in 0.9.0 is unchanged in 1.0.0:
+The functional spec API introduced in 0.9.0 is unchanged in 0.13.0:
 
 - `defineSpec({ resources: { ... } })`
 - `defineOperation({ ... })`
@@ -210,9 +210,9 @@ The functional spec API introduced in 0.9.0 is unchanged in 1.0.0:
 Zod schemas continue to be authored the same way. Regeneration updates the generated client, server,
 and Hono support code to the options-object APIs described above, so expect source diffs. The
 generated request, response, validation, and runtime behavior remain compatible. The
-`test-utils/src/test-project/output` golden fixture verifies the exact 1.0 output on every build.
+`test-utils/src/test-project/output` golden fixture verifies the exact 0.13 output on every build.
 
-### 5. Migration Checklist (0.12.x to 1.0.x)
+### 5. Migration Checklist (0.12.x to 0.13.x)
 
 For **end users** (you use the CLI but don't author plugins):
 
