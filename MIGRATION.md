@@ -109,6 +109,12 @@ instead — same guarantees, typed error channels, I/O through `@effect/platform
 service. See [`docs/plugin-authoring.md`](./docs/plugin-authoring.md) for the full V2 contract and
 [ADR 0003](./docs/adr/0003-effect-native-plugin-api.md) for the design rationale.
 
+Plugin authors no longer need to copy the CLI's private fake contexts or manually retain
+`Layer.buildWithScope` state. Use `createPluginTestKit` for path-safe in-memory lifecycle tests and
+`defineScopedPlugin` for one plugin-owned Layer per generation call. The helper releases the Layer
+after success, typed failure, defect, and interruption while keeping ordinary plugin hooks at
+`R = never`.
+
 ### 2. CLI on `@effect/cli` (BREAKING for invocation in scripts)
 
 The CLI is now built on `@effect/cli`. Three observable changes:
@@ -386,13 +392,12 @@ For **plugin authors**:
 - [ ] Wrap sync emitter bodies in `Effect.try` with `PluginExecutionError` mapping (or use
       `definePluginWithLibCopy`, which does it for you).
 - [ ] Declare `effect >=3.22.0 <4` as a `peerDependency`.
-- [ ] Run plugin tests through `Effect.runSync(plugin.generate(context))` against a fake context
-      (see [`docs/plugin-authoring.md`](./docs/plugin-authoring.md) for the pattern).
+- [ ] Replace hand-built full `GeneratorContext` fakes with `createPluginTestKit`; inspect its
+      issues, generated files, contents, and finalizer failures.
 - [ ] Verify your plugin is discoverable: a named export matching the plugin name, a default export
       of a `Plugin` record, or a default export of a `(options?) => Plugin` factory.
 - [ ] Keep configurable factories pure and synchronous. If the plugin owns a long-lived Effect
-      service, acquire its private Layer/Scope in `initialize`, retain the built service context in
-      that per-generation plugin instance, and close the Scope from `finalize` (see the
+      service, use `defineScopedPlugin` with a per-generation Layer (see the
       [scoped-service example](./packages/cli/examples/scoped-service-plugin.mjs)). This supports
       exit-independent cleanup; `finalize` does not receive the generator's original `Exit`, so
       transactional finalizers need a different integration boundary.

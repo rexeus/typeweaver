@@ -33,6 +33,11 @@
       "fixtures": ["packages/cli/examples/scoped-service-plugin.mjs"]
     },
     {
+      "id": "plugin-test-kit",
+      "documents": ["docs/plugin-authoring.md", "packages/gen/README.md"],
+      "fixtures": ["packages/cli/examples/documentation/plugin-test-kit.ts"]
+    },
+    {
       "id": "generated-client",
       "documents": ["packages/clients/README.md"],
       "fixtures": ["packages/cli/examples/documentation/generated-client.ts"]

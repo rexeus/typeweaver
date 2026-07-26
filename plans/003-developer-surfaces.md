@@ -78,6 +78,9 @@ before implementation if package ownership or public names changed.
 
 ### 1. Make third-party plugin authoring a product surface
 
+**Status:** IN PROGRESS — the public lifecycle test kit and scoped-Layer helper are complete; the
+non-interactive scaffold and packed external consumer remain.
+
 Expose a supported plugin test kit that can build safe in-memory contexts, run the full lifecycle,
 inspect generated files/issues, and provide test Layers without importing private CLI internals.
 Provide an Effect 3.22-compatible helper for plugins that own a scoped Layer, with one acquisition

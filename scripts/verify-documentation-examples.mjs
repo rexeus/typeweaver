@@ -13,6 +13,7 @@ const requiredGroupIds = [
   "generation-cli-config",
   "minimal-plugin",
   "scoped-service-plugin",
+  "plugin-test-kit",
   "generated-client",
   "hono-handler",
   "fetch-server-handler",
