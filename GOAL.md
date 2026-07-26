@@ -60,10 +60,10 @@ the progress log with the relevant commit or artifact.
 
 ### Stage 1: Product truth and type safety
 
-- [ ] `VISION.md` defines the product promise, users, principles, non-goals, north-star workflow,
+- [x] `VISION.md` defines the product promise, users, principles, non-goals, north-star workflow,
       and measurable success signals.
   - Verify: `pnpm docs:check` exits 0 and the required-section test introduced by Plan 001 passes.
-- [ ] Root, package, contributor, and architecture documentation matches the actual packages,
+- [x] Root, package, contributor, and architecture documentation matches the actual packages,
       Node/pnpm toolchain, tsdown, Oxlint/Oxfmt, CLI surface, Effect baseline, and implemented
       architecture.
   - Verify: repository truth checks introduced by Plan 001 pass; ADR 0001 and ADR 0002 no longer
@@ -251,6 +251,7 @@ into general repository gardening.
 | Finding                                                                                                               | Evidence                                                                                                                                                | Proposed verification                                                                    | Stage | Status |
 | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ----- | ------ |
 | Scoped-service documentation process tests inherit Vitest's 5-second timeout and fail under full-workspace contention | Baseline `pnpm test` timed out at `packages/cli/__test__/pluginAuthoring.serviceFixture.test.ts:93`; the same test passed sequentially in 2.228 seconds | Run the focused test, the root `pnpm test`, and the complete baseline gate under Node 24 | 1     | DONE   |
+| Contributor guidance was ignored and therefore absent from clean checkouts                                            | `.gitignore` explicitly listed `AGENTS.md`; `git check-ignore -v AGENTS.md` resolved to `.gitignore:8`                                                  | Track `AGENTS.md` and make `pnpm docs:check` verify its manifest-derived toolchain facts | 1     | DONE   |
 
 ## Stop conditions
 
@@ -302,3 +303,4 @@ Append one line after every iteration. Never rewrite earlier entries.
 | 1         | Stage 1  | Started baseline recovery for process-backed scoped-service documentation tests | Full baseline reached `pnpm test`; the scoped-service typecheck exceeded Vitest's default 5-second timeout under workspace contention after passing sequentially in 2.228 seconds | Apply the existing 15-second CLI process-test budget and rerun focused and full baseline gates  |
 | 2         | Stage 1  | Applied the established 15-second budget to both scoped-service process tests   | Focused suite passed 3/3 tests; the previously failing root `pnpm test` passed all 23 Turbo tasks                                                                                 | Commit the baseline repair and reproduce the complete baseline gate from the clean stage branch |
 | 3         | Stage 1  | Reproduced the complete Node 24 baseline after commit `917ef13e`                | Every full-gate command through `pnpm publish:dry` exited 0; final `git status --short` was empty                                                                                 | Start Plan 001 Work Package 1 with repository-truth characterization                            |
+| 4         | Stage 1  | Completed Plan 001 Work Package 1 at `62856a3d`                                 | `pnpm docs:check`, `pnpm format:check`, and `pnpm lint` exited 0; stale-tool and unresolved-ADR searches returned no matches; issues #198 and #200 were re-read and remain open   | Start Work Package 2 by inventorying and characterizing every public documentation example      |
