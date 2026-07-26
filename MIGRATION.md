@@ -40,6 +40,13 @@ The V1 class hierarchy is gone:
   the `ContextBuilder` service; it is no longer part of the package's public API.
 - Plugins are now records returned by `definePlugin(...)`. Lifecycle stages return
   `Effect<void, PluginExecutionError>` instead of `Promise<void> | void`.
+- Plugins may add an optional `validate(normalizedSpec, context)` hook returning
+  `Effect<readonly Issue[], PluginExecutionError>`. Its `PluginValidationContext` is intentionally
+  write-incapable: it has no output directory, writer, template renderer, or generated-file tracker.
+  Existing plugins do not need to add the hook.
+- Normalize errors now map exhaustively to stable `TW-SPEC-001` through `TW-SPEC-021` entries via
+  `SPEC_ISSUE_REGISTRY`; use `normalizationErrorToIssue` for structured reports instead of parsing
+  English error messages.
 - Plugin `finalize` failures now surface as WARN logs instead of failing the run. If your plugin
   runs hard-fail work in finalize, move it to `generate`.
 

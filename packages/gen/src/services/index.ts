@@ -9,5 +9,6 @@ export { PluginRegistry } from "./PluginRegistry.js";
 export type {
   PluginRegistration,
   PluginRegistryInstance,
+  PluginValidationParams,
 } from "./PluginRegistry.js";
 export { TemplateRenderer } from "./TemplateRenderer.js";

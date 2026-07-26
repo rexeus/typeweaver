@@ -1,12 +1,25 @@
 import { Effect, Either, Ref } from "effect";
-import { PluginDependencyError } from "../plugins/errors/index.js";
-import type { PluginConfig } from "../plugins/contextTypes.js";
+import {
+  PluginDependencyError,
+  PluginExecutionError,
+} from "../plugins/errors/index.js";
+import type { Issue } from "../issues/Issue.js";
+import type { NormalizedSpec } from "../NormalizedSpec.js";
+import type {
+  PluginConfig,
+  PluginValidationContext,
+} from "../plugins/contextTypes.js";
 import type { Plugin } from "../plugins/Plugin.js";
 
 export type PluginRegistration = {
   readonly name: string;
   readonly plugin: Plugin;
   readonly config?: PluginConfig;
+};
+
+export type PluginValidationParams = {
+  readonly normalizedSpec: NormalizedSpec;
+  readonly context: PluginValidationContext;
 };
 
 /**
@@ -22,6 +35,12 @@ export type PluginRegistryInstance = {
   readonly getAll: Effect.Effect<
     readonly PluginRegistration[],
     PluginDependencyError
+  >;
+  readonly validate: (
+    params: PluginValidationParams
+  ) => Effect.Effect<
+    readonly Issue[],
+    PluginDependencyError | PluginExecutionError
   >;
 };
 
@@ -177,7 +196,29 @@ const createInstance: () => Effect.Effect<PluginRegistryInstance> = Effect.fn(
     return yield* sortPluginRegistrations(Array.from(plugins.values()));
   }).pipe(Effect.withSpan("typeweaver.PluginRegistry.getAll"));
 
-  return { register, getAll } as const;
+  const validate = Effect.fn("typeweaver.PluginRegistry.validate")(function* (
+    params: PluginValidationParams
+  ) {
+    const registrations = yield* getAll;
+    const issueGroups = yield* Effect.forEach(
+      registrations,
+      registration => {
+        const validatePlugin = registration.plugin.validate;
+        if (validatePlugin === undefined) {
+          return Effect.succeed<readonly Issue[]>([]);
+        }
+        return validatePlugin(params.normalizedSpec, params.context).pipe(
+          Effect.withSpan("typeweaver.plugin.validate", {
+            attributes: { plugin: registration.name },
+          })
+        );
+      },
+      { concurrency: 1 }
+    );
+    return issueGroups.flat();
+  });
+
+  return { register, getAll, validate } as const;
 });
 
 /**
