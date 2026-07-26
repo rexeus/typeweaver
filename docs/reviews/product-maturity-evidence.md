@@ -4,16 +4,18 @@
 
 This report covers the complete three-stage product-maturity stack. The implementation review was
 performed after the owner-authorized merge of current `main` at `d8b46cd1`, with both review fixes
-included. The complete local Stage 3 gate passed at `42a1d157217b22dc263a9c7bb55c9ffc00b8989f`. The
-pull-request checks and exact delivered head remain pending before this report is final.
+included. The repaired complete local Stage 3 gate passed at
+`07663af42ef70ce0372cab39eb7d84b6a1c635cc`. Ready PR #212 targets `main`, remains open and unmerged,
+and all required checks passed at exact delivered source head
+`ac680374daf5aed02e830ec839391c68dab9381c`.
 
 Stages 1 and 2 were green before the human owner merged them. Their current delivery records are:
 
-| Stage | Pull request                                                                | Reviewed head                              | Merge commit                               | Required checks                                                                                                                         |
-| ----- | --------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | [#209](https://github.com/rexeus/typeweaver/pull/209), `main`, human merged | `b8861460b501ef19948fa732fc8901c704f6230e` | `81aab076d1ef5f21c084e29427ae299563725014` | [Quality Check](https://github.com/rexeus/typeweaver/actions/runs/30209088039), Windows security, CodeQL, and both Socket checks passed |
-| 2     | [#211](https://github.com/rexeus/typeweaver/pull/211), `main`, human merged | `dfdc3354b24ce627794440703567f15204ab63ef` | `7ca4f26cd03f72e49a472749d6ae14ce9fca21a1` | [Quality Check](https://github.com/rexeus/typeweaver/actions/runs/30209719892), Windows security, and both Socket checks passed         |
-| 3     | Pending ready pull request against `main`                                   | Pending                                    | Must remain unmerged                       | Pending                                                                                                                                 |
+| Stage | Pull request                                                                  | Reviewed head                              | Merge commit                               | Required checks                                                                                                                         |
+| ----- | ----------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | [#209](https://github.com/rexeus/typeweaver/pull/209), `main`, human merged   | `b8861460b501ef19948fa732fc8901c704f6230e` | `81aab076d1ef5f21c084e29427ae299563725014` | [Quality Check](https://github.com/rexeus/typeweaver/actions/runs/30209088039), Windows security, CodeQL, and both Socket checks passed |
+| 2     | [#211](https://github.com/rexeus/typeweaver/pull/211), `main`, human merged   | `dfdc3354b24ce627794440703567f15204ab63ef` | `7ca4f26cd03f72e49a472749d6ae14ce9fca21a1` | [Quality Check](https://github.com/rexeus/typeweaver/actions/runs/30209719892), Windows security, and both Socket checks passed         |
+| 3     | [#212](https://github.com/rexeus/typeweaver/pull/212), `main`, open and ready | `ac680374daf5aed02e830ec839391c68dab9381c` | Must remain unmerged                       | [Quality Check](https://github.com/rexeus/typeweaver/actions/runs/30214886101), Windows security, CodeQL, and both Socket checks passed |
 
 ## Full-gate registry
 
@@ -23,14 +25,15 @@ Stages 1 and 2 were green before the human owner merged them. Their current deli
   10.34.5 with an empty final status. The local result is recorded by `7d80366c`; PR #211 was
   subsequently green at `dfdc3354`.
 - **G3 — Stage 3:** every command in the full repository gate passed under Node 24.16.0 and pnpm
-  10.34.5 at `42a1d157217b22dc263a9c7bb55c9ffc00b8989f`. Both frozen installs, the pinned Effect
+  10.34.5 at `07663af42ef70ce0372cab39eb7d84b6a1c635cc`. Both frozen installs, the pinned Effect
   reference, build, generation, Node/Deno/Bun bundles, 27/27 typecheck tasks, architecture
-  contracts, 255 regenerated fixtures, packed consumers, docs, format, lint, all workspace tests,
-  and publish dry run passed; the final `git status --short` was empty. Ready PR
-  [#212](https://github.com/rexeus/typeweaver/pull/212) targets `main`, remains open and unmerged,
-  and all quality-check, Windows security, CodeQL, and Socket checks passed at exact reviewed head
-  `e2041464bc1058e15941e2f83883bd30e841ed1f` in
-  [CI run 30213270173](https://github.com/rexeus/typeweaver/actions/runs/30213270173) and the linked
+  contracts, 255 regenerated fixtures, packed consumers, 18 documentation groups and runtime
+  workflows, format, lint, all workspace tests, and publish dry run passed; the CLI suite passed 385
+  tests with two existing skips under workspace load, and the final `git status --short` was empty.
+  Ready PR [#212](https://github.com/rexeus/typeweaver/pull/212) targets `main`, remains open and
+  unmerged, and all quality-check, Windows security, CodeQL, and Socket checks passed at exact
+  delivered source head `ac680374daf5aed02e830ec839391c68dab9381c` in
+  [CI run 30214886101](https://github.com/rexeus/typeweaver/actions/runs/30214886101) and the linked
   check runs.
 
 ## Goal criterion evidence
@@ -58,25 +61,25 @@ Stages 1 and 2 were green before the human owner merged them. Their current deli
 
 ### Stage 3 — developer surfaces
 
-| Goal criterion                                  | Implementation commit and files                                                                                                                                            | Narrow verification                                                                                                                                                                                                                  | Generated or packed evidence                                                                                                                          | Full gate and PR                        |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| Public third-party plugin starter path          | `4ccbed16`, `d14b80eb`, and concurrency repair `6b0ad927`; public test kit, `defineScopedPlugin`, scaffold templates, docs, Changesets and migration guide                 | Gen lifecycle/type tests, CLI scaffold golden process tests, Effect diagnostics, and concurrent two-fiber acquisition/release regression                                                                                             | `scripts/test-packed-consumers.mjs` installs, tests, builds, and generates from the scaffold in an external workspace                                 | G3; PR #212 checks passed at `e2041464` |
-| Real `init`, `validate`, and `doctor` workflows | `545331b5`, `a8afbb05`, `4c58b17f`, and rollback repair `2637dd1d`; CLI services, public report schemas, process/rollback tests, templates, Changesets and migration guide | Full CLI suite passes 383 tests with 2 existing skips; process tests prove JSON/human reports, exit codes, no-write validation, atomic publication, ordinary rollback, and recoverable rollback failure; CLI typecheck passes        | Complete Todo starter templates under `packages/cli/src/templates/project-init/`                                                                      | G3; PR #212 checks passed at `e2041464` |
-| Generated command-line API client               | `0f0ad742` and `887c4b2a`; shared client transport, command generator/runtime/model, public docs, Changesets and migration guide                                           | 17/17 command tests cover real-server success, body modes, path/query, AND security, sanitized network errors, validation, HTTP/network failures, and SIGINT 130                                                                     | Generated commands under `packages/test-utils/src/test-project/output/command/`; packed external consumer compiles and runs                           | G3; PR #212 checks passed at `e2041464` |
-| Optional Effect-returning server handlers       | `fc4cee60` and `8acb009c`; request signal, Effect runtime/generator, type/runtime/server-integration tests, public docs, Changesets and migration guide                    | 9/9 Effect tests cover one managed runtime, generated types, typed failure mapping, defect sanitization, abort interruption, spans, shutdown, and static runtime-boundary rules; Server 834/834 and strict Effect diagnostics passed | Generated handlers under `packages/test-utils/src/test-project/output/*/Effect*ApiHandler.ts`; packed external consumer uses one Effect 3.22 identity | G3; PR #212 checks passed at `e2041464` |
-| Shipped guides and executable workflows         | `4dfc5e40`; root selection matrix, plugin/CLI/package guides, documentation manifest and runtime-fixture verifier                                                          | `pnpm docs:check` typechecked 18 documentation groups and executed 17/17 built-CLI workflow cases                                                                                                                                    | Executable plugin scaffold, init, validate, doctor, command, and Effect examples                                                                      | G3; PR #212 checks passed at `e2041464` |
-| Final evidence report and independent review    | This report; fixes `6b0ad927` and `2637dd1d`                                                                                                                               | Review dimensions and findings are recorded below; G3 passed at the reviewed source head                                                                                                                                             | All generated and packed evidence above                                                                                                               | G3; PR #212 checks passed at `e2041464` |
-| Stage 3 public-contract delivery                | Stage 3 feature/fix commits and their colocated Changesets plus `MIGRATION.md`                                                                                             | Changeset status and publish dry run passed in G3                                                                                                                                                                                    | Generated fixture set, packed consumers, and publish dry-run package set                                                                              | G3; PR #212 open, green, and unmerged   |
+| Goal criterion                                  | Implementation commit and files                                                                                                                                                                                                            | Narrow verification                                                                                                                                                                                                                                                                           | Generated or packed evidence                                                                                                                          | Full gate and PR                        |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| Public third-party plugin starter path          | `4ccbed16`, `d14b80eb`, and concurrency repair `6b0ad927`; public test kit, `defineScopedPlugin`, scaffold templates, docs, Changesets and migration guide                                                                                 | Gen lifecycle/type tests, CLI scaffold golden process tests, Effect diagnostics, and concurrent two-fiber acquisition/release regression                                                                                                                                                      | `scripts/test-packed-consumers.mjs` installs, tests, builds, and generates from the scaffold in an external workspace                                 | G3; PR #212 checks passed at `ac680374` |
+| Real `init`, `validate`, and `doctor` workflows | `545331b5`, `a8afbb05`, `4c58b17f`, rollback repair `2637dd1d`, review repair `ba58b56a`, and test hardening `006e5321`/`07663af4`; CLI services, public report schemas, process/rollback tests, templates, Changesets and migration guide | Full CLI suite passes 385 tests with 2 existing skips; process tests prove JSON/human reports, exit codes, no-write validation outside the project tree, atomic publication, ordinary rollback, recoverable rollback failure, and stable execution under workspace load; CLI typecheck passes | Complete Todo starter templates under `packages/cli/src/templates/project-init/`                                                                      | G3; PR #212 checks passed at `ac680374` |
+| Generated command-line API client               | `0f0ad742` and `887c4b2a`; shared client transport, command generator/runtime/model, public docs, Changesets and migration guide                                                                                                           | 17/17 command tests cover real-server success, body modes, path/query, AND security, sanitized network errors, validation, HTTP/network failures, and SIGINT 130                                                                                                                              | Generated commands under `packages/test-utils/src/test-project/output/command/`; packed external consumer compiles and runs                           | G3; PR #212 checks passed at `ac680374` |
+| Optional Effect-returning server handlers       | `fc4cee60`, `8acb009c`, and guide repair `ba58b56a`; request signal, Effect runtime/generator, type/runtime/server-integration tests, public docs, Changesets and migration guide                                                          | 9/9 Effect tests cover one managed runtime, generated types, typed failure mapping, defect sanitization, abort interruption, spans, shutdown, and static runtime-boundary rules; Server 834/834 and strict Effect diagnostics passed                                                          | Generated handlers under `packages/test-utils/src/test-project/output/*/Effect*ApiHandler.ts`; packed external consumer uses one Effect 3.22 identity | G3; PR #212 checks passed at `ac680374` |
+| Shipped guides and executable workflows         | `4dfc5e40` and truth repair `ba58b56a`; root selection matrix, plugin/CLI/package guides, documentation manifest and runtime-fixture verifier                                                                                              | `pnpm docs:check` typechecked 18 documentation groups and executed 18/18 built-CLI workflow cases                                                                                                                                                                                             | Executable plugin scaffold, init, validate, doctor, command, and Effect examples                                                                      | G3; PR #212 checks passed at `ac680374` |
+| Final evidence report and independent review    | This report; fixes `6b0ad927`, `2637dd1d`, `ba58b56a`, `006e5321`, and `07663af4`                                                                                                                                                          | Review dimensions and findings are recorded below; the repaired G3 gate and every PR check passed at the recorded source head                                                                                                                                                                 | All generated and packed evidence above                                                                                                               | G3; PR #212 checks passed at `ac680374` |
+| Stage 3 public-contract delivery                | Stage 3 feature/fix commits and their colocated Changesets plus `MIGRATION.md`                                                                                                                                                             | Changeset status and publish dry run passed in G3                                                                                                                                                                                                                                             | Generated fixture set, packed consumers, and publish dry-run package set                                                                              | G3; PR #212 open, green, and unmerged   |
 
 ## Independent review
 
 ### Scope and method
 
 The fresh review pass considered the complete Stage 3 diff from merged `main` (`7ca4f26c`) through
-`2637dd1d`, including the normal integration merge `d8b46cd1`. It reviewed correctness, security,
-public TypeScript API design, Effect 3 practices, tests, maintainability, plugin DX, OpenAPI
-boundaries, documentation, package manifests, Changesets, migration guidance, generated fixtures,
-and packed-consumer isolation.
+`07663af4`, including the normal integration merge `d8b46cd1` and the completed Copilot review at
+`a1c6479b`. It reviewed correctness, security, public TypeScript API design, Effect 3 practices,
+tests, maintainability, plugin DX, OpenAPI boundaries, documentation, package manifests, Changesets,
+migration guidance, generated fixtures, and packed-consumer isolation.
 
 Static review also checked the added TypeScript lines for new `any`, unsafe casts, ignored
 TypeScript diagnostics, test skips/todos, and authored lint suppressions. None were added. The only
@@ -109,7 +112,22 @@ for a newly generated index file; it is generated output rather than an authored
    by a restore failure was reported as a plain filesystem error, after which scoped cleanup removed
    the backup. Commit `2637dd1d` preserves the staging backup and returns a typed recovery path. The
    focused 2/2 rollback tests and the full sequential CLI suite pass.
+3. **Resolved — comma-separated plugin flags retained empty plugin names.** Copilot comment
+   `3653076020` identified the misleading empty module-resolution path. Commit `ba58b56a` filters
+   empty entries; the focused parser suite passes 8/8.
+4. **Resolved — validation staged temporary output inside the project tree.** Copilot comment
+   `3653089514` identified the interruption residue risk. Commit `ba58b56a` uses OS-temporary
+   staging while preserving dependency resolution through the nearest `node_modules`; the focused
+   validation suite passes 5/5 and executable docs pass 18/18 workflows.
+5. **Resolved — the Effect guide overstated HEAD-operation mapper coverage.** Copilot comment
+   `3653076033` identified the mismatch with the server handler surface. Commit `ba58b56a` narrows
+   the claim, and the executable documentation contract rejects the stale wording.
+6. **Disproven — command client resource names require a broader PascalCase transform.** Copilot
+   comment `3653076009` proposed kebab/snake resource keys, but the normalized public contract
+   accepts only camelCase or PascalCase resource names. The current first-character capitalization
+   matches that accepted input domain, so no in-scope defect exists.
 
-No lower-priority discovery met the `GOAL.md` promotion gate during this review. At the reviewed
-source head there is no unresolved in-scope critical or high-confidence high-impact finding. PR #212
-is open, green, and unmerged at the recorded reviewed head.
+All actionable review discoveries met the `GOAL.md` promotion gate, were characterized before
+repair, and are closed by the evidence above. At delivered source head `ac680374` there is no
+unresolved in-scope critical or high-confidence high-impact finding. PR #212 is open, green, and
+unmerged at the recorded reviewed head.

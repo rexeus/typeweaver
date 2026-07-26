@@ -129,18 +129,18 @@ the progress log with the relevant commit or artifact.
     without a per-request runtime or per-handler `Effect.runPromise`.
 - [x] All public guides describe the shipped behavior and every new public workflow has an
       executable example.
-- [ ] A final evidence report maps every claim in this goal to commands, artifacts, commits, and PR
+- [x] A final evidence report maps every claim in this goal to commands, artifacts, commits, and PR
       checks and records an independent review with no unresolved critical or high-confidence
       high-impact finding in scope.
-- [ ] Stage 3 has appropriate Changesets and migration notes, a green full gate, and an open green
+- [x] Stage 3 has appropriate Changesets and migration notes, a green full gate, and an open green
       PR targeting `main`.
 
 ### Final delivery
 
-- [ ] PRs #209 and #211 are recorded as human-merged after green checks, while the Stage 3 PR
+- [x] PRs #209 and #211 are recorded as human-merged after green checks, while the Stage 3 PR
       targets `main`, is open and green, and remains unmerged.
-- [ ] Every required check on every PR is green at its recorded head commit.
-- [ ] `plans/README.md` and this file show all three stages as complete with evidence.
+- [x] Every required check on every PR is green at its recorded head commit.
+- [x] `plans/README.md` and this file show all three stages as complete with evidence.
 - [x] No criterion was waived merely because the implementation became difficult. Any intentionally
       rejected feature is recorded as a product non-goal with evidence and reviewer-visible
       rationale.
@@ -314,11 +314,11 @@ Human approval is required. Never execute autonomously:
 
 ## Stage evidence
 
-| Stage | Status             | Branch                               | Head                                       | PR                                                    | Required checks                                       | Evidence report                                                                             |
-| ----- | ------------------ | ------------------------------------ | ------------------------------------------ | ----------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| 1     | DONE, HUMAN MERGED | `feat/product-truth-and-type-safety` | `b8861460b501ef19948fa732fc8901c704f6230e` | [#209](https://github.com/rexeus/typeweaver/pull/209) | quality-check, windows-security, CodeQL, Socket: PASS | Iterations 1–9; [CI run](https://github.com/rexeus/typeweaver/actions/runs/30209088039)     |
-| 2     | DONE, HUMAN MERGED | `feat/contract-and-openapi-maturity` | `dfdc3354b24ce627794440703567f15204ab63ef` | [#211](https://github.com/rexeus/typeweaver/pull/211) | quality-check, windows-security, Socket: PASS         | Iterations 10–20; [CI run](https://github.com/rexeus/typeweaver/actions/runs/30209719892)   |
-| 3     | IN PROGRESS        | `feat/developer-surfaces`            | `07663af42ef70ce0372cab39eb7d84b6a1c635cc` | [#212](https://github.com/rexeus/typeweaver/pull/212) | Repaired exact-head checks pending                    | [Final evidence review](docs/reviews/product-maturity-evidence.md); local gate Iteration 44 |
+| Stage | Status             | Branch                               | Head                                       | PR                                                    | Required checks                                       | Evidence report                                                                                                                             |
+| ----- | ------------------ | ------------------------------------ | ------------------------------------------ | ----------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | DONE, HUMAN MERGED | `feat/product-truth-and-type-safety` | `b8861460b501ef19948fa732fc8901c704f6230e` | [#209](https://github.com/rexeus/typeweaver/pull/209) | quality-check, windows-security, CodeQL, Socket: PASS | Iterations 1–9; [CI run](https://github.com/rexeus/typeweaver/actions/runs/30209088039)                                                     |
+| 2     | DONE, HUMAN MERGED | `feat/contract-and-openapi-maturity` | `dfdc3354b24ce627794440703567f15204ab63ef` | [#211](https://github.com/rexeus/typeweaver/pull/211) | quality-check, windows-security, Socket: PASS         | Iterations 10–20; [CI run](https://github.com/rexeus/typeweaver/actions/runs/30209719892)                                                   |
+| 3     | DONE               | `feat/developer-surfaces`            | `ac680374daf5aed02e830ec839391c68dab9381c` | [#212](https://github.com/rexeus/typeweaver/pull/212) | quality-check, windows-security, CodeQL, Socket: PASS | [Final evidence review](docs/reviews/product-maturity-evidence.md); [CI run](https://github.com/rexeus/typeweaver/actions/runs/30214886101) |
 
 Status values: `TODO`, `IN PROGRESS`, `DONE`, `DONE, HUMAN MERGED`, or `BLOCKED: <reason>`.
 
@@ -373,3 +373,4 @@ Append one line after every iteration. Never rewrite earlier entries.
 | 42        | Stage 3  | Reached the post-timeout gate's maintainability boundary                              | Frozen installs, exact Effect pin, build, 255-fixture generation, Node/Deno/Bun bundles, 27/27 typechecks, and all architecture checks through 18 documentation groups and 18/18 runtime workflows passed; the maintainability self-test then found the formatted init happy-path test at 102 lines against the 100-line limit                                                                                                                                                    | Extract the starter-source assertions and rerun narrow maintainability checks                                |
 | 43        | Stage 3  | Restored the init test's maintainability boundary                                     | Starter-operation assertions now live in a focused helper; both process files pass 8/8, standalone lint exits zero, and the full architecture-contract suite passes documentation, maintainability, Effect diagnostics, public contracts, all package tests, 255-fixture freshness, and packed consumers without changing the authored worktree                                                                                                                                   | Commit the green maintainability repair, then rerun the complete Stage 3 gate from scratch                   |
 | 44        | Stage 3  | Completed the repaired clean local Stage 3 gate at `07663af4`                         | Under Node 24.16.0 and pnpm 10.34.5, both frozen installs, exact Effect reference, build, generation, Node/Deno/Bun bundles, 27/27 typechecks, architecture contracts, 255 fresh fixtures, packed consumers, 18 documentation groups and workflows, format, lint, all workspace tests, and publish dry run passed; CLI passed 385 tests with 2 existing skips under workspace load, and final status was empty                                                                    | Commit the gate record, push normally, and require all PR checks on the repaired exact head                  |
+| 45        | Stage 3  | Completed Stage 3 delivery and the final independent review at `ac680374`             | Ready PR #212 targets `main`, remains open and unmerged, and all seven quality-check, Windows security, CodeQL, and Socket checks passed at the exact recorded source head in [CI run 30214886101](https://github.com/rexeus/typeweaver/actions/runs/30214886101); the final report records every criterion and all review findings, with no unresolved in-scope critical or high-confidence high-impact finding                                                                  | Commit the completion record, push normally, and require the same checks on the docs-only successor          |
