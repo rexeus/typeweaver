@@ -125,6 +125,7 @@ const createRecordingPluginRegistry = (
     return {
       register,
       getAll: Effect.succeed([] as never),
+      validate: () => Effect.succeed([]),
     } satisfies PluginRegistryInstance;
   });
 
@@ -1018,6 +1019,7 @@ describe("pluginLoader plugin shape validation", () => {
         omitField: false,
       },
       { field: "initialize", invalidValue: 42, omitField: false },
+      { field: "validate", invalidValue: 42, omitField: false },
       { field: "collectResources", invalidValue: 42, omitField: false },
       { field: "generate", invalidValue: 42, omitField: false },
       { field: "finalize", invalidValue: 42, omitField: false },
@@ -1037,6 +1039,7 @@ describe("pluginLoader plugin shape validation", () => {
       const invalidPlugin: Record<string, unknown> = {
         name: "invalid-plugin",
         initialize: lifecycleTripwire,
+        validate: lifecycleTripwire,
         collectResources: lifecycleTripwire,
         generate: lifecycleTripwire,
         finalize: lifecycleTripwire,

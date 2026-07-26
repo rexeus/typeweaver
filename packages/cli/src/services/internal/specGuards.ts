@@ -55,8 +55,17 @@ const isResourceDefinition = (value: unknown): boolean => {
   );
 };
 
+const isMetadataDefinition = (value: unknown): boolean =>
+  isRecord(value) &&
+  hasNonEmptyString(value, "title") &&
+  hasNonEmptyString(value, "version");
+
 export const isSpecDefinition = (value: unknown): value is SpecDefinition => {
-  if (!isRecord(value) || !isRecord(value.resources)) {
+  if (
+    !isRecord(value) ||
+    !isMetadataDefinition(value.metadata) ||
+    !isRecord(value.resources)
+  ) {
     return false;
   }
 
