@@ -141,3 +141,47 @@ describe("generated command runtime", () => {
     expect(fixture.stdout()).not.toContain("secret");
   });
 });
+
+describe("generated command security", () => {
+  test("encodes Unicode Basic credentials as UTF-8", async () => {
+    let observedAuthorization: string | undefined;
+    const fixture = testIo([
+      "ping",
+      "--base-url",
+      "https://api.example.test",
+      "--auth-basic",
+      "用户:密码",
+    ]);
+    const basicCommand = {
+      ...command(async context => {
+        observedAuthorization = context.defaultHeaders.Authorization;
+        return {
+          type: "PingSuccess",
+          statusCode: 200,
+          body: { alive: true },
+        };
+      }),
+      security: {
+        requirements: [["basicAuth"]],
+        schemes: [
+          {
+            name: "basicAuth",
+            flag: "auth-basic",
+            kind: "http",
+            scheme: "basic",
+          },
+        ],
+      },
+    } as const satisfies GeneratedCommand;
+
+    const exitCode = await runGeneratedCommandCli(
+      { programName: "fixture", commands: [basicCommand] },
+      fixture.io
+    );
+
+    expect({ exitCode, observedAuthorization }).toStrictEqual({
+      exitCode: 0,
+      observedAuthorization: "Basic 55So5oi3OuWvhueggQ==",
+    });
+  });
+});

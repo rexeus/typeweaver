@@ -660,6 +660,31 @@ describe("ApiClient path parameter replacement", () => {
   });
 });
 
+describe("ApiClient default headers", () => {
+  test("treats header names case-insensitively when request headers override defaults", async () => {
+    const { mockFetch } = await sendRaw(
+      {
+        header: {
+          authorization: "Bearer request",
+        },
+      },
+      {
+        defaultHeaders: {
+          Authorization: "Bearer default",
+          "X-Default": "default",
+        },
+      }
+    );
+
+    expect([
+      ...new Headers(getFetchCall(mockFetch).init.headers).entries(),
+    ]).toStrictEqual([
+      ["authorization", "Bearer request"],
+      ["x-default", "default"],
+    ]);
+  });
+});
+
 describe("ApiClient request serialization", () => {
   test("merges default headers while request headers take precedence", async () => {
     const { mockFetch } = await sendRaw(

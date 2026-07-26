@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { readFile } from "node:fs/promises";
 import { RequestValidationError } from "@rexeus/typeweaver-core";
 import type {
@@ -267,7 +268,9 @@ const applySecurityScheme = (
 ): void => {
   if (scheme.kind === "http") {
     headers.Authorization =
-      scheme.scheme === "basic" ? `Basic ${btoa(credential)}` : `Bearer ${credential}`;
+      scheme.scheme === "basic"
+        ? `Basic ${Buffer.from(credential, "utf8").toString("base64")}`
+        : `Bearer ${credential}`;
     return;
   }
   if (scheme.kind !== "apiKey") {

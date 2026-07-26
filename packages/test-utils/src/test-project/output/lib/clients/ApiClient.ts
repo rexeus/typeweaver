@@ -337,7 +337,15 @@ export abstract class ApiClient {
   ): Record<string, string> | undefined {
     const hasDefaults = Object.keys(this.defaultHeaders).length > 0;
     if (!hasDefaults) return headers;
-    return { ...this.defaultHeaders, ...headers };
+    const requestHeaderNames = new Set(
+      Object.keys(headers ?? {}).map((headerName) => headerName.toLowerCase()),
+    );
+    const applicableDefaults = Object.fromEntries(
+      Object.entries(this.defaultHeaders).filter(
+        ([headerName]) => !requestHeaderNames.has(headerName.toLowerCase()),
+      ),
+    );
+    return { ...applicableDefaults, ...headers };
   }
 
   private createRequestSignal(): AbortSignal | undefined {

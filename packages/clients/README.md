@@ -73,8 +73,8 @@ const client = new TodoClient({
 ```
 
 Default headers and query values are copied into each request without mutating the supplied objects.
-Command-specific values take precedence. When both `signal` and `timeoutMs` are present, the request
-is cancelled when either boundary aborts.
+Command-specific values take precedence, with HTTP header names compared case-insensitively. When
+both `signal` and `timeoutMs` are present, the request is cancelled when either boundary aborts.
 
 ### ✉️ Request Commands
 

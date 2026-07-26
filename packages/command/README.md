@@ -85,7 +85,8 @@ integration project in the
 Security flags are derived only from the normalized TypeWeaver contract:
 
 - HTTP bearer, OAuth2, and OpenID Connect credentials become bearer authorization values.
-- HTTP basic credentials are encoded for the Basic authorization scheme.
+- HTTP basic credentials are encoded as UTF-8 before Base64 conversion for the Basic authorization
+  scheme.
 - API keys are projected into their declared header, query, or cookie location.
 - Requirements preserve contract semantics: schemes inside one requirement are ANDed; requirement
   entries are alternatives.
