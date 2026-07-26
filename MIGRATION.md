@@ -16,7 +16,7 @@ releases.
 ## Migrating from 0.12.x to 1.0.x
 
 Version 1.0.0 completes the migration to **Effect** as typeweaver's runtime foundation and matures
-the executable API contract. The release breaks six surfaces:
+the executable API contract. The release breaks seven surfaces:
 
 1. The **plugin API** (V1 class-based → V2 Effect-native records). Affects anyone who built a custom
    plugin.
@@ -29,6 +29,8 @@ the executable API contract. The release breaks six surfaces:
 5. The unvalidated **HTTP body boundary** is `unknown` instead of implicit `any`.
 6. The **spec authoring API** requires API metadata and can declare generator-neutral security,
    descriptions, tags, and deprecation.
+7. The **OpenAPI projection** moves from hard-coded 3.1.1 output to explicit 3.1.2 and 3.2.0 target
+   profiles, with API identity sourced from the spec.
 
 ### 1. Plugin API V1 → V2 (BREAKING — third-party plugin authors)
 
@@ -278,7 +280,35 @@ Zod request and response schemas continue to be authored the same way. Regenerat
 generated client, server, and Hono support code to the options-object APIs described above, so
 expect source diffs. The test-project golden fixture verifies the exact 1.0 output on every build.
 
-### 5. Unsupported Zod schemas fail explicitly
+### 5. OpenAPI target profiles and spec-owned identity (BREAKING)
+
+`@rexeus/typeweaver-openapi` now defaults to OpenAPI 3.1.2 and accepts an explicit `target` of
+`"3.1.2"` or `"3.2.0"`. Existing users that require the compatibility profile may omit the option;
+users that require 3.2 select it explicitly:
+
+```ts
+openApiPlugin({
+  target: "3.2.0",
+  outputPath: "openapi/openapi.json",
+});
+```
+
+Remove `info` from OpenAPI plugin and builder options. Title, version, description, and reusable
+tags now come from `defineSpec({ metadata: ... })`, so every generator consumes one API identity.
+Servers, the output path, and the projection target remain OpenAPI options.
+
+Regeneration changes the emitted `openapi` field from `3.1.1` to `3.1.2` by default and projects
+contract security into `components.securitySchemes`, root `security`, and effective operation
+`security`. Explicitly public operations emit `security: []`. Builder representability warnings are
+available as stable `TW-PLUGIN-OPENAPI-*` issues through the plugin's write-incapable `validate`
+hook rather than generation-time warning logs.
+
+<!-- docs-example: openapi-options -->
+
+The supported option shapes are typechecked in the
+[OpenAPI options fixture](./packages/cli/examples/documentation/openapi-options.ts).
+
+### 6. Unsupported Zod schemas fail explicitly
 
 `@rexeus/typeweaver-zod-to-ts` previously converted `z.lazy()`, `z.templateLiteral()`, `z.custom()`,
 and `z.transform()` to TypeScript `unknown`. This hid contract loss in generated output. These
@@ -302,7 +332,7 @@ try {
 Replace unsupported shapes with an equivalent supported schema before generation. `z.unknown()`
 remains supported and still generates TypeScript `unknown`.
 
-### 6. Unvalidated HTTP bodies are unknown
+### 7. Unvalidated HTTP bodies are unknown
 
 `IHttpBody` and the default body types of `IHttpRequest`, `IHttpResponse`, handlers, and generated
 Fetch/Hono adapters no longer resolve to `any`. Generated operation types remain schema-specific.
@@ -329,7 +359,7 @@ adapters continue to support JSON values, strings, `ArrayBuffer`, `Blob`, `null`
 Values that cannot be represented by `JSON.stringify` now fail explicitly; Hono exposes
 `HonoResponseSerializationError` for this case.
 
-### 7. Migration Checklist (0.12.x to 1.0.x)
+### 8. Migration Checklist (0.12.x to 1.0.x)
 
 For **end users** (you use the CLI but don't author plugins):
 
@@ -347,6 +377,8 @@ For **end users** (you use the CLI but don't author plugins):
 - [ ] Move reusable API tags and security schemes into the generator-neutral spec contract.
 - [ ] Use `security: []` for operations or resources that must remain explicitly public under an
       inherited security requirement.
+- [ ] Remove `info` from OpenAPI plugin options and select `target: "3.2.0"` only when consumers
+      support that profile; otherwise use the 3.1.2 default.
 
 For **plugin authors**:
 

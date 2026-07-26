@@ -63,6 +63,7 @@
   },
   "devDependencies": {
     "@rexeus/typeweaver-gen": "workspace:^",
+    "@seriousme/openapi-schema-validator": "2.9.0",
     "@stoplight/spectral-cli": "6.16.2",
     "effect": "^3.22.0",
     "test-utils": "file:../test-utils",

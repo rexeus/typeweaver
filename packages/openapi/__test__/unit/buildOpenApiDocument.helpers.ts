@@ -49,8 +49,8 @@ function normalizeBodyForBuilder(
   return "schema" in body ? body : aJsonNormalizedBody(body);
 }
 
-export function todoApiInfo() {
-  return { info: { title: "Todo API", version: "1.0.0" } };
+export function todoApiOptions() {
+  return {};
 }
 
 export function aTodoSpecWith(

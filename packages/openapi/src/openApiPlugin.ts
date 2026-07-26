@@ -3,8 +3,8 @@ import type { Plugin } from "@rexeus/typeweaver-gen";
 import { Effect } from "effect";
 import { buildOpenApiDocument } from "./buildOpenApiDocument.js";
 import { normalizeOpenApiPluginOptions } from "./internal/normalizeOptions.js";
+import { openApiWarningToIssue } from "./warningIssues.js";
 import type { OpenApiPluginOptions } from "./internal/normalizeOptions.js";
-import type { OpenApiBuildWarning } from "./types.js";
 
 export type { OpenApiPluginOptions } from "./internal/normalizeOptions.js";
 
@@ -19,44 +19,42 @@ export const openApiPlugin = (options: OpenApiPluginOptions = {}): Plugin => {
 
   return definePlugin({
     name: PLUGIN_NAME,
+    validate: normalizedSpec =>
+      Effect.try({
+        try: () =>
+          buildOpenApiDocument(normalizedSpec, {
+            target: normalized.target,
+            ...(normalized.servers === undefined
+              ? {}
+              : { servers: normalized.servers }),
+          }).warnings.map(openApiWarningToIssue),
+        catch: cause =>
+          new PluginExecutionError({
+            pluginName: PLUGIN_NAME,
+            phase: "validate",
+            cause,
+          }),
+      }),
     generate: context =>
-      Effect.gen(function* () {
-        const result = yield* Effect.try({
-          try: () => {
-            const built = buildOpenApiDocument(context.normalizedSpec, {
-              info: normalized.info,
-              ...(normalized.servers !== undefined
-                ? { servers: normalized.servers }
-                : {}),
-            });
-            const json = `${JSON.stringify(built.document, null, 2)}\n`;
-            context.writeFile(normalized.outputPath, json);
-            return built;
-          },
-          catch: cause =>
-            new PluginExecutionError({
-              pluginName: PLUGIN_NAME,
-              phase: "generate",
-              cause,
-            }),
-        });
-
-        if (result.warnings.length > 0) {
-          yield* Effect.logWarning(formatWarnings(result.warnings));
-        }
+      Effect.try({
+        try: () => {
+          const built = buildOpenApiDocument(context.normalizedSpec, {
+            target: normalized.target,
+            ...(normalized.servers === undefined
+              ? {}
+              : { servers: normalized.servers }),
+          });
+          const json = `${JSON.stringify(built.document, null, 2)}\n`;
+          context.writeFile(normalized.outputPath, json);
+        },
+        catch: cause =>
+          new PluginExecutionError({
+            pluginName: PLUGIN_NAME,
+            phase: "generate",
+            cause,
+          }),
       }),
   });
-};
-
-const formatWarnings = (warnings: readonly OpenApiBuildWarning[]): string => {
-  const warningLines = warnings.map(
-    warning => `- ${warning.code}: ${warning.message} (${warning.documentPath})`
-  );
-
-  return [
-    `OpenAPI generation completed with ${warnings.length} warning(s).`,
-    ...warningLines,
-  ].join("\n");
 };
 
 export default openApiPlugin;

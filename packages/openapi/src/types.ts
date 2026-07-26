@@ -4,9 +4,11 @@ import type {
 } from "@rexeus/typeweaver-zod-to-json-schema";
 
 export type BuildOpenApiDocumentOptions = {
-  readonly info: OpenApiInfoObject;
+  readonly target?: OpenApiTarget;
   readonly servers?: readonly OpenApiServerObject[];
 };
+
+export type OpenApiTarget = "3.1.2" | "3.2.0";
 
 export type OpenApiBuildResult = {
   readonly document: OpenApiDocument;
@@ -14,13 +16,14 @@ export type OpenApiBuildResult = {
 };
 
 export type OpenApiDocument = {
-  readonly openapi: "3.1.1";
+  readonly openapi: OpenApiTarget;
   readonly jsonSchemaDialect: "https://json-schema.org/draft/2020-12/schema";
   readonly info: OpenApiInfoObject;
   readonly servers?: readonly OpenApiServerObject[];
   readonly tags: readonly OpenApiTagObject[];
   readonly paths: OpenApiPathsObject;
   readonly components?: OpenApiComponentsObject;
+  readonly security?: OpenApiSecurityRequirements;
 };
 
 export type OpenApiInfoObject = {
@@ -61,10 +64,13 @@ export type OpenApiHttpMethod =
 export type OpenApiOperationObject = {
   readonly operationId: string;
   readonly summary?: string;
+  readonly description?: string;
+  readonly deprecated?: boolean;
   readonly tags: readonly string[];
   readonly parameters?: readonly OpenApiParameterObject[];
   readonly requestBody?: OpenApiRequestBodyObject;
   readonly responses: OpenApiResponsesObject;
+  readonly security?: OpenApiSecurityRequirements;
 };
 
 export type OpenApiParameterObject = {
@@ -109,7 +115,61 @@ export type OpenApiHeaderObject = {
 export type OpenApiComponentsObject = {
   readonly responses?: Record<string, OpenApiResponseObject>;
   readonly schemas?: Record<string, JsonSchema>;
+  readonly securitySchemes?: Record<string, OpenApiSecuritySchemeObject>;
 };
+
+export type OpenApiSecurityRequirement = Readonly<
+  Record<string, readonly string[]>
+>;
+
+export type OpenApiSecurityRequirements = readonly OpenApiSecurityRequirement[];
+
+type OpenApiSecuritySchemeBase = {
+  readonly description?: string;
+};
+
+export type OpenApiHttpSecuritySchemeObject = OpenApiSecuritySchemeBase & {
+  readonly type: "http";
+  readonly scheme: "basic" | "bearer";
+  readonly bearerFormat?: string;
+};
+
+export type OpenApiApiKeySecuritySchemeObject = OpenApiSecuritySchemeBase & {
+  readonly type: "apiKey";
+  readonly name: string;
+  readonly in: "header" | "query" | "cookie";
+};
+
+export type OpenApiOAuth2FlowObject = {
+  readonly authorizationUrl?: string;
+  readonly tokenUrl?: string;
+  readonly refreshUrl?: string;
+  readonly scopes: Readonly<Record<string, string>>;
+};
+
+export type OpenApiOAuth2FlowsObject = {
+  readonly implicit?: OpenApiOAuth2FlowObject;
+  readonly password?: OpenApiOAuth2FlowObject;
+  readonly clientCredentials?: OpenApiOAuth2FlowObject;
+  readonly authorizationCode?: OpenApiOAuth2FlowObject;
+};
+
+export type OpenApiOAuth2SecuritySchemeObject = OpenApiSecuritySchemeBase & {
+  readonly type: "oauth2";
+  readonly flows: OpenApiOAuth2FlowsObject;
+};
+
+export type OpenApiOpenIdConnectSecuritySchemeObject =
+  OpenApiSecuritySchemeBase & {
+    readonly type: "openIdConnect";
+    readonly openIdConnectUrl: string;
+  };
+
+export type OpenApiSecuritySchemeObject =
+  | OpenApiHttpSecuritySchemeObject
+  | OpenApiApiKeySecuritySchemeObject
+  | OpenApiOAuth2SecuritySchemeObject
+  | OpenApiOpenIdConnectSecuritySchemeObject;
 
 export type OpenApiSchemaConversionWarningCode =
   | "unsupported-schema"
@@ -132,7 +192,8 @@ export type OpenApiDiagnosticWarningCode =
   | "missing-path-parameter-schema"
   | "unused-path-parameter-schema"
   | "missing-canonical-response"
-  | "duplicate-canonical-response";
+  | "duplicate-canonical-response"
+  | "unrepresentable-resource-description";
 
 export type OpenApiDiagnosticWarning = {
   readonly origin: "openapi-builder";

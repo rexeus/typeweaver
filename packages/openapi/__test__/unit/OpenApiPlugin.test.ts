@@ -16,7 +16,6 @@ import {
   aResponseWith,
 } from "./buildOpenApiDocument.helpers.js";
 import type {
-  OpenApiInfoObject,
   OpenApiPluginOptions,
   OpenApiServerObject,
 } from "../../src/index.js";
@@ -99,20 +98,28 @@ describe("openApiPlugin output", () => {
     const document = JSON.parse(context.writtenFiles[0]?.content ?? "{}");
     expect(context.writtenFiles).toHaveLength(1);
     expect(context.writtenFiles[0]?.path).toBe("openapi/openapi.json");
-    expect(document.openapi).toBe("3.1.1");
+    expect(document.openapi).toBe("3.1.2");
     expect(document.info).toEqual({
-      title: "Typeweaver API",
-      version: "0.0.0",
+      title: "Todo API",
+      version: "1.0.0",
     });
     expect(document.paths).toHaveProperty("/items/{itemId}");
   });
 
-  test("writes custom OpenAPI metadata to the configured output path", () => {
-    const context = anOpenApiGeneratorContextWith(anItemsSpec());
+  test("projects spec metadata and the configured target and output path", () => {
+    const context = anOpenApiGeneratorContextWith(
+      anItemsSpec({
+        metadata: {
+          title: "Contract API",
+          version: "2.0.0",
+          description: "Contract description",
+        },
+      })
+    );
 
     runGenerate(
       {
-        info: { title: "Todo API", version: "1.0.0", summary: "Todos" },
+        target: "3.2.0",
         servers: [
           { url: "https://api.example.com", description: "Production" },
         ],
@@ -123,10 +130,11 @@ describe("openApiPlugin output", () => {
 
     const document = JSON.parse(context.writtenFiles[0]?.content ?? "{}");
     expect(context.writtenFiles[0]?.path).toBe("docs/openapi.json");
+    expect(document.openapi).toBe("3.2.0");
     expect(document.info).toEqual({
-      title: "Todo API",
-      version: "1.0.0",
-      summary: "Todos",
+      title: "Contract API",
+      version: "2.0.0",
+      description: "Contract description",
     });
     expect(document.servers).toEqual([
       { url: "https://api.example.com", description: "Production" },
@@ -184,7 +192,7 @@ describe("openApiPlugin diagnostics", () => {
     ]);
   });
 
-  test("warns without embedding builder warnings in the OpenAPI document", () => {
+  test("keeps validation issues out of generation logs and the document", () => {
     const context = anOpenApiGeneratorContextWith(
       anItemsSpec({
         operations: [
@@ -201,18 +209,7 @@ describe("openApiPlugin diagnostics", () => {
 
     const document = JSON.parse(context.writtenFiles[0]?.content ?? "{}");
     const warningLogs = logs.filter(entry => entry.level === "WARN");
-    expect(warningLogs).toHaveLength(1);
-    const warningMessage = warningLogs[0]?.message ?? "";
-    expect(warningMessage).toContain(
-      "OpenAPI generation completed with 1 warning(s)."
-    );
-    expect(warningMessage).toContain("missing-path-parameter-schema");
-    expect(warningMessage).toContain(
-      "Path parameter 'itemId' is missing a schema."
-    );
-    expect(warningMessage).toContain(
-      "/paths/~1items~1{itemId}/get/parameters/0/schema"
-    );
+    expect(warningLogs).toEqual([]);
     expect(document).not.toHaveProperty("warnings");
   });
 });
@@ -225,9 +222,9 @@ describe("openApiPlugin configuration errors", () => {
       reason: /options must be an object/,
     },
     {
-      scenario: "missing info version",
-      options: { info: { title: "Todo API" } as OpenApiInfoObject },
-      reason: /info\.title and info\.version must be strings/,
+      scenario: "unsupported target",
+      options: { target: "3.1.1" as never },
+      reason: /target must be '3\.1\.2' or '3\.2\.0'/,
     },
     {
       scenario: "non-array servers",
@@ -290,11 +287,15 @@ describe("openApiPlugin configuration errors", () => {
 
 function anItemsSpec(
   overrides: {
+    readonly metadata?: NormalizedSpec["metadata"];
     readonly operations?: readonly NormalizedOperation[];
     readonly responses?: readonly NormalizedResponse[];
   } = {}
 ): NormalizedSpec {
   return aNormalizedSpecWith({
+    ...(overrides.metadata === undefined
+      ? {}
+      : { metadata: overrides.metadata }),
     resources: [
       {
         name: "Items",

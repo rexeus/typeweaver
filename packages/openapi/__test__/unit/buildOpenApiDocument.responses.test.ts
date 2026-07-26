@@ -15,7 +15,7 @@ import {
   aRecursiveTreeNodeSchema,
   aResponseWith,
   aTodoSpecWith,
-  todoApiInfo,
+  todoApiOptions,
 } from "./buildOpenApiDocument.helpers.js";
 
 const OK_STATUS = 200 as NormalizedResponse["statusCode"];
@@ -41,7 +41,7 @@ describe("buildOpenApiDocument canonical response references", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.components?.responses).toEqual({
       TodoResponse: {
@@ -80,7 +80,7 @@ describe("buildOpenApiDocument canonical response references", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.components?.responses).toEqual({
       "Todo/Success~Response": { description: "OK" },
@@ -107,7 +107,7 @@ describe("buildOpenApiDocument inline response bodies", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses).toEqual({
       "200": {
@@ -144,7 +144,7 @@ describe("buildOpenApiDocument inline response bodies", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses).toEqual({
       "200": {
@@ -176,7 +176,7 @@ describe("buildOpenApiDocument raw response fallbacks", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses).toEqual({
       "200": {
@@ -207,7 +207,7 @@ describe("buildOpenApiDocument raw response fallbacks", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses).toEqual({
       "200": {
@@ -240,7 +240,7 @@ describe("buildOpenApiDocument concrete raw pipe responses", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses).toEqual({
       "200": {
@@ -298,7 +298,7 @@ test("registers transform raw pipe outputs without binary fallback", () => {
     ],
   });
 
-  const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+  const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
   expect(result.document.paths["/todos"]?.get?.responses).toEqual({
     "200": {
@@ -396,7 +396,7 @@ describe("buildOpenApiDocument inline response headers", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses).toEqual({
       "200": {
@@ -425,7 +425,7 @@ describe("buildOpenApiDocument inline response headers", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses).toEqual({
       "200": {
@@ -449,7 +449,7 @@ describe("buildOpenApiDocument response status grouping", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses).toEqual({});
     expect(result.warnings).toEqual([
@@ -482,7 +482,7 @@ describe("buildOpenApiDocument response status grouping", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses).toEqual({
       "200": { description: "OkResponse: First\n\nOkResponse: Second" },
@@ -514,7 +514,7 @@ describe("buildOpenApiDocument response status grouping", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses).toEqual({
       "200": { description: "Todo found" },
@@ -543,7 +543,7 @@ describe("buildOpenApiDocument duplicate inline and canonical bodies", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description:
@@ -583,7 +583,7 @@ describe("buildOpenApiDocument duplicate inline and canonical bodies", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description:
@@ -624,7 +624,7 @@ describe("buildOpenApiDocument mixed and deduplicated response bodies", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description:
@@ -662,7 +662,7 @@ describe("buildOpenApiDocument mixed and deduplicated response bodies", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description: "TodoFound: Todo found\n\nTodoCached: Todo cached",
@@ -703,7 +703,7 @@ describe("buildOpenApiDocument duplicate response media types", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description: "TodoFound: Todo found\n\nTodoText: Todo text",
@@ -737,7 +737,7 @@ describe("buildOpenApiDocument duplicate response media types", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description: "PlainText: Plain text\n\nStructuredText: Structured text",
@@ -773,7 +773,7 @@ describe("buildOpenApiDocument duplicate body warnings and bodyless variants", (
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.warnings).toEqual([
       {
@@ -809,7 +809,7 @@ describe("buildOpenApiDocument duplicate body warnings and bodyless variants", (
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description: "OkResponse: OK\n\nNoBody: OK",
@@ -832,7 +832,7 @@ describe("buildOpenApiDocument duplicate body warnings and bodyless variants", (
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description: "OkResponse: OK\n\nNoBody: OK",
@@ -866,7 +866,7 @@ describe("buildOpenApiDocument merged response headers", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description: "OkResponse: OK\n\nCachedResponse: OK",
@@ -897,7 +897,7 @@ describe("buildOpenApiDocument merged response headers", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description: "UpperHeader: OK\n\nLowerHeader: OK",
@@ -931,7 +931,7 @@ describe("buildOpenApiDocument case-insensitive merged header schemas", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description: "StringHeader: OK\n\nNumberHeader: OK",
@@ -974,7 +974,7 @@ describe("buildOpenApiDocument case-insensitive merged header schemas", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description: "DualHeader: OK\n\nOtherHeader: OK",
@@ -1016,7 +1016,7 @@ describe("buildOpenApiDocument differing merged header schemas", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description: "StringHeader: OK\n\nArrayHeader: OK",
@@ -1066,7 +1066,7 @@ describe("buildOpenApiDocument recursive merged header refs", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/trees"]?.get?.responses["200"]).toEqual({
       description: "TreeHeader: OK\n\nTreeSummaryHeader: OK",
@@ -1135,7 +1135,7 @@ describe("buildOpenApiDocument merged header warnings and prototypes", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description: "StringHeader: OK\n\nNumberHeader: OK",
@@ -1186,7 +1186,7 @@ describe("buildOpenApiDocument merged header warnings and prototypes", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description: "WithConstructorHeader: OK\n\nWithoutConstructorHeader: OK",
@@ -1215,7 +1215,7 @@ describe("buildOpenApiDocument omitted merged header variants", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description: "WithHeader: OK\n\nWithoutHeader: OK",
@@ -1249,7 +1249,7 @@ describe("buildOpenApiDocument omitted merged header variants", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description: "DescribedHeader: OK\n\nUndescribedHeader: OK",
@@ -1286,7 +1286,7 @@ describe("buildOpenApiDocument equivalent and optional merged headers", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description: "MinimumFirst: OK\n\nMaximumFirst: OK",
@@ -1316,7 +1316,7 @@ describe("buildOpenApiDocument equivalent and optional merged headers", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description: "RequiredHeader: OK\n\nOptionalHeader: OK",
@@ -1356,7 +1356,7 @@ describe("buildOpenApiDocument merged header descriptions", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description: "OkResponse: OK\n\nValidationError: OK",
@@ -1402,7 +1402,7 @@ describe("buildOpenApiDocument merged header descriptions", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description:
@@ -1439,7 +1439,7 @@ describe("buildOpenApiDocument undescribed merged headers", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
       description: "OkResponse: OK\n\nValidationError: OK",
@@ -1462,7 +1462,7 @@ describe("buildOpenApiDocument response warning paths", () => {
     });
     const normalizedSpec = aTodoSpecWith({ responses: [warningResponse] });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.warnings).toEqual([
       {
@@ -1495,7 +1495,7 @@ describe("buildOpenApiDocument response warning paths", () => {
     });
     const normalizedSpec = aTodoSpecWith({ responses: [warningResponse] });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.warnings).toEqual([
       {
@@ -1535,7 +1535,7 @@ describe("buildOpenApiDocument inline response warning paths", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.warnings).toEqual([
       {
@@ -1577,7 +1577,7 @@ describe("buildOpenApiDocument inline response warning paths", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.warnings).toEqual([
       {
@@ -1624,7 +1624,7 @@ describe("buildOpenApiDocument header schema refs", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/trees"]?.get?.responses["200"]).toEqual({
       description: "OK",

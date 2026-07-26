@@ -9,7 +9,7 @@ const config = {
     [
       "openapi",
       {
-        info: { title: "Todo API", version: "1.0.0" },
+        target: "3.2.0",
         outputPath: "openapi/openapi.json",
       },
     ],

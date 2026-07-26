@@ -13,20 +13,18 @@ import {
   aRecursiveTreeNodeSchema,
   aResponseWith,
   aTodoSpecWith,
-  todoApiInfo,
+  todoApiOptions,
 } from "./buildOpenApiDocument.helpers.js";
 
 describe("buildOpenApiDocument shell and request parameters", () => {
-  test("builds an OpenAPI 3.1.1 document shell for an empty spec", () => {
+  test("builds the default OpenAPI 3.1.2 document shell from spec metadata", () => {
     const normalizedSpec = aNormalizedSpecWith();
 
-    const result = buildOpenApiDocument(normalizedSpec, {
-      info: { title: "Todo API", version: "1.0.0" },
-    });
+    const result = buildOpenApiDocument(normalizedSpec);
 
     expect(result).toEqual({
       document: {
-        openapi: "3.1.1",
+        openapi: "3.1.2",
         jsonSchemaDialect: "https://json-schema.org/draft/2020-12/schema",
         info: { title: "Todo API", version: "1.0.0" },
         tags: [],
@@ -56,7 +54,7 @@ describe("buildOpenApiDocument shell and request parameters", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos/{id}"]?.patch?.parameters).toEqual([
       { name: "id", in: "path", required: true, schema: { type: "string" } },
@@ -98,7 +96,7 @@ describe("buildOpenApiDocument embedded path parameters", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(
       result.document.paths["/files/{123id}.{format}"]?.get?.parameters
@@ -133,7 +131,7 @@ describe("buildOpenApiDocument required request bodies", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
       required: true,
@@ -167,7 +165,7 @@ describe("buildOpenApiDocument required request bodies", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
       required: true,
@@ -193,7 +191,7 @@ describe("buildOpenApiDocument optional request bodies", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
       required: false,
@@ -226,7 +224,7 @@ describe("buildOpenApiDocument optional request bodies", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.components?.schemas?.UploadJsonRequestBody).toEqual({
       type: "string",
@@ -260,17 +258,17 @@ describe("buildOpenApiDocument operation and path ordering", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]).toEqual({
       get: {
         operationId: "listTodos",
-        tags: ["Todos"],
+        tags: [],
         responses: { "200": { description: "OK" } },
       },
       post: {
         operationId: "createTodo",
-        tags: ["Todos"],
+        tags: [],
         responses: { "200": { description: "OK" } },
       },
     });
@@ -287,11 +285,11 @@ describe("buildOpenApiDocument operation and path ordering", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get).toEqual({
       operationId: "getTodo",
-      tags: ["Todos"],
+      tags: [],
       responses: { "200": { description: "OK" } },
     });
     expect(result.warnings).toEqual([]);
@@ -310,7 +308,7 @@ describe("buildOpenApiDocument operation and path ordering", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(
       result.document.paths["/todos/{todoId}/comments/{commentId}"]?.get
@@ -345,7 +343,7 @@ describe("buildOpenApiDocument Typeweaver path syntax", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos/{123id}"]?.get?.parameters).toEqual([
       {
@@ -370,7 +368,7 @@ describe("buildOpenApiDocument Typeweaver path syntax", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(
       result.document.paths["/files/{name}.{ext}"]?.get?.parameters
@@ -403,7 +401,7 @@ describe("buildOpenApiDocument missing path schemas", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos/{id}"]?.get?.parameters).toEqual([
       { name: "id", in: "path", required: true, schema: {} },
@@ -439,7 +437,7 @@ describe("buildOpenApiDocument missing path schemas", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.parameters).toBeUndefined();
     expect(result.warnings).toEqual([
@@ -476,7 +474,7 @@ describe("buildOpenApiDocument query catchalls", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.parameters).toBeUndefined();
     expect(result.warnings).toEqual([
@@ -513,7 +511,7 @@ describe("buildOpenApiDocument query catchalls", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.parameters).toEqual([
       { name: "id", in: "query", required: true, schema: { type: "string" } },
@@ -554,7 +552,7 @@ describe("buildOpenApiDocument header catchalls", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.parameters).toEqual([
       {
@@ -615,7 +613,7 @@ describe("buildOpenApiDocument request body wrappers", () => {
         ],
       });
 
-      const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+      const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
       expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
         required: false,
@@ -646,7 +644,7 @@ describe("buildOpenApiDocument default request bodies", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
       required: false,
@@ -674,7 +672,7 @@ describe("buildOpenApiDocument default request bodies", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
       required: false,
@@ -702,7 +700,7 @@ describe("buildOpenApiDocument default request bodies", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
       required: false,
@@ -734,7 +732,7 @@ describe("buildOpenApiDocument required body semantics", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
       required: true,
@@ -764,7 +762,7 @@ describe("buildOpenApiDocument required body semantics", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
       required: true,
@@ -796,7 +794,7 @@ describe("buildOpenApiDocument optional parameter containers", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.parameters).toEqual([
       {
@@ -826,7 +824,7 @@ describe("buildOpenApiDocument optional parameter containers", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/todos"]?.get?.parameters).toEqual([
       {
@@ -853,7 +851,7 @@ describe("buildOpenApiDocument nested warning paths", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.warnings).toEqual([
       {
@@ -892,7 +890,7 @@ describe("buildOpenApiDocument nested warning paths", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.warnings).toEqual([
       {
@@ -930,7 +928,7 @@ describe("buildOpenApiDocument root warning paths", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.warnings).toEqual([
       {
@@ -991,7 +989,7 @@ describe("buildOpenApiDocument recursive schemas and determinism", () => {
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths["/trees"]?.get?.parameters).toEqual([
       {
@@ -1031,8 +1029,8 @@ describe("buildOpenApiDocument recursive schemas and determinism", () => {
       ],
     });
 
-    const firstResult = buildOpenApiDocument(normalizedSpec, todoApiInfo());
-    const secondResult = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const firstResult = buildOpenApiDocument(normalizedSpec, todoApiOptions());
+    const secondResult = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(secondResult).toEqual(firstResult);
   });
@@ -1052,7 +1050,7 @@ describe("buildOpenApiDocument recursive schemas and determinism", () => {
     ];
     const normalizedSpec = aNormalizedSpecWith({ resources });
 
-    buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(normalizedSpec.resources).toBe(resources);
     expect(normalizedSpec.resources[0]?.operations[0]).toBe(operation);
@@ -1071,13 +1069,13 @@ describe("buildOpenApiDocument normalized paths and canonical responses", () => 
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.document.paths).toEqual({
       "/todos": {
         get: {
           operationId: "getTodo",
-          tags: ["Todos"],
+          tags: [],
           responses: { "200": { description: "OK" } },
         },
       },
@@ -1092,7 +1090,7 @@ describe("buildOpenApiDocument normalized paths and canonical responses", () => 
       ],
     });
 
-    const result = buildOpenApiDocument(normalizedSpec, todoApiInfo());
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
     expect(result.warnings).toEqual([
       {
