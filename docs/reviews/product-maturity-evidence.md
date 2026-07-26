@@ -136,16 +136,24 @@ for a newly generated index file; it is generated output rather than an authored
    `InvalidCharacterError` for `用户:密码`. Commit `73fb710b` encodes credentials as UTF-8 through
    Node `Buffer`; the Command suite passes 19/19 and asserts `Basic 55So5oi3OuWvhueggQ==`.
 9. **Resolved — normalized body warnings lost their actionable locations.** Review comment
-   `3653191687` identified the hard-coded `/resources` issue path. The failing characterization
+   `3653272183` identified the hard-coded `/resources` issue path. The failing characterization
    expected `/resources/0/operations/0/request/body` but received `/resources`. Commit `b539a81a`
    maps request, inline-response, and canonical-response locations to valid normalized-contract JSON
    Pointers while preserving the conservative fallback; Gen passes 336/336 and CLI validation passes
    5/5.
 10. **Resolved — the command generator rejected the non-conflicting `version` operation.** Review
-    comment `3653191692` identified `version` in the reserved-name set although the generated
+    comment `3653272194` identified `version` in the reserved-name set although the generated
     runtime has no matching command or switch. The failing characterization returned
     `TW-PLUGIN-COMMAND-001`. Commit `b539a81a` reserves only the actual `help` command and proves a
     generated `VersionCommand`; Command passes 19/19.
+11. **Disproven — client default headers throw when per-request headers are absent.** Review comment
+    `3653285817` claims spreading an absent `headers` value throws. Under the required Node 24
+    baseline, `{ ...undefined }` evaluates to `{}` without error, so the existing
+    `{ ...applicableDefaults, ...headers }` expression preserves defaults as intended.
+12. **Disproven — generated command header merging throws when the optional request header is
+    absent.** Review comment `3653285822` makes the same claim for `{ ...context.request.header }`.
+    Direct Node 24 characterization returned `{"stable":true}` for `{ stable: true, ...undefined }`;
+    programmatic callers may omit the optional header without a runtime exception.
 
 All actionable review discoveries met the `GOAL.md` promotion gate, were characterized before
 repair, and are closed by the evidence above. At delivered source head `b539a81a` there is no
