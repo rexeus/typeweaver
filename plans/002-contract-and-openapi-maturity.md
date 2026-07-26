@@ -229,7 +229,7 @@ and evidence in `GOAL.md`.
 | Work package                                   | Status | Commit    | Evidence                                                                                                                                                                             |
 | ---------------------------------------------- | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 1. Characterize and design the public contract | DONE   | `dc6251a` | Core type and Gen runtime characterizations failed before behavior changed; ADR 0009 fixes the accepted shape and inheritance table; Core 150/150, Gen 303/303, and docs checks pass |
-| 2. Authoring and normalized metadata/security  | TODO   |           |                                                                                                                                                                                      |
+| 2. Authoring and normalized metadata/security  | DONE   | `a83c79b` | Core 151/151 and Gen 318/318 tests pass; generated 225-file fixture is reproducible; workspace typecheck, docs, lint, format, Effect diagnostics, and Changeset status pass           |
 | 3. Side-effect-free plugin validation          | TODO   |           |                                                                                                                                                                                      |
 | 4. Explicit OpenAPI target profiles            | TODO   |           |                                                                                                                                                                                      |
 | 5. Honest support matrix                       | TODO   |           |                                                                                                                                                                                      |
@@ -248,13 +248,13 @@ and evidence in `GOAL.md`.
 
 ## Done criteria
 
-- [ ] The accepted ADR and implementation agree on all target-contract semantics.
-- [ ] Security is generator-neutral and normalized once.
+- [x] The accepted ADR and implementation agree on all target-contract semantics.
+- [x] Security is generator-neutral and normalized once.
 - [ ] Plugin validation is Effect-native, deterministic, and write-incapable.
 - [ ] Stable issue registries are exhaustive.
 - [ ] Both OpenAPI targets pass an honest validator matrix.
 - [ ] Docs state the support boundary without overclaiming.
-- [ ] Public changes have Changesets and migrations.
+- [x] Public changes have Changesets and migrations.
 - [ ] Full local gate and all GitHub checks pass.
 - [ ] Stage 2 PR targets the Stage 1 branch, is open, green, and unmerged.
 - [ ] Goal and plan index contain Stage 2 evidence.
