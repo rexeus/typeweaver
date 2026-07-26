@@ -28,6 +28,7 @@ const writeMinimalSpecModule = (dir: string): string => {
     filePath,
     [
       "export const spec = {",
+      '  metadata: { title: "Items API", version: "1.0.0" },',
       "  resources: {",
       "    item: {",
       "      operations: [",
@@ -77,9 +78,11 @@ describe("SpecImporter", () => {
       }).pipe(Effect.provide(layer))
     );
 
-    // `isSpecDefinition` accepts any object with a `resources` record; the
-    // assertion mirrors the production guard.
     expect(definition).toMatchObject({
+      metadata: {
+        title: "Items API",
+        version: "1.0.0",
+      },
       resources: {
         item: {
           operations: expect.any(Array) as unknown[],
