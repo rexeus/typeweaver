@@ -99,7 +99,7 @@ the progress log with the relevant commit or artifact.
       out-of-scope features. It does not claim bidirectional Zod/OpenAPI/Effect Schema
       round-tripping.
   - Verify: `pnpm docs:check` and the OpenAPI package tests pass.
-- [ ] Stage 2 has appropriate Changesets and migration notes, a green full gate, and an open green
+- [x] Stage 2 has appropriate Changesets and migration notes, a green full gate, and an open green
       PR targeting the Stage 1 branch.
 
 ### Stage 3: Developer surfaces
@@ -293,11 +293,11 @@ Human approval is required. Never execute autonomously:
 
 ## Stage evidence
 
-| Stage | Status      | Branch                               | Head                                       | PR                                                    | Required checks                                       | Evidence report                                                                         |
-| ----- | ----------- | ------------------------------------ | ------------------------------------------ | ----------------------------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| 1     | DONE        | `feat/product-truth-and-type-safety` | `4be4d3171ba76e8aedadfd6d5eade1a384c6865e` | [#209](https://github.com/rexeus/typeweaver/pull/209) | quality-check, windows-security, CodeQL, Socket: PASS | Iterations 1–8; [CI run](https://github.com/rexeus/typeweaver/actions/runs/30200908126) |
-| 2     | IN PROGRESS | `feat/contract-and-openapi-maturity` |                                            |                                                       |                                                       |                                                                                         |
-| 3     | TODO        | `feat/developer-surfaces`            |                                            |                                                       |                                                       |                                                                                         |
+| Stage | Status      | Branch                               | Head                                       | PR                                                    | Required checks                                       | Evidence report                                                                           |
+| ----- | ----------- | ------------------------------------ | ------------------------------------------ | ----------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 1     | DONE        | `feat/product-truth-and-type-safety` | `4be4d3171ba76e8aedadfd6d5eade1a384c6865e` | [#209](https://github.com/rexeus/typeweaver/pull/209) | quality-check, windows-security, CodeQL, Socket: PASS | Iterations 1–8; [CI run](https://github.com/rexeus/typeweaver/actions/runs/30200908126)   |
+| 2     | DONE        | `feat/contract-and-openapi-maturity` | `7d80366c9766b5d6aaeacca058b960de3445e2a5` | [#211](https://github.com/rexeus/typeweaver/pull/211) | quality-check, windows-security, Socket: PASS         | Iterations 10–20; [CI run](https://github.com/rexeus/typeweaver/actions/runs/30204468432) |
+| 3     | IN PROGRESS | `feat/developer-surfaces`            |                                            |                                                       |                                                       |                                                                                           |
 
 Status values: `TODO`, `IN PROGRESS`, `DONE`, or `BLOCKED: <reason>`.
 
@@ -327,3 +327,4 @@ Append one line after every iteration. Never rewrite earlier entries.
 | 17        | Stage 2  | Characterized a CLI process-test timeout under full-workspace contention              | The full gate passed Effect migration, docs, format, and lint, then `pnpm test` failed only the missing-input process case at Vitest's 5-second default; the same case had passed sequentially in 3.642 seconds                                                               | Apply the established 15-second process-test budget, verify narrowly, and restart the full gate   |
 | 18        | Stage 2  | Applied the established process-test budget to CLI configuration diagnostics          | The focused CLI process file passed 13/13, including both table cases; root `pnpm test` then passed all 23 Turbo tasks under workspace contention, with the previously failing missing-input case completing in 3.753 seconds                                                 | Commit the focused timeout repair, then restart the complete Stage 2 gate                         |
 | 19        | Stage 2  | Completed the full local Stage 2 gate at `978a7d95`                                   | Under Node 24.16.0 and pnpm 10.34.5, every required command from frozen install through Effect migration, docs, format, lint, tests, and `publish:dry` exited 0; the final `git status --short` was empty                                                                     | Commit local gate evidence, verify the remote branch, then push and open the stacked Stage 2 PR   |
+| 20        | Stage 2  | Delivered Stage 2 as open ready PR #211 at exact head `7d80366c`                      | The PR targets `feat/product-truth-and-type-safety`, remains unmerged, has clean merge status, and quality-check, windows-security, and both Socket checks passed at the recorded head                                                                                        | Start Plan 003 Work Package 1 from the exact Stage 2 head                                         |
