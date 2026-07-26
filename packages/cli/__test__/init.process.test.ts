@@ -99,6 +99,22 @@ const collectTree = (root: string): string => {
     .join("\0");
 };
 
+const expectStarterOperations = (target: string): void => {
+  const specSource = fs.readFileSync(
+    path.join(target, "api", "spec", "index.ts"),
+    "utf8"
+  );
+  for (const operationName of [
+    "CreateTodoOperation",
+    "UpdateTodoOperation",
+    "GetTodoOperation",
+    "ListTodoOperation",
+    "QueryTodoOperation",
+  ]) {
+    expect(specSource).toContain(operationName);
+  }
+};
+
 afterEach(() => {
   for (const workspace of workspaces) {
     fs.rmSync(workspace, { recursive: true, force: true });
@@ -184,15 +200,7 @@ describe("built CLI init publication", () => {
         "api/spec/todo/errors/TodoNotFoundError.ts"
       );
 
-      const specSource = fs.readFileSync(
-        path.join(target, "api", "spec", "index.ts"),
-        "utf8"
-      );
-      expect(specSource).toContain("CreateTodoOperation");
-      expect(specSource).toContain("UpdateTodoOperation");
-      expect(specSource).toContain("GetTodoOperation");
-      expect(specSource).toContain("ListTodoOperation");
-      expect(specSource).toContain("QueryTodoOperation");
+      expectStarterOperations(target);
 
       fs.symlinkSync(
         path.join(packageDirectory, "node_modules"),
