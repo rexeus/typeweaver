@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-command",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Generates a command-line API client from a TypeWeaver contract.",
   "type": "module",
   "sideEffects": false,

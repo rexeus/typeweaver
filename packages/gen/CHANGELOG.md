@@ -1,5 +1,98 @@
 # @rexeus/typeweaver-gen
 
+## 0.13.0
+
+### Minor Changes
+
+- 545331b: Add a side-effect-free `typeweaver validate` workflow with stable human and JSON reports, severity
+  thresholds, public Zod report schemas, normalized-spec warning codes, and plugin validation issues.
+- 33c3554: Migrate the runtime, plugin API, and CLI to Effect.
+
+  The plugin API moves from class-based `BasePlugin` extension to V2 records returned by
+  `definePlugin(...)` and `definePluginWithLibCopy(...)`. Lifecycle stages return
+  `Effect<void, PluginExecutionError>` instead of `Promise<void> | void`. Error surfaces in the
+  Effect-enabled packages use `Data.TaggedError`, including lifecycle failures
+  (`PluginExecutionError`) and construction-time misconfiguration (`PluginConfigError`). The CLI is
+  built on `@effect/cli`, with concise error formatting that preserves every failure and defect in
+  composite causes, plus structured log lines. The
+  `GeneratorContext` additionally exposes an Effect-native surface (`writeFileEffect`,
+  `renderTemplateEffect`, `addGeneratedFileEffect`) with the same path-safety and atomic-write
+  guarantees, routed through `@effect/platform`'s `FileSystem` service.
+
+  Generator recovery now keeps publication and cleanup boundaries consistent under defects and Fiber
+  interruption. Spec bundles are written to a scoped staging directory and renamed into place only
+  after Rolldown settles successfully. Because Rolldown does not expose cancellation, an interrupted
+  bundle waits for that Promise to settle before releasing its scope and output lock. Generated-file
+  replacement and tracking form one commit, so a cleanup failure cannot leave a published but
+  untracked file.
+
+  Error payloads that represent multiple failure modes are now discriminated:
+  `PluginDependencyError.issue` distinguishes a missing dependency from a structured dependency-cycle
+  path, and `UnsafeCleanTargetError.details` carries only the fields required by its reason. The
+  generator's `GenerateFailure` type is derived from the actual Effect error channel so cleanup
+  failures cannot silently drift out of the public contract.
+
+  Expected formatter and filesystem failures now stay on Effect's typed error channel. Formatter
+  module loading, formatting, output traversal, clean-target inspection, output-lock I/O, and
+  generated-path probes expose dedicated tagged errors; unexpected programming failures remain
+  defects. The test-only in-memory filesystem follows the same missing-path, parent-directory,
+  rename, realpath, directory-listing, and scoped-temp semantics as the Node filesystem layer.
+
+  CLI option resolution now preserves custom top-level configuration keys when forwarding the final
+  configuration to plugin contexts.
+
+  Programmatic extension APIs with long positional argument lists now use named options objects.
+  Construct `NetworkError` with `new NetworkError(message, { code, method, url, cause })`. Custom
+  `TypeweaverRouter` subclasses pass one exported `TypeweaverRouteOptions` object to `route`, and
+  custom `TypeweaverHono` subclasses pass one exported `TypeweaverHonoRequestOptions` object to
+  `handleRequest`.
+
+  The spec authoring API (`defineSpec`, `defineOperation`, `defineResponse`) is unchanged. Existing
+  specs that use supported Zod schemas keep working byte-for-byte.
+
+  - Effect-native plugin packages and `@rexeus/typeweaver-gen` now expose
+    `peerDependencies.effect: ">=3.22.0 <4"`. The 3.22 lower bound matches the current `@effect/*`
+    runtime family; 3.21.2 would install a second nominally incompatible Effect identity. Plugin
+    authors must install one Effect 3 version satisfying that range.
+
+  - `@rexeus/typeweaver-core`'s `DuplicateResponseNameError` stays a plain `Error` (the authoring
+    package carries no effect dependency) and now exposes the offending `responseName`.
+    `@rexeus/typeweaver-gen` wraps it at the normalization boundary into a tagged
+    `DuplicateResponseNameError`, so the `NormalizationError` union is fully `catchTag`-addressable.
+
+  Breaking changes are documented in the
+  [migration guide](https://github.com/rexeus/typeweaver/blob/main/MIGRATION.md#migrating-from-012x-to-013x).
+  Background on the design decisions:
+
+  - ADR 0003 — Effect-native plugin API (V2)
+  - ADR 0004 — FileSystem service adoption
+  - ADR 0005 — Effect.Service patterns
+  - ADR 0006 — CLI error and log formatting
+  - ADR 0007 — Generator per-call isolation
+
+- a83c79b: Require generator-neutral API metadata in `defineSpec`, add first-class HTTP, API-key, OAuth2, and
+  OpenID Connect security declarations, and normalize effective resource and operation security with
+  explicit inheritance-source information.
+
+  Normalization now rejects duplicate schemes and tags, unknown references and OAuth2 scopes,
+  malformed security URLs, invalid requirement objects, and contradictory HTTP authorization-header
+  schemas with exported structured errors.
+
+- f4fd035: Add the optional Effect-native plugin validation hook, a write-incapable validation context,
+  structured issues, deterministic registry execution, and stable normalization diagnostic codes.
+- 4ccbed1: Add a public in-memory plugin lifecycle test kit and a scoped-Layer plugin helper with deterministic
+  release across success, typed failure, defect, and interruption. Concurrent generation fibers using
+  the same module-cached plugin instance retain isolated Layer ownership.
+
+### Patch Changes
+
+- b539a81: Preserve normalized body-warning locations as concrete validation JSON Pointers, and allow generated
+  API operations named `version` because the command runtime has no conflicting version subcommand.
+- Updated dependencies [33c3554]
+- Updated dependencies [a83c79b]
+- Updated dependencies [450408d]
+  - @rexeus/typeweaver-core@0.13.0
+
 ## 0.12.0
 
 ### Minor Changes

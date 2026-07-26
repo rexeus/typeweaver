@@ -1,6 +1,6 @@
 {
   "name": "@rexeus/typeweaver-effect",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Generates optional Effect-native adapters for TypeWeaver Fetch server handlers.",
   "type": "module",
   "sideEffects": false,

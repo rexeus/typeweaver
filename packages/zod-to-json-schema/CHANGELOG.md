@@ -1,5 +1,7 @@
 # @rexeus/typeweaver-zod-to-json-schema
 
+## 0.13.0
+
 ## 0.12.0
 
 ### Minor Changes
