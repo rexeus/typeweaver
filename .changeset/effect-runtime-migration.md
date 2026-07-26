@@ -65,7 +65,8 @@ unchanged — existing specs keep working byte-for-byte.
   `@rexeus/typeweaver-gen` wraps it at the normalization boundary into a tagged
   `DuplicateResponseNameError`, so the `NormalizationError` union is fully `catchTag`-addressable.
 
-Breaking changes are documented in [MIGRATION.md](../MIGRATION.md#migrating-from-012x-to-10x).
+Breaking changes are documented in the
+[migration guide](https://github.com/rexeus/typeweaver/blob/main/MIGRATION.md#migrating-from-012x-to-10x).
 Background on the design decisions:
 
 - ADR 0003 — Effect-native plugin API (V2)
