@@ -30,14 +30,17 @@ implementation safety and composability while remaining optional for TypeWeaver 
 
 ## Delivery model
 
-The implementation is delivered as three stacked pull requests. The loop may implement, commit,
-push, create or update these pull requests, and repair their CI. It must never merge them.
+The implementation started as three stacked pull requests. After Stages 1 and 2 were green, the
+human owner merged PRs #209 and #211. On 2026-07-26, the owner explicitly accepted those merges and
+authorized Stage 3 to integrate the current `main` and target `main`. The loop may implement,
+commit, push, create or update the remaining Stage 3 pull request, and repair its CI. It must never
+merge that PR.
 
-| Stage | Plan                                         | Branch                               | Pull request base                    |
-| ----- | -------------------------------------------- | ------------------------------------ | ------------------------------------ |
-| 1     | `plans/001-product-truth-and-type-safety.md` | `feat/product-truth-and-type-safety` | `main`                               |
-| 2     | `plans/002-contract-and-openapi-maturity.md` | `feat/contract-and-openapi-maturity` | `feat/product-truth-and-type-safety` |
-| 3     | `plans/003-developer-surfaces.md`            | `feat/developer-surfaces`            | `feat/contract-and-openapi-maturity` |
+| Stage | Plan                                         | Branch                               | Pull request base                                     |
+| ----- | -------------------------------------------- | ------------------------------------ | ----------------------------------------------------- |
+| 1     | `plans/001-product-truth-and-type-safety.md` | `feat/product-truth-and-type-safety` | `main` — human merged as PR #209                      |
+| 2     | `plans/002-contract-and-openapi-maturity.md` | `feat/contract-and-openapi-maturity` | Stage 1 branch — human merged as PR #211              |
+| 3     | `plans/003-developer-surfaces.md`            | `feat/developer-surfaces`            | `main` — explicitly authorized after the prior merges |
 
 After a stage is locally complete:
 
@@ -47,8 +50,9 @@ After a stage is locally complete:
 4. Open a ready-for-review pull request against the base in the table.
 5. Inspect all pull-request checks and repair failures until every required check is green.
 6. Record the PR URL, head commit, checks, and evidence in this file.
-7. Create the next stage branch from the completed current stage head. Do not wait for or perform a
-   merge.
+7. For the historical Stage 1 and 2 deliveries, continue from the completed stage head without
+   performing a merge. For Stage 3, integrate current `main` with a normal merge as explicitly
+   authorized by the owner.
 
 If a named branch or PR already exists, inspect it before changing anything. Reuse it only when it
 represents this goal and has not diverged. Never force-push.
@@ -78,7 +82,8 @@ the progress log with the relevant commit or artifact.
   - Verify: public type-contract tests prove the body types are not `any`, and generated fixtures
     compile on Node, Deno, and Bun.
 - [x] Stage 1 has a Changeset for every changed published contract, migration notes for breaking
-      changes, a green full gate, and an open green PR targeting `main`.
+      changes, a green full gate, and green PR #209 targeting `main`; the owner subsequently merged
+      it.
 
 ### Stage 2: Contract and OpenAPI maturity
 
@@ -99,8 +104,8 @@ the progress log with the relevant commit or artifact.
       out-of-scope features. It does not claim bidirectional Zod/OpenAPI/Effect Schema
       round-tripping.
   - Verify: `pnpm docs:check` and the OpenAPI package tests pass.
-- [x] Stage 2 has appropriate Changesets and migration notes, a green full gate, and an open green
-      PR targeting the Stage 1 branch.
+- [x] Stage 2 has appropriate Changesets and migration notes, a green full gate, and green PR #211;
+      the owner subsequently merged it.
 
 ### Stage 3: Developer surfaces
 
@@ -128,11 +133,12 @@ the progress log with the relevant commit or artifact.
       checks and records an independent review with no unresolved critical or high-confidence
       high-impact finding in scope.
 - [ ] Stage 3 has appropriate Changesets and migration notes, a green full gate, and an open green
-      PR targeting the Stage 2 branch.
+      PR targeting `main`.
 
-### Final stack
+### Final delivery
 
-- [ ] All three PRs are open, use the exact stacked bases above, and are not merged.
+- [ ] PRs #209 and #211 are recorded as human-merged after green checks, while the Stage 3 PR
+      targets `main`, is open and green, and remains unmerged.
 - [ ] Every required check on every PR is green at its recorded head commit.
 - [ ] `plans/README.md` and this file show all three stages as complete with evidence.
 - [ ] No criterion was waived merely because the implementation became difficult. Any intentionally
@@ -214,11 +220,12 @@ The loop must not:
 - Commit one logical work package at a time and include Changesets in the commit that establishes
   the corresponding public behavior.
 - Normal pushes and PR creation/update are authorized.
-- Never merge a PR.
+- Never merge the remaining Stage 3 PR.
 - Never publish packages or create a release.
 - Never delete remote branches.
-- Never change PR bases away from the stack declared above without human approval.
-- If a remote branch is ahead or diverged, stop and report instead of force-pushing.
+- The owner-approved Stage 3 base is `main`; do not change it again without human approval.
+- Historical Stage 1 and 2 remote advancement from their human merges is expected. If the Stage 3
+  remote branch is ahead or diverged, stop and report instead of force-pushing.
 
 ## Iteration policy
 
@@ -281,7 +288,7 @@ into general repository gardening.
   blocker, and the smallest input or authority that would unlock progress.
 - **Drift:** stop if the implementation requires a native Effect `HttpApi` backend, an OpenAPI
   importer, an Effect 4 migration, or another explicit non-goal.
-- **Remote divergence:** stop if a stage branch has diverged and a normal push is impossible.
+- **Remote divergence:** stop if the Stage 3 branch has diverged and a normal push is impossible.
 
 ## Irreversible actions
 
@@ -296,13 +303,13 @@ Human approval is required. Never execute autonomously:
 
 ## Stage evidence
 
-| Stage | Status      | Branch                               | Head                                       | PR                                                    | Required checks                                       | Evidence report                                                                           |
-| ----- | ----------- | ------------------------------------ | ------------------------------------------ | ----------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| 1     | DONE        | `feat/product-truth-and-type-safety` | `4be4d3171ba76e8aedadfd6d5eade1a384c6865e` | [#209](https://github.com/rexeus/typeweaver/pull/209) | quality-check, windows-security, CodeQL, Socket: PASS | Iterations 1–8; [CI run](https://github.com/rexeus/typeweaver/actions/runs/30200908126)   |
-| 2     | DONE        | `feat/contract-and-openapi-maturity` | `7d80366c9766b5d6aaeacca058b960de3445e2a5` | [#211](https://github.com/rexeus/typeweaver/pull/211) | quality-check, windows-security, Socket: PASS         | Iterations 10–20; [CI run](https://github.com/rexeus/typeweaver/actions/runs/30204468432) |
-| 3     | IN PROGRESS | `feat/developer-surfaces`            |                                            |                                                       |                                                       |                                                                                           |
+| Stage | Status             | Branch                               | Head                                       | PR                                                    | Required checks                                       | Evidence report                                                                           |
+| ----- | ------------------ | ------------------------------------ | ------------------------------------------ | ----------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 1     | DONE, HUMAN MERGED | `feat/product-truth-and-type-safety` | `b8861460b501ef19948fa732fc8901c704f6230e` | [#209](https://github.com/rexeus/typeweaver/pull/209) | quality-check, windows-security, CodeQL, Socket: PASS | Iterations 1–9; [CI run](https://github.com/rexeus/typeweaver/actions/runs/30209088039)   |
+| 2     | DONE, HUMAN MERGED | `feat/contract-and-openapi-maturity` | `dfdc3354b24ce627794440703567f15204ab63ef` | [#211](https://github.com/rexeus/typeweaver/pull/211) | quality-check, windows-security, Socket: PASS         | Iterations 10–20; [CI run](https://github.com/rexeus/typeweaver/actions/runs/30209719892) |
+| 3     | IN PROGRESS        | `feat/developer-surfaces`            |                                            |                                                       |                                                       |                                                                                           |
 
-Status values: `TODO`, `IN PROGRESS`, `DONE`, or `BLOCKED: <reason>`.
+Status values: `TODO`, `IN PROGRESS`, `DONE`, `DONE, HUMAN MERGED`, or `BLOCKED: <reason>`.
 
 ## Progress log
 
@@ -341,3 +348,4 @@ Append one line after every iteration. Never rewrite earlier entries.
 | 28        | Stage 3  | Exposed Fetch request cancellation at the existing server boundary                    | Characterization first failed 1/1 because `ServerContext` had no signal; afterward the focused app suite passed 101/101, the full Server suite passed 834/834 across Node/Deno/Bun, 251 generated fixtures reproduced, and server typecheck, docs, format, lint, Changeset, and the exact Effect 3.22 reference check passed                                                                                                                                                      | Commit the server seam, then implement the optional managed Effect adapter and generated types      |
 | 29        | Stage 3  | Completed the optional managed Effect handler adapter                                 | The absent-package characterization failed before implementation; afterward Effect passed 9/9 runtime, generated-type, Fetch-server, lifecycle, typed-error, defect, interruption, span, and static-boundary tests. Server passed 834/834; 255 fixtures reproduced; the packed external consumer compiled and ran with one Effect 3.22 identity; workspace typecheck, strict Effect diagnostics, docs example, build, format, lint, Changeset, and pinned-reference checks passed | Commit Work Package 4, then complete cross-surface public guidance and executable workflow coverage |
 | 30        | Stage 3  | Completed cross-surface guides and executable public workflow coverage                | Characterization found seven missing catalog, workflow-registration, and selection-guide contracts before the change; afterward `pnpm docs:check` verified 17 documentation groups and executed 17/17 built-CLI process tests for plugin scaffolding, `init`, `validate`, and `doctor`, while the explicit surface matrix documents plain Fetch, Hono, generated CLI, and optional Effect choices plus the native `HttpApi` non-goal                                              | Commit Work Package 5, then perform the independent final evidence review                           |
+| 31        | Stage 3  | Accepted the owner-authorized post-merge delivery model                               | The owner confirmed that PRs #209 and #211 were intentionally merged and explicitly authorized Stage 3 to use `main`; live GitHub evidence records green merged heads `b8861460` and `dfdc3354`, and the durable delivery contract now requires the Stage 3 PR to target current `main` while remaining unmerged                                                                                                                                                                  | Commit the contract adjustment, then integrate current `origin/main` without rewriting history      |

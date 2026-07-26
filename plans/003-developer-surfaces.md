@@ -1,9 +1,9 @@
 # Plan 003: Deliver plugin, CLI, generated-command, and Effect surfaces
 
-> **Executor instructions:** Start only after the Stage 2 PR is open and green. Branch from its
-> exact head and target the Stage 2 branch. Read all prior migration notes and the final normalized
-> contract before designing generated APIs. Execute work packages in order and stop instead of
-> improvising.
+> **Executor instructions:** Stage 2 was green and subsequently merged by the human owner. On
+> 2026-07-26, the owner authorized this branch to integrate current `main` and target `main`. Read
+> all prior migration notes and the final normalized contract before designing generated APIs.
+> Execute work packages in order and stop instead of improvising.
 
 ## Status
 
@@ -12,11 +12,11 @@
 - **Priority:** P1
 - **Effort:** XL
 - **Risk:** HIGH
-- **Depends on:** Plan 002 PR open and green
+- **Depends on:** Plan 002 green and human-merged
 - **Category:** plugin DX, CLI, generator, Effect integration, final review
 - **Planned at:** commit `3c97d402`, 2026-07-26
 - **Branch:** `feat/developer-surfaces`
-- **PR base:** `feat/contract-and-openapi-maturity`
+- **PR base:** `main` (owner-authorized after the Stage 1 and 2 merges)
 
 ## Outcome
 
@@ -266,9 +266,8 @@ maintainability, plugin DX, OpenAPI, and documentation. Every critical or high-c
 high-impact finding must be fixed and re-verified or recorded as a true blocker. Lower-priority
 discoveries pass through the `GOAL.md` discovery gate.
 
-Run the full gate, commit, push, and open a ready PR against `feat/contract-and-openapi-maturity`.
-Repair CI until all checks are green. Record all three PR heads/bases/checks in `GOAL.md`. Do not
-merge any PR.
+Run the full gate, commit, push, and open a ready PR against `main`. Repair CI until all checks are
+green. Record all three PR heads/bases/checks in `GOAL.md`. Do not merge the Stage 3 PR.
 
 ## Test plan
 
@@ -292,8 +291,8 @@ merge any PR.
 - [ ] Final review report maps every goal criterion to evidence.
 - [ ] No unresolved critical or high-confidence high-impact finding remains in scope.
 - [ ] Full local gate and all GitHub checks pass.
-- [ ] Stage 3 PR targets the Stage 2 branch, is open, green, and unmerged.
-- [ ] The three-PR stack and plan/goal status are fully recorded.
+- [ ] Stage 3 PR targets `main`, is open, green, and unmerged.
+- [ ] The human-merged Stage 1 and 2 PRs, open Stage 3 PR, and plan/goal status are fully recorded.
 
 ## STOP conditions
 
@@ -306,7 +305,7 @@ Stop and report if:
   of ordinary server users
 - cancellation or scoped-resource release cannot be proven deterministically
 - a packed consumer needs undeclared workspace-only dependencies
-- any PR branch is remote-ahead/diverged or has the wrong stacked base
+- the Stage 3 PR branch is remote-ahead/diverged or targets a base other than authorized `main`
 - final review finds a critical/high issue with no safe in-scope fix
 
 ## Maintenance notes

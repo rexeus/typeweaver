@@ -9,11 +9,11 @@ before changing files.
 
 ## Execution order and status
 
-| Plan                                        | Stage | Title                                                       | Priority | Effort | Depends on            | Status      |
-| ------------------------------------------- | ----- | ----------------------------------------------------------- | -------- | ------ | --------------------- | ----------- |
-| [001](001-product-truth-and-type-safety.md) | 1     | Establish product truth and close type-safety gaps          | P1       | L      | Planning PR merged    | DONE        |
-| [002](002-contract-and-openapi-maturity.md) | 2     | Mature the core contract and OpenAPI projection             | P1       | L      | 001 PR open and green | DONE        |
-| [003](003-developer-surfaces.md)            | 3     | Deliver plugin, CLI, generated-command, and Effect surfaces | P1       | XL     | 002 PR open and green | IN PROGRESS |
+| Plan                                        | Stage | Title                                                       | Priority | Effort | Depends on             | Status      |
+| ------------------------------------------- | ----- | ----------------------------------------------------------- | -------- | ------ | ---------------------- | ----------- |
+| [001](001-product-truth-and-type-safety.md) | 1     | Establish product truth and close type-safety gaps          | P1       | L      | Planning PR merged     | DONE        |
+| [002](002-contract-and-openapi-maturity.md) | 2     | Mature the core contract and OpenAPI projection             | P1       | L      | 001 PR open and green  | DONE        |
+| [003](003-developer-surfaces.md)            | 3     | Deliver plugin, CLI, generated-command, and Effect surfaces | P1       | XL     | 002 human-merged green | IN PROGRESS |
 
 Status values: `TODO`, `IN PROGRESS`, `DONE`, `BLOCKED: <reason>`, or `REJECTED: <reason>`.
 
@@ -38,16 +38,18 @@ The ordering is product-driven:
 - Plugin scaffolding, the generated command client, and the Effect handler adapter build on the
   final normalized contract rather than inventing parallel metadata.
 
-## Pull request stack
+## Pull request delivery
 
-| Plan | Branch                               | Base                                 | Merge policy |
-| ---- | ------------------------------------ | ------------------------------------ | ------------ |
-| 001  | `feat/product-truth-and-type-safety` | `main`                               | Human only   |
-| 002  | `feat/contract-and-openapi-maturity` | `feat/product-truth-and-type-safety` | Human only   |
-| 003  | `feat/developer-surfaces`            | `feat/contract-and-openapi-maturity` | Human only   |
+| Plan | Branch                               | Base                                                 | Merge policy            |
+| ---- | ------------------------------------ | ---------------------------------------------------- | ----------------------- |
+| 001  | `feat/product-truth-and-type-safety` | `main`                                               | Human merged as PR #209 |
+| 002  | `feat/contract-and-openapi-maturity` | Stage 1 branch                                       | Human merged as PR #211 |
+| 003  | `feat/developer-surfaces`            | `main` after explicitly authorized merge integration | Open and unmerged       |
 
-The loop is authorized to commit, push, open or update these PRs, and repair CI. It is never
-authorized to merge, release, publish, force-push, or delete remote state.
+The owner confirmed the Stage 1 and 2 merges and authorized Stage 3 to integrate current `main` and
+target `main`. The loop is authorized to commit, push, open or update the remaining Stage 3 PR, and
+repair CI. It is never authorized to merge that PR, release, publish, force-push, or delete remote
+state.
 
 ## Shared verification contract
 
