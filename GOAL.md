@@ -77,7 +77,7 @@ the progress log with the relevant commit or artifact.
 - [x] Public HTTP body contracts and generated server/Hono declarations contain no implicit `any`.
   - Verify: public type-contract tests prove the body types are not `any`, and generated fixtures
     compile on Node, Deno, and Bun.
-- [ ] Stage 1 has a Changeset for every changed published contract, migration notes for breaking
+- [x] Stage 1 has a Changeset for every changed published contract, migration notes for breaking
       changes, a green full gate, and an open green PR targeting `main`.
 
 ### Stage 2: Contract and OpenAPI maturity
@@ -286,11 +286,11 @@ Human approval is required. Never execute autonomously:
 
 ## Stage evidence
 
-| Stage | Status      | Branch                               | Head | PR  | Required checks | Evidence report |
-| ----- | ----------- | ------------------------------------ | ---- | --- | --------------- | --------------- |
-| 1     | IN PROGRESS | `feat/product-truth-and-type-safety` |      |     |                 |                 |
-| 2     | TODO        | `feat/contract-and-openapi-maturity` |      |     |                 |                 |
-| 3     | TODO        | `feat/developer-surfaces`            |      |     |                 |                 |
+| Stage | Status      | Branch                               | Head                                       | PR                                                    | Required checks                                       | Evidence report                                                                         |
+| ----- | ----------- | ------------------------------------ | ------------------------------------------ | ----------------------------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| 1     | DONE        | `feat/product-truth-and-type-safety` | `4be4d3171ba76e8aedadfd6d5eade1a384c6865e` | [#209](https://github.com/rexeus/typeweaver/pull/209) | quality-check, windows-security, CodeQL, Socket: PASS | Iterations 1–8; [CI run](https://github.com/rexeus/typeweaver/actions/runs/30200908126) |
+| 2     | IN PROGRESS | `feat/contract-and-openapi-maturity` |                                            |                                                       |                                                       |                                                                                         |
+| 3     | TODO        | `feat/developer-surfaces`            |                                            |                                                       |                                                       |                                                                                         |
 
 Status values: `TODO`, `IN PROGRESS`, `DONE`, or `BLOCKED: <reason>`.
 
@@ -309,3 +309,4 @@ Append one line after every iteration. Never rewrite earlier entries.
 | 6         | Stage 1  | Completed Plan 001 Work Package 3 at `6c78fba8`                                 | Characterization failed in all six silent-fallback cases before the fix; afterward 121/121 package tests, package typecheck/build, and `pnpm verify:generated` passed with 225 fixtures unchanged                         | Start Work Package 4 by characterizing every public HTTP body type and supported runtime body   |
 | 7         | Stage 1  | Completed Plan 001 Work Package 4 at `450408d5`                                 | `IsAny` characterization failed 4 Core, 3 Server, and 5 Hono contracts before the fix; afterward 150 Core, 833 Server, and 112 Hono tests passed, 225 fixtures reproduced, and Node/Deno/Bun bundle gates passed          | Reconcile Stage 1 evidence and live issues, then run the complete stage gate                    |
 | 8         | Stage 1  | Reconciled live issues and completed the local Stage 1 gate at `54dd46e`        | Issues #193, #198, and #200 remain open but are implemented on this branch; #199 is superseded by the pinned Effect 3.22 reference tooling; every full-gate command exited 0 under Node 24 and the final status was empty | Commit the local gate evidence, push normally, and open the ready Stage 1 PR against `main`     |
+| 9         | Stage 1  | Delivered Stage 1 as open ready PR #209 at exact head `4be4d317`                | The PR targets `main`, remains unmerged, and quality-check, windows-security, CodeQL, and both Socket checks passed at the recorded head                                                                                  | Start Plan 002 Work Package 1 from the exact Stage 1 head                                       |
