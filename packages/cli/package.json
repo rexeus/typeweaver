@@ -44,15 +44,17 @@
     "test:bundle:deno": "pnpm run build && deno run -A --sloppy-imports dist/entry.mjs generate --output test/outputs/bundle-deno --input ../test-utils/src/test-project/spec/index.ts --plugins clients,aws-cdk,hono",
     "test:bundle:bun": "pnpm run build && bun run dist/entry.mjs generate --output test/outputs/bundle-bun --input ../test-utils/src/test-project/spec/index.ts --plugins clients,aws-cdk,hono",
     "test:bundle:all": "pnpm run test:bundle && pnpm run test:bundle:deno && pnpm run test:bundle:bun",
-    "test:process": "pnpm run build && vitest --run --no-file-parallelism __test__/cli.process.test.ts __test__/pluginAuthoring.serviceFixture.test.ts",
+    "test:process": "pnpm run build && vitest --run --no-file-parallelism __test__/cli.process.test.ts __test__/pluginAuthoring.serviceFixture.test.ts __test__/pluginScaffold.process.test.ts __test__/validate.process.test.ts __test__/doctor.process.test.ts __test__/init.process.test.ts __test__/projectInitializer.rollback.test.ts",
     "test": "vitest --run",
     "test:windows-security": "vitest run --no-file-parallelism __test__/generator.test.ts __test__/generator.unsafeTarget.test.ts __test__/generator.lockfile.test.ts __test__/generator.lifecycle-ordering.test.ts __test__/generator.orphanTempdirs.test.ts __test__/generator.recovery.test.ts __test__/pluginAuthoring.scopedServiceRecovery.test.ts __test__/pluginAuthoring.serviceFixture.test.ts __test__/services/internal/generatorPreflight.test.ts __test__/services/FileSystem.contract.test.ts __test__/specLoader.test.ts __test__/cli.process.test.ts",
-    "test:gen": "pnpm run test:gen:types && pnpm run test:gen:clients && pnpm run test:gen:aws-cdk && pnpm run test:gen:hono && pnpm run test:gen:all",
+    "test:gen": "pnpm run test:gen:types && pnpm run test:gen:clients && pnpm run test:gen:command && pnpm run test:gen:effect && pnpm run test:gen:aws-cdk && pnpm run test:gen:hono && pnpm run test:gen:all",
     "test:gen:types": "tsx src/cli.ts generate --output test/outputs/types --input ../test-utils/src/test-project/spec/index.ts",
     "test:gen:clients": "tsx src/cli.ts generate --output test/outputs/clients --input ../test-utils/src/test-project/spec/index.ts --plugins clients",
+    "test:gen:command": "tsx src/cli.ts generate --output test/outputs/command --input ../test-utils/src/test-project/spec/index.ts --plugins clients,command",
+    "test:gen:effect": "tsx src/cli.ts generate --output test/outputs/effect --input ../test-utils/src/test-project/spec/index.ts --plugins server,effect",
     "test:gen:aws-cdk": "tsx src/cli.ts generate --output test/outputs/aws-cdk --input ../test-utils/src/test-project/spec/index.ts --plugins aws-cdk",
     "test:gen:hono": "tsx src/cli.ts generate --output test/outputs/hono --input ../test-utils/src/test-project/spec/index.ts --plugins hono",
-    "test:gen:all": "tsx src/cli.ts generate --output test/outputs/all --input ../test-utils/src/test-project/spec/index.ts --plugins clients,aws-cdk,hono"
+    "test:gen:all": "tsx src/cli.ts generate --output test/outputs/all --input ../test-utils/src/test-project/spec/index.ts --plugins clients,command,aws-cdk,hono,server,effect"
   },
   "keywords": [
     "api",
@@ -88,7 +90,9 @@
     "@effect/workflow": "^0.19.0",
     "@rexeus/typeweaver-aws-cdk": "workspace:^",
     "@rexeus/typeweaver-clients": "workspace:^",
+    "@rexeus/typeweaver-command": "workspace:^",
     "@rexeus/typeweaver-core": "workspace:^",
+    "@rexeus/typeweaver-effect": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
     "@rexeus/typeweaver-hono": "workspace:^",
     "@rexeus/typeweaver-openapi": "workspace:^",
@@ -97,7 +101,8 @@
     "@types/ws": "8.18.1",
     "effect": "^3.22.0",
     "oxc-transform": "^0.141.0",
-    "rolldown": "^1.2.0"
+    "rolldown": "^1.2.0",
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
     "oxfmt": "catalog:peers"
@@ -113,7 +118,6 @@
     "fast-check": "^4.9.0",
     "hono": "^4.12.32",
     "test-utils": "file:../test-utils",
-    "tsx": "^4.23.1",
-    "zod": "^4.4.3"
+    "tsx": "^4.23.1"
   }
 }

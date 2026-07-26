@@ -1,21 +1,22 @@
 # Plan 003: Deliver plugin, CLI, generated-command, and Effect surfaces
 
-> **Executor instructions:** Start only after the Stage 2 PR is open and green. Branch from its
-> exact head and target the Stage 2 branch. Read all prior migration notes and the final normalized
-> contract before designing generated APIs. Execute work packages in order and stop instead of
-> improvising.
+> **Executor instructions:** Stage 2 was green and subsequently merged by the human owner. On
+> 2026-07-26, the owner authorized this branch to integrate current `main` and target `main`. Read
+> all prior migration notes and the final normalized contract before designing generated APIs.
+> Execute work packages in order and stop instead of improvising.
 
 ## Status
 
 - **Stage:** 3
+- **Status:** DONE
 - **Priority:** P1
 - **Effort:** XL
 - **Risk:** HIGH
-- **Depends on:** Plan 002 PR open and green
+- **Depends on:** Plan 002 green and human-merged
 - **Category:** plugin DX, CLI, generator, Effect integration, final review
 - **Planned at:** commit `3c97d402`, 2026-07-26
 - **Branch:** `feat/developer-surfaces`
-- **PR base:** `feat/contract-and-openapi-maturity`
+- **PR base:** `main` (owner-authorized after the Stage 1 and 2 merges)
 
 ## Outcome
 
@@ -77,6 +78,9 @@ before implementation if package ownership or public names changed.
 
 ### 1. Make third-party plugin authoring a product surface
 
+**Status:** DONE — the public lifecycle test kit, scoped-Layer helper, non-interactive scaffold,
+golden process tests, and packed external consumer are complete.
+
 Expose a supported plugin test kit that can build safe in-memory contexts, run the full lifecycle,
 inspect generated files/issues, and provide test Layers without importing private CLI internals.
 Provide an Effect 3.22-compatible helper for plugins that own a scoped Layer, with one acquisition
@@ -107,6 +111,11 @@ exit path.
 
 ### 2. Complete the core CLI workflow
 
+**Status:** DONE — `validate` and `doctor` provide scoped no-write workflows with stable human/JSON
+reports and public Zod schemas. `init` now publishes a complete Todo starter transactionally,
+requires an explicit target, supports dry-run/force/config-format policy, preserves existing package
+manifests, and restores all target files after injected publication failure.
+
 Replace the `init` stub with an atomic, non-destructive project bootstrap. Implement:
 
 - `validate`: no output writes, human/JSON reports, stable codes, severity threshold, plugin
@@ -135,6 +144,10 @@ pnpm --filter @rexeus/typeweaver typecheck:contracts
 Expected: commands pass success/failure/process tests; the literal “coming soon” no longer exists.
 
 ### 3. Generate command-line API clients
+
+**Status:** DONE — the generated Node.js command client composes the Fetch client, preserves
+contract-derived security and cancellation, exposes stable flags/output/exit codes, and passes real
+server plus packed external-consumer verification.
 
 Create `packages/command` published as `@rexeus/typeweaver-command`. It is a generator plugin
 consuming the normalized contract and generated Fetch client, not a second HTTP implementation.
@@ -173,6 +186,11 @@ Expected: generated CLI process tests pass against a real local server and the p
 in a temporary consumer.
 
 ### 4. Add optional Effect-native server handlers
+
+**Status:** DONE — the Fetch-native server exposes request cancellation, while the optional adapter
+owns one Effect 3.22 `ManagedRuntime` at the application boundary and generates typed handler/error
+mapper records for the existing routers. Runtime, type-contract, real Fetch-server, static-boundary,
+diagnostic, documentation-example, generated-fixture, and packed-consumer proofs are complete.
 
 Create `packages/effect` published as `@rexeus/typeweaver-effect`. Build on the existing
 server/router contract rather than generating a second server stack. The public handler shape should
@@ -217,6 +235,11 @@ construction or undocumented `runPromise` boundary.
 
 ### 5. Complete documentation and product examples
 
+**Status:** DONE — root and package catalogs include the optional Effect adapter, the root guide
+contains an explicit plain Fetch/Hono/generated CLI/Effect selection matrix, and documentation
+verification executes the public plugin-scaffold, `init`, `validate`, and `doctor` process workflows
+in addition to typechecking the generated command and Effect handler fixtures.
+
 Update root/package docs and executable fixtures for:
 
 - third-party plugin from scaffold to generated output
@@ -229,6 +252,16 @@ Document Effect as optional and keep the native `HttpApi` direction in the non-g
 section. Every code path joins `docs:check`.
 
 ### 6. Perform the final evidence review
+
+**Status:** DONE — `docs/reviews/product-maturity-evidence.md` maps every criterion through the
+reviewed Stage 3 source head and records the fresh cross-dimensional review. Both high-impact
+findings, all three actionable findings from the first Copilot pass, and both later authentication
+findings are resolved. The final warning-location and command-name findings are also resolved. The
+two final optional-header object-spread comments are disproven by Node 24 semantics. The later
+runtime-portability comment is outside the verified Node/Deno/Bun contract, whose current runtimes
+all provide the required AbortSignal APIs. The post-review complete local gate passed at `b539a81a`;
+ready PR #212 targets `main`, remains open and unmerged, and all required checks passed at that
+exact delivered source head.
 
 Create an English evidence report under `docs/reviews/` that maps every `GOAL.md` criterion to:
 
@@ -243,9 +276,8 @@ maintainability, plugin DX, OpenAPI, and documentation. Every critical or high-c
 high-impact finding must be fixed and re-verified or recorded as a true blocker. Lower-priority
 discoveries pass through the `GOAL.md` discovery gate.
 
-Run the full gate, commit, push, and open a ready PR against `feat/contract-and-openapi-maturity`.
-Repair CI until all checks are green. Record all three PR heads/bases/checks in `GOAL.md`. Do not
-merge any PR.
+Run the full gate, commit, push, and open a ready PR against `main`. Repair CI until all checks are
+green. Record all three PR heads/bases/checks in `GOAL.md`. Do not merge the Stage 3 PR.
 
 ## Test plan
 
@@ -260,17 +292,17 @@ merge any PR.
 
 ## Done criteria
 
-- [ ] A scaffolded external plugin succeeds using only public APIs.
-- [ ] `init`, `validate`, and `doctor` are real, tested commands.
-- [ ] Generated command client passes real-server and packed-consumer tests.
-- [ ] Effect handlers satisfy runtime ownership, typed error, interruption, and observability
+- [x] A scaffolded external plugin succeeds using only public APIs.
+- [x] `init`, `validate`, and `doctor` are real, tested commands.
+- [x] Generated command client passes real-server and packed-consumer tests.
+- [x] Effect handlers satisfy runtime ownership, typed error, interruption, and observability
       requirements without affecting plain handlers.
-- [ ] All new public APIs have Changesets, migrations, and executable docs.
-- [ ] Final review report maps every goal criterion to evidence.
-- [ ] No unresolved critical or high-confidence high-impact finding remains in scope.
-- [ ] Full local gate and all GitHub checks pass.
-- [ ] Stage 3 PR targets the Stage 2 branch, is open, green, and unmerged.
-- [ ] The three-PR stack and plan/goal status are fully recorded.
+- [x] All new public APIs have Changesets, migrations, and executable docs.
+- [x] Final review report maps every goal criterion to evidence.
+- [x] No unresolved critical or high-confidence high-impact finding remains in scope.
+- [x] Full local gate and all GitHub checks pass.
+- [x] Stage 3 PR targets `main`, is open, green, and unmerged.
+- [x] The human-merged Stage 1 and 2 PRs, open Stage 3 PR, and plan/goal status are fully recorded.
 
 ## STOP conditions
 
@@ -283,7 +315,7 @@ Stop and report if:
   of ordinary server users
 - cancellation or scoped-resource release cannot be proven deterministically
 - a packed consumer needs undeclared workspace-only dependencies
-- any PR branch is remote-ahead/diverged or has the wrong stacked base
+- the Stage 3 PR branch is remote-ahead/diverged or targets a base other than authorized `main`
 - final review finds a critical/high issue with no safe in-scope fix
 
 ## Maintenance notes

@@ -1,0 +1,28 @@
+import { defineSpec } from "@rexeus/typeweaver-core";
+import { CreateTodoOperation } from "./todo/CreateTodoOperation.js";
+import { GetTodoOperation } from "./todo/GetTodoOperation.js";
+import { ListTodoOperation } from "./todo/ListTodoOperation.js";
+import { QueryTodoOperation } from "./todo/QueryTodoOperation.js";
+import { UpdateTodoOperation } from "./todo/UpdateTodoOperation.js";
+
+export const spec = defineSpec({
+  metadata: {
+    title: "Todo API",
+    version: "1.0.0",
+    description: "A TypeWeaver Todo API starter.",
+    tags: [{ name: "todos", description: "Todo management" }],
+  },
+  resources: {
+    todo: {
+      description: "Create, retrieve, update, list, and query todos.",
+      tags: ["todos"],
+      operations: [
+        CreateTodoOperation,
+        UpdateTodoOperation,
+        GetTodoOperation,
+        ListTodoOperation,
+        QueryTodoOperation,
+      ],
+    },
+  },
+});

@@ -1,3 +1,4 @@
+import path from "node:path";
 import { PluginConfigError } from "@rexeus/typeweaver-gen";
 import type {
   Plugin,
@@ -404,6 +405,38 @@ describe("pluginLoader configured plugin reporting", () => {
 });
 
 describe("pluginLoader module resolution", () => {
+  test("resolves a relative plugin path from the current working directory", async () => {
+    const pluginPath = writePluginModule([
+      'export const relativePlugin = { name: "relative-plugin" };',
+    ]);
+    const registeredPlugins: RegisteredPlugin[] = [];
+    const originalWorkingDirectory = process.cwd();
+
+    process.chdir(path.dirname(pluginPath));
+    try {
+      const resolvedPluginUrl = importPathForFile(path.resolve("plugin.mjs"));
+      const { logs } = await runLoadPlugins({
+        registeredPlugins,
+        requiredPlugins: [requiredTypesPlugin()],
+        strategies: ["local"],
+        config: configWithPlugin("./plugin.mjs"),
+        useRealModuleLoader: true,
+      });
+
+      expect(registeredPlugins.map(plugin => plugin.name)).toEqual([
+        "types",
+        "relative-plugin",
+      ]);
+      expectSuccessfulLoadSummary(logs, {
+        count: 1,
+        pluginName: "relative-plugin",
+        source: resolvedPluginUrl,
+      });
+    } finally {
+      process.chdir(originalWorkingDirectory);
+    }
+  });
+
   test("loads a named plugin class exported from a file URL", async () => {
     // Real-fs scenario: this test exercises the absolute-path -> file URL
     // conversion in `toLocalImportSpecifier`, which is module-resolution

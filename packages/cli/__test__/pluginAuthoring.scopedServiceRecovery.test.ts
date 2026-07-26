@@ -6,7 +6,7 @@ import {
   ContextBuilder,
   PluginExecutionError,
   PluginRegistry,
-  definePlugin,
+  defineScopedPlugin,
 } from "@rexeus/typeweaver-gen";
 import type { Plugin } from "@rexeus/typeweaver-gen";
 import { NodeContext } from "@effect/platform-node";
@@ -20,7 +20,6 @@ import {
   Exit,
   Fiber,
   Layer,
-  Scope,
 } from "effect";
 import {
   Formatter,
@@ -46,11 +45,6 @@ type ResourceEvent = {
 
 type ResourceProbe = {
   readonly id: number;
-};
-
-type ProbeRuntime = {
-  readonly scope: Scope.CloseableScope;
-  readonly services: Context.Context<ResourceProbe>;
 };
 
 class ProbeLayerBuildError extends Data.TaggedError("ProbeLayerBuildError")<{
@@ -163,66 +157,11 @@ const makeScopedProbePlugin = (config: {
     resource: ResourceProbe
   ) => Effect.Effect<void, PluginExecutionError>;
 }): Plugin => {
-  let runtime: ProbeRuntime | undefined;
-
-  const withResource = <A, E>(
-    use: (resource: ResourceProbe) => Effect.Effect<A, E>
-  ): Effect.Effect<A, E> =>
-    Effect.suspend(() => {
-      const current = runtime;
-      if (current === undefined) {
-        return Effect.dieMessage(
-          "scoped probe plugin used before successful initialization"
-        );
-      }
-      return Effect.flatMap(ProbeResource, use).pipe(
-        Effect.provide(current.services)
-      );
-    });
-
-  return definePlugin({
+  return defineScopedPlugin({
     name: "scoped-probe",
-
-    initialize: () =>
-      Effect.acquireUseRelease(
-        Scope.make(),
-        scope =>
-          Layer.buildWithScope(config.resourceLayer, scope).pipe(
-            Effect.tap(services =>
-              Effect.sync(() => {
-                runtime = { scope, services };
-              })
-            )
-          ),
-        (scope, exit) =>
-          Exit.isFailure(exit) ? Scope.close(scope, exit) : Effect.void
-      ).pipe(
-        Effect.asVoid,
-        Effect.mapError(
-          cause =>
-            new PluginExecutionError({
-              pluginName: "scoped-probe",
-              phase: "initialize",
-              cause,
-            })
-        )
-      ),
-
-    generate: () => withResource(config.onGenerate),
-
-    finalize: () =>
-      Effect.suspend(() => {
-        const current = runtime;
-        runtime = undefined;
-        if (current === undefined) {
-          return Effect.void;
-        }
-
-        return Effect.flatMap(ProbeResource, config.onFinalize).pipe(
-          Effect.provide(current.services),
-          Effect.ensuring(Scope.close(current.scope, Exit.void))
-        );
-      }),
+    layer: config.resourceLayer,
+    generate: () => Effect.flatMap(ProbeResource, config.onGenerate),
+    finalize: () => Effect.flatMap(ProbeResource, config.onFinalize),
   });
 };
 

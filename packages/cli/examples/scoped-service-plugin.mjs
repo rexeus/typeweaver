@@ -1,24 +1,13 @@
 // @ts-check
 
 import fs from "node:fs";
-import {
-  PluginConfigError,
-  PluginExecutionError,
-  definePlugin,
-} from "@rexeus/typeweaver-gen";
-import { Context, Data, Effect, Exit, Layer, Scope } from "effect";
+import { PluginConfigError, defineScopedPlugin } from "@rexeus/typeweaver-gen";
+import { Context, Data, Effect, Layer } from "effect";
 
 /** @typedef {import("@rexeus/typeweaver-gen").Plugin} Plugin */
 /** @typedef {import("@rexeus/typeweaver-gen").PluginFactory} PluginFactory */
-/** @typedef {import("@rexeus/typeweaver-gen").PluginExecutionPhase} PluginExecutionPhase */
 /** @typedef {{ readonly eventsPath?: string }} ScopedServicePluginOptions */
 /** @typedef {{ readonly record: (event: string) => Effect.Effect<void, EventLogError> }} ScopedResourceService */
-/**
- * @typedef {{
- *   readonly scope: Scope.CloseableScope;
- *   readonly services: Context.Context<ScopedResourceService>;
- * }} ScopedResourceRuntime
- */
 
 const PLUGIN_NAME = "scoped-service";
 
@@ -103,95 +92,31 @@ const parseOptions = options => {
 };
 
 /**
- * @param {PluginExecutionPhase} phase
- * @param {unknown} cause
- */
-const executionError = (phase, cause) =>
-  new PluginExecutionError({
-    pluginName: PLUGIN_NAME,
-    phase,
-    cause,
-  });
-
-/**
- * The standard loader calls plugin factories synchronously. Resource
- * acquisition therefore belongs in `initialize`, while the matching Scope is
- * retained by this per-generation plugin instance until `finalize`.
+ * The standard loader calls plugin factories synchronously.
+ * `defineScopedPlugin` owns one Layer/Scope for this per-generation plugin
+ * instance and provides `ScopedResource` to every service-dependent hook.
  *
  * @type {PluginFactory}
  */
 export const scopedServicePlugin = (options = {}) => {
   const { eventsPath } = parseOptions(options);
-  /** @type {ScopedResourceRuntime | undefined} */
-  let runtime;
 
-  /**
-   * @param {string} event
-   * @returns {Effect.Effect<void, EventLogError>}
-   */
-  const recordWithResource = event =>
-    Effect.suspend(() => {
-      const current = runtime;
-      if (current === undefined) {
-        return Effect.dieMessage(
-          "scoped-service plugin used before successful initialization"
-        );
-      }
-
-      return Effect.flatMap(ScopedResource, resource =>
-        resource.record(event)
-      ).pipe(Effect.provide(current.services));
-    });
-
-  return definePlugin({
+  return defineScopedPlugin({
     name: PLUGIN_NAME,
-
-    initialize: () =>
-      Effect.acquireUseRelease(
-        Scope.make(),
-        scope =>
-          Layer.buildWithScope(scopedResourceLayer(eventsPath), scope).pipe(
-            Effect.tap(services =>
-              Effect.sync(() => {
-                runtime = { scope, services };
-              })
-            )
-          ),
-        (scope, exit) =>
-          Exit.isFailure(exit) ? Scope.close(scope, exit) : Effect.void
-      ).pipe(
-        Effect.asVoid,
-        Effect.mapError(cause => executionError("initialize", cause))
-      ),
+    layer: scopedResourceLayer(eventsPath),
 
     generate: context =>
       Effect.gen(function* () {
-        yield* recordWithResource("generate");
+        const resource = yield* ScopedResource;
+        yield* resource.record("generate");
         yield* context.writeFileEffect(
           "scoped-service/session.txt",
           "generated through a scoped service\n"
         );
-      }).pipe(Effect.mapError(cause => executionError("generate", cause))),
+      }),
 
     finalize: () =>
-      Effect.suspend(() => {
-        const current = runtime;
-        runtime = undefined;
-        if (current === undefined) {
-          return Effect.void;
-        }
-
-        return Effect.flatMap(ScopedResource, resource =>
-          resource.record("finalize")
-        ).pipe(
-          Effect.provide(current.services),
-          // Plugin.finalize does not receive the generator's Exit. This pattern
-          // therefore owns exit-independent resources and closes them with a
-          // neutral Exit after the plugin's final work has completed.
-          Effect.ensuring(Scope.close(current.scope, Exit.void)),
-          Effect.mapError(cause => executionError("finalize", cause))
-        );
-      }),
+      Effect.flatMap(ScopedResource, resource => resource.record("finalize")),
   });
 };
 

@@ -1,18 +1,22 @@
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { Command, Options } from "@effect/cli";
 import { NodeRuntime } from "@effect/platform-node";
-import { Effect } from "effect";
+import { Effect, Logger, LogLevel } from "effect";
+import {
+  cliPackageVersion,
+  cliZodVersion,
+  pluginScaffoldTemplateDirectory,
+  projectInitTemplateDirectory,
+} from "./cliMetadata.js";
+import {
+  runAddPlugin,
+  runDoctor,
+  runGenerate,
+  runInit,
+  runValidate,
+} from "./commands.js";
 import { ProductionLayer, VerboseLayer } from "./effectRuntime.js";
 import { formatErrorForCli } from "./formatErrorForCli.js";
-import { runGenerate } from "./runGenerate.js";
 import { isOnlyValidationErrorCause } from "./validationErrorFilter.js";
-
-const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-const packageJson = JSON.parse(
-  fs.readFileSync(path.join(moduleDir, "../package.json"), "utf-8")
-) as { readonly version: string };
 
 const inputOption = Options.text("input").pipe(
   Options.withAlias("i"),
@@ -75,6 +79,68 @@ const verboseOption = Options.boolean("verbose", { ifPresent: true }).pipe(
   Options.optional
 );
 
+const pluginNameOption = Options.text("name").pipe(
+  Options.withAlias("n"),
+  Options.withDescription("lowercase kebab-case plugin name")
+);
+
+const pluginTargetOption = Options.text("target").pipe(
+  Options.withAlias("t"),
+  Options.withDescription("new directory that will receive the plugin scaffold")
+);
+
+const initTargetOption = Options.text("target").pipe(
+  Options.withAlias("t"),
+  Options.withDescription("project directory to create or update explicitly")
+);
+
+const forceOption = Options.boolean("force", { ifPresent: true }).pipe(
+  Options.withDescription(
+    "overwrite conflicting starter files in a non-empty target"
+  ),
+  Options.optional
+);
+
+const dryRunOption = Options.boolean("dry-run", { ifPresent: true }).pipe(
+  Options.withDescription("plan the project without writing files"),
+  Options.optional
+);
+
+const configFormatOption = Options.choice("config-format", [
+  "mjs",
+  "cjs",
+  "js",
+]).pipe(
+  Options.withDescription("module format for the generated configuration"),
+  Options.optional
+);
+
+const jsonOption = Options.boolean("json", { ifPresent: true }).pipe(
+  Options.withDescription("emit a stable machine-readable JSON report"),
+  Options.optional
+);
+
+const strictOption = Options.boolean("strict", { ifPresent: true }).pipe(
+  Options.withDescription("fail validation when warnings are present"),
+  Options.optional
+);
+
+const failOnOption = Options.choice("fail-on", [
+  "error",
+  "warning",
+  "info",
+]).pipe(
+  Options.withDescription("lowest issue severity that exits non-zero"),
+  Options.optional
+);
+
+const deepOption = Options.boolean("deep", { ifPresent: true }).pipe(
+  Options.withDescription(
+    "bundle, normalize, and validate the spec without writing project output"
+  ),
+  Options.optional
+);
+
 const generateCommand = Command.make(
   "generate",
   {
@@ -95,22 +161,101 @@ const generateCommand = Command.make(
   )
 );
 
-const initCommand = Command.make("init", {}, () =>
-  Effect.logInfo("The init command is coming soon!")
+const initCommand = Command.make(
+  "init",
+  {
+    target: initTargetOption,
+    force: forceOption,
+    "dry-run": dryRunOption,
+    "config-format": configFormatOption,
+    json: jsonOption,
+  },
+  args =>
+    runInit(args, {
+      currentWorkingDirectory: process.cwd(),
+      templateDir: projectInitTemplateDirectory,
+      typeweaverVersion: cliPackageVersion,
+      zodVersion: cliZodVersion,
+    })
 ).pipe(
-  Command.withDescription("Initialize a new typeweaver project (coming soon)")
+  Command.withDescription(
+    "Create an atomic TypeWeaver Todo starter in an explicit target"
+  )
+);
+
+const validateCommand = Command.make(
+  "validate",
+  {
+    input: inputOption,
+    config: configOption,
+    plugins: pluginsOption,
+    strict: strictOption,
+    "fail-on": failOnOption,
+    json: jsonOption,
+  },
+  runValidate
+).pipe(
+  Command.withDescription(
+    "Validate a spec and its plugins without writing project output"
+  )
+);
+
+const doctorCommand = Command.make(
+  "doctor",
+  {
+    input: inputOption,
+    output: outputOption,
+    config: configOption,
+    plugins: pluginsOption,
+    deep: deepOption,
+    json: jsonOption,
+  },
+  runDoctor
+).pipe(
+  Command.withDescription(
+    "Diagnose the runtime, project configuration, plugins, and output safety"
+  )
+);
+
+const addPluginCommand = Command.make(
+  "plugin",
+  {
+    name: pluginNameOption,
+    target: pluginTargetOption,
+  },
+  args =>
+    runAddPlugin(args, {
+      currentWorkingDirectory: process.cwd(),
+      templateDir: pluginScaffoldTemplateDirectory,
+      typeweaverVersion: cliPackageVersion,
+    })
+).pipe(
+  Command.withDescription(
+    "Create a tested TypeWeaver plugin package in a new directory"
+  )
+);
+
+const addCommand = Command.make("add").pipe(
+  Command.withDescription("Add a TypeWeaver developer surface"),
+  Command.withSubcommands([addPluginCommand])
 );
 
 const cli = Command.make("typeweaver").pipe(
   Command.withDescription(
     "Type-safe API framework with code generation for TypeScript"
   ),
-  Command.withSubcommands([generateCommand, initCommand])
+  Command.withSubcommands([
+    generateCommand,
+    initCommand,
+    validateCommand,
+    doctorCommand,
+    addCommand,
+  ])
 );
 
 const run = Command.run(cli, {
   name: "typeweaver",
-  version: packageJson.version,
+  version: cliPackageVersion,
 });
 
 // `@effect/cli` scopes options to commands, but the chosen Layer is fixed
@@ -123,9 +268,13 @@ const run = Command.run(cli, {
 // so normalize that public compatibility flag before parsing.
 const cliArgs = process.argv.map(arg => (arg === "-V" ? "--version" : arg));
 const isVerbose = cliArgs.some(arg => arg === "--verbose");
+const isJson = cliArgs.some(arg => arg === "--json");
+const isReadOnlyDiagnostic = cliArgs.some(
+  arg => arg === "validate" || arg === "doctor"
+);
 const runtimeLayer = isVerbose ? VerboseLayer : ProductionLayer;
 
-const program = run(cliArgs).pipe(
+const programWithErrorBoundary = run(cliArgs).pipe(
   // @effect/cli surfaces help requests and validation issues as
   // `ValidationError`. The framework already prints a friendly message and
   // sets the exit code for those — skip the custom formatter so we do not
@@ -143,9 +292,13 @@ const program = run(cliArgs).pipe(
       // eslint-disable-next-line no-console
       console.error(formatErrorForCli(cause));
     });
-  }),
-  Effect.provide(runtimeLayer)
+  })
 );
+const program = (
+  isJson || isReadOnlyDiagnostic
+    ? programWithErrorBoundary.pipe(Logger.withMinimumLogLevel(LogLevel.None))
+    : programWithErrorBoundary
+).pipe(Effect.provide(runtimeLayer));
 
 NodeRuntime.runMain(program, {
   disableErrorReporting: true,

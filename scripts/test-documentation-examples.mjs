@@ -42,6 +42,7 @@ try {
         id: groupId,
         documents: ["README.md"],
         fixtures: ["examples/invalid.ts"],
+        runtimeFixtures: ["examples/missing.process.test.ts"],
       },
     ],
   });
@@ -57,10 +58,22 @@ try {
     ),
     `invalid fixture unexpectedly passed:\n${invalidResult.failures.join("\n")}`
   );
+  assert(
+    invalidResult.failures.some(failure =>
+      failure.includes(
+        "missing runtime fixture examples/missing.process.test.ts"
+      )
+    ),
+    `missing runtime fixture unexpectedly passed:\n${invalidResult.failures.join("\n")}`
+  );
 
   writeFileSync(
     path.join(fixtureRoot, "examples", "invalid.ts"),
     'export const valid: string = "checked";\n'
+  );
+  writeFileSync(
+    path.join(fixtureRoot, "examples", "missing.process.test.ts"),
+    'export const runtimeFixture = "registered";\n'
   );
   const validResult = verifyDocumentationExamples({
     workspaceRoot: fixtureRoot,

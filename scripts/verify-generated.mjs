@@ -105,7 +105,7 @@ try {
       "--input",
       path.join(testProjectRoot, "spec", "index.ts"),
       "--plugins",
-      "clients,aws-cdk,hono,server,openapi",
+      "clients,command,aws-cdk,hono,server,effect,openapi",
     ],
     {
       cwd: path.join(workspaceRoot, "packages", "test-utils"),

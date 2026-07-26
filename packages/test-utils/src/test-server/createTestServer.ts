@@ -32,6 +32,10 @@ export type TestServerOptions = {
   readonly throwSpecimenError?: Error | ITypedHttpResponse;
   /** Custom response to return for all requests (bypasses handlers). */
   readonly customResponses?: IHttpResponse;
+  /** Delay the GetTodo handler for cancellation integration tests. */
+  readonly getTodoDelayMs?: number;
+  /** Observe an accepted request before routing it. */
+  readonly onRequest?: (request: Request) => void;
 } & Omit<TypeweaverHonoOptions<unknown>, "requestHandlers">;
 
 /**
@@ -57,7 +61,8 @@ export function createTestHono(options?: TestServerOptions): Hono {
   const app = new Hono();
   const adapter = new HonoAdapter();
 
-  app.use("*", async (_c, next) => {
+  app.use("*", async (context, next) => {
+    options?.onRequest?.(context.req.raw);
     if (options?.customResponses) {
       return adapter.toResponse(options.customResponses);
     }
@@ -66,7 +71,10 @@ export function createTestHono(options?: TestServerOptions): Hono {
   });
 
   const todoRouter = new TodoHono({
-    requestHandlers: new TodoHandlers(options?.throwTodoError),
+    requestHandlers: new TodoHandlers(
+      options?.throwTodoError,
+      options?.getTodoDelayMs
+    ),
     ...options,
   });
   const authRouter = new AuthHono({

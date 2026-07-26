@@ -89,7 +89,7 @@ describe("documented scoped-service plugin", () => {
     expect(guide).not.toContain("Effect.Effect<Plugin");
     expect(guide).toContain("scoped-service-plugin.mjs");
     expect(guide).toContain("exit-independent resources");
-    expect(guide).toContain("Exit.void");
+    expect(guide).toContain("defineScopedPlugin");
   });
 
   test(

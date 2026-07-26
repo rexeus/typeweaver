@@ -109,6 +109,18 @@ instead — same guarantees, typed error channels, I/O through `@effect/platform
 service. See [`docs/plugin-authoring.md`](./docs/plugin-authoring.md) for the full V2 contract and
 [ADR 0003](./docs/adr/0003-effect-native-plugin-api.md) for the design rationale.
 
+Plugin authors no longer need to copy the CLI's private fake contexts or manually retain
+`Layer.buildWithScope` state. Use `createPluginTestKit` for path-safe in-memory lifecycle tests and
+`defineScopedPlugin` for one plugin-owned Layer per generation call. The helper releases the Layer
+after success, typed failure, defect, and interruption, isolates concurrent calls that share a
+module-cached plugin instance, and keeps ordinary plugin hooks at `R = never`.
+
+For a new V2 package, run
+`typeweaver add plugin --name <lowercase-kebab-name> --target <new-directory>`. This additive,
+non-interactive command creates a strict TypeScript package with public lifecycle tests, a
+configurable factory example, and an integration generation fixture. It refuses an existing target;
+there is no migration required for existing plugin packages.
+
 ### 2. CLI on `@effect/cli` (BREAKING for invocation in scripts)
 
 The CLI is now built on `@effect/cli`. Three observable changes:
@@ -144,6 +156,37 @@ working directory, a workspace root, or any directory carrying a workspace marke
 Generating next to the spec source (e.g. `--output spec` with `--input spec/index.ts`) remains
 allowed with `--no-clean`; only the destructive clean step refuses targets that contain the input
 file.
+
+The additive `typeweaver validate` command runs normalization and plugin validation without writing
+project output. Its `--json` mode emits a versioned report accepted by the public
+`ValidationReportSchema`; `--fail-on` and `--strict` control the deterministic exit threshold.
+Existing `generate` invocations do not need to change.
+
+The additive `typeweaver doctor` command checks the supported runtime and package-manager workflow,
+configuration and spec resolution, plugin availability, output safety, Effect compatibility, and
+optional formatter availability. `--deep` performs the same scoped no-output validation used by
+`validate`. Human and JSON reports use stable `TW-DOCTOR-*` codes; JSON output is accepted by the
+public `DoctorReportSchema`. Warnings retain exit code 0, while any failed check exits 1. Existing
+scripts do not need to change unless they choose to add this preflight.
+
+The former placeholder `typeweaver init` command is now an additive, non-interactive project
+bootstrap. It requires `--target`, refuses a non-empty directory unless `--force` is explicit, and
+publishes a complete Todo starter transactionally. `--dry-run` reports the planned files without
+writing, `--config-format mjs|cjs|js` selects the generated config module, and `--json` emits a
+versioned report accepted by the public `InitReportSchema`. An existing `package.json` is always
+preserved; `--force` replaces only conflicting starter files. If the filesystem also prevents a
+rollback, the failure reports the retained recovery path instead of deleting the only backup.
+Existing `generate`, `validate`, and `doctor` scripts do not need to change.
+
+The new `@rexeus/typeweaver-command` package is additive. Install it together with
+`@rexeus/typeweaver-clients` and add both `"clients"` and `"command"` to the plugin list when you
+want a generated Node.js command-line client. Existing generated clients require no migration. The
+new plugin emits one command per operation, uses only declared contract security, and forwards
+cancellation into the existing Fetch transport. Its executable is `command/cli.mts`; compile the
+generated NodeNext sources and run the emitted `command/cli.mjs`. See the
+[command package guide](./packages/command/README.md) for deterministic flags, body sources, output,
+exit codes, and representability limits. An operation named `version` remains valid because the
+generated runtime has no version subcommand; only `help` is reserved.
 
 ### 3. Internal API changes (informational; only programmatic consumers)
 
@@ -204,6 +247,21 @@ If you imported the generator programmatically rather than through the CLI:
 - `NetworkError` now receives its metadata through a `NetworkErrorOptions` object. Replace
   `new NetworkError(message, code, method, url, { cause })` with
   `new NetworkError(message, { code, method, url, cause })`.
+- Generated client `ApiClientProps` add optional `defaultHeaders`, `defaultQuery`, and `signal`
+  fields. They require no migration; command values override defaults case-insensitively for HTTP
+  header names, and an external signal is combined with `timeoutMs` when both are present.
+- Generated command Basic credentials are UTF-8 encoded before Base64 conversion. This requires no
+  migration and permits non-Latin usernames and passwords without the former `btoa` failure.
+- `normalizedSpecWarningToIssue(warning, spec?)` accepts an optional normalized spec. Passing it
+  narrows body-warning paths to the affected request, inline response, or canonical response; the
+  one-argument call remains source-compatible.
+- Generated server `ServerContext` now includes the incoming Fetch request's `signal`. Existing
+  handlers require no migration; cancellation-aware handlers and adapters can forward this
+  `AbortSignal` to their runtime boundary.
+- Projects may opt into `@rexeus/typeweaver-effect` by generating `server,effect`, creating one
+  `createEffectHandlerRuntime(applicationLayer)` beside the application, adapting generated resource
+  handlers, and calling `runtime.dispose()` during graceful shutdown. Existing Promise handlers and
+  the ordinary server package do not require Effect or any migration.
 - Custom `TypeweaverRouter` subclasses now call the protected `route` method with one exported
   `TypeweaverRouteOptions` object instead of the previous positional arguments.
 - Custom `TypeweaverHono` subclasses now call the protected `handleRequest` method with one exported
@@ -388,13 +446,12 @@ For **plugin authors**:
 - [ ] Wrap sync emitter bodies in `Effect.try` with `PluginExecutionError` mapping (or use
       `definePluginWithLibCopy`, which does it for you).
 - [ ] Declare `effect >=3.22.0 <4` as a `peerDependency`.
-- [ ] Run plugin tests through `Effect.runSync(plugin.generate(context))` against a fake context
-      (see [`docs/plugin-authoring.md`](./docs/plugin-authoring.md) for the pattern).
+- [ ] Replace hand-built full `GeneratorContext` fakes with `createPluginTestKit`; inspect its
+      issues, generated files, contents, and finalizer failures.
 - [ ] Verify your plugin is discoverable: a named export matching the plugin name, a default export
       of a `Plugin` record, or a default export of a `(options?) => Plugin` factory.
 - [ ] Keep configurable factories pure and synchronous. If the plugin owns a long-lived Effect
-      service, acquire its private Layer/Scope in `initialize`, retain the built service context in
-      that per-generation plugin instance, and close the Scope from `finalize` (see the
+      service, use `defineScopedPlugin` with a per-generation Layer (see the
       [scoped-service example](./packages/cli/examples/scoped-service-plugin.mjs)). This supports
       exit-independent cleanup; `finalize` does not receive the generator's original `Exit`, so
       transactional finalizers need a different integration boundary.

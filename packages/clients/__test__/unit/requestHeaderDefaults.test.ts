@@ -1,7 +1,7 @@
 import type { NormalizedRequest } from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { getRequestHeaderDefaults } from "../../src/requestHeaderDefaults.js";
+import { getRequestHeaderDefaults } from "../../src/index.js";
 
 describe("getRequestHeaderDefaults", () => {
   test("extracts exact string literal header defaults", () => {

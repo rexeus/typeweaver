@@ -1,0 +1,12 @@
+import { defineResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+import { z } from "zod";
+
+export const ForbiddenError = defineResponse({
+  name: "ForbiddenError",
+  description: "The operation is forbidden.",
+  statusCode: HttpStatusCode.FORBIDDEN,
+  body: z.object({
+    code: z.literal("FORBIDDEN"),
+    message: z.literal("The operation is forbidden."),
+  }),
+});

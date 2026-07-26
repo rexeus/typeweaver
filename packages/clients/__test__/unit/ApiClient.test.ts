@@ -452,6 +452,22 @@ describe("ApiClient query string construction", () => {
 
     expect(getFetchCall(mockFetch).url).toBe("http://localhost:3000/todos");
   });
+
+  test("merges default query values while request values take precedence", async () => {
+    const { mockFetch } = await sendRaw(
+      {
+        path: "/todos",
+        query: { page: "2", filter: "open" },
+      },
+      {
+        defaultQuery: { apiKey: "secret", page: "1" },
+      }
+    );
+
+    expect(getFetchCall(mockFetch).url).toBe(
+      "http://localhost:3000/todos?apiKey=secret&page=2&filter=open"
+    );
+  });
 });
 
 describe("ApiClient path parameters", () => {
@@ -644,7 +660,55 @@ describe("ApiClient path parameter replacement", () => {
   });
 });
 
+describe("ApiClient default headers", () => {
+  test("treats header names case-insensitively when request headers override defaults", async () => {
+    const { mockFetch } = await sendRaw(
+      {
+        header: {
+          authorization: "Bearer request",
+        },
+      },
+      {
+        defaultHeaders: {
+          Authorization: "Bearer default",
+          "X-Default": "default",
+        },
+      }
+    );
+
+    expect([
+      ...new Headers(getFetchCall(mockFetch).init.headers).entries(),
+    ]).toStrictEqual([
+      ["authorization", "Bearer request"],
+      ["x-default", "default"],
+    ]);
+  });
+});
+
 describe("ApiClient request serialization", () => {
+  test("merges default headers while request headers take precedence", async () => {
+    const { mockFetch } = await sendRaw(
+      {
+        header: {
+          Authorization: "Bearer request",
+          "X-Request": "request",
+        },
+      },
+      {
+        defaultHeaders: {
+          Authorization: "Bearer default",
+          "X-Default": "default",
+        },
+      }
+    );
+
+    expect(getFetchCall(mockFetch).init.headers).toStrictEqual({
+      Authorization: "Bearer request",
+      "X-Default": "default",
+      "X-Request": "request",
+    });
+  });
+
   test.each([
     { case: "undefined", body: undefined },
     { case: "null", body: null },
@@ -736,6 +800,18 @@ describe("ApiClient request serialization", () => {
       expect(getFetchCall(mockFetch).init.headers).toStrictEqual(header);
     }
   );
+});
+
+describe("ApiClient cancellation", () => {
+  test("forwards an external AbortSignal to fetch", async () => {
+    const abortController = new AbortController();
+    const { mockFetch } = await sendRaw(
+      { method: HttpMethod.GET },
+      { signal: abortController.signal }
+    );
+
+    expect(getFetchCall(mockFetch).init.signal).toBe(abortController.signal);
+  });
 });
 
 describe("ApiClient request serialization failures", () => {

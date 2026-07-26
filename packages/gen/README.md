@@ -143,12 +143,32 @@ until `types`'s same stage has completed.
 `outputDir`, writer, template renderer, or generated-file tracker. Validation returns `Issue`
 records with a stable code, severity, message, JSON Pointer, optional source location and hint, and
 fixability metadata. Spec-normalization failures use the exhaustive `SPEC_ISSUE_REGISTRY`
-`TW-SPEC-001` through `TW-SPEC-021` namespace.
+`TW-SPEC-001` through `TW-SPEC-021` namespace. Normalized body warnings retain concrete request,
+inline-response, or canonical-response JSON Pointers when a normalized spec is supplied to
+`normalizedSpecWarningToIssue`.
+
+### Scoped services and public plugin tests
+
+Use `defineScopedPlugin` for a plugin-owned Effect Layer. It acquires one Layer per generation,
+provides the service requirements to lifecycle hooks, isolates concurrent calls that share one
+plugin instance, and releases the Scope after success, typed failure, defect, or interruption.
+
+`createPluginTestKit` runs the complete plugin lifecycle against path-safe in-memory contexts. Its
+result exposes structured issues, generated paths, file contents, the final normalized spec, and
+typed best-effort finalizer failures. The kit also builds individual public contexts for focused
+hook tests.
+
+<!-- docs-example: plugin-test-kit -->
+
+The executable [plugin-test-kit fixture](../cli/examples/documentation/plugin-test-kit.ts) combines
+`defineScopedPlugin`, a test Layer, and the public harness without importing CLI internals.
 
 ## 🔧 What it exports
 
-- **Plugin authoring:** `definePlugin`, `definePluginWithLibCopy`, `copyPluginLibFiles`, and the
-  `Plugin` and `PluginFactory` types.
+- **Plugin authoring:** `definePlugin`, `defineScopedPlugin`, `definePluginWithLibCopy`,
+  `copyPluginLibFiles`, and the `Plugin`, `PluginFactory`, and `ScopedPluginDefinition` types.
+- **Plugin testing:** `createPluginTestKit` plus `PluginTestKit`, `PluginTestResult`, and the
+  inspectable in-memory file types.
 - **Lifecycle contexts:** the write-incapable `PluginValidationContext`, plus `PluginContext` and
   `GeneratorContext` for write-capable stages and per-resource path resolution.
 - **Diagnostics:** `Issue`, `Severity`, `SPEC_ISSUE_REGISTRY`, `getSpecErrorEntry`, and
@@ -165,8 +185,8 @@ fixability metadata. Spec-normalization failures use the exhaustive `SPEC_ISSUE_
 ## 📚 Authoring a plugin
 
 The README covers the minimum surface. For the full guide — `GeneratorContext` helpers, factory
-plugins with options, exit-independent scoped services owned by a synchronous factory, lib-copy
-internals, the `depends` ordering rules, and a testable fake-context pattern — see
+plugins with options, exit-independent scoped services, lib-copy internals, the `depends` ordering
+rules, and the public in-memory lifecycle test kit — see
 [`docs/plugin-authoring.md`](https://github.com/rexeus/typeweaver/tree/main/docs/plugin-authoring.md).
 
 Background reading on the API shape:

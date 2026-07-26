@@ -16,6 +16,8 @@ export * from "./DownloadFileContentResponse.js";
 
 export * from "./DownloadFileContentResponseValidator.js";
 
+export * from "./EffectFileApiHandler.js";
+
 export * from "./FileClient.js";
 
 export * from "./FileHono.js";

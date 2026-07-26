@@ -92,15 +92,28 @@ Typeweaver is modular by design. Install only what you need.
 | Package                                                    | Description                                                                 | Version                                                         |
 | ---------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | [@rexeus/typeweaver-clients](./packages/clients/README.md) | HTTP client generators using the Fetch API                                  | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients) |
+| [@rexeus/typeweaver-command](./packages/command/README.md) | Generates a Node.js command-line client by composing the Fetch client       | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-command) |
+| [@rexeus/typeweaver-effect](./packages/effect/README.md)   | Adds optional Effect handlers to the Fetch-native server                    | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-effect)  |
 | [@rexeus/typeweaver-hono](./packages/hono/README.md)       | Generates type-safe Hono routers with validation and error handling         | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)    |
 | [@rexeus/typeweaver-server](./packages/server/README.md)   | Generates a lightweight, dependency-free server with routing and middleware | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-server)  |
 | [@rexeus/typeweaver-aws-cdk](./packages/aws-cdk/README.md) | AWS CDK constructs for API Gateway V2                                       | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
 | [@rexeus/typeweaver-openapi](./packages/openapi/README.md) | Generates validated OpenAPI 3.1.2 and 3.2.0 JSON documents                  | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-openapi) |
 
-> **Server vs Hono?** The [Server plugin](./packages/server/README.md) is a dependency-free, Fetch
-> API-native server — ideal for Bun, Deno, and Cloudflare Workers. The
-> [Hono plugin](./packages/hono/README.md) generates routers for the Hono framework — ideal if you
-> already use Hono or want its middleware ecosystem.
+### Choose a developer surface
+
+| Need                                              | Choose                            | What it adds                                                                 |
+| ------------------------------------------------- | --------------------------------- | ---------------------------------------------------------------------------- |
+| Portable Fetch request handlers without a runtime | Plain Fetch server (`server`)     | Dependency-free routing for Node.js, Bun, Deno, and worker-style runtimes    |
+| Hono middleware and router integration            | Hono (`hono`)                     | Generated Hono routers over the same request and response contract           |
+| An operator-facing Node.js executable             | Generated CLI (`clients,command`) | One command per operation over the generated Fetch client                    |
+| Typed Effect failures, Layers, and interruption   | Effect adapter (`server,effect`)  | Effect-returning handlers adapted into the existing Fetch-native server      |
+| A typed API for application code                  | Fetch client (`clients`)          | Request validation, contract-derived security, and a composable Fetch client |
+
+The Effect adapter is optional: ordinary Fetch server, Hono, and client users do not install Effect.
+It is an adapter over the plain server rather than a second router or schema system. A native Effect
+`HttpApi` backend remains explicitly outside the current product contract.
+
+<!-- docs-example: generated-command -->
 
 ### Internal packages
 
@@ -114,6 +127,20 @@ More plugins are planned. Want to build your own? Start with the
 ---
 
 ## 🚀 Quickstart
+
+Create a complete starter, validate its contract, and generate a Fetch client:
+
+```bash
+npx typeweaver init --target ./todo-api
+cd todo-api
+pnpm install
+pnpm validate
+pnpm generate
+```
+
+<!-- docs-example: init-workflow -->
+
+The manual workflow below shows how the same contract is assembled.
 
 1. **Author a spec entrypoint:**
 

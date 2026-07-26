@@ -1,5 +1,10 @@
 import { isNormalizationError } from "../errors/NormalizationError.js";
 import type { NormalizationError } from "../errors/NormalizationError.js";
+import type {
+  NormalizedSpec,
+  NormalizedSpecWarning,
+  NormalizedSpecWarningLocation,
+} from "../NormalizedSpec.js";
 import type { Issue, JsonPointer } from "./Issue.js";
 
 type NormalizationErrorTag = NormalizationError["_tag"];
@@ -123,6 +128,26 @@ export const SPEC_ISSUE_REGISTRY = {
   },
 } as const satisfies Readonly<Record<NormalizationErrorTag, SpecIssueEntry>>;
 
+export const NORMALIZED_SPEC_WARNING_REGISTRY = {
+  "ambiguous-content-type-header": {
+    code: "TW-SPEC-101",
+    summary: "Content-Type header allows multiple media types",
+    hint: "Use one literal Content-Type value when the body representation is media-type specific.",
+  },
+  "missing-content-type-header": {
+    code: "TW-SPEC-102",
+    summary: "Body contract has no Content-Type header",
+    hint: "Declare a literal Content-Type header so generators can represent the body media type.",
+  },
+  "raw-body-media-type-fallback": {
+    code: "TW-SPEC-103",
+    summary: "Raw body uses a fallback media type",
+    hint: "Declare a literal Content-Type header matching the raw body representation.",
+  },
+} as const satisfies Readonly<
+  Record<NormalizedSpecWarning["code"], SpecIssueEntry>
+>;
+
 const NORMALIZATION_ERROR_PATHS = {
   ContradictorySecurityHeaderError: "/resources",
   DerivedResponseCycleError: "/responses",
@@ -168,6 +193,87 @@ export const normalizationErrorToIssue = (
     severity: "error",
     message: error.message,
     path: pathForNormalizationError(error),
+    hint: entry.hint,
+    fixable: false,
+  };
+};
+
+const canonicalResponseWarningPath = (
+  location: NormalizedSpecWarningLocation,
+  spec: NormalizedSpec
+): JsonPointer | undefined => {
+  if (location.responseName === undefined) return undefined;
+  const responseIndex = spec.responses.findIndex(
+    response =>
+      response.name === location.responseName &&
+      (location.statusCode === undefined ||
+        response.statusCode === location.statusCode)
+  );
+  return responseIndex < 0 ? undefined : `/responses/${responseIndex}/body`;
+};
+
+const operationWarningPath = (
+  location: NormalizedSpecWarningLocation,
+  spec: NormalizedSpec
+): JsonPointer | undefined => {
+  if (
+    location.resourceName === undefined ||
+    location.operationId === undefined
+  ) {
+    return undefined;
+  }
+  const resourceIndex = spec.resources.findIndex(
+    resource => resource.name === location.resourceName
+  );
+  const resource = spec.resources[resourceIndex];
+  if (resource === undefined) return undefined;
+  const operationIndex = resource.operations.findIndex(
+    operation => operation.operationId === location.operationId
+  );
+  const operation = resource.operations[operationIndex];
+  if (operation === undefined) return undefined;
+  const operationPath: JsonPointer = `/resources/${resourceIndex}/operations/${operationIndex}`;
+  if (location.part === "request.body") {
+    return `${operationPath}/request/body`;
+  }
+  const responseIndex = operation.responses.findIndex(
+    response =>
+      response.source === "inline" &&
+      response.responseName === location.responseName &&
+      (location.statusCode === undefined ||
+        response.response.statusCode === location.statusCode)
+  );
+  return responseIndex < 0
+    ? undefined
+    : `${operationPath}/responses/${responseIndex}/response/body`;
+};
+
+const pathForNormalizedSpecWarning = (
+  warning: NormalizedSpecWarning,
+  spec: NormalizedSpec | undefined
+): JsonPointer => {
+  if (spec === undefined) {
+    return warning.location.part === "request.body"
+      ? "/resources"
+      : "/responses";
+  }
+  return (
+    operationWarningPath(warning.location, spec) ??
+    canonicalResponseWarningPath(warning.location, spec) ??
+    (warning.location.part === "request.body" ? "/resources" : "/responses")
+  );
+};
+
+export const normalizedSpecWarningToIssue = (
+  warning: NormalizedSpecWarning,
+  spec?: NormalizedSpec
+): Issue => {
+  const entry = NORMALIZED_SPEC_WARNING_REGISTRY[warning.code];
+  return {
+    code: entry.code,
+    severity: "warning",
+    message: warning.message,
+    path: pathForNormalizedSpecWarning(warning, spec),
     hint: entry.hint,
     fixable: false,
   };

@@ -13,9 +13,16 @@ const requiredGroupIds = [
   "generation-cli-config",
   "minimal-plugin",
   "scoped-service-plugin",
+  "plugin-test-kit",
+  "plugin-scaffold",
+  "init-workflow",
+  "validate-workflow",
+  "doctor-workflow",
   "generated-client",
+  "generated-command",
   "hono-handler",
   "fetch-server-handler",
+  "effect-handler",
   "openapi-options",
   "zod-to-ts",
 ];
@@ -31,7 +38,11 @@ if (result.failures.length > 0) {
 }
 
 for (const group of result.groups) {
+  const fixtures = [
+    ...group.fixtures,
+    ...(Array.isArray(group.runtimeFixtures) ? group.runtimeFixtures : []),
+  ];
   process.stdout.write(
-    `Documentation example verified: ${group.id} (${group.fixtures.join(", ")})\n`
+    `Documentation example verified: ${group.id} (${fixtures.join(", ")})\n`
   );
 }

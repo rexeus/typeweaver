@@ -24,6 +24,8 @@ export * from "./AuthHttpApiRoutes.js";
 
 export * from "./AuthRouter.js";
 
+export * from "./EffectAuthApiHandler.js";
+
 export * from "./RefreshTokenRequest.js";
 
 export * from "./RefreshTokenRequestCommand.js";

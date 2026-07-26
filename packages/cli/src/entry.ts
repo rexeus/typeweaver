@@ -3,7 +3,9 @@ import { detectRuntime, getRuntimeDisplayName } from "./runtime.js";
 const main = async (): Promise<void> => {
   const runtime = detectRuntime();
 
-  console.info(`Running on ${getRuntimeDisplayName(runtime)}`);
+  if (!process.argv.includes("--json")) {
+    console.info(`Running on ${getRuntimeDisplayName(runtime)}`);
+  }
 
   await import("./cli.js");
 };

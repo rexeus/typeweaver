@@ -1,0 +1,71 @@
+{
+  "name": "@rexeus/typeweaver-effect",
+  "version": "0.12.0",
+  "description": "Generates optional Effect-native adapters for TypeWeaver Fetch server handlers.",
+  "type": "module",
+  "sideEffects": false,
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "package.json",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "format": "oxfmt",
+    "build": "tsdown",
+    "test": "vitest --run",
+    "prepack": "npm run build",
+    "preversion": "npm run build"
+  },
+  "keywords": [
+    "api",
+    "effect",
+    "generator",
+    "server",
+    "typeweaver"
+  ],
+  "author": "Dennis Wentzien <dw@rexeus.com>",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rexeus/typeweaver.git",
+    "directory": "packages/effect"
+  },
+  "bugs": {
+    "url": "https://github.com/rexeus/typeweaver/issues"
+  },
+  "homepage": "https://github.com/rexeus/typeweaver#readme",
+  "peerDependencies": {
+    "@rexeus/typeweaver-core": "workspace:^",
+    "@rexeus/typeweaver-gen": "workspace:^",
+    "@rexeus/typeweaver-server": "workspace:^",
+    "effect": "catalog:peers"
+  },
+  "devDependencies": {
+    "@rexeus/typeweaver-core": "workspace:^",
+    "@rexeus/typeweaver-gen": "workspace:^",
+    "@rexeus/typeweaver-server": "workspace:^",
+    "effect": "^3.22.0",
+    "test-utils": "file:../test-utils"
+  },
+  "dependencies": {
+    "polycase": "^1.1.0"
+  }
+}

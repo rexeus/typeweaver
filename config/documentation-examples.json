@@ -33,9 +33,43 @@
       "fixtures": ["packages/cli/examples/scoped-service-plugin.mjs"]
     },
     {
+      "id": "plugin-test-kit",
+      "documents": ["docs/plugin-authoring.md", "packages/gen/README.md"],
+      "fixtures": ["packages/cli/examples/documentation/plugin-test-kit.ts"]
+    },
+    {
+      "id": "plugin-scaffold",
+      "documents": ["docs/plugin-authoring.md", "packages/cli/README.md"],
+      "fixtures": [],
+      "runtimeFixtures": ["packages/cli/__test__/pluginScaffold.process.test.ts"]
+    },
+    {
+      "id": "init-workflow",
+      "documents": ["README.md", "packages/cli/README.md"],
+      "fixtures": [],
+      "runtimeFixtures": ["packages/cli/__test__/init.process.test.ts"]
+    },
+    {
+      "id": "validate-workflow",
+      "documents": ["packages/cli/README.md"],
+      "fixtures": [],
+      "runtimeFixtures": ["packages/cli/__test__/validate.process.test.ts"]
+    },
+    {
+      "id": "doctor-workflow",
+      "documents": ["packages/cli/README.md"],
+      "fixtures": [],
+      "runtimeFixtures": ["packages/cli/__test__/doctor.process.test.ts"]
+    },
+    {
       "id": "generated-client",
       "documents": ["packages/clients/README.md"],
       "fixtures": ["packages/cli/examples/documentation/generated-client.ts"]
+    },
+    {
+      "id": "generated-command",
+      "documents": ["README.md", "packages/cli/README.md", "packages/command/README.md"],
+      "fixtures": ["packages/cli/examples/documentation/generated-command.ts"]
     },
     {
       "id": "hono-handler",
@@ -46,6 +80,11 @@
       "id": "fetch-server-handler",
       "documents": ["packages/server/README.md"],
       "fixtures": ["packages/cli/examples/documentation/fetch-server-handler.ts"]
+    },
+    {
+      "id": "effect-handler",
+      "documents": ["packages/effect/README.md"],
+      "fixtures": ["packages/cli/examples/documentation/effect-handler.ts"]
     },
     {
       "id": "openapi-options",

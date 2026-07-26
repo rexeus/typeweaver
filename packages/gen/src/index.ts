@@ -11,3 +11,4 @@ export * from "./helpers/routeSort.js";
 export * from "./helpers/templateEngine.js";
 export * from "./runtime/MainLayer.js";
 export * from "./services/index.js";
+export * from "./testing/index.js";

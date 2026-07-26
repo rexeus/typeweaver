@@ -1,0 +1,37 @@
+import {
+  defineOperation,
+  defineResponse,
+  HttpMethod,
+  HttpStatusCode,
+} from "@rexeus/typeweaver-core";
+import {
+  ConflictError,
+  ForbiddenError,
+  InternalServerError,
+  UnauthorizedError,
+  ValidationError,
+} from "../shared/errors/index.js";
+import { createTodoBodySchema, todoSchema } from "./schemas.js";
+
+export const CreateTodoOperation = defineOperation({
+  operationId: "createTodo",
+  summary: "Create a todo",
+  method: HttpMethod.POST,
+  path: "/todos",
+  request: {
+    body: createTodoBodySchema,
+  },
+  responses: [
+    defineResponse({
+      name: "CreateTodoSuccess",
+      description: "The todo was created.",
+      statusCode: HttpStatusCode.CREATED,
+      body: todoSchema,
+    }),
+    ValidationError,
+    UnauthorizedError,
+    ForbiddenError,
+    ConflictError,
+    InternalServerError,
+  ],
+});

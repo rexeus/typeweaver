@@ -82,6 +82,20 @@ describe("resolveGenerateOptions", () => {
 
     expect(options.config.plugins).toEqual(["clients", "hono", "server"]);
   });
+
+  test("ignores empty CLI plugin entries", () => {
+    const options = resolveGenerateOptions(
+      {
+        input: "./spec.ts",
+        output: "./generated",
+        plugins: "clients, ,hono,,server,",
+      },
+      { plugins: ["config-plugin"] },
+      workspacePath
+    );
+
+    expect(options.config.plugins).toEqual(["clients", "hono", "server"]);
+  });
 });
 
 describe("resolveGenerateOptions validation", () => {

@@ -198,6 +198,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
 
     const ctx: ServerContext = {
       request: httpRequest,
+      signal: request.signal,
       state: new StateMap(),
       route: match
         ? {

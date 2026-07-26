@@ -51,7 +51,10 @@ import type {
 import type { HonoTodoApiHandler } from "../../test-project/output/todo/TodoHono.js";
 
 export class TodoHandlers implements HonoTodoApiHandler {
-  public constructor(private readonly throwError?: Error | ITypedHttpResponse) {
+  public constructor(
+    private readonly throwError?: Error | ITypedHttpResponse,
+    private readonly getTodoDelayMs?: number
+  ) {
     //
   }
 
@@ -134,6 +137,9 @@ export class TodoHandlers implements HonoTodoApiHandler {
   public async handleGetTodoRequest(
     request: IGetTodoRequest
   ): Promise<GetTodoResponse> {
+    if (this.getTodoDelayMs !== undefined) {
+      await new Promise(resolve => setTimeout(resolve, this.getTodoDelayMs));
+    }
     if (this.throwError) {
       throw this.throwError;
     }

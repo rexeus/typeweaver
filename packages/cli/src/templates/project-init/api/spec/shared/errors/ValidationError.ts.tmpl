@@ -1,0 +1,13 @@
+import { defineResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+import { z } from "zod";
+
+export const ValidationError = defineResponse({
+  name: "ValidationError",
+  description: "The request is invalid.",
+  statusCode: HttpStatusCode.BAD_REQUEST,
+  body: z.object({
+    code: z.literal("VALIDATION_ERROR"),
+    message: z.literal("The request is invalid."),
+    issues: z.array(z.unknown()),
+  }),
+});

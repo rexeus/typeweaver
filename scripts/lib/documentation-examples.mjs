@@ -71,7 +71,12 @@ const validateGroup = (group, index) => {
   if (typeof group !== "object" || group === null || Array.isArray(group)) {
     return {
       failures: [`${fallbackId} must be an object`],
-      group: { id: fallbackId, documents: [], fixtures: [] },
+      group: {
+        id: fallbackId,
+        documents: [],
+        fixtures: [],
+        runtimeFixtures: [],
+      },
     };
   }
 
@@ -86,6 +91,14 @@ const validateGroup = (group, index) => {
     field: "fixtures",
     value: group.fixtures,
   });
+  const runtimeFixtures =
+    group.runtimeFixtures === undefined
+      ? { failures: [], values: [] }
+      : validateStringArray({
+          groupId: id,
+          field: "runtimeFixtures",
+          value: group.runtimeFixtures,
+        });
 
   return {
     failures: [
@@ -94,11 +107,13 @@ const validateGroup = (group, index) => {
         : []),
       ...documents.failures,
       ...fixtures.failures,
+      ...runtimeFixtures.failures,
     ],
     group: {
       id,
       documents: documents.values,
       fixtures: fixtures.values,
+      runtimeFixtures: runtimeFixtures.values,
     },
   };
 };
@@ -155,6 +170,9 @@ const validateManifest = (manifest, manifestPath, requiredGroupIds) => {
 
 const validateGroupFiles = (group, workspaceRoot) => {
   const marker = `<!-- docs-example: ${group.id} -->`;
+  const runtimeFixtures = Array.isArray(group.runtimeFixtures)
+    ? group.runtimeFixtures
+    : [];
   const documentFailures = group.documents.flatMap(document => {
     const documentPath = path.resolve(workspaceRoot, document);
     if (!existsSync(documentPath)) {
@@ -167,8 +185,11 @@ const validateGroupFiles = (group, workspaceRoot) => {
   const fixtureFailures = group.fixtures
     .filter(fixture => !existsSync(path.resolve(workspaceRoot, fixture)))
     .map(fixture => `${group.id}: missing fixture ${fixture}`);
+  const runtimeFixtureFailures = runtimeFixtures
+    .filter(fixture => !existsSync(path.resolve(workspaceRoot, fixture)))
+    .map(fixture => `${group.id}: missing runtime fixture ${fixture}`);
 
-  return [...documentFailures, ...fixtureFailures];
+  return [...documentFailures, ...fixtureFailures, ...runtimeFixtureFailures];
 };
 
 const parseTypeScriptConfig = (workspaceRoot, tsconfig) => {

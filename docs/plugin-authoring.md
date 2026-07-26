@@ -12,6 +12,23 @@ section in [`MIGRATION.md`](../MIGRATION.md).
 
 ## Quick start
 
+The supported starter path creates a tested package without prompts or private test helpers:
+
+```sh
+npx typeweaver add plugin --name hello --target ./typeweaver-plugin-hello
+cd typeweaver-plugin-hello
+pnpm install
+pnpm check
+```
+
+<!-- docs-example: plugin-scaffold -->
+
+The target must be a new directory and the name must use lowercase kebab-case. The generated
+`pnpm check` command typechecks the public API contract, runs in-memory lifecycle tests, builds the
+package, and invokes the built plugin through TypeWeaver against an included integration spec. Its
+README documents validation diagnostics, the lifecycle, and the Effect 3.22.0 development baseline
+with peer range `>=3.22.0 <4`.
+
 A minimal plugin is a record returned by `definePlugin(...)`:
 
 ```ts
@@ -358,40 +375,50 @@ at the plugin boundary.
 
 ---
 
-## Exit-independent scoped services inside a synchronous factory
+## Exit-independent scoped services
 
 The standard loader accepts a `Plugin` record or a synchronous `(options?: PluginConfig) => Plugin`
-factory. It does not execute Effect-returning factories. This keeps construction deterministic:
-validate options and create per-generation closure state in the factory, but perform no I/O and
-acquire no resources there.
+factory. It does not execute Effect-returning factories. Validate options synchronously, then use
+`defineScopedPlugin` when the plugin owns a long-lived service such as an HTTP client, connection
+pool, cache, or watcher:
 
-When a plugin needs a long-lived service whose cleanup is unconditional (an HTTP client, connection
-pool, cache, or watcher), keep every lifecycle method at `R = never` with this ownership pattern:
+```ts
+import { Context, Effect, Layer } from "effect";
+import { defineScopedPlugin } from "@rexeus/typeweaver-gen";
 
-1. Export a synchronous `PluginFactory`. The loader creates one plugin instance per generation, so
-   its private state is not shared between concurrent runs.
-2. In `initialize`, create a private `Scope` and build the service `Layer` with
-   `Layer.buildWithScope`. If initialization fails or is interrupted, close the Scope before the
-   failure leaves `initialize`; otherwise retain the Scope and built service context in the
-   instance.
-3. In later hooks, provide the retained service context to the hook Effect.
-4. In `finalize`, finish the plugin's service-dependent work first and close the Scope in an
-   `Effect.ensuring` finalizer. The generator invokes `finalize` exactly once for every successfully
-   initialized plugin, including after failure, defect, or interruption elsewhere in the pipeline.
+type Session = { readonly write: (value: string) => Effect.Effect<void> };
+const Session = Context.GenericTag<Session>("my-plugin/Session");
+const sessionLayer: Layer.Layer<Session> = Layer.succeed(Session, {
+  write: value => Effect.logInfo(value),
+});
 
-`Plugin.finalize` does not receive the generator's original `Exit`, so the private Scope is closed
-with `Exit.void`. This pattern is intentionally limited to **exit-independent resources**. Do not
-use it for a transaction or any resource whose finalizer must choose commit versus rollback from the
-pipeline outcome; supporting that would require a future plugin-lifecycle contract that carries the
-original `Exit`.
+export const sessionPlugin = defineScopedPlugin({
+  name: "session",
+  layer: sessionLayer,
+  generate: context =>
+    Effect.flatMap(Session, session =>
+      session
+        .write("generating")
+        .pipe(Effect.zipRight(context.writeFileEffect("session.txt", "ready\n")))
+    ),
+});
+```
 
-Do not provide the resource Layer independently to each lifecycle hook: that would acquire and
-release a different resource for every hook. Do not call `Effect.runSync`, `Effect.runPromise`, or
-create a local runtime inside the plugin.
+`defineScopedPlugin` builds the Layer exactly once in `initialize`, provides its services to
+`initialize`, `collectResources`, `generate`, and `finalize`, and closes the retained Scope after
+success, typed failure, defect, or interruption. Failed or interrupted Layer construction closes its
+provisional Scope before the failure escapes. Concurrent generation fibers that share the same
+module-cached plugin instance retain independent Layers. The returned ordinary `Plugin` still
+exposes `R = never` at every lifecycle boundary.
+
+The helper owns **exit-independent resources**. `Plugin.finalize` does not receive the generator's
+original `Exit`, so do not use it for a transaction whose finalizer must choose commit versus
+rollback. Do not provide the Layer independently to each hook and do not create a local runtime
+inside the plugin.
 
 The complete [`scoped-service-plugin.mjs`](../packages/cli/examples/scoped-service-plugin.mjs)
-example implements this pattern. It is JavaScript with `checkJs`, is compiled during verification,
-and is exercised through the built CLI. Its fixture proves the resource sequence
+example uses the helper. It is JavaScript with `checkJs`, is compiled during verification, and is
+exercised through the built CLI. Its fixture proves the resource sequence
 `acquire → generate → finalize → release`.
 
 <!-- docs-example: scoped-service-plugin -->
@@ -438,55 +465,29 @@ explicit absolute path in `typeweaver.config.js`.
 
 ## Testing plugins
 
-The V2 contract is testable without a real runtime. Put emission logic behind the narrowest context
-slice it needs, then test that function with a complete fake for that small contract:
+Use `createPluginTestKit` instead of copying CLI test internals or hand-constructing the large
+`GeneratorContext` contract. The kit runs validation, initialization, resource collection,
+generation, and finalization against a path-safe in-memory context:
 
 ```ts
-import { definePlugin, PluginExecutionError } from "@rexeus/typeweaver-gen";
-import type { GeneratorContext } from "@rexeus/typeweaver-gen";
-import { Effect } from "effect";
-import { describe, expect, test } from "vitest";
+const kit = createPluginTestKit({ normalizedSpec, templates });
+const result = Effect.runSync(kit.run(plugin));
 
-type HelloContext = Pick<GeneratorContext, "writeFile">;
-
-export const generateHello = (context: HelloContext): void => {
-  context.writeFile("hello.txt", "hello from a typeweaver plugin\n");
-};
-
-export const helloPlugin = definePlugin({
-  name: "hello",
-  generate: context =>
-    Effect.try({
-      try: () => generateHello(context),
-      catch: cause =>
-        new PluginExecutionError({
-          pluginName: "hello",
-          phase: "generate",
-          cause,
-        }),
-    }),
-});
-
-describe("generateHello", () => {
-  test("writes the greeting", () => {
-    const writtenFiles: Array<{ path: string; content: string }> = [];
-    const context: HelloContext = {
-      writeFile: (path, content) => {
-        writtenFiles.push({ path, content });
-      },
-    };
-
-    generateHello(context);
-
-    expect(writtenFiles).toEqual([
-      { path: "hello.txt", content: "hello from a typeweaver plugin\n" },
-    ]);
-  });
-});
+expect(result.issues).toEqual([]);
+expect(result.generatedFiles).toEqual(["hello.txt"]);
+expect(result.files).toEqual([{ path: "hello.txt", content: "hello from a typeweaver plugin\n" }]);
 ```
 
-The pattern keeps your tests fast (no disk I/O), deterministic (no real runtime), and focused on the
-plugin's behavior rather than the orchestration around it.
+The kit exposes `buildPluginContext`, `buildValidationContext`, and `buildGeneratorContext` for
+focused hook tests. `files.read()` and `files.list()` inspect output without disk I/O.
+`finalizeErrors()` exposes typed best-effort finalizer failures while defects and interruption keep
+their normal Effect semantics. Service-dependent plugins pass a test `Layer` to
+`defineScopedPlugin`; no private `ContextBuilder`, CLI service, Scope, or runtime is required.
+
+<!-- docs-example: plugin-test-kit -->
+
+The complete [plugin-test-kit fixture](../packages/cli/examples/documentation/plugin-test-kit.ts)
+typechecks a scoped plugin, a test Layer, and the public lifecycle harness together.
 
 ---
 

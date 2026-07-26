@@ -56,10 +56,12 @@ Now you are ready to start building! Check out [Quickstart](#-get-started)
 | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | [@rexeus/typeweaver-types](https://github.com/rexeus/typeweaver/tree/main/packages/types/README.md)     | Plugin for request/response types and validation - the foundation for all other plugins and always included | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-types)   |
 | [@rexeus/typeweaver-clients](https://github.com/rexeus/typeweaver/tree/main/packages/clients/README.md) | Plugin for HTTP clients using fetch                                                                         | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients) |
+| [@rexeus/typeweaver-command](https://github.com/rexeus/typeweaver/tree/main/packages/command/README.md) | Node.js command-line API client composed from the generated Fetch client                                    | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-command) |
+| [@rexeus/typeweaver-effect](https://github.com/rexeus/typeweaver/tree/main/packages/effect/README.md)   | Optional Effect-returning handlers adapted into the Fetch-native server                                     | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-effect)  |
 | [@rexeus/typeweaver-server](https://github.com/rexeus/typeweaver/tree/main/packages/server/README.md)   | Plugin for a zero-dependency, Fetch API-native server with built-in routing and middleware                  | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-server)  |
 | [@rexeus/typeweaver-hono](https://github.com/rexeus/typeweaver/tree/main/packages/hono/README.md)       | Plugin for Hono routers                                                                                     | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)    |
 | [@rexeus/typeweaver-aws-cdk](https://github.com/rexeus/typeweaver/tree/main/packages/aws-cdk/README.md) | Plugin for AWS CDK constructs for API Gateway V2                                                            | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
-| [@rexeus/typeweaver-openapi](https://github.com/rexeus/typeweaver/tree/main/packages/openapi/README.md) | Plugin for OpenAPI 3.1.1 JSON documents                                                                     | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-openapi) |
+| [@rexeus/typeweaver-openapi](https://github.com/rexeus/typeweaver/tree/main/packages/openapi/README.md) | Plugin for OpenAPI 3.1.2 (default) and explicit 3.2.0 JSON documents                                        | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-openapi) |
 
 More plugins are planned. If you want to build your own, start with the
 [Plugin authoring guide](https://github.com/rexeus/typeweaver/tree/main/docs/plugin-authoring.md).
@@ -87,7 +89,126 @@ bunx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --
 > **Note**: Deno may require the `--sloppy-imports` flag or equivalent configuration in `deno.json`
 > when your API definitions use extensionless TypeScript imports.
 
-### ⚙️ Options
+### Scaffold a plugin
+
+Create a complete third-party plugin starter without prompts:
+
+```bash
+npx typeweaver add plugin --name audit-log --target ./typeweaver-plugin-audit-log
+cd typeweaver-plugin-audit-log
+pnpm install
+pnpm check
+```
+
+<!-- docs-example: plugin-scaffold -->
+
+The target directory must not exist; the command never overwrites user files. Plugin names use
+lowercase kebab-case. The starter contains a package manifest, strict TypeScript configuration,
+minimal and configurable plugin exports, a generation fixture, and tests built only on the public
+`createPluginTestKit` and `defineScopedPlugin` APIs.
+
+`pnpm check` typechecks, tests, builds, and runs the plugin against the included spec. The scaffold
+develops against Effect 3.22.0 and declares the supported plugin peer range `>=3.22.0 <4`.
+
+### Initialize a project
+
+Create an executable Todo API starter in an explicit directory:
+
+```bash
+npx typeweaver init --target ./todo-api
+cd todo-api
+pnpm install
+pnpm validate
+pnpm generate
+```
+
+<!-- docs-example: init-workflow -->
+
+The starter contains five Todo operations, reusable and derived error responses, a strict TypeScript
+configuration, package scripts, and a client-generation config. A missing package manifest is
+created; an existing `package.json` is preserved.
+
+`init` refuses any non-empty target unless `--force` is present. Force mode overwrites only
+conflicting starter files and rolls every published file back if a later publication fails. Inspect
+the deterministic plan without creating the target with `--dry-run`. If the filesystem also prevents
+rollback, the failure names a retained recovery path containing the unrestored original. Use
+`--config-format mjs|cjs|js` to select the config module format.
+
+Human output goes to stdout on success and stderr on failure. `--json` always writes one versioned
+`InitReport` to stdout; automation can validate it with the public `InitReportSchema`. Stable
+failure codes are `TW-INIT-001` through `TW-INIT-005`, and failures exit 1.
+
+### Validate without writing
+
+Validate the normalized spec and every configured plugin without touching the configured output:
+
+```bash
+npx typeweaver validate --input ./api/spec/index.ts
+npx typeweaver validate --config ./typeweaver.config.mjs --json
+```
+
+<!-- docs-example: validate-workflow -->
+
+Validation uses a scoped temporary bundle that is removed before the command exits. Human failures
+are written to stderr. `--json` writes one versioned `ValidationReport` document to stdout; the
+public `ValidationReportSchema` export can validate it in automation.
+
+The default exit threshold is `error`. Use `--fail-on warning`, `--fail-on info`, or `--strict`
+(`warning`) to tighten CI. Exit code 0 means no issue met the threshold; exit code 1 means at least
+one did. Normalization failures retain their stable `TW-SPEC-*` codes, normalized contract warnings
+use `TW-SPEC-101` through `TW-SPEC-103`, and plugin validation issues retain the plugin's declared
+code. Body warnings point to the affected normalized request, inline response, or canonical response
+body.
+
+### Diagnose a project
+
+Run deterministic environment and project checks without generating output:
+
+```bash
+npx typeweaver doctor \
+  --input ./api/spec/index.ts \
+  --output ./api/generated
+
+npx typeweaver doctor --config ./typeweaver.config.mjs --deep --json
+```
+
+<!-- docs-example: doctor-workflow -->
+
+The standard checks cover runtime detection, Node.js 24, the pnpm 10.34.5 repository workflow,
+configuration and spec resolution, plugin availability, output safety and permissions, the supported
+Effect range, and optional oxfmt availability. `--deep` additionally bundles, normalizes, and
+validates the spec through a scoped temporary directory that is removed before exit.
+
+Human output gives every check a stable `TW-DOCTOR-001` through `TW-DOCTOR-010` code and a `pass`,
+`warn`, `fail`, or `skip` outcome. `--json` emits exactly one versioned `DoctorReport` on stdout;
+automation can validate it with the public `DoctorReportSchema`. Exit code 0 means no check failed
+(warnings are advisory); exit code 1 means at least one check failed. Neither mode writes project
+output.
+
+### Generate a command-line API client
+
+Install `@rexeus/typeweaver-clients` and `@rexeus/typeweaver-command`, then generate both
+projections:
+
+```bash
+npx typeweaver generate \
+  --input ./api/spec/index.ts \
+  --output ./api/generated \
+  --plugins clients,command
+```
+
+Compile the generated NodeNext TypeScript and run `command/cli.mjs`. It provides one deterministic
+subcommand per operation, contract-derived authentication flags, inline/file/stdin bodies, JSON
+output by default, `--human` output, and stable exit codes.
+
+<!-- docs-example: generated-command -->
+
+The generated public invocation boundary is checked in the
+[command fixture](./examples/documentation/generated-command.ts). See the
+[@rexeus/typeweaver-command guide](../command/README.md) for flags, security semantics, exit codes,
+and Node.js runtime limits.
+
+### ⚙️ Generate options
 
 - `--input, -i <path>`: Spec entrypoint file (required via flag or config)
 - `--output, -o <path>`: Output directory for generated code (required via flag or config)
@@ -110,7 +231,7 @@ configurations:
 export default {
   input: "./api/spec/index.ts",
   output: "./api/generated",
-  plugins: ["clients", "hono", "aws-cdk", "openapi"],
+  plugins: ["clients", "command", "hono", "aws-cdk", "openapi"],
   format: true,
   clean: true,
 };

@@ -1,0 +1,43 @@
+import {
+  defineOperation,
+  defineResponse,
+  HttpMethod,
+  HttpStatusCode,
+} from "@rexeus/typeweaver-core";
+import { z } from "zod";
+import {
+  ConflictError,
+  ForbiddenError,
+  InternalServerError,
+  UnauthorizedError,
+  ValidationError,
+} from "../shared/errors/index.js";
+import { TodoNotFoundError } from "./errors/TodoNotFoundError.js";
+import { todoSchema, updateTodoBodySchema } from "./schemas.js";
+
+export const UpdateTodoOperation = defineOperation({
+  operationId: "updateTodo",
+  summary: "Update a todo",
+  method: HttpMethod.PATCH,
+  path: "/todos/:todoId",
+  request: {
+    param: z.object({
+      todoId: z.uuid(),
+    }),
+    body: updateTodoBodySchema,
+  },
+  responses: [
+    defineResponse({
+      name: "UpdateTodoSuccess",
+      description: "The todo was updated.",
+      statusCode: HttpStatusCode.OK,
+      body: todoSchema,
+    }),
+    TodoNotFoundError,
+    ValidationError,
+    UnauthorizedError,
+    ForbiddenError,
+    ConflictError,
+    InternalServerError,
+  ],
+});
