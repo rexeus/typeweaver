@@ -200,13 +200,13 @@ the PR URL and evidence in `GOAL.md`.
 
 ## Work package evidence
 
-| Work package                           | Status | Commit     | Evidence                                                                                                           |
-| -------------------------------------- | ------ | ---------- | ------------------------------------------------------------------------------------------------------------------ |
-| 1. Product vision and repository truth | DONE   | `62856a3d` | `pnpm docs:check`, `pnpm format:check`, and `pnpm lint` pass; both required stale-state searches return no matches |
-| 2. Executable public documentation     | TODO   |            |                                                                                                                    |
-| 3. Honest unsupported-schema failures  | TODO   |            |                                                                                                                    |
-| 4. Public HTTP body boundary           | TODO   |            |                                                                                                                    |
-| 5. Stage reconciliation and delivery   | TODO   |            |                                                                                                                    |
+| Work package                           | Status | Commit     | Evidence                                                                                                                           |
+| -------------------------------------- | ------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Product vision and repository truth | DONE   | `62856a3d` | `pnpm docs:check`, `pnpm format:check`, and `pnpm lint` pass; both required stale-state searches return no matches                 |
+| 2. Executable public documentation     | DONE   | `31ad8594` | Nine declared fixture groups and the invalid-example self-test pass through `pnpm docs:check`; `pnpm typecheck` passes 23/23 tasks |
+| 3. Honest unsupported-schema failures  | TODO   |            |                                                                                                                                    |
+| 4. Public HTTP body boundary           | TODO   |            |                                                                                                                                    |
+| 5. Stage reconciliation and delivery   | TODO   |            |                                                                                                                                    |
 
 ## Test plan
 
