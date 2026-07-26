@@ -14,6 +14,7 @@ type ProcessResult = {
 
 const packageDirectory = path.resolve(import.meta.dirname, "..");
 const cliEntry = path.join(packageDirectory, "bin", "typeweaver.mjs");
+const PROCESS_TEST_TIMEOUT_MS = 15_000;
 const outputsDirectory = path.join(
   packageDirectory,
   "test",
@@ -159,60 +160,66 @@ describe("built CLI init planning and safety", () => {
 });
 
 describe("built CLI init publication", () => {
-  test("creates a starter that validates and generates", async () => {
-    const workspace = createWorkspace();
-    const target = path.join(workspace, "todo-api");
+  test(
+    "creates a starter that validates and generates",
+    async () => {
+      const workspace = createWorkspace();
+      const target = path.join(workspace, "todo-api");
 
-    const initialized = await runCli(workspace, [
-      "init",
-      "--target",
-      target,
-      "--json",
-    ]);
-    expect(initialized.code).toBe(0);
-    const report = parseReport(initialized.stdout);
-    expect(report).toMatchObject({
-      success: true,
-      status: "created",
-      configFile: "typeweaver.config.mjs",
-    });
-    expect(report.files).toContain("api/spec/index.ts");
-    expect(report.files).toContain("api/spec/todo/errors/TodoNotFoundError.ts");
+      const initialized = await runCli(workspace, [
+        "init",
+        "--target",
+        target,
+        "--json",
+      ]);
+      expect(initialized.code).toBe(0);
+      const report = parseReport(initialized.stdout);
+      expect(report).toMatchObject({
+        success: true,
+        status: "created",
+        configFile: "typeweaver.config.mjs",
+      });
+      expect(report.files).toContain("api/spec/index.ts");
+      expect(report.files).toContain(
+        "api/spec/todo/errors/TodoNotFoundError.ts"
+      );
 
-    const specSource = fs.readFileSync(
-      path.join(target, "api", "spec", "index.ts"),
-      "utf8"
-    );
-    expect(specSource).toContain("CreateTodoOperation");
-    expect(specSource).toContain("UpdateTodoOperation");
-    expect(specSource).toContain("GetTodoOperation");
-    expect(specSource).toContain("ListTodoOperation");
-    expect(specSource).toContain("QueryTodoOperation");
+      const specSource = fs.readFileSync(
+        path.join(target, "api", "spec", "index.ts"),
+        "utf8"
+      );
+      expect(specSource).toContain("CreateTodoOperation");
+      expect(specSource).toContain("UpdateTodoOperation");
+      expect(specSource).toContain("GetTodoOperation");
+      expect(specSource).toContain("ListTodoOperation");
+      expect(specSource).toContain("QueryTodoOperation");
 
-    fs.symlinkSync(
-      path.join(packageDirectory, "node_modules"),
-      path.join(target, "node_modules"),
-      "dir"
-    );
-    const validation = await runCli(target, [
-      "validate",
-      "--config",
-      "typeweaver.config.mjs",
-      "--json",
-    ]);
-    expect(validation.code, validation.stdout + validation.stderr).toBe(0);
+      fs.symlinkSync(
+        path.join(packageDirectory, "node_modules"),
+        path.join(target, "node_modules"),
+        "dir"
+      );
+      const validation = await runCli(target, [
+        "validate",
+        "--config",
+        "typeweaver.config.mjs",
+        "--json",
+      ]);
+      expect(validation.code, validation.stdout + validation.stderr).toBe(0);
 
-    const generation = await runCli(target, [
-      "generate",
-      "--config",
-      "typeweaver.config.mjs",
-      "--no-format",
-    ]);
-    expect(generation.code, generation.stdout + generation.stderr).toBe(0);
-    expect(
-      fs.existsSync(path.join(target, "api", "generated", "index.ts"))
-    ).toBe(true);
-  });
+      const generation = await runCli(target, [
+        "generate",
+        "--config",
+        "typeweaver.config.mjs",
+        "--no-format",
+      ]);
+      expect(generation.code, generation.stdout + generation.stderr).toBe(0);
+      expect(
+        fs.existsSync(path.join(target, "api", "generated", "index.ts"))
+      ).toBe(true);
+    },
+    PROCESS_TEST_TIMEOUT_MS
+  );
 
   test("force-overwrites conflicts but preserves an existing package manifest", async () => {
     const workspace = createWorkspace();

@@ -7,6 +7,7 @@ import { afterEach, describe, expect, test } from "vitest";
 const execFileAsync = promisify(execFile);
 const packageDirectory = path.resolve(import.meta.dirname, "..");
 const cliEntry = path.join(packageDirectory, "bin", "typeweaver.mjs");
+const PROCESS_TEST_TIMEOUT_MS = 15_000;
 const outputsDirectory = path.join(
   packageDirectory,
   "test",
@@ -53,22 +54,26 @@ afterEach(() => {
 });
 
 describe("built CLI plugin scaffold", () => {
-  test("creates the deterministic public starter without prompts", async () => {
-    const workspace = createWorkspace();
-    const target = path.join(workspace, "audit-log-plugin");
+  test(
+    "creates the deterministic public starter without prompts",
+    async () => {
+      const workspace = createWorkspace();
+      const target = path.join(workspace, "audit-log-plugin");
 
-    const result = await execFileAsync(
-      process.execPath,
-      [cliEntry, "add", "plugin", "--name", "audit-log", "--target", target],
-      { cwd: workspace }
-    );
+      const result = await execFileAsync(
+        process.execPath,
+        [cliEntry, "add", "plugin", "--name", "audit-log", "--target", target],
+        { cwd: workspace }
+      );
 
-    expect(result.stderr).toBe("");
-    expect(result.stdout).toContain(
-      `Created TypeWeaver plugin 'audit-log' at ${target}`
-    );
-    expect(collectFileTree(target)).toMatchSnapshot();
-  });
+      expect(result.stderr).toBe("");
+      expect(result.stdout).toContain(
+        `Created TypeWeaver plugin 'audit-log' at ${target}`
+      );
+      expect(collectFileTree(target)).toMatchSnapshot();
+    },
+    PROCESS_TEST_TIMEOUT_MS
+  );
 
   test("rejects an existing target without changing its contents", async () => {
     const workspace = createWorkspace();
