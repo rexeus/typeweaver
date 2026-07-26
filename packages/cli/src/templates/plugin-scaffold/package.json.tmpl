@@ -1,0 +1,39 @@
+{
+  "name": "{{packageName}}",
+  "version": "0.1.0",
+  "description": "TypeWeaver generator plugin for {{pluginName}}",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "test": "vitest run",
+    "test:generate": "pnpm run build && typeweaver generate --input test/fixture/spec.ts --output test/fixture/generated --plugins ./dist/index.js --no-format",
+    "check": "pnpm run typecheck && pnpm run test && pnpm run test:generate"
+  },
+  "peerDependencies": {
+    "@rexeus/typeweaver-gen": "^{{typeweaverVersion}}",
+    "effect": ">=3.22.0 <4"
+  },
+  "devDependencies": {
+    "@rexeus/typeweaver": "^{{typeweaverVersion}}",
+    "@rexeus/typeweaver-core": "^{{typeweaverVersion}}",
+    "@rexeus/typeweaver-gen": "^{{typeweaverVersion}}",
+    "@types/node": "^26.1.0",
+    "effect": "3.22.0",
+    "hono": "^4.12.32",
+    "typescript": "^6.0.2",
+    "vitest": "^3.2.7",
+    "zod": "^4.4.3"
+  }
+}

@@ -9,6 +9,12 @@ export { OutputCleanError } from "./OutputCleanError.js";
 export { OutputLockError } from "./OutputLockError.js";
 export type { OutputLockOperation } from "./OutputLockError.js";
 export { PluginLoadError } from "./PluginLoadError.js";
+export {
+  InvalidPluginScaffoldNameError,
+  PluginScaffoldFileSystemError,
+  PluginScaffoldTargetExistsError,
+} from "./PluginScaffoldError.js";
+export type { PluginScaffoldFileSystemOperation } from "./PluginScaffoldError.js";
 export type { PluginLoadAttempt } from "./PluginLoadError.js";
 export { UnsafeCleanTargetError } from "./UnsafeCleanTargetError.js";
 export type {

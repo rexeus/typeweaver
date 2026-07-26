@@ -12,6 +12,21 @@ section in [`MIGRATION.md`](../MIGRATION.md).
 
 ## Quick start
 
+The supported starter path creates a tested package without prompts or private test helpers:
+
+```sh
+npx typeweaver add plugin --name hello --target ./typeweaver-plugin-hello
+cd typeweaver-plugin-hello
+pnpm install
+pnpm check
+```
+
+The target must be a new directory and the name must use lowercase kebab-case. The generated
+`pnpm check` command typechecks the public API contract, runs in-memory lifecycle tests, builds the
+package, and invokes the built plugin through TypeWeaver against an included integration spec. Its
+README documents validation diagnostics, the lifecycle, and the Effect 3.22.0 development baseline
+with peer range `>=3.22.0 <4`.
+
 A minimal plugin is a record returned by `definePlugin(...)`:
 
 ```ts

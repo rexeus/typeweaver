@@ -1,0 +1,44 @@
+# {{packageName}}
+
+TypeWeaver generator plugin scaffold for `{{pluginName}}`.
+
+## Start
+
+```sh
+pnpm install
+pnpm check
+```
+
+`pnpm check` typechecks the package, runs public in-memory lifecycle tests, builds the plugin, and
+generates against the included integration spec.
+
+## Public plugin shapes
+
+- `src/plugin.ts` is the minimal record-style plugin and the package default export.
+- `src/configurablePlugin.ts` is a synchronous configurable `PluginFactory`.
+- `test/plugin.test.ts` uses `createPluginTestKit`, `defineScopedPlugin`, and a test Layer without
+  private CLI services.
+
+Plugins return Effects from `validate`, `initialize`, `collectResources`, `generate`, and
+`finalize`. Contract diagnostics belong in the write-incapable `validate` phase as stable `Issue`
+records. Expected lifecycle failures use `PluginExecutionError`; invalid factory options use
+`PluginConfigError`.
+
+## Effect contract
+
+This scaffold develops against Effect 3.22.0 and declares the supported peer range
+`>=3.22.0 <4`. Do not create a runtime inside plugin hooks. Use `defineScopedPlugin` when the plugin
+owns an exit-independent Layer that must be acquired once and released after success, typed failure,
+defect, or interruption.
+
+## Install in a TypeWeaver project
+
+Build the package, then reference its package name or local path in `typeweaver.config.mjs`:
+
+```js
+export default {
+  input: "./spec/index.ts",
+  output: "./generated",
+  plugins: ["{{packageName}}"],
+};
+```

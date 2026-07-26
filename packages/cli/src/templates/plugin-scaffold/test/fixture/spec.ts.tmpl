@@ -1,0 +1,31 @@
+import {
+  HttpMethod,
+  HttpStatusCode,
+  defineOperation,
+  defineResponse,
+  defineSpec,
+} from "@rexeus/typeweaver-core";
+
+const ok = defineResponse({
+  name: "ScaffoldOk",
+  statusCode: HttpStatusCode.OK,
+  description: "Scaffold integration response",
+});
+
+export const spec = defineSpec({
+  metadata: { title: "{{pluginTypeName}} Scaffold API", version: "1.0.0" },
+  resources: {
+    scaffold: {
+      operations: [
+        defineOperation({
+          operationId: "verifyScaffold",
+          method: HttpMethod.GET,
+          path: "/scaffold",
+          summary: "Verify the scaffold",
+          request: {},
+          responses: [ok],
+        }),
+      ],
+    },
+  },
+});

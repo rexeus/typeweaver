@@ -78,8 +78,8 @@ before implementation if package ownership or public names changed.
 
 ### 1. Make third-party plugin authoring a product surface
 
-**Status:** IN PROGRESS — the public lifecycle test kit and scoped-Layer helper are complete; the
-non-interactive scaffold and packed external consumer remain.
+**Status:** DONE — the public lifecycle test kit, scoped-Layer helper, non-interactive scaffold,
+golden process tests, and packed external consumer are complete.
 
 Expose a supported plugin test kit that can build safe in-memory contexts, run the full lifecycle,
 inspect generated files/issues, and provide test Layers without importing private CLI internals.
@@ -264,7 +264,7 @@ merge any PR.
 
 ## Done criteria
 
-- [ ] A scaffolded external plugin succeeds using only public APIs.
+- [x] A scaffolded external plugin succeeds using only public APIs.
 - [ ] `init`, `validate`, and `doctor` are real, tested commands.
 - [ ] Generated command client passes real-server and packed-consumer tests.
 - [ ] Effect handlers satisfy runtime ownership, typed error, interruption, and observability

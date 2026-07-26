@@ -212,12 +212,18 @@ const decodePlugin = (
 const formatError = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
+const isRelativePathSpecifier = (pluginName: string): boolean =>
+  /^(?:\.{1,2}[\\/])/u.test(pluginName);
+
 const toLocalImportSpecifier = (pluginName: string): string => {
   if (pluginName.startsWith("file:")) {
     return pluginName;
   }
   if (path.isAbsolute(pluginName)) {
     return pathToFileURL(pluginName).href;
+  }
+  if (isRelativePathSpecifier(pluginName)) {
+    return pathToFileURL(path.resolve(pluginName)).href;
   }
   return pluginName;
 };

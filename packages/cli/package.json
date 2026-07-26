@@ -44,7 +44,7 @@
     "test:bundle:deno": "pnpm run build && deno run -A --sloppy-imports dist/entry.mjs generate --output test/outputs/bundle-deno --input ../test-utils/src/test-project/spec/index.ts --plugins clients,aws-cdk,hono",
     "test:bundle:bun": "pnpm run build && bun run dist/entry.mjs generate --output test/outputs/bundle-bun --input ../test-utils/src/test-project/spec/index.ts --plugins clients,aws-cdk,hono",
     "test:bundle:all": "pnpm run test:bundle && pnpm run test:bundle:deno && pnpm run test:bundle:bun",
-    "test:process": "pnpm run build && vitest --run --no-file-parallelism __test__/cli.process.test.ts __test__/pluginAuthoring.serviceFixture.test.ts",
+    "test:process": "pnpm run build && vitest --run --no-file-parallelism __test__/cli.process.test.ts __test__/pluginAuthoring.serviceFixture.test.ts __test__/pluginScaffold.process.test.ts",
     "test": "vitest --run",
     "test:windows-security": "vitest run --no-file-parallelism __test__/generator.test.ts __test__/generator.unsafeTarget.test.ts __test__/generator.lockfile.test.ts __test__/generator.lifecycle-ordering.test.ts __test__/generator.orphanTempdirs.test.ts __test__/generator.recovery.test.ts __test__/pluginAuthoring.scopedServiceRecovery.test.ts __test__/pluginAuthoring.serviceFixture.test.ts __test__/services/internal/generatorPreflight.test.ts __test__/services/FileSystem.contract.test.ts __test__/specLoader.test.ts __test__/cli.process.test.ts",
     "test:gen": "pnpm run test:gen:types && pnpm run test:gen:clients && pnpm run test:gen:aws-cdk && pnpm run test:gen:hono && pnpm run test:gen:all",

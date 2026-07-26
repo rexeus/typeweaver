@@ -1,18 +1,15 @@
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { Command, Options } from "@effect/cli";
 import { NodeRuntime } from "@effect/platform-node";
 import { Effect } from "effect";
+import {
+  cliPackageVersion,
+  pluginScaffoldTemplateDirectory,
+} from "./cliMetadata.js";
 import { ProductionLayer, VerboseLayer } from "./effectRuntime.js";
 import { formatErrorForCli } from "./formatErrorForCli.js";
+import { runAddPlugin } from "./runAddPlugin.js";
 import { runGenerate } from "./runGenerate.js";
 import { isOnlyValidationErrorCause } from "./validationErrorFilter.js";
-
-const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-const packageJson = JSON.parse(
-  fs.readFileSync(path.join(moduleDir, "../package.json"), "utf-8")
-) as { readonly version: string };
 
 const inputOption = Options.text("input").pipe(
   Options.withAlias("i"),
@@ -75,6 +72,16 @@ const verboseOption = Options.boolean("verbose", { ifPresent: true }).pipe(
   Options.optional
 );
 
+const pluginNameOption = Options.text("name").pipe(
+  Options.withAlias("n"),
+  Options.withDescription("lowercase kebab-case plugin name")
+);
+
+const pluginTargetOption = Options.text("target").pipe(
+  Options.withAlias("t"),
+  Options.withDescription("new directory that will receive the plugin scaffold")
+);
+
 const generateCommand = Command.make(
   "generate",
   {
@@ -101,16 +108,39 @@ const initCommand = Command.make("init", {}, () =>
   Command.withDescription("Initialize a new typeweaver project (coming soon)")
 );
 
+const addPluginCommand = Command.make(
+  "plugin",
+  {
+    name: pluginNameOption,
+    target: pluginTargetOption,
+  },
+  args =>
+    runAddPlugin(args, {
+      currentWorkingDirectory: process.cwd(),
+      templateDir: pluginScaffoldTemplateDirectory,
+      typeweaverVersion: cliPackageVersion,
+    })
+).pipe(
+  Command.withDescription(
+    "Create a tested TypeWeaver plugin package in a new directory"
+  )
+);
+
+const addCommand = Command.make("add").pipe(
+  Command.withDescription("Add a TypeWeaver developer surface"),
+  Command.withSubcommands([addPluginCommand])
+);
+
 const cli = Command.make("typeweaver").pipe(
   Command.withDescription(
     "Type-safe API framework with code generation for TypeScript"
   ),
-  Command.withSubcommands([generateCommand, initCommand])
+  Command.withSubcommands([generateCommand, initCommand, addCommand])
 );
 
 const run = Command.run(cli, {
   name: "typeweaver",
-  version: packageJson.version,
+  version: cliPackageVersion,
 });
 
 // `@effect/cli` scopes options to commands, but the chosen Layer is fixed

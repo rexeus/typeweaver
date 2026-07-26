@@ -115,6 +115,12 @@ Plugin authors no longer need to copy the CLI's private fake contexts or manuall
 after success, typed failure, defect, and interruption while keeping ordinary plugin hooks at
 `R = never`.
 
+For a new V2 package, run
+`typeweaver add plugin --name <lowercase-kebab-name> --target <new-directory>`. This additive,
+non-interactive command creates a strict TypeScript package with public lifecycle tests, a
+configurable factory example, and an integration generation fixture. It refuses an existing target;
+there is no migration required for existing plugin packages.
+
 ### 2. CLI on `@effect/cli` (BREAKING for invocation in scripts)
 
 The CLI is now built on `@effect/cli`. Three observable changes:

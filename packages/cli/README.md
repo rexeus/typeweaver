@@ -87,6 +87,25 @@ bunx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --
 > **Note**: Deno may require the `--sloppy-imports` flag or equivalent configuration in `deno.json`
 > when your API definitions use extensionless TypeScript imports.
 
+### Scaffold a plugin
+
+Create a complete third-party plugin starter without prompts:
+
+```bash
+npx typeweaver add plugin --name audit-log --target ./typeweaver-plugin-audit-log
+cd typeweaver-plugin-audit-log
+pnpm install
+pnpm check
+```
+
+The target directory must not exist; the command never overwrites user files. Plugin names use
+lowercase kebab-case. The starter contains a package manifest, strict TypeScript configuration,
+minimal and configurable plugin exports, a generation fixture, and tests built only on the public
+`createPluginTestKit` and `defineScopedPlugin` APIs.
+
+`pnpm check` typechecks, tests, builds, and runs the plugin against the included spec. The scaffold
+develops against Effect 3.22.0 and declares the supported plugin peer range `>=3.22.0 <4`.
+
 ### ⚙️ Options
 
 - `--input, -i <path>`: Spec entrypoint file (required via flag or config)
