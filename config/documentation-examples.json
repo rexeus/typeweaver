@@ -38,6 +38,30 @@
       "fixtures": ["packages/cli/examples/documentation/plugin-test-kit.ts"]
     },
     {
+      "id": "plugin-scaffold",
+      "documents": ["docs/plugin-authoring.md", "packages/cli/README.md"],
+      "fixtures": [],
+      "runtimeFixtures": ["packages/cli/__test__/pluginScaffold.process.test.ts"]
+    },
+    {
+      "id": "init-workflow",
+      "documents": ["README.md", "packages/cli/README.md"],
+      "fixtures": [],
+      "runtimeFixtures": ["packages/cli/__test__/init.process.test.ts"]
+    },
+    {
+      "id": "validate-workflow",
+      "documents": ["packages/cli/README.md"],
+      "fixtures": [],
+      "runtimeFixtures": ["packages/cli/__test__/validate.process.test.ts"]
+    },
+    {
+      "id": "doctor-workflow",
+      "documents": ["packages/cli/README.md"],
+      "fixtures": [],
+      "runtimeFixtures": ["packages/cli/__test__/doctor.process.test.ts"]
+    },
+    {
       "id": "generated-client",
       "documents": ["packages/clients/README.md"],
       "fixtures": ["packages/cli/examples/documentation/generated-client.ts"]

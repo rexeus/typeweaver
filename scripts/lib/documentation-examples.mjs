@@ -47,6 +47,9 @@ const validateManifest = (manifest, manifestPath, requiredGroupIds) => {
 
 const validateGroupFiles = (group, workspaceRoot) => {
   const marker = `<!-- docs-example: ${group.id} -->`;
+  const runtimeFixtures = Array.isArray(group.runtimeFixtures)
+    ? group.runtimeFixtures
+    : [];
   const documentFailures = group.documents.flatMap(document => {
     const documentPath = path.resolve(workspaceRoot, document);
     if (!existsSync(documentPath)) {
@@ -59,8 +62,11 @@ const validateGroupFiles = (group, workspaceRoot) => {
   const fixtureFailures = group.fixtures
     .filter(fixture => !existsSync(path.resolve(workspaceRoot, fixture)))
     .map(fixture => `${group.id}: missing fixture ${fixture}`);
+  const runtimeFixtureFailures = runtimeFixtures
+    .filter(fixture => !existsSync(path.resolve(workspaceRoot, fixture)))
+    .map(fixture => `${group.id}: missing runtime fixture ${fixture}`);
 
-  return [...documentFailures, ...fixtureFailures];
+  return [...documentFailures, ...fixtureFailures, ...runtimeFixtureFailures];
 };
 
 const parseTypeScriptConfig = (workspaceRoot, manifest) => {

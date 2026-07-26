@@ -57,6 +57,7 @@ Now you are ready to start building! Check out [Quickstart](#-get-started)
 | [@rexeus/typeweaver-types](https://github.com/rexeus/typeweaver/tree/main/packages/types/README.md)     | Plugin for request/response types and validation - the foundation for all other plugins and always included | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-types)   |
 | [@rexeus/typeweaver-clients](https://github.com/rexeus/typeweaver/tree/main/packages/clients/README.md) | Plugin for HTTP clients using fetch                                                                         | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients) |
 | [@rexeus/typeweaver-command](https://github.com/rexeus/typeweaver/tree/main/packages/command/README.md) | Node.js command-line API client composed from the generated Fetch client                                    | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-command) |
+| [@rexeus/typeweaver-effect](https://github.com/rexeus/typeweaver/tree/main/packages/effect/README.md)   | Optional Effect-returning handlers adapted into the Fetch-native server                                     | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-effect)  |
 | [@rexeus/typeweaver-server](https://github.com/rexeus/typeweaver/tree/main/packages/server/README.md)   | Plugin for a zero-dependency, Fetch API-native server with built-in routing and middleware                  | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-server)  |
 | [@rexeus/typeweaver-hono](https://github.com/rexeus/typeweaver/tree/main/packages/hono/README.md)       | Plugin for Hono routers                                                                                     | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)    |
 | [@rexeus/typeweaver-aws-cdk](https://github.com/rexeus/typeweaver/tree/main/packages/aws-cdk/README.md) | Plugin for AWS CDK constructs for API Gateway V2                                                            | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
@@ -99,6 +100,8 @@ pnpm install
 pnpm check
 ```
 
+<!-- docs-example: plugin-scaffold -->
+
 The target directory must not exist; the command never overwrites user files. Plugin names use
 lowercase kebab-case. The starter contains a package manifest, strict TypeScript configuration,
 minimal and configurable plugin exports, a generation fixture, and tests built only on the public
@@ -118,6 +121,8 @@ pnpm install
 pnpm validate
 pnpm generate
 ```
+
+<!-- docs-example: init-workflow -->
 
 The starter contains five Todo operations, reusable and derived error responses, a strict TypeScript
 configuration, package scripts, and a client-generation config. A missing package manifest is
@@ -141,6 +146,8 @@ npx typeweaver validate --input ./api/spec/index.ts
 npx typeweaver validate --config ./typeweaver.config.mjs --json
 ```
 
+<!-- docs-example: validate-workflow -->
+
 Validation uses a scoped temporary bundle that is removed before the command exits. Human failures
 are written to stderr. `--json` writes one versioned `ValidationReport` document to stdout; the
 public `ValidationReportSchema` export can validate it in automation.
@@ -162,6 +169,8 @@ npx typeweaver doctor \
 
 npx typeweaver doctor --config ./typeweaver.config.mjs --deep --json
 ```
+
+<!-- docs-example: doctor-workflow -->
 
 The standard checks cover runtime detection, Node.js 24, the pnpm 10.34.5 repository workflow,
 configuration and spec resolution, plugin availability, output safety and permissions, the supported

@@ -235,6 +235,11 @@ construction or undocumented `runPromise` boundary.
 
 ### 5. Complete documentation and product examples
 
+**Status:** DONE — root and package catalogs include the optional Effect adapter, the root guide
+contains an explicit plain Fetch/Hono/generated CLI/Effect selection matrix, and documentation
+verification executes the public plugin-scaffold, `init`, `validate`, and `doctor` process workflows
+in addition to typechecking the generated command and Effect handler fixtures.
+
 Update root/package docs and executable fixtures for:
 
 - third-party plugin from scaffold to generated output
@@ -283,7 +288,7 @@ merge any PR.
 - [x] Generated command client passes real-server and packed-consumer tests.
 - [x] Effect handlers satisfy runtime ownership, typed error, interruption, and observability
       requirements without affecting plain handlers.
-- [ ] All new public APIs have Changesets, migrations, and executable docs.
+- [x] All new public APIs have Changesets, migrations, and executable docs.
 - [ ] Final review report maps every goal criterion to evidence.
 - [ ] No unresolved critical or high-confidence high-impact finding remains in scope.
 - [ ] Full local gate and all GitHub checks pass.

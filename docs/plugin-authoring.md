@@ -21,6 +21,8 @@ pnpm install
 pnpm check
 ```
 
+<!-- docs-example: plugin-scaffold -->
+
 The target must be a new directory and the name must use lowercase kebab-case. The generated
 `pnpm check` command typechecks the public API contract, runs in-memory lifecycle tests, builds the
 package, and invokes the built plugin through TypeWeaver against an included integration spec. Its
