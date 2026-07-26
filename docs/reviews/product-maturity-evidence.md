@@ -155,6 +155,13 @@ for a newly generated index file; it is generated output rather than an authored
     Direct Node 24 characterization returned `{"stable":true}` for `{ stable: true, ...undefined }`;
     programmatic callers may omit the optional header without a runtime exception.
 
+13. **Out of contract — add a legacy browser/worker fallback for `AbortSignal.any`.** Review comment
+    `3653357527` identifies environments outside the verified runtime matrix. TypeWeaver verifies
+    generated bundles on Node, Deno, and Bun; direct checks confirm both `AbortSignal.any` and
+    `AbortSignal.timeout` on Node 24.16.0, Deno 2.7.13, and Bun 1.3.13. Fetch-native describes the
+    framework-neutral API boundary and does not promise compatibility with older browser/worker
+    implementations, so this goal does not add a second cancellation implementation.
+
 All actionable review discoveries met the `GOAL.md` promotion gate, were characterized before
 repair, and are closed by the evidence above. At delivered source head `b539a81a` there is no
 unresolved in-scope critical or high-confidence high-impact finding. PR #212 is open, green, and
