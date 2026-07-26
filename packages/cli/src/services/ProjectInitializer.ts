@@ -408,7 +408,19 @@ const commitFile = (
         Effect.either
       );
     if (Either.isLeft(published)) {
-      yield* restoreCurrentFile(fileSystem, targetPath, backupPath);
+      const restored = yield* restoreCurrentFile(
+        fileSystem,
+        targetPath,
+        backupPath
+      ).pipe(Effect.either);
+      if (Either.isLeft(restored)) {
+        return yield* new ProjectInitRollbackError({
+          targetDir: params.targetDir,
+          originalCause: published.left,
+          rollbackCause: restored.left,
+          recoveryPath: backupPath,
+        });
+      }
       return yield* published.left;
     }
     return { targetPath, backupPath };
@@ -486,6 +498,7 @@ const publishProject = (
         targetDir: params.targetDir,
         originalCause: committed.left,
         rollbackCause: rolledBack.left,
+        recoveryPath: path.join(params.stagingDir, "backup"),
       });
     }
     return yield* committed.left;
@@ -497,29 +510,50 @@ const executePlan = (
   plan: readonly PlannedInitFile[],
   force: boolean
 ): Effect.Effect<void, ProjectInitFailure> =>
-  Effect.scoped(
-    Effect.gen(function* () {
-      const stagingParent = yield* findNearestExistingDirectory(
-        fileSystem,
-        path.dirname(targetDir)
-      );
-      const stagingDir = yield* fileSystem
-        .makeTempDirectoryScoped({
+  Effect.gen(function* () {
+    const stagingParent = yield* findNearestExistingDirectory(
+      fileSystem,
+      path.dirname(targetDir)
+    );
+    let preserveStaging = false;
+    yield* Effect.acquireUseRelease(
+      fileSystem
+        .makeTempDirectory({
           directory: stagingParent,
           prefix: `.typeweaver-init-${path.basename(targetDir)}-`,
         })
         .pipe(
           Effect.mapError(fileSystemError("makeTempDirectory", stagingParent))
-        );
-      yield* writeStagingTree(fileSystem, stagingDir, plan);
-      yield* publishProject(fileSystem, {
-        targetDir,
-        stagingDir,
-        plan,
-        force,
-      });
-    })
-  );
+        ),
+      stagingDir =>
+        writeStagingTree(fileSystem, stagingDir, plan).pipe(
+          Effect.zipRight(
+            publishProject(fileSystem, {
+              targetDir,
+              stagingDir,
+              plan,
+              force,
+            })
+          ),
+          Effect.tapError(failure =>
+            failure._tag === "ProjectInitRollbackError"
+              ? Effect.sync(() => {
+                  preserveStaging = true;
+                })
+              : Effect.void
+          )
+        ),
+      stagingDir =>
+        preserveStaging
+          ? Effect.void
+          : fileSystem
+              .remove(stagingDir, { recursive: true, force: true })
+              .pipe(
+                Effect.mapError(fileSystemError("remove", stagingDir)),
+                Effect.orDie
+              )
+    );
+  });
 
 const nextStepsFor = (
   targetDir: string,

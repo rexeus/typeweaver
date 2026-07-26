@@ -75,9 +75,10 @@ export class ProjectInitRollbackError extends Data.TaggedError(
   readonly targetDir: string;
   readonly originalCause: unknown;
   readonly rollbackCause: unknown;
+  readonly recoveryPath: string;
 }> {
   public override get message(): string {
-    return `Init failed and rollback could not fully restore '${this.targetDir}': ${formatCause(this.rollbackCause)}`;
+    return `Init failed and rollback could not fully restore '${this.targetDir}': ${formatCause(this.rollbackCause)}. The unrestored original remains at '${this.recoveryPath}'.`;
   }
 }
 

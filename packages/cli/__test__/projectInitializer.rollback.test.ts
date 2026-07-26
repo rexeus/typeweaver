@@ -57,6 +57,42 @@ const failingPublishLayer = (
   ).pipe(Layer.provide(NodeFileSystem.layer));
 };
 
+const failingPublishAndRestoreLayer = (
+  targetDir: string
+): Layer.Layer<FileSystem.FileSystem> =>
+  Layer.effect(
+    FileSystem.FileSystem,
+    Effect.gen(function* () {
+      const base = yield* FileSystem.FileSystem;
+      const readmePath = path.join(targetDir, "README.md");
+      return FileSystem.makeNoop({
+        ...base,
+        rename: (source, destination) => {
+          const publishingReadme =
+            source.includes(`${path.sep}new${path.sep}README.md`) &&
+            destination === readmePath;
+          const restoringReadme =
+            source.includes(`${path.sep}backup${path.sep}README.md`) &&
+            destination === readmePath;
+          if (publishingReadme || restoringReadme) {
+            return Effect.fail(
+              new SystemError({
+                reason: "PermissionDenied",
+                module: "FileSystem",
+                method: "rename",
+                pathOrDescriptor: destination,
+                description: publishingReadme
+                  ? "injected publication failure"
+                  : "injected restore failure",
+              })
+            );
+          }
+          return base.rename(source, destination);
+        },
+      });
+    })
+  ).pipe(Layer.provide(NodeFileSystem.layer));
+
 afterEach(() => {
   for (const workspace of workspaces) {
     fs.rmSync(workspace, { recursive: true, force: true });
@@ -110,5 +146,50 @@ describe("ProjectInitializer rollback", () => {
         .readdirSync(workspace)
         .some(entry => entry.startsWith(".typeweaver-init-"))
     ).toBe(false);
+  });
+
+  test("preserves an unrestored original at the reported recovery path", async () => {
+    const workspace = createWorkspace();
+    const targetDir = path.join(workspace, "existing");
+    const originalReadme = "existing readme\n";
+    fs.mkdirSync(targetDir);
+    fs.writeFileSync(path.join(targetDir, "README.md"), originalReadme);
+
+    const initializerLayer = ProjectInitializer.Default.pipe(
+      Layer.provide(failingPublishAndRestoreLayer(targetDir))
+    );
+    const result = await Effect.runPromise(
+      ProjectInitializer.initialize({
+        targetDir,
+        currentWorkingDirectory: workspace,
+        templateDir,
+        typeweaverVersion: "0.12.0",
+        zodVersion: "^4.4.3",
+        force: true,
+        dryRun: false,
+      }).pipe(Effect.either, Effect.provide(initializerLayer))
+    );
+
+    expect(Either.isLeft(result)).toBe(true);
+    if (Either.isLeft(result)) {
+      const error = Cause.originalError(result.left);
+      expect(error).toMatchObject({
+        _tag: "ProjectInitRollbackError",
+        targetDir,
+        recoveryPath: expect.any(String),
+      });
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "recoveryPath" in error &&
+        typeof error.recoveryPath === "string"
+      ) {
+        expect(fs.readFileSync(error.recoveryPath, "utf8")).toBe(
+          originalReadme
+        );
+        expect(error.message).toContain(error.recoveryPath);
+      }
+    }
+    expect(fs.existsSync(path.join(targetDir, "README.md"))).toBe(false);
   });
 });

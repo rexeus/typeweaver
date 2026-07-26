@@ -174,8 +174,9 @@ bootstrap. It requires `--target`, refuses a non-empty directory unless `--force
 publishes a complete Todo starter transactionally. `--dry-run` reports the planned files without
 writing, `--config-format mjs|cjs|js` selects the generated config module, and `--json` emits a
 versioned report accepted by the public `InitReportSchema`. An existing `package.json` is always
-preserved; `--force` replaces only conflicting starter files. Existing `generate`, `validate`, and
-`doctor` scripts do not need to change.
+preserved; `--force` replaces only conflicting starter files. If the filesystem also prevents a
+rollback, the failure reports the retained recovery path instead of deleting the only backup.
+Existing `generate`, `validate`, and `doctor` scripts do not need to change.
 
 The new `@rexeus/typeweaver-command` package is additive. Install it together with
 `@rexeus/typeweaver-clients` and add both `"clients"` and `"command"` to the plugin list when you

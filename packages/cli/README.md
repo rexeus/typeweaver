@@ -130,7 +130,8 @@ created; an existing `package.json` is preserved.
 
 `init` refuses any non-empty target unless `--force` is present. Force mode overwrites only
 conflicting starter files and rolls every published file back if a later publication fails. Inspect
-the deterministic plan without creating the target with `--dry-run`. Use
+the deterministic plan without creating the target with `--dry-run`. If the filesystem also prevents
+rollback, the failure names a retained recovery path containing the unrestored original. Use
 `--config-format mjs|cjs|js` to select the config module format.
 
 Human output goes to stdout on success and stderr on failure. `--json` always writes one versioned
