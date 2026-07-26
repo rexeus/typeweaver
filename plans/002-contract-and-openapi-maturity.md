@@ -226,14 +226,14 @@ and evidence in `GOAL.md`.
 
 ## Work package evidence
 
-| Work package                                   | Status | Commit    | Evidence                                                                                                                                                                                  |
-| ---------------------------------------------- | ------ | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Characterize and design the public contract | DONE   | `dc6251a` | Core type and Gen runtime characterizations failed before behavior changed; ADR 0009 fixes the accepted shape and inheritance table; Core 150/150, Gen 303/303, and docs checks pass      |
-| 2. Authoring and normalized metadata/security  | DONE   | `a83c79b` | Core 151/151 and Gen 318/318 tests pass; generated 225-file fixture is reproducible; workspace typecheck, docs, lint, format, Effect diagnostics, and Changeset status pass               |
-| 3. Side-effect-free plugin validation          | DONE   | `f4fd035` | Gen 325/325 and package typecheck pass; negative tsc fixture rejects write access; registry tests prove deterministic ordering, typed failures, spans, isolation, and stable codes        |
-| 4. Explicit OpenAPI target profiles            | DONE   | `567724e` | OpenAPI 126/126 tests and package typecheck pass; both profiles pass the official-schema validator, the 3.1.2 generated fixture passes Spectral, and all 225 generated fixtures reproduce |
-| 5. Honest support matrix                       | DONE   | `f91399f` | Documentation characterization failed before the change; afterward docs checks and all 129 OpenAPI tests pass with supported, lossy-with-diagnostic, and out-of-scope boundaries enforced |
-| 6. Stacked stage delivery                      | TODO   |           |                                                                                                                                                                                           |
+| Work package                                   | Status      | Commit    | Evidence                                                                                                                                                                                  |
+| ---------------------------------------------- | ----------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Characterize and design the public contract | DONE        | `dc6251a` | Core type and Gen runtime characterizations failed before behavior changed; ADR 0009 fixes the accepted shape and inheritance table; Core 150/150, Gen 303/303, and docs checks pass      |
+| 2. Authoring and normalized metadata/security  | DONE        | `a83c79b` | Core 151/151 and Gen 318/318 tests pass; generated 225-file fixture is reproducible; workspace typecheck, docs, lint, format, Effect diagnostics, and Changeset status pass               |
+| 3. Side-effect-free plugin validation          | DONE        | `f4fd035` | Gen 325/325 and package typecheck pass; negative tsc fixture rejects write access; registry tests prove deterministic ordering, typed failures, spans, isolation, and stable codes        |
+| 4. Explicit OpenAPI target profiles            | DONE        | `567724e` | OpenAPI 126/126 tests and package typecheck pass; both profiles pass the official-schema validator, the 3.1.2 generated fixture passes Spectral, and all 225 generated fixtures reproduce |
+| 5. Honest support matrix                       | DONE        | `f91399f` | Documentation characterization failed before the change; afterward docs checks and all 129 OpenAPI tests pass with supported, lossy-with-diagnostic, and out-of-scope boundaries enforced |
+| 6. Stacked stage delivery                      | IN PROGRESS | `978a7d9` | The complete Node 24 local gate passed at the recorded head with an empty final status; remote divergence, ready PR creation, and required GitHub checks remain                           |
 
 ## Test plan
 
