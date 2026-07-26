@@ -13,6 +13,18 @@ type ProcessResult = {
 
 const packageDirectory = path.resolve(import.meta.dirname, "..");
 const cliEntry = path.join(packageDirectory, "bin", "typeweaver.mjs");
+const packageManifest: unknown = JSON.parse(
+  fs.readFileSync(path.join(packageDirectory, "package.json"), "utf8")
+);
+if (
+  typeof packageManifest !== "object" ||
+  packageManifest === null ||
+  !("version" in packageManifest) ||
+  typeof packageManifest.version !== "string"
+) {
+  throw new Error("CLI package.json must declare a string version");
+}
+const packageVersion = packageManifest.version;
 const processOutputsDirectory = path.join(
   packageDirectory,
   "test",
@@ -531,12 +543,12 @@ describe("built CLI flag and verbosity handling", () => {
     expect(result.stdout).toContain("[DEBUG] Released output lock");
   });
 
-  test("preserves Commander's historical -V version alias", async () => {
+  test("reports the package version through Commander's historical -V alias", async () => {
     const workspace = createWorkspace();
     const result = await runCli(workspace, ["-V"]);
 
     expect(result).toMatchObject({ code: 0, signal: null, stderr: "" });
-    expect(result.stdout).toBe("Running on Node.js\n0.12.0\n\n");
+    expect(result.stdout).toBe(`Running on Node.js\n${packageVersion}\n\n`);
     expect(result.stdout).not.toContain("[DEBUG]");
   });
 });

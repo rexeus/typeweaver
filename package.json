@@ -18,9 +18,11 @@
     "verify:generated": "node scripts/verify-generated.mjs",
     "verify:effect-reference": "node scripts/verify-effect-reference.mjs && node scripts/test-effect-reference-guard.mjs",
     "effect:diagnostics": "node scripts/test-effect-diagnostics.mjs && node scripts/run-effect-diagnostics.mjs",
-    "docs:check": "node scripts/test-effect-version-contract.mjs && node scripts/check-effect-version-contract.mjs && node scripts/check-markdown-links.mjs",
+    "verify:effect-version": "node scripts/test-effect-version-contract.mjs && node scripts/check-effect-version-contract.mjs",
+    "docs:check": "node scripts/check-markdown-links.mjs",
     "verify:packed-consumers": "node scripts/test-packed-consumers.mjs",
-    "verify:effect-migration": "node scripts/verify-effect-migration.mjs",
+    "test:pnpm-launcher": "node scripts/test-pnpm-launcher.mjs",
+    "verify:architecture-contracts": "node scripts/verify-architecture-contracts.mjs",
     "publish:dry": "pnpm publish -r --dry-run --no-git-checks",
     "ci:publish": "pnpm publish -r --provenance",
     "prepare:commit": "pnpm run format && pnpm run lint:fix && pnpm run typecheck && pnpm run build && pnpm run test"
