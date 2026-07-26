@@ -51,55 +51,7 @@ describe("generated OpenAPI fixture", () => {
     ) as OpenApiFixture;
 
     expect(fixture.openapi).toBe("3.1.2");
-    expect(fixture).toMatchObject({
-      info: {
-        title: "TypeWeaver Test API",
-        version: "1.0.0",
-        description:
-          "Executable fixture for metadata, security, transport, and generator contracts.",
-      },
-      security: [{ bearerAuth: [] }],
-      paths: {
-        "/todos/{todoId}": {
-          get: {
-            description:
-              "Returns one todo using an AND-combined bearer and API-key requirement.",
-            tags: ["todos", "read"],
-            security: [{ bearerAuth: [], apiKeyAuth: [] }],
-          },
-          options: {
-            deprecated: true,
-            security: [],
-          },
-        },
-      },
-      components: {
-        securitySchemes: {
-          bearerAuth: {
-            type: "http",
-            scheme: "bearer",
-            bearerFormat: "JWT",
-          },
-          apiKeyAuth: {
-            type: "apiKey",
-            name: "X-API-Key",
-            in: "header",
-          },
-          oauth2Auth: {
-            type: "oauth2",
-            flows: {
-              authorizationCode: {
-                authorizationUrl: "https://identity.example.test/authorize",
-                tokenUrl: "https://identity.example.test/token",
-                scopes: {
-                  "tokens:write": "Create and refresh access tokens",
-                },
-              },
-            },
-          },
-        },
-      },
-    });
+    expectContractProjection(fixture);
     const schemas = componentsSchemas(fixture);
 
     expect(
@@ -176,6 +128,58 @@ describe("generated OpenAPI fixture", () => {
     // out-of-process Spectral run under parallel CI load.
   }, 30_000);
 });
+
+function expectContractProjection(fixture: OpenApiFixture): void {
+  expect(fixture).toMatchObject({
+    info: {
+      title: "TypeWeaver Test API",
+      version: "1.0.0",
+      description:
+        "Executable fixture for metadata, security, transport, and generator contracts.",
+    },
+    security: [{ bearerAuth: [] }],
+    paths: {
+      "/todos/{todoId}": {
+        get: {
+          description:
+            "Returns one todo using an AND-combined bearer and API-key requirement.",
+          tags: ["todos", "read"],
+          security: [{ bearerAuth: [], apiKeyAuth: [] }],
+        },
+        options: {
+          deprecated: true,
+          security: [],
+        },
+      },
+    },
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+        apiKeyAuth: {
+          type: "apiKey",
+          name: "X-API-Key",
+          in: "header",
+        },
+        oauth2Auth: {
+          type: "oauth2",
+          flows: {
+            authorizationCode: {
+              authorizationUrl: "https://identity.example.test/authorize",
+              tokenUrl: "https://identity.example.test/token",
+              scopes: {
+                "tokens:write": "Create and refresh access tokens",
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+}
 
 function componentsSchemas(fixture: OpenApiFixture): Record<string, unknown> {
   if (!isRecord(fixture.components)) {
