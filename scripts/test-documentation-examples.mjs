@@ -68,10 +68,25 @@ try {
     requiredGroupIds: [groupId],
   });
   assert.deepEqual(validResult.failures, []);
+
+  writeJson(manifestPath, {
+    version: 1,
+    tsconfig: "tsconfig.json",
+    groups: [{ id: groupId }],
+  });
+  const malformedManifestResult = verifyDocumentationExamples({
+    workspaceRoot: fixtureRoot,
+    manifestPath,
+    requiredGroupIds: [groupId],
+  });
+  assert.deepEqual(malformedManifestResult.failures, [
+    `${groupId}: documents must be an array`,
+    `${groupId}: fixtures must be an array`,
+  ]);
 } finally {
   rmSync(fixtureRoot, { recursive: true });
 }
 
 process.stdout.write(
-  "Documentation example checker rejected its invalid TypeScript fixture\n"
+  "Documentation example checker rejected invalid fixtures and manifests\n"
 );

@@ -1,7 +1,7 @@
 ---
-"@rexeus/typeweaver-core": major
-"@rexeus/typeweaver-server": major
-"@rexeus/typeweaver-hono": major
+"@rexeus/typeweaver-core": minor
+"@rexeus/typeweaver-server": minor
+"@rexeus/typeweaver-hono": minor
 ---
 
 Replace the implicit `any` HTTP body default with an `unknown` boundary, narrow response bodies in

@@ -17,12 +17,77 @@ const formatDiagnostic = (diagnostic, workspaceRoot) => {
 
 const readJson = filePath => JSON.parse(readFileSync(filePath, "utf8"));
 
+const isNonEmptyString = value => typeof value === "string" && value.length > 0;
+
+const validateStringArray = ({ groupId, field, value }) => {
+  if (!Array.isArray(value)) {
+    return {
+      failures: [`${groupId}: ${field} must be an array`],
+      values: [],
+    };
+  }
+
+  return {
+    failures: value.flatMap((entry, index) =>
+      isNonEmptyString(entry)
+        ? []
+        : [`${groupId}: ${field}[${String(index)}] must be a non-empty string`]
+    ),
+    values: value.filter(isNonEmptyString),
+  };
+};
+
+const validateGroup = (group, index) => {
+  const fallbackId = `<group ${String(index)}>`;
+  if (typeof group !== "object" || group === null || Array.isArray(group)) {
+    return {
+      failures: [`${fallbackId} must be an object`],
+      group: { id: fallbackId, documents: [], fixtures: [] },
+    };
+  }
+
+  const id = isNonEmptyString(group.id) ? group.id : fallbackId;
+  const documents = validateStringArray({
+    groupId: id,
+    field: "documents",
+    value: group.documents,
+  });
+  const fixtures = validateStringArray({
+    groupId: id,
+    field: "fixtures",
+    value: group.fixtures,
+  });
+
+  return {
+    failures: [
+      ...(id === fallbackId
+        ? [`${fallbackId}: id must be a non-empty string`]
+        : []),
+      ...documents.failures,
+      ...fixtures.failures,
+    ],
+    group: {
+      id,
+      documents: documents.values,
+      fixtures: fixtures.values,
+    },
+  };
+};
+
 const validateManifest = (manifest, manifestPath, requiredGroupIds) => {
   const failures =
     manifest.version === 1
       ? []
       : [`${manifestPath} has unsupported version ${String(manifest.version)}`];
-  const groups = Array.isArray(manifest.groups) ? manifest.groups : [];
+  const validatedGroups = Array.isArray(manifest.groups)
+    ? manifest.groups.map(validateGroup)
+    : [];
+  const groups = validatedGroups.map(result => result.group);
+  if (!Array.isArray(manifest.groups)) {
+    failures.push(`${manifestPath}: groups must be an array`);
+  }
+  failures.push(...validatedGroups.flatMap(result => result.failures));
+
   const groupIds = groups.map(group => group.id);
   const duplicateGroupIds = new Set(
     groupIds.filter((groupId, index) => groupIds.indexOf(groupId) !== index)
