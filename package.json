@@ -19,6 +19,7 @@
     "verify:effect-reference": "node scripts/verify-effect-reference.mjs && node scripts/test-effect-reference-guard.mjs",
     "effect:diagnostics": "node scripts/test-effect-diagnostics.mjs && node scripts/run-effect-diagnostics.mjs",
     "verify:effect-version": "node scripts/test-effect-version-contract.mjs && node scripts/check-effect-version-contract.mjs",
+    "verify:release-version": "node scripts/test-release-version-contract.mjs && node scripts/check-release-version-contract.mjs",
     "docs:check": "node scripts/check-markdown-links.mjs",
     "verify:packed-consumers": "node scripts/test-packed-consumers.mjs",
     "test:pnpm-launcher": "node scripts/test-pnpm-launcher.mjs",
