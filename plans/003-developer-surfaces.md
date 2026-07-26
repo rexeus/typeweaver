@@ -255,7 +255,8 @@ section. Every code path joins `docs:check`.
 
 **Status:** IN PROGRESS — `docs/reviews/product-maturity-evidence.md` maps every criterion through
 the reviewed Stage 3 source head and records the fresh cross-dimensional review with both
-high-impact findings resolved. The final full gate and open green PR evidence remain pending.
+high-impact findings resolved. The complete local gate passed at `42a1d157`; the open green PR
+evidence remains pending.
 
 Create an English evidence report under `docs/reviews/` that maps every `GOAL.md` criterion to:
 
