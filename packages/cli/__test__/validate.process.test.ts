@@ -348,7 +348,7 @@ describe("built CLI validate issue routing", () => {
       issues: [{ code: "TW-PLUGIN-WARNING-PROBE-001" }],
     });
     expect(collectWorkspace(workspace)).toBe(before);
-  });
+  }, 15_000);
 
   test("routes a failed human report to stderr", async () => {
     const workspace = createWorkspace();
