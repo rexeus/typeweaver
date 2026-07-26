@@ -33,11 +33,12 @@ npx typeweaver generate \
 For every resource, generation adds `Effect<Resource>ApiHandler.ts`. It contains:
 
 - request- and response-specific Effect handler types
-- typed error mappers for each operation
+- typed error mappers for each emitted non-HEAD operation
 - an `adapt<Resource>EffectHandlers` function returning the existing `Server<Resource>ApiHandler`
 
 The generated adapter contains no runtime construction and no `Effect.runPromise`. It delegates to
-one runtime supplied by the application.
+one runtime supplied by the application. Explicit HEAD operations follow the server generator's
+existing handler contract and are omitted in favor of the Fetch server's automatic GET fallback.
 
 ## Runtime ownership
 

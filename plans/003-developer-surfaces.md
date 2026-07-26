@@ -8,7 +8,7 @@
 ## Status
 
 - **Stage:** 3
-- **Status:** DONE
+- **Status:** IN PROGRESS
 - **Priority:** P1
 - **Effort:** XL
 - **Risk:** HIGH
@@ -253,10 +253,11 @@ section. Every code path joins `docs:check`.
 
 ### 6. Perform the final evidence review
 
-**Status:** DONE — `docs/reviews/product-maturity-evidence.md` maps every criterion through the
-reviewed Stage 3 source head and records the fresh cross-dimensional review with both high-impact
-findings resolved. The complete local gate passed at `42a1d157`; ready PR #212 targets `main` and
-all quality-check, Windows security, CodeQL, and Socket checks passed at `e2041464`.
+**Status:** IN PROGRESS — `docs/reviews/product-maturity-evidence.md` maps every criterion through
+the reviewed Stage 3 source head and records the fresh cross-dimensional review with both
+high-impact findings resolved. The complete local gate passed at `42a1d157`; ready PR #212 targets
+`main`, and the completed Copilot review produced three actionable lower-impact repairs that are now
+passing through the discovery gate.
 
 Create an English evidence report under `docs/reviews/` that maps every `GOAL.md` criterion to:
 
@@ -293,11 +294,11 @@ green. Record all three PR heads/bases/checks in `GOAL.md`. Do not merge the Sta
 - [x] Effect handlers satisfy runtime ownership, typed error, interruption, and observability
       requirements without affecting plain handlers.
 - [x] All new public APIs have Changesets, migrations, and executable docs.
-- [x] Final review report maps every goal criterion to evidence.
-- [x] No unresolved critical or high-confidence high-impact finding remains in scope.
-- [x] Full local gate and all GitHub checks pass.
-- [x] Stage 3 PR targets `main`, is open, green, and unmerged.
-- [x] The human-merged Stage 1 and 2 PRs, open Stage 3 PR, and plan/goal status are fully recorded.
+- [ ] Final review report maps every goal criterion to evidence.
+- [ ] No unresolved critical or high-confidence high-impact finding remains in scope.
+- [ ] Full local gate and all GitHub checks pass.
+- [ ] Stage 3 PR targets `main`, is open, green, and unmerged.
+- [ ] The human-merged Stage 1 and 2 PRs, open Stage 3 PR, and plan/goal status are fully recorded.
 
 ## STOP conditions
 

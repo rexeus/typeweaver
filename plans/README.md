@@ -9,11 +9,11 @@ before changing files.
 
 ## Execution order and status
 
-| Plan                                        | Stage | Title                                                       | Priority | Effort | Depends on             | Status |
-| ------------------------------------------- | ----- | ----------------------------------------------------------- | -------- | ------ | ---------------------- | ------ |
-| [001](001-product-truth-and-type-safety.md) | 1     | Establish product truth and close type-safety gaps          | P1       | L      | Planning PR merged     | DONE   |
-| [002](002-contract-and-openapi-maturity.md) | 2     | Mature the core contract and OpenAPI projection             | P1       | L      | 001 PR open and green  | DONE   |
-| [003](003-developer-surfaces.md)            | 3     | Deliver plugin, CLI, generated-command, and Effect surfaces | P1       | XL     | 002 human-merged green | DONE   |
+| Plan                                        | Stage | Title                                                       | Priority | Effort | Depends on             | Status      |
+| ------------------------------------------- | ----- | ----------------------------------------------------------- | -------- | ------ | ---------------------- | ----------- |
+| [001](001-product-truth-and-type-safety.md) | 1     | Establish product truth and close type-safety gaps          | P1       | L      | Planning PR merged     | DONE        |
+| [002](002-contract-and-openapi-maturity.md) | 2     | Mature the core contract and OpenAPI projection             | P1       | L      | 001 PR open and green  | DONE        |
+| [003](003-developer-surfaces.md)            | 3     | Deliver plugin, CLI, generated-command, and Effect surfaces | P1       | XL     | 002 human-merged green | IN PROGRESS |
 
 Status values: `TODO`, `IN PROGRESS`, `DONE`, `BLOCKED: <reason>`, or `REJECTED: <reason>`.
 

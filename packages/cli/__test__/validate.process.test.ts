@@ -156,6 +156,41 @@ const writeWarningPlugin = (workspace: string): void => {
   );
 };
 
+const writeStagingProbePlugin = (workspace: string): void => {
+  const pluginPath = path.join(workspace, "plugins", "staging-probe.mjs");
+  fs.mkdirSync(path.dirname(pluginPath), { recursive: true });
+  fs.writeFileSync(
+    pluginPath,
+    [
+      'import fs from "node:fs";',
+      'import { Effect } from "effect";',
+      "",
+      "export default {",
+      '  name: "staging-probe",',
+      "  validate: () =>",
+      "    Effect.sync(() => {",
+      "      const stagingEntries = fs",
+      "        .readdirSync(process.cwd())",
+      '        .filter(entry => entry.startsWith(".typeweaver-validate-"));',
+      "      return stagingEntries.length === 0",
+      "        ? []",
+      "        : [",
+      "            {",
+      '              code: "TW-PLUGIN-STAGING-PROBE-001",',
+      '              severity: "warning",',
+      '              message: "Validation staging is visible inside the project.",',
+      '              path: "/",',
+      '              hint: "Stage validation outside the project tree.",',
+      "              fixable: false,",
+      "            },",
+      "          ];",
+      "    }),",
+      "};",
+      "",
+    ].join("\n")
+  );
+};
+
 const collectWorkspace = (workspace: string): string => {
   const files: string[] = [];
   const visit = (directory: string): void => {
@@ -215,6 +250,27 @@ describe("built CLI validate workflow", () => {
       issues: [],
     });
     expect(collectWorkspace(workspace)).toBe(before);
+  });
+
+  test("does not expose validation staging directories to project plugins", async () => {
+    const workspace = createWorkspace();
+    writeSpec(workspace);
+    writeStagingProbePlugin(workspace);
+
+    const result = await runCli(workspace, [
+      "validate",
+      "--input",
+      "spec/index.ts",
+      "--plugins",
+      "./plugins/staging-probe.mjs",
+      "--json",
+    ]);
+
+    expect(result.code).toBe(0);
+    expect(parseReport(result.stdout)).toMatchObject({
+      valid: true,
+      issues: [],
+    });
   });
 
   test("reports a stable spec code and exits one without writing", async () => {
