@@ -1,0 +1,301 @@
+# TypeWeaver Product Maturity Goal
+
+## Goal
+
+Turn TypeWeaver into a truthfully documented, end-to-end type-safe API-first platform whose
+executable contract can produce validated OpenAPI profiles, a usable command-line client, and an
+optional Effect-native handler surface without framework or Effect lock-in.
+
+## Why
+
+TypeWeaver already has a strong generation engine, an Effect-native plugin orchestrator, and
+meaningful integration tests. The next product milestone is not another isolated generator. It is a
+coherent public contract that users can understand, validate, extend, and project into multiple
+developer surfaces without hidden type holes or undocumented assumptions.
+
+When two implementation paths compete, prefer the one that makes the TypeWeaver contract more
+truthful, portable, deterministic, and useful to API-first developers. Effect should improve
+implementation safety and composability while remaining optional for TypeWeaver consumers.
+
+## Starting point
+
+- This goal was planned at commit `3c97d402` on 2026-07-26.
+- The planning PR contains only this goal and the plans under `plans/`.
+- Do not start implementation until the planning PR has been merged into `main`.
+- At the start of execution, fetch `origin`, switch to `main`, and require a clean fast-forward to
+  `origin/main`.
+- Read this file and the current stage plan completely at the start of every iteration.
+- TypeWeaver's active Effect baseline is Effect 3.22.0 with public peer range `>=3.22.0 <4`. Verify
+  it with `pnpm verify:effect-reference` before relying on vendored Effect APIs.
+
+## Delivery model
+
+The implementation is delivered as three stacked pull requests. The loop may implement, commit,
+push, create or update these pull requests, and repair their CI. It must never merge them.
+
+| Stage | Plan                                         | Branch                               | Pull request base                    |
+| ----- | -------------------------------------------- | ------------------------------------ | ------------------------------------ |
+| 1     | `plans/001-product-truth-and-type-safety.md` | `feat/product-truth-and-type-safety` | `main`                               |
+| 2     | `plans/002-contract-and-openapi-maturity.md` | `feat/contract-and-openapi-maturity` | `feat/product-truth-and-type-safety` |
+| 3     | `plans/003-developer-surfaces.md`            | `feat/developer-surfaces`            | `feat/contract-and-openapi-maturity` |
+
+After a stage is locally complete:
+
+1. Run every stage gate and the full repository gate.
+2. Commit all stage work as logical Conventional Commits.
+3. Push the stage branch with a normal push.
+4. Open a ready-for-review pull request against the base in the table.
+5. Inspect all pull-request checks and repair failures until every required check is green.
+6. Record the PR URL, head commit, checks, and evidence in this file.
+7. Create the next stage branch from the completed current stage head. Do not wait for or perform a
+   merge.
+
+If a named branch or PR already exists, inspect it before changing anything. Reuse it only when it
+represents this goal and has not diverged. Never force-push.
+
+## Done criteria
+
+Complete the criteria in order. A criterion is complete only when its verification is recorded in
+the progress log with the relevant commit or artifact.
+
+### Stage 1: Product truth and type safety
+
+- [ ] `VISION.md` defines the product promise, users, principles, non-goals, north-star workflow,
+      and measurable success signals.
+  - Verify: `pnpm docs:check` exits 0 and the required-section test introduced by Plan 001 passes.
+- [ ] Root, package, contributor, and architecture documentation matches the actual packages,
+      Node/pnpm toolchain, tsdown, Oxlint/Oxfmt, CLI surface, Effect baseline, and implemented
+      architecture.
+  - Verify: repository truth checks introduced by Plan 001 pass; ADR 0001 and ADR 0002 no longer
+    contain unresolved implemented decisions or invalid `defineSpec` examples.
+- [ ] Public documentation examples are executable or typechecked fixtures, not unchecked Markdown
+      claims.
+  - Verify: the new documentation-example command exits 0 and is called by `pnpm docs:check` and CI.
+- [ ] Unsupported Zod schemas never silently become generated `unknown` types.
+  - Verify: `@rexeus/typeweaver-zod-to-ts` tests cover every intentionally unsupported schema kind
+    and assert stable actionable failures.
+- [ ] Public HTTP body contracts and generated server/Hono declarations contain no implicit `any`.
+  - Verify: public type-contract tests prove the body types are not `any`, and generated fixtures
+    compile on Node, Deno, and Bun.
+- [ ] Stage 1 has a Changeset for every changed published contract, migration notes for breaking
+      changes, a green full gate, and an open green PR targeting `main`.
+
+### Stage 2: Contract and OpenAPI maturity
+
+- [ ] The authoring and normalized models expose generator-neutral API metadata and a first-class
+      security contract with documented inheritance and explicit public-operation semantics.
+  - Verify: core/gen unit tests, type tests, generated fixtures, and the accepted contract ADR from
+    Plan 002 all agree.
+- [ ] The plugin contract has a side-effect-free validation phase with stable, structured issues and
+      no write-capable validation context.
+  - Verify: compile-time context tests and PluginRegistry lifecycle tests pass; existing plugins
+    remain source compatible unless a documented breaking change is intentional.
+- [ ] OpenAPI supports explicit `3.1.2` and `3.2.0` targets, defaults to the documented
+      compatibility target, projects contract metadata/security, and reports representability loss
+      with stable diagnostic codes.
+  - Verify: both generated profiles pass the declared validator matrix; warning registry
+    exhaustiveness tests pass.
+- [ ] OpenAPI's documented support matrix explicitly distinguishes supported, lossy, and
+      out-of-scope features. It does not claim bidirectional Zod/OpenAPI/Effect Schema
+      round-tripping.
+  - Verify: `pnpm docs:check` and the OpenAPI package tests pass.
+- [ ] Stage 2 has appropriate Changesets and migration notes, a green full gate, and an open green
+      PR targeting the Stage 1 branch.
+
+### Stage 3: Developer surfaces
+
+- [ ] A third-party plugin can be scaffolded, tested, and generated through a documented public
+      starter path without copying private test internals.
+  - Verify: scaffold golden tests and a packed external plugin consumer pass.
+- [ ] The TypeWeaver CLI provides real `init`, `validate`, and `doctor` workflows with stable human
+      and JSON diagnostics; `init` is no longer a stub.
+  - Verify: process tests cover success, failure, no-write validation, JSON schema, and atomic
+    bootstrap behavior on supported runtimes.
+- [ ] `@rexeus/typeweaver-command` generates a command-line API client with one command per
+      operation, deterministic flags, body file/stdin support, structured output, documented exit
+      codes, and contract-derived security.
+  - Verify: generate a CLI from the test project, run it against a real local TypeWeaver test
+    server, and assert success, validation, authentication, HTTP failure, network failure, and
+    cancellation behavior.
+- [ ] `@rexeus/typeweaver-effect` provides Effect-returning handlers for the existing Fetch-native
+      server with one managed runtime at the application boundary, typed failures, service
+      requirements, interruption on request abort, and operation spans.
+  - Verify: Effect diagnostics, type-contract tests, lifecycle tests, and packed consumer tests pass
+    without a per-request runtime or per-handler `Effect.runPromise`.
+- [ ] All public guides describe the shipped behavior and every new public workflow has an
+      executable example.
+- [ ] A final evidence report maps every claim in this goal to commands, artifacts, commits, and PR
+      checks and records an independent review with no unresolved critical or high-confidence
+      high-impact finding in scope.
+- [ ] Stage 3 has appropriate Changesets and migration notes, a green full gate, and an open green
+      PR targeting the Stage 2 branch.
+
+### Final stack
+
+- [ ] All three PRs are open, use the exact stacked bases above, and are not merged.
+- [ ] Every required check on every PR is green at its recorded head commit.
+- [ ] `plans/README.md` and this file show all three stages as complete with evidence.
+- [ ] No criterion was waived merely because the implementation became difficult. Any intentionally
+      rejected feature is recorded as a product non-goal with evidence and reviewer-visible
+      rationale.
+
+## Full repository gate
+
+Run the narrow checks required by the current work package first. Before completing each stage, run
+all of the following from a clean checkout with Node 24 and pnpm 10.34.5:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm verify:effect-reference
+pnpm build
+pnpm install --frozen-lockfile
+pnpm test:gen
+pnpm --filter @rexeus/typeweaver test:bundle:all
+pnpm typecheck
+pnpm verify:effect-migration
+pnpm docs:check
+pnpm format:check
+pnpm lint
+pnpm test
+pnpm publish:dry
+git status --short
+```
+
+Expected result: every command exits 0 and the final status contains only the intentional
+goal/progress updates that will be committed. Run the Windows security workflow through GitHub CI
+for each PR.
+
+## Constraints
+
+- Breaking public API changes are allowed because the project is pre-1.0, but they must improve the
+  durable contract, have type/runtime tests, include a Changeset, and document migration from the
+  previous shape.
+- Preserve deterministic generation, path-safety, transactional publication, per-call isolation,
+  structured Effect errors, and the existing Node/Deno/Bun runtime contract.
+- Effect remains pinned to 3.22.0 for development with peer range `>=3.22.0 <4`. Effect 4 APIs are
+  forbidden.
+- Do not introduce `any`, unsafe assertions, ignored TypeScript errors, skipped tests, muted lints,
+  or validation bypasses to make a gate green.
+- Do not install ESLint. Maintainability enforcement stays on Oxlint/Oxfmt and the existing
+  SonarJS-compatible Oxlint configuration.
+- Prefer `unknown` plus validation at external boundaries.
+- Do not make Effect mandatory for core, client, Hono, or plain server users.
+- Do not build a full OpenAPI importer, ORM, authentication provider, business logic generator,
+  native Effect `HttpApi` backend, or lossless Zod/OpenAPI/Effect Schema round-trip in this goal.
+- Do not claim performance characteristics without a reproducible benchmark.
+- Keep generated outputs generated; change templates/generators and regenerate fixtures rather than
+  hand-editing outputs.
+- Do not close, edit, or create GitHub issues unless the user separately authorizes it. Plans may
+  reference existing issues.
+
+## Boundaries
+
+The loop may change:
+
+- `README.md`, `VISION.md`, `AGENTS.md`, package READMEs, `docs/`, and examples
+- root build/test scripts and CI required to enforce this goal
+- packages in `packages/*` required by the current stage
+- workspace manifests, lockfile, Changesets, templates, and generated test fixtures required by
+  intentional package changes
+- this goal and `plans/` for progress and evidence updates
+
+The loop must not:
+
+- edit `.repos/effect`
+- change the Effect baseline or migrate to Effect 4
+- modify unrelated applications, repositories, credentials, production resources, release
+  configuration, or published npm state
+- perform broad dependency upgrades unrelated to an accepted work package
+- rewrite Git history or force-push
+
+## Git and PR policy
+
+- Use Conventional Commits in English.
+- Commit one logical work package at a time and include Changesets in the commit that establishes
+  the corresponding public behavior.
+- Normal pushes and PR creation/update are authorized.
+- Never merge a PR.
+- Never publish packages or create a release.
+- Never delete remote branches.
+- Never change PR bases away from the stack declared above without human approval.
+- If a remote branch is ahead or diverged, stop and report instead of force-pushing.
+
+## Iteration policy
+
+1. Re-read this file, `plans/README.md`, and the current stage plan.
+2. Select the first incomplete, unblocked work package in dependency order.
+3. Record the baseline evidence or failing characterization before changing behavior.
+4. Make the smallest coherent change that advances that work package.
+5. Run its narrow verification command.
+6. Update the plan status and append a progress-log entry containing what changed, what the check
+   proved, and the next action.
+7. Commit at a logical green boundary. Do not accumulate unrelated changes.
+8. At a stage boundary, run the full gate, push, open/update the PR, and repair CI before branching
+   for the next stage.
+
+## Discovered work
+
+New findings must first be added to the table below with evidence, impact, a proposed verification,
+and a recommended stage. Finish the work package already in progress before switching.
+
+Promote a finding into a stage only when it:
+
+1. directly serves the Goal and Why,
+2. is supported by repository evidence,
+3. has a machine-checkable completion condition, and
+4. does not violate the boundaries or explicit non-goals.
+
+Otherwise leave it for human review. Discovery must deepen the agreed product milestone, not turn it
+into general repository gardening.
+
+| Finding    | Evidence | Proposed verification | Stage | Status |
+| ---------- | -------- | --------------------- | ----- | ------ |
+| _None yet_ |          |                       |       |        |
+
+## Stop conditions
+
+- **Done:** every criterion is checked with recorded evidence, all three stacked PRs are open and
+  green, and none has been merged.
+- **Iteration cap:** stop after 90 total implementation iterations or 30 in any single stage. Report
+  completed criteria, remaining criteria, evidence, and the next best action. Do not declare
+  completion.
+- **Budget:** when the runner's token or cost budget is reached, stop with a truthful handoff.
+  Budget exhaustion is not completion.
+- **No progress:** stop after three consecutive iterations that produce no change in a criterion's
+  machine-checkable evidence.
+- **Circuit breaker:** retry the same failing tool, command, CI job, or external operation at most
+  three times without a materially different hypothesis.
+- **Blocked:** after exhausting safe in-scope paths, report attempted paths, exact evidence, the
+  blocker, and the smallest input or authority that would unlock progress.
+- **Drift:** stop if the implementation requires a native Effect `HttpApi` backend, an OpenAPI
+  importer, an Effect 4 migration, or another explicit non-goal.
+- **Remote divergence:** stop if a stage branch has diverged and a normal push is impossible.
+
+## Irreversible actions
+
+Human approval is required. Never execute autonomously:
+
+- merging any pull request
+- publishing packages or creating a release
+- force-pushing or rewriting published history
+- deleting remote branches, tags, packages, or GitHub content
+- deploying infrastructure or writing to production services
+- changing repository secrets, credentials, permissions, or branch protection
+
+## Stage evidence
+
+| Stage | Status | Branch                               | Head | PR  | Required checks | Evidence report |
+| ----- | ------ | ------------------------------------ | ---- | --- | --------------- | --------------- |
+| 1     | TODO   | `feat/product-truth-and-type-safety` |      |     |                 |                 |
+| 2     | TODO   | `feat/contract-and-openapi-maturity` |      |     |                 |                 |
+| 3     | TODO   | `feat/developer-surfaces`            |      |     |                 |                 |
+
+Status values: `TODO`, `IN PROGRESS`, `DONE`, or `BLOCKED: <reason>`.
+
+## Progress log
+
+Append one line after every iteration. Never rewrite earlier entries.
+
+| Iteration | Stage    | Change                                             | Evidence                                                | Next action                                                   |
+| --------- | -------- | -------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------- |
+| 0         | Planning | Goal and three-stage roadmap created at `3c97d402` | Planning artifacts only; implementation has not started | Merge the planning PR, then start Stage 1 from updated `main` |
