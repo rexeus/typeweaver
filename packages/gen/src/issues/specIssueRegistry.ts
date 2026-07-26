@@ -1,5 +1,6 @@
 import { isNormalizationError } from "../errors/NormalizationError.js";
 import type { NormalizationError } from "../errors/NormalizationError.js";
+import type { NormalizedSpecWarning } from "../NormalizedSpec.js";
 import type { Issue, JsonPointer } from "./Issue.js";
 
 type NormalizationErrorTag = NormalizationError["_tag"];
@@ -123,6 +124,26 @@ export const SPEC_ISSUE_REGISTRY = {
   },
 } as const satisfies Readonly<Record<NormalizationErrorTag, SpecIssueEntry>>;
 
+export const NORMALIZED_SPEC_WARNING_REGISTRY = {
+  "ambiguous-content-type-header": {
+    code: "TW-SPEC-101",
+    summary: "Content-Type header allows multiple media types",
+    hint: "Use one literal Content-Type value when the body representation is media-type specific.",
+  },
+  "missing-content-type-header": {
+    code: "TW-SPEC-102",
+    summary: "Body contract has no Content-Type header",
+    hint: "Declare a literal Content-Type header so generators can represent the body media type.",
+  },
+  "raw-body-media-type-fallback": {
+    code: "TW-SPEC-103",
+    summary: "Raw body uses a fallback media type",
+    hint: "Declare a literal Content-Type header matching the raw body representation.",
+  },
+} as const satisfies Readonly<
+  Record<NormalizedSpecWarning["code"], SpecIssueEntry>
+>;
+
 const NORMALIZATION_ERROR_PATHS = {
   ContradictorySecurityHeaderError: "/resources",
   DerivedResponseCycleError: "/responses",
@@ -168,6 +189,20 @@ export const normalizationErrorToIssue = (
     severity: "error",
     message: error.message,
     path: pathForNormalizationError(error),
+    hint: entry.hint,
+    fixable: false,
+  };
+};
+
+export const normalizedSpecWarningToIssue = (
+  warning: NormalizedSpecWarning
+): Issue => {
+  const entry = NORMALIZED_SPEC_WARNING_REGISTRY[warning.code];
+  return {
+    code: entry.code,
+    severity: "warning",
+    message: warning.message,
+    path: "/resources",
     hint: entry.hint,
     fixable: false,
   };

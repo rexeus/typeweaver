@@ -348,7 +348,7 @@ type LoadParams = {
   readonly registry: PluginRegistryInstance;
   readonly requiredPlugins: readonly Plugin[];
   readonly strategies: readonly PluginResolutionStrategy[];
-  readonly config?: TypeweaverConfig;
+  readonly config?: Pick<TypeweaverConfig, "plugins">;
 };
 
 const loadConfiguredPlugin = (

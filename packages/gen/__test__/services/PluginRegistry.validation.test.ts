@@ -2,7 +2,9 @@ import { Cause, Effect, Exit, Layer, Logger, Tracer } from "effect";
 import { describe, expect, test } from "vitest";
 import {
   DuplicateOperationIdError,
+  NORMALIZED_SPEC_WARNING_REGISTRY,
   normalizationErrorToIssue,
+  normalizedSpecWarningToIssue,
   SPEC_ISSUE_REGISTRY,
 } from "../../src/index.js";
 import {
@@ -286,5 +288,25 @@ describe("stable spec issue registry", () => {
       fixable: false,
     });
     expect(normalizationErrorToIssue(new Error("unknown"))).toBeUndefined();
+  });
+
+  test("maps every normalized warning to a stable warning issue", () => {
+    expect(
+      Object.values(NORMALIZED_SPEC_WARNING_REGISTRY).map(entry => entry.code)
+    ).toEqual(["TW-SPEC-101", "TW-SPEC-102", "TW-SPEC-103"]);
+    expect(
+      normalizedSpecWarningToIssue({
+        code: "missing-content-type-header",
+        message: "Missing Content-Type",
+        location: { part: "request.body", operationId: "createTodo" },
+      })
+    ).toEqual({
+      code: "TW-SPEC-102",
+      severity: "warning",
+      message: "Missing Content-Type",
+      path: "/resources",
+      hint: "Declare a literal Content-Type header so generators can represent the body media type.",
+      fixable: false,
+    });
   });
 });

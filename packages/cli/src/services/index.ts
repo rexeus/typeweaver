@@ -22,6 +22,11 @@ export type {
   PluginScaffoldParams,
   PluginScaffoldResult,
 } from "./PluginScaffolder.js";
+export { ProjectValidator } from "./ProjectValidator.js";
+export type {
+  ValidateProjectParams,
+  ValidateProjectResult,
+} from "./ProjectValidator.js";
 export { SpecBundler } from "./SpecBundler.js";
 export type { SpecBundlerConfig, SpecBundlerDeps } from "./SpecBundler.js";
 export { SpecImporter } from "./SpecImporter.js";

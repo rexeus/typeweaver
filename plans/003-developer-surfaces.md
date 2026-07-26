@@ -111,6 +111,10 @@ exit path.
 
 ### 2. Complete the core CLI workflow
 
+**Status:** IN PROGRESS — `validate` is complete with scoped no-write bundling, stable human/JSON
+reports, Zod schemas, severity thresholds, normalized warnings, and plugin issues; `doctor` and the
+atomic `init` bootstrap remain.
+
 Replace the `init` stub with an atomic, non-destructive project bootstrap. Implement:
 
 - `validate`: no output writes, human/JSON reports, stable codes, severity threshold, plugin

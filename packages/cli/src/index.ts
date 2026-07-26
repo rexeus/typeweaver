@@ -7,6 +7,12 @@
  */
 export { effectRuntime, ProductionLayer } from "./effectRuntime.js";
 export { Generator } from "./services/Generator.js";
+export {
+  SeveritySchema,
+  ValidationIssueSchema,
+  ValidationReportSchema,
+} from "./reports/ValidationReport.js";
+export type { ValidationReport } from "./reports/ValidationReport.js";
 export type {
   GenerateFailure,
   GenerateParams,

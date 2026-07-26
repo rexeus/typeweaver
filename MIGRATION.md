@@ -157,6 +157,11 @@ Generating next to the spec source (e.g. `--output spec` with `--input spec/inde
 allowed with `--no-clean`; only the destructive clean step refuses targets that contain the input
 file.
 
+The additive `typeweaver validate` command runs normalization and plugin validation without writing
+project output. Its `--json` mode emits a versioned report accepted by the public
+`ValidationReportSchema`; `--fail-on` and `--strict` control the deterministic exit threshold.
+Existing `generate` invocations do not need to change.
+
 ### 3. Internal API changes (informational; only programmatic consumers)
 
 If you imported the generator programmatically rather than through the CLI:

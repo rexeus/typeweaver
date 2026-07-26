@@ -1,6 +1,6 @@
 import { Command, Options } from "@effect/cli";
 import { NodeRuntime } from "@effect/platform-node";
-import { Effect } from "effect";
+import { Effect, Logger, LogLevel } from "effect";
 import {
   cliPackageVersion,
   pluginScaffoldTemplateDirectory,
@@ -9,6 +9,7 @@ import { ProductionLayer, VerboseLayer } from "./effectRuntime.js";
 import { formatErrorForCli } from "./formatErrorForCli.js";
 import { runAddPlugin } from "./runAddPlugin.js";
 import { runGenerate } from "./runGenerate.js";
+import { runValidate } from "./runValidate.js";
 import { isOnlyValidationErrorCause } from "./validationErrorFilter.js";
 
 const inputOption = Options.text("input").pipe(
@@ -82,6 +83,25 @@ const pluginTargetOption = Options.text("target").pipe(
   Options.withDescription("new directory that will receive the plugin scaffold")
 );
 
+const jsonOption = Options.boolean("json", { ifPresent: true }).pipe(
+  Options.withDescription("emit a stable machine-readable JSON report"),
+  Options.optional
+);
+
+const strictOption = Options.boolean("strict", { ifPresent: true }).pipe(
+  Options.withDescription("fail validation when warnings are present"),
+  Options.optional
+);
+
+const failOnOption = Options.choice("fail-on", [
+  "error",
+  "warning",
+  "info",
+]).pipe(
+  Options.withDescription("lowest issue severity that exits non-zero"),
+  Options.optional
+);
+
 const generateCommand = Command.make(
   "generate",
   {
@@ -106,6 +126,23 @@ const initCommand = Command.make("init", {}, () =>
   Effect.logInfo("The init command is coming soon!")
 ).pipe(
   Command.withDescription("Initialize a new typeweaver project (coming soon)")
+);
+
+const validateCommand = Command.make(
+  "validate",
+  {
+    input: inputOption,
+    config: configOption,
+    plugins: pluginsOption,
+    strict: strictOption,
+    "fail-on": failOnOption,
+    json: jsonOption,
+  },
+  runValidate
+).pipe(
+  Command.withDescription(
+    "Validate a spec and its plugins without writing project output"
+  )
 );
 
 const addPluginCommand = Command.make(
@@ -135,7 +172,12 @@ const cli = Command.make("typeweaver").pipe(
   Command.withDescription(
     "Type-safe API framework with code generation for TypeScript"
   ),
-  Command.withSubcommands([generateCommand, initCommand, addCommand])
+  Command.withSubcommands([
+    generateCommand,
+    initCommand,
+    validateCommand,
+    addCommand,
+  ])
 );
 
 const run = Command.run(cli, {
@@ -153,9 +195,13 @@ const run = Command.run(cli, {
 // so normalize that public compatibility flag before parsing.
 const cliArgs = process.argv.map(arg => (arg === "-V" ? "--version" : arg));
 const isVerbose = cliArgs.some(arg => arg === "--verbose");
+const isJson = cliArgs.some(arg => arg === "--json");
+const isReadOnlyDiagnostic = cliArgs.some(
+  arg => arg === "validate" || arg === "doctor"
+);
 const runtimeLayer = isVerbose ? VerboseLayer : ProductionLayer;
 
-const program = run(cliArgs).pipe(
+const programWithErrorBoundary = run(cliArgs).pipe(
   // @effect/cli surfaces help requests and validation issues as
   // `ValidationError`. The framework already prints a friendly message and
   // sets the exit code for those — skip the custom formatter so we do not
@@ -173,9 +219,13 @@ const program = run(cliArgs).pipe(
       // eslint-disable-next-line no-console
       console.error(formatErrorForCli(cause));
     });
-  }),
-  Effect.provide(runtimeLayer)
+  })
 );
+const program = (
+  isJson || isReadOnlyDiagnostic
+    ? programWithErrorBoundary.pipe(Logger.withMinimumLogLevel(LogLevel.None))
+    : programWithErrorBoundary
+).pipe(Effect.provide(runtimeLayer));
 
 NodeRuntime.runMain(program, {
   disableErrorReporting: true,

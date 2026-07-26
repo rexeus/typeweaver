@@ -24,7 +24,7 @@ const resolveBooleanOption = (
   configValue: boolean | undefined
 ): boolean => optionValue ?? configValue ?? true;
 
-const parsePlugins = (plugins: string): string[] =>
+export const parsePluginList = (plugins: string): string[] =>
   plugins.split(",").map(plugin => plugin.trim());
 
 export const resolveGenerateOptions = (
@@ -62,7 +62,7 @@ export const resolveGenerateOptions = (
   };
 
   if (options.plugins) {
-    finalConfig.plugins = parsePlugins(options.plugins);
+    finalConfig.plugins = parsePluginList(options.plugins);
   }
 
   return {

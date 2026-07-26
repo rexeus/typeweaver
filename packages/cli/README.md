@@ -106,7 +106,26 @@ minimal and configurable plugin exports, a generation fixture, and tests built o
 `pnpm check` typechecks, tests, builds, and runs the plugin against the included spec. The scaffold
 develops against Effect 3.22.0 and declares the supported plugin peer range `>=3.22.0 <4`.
 
-### ⚙️ Options
+### Validate without writing
+
+Validate the normalized spec and every configured plugin without touching the configured output:
+
+```bash
+npx typeweaver validate --input ./api/spec/index.ts
+npx typeweaver validate --config ./typeweaver.config.mjs --json
+```
+
+Validation uses a scoped temporary bundle that is removed before the command exits. Human failures
+are written to stderr. `--json` writes one versioned `ValidationReport` document to stdout; the
+public `ValidationReportSchema` export can validate it in automation.
+
+The default exit threshold is `error`. Use `--fail-on warning`, `--fail-on info`, or `--strict`
+(`warning`) to tighten CI. Exit code 0 means no issue met the threshold; exit code 1 means at least
+one did. Normalization failures retain their stable `TW-SPEC-*` codes, normalized contract warnings
+use `TW-SPEC-101` through `TW-SPEC-103`, and plugin validation issues retain the plugin's declared
+code.
+
+### ⚙️ Generate options
 
 - `--input, -i <path>`: Spec entrypoint file (required via flag or config)
 - `--output, -o <path>`: Output directory for generated code (required via flag or config)
