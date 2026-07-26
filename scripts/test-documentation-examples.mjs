@@ -105,6 +105,39 @@ try {
       `${manifestPath}: tsconfig must be a non-empty string`,
     ]);
   }
+
+  rmSync(path.join(fixtureRoot, manifestPath));
+  const missingManifestResult = verifyDocumentationExamples({
+    workspaceRoot: fixtureRoot,
+    manifestPath,
+    requiredGroupIds: [groupId],
+  });
+  assert.deepEqual(missingManifestResult, {
+    failures: [`${manifestPath}: manifest file does not exist`],
+    groups: [],
+  });
+
+  writeFileSync(path.join(fixtureRoot, manifestPath), "{ invalid json");
+  const invalidJsonResult = verifyDocumentationExamples({
+    workspaceRoot: fixtureRoot,
+    manifestPath,
+    requiredGroupIds: [groupId],
+  });
+  assert.deepEqual(invalidJsonResult, {
+    failures: [`${manifestPath}: manifest contains invalid JSON`],
+    groups: [],
+  });
+
+  writeJson(manifestPath, null);
+  const nonObjectManifestResult = verifyDocumentationExamples({
+    workspaceRoot: fixtureRoot,
+    manifestPath,
+    requiredGroupIds: [groupId],
+  });
+  assert.deepEqual(nonObjectManifestResult, {
+    failures: [`${manifestPath}: manifest must be a JSON object`],
+    groups: [],
+  });
 } finally {
   rmSync(fixtureRoot, { recursive: true });
 }

@@ -15,9 +15,38 @@ const formatDiagnostic = (diagnostic, workspaceRoot) => {
   return `${file}:${position.line + 1}:${position.character + 1} TS${diagnostic.code}: ${message}`;
 };
 
-const readJson = filePath => JSON.parse(readFileSync(filePath, "utf8"));
+const readManifest = (absoluteManifestPath, manifestPath) => {
+  if (!existsSync(absoluteManifestPath)) {
+    return {
+      failures: [`${manifestPath}: manifest file does not exist`],
+      manifest: undefined,
+    };
+  }
+
+  let source;
+  try {
+    source = readFileSync(absoluteManifestPath, "utf8");
+  } catch {
+    return {
+      failures: [`${manifestPath}: manifest file could not be read`],
+      manifest: undefined,
+    };
+  }
+
+  try {
+    return { failures: [], manifest: JSON.parse(source) };
+  } catch {
+    return {
+      failures: [`${manifestPath}: manifest contains invalid JSON`],
+      manifest: undefined,
+    };
+  }
+};
 
 const isNonEmptyString = value => typeof value === "string" && value.length > 0;
+
+const isRecord = value =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
 const validateStringArray = ({ groupId, field, value }) => {
   if (!Array.isArray(value)) {
@@ -75,6 +104,14 @@ const validateGroup = (group, index) => {
 };
 
 const validateManifest = (manifest, manifestPath, requiredGroupIds) => {
+  if (!isRecord(manifest)) {
+    return {
+      failures: [`${manifestPath}: manifest must be a JSON object`],
+      groups: [],
+      tsconfig: undefined,
+    };
+  }
+
   const failures =
     manifest.version === 1
       ? []
@@ -196,9 +233,13 @@ export const verifyDocumentationExamples = ({
   requiredGroupIds,
 }) => {
   const absoluteManifestPath = path.resolve(workspaceRoot, manifestPath);
-  const manifest = readJson(absoluteManifestPath);
+  const manifestResult = readManifest(absoluteManifestPath, manifestPath);
+  if (manifestResult.manifest === undefined) {
+    return { failures: manifestResult.failures, groups: [] };
+  }
+
   const manifestValidation = validateManifest(
-    manifest,
+    manifestResult.manifest,
     manifestPath,
     requiredGroupIds
   );
