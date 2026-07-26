@@ -288,7 +288,11 @@ const writeConsumerManifest = ({
       "@rexeus/typeweaver-command":
         packedDependencies["@rexeus/typeweaver-command"],
       "@rexeus/typeweaver-core": packedDependencies["@rexeus/typeweaver-core"],
+      "@rexeus/typeweaver-effect":
+        packedDependencies["@rexeus/typeweaver-effect"],
       "@rexeus/typeweaver-gen": packedDependencies["@rexeus/typeweaver-gen"],
+      "@rexeus/typeweaver-server":
+        packedDependencies["@rexeus/typeweaver-server"],
       "@types/node": "26.1.1",
       effect: effectVersion,
       hono: "4.12.32",
@@ -557,7 +561,7 @@ const writeRuntimeConfig = fixtureRoot => {
       "export default {",
       `  input: ${JSON.stringify(path.join(fixtureRoot, "spec", "index.ts"))},`,
       `  output: ${JSON.stringify(outputRoot)},`,
-      `  plugins: ["clients", "command", [${JSON.stringify(pluginPath)}, {}]],`,
+      `  plugins: ["clients", "command", "server", "effect", [${JSON.stringify(pluginPath)}, {}]],`,
       "};",
       "",
     ].join("\n")
@@ -566,6 +570,29 @@ const writeRuntimeConfig = fixtureRoot => {
 };
 
 const verifyGeneratedCommandConsumer = ({ fixtureRoot, outputRoot }) => {
+  writeFileSync(
+    path.join(outputRoot, "effect-consumer.ts"),
+    [
+      'import { createEffectHandlerRuntime } from "@rexeus/typeweaver-effect";',
+      'import { Effect, Layer } from "effect";',
+      'import { adaptHealthEffectHandlers } from "./health/EffectHealthApiHandler.js";',
+      'import type { EffectHealthApiHandler, EffectHealthErrorMappers } from "./health/EffectHealthApiHandler.js";',
+      'import { createOkResponse } from "./responses/OkResponse.js";',
+      "",
+      "const runtime = createEffectHandlerRuntime(Layer.empty);",
+      "const handlers = {",
+      "  handlePingRequest: () => Effect.succeed(createOkResponse()),",
+      "} satisfies EffectHealthApiHandler<never, never>;",
+      "const errorMappers = {",
+      "  handlePingRequest: () => createOkResponse(),",
+      "} satisfies EffectHealthErrorMappers<never>;",
+      "const adapted = adaptHealthEffectHandlers(runtime, handlers, errorMappers);",
+      'if (typeof adapted.handlePingRequest !== "function") throw new Error("missing Effect adapter");',
+      "await runtime.dispose();",
+      'process.stdout.write("effect-adapter-ok\\\\n");',
+      "",
+    ].join("\n")
+  );
   const generatedTsconfig = path.join(
     fixtureRoot,
     "generated-command.tsconfig.json"
@@ -611,6 +638,13 @@ const verifyGeneratedCommandConsumer = ({ fixtureRoot, outputRoot }) => {
       cwd: fixtureRoot,
     }),
     /ping\s+Ping/
+  );
+  assert.equal(
+    runNode({
+      args: [path.join(generatedDist, "effect-consumer.js")],
+      cwd: fixtureRoot,
+    }),
+    "effect-adapter-ok\\n"
   );
 };
 
@@ -670,7 +704,7 @@ const verifySupportedConsumer = ({
     ],
     cwd: fixtureRoot,
   });
-  assert.match(output, /Successfully loaded 3 plugin/);
+  assert.match(output, /Successfully loaded 5 plugin/);
   assert.equal(
     readFileSync(path.join(outputRoot, "packed-compat", "result.txt"), "utf8"),
     "packed-consumer-ok\n"

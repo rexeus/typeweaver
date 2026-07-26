@@ -251,6 +251,10 @@ If you imported the generator programmatically rather than through the CLI:
 - Generated server `ServerContext` now includes the incoming Fetch request's `signal`. Existing
   handlers require no migration; cancellation-aware handlers and adapters can forward this
   `AbortSignal` to their runtime boundary.
+- Projects may opt into `@rexeus/typeweaver-effect` by generating `server,effect`, creating one
+  `createEffectHandlerRuntime(applicationLayer)` beside the application, adapting generated resource
+  handlers, and calling `runtime.dispose()` during graceful shutdown. Existing Promise handlers and
+  the ordinary server package do not require Effect or any migration.
 - Custom `TypeweaverRouter` subclasses now call the protected `route` method with one exported
   `TypeweaverRouteOptions` object instead of the previous positional arguments.
 - Custom `TypeweaverHono` subclasses now call the protected `handleRequest` method with one exported

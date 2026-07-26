@@ -18,6 +18,7 @@ const requiredGroupIds = [
   "generated-command",
   "hono-handler",
   "fetch-server-handler",
+  "effect-handler",
   "openapi-options",
 ];
 const result = verifyDocumentationExamples({

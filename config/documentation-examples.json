@@ -58,6 +58,11 @@
       "fixtures": ["packages/cli/examples/documentation/fetch-server-handler.ts"]
     },
     {
+      "id": "effect-handler",
+      "documents": ["packages/effect/README.md"],
+      "fixtures": ["packages/cli/examples/documentation/effect-handler.ts"]
+    },
+    {
       "id": "openapi-options",
       "documents": ["packages/openapi/README.md"],
       "fixtures": ["packages/cli/examples/documentation/openapi-options.ts"]

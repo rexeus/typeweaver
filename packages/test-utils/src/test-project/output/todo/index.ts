@@ -46,6 +46,8 @@ export * from "./DeleteTodoResponse.js";
 
 export * from "./DeleteTodoResponseValidator.js";
 
+export * from "./EffectTodoApiHandler.js";
+
 export * from "./GetTodoRequest.js";
 
 export * from "./GetTodoRequestCommand.js";

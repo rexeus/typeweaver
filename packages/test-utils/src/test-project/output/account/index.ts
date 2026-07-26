@@ -14,6 +14,8 @@ export * from "./AccountHttpApiRoutes.js";
 
 export * from "./AccountRouter.js";
 
+export * from "./EffectAccountApiHandler.js";
+
 export * from "./RegisterAccountRequest.js";
 
 export * from "./RegisterAccountRequestCommand.js";

@@ -125,6 +125,9 @@ importers:
       '@rexeus/typeweaver-core':
         specifier: workspace:^
         version: link:../core
+      '@rexeus/typeweaver-effect':
+        specifier: workspace:^
+        version: link:../effect
       '@rexeus/typeweaver-gen':
         specifier: workspace:^
         version: link:../gen
@@ -236,6 +239,28 @@ importers:
       zod:
         specifier: ^4.4.3
         version: 4.4.3
+
+  packages/effect:
+    dependencies:
+      polycase:
+        specifier: ^1.1.0
+        version: 1.1.0
+    devDependencies:
+      '@rexeus/typeweaver-core':
+        specifier: workspace:^
+        version: link:../core
+      '@rexeus/typeweaver-gen':
+        specifier: workspace:^
+        version: link:../gen
+      '@rexeus/typeweaver-server':
+        specifier: workspace:^
+        version: link:../server
+      effect:
+        specifier: ^3.22.0
+        version: 3.22.0
+      test-utils:
+        specifier: file:../test-utils
+        version: link:../test-utils
 
   packages/gen:
     dependencies:
@@ -360,6 +385,9 @@ importers:
       '@rexeus/typeweaver-core':
         specifier: workspace:^
         version: link:../core
+      '@rexeus/typeweaver-effect':
+        specifier: workspace:^
+        version: link:../effect
       '@rexeus/typeweaver-gen':
         specifier: workspace:^
         version: link:../gen

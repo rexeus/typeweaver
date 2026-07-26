@@ -187,9 +187,10 @@ in a temporary consumer.
 
 ### 4. Add optional Effect-native server handlers
 
-**Status:** IN PROGRESS — the Fetch-native server now exposes request cancellation through
-`ServerContext.signal`; the optional adapter package, generated handler types, lifecycle behavior,
-and external-consumer proof remain in progress.
+**Status:** DONE — the Fetch-native server exposes request cancellation, while the optional adapter
+owns one Effect 3.22 `ManagedRuntime` at the application boundary and generates typed handler/error
+mapper records for the existing routers. Runtime, type-contract, real Fetch-server, static-boundary,
+diagnostic, documentation-example, generated-fixture, and packed-consumer proofs are complete.
 
 Create `packages/effect` published as `@rexeus/typeweaver-effect`. Build on the existing
 server/router contract rather than generating a second server stack. The public handler shape should
@@ -280,7 +281,7 @@ merge any PR.
 - [x] A scaffolded external plugin succeeds using only public APIs.
 - [x] `init`, `validate`, and `doctor` are real, tested commands.
 - [x] Generated command client passes real-server and packed-consumer tests.
-- [ ] Effect handlers satisfy runtime ownership, typed error, interruption, and observability
+- [x] Effect handlers satisfy runtime ownership, typed error, interruption, and observability
       requirements without affecting plain handlers.
 - [ ] All new public APIs have Changesets, migrations, and executable docs.
 - [ ] Final review report maps every goal criterion to evidence.
