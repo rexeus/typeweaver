@@ -45,11 +45,16 @@ export type UpdateTodoStatusRequestCommandInput = Omit<
  * Update todo status
  */
 export class UpdateTodoStatusRequestCommand
-  extends RequestCommand
+  extends RequestCommand<
+    IUpdateTodoStatusRequestHeader,
+    IUpdateTodoStatusRequestParam,
+    undefined,
+    IUpdateTodoStatusRequestBody
+  >
   implements IUpdateTodoStatusRequest
 {
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.PUT;
+  public override readonly method = HttpMethod.PUT;
   public override readonly path = definition.path;
 
   public override readonly header: IUpdateTodoStatusRequestHeader;

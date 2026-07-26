@@ -41,9 +41,12 @@ export type OptionsTodoRequestCommandInput = Omit<
 /**
  * Get allowed methods for todo resource
  */
-export class OptionsTodoRequestCommand extends RequestCommand implements IOptionsTodoRequest {
+export class OptionsTodoRequestCommand
+  extends RequestCommand<IOptionsTodoRequestHeader, IOptionsTodoRequestParam, undefined, undefined>
+  implements IOptionsTodoRequest
+{
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.OPTIONS;
+  public override readonly method = HttpMethod.OPTIONS;
   public override readonly path = definition.path;
 
   public override readonly header: IOptionsTodoRequestHeader;

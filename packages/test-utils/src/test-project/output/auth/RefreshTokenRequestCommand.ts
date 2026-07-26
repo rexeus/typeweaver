@@ -43,9 +43,12 @@ export type RefreshTokenRequestCommandInput = Omit<
 /**
  * Refresh access token by refresh token
  */
-export class RefreshTokenRequestCommand extends RequestCommand implements IRefreshTokenRequest {
+export class RefreshTokenRequestCommand
+  extends RequestCommand<IRefreshTokenRequestHeader, undefined, undefined, IRefreshTokenRequestBody>
+  implements IRefreshTokenRequest
+{
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.POST;
+  public override readonly method = HttpMethod.POST;
   public override readonly path = definition.path;
 
   public override readonly header: IRefreshTokenRequestHeader;

@@ -7,38 +7,54 @@
  */
 
 import type { Context } from "hono";
+import type { BlankEnv, BlankSchema } from "hono/types";
 import {
   TypeweaverHono,
   type HonoRequestHandler,
   type TypeweaverHonoOptions,
 } from "../lib/hono/index.js";
 
-import type { IUploadFileRequest } from "./UploadFileRequest.js";
+import type { IUploadFileRequest, IRawUploadFileRequest } from "./UploadFileRequest.js";
 import { UploadFileRequestValidator } from "./UploadFileRequestValidator.js";
 import type { UploadFileResponse } from "./UploadFileResponse.js";
 import { UploadFileResponseValidator } from "./UploadFileResponseValidator.js";
 
-import type { IGetFileMetadataRequest } from "./GetFileMetadataRequest.js";
+import type {
+  IGetFileMetadataRequest,
+  IRawGetFileMetadataRequest,
+} from "./GetFileMetadataRequest.js";
 import { GetFileMetadataRequestValidator } from "./GetFileMetadataRequestValidator.js";
 import type { GetFileMetadataResponse } from "./GetFileMetadataResponse.js";
 import { GetFileMetadataResponseValidator } from "./GetFileMetadataResponseValidator.js";
 
-import type { IDownloadFileContentRequest } from "./DownloadFileContentRequest.js";
+import type {
+  IDownloadFileContentRequest,
+  IRawDownloadFileContentRequest,
+} from "./DownloadFileContentRequest.js";
 import { DownloadFileContentRequestValidator } from "./DownloadFileContentRequestValidator.js";
 import type { DownloadFileContentResponse } from "./DownloadFileContentResponse.js";
 import { DownloadFileContentResponseValidator } from "./DownloadFileContentResponseValidator.js";
 
-export type HonoFileApiHandler = {
+type HandlerRequest<TValidateRequests extends boolean, TValidated, TRaw> = [
+  TValidateRequests,
+] extends [true]
+  ? TValidated
+  : TRaw;
+
+export type HonoFileApiHandler<TValidateRequests extends boolean = true> = {
   /**
    * Upload a file
    */
-  handleUploadFileRequest: HonoRequestHandler<IUploadFileRequest, UploadFileResponse>;
+  handleUploadFileRequest: HonoRequestHandler<
+    HandlerRequest<TValidateRequests, IUploadFileRequest, IRawUploadFileRequest>,
+    UploadFileResponse
+  >;
 
   /**
    * Get file metadata
    */
   handleGetFileMetadataRequest: HonoRequestHandler<
-    IGetFileMetadataRequest,
+    HandlerRequest<TValidateRequests, IGetFileMetadataRequest, IRawGetFileMetadataRequest>,
     GetFileMetadataResponse
   >;
 
@@ -46,13 +62,25 @@ export type HonoFileApiHandler = {
    * Download file content
    */
   handleDownloadFileContentRequest: HonoRequestHandler<
-    IDownloadFileContentRequest,
+    HandlerRequest<TValidateRequests, IDownloadFileContentRequest, IRawDownloadFileContentRequest>,
     DownloadFileContentResponse
   >;
 };
 
-export class FileHono extends TypeweaverHono<HonoFileApiHandler> {
-  public constructor(options: TypeweaverHonoOptions<HonoFileApiHandler>) {
+export class FileHono<TValidateRequests extends boolean = true> extends TypeweaverHono<
+  HonoFileApiHandler<TValidateRequests>,
+  BlankEnv,
+  BlankSchema,
+  "/",
+  TValidateRequests
+> {
+  public constructor(
+    options: TypeweaverHonoOptions<
+      HonoFileApiHandler<TValidateRequests>,
+      BlankEnv,
+      TValidateRequests
+    >,
+  ) {
     super(options);
     this.setupRoutes();
   }

@@ -7,29 +7,51 @@
  */
 
 import type { Context } from "hono";
+import type { BlankEnv, BlankSchema } from "hono/types";
 import {
   TypeweaverHono,
   type HonoRequestHandler,
   type TypeweaverHonoOptions,
 } from "../lib/hono/index.js";
 
-import type { IRegisterAccountRequest } from "./RegisterAccountRequest.js";
+import type {
+  IRegisterAccountRequest,
+  IRawRegisterAccountRequest,
+} from "./RegisterAccountRequest.js";
 import { RegisterAccountRequestValidator } from "./RegisterAccountRequestValidator.js";
 import type { RegisterAccountResponse } from "./RegisterAccountResponse.js";
 import { RegisterAccountResponseValidator } from "./RegisterAccountResponseValidator.js";
 
-export type HonoAccountApiHandler = {
+type HandlerRequest<TValidateRequests extends boolean, TValidated, TRaw> = [
+  TValidateRequests,
+] extends [true]
+  ? TValidated
+  : TRaw;
+
+export type HonoAccountApiHandler<TValidateRequests extends boolean = true> = {
   /**
    * Register new account
    */
   handleRegisterAccountRequest: HonoRequestHandler<
-    IRegisterAccountRequest,
+    HandlerRequest<TValidateRequests, IRegisterAccountRequest, IRawRegisterAccountRequest>,
     RegisterAccountResponse
   >;
 };
 
-export class AccountHono extends TypeweaverHono<HonoAccountApiHandler> {
-  public constructor(options: TypeweaverHonoOptions<HonoAccountApiHandler>) {
+export class AccountHono<TValidateRequests extends boolean = true> extends TypeweaverHono<
+  HonoAccountApiHandler<TValidateRequests>,
+  BlankEnv,
+  BlankSchema,
+  "/",
+  TValidateRequests
+> {
+  public constructor(
+    options: TypeweaverHonoOptions<
+      HonoAccountApiHandler<TValidateRequests>,
+      BlankEnv,
+      TValidateRequests
+    >,
+  ) {
     super(options);
     this.setupRoutes();
   }

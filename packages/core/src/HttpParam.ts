@@ -1,17 +1,7 @@
-import type {
-  ZodEnum,
-  ZodLiteral,
-  ZodObject,
-  ZodString,
-  ZodStringFormat,
-} from "zod";
+import type { ZodObject } from "zod";
 
 export type IHttpParam = Record<string, string> | undefined;
 
-type HttpParamValue =
-  | ZodString
-  | ZodStringFormat
-  | ZodLiteral<string>
-  | ZodEnum<Record<string, string>>;
+export type IRawHttpParam = Readonly<Record<string, string>> | undefined;
 
-export type HttpParamSchema = ZodObject<Record<string, HttpParamValue>>;
+export type HttpParamSchema = ZodObject;

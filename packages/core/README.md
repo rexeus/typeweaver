@@ -70,7 +70,7 @@ Imports and the parent response are included in the typechecked
 ## 🔧 What It Provides
 
 - **HTTP primitives**: `HttpMethod`, `HttpStatusCode`, `IHttpRequest`, `IHttpResponse`,
-  `ITypedHttpResponse`.
+  `ITypedHttpResponse`, and `IRawHttpRequest`.
 - **Spec authoring**: `defineSpec`, `defineOperation`, `defineResponse`, `defineDerivedResponse`,
   metadata, tags, and generator-neutral security declarations.
 - **Type guards**: `isTypedHttpResponse` for runtime discrimination of typed response objects.
@@ -93,6 +93,25 @@ function readTextBody(response: IHttpResponse): string | undefined {
 Fetch-native adapters preserve strings, `ArrayBuffer`, and `Blob` values and JSON-serialize other
 supported response values. They reject values that `JSON.stringify` cannot represent instead of
 silently producing an empty response.
+
+### Raw, validated, and client request values
+
+Typeweaver keeps three HTTP request representations separate:
+
+- `IRawHttpRequest` is adapter output. Path values are strings; repeated query and header values are
+  readonly string arrays; an unvalidated body is `unknown`.
+- `IHttpRequest<Header, Param, Query, Body>` is validated output. Generated request types use each
+  Zod schema's output type and keep every property readonly.
+- `ClientHttpParam`, `ClientHttpQuery`, and `ClientHttpHeader` accept the domain scalars that a
+  generated client can serialize: `string`, finite `number`, `boolean`, `bigint`, and valid `Date`.
+
+Request schemas must accept the raw representation and produce a supported client scalar or scalar
+array. For textual HTTP booleans, prefer `z.stringbool()`: it maps values such as `"false"` and
+`"0"` to `false`. `z.coerce.boolean()` intentionally retains Zod's JavaScript-truthiness behavior,
+so both non-empty strings produce `true`.
+
+See the [typed HTTP boundary migration guide](../../docs/migrations/typed-http-boundaries.md) for
+examples and compatibility guidance.
 
 This package does not ship framework adapters. Use plugins like `@rexeus/typeweaver-hono` or
 `@rexeus/typeweaver-aws-cdk` for routers/integrations.

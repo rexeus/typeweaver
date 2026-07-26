@@ -26,6 +26,10 @@ export * from "./ForbiddenErrorResponse.js";
 
 export * from "./GetFileMetadataSuccessResponse.js";
 
+export * from "./GetMetricLabelsSuccessResponse.js";
+
+export * from "./GetMetricSuccessResponse.js";
+
 export * from "./GetTodoSuccessResponse.js";
 
 export * from "./HeadTodoSuccessResponse.js";

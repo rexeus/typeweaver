@@ -7,7 +7,9 @@
 
 import type {
   IHttpRequest,
+  IRawHttpRequest,
   IRequestValidator,
+  IValidatedHttpRequest,
   SafeRequestValidationResult,
 } from "@rexeus/typeweaver-core";
 import { Validator } from "./Validator.js";
@@ -25,9 +27,11 @@ import { Validator } from "./Validator.js";
  * - Return validated data (for `validate`)
  * - Return success/error result (for `safeValidate`)
  */
-export abstract class RequestValidator
+export abstract class RequestValidator<
+  TValidatedRequest extends IValidatedHttpRequest = IHttpRequest,
+>
   extends Validator
-  implements IRequestValidator
+  implements IRequestValidator<TValidatedRequest>
 {
   public constructor() {
     super();
@@ -40,8 +44,8 @@ export abstract class RequestValidator
    * @returns A result object containing either the validated request or error details
    */
   public abstract safeValidate(
-    request: IHttpRequest
-  ): SafeRequestValidationResult<IHttpRequest>;
+    request: IRawHttpRequest
+  ): SafeRequestValidationResult<TValidatedRequest>;
 
   /**
    * Validates a request and throws if validation fails.
@@ -50,5 +54,5 @@ export abstract class RequestValidator
    * @returns The validated request with proper typing
    * @throws {RequestValidationError} If any part of the request fails validation
    */
-  public abstract validate(request: IHttpRequest): IHttpRequest;
+  public abstract validate(request: IRawHttpRequest): TValidatedRequest;
 }

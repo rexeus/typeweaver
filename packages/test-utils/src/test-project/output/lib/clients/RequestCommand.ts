@@ -6,11 +6,10 @@
  */
 
 import type {
+  ClientHttpHeader,
+  ClientHttpParam,
+  ClientHttpQuery,
   HttpMethod,
-  IHttpBody,
-  IHttpHeader,
-  IHttpParam,
-  IHttpQuery,
   IHttpRequest,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
@@ -29,11 +28,11 @@ import type {
  * @template Body - The request body type
  */
 export abstract class RequestCommand<
-  Header extends IHttpHeader = IHttpHeader | undefined,
-  Param extends IHttpParam = IHttpParam | undefined,
-  Query extends IHttpQuery = IHttpQuery | undefined,
-  Body extends IHttpBody = IHttpBody | undefined,
-> implements IHttpRequest {
+  Header extends ClientHttpHeader = ClientHttpHeader,
+  Param extends ClientHttpParam = ClientHttpParam,
+  Query extends ClientHttpQuery = ClientHttpQuery,
+  Body = unknown,
+> implements IHttpRequest<Header, Param, Query, Body> {
   /** Unique operation identifier from the API definition */
   public readonly operationId!: string;
   /** The HTTP method for this request */

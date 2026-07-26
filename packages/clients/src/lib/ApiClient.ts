@@ -6,15 +6,17 @@
  */
 
 import type {
+  ClientHttpHeader,
+  ClientHttpParam,
+  ClientHttpQuery,
   IHttpHeader,
-  IHttpParam,
-  IHttpQuery,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
 import { ApiClientConfigurationError } from "./errors/ApiClientConfigurationError.js";
 import { NetworkError } from "./NetworkError.js";
 import { PathParameterError } from "./PathParameterError.js";
 import { RequestCommand } from "./RequestCommand.js";
+import { RequestSerializationError } from "./RequestSerializationError.js";
 import { ResponseParseError } from "./ResponseParseError.js";
 import type { NetworkErrorCode } from "./NetworkError.js";
 
@@ -58,7 +60,7 @@ type NetworkFailure = {
   readonly description: string;
 };
 
-type PathParameters = NonNullable<IHttpParam>;
+type PathParameters = NonNullable<ClientHttpParam>;
 
 function hasAsciiControlCharacter(value: string): boolean {
   for (let index = 0; index < value.length; index += 1) {
@@ -357,7 +359,7 @@ export abstract class ApiClient {
   }
 
   private flattenHeaders(
-    header: IHttpHeader
+    header: ClientHttpHeader
   ): Record<string, string> | undefined {
     if (header === undefined) return undefined;
 
@@ -366,7 +368,11 @@ export abstract class ApiClient {
       if (value === undefined) {
         continue;
       }
-      flattened[key] = Array.isArray(value) ? value.join(", ") : value;
+      flattened[key] = Array.isArray(value)
+        ? value
+            .map(item => this.serializeHttpScalar(item, "header", key))
+            .join(", ")
+        : this.serializeHttpScalar(value, "header", key);
     }
     return flattened;
   }
@@ -503,7 +509,7 @@ export abstract class ApiClient {
     return schemeMatch[0].slice(0, -1).toLowerCase();
   }
 
-  private createPath(path: string, param?: IHttpParam): string {
+  private createPath(path: string, param?: ClientHttpParam): string {
     const pathParameterSet = new Set(getPathParameterNames(path));
     const parameters: PathParameters = param ?? {};
 
@@ -549,10 +555,11 @@ export abstract class ApiClient {
 
   private encodePathParameter(
     key: string,
-    value: string,
+    value: unknown,
     path: string
   ): string {
-    if (value === "." || value === "..") {
+    const serialized = this.serializeHttpScalar(value, "path", key);
+    if (serialized === "." || serialized === "..") {
       throw new PathParameterError(
         `Path parameter '${key}' cannot be a URL dot-segment`,
         key,
@@ -560,23 +567,23 @@ export abstract class ApiClient {
       );
     }
 
-    return encodeURIComponent(value);
+    return encodeURIComponent(serialized);
   }
 
-  private createUrl(path: string, query?: IHttpQuery): string {
+  private createUrl(path: string, query?: ClientHttpQuery): string {
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
     const queryString = this.buildQueryString(query);
     return queryString ? `${normalizedPath}?${queryString}` : normalizedPath;
   }
 
-  private buildQueryString(query?: IHttpQuery): string {
+  private buildQueryString(query?: ClientHttpQuery): string {
     const hasDefaults = Object.keys(this.defaultQuery).length > 0;
     if (!query && !hasDefaults) {
       return "";
     }
 
     const params = new URLSearchParams();
-    const mergedQuery: IHttpQuery = {
+    const mergedQuery: ClientHttpQuery = {
       ...this.defaultQuery,
       ...query,
     };
@@ -585,15 +592,64 @@ export abstract class ApiClient {
         continue;
       }
       if (!Array.isArray(value)) {
-        params.append(key, value);
+        params.append(key, this.serializeHttpScalar(value, "query", key));
         continue;
       }
       for (const item of value) {
         if (item !== undefined) {
-          params.append(key, item);
+          params.append(key, this.serializeHttpScalar(item, "query", key));
         }
       }
     }
     return params.toString();
+  }
+
+  private serializeHttpScalar(
+    value: unknown,
+    location: "header" | "path" | "query",
+    key: string
+  ): string {
+    if (value === null) {
+      throw new RequestSerializationError(location, key, value, "null-value");
+    }
+    if (Array.isArray(value)) {
+      throw new RequestSerializationError(location, key, value, "nested-array");
+    }
+    if (value instanceof Date) {
+      if (Number.isNaN(value.getTime())) {
+        throw new RequestSerializationError(
+          location,
+          key,
+          value,
+          "invalid-date"
+        );
+      }
+      return value.toISOString();
+    }
+
+    switch (typeof value) {
+      case "string":
+        return value;
+      case "number":
+        if (!Number.isFinite(value)) {
+          throw new RequestSerializationError(
+            location,
+            key,
+            value,
+            "non-finite-number"
+          );
+        }
+        return String(value);
+      case "boolean":
+      case "bigint":
+        return String(value);
+      default:
+        throw new RequestSerializationError(
+          location,
+          key,
+          value,
+          "unsupported-type"
+        );
+    }
   }
 }

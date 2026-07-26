@@ -7,36 +7,61 @@
  */
 
 import type { Context } from "hono";
+import type { BlankEnv, BlankSchema } from "hono/types";
 import {
   TypeweaverHono,
   type HonoRequestHandler,
   type TypeweaverHonoOptions,
 } from "../lib/hono/index.js";
 
-import type { IAccessTokenRequest } from "./AccessTokenRequest.js";
+import type { IAccessTokenRequest, IRawAccessTokenRequest } from "./AccessTokenRequest.js";
 import { AccessTokenRequestValidator } from "./AccessTokenRequestValidator.js";
 import type { AccessTokenResponse } from "./AccessTokenResponse.js";
 import { AccessTokenResponseValidator } from "./AccessTokenResponseValidator.js";
 
-import type { IRefreshTokenRequest } from "./RefreshTokenRequest.js";
+import type { IRefreshTokenRequest, IRawRefreshTokenRequest } from "./RefreshTokenRequest.js";
 import { RefreshTokenRequestValidator } from "./RefreshTokenRequestValidator.js";
 import type { RefreshTokenResponse } from "./RefreshTokenResponse.js";
 import { RefreshTokenResponseValidator } from "./RefreshTokenResponseValidator.js";
 
-export type HonoAuthApiHandler = {
+type HandlerRequest<TValidateRequests extends boolean, TValidated, TRaw> = [
+  TValidateRequests,
+] extends [true]
+  ? TValidated
+  : TRaw;
+
+export type HonoAuthApiHandler<TValidateRequests extends boolean = true> = {
   /**
    * Get access token by email and password
    */
-  handleAccessTokenRequest: HonoRequestHandler<IAccessTokenRequest, AccessTokenResponse>;
+  handleAccessTokenRequest: HonoRequestHandler<
+    HandlerRequest<TValidateRequests, IAccessTokenRequest, IRawAccessTokenRequest>,
+    AccessTokenResponse
+  >;
 
   /**
    * Refresh access token by refresh token
    */
-  handleRefreshTokenRequest: HonoRequestHandler<IRefreshTokenRequest, RefreshTokenResponse>;
+  handleRefreshTokenRequest: HonoRequestHandler<
+    HandlerRequest<TValidateRequests, IRefreshTokenRequest, IRawRefreshTokenRequest>,
+    RefreshTokenResponse
+  >;
 };
 
-export class AuthHono extends TypeweaverHono<HonoAuthApiHandler> {
-  public constructor(options: TypeweaverHonoOptions<HonoAuthApiHandler>) {
+export class AuthHono<TValidateRequests extends boolean = true> extends TypeweaverHono<
+  HonoAuthApiHandler<TValidateRequests>,
+  BlankEnv,
+  BlankSchema,
+  "/",
+  TValidateRequests
+> {
+  public constructor(
+    options: TypeweaverHonoOptions<
+      HonoAuthApiHandler<TValidateRequests>,
+      BlankEnv,
+      TValidateRequests
+    >,
+  ) {
     super(options);
     this.setupRoutes();
   }

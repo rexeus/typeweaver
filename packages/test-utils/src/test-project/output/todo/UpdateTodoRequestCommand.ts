@@ -44,9 +44,17 @@ export type UpdateTodoRequestCommandInput = Omit<
 /**
  * Update todo
  */
-export class UpdateTodoRequestCommand extends RequestCommand implements IUpdateTodoRequest {
+export class UpdateTodoRequestCommand
+  extends RequestCommand<
+    IUpdateTodoRequestHeader,
+    IUpdateTodoRequestParam,
+    undefined,
+    IUpdateTodoRequestBody
+  >
+  implements IUpdateTodoRequest
+{
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.PATCH;
+  public override readonly method = HttpMethod.PATCH;
   public override readonly path = definition.path;
 
   public override readonly header: IUpdateTodoRequestHeader;

@@ -8,52 +8,51 @@
 
 import { spec } from "../spec/spec.js";
 import {
-  type IHttpRequest,
+  HttpMethod,
+  type IRawHttpRequest,
   type SafeRequestValidationResult,
   RequestValidationError,
 } from "@rexeus/typeweaver-core";
 import { getOperationDefinition, RequestValidator } from "../lib/types/index.js";
-import type { IRegisterAccountRequest } from "./RegisterAccountRequest.js";
+import type {
+  IRegisterAccountRequest,
+  IRegisterAccountRequestBody,
+  IRegisterAccountRequestHeader,
+} from "./RegisterAccountRequest.js";
 
 const definition = getOperationDefinition(spec, "account", "RegisterAccount");
 
-export class RegisterAccountRequestValidator extends RequestValidator {
-  public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IRegisterAccountRequest> {
+export class RegisterAccountRequestValidator extends RequestValidator<IRegisterAccountRequest> {
+  public safeValidate(
+    request: IRawHttpRequest,
+  ): SafeRequestValidationResult<IRegisterAccountRequest> {
     const error = new RequestValidationError();
-    const validatedRequest: IHttpRequest = {
-      method: request.method,
-      path: request.path,
-      query: undefined,
-      header: undefined,
-      body: undefined,
-      param: undefined,
-    };
 
-    if (definition.request.body) {
-      const result = definition.request.body.safeParse(request.body);
-
-      if (!result.success) {
-        error.addBodyIssues(result.error.issues);
-      } else {
-        validatedRequest.body = result.data;
-      }
+    const bodySchema = this.requireRequestSchema(definition.request.body, "body");
+    const bodyResult = this.safeParseAs<IRegisterAccountRequestBody>(bodySchema, request.body);
+    if (!bodyResult.success) {
+      error.addBodyIssues(bodyResult.error.issues);
     }
 
-    if (definition.request.header) {
-      const coercedHeader = this.coerceHeaderToSchema(
-        request.header,
-        this.getSchema(definition.request.header),
-      );
-      const result = definition.request.header.safeParse(coercedHeader);
-
-      if (!result.success) {
-        error.addHeaderIssues(result.error.issues);
-      } else {
-        validatedRequest.header = result.data as IHttpRequest["header"];
-      }
+    const headerSchema = this.requireRequestSchema(definition.request.header, "header");
+    const coercedHeader = this.coerceHeaderToSchema(request.header, headerSchema);
+    const headerMultiplicityIssues = this.findMultiplicityIssues(
+      request.header,
+      headerSchema,
+      false,
+    );
+    if (headerMultiplicityIssues.length > 0) {
+      error.addHeaderIssues(headerMultiplicityIssues);
+    }
+    const headerResult = this.safeParseAs<IRegisterAccountRequestHeader>(
+      headerSchema,
+      coercedHeader,
+    );
+    if (!headerResult.success) {
+      error.addHeaderIssues(headerResult.error.issues);
     }
 
-    if (error.hasIssues()) {
+    if (error.hasIssues() || !bodyResult.success || !headerResult.success) {
       return {
         isValid: false,
         error,
@@ -62,11 +61,16 @@ export class RegisterAccountRequestValidator extends RequestValidator {
 
     return {
       isValid: true,
-      data: validatedRequest as IRegisterAccountRequest,
+      data: {
+        method: HttpMethod.POST,
+        path: request.path,
+        body: bodyResult.data,
+        header: headerResult.data,
+      },
     };
   }
 
-  public validate(request: IHttpRequest): IRegisterAccountRequest {
+  public validate(request: IRawHttpRequest): IRegisterAccountRequest {
     const result = this.safeValidate(request);
 
     if (!result.isValid) {

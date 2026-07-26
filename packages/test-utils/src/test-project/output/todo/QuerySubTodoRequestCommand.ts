@@ -45,9 +45,17 @@ export type QuerySubTodoRequestCommandInput = Omit<
 /**
  * Query subtodos for a specific todo
  */
-export class QuerySubTodoRequestCommand extends RequestCommand implements IQuerySubTodoRequest {
+export class QuerySubTodoRequestCommand
+  extends RequestCommand<
+    IQuerySubTodoRequestHeader,
+    IQuerySubTodoRequestParam,
+    IQuerySubTodoRequestQuery,
+    IQuerySubTodoRequestBody
+  >
+  implements IQuerySubTodoRequest
+{
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.POST;
+  public override readonly method = HttpMethod.POST;
   public override readonly path = definition.path;
 
   public override readonly header: IQuerySubTodoRequestHeader;

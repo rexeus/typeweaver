@@ -90,10 +90,7 @@ export class ResponseValidator extends Validator {
         }
       }
       if (headerSchema) {
-        const coercedHeader = this.coerceHeaderToSchema(
-          response.header,
-          this.getSchema(headerSchema),
-        );
+        const coercedHeader = this.coerceHeaderToSchema(response.header, headerSchema);
         const validateHeaderResult = headerSchema.safeParse(coercedHeader);
         if (!validateHeaderResult.success) {
           error.addHeaderIssues(responseName, validateHeaderResult.error.issues);

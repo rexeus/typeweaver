@@ -42,11 +42,16 @@ export type GetFileMetadataRequestCommandInput = Omit<
  * Get file metadata
  */
 export class GetFileMetadataRequestCommand
-  extends RequestCommand
+  extends RequestCommand<
+    IGetFileMetadataRequestHeader,
+    IGetFileMetadataRequestParam,
+    undefined,
+    undefined
+  >
   implements IGetFileMetadataRequest
 {
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.GET;
+  public override readonly method = HttpMethod.GET;
   public override readonly path = definition.path;
 
   public override readonly header: IGetFileMetadataRequestHeader;

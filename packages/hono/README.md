@@ -117,7 +117,9 @@ The generated Hono handler signature and response factory are typechecked in the
 `TypeweaverHonoOptions<RequestHandlers>`
 
 - `requestHandlers`: object implementing the generated `Hono<ResourceName>ApiHandler` type
-- `validateRequests` (default: `true`): enable/disable request validation
+- `validateRequests` (default: `true`): enable/disable request validation. Omitted or literal `true`
+  gives handlers the generated validated Zod-output request. Literal `false` and dynamic `boolean`
+  expose `IRaw<OperationId>Request`, because validation is not statically guaranteed.
 - `validateResponses` (default: `true`): enable/disable response validation. When enabled, responses
   are validated against the operation's schema and extra body fields are stripped before sending.
 - `handleRequestValidationErrors`: `true` | `false` |
@@ -161,6 +163,13 @@ The generated Hono handler signature and response factory are typechecked in the
 
 You can also pass standard Hono options (e.g. `strict`, `getPath`, etc.) through the same options
 object.
+
+Hono adapters expose `IRawHttpRequest` to the pre-validation boundary and preserve repeated query
+values. Generated validators normalize singleton array fields, reject repeated values for scalar
+schemas, and match header names case-insensitively. Scalar header values containing commas are not
+treated as duplicates; header-array schemas use the documented comma-separated header-list
+representation. See the
+[typed HTTP boundary migration guide](../../docs/migrations/typed-http-boundaries.md).
 
 ## 📄 License
 

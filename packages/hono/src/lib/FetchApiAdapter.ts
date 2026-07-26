@@ -9,9 +9,10 @@ import type {
   HttpMethod,
   IHttpBody,
   IHttpHeader,
-  IHttpQuery,
-  IHttpRequest,
   IHttpResponse,
+  IRawHttpHeader,
+  IRawHttpQuery,
+  IRawHttpRequest,
 } from "@rexeus/typeweaver-core";
 import {
   HonoBodyParseError,
@@ -33,17 +34,17 @@ export class FetchApiAdapter extends HttpAdapter<
   Record<string, string>
 > {
   /**
-   * Converts a Fetch API Request to an IHttpRequest.
+   * Converts a Fetch API Request to an IRawHttpRequest.
    * Extracts headers, query parameters, and body from the Request object.
    *
    * @param request - The Fetch API Request object
    * @param pathParams - Optional path parameters (not available in Fetch API Request)
-   * @returns Promise resolving to an IHttpRequest
+   * @returns Promise resolving to an IRawHttpRequest
    */
   public async toRequest(
     request: Request,
     pathParams?: Record<string, string>
-  ): Promise<IHttpRequest> {
+  ): Promise<IRawHttpRequest> {
     const url = new URL(request.url);
 
     return {
@@ -92,16 +93,15 @@ export class FetchApiAdapter extends HttpAdapter<
     }
   }
 
-  private extractHeaders(headers: Headers): IHttpHeader {
+  private extractHeaders(headers: Headers): IRawHttpHeader {
     const result: Record<string, string | string[]> = Object.create(null);
     headers.forEach((value, key) => {
-      if (!value) return;
       this.addMultiValue(result, key, value);
     });
     return Object.keys(result).length > 0 ? result : undefined;
   }
 
-  private extractQueryParams(url: URL): IHttpQuery {
+  private extractQueryParams(url: URL): IRawHttpQuery {
     const result: Record<string, string | string[]> = Object.create(null);
     url.searchParams.forEach((value, key) => {
       this.addMultiValue(result, key, value);

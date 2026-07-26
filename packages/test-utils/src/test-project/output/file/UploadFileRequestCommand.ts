@@ -41,9 +41,12 @@ export type UploadFileRequestCommandInput = Omit<
 /**
  * Upload a file
  */
-export class UploadFileRequestCommand extends RequestCommand implements IUploadFileRequest {
+export class UploadFileRequestCommand
+  extends RequestCommand<IUploadFileRequestHeader, undefined, undefined, IUploadFileRequestBody>
+  implements IUploadFileRequest
+{
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.POST;
+  public override readonly method = HttpMethod.POST;
   public override readonly path = definition.path;
 
   public override readonly header: IUploadFileRequestHeader;

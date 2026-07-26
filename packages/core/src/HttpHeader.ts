@@ -1,30 +1,14 @@
-import type {
-  ZodArray,
-  ZodEnum,
-  ZodLiteral,
-  ZodObject,
-  ZodOptional,
-  ZodRecord,
-  ZodString,
-  ZodStringFormat,
-} from "zod";
+import type { ZodObject, ZodOptional, ZodRecord } from "zod";
 
+/** Transport-safe HTTP response headers. */
 export type IHttpHeader = Record<string, string | string[]> | undefined;
 
-type ZodStringType =
-  | ZodString
-  | ZodStringFormat
-  | ZodLiteral<string>
-  | ZodEnum<Record<string, string>>;
+export type RawHttpHeaderValue = string | readonly string[];
 
-type HttpHeaderValue =
-  | ZodStringType
-  | ZodOptional<ZodStringType>
-  | ZodArray<ZodStringType>
-  | ZodOptional<ZodArray<ZodStringType>>;
+export type IRawHttpHeader =
+  | Readonly<Record<string, RawHttpHeaderValue>>
+  | undefined;
 
-type HttpHeaderObject =
-  | ZodObject<Record<string, HttpHeaderValue>>
-  | ZodRecord<ZodStringType, HttpHeaderValue>;
+type HttpHeaderObject = ZodObject | ZodRecord;
 
 export type HttpHeaderSchema = HttpHeaderObject | ZodOptional<HttpHeaderObject>;

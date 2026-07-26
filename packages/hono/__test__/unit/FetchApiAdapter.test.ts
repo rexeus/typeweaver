@@ -7,6 +7,34 @@ import { FetchApiAdapter } from "../../src/lib/FetchApiAdapter.js";
 
 const TEST_URL = "https://typeweaver.test/body";
 
+describe("FetchApiAdapter raw request boundary", () => {
+  test("preserves repeated query values and explicit path parameters", async () => {
+    const adapter = new FetchApiAdapter();
+    const request = new Request(
+      `${TEST_URL}?tag=first&tag=second&search=typeweaver`
+    );
+
+    const result = await adapter.toRequest(request, { resourceId: "42" });
+
+    expect(result.query).toEqual({
+      tag: ["first", "second"],
+      search: "typeweaver",
+    });
+    expect(result.param).toEqual({ resourceId: "42" });
+  });
+
+  test("preserves empty request headers as transport data", async () => {
+    const adapter = new FetchApiAdapter();
+    const request = new Request(TEST_URL, {
+      headers: { "X-Empty": "" },
+    });
+
+    const result = await adapter.toRequest(request);
+
+    expect(result.header).toMatchObject({ "x-empty": "" });
+  });
+});
+
 describe("FetchApiAdapter request body boundary", () => {
   test("parses JSON values from external requests", async () => {
     const adapter = new FetchApiAdapter();

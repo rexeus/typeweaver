@@ -8,62 +8,53 @@
 
 import { spec } from "../spec/spec.js";
 import {
-  type IHttpRequest,
+  HttpMethod,
+  type IRawHttpRequest,
   type SafeRequestValidationResult,
   RequestValidationError,
 } from "@rexeus/typeweaver-core";
 import { getOperationDefinition, RequestValidator } from "../lib/types/index.js";
-import type { IUpdateTodoRequest } from "./UpdateTodoRequest.js";
+import type {
+  IUpdateTodoRequest,
+  IUpdateTodoRequestBody,
+  IUpdateTodoRequestHeader,
+  IUpdateTodoRequestParam,
+} from "./UpdateTodoRequest.js";
 
 const definition = getOperationDefinition(spec, "todo", "UpdateTodo");
 
-export class UpdateTodoRequestValidator extends RequestValidator {
-  public safeValidate(request: IHttpRequest): SafeRequestValidationResult<IUpdateTodoRequest> {
+export class UpdateTodoRequestValidator extends RequestValidator<IUpdateTodoRequest> {
+  public safeValidate(request: IRawHttpRequest): SafeRequestValidationResult<IUpdateTodoRequest> {
     const error = new RequestValidationError();
-    const validatedRequest: IHttpRequest = {
-      method: request.method,
-      path: request.path,
-      query: undefined,
-      header: undefined,
-      body: undefined,
-      param: undefined,
-    };
 
-    if (definition.request.body) {
-      const result = definition.request.body.safeParse(request.body);
-
-      if (!result.success) {
-        error.addBodyIssues(result.error.issues);
-      } else {
-        validatedRequest.body = result.data;
-      }
+    const bodySchema = this.requireRequestSchema(definition.request.body, "body");
+    const bodyResult = this.safeParseAs<IUpdateTodoRequestBody>(bodySchema, request.body);
+    if (!bodyResult.success) {
+      error.addBodyIssues(bodyResult.error.issues);
     }
 
-    if (definition.request.header) {
-      const coercedHeader = this.coerceHeaderToSchema(
-        request.header,
-        this.getSchema(definition.request.header),
-      );
-      const result = definition.request.header.safeParse(coercedHeader);
-
-      if (!result.success) {
-        error.addHeaderIssues(result.error.issues);
-      } else {
-        validatedRequest.header = result.data as IHttpRequest["header"];
-      }
+    const headerSchema = this.requireRequestSchema(definition.request.header, "header");
+    const coercedHeader = this.coerceHeaderToSchema(request.header, headerSchema);
+    const headerMultiplicityIssues = this.findMultiplicityIssues(
+      request.header,
+      headerSchema,
+      false,
+    );
+    if (headerMultiplicityIssues.length > 0) {
+      error.addHeaderIssues(headerMultiplicityIssues);
+    }
+    const headerResult = this.safeParseAs<IUpdateTodoRequestHeader>(headerSchema, coercedHeader);
+    if (!headerResult.success) {
+      error.addHeaderIssues(headerResult.error.issues);
     }
 
-    if (definition.request.param) {
-      const result = definition.request.param.safeParse(request.param);
-
-      if (!result.success) {
-        error.addPathParamIssues(result.error.issues);
-      } else {
-        validatedRequest.param = result.data;
-      }
+    const paramSchema = this.requireRequestSchema(definition.request.param, "param");
+    const paramResult = this.safeParseAs<IUpdateTodoRequestParam>(paramSchema, request.param);
+    if (!paramResult.success) {
+      error.addPathParamIssues(paramResult.error.issues);
     }
 
-    if (error.hasIssues()) {
+    if (error.hasIssues() || !bodyResult.success || !headerResult.success || !paramResult.success) {
       return {
         isValid: false,
         error,
@@ -72,11 +63,17 @@ export class UpdateTodoRequestValidator extends RequestValidator {
 
     return {
       isValid: true,
-      data: validatedRequest as IUpdateTodoRequest,
+      data: {
+        method: HttpMethod.PATCH,
+        path: request.path,
+        body: bodyResult.data,
+        header: headerResult.data,
+        param: paramResult.data,
+      },
     };
   }
 
-  public validate(request: IHttpRequest): IUpdateTodoRequest {
+  public validate(request: IRawHttpRequest): IUpdateTodoRequest {
     const result = this.safeValidate(request);
 
     if (!result.isValid) {

@@ -47,12 +47,12 @@ import type { TypeweaverRouter } from "./TypeweaverRouter.js";
 
 /**
  * The main application class that provides routing, middleware, and
- * request handling — all using typeweaver's native `IHttpRequest`/`IHttpResponse` format.
+ * request handling using typeweaver's raw-request and typed-response contracts.
  *
  * Exposes a single `fetch()` method compatible with Bun, Deno, Cloudflare Workers,
  * and adaptable to Node.js `http.createServer`.
  *
- * Internally, the entire pipeline operates on `IHttpRequest`/`IHttpResponse`.
+ * Internally, middleware operates on `IRawHttpRequest`/`IHttpResponse`.
  * Conversion from/to Fetch API `Request`/`Response` happens **only** at the boundary.
  *
  * Middleware is return-based: each middleware returns an `IHttpResponse`

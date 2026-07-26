@@ -65,6 +65,8 @@ All request-related types for an operation are defined in one file: `<OperationI
 - **`I<OperationId>RequestBody`** - Type for request body, if defined, e.g. `ICreateTodoRequestBody`
 - **`I<OperationId>Request`** - Complete request interface combining path, method, headers, and
   body, e.g. `ICreateTodoRequest`
+- **`IRaw<OperationId>Request`** - Operation-specific raw transport input used when request
+  validation is not statically guaranteed
 - **`Successful<OperationId>Response`** - Union type excluding error responses for success-only
   handling
 
@@ -99,10 +101,11 @@ Request validation logic for an operation is defined in one file:
 - **`safeValidate()`** - Non-throwing validation method returning `SafeRequestValidationResult`
 - **`validate()`** - Throwing validation method that returns validated request or throws
   `RequestValidationError`
-- **Header coercion logic** - Automatic conversion of headers to schema-appropriate types (single
-  string value & multi string value headers)
-- **Query parameter coercion logic** - Automatic conversion of query parameters to
-  schema-appropriate types (single string value & multi string value query parameters)
+- **Header parsing** - Raw strings are matched case-insensitively to schema keys. Array schemas
+  receive the documented comma-separated header-list representation; scalar values containing commas
+  stay scalar.
+- **Query parsing** - Repeated values stay ordered arrays. Array schemas normalize a singleton to
+  one array item; scalar schemas reject repeated transport values.
 - **Request validation errors** - Includes all issues related to the incoming request for headers,
   query parameters, and body.
 - **Unknown property filtering** - Automatically removes properties not defined in the request
@@ -111,13 +114,13 @@ Request validation logic for an operation is defined in one file:
 **Using the generated request validators**
 
 ```typescript
-import { RequestValidationError, type IHttpRequest } from "@rexeus/typeweaver-core";
+import { RequestValidationError, type IRawHttpRequest } from "@rexeus/typeweaver-core";
 import { CreateTodoRequestValidator } from "path/to/generated/output";
 
 const requestValidator = new CreateTodoRequestValidator();
 
-// A request in structure of IHttpRequest
-const request: IHttpRequest = {
+// A request in raw transport form
+const request: IRawHttpRequest = {
   // ...
 };
 

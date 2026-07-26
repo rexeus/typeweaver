@@ -15,7 +15,17 @@ import { MissingResponseDefinitionError } from "./errors/MissingResponseDefiniti
 type MatchedOperationDefinition<
   TSpec extends SpecDefinition,
   TResourceName extends keyof TSpec["resources"] & string,
-> = NonNullable<TSpec["resources"][TResourceName]>["operations"][number];
+  TOperationId extends string,
+> =
+  Extract<
+    NonNullable<TSpec["resources"][TResourceName]>["operations"][number],
+    { readonly operationId: TOperationId }
+  > extends never
+    ? NonNullable<TSpec["resources"][TResourceName]>["operations"][number]
+    : Extract<
+        NonNullable<TSpec["resources"][TResourceName]>["operations"][number],
+        { readonly operationId: TOperationId }
+      >;
 
 type MatchedResponseDefinition<
   TResponses extends readonly ResponseDefinition[],
@@ -24,11 +34,12 @@ type MatchedResponseDefinition<
 export const getOperationDefinition = <
   TSpec extends SpecDefinition,
   TResourceName extends keyof TSpec["resources"] & string,
+  TOperationId extends string,
 >(
   spec: TSpec,
   resourceName: TResourceName,
-  operationId: string
-): MatchedOperationDefinition<TSpec, TResourceName> => {
+  operationId: TOperationId
+): MatchedOperationDefinition<TSpec, TResourceName, TOperationId> => {
   const operation = spec.resources[resourceName]?.operations.find(
     candidate => candidate.operationId === operationId
   );
@@ -40,7 +51,11 @@ export const getOperationDefinition = <
     );
   }
 
-  return operation as MatchedOperationDefinition<TSpec, TResourceName>;
+  return operation as MatchedOperationDefinition<
+    TSpec,
+    TResourceName,
+    TOperationId
+  >;
 };
 
 export const getResponseDefinition = <

@@ -9,6 +9,7 @@ import type {
   HttpMethod,
   IHttpResponse,
   IRequestValidator,
+  IValidatedHttpRequest,
   IResponseValidator,
   ITypedHttpResponse,
   RequestValidationError,
@@ -37,7 +38,7 @@ export type RouteDefinition = {
   readonly operationId: string;
   readonly method: HttpMethod;
   readonly path: string;
-  readonly requestValidator: IRequestValidator;
+  readonly requestValidator: IRequestValidator<IValidatedHttpRequest>;
   readonly responseValidator: IResponseValidator;
   readonly handler: RequestHandler<any, any, any>;
   /** Reference to the router config for error handling. */

@@ -44,9 +44,17 @@ export type UpdateSubTodoRequestCommandInput = Omit<
 /**
  * Update subtodo
  */
-export class UpdateSubTodoRequestCommand extends RequestCommand implements IUpdateSubTodoRequest {
+export class UpdateSubTodoRequestCommand
+  extends RequestCommand<
+    IUpdateSubTodoRequestHeader,
+    IUpdateSubTodoRequestParam,
+    undefined,
+    IUpdateSubTodoRequestBody
+  >
+  implements IUpdateSubTodoRequest
+{
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.PUT;
+  public override readonly method = HttpMethod.PUT;
   public override readonly path = definition.path;
 
   public override readonly header: IUpdateSubTodoRequestHeader;

@@ -8,54 +8,54 @@
 
 import { spec } from "../spec/spec.js";
 import {
-  type IHttpRequest,
+  HttpMethod,
+  type IRawHttpRequest,
   type SafeRequestValidationResult,
   RequestValidationError,
 } from "@rexeus/typeweaver-core";
 import { getOperationDefinition, RequestValidator } from "../lib/types/index.js";
-import type { IDownloadFileContentRequest } from "./DownloadFileContentRequest.js";
+import type {
+  IDownloadFileContentRequest,
+  IDownloadFileContentRequestHeader,
+  IDownloadFileContentRequestParam,
+} from "./DownloadFileContentRequest.js";
 
 const definition = getOperationDefinition(spec, "file", "DownloadFileContent");
 
-export class DownloadFileContentRequestValidator extends RequestValidator {
+export class DownloadFileContentRequestValidator extends RequestValidator<IDownloadFileContentRequest> {
   public safeValidate(
-    request: IHttpRequest,
+    request: IRawHttpRequest,
   ): SafeRequestValidationResult<IDownloadFileContentRequest> {
     const error = new RequestValidationError();
-    const validatedRequest: IHttpRequest = {
-      method: request.method,
-      path: request.path,
-      query: undefined,
-      header: undefined,
-      body: undefined,
-      param: undefined,
-    };
 
-    if (definition.request.header) {
-      const coercedHeader = this.coerceHeaderToSchema(
-        request.header,
-        this.getSchema(definition.request.header),
-      );
-      const result = definition.request.header.safeParse(coercedHeader);
-
-      if (!result.success) {
-        error.addHeaderIssues(result.error.issues);
-      } else {
-        validatedRequest.header = result.data as IHttpRequest["header"];
-      }
+    const headerSchema = this.requireRequestSchema(definition.request.header, "header");
+    const coercedHeader = this.coerceHeaderToSchema(request.header, headerSchema);
+    const headerMultiplicityIssues = this.findMultiplicityIssues(
+      request.header,
+      headerSchema,
+      false,
+    );
+    if (headerMultiplicityIssues.length > 0) {
+      error.addHeaderIssues(headerMultiplicityIssues);
+    }
+    const headerResult = this.safeParseAs<IDownloadFileContentRequestHeader>(
+      headerSchema,
+      coercedHeader,
+    );
+    if (!headerResult.success) {
+      error.addHeaderIssues(headerResult.error.issues);
     }
 
-    if (definition.request.param) {
-      const result = definition.request.param.safeParse(request.param);
-
-      if (!result.success) {
-        error.addPathParamIssues(result.error.issues);
-      } else {
-        validatedRequest.param = result.data;
-      }
+    const paramSchema = this.requireRequestSchema(definition.request.param, "param");
+    const paramResult = this.safeParseAs<IDownloadFileContentRequestParam>(
+      paramSchema,
+      request.param,
+    );
+    if (!paramResult.success) {
+      error.addPathParamIssues(paramResult.error.issues);
     }
 
-    if (error.hasIssues()) {
+    if (error.hasIssues() || !headerResult.success || !paramResult.success) {
       return {
         isValid: false,
         error,
@@ -64,11 +64,17 @@ export class DownloadFileContentRequestValidator extends RequestValidator {
 
     return {
       isValid: true,
-      data: validatedRequest as IDownloadFileContentRequest,
+      data: {
+        method: HttpMethod.GET,
+        path: request.path,
+
+        header: headerResult.data,
+        param: paramResult.data,
+      },
     };
   }
 
-  public validate(request: IHttpRequest): IDownloadFileContentRequest {
+  public validate(request: IRawHttpRequest): IDownloadFileContentRequest {
     const result = this.safeValidate(request);
 
     if (!result.isValid) {
