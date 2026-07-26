@@ -115,6 +115,18 @@ More plugins are planned. Want to build your own? Start with the
 
 ## 🚀 Quickstart
 
+Create a complete starter, validate its contract, and generate a Fetch client:
+
+```bash
+npx typeweaver init --target ./todo-api
+cd todo-api
+pnpm install
+pnpm validate
+pnpm generate
+```
+
+The manual workflow below shows how the same contract is assembled.
+
 1. **Author a spec entrypoint:**
 
 ```typescript

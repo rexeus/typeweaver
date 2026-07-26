@@ -11,6 +11,7 @@ import {
   PluginModuleLoader,
   PluginScaffolder,
   ProjectDoctor,
+  ProjectInitializer,
   ProjectValidator,
   SpecLoader,
 } from "./services/index.js";
@@ -44,6 +45,7 @@ const CliServices = Layer.mergeAll(
   PluginScaffolder.Default,
   ProjectValidator.Default,
   ProjectDoctor.Default,
+  ProjectInitializer.Default,
   Generator.Default,
   CliLoggerLayer
 );
@@ -73,6 +75,7 @@ const VerboseCliServices = Layer.mergeAll(
   PluginScaffolder.Default,
   ProjectValidator.Default,
   ProjectDoctor.Default,
+  ProjectInitializer.Default,
   Generator.Default,
   VerboseCliLoggerLayer,
   Logger.minimumLogLevel(LogLevel.Debug)

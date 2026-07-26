@@ -106,6 +106,31 @@ minimal and configurable plugin exports, a generation fixture, and tests built o
 `pnpm check` typechecks, tests, builds, and runs the plugin against the included spec. The scaffold
 develops against Effect 3.22.0 and declares the supported plugin peer range `>=3.22.0 <4`.
 
+### Initialize a project
+
+Create an executable Todo API starter in an explicit directory:
+
+```bash
+npx typeweaver init --target ./todo-api
+cd todo-api
+pnpm install
+pnpm validate
+pnpm generate
+```
+
+The starter contains five Todo operations, reusable and derived error responses, a strict TypeScript
+configuration, package scripts, and a client-generation config. A missing package manifest is
+created; an existing `package.json` is preserved.
+
+`init` refuses any non-empty target unless `--force` is present. Force mode overwrites only
+conflicting starter files and rolls every published file back if a later publication fails. Inspect
+the deterministic plan without creating the target with `--dry-run`. Use
+`--config-format mjs|cjs|js` to select the config module format.
+
+Human output goes to stdout on success and stderr on failure. `--json` always writes one versioned
+`InitReport` to stdout; automation can validate it with the public `InitReportSchema`. Stable
+failure codes are `TW-INIT-001` through `TW-INIT-005`, and failures exit 1.
+
 ### Validate without writing
 
 Validate the normalized spec and every configured plugin without touching the configured output:

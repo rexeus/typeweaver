@@ -1,0 +1,12 @@
+import { defineResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+import { z } from "zod";
+
+export const UnauthorizedError = defineResponse({
+  name: "UnauthorizedError",
+  description: "Authentication is required.",
+  statusCode: HttpStatusCode.UNAUTHORIZED,
+  body: z.object({
+    code: z.literal("UNAUTHORIZED"),
+    message: z.literal("Authentication is required."),
+  }),
+});

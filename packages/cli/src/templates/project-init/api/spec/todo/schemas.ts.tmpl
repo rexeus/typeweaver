@@ -1,0 +1,23 @@
+import { z } from "zod";
+
+export const todoSchema = z.object({
+  id: z.uuid(),
+  title: z.string().min(1),
+  completed: z.boolean(),
+});
+
+export const createTodoBodySchema = todoSchema.omit({
+  id: true,
+});
+
+export const updateTodoBodySchema = createTodoBodySchema.partial();
+
+export const queryTodoBodySchema = z.object({
+  search: z.string().optional(),
+  completed: z.boolean().optional(),
+});
+
+export const listTodoQuerySchema = z.object({
+  limit: z.string().optional(),
+  cursor: z.string().optional(),
+});

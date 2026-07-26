@@ -8,6 +8,11 @@
 export { effectRuntime, ProductionLayer } from "./effectRuntime.js";
 export { Generator } from "./services/Generator.js";
 export {
+  InitDiagnosticSchema,
+  InitReportSchema,
+} from "./reports/InitReport.js";
+export type { InitDiagnostic, InitReport } from "./reports/InitReport.js";
+export {
   DoctorCheckSchema,
   DoctorOutcomeSchema,
   DoctorReportSchema,

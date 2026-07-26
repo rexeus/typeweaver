@@ -1,0 +1,12 @@
+import { defineResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+import { z } from "zod";
+
+export const NotFoundError = defineResponse({
+  name: "NotFoundError",
+  description: "The requested resource was not found.",
+  statusCode: HttpStatusCode.NOT_FOUND,
+  body: z.object({
+    code: z.literal("NOT_FOUND"),
+    message: z.literal("The requested resource was not found."),
+  }),
+});

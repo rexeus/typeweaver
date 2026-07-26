@@ -1,0 +1,36 @@
+import {
+  defineOperation,
+  defineResponse,
+  HttpMethod,
+  HttpStatusCode,
+} from "@rexeus/typeweaver-core";
+import { z } from "zod";
+import {
+  ForbiddenError,
+  InternalServerError,
+  UnauthorizedError,
+  ValidationError,
+} from "../shared/errors/index.js";
+import { queryTodoBodySchema, todoSchema } from "./schemas.js";
+
+export const QueryTodoOperation = defineOperation({
+  operationId: "queryTodos",
+  summary: "Query todos",
+  method: HttpMethod.POST,
+  path: "/todos/query",
+  request: {
+    body: queryTodoBodySchema,
+  },
+  responses: [
+    defineResponse({
+      name: "QueryTodoSuccess",
+      description: "Todos matching the query were returned.",
+      statusCode: HttpStatusCode.OK,
+      body: z.array(todoSchema),
+    }),
+    ValidationError,
+    UnauthorizedError,
+    ForbiddenError,
+    InternalServerError,
+  ],
+});

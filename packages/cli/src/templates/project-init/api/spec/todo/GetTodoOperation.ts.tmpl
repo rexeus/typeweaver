@@ -1,0 +1,40 @@
+import {
+  defineOperation,
+  defineResponse,
+  HttpMethod,
+  HttpStatusCode,
+} from "@rexeus/typeweaver-core";
+import { z } from "zod";
+import {
+  ForbiddenError,
+  InternalServerError,
+  NotFoundError,
+  UnauthorizedError,
+} from "../shared/errors/index.js";
+import { TodoNotFoundError } from "./errors/TodoNotFoundError.js";
+import { todoSchema } from "./schemas.js";
+
+export const GetTodoOperation = defineOperation({
+  operationId: "getTodo",
+  summary: "Get a todo",
+  method: HttpMethod.GET,
+  path: "/todos/:todoId",
+  request: {
+    param: z.object({
+      todoId: z.uuid(),
+    }),
+  },
+  responses: [
+    defineResponse({
+      name: "GetTodoSuccess",
+      description: "The todo was retrieved.",
+      statusCode: HttpStatusCode.OK,
+      body: todoSchema,
+    }),
+    NotFoundError,
+    TodoNotFoundError,
+    UnauthorizedError,
+    ForbiddenError,
+    InternalServerError,
+  ],
+});

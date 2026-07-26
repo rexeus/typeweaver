@@ -111,11 +111,10 @@ exit path.
 
 ### 2. Complete the core CLI workflow
 
-**Status:** IN PROGRESS — `validate` and `doctor` are complete with scoped no-write bundling, stable
-human/JSON reports and public Zod schemas. Validation includes severity thresholds, normalized
-warnings, and plugin issues; doctor includes ordered runtime/project checks, dependency skips,
-output-safety probes, Effect diagnostics, and optional deep validation. The atomic `init` bootstrap
-remains.
+**Status:** DONE — `validate` and `doctor` provide scoped no-write workflows with stable human/JSON
+reports and public Zod schemas. `init` now publishes a complete Todo starter transactionally,
+requires an explicit target, supports dry-run/force/config-format policy, preserves existing package
+manifests, and restores all target files after injected publication failure.
 
 Replace the `init` stub with an atomic, non-destructive project bootstrap. Implement:
 
@@ -271,7 +270,7 @@ merge any PR.
 ## Done criteria
 
 - [x] A scaffolded external plugin succeeds using only public APIs.
-- [ ] `init`, `validate`, and `doctor` are real, tested commands.
+- [x] `init`, `validate`, and `doctor` are real, tested commands.
 - [ ] Generated command client passes real-server and packed-consumer tests.
 - [ ] Effect handlers satisfy runtime ownership, typed error, interruption, and observability
       requirements without affecting plain handlers.

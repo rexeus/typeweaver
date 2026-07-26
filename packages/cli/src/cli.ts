@@ -3,12 +3,15 @@ import { NodeRuntime } from "@effect/platform-node";
 import { Effect, Logger, LogLevel } from "effect";
 import {
   cliPackageVersion,
+  cliZodVersion,
   pluginScaffoldTemplateDirectory,
+  projectInitTemplateDirectory,
 } from "./cliMetadata.js";
 import {
   runAddPlugin,
   runDoctor,
   runGenerate,
+  runInit,
   runValidate,
 } from "./commands.js";
 import { ProductionLayer, VerboseLayer } from "./effectRuntime.js";
@@ -86,6 +89,32 @@ const pluginTargetOption = Options.text("target").pipe(
   Options.withDescription("new directory that will receive the plugin scaffold")
 );
 
+const initTargetOption = Options.text("target").pipe(
+  Options.withAlias("t"),
+  Options.withDescription("project directory to create or update explicitly")
+);
+
+const forceOption = Options.boolean("force", { ifPresent: true }).pipe(
+  Options.withDescription(
+    "overwrite conflicting starter files in a non-empty target"
+  ),
+  Options.optional
+);
+
+const dryRunOption = Options.boolean("dry-run", { ifPresent: true }).pipe(
+  Options.withDescription("plan the project without writing files"),
+  Options.optional
+);
+
+const configFormatOption = Options.choice("config-format", [
+  "mjs",
+  "cjs",
+  "js",
+]).pipe(
+  Options.withDescription("module format for the generated configuration"),
+  Options.optional
+);
+
 const jsonOption = Options.boolean("json", { ifPresent: true }).pipe(
   Options.withDescription("emit a stable machine-readable JSON report"),
   Options.optional
@@ -132,10 +161,26 @@ const generateCommand = Command.make(
   )
 );
 
-const initCommand = Command.make("init", {}, () =>
-  Effect.logInfo("The init command is coming soon!")
+const initCommand = Command.make(
+  "init",
+  {
+    target: initTargetOption,
+    force: forceOption,
+    "dry-run": dryRunOption,
+    "config-format": configFormatOption,
+    json: jsonOption,
+  },
+  args =>
+    runInit(args, {
+      currentWorkingDirectory: process.cwd(),
+      templateDir: projectInitTemplateDirectory,
+      typeweaverVersion: cliPackageVersion,
+      zodVersion: cliZodVersion,
+    })
 ).pipe(
-  Command.withDescription("Initialize a new typeweaver project (coming soon)")
+  Command.withDescription(
+    "Create an atomic TypeWeaver Todo starter in an explicit target"
+  )
 );
 
 const validateCommand = Command.make(

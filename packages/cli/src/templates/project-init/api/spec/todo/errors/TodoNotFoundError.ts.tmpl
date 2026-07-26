@@ -1,0 +1,15 @@
+import { defineDerivedResponse } from "@rexeus/typeweaver-core";
+import { z } from "zod";
+import { NotFoundError } from "../../shared/errors/index.js";
+
+export const TodoNotFoundError = defineDerivedResponse(NotFoundError, {
+  name: "TodoNotFoundError",
+  description: "The requested todo was not found.",
+  body: z.object({
+    code: z.literal("TODO_NOT_FOUND"),
+    message: z.literal("The requested todo was not found."),
+    actualValues: z.object({
+      todoId: z.uuid(),
+    }),
+  }),
+});

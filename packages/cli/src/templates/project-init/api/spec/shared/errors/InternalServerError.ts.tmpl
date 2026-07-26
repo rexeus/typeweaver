@@ -1,0 +1,12 @@
+import { defineResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
+import { z } from "zod";
+
+export const InternalServerError = defineResponse({
+  name: "InternalServerError",
+  description: "An internal server error occurred.",
+  statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
+  body: z.object({
+    code: z.literal("INTERNAL_SERVER_ERROR"),
+    message: z.literal("An internal server error occurred."),
+  }),
+});

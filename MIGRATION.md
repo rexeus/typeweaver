@@ -169,6 +169,14 @@ optional formatter availability. `--deep` performs the same scoped no-output val
 public `DoctorReportSchema`. Warnings retain exit code 0, while any failed check exits 1. Existing
 scripts do not need to change unless they choose to add this preflight.
 
+The former placeholder `typeweaver init` command is now an additive, non-interactive project
+bootstrap. It requires `--target`, refuses a non-empty directory unless `--force` is explicit, and
+publishes a complete Todo starter transactionally. `--dry-run` reports the planned files without
+writing, `--config-format mjs|cjs|js` selects the generated config module, and `--json` emits a
+versioned report accepted by the public `InitReportSchema`. An existing `package.json` is always
+preserved; `--force` replaces only conflicting starter files. Existing `generate`, `validate`, and
+`doctor` scripts do not need to change.
+
 ### 3. Internal API changes (informational; only programmatic consumers)
 
 If you imported the generator programmatically rather than through the CLI:
