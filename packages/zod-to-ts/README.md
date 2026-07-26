@@ -17,8 +17,10 @@ npm install @rexeus/typeweaver-zod-to-ts
 
 ## 💡 How to use
 
+<!-- docs-example: zod-to-ts -->
+
 ```typescript
-import { TsTypeNode, TsTypePrinter } from "@rexeus/typeweaver-zod-to-ts";
+import { fromZod, print } from "@rexeus/typeweaver-zod-to-ts";
 import { z } from "zod";
 
 // Define a Zod schema
@@ -30,10 +32,10 @@ const userSchema = z.object({
 });
 
 // Convert to TypeScript AST node
-const typeNode = TsTypeNode.fromZod(userSchema);
+const typeNode = fromZod(userSchema);
 
 // Print as TypeScript type string
-const typeString = TsTypePrinter.print(typeNode);
+const typeString = print(typeNode);
 // Output: { id: string; name: string; email: string; age?: number | undefined; }
 ```
 

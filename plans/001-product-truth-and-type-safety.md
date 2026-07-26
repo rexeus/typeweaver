@@ -47,7 +47,9 @@ implementing.
 - ADR 0001 and ADR 0002 remain `Proposed` although their architecture is implemented. ADR 0001
   contains the obsolete bare-array `defineSpec` resource example tracked by #198 and #200.
 - `scripts/check-markdown-links.mjs` verifies local file targets but does not compile code blocks.
-  `docs:check` checks links and the Effect version contract.
+  `docs:check` checks Markdown links, `verify:effect-version` enforces the Effect dependency and
+  version contracts, and `verify:architecture-contracts` composes both checks into the durable
+  architecture gate.
 - `packages/cli/examples/tsconfig.json` proves that checked-in TypeScript examples can be
   typechecked as part of a package command. Use this as the executable-docs pattern.
 - `packages/zod-to-ts/src/tsTypeGenerator.ts` intentionally maps `z.unknown()` to TypeScript
@@ -200,13 +202,13 @@ the PR URL and evidence in `GOAL.md`.
 
 ## Work package evidence
 
-| Work package                           | Status | Commit     | Evidence                                                                                                                                                                |
-| -------------------------------------- | ------ | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Product vision and repository truth | DONE   | `62856a3d` | `pnpm docs:check`, `pnpm format:check`, and `pnpm lint` pass; both required stale-state searches return no matches                                                      |
-| 2. Executable public documentation     | DONE   | `31ad8594` | Nine declared fixture groups and the invalid-example self-test pass through `pnpm docs:check`; `pnpm typecheck` passes 23/23 tasks                                      |
-| 3. Honest unsupported-schema failures  | DONE   | `6c78fba8` | Six formerly silent fallback cases now throw the exported stable error; 121/121 tests and package typecheck pass; 225 generated fixtures are unchanged                  |
-| 4. Public HTTP body boundary           | DONE   | `450408d5` | `IsAny` contracts, 150 Core/833 Server/112 Hono tests, 225 deterministic fixtures, root typecheck, and Node/Deno/Bun bundle gates pass                                  |
-| 5. Stage reconciliation and delivery   | DONE   | `4be4d317` | Live issues reconciled without mutation; complete local gate and all PR #209 checks pass at the exact recorded head; PR is open, ready, targets `main`, and is unmerged |
+| Work package                           | Status | Commit     | Evidence                                                                                                                                                                                |
+| -------------------------------------- | ------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Product vision and repository truth | DONE   | `62856a3d` | `pnpm docs:check`, `pnpm format:check`, and `pnpm lint` pass; both required stale-state searches return no matches                                                                      |
+| 2. Executable public documentation     | DONE   | `31ad8594` | Ten declared fixture groups plus invalid-example and manifest-contract self-tests pass through `pnpm docs:check`; `pnpm typecheck` passes 23/23 tasks                                   |
+| 3. Honest unsupported-schema failures  | DONE   | `6c78fba8` | Six formerly silent fallback cases now throw the exported stable error; 121/121 tests and package typecheck pass; 225 generated fixtures are unchanged                                  |
+| 4. Public HTTP body boundary           | DONE   | `450408d5` | `IsAny` contracts, 150 Core/833 Server/112 Hono tests, 225 deterministic fixtures, root typecheck, and Node/Deno/Bun bundle gates pass                                                  |
+| 5. Stage reconciliation and delivery   | DONE   | `b8861460` | Live issues were reconciled without mutation; the complete local gate and all PR #209 checks passed, and merge commit `81aab076` integrated the final reviewed Stage 1 head into `main` |
 
 ## Test plan
 

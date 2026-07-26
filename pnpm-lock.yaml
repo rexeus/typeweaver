@@ -162,6 +162,9 @@ importers:
       '@effect/vitest':
         specifier: ^0.30.0
         version: 0.30.0(effect@3.22.0)(vitest@3.2.7(@types/node@26.1.1)(tsx@4.23.1)(yaml@2.9.0))
+      '@rexeus/typeweaver-zod-to-ts':
+        specifier: workspace:^
+        version: link:../zod-to-ts
       fast-check:
         specifier: ^4.9.0
         version: 4.9.0

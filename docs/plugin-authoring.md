@@ -436,7 +436,7 @@ plugins:
   "main": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "peerDependencies": {
-    "@rexeus/typeweaver-gen": "^1.0.0",
+    "@rexeus/typeweaver-gen": "^0.13.0",
     "effect": ">=3.22.0 <4"
   }
 }

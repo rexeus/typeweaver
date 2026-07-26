@@ -64,7 +64,7 @@ pnpm install --frozen-lockfile
 pnpm test:gen
 pnpm --filter @rexeus/typeweaver test:bundle:all
 pnpm typecheck
-pnpm verify:effect-migration
+pnpm verify:architecture-contracts
 pnpm docs:check
 pnpm format:check
 pnpm lint

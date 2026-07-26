@@ -81,10 +81,80 @@ try {
     requiredGroupIds: [groupId],
   });
   assert.deepEqual(validResult.failures, []);
+
+  writeJson(manifestPath, {
+    version: 1,
+    tsconfig: "tsconfig.json",
+    groups: [{ id: groupId }],
+  });
+  const malformedManifestResult = verifyDocumentationExamples({
+    workspaceRoot: fixtureRoot,
+    manifestPath,
+    requiredGroupIds: [groupId],
+  });
+  assert.deepEqual(malformedManifestResult.failures, [
+    `${groupId}: documents must be an array`,
+    `${groupId}: fixtures must be an array`,
+  ]);
+
+  for (const invalidTsconfig of [undefined, 42]) {
+    writeJson(manifestPath, {
+      version: 1,
+      ...(invalidTsconfig === undefined ? {} : { tsconfig: invalidTsconfig }),
+      groups: [
+        {
+          id: groupId,
+          documents: ["README.md"],
+          fixtures: ["examples/invalid.ts"],
+        },
+      ],
+    });
+    const invalidTsconfigResult = verifyDocumentationExamples({
+      workspaceRoot: fixtureRoot,
+      manifestPath,
+      requiredGroupIds: [groupId],
+    });
+    assert.deepEqual(invalidTsconfigResult.failures, [
+      `${manifestPath}: tsconfig must be a non-empty string`,
+    ]);
+  }
+
+  rmSync(path.join(fixtureRoot, manifestPath));
+  const missingManifestResult = verifyDocumentationExamples({
+    workspaceRoot: fixtureRoot,
+    manifestPath,
+    requiredGroupIds: [groupId],
+  });
+  assert.deepEqual(missingManifestResult, {
+    failures: [`${manifestPath}: manifest file does not exist`],
+    groups: [],
+  });
+
+  writeFileSync(path.join(fixtureRoot, manifestPath), "{ invalid json");
+  const invalidJsonResult = verifyDocumentationExamples({
+    workspaceRoot: fixtureRoot,
+    manifestPath,
+    requiredGroupIds: [groupId],
+  });
+  assert.deepEqual(invalidJsonResult, {
+    failures: [`${manifestPath}: manifest contains invalid JSON`],
+    groups: [],
+  });
+
+  writeJson(manifestPath, null);
+  const nonObjectManifestResult = verifyDocumentationExamples({
+    workspaceRoot: fixtureRoot,
+    manifestPath,
+    requiredGroupIds: [groupId],
+  });
+  assert.deepEqual(nonObjectManifestResult, {
+    failures: [`${manifestPath}: manifest must be a JSON object`],
+    groups: [],
+  });
 } finally {
   rmSync(fixtureRoot, { recursive: true });
 }
 
 process.stdout.write(
-  "Documentation example checker rejected its invalid TypeScript fixture\n"
+  "Documentation example checker rejected invalid fixtures and manifests\n"
 );

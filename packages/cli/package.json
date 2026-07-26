@@ -114,6 +114,7 @@
   },
   "devDependencies": {
     "@effect/vitest": "^0.30.0",
+    "@rexeus/typeweaver-zod-to-ts": "workspace:^",
     "fast-check": "^4.9.0",
     "hono": "^4.12.32",
     "test-utils": "file:../test-utils",

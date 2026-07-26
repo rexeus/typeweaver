@@ -15,14 +15,137 @@ const formatDiagnostic = (diagnostic, workspaceRoot) => {
   return `${file}:${position.line + 1}:${position.character + 1} TS${diagnostic.code}: ${message}`;
 };
 
-const readJson = filePath => JSON.parse(readFileSync(filePath, "utf8"));
+const readManifest = (absoluteManifestPath, manifestPath) => {
+  if (!existsSync(absoluteManifestPath)) {
+    return {
+      failures: [`${manifestPath}: manifest file does not exist`],
+      manifest: undefined,
+    };
+  }
+
+  let source;
+  try {
+    source = readFileSync(absoluteManifestPath, "utf8");
+  } catch {
+    return {
+      failures: [`${manifestPath}: manifest file could not be read`],
+      manifest: undefined,
+    };
+  }
+
+  try {
+    return { failures: [], manifest: JSON.parse(source) };
+  } catch {
+    return {
+      failures: [`${manifestPath}: manifest contains invalid JSON`],
+      manifest: undefined,
+    };
+  }
+};
+
+const isNonEmptyString = value => typeof value === "string" && value.length > 0;
+
+const isRecord = value =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const validateStringArray = ({ groupId, field, value }) => {
+  if (!Array.isArray(value)) {
+    return {
+      failures: [`${groupId}: ${field} must be an array`],
+      values: [],
+    };
+  }
+
+  return {
+    failures: value.flatMap((entry, index) =>
+      isNonEmptyString(entry)
+        ? []
+        : [`${groupId}: ${field}[${String(index)}] must be a non-empty string`]
+    ),
+    values: value.filter(isNonEmptyString),
+  };
+};
+
+const validateGroup = (group, index) => {
+  const fallbackId = `<group ${String(index)}>`;
+  if (typeof group !== "object" || group === null || Array.isArray(group)) {
+    return {
+      failures: [`${fallbackId} must be an object`],
+      group: {
+        id: fallbackId,
+        documents: [],
+        fixtures: [],
+        runtimeFixtures: [],
+      },
+    };
+  }
+
+  const id = isNonEmptyString(group.id) ? group.id : fallbackId;
+  const documents = validateStringArray({
+    groupId: id,
+    field: "documents",
+    value: group.documents,
+  });
+  const fixtures = validateStringArray({
+    groupId: id,
+    field: "fixtures",
+    value: group.fixtures,
+  });
+  const runtimeFixtures =
+    group.runtimeFixtures === undefined
+      ? { failures: [], values: [] }
+      : validateStringArray({
+          groupId: id,
+          field: "runtimeFixtures",
+          value: group.runtimeFixtures,
+        });
+
+  return {
+    failures: [
+      ...(id === fallbackId
+        ? [`${fallbackId}: id must be a non-empty string`]
+        : []),
+      ...documents.failures,
+      ...fixtures.failures,
+      ...runtimeFixtures.failures,
+    ],
+    group: {
+      id,
+      documents: documents.values,
+      fixtures: fixtures.values,
+      runtimeFixtures: runtimeFixtures.values,
+    },
+  };
+};
 
 const validateManifest = (manifest, manifestPath, requiredGroupIds) => {
+  if (!isRecord(manifest)) {
+    return {
+      failures: [`${manifestPath}: manifest must be a JSON object`],
+      groups: [],
+      tsconfig: undefined,
+    };
+  }
+
   const failures =
     manifest.version === 1
       ? []
       : [`${manifestPath} has unsupported version ${String(manifest.version)}`];
-  const groups = Array.isArray(manifest.groups) ? manifest.groups : [];
+  const tsconfig = isNonEmptyString(manifest.tsconfig)
+    ? manifest.tsconfig
+    : undefined;
+  if (tsconfig === undefined) {
+    failures.push(`${manifestPath}: tsconfig must be a non-empty string`);
+  }
+  const validatedGroups = Array.isArray(manifest.groups)
+    ? manifest.groups.map(validateGroup)
+    : [];
+  const groups = validatedGroups.map(result => result.group);
+  if (!Array.isArray(manifest.groups)) {
+    failures.push(`${manifestPath}: groups must be an array`);
+  }
+  failures.push(...validatedGroups.flatMap(result => result.failures));
+
   const groupIds = groups.map(group => group.id);
   const duplicateGroupIds = new Set(
     groupIds.filter((groupId, index) => groupIds.indexOf(groupId) !== index)
@@ -42,7 +165,7 @@ const validateManifest = (manifest, manifestPath, requiredGroupIds) => {
       )
   );
 
-  return { failures, groups };
+  return { failures, groups, tsconfig };
 };
 
 const validateGroupFiles = (group, workspaceRoot) => {
@@ -69,8 +192,8 @@ const validateGroupFiles = (group, workspaceRoot) => {
   return [...documentFailures, ...fixtureFailures, ...runtimeFixtureFailures];
 };
 
-const parseTypeScriptConfig = (workspaceRoot, manifest) => {
-  const tsconfigPath = path.resolve(workspaceRoot, manifest.tsconfig);
+const parseTypeScriptConfig = (workspaceRoot, tsconfig) => {
+  const tsconfigPath = path.resolve(workspaceRoot, tsconfig);
   const configFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
   if (configFile.error !== undefined) {
     return {
@@ -97,7 +220,7 @@ const parseTypeScriptConfig = (workspaceRoot, manifest) => {
 const validateFixtureInclusion = (
   groups,
   workspaceRoot,
-  manifest,
+  tsconfig,
   parsedConfig
 ) => {
   const compiledFiles = new Set(
@@ -110,7 +233,7 @@ const validateFixtureInclusion = (
       )
       .map(
         fixture =>
-          `${group.id}: fixture is not included by ${manifest.tsconfig}: ${fixture}`
+          `${group.id}: fixture is not included by ${tsconfig}: ${fixture}`
       )
   );
 };
@@ -131,9 +254,13 @@ export const verifyDocumentationExamples = ({
   requiredGroupIds,
 }) => {
   const absoluteManifestPath = path.resolve(workspaceRoot, manifestPath);
-  const manifest = readJson(absoluteManifestPath);
+  const manifestResult = readManifest(absoluteManifestPath, manifestPath);
+  if (manifestResult.manifest === undefined) {
+    return { failures: manifestResult.failures, groups: [] };
+  }
+
   const manifestValidation = validateManifest(
-    manifest,
+    manifestResult.manifest,
     manifestPath,
     requiredGroupIds
   );
@@ -143,7 +270,14 @@ export const verifyDocumentationExamples = ({
       validateGroupFiles(group, workspaceRoot)
     ),
   ];
-  const configResult = parseTypeScriptConfig(workspaceRoot, manifest);
+  if (manifestValidation.tsconfig === undefined) {
+    return { failures, groups: manifestValidation.groups };
+  }
+
+  const configResult = parseTypeScriptConfig(
+    workspaceRoot,
+    manifestValidation.tsconfig
+  );
   failures.push(...configResult.failures);
 
   if (configResult.parsedConfig === undefined) {
@@ -154,7 +288,7 @@ export const verifyDocumentationExamples = ({
     ...validateFixtureInclusion(
       manifestValidation.groups,
       workspaceRoot,
-      manifest,
+      manifestValidation.tsconfig,
       configResult.parsedConfig
     )
   );

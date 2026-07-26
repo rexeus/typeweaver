@@ -1,14 +1,14 @@
 ---
-"@rexeus/typeweaver": major
-"@rexeus/typeweaver-core": major
-"@rexeus/typeweaver-gen": major
-"@rexeus/typeweaver-types": major
-"@rexeus/typeweaver-clients": major
-"@rexeus/typeweaver-aws-cdk": major
-"@rexeus/typeweaver-hono": major
-"@rexeus/typeweaver-server": major
-"@rexeus/typeweaver-openapi": major
-"@rexeus/typeweaver-zod-to-ts": major
+"@rexeus/typeweaver": minor
+"@rexeus/typeweaver-core": minor
+"@rexeus/typeweaver-gen": minor
+"@rexeus/typeweaver-types": minor
+"@rexeus/typeweaver-clients": minor
+"@rexeus/typeweaver-aws-cdk": minor
+"@rexeus/typeweaver-hono": minor
+"@rexeus/typeweaver-server": minor
+"@rexeus/typeweaver-openapi": minor
+"@rexeus/typeweaver-zod-to-ts": minor
 ---
 
 Migrate the runtime, plugin API, and CLI to Effect.
@@ -65,7 +65,8 @@ specs that use supported Zod schemas keep working byte-for-byte.
   `@rexeus/typeweaver-gen` wraps it at the normalization boundary into a tagged
   `DuplicateResponseNameError`, so the `NormalizationError` union is fully `catchTag`-addressable.
 
-Breaking changes are documented in [MIGRATION.md](../MIGRATION.md#migrating-from-012x-to-10x).
+Breaking changes are documented in the
+[migration guide](https://github.com/rexeus/typeweaver/blob/main/MIGRATION.md#migrating-from-012x-to-013x).
 Background on the design decisions:
 
 - ADR 0003 — Effect-native plugin API (V2)

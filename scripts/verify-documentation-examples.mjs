@@ -24,6 +24,7 @@ const requiredGroupIds = [
   "fetch-server-handler",
   "effect-handler",
   "openapi-options",
+  "zod-to-ts",
 ];
 const result = verifyDocumentationExamples({
   workspaceRoot,
