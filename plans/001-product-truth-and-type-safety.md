@@ -47,7 +47,9 @@ implementing.
 - ADR 0001 and ADR 0002 remain `Proposed` although their architecture is implemented. ADR 0001
   contains the obsolete bare-array `defineSpec` resource example tracked by #198 and #200.
 - `scripts/check-markdown-links.mjs` verifies local file targets but does not compile code blocks.
-  `docs:check` checks links and the Effect version contract.
+  `docs:check` checks Markdown links, `verify:effect-version` enforces the Effect dependency and
+  version contracts, and `verify:architecture-contracts` composes both checks into the durable
+  architecture gate.
 - `packages/cli/examples/tsconfig.json` proves that checked-in TypeScript examples can be
   typechecked as part of a package command. Use this as the executable-docs pattern.
 - `packages/zod-to-ts/src/tsTypeGenerator.ts` intentionally maps `z.unknown()` to TypeScript

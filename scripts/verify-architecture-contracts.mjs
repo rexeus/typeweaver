@@ -1,19 +1,15 @@
-import { spawnSync, execFileSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { lstatSync, readFileSync, readlinkSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { spawnPnpmSync } from "./lib/pnpm-command.mjs";
 
 const workspaceRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   ".."
 );
-const pnpmCli = process.env.npm_execpath;
-if (pnpmCli === undefined) {
-  throw new Error("Run this gate through `pnpm verify:effect-migration`.");
-}
-
 const hash = value => createHash("sha256").update(value).digest("hex");
 
 const gitOutput = args =>
@@ -51,11 +47,23 @@ const snapshotAuthoredWorktree = () => ({
 
 const commands = [
   {
-    label: "Effect source reference",
+    label: "Package-manager launcher contract",
+    args: ["run", "test:pnpm-launcher"],
+  },
+  {
+    label: "Pinned Effect source contract",
     args: ["run", "verify:effect-reference"],
   },
   {
-    label: "Effect version and documentation contracts",
+    label: "Effect dependency and version contracts",
+    args: ["run", "verify:effect-version"],
+  },
+  {
+    label: "Pre-1.0 release version contract",
+    args: ["run", "verify:release-version"],
+  },
+  {
+    label: "Documentation link integrity",
     args: ["run", "docs:check"],
   },
   {
@@ -67,7 +75,7 @@ const commands = [
     args: ["run", "effect:diagnostics"],
   },
   {
-    label: "Migration type contracts",
+    label: "Public CLI type contracts",
     args: ["--filter", "@rexeus/typeweaver", "run", "typecheck:contracts"],
   },
   {
@@ -102,7 +110,8 @@ const commands = [
 
 const runPnpm = ({ label, args }) => {
   process.stdout.write(`\n==> ${label}\n`);
-  const result = spawnSync(process.execPath, [pnpmCli, ...args], {
+  const result = spawnPnpmSync({
+    args,
     cwd: workspaceRoot,
     env: process.env,
     stdio: "inherit",
@@ -128,7 +137,7 @@ try {
 const after = snapshotAuthoredWorktree();
 if (JSON.stringify(after) !== JSON.stringify(before)) {
   throw new Error(
-    "verify:effect-migration changed the authored Git worktree",
+    "verify:architecture-contracts changed the authored Git worktree",
     commandFailure === undefined ? undefined : { cause: commandFailure }
   );
 }
@@ -137,5 +146,5 @@ if (commandFailure !== undefined) {
 }
 
 process.stdout.write(
-  "\nEffect migration verification passed without changing the authored worktree\n"
+  "\nArchitecture contracts passed without changing the authored worktree\n"
 );

@@ -11,16 +11,12 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
+import { spawnPnpmSync } from "./lib/pnpm-command.mjs";
 
 const workspaceRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   ".."
 );
-const pnpmCli = process.env.npm_execpath;
-if (pnpmCli === undefined) {
-  throw new Error("Run this check through `pnpm test:maintainability-lint`.");
-}
-
 const switchComplexity = caseCount =>
   [
     "function switchComplexity(value) {",
@@ -470,15 +466,12 @@ const parseLintOutput = result => {
 };
 
 const runRootLint = () => {
-  const result = spawnSync(
-    process.execPath,
-    [pnpmCli, "--silent", "run", "lint", "--format=json"],
-    {
-      cwd: workspaceRoot,
-      encoding: "utf8",
-      maxBuffer: 50 * 1024 * 1024,
-    }
-  );
+  const result = spawnPnpmSync({
+    args: ["--silent", "run", "lint", "--format=json"],
+    cwd: workspaceRoot,
+    encoding: "utf8",
+    maxBuffer: 50 * 1024 * 1024,
+  });
   return { ...parseLintOutput(result), status: result.status };
 };
 

@@ -105,12 +105,15 @@ jobs:
           pnpm run typecheck
           echo "::endgroup::"
 
-      - name: Verify Effect migration
+      # Durable post-migration gate: package-manager portability, the pinned
+      # Effect baseline, public contracts, generated output, workspace tests,
+      # and packed-consumer compatibility.
+      - name: Verify architecture contracts
         env:
           NODE_OPTIONS: "--max-old-space-size=6144"
         run: |
-          echo "::group::Effect migration contract"
-          pnpm run verify:effect-migration
+          echo "::group::Architecture contracts"
+          pnpm run verify:architecture-contracts
           echo "::endgroup::"
 
       - name: Verify documentation
