@@ -1,5 +1,5 @@
 import { assert, it } from "@effect/vitest";
-import { Context, Data, Deferred, Effect, Fiber, Layer } from "effect";
+import { Context, Data, Deferred, Effect, Fiber, Layer, Ref } from "effect";
 import { describe, expect, test } from "vitest";
 import { createPluginTestKit, defineScopedPlugin } from "../../src/index.js";
 import type { NormalizedSpec } from "../../src/index.js";
@@ -41,6 +41,62 @@ const makeResourceLayer = (events: string[]) =>
     )
   );
 
+const concurrentScopedRuns = () =>
+  Effect.gen(function* () {
+    let nextResourceId = 0;
+    const acquisitions: number[] = [];
+    const releases: number[] = [];
+    const observedIds: number[] = [];
+    const entered = yield* Ref.make(0);
+    const bothEntered = yield* Deferred.make<void>();
+    const plugin = defineScopedPlugin({
+      name: "scoped-concurrent",
+      layer: Layer.scoped(
+        ResourceProbe,
+        Effect.acquireRelease(
+          Effect.sync(() => {
+            nextResourceId += 1;
+            acquisitions.push(nextResourceId);
+            return { id: nextResourceId };
+          }),
+          resource =>
+            Effect.sync(() => {
+              releases.push(resource.id);
+            })
+        )
+      ),
+      generate: () =>
+        Effect.gen(function* () {
+          const resource = yield* ResourceProbe;
+          observedIds.push(resource.id);
+          const enteredCount = yield* Ref.updateAndGet(
+            entered,
+            count => count + 1
+          );
+          if (enteredCount === 2) {
+            yield* Deferred.succeed(bothEntered, undefined);
+          }
+          yield* Deferred.await(bothEntered);
+        }),
+    });
+    const first = createPluginTestKit({ normalizedSpec: emptySpec });
+    const second = createPluginTestKit({ normalizedSpec: emptySpec });
+
+    yield* Effect.all([first.run(plugin), second.run(plugin)], {
+      concurrency: "unbounded",
+    });
+
+    assert.deepStrictEqual(acquisitions, [1, 2]);
+    assert.deepStrictEqual(
+      observedIds.sort((left, right) => left - right),
+      [1, 2]
+    );
+    assert.deepStrictEqual(
+      releases.sort((left, right) => left - right),
+      [1, 2]
+    );
+  });
+
 describe("defineScopedPlugin successful lifecycle", () => {
   test("acquires one Layer per run and releases it after successful finalization", () => {
     const events: string[] = [];
@@ -78,6 +134,11 @@ describe("defineScopedPlugin successful lifecycle", () => {
       "release:1",
     ]);
   });
+
+  it.effect(
+    "isolates one shared plugin instance across concurrent runs",
+    concurrentScopedRuns
+  );
 });
 
 describe("defineScopedPlugin failure recovery", () => {

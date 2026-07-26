@@ -407,8 +407,9 @@ export const sessionPlugin = defineScopedPlugin({
 `defineScopedPlugin` builds the Layer exactly once in `initialize`, provides its services to
 `initialize`, `collectResources`, `generate`, and `finalize`, and closes the retained Scope after
 success, typed failure, defect, or interruption. Failed or interrupted Layer construction closes its
-provisional Scope before the failure escapes. The returned ordinary `Plugin` still exposes
-`R = never` at every lifecycle boundary.
+provisional Scope before the failure escapes. Concurrent generation fibers that share the same
+module-cached plugin instance retain independent Layers. The returned ordinary `Plugin` still
+exposes `R = never` at every lifecycle boundary.
 
 The helper owns **exit-independent resources**. `Plugin.finalize` does not receive the generator's
 original `Exit`, so do not use it for a transaction whose finalizer must choose commit versus

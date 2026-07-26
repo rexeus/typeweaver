@@ -112,8 +112,8 @@ service. See [`docs/plugin-authoring.md`](./docs/plugin-authoring.md) for the fu
 Plugin authors no longer need to copy the CLI's private fake contexts or manually retain
 `Layer.buildWithScope` state. Use `createPluginTestKit` for path-safe in-memory lifecycle tests and
 `defineScopedPlugin` for one plugin-owned Layer per generation call. The helper releases the Layer
-after success, typed failure, defect, and interruption while keeping ordinary plugin hooks at
-`R = never`.
+after success, typed failure, defect, and interruption, isolates concurrent calls that share a
+module-cached plugin instance, and keeps ordinary plugin hooks at `R = never`.
 
 For a new V2 package, run
 `typeweaver add plugin --name <lowercase-kebab-name> --target <new-directory>`. This additive,

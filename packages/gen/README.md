@@ -148,8 +148,8 @@ fixability metadata. Spec-normalization failures use the exhaustive `SPEC_ISSUE_
 ### Scoped services and public plugin tests
 
 Use `defineScopedPlugin` for a plugin-owned Effect Layer. It acquires one Layer per generation,
-provides the service requirements to lifecycle hooks, and releases the Scope after success, typed
-failure, defect, or interruption.
+provides the service requirements to lifecycle hooks, isolates concurrent calls that share one
+plugin instance, and releases the Scope after success, typed failure, defect, or interruption.
 
 `createPluginTestKit` runs the complete plugin lifecycle against path-safe in-memory contexts. Its
 result exposes structured issues, generated paths, file contents, the final normalized spec, and

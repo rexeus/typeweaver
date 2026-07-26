@@ -1,4 +1,4 @@
-import { Context, Effect, Exit, Layer, Scope } from "effect";
+import { Context, Effect, Exit, FiberRef, Layer, Scope } from "effect";
 import { PluginExecutionError } from "./errors/PluginExecutionError.js";
 import { definePlugin } from "./Plugin.js";
 import type { Issue } from "../issues/Issue.js";
@@ -16,9 +16,9 @@ type ScopedPluginRuntime<Services> = {
   readonly services: Context.Context<Services>;
 };
 
-type ScopedPluginRuntimeState<Services> = {
-  current: ScopedPluginRuntime<Services> | undefined;
-};
+type ScopedPluginRuntimeRef<Services> = FiberRef.FiberRef<
+  ScopedPluginRuntime<Services> | undefined
+>;
 
 /**
  * Public definition for a plugin that owns one scoped Effect Layer for the
@@ -58,21 +58,21 @@ const executionError = (
 const makeRuntimeProvider =
   <Services>(
     definition: ScopedPluginDefinition<Services>,
-    state: ScopedPluginRuntimeState<Services>
+    runtimeRef: ScopedPluginRuntimeRef<Services>
   ) =>
   <A>(
     phase: Exclude<PluginExecutionPhase, "validate" | "initialize">,
     effect: () => Effect.Effect<A, unknown, Services>
   ): Effect.Effect<A, PluginExecutionError> =>
-    Effect.suspend(() => {
-      const current = state.current;
+    Effect.gen(function* () {
+      const current = yield* FiberRef.get(runtimeRef);
       if (current === undefined) {
-        return Effect.dieMessage(
+        return yield* Effect.dieMessage(
           `Scoped plugin '${definition.name}' used before successful initialization`
         );
       }
 
-      return effect().pipe(
+      return yield* effect().pipe(
         Effect.provide(current.services),
         Effect.mapError(cause => executionError(definition.name, phase, cause))
       );
@@ -80,25 +80,24 @@ const makeRuntimeProvider =
 
 const makeInitialize = <Services>(
   definition: ScopedPluginDefinition<Services>,
-  state: ScopedPluginRuntimeState<Services>
+  runtimeRef: ScopedPluginRuntimeRef<Services>
 ) => {
   const initializeHook = definition.initialize;
   return (context: PluginContext): Effect.Effect<void, PluginExecutionError> =>
-    Effect.suspend(() => {
-      if (state.current !== undefined) {
-        return Effect.dieMessage(
+    Effect.gen(function* () {
+      const current = yield* FiberRef.get(runtimeRef);
+      if (current !== undefined) {
+        return yield* Effect.dieMessage(
           `Scoped plugin '${definition.name}' initialized more than once without finalization`
         );
       }
 
-      return Effect.acquireUseRelease(
+      yield* Effect.acquireUseRelease(
         Scope.make(),
         scope =>
           Layer.buildWithScope(definition.layer, scope).pipe(
             Effect.tap(services =>
-              Effect.sync(() => {
-                state.current = { scope, services };
-              })
+              FiberRef.set(runtimeRef, { scope, services })
             ),
             Effect.flatMap(services =>
               initializeHook === undefined
@@ -109,33 +108,29 @@ const makeInitialize = <Services>(
         (scope, exit) =>
           Exit.isFailure(exit)
             ? Scope.close(scope, exit).pipe(
-                Effect.ensuring(
-                  Effect.sync(() => {
-                    state.current = undefined;
-                  })
-                )
+                Effect.ensuring(FiberRef.set(runtimeRef, undefined))
               )
             : Effect.void
-      ).pipe(
-        Effect.asVoid,
-        Effect.mapError(cause =>
-          executionError(definition.name, "initialize", cause)
-        )
       );
-    });
+    }).pipe(
+      Effect.asVoid,
+      Effect.mapError(cause =>
+        executionError(definition.name, "initialize", cause)
+      )
+    );
 };
 
 const makeFinalize = <Services>(
   definition: ScopedPluginDefinition<Services>,
-  state: ScopedPluginRuntimeState<Services>
+  runtimeRef: ScopedPluginRuntimeRef<Services>
 ) => {
   const finalizeHook = definition.finalize;
   return (context: PluginContext): Effect.Effect<void, PluginExecutionError> =>
-    Effect.suspend(() => {
-      const current = state.current;
-      state.current = undefined;
+    Effect.gen(function* () {
+      const current = yield* FiberRef.get(runtimeRef);
+      yield* FiberRef.set(runtimeRef, undefined);
       if (current === undefined) {
-        return Effect.void;
+        return;
       }
 
       const finalizeEffect =
@@ -148,7 +143,7 @@ const makeFinalize = <Services>(
               )
             );
 
-      return finalizeEffect.pipe(
+      yield* finalizeEffect.pipe(
         Effect.ensuring(Scope.close(current.scope, Exit.void))
       );
     });
@@ -158,21 +153,26 @@ const makeFinalize = <Services>(
  * Defines a service-dependent plugin while keeping every public lifecycle hook
  * at `R = never`.
  *
- * The Layer is built exactly once by `initialize`, retained in the
- * per-plugin closure, and closed by `finalize`. Failed, defective, or
- * interrupted initialization closes its provisional Scope before the failure
- * escapes. Once initialization succeeds, the generator's unconditional
- * finalization boundary guarantees release after success, typed failure,
- * defect, or interruption in downstream lifecycle stages.
+ * The Layer is built exactly once by `initialize`, retained in a plugin-local
+ * FiberRef for the current generation fiber, and closed by `finalize`. Failed,
+ * defective, or interrupted initialization closes its provisional Scope before
+ * the failure escapes. Once initialization succeeds, the generator's
+ * unconditional finalization boundary guarantees release after success, typed
+ * failure, defect, or interruption in downstream lifecycle stages.
  */
 export const defineScopedPlugin = <Services>(
   definition: ScopedPluginDefinition<Services>
 ): Plugin => {
-  const state: ScopedPluginRuntimeState<Services> = { current: undefined };
+  const runtimeRef = FiberRef.unsafeMake<
+    ScopedPluginRuntime<Services> | undefined
+  >(undefined, {
+    fork: current => current,
+    join: parent => parent,
+  });
   const validateHook = definition.validate;
   const collectResourcesHook = definition.collectResources;
   const generateHook = definition.generate;
-  const withRuntime = makeRuntimeProvider(definition, state);
+  const withRuntime = makeRuntimeProvider(definition, runtimeRef);
 
   return definePlugin({
     name: definition.name,
@@ -192,7 +192,7 @@ export const defineScopedPlugin = <Services>(
               )
             ),
         }),
-    initialize: makeInitialize(definition, state),
+    initialize: makeInitialize(definition, runtimeRef),
     ...(collectResourcesHook === undefined
       ? {}
       : {
@@ -207,6 +207,6 @@ export const defineScopedPlugin = <Services>(
           generate: (context: GeneratorContext) =>
             withRuntime("generate", () => generateHook(context)),
         }),
-    finalize: makeFinalize(definition, state),
+    finalize: makeFinalize(definition, runtimeRef),
   });
 };
