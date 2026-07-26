@@ -177,6 +177,15 @@ versioned report accepted by the public `InitReportSchema`. An existing `package
 preserved; `--force` replaces only conflicting starter files. Existing `generate`, `validate`, and
 `doctor` scripts do not need to change.
 
+The new `@rexeus/typeweaver-command` package is additive. Install it together with
+`@rexeus/typeweaver-clients` and add both `"clients"` and `"command"` to the plugin list when you
+want a generated Node.js command-line client. Existing generated clients require no migration. The
+new plugin emits one command per operation, uses only declared contract security, and forwards
+cancellation into the existing Fetch transport. Its executable is `command/cli.mts`; compile the
+generated NodeNext sources and run the emitted `command/cli.mjs`. See the
+[command package guide](./packages/command/README.md) for deterministic flags, body sources, output,
+exit codes, and representability limits.
+
 ### 3. Internal API changes (informational; only programmatic consumers)
 
 If you imported the generator programmatically rather than through the CLI:

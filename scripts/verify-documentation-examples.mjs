@@ -15,6 +15,7 @@ const requiredGroupIds = [
   "scoped-service-plugin",
   "plugin-test-kit",
   "generated-client",
+  "generated-command",
   "hono-handler",
   "fetch-server-handler",
   "openapi-options",

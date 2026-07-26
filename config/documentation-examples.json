@@ -43,6 +43,11 @@
       "fixtures": ["packages/cli/examples/documentation/generated-client.ts"]
     },
     {
+      "id": "generated-command",
+      "documents": ["README.md", "packages/cli/README.md", "packages/command/README.md"],
+      "fixtures": ["packages/cli/examples/documentation/generated-command.ts"]
+    },
+    {
       "id": "hono-handler",
       "documents": ["packages/hono/README.md"],
       "fixtures": ["packages/cli/examples/documentation/hono-handler.ts"]

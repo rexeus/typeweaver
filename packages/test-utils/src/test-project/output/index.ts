@@ -10,11 +10,15 @@ export * from "./account/index.js";
 
 export * from "./auth/index.js";
 
+export * from "./command/index.js";
+
 export * from "./file/index.js";
 
 export * from "./lib/aws-cdk/index.js";
 
 export * from "./lib/clients/index.js";
+
+export * from "./lib/command/index.js";
 
 export * from "./lib/hono/index.js";
 

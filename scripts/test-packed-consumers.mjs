@@ -253,6 +253,7 @@ const writeConsumerSources = fixtureRoot => {
       skipLibCheck: false,
       strict: true,
       target: "ES2024",
+      types: ["node"],
     },
     include: ["plugin/index.mjs", "programmatic.ts", "spec/index.ts"],
   });
@@ -282,6 +283,10 @@ const writeConsumerManifest = ({
     packageManager: rootPackage.packageManager,
     dependencies: {
       "@rexeus/typeweaver": packedDependencies["@rexeus/typeweaver"],
+      "@rexeus/typeweaver-clients":
+        packedDependencies["@rexeus/typeweaver-clients"],
+      "@rexeus/typeweaver-command":
+        packedDependencies["@rexeus/typeweaver-command"],
       "@rexeus/typeweaver-core": packedDependencies["@rexeus/typeweaver-core"],
       "@rexeus/typeweaver-gen": packedDependencies["@rexeus/typeweaver-gen"],
       "@types/node": "26.1.1",
@@ -552,12 +557,61 @@ const writeRuntimeConfig = fixtureRoot => {
       "export default {",
       `  input: ${JSON.stringify(path.join(fixtureRoot, "spec", "index.ts"))},`,
       `  output: ${JSON.stringify(outputRoot)},`,
-      `  plugins: [[${JSON.stringify(pluginPath)}, {}]],`,
+      `  plugins: ["clients", "command", [${JSON.stringify(pluginPath)}, {}]],`,
       "};",
       "",
     ].join("\n")
   );
   return { configPath, outputRoot };
+};
+
+const verifyGeneratedCommandConsumer = ({ fixtureRoot, outputRoot }) => {
+  const generatedTsconfig = path.join(
+    fixtureRoot,
+    "generated-command.tsconfig.json"
+  );
+  const generatedDist = path.join(fixtureRoot, "generated-dist");
+  writeJson(generatedTsconfig, {
+    compilerOptions: {
+      allowJs: true,
+      checkJs: false,
+      module: "NodeNext",
+      moduleResolution: "NodeNext",
+      outDir: generatedDist,
+      rootDir: outputRoot,
+      skipLibCheck: false,
+      strict: true,
+      target: "ES2024",
+      types: ["node"],
+    },
+    include: [
+      path.join(outputRoot, "**/*.ts"),
+      path.join(outputRoot, "**/*.mts"),
+      path.join(outputRoot, "**/*.js"),
+    ],
+  });
+  run({
+    args: ["exec", "tsc", "--project", generatedTsconfig],
+    cwd: fixtureRoot,
+  });
+  assert.equal(
+    runNode({
+      args: [
+        "--input-type=module",
+        "--eval",
+        `await import(${JSON.stringify(path.join(generatedDist, "index.js"))}); if (process.exitCode !== undefined) throw new Error("generated barrel executed the command CLI"); process.stdout.write("generated-import-ok\\\\n");`,
+      ],
+      cwd: fixtureRoot,
+    }),
+    "generated-import-ok\\n"
+  );
+  assert.match(
+    runNode({
+      args: [path.join(generatedDist, "command", "cli.mjs"), "--help"],
+      cwd: fixtureRoot,
+    }),
+    /ping\s+Ping/
+  );
 };
 
 const verifySupportedConsumer = ({
@@ -616,11 +670,12 @@ const verifySupportedConsumer = ({
     ],
     cwd: fixtureRoot,
   });
-  assert.match(output, /Successfully loaded 1 plugin/);
+  assert.match(output, /Successfully loaded 3 plugin/);
   assert.equal(
     readFileSync(path.join(outputRoot, "packed-compat", "result.txt"), "utf8"),
     "packed-consumer-ok\n"
   );
+  verifyGeneratedCommandConsumer({ fixtureRoot, outputRoot });
   verifyScaffoldedPlugin({
     archives,
     effectVersion,

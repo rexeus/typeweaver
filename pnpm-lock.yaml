@@ -119,6 +119,9 @@ importers:
       '@rexeus/typeweaver-clients':
         specifier: workspace:^
         version: link:../clients
+      '@rexeus/typeweaver-command':
+        specifier: workspace:^
+        version: link:../command
       '@rexeus/typeweaver-core':
         specifier: workspace:^
         version: link:../core
@@ -193,6 +196,34 @@ importers:
       test-utils:
         specifier: file:../test-utils
         version: link:../test-utils
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+
+  packages/command:
+    dependencies:
+      polycase:
+        specifier: ^1.1.0
+        version: 1.1.0
+    devDependencies:
+      '@rexeus/typeweaver-clients':
+        specifier: workspace:^
+        version: link:../clients
+      '@rexeus/typeweaver-core':
+        specifier: workspace:^
+        version: link:../core
+      '@rexeus/typeweaver-gen':
+        specifier: workspace:^
+        version: link:../gen
+      effect:
+        specifier: ^3.22.0
+        version: 3.22.0
+      test-utils:
+        specifier: file:../test-utils
+        version: link:../test-utils
+      tsx:
+        specifier: ^4.23.1
+        version: 4.23.1
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -323,6 +354,9 @@ importers:
       '@rexeus/typeweaver-clients':
         specifier: workspace:^
         version: link:../clients
+      '@rexeus/typeweaver-command':
+        specifier: workspace:^
+        version: link:../command
       '@rexeus/typeweaver-core':
         specifier: workspace:^
         version: link:../core

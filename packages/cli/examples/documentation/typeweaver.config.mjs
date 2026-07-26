@@ -4,6 +4,7 @@ const config = {
   output: "./api/generated",
   plugins: [
     "clients",
+    "command",
     "hono",
     "aws-cdk",
     [

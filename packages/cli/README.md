@@ -56,6 +56,7 @@ Now you are ready to start building! Check out [Quickstart](#-get-started)
 | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | [@rexeus/typeweaver-types](https://github.com/rexeus/typeweaver/tree/main/packages/types/README.md)     | Plugin for request/response types and validation - the foundation for all other plugins and always included | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-types)   |
 | [@rexeus/typeweaver-clients](https://github.com/rexeus/typeweaver/tree/main/packages/clients/README.md) | Plugin for HTTP clients using fetch                                                                         | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients) |
+| [@rexeus/typeweaver-command](https://github.com/rexeus/typeweaver/tree/main/packages/command/README.md) | Node.js command-line API client composed from the generated Fetch client                                    | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-command) |
 | [@rexeus/typeweaver-server](https://github.com/rexeus/typeweaver/tree/main/packages/server/README.md)   | Plugin for a zero-dependency, Fetch API-native server with built-in routing and middleware                  | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-server)  |
 | [@rexeus/typeweaver-hono](https://github.com/rexeus/typeweaver/tree/main/packages/hono/README.md)       | Plugin for Hono routers                                                                                     | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)    |
 | [@rexeus/typeweaver-aws-cdk](https://github.com/rexeus/typeweaver/tree/main/packages/aws-cdk/README.md) | Plugin for AWS CDK constructs for API Gateway V2                                                            | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
@@ -173,6 +174,29 @@ automation can validate it with the public `DoctorReportSchema`. Exit code 0 mea
 (warnings are advisory); exit code 1 means at least one check failed. Neither mode writes project
 output.
 
+### Generate a command-line API client
+
+Install `@rexeus/typeweaver-clients` and `@rexeus/typeweaver-command`, then generate both
+projections:
+
+```bash
+npx typeweaver generate \
+  --input ./api/spec/index.ts \
+  --output ./api/generated \
+  --plugins clients,command
+```
+
+Compile the generated NodeNext TypeScript and run `command/cli.mjs`. It provides one deterministic
+subcommand per operation, contract-derived authentication flags, inline/file/stdin bodies, JSON
+output by default, `--human` output, and stable exit codes.
+
+<!-- docs-example: generated-command -->
+
+The generated public invocation boundary is checked in the
+[command fixture](./examples/documentation/generated-command.ts). See the
+[@rexeus/typeweaver-command guide](../command/README.md) for flags, security semantics, exit codes,
+and Node.js runtime limits.
+
 ### ⚙️ Generate options
 
 - `--input, -i <path>`: Spec entrypoint file (required via flag or config)
@@ -196,7 +220,7 @@ configurations:
 export default {
   input: "./api/spec/index.ts",
   output: "./api/generated",
-  plugins: ["clients", "hono", "aws-cdk", "openapi"],
+  plugins: ["clients", "command", "hono", "aws-cdk", "openapi"],
   format: true,
   clean: true,
 };

@@ -92,6 +92,7 @@ Typeweaver is modular by design. Install only what you need.
 | Package                                                    | Description                                                                 | Version                                                         |
 | ---------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | [@rexeus/typeweaver-clients](./packages/clients/README.md) | HTTP client generators using the Fetch API                                  | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients) |
+| [@rexeus/typeweaver-command](./packages/command/README.md) | Generates a Node.js command-line client by composing the Fetch client       | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-command) |
 | [@rexeus/typeweaver-hono](./packages/hono/README.md)       | Generates type-safe Hono routers with validation and error handling         | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)    |
 | [@rexeus/typeweaver-server](./packages/server/README.md)   | Generates a lightweight, dependency-free server with routing and middleware | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-server)  |
 | [@rexeus/typeweaver-aws-cdk](./packages/aws-cdk/README.md) | AWS CDK constructs for API Gateway V2                                       | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
@@ -101,6 +102,13 @@ Typeweaver is modular by design. Install only what you need.
 > API-native server — ideal for Bun, Deno, and Cloudflare Workers. The
 > [Hono plugin](./packages/hono/README.md) generates routers for the Hono framework — ideal if you
 > already use Hono or want its middleware ecosystem.
+
+> **API client or command client?** The [Clients plugin](./packages/clients/README.md) generates a
+> typed Fetch API for application code. Add the [Command plugin](./packages/command/README.md) when
+> operators or scripts also need a generated Node.js executable over that same transport and
+> contract.
+
+<!-- docs-example: generated-command -->
 
 ### Internal packages
 
