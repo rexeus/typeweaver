@@ -1,285 +1,240 @@
-# 🧵✨ typeweaver
+<div align="center">
 
-[![npm version](https://img.shields.io/npm/v/@rexeus/typeweaver.svg)](https://www.npmjs.com/package/@rexeus/typeweaver)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-supported-339933?logo=node.js&logoColor=fff)](https://nodejs.org/)
-[![Deno](https://img.shields.io/badge/Deno-supported-000?logo=deno&logoColor=fff)](https://deno.land/)
-[![Bun](https://img.shields.io/badge/Bun-supported-f9f1e1?logo=bun&logoColor=000)](https://bun.sh/)
+# 🧵 TypeWeaver
 
-Typeweaver is a type-safe HTTP API framework built for API-first development with a focus on
-developer experience. Use typeweaver to specify your HTTP APIs in TypeScript and Zod, and generate
-clients, validators, routers, and more ✨
+### One contract. Every surface. No drift.
 
-The long-term product promise, boundaries, and measurable success signals are documented in
-[VISION.md](./VISION.md).
+Define your HTTP API once in TypeScript and Zod. Generate the typed clients, validated server
+boundaries, command-line tools, infrastructure routes, and OpenAPI documents your team would
+otherwise keep in sync by hand.
 
-## 📥 Installation
+[Get started](./docs/getting-started.md) · [Choose a projection](#choose-the-surfaces-you-need) ·
+[Build a plugin](./docs/plugin-authoring.md) · [Read the vision](./VISION.md)
 
-```bash
-# Install the CLI as a dev dependency
-npm install -D @rexeus/typeweaver
+</div>
 
-# Install the runtime as a dependency
-npm install @rexeus/typeweaver-core
+---
+
+## Your API should not become a coordination problem
+
+A single endpoint often ends up described in several places: backend validators, handler types,
+frontend clients, API documentation, infrastructure, and operational tooling. Every copy can drift.
+Every change becomes a search-and-update exercise.
+
+TypeWeaver replaces those parallel contracts with one executable source:
+
+```text
+TypeScript + Zod contract
+          │
+          ├── validate and normalize
+          │
+          ├── TypeScript types and Zod validators
+          ├── Fetch clients
+          ├── Fetch-native or Hono server routers
+          ├── a Node.js command-line client
+          ├── OpenAPI documents
+          └── AWS CDK route helpers
 ```
 
-Now you are ready to start building! Check out [Quickstart](#-Quickstart)
+Change the contract. Regenerate. Let TypeScript, runtime validation, and stable diagnostics show you
+every surface that moved.
 
----
+## See the loop
 
-## 💡 Motivation
+Your contract stays readable TypeScript:
 
-OpenAPI is the industry standard for defining APIs, but I was never satisfied with the developer
-experience it provided. Writing YAMLs and JSON Schemas for huge projects felt cumbersome, and
-generators for TypeScript clients and servers often fell short.
-
-Meanwhile, [Zod](https://github.com/colinhacks/zod) is sitting right there 👀. Writing schemas with
-it feels like a breeze—beautiful syntax, powerful utilities like pick, omit, merge etc, all built
-for TypeScript from ground up.
-
-So why not use Zod to define your API contracts?
-
-That's exactly what typeweaver does. Define your APIs with Zod schemas and focus on what
-matters—designing great APIs and implementing business logic. The boilerplate? That's generated ✅.
-The type safety? It's real 🔒. The developer experience? Finally, it's what it should be 🚀.
-
-## 🌱 Project Status
-
-Typeweaver is pre-1.0 and under active development. The functional spec API and normalized
-generation model are implemented, and the repository verifies generated bundles on Node.js, Deno,
-and Bun. Public contracts may still change before 1.0; breaking changes are documented with
-Changesets and migration guidance.
-
-## 🎯 Why typeweaver?
-
-- 📝 **Define once, generate everything**: API contracts in Zod become clients, routers, validators,
-  and more.
-- 📂 **Resource-based architecture**: APIs organized by resources (like users, todos, projects, tags
-  etc.), each with its operations and generated components (e.g. clients). Scale naturally as your
-  API grows.
-- 🔒 **Type safety across generated surfaces**: API definitions drive request and response types,
-  validators, clients, and handlers. Runtime input is validated before application code consumes it.
-- ✅ **Automatic validation**: Invalid requests never reach your code.
-- 🔌 **Bring your own framework**: Ready-made adapters for popular frameworks, extensible plugin
-  system for everything else.
-- 😊 **Delightful DX**: One schema, no duplication, pure TypeScript 🚀.
-
----
-
-## 📦 Packages
-
-Typeweaver is modular by design. Install only what you need.
-
-### Foundational packages
-
-| Package                                                | Description                                      | Version                                                       |
-| ------------------------------------------------------ | ------------------------------------------------ | ------------------------------------------------------------- |
-| [@rexeus/typeweaver](./packages/cli/README.md)         | CLI tool for code generation                     | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver)       |
-| [@rexeus/typeweaver-core](./packages/core/README.md)   | Core types for API specification                 | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-core)  |
-| [@rexeus/typeweaver-gen](./packages/gen/README.md)     | Code generation engine and plugin system         | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-gen)   |
-| [@rexeus/typeweaver-types](./packages/types/README.md) | Plugin for request/response types and validation | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-types) |
-
-### Schema projection packages
-
-| Package                                                                          | Description                                 | Version                                                                    |
-| -------------------------------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------- |
-| [@rexeus/typeweaver-zod-to-ts](./packages/zod-to-ts/README.md)                   | Converts Zod v4 schemas to TypeScript types | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-zod-to-ts)          |
-| [@rexeus/typeweaver-zod-to-json-schema](./packages/zod-to-json-schema/README.md) | Converts Zod v4 schemas to JSON Schema      | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-zod-to-json-schema) |
-
-### Plugins
-
-| Package                                                    | Description                                                                 | Version                                                         |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| [@rexeus/typeweaver-clients](./packages/clients/README.md) | HTTP client generators using the Fetch API                                  | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-clients) |
-| [@rexeus/typeweaver-command](./packages/command/README.md) | Generates a Node.js command-line client by composing the Fetch client       | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-command) |
-| [@rexeus/typeweaver-effect](./packages/effect/README.md)   | Adds optional Effect handlers to the Fetch-native server                    | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-effect)  |
-| [@rexeus/typeweaver-hono](./packages/hono/README.md)       | Generates type-safe Hono routers with validation and error handling         | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-hono)    |
-| [@rexeus/typeweaver-server](./packages/server/README.md)   | Generates a lightweight, dependency-free server with routing and middleware | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-server)  |
-| [@rexeus/typeweaver-aws-cdk](./packages/aws-cdk/README.md) | AWS CDK constructs for API Gateway V2                                       | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-aws-cdk) |
-| [@rexeus/typeweaver-openapi](./packages/openapi/README.md) | Generates validated OpenAPI 3.1.2 and 3.2.0 JSON documents                  | ![npm](https://img.shields.io/npm/v/@rexeus/typeweaver-openapi) |
-
-### Choose a developer surface
-
-| Need                                              | Choose                            | What it adds                                                                 |
-| ------------------------------------------------- | --------------------------------- | ---------------------------------------------------------------------------- |
-| Portable Fetch request handlers without a runtime | Plain Fetch server (`server`)     | Dependency-free routing for Node.js, Bun, Deno, and worker-style runtimes    |
-| Hono middleware and router integration            | Hono (`hono`)                     | Generated Hono routers over the same request and response contract           |
-| An operator-facing Node.js executable             | Generated CLI (`clients,command`) | One command per operation over the generated Fetch client                    |
-| Typed Effect failures, Layers, and interruption   | Effect adapter (`server,effect`)  | Effect-returning handlers adapted into the existing Fetch-native server      |
-| A typed API for application code                  | Fetch client (`clients`)          | Request validation, contract-derived security, and a composable Fetch client |
-
-The Effect adapter is optional: ordinary Fetch server, Hono, and client users do not install Effect.
-It is an adapter over the plain server rather than a second router or schema system. A native Effect
-`HttpApi` backend remains explicitly outside the current product contract.
-
-<!-- docs-example: generated-command -->
-
-### Internal packages
-
-| Package                                       | Description                                       |
-| --------------------------------------------- | ------------------------------------------------- |
-| [test-utils](./packages/test-utils/README.md) | Shared test utilities, fixtures, and test servers |
-
-More plugins are planned. Want to build your own? Start with the
-[Plugin authoring guide](./docs/plugin-authoring.md).
-
----
-
-## 🚀 Quickstart
-
-Create a complete starter, validate its contract, and generate a Fetch client:
-
-```bash
-npx typeweaver init --target ./todo-api
-cd todo-api
-pnpm install
-pnpm validate
-pnpm generate
-```
-
-<!-- docs-example: init-workflow -->
-
-The manual workflow below shows how the same contract is assembled.
-
-1. **Author a spec entrypoint:**
-
-```typescript
-// api/spec/user/GetUserDefinition.ts
+```ts
 import {
   defineOperation,
   defineResponse,
+  defineSpec,
   HttpMethod,
   HttpStatusCode,
 } from "@rexeus/typeweaver-core";
 import { z } from "zod";
-import { UserNotFoundErrorDefinition } from "./errors/UserNotFoundErrorDefinition";
-import { sharedResponses } from "../shared/sharedResponses";
 
-export const GetUserDefinition = defineOperation({
-  operationId: "getUser",
+const GetTodoSuccess = defineResponse({
+  name: "GetTodoSuccess",
+  statusCode: HttpStatusCode.OK,
+  description: "The todo was found",
+  body: z.object({
+    id: z.uuid(),
+    title: z.string(),
+    completed: z.boolean(),
+  }),
+});
+
+const GetTodo = defineOperation({
+  operationId: "getTodo",
   method: HttpMethod.GET,
-  path: "/users/:userId",
-  summary: "Get a user by id",
+  path: "/todos/:todoId",
+  summary: "Get a todo",
   request: {
     param: z.object({
-      userId: z.uuid(),
+      todoId: z.uuid(),
     }),
   },
-  responses: [
-    defineResponse({
-      name: "GetUserSuccess",
-      statusCode: HttpStatusCode.OK,
-      description: "User successfully retrieved",
-      header: z.object({
-        "Content-Type": z.literal("application/json"),
-      }),
-      body: z.object({
-        id: z.uuid(),
-        name: z.string(),
-        email: z.email(),
-      }),
-    }),
-    UserNotFoundErrorDefinition, // Define error responses
-    ...sharedResponses, // Reuse common errors across operations
-  ],
+  responses: [GetTodoSuccess],
 });
-```
-
-```typescript
-// api/spec/index.ts
-import { defineSpec } from "@rexeus/typeweaver-core";
-import { GetUserDefinition } from "./user/GetUserDefinition";
 
 export const spec = defineSpec({
-  metadata: { title: "Users API", version: "1.0.0" },
+  metadata: {
+    title: "Todo API",
+    version: "1.0.0",
+  },
   resources: {
-    user: {
-      operations: [GetUserDefinition],
+    todo: {
+      operations: [GetTodo],
     },
   },
 });
 ```
 
-2. **Example project structure:**
+<!-- docs-example: root-quickstart -->
 
-The directory layout is up to you. Typeweaver only cares about the `defineSpec(...)` entrypoint, not
-about folder names. Here is one common way to organize a project:
+The complete contract shape is typechecked in the
+[root quickstart fixture](./packages/cli/examples/documentation/root-quickstart.ts).
 
-```
-api/
-├── spec/
-│   ├── index.ts         # Spec entrypoint — exports defineSpec(...)
-│   ├── user/
-│   │   ├── errors/
-│   │   │   └── UserNotFoundErrorDefinition.ts
-│   │   └── GetUserDefinition.ts
-│   └── shared/
-│       └── sharedResponses.ts
-└── generated/           # Generated by typeweaver
-    ├── user/
-    │   ├── UserClient.ts
-    │   └── ...
-    └── index.ts          # Entry point exports
+Then choose the surfaces your project needs:
+
+```js
+// typeweaver.config.mjs
+export default {
+  input: "./api/spec/index.ts",
+  output: "./api/generated",
+  plugins: ["clients", "server", "openapi"],
+};
 ```
 
-Resource names come from `defineSpec({ resources: ... })`, not from folder names.
+The generated client already understands the request and every declared response:
 
-3. **Generate code**
+```ts
+const response = await todoClient.send(
+  new GetTodoRequestCommand({
+    param: {
+      todoId,
+    },
+  })
+);
 
-```bash
-# Select the plugins you want to use
-# -> In this case "clients" for type-safe Http-Clients, "hono" for Hono framework integration
-npx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --plugins clients,hono
-
-# Or use the built-in server (zero external dependencies)
-npx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --plugins clients,server
-```
-
-4. **Use the generated code**
-
-```typescript
-import { UserClient, GetUserRequestCommand } from "./api/generated";
-
-const client = new UserClient({
-  baseUrl: "https://api.example.com",
-});
-
-const getUserRequestCommand = new GetUserRequestCommand({
-  param: {
-    userId: "d3882a0e-8241-4a71-ad38-5778835ef596",
-  },
-});
-
-const response = await client.send(getUserRequestCommand);
-
-// TypeScript discriminates between different response types via the `type` field
-if (response.type === "GetUserSuccess") {
-  console.log(response.body.name);
-} else if (response.type === "UserNotFoundError") {
-  console.error(`User not found`);
+if (response.type === "GetTodoSuccess") {
+  console.log(response.body.title); // fully typed
 }
 ```
 
-<!-- docs-example: root-quickstart -->
+No handwritten DTO mirror. No separate client contract. No documentation schema to remember after
+the implementation changes.
 
-The complete source-contract version of this flow is typechecked in the
-[root quickstart fixture](./packages/cli/examples/documentation/root-quickstart.ts).
+## Start with a working API contract
 
-&rarr; That's it! Start building your API. [Get started](./packages/cli/README.md#-get-started)
+```bash
+pnpm dlx @rexeus/typeweaver init --target ./todo-api
+cd todo-api
+pnpm install
+pnpm validate
+pnpm generate
+pnpm typecheck
+```
 
----
+<!-- docs-example: init-workflow -->
 
-## 🤝 Contributing
+The starter gives you a complete Todo contract, reusable responses, a generation config, and a
+repeatable validate → generate → typecheck workflow.
 
-Contributions are very welcome — from docs and examples to bug fixes, new plugins and features.
+[Walk through the generated project →](./docs/getting-started.md)
 
-## 💬 Feedback & Issues
+## Choose the surfaces you need
 
-We’d love to hear your feedback — on API design, DX, docs, issues and ideas. Report them
-[here](https://github.com/rexeus/typeweaver/issues).
+The `types` projection is always included. Add only the capabilities that belong in your system:
 
----
+| You need                            | Select               | What you get                                                                            |
+| ----------------------------------- | -------------------- | --------------------------------------------------------------------------------------- |
+| A typed application client          | `clients`            | Resource clients and one request command per operation, built on Fetch                  |
+| A portable request-handler boundary | `server`             | Generated routers, typed handlers, validation, and middleware over `Request`/`Response` |
+| Hono integration                    | `hono`               | Generated Hono routers wired to the same contract                                       |
+| An operator-facing CLI              | `clients`, `command` | One deterministic subcommand per API operation                                          |
+| Effect-returning handlers           | `server`, `effect`   | Effect adapters over the Fetch-native server contract                                   |
+| Standards-based API documentation   | `openapi`            | Generates validated OpenAPI 3.1.2 and 3.2.0 JSON documents                              |
+| API Gateway route declarations      | `aws-cdk`            | AWS CDK HTTP API route helpers while integration ownership stays in your stack          |
+
+<!-- docs-example: generated-command -->
+
+The generated command invocation boundary is typechecked in the
+[command fixture](./packages/cli/examples/documentation/generated-command.ts).
+
+## Built for contract evolution
+
+TypeWeaver is designed around a few non-negotiable properties:
+
+- **One validated core.** Every plugin consumes the same normalized contract.
+- **Deterministic output.** The same contract and configuration should produce the same files.
+- **Explicit projection loss.** A target that cannot faithfully represent part of the contract
+  reports a diagnostic instead of silently inventing behavior.
+- **Generated code you can own operationally.** Framework-specific integrations are optional; the
+  Fetch-native path remains the portable baseline.
+- **A public extension model.** Third-party plugins use documented lifecycle, context, diagnostics,
+  and testing contracts.
+
+## Where to go next
+
+- [Getting started](./docs/getting-started.md) — build, generate, call, serve, and evolve a small
+  API.
+- [CLI reference](./packages/cli/README.md) — `init`, `validate`, `generate`, `doctor`,
+  configuration, and automation.
+- [Contract authoring](./packages/core/README.md) — specs, operations, responses, metadata, and
+  security declarations.
+- [Plugin authoring](./docs/plugin-authoring.md) — create a new projection on the normalized model.
+- [Vision](./VISION.md) — product promise, principles, boundaries, and non-goals.
+
+<details>
+<summary><strong>Package map</strong></summary>
+
+### Product entry point
+
+- [`@rexeus/typeweaver`](./packages/cli/README.md) — scaffold, validate, diagnose, and generate.
+
+### Contract and generated surfaces
+
+- [`@rexeus/typeweaver-core`](./packages/core/README.md) — executable contract and shared runtime
+  types.
+- [`@rexeus/typeweaver-types`](./packages/types/README.md) — generated request/response types and
+  validators; always enabled.
+- [`@rexeus/typeweaver-clients`](./packages/clients/README.md) — generated Fetch clients.
+- [`@rexeus/typeweaver-command`](./packages/command/README.md) — generated Node.js command-line
+  client.
+- [`@rexeus/typeweaver-server`](./packages/server/README.md) — Fetch-native server routers and
+  middleware.
+- [`@rexeus/typeweaver-hono`](./packages/hono/README.md) — Hono routers.
+- [`@rexeus/typeweaver-effect`](./packages/effect/README.md) — optional Effect handler adapters.
+- [`@rexeus/typeweaver-openapi`](./packages/openapi/README.md) — OpenAPI projection.
+- [`@rexeus/typeweaver-aws-cdk`](./packages/aws-cdk/README.md) — AWS CDK HTTP API route helpers.
+
+### Extension and schema tooling
+
+- [`@rexeus/typeweaver-gen`](./packages/gen/README.md) — normalized model, plugin lifecycle,
+  contexts, and test kit.
+- [`@rexeus/typeweaver-zod-to-ts`](./packages/zod-to-ts/README.md) — Zod-to-TypeScript projection.
+- [`@rexeus/typeweaver-zod-to-json-schema`](./packages/zod-to-json-schema/README.md) —
+  Zod-to-JSON-Schema projection.
+- [`test-utils`](./packages/test-utils/README.md) — private monorepo fixtures and integration
+  helpers.
+
+</details>
+
+## Project status
+
+TypeWeaver is pre-1.0 and under active development. Public contracts may still change before 1.0;
+breaking changes are documented through Changesets and migration guidance.
+
+The repository's reference workflow targets Node.js 24. Runtime support depends on the generated
+surface: consult the relevant package page before choosing a deployment target. The generated
+command-line client is Node.js-specific.
+
+## Contributing and feedback
+
+Contributions to documentation, examples, bug fixes, plugins, and product features are welcome. Use
+[GitHub Issues](https://github.com/rexeus/typeweaver/issues) for defects, documentation gaps, and
+product ideas.
 
 ## License
 

@@ -9,6 +9,7 @@ const workspaceRoot = path.resolve(
 );
 const requiredGroupIds = [
   "root-quickstart",
+  "getting-started",
   "core-response-derivation",
   "generation-cli-config",
   "minimal-plugin",

@@ -1,110 +1,75 @@
-# 🧵✨ @rexeus/typeweaver-hono
+# `@rexeus/typeweaver-hono`
+
+> Generate Hono routers whose handler signatures, validation, declared responses, and error
+> boundaries come from your TypeWeaver contract.
 
 [![npm version](https://img.shields.io/npm/v/@rexeus/typeweaver-hono.svg)](https://www.npmjs.com/package/@rexeus/typeweaver-hono)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](../../LICENSE)
 
-Typeweaver is a type-safe HTTP API framework built for API-first development with a focus on
-developer experience. Use typeweaver to specify your HTTP APIs in TypeScript and Zod, and generate
-clients, validators, routers, and more ✨
+## Choose this projection when
 
-## 📝 Hono Plugin
+Use `hono` when your application already uses Hono or needs direct access to its `Context`,
+middleware ecosystem, and deployment adapters.
 
-This plugin generates type-safe Hono routers from your typeweaver API definitions. For each
-resource, it produces a `<ResourceName>Hono` router class that sets up the routes, validates
-requests via the generated validators, and wires your handler methods with full type safety.
+Choose [`server`](../server/README.md) when you prefer TypeWeaver's Fetch-native app, router, and
+typed middleware model without a web-framework dependency.
 
----
-
-## 📥 Installation
+## Install and generate
 
 ```bash
-# Install the CLI and the plugin as a dev dependency
-npm install -D @rexeus/typeweaver @rexeus/typeweaver-hono
+pnpm add -D @rexeus/typeweaver
+pnpm add @rexeus/typeweaver-core hono zod
 
-# Install the runtime as a dependency
-npm install @rexeus/typeweaver-core
+pnpm typeweaver generate \
+  --input ./api/spec/index.ts \
+  --output ./api/generated \
+  --plugins hono
 ```
 
-## 💡 How to use
+The package supports Hono `>=4.11.0 <5`. The `types` projection is included automatically.
 
-```bash
-npx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --plugins hono
-```
+## Generated surface
 
-More on the CLI in
-[@rexeus/typeweaver](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md#️-cli).
+For a `todo` resource, generation adds a `TodoHono.ts` router and copies the Hono adapter runtime
+into `lib/hono/`.
 
-## 📂 Generated Output
+The generated resource file exports:
 
-For each resource (e.g., `Todo`) this plugin generates a Hono router class, which handles the
-routing and request validation for all operations of the resource. This Hono router class can then
-be easily integrated into your Hono application.
+- a `HonoTodoApiHandler` contract;
+- one handler method per operation;
+- a `TodoHono` router class;
+- operation-specific request/response types through the generated barrel.
 
-Generated files are like `<ResourceName>Hono.ts` – e.g. `TodoHono.ts`.
-
-## 🚀 Usage
-
-Implement your handlers and mount the generated router in a Hono app.
+## Implement handlers
 
 ```ts
-// api/user-handlers.ts
 import type { Context } from "hono";
-import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { HonoUserApiHandler, IGetUserRequest, GetUserResponse } from "./generated";
-import { createUserNotFoundErrorResponse, createGetUserSuccessResponse } from "./generated";
+import {
+  createGetTodoSuccessResponse,
+  createTodoNotFoundResponse,
+  type GetTodoResponse,
+  type HonoTodoApiHandler,
+  type IGetTodoRequest,
+} from "./api/generated/index.js";
 
-export class UserHandlers implements HonoUserApiHandler {
-  async handleGetUserRequest(request: IGetUserRequest, context: Context): Promise<GetUserResponse> {
-    const user = await db.findUser(request.param.userId);
-    if (!user) {
-      return createUserNotFoundErrorResponse({
-        header: { "Content-Type": "application/json" },
-        body: { message: "User not found" },
+export class TodoHandlers implements HonoTodoApiHandler {
+  async handleGetTodoRequest(request: IGetTodoRequest, context: Context): Promise<GetTodoResponse> {
+    const todo = await findTodo(request.param.todoId, {
+      requestId: context.req.header("x-request-id"),
+    });
+
+    if (!todo) {
+      return createTodoNotFoundResponse({
+        body: {
+          message: "Todo not found",
+          todoId: request.param.todoId,
+        },
       });
     }
 
-    return createGetUserSuccessResponse({
-      header: { "Content-Type": "application/json" },
-      body: {
-        id: request.param.userId,
-        name: "Jane",
-        email: "jane@example.com",
-      },
-    });
+    return createGetTodoSuccessResponse({ body: todo });
   }
-  // Implement other operation handlers: handleCreateUserRequest, ...
 }
-```
-
-```ts
-// api/server.ts
-import { serve } from "@hono/node-server";
-import { Hono } from "hono";
-import { UserHono } from "./generated";
-import { UserHandlers } from "./user-handlers";
-
-const app = new Hono();
-const userHandlers = new UserHandlers();
-
-// Configure the generated router
-const userRouter = new UserHono({
-  requestHandlers: userHandlers,
-  validateRequests: true, // default, validates requests
-  validateResponses: true, // default, validates responses and strips extra fields
-  handleRequestValidationErrors: true, // default: returns 400 with issues
-  handleBodyParseErrors: true, // default: returns sanitized 400 for malformed bodies
-  handleResponseValidationErrors: true, // default: returns 500
-  handleHttpResponseErrors: true, // default: returns thrown typed HTTP responses as-is
-  handleUnknownErrors: true, // default: returns 500
-});
-
-// Mount the router into your Hono app
-app.route("/", userRouter);
-
-serve({ fetch: app.fetch, port: 3000 }, () => {
-  console.log("Hono server listening on http://localhost:3000");
-});
 ```
 
 <!-- docs-example: hono-handler -->
@@ -112,56 +77,129 @@ serve({ fetch: app.fetch, port: 3000 }, () => {
 The generated Hono handler signature and response factory are typechecked in the
 [Hono handler fixture](../cli/examples/documentation/hono-handler.ts).
 
-### ⚙️ Configuration
+The generated interface keeps request and response types synchronized with the contract while
+leaving application services and Hono context ownership in your code.
 
-`TypeweaverHonoOptions<RequestHandlers>`
+## Mount the router
 
-- `requestHandlers`: object implementing the generated `Hono<ResourceName>ApiHandler` type
-- `validateRequests` (default: `true`): enable/disable request validation
-- `validateResponses` (default: `true`): enable/disable response validation. When enabled, responses
-  are validated against the operation's schema and extra body fields are stripped before sending.
-- `handleRequestValidationErrors`: `true` | `false` |
-  `(err, c) => IHttpResponse | Promise<IHttpResponse>`
-  - If `true` (default), returns `400 Bad Request` with validation issues in the body
-  - If `false`, disables this handler (errors fall through to the unknown error handler)
-  - If function, calls the function with the error and context, expects an `IHttpResponse` to
-    return, so you can customize the response in the way you want
-- `handleBodyParseErrors`: `true` | `false` | `(err, c) => IHttpResponse | Promise<IHttpResponse>`
-  - If `true` (default), malformed request bodies (including invalid JSON and vendor JSON media
-    types) return a sanitized `400 Bad Request` response
-  - If `false`, disables this special handling. Body parse errors fall through to
-    `handleUnknownErrors` when configured, or propagate to Hono's error handling when unknown error
-    handling is disabled.
-  - If function, calls the function with the body parse error and Hono context. Import
-    `HonoBodyParseError` from the generated Hono runtime barrel when you need an `instanceof` check.
-    If the custom handler throws, the router falls back to the default sanitized `400 Bad Request`
-    response.
-- `handleResponseValidationErrors`: `true` | `false` |
-  `(err, response, c) => IHttpResponse | Promise<IHttpResponse>`
-  - If `true` (default), returns `500 Internal Server Error`
-  - If `false`, disables response validation error handling — the invalid response is returned
-    as-is. Validation still runs (and strips extra fields on valid responses), but invalid responses
-    pass through unchanged. Useful when you want field stripping without blocking invalid responses.
-  - If function, calls the function with the `ResponseValidationError`, the original (invalid)
-    response, and the Hono context. The function should return an `IHttpResponse`. If the custom
-    handler throws, the original response is returned as a fallback.
-- `handleHttpResponseErrors`: `true` | `false` |
-  `(err, c) => IHttpResponse | Promise<IHttpResponse>`
-  - If `true` (default), returns thrown typed HTTP responses (`ITypedHttpResponse`) as-is, they will
-    be sent as the response
-  - If `false`, disables this handler (errors fall through to the unknown error handler)
-  - If function, calls the function with the error and context, expects an `IHttpResponse` to
-    return, so you can customize the response in the way you want
-- `handleUnknownErrors`: `true` | `false` | `(err, c) => IHttpResponse | Promise<IHttpResponse>`
-  - If `true` (default), returns `500 Internal Server Error` with a generic message
-  - If `false`, disables this handler (errors propagate to Hono's error handling, e.g. via
-    `app.onError`)
-  - If function, calls the function with the error and context, expects an `IHttpResponse` to
-    return, so you can customize the response in the way you want
+```ts
+import { Hono } from "hono";
+import { TodoHono } from "./api/generated/index.js";
+import { TodoHandlers } from "./todo-handlers.js";
 
-You can also pass standard Hono options (e.g. `strict`, `getPath`, etc.) through the same options
-object.
+const app = new Hono();
 
-## 📄 License
+app.route(
+  "/",
+  new TodoHono({
+    requestHandlers: new TodoHandlers(),
+  })
+);
+
+export default app;
+```
+
+Use the Hono adapter appropriate for your deployment target to serve `app.fetch`.
+
+## Router options
+
+```ts
+const router = new TodoHono({
+  requestHandlers: new TodoHandlers(),
+  validateRequests: true,
+  validateResponses: true,
+  handleRequestValidationErrors: true,
+  handleBodyParseErrors: true,
+  handleResponseValidationErrors: true,
+  handleHttpResponseErrors: true,
+  handleUnknownErrors: true,
+  strict: true,
+});
+```
+
+| Option                           | Default  | Purpose                                    |
+| -------------------------------- | -------- | ------------------------------------------ |
+| `requestHandlers`                | required | generated operation handlers               |
+| `validateRequests`               | `true`   | validate and parse incoming request parts  |
+| `validateResponses`              | `true`   | validate and parse handler responses       |
+| `handleRequestValidationErrors`  | `true`   | default 400 or custom mapper               |
+| `handleBodyParseErrors`          | `true`   | sanitized 400 for malformed request bodies |
+| `handleResponseValidationErrors` | `true`   | default 500 or custom mapper               |
+| `handleHttpResponseErrors`       | `true`   | return thrown typed HTTP responses         |
+| `handleUnknownErrors`            | `true`   | sanitized 500 or custom mapper             |
+
+Standard Hono options such as `strict` and `getPath` pass through the same options object.
+
+Each error handler accepts `true`, `false`, or a custom function. Custom functions receive the
+relevant error plus Hono context and return an `IHttpResponse`.
+
+```ts
+const router = new TodoHono({
+  requestHandlers: new TodoHandlers(),
+  handleRequestValidationErrors: (error, context) => ({
+    type: "ValidationError",
+    statusCode: 400,
+    body: {
+      requestId: context.req.header("x-request-id"),
+      issues: {
+        body: error.bodyIssues,
+        query: error.queryIssues,
+        param: error.pathParamIssues,
+        header: error.headerIssues,
+      },
+    },
+  }),
+});
+```
+
+When unknown-error handling is disabled, errors propagate to Hono's own error boundary, such as
+`app.onError`.
+
+## Body and response behavior
+
+The adapter:
+
+- reads path, query, header, and body values into the generated request shape;
+- recognizes JSON and vendor `+json` media types;
+- reports malformed bodies through `HonoBodyParseError` and the configured body-error boundary;
+- validates declared responses when enabled;
+- strips extra object fields when the declared Zod response schema parses them;
+- serializes the resulting `IHttpResponse` through Hono.
+
+Import adapter errors from the generated runtime barrel when a custom handler needs an `instanceof`
+check:
+
+```ts
+import {
+  HonoBodyParseError,
+  HonoResponseSerializationError,
+} from "./api/generated/lib/hono/index.js";
+```
+
+## Security boundary
+
+TypeWeaver security declarations can become OpenAPI requirements and generated client/command
+inputs. The Hono plugin does not turn them into authentication middleware automatically. Apply Hono
+middleware or application logic explicitly.
+
+## Boundaries
+
+This plugin does not:
+
+- replace Hono's deployment adapters;
+- create application services or context variables;
+- enforce authentication declarations automatically;
+- introduce a second router beside Hono;
+- require the Fetch-native TypeWeaver server package.
+
+## Related documentation
+
+- [Migration guide](../../MIGRATION.md)
+- [Getting started](../../docs/getting-started.md)
+- [Fetch-native server](../server/README.md)
+- [Generated types and validators](../types/README.md)
+- [Contract authoring](../core/README.md)
+
+## License
 
 Apache 2.0 © Dennis Wentzien 2026

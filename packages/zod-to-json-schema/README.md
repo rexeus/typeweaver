@@ -1,16 +1,28 @@
-# @rexeus/typeweaver-zod-to-json-schema
+# `@rexeus/typeweaver-zod-to-json-schema`
 
-Converts Zod v4 schemas to JSON Schema Draft 2020-12-compatible objects. Typeweaver uses this
-package as the reusable conversion layer for OpenAPI 3.1 generation, but it is intentionally
-standalone.
+> Convert Zod 4 schemas into embeddable JSON Schema Draft 2020-12 objects while returning
+> deterministic warnings for runtime behavior the target cannot express.
+
+[![npm version](https://img.shields.io/npm/v/@rexeus/typeweaver-zod-to-json-schema.svg)](https://www.npmjs.com/package/@rexeus/typeweaver-zod-to-json-schema)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](../../LICENSE)
+
+## Choose this package when
+
+Use this standalone converter when you need a JSON Schema representation of a Zod 4 schema and must
+know where the projection became broader or less precise.
+
+TypeWeaver's OpenAPI projection uses the same conversion layer, but the package does not require a
+TypeWeaver API spec.
 
 ## Install
 
-```sh
+```bash
 pnpm add @rexeus/typeweaver-zod-to-json-schema zod
 ```
 
-## Usage
+The supported Zod peer range is `>=4.3.0 <5`.
+
+## Convert a schema
 
 ```ts
 import { fromZod } from "@rexeus/typeweaver-zod-to-json-schema";
@@ -26,44 +38,126 @@ const result = fromZod(
 console.log(result.schema);
 // {
 //   type: "object",
-//   properties: { id: { type: "string", format: "uuid" }, name: { type: "string" } },
+//   properties: {
+//     id: { type: "string", format: "uuid" },
+//     name: { type: "string" }
+//   },
 //   required: ["id"],
 //   additionalProperties: false
 // }
+
+console.log(result.warnings); // []
 ```
 
-`fromZod()` returns both the JSON Schema and deterministic warnings for Zod features that JSON
-Schema cannot represent precisely, such as transforms, custom refinements, dates, maps, and sets.
+`fromZod()` always returns both parts:
+
+```ts
+type ZodToJsonSchemaResult = {
+  readonly schema: JsonSchema;
+  readonly warnings: readonly ZodToJsonSchemaWarning[];
+};
+```
+
+## Representational loss is explicit
+
+Zod can describe runtime behavior that JSON Schema cannot reproduce exactly, including transforms,
+custom refinements, dates, maps, sets, and unsupported checks.
 
 ```ts
 const { schema, warnings } = fromZod(z.string().transform(value => value.length));
 
-// schema falls back to a broad JSON Schema object when Zod cannot represent the
-// runtime behavior exactly.
 console.log(schema); // {}
 console.log(warnings[0]?.code); // "unsupported-schema"
 ```
 
-If Zod's conversion throws, `fromZod()` does not throw. It returns `{ schema: {}, warnings }` and
-appends a `conversion-error` warning with the original error message.
+Warning codes are:
 
-Warning paths are JSON Pointer strings. When a warning corresponds to JSON Schema output, the path
-points at that output location: the root path is `""`, object properties appear under
-`/properties/name`, and record keys and values appear under `/propertyNames` and
-`/additionalProperties`. Pointer segments escape `~` as `~0` and `/` as `~1`. Source-side Zod
-concepts without a direct JSON Schema output location use stable Typeweaver extension paths under
-the nearest output path, such as `/x-typeweaver/mapKey`, `/x-typeweaver/mapValue`,
-`/x-typeweaver/pipeIn`, and `/x-typeweaver/pipeOut`. For example, a root pipe input is reported at
-`/x-typeweaver/pipeIn`, while a `count` property pipe output is reported at
-`/properties/count/x-typeweaver/pipeOut`.
+| Code                 | Meaning                                                    |
+| -------------------- | ---------------------------------------------------------- |
+| `unsupported-schema` | the schema kind has no faithful JSON Schema representation |
+| `unsupported-check`  | a validation check cannot be preserved exactly             |
+| `conversion-error`   | Zod's conversion failed                                    |
 
-Warnings include `schemaType` as best-effort diagnostic context from the source Zod schema. Treat it
-as debugging detail, not a stable public API contract.
+When conversion throws, `fromZod()` catches the failure, returns a broad `{}` schema, and appends a
+`conversion-error` warning. Representability problems therefore remain inspectable data rather than
+an unstructured log or an uncaught exception.
 
-## Output
+## Warning paths
 
-- Target dialect: JSON Schema Draft 2020-12.
-- The root `$schema` marker from Zod's output is stripped for easier embedding in downstream OpenAPI
-  documents.
-- Tuple schemas are normalized with `minItems`. Fixed-length tuples also receive `items: {}` and
-  `maxItems`; rest tuples preserve their `items` schema and do not receive a synthesized `maxItems`.
+Each warning includes:
+
+```ts
+type ZodToJsonSchemaWarning = {
+  readonly code: "unsupported-schema" | "unsupported-check" | "conversion-error";
+  readonly schemaType: string;
+  readonly path: string;
+  readonly message: string;
+};
+```
+
+`path` is a JSON Pointer:
+
+- the root is `""`;
+- object properties use paths such as `/properties/name`;
+- record keys and values use `/propertyNames` and `/additionalProperties`;
+- `~` and `/` are escaped according to JSON Pointer rules.
+
+Source concepts without a direct output location use stable TypeWeaver extension segments near the
+affected schema, such as:
+
+- `/x-typeweaver/mapKey`;
+- `/x-typeweaver/mapValue`;
+- `/x-typeweaver/pipeIn`;
+- `/x-typeweaver/pipeOut`.
+
+`schemaType` is best-effort diagnostic context from Zod internals. Do not use it as a stable machine
+contract; use `code` and `path` instead.
+
+## Output normalization
+
+The converter:
+
+- targets JSON Schema Draft 2020-12;
+- removes the root `$schema` field so the result can be embedded in a larger document;
+- normalizes tuple bounds for downstream compatibility;
+- preserves a deterministic warning order.
+
+## Treat warnings according to your use case
+
+A broad schema may be acceptable for documentation but unacceptable for policy enforcement. The
+caller owns that decision:
+
+```ts
+const result = fromZod(schema);
+
+if (result.warnings.length > 0) {
+  throw new Error(
+    result.warnings
+      .map(warning => `${warning.code} at ${warning.path}: ${warning.message}`)
+      .join("\n")
+  );
+}
+```
+
+## Boundaries
+
+This package does not:
+
+- recreate Zod runtime transforms in JSON Schema;
+- guarantee lossless round-tripping;
+- validate data against the emitted schema;
+- hide unsupported constructs;
+- attach an OpenAPI document around the result.
+
+For a complete API projection, use [`@rexeus/typeweaver-openapi`](../openapi/README.md).
+
+## Related documentation
+
+- [Migration guide](../../MIGRATION.md)
+- [OpenAPI projection](../openapi/README.md)
+- [Zod to TypeScript](../zod-to-ts/README.md)
+- [Generated types and validators](../types/README.md)
+
+## License
+
+Apache 2.0 © Dennis Wentzien 2026

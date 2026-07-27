@@ -8,6 +8,14 @@
       "fixtures": ["packages/cli/examples/documentation/root-quickstart.ts"]
     },
     {
+      "id": "getting-started",
+      "documents": ["docs/getting-started.md"],
+      "fixtures": [
+        "packages/cli/examples/documentation/getting-started.ts",
+        "packages/cli/examples/documentation/getting-started.config.mjs"
+      ]
+    },
+    {
       "id": "core-response-derivation",
       "documents": ["packages/core/README.md"],
       "fixtures": ["packages/cli/examples/documentation/core-response-derivation.ts"]
@@ -45,7 +53,7 @@
     },
     {
       "id": "init-workflow",
-      "documents": ["README.md", "packages/cli/README.md"],
+      "documents": ["README.md", "docs/getting-started.md", "packages/cli/README.md"],
       "fixtures": [],
       "runtimeFixtures": ["packages/cli/__test__/init.process.test.ts"]
     },
@@ -63,7 +71,7 @@
     },
     {
       "id": "generated-client",
-      "documents": ["packages/clients/README.md"],
+      "documents": ["docs/getting-started.md", "packages/clients/README.md"],
       "fixtures": ["packages/cli/examples/documentation/generated-client.ts"]
     },
     {
@@ -78,7 +86,7 @@
     },
     {
       "id": "fetch-server-handler",
-      "documents": ["packages/server/README.md"],
+      "documents": ["docs/getting-started.md", "packages/server/README.md"],
       "fixtures": ["packages/cli/examples/documentation/fetch-server-handler.ts"]
     },
     {

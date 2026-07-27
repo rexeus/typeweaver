@@ -1,215 +1,181 @@
-# 🧵✨ @rexeus/typeweaver-types
+# `@rexeus/typeweaver-types`
+
+> Generate the request types, response unions, response factories, and Zod validators that every
+> other TypeWeaver surface builds on.
 
 [![npm version](https://img.shields.io/npm/v/@rexeus/typeweaver-types.svg)](https://www.npmjs.com/package/@rexeus/typeweaver-types)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](../../LICENSE)
 
-Typeweaver is a type-safe HTTP API framework built for API-first development with a focus on
-developer experience. Use typeweaver to specify your HTTP APIs in TypeScript and Zod, and generate
-clients, validators, routers, and more ✨
+## You usually do not select this plugin
 
-## 📝 Types Plugin
+The `types` projection is always loaded by TypeWeaver. It is the common foundation for clients,
+routers, commands, and adapters.
 
-This plugin generates TypeScript types and Zod validators from your typeweaver API definitions,
-providing the foundation for type-safe API development. This is the core plugin that's included by
-default in every typeweaver generation.
-
----
-
-## 📥 Installation
+Install the product and runtime dependencies:
 
 ```bash
-# Install the CLI as a dev dependency
-# Types plugin will be automatically included
-npm install -D @rexeus/typeweaver
-
-# Install the runtime as a dependency
-npm install @rexeus/typeweaver-core
+pnpm add -D @rexeus/typeweaver
+pnpm add @rexeus/typeweaver-core zod
 ```
 
-## 💡 How to use
-
-This plugin is included by default and doesn't need to be explicitly specified:
+Then select only the additional projections you need:
 
 ```bash
-# Generate with clients + types plugins
-npx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --plugins clients
+pnpm typeweaver generate \
+  --input ./api/spec/index.ts \
+  --output ./api/generated \
+  --plugins clients
 ```
 
-More details on how to use the
-[CLI](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md#️-cli).
+Types and validators are generated automatically alongside the client.
 
-## 📂 Generated Output
+## Generated surface
 
-For each operation (e.g., `CreateTodo`), the plugin generates four main files:
+For an operation with `operationId: "createTodo"`, the plugin emits:
 
-- `<OperationId>Request.ts`
-- `<OperationId>Response.ts`
-- `<OperationId>RequestValidator.ts`
-- `<OperationId>ResponseValidator.ts`
+```text
+CreateTodoRequest.ts
+CreateTodoRequestValidator.ts
+CreateTodoResponse.ts
+CreateTodoResponseValidator.ts
+```
 
-These files contain the necessary types and validators for requests and responses. All of these
-provided types and factory functions are exported.
+### Request file
 
-### 📨 Request Types
+The request file contains operation-specific types for every declared request part and one complete
+request interface, for example:
 
-All request-related types for an operation are defined in one file: `<OperationId>Request.ts`, e.g.
-`CreateTodoRequest.ts`. This file contains:
+- `ICreateTodoRequestHeader`;
+- `ICreateTodoRequestPath`;
+- `ICreateTodoRequestQuery`;
+- `ICreateTodoRequestBody`;
+- `ICreateTodoRequest`.
 
-- **`I<OperationId>RequestHeader`** - Type of request headers, if defined, e.g.
-  `ICreateTodoRequestHeader`
-- **`I<OperationId>RequestPath`** - Type for path parameters, if defined, e.g.
-  `ICreateTodoRequestPath`
-- **`I<OperationId>RequestQuery`** - Type for query parameters, if defined, e.g.
-  `ICreateTodoRequestQuery`
-- **`I<OperationId>RequestBody`** - Type for request body, if defined, e.g. `ICreateTodoRequestBody`
-- **`I<OperationId>Request`** - Complete request interface combining path, method, headers, and
-  body, e.g. `ICreateTodoRequest`
-- **`Successful<OperationId>Response`** - Union type excluding error responses for success-only
-  handling
+Only declared request parts appear with a precise type.
 
-### 📬 Response Types
+### Response file
 
-All response-related types for an operation are defined in one file: `<OperationId>Response.ts`,
-e.g. `CreateTodoResponse.ts`. This file contains for each response defined inline in an operation:
+The response file contains:
 
-- **`I<ResponseName>ResponseHeader`** - Type for success response headers, if defined, e.g.
-  `ICreateTodoSuccessResponseHeader`
-- **`I<ResponseName>ResponseBody`** - Type for success response payload structure, if defined, e.g.
-  `ICreateTodoSuccessResponseBody`
-- **`I<ResponseName>Response`** - Typed response object using
-  `ITypedHttpResponse<TType, TStatusCode, THeader, TBody>`, e.g. `ICreateTodoSuccessResponse`
-- **`create<ResponseName>Response`** - Factory function that creates a typed response object, e.g.
-  `createCreateTodoSuccessResponse`
+- one typed interface per declared response;
+- one factory per response;
+- the complete operation response union;
+- a success-only union where applicable.
 
-Furthermore, a union type is generated, which includes all possible responses (success + error), not
-only those defined inline in the operation:
+```ts
+import { createCreateTodoSuccessResponse, type CreateTodoResponse } from "./api/generated/index.js";
 
-- **`<OperationId>Response`** - Union type of all `I`-prefixed response types, e.g.
-  `CreateTodoResponse` which is a union of
-  `ICreateTodoSuccessResponse | IForbiddenErrorResponse | ...`
+const response: CreateTodoResponse = createCreateTodoSuccessResponse({
+  body: {
+    id: crypto.randomUUID(),
+    title: "Write documentation",
+    completed: false,
+  },
+});
+```
 
-### 📨✓ Request Validators
+Factories set stable response discriminators and status codes from the contract. Application code
+supplies only the declared headers and body.
 
-Request validation logic for an operation is defined in one file:
-`<OperationId>RequestValidator.ts`, e.g. `CreateTodoRequestValidator.ts`. This file contains:
+## Request validation
 
-- **`<OperationId>RequestValidator`** - Main validation class extending `RequestValidator`, e.g.
-  `CreateTodoRequestValidator`
-- **`safeValidate()`** - Non-throwing validation method returning `SafeRequestValidationResult`
-- **`validate()`** - Throwing validation method that returns validated request or throws
-  `RequestValidationError`
-- **Header coercion logic** - Automatic conversion of headers to schema-appropriate types (single
-  string value & multi string value headers)
-- **Query parameter coercion logic** - Automatic conversion of query parameters to
-  schema-appropriate types (single string value & multi string value query parameters)
-- **Request validation errors** - Includes all issues related to the incoming request for headers,
-  query parameters, and body.
-- **Unknown property filtering** - Automatically removes properties not defined in the request
-  schema. If a request exceeds the definition, it is not rejected directly.
+```ts
+import { HttpMethod, type IHttpRequest } from "@rexeus/typeweaver-core";
+import { GetTodoRequestValidator } from "./api/generated/index.js";
 
-**Using the generated request validators**
+const validator = new GetTodoRequestValidator();
 
-```typescript
-import { RequestValidationError, type IHttpRequest } from "@rexeus/typeweaver-core";
-import { CreateTodoRequestValidator } from "path/to/generated/output";
-
-const requestValidator = new CreateTodoRequestValidator();
-
-// A request in structure of IHttpRequest
-const request: IHttpRequest = {
-  // ...
+const input: IHttpRequest = {
+  method: HttpMethod.GET,
+  path: "/todos/:todoId",
+  param: {
+    todoId: "846a8c8d-28dc-4b66-ae6c-8d1c551430b2",
+  },
 };
 
-// Using safe validation
-const safeResult = requestValidator.safeValidate(request);
-if (safeResult.isValid) {
-  console.log("Request is valid", safeResult.data);
-} else {
-  // Error is instance of RequestValidationError class
-  console.log("Request is invalid", safeResult.error);
-}
+const result = validator.safeValidate(input);
 
-// Using throwing validation
-try {
-  const validatedRequest = requestValidator.validate(request);
-  console.log("Request is valid", validatedRequest);
-} catch (error) {
-  if (error instanceof RequestValidationError) {
-    console.log("Request is invalid", error);
-  }
+if (result.isValid) {
+  result.data.param.todoId; // typed and validated
+} else {
+  console.error(result.error);
 }
 ```
 
-### 📬✓ Response Validators
+Use `validate()` when a throwing boundary is more convenient. It returns the validated request or
+throws `RequestValidationError` with structured issues.
 
-Response validation logic for an operation is defined in one file:
-`<OperationId>ResponseValidator.ts`, e.g. `CreateTodoResponseValidator.ts`. This file contains:
+The validator:
 
-- **`<OperationId>ResponseValidator`** - Main validation class extending `ResponseValidator`, e.g.
-  `CreateTodoResponseValidator`
-- **`safeValidate()`** - Non-throwing validation method returning `SafeResponseValidationResult`
-- **`validate()`** - Throwing validation method that returns validated response or throws
-  ResponseValidationError
-- Valid response data is a typed response object matching one of the generated response types
-- **Header coercion logic** - Automatic conversion of headers to schema-appropriate types (single
-  string value & multi string value headers)
-- **Response validation errors** - Include details about the issues with all possible responses for
-  the given status code:
-  - An issue for a possible response includes details about header and body issues
-  - If the given status code is not specified in the operation at all an issue with details about
-    expected status codes is included
-- **Unknown property filtering** - Automatically removes properties not defined in the response
-  schema. If a response exceeds the definition, it is not rejected directly.
+- validates header, path, query, and body schemas;
+- coerces supported query and header string values to their schema representation;
+- groups issues by request part;
+- returns the parsed Zod value;
+- follows the schema's object behavior, including removal of unknown object keys for ordinary Zod
+  objects.
 
-**Using the generated response validators**
+## Response validation
 
-```typescript
-import { ResponseValidationError, type IHttpResponse } from "@rexeus/typeweaver-core";
-import { CreateTodoResponseValidator } from "path/to/generated/output";
+```ts
+import { HttpStatusCode } from "@rexeus/typeweaver-core";
+import { GetTodoResponseValidator } from "./api/generated/index.js";
 
-const responseValidator = new CreateTodoResponseValidator();
+const result = new GetTodoResponseValidator().safeValidate({
+  statusCode: HttpStatusCode.OK,
+  body: {
+    id: "846a8c8d-28dc-4b66-ae6c-8d1c551430b2",
+    title: "Write documentation",
+    completed: false,
+    internalOnly: "removed by the declared object schema",
+  },
+});
 
-// A response in structure of IHttpResponse
-const response: IHttpResponse = {
-  // ...
-};
-
-// Using safe validation
-const safeResult = responseValidator.safeValidate(response);
-if (safeResult.isValid) {
-  console.log("Response is valid", safeResult.data);
-
-  // Data is a typed response object — use the type discriminator to narrow
-  if (safeResult.data.type === "CreateTodoSuccess") {
-    // handle CreateTodoSuccessResponse
-  }
-  if (safeResult.data.type === "InternalServerError") {
-    // handle InternalServerErrorResponse
-  }
-  // handle other response types ...
-} else {
-  // Error is instance of ResponseValidationError class
-  console.log("Response is invalid", safeResult.error);
-}
-
-// Using throwing validation
-try {
-  const validatedResponse = responseValidator.validate(response);
-  console.log("Response is valid", validatedResponse);
-
-  // Same here: use the type discriminator to narrow
-  if (validatedResponse.type === "CreateTodoSuccess") {
-    // handle CreateTodoSuccessResponse
-  }
-  // ... handle other response types
-} catch (error) {
-  if (error instanceof ResponseValidationError) {
-    console.log("Response is invalid", error);
-  }
+if (result.isValid) {
+  console.log(result.data.type); // "GetTodoSuccess"
 }
 ```
 
-## 📄 License
+A response must match a declared status/schema combination. Valid responses are returned in their
+parsed form.
+
+A response that matches no declared contract is not silently widened. Callers receive the structured
+response-validation boundary used by the generated client and server integrations.
+
+Unknown object keys may be removed when the declared Zod object schema parses the response. That is
+normal schema parsing; it is different from accepting an unrecognized response.
+
+## Why this projection is always present
+
+Every higher-level projection needs the same answers:
+
+- What can enter this operation?
+- What can leave it?
+- How is external input validated?
+- How is a response discriminated?
+
+Generating those answers once prevents each adapter from reimplementing the contract independently.
+
+## Boundaries
+
+This plugin generates types and validators. It does not:
+
+- send HTTP requests;
+- register routes;
+- implement authentication;
+- choose a server framework;
+- turn every Zod runtime behavior into an exactly equivalent TypeScript or standards representation.
+
+Projection limits are reported by the relevant converter or target plugin.
+
+## Related documentation
+
+- [Migration guide](../../MIGRATION.md)
+- [Getting started](../../docs/getting-started.md)
+- [Contract authoring](../core/README.md)
+- [Fetch clients](../clients/README.md)
+- [Fetch-native server](../server/README.md)
+- [Hono integration](../hono/README.md)
+
+## License
 
 Apache 2.0 © Dennis Wentzien 2026

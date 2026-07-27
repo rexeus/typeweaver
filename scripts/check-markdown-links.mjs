@@ -8,9 +8,21 @@ const workspaceRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   ".."
 );
-const markdownFiles = execFileSync("git", ["ls-files", "-z", "*.md"], {
-  cwd: workspaceRoot,
-})
+const markdownFiles = execFileSync(
+  "git",
+  [
+    "ls-files",
+    "-z",
+    "--cached",
+    "--others",
+    "--exclude-standard",
+    "--",
+    "*.md",
+  ],
+  {
+    cwd: workspaceRoot,
+  }
+)
   .toString("utf8")
   .split("\0")
   .filter(Boolean);
@@ -53,5 +65,5 @@ if (broken.length > 0) {
 }
 
 process.stdout.write(
-  `Local Markdown links verified across ${markdownFiles.length} tracked files\n`
+  `Local Markdown links verified across ${markdownFiles.length} repository files\n`
 );
