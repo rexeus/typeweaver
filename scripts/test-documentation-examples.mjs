@@ -85,6 +85,20 @@ try {
   writeJson(manifestPath, {
     version: 1,
     tsconfig: "tsconfig.json",
+    groups: [],
+  });
+  const missingRequiredGroupResult = verifyDocumentationExamples({
+    workspaceRoot: fixtureRoot,
+    manifestPath,
+    requiredGroupIds: [groupId],
+  });
+  assert.deepEqual(missingRequiredGroupResult.failures, [
+    `Missing required documentation example group: ${groupId}`,
+  ]);
+
+  writeJson(manifestPath, {
+    version: 1,
+    tsconfig: "tsconfig.json",
     groups: [{ id: groupId }],
   });
   const malformedManifestResult = verifyDocumentationExamples({

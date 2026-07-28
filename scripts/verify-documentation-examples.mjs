@@ -11,6 +11,7 @@ const requiredGroupIds = [
   "root-quickstart",
   "getting-started",
   "core-response-derivation",
+  "metadata-security-contract",
   "generation-cli-config",
   "minimal-plugin",
   "scoped-service-plugin",

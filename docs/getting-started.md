@@ -64,11 +64,15 @@ pnpm typecheck
 Use `pnpm doctor` when the project, runtime, config, plugin resolution, or output directory does not
 behave as expected.
 
-The rest of this guide builds the same idea manually so you can see every moving part.
+The rest of this guide builds the same idea manually from an empty directory so you can see every
+moving part.
 
-## 1. Install the authoring and generation packages
+## 1. Create the TypeScript package
 
 ```bash
+mkdir typeweaver-example
+cd typeweaver-example
+pnpm init
 pnpm add -D @rexeus/typeweaver typescript
 pnpm add @rexeus/typeweaver-core zod
 ```
@@ -77,10 +81,14 @@ pnpm add @rexeus/typeweaver-core zod
 select them by name in configuration. `@rexeus/typeweaver-core` and `zod` belong in ordinary
 dependencies because your source contract and generated runtime surfaces import them.
 
-Add scripts to `package.json`:
+Update `package.json` so it contains at least the ESM mode, private-package guard, and TypeWeaver
+scripts shown below. Keep the `name`, `version`, and dependency fields created by `pnpm init` and
+the install commands.
 
 ```json
 {
+  "private": true,
+  "type": "module",
   "scripts": {
     "api:validate": "typeweaver validate --config ./typeweaver.config.mjs",
     "api:generate": "typeweaver generate --config ./typeweaver.config.mjs",
@@ -90,9 +98,35 @@ Add scripts to `package.json`:
 }
 ```
 
+Create `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": false,
+    "strict": true,
+    "target": "ES2024",
+    "verbatimModuleSyntax": true
+  },
+  "include": ["api/**/*.ts", "*.ts"]
+}
+```
+
 ## 2. Author one operation
 
-Create `api/spec/index.ts`:
+Create the spec directory and then `api/spec/index.ts`:
+
+```bash
+mkdir -p api/spec
+```
+
+The project now has the complete package and compiler foundation needed by the remaining steps.
 
 ```ts
 import {

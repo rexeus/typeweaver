@@ -109,10 +109,16 @@ export default {
 The generated client already understands the request and every declared response:
 
 ```ts
-const response = await todoClient.send(
+import { GetTodoRequestCommand, TodoClient } from "./api/generated/index.js";
+
+const client = new TodoClient({
+  baseUrl: "https://api.example.com",
+});
+
+const response = await client.send(
   new GetTodoRequestCommand({
     param: {
-      todoId,
+      todoId: "846a8c8d-28dc-4b66-ae6c-8d1c551430b2",
     },
   })
 );

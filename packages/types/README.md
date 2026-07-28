@@ -46,7 +46,7 @@ The request file contains operation-specific types for every declared request pa
 request interface, for example:
 
 - `ICreateTodoRequestHeader`;
-- `ICreateTodoRequestPath`;
+- `ICreateTodoRequestParam`;
 - `ICreateTodoRequestQuery`;
 - `ICreateTodoRequestBody`;
 - `ICreateTodoRequest`.
@@ -87,7 +87,7 @@ const validator = new GetTodoRequestValidator();
 
 const input: IHttpRequest = {
   method: HttpMethod.GET,
-  path: "/todos/:todoId",
+  path: "/todos/846a8c8d-28dc-4b66-ae6c-8d1c551430b2",
   param: {
     todoId: "846a8c8d-28dc-4b66-ae6c-8d1c551430b2",
   },
@@ -107,10 +107,11 @@ throws `RequestValidationError` with structured issues.
 
 The validator:
 
-- validates header, path, query, and body schemas;
+- validates header, path-parameter (`param`), query, and body schemas;
 - coerces supported query and header string values to their schema representation;
 - groups issues by request part;
 - returns the parsed Zod value;
+- preserves the request method and concrete path unchanged;
 - follows the schema's object behavior, including removal of unknown object keys for ordinary Zod
   objects.
 
