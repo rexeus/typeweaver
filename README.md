@@ -8,8 +8,9 @@ Define your HTTP API once in TypeScript and Zod. Generate the typed clients, val
 boundaries, command-line tools, infrastructure routes, and OpenAPI documents your team would
 otherwise keep in sync by hand.
 
-[Get started](./docs/getting-started.md) · [Choose a projection](#choose-the-surfaces-you-need) ·
-[Build a plugin](./docs/plugin-authoring.md) · [Read the vision](./VISION.md)
+[Get started](./docs/getting-started.md) · [Browse the documentation](./docs/README.md) ·
+[Choose a projection](#choose-the-surfaces-you-need) · [Build a plugin](./docs/plugin-authoring.md)
+· [Read the vision](./VISION.md)
 
 </div>
 
@@ -108,6 +109,8 @@ export default {
 
 The generated client already understands the request and every declared response:
 
+<!-- docs-example: generated-client -->
+
 ```ts
 import { GetTodoRequestCommand, TodoClient } from "./api/generated/index.js";
 
@@ -127,6 +130,12 @@ if (response.type === "GetTodoSuccess") {
   console.log(response.body.title); // fully typed
 }
 ```
+
+<!-- docs-snippet: root-generated-client -->
+
+This visible block is synchronized with the
+[root client snippet](./packages/cli/examples/documentation/snippets/root-generated-client.ts) and
+typechecked against freshly generated output from the documented Todo contract.
 
 No handwritten DTO mirror. No separate client contract. No documentation schema to remember after
 the implementation changes.
@@ -185,6 +194,8 @@ TypeWeaver is designed around a few non-negotiable properties:
 
 - [Getting started](./docs/getting-started.md) — build, generate, call, serve, and evolve a small
   API.
+- [Documentation index](./docs/README.md) — find contract, CLI, projection, plugin, runtime,
+  troubleshooting, and migration guidance.
 - [CLI reference](./packages/cli/README.md) — `init`, `validate`, `generate`, `doctor`,
   configuration, and automation.
 - [Contract authoring](./packages/core/README.md) — specs, operations, responses, metadata, and
@@ -192,8 +203,7 @@ TypeWeaver is designed around a few non-negotiable properties:
 - [Plugin authoring](./docs/plugin-authoring.md) — create a new projection on the normalized model.
 - [Vision](./VISION.md) — product promise, principles, boundaries, and non-goals.
 
-<details>
-<summary><strong>Package map</strong></summary>
+## Package map
 
 ### Product entry point
 
@@ -224,8 +234,6 @@ TypeWeaver is designed around a few non-negotiable properties:
   Zod-to-JSON-Schema projection.
 - [`test-utils`](./packages/test-utils/README.md) — private monorepo fixtures and integration
   helpers.
-
-</details>
 
 ## Project status
 

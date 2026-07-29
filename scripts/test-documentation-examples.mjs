@@ -19,7 +19,17 @@ try {
   mkdirSync(path.join(fixtureRoot, "examples"));
   writeFileSync(
     path.join(fixtureRoot, "README.md"),
-    `# Fixture\n\n<!-- docs-example: ${groupId} -->\n`
+    [
+      "# Fixture",
+      "",
+      `<!-- docs-example: ${groupId} -->`,
+      "",
+      "```ts",
+      "export const invalid: string = 42;",
+      "```",
+      `<!-- docs-snippet: ${groupId} -->`,
+      "",
+    ].join("\n")
   );
   writeFileSync(
     path.join(fixtureRoot, "examples", "invalid.ts"),
@@ -43,6 +53,13 @@ try {
         documents: ["README.md"],
         fixtures: ["examples/invalid.ts"],
         runtimeFixtures: ["examples/missing.process.test.ts"],
+        snippets: [
+          {
+            id: groupId,
+            document: "README.md",
+            fixture: "examples/invalid.ts",
+          },
+        ],
       },
     ],
   });
@@ -75,12 +92,82 @@ try {
     path.join(fixtureRoot, "examples", "missing.process.test.ts"),
     'export const runtimeFixture = "registered";\n'
   );
+  writeFileSync(
+    path.join(fixtureRoot, "README.md"),
+    [
+      "# Fixture",
+      "",
+      `<!-- docs-example: ${groupId} -->`,
+      "",
+      "```ts",
+      'export const valid: string = "checked";',
+      "```",
+      `<!-- docs-snippet: ${groupId} -->`,
+      "",
+    ].join("\n")
+  );
   const validResult = verifyDocumentationExamples({
     workspaceRoot: fixtureRoot,
     manifestPath,
     requiredGroupIds: [groupId],
   });
   assert.deepEqual(validResult.failures, []);
+
+  writeFileSync(
+    path.join(fixtureRoot, "README.md"),
+    [
+      "# Fixture",
+      "",
+      `<!-- docs-example: ${groupId} -->`,
+      "",
+      "```ts",
+      'export const valid: string = "drifted";',
+      "```",
+      `<!-- docs-snippet: ${groupId} -->`,
+      "",
+    ].join("\n")
+  );
+  const driftedSnippetResult = verifyDocumentationExamples({
+    workspaceRoot: fixtureRoot,
+    manifestPath,
+    requiredGroupIds: [groupId],
+  });
+  assert(
+    driftedSnippetResult.failures.includes(
+      `${groupId}: documented snippet ${groupId} differs from examples/invalid.ts`
+    ),
+    `drifted snippet unexpectedly passed:\n${driftedSnippetResult.failures.join("\n")}`
+  );
+
+  writeJson(manifestPath, {
+    version: 1,
+    tsconfig: "tsconfig.json",
+    groups: [
+      {
+        id: groupId,
+        documents: ["README.md"],
+        fixtures: [],
+        snippets: [
+          {
+            id: groupId,
+            document: "README.md",
+            fixture: "examples/missing-snippet.ts",
+          },
+        ],
+      },
+    ],
+  });
+  const missingSnippetFixtureResult = verifyDocumentationExamples({
+    workspaceRoot: fixtureRoot,
+    manifestPath,
+    requiredGroupIds: [groupId],
+  });
+  assert(
+    missingSnippetFixtureResult.failures.includes(
+      `${groupId}: missing snippet fixture examples/missing-snippet.ts`
+    ),
+    `missing snippet fixture unexpectedly passed:\n${missingSnippetFixtureResult.failures.join("\n")}`
+  );
 
   writeJson(manifestPath, {
     version: 1,

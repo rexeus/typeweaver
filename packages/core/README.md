@@ -28,7 +28,7 @@ A TypeWeaver contract has three main levels:
 spec
 └── resources
     └── operations
-        ├── request schemas
+        ├── request definition
         └── response definitions
 ```
 
@@ -99,7 +99,7 @@ Every `defineOperation` declares:
 - an HTTP method;
 - an Express-style path such as `/todos/:todoId`;
 - a summary;
-- request schemas;
+- a request object whose `header`, `param`, `query`, and `body` schemas are individually optional;
 - at least one declared response.
 
 Prefer camelCase operation IDs. PascalCase remains supported for compatibility; snake_case and

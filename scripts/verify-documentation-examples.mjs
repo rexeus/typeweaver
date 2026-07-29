@@ -43,6 +43,9 @@ for (const group of result.groups) {
   const fixtures = [
     ...group.fixtures,
     ...(Array.isArray(group.runtimeFixtures) ? group.runtimeFixtures : []),
+    ...(Array.isArray(group.snippets)
+      ? group.snippets.map(snippet => snippet.fixture)
+      : []),
   ];
   process.stdout.write(
     `Documentation example verified: ${group.id} (${fixtures.join(", ")})\n`

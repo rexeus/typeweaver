@@ -71,8 +71,20 @@
     },
     {
       "id": "generated-client",
-      "documents": ["docs/getting-started.md", "packages/clients/README.md"],
-      "fixtures": ["packages/cli/examples/documentation/generated-client.ts"]
+      "documents": ["README.md", "docs/getting-started.md", "packages/clients/README.md"],
+      "fixtures": ["packages/cli/examples/documentation/generated-client.ts"],
+      "snippets": [
+        {
+          "id": "root-generated-client",
+          "document": "README.md",
+          "fixture": "packages/cli/examples/documentation/snippets/root-generated-client.ts"
+        },
+        {
+          "id": "getting-started-generated-client",
+          "document": "docs/getting-started.md",
+          "fixture": "packages/cli/examples/documentation/snippets/getting-started-generated-client.ts"
+        }
+      ]
     },
     {
       "id": "generated-command",

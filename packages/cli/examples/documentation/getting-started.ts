@@ -43,7 +43,7 @@ export const GetTodo = defineOperation({
   responses: [GetTodoSuccess, TodoNotFound],
 });
 
-export const gettingStartedSpec = defineSpec({
+export const spec = defineSpec({
   metadata: {
     title: "Todo API",
     version: "1.0.0",

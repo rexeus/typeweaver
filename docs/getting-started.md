@@ -9,6 +9,15 @@ The goal is not to teach every option. It is to make the TypeWeaver development 
 author → validate → generate → implement → consume → evolve
 ```
 
+## Choose your path
+
+- [Scaffold the maintained starter](#fastest-path-scaffold-the-starter) for the shortest route to a
+  working project.
+- [Build the example manually](#1-create-the-typescript-package) to understand every file.
+- [Use the generated client](#6-call-the-api-through-the-generated-client).
+- [Add a Fetch-native server](#7-add-a-typed-server-boundary).
+- [Diagnose common failures](#diagnose-common-failures).
+
 ## What you need
 
 This walkthrough uses:
@@ -123,8 +132,11 @@ Create `tsconfig.json`:
 Create the spec directory and then `api/spec/index.ts`:
 
 ```bash
-mkdir -p api/spec
+mkdir api
+mkdir api/spec
 ```
+
+These two commands work unchanged in common POSIX shells and PowerShell.
 
 The project now has the complete package and compiler foundation needed by the remaining steps.
 
@@ -308,6 +320,8 @@ regenerate. Do not patch generated files by hand.
 
 ## 6. Call the API through the generated client
 
+<!-- docs-example: generated-client -->
+
 ```ts
 import { GetTodoRequestCommand, TodoClient } from "./api/generated/index.js";
 
@@ -335,10 +349,13 @@ switch (response.type) {
 }
 ```
 
-<!-- docs-example: generated-client -->
+<!-- docs-snippet: getting-started-generated-client -->
 
-The generated client boundary is typechecked against the regenerated integration project in the
-[client fixture](../packages/cli/examples/documentation/generated-client.ts).
+This visible block is synchronized with the
+[Getting Started client snippet](../packages/cli/examples/documentation/snippets/getting-started-generated-client.ts)
+and typechecked against freshly generated output from this guide's contract. The broader
+[client fixture](../packages/cli/examples/documentation/generated-client.ts) covers the regenerated
+integration project.
 
 The response discriminator narrows the complete response union. Request construction and successful
 response parsing pass through the generated validators.
