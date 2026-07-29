@@ -28,6 +28,14 @@ const contract = JSON.parse(
 const rootPackage = JSON.parse(
   readFileSync(path.join(workspaceRoot, "package.json"), "utf8")
 );
+const createPackedOverrides = packedDependencies => ({
+  ...packedDependencies,
+  // These optional WASI bindings currently target different @emnapi peer
+  // families. Keep their wasm runtimes isolated while retaining strict peer
+  // checks for TypeWeaver's public consumer contracts.
+  "@oxc-transform/binding-wasm32-wasi@0.141.0>@napi-rs/wasm-runtime": "1.1.6",
+  "@rolldown/binding-wasm32-wasi@1.2.1>@napi-rs/wasm-runtime": "1.2.0",
+});
 const archiveName = ({ name, version }) =>
   `${name.replace(/^@/, "").replaceAll("/", "-")}-${version}.tgz`;
 const readJson = filePath => JSON.parse(readFileSync(filePath, "utf8"));
@@ -301,7 +309,7 @@ const writeConsumerManifest = ({
       zod: "4.4.3",
     },
     pnpm: {
-      overrides: packedDependencies,
+      overrides: createPackedOverrides(packedDependencies),
     },
   });
   writeFileSync(
@@ -507,7 +515,7 @@ const verifyScaffoldedPlugin = ({
     ...scaffoldManifest,
     packageManager: rootPackage.packageManager,
     pnpm: {
-      overrides: packedDependencies,
+      overrides: createPackedOverrides(packedDependencies),
     },
   });
   writeFileSync(

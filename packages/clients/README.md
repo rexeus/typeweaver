@@ -1,122 +1,208 @@
-# 🧵✨ @rexeus/typeweaver-clients
+# `@rexeus/typeweaver-clients`
+
+> Generate a typed Fetch client whose requests and response unions come directly from the same
+> executable contract as your server and documentation.
 
 [![npm version](https://img.shields.io/npm/v/@rexeus/typeweaver-clients.svg)](https://www.npmjs.com/package/@rexeus/typeweaver-clients)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](../../LICENSE)
 
-Typeweaver is a type-safe HTTP API framework built for API-first development with a focus on
-developer experience. Use typeweaver to specify your HTTP APIs in TypeScript and Zod, and generate
-clients, validators, routers, and more ✨
+## Choose this projection when
 
-## 📝 Clients Plugin
+Use `clients` for application code, integration tests, SDK-style consumers, or any other TypeScript
+caller that should not rebuild HTTP paths and response shapes by hand.
 
-This plugin generates type-safe HTTP clients from your typeweaver API definitions, providing
-end-to-end type safety. The generated clients use the Command Pattern, where each API request is
-encapsulated as a typed command object that contains all request data and handles response
-processing.
-
-## 📥 Installation
+The first-party plugin ships with the TypeWeaver CLI:
 
 ```bash
-# Install the CLI and the plugin as a dev dependency
-npm install -D @rexeus/typeweaver @rexeus/typeweaver-clients
-
-# Install the runtime as a dependency
-npm install @rexeus/typeweaver-core
+pnpm add -D @rexeus/typeweaver
+pnpm add @rexeus/typeweaver-core zod
 ```
 
-## 💡 How to use
+Generate it:
 
 ```bash
-npx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --plugins clients
+pnpm typeweaver generate \
+  --input ./api/spec/index.ts \
+  --output ./api/generated \
+  --plugins clients
 ```
 
-More on the CLI in
-[@rexeus/typeweaver](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md#️-cli).
+Or select it in `typeweaver.config.mjs`:
 
-## 📂 Generated Output
-
-For each resource (e.g., `Todo`), the plugin generates a HTTP client. This client can execute
-request commands for all operations of this resource. This plugin generates the following files:
-
-- `<ResourceName>Client.ts` - e.g. `TodoClient.ts`
-- `<OperationId>RequestCommand.ts` - e.g. `CreateTodoRequestCommand.ts`
-
-### 📡 Clients
-
-Resource-specific HTTP clients are generated as `<ResourceName>Client.ts` files, e.g.
-`TodoClient.ts`. Each client extends the `ApiClient` base class and provides:
-
-- **Type-safe HTTP methods** - Method overloads for each operation ensuring compile-time type
-  checking
-- **fetch based** - Zero dependencies, uses the native fetch API. Supports custom fetch functions
-  for middleware and testing
-- **Response type mapping** - Each response is automatically mapped to the associated typed response
-  object. This ensures that all responses are in the defined format and it is type-safe.
-- **Unknown response handling**
-  - Unknown properties are automatically removed from the response. If a response exceeds the
-    definition, it is not rejected directly.
-
-**Using generated clients**
-
-```typescript
-import { TodoClient } from "path/to/generated/output";
-
-const client = new TodoClient({
-  fetchFn: customFetch, // Custom fetch function (optional, defaults to globalThis.fetch)
-  baseUrl: "https://api.example.com", // Base URL for all requests (required)
-  defaultHeaders: { Authorization: "Bearer token" }, // Applied unless a command overrides the key
-  defaultQuery: { apiKey: "secret" }, // Applied unless a command overrides the key
-  signal: abortController.signal, // Forward external cancellation (optional)
-  timeoutMs: 30_000, // Request timeout in milliseconds (optional)
-});
+```js
+export default {
+  input: "./api/spec/index.ts",
+  output: "./api/generated",
+  plugins: ["clients"],
+};
 ```
 
-Default headers and query values are copied into each request without mutating the supplied objects.
-Command-specific values take precedence, with HTTP header names compared case-insensitively. When
-both `signal` and `timeoutMs` are present, the request is cancelled when either boundary aborts.
+## Generated surface
 
-### ✉️ Request Commands
+For every resource, TypeWeaver emits one client. For every operation, it emits one request command:
 
-Request commands are generated as `<OperationId>RequestCommand.ts` files, e.g.
-`CreateTodoRequestCommand.ts`. These commands encapsulate all request data and provide:
+```text
+api/generated/todo/
+├── TodoClient.ts
+├── CreateTodoRequestCommand.ts
+├── GetTodoRequestCommand.ts
+└── ...types and validators from the automatic types projection
+```
 
-- **Type-safe construction** - Constructor enforces correct request structure
-- **Complete request encapsulation** - Contains method, path, headers, query parameters, and body
-- **Response processing** - Transform raw HTTP responses into typed response objects
+The resource client owns transport configuration. Each command owns one operation's method, path,
+request shape, request validation, and response processing.
 
-### Basic Usage
+## Call an operation
 
-```typescript
-import { TodoClient, CreateTodoRequestCommand } from "path/to/generated/output";
+```ts
+import { GetTodoRequestCommand, TodoClient } from "./api/generated/index.js";
 
 const client = new TodoClient({
   baseUrl: "https://api.example.com",
 });
 
-const command = new CreateTodoRequestCommand({
-  header: { Authorization: "Bearer token" },
-  body: { title: "New Todo" },
-});
+const response = await client.send(
+  new GetTodoRequestCommand({
+    param: {
+      todoId: "846a8c8d-28dc-4b66-ae6c-8d1c551430b2",
+    },
+  })
+);
 
-const response = await client.send(command);
+switch (response.type) {
+  case "GetTodoSuccess":
+    console.log(response.body.title);
+    break;
 
-// Use the type discriminator to narrow the response type
-if (response.type === "CreateTodoSuccess") {
-  console.log("Todo created successfully:", response.body);
-} else if (response.type === "ValidationError") {
-  // Handle validation errors
-} else if (response.type === "InternalServerError") {
-  // Handle internal server errors
+  case "TodoNotFound":
+    console.error(response.body.message);
+    break;
 }
-// ... Handle other response types
 ```
 
 <!-- docs-example: generated-client -->
 
-The generated client and command signatures are checked against the regenerated integration project
-in the [client fixture](../cli/examples/documentation/generated-client.ts).
+The generated client and request-command boundary is typechecked in the
+[client fixture](../cli/examples/documentation/generated-client.ts).
 
-## 📄 License
+`send()` returns the complete generated response union. Narrow on `response.type`; do not cast a raw
+status/body pair into an application type.
+
+## Client options
+
+```ts
+const client = new TodoClient({
+  baseUrl: "https://api.example.com",
+  fetchFn: instrumentedFetch,
+  defaultHeaders: {
+    Authorization: `Bearer ${token}`,
+  },
+  defaultQuery: {
+    apiVersion: "2026-07-01",
+  },
+  signal: shutdownController.signal,
+  timeoutMs: 30_000,
+});
+```
+
+| Option           | Behavior                                                                                           |
+| ---------------- | -------------------------------------------------------------------------------------------------- |
+| `baseUrl`        | Required non-empty base URL; an explicit URI scheme must be HTTP or HTTPS                          |
+| `fetchFn`        | Custom Fetch implementation; defaults to `globalThis.fetch`                                        |
+| `defaultHeaders` | Copied into every request unless the command supplies the same header, compared case-insensitively |
+| `defaultQuery`   | Copied into every request unless the command supplies the same query key                           |
+| `signal`         | External cancellation boundary                                                                     |
+| `timeoutMs`      | Positive finite timeout; combined with `signal` when both exist                                    |
+
+The supplied default objects are not mutated.
+
+## Request behavior
+
+The generated client:
+
+- validates command input through the generated request validator;
+- substitutes and URL-encodes declared `:path` parameters;
+- rejects missing, unexpected, or unsafe dot-segment path values;
+- serializes query arrays as repeated values;
+- preserves strings and native Fetch body types;
+- JSON-serializes other supported body values;
+- adds `Content-Type: application/json` only when it performed JSON serialization and no content
+  type was supplied.
+
+## Response behavior
+
+The transport parses the body according to the response content type:
+
+- JSON and `+json` media types become parsed values;
+- text or missing content types become strings;
+- other media types become `ArrayBuffer` values;
+- `204` and `304` responses have no body.
+
+The generated command then validates the raw response against every response declared for the
+operation.
+
+A matching response is returned as the typed discriminated union. A response that matches no
+declared status/schema combination throws `UnknownResponseError` rather than being accepted as an
+invented variant.
+
+Unknown object keys may be removed when the declared Zod object schema parses the response. That is
+normal schema parsing; it is different from accepting an unrecognized response.
+
+## Failure boundary
+
+Transport and contract failures remain distinguishable:
+
+| Error                         | Meaning                                                                     |
+| ----------------------------- | --------------------------------------------------------------------------- |
+| `ApiClientConfigurationError` | Invalid base URL or timeout configuration                                   |
+| `PathParameterError`          | Missing, unexpected, or unsafe path parameter                               |
+| `NetworkError`                | Fetch failed, timed out, or was aborted                                     |
+| `ResponseParseError`          | The response body could not be read or parsed as declared by its media type |
+| `RequestValidationError`      | Command input did not satisfy the generated request contract                |
+| `UnknownResponseError`        | The HTTP response matched none of the operation's declared responses        |
+
+This separation lets application code retry network failures, report contract drift, and handle
+declared API responses without conflating them.
+
+## Custom Fetch for middleware and tests
+
+```ts
+const client = new TodoClient({
+  baseUrl: "https://api.example.com",
+
+  fetchFn: async (input, init) => {
+    const startedAt = performance.now();
+
+    try {
+      return await fetch(input, init);
+    } finally {
+      console.log("request duration", performance.now() - startedAt);
+    }
+  },
+});
+```
+
+The custom function is the single transport boundary; request commands do not create another HTTP
+implementation.
+
+## Boundaries
+
+This plugin does not:
+
+- perform an OAuth login flow or store secrets;
+- retry requests automatically;
+- hide undeclared server responses;
+- generate a command-line program — use [`command`](../command/README.md) for that;
+- require a TypeWeaver server. It can call any endpoint that honors the declared HTTP contract.
+
+## Related documentation
+
+- [Migration guide](../../MIGRATION.md)
+- [Getting started](../../docs/getting-started.md)
+- [Generated types and validators](../types/README.md)
+- [Generated command-line client](../command/README.md)
+- [Contract authoring](../core/README.md)
+
+## License
 
 Apache 2.0 © Dennis Wentzien 2026

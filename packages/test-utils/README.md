@@ -1,74 +1,123 @@
-# test-utils
+# `test-utils`
 
-Internal test utilities for the typeweaver monorepo. This package is **not published to npm** — it
-is used exclusively by other packages for integration and unit testing.
+> Private fixtures, factories, generated artifacts, and test servers used to verify TypeWeaver
+> packages against one representative API contract.
 
-## What's inside
+## Internal workspace only
 
-### Test Project (`src/test-project/`)
+This workspace is private and is not published to npm. It exists for TypeWeaver repository
+maintainers and package tests.
 
-A complete sample API project with a spec entrypoint, generated output, and typed schemas:
+Application users and third-party plugin authors should not depend on it. Plugin authors can use the
+public [`createPluginTestKit`](../gen/README.md#test-the-public-lifecycle-in-memory) instead.
 
-- **Spec authoring** — API contracts under `src/test-project/spec/` for `Todo`, `Account`, `Auth`
-  resources with shared error responses, demonstrating all typeweaver features (path params, query
-  params, headers, bodies, error types, nested resources like SubTodos)
-- **Generated Output** — Pre-generated code from the definitions using all plugins (`clients`,
-  `hono`, `server`, `aws-cdk`), providing real generated artifacts for testing
+## What it contains
 
-### Test Data Factories (`src/data/`)
+### Representative test project
 
-Composable factory functions for creating test request/response objects with sensible defaults:
+`src/test-project/` contains a complete API contract with Todo, Account, Auth, and nested resource
+scenarios. It exercises:
 
-- `createData(defaults, overrides)` — Deep-merges defaults with partial overrides
-- `createDataFactory(getDefaults)` — Creates reusable factories from a defaults function
-- `createRequest(...)` — Builds typed `IHttpRequest` objects with body/header/param/query creators
-- `createResponse(...)` — Builds typed `IHttpResponse` objects with body/header creators
-- `createErrorResponseHeader()` — Factory for error response headers
-- `createJwtToken()` — Generates fake JWT tokens for auth testing
+- path, query, header, and body inputs;
+- reusable and inline responses;
+- success and error unions;
+- security and authentication-related shapes;
+- generated output from every first-party projection.
 
-Per-resource utilities (e.g., `createGetTodoRequest()`, `createAccessTokenResponse()`) are generated
-and provide ready-to-use test data for every operation.
+The checked-in output lets package tests import real generated files without rebuilding the project
+in every test process.
 
-### Test Servers (`src/test-server/`)
+### Data factories
 
-Pre-configured server instances for integration testing:
+`src/data/` provides composable defaults and overrides for request and response fixtures, including:
 
-- `createTestServer(options)` — Starts a Hono-based HTTP server on a random port with all routers
-  mounted
-- `createPrefixedTestServer(prefix, options)` — Same, but with routes under a path prefix
-- `createTestApp(options)` — Creates a `TypeweaverApp` (server plugin) instance for direct `fetch()`
-  testing without starting an HTTP server
-- `createTestHono(options)` — Creates a Hono app instance for direct testing
+- `createData()`;
+- `createDataFactory()`;
+- request and response builders;
+- generated operation-specific factories;
+- common error headers;
+- fake JWT values for authentication scenarios.
 
-All test server functions support options to force handler errors (`throwTodoError`,
-`throwAuthError`, etc.) and override responses (`customResponses`) for testing error handling
-scenarios.
+Prefer these factories over large handwritten objects so a contract change can be reflected in one
+place.
 
-### Utilities
+### Test applications and servers
 
-- `captureError(fn)` — Captures a synchronous error for assertion without `expect().toThrow()`
+`src/test-server/` provides:
 
-## Usage
+- a Hono HTTP server on a random port;
+- a prefixed server variant;
+- a `TypeweaverApp` for direct `fetch()` tests;
+- a Hono app for direct adapter tests;
+- handler-error and response-override controls for boundary testing.
 
-Referenced from other packages via `"test-utils": "file:../test-utils"` in their `devDependencies`.
+Use direct app calls when networking is not part of the behavior under test. Start a real server
+only for end-to-end HTTP behavior.
+
+### Small assertion helpers
+
+The workspace also exports focused helpers such as `captureError()` for tests that need to inspect a
+synchronously thrown value.
+
+## Usage inside the monorepo
+
+Packages reference the workspace through a local development dependency:
+
+```json
+{
+  "devDependencies": {
+    "test-utils": "file:../test-utils"
+  }
+}
+```
 
 ```ts
 import {
-  createTestServer,
-  createTestApp,
+  captureError,
   createGetTodoRequest,
   createGetTodoSuccessResponse,
-  captureError,
+  createTestApp,
+  createTestServer,
 } from "test-utils";
 ```
 
-## Regenerating Test Output
+Keep imports on the public workspace barrel unless a test is deliberately exercising an internal
+fixture module.
 
-When the spec or plugins change, regenerate the test output:
+## Regenerate checked-in output
+
+Regenerate whenever the contract, normalized model, templates, public generated API, or any
+first-party plugin changes:
 
 ```bash
 pnpm --filter test-utils run test-project:gen
 ```
+
+The script runs the TypeWeaver CLI with:
+
+```text
+clients, command, aws-cdk, hono, server, effect, openapi
+```
+
+The automatic `types` projection is included as their shared foundation.
+
+After regeneration, inspect the diff. Generated changes are part of the review signal: unexpected
+churn can reveal an unstable emitter or an accidental public API change.
+
+## Maintenance rules
+
+- Keep the fixture broad enough to exercise shared behavior, but do not turn it into product
+  documentation.
+- Add a focused package-local test for edge cases that do not belong in the representative API.
+- Do not publish this workspace or treat its helpers as compatibility contracts.
+- Keep generated output synchronized with the source fixture.
+- Prefer the public plugin test kit for third-party extension examples.
+
+## Related documentation
+
+- [Plugin SDK](../gen/README.md)
+- [CLI reference](../cli/README.md)
+- [Repository Getting Started](../../docs/getting-started.md)
 
 ## License
 
