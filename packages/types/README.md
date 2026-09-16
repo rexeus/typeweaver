@@ -66,13 +66,21 @@ The response file contains:
 import { createCreateTodoSuccessResponse, type CreateTodoResponse } from "./api/generated/index.js";
 
 const response: CreateTodoResponse = createCreateTodoSuccessResponse({
+  header: { "Content-Type": "application/json" },
   body: {
     id: crypto.randomUUID(),
+    accountId: "account-1",
     title: "Write documentation",
-    completed: false,
+    status: "TODO",
+    createdAt: new Date().toISOString(),
+    modifiedAt: new Date().toISOString(),
+    createdBy: "docs",
+    modifiedBy: "docs",
   },
 });
 ```
+
+<!-- docs-example: types-surface -->
 
 Factories set stable response discriminators and status codes from the contract. Application code
 supplies only the declared headers and body.
@@ -88,6 +96,10 @@ const validator = new GetTodoRequestValidator();
 const input: IHttpRequest = {
   method: HttpMethod.GET,
   path: "/todos/846a8c8d-28dc-4b66-ae6c-8d1c551430b2",
+  header: {
+    Accept: "application/json",
+    Authorization: "Bearer example-token",
+  },
   param: {
     todoId: "846a8c8d-28dc-4b66-ae6c-8d1c551430b2",
   },
@@ -125,8 +137,13 @@ const result = new GetTodoResponseValidator().safeValidate({
   statusCode: HttpStatusCode.OK,
   body: {
     id: "846a8c8d-28dc-4b66-ae6c-8d1c551430b2",
+    accountId: "account-1",
     title: "Write documentation",
-    completed: false,
+    status: "TODO",
+    createdAt: "2026-07-26",
+    modifiedAt: "2026-07-26",
+    createdBy: "docs",
+    modifiedBy: "docs",
     internalOnly: "removed by the declared object schema",
   },
 });

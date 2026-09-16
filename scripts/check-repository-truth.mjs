@@ -2,6 +2,11 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import {
+  deriveMetadataFields,
+  extractMetadataProjectionFields,
+  metadataProjectionMatches,
+} from "./lib/repository-truth.mjs";
 
 const workspaceRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -55,6 +60,40 @@ if (effectReadme.includes("typed error mappers for each operation")) {
   failures.push(
     "packages/effect/README.md overstates generated HEAD-operation coverage"
   );
+}
+
+// The OpenAPI guide's metadata projection sentence must name exactly the fields
+// the authoring contract defines and the document assembler projects, while the
+// separate securitySchemes/security sentence stays out of scope.
+const openApiReadme = read("packages/openapi/README.md");
+const apiMetadataSource = read("packages/core/src/ApiMetadata.ts");
+const supportedMetadataFields = deriveMetadataFields(apiMetadataSource);
+if (supportedMetadataFields.length === 0) {
+  failures.push("packages/core/src/ApiMetadata.ts defines no metadata fields");
+} else if (
+  !metadataProjectionMatches({
+    apiMetadataSource,
+    documentSource: openApiReadme,
+  })
+) {
+  const documentedMetadataFields =
+    extractMetadataProjectionFields(openApiReadme);
+  failures.push(
+    `packages/openapi/README.md metadata projection must name exactly ${supportedMetadataFields.join(", ")}; found ${documentedMetadataFields.join(", ") || "(none)"}`
+  );
+}
+
+// `pnpm doctor` resolves to a pnpm builtin rather than the scaffold's script.
+// Onboarding documents must name the explicit `pnpm run doctor` form.
+for (const document of [
+  "docs/getting-started.md",
+  "packages/cli/src/templates/project-init/README.md.tmpl",
+]) {
+  if (read(document).includes("pnpm doctor")) {
+    failures.push(
+      `${document} invokes the pnpm builtin instead of \`pnpm run doctor\``
+    );
+  }
 }
 
 if (failures.length > 0) {

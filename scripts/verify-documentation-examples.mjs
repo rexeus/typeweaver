@@ -27,6 +27,10 @@ const requiredGroupIds = [
   "effect-handler",
   "openapi-options",
   "zod-to-ts",
+  "zod-to-json-schema",
+  "types-surface",
+  "aws-cdk-routes",
+  "test-utils-surface",
 ];
 const result = verifyDocumentationExamples({
   workspaceRoot,

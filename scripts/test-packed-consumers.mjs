@@ -28,14 +28,6 @@ const contract = JSON.parse(
 const rootPackage = JSON.parse(
   readFileSync(path.join(workspaceRoot, "package.json"), "utf8")
 );
-const createPackedOverrides = packedDependencies => ({
-  ...packedDependencies,
-  // These optional WASI bindings currently target different @emnapi peer
-  // families. Keep their wasm runtimes isolated while retaining strict peer
-  // checks for TypeWeaver's public consumer contracts.
-  "@oxc-transform/binding-wasm32-wasi@0.141.0>@napi-rs/wasm-runtime": "1.1.6",
-  "@rolldown/binding-wasm32-wasi@1.2.1>@napi-rs/wasm-runtime": "1.2.0",
-});
 const archiveName = ({ name, version }) =>
   `${name.replace(/^@/, "").replaceAll("/", "-")}-${version}.tgz`;
 const readJson = filePath => JSON.parse(readFileSync(filePath, "utf8"));
@@ -309,7 +301,7 @@ const writeConsumerManifest = ({
       zod: "4.4.3",
     },
     pnpm: {
-      overrides: createPackedOverrides(packedDependencies),
+      overrides: packedDependencies,
     },
   });
   writeFileSync(
@@ -426,6 +418,43 @@ const assertGeneratorEffectPeerContract = fixtureRoot => {
   assert.equal(generatorManifest.dependencies?.effect, undefined);
 };
 
+// A real consumer never receives the workspace's pnpm overrides, so the pinned
+// transitive `@effect/platform-node-shared` version must survive into the packed
+// graph and be the single copy that `@effect/platform-node` actually loads.
+const assertPlatformNodeSharedIdentity = ({ fixtureRoot }) => {
+  const cliManifest = readJson(
+    installedPackageJsonPath(fixtureRoot, "@rexeus/typeweaver")
+  );
+  const expectedVersion =
+    cliManifest.dependencies["@effect/platform-node-shared"];
+  assert.match(
+    expectedVersion,
+    /^\d+\.\d+\.\d+$/,
+    "packed CLI must pin @effect/platform-node-shared to an exact version"
+  );
+  const installedSharedPath = installedPackageJsonPath(
+    fixtureRoot,
+    "@effect/platform-node-shared"
+  );
+  const platformNodeRequire = createRequire(
+    realpathSync(installedPackageJsonPath(fixtureRoot, "@effect/platform-node"))
+  );
+  const loadedSharedPath = realpathSync(
+    platformNodeRequire.resolve("@effect/platform-node-shared/package.json")
+  );
+  assert.equal(
+    loadedSharedPath,
+    installedSharedPath,
+    "@effect/platform-node loads a different @effect/platform-node-shared copy than the pinned identity"
+  );
+  const loadedVersion = readJson(loadedSharedPath).version;
+  assert.equal(
+    loadedVersion,
+    expectedVersion,
+    `@effect/platform-node-shared resolved to ${loadedVersion}; expected ${expectedVersion}`
+  );
+};
+
 const assertSingleEffectIdentity = ({
   effectVersion,
   fixtureRoot,
@@ -515,7 +544,7 @@ const verifyScaffoldedPlugin = ({
     ...scaffoldManifest,
     packageManager: rootPackage.packageManager,
     pnpm: {
-      overrides: createPackedOverrides(packedDependencies),
+      overrides: packedDependencies,
     },
   });
   writeFileSync(
@@ -673,6 +702,7 @@ const verifySupportedConsumer = ({
   installFixture(fixtureRoot);
   assertPackedPackages({ fixtureRoot, packages });
   assertGeneratorEffectPeerContract(fixtureRoot);
+  assertPlatformNodeSharedIdentity({ fixtureRoot });
   assertSingleEffectIdentity({ effectVersion, fixtureRoot, packages });
   run({
     args: ["exec", "tsc", "--project", "tsconfig.json"],

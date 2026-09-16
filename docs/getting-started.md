@@ -70,8 +70,8 @@ pnpm generate
 pnpm typecheck
 ```
 
-Use `pnpm doctor` when the project, runtime, config, plugin resolution, or output directory does not
-behave as expected.
+Use `pnpm run doctor` when the project, runtime, config, plugin resolution, or output directory does
+not behave as expected.
 
 The rest of this guide builds the same idea manually from an empty directory so you can see every
 moving part.

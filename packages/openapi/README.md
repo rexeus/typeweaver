@@ -62,8 +62,10 @@ All plugin options are optional:
 | `servers`    | omitted                  | Root OpenAPI server declarations                      |
 | `outputPath` | `"openapi/openapi.json"` | Path relative to the configured generation output     |
 
-The API title, version, summary, description, terms of service, reusable tags, and security schemes
-come from `defineSpec({ metadata: ... })`. They are contract data, not plugin configuration.
+The API `title`, `version`, and `description`, plus reusable `tags`, come from
+`defineSpec({ metadata: ... })`. Security schemes come from the separate
+`defineSpec({ securitySchemes, security })` contract, not from `metadata`. Metadata is contract
+data, not plugin configuration.
 
 ## Choose the target deliberately
 

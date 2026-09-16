@@ -49,6 +49,8 @@ console.log(result.schema);
 console.log(result.warnings); // []
 ```
 
+<!-- docs-example: zod-to-json-schema -->
+
 `fromZod()` always returns both parts:
 
 ```ts

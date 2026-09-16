@@ -81,6 +81,8 @@ import {
 } from "test-utils";
 ```
 
+<!-- docs-example: test-utils-surface -->
+
 Keep imports on the public workspace barrel unless a test is deliberately exercising an internal
 fixture module.
 

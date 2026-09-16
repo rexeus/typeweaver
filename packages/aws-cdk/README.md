@@ -62,6 +62,8 @@ const routes = new TodoHttpApiRoutes().getRoutes();
 // Array<{ path: string; methods: HttpMethod[] }>
 ```
 
+<!-- docs-example: aws-cdk-routes -->
+
 TypeWeaver authoring paths such as `/todos/:todoId` become API Gateway paths such as
 `/todos/{todoId}`. Operations that share one path are grouped into one route entry with several
 methods.
@@ -121,6 +123,10 @@ export class TodoApi extends Construct {
   }
 }
 ```
+
+`aws-cdk-lib` and `constructs` are application dependencies, not TypeWeaver runtime dependencies.
+The stack wiring above is application-owned; the generated route metadata it consumes is typechecked
+by the repository documentation fixtures.
 
 The generated metadata deliberately uses TypeWeaver's framework-neutral `HttpMethod` enum, so the
 stack maps it to the AWS CDK enum at the integration boundary. One integration per resource is only
