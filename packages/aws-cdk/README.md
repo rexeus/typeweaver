@@ -70,68 +70,23 @@ methods.
 
 ## Register the routes in a CDK stack
 
-Install the AWS CDK libraries your application uses:
-
-```bash
-pnpm add aws-cdk-lib constructs
-```
-
-Then combine generated route metadata with an application-owned integration:
-
-```ts
-import { HttpMethod as ContractHttpMethod } from "@rexeus/typeweaver-core";
-import { Construct } from "constructs";
-import { HttpApi, HttpMethod as CdkHttpMethod } from "aws-cdk-lib/aws-apigatewayv2";
-import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
-import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
-import { TodoHttpApiRoutes } from "./api/generated/index.js";
-
-const cdkHttpMethodByContractMethod = {
-  [ContractHttpMethod.GET]: CdkHttpMethod.GET,
-  [ContractHttpMethod.POST]: CdkHttpMethod.POST,
-  [ContractHttpMethod.PUT]: CdkHttpMethod.PUT,
-  [ContractHttpMethod.DELETE]: CdkHttpMethod.DELETE,
-  [ContractHttpMethod.PATCH]: CdkHttpMethod.PATCH,
-  [ContractHttpMethod.OPTIONS]: CdkHttpMethod.OPTIONS,
-  [ContractHttpMethod.HEAD]: CdkHttpMethod.HEAD,
-} satisfies Record<ContractHttpMethod, CdkHttpMethod>;
-
-const toCdkHttpMethod = (method: ContractHttpMethod): CdkHttpMethod =>
-  cdkHttpMethodByContractMethod[method];
-
-type TodoApiProps = {
-  readonly httpApi: HttpApi;
-};
-
-export class TodoApi extends Construct {
-  public constructor(scope: Construct, id: string, props: TodoApiProps) {
-    super(scope, id);
-
-    const handler = new NodejsFunction(this, "Handler", {
-      entry: "src/todo-lambda.ts",
-    });
-
-    const integration = new HttpLambdaIntegration("TodoIntegration", handler);
-
-    for (const route of new TodoHttpApiRoutes().getRoutes()) {
-      props.httpApi.addRoutes({
-        path: route.path,
-        methods: route.methods.map(toCdkHttpMethod),
-        integration,
-      });
-    }
-  }
-}
-```
-
 `aws-cdk-lib` and `constructs` are application dependencies, not TypeWeaver runtime dependencies.
-The stack wiring above is application-owned; the generated route metadata it consumes is typechecked
-by the repository documentation fixtures.
+This repository does not install or typecheck them, so it publishes no executable stack example. The
+supported integration point is the generated route metadata shown above.
 
-The generated metadata deliberately uses TypeWeaver's framework-neutral `HttpMethod` enum, so the
-stack maps it to the AWS CDK enum at the integration boundary. One integration per resource is only
-an example. You can select integrations per path or method, combine generated resources, add
-authorizers, or attach route-specific infrastructure in ordinary CDK code.
+An application connects the two in ordinary infrastructure code:
+
+1. Install `aws-cdk-lib` and `constructs` in the package that owns the stack.
+2. Import each generated `*HttpApiRoutes` class from the generation output.
+3. Map its framework-neutral `HttpMethod` values to the AWS CDK HTTP API method enum at the
+   integration boundary.
+4. Add the routes to an `HttpApi`, selecting the integration, authorizer, and per-route
+   infrastructure the application uses.
+
+One integration per resource is only an example. You can select integrations per path or method,
+combine generated resources, add authorizers, or attach route-specific infrastructure in ordinary
+CDK code. The generated route metadata this wiring consumes is typechecked by the repository
+documentation fixtures.
 
 ## What stays synchronized
 

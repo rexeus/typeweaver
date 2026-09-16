@@ -71,8 +71,8 @@ the progress log with the relevant commit or artifact.
       architecture.
   - Verify: repository truth checks introduced by Plan 001 pass; ADR 0001 and ADR 0002 no longer
     contain unresolved implemented decisions or invalid `defineSpec` examples.
-- [x] Public documentation examples are executable or typechecked fixtures, not unchecked Markdown
-      claims.
+- [x] Declared public documentation examples are backed by executable or typechecked fixtures, not
+      unchecked Markdown claims.
   - Verify: the new documentation-example command exits 0 and is called by `pnpm docs:check` and CI.
 - [x] Unsupported Zod schemas never silently become generated `unknown` types.
   - Verify: `@rexeus/typeweaver-zod-to-ts` tests cover every intentionally unsupported schema kind

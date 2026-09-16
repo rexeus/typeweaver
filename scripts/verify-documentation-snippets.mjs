@@ -1,7 +1,8 @@
-import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { withDocumentationSnippetFixture } from "./lib/documentation-snippets.mjs";
 import { spawnPnpmSync } from "./lib/pnpm-command.mjs";
 
 const workspaceRoot = path.resolve(
@@ -36,65 +37,78 @@ const snippetFiles = [
   "root-generated-client.ts",
   "getting-started-generated-client.ts",
 ];
-const fixtureRoot = mkdtempSync(
-  path.join(sourceRoot, ".typeweaver-doc-snippets-")
-);
+// The fixture links the CLI workspace modules, which do not carry the root
+// `@types/node` needed by the root compiler options.
+const typeRoots = [
+  path.join(workspaceRoot, "node_modules/@types"),
+  path.join(workspaceRoot, "packages/cli/node_modules/@types"),
+];
 
-try {
-  const generatedRoot = path.join(fixtureRoot, "api/generated");
-  runPnpm([
-    "--filter",
-    "@rexeus/typeweaver",
-    "run",
-    "cli",
-    "--",
-    "generate",
-    "--input",
-    path.join(sourceRoot, "getting-started.ts"),
-    "--output",
-    generatedRoot,
-    "--plugins",
-    "clients",
-    "--no-format",
-  ]);
+withDocumentationSnippetFixture({
+  workspaceRoot,
+  body: fixtureRoot => {
+    const generatedRoot = path.join(fixtureRoot, "api/generated");
+    runPnpm([
+      "--filter",
+      "@rexeus/typeweaver",
+      "run",
+      "cli",
+      "--",
+      "generate",
+      "--input",
+      path.join(sourceRoot, "getting-started.ts"),
+      "--output",
+      generatedRoot,
+      "--plugins",
+      "clients",
+      "--no-format",
+    ]);
 
-  for (const snippetFile of snippetFiles) {
-    cpSync(
-      path.join(sourceRoot, "snippets", snippetFile),
-      path.join(fixtureRoot, snippetFile)
+    for (const snippetFile of snippetFiles) {
+      cpSync(
+        path.join(sourceRoot, "snippets", snippetFile),
+        path.join(fixtureRoot, snippetFile)
+      );
+    }
+
+    // Without a nearer manifest, the generated `.ts` files resolve as CommonJS
+    // and violate `verbatimModuleSyntax`; the in-tree fixture inherited the CLI
+    // package's module type instead.
+    writeFileSync(
+      path.join(fixtureRoot, "package.json"),
+      `${JSON.stringify({ type: "module" }, null, 2)}\n`
     );
-  }
-
-  const rootConfigPath = path
-    .relative(fixtureRoot, path.join(workspaceRoot, "tsconfig.json"))
-    .replaceAll(path.sep, "/");
-  writeFileSync(
-    path.join(fixtureRoot, "tsconfig.json"),
-    `${JSON.stringify(
-      {
-        extends: rootConfigPath,
-        compilerOptions: {
-          declaration: false,
-          declarationMap: false,
-          noEmit: true,
-          skipLibCheck: false,
-          sourceMap: false,
+    writeFileSync(
+      path.join(fixtureRoot, "tsconfig.json"),
+      `${JSON.stringify(
+        {
+          extends: path
+            .join(workspaceRoot, "tsconfig.json")
+            .replaceAll(path.sep, "/"),
+          compilerOptions: {
+            declaration: false,
+            declarationMap: false,
+            noEmit: true,
+            skipLibCheck: false,
+            sourceMap: false,
+            typeRoots: typeRoots.map(typeRoot =>
+              typeRoot.replaceAll(path.sep, "/")
+            ),
+          },
+          include: ["./*.ts", "./api/generated/**/*.ts"],
         },
-        include: ["./*.ts", "./api/generated/**/*.ts"],
-      },
-      null,
-      2
-    )}\n`
-  );
-  runPnpm([
-    "exec",
-    "tsc",
-    "--project",
-    path.join(fixtureRoot, "tsconfig.json"),
-  ]);
-} finally {
-  rmSync(fixtureRoot, { recursive: true });
-}
+        null,
+        2
+      )}\n`
+    );
+    runPnpm([
+      "exec",
+      "tsc",
+      "--project",
+      path.join(fixtureRoot, "tsconfig.json"),
+    ]);
+  },
+});
 
 process.stdout.write(
   `Documentation snippets generated and typechecked: ${snippetFiles.join(", ")}\n`

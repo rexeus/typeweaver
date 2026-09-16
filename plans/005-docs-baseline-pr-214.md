@@ -3,8 +3,9 @@
 ## Outcome
 
 PR #214 gives users correct TypeWeaver commands, keeps Markdown link discovery explicit, contained,
-and covered, registers every rewritten public guide with typechecked examples, remediates the
-published Effect dependency family, and returns to review with fresh evidence.
+and covered, registers each rewritten public guide with a representative executable or typechecked
+example plus exact fixture mappings for declared snippets, remediates the published Effect
+dependency family, and returns to review with fresh evidence.
 
 ## Context and handoff
 
@@ -36,9 +37,10 @@ patches requiring a newer Effect peer than the 3.22.0 baseline.
   runtime.
 - Remove packaged-consumer-only peer overrides that a real consumer cannot inherit, keeping only
   manifest-level fixes.
-- Register every rewritten public guide that contains code with typechecked documentation fixtures,
-  correcting stale examples rather than claiming unchecked prose is TypeScript, and reject Markdown
-  links that resolve outside the repository root.
+- Register each rewritten public guide that contains code with a representative executable or
+  typechecked documentation fixture, pin every declared documentation snippet to its fixture
+  exactly, correct stale examples rather than claiming unchecked prose is TypeScript, and reject
+  Markdown links that resolve outside the repository root.
 - Correct the OpenAPI metadata claim to the fields the authoring contract defines and the document
   assembler projects, with a repository-truth guard.
 - Include the post-maturity roadmap and milestone plan files (004–009) in PR #214, as explicitly
