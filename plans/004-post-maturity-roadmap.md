@@ -27,7 +27,8 @@ present-day workspace compatibility and a future coordinated Effect 4 migration.
 - **Milestones:** [005](005-docs-baseline-pr-214.md), [006](006-strict-object-warning-215.md),
   [007](007-typed-http-boundaries-pr-213.md), [008](008-generate-check-216.md), and
   [009](009-effect-4-compatibility-217.md)
-- **Dependencies:** execute milestones in numeric order; Effect 4 phase B remains conditional on a
+- **Dependencies:** execute milestones in numeric order, stacking each milestone on the previous
+  milestone's branch when it is not yet human-merged; Effect 4 phase B remains conditional on a
   stable upstream release.
 
 ## Scope
@@ -55,7 +56,10 @@ present-day workspace compatibility and a future coordinated Effect 4 migration.
 - **Correctness before new CLI capability** — PR #213 stabilizes the public HTTP boundary and a
   large generated fixture tree before #216 compares committed output against fresh generation.
 - **One delivery per independently reviewable milestone** — update the existing PR for #214 and
-  #213; create separate PRs for #215, #216, and #217 phase A.
+  #213; create a separate PR implementing each of issues #215, #216, and #217 phase A. Milestones
+  may stack: the PR implementing Issue #215 (`fix/strict-object-never-warning`) targets
+  `docs/documentation-standard`, and later milestones may target the previous milestone's branch
+  until a human merges it.
 - **Two-stage Effect 4 strategy** — document and prove isolated CLI use in Effect 4 workspaces now;
   migrate the Effect-native plugin and adapter surfaces only after Effect 4 and its CLI/platform
   dependencies are stable.
@@ -93,8 +97,10 @@ present-day workspace compatibility and a future coordinated Effect 4 migration.
 
 ## Risks and open questions
 
-- **Human merge ordering** — later branches must start from the remote `main` that includes the
-  prior human-merged milestone; no stacked branch should silently substitute for that approval.
+- **Human merge ordering** — the owner approved stacked delivery: the PR implementing Issue #215
+  (`fix/strict-object-never-warning`) targets `docs/documentation-standard`, and later milestones
+  may target the previous milestone's branch. A stacked branch still does not substitute for human
+  approval; no plan authorizes merging.
 - **Effect 4 timing** — phase B must be replanned if stable Effect 4 materially differs from rc.115
   or its CLI remains unstable.
 - **Release PR #205** — package-version publication is outside this roadmap and must not be mixed

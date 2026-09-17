@@ -363,7 +363,22 @@ function collectObjectWarnings(
     collectChild(value, collector, [...path, "properties", key]);
   }
 
+  if (isStrictObjectCatchall(def.catchall)) {
+    return;
+  }
+
   collectChild(def.catchall, collector, [...path, "additionalProperties"]);
+}
+
+/**
+ * A Zod strict object carries an internal `never` catchall that the converter
+ * represents exactly as `additionalProperties: false`. Traversing it as a child
+ * would emit a false `unsupported-schema` warning, so object traversal skips
+ * only this representable catchall. A standalone `never` schema stays
+ * unsupported.
+ */
+function isStrictObjectCatchall(catchall: ZodSchema | undefined): boolean {
+  return catchall !== undefined && getSchemaType(catchall) === "never";
 }
 
 function collectOptionWarnings(

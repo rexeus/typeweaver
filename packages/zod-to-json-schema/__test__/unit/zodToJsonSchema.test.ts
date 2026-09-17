@@ -511,6 +511,84 @@ describe("fromZod nested warning preservation", () => {
   );
 });
 
+describe("fromZod strict objects", () => {
+  test("converts root strict objects without warning for the internal never catchall", () => {
+    const result = fromZod(z.strictObject({ value: z.string() }));
+
+    expect(result).toEqual({
+      schema: {
+        type: "object",
+        properties: { value: { type: "string" } },
+        required: ["value"],
+        additionalProperties: false,
+      },
+      warnings: [],
+    });
+  });
+
+  test("converts nested strict objects without warning for the internal never catchall", () => {
+    const result = fromZod(
+      z.object({ nested: z.strictObject({ value: z.string() }) })
+    );
+
+    expect(result).toEqual({
+      schema: {
+        type: "object",
+        properties: {
+          nested: {
+            type: "object",
+            properties: { value: { type: "string" } },
+            required: ["value"],
+            additionalProperties: false,
+          },
+        },
+        required: ["nested"],
+        additionalProperties: false,
+      },
+      warnings: [],
+    });
+  });
+
+  test("keeps unsupported-property warnings for strict objects", () => {
+    const result = fromZod(z.strictObject({ value: z.custom<string>() }));
+
+    expect(result).toEqual({
+      schema: {
+        type: "object",
+        properties: { value: {} },
+        required: ["value"],
+        additionalProperties: false,
+      },
+      warnings: [
+        {
+          code: "unsupported-schema",
+          path: "/properties/value",
+          schemaType: "custom",
+          message:
+            "Zod custom falls back to a broader JSON Schema representation.",
+        },
+      ],
+    });
+  });
+
+  test("still warns for standalone never schemas", () => {
+    const result = fromZod(z.never());
+
+    expect(result).toEqual({
+      schema: { not: {} },
+      warnings: [
+        {
+          code: "unsupported-schema",
+          path: "",
+          schemaType: "never",
+          message:
+            "Zod never falls back to a broader JSON Schema representation.",
+        },
+      ],
+    });
+  });
+});
+
 describe("fromZod warning paths", () => {
   test("encodes warning paths as JSON Pointers", () => {
     const result = fromZod(

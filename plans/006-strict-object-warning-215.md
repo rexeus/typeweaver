@@ -16,6 +16,9 @@ strict object's internal `never` schema as unsupported.
 - **Roadmap:** [004](004-post-maturity-roadmap.md)
 - **Previous milestone:** [005](005-docs-baseline-pr-214.md)
 - **Next milestone:** [007](007-typed-http-boundaries-pr-213.md)
+- **Dependencies:** stacked on PR #214 (`docs/documentation-standard`) per the approved roadmap
+  delivery model; the PR implementing Issue #215 (`fix/strict-object-never-warning`) targets that
+  branch.
 
 ## Scope
 
