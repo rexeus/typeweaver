@@ -410,6 +410,34 @@ describe("buildOpenApiDocument inline response headers", () => {
     expect(result.warnings).toEqual([]);
   });
 
+  test("maps strict response header containers without a false catchall warning", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          responses: [
+            anInlineOkResponse({
+              header: aHeaderSchemaForBuilder(
+                z.strictObject({ etag: z.string() })
+              ),
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
+
+    expect(result.document.paths["/todos"]?.get?.responses).toEqual({
+      "200": {
+        description: "OK",
+        headers: {
+          etag: { required: true, schema: { type: "string" } },
+        },
+      },
+    });
+    expect(result.warnings).toEqual([]);
+  });
+
   test("marks response headers from catch containers as not required", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [

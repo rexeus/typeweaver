@@ -1,9 +1,11 @@
 # Plan 003: Deliver plugin, CLI, generated-command, and Effect surfaces
 
-> **Executor instructions:** Stage 2 was green and subsequently merged by the human owner. On
-> 2026-07-26, the owner authorized this branch to integrate current `main` and target `main`. Read
-> all prior migration notes and the final normalized contract before designing generated APIs.
-> Execute work packages in order and stop instead of improvising.
+> **Executor instructions (historical):** Stage 2 was green and human-merged. The owner authorized
+> this branch to integrate current `main` and target `main`; the resulting Stage 3 delivery was
+> human-merged as PR #212 (merge commit `af7e0ddf`). This plan is complete and retained as evidence.
+> The active post-maturity roadmap is `plans/004`–`plans/009`. Read all prior migration notes and
+> the final normalized contract before designing generated APIs. Execute work packages in order and
+> stop instead of improvising.
 
 ## Status
 
@@ -16,7 +18,7 @@
 - **Category:** plugin DX, CLI, generator, Effect integration, final review
 - **Planned at:** commit `3c97d402`, 2026-07-26
 - **Branch:** `feat/developer-surfaces`
-- **PR base:** `main` (owner-authorized after the Stage 1 and 2 merges)
+- **PR base:** `main` (human-merged as PR #212, merge commit `af7e0ddf`)
 
 ## Outcome
 
@@ -260,8 +262,8 @@ findings are resolved. The final warning-location and command-name findings are 
 two final optional-header object-spread comments are disproven by Node 24 semantics. The later
 runtime-portability comment is outside the verified Node/Deno/Bun contract, whose current runtimes
 all provide the required AbortSignal APIs. The post-review complete local gate passed at `b539a81a`;
-ready PR #212 targets `main`, remains open and unmerged, and all required checks passed at that
-exact delivered source head.
+ready PR #212 targeted `main` and all required checks passed at that exact delivered source head
+before the owner human-merged it as merge commit `af7e0ddf`.
 
 Create an English evidence report under `docs/reviews/` that maps every `GOAL.md` criterion to:
 
@@ -277,7 +279,7 @@ high-impact finding must be fixed and re-verified or recorded as a true blocker.
 discoveries pass through the `GOAL.md` discovery gate.
 
 Run the full gate, commit, push, and open a ready PR against `main`. Repair CI until all checks are
-green. Record all three PR heads/bases/checks in `GOAL.md`. Do not merge the Stage 3 PR.
+green. Record all three PR heads/bases/checks in `GOAL.md`. Do not merge any pull request.
 
 ## Test plan
 
@@ -301,8 +303,8 @@ green. Record all three PR heads/bases/checks in `GOAL.md`. Do not merge the Sta
 - [x] Final review report maps every goal criterion to evidence.
 - [x] No unresolved critical or high-confidence high-impact finding remains in scope.
 - [x] Full local gate and all GitHub checks pass.
-- [x] Stage 3 PR targets `main`, is open, green, and unmerged.
-- [x] The human-merged Stage 1 and 2 PRs, open Stage 3 PR, and plan/goal status are fully recorded.
+- [x] Stage 3 PR targeted `main`, was green, and was human-merged as PR #212.
+- [x] The human-merged Stage 1, 2, and 3 PRs and plan/goal status are fully recorded.
 
 ## STOP conditions
 
@@ -315,7 +317,7 @@ Stop and report if:
   of ordinary server users
 - cancellation or scoped-resource release cannot be proven deterministically
 - a packed consumer needs undeclared workspace-only dependencies
-- the Stage 3 PR branch is remote-ahead/diverged or targets a base other than authorized `main`
+- a follow-on roadmap branch is remote-ahead/diverged and cannot be pushed normally
 - final review finds a critical/high issue with no safe in-scope fix
 
 ## Maintenance notes

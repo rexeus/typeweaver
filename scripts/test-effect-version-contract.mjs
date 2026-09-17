@@ -8,12 +8,14 @@ const fixtureRoot = mkdtempSync(
   path.join(tmpdir(), "typeweaver-effect-contract-")
 );
 const packageRoot = path.join(fixtureRoot, "packages", "runtime");
+const publishedRoot = path.join(fixtureRoot, "packages", "published");
 const installedEffectRoot = path.join(packageRoot, "node_modules", "effect");
 const writeJson = (filePath, value) =>
   writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 
 try {
   mkdirSync(installedEffectRoot, { recursive: true });
+  mkdirSync(publishedRoot, { recursive: true });
   writeJson(path.join(packageRoot, "package.json"), {
     name: "runtime-fixture",
     dependencies: {
@@ -60,10 +62,49 @@ try {
     }),
     []
   );
+
+  writeJson(path.join(publishedRoot, "package.json"), {
+    name: "published-fixture",
+    dependencies: {
+      "@effect/platform": "^0.97.0",
+    },
+  });
+  const caretFailures = validateEffectPackageVersions({
+    workspaceRoot: fixtureRoot,
+    runtimeVersion: "3.22.0",
+    acceptedEffectDependencies: { "@effect/platform": "0.97.0" },
+  });
+  assert(
+    caretFailures.some(failure =>
+      failure.includes(
+        "@effect/platform must be pinned to 0.97.0; found ^0.97.0"
+      )
+    ),
+    `missing caret-drift failure:\n${caretFailures.join("\n")}`
+  );
+
+  writeJson(path.join(publishedRoot, "package.json"), {
+    name: "published-fixture",
+    dependencies: {
+      "@effect/platform": "0.97.0",
+      "@effect/sql": "0.52.0",
+    },
+  });
+  const unacceptedFailures = validateEffectPackageVersions({
+    workspaceRoot: fixtureRoot,
+    runtimeVersion: "3.22.0",
+    acceptedEffectDependencies: { "@effect/platform": "0.97.0" },
+  });
+  assert(
+    unacceptedFailures.some(failure =>
+      failure.includes("unaccepted Effect dependency @effect/sql@0.52.0")
+    ),
+    `missing unaccepted-dependency failure:\n${unacceptedFailures.join("\n")}`
+  );
 } finally {
   rmSync(fixtureRoot, { recursive: true });
 }
 
 process.stdout.write(
-  "Effect package contract guard rejected the Effect 4 fixture\n"
+  "Effect package contract guard rejected the Effect 4, caret-drift, and unaccepted-dependency fixtures\n"
 );

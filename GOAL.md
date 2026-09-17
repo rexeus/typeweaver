@@ -30,29 +30,28 @@ implementation safety and composability while remaining optional for TypeWeaver 
 
 ## Delivery model
 
-The implementation started as three stacked pull requests. After Stages 1 and 2 were green, the
-human owner merged PRs #209 and #211. On 2026-07-26, the owner explicitly accepted those merges and
-authorized Stage 3 to integrate the current `main` and target `main`. The loop may implement,
-commit, push, create or update the remaining Stage 3 pull request, and repair its CI. It must never
-merge that PR.
+The implementation was delivered as three stacked pull requests, and the human owner merged all
+three after green checks: Stage 1 as PR #209, Stage 2 as PR #211, and Stage 3 as PR #212 (merge
+commit `af7e0ddf`). The product-maturity goal is therefore complete on `main`. Follow-on work is
+sequenced separately in the post-maturity roadmap under `plans/004`–`plans/009`. The loop may
+implement, commit, push, create or update a pull request for an active milestone, and repair its CI,
+but it must never merge a pull request, publish packages, or create a release.
 
-| Stage | Plan                                         | Branch                               | Pull request base                                     |
-| ----- | -------------------------------------------- | ------------------------------------ | ----------------------------------------------------- |
-| 1     | `plans/001-product-truth-and-type-safety.md` | `feat/product-truth-and-type-safety` | `main` — human merged as PR #209                      |
-| 2     | `plans/002-contract-and-openapi-maturity.md` | `feat/contract-and-openapi-maturity` | Stage 1 branch — human merged as PR #211              |
-| 3     | `plans/003-developer-surfaces.md`            | `feat/developer-surfaces`            | `main` — explicitly authorized after the prior merges |
+| Stage | Plan                                         | Branch                               | Pull request base                             |
+| ----- | -------------------------------------------- | ------------------------------------ | --------------------------------------------- |
+| 1     | `plans/001-product-truth-and-type-safety.md` | `feat/product-truth-and-type-safety` | `main` — human merged as PR #209              |
+| 2     | `plans/002-contract-and-openapi-maturity.md` | `feat/contract-and-openapi-maturity` | Stage 1 branch — human merged as PR #211      |
+| 3     | `plans/003-developer-surfaces.md`            | `feat/developer-surfaces`            | `main` — human merged as PR #212 (`af7e0ddf`) |
 
-After a stage is locally complete:
+After a stage was locally complete, the delivery loop:
 
-1. Run every stage gate and the full repository gate.
-2. Commit all stage work as logical Conventional Commits.
-3. Push the stage branch with a normal push.
-4. Open a ready-for-review pull request against the base in the table.
-5. Inspect all pull-request checks and repair failures until every required check is green.
-6. Record the PR URL, head commit, checks, and evidence in this file.
-7. For the historical Stage 1 and 2 deliveries, continue from the completed stage head without
-   performing a merge. For Stage 3, integrate current `main` with a normal merge as explicitly
-   authorized by the owner.
+1. Ran every stage gate and the full repository gate.
+2. Committed all stage work as logical Conventional Commits.
+3. Pushed the stage branch with a normal push.
+4. Opened a ready-for-review pull request against the base in the table.
+5. Inspected all pull-request checks and repaired failures until every required check was green.
+6. Recorded the PR URL, head commit, checks, and evidence in this file.
+7. Left merging to the human owner; no stage branch was force-pushed or history-rewritten.
 
 If a named branch or PR already exists, inspect it before changing anything. Reuse it only when it
 represents this goal and has not diverged. Never force-push.
@@ -72,8 +71,8 @@ the progress log with the relevant commit or artifact.
       architecture.
   - Verify: repository truth checks introduced by Plan 001 pass; ADR 0001 and ADR 0002 no longer
     contain unresolved implemented decisions or invalid `defineSpec` examples.
-- [x] Public documentation examples are executable or typechecked fixtures, not unchecked Markdown
-      claims.
+- [x] Declared public documentation examples are backed by executable or typechecked fixtures, not
+      unchecked Markdown claims.
   - Verify: the new documentation-example command exits 0 and is called by `pnpm docs:check` and CI.
 - [x] Unsupported Zod schemas never silently become generated `unknown` types.
   - Verify: `@rexeus/typeweaver-zod-to-ts` tests cover every intentionally unsupported schema kind
@@ -132,13 +131,13 @@ the progress log with the relevant commit or artifact.
 - [x] A final evidence report maps every claim in this goal to commands, artifacts, commits, and PR
       checks and records an independent review with no unresolved critical or high-confidence
       high-impact finding in scope.
-- [x] Stage 3 has appropriate Changesets and migration notes, a green full gate, and an open green
-      PR targeting `main`.
+- [x] Stage 3 has appropriate Changesets and migration notes, a green full gate, and a green PR
+      targeting `main` that the owner subsequently merged as PR #212.
 
 ### Final delivery
 
-- [x] PRs #209 and #211 are recorded as human-merged after green checks, while the Stage 3 PR
-      targets `main`, is open and green, and remains unmerged.
+- [x] PRs #209, #211, and #212 are recorded as human-merged after green checks; `main` contains the
+      complete three-stage delivery at merge commit `af7e0ddf`.
 - [x] Every required check on every PR is green at its recorded head commit.
 - [x] `plans/README.md` and this file show all three stages as complete with evidence.
 - [x] No criterion was waived merely because the implementation became difficult. Any intentionally
@@ -220,12 +219,12 @@ The loop must not:
 - Commit one logical work package at a time and include Changesets in the commit that establishes
   the corresponding public behavior.
 - Normal pushes and PR creation/update are authorized.
-- Never merge the remaining Stage 3 PR.
+- Never merge any pull request.
 - Never publish packages or create a release.
 - Never delete remote branches.
-- The owner-approved Stage 3 base is `main`; do not change it again without human approval.
-- Historical Stage 1 and 2 remote advancement from their human merges is expected. If the Stage 3
-  remote branch is ahead or diverged, stop and report instead of force-pushing.
+- The three product-maturity branches and bases are historical and must not change; the owner
+  approved and merged them as PRs #209, #211, and #212.
+- If an active roadmap branch is ahead or diverged, stop and report instead of force-pushing.
 
 ## Iteration policy
 
@@ -297,8 +296,8 @@ compatibility layer | 3 | DONE |
 
 ## Stop conditions
 
-- **Done:** every criterion is checked with recorded evidence, human-merged PRs #209 and #211 are
-  recorded at green heads, and the Stage 3 PR against `main` is open, green, and unmerged.
+- **Done:** every criterion is checked with recorded evidence and human-merged PRs #209, #211, and
+  #212 are recorded at green heads, with `main` containing the complete delivery at `af7e0ddf`.
 - **Iteration cap:** stop after 90 total implementation iterations or 30 in any single stage. Report
   completed criteria, remaining criteria, evidence, and the next best action. Do not declare
   completion.
@@ -312,7 +311,8 @@ compatibility layer | 3 | DONE |
   blocker, and the smallest input or authority that would unlock progress.
 - **Drift:** stop if the implementation requires a native Effect `HttpApi` backend, an OpenAPI
   importer, an Effect 4 migration, or another explicit non-goal.
-- **Remote divergence:** stop if the Stage 3 branch has diverged and a normal push is impossible.
+- **Remote divergence:** stop if an active roadmap branch has diverged and a normal push is
+  impossible.
 
 ## Irreversible actions
 
@@ -327,11 +327,11 @@ Human approval is required. Never execute autonomously:
 
 ## Stage evidence
 
-| Stage | Status             | Branch                               | Head                                       | PR                                                    | Required checks                                       | Evidence report                                                                                                                             |
-| ----- | ------------------ | ------------------------------------ | ------------------------------------------ | ----------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | DONE, HUMAN MERGED | `feat/product-truth-and-type-safety` | `b8861460b501ef19948fa732fc8901c704f6230e` | [#209](https://github.com/rexeus/typeweaver/pull/209) | quality-check, windows-security, CodeQL, Socket: PASS | Iterations 1–9; [CI run](https://github.com/rexeus/typeweaver/actions/runs/30209088039)                                                     |
-| 2     | DONE, HUMAN MERGED | `feat/contract-and-openapi-maturity` | `dfdc3354b24ce627794440703567f15204ab63ef` | [#211](https://github.com/rexeus/typeweaver/pull/211) | quality-check, windows-security, Socket: PASS         | Iterations 10–20; [CI run](https://github.com/rexeus/typeweaver/actions/runs/30209719892)                                                   |
-| 3     | DONE               | `feat/developer-surfaces`            | `b539a81a654202ab3d557ce4da0f1d188d52de45` | [#212](https://github.com/rexeus/typeweaver/pull/212) | quality-check, windows-security, CodeQL, Socket: PASS | [Final evidence review](docs/reviews/product-maturity-evidence.md); [CI run](https://github.com/rexeus/typeweaver/actions/runs/30218172873) |
+| Stage | Status             | Branch                               | Head                                       | PR                                                    | Required checks                                       | Evidence report                                                                                                                                                   |
+| ----- | ------------------ | ------------------------------------ | ------------------------------------------ | ----------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | DONE, HUMAN MERGED | `feat/product-truth-and-type-safety` | `b8861460b501ef19948fa732fc8901c704f6230e` | [#209](https://github.com/rexeus/typeweaver/pull/209) | quality-check, windows-security, CodeQL, Socket: PASS | Iterations 1–9; [CI run](https://github.com/rexeus/typeweaver/actions/runs/30209088039)                                                                           |
+| 2     | DONE, HUMAN MERGED | `feat/contract-and-openapi-maturity` | `dfdc3354b24ce627794440703567f15204ab63ef` | [#211](https://github.com/rexeus/typeweaver/pull/211) | quality-check, windows-security, Socket: PASS         | Iterations 10–20; [CI run](https://github.com/rexeus/typeweaver/actions/runs/30209719892)                                                                         |
+| 3     | DONE, HUMAN MERGED | `feat/developer-surfaces`            | `b539a81a654202ab3d557ce4da0f1d188d52de45` | [#212](https://github.com/rexeus/typeweaver/pull/212) | quality-check, windows-security, CodeQL, Socket: PASS | [Final evidence review](docs/reviews/product-maturity-evidence.md); [CI run](https://github.com/rexeus/typeweaver/actions/runs/30218172873); merged as `af7e0ddf` |
 
 Status values: `TODO`, `IN PROGRESS`, `DONE`, `DONE, HUMAN MERGED`, or `BLOCKED: <reason>`.
 
@@ -399,3 +399,4 @@ Append one line after every iteration. Never rewrite earlier entries.
 | 55        | Stage 3  | Delivered the final review corrections at exact source head `b539a81a`                | Ready PR #212 targets `main`, remains open, ready, mergeable, and unmerged; quality-check, Windows security, CodeQL, both analysis jobs, and both Socket checks passed at the exact source head in [CI run 30218172873](https://github.com/rexeus/typeweaver/actions/runs/30218172873)                                                                                                                                                                                            | Commit the durable evidence successor, push normally, and require the same checks                            |
 | 56        | Stage 3  | Audited the completed final Copilot pass                                              | Thread-aware inspection found two additional comments claiming optional object spreads throw. Direct Node 24 characterization returned `{}` for `{ ...undefined }` and `{"stable":true}` for `{ stable: true, ...undefined }`; both comments are false positives, while the evidence successor passed every required check and Copilot review at `58a0e067`                                                                                                                       | Correct the verified comment IDs, record the disproven findings, then close every remaining review thread    |
 | 57        | Stage 3  | Audited the post-resolution Copilot runtime-portability comment                       | Comment `3653357527` requested a fallback for unverified browser/worker environments; the durable contract verifies generated bundles on Node, Deno, and Bun, and direct checks prove `AbortSignal.any` plus `AbortSignal.timeout` exist on Node 24.16.0, Deno 2.7.13, and Bun 1.3.13                                                                                                                                                                                             | Record the supported-runtime boundary, answer and resolve the thread, then require final green checks        |
+| 58        | Delivery | Recorded the human merge of PR #212 and handed off to the post-maturity roadmap       | The owner merged the Stage 3 PR #212 into `main` as merge commit `af7e0ddf`, so all three product-maturity PRs (#209, #211, #212) are human-merged and this goal's delivery model, final status, stop conditions, and authorization are historical; follow-on work is sequenced by `plans/004`–`plans/009` under the same no-autonomous-merge, release, or publish rule                                                                                                           | Start Plan 005 (documentation baseline) from the merged `main` without any autonomous merge                  |

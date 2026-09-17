@@ -1,220 +1,304 @@
-# 🧵✨ @rexeus/typeweaver-gen
+# `@rexeus/typeweaver-gen`
+
+> Build TypeWeaver projections against one validated, normalized API model using a public lifecycle,
+> structured diagnostics, path-safe output contexts, scoped Effect services, and an in-memory plugin
+> test kit.
 
 [![npm version](https://img.shields.io/npm/v/@rexeus/typeweaver-gen.svg)](https://www.npmjs.com/package/@rexeus/typeweaver-gen)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](../../LICENSE)
 
-Typeweaver is a type-safe HTTP API framework built for API-first development with a focus on
-developer experience. Use typeweaver to specify your HTTP APIs in TypeScript and Zod, and generate
-clients, validators, routers, and more ✨
+## Choose this package when
 
-## 📝 Generation Package
+Most TypeWeaver users should install [`@rexeus/typeweaver`](../cli/README.md), select first-party
+projections, and never depend on this package directly.
 
-Core building blocks for authoring typeweaver plugins: the `Plugin` type, the `definePlugin` and
-`definePluginWithLibCopy` constructors, the normalized resource model, and the lifecycle context
-types consumed by the CLI orchestrator.
+Use `@rexeus/typeweaver-gen` when you are:
 
-The normalized model is the generator-neutral center of Typeweaver's
-[one-contract, many-projections](../../VISION.md#one-contract-many-projections) product promise.
+- writing a third-party generator plugin;
+- testing a projection independently of the CLI;
+- consuming TypeWeaver's normalized contract model;
+- integrating generation through the public orchestration contracts.
 
-Normalization validates API metadata, reusable tags, and named security schemes before plugins run.
-Each normalized resource and operation receives its effective tags and security plus a source
-(`none`, `spec`, `resource`, or `operation`). This preserves the distinction between absent
-security, inherited security, an explicit public `[]`, and a non-empty override.
+## Install the plugin SDK
+
+```bash
+pnpm add -D \
+  @rexeus/typeweaver-gen \
+  @rexeus/typeweaver-core \
+  effect \
+  zod
+```
+
+The supported Effect peer range is `>=3.22.0 <4`. Keep one compatible Effect identity in the
+dependency graph.
+
+## The normalized model is the extension boundary
+
+Plugins do not reinterpret the raw authoring module independently. TypeWeaver first validates and
+normalizes the contract, then gives every plugin the same generator-neutral model:
+
+```text
+authoring module
+      │
+      ▼
+validate + normalize
+      │
+      ▼
+NormalizedSpec
+      │
+      ├── plugin A
+      ├── plugin B
+      └── plugin C
+```
+
+The model includes normalized resources, operations, request parts, named response usage, metadata,
+tags, and effective security declarations. It preserves whether security was absent, inherited,
+explicitly public, or overridden.
 
 <!-- docs-example: metadata-security-contract -->
 
-The public authoring input behind this normalized shape is typechecked in the
-[metadata/security fixture](../cli/examples/documentation/metadata-security.ts) and defined by
-[ADR 0009](../../docs/adr/0009-api-metadata-and-security-contract.md).
+The authoring input behind this normalized shape is typechecked in the
+[metadata and security fixture](../cli/examples/documentation/metadata-security.ts).
 
----
-
-## 📥 Installation
-
-```bash
-npm install -D @rexeus/typeweaver-gen effect
-```
-
-`effect` is a peer dependency. TypeWeaver develops and tests with Effect 3.22.0; published plugins
-support the intentional range `>=3.22.0 <4`. The 3.22 lower bound matches the current `@effect/*`
-package family and prevents plugin authors from loading a second, incompatible Effect identity.
-
-## 💡 How to use
-
-Most users don't depend on this package directly — use the CLI instead:
-[`@rexeus/typeweaver`](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md). If
-you're writing a plugin, start here.
-
-### 🚀 Minimal plugin
-
-A plugin is a value returned from `definePlugin(...)`. Each lifecycle stage returns an `Effect`
-whose error channel is narrowed to `PluginExecutionError`. The orchestrator does not catch raw
-throws — wrap synchronous emission in `Effect.try` so thrown exceptions become typed failures:
+## Write a minimal plugin
 
 ```ts
-import { definePlugin, PluginExecutionError } from "@rexeus/typeweaver-gen";
-import type { Plugin } from "@rexeus/typeweaver-gen";
+import { definePlugin, PluginExecutionError, type Plugin } from "@rexeus/typeweaver-gen";
 import { Effect } from "effect";
 
-export const helloPlugin: Plugin = definePlugin({
-  name: "hello",
+export const summaryPlugin: Plugin = definePlugin({
+  name: "summary",
   generate: context =>
     Effect.try({
       try: () => {
-        context.writeFile("hello.txt", "hello from a typeweaver plugin\n");
+        const lines = context.normalizedSpec.resources.map(
+          resource => `- ${resource.name}: ${resource.operations.length} operations`
+        );
+
+        context.writeFile("summary.md", `${lines.join("\n")}\n`);
       },
       catch: cause =>
         new PluginExecutionError({
-          pluginName: "hello",
+          pluginName: "summary",
           phase: "generate",
           cause,
         }),
     }),
 });
 
-export default helloPlugin;
+export default summaryPlugin;
 ```
 
 <!-- docs-example: minimal-plugin -->
 
-This exact public surface is typechecked in the
-[minimal-plugin fixture](../cli/examples/documentation/minimal-plugin.ts).
+The public plugin shape, typed error channel, and path-safe writer are checked in the
+[minimal plugin fixture](../cli/examples/documentation/minimal-plugin.ts).
 
-### 📦 Emit-and-copy plugins
+Lifecycle hooks return `Effect` values with a typed `PluginExecutionError` channel. Convert
+synchronous throws with `Effect.try`; the orchestrator does not silently turn defects into
+successful generation.
 
-When a plugin ships static runtime support code under `src/lib/`, use `definePluginWithLibCopy`. It
-copies the lib directory into `output/lib/{pluginName}/` and runs one or more synchronous emitter
-functions inside a shared `Effect.try` boundary:
-
-```ts
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { definePluginWithLibCopy } from "@rexeus/typeweaver-gen";
-import type { Plugin } from "@rexeus/typeweaver-gen";
-import { generate as generateRequests } from "./requestGenerator.js";
-import { generate as generateResponses } from "./responseGenerator.js";
-
-const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-
-export const typesPlugin: Plugin = definePluginWithLibCopy({
-  name: "types",
-  libSourceDir: path.join(moduleDir, "lib"),
-  generators: [generateRequests, generateResponses],
-});
-
-export default typesPlugin;
-```
-
-## 🔌 Plugin lifecycle
-
-The plugin contract exposes five optional stages. Validation is invoked through the per-call
-`PluginRegistry` before a caller enters write-capable generation:
+## Lifecycle
 
 ```ts
 type Plugin = {
   readonly name: string;
   readonly depends?: readonly string[];
   readonly validate?: (
-    spec: NormalizedSpec,
-    ctx: PluginValidationContext
+    normalizedSpec: NormalizedSpec,
+    context: PluginValidationContext
   ) => Effect.Effect<readonly Issue[], PluginExecutionError>;
-  readonly initialize?: (ctx: PluginContext) => Effect.Effect<void, PluginExecutionError>;
+  readonly initialize?: (context: PluginContext) => Effect.Effect<void, PluginExecutionError>;
   readonly collectResources?: (
-    spec: NormalizedSpec
+    normalizedSpec: NormalizedSpec
   ) => Effect.Effect<NormalizedSpec, PluginExecutionError>;
-  readonly generate?: (ctx: GeneratorContext) => Effect.Effect<void, PluginExecutionError>;
-  readonly finalize?: (ctx: PluginContext) => Effect.Effect<void, PluginExecutionError>;
+  readonly generate?: (context: GeneratorContext) => Effect.Effect<void, PluginExecutionError>;
+  readonly finalize?: (context: PluginContext) => Effect.Effect<void, PluginExecutionError>;
 };
 ```
 
-| Stage              | When                                           | Use it for                                                                            |
-| ------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `validate`         | After normalization, without an output context | Returning structured, stable, side-effect-free diagnostics                            |
-| `initialize`       | After plugin discovery, before normalization   | Setup that needs the resolved output directory but not the spec                       |
-| `collectResources` | After normalization, before emission           | Transforming the normalized spec (e.g. injecting derived ops)                         |
-| `generate`         | Once the spec is final                         | Writing files via `context.writeFile`                                                 |
-| `finalize`         | After every plugin has generated               | Post-processing, summary output. Failures surface as WARN — they do not fail the run. |
+| Hook               | Purpose                                                  | Generator writer available? |
+| ------------------ | -------------------------------------------------------- | --------------------------- |
+| `validate`         | report stable, structured, projection-specific issues    | no                          |
+| `initialize`       | prepare plugin state after paths and config are resolved | no                          |
+| `collectResources` | derive or transform the normalized model before emission | no                          |
+| `generate`         | emit files from the final normalized model               | yes                         |
+| `finalize`         | clean up or summarize after all plugins generated        | no                          |
 
-`depends` declares a topological ordering: a plugin with `depends: ["types"]` will not run a stage
-until `types`'s same stage has completed.
+Only `generate` receives `GeneratorContext` and its path-safe writer. `initialize` and `finalize`
+receive the smaller `PluginContext`; avoid bypassing the generated-file lifecycle with direct
+filesystem writes.
 
-`PluginValidationContext` contains only `inputDir` and the read-only user configuration. It has no
-`outputDir`, writer, template renderer, or generated-file tracker. Validation returns `Issue`
-records with a stable code, severity, message, JSON Pointer, optional source location and hint, and
-fixability metadata. Spec-normalization failures use the exhaustive `SPEC_ISSUE_REGISTRY`
-`TW-SPEC-001` through `TW-SPEC-021` namespace. Normalized body warnings retain concrete request,
-inline-response, or canonical-response JSON Pointers when a normalized spec is supplied to
-`normalizedSpecWarningToIssue`.
+`depends` defines topological ordering for every lifecycle stage. A plugin with `depends: ["types"]`
+runs after `types` in that stage.
 
-### Scoped services and public plugin tests
+A typed `PluginExecutionError` returned by `finalize` is logged as a best-effort warning after
+generation. Defects and interruption are not downgraded: TypeWeaver still attempts every remaining
+finalizer in reverse order, then fails the lifecycle with the accumulated cause.
 
-Use `defineScopedPlugin` for a plugin-owned Effect Layer. It acquires one Layer per generation,
-provides the service requirements to lifecycle hooks, isolates concurrent calls that share one
-plugin instance, and releases the Scope after success, typed failure, defect, or interruption.
+## Validation must remain side-effect-free
 
-`createPluginTestKit` runs the complete plugin lifecycle against path-safe in-memory contexts. Its
-result exposes structured issues, generated paths, file contents, the final normalized spec, and
-typed best-effort finalizer failures. The kit also builds individual public contexts for focused
-hook tests.
+`PluginValidationContext` intentionally exposes only the input directory and read-only user
+configuration. It has no output directory, file writer, template renderer, or generated-file
+tracker.
+
+Return issues instead of logging ad-hoc text:
+
+```ts
+import { Effect } from "effect";
+import { definePlugin } from "@rexeus/typeweaver-gen";
+
+export default definePlugin({
+  name: "operation-budget",
+  validate: spec =>
+    Effect.succeed(
+      spec.resources.flatMap((resource, resourceIndex) =>
+        resource.operations.length > 20
+          ? [
+              {
+                code: "TW-PLUGIN-OPERATION-BUDGET-001",
+                severity: "warning",
+                message: `${resource.name} contains more than 20 operations.`,
+                path: `/resources/${resourceIndex}`,
+                fixable: false,
+              },
+            ]
+          : []
+      )
+    ),
+});
+```
+
+Stable issue codes let CI, IDEs, and future tooling react without parsing human prose.
+
+## Emit files through the context
+
+Prefer `context.writeFile()` over direct filesystem writes. The public context:
+
+- rejects output paths that escape the configured directory;
+- tracks generated files;
+- publishes through the orchestrator's file lifecycle;
+- exposes resource-aware output helpers;
+- renders templates through the configured renderer.
+
+A plugin that ships static runtime support can use `definePluginWithLibCopy`:
+
+```ts
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { definePluginWithLibCopy, type Plugin } from "@rexeus/typeweaver-gen";
+import { generate } from "./generator.js";
+
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+
+export const widgetPlugin: Plugin = definePluginWithLibCopy({
+  name: "widget",
+  depends: ["types"],
+  libSourceDir: path.join(moduleDir, "lib"),
+  generators: [generate],
+});
+```
+
+The library is copied to `output/lib/widget/` and emitted files can import it through generated
+paths.
+
+## Factory plugins and configuration
+
+A plugin may export a factory when users need projection-specific options. The CLI resolves a
+configured tuple such as:
+
+```js
+export default {
+  input: "./api/spec/index.ts",
+  output: "./api/generated",
+  plugins: [["widget", { mode: "compact" }]],
+};
+```
+
+Keep user options narrow, validate them early, and preserve the distinction between product-wide
+config and projection-owned config.
+
+## Scoped Effect services
+
+Use `defineScopedPlugin` when a plugin needs an Effect `Layer` with acquisition and release.
+TypeWeaver acquires one scope per generation call, provides it to lifecycle hooks, isolates
+concurrent runs that share the same plugin value, and releases it after success, typed failure,
+defect, or interruption.
+
+This is the preferred model for resources such as temporary directories, caches, connections, or
+plugin-owned tracing services.
+
+## Test the public lifecycle in memory
+
+`createPluginTestKit` runs a plugin without importing CLI internals:
+
+```ts
+import { createPluginTestKit, definePlugin, type NormalizedSpec } from "@rexeus/typeweaver-gen";
+import { Effect } from "effect";
+
+const plugin = definePlugin({
+  name: "hello",
+  generate: context => Effect.sync(() => context.writeFile("hello.txt", "hello\n")),
+});
+
+const normalizedSpec: NormalizedSpec = {
+  metadata: { title: "Plugin Fixture API", version: "1.0.0" },
+  securitySchemes: [],
+  security: { requirements: [], source: "none" },
+  resources: [],
+  responses: [],
+  warnings: [],
+};
+
+const kit = createPluginTestKit({ normalizedSpec });
+const result = await Effect.runPromise(kit.run(plugin));
+
+expect(result.issues).toEqual([]);
+expect(result.generatedFiles).toContain("/typeweaver/plugin-test/output/hello.txt");
+expect(result.files.find(file => file.path.endsWith("/hello.txt"))?.content).toBe("hello\n");
+```
 
 <!-- docs-example: plugin-test-kit -->
 
-The executable [plugin-test-kit fixture](../cli/examples/documentation/plugin-test-kit.ts) combines
-`defineScopedPlugin`, a test Layer, and the public harness without importing CLI internals.
+The in-memory lifecycle and scoped-service path are typechecked in the
+[plugin test-kit fixture](../cli/examples/documentation/plugin-test-kit.ts).
 
-## 🔧 What it exports
+The test result exposes issues, paths, file contents, the final normalized spec, and best-effort
+finalizer failures. Focused context builders are available for individual hook tests.
 
-- **Plugin authoring:** `definePlugin`, `defineScopedPlugin`, `definePluginWithLibCopy`,
-  `copyPluginLibFiles`, and the `Plugin`, `PluginFactory`, and `ScopedPluginDefinition` types.
-- **Plugin testing:** `createPluginTestKit` plus `PluginTestKit`, `PluginTestResult`, and the
-  inspectable in-memory file types.
-- **Lifecycle contexts:** the write-incapable `PluginValidationContext`, plus `PluginContext` and
-  `GeneratorContext` for write-capable stages and per-resource path resolution.
-- **Diagnostics:** `Issue`, `Severity`, `SPEC_ISSUE_REGISTRY`, `getSpecErrorEntry`, and
-  `normalizationErrorToIssue`.
-- **Tagged errors:** `PluginExecutionError`, `PluginDependencyError`, `UnsafeGeneratedPathError` —
-  raised at the plugin boundary and the orchestrator.
-- **Normalized resource model:** `NormalizedSpec`, `NormalizedResource`, `NormalizedOperation`,
-  `NormalizedResponse`, `NormalizedResponseUsage` — the validated API model delivered to plugins.
-- **Services:** `PluginRegistry`, `TemplateRenderer`, `PathSafety`, `ContextBuilder` — composed by
-  the CLI runtime; plugin authors rarely need to reference them directly.
-- **Configuration types:** `TypeweaverConfig` — the shape of the optional
-  `typeweaver.config.{js,mjs,cjs}` file, useful for `@type` JSDoc annotations on JavaScript configs.
+## Public surface
 
-## 📚 Authoring a plugin
+The package exports:
 
-The README covers the minimum surface. For the full guide — `GeneratorContext` helpers, factory
-plugins with options, exit-independent scoped services, lib-copy internals, the `depends` ordering
-rules, and the public in-memory lifecycle test kit — see
-[`docs/plugin-authoring.md`](https://github.com/rexeus/typeweaver/tree/main/docs/plugin-authoring.md).
+- plugin constructors: `definePlugin`, `defineScopedPlugin`, and `definePluginWithLibCopy`;
+- plugin and factory types;
+- lifecycle contexts and normalized model types;
+- `Issue`, the `Severity` type, issue registries, and normalization-to-issue helpers;
+- tagged plugin, dependency, and path-safety errors;
+- `createPluginTestKit` and inspectable in-memory output types;
+- orchestration services used by the CLI;
+- `TypeweaverConfig` for JavaScript-config JSDoc annotations.
 
-Background reading on the API shape:
+## Boundaries
 
-- [ADR 0003: Effect-native plugin API](https://github.com/rexeus/typeweaver/tree/main/docs/adr/0003-effect-native-plugin-api.md)
-- [ADR 0004: FileSystem service adoption](https://github.com/rexeus/typeweaver/tree/main/docs/adr/0004-filesystem-service-adoption.md)
-- [ADR 0007: Generator per-call isolation](https://github.com/rexeus/typeweaver/tree/main/docs/adr/0007-generator-per-call-isolation.md)
+A plugin should not:
 
-### 🏷️ Spec naming validation
+- mutate the user's source contract;
+- write during validation;
+- bypass output path safety;
+- duplicate normalization rules privately;
+- hide representational loss;
+- require CLI internals for tests;
+- combine unrelated projections merely because they share a package.
 
-The normalization pipeline validates supported naming formats before generation:
+## Related documentation
 
-- `operationId` should use camelCase (preferred), for example `getUser`.
-- PascalCase `operationId` values are supported for compatibility.
-- snake_case and kebab-case `operationId` values are rejected during normalization.
-- `resourceName` should preferably be a singular noun in camelCase, for example `user` or
-  `authSession`.
-- Plural and PascalCase `resourceName` values are supported.
-- snake_case and kebab-case `resourceName` values are rejected during normalization.
+- [Migration guide](../../MIGRATION.md)
+- [Full plugin-authoring guide](../../docs/plugin-authoring.md)
+- [CLI reference](../cli/README.md)
+- [Contract authoring](../core/README.md)
+- [Vision](../../VISION.md)
 
-## 📌 Notes
-
-- Plugins are configured and executed by the CLI (`@rexeus/typeweaver`). See the CLI options
-  [here](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md#️-options).
-- Keep plugins focused: one concern per plugin (clients, routers, infra).
-- Prefer `GeneratorContext.writeFile` over manual `fs` writes — it routes through the path-safety
-  guard, registers paths with the tracker, and uses an atomic temp-file + rename.
-
-## 📄 License
+## License
 
 Apache 2.0 © Dennis Wentzien 2026

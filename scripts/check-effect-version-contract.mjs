@@ -45,6 +45,12 @@ for (const document of requiredDocuments) {
   }
 }
 
+if (Object.keys(contract.acceptedEffectDependencies ?? {}).length === 0) {
+  failures.push(
+    "config/effect-baseline.json must list acceptedEffectDependencies"
+  );
+}
+
 const workspaceConfig = read("pnpm-workspace.yaml");
 if (!workspaceConfig.includes(`effect: "${contract.peerRange}"`)) {
   failures.push("pnpm-workspace.yaml does not match the Effect peer contract");
@@ -165,6 +171,7 @@ failures.push(
   ...validateEffectPackageVersions({
     workspaceRoot,
     runtimeVersion: contract.runtimeVersion,
+    acceptedEffectDependencies: contract.acceptedEffectDependencies ?? {},
   })
 );
 

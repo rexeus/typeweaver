@@ -15,6 +15,22 @@ before changing files.
 | [002](002-contract-and-openapi-maturity.md) | 2     | Mature the core contract and OpenAPI projection             | P1       | L      | 001 PR open and green  | DONE   |
 | [003](003-developer-surfaces.md)            | 3     | Deliver plugin, CLI, generated-command, and Effect surfaces | P1       | XL     | 002 human-merged green | DONE   |
 
+The completed product-maturity stages are followed by a separate post-maturity roadmap. The roadmap
+and milestone plan files (004–009) are included in PR #214 at the user's explicit request as
+planning artifacts. The roadmap does not reopen the completed goal or authorize merging, publishing,
+or issue mutation. The owner approved stacked delivery for the roadmap: the PR implementing Issue
+#215 (`fix/strict-object-never-warning`, PR #218) targets `docs/documentation-standard` (PR #214),
+and later milestones may target the previous milestone's branch until a human merges it.
+
+| Plan                                       | Milestone | Title                                 | Priority | Effort | Depends on                     | Status      |
+| ------------------------------------------ | --------- | ------------------------------------- | -------- | ------ | ------------------------------ | ----------- |
+| [004](004-post-maturity-roadmap.md)        | Roadmap   | Sequence the next contract deliveries | P1       | XL     | Product-maturity goal complete | TODO        |
+| [005](005-docs-baseline-pr-214.md)         | 1         | Repair the documentation baseline     | P1       | S      | Current `main`                 | IN PROGRESS |
+| [006](006-strict-object-warning-215.md)    | 2         | Remove strict-object false warnings   | P1       | S      | 005 branch (PR #214)           | DONE        |
+| [007](007-typed-http-boundaries-pr-213.md) | 3         | Repair typed HTTP request boundaries  | P1       | L      | 006 branch (may stack)         | TODO        |
+| [008](008-generate-check-216.md)           | 4         | Add generated-output drift checking   | P1       | M      | 007 branch (may stack)         | TODO        |
+| [009](009-effect-4-compatibility-217.md)   | 5         | Deliver an honest Effect 4 path       | P2       | XL     | 008; stable Effect 4 for B     | TODO        |
+
 Status values: `TODO`, `IN PROGRESS`, `DONE`, `BLOCKED: <reason>`, or `REJECTED: <reason>`.
 
 ## Dependency graph
@@ -44,12 +60,12 @@ The ordering is product-driven:
 | ---- | ------------------------------------ | ---------------------------------------------------- | ----------------------- |
 | 001  | `feat/product-truth-and-type-safety` | `main`                                               | Human merged as PR #209 |
 | 002  | `feat/contract-and-openapi-maturity` | Stage 1 branch                                       | Human merged as PR #211 |
-| 003  | `feat/developer-surfaces`            | `main` after explicitly authorized merge integration | Open and unmerged       |
+| 003  | `feat/developer-surfaces`            | `main` after explicitly authorized merge integration | Human merged as PR #212 |
 
-The owner confirmed the Stage 1 and 2 merges and authorized Stage 3 to integrate current `main` and
-target `main`. The loop is authorized to commit, push, open or update the remaining Stage 3 PR, and
-repair CI. It is never authorized to merge that PR, release, publish, force-push, or delete remote
-state.
+The owner confirmed the Stage 1, 2, and 3 merges (PRs #209, #211, and #212). The earlier
+authorization to commit, push, open or update the Stage 3 PR and repair CI is historical and no
+longer active. No plan authorizes merging a pull request, releasing, publishing, force-pushing, or
+deleting remote state.
 
 ## Shared verification contract
 

@@ -1,93 +1,215 @@
-# @rexeus/typeweaver-effect
+# `@rexeus/typeweaver-effect`
 
-Add Effect-returning handlers to TypeWeaver's existing Fetch-native server. This package is an
-optional adapter and generator plugin: it does not introduce Effect Schema, a second router, or a
-native `HttpApi` backend, and ordinary server users do not install it.
+> Implement generated Fetch-native server handlers with Effect while keeping TypeWeaver's existing
+> router, request contract, response union, and error boundary.
 
-## Installation
+[![npm version](https://img.shields.io/npm/v/@rexeus/typeweaver-effect.svg)](https://www.npmjs.com/package/@rexeus/typeweaver-effect)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](../../LICENSE)
 
-Install the server and Effect plugins for generation, plus the supported Effect 3 peer:
+## Choose this projection when
 
-```bash
-npm install -D \
-  @rexeus/typeweaver \
-  @rexeus/typeweaver-server \
-  @rexeus/typeweaver-effect
-npm install effect@^3.22.0
-```
+Use `effect` when your application services and handlers already use Effect and should expose typed
+failures, Layers, interruption, spans, and structured log annotations through the generated server
+contract.
 
-The package supports Effect `>=3.22.0 <4`. TypeWeaver itself develops against the pinned 3.22.0
-reference.
+Ordinary Promise-based server users do not need this package.
 
-## Generate
+This is an adapter, not a second server stack. It does not introduce Effect Schema, an Effect
+router, or a native Effect `HttpApi` backend.
 
-Select the existing server and the Effect adapter:
+## Install and generate
 
 ```bash
-npx typeweaver generate \
+pnpm add -D @rexeus/typeweaver
+pnpm add \
+  @rexeus/typeweaver-core \
+  @rexeus/typeweaver-effect \
+  effect \
+  zod
+
+pnpm typeweaver generate \
   --input ./api/spec/index.ts \
   --output ./api/generated \
   --plugins server,effect
 ```
 
-For every resource, generation adds `Effect<Resource>ApiHandler.ts`. It contains:
+The package supports Effect `>=3.22.0 <4`.
 
-- request- and response-specific Effect handler types
-- typed error mappers for each emitted non-HEAD operation
-- an `adapt<Resource>EffectHandlers` function returning the existing `Server<Resource>ApiHandler`
+The direct runtime dependency on `@rexeus/typeweaver-effect` is intentional: generated adapters
+reference its public types, and the application owns `createEffectHandlerRuntime`.
 
-The generated adapter contains no runtime construction and no `Effect.runPromise`. It delegates to
-one runtime supplied by the application. Explicit HEAD operations follow the server generator's
-existing handler contract and are omitted in favor of the Fetch server's automatic GET fallback.
+## Generated surface
 
-## Runtime ownership
+For every resource, generation adds `Effect<Resource>ApiHandler.ts` next to the Fetch-native router:
 
-Create one runtime beside the application, adapt every handler record with it, and dispose it from
-the application's graceful-shutdown hook:
-
-```ts
-const runtime = createEffectHandlerRuntime(applicationLayer);
-
-const accountRouter = new AccountRouter({
-  requestHandlers: adaptAccountEffectHandlers(runtime, handlers, errorMappers),
-});
-
-const app = new TypeweaverApp().route(accountRouter);
-
-export const shutdown = async (): Promise<void> => {
-  await runtime.dispose();
-};
+```text
+api/generated/todo/
+├── TodoRouter.ts
+└── EffectTodoApiHandler.ts
 ```
 
-`createEffectHandlerRuntime` accepts a `Layer<R, never, never>`. This keeps Layer construction
-failures outside the operation's typed business-error channel. The managed Layer is acquired once,
-shared by requests, and released exactly once even when `dispose` is called more than once. Await
-`shutdown` from the hosting runtime's graceful-shutdown hook.
+It exports:
+
+- `EffectTodoApiHandler<TError, TRequirements, TState>`;
+- `EffectTodoErrorMappers<TError, TState>`;
+- `adaptTodoEffectHandlers(...)`.
+
+The adapter returns the ordinary `ServerTodoApiHandler` required by `TodoRouter`.
+
+## Own one runtime at the application boundary
+
+```ts
+// effect-runtime.ts
+import { createEffectHandlerRuntime } from "@rexeus/typeweaver-effect";
+import { Context, Effect, Layer } from "effect";
+
+type Todo = {
+  readonly id: string;
+  readonly title: string;
+};
+
+export class TodoRepository extends Context.Tag("Todo/Repository")<
+  TodoRepository,
+  {
+    readonly find: (todoId: string) => Effect.Effect<Todo | undefined>;
+  }
+>() {}
+
+const TodoRepositoryLive = Layer.succeed(TodoRepository, {
+  find: todoId =>
+    Effect.succeed(todoId === "todo-1" ? { id: todoId, title: "Ship the contract" } : undefined),
+});
+
+export const effectRuntime = createEffectHandlerRuntime(TodoRepositoryLive);
+```
+
+A managed Layer is acquired once, shared across requests, and released exactly once. `dispose()` is
+idempotent.
+
+Keep runtime creation outside generated adapters and request handlers. Do not create one managed
+runtime per request.
+
+## Implement Effect handlers
+
+```ts
+import { Data, Effect } from "effect";
+import { createGetTodoSuccessResponse, type EffectTodoApiHandler } from "./api/generated/index.js";
+import { TodoRepository } from "./effect-runtime.js";
+
+export class TodoNotFound extends Data.TaggedError("TodoNotFound")<{
+  readonly todoId: string;
+}> {
+  get message(): string {
+    return `Todo ${this.todoId} was not found`;
+  }
+}
+
+export const todoHandlers = {
+  handleGetTodoRequest: request =>
+    Effect.gen(function* () {
+      const repository = yield* TodoRepository;
+      const todo = yield* repository.find(request.param.todoId);
+
+      if (todo === undefined) {
+        return yield* Effect.fail(new TodoNotFound({ todoId: request.param.todoId }));
+      }
+
+      return createGetTodoSuccessResponse({ body: todo });
+    }),
+} satisfies EffectTodoApiHandler<TodoNotFound, TodoRepository>;
+```
+
+Map the typed business-error channel into the operation's declared response union:
+
+```ts
+import { createTodoNotFoundResponse, type EffectTodoErrorMappers } from "./api/generated/index.js";
+
+export const todoErrorMappers = {
+  handleGetTodoRequest: error =>
+    createTodoNotFoundResponse({
+      body: {
+        message: "Todo not found",
+        todoId: error.todoId,
+      },
+    }),
+} satisfies EffectTodoErrorMappers<TodoNotFound>;
+```
 
 <!-- docs-example: effect-handler -->
 
-The complete service, typed-error, adapter, and shutdown setup is typechecked in the
+The complete Layer, tagged-error, adapter, mapper, and shutdown path is typechecked in the
 [Effect handler fixture](../cli/examples/documentation/effect-handler.ts).
 
-## Failure, cancellation, and observability
+Each operation has its own mapper, so TypeScript checks that a typed failure becomes a response that
+operation actually declares.
 
-- A handler returns `Effect<Response, Error, Requirements>`.
-- Each operation maps its typed `Error` to its own generated response union.
-- Defects and interruptions never enter that mapper. They cross the existing server unknown-error
-  boundary as sanitized `EffectHandlerDefectError` or `EffectHandlerInterruptedError` values.
-- The runtime passes `ServerContext.signal` to Effect 3.22's managed runtime. Aborting the incoming
-  Fetch request therefore interrupts the handler fiber.
-- Each handler runs in `typeweaver.handler.<operationId>` with server-span kind. The operation ID,
-  HTTP method, and route pattern are attached as span attributes and structured log annotations.
+## Adapt and mount
 
-The server response for a defect remains the existing sanitized 500 response. Applications can use
-the server's `onError` callback for internal reporting without exposing defect details to clients.
+```ts
+import { adaptTodoEffectHandlers, TodoRouter, TypeweaverApp } from "./api/generated/index.js";
+import { effectRuntime } from "./effect-runtime.js";
+import { todoErrorMappers, todoHandlers } from "./todo-handlers.js";
 
-## Plain Promise handlers
+const router = new TodoRouter({
+  requestHandlers: adaptTodoEffectHandlers(effectRuntime, todoHandlers, todoErrorMappers),
+});
 
-The generated server contract remains Promise-native. The Effect plugin only generates adapter types
-and functions, and `@rexeus/typeweaver-server` has no Effect dependency. Promise handlers and mixed
-projects continue to use the ordinary server package unchanged.
+export const app = new TypeweaverApp().route(router);
+
+export const shutdown = async (): Promise<void> => {
+  await effectRuntime.dispose();
+};
+```
+
+Call `shutdown` from the hosting runtime's graceful-shutdown hook.
+
+## Failure semantics
+
+The adapter preserves the distinction between business failures and runtime failures:
+
+- typed Effect failures go to the generated operation mapper;
+- defects become sanitized `EffectHandlerDefectError` values at the server's unknown-error boundary;
+- interruption becomes `EffectHandlerInterruptedError`;
+- defects and interruption never enter the typed business-error mapper.
+
+The Fetch server's default unknown-error handling returns a sanitized 500. Use
+`TypeweaverApp({ onError })` or a custom server error handler for internal reporting.
+
+## Cancellation and observability
+
+The incoming `ServerContext.signal` is passed to the managed Effect runtime. Aborting the Fetch
+request interrupts the handler fiber.
+
+Each operation runs in a span named:
+
+```text
+typeweaver.handler.<operationId>
+```
+
+The operation ID, HTTP method, and route pattern are attached as span attributes and structured log
+annotations.
+
+## Explicit HEAD operations
+
+Generated Effect handler records omit HEAD operations. The Fetch-native server owns its existing
+automatic GET-to-HEAD fallback behavior.
+
+## Boundaries
+
+This package does not:
+
+- replace the Fetch-native TypeWeaver router;
+- generate Effect Schema values;
+- expose a native Effect `HttpApi` backend;
+- move Layer ownership into generated code;
+- turn defects into typed business failures.
+
+## Related documentation
+
+- [Migration guide](../../MIGRATION.md)
+- [Fetch-native server](../server/README.md)
+- [Getting started](../../docs/getting-started.md)
+- [Project vision and non-goals](../../VISION.md)
 
 ## License
 

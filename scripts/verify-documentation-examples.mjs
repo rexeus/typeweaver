@@ -9,7 +9,9 @@ const workspaceRoot = path.resolve(
 );
 const requiredGroupIds = [
   "root-quickstart",
+  "getting-started",
   "core-response-derivation",
+  "metadata-security-contract",
   "generation-cli-config",
   "minimal-plugin",
   "scoped-service-plugin",
@@ -25,6 +27,10 @@ const requiredGroupIds = [
   "effect-handler",
   "openapi-options",
   "zod-to-ts",
+  "zod-to-json-schema",
+  "types-surface",
+  "aws-cdk-routes",
+  "test-utils-surface",
 ];
 const result = verifyDocumentationExamples({
   workspaceRoot,
@@ -41,6 +47,9 @@ for (const group of result.groups) {
   const fixtures = [
     ...group.fixtures,
     ...(Array.isArray(group.runtimeFixtures) ? group.runtimeFixtures : []),
+    ...(Array.isArray(group.snippets)
+      ? group.snippets.map(snippet => snippet.fixture)
+      : []),
   ];
   process.stdout.write(
     `Documentation example verified: ${group.id} (${fixtures.join(", ")})\n`

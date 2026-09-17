@@ -38,6 +38,34 @@ const validateDeclaredVersions = ({
   return failures;
 };
 
+const validatePublishedEffectDependencies = ({
+  packageJson,
+  packagePath,
+  acceptedEffectDependencies,
+}) => {
+  const failures = [];
+  for (const [name, specifier] of Object.entries(
+    packageJson.dependencies ?? {}
+  )) {
+    if (!name.startsWith("@effect/")) {
+      continue;
+    }
+    const accepted = acceptedEffectDependencies[name];
+    if (accepted === undefined) {
+      failures.push(
+        `${packagePath} declares unaccepted Effect dependency ${name}@${specifier}`
+      );
+      continue;
+    }
+    if (specifier !== accepted) {
+      failures.push(
+        `${packagePath} ${name} must be pinned to ${accepted}; found ${specifier}`
+      );
+    }
+  }
+  return failures;
+};
+
 const validateResolvedVersion = ({
   manifestPath,
   packagePath,
@@ -65,6 +93,7 @@ const validatePackage = ({
   manifestPath,
   runtimeVersion,
   runtimeRange,
+  acceptedEffectDependencies,
 }) => {
   let packageJson;
   try {
@@ -73,13 +102,19 @@ const validatePackage = ({
     return [];
   }
 
+  const packagePath = formatPackagePath(workspaceRoot, manifestPath);
+  const failures = validatePublishedEffectDependencies({
+    packageJson,
+    packagePath,
+    acceptedEffectDependencies,
+  });
   const effectSections = findEffectSections(packageJson);
   if (effectSections.length === 0) {
-    return [];
+    return failures;
   }
 
-  const packagePath = formatPackagePath(workspaceRoot, manifestPath);
   return [
+    ...failures,
     ...validateDeclaredVersions({
       packageJson,
       packagePath,
@@ -97,6 +132,7 @@ const validatePackage = ({
 export const validateEffectPackageVersions = ({
   workspaceRoot,
   runtimeVersion,
+  acceptedEffectDependencies = {},
 }) => {
   const failures = [];
   const packagesRoot = path.join(workspaceRoot, "packages");
@@ -114,6 +150,7 @@ export const validateEffectPackageVersions = ({
         manifestPath,
         runtimeVersion,
         runtimeRange,
+        acceptedEffectDependencies,
       })
     );
   }
