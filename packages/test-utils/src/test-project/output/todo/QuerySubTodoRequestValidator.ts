@@ -44,6 +44,10 @@ export class QuerySubTodoRequestValidator extends RequestValidator<IQuerySubTodo
     if (headerMultiplicityIssues.length > 0) {
       error.addHeaderIssues(headerMultiplicityIssues);
     }
+    const headerRecordKeyIssues = this.findRecordKeyIdentityIssues(request.header, headerSchema);
+    if (headerRecordKeyIssues.length > 0) {
+      error.addHeaderIssues(headerRecordKeyIssues);
+    }
     const headerResult = this.safeParseAs<IQuerySubTodoRequestHeader>(headerSchema, coercedHeader);
     if (!headerResult.success) {
       error.addHeaderIssues(headerResult.error.issues);
@@ -60,6 +64,10 @@ export class QuerySubTodoRequestValidator extends RequestValidator<IQuerySubTodo
     const queryMultiplicityIssues = this.findMultiplicityIssues(request.query, querySchema, true);
     if (queryMultiplicityIssues.length > 0) {
       error.addQueryIssues(queryMultiplicityIssues);
+    }
+    const queryRecordKeyIssues = this.findRecordKeyIdentityIssues(request.query, querySchema);
+    if (queryRecordKeyIssues.length > 0) {
+      error.addQueryIssues(queryRecordKeyIssues);
     }
     const queryResult = this.safeParseAs<IQuerySubTodoRequestQuery>(querySchema, coercedQuery);
     if (!queryResult.success) {

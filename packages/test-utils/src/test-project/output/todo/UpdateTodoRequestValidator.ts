@@ -43,6 +43,10 @@ export class UpdateTodoRequestValidator extends RequestValidator<IUpdateTodoRequ
     if (headerMultiplicityIssues.length > 0) {
       error.addHeaderIssues(headerMultiplicityIssues);
     }
+    const headerRecordKeyIssues = this.findRecordKeyIdentityIssues(request.header, headerSchema);
+    if (headerRecordKeyIssues.length > 0) {
+      error.addHeaderIssues(headerRecordKeyIssues);
+    }
     const headerResult = this.safeParseAs<IUpdateTodoRequestHeader>(headerSchema, coercedHeader);
     if (!headerResult.success) {
       error.addHeaderIssues(headerResult.error.issues);

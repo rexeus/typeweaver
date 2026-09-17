@@ -5,6 +5,7 @@ import type {
   HttpMethod,
   HttpParamSchema,
   HttpQuerySchema,
+  HttpRequestHeaderSchema,
   HttpStatusCode,
   SecurityRequirements,
   SecuritySchemeDefinition,
@@ -90,7 +91,7 @@ export type NormalizedOperation = {
 };
 
 export type NormalizedRequest = {
-  readonly header?: HttpHeaderSchema;
+  readonly header?: HttpRequestHeaderSchema;
   readonly param?: HttpParamSchema;
   readonly query?: HttpQuerySchema;
   readonly body?: NormalizedHttpBody;

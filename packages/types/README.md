@@ -53,8 +53,11 @@ request interface, for example:
 
 Only declared request parts appear with a precise type. The file also emits
 `IRaw<OperationId>Request` (for example `IRawCreateTodoRequest`), the raw transport form used when
-request validation is not statically guaranteed. See the
-[typed HTTP boundary migration guide](../../docs/migrations/typed-http-boundaries.md).
+request validation is not statically guaranteed. Raw aliases derive from `IRawHttpRequest` and
+specialize only the router-guaranteed path parameters: query/header stay open transport records with
+lowercase/runtime keys and undeclared values possible, values are always
+`string | readonly string[]`, `method` stays `HttpMethod`, and the body is optional `unknown`. See
+the [typed HTTP boundary migration guide](../../docs/migrations/typed-http-boundaries.md).
 
 ### Response file
 
@@ -129,7 +132,13 @@ The validator:
   array schemas and rejecting repeated values for scalar schemas;
 - groups issues by request part;
 - returns the parsed Zod value;
-- preserves the request method and concrete path unchanged;
+- parses every own raw record key with the record's key schema before the container parse and
+  reports an explicit issue when the key fails parsing, produces a non-string, changes identity, or
+  resolves to reserved `__proto__` (`constructor` and `toString` remain ordinary supported keys);
+- normalizes `method` to the operation's declared method, so a HEAD request routed to a GET
+  operation reports `HttpMethod.GET`;
+- preserves the concrete request `path` string unchanged and does not re-derive path parameters from
+  it, so the validated `param` values come from the transport request;
 - follows the schema's object behavior, including removal of unknown object keys for ordinary Zod
   objects.
 

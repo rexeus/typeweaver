@@ -470,10 +470,24 @@ describe("ApiClient query string construction", () => {
     expect(getFetchCall(mockFetch).url).toBe("http://localhost:3000/todos");
   });
 
-  test("omits trailing question mark when serialized query is empty", async () => {
+  test("rejects an empty query array before fetch", async () => {
+    await expectRequestSerializationFailure(
+      {
+        path: "/todos",
+        query: { emptyTags: [] } as unknown as ClientHttpQuery,
+      },
+      {
+        location: "query",
+        key: "emptyTags",
+        reason: "empty-array",
+        valueType: "array",
+      }
+    );
+  });
+
+  test("omits trailing question mark when all query values are undefined", async () => {
     const query = {
       priority: undefined,
-      emptyTags: [],
       skippedTags: [undefined, undefined],
     } as unknown as ClientHttpQuery;
 
@@ -1099,6 +1113,7 @@ describe("ApiClient request header flattening", () => {
   test("omits undefined header values while preserving empty strings, scalars, and arrays", async () => {
     const header = {
       "X-Empty-Value": "",
+      "X-Empty-Array": [],
       "X-Scalar-Value": "present",
       "X-Multi-Value": ["first", "second"],
       "X-Undefined-Value": undefined,
@@ -1107,9 +1122,100 @@ describe("ApiClient request header flattening", () => {
     const { mockFetch } = await sendRaw({ header });
 
     expect(getFetchCall(mockFetch).init.headers).toStrictEqual({
+      "X-Empty-Array": "",
       "X-Empty-Value": "",
       "X-Multi-Value": "first, second",
       "X-Scalar-Value": "present",
+    });
+  });
+});
+
+describe("ApiClient reserved record keys", () => {
+  const withOwnProtoKey = <TValue>(value: TValue): Record<string, TValue> => {
+    const record: Record<string, TValue> = {};
+    Object.defineProperty(record, "__proto__", {
+      value,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+    return record;
+  };
+
+  test("rejects an own __proto__ query key before fetch", async () => {
+    await expectRequestSerializationFailure(
+      { query: withOwnProtoKey("value") },
+      {
+        location: "query",
+        key: "__proto__",
+        reason: "reserved-key",
+        valueType: "string",
+      }
+    );
+  });
+
+  test("rejects an own __proto__ header key before fetch", async () => {
+    await expectRequestSerializationFailure(
+      { header: withOwnProtoKey("value") },
+      {
+        location: "header",
+        key: "__proto__",
+        reason: "reserved-key",
+        valueType: "string",
+      }
+    );
+  });
+
+  test("rejects an own __proto__ path parameter before fetch", async () => {
+    await expectRequestSerializationFailure(
+      { path: "/todos/:todoId", param: withOwnProtoKey("value") },
+      {
+        location: "path",
+        key: "__proto__",
+        reason: "reserved-key",
+        valueType: "string",
+      }
+    );
+  });
+
+  test("serializes ordinary embedded path placeholders", async () => {
+    const { mockFetch } = await sendRaw({
+      path: "/files/:fileId.:format",
+      param: { fileId: "report", format: "json" },
+    });
+
+    expect(getFetchCall(mockFetch).url).toBe(
+      "http://localhost:3000/files/report.json"
+    );
+  });
+
+  test("serializes constructor and toString path parameters", async () => {
+    const { mockFetch } = await sendRaw({
+      path: "/todos/:constructor/:toString",
+      param: { constructor: "a", toString: "b" },
+    });
+
+    expect(getFetchCall(mockFetch).url).toBe("http://localhost:3000/todos/a/b");
+  });
+
+  test("serializes constructor and toString query and header keys", async () => {
+    const query: Record<string, string> = {
+      constructor: "c",
+      toString: "t",
+    };
+    const header: Record<string, string> = {
+      constructor: "c",
+      toString: "t",
+    };
+
+    const { mockFetch } = await sendRaw({ query, header });
+    const call = getFetchCall(mockFetch);
+
+    expect(call.url).toContain("constructor=c");
+    expect(call.url).toContain("toString=t");
+    expect(call.init.headers).toMatchObject({
+      constructor: "c",
+      toString: "t",
     });
   });
 });

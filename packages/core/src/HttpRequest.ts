@@ -40,22 +40,27 @@ export type IRawHttpRequest = {
   readonly method: HttpMethod;
 };
 
-type RawHttpPartValue<T> =
-  Exclude<T, undefined> extends readonly unknown[] ? readonly string[] : string;
-
-type RawHttpPart<T> =
+/**
+ * Path parameters are guaranteed for a matched route, so the raw container is
+ * required when the operation declares one and absent otherwise.
+ */
+type RawHttpParamProperty<T> =
   T extends Readonly<Record<string, unknown>>
-    ? { readonly [Key in keyof T]: RawHttpPartValue<T[Key]> }
-    : undefined;
+    ? { readonly param: Readonly<{ [Key in keyof T]: string }> }
+    : { readonly param?: undefined };
 
 /**
- * Derives the operation-specific raw transport request from a validated
- * generated request while preserving required and optional properties.
+ * Derives the operation-specific raw transport request by narrowing
+ * `IRawHttpRequest` to the route's guaranteed path parameters.
+ *
+ * Raw query and header stay the open `IRawHttpQuery`/`IRawHttpHeader` records:
+ * adapters emit lowercase runtime keys, undeclared keys, and repeated or
+ * comma-delimited values, none of which the validated schema can promise.
+ * `method` stays `HttpMethod` because a HEAD request may fall back to a GET
+ * route, and the body stays optional `unknown`.
  */
-export type IRawHttpRequestFor<TRequest extends IValidatedHttpRequest> = {
-  readonly [Key in keyof TRequest]: Key extends "body"
-    ? unknown
-    : Key extends "header" | "param" | "query"
-      ? RawHttpPart<TRequest[Key]>
-      : TRequest[Key];
-};
+export type IRawHttpRequestFor<TRequest extends IValidatedHttpRequest> = Omit<
+  IRawHttpRequest,
+  "param"
+> &
+  RawHttpParamProperty<TRequest["param"]>;

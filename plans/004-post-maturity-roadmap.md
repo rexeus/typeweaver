@@ -19,10 +19,11 @@ Independent review found that neither open PR should merge unchanged. PR #214 ha
 documentation-verification defects (stale doctor guidance in two onboarding paths), an implicit
 rather than reproduced link-discovery gap, and published `@effect/*` caret ranges that drifted off
 the Effect 3.22.0 baseline in fresh packed consumers. PR #213 has public type/runtime contract
-defects around dynamic validation, raw transport shapes, and record-array normalization. Issue #215
-is implemented by open, review-ready PR #218 at `d8440f9f`, stacked on PR #214, and awaits human
-review and merge; #216 needs a short contract-design step; #217 must be split between present-day
-workspace compatibility and a future coordinated Effect 4 migration.
+defects around dynamic validation, raw transport shapes, and record-array normalization. PR #213 has
+been repaired on branch `codex/issue-206-typed-http-boundary` and now targets the PR #218 branch; it
+awaits fresh CI. Issue #215 is implemented by open, review-ready PR #218 at `d8440f9f`, stacked on
+PR #214, and awaits human review and merge; #216 needs a short contract-design step; #217 must be
+split between present-day workspace compatibility and a future coordinated Effect 4 migration.
 
 ## Related plans
 
@@ -83,8 +84,9 @@ workspace compatibility and a future coordinated Effect 4 migration.
 - [ ] 3. **Make typed HTTP boundaries truthful**
   - **Outcome:** PR #213's raw, validated, dynamic-mode, and record contracts agree at type and
     runtime boundaries.
-  - **Evidence:** [Plan 007](007-typed-http-boundaries-pr-213.md) is complete and all fresh checks
-    pass.
+  - **Evidence:** [Plan 007](007-typed-http-boundaries-pr-213.md) is IN PROGRESS. The repair is
+    stacked on the PR #218 branch (`fix/strict-object-never-warning`) and awaits fresh PR #213 CI
+    before it can be marked DONE.
 - [ ] 4. **Add generated-output drift checking**
   - **Outcome:** `typeweaver generate --check` detects added, removed, and changed output without
     mutating the configured directory.

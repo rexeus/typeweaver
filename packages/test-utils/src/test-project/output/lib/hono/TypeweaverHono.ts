@@ -92,24 +92,43 @@ export type HonoResponseValidationErrorHandler = (
 ) => Promise<IHttpResponse> | IHttpResponse;
 
 /**
+ * Makes `validateRequests` mandatory when the router cannot statically
+ * guarantee which request shape reaches a handler.
+ *
+ * A literal `false` always receives raw requests and a dynamic `boolean` may
+ * receive either shape, so the caller must state the mode explicitly. The
+ * default and literal `true` modes keep the option optional because omitting it
+ * means validated requests at runtime.
+ */
+type RequireExplicitValidation<TValidateRequests extends boolean> = [TValidateRequests] extends [
+  true,
+]
+  ? unknown
+  : { readonly validateRequests: TValidateRequests };
+
+/**
  * Configuration options for TypeweaverHono routers.
  * @template RequestHandlers - Type containing all request handler methods
  * @template HonoEnv - Hono environment type for middleware context
+ * @template TValidateRequests - Request validation mode; defaults to `true`
  */
 export type TypeweaverHonoOptions<
   RequestHandlers,
   HonoEnv extends Env = BlankEnv,
-  TValidateRequests extends boolean = boolean,
+  TValidateRequests extends boolean = true,
 > = HonoOptions<HonoEnv> & {
   /**
    * Request handler methods for each operation.
-   * Each handler receives a request (validated if `validateRequests` is true) and Hono context.
+   * Each handler receives a request whose shape matches the validation mode.
    */
   readonly requestHandlers: RequestHandlers;
 
   /**
    * Enable request validation using generated validators.
    * When false, requests are passed through without validation.
+   *
+   * Required when the router is specialized as `false` or `boolean` so the
+   * handler request type always matches runtime behavior.
    * @default true
    */
   readonly validateRequests?: TValidateRequests;
@@ -165,7 +184,7 @@ export type TypeweaverHonoOptions<
    * @default true
    */
   readonly handleUnknownErrors?: HonoUnknownErrorHandler | boolean;
-};
+} & RequireExplicitValidation<TValidateRequests>;
 
 /**
  * Inputs used by generated and custom Hono routers to handle one operation.
@@ -199,7 +218,7 @@ export abstract class TypeweaverHono<
   HonoEnv extends Env = BlankEnv,
   HonoSchema extends Schema = BlankSchema,
   HonoBasePath extends string = "/",
-  TValidateRequests extends boolean = boolean,
+  TValidateRequests extends boolean = true,
 > extends Hono<HonoEnv, HonoSchema, HonoBasePath> {
   /**
    * Adapter for converting between Hono and typeweaver request/response formats.

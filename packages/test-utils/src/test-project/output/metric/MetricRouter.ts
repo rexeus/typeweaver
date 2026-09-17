@@ -19,6 +19,14 @@ import type { GetMetricResponse } from "./GetMetricResponse.js";
 import { GetMetricResponseValidator } from "./GetMetricResponseValidator.js";
 
 import type {
+  IGetMetricKeyedLabelsRequest,
+  IRawGetMetricKeyedLabelsRequest,
+} from "./GetMetricKeyedLabelsRequest.js";
+import { GetMetricKeyedLabelsRequestValidator } from "./GetMetricKeyedLabelsRequestValidator.js";
+import type { GetMetricKeyedLabelsResponse } from "./GetMetricKeyedLabelsResponse.js";
+import { GetMetricKeyedLabelsResponseValidator } from "./GetMetricKeyedLabelsResponseValidator.js";
+
+import type {
   IGetMetricLabelsRequest,
   IRawGetMetricLabelsRequest,
 } from "./GetMetricLabelsRequest.js";
@@ -26,11 +34,21 @@ import { GetMetricLabelsRequestValidator } from "./GetMetricLabelsRequestValidat
 import type { GetMetricLabelsResponse } from "./GetMetricLabelsResponse.js";
 import { GetMetricLabelsResponseValidator } from "./GetMetricLabelsResponseValidator.js";
 
+import type {
+  IGetMetricSamplesRequest,
+  IRawGetMetricSamplesRequest,
+} from "./GetMetricSamplesRequest.js";
+import { GetMetricSamplesRequestValidator } from "./GetMetricSamplesRequestValidator.js";
+import type { GetMetricSamplesResponse } from "./GetMetricSamplesResponse.js";
+import { GetMetricSamplesResponseValidator } from "./GetMetricSamplesResponseValidator.js";
+
 type HandlerRequest<TValidateRequests extends boolean, TValidated, TRaw> = [
   TValidateRequests,
 ] extends [true]
   ? TValidated
-  : TRaw;
+  : [TValidateRequests] extends [false]
+    ? TRaw
+    : TValidated | TRaw;
 
 export type ServerMetricApiHandler<
   TState extends Record<string, unknown> = Record<string, unknown>,
@@ -46,11 +64,33 @@ export type ServerMetricApiHandler<
   >;
 
   /**
+   * Read label records whose key schema must preserve raw keys
+   */
+  handleGetMetricKeyedLabelsRequest: RequestHandler<
+    HandlerRequest<
+      TValidateRequests,
+      IGetMetricKeyedLabelsRequest,
+      IRawGetMetricKeyedLabelsRequest
+    >,
+    GetMetricKeyedLabelsResponse,
+    TState
+  >;
+
+  /**
    * Read dynamic metric label records
    */
   handleGetMetricLabelsRequest: RequestHandler<
     HandlerRequest<TValidateRequests, IGetMetricLabelsRequest, IRawGetMetricLabelsRequest>,
     GetMetricLabelsResponse,
+    TState
+  >;
+
+  /**
+   * Read metric sample series by label
+   */
+  handleGetMetricSamplesRequest: RequestHandler<
+    HandlerRequest<TValidateRequests, IGetMetricSamplesRequest, IRawGetMetricSamplesRequest>,
+    GetMetricSamplesResponse,
     TState
   >;
 };
@@ -80,12 +120,30 @@ export class MetricRouter<
     });
 
     this.route({
+      operationId: "GetMetricKeyedLabels",
+      method: HttpMethod.GET,
+      path: "/metrics/:metricId/keyed-labels",
+      requestValidator: new GetMetricKeyedLabelsRequestValidator(),
+      responseValidator: new GetMetricKeyedLabelsResponseValidator(),
+      handler: this.requestHandlers.handleGetMetricKeyedLabelsRequest.bind(this.requestHandlers),
+    });
+
+    this.route({
       operationId: "GetMetricLabels",
       method: HttpMethod.GET,
       path: "/metrics/:metricId/labels",
       requestValidator: new GetMetricLabelsRequestValidator(),
       responseValidator: new GetMetricLabelsResponseValidator(),
       handler: this.requestHandlers.handleGetMetricLabelsRequest.bind(this.requestHandlers),
+    });
+
+    this.route({
+      operationId: "GetMetricSamples",
+      method: HttpMethod.GET,
+      path: "/metrics/:metricId/samples",
+      requestValidator: new GetMetricSamplesRequestValidator(),
+      responseValidator: new GetMetricSamplesResponseValidator(),
+      handler: this.requestHandlers.handleGetMetricSamplesRequest.bind(this.requestHandlers),
     });
   }
 }

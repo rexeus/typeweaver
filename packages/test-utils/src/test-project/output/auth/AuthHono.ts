@@ -28,7 +28,9 @@ type HandlerRequest<TValidateRequests extends boolean, TValidated, TRaw> = [
   TValidateRequests,
 ] extends [true]
   ? TValidated
-  : TRaw;
+  : [TValidateRequests] extends [false]
+    ? TRaw
+    : TValidated | TRaw;
 
 export type HonoAuthApiHandler<TValidateRequests extends boolean = true> = {
   /**

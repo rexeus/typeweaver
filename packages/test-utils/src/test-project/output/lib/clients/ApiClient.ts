@@ -187,6 +187,12 @@ export abstract class ApiClient {
   protected async execute(request: RequestCommand): Promise<IHttpResponse> {
     const { method, path, header, query, param, body } = request;
 
+    this.assertNoReservedKeys(param, "path");
+    this.assertNoReservedKeys(query, "query");
+    this.assertNoReservedKeys(header, "header");
+    this.assertNoReservedKeys(this.defaultQuery, "query");
+    this.assertNoReservedKeys(this.defaultHeaders, "header");
+
     const pathWithParam = this.createPath(path, param);
     const relativeUrl = this.createUrl(pathWithParam, query);
     const fullUrl = this.buildFullUrl(relativeUrl);
@@ -205,6 +211,26 @@ export abstract class ApiClient {
     });
 
     return await this.createResponse(response, method, fullUrl);
+  }
+
+  /**
+   * Rejects an own `__proto__` key before URL or header construction.
+   *
+   * `__proto__` cannot be serialized or round-tripped as an ordinary HTTP
+   * key, so failing explicitly is safer than dropping or mutating it.
+   * `constructor` and `toString` are ordinary supported keys.
+   */
+  private assertNoReservedKeys(
+    record: Readonly<Record<string, unknown>> | undefined,
+    location: "header" | "path" | "query",
+  ): void {
+    if (record === undefined || !Object.hasOwn(record, "__proto__")) {
+      return;
+    }
+
+    const value: unknown = Object.getOwnPropertyDescriptor(record, "__proto__")?.value;
+
+    throw new RequestSerializationError(location, "__proto__", value, "reserved-key");
   }
 
   private async performFetch(method: string, url: string, init: RequestInit): Promise<Response> {
@@ -321,9 +347,15 @@ export abstract class ApiClient {
       if (value === undefined) {
         continue;
       }
-      flattened[key] = Array.isArray(value)
-        ? value.map((item) => this.serializeHttpScalar(item, "header", key)).join(", ")
-        : this.serializeHttpScalar(value, "header", key);
+      if (Array.isArray(value)) {
+        // An empty header list round-trips as the empty comma-list value and is
+        // normalized back to `[]` by the validator for array header schemas.
+        flattened[key] = value
+          .map((item) => this.serializeHttpScalar(item, "header", key))
+          .join(", ");
+        continue;
+      }
+      flattened[key] = this.serializeHttpScalar(value, "header", key);
     }
     return flattened;
   }
@@ -532,6 +564,9 @@ export abstract class ApiClient {
       if (!Array.isArray(value)) {
         params.append(key, this.serializeHttpScalar(value, "query", key));
         continue;
+      }
+      if (value.length === 0) {
+        throw new RequestSerializationError("query", key, value, "empty-array");
       }
       for (const item of value) {
         if (item !== undefined) {

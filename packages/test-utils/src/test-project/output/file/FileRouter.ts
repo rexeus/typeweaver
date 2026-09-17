@@ -38,7 +38,9 @@ type HandlerRequest<TValidateRequests extends boolean, TValidated, TRaw> = [
   TValidateRequests,
 ] extends [true]
   ? TValidated
-  : TRaw;
+  : [TValidateRequests] extends [false]
+    ? TRaw
+    : TValidated | TRaw;
 
 export type ServerFileApiHandler<
   TState extends Record<string, unknown> = Record<string, unknown>,

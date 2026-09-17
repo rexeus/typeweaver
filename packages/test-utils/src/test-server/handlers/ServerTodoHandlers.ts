@@ -241,7 +241,10 @@ export class ServerTodoHandlers implements ServerTodoApiHandler<
       throw this.throwError;
     }
 
-    const nextToken = request.query?.nextToken;
+    const rawNextToken = request.query?.nextToken;
+    const nextToken = Array.isArray(rawNextToken)
+      ? rawNextToken[0]
+      : rawNextToken;
 
     if (nextToken === undefined) {
       return createQueryTodoSuccessResponse();

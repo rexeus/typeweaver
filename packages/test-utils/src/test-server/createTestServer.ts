@@ -10,7 +10,6 @@ import { TestServerSetupError } from "./errors/TestServerSetupError.js";
 import { AccountHandlers } from "./handlers/AccountApiHandler.js";
 import { AuthHandlers } from "./handlers/AuthHandlers.js";
 import { TodoHandlers } from "./handlers/TodoHandlers.js";
-import type { TypeweaverHonoOptions } from "../test-project/output/lib/hono/index.js";
 import type { ServerType } from "@hono/node-server";
 import type { AddressInfo } from "node:net";
 
@@ -36,7 +35,18 @@ export type TestServerOptions = {
   readonly getTodoDelayMs?: number;
   /** Observe an accepted request before routing it. */
   readonly onRequest?: (request: Request) => void;
-} & Omit<TypeweaverHonoOptions<unknown>, "requestHandlers">;
+  /**
+   * Request validation mode applied to every mounted router.
+   *
+   * Optional here because this helper chooses the mode at construction time;
+   * each generated router is then built as `<boolean>` with an explicit mode so
+   * its handler types match runtime behavior.
+   */
+  readonly validateRequests?: boolean;
+} & Omit<
+  ConstructorParameters<typeof TodoHono<boolean>>[0],
+  "requestHandlers" | "validateRequests"
+>;
 
 /**
  * Result returned by {@link createTestServer} and {@link createPrefixedTestServer}.
@@ -70,20 +80,25 @@ export function createTestHono(options?: TestServerOptions): Hono {
     return next();
   });
 
-  const todoRouter = new TodoHono({
+  const validateRequests = options?.validateRequests ?? true;
+
+  const todoRouter = new TodoHono<boolean>({
     requestHandlers: new TodoHandlers(
       options?.throwTodoError,
       options?.getTodoDelayMs
     ),
     ...options,
+    validateRequests,
   });
-  const authRouter = new AuthHono({
+  const authRouter = new AuthHono<boolean>({
     requestHandlers: new AuthHandlers(options?.throwAuthError),
     ...options,
+    validateRequests,
   });
-  const accountRouter = new AccountHono({
+  const accountRouter = new AccountHono<boolean>({
     requestHandlers: new AccountHandlers(options?.throwAccountError),
     ...options,
+    validateRequests,
   });
 
   app.route("/", authRouter);

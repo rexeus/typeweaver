@@ -11,12 +11,26 @@ import { ApiClient, type ApiClientProps } from "../lib/clients/index.js";
 import { GetMetricRequestCommand } from "./GetMetricRequestCommand.js";
 import type { GetMetricResponse } from "./GetMetricResponse.js";
 
+import { GetMetricKeyedLabelsRequestCommand } from "./GetMetricKeyedLabelsRequestCommand.js";
+import type { GetMetricKeyedLabelsResponse } from "./GetMetricKeyedLabelsResponse.js";
+
 import { GetMetricLabelsRequestCommand } from "./GetMetricLabelsRequestCommand.js";
 import type { GetMetricLabelsResponse } from "./GetMetricLabelsResponse.js";
 
-export type MetricRequestCommands = GetMetricRequestCommand | GetMetricLabelsRequestCommand;
+import { GetMetricSamplesRequestCommand } from "./GetMetricSamplesRequestCommand.js";
+import type { GetMetricSamplesResponse } from "./GetMetricSamplesResponse.js";
 
-export type MetricResponses = GetMetricResponse | GetMetricLabelsResponse;
+export type MetricRequestCommands =
+  | GetMetricRequestCommand
+  | GetMetricKeyedLabelsRequestCommand
+  | GetMetricLabelsRequestCommand
+  | GetMetricSamplesRequestCommand;
+
+export type MetricResponses =
+  | GetMetricResponse
+  | GetMetricKeyedLabelsResponse
+  | GetMetricLabelsResponse
+  | GetMetricSamplesResponse;
 
 export class MetricClient extends ApiClient {
   public constructor(props: ApiClientProps) {
@@ -29,9 +43,21 @@ export class MetricClient extends ApiClient {
   public async send(command: GetMetricRequestCommand): Promise<GetMetricResponse>;
 
   /**
+   * Read label records whose key schema must preserve raw keys
+   */
+  public async send(
+    command: GetMetricKeyedLabelsRequestCommand,
+  ): Promise<GetMetricKeyedLabelsResponse>;
+
+  /**
    * Read dynamic metric label records
    */
   public async send(command: GetMetricLabelsRequestCommand): Promise<GetMetricLabelsResponse>;
+
+  /**
+   * Read metric sample series by label
+   */
+  public async send(command: GetMetricSamplesRequestCommand): Promise<GetMetricSamplesResponse>;
 
   public async send(command: MetricRequestCommands): Promise<MetricResponses> {
     const response = await this.execute(command);

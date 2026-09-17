@@ -13,7 +13,9 @@ import { UploadFileCommand } from "./operations/UploadFileCommand.js";
 import { DownloadFileContentCommand } from "./operations/DownloadFileContentCommand.js";
 import { GetFileMetadataCommand } from "./operations/GetFileMetadataCommand.js";
 import { GetMetricCommand } from "./operations/GetMetricCommand.js";
+import { GetMetricKeyedLabelsCommand } from "./operations/GetMetricKeyedLabelsCommand.js";
 import { GetMetricLabelsCommand } from "./operations/GetMetricLabelsCommand.js";
+import { GetMetricSamplesCommand } from "./operations/GetMetricSamplesCommand.js";
 import { CreateSubTodoCommand } from "./operations/CreateSubTodoCommand.js";
 import { CreateTodoCommand } from "./operations/CreateTodoCommand.js";
 import { DeleteSubTodoCommand } from "./operations/DeleteSubTodoCommand.js";
@@ -40,7 +42,9 @@ process.exitCode = await runGeneratedCommandCli({
     DownloadFileContentCommand,
     GetFileMetadataCommand,
     GetMetricCommand,
+    GetMetricKeyedLabelsCommand,
     GetMetricLabelsCommand,
+    GetMetricSamplesCommand,
     CreateSubTodoCommand,
     CreateTodoCommand,
     DeleteSubTodoCommand,

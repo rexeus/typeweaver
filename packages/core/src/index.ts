@@ -18,6 +18,7 @@ export * from "./RequestValidator.js";
 export * from "./ResponseValidationError.js";
 export * from "./ResponseValidator.js";
 export * from "./UnknownResponse.js";
+export * from "./ReservedPathParameter.js";
 export * from "./defineOperation.js";
 export * from "./defineResponse.js";
 export * from "./defineSpec.js";

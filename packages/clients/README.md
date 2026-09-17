@@ -136,8 +136,9 @@ order, and header arrays retain Typeweaver's comma-separated header-list represe
 
 Unsupported input is rejected before `fetch` with `RequestSerializationError`. Its stable `code`,
 `location`, `key`, `reason`, and `valueType` fields distinguish invalid dates, non-finite numbers,
-nulls, nested arrays, and unsupported types. See the
-[typed HTTP boundary migration guide](../../docs/migrations/typed-http-boundaries.md) for the
+nulls, nested arrays, empty query arrays, unsupported types, and a reserved `__proto__` param,
+query, or header key (`reserved-key`). `constructor` and `toString` are ordinary supported keys. See
+the [typed HTTP boundary migration guide](../../docs/migrations/typed-http-boundaries.md) for the
 complete serialization table.
 
 ## Response behavior

@@ -35,8 +35,8 @@ import type {
 
 type TodoHonoTestOptions = Omit<
   ConstructorParameters<typeof TodoHono<false>>[0],
-  "requestHandlers"
->;
+  "requestHandlers" | "validateRequests"
+> & { readonly validateRequests?: false };
 
 type CapturedResponseValidationCall = {
   readonly error: ResponseValidationError;

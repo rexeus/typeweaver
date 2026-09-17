@@ -4,6 +4,7 @@ import { defineOperation } from "../../src/defineOperation.js";
 import { defineResponse } from "../../src/defineResponse.js";
 import { HttpMethod } from "../../src/HttpMethod.js";
 import { HttpStatusCode } from "../../src/HttpStatusCode.js";
+import { ReservedPathParameterError } from "../../src/ReservedPathParameter.js";
 
 describe("defineOperation", () => {
   test("returns the authored operation definition instance", () => {
@@ -90,5 +91,53 @@ describe("defineOperation", () => {
 
     expect(operation.request).toBe(request);
     expect(operation.responses).toBe(responses);
+  });
+});
+
+describe("defineOperation reserved path parameters", () => {
+  test.each([
+    "/todos/:__proto__",
+    "/files/:__proto__.:format",
+    "/:__proto__-suffix",
+    "/files/:__proto__{suffix}",
+    "/:__proto__!suffix",
+    "/a/:x/:__proto__",
+  ])("rejects the reserved path parameter in %s at runtime", (path: string) => {
+    expect(() =>
+      defineOperation({
+        operationId: "reservedPath",
+        method: HttpMethod.GET,
+        path,
+        summary: "Reserved path parameter",
+        request: {},
+        responses: [],
+      })
+    ).toThrow(ReservedPathParameterError);
+  });
+
+  test("accepts constructor and toString path parameters", () => {
+    const operation = defineOperation({
+      operationId: "readByGeneratedNames",
+      method: HttpMethod.GET,
+      path: "/todos/:constructor/:toString",
+      summary: "Ordinary path parameter names",
+      request: {},
+      responses: [],
+    });
+
+    expect(operation.path).toBe("/todos/:constructor/:toString");
+  });
+
+  test("preserves ordinary embedded placeholders", () => {
+    const operation = defineOperation({
+      operationId: "readFileFormat",
+      method: HttpMethod.GET,
+      path: "/files/:fileId.:format",
+      summary: "Ordinary embedded placeholders",
+      request: {},
+      responses: [],
+    });
+
+    expect(operation.path).toBe("/files/:fileId.:format");
   });
 });

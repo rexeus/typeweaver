@@ -1,7 +1,9 @@
+import { ReservedPathParameterError } from "@rexeus/typeweaver-core";
 import type { HttpMethod } from "@rexeus/typeweaver-core";
 import { captureError, TestAssertionError } from "test-utils";
 import { assert, describe, expect, test } from "vitest";
 import {
+  AmbiguousPathSegmentError,
   ConflictingPathParameterNameError,
   DuplicateRouteRegistrationError,
 } from "../../src/lib/errors/index.js";
@@ -820,5 +822,157 @@ describe("Router compatible route extensions", () => {
         conflictingParameterName: "id",
       })
     );
+  });
+});
+
+describe("Router reserved and generated path parameters", () => {
+  test("rejects a ':__proto__' placeholder at registration", () => {
+    const router = new Router();
+
+    expect(() => router.add(route("GET", "/todos/:__proto__"))).toThrow(
+      ReservedPathParameterError
+    );
+  });
+
+  test.each(["/files/:__proto__.:format", "/:__proto__-suffix"])(
+    "rejects the reserved placeholder in %s at registration",
+    (path: string) => {
+      const router = new Router();
+
+      expect(() => router.add(route("GET", path))).toThrow(
+        ReservedPathParameterError
+      );
+    }
+  );
+
+  test("preserves ordinary embedded placeholders", () => {
+    const router = new Router();
+    router.add(route("GET", "/files/:fileId.:format"));
+
+    const match = router.match("GET", "/files/report.json");
+
+    assert(match);
+  });
+
+  test("keeps constructor and toString params as own properties", () => {
+    const router = new Router();
+    router.add(route("GET", "/todos/:constructor/:toString"));
+
+    const match = router.match("GET", "/todos/a/b");
+    assert(match);
+
+    expect(
+      Object.getOwnPropertyDescriptor(match.params, "constructor")?.value
+    ).toBe("a");
+    expect(
+      Object.getOwnPropertyDescriptor(match.params, "toString")?.value
+    ).toBe("b");
+  });
+});
+
+describe("Router embedded segment placeholders", () => {
+  test("extracts multiple placeholders from one segment", () => {
+    const router = new Router();
+    router.add(route("GET", "/files/:fileId.:format", "get-file"));
+
+    expectMatch(router, "GET", "/files/report.json", {
+      operationId: "get-file",
+      params: { fileId: "report", format: "json" },
+    });
+  });
+
+  test("extracts placeholders around punctuation separators", () => {
+    const router = new Router();
+    router.add(route("GET", "/assets/:name-:hash.:ext", "get-asset"));
+
+    expectMatch(router, "GET", "/assets/logo-abc123.svg", {
+      operationId: "get-asset",
+      params: { name: "logo", hash: "abc123", ext: "svg" },
+    });
+  });
+
+  test("decodes embedded placeholder values", () => {
+    const router = new Router();
+    router.add(route("GET", "/files/:fileId.:format", "get-file"));
+
+    expectMatch(router, "GET", "/files/hello%20world.json", {
+      operationId: "get-file",
+      params: { fileId: "hello world", format: "json" },
+    });
+  });
+
+  test("keeps encoded dot-segment embedded values raw", () => {
+    const router = new Router();
+    router.add(route("GET", "/files/:fileId.:format", "get-file"));
+
+    expectMatch(router, "GET", "/files/%2e%2e.json", {
+      operationId: "get-file",
+      params: { fileId: "%2e%2e", format: "json" },
+    });
+  });
+
+  test("lets the trailing embedded placeholder capture the remainder", () => {
+    const router = new Router();
+    router.add(route("GET", "/files/:fileId.:format", "get-file"));
+
+    expectMatch(router, "GET", "/files/report.json.extra", {
+      operationId: "get-file",
+      params: { fileId: "report", format: "json.extra" },
+    });
+  });
+
+  test("prefers the more specific embedded pattern over a bare parameter", () => {
+    const router = new Router();
+    router.add(route("GET", "/files/:fileId", "bare-file"));
+    router.add(route("GET", "/files/:fileId.:format", "formatted-file"));
+
+    expectMatch(router, "GET", "/files/report.json", {
+      operationId: "formatted-file",
+      params: { fileId: "report", format: "json" },
+    });
+    expectMatch(router, "GET", "/files/report", {
+      operationId: "bare-file",
+      params: { fileId: "report" },
+    });
+  });
+
+  test("rejects ambiguous adjacent placeholders", () => {
+    const router = new Router();
+
+    expect(() => router.add(route("GET", "/files/:name:format"))).toThrow(
+      AmbiguousPathSegmentError
+    );
+  });
+
+  test("rejects a rename of the same embedded shape", () => {
+    const router = new Router();
+    router.add(route("GET", "/files/:fileId.:format"));
+
+    expect(() => router.add(route("GET", "/files/:name.:ext"))).toThrow(
+      ConflictingPathParameterNameError
+    );
+  });
+
+  test("rejects segments that do not match the embedded pattern", () => {
+    const router = new Router();
+    router.add(route("GET", "/files/:fileId.:format", "get-file"));
+
+    expectNoMatch(router, "GET", "/files/report");
+    expectNoMatch(router, "GET", "/files/.json");
+  });
+
+  test("keeps constructor and toString embedded params as own properties", () => {
+    const router = new Router();
+    router.add(route("GET", "/x/:constructor.:toString", "get-x"));
+
+    const match = router.match("GET", "/x/a.b");
+    assert(match);
+
+    expect(
+      Object.getOwnPropertyDescriptor(match.params, "constructor")?.value
+    ).toBe("a");
+    expect(
+      Object.getOwnPropertyDescriptor(match.params, "toString")?.value
+    ).toBe("b");
   });
 });

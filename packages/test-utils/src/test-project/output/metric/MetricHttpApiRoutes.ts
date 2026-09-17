@@ -21,9 +21,25 @@ export class MetricHttpApiRoutes extends AwsHttpApiGatewayRoutes {
 
     {
       /**
+       * GET: Read label records whose key schema must preserve raw keys
+       */
+      path: "/metrics/{metricId}/keyed-labels",
+      methods: [HttpMethod.GET],
+    },
+
+    {
+      /**
        * GET: Read dynamic metric label records
        */
       path: "/metrics/{metricId}/labels",
+      methods: [HttpMethod.GET],
+    },
+
+    {
+      /**
+       * GET: Read metric sample series by label
+       */
+      path: "/metrics/{metricId}/samples",
       methods: [HttpMethod.GET],
     },
   ];

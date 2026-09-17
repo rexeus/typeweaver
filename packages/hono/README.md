@@ -129,8 +129,10 @@ const router = new TodoHono({
 | `handleUnknownErrors`            | `true`   | sanitized 500 or custom mapper             |
 
 `validateRequests: true` (the default) gives each handler the generated validated Zod-output
-request. Literal `false` and a dynamic `boolean` expose `IRaw<OperationId>Request`, because
-validation is not statically guaranteed at the handler boundary.
+request. Literal `false` exposes `IRaw<OperationId>Request`, and a dynamic `boolean` exposes their
+union because validation is not statically guaranteed at the handler boundary. When the router is
+specialized as `false` or `boolean`, `validateRequests` is required so the handler request type
+always matches runtime behavior.
 
 Standard Hono options such as `strict` and `getPath` pass through the same options object.
 

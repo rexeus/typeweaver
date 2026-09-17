@@ -22,7 +22,11 @@ export * from "./operations/GetFileMetadataCommand.js";
 
 export * from "./operations/GetMetricCommand.js";
 
+export * from "./operations/GetMetricKeyedLabelsCommand.js";
+
 export * from "./operations/GetMetricLabelsCommand.js";
+
+export * from "./operations/GetMetricSamplesCommand.js";
 
 export * from "./operations/GetTodoCommand.js";
 

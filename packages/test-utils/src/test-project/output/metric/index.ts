@@ -8,6 +8,16 @@
 
 export * from "./EffectMetricApiHandler.js";
 
+export * from "./GetMetricKeyedLabelsRequest.js";
+
+export * from "./GetMetricKeyedLabelsRequestCommand.js";
+
+export * from "./GetMetricKeyedLabelsRequestValidator.js";
+
+export * from "./GetMetricKeyedLabelsResponse.js";
+
+export * from "./GetMetricKeyedLabelsResponseValidator.js";
+
 export * from "./GetMetricLabelsRequest.js";
 
 export * from "./GetMetricLabelsRequestCommand.js";
@@ -27,6 +37,16 @@ export * from "./GetMetricRequestValidator.js";
 export * from "./GetMetricResponse.js";
 
 export * from "./GetMetricResponseValidator.js";
+
+export * from "./GetMetricSamplesRequest.js";
+
+export * from "./GetMetricSamplesRequestCommand.js";
+
+export * from "./GetMetricSamplesRequestValidator.js";
+
+export * from "./GetMetricSamplesResponse.js";
+
+export * from "./GetMetricSamplesResponseValidator.js";
 
 export * from "./MetricClient.js";
 

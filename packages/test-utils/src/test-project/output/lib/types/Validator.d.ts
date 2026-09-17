@@ -8,7 +8,9 @@ export declare abstract class Validator {
     shape: Record<string, unknown>,
     caseSensitive: boolean,
   ): Map<string, SchemaInfo>;
-  protected getSchema(headerSchema: HttpHeaderSchema | HttpQuerySchema): Record<string, unknown>;
+  protected getSchema(
+    headerSchema: HttpHeaderSchemaLike | HttpQuerySchema,
+  ): Record<string, unknown>;
   protected safeParseAs<TOutput>(schema: z.ZodType, input: unknown): z.ZodSafeParseResult<TOutput>;
   protected requireRequestSchema<TSchema extends z.ZodType>(
     schema: TSchema | undefined,
@@ -16,16 +18,20 @@ export declare abstract class Validator {
   ): TSchema;
   protected findMultiplicityIssues(
     data: unknown,
-    schema: HttpHeaderSchema | HttpQuerySchema,
+    schema: HttpHeaderSchemaLike | HttpQuerySchema,
     caseSensitive: boolean,
+  ): z.core.$ZodIssue[];
+  protected findRecordKeyIdentityIssues(
+    data: unknown,
+    schema: HttpHeaderSchemaLike | HttpQuerySchema,
   ): z.core.$ZodIssue[];
   protected coerceToSchema(
     data: unknown,
     shape: Record<string, unknown>,
     caseSensitive: boolean,
   ): unknown;
-  protected coerceHeaderToSchema(header: unknown, schema: HttpHeaderSchema): unknown;
+  protected coerceHeaderToSchema(header: unknown, schema: HttpHeaderSchemaLike): unknown;
   protected coerceQueryToSchema(query: unknown, schema: HttpQuerySchema): unknown;
 }
-import type { HttpHeaderSchema, HttpQuerySchema } from "@rexeus/typeweaver-core";
+import type { HttpHeaderSchemaLike, HttpQuerySchema } from "@rexeus/typeweaver-core";
 import type { z } from "zod";

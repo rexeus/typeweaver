@@ -590,6 +590,31 @@
         "security": []
       }
     },
+    "/metrics/{metricId}/keyed-labels": {
+      "get": {
+        "operationId": "GetMetricKeyedLabels",
+        "summary": "Read label records whose key schema must preserve raw keys",
+        "tags": ["metrics"],
+        "parameters": [
+          {
+            "name": "metricId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/GetMetricKeyedLabelsSuccess"
+          }
+        },
+        "security": []
+      }
+    },
     "/metrics/{metricId}/labels": {
       "get": {
         "operationId": "GetMetricLabels",
@@ -610,6 +635,31 @@
         "responses": {
           "200": {
             "$ref": "#/components/responses/GetMetricLabelsSuccess"
+          }
+        },
+        "security": []
+      }
+    },
+    "/metrics/{metricId}/samples": {
+      "get": {
+        "operationId": "GetMetricSamples",
+        "summary": "Read metric sample series by label",
+        "tags": ["metrics"],
+        "parameters": [
+          {
+            "name": "metricId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/GetMetricSamplesSuccess"
           }
         },
         "security": []
@@ -2851,6 +2901,25 @@
           }
         }
       },
+      "GetMetricKeyedLabelsSuccess": {
+        "description": "The parsed keyed label records",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["application/json"]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/GetMetricKeyedLabelsSuccessBody"
+            }
+          }
+        }
+      },
       "GetMetricLabelsSuccess": {
         "description": "The parsed metric label records",
         "headers": {
@@ -2866,6 +2935,25 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/GetMetricLabelsSuccessBody"
+            }
+          }
+        }
+      },
+      "GetMetricSamplesSuccess": {
+        "description": "The parsed sample series by label",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["application/json"]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/GetMetricSamplesSuccessBody"
             }
           }
         }
@@ -3834,6 +3922,27 @@
         "required": ["metricId", "enabled"],
         "additionalProperties": false
       },
+      "GetMetricKeyedLabelsSuccessBody": {
+        "type": "object",
+        "properties": {
+          "metricId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "labels": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "number"
+            }
+          }
+        },
+        "required": ["metricId", "labels"],
+        "additionalProperties": false
+      },
       "GetMetricLabelsSuccessBody": {
         "type": "object",
         "properties": {
@@ -3862,6 +3971,30 @@
           }
         },
         "required": ["metricId", "labels", "flags"],
+        "additionalProperties": false
+      },
+      "GetMetricSamplesSuccessBody": {
+        "type": "object",
+        "properties": {
+          "metricId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "samples": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "required": ["metricId", "samples"],
         "additionalProperties": false
       },
       "CreateSubTodoSuccessBody": {

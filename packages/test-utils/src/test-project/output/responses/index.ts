@@ -26,7 +26,11 @@ export * from "./ForbiddenErrorResponse.js";
 
 export * from "./GetFileMetadataSuccessResponse.js";
 
+export * from "./GetMetricKeyedLabelsSuccessResponse.js";
+
 export * from "./GetMetricLabelsSuccessResponse.js";
+
+export * from "./GetMetricSamplesSuccessResponse.js";
 
 export * from "./GetMetricSuccessResponse.js";
 

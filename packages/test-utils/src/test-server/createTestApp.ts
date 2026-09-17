@@ -35,9 +35,20 @@ export type TestAppOptions = {
   readonly customResponses?: IHttpResponse;
   /** Maximum request body size forwarded to the app. */
   readonly maxBodySize?: number;
+  /**
+   * Request validation mode applied to every mounted router.
+   *
+   * Optional here because this helper chooses the mode at construction time;
+   * each generated router is then built as `<..., boolean>` with an explicit
+   * mode so its handler types match runtime behavior.
+   */
+  readonly validateRequests?: boolean;
 } & Omit<
-  TypeweaverRouterOptions<Record<string, RequestHandler<any, any, any>>>,
-  "requestHandlers"
+  TypeweaverRouterOptions<
+    Record<string, RequestHandler<any, any, any>>,
+    boolean
+  >,
+  "requestHandlers" | "validateRequests"
 >;
 
 export const DEFAULT_RUNTIME_TEST_APP_OPTIONS = {
@@ -49,14 +60,19 @@ export const DEFAULT_RUNTIME_TEST_APP_OPTIONS = {
   "maxBodySize" | "validateRequests" | "validateResponses"
 >;
 
+type SharedRouterOptions = Omit<
+  TypeweaverRouterOptions<
+    Record<string, RequestHandler<any, any, any>>,
+    boolean
+  >,
+  "requestHandlers"
+>;
+
 function createSharedRouterOptions(
   options?: TestAppOptions
-): Omit<
-  TypeweaverRouterOptions<Record<string, RequestHandler<any, any, any>>>,
-  "requestHandlers"
-> {
+): SharedRouterOptions {
   return {
-    validateRequests: options?.validateRequests,
+    validateRequests: options?.validateRequests ?? true,
     validateResponses: options?.validateResponses,
     handleHttpResponseErrors: options?.handleHttpResponseErrors,
     handleRequestValidationErrors: options?.handleRequestValidationErrors,
@@ -88,15 +104,15 @@ export function createTestApp(options?: TestAppOptions): TypeweaverApp {
     );
   }
 
-  const todoRouter = new TodoRouter({
+  const todoRouter = new TodoRouter<Record<string, unknown>, boolean>({
     requestHandlers: new ServerTodoHandlers(options?.throwTodoError),
     ...sharedRouterOptions,
   });
-  const authRouter = new AuthRouter({
+  const authRouter = new AuthRouter<Record<string, unknown>, boolean>({
     requestHandlers: new ServerAuthHandlers(options?.throwAuthError),
     ...sharedRouterOptions,
   });
-  const accountRouter = new AccountRouter({
+  const accountRouter = new AccountRouter<Record<string, unknown>, boolean>({
     requestHandlers: new ServerAccountHandlers(options?.throwAccountError),
     ...sharedRouterOptions,
   });

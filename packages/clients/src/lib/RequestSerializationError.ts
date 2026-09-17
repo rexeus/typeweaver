@@ -1,10 +1,12 @@
 export type RequestSerializationLocation = "header" | "path" | "query";
 
 export type RequestSerializationReason =
+  | "empty-array"
   | "invalid-date"
   | "nested-array"
   | "non-finite-number"
   | "null-value"
+  | "reserved-key"
   | "unsupported-type";
 
 function describeValueType(value: unknown): string {

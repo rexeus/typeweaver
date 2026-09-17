@@ -8,7 +8,9 @@ import {
 } from "./file/index.js";
 import {
   GetMetricDefinition,
+  GetMetricKeyedLabelsDefinition,
   GetMetricLabelsDefinition,
+  GetMetricSamplesDefinition,
 } from "./metric/index.js";
 import {
   CreateSubTodoDefinition,
@@ -98,7 +100,12 @@ export const spec = defineSpec({
       description: "Typed HTTP-boundary coercion and serialization",
       tags: ["metrics"],
       security: [],
-      operations: [GetMetricDefinition, GetMetricLabelsDefinition],
+      operations: [
+        GetMetricDefinition,
+        GetMetricKeyedLabelsDefinition,
+        GetMetricLabelsDefinition,
+        GetMetricSamplesDefinition,
+      ],
     },
     todo: {
       description: "Bearer-protected todo operations",

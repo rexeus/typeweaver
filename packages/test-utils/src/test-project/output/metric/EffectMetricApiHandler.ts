@@ -14,8 +14,12 @@ import type { ServerContext } from "../lib/server/index.js";
 import type { ServerMetricApiHandler } from "./MetricRouter.js";
 import type { IGetMetricRequest } from "./GetMetricRequest.js";
 import type { GetMetricResponse } from "./GetMetricResponse.js";
+import type { IGetMetricKeyedLabelsRequest } from "./GetMetricKeyedLabelsRequest.js";
+import type { GetMetricKeyedLabelsResponse } from "./GetMetricKeyedLabelsResponse.js";
 import type { IGetMetricLabelsRequest } from "./GetMetricLabelsRequest.js";
 import type { GetMetricLabelsResponse } from "./GetMetricLabelsResponse.js";
+import type { IGetMetricSamplesRequest } from "./GetMetricSamplesRequest.js";
+import type { GetMetricSamplesResponse } from "./GetMetricSamplesResponse.js";
 
 export type EffectMetricApiHandler<
   TError,
@@ -29,9 +33,23 @@ export type EffectMetricApiHandler<
     TRequirements,
     ServerContext<TState>
   >;
+  readonly handleGetMetricKeyedLabelsRequest: EffectRequestHandler<
+    IGetMetricKeyedLabelsRequest,
+    GetMetricKeyedLabelsResponse,
+    TError,
+    TRequirements,
+    ServerContext<TState>
+  >;
   readonly handleGetMetricLabelsRequest: EffectRequestHandler<
     IGetMetricLabelsRequest,
     GetMetricLabelsResponse,
+    TError,
+    TRequirements,
+    ServerContext<TState>
+  >;
+  readonly handleGetMetricSamplesRequest: EffectRequestHandler<
+    IGetMetricSamplesRequest,
+    GetMetricSamplesResponse,
     TError,
     TRequirements,
     ServerContext<TState>
@@ -47,9 +65,19 @@ export type EffectMetricErrorMappers<
     GetMetricResponse,
     ServerContext<TState>
   >;
+  readonly handleGetMetricKeyedLabelsRequest: EffectHandlerErrorMapper<
+    TError,
+    GetMetricKeyedLabelsResponse,
+    ServerContext<TState>
+  >;
   readonly handleGetMetricLabelsRequest: EffectHandlerErrorMapper<
     TError,
     GetMetricLabelsResponse,
+    ServerContext<TState>
+  >;
+  readonly handleGetMetricSamplesRequest: EffectHandlerErrorMapper<
+    TError,
+    GetMetricSamplesResponse,
     ServerContext<TState>
   >;
 };
@@ -70,11 +98,25 @@ export const adaptMetricEffectHandlers = <
       context,
       errorMappers.handleGetMetricRequest,
     ),
+  handleGetMetricKeyedLabelsRequest: (request, context) =>
+    runtime.run(
+      handlers.handleGetMetricKeyedLabelsRequest,
+      request,
+      context,
+      errorMappers.handleGetMetricKeyedLabelsRequest,
+    ),
   handleGetMetricLabelsRequest: (request, context) =>
     runtime.run(
       handlers.handleGetMetricLabelsRequest,
       request,
       context,
       errorMappers.handleGetMetricLabelsRequest,
+    ),
+  handleGetMetricSamplesRequest: (request, context) =>
+    runtime.run(
+      handlers.handleGetMetricSamplesRequest,
+      request,
+      context,
+      errorMappers.handleGetMetricSamplesRequest,
     ),
 });
