@@ -29,8 +29,13 @@ export declare abstract class Validator {
     data: unknown,
     shape: Record<string, unknown>,
     caseSensitive: boolean,
+    preserveUnknownKeys: boolean,
   ): unknown;
-  protected coerceHeaderToSchema(header: unknown, schema: HttpHeaderSchemaLike): unknown;
+  protected coerceHeaderToSchema(
+    header: unknown,
+    schema: HttpHeaderSchemaLike,
+    preserveUnknownObjectKeys?: boolean,
+  ): unknown;
   protected coerceQueryToSchema(query: unknown, schema: HttpQuerySchema): unknown;
 }
 import type { HttpHeaderSchemaLike, HttpQuerySchema } from "@rexeus/typeweaver-core";

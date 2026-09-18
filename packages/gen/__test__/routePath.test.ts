@@ -1,5 +1,37 @@
 import { describe, expect, test } from "vitest";
-import { getPathParameterNames } from "../src/helpers/routePath.js";
+import {
+  getPathParameterNames,
+  normalizeRoutePath,
+} from "../src/helpers/routePath.js";
+
+describe("normalizeRoutePath canonical grammar", () => {
+  test("preserves embedded literal structure while erasing parameter names", () => {
+    expect(normalizeRoutePath("/files/:fileId.:format")).toBe(
+      '[[["literal","files"]],[["param"],["literal","."],["param"]]]'
+    );
+    expect(normalizeRoutePath("/assets/:name-:hash.:ext")).toBe(
+      '[[["literal","assets"]],[["param"],["literal","-"],["param"],["literal","."],["param"]]]'
+    );
+  });
+
+  test("distinguishes bare and embedded parameter shapes", () => {
+    expect(normalizeRoutePath("/files/:fileId")).not.toBe(
+      normalizeRoutePath("/files/:fileId.:format")
+    );
+  });
+
+  test("normalizes renamed embedded parameters to the same shape", () => {
+    expect(normalizeRoutePath("/files/:fileId.:format")).toBe(
+      normalizeRoutePath("/files/:name.:extension")
+    );
+  });
+
+  test("distinguishes literal colons from placeholder markers", () => {
+    expect(normalizeRoutePath("/files/report:")).not.toBe(
+      normalizeRoutePath("/files/report:id")
+    );
+  });
+});
 
 describe("getPathParameterNames canonical grammar", () => {
   test.each([

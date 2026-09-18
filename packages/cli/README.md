@@ -113,16 +113,16 @@ pnpm typeweaver generate \
 
 Common options:
 
-| Option                     | Description                                                             |
-| -------------------------- | ----------------------------------------------------------------------- |
-| `--input, -i <path>`       | Spec entrypoint                                                         |
-| `--output, -o <path>`      | Generated output directory                                              |
-| `--config, -c <path>`      | JavaScript config file                                                  |
-| `--plugins, -p <names>`    | Comma-separated plugin selection; `all` selects all first-party plugins |
-| `--format` / `--no-format` | Enable or disable formatting                                            |
-| `--clean` / `--no-clean`   | Enable or disable output cleanup                                        |
-| `--check`                  | Generate in isolation and report drift without writing output           |
-| `--verbose`                | Show plugin loading, lifecycle, locking, and Effect span details        |
+| Option                     | Description                                                      |
+| -------------------------- | ---------------------------------------------------------------- |
+| `--input, -i <path>`       | Spec entrypoint                                                  |
+| `--output, -o <path>`      | Generated output directory                                       |
+| `--config, -c <path>`      | JavaScript config file                                           |
+| `--plugins, -p <names>`    | Comma-separated plugin selection                                 |
+| `--format` / `--no-format` | Enable or disable formatting                                     |
+| `--clean` / `--no-clean`   | Enable or disable output cleanup                                 |
+| `--check`                  | Generate in isolation and report drift without writing output    |
+| `--verbose`                | Show plugin loading, lifecycle, locking, and Effect span details |
 
 Generation uses a per-call plugin registry, validates before write-capable publication, protects
 generated paths, and publishes files through the generator context rather than arbitrary plugin

@@ -257,6 +257,11 @@ schema before the container parse and reports an explicit issue for overwrites, 
 transformed `__proto__` outputs. Generated clients reject an own `__proto__` param, query, or header
 key as `reserved-key`; `constructor` and `toString` remain supported.
 
+Finite request-header record keys (literals, enums, and their unions) are restored to their declared
+casing after case-insensitive transport lookup. Non-finite header record keys keep the
+lowercase/runtime spelling supplied by Fetch, so their key schema must accept that spelling. Query
+record keys remain case-sensitive.
+
 See the [typed HTTP boundary migration guide](../../docs/migrations/typed-http-boundaries.md) for
 examples and compatibility guidance.
 

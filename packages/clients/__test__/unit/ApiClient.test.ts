@@ -1189,6 +1189,17 @@ describe("ApiClient reserved record keys", () => {
     );
   });
 
+  test("escapes embedded delimiters inside path parameter values", async () => {
+    const { mockFetch } = await sendRaw({
+      path: "/files/:fileId.:format",
+      param: { fileId: "quarter.1", format: "json" },
+    });
+
+    expect(getFetchCall(mockFetch).url).toBe(
+      "http://localhost:3000/files/quarter%2E1.json"
+    );
+  });
+
   test("serializes constructor and toString path parameters", async () => {
     const { mockFetch } = await sendRaw({
       path: "/todos/:constructor/:toString",

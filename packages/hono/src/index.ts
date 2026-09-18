@@ -8,27 +8,50 @@ import {
 import type { Plugin } from "@rexeus/typeweaver-gen";
 import { Effect } from "effect";
 import { generate as generateHonoRouters } from "./honoRouterGenerator.js";
+import { validateHonoSpec } from "./validation.js";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const PLUGIN_NAME = "hono";
+
+const requireSupportedHonoPaths = (
+  normalizedSpec: Parameters<typeof validateHonoSpec>[0]
+) => {
+  const issue = validateHonoSpec(normalizedSpec)[0];
+  if (issue === undefined) return Effect.void;
+
+  return Effect.fail(
+    new PluginExecutionError({
+      pluginName: PLUGIN_NAME,
+      phase: "generate",
+      cause: new Error(`[${issue.code}] ${issue.message}`),
+    })
+  );
+};
 
 export const honoPlugin: Plugin = definePlugin({
-  name: "hono",
+  name: PLUGIN_NAME,
   depends: ["types"],
+  validate: normalizedSpec => Effect.succeed(validateHonoSpec(normalizedSpec)),
   generate: context =>
-    Effect.try({
-      try: () =>
-        copyPluginLibFiles({
-          context,
-          libSourceDir: path.join(moduleDir, "lib"),
-          libNamespace: "hono",
-        }),
-      catch: cause =>
-        new PluginExecutionError({
-          pluginName: "hono",
-          phase: "generate",
-          cause,
-        }),
-    }).pipe(Effect.zipRight(generateHonoRouters(context))),
+    requireSupportedHonoPaths(context.normalizedSpec).pipe(
+      Effect.zipRight(
+        Effect.try({
+          try: () =>
+            copyPluginLibFiles({
+              context,
+              libSourceDir: path.join(moduleDir, "lib"),
+              libNamespace: "hono",
+            }),
+          catch: cause =>
+            new PluginExecutionError({
+              pluginName: PLUGIN_NAME,
+              phase: "generate",
+              cause,
+            }),
+        })
+      ),
+      Effect.zipRight(generateHonoRouters(context))
+    ),
 });
 
 export default honoPlugin;

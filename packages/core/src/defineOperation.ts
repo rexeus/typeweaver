@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { AmbiguousRequestHeaderNameError } from "./AmbiguousRequestHeaderNameError.js";
 import {
   findReservedPathParameter,
   ReservedPathParameterError,
@@ -102,6 +104,62 @@ export type ReservedPathParameterConstraint<TPath extends string> =
       }
     : unknown;
 
+const finiteStringOutputs = (
+  schema: z.core.$ZodType
+): readonly string[] | undefined => {
+  if (schema instanceof z.ZodLiteral) {
+    const values = [...schema.values];
+    const strings = values.filter(
+      (value): value is string => typeof value === "string"
+    );
+    return strings.length === values.length ? strings : undefined;
+  }
+  if (schema instanceof z.ZodEnum) {
+    const strings = schema.options.filter(
+      (value): value is string => typeof value === "string"
+    );
+    return strings.length === schema.options.length ? strings : undefined;
+  }
+  if (schema instanceof z.ZodUnion) {
+    const outputs = schema.options.map(finiteStringOutputs);
+    if (outputs.some(output => output === undefined)) return undefined;
+    return outputs.flatMap(output => output ?? []);
+  }
+  return undefined;
+};
+
+const requestHeaderNames = (
+  request: RequestDefinition
+): readonly string[] | undefined => {
+  const schema = request.header;
+  const container = schema instanceof z.ZodOptional ? schema.unwrap() : schema;
+
+  if (container instanceof z.ZodObject) {
+    return Object.keys(container.shape);
+  }
+  if (container instanceof z.ZodRecord) {
+    return finiteStringOutputs(container.keyType);
+  }
+  return undefined;
+};
+
+const assertUnambiguousRequestHeaderNames = (
+  request: RequestDefinition
+): void => {
+  const names = requestHeaderNames(request);
+  if (names === undefined) return;
+
+  const seen = new Map<string, string>();
+  for (const name of names) {
+    const normalized = name.toLowerCase();
+    const previous = seen.get(normalized);
+    if (previous !== undefined && previous !== name) {
+      throw new AmbiguousRequestHeaderNameError(previous, name);
+    }
+    seen.set(normalized, name);
+  }
+};
+
 export type OperationDefinition<
   TOperationId extends string = string,
   TPath extends string = string,
@@ -187,6 +245,8 @@ export const defineOperation = <const TDefinition extends OperationDefinition>(
       reservedPathParameter
     );
   }
+
+  assertUnambiguousRequestHeaderNames(definition.request);
 
   return definition;
 };

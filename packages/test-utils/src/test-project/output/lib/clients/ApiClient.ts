@@ -490,9 +490,24 @@ export abstract class ApiClient {
     this.assertNoUnexpectedPathParameters(path, pathParameterSet, parameters);
     this.assertNoMissingPathParameters(path, pathParameterSet, parameters);
 
-    return path.replace(PATH_PARAMETER_PATTERN, (_placeholder, key: string) =>
-      this.encodePathParameter(key, parameters[key]!, path),
+    return path.replace(PATH_PARAMETER_PATTERN, (placeholder, key: string, offset: number) =>
+      this.encodePathParameter(
+        key,
+        parameters[key]!,
+        path,
+        ApiClient.followingStaticDelimiter(path, offset + placeholder.length),
+      ),
     );
+  }
+
+  private static followingStaticDelimiter(
+    path: string,
+    placeholderEnd: number,
+  ): string | undefined {
+    const remainder = path.slice(placeholderEnd);
+    if (remainder.length === 0 || remainder.startsWith("/")) return undefined;
+
+    return Array.from(remainder)[0];
   }
 
   private assertNoUnexpectedPathParameters(
@@ -527,7 +542,12 @@ export abstract class ApiClient {
     }
   }
 
-  private encodePathParameter(key: string, value: unknown, path: string): string {
+  private encodePathParameter(
+    key: string,
+    value: unknown,
+    path: string,
+    followingStaticDelimiter?: string,
+  ): string {
     const serialized = this.serializeHttpScalar(value, "path", key);
     if (serialized === "." || serialized === "..") {
       throw new PathParameterError(
@@ -537,7 +557,21 @@ export abstract class ApiClient {
       );
     }
 
-    return encodeURIComponent(serialized);
+    if (followingStaticDelimiter === undefined) {
+      return encodeURIComponent(serialized);
+    }
+
+    return serialized
+      .split(followingStaticDelimiter)
+      .map((part) => encodeURIComponent(part))
+      .join(ApiClient.percentEncode(followingStaticDelimiter));
+  }
+
+  private static percentEncode(value: string): string {
+    return Array.from(
+      new TextEncoder().encode(value),
+      (byte) => `%${byte.toString(16).toUpperCase().padStart(2, "0")}`,
+    ).join("");
   }
 
   private createUrl(path: string, query?: ClientHttpQuery): string {

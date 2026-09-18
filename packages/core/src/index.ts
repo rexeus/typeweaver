@@ -24,3 +24,4 @@ export * from "./defineResponse.js";
 export * from "./defineSpec.js";
 export * from "./defaultError.js";
 export * from "./validateResponseUniqueness.js";
+export * from "./AmbiguousRequestHeaderNameError.js";
