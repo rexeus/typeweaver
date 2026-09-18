@@ -23,7 +23,8 @@ const workspaces: string[] = [];
 
 const runCli = (
   workspace: string,
-  args: readonly string[]
+  args: readonly string[],
+  timeoutMs = 15_000
 ): Promise<ProcessResult> =>
   new Promise((resolve, reject) => {
     const child: ChildProcess = spawn(process.execPath, [cliEntry, ...args], {
@@ -46,16 +47,23 @@ const runCli = (
     child.stderr?.on("data", chunk => {
       stderr += String(chunk);
     });
+    let timeoutError: Error | undefined;
     const timeout = setTimeout(() => {
+      timeoutError = new Error(
+        `Built CLI process timed out: ${args.join(" ")}`
+      );
       child.kill("SIGKILL");
-      reject(new Error(`Built CLI process timed out: ${args.join(" ")}`));
-    }, 15_000);
+    }, timeoutMs);
     child.once("error", error => {
       clearTimeout(timeout);
       reject(error);
     });
     child.once("close", (code, signal) => {
       clearTimeout(timeout);
+      if (timeoutError !== undefined) {
+        reject(timeoutError);
+        return;
+      }
       resolve({
         code,
         signal,
@@ -147,8 +155,12 @@ const writeConfig = (
   return configPath;
 };
 
-const writeSlowPlugin = (workspace: string, markerPath: string): string => {
-  const pluginPath = path.join(workspace, "plugins", "slow-plugin.mjs");
+const writeBlockingPlugin = (
+  workspace: string,
+  heldMarkerPath: string,
+  releaseMarkerPath: string
+): string => {
+  const pluginPath = path.join(workspace, "plugins", "blocking-plugin.mjs");
   fs.mkdirSync(path.dirname(pluginPath), { recursive: true });
   fs.writeFileSync(
     pluginPath,
@@ -156,15 +168,24 @@ const writeSlowPlugin = (workspace: string, markerPath: string): string => {
       'import fs from "node:fs";',
       'import { Effect } from "effect";',
       "",
-      `const markerPath = ${JSON.stringify(markerPath)};`,
+      `const heldMarkerPath = ${JSON.stringify(heldMarkerPath)};`,
+      `const releaseMarkerPath = ${JSON.stringify(releaseMarkerPath)};`,
+      "",
+      // Yield to the runtime between polls instead of busy-waiting; the holder
+      // stays blocked until the test writes the release marker.
+      "const waitForRelease = Effect.gen(function* () {",
+      "  while (!fs.existsSync(releaseMarkerPath)) {",
+      "    yield* Effect.sleep(50);",
+      "  }",
+      "});",
       "",
       "export default {",
-      '  name: "slow-check-plugin",',
+      '  name: "blocking-check-plugin",',
       "  initialize: () =>",
       "    Effect.sync(() => {",
-      '      fs.writeFileSync(markerPath, "held\\n");',
+      '      fs.writeFileSync(heldMarkerPath, "held\\n");',
       "    }),",
-      "  generate: () => Effect.sleep(1500),",
+      "  generate: () => waitForRelease,",
       "};",
       "",
     ].join("\n")
@@ -217,8 +238,11 @@ const snapshotTree = (root: string): Record<string, string> => {
   return snapshot;
 };
 
-const generate = (workspace: string, args: readonly string[]) =>
-  runCli(workspace, ["generate", ...args]);
+const generate = (
+  workspace: string,
+  args: readonly string[],
+  timeoutMs = 15_000
+) => runCli(workspace, ["generate", ...args], timeoutMs);
 
 afterEach(() => {
   for (const workspace of workspaces.splice(0)) {
@@ -402,67 +426,104 @@ describe("built CLI output lock concurrency", () => {
   test("a second generate process fails closed while one holds the lock", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
-    const markerPath = path.join(workspace, "lock-held.marker");
-    const pluginPath = writeSlowPlugin(workspace, markerPath);
+    const heldMarkerPath = path.join(workspace, "lock-held.marker");
+    const releaseMarkerPath = path.join(workspace, "lock-release.marker");
+    const pluginPath = writeBlockingPlugin(
+      workspace,
+      heldMarkerPath,
+      releaseMarkerPath
+    );
 
-    const first = runCli(workspace, [
-      "generate",
-      "--input",
-      "spec/index.ts",
-      "--output",
-      "generated",
-      "--plugins",
-      pluginPath,
-      "--no-format",
-    ]);
-    await waitForFile(markerPath, 10_000);
+    const holder = runCli(
+      workspace,
+      [
+        "generate",
+        "--input",
+        "spec/index.ts",
+        "--output",
+        "generated",
+        "--plugins",
+        pluginPath,
+        "--no-format",
+      ],
+      45_000
+    );
+    let holderResult: ProcessResult | undefined;
+    try {
+      await waitForFile(heldMarkerPath, 20_000);
 
-    const second = await runCli(workspace, [
-      "generate",
-      "--input",
-      "spec/index.ts",
-      "--output",
-      "generated",
-      "--plugins",
-      pluginPath,
-      "--no-format",
-    ]);
+      // The contender deliberately omits the blocking plugin so a broken lock
+      // cannot leave a second blocked process behind.
+      const contender = await runCli(workspace, [
+        "generate",
+        "--input",
+        "spec/index.ts",
+        "--output",
+        "generated",
+        "--no-format",
+      ]);
 
-    expect(second).toMatchObject({ code: 1, signal: null });
-    expect(second.stderr).toContain("Another typeweaver generate is running");
+      expect(contender).toMatchObject({ code: 1, signal: null });
+      expect(contender.stderr).toContain(
+        "Another typeweaver generate is running"
+      );
+    } finally {
+      fs.writeFileSync(releaseMarkerPath, "release\n");
+      holderResult = await holder;
+    }
 
-    const firstResult = await first;
-    expect(firstResult).toMatchObject({ code: 0, signal: null });
-  }, 30_000);
+    expect(holderResult).toMatchObject({ code: 0, signal: null });
+  }, 60_000);
 
-  test("check holding a missing mixed-case output blocks generation and creates nothing", async () => {
+  test("check holding a missing mixed-case output blocks case-variant generation and creates neither", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
     const configPath = writeConfig(workspace, [
       '  output: "./Generated/Output",',
     ]);
-    const markerPath = path.join(workspace, "mixed-case-lock.marker");
-    const pluginPath = writeSlowPlugin(workspace, markerPath);
+    const heldMarkerPath = path.join(workspace, "mixed-case-held.marker");
+    const releaseMarkerPath = path.join(workspace, "mixed-case-release.marker");
+    const pluginPath = writeBlockingPlugin(
+      workspace,
+      heldMarkerPath,
+      releaseMarkerPath
+    );
+    const upperOutput = path.join(workspace, "Generated", "Output");
+    const lowerOutput = path.join(workspace, "generated", "output");
 
-    const checkPromise = generate(workspace, [
-      "--check",
-      "--config",
-      configPath,
-      "--plugins",
-      pluginPath,
-    ]);
-    await waitForFile(markerPath, 10_000);
+    const holder = generate(
+      workspace,
+      ["--check", "--config", configPath, "--plugins", pluginPath],
+      45_000
+    );
+    let holderResult: ProcessResult | undefined;
+    try {
+      await waitForFile(heldMarkerPath, 20_000);
 
-    const normal = await generate(workspace, ["--config", configPath]);
+      // The contender explicitly targets the lowercase spelling. Canonical lock
+      // identity case-folds the whole path, so it must still collide.
+      const contender = await generate(workspace, [
+        "--input",
+        "spec/index.ts",
+        "--output",
+        "generated/output",
+        "--no-format",
+      ]);
 
-    expect(normal).toMatchObject({ code: 1, signal: null });
-    expect(normal.stderr).toContain("Another typeweaver generate is running");
-    const mixedCaseOutput = path.join(workspace, "Generated", "Output");
-    expect(fs.existsSync(mixedCaseOutput)).toBe(false);
+      expect(contender).toMatchObject({ code: 1, signal: null });
+      expect(contender.stderr).toContain(
+        "Another typeweaver generate is running"
+      );
+      expect(fs.existsSync(upperOutput)).toBe(false);
+      expect(fs.existsSync(lowerOutput)).toBe(false);
+    } finally {
+      fs.writeFileSync(releaseMarkerPath, "release\n");
+      holderResult = await holder;
+    }
 
-    // The check itself reports the missing output as drift, without creating it.
-    const checkResult = await checkPromise;
-    expect(checkResult.code).toBe(1);
-    expect(fs.existsSync(mixedCaseOutput)).toBe(false);
-  }, 30_000);
+    // The check reports the missing output as drift without creating it.
+    expect(holderResult).toMatchObject({ code: 1, signal: null });
+    expect(fs.existsSync(upperOutput)).toBe(false);
+    expect(fs.existsSync(lowerOutput)).toBe(false);
+  }, 60_000);
 });
