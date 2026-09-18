@@ -22,13 +22,13 @@ export const createResponse = (): CreateTodoResponse =>
 
 export const request: IHttpRequest = {
   method: HttpMethod.GET,
-  path: "/todos/846a8c8d-28dc-4b66-ae6c-8d1c551430b2",
+  path: "/todos/01ARZ3NDEKTSV4RRFFQ69G5FAV",
   header: {
     Accept: "application/json",
     Authorization: "Bearer example-token",
   },
   param: {
-    todoId: "846a8c8d-28dc-4b66-ae6c-8d1c551430b2",
+    todoId: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
   },
 };
 
@@ -43,14 +43,16 @@ export const validateRequest = () => {
 export const validateResponse = () =>
   new GetTodoResponseValidator().safeValidate({
     statusCode: HttpStatusCode.OK,
+    header: { "Content-Type": "application/json" },
     body: {
-      id: "846a8c8d-28dc-4b66-ae6c-8d1c551430b2",
-      accountId: "account-1",
+      id: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+      accountId: "01ARZ3NDEKTSV4RRFFQ69G5FAW",
       title: "Write documentation",
       status: "TODO",
       createdAt: "2026-07-26",
       modifiedAt: "2026-07-26",
       createdBy: "docs",
       modifiedBy: "docs",
+      internalOnly: "removed by the declared object schema",
     },
   });
