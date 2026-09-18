@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import {
   coordinationArtifactMarkerSource,
   SPEC_BUNDLER_TEMP_DIRECTORY_PREFIX,
@@ -22,10 +23,18 @@ export type SpecBundlerConfig = {
   readonly specOutputDir: string;
 };
 
+/** Minimal URL shape so Windows-path tests can inject a converter. */
+export type FileUrlLike = {
+  readonly href: string;
+};
+
+export type FileUrlConverter = (filePath: string) => FileUrlLike;
+
 export type SpecBundlerDeps = {
   readonly build?: (options: BuildOptions) => Promise<unknown>;
   readonly existsSync?: (filePath: string) => boolean;
   readonly realpathSync?: (filePath: string) => string;
+  readonly toFileUrl?: FileUrlConverter;
 };
 
 export const createWrapperImportSpecifier = (
@@ -35,13 +44,24 @@ export const createWrapperImportSpecifier = (
   createWrapperImportSpecifierWith(
     wrapperFile,
     inputFile,
-    fs.realpathSync.native
+    fs.realpathSync.native,
+    pathToFileURL
   );
 
-const createWrapperImportSpecifierWith = (
+/**
+ * Computes the specifier used by the generated wrapper to import the user's
+ * spec entrypoint.
+ *
+ * Same-drive/root targets stay relative so normal generation is unchanged.
+ * When `path.relative` cannot express a relative path (different Windows
+ * drives or UNC roots), a bare absolute filesystem path is invalid to Node
+ * ESM, so the target is emitted as a `file://` URL instead.
+ */
+export const createWrapperImportSpecifierWith = (
   wrapperFile: string,
   inputFile: string,
-  realpathSync: (filePath: string) => string
+  realpathSync: (filePath: string) => string,
+  toFileUrl: FileUrlConverter = pathToFileURL
 ): string => {
   const absoluteInputFile = resolveBundledInputFile(inputFile);
   const useWindowsPathSemantics = usesWindowsPathSemantics(
@@ -55,15 +75,20 @@ const createWrapperImportSpecifierWith = (
   const resolvedInputFile = useWindowsPathSemantics
     ? absoluteInputFile
     : resolveRealFilePath(absoluteInputFile, realpathSync);
-  const relativeInputFile = pathModule
-    .relative(wrapperDir, resolvedInputFile)
-    .replaceAll(pathModule.sep, "/");
+  const relativeInputFile = pathModule.relative(wrapperDir, resolvedInputFile);
 
-  if (relativeInputFile.startsWith(".") || relativeInputFile.startsWith("..")) {
-    return relativeInputFile;
+  if (pathModule.isAbsolute(relativeInputFile)) {
+    // Cross-drive/cross-root: Node ESM requires a valid file URL, not a bare
+    // absolute filesystem path.
+    return toFileUrl(resolvedInputFile).href;
   }
 
-  return `./${relativeInputFile}`;
+  const posixRelative = relativeInputFile.replaceAll(pathModule.sep, "/");
+  if (posixRelative.startsWith(".") || posixRelative.startsWith("..")) {
+    return posixRelative;
+  }
+
+  return `./${posixRelative}`;
 };
 
 const resolveBundledInputFile = (inputFile: string): string => {
@@ -148,7 +173,8 @@ const makeBundlePaths = (
     wrapperImportSpecifier: createWrapperImportSpecifierWith(
       wrapperFile,
       config.inputFile,
-      deps.realpathSync ?? fs.realpathSync.native
+      deps.realpathSync ?? fs.realpathSync.native,
+      deps.toFileUrl
     ),
   };
 };
@@ -192,6 +218,11 @@ const writeBundleWrapper = Effect.fn(function* (operation: BundleOperation) {
 const isExternalModule = (source: string): boolean => {
   if (source.startsWith("node:")) {
     return true;
+  }
+  // A cross-drive/cross-root entrypoint is emitted as a file URL; it must be
+  // bundled, not left external, or Node would import the unbundled source.
+  if (source.startsWith("file:")) {
+    return false;
   }
   return !source.startsWith(".") && !path.isAbsolute(source);
 };
