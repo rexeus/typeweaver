@@ -23,7 +23,10 @@ defects around dynamic validation, raw transport shapes, and record-array normal
 been repaired on branch `codex/issue-206-typed-http-boundary` and now targets the PR #218 branch; it
 awaits fresh CI. Issue #215 is implemented by open, review-ready PR #218 at `d8440f9f`, stacked on
 PR #214, and awaits human review and merge; #216 needs a short contract-design step; #217 must be
-split between present-day workspace compatibility and a future coordinated Effect 4 migration.
+split between present-day workspace compatibility and a future coordinated Effect 4 migration. Issue
+#216 is implemented on `feat/generate-check-216` (PR #219); #217 phase A is implemented on
+`feat/effect-4-compatibility-217` and awaits its dedicated PR CI. Phase B remains blocked until
+Effect 4 is stable.
 
 ## Related plans
 
@@ -98,8 +101,10 @@ split between present-day workspace compatibility and a future coordinated Effec
 - [ ] 5. **Deliver the honest Effect 4 compatibility path**
   - **Outcome:** present-day independent surfaces and CLI isolation are documented and executable;
     Effect-native migration remains gated on stable Effect 4.
-  - **Evidence:** [Plan 009](009-effect-4-compatibility-217.md) phase A is merged-ready, and phase B
-    has explicit entry criteria.
+  - **Evidence:** [Plan 009](009-effect-4-compatibility-217.md) is IN PROGRESS. Phase A ADR 0010,
+    truthful `TW-DOCTOR-011` workspace classification, and packed `effect@4.0.0-rc.115` isolated CLI
+    evidence pass locally; the milestone stays IN PROGRESS until the dedicated PR's required checks
+    pass. Phase B remains BLOCKED on a stable, aligned Effect 4 release and is not started.
 
 ## Final validation
 

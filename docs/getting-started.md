@@ -521,7 +521,13 @@ pnpm api:doctor
 
 It checks the runtime, config and spec resolution, plugin availability, output safety, permissions,
 Effect compatibility, and formatting setup. Deep mode also bundles, normalizes, and validates the
-contract without publishing output.
+contract without publishing output. `doctor` reports the project-declared Effect (`TW-DOCTOR-011`)
+separately from the CLI's own bundled runtime (`TW-DOCTOR-008`). It warns for the exact Phase A
+evidence pin, `effect@4.0.0-rc.115`, only when built-in plain projections are configured, and it
+marks every other Effect 4 version as UNVERIFIED. It fails when the Effect-native `effect`
+projection or a custom plugin is selected. The binary CLI must run as an isolated child process with
+Effect-neutral config and spec inputs. A project that does not declare Effect is skipped, even if a
+parent tree has it. See [ADR 0010](./adr/0010-effect-4-workspace-compatibility.md).
 
 Typical causes:
 

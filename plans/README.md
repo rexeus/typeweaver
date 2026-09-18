@@ -31,7 +31,7 @@ progress.
 | [006](006-strict-object-warning-215.md)    | 2         | Remove strict-object false warnings   | P1       | S      | 005 branch (PR #214)           | DONE        |
 | [007](007-typed-http-boundaries-pr-213.md) | 3         | Repair typed HTTP request boundaries  | P1       | L      | 006 branch (PR #218)           | IN PROGRESS |
 | [008](008-generate-check-216.md)           | 4         | Add generated-output drift checking   | P1       | M      | 007 branch (may stack)         | IN PROGRESS |
-| [009](009-effect-4-compatibility-217.md)   | 5         | Deliver an honest Effect 4 path       | P2       | XL     | 008; stable Effect 4 for B     | TODO        |
+| [009](009-effect-4-compatibility-217.md)   | 5         | Deliver an honest Effect 4 path       | P2       | XL     | 008; stable Effect 4 for B     | IN PROGRESS |
 
 Status values: `TODO`, `IN PROGRESS`, `DONE`, `BLOCKED: <reason>`, or `REJECTED: <reason>`.
 

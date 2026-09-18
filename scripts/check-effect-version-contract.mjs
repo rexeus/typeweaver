@@ -3,7 +3,11 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { validateEffectPackageVersions } from "./lib/effect-version-contract.mjs";
+import {
+  PHASE_A_DOCUMENT_TOKENS,
+  validateEffectPackageVersions,
+  validateEffectPhaseAContract,
+} from "./lib/effect-version-contract.mjs";
 
 const workspaceRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -172,6 +176,32 @@ failures.push(
     workspaceRoot,
     runtimeVersion: contract.runtimeVersion,
     acceptedEffectDependencies: contract.acceptedEffectDependencies ?? {},
+  })
+);
+
+const readOptional = relativePath => {
+  try {
+    return read(relativePath);
+  } catch {
+    return undefined;
+  }
+};
+failures.push(
+  ...validateEffectPhaseAContract({
+    contract,
+    manifests: {
+      cli: JSON.parse(read("packages/cli/package.json")),
+      gen: JSON.parse(read("packages/gen/package.json")),
+      effect: JSON.parse(read("packages/effect/package.json")),
+      hono: JSON.parse(read("packages/hono/package.json")),
+      core: JSON.parse(read("packages/core/package.json")),
+    },
+    documents: Object.fromEntries(
+      Object.keys(PHASE_A_DOCUMENT_TOKENS).map(document => [
+        document,
+        readOptional(document),
+      ])
+    ),
   })
 );
 

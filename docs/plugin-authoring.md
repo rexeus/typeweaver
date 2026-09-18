@@ -5,6 +5,13 @@ background, see [ADR 0003: Effect-native plugin API](./adr/0003-effect-native-pl
 [ADR 0004: FileSystem service adoption](./adr/0004-filesystem-service-adoption.md), and
 [ADR 0007: Generator per-call isolation](./adr/0007-generator-per-call-isolation.md).
 
+Plugin authoring is Effect 3-only. The V2 lifecycle ABI returns Effect 3 values, so a plugin cannot
+run inside an Effect 4 application's runtime, and the binary CLI's process isolation does not change
+that. An Effect 4 workspace should use the CLI's built-in plain projections instead of a custom
+plugin. The only evidenced Effect 4 version is `4.0.0-rc.115`, and even then compatibility is
+conditional on Effect-neutral config and spec modules; every other Effect 4 version is UNVERIFIED.
+See [ADR 0010: Effect 4 workspace compatibility](./adr/0010-effect-4-workspace-compatibility.md).
+
 If you are migrating a V1 plugin (built against `extends BasePlugin`), see the breaking-change
 section in [`MIGRATION.md`](../MIGRATION.md).
 

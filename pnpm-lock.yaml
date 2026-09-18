@@ -158,6 +158,9 @@ importers:
       rolldown:
         specifier: ^1.2.0
         version: 1.2.0
+      semver:
+        specifier: 7.7.4
+        version: 7.7.4
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -171,6 +174,9 @@ importers:
       '@rexeus/typeweaver-zod-to-ts':
         specifier: workspace:^
         version: link:../zod-to-ts
+      '@types/semver':
+        specifier: 7.8.0
+        version: 7.8.0
       fast-check:
         specifier: ^4.9.0
         version: 4.9.0
@@ -1979,6 +1985,9 @@ packages:
 
   '@types/sarif@2.1.7':
     resolution: {integrity: sha512-kRz0VEkJqWLf1LLVN4pT1cg1Z9wAuvI6L97V3m2f5B76Tg8d413ddvLBPTEHAZJlnn4XSvu0FkZtViCQGVyrXQ==}
+
+  '@types/semver@7.8.0':
+    resolution: {integrity: sha512-1mAINjtQCXXeLkJ9ehXkwOcBpqtLxiVtKhpUf83DdRNdQKV0iXZpaHYqRr7nj+wvxuJzoAmAwXI+sCNMv1CzLQ==}
 
   '@types/urijs@1.19.26':
     resolution: {integrity: sha512-wkXrVzX5yoqLnndOwFsieJA7oKM8cNkOKJtf/3vVGSUFkWDKZvFHpIl9Pvqb/T9UsawBBFMTTD8xu7sK5MWuvg==}
@@ -5182,6 +5191,8 @@ snapshots:
 
   '@types/sarif@2.1.7': {}
 
+  '@types/semver@7.8.0': {}
+
   '@types/urijs@1.19.26': {}
 
   '@types/ws@8.18.1':
@@ -6304,7 +6315,7 @@ snapshots:
 
   make-dir@4.0.0:
     dependencies:
-      semver: 7.8.5
+      semver: 7.7.4
 
   markdown-escape@2.0.0: {}
 

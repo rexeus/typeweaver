@@ -13,6 +13,7 @@ import {
   checkOutput,
   checkPackageManager,
   checkRuntime,
+  checkWorkspaceEffectCompatibility,
 } from "./doctorEnvironment.js";
 import {
   DEFAULT_PLUGIN_RESOLUTION_STRATEGIES,
@@ -304,6 +305,10 @@ const diagnoseProject = (
       deep: params.deep,
       currentWorkingDirectory: params.currentWorkingDirectory,
     });
+    const workspaceEffectCheck = yield* checkWorkspaceEffectCompatibility(
+      resolved.inputs.config,
+      params.currentWorkingDirectory
+    );
     return [
       checkRuntime(),
       checkNodeVersion(),
@@ -315,6 +320,7 @@ const diagnoseProject = (
       effectCheck,
       formatterCheck,
       deepCheck,
+      workspaceEffectCheck,
     ];
   });
 

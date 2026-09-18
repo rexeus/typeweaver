@@ -32,6 +32,12 @@ pnpm add -D \
 The supported Effect peer range is `>=3.22.0 <4`. Keep one compatible Effect identity in the
 dependency graph.
 
+`@rexeus/typeweaver-gen` is Effect 3-only: the plugin lifecycle ABI returns Effect 3 values, so an
+Effect 4 application cannot import this package or author a plugin against its own runtime. Effect 4
+workspaces use the process-isolated binary CLI with built-in plain projections instead, and the only
+evidenced Effect 4 version is `4.0.0-rc.115`; every other Effect 4 version is UNVERIFIED. See
+[ADR 0010](../../docs/adr/0010-effect-4-workspace-compatibility.md).
+
 ## The normalized model is the extension boundary
 
 Plugins do not reinterpret the raw authoring module independently. TypeWeaver first validates and

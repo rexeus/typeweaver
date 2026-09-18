@@ -4,6 +4,10 @@
 
 Accepted
 
+[ADR 0010](./0010-effect-4-workspace-compatibility.md) supplements this baseline with the
+process-isolated Effect 4 workspace compatibility contract. It does not supersede this ADR, and the
+Effect 3.22.0 development baseline and `>=3.22.0 <4` peer range described here remain authoritative.
+
 ## Context
 
 The repository develops and tests against **Effect 3.22.0**. Published TypeWeaver packages expose

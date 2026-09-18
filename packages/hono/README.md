@@ -28,6 +28,12 @@ pnpm typeweaver generate \
 
 The package supports Hono `>=4.11.0 <5`. The `types` projection is included automatically.
 
+`hono` is an optional peer dependency. The generator plugin itself does not require Hono to execute;
+only the generated Hono output imports it. A consumer that selects the `hono` projection must
+install `hono`, while a CLI-only consumer that never generates Hono does not need it to satisfy
+strict peer checks. The `effect`, `@rexeus/typeweaver-gen`, and `@rexeus/typeweaver-core` peers
+remain required.
+
 ## Generated surface
 
 For a `todo` resource, generation adds a `TodoHono.ts` router and copies the Hono adapter runtime
