@@ -98,20 +98,21 @@ phase B remains blocked until Effect 4 is stable.
     mutating the configured directory.
   - **Evidence:** [Plan 008](008-generate-check-216.md) is DONE (review-ready) in
     [PR #219](https://github.com/rexeus/typeweaver/pull/219), targeting
-    `codex/issue-206-typed-http-boundary`. At exact head `04763a64`, `quality-check`,
+    `codex/issue-206-typed-http-boundary`. At reviewed source head `67a66077`, `quality-check`,
     `windows-security`, `Socket Security: Project Report`, and
     `Socket Security: Pull Request Alerts` pass. Evidence:
-    [CI run 35300879454](https://github.com/rexeus/typeweaver/actions/runs/35300879454). The PR is
+    [CI run 35306935948](https://github.com/rexeus/typeweaver/actions/runs/35306935948). The PR is
     open, mergeable, and unmerged.
 - [x] 5. **Deliver the honest Effect 4 compatibility path**
   - **Outcome:** present-day independent surfaces and CLI isolation are documented and executable;
     Effect-native migration remains gated on stable Effect 4.
   - **Evidence:** [Plan 009](009-effect-4-compatibility-217.md) phase A is DONE (review-ready) in
-    [PR #220](https://github.com/rexeus/typeweaver/pull/220), stacked on PR #219. At exact source
-    head `6978bf65`, `quality-check`, `windows-security`, `Socket Security: Project Report`, and
-    `Socket Security: Pull Request Alerts` pass in
-    [CI run 35300881218](https://github.com/rexeus/typeweaver/actions/runs/35300881218). The PR is
-    open and unmerged. Phase B remains BLOCKED on a stable, aligned Effect 4 release.
+    [PR #220](https://github.com/rexeus/typeweaver/pull/220), stacked on PR #219. The reviewed
+    source correction is `9e371a7c`; integrated stack head `f72d133c` passes `quality-check`,
+    `windows-security`, `Socket Security: Project Report`, and
+    `Socket Security: Pull Request Alerts` in
+    [CI run 35306061286](https://github.com/rexeus/typeweaver/actions/runs/35306061286). The PR is
+    open, mergeable, and unmerged. Phase B remains BLOCKED on a stable, aligned Effect 4 release.
 
 ## Final validation
 

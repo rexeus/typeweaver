@@ -4,9 +4,9 @@
 
 **DONE (review-ready)** on `feat/generate-check-216`, stacked on PR #213 as
 [PR #219](https://github.com/rexeus/typeweaver/pull/219). The complete implementation and CI repairs
-are at exact head `04763a64`; the PR is open, mergeable, and unmerged. `quality-check`,
+are at reviewed source head `67a66077`; the PR is open, mergeable, and unmerged. `quality-check`,
 `windows-security`, `Socket Security: Project Report`, and `Socket Security: Pull Request Alerts`
-all pass in [CI run 35300879454](https://github.com/rexeus/typeweaver/actions/runs/35300879454).
+all pass in [CI run 35306935948](https://github.com/rexeus/typeweaver/actions/runs/35306935948).
 
 ## Outcome
 
@@ -108,10 +108,13 @@ committed output.
     the new staging, comparison, checker, and process suites. Cross-drive spec staging was repaired
     at `14710950`; its external-classification regression test was made filesystem-independent at
     `d0a6d01b`; and process lock contention now uses a deterministic held/release handshake at
-    `04763a64`. The final Linux quality job covers frozen installation, build, generation,
+    `04763a64`. The Windows system temp locator became drive-independent at `45ee3f96`, and the
+    double-generation checker test received an evidence-based Windows cold-start budget at
+    `67a66077`. The final Linux quality job covers frozen installation, build, generation,
     Node/Deno/Bun bundles, typechecking, architecture contracts (including workspace tests and
     packed consumers), docs, format, lint, and publish dry-run; it and the Windows security job pass
-    at the exact PR head.
+    at the reviewed source head in
+    [CI run 35306935948](https://github.com/rexeus/typeweaver/actions/runs/35306935948).
 
 ## Risks and open questions
 

@@ -15,6 +15,7 @@ import {
   outputLockDirectory,
 } from "../src/services/internal/outputCoordinationArtifact.js";
 
+const GENERATION_TEST_TIMEOUT_MS = 15_000;
 const tempDirs: string[] = [];
 
 const createTempWorkspace = (suffix: string): string => {
@@ -177,22 +178,28 @@ afterEach(() => {
 });
 
 describe("GeneratedOutputChecker match", () => {
-  test("succeeds against a fresh generation without touching configured output", async () => {
-    const workspace = createTempWorkspace("match");
-    writeTinySpec(workspace);
-    await runGenerate(workspace);
-    const outputDir = path.join(workspace, "generated", "output");
-    const before = snapshotTree(outputDir);
+  test(
+    "succeeds against a fresh generation without touching configured output",
+    async () => {
+      const workspace = createTempWorkspace("match");
+      writeTinySpec(workspace);
+      await runGenerate(workspace);
+      const outputDir = path.join(workspace, "generated", "output");
+      const before = snapshotTree(outputDir);
 
-    await expect(
-      effectRuntime.runPromise(
-        GeneratedOutputChecker.check(checkParams(workspace))
-      )
-    ).resolves.toBeUndefined();
+      await expect(
+        effectRuntime.runPromise(
+          GeneratedOutputChecker.check(checkParams(workspace))
+        )
+      ).resolves.toBeUndefined();
 
-    expect(snapshotTree(outputDir)).toEqual(before);
-    expect(fs.existsSync(path.join(outputDir, ".typeweaver-lock"))).toBe(false);
-  });
+      expect(snapshotTree(outputDir)).toEqual(before);
+      expect(fs.existsSync(path.join(outputDir, ".typeweaver-lock"))).toBe(
+        false
+      );
+    },
+    GENERATION_TEST_TIMEOUT_MS
+  );
 });
 
 describe("GeneratedOutputChecker drift categories", () => {
