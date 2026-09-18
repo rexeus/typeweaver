@@ -61,12 +61,17 @@ describe("workspace Effect compatibility classifier", () => {
 
   test("passes a supported Effect 3 workspace", () => {
     for (const version of ["3.22.0", "3.22.5", "3.23.1"]) {
-      expect(classify(resolved(version), ["clients", "server"])).toMatchObject({
-        outcome: "pass",
-      });
-      expect(
-        classify(resolved(version), ["clients", "server"]).message
-      ).not.toContain("isolated");
+      for (const plugins of [
+        ["clients", "server"],
+        ["server", "effect"],
+        ["clients", "@acme/typeweaver-plugin"],
+      ]) {
+        const check = classify(resolved(version), plugins);
+        expect(check, `${version}: ${plugins.join(", ")}`).toMatchObject({
+          outcome: "pass",
+        });
+        expect(check.message).not.toContain("isolated");
+      }
     }
   });
 
@@ -108,6 +113,43 @@ describe("workspace Effect compatibility classifier", () => {
       expect(check.message, version).toContain(PHASE_A_EFFECT_VERSION);
       expect(check.message, version).toContain("does not claim");
       expect(check.message, version).not.toContain("can still run");
+    }
+  });
+});
+
+describe("undeclared Effect with native surfaces", () => {
+  test("skips only when no native or custom plugin is configured", () => {
+    const plainPluginLists: WorkspaceEffectCompatibilityFacts["configuredPlugins"][] =
+      [[], ["types", "clients", "server", "openapi"]];
+    for (const plugins of plainPluginLists) {
+      expect(classify({ _tag: "NotDeclared" }, plugins)).toMatchObject({
+        code: "TW-DOCTOR-011",
+        outcome: "skip",
+      });
+    }
+  });
+
+  test("fails for an undeclared project that configures the Effect projection", () => {
+    const check = classify({ _tag: "NotDeclared" }, ["server", "effect"]);
+    expect(check).toMatchObject({
+      code: "TW-DOCTOR-011",
+      outcome: "fail",
+    });
+    expect(check.message).toContain("does not declare Effect");
+    expect(check.message).toContain("project-owned Effect");
+    expect(check.message).toContain("effect");
+    expect(check.message).toContain(">=3.22.0 <4");
+  });
+
+  test("fails for an undeclared project that configures a custom plugin", () => {
+    for (const external of [
+      "@rexeus/typeweaver-effect",
+      "./plugins/custom.mjs",
+      "@acme/typeweaver-plugin",
+    ]) {
+      const check = classify({ _tag: "NotDeclared" }, ["clients", external]);
+      expect(check.outcome, external).toBe("fail");
+      expect(check.message, external).toContain(external);
     }
   });
 });

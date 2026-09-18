@@ -420,6 +420,54 @@ describe("built CLI project-owned Effect resolution", () => {
   });
 });
 
+describe("built CLI undeclared native surfaces", () => {
+  test("fails for an undeclared project that configures the Effect projection", async () => {
+    const workspace = createWorkspace();
+    writeSpec(workspace);
+    writeWorkspaceManifest(workspace);
+
+    const result = await runCli(workspace, [
+      "doctor",
+      "--input",
+      "spec/index.ts",
+      "--output",
+      "generated",
+      "--plugins",
+      "server,effect",
+      "--json",
+    ]);
+
+    expect(result.code).toBe(1);
+    const check = await expectCheck(result, "TW-DOCTOR-011");
+    expect(check.outcome).toBe("fail");
+    expect(check.message).toContain("does not declare Effect");
+    expect(check.message).toContain("project-owned Effect");
+  });
+
+  test("fails for an undeclared project that configures a custom plugin", async () => {
+    const workspace = createWorkspace();
+    writeSpec(workspace);
+    writeWorkspaceManifest(workspace);
+    const pluginPath = writeExternalPlugin(workspace);
+
+    const result = await runCli(workspace, [
+      "doctor",
+      "--input",
+      "spec/index.ts",
+      "--output",
+      "generated",
+      "--plugins",
+      pluginPath,
+      "--json",
+    ]);
+
+    expect(result.code).toBe(1);
+    const check = await expectCheck(result, "TW-DOCTOR-011");
+    expect(check.outcome).toBe("fail");
+    expect(check.message).toContain(pluginPath);
+  });
+});
+
 describe("built CLI declaration verification", () => {
   test("fails when the project declares the RC but only a parent Effect 3 resolves", async () => {
     const workspace = createWorkspace();

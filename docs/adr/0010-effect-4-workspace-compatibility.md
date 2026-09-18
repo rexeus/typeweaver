@@ -78,10 +78,12 @@ dependencies; they do not import Effect, `@rexeus/typeweaver-gen`, or the Effect
   compatibility claim about them.
 - `typeweaver doctor` resolves the Effect declaration at the project boundary (never a parent tree
   or the CLI's own runtime). It reports it as `TW-DOCTOR-011` separately from the CLI's bundled
-  runtime (`TW-DOCTOR-008`): a project that does not declare Effect is skipped, the exact
-  `4.0.0-rc.115` pin gets a conditional warning, every other Effect 4 version is marked UNVERIFIED,
-  and Effect-native surfaces fail. It never claims the generated output proves the whole workspace
-  is Effect-free.
+  runtime (`TW-DOCTOR-008`): a project that does not declare Effect is skipped only when no
+  Effect-native or custom plugin is configured; an undeclared project that selects the `effect`
+  projection or a custom plugin fails, because those surfaces need a project-owned Effect runtime.
+  The exact `4.0.0-rc.115` pin gets a conditional warning, every other Effect 4 version is marked
+  UNVERIFIED, and Effect-native surfaces pass only with a declared, supported stable Effect 3
+  runtime. It never claims the generated output proves the whole workspace is Effect-free.
 - When stable Effect 4 arrives, Phase B revisits the matrix, peer ranges, doctor outcomes, and this
   ADR together, coordinated with the migration plan in
   [`plans/009`](../../plans/009-effect-4-compatibility-217.md).

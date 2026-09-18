@@ -150,7 +150,7 @@ const skipCheck = (): DoctorCheck =>
     name: "workspace Effect compatibility",
     outcome: "skip",
     message:
-      "The project does not declare an Effect dependency or peer, so workspace Effect compatibility is not applicable.",
+      "The project does not declare an Effect dependency or peer, and no Effect-native or custom plugin is configured, so workspace Effect compatibility is not applicable.",
   });
 
 const passCheck = (version: string): DoctorCheck =>
@@ -168,6 +168,15 @@ const failUnresolvedCheck = (detail: string): DoctorCheck =>
     outcome: "fail",
     message: `The project declares Effect, but doctor cannot verify the declaration: ${detail}`,
     hint: "Install the declared Effect version or correct the package.json specifier.",
+  });
+
+const failNotDeclaredNativeCheck = (surfaces: readonly string[]): DoctorCheck =>
+  createDoctorCheck({
+    code: "TW-DOCTOR-011",
+    name: "workspace Effect compatibility",
+    outcome: "fail",
+    message: `The project does not declare Effect, but these configured surfaces require a project-owned Effect ${SUPPORTED_EFFECT_PEER_RANGE} runtime: ${surfaces.join(", ")}. The TypeWeaver CLI's nested Effect runtime cannot satisfy generated plugin or adapter contracts.`,
+    hint: `Declare effect ${SUPPORTED_EFFECT_PEER_RANGE} in the project, or select only built-in plain projections.`,
   });
 
 const warnTestedEffect4Check = (
@@ -246,24 +255,14 @@ const failUnrecognizedCheck = (version: string): DoctorCheck =>
   });
 
 /**
- * Pure classification of a project-owned, declaration-verified Effect
- * resolution and configured plugin specifiers. It never resolves modules or
- * inspects the CLI's own runtime, so callers control every fact in the
- * decision.
+ * Classifies a verified, declared Effect resolution together with the
+ * configured plugin surfaces.
  */
-export const classifyWorkspaceEffectCompatibility = (
-  facts: WorkspaceEffectCompatibilityFacts
+const classifyResolvedEffect = (
+  version: string,
+  classification: ConfiguredPluginClassification,
+  surfaces: readonly string[]
 ): DoctorCheck => {
-  const { workspaceEffect } = facts;
-  if (workspaceEffect._tag === "NotDeclared") {
-    return skipCheck();
-  }
-  if (workspaceEffect._tag === "Unresolved") {
-    return failUnresolvedCheck(workspaceEffect.detail);
-  }
-  const classification = classifyConfiguredPlugins(facts.configuredPlugins);
-  const surfaces = nativeSurfaces(classification);
-  const { version } = workspaceEffect;
   const parsed = parseVersion(version);
   if (parsed === undefined) {
     return failUnrecognizedCheck(version);
@@ -285,6 +284,33 @@ export const classifyWorkspaceEffectCompatibility = (
   return version === PHASE_A_EFFECT_VERSION
     ? warnTestedEffect4Check(version, classification)
     : warnUnverifiedEffect4Check(version);
+};
+
+/**
+ * Pure classification of a project-owned, declaration-verified Effect
+ * resolution and configured plugin specifiers. It never resolves modules or
+ * inspects the CLI's own runtime, so callers control every fact in the
+ * decision.
+ */
+export const classifyWorkspaceEffectCompatibility = (
+  facts: WorkspaceEffectCompatibilityFacts
+): DoctorCheck => {
+  const { workspaceEffect } = facts;
+  const classification = classifyConfiguredPlugins(facts.configuredPlugins);
+  const surfaces = nativeSurfaces(classification);
+  if (workspaceEffect._tag === "NotDeclared") {
+    return surfaces.length > 0
+      ? failNotDeclaredNativeCheck(surfaces)
+      : skipCheck();
+  }
+  if (workspaceEffect._tag === "Unresolved") {
+    return failUnresolvedCheck(workspaceEffect.detail);
+  }
+  return classifyResolvedEffect(
+    workspaceEffect.version,
+    classification,
+    surfaces
+  );
 };
 
 const readEffectVersion = (packageJsonPath: string): string | undefined => {

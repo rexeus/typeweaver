@@ -7,9 +7,12 @@
 Document and prove Phase A Effect 4 workspace compatibility without widening any peer range. The only
 evidenced Effect 4 version is `4.0.0-rc.115` (pnpm, strict peers); every other Effect 4 version is
 UNVERIFIED. `typeweaver doctor` now resolves the project-declared Effect at the project boundary as
-`TW-DOCTOR-011` (skipped when the project does not declare Effect, a conditional warning for the
-exact `4.0.0-rc.115` pin with built-in plain projections, UNVERIFIED warnings for any other Effect 4
-version, and failure for the Effect-native `effect` projection or a custom plugin). It also renames
+`TW-DOCTOR-011` (skipped only when the project does not declare Effect and no Effect-native or
+custom plugin is configured; an undeclared project that selects the `effect` projection or a custom
+plugin fails; a conditional warning for the exact `4.0.0-rc.115` pin with built-in plain
+projections; UNVERIFIED warnings for any other Effect 4 version; and failure for the Effect-native
+`effect` projection or a custom plugin unless the workspace declares a supported stable Effect 3
+runtime). It also renames
 `TW-DOCTOR-008` to the CLI's own bundled Effect runtime. The binary CLI remains usable in an Effect 4
 workspace through process isolation, while the CLI programmatic API, `@rexeus/typeweaver-gen` plugin
 authoring, first-party plugin imports, and `@rexeus/typeweaver-effect` stay on Effect `>=3.22.0 <4`.
