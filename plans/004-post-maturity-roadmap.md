@@ -12,21 +12,20 @@ compatibility path.
 The product-maturity goal in [`GOAL.md`](../GOAL.md) is complete on `main` at `af7e0ddf`, the human
 merge of Stage 3 PR #212, so PRs #209, #211, and #212 are all human-merged. PR #211's metadata,
 security, plugin-validation, and OpenAPI contracts are stable dependencies. PRs #213 and #214 are
-open; PR #218 implements Issue #215, stacked on PR #214, while issues #216 and #217 still have no
-implementation PRs.
+open; PR #218 implements Issue #215, stacked on PR #214, and PR #219 implements Issue #216, stacked
+on PR #213. Issue #217 remains split between present-day workspace compatibility and a future
+coordinated Effect 4 migration.
 
 Independent review found that neither open PR should merge unchanged. PR #214 has bounded
 documentation-verification defects (stale doctor guidance in two onboarding paths), an implicit
 rather than reproduced link-discovery gap, and published `@effect/*` caret ranges that drifted off
 the Effect 3.22.0 baseline in fresh packed consumers. PR #213 has public type/runtime contract
 defects around dynamic validation, raw transport shapes, and record-array normalization. PR #213 has
-been repaired on branch `codex/issue-206-typed-http-boundary` and now targets the PR #218 branch; it
-awaits fresh CI. Issue #215 is implemented by open, review-ready PR #218 at `d8440f9f`, stacked on
-PR #214, and awaits human review and merge; #216 needs a short contract-design step; #217 must be
-split between present-day workspace compatibility and a future coordinated Effect 4 migration. Issue
-#216 is implemented on `feat/generate-check-216` (PR #219); #217 phase A is implemented on
-`feat/effect-4-compatibility-217` and awaits its dedicated PR CI. Phase B remains blocked until
-Effect 4 is stable.
+been repaired on branch `codex/issue-206-typed-http-boundary`, targets the PR #218 branch, and is
+review-ready at green head `53ff8f5c`. Issue #215 is implemented by open, review-ready PR #218 at
+green head `41aee989`, stacked on PR #214, and awaits human review and merge. Issue #216 is
+delivered as open, review-ready PR #219. Issue #217 phase A is implemented on
+`feat/effect-4-compatibility-217` as PR #220; phase B remains blocked until Effect 4 is stable.
 
 ## Related plans
 
@@ -80,24 +79,29 @@ Effect 4 is stable.
     unsupported schemas still do.
   - **Evidence:** [Plan 006](006-strict-object-warning-215.md) is DONE (review-ready) in
     [PR #218](https://github.com/rexeus/typeweaver/pull/218), which targets
-    `docs/documentation-standard` (PR #214). At exact head `d8440f9f`, `quality-check`,
+    `docs/documentation-standard` (PR #214). At exact head `41aee989`, `quality-check`,
     `windows-security`, `Socket Security: Project Report`, and
-    `Socket Security: Pull Request Alerts` all pass. The PR remains open and unmerged; milestone 1
-    remains in progress and milestones 3–5 remain pending.
-- [ ] 3. **Make typed HTTP boundaries truthful**
+    `Socket Security: Pull Request Alerts` all pass. Evidence:
+    [CI run 35239621218](https://github.com/rexeus/typeweaver/actions/runs/35239621218). The PR
+    remains open and unmerged; the other milestone states are tracked below.
+- [x] 3. **Make typed HTTP boundaries truthful**
   - **Outcome:** PR #213's raw, validated, dynamic-mode, and record contracts agree at type and
     runtime boundaries.
-  - **Evidence:** [Plan 007](007-typed-http-boundaries-pr-213.md) is IN PROGRESS. The repair is
-    stacked on the PR #218 branch (`fix/strict-object-never-warning`) and awaits fresh PR #213 CI
-    before it can be marked DONE.
-- [ ] 4. **Add generated-output drift checking**
+  - **Evidence:** [Plan 007](007-typed-http-boundaries-pr-213.md) is DONE (review-ready) in
+    [PR #213](https://github.com/rexeus/typeweaver/pull/213), stacked on the PR #218 branch. At
+    exact head `53ff8f5c`, all current required quality, Windows security, and Socket checks pass.
+    Evidence: [CI run 35274415172](https://github.com/rexeus/typeweaver/actions/runs/35274415172).
+    The PR is open, mergeable, and unmerged.
+- [x] 4. **Add generated-output drift checking**
   - **Outcome:** `typeweaver generate --check` detects added, removed, and changed output without
     mutating the configured directory.
-  - **Evidence:** [Plan 008](008-generate-check-216.md) is IN PROGRESS. The CLI contract, isolated
-    trusted-temp staging, byte comparison, flat trusted-parent output lock, dependency parity,
-    reserved-path safety, legacy-lock migration behavior, process/lifecycle/comparison tests,
-    documentation, and Changeset are implemented on `feat/generate-check-216`; the milestone is not
-    DONE until the dedicated PR's required checks pass.
+  - **Evidence:** [Plan 008](008-generate-check-216.md) is DONE (review-ready) in
+    [PR #219](https://github.com/rexeus/typeweaver/pull/219), targeting
+    `codex/issue-206-typed-http-boundary`. At exact head `04763a64`, `quality-check`,
+    `windows-security`, `Socket Security: Project Report`, and
+    `Socket Security: Pull Request Alerts` pass. Evidence:
+    [CI run 35300879454](https://github.com/rexeus/typeweaver/actions/runs/35300879454). The PR is
+    open, mergeable, and unmerged.
 - [ ] 5. **Deliver the honest Effect 4 compatibility path**
   - **Outcome:** present-day independent surfaces and CLI isolation are documented and executable;
     Effect-native migration remains gated on stable Effect 4.

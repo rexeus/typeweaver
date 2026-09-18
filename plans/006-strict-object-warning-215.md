@@ -13,10 +13,10 @@ strict object's internal `never` schema as unsupported.
 
 ## Status
 
-DONE (review-ready). Implemented on branch `fix/strict-object-never-warning` at head `d8440f9f`,
-stacked on `docs/documentation-standard` (PR #214) and delivered as
-[PR #218](https://github.com/rexeus/typeweaver/pull/218). All work packages are complete and every
-required check is green at `d8440f9f`:
+DONE (review-ready). Implemented on branch `fix/strict-object-never-warning` at `d8440f9f`, stacked
+on `docs/documentation-standard` (PR #214), and delivered as
+[PR #218](https://github.com/rexeus/typeweaver/pull/218). Its delivery record is current at exact
+head `41aee989`; all work packages are complete and every required check is green there:
 
 - `quality-check` — pass
 - `windows-security` — pass
@@ -77,10 +77,11 @@ The pull request remains open for human review and merge; this plan does not cla
   - **Evidence:** package tests/typechecks, OpenAPI tests/typecheck, workspace typecheck/test, docs,
     format, lint, generated verification, and required CI checks pass.
   - **Status:** DONE (review-ready) — [PR #218](https://github.com/rexeus/typeweaver/pull/218)
-    targets `docs/documentation-standard` (PR #214) at exact head `d8440f9f`. `quality-check`,
+    targets `docs/documentation-standard` (PR #214) at exact head `41aee989`. `quality-check`,
     `windows-security`, `Socket Security: Project Report`, and
-    `Socket Security: Pull Request Alerts` all pass at that head. The PR remains open and unmerged;
-    no human merge is claimed.
+    `Socket Security: Pull Request Alerts` all pass at that head. Evidence:
+    [CI run 35239621218](https://github.com/rexeus/typeweaver/actions/runs/35239621218). The PR
+    remains open and unmerged; no human merge is claimed.
 
 ## Risks and open questions
 

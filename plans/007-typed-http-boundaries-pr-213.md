@@ -1,6 +1,8 @@
 # Repair typed HTTP boundaries in PR #213
 
-**Status:** IN PROGRESS — code repaired locally; waiting on fresh CI before DONE.
+**Status:** DONE (review-ready) — repaired and delivered at exact head `53ff8f5c`. PR #213 is open,
+mergeable, and unmerged; all current required quality, Windows security, and Socket checks pass in
+[CI run 35274415172](https://github.com/rexeus/typeweaver/actions/runs/35274415172).
 
 **Stack:** PR [#213](https://github.com/rexeus/typeweaver/pull/213) on branch
 `codex/issue-206-typed-http-boundary` targets `fix/strict-object-never-warning` (PR
@@ -90,10 +92,12 @@ commit `ab509e78` so PR #213 stacks on PR #218. No force-push or history rewrite
     that executable evidence proves.
   - **Evidence:** `pnpm verify:generated` reproduces 283 committed fixture files exactly; READMEs,
     migration guide, and Changeset describe the corrected contract.
-- [ ] 6. **Run the complete repository gate and update PR #213**
+- [x] 6. **Run the complete repository gate and update PR #213**
   - **Outcome:** no unresolved high-confidence contract finding remains.
-  - **Evidence:** the full gate from `GOAL.md`, packed-consumer and generated verification, fresh
-    quality-check, Windows, CodeQL, and Socket checks pass at the corrected head.
+  - **Evidence:** local focused and repository gates, packed-consumer and generated verification,
+    and the current required `quality-check`, `windows-security`, `Socket Security: Project Report`,
+    and `Socket Security: Pull Request Alerts` pass at corrected head `53ff8f5c`. The independent
+    final review found no unresolved material issue.
 
 ## Risks and open questions
 
