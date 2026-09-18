@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
+import { z } from "zod";
 import { InitReportSchema } from "../src/index.js";
 import type { InitReport } from "../src/index.js";
 import type { ChildProcess } from "node:child_process";
@@ -22,6 +23,16 @@ const outputsDirectory = path.join(
   "init-process"
 );
 const workspaces: string[] = [];
+const StarterPackageSchema = z.object({
+  dependencies: z.object({
+    "@rexeus/typeweaver-core": z.string(),
+    zod: z.string(),
+  }),
+  devDependencies: z.object({
+    "@rexeus/typeweaver": z.string(),
+    typescript: z.string(),
+  }),
+});
 
 const runCli = (
   workspace: string,
@@ -115,6 +126,18 @@ const expectStarterOperations = (target: string): void => {
   }
 };
 
+const expectStarterPackageManifest = (target: string): void => {
+  const packageManifest = StarterPackageSchema.parse(
+    JSON.parse(fs.readFileSync(path.join(target, "package.json"), "utf8"))
+  );
+  expect(packageManifest.dependencies).toHaveProperty(
+    "@rexeus/typeweaver-core"
+  );
+  expect(packageManifest.dependencies).toHaveProperty("zod");
+  expect(packageManifest.devDependencies).toHaveProperty("@rexeus/typeweaver");
+  expect(packageManifest.devDependencies).toHaveProperty("typescript");
+};
+
 afterEach(() => {
   for (const workspace of workspaces) {
     fs.rmSync(workspace, { recursive: true, force: true });
@@ -204,6 +227,7 @@ describe("built CLI init publication", () => {
         "api/spec/todo/errors/TodoNotFoundError.ts"
       );
 
+      expectStarterPackageManifest(target);
       expectStarterOperations(target);
 
       fs.symlinkSync(

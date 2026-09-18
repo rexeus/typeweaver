@@ -9,10 +9,12 @@
     "doctor": "typeweaver doctor --config ./{{configFile}} --deep",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@rexeus/typeweaver-core": "^{{typeweaverVersion}}",
+    "zod": "{{zodVersion}}"
+  },
   "devDependencies": {
     "@rexeus/typeweaver": "^{{typeweaverVersion}}",
-    "@rexeus/typeweaver-core": "^{{typeweaverVersion}}",
-    "typescript": "^6.0.2",
-    "zod": "{{zodVersion}}"
+    "typescript": "^6.0.2"
   }
 }
