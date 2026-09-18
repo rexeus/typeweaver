@@ -25,7 +25,8 @@ been repaired on branch `codex/issue-206-typed-http-boundary`, targets the PR #2
 review-ready at green head `53ff8f5c`. Issue #215 is implemented by open, review-ready PR #218 at
 green head `41aee989`, stacked on PR #214, and awaits human review and merge. Issue #216 is
 delivered as open, review-ready PR #219. Issue #217 phase A is implemented on
-`feat/effect-4-compatibility-217` as PR #220; phase B remains blocked until Effect 4 is stable.
+`feat/effect-4-compatibility-217` as open, review-ready PR #220 at green source head `6978bf65`;
+phase B remains blocked until Effect 4 is stable.
 
 ## Related plans
 
@@ -102,13 +103,15 @@ delivered as open, review-ready PR #219. Issue #217 phase A is implemented on
     `Socket Security: Pull Request Alerts` pass. Evidence:
     [CI run 35300879454](https://github.com/rexeus/typeweaver/actions/runs/35300879454). The PR is
     open, mergeable, and unmerged.
-- [ ] 5. **Deliver the honest Effect 4 compatibility path**
+- [x] 5. **Deliver the honest Effect 4 compatibility path**
   - **Outcome:** present-day independent surfaces and CLI isolation are documented and executable;
     Effect-native migration remains gated on stable Effect 4.
-  - **Evidence:** [Plan 009](009-effect-4-compatibility-217.md) is IN PROGRESS. Phase A ADR 0010,
-    truthful `TW-DOCTOR-011` workspace classification, and packed `effect@4.0.0-rc.115` isolated CLI
-    evidence pass locally; the milestone stays IN PROGRESS until the dedicated PR's required checks
-    pass. Phase B remains BLOCKED on a stable, aligned Effect 4 release and is not started.
+  - **Evidence:** [Plan 009](009-effect-4-compatibility-217.md) phase A is DONE (review-ready) in
+    [PR #220](https://github.com/rexeus/typeweaver/pull/220), stacked on PR #219. At exact source
+    head `6978bf65`, `quality-check`, `windows-security`, `Socket Security: Project Report`, and
+    `Socket Security: Pull Request Alerts` pass in
+    [CI run 35300881218](https://github.com/rexeus/typeweaver/actions/runs/35300881218). The PR is
+    open and unmerged. Phase B remains BLOCKED on a stable, aligned Effect 4 release.
 
 ## Final validation
 

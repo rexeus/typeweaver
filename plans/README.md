@@ -22,16 +22,17 @@ or issue mutation. The owner approved stacked delivery for the roadmap: the PR i
 #215 (`fix/strict-object-never-warning`, PR #218) targets `docs/documentation-standard` (PR #214),
 and later milestones may target the previous milestone's branch until a human merges it. Milestone 3
 is review-ready as PR #213 at `53ff8f5c`; milestone 4 is review-ready as PR #219 at `04763a64`,
-stacked on PR #213.
+stacked on PR #213. Milestone 5 phase A is review-ready as PR #220 with reviewed source head
+`6978bf65`; phase B is blocked until Effect 4 and its aligned tooling are stable.
 
-| Plan                                       | Milestone | Title                                 | Priority | Effort | Depends on                     | Status      |
-| ------------------------------------------ | --------- | ------------------------------------- | -------- | ------ | ------------------------------ | ----------- |
-| [004](004-post-maturity-roadmap.md)        | Roadmap   | Sequence the next contract deliveries | P1       | XL     | Product-maturity goal complete | TODO        |
-| [005](005-docs-baseline-pr-214.md)         | 1         | Repair the documentation baseline     | P1       | S      | Current `main`                 | IN PROGRESS |
-| [006](006-strict-object-warning-215.md)    | 2         | Remove strict-object false warnings   | P1       | S      | 005 branch (PR #214)           | DONE        |
-| [007](007-typed-http-boundaries-pr-213.md) | 3         | Repair typed HTTP request boundaries  | P1       | L      | 006 branch (PR #218)           | DONE        |
-| [008](008-generate-check-216.md)           | 4         | Add generated-output drift checking   | P1       | M      | 007 branch (may stack)         | DONE        |
-| [009](009-effect-4-compatibility-217.md)   | 5         | Deliver an honest Effect 4 path       | P2       | XL     | 008; stable Effect 4 for B     | IN PROGRESS |
+| Plan                                       | Milestone | Title                                 | Priority | Effort | Depends on                     | Status                   |
+| ------------------------------------------ | --------- | ------------------------------------- | -------- | ------ | ------------------------------ | ------------------------ |
+| [004](004-post-maturity-roadmap.md)        | Roadmap   | Sequence the next contract deliveries | P1       | XL     | Product-maturity goal complete | TODO                     |
+| [005](005-docs-baseline-pr-214.md)         | 1         | Repair the documentation baseline     | P1       | S      | Current `main`                 | IN PROGRESS              |
+| [006](006-strict-object-warning-215.md)    | 2         | Remove strict-object false warnings   | P1       | S      | 005 branch (PR #214)           | DONE                     |
+| [007](007-typed-http-boundaries-pr-213.md) | 3         | Repair typed HTTP request boundaries  | P1       | L      | 006 branch (PR #218)           | DONE                     |
+| [008](008-generate-check-216.md)           | 4         | Add generated-output drift checking   | P1       | M      | 007 branch (may stack)         | DONE                     |
+| [009](009-effect-4-compatibility-217.md)   | 5         | Deliver an honest Effect 4 path       | P2       | XL     | 008; stable Effect 4 for B     | BLOCKED: stable Effect 4 |
 
 Status values: `TODO`, `IN PROGRESS`, `DONE`, `BLOCKED: <reason>`, or `REJECTED: <reason>`.
 

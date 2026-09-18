@@ -1,5 +1,14 @@
 # Define and deliver the Effect 4 compatibility path
 
+## Status
+
+**PHASE A DONE (review-ready); PHASE B BLOCKED.** Phase A is delivered as open and unmerged
+[PR #220](https://github.com/rexeus/typeweaver/pull/220), stacked on PR #219. At exact source head
+`6978bf65`, `quality-check`, `windows-security`, `Socket Security: Project Report`, and
+`Socket Security: Pull Request Alerts` all pass in
+[CI run 35300881218](https://github.com/rexeus/typeweaver/actions/runs/35300881218). Phase B remains
+blocked until Effect 4 and its aligned platform, CLI, testing, and language tooling are stable.
+
 ## Outcome
 
 TypeWeaver states and proves what works in an Effect 4 workspace today without misrepresenting
@@ -82,11 +91,14 @@ for planning and delivery. Phase B is conditional work, not an immediate compati
     the CLI subtree resolves one Effect 3 realpath (exactly two physical identities), proves
     gen/effect are unavailable phantom imports, and rejects a strict-peer Effect 4 install of the
     packed gen/effect packages.
-- [ ] 3. **Phase A: deliver a dedicated compatibility PR**
+- [x] 3. **Phase A: deliver a dedicated compatibility PR**
   - **Outcome:** the current release line makes no misleading Effect 4 promise.
-  - **Evidence:** docs, doctor, packed consumers, Effect diagnostics, focused tests, and the
-    repository gate pass locally; the milestone stays IN PROGRESS until the dedicated PR's required
-    checks pass.
+  - **Evidence:** docs, doctor, packed consumers, Effect diagnostics, focused tests, and repository
+    gates pass. The final Linux quality job covers frozen installation, build, generation,
+    Node/Deno/Bun bundles, typechecking, architecture contracts (including workspace tests and
+    packed consumers), docs, format, lint, and publish dry-run. It and the Windows security job pass
+    at source head `6978bf65` in
+    [CI run 35300881218](https://github.com/rexeus/typeweaver/actions/runs/35300881218).
 - [ ] 4. **Phase B entry gate: confirm stable upstream contracts** — **BLOCKED: Effect 4 is still
       `4.0.0-rc.115`; no stable release or aligned platform/CLI toolchain exists.**
   - **Outcome:** exact stable Effect, platform, CLI, Vitest, language-service, and source-reference
