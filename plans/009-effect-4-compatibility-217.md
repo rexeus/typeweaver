@@ -3,10 +3,10 @@
 ## Status
 
 **PHASE A DONE (review-ready); PHASE B BLOCKED.** Phase A is delivered as open and unmerged
-[PR #220](https://github.com/rexeus/typeweaver/pull/220), stacked on PR #219. The reviewed source
-correction is `9e371a7c`; integrated stack head `f72d133c` passes `quality-check`,
-`windows-security`, `Socket Security: Project Report`, and `Socket Security: Pull Request Alerts` in
-[CI run 35306061286](https://github.com/rexeus/typeweaver/actions/runs/35306061286). Phase B remains
+[PR #220](https://github.com/rexeus/typeweaver/pull/220), stacked on PR #219. Reviewed source head
+`a96663b2` passes `quality-check`, `windows-security`, `Socket Security: Project Report`, and
+`Socket Security: Pull Request Alerts` in
+[CI run 35308790589](https://github.com/rexeus/typeweaver/actions/runs/35308790589). Phase B remains
 blocked until Effect 4 and its aligned platform, CLI, testing, and language tooling are stable.
 
 ## Outcome
@@ -97,9 +97,9 @@ for planning and delivery. Phase B is conditional work, not an immediate compati
     gates pass. The final Linux quality job covers frozen installation, build, generation,
     Node/Deno/Bun bundles, typechecking, architecture contracts (including workspace tests and
     packed consumers), docs, format, lint, and publish dry-run. It and the Windows security job pass
-    with the undeclared-native-surface correction at `9e371a7c`, integrated at stack head
-    `f72d133c`, in
-    [CI run 35306061286](https://github.com/rexeus/typeweaver/actions/runs/35306061286).
+    with the undeclared-native-surface and deep-validation gating corrections at reviewed source
+    head `a96663b2` in
+    [CI run 35308790589](https://github.com/rexeus/typeweaver/actions/runs/35308790589).
 - [ ] 4. **Phase B entry gate: confirm stable upstream contracts** — **BLOCKED: Effect 4 is still
       `4.0.0-rc.115`; no stable release or aligned platform/CLI toolchain exists.**
   - **Outcome:** exact stable Effect, platform, CLI, Vitest, language-service, and source-reference

@@ -107,11 +107,10 @@ phase B remains blocked until Effect 4 is stable.
   - **Outcome:** present-day independent surfaces and CLI isolation are documented and executable;
     Effect-native migration remains gated on stable Effect 4.
   - **Evidence:** [Plan 009](009-effect-4-compatibility-217.md) phase A is DONE (review-ready) in
-    [PR #220](https://github.com/rexeus/typeweaver/pull/220), stacked on PR #219. The reviewed
-    source correction is `9e371a7c`; integrated stack head `f72d133c` passes `quality-check`,
-    `windows-security`, `Socket Security: Project Report`, and
-    `Socket Security: Pull Request Alerts` in
-    [CI run 35306061286](https://github.com/rexeus/typeweaver/actions/runs/35306061286). The PR is
+    [PR #220](https://github.com/rexeus/typeweaver/pull/220), stacked on PR #219. Reviewed source
+    head `a96663b2` passes `quality-check`, `windows-security`, `Socket Security: Project Report`,
+    and `Socket Security: Pull Request Alerts` in
+    [CI run 35308790589](https://github.com/rexeus/typeweaver/actions/runs/35308790589). The PR is
     open, mergeable, and unmerged. Phase B remains BLOCKED on a stable, aligned Effect 4 release.
 
 ## Final validation

@@ -23,7 +23,7 @@ or issue mutation. The owner approved stacked delivery for the roadmap: the PR i
 and later milestones may target the previous milestone's branch until a human merges it. Milestone 3
 is review-ready as PR #213 at `53ff8f5c`; milestone 4 is review-ready as PR #219 at `67a66077`,
 stacked on PR #213. Milestone 5 phase A is review-ready as PR #220 with reviewed source head
-`9e371a7c`; phase B is blocked until Effect 4 and its aligned tooling are stable.
+`a96663b2`; phase B is blocked until Effect 4 and its aligned tooling are stable.
 
 | Plan                                       | Milestone | Title                                 | Priority | Effort | Depends on                     | Status                   |
 | ------------------------------------------ | --------- | ------------------------------------- | -------- | ------ | ------------------------------ | ------------------------ |
