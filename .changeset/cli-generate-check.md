@@ -9,8 +9,9 @@ cleans, or writes the configured output directory, supports the config and expli
 `--input`/`--output`/`--plugins` workflows, snapshots committed output before generating under
 `clean: false`, and keeps `--verbose` debug lifecycle and lock output.
 
-Output locks are now flat entries directly under a verified trusted system temp directory (POSIX
-`/tmp`, root-owned sticky and world-writable; Windows the constant `C:\Windows\Temp`), named
+Output locks are now flat entries directly under the platform system temp directory (POSIX `/tmp`,
+root-owned sticky and world-writable; Windows the drive-independent
+`\\?\GLOBALROOT\SystemRoot\Temp` namespace with inherited system-directory ACLs), named
 `.typeweaver-output-lock-<hash>` from the physical output identity, so no CLI user owns a shared
 parent and no lock artifact is written inside generated output. Lock directories are created `0700`
 and metadata `0600`. The identity realpath-resolves the nearest existing ancestor (so symlink aliases
