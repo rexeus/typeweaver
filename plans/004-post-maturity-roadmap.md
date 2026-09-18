@@ -96,10 +96,10 @@ delivered as open, review-ready PR #219; #217 must retain the two-phase compatib
     mutating the configured directory.
   - **Evidence:** [Plan 008](008-generate-check-216.md) is DONE (review-ready) in
     [PR #219](https://github.com/rexeus/typeweaver/pull/219), targeting
-    `codex/issue-206-typed-http-boundary`. At exact head `04763a64`, `quality-check`,
+    `codex/issue-206-typed-http-boundary`. At reviewed source head `67a66077`, `quality-check`,
     `windows-security`, `Socket Security: Project Report`, and
     `Socket Security: Pull Request Alerts` pass. Evidence:
-    [CI run 35300879454](https://github.com/rexeus/typeweaver/actions/runs/35300879454). The PR is
+    [CI run 35306935948](https://github.com/rexeus/typeweaver/actions/runs/35306935948). The PR is
     open, mergeable, and unmerged.
 - [ ] 5. **Deliver the honest Effect 4 compatibility path**
   - **Outcome:** present-day independent surfaces and CLI isolation are documented and executable;

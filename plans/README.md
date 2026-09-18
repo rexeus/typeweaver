@@ -21,7 +21,7 @@ planning artifacts. The roadmap does not reopen the completed goal or authorize 
 or issue mutation. The owner approved stacked delivery for the roadmap: the PR implementing Issue
 #215 (`fix/strict-object-never-warning`, PR #218) targets `docs/documentation-standard` (PR #214),
 and later milestones may target the previous milestone's branch until a human merges it. Milestone 3
-is review-ready as PR #213 at `53ff8f5c`; milestone 4 is review-ready as PR #219 at `04763a64`,
+is review-ready as PR #213 at `53ff8f5c`; milestone 4 is review-ready as PR #219 at `67a66077`,
 stacked on PR #213.
 
 | Plan                                       | Milestone | Title                                 | Priority | Effort | Depends on                     | Status      |
