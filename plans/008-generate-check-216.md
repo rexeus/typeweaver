@@ -2,10 +2,11 @@
 
 ## Status
 
-**IN PROGRESS** on `feat/generate-check-216` (stacked on PR #213's head). Work packages 1–4 are
-implemented with focused process, lifecycle, comparison, and lock tests plus CLI documentation and a
-minor Changeset. The milestone remains IN PROGRESS until the dedicated PR's required checks pass; it
-is not DONE from a local green run.
+**DONE (review-ready)** on `feat/generate-check-216`, stacked on PR #213 as
+[PR #219](https://github.com/rexeus/typeweaver/pull/219). The complete implementation and CI repairs
+are at exact head `04763a64`; the PR is open, mergeable, and unmerged. `quality-check`,
+`windows-security`, `Socket Security: Project Report`, and `Socket Security: Pull Request Alerts`
+all pass in [CI run 35300879454](https://github.com/rexeus/typeweaver/actions/runs/35300879454).
 
 ## Outcome
 
@@ -97,14 +98,18 @@ committed output.
     fence and other lookalike artifacts are ordinary drift and clean-removable. A two-process test
     plus alias/case/reserved/legacy/mixed-version tests cover the contract. `--verbose` keeps debug
     lock and lifecycle output.
-- [ ] 5. **Document and deliver**
+- [x] 5. **Document and deliver**
   - **Outcome:** users have an executable package-script/CI example and release note.
   - **Evidence:** CLI README and getting-started document `generate --check` with an executable
     documentation workflow; `MIGRATION.md` documents the flat lock move, whole-path case folding,
     fixed Windows temp, reserved namespace, remediation, and mixed-version constraint; a minor
     `@rexeus/typeweaver` Changeset is present; the Windows security gate runs the new staging,
-    comparison, checker, and process suites. Remaining: full repository gate and required PR checks
-    before DONE.
+    comparison, checker, and process suites. Cross-drive spec staging was repaired at `14710950`;
+    its external-classification regression test was made filesystem-independent at `d0a6d01b`; and
+    process lock contention now uses a deterministic held/release handshake at `04763a64`. The final
+    Linux quality job covers frozen installation, build, generation, Node/Deno/Bun bundles,
+    typechecking, architecture contracts (including workspace tests and packed consumers), docs,
+    format, lint, and publish dry-run; it and the Windows security job pass at the exact PR head.
 
 ## Risks and open questions
 
