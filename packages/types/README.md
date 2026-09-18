@@ -135,6 +135,9 @@ The validator:
 - parses every own raw record key with the record's key schema before the container parse and
   reports an explicit issue when the key fails parsing, produces a non-string, changes identity, or
   resolves to reserved `__proto__` (`constructor` and `toString` remain ordinary supported keys);
+- restores finite header record keys to their declared spelling after case-insensitive matching;
+  non-finite header record keys retain Fetch's lowercase/runtime spelling, while query record keys
+  remain case-sensitive;
 - normalizes `method` to the operation's declared method, so a HEAD request routed to a GET
   operation reports `HttpMethod.GET`;
 - preserves the concrete request `path` string unchanged and does not re-derive path parameters from

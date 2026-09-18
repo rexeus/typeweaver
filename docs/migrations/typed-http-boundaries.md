@@ -69,9 +69,10 @@ safely. Ordinary typed string transforms (`z.string().transform(...)`) and array
 valid because their input schema proves raw acceptance.
 
 Open object containers are rejected at `defineOperation`: `z.looseObject`, `.loose()`,
-`.passthrough()`, and `.catchall(...)` with a non-`never` value are not truthful request contracts
-because the runtime validator strips unknown keys. Use `z.record(...)` for undeclared keys; default
-strip objects, `z.strictObject`, `.catchall(z.never())`, and `z.record(...)` remain supported.
+`.passthrough()`, and `.catchall(...)` with a non-`never` value are not fixed request contracts. Use
+`z.record(...)` for undeclared keys. Default objects strip undeclared wire keys, while
+`z.strictObject` and `.catchall(z.never())` preserve those keys through transport normalization so
+Zod rejects them. `z.record(...)` remains supported.
 
 Request headers are parsed from raw strings and may coerce or produce domain scalars, arrays, and
 records; they use the separate broad `HttpRequestHeaderSchema`. Response headers keep the stack-base
@@ -111,6 +112,13 @@ parameters on a prototype-free map, and generated clients reject an own `__proto
 header key with `RequestSerializationError` reason `reserved-key` before path, URL, or header
 construction.
 
+HTTP header names are case-insensitive. Object header schemas therefore reject declared names that
+collide after lowercasing. Finite record key schemas (string literals, enums, and their unions) map
+a wire key back to the single declared casing before record-key identity validation; query record
+keys remain case-sensitive. Non-finite header record keys retain the lowercase/runtime spelling from
+the Fetch transport, so their key schema must accept that spelling (for example, use `/^x-/` rather
+than `/^X-/`).
+
 ## Client serialization
 
 | Domain value                   | HTTP representation                 |
@@ -138,9 +146,16 @@ before path, URL, or header construction; `constructor` and `toString` serialize
 A query value of `""` is structurally normalized to `[""]` for an array schema, and Zod owns its
 meaning: for example `z.array(z.coerce.number())` parses `""` as `0`.
 
-Path values are serialized before dot-segment protection and percent encoding. Invalid dates,
-non-finite numbers, `null`, nested arrays, empty query arrays, objects, functions, symbols, and
-other unsupported values throw `RequestSerializationError` before `fetch` is invoked.
+Path values are serialized before dot-segment protection and percent encoding. For embedded
+templates such as `/files/:fileId.:format`, the client additionally percent-encodes occurrences of
+the following static delimiter inside the parameter value, so `fileId: "quarter.1"` reaches the
+router as `quarter.1` rather than being split at the value's dot. Invalid dates, non-finite numbers,
+`null`, nested arrays, empty query arrays, objects, functions, symbols, and other unsupported values
+throw `RequestSerializationError` before `fetch` is invoked.
+
+The Fetch-native server supports embedded placeholders. Hono only extracts slash-delimited path
+parameters, so the Hono plugin rejects operations such as `/files/:fileId.:format` with
+`TW-PLUGIN-HONO-001`; place each Hono path parameter in its own segment.
 
 ## Validation-mode migration
 

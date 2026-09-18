@@ -94,6 +94,41 @@ describe("defineOperation", () => {
   });
 });
 
+describe("defineOperation request header validation", () => {
+  test("rejects object keys that collide case-insensitively", () => {
+    expect(() =>
+      defineOperation({
+        operationId: "readHeaderCollision",
+        method: HttpMethod.GET,
+        path: "/headers",
+        summary: "Read colliding headers",
+        request: {
+          header: z.object({
+            "X-Flag": z.string(),
+            "x-flag": z.string(),
+          }),
+        },
+        responses: [],
+      })
+    ).toThrow(/case-insensitively/);
+  });
+
+  test("rejects finite record keys that collide case-insensitively", () => {
+    expect(() =>
+      defineOperation({
+        operationId: "readRecordHeaderCollision",
+        method: HttpMethod.GET,
+        path: "/record-headers",
+        summary: "Read colliding record headers",
+        request: {
+          header: z.record(z.enum(["X-Flag", "x-flag"]), z.string()),
+        },
+        responses: [],
+      })
+    ).toThrow(/case-insensitively/);
+  });
+});
+
 describe("defineOperation reserved path parameters", () => {
   test.each([
     "/todos/:__proto__",

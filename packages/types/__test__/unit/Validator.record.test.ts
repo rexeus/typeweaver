@@ -15,7 +15,21 @@ class ProbeValidator extends Validator {
     header: unknown,
     schema: HttpRequestHeaderSchema
   ): unknown {
+    return this.coerceHeaderToSchema(header, schema, true);
+  }
+
+  public coerceResponseHeader(
+    header: unknown,
+    schema: HttpRequestHeaderSchema
+  ): unknown {
     return this.coerceHeaderToSchema(header, schema);
+  }
+
+  public recordKeyIssues(
+    data: unknown,
+    schema: HttpRequestHeaderSchema
+  ): readonly z.core.$ZodIssue[] {
+    return this.findRecordKeyIdentityIssues(data, schema);
   }
 }
 
@@ -56,6 +70,72 @@ describe("Validator record normalization", () => {
     );
 
     expect(schema.parse(coerced)).toEqual({ "x-note": "first, second" });
+  });
+
+  test("restores finite record header keys to their declared casing", () => {
+    const schema = z.record(z.literal("X-Flag"), z.string());
+    const coerced = validator.coerceHeader({ "x-flag": "enabled" }, schema);
+
+    expect(schema.parse(coerced)).toEqual({ "X-Flag": "enabled" });
+    expect(validator.recordKeyIssues(coerced, schema)).toEqual([]);
+  });
+
+  test("deduplicates overlapping finite record key unions", () => {
+    const schema = z.record(
+      z.union([z.literal("X-Flag"), z.enum(["X-Flag", "Accept"])]),
+      z.string()
+    );
+    const coerced = validator.coerceHeader(
+      { "x-flag": "enabled", accept: "application/json" },
+      schema
+    );
+
+    expect(schema.parse(coerced)).toEqual({
+      "X-Flag": "enabled",
+      Accept: "application/json",
+    });
+    expect(validator.recordKeyIssues(coerced, schema)).toEqual([]);
+  });
+
+  test("keeps transport casing for non-finite header record keys", () => {
+    const schema = z.record(z.string().regex(/^x-/), z.string());
+    const coerced = validator.coerceHeader({ "x-flag": "enabled" }, schema);
+
+    expect(schema.parse(coerced)).toEqual({ "x-flag": "enabled" });
+  });
+});
+
+describe("Validator strict object normalization", () => {
+  const validator = new ProbeValidator();
+
+  test("preserves undeclared query keys for strict-object rejection", () => {
+    const schema = z.strictObject({ known: z.string() });
+    const coerced = validator.coerceQuery(
+      { known: "value", unexpected: "rejected" },
+      schema
+    );
+
+    expect(schema.safeParse(coerced).success).toBe(false);
+  });
+
+  test("preserves undeclared header keys for strict-object rejection", () => {
+    const schema = z.strictObject({ "X-Known": z.string() });
+    const coerced = validator.coerceHeader(
+      { "x-known": "value", "x-unexpected": "rejected" },
+      schema
+    );
+
+    expect(schema.safeParse(coerced).success).toBe(false);
+  });
+
+  test("keeps response-header unknown-key filtering unchanged", () => {
+    const schema = z.strictObject({ "X-Known": z.string() });
+    const coerced = validator.coerceResponseHeader(
+      { "x-known": "value", "x-unexpected": "ignored" },
+      schema
+    );
+
+    expect(schema.parse(coerced)).toEqual({ "X-Known": "value" });
   });
 });
 

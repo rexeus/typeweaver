@@ -31,11 +31,13 @@ export declare abstract class Validator {
   protected coerceToSchema(
     data: unknown,
     shape: Record<string, unknown>,
-    caseSensitive: boolean
+    caseSensitive: boolean,
+    preserveUnknownKeys: boolean
   ): unknown;
   protected coerceHeaderToSchema(
     header: unknown,
-    schema: HttpHeaderSchemaLike
+    schema: HttpHeaderSchemaLike,
+    preserveUnknownObjectKeys?: boolean
   ): unknown;
   protected coerceQueryToSchema(
     query: unknown,

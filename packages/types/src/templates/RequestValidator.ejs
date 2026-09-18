@@ -49,7 +49,8 @@ import type {
         );
         const coercedHeader = this.coerceHeaderToSchema(
           request.header,
-          headerSchema
+          headerSchema,
+          true
         );
         const headerMultiplicityIssues = this.findMultiplicityIssues(
           request.header,
@@ -60,7 +61,7 @@ import type {
           error.addHeaderIssues(headerMultiplicityIssues);
         }
         const headerRecordKeyIssues = this.findRecordKeyIdentityIssues(
-          request.header,
+          coercedHeader,
           headerSchema
         );
         if (headerRecordKeyIssues.length > 0) {

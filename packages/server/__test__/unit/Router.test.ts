@@ -901,6 +901,16 @@ describe("Router embedded segment placeholders", () => {
     });
   });
 
+  test("preserves encoded embedded delimiters inside placeholder values", () => {
+    const router = new Router();
+    router.add(route("GET", "/files/:fileId.:format", "get-file"));
+
+    expectMatch(router, "GET", "/files/quarter%2E1.json", {
+      operationId: "get-file",
+      params: { fileId: "quarter.1", format: "json" },
+    });
+  });
+
   test("keeps encoded dot-segment embedded values raw", () => {
     const router = new Router();
     router.add(route("GET", "/files/:fileId.:format", "get-file"));
