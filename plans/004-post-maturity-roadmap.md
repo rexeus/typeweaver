@@ -90,7 +90,11 @@ split between present-day workspace compatibility and a future coordinated Effec
 - [ ] 4. **Add generated-output drift checking**
   - **Outcome:** `typeweaver generate --check` detects added, removed, and changed output without
     mutating the configured directory.
-  - **Evidence:** [Plan 008](008-generate-check-216.md) is complete in a dedicated PR.
+  - **Evidence:** [Plan 008](008-generate-check-216.md) is IN PROGRESS. The CLI contract, isolated
+    trusted-temp staging, byte comparison, flat trusted-parent output lock, dependency parity,
+    reserved-path safety, legacy-lock migration behavior, process/lifecycle/comparison tests,
+    documentation, and Changeset are implemented on `feat/generate-check-216`; the milestone is not
+    DONE until the dedicated PR's required checks pass.
 - [ ] 5. **Deliver the honest Effect 4 compatibility path**
   - **Outcome:** present-day independent surfaces and CLI isolation are documented and executable;
     Effect-native migration remains gated on stable Effect 4.

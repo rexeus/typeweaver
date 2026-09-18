@@ -5,6 +5,7 @@ import { CliLoggerLayer, VerboseCliLoggerLayer } from "./cliLogger.js";
 import {
   ConfigLoader,
   Formatter,
+  GeneratedOutputChecker,
   Generator,
   IndexFileGenerator,
   PluginLoader,
@@ -47,6 +48,7 @@ const CliServices = Layer.mergeAll(
   ProjectDoctor.Default,
   ProjectInitializer.Default,
   Generator.Default,
+  GeneratedOutputChecker.Default,
   CliLoggerLayer
 );
 
@@ -77,6 +79,7 @@ const VerboseCliServices = Layer.mergeAll(
   ProjectDoctor.Default,
   ProjectInitializer.Default,
   Generator.Default,
+  GeneratedOutputChecker.Default,
   VerboseCliLoggerLayer,
   Logger.minimumLogLevel(LogLevel.Debug)
 );

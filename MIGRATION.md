@@ -419,7 +419,47 @@ adapters continue to support JSON values, strings, `ArrayBuffer`, `Blob`, `null`
 Values that cannot be represented by `JSON.stringify` now fail explicitly; Hono exposes
 `HonoResponseSerializationError` for this case.
 
-### 8. Migration Checklist (0.12.x to 0.13.x)
+### 8. Output lock location and mixed-version concurrency
+
+TypeWeaver no longer writes its generation lock inside the configured output directory. The lock is
+now a flat entry named `.typeweaver-output-lock-<hash>` created directly under a verified trusted
+system temp directory (POSIX `/tmp`; Windows the constant `C:\Windows\Temp`). The hash derives from
+the canonical physical output path, so a read-only `typeweaver generate --check` can hold the same
+lock without creating any file in the generated tree, and no CLI user owns a shared parent that
+could rename another user's lock.
+
+What this means for upgrades:
+
+- **Mixed CLI versions must not run generation concurrently.** An older CLI holds an in-output
+  `.typeweaver-lock` that the new CLI cannot write to coordinate with. The new CLI detects that lock
+  before acquiring its own: a live holder or malformed/ownership-uncertain metadata fails closed, so
+  stop any older `typeweaver generate` process before running the new one. Complete metadata owned
+  by a provably dead process is treated as stale and does not block `generate` or `check`.
+- **Legacy lock remediation.** A live, malformed, or ownership-uncertain `.typeweaver-lock` blocks
+  generation and checking before any clean runs and requires manual removal after confirming no
+  older process is running. A complete `.typeweaver-lock` whose regular `info.json` names a provably
+  dead process is proven coordination state: `generate --check` excludes it and a later clean
+  generation removes it. A symlinked `info.json` is malformed legacy metadata, so it also blocks and
+  requires the same manual safety check before removal. Fence-shaped files/directories, ordinary
+  `.typeweaver-lock` files, and other lookalikes are reported as drift and removed by a normal
+  clean.
+- **Stale in-output locks are not deleted by a check.** `generate --check` never mutates the
+  configured output tree, including to clean up a dead legacy lock.
+- **Do not point output or source at the coordination namespace.** A configured output or project
+  directory that equals the trusted temp root or uses a reserved coordination/staging name
+  (including lock fence names) is rejected with `ReservedCoordinationPathError` before any lock or
+  stage is created. Ordinary project outputs elsewhere under the temp root (for example
+  `<temp>/project/generated`) are fine.
+- **The lock identity folds case for the whole path.** A missing `Generated/Output` and the same
+  directory once created hashes to one lock, and symlink or platform aliases converge through
+  `realpath`. On case-sensitive filesystems two names differing only by case are treated as one
+  output; conservative contention is intentional because split locks are unsafe.
+- The POSIX trusted temp directory must be a root-owned sticky, world-writable directory; it is
+  never created by TypeWeaver as a user-owned child. Windows uses the constant system temp path
+  rather than `TEMP`, `TMP`, `SystemRoot`, or `SystemDrive`, and relies on inherited ACLs. A
+  missing, non-directory, or unwritable root fails closed with an actionable error.
+
+### 9. Migration Checklist (0.12.x to 0.13.x)
 
 For **end users** (you use the CLI but don't author plugins):
 

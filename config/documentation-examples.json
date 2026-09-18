@@ -70,6 +70,12 @@
       "runtimeFixtures": ["packages/cli/__test__/doctor.process.test.ts"]
     },
     {
+      "id": "generate-check-workflow",
+      "documents": ["packages/cli/README.md", "docs/getting-started.md"],
+      "fixtures": [],
+      "runtimeFixtures": ["packages/cli/__test__/generateCheck.process.test.ts"]
+    },
+    {
       "id": "generated-client",
       "documents": ["README.md", "docs/getting-started.md", "packages/clients/README.md"],
       "fixtures": ["packages/cli/examples/documentation/generated-client.ts"],

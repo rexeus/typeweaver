@@ -11,7 +11,7 @@ import {
   FormatterFileSystemError,
   FormatterLoadError,
 } from "./errors/FormatterError.js";
-import { isOutputLockArtifactName } from "./internal/outputCoordinationArtifact.js";
+import { isCompleteLegacyOutputLock } from "./internal/outputCoordinationArtifact.js";
 import type {
   FormatterError,
   FormatterFileSystemOperation,
@@ -200,14 +200,11 @@ const formatDirectory: (
     );
 
     for (const content of contents) {
-      // Exact lock names are reserved coordination artifacts. Atomic-write
-      // and bundler staging directories are skipped only when both their
-      // Node-mkdtemp name shape and exact, versioned marker agree. A prefix
-      // alone is user content and must remain format-visible.
-      if (isOutputLockArtifactName(content)) {
-        continue;
-      }
-
+      // Atomic-write and bundler staging directories are skipped only when
+      // both their Node-mkdtemp name shape and exact, versioned marker agree. A
+      // proven legacy `.typeweaver-lock` directory is skipped below so its
+      // metadata is not rewritten. A name alone is user content and must remain
+      // format-visible.
       const filePath = path.join(targetDir, content);
       const canonicalFilePath = yield* fileSystem
         .realPath(filePath)
@@ -222,6 +219,7 @@ const formatDirectory: (
 
       if (info.type === "Directory") {
         if (
+          !isCompleteLegacyOutputLock(filePath, content) &&
           !(yield* hasCoordinationArtifactMarker(
             fileSystem,
             filePath,

@@ -72,6 +72,13 @@ const noCleanOption = Options.boolean("no-clean", { ifPresent: true }).pipe(
   Options.optional
 );
 
+const checkOption = Options.boolean("check", { ifPresent: true }).pipe(
+  Options.withDescription(
+    "generate into isolation and report drift against committed output without writing it"
+  ),
+  Options.optional
+);
+
 const verboseOption = Options.boolean("verbose", { ifPresent: true }).pipe(
   Options.withDescription(
     "enable debug-level logging (effect spans, plugin attempts, lock acquire/release)"
@@ -152,6 +159,7 @@ const generateCommand = Command.make(
     "no-format": noFormatOption,
     clean: cleanOption,
     "no-clean": noCleanOption,
+    check: checkOption,
     verbose: verboseOption,
   },
   runGenerate

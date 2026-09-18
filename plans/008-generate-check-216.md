@@ -1,5 +1,12 @@
 # Add generated-output drift checking
 
+## Status
+
+**IN PROGRESS** on `feat/generate-check-216` (stacked on PR #213's head). Work packages 1–4 are
+implemented with focused process, lifecycle, comparison, and lock tests plus CLI documentation and a
+minor Changeset. The milestone remains IN PROGRESS until the dedicated PR's required checks pass; it
+is not DONE from a local green run.
+
 ## Outcome
 
 `typeweaver generate --check` performs fresh isolated generation, compares relative paths and bytes
@@ -53,28 +60,51 @@ committed output.
 
 ## Plan
 
-- [ ] 1. **Accept the CLI contract with failing process tests**
+- [x] 1. **Accept the CLI contract with failing process tests**
   - **Outcome:** flags, exit codes, terminology, missing output, no-write behavior, and
     `clean:false` semantics are executable before implementation.
-  - **Evidence:** process/service tests fail for the absent mode and encode no JSON promise.
-- [ ] 2. **Extract scoped isolated generation**
+  - **Evidence:** The pre-fix run failed because `--check` and the checker/comparison modules did
+    not exist; `generateCheck.process.test.ts` now covers config and explicit flags, match, all
+    three drift groups, missing output, `clean:false`, and generation failure with no output
+    mutation.
+- [x] 2. **Extract scoped isolated generation**
   - **Outcome:** generation can run against an OS-temp target with both resolved output fields
     changed and project dependencies available, without touching configured output.
-  - **Evidence:** tests observe staging outside the project and cleanup after success, typed
-    failure, and interruption.
-- [ ] 3. **Implement deterministic comparison and diagnostics**
+  - **Evidence:** `projectStaging.ts` is shared by `ProjectValidator` and `GeneratedOutputChecker`;
+    `withStagedProject` tests prove stage removal on success, typed failure, defect, and
+    interruption while linking the nearest `node_modules`.
+- [x] 3. **Implement deterministic comparison and diagnostics**
   - **Outcome:** regular files are compared by sorted relative path and bytes; every drift category
     is reported through a typed CLI failure.
-  - **Evidence:** unit tests cover matching, added, removed, changed, binary, missing, unreadable,
-    and unsupported-entry cases.
-- [ ] 4. **Integrate the CLI and concurrency behavior**
+  - **Evidence:** `outputComparison.test.ts` covers matching, added, removed, changed, binary,
+    missing committed output, deterministic sort, unreadable files, and symbolic-link rejection.
+- [x] 4. **Integrate the CLI and concurrency behavior**
   - **Outcome:** config and explicit flags work; check detects or avoids torn reads during
     concurrent generation using the existing output-lock contract.
-  - **Evidence:** process and lifecycle tests pass without configured-output writes.
+  - **Evidence:** Output locks are flat `.typeweaver-output-lock-<hash>` entries created `0700` with
+    `0600` metadata directly under a verified trusted system temp directory (POSIX root-owned sticky
+    `/tmp`; Windows constant `C:\Windows\Temp`), so no user owns a shared parent and no artifact is
+    written inside output. Identity realpath-resolves the nearest existing ancestor and case-folds
+    the whole canonical path, so a missing mixed-case output and its later-created form share one
+    lock (unit + process race tests). Normal generation creates output only after acquiring the
+    lock. Staging lives directly under the trusted parent, and checks mirror the ancestor
+    `node_modules` topology of the original `<configured output>/spec/spec.js` including fallback
+    past a partial nearest directory (hoisted fixture test); validation restores its pre-PR
+    cwd-nearest lookup. Staged generation is gated by an internal unforgeable authority and must
+    descend from the created stage. Legacy `.typeweaver-lock` is classified with lstat/no-follow: a
+    complete dead lock is excluded by check and removed by later clean, while
+    live/malformed/symlinked/uncertain locks fail closed before clean and require manual removal;
+    fence and other lookalike artifacts are ordinary drift and clean-removable. A two-process test
+    plus alias/case/reserved/legacy/mixed-version tests cover the contract. `--verbose` keeps debug
+    lock and lifecycle output.
 - [ ] 5. **Document and deliver**
   - **Outcome:** users have an executable package-script/CI example and release note.
-  - **Evidence:** docs checks, CLI tests/typecheck, generated verification, full repository gate,
-    and required PR checks pass in a dedicated PR closing #216.
+  - **Evidence:** CLI README and getting-started document `generate --check` with an executable
+    documentation workflow; `MIGRATION.md` documents the flat lock move, whole-path case folding,
+    fixed Windows temp, reserved namespace, remediation, and mixed-version constraint; a minor
+    `@rexeus/typeweaver` Changeset is present; the Windows security gate runs the new staging,
+    comparison, checker, and process suites. Remaining: full repository gate and required PR checks
+    before DONE.
 
 ## Risks and open questions
 

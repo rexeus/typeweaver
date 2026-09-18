@@ -1,5 +1,10 @@
 import { ContextBuilder, PluginRegistry } from "@rexeus/typeweaver-gen";
 import { Effect } from "effect";
+import {
+  ReservedCoordinationPathError,
+  UnsafeSharedTempDirectoryError,
+  UnsafeStagingRootError,
+} from "../errors/index.js";
 import { Formatter } from "./Formatter.js";
 import {
   DEFAULT_PLUGIN_RESOLUTION_STRATEGIES,
@@ -42,7 +47,19 @@ export class Generator extends Effect.Service<Generator>()(
         });
         yield* Effect.logInfo("Starting generation...");
 
-        const paths = resolveGenerationPaths(params);
+        const paths = yield* Effect.try({
+          try: () => resolveGenerationPaths(params),
+          catch: error => {
+            if (
+              error instanceof ReservedCoordinationPathError ||
+              error instanceof UnsafeSharedTempDirectoryError ||
+              error instanceof UnsafeStagingRootError
+            ) {
+              return error;
+            }
+            throw error;
+          },
+        });
         yield* Effect.logDebug(
           `Input file: '${paths.inputFile}'; output dir: '${paths.outputDir}'`
         );

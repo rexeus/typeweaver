@@ -4,12 +4,17 @@ import path from "node:path";
 import { NodeContext } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Cause, Deferred, Effect, Exit, Fiber } from "effect";
-import { afterEach, describe, expect } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
+import { ReservedCoordinationPathError } from "../../../src/errors/index.js";
 import {
   prepareGeneration,
   resolveGenerationPaths,
   withGenerationLock,
 } from "../../../src/services/internal/generatorPreflight.js";
+import {
+  canonicalHostTempDirectory,
+  outputLockDirectory,
+} from "../../../src/services/internal/outputCoordinationArtifact.js";
 
 const tempDirs: string[] = [];
 
@@ -73,7 +78,7 @@ describe("generator preflight and lock workflow", () => {
 
       return Effect.gen(function* () {
         const plan = yield* makePlan(workspace);
-        const lockPath = path.join(plan.outputDir, ".typeweaver-lock");
+        const lockPath = outputLockDirectory(plan.outputDir);
 
         const firstExit = yield* Effect.exit(
           withGenerationLock(
@@ -108,7 +113,7 @@ describe("generator preflight and lock workflow", () => {
 
     return Effect.gen(function* () {
       const plan = yield* makePlan(workspace);
-      const lockPath = path.join(plan.outputDir, ".typeweaver-lock");
+      const lockPath = outputLockDirectory(plan.outputDir);
       const entered = yield* Deferred.make<void>();
       const blocked = yield* Deferred.make<void>();
       const fiber = yield* Effect.fork(
@@ -130,5 +135,56 @@ describe("generator preflight and lock workflow", () => {
       }
       expect(fs.existsSync(lockPath)).toBe(false);
     }).pipe(Effect.provide(NodeContext.layer));
+  });
+});
+
+describe("generator preflight reserved source validation", () => {
+  test("rejects a working directory inside the reserved namespace", () => {
+    const reservedCwd = path.join(
+      canonicalHostTempDirectory(),
+      "typeweaver-check-Ab12Z9"
+    );
+
+    expect(() =>
+      resolveGenerationPaths({
+        inputFile: "spec/index.ts",
+        outputDir: "generated",
+        currentWorkingDirectory: reservedCwd,
+      })
+    ).toThrow(ReservedCoordinationPathError);
+  });
+
+  test("rejects an input directory inside the reserved namespace", () => {
+    const workspace = makeWorkspace();
+    const reservedInput = path.join(
+      canonicalHostTempDirectory(),
+      `.typeweaver-output-lock-${"a".repeat(64)}`,
+      "spec",
+      "index.ts"
+    );
+
+    expect(() =>
+      resolveGenerationPaths({
+        inputFile: reservedInput,
+        outputDir: "generated",
+        currentWorkingDirectory: workspace,
+      })
+    ).toThrow(ReservedCoordinationPathError);
+  });
+
+  test("rejects a flat lock fence name used as the configured output", () => {
+    const workspace = makeWorkspace();
+    const fenceOutput = path.join(
+      canonicalHostTempDirectory(),
+      `.typeweaver-output-lock-${"a".repeat(64)}.fence-${"b".repeat(24)}`
+    );
+
+    expect(() =>
+      resolveGenerationPaths({
+        inputFile: "spec/index.ts",
+        outputDir: fenceOutput,
+        currentWorkingDirectory: workspace,
+      })
+    ).toThrow(ReservedCoordinationPathError);
   });
 });

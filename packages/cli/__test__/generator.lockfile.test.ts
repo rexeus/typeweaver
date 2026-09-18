@@ -10,9 +10,13 @@ import {
   acquireOutputLockWith,
   releaseOutputLock,
 } from "../src/services/generatorIO.js";
+import { outputLockDirectory } from "../src/services/internal/outputCoordinationArtifact.js";
 import type { OutputLock } from "../src/services/generatorIO.js";
 
 const tempDirs: string[] = [];
+
+const fencePrefixFor = (lockDir: string): string =>
+  `${path.basename(lockDir)}.fence-`;
 
 const createTempWorkspace = (suffix: string): string => {
   const tempDir = fs.mkdtempSync(
@@ -96,7 +100,7 @@ const seedHeldLock = (
   info: { readonly pid: number; readonly startedAt: string }
 ): string => {
   const outputDir = path.join(workspace, "generated", "output");
-  const lockDir = path.join(outputDir, ".typeweaver-lock");
+  const lockDir = outputLockDirectory(outputDir);
   fs.mkdirSync(lockDir, { recursive: true });
   fs.writeFileSync(
     path.join(lockDir, "info.json"),
@@ -181,7 +185,7 @@ describe("Generator failed output-lock release recovery", () => {
     const workspace = createTempWorkspace("release-retry");
     writeTinySpec(workspace);
     const outputDir = path.join(workspace, "generated", "output");
-    const lockDir = path.join(outputDir, ".typeweaver-lock");
+    const lockDir = outputLockDirectory(outputDir);
     const releaseFailure = Object.assign(
       new Error("simulated transient lock release failure"),
       {
@@ -227,8 +231,8 @@ describe("Generator failed output-lock release recovery", () => {
     expect(fs.existsSync(lockDir)).toBe(false);
     expect(
       fs
-        .readdirSync(outputDir)
-        .filter(entry => entry.startsWith(".typeweaver-lock.fence-"))
+        .readdirSync(path.dirname(lockDir))
+        .filter(entry => entry.startsWith(fencePrefixFor(lockDir)))
     ).toHaveLength(1);
   });
 });
@@ -238,7 +242,7 @@ describe("Generator detached output-lock cleanup", () => {
     const workspace = createTempWorkspace("fence-cleanup-failure");
     writeTinySpec(workspace);
     const outputDir = path.join(workspace, "generated", "output");
-    const lockDir = path.join(outputDir, ".typeweaver-lock");
+    const lockDir = outputLockDirectory(outputDir);
     const cleanupFailure = Object.assign(
       new Error("simulated partial fence cleanup failure"),
       {
@@ -254,8 +258,8 @@ describe("Generator detached output-lock cleanup", () => {
       .mockImplementation((target, options) => {
         if (
           typeof target === "string" &&
-          path.dirname(target) === outputDir &&
-          path.basename(target).startsWith(".typeweaver-lock.fence-") &&
+          path.dirname(target) === path.dirname(lockDir) &&
+          path.basename(target).startsWith(fencePrefixFor(lockDir)) &&
           failedFencePath === undefined
         ) {
           failedFencePath = target;
@@ -290,11 +294,8 @@ describe("Generator output-lock ownership", () => {
     writeTinySpec(workspace);
 
     await runGenerate(workspace);
-    const lockDir = path.join(
-      workspace,
-      "generated",
-      "output",
-      ".typeweaver-lock"
+    const lockDir = outputLockDirectory(
+      path.join(workspace, "generated", "output")
     );
     expect(fs.existsSync(lockDir)).toBe(false);
 
@@ -344,12 +345,12 @@ describe("Generator output-lock ownership", () => {
     }
 
     const outputDir = path.join(workspace, "generated", "output");
-    const lockDir = path.join(outputDir, ".typeweaver-lock");
+    const lockDir = outputLockDirectory(outputDir);
     expect(fs.existsSync(lockDir)).toBe(false);
     expect(
       fs
-        .readdirSync(outputDir)
-        .filter(entry => entry.startsWith(".typeweaver-lock.fence-"))
+        .readdirSync(path.dirname(lockDir))
+        .filter(entry => entry.startsWith(fencePrefixFor(lockDir)))
     ).toHaveLength(1);
     // Generation actually produced output despite the stale lock.
     expect(
@@ -384,7 +385,7 @@ describe("Generator output-lock metadata", () => {
   test("does not reclaim a lock whose ownership metadata is not yet published", async () => {
     const workspace = createTempWorkspace("acquiring");
     const outputDir = path.join(workspace, "generated", "output");
-    const lockDir = path.join(outputDir, ".typeweaver-lock");
+    const lockDir = outputLockDirectory(outputDir);
     fs.mkdirSync(lockDir, { recursive: true });
 
     const exit = await Effect.runPromiseExit(
@@ -413,7 +414,7 @@ describe("Generator output-lock metadata", () => {
   test("does not reclaim a lock with partially written ownership metadata", async () => {
     const workspace = createTempWorkspace("partial-metadata");
     const outputDir = path.join(workspace, "generated", "output");
-    const lockDir = path.join(outputDir, ".typeweaver-lock");
+    const lockDir = outputLockDirectory(outputDir);
     fs.mkdirSync(lockDir, { recursive: true });
     fs.writeFileSync(path.join(lockDir, "info.json"), '{"pid":');
 
@@ -437,7 +438,7 @@ describe("Generator output-lock acquisition rollback", () => {
     const workspace = createTempWorkspace("publication-failure");
     const outputDir = path.join(workspace, "generated", "output");
     fs.mkdirSync(outputDir, { recursive: true });
-    const lockDir = path.join(outputDir, ".typeweaver-lock");
+    const lockDir = outputLockDirectory(outputDir);
     const writeFileSync = vi
       .spyOn(fs, "writeFileSync")
       .mockImplementationOnce(() => {
@@ -460,7 +461,7 @@ describe("Generator output-lock acquisition rollback", () => {
     const workspace = createTempWorkspace("rollback-replacement");
     const outputDir = path.join(workspace, "generated", "output");
     const inputFile = path.join(workspace, "spec", "index.ts");
-    const lockDir = path.join(outputDir, ".typeweaver-lock");
+    const lockDir = outputLockDirectory(outputDir);
     fs.mkdirSync(outputDir, { recursive: true });
 
     const exit = Effect.runSyncExit(
@@ -681,6 +682,6 @@ describe("Generator output-lock diagnostics", () => {
     expect(error.message).toContain("/tmp/typeweaver-out");
     expect(error.message).toContain("PID 4242");
     expect(error.message).toContain("2026-05-17T08:00:00.000Z");
-    expect(error.message).toContain(".typeweaver-lock");
+    expect(error.message).toContain(outputLockDirectory("/tmp/typeweaver-out"));
   });
 });
