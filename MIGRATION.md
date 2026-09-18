@@ -439,11 +439,11 @@ Values that cannot be represented by `JSON.stringify` now fail explicitly; Hono 
 ### 8. Output lock location and mixed-version concurrency
 
 TypeWeaver no longer writes its generation lock inside the configured output directory. The lock is
-now a flat entry named `.typeweaver-output-lock-<hash>` created directly under a verified trusted
-system temp directory (POSIX `/tmp`; Windows the constant `C:\Windows\Temp`). The hash derives from
-the canonical physical output path, so a read-only `typeweaver generate --check` can hold the same
-lock without creating any file in the generated tree, and no CLI user owns a shared parent that
-could rename another user's lock.
+now a flat entry named `.typeweaver-output-lock-<hash>` created directly under the platform system
+temp directory (POSIX `/tmp`; Windows resolves `\\?\GLOBALROOT\SystemRoot\Temp` to the installed
+Windows system temp directory). The hash derives from the canonical physical output path, so a
+read-only `typeweaver generate --check` can hold the same lock without creating any file in the
+generated tree, and no CLI user owns a shared parent that could rename another user's lock.
 
 What this means for upgrades:
 
@@ -472,9 +472,10 @@ What this means for upgrades:
   `realpath`. On case-sensitive filesystems two names differing only by case are treated as one
   output; conservative contention is intentional because split locks are unsafe.
 - The POSIX trusted temp directory must be a root-owned sticky, world-writable directory; it is
-  never created by TypeWeaver as a user-owned child. Windows uses the constant system temp path
-  rather than `TEMP`, `TMP`, `SystemRoot`, or `SystemDrive`, and relies on inherited ACLs. A
-  missing, non-directory, or unwritable root fails closed with an actionable error.
+  never created by TypeWeaver as a user-owned child. Windows resolves the Object Manager's
+  `SystemRoot` alias instead of assuming `C:` or reading `TEMP`, `TMP`, `windir`, `SystemRoot`, or
+  `SystemDrive`, and relies on the installed system temp directory's inherited ACLs. A missing,
+  non-directory, or unwritable root fails closed with an actionable error.
 
 ### 9. Migration Checklist (0.12.x to 0.13.x)
 

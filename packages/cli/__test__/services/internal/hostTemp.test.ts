@@ -34,8 +34,40 @@ describe("fixed host temp path policy", () => {
     expect(fixedHostTempPath("posix")).toBe("/tmp");
   });
 
-  test("Windows uses the constant system temp C:\\Windows\\Temp", () => {
-    expect(fixedHostTempPath("win32")).toBe("C:\\Windows\\Temp");
+  test("Windows uses the drive-independent system temp namespace", () => {
+    expect(fixedHostTempPath("win32")).toBe(
+      "\\\\?\\GLOBALROOT\\SystemRoot\\Temp"
+    );
+  });
+
+  test("Windows ignores environment paths that can disagree across processes", () => {
+    const original = {
+      SystemDrive: process.env.SystemDrive,
+      SystemRoot: process.env.SystemRoot,
+      TEMP: process.env.TEMP,
+      TMP: process.env.TMP,
+      windir: process.env.windir,
+    };
+    Object.assign(process.env, {
+      SystemDrive: "Z:",
+      SystemRoot: "Z:\\SpoofedWindows",
+      TEMP: "Z:\\AttackerTemp",
+      TMP: "Y:\\OtherTemp",
+      windir: "X:\\AlsoSpoofed",
+    });
+    try {
+      expect(fixedHostTempPath("win32")).toBe(
+        "\\\\?\\GLOBALROOT\\SystemRoot\\Temp"
+      );
+    } finally {
+      for (const [name, value] of Object.entries(original)) {
+        if (value === undefined) {
+          delete process.env[name];
+        } else {
+          process.env[name] = value;
+        }
+      }
+    }
   });
 });
 

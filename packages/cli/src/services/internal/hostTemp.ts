@@ -6,7 +6,7 @@ import { canonicalizePathForContainment } from "./canonicalPath.js";
 import { isExpectedNodeSystemError } from "./nodeFsErrors.js";
 
 const POSIX_HOST_TEMP = "/tmp";
-const WINDOWS_HOST_TEMP = "C:\\Windows\\Temp";
+const WINDOWS_HOST_TEMP = "\\\\?\\GLOBALROOT\\SystemRoot\\Temp";
 const STICKY_BIT = 0o1000;
 const WORLD_WRITABLE_BIT = 0o002;
 
@@ -53,10 +53,12 @@ const isReservedCoordinationEntryName = (entryName: string): boolean => {
 
 /**
  * Environment-independent fixed host temp path. POSIX is always `/tmp`.
- * Windows is the constant system temp `C:\Windows\Temp`; it deliberately does
- * not read `TEMP`, `TMP`, `SystemRoot`, or `SystemDrive`, so every process on
- * a machine agrees on one root. Windows relies on the inherited ACL of that
- * directory rather than POSIX mode bits.
+ * Windows uses the Object Manager's `SystemRoot` alias, so it reaches the
+ * installed Windows directory even when that directory is not on `C:`. It
+ * deliberately does not read `TEMP`, `TMP`, `windir`, `SystemRoot`, or
+ * `SystemDrive`, so every process on a machine agrees on one root. Windows
+ * relies on the inherited ACL of that system directory rather than POSIX mode
+ * bits.
  */
 export const fixedHostTempPath = (platform: HostTempPlatform): string =>
   platform === "win32" ? WINDOWS_HOST_TEMP : POSIX_HOST_TEMP;

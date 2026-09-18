@@ -83,33 +83,35 @@ committed output.
   - **Outcome:** config and explicit flags work; check detects or avoids torn reads during
     concurrent generation using the existing output-lock contract.
   - **Evidence:** Output locks are flat `.typeweaver-output-lock-<hash>` entries created `0700` with
-    `0600` metadata directly under a verified trusted system temp directory (POSIX root-owned sticky
-    `/tmp`; Windows constant `C:\Windows\Temp`), so no user owns a shared parent and no artifact is
-    written inside output. Identity realpath-resolves the nearest existing ancestor and case-folds
-    the whole canonical path, so a missing mixed-case output and its later-created form share one
-    lock (unit + process race tests). Normal generation creates output only after acquiring the
-    lock. Staging lives directly under the trusted parent, and checks mirror the ancestor
-    `node_modules` topology of the original `<configured output>/spec/spec.js` including fallback
-    past a partial nearest directory (hoisted fixture test); validation restores its pre-PR
-    cwd-nearest lookup. Staged generation is gated by an internal unforgeable authority and must
-    descend from the created stage. Legacy `.typeweaver-lock` is classified with lstat/no-follow: a
-    complete dead lock is excluded by check and removed by later clean, while
-    live/malformed/symlinked/uncertain locks fail closed before clean and require manual removal;
-    fence and other lookalike artifacts are ordinary drift and clean-removable. A two-process test
-    plus alias/case/reserved/legacy/mixed-version tests cover the contract. `--verbose` keeps debug
-    lock and lifecycle output.
+    `0600` metadata directly under the platform system temp directory (POSIX root-owned sticky
+    `/tmp`; Windows the drive-independent `\\?\GLOBALROOT\SystemRoot\Temp` namespace with inherited
+    system-directory ACLs), so no user owns a shared parent and no artifact is written inside
+    output. Identity realpath-resolves the nearest existing ancestor and case-folds the whole
+    canonical path, so a missing mixed-case output and its later-created form share one lock (unit +
+    process race tests). Normal generation creates output only after acquiring the lock. Staging
+    lives directly under the trusted parent, and checks mirror the ancestor `node_modules` topology
+    of the original `<configured output>/spec/spec.js` including fallback past a partial nearest
+    directory (hoisted fixture test); validation restores its pre-PR cwd-nearest lookup. Staged
+    generation is gated by an internal unforgeable authority and must descend from the created
+    stage. Legacy `.typeweaver-lock` is classified with lstat/no-follow: a complete dead lock is
+    excluded by check and removed by later clean, while live/malformed/symlinked/uncertain locks
+    fail closed before clean and require manual removal; fence and other lookalike artifacts are
+    ordinary drift and clean-removable. A two-process test plus
+    alias/case/reserved/legacy/mixed-version tests cover the contract. `--verbose` keeps debug lock
+    and lifecycle output.
 - [x] 5. **Document and deliver**
   - **Outcome:** users have an executable package-script/CI example and release note.
   - **Evidence:** CLI README and getting-started document `generate --check` with an executable
     documentation workflow; `MIGRATION.md` documents the flat lock move, whole-path case folding,
-    fixed Windows temp, reserved namespace, remediation, and mixed-version constraint; a minor
-    `@rexeus/typeweaver` Changeset is present; the Windows security gate runs the new staging,
-    comparison, checker, and process suites. Cross-drive spec staging was repaired at `14710950`;
-    its external-classification regression test was made filesystem-independent at `d0a6d01b`; and
-    process lock contention now uses a deterministic held/release handshake at `04763a64`. The final
-    Linux quality job covers frozen installation, build, generation, Node/Deno/Bun bundles,
-    typechecking, architecture contracts (including workspace tests and packed consumers), docs,
-    format, lint, and publish dry-run; it and the Windows security job pass at the exact PR head.
+    drive-independent Windows system temp, reserved namespace, remediation, and mixed-version
+    constraint; a minor `@rexeus/typeweaver` Changeset is present; the Windows security gate runs
+    the new staging, comparison, checker, and process suites. Cross-drive spec staging was repaired
+    at `14710950`; its external-classification regression test was made filesystem-independent at
+    `d0a6d01b`; and process lock contention now uses a deterministic held/release handshake at
+    `04763a64`. The final Linux quality job covers frozen installation, build, generation,
+    Node/Deno/Bun bundles, typechecking, architecture contracts (including workspace tests and
+    packed consumers), docs, format, lint, and publish dry-run; it and the Windows security job pass
+    at the exact PR head.
 
 ## Risks and open questions
 
