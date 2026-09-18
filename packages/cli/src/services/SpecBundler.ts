@@ -215,7 +215,12 @@ const writeBundleWrapper = Effect.fn(function* (operation: BundleOperation) {
     .pipe(Effect.mapError(makeBundleError(operation.config.inputFile)));
 });
 
-const isExternalModule = (source: string): boolean => {
+/**
+ * Classifies a module specifier as external to the bundle. Bundled imports are
+ * relative (`./`, `../`), absolute host paths, and `file:` URLs (cross-drive
+ * entrypoints). `node:` builtins and bare package specifiers stay external.
+ */
+export const isExternalModule = (source: string): boolean => {
   if (source.startsWith("node:")) {
     return true;
   }
