@@ -101,13 +101,13 @@ const validator = new GetTodoRequestValidator();
 
 const input: IRawHttpRequest = {
   method: HttpMethod.GET,
-  path: "/todos/846a8c8d-28dc-4b66-ae6c-8d1c551430b2",
+  path: "/todos/01ARZ3NDEKTSV4RRFFQ69G5FAV",
   header: {
     Accept: "application/json",
     Authorization: "Bearer example-token",
   },
   param: {
-    todoId: "846a8c8d-28dc-4b66-ae6c-8d1c551430b2",
+    todoId: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
   },
 };
 
@@ -150,9 +150,10 @@ import { GetTodoResponseValidator } from "./api/generated/index.js";
 
 const result = new GetTodoResponseValidator().safeValidate({
   statusCode: HttpStatusCode.OK,
+  header: { "Content-Type": "application/json" },
   body: {
-    id: "846a8c8d-28dc-4b66-ae6c-8d1c551430b2",
-    accountId: "account-1",
+    id: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+    accountId: "01ARZ3NDEKTSV4RRFFQ69G5FAW",
     title: "Write documentation",
     status: "TODO",
     createdAt: "2026-07-26",
