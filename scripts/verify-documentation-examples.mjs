@@ -20,6 +20,7 @@ const requiredGroupIds = [
   "init-workflow",
   "validate-workflow",
   "doctor-workflow",
+  "generate-check-workflow",
   "generated-client",
   "generated-command",
   "hono-handler",

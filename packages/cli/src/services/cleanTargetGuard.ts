@@ -1,6 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { UnsafeCleanTargetError } from "../errors/UnsafeCleanTargetError.js";
+import {
+  canonicalizePathForContainment,
+  isSameOrDescendantOf,
+} from "./internal/canonicalPath.js";
 
 /**
  * Filesystem probes the clean-target guard depends on. Kept narrow so tests
@@ -91,39 +95,6 @@ const hasWorkspaceMarker = (
   }
 
   return hasWorkspacesField(packageJsonPath, fileSystem);
-};
-
-const canonicalizePathForContainment = (
-  targetPath: string,
-  fileSystem: CleanTargetFs
-): string => {
-  const remainingSegments: string[] = [];
-  let nearestExistingPath = path.resolve(targetPath);
-
-  while (!fileSystem.exists(nearestExistingPath)) {
-    const parentPath = path.dirname(nearestExistingPath);
-    if (parentPath === nearestExistingPath) {
-      break;
-    }
-
-    remainingSegments.unshift(path.basename(nearestExistingPath));
-    nearestExistingPath = parentPath;
-  }
-
-  const canonicalExistingPath = fileSystem.realPath(nearestExistingPath);
-
-  return path.join(canonicalExistingPath, ...remainingSegments);
-};
-
-const isSameOrDescendantOf = (directory: string, ancestor: string): boolean => {
-  const relativePath = path.relative(ancestor, directory);
-  const parentTraversalPrefix = `..${path.sep}`;
-  const escapesAncestor =
-    relativePath === ".." || relativePath.startsWith(parentTraversalPrefix);
-
-  return (
-    relativePath === "" || (!escapesAncestor && !path.isAbsolute(relativePath))
-  );
 };
 
 type CleanTargetContext = {

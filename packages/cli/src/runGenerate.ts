@@ -6,6 +6,7 @@ import {
   ConfigLoader,
   getResolvedConfigPath,
 } from "./services/ConfigLoader.js";
+import { GeneratedOutputChecker } from "./services/GeneratedOutputChecker.js";
 import { Generator } from "./services/Generator.js";
 
 export type GenerateHandlerInput = {
@@ -17,6 +18,7 @@ export type GenerateHandlerInput = {
   readonly "no-format": Option.Option<boolean>;
   readonly clean: Option.Option<boolean>;
   readonly "no-clean": Option.Option<boolean>;
+  readonly check: Option.Option<boolean>;
   // `--verbose` is consumed at runtime-layer selection time in `cli.ts`,
   // so the handler simply ignores it. Declared here to satisfy the parsed
   // shape from `@effect/cli`.
@@ -34,9 +36,10 @@ const resolveBooleanFlag = (
 
 /**
  * Generate-subcommand body. Resolves CLI flags against an optional config
- * file and dispatches to the Generator service. `MissingGenerateOptionError`
- * is narrowed into the failure channel; anything else from
- * `resolveGenerateOptions` propagates as a defect.
+ * file and dispatches to the Generator service or, with `--check`, to the
+ * read-only drift checker. `MissingGenerateOptionError` is narrowed into the
+ * failure channel; anything else from `resolveGenerateOptions` propagates as a
+ * defect.
  */
 export const runGenerate = (args: GenerateHandlerInput) =>
   Effect.gen(function* () {
@@ -71,10 +74,19 @@ export const runGenerate = (args: GenerateHandlerInput) =>
       },
     });
 
-    yield* Generator.generate({
+    const check = Option.isSome(args.check) && args.check.value;
+    const verbose = Option.isSome(args.verbose) && args.verbose.value;
+    const generateParams = {
       inputFile: resolved.inputPath,
       outputDir: resolved.outputDir,
       config: resolved.config,
       currentWorkingDirectory: cwd,
-    });
+    } as const;
+
+    if (check) {
+      yield* GeneratedOutputChecker.check({ ...generateParams, verbose });
+      return;
+    }
+
+    yield* Generator.generate(generateParams);
   });

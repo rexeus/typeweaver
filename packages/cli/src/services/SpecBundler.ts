@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import {
   coordinationArtifactMarkerSource,
   SPEC_BUNDLER_TEMP_DIRECTORY_PREFIX,
@@ -12,7 +13,7 @@ import {
   SpecBundleError,
   SpecBundleOutputMissingError,
 } from "./errors/specErrors.js";
-import type { BuildOptions } from "rolldown";
+import type { BuildOptions, Plugin } from "rolldown";
 
 const WINDOWS_ABSOLUTE_PATH_PATTERN = /^[A-Za-z]:[\\/]/;
 const WINDOWS_UNC_PATH_PATTERN = /^\\\\/;
@@ -20,12 +21,22 @@ const WINDOWS_UNC_PATH_PATTERN = /^\\\\/;
 export type SpecBundlerConfig = {
   readonly inputFile: string;
   readonly specOutputDir: string;
+  readonly externalImportBase?: string;
+  readonly pinExternalImports?: boolean;
 };
+
+/** Minimal URL shape so Windows-path tests can inject a converter. */
+export type FileUrlLike = {
+  readonly href: string;
+};
+
+export type FileUrlConverter = (filePath: string) => FileUrlLike;
 
 export type SpecBundlerDeps = {
   readonly build?: (options: BuildOptions) => Promise<unknown>;
   readonly existsSync?: (filePath: string) => boolean;
   readonly realpathSync?: (filePath: string) => string;
+  readonly toFileUrl?: FileUrlConverter;
 };
 
 export const createWrapperImportSpecifier = (
@@ -35,13 +46,24 @@ export const createWrapperImportSpecifier = (
   createWrapperImportSpecifierWith(
     wrapperFile,
     inputFile,
-    fs.realpathSync.native
+    fs.realpathSync.native,
+    pathToFileURL
   );
 
-const createWrapperImportSpecifierWith = (
+/**
+ * Computes the specifier used by the generated wrapper to import the user's
+ * spec entrypoint.
+ *
+ * Same-drive/root targets stay relative so normal generation is unchanged.
+ * When `path.relative` cannot express a relative path (different Windows
+ * drives or UNC roots), a bare absolute filesystem path is invalid to Node
+ * ESM, so the target is emitted as a `file://` URL instead.
+ */
+export const createWrapperImportSpecifierWith = (
   wrapperFile: string,
   inputFile: string,
-  realpathSync: (filePath: string) => string
+  realpathSync: (filePath: string) => string,
+  toFileUrl: FileUrlConverter = pathToFileURL
 ): string => {
   const absoluteInputFile = resolveBundledInputFile(inputFile);
   const useWindowsPathSemantics = usesWindowsPathSemantics(
@@ -55,15 +77,20 @@ const createWrapperImportSpecifierWith = (
   const resolvedInputFile = useWindowsPathSemantics
     ? absoluteInputFile
     : resolveRealFilePath(absoluteInputFile, realpathSync);
-  const relativeInputFile = pathModule
-    .relative(wrapperDir, resolvedInputFile)
-    .replaceAll(pathModule.sep, "/");
+  const relativeInputFile = pathModule.relative(wrapperDir, resolvedInputFile);
 
-  if (relativeInputFile.startsWith(".") || relativeInputFile.startsWith("..")) {
-    return relativeInputFile;
+  if (pathModule.isAbsolute(relativeInputFile)) {
+    // Cross-drive/cross-root: Node ESM requires a valid file URL, not a bare
+    // absolute filesystem path.
+    return toFileUrl(resolvedInputFile).href;
   }
 
-  return `./${relativeInputFile}`;
+  const posixRelative = relativeInputFile.replaceAll(pathModule.sep, "/");
+  if (posixRelative.startsWith(".") || posixRelative.startsWith("..")) {
+    return posixRelative;
+  }
+
+  return `./${posixRelative}`;
 };
 
 const resolveBundledInputFile = (inputFile: string): string => {
@@ -148,7 +175,8 @@ const makeBundlePaths = (
     wrapperImportSpecifier: createWrapperImportSpecifierWith(
       wrapperFile,
       config.inputFile,
-      deps.realpathSync ?? fs.realpathSync.native
+      deps.realpathSync ?? fs.realpathSync.native,
+      deps.toFileUrl
     ),
   };
 };
@@ -189,29 +217,113 @@ const writeBundleWrapper = Effect.fn(function* (operation: BundleOperation) {
     .pipe(Effect.mapError(makeBundleError(operation.config.inputFile)));
 });
 
-const isExternalModule = (source: string): boolean => {
+/**
+ * Classifies a module specifier as external to the bundle. Bundled imports are
+ * relative (`./`, `../`), absolute host paths, and `file:` URLs (cross-drive
+ * entrypoints). `node:` builtins and bare package specifiers stay external.
+ */
+export const isExternalModule = (source: string): boolean => {
   if (source.startsWith("node:")) {
     return true;
+  }
+  // A cross-drive/cross-root entrypoint is emitted as a file URL; it must be
+  // bundled, not left external, or Node would import the unbundled source.
+  if (source.startsWith("file:")) {
+    return false;
   }
   return !source.startsWith(".") && !path.isAbsolute(source);
 };
 
-const makeBuildOptions = (
-  tempDir: string,
-  paths: BundlePaths
-): BuildOptions => ({
-  cwd: tempDir,
-  input: paths.wrapperFile,
-  treeshake: true,
-  experimental: {
-    attachDebugInfo: "none",
+const hasUnpinnedDynamicImport = (value: unknown): boolean => {
+  if (Array.isArray(value)) {
+    return value.some(hasUnpinnedDynamicImport);
+  }
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  if (Reflect.get(value, "type") === "ImportExpression") {
+    const source = Reflect.get(value, "source");
+    const literalValue =
+      typeof source === "object" &&
+      source !== null &&
+      Reflect.get(source, "type") === "Literal"
+        ? Reflect.get(source, "value")
+        : undefined;
+    return !(
+      typeof literalValue === "string" &&
+      (literalValue.startsWith("file:") || literalValue.startsWith("node:"))
+    );
+  }
+  return Object.values(value).some(hasUnpinnedDynamicImport);
+};
+
+const pinExternalImportsPlugin = (externalImportBase: string): Plugin => ({
+  name: "typeweaver-pin-external-imports",
+  async resolveId(source) {
+    if (!isExternalModule(source)) {
+      return null;
+    }
+    if (source.startsWith("node:")) {
+      return { id: source, external: true };
+    }
+    const resolved = await this.resolve(source, externalImportBase, {
+      skipSelf: true,
+    });
+    if (resolved === null) {
+      throw new Error(
+        `Unable to resolve external module '${source}' from '${externalImportBase}'`
+      );
+    }
+    if (resolved.id.startsWith("node:") || resolved.id.startsWith("file:")) {
+      return { id: resolved.id, external: true };
+    }
+    if (path.isAbsolute(resolved.id)) {
+      return { id: pathToFileURL(resolved.id).href, external: true };
+    }
+    if (resolved.external) {
+      throw new Error(
+        `External module '${source}' resolved to non-absolute id '${resolved.id}'`
+      );
+    }
+
+    return { ...resolved, external: false };
   },
-  external: isExternalModule,
-  output: {
-    file: paths.stagedSpecFile,
-    format: "esm",
+  renderChunk(code) {
+    if (hasUnpinnedDynamicImport(this.parse(code))) {
+      throw new Error(
+        "Isolated spec evaluation cannot safely resolve a dynamic import unless it is a literal node: or file: specifier"
+      );
+    }
+    return null;
   },
 });
+
+const makeBuildOptions = (
+  tempDir: string,
+  paths: BundlePaths,
+  externalImportBase: string | undefined
+): BuildOptions => {
+  const pinExternalImports = externalImportBase !== undefined;
+  const options: BuildOptions = {
+    cwd: tempDir,
+    input: paths.wrapperFile,
+    treeshake: true,
+    ...(pinExternalImports ? { platform: "node" as const } : {}),
+    experimental: {
+      attachDebugInfo: "none",
+    },
+    external: pinExternalImports
+      ? source => source.startsWith("node:")
+      : isExternalModule,
+    output: {
+      file: paths.stagedSpecFile,
+      format: "esm",
+    },
+  };
+  return pinExternalImports
+    ? { ...options, plugins: [pinExternalImportsPlugin(externalImportBase)] }
+    : options;
+};
 
 const runRolldownBuild = Effect.fn(function* (params: {
   readonly build: (options: BuildOptions) => Promise<unknown>;
@@ -275,7 +387,13 @@ const bundleSpec = Effect.fn(function* (
       yield* runRolldownBuild({
         build: deps.build ?? build,
         inputFile: config.inputFile,
-        options: makeBuildOptions(tempDir, paths),
+        options: makeBuildOptions(
+          tempDir,
+          paths,
+          config.pinExternalImports === true
+            ? (config.externalImportBase ?? config.inputFile)
+            : undefined
+        ),
       });
       yield* assertBundleOutputExists(operation);
       yield* publishBundle(operation);

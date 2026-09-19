@@ -1,5 +1,14 @@
 # Add generated-output drift checking
 
+## Status
+
+**DONE (review-ready locally)** on `feat/generate-check-216`, stacked on PR #213 as
+[PR #219](https://github.com/rexeus/typeweaver/pull/219). Review-fix work for isolated spec-import
+pinning, Windows directory junctions, canonical output-lock binding, and validator temp isolation
+supersedes reviewed source head `67a66077`. Local sequential verification passed; Turbo is unusable
+in this environment (`Exec format error`). Re-run GitHub CI after push — Deno/Bun bundles and the
+Windows security job are CI-only, and the earlier quality-check run does not cover these fixes.
+
 ## Outcome
 
 `typeweaver generate --check` performs fresh isolated generation, compares relative paths and bytes
@@ -53,28 +62,62 @@ committed output.
 
 ## Plan
 
-- [ ] 1. **Accept the CLI contract with failing process tests**
+- [x] 1. **Accept the CLI contract with failing process tests**
   - **Outcome:** flags, exit codes, terminology, missing output, no-write behavior, and
     `clean:false` semantics are executable before implementation.
-  - **Evidence:** process/service tests fail for the absent mode and encode no JSON promise.
-- [ ] 2. **Extract scoped isolated generation**
+  - **Evidence:** The pre-fix run failed because `--check` and the checker/comparison modules did
+    not exist; `generateCheck.process.test.ts` now covers config and explicit flags, match, all
+    three drift groups, missing output, `clean:false`, and generation failure with no output
+    mutation.
+- [x] 2. **Extract scoped isolated generation**
   - **Outcome:** generation can run against an OS-temp target with both resolved output fields
     changed and project dependencies available, without touching configured output.
-  - **Evidence:** tests observe staging outside the project and cleanup after success, typed
-    failure, and interruption.
-- [ ] 3. **Implement deterministic comparison and diagnostics**
+  - **Evidence:** `projectStaging.ts` is shared by `ProjectValidator` and `GeneratedOutputChecker`;
+    `withStagedProject` tests prove stage removal on success, typed failure, defect, and
+    interruption while linking the nearest `node_modules`.
+- [x] 3. **Implement deterministic comparison and diagnostics**
   - **Outcome:** regular files are compared by sorted relative path and bytes; every drift category
     is reported through a typed CLI failure.
-  - **Evidence:** unit tests cover matching, added, removed, changed, binary, missing, unreadable,
-    and unsupported-entry cases.
-- [ ] 4. **Integrate the CLI and concurrency behavior**
+  - **Evidence:** `outputComparison.test.ts` covers matching, added, removed, changed, binary,
+    missing committed output, deterministic sort, unreadable files, and symbolic-link rejection.
+- [x] 4. **Integrate the CLI and concurrency behavior**
   - **Outcome:** config and explicit flags work; check detects or avoids torn reads during
     concurrent generation using the existing output-lock contract.
-  - **Evidence:** process and lifecycle tests pass without configured-output writes.
-- [ ] 5. **Document and deliver**
+  - **Evidence:** Output locks are flat `.typeweaver-output-lock-<hash>` entries created `0700` with
+    `0600` metadata directly under the platform system temp directory (POSIX root-owned sticky
+    `/tmp`; Windows the drive-independent `\\?\GLOBALROOT\SystemRoot\Temp` namespace with inherited
+    system-directory ACLs), so no user owns a shared parent and no artifact is written inside
+    output. Identity realpath-resolves the nearest existing ancestor and case-folds the whole
+    canonical path, so a missing mixed-case output and its later-created form share one lock (unit +
+    process race tests). Normal generation creates output only after acquiring the lock. Staging
+    lives directly under the trusted parent. Checks pin bare spec imports against the original
+    `<configured output>/spec/spec.js` location, including fallback past a partial nearest
+    directory, before isolated execution; this preserves normal generation lookup without accepting
+    packages planted under the shared temp parent. Validation pins against its original working
+    directory, and non-literal dynamic imports are rejected because their targets cannot be pinned
+    safely. Staged generation is gated by an internal unforgeable authority and must descend from
+    the created stage. Legacy `.typeweaver-lock` is classified with lstat/no-follow: a complete dead
+    lock is excluded by check and removed by later clean, while live/malformed/symlinked/uncertain
+    locks fail closed before clean and require manual removal; fence and other lookalike artifacts
+    are ordinary drift and clean-removable. A two-process test plus
+    alias/case/reserved/legacy/mixed-version tests cover the contract. `--verbose` keeps debug lock
+    and lifecycle output.
+- [x] 5. **Document and deliver**
   - **Outcome:** users have an executable package-script/CI example and release note.
-  - **Evidence:** docs checks, CLI tests/typecheck, generated verification, full repository gate,
-    and required PR checks pass in a dedicated PR closing #216.
+  - **Evidence:** CLI README and getting-started document `generate --check` with an executable
+    documentation workflow; `MIGRATION.md` documents the flat lock move, whole-path case folding,
+    drive-independent Windows system temp, reserved namespace, remediation, and mixed-version
+    constraint; a minor `@rexeus/typeweaver` Changeset is present; the Windows security gate runs
+    the new staging, comparison, checker, and process suites. Cross-drive spec staging was repaired
+    at `14710950`; its external-classification regression test was made filesystem-independent at
+    `d0a6d01b`; and process lock contention now uses a deterministic held/release handshake at
+    `04763a64`. The Windows system temp locator became drive-independent at `45ee3f96`, and the
+    double-generation checker test received an evidence-based Windows cold-start budget at
+    `67a66077`. The final Linux quality job covers frozen installation, build, generation,
+    Node/Deno/Bun bundles, typechecking, architecture contracts (including workspace tests and
+    packed consumers), docs, format, lint, and publish dry-run; it and the Windows security job pass
+    at the reviewed source head in
+    [CI run 35306935948](https://github.com/rexeus/typeweaver/actions/runs/35306935948).
 
 ## Risks and open questions
 

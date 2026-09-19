@@ -295,7 +295,8 @@ describe("Generator output-target symlink revalidation", () => {
         prepareGeneration(resolveGenerationPaths(params))
       );
 
-      fs.rmSync(plan.outputDir, { recursive: true });
+      fs.mkdirSync(path.dirname(plan.outputDir), { recursive: true });
+      fs.rmSync(plan.outputDir, { recursive: true, force: true });
       const orphanDir = path.join(
         externalOutputDirectory,
         ".typeweaver-ABC123"
@@ -310,7 +311,7 @@ describe("Generator output-target symlink revalidation", () => {
       );
 
       const exit = await effectRuntime.runPromiseExit(
-        withGenerationLock(plan, Effect.void)
+        withGenerationLock(plan, () => Effect.void)
       );
 
       const failure = expectUnsafeCleanTargetFailure(exit, "symbolic-link");

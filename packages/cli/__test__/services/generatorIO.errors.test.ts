@@ -8,6 +8,7 @@ import {
   cleanOutputDirPreservingLock,
   releaseOutputLockStrict,
 } from "../../src/services/generatorIO.js";
+import { outputLockDirectory } from "../../src/services/internal/outputCoordinationArtifact.js";
 import type { CleanTargetFs } from "../../src/services/cleanTargetGuard.js";
 import type { OutputLock } from "../../src/services/generatorIO.js";
 
@@ -177,7 +178,7 @@ describe("generator clean-target symlink inspection errors", () => {
 });
 
 describe("generator output-lock filesystem errors", () => {
-  test("reports lock acquisition permission failures without defects", () => {
+  test("reports lock directory creation failures without defects", () => {
     const outputDir = createTempDir();
     const cause = expectedSystemError("EACCES");
     vi.spyOn(fs, "mkdirSync").mockImplementationOnce(() => {
@@ -195,7 +196,7 @@ describe("generator output-lock filesystem errors", () => {
     expect(failure).toEqual(
       expect.objectContaining({
         outputDir,
-        lockPath: path.join(outputDir, ".typeweaver-lock"),
+        lockPath: outputLockDirectory(outputDir),
         operation: "acquire",
         cause,
       })
@@ -204,8 +205,8 @@ describe("generator output-lock filesystem errors", () => {
 
   test("does not misreport unreadable lock metadata as contention", () => {
     const outputDir = createTempDir();
-    const lockPath = path.join(outputDir, ".typeweaver-lock");
-    fs.mkdirSync(lockPath);
+    const lockPath = outputLockDirectory(outputDir);
+    fs.mkdirSync(lockPath, { recursive: true });
     fs.writeFileSync(path.join(lockPath, "info.json"), "{}");
     const cause = expectedSystemError("EACCES");
     vi.spyOn(fs, "readFileSync").mockImplementationOnce(() => {
@@ -234,8 +235,8 @@ describe("generator output-lock filesystem errors", () => {
 describe("generator output-lock release errors", () => {
   test("recognizes platform-specific filesystem errors outside a fixed allowlist", () => {
     const outputDir = createTempDir();
-    const lockPath = path.join(outputDir, ".typeweaver-lock");
-    fs.mkdirSync(lockPath);
+    const lockPath = outputLockDirectory(outputDir);
+    fs.mkdirSync(lockPath, { recursive: true });
     fs.writeFileSync(path.join(lockPath, "info.json"), "{}");
     const cause = expectedSystemError("EISDIR");
     vi.spyOn(fs, "readFileSync").mockImplementationOnce(() => {
@@ -262,9 +263,13 @@ describe("generator output-lock release errors", () => {
 
   test("reports strict lock detach permission failures without defects", () => {
     const outputDir = createTempDir();
-    const lockPath = path.join(outputDir, ".typeweaver-lock");
-    const lock: OutputLock = { path: lockPath, ownerToken: "owned" };
-    fs.mkdirSync(lockPath);
+    const lockPath = outputLockDirectory(outputDir);
+    const lock: OutputLock = {
+      path: lockPath,
+      outputDir,
+      ownerToken: "owned",
+    };
+    fs.mkdirSync(lockPath, { recursive: true });
     fs.writeFileSync(
       path.join(lockPath, "info.json"),
       JSON.stringify({

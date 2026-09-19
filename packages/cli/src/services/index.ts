@@ -11,6 +11,7 @@ export type {
   FormatterFileSystemOperation,
 } from "./errors/FormatterError.js";
 export { Generator } from "./Generator.js";
+export { GeneratedOutputChecker } from "./GeneratedOutputChecker.js";
 export type { GenerateFailure, GenerateParams } from "./generatorTypes.js";
 export { IndexFileGenerator } from "./IndexFileGenerator.js";
 export { PluginLoader } from "./PluginLoader.js";

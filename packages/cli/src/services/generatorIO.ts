@@ -1,43 +1,40 @@
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import {
-  coordinationArtifactKindForTempDirectoryName,
-  matchesCoordinationArtifactMarker,
-  TYPEWEAVER_COORDINATION_MARKER_FILE,
-} from "@rexeus/typeweaver-gen";
 import { FileSystem } from "@effect/platform";
 import { Effect } from "effect";
 import {
   CleanTargetInspectionError,
   ConcurrentGenerationError,
+  LegacyOutputLockError,
   OutputCleanError,
   OutputLockError,
   UnsafeCleanTargetError,
+  UnsafeSharedTempDirectoryError,
 } from "../errors/index.js";
 import {
   assertSafeCleanTarget,
   assertSafeCleanTargetWith,
 } from "./cleanTargetGuard.js";
-import { isOutputLockArtifactName } from "./internal/outputCoordinationArtifact.js";
+import {
+  errnoCode,
+  isExpectedNodeSystemError,
+} from "./internal/nodeFsErrors.js";
+import {
+  canonicalOutputPath,
+  canonicalHostTempDirectory,
+  ensureTrustedHostTempDirectory,
+  hasCoordinationArtifactMarker,
+  inspectLegacyOutputLock,
+  isLiveLegacyOutputLock,
+  isProcessAlive,
+  LEGACY_OUTPUT_LOCK_DIRECTORY,
+  OUTPUT_LOCK_INFO_FILE,
+  outputLockDirectory,
+  readOutputLockInfo,
+} from "./internal/outputCoordinationArtifact.js";
 import type { CleanTargetFs } from "./cleanTargetGuard.js";
-import type { PlatformError } from "@effect/platform/Error";
-
-const isExpectedNodeSystemError = (error: unknown): error is Error => {
-  const code = errnoCode(error);
-  if (code === undefined || !(error instanceof Error)) {
-    return false;
-  }
-
-  // Node filesystem errors carry the failing syscall and/or a numeric errno.
-  // This structural check covers platform-specific libuv codes (for example
-  // EISDIR) without misclassifying arbitrary application errors that merely
-  // happen to expose a string `code`.
-  return (
-    ("syscall" in error && typeof error.syscall === "string") ||
-    ("errno" in error && typeof error.errno === "number")
-  );
-};
+import type { OutputLockInfo } from "./internal/outputCoordinationArtifact.js";
 
 /**
  * Effect-wrapped output-target check. Safety violations and expected Node
@@ -98,9 +95,7 @@ export const assertSafeCleanTargetEffectWith = (
     },
   });
 
-export const removeOutputDir = (
-  outputDir: string
-): Effect.Effect<void, PlatformError, FileSystem.FileSystem> =>
+export const removeOutputDir = (outputDir: string) =>
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
     const exists = yield* fileSystem.exists(outputDir);
@@ -111,10 +106,12 @@ export const removeOutputDir = (
   });
 
 /**
- * Clean every entry inside `outputDir` except the active lock and stale
- * ownership fences. The fences prevent a delayed stale-lock reclaimer
- * from moving or deleting a replacement owner's lock. Idempotent — a
- * missing `outputDir` is a no-op.
+ * Clean every entry inside `outputDir`, preserving only a proven legacy
+ * `.typeweaver-lock` directory that a live process still owns. Dead complete
+ * locks, malformed locks, fence-shaped files/directories, and all lookalikes
+ * are removed so a following `generate --check` can report a remediable tree.
+ * Current coordination locks live out of band. Idempotent — a missing
+ * `outputDir` is a no-op.
  *
  * Filesystem failures (e.g. `EACCES` on a read-only entry) surface as a
  * typed `OutputCleanError` rather than a defect: the operator can act on
@@ -131,10 +128,17 @@ export const cleanOutputDirPreservingLock = (
       }
       const entries = fs.readdirSync(outputDir, { withFileTypes: true });
       for (const entry of entries) {
-        if (isOutputLockArtifactName(entry.name)) {
+        const entryPath = path.join(outputDir, entry.name);
+        // Preserve only a proven legacy lock that a live process still owns.
+        // Dead or malformed legacy entries, fence-shaped files/directories, and
+        // all lookalikes are removed so reported drift is remediable.
+        if (
+          entry.isDirectory() &&
+          isLiveLegacyOutputLock(entryPath, entry.name)
+        ) {
           continue;
         }
-        fs.rmSync(path.join(outputDir, entry.name), {
+        fs.rmSync(entryPath, {
           recursive: true,
           force: true,
         });
@@ -152,7 +156,7 @@ export const ensureOutputDirectories = (params: {
   readonly outputDir: string;
   readonly responsesOutputDir: string;
   readonly specOutputDir: string;
-}): Effect.Effect<void, PlatformError, FileSystem.FileSystem> =>
+}) =>
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
     yield* fileSystem.makeDirectory(params.outputDir, { recursive: true });
@@ -162,18 +166,9 @@ export const ensureOutputDirectories = (params: {
     yield* fileSystem.makeDirectory(params.specOutputDir, { recursive: true });
   });
 
-const LOCK_DIR_NAME = ".typeweaver-lock";
-const LOCK_INFO_FILE = "info.json";
-
-type LockInfo = {
-  readonly pid: number;
-  readonly startedAt: string;
-  readonly inputFile: string;
-  readonly ownerToken?: string;
-};
-
 export type OutputLock = {
   readonly path: string;
+  readonly outputDir: string;
   readonly ownerToken: string;
 };
 
@@ -208,14 +203,17 @@ const forgetFailedOutputLockReleaseAt = (lockPath: string): void => {
 
 const isFailedOutputLockRelease = (
   lockPath: string,
-  holder: LockInfo
+  holder: OutputLockInfo
 ): boolean =>
   holder.pid === process.pid &&
   holder.ownerToken !== undefined &&
   failedOutputLockReleases.get(outputLockReleaseKey(lockPath)) ===
     holder.ownerToken;
 
-const isActiveOutputLock = (lockPath: string, holder: LockInfo): boolean =>
+const isActiveOutputLock = (
+  lockPath: string,
+  holder: OutputLockInfo
+): boolean =>
   !isFailedOutputLockRelease(lockPath, holder) && isProcessAlive(holder.pid);
 
 type OutputLockDetachStatus =
@@ -243,116 +241,15 @@ const NO_OUTPUT_LOCK_HOOKS: OutputLockAcquisitionHooks = {
   onBeforeStaleLockMove: () => undefined,
 };
 
-const hasCoordinationArtifactMarker = (
-  directoryPath: string,
-  entryName: string
-): boolean => {
-  const kind = coordinationArtifactKindForTempDirectoryName(entryName);
-  if (kind === undefined) {
-    return false;
-  }
-
-  const markerPath = path.join(
-    directoryPath,
-    TYPEWEAVER_COORDINATION_MARKER_FILE
-  );
-  try {
-    if (!fs.lstatSync(markerPath).isFile()) {
-      return false;
-    }
-    return matchesCoordinationArtifactMarker(
-      fs.readFileSync(markerPath, "utf8"),
-      kind
-    );
-  } catch (error) {
-    const code = errnoCode(error);
-    if (code === "ENOENT" || code === "ENOTDIR") {
-      return false;
-    }
-    throw error;
-  }
-};
-
-const errnoCode = (error: unknown): string | undefined =>
-  typeof error === "object" &&
-  error !== null &&
-  "code" in error &&
-  typeof error.code === "string"
-    ? error.code
-    : undefined;
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-const isProcessAlive = (pid: number): boolean => {
-  try {
-    // Signal 0 performs error checking without sending a signal. Returns
-    // true if the process exists and the caller has permission to signal
-    // it. Node abstracts the POSIX/Windows difference.
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    // EPERM means the process exists but is owned by another user — still
-    // alive, just not signal-able. Only ESRCH proves that the PID has no live
-    // process. Unknown platform errors are treated conservatively as alive.
-    return errnoCode(error) !== "ESRCH";
-  }
-};
-
-const decodeLockInfo = (parsed: unknown): LockInfo | undefined => {
-  if (!isRecord(parsed)) {
-    return undefined;
-  }
-
-  const candidate = parsed;
-  if (
-    typeof candidate.pid !== "number" ||
-    typeof candidate.startedAt !== "string"
-  ) {
-    return undefined;
-  }
-  if (
-    candidate.ownerToken !== undefined &&
-    typeof candidate.ownerToken !== "string"
-  ) {
-    return undefined;
-  }
-
-  return {
-    pid: candidate.pid,
-    startedAt: candidate.startedAt,
-    inputFile:
-      typeof candidate.inputFile === "string" ? candidate.inputFile : "",
-    ...(candidate.ownerToken === undefined
-      ? {}
-      : { ownerToken: candidate.ownerToken }),
-  };
-};
-
-const isUnavailableLockInfo = (error: unknown): boolean =>
-  error instanceof SyntaxError ||
-  errnoCode(error) === "ENOENT" ||
-  errnoCode(error) === "ENOTDIR";
-
-const readLockInfo = (lockDir: string): LockInfo | undefined => {
-  try {
-    const raw = fs.readFileSync(path.join(lockDir, LOCK_INFO_FILE), "utf8");
-    return decodeLockInfo(JSON.parse(raw) as unknown);
-  } catch (error) {
-    if (isUnavailableLockInfo(error)) {
-      return undefined;
-    }
-    throw error;
-  }
-};
-
-const writeLockInfo = (lockDir: string, info: LockInfo): void => {
-  const candidatePath = path.join(lockDir, `.${info.ownerToken}.json`);
+const writeLockInfo = (lockDir: string, info: OutputLockInfo): void => {
+  const candidatePath = path.join(lockDir, `.${String(info.ownerToken)}.json`);
   try {
     fs.writeFileSync(candidatePath, JSON.stringify(info, null, 2), {
       flag: "wx",
+      // Owner-only metadata; the lock directory is already 0o700.
+      mode: 0o600,
     });
-    fs.renameSync(candidatePath, path.join(lockDir, LOCK_INFO_FILE));
+    fs.renameSync(candidatePath, path.join(lockDir, OUTPUT_LOCK_INFO_FILE));
   } finally {
     fs.rmSync(candidatePath, { force: true });
   }
@@ -360,7 +257,9 @@ const writeLockInfo = (lockDir: string, info: LockInfo): void => {
 
 const tryCreateLockDir = (lockDir: string): boolean => {
   try {
-    fs.mkdirSync(lockDir);
+    // Explicit private mode so a permissive umask cannot expose lock metadata
+    // to other users on the shared trusted temp root.
+    fs.mkdirSync(lockDir, { mode: 0o700 });
     return true;
   } catch (error) {
     if (errnoCode(error) === "EEXIST") {
@@ -370,12 +269,12 @@ const tryCreateLockDir = (lockDir: string): boolean => {
   }
 };
 
-const sameLockInfo = (left: LockInfo, right: LockInfo): boolean =>
+const sameLockInfo = (left: OutputLockInfo, right: OutputLockInfo): boolean =>
   left.pid === right.pid &&
   left.startedAt === right.startedAt &&
   left.ownerToken === right.ownerToken;
 
-const lockFencePath = (lockDir: string, info: LockInfo): string => {
+const lockFencePath = (lockDir: string, info: OutputLockInfo): string => {
   const identity =
     info.ownerToken ??
     `${info.pid}\u0000${info.startedAt}\u0000${info.inputFile}`;
@@ -388,10 +287,10 @@ const lockFencePath = (lockDir: string, info: LockInfo): string => {
 
 const moveStaleLockToFence = (
   lockDir: string,
-  expected: LockInfo,
+  expected: OutputLockInfo,
   hooks: OutputLockAcquisitionHooks
 ): boolean => {
-  const current = readLockInfo(lockDir);
+  const current = readOutputLockInfo(lockDir);
   if (current === undefined || !sameLockInfo(current, expected)) {
     return false;
   }
@@ -407,7 +306,7 @@ const moveStaleLockToFence = (
     throw error;
   }
 
-  const fenced = readLockInfo(fencePath);
+  const fenced = readOutputLockInfo(fencePath);
   if (fenced === undefined || !sameLockInfo(fenced, expected)) {
     if (!fs.existsSync(lockDir)) {
       fs.renameSync(fencePath, lockDir);
@@ -418,7 +317,7 @@ const moveStaleLockToFence = (
 };
 
 const rollbackLockAcquisition = (lockDir: string, ownerToken: string): void => {
-  const current = readLockInfo(lockDir);
+  const current = readOutputLockInfo(lockDir);
   if (current !== undefined && current.ownerToken !== ownerToken) {
     return;
   }
@@ -432,7 +331,10 @@ const tryAcquireNewOutputLock = (
   },
   hooks: OutputLockAcquisitionHooks
 ): OutputLock | undefined => {
-  const lockDir = path.join(params.outputDir, LOCK_DIR_NAME);
+  // The lock is a flat entry directly under the trusted system temp root, so
+  // no CLI user owns a shared parent that could rename another user's lock.
+  ensureTrustedHostTempDirectory(canonicalHostTempDirectory());
+  const lockDir = outputLockDirectory(params.outputDir);
   if (!tryCreateLockDir(lockDir)) {
     return undefined;
   }
@@ -446,21 +348,77 @@ const tryAcquireNewOutputLock = (
       inputFile: params.inputFile,
       ownerToken,
     });
-    return { path: lockDir, ownerToken };
+    return { path: lockDir, outputDir: params.outputDir, ownerToken };
   } catch (error) {
     rollbackLockAcquisition(lockDir, ownerToken);
     throw error;
   }
 };
 
+type LockHolder = ConcurrentGenerationError["holder"];
+
+const knownHolder = (info: OutputLockInfo): LockHolder => ({
+  _tag: "Known",
+  pid: info.pid,
+  startedAt: info.startedAt,
+});
+
+const concurrentFailure = (
+  outputDir: string,
+  lockPath: string | undefined,
+  holder: LockHolder
+): ConcurrentGenerationError =>
+  new ConcurrentGenerationError({ outputDir, lockPath, holder });
+
+const assertNoLiveLegacyLock = (outputDir: string): void => {
+  let legacy;
+  try {
+    legacy = inspectLegacyOutputLock(outputDir);
+  } catch (error) {
+    if (isExpectedNodeSystemError(error)) {
+      throw new LegacyOutputLockError({
+        outputDir,
+        lockPath: path.join(outputDir, LEGACY_OUTPUT_LOCK_DIRECTORY),
+        reason: "ownership-uncertain",
+        cause: error,
+      });
+    }
+    throw error;
+  }
+  if (legacy._tag !== "Held") {
+    return;
+  }
+  throw new LegacyOutputLockError({
+    outputDir,
+    lockPath: legacy.lockPath,
+    reason: legacy.reason,
+    ...(legacy.holder === undefined
+      ? {}
+      : {
+          holderPid: legacy.holder.pid,
+          holderStartedAt: legacy.holder.startedAt,
+        }),
+  });
+};
+
 /**
- * Acquire an exclusive lock on `outputDir` by creating a `.typeweaver-lock/`
- * directory. `mkdir` is atomic and fails with `EEXIST` if the directory
- * already exists. Ownership metadata is published atomically and contains
- * a unique token. Missing or malformed metadata fails closed so another
- * process cannot reclaim a lock while its owner is still publishing it.
- * If complete metadata belongs to a dead PID, the stale lock is reclaimed
- * only while those metadata remain unchanged.
+ * Acquire an exclusive lock on `outputDir`. The lock is a `lock` directory
+ * under a deterministic host-temp coordination path derived from the physical
+ * output identity; `mkdir` is atomic and fails with `EEXIST` if the lock
+ * already exists. Keeping the coordination tree out of configured output lets
+ * read-only checks hold the same lock without transiently mutating output.
+ *
+ * Before acquiring, a legacy in-output `.typeweaver-lock` is inspected: a live
+ * holder or malformed/ownership-uncertain metadata fails closed because the
+ * current CLI cannot write that legacy lock to coordinate with an older
+ * process. Complete metadata owned by a dead process is stale and does not
+ * block.
+ *
+ * Ownership metadata is published atomically and contains a unique token.
+ * Missing or malformed metadata fails closed so another process cannot reclaim
+ * a lock while its owner is still publishing it. If complete metadata belongs
+ * to a dead PID, the stale lock is reclaimed only while those metadata remain
+ * unchanged.
  *
  * Pair via `Effect.acquireRelease`: release verifies the ownership token,
  * so a delayed finalizer cannot remove a replacement owner's lock.
@@ -471,79 +429,80 @@ export const acquireOutputLockWith = (
     readonly inputFile: string;
   },
   hooks: OutputLockAcquisitionHooks
-): Effect.Effect<OutputLock, ConcurrentGenerationError | OutputLockError> =>
-  Effect.try({
+): Effect.Effect<
+  OutputLock,
+  | ConcurrentGenerationError
+  | LegacyOutputLockError
+  | OutputLockError
+  | UnsafeSharedTempDirectoryError
+> => {
+  let lockPath: string | undefined;
+  return Effect.try({
     try: () => {
-      const lockDir = path.join(params.outputDir, LOCK_DIR_NAME);
+      const lockedParams = {
+        ...params,
+        outputDir: canonicalOutputPath(params.outputDir),
+      };
+      assertNoLiveLegacyLock(lockedParams.outputDir);
+      const lockDir = outputLockDirectory(lockedParams.outputDir);
+      lockPath = lockDir;
 
-      const acquired = tryAcquireNewOutputLock(params, hooks);
+      const acquired = tryAcquireNewOutputLock(lockedParams, hooks);
       if (acquired !== undefined) {
         forgetFailedOutputLockReleaseAt(lockDir);
         return acquired;
       }
 
-      const holder = readLockInfo(lockDir);
+      const holder = readOutputLockInfo(lockDir);
       if (holder === undefined) {
-        throw new ConcurrentGenerationError({
-          outputDir: params.outputDir,
-          holder: { _tag: "Unknown" },
+        throw concurrentFailure(lockedParams.outputDir, lockPath, {
+          _tag: "Unknown",
         });
       }
       if (isActiveOutputLock(lockDir, holder)) {
-        throw new ConcurrentGenerationError({
-          outputDir: params.outputDir,
-          holder: {
-            _tag: "Known",
-            pid: holder.pid,
-            startedAt: holder.startedAt,
-          },
-        });
+        throw concurrentFailure(
+          lockedParams.outputDir,
+          lockPath,
+          knownHolder(holder)
+        );
       }
 
       if (!moveStaleLockToFence(lockDir, holder, hooks)) {
-        const reHolder = readLockInfo(lockDir);
+        const reHolder = readOutputLockInfo(lockDir);
         if (reHolder?.ownerToken !== holder.ownerToken) {
           forgetFailedOutputLockReleaseAt(lockDir);
         }
-        throw new ConcurrentGenerationError({
-          outputDir: params.outputDir,
-          holder:
-            reHolder === undefined
-              ? { _tag: "Unknown" }
-              : {
-                  _tag: "Known",
-                  pid: reHolder.pid,
-                  startedAt: reHolder.startedAt,
-                },
-        });
+        throw concurrentFailure(
+          lockedParams.outputDir,
+          lockPath,
+          reHolder === undefined ? { _tag: "Unknown" } : knownHolder(reHolder)
+        );
       }
       forgetFailedOutputLockReleaseAt(lockDir);
 
-      const reclaimed = tryAcquireNewOutputLock(params, hooks);
+      const reclaimed = tryAcquireNewOutputLock(lockedParams, hooks);
       if (reclaimed !== undefined) {
         return reclaimed;
       }
-      const reHolder = readLockInfo(lockDir);
-      throw new ConcurrentGenerationError({
-        outputDir: params.outputDir,
-        holder:
-          reHolder === undefined
-            ? { _tag: "Unknown" }
-            : {
-                _tag: "Known",
-                pid: reHolder.pid,
-                startedAt: reHolder.startedAt,
-              },
-      });
+      const reHolder = readOutputLockInfo(lockDir);
+      throw concurrentFailure(
+        lockedParams.outputDir,
+        lockPath,
+        reHolder === undefined ? { _tag: "Unknown" } : knownHolder(reHolder)
+      );
     },
     catch: error => {
-      if (error instanceof ConcurrentGenerationError) {
+      if (
+        error instanceof ConcurrentGenerationError ||
+        error instanceof LegacyOutputLockError ||
+        error instanceof UnsafeSharedTempDirectoryError
+      ) {
         return error;
       }
       if (isExpectedNodeSystemError(error)) {
         return new OutputLockError({
           outputDir: params.outputDir,
-          lockPath: path.join(params.outputDir, LOCK_DIR_NAME),
+          lockPath: lockPath ?? canonicalHostTempDirectory(),
           operation: "acquire",
           cause: error,
         });
@@ -551,19 +510,25 @@ export const acquireOutputLockWith = (
       throw error;
     },
   });
+};
 
 export const acquireOutputLock = (params: {
   readonly outputDir: string;
   readonly inputFile: string;
-}): Effect.Effect<OutputLock, ConcurrentGenerationError | OutputLockError> =>
-  acquireOutputLockWith(params, NO_OUTPUT_LOCK_HOOKS);
+}): Effect.Effect<
+  OutputLock,
+  | ConcurrentGenerationError
+  | LegacyOutputLockError
+  | OutputLockError
+  | UnsafeSharedTempDirectoryError
+> => acquireOutputLockWith(params, NO_OUTPUT_LOCK_HOOKS);
 
 const detachOutputLock = (lock: OutputLock): OutputLockDetachStatus => {
   if (fs.lstatSync(lock.path, { throwIfNoEntry: false }) === undefined) {
     return { _tag: "AlreadyAbsent" };
   }
 
-  const holder = readLockInfo(lock.path);
+  const holder = readOutputLockInfo(lock.path);
   if (holder?.ownerToken !== lock.ownerToken) {
     return { _tag: "OwnershipChanged" };
   }
@@ -571,7 +536,7 @@ const detachOutputLock = (lock: OutputLock): OutputLockDetachStatus => {
   const fencePath = lockFencePath(lock.path, holder);
   fs.renameSync(lock.path, fencePath);
 
-  const fenced = readLockInfo(fencePath);
+  const fenced = readOutputLockInfo(fencePath);
   if (fenced !== undefined && sameLockInfo(fenced, holder)) {
     return { _tag: "Detached", fencePath };
   }
@@ -588,6 +553,8 @@ const removeDetachedOutputLock = (
   fencePath: string
 ): OutputLockReleaseStatus => {
   try {
+    // The fence is a flat sibling of the lock directly under the trusted temp
+    // root, so removing it fully releases the deterministic coordination name.
     fs.rmSync(fencePath, { recursive: true, force: true });
     return { _tag: "Released" };
   } catch (cause) {
@@ -643,7 +610,7 @@ export const releaseOutputLockStrict = (
     catch: cause => {
       if (isExpectedNodeSystemError(cause)) {
         return new OutputLockError({
-          outputDir: path.dirname(lock.path),
+          outputDir: lock.outputDir,
           lockPath: lock.path,
           operation: "release",
           cause,
@@ -685,12 +652,11 @@ export const releaseOutputLock = (lock: OutputLock): Effect.Effect<void> =>
  * rewrite their in-flight `.tmp` content.
  *
  * Cheap and idempotent: if the output directory does not exist (first run)
- * or contains no orphans, the sweep is a no-op. The current lock dir
- * (`.typeweaver-lock`) and stale-ownership fences are preserved — only the
- * atomic-write (`.typeweaver-XXXXXX`) and spec-bundler staging
- * (`.typeweaver-spec-loader-XXXXXX`) artifacts with an exact, versioned
- * ownership marker are pruned. A matching name without that marker is
- * user-owned and preserved.
+ * or contains no orphans, the sweep is a no-op. A live proven legacy lock is
+ * skipped; only the atomic-write (`.typeweaver-XXXXXX`) and spec-bundler
+ * staging (`.typeweaver-spec-loader-XXXXXX`) artifacts with an exact,
+ * versioned ownership marker are pruned. A matching name without that marker
+ * is user-owned and preserved.
  *
  * Best-effort: a failing `rm` (e.g. `EACCES` on crash debris owned by
  * another user) is demoted to a WARN log — an unremovable orphan must not
@@ -726,10 +692,11 @@ const sweepOrphanTempdirsAt = (directory: string): void => {
     if (!entry.isDirectory()) {
       continue;
     }
-    if (isOutputLockArtifactName(entry.name)) {
+    const entryPath = path.join(directory, entry.name);
+    // Never descend into a live legacy lock; clean owns dead/unproven removal.
+    if (isLiveLegacyOutputLock(entryPath, entry.name)) {
       continue;
     }
-    const entryPath = path.join(directory, entry.name);
     if (hasCoordinationArtifactMarker(entryPath, entry.name)) {
       fs.rmSync(entryPath, { recursive: true, force: true });
       continue;

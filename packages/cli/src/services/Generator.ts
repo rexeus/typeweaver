@@ -1,5 +1,10 @@
 import { ContextBuilder, PluginRegistry } from "@rexeus/typeweaver-gen";
 import { Effect } from "effect";
+import {
+  ReservedCoordinationPathError,
+  UnsafeSharedTempDirectoryError,
+  UnsafeStagingRootError,
+} from "../errors/index.js";
 import { Formatter } from "./Formatter.js";
 import {
   DEFAULT_PLUGIN_RESOLUTION_STRATEGIES,
@@ -42,7 +47,19 @@ export class Generator extends Effect.Service<Generator>()(
         });
         yield* Effect.logInfo("Starting generation...");
 
-        const paths = resolveGenerationPaths(params);
+        const paths = yield* Effect.try({
+          try: () => resolveGenerationPaths(params),
+          catch: error => {
+            if (
+              error instanceof ReservedCoordinationPathError ||
+              error instanceof UnsafeSharedTempDirectoryError ||
+              error instanceof UnsafeStagingRootError
+            ) {
+              return error;
+            }
+            throw error;
+          },
+        });
         yield* Effect.logDebug(
           `Input file: '${paths.inputFile}'; output dir: '${paths.outputDir}'`
         );
@@ -50,8 +67,7 @@ export class Generator extends Effect.Service<Generator>()(
         const registry = yield* PluginRegistry.createInstance();
         const plan = yield* prepareGeneration(paths);
 
-        yield* withGenerationLock(
-          plan,
+        yield* withGenerationLock(plan, lockedPlan =>
           Effect.gen(function* () {
             yield* pluginLoader.loadAll({
               registry,
@@ -61,23 +77,27 @@ export class Generator extends Effect.Service<Generator>()(
             });
 
             yield* Effect.logInfo(
-              `Bundling spec from '${plan.inputFile}' to '${plan.specOutputDir}'...`
+              `Bundling spec from '${lockedPlan.inputFile}' to '${lockedPlan.specOutputDir}'...`
             );
             const normalizedSpec = (yield* specLoader.load({
-              inputFile: plan.inputFile,
-              specOutputDir: plan.specOutputDir,
+              inputFile: lockedPlan.inputFile,
+              specOutputDir: lockedPlan.specOutputDir,
+              isolatedImport: params.stagingAuthority !== undefined,
+              ...(params.externalImportBase === undefined
+                ? {}
+                : { externalImportBase: params.externalImportBase }),
             })).normalizedSpec;
 
             const pluginContext = yield* contextBuilder.buildPluginContext({
-              outputDir: plan.outputDir,
-              inputDir: plan.inputDir,
-              config: plan.userConfig,
+              outputDir: lockedPlan.outputDir,
+              inputDir: lockedPlan.inputDir,
+              config: lockedPlan.userConfig,
             });
             const initial = yield* registry.getAll;
 
             const result = yield* runPluginLifecycle(
               {
-                plan,
+                plan: lockedPlan,
                 initial,
                 normalizedSpec,
                 pluginContext,
@@ -85,7 +105,7 @@ export class Generator extends Effect.Service<Generator>()(
               { contextBuilder, indexFileGenerator }
             );
 
-            yield* runGeneratorPostprocessing(plan, result, formatter);
+            yield* runGeneratorPostprocessing(lockedPlan, result, formatter);
           })
         );
       });

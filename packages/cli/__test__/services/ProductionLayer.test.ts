@@ -7,12 +7,15 @@ import {
 import { Effect } from "effect";
 import { describe, expect, test } from "vitest";
 import { effectRuntime } from "../../src/effectRuntime.js";
-import { ConfigLoader } from "../../src/services/ConfigLoader.js";
-import { Formatter } from "../../src/services/Formatter.js";
-import { Generator } from "../../src/services/Generator.js";
-import { PluginLoader } from "../../src/services/PluginLoader.js";
-import { PluginModuleLoader } from "../../src/services/PluginModuleLoader.js";
-import { SpecLoader } from "../../src/services/SpecLoader.js";
+import {
+  ConfigLoader,
+  Formatter,
+  GeneratedOutputChecker,
+  Generator,
+  PluginLoader,
+  PluginModuleLoader,
+  SpecLoader,
+} from "../../src/services/index.js";
 
 describe("ProductionLayer", () => {
   // Smoke test: every service registered on the production layer must be
@@ -26,6 +29,7 @@ describe("ProductionLayer", () => {
       yield* Formatter;
       yield* SpecLoader;
       yield* Generator;
+      yield* GeneratedOutputChecker;
       yield* PluginLoader;
       yield* PluginModuleLoader;
       yield* PluginRegistry;

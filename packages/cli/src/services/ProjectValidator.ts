@@ -14,6 +14,7 @@ import {
   DEFAULT_PLUGIN_RESOLUTION_STRATEGIES,
   defaultRequiredPlugins,
 } from "./generatorDefaults.js";
+import { linkNearestNodeModules } from "./internal/projectStaging.js";
 import { PluginLoader } from "./PluginLoader.js";
 import { SpecLoader } from "./SpecLoader.js";
 
@@ -27,29 +28,50 @@ export type ValidateProjectResult = {
   readonly issues: readonly Issue[];
 };
 
-const linkNearestNodeModules = Effect.fn(function* (
-  fileSystem: FileSystem.FileSystem,
-  currentWorkingDirectory: string,
-  temporaryDirectory: string
-) {
-  let searchDirectory = path.resolve(currentWorkingDirectory);
-  while (true) {
-    const nodeModulesDirectory = path.join(searchDirectory, "node_modules");
-    if (yield* fileSystem.exists(nodeModulesDirectory)) {
-      yield* fileSystem.symlink(
-        nodeModulesDirectory,
-        path.join(temporaryDirectory, "node_modules")
-      );
-      return;
-    }
+type StagedValidationDeps = {
+  readonly pluginLoader: PluginLoader;
+  readonly pluginRegistry: PluginRegistry;
+  readonly specLoader: SpecLoader;
+  readonly inputFile: string;
+  readonly temporaryDirectory: string;
+  readonly currentWorkingDirectory: string;
+  readonly config: Partial<TypeweaverConfig> & { readonly input: string };
+};
 
-    const parentDirectory = path.dirname(searchDirectory);
-    if (parentDirectory === searchDirectory) {
-      return;
-    }
-    searchDirectory = parentDirectory;
-  }
-});
+const runStagedValidation = (deps: StagedValidationDeps) =>
+  Effect.gen(function* () {
+    const registry = yield* deps.pluginRegistry.createInstance();
+
+    yield* deps.pluginLoader.loadAll({
+      registry,
+      requiredPlugins: defaultRequiredPlugins(),
+      strategies: DEFAULT_PLUGIN_RESOLUTION_STRATEGIES,
+      config: deps.config,
+    });
+    const loaded = yield* deps.specLoader.load({
+      inputFile: deps.inputFile,
+      specOutputDir: path.join(deps.temporaryDirectory, "spec"),
+      isolatedImport: true,
+      externalImportBase: path.resolve(deps.currentWorkingDirectory, "spec.js"),
+    });
+    const validationContext: PluginValidationContext = {
+      inputDir: path.dirname(deps.inputFile),
+      config: { ...deps.config },
+    };
+    const pluginIssues = yield* registry.validate({
+      normalizedSpec: loaded.normalizedSpec,
+      context: validationContext,
+    });
+
+    return {
+      issues: [
+        ...loaded.normalizedSpec.warnings.map(warning =>
+          normalizedSpecWarningToIssue(warning, loaded.normalizedSpec)
+        ),
+        ...pluginIssues,
+      ],
+    };
+  });
 
 export class ProjectValidator extends Effect.Service<ProjectValidator>()(
   "typeweaver/ProjectValidator",
@@ -60,55 +82,36 @@ export class ProjectValidator extends Effect.Service<ProjectValidator>()(
       const pluginRegistry = yield* PluginRegistry;
       const specLoader = yield* SpecLoader;
 
-      const validate = Effect.fn("typeweaver.ProjectValidator.validate")(
-        (params: ValidateProjectParams) =>
-          Effect.scoped(
-            Effect.gen(function* () {
-              const inputFile = path.resolve(
-                params.currentWorkingDirectory,
-                params.inputFile
-              );
-              const temporaryDirectory =
-                yield* fileSystem.makeTempDirectoryScoped({
-                  prefix: "typeweaver-validate-",
-                });
-              yield* linkNearestNodeModules(
-                fileSystem,
-                params.currentWorkingDirectory,
-                temporaryDirectory
-              );
-              const registry = yield* pluginRegistry.createInstance();
-
-              yield* pluginLoader.loadAll({
-                registry,
-                requiredPlugins: defaultRequiredPlugins(),
-                strategies: DEFAULT_PLUGIN_RESOLUTION_STRATEGIES,
-                config: params.config,
+      const validate = Effect.fn("typeweaver.ProjectValidator.validate")((
+        params: ValidateProjectParams
+      ) => {
+        const inputFile = path.resolve(
+          params.currentWorkingDirectory,
+          params.inputFile
+        );
+        return Effect.scoped(
+          Effect.gen(function* () {
+            const temporaryDirectory =
+              yield* fileSystem.makeTempDirectoryScoped({
+                prefix: "typeweaver-validate-",
               });
-              const loaded = yield* specLoader.load({
-                inputFile,
-                specOutputDir: path.join(temporaryDirectory, "spec"),
-              });
-              const validationContext: PluginValidationContext = {
-                inputDir: path.dirname(inputFile),
-                config: { ...params.config },
-              };
-              const pluginIssues = yield* registry.validate({
-                normalizedSpec: loaded.normalizedSpec,
-                context: validationContext,
-              });
-
-              return {
-                issues: [
-                  ...loaded.normalizedSpec.warnings.map(warning =>
-                    normalizedSpecWarningToIssue(warning, loaded.normalizedSpec)
-                  ),
-                  ...pluginIssues,
-                ],
-              };
-            })
-          )
-      );
+            yield* linkNearestNodeModules(
+              fileSystem,
+              params.currentWorkingDirectory,
+              temporaryDirectory
+            );
+            return yield* runStagedValidation({
+              pluginLoader,
+              pluginRegistry,
+              specLoader,
+              inputFile,
+              temporaryDirectory,
+              currentWorkingDirectory: params.currentWorkingDirectory,
+              config: params.config,
+            });
+          })
+        );
+      });
 
       return { validate } as const;
     }),

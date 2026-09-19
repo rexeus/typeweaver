@@ -4,12 +4,17 @@ import path from "node:path";
 import { NodeContext } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Cause, Deferred, Effect, Exit, Fiber } from "effect";
-import { afterEach, describe, expect } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
+import { ReservedCoordinationPathError } from "../../../src/errors/index.js";
 import {
   prepareGeneration,
   resolveGenerationPaths,
   withGenerationLock,
 } from "../../../src/services/internal/generatorPreflight.js";
+import {
+  canonicalHostTempDirectory,
+  outputLockDirectory,
+} from "../../../src/services/internal/outputCoordinationArtifact.js";
 
 const tempDirs: string[] = [];
 
@@ -35,13 +40,18 @@ const makePlan = (workspace: string) =>
     })
   ).pipe(Effect.provide(NodeContext.layer));
 
-describe("generator preflight and lock workflow", () => {
-  afterEach(() => {
-    for (const tempDir of tempDirs.splice(0)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
+const expectLockHeld = (lockPath: string) =>
+  Effect.sync(() => {
+    expect(fs.existsSync(lockPath)).toBe(true);
   });
 
+afterEach(() => {
+  for (const tempDir of tempDirs.splice(0)) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+describe("generator preflight and lock workflow", () => {
   it.effect(
     "rejects an unsafe target before creating generator subdirectories",
     () => {
@@ -73,14 +83,13 @@ describe("generator preflight and lock workflow", () => {
 
       return Effect.gen(function* () {
         const plan = yield* makePlan(workspace);
-        const lockPath = path.join(plan.outputDir, ".typeweaver-lock");
+        const lockPath = outputLockDirectory(plan.outputDir);
 
         const firstExit = yield* Effect.exit(
-          withGenerationLock(
-            plan,
-            Effect.sync(() => {
-              expect(fs.existsSync(lockPath)).toBe(true);
-            }).pipe(Effect.zipRight(Effect.die(workflowFailure)))
+          withGenerationLock(plan, () =>
+            expectLockHeld(lockPath).pipe(
+              Effect.zipRight(Effect.die(workflowFailure))
+            )
           )
         );
 
@@ -92,12 +101,7 @@ describe("generator preflight and lock workflow", () => {
         }
         expect(fs.existsSync(lockPath)).toBe(false);
 
-        yield* withGenerationLock(
-          plan,
-          Effect.sync(() => {
-            expect(fs.existsSync(lockPath)).toBe(true);
-          })
-        );
+        yield* withGenerationLock(plan, () => expectLockHeld(lockPath));
         expect(fs.existsSync(lockPath)).toBe(false);
       }).pipe(Effect.provide(NodeContext.layer));
     }
@@ -108,12 +112,11 @@ describe("generator preflight and lock workflow", () => {
 
     return Effect.gen(function* () {
       const plan = yield* makePlan(workspace);
-      const lockPath = path.join(plan.outputDir, ".typeweaver-lock");
+      const lockPath = outputLockDirectory(plan.outputDir);
       const entered = yield* Deferred.make<void>();
       const blocked = yield* Deferred.make<void>();
       const fiber = yield* Effect.fork(
-        withGenerationLock(
-          plan,
+        withGenerationLock(plan, () =>
           Deferred.succeed(entered, undefined).pipe(
             Effect.zipRight(Deferred.await(blocked))
           )
@@ -130,5 +133,108 @@ describe("generator preflight and lock workflow", () => {
       }
       expect(fs.existsSync(lockPath)).toBe(false);
     }).pipe(Effect.provide(NodeContext.layer));
+  });
+});
+
+describe("generator canonical lock binding", () => {
+  test("keeps output writes bound to the canonical path acquired by the lock", async () => {
+    const workspace = makeWorkspace();
+    const firstTarget = path.join(workspace, "first-target");
+    const secondTarget = path.join(workspace, "second-target");
+    const alias = path.join(workspace, "output-alias");
+    fs.mkdirSync(firstTarget);
+    fs.mkdirSync(secondTarget);
+    fs.symlinkSync(
+      firstTarget,
+      alias,
+      process.platform === "win32" ? "junction" : "dir"
+    );
+    const plan = await Effect.runPromise(
+      prepareGeneration(
+        resolveGenerationPaths({
+          inputFile: "spec/index.ts",
+          outputDir: "output-alias/generated",
+          config: {
+            input: "spec/index.ts",
+            output: "output-alias/generated",
+            clean: false,
+          },
+          currentWorkingDirectory: workspace,
+        })
+      ).pipe(Effect.provide(NodeContext.layer))
+    );
+
+    await Effect.runPromise(
+      withGenerationLock(plan, lockedPlan =>
+        Effect.sync(() => {
+          fs.unlinkSync(alias);
+          fs.symlinkSync(
+            secondTarget,
+            alias,
+            process.platform === "win32" ? "junction" : "dir"
+          );
+          fs.writeFileSync(
+            path.join(lockedPlan.outputDir, "marker.txt"),
+            "locked\n"
+          );
+        })
+      ).pipe(Effect.provide(NodeContext.layer))
+    );
+
+    expect(
+      fs.readFileSync(path.join(firstTarget, "generated", "marker.txt"), "utf8")
+    ).toBe("locked\n");
+    expect(fs.existsSync(path.join(secondTarget, "generated"))).toBe(false);
+  });
+});
+
+describe("generator preflight reserved source validation", () => {
+  test("rejects a working directory inside the reserved namespace", () => {
+    const reservedCwd = path.join(
+      canonicalHostTempDirectory(),
+      "typeweaver-check-Ab12Z9"
+    );
+
+    expect(() =>
+      resolveGenerationPaths({
+        inputFile: "spec/index.ts",
+        outputDir: "generated",
+        currentWorkingDirectory: reservedCwd,
+      })
+    ).toThrow(ReservedCoordinationPathError);
+  });
+
+  test("rejects an input directory inside the reserved namespace", () => {
+    const workspace = makeWorkspace();
+    const reservedInput = path.join(
+      canonicalHostTempDirectory(),
+      `.typeweaver-output-lock-${"a".repeat(64)}`,
+      "spec",
+      "index.ts"
+    );
+
+    expect(() =>
+      resolveGenerationPaths({
+        inputFile: reservedInput,
+        outputDir: "generated",
+        currentWorkingDirectory: workspace,
+      })
+    ).toThrow(ReservedCoordinationPathError);
+  });
+
+  test("rejects a flat lock fence name used as the configured output", () => {
+    const workspace = makeWorkspace();
+    const fenceOutput = path.join(
+      canonicalHostTempDirectory(),
+      `.typeweaver-output-lock-${"a".repeat(64)}.fence-${"b".repeat(24)}`
+    );
+
+    expect(() =>
+      resolveGenerationPaths({
+        inputFile: "spec/index.ts",
+        outputDir: fenceOutput,
+        currentWorkingDirectory: workspace,
+      })
+    ).toThrow(ReservedCoordinationPathError);
   });
 });

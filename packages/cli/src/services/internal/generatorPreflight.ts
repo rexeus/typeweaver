@@ -9,6 +9,10 @@ import {
   releaseOutputLock,
   sweepOrphanTempdirs,
 } from "../generatorIO.js";
+import {
+  assertGenerationOutputAllowed,
+  assertPathNotReservedForCoordination,
+} from "./stagingAuthority.js";
 import type { GenerateParams } from "../generatorTypes.js";
 
 export type GenerationPaths = {
@@ -32,6 +36,17 @@ export const resolveGenerationPaths = (
   const cwd = params.currentWorkingDirectory ?? process.cwd();
   const inputFile = path.resolve(cwd, params.inputFile);
   const outputDir = path.resolve(cwd, params.outputDir);
+  const inputDir = path.dirname(inputFile);
+  // Project source and input directory are never bypassed by a staging
+  // authority; only the staged output descendant is internal.
+  assertPathNotReservedForCoordination(cwd);
+  assertPathNotReservedForCoordination(inputDir);
+  assertGenerationOutputAllowed({
+    outputDir,
+    ...(params.stagingAuthority === undefined
+      ? {}
+      : { stagingAuthority: params.stagingAuthority }),
+  });
   return {
     params,
     cwd,
@@ -56,8 +71,8 @@ export const prepareGeneration = (paths: GenerationPaths) =>
       plan.cwd,
       plan.params.config?.clean !== false ? plan.inputFile : undefined
     );
-    yield* ensureOutputDirectories(plan);
-
+    // Output directories are created only after the lock is acquired so a run
+    // that loses the concurrency race cannot create or mutate the output tree.
     return plan;
   });
 
@@ -73,18 +88,17 @@ const prepareLockedOutput = (plan: GenerationPlan) =>
     );
     yield* sweepOrphanTempdirs(plan.outputDir);
 
-    if (plan.params.config?.clean === false) {
-      return;
+    if (plan.params.config?.clean !== false) {
+      yield* Effect.logInfo("Cleaning output directory...");
+      yield* cleanOutputDirPreservingLock(plan.outputDir);
     }
 
-    yield* Effect.logInfo("Cleaning output directory...");
-    yield* cleanOutputDirPreservingLock(plan.outputDir);
     yield* ensureOutputDirectories(plan);
   });
 
 export const withGenerationLock = <A, E, R>(
   plan: GenerationPlan,
-  workflow: Effect.Effect<A, E, R>
+  workflow: (lockedPlan: GenerationPlan) => Effect.Effect<A, E, R>
 ) =>
   Effect.acquireUseRelease(
     Effect.gen(function* () {
@@ -97,7 +111,22 @@ export const withGenerationLock = <A, E, R>(
       );
       return outputLock;
     }),
-    () => prepareLockedOutput(plan).pipe(Effect.zipRight(workflow)),
+    outputLock => {
+      const lockedPlan: GenerationPlan = {
+        ...plan,
+        outputDir: outputLock.outputDir,
+        responsesOutputDir: path.join(outputLock.outputDir, "responses"),
+        specOutputDir: path.join(outputLock.outputDir, "spec"),
+      };
+      return assertSafeCleanTargetEffect(
+        plan.outputDir,
+        plan.cwd,
+        plan.params.config?.clean !== false ? plan.inputFile : undefined
+      ).pipe(
+        Effect.zipRight(prepareLockedOutput(lockedPlan)),
+        Effect.zipRight(workflow(lockedPlan))
+      );
+    },
     outputLock =>
       Effect.gen(function* () {
         yield* releaseOutputLock(outputLock);

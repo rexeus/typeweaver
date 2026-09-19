@@ -101,6 +101,7 @@ the install commands.
   "scripts": {
     "api:validate": "typeweaver validate --config ./typeweaver.config.mjs",
     "api:generate": "typeweaver generate --config ./typeweaver.config.mjs",
+    "api:check": "typeweaver generate --check --config ./typeweaver.config.mjs",
     "api:doctor": "typeweaver doctor --config ./typeweaver.config.mjs --deep",
     "typecheck": "tsc --noEmit"
   }
@@ -317,6 +318,27 @@ api/generated/
 
 Generated output is disposable. Change the source contract or generator configuration, then
 regenerate. Do not patch generated files by hand.
+
+### Fail CI when committed output is stale
+
+When your project commits generated output, add a check step so a forgotten regeneration fails the
+build. `api:check` generates into isolated temporary storage, byte-compares the result with the
+committed output, and exits `1` when files were added, removed, or changed. It never creates or
+writes the configured output directory.
+
+<!-- docs-example: generate-check-workflow -->
+
+```yaml
+# .github/workflows/api.yml
+- run: pnpm install --frozen-lockfile
+- run: pnpm api:check
+```
+
+`pnpm api:check` mirrors `pnpm api:generate`: it reads the same config or explicit `--input`,
+`--output`, `--plugins`, `--format`, and `--clean` options. With `clean: false` it snapshots the
+committed output into the isolated stage first, so files preserved by a no-clean generation do not
+register as drift. Match exits `0`; drift prints sorted `Added`, `Removed`, and `Changed` relative
+paths and exits `1`.
 
 ## 6. Call the API through the generated client
 
