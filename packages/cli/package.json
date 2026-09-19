@@ -120,7 +120,7 @@
     "@rexeus/typeweaver-zod-to-ts": "workspace:^",
     "@types/semver": "7.8.0",
     "fast-check": "^4.9.0",
-    "hono": "^4.12.32",
+    "hono": "^4.13.5",
     "test-utils": "file:../test-utils",
     "tsx": "^4.23.1"
   }
