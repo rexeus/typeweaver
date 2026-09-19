@@ -84,7 +84,7 @@ export const assertGenerationOutputAllowed = (params: {
   if (!isSameOrDescendantOf(canonicalOutput, stageRoot)) {
     throw new UnsafeStagingRootError({
       stagingRoot: stageRoot,
-      reason: "not-disjoint",
+      reason: "not-descendant",
       conflictingPath: canonicalOutput,
     });
   }

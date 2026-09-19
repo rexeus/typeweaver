@@ -291,7 +291,7 @@ const pinExternalImportsPlugin = (externalImportBase: string): Plugin => ({
   renderChunk(code) {
     if (hasUnpinnedDynamicImport(this.parse(code))) {
       throw new Error(
-        "Isolated spec evaluation cannot safely resolve a non-literal dynamic import"
+        "Isolated spec evaluation cannot safely resolve a dynamic import unless it is a literal node: or file: specifier"
       );
     }
     return null;

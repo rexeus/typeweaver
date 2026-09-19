@@ -167,7 +167,7 @@ describe("generator canonical lock binding", () => {
     await Effect.runPromise(
       withGenerationLock(plan, lockedPlan =>
         Effect.sync(() => {
-          fs.rmSync(alias, { force: true });
+          fs.unlinkSync(alias);
           fs.symlinkSync(
             secondTarget,
             alias,

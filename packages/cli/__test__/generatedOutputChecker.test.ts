@@ -485,7 +485,7 @@ describe("GeneratedOutputChecker shared-temp isolation", () => {
 
 describe("GeneratedOutputChecker dynamic-import isolation", () => {
   test(
-    "rejects non-literal dynamic imports before shared-temp resolution",
+    "rejects unpinned dynamic imports before shared-temp resolution",
     async () => {
       const workspace = createProjectWorkspace("dynamic-temp-dependency");
       const packageName = `typeweaver-dynamic-temp-probe-${String(process.pid)}-${Date.now().toString(36)}`;

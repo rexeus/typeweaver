@@ -126,6 +126,7 @@ const readEntryStats = (
 const isExcludedCoordinationDirectory = (
   root: string,
   absolutePath: string,
+  relativePath: string,
   entryName: string
 ): boolean => {
   try {
@@ -134,7 +135,7 @@ const isExcludedCoordinationDirectory = (
       isCompleteLegacyOutputLock(absolutePath, entryName)
     );
   } catch (cause) {
-    throw readError(root, toPosix(entryName), cause);
+    throw readError(root, toPosix(relativePath), cause);
   }
 };
 
@@ -167,7 +168,12 @@ const collectEntry = (
   }
   if (stats.isDirectory()) {
     if (
-      isExcludedCoordinationDirectory(context.root, absolutePath, entryName)
+      isExcludedCoordinationDirectory(
+        context.root,
+        absolutePath,
+        relativePath,
+        entryName
+      )
     ) {
       return;
     }
