@@ -1,5 +1,159 @@
 # @rexeus/typeweaver-clients
 
+## 0.13.0
+
+### Minor Changes
+
+- 0f0ad74: Add default request headers and query values plus external AbortSignal forwarding to generated
+  clients, and export the deterministic request-header default extractor for composed generators.
+- 33c3554: Migrate the runtime, plugin API, and CLI to Effect.
+
+  The plugin API moves from class-based `BasePlugin` extension to V2 records returned by
+  `definePlugin(...)` and `definePluginWithLibCopy(...)`. Lifecycle stages return
+  `Effect<void, PluginExecutionError>` instead of `Promise<void> | void`. Error surfaces in the
+  Effect-enabled packages use `Data.TaggedError`, including lifecycle failures
+  (`PluginExecutionError`) and construction-time misconfiguration (`PluginConfigError`). The CLI is
+  built on `@effect/cli`, with concise error formatting that preserves every failure and defect in
+  composite causes, plus structured log lines. The
+  `GeneratorContext` additionally exposes an Effect-native surface (`writeFileEffect`,
+  `renderTemplateEffect`, `addGeneratedFileEffect`) with the same path-safety and atomic-write
+  guarantees, routed through `@effect/platform`'s `FileSystem` service.
+
+  Generator recovery now keeps publication and cleanup boundaries consistent under defects and Fiber
+  interruption. Spec bundles are written to a scoped staging directory and renamed into place only
+  after Rolldown settles successfully. Because Rolldown does not expose cancellation, an interrupted
+  bundle waits for that Promise to settle before releasing its scope and output lock. Generated-file
+  replacement and tracking form one commit, so a cleanup failure cannot leave a published but
+  untracked file.
+
+  Error payloads that represent multiple failure modes are now discriminated:
+  `PluginDependencyError.issue` distinguishes a missing dependency from a structured dependency-cycle
+  path, and `UnsafeCleanTargetError.details` carries only the fields required by its reason. The
+  generator's `GenerateFailure` type is derived from the actual Effect error channel so cleanup
+  failures cannot silently drift out of the public contract.
+
+  Expected formatter and filesystem failures now stay on Effect's typed error channel. Formatter
+  module loading, formatting, output traversal, clean-target inspection, output-lock I/O, and
+  generated-path probes expose dedicated tagged errors; unexpected programming failures remain
+  defects. The test-only in-memory filesystem follows the same missing-path, parent-directory,
+  rename, realpath, directory-listing, and scoped-temp semantics as the Node filesystem layer.
+
+  CLI option resolution now preserves custom top-level configuration keys when forwarding the final
+  configuration to plugin contexts.
+
+  Programmatic extension APIs with long positional argument lists now use named options objects.
+  Construct `NetworkError` with `new NetworkError(message, { code, method, url, cause })`. Custom
+  `TypeweaverRouter` subclasses pass one exported `TypeweaverRouteOptions` object to `route`, and
+  custom `TypeweaverHono` subclasses pass one exported `TypeweaverHonoRequestOptions` object to
+  `handleRequest`.
+
+  The spec authoring API (`defineSpec`, `defineOperation`, `defineResponse`) is unchanged. Existing
+  specs that use supported Zod schemas keep working byte-for-byte.
+
+  - Effect-native plugin packages and `@rexeus/typeweaver-gen` now expose
+    `peerDependencies.effect: ">=3.22.0 <4"`. The 3.22 lower bound matches the current `@effect/*`
+    runtime family; 3.21.2 would install a second nominally incompatible Effect identity. Plugin
+    authors must install one Effect 3 version satisfying that range.
+
+  - `@rexeus/typeweaver-core`'s `DuplicateResponseNameError` stays a plain `Error` (the authoring
+    package carries no effect dependency) and now exposes the offending `responseName`.
+    `@rexeus/typeweaver-gen` wraps it at the normalization boundary into a tagged
+    `DuplicateResponseNameError`, so the `NormalizationError` union is fully `catchTag`-addressable.
+
+  Breaking changes are documented in the
+  [migration guide](https://github.com/rexeus/typeweaver/blob/main/MIGRATION.md#migrating-from-012x-to-013x).
+  Background on the design decisions:
+
+  - ADR 0003 — Effect-native plugin API (V2)
+  - ADR 0004 — FileSystem service adoption
+  - ADR 0005 — Effect.Service patterns
+  - ADR 0006 — CLI error and log formatting
+  - ADR 0007 — Generator per-call isolation
+
+- 8700698: Separate raw HTTP transport requests from validated Zod output, add compile-time request-boundary
+  schema checks, serialize domain scalars in generated clients, and make Server and Hono handler types
+  truthful for every request-validation mode.
+
+  Operation-specific `IRaw<OperationId>Request` types derive from `IRawHttpRequest` and specialize only
+  the router-guaranteed path parameters. Query and header stay open transport records with
+  lowercase/runtime keys and undeclared values possible, and `method` stays `HttpMethod` because a HEAD
+  request may fall back to a GET route; the body stays optional `unknown`. A dynamic `boolean`
+  validation mode exposes the validated/raw union, and `validateRequests` is required whenever a router
+  is specialized as `false` or `boolean`.
+
+  Request fields are rejected by their output kind and transport cardinality rather than by schema
+  class. Fields whose output is not a client scalar or readonly scalar array, whose raw input cannot
+  deliver the transport shape, or whose input/output cardinality disagrees are rejected at
+  `defineOperation`. A bare `unknown`/`any` pipe input delegates raw acceptance to its downstream
+  schema, so `unknown.pipe(z.string())` and `unknown.pipe(z.coerce.number())` stay valid while
+  `unknown.pipe(z.number())` and `any.pipe(z.number())` are rejected. Every `z.preprocess`/transform
+  pipe input is opaque and rejected even when a callback would coerce safely. Open object containers
+  (`z.looseObject`, `.loose()`, `.passthrough()`, and non-`never` `.catchall`) are rejected with a
+  pointer to `z.record`; default strip objects, `z.strictObject`, `.catchall(z.never())`, and
+  `z.record(...)` remain supported. Strict request objects receive undeclared wire keys so
+  `z.strictObject` and `.catchall(z.never())` reject them instead of validating a filtered object;
+  default objects continue to strip undeclared keys. Array elements are inspected, so
+  `any`/`unknown`/`never`/nested/object/nullish elements are rejected for object fields and record
+  values, and only the exact broad base `z.ZodType` carried by `RequestDefinition` escapes
+  classification.
+
+  `__proto__` is reserved in every request transport part (param, query, header) and route placeholder.
+  Statically knowable reserved names are rejected at `defineOperation`: request object shapes with a
+  `__proto__` key, record key literals/enums containing `__proto__`, and `:__proto__` route
+  placeholders; detectable key pipes, transforms, preprocess schemas, and non-string keys are rejected
+  as before, while plain string, string refinement/format, literal, and enum keys remain supported.
+  Record key schemas must preserve each raw key exactly: because Zod string mutators (`.trim()`,
+  `.toLowerCase()`, `.toUpperCase()`) are opaque `ZodString` overwrites, the generated validator parses
+  every own raw record key with the key schema before the container parse and reports an explicit issue
+  when the key fails parsing, produces a non-string, changes identity, or resolves to `__proto__`.
+  Generated clients reject an own `__proto__` param, query, or header key with
+  `RequestSerializationError` reason `reserved-key` before path, URL, or header construction.
+  `constructor` and `toString` remain supported in records and path parameters. Request-header object
+  schemas reject declared names that collide case-insensitively. Finite record header keys are restored
+  from normalized wire casing to the single declared spelling before key identity validation; query
+  keys remain case-sensitive. Non-finite header record keys retain the lowercase/runtime transport
+  spelling and their schema must accept that spelling.
+
+  Request headers use the separate broad coercing/domain-output contract
+  (`HttpRequestHeaderSchema`); the normalized spec reflects this with
+  `NormalizedRequest.header: HttpRequestHeaderSchema`. The response-header contract is the unchanged
+  transport-safe `HttpHeaderSchema` (`string`/`string[]` only) from the stack base.
+
+  Generated clients reject an empty query array before `fetch` with `RequestSerializationError` reason
+  `empty-array`, because it cannot be distinguished from an absent key; pass `undefined` to omit a
+  query key. An empty header array is allowed and serializes to the empty comma-list `""`, which the
+  validator normalizes back to `[]` for array header schemas. Embedded path placeholders preserve
+  delimiter characters in parameter values: generated clients percent-encode the following static
+  delimiter inside each value before the server router splits the segment.
+  The Hono plugin rejects embedded path placeholders with `TW-PLUGIN-HONO-001` because Hono cannot
+  extract them faithfully; Hono path parameters must occupy complete slash-delimited segments.
+
+  This is a breaking pre-1.0 type change for code that consumes bare requests, calls generated
+  validators directly, disables request validation, specializes a router as `false`/`boolean`, relied
+  on raw query/header values being scalar or schema-cased, relied on an open/catchall request object,
+  used a transforming record key, used an own `__proto__` record key, or sent empty query arrays. Use
+  `IRawHttpRequest` at transport and middleware boundaries, operation-specific generated request types
+  after validation, and follow the typed HTTP boundary migration guide.
+
+### Patch Changes
+
+- 73fb710: Treat HTTP header names case-insensitively when request headers override client defaults, and encode
+  generated command-client Basic credentials as UTF-8 before Base64 conversion.
+- Updated dependencies [545331b]
+- Updated dependencies [db12a9a]
+- Updated dependencies [33c3554]
+- Updated dependencies [6c78fba]
+- Updated dependencies [a83c79b]
+- Updated dependencies [a9a79dc]
+- Updated dependencies [f4fd035]
+- Updated dependencies [4ccbed1]
+- Updated dependencies [b539a81]
+- Updated dependencies [450408d]
+- Updated dependencies [8700698]
+  - @rexeus/typeweaver-gen@0.13.0
+  - @rexeus/typeweaver-core@0.13.0
+  - @rexeus/typeweaver-zod-to-ts@0.13.0
+
 ## 0.12.0
 
 ### Minor Changes
