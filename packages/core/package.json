@@ -58,7 +58,7 @@
     "zod": "catalog:peers"
   },
   "devDependencies": {
-    "vitest": "^3.2.6",
+    "vitest": "^4.1.11",
     "zod": "^4.4.3"
   }
 }
