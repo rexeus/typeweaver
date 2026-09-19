@@ -1045,7 +1045,7 @@ const assertSupportedEffect3 = version => {
     .split(".")
     .map(part => Number.parseInt(part, 10));
   assert(
-    major === 3 && minor >= 22,
+    !version.includes("-") && major === 3 && minor >= 22,
     `CLI subtree resolved unsupported Effect ${version}`
   );
 };

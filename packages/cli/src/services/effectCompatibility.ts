@@ -124,7 +124,7 @@ const parseVersion = (version: string): ParsedVersion | undefined => {
  * passes. Prereleases such as `3.22.0-rc.1` never satisfy a range that does
  * not itself name a prerelease.
  */
-const isSupportedStableEffect3 = (version: string): boolean => {
+export const isSupportedStableEffect3 = (version: string): boolean => {
   const parsed = parse(version);
   return (
     parsed !== null &&

@@ -329,8 +329,9 @@ const validatePhaseADocuments = documents => {
         failures.push(`${document} is missing Phase A statement: ${token}`);
       }
     }
+    const lowered = content.toLowerCase();
     for (const phrase of PHASE_A_FORBIDDEN_PHRASES) {
-      if (content.includes(phrase)) {
+      if (lowered.includes(phrase.toLowerCase())) {
         failures.push(
           `${document} contains a generic Phase A promise: "${phrase}"`
         );

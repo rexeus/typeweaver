@@ -48,25 +48,20 @@ dependencies; they do not import Effect, `@rexeus/typeweaver-gen`, or the Effect
 
 ### Requirements for Phase A
 
-1. **Effect-neutral inputs.** The config module and spec entrypoint consumed by the child CLI must
-   be Effect-neutral: they may import `@rexeus/typeweaver-core` and Zod, but not `effect`,
-   `@rexeus/typeweaver-gen`, or any first-party Effect plugin.
+1. **Effect-neutral inputs, verified by the consumer.** The config module and spec entrypoint
+   consumed by the isolated binary CLI must be Effect-neutral: they may import
+   `@rexeus/typeweaver-core` and Zod, but not `effect`, `@rexeus/typeweaver-gen`, or any first-party
+   Effect plugin. `typeweaver doctor` cannot inspect those modules, so its warning for the exact pin
+   is explicitly conditional on that requirement.
 2. **No crossing Effect values.** The application and the isolated CLI process must not exchange
    Effect values, Layers, runtimes, or managed runtimes in either direction.
 3. **The exact RC pin is evidence, not a promise.** The packed evidence witnesses `4.0.0-rc.115`
    specifically. Every other Effect 4 release candidate or stable version is UNVERIFIED: TypeWeaver
    does not claim generic Effect 4 support, does not promise a range, and does not widen the
    published peer range.
-4. **Effect-neutral inputs, verified by the consumer.** The config module and spec entrypoint
-   consumed by the isolated binary CLI must be Effect-neutral: they may import
-   `@rexeus/typeweaver-core` and Zod, but not `effect`, `@rexeus/typeweaver-gen`, or any first-party
-   Effect plugin. `typeweaver doctor` cannot inspect those modules, so its warning for the exact pin
-   is explicitly conditional on that requirement.
-5. **No crossing Effect values.** The application and the isolated CLI process must not exchange
-   Effect values, Layers, runtimes, or managed runtimes in either direction.
-6. **pnpm specific.** The packed evidence uses pnpm with strict peer dependencies and isolated
+4. **pnpm specific.** The packed evidence uses pnpm with strict peer dependencies and isolated
    `node_modules`. Other package managers are not proven by Phase A.
-7. **Phase B is blocked.** Migrating gen, first-party plugins, the CLI programmatic API, and the
+5. **Phase B is blocked.** Migrating gen, first-party plugins, the CLI programmatic API, and the
    adapter to Effect 4 waits for stable aligned upstream releases and a separately approved
    superseding ADR.
 

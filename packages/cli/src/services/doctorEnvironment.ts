@@ -5,7 +5,10 @@ import { Effect } from "effect";
 import { createDoctorCheck } from "../reports/DoctorReport.js";
 import { detectRuntime, getRuntimeDisplayName } from "../runtime.js";
 import { assertSafeCleanTarget } from "./cleanTargetGuard.js";
-import { checkWorkspaceEffectCompatibility } from "./effectCompatibility.js";
+import {
+  checkWorkspaceEffectCompatibility,
+  isSupportedStableEffect3,
+} from "./effectCompatibility.js";
 import type { DoctorCheck } from "../reports/DoctorReport.js";
 
 export { checkWorkspaceEffectCompatibility };
@@ -210,10 +213,7 @@ export const checkEffectReference = (): Effect.Effect<DoctorCheck> =>
   Effect.tryPromise({
     try: async () => {
       const version = await readPackageVersion("effect/package.json");
-      const [major = Number.NaN, minor = Number.NaN] = version
-        .split(".")
-        .map(part => Number.parseInt(part, 10));
-      if (major !== 3 || minor < 22) {
+      if (!isSupportedStableEffect3(version)) {
         return createDoctorCheck({
           code: "TW-DOCTOR-008",
           name: "CLI Effect runtime",
