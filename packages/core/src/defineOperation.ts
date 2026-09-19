@@ -1,7 +1,164 @@
+import { z } from "zod";
+import { AmbiguousRequestHeaderNameError } from "./AmbiguousRequestHeaderNameError.js";
+import {
+  findReservedPathParameter,
+  ReservedPathParameterError,
+} from "./ReservedPathParameter.js";
 import type { ResponseDefinition } from "./defineResponse.js";
 import type { HttpMethod } from "./HttpMethod.js";
+import type { HttpRequestBoundaryConstraint } from "./HttpRequestBoundary.js";
 import type { RequestDefinition } from "./RequestDefinition.js";
 import type { SecurityRequirements } from "./SecurityDefinition.js";
+
+type LowercaseLetter =
+  | "a"
+  | "b"
+  | "c"
+  | "d"
+  | "e"
+  | "f"
+  | "g"
+  | "h"
+  | "i"
+  | "j"
+  | "k"
+  | "l"
+  | "m"
+  | "n"
+  | "o"
+  | "p"
+  | "q"
+  | "r"
+  | "s"
+  | "t"
+  | "u"
+  | "v"
+  | "w"
+  | "x"
+  | "y"
+  | "z";
+
+/** Characters admitted by the canonical `[A-Za-z0-9_]+` placeholder grammar. */
+type PlaceholderNameChar =
+  | LowercaseLetter
+  | Uppercase<LowercaseLetter>
+  | "0"
+  | "1"
+  | "2"
+  | "3"
+  | "4"
+  | "5"
+  | "6"
+  | "7"
+  | "8"
+  | "9"
+  | "_";
+
+/**
+ * Consumes a canonical placeholder name starting at the current position.
+ * Returns the consumed name and the unconsumed remainder; the name ends at the
+ * first character outside the `[A-Za-z0-9_]+` class.
+ */
+type ConsumePlaceholderName<
+  TPath extends string,
+  TName extends string = "",
+> = TPath extends `${infer TChar}${infer TRest}`
+  ? TChar extends PlaceholderNameChar
+    ? ConsumePlaceholderName<TRest, `${TName}${TChar}`>
+    : { readonly name: TName; readonly rest: TPath }
+  : { readonly name: TName; readonly rest: "" };
+
+/** Returns the path after the first `:`, or `undefined` when none remains. */
+type AfterFirstColon<TPath extends string> =
+  TPath extends `${infer TChar}${infer TRest}`
+    ? TChar extends ":"
+      ? TRest
+      : AfterFirstColon<TRest>
+    : undefined;
+
+/**
+ * Compile-time rejection of a `:__proto__` route placeholder, modelled on the
+ * canonical `:([A-Za-z0-9_]+)` grammar. The placeholder name is consumed
+ * exactly, so `:__proto__`, `:__proto__.:format`, `:__proto__-suffix`,
+ * `:__proto__{suffix}`, and later occurrences are rejected regardless of the
+ * non-name terminator, while `:__proto__x` and other prefixes are preserved.
+ */
+type HasReservedPathParameter<TPath extends string> =
+  AfterFirstColon<TPath> extends infer TAfterColon
+    ? TAfterColon extends string
+      ? ConsumePlaceholderName<TAfterColon> extends {
+          readonly name: infer TName extends string;
+          readonly rest: infer TRest extends string;
+        }
+        ? TName extends "__proto__"
+          ? true
+          : HasReservedPathParameter<TRest>
+        : false
+      : false
+    : false;
+
+export type ReservedPathParameterConstraint<TPath extends string> =
+  HasReservedPathParameter<TPath> extends true
+    ? {
+        readonly __typeweaverReservedPathParameterError__: "Path parameter ':__proto__' is reserved";
+      }
+    : unknown;
+
+const finiteStringOutputs = (
+  schema: z.core.$ZodType
+): readonly string[] | undefined => {
+  if (schema instanceof z.ZodLiteral) {
+    const values = [...schema.values];
+    const strings = values.filter(
+      (value): value is string => typeof value === "string"
+    );
+    return strings.length === values.length ? strings : undefined;
+  }
+  if (schema instanceof z.ZodEnum) {
+    const strings = schema.options.filter(
+      (value): value is string => typeof value === "string"
+    );
+    return strings.length === schema.options.length ? strings : undefined;
+  }
+  if (schema instanceof z.ZodUnion) {
+    const outputs = schema.options.map(finiteStringOutputs);
+    if (outputs.some(output => output === undefined)) return undefined;
+    return outputs.flatMap(output => output ?? []);
+  }
+  return undefined;
+};
+
+const requestHeaderNames = (
+  request: RequestDefinition
+): readonly string[] | undefined => {
+  const schema = request.header;
+  const container = schema instanceof z.ZodOptional ? schema.unwrap() : schema;
+
+  if (container instanceof z.ZodObject) {
+    return Object.keys(container.shape);
+  }
+  if (container instanceof z.ZodRecord) {
+    return finiteStringOutputs(container.keyType);
+  }
+  return undefined;
+};
+
+const assertUnambiguousRequestHeaderNames = (
+  request: RequestDefinition
+): void => {
+  const names = requestHeaderNames(request);
+  if (names === undefined) return;
+
+  const seen = new Map<string, string>();
+  for (const name of names) {
+    const normalized = name.toLowerCase();
+    const previous = seen.get(normalized);
+    if (previous !== undefined && previous !== name) {
+      throw new AmbiguousRequestHeaderNameError(previous, name);
+    }
+    seen.set(normalized, name);
+  }
+};
 
 export type OperationDefinition<
   TOperationId extends string = string,
@@ -76,7 +233,20 @@ export type OperationDefinition<
  * ```
  */
 export const defineOperation = <const TDefinition extends OperationDefinition>(
-  definition: TDefinition
+  definition: TDefinition &
+    HttpRequestBoundaryConstraint<TDefinition["request"]> &
+    ReservedPathParameterConstraint<TDefinition["path"]>
 ): TDefinition => {
+  const reservedPathParameter = findReservedPathParameter(definition.path);
+
+  if (reservedPathParameter !== undefined) {
+    throw new ReservedPathParameterError(
+      definition.path,
+      reservedPathParameter
+    );
+  }
+
+  assertUnambiguousRequestHeaderNames(definition.request);
+
   return definition;
 };

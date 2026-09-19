@@ -31,7 +31,7 @@ const unhandledServerTodoRequest = async (): Promise<never> => {
 
 const createServerTodoHandlersReturning = (
   response: CreateTodoResponse
-): ServerTodoApiHandler => ({
+): ServerTodoApiHandler<Record<string, unknown>, false> => ({
   handleListTodosRequest: unhandledServerTodoRequest,
   handleCreateTodoRequest: async () => response,
   handleQueryTodoRequest: unhandledServerTodoRequest,
@@ -53,7 +53,7 @@ const createTodoAppReturning = (
 ): TypeweaverApp => {
   const app = new TypeweaverApp();
   app.route(
-    new TodoRouter({
+    new TodoRouter<Record<string, unknown>, false>({
       requestHandlers: createServerTodoHandlersReturning(response),
       validateRequests: false,
       validateResponses: true,

@@ -26,6 +26,8 @@ export * from "./lib/server/index.js";
 
 export * from "./lib/types/index.js";
 
+export * from "./metric/index.js";
+
 export * from "./responses/index.js";
 
 export * from "./todo/index.js";

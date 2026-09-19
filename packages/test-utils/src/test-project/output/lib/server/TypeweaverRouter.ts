@@ -18,25 +18,45 @@ import type {
 } from "./Router.js";
 
 /**
+ * Makes `validateRequests` mandatory when the router cannot statically
+ * guarantee which request shape reaches a handler.
+ *
+ * A literal `false` always receives raw requests and a dynamic `boolean` may
+ * receive either shape, so the caller must state the mode explicitly. The
+ * default and literal `true` modes keep the option optional because omitting it
+ * means validated requests at runtime.
+ */
+type RequireExplicitValidation<TValidateRequests extends boolean> = [TValidateRequests] extends [
+  true,
+]
+  ? unknown
+  : { readonly validateRequests: TValidateRequests };
+
+/**
  * Configuration options for TypeweaverRouter instances.
  *
  * @template RequestHandlers - Object type containing all handler methods for this router
+ * @template TValidateRequests - Request validation mode; defaults to `true`
  */
 export type TypeweaverRouterOptions<
   RequestHandlers extends Record<string, RequestHandler<any, any, any>>,
+  TValidateRequests extends boolean = true,
 > = {
   /**
    * Request handler methods for each operation.
-   * Each handler receives a validated request and the server context.
+   * Each handler receives a request whose shape matches the validation mode.
    */
   readonly requestHandlers: RequestHandlers;
 
   /**
    * Enable request validation using generated validators.
    * When false, requests are passed through without validation.
+   *
+   * Required when the router is specialized as `false` or `boolean` so the
+   * handler request type always matches runtime behavior.
    * @default true
    */
-  readonly validateRequests?: boolean;
+  readonly validateRequests?: TValidateRequests;
 
   /**
    * Enable response validation using generated validators.
@@ -80,7 +100,7 @@ export type TypeweaverRouterOptions<
    * @default true
    */
   readonly handleUnknownErrors?: UnknownErrorHandler | boolean;
-};
+} & RequireExplicitValidation<TValidateRequests>;
 
 /**
  * Definition passed to generated and custom routers when registering a route.
@@ -96,19 +116,21 @@ export type TypeweaverRouteOptions = Omit<RouteDefinition, "routerConfig">;
  * The router does **not** handle HTTP directly — it collects route definitions
  * that are mounted onto a `TypeweaverApp` via `app.route(...)`.
  *
- * All types are in typeweaver's native `IHttpRequest`/`IHttpResponse` format.
+ * Requests enter as `IRawHttpRequest` values and are exposed to handlers as
+ * validated `IHttpRequest` values only when validation is statically enabled.
  * No framework-specific types are involved.
  *
  * @template RequestHandlers - Object type containing typed handler methods
  */
 export abstract class TypeweaverRouter<
   RequestHandlers extends Record<string, RequestHandler<any, any, any>>,
+  TValidateRequests extends boolean = true,
 > {
   protected readonly requestHandlers: RequestHandlers;
   private readonly routes: RouteDefinition[] = [];
   private readonly errorConfig: RouterErrorConfig;
 
-  public constructor(options: TypeweaverRouterOptions<RequestHandlers>) {
+  public constructor(options: TypeweaverRouterOptions<RequestHandlers, TValidateRequests>) {
     const {
       requestHandlers,
       validateRequests = true,

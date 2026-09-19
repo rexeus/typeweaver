@@ -1,4 +1,7 @@
-import type { HttpBodySchema, HttpHeaderSchema } from "@rexeus/typeweaver-core";
+import type {
+  HttpBodySchema,
+  HttpHeaderSchemaLike,
+} from "@rexeus/typeweaver-core";
 import { z } from "zod";
 import type {
   NormalizedBodyMediaTypeSource,
@@ -10,7 +13,7 @@ import type {
 
 export type NormalizeBodyInput = {
   readonly bodySchema?: HttpBodySchema;
-  readonly headerSchema?: HttpHeaderSchema;
+  readonly headerSchema?: HttpHeaderSchemaLike;
   readonly location: NormalizedSpecWarningLocation;
 };
 
@@ -121,7 +124,7 @@ const createNormalizedBody = (input: {
 };
 
 const extractContentTypeHeader = (
-  headerSchema: HttpHeaderSchema | undefined
+  headerSchema: HttpHeaderSchemaLike | undefined
 ): ContentTypeHeaderResult => {
   const headerObject = unwrapOptional(headerSchema);
 
@@ -299,19 +302,19 @@ const unwrapMediaInferenceStep = (schema: z.ZodType): MediaInferenceStep => {
     : { _tag: "Done", schema };
 };
 
-const unwrapOptional = <TSchema extends z.ZodType>(
-  schema: TSchema | z.ZodOptional<TSchema> | undefined
-): TSchema | undefined => {
-  return schema instanceof z.ZodOptional
-    ? (schema.unwrap() as TSchema)
-    : schema;
+const unwrapOptional = (
+  schema: z.core.$ZodType | undefined
+): z.core.$ZodType | undefined => {
+  return schema instanceof z.ZodOptional ? schema.unwrap() : schema;
 };
 
-const isZodObject = (schema: z.ZodType): schema is ZodObjectWithShape => {
+const isZodObject = (schema: z.core.$ZodType): schema is ZodObjectWithShape => {
   return getSchemaType(schema) === "object" && "shape" in schema;
 };
 
-const extractStringLiteralValues = (schema: z.ZodType): readonly string[] => {
+const extractStringLiteralValues = (
+  schema: z.core.$ZodType
+): readonly string[] => {
   const unwrappedSchema = unwrapOptional(schema);
 
   if (unwrappedSchema === undefined) {
@@ -334,7 +337,7 @@ const extractStringLiteralValues = (schema: z.ZodType): readonly string[] => {
 };
 
 const literalSchemaValues = (
-  schema: z.ZodType | undefined
+  schema: z.core.$ZodType | undefined
 ): readonly unknown[] => {
   const literalSchema = schema as
     | {
@@ -346,7 +349,7 @@ const literalSchemaValues = (
 };
 
 const enumSchemaValues = (
-  schema: z.ZodType | undefined
+  schema: z.core.$ZodType | undefined
 ): readonly unknown[] => {
   const enumSchema = schema as
     | {
@@ -377,12 +380,14 @@ const enumSchemaValues = (
   return [];
 };
 
-const getSchemaType = (schema: z.ZodType | undefined): string | undefined => {
+const getSchemaType = (
+  schema: z.core.$ZodType | undefined
+): string | undefined => {
   return getSchemaDefinition(schema)?.type;
 };
 
 const getSchemaDefinition = (
-  schema: z.ZodType | undefined
+  schema: z.core.$ZodType | undefined
 ): ZodTypeDefinition | undefined => {
   const schemaWithDefinition = schema as
     | {

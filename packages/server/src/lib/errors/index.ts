@@ -11,6 +11,7 @@ export {
   RequestBodyDrainTimeoutError,
   ResponseSerializationError,
 } from "../Errors.js";
+export { AmbiguousPathSegmentError } from "./AmbiguousPathSegmentError.js";
 export { ConflictingPathParameterNameError } from "./ConflictingPathParameterNameError.js";
 export { DuplicateRouteRegistrationError } from "./DuplicateRouteRegistrationError.js";
 export { MiddlewareNextAlreadyCalledError } from "./MiddlewareNextAlreadyCalledError.js";

@@ -38,9 +38,12 @@ export type HeadTodoRequestCommandInput = Omit<IHeadTodoRequest, "method" | "pat
 /**
  * Check if todo exists
  */
-export class HeadTodoRequestCommand extends RequestCommand implements IHeadTodoRequest {
+export class HeadTodoRequestCommand
+  extends RequestCommand<IHeadTodoRequestHeader, IHeadTodoRequestParam, undefined, undefined>
+  implements IHeadTodoRequest
+{
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.HEAD;
+  public override readonly method = HttpMethod.HEAD;
   public override readonly path = definition.path;
 
   public override readonly header: IHeadTodoRequestHeader;

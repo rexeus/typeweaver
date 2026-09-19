@@ -1,12 +1,17 @@
 import { internalServerErrorDefaultError } from "@rexeus/typeweaver-core";
-import type { IHttpRequest, ITypedHttpResponse } from "@rexeus/typeweaver-core";
+import type {
+  ITypedHttpResponse,
+  IValidatedHttpRequest,
+} from "@rexeus/typeweaver-core";
 import { createCreateTodoSuccessResponseBody } from "test-utils";
 import { expect } from "vitest";
 
 /**
  * Converts an IHttpRequest to fetch-compatible RequestInit for Hono's `app.request()`.
  */
-export function prepareRequestData(requestData: IHttpRequest): RequestInit {
+export function prepareRequestData(
+  requestData: IValidatedHttpRequest
+): RequestInit {
   const body =
     typeof requestData.body === "string"
       ? requestData.body
@@ -18,10 +23,10 @@ export function prepareRequestData(requestData: IHttpRequest): RequestInit {
   for (const [key, value] of Object.entries(requestData.header ?? {})) {
     if (Array.isArray(value)) {
       for (const v of value) {
-        headers.append(key, v);
+        headers.append(key, String(v));
       }
     } else {
-      headers.set(key, value);
+      headers.set(key, String(value));
     }
   }
   return { method: requestData.method, headers, body };

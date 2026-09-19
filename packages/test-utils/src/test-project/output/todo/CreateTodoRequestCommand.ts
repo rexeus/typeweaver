@@ -43,9 +43,12 @@ export type CreateTodoRequestCommandInput = Omit<
 /**
  * Create new todo
  */
-export class CreateTodoRequestCommand extends RequestCommand implements ICreateTodoRequest {
+export class CreateTodoRequestCommand
+  extends RequestCommand<ICreateTodoRequestHeader, undefined, undefined, ICreateTodoRequestBody>
+  implements ICreateTodoRequest
+{
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.POST;
+  public override readonly method = HttpMethod.POST;
   public override readonly path = definition.path;
 
   public override readonly header: ICreateTodoRequestHeader;

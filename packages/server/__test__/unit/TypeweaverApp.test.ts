@@ -148,8 +148,8 @@ type TypedResponseValidationAppOptions = {
   readonly onError?: TypeweaverAppOptions["onError"];
 };
 
-class TestRouter extends TypeweaverRouter<TestHandlers> {
-  constructor(options: TypeweaverRouterOptions<TestHandlers>) {
+class TestRouter extends TypeweaverRouter<TestHandlers, boolean> {
+  constructor(options: TypeweaverRouterOptions<TestHandlers, boolean>) {
     super(options);
 
     this.route({
@@ -186,8 +186,8 @@ class TestRouter extends TypeweaverRouter<TestHandlers> {
   }
 }
 
-class ValidatingTestRouter extends TypeweaverRouter<TestHandlers> {
-  constructor(options: TypeweaverRouterOptions<TestHandlers>) {
+class ValidatingTestRouter extends TypeweaverRouter<TestHandlers, boolean> {
+  constructor(options: TypeweaverRouterOptions<TestHandlers, boolean>) {
     super(options);
 
     this.route({
@@ -218,8 +218,8 @@ class BodyOnlyValidatingRouter extends TypeweaverRouter<TestHandlers> {
   }
 }
 
-class ResponseValidatingRouter extends TypeweaverRouter<TestHandlers> {
-  constructor(options: TypeweaverRouterOptions<TestHandlers>) {
+class ResponseValidatingRouter extends TypeweaverRouter<TestHandlers, boolean> {
+  constructor(options: TypeweaverRouterOptions<TestHandlers, boolean>) {
     super(options);
 
     this.route({
@@ -244,9 +244,12 @@ class ResponseValidatingRouter extends TypeweaverRouter<TestHandlers> {
   }
 }
 
-class CustomResponseValidatingRouter extends TypeweaverRouter<TestHandlers> {
+class CustomResponseValidatingRouter extends TypeweaverRouter<
+  TestHandlers,
+  boolean
+> {
   constructor(
-    options: TypeweaverRouterOptions<TestHandlers> & {
+    options: TypeweaverRouterOptions<TestHandlers, boolean> & {
       readonly responseValidator: IResponseValidator;
     }
   ) {
@@ -299,8 +302,8 @@ type PostOnlyHandlers = {
   handleCreateTodo: RequestHandler;
 };
 
-class PostOnlyRouter extends TypeweaverRouter<PostOnlyHandlers> {
-  constructor(options: TypeweaverRouterOptions<PostOnlyHandlers>) {
+class PostOnlyRouter extends TypeweaverRouter<PostOnlyHandlers, boolean> {
+  constructor(options: TypeweaverRouterOptions<PostOnlyHandlers, boolean>) {
     super(options);
 
     this.route({
@@ -344,7 +347,7 @@ function defaultHandlers(overrides: Partial<TestHandlers> = {}): TestHandlers {
 }
 
 function createApp(
-  routerOptions?: Partial<TypeweaverRouterOptions<TestHandlers>>,
+  routerOptions?: Partial<TypeweaverRouterOptions<TestHandlers, boolean>>,
   handlerOverrides?: Partial<TestHandlers>,
   appOptions?: TypeweaverAppOptions
 ): TypeweaverApp {
@@ -369,12 +372,13 @@ function createAppMountedAt(prefix: string): TypeweaverApp {
 }
 
 function createValidatingApp(
-  routerOptions?: Partial<TypeweaverRouterOptions<TestHandlers>>,
+  routerOptions?: Partial<TypeweaverRouterOptions<TestHandlers, boolean>>,
   handlerOverrides?: Partial<TestHandlers>,
   appOptions?: TypeweaverAppOptions
 ): TypeweaverApp {
   const app = new TypeweaverApp(appOptions);
   const router = new ValidatingTestRouter({
+    validateRequests: true,
     requestHandlers: defaultHandlers(handlerOverrides),
     ...routerOptions,
   });
@@ -383,7 +387,7 @@ function createValidatingApp(
 }
 
 function createResponseValidatingApp(
-  routerOptions?: Partial<TypeweaverRouterOptions<TestHandlers>>,
+  routerOptions?: Partial<TypeweaverRouterOptions<TestHandlers, boolean>>,
   handlerOverrides?: Partial<TestHandlers>,
   appOptions?: TypeweaverAppOptions
 ): TypeweaverApp {
@@ -1727,14 +1731,20 @@ describe("Fluent API", () => {
 
   test("should return this from route() for chaining", () => {
     const app = new TypeweaverApp();
-    const router = new TestRouter({ requestHandlers: defaultHandlers() });
+    const router = new TestRouter({
+      validateRequests: true,
+      requestHandlers: defaultHandlers(),
+    });
 
     expect(app.route(router)).toBe(app);
   });
 
   test("should return this from route() with prefix for chaining", () => {
     const app = new TypeweaverApp();
-    const router = new TestRouter({ requestHandlers: defaultHandlers() });
+    const router = new TestRouter({
+      validateRequests: true,
+      requestHandlers: defaultHandlers(),
+    });
 
     expect(app.route("/api", router)).toBe(app);
   });

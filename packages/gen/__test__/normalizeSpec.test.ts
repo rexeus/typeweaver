@@ -690,19 +690,19 @@ describe("normalizeSpec explicit Content-Type transport mapping", () => {
 
   test("warns and infers media type for conflicting Content-Type header keys", () => {
     const body = z.object({ title: z.string() });
-    const spec = aSpec({
+    const authoredOperation = {
+      ...anOperation(),
+      request: {
+        header: z.object({
+          "Content-Type": z.literal("application/json"),
+          "content-type": z.literal("text/plain"),
+        }),
+        body,
+      },
+    };
+    const spec = aMalformedSpec({
       todos: {
-        operations: [
-          anOperation({
-            request: {
-              header: z.object({
-                "Content-Type": z.literal("application/json"),
-                "content-type": z.literal("text/plain"),
-              }),
-              body,
-            },
-          }),
-        ],
+        operations: [authoredOperation],
       },
     });
 
@@ -1016,6 +1016,87 @@ describe("normalizeSpec route validation", () => {
     const normalizedSpec = normalizeSpec(spec);
 
     expect(normalizedSpec.resources[0]?.operations).toHaveLength(2);
+  });
+});
+
+describe("normalizeSpec embedded route validation", () => {
+  test("distinguishes bare and embedded parameterized routes", () => {
+    const okResponse = aCanonicalResponse("SharedResponse");
+    const spec = aSpec({
+      files: {
+        operations: [
+          anOperation({
+            operationId: "getFile",
+            path: "/files/:fileId",
+            request: { param: z.object({ fileId: z.string() }) },
+            responses: [okResponse],
+          }),
+          anOperation({
+            operationId: "getFileFormat",
+            path: "/files/:fileId.:format",
+            request: {
+              param: z.object({ fileId: z.string(), format: z.string() }),
+            },
+            responses: [okResponse],
+          }),
+        ],
+      },
+    });
+
+    expect(normalizeSpec(spec).resources[0]?.operations).toHaveLength(2);
+  });
+
+  test("rejects renamed embedded routes with the same literal shape", () => {
+    const okResponse = aCanonicalResponse("SharedResponse");
+    const spec = aSpec({
+      files: {
+        operations: [
+          anOperation({
+            operationId: "getFileFormat",
+            path: "/files/:fileId.:format",
+            request: {
+              param: z.object({ fileId: z.string(), format: z.string() }),
+            },
+            responses: [okResponse],
+          }),
+          anOperation({
+            operationId: "getNamedFileFormat",
+            path: "/files/:name.:extension",
+            request: {
+              param: z.object({ name: z.string(), extension: z.string() }),
+            },
+            responses: [okResponse],
+          }),
+        ],
+      },
+    });
+
+    expect(() => normalizeSpec(spec)).toThrowError(DuplicateRouteError);
+  });
+});
+
+describe("normalizeSpec route edge validation", () => {
+  test("distinguishes literal colons from embedded placeholders", () => {
+    const okResponse = aCanonicalResponse("SharedResponse");
+    const spec = aSpec({
+      files: {
+        operations: [
+          anOperation({
+            operationId: "getColonReport",
+            path: "/files/report:",
+            responses: [okResponse],
+          }),
+          anOperation({
+            operationId: "getReportById",
+            path: "/files/report:id",
+            request: { param: z.object({ id: z.string() }) },
+            responses: [okResponse],
+          }),
+        ],
+      },
+    });
+
+    expect(normalizeSpec(spec).resources[0]?.operations).toHaveLength(2);
   });
 
   test("rejects trailing slash route conflicts", () => {

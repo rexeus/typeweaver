@@ -1,9 +1,9 @@
 import type {
   HttpMethod,
-  IHttpRequest,
   IRequestValidator,
   IResponseValidator,
   ITypedHttpResponse,
+  IValidatedHttpRequest,
 } from "@rexeus/typeweaver-core";
 import { internalServerErrorDefaultError } from "@rexeus/typeweaver-core";
 import { createCreateTodoSuccessResponseBody } from "test-utils";
@@ -106,7 +106,7 @@ export function request(method: string, path: string): Request {
  */
 export function buildFetchRequest(
   url: string,
-  requestData: IHttpRequest
+  requestData: IValidatedHttpRequest
 ): Request {
   const body =
     typeof requestData.body === "string"
@@ -119,10 +119,10 @@ export function buildFetchRequest(
   for (const [key, value] of Object.entries(requestData.header ?? {})) {
     if (Array.isArray(value)) {
       for (const v of value) {
-        headers.append(key, v);
+        headers.append(key, String(v));
       }
     } else {
-      headers.set(key, value);
+      headers.set(key, String(value));
     }
   }
 

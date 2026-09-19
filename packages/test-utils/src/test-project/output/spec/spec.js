@@ -303,6 +303,110 @@ const GetFileMetadataDefinition = defineOperation({
     ...sharedResponses,
   ],
 });
+const GetMetricDefinition = defineOperation({
+  operationId: "GetMetric",
+  method: HttpMethod.GET,
+  path: "/metrics/:metricId",
+  summary: "Read a metric through typed HTTP request boundaries",
+  request: {
+    param: z.object({ metricId: z.coerce.number().int().positive() }),
+    query: z.object({
+      enabled: z.stringbool().optional(),
+      truthy: z.coerce.boolean().optional(),
+      capturedAt: z.coerce.date().optional(),
+      samples: z.array(z.coerce.number()).optional(),
+    }),
+    header: z.object({
+      "X-Attempt": z.coerce.number().int(),
+      "X-Enabled": z.stringbool().optional(),
+      "X-Flags": z.array(z.stringbool()).optional(),
+      "X-Note": z.string().optional(),
+      "X-Observed-At": z.coerce.date().optional(),
+    }),
+  },
+  responses: [
+    defineResponse({
+      name: "GetMetricSuccess",
+      statusCode: HttpStatusCode.OK,
+      description: "The requested metric",
+      header: z.object({ "Content-Type": z.literal("application/json") }),
+      body: z.object({
+        metricId: z.number().int().positive(),
+        enabled: z.boolean(),
+      }),
+    }),
+  ],
+});
+const GetMetricKeyedLabelsDefinition = defineOperation({
+  operationId: "GetMetricKeyedLabels",
+  method: HttpMethod.GET,
+  path: "/metrics/:metricId/keyed-labels",
+  summary: "Read label records whose key schema must preserve raw keys",
+  request: {
+    param: z.object({ metricId: z.coerce.number().int().positive() }),
+    query: z.record(z.string().trim(), z.coerce.number()).optional(),
+    header: z.record(z.string().toLowerCase(), z.stringbool()).optional(),
+  },
+  responses: [
+    defineResponse({
+      name: "GetMetricKeyedLabelsSuccess",
+      statusCode: HttpStatusCode.OK,
+      description: "The parsed keyed label records",
+      header: z.object({ "Content-Type": z.literal("application/json") }),
+      body: z.object({
+        metricId: z.number().int().positive(),
+        labels: z.record(z.string(), z.number()),
+      }),
+    }),
+  ],
+});
+const GetMetricLabelsDefinition = defineOperation({
+  operationId: "GetMetricLabels",
+  method: HttpMethod.GET,
+  path: "/metrics/:metricId/labels",
+  summary: "Read dynamic metric label records",
+  request: {
+    param: z.object({ metricId: z.coerce.number().int().positive() }),
+    query: z.record(z.string(), z.coerce.number()).optional(),
+    header: z.record(z.string(), z.stringbool()).optional(),
+  },
+  responses: [
+    defineResponse({
+      name: "GetMetricLabelsSuccess",
+      statusCode: HttpStatusCode.OK,
+      description: "The parsed metric label records",
+      header: z.object({ "Content-Type": z.literal("application/json") }),
+      body: z.object({
+        metricId: z.number().int().positive(),
+        labels: z.record(z.string(), z.number()),
+        flags: z.record(z.string(), z.boolean()),
+      }),
+    }),
+  ],
+});
+const GetMetricSamplesDefinition = defineOperation({
+  operationId: "GetMetricSamples",
+  method: HttpMethod.GET,
+  path: "/metrics/:metricId/samples",
+  summary: "Read metric sample series by label",
+  request: {
+    param: z.object({ metricId: z.coerce.number().int().positive() }),
+    query: z.record(z.string(), z.array(z.coerce.number())).optional(),
+    header: z.record(z.string(), z.array(z.string())).optional(),
+  },
+  responses: [
+    defineResponse({
+      name: "GetMetricSamplesSuccess",
+      statusCode: HttpStatusCode.OK,
+      description: "The parsed sample series by label",
+      header: z.object({ "Content-Type": z.literal("application/json") }),
+      body: z.object({
+        metricId: z.number().int().positive(),
+        samples: z.record(z.string(), z.array(z.number())),
+      }),
+    }),
+  ],
+});
 const todoStatus = z.enum(["TODO", "IN_PROGRESS", "DONE", "ARCHIVED"]);
 const todoSchema = z.object({
   id: z.ulid(),
@@ -897,6 +1001,10 @@ const spec$1 = defineSpec({
         description: "Binary file operations",
       },
       {
+        name: "metrics",
+        description: "Typed HTTP-boundary metrics",
+      },
+      {
         name: "todos",
         description: "Todo management",
       },
@@ -950,6 +1058,17 @@ const spec$1 = defineSpec({
       tags: ["files"],
       security: [{ apiKeyAuth: [] }],
       operations: [UploadFileDefinition, DownloadFileContentDefinition, GetFileMetadataDefinition],
+    },
+    metric: {
+      description: "Typed HTTP-boundary coercion and serialization",
+      tags: ["metrics"],
+      security: [],
+      operations: [
+        GetMetricDefinition,
+        GetMetricKeyedLabelsDefinition,
+        GetMetricLabelsDefinition,
+        GetMetricSamplesDefinition,
+      ],
     },
     todo: {
       description: "Bearer-protected todo operations",

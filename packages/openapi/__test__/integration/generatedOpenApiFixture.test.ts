@@ -52,6 +52,7 @@ describe("generated OpenAPI fixture", () => {
 
     expect(fixture.openapi).toBe("3.1.2");
     expectContractProjection(fixture);
+    expectMetricBoundaryProjection(fixture);
     const schemas = componentsSchemas(fixture);
 
     expect(
@@ -179,6 +180,101 @@ function expectContractProjection(fixture: OpenApiFixture): void {
       },
     },
   });
+}
+
+function expectMetricBoundaryProjection(fixture: OpenApiFixture): void {
+  expect(parametersAt(fixture, "/metrics/{metricId}", "get")).toEqual([
+    {
+      name: "metricId",
+      in: "path",
+      required: true,
+      schema: {
+        type: "integer",
+        exclusiveMinimum: 0,
+        maximum: Number.MAX_SAFE_INTEGER,
+      },
+    },
+    {
+      name: "enabled",
+      in: "query",
+      required: false,
+      schema: { type: "boolean" },
+    },
+    {
+      name: "truthy",
+      in: "query",
+      required: false,
+      schema: { type: "boolean" },
+    },
+    {
+      name: "capturedAt",
+      in: "query",
+      required: false,
+      schema: {},
+    },
+    {
+      name: "samples",
+      in: "query",
+      required: false,
+      schema: { type: "array", items: { type: "number" } },
+    },
+    {
+      name: "X-Attempt",
+      in: "header",
+      required: true,
+      schema: {
+        type: "integer",
+        minimum: Number.MIN_SAFE_INTEGER,
+        maximum: Number.MAX_SAFE_INTEGER,
+      },
+    },
+    {
+      name: "X-Enabled",
+      in: "header",
+      required: false,
+      schema: { type: "boolean" },
+    },
+    {
+      name: "X-Flags",
+      in: "header",
+      required: false,
+      schema: { type: "array", items: { type: "boolean" } },
+    },
+    {
+      name: "X-Note",
+      in: "header",
+      required: false,
+      schema: { type: "string" },
+    },
+    {
+      name: "X-Observed-At",
+      in: "header",
+      required: false,
+      schema: {},
+    },
+  ]);
+}
+
+function parametersAt(
+  fixture: OpenApiFixture,
+  path: string,
+  method: string
+): readonly unknown[] | undefined {
+  if (!isRecord(fixture.paths)) {
+    return undefined;
+  }
+
+  const pathItem = fixture.paths[path];
+  if (!isRecord(pathItem)) {
+    return undefined;
+  }
+
+  const operation = pathItem[method];
+  if (!isRecord(operation) || !Array.isArray(operation.parameters)) {
+    return undefined;
+  }
+
+  return operation.parameters;
 }
 
 function componentsSchemas(fixture: OpenApiFixture): Record<string, unknown> {

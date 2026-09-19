@@ -38,9 +38,12 @@ export type ListTodosRequestCommandInput = Omit<IListTodosRequest, "method" | "p
 /**
  * List todos with filtering, pagination, and search
  */
-export class ListTodosRequestCommand extends RequestCommand implements IListTodosRequest {
+export class ListTodosRequestCommand
+  extends RequestCommand<IListTodosRequestHeader, undefined, IListTodosRequestQuery, undefined>
+  implements IListTodosRequest
+{
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.GET;
+  public override readonly method = HttpMethod.GET;
   public override readonly path = definition.path;
 
   public override readonly header: IListTodosRequestHeader;

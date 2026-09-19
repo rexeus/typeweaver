@@ -172,6 +172,19 @@ A `false` value delegates/falls through according to the specific boundary. For 
 errors, `false` returns the original invalid response rather than converting it to the default 500;
 validation still runs.
 
+The `validateRequests` literal also controls handler types. Omitting it or passing literal `true`
+exposes the generated validated Zod-output request. Literal `false` exposes
+`IRaw<OperationId>Request`, and a dynamic `boolean` exposes their union because validation is not
+statically guaranteed. When a router is specialized as `false` or `boolean`, `validateRequests` is
+required so the handler request type always matches runtime behavior. Middleware and pre-validation
+context always see `IRawHttpRequest`.
+
+Raw adapters preserve repeated query values. Generated validators normalize one query value for an
+array schema, reject multiple values for scalar schemas, and match request-header names
+case-insensitively without splitting arbitrary scalar header values on commas. Record schemas use
+the same value-schema-aware normalization, including array-valued records. See the
+[typed HTTP boundary migration guide](../../docs/migrations/typed-http-boundaries.md).
+
 ## Application-level error reporting
 
 Configure the top-level app boundary:

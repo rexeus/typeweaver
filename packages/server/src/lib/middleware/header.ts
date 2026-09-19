@@ -1,4 +1,6 @@
-export type HeaderMap = Record<string, string | string[]> | undefined;
+export type HeaderMap =
+  | Readonly<Record<string, string | readonly string[]>>
+  | undefined;
 
 export function readSingletonHeader(
   header: HeaderMap,
@@ -52,7 +54,7 @@ export function omitHeaders(
 
   for (const [key, value] of Object.entries(header ?? {})) {
     if (normalizedNames.has(key.toLowerCase())) continue;
-    headers[key] = value;
+    headers[key] = typeof value === "string" ? value : [...value];
   }
 
   return headers;

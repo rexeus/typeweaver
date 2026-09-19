@@ -41,9 +41,12 @@ export type DeleteTodoRequestCommandInput = Omit<
 /**
  * Delete todo
  */
-export class DeleteTodoRequestCommand extends RequestCommand implements IDeleteTodoRequest {
+export class DeleteTodoRequestCommand
+  extends RequestCommand<IDeleteTodoRequestHeader, IDeleteTodoRequestParam, undefined, undefined>
+  implements IDeleteTodoRequest
+{
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.DELETE;
+  public override readonly method = HttpMethod.DELETE;
   public override readonly path = definition.path;
 
   public override readonly header: IDeleteTodoRequestHeader;

@@ -128,6 +128,12 @@ const router = new TodoHono({
 | `handleHttpResponseErrors`       | `true`   | return thrown typed HTTP responses         |
 | `handleUnknownErrors`            | `true`   | sanitized 500 or custom mapper             |
 
+`validateRequests: true` (the default) gives each handler the generated validated Zod-output
+request. Literal `false` exposes `IRaw<OperationId>Request`, and a dynamic `boolean` exposes their
+union because validation is not statically guaranteed at the handler boundary. When the router is
+specialized as `false` or `boolean`, `validateRequests` is required so the handler request type
+always matches runtime behavior.
+
 Standard Hono options such as `strict` and `getPath` pass through the same options object.
 
 Each error handler accepts `true`, `false`, or a custom function. Custom functions receive the
@@ -165,6 +171,13 @@ The adapter:
 - validates declared responses when enabled;
 - strips extra object fields when the declared Zod response schema parses them;
 - serializes the resulting `IHttpResponse` through Hono.
+
+Hono adapters expose `IRawHttpRequest` to the pre-validation boundary and preserve repeated query
+values. Generated validators normalize singleton array fields, reject repeated values for scalar
+schemas, and match header names case-insensitively. Scalar header values containing commas are not
+treated as duplicates; header-array schemas use the documented comma-separated header-list
+representation. See the
+[typed HTTP boundary migration guide](../../docs/migrations/typed-http-boundaries.md).
 
 Import adapter errors from the generated runtime barrel when a custom handler needs an `instanceof`
 check:

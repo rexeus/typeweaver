@@ -9,4 +9,5 @@ export * from "./ApiClient.js";
 export * from "./NetworkError.js";
 export * from "./PathParameterError.js";
 export * from "./RequestCommand.js";
+export * from "./RequestSerializationError.js";
 export * from "./ResponseParseError.js";

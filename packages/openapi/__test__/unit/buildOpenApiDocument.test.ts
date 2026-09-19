@@ -16,6 +16,34 @@ import {
   todoApiOptions,
 } from "./buildOpenApiDocument.helpers.js";
 
+function buildCoercingHttpBoundaryDocument() {
+  const normalizedSpec = aTodoSpecWith({
+    operations: [
+      anOperationWith({
+        operationId: "getMetric",
+        path: "/metrics/:metricId",
+        request: {
+          param: z.object({
+            metricId: z.coerce.number().int().positive(),
+          }),
+          query: z.object({
+            enabled: z.stringbool().optional(),
+            capturedAt: z.coerce.date().optional(),
+            samples: z.array(z.coerce.number()).optional(),
+          }),
+          header: z.object({
+            "X-Attempt": z.coerce.number().int(),
+            "X-Enabled": z.stringbool().optional(),
+          }),
+        },
+        responses: [anInlineResponseUsage(aResponseWith())],
+      }),
+    ],
+  });
+
+  return buildOpenApiDocument(normalizedSpec, todoApiOptions());
+}
+
 describe("buildOpenApiDocument shell and request parameters", () => {
   test("builds the default OpenAPI 3.1.2 document shell from spec metadata", () => {
     const normalizedSpec = aNormalizedSpecWith();
@@ -78,6 +106,96 @@ describe("buildOpenApiDocument shell and request parameters", () => {
       },
     ]);
     expect(result.warnings).toEqual([]);
+  });
+});
+
+describe("buildOpenApiDocument coercing request parameters", () => {
+  test("projects coercing HTTP fields and warns for lossy Date output", () => {
+    const result = buildCoercingHttpBoundaryDocument();
+
+    expect(
+      result.document.paths["/metrics/{metricId}"]?.get?.parameters
+    ).toEqual([
+      {
+        name: "metricId",
+        in: "path",
+        required: true,
+        schema: {
+          type: "integer",
+          exclusiveMinimum: 0,
+          maximum: Number.MAX_SAFE_INTEGER,
+        },
+      },
+      {
+        name: "enabled",
+        in: "query",
+        required: false,
+        schema: { type: "boolean" },
+      },
+      {
+        name: "capturedAt",
+        in: "query",
+        required: false,
+        schema: {},
+      },
+      {
+        name: "samples",
+        in: "query",
+        required: false,
+        schema: { type: "array", items: { type: "number" } },
+      },
+      {
+        name: "X-Attempt",
+        in: "header",
+        required: true,
+        schema: {
+          type: "integer",
+          minimum: Number.MIN_SAFE_INTEGER,
+          maximum: Number.MAX_SAFE_INTEGER,
+        },
+      },
+      {
+        name: "X-Enabled",
+        in: "header",
+        required: false,
+        schema: { type: "boolean" },
+      },
+    ]);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        origin: "schema-conversion",
+        code: "unsupported-schema",
+        schemaType: "pipe",
+        documentPath: "/paths/~1metrics~1{metricId}/get/parameters/1/schema",
+        location: expect.objectContaining({
+          operationId: "getMetric",
+          part: "request.query",
+          parameterName: "enabled",
+        }),
+      }),
+      expect.objectContaining({
+        origin: "schema-conversion",
+        code: "unsupported-schema",
+        schemaType: "date",
+        documentPath: "/paths/~1metrics~1{metricId}/get/parameters/2/schema",
+        location: expect.objectContaining({
+          operationId: "getMetric",
+          part: "request.query",
+          parameterName: "capturedAt",
+        }),
+      }),
+      expect.objectContaining({
+        origin: "schema-conversion",
+        code: "unsupported-schema",
+        schemaType: "pipe",
+        documentPath: "/paths/~1metrics~1{metricId}/get/parameters/5/schema",
+        location: expect.objectContaining({
+          operationId: "getMetric",
+          part: "request.header",
+          parameterName: "X-Enabled",
+        }),
+      }),
+    ]);
   });
 });
 

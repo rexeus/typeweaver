@@ -1,10 +1,14 @@
 import assert from "node:assert";
-import type { IHttpRequest } from "@rexeus/typeweaver-core";
+import type { IRawHttpRequest } from "@rexeus/typeweaver-core";
 import { HttpMethod, RequestValidationError } from "@rexeus/typeweaver-core";
 import {
   captureError,
   CreateTodoRequestValidator,
   DeleteTodoRequestValidator,
+  GetMetricKeyedLabelsRequestValidator,
+  GetMetricRequestValidator,
+  GetMetricLabelsRequestValidator,
+  GetMetricSamplesRequestValidator,
   GetTodoRequestValidator,
   ListSubTodosRequestValidator,
   ListTodosRequestValidator,
@@ -16,6 +20,8 @@ import { describe, expect, test } from "vitest";
 import type {
   ICreateTodoRequest,
   IDeleteTodoRequest,
+  IGetMetricRequest,
+  IGetMetricLabelsRequest,
   IGetTodoRequest,
   IListSubTodosRequest,
   IListTodosRequest,
@@ -163,18 +169,18 @@ const validUploadFileRequest = (): IUploadFileRequest => ({
 });
 
 const requestWithRuntimePart = (
-  request: IHttpRequest,
+  request: IRawHttpRequest,
   part: "body" | "header" | "param" | "query",
   value: unknown
-): IHttpRequest => ({
+): IRawHttpRequest => ({
   ...request,
   [part]: value,
 });
 
 const withoutRuntimePart = (
-  request: IHttpRequest,
+  request: IRawHttpRequest,
   part: "body" | "header" | "param" | "query"
-): IHttpRequest => {
+): IRawHttpRequest => {
   const clone = { ...request };
   delete clone[part];
   return clone;
@@ -184,7 +190,7 @@ const issuePaths = (issues: RequestValidationError["bodyIssues"]) =>
   issues.map(issue => issue.path);
 
 const querySubTodoRequestWithInvalidBodyHeaderParamAndQuery =
-  (): IHttpRequest =>
+  (): IRawHttpRequest =>
     requestWithRuntimePart(
       requestWithRuntimePart(
         requestWithRuntimePart(
@@ -295,9 +301,9 @@ describe("Generated RequestValidator safeValidate and validate contracts", () =>
     expect(thrownError.queryIssues).toEqual(safeResult.error.queryIssues);
   });
 
-  test("preserves input method and path without route matching", () => {
+  test("normalizes the operation method and preserves the request path", () => {
     const validator = new GetTodoRequestValidator();
-    const request: IHttpRequest = {
+    const request: IRawHttpRequest = {
       ...validGetTodoRequest(),
       method: HttpMethod.POST,
       path: "/not-the-todo-route",
@@ -307,7 +313,7 @@ describe("Generated RequestValidator safeValidate and validate contracts", () =>
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
-    expect(result.data.method).toBe(HttpMethod.POST);
+    expect(result.data.method).toBe(HttpMethod.GET);
     expect(result.data.path).toBe("/not-the-todo-route");
   });
 });
@@ -779,7 +785,7 @@ describe("Generated RequestValidator optional and malformed queries", () => {
     }
   );
 
-  test("returns an empty object for a missing optional query object", () => {
+  test("returns undefined for a missing optional query object", () => {
     const validator = new ListSubTodosRequestValidator();
     const request = withoutRuntimePart(validListSubTodosRequest(), "query");
 
@@ -787,7 +793,7 @@ describe("Generated RequestValidator optional and malformed queries", () => {
     expect(result.isValid).toBe(true);
     assert(result.isValid);
 
-    expect(result.data.query).toEqual({});
+    expect(result.data.query).toBeUndefined();
   });
 
   test("treats a null optional query object as absent", () => {
@@ -932,7 +938,7 @@ describe("Generated RequestValidator path parameter contracts", () => {
 
   test("accepts a request whose path string and path parameters disagree", () => {
     const validator = new GetTodoRequestValidator();
-    const request: IHttpRequest = {
+    const request: IRawHttpRequest = {
       ...validGetTodoRequest(),
       path: `/todos/${OTHER_TODO_ID}`,
       param: { todoId: TODO_ID },
@@ -958,7 +964,7 @@ describe("Generated RequestValidator operations missing request parts", () => {
     expect(result.isValid).toBe(true);
     assert(result.isValid);
 
-    expect((result.data as IHttpRequest).body).toBeUndefined();
+    expect(result.data.body).toBeUndefined();
   });
 
   test("ignores supplied queries for queryless operations", () => {
@@ -971,7 +977,7 @@ describe("Generated RequestValidator operations missing request parts", () => {
     expect(result.isValid).toBe(true);
     assert(result.isValid);
 
-    expect((result.data as IHttpRequest).query).toBeUndefined();
+    expect(result.data.query).toBeUndefined();
   });
 
   test("ignores supplied parameters for parameterless operations", () => {
@@ -984,7 +990,7 @@ describe("Generated RequestValidator operations missing request parts", () => {
     expect(result.isValid).toBe(true);
     assert(result.isValid);
 
-    expect((result.data as IHttpRequest).param).toBeUndefined();
+    expect(result.data.param).toBeUndefined();
   });
 
   test("returns undefined for absent query schemas", () => {
@@ -995,7 +1001,7 @@ describe("Generated RequestValidator operations missing request parts", () => {
     expect(result.isValid).toBe(true);
     assert(result.isValid);
 
-    expect((result.data as IHttpRequest).query).toBeUndefined();
+    expect(result.data.query).toBeUndefined();
   });
 });
 
@@ -1028,5 +1034,310 @@ describe("Generated RequestValidator accumulated errors", () => {
 
     expect(result.isValid).toBe(false);
     expect("data" in result).toBe(false);
+  });
+});
+
+describe("Generated RequestValidator typed HTTP boundary coercion", () => {
+  const validRawMetricRequest = (): IRawHttpRequest => ({
+    method: HttpMethod.GET,
+    path: "/metrics/42",
+    param: { metricId: "42" },
+    query: {
+      enabled: "false",
+      truthy: "false",
+      capturedAt: "2026-07-26T10:15:30.000Z",
+      samples: ["1.5", "2"],
+    },
+    header: {
+      "x-attempt": "3",
+      "x-enabled": "false",
+      "x-flags": "false, true",
+      "x-note": "first, second",
+      "x-observed-at": "2026-07-26T10:15:30.000Z",
+    },
+  });
+
+  test("returns exact Zod output while preserving Zod boolean semantics", () => {
+    const result = new GetMetricRequestValidator().safeValidate(
+      validRawMetricRequest()
+    );
+
+    expect(result.isValid).toBe(true);
+    assert(result.isValid);
+    expect(result.data).toEqual<IGetMetricRequest>({
+      method: HttpMethod.GET,
+      path: "/metrics/42",
+      param: { metricId: 42 },
+      query: {
+        enabled: false,
+        truthy: true,
+        capturedAt: new Date("2026-07-26T10:15:30.000Z"),
+        samples: [1.5, 2],
+      },
+      header: {
+        "X-Attempt": 3,
+        "X-Enabled": false,
+        "X-Flags": [false, true],
+        "X-Note": "first, second",
+        "X-Observed-At": new Date("2026-07-26T10:15:30.000Z"),
+      },
+    });
+  });
+
+  test("normalizes a singleton query value for an array schema", () => {
+    const request = requestWithRuntimePart(validRawMetricRequest(), "query", {
+      samples: "7",
+    });
+
+    const result = new GetMetricRequestValidator().safeValidate(request);
+
+    expect(result.isValid).toBe(true);
+    assert(result.isValid);
+    expect(result.data.query.samples).toEqual([7]);
+  });
+
+  test("rejects repeated raw values for a scalar query schema", () => {
+    const request = requestWithRuntimePart(validRawMetricRequest(), "query", {
+      truthy: ["false", "true"],
+    });
+
+    const result = new GetMetricRequestValidator().safeValidate(request);
+
+    expect(result.isValid).toBe(false);
+    assert(!result.isValid);
+    expect(issuePaths(result.error.queryIssues)).toContainEqual(["truthy"]);
+  });
+
+  test("rejects an invalid numeric path before handler dispatch", () => {
+    const request = requestWithRuntimePart(validRawMetricRequest(), "param", {
+      metricId: "not-a-number",
+    });
+
+    const result = new GetMetricRequestValidator().safeValidate(request);
+
+    expect(result.isValid).toBe(false);
+    assert(!result.isValid);
+    expect(issuePaths(result.error.pathParamIssues)).toContainEqual([
+      "metricId",
+    ]);
+  });
+});
+
+describe("Generated RequestValidator record HTTP boundaries", () => {
+  test("parses record query and header containers without dropping keys", () => {
+    const result = new GetMetricLabelsRequestValidator().safeValidate({
+      method: HttpMethod.GET,
+      path: "/metrics/42/labels",
+      param: { metricId: "42" },
+      query: { p50: "1.5", p99: "2" },
+      header: { "feature-a": "false", "feature-b": "true" },
+    });
+
+    expect(result.isValid).toBe(true);
+    assert(result.isValid);
+    expect(result.data).toEqual<IGetMetricLabelsRequest>({
+      method: HttpMethod.GET,
+      path: "/metrics/42/labels",
+      param: { metricId: 42 },
+      query: { p50: 1.5, p99: 2 },
+      header: { "feature-a": false, "feature-b": true },
+    });
+  });
+
+  test("preserves missing optional record containers as undefined", () => {
+    const result = new GetMetricLabelsRequestValidator().safeValidate({
+      method: HttpMethod.GET,
+      path: "/metrics/42/labels",
+      param: { metricId: "42" },
+    });
+
+    expect(result.isValid).toBe(true);
+    assert(result.isValid);
+    expect(result.data.query).toBeUndefined();
+    expect(result.data.header).toBeUndefined();
+  });
+});
+
+describe("Generated RequestValidator record array normalization", () => {
+  test("normalizes singleton and repeated query record array values", () => {
+    const result = new GetMetricSamplesRequestValidator().safeValidate({
+      method: HttpMethod.GET,
+      path: "/metrics/42/samples",
+      param: { metricId: "42" },
+      query: { p50: "1.5", p99: ["2", "3"] },
+    });
+
+    expect(result.isValid).toBe(true);
+    assert(result.isValid);
+    expect(result.data.query).toEqual({ p50: [1.5], p99: [2, 3] });
+  });
+
+  test("splits comma-delimited header record array values", () => {
+    const result = new GetMetricSamplesRequestValidator().safeValidate({
+      method: HttpMethod.GET,
+      path: "/metrics/42/samples",
+      param: { metricId: "42" },
+      header: { "x-series": "alpha, beta", "x-single": "tag" },
+    });
+
+    expect(result.isValid).toBe(true);
+    assert(result.isValid);
+    expect(result.data.header).toEqual({
+      "x-series": ["alpha", "beta"],
+      "x-single": ["tag"],
+    });
+  });
+
+  test("accepts repeated raw query values for an array record", () => {
+    const result = new GetMetricSamplesRequestValidator().safeValidate({
+      method: HttpMethod.GET,
+      path: "/metrics/42/samples",
+      param: { metricId: "42" },
+      query: { p99: ["2", "3"] },
+    });
+
+    expect(result.isValid).toBe(true);
+    assert(result.isValid);
+    expect(result.data.query).toEqual({ p99: [2, 3] });
+  });
+
+  test("rejects repeated raw values for a scalar record", () => {
+    const result = new GetMetricLabelsRequestValidator().safeValidate({
+      method: HttpMethod.GET,
+      path: "/metrics/42/labels",
+      param: { metricId: "42" },
+      query: { p50: ["1", "2"] },
+    });
+
+    expect(result.isValid).toBe(false);
+    assert(!result.isValid);
+    expect(issuePaths(result.error.queryIssues)).toContainEqual(["p50"]);
+  });
+});
+
+describe("Generated RequestValidator reserved record keys", () => {
+  const rawLabelsRequest = (parts: {
+    query?: IRawHttpRequest["query"];
+    header?: IRawHttpRequest["header"];
+  }): IRawHttpRequest => ({
+    method: HttpMethod.GET,
+    path: "/metrics/42/labels",
+    param: { metricId: "42" },
+    ...parts,
+  });
+
+  test("rejects a JSON.parse __proto__ record query key", () => {
+    const query = JSON.parse('{"__proto__":"1"}');
+
+    const result = new GetMetricLabelsRequestValidator().safeValidate(
+      rawLabelsRequest({ query })
+    );
+
+    expect(result.isValid).toBe(false);
+    assert(!result.isValid);
+    expect(issuePaths(result.error.queryIssues)).toEqual([["__proto__"]]);
+  });
+
+  test("rejects a defineProperty __proto__ record header key", () => {
+    const header: Record<string, string> = {};
+    Object.defineProperty(header, "__proto__", {
+      value: "true",
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+
+    const result = new GetMetricLabelsRequestValidator().safeValidate(
+      rawLabelsRequest({ header })
+    );
+
+    expect(result.isValid).toBe(false);
+    assert(!result.isValid);
+    expect(issuePaths(result.error.headerIssues)).toEqual([["__proto__"]]);
+  });
+
+  test("preserves constructor and toString record keys end to end", () => {
+    const query = JSON.parse('{"constructor":"1","toString":"2"}');
+    const header = JSON.parse('{"constructor":"true","toString":"false"}');
+
+    const result = new GetMetricLabelsRequestValidator().safeValidate(
+      rawLabelsRequest({ query, header })
+    );
+
+    expect(result.isValid).toBe(true);
+    assert(result.isValid);
+    expect(result.data.query).toEqual({ constructor: 1, toString: 2 });
+    expect(result.data.header).toEqual({
+      constructor: true,
+      toString: false,
+    });
+  });
+});
+
+describe("Generated RequestValidator record key identity", () => {
+  const rawKeyedRequest = (parts: {
+    query?: IRawHttpRequest["query"];
+    header?: IRawHttpRequest["header"];
+  }): IRawHttpRequest => ({
+    method: HttpMethod.GET,
+    path: "/metrics/42/keyed-labels",
+    param: { metricId: "42" },
+    ...parts,
+  });
+
+  test("rejects a trimmed query key", () => {
+    const query = JSON.parse('{" p50 ":"1"}');
+
+    const result = new GetMetricKeyedLabelsRequestValidator().safeValidate(
+      rawKeyedRequest({ query })
+    );
+
+    expect(result.isValid).toBe(false);
+    assert(!result.isValid);
+    expect(issuePaths(result.error.queryIssues)).toEqual([[" p50 "]]);
+  });
+
+  test("rejects a lowercased header key and a transformed __proto__ output", () => {
+    const header = JSON.parse('{"ABC":"true","__PROTO__":"false"}');
+
+    const result = new GetMetricKeyedLabelsRequestValidator().safeValidate(
+      rawKeyedRequest({ header })
+    );
+
+    expect(result.isValid).toBe(false);
+    assert(!result.isValid);
+    expect(issuePaths(result.error.headerIssues)).toEqual([
+      ["ABC"],
+      ["__PROTO__"],
+    ]);
+  });
+
+  test("rejects a key that would collide with a preserved key", () => {
+    const header = JSON.parse('{"ABC":"true","abc":"false"}');
+
+    const result = new GetMetricKeyedLabelsRequestValidator().safeValidate(
+      rawKeyedRequest({ header })
+    );
+
+    expect(result.isValid).toBe(false);
+    assert(!result.isValid);
+    expect(issuePaths(result.error.headerIssues)).toEqual([["ABC"]]);
+  });
+
+  test("accepts preserved keys, including constructor", () => {
+    const query = JSON.parse('{"p50":"1","constructor":"2"}');
+    const header = JSON.parse('{"tostring":"true","constructor":"false"}');
+
+    const result = new GetMetricKeyedLabelsRequestValidator().safeValidate(
+      rawKeyedRequest({ query, header })
+    );
+
+    expect(result.isValid).toBe(true);
+    assert(result.isValid);
+    expect(result.data.query).toEqual({ p50: 1, constructor: 2 });
+    expect(result.data.header).toEqual({
+      tostring: true,
+      constructor: false,
+    });
   });
 });

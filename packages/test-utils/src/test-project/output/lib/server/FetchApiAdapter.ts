@@ -9,9 +9,10 @@ import type {
   HttpMethod,
   IHttpBody,
   IHttpHeader,
-  IHttpQuery,
-  IHttpRequest,
   IHttpResponse,
+  IRawHttpHeader,
+  IRawHttpQuery,
+  IRawHttpRequest,
 } from "@rexeus/typeweaver-core";
 import {
   createFetchBodyLimitPolicy,
@@ -29,7 +30,7 @@ export type FetchApiAdapterOptions = {
 
 /**
  * Converts between Fetch API `Request`/`Response` and typeweaver's
- * `IHttpRequest`/`IHttpResponse` at the server boundary.
+ * `IRawHttpRequest`/`IHttpResponse` at the server boundary.
  *
  * This is the **only** place where framework-specific types exist.
  * Everything inside the middleware pipeline and handlers works
@@ -47,16 +48,16 @@ export class FetchApiAdapter {
   }
 
   /**
-   * Converts a Fetch API Request to an IHttpRequest.
+   * Converts a Fetch API Request to an IRawHttpRequest.
    *
    * Accepts an optional pre-parsed URL to avoid redundant parsing.
    *
    * @param request - The Fetch API Request object
    * @param url - Optional pre-parsed URL object to avoid double parsing
-   * @returns Promise resolving to an IHttpRequest
+   * @returns Promise resolving to an IRawHttpRequest
    * @throws BodyParseError when the request body is malformed
    */
-  public async toRequest(request: Request, url?: URL): Promise<IHttpRequest> {
+  public async toRequest(request: Request, url?: URL): Promise<IRawHttpRequest> {
     const parsedUrl = url ?? new URL(request.url);
 
     return {
@@ -108,7 +109,7 @@ export class FetchApiAdapter {
     return FetchApiAdapter.extractMediaType(contentType) === "multipart/form-data";
   }
 
-  private static extractHeaders(headers: Headers): IHttpHeader {
+  private static extractHeaders(headers: Headers): IRawHttpHeader {
     const result: Record<string, string | string[]> = Object.create(null);
     headers.forEach((value, key) => {
       FetchApiAdapter.addMultiValue(result, key, value);
@@ -116,7 +117,7 @@ export class FetchApiAdapter {
     return Object.keys(result).length > 0 ? result : undefined;
   }
 
-  private static extractQueryParams(url: URL): IHttpQuery {
+  private static extractQueryParams(url: URL): IRawHttpQuery {
     const result: Record<string, string | string[]> = Object.create(null);
     url.searchParams.forEach((value, key) => {
       FetchApiAdapter.addMultiValue(result, key, value);

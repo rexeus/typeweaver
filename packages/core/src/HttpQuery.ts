@@ -1,30 +1,13 @@
-import type {
-  ZodArray,
-  ZodEnum,
-  ZodLiteral,
-  ZodObject,
-  ZodOptional,
-  ZodRecord,
-  ZodString,
-  ZodStringFormat,
-} from "zod";
+import type { ZodObject, ZodOptional, ZodRecord } from "zod";
 
 export type IHttpQuery = Record<string, string | string[]> | undefined;
 
-type ZodStringType =
-  | ZodString
-  | ZodStringFormat
-  | ZodLiteral<string>
-  | ZodEnum<Record<string, string>>;
+export type RawHttpQueryValue = string | readonly string[];
 
-type HttpQueryValue =
-  | ZodStringType
-  | ZodOptional<ZodStringType>
-  | ZodArray<ZodStringType>
-  | ZodOptional<ZodArray<ZodStringType>>;
+export type IRawHttpQuery =
+  | Readonly<Record<string, RawHttpQueryValue>>
+  | undefined;
 
-type HttpQueryObject =
-  | ZodObject<Record<string, HttpQueryValue>>
-  | ZodRecord<ZodStringType, HttpQueryValue>;
+type HttpQueryObject = ZodObject | ZodRecord;
 
 export type HttpQuerySchema = HttpQueryObject | ZodOptional<HttpQueryObject>;

@@ -1,5 +1,6 @@
 /* oxlint-disable import/max-dependencies */
 export * from "./HttpRequest.js";
+export * from "./HttpRequestBoundary.js";
 export * from "./HttpResponse.js";
 export * from "./HttpResponseNormalization.js";
 export * from "./HttpHeader.js";
@@ -17,8 +18,10 @@ export * from "./RequestValidator.js";
 export * from "./ResponseValidationError.js";
 export * from "./ResponseValidator.js";
 export * from "./UnknownResponse.js";
+export * from "./ReservedPathParameter.js";
 export * from "./defineOperation.js";
 export * from "./defineResponse.js";
 export * from "./defineSpec.js";
 export * from "./defaultError.js";
 export * from "./validateResponseUniqueness.js";
+export * from "./AmbiguousRequestHeaderNameError.js";

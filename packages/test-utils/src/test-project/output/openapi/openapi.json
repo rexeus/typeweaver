@@ -20,6 +20,10 @@
       "description": "Binary file operations"
     },
     {
+      "name": "metrics",
+      "description": "Typed HTTP-boundary metrics"
+    },
+    {
       "name": "todos",
       "description": "Todo management"
     },
@@ -483,6 +487,182 @@
             "apiKeyAuth": []
           }
         ]
+      }
+    },
+    "/metrics/{metricId}": {
+      "get": {
+        "operationId": "GetMetric",
+        "summary": "Read a metric through typed HTTP request boundaries",
+        "tags": ["metrics"],
+        "parameters": [
+          {
+            "name": "metricId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "enabled",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "truthy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "capturedAt",
+            "in": "query",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "name": "samples",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          },
+          {
+            "name": "X-Attempt",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "X-Enabled",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "X-Flags",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "boolean"
+              }
+            }
+          },
+          {
+            "name": "X-Note",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Observed-At",
+            "in": "header",
+            "required": false,
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/GetMetricSuccess"
+          }
+        },
+        "security": []
+      }
+    },
+    "/metrics/{metricId}/keyed-labels": {
+      "get": {
+        "operationId": "GetMetricKeyedLabels",
+        "summary": "Read label records whose key schema must preserve raw keys",
+        "tags": ["metrics"],
+        "parameters": [
+          {
+            "name": "metricId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/GetMetricKeyedLabelsSuccess"
+          }
+        },
+        "security": []
+      }
+    },
+    "/metrics/{metricId}/labels": {
+      "get": {
+        "operationId": "GetMetricLabels",
+        "summary": "Read dynamic metric label records",
+        "tags": ["metrics"],
+        "parameters": [
+          {
+            "name": "metricId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/GetMetricLabelsSuccess"
+          }
+        },
+        "security": []
+      }
+    },
+    "/metrics/{metricId}/samples": {
+      "get": {
+        "operationId": "GetMetricSamples",
+        "summary": "Read metric sample series by label",
+        "tags": ["metrics"],
+        "parameters": [
+          {
+            "name": "metricId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/GetMetricSamplesSuccess"
+          }
+        },
+        "security": []
       }
     },
     "/todos/{todoId}/subtodos": {
@@ -2702,6 +2882,82 @@
           }
         }
       },
+      "GetMetricSuccess": {
+        "description": "The requested metric",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["application/json"]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/GetMetricSuccessBody"
+            }
+          }
+        }
+      },
+      "GetMetricKeyedLabelsSuccess": {
+        "description": "The parsed keyed label records",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["application/json"]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/GetMetricKeyedLabelsSuccessBody"
+            }
+          }
+        }
+      },
+      "GetMetricLabelsSuccess": {
+        "description": "The parsed metric label records",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["application/json"]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/GetMetricLabelsSuccessBody"
+            }
+          }
+        }
+      },
+      "GetMetricSamplesSuccess": {
+        "description": "The parsed sample series by label",
+        "headers": {
+          "Content-Type": {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["application/json"]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/GetMetricSamplesSuccessBody"
+            }
+          }
+        }
+      },
       "CreateSubTodoSuccess": {
         "description": "SubTodo created successfully",
         "headers": {
@@ -3649,6 +3905,96 @@
           }
         },
         "required": ["id", "name", "size", "mimeType", "createdAt"],
+        "additionalProperties": false
+      },
+      "GetMetricSuccessBody": {
+        "type": "object",
+        "properties": {
+          "metricId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": ["metricId", "enabled"],
+        "additionalProperties": false
+      },
+      "GetMetricKeyedLabelsSuccessBody": {
+        "type": "object",
+        "properties": {
+          "metricId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "labels": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "number"
+            }
+          }
+        },
+        "required": ["metricId", "labels"],
+        "additionalProperties": false
+      },
+      "GetMetricLabelsSuccessBody": {
+        "type": "object",
+        "properties": {
+          "metricId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "labels": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "flags": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          }
+        },
+        "required": ["metricId", "labels", "flags"],
+        "additionalProperties": false
+      },
+      "GetMetricSamplesSuccessBody": {
+        "type": "object",
+        "properties": {
+          "metricId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "samples": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "required": ["metricId", "samples"],
         "additionalProperties": false
       },
       "CreateSubTodoSuccessBody": {

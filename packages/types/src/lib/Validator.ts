@@ -6,11 +6,10 @@
  */
 
 import type {
-  HttpHeaderSchema,
+  HttpHeaderSchemaLike,
   HttpQuerySchema,
 } from "@rexeus/typeweaver-core";
 import z from "zod";
-import { $ZodArray, $ZodOptional } from "zod/v4/core";
 import type { $ZodShape } from "zod/v4/core";
 
 type SchemaInfo = { readonly originalKey: string; readonly isArray: boolean };
@@ -23,6 +22,7 @@ type SchemaInfo = { readonly originalKey: string; readonly isArray: boolean };
  * - Coerce objects to match schema expectations
  */
 export abstract class Validator {
+  private static readonly reservedRecordKey = "__proto__";
   private static readonly schemaCacheCaseSensitive = new WeakMap<
     $ZodShape,
     Map<string, SchemaInfo>
@@ -66,18 +66,113 @@ export abstract class Validator {
    * @returns
    */
   protected getSchema(
-    headerSchema: HttpHeaderSchema | HttpQuerySchema
+    headerSchema: HttpHeaderSchemaLike | HttpQuerySchema
   ): $ZodShape {
-    if (headerSchema instanceof z.ZodObject) {
-      return headerSchema.shape;
+    return this.getObjectSchema(headerSchema)?.shape ?? {};
+  }
+
+  private getObjectSchema(
+    schema: HttpHeaderSchemaLike | HttpQuerySchema
+  ): z.ZodObject | undefined {
+    if (schema instanceof z.ZodObject) {
+      return schema;
     }
-    if (headerSchema instanceof z.ZodOptional) {
-      const unwrapped = headerSchema.unwrap();
-      if (unwrapped instanceof z.ZodObject) {
-        return unwrapped.shape;
+    if (schema instanceof z.ZodOptional) {
+      const unwrapped = schema.unwrap();
+      return unwrapped instanceof z.ZodObject ? unwrapped : undefined;
+    }
+    return undefined;
+  }
+
+  /**
+   * Unwraps an optional container schema to a supported object or record.
+   */
+  private getContainerSchema(
+    schema: HttpHeaderSchemaLike | HttpQuerySchema
+  ): z.ZodObject | z.ZodRecord | undefined {
+    const unwrapped =
+      schema instanceof z.ZodOptional ? schema.unwrap() : schema;
+    if (unwrapped instanceof z.ZodObject || unwrapped instanceof z.ZodRecord) {
+      return unwrapped;
+    }
+    return undefined;
+  }
+
+  /**
+   * Parse with a runtime-loaded schema while preserving the generated
+   * operation output type.
+   *
+   * The bundled specification intentionally exposes `SpecDefinition` rather
+   * than its complete source-level literal type. Successful Zod parsing is the
+   * runtime proof for this single, localized type bridge.
+   */
+  protected safeParseAs<TOutput>(
+    schema: z.ZodType,
+    input: unknown
+  ): z.ZodSafeParseResult<TOutput> {
+    return schema.safeParse(input) as z.ZodSafeParseResult<TOutput>;
+  }
+
+  protected requireRequestSchema<TSchema extends z.ZodType>(
+    schema: TSchema | undefined,
+    requestPart: "body" | "header" | "param" | "query"
+  ): TSchema {
+    if (schema === undefined) {
+      throw new TypeError(
+        `Generated request validator expected a ${requestPart} schema`
+      );
+    }
+    return schema;
+  }
+
+  protected findMultiplicityIssues(
+    data: unknown,
+    schema: HttpHeaderSchemaLike | HttpQuerySchema,
+    caseSensitive: boolean
+  ): z.core.$ZodIssue[] {
+    if (typeof data !== "object" || data === null || Array.isArray(data)) {
+      return [];
+    }
+
+    const issues: z.core.$ZodIssue[] = [];
+
+    for (const [key, value] of Object.entries(data)) {
+      if (!Array.isArray(value) || value.length <= 1) {
+        continue;
+      }
+
+      if (this.fieldExpectsArray(schema, key, caseSensitive) === false) {
+        issues.push({
+          code: "custom",
+          input: value,
+          path: [key],
+          message: "Expected a single HTTP value but received multiple values",
+        });
       }
     }
-    return {};
+
+    return issues;
+  }
+
+  private fieldExpectsArray(
+    schema: HttpHeaderSchemaLike | HttpQuerySchema,
+    key: string,
+    caseSensitive: boolean
+  ): boolean | undefined {
+    const container =
+      schema instanceof z.ZodOptional ? schema.unwrap() : schema;
+
+    if (container instanceof z.ZodObject) {
+      const lookupKey = caseSensitive ? key : key.toLowerCase();
+      return this.analyzeSchema(container.shape, caseSensitive).get(lookupKey)
+        ?.isArray;
+    }
+
+    if (container instanceof z.ZodRecord) {
+      return this.isArraySchema(container.valueType);
+    }
+
+    return undefined;
   }
 
   /**
@@ -92,10 +187,7 @@ export abstract class Validator {
     for (const [key, zodType] of Object.entries(shape)) {
       if (!zodType) continue;
 
-      const isArray =
-        zodType instanceof $ZodArray ||
-        (zodType instanceof $ZodOptional &&
-          zodType._zod.def.innerType instanceof $ZodArray);
+      const isArray = this.isArraySchema(zodType);
 
       const lookupKey = caseSensitive ? key : key.toLowerCase();
       schemaMap.set(lookupKey, { originalKey: key, isArray });
@@ -103,9 +195,57 @@ export abstract class Validator {
     return schemaMap;
   }
 
+  private isArraySchema(schema: z.core.$ZodType): boolean {
+    return this.classifyArrayTransport(schema) === "array";
+  }
+
+  /**
+   * Classifies a leaf schema's transport cardinality by unwrapping public Zod
+   * wrappers the authoring boundary also accepts. The raw transport value feeds
+   * a pipe's input side, so `ZodPipe.in` determines the shape to normalize.
+   */
+  private classifyArrayTransport(schema: z.core.$ZodType): "array" | "scalar" {
+    const unwrapped = this.unwrapCardinalityWrappers(schema);
+
+    if (unwrapped instanceof z.ZodArray) {
+      return "array";
+    }
+    if (unwrapped instanceof z.ZodPipe) {
+      return this.classifyArrayTransport(unwrapped.in);
+    }
+    return "scalar";
+  }
+
+  private unwrapCardinalityWrappers(schema: z.core.$ZodType): z.core.$ZodType {
+    let current = schema;
+    let unwrapped = Validator.unwrapCardinalityWrapper(current);
+
+    while (unwrapped !== undefined) {
+      current = unwrapped;
+      unwrapped = Validator.unwrapCardinalityWrapper(current);
+    }
+
+    return current;
+  }
+
+  private static unwrapCardinalityWrapper(
+    schema: z.core.$ZodType
+  ): z.core.$ZodType | undefined {
+    if (schema instanceof z.ZodOptional) return schema.unwrap();
+    if (schema instanceof z.ZodExactOptional) return schema.unwrap();
+    if (schema instanceof z.ZodDefault) return schema.unwrap();
+    if (schema instanceof z.ZodCatch) return schema.unwrap();
+    if (schema instanceof z.ZodReadonly) return schema.unwrap();
+    if (schema instanceof z.ZodNonOptional) return schema.unwrap();
+    if (schema instanceof z.ZodSuccess) return schema.unwrap();
+    if (schema instanceof z.ZodPrefault) return schema.unwrap();
+    return undefined;
+  }
+
   /**
    * Coerces objects to match schema expectations with configurable case sensitivity.
-   * Values not in the schema are ignored.
+   * Values not in the schema are preserved so the container schema can apply
+   * its declared strip, passthrough, catchall, or strict behavior.
    *
    * @param data - The data object to coerce
    * @param shape - The Zod schema shape to match against
@@ -115,14 +255,15 @@ export abstract class Validator {
   protected coerceToSchema(
     data: unknown,
     shape: $ZodShape,
-    caseSensitive: boolean
+    caseSensitive: boolean,
+    preserveUnknownKeys: boolean
   ): unknown {
     if (typeof data !== "object" || data === null || Array.isArray(data)) {
       return data;
     }
 
     const schemaMap = this.analyzeSchema(shape, caseSensitive);
-    const coerced: Record<string, unknown | unknown[]> = {};
+    const coerced: Record<string, unknown | unknown[]> = Object.create(null);
 
     for (const [key, value] of Object.entries(data)) {
       const normalizedKey = caseSensitive ? key : key.toLowerCase();
@@ -135,8 +276,9 @@ export abstract class Validator {
           value,
           schemaInfo.isArray
         );
+      } else if (preserveUnknownKeys) {
+        Validator.setOwnValue(coerced, key, value);
       }
-      // Headers/params not in schema are ignored (strict validation)
     }
 
     // If case-sensitive, return coerced object as is
@@ -159,11 +301,11 @@ export abstract class Validator {
     value: unknown,
     expectsArray: boolean
   ): void {
-    const existing = coerced[key];
+    const existing = Validator.getOwnValue(coerced, key);
     const newValue = this.coerceValueStructure(value, expectsArray);
 
     if (existing === undefined) {
-      coerced[key] = newValue;
+      Validator.setOwnValue(coerced, key, newValue);
       return;
     }
 
@@ -174,7 +316,39 @@ export abstract class Validator {
 
     // If schema expects a single value but we have multiple, preserve as array
     // to avoid data loss (validation will catch this later)
-    coerced[key] = expectsArray || merged.length > 1 ? merged : merged[0];
+    Validator.setOwnValue(
+      coerced,
+      key,
+      expectsArray || merged.length > 1 ? merged : merged[0]
+    );
+  }
+
+  /**
+   * Reads an own property only. Dynamic record/header keys such as
+   * `constructor` or `toString` must not collide with inherited values.
+   */
+  private static getOwnValue<TValue>(
+    source: Record<string, TValue>,
+    key: string
+  ): TValue | undefined {
+    return Object.hasOwn(source, key) ? source[key] : undefined;
+  }
+
+  /**
+   * Writes an own enumerable data property. Dynamic keys such as `__proto__`
+   * become ordinary keys rather than mutating the object prototype.
+   */
+  private static setOwnValue<TValue>(
+    target: Record<string, TValue>,
+    key: string,
+    value: TValue
+  ): void {
+    Object.defineProperty(target, key, {
+      value,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
   }
 
   /**
@@ -203,12 +377,111 @@ export abstract class Validator {
     coerced: Record<string, unknown | unknown[]>,
     schemaMap: Map<string, SchemaInfo>
   ): Record<string, unknown | unknown[]> {
-    const withOriginalKeys: Record<string, unknown | unknown[]> = {};
+    const withOriginalKeys: Record<string, unknown | unknown[]> =
+      Object.create(null);
     for (const [key, value] of Object.entries(coerced)) {
       const originalKey = schemaMap.get(key)?.originalKey ?? key;
-      withOriginalKeys[originalKey] = value;
+      Validator.setOwnValue(withOriginalKeys, originalKey, value);
     }
     return withOriginalKeys;
+  }
+
+  /**
+   * Reports record keys that the record's key schema does not preserve
+   * exactly.
+   *
+   * Zod record parsing does not preserve `__proto__`, and opaque Zod string
+   * overwrites (`.trim()`, `.toLowerCase()`, `.toUpperCase()`) can change key
+   * identity or emit a reserved key. Each own raw key is parsed with the
+   * record's key schema before the container parse: a key that fails parsing,
+   * produces a non-string, changes identity, or resolves to `__proto__` is
+   * reported instead of being silently dropped. `constructor` and `toString`
+   * are ordinary supported keys and are not reported.
+   *
+   * @param data - The raw query or header object
+   * @param schema - The record container schema (optional wrappers supported)
+   * @returns Custom issues for keys the key schema does not preserve
+   */
+  protected findRecordKeyIdentityIssues(
+    data: unknown,
+    schema: HttpHeaderSchemaLike | HttpQuerySchema
+  ): z.core.$ZodIssue[] {
+    if (typeof data !== "object" || data === null || Array.isArray(data)) {
+      return [];
+    }
+
+    const container = this.getContainerSchema(schema);
+    if (!(container instanceof z.ZodRecord)) {
+      return [];
+    }
+
+    const issues: z.core.$ZodIssue[] = [];
+    const keySchema = container.keyType;
+
+    if (!(keySchema instanceof z.ZodType)) {
+      return issues;
+    }
+
+    for (const rawKey of Object.keys(data)) {
+      const issue = Validator.classifyRecordKeyIssue(rawKey, keySchema);
+
+      if (issue !== undefined) {
+        issues.push(issue);
+      }
+    }
+
+    return issues;
+  }
+
+  private static classifyRecordKeyIssue(
+    rawKey: string,
+    keySchema: z.ZodType
+  ): z.core.$ZodIssue | undefined {
+    const parsedKey = keySchema.safeParse(rawKey);
+
+    if (!parsedKey.success) {
+      return Validator.createRecordKeyIssue(
+        rawKey,
+        `Record key '${rawKey}' is rejected by the record key schema`
+      );
+    }
+
+    const parsedOutput = parsedKey.data;
+
+    if (typeof parsedOutput !== "string") {
+      return Validator.createRecordKeyIssue(
+        rawKey,
+        `Record key '${rawKey}' must produce a string`
+      );
+    }
+
+    if (parsedOutput !== rawKey) {
+      return Validator.createRecordKeyIssue(
+        rawKey,
+        `Record key '${rawKey}' is not preserved by the record key schema`
+      );
+    }
+
+    if (rawKey === Validator.reservedRecordKey) {
+      return Validator.createRecordKeyIssue(
+        rawKey,
+        `Reserved HTTP record key '${Validator.reservedRecordKey}' is not supported`
+      );
+    }
+
+    return undefined;
+  }
+
+  private static createRecordKeyIssue(
+    rawKey: string,
+    message: string
+  ): z.core.$ZodIssue {
+    return {
+      code: "custom",
+      input: rawKey,
+      path: [rawKey],
+      message,
+    };
   }
 
   /**
@@ -218,16 +491,140 @@ export abstract class Validator {
    * @param shape - The Zod schema shape for headers
    * @returns Coerced header object
    */
-  protected coerceHeaderToSchema(header: unknown, shape: $ZodShape): unknown {
+  protected coerceHeaderToSchema(
+    header: unknown,
+    schema: HttpHeaderSchemaLike,
+    preserveUnknownObjectKeys = false
+  ): unknown {
+    if (header === undefined && schema instanceof z.ZodOptional) {
+      return undefined;
+    }
+    const objectSchema = this.getObjectSchema(schema);
+    if (objectSchema === undefined) {
+      return this.coerceNonObjectHeaderContainer(header, schema);
+    }
+    return this.coerceObjectHeader(
+      header,
+      objectSchema.shape,
+      preserveUnknownObjectKeys
+    );
+  }
+
+  private coerceNonObjectHeaderContainer(
+    header: unknown,
+    schema: HttpHeaderSchemaLike
+  ): unknown {
+    const container = this.getContainerSchema(schema);
+    if (container instanceof z.ZodRecord) {
+      return this.coerceRecordToSchema(
+        header ?? {},
+        container.keyType,
+        container.valueType,
+        true
+      );
+    }
+    return header ?? {};
+  }
+
+  private coerceObjectHeader(
+    header: unknown,
+    shape: $ZodShape,
+    preserveUnknownKeys: boolean
+  ): unknown {
     if (typeof header !== "object" || header === null) {
-      return this.coerceToSchema(header ?? {}, shape, false);
+      return this.coerceToSchema(
+        header ?? {},
+        shape,
+        false,
+        preserveUnknownKeys
+      );
     }
     if (Array.isArray(header)) {
       return header;
     }
 
     const preprocessed = this.splitCommaDelimitedValues(header, shape);
-    return this.coerceToSchema(preprocessed, shape, false);
+    return this.coerceToSchema(preprocessed, shape, false, preserveUnknownKeys);
+  }
+
+  /**
+   * Coerces a record container with value-schema-aware cardinality.
+   *
+   * Query keys and non-finite header keys preserve their transport casing.
+   * Finite header keys are restored to their single declared casing. When the
+   * value schema expects an array, a singleton value is wrapped and, for
+   * headers (`splitCommaDelimited`), a comma-delimited string is split into a
+   * list. Scalar values keep their raw shape so Zod can reject multiplicity.
+   */
+  private coerceRecordToSchema(
+    data: unknown,
+    keyType: z.core.$ZodType,
+    valueType: z.core.$ZodType,
+    splitCommaDelimited: boolean
+  ): unknown {
+    if (typeof data !== "object" || data === null || Array.isArray(data)) {
+      return data;
+    }
+
+    const expectsArray = this.isArraySchema(valueType);
+    const coerced: Record<string, unknown | unknown[]> = Object.create(null);
+
+    for (const [key, value] of Object.entries(data)) {
+      const outputKey = splitCommaDelimited
+        ? this.canonicalHeaderRecordKey(key, keyType)
+        : key;
+      const normalized =
+        splitCommaDelimited && expectsArray && typeof value === "string"
+          ? value
+              .split(",")
+              .map(part => part.trim())
+              .filter(part => part !== "")
+          : value;
+      this.addValueToCoerced(coerced, outputKey, normalized, expectsArray);
+    }
+
+    return coerced;
+  }
+
+  private canonicalHeaderRecordKey(
+    rawKey: string,
+    keyType: z.core.$ZodType
+  ): string {
+    const finiteKeys = Validator.finiteStringOutputs(keyType);
+    if (finiteKeys === undefined) return rawKey;
+
+    const matches = new Set(
+      finiteKeys.filter(
+        candidate => candidate.toLowerCase() === rawKey.toLowerCase()
+      )
+    );
+    return matches.size === 1 ? [...matches][0]! : rawKey;
+  }
+
+  private static finiteStringOutputs(
+    schema: z.core.$ZodType
+  ): readonly string[] | undefined {
+    if (schema instanceof z.ZodLiteral) {
+      const values = [...schema.values];
+      const strings = values.filter(
+        (value): value is string => typeof value === "string"
+      );
+      return strings.length === values.length ? strings : undefined;
+    }
+    if (schema instanceof z.ZodEnum) {
+      const strings = schema.options.filter(
+        (value): value is string => typeof value === "string"
+      );
+      return strings.length === schema.options.length ? strings : undefined;
+    }
+    if (schema instanceof z.ZodUnion) {
+      const outputs = schema.options.map(option =>
+        Validator.finiteStringOutputs(option)
+      );
+      if (outputs.some(output => output === undefined)) return undefined;
+      return outputs.flatMap(output => output ?? []);
+    }
+    return undefined;
   }
 
   /**
@@ -240,18 +637,22 @@ export abstract class Validator {
     shape: $ZodShape
   ): Record<string, unknown> {
     const schemaMap = this.analyzeSchema(shape, false);
-    const result: Record<string, unknown> = {};
+    const result: Record<string, unknown> = Object.create(null);
 
     for (const [key, value] of Object.entries(header)) {
       const schemaInfo = schemaMap.get(key.toLowerCase());
 
       if (schemaInfo?.isArray && typeof value === "string") {
-        result[key] = value
-          .split(",")
-          .map(v => v.trim())
-          .filter(v => v !== "");
+        Validator.setOwnValue(
+          result,
+          key,
+          value
+            .split(",")
+            .map(v => v.trim())
+            .filter(v => v !== "")
+        );
       } else {
-        result[key] = value;
+        Validator.setOwnValue(result, key, value);
       }
     }
 
@@ -265,7 +666,26 @@ export abstract class Validator {
    * @param shape - The Zod schema shape for query parameters
    * @returns Coerced query object
    */
-  protected coerceQueryToSchema(query: unknown, shape: $ZodShape): unknown {
-    return this.coerceToSchema(query ?? {}, shape, true); // case-sensitive
+  protected coerceQueryToSchema(
+    query: unknown,
+    schema: HttpQuerySchema
+  ): unknown {
+    if (query === undefined && schema instanceof z.ZodOptional) {
+      return undefined;
+    }
+    const objectSchema = this.getObjectSchema(schema);
+    if (objectSchema === undefined) {
+      const container = this.getContainerSchema(schema);
+      if (container instanceof z.ZodRecord) {
+        return this.coerceRecordToSchema(
+          query ?? {},
+          container.keyType,
+          container.valueType,
+          false
+        );
+      }
+      return query ?? {};
+    }
+    return this.coerceToSchema(query ?? {}, objectSchema.shape, true, true);
   }
 }

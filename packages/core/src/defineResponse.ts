@@ -59,7 +59,8 @@ export type ResponseDefinition<
   readonly description: TDescription;
   /**
    * Zod schema for response headers. When derived, child headers are
-   * merged onto the parent schema
+   * merged onto the parent schema. The transport-safe `HttpHeaderSchema`
+   * contract is unchanged by the request-boundary work.
    */
   readonly header?: THeader;
   /**

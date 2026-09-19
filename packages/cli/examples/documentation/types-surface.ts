@@ -1,4 +1,4 @@
-import type { IHttpRequest } from "@rexeus/typeweaver-core";
+import type { IRawHttpRequest } from "@rexeus/typeweaver-core";
 import { HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
 import { createCreateTodoSuccessResponse } from "../../../test-utils/src/test-project/output/responses/CreateTodoSuccessResponse.js";
 import { GetTodoRequestValidator } from "../../../test-utils/src/test-project/output/todo/GetTodoRequestValidator.js";
@@ -20,7 +20,7 @@ export const createResponse = (): CreateTodoResponse =>
     },
   });
 
-export const request: IHttpRequest = {
+export const request: IRawHttpRequest = {
   method: HttpMethod.GET,
   path: "/todos/01ARZ3NDEKTSV4RRFFQ69G5FAV",
   header: {

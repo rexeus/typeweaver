@@ -6,15 +6,17 @@
  */
 
 import type {
+  ClientHttpHeader,
+  ClientHttpParam,
+  ClientHttpQuery,
   IHttpHeader,
-  IHttpParam,
-  IHttpQuery,
   IHttpResponse,
 } from "@rexeus/typeweaver-core";
 import { ApiClientConfigurationError } from "./errors/ApiClientConfigurationError.js";
 import { NetworkError } from "./NetworkError.js";
 import { PathParameterError } from "./PathParameterError.js";
 import { RequestCommand } from "./RequestCommand.js";
+import { RequestSerializationError } from "./RequestSerializationError.js";
 import { ResponseParseError } from "./ResponseParseError.js";
 import type { NetworkErrorCode } from "./NetworkError.js";
 
@@ -58,7 +60,7 @@ type NetworkFailure = {
   readonly description: string;
 };
 
-type PathParameters = NonNullable<IHttpParam>;
+type PathParameters = NonNullable<ClientHttpParam>;
 
 function hasAsciiControlCharacter(value: string): boolean {
   for (let index = 0; index < value.length; index += 1) {
@@ -204,6 +206,12 @@ export abstract class ApiClient {
   protected async execute(request: RequestCommand): Promise<IHttpResponse> {
     const { method, path, header, query, param, body } = request;
 
+    this.assertNoReservedKeys(param, "path");
+    this.assertNoReservedKeys(query, "query");
+    this.assertNoReservedKeys(header, "header");
+    this.assertNoReservedKeys(this.defaultQuery, "query");
+    this.assertNoReservedKeys(this.defaultHeaders, "header");
+
     const pathWithParam = this.createPath(path, param);
     const relativeUrl = this.createUrl(pathWithParam, query);
     const fullUrl = this.buildFullUrl(relativeUrl);
@@ -222,6 +230,34 @@ export abstract class ApiClient {
     });
 
     return await this.createResponse(response, method, fullUrl);
+  }
+
+  /**
+   * Rejects an own `__proto__` key before URL or header construction.
+   *
+   * `__proto__` cannot be serialized or round-tripped as an ordinary HTTP
+   * key, so failing explicitly is safer than dropping or mutating it.
+   * `constructor` and `toString` are ordinary supported keys.
+   */
+  private assertNoReservedKeys(
+    record: Readonly<Record<string, unknown>> | undefined,
+    location: "header" | "path" | "query"
+  ): void {
+    if (record === undefined || !Object.hasOwn(record, "__proto__")) {
+      return;
+    }
+
+    const value: unknown = Object.getOwnPropertyDescriptor(
+      record,
+      "__proto__"
+    )?.value;
+
+    throw new RequestSerializationError(
+      location,
+      "__proto__",
+      value,
+      "reserved-key"
+    );
   }
 
   private async performFetch(
@@ -357,7 +393,7 @@ export abstract class ApiClient {
   }
 
   private flattenHeaders(
-    header: IHttpHeader
+    header: ClientHttpHeader
   ): Record<string, string> | undefined {
     if (header === undefined) return undefined;
 
@@ -366,7 +402,15 @@ export abstract class ApiClient {
       if (value === undefined) {
         continue;
       }
-      flattened[key] = Array.isArray(value) ? value.join(", ") : value;
+      if (Array.isArray(value)) {
+        // An empty header list round-trips as the empty comma-list value and is
+        // normalized back to `[]` by the validator for array header schemas.
+        flattened[key] = value
+          .map(item => this.serializeHttpScalar(item, "header", key))
+          .join(", ");
+        continue;
+      }
+      flattened[key] = this.serializeHttpScalar(value, "header", key);
     }
     return flattened;
   }
@@ -503,16 +547,33 @@ export abstract class ApiClient {
     return schemeMatch[0].slice(0, -1).toLowerCase();
   }
 
-  private createPath(path: string, param?: IHttpParam): string {
+  private createPath(path: string, param?: ClientHttpParam): string {
     const pathParameterSet = new Set(getPathParameterNames(path));
     const parameters: PathParameters = param ?? {};
 
     this.assertNoUnexpectedPathParameters(path, pathParameterSet, parameters);
     this.assertNoMissingPathParameters(path, pathParameterSet, parameters);
 
-    return path.replace(PATH_PARAMETER_PATTERN, (_placeholder, key: string) =>
-      this.encodePathParameter(key, parameters[key]!, path)
+    return path.replace(
+      PATH_PARAMETER_PATTERN,
+      (placeholder, key: string, offset: number) =>
+        this.encodePathParameter(
+          key,
+          parameters[key]!,
+          path,
+          ApiClient.followingStaticDelimiter(path, offset + placeholder.length)
+        )
     );
+  }
+
+  private static followingStaticDelimiter(
+    path: string,
+    placeholderEnd: number
+  ): string | undefined {
+    const remainder = path.slice(placeholderEnd);
+    if (remainder.length === 0 || remainder.startsWith("/")) return undefined;
+
+    return Array.from(remainder)[0];
   }
 
   private assertNoUnexpectedPathParameters(
@@ -549,10 +610,12 @@ export abstract class ApiClient {
 
   private encodePathParameter(
     key: string,
-    value: string,
-    path: string
+    value: unknown,
+    path: string,
+    followingStaticDelimiter?: string
   ): string {
-    if (value === "." || value === "..") {
+    const serialized = this.serializeHttpScalar(value, "path", key);
+    if (serialized === "." || serialized === "..") {
       throw new PathParameterError(
         `Path parameter '${key}' cannot be a URL dot-segment`,
         key,
@@ -560,23 +623,37 @@ export abstract class ApiClient {
       );
     }
 
-    return encodeURIComponent(value);
+    if (followingStaticDelimiter === undefined) {
+      return encodeURIComponent(serialized);
+    }
+
+    return serialized
+      .split(followingStaticDelimiter)
+      .map(part => encodeURIComponent(part))
+      .join(ApiClient.percentEncode(followingStaticDelimiter));
   }
 
-  private createUrl(path: string, query?: IHttpQuery): string {
+  private static percentEncode(value: string): string {
+    return Array.from(
+      new TextEncoder().encode(value),
+      byte => `%${byte.toString(16).toUpperCase().padStart(2, "0")}`
+    ).join("");
+  }
+
+  private createUrl(path: string, query?: ClientHttpQuery): string {
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
     const queryString = this.buildQueryString(query);
     return queryString ? `${normalizedPath}?${queryString}` : normalizedPath;
   }
 
-  private buildQueryString(query?: IHttpQuery): string {
+  private buildQueryString(query?: ClientHttpQuery): string {
     const hasDefaults = Object.keys(this.defaultQuery).length > 0;
     if (!query && !hasDefaults) {
       return "";
     }
 
     const params = new URLSearchParams();
-    const mergedQuery: IHttpQuery = {
+    const mergedQuery: ClientHttpQuery = {
       ...this.defaultQuery,
       ...query,
     };
@@ -585,15 +662,67 @@ export abstract class ApiClient {
         continue;
       }
       if (!Array.isArray(value)) {
-        params.append(key, value);
+        params.append(key, this.serializeHttpScalar(value, "query", key));
         continue;
+      }
+      if (value.length === 0) {
+        throw new RequestSerializationError("query", key, value, "empty-array");
       }
       for (const item of value) {
         if (item !== undefined) {
-          params.append(key, item);
+          params.append(key, this.serializeHttpScalar(item, "query", key));
         }
       }
     }
     return params.toString();
+  }
+
+  private serializeHttpScalar(
+    value: unknown,
+    location: "header" | "path" | "query",
+    key: string
+  ): string {
+    if (value === null) {
+      throw new RequestSerializationError(location, key, value, "null-value");
+    }
+    if (Array.isArray(value)) {
+      throw new RequestSerializationError(location, key, value, "nested-array");
+    }
+    if (value instanceof Date) {
+      if (Number.isNaN(value.getTime())) {
+        throw new RequestSerializationError(
+          location,
+          key,
+          value,
+          "invalid-date"
+        );
+      }
+      return value.toISOString();
+    }
+
+    switch (typeof value) {
+      case "string":
+        return value;
+      case "number":
+        if (!Number.isFinite(value)) {
+          throw new RequestSerializationError(
+            location,
+            key,
+            value,
+            "non-finite-number"
+          );
+        }
+        return String(value);
+      case "boolean":
+      case "bigint":
+        return String(value);
+      default:
+        throw new RequestSerializationError(
+          location,
+          key,
+          value,
+          "unsupported-type"
+        );
+    }
   }
 }

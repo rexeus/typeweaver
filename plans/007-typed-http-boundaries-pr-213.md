@@ -1,5 +1,14 @@
 # Repair typed HTTP boundaries in PR #213
 
+**Status:** IN PROGRESS — code repaired locally; waiting on fresh CI before DONE.
+
+**Stack:** PR [#213](https://github.com/rexeus/typeweaver/pull/213) on branch
+`codex/issue-206-typed-http-boundary` targets `fix/strict-object-never-warning` (PR
+[#218](https://github.com/rexeus/typeweaver/pull/218)) at head `41aee989`, which targets
+`docs/documentation-standard` (PR [#214](https://github.com/rexeus/typeweaver/pull/214)). The
+preceding milestone was integrated into this branch by merge commit `ab509e78`
+(`chore(stack): integrate preceding milestones`), not by rebase.
+
 ## Outcome
 
 PR #213 exposes raw transport, validated handler, and client scalar contracts that agree with actual
@@ -7,12 +16,14 @@ Server and Hono runtime behavior for every validation mode and supported object/
 
 ## Context and handoff
 
-PR #213 (`codex/issue-206-typed-http-boundary`, head `8700698a`) is based on current `main` and
-passed historical CI, but independent review found blocking soundness defects. Dynamic `boolean`
-validation is typed as raw while runtime may pass validated output; operation-specific raw types
-derive multiplicity and requiredness from validated output; and accepted array-valued records do not
-normalize singleton transport values. Concrete `unknown` record values also bypass the client scalar
-boundary. The PR's scalar serializer and broad migration structure are otherwise useful.
+PR #213 (`codex/issue-206-typed-http-boundary`, originally head `8700698a`) passed historical CI,
+but independent review found blocking soundness defects. Dynamic `boolean` validation was typed as
+raw while runtime may pass validated output; operation-specific raw types derived multiplicity and
+requiredness from validated output; and accepted array-valued records did not normalize singleton
+transport values. Concrete `unknown`/`any` record values also bypassed the client scalar boundary.
+The PR's scalar serializer and broad migration structure are otherwise useful. The preceding
+`fix/strict-object-never-warning` milestone (PR #218, head `41aee989`) was integrated by merge
+commit `ab509e78` so PR #213 stacks on PR #218. No force-push or history rewrite was used.
 
 ## Related plans
 
@@ -49,27 +60,36 @@ boundary. The PR's scalar serializer and broad migration structure are otherwise
 
 ## Plan
 
-- [ ] 1. **Rebase the existing PR after prior milestones**
+- [x] 1. **Integrate the existing PR after prior milestones**
   - **Outcome:** PR #213 preserves the new documentation structure and current warning behavior.
-  - **Evidence:** clean merge state without force-push or hand-edited generated fixtures.
-- [ ] 2. **Characterize every reported unsound path**
+  - **Evidence:** branch stacked on `fix/strict-object-never-warning` (PR #218, head `41aee989`)
+    through merge commit `ab509e78`; `git merge-base` equals the PR #218 head; no force-push and no
+    hand-edited generated fixtures.
+- [x] 2. **Characterize every reported unsound path**
   - **Outcome:** type and runtime tests fail for dynamic true/false, omitted explicit false options,
     repeated scalar transport, absent required fields before validation, singleton record arrays,
     and concrete unknown/any record outputs.
-  - **Evidence:** focused Core, Types, Server, and Hono tests demonstrate each pre-fix mismatch.
-- [ ] 3. **Correct validation-mode and raw boundary contracts**
+  - **Evidence:** before the fix, `HttpRequestBoundary.contract.tst.ts` rejected two unused
+    `@ts-expect-error` directives for concrete `unknown`/`any` record values and five
+    `IRawHttpRequestFor` assignability errors for repeated scalar query, comma-delimited array
+    header, and absent required query/header values.
+- [x] 3. **Correct validation-mode and raw boundary contracts**
   - **Outcome:** public and generated types match constructor defaults and adapter output.
-  - **Evidence:** type contracts and runtime tests pass for default, literal true, literal false,
-    and accepted dynamic behavior in both Server and Hono.
-- [ ] 4. **Resolve record normalization and scalar admissibility**
+  - **Evidence:** `RequestValidationMode.contract.tst.ts` and runtime dynamic-mode tests pass for
+    default, literal true, literal false, and dynamic `boolean` in both Server and Hono; raw
+    contracts derive query/header absence and `string | readonly string[]` from adapters.
+- [x] 4. **Resolve record normalization and scalar admissibility**
   - **Outcome:** every accepted schema round-trips client → adapter → validator, and unsupported
     outputs fail at `defineOperation`.
-  - **Evidence:** generated integration tests cover singleton/repeated values and negative type
-    cases.
-- [ ] 5. **Regenerate and reconcile the public contract**
+  - **Evidence:** `GetMetricSamples` generated validator tests cover singleton and repeated
+    array-valued records plus comma-delimited header records; `defineOperation` type contracts
+    reject concrete unknown/any/object/nested-array record values while keeping the base
+    `RequestDefinition` and unresolved `z.ZodType` usable.
+- [x] 5. **Regenerate and reconcile the public contract**
   - **Outcome:** generated fixtures, READMEs, migration guide, and Changeset state only behavior
     that executable evidence proves.
-  - **Evidence:** deterministic generation reproduces the committed tree exactly.
+  - **Evidence:** `pnpm verify:generated` reproduces 283 committed fixture files exactly; READMEs,
+    migration guide, and Changeset describe the corrected contract.
 - [ ] 6. **Run the complete repository gate and update PR #213**
   - **Outcome:** no unresolved high-confidence contract finding remains.
   - **Evidence:** the full gate from `GOAL.md`, packed-consumer and generated verification, fresh

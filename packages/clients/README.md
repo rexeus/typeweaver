@@ -129,6 +129,18 @@ The generated client:
 - adds `Content-Type: application/json` only when it performed JSON serialization and no content
   type was supplied.
 
+Generated path, query, and request-header inputs accept `string`, finite `number`, `boolean`,
+`bigint`, and valid `Date` values. Dates use ISO-8601 UTC, query arrays become repeated keys in
+order, and header arrays retain Typeweaver's comma-separated header-list representation. An
+`undefined` query or header value is omitted.
+
+Unsupported input is rejected before `fetch` with `RequestSerializationError`. Its stable `code`,
+`location`, `key`, `reason`, and `valueType` fields distinguish invalid dates, non-finite numbers,
+nulls, nested arrays, empty query arrays, unsupported types, and a reserved `__proto__` param,
+query, or header key (`reserved-key`). `constructor` and `toString` are ordinary supported keys. See
+the [typed HTTP boundary migration guide](../../docs/migrations/typed-http-boundaries.md) for the
+complete serialization table.
+
 ## Response behavior
 
 The transport parses the body according to the response content type:
@@ -158,6 +170,7 @@ Transport and contract failures remain distinguishable:
 | `PathParameterError`          | Missing, unexpected, or unsafe path parameter                               |
 | `NetworkError`                | Fetch failed, timed out, or was aborted                                     |
 | `ResponseParseError`          | The response body could not be read or parsed as declared by its media type |
+| `RequestSerializationError`   | Command input could not be serialized into its HTTP representation          |
 | `RequestValidationError`      | Command input did not satisfy the generated request contract                |
 | `UnknownResponseError`        | The HTTP response matched none of the operation's declared responses        |
 

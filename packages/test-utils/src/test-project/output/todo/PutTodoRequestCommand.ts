@@ -41,9 +41,17 @@ export type PutTodoRequestCommandInput = Omit<IPutTodoRequest, "method" | "path"
 /**
  * Replace todo completely
  */
-export class PutTodoRequestCommand extends RequestCommand implements IPutTodoRequest {
+export class PutTodoRequestCommand
+  extends RequestCommand<
+    IPutTodoRequestHeader,
+    IPutTodoRequestParam,
+    undefined,
+    IPutTodoRequestBody
+  >
+  implements IPutTodoRequest
+{
   public override readonly operationId = definition.operationId;
-  public override readonly method = definition.method as HttpMethod.PUT;
+  public override readonly method = HttpMethod.PUT;
   public override readonly path = definition.path;
 
   public override readonly header: IPutTodoRequestHeader;

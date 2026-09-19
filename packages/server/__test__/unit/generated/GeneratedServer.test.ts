@@ -1,10 +1,18 @@
-import type { IHttpRequest, ITypedHttpResponse } from "@rexeus/typeweaver-core";
+import { HttpMethod } from "@rexeus/typeweaver-core";
+import type {
+  ITypedHttpResponse,
+  IValidatedHttpRequest,
+} from "@rexeus/typeweaver-core";
 import {
   createCreateSubTodoRequest,
   createCreateTodoRequest,
   createDeleteSubTodoRequest,
   createDeleteTodoRequest,
   createGetTodoRequest,
+  createGetMetricSuccessResponse,
+  createGetMetricLabelsSuccessResponse,
+  createGetMetricSamplesSuccessResponse,
+  createGetMetricKeyedLabelsSuccessResponse,
   createHeadTodoRequest,
   createListSubTodosRequest,
   createListTodosRequest,
@@ -17,7 +25,9 @@ import {
   createUpdateTodoRequest,
   createUpdateTodoStatusRequest,
   defineMiddleware,
+  MetricRouter,
   TestApplicationError,
+  TypeweaverApp,
 } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
 import {
@@ -27,7 +37,11 @@ import {
   expectJson,
   postRaw,
 } from "../../helpers.js";
-import type { IValidationErrorResponseBody } from "test-utils";
+import type {
+  IGetMetricRequest,
+  IValidationErrorResponseBody,
+  ServerMetricApiHandler,
+} from "test-utils";
 
 async function expectNoBody(response: Response): Promise<void> {
   expect(await response.text()).toBe("");
@@ -47,7 +61,7 @@ async function expectValidationIssue(
 
 function buildRawBodyFetchRequest(
   url: string,
-  requestData: IHttpRequest,
+  requestData: IValidatedHttpRequest,
   body: string
 ): Request {
   return buildFetchRequest(url, { ...requestData, body });
@@ -158,6 +172,105 @@ describe("Generated Server request bodies and parameters", () => {
 
     const data = await expectJson(response, 200);
     expect(data.nextToken).toBe("runtime query+token");
+  });
+});
+
+function createMetricBoundaryHandlers(
+  onRequest?: (request: IGetMetricRequest) => void
+): ServerMetricApiHandler<Record<string, unknown>, true> {
+  return {
+    handleGetMetricRequest: async request => {
+      onRequest?.(request);
+      return createGetMetricSuccessResponse({
+        header: { "Content-Type": "application/json" },
+        body: {
+          metricId: request.param.metricId,
+          enabled: request.query.enabled ?? false,
+        },
+      });
+    },
+    handleGetMetricLabelsRequest: async request =>
+      createGetMetricLabelsSuccessResponse({
+        header: { "Content-Type": "application/json" },
+        body: {
+          metricId: request.param.metricId,
+          labels: request.query ?? {},
+          flags: request.header ?? {},
+        },
+      }),
+    handleGetMetricSamplesRequest: async request =>
+      createGetMetricSamplesSuccessResponse({
+        header: { "Content-Type": "application/json" },
+        body: {
+          metricId: request.param.metricId,
+          samples: request.query ?? {},
+        },
+      }),
+    handleGetMetricKeyedLabelsRequest: async request =>
+      createGetMetricKeyedLabelsSuccessResponse({
+        header: { "Content-Type": "application/json" },
+        body: {
+          metricId: request.param.metricId,
+          labels: request.query ?? {},
+        },
+      }),
+  };
+}
+
+describe("Generated Server typed HTTP boundary coercion", () => {
+  test("passes validated domain values to handlers by default", async () => {
+    let capturedRequest: IGetMetricRequest | undefined;
+    const app = new TypeweaverApp().route(
+      new MetricRouter({
+        requestHandlers: createMetricBoundaryHandlers(request => {
+          capturedRequest = request;
+        }),
+      })
+    );
+
+    const response = await app.fetch(
+      new Request(
+        `${BASE_URL}/metrics/42?enabled=false&truthy=false&samples=1.5&samples=2`,
+        {
+          headers: {
+            "X-Attempt": "3",
+            "X-Enabled": "false",
+            "X-Observed-At": "2026-07-26T10:15:30.000Z",
+          },
+        }
+      )
+    );
+
+    expect(response.status).toBe(200);
+    expect(capturedRequest).toEqual({
+      method: "GET",
+      path: "/metrics/42",
+      param: { metricId: 42 },
+      query: {
+        enabled: false,
+        truthy: true,
+        samples: [1.5, 2],
+      },
+      header: {
+        "X-Attempt": 3,
+        "X-Enabled": false,
+        "X-Observed-At": new Date("2026-07-26T10:15:30.000Z"),
+      },
+    });
+  });
+
+  test("returns a validation error for an invalid coerced path value", async () => {
+    const app = new TypeweaverApp().route(
+      new MetricRouter({ requestHandlers: createMetricBoundaryHandlers() })
+    );
+
+    const response = await app.fetch(
+      new Request(`${BASE_URL}/metrics/not-a-number`, {
+        headers: { "X-Attempt": "3" },
+      })
+    );
+
+    await expectValidationIssue(response, "param");
   });
 });
 
@@ -854,5 +967,160 @@ describe("Generated Server middleware", () => {
     const data = await expectJson(response, 418);
     expect(data.message).toBe("I'm still a teapot");
     expect(data.code).toBeUndefined();
+  });
+});
+
+describe("Generated Server dynamic validation mode", () => {
+  const createDynamicHandlers = (
+    onMetricId: (metricId: unknown) => void
+  ): ServerMetricApiHandler<Record<string, unknown>, boolean> => ({
+    handleGetMetricRequest: async request => {
+      onMetricId(request.param.metricId);
+      return createGetMetricSuccessResponse({
+        header: { "Content-Type": "application/json" },
+        body: { metricId: 42, enabled: true },
+      });
+    },
+    handleGetMetricLabelsRequest: async () =>
+      createGetMetricLabelsSuccessResponse({
+        header: { "Content-Type": "application/json" },
+        body: { metricId: 42, labels: {}, flags: {} },
+      }),
+    handleGetMetricSamplesRequest: async () =>
+      createGetMetricSamplesSuccessResponse({
+        header: { "Content-Type": "application/json" },
+        body: { metricId: 42, samples: {} },
+      }),
+    handleGetMetricKeyedLabelsRequest: async () =>
+      createGetMetricKeyedLabelsSuccessResponse({
+        header: { "Content-Type": "application/json" },
+        body: { metricId: 42, labels: {} },
+      }),
+  });
+
+  test("delivers validated values when dynamic validation is enabled", async () => {
+    const observed: unknown[] = [];
+    const app = new TypeweaverApp().route(
+      new MetricRouter<Record<string, unknown>, boolean>({
+        validateRequests: true,
+        requestHandlers: createDynamicHandlers(value => observed.push(value)),
+      })
+    );
+
+    const response = await app.fetch(
+      new Request(`${BASE_URL}/metrics/42`, { headers: { "X-Attempt": "3" } })
+    );
+
+    expect(response.status).toBe(200);
+    expect(observed).toEqual([42]);
+  });
+
+  test("delivers raw values when dynamic validation is disabled", async () => {
+    const observed: unknown[] = [];
+    const app = new TypeweaverApp().route(
+      new MetricRouter<Record<string, unknown>, boolean>({
+        validateRequests: false,
+        requestHandlers: createDynamicHandlers(value => observed.push(value)),
+      })
+    );
+
+    const response = await app.fetch(
+      new Request(`${BASE_URL}/metrics/42`, { headers: { "X-Attempt": "3" } })
+    );
+
+    expect(response.status).toBe(200);
+    expect(observed).toEqual(["42"]);
+  });
+  test("delivers validated values in literal true mode", async () => {
+    const observed: unknown[] = [];
+    const app = new TypeweaverApp().route(
+      new MetricRouter<Record<string, unknown>, true>({
+        validateRequests: true,
+        requestHandlers: createDynamicHandlers(value => observed.push(value)),
+      })
+    );
+
+    const response = await app.fetch(
+      new Request(`${BASE_URL}/metrics/42`, { headers: { "X-Attempt": "3" } })
+    );
+
+    expect(response.status).toBe(200);
+    expect(observed).toEqual([42]);
+  });
+
+  test("delivers raw values in literal false mode", async () => {
+    const observed: unknown[] = [];
+    const app = new TypeweaverApp().route(
+      new MetricRouter<Record<string, unknown>, false>({
+        validateRequests: false,
+        requestHandlers: createDynamicHandlers(value => observed.push(value)),
+      })
+    );
+
+    const response = await app.fetch(
+      new Request(`${BASE_URL}/metrics/42`, { headers: { "X-Attempt": "3" } })
+    );
+
+    expect(response.status).toBe(200);
+    expect(observed).toEqual(["42"]);
+  });
+});
+
+describe("Generated Server raw transport truthfulness", () => {
+  test("matches lowercase schema headers and ignores undeclared wire values", async () => {
+    let captured: IGetMetricRequest | undefined;
+    const app = new TypeweaverApp().route(
+      new MetricRouter({
+        requestHandlers: createMetricBoundaryHandlers(request => {
+          captured = request;
+        }),
+      })
+    );
+
+    const response = await app.fetch(
+      new Request(`${BASE_URL}/metrics/42?undeclared=1`, {
+        headers: { "x-attempt": "3", "x-undeclared": "value" },
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(captured?.header["X-Attempt"]).toBe(3);
+    expect(captured?.header).not.toHaveProperty("x-attempt");
+    expect(captured?.query).not.toHaveProperty("undeclared");
+  });
+
+  test("falls back from HEAD to the GET route", async () => {
+    let captured: IGetMetricRequest | undefined;
+    const app = new TypeweaverApp().route(
+      new MetricRouter({
+        requestHandlers: createMetricBoundaryHandlers(request => {
+          captured = request;
+        }),
+      })
+    );
+
+    const response = await app.fetch(
+      new Request(`${BASE_URL}/metrics/42`, {
+        method: "HEAD",
+        headers: { "X-Attempt": "3" },
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(captured?.method).toBe(HttpMethod.GET);
+  });
+});
+
+describe("Generated Server reserved record keys", () => {
+  test("rejects an own __proto__ record query key", async () => {
+    const app = new TypeweaverApp().route(
+      new MetricRouter({ requestHandlers: createMetricBoundaryHandlers() })
+    );
+
+    const response = await app.fetch(
+      new Request(`${BASE_URL}/metrics/42/labels?__proto__=1`)
+    );
+
+    await expectValidationIssue(response, "query");
   });
 });

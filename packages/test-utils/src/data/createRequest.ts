@@ -1,4 +1,4 @@
-import type { IHttpRequest } from "@rexeus/typeweaver-core";
+import type { IValidatedHttpRequest } from "@rexeus/typeweaver-core";
 import { createData } from "./createData.js";
 
 type RequestCreators<TBody, THeader, TParam, TQuery> = {
@@ -58,7 +58,7 @@ const applyRequestOverrides = <TBody, THeader, TParam, TQuery>(
  * @returns A fully populated request object of type `TRequest`
  */
 export function createRequest<
-  TRequest extends IHttpRequest,
+  TRequest extends IValidatedHttpRequest,
   TBody,
   THeader,
   TParam,

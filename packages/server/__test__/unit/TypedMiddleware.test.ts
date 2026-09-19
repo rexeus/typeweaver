@@ -25,10 +25,11 @@ type StateEchoHandlers<TState extends AuthState> = {
 };
 
 class StateEchoRouter<TState extends AuthState> extends TypeweaverRouter<
-  StateEchoHandlers<TState>
+  StateEchoHandlers<TState>,
+  boolean
 > {
   public constructor(
-    options: TypeweaverRouterOptions<StateEchoHandlers<TState>>
+    options: TypeweaverRouterOptions<StateEchoHandlers<TState>, boolean>
   ) {
     super(options);
     this.route({

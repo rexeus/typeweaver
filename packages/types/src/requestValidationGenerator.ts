@@ -34,7 +34,7 @@ function writeRequestValidator(
   operation: NormalizedOperation,
   context: GeneratorContext
 ): void {
-  const { operationId, request } = operation;
+  const { method, operationId, request } = operation;
   const { body, query, param, header } = request ?? {};
   const hasRequestSchema =
     body !== undefined ||
@@ -50,6 +50,7 @@ function writeRequestValidator(
 
   const content = context.renderTemplate(templateFilePath, {
     pascalCaseOperationId,
+    method,
     operationId,
     resourceName,
     specPath: context.getSpecImportPath({

@@ -150,7 +150,7 @@ export abstract class ResponseValidator<
       if (headerSchema) {
         const coercedHeader = this.coerceHeaderToSchema(
           response.header,
-          this.getSchema(headerSchema)
+          headerSchema
         );
         const validateHeaderResult = headerSchema.safeParse(
           coercedHeader

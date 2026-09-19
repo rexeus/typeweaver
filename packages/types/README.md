@@ -51,7 +51,13 @@ request interface, for example:
 - `ICreateTodoRequestBody`;
 - `ICreateTodoRequest`.
 
-Only declared request parts appear with a precise type.
+Only declared request parts appear with a precise type. The file also emits
+`IRaw<OperationId>Request` (for example `IRawCreateTodoRequest`), the raw transport form used when
+request validation is not statically guaranteed. Raw aliases derive from `IRawHttpRequest` and
+specialize only the router-guaranteed path parameters: query/header stay open transport records with
+lowercase/runtime keys and undeclared values possible, values are always
+`string | readonly string[]`, `method` stays `HttpMethod`, and the body is optional `unknown`. See
+the [typed HTTP boundary migration guide](../../docs/migrations/typed-http-boundaries.md).
 
 ### Response file
 
@@ -88,12 +94,12 @@ supplies only the declared headers and body.
 ## Request validation
 
 ```ts
-import { HttpMethod, type IHttpRequest } from "@rexeus/typeweaver-core";
+import { HttpMethod, type IRawHttpRequest } from "@rexeus/typeweaver-core";
 import { GetTodoRequestValidator } from "./api/generated/index.js";
 
 const validator = new GetTodoRequestValidator();
 
-const input: IHttpRequest = {
+const input: IRawHttpRequest = {
   method: HttpMethod.GET,
   path: "/todos/01ARZ3NDEKTSV4RRFFQ69G5FAV",
   header: {
@@ -120,10 +126,22 @@ throws `RequestValidationError` with structured issues.
 The validator:
 
 - validates header, path-parameter (`param`), query, and body schemas;
-- coerces supported query and header string values to their schema representation;
+- parses headers by matching raw names case-insensitively to schema keys; array schemas receive the
+  comma-separated header-list representation and scalar values containing commas stay scalar;
+- parses repeated query values as ordered arrays, normalizing a singleton to one array item for
+  array schemas and rejecting repeated values for scalar schemas;
 - groups issues by request part;
 - returns the parsed Zod value;
-- preserves the request method and concrete path unchanged;
+- parses every own raw record key with the record's key schema before the container parse and
+  reports an explicit issue when the key fails parsing, produces a non-string, changes identity, or
+  resolves to reserved `__proto__` (`constructor` and `toString` remain ordinary supported keys);
+- restores finite header record keys to their declared spelling after case-insensitive matching;
+  non-finite header record keys retain Fetch's lowercase/runtime spelling, while query record keys
+  remain case-sensitive;
+- normalizes `method` to the operation's declared method, so a HEAD request routed to a GET
+  operation reports `HttpMethod.GET`;
+- preserves the concrete request `path` string unchanged and does not re-derive path parameters from
+  it, so the validated `param` values come from the transport request;
 - follows the schema's object behavior, including removal of unknown object keys for ordinary Zod
   objects.
 
