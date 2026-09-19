@@ -33,7 +33,7 @@ export class CreateTodoRequestValidator extends RequestValidator<ICreateTodoRequ
     }
 
     const headerSchema = this.requireRequestSchema(definition.request.header, "header");
-    const coercedHeader = this.coerceHeaderToSchema(request.header, headerSchema);
+    const coercedHeader = this.coerceHeaderToSchema(request.header, headerSchema, true);
     const headerMultiplicityIssues = this.findMultiplicityIssues(
       request.header,
       headerSchema,
@@ -42,7 +42,7 @@ export class CreateTodoRequestValidator extends RequestValidator<ICreateTodoRequ
     if (headerMultiplicityIssues.length > 0) {
       error.addHeaderIssues(headerMultiplicityIssues);
     }
-    const headerRecordKeyIssues = this.findRecordKeyIdentityIssues(request.header, headerSchema);
+    const headerRecordKeyIssues = this.findRecordKeyIdentityIssues(coercedHeader, headerSchema);
     if (headerRecordKeyIssues.length > 0) {
       error.addHeaderIssues(headerRecordKeyIssues);
     }

@@ -2,11 +2,12 @@
 
 ## Status
 
-**DONE (review-ready)** on `feat/generate-check-216`, stacked on PR #213 as
-[PR #219](https://github.com/rexeus/typeweaver/pull/219). The complete implementation and CI repairs
-are at reviewed source head `67a66077`; the PR is open, mergeable, and unmerged. `quality-check`,
-`windows-security`, `Socket Security: Project Report`, and `Socket Security: Pull Request Alerts`
-all pass in [CI run 35306935948](https://github.com/rexeus/typeweaver/actions/runs/35306935948).
+**DONE (review-ready locally)** on `feat/generate-check-216`, stacked on PR #213 as
+[PR #219](https://github.com/rexeus/typeweaver/pull/219). Review-fix work for isolated spec-import
+pinning, Windows directory junctions, canonical output-lock binding, and validator temp isolation
+supersedes reviewed source head `67a66077`. Local sequential verification passed; Turbo is unusable
+in this environment (`Exec format error`). Re-run GitHub CI after push — Deno/Bun bundles and the
+Windows security job are CI-only, and the earlier quality-check run does not cover these fixes.
 
 ## Outcome
 
@@ -89,14 +90,16 @@ committed output.
     output. Identity realpath-resolves the nearest existing ancestor and case-folds the whole
     canonical path, so a missing mixed-case output and its later-created form share one lock (unit +
     process race tests). Normal generation creates output only after acquiring the lock. Staging
-    lives directly under the trusted parent, and checks mirror the ancestor `node_modules` topology
-    of the original `<configured output>/spec/spec.js` including fallback past a partial nearest
-    directory (hoisted fixture test); validation restores its pre-PR cwd-nearest lookup. Staged
-    generation is gated by an internal unforgeable authority and must descend from the created
-    stage. Legacy `.typeweaver-lock` is classified with lstat/no-follow: a complete dead lock is
-    excluded by check and removed by later clean, while live/malformed/symlinked/uncertain locks
-    fail closed before clean and require manual removal; fence and other lookalike artifacts are
-    ordinary drift and clean-removable. A two-process test plus
+    lives directly under the trusted parent. Checks pin bare spec imports against the original
+    `<configured output>/spec/spec.js` location, including fallback past a partial nearest
+    directory, before isolated execution; this preserves normal generation lookup without accepting
+    packages planted under the shared temp parent. Validation pins against its original working
+    directory, and non-literal dynamic imports are rejected because their targets cannot be pinned
+    safely. Staged generation is gated by an internal unforgeable authority and must descend from
+    the created stage. Legacy `.typeweaver-lock` is classified with lstat/no-follow: a complete dead
+    lock is excluded by check and removed by later clean, while live/malformed/symlinked/uncertain
+    locks fail closed before clean and require manual removal; fence and other lookalike artifacts
+    are ordinary drift and clean-removable. A two-process test plus
     alias/case/reserved/legacy/mixed-version tests cover the contract. `--verbose` keeps debug lock
     and lifecycle output.
 - [x] 5. **Document and deliver**

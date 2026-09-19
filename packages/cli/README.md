@@ -113,16 +113,16 @@ pnpm typeweaver generate \
 
 Common options:
 
-| Option                     | Description                                                             |
-| -------------------------- | ----------------------------------------------------------------------- |
-| `--input, -i <path>`       | Spec entrypoint                                                         |
-| `--output, -o <path>`      | Generated output directory                                              |
-| `--config, -c <path>`      | JavaScript config file                                                  |
-| `--plugins, -p <names>`    | Comma-separated plugin selection; `all` selects all first-party plugins |
-| `--format` / `--no-format` | Enable or disable formatting                                            |
-| `--clean` / `--no-clean`   | Enable or disable output cleanup                                        |
-| `--check`                  | Generate in isolation and report drift without writing output           |
-| `--verbose`                | Show plugin loading, lifecycle, locking, and Effect span details        |
+| Option                     | Description                                                      |
+| -------------------------- | ---------------------------------------------------------------- |
+| `--input, -i <path>`       | Spec entrypoint                                                  |
+| `--output, -o <path>`      | Generated output directory                                       |
+| `--config, -c <path>`      | JavaScript config file                                           |
+| `--plugins, -p <names>`    | Comma-separated plugin selection                                 |
+| `--format` / `--no-format` | Enable or disable formatting                                     |
+| `--clean` / `--no-clean`   | Enable or disable output cleanup                                 |
+| `--check`                  | Generate in isolation and report drift without writing output    |
+| `--verbose`                | Show plugin loading, lifecycle, locking, and Effect span details |
 
 Generation uses a per-call plugin registry, validates before write-capable publication, protects
 generated paths, and publishes files through the generator context rather than arbitrary plugin
@@ -161,14 +161,16 @@ The generation lock is a flat `.typeweaver-output-lock-<hash>` entry directly un
 trusted system temp directory, and staging directories are created there too, so no artifact is
 written into the configured output and no user owns a shared parent. The lock identity realpath- and
 case-folds the physical output path, so a missing output and its later-created form share one lock.
-Checks mirror the ancestor `node_modules` lookup topology of the original `<output>/spec/spec.js`,
-so dependency fallback matches normal generation. A configured output or project directory that
-equals the temp root or uses a reserved coordination/staging name is rejected before anything is
-created; ordinary outputs elsewhere under the temp root are unaffected. A normal clean removes a
-proven dead legacy lock and ordinary lookalikes while preserving a live proven lock. Do not run
-generation concurrently with a CLI version that predates this lock location; a live, malformed
-(including symlinked metadata), or ownership-uncertain legacy `.typeweaver-lock` fails closed and
-requires manual review. See [MIGRATION.md](../../MIGRATION.md).
+Checks resolve bare spec imports from the original `<output>/spec/spec.js` location before isolated
+evaluation, so dependency fallback matches normal generation without allowing the shared temp
+directory to inject packages. Non-literal dynamic imports cannot be pinned safely and are rejected
+during isolated evaluation. A configured output or project directory that equals the temp root or
+uses a reserved coordination/staging name is rejected before anything is created; ordinary outputs
+elsewhere under the temp root are unaffected. A normal clean removes a proven dead legacy lock and
+ordinary lookalikes while preserving a live proven lock. Do not run generation concurrently with a
+CLI version that predates this lock location; a live, malformed (including symlinked metadata), or
+ownership-uncertain legacy `.typeweaver-lock` fails closed and requires manual review. See
+[MIGRATION.md](../../MIGRATION.md).
 
 ### `validate`
 

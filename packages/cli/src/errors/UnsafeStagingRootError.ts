@@ -1,6 +1,9 @@
 import { Data } from "effect";
 
-export type UnsafeStagingRootReason = "not-disjoint" | "inspection-failed";
+export type UnsafeStagingRootReason =
+  | "not-disjoint"
+  | "not-descendant"
+  | "inspection-failed";
 
 const formatCause = (cause: unknown): string =>
   cause instanceof Error ? cause.message : String(cause);
@@ -22,6 +25,9 @@ export class UnsafeStagingRootError extends Data.TaggedError(
   public override get message(): string {
     if (this.reason === "inspection-failed") {
       return `Failed to inspect staging root '${this.stagingRoot}': ${formatCause(this.cause)}`;
+    }
+    if (this.reason === "not-descendant") {
+      return `Refusing to generate because output '${String(this.conflictingPath)}' is not inside staging root '${this.stagingRoot}'.`;
     }
     return `Refusing to stage generated output because staging root '${this.stagingRoot}' overlaps '${String(this.conflictingPath)}'. Choose a temporary directory outside the project and its configured output.`;
   }

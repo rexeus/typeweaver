@@ -21,13 +21,14 @@ split locks. Staging directories are created directly under the trusted temp roo
 success, failure, and interruption; normal generation creates output directories only after it holds
 the lock.
 
-Checks resolve staged runtime dependencies by mirroring the ancestor `node_modules` topology of the
-original `<configured output>/spec/spec.js`, so lookup order and fallback past a partial nearer
-`node_modules` match normal generation. Configured output or project source that equals the trusted
-temp root or uses a reserved coordination/staging name (including lock fence names) is rejected
-before any lock or stage is created; ordinary project outputs elsewhere under the temp root are
-unaffected. Only the CLI check pipeline can stage under the reserved namespace via an internal,
-unforgeable authority.
+Checks pin bare spec imports against the original `<configured output>/spec/spec.js` location before
+isolated evaluation, so lookup order and fallback past a partial nearer `node_modules` match normal
+generation without allowing the shared temp directory to inject packages. Non-literal dynamic
+imports are rejected because their runtime target cannot be pinned safely. Configured output or
+project source that equals the trusted temp root or uses a reserved coordination/staging name
+(including lock fence names) is rejected before any lock or stage is created; ordinary project
+outputs elsewhere under the temp root are unaffected. Only the CLI check pipeline can stage under
+the reserved namespace via an internal, unforgeable authority.
 
 Legacy remediation: a complete `.typeweaver-lock` whose regular metadata names a dead process is
 proven coordination state that `--check` excludes and a later clean generation removes. A live,

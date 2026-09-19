@@ -101,13 +101,13 @@ const validator = new GetTodoRequestValidator();
 
 const input: IRawHttpRequest = {
   method: HttpMethod.GET,
-  path: "/todos/846a8c8d-28dc-4b66-ae6c-8d1c551430b2",
+  path: "/todos/01ARZ3NDEKTSV4RRFFQ69G5FAV",
   header: {
     Accept: "application/json",
     Authorization: "Bearer example-token",
   },
   param: {
-    todoId: "846a8c8d-28dc-4b66-ae6c-8d1c551430b2",
+    todoId: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
   },
 };
 
@@ -135,6 +135,9 @@ The validator:
 - parses every own raw record key with the record's key schema before the container parse and
   reports an explicit issue when the key fails parsing, produces a non-string, changes identity, or
   resolves to reserved `__proto__` (`constructor` and `toString` remain ordinary supported keys);
+- restores finite header record keys to their declared spelling after case-insensitive matching;
+  non-finite header record keys retain Fetch's lowercase/runtime spelling, while query record keys
+  remain case-sensitive;
 - normalizes `method` to the operation's declared method, so a HEAD request routed to a GET
   operation reports `HttpMethod.GET`;
 - preserves the concrete request `path` string unchanged and does not re-derive path parameters from
@@ -150,9 +153,10 @@ import { GetTodoResponseValidator } from "./api/generated/index.js";
 
 const result = new GetTodoResponseValidator().safeValidate({
   statusCode: HttpStatusCode.OK,
+  header: { "Content-Type": "application/json" },
   body: {
-    id: "846a8c8d-28dc-4b66-ae6c-8d1c551430b2",
-    accountId: "account-1",
+    id: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+    accountId: "01ARZ3NDEKTSV4RRFFQ69G5FAW",
     title: "Write documentation",
     status: "TODO",
     createdAt: "2026-07-26",

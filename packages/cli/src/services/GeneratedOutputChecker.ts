@@ -7,7 +7,11 @@ import {
   UnsafeSharedTempDirectoryError,
 } from "../errors/index.js";
 import { Generator } from "./Generator.js";
-import { acquireOutputLock, releaseOutputLock } from "./generatorIO.js";
+import {
+  acquireOutputLock,
+  assertSafeCleanTargetEffect,
+  releaseOutputLock,
+} from "./generatorIO.js";
 import { withMirroredOutputStage } from "./internal/projectStaging.js";
 import {
   assertPathNotReservedForCoordination,
@@ -44,6 +48,11 @@ type CheckOperationDeps = {
 const runCheckOperation = (deps: CheckOperationDeps) =>
   Effect.gen(function* () {
     if (deps.config?.clean === false) {
+      yield* assertSafeCleanTargetEffect(
+        deps.configuredOutputDir,
+        deps.cwd,
+        undefined
+      );
       yield* snapshotOutputTree({
         sourceRoot: deps.configuredOutputDir,
         destinationRoot: deps.stagedOutputDir,
@@ -60,11 +69,21 @@ const runCheckOperation = (deps: CheckOperationDeps) =>
       },
       currentWorkingDirectory: deps.cwd,
       stagingAuthority: deps.stagingAuthority,
+      externalImportBase: path.join(
+        deps.configuredOutputDir,
+        "spec",
+        "spec.js"
+      ),
     });
     yield* deps.verbose
       ? generation
       : generation.pipe(Logger.withMinimumLogLevel(LogLevel.Warning));
 
+    yield* assertSafeCleanTargetEffect(
+      deps.configuredOutputDir,
+      deps.cwd,
+      undefined
+    );
     const comparison = yield* compareOutputTrees({
       committedRoot: deps.configuredOutputDir,
       generatedRoot: deps.stagedOutputDir,
@@ -86,7 +105,7 @@ const runCheckOperation = (deps: CheckOperationDeps) =>
 const withConfiguredOutputLock = <A, E, R>(params: {
   readonly configuredOutputDir: string;
   readonly inputFile: string;
-  readonly run: Effect.Effect<A, E, R>;
+  readonly run: (lockedOutputDir: string) => Effect.Effect<A, E, R>;
 }) =>
   Effect.acquireUseRelease(
     Effect.gen(function* () {
@@ -99,7 +118,7 @@ const withConfiguredOutputLock = <A, E, R>(params: {
       );
       return outputLock;
     }),
-    () => params.run,
+    outputLock => params.run(outputLock.outputDir),
     outputLock =>
       Effect.gen(function* () {
         yield* releaseOutputLock(outputLock);
@@ -113,12 +132,14 @@ const withConfiguredOutputLock = <A, E, R>(params: {
  * A check validates the configured output and source are outside the reserved
  * coordination namespace, then holds the configured-output lock before any
  * staging begins. It generates into a nested stage whose ancestor
- * `node_modules` topology mirrors the original configured output, and
- * byte-compares the fresh tree against the committed tree without ever writing
- * to it. With `clean: false` the committed tree is first snapshotted into the
- * stage so preservation semantics mirror a normal no-clean generation. Drift is
- * reported through `GeneratedOutputDriftError` with sorted `Added`, `Removed`,
- * and `Changed` groups.
+ * `node_modules` topology mirrors the original configured output, pins isolated
+ * spec evaluation against the original `<output>/spec/spec.js` location so the
+ * shared temp parent cannot inject packages, and byte-compares the fresh tree
+ * against the committed tree without ever writing to it. With `clean: false`
+ * the committed tree is first snapshotted into the stage so preservation
+ * semantics mirror a normal no-clean generation. Drift is reported through
+ * `GeneratedOutputDriftError` with sorted `Added`, `Removed`, and `Changed`
+ * groups.
  */
 export class GeneratedOutputChecker extends Effect.Service<GeneratedOutputChecker>()(
   "typeweaver/GeneratedOutputChecker",
@@ -133,7 +154,7 @@ export class GeneratedOutputChecker extends Effect.Service<GeneratedOutputChecke
           const configuredOutputDir = path.resolve(cwd, params.outputDir);
           const inputFile = path.resolve(cwd, params.inputFile);
           const inputDirectory = path.dirname(inputFile);
-          const forbiddenRoots = [
+          const reservedCandidates = [
             configuredOutputDir,
             cwd,
             inputDirectory,
@@ -141,7 +162,7 @@ export class GeneratedOutputChecker extends Effect.Service<GeneratedOutputChecke
 
           yield* Effect.try({
             try: () => {
-              for (const candidate of forbiddenRoots) {
+              for (const candidate of reservedCandidates) {
                 assertPathNotReservedForCoordination(candidate);
               }
             },
@@ -156,24 +177,36 @@ export class GeneratedOutputChecker extends Effect.Service<GeneratedOutputChecke
             },
           });
 
+          yield* assertSafeCleanTargetEffect(
+            configuredOutputDir,
+            cwd,
+            undefined
+          );
           yield* withConfiguredOutputLock({
             configuredOutputDir,
             inputFile,
-            run: withMirroredOutputStage(
-              fileSystem,
-              { configuredOutputDir, forbiddenRoots },
-              ({ stageRoot, stagedOutputDir }) =>
-                runCheckOperation({
-                  generator,
-                  configuredOutputDir,
-                  inputFile,
-                  stagedOutputDir,
-                  cwd,
-                  config: params.config,
-                  verbose: params.verbose === true,
-                  stagingAuthority: createStagingAuthority(stageRoot),
-                })
-            ),
+            run: lockedOutputDir => {
+              const forbiddenRoots = [
+                lockedOutputDir,
+                cwd,
+                inputDirectory,
+              ] as const;
+              return withMirroredOutputStage(
+                fileSystem,
+                { configuredOutputDir: lockedOutputDir, forbiddenRoots },
+                ({ stageRoot, stagedOutputDir }) =>
+                  runCheckOperation({
+                    generator,
+                    configuredOutputDir: lockedOutputDir,
+                    inputFile,
+                    stagedOutputDir,
+                    cwd,
+                    config: params.config,
+                    verbose: params.verbose === true,
+                    stagingAuthority: createStagingAuthority(stageRoot),
+                  })
+              );
+            },
           });
         }
       );

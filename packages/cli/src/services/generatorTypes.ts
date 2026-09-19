@@ -15,6 +15,8 @@ export type GenerateParams = {
    * subject to the reserved-path guards.
    */
   readonly stagingAuthority?: StagingAuthority;
+  /** Runtime-resolution base used only with an internal staging authority. */
+  readonly externalImportBase?: string;
 };
 
 export type GenerateFailure = Effect.Effect.Error<

@@ -130,7 +130,8 @@
     {
       "id": "types-surface",
       "documents": ["packages/types/README.md"],
-      "fixtures": ["packages/cli/examples/documentation/types-surface.ts"]
+      "fixtures": ["packages/cli/examples/documentation/types-surface.ts"],
+      "runtimeFixtures": ["packages/cli/__test__/documentationExamples.test.ts"]
     },
     {
       "id": "aws-cdk-routes",

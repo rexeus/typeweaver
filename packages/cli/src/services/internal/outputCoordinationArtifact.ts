@@ -41,11 +41,11 @@ const hostPathFs = {
  * filesystems. False contention is safe; two locks for one physical output are
  * not.
  */
+export const canonicalOutputPath = (outputDir: string): string =>
+  canonicalizePathForContainment(path.resolve(outputDir), hostPathFs);
+
 export const normalizeOutputPathForLock = (outputDir: string): string =>
-  canonicalizePathForContainment(
-    path.resolve(outputDir),
-    hostPathFs
-  ).toLowerCase();
+  canonicalOutputPath(outputDir).toLowerCase();
 
 /**
  * Deterministic flat lock directory directly under the trusted host temp root.

@@ -6,7 +6,6 @@
  */
 
 import type {
-  IHttpRequest,
   IRawHttpRequest,
   IRequestValidator,
   IValidatedHttpRequest,
@@ -28,7 +27,7 @@ import { Validator } from "./Validator.js";
  * - Return success/error result (for `safeValidate`)
  */
 export abstract class RequestValidator<
-  TValidatedRequest extends IValidatedHttpRequest = IHttpRequest,
+  TValidatedRequest extends IValidatedHttpRequest = IValidatedHttpRequest,
 >
   extends Validator
   implements IRequestValidator<TValidatedRequest>

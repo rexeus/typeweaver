@@ -13,7 +13,7 @@ import {
   SpecBundleError,
   SpecBundleOutputMissingError,
 } from "./errors/specErrors.js";
-import type { BuildOptions } from "rolldown";
+import type { BuildOptions, Plugin } from "rolldown";
 
 const WINDOWS_ABSOLUTE_PATH_PATTERN = /^[A-Za-z]:[\\/]/;
 const WINDOWS_UNC_PATH_PATTERN = /^\\\\/;
@@ -21,6 +21,8 @@ const WINDOWS_UNC_PATH_PATTERN = /^\\\\/;
 export type SpecBundlerConfig = {
   readonly inputFile: string;
   readonly specOutputDir: string;
+  readonly externalImportBase?: string;
+  readonly pinExternalImports?: boolean;
 };
 
 /** Minimal URL shape so Windows-path tests can inject a converter. */
@@ -232,22 +234,96 @@ export const isExternalModule = (source: string): boolean => {
   return !source.startsWith(".") && !path.isAbsolute(source);
 };
 
-const makeBuildOptions = (
-  tempDir: string,
-  paths: BundlePaths
-): BuildOptions => ({
-  cwd: tempDir,
-  input: paths.wrapperFile,
-  treeshake: true,
-  experimental: {
-    attachDebugInfo: "none",
+const hasUnpinnedDynamicImport = (value: unknown): boolean => {
+  if (Array.isArray(value)) {
+    return value.some(hasUnpinnedDynamicImport);
+  }
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  if (Reflect.get(value, "type") === "ImportExpression") {
+    const source = Reflect.get(value, "source");
+    const literalValue =
+      typeof source === "object" &&
+      source !== null &&
+      Reflect.get(source, "type") === "Literal"
+        ? Reflect.get(source, "value")
+        : undefined;
+    return !(
+      typeof literalValue === "string" &&
+      (literalValue.startsWith("file:") || literalValue.startsWith("node:"))
+    );
+  }
+  return Object.values(value).some(hasUnpinnedDynamicImport);
+};
+
+const pinExternalImportsPlugin = (externalImportBase: string): Plugin => ({
+  name: "typeweaver-pin-external-imports",
+  async resolveId(source) {
+    if (!isExternalModule(source)) {
+      return null;
+    }
+    if (source.startsWith("node:")) {
+      return { id: source, external: true };
+    }
+    const resolved = await this.resolve(source, externalImportBase, {
+      skipSelf: true,
+    });
+    if (resolved === null) {
+      throw new Error(
+        `Unable to resolve external module '${source}' from '${externalImportBase}'`
+      );
+    }
+    if (resolved.id.startsWith("node:") || resolved.id.startsWith("file:")) {
+      return { id: resolved.id, external: true };
+    }
+    if (path.isAbsolute(resolved.id)) {
+      return { id: pathToFileURL(resolved.id).href, external: true };
+    }
+    if (resolved.external) {
+      throw new Error(
+        `External module '${source}' resolved to non-absolute id '${resolved.id}'`
+      );
+    }
+
+    return { ...resolved, external: false };
   },
-  external: isExternalModule,
-  output: {
-    file: paths.stagedSpecFile,
-    format: "esm",
+  renderChunk(code) {
+    if (hasUnpinnedDynamicImport(this.parse(code))) {
+      throw new Error(
+        "Isolated spec evaluation cannot safely resolve a dynamic import unless it is a literal node: or file: specifier"
+      );
+    }
+    return null;
   },
 });
+
+const makeBuildOptions = (
+  tempDir: string,
+  paths: BundlePaths,
+  externalImportBase: string | undefined
+): BuildOptions => {
+  const pinExternalImports = externalImportBase !== undefined;
+  const options: BuildOptions = {
+    cwd: tempDir,
+    input: paths.wrapperFile,
+    treeshake: true,
+    ...(pinExternalImports ? { platform: "node" as const } : {}),
+    experimental: {
+      attachDebugInfo: "none",
+    },
+    external: pinExternalImports
+      ? source => source.startsWith("node:")
+      : isExternalModule,
+    output: {
+      file: paths.stagedSpecFile,
+      format: "esm",
+    },
+  };
+  return pinExternalImports
+    ? { ...options, plugins: [pinExternalImportsPlugin(externalImportBase)] }
+    : options;
+};
 
 const runRolldownBuild = Effect.fn(function* (params: {
   readonly build: (options: BuildOptions) => Promise<unknown>;
@@ -311,7 +387,13 @@ const bundleSpec = Effect.fn(function* (
       yield* runRolldownBuild({
         build: deps.build ?? build,
         inputFile: config.inputFile,
-        options: makeBuildOptions(tempDir, paths),
+        options: makeBuildOptions(
+          tempDir,
+          paths,
+          config.pinExternalImports === true
+            ? (config.externalImportBase ?? config.inputFile)
+            : undefined
+        ),
       });
       yield* assertBundleOutputExists(operation);
       yield* publishBundle(operation);
