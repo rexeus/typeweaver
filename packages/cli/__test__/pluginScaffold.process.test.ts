@@ -3,11 +3,24 @@ import fs from "node:fs";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, test } from "vitest";
+import { z } from "zod";
+import { cliPackageVersion } from "../src/cliMetadata.js";
 
 const execFileAsync = promisify(execFile);
 const packageDirectory = path.resolve(import.meta.dirname, "..");
 const cliEntry = path.join(packageDirectory, "bin", "typeweaver.mjs");
 const PROCESS_TEST_TIMEOUT_MS = 15_000;
+const typeweaverVersionRange = `^${cliPackageVersion}`;
+const PluginPackageSchema = z.object({
+  peerDependencies: z.object({
+    "@rexeus/typeweaver-gen": z.string(),
+  }),
+  devDependencies: z.object({
+    "@rexeus/typeweaver": z.string(),
+    "@rexeus/typeweaver-core": z.string(),
+    "@rexeus/typeweaver-gen": z.string(),
+  }),
+});
 const outputsDirectory = path.join(
   packageDirectory,
   "test",
@@ -46,6 +59,9 @@ const collectFileTree = (root: string): string => {
     .join("\n");
 };
 
+const normalizeReleaseVersion = (fileTree: string): string =>
+  fileTree.replaceAll(typeweaverVersionRange, "^<TYPEWEAVER_VERSION>");
+
 afterEach(() => {
   for (const workspace of workspaces) {
     fs.rmSync(workspace, { recursive: true, force: true });
@@ -70,7 +86,22 @@ describe("built CLI plugin scaffold", () => {
       expect(result.stdout).toContain(
         `Created TypeWeaver plugin 'audit-log' at ${target}`
       );
-      expect(collectFileTree(target)).toMatchSnapshot();
+      const packageManifest = PluginPackageSchema.parse(
+        JSON.parse(fs.readFileSync(path.join(target, "package.json"), "utf8"))
+      );
+      expect(packageManifest).toStrictEqual({
+        peerDependencies: {
+          "@rexeus/typeweaver-gen": typeweaverVersionRange,
+        },
+        devDependencies: {
+          "@rexeus/typeweaver": typeweaverVersionRange,
+          "@rexeus/typeweaver-core": typeweaverVersionRange,
+          "@rexeus/typeweaver-gen": typeweaverVersionRange,
+        },
+      });
+      expect(
+        normalizeReleaseVersion(collectFileTree(target))
+      ).toMatchSnapshot();
     },
     PROCESS_TEST_TIMEOUT_MS
   );

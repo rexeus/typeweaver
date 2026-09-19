@@ -27,8 +27,8 @@
     "verify:packed-consumers": "node scripts/test-packed-consumers.mjs",
     "test:pnpm-launcher": "node scripts/test-pnpm-launcher.mjs",
     "verify:architecture-contracts": "node scripts/verify-architecture-contracts.mjs",
-    "publish:dry": "pnpm publish -r --dry-run --no-git-checks",
-    "ci:publish": "pnpm publish -r --provenance",
+    "publish:dry": "pnpm publish -r --dry-run --no-git-checks --access public",
+    "ci:publish": "pnpm publish -r --provenance --access public",
     "prepare:commit": "pnpm run format && pnpm run lint:fix && pnpm run typecheck && pnpm run build && pnpm run test"
   },
   "keywords": [
