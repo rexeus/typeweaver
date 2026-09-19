@@ -1,5 +1,186 @@
 # @rexeus/typeweaver
 
+## 0.13.0
+
+### Minor Changes
+
+- a8afbb0: Add a read-only `typeweaver doctor` workflow with stable human and JSON checks for runtime,
+  configuration, spec, plugins, output safety, Effect compatibility, formatter availability, and
+  optional deep validation.
+- c09a336: Add a read-only `typeweaver generate --check` mode that performs a fresh isolated generation and
+  byte-compares it with the configured output. Matching output exits `0`; drift exits `1` with
+  deterministic, sorted `Added`, `Removed`, and `Changed` relative paths. The check never creates,
+  cleans, or writes the configured output directory, supports the config and explicit
+  `--input`/`--output`/`--plugins` workflows, snapshots committed output before generating under
+  `clean: false`, and keeps `--verbose` debug lifecycle and lock output.
+
+  Output locks are now flat entries directly under the platform system temp directory (POSIX `/tmp`,
+  root-owned sticky and world-writable; Windows the drive-independent
+  `\\?\GLOBALROOT\SystemRoot\Temp` namespace with inherited system-directory ACLs), named
+  `.typeweaver-output-lock-<hash>` from the physical output identity, so no CLI user owns a shared
+  parent and no lock artifact is written inside generated output. Lock directories are created `0700`
+  and metadata `0600`. The identity realpath-resolves the nearest existing ancestor (so symlink aliases
+  converge) and case-folds the whole canonical path on every platform, so a missing `Generated/Output`
+  and a later-created `generated/output` hash identically; conservative contention is preferred over
+  split locks. Staging directories are created directly under the trusted temp root and are removed on
+  success, failure, and interruption; normal generation creates output directories only after it holds
+  the lock.
+
+  Checks pin bare spec imports against the original `<configured output>/spec/spec.js` location before
+  isolated evaluation, so lookup order and fallback past a partial nearer `node_modules` match normal
+  generation without allowing the shared temp directory to inject packages. Non-literal dynamic
+  imports are rejected because their runtime target cannot be pinned safely. Configured output or
+  project source that equals the trusted temp root or uses a reserved coordination/staging name
+  (including lock fence names) is rejected before any lock or stage is created; ordinary project
+  outputs elsewhere under the temp root are unaffected. Only the CLI check pipeline can stage under
+  the reserved namespace via an internal, unforgeable authority.
+
+  Legacy remediation: a complete `.typeweaver-lock` whose regular metadata names a dead process is
+  proven coordination state that `--check` excludes and a later clean generation removes. A live,
+  malformed (including symlinked metadata), or ownership-uncertain lock blocks generate/check before
+  any clean and requires manual removal after confirming no older process runs. Fence-shaped
+  files/directories and other lookalikes are ordinary drift and clean-removable. Mixed CLI versions
+  must not run generation concurrently. See `MIGRATION.md`.
+
+- 4c58b17: Replace the placeholder `init` command with an atomic Todo project bootstrap, explicit target and
+  overwrite policy, dry-run planning, selectable JavaScript config formats, rollback on publication
+  failure, recoverable originals when rollback itself fails, and stable human and JSON reports.
+- 545331b: Add a side-effect-free `typeweaver validate` workflow with stable human and JSON reports, severity
+  thresholds, public Zod report schemas, normalized-spec warning codes, and plugin validation issues.
+- 8acb009: Add the optional Effect-native Fetch server adapter with generated operation types, one managed
+  application runtime, typed failure mapping, request interruption, operation spans, and idempotent
+  Layer shutdown.
+- 33c3554: Migrate the runtime, plugin API, and CLI to Effect.
+
+  The plugin API moves from class-based `BasePlugin` extension to V2 records returned by
+  `definePlugin(...)` and `definePluginWithLibCopy(...)`. Lifecycle stages return
+  `Effect<void, PluginExecutionError>` instead of `Promise<void> | void`. Error surfaces in the
+  Effect-enabled packages use `Data.TaggedError`, including lifecycle failures
+  (`PluginExecutionError`) and construction-time misconfiguration (`PluginConfigError`). The CLI is
+  built on `@effect/cli`, with concise error formatting that preserves every failure and defect in
+  composite causes, plus structured log lines. The
+  `GeneratorContext` additionally exposes an Effect-native surface (`writeFileEffect`,
+  `renderTemplateEffect`, `addGeneratedFileEffect`) with the same path-safety and atomic-write
+  guarantees, routed through `@effect/platform`'s `FileSystem` service.
+
+  Generator recovery now keeps publication and cleanup boundaries consistent under defects and Fiber
+  interruption. Spec bundles are written to a scoped staging directory and renamed into place only
+  after Rolldown settles successfully. Because Rolldown does not expose cancellation, an interrupted
+  bundle waits for that Promise to settle before releasing its scope and output lock. Generated-file
+  replacement and tracking form one commit, so a cleanup failure cannot leave a published but
+  untracked file.
+
+  Error payloads that represent multiple failure modes are now discriminated:
+  `PluginDependencyError.issue` distinguishes a missing dependency from a structured dependency-cycle
+  path, and `UnsafeCleanTargetError.details` carries only the fields required by its reason. The
+  generator's `GenerateFailure` type is derived from the actual Effect error channel so cleanup
+  failures cannot silently drift out of the public contract.
+
+  Expected formatter and filesystem failures now stay on Effect's typed error channel. Formatter
+  module loading, formatting, output traversal, clean-target inspection, output-lock I/O, and
+  generated-path probes expose dedicated tagged errors; unexpected programming failures remain
+  defects. The test-only in-memory filesystem follows the same missing-path, parent-directory,
+  rename, realpath, directory-listing, and scoped-temp semantics as the Node filesystem layer.
+
+  CLI option resolution now preserves custom top-level configuration keys when forwarding the final
+  configuration to plugin contexts.
+
+  Programmatic extension APIs with long positional argument lists now use named options objects.
+  Construct `NetworkError` with `new NetworkError(message, { code, method, url, cause })`. Custom
+  `TypeweaverRouter` subclasses pass one exported `TypeweaverRouteOptions` object to `route`, and
+  custom `TypeweaverHono` subclasses pass one exported `TypeweaverHonoRequestOptions` object to
+  `handleRequest`.
+
+  The spec authoring API (`defineSpec`, `defineOperation`, `defineResponse`) is unchanged. Existing
+  specs that use supported Zod schemas keep working byte-for-byte.
+
+  - Effect-native plugin packages and `@rexeus/typeweaver-gen` now expose
+    `peerDependencies.effect: ">=3.22.0 <4"`. The 3.22 lower bound matches the current `@effect/*`
+    runtime family; 3.21.2 would install a second nominally incompatible Effect identity. Plugin
+    authors must install one Effect 3 version satisfying that range.
+
+  - `@rexeus/typeweaver-core`'s `DuplicateResponseNameError` stays a plain `Error` (the authoring
+    package carries no effect dependency) and now exposes the offending `responseName`.
+    `@rexeus/typeweaver-gen` wraps it at the normalization boundary into a tagged
+    `DuplicateResponseNameError`, so the `NormalizationError` union is fully `catchTag`-addressable.
+
+  Breaking changes are documented in the
+  [migration guide](https://github.com/rexeus/typeweaver/blob/main/MIGRATION.md#migrating-from-012x-to-013x).
+  Background on the design decisions:
+
+  - ADR 0003 — Effect-native plugin API (V2)
+  - ADR 0004 — FileSystem service adoption
+  - ADR 0005 — Effect.Service patterns
+  - ADR 0006 — CLI error and log formatting
+  - ADR 0007 — Generator per-call isolation
+
+- 887c4b2: Add a generated Node.js command-line API client with one deterministic command per operation,
+  path/query/header flags, inline/file/stdin request bodies, contract-derived security, structured
+  output, stable exit codes, request cancellation, structured plugin diagnostics, and packed external
+  consumer verification.
+- d14b80e: Add a non-interactive `typeweaver add plugin` command that creates a deterministic, tested
+  third-party plugin starter in a new directory without overwriting user files.
+
+### Patch Changes
+
+- db12a9a: An Effect 4 app can run the `typeweaver` CLI as a separate process to generate plain output. The
+  Effect peer range stays `>=3.22.0 <4`. The only tested Effect 4 version is `4.0.0-rc.115` (pnpm,
+  strict peers); every other Effect 4 version is UNVERIFIED. `typeweaver doctor` now resolves the
+  project-declared Effect at the project boundary as
+  `TW-DOCTOR-011` (skipped only when the project does not declare Effect and no Effect-native or
+  custom plugin is configured; an undeclared project that selects the `effect` projection or a custom
+  plugin fails; a conditional warning for the exact `4.0.0-rc.115` pin with built-in plain
+  projections; UNVERIFIED warnings for any other Effect 4 version; and failure for the Effect-native
+  `effect` projection or a custom plugin unless the workspace declares a supported stable Effect 3
+  runtime). It also renames
+  `TW-DOCTOR-008` to the CLI's own bundled Effect runtime. The binary CLI remains usable in an Effect 4
+  workspace through process isolation, while the CLI programmatic API, `@rexeus/typeweaver-gen` plugin
+  authoring, first-party plugin imports, and `@rexeus/typeweaver-effect` stay on Effect `>=3.22.0 <4`.
+  Packed evidence covers all built-in plain projections and rejects a strict-peer Effect 4 install of
+  the Effect-native packages.
+
+  The CLI now validates the project-declared Effect with a direct `semver` dependency: `doctor` passes
+  only a stable release that satisfies the project's declared specifier under standard semver
+  (prereleases never pass), and a declaration that cannot be verified fails truthfully instead of
+  passing on a hoisted parent Effect.
+
+- a9a79dc: Pin the published `@effect/*` dependencies, including a direct `@effect/platform-node-shared` pin, to
+  the versions verified against the Effect 3.22.0 baseline. Fresh packed consumers now resolve a
+  peer-coherent Effect family instead of newer patch releases whose peers require a newer Effect
+  version.
+- ba58b56: Ignore empty entries in comma-separated CLI plugin flags and stage validation outside the project
+  tree.
+- b539a81: Preserve normalized body-warning locations as concrete validation JSON Pointers, and allow generated
+  API operations named `version` because the command runtime has no conflicting version subcommand.
+- Updated dependencies [545331b]
+- Updated dependencies [0f0ad74]
+- Updated dependencies [db12a9a]
+- Updated dependencies [8acb009]
+- Updated dependencies [33c3554]
+- Updated dependencies [887c4b2]
+- Updated dependencies [db12a9a]
+- Updated dependencies [a83c79b]
+- Updated dependencies [567724e]
+- Updated dependencies [a9a79dc]
+- Updated dependencies [f4fd035]
+- Updated dependencies [4ccbed1]
+- Updated dependencies [b539a81]
+- Updated dependencies [73fb710]
+- Updated dependencies [fc4cee6]
+- Updated dependencies [d8440f9]
+- Updated dependencies [450408d]
+- Updated dependencies [8700698]
+  - @rexeus/typeweaver-gen@0.13.0
+  - @rexeus/typeweaver-clients@0.13.0
+  - @rexeus/typeweaver-effect@0.13.0
+  - @rexeus/typeweaver-core@0.13.0
+  - @rexeus/typeweaver-types@0.13.0
+  - @rexeus/typeweaver-aws-cdk@0.13.0
+  - @rexeus/typeweaver-hono@0.13.0
+  - @rexeus/typeweaver-server@0.13.0
+  - @rexeus/typeweaver-openapi@0.13.0
+  - @rexeus/typeweaver-command@0.13.0
+
 ## 0.12.0
 
 ### Minor Changes

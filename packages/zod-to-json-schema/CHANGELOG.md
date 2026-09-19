@@ -1,5 +1,14 @@
 # @rexeus/typeweaver-zod-to-json-schema
 
+## 0.13.0
+
+### Patch Changes
+
+- d8440f9: Skip the internal `never` catchall when collecting object-schema warnings so Zod strict objects no
+  longer report the representable `additionalProperties: false` conversion as `unsupported-schema`.
+  Genuine lossy-schema warnings for `z.custom()`, transforms, unsupported checks, and non-`never`
+  catchalls are unchanged. This is a warning-only patch; no migration is required.
+
 ## 0.12.0
 
 ### Minor Changes
