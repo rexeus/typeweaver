@@ -121,7 +121,7 @@ for (const markdownFile of markdownFiles) {
 
     const fileTarget = decodeURIComponent(target.split("#", 1)[0] ?? "");
     const resolved = fileTarget.startsWith("/")
-      ? path.join(repositoryRoot, fileTarget)
+      ? path.join(repositoryRoot, fileTarget.replace(/^\/+/, ""))
       : path.resolve(
           path.dirname(path.join(repositoryRoot, markdownFile)),
           fileTarget
