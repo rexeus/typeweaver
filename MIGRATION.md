@@ -16,7 +16,7 @@ lines.
 ## Migrating from 0.12.x to 0.13.x
 
 Version 0.13.0 completes the migration to **Effect** as TypeWeaver's runtime foundation and matures
-the executable API contract. The release breaks seven surfaces:
+the executable API contract. The release breaks eight surfaces:
 
 1. The **plugin API** (V1 class-based → V2 Effect-native records). Affects anyone who built a custom
    plugin.
@@ -26,11 +26,14 @@ the executable API contract. The release breaks seven surfaces:
    `NetworkError` construction and custom subclasses of the generated server and Hono router bases.
 4. The **Zod-to-TypeScript converter** rejects unsupported schema shapes instead of silently
    generating `unknown`.
-5. The unvalidated **HTTP body boundary** is `unknown` instead of implicit `any`.
+5. **HTTP request boundaries** distinguish raw transport values, validated schema output, and client
+   input; unvalidated bodies are `unknown` instead of implicit `any`.
 6. The **spec authoring API** requires API metadata and can declare generator-neutral security,
    descriptions, tags, and deprecation.
 7. The **OpenAPI projection** moves from hard-coded 3.1.1 output to explicit 3.1.2 and 3.2.0 target
    profiles, with API identity sourced from the spec.
+8. **Generation locking** moves to a system-temporary coordination namespace; mixed CLI versions
+   must not generate concurrently.
 
 ### 1. Plugin API V1 → V2 (BREAKING — third-party plugin authors)
 
@@ -409,7 +412,38 @@ try {
 Replace unsupported shapes with an equivalent supported schema before generation. `z.unknown()`
 remains supported and still generates TypeScript `unknown`.
 
-### 7. Unvalidated HTTP bodies are unknown
+### 7. Typed HTTP request boundaries and unvalidated bodies
+
+Generated routers now distinguish the request value that arrived from the transport from the value
+that passed operation validation:
+
+- `IRawHttpRequest` and generated `IRaw<OperationId>Request` aliases contain raw path, query, and
+  header strings. Repeated query and header values are readonly string arrays, and the body is
+  optional `unknown`.
+- Operation-specific `IHttpRequest` types contain readonly Zod output values after validation.
+- Generated clients accept serializable domain scalars (`string`, finite `number`, `boolean`,
+  `bigint`, and valid `Date`) and serialize them to HTTP text.
+
+Generated Server and Hono handler types now follow `validateRequests`:
+
+| Configuration             | Handler request                             |
+| ------------------------- | ------------------------------------------- |
+| omitted or literal `true` | validated generated request                 |
+| literal `false`           | operation-specific raw request              |
+| dynamic `boolean`         | validated request or operation-specific raw |
+
+Code that sets `validateRequests: false` must narrow or validate raw strings before treating them as
+domain values. Middleware, pre-validation hooks, and direct generated-validator calls should accept
+`IRawHttpRequest`; successful validation returns the operation-specific validated request. A router
+specialized as `false` or `boolean` must also pass that option explicitly so its runtime behavior
+matches its handler type.
+
+Request schemas must accept their raw HTTP representation and produce values that generated clients
+can serialize. Prefer `z.coerce.number()` for numeric text and `z.stringbool()` for textual
+booleans; `z.coerce.boolean()` follows JavaScript truthiness, so the non-empty string `"false"`
+becomes `true`. Repeated query keys feed array schemas, while scalar schemas reject repeated values.
+See the [typed HTTP boundary guide](./docs/migrations/typed-http-boundaries.md) for schema
+constraints, record-key safety, header casing, arrays, and client serialization rules.
 
 `IHttpBody` and the default body types of `IHttpRequest`, `IHttpResponse`, handlers, and generated
 Fetch/Hono adapters no longer resolve to `any`. Generated operation types remain schema-specific.
@@ -489,6 +523,12 @@ For **end users** (you use the CLI but don't author plugins):
       reaches TypeScript generation with a supported, statically inspectable schema.
 - [ ] Narrow `body` before reading it when using unparameterized `IHttpRequest` or `IHttpResponse`
       types.
+- [ ] Use `IRawHttpRequest` at middleware, pre-validation, and direct validator boundaries; only use
+      operation-specific `IHttpRequest` values after successful validation.
+- [ ] Narrow raw query and header strings in handlers configured with `validateRequests: false`, and
+      pass `validateRequests` explicitly for routers typed as `false` or `boolean`.
+- [ ] Update request schemas to accept raw HTTP strings and produce client-serializable scalar or
+      readonly scalar-array outputs.
 - [ ] Add explicit request, response, and context generics to custom generated `HttpAdapter`
       subclasses that previously relied on defaults.
 - [ ] Add `metadata.title` and `metadata.version` to every `defineSpec` call.

@@ -26,6 +26,9 @@
     "LICENSE",
     "NOTICE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "format": "oxfmt",
