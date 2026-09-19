@@ -1,8 +1,4 @@
-import type {
-  IHttpRequest,
-  IRawHttpRequest,
-  IValidatedHttpRequest,
-} from "./HttpRequest.js";
+import type { IRawHttpRequest, IValidatedHttpRequest } from "./HttpRequest.js";
 import type { RequestValidationError } from "./RequestValidationError.js";
 
 type ValidationSuccessResult<T> = {
@@ -20,7 +16,7 @@ export type SafeRequestValidationResult<T> =
   | ValidationFailureResult;
 
 export type IRequestValidator<
-  TValidatedRequest extends IValidatedHttpRequest = IHttpRequest,
+  TValidatedRequest extends IValidatedHttpRequest = IValidatedHttpRequest,
 > = {
   /**
    * Validates a request and returns a result object.
