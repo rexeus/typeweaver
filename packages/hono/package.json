@@ -59,6 +59,11 @@
     "effect": "catalog:peers",
     "hono": "catalog:peers"
   },
+  "peerDependenciesMeta": {
+    "hono": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",

@@ -103,6 +103,7 @@
     "effect": "^3.22.0",
     "oxc-transform": "^0.141.0",
     "rolldown": "^1.2.0",
+    "semver": "7.7.4",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
@@ -117,6 +118,7 @@
     "@effect/vitest": "^0.30.0",
     "@rexeus/typeweaver-zod-to-json-schema": "workspace:^",
     "@rexeus/typeweaver-zod-to-ts": "workspace:^",
+    "@types/semver": "7.8.0",
     "fast-check": "^4.9.0",
     "hono": "^4.12.32",
     "test-utils": "file:../test-utils",

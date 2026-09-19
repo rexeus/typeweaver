@@ -24,7 +24,9 @@ defects around dynamic validation, raw transport shapes, and record-array normal
 been repaired on branch `codex/issue-206-typed-http-boundary`, targets the PR #218 branch, and is
 review-ready at green head `53ff8f5c`. Issue #215 is implemented by open, review-ready PR #218 at
 green head `41aee989`, stacked on PR #214, and awaits human review and merge. Issue #216 is
-delivered as open, review-ready PR #219; #217 must retain the two-phase compatibility strategy.
+delivered as open, review-ready PR #219. Issue #217 phase A is implemented on
+`feat/effect-4-compatibility-217` as open, review-ready PR #220 at green source head `6978bf65`;
+phase B remains blocked until Effect 4 is stable.
 
 ## Related plans
 
@@ -101,11 +103,15 @@ delivered as open, review-ready PR #219; #217 must retain the two-phase compatib
     `Socket Security: Pull Request Alerts` pass. Evidence:
     [CI run 35306935948](https://github.com/rexeus/typeweaver/actions/runs/35306935948). The PR is
     open, mergeable, and unmerged.
-- [ ] 5. **Deliver the honest Effect 4 compatibility path**
+- [x] 5. **Deliver the honest Effect 4 compatibility path**
   - **Outcome:** present-day independent surfaces and CLI isolation are documented and executable;
     Effect-native migration remains gated on stable Effect 4.
-  - **Evidence:** [Plan 009](009-effect-4-compatibility-217.md) phase A is merged-ready, and phase B
-    has explicit entry criteria.
+  - **Evidence:** [Plan 009](009-effect-4-compatibility-217.md) phase A is DONE (review-ready) in
+    [PR #220](https://github.com/rexeus/typeweaver/pull/220), stacked on PR #219. Reviewed source
+    head `a96663b2` passes `quality-check`, `windows-security`, `Socket Security: Project Report`,
+    and `Socket Security: Pull Request Alerts` in
+    [CI run 35308790589](https://github.com/rexeus/typeweaver/actions/runs/35308790589). The PR is
+    open, mergeable, and unmerged. Phase B remains BLOCKED on a stable, aligned Effect 4 release.
 
 ## Final validation
 

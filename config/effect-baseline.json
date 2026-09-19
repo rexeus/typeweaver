@@ -1,6 +1,12 @@
 {
   "runtimeVersion": "3.22.0",
   "peerRange": ">=3.22.0 <4",
+  "phaseA": {
+    "effectVersion": "4.0.0-rc.115",
+    "scope": "process-isolated-cli-only",
+    "stability": "release-candidate",
+    "nativeSurfaces": "effect-3-only"
+  },
   "acceptedEffectDependencies": {
     "@effect/cli": "0.76.0",
     "@effect/cluster": "0.60.0",

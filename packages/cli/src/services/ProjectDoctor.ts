@@ -13,6 +13,7 @@ import {
   checkOutput,
   checkPackageManager,
   checkRuntime,
+  checkWorkspaceEffectCompatibility,
 } from "./doctorEnvironment.js";
 import {
   DEFAULT_PLUGIN_RESOLUTION_STRATEGIES,
@@ -212,6 +213,11 @@ const skippedDeepCheck = (message: string): DoctorCheck =>
     message,
   });
 
+// Deep validation runs configured plugin `validate` Effects, so it is gated on
+// every prerequisite including workspace Effect compatibility. An Effect-native
+// or custom plugin in an unsupported workspace must never reach a plugin
+// validation Effect; the compatibility check fails first and this skip keeps the
+// two checks consistent.
 const checkDeepValidation = (
   projectValidator: ProjectValidator,
   params: DeepValidationParams
@@ -226,7 +232,7 @@ const checkDeepValidation = (
   ) {
     return Effect.succeed(
       skippedDeepCheck(
-        "Deep validation depends on valid configuration, input, and plugins."
+        "Deep validation depends on valid configuration, input, plugins, and workspace Effect compatibility."
       )
     );
   }
@@ -298,9 +304,18 @@ const diagnoseProject = (
     );
     const effectCheck = yield* checkEffectReference();
     const formatterCheck = yield* checkFormatter(resolved.inputs.config.format);
+    const workspaceEffectCheck = yield* checkWorkspaceEffectCompatibility(
+      resolved.inputs.config,
+      params.currentWorkingDirectory
+    );
     const deepCheck = yield* checkDeepValidation(services.projectValidator, {
       inputs: resolved.inputs,
-      prerequisiteChecks: [resolved.configCheck, inputCheck, pluginCheck],
+      prerequisiteChecks: [
+        resolved.configCheck,
+        inputCheck,
+        pluginCheck,
+        workspaceEffectCheck,
+      ],
       deep: params.deep,
       currentWorkingDirectory: params.currentWorkingDirectory,
     });
@@ -315,6 +330,7 @@ const diagnoseProject = (
       effectCheck,
       formatterCheck,
       deepCheck,
+      workspaceEffectCheck,
     ];
   });
 

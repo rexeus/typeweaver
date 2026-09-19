@@ -1,5 +1,14 @@
 # Define and deliver the Effect 4 compatibility path
 
+## Status
+
+**PHASE A DONE (review-ready); PHASE B BLOCKED.** Phase A is delivered as open and unmerged
+[PR #220](https://github.com/rexeus/typeweaver/pull/220), stacked on PR #219. Reviewed source head
+`a96663b2` passes `quality-check`, `windows-security`, `Socket Security: Project Report`, and
+`Socket Security: Pull Request Alerts` in
+[CI run 35308790589](https://github.com/rexeus/typeweaver/actions/runs/35308790589). Phase B remains
+blocked until Effect 4 and its aligned platform, CLI, testing, and language tooling are stable.
+
 ## Outcome
 
 TypeWeaver states and proves what works in an Effect 4 workspace today without misrepresenting
@@ -46,8 +55,9 @@ for planning and delivery. Phase B is conditional work, not an immediate compati
 
 - **Keep the current 0.13 line on Effect 3** — its public plugin ABI and adapter are Effect-native;
   widening the peer range would be both type- and runtime-unsound.
-- **Support Effect 4 workspaces through process isolation now** — the CLI owns a nested Effect 3
-  runtime and can generate Effect-independent outputs without sharing the application's runtime.
+- **Prove the exact `effect@4.0.0-rc.115` binary-CLI path through process isolation now** — the CLI
+  owns a nested Effect 3 runtime and can generate Effect-independent outputs from Effect-neutral
+  inputs without sharing the application's runtime. Every other Effect 4 version is unverified.
 - **Use a coordinated Effect 4 TypeWeaver line after upstream stability** — migrate gen, first-party
   plugins, CLI, and the adapter together rather than multiplying every plugin into v3/v4 packages.
 - **Retain the previous TypeWeaver line for Effect 3 consumers** — simultaneous majors in one
@@ -56,39 +66,60 @@ for planning and delivery. Phase B is conditional work, not an immediate compati
 
 ## Plan
 
-- [ ] 1. **Phase A: record the compatibility matrix in an ADR**
+- [x] 1. **Phase A: record the compatibility matrix in an ADR**
   - **Outcome:** users can distinguish independent, process-isolated, and Effect-native surfaces.
-  - **Evidence:** ADR, package READMEs, `doctor`, and release notes state identical supported ranges
-    and exclusions.
-- [ ] 2. **Phase A: add packed Effect 4 workspace evidence**
+  - **Evidence:** [ADR 0010](../docs/adr/0010-effect-4-workspace-compatibility.md) is accepted and
+    supplements ADR 0008; `docs/README.md`, the CLI/gen/effect package READMEs,
+    `docs/plugin-authoring.md`, `MIGRATION.md`, and the root README state the same supported ranges
+    and exclusions. `pnpm verify:effect-version` enforces the exact metadata, unchanged v3
+    runtime/peers, CLI dependency/no Effect peer, gen/effect v3 peers, and the ADR/docs matrix
+    tokens.
+- [x] 2. **Phase A: add packed Effect 4 workspace evidence**
   - **Outcome:** an app on the selected exact Effect 4 version installs the TypeWeaver CLI as build
     tooling and generates plain outputs without unresolved peers or runtime-identity crossing.
-  - **Evidence:** packed pnpm consumer test verifies install graph, CLI process execution,
-    generation, and plain output typecheck; it also proves plugin/adapter imports remain
-    intentionally rejected.
-- [ ] 3. **Phase A: deliver a dedicated compatibility PR**
+  - **Evidence:** `scripts/test-packed-consumers.mjs` packs pnpm fixtures with strict peers and
+    overrides for every packed TypeWeaver tarball. A minimal fixture (packed CLI + core, exact
+    `effect@4.0.0-rc.115`, Zod and TypeScript tooling, no Hono) proves the Hono peer became optional
+    and install succeeds. A second fixture adds Hono and generates all advertised plain projections
+    (`types`, `clients`, `server`, `hono`, `command`, `openapi`, `aws-cdk`) through
+    `pnpm exec typeweaver`; it asserts each projection output exists, scans every generated
+    TypeScript/JavaScript module specifier (static, side-effect, re-export, dynamic import, and
+    `require`) for forbidden `effect`/gen/effect-adapter imports, typechecks and runs an application
+    module that imports both `effect@4.0.0-rc.115` and the generated output, runs `doctor` asserting
+    `TW-DOCTOR-008` pass and the `TW-DOCTOR-011` exact-pin conditional warning, proves only the
+    application anchor resolves the RC while every effect-declaring installed TypeWeaver package in
+    the CLI subtree resolves one Effect 3 realpath (exactly two physical identities), proves
+    gen/effect are unavailable phantom imports, and rejects a strict-peer Effect 4 install of the
+    packed gen/effect packages.
+- [x] 3. **Phase A: deliver a dedicated compatibility PR**
   - **Outcome:** the current release line makes no misleading Effect 4 promise.
-  - **Evidence:** docs, doctor, packed consumers, Effect diagnostics, full repository gate, and CI
-    pass.
-- [ ] 4. **Phase B entry gate: confirm stable upstream contracts**
+  - **Evidence:** docs, doctor, packed consumers, Effect diagnostics, focused tests, and repository
+    gates pass. The final Linux quality job covers frozen installation, build, generation,
+    Node/Deno/Bun bundles, typechecking, architecture contracts (including workspace tests and
+    packed consumers), docs, format, lint, and publish dry-run. It and the Windows security job pass
+    with the undeclared-native-surface and deep-validation gating corrections at reviewed source
+    head `a96663b2` in
+    [CI run 35308790589](https://github.com/rexeus/typeweaver/actions/runs/35308790589).
+- [ ] 4. **Phase B entry gate: confirm stable upstream contracts** — **BLOCKED: Effect 4 is still
+      `4.0.0-rc.115`; no stable release or aligned platform/CLI toolchain exists.**
   - **Outcome:** exact stable Effect, platform, CLI, Vitest, language-service, and source-reference
     versions are selected before production migration.
-  - **Evidence:** no RC or unstable CLI dependency remains in the proposed public support contract;
-    otherwise phase B stays blocked.
-- [ ] 5. **Phase B: supersede ADR 0008 and port generator infrastructure**
+  - **Evidence:** not started. Phase A pins the RC only as workspace evidence.
+- [ ] 5. **Phase B: supersede ADR 0008 and port generator infrastructure** — **BLOCKED by work
+      package 4.**
   - **Outcome:** services, layers, scopes, Cause handling, platform APIs, and scoped-plugin state
     have Effect 4-native implementations with preserved lifecycle/concurrency behavior.
-  - **Evidence:** focused migration tests prove per-call isolation, acquisition/release,
-    interruption, issue ordering, and no duplicate runtime identity.
-- [ ] 6. **Phase B: port plugins, CLI, and Effect adapter in dependency order**
+  - **Evidence:** not started.
+- [ ] 6. **Phase B: port plugins, CLI, and Effect adapter in dependency order** — **BLOCKED by work
+      package 4.**
   - **Outcome:** all Effect-integrated packages share one Effect 4 identity while independent
     outputs remain Effect-free.
-  - **Evidence:** packed plugin consumer, generated projects, adapter
-    lifecycle/failure/abort/shutdown, Node/Deno/Bun, Windows, and full release gates pass.
-- [ ] 7. **Phase B: publish migration guidance for the coordinated line**
+  - **Evidence:** not started.
+- [ ] 7. **Phase B: publish migration guidance for the coordinated line** — **BLOCKED by work
+      package 4.**
   - **Outcome:** Effect 3 users have an explicit supported previous line and Effect 4 users have one
     coherent upgrade path.
-  - **Evidence:** package peers, baseline config, doctor, docs, Changesets, and release notes agree.
+  - **Evidence:** not started.
 
 ## Risks and open questions
 

@@ -5,7 +5,13 @@ import { Effect } from "effect";
 import { createDoctorCheck } from "../reports/DoctorReport.js";
 import { detectRuntime, getRuntimeDisplayName } from "../runtime.js";
 import { assertSafeCleanTarget } from "./cleanTargetGuard.js";
+import {
+  checkWorkspaceEffectCompatibility,
+  isSupportedStableEffect3,
+} from "./effectCompatibility.js";
 import type { DoctorCheck } from "../reports/DoctorReport.js";
+
+export { checkWorkspaceEffectCompatibility };
 
 const failureMessage = (failure: unknown): string =>
   failure instanceof Error ? failure.message : String(failure);
@@ -200,36 +206,36 @@ const readPackageVersion = async (specifier: string): Promise<string> => {
   return version;
 };
 
+// TW-DOCTOR-008 reports the Effect runtime bundled with this CLI entrypoint,
+// resolved from the CLI's own module location. The consumer project's Effect
+// major is a separate question and belongs to TW-DOCTOR-011.
 export const checkEffectReference = (): Effect.Effect<DoctorCheck> =>
   Effect.tryPromise({
     try: async () => {
       const version = await readPackageVersion("effect/package.json");
-      const [major = Number.NaN, minor = Number.NaN] = version
-        .split(".")
-        .map(part => Number.parseInt(part, 10));
-      if (major !== 3 || minor < 22) {
+      if (!isSupportedStableEffect3(version)) {
         return createDoctorCheck({
           code: "TW-DOCTOR-008",
-          name: "Effect reference",
+          name: "CLI Effect runtime",
           outcome: "fail",
-          message: `Effect ${version} is outside the supported >=3.22.0 <4 range.`,
-          hint: "Install an Effect 3 release in the supported peer range.",
+          message: `The TypeWeaver CLI resolves its own Effect ${version}, outside the supported >=3.22.0 <4 range.`,
+          hint: "Reinstall the CLI so its bundled Effect 3 dependency resolves in range.",
         });
       }
       return createDoctorCheck({
         code: "TW-DOCTOR-008",
-        name: "Effect reference",
+        name: "CLI Effect runtime",
         outcome: "pass",
-        message: `Effect ${version} satisfies the >=3.22.0 <4 contract.`,
+        message: `The TypeWeaver CLI resolves its own Effect ${version}, satisfying the >=3.22.0 <4 contract.`,
       });
     },
     catch: cause =>
       createDoctorCheck({
         code: "TW-DOCTOR-008",
-        name: "Effect reference",
+        name: "CLI Effect runtime",
         outcome: "fail",
-        message: `Effect reference diagnostics failed: ${failureMessage(cause)}`,
-        hint: "Install the declared Effect 3 peer dependency.",
+        message: `The TypeWeaver CLI could not resolve its own Effect runtime: ${failureMessage(cause)}`,
+        hint: "Reinstall the CLI so its bundled Effect 3 dependency resolves.",
       }),
   }).pipe(Effect.merge);
 

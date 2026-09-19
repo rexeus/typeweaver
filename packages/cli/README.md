@@ -316,6 +316,19 @@ Importing `@rexeus/typeweaver` is side-effect free: it does not parse arguments 
 `process.exitCode`. The package exports the production generator service/runtime plus versioned
 report schemas and types.
 
+## Effect 4 workspaces
+
+Phase A evidence covers exactly `effect@4.0.0-rc.115`. In such a workspace, run the binary CLI
+(`typeweaver generate`) as an isolated child process with an Effect-neutral config and spec module
+and the built-in plain projections (`types`, `clients`, `server`, `hono`, `command`, `openapi`,
+`aws-cdk`). The CLI bundles its own Effect 3 runtime, so the generated output does not import
+Effect. Every other Effect 4 version is UNVERIFIED.
+
+The CLI programmatic API (`Generator`, `effectRuntime`) and the Effect-native `effect` projection
+require Effect `>=3.22.0 <4`. `typeweaver doctor` reports the declared workspace Effect as
+`TW-DOCTOR-011` and the CLI's own bundled runtime as `TW-DOCTOR-008`; see
+[ADR 0010](../../docs/adr/0010-effect-4-workspace-compatibility.md).
+
 ## Related documentation
 
 - [Getting started](../../docs/getting-started.md)

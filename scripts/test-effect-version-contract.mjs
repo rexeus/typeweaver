@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { validateEffectPackageVersions } from "./lib/effect-version-contract.mjs";
+import {
+  PHASE_A_DOCUMENT_TOKENS,
+  validateEffectPackageVersions,
+  validateEffectPhaseAContract,
+} from "./lib/effect-version-contract.mjs";
 
 const fixtureRoot = mkdtempSync(
   path.join(tmpdir(), "typeweaver-effect-contract-")
@@ -104,6 +108,142 @@ try {
 } finally {
   rmSync(fixtureRoot, { recursive: true });
 }
+
+const validPhaseAContract = () => ({
+  runtimeVersion: "3.22.0",
+  peerRange: ">=3.22.0 <4",
+  phaseA: {
+    effectVersion: "4.0.0-rc.115",
+    scope: "process-isolated-cli-only",
+    stability: "release-candidate",
+    nativeSurfaces: "effect-3-only",
+  },
+});
+
+const validPhaseAManifests = () => ({
+  cli: {
+    dependencies: { effect: "^3.22.0" },
+    peerDependencies: {},
+  },
+  gen: {
+    dependencies: {},
+    peerDependencies: { effect: "catalog:peers" },
+  },
+  effect: {
+    dependencies: {},
+    peerDependencies: { effect: "catalog:peers" },
+  },
+  hono: {
+    dependencies: {},
+    peerDependencies: { effect: "catalog:peers", hono: "catalog:peers" },
+    peerDependenciesMeta: { hono: { optional: true } },
+  },
+  core: {
+    peerDependencies: { zod: "catalog:peers" },
+  },
+});
+
+const validPhaseADocuments = () =>
+  Object.fromEntries(
+    Object.entries(PHASE_A_DOCUMENT_TOKENS).map(([document, tokens]) => [
+      document,
+      tokens.join("\n"),
+    ])
+  );
+
+const verifyPhaseAContractGuard = () => {
+  const validate = (mutate = () => {}) => {
+    const input = {
+      contract: validPhaseAContract(),
+      manifests: validPhaseAManifests(),
+      documents: validPhaseADocuments(),
+    };
+    mutate(input);
+    return validateEffectPhaseAContract(input);
+  };
+
+  assert.deepEqual(
+    validate(),
+    [],
+    `valid Phase A contract rejected:\n${validate().join("\n")}`
+  );
+
+  assert(
+    validate(input => {
+      input.contract.phaseA.scope = "promised-range";
+    }).some(failure => failure.includes("process-isolated-cli-only")),
+    "missing Phase A scope failure"
+  );
+  assert(
+    validate(input => {
+      input.contract.phaseA.effectVersion = "4.0.0";
+    }).some(failure => failure.includes("4.0.0-rc.115")),
+    "missing exact Phase A RC failure"
+  );
+  assert(
+    validate(input => {
+      input.contract.phaseA.nativeSurfaces = "effect-4-capable";
+    }).some(failure => failure.includes("effect-3-only")),
+    "missing native-surfaces failure"
+  );
+  assert(
+    validate(input => {
+      input.contract.peerRange = ">=3.22.0 <5";
+    }).some(failure => failure.includes("<4")),
+    "missing peer widening failure"
+  );
+  assert(
+    validate(input => {
+      input.manifests.cli.peerDependencies.effect = "catalog:peers";
+    }).some(failure => failure.includes("CLI")),
+    "missing CLI Effect peer failure"
+  );
+  assert(
+    validate(input => {
+      input.manifests.gen.peerDependencies.effect = "^4.0.0";
+    }).some(failure => failure.includes("@rexeus/typeweaver-gen")),
+    "missing gen peer failure"
+  );
+  assert(
+    validate(input => {
+      delete input.documents[
+        "docs/adr/0010-effect-4-workspace-compatibility.md"
+      ];
+    }).some(failure => failure.includes("0010")),
+    "missing ADR 0010 failure"
+  );
+  assert(
+    validate(input => {
+      input.documents["README.md"] =
+        `${input.documents["README.md"]}\nTypeWeaver supports Effect 4.\n`;
+    }).some(failure => failure.includes("generic Phase A promise")),
+    "missing generic Effect 4 promise failure"
+  );
+  assert(
+    validate(input => {
+      input.documents["packages/cli/README.md"] = input.documents[
+        "packages/cli/README.md"
+      ].replaceAll("4.0.0-rc.115", "Effect 4");
+    }).some(failure => failure.includes("4.0.0-rc.115")),
+    "missing exact-pin document failure"
+  );
+  assert(
+    validate(input => {
+      delete input.manifests.hono.peerDependenciesMeta.hono.optional;
+    }).some(failure => failure.includes("hono")),
+    "missing optional Hono peer failure"
+  );
+  assert(
+    validate(input => {
+      input.manifests.effect.peerDependenciesMeta = {
+        effect: { optional: true },
+      };
+    }).some(failure => failure.includes("must not mark effect optional")),
+    "missing required-Effect-peer failure"
+  );
+};
+
+verifyPhaseAContractGuard();
 
 process.stdout.write(
   "Effect package contract guard rejected the Effect 4, caret-drift, and unaccepted-dependency fixtures\n"

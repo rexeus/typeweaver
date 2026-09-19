@@ -33,7 +33,12 @@ pnpm typeweaver generate \
   --plugins server,effect
 ```
 
-The package supports Effect `>=3.22.0 <4`.
+The package supports Effect `>=3.22.0 <4`. `@rexeus/typeweaver-effect` is Effect 3-only. An Effect 4
+application cannot import it or select the `effect` projection, because generated handlers and the
+managed runtime must share the application's single Effect identity. Effect 4 workspaces use the
+process-isolated binary CLI with built-in plain projections instead, and the only evidenced Effect 4
+version is `4.0.0-rc.115`; every other Effect 4 version is UNVERIFIED. See
+[ADR 0010](../../docs/adr/0010-effect-4-workspace-compatibility.md).
 
 The direct runtime dependency on `@rexeus/typeweaver-effect` is intentional: generated adapters
 reference its public types, and the application owns `createEffectHandlerRuntime`.
