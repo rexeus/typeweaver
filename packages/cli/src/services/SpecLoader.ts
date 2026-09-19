@@ -19,6 +19,8 @@ import type {
 export type SpecLoaderConfig = {
   readonly inputFile: string;
   readonly specOutputDir: string;
+  readonly externalImportBase?: string;
+  readonly isolatedImport?: boolean;
 };
 
 export type LoadedSpec = {
@@ -83,7 +85,33 @@ export class SpecLoader extends Effect.Service<SpecLoader>()(
             )
           );
 
-        const definition = yield* importer.importDefinition(bundledSpecFile);
+        const definition =
+          config.isolatedImport === true
+            ? yield* Effect.scoped(
+                Effect.gen(function* () {
+                  const importDirectory = yield* fileSystem
+                    .makeTempDirectoryScoped({
+                      directory: config.specOutputDir,
+                      prefix: ".typeweaver-import-",
+                    })
+                    .pipe(
+                      Effect.mapError(
+                        cause =>
+                          new SpecOutputWriteError({
+                            path: config.specOutputDir,
+                            cause,
+                          })
+                      )
+                    );
+                  const importBundle = yield* bundler.bundle({
+                    ...config,
+                    specOutputDir: importDirectory,
+                    pinExternalImports: true,
+                  });
+                  return yield* importer.importDefinition(importBundle);
+                })
+              )
+            : yield* importer.importDefinition(bundledSpecFile);
         const normalizedSpec = yield* normalizeSpec(definition);
 
         return { definition, normalizedSpec };

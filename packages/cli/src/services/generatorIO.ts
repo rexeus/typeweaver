@@ -21,6 +21,7 @@ import {
   isExpectedNodeSystemError,
 } from "./internal/nodeFsErrors.js";
 import {
+  canonicalOutputPath,
   canonicalHostTempDirectory,
   ensureTrustedHostTempDirectory,
   hasCoordinationArtifactMarker,
@@ -438,11 +439,15 @@ export const acquireOutputLockWith = (
   let lockPath: string | undefined;
   return Effect.try({
     try: () => {
-      assertNoLiveLegacyLock(params.outputDir);
-      const lockDir = outputLockDirectory(params.outputDir);
+      const lockedParams = {
+        ...params,
+        outputDir: canonicalOutputPath(params.outputDir),
+      };
+      assertNoLiveLegacyLock(lockedParams.outputDir);
+      const lockDir = outputLockDirectory(lockedParams.outputDir);
       lockPath = lockDir;
 
-      const acquired = tryAcquireNewOutputLock(params, hooks);
+      const acquired = tryAcquireNewOutputLock(lockedParams, hooks);
       if (acquired !== undefined) {
         forgetFailedOutputLockReleaseAt(lockDir);
         return acquired;
@@ -450,13 +455,13 @@ export const acquireOutputLockWith = (
 
       const holder = readOutputLockInfo(lockDir);
       if (holder === undefined) {
-        throw concurrentFailure(params.outputDir, lockPath, {
+        throw concurrentFailure(lockedParams.outputDir, lockPath, {
           _tag: "Unknown",
         });
       }
       if (isActiveOutputLock(lockDir, holder)) {
         throw concurrentFailure(
-          params.outputDir,
+          lockedParams.outputDir,
           lockPath,
           knownHolder(holder)
         );
@@ -468,20 +473,20 @@ export const acquireOutputLockWith = (
           forgetFailedOutputLockReleaseAt(lockDir);
         }
         throw concurrentFailure(
-          params.outputDir,
+          lockedParams.outputDir,
           lockPath,
           reHolder === undefined ? { _tag: "Unknown" } : knownHolder(reHolder)
         );
       }
       forgetFailedOutputLockReleaseAt(lockDir);
 
-      const reclaimed = tryAcquireNewOutputLock(params, hooks);
+      const reclaimed = tryAcquireNewOutputLock(lockedParams, hooks);
       if (reclaimed !== undefined) {
         return reclaimed;
       }
       const reHolder = readOutputLockInfo(lockDir);
       throw concurrentFailure(
-        params.outputDir,
+        lockedParams.outputDir,
         lockPath,
         reHolder === undefined ? { _tag: "Unknown" } : knownHolder(reHolder)
       );

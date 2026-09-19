@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { FileSystem } from "@effect/platform";
+import { BadArgument, SystemError } from "@effect/platform/Error";
 import { Effect } from "effect";
 import {
   ReservedCoordinationPathError,
@@ -17,13 +18,78 @@ import {
   canonicalHostTempDirectory,
   ensureTrustedHostTempDirectory,
 } from "./hostTemp.js";
-import { isExpectedNodeSystemError } from "./nodeFsErrors.js";
-import type { PlatformError } from "@effect/platform/Error";
+import { errnoCode, isExpectedNodeSystemError } from "./nodeFsErrors.js";
+import type { PlatformError, SystemErrorReason } from "@effect/platform/Error";
 
 const hostPathFs = {
   exists: (probePath: string): boolean => fs.existsSync(probePath),
   realPath: (probePath: string): string => fs.realpathSync.native(probePath),
 };
+
+const systemErrorReason = (cause: unknown): SystemErrorReason => {
+  switch (errnoCode(cause)) {
+    case "ENOENT":
+      return "NotFound";
+    case "EACCES":
+    case "EPERM":
+      return "PermissionDenied";
+    case "EEXIST":
+      return "AlreadyExists";
+    case "EISDIR":
+    case "ENOTDIR":
+    case "ELOOP":
+      return "BadResource";
+    case "EBUSY":
+      return "Busy";
+    default:
+      return "Unknown";
+  }
+};
+
+const mapNodeSymlinkError = (
+  cause: unknown,
+  linkPath: string
+): PlatformError => {
+  if (!isExpectedNodeSystemError(cause)) {
+    return new BadArgument({
+      module: "FileSystem",
+      method: "symlink",
+      cause,
+    });
+  }
+
+  const syscall =
+    "syscall" in cause && typeof cause.syscall === "string"
+      ? cause.syscall
+      : undefined;
+  return new SystemError({
+    reason: systemErrorReason(cause),
+    module: "FileSystem",
+    method: "symlink",
+    pathOrDescriptor: linkPath,
+    ...(syscall === undefined ? {} : { syscall }),
+    description: cause.message,
+    cause,
+  });
+};
+
+/**
+ * Windows directory symlinks require a privilege that junctions do not. The
+ * staging targets are existing absolute directories, so junctions preserve
+ * dependency lookup without requiring Developer Mode or elevation.
+ */
+export const linkDirectory = (
+  fileSystem: FileSystem.FileSystem,
+  targetPath: string,
+  linkPath: string,
+  platform: NodeJS.Platform = process.platform
+): Effect.Effect<void, PlatformError> =>
+  platform === "win32"
+    ? Effect.tryPromise({
+        try: () => fs.promises.symlink(targetPath, linkPath, "junction"),
+        catch: cause => mapNodeSymlinkError(cause, linkPath),
+      })
+    : fileSystem.symlink(targetPath, linkPath);
 
 /**
  * Links the nearest `node_modules` directory at or above
@@ -45,7 +111,8 @@ export const linkNearestNodeModules = (
     while (true) {
       const nodeModulesDirectory = path.join(searchDirectory, "node_modules");
       if (yield* fileSystem.exists(nodeModulesDirectory)) {
-        yield* fileSystem.symlink(
+        yield* linkDirectory(
+          fileSystem,
           nodeModulesDirectory,
           path.join(temporaryDirectory, "node_modules")
         );
@@ -64,12 +131,6 @@ export type StagedProjectParams = {
   readonly prefix: string;
   /** Canonical-or-resolvable paths the stage must not overlap. */
   readonly forbiddenRoots: readonly string[];
-  /**
-   * When set, links the nearest `node_modules` from this directory into the
-   * stage root (validation's pre-PR behavior). Omit for callers that build
-   * their own dependency topology.
-   */
-  readonly dependencyDirectory?: string;
 };
 
 const canonicalizeOrThrow = (targetPath: string): string => {
@@ -177,13 +238,6 @@ export const withStagedProject = <A, E, R>(
         }
       }
 
-      if (params.dependencyDirectory !== undefined) {
-        yield* linkNearestNodeModules(
-          fileSystem,
-          params.dependencyDirectory,
-          temporaryDirectory
-        );
-      }
       return yield* use(temporaryDirectory);
     })
   );
@@ -265,7 +319,7 @@ export const prepareMirroredOutput = (
         "node_modules"
       );
       if (!(yield* fileSystem.exists(linkPath))) {
-        yield* fileSystem.symlink(nodeModulesDirectory, linkPath);
+        yield* linkDirectory(fileSystem, nodeModulesDirectory, linkPath);
       }
     }
     return stagedOutputDir;

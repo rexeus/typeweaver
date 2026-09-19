@@ -98,7 +98,7 @@ const prepareLockedOutput = (plan: GenerationPlan) =>
 
 export const withGenerationLock = <A, E, R>(
   plan: GenerationPlan,
-  workflow: Effect.Effect<A, E, R>
+  workflow: (lockedPlan: GenerationPlan) => Effect.Effect<A, E, R>
 ) =>
   Effect.acquireUseRelease(
     Effect.gen(function* () {
@@ -111,7 +111,22 @@ export const withGenerationLock = <A, E, R>(
       );
       return outputLock;
     }),
-    () => prepareLockedOutput(plan).pipe(Effect.zipRight(workflow)),
+    outputLock => {
+      const lockedPlan: GenerationPlan = {
+        ...plan,
+        outputDir: outputLock.outputDir,
+        responsesOutputDir: path.join(outputLock.outputDir, "responses"),
+        specOutputDir: path.join(outputLock.outputDir, "spec"),
+      };
+      return assertSafeCleanTargetEffect(
+        plan.outputDir,
+        plan.cwd,
+        plan.params.config?.clean !== false ? plan.inputFile : undefined
+      ).pipe(
+        Effect.zipRight(prepareLockedOutput(lockedPlan)),
+        Effect.zipRight(workflow(lockedPlan))
+      );
+    },
     outputLock =>
       Effect.gen(function* () {
         yield* releaseOutputLock(outputLock);

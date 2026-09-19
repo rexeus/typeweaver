@@ -17,10 +17,24 @@ import {
 
 const GENERATION_TEST_TIMEOUT_MS = 15_000;
 const tempDirs: string[] = [];
+const externalPaths: string[] = [];
 
 const createTempWorkspace = (suffix: string): string => {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), `typeweaver-check-${suffix}-`)
+  );
+  fs.symlinkSync(
+    path.join(import.meta.dirname, "..", "node_modules"),
+    path.join(tempDir, "node_modules"),
+    process.platform === "win32" ? "junction" : "dir"
+  );
+  tempDirs.push(tempDir);
+  return tempDir;
+};
+
+const createProjectWorkspace = (suffix: string): string => {
+  const tempDir = fs.mkdtempSync(
+    path.join(import.meta.dirname, `.typeweaver-check-${suffix}-`)
   );
   tempDirs.push(tempDir);
   return tempDir;
@@ -171,9 +185,17 @@ const extractFailure = (exit: Exit.Exit<unknown, unknown>): unknown => {
   return failure.value;
 };
 
+const failureProperty = (failure: unknown, property: string): unknown =>
+  typeof failure === "object" && failure !== null && property in failure
+    ? Reflect.get(failure, property)
+    : undefined;
+
 afterEach(() => {
   for (const tempDir of tempDirs.splice(0)) {
     fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+  for (const externalPath of externalPaths.splice(0)) {
+    fs.rmSync(externalPath, { recursive: true, force: true });
   }
 });
 
@@ -372,11 +394,6 @@ describe("GeneratedOutputChecker dependency parity", () => {
     // only exist in the workspace-root node_modules one level higher. Normal
     // generation falls through, and the staged check must mirror that order.
     fs.mkdirSync(path.join(outputTree, "node_modules"), { recursive: true });
-    fs.symlinkSync(
-      path.join(process.cwd(), "node_modules"),
-      path.join(workspace, "node_modules"),
-      process.platform === "win32" ? "junction" : "dir"
-    );
     writeTinySpecAt(specTree);
 
     const inputFile = "packages/spec-tree/spec/index.ts";
@@ -408,6 +425,239 @@ describe("GeneratedOutputChecker dependency parity", () => {
         })
       )
     ).resolves.toBeUndefined();
+  });
+});
+
+describe("GeneratedOutputChecker shared-temp isolation", () => {
+  test(
+    "does not import a dependency available only above the shared stage root",
+    async () => {
+      const workspace = createProjectWorkspace("shared-temp-dependency");
+      const packageName = `typeweaver-temp-probe-${String(process.pid)}-${Date.now().toString(36)}`;
+      const plantedPackage = path.join(
+        canonicalHostTempDirectory(),
+        "node_modules",
+        packageName
+      );
+      const sentinel = path.join(workspace, "executed.txt");
+      externalPaths.push(plantedPackage);
+      fs.mkdirSync(plantedPackage, { recursive: true });
+      fs.writeFileSync(
+        path.join(plantedPackage, "package.json"),
+        JSON.stringify({
+          name: packageName,
+          type: "module",
+          exports: "./index.js",
+        })
+      );
+      fs.writeFileSync(
+        path.join(plantedPackage, "index.js"),
+        [
+          'import fs from "node:fs";',
+          `fs.writeFileSync(${JSON.stringify(sentinel)}, "executed\\n");`,
+          "export const probe = true;",
+          "",
+        ].join("\n")
+      );
+      const specFile = writeTinySpec(workspace);
+      const specSource = fs.readFileSync(specFile, "utf8");
+      fs.writeFileSync(
+        specFile,
+        [
+          `import { probe } from ${JSON.stringify(packageName)};`,
+          'if (!probe) throw new Error("probe unavailable");',
+          specSource,
+        ].join("\n")
+      );
+
+      const exit = await effectRuntime.runPromiseExit(
+        GeneratedOutputChecker.check(checkParams(workspace))
+      );
+
+      expect(failureProperty(extractFailure(exit), "_tag")).toBe(
+        "SpecBundleError"
+      );
+      expect(fs.existsSync(sentinel)).toBe(false);
+    },
+    GENERATION_TEST_TIMEOUT_MS
+  );
+});
+
+describe("GeneratedOutputChecker dynamic-import isolation", () => {
+  test(
+    "rejects non-literal dynamic imports before shared-temp resolution",
+    async () => {
+      const workspace = createProjectWorkspace("dynamic-temp-dependency");
+      const packageName = `typeweaver-dynamic-temp-probe-${String(process.pid)}-${Date.now().toString(36)}`;
+      const plantedPackage = path.join(
+        canonicalHostTempDirectory(),
+        "node_modules",
+        packageName
+      );
+      const sentinel = path.join(workspace, "dynamic-executed.txt");
+      externalPaths.push(plantedPackage);
+      fs.mkdirSync(plantedPackage, { recursive: true });
+      fs.writeFileSync(
+        path.join(plantedPackage, "package.json"),
+        JSON.stringify({
+          name: packageName,
+          type: "module",
+          exports: "./index.js",
+        })
+      );
+      fs.writeFileSync(
+        path.join(plantedPackage, "index.js"),
+        [
+          'import fs from "node:fs";',
+          `fs.writeFileSync(${JSON.stringify(sentinel)}, "executed\\n");`,
+          "",
+        ].join("\n")
+      );
+      const specFile = writeTinySpec(workspace);
+      const specSource = fs.readFileSync(specFile, "utf8");
+      fs.writeFileSync(
+        specFile,
+        [
+          `const dynamicPackage = ${JSON.stringify(packageName)};`,
+          "await import(dynamicPackage);",
+          specSource,
+        ].join("\n")
+      );
+
+      const exit = await effectRuntime.runPromiseExit(
+        GeneratedOutputChecker.check(checkParams(workspace))
+      );
+
+      expect(failureProperty(extractFailure(exit), "_tag")).toBe(
+        "SpecBundleError"
+      );
+      expect(fs.existsSync(sentinel)).toBe(false);
+    },
+    GENERATION_TEST_TIMEOUT_MS
+  );
+});
+
+describe("GeneratedOutputChecker runtime resolution", () => {
+  test(
+    "resolves conditional exports with Node runtime conditions",
+    async () => {
+      const workspace = createProjectWorkspace("conditional-exports");
+      const packageName = `typeweaver-conditions-${String(process.pid)}`;
+      const packageDirectory = path.join(
+        workspace,
+        "node_modules",
+        packageName
+      );
+      fs.mkdirSync(packageDirectory, { recursive: true });
+      fs.writeFileSync(
+        path.join(packageDirectory, "package.json"),
+        JSON.stringify({
+          name: packageName,
+          type: "module",
+          exports: {
+            ".": {
+              node: "./node.js",
+              browser: "./browser.js",
+              default: "./default.js",
+            },
+          },
+        })
+      );
+      fs.writeFileSync(
+        path.join(packageDirectory, "node.js"),
+        'export const operationId = "nodeOperation";\n'
+      );
+      fs.writeFileSync(
+        path.join(packageDirectory, "browser.js"),
+        'export const operationId = "browserOperation";\n'
+      );
+      fs.writeFileSync(
+        path.join(packageDirectory, "default.js"),
+        'export const operationId = "defaultOperation";\n'
+      );
+      const specFile = path.join(workspace, "spec", "index.ts");
+      fs.mkdirSync(path.dirname(specFile), { recursive: true });
+      fs.writeFileSync(
+        specFile,
+        [
+          `import { operationId } from ${JSON.stringify(packageName)};`,
+          'import { defineOperation, defineResponse, defineSpec, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";',
+          'const ok = defineResponse({ name: "Ok", statusCode: HttpStatusCode.OK, description: "OK" });',
+          'export const spec = defineSpec({ metadata: { title: "Conditions", version: "1.0.0" }, resources: { probe: { operations: [defineOperation({ operationId, path: "/probe", method: HttpMethod.GET, summary: "Probe", request: {}, responses: [ok] })] } } });',
+          "",
+        ].join("\n")
+      );
+
+      await runGenerate(workspace);
+      await expect(
+        effectRuntime.runPromise(
+          GeneratedOutputChecker.check(checkParams(workspace))
+        )
+      ).resolves.toBeUndefined();
+    },
+    GENERATION_TEST_TIMEOUT_MS
+  );
+});
+
+describe("GeneratedOutputChecker import ordering", () => {
+  test(
+    "builds the portable bundle before isolated spec side effects run",
+    async () => {
+      const workspace = createProjectWorkspace("import-side-effect");
+      const helperFile = path.join(workspace, "spec", "operation.ts");
+      const initialHelperSource = [
+        'import fs from "node:fs";',
+        `fs.writeFileSync(${JSON.stringify(helperFile)}, 'export const operationId = "mutatedOperation";\\n');`,
+        'export const operationId = "stableOperation";',
+        "",
+      ].join("\n");
+      fs.mkdirSync(path.dirname(helperFile), { recursive: true });
+      fs.writeFileSync(helperFile, initialHelperSource);
+      fs.writeFileSync(
+        path.join(workspace, "spec", "index.ts"),
+        [
+          'import { operationId } from "./operation.js";',
+          'import { defineOperation, defineResponse, defineSpec, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";',
+          'const ok = defineResponse({ name: "Ok", statusCode: HttpStatusCode.OK, description: "OK" });',
+          'export const spec = defineSpec({ metadata: { title: "Side effect", version: "1.0.0" }, resources: { probe: { operations: [defineOperation({ operationId, path: "/probe", method: HttpMethod.GET, summary: "Probe", request: {}, responses: [ok] })] } } });',
+          "",
+        ].join("\n")
+      );
+
+      await runGenerate(workspace);
+      fs.writeFileSync(helperFile, initialHelperSource);
+
+      await expect(
+        effectRuntime.runPromise(
+          GeneratedOutputChecker.check(checkParams(workspace))
+        )
+      ).resolves.toBeUndefined();
+    },
+    GENERATION_TEST_TIMEOUT_MS
+  );
+});
+
+describe("GeneratedOutputChecker output identity", () => {
+  test("rejects a dangling configured-output alias before locking", async () => {
+    const workspace = createTempWorkspace("dangling-output-alias");
+    writeTinySpec(workspace);
+    const generatedDirectory = path.join(workspace, "generated");
+    const target = path.join(workspace, "eventual-output");
+    fs.mkdirSync(generatedDirectory);
+    fs.symlinkSync(
+      target,
+      path.join(generatedDirectory, "output"),
+      process.platform === "win32" ? "junction" : "dir"
+    );
+
+    const exit = await effectRuntime.runPromiseExit(
+      GeneratedOutputChecker.check(checkParams(workspace))
+    );
+
+    const failure = extractFailure(exit);
+    expect(failureProperty(failure, "_tag")).toBe("UnsafeCleanTargetError");
+    expect(failureProperty(failure, "reason")).toBe("symbolic-link");
+    expect(fs.existsSync(target)).toBe(false);
   });
 });
 

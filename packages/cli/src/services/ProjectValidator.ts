@@ -14,7 +14,7 @@ import {
   DEFAULT_PLUGIN_RESOLUTION_STRATEGIES,
   defaultRequiredPlugins,
 } from "./generatorDefaults.js";
-import { withStagedProject } from "./internal/projectStaging.js";
+import { linkNearestNodeModules } from "./internal/projectStaging.js";
 import { PluginLoader } from "./PluginLoader.js";
 import { SpecLoader } from "./SpecLoader.js";
 
@@ -34,6 +34,7 @@ type StagedValidationDeps = {
   readonly specLoader: SpecLoader;
   readonly inputFile: string;
   readonly temporaryDirectory: string;
+  readonly currentWorkingDirectory: string;
   readonly config: Partial<TypeweaverConfig> & { readonly input: string };
 };
 
@@ -50,6 +51,8 @@ const runStagedValidation = (deps: StagedValidationDeps) =>
     const loaded = yield* deps.specLoader.load({
       inputFile: deps.inputFile,
       specOutputDir: path.join(deps.temporaryDirectory, "spec"),
+      isolatedImport: true,
+      externalImportBase: path.resolve(deps.currentWorkingDirectory, "spec.js"),
     });
     const validationContext: PluginValidationContext = {
       inputDir: path.dirname(deps.inputFile),
@@ -86,28 +89,27 @@ export class ProjectValidator extends Effect.Service<ProjectValidator>()(
           params.currentWorkingDirectory,
           params.inputFile
         );
-        return withStagedProject(
-          fileSystem,
-          {
-            // Validation has no configured output; restore the pre-existing
-            // behavior of linking the nearest node_modules from the working
-            // directory into the stage.
-            dependencyDirectory: params.currentWorkingDirectory,
-            prefix: "typeweaver-validate-",
-            forbiddenRoots: [
+        return Effect.scoped(
+          Effect.gen(function* () {
+            const temporaryDirectory =
+              yield* fileSystem.makeTempDirectoryScoped({
+                prefix: "typeweaver-validate-",
+              });
+            yield* linkNearestNodeModules(
+              fileSystem,
               params.currentWorkingDirectory,
-              path.dirname(inputFile),
-            ],
-          },
-          temporaryDirectory =>
-            runStagedValidation({
+              temporaryDirectory
+            );
+            return yield* runStagedValidation({
               pluginLoader,
               pluginRegistry,
               specLoader,
               inputFile,
               temporaryDirectory,
+              currentWorkingDirectory: params.currentWorkingDirectory,
               config: params.config,
-            })
+            });
+          })
         );
       });
 

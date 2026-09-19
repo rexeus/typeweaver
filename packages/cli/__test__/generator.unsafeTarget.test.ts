@@ -311,7 +311,7 @@ describe("Generator output-target symlink revalidation", () => {
       );
 
       const exit = await effectRuntime.runPromiseExit(
-        withGenerationLock(plan, Effect.void)
+        withGenerationLock(plan, () => Effect.void)
       );
 
       const failure = expectUnsafeCleanTargetFailure(exit, "symbolic-link");

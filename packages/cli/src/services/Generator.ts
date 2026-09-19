@@ -67,8 +67,7 @@ export class Generator extends Effect.Service<Generator>()(
         const registry = yield* PluginRegistry.createInstance();
         const plan = yield* prepareGeneration(paths);
 
-        yield* withGenerationLock(
-          plan,
+        yield* withGenerationLock(plan, lockedPlan =>
           Effect.gen(function* () {
             yield* pluginLoader.loadAll({
               registry,
@@ -78,23 +77,27 @@ export class Generator extends Effect.Service<Generator>()(
             });
 
             yield* Effect.logInfo(
-              `Bundling spec from '${plan.inputFile}' to '${plan.specOutputDir}'...`
+              `Bundling spec from '${lockedPlan.inputFile}' to '${lockedPlan.specOutputDir}'...`
             );
             const normalizedSpec = (yield* specLoader.load({
-              inputFile: plan.inputFile,
-              specOutputDir: plan.specOutputDir,
+              inputFile: lockedPlan.inputFile,
+              specOutputDir: lockedPlan.specOutputDir,
+              isolatedImport: params.stagingAuthority !== undefined,
+              ...(params.externalImportBase === undefined
+                ? {}
+                : { externalImportBase: params.externalImportBase }),
             })).normalizedSpec;
 
             const pluginContext = yield* contextBuilder.buildPluginContext({
-              outputDir: plan.outputDir,
-              inputDir: plan.inputDir,
-              config: plan.userConfig,
+              outputDir: lockedPlan.outputDir,
+              inputDir: lockedPlan.inputDir,
+              config: lockedPlan.userConfig,
             });
             const initial = yield* registry.getAll;
 
             const result = yield* runPluginLifecycle(
               {
-                plan,
+                plan: lockedPlan,
                 initial,
                 normalizedSpec,
                 pluginContext,
@@ -102,7 +105,7 @@ export class Generator extends Effect.Service<Generator>()(
               { contextBuilder, indexFileGenerator }
             );
 
-            yield* runGeneratorPostprocessing(plan, result, formatter);
+            yield* runGeneratorPostprocessing(lockedPlan, result, formatter);
           })
         );
       });

@@ -4,7 +4,7 @@ import path from "node:path";
 import { FileSystem } from "@effect/platform";
 import { NodeContext } from "@effect/platform-node";
 import { Cause, Deferred, Effect, Exit, Fiber } from "effect";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   ReservedCoordinationPathError,
   UnsafeStagingRootError,
@@ -12,6 +12,8 @@ import {
 import { canonicalHostTempDirectory } from "../../../src/services/internal/hostTemp.js";
 import {
   assertStagingParentSafe,
+  linkDirectory,
+  linkNearestNodeModules,
   withStagedProject,
 } from "../../../src/services/internal/projectStaging.js";
 import type { StagedProjectParams } from "../../../src/services/internal/projectStaging.js";
@@ -36,9 +38,99 @@ const stagedProject = <A>(
   }).pipe(Effect.provide(NodeContext.layer));
 
 afterEach(() => {
+  vi.restoreAllMocks();
   for (const tempDir of tempDirs.splice(0)) {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
+});
+
+describe("directory staging links", () => {
+  test("requests an elevation-free junction on Windows", async () => {
+    const symlink = vi.spyOn(fs.promises, "symlink").mockResolvedValue();
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        yield* linkDirectory(
+          fileSystem,
+          "C:\\project\\node_modules",
+          "C:\\stage\\node_modules",
+          "win32"
+        );
+      }).pipe(Effect.provide(NodeContext.layer))
+    );
+
+    expect(symlink).toHaveBeenCalledWith(
+      "C:\\project\\node_modules",
+      "C:\\stage\\node_modules",
+      "junction"
+    );
+  });
+
+  test("maps Windows junction failures into the typed filesystem channel", async () => {
+    const cause = Object.assign(new Error("junction denied"), {
+      code: "EPERM",
+      errno: -1,
+      syscall: "symlink",
+    });
+    vi.spyOn(fs.promises, "symlink").mockRejectedValue(cause);
+
+    const exit = await Effect.runPromiseExit(
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        yield* linkDirectory(
+          fileSystem,
+          "C:\\project\\node_modules",
+          "C:\\stage\\node_modules",
+          "win32"
+        );
+      }).pipe(Effect.provide(NodeContext.layer))
+    );
+
+    expect(Exit.isFailure(exit)).toBe(true);
+    if (Exit.isFailure(exit)) {
+      const failure = Cause.failureOption(exit.cause);
+      expect(failure._tag).toBe("Some");
+      if (failure._tag === "Some") {
+        expect(failure.value).toMatchObject({
+          _tag: "SystemError",
+          reason: "PermissionDenied",
+          module: "FileSystem",
+          method: "symlink",
+          pathOrDescriptor: "C:\\stage\\node_modules",
+        });
+      }
+    }
+  });
+
+  test("removes a staged directory link without deleting its external target", async () => {
+    const workspace = createTempDir("external-link-cleanup");
+    const externalNodeModules = path.join(workspace, "external-node-modules");
+    const sentinel = path.join(externalNodeModules, "sentinel.txt");
+    fs.mkdirSync(externalNodeModules);
+    fs.writeFileSync(sentinel, "preserve\n");
+    let stagePath: string | undefined;
+
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const fileSystem = yield* FileSystem.FileSystem;
+          stagePath = yield* fileSystem.makeTempDirectoryScoped({
+            prefix: "typeweaver-link-cleanup-",
+          });
+          yield* linkDirectory(
+            fileSystem,
+            externalNodeModules,
+            path.join(stagePath, "node_modules")
+          );
+        })
+      ).pipe(Effect.provide(NodeContext.layer))
+    );
+
+    expect(stagePath).toBeDefined();
+    expect(fs.existsSync(stagePath ?? "")).toBe(false);
+    expect(fs.readFileSync(sentinel, "utf8")).toBe("preserve\n");
+  });
 });
 
 describe("withStagedProject lifecycle", () => {
@@ -48,7 +140,6 @@ describe("withStagedProject lifecycle", () => {
     await Effect.runPromise(
       stagedProject(
         {
-          dependencyDirectory: workspace,
           prefix: "typeweaver-check-",
           forbiddenRoots: [workspace],
         },
@@ -69,7 +160,6 @@ describe("withStagedProject lifecycle", () => {
     const exit = await Effect.runPromiseExit(
       stagedProject(
         {
-          dependencyDirectory: workspace,
           prefix: "typeweaver-check-",
           forbiddenRoots: [workspace],
         },
@@ -93,7 +183,6 @@ describe("withStagedProject lifecycle", () => {
         const fiber = yield* Effect.fork(
           stagedProject(
             {
-              dependencyDirectory: workspace,
               prefix: "typeweaver-check-",
               forbiddenRoots: [workspace],
             },
@@ -117,19 +206,18 @@ describe("withStagedProject lifecycle", () => {
     const project = path.join(workspace, "packages", "api");
     fs.mkdirSync(path.join(project, "node_modules"), { recursive: true });
 
-    const linked = await Effect.runPromise(
-      stagedProject(
-        {
-          dependencyDirectory: project,
-          prefix: "typeweaver-check-",
-          forbiddenRoots: [workspace, project],
-        },
-        stagePath =>
-          Effect.sync(() => fs.existsSync(path.join(stagePath, "node_modules")))
-      )
+    const stagePath = path.join(workspace, "stage");
+    fs.mkdirSync(stagePath);
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        yield* linkNearestNodeModules(fileSystem, project, stagePath);
+      }).pipe(Effect.provide(NodeContext.layer))
     );
 
-    expect(linked).toBe(true);
+    expect(fs.realpathSync(path.join(stagePath, "node_modules"))).toBe(
+      fs.realpathSync(path.join(project, "node_modules"))
+    );
   });
 });
 
@@ -142,7 +230,6 @@ describe("staging parent safety", () => {
     const exit = await Effect.runPromiseExit(
       stagedProject(
         {
-          dependencyDirectory: workspace,
           prefix: "typeweaver-check-",
           forbiddenRoots: [filesystemRoot],
         },
@@ -176,7 +263,6 @@ describe("staging parent safety", () => {
   });
 
   test("rejects a forbidden root in the reserved coordination namespace", async () => {
-    const workspace = createTempDir("reserved");
     const reservedSource = path.join(
       canonicalHostTempDirectory(),
       `.typeweaver-output-lock-${"a".repeat(64)}`
@@ -185,7 +271,6 @@ describe("staging parent safety", () => {
     const exit = await Effect.runPromiseExit(
       stagedProject(
         {
-          dependencyDirectory: workspace,
           prefix: "typeweaver-check-",
           forbiddenRoots: [reservedSource],
         },
