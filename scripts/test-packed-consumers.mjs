@@ -1361,31 +1361,31 @@ const main = () => {
       });
     }
     verifyDuplicateGuard({ archives, matrixRoot, packages });
-    const phaseAEffectVersion = contract.phaseA?.effectVersion;
+    const effect4EvidenceVersion = contract.effect4Evidence?.effectVersion;
     assert(
-      typeof phaseAEffectVersion === "string",
-      "config/effect-baseline.json must pin phaseA.effectVersion"
+      typeof effect4EvidenceVersion === "string",
+      "config/effect-baseline.json must pin effect4Evidence.effectVersion"
     );
     verifyMinimalStrictInstall({
       archives,
-      effectVersion: phaseAEffectVersion,
+      effectVersion: effect4EvidenceVersion,
       matrixRoot,
       packages,
     });
     verifyAllPlainProjectionsConsumer({
       archives,
-      effectVersion: phaseAEffectVersion,
+      effectVersion: effect4EvidenceVersion,
       matrixRoot,
       packages,
     });
     verifyEffect4StrictPeerNegative({
       archives,
-      effectVersion: phaseAEffectVersion,
+      effectVersion: effect4EvidenceVersion,
       matrixRoot,
       packages,
     });
     process.stdout.write(
-      `Packed consumer and plugin scaffold matrix verified for Effect ${Array.from(supportedVersions).join(", ")}; duplicate identity rejected; Effect ${phaseAEffectVersion} minimal strict install, all plain projections, and strict-peer negative verified\n`
+      `Packed consumer and plugin scaffold matrix verified for Effect ${Array.from(supportedVersions).join(", ")}; duplicate identity rejected; Effect ${effect4EvidenceVersion} minimal strict install, all plain projections, and strict-peer negative verified\n`
     );
   } finally {
     rmSync(matrixRoot, { recursive: true });

@@ -191,19 +191,19 @@ generated runtime has no version subcommand; only `help` is reserved.
 #### Effect 4 workspaces and the binary CLI
 
 TypeWeaver 0.13 remains an Effect 3 line: the development baseline is Effect 3.22.0, the public peer
-range is `>=3.22.0 <4`, and Effect-native surfaces do not accept Effect 4 values. Phase A evidence
-covers exactly `effect@4.0.0-rc.115`. In such a workspace the binary CLI can run as a
-`process-isolated` child process with an Effect-neutral config and spec module, and the tested
-built-in plain projections (`types`, `clients`, `server`, `command`, `hono`, `openapi`, `aws-cdk`)
-then generate Effect-independent output. This evidence is pnpm-specific with strict peers, and it
-does not promise any other Effect 4 release candidate or stable version: every other Effect 4
-version is UNVERIFIED.
+range is `>=3.22.0 <4`, and Effect-native surfaces do not accept Effect 4 values. TypeWeaver has
+tested isolated CLI generation only with `effect@4.0.0-rc.115`. In such a workspace the binary CLI
+can run as a `process-isolated` child process with an Effect-neutral config and spec module, and the
+tested built-in plain projections (`types`, `clients`, `server`, `command`, `hono`, `openapi`,
+`aws-cdk`) then generate Effect-independent output. This evidence is pnpm-specific with strict
+peers, and it does not promise any other Effect 4 release candidate or stable version: every other
+Effect 4 version is UNVERIFIED.
 
 The CLI programmatic API (`Generator`, `effectRuntime`), `@rexeus/typeweaver-gen` plugin authoring,
 direct first-party plugin imports, and `@rexeus/typeweaver-effect` remain Effect 3-only and are not
 supported in an Effect 4 workspace. No migration step is required for existing Effect 3 users. See
-[ADR 0010](./docs/adr/0010-effect-4-workspace-compatibility.md) for the full matrix and the blocked
-Phase B entry criteria.
+[ADR 0010](./docs/adr/0010-effect-4-workspace-compatibility.md) for the full matrix. A later native
+Effect 4 line waits for a stable Effect 4 release.
 
 ### 3. Internal API changes (informational; only programmatic consumers)
 

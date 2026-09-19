@@ -34,3 +34,6 @@ coverage/
 
 # Vendored Effect source (skill research; bootstrapped via `pnpm prepare`)
 .repos/effect
+
+# Local agent plans — not part of the published repository
+/plans/

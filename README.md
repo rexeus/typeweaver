@@ -177,10 +177,10 @@ The `types` projection is always included. Add only the capabilities that belong
 The generated command invocation boundary is typechecked in the
 [command fixture](./packages/cli/examples/documentation/generated-command.ts).
 
-Phase A evidence covers exactly `effect@4.0.0-rc.115`: an Effect 4 application can run the
-`binary CLI` as an isolated child process only with Effect-neutral config and spec modules, and only
-the built-in plain projections were exercised (pnpm, strict peers). Every other Effect 4 version is
-UNVERIFIED. The CLI programmatic API, plugin authoring, and the `effect` projection remain on Effect
+An Effect 4 application can run the `binary CLI` as an isolated child process only with
+Effect-neutral config and spec modules. TypeWeaver has tested this only with `effect@4.0.0-rc.115`
+and the built-in plain projections (pnpm, strict peers). Every other Effect 4 version is UNVERIFIED.
+The CLI programmatic API, plugin authoring, and the `effect` projection remain on Effect
 `>=3.22.0 <4`; see [ADR 0010](./docs/adr/0010-effect-4-workspace-compatibility.md).
 
 ## Built for contract evolution

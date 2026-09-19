@@ -2,9 +2,10 @@
 
 ## Repository contract
 
-Read `GOAL.md`, `plans/README.md`, and the active stage plan before goal work. `VISION.md` defines
-the product direction. Keep implementation, public documentation, generated fixtures, Changesets,
-and migration notes synchronized at each public-contract boundary.
+Read `VISION.md` for the product direction and the repository documentation before changing a public
+contract. Keep implementation, public documentation, generated fixtures, Changesets, and migration
+notes synchronized at each public-contract boundary. A local `plans/` directory may hold working
+notes, but it is gitignored and never part of the published repository.
 
 ## Toolchain
 
@@ -79,5 +80,8 @@ pnpm lint
 pnpm test
 ```
 
-Before completing a stage, run the exact full gate in `GOAL.md`, including generated fixtures,
-multi-runtime bundles, Effect contracts, dry-run publishing, and a clean-worktree check.
+Before completing a public-contract change, run the common checks above and
+`pnpm verify:architecture-contracts`; that gate covers generated fixtures, the Effect version
+contract, packed consumers, and package-manager contracts. Run
+`pnpm --filter @rexeus/typeweaver run test:bundle:all` for the multi-runtime bundle gate, then run
+dry-run publishing and finish with a clean-worktree check.

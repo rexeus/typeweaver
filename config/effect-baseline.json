@@ -1,7 +1,7 @@
 {
   "runtimeVersion": "3.22.0",
   "peerRange": ">=3.22.0 <4",
-  "phaseA": {
+  "effect4Evidence": {
     "effectVersion": "4.0.0-rc.115",
     "scope": "process-isolated-cli-only",
     "stability": "release-candidate",

@@ -3,9 +3,9 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
-  PHASE_A_DOCUMENT_TOKENS,
+  EFFECT_4_DOCUMENT_TOKENS,
   validateEffectPackageVersions,
-  validateEffectPhaseAContract,
+  validateEffect4WorkspaceContract,
 } from "./lib/effect-version-contract.mjs";
 
 const fixtureRoot = mkdtempSync(
@@ -109,10 +109,10 @@ try {
   rmSync(fixtureRoot, { recursive: true });
 }
 
-const validPhaseAContract = () => ({
+const validEffect4WorkspaceContract = () => ({
   runtimeVersion: "3.22.0",
   peerRange: ">=3.22.0 <4",
-  phaseA: {
+  effect4Evidence: {
     effectVersion: "4.0.0-rc.115",
     scope: "process-isolated-cli-only",
     stability: "release-candidate",
@@ -120,7 +120,7 @@ const validPhaseAContract = () => ({
   },
 });
 
-const validPhaseAManifests = () => ({
+const validEffect4WorkspaceManifests = () => ({
   cli: {
     dependencies: { effect: "^3.22.0" },
     peerDependencies: {},
@@ -143,46 +143,46 @@ const validPhaseAManifests = () => ({
   },
 });
 
-const validPhaseADocuments = () =>
+const validEffect4WorkspaceDocuments = () =>
   Object.fromEntries(
-    Object.entries(PHASE_A_DOCUMENT_TOKENS).map(([document, tokens]) => [
+    Object.entries(EFFECT_4_DOCUMENT_TOKENS).map(([document, tokens]) => [
       document,
       tokens.join("\n"),
     ])
   );
 
-const verifyPhaseAContractGuard = () => {
+const verifyEffect4WorkspaceContractGuard = () => {
   const validate = (mutate = () => {}) => {
     const input = {
-      contract: validPhaseAContract(),
-      manifests: validPhaseAManifests(),
-      documents: validPhaseADocuments(),
+      contract: validEffect4WorkspaceContract(),
+      manifests: validEffect4WorkspaceManifests(),
+      documents: validEffect4WorkspaceDocuments(),
     };
     mutate(input);
-    return validateEffectPhaseAContract(input);
+    return validateEffect4WorkspaceContract(input);
   };
 
   assert.deepEqual(
     validate(),
     [],
-    `valid Phase A contract rejected:\n${validate().join("\n")}`
+    `valid Effect 4 workspace contract rejected:\n${validate().join("\n")}`
   );
 
   assert(
     validate(input => {
-      input.contract.phaseA.scope = "promised-range";
+      input.contract.effect4Evidence.scope = "promised-range";
     }).some(failure => failure.includes("process-isolated-cli-only")),
-    "missing Phase A scope failure"
+    "missing Effect 4 evidence scope failure"
   );
   assert(
     validate(input => {
-      input.contract.phaseA.effectVersion = "4.0.0";
+      input.contract.effect4Evidence.effectVersion = "4.0.0";
     }).some(failure => failure.includes("4.0.0-rc.115")),
-    "missing exact Phase A RC failure"
+    "missing exact Effect 4 evidence pin failure"
   );
   assert(
     validate(input => {
-      input.contract.phaseA.nativeSurfaces = "effect-4-capable";
+      input.contract.effect4Evidence.nativeSurfaces = "effect-4-capable";
     }).some(failure => failure.includes("effect-3-only")),
     "missing native-surfaces failure"
   );
@@ -216,7 +216,7 @@ const verifyPhaseAContractGuard = () => {
     validate(input => {
       input.documents["README.md"] =
         `${input.documents["README.md"]}\nTypeWeaver supports Effect 4.\n`;
-    }).some(failure => failure.includes("generic Phase A promise")),
+    }).some(failure => failure.includes("generic Effect 4 promise")),
     "missing generic Effect 4 promise failure"
   );
   assert(
@@ -243,7 +243,7 @@ const verifyPhaseAContractGuard = () => {
   );
 };
 
-verifyPhaseAContractGuard();
+verifyEffect4WorkspaceContractGuard();
 
 process.stdout.write(
   "Effect package contract guard rejected the Effect 4, caret-drift, and unaccepted-dependency fixtures\n"

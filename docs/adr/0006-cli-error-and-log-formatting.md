@@ -16,9 +16,9 @@ CLI:
    `timestamp=2026-05-16T10:23:14.123Z level=INFO fiber=#0 message="Bundling..."` in the default
    format. A CLI user wants `Bundling spec from '...'`, not a logfmt record.
 
-The Task #9 migration to `@effect/cli` made the CLI's user-facing surface load-bearing: `--help`,
-validation errors, and runtime failures all flow through the same pipeline that the spec generation
-logic uses. A single unhandled `Cause` would print thirty lines where one was wanted.
+The migration to `@effect/cli` made the CLI's user-facing surface load-bearing: `--help`, validation
+errors, and runtime failures all flow through the same pipeline that the spec generation logic uses.
+A single unhandled `Cause` would print thirty lines where one was wanted.
 
 ## Decision
 

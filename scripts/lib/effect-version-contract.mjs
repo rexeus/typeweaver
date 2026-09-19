@@ -159,12 +159,12 @@ export const validateEffectPackageVersions = ({
 };
 
 /**
- * Stable statements each public document must keep for the Phase A contract.
- * Exact sentences stay flexible; the load-bearing exact pin, binary/process
- * boundary, surface names, and Phase B gate are asserted so no document drifts
- * into a generic "supports Effect 4" claim.
+ * Stable statements each public document must keep for the Effect 4 workspace
+ * contract. Exact sentences stay flexible; the load-bearing exact pin,
+ * binary/process boundary, and surface names are asserted so no document
+ * drifts into a generic "supports Effect 4" claim.
  */
-export const PHASE_A_DOCUMENT_TOKENS = {
+export const EFFECT_4_DOCUMENT_TOKENS = {
   "docs/adr/0010-effect-4-workspace-compatibility.md": [
     "0008",
     "4.0.0-rc.115",
@@ -177,7 +177,6 @@ export const PHASE_A_DOCUMENT_TOKENS = {
     "plain generated",
     "first-party",
     "Effect adapter",
-    "Phase B",
     "UNVERIFIED",
   ],
   "docs/adr/0008-effect-v3-baseline.md": ["0010"],
@@ -192,10 +191,10 @@ export const PHASE_A_DOCUMENT_TOKENS = {
 };
 
 /**
- * Phrasings that overstate Phase A. They must not appear in any public
- * document that states the compatibility contract.
+ * Phrasings that overstate isolated CLI evidence. They must not appear in any
+ * public document that states the compatibility contract.
  */
-export const PHASE_A_FORBIDDEN_PHRASES = [
+export const EFFECT_4_FORBIDDEN_PHRASES = [
   "supports Effect 4",
   "Effect 4 is supported",
   ">=3.22.0 <5",
@@ -207,7 +206,7 @@ const OPTIONAL_SENSITIVE_PEERS = [
   "@rexeus/typeweaver-core",
 ];
 
-const validatePhaseAVersions = contract => {
+const validateEffect4EvidenceVersions = contract => {
   const failures = [];
   if (contract.runtimeVersion !== "3.22.0") {
     failures.push(
@@ -219,25 +218,25 @@ const validatePhaseAVersions = contract => {
       `config/effect-baseline.json peerRange must remain >=3.22.0 <4; found ${contract.peerRange}`
     );
   }
-  const phaseA = contract.phaseA ?? {};
-  if (phaseA.effectVersion !== "4.0.0-rc.115") {
+  const effect4Evidence = contract.effect4Evidence ?? {};
+  if (effect4Evidence.effectVersion !== "4.0.0-rc.115") {
     failures.push(
-      `config/effect-baseline.json phaseA.effectVersion must be the exact evidence pin 4.0.0-rc.115; found ${phaseA.effectVersion}`
+      `config/effect-baseline.json effect4Evidence.effectVersion must be the exact evidence pin 4.0.0-rc.115; found ${effect4Evidence.effectVersion}`
     );
   }
-  if (phaseA.scope !== "process-isolated-cli-only") {
+  if (effect4Evidence.scope !== "process-isolated-cli-only") {
     failures.push(
-      `config/effect-baseline.json phaseA.scope must be process-isolated-cli-only; found ${phaseA.scope}`
+      `config/effect-baseline.json effect4Evidence.scope must be process-isolated-cli-only; found ${effect4Evidence.scope}`
     );
   }
-  if (phaseA.stability !== "release-candidate") {
+  if (effect4Evidence.stability !== "release-candidate") {
     failures.push(
-      `config/effect-baseline.json phaseA.stability must be release-candidate; found ${phaseA.stability}`
+      `config/effect-baseline.json effect4Evidence.stability must be release-candidate; found ${effect4Evidence.stability}`
     );
   }
-  if (phaseA.nativeSurfaces !== "effect-3-only") {
+  if (effect4Evidence.nativeSurfaces !== "effect-3-only") {
     failures.push(
-      `config/effect-baseline.json phaseA.nativeSurfaces must be effect-3-only; found ${phaseA.nativeSurfaces}`
+      `config/effect-baseline.json effect4Evidence.nativeSurfaces must be effect-3-only; found ${effect4Evidence.nativeSurfaces}`
     );
   }
   return failures;
@@ -292,7 +291,7 @@ const validateSensitivePeersStayRequired = manifests => {
   return failures;
 };
 
-const validatePhaseAManifests = manifests => {
+const validateEffect4EvidenceManifests = manifests => {
   const failures = [];
   if (manifests.cli?.dependencies?.effect !== "^3.22.0") {
     failures.push(
@@ -314,26 +313,28 @@ const validatePhaseAManifests = manifests => {
   ];
 };
 
-const validatePhaseADocuments = documents => {
+const validateEffect4EvidenceDocuments = documents => {
   const failures = [];
-  for (const [document, tokens] of Object.entries(PHASE_A_DOCUMENT_TOKENS)) {
+  for (const [document, tokens] of Object.entries(EFFECT_4_DOCUMENT_TOKENS)) {
     const content = documents[document];
     if (typeof content !== "string") {
       failures.push(
-        `${document} is required by the Phase A compatibility contract`
+        `${document} is required by the Effect 4 workspace compatibility contract`
       );
       continue;
     }
     for (const token of tokens) {
       if (!content.includes(token)) {
-        failures.push(`${document} is missing Phase A statement: ${token}`);
+        failures.push(
+          `${document} is missing Effect 4 workspace statement: ${token}`
+        );
       }
     }
     const lowered = content.toLowerCase();
-    for (const phrase of PHASE_A_FORBIDDEN_PHRASES) {
+    for (const phrase of EFFECT_4_FORBIDDEN_PHRASES) {
       if (lowered.includes(phrase.toLowerCase())) {
         failures.push(
-          `${document} contains a generic Phase A promise: "${phrase}"`
+          `${document} contains a generic Effect 4 promise: "${phrase}"`
         );
       }
     }
@@ -342,19 +343,19 @@ const validatePhaseADocuments = documents => {
 };
 
 /**
- * Enforces the Phase A compatibility contract: the runtime and peer range stay
- * on Effect 3, the evidence pin stays exact/process-scoped/Effect-3-native, the
+ * Enforces the Effect 4 workspace contract: the runtime and peer range stay on
+ * Effect 3, the evidence pin stays exact/process-scoped/Effect-3-native, the
  * CLI keeps Effect as its own dependency rather than a peer, the required
  * Effect/gen/core peers stay required, the Hono peer is optional because the
  * generator runs without it, and every public document keeps the exact-pin
  * binary-only wording without a generic Effect 4 promise.
  */
-export const validateEffectPhaseAContract = ({
+export const validateEffect4WorkspaceContract = ({
   contract,
   manifests,
   documents,
 }) => [
-  ...validatePhaseAVersions(contract),
-  ...validatePhaseAManifests(manifests),
-  ...validatePhaseADocuments(documents),
+  ...validateEffect4EvidenceVersions(contract),
+  ...validateEffect4EvidenceManifests(manifests),
+  ...validateEffect4EvidenceDocuments(documents),
 ];
