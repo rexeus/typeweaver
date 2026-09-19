@@ -14,9 +14,9 @@ export type OperationContext = {
 export function createOperationLocation(options: {
   readonly context: OperationContext;
   readonly part: string;
-  readonly parameterName?: string;
-  readonly responseName?: string;
-  readonly statusCode?: string;
+  readonly parameterName?: string | undefined;
+  readonly responseName?: string | undefined;
+  readonly statusCode?: string | undefined;
 }): OpenApiWarningLocation {
   const isComponentResponseLocation =
     options.context.resourceName === "components.responses";
@@ -32,8 +32,14 @@ export function createOperationLocation(options: {
         }),
     openApiPath: options.context.openApiPath,
     part: options.part,
-    parameterName: options.parameterName,
-    responseName: options.responseName,
-    statusCode: options.statusCode,
+    ...(options.parameterName === undefined
+      ? {}
+      : { parameterName: options.parameterName }),
+    ...(options.responseName === undefined
+      ? {}
+      : { responseName: options.responseName }),
+    ...(options.statusCode === undefined
+      ? {}
+      : { statusCode: options.statusCode }),
   };
 }

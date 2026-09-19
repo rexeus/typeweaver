@@ -16,14 +16,21 @@ export const validateUniqueResponseNames = (
   for (const resource of Object.values(resources)) {
     for (const operation of resource.operations) {
       for (const response of operation.responses) {
-        const existingResponse = responsesByName.get(response.name);
-
-        if (existingResponse !== undefined && existingResponse !== response) {
-          throw new DuplicateResponseNameError(response.name);
-        }
-
-        responsesByName.set(response.name, response);
+        registerUniqueResponse(responsesByName, response);
       }
     }
   }
+};
+
+const registerUniqueResponse = (
+  responsesByName: Map<string, ResponseDefinition>,
+  response: ResponseDefinition
+): void => {
+  const existingResponse = responsesByName.get(response.name);
+
+  if (existingResponse !== undefined && existingResponse !== response) {
+    throw new DuplicateResponseNameError(response.name);
+  }
+
+  responsesByName.set(response.name, response);
 };

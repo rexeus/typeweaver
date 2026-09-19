@@ -1,4 +1,3 @@
-/* oxlint-disable import/max-dependencies */
 export * from "./todoSchema.js";
 export { SubTodoNotChangeableErrorDefinition } from "./errors/SubTodoNotChangeableErrorDefinition.js";
 export { SubTodoNotFoundErrorDefinition } from "./errors/SubTodoNotFoundErrorDefinition.js";

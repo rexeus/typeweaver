@@ -212,9 +212,9 @@ const createThrowingModuleSource = (options: {
 const capturePluginLoadError = async (
   load: Promise<RunResult>
 ): Promise<PluginLoadError> => {
-  const failure = await load.then(
+  const failure: unknown = await load.then(
     () => undefined,
-    error => error
+    (error: unknown) => error
   );
 
   if (!(failure instanceof PluginLoadError)) {
@@ -229,9 +229,9 @@ const capturePluginLoadError = async (
 const captureTaggedPluginConfigError = async (
   load: Promise<RunResult>
 ): Promise<CapturedPluginConfigError> => {
-  const failure = await load.then(
+  const failure: unknown = await load.then(
     () => undefined,
-    error => error
+    (error: unknown) => error
   );
 
   if (!isPluginConfigError(failure)) {
@@ -248,7 +248,9 @@ const messages = (logs: readonly CapturedLog[]): readonly string[] =>
 
 const expectNoSuccessfulLoadSummary = (logs: readonly CapturedLog[]): void => {
   expect(messages(logs)).not.toEqual(
-    expect.arrayContaining([expect.stringMatching(/Successfully loaded/)])
+    expect.arrayContaining([
+      expect.stringMatching(/Successfully loaded/) as unknown,
+    ]) as unknown
   );
 };
 
@@ -624,7 +626,7 @@ describe("pluginLoader resolution failures", () => {
     expect(failure.attempts).toEqual([
       {
         path: "missing-plugin",
-        error: expect.stringMatching(/\S/),
+        error: expect.stringMatching(/\S/) as unknown,
       },
     ]);
   });
@@ -666,11 +668,11 @@ describe("pluginLoader resolution failures", () => {
     expect(failure.attempts).toEqual([
       {
         path: "@rexeus/typeweaver-missing-plugin",
-        error: expect.stringMatching(/\S/),
+        error: expect.stringMatching(/\S/) as unknown,
       },
       {
         path: "@rexeus/missing-plugin",
-        error: expect.stringMatching(/\S/),
+        error: expect.stringMatching(/\S/) as unknown,
       },
     ]);
   });
@@ -1114,7 +1116,7 @@ describe("pluginLoader plugin shape validation", () => {
           expect(failure.value.attempts).toEqual([
             {
               path: "invalid-plugin",
-              error: expect.stringContaining(`field '${field}'`),
+              error: expect.stringContaining(`field '${field}'`) as unknown,
             },
           ]);
         }
@@ -1153,7 +1155,7 @@ describe("pluginLoader real-module validation", () => {
         expect(failure.value.attempts).toEqual([
           {
             path: importPathForFile(pluginPath),
-            error: expect.stringContaining("field 'generate'"),
+            error: expect.stringContaining("field 'generate'") as unknown,
           },
         ]);
       }
@@ -1175,7 +1177,7 @@ describe("pluginLoader real-module validation", () => {
     expect(failure.attempts).toEqual([
       {
         path: "@example/missing-plugin",
-        error: expect.stringMatching(/\S/),
+        error: expect.stringMatching(/\S/) as unknown,
       },
     ]);
   });

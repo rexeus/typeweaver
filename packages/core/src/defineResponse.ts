@@ -159,14 +159,17 @@ const cloneResponseDefinitionWithoutMetadata = <
 >(
   response: TResponse
 ): TResponse => {
-  const descriptors = Object.fromEntries(
-    Reflect.ownKeys(response)
-      .filter(key => key !== responseDefinitionMetadataSymbol)
-      .map(key => [key, Object.getOwnPropertyDescriptor(response, key)!])
-  );
+  const descriptors: PropertyDescriptorMap = {};
+  for (const key of Reflect.ownKeys(response)) {
+    if (key === responseDefinitionMetadataSymbol) continue;
+    const descriptor = Object.getOwnPropertyDescriptor(response, key);
+    if (descriptor !== undefined) {
+      descriptors[key] = descriptor;
+    }
+  }
 
   return Object.create(
-    Object.getPrototypeOf(response),
+    Reflect.getPrototypeOf(response),
     descriptors
   ) as TResponse;
 };
@@ -187,7 +190,7 @@ type ResponseLineage<
   TResponse extends ResponseDefinition,
   TName extends string,
 > =
-  TResponse["derived"] extends DerivedResponseMetadata<any, infer TLineage>
+  TResponse["derived"] extends DerivedResponseMetadata<string, infer TLineage>
     ? readonly [...TLineage, TName]
     : readonly [TName];
 

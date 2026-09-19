@@ -213,8 +213,8 @@ describe("returned response body validation", () => {
     const data = await expectJson(response, 201);
     expect(data).not.toHaveProperty("extraField");
     expect(data).not.toHaveProperty("anotherExtra");
-    expect(data.id).toBe(responseWithExtra.body.id);
-    expect(data.title).toBe(responseWithExtra.body.title);
+    expect(data["id"]).toBe(responseWithExtra.body.id);
+    expect(data["title"]).toBe(responseWithExtra.body.title);
   });
 
   test("returns a sanitized 500 when a returned response body has invalid field types", async () => {
@@ -394,7 +394,7 @@ describe("custom response-validation handlers", () => {
     const response = await requestCreateTodo(app);
 
     const data = await expectJson(response, 503);
-    expect(data.reason).toBe("schema mismatch");
+    expect(data["reason"]).toBe("schema mismatch");
     expect(response.headers.get("x-custom")).toBe("response-validation");
   });
 
@@ -448,8 +448,8 @@ describe("validateResponses: false", () => {
     const response = await requestCreateTodo(app);
 
     const data = await expectJson(response, 201);
-    expect(data.extraField).toBe("should-remain");
-    expect(data.secretData).toEqual({ nested: true });
+    expect(data["extraField"]).toBe("should-remain");
+    expect(data["secretData"]).toEqual({ nested: true });
   });
 
   test("passes through schema-invalid body values when response validation is disabled", async () => {
@@ -464,8 +464,8 @@ describe("validateResponses: false", () => {
     const response = await requestCreateTodo(app);
 
     const data = await expectJson(response, 201);
-    expect(data.id).toBe(12345);
-    expect(data.title).toBe(true);
+    expect(data["id"]).toBe(12345);
+    expect(data["title"]).toBe(true);
   });
 
   test("keeps unknown response headers when response validation is disabled", async () => {
@@ -501,8 +501,8 @@ describe("handleResponseValidationErrors: false", () => {
     const response = await requestCreateTodo(app);
 
     const data = await expectJson(response, 201);
-    expect(data.id).toBe(12345);
-    expect(data.title).toBe(true);
+    expect(data["id"]).toBe(12345);
+    expect(data["title"]).toBe(true);
   });
 
   test("still strips extra fields from valid responses when response-validation error handling is disabled", async () => {
@@ -518,8 +518,8 @@ describe("handleResponseValidationErrors: false", () => {
 
     const data = await expectJson(response, 201);
     expect(data).not.toHaveProperty("extraField");
-    expect(data.id).toBe(responseWithExtra.body.id);
-    expect(data.title).toBe(responseWithExtra.body.title);
+    expect(data["id"]).toBe(responseWithExtra.body.id);
+    expect(data["title"]).toBe(responseWithExtra.body.title);
   });
 });
 
@@ -595,7 +595,7 @@ describe("returned and thrown typed response parity", () => {
 
       const data = await expectJson(response, 201);
       expect(data).not.toHaveProperty("extraField");
-      expect(data.id).toBe(typedResponse.body.id);
+      expect(data["id"]).toBe(typedResponse.body.id);
     }
   );
 

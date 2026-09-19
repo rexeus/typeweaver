@@ -68,6 +68,11 @@ export function getTypeScriptFiles(sourceDir) {
   return collectTypeScriptFiles(sourceDir).sort();
 }
 
+/**
+ * @param {string} sourceDir
+ * @param {string} [currentDir]
+ * @returns {string[]}
+ */
 function collectTypeScriptFiles(sourceDir, currentDir = sourceDir) {
   const relativeFilePaths = [];
 
@@ -93,6 +98,10 @@ function collectTypeScriptFiles(sourceDir, currentDir = sourceDir) {
   return relativeFilePaths;
 }
 
+/**
+ * @param {string} sourceFilePath
+ * @returns {string}
+ */
 function transpileTypeScriptFile(sourceFilePath) {
   const source = fs.readFileSync(sourceFilePath, "utf8");
   const { outputText } = ts.transpileModule(source, {

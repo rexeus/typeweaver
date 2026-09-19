@@ -47,7 +47,7 @@ describe("logger output", () => {
     });
 
     expect(logFn).toHaveBeenCalledOnce();
-    expect(logFn.mock.calls[0]![0]).toBe("GET /users 200 14ms");
+    expect(logFn.mock.calls[0]?.[0]).toBe("GET /users 200 14ms");
   });
 
   test("passes complete request and response data to a custom formatter", async () => {
@@ -67,7 +67,7 @@ describe("logger output", () => {
     });
 
     expect(format).toHaveBeenCalledOnce();
-    expect(format.mock.calls[0]![0]).toEqual({
+    expect(format.mock.calls[0]?.[0]).toEqual({
       method: HttpMethod.POST,
       path: "/items",
       statusCode: 201,
@@ -124,7 +124,7 @@ describe("logger sequencing and failures", () => {
       });
 
       expect(consoleSpy).toHaveBeenCalledOnce();
-      expect(consoleSpy.mock.calls[0]![0]).toBe("DELETE /items/1 204 17ms");
+      expect(consoleSpy.mock.calls[0]?.[0]).toBe("DELETE /items/1 204 17ms");
     } finally {
       consoleSpy.mockRestore();
     }

@@ -3,11 +3,11 @@ import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { MissingGenerateOptionError } from "./errors/MissingGenerateOptionError.js";
 
 export type GenerateCommandOptions = {
-  readonly input?: string;
-  readonly output?: string;
-  readonly plugins?: string;
-  readonly format?: boolean;
-  readonly clean?: boolean;
+  readonly input?: string | undefined;
+  readonly output?: string | undefined;
+  readonly plugins?: string | undefined;
+  readonly format?: boolean | undefined;
+  readonly clean?: boolean | undefined;
 };
 
 export type ResolvedGenerateOptions = {

@@ -4,6 +4,10 @@
   "commit": false,
   "fixed": [["@rexeus/*"]],
   "linked": [],
+  "privatePackages": {
+    "version": false,
+    "tag": false
+  },
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",

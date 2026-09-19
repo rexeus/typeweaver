@@ -8,14 +8,36 @@ import {
   validateEffect4WorkspaceContract,
 } from "./lib/effect-version-contract.mjs";
 
+/** @typedef {import("./lib/tooling-types.mjs").EffectBaselineContract} EffectBaselineContract */
+/** @typedef {import("./lib/tooling-types.mjs").Effect4EvidenceContract} Effect4EvidenceContract */
+/** @typedef {import("./lib/tooling-types.mjs").DependencyMap} DependencyMap */
+/** @typedef {EffectBaselineContract & { effect4Evidence: Effect4EvidenceContract }} Effect4EvidenceContractInput */
+
+/**
+ * @typedef {object} TestManifest
+ * @property {DependencyMap} dependencies
+ * @property {DependencyMap} peerDependencies
+ * @property {Record<string, { optional?: boolean }>} peerDependenciesMeta
+ */
+
+/** @typedef {{ cli: TestManifest, gen: TestManifest, effect: TestManifest, hono: TestManifest, core: TestManifest }} TestManifests */
+/** @typedef {{ contract: Effect4EvidenceContractInput, manifests: TestManifests, documents: Record<string, string> }} ContractInput */
+/** @typedef {[mutate: (input: ContractInput) => void, expected: string, message: string]} ContractMutation */
+
 const fixtureRoot = mkdtempSync(
   path.join(tmpdir(), "typeweaver-effect-contract-")
 );
 const packageRoot = path.join(fixtureRoot, "packages", "runtime");
 const publishedRoot = path.join(fixtureRoot, "packages", "published");
 const installedEffectRoot = path.join(packageRoot, "node_modules", "effect");
-const writeJson = (filePath, value) =>
+/**
+ * @param {string} filePath
+ * @param {unknown} value
+ * @returns {void}
+ */
+const writeJson = (filePath, value) => {
   writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
+};
 
 try {
   mkdirSync(installedEffectRoot, { recursive: true });
@@ -109,6 +131,7 @@ try {
   rmSync(fixtureRoot, { recursive: true });
 }
 
+/** @returns {Effect4EvidenceContractInput} */
 const validEffect4WorkspaceContract = () => ({
   runtimeVersion: "3.22.0",
   peerRange: ">=3.22.0 <4",
@@ -118,20 +141,29 @@ const validEffect4WorkspaceContract = () => ({
     stability: "release-candidate",
     nativeSurfaces: "effect-3-only",
   },
+  acceptedEffectDependencies: {},
+  languageServiceVersion: "0.87.1",
+  referenceRepository: "https://example.test/effect.git",
+  referenceTag: "effect@3.22.0",
+  referenceCommit: "0000000000000000000000000000000000000000",
 });
 
+/** @returns {TestManifests} */
 const validEffect4WorkspaceManifests = () => ({
   cli: {
     dependencies: { effect: "^3.22.0" },
     peerDependencies: {},
+    peerDependenciesMeta: {},
   },
   gen: {
     dependencies: {},
     peerDependencies: { effect: "catalog:peers" },
+    peerDependenciesMeta: {},
   },
   effect: {
     dependencies: {},
     peerDependencies: { effect: "catalog:peers" },
+    peerDependenciesMeta: {},
   },
   hono: {
     dependencies: {},
@@ -139,19 +171,118 @@ const validEffect4WorkspaceManifests = () => ({
     peerDependenciesMeta: { hono: { optional: true } },
   },
   core: {
+    dependencies: {},
     peerDependencies: { zod: "catalog:peers" },
+    peerDependenciesMeta: {},
   },
 });
 
-const validEffect4WorkspaceDocuments = () =>
-  Object.fromEntries(
-    Object.entries(EFFECT_4_DOCUMENT_TOKENS).map(([document, tokens]) => [
-      document,
-      tokens.join("\n"),
-    ])
-  );
+/** @returns {Record<string, string>} */
+const validEffect4WorkspaceDocuments = () => {
+  /** @type {Record<string, string>} */
+  const documents = {};
+  for (const [document, tokens] of Object.entries(EFFECT_4_DOCUMENT_TOKENS)) {
+    documents[document] = tokens.join("\n");
+  }
+  return documents;
+};
+
+/** @type {ContractMutation[]} */
+const effect4EvidenceMutations = [
+  [
+    input => {
+      input.contract.effect4Evidence.scope = "promised-range";
+    },
+    "process-isolated-cli-only",
+    "missing Effect 4 evidence scope failure",
+  ],
+  [
+    input => {
+      input.contract.effect4Evidence.effectVersion = "4.0.0";
+    },
+    "4.0.0-rc.115",
+    "missing exact Effect 4 evidence pin failure",
+  ],
+  [
+    input => {
+      input.contract.effect4Evidence.nativeSurfaces = "effect-4-capable";
+    },
+    "effect-3-only",
+    "missing native-surfaces failure",
+  ],
+  [
+    input => {
+      input.contract.peerRange = ">=3.22.0 <5";
+    },
+    "<4",
+    "missing peer widening failure",
+  ],
+  [
+    input => {
+      input.manifests.cli.peerDependencies["effect"] = "catalog:peers";
+    },
+    "CLI",
+    "missing CLI Effect peer failure",
+  ],
+  [
+    input => {
+      input.manifests.gen.peerDependencies["effect"] = "^4.0.0";
+    },
+    "@rexeus/typeweaver-gen",
+    "missing gen peer failure",
+  ],
+  [
+    input => {
+      delete input.documents[
+        "docs/adr/0010-effect-4-workspace-compatibility.md"
+      ];
+    },
+    "0010",
+    "missing ADR 0010 failure",
+  ],
+  [
+    input => {
+      input.documents["README.md"] =
+        `${input.documents["README.md"] ?? ""}\nTypeWeaver supports Effect 4.\n`;
+    },
+    "generic Effect 4 promise",
+    "missing generic Effect 4 promise failure",
+  ],
+  [
+    input => {
+      input.documents["packages/cli/README.md"] = (
+        input.documents["packages/cli/README.md"] ?? ""
+      ).replaceAll("4.0.0-rc.115", "Effect 4");
+    },
+    "4.0.0-rc.115",
+    "missing exact-pin document failure",
+  ],
+  [
+    input => {
+      const honoMeta = input.manifests.hono.peerDependenciesMeta["hono"];
+      if (honoMeta !== undefined) {
+        delete honoMeta.optional;
+      }
+    },
+    "hono",
+    "missing optional Hono peer failure",
+  ],
+  [
+    input => {
+      input.manifests.effect.peerDependenciesMeta = {
+        effect: { optional: true },
+      };
+    },
+    "must not mark effect optional",
+    "missing required-Effect-peer failure",
+  ],
+];
 
 const verifyEffect4WorkspaceContractGuard = () => {
+  /**
+   * @param {(input: ContractInput) => void} [mutate]
+   * @returns {string[]}
+   */
   const validate = (mutate = () => {}) => {
     const input = {
       contract: validEffect4WorkspaceContract(),
@@ -168,79 +299,12 @@ const verifyEffect4WorkspaceContractGuard = () => {
     `valid Effect 4 workspace contract rejected:\n${validate().join("\n")}`
   );
 
-  assert(
-    validate(input => {
-      input.contract.effect4Evidence.scope = "promised-range";
-    }).some(failure => failure.includes("process-isolated-cli-only")),
-    "missing Effect 4 evidence scope failure"
-  );
-  assert(
-    validate(input => {
-      input.contract.effect4Evidence.effectVersion = "4.0.0";
-    }).some(failure => failure.includes("4.0.0-rc.115")),
-    "missing exact Effect 4 evidence pin failure"
-  );
-  assert(
-    validate(input => {
-      input.contract.effect4Evidence.nativeSurfaces = "effect-4-capable";
-    }).some(failure => failure.includes("effect-3-only")),
-    "missing native-surfaces failure"
-  );
-  assert(
-    validate(input => {
-      input.contract.peerRange = ">=3.22.0 <5";
-    }).some(failure => failure.includes("<4")),
-    "missing peer widening failure"
-  );
-  assert(
-    validate(input => {
-      input.manifests.cli.peerDependencies.effect = "catalog:peers";
-    }).some(failure => failure.includes("CLI")),
-    "missing CLI Effect peer failure"
-  );
-  assert(
-    validate(input => {
-      input.manifests.gen.peerDependencies.effect = "^4.0.0";
-    }).some(failure => failure.includes("@rexeus/typeweaver-gen")),
-    "missing gen peer failure"
-  );
-  assert(
-    validate(input => {
-      delete input.documents[
-        "docs/adr/0010-effect-4-workspace-compatibility.md"
-      ];
-    }).some(failure => failure.includes("0010")),
-    "missing ADR 0010 failure"
-  );
-  assert(
-    validate(input => {
-      input.documents["README.md"] =
-        `${input.documents["README.md"]}\nTypeWeaver supports Effect 4.\n`;
-    }).some(failure => failure.includes("generic Effect 4 promise")),
-    "missing generic Effect 4 promise failure"
-  );
-  assert(
-    validate(input => {
-      input.documents["packages/cli/README.md"] = input.documents[
-        "packages/cli/README.md"
-      ].replaceAll("4.0.0-rc.115", "Effect 4");
-    }).some(failure => failure.includes("4.0.0-rc.115")),
-    "missing exact-pin document failure"
-  );
-  assert(
-    validate(input => {
-      delete input.manifests.hono.peerDependenciesMeta.hono.optional;
-    }).some(failure => failure.includes("hono")),
-    "missing optional Hono peer failure"
-  );
-  assert(
-    validate(input => {
-      input.manifests.effect.peerDependenciesMeta = {
-        effect: { optional: true },
-      };
-    }).some(failure => failure.includes("must not mark effect optional")),
-    "missing required-Effect-peer failure"
-  );
+  for (const [mutate, expected, message] of effect4EvidenceMutations) {
+    assert(
+      validate(mutate).some(failure => failure.includes(expected)),
+      message
+    );
+  }
 };
 
 verifyEffect4WorkspaceContractGuard();

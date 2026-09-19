@@ -56,7 +56,7 @@ async function expectValidationIssue(
     400,
     "VALIDATION_ERROR"
   )) as IValidationErrorResponseBody;
-  expect(data.issues[issueKey]).toHaveLength(1);
+  expect(data["issues"][issueKey]).toHaveLength(1);
 }
 
 function buildRawBodyFetchRequest(
@@ -95,9 +95,9 @@ describe("Generated Server request bodies and parameters", () => {
     );
 
     const data = await expectJson(response, 201);
-    expect(data.title).toBe("Write generated server tests");
-    expect(data.priority).toBe("HIGH");
-    expect(data.status).toBe("TODO");
+    expect(data["title"]).toBe("Write generated server tests");
+    expect(data["priority"]).toBe("HIGH");
+    expect(data["status"]).toBe("TODO");
   });
 
   test("merges route params into the replace todo response", async () => {
@@ -115,8 +115,8 @@ describe("Generated Server request bodies and parameters", () => {
     );
 
     const data = await expectJson(response, 200);
-    expect(data.id).toBe(requestData.param.todoId);
-    expect(data.title).toBe("Replace from route params");
+    expect(data["id"]).toBe(requestData.param.todoId);
+    expect(data["title"]).toBe("Replace from route params");
   });
 
   test("merges route params and body into the update todo response", async () => {
@@ -134,8 +134,8 @@ describe("Generated Server request bodies and parameters", () => {
     );
 
     const data = await expectJson(response, 200);
-    expect(data.id).toBe(requestData.param.todoId);
-    expect(data.title).toBe("Patch from route params");
+    expect(data["id"]).toBe(requestData.param.todoId);
+    expect(data["title"]).toBe("Patch from route params");
   });
 
   test("returns the requested todo status update", async () => {
@@ -153,8 +153,8 @@ describe("Generated Server request bodies and parameters", () => {
     );
 
     const data = await expectJson(response, 200);
-    expect(data.id).toBe(requestData.param.todoId);
-    expect(data.status).toBe("DONE");
+    expect(data["id"]).toBe(requestData.param.todoId);
+    expect(data["status"]).toBe("DONE");
   });
 
   test("returns the decoded nextToken from the query todo request", async () => {
@@ -171,7 +171,7 @@ describe("Generated Server request bodies and parameters", () => {
     );
 
     const data = await expectJson(response, 200);
-    expect(data.nextToken).toBe("runtime query+token");
+    expect(data["nextToken"]).toBe("runtime query+token");
   });
 });
 
@@ -284,7 +284,7 @@ describe("Generated Server static and nested routes", () => {
     );
 
     const data = await expectJson(response, 200);
-    expect(data.results).toEqual(expect.any(Array));
+    expect(data["results"]).toEqual(expect.any(Array));
   });
 
   test("decodes path parameters before passing them to generated handlers", async () => {
@@ -299,7 +299,7 @@ describe("Generated Server static and nested routes", () => {
     );
 
     const data = await expectJson(response, 200);
-    expect(data.id).toBe("runtime todo+42");
+    expect(data["id"]).toBe("runtime todo+42");
   });
 
   test("propagates nested subtodo route parameters", async () => {
@@ -320,9 +320,9 @@ describe("Generated Server static and nested routes", () => {
     );
 
     const data = await expectJson(response, 200);
-    expect(data.parentId).toBe(requestData.param.todoId);
-    expect(data.id).toBe(requestData.param.subtodoId);
-    expect(data.title).toBe("Nested route update");
+    expect(data["parentId"]).toBe(requestData.param.todoId);
+    expect(data["id"]).toBe(requestData.param.subtodoId);
+    expect(data["title"]).toBe("Nested route update");
   });
 
   test("routes nested list requests to the subtodo collection handler", async () => {
@@ -339,7 +339,7 @@ describe("Generated Server static and nested routes", () => {
     );
 
     const data = await expectJson(response, 200);
-    expect(data.results).toEqual(expect.any(Array));
+    expect(data["results"]).toEqual(expect.any(Array));
   });
 });
 
@@ -359,8 +359,8 @@ describe("Generated Server nested route methods", () => {
     );
 
     const data = await expectJson(response, 201);
-    expect(data.parentId).toBe(requestData.param.todoId);
-    expect(data.title).toBe("Create nested route");
+    expect(data["parentId"]).toBe(requestData.param.todoId);
+    expect(data["title"]).toBe("Create nested route");
   });
 
   test("routes nested static query requests to the subtodo query handler", async () => {
@@ -378,7 +378,7 @@ describe("Generated Server nested route methods", () => {
     );
 
     const data = await expectJson(response, 200);
-    expect(data.results).toEqual(expect.any(Array));
+    expect(data["results"]).toEqual(expect.any(Array));
   });
 
   test("routes nested delete requests to the subtodo delete handler", async () => {
@@ -398,7 +398,7 @@ describe("Generated Server nested route methods", () => {
     );
 
     const data = await expectJson(response, 200);
-    expect(data.message).toEqual(expect.any(String));
+    expect(data["message"]).toEqual(expect.any(String));
   });
 });
 
@@ -531,7 +531,7 @@ describe("Generated Server request validation bypass", () => {
       name: "body",
       createRequest: () =>
         createCreateTodoRequest({
-          body: { priority: "INVALID_PRIORITY" as any },
+          body: { priority: "INVALID_PRIORITY" as never },
         }),
       url: `${BASE_URL}/todos`,
       issueKey: "body" as const,
@@ -540,7 +540,7 @@ describe("Generated Server request validation bypass", () => {
       name: "headers",
       createRequest: () =>
         createCreateTodoRequest({
-          header: { "Content-Type": "text/plain" as any },
+          header: { "Content-Type": "text/plain" as never },
         }),
       url: `${BASE_URL}/todos`,
       issueKey: "header" as const,
@@ -589,7 +589,7 @@ describe("Generated Server request validation bypass", () => {
     );
 
     const data = await expectJson(response, 200);
-    expect(data.id).toBe("not-a-ulid");
+    expect(data["id"]).toBe("not-a-ulid");
   });
 
   test("bypasses query validation when validateRequests is disabled", async () => {
@@ -601,7 +601,7 @@ describe("Generated Server request validation bypass", () => {
     );
 
     const data = await expectJson(response, 200);
-    expect(data.results).toEqual(expect.any(Array));
+    expect(data["results"]).toEqual(expect.any(Array));
   });
 
   test("preserves encoded dangerous path parameters at the fetch boundary", async () => {
@@ -616,7 +616,7 @@ describe("Generated Server request validation bypass", () => {
     );
 
     const data = await expectJson(response, 200);
-    expect(data.id).toBe("a%2Fb");
+    expect(data["id"]).toBe("a%2Fb");
   });
 });
 
@@ -630,7 +630,7 @@ describe("Generated Server request validation errors", () => {
       }),
     });
     const requestData = createCreateTodoRequest({
-      body: { priority: "INVALID_PRIORITY" as any },
+      body: { priority: "INVALID_PRIORITY" as never },
     });
 
     const response = await app.fetch(
@@ -638,7 +638,7 @@ describe("Generated Server request validation errors", () => {
     );
 
     const data = await expectJson(response, 400);
-    expect(data.message).toBe("Custom validation error");
+    expect(data["message"]).toBe("Custom validation error");
   });
 
   test("returns a sanitized bad request response for malformed JSON", async () => {
@@ -649,7 +649,7 @@ describe("Generated Server request validation errors", () => {
     );
 
     const data = await expectErrorResponse(response, 400, "BAD_REQUEST");
-    expect(data.message).toBe("Malformed request body");
+    expect(data["message"]).toBe("Malformed request body");
     expect(JSON.stringify(data)).not.toContain("title");
   });
 
@@ -685,7 +685,7 @@ describe("Generated Server request validation errors", () => {
       );
 
       const data = await expectJson(response, 201);
-      expect(data.title).toBe("Pollution guard");
+      expect(data["title"]).toBe("Pollution guard");
       expect(Object.prototype).not.toHaveProperty("polluted");
     } finally {
       delete (Object.prototype as { polluted?: unknown }).polluted;
@@ -704,8 +704,8 @@ describe("Generated Server response handling", () => {
 
     expect(response.headers.get("Content-Type")).toBe("application/json");
     const data = await expectJson(response, 201);
-    expect(data.id).toEqual(expect.any(String));
-    expect(data.title).toBe(requestData.body.title);
+    expect(data["id"]).toEqual(expect.any(String));
+    expect(data["title"]).toBe(requestData.body.title);
   });
 
   test("returns string response bodies as plain text", async () => {
@@ -763,7 +763,7 @@ describe("Generated Server typed error handling", () => {
     );
 
     const data = await expectJson(response, 404);
-    expect(data.errorCode).toBe("TODO_NOT_FOUND");
+    expect(data["errorCode"]).toBe("TODO_NOT_FOUND");
   });
 
   test("uses a custom HTTP response error handler when provided", async () => {
@@ -787,7 +787,7 @@ describe("Generated Server typed error handling", () => {
     );
 
     const data = await expectJson(response, 404);
-    expect(data.customMessage).toBe("Custom error handling");
+    expect(data["customMessage"]).toBe("Custom error handling");
   });
 
   test("fails closed with a sanitized 500 for invalid generated responses", async () => {
@@ -844,7 +844,7 @@ describe("Generated Server unknown and handler errors", () => {
     );
 
     const data = await expectJson(response, 500);
-    expect(data.customUnknownError).toBe("Custom unknown error handling");
+    expect(data["customUnknownError"]).toBe("Custom unknown error handling");
   });
 
   test("returns the default 500 response when the request validation error handler throws", async () => {
@@ -854,7 +854,7 @@ describe("Generated Server unknown and handler errors", () => {
       },
     });
     const requestData = createCreateTodoRequest({
-      body: { priority: "INVALID_PRIORITY" as any },
+      body: { priority: "INVALID_PRIORITY" as never },
     });
 
     const response = await app.fetch(
@@ -945,7 +945,7 @@ describe("Generated Server middleware", () => {
     );
 
     const data = await expectJson(response, 418);
-    expect(data.message).toBe("I'm a teapot");
+    expect(data["message"]).toBe("I'm a teapot");
   });
 
   test("returns middleware short-circuit responses before request validation", async () => {
@@ -957,7 +957,7 @@ describe("Generated Server middleware", () => {
       }))
     );
     const requestData = createCreateTodoRequest({
-      body: { priority: "INVALID_PRIORITY" as any },
+      body: { priority: "INVALID_PRIORITY" as never },
     });
 
     const response = await app.fetch(
@@ -965,8 +965,8 @@ describe("Generated Server middleware", () => {
     );
 
     const data = await expectJson(response, 418);
-    expect(data.message).toBe("I'm still a teapot");
-    expect(data.code).toBeUndefined();
+    expect(data["message"]).toBe("I'm still a teapot");
+    expect(data["code"]).toBeUndefined();
   });
 });
 

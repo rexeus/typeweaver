@@ -11,8 +11,11 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+/** @typedef {import("./lib/tooling-types.mjs").EffectBaselineContract} EffectBaselineContract */
+
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.resolve(scriptDir, "..");
+/** @type {EffectBaselineContract} */
 const baseline = JSON.parse(
   readFileSync(
     path.join(workspaceRoot, "config", "effect-baseline.json"),
@@ -23,15 +26,26 @@ const fixtureRoot = mkdtempSync(
   path.join(os.tmpdir(), "typeweaver-effect-reference-")
 );
 
+/**
+ * @param {string} command
+ * @param {readonly string[]} args
+ * @param {{ cwd?: string, quiet?: boolean }} [options]
+ * @returns {string}
+ */
 const run = (command, args, options = {}) =>
   execFileSync(command, args, {
-    cwd: options.cwd,
+    ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
     encoding: "utf8",
     stdio: options.quiet
       ? ["ignore", "pipe", "pipe"]
       : ["ignore", "inherit", "inherit"],
   })?.trim();
 
+/**
+ * @param {string} target
+ * @param {unknown} value
+ * @returns {void}
+ */
 const writeJson = (target, value) => {
   mkdirSync(path.dirname(target), { recursive: true });
   writeFileSync(target, `${JSON.stringify(value, null, 2)}\n`);

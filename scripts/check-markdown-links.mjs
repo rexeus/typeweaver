@@ -11,6 +11,10 @@ const defaultRepositoryRoot = path.resolve(
 const usage =
   "Usage: node scripts/check-markdown-links.mjs [--repository-root <path>]";
 
+/**
+ * @param {string} message
+ * @returns {never}
+ */
 const fail = message => {
   process.stderr.write(`${message}\n${usage}\n`);
   process.exit(2);
@@ -19,6 +23,10 @@ const fail = message => {
 // `--repository-root` is an explicit private test seam. It is never read from
 // ambient state, so an ordinary invocation always validates the workspace that
 // contains this script.
+/**
+ * @param {readonly string[]} arguments_
+ * @returns {string | undefined}
+ */
 const parseRepositoryRoot = arguments_ => {
   let repositoryRoot;
   for (let index = 0; index < arguments_.length; index += 1) {
@@ -39,6 +47,10 @@ const parseRepositoryRoot = arguments_ => {
   return repositoryRoot;
 };
 
+/**
+ * @param {string} value
+ * @returns {string}
+ */
 const resolveRepositoryRoot = value => {
   if (!path.isAbsolute(value)) {
     fail(`--repository-root must be an absolute path: ${value}`);
@@ -81,6 +93,11 @@ const markdownFiles = execFileSync(
 // cross-platform. On Windows, `path.relative` returns an absolute path when the
 // two paths are on different drives, which the `path.isAbsolute` guard treats as
 // outside the repository.
+/**
+ * @param {string} root
+ * @param {string} candidate
+ * @returns {boolean}
+ */
 const isWithinRepository = (root, candidate) => {
   const relative = path.relative(root, candidate);
   return (

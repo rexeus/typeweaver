@@ -22,7 +22,7 @@ type PluginCandidate = {
 type PluginLoadResult = {
   readonly plugin: Plugin;
   readonly source: string;
-  readonly config?: PluginConfig;
+  readonly config?: PluginConfig | undefined;
 };
 
 type PluginFactory = (config?: PluginConfig) => unknown;
@@ -111,7 +111,7 @@ const invalidField = (
 const decodePluginName = (
   value: Record<string, unknown>
 ): Either.Either<string, PluginShapeIssue> => {
-  const name = value.name;
+  const name = value["name"];
   return typeof name === "string" && name.trim().length > 0
     ? Either.right(name)
     : invalidField("name", "a non-empty string", name);
@@ -123,12 +123,12 @@ const decodeDependencies = (
   if (!("depends" in value)) {
     return Either.right(undefined);
   }
-  if (!Array.isArray(value.depends)) {
-    return invalidField("depends", "an array of strings", value.depends);
+  if (!Array.isArray(value["depends"])) {
+    return invalidField("depends", "an array of strings", value["depends"]);
   }
 
   const dependencies: string[] = [];
-  for (const [index, dependency] of value.depends.entries()) {
+  for (const [index, dependency] of value["depends"].entries()) {
     if (typeof dependency !== "string") {
       return invalidField(
         "depends",
@@ -256,7 +256,7 @@ const findPluginCandidates = (
   const candidates: PluginCandidate[] = [];
 
   if ("default" in pluginModule) {
-    candidates.push({ exportName: "default", value: pluginModule.default });
+    candidates.push({ exportName: "default", value: pluginModule["default"] });
   }
 
   for (const [key, value] of Object.entries(pluginModule)) {
@@ -348,7 +348,7 @@ type LoadParams = {
   readonly registry: PluginRegistryInstance;
   readonly requiredPlugins: readonly Plugin[];
   readonly strategies: readonly PluginResolutionStrategy[];
-  readonly config?: Pick<TypeweaverConfig, "plugins">;
+  readonly config?: Pick<TypeweaverConfig, "plugins"> | undefined;
 };
 
 const loadConfiguredPlugin = (

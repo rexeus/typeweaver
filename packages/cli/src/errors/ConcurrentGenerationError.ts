@@ -42,7 +42,7 @@ export class ConcurrentGenerationError extends Data.TaggedError(
 )<{
   readonly outputDir: string;
   readonly holder: OutputLockHolder;
-  readonly lockPath?: string;
+  readonly lockPath?: string | undefined;
 }> {
   public get holderPid(): number | undefined {
     return this.holder._tag === "Known" ? this.holder.pid : undefined;

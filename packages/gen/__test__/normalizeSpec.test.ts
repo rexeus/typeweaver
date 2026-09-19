@@ -339,7 +339,7 @@ describe("normalizeSpec inferred body transports", () => {
           operationId: "getTodo",
           part: "request.body",
         },
-      }),
+      }) as unknown,
     ]);
   });
 
@@ -361,7 +361,9 @@ describe("normalizeSpec inferred body transports", () => {
       transport: "text",
     });
     expect(normalizedSpec.warnings).toEqual([
-      expect.objectContaining({ code: "missing-content-type-header" }),
+      expect.objectContaining({
+        code: "missing-content-type-header",
+      }) as unknown,
     ]);
   });
 });
@@ -387,7 +389,9 @@ describe("normalizeSpec literal and fallback body transports", () => {
       transport: "text",
     });
     expect(normalizedSpec.warnings).toEqual([
-      expect.objectContaining({ code: "missing-content-type-header" }),
+      expect.objectContaining({
+        code: "missing-content-type-header",
+      }) as unknown,
     ]);
   });
 
@@ -543,7 +547,9 @@ describe("normalizeSpec ambiguous Content-Type warnings", () => {
 
     expect(operation.request?.body?.mediaType).toBe("application/json");
     expect(normalizedSpec.warnings).toEqual([
-      expect.objectContaining({ code: "ambiguous-content-type-header" }),
+      expect.objectContaining({
+        code: "ambiguous-content-type-header",
+      }) as unknown,
     ]);
   });
 });
@@ -630,7 +636,9 @@ describe("normalizeSpec wrapped body schemas", () => {
       });
       expect(operation.request?.body?.schema).toBe(body);
       expect(normalizedSpec.warnings).toEqual([
-        expect.objectContaining({ code: "missing-content-type-header" }),
+        expect.objectContaining({
+          code: "missing-content-type-header",
+        }) as unknown,
       ]);
     }
   );
@@ -716,7 +724,9 @@ describe("normalizeSpec explicit Content-Type transport mapping", () => {
       transport: "json",
     });
     expect(normalizedSpec.warnings).toEqual([
-      expect.objectContaining({ code: "ambiguous-content-type-header" }),
+      expect.objectContaining({
+        code: "ambiguous-content-type-header",
+      }) as unknown,
     ]);
   });
 });
@@ -1203,9 +1213,9 @@ describe("normalizeSpec request and path parameter validation", () => {
 
     expect(theOnlyOperationIn(normalizedSpec).request?.param?.shape).toEqual(
       expect.objectContaining({
-        orgId: expect.any(Object),
-        todoId: expect.any(Object),
-      })
+        orgId: expect.any(Object) as unknown,
+        todoId: expect.any(Object) as unknown,
+      }) as unknown
     );
   });
 
@@ -1353,7 +1363,7 @@ describe("normalizeSpec inline derived responses", () => {
         derivedFrom: "ParentResponse",
         lineage: ["InlineDerivedResponse"],
         depth: 1,
-      }),
+      }) as unknown,
     });
   });
 
@@ -1397,7 +1407,7 @@ describe("normalizeSpec inline derived responses", () => {
         derivedFrom: "ChildResponse",
         lineage: ["ChildResponse", "InlineGrandchildResponse"],
         depth: 2,
-      }),
+      }) as unknown,
     });
   });
 });

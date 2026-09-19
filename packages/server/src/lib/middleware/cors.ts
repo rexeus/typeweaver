@@ -226,12 +226,17 @@ function mergeVary(existing: readonly string[], value: string): string {
 }
 
 function removePolicyControlledCorsHeaders(
-  responseHeaders: Record<string, string | string[]> | undefined
+  responseHeaders: Record<string, string | string[] | undefined> | undefined
 ): Record<string, string | string[]> {
   const result: Record<string, string | string[]> = {};
 
   for (const [key, value] of Object.entries(responseHeaders ?? {})) {
-    if (POLICY_CONTROLLED_CORS_HEADERS.has(key.toLowerCase())) continue;
+    if (
+      value === undefined ||
+      POLICY_CONTROLLED_CORS_HEADERS.has(key.toLowerCase())
+    ) {
+      continue;
+    }
 
     result[key] = value;
   }
@@ -240,20 +245,20 @@ function removePolicyControlledCorsHeaders(
 }
 
 function mergeResponseHeaders(
-  responseHeaders: Record<string, string | string[]> | undefined,
+  responseHeaders: Record<string, string | string[] | undefined> | undefined,
   corsHeaders: Record<string, string>
 ): Record<string, string | string[]> {
   const result = removePolicyControlledCorsHeaders(responseHeaders);
 
   const mergedCorsHeaders = { ...corsHeaders };
-  if (corsHeaders.vary !== undefined) {
+  if (corsHeaders["vary"] !== undefined) {
     for (const key of Object.keys(result)) {
       if (key.toLowerCase() === "vary") delete result[key];
     }
 
-    mergedCorsHeaders.vary = mergeVary(
+    mergedCorsHeaders["vary"] = mergeVary(
       readHeaderValues(responseHeaders, "vary"),
-      corsHeaders.vary
+      corsHeaders["vary"]
     );
   }
 

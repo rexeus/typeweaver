@@ -4,6 +4,8 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+/** @typedef {import("./lib/tooling-types.mjs").PackageManifest} PackageManifest */
+
 const workspaceRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   ".."
@@ -16,11 +18,11 @@ const languageServiceCli = path.join(
   "cli.js"
 );
 const packageRoot = path.join(workspaceRoot, "packages");
-const dependencySections = [
+const dependencySections = /** @type {const} */ ([
   "dependencies",
   "devDependencies",
   "peerDependencies",
-];
+]);
 const projects = readdirSync(packageRoot, { withFileTypes: true })
   .filter(entry => entry.isDirectory())
   .flatMap(entry => {
@@ -29,9 +31,10 @@ const projects = readdirSync(packageRoot, { withFileTypes: true })
     if (!existsSync(packageJsonPath)) {
       return [];
     }
+    /** @type {PackageManifest} */
     const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
     const usesEffect = dependencySections.some(
-      section => packageJson[section]?.effect !== undefined
+      section => packageJson[section]?.["effect"] !== undefined
     );
     if (!usesEffect) {
       return [];
@@ -44,7 +47,7 @@ const projects = readdirSync(packageRoot, { withFileTypes: true })
   })
   .sort();
 const format =
-  process.env.GITHUB_ACTIONS === "true" ? "github-actions" : "text";
+  process.env["GITHUB_ACTIONS"] === "true" ? "github-actions" : "text";
 
 for (const project of projects) {
   process.stdout.write(

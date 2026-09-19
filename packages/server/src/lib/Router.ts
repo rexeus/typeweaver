@@ -24,7 +24,7 @@ import {
   ConflictingPathParameterNameError,
   DuplicateRouteRegistrationError,
 } from "./errors/index.js";
-import type { RequestHandler } from "./RequestHandler.js";
+import type { ErasedRequestHandler } from "./RequestHandler.js";
 import type { ServerContext } from "./ServerContext.js";
 
 /**
@@ -45,7 +45,7 @@ export type RouteDefinition = {
   readonly path: string;
   readonly requestValidator: IRequestValidator<IValidatedHttpRequest>;
   readonly responseValidator: IResponseValidator;
-  readonly handler: RequestHandler<any, any, any>;
+  readonly handler: ErasedRequestHandler;
   /** Reference to the router config for error handling. */
   readonly routerConfig: RouterErrorConfig;
 };
@@ -259,6 +259,22 @@ export class Router {
   }
 
   /**
+   * Reads a canonical `:name` placeholder starting at `start`. A `:` without a
+   * following `[A-Za-z0-9_]` name character is not a placeholder.
+   */
+  private static readPlaceholder(
+    segment: string,
+    start: number
+  ): { readonly name: string; readonly length: number } | undefined {
+    if (segment.charAt(start) !== ":") return undefined;
+
+    const name = Router.readPlaceholderName(segment, start + 1);
+    if (name === undefined) return undefined;
+
+    return { name, length: 1 + name.length };
+  }
+
+  /**
    * Parses one path segment into literal and canonical `:name` placeholder
    * tokens. A `:` without a following `[A-Za-z0-9_]` name character stays
    * literal. Adjacent placeholders without a static separator are ambiguous and
@@ -277,25 +293,18 @@ export class Router {
     };
 
     while (index < segment.length) {
-      const character = segment[index]!;
-
-      if (character === ":") {
-        const name = Router.readPlaceholderName(segment, index + 1);
-
-        if (name !== undefined) {
-          flushStatic();
-
-          if (tokens.at(-1)?.kind === "param") {
-            throw new AmbiguousPathSegmentError(path, segment);
-          }
-
-          tokens.push({ kind: "param", name });
-          index += 1 + name.length;
-          continue;
+      const placeholder = Router.readPlaceholder(segment, index);
+      if (placeholder !== undefined) {
+        flushStatic();
+        if (tokens.at(-1)?.kind === "param") {
+          throw new AmbiguousPathSegmentError(path, segment);
         }
+        tokens.push({ kind: "param", name: placeholder.name });
+        index += placeholder.length;
+        continue;
       }
 
-      staticBuffer += character;
+      staticBuffer += segment.charAt(index);
       index += 1;
     }
 
@@ -355,7 +364,10 @@ export class Router {
   public match(method: string, path: string): RouteMatch | undefined {
     const upperMethod = method.toUpperCase();
     const segments = Router.toSegments(path);
-    const params: Record<string, string> = Object.create(null);
+    const params: Record<string, string> = Object.create(null) as Record<
+      string,
+      string
+    >;
 
     const node = this.traverse(this.root, segments, 0, params);
     if (!node) return undefined;
@@ -378,7 +390,10 @@ export class Router {
    */
   public matchPath(path: string): { allowedMethods: string[] } | undefined {
     const segments = Router.toSegments(path);
-    const params: Record<string, string> = Object.create(null);
+    const params: Record<string, string> = Object.create(null) as Record<
+      string,
+      string
+    >;
 
     const node = this.traverse(this.root, segments, 0, params);
     if (!node || node.methods.size === 0) return undefined;
@@ -412,7 +427,7 @@ export class Router {
       return node;
     }
 
-    const segment = segments[index]!;
+    const segment = segments[index] ?? "";
 
     // 1. Try static child first (higher priority)
     const staticChild = node.staticChildren.get(segment);
@@ -443,7 +458,7 @@ export class Router {
     const names = Object.keys(captured);
 
     for (const name of names) {
-      params[name] = captured[name]!;
+      params[name] = captured[name] ?? "";
     }
 
     return names;
@@ -475,11 +490,15 @@ export class Router {
     pattern: SegmentPattern,
     segment: string
   ): Record<string, string> | undefined {
-    const captured: Record<string, string> = Object.create(null);
+    const captured: Record<string, string> = Object.create(null) as Record<
+      string,
+      string
+    >;
     let cursor = 0;
 
     for (let index = 0; index < pattern.tokens.length; index += 1) {
-      const token = pattern.tokens[index]!;
+      const token = pattern.tokens[index];
+      if (token === undefined) return undefined;
 
       if (token.kind === "static") {
         if (!segment.startsWith(token.value, cursor)) return undefined;

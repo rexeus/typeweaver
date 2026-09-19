@@ -1,4 +1,5 @@
 import { ContextBuilder, PluginRegistry } from "@rexeus/typeweaver-gen";
+import type { PluginRegistryInstance } from "@rexeus/typeweaver-gen";
 import { Effect } from "effect";
 import {
   ReservedCoordinationPathError,
@@ -21,6 +22,71 @@ import {
 import { PluginLoader } from "./PluginLoader.js";
 import { SpecLoader } from "./SpecLoader.js";
 import type { GenerateParams } from "./generatorTypes.js";
+
+type LockedGenerationPlan = Parameters<
+  Parameters<typeof withGenerationLock>[1]
+>[0];
+
+type LockedGenerationEnvironment = {
+  readonly contextBuilder: ContextBuilder;
+  readonly pluginLoader: PluginLoader;
+  readonly specLoader: SpecLoader;
+  readonly formatter: Formatter;
+  readonly indexFileGenerator: IndexFileGenerator;
+  readonly registry: PluginRegistryInstance;
+  readonly params: GenerateParams;
+  readonly lockedPlan: LockedGenerationPlan;
+};
+
+const runLockedGeneration = ({
+  contextBuilder,
+  pluginLoader,
+  specLoader,
+  formatter,
+  indexFileGenerator,
+  registry,
+  params,
+  lockedPlan,
+}: LockedGenerationEnvironment) =>
+  Effect.gen(function* () {
+    yield* pluginLoader.loadAll({
+      registry,
+      requiredPlugins: defaultRequiredPlugins(),
+      strategies: DEFAULT_PLUGIN_RESOLUTION_STRATEGIES,
+      config: params.config,
+    });
+
+    yield* Effect.logInfo(
+      `Bundling spec from '${lockedPlan.inputFile}' to '${lockedPlan.specOutputDir}'...`
+    );
+    const normalizedSpec = (yield* specLoader.load({
+      inputFile: lockedPlan.inputFile,
+      specOutputDir: lockedPlan.specOutputDir,
+      isolatedImport: params.stagingAuthority !== undefined,
+      ...(params.externalImportBase === undefined
+        ? {}
+        : { externalImportBase: params.externalImportBase }),
+    })).normalizedSpec;
+
+    const pluginContext = yield* contextBuilder.buildPluginContext({
+      outputDir: lockedPlan.outputDir,
+      inputDir: lockedPlan.inputDir,
+      config: lockedPlan.userConfig,
+    });
+    const initial = yield* registry.getAll;
+
+    const result = yield* runPluginLifecycle(
+      {
+        plan: lockedPlan,
+        initial,
+        normalizedSpec,
+        pluginContext,
+      },
+      { contextBuilder, indexFileGenerator }
+    );
+
+    yield* runGeneratorPostprocessing(lockedPlan, result, formatter);
+  });
 
 /**
  * Effect-native top-level generator orchestrator. The focused internal
@@ -68,44 +134,15 @@ export class Generator extends Effect.Service<Generator>()(
         const plan = yield* prepareGeneration(paths);
 
         yield* withGenerationLock(plan, lockedPlan =>
-          Effect.gen(function* () {
-            yield* pluginLoader.loadAll({
-              registry,
-              requiredPlugins: defaultRequiredPlugins(),
-              strategies: DEFAULT_PLUGIN_RESOLUTION_STRATEGIES,
-              config: params.config,
-            });
-
-            yield* Effect.logInfo(
-              `Bundling spec from '${lockedPlan.inputFile}' to '${lockedPlan.specOutputDir}'...`
-            );
-            const normalizedSpec = (yield* specLoader.load({
-              inputFile: lockedPlan.inputFile,
-              specOutputDir: lockedPlan.specOutputDir,
-              isolatedImport: params.stagingAuthority !== undefined,
-              ...(params.externalImportBase === undefined
-                ? {}
-                : { externalImportBase: params.externalImportBase }),
-            })).normalizedSpec;
-
-            const pluginContext = yield* contextBuilder.buildPluginContext({
-              outputDir: lockedPlan.outputDir,
-              inputDir: lockedPlan.inputDir,
-              config: lockedPlan.userConfig,
-            });
-            const initial = yield* registry.getAll;
-
-            const result = yield* runPluginLifecycle(
-              {
-                plan: lockedPlan,
-                initial,
-                normalizedSpec,
-                pluginContext,
-              },
-              { contextBuilder, indexFileGenerator }
-            );
-
-            yield* runGeneratorPostprocessing(lockedPlan, result, formatter);
+          runLockedGeneration({
+            contextBuilder,
+            pluginLoader,
+            specLoader,
+            formatter,
+            indexFileGenerator,
+            registry,
+            params,
+            lockedPlan,
           })
         );
       });

@@ -70,18 +70,25 @@ export const collectCanonicalResponseDefinitions = (
   for (const resource of Object.values(definition.resources)) {
     for (const operation of resource.operations) {
       for (const response of operation.responses) {
-        if (!isNamedResponseDefinition(response)) {
-          continue;
-        }
-
-        validateDerivedResponseMetadata(response);
-
-        canonicalResponses.set(response.name, response);
+        registerCanonicalResponse(canonicalResponses, response);
       }
     }
   }
 
   return canonicalResponses;
+};
+
+const registerCanonicalResponse = (
+  canonicalResponses: Map<string, ResponseDefinition>,
+  response: ResponseDefinition
+): void => {
+  if (!isNamedResponseDefinition(response)) {
+    return;
+  }
+
+  validateDerivedResponseMetadata(response);
+
+  canonicalResponses.set(response.name, response);
 };
 
 export const getDerivedResponseChain = (
@@ -154,18 +161,22 @@ const validateInlineDerivedResponses = (
   for (const resource of Object.values(definition.resources)) {
     for (const operation of resource.operations) {
       for (const response of operation.responses) {
-        if (isNamedResponseDefinition(response)) {
-          continue;
-        }
-
-        validateDerivedResponseMetadata(response);
-        validateDerivedResponseAgainstCanonicalGraph(
-          response,
-          canonicalResponses
-        );
+        validateInlineDerivedResponse(response, canonicalResponses);
       }
     }
   }
+};
+
+const validateInlineDerivedResponse = (
+  response: ResponseDefinition,
+  canonicalResponses: ReadonlyMap<string, ResponseDefinition>
+): void => {
+  if (isNamedResponseDefinition(response)) {
+    return;
+  }
+
+  validateDerivedResponseMetadata(response);
+  validateDerivedResponseAgainstCanonicalGraph(response, canonicalResponses);
 };
 
 export const normalizeResponseDefinition = (

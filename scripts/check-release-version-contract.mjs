@@ -12,10 +12,24 @@ const workspaceRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   ".."
 );
+/** @typedef {import("./lib/tooling-types.mjs").PackageManifest} PackageManifest */
+/** @typedef {{ maximumPublishedMajor: number, breakingChangeBump: string }} ReleasePolicy */
+
+/**
+ * @param {string} relativePath
+ * @returns {string}
+ */
 const read = relativePath =>
   readFileSync(path.join(workspaceRoot, relativePath), "utf8");
-const readJson = relativePath => JSON.parse(read(relativePath));
-const policy = readJson("config/release-policy.json");
+
+/**
+ * @param {string} relativePath
+ * @returns {PackageManifest}
+ */
+const readManifestJson = relativePath => JSON.parse(read(relativePath));
+
+/** @type {ReleasePolicy} */
+const policy = JSON.parse(read("config/release-policy.json"));
 
 const packages = readdirSync(path.join(workspaceRoot, "packages"), {
   withFileTypes: true,
@@ -27,7 +41,7 @@ const packages = readdirSync(path.join(workspaceRoot, "packages"), {
   if (!existsSync(path.join(workspaceRoot, manifestPath))) {
     return [];
   }
-  const manifest = readJson(manifestPath);
+  const manifest = readManifestJson(manifestPath);
   return typeof manifest.name === "string" &&
     manifest.name.startsWith("@rexeus/") &&
     typeof manifest.version === "string"
@@ -35,6 +49,7 @@ const packages = readdirSync(path.join(workspaceRoot, "packages"), {
         {
           name: manifest.name,
           version: manifest.version,
+          private: manifest.private === true,
         },
       ]
     : [];
@@ -65,6 +80,10 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
+const publishablePackages = packages.filter(
+  packageManifest => packageManifest.private !== true
+);
+
 process.stdout.write(
-  `Release version contract verified: ${String(packages.length)} packages remain on major ${String(policy.maximumPublishedMajor)}\n`
+  `Release version contract verified: ${String(publishablePackages.length)} publishable packages remain on major ${String(policy.maximumPublishedMajor)}\n`
 );

@@ -37,3 +37,18 @@ export type RequestHandler<
   TResponse extends IHttpResponse = IHttpResponse,
   TState extends Record<string, unknown> = Record<string, unknown>,
 > = (request: TRequest, ctx: ServerContext<TState>) => Promise<TResponse>;
+
+/**
+ * A request handler with its request, response, and state parameters erased.
+ *
+ * Routers register heterogeneous, precisely typed handlers, so the runtime
+ * stores them behind this widened contract. The method signature is
+ * intentional: method parameters are checked bivariantly, which lets a
+ * concrete {@link RequestHandler} widen without an `any` escape hatch.
+ */
+export type ErasedRequestHandler = {
+  bivarianceHack(
+    request: IRawHttpRequest | IValidatedHttpRequest,
+    ctx: ServerContext<Record<string, unknown>>
+  ): Promise<IHttpResponse>;
+}["bivarianceHack"];

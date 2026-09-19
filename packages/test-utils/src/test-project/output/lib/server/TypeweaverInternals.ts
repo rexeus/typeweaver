@@ -14,25 +14,30 @@ export type TypeweaverRuntimeContext = {
   readonly reportError: (error: unknown) => void;
 };
 
-const appRuntimeContextRegistry = new WeakMap<TypeweaverApp<any>, TypeweaverRuntimeContext>();
+const appRuntimeContextRegistry = new WeakMap<
+  TypeweaverApp<Record<string, unknown>>,
+  TypeweaverRuntimeContext
+>();
 
 function fallbackReportError(error: unknown): void {
   console.error(error);
 }
 
 export function setTypeweaverAppRuntimeContext(
-  app: TypeweaverApp<any>,
+  app: TypeweaverApp<Record<string, unknown>>,
   runtimeContext: TypeweaverRuntimeContext,
 ): void {
   appRuntimeContextRegistry.set(app, runtimeContext);
 }
 
 export function getTypeweaverAppRuntimeContext(
-  app: TypeweaverApp<any>,
+  app: TypeweaverApp<Record<string, unknown>>,
 ): TypeweaverRuntimeContext | undefined {
   return appRuntimeContextRegistry.get(app);
 }
 
-export function getTypeweaverAppErrorReporter(app: TypeweaverApp<any>): (error: unknown) => void {
+export function getTypeweaverAppErrorReporter(
+  app: TypeweaverApp<Record<string, unknown>>,
+): (error: unknown) => void {
   return getTypeweaverAppRuntimeContext(app)?.reportError ?? fallbackReportError;
 }

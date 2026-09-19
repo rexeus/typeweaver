@@ -709,6 +709,21 @@ describe("ApiClient path parameters", () => {
     expect(getFetchCall(mockFetch).url).toBe("http://localhost:3000/todos/");
   });
 
+  test("rejects a null path parameter with a null-value serialization error", async () => {
+    await expectRequestSerializationFailure(
+      {
+        path: "/todos/:todoId",
+        param: { todoId: null } as unknown as ClientHttpParam,
+      },
+      {
+        location: "path",
+        key: "todoId",
+        reason: "null-value",
+        valueType: "null",
+      }
+    );
+  });
+
   test.each([".", ".."] as const)(
     "rejects dot-segment path parameter value %s before fetch",
     async fileId => {
@@ -1045,7 +1060,7 @@ describe("ApiClient request serialization failures", () => {
     const mockFetch = resolvedFetch();
     const client = createClient(mockFetch);
     const circular: Record<string, unknown> = {};
-    circular.self = circular;
+    circular["self"] = circular;
     const command = new TestRequestCommand({
       method: HttpMethod.POST,
       body: circular,

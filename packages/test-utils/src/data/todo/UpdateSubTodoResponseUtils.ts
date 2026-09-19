@@ -8,6 +8,7 @@ import type {
   IUpdateSubTodoSuccessResponseBody,
   IUpdateSubTodoSuccessResponseHeader,
 } from "../../index.js";
+import type { DataOverrides } from "../createData.js";
 
 export const createUpdateSubTodoSuccessResponseHeader =
   createDataFactory<IUpdateSubTodoSuccessResponseHeader>(() => ({
@@ -55,8 +56,8 @@ export const createUpdateSubTodoSuccessResponseBody =
 
 type UpdateSubTodoSuccessResponseInput = {
   statusCode?: number;
-  header?: Partial<IUpdateSubTodoSuccessResponseHeader>;
-  body?: Partial<IUpdateSubTodoSuccessResponseBody>;
+  header?: DataOverrides<IUpdateSubTodoSuccessResponseHeader>;
+  body?: DataOverrides<IUpdateSubTodoSuccessResponseBody>;
 };
 
 export function createUpdateSubTodoSuccessResponse(

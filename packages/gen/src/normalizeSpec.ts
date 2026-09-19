@@ -201,33 +201,26 @@ const normalizeOperationResponses = (
   return { responses: normalizedResponses, warnings };
 };
 
-const normalizeOperation = (
+const registerOperationIdentity = (
   context: OperationNormalizationContext,
   operation: ResourceDefinition["operations"][number]
-): NormalizeOperationResult => {
-  const {
-    resourceName,
-    resourceContract,
-    contractRoot,
-    operationIds,
-    routeKeys,
-  } = context;
+): void => {
   if (!isSupportedOperationId(operation.operationId)) {
     throw new InvalidOperationIdError({ operationId: operation.operationId });
   }
 
-  if (operationIds.has(operation.operationId)) {
+  if (context.operationIds.has(operation.operationId)) {
     throw new DuplicateOperationIdError({
       operationId: operation.operationId,
     });
   }
 
-  operationIds.add(operation.operationId);
+  context.operationIds.add(operation.operationId);
 
   const normalizedPath = normalizeRoutePath(operation.path);
   const routeKey = `${operation.method}:${normalizedPath}`;
 
-  if (routeKeys.has(routeKey)) {
+  if (context.routeKeys.has(routeKey)) {
     throw new DuplicateRouteError({
       method: operation.method,
       path: operation.path,
@@ -235,13 +228,21 @@ const normalizeOperation = (
     });
   }
 
-  routeKeys.add(routeKey);
+  context.routeKeys.add(routeKey);
 
   if (operation.responses.length === 0) {
     throw new EmptyOperationResponsesError({
       operationId: operation.operationId,
     });
   }
+};
+
+const normalizeOperation = (
+  context: OperationNormalizationContext,
+  operation: ResourceDefinition["operations"][number]
+): NormalizeOperationResult => {
+  const { resourceName, resourceContract, contractRoot } = context;
+  registerOperationIdentity(context, operation);
 
   const request = validateRequest(
     resourceName,

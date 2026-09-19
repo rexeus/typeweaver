@@ -77,8 +77,12 @@ describe("definePluginWithLibCopy path-safety guard", () => {
       generators: [],
     });
 
+    const { generate } = escapingPlugin;
+    if (generate === undefined) {
+      throw new Error("expected the plugin to expose a generate effect");
+    }
     const exit = Effect.runSyncExit(
-      escapingPlugin.generate!(aMinimalGeneratorContext(outputDir))
+      generate(aMinimalGeneratorContext(outputDir))
     );
 
     expect(Exit.isFailure(exit)).toBe(true);
@@ -118,8 +122,12 @@ describe("definePluginWithLibCopy path-safety guard", () => {
       generators: [],
     });
 
+    const { generate } = safePlugin;
+    if (generate === undefined) {
+      throw new Error("expected the plugin to expose a generate effect");
+    }
     const exit = Effect.runSyncExit(
-      safePlugin.generate!(aMinimalGeneratorContext(outputDir))
+      generate(aMinimalGeneratorContext(outputDir))
     );
 
     expect(Exit.isSuccess(exit)).toBe(true);

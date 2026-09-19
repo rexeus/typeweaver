@@ -1,38 +1,16 @@
+import { factory, SyntaxKind } from "@typescript/typescript6";
 import {
-  factory,
-  isArrayTypeNode,
-  isIdentifier,
-  isIdentifierPart,
-  isIdentifierStart,
-  isLiteralTypeNode,
-  isParenthesizedTypeNode,
-  isTupleTypeNode,
-  isTypeReferenceNode,
-  isUnionTypeNode,
-  ScriptTarget,
-  SyntaxKind,
-} from "@typescript/typescript6";
-import {
-  $ZodAny,
   $ZodArray,
-  $ZodBigInt,
-  $ZodBoolean,
   $ZodCatch,
   $ZodCustom,
-  $ZodDate,
   $ZodDefault,
   $ZodEnum,
-  $ZodFile,
   $ZodIntersection,
   $ZodLazy,
   $ZodLiteral,
   $ZodMap,
-  $ZodNaN,
-  $ZodNever,
   $ZodNonOptional,
-  $ZodNull,
   $ZodNullable,
-  $ZodNumber,
   $ZodObject,
   $ZodOptional,
   $ZodPipe,
@@ -40,27 +18,18 @@ import {
   $ZodReadonly,
   $ZodRecord,
   $ZodSet,
-  $ZodString,
-  $ZodSuccess,
-  $ZodSymbol,
   $ZodTemplateLiteral,
   $ZodTransform,
   $ZodTuple,
-  $ZodUndefined,
   $ZodUnion,
-  $ZodUnknown,
-  $ZodVoid,
 } from "zod/v4/core";
-import { EmptyZodLiteralError } from "./errors/EmptyZodLiteralError.js";
-import { UnsupportedLiteralValueError } from "./errors/UnsupportedLiteralValueError.js";
 import { UnsupportedZodTypeError } from "./errors/UnsupportedZodTypeError.js";
-import type {
-  Identifier,
-  StringLiteral,
-  TypeElement,
-  TypeNode,
-  TypeReferenceNode,
-} from "@typescript/typescript6";
+import { fromZodIntrinsic } from "./intrinsicType.js";
+import { fromZodEnum, fromZodLiteral } from "./literalType.js";
+import { fromZodPrimitive } from "./primitiveType.js";
+import { createTsAstPropertyKey } from "./propertyKey.js";
+import { createReadonlyType, withoutUndefined } from "./typeTransforms.js";
+import type { TypeElement, TypeNode } from "@typescript/typescript6";
 import type { $ZodType } from "zod/v4/core";
 
 type ZodTypeHandler = (zodType: $ZodType) => TypeNode | undefined;
@@ -82,61 +51,6 @@ export function fromZod(zodType: $ZodType): TypeNode {
   }
 
   return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
-}
-
-function fromZodPrimitive(zodType: $ZodType): TypeNode | undefined {
-  if (zodType instanceof $ZodString) {
-    return fromZodString(zodType);
-  }
-  if (zodType instanceof $ZodNumber) {
-    return fromZodNumber(zodType);
-  }
-  if (zodType instanceof $ZodBigInt) {
-    return fromZodBigInt(zodType);
-  }
-  if (zodType instanceof $ZodBoolean) {
-    return fromZodBoolean(zodType);
-  }
-  if (zodType instanceof $ZodDate) {
-    return fromZodDate(zodType);
-  }
-  if (zodType instanceof $ZodSymbol) {
-    return fromZodSymbol(zodType);
-  }
-  if (zodType instanceof $ZodUndefined) {
-    return fromZodUndefined(zodType);
-  }
-  if (zodType instanceof $ZodNull) {
-    return fromZodNull(zodType);
-  }
-
-  return undefined;
-}
-
-function fromZodIntrinsic(zodType: $ZodType): TypeNode | undefined {
-  if (zodType instanceof $ZodAny) {
-    return fromZodAny(zodType);
-  }
-  if (zodType instanceof $ZodUnknown) {
-    return fromZodUnknown(zodType);
-  }
-  if (zodType instanceof $ZodNever) {
-    return fromZodNever(zodType);
-  }
-  if (zodType instanceof $ZodVoid) {
-    return fromZodVoid(zodType);
-  }
-  if (zodType instanceof $ZodNaN) {
-    return fromZodNaN(zodType);
-  }
-  if (zodType instanceof $ZodSuccess) {
-    return fromZodSuccess(zodType);
-  }
-  if (zodType instanceof $ZodFile) {
-    return fromZodFile(zodType);
-  }
-
-  return undefined;
 }
 
 function fromZodStructure(zodType: $ZodType): TypeNode | undefined {
@@ -220,60 +134,12 @@ function fromZodTransformation(zodType: $ZodType): TypeNode | undefined {
   return undefined;
 }
 
-function fromZodString(_zodString: $ZodString): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.StringKeyword);
-}
-
-function fromZodNumber(_zodNumber: $ZodNumber): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.NumberKeyword);
-}
-
-function fromZodBigInt(_zodBigInt: $ZodBigInt): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.BigIntKeyword);
-}
-
-function fromZodBoolean(_zodBoolean: $ZodBoolean): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.BooleanKeyword);
-}
-
-function fromZodDate(_zodDate: $ZodDate): TypeNode {
-  return factory.createTypeReferenceNode(factory.createIdentifier("Date"));
-}
-
-function fromZodSymbol(_zodSymbol: $ZodSymbol): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.SymbolKeyword);
-}
-
-function fromZodUndefined(_zodUndefined: $ZodUndefined): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.UndefinedKeyword);
-}
-
 function fromZodNullable(zodNullable: $ZodNullable): TypeNode {
   const innerType = fromZod(zodNullable._zod.def.innerType);
   return factory.createUnionTypeNode([
     innerType,
     factory.createLiteralTypeNode(factory.createNull()),
   ]);
-}
-
-function fromZodNull(_zodNull: $ZodNull): TypeNode {
-  return factory.createLiteralTypeNode(factory.createNull());
-}
-
-function fromZodAny(_zodAny: $ZodAny): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.AnyKeyword);
-}
-
-function fromZodUnknown(_zodUnknown: $ZodUnknown): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword);
-}
-
-function fromZodNever(_zodNever: $ZodNever): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.NeverKeyword);
-}
-
-function fromZodVoid(_zodVoid: $ZodVoid): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.VoidKeyword);
 }
 
 function fromZodArray(zodArray: $ZodArray): TypeNode {
@@ -359,67 +225,6 @@ function fromZodSet(zodSet: $ZodSet): TypeNode {
   ]);
 }
 
-function fromZodLiteral(zodLiteral: $ZodLiteral): TypeNode {
-  if (zodLiteral._zod.def.values.length === 0) {
-    throw new EmptyZodLiteralError();
-  }
-  const types = zodLiteral._zod.def.values.map(fromLiteralValue);
-
-  const [type] = types;
-  if (types.length === 1 && type) {
-    return type;
-  }
-
-  return factory.createUnionTypeNode(types);
-}
-
-type LiteralValue = string | number | boolean | bigint | null | undefined;
-
-function fromLiteralValue(value: LiteralValue): TypeNode {
-  if (typeof value === "string") {
-    return factory.createLiteralTypeNode(factory.createStringLiteral(value));
-  }
-  if (typeof value === "number") {
-    return factory.createLiteralTypeNode(factory.createNumericLiteral(value));
-  }
-  if (typeof value === "boolean") {
-    return factory.createLiteralTypeNode(
-      value ? factory.createTrue() : factory.createFalse()
-    );
-  }
-  if (typeof value === "bigint") {
-    return factory.createLiteralTypeNode(
-      factory.createBigIntLiteral(`${value.toString()}n`)
-    );
-  }
-  if (value === null) {
-    return factory.createLiteralTypeNode(factory.createNull());
-  }
-  if (value === undefined) {
-    return factory.createKeywordTypeNode(SyntaxKind.UndefinedKeyword);
-  }
-
-  throw new UnsupportedLiteralValueError(typeof value);
-}
-
-function fromZodEnum(zodEnum: $ZodEnum): TypeNode {
-  const values = getZodEnumValues(zodEnum._zod.def.entries);
-  const types = values.map(fromLiteralValue);
-  return factory.createUnionTypeNode(types);
-}
-
-function getZodEnumValues(
-  entries: Record<string, string | number>
-): Array<string | number> {
-  const numericValues = Object.values(entries).filter(
-    (value): value is number => typeof value === "number"
-  );
-
-  return Object.entries(entries)
-    .filter(([key]) => !numericValues.includes(Number(key)))
-    .map(([, value]) => value);
-}
-
 function fromZodPromise(zodPromise: $ZodPromise): TypeNode {
   const innerType = fromZod(zodPromise._zod.def.innerType);
   return factory.createTypeReferenceNode(factory.createIdentifier("Promise"), [
@@ -445,40 +250,6 @@ function fromZodOptional(zodOptional: $ZodOptional): TypeNode {
 function fromZodDefault(zodDefault: $ZodDefault): TypeNode {
   const innerType = fromZod(zodDefault._zod.def.innerType);
   return withoutUndefined(innerType);
-}
-
-function withoutUndefined(
-  type: TypeNode,
-  fallbackType: TypeNode = type
-): TypeNode {
-  if (isParenthesizedTypeNode(type)) {
-    return withoutUndefined(type.type, fallbackType);
-  }
-
-  if (type.kind === SyntaxKind.UndefinedKeyword) {
-    return fallbackType;
-  }
-
-  if (!isUnionTypeNode(type)) {
-    return type;
-  }
-
-  const types = type.types
-    .map(nextType => withoutUndefined(nextType))
-    .flatMap(nextType =>
-      isUnionTypeNode(nextType) ? Array.from(nextType.types) : [nextType]
-    )
-    .filter(nextType => nextType.kind !== SyntaxKind.UndefinedKeyword);
-
-  const [singleType] = types;
-  if (types.length === 0) {
-    return fallbackType;
-  }
-  if (types.length === 1 && singleType) {
-    return singleType;
-  }
-
-  return factory.createUnionTypeNode(types);
 }
 
 function fromZodTemplateLiteral(
@@ -516,204 +287,10 @@ function fromZodReadonly(zodReadonly: $ZodReadonly): TypeNode {
   return createReadonlyType(fromZod(zodReadonly._zod.def.innerType));
 }
 
-function fromZodNaN(_zodNaN: $ZodNaN): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.NumberKeyword);
-}
-
 function fromZodPipe(zodPipe: $ZodPipe): TypeNode {
   return fromZod(zodPipe._zod.def.out);
 }
 
-function fromZodSuccess(_zodSuccess: $ZodSuccess): TypeNode {
-  return factory.createKeywordTypeNode(SyntaxKind.BooleanKeyword);
-}
-
 function fromZodCatch(zodCatch: $ZodCatch): TypeNode {
   return fromZod(zodCatch._zod.def.innerType);
-}
-
-function fromZodFile(_zodFile: $ZodFile): TypeNode {
-  return factory.createTypeReferenceNode(factory.createIdentifier("File"));
-}
-
-function createReadonlyType(type: TypeNode): TypeNode {
-  if (isParenthesizedTypeNode(type)) {
-    return createReadonlyType(type.type);
-  }
-
-  if (isUnionTypeNode(type)) {
-    return factory.createUnionTypeNode(type.types.map(createReadonlyType));
-  }
-
-  if (isArrayTypeNode(type) || isTupleTypeNode(type)) {
-    return factory.createTypeOperatorNode(SyntaxKind.ReadonlyKeyword, type);
-  }
-
-  if (isReadonlyPrimitiveType(type) || isLiteralTypeNode(type)) {
-    return type;
-  }
-
-  if (isTypeReferenceNode(type)) {
-    return createReadonlyReferenceType(type);
-  }
-
-  return wrapInReadonly(type);
-}
-
-function createReadonlyReferenceType(type: TypeReferenceNode): TypeNode {
-  const typeName = isIdentifier(type.typeName)
-    ? type.typeName.escapedText.toString()
-    : undefined;
-
-  if (typeName === "Map") {
-    return factory.createTypeReferenceNode(
-      factory.createIdentifier("ReadonlyMap"),
-      type.typeArguments
-    );
-  }
-
-  if (typeName === "Set") {
-    return factory.createTypeReferenceNode(
-      factory.createIdentifier("ReadonlySet"),
-      type.typeArguments
-    );
-  }
-
-  if (typeName === "Date" || typeName === "Promise") {
-    return type;
-  }
-
-  return wrapInReadonly(type);
-}
-
-function wrapInReadonly(type: TypeNode): TypeNode {
-  return factory.createTypeReferenceNode(factory.createIdentifier("Readonly"), [
-    type,
-  ]);
-}
-
-function isReadonlyPrimitiveType(type: TypeNode): boolean {
-  return [
-    SyntaxKind.AnyKeyword,
-    SyntaxKind.BigIntKeyword,
-    SyntaxKind.BooleanKeyword,
-    SyntaxKind.NeverKeyword,
-    SyntaxKind.NumberKeyword,
-    SyntaxKind.StringKeyword,
-    SyntaxKind.SymbolKeyword,
-    SyntaxKind.UndefinedKeyword,
-    SyntaxKind.UnknownKeyword,
-    SyntaxKind.VoidKeyword,
-  ].includes(type.kind);
-}
-
-const RESERVED_IDENTIFIER_NAMES = new Set([
-  "abstract",
-  "accessor",
-  "any",
-  "as",
-  "asserts",
-  "async",
-  "await",
-  "bigint",
-  "boolean",
-  "break",
-  "case",
-  "catch",
-  "class",
-  "const",
-  "constructor",
-  "continue",
-  "debugger",
-  "declare",
-  "default",
-  "delete",
-  "do",
-  "else",
-  "enum",
-  "export",
-  "extends",
-  "false",
-  "finally",
-  "for",
-  "from",
-  "function",
-  "get",
-  "global",
-  "if",
-  "implements",
-  "import",
-  "in",
-  "infer",
-  "instanceof",
-  "interface",
-  "intrinsic",
-  "is",
-  "keyof",
-  "let",
-  "module",
-  "namespace",
-  "never",
-  "new",
-  "null",
-  "number",
-  "object",
-  "of",
-  "out",
-  "override",
-  "package",
-  "private",
-  "protected",
-  "public",
-  "readonly",
-  "require",
-  "return",
-  "satisfies",
-  "set",
-  "static",
-  "string",
-  "super",
-  "switch",
-  "symbol",
-  "this",
-  "throw",
-  "true",
-  "try",
-  "type",
-  "typeof",
-  "undefined",
-  "unique",
-  "unknown",
-  "using",
-  "var",
-  "void",
-  "while",
-  "with",
-  "yield",
-]);
-
-function createTsAstPropertyKey(key: string): Identifier | StringLiteral {
-  if (isSafePropertyIdentifier(key)) {
-    return factory.createIdentifier(key);
-  }
-  return factory.createStringLiteral(key);
-}
-
-function isSafePropertyIdentifier(key: string): boolean {
-  return isIdentifierName(key) && !RESERVED_IDENTIFIER_NAMES.has(key);
-}
-
-function isIdentifierName(value: string): boolean {
-  const [firstCharacter] = value;
-
-  if (!firstCharacter) {
-    return false;
-  }
-
-  return (
-    isIdentifierStart(firstCharacter.codePointAt(0)!, ScriptTarget.Latest) &&
-    Array.from(value.slice(firstCharacter.length)).every(character =>
-      isIdentifierPart(character.codePointAt(0)!, ScriptTarget.Latest)
-    )
-  );
 }

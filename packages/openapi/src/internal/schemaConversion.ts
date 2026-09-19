@@ -196,7 +196,7 @@ function omittedInputResult(schema: z.core.$ZodType): OmittedInputResult {
 export function getObjectProperties(
   schema: JsonSchema
 ): Record<string, JsonSchema> {
-  const properties = schema.properties;
+  const properties = schema["properties"];
 
   if (!isJsonSchema(properties)) {
     return {};
@@ -226,12 +226,12 @@ export function preserveReferencedRootDefinitions(
 }
 
 export function getRequiredNames(schema: JsonSchema): ReadonlySet<string> {
-  if (!Array.isArray(schema.required)) {
+  if (!Array.isArray(schema["required"])) {
     return new Set();
   }
 
   return new Set(
-    schema.required.filter(
+    schema["required"].filter(
       (entry): entry is string => typeof entry === "string"
     )
   );
@@ -242,7 +242,7 @@ export function hasUnrepresentableAdditionalProperties(
 ): boolean {
   return (
     Object.prototype.hasOwnProperty.call(schema, "additionalProperties") &&
-    schema.additionalProperties !== false
+    schema["additionalProperties"] !== false
   );
 }
 
@@ -255,7 +255,9 @@ function rebaseJsonSchemaValue(
   documentPath: string
 ): JsonSchemaValue {
   if (Array.isArray(value)) {
-    return value.map(item => rebaseJsonSchemaValue(item, documentPath));
+    return (value as readonly JsonSchemaValue[]).map(item =>
+      rebaseJsonSchemaValue(item, documentPath)
+    );
   }
 
   if (!isJsonSchema(value)) {
@@ -378,7 +380,7 @@ function collectReferencedDefinitionNamesFromValue(
   names: Set<string>
 ): void {
   if (Array.isArray(value)) {
-    value.forEach(item =>
+    (value as readonly JsonSchemaValue[]).forEach(item =>
       collectReferencedDefinitionNamesFromValue(item, definitionKey, names)
     );
     return;

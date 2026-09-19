@@ -176,7 +176,7 @@ describe("ProjectInitializer rollback", () => {
       expect(error).toMatchObject({
         _tag: "ProjectInitRollbackError",
         targetDir,
-        recoveryPath: expect.any(String),
+        recoveryPath: expect.any(String) as unknown,
       });
       if (
         typeof error === "object" &&

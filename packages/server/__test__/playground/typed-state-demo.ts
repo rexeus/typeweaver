@@ -8,6 +8,7 @@
  * This is NOT a test file — it's a hands-on demo of the type system.
  */
 
+import type { IRawHttpRequest } from "@rexeus/typeweaver-core";
 import { StateMap } from "../../src/lib/StateMap.js";
 import { defineMiddleware } from "../../src/lib/TypedMiddleware.js";
 import { TypeweaverApp } from "../../src/lib/TypeweaverApp.js";
@@ -118,7 +119,10 @@ const perms = state.get("permissions");
 // 5. TYPED HANDLER CONTEXT
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function exampleHandler(_req: any, ctx: ServerContext<AppState>) {
+async function exampleHandler(
+  _req: IRawHttpRequest,
+  ctx: ServerContext<AppState>
+) {
   const userId = ctx.state.get("userId");
   //    ↑ Hover: string
 

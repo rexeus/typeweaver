@@ -259,7 +259,7 @@ describe("Formatter filesystem failures", () => {
       moduleName: "oxfmt",
       cause: expect.objectContaining({
         message: "Module did not export a format function",
-      }),
+      }) as unknown,
     });
   });
 
@@ -356,7 +356,7 @@ describe("Formatter execution failures", () => {
       filePath,
       cause: expect.objectContaining({
         message: "Formatter did not return a string code",
-      }),
+      }) as unknown,
     });
     expect(fs.readFileSync(filePath, "utf8")).toBe("unformatted\n");
   });

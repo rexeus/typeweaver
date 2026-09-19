@@ -18,7 +18,7 @@ import { generate } from "../../src/responseGenerator.js";
 import type { ResponseGenerationContext } from "../../src/responseGenerator.js";
 
 type ResponseOverrides = Omit<Partial<NormalizedResponse>, "body"> & {
-  readonly body?: z.ZodType | NormalizedHttpBody;
+  readonly body?: z.ZodType | NormalizedHttpBody | undefined;
 };
 
 function aJsonNormalizedBody(schema: z.ZodType): NormalizedHttpBody {

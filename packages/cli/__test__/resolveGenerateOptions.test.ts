@@ -110,7 +110,7 @@ describe("resolveGenerateOptions validation", () => {
       workspacePath
     );
 
-    expect(options.config.customFeature).toEqual({ enabled: true });
+    expect(options.config["customFeature"]).toEqual({ enabled: true });
   });
 
   test("rejects missing input with option diagnostics", () => {

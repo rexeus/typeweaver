@@ -320,10 +320,10 @@ const readEffectVersion = (packageJsonPath: string): string | undefined => {
   } catch {
     return undefined;
   }
-  if (!isRecord(parsed) || typeof parsed.version !== "string") {
+  if (!isRecord(parsed) || typeof parsed["version"] !== "string") {
     return undefined;
   }
-  return parsed.version;
+  return parsed["version"];
 };
 
 const declaredSpecifier = (
@@ -331,8 +331,8 @@ const declaredSpecifier = (
 ): string | undefined => {
   for (const section of DECLARATION_SECTIONS) {
     const dependencies = manifest[section];
-    if (isRecord(dependencies) && typeof dependencies.effect === "string") {
-      return dependencies.effect;
+    if (isRecord(dependencies) && typeof dependencies["effect"] === "string") {
+      return dependencies["effect"];
     }
   }
   return undefined;

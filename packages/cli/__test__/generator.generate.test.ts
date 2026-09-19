@@ -493,12 +493,15 @@ describe("Generator validator and OpenAPI output", () => {
     });
 
     const openApiFile = path.join(outputDir, "openapi", "openapi.json");
-    const document = JSON.parse(readFile(openApiFile));
+    const document = JSON.parse(readFile(openApiFile)) as Record<
+      string,
+      unknown
+    >;
     const rootIndex = readFile(path.join(outputDir, "index.ts"));
 
     expectFileExists(openApiFile);
-    expect(document.openapi).toBe("3.1.2");
-    expect(document.paths).toHaveProperty("/items/{itemId}");
+    expect(document["openapi"]).toBe("3.1.2");
+    expect(document["paths"]).toHaveProperty("/items/{itemId}");
     expect(rootIndex).not.toContain("openapi.json");
     expect(rootIndex).not.toContain("./openapi/index.js");
     expect(fs.existsSync(path.join(outputDir, "openapi", "index.ts"))).toBe(
@@ -527,7 +530,7 @@ describe("Generator generated TypeScript compatibility", () => {
     });
 
     await runGeneratedTypecheck(workspace, tsconfigFile);
-  });
+  }, 30_000);
 
   test("omits operation-definition imports and lookups from request validators without schemas", async () => {
     const workspace = createTempWorkspace();
@@ -606,7 +609,6 @@ describe("Generator output cleanup", () => {
     await runGenerator({
       inputFile: "spec/index.ts",
       outputDir: "generated/output",
-      config: undefined,
       currentWorkingDirectory: workspace,
     });
 

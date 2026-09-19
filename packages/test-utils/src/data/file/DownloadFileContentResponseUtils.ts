@@ -36,7 +36,8 @@ export function createDownloadFileContentSuccessResponse(
       statusCode: HttpStatusCode.OK,
     },
     {
-      body: () => input.body ?? createDownloadFileContentSuccessResponseBody(),
+      body: (): IDownloadFileContentSuccessResponseBody =>
+        input.body ?? createDownloadFileContentSuccessResponseBody(),
       header: createDownloadFileContentSuccessResponseHeader,
     },
     input

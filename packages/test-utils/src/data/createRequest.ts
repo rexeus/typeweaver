@@ -20,10 +20,10 @@ const applyRequestDefaults = <TBody, THeader, TParam, TQuery>(
   target: Record<string, unknown>,
   creators: RequestCreators<TBody, THeader, TParam, TQuery>
 ): void => {
-  if (creators.body) target.body = creators.body();
-  if (creators.header) target.header = creators.header();
-  if (creators.param) target.param = creators.param();
-  if (creators.query) target.query = creators.query();
+  if (creators.body) target["body"] = creators.body();
+  if (creators.header) target["header"] = creators.header();
+  if (creators.param) target["param"] = creators.param();
+  if (creators.query) target["query"] = creators.query();
 };
 
 const applyRequestOverrides = <TBody, THeader, TParam, TQuery>(
@@ -31,12 +31,14 @@ const applyRequestOverrides = <TBody, THeader, TParam, TQuery>(
   creators: RequestCreators<TBody, THeader, TParam, TQuery>,
   input: RequestInput<TBody, THeader, TParam, TQuery>
 ): void => {
-  if (input.path !== undefined) target.path = input.path;
-  if (input.body && creators.body) target.body = creators.body(input.body);
+  if (input.path !== undefined) target["path"] = input.path;
+  if (input.body && creators.body) target["body"] = creators.body(input.body);
   if (input.header && creators.header)
-    target.header = creators.header(input.header);
-  if (input.param && creators.param) target.param = creators.param(input.param);
-  if (input.query && creators.query) target.query = creators.query(input.query);
+    target["header"] = creators.header(input.header);
+  if (input.param && creators.param)
+    target["param"] = creators.param(input.param);
+  if (input.query && creators.query)
+    target["query"] = creators.query(input.query);
 };
 
 /**

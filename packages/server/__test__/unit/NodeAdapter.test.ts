@@ -35,7 +35,7 @@ import type {
   NodeRequestWireMetadata,
 } from "../node-helpers.js";
 
-type FakeApp = TypeweaverApp<any> & {
+type FakeApp = TypeweaverApp<Record<string, unknown>> & {
   readonly receivedRequests: readonly Request[];
 };
 
@@ -77,7 +77,7 @@ function fakeAppWithErrorReporter(
 function typeweaverAppReturning(
   response: Response,
   options?: ConstructorParameters<typeof TypeweaverApp>[0]
-): TypeweaverApp<any> {
+): TypeweaverApp<Record<string, unknown>> {
   const app = new TypeweaverApp(options);
   app.fetch = async () => response;
 
@@ -87,7 +87,9 @@ function typeweaverAppReturning(
 function responseWithCancelableBody(status: number) {
   const response = new Response(new ReadableStream());
   Object.defineProperty(response, "status", { value: status });
-  const cancelSpy = vi.spyOn(response.body!, "cancel").mockResolvedValue();
+  const cancelSpy = vi
+    .spyOn(response.body as ReadableStream, "cancel")
+    .mockResolvedValue();
 
   return { cancelSpy, response };
 }
@@ -101,7 +103,7 @@ function responseWithRejectingCancelableBody(
   });
   Object.defineProperty(response, "status", { value: status });
   const cancelSpy = vi
-    .spyOn(response.body!, "cancel")
+    .spyOn(response.body as ReadableStream, "cancel")
     .mockRejectedValue(cancelError);
 
   return { cancelSpy, response };
@@ -116,7 +118,7 @@ function responseWithThrowingCancelableBody(
   });
   Object.defineProperty(response, "status", { value: status });
   const cancelSpy = vi
-    .spyOn(response.body!, "cancel")
+    .spyOn(response.body as ReadableStream, "cancel")
     .mockImplementation(() => {
       throw cancelError;
     });
@@ -151,7 +153,7 @@ function waitForRequestStreamToResume(req: IncomingMessage): Promise<void> {
 
 function captureDrainedRequestBody(req: IncomingMessage): Promise<string> {
   const chunks: Buffer[] = [];
-  req.on("data", chunk => {
+  req.on("data", (chunk: Buffer) => {
     chunks.push(Buffer.from(chunk));
   });
 
@@ -863,7 +865,7 @@ describe("Node request body translation", () => {
     handler(req, res);
     await awaitResponse(res);
 
-    const request = app.receivedRequests[0]!;
+    const request = app.receivedRequests[0] as Request;
     expect(await request.text()).toBe(body);
   });
 
@@ -885,7 +887,7 @@ describe("Node request body translation", () => {
     handler(req, res);
     await awaitResponse(res);
 
-    const request = app.receivedRequests[0]!;
+    const request = app.receivedRequests[0] as Request;
     const receivedBytes = Buffer.from(await request.arrayBuffer());
     expect(receivedBytes).toEqual(binaryBody);
   });
@@ -905,7 +907,7 @@ describe("Node request body translation", () => {
     handler(req, res);
     await awaitResponse(res);
 
-    const request = app.receivedRequests[0]!;
+    const request = app.receivedRequests[0] as Request;
     expect(expectRequest(request).body).toBeNull();
   });
 
@@ -959,7 +961,7 @@ describe("Node skipped request body cleanup", () => {
     handler(req, res);
     await awaitResponse(res);
 
-    const request = app.receivedRequests[0]!;
+    const request = app.receivedRequests[0] as Request;
     expect(res.writtenStatus).toBe(200);
     expect(request.body).toBeNull();
   });
@@ -981,7 +983,7 @@ describe("Node skipped request body cleanup", () => {
       handler(req, res);
       await awaitResponse(res);
 
-      const request = app.receivedRequests[0]!;
+      const request = app.receivedRequests[0] as Request;
       expect(res.writtenStatus).toBe(200);
       expect(request.body).toBeNull();
     }
@@ -1147,7 +1149,7 @@ describe("Node skipped body destructive cleanup", () => {
     handler(req, res);
     await awaitResponse(res);
 
-    const request = app.receivedRequests[0]!;
+    const request = app.receivedRequests[0] as Request;
     expect(expectRequest(request).body).toBeNull();
   });
 });
@@ -1436,7 +1438,7 @@ describe("error handling", () => {
     await awaitResponse(res);
 
     expect(res.writtenStatus).toBe(500);
-    const parsed = JSON.parse(res.writtenBody);
+    const parsed = JSON.parse(res.writtenBody) as Record<string, unknown>;
     expect(parsed).toEqual({
       code: internalServerErrorDefaultError.code,
       message: internalServerErrorDefaultError.message,
@@ -1719,7 +1721,7 @@ describe("body size enforcement", () => {
     await awaitResponse(res);
 
     expect(res.writtenStatus).toBe(413);
-    const parsed = JSON.parse(res.writtenBody);
+    const parsed = JSON.parse(res.writtenBody) as Record<string, unknown>;
     expect(parsed).toEqual({
       code: payloadTooLargeDefaultError.code,
       message: payloadTooLargeDefaultError.message,
@@ -1828,7 +1830,7 @@ describe("Node streamed body limits", () => {
     handler(req, res);
     await awaitResponse(res);
 
-    const request = app.receivedRequests[0]!;
+    const request = app.receivedRequests[0] as Request;
     expect(res.writtenStatus).toBe(200);
     expect(await request.text()).toBe("");
   });
@@ -1880,7 +1882,7 @@ describe("Node body limit header edge cases", () => {
     handler(req, res);
     await awaitResponse(res);
 
-    const request = app.receivedRequests[0]!;
+    const request = app.receivedRequests[0] as Request;
     expect(res.writtenStatus).toBe(200);
     expect(await request.text()).toBe("data");
   });
@@ -2021,7 +2023,7 @@ describe("Node post-limit cleanup", () => {
     await awaitResponse(res);
 
     expect(res.writtenStatus).toBe(200);
-    const request = app.receivedRequests[0]!;
+    const request = app.receivedRequests[0] as Request;
     expect(await request.text()).toBe(body);
   });
 });
@@ -2044,7 +2046,7 @@ describe("Node default body limits", () => {
     await awaitResponse(res);
 
     expect(res.writtenStatus).toBe(200);
-    const request = app.receivedRequests[0]!;
+    const request = app.receivedRequests[0] as Request;
     expect(await request.text()).toBe(body);
   });
 
@@ -2089,7 +2091,7 @@ describe("Node default body limits", () => {
     await awaitResponse(res);
 
     expect(res.writtenStatus).toBe(413);
-    const parsed = JSON.parse(res.writtenBody);
+    const parsed = JSON.parse(res.writtenBody) as Record<string, unknown>;
     expect(parsed).toEqual({
       code: payloadTooLargeDefaultError.code,
       message: payloadTooLargeDefaultError.message,

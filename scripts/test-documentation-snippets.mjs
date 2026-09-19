@@ -16,10 +16,16 @@ const workspaceRoot = path.resolve(
   ".."
 );
 const fixturePrefix = "typeweaver-doc-snippets-";
+/**
+ * @returns {string[]}
+ */
 const listFixtures = () =>
   readdirSync(tmpdir())
     .filter(name => name.startsWith(fixturePrefix))
     .sort();
+/**
+ * @returns {string}
+ */
 const gitStatus = () => {
   const result = spawnSync(
     "git",
@@ -33,6 +39,10 @@ const gitStatus = () => {
 };
 
 const workspacePrefix = `${path.resolve(workspaceRoot)}${path.sep}`;
+/**
+ * @param {string} fixtureRoot
+ * @returns {void}
+ */
 const assertOutsideWorkspace = fixtureRoot => {
   assert(
     !path.resolve(fixtureRoot).startsWith(workspacePrefix),
@@ -53,6 +63,7 @@ removeDocumentationSnippetFixture(fixtureRoot);
 assert(!existsSync(fixtureRoot), "fixture survived cleanup");
 removeDocumentationSnippetFixture(fixtureRoot);
 
+/** @type {string | undefined} */
 let failedFixtureRoot;
 assert.throws(
   () =>
@@ -65,8 +76,10 @@ assert.throws(
     }),
   /fixture body failed/
 );
+assert(failedFixtureRoot !== undefined, "fixture body never received a root");
 assert(!existsSync(failedFixtureRoot), "fixture survived a failed body");
 
+/** @type {string | undefined} */
 let completedFixtureRoot;
 withDocumentationSnippetFixture({
   workspaceRoot,
@@ -74,6 +87,10 @@ withDocumentationSnippetFixture({
     completedFixtureRoot = root;
   },
 });
+assert(
+  completedFixtureRoot !== undefined,
+  "fixture body never received a root"
+);
 assert(!existsSync(completedFixtureRoot), "fixture survived a successful body");
 
 assert.deepEqual(

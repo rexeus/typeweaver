@@ -69,7 +69,7 @@ const captureOpenApiPluginConfigError = (
     expect(error).toMatchObject({
       _tag: "PluginConfigError",
       pluginName: "openapi",
-      reason: expect.any(String),
+      reason: expect.any(String) as unknown,
     });
     if (isCapturedPluginConfigError(error)) {
       return error;
@@ -95,15 +95,17 @@ describe("openApiPlugin output", () => {
 
     runGenerate({}, context);
 
-    const document = JSON.parse(context.writtenFiles[0]?.content ?? "{}");
+    const document = JSON.parse(
+      context.writtenFiles[0]?.content ?? "{}"
+    ) as Record<string, unknown>;
     expect(context.writtenFiles).toHaveLength(1);
     expect(context.writtenFiles[0]?.path).toBe("openapi/openapi.json");
-    expect(document.openapi).toBe("3.1.2");
-    expect(document.info).toEqual({
+    expect(document["openapi"]).toBe("3.1.2");
+    expect(document["info"]).toEqual({
       title: "Todo API",
       version: "1.0.0",
     });
-    expect(document.paths).toHaveProperty("/items/{itemId}");
+    expect(document["paths"]).toHaveProperty("/items/{itemId}");
   });
 
   test("projects spec metadata and the configured target and output path", () => {
@@ -128,15 +130,17 @@ describe("openApiPlugin output", () => {
       context
     );
 
-    const document = JSON.parse(context.writtenFiles[0]?.content ?? "{}");
+    const document = JSON.parse(
+      context.writtenFiles[0]?.content ?? "{}"
+    ) as Record<string, unknown>;
     expect(context.writtenFiles[0]?.path).toBe("docs/openapi.json");
-    expect(document.openapi).toBe("3.2.0");
-    expect(document.info).toEqual({
+    expect(document["openapi"]).toBe("3.2.0");
+    expect(document["info"]).toEqual({
       title: "Contract API",
       version: "2.0.0",
       description: "Contract description",
     });
-    expect(document.servers).toEqual([
+    expect(document["servers"]).toEqual([
       { url: "https://api.example.com", description: "Production" },
     ]);
   });
@@ -175,8 +179,10 @@ describe("openApiPlugin diagnostics", () => {
       context
     );
 
-    const document = JSON.parse(context.writtenFiles[0]?.content ?? "{}");
-    expect(document.servers).toEqual([
+    const document = JSON.parse(
+      context.writtenFiles[0]?.content ?? "{}"
+    ) as Record<string, unknown>;
+    expect(document["servers"]).toEqual([
       {
         url: "https://{environment}.example.com/{basePath}",
         description: "Environment server",
@@ -207,7 +213,9 @@ describe("openApiPlugin diagnostics", () => {
 
     const logs = runGenerateCapturingLogs({}, context);
 
-    const document = JSON.parse(context.writtenFiles[0]?.content ?? "{}");
+    const document = JSON.parse(
+      context.writtenFiles[0]?.content ?? "{}"
+    ) as Record<string, unknown>;
     const warningLogs = logs.filter(entry => entry.level === "WARN");
     expect(warningLogs).toEqual([]);
     expect(document).not.toHaveProperty("warnings");

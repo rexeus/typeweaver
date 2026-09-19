@@ -12,13 +12,13 @@ import type {
 } from "./NormalizedSpec.js";
 
 export type NormalizeBodyInput = {
-  readonly bodySchema?: HttpBodySchema;
-  readonly headerSchema?: HttpHeaderSchemaLike;
+  readonly bodySchema?: HttpBodySchema | undefined;
+  readonly headerSchema?: HttpHeaderSchemaLike | undefined;
   readonly location: NormalizedSpecWarningLocation;
 };
 
 export type NormalizeBodyResult = {
-  readonly body?: NormalizedHttpBody;
+  readonly body?: NormalizedHttpBody | undefined;
   readonly warnings: readonly NormalizedSpecWarning[];
 };
 
@@ -259,8 +259,8 @@ const unwrapMediaInferenceSchema = (
 };
 
 type MediaInferenceStep =
-  | { readonly _tag: "Continue"; readonly schema?: z.ZodType }
-  | { readonly _tag: "Done"; readonly schema?: z.ZodType };
+  | { readonly _tag: "Continue"; readonly schema?: z.ZodType | undefined }
+  | { readonly _tag: "Done"; readonly schema?: z.ZodType | undefined };
 
 const MEDIA_INFERENCE_WRAPPER_TYPES = new Set([
   "optional",

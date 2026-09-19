@@ -58,7 +58,7 @@ export const compareRoutes = (
   }
 
   for (let i = 0; i < aSegments.length; i++) {
-    const cmp = comparePathSegments(aSegments[i]!, bSegments[i]!);
+    const cmp = comparePathSegments(aSegments[i] ?? "", bSegments[i] ?? "");
     if (cmp !== 0) {
       return cmp;
     }

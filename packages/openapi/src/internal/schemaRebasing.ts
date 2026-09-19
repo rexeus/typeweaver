@@ -50,7 +50,7 @@ function rebaseSchemaValueDocumentRefs(
   toPointer: string
 ): JsonSchemaValue {
   if (Array.isArray(value)) {
-    return value.map(item =>
+    return (value as readonly JsonSchemaValue[]).map(item =>
       rebaseSchemaValueDocumentRefs(item, fromPointer, toPointer)
     );
   }

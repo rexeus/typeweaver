@@ -110,7 +110,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 function isOpenApiServerObject(value: unknown): value is OpenApiServerObject {
-  return isPlainObject(value) && typeof value.url === "string";
+  return isPlainObject(value) && typeof value["url"] === "string";
 }
 
 function throwConfigError(reason: string): never {

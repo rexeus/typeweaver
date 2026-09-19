@@ -359,7 +359,7 @@ describe("project-owned Effect resolution", () => {
     );
     expect(resolveWorkspaceEffect(projectRoot)).toMatchObject({
       _tag: "Unresolved",
-      detail: expect.stringContaining("does not satisfy it"),
+      detail: expect.stringContaining("does not satisfy it") as unknown,
     });
     expect(
       classifyWorkspaceEffectCompatibility({
@@ -377,7 +377,7 @@ describe("project-owned Effect resolution", () => {
     );
     expect(resolveWorkspaceEffect(projectRoot)).toMatchObject({
       _tag: "Unresolved",
-      detail: expect.stringContaining("non-semver"),
+      detail: expect.stringContaining("non-semver") as unknown,
     });
   });
 });

@@ -141,6 +141,70 @@ const withConfiguredOutputLock = <A, E, R>(params: {
  * `GeneratedOutputDriftError` with sorted `Added`, `Removed`, and `Changed`
  * groups.
  */
+type GeneratedOutputCheckerDependencies = {
+  readonly fileSystem: FileSystem.FileSystem;
+  readonly generator: Generator;
+};
+
+const createCheck = ({
+  fileSystem,
+  generator,
+}: GeneratedOutputCheckerDependencies) =>
+  Effect.fn("typeweaver.GeneratedOutputChecker.check")(function* (
+    params: CheckGenerateParams
+  ) {
+    const cwd = params.currentWorkingDirectory ?? process.cwd();
+    const configuredOutputDir = path.resolve(cwd, params.outputDir);
+    const inputFile = path.resolve(cwd, params.inputFile);
+    const inputDirectory = path.dirname(inputFile);
+    const reservedCandidates = [
+      configuredOutputDir,
+      cwd,
+      inputDirectory,
+    ] as const;
+
+    yield* Effect.try({
+      try: () => {
+        for (const candidate of reservedCandidates) {
+          assertPathNotReservedForCoordination(candidate);
+        }
+      },
+      catch: error => {
+        if (
+          error instanceof ReservedCoordinationPathError ||
+          error instanceof UnsafeSharedTempDirectoryError
+        ) {
+          return error;
+        }
+        throw error;
+      },
+    });
+
+    yield* assertSafeCleanTargetEffect(configuredOutputDir, cwd, undefined);
+    yield* withConfiguredOutputLock({
+      configuredOutputDir,
+      inputFile,
+      run: lockedOutputDir => {
+        const forbiddenRoots = [lockedOutputDir, cwd, inputDirectory] as const;
+        return withMirroredOutputStage(
+          fileSystem,
+          { configuredOutputDir: lockedOutputDir, forbiddenRoots },
+          ({ stageRoot, stagedOutputDir }) =>
+            runCheckOperation({
+              generator,
+              configuredOutputDir: lockedOutputDir,
+              inputFile,
+              stagedOutputDir,
+              cwd,
+              config: params.config,
+              verbose: params.verbose === true,
+              stagingAuthority: createStagingAuthority(stageRoot),
+            })
+        );
+      },
+    });
+  });
+
 export class GeneratedOutputChecker extends Effect.Service<GeneratedOutputChecker>()(
   "typeweaver/GeneratedOutputChecker",
   {
@@ -148,68 +212,7 @@ export class GeneratedOutputChecker extends Effect.Service<GeneratedOutputChecke
       const fileSystem = yield* FileSystem.FileSystem;
       const generator = yield* Generator;
 
-      const check = Effect.fn("typeweaver.GeneratedOutputChecker.check")(
-        function* (params: CheckGenerateParams) {
-          const cwd = params.currentWorkingDirectory ?? process.cwd();
-          const configuredOutputDir = path.resolve(cwd, params.outputDir);
-          const inputFile = path.resolve(cwd, params.inputFile);
-          const inputDirectory = path.dirname(inputFile);
-          const reservedCandidates = [
-            configuredOutputDir,
-            cwd,
-            inputDirectory,
-          ] as const;
-
-          yield* Effect.try({
-            try: () => {
-              for (const candidate of reservedCandidates) {
-                assertPathNotReservedForCoordination(candidate);
-              }
-            },
-            catch: error => {
-              if (
-                error instanceof ReservedCoordinationPathError ||
-                error instanceof UnsafeSharedTempDirectoryError
-              ) {
-                return error;
-              }
-              throw error;
-            },
-          });
-
-          yield* assertSafeCleanTargetEffect(
-            configuredOutputDir,
-            cwd,
-            undefined
-          );
-          yield* withConfiguredOutputLock({
-            configuredOutputDir,
-            inputFile,
-            run: lockedOutputDir => {
-              const forbiddenRoots = [
-                lockedOutputDir,
-                cwd,
-                inputDirectory,
-              ] as const;
-              return withMirroredOutputStage(
-                fileSystem,
-                { configuredOutputDir: lockedOutputDir, forbiddenRoots },
-                ({ stageRoot, stagedOutputDir }) =>
-                  runCheckOperation({
-                    generator,
-                    configuredOutputDir: lockedOutputDir,
-                    inputFile,
-                    stagedOutputDir,
-                    cwd,
-                    config: params.config,
-                    verbose: params.verbose === true,
-                    stagingAuthority: createStagingAuthority(stageRoot),
-                  })
-              );
-            },
-          });
-        }
-      );
+      const check = createCheck({ fileSystem, generator });
 
       return { check } as const;
     }),

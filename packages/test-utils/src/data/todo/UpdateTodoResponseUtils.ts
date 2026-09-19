@@ -8,11 +8,12 @@ import type {
   IUpdateTodoSuccessResponseBody,
   IUpdateTodoSuccessResponseHeader,
 } from "../../index.js";
+import type { DataOverrides } from "../createData.js";
 
 type UpdateTodoSuccessResponseInput = {
   statusCode?: number;
-  header?: Partial<IUpdateTodoSuccessResponseHeader>;
-  body?: Partial<IUpdateTodoSuccessResponseBody>;
+  header?: DataOverrides<IUpdateTodoSuccessResponseHeader>;
+  body?: DataOverrides<IUpdateTodoSuccessResponseBody>;
 };
 
 export function createUpdateTodoSuccessResponse(

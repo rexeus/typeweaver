@@ -511,7 +511,25 @@ What this means for upgrades:
   `SystemDrive`, and relies on the installed system temp directory's inherited ACLs. A missing,
   non-directory, or unwritable root fails closed with an actionable error.
 
-### 9. Migration Checklist (0.12.x to 0.13.x)
+### 9. Optional HTTP values and normalized properties admit explicit `undefined`
+
+TypeWeaver's compiler profiles now enable `exactOptionalPropertyTypes`, and the public types were
+aligned with how schemas actually model optional values. Optional HTTP header/query map values and
+optional normalized model properties now include `undefined` in their value type:
+
+- `IHttpHeader` and `IHttpQuery` admit `undefined` values, and `RawHttpHeaderValue` and
+  `RawHttpQueryValue` include `undefined`. A key that is present but unset is represented explicitly
+  at the transport boundary.
+- `NormalizedSpec` resources, operations, requests, and responses mark their optional fields as
+  `T | undefined` (for example `NormalizedOperation["description"]` and
+  `NormalizedOperation["request"]`).
+
+The change is additive: existing valid assignments keep working. Consumers that enable
+`exactOptionalPropertyTypes` no longer need to widen or omit these properties themselves, and
+consumers that index header/query maps should handle the `undefined` value; the server middleware
+already skips undefined entries when reading or copying headers.
+
+### 10. Migration Checklist (0.12.x to 0.13.x)
 
 For **end users** (you use the CLI but don't author plugins):
 
@@ -537,6 +555,8 @@ For **end users** (you use the CLI but don't author plugins):
       inherited security requirement.
 - [ ] Remove `info` from OpenAPI plugin options and select `target: "3.2.0"` only when consumers
       support that profile; otherwise use the 3.1.2 default.
+- [ ] Handle present-but-`undefined` entries when indexing `IHttpHeader` or `IHttpQuery` values, and
+      the widened optional fields on `NormalizedSpec` types.
 
 For **plugin authors**:
 

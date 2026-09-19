@@ -47,7 +47,7 @@ function normalizeTupleSchema(
   schema: JsonSchema & { readonly prefixItems: readonly JsonSchemaValue[] }
 ): JsonSchema {
   const itemCount = schema.prefixItems.length;
-  const minItems = schema.minItems ?? itemCount;
+  const minItems = schema["minItems"] ?? itemCount;
 
   if (hasOwnSchemaKeyword(schema, "items")) {
     return { ...schema, minItems };
@@ -55,9 +55,9 @@ function normalizeTupleSchema(
 
   return {
     ...schema,
-    items: schema.items ?? {},
+    items: schema["items"] ?? {},
     minItems,
-    maxItems: schema.maxItems ?? itemCount,
+    maxItems: schema["maxItems"] ?? itemCount,
   };
 }
 
@@ -72,7 +72,7 @@ function normalizeSchemaKeyword(
 
   if (
     OBJECT_SCHEMA_CHILD_KEYS.has(key) &&
-    parent.type === "object" &&
+    parent["type"] === "object" &&
     isJsonSchema(value)
   ) {
     return normalizeJsonSchema(value);
@@ -88,7 +88,7 @@ function normalizeSchemaKeyword(
   }
 
   if (SCHEMA_CHILD_ARRAY_KEYS.has(key) && Array.isArray(value)) {
-    return value.map(entry =>
+    return (value as readonly JsonSchemaValue[]).map(entry =>
       isJsonSchema(entry) ? normalizeJsonSchema(entry) : entry
     );
   }
@@ -99,7 +99,7 @@ function normalizeSchemaKeyword(
 function isTupleSchema(
   schema: JsonSchema
 ): schema is JsonSchema & { readonly prefixItems: readonly JsonSchemaValue[] } {
-  return schema.type === "array" && Array.isArray(schema.prefixItems);
+  return schema["type"] === "array" && Array.isArray(schema["prefixItems"]);
 }
 
 function isJsonSchema(value: JsonSchemaValue): value is JsonSchema {

@@ -23,10 +23,10 @@ export const headFallbackRawRequest: IRawGetMetricRequest = {
 
 expectTypeOf<IRawGetMetricRequest["method"]>().toEqualTypeOf<HttpMethod>();
 expectTypeOf<NonNullable<IRawGetMetricRequest["header"]>>().toEqualTypeOf<
-  Readonly<Record<string, string | readonly string[]>>
+  Readonly<Record<string, string | readonly string[] | undefined>>
 >();
 expectTypeOf<NonNullable<IRawGetMetricRequest["query"]>>().toEqualTypeOf<
-  Readonly<Record<string, string | readonly string[]>>
+  Readonly<Record<string, string | readonly string[] | undefined>>
 >();
 
 export const recordArrayRawRequest: IRawGetMetricSamplesRequest = {

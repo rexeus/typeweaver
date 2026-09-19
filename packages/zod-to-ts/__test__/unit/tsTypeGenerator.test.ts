@@ -350,7 +350,7 @@ describe("literal and enum schemas", () => {
     expect(error).toEqual(
       expect.objectContaining({
         valueType: "symbol",
-      })
+      }) as unknown
     );
   });
 });
@@ -609,8 +609,8 @@ describe("unsupported schemas", () => {
         expect.objectContaining({
           code: "UNSUPPORTED_ZOD_TYPE",
           schemaKind,
-          reason: expect.stringContaining(reason),
-        })
+          reason: expect.stringContaining(reason) as unknown,
+        }) as unknown
       );
       if (!(error instanceof UnsupportedZodTypeError)) {
         throw new Error("Expected UnsupportedZodTypeError");

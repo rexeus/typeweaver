@@ -13,6 +13,10 @@ const sourceRoot = path.join(
   workspaceRoot,
   "packages/cli/examples/documentation"
 );
+/**
+ * @param {readonly string[]} args
+ * @returns {void}
+ */
 const runPnpm = args => {
   const result = spawnPnpmSync({
     args,

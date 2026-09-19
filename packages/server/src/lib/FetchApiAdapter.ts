@@ -94,7 +94,7 @@ export class FetchApiAdapter {
 
   private static extractMediaType(contentType: string | null): string | null {
     if (!contentType) return null;
-    return contentType.split(";")[0]!.trim().toLowerCase();
+    return (contentType.split(";")[0] ?? "").trim().toLowerCase();
   }
 
   private static isJsonContentType(contentType: string | null): boolean {
@@ -127,7 +127,9 @@ export class FetchApiAdapter {
   }
 
   private static extractHeaders(headers: Headers): IRawHttpHeader {
-    const result: Record<string, string | string[]> = Object.create(null);
+    const result: Record<string, string | string[]> = Object.create(
+      null
+    ) as Record<string, string | string[]>;
     headers.forEach((value, key) => {
       FetchApiAdapter.addMultiValue(result, key, value);
     });
@@ -135,7 +137,9 @@ export class FetchApiAdapter {
   }
 
   private static extractQueryParams(url: URL): IRawHttpQuery {
-    const result: Record<string, string | string[]> = Object.create(null);
+    const result: Record<string, string | string[]> = Object.create(
+      null
+    ) as Record<string, string | string[]>;
     url.searchParams.forEach((value, key) => {
       FetchApiAdapter.addMultiValue(result, key, value);
     });
@@ -166,10 +170,10 @@ export class FetchApiAdapter {
   private static async parseJsonBody(request: Request): Promise<IHttpBody> {
     try {
       const text = await request.text();
-      return JSON.parse(text, (key, value) => {
+      return JSON.parse(text, (key: string, value: unknown) => {
         if (key === "__proto__") return undefined;
         return value;
-      });
+      }) as unknown;
     } catch (error) {
       throw new BodyParseError("Invalid JSON in request body", {
         cause: error,
@@ -199,7 +203,9 @@ export class FetchApiAdapter {
       });
     }
 
-    const result: Record<string, string | string[]> = Object.create(null);
+    const result: Record<string, string | string[]> = Object.create(
+      null
+    ) as Record<string, string | string[]>;
     new URLSearchParams(text).forEach((value, key) => {
       FetchApiAdapter.addMultiValue(result, key, value);
     });
@@ -219,7 +225,7 @@ export class FetchApiAdapter {
     }
 
     const result: Record<string, string | File | (string | File)[]> =
-      Object.create(null);
+      Object.create(null) as Record<string, string | File | (string | File)[]>;
     formData.forEach((value, key) => {
       const existing = result[key];
       if (existing === undefined) {
@@ -268,7 +274,8 @@ export class FetchApiAdapter {
   private async readBodyWithLimit(request: Request): Promise<Request> {
     if (!request.body) return request;
 
-    const reader = request.body.getReader();
+    const reader: ReadableStreamDefaultReader<Uint8Array> =
+      request.body.getReader();
     const chunks: Uint8Array[] = [];
     let totalBytes = 0;
 

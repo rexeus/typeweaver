@@ -10,8 +10,8 @@ export type NodeRequestWireMetadata = {
 };
 
 export type MockIncomingMessageOptions = {
-  readonly body?: string | Buffer;
-  readonly wireMetadata?: NodeRequestWireMetadata;
+  readonly body?: string | Buffer | undefined;
+  readonly wireMetadata?: NodeRequestWireMetadata | undefined;
 };
 
 export type MockServerResponse = ServerResponse & {
@@ -112,23 +112,34 @@ export function createMockServerResponse(
   req: IncomingMessage
 ): MockServerResponse {
   const res = new ServerResponse(req);
-  res.assignSocket(new PassThrough() as any);
+  res.assignSocket(new PassThrough() as unknown as Socket);
 
   let writtenStatus: number | undefined;
   const writtenHeaders: Record<string, string> = {};
   const writtenRawHeaders: Record<string, string | string[]> = {};
   let writtenBody = "";
-  let writtenBodyBuffer = Buffer.alloc(0);
+  let writtenBodyBuffer: Buffer = Buffer.alloc(0);
 
   const originalSetHeader = res.setHeader.bind(res);
-  res.setHeader = ((name: string, value: string | string[]) => {
-    writtenHeaders[name] = Array.isArray(value) ? value.join(", ") : value;
-    writtenRawHeaders[name] = value;
+  res.setHeader = ((
+    name: string,
+    value: number | string | readonly string[]
+  ) => {
+    writtenHeaders[name] = Array.isArray(value)
+      ? value.join(", ")
+      : String(value);
+    writtenRawHeaders[name] = Array.isArray(value)
+      ? [...(value as readonly string[])]
+      : String(value);
     return originalSetHeader(name, value);
-  }) as any;
+  }) as unknown as typeof res.setHeader;
 
   const originalWriteHead = res.writeHead.bind(res);
-  res.writeHead = ((statusCode: number, ...args: any[]) => {
+  const writeHead = originalWriteHead as (
+    statusCode: number,
+    ...args: unknown[]
+  ) => ServerResponse;
+  res.writeHead = ((statusCode: number, ...args: unknown[]) => {
     writtenStatus = statusCode;
     const headers =
       typeof args[0] === "object" && args[0] !== null ? args[0] : undefined;
@@ -137,17 +148,18 @@ export function createMockServerResponse(
         writtenHeaders[key] = String(value);
       }
     }
-    return originalWriteHead(statusCode, ...args);
-  }) as any;
+    return writeHead(statusCode, ...args);
+  }) as unknown as typeof res.writeHead;
 
   const originalEnd = res.end.bind(res);
-  res.end = ((chunk?: any) => {
+  const end = originalEnd as (chunk?: unknown) => ServerResponse;
+  res.end = ((chunk?: string | Buffer | Uint8Array) => {
     if (chunk) {
       writtenBody = String(chunk);
       writtenBodyBuffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
     }
-    return originalEnd(chunk);
-  }) as any;
+    return end(chunk);
+  }) as unknown as typeof res.end;
 
   return Object.defineProperties(res, {
     writtenStatus: { get: () => writtenStatus },
@@ -155,7 +167,7 @@ export function createMockServerResponse(
     writtenRawHeaders: { get: () => ({ ...writtenRawHeaders }) },
     writtenBody: { get: () => writtenBody },
     writtenBodyBuffer: { get: () => writtenBodyBuffer },
-  }) as any;
+  }) as unknown as MockServerResponse;
 }
 
 export function awaitResponse(res: ServerResponse): Promise<void> {

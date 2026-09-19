@@ -42,11 +42,11 @@ describe("fixed host temp path policy", () => {
 
   test("Windows ignores environment paths that can disagree across processes", () => {
     const original = {
-      SystemDrive: process.env.SystemDrive,
-      SystemRoot: process.env.SystemRoot,
-      TEMP: process.env.TEMP,
-      TMP: process.env.TMP,
-      windir: process.env.windir,
+      SystemDrive: process.env["SystemDrive"],
+      SystemRoot: process.env["SystemRoot"],
+      TEMP: process.env["TEMP"],
+      TMP: process.env["TMP"],
+      windir: process.env["windir"],
     };
     Object.assign(process.env, {
       SystemDrive: "Z:",

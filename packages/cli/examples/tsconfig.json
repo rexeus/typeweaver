@@ -1,14 +1,4 @@
 {
-  "compilerOptions": {
-    "allowJs": true,
-    "checkJs": true,
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "noEmit": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "target": "ES2022",
-    "types": ["node"]
-  },
+  "extends": "@rexeus/typeweaver-tsconfig/checkjs.json",
   "include": ["scoped-service-plugin.mjs"]
 }

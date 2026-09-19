@@ -23,9 +23,9 @@ const recordingMiddleware =
 const captureMiddlewareNextAlreadyCalledError = async (
   promise: Promise<unknown>
 ): Promise<MiddlewareNextAlreadyCalledError> => {
-  const error = await promise.then(
+  const error: unknown = await promise.then(
     () => undefined,
-    caughtError => caughtError
+    (caughtError: unknown) => caughtError
   );
 
   if (!(error instanceof MiddlewareNextAlreadyCalledError)) {

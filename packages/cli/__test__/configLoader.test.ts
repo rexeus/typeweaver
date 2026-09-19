@@ -170,7 +170,7 @@ describe("configLoader path resolution", () => {
       expect.objectContaining({
         configPath,
         extension,
-      })
+      }) as unknown
     );
   });
 
@@ -189,7 +189,7 @@ describe("configLoader path resolution", () => {
         configPath,
         extension: path.extname(configPath).toLowerCase(),
         supportedExtensions: [".js", ".mjs", ".cjs"],
-      })
+      }) as unknown
     );
   });
 
@@ -522,7 +522,9 @@ describe("configLoader evaluation failures", () => {
     );
     await expect(configLoad).rejects.toMatchObject({
       configPath,
-      cause: expect.objectContaining({ name: "ConfigEvaluationError" }),
+      cause: expect.objectContaining({
+        name: "ConfigEvaluationError",
+      }) as unknown,
     });
     await expect(configLoad).rejects.toThrow(/config evaluation failed/);
   });

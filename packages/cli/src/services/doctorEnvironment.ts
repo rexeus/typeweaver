@@ -60,7 +60,7 @@ export const checkNodeVersion = (): DoctorCheck => {
 };
 
 export const checkPackageManager = (): DoctorCheck => {
-  const userAgent = process.env.npm_config_user_agent;
+  const userAgent = process.env["npm_config_user_agent"];
   if (userAgent === undefined || userAgent.trim().length === 0) {
     return createDoctorCheck({
       code: "TW-DOCTOR-003",
@@ -199,7 +199,7 @@ const readPackageVersion = async (specifier: string): Promise<string> => {
   if (typeof parsed !== "object" || parsed === null) {
     throw new Error(`${specifier} does not contain a package object.`);
   }
-  const version = Reflect.get(parsed, "version");
+  const version: unknown = Reflect.get(parsed, "version");
   if (typeof version !== "string") {
     throw new Error(`${specifier} does not declare a version.`);
   }

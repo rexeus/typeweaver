@@ -31,11 +31,20 @@ const cliEntry = path.join(
   "entry.mjs"
 );
 
+/**
+ * @param {string} root
+ * @returns {string[]}
+ */
 const collectFilePaths = root => {
+  /** @type {string[]} */
   const pending = [""];
+  /** @type {string[]} */
   const files = [];
   while (pending.length > 0) {
     const relativeDirectory = pending.pop();
+    if (relativeDirectory === undefined) {
+      continue;
+    }
     const absoluteDirectory = path.join(root, relativeDirectory);
     for (const entry of readdirSync(absoluteDirectory, {
       withFileTypes: true,
@@ -53,9 +62,18 @@ const collectFilePaths = root => {
   return files.sort();
 };
 
+/**
+ * @param {string} filePath
+ * @returns {string}
+ */
 const fileHash = filePath =>
   createHash("sha256").update(readFileSync(filePath)).digest("hex");
 
+/**
+ * @param {string} expectedRoot
+ * @param {string} actualRoot
+ * @returns {number}
+ */
 const compareTrees = (expectedRoot, actualRoot) => {
   const expectedFiles = collectFilePaths(expectedRoot);
   const actualFiles = collectFilePaths(actualRoot);

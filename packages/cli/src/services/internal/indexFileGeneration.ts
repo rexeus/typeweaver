@@ -115,7 +115,7 @@ function planGroupIndexes(
     .filter(group => !existingBarrels.has(group))
     .map(group => ({
       path: `${group}/index.ts`,
-      data: { indexPaths: Array.from(groups.get(group)!).sort() },
+      data: { indexPaths: Array.from(groups.get(group) ?? []).sort() },
     }));
 }
 

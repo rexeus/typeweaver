@@ -10,6 +10,7 @@ import type {
   TypeweaverUserConfig,
 } from "../plugins/contextTypes.js";
 import type { Plugin } from "../plugins/Plugin.js";
+import type { PluginTestContextOptions } from "./internal/pluginTestContext.js";
 
 const DEFAULT_INPUT_DIR = "/typeweaver/plugin-test/input";
 const DEFAULT_OUTPUT_DIR = "/typeweaver/plugin-test/output";
@@ -121,6 +122,83 @@ const finalizePlugin = (
         Effect.flatMap(exit => collectFinalizerExit(exit, state.finalizeErrors))
       );
 
+const resolveTestOptions = (
+  options: PluginTestKitOptions
+): PluginTestContextOptions => ({
+  inputDir: options.inputDir ?? DEFAULT_INPUT_DIR,
+  outputDir: options.outputDir ?? DEFAULT_OUTPUT_DIR,
+  templateDir: options.templateDir ?? DEFAULT_TEMPLATE_DIR,
+  coreDir: options.coreDir ?? DEFAULT_CORE_DIR,
+  responsesOutputDir:
+    options.responsesOutputDir ?? DEFAULT_RESPONSES_OUTPUT_DIR,
+  specOutputDir: options.specOutputDir ?? DEFAULT_SPEC_OUTPUT_DIR,
+  config: options.config ?? {},
+});
+
+const buildTemplates = (
+  options: PluginTestKitOptions
+): ReadonlyMap<string, string> =>
+  new Map(
+    Object.entries(options.templates ?? {}).map(([templatePath, source]) => [
+      path.posix.normalize(templatePath.replaceAll("\\", "/")),
+      source,
+    ])
+  );
+
+type PluginStageRunner = {
+  readonly plugin: Plugin;
+  readonly normalizedSpec: NormalizedSpec;
+  readonly pluginContext: PluginContext;
+  readonly validationContext: PluginValidationContext;
+  readonly buildGeneratorContext: (
+    normalizedSpec: NormalizedSpec
+  ) => GeneratorContext;
+  readonly state: PluginTestState;
+  readonly files: PluginTestFiles;
+};
+
+const runPluginStages = (
+  runner: PluginStageRunner
+): Effect.Effect<PluginTestResult, PluginExecutionError> => {
+  let initialized = false;
+
+  return Effect.gen(function* () {
+    const issues =
+      runner.plugin.validate === undefined
+        ? []
+        : yield* runner.plugin.validate(
+            runner.normalizedSpec,
+            runner.validationContext
+          );
+    yield* runner.plugin.initialize?.(runner.pluginContext) ?? Effect.void;
+    initialized = true;
+    const normalizedSpec =
+      runner.plugin.collectResources === undefined
+        ? runner.normalizedSpec
+        : yield* runner.plugin.collectResources(runner.normalizedSpec);
+    const generatorContext = runner.buildGeneratorContext(normalizedSpec);
+    yield* runner.plugin.generate?.(generatorContext) ?? Effect.void;
+
+    return {
+      issues,
+      normalizedSpec,
+      generatedFiles: Array.from(runner.state.generatedFiles).sort(),
+      files: runner.files.list(),
+      finalizeErrors: [...runner.state.finalizeErrors],
+    };
+  }).pipe(
+    Effect.onExit(() =>
+      initialized
+        ? finalizePlugin(runner.plugin, runner.pluginContext, runner.state)
+        : Effect.void
+    ),
+    Effect.map(result => ({
+      ...result,
+      finalizeErrors: [...runner.state.finalizeErrors],
+    }))
+  );
+};
+
 /**
  * Creates a fresh, fully in-memory harness for one third-party plugin.
  *
@@ -132,22 +210,8 @@ const finalizePlugin = (
 export const createPluginTestKit = (
   options: PluginTestKitOptions
 ): PluginTestKit => {
-  const resolvedOptions = {
-    inputDir: options.inputDir ?? DEFAULT_INPUT_DIR,
-    outputDir: options.outputDir ?? DEFAULT_OUTPUT_DIR,
-    templateDir: options.templateDir ?? DEFAULT_TEMPLATE_DIR,
-    coreDir: options.coreDir ?? DEFAULT_CORE_DIR,
-    responsesOutputDir:
-      options.responsesOutputDir ?? DEFAULT_RESPONSES_OUTPUT_DIR,
-    specOutputDir: options.specOutputDir ?? DEFAULT_SPEC_OUTPUT_DIR,
-    config: options.config ?? {},
-  };
-  const templates = new Map(
-    Object.entries(options.templates ?? {}).map(([templatePath, source]) => [
-      path.posix.normalize(templatePath.replaceAll("\\", "/")),
-      source,
-    ])
-  );
+  const resolvedOptions = resolveTestOptions(options);
+  const templates = buildTemplates(options);
   const state: PluginTestState = {
     fileContent: new Map(),
     generatedFiles: new Set(),
@@ -179,42 +243,15 @@ export const createPluginTestKit = (
     Effect.suspend(() => {
       files.reset();
       state.finalizeErrors.length = 0;
-      const pluginContext = buildPluginContext();
-      const validationContext = buildValidationContext();
-      let initialized = false;
-
-      return Effect.gen(function* () {
-        const issues =
-          plugin.validate === undefined
-            ? []
-            : yield* plugin.validate(options.normalizedSpec, validationContext);
-        yield* plugin.initialize?.(pluginContext) ?? Effect.void;
-        initialized = true;
-        const normalizedSpec =
-          plugin.collectResources === undefined
-            ? options.normalizedSpec
-            : yield* plugin.collectResources(options.normalizedSpec);
-        const generatorContext = buildGeneratorContext(normalizedSpec);
-        yield* plugin.generate?.(generatorContext) ?? Effect.void;
-
-        return {
-          issues,
-          normalizedSpec,
-          generatedFiles: Array.from(state.generatedFiles).sort(),
-          files: files.list(),
-          finalizeErrors: [...state.finalizeErrors],
-        };
-      }).pipe(
-        Effect.onExit(() =>
-          initialized
-            ? finalizePlugin(plugin, pluginContext, state)
-            : Effect.void
-        ),
-        Effect.map(result => ({
-          ...result,
-          finalizeErrors: [...state.finalizeErrors],
-        }))
-      );
+      return runPluginStages({
+        plugin,
+        normalizedSpec: options.normalizedSpec,
+        pluginContext: buildPluginContext(),
+        validationContext: buildValidationContext(),
+        buildGeneratorContext,
+        state,
+        files,
+      });
     });
 
   return {

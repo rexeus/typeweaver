@@ -14,7 +14,7 @@ import type { Plugin } from "../plugins/Plugin.js";
 export type PluginRegistration = {
   readonly name: string;
   readonly plugin: Plugin;
-  readonly config?: PluginConfig;
+  readonly config?: PluginConfig | undefined;
 };
 
 export type PluginValidationParams = {

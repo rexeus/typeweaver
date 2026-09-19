@@ -6,18 +6,32 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { spawnPnpmSync } from "./lib/pnpm-command.mjs";
 
+/** @typedef {{ label: string, args: readonly string[] }} ContractCommand */
+/** @typedef {{ tracked: string, untracked: [string, string][] }} WorktreeSnapshot */
+
 const workspaceRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   ".."
 );
+/**
+ * @param {string | Uint8Array} value
+ * @returns {string}
+ */
 const hash = value => createHash("sha256").update(value).digest("hex");
 
+/**
+ * @param {readonly string[]} args
+ * @returns {Buffer}
+ */
 const gitOutput = args =>
   execFileSync("git", args, {
     cwd: workspaceRoot,
     maxBuffer: 50 * 1024 * 1024,
   });
 
+/**
+ * @returns {string[]}
+ */
 const untrackedPaths = () =>
   gitOutput(["status", "--porcelain=v1", "-z", "--untracked-files=all"])
     .toString("utf8")
@@ -25,6 +39,10 @@ const untrackedPaths = () =>
     .filter(entry => entry.startsWith("?? "))
     .map(entry => entry.slice(3));
 
+/**
+ * @param {string} relativePath
+ * @returns {string}
+ */
 const fingerprintPath = relativePath => {
   const absolutePath = path.join(workspaceRoot, relativePath);
   const stat = lstatSync(absolutePath);
@@ -37,6 +55,9 @@ const fingerprintPath = relativePath => {
   return hash(`other:${stat.mode}:${stat.size}`);
 };
 
+/**
+ * @returns {WorktreeSnapshot}
+ */
 const snapshotAuthoredWorktree = () => ({
   tracked: hash(gitOutput(["diff", "--binary", "HEAD", "--"])),
   untracked: untrackedPaths().map(relativePath => [
@@ -45,6 +66,7 @@ const snapshotAuthoredWorktree = () => ({
   ]),
 });
 
+/** @type {ContractCommand[]} */
 const commands = [
   {
     label: "Package-manager launcher contract",
@@ -69,6 +91,26 @@ const commands = [
   {
     label: "Oxlint maintainability contracts",
     args: ["run", "test:maintainability-lint"],
+  },
+  {
+    label: "Oxlint type-aware policy contracts",
+    args: ["run", "test:lint-policy"],
+  },
+  {
+    label: "TypeScript compiler profile contracts",
+    args: ["run", "test:typescript-toolchain"],
+  },
+  {
+    label: "Repository tooling typecheck",
+    args: ["run", "typecheck:scripts"],
+  },
+  {
+    label: "Repository tooling tests",
+    args: ["run", "test:tooling"],
+  },
+  {
+    label: "Quality task contract guards",
+    args: ["run", "test:quality-contracts"],
   },
   {
     label: "Effect language-service diagnostics",
@@ -108,6 +150,10 @@ const commands = [
   },
 ];
 
+/**
+ * @param {ContractCommand} command
+ * @returns {void}
+ */
 const runPnpm = ({ label, args }) => {
   process.stdout.write(`\n==> ${label}\n`);
   const result = spawnPnpmSync({

@@ -221,10 +221,13 @@ describe("isTypedHttpResponse basic shapes", () => {
 
 describe("isTypedHttpResponse header shapes", () => {
   test("accepts a null-prototype typed HTTP response", () => {
-    const response = Object.assign(Object.create(null), {
-      type: "NullPrototypeResponse",
-      statusCode: HttpStatusCode.OK,
-    });
+    const response = Object.assign(
+      Object.create(null) as Record<string, unknown>,
+      {
+        type: "NullPrototypeResponse",
+        statusCode: HttpStatusCode.OK,
+      }
+    );
 
     expect(isTypedHttpResponse(response)).toBe(true);
   });
@@ -260,9 +263,12 @@ describe("isTypedHttpResponse header shapes", () => {
   });
 
   test("accepts a null-prototype header record with string values", () => {
-    const header = Object.assign(Object.create(null), {
-      "X-Request-Id": "request-1",
-    });
+    const header = Object.assign(
+      Object.create(null) as Record<string, unknown>,
+      {
+        "X-Request-Id": "request-1",
+      }
+    );
     const response = {
       type: "NullPrototypeHeaderResponse",
       statusCode: HttpStatusCode.OK,

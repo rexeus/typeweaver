@@ -11,6 +11,11 @@ const packages = [
     version: "0.12.0",
   },
 ];
+/**
+ * @param {string} type
+ * @param {string} [name]
+ * @returns {{ fileName: string, releases: import("./lib/release-version-contract.mjs").ChangesetRelease[] }}
+ */
 const changeset = (type, name = "@rexeus/typeweaver") => ({
   fileName: "fixture.md",
   releases: parseChangesetReleases({
@@ -23,6 +28,10 @@ Fixture release.
 `,
   }),
 });
+/**
+ * @param {string} version
+ * @returns {string[]}
+ */
 const validatePackageVersion = version =>
   validateReleaseVersionContract({
     maximumPublishedMajor: 0,
@@ -60,6 +69,34 @@ assert.match(
     changesets: [changeset("major", "@rexeus/missing")],
   }).join("\n"),
   /references unknown package @rexeus\/missing/u
+);
+
+// Private workspace packages such as the shared TypeScript profile package are
+// excluded from the publishable inventory: their version never constrains the
+// release line, and a changeset must not name them because they never publish.
+const privatePackage = {
+  name: "@rexeus/typeweaver-tsconfig",
+  version: "1.0.0",
+  private: true,
+};
+
+assert.deepEqual(
+  validateReleaseVersionContract({
+    maximumPublishedMajor: 0,
+    packages: [privatePackage],
+    changesets: [],
+  }),
+  [],
+  "a private package must not constrain the release major"
+);
+
+assert.match(
+  validateReleaseVersionContract({
+    maximumPublishedMajor: 0,
+    packages: [...packages, privatePackage],
+    changesets: [changeset("minor", "@rexeus/typeweaver-tsconfig")],
+  }).join("\n"),
+  /references unknown package @rexeus\/typeweaver-tsconfig/u
 );
 
 assert.match(

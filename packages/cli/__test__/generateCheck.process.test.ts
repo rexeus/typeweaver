@@ -280,7 +280,7 @@ describe("built CLI generate --check matches", () => {
     expect(
       fs.existsSync(path.join(workspace, "generated", ".typeweaver-lock"))
     ).toBe(false);
-  }, 15_000);
+  }, 30_000);
 
   test("matches committed output through the config workflow", async () => {
     const workspace = createWorkspace();

@@ -32,8 +32,8 @@ const isMissingOptionalFormatter = (cause: unknown): boolean => {
     return false;
   }
 
-  const code = Reflect.get(cause, "code");
-  const message = Reflect.get(cause, "message");
+  const code: unknown = Reflect.get(cause, "code");
+  const message: unknown = Reflect.get(cause, "message");
   if (
     (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND") ||
     typeof message !== "string"
@@ -80,7 +80,7 @@ const loadFormatter = (
       });
     }
 
-    const format = Reflect.get(loaded.right, "format");
+    const format: unknown = Reflect.get(loaded.right, "format");
     if (!isFormatFn(format)) {
       return yield* new FormatterLoadError({
         moduleName: "oxfmt",
@@ -170,7 +170,7 @@ const formatFile = (
         cause: new TypeError("Formatter did not return an object"),
       });
     }
-    const code = Reflect.get(formatted, "code");
+    const code: unknown = Reflect.get(formatted, "code");
     if (typeof code !== "string") {
       return yield* new FormatterExecutionError({
         filePath,

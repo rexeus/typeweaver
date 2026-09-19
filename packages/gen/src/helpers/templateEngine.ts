@@ -76,6 +76,10 @@ export function renderTemplate(template: string, data: TemplateData): string {
     `__output.push(${JSON.stringify(template.slice(currentIndex))});`
   );
 
+  // The template language requires evaluating interpolated expressions in a
+  // scope that exposes template variables as bare identifiers. No reentrant or
+  // untrusted source reaches this engine, so `new Function` is intentional;
+  // oxlint-disable-next-line no-new-func
   const render = new Function(
     "data",
     "__escape",

@@ -31,7 +31,7 @@ const permissiveCorsHeaders = {
 
 type DownstreamPermissiveCorsPolicyOptions = {
   readonly statusCode?: IHttpResponse["statusCode"];
-  readonly header?: Record<string, string | string[]>;
+  readonly header?: Record<string, string | string[]> | undefined;
   readonly body?: IHttpResponse["body"];
 };
 
@@ -50,7 +50,7 @@ function downstreamResponseWithPermissiveCorsPolicy({
 type RunCorsOptions = {
   readonly options?: CorsOptions;
   readonly method?: HttpMethod;
-  readonly header?: Record<string, string | string[]>;
+  readonly header?: Record<string, string | string[] | undefined> | undefined;
   readonly finalHandler?: () => Promise<IHttpResponse>;
 };
 
@@ -1023,6 +1023,63 @@ describe("CORS preflight header casing", () => {
     expect(response.header?.["access-control-allow-headers"]).toBe(
       "Content-Type, Authorization"
     );
+  });
+});
+
+describe("CORS explicit undefined Origin entries", () => {
+  test("treats a lone undefined Origin as absent", async () => {
+    const response = await executeCors({
+      options: { origin: "https://allowed.com" },
+      header: { origin: undefined },
+    });
+    const absent = await executeCors({
+      options: { origin: "https://allowed.com" },
+    });
+
+    expect(response.header).toEqual(absent.header);
+    expect(response.header?.["access-control-allow-origin"]).toBe(
+      "https://allowed.com"
+    );
+  });
+
+  test.each<{
+    readonly case: string;
+    readonly header: Record<string, string | undefined>;
+  }>([
+    {
+      case: "valid entry first",
+      header: { origin: "https://app.com", Origin: undefined },
+    },
+    {
+      case: "undefined entry first",
+      header: { Origin: undefined, origin: "https://app.com" },
+    },
+  ])(
+    "reflects the valid singleton when a differently cased undefined entry shares the Origin name ($case)",
+    async ({ header }) => {
+      const response = await executeCors({
+        options: { origin: ["https://app.com"] },
+        header,
+      });
+
+      expect(response.header?.["access-control-allow-origin"]).toBe(
+        "https://app.com"
+      );
+      expect(response.header?.["vary"]).toBe("Origin");
+    }
+  );
+
+  test("still fails closed for genuine differently cased Origin duplicates", async () => {
+    const response = await executeCors({
+      options: { origin: ["https://app.com"] },
+      header: {
+        origin: "https://app.com",
+        Origin: "https://evil.com",
+      },
+    });
+
+    expect(response.header?.["access-control-allow-origin"]).toBeUndefined();
+    expect(response.header?.["vary"]).toBe("Origin");
   });
 });
 

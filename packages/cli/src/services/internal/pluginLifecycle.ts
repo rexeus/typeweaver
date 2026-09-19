@@ -47,6 +47,14 @@ export type GenerationResult = {
   readonly generatedFiles: readonly string[];
 };
 
+const markPluginInitialized = (params: {
+  readonly registration: PluginRegistration;
+  readonly initialized: PluginRegistration[];
+}): Effect.Effect<void> =>
+  Effect.sync(() => {
+    params.initialized.push(params.registration);
+  });
+
 const initializePlugin = Effect.fn(function* (params: {
   readonly registration: PluginRegistration;
   readonly pluginContext: PluginContext;
@@ -65,13 +73,7 @@ const initializePlugin = Effect.fn(function* (params: {
     `Initializing plugin: ${params.registration.plugin.name}`
   );
   yield* Effect.uninterruptibleMask(restore =>
-    restore(initialize).pipe(
-      Effect.tap(() =>
-        Effect.sync(() => {
-          params.initialized.push(params.registration);
-        })
-      )
-    )
+    restore(initialize).pipe(Effect.tap(() => markPluginInitialized(params)))
   );
 });
 

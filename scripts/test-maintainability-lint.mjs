@@ -9,208 +9,31 @@ import {
 } from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { fileURLToPath } from "node:url";
 import ts from "typescript";
+import {
+  assertLintPolicyConfiguration,
+  readLintConfig,
+  workspaceRoot,
+} from "./lib/lint-policy-contract.mjs";
+import { ruleCases } from "./lib/maintainability-fixtures.mjs";
 import { spawnPnpmSync } from "./lib/pnpm-command.mjs";
 
-const workspaceRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  ".."
-);
-const switchComplexity = caseCount =>
-  [
-    "function switchComplexity(value) {",
-    "  switch (value) {",
-    ...Array.from({ length: caseCount }, (_, index) => `    case ${index}:`),
-    "      return true;",
-    "    default:",
-    "      return false;",
-    "  }",
-    "}",
-  ].join("\n");
+/** @typedef {import("./lib/tooling-types.mjs").PackageManifest} PackageManifest */
+/** @typedef {{ code: string, filename: string, message: string, severity: string }} LintDiagnostic */
+/** @typedef {{ diagnostics: LintDiagnostic[] }} LintOutput */
+/** @typedef {LintOutput & { status: number | null }} LintResult */
 
-const nestedIfs = depth => {
-  const opening = Array.from(
-    { length: depth },
-    (_, index) => `${"  ".repeat(index + 1)}if (values[${index}]) {`
-  );
-  const closing = Array.from(
-    { length: depth },
-    (_, index) => `${"  ".repeat(depth - index)}}`
-  );
-  return [
-    "function nested(values) {",
-    ...opening,
-    `${"  ".repeat(depth + 1)}return true;`,
-    ...closing,
-    "  return false;",
-    "}",
-  ].join("\n");
-};
-
-const functionLines = valueLines =>
-  [
-    "function lines() {",
-    "",
-    "  // Blank and comment-only lines must not count.",
-    "  /* This comment-only line must not count either. */",
-    "  return [",
-    ...Array.from({ length: valueLines }, () => "    0,"),
-    "  ];",
-    "}",
-  ].join("\n");
-
-const nestedCallbacks = depth => {
-  let body = "return value;";
-  for (let index = 0; index < depth; index += 1) {
-    body = `run(() => { ${body} });`;
-  }
-  return `function callbacks(run, value) { ${body} }`;
-};
-
-const statements = count =>
-  [
-    "function statements(value) {",
-    ...Array.from({ length: count }, (_, index) => `  value(${index});`),
-    "}",
-  ].join("\n");
-
-const cognitiveComplexity = withElse => {
-  const flatConditions = Array.from({ length: 5 }, (_, index) => {
-    const condition = `  if (values[${index + 4}]) { consume(); }`;
-    return withElse && index === 4
-      ? `${condition} else { consume(); }`
-      : condition;
-  });
-  return [
-    "function cognitive(values, consume) {",
-    "  if (values[0]) {",
-    "    if (values[1]) {",
-    "      if (values[2]) {",
-    "        if (values[3]) {",
-    "          consume();",
-    "        }",
-    "      }",
-    "    }",
-    "  }",
-    ...flatConditions,
-    "}",
-  ].join("\n");
-};
-
-const logicalChain = (start, operatorCount) =>
-  Array.from(
-    { length: operatorCount + 1 },
-    (_, index) => `values[${start + index}]`
-  ).join(" && ");
-
-const expressionComplexity = secondOperatorCount =>
-  [
-    `function firstExpression(values) { return ${logicalChain(0, 6)}; }`,
-    `function secondExpression(values) { return ${logicalChain(
-      7,
-      secondOperatorCount
-    )}; }`,
-  ].join("\n");
-
-const ruleCases = [
-  {
-    name: "complexity",
-    rule: "eslint/complexity",
-    diagnostic: "eslint(complexity)",
-    options: ["error", { max: 10, variant: "classic" }],
-    valid: switchComplexity(9),
-    invalid: switchComplexity(10),
-  },
-  {
-    name: "max-depth",
-    rule: "eslint/max-depth",
-    diagnostic: "eslint(max-depth)",
-    options: ["error", { max: 4 }],
-    valid: nestedIfs(4),
-    invalid: nestedIfs(5),
-  },
-  {
-    name: "max-lines-per-function",
-    rule: "eslint/max-lines-per-function",
-    diagnostic: "eslint(max-lines-per-function)",
-    options: ["error", { max: 100, skipBlankLines: true, skipComments: true }],
-    valid: functionLines(96),
-    invalid: functionLines(97),
-  },
-  {
-    name: "max-nested-callbacks",
-    rule: "eslint/max-nested-callbacks",
-    diagnostic: "eslint(max-nested-callbacks)",
-    options: ["error", { max: 4 }],
-    valid: nestedCallbacks(4),
-    invalid: nestedCallbacks(5),
-  },
-  {
-    name: "max-params",
-    rule: "eslint/max-params",
-    diagnostic: "eslint(max-params)",
-    options: ["error", { max: 4, countThis: "except-void" }],
-    valid:
-      "function parameters(this: void, a, b, c, d) { return [a, b, c, d]; }",
-    invalid:
-      "function parameters(this: unknown, a, b, c, d) { return [a, b, c, d]; }",
-  },
-  {
-    name: "max-statements",
-    rule: "eslint/max-statements",
-    diagnostic: "eslint(max-statements)",
-    options: ["error", { max: 40 }],
-    valid: statements(40),
-    invalid: statements(41),
-  },
-  {
-    name: "cognitive-complexity",
-    rule: "sonarjs/cognitive-complexity",
-    diagnostic: "sonarjs(cognitive-complexity)",
-    options: ["error", 15],
-    valid: cognitiveComplexity(false),
-    invalid: cognitiveComplexity(true),
-  },
-  {
-    name: "expression-complexity",
-    rule: "sonarjs/expression-complexity",
-    diagnostic: "sonarjs(expression-complexity)",
-    options: ["error", { max: 6 }],
-    valid: expressionComplexity(6),
-    invalid: expressionComplexity(7),
-  },
-  {
-    name: "no-nested-switch",
-    rule: "sonarjs/no-nested-switch",
-    diagnostic: "sonarjs(no-nested-switch)",
-    options: "error",
-    valid:
-      "function switches(a, b) { switch (a) { case 1: return true; } switch (b) { case 2: return true; } return false; }",
-    invalid:
-      "function nestedSwitch(a, b) { switch (a) { case 1: switch (b) { case 2: return true; } } return false; }",
-  },
-];
-
-const readJson = filePath => JSON.parse(readFileSync(filePath, "utf8"));
-
-const allowedIgnorePatterns = [
-  "**/dist/**",
-  "**/node_modules/**",
-  ".vscode/**",
-  "**/output/**",
-  "**/outputs/**",
-];
-
+/**
+ * Authored lint suppressions. Every entry is a deliberate, explained
+ * exception; the list is asserted exactly so a suppression cannot be added,
+ * removed, or moved without a reviewed contract change.
+ *
+ * @type {Map<string, string[]>}
+ */
 const allowedDisableDirectives = new Map([
-  ["packages/cli/src/cli.ts", ["// eslint-disable-next-line no-console"]],
   [
-    "packages/cli/src/cliLogger.ts",
-    Array.from({ length: 7 }, () => "// eslint-disable-next-line no-console"),
-  ],
-  [
-    "packages/core/src/index.ts",
-    ["/* oxlint-disable import/max-dependencies */"],
+    "packages/gen/src/helpers/templateEngine.ts",
+    ["// oxlint-disable-next-line no-new-func"],
   ],
   [
     "packages/server/__test__/unit/NodeAdapter.test.ts",
@@ -220,57 +43,17 @@ const allowedDisableDirectives = new Map([
     "packages/server/src/lib/TypeweaverApp.ts",
     ["// oxlint-disable import/max-dependencies"],
   ],
-  [
-    "packages/server/src/lib/index.ts",
-    ["/* oxlint-disable import/max-dependencies */"],
-  ],
-  [
-    "packages/test-utils/src/data/index.ts",
-    ["/* oxlint-disable import/max-dependencies */"],
-  ],
-  [
-    "packages/test-utils/src/data/todo/index.ts",
-    ["/* oxlint-disable import/max-dependencies */"],
-  ],
-  [
-    "packages/test-utils/src/test-project/spec/shared/index.ts",
-    ["/* oxlint-disable import/max-dependencies */"],
-  ],
-  [
-    "packages/test-utils/src/test-project/spec/todo/index.ts",
-    ["/* oxlint-disable import/max-dependencies */"],
-  ],
 ]);
 
-const assertRootConfiguration = () => {
-  const config = readJson(path.join(workspaceRoot, ".oxlintrc.json"));
-  for (const ruleCase of ruleCases) {
-    if (
-      JSON.stringify(config.rules[ruleCase.rule]) !==
-      JSON.stringify(ruleCase.options)
-    ) {
-      throw new Error(
-        `${ruleCase.rule} does not match its verified configuration`
-      );
-    }
-  }
-  if (!config.jsPlugins?.includes("eslint-plugin-sonarjs")) {
-    throw new Error("The root config does not load the SonarJS Oxlint plugin");
-  }
-  if (
-    JSON.stringify(config.ignorePatterns) !==
-    JSON.stringify(allowedIgnorePatterns)
-  ) {
-    throw new Error("The Oxlint ignore patterns changed from the audited set");
-  }
-  if (
-    config.overrides !== undefined &&
-    JSON.stringify(config.overrides) !== "[]"
-  ) {
-    throw new Error("Oxlint overrides may not weaken the root rule contract");
-  }
-};
+/**
+ * @param {string} filePath
+ * @returns {PackageManifest}
+ */
+const readManifest = filePath => JSON.parse(readFileSync(filePath, "utf8"));
 
+/**
+ * @returns {string[]}
+ */
 const manifestPaths = () => {
   const packageRoot = path.join(workspaceRoot, "packages");
   const packageManifests = readdirSync(packageRoot, { withFileTypes: true })
@@ -280,11 +63,19 @@ const manifestPaths = () => {
   return [path.join(workspaceRoot, "package.json"), ...packageManifests];
 };
 
+/**
+ * @param {string} command
+ * @returns {boolean}
+ */
 const invokesEslint = command =>
   /(?:^|[^a-z0-9_-])eslint(?:\.js)?(?:$|[^a-z0-9_-])/iu.test(command);
 
+/**
+ * @param {string} manifestPath
+ * @returns {PackageManifest}
+ */
 const assertManifestHasNoEslint = manifestPath => {
-  const manifest = readJson(manifestPath);
+  const manifest = readManifest(manifestPath);
   const dependencyGroups = [
     manifest.dependencies,
     manifest.devDependencies,
@@ -294,7 +85,7 @@ const assertManifestHasNoEslint = manifestPath => {
   if (
     dependencyGroups.some(
       group =>
-        group?.eslint !== undefined ||
+        group?.["eslint"] !== undefined ||
         Object.values(group ?? {}).some(specifier =>
           String(specifier).startsWith("npm:eslint@")
         )
@@ -308,6 +99,9 @@ const assertManifestHasNoEslint = manifestPath => {
   return manifest;
 };
 
+/**
+ * @returns {string[]}
+ */
 const trackedFiles = () => {
   const result = spawnSync("git", ["ls-files", "-z"], {
     cwd: workspaceRoot,
@@ -324,11 +118,19 @@ const trackedFiles = () => {
   return result.stdout.split("\0").filter(Boolean);
 };
 
+/**
+ * @param {string} file
+ * @returns {boolean}
+ */
 const isAuthoredLintSource = file =>
   /\.[cm]?[jt]sx?$/u.test(file) &&
   !/(?:^|\/)(?:dist|node_modules|output|outputs)(?:\/|$)/u.test(file) &&
   !file.startsWith(".vscode/");
 
+/**
+ * @param {string} file
+ * @returns {ts.ScriptKind}
+ */
 const scriptKindFor = file => {
   if (file.endsWith(".tsx")) return ts.ScriptKind.TSX;
   if (file.endsWith(".jsx")) return ts.ScriptKind.JSX;
@@ -336,6 +138,11 @@ const scriptKindFor = file => {
   return ts.ScriptKind.TS;
 };
 
+/**
+ * @param {string} source
+ * @param {string} [file]
+ * @returns {string[]}
+ */
 const extractDisableDirectives = (source, file = "fixture.ts") => {
   const sourceFile = ts.createSourceFile(
     file,
@@ -344,14 +151,23 @@ const extractDisableDirectives = (source, file = "fixture.ts") => {
     true,
     scriptKindFor(file)
   );
+  /** @type {Map<string, ts.CommentRange>} */
   const commentRanges = new Map();
 
+  /**
+   * @param {readonly ts.CommentRange[] | undefined} ranges
+   * @returns {void}
+   */
   const rememberRanges = ranges => {
     for (const range of ranges ?? []) {
       commentRanges.set(`${range.pos}:${range.end}`, range);
     }
   };
 
+  /**
+   * @param {ts.Node} node
+   * @returns {void}
+   */
   const visit = node => {
     rememberRanges(ts.getLeadingCommentRanges(source, node.getFullStart()));
     rememberRanges(ts.getTrailingCommentRanges(source, node.getEnd()));
@@ -367,12 +183,19 @@ const extractDisableDirectives = (source, file = "fixture.ts") => {
     .filter(comment => /(?:oxlint|eslint)-(?:disable|enable)/u.test(comment));
 };
 
+/**
+ * @param {string} file
+ * @returns {string[]}
+ */
 const disableDirectives = file =>
   extractDisableDirectives(
     readFileSync(path.join(workspaceRoot, file), "utf8"),
     file
   );
 
+/**
+ * @returns {void}
+ */
 const assertDisableDirectiveScanner = () => {
   const actual = extractDisableDirectives(
     [
@@ -391,13 +214,18 @@ const assertDisableDirectiveScanner = () => {
   }
 };
 
+/**
+ * @param {readonly string[]} files
+ * @returns {void}
+ */
 const assertDisableDirectives = files => {
   assertDisableDirectiveScanner();
+  /** @type {[string, string[]][]} */
+  const entries = files
+    .filter(isAuthoredLintSource)
+    .map(file => [file, disableDirectives(file)]);
   const actual = new Map(
-    files
-      .filter(isAuthoredLintSource)
-      .map(file => [file, disableDirectives(file)])
-      .filter(([, directives]) => directives.length > 0)
+    entries.filter(([, directives]) => directives.length > 0)
   );
   if (
     JSON.stringify([...actual]) !==
@@ -411,9 +239,16 @@ const assertDisableDirectives = files => {
   }
 };
 
+/**
+ * @returns {void}
+ */
 const assertNoEslintRuntime = () => {
   const manifests = manifestPaths().map(assertManifestHasNoEslint);
-  if (manifests[0].scripts?.lint !== "oxlint .") {
+  const [rootManifest] = manifests;
+  if (rootManifest === undefined) {
+    throw new Error("The root package manifest is missing");
+  }
+  if (rootManifest.scripts?.["lint"] !== "oxlint . --deny-warnings") {
     throw new Error("The root lint script must remain the single Oxlint gate");
   }
 
@@ -451,6 +286,28 @@ const assertNoEslintRuntime = () => {
   assertDisableDirectives(repositoryFiles);
 };
 
+/**
+ * @returns {void}
+ */
+const assertRootConfiguration = () => {
+  assertLintPolicyConfiguration();
+  const config = readLintConfig();
+  for (const ruleCase of ruleCases) {
+    if (
+      JSON.stringify(config.rules[ruleCase.rule]) !==
+      JSON.stringify(ruleCase.options)
+    ) {
+      throw new Error(
+        `${ruleCase.rule} does not match its verified configuration`
+      );
+    }
+  }
+};
+
+/**
+ * @param {import("node:child_process").SpawnSyncReturns<string>} result
+ * @returns {LintOutput}
+ */
 const parseLintOutput = result => {
   if (result.error !== undefined) {
     throw result.error;
@@ -465,6 +322,9 @@ const parseLintOutput = result => {
   }
 };
 
+/**
+ * @returns {LintResult}
+ */
 const runRootLint = () => {
   const result = spawnPnpmSync({
     args: ["--silent", "run", "lint", "--format=json"],
@@ -475,6 +335,11 @@ const runRootLint = () => {
   return { ...parseLintOutput(result), status: result.status };
 };
 
+/**
+ * @param {string} directory
+ * @param {"valid" | "invalid"} kind
+ * @returns {void}
+ */
 const writeFixtures = (directory, kind) => {
   for (const ruleCase of ruleCases) {
     writeFileSync(
@@ -484,12 +349,22 @@ const writeFixtures = (directory, kind) => {
   }
 };
 
+/**
+ * @param {LintOutput} lintResult
+ * @param {string} fixtureRoot
+ * @returns {LintDiagnostic[]}
+ */
 const fixtureDiagnostics = (lintResult, fixtureRoot) =>
   lintResult.diagnostics.filter(diagnostic => {
     const absolutePath = path.resolve(workspaceRoot, diagnostic.filename);
     return absolutePath.startsWith(`${fixtureRoot}${path.sep}`);
   });
 
+/**
+ * @param {LintOutput} result
+ * @param {string} fixtureRoot
+ * @returns {void}
+ */
 const assertValidFixtures = (result, fixtureRoot) => {
   const diagnostics = fixtureDiagnostics(result, fixtureRoot);
   if (diagnostics.length > 0) {
@@ -503,6 +378,11 @@ const assertValidFixtures = (result, fixtureRoot) => {
   }
 };
 
+/**
+ * @param {LintResult} result
+ * @param {string} fixtureRoot
+ * @returns {void}
+ */
 const assertInvalidFixtures = (result, fixtureRoot) => {
   const diagnostics = fixtureDiagnostics(result, fixtureRoot);
   const actual = diagnostics
@@ -532,6 +412,7 @@ assertNoEslintRuntime();
 const fixtureRoot = mkdtempSync(
   path.join(workspaceRoot, "scripts", ".maintainability-run-")
 );
+/** @type {LintResult | undefined} */
 let validResult;
 try {
   writeFixtures(fixtureRoot, "valid");
@@ -545,6 +426,9 @@ try {
   rmSync(fixtureRoot, { recursive: true, force: true });
 }
 
+if (validResult === undefined) {
+  throw new Error("The maintainability fixture run did not produce a result");
+}
 if (validResult.status !== 0) {
   throw new Error(
     "The maintainability mutations passed, but the authored repository still fails pnpm lint"

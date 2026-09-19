@@ -23,16 +23,17 @@ export const cliLogger = Logger.make<unknown, void>(({ message, logLevel }) => {
 
   switch (logLevel._tag) {
     case "Warning":
-      // eslint-disable-next-line no-console
       console.warn(`[WARN] ${text}`);
       return;
     case "Error":
     case "Fatal":
-      // eslint-disable-next-line no-console
       console.error(`[ERROR] ${text}`);
       return;
-    default:
-      // eslint-disable-next-line no-console
+    case "All":
+    case "Info":
+    case "Debug":
+    case "Trace":
+    case "None":
       console.info(text);
       return;
   }
@@ -51,21 +52,19 @@ export const verboseCliLogger = Logger.make<unknown, void>(
 
     switch (logLevel._tag) {
       case "Warning":
-        // eslint-disable-next-line no-console
         console.warn(`[WARN] ${text}`);
         return;
       case "Error":
       case "Fatal":
-        // eslint-disable-next-line no-console
         console.error(`[ERROR] ${text}`);
         return;
       case "Debug":
       case "Trace":
-        // eslint-disable-next-line no-console
         console.info(`[DEBUG] ${text}`);
         return;
-      default:
-        // eslint-disable-next-line no-console
+      case "All":
+      case "Info":
+      case "None":
         console.info(text);
         return;
     }

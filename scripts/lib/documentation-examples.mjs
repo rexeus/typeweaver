@@ -1,7 +1,22 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
+import {
+  readManifest,
+  validateManifest,
+} from "./documentation-example-manifest.mjs";
 
+/** @typedef {import("./documentation-example-manifest.mjs").DocumentationGroup} DocumentationGroup */
+/** @typedef {import("./documentation-example-manifest.mjs").DocumentationSnippet} DocumentationSnippet */
+
+/** @typedef {{ failures: string[], parsedConfig: ts.ParsedCommandLine | undefined }} ParsedConfigResult */
+/** @typedef {{ failure: string | undefined, source: string | undefined }} SnippetExtraction */
+
+/**
+ * @param {ts.Diagnostic} diagnostic
+ * @param {string} workspaceRoot
+ * @returns {string}
+ */
 const formatDiagnostic = (diagnostic, workspaceRoot) => {
   const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n");
   if (diagnostic.file === undefined || diagnostic.start === undefined) {
@@ -15,224 +30,17 @@ const formatDiagnostic = (diagnostic, workspaceRoot) => {
   return `${file}:${position.line + 1}:${position.character + 1} TS${diagnostic.code}: ${message}`;
 };
 
-const readManifest = (absoluteManifestPath, manifestPath) => {
-  if (!existsSync(absoluteManifestPath)) {
-    return {
-      failures: [`${manifestPath}: manifest file does not exist`],
-      manifest: undefined,
-    };
-  }
-
-  let source;
-  try {
-    source = readFileSync(absoluteManifestPath, "utf8");
-  } catch {
-    return {
-      failures: [`${manifestPath}: manifest file could not be read`],
-      manifest: undefined,
-    };
-  }
-
-  try {
-    return { failures: [], manifest: JSON.parse(source) };
-  } catch {
-    return {
-      failures: [`${manifestPath}: manifest contains invalid JSON`],
-      manifest: undefined,
-    };
-  }
-};
-
-const isNonEmptyString = value => typeof value === "string" && value.length > 0;
-
-const isRecord = value =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const validateStringArray = ({ groupId, field, value }) => {
-  if (!Array.isArray(value)) {
-    return {
-      failures: [`${groupId}: ${field} must be an array`],
-      values: [],
-    };
-  }
-
-  return {
-    failures: value.flatMap((entry, index) =>
-      isNonEmptyString(entry)
-        ? []
-        : [`${groupId}: ${field}[${String(index)}] must be a non-empty string`]
-    ),
-    values: value.filter(isNonEmptyString),
-  };
-};
-
-const validateSnippets = ({ groupId, value }) => {
-  if (value === undefined) {
-    return { failures: [], values: [] };
-  }
-  if (!Array.isArray(value)) {
-    return {
-      failures: [`${groupId}: snippets must be an array`],
-      values: [],
-    };
-  }
-
-  const results = value.map((snippet, index) => {
-    const prefix = `${groupId}: snippets[${String(index)}]`;
-    if (!isRecord(snippet)) {
-      return {
-        failures: [`${prefix} must be an object`],
-        value: undefined,
-      };
-    }
-
-    const fields = ["id", "document", "fixture"];
-    const failures = fields.flatMap(field =>
-      isNonEmptyString(snippet[field])
-        ? []
-        : [`${prefix}.${field} must be a non-empty string`]
-    );
-    return {
-      failures,
-      value:
-        failures.length === 0
-          ? {
-              id: snippet.id,
-              document: snippet.document,
-              fixture: snippet.fixture,
-            }
-          : undefined,
-    };
-  });
-
-  return {
-    failures: results.flatMap(result => result.failures),
-    values: results.flatMap(result =>
-      result.value === undefined ? [] : [result.value]
-    ),
-  };
-};
-
-const validateGroup = (group, index) => {
-  const fallbackId = `<group ${String(index)}>`;
-  if (typeof group !== "object" || group === null || Array.isArray(group)) {
-    return {
-      failures: [`${fallbackId} must be an object`],
-      group: {
-        id: fallbackId,
-        documents: [],
-        fixtures: [],
-        runtimeFixtures: [],
-        snippets: [],
-      },
-    };
-  }
-
-  const id = isNonEmptyString(group.id) ? group.id : fallbackId;
-  const documents = validateStringArray({
-    groupId: id,
-    field: "documents",
-    value: group.documents,
-  });
-  const fixtures = validateStringArray({
-    groupId: id,
-    field: "fixtures",
-    value: group.fixtures,
-  });
-  const runtimeFixtures =
-    group.runtimeFixtures === undefined
-      ? { failures: [], values: [] }
-      : validateStringArray({
-          groupId: id,
-          field: "runtimeFixtures",
-          value: group.runtimeFixtures,
-        });
-  const snippets = validateSnippets({ groupId: id, value: group.snippets });
-  const snippetIds = snippets.values.map(snippet => snippet.id);
-  const duplicateSnippetIds = new Set(
-    snippetIds.filter(
-      (snippetId, snippetIndex) =>
-        snippetIds.indexOf(snippetId) !== snippetIndex
-    )
-  );
-
-  return {
-    failures: [
-      ...(id === fallbackId
-        ? [`${fallbackId}: id must be a non-empty string`]
-        : []),
-      ...documents.failures,
-      ...fixtures.failures,
-      ...runtimeFixtures.failures,
-      ...snippets.failures,
-      ...Array.from(
-        duplicateSnippetIds,
-        snippetId => `${id}: duplicate snippet id ${snippetId}`
-      ),
-    ],
-    group: {
-      id,
-      documents: documents.values,
-      fixtures: fixtures.values,
-      runtimeFixtures: runtimeFixtures.values,
-      snippets: snippets.values,
-    },
-  };
-};
-
-const validateManifest = (manifest, manifestPath, requiredGroupIds) => {
-  if (!isRecord(manifest)) {
-    return {
-      failures: [`${manifestPath}: manifest must be a JSON object`],
-      groups: [],
-      tsconfig: undefined,
-    };
-  }
-
-  const failures =
-    manifest.version === 1
-      ? []
-      : [`${manifestPath} has unsupported version ${String(manifest.version)}`];
-  const tsconfig = isNonEmptyString(manifest.tsconfig)
-    ? manifest.tsconfig
-    : undefined;
-  if (tsconfig === undefined) {
-    failures.push(`${manifestPath}: tsconfig must be a non-empty string`);
-  }
-  const validatedGroups = Array.isArray(manifest.groups)
-    ? manifest.groups.map(validateGroup)
-    : [];
-  const groups = validatedGroups.map(result => result.group);
-  if (!Array.isArray(manifest.groups)) {
-    failures.push(`${manifestPath}: groups must be an array`);
-  }
-  failures.push(...validatedGroups.flatMap(result => result.failures));
-
-  const groupIds = groups.map(group => group.id);
-  const duplicateGroupIds = new Set(
-    groupIds.filter((groupId, index) => groupIds.indexOf(groupId) !== index)
-  );
-
-  failures.push(
-    ...Array.from(
-      duplicateGroupIds,
-      groupId => `Duplicate documentation example group: ${groupId}`
-    )
-  );
-  failures.push(
-    ...requiredGroupIds
-      .filter(groupId => !groupIds.includes(groupId))
-      .map(
-        groupId => `Missing required documentation example group: ${groupId}`
-      )
-  );
-
-  return { failures, groups, tsconfig };
-};
-
+/**
+ * @param {string} source
+ * @returns {string}
+ */
 const normalizeSnippet = source =>
   source.replaceAll("\r\n", "\n").replaceAll("\r", "\n").trimEnd();
 
+/**
+ * @param {{ groupId: string, snippet: DocumentationSnippet, documentSource: string }} options
+ * @returns {SnippetExtraction}
+ */
 const extractDocumentedSnippet = ({ groupId, snippet, documentSource }) => {
   const marker = `<!-- docs-snippet: ${snippet.id} -->`;
   const markerParts = documentSource.split(marker);
@@ -243,15 +51,17 @@ const extractDocumentedSnippet = ({ groupId, snippet, documentSource }) => {
     };
   }
 
-  const sourceBeforeMarker = markerParts[0].trimEnd();
+  const sourceBeforeMarker = (markerParts[0] ?? "").trimEnd();
   const fenceMatches = Array.from(
     sourceBeforeMarker.matchAll(
       /(?:^|\n)```(?:ts|typescript)\r?\n([\s\S]*?)\r?\n```/g
     )
   );
   const fenceMatch = fenceMatches.at(-1);
+  const fenceSource = fenceMatch?.[1];
   if (
-    fenceMatch?.[1] === undefined ||
+    fenceMatch === undefined ||
+    fenceSource === undefined ||
     fenceMatch.index === undefined ||
     fenceMatch.index + fenceMatch[0].length !== sourceBeforeMarker.length
   ) {
@@ -260,10 +70,15 @@ const extractDocumentedSnippet = ({ groupId, snippet, documentSource }) => {
       source: undefined,
     };
   }
-  return { failure: undefined, source: normalizeSnippet(fenceMatch[1]) };
+  return { failure: undefined, source: normalizeSnippet(fenceSource) };
 };
 
+/**
+ * @param {{ group: DocumentationGroup, snippet: DocumentationSnippet, workspaceRoot: string }} options
+ * @returns {string[]}
+ */
 const validateSnippet = ({ group, snippet, workspaceRoot }) => {
+  /** @type {string[]} */
   const failures = [];
   if (!group.documents.includes(snippet.document)) {
     failures.push(
@@ -298,6 +113,11 @@ const validateSnippet = ({ group, snippet, workspaceRoot }) => {
   return failures;
 };
 
+/**
+ * @param {DocumentationGroup} group
+ * @param {string} workspaceRoot
+ * @returns {string[]}
+ */
 const validateGroupFiles = (group, workspaceRoot) => {
   const marker = `<!-- docs-example: ${group.id} -->`;
   const runtimeFixtures = Array.isArray(group.runtimeFixtures)
@@ -330,6 +150,11 @@ const validateGroupFiles = (group, workspaceRoot) => {
   ];
 };
 
+/**
+ * @param {string} workspaceRoot
+ * @param {string} tsconfig
+ * @returns {ParsedConfigResult}
+ */
 const parseTypeScriptConfig = (workspaceRoot, tsconfig) => {
   const tsconfigPath = path.resolve(workspaceRoot, tsconfig);
   const configFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
@@ -355,6 +180,13 @@ const parseTypeScriptConfig = (workspaceRoot, tsconfig) => {
   };
 };
 
+/**
+ * @param {readonly DocumentationGroup[]} groups
+ * @param {string} workspaceRoot
+ * @param {string} tsconfig
+ * @param {ts.ParsedCommandLine} parsedConfig
+ * @returns {string[]}
+ */
 const validateFixtureInclusion = (
   groups,
   workspaceRoot,
@@ -376,6 +208,11 @@ const validateFixtureInclusion = (
   );
 };
 
+/**
+ * @param {string} workspaceRoot
+ * @param {ts.ParsedCommandLine} parsedConfig
+ * @returns {string[]}
+ */
 const getTypeScriptFailures = (workspaceRoot, parsedConfig) => {
   const program = ts.createProgram(
     parsedConfig.fileNames,
@@ -386,6 +223,14 @@ const getTypeScriptFailures = (workspaceRoot, parsedConfig) => {
     .map(diagnostic => formatDiagnostic(diagnostic, workspaceRoot));
 };
 
+/**
+ * @param {{
+ *   workspaceRoot: string,
+ *   manifestPath: string,
+ *   requiredGroupIds: readonly string[],
+ * }} options
+ * @returns {{ failures: string[], groups: DocumentationGroup[] }}
+ */
 export const verifyDocumentationExamples = ({
   workspaceRoot,
   manifestPath,

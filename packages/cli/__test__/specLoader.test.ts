@@ -147,7 +147,7 @@ const expectBundledArtifacts = (outputDir: string): void => {
 
 const expectSingleTodoResource = (loadedSpec: LoadedSpec): void => {
   expect(Object.keys(loadedSpec.definition.resources)).toEqual(["todos"]);
-  expect(loadedSpec.definition.resources.todos?.operations).toHaveLength(1);
+  expect(loadedSpec.definition.resources["todos"]?.operations).toHaveLength(1);
   expect(loadedSpec.normalizedSpec.resources).toEqual([
     expect.objectContaining({
       name: "todos",
@@ -155,9 +155,9 @@ const expectSingleTodoResource = (loadedSpec: LoadedSpec): void => {
         expect.objectContaining({
           operationId: "getTodo",
           path: "/todos/:todoId",
-        }),
+        }) as unknown,
       ],
-    }),
+    }) as unknown,
   ]);
 };
 
@@ -564,7 +564,7 @@ describe("SpecLoader bundler output contract", () => {
           inputFile,
           cause: probeFailure,
           _tag: "SpecBundleError",
-        }),
+        }) as unknown,
       ]);
       expect(fs.readdirSync(project.outputDir)).toEqual([]);
     }
@@ -614,7 +614,7 @@ describe("SpecLoader supported spec modules", () => {
         name: "TodoResponse",
         kind: "response",
         statusCode: 200,
-      }),
+      }) as unknown,
     ]);
     expect(
       loadedSpec.normalizedSpec.resources[0]?.operations[0]?.responses
@@ -629,7 +629,7 @@ describe("SpecLoader supported spec modules", () => {
         response: expect.objectContaining({
           name: "TodoNotFound",
           statusCode: 404,
-        }),
+        }) as unknown,
       },
     ]);
     expectBundledArtifacts(project.outputDir);
@@ -653,7 +653,7 @@ describe("SpecLoader supported spec modules", () => {
         name: "TodoResponse",
         kind: "response",
         statusCode: 200,
-      }),
+      }) as unknown,
     ]);
     expectBundledArtifacts(project.outputDir);
   });
@@ -676,7 +676,7 @@ describe("SpecLoader supported spec modules", () => {
         response: expect.objectContaining({
           name: "TodoResponse",
           statusCode: 200,
-        }),
+        }) as unknown,
       },
     ]);
     expectBundledArtifacts(project.outputDir);

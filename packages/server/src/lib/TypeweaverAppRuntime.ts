@@ -15,8 +15,8 @@ type InitializeTypeweaverAppRuntimeOptions = {
 };
 
 type InitializeTypeweaverAppRuntimeParameters = {
-  readonly app: TypeweaverApp<any>;
-  readonly options?: InitializeTypeweaverAppRuntimeOptions;
+  readonly app: TypeweaverApp<Record<string, unknown>>;
+  readonly options?: InitializeTypeweaverAppRuntimeOptions | undefined;
   readonly reportError: (error: unknown) => void;
 };
 
