@@ -66,6 +66,53 @@ const validateStringArray = ({ groupId, field, value }) => {
   };
 };
 
+const validateSnippets = ({ groupId, value }) => {
+  if (value === undefined) {
+    return { failures: [], values: [] };
+  }
+  if (!Array.isArray(value)) {
+    return {
+      failures: [`${groupId}: snippets must be an array`],
+      values: [],
+    };
+  }
+
+  const results = value.map((snippet, index) => {
+    const prefix = `${groupId}: snippets[${String(index)}]`;
+    if (!isRecord(snippet)) {
+      return {
+        failures: [`${prefix} must be an object`],
+        value: undefined,
+      };
+    }
+
+    const fields = ["id", "document", "fixture"];
+    const failures = fields.flatMap(field =>
+      isNonEmptyString(snippet[field])
+        ? []
+        : [`${prefix}.${field} must be a non-empty string`]
+    );
+    return {
+      failures,
+      value:
+        failures.length === 0
+          ? {
+              id: snippet.id,
+              document: snippet.document,
+              fixture: snippet.fixture,
+            }
+          : undefined,
+    };
+  });
+
+  return {
+    failures: results.flatMap(result => result.failures),
+    values: results.flatMap(result =>
+      result.value === undefined ? [] : [result.value]
+    ),
+  };
+};
+
 const validateGroup = (group, index) => {
   const fallbackId = `<group ${String(index)}>`;
   if (typeof group !== "object" || group === null || Array.isArray(group)) {
@@ -76,6 +123,7 @@ const validateGroup = (group, index) => {
         documents: [],
         fixtures: [],
         runtimeFixtures: [],
+        snippets: [],
       },
     };
   }
@@ -99,6 +147,14 @@ const validateGroup = (group, index) => {
           field: "runtimeFixtures",
           value: group.runtimeFixtures,
         });
+  const snippets = validateSnippets({ groupId: id, value: group.snippets });
+  const snippetIds = snippets.values.map(snippet => snippet.id);
+  const duplicateSnippetIds = new Set(
+    snippetIds.filter(
+      (snippetId, snippetIndex) =>
+        snippetIds.indexOf(snippetId) !== snippetIndex
+    )
+  );
 
   return {
     failures: [
@@ -108,12 +164,18 @@ const validateGroup = (group, index) => {
       ...documents.failures,
       ...fixtures.failures,
       ...runtimeFixtures.failures,
+      ...snippets.failures,
+      ...Array.from(
+        duplicateSnippetIds,
+        snippetId => `${id}: duplicate snippet id ${snippetId}`
+      ),
     ],
     group: {
       id,
       documents: documents.values,
       fixtures: fixtures.values,
       runtimeFixtures: runtimeFixtures.values,
+      snippets: snippets.values,
     },
   };
 };
@@ -168,6 +230,74 @@ const validateManifest = (manifest, manifestPath, requiredGroupIds) => {
   return { failures, groups, tsconfig };
 };
 
+const normalizeSnippet = source =>
+  source.replaceAll("\r\n", "\n").replaceAll("\r", "\n").trimEnd();
+
+const extractDocumentedSnippet = ({ groupId, snippet, documentSource }) => {
+  const marker = `<!-- docs-snippet: ${snippet.id} -->`;
+  const markerParts = documentSource.split(marker);
+  if (markerParts.length !== 2) {
+    return {
+      failure: `${groupId}: ${snippet.document} must contain exactly one marker ${marker}`,
+      source: undefined,
+    };
+  }
+
+  const sourceBeforeMarker = markerParts[0].trimEnd();
+  const fenceMatches = Array.from(
+    sourceBeforeMarker.matchAll(
+      /(?:^|\n)```(?:ts|typescript)\r?\n([\s\S]*?)\r?\n```/g
+    )
+  );
+  const fenceMatch = fenceMatches.at(-1);
+  if (
+    fenceMatch?.[1] === undefined ||
+    fenceMatch.index === undefined ||
+    fenceMatch.index + fenceMatch[0].length !== sourceBeforeMarker.length
+  ) {
+    return {
+      failure: `${groupId}: ${snippet.document} must place a TypeScript code fence immediately before ${marker}`,
+      source: undefined,
+    };
+  }
+  return { failure: undefined, source: normalizeSnippet(fenceMatch[1]) };
+};
+
+const validateSnippet = ({ group, snippet, workspaceRoot }) => {
+  const failures = [];
+  if (!group.documents.includes(snippet.document)) {
+    failures.push(
+      `${group.id}: snippet ${snippet.id} document is not registered in the group: ${snippet.document}`
+    );
+  }
+  const documentPath = path.resolve(workspaceRoot, snippet.document);
+  const fixturePath = path.resolve(workspaceRoot, snippet.fixture);
+  if (!existsSync(fixturePath)) {
+    failures.push(`${group.id}: missing snippet fixture ${snippet.fixture}`);
+  }
+  if (!existsSync(documentPath) || !existsSync(fixturePath)) {
+    return failures;
+  }
+
+  const extraction = extractDocumentedSnippet({
+    groupId: group.id,
+    snippet,
+    documentSource: readFileSync(documentPath, "utf8"),
+  });
+  if (extraction.failure !== undefined) {
+    failures.push(extraction.failure);
+    return failures;
+  }
+
+  const fixtureSnippet = normalizeSnippet(readFileSync(fixturePath, "utf8"));
+  if (extraction.source !== fixtureSnippet) {
+    failures.push(
+      `${group.id}: documented snippet ${snippet.id} differs from ${snippet.fixture}`
+    );
+  }
+  return failures;
+};
+
 const validateGroupFiles = (group, workspaceRoot) => {
   const marker = `<!-- docs-example: ${group.id} -->`;
   const runtimeFixtures = Array.isArray(group.runtimeFixtures)
@@ -188,8 +318,16 @@ const validateGroupFiles = (group, workspaceRoot) => {
   const runtimeFixtureFailures = runtimeFixtures
     .filter(fixture => !existsSync(path.resolve(workspaceRoot, fixture)))
     .map(fixture => `${group.id}: missing runtime fixture ${fixture}`);
+  const snippetFailures = group.snippets.flatMap(snippet =>
+    validateSnippet({ group, snippet, workspaceRoot })
+  );
 
-  return [...documentFailures, ...fixtureFailures, ...runtimeFixtureFailures];
+  return [
+    ...documentFailures,
+    ...fixtureFailures,
+    ...runtimeFixtureFailures,
+    ...snippetFailures,
+  ];
 };
 
 const parseTypeScriptConfig = (workspaceRoot, tsconfig) => {

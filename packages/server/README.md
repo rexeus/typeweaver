@@ -1,400 +1,162 @@
-# 🧵✨ @rexeus/typeweaver-server
+# `@rexeus/typeweaver-server`
+
+> Generate a Fetch-native server boundary with typed handlers, request and response validation,
+> routing, error mapping, and composable middleware—without adopting a separate web framework.
 
 [![npm version](https://img.shields.io/npm/v/@rexeus/typeweaver-server.svg)](https://www.npmjs.com/package/@rexeus/typeweaver-server)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](../../LICENSE)
 
-Typeweaver is a type-safe HTTP API framework built for API-first development with a focus on
-developer experience. Use typeweaver to specify your HTTP APIs in TypeScript and Zod, and generate
-clients, validators, routers, and more ✨
+## Choose this projection when
 
-## 📝 Server Plugin
+Use `server` when you want application code to implement generated handler contracts while the
+generated runtime deals with HTTP routing and the Fetch `Request`/`Response` boundary.
 
-This plugin generates a **lightweight, dependency-free server** with built-in routing and middleware
-from your typeweaver API definitions. No external framework required — everything runs on the
-standard Fetch API (`Request`/`Response`).
+Choose [`hono`](../hono/README.md) instead when your application already uses Hono and should remain
+inside its context and middleware model.
 
-For each resource, it produces a `<ResourceName>Router` class that registers routes, validates
-requests, and wires your handler methods with full type safety. Mount routers on the provided
-`TypeweaverApp` to get a complete server with middleware support.
-
-> Choose this plugin for a zero-dependency, Fetch API-native server. For Hono framework integration,
-> see [@rexeus/typeweaver-hono](../hono/README.md).
-
-### Key Features
-
-- **Zero runtime dependencies** — no Hono, Express, or Fastify required
-- **Fetch API compatible** — works with Bun, Deno, Cloudflare Workers, and Node.js (>=18)
-- **High-performance radix tree router** — O(d) lookup where d = number of path segments
-- **Type-safe middleware** — compile-time state guarantees via `defineMiddleware`, `StateMap`, and
-  `InferState`
-- **Automatic HEAD handling** — falls back to GET handlers per HTTP spec
-- **405 Method Not Allowed** — with proper `Allow` header
-
----
-
-## 📥 Installation
+## Generate it
 
 ```bash
-# Install the CLI and the plugin as a dev dependency
-npm install -D @rexeus/typeweaver @rexeus/typeweaver-server
+pnpm add -D @rexeus/typeweaver
+pnpm add @rexeus/typeweaver-core zod
 
-# Install the runtime as a dependency
-npm install @rexeus/typeweaver-core
+pnpm typeweaver generate \
+  --input ./api/spec/index.ts \
+  --output ./api/generated \
+  --plugins server
 ```
 
-## 💡 How to use
+The `types` projection is included automatically. The server runtime is copied into the generated
+output, so application code imports routers and runtime helpers from that output rather than from
+the generator package.
 
-```bash
-npx typeweaver generate --input ./api/spec/index.ts --output ./api/generated --plugins server
+## Generated surface
+
+For a `todo` resource:
+
+```text
+api/generated/
+├── lib/server/                 # app, router, adapters, middleware, errors
+└── todo/
+    ├── TodoRouter.ts           # router and ServerTodoApiHandler contract
+    └── ...generated operation types and validators
 ```
 
-More on the CLI in
-[@rexeus/typeweaver](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md#️-cli).
-
-## 📂 Generated Output
-
-For a resource `User`, the plugin generates:
-
-```
-generated/
-  lib/server/              ← TypeweaverApp, middleware types, etc.
-  user/
-    UserRouter.ts          ← Router class + ServerUserApiHandler type
-    GetUserRequest.ts      ← Request types (IGetUserRequest)
-    GetUserResponse.ts     ← Response types + factory classes
-    ...
-```
-
-Import `TypeweaverApp`, routers, and types from `./generated`.
-
-## 🚀 Usage
-
-### Implement handlers
-
-Each handler receives the typed request and returns a typed response — plain objects with
-`statusCode`, `header`, and `body`. Content-Type is auto-set to `application/json` for object
-bodies.
+## Implement handlers
 
 ```ts
-// user-handlers.ts
-import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import type { ServerUserApiHandler } from "./generated";
+import {
+  createGetTodoSuccessResponse,
+  createTodoNotFoundResponse,
+  type ServerTodoApiHandler,
+} from "./api/generated/index.js";
 
-export const userHandlers: ServerUserApiHandler = {
-  async handleListUsersRequest() {
-    return {
-      statusCode: HttpStatusCode.OK,
-      body: [{ id: "1", name: "Jane", email: "jane@example.com" }],
-    };
-  },
+export const todoHandlers: ServerTodoApiHandler = {
+  async handleGetTodoRequest(request, context) {
+    const todo = await findTodo(request.param.todoId, {
+      signal: context.signal,
+    });
 
-  async handleCreateUserRequest(request) {
-    return {
-      statusCode: HttpStatusCode.CREATED,
-      body: { id: "1", name: request.body.name, email: request.body.email },
-    };
-  },
+    if (!todo) {
+      return createTodoNotFoundResponse({
+        body: {
+          message: "Todo not found",
+          todoId: request.param.todoId,
+        },
+      });
+    }
 
-  async handleGetUserRequest(request) {
-    return {
-      statusCode: HttpStatusCode.OK,
-      body: {
-        id: request.param.userId,
-        name: "Jane",
-        email: "jane@example.com",
-      },
-    };
-  },
-
-  async handleDeleteUserRequest() {
-    return { statusCode: HttpStatusCode.NO_CONTENT };
+    return createGetTodoSuccessResponse({ body: todo });
   },
 };
 ```
 
-> Generated response factory functions (e.g. `createGetUserSuccessResponse`) are also available for
-> constructing typed responses with pre-set `type` and `statusCode` discriminators.
-
 <!-- docs-example: fetch-server-handler -->
 
-The Fetch-native handler signature and response factory are typechecked in the
+The generated Fetch handler signature and response factory are typechecked in the
 [server handler fixture](../cli/examples/documentation/fetch-server-handler.ts).
 
-### Create the app
+TypeScript requires the resource handler record to cover every generated operation. Each method
+receives the validated request and a `ServerContext` that includes the incoming cancellation signal
+and middleware state.
+
+## Mount routers
 
 ```ts
-// server.ts
-import { TypeweaverApp, UserRouter } from "./generated";
-import { userHandlers } from "./user-handlers";
+import { TodoRouter, TypeweaverApp } from "./api/generated/index.js";
+import { todoHandlers } from "./todo-handlers.js";
 
-const app = new TypeweaverApp();
-app.route(new UserRouter({ requestHandlers: userHandlers }));
-
-export { app };
+export const app = new TypeweaverApp().route(new TodoRouter({ requestHandlers: todoHandlers }));
 ```
 
-### Start the server
-
-**Bun**
+Mount multiple resources or a path prefix:
 
 ```ts
-import { app } from "./server";
-
-Bun.serve({ fetch: app.fetch, port: 3000 });
+const app = new TypeweaverApp()
+  .route(new HealthRouter({ requestHandlers: healthHandlers }))
+  .route("/api/v1", new TodoRouter({ requestHandlers: todoHandlers }));
 ```
 
-**Deno**
+`app.fetch` is a standard Fetch handler. Connect it to the host runtime:
 
 ```ts
-import { app } from "./server.ts";
-
-Deno.serve({ port: 3000 }, app.fetch);
-```
-
-**Node.js**
-
-```ts
+// Node.js
 import { createServer } from "node:http";
-import { nodeAdapter } from "./generated/lib/server";
-import { app } from "./server";
+import { nodeAdapter } from "./api/generated/lib/server/index.js";
 
 createServer(nodeAdapter(app)).listen(3000);
 ```
 
-### Multiple routers
-
 ```ts
-app.route(new UserRouter({ requestHandlers: userHandlers }));
-app.route("/api/v1", new OrderRouter({ requestHandlers: orderHandlers }));
+// Bun
+Bun.serve({ port: 3000, fetch: app.fetch });
 ```
 
-### 🔗 Middleware
+```ts
+// Deno
+Deno.serve({ port: 3000 }, app.fetch);
+```
 
-Middleware is defined with `defineMiddleware` and follows a return-based onion model. Each
-middleware declares what state it **provides** downstream and what state it **requires** from
-upstream — all checked at compile time.
+Runtime support should be verified against the host and generated bundle you deploy; the server
+contract itself is built on standard Fetch primitives.
 
-**Providing state** — pass state to `next()`:
+## Validation and error mapping
+
+Request and response validation are enabled by default. They are explicit router options rather than
+unconditional product-wide behavior:
 
 ```ts
-import { defineMiddleware } from "./generated/lib/server";
-
-const auth = defineMiddleware<{ userId: string }>(async (ctx, next) => {
-  const token = ctx.request.header?.["authorization"];
-  return next({ userId: parseToken(token) });
+const router = new TodoRouter({
+  requestHandlers: todoHandlers,
+  validateRequests: true,
+  validateResponses: true,
+  handleRequestValidationErrors: true,
+  handleResponseValidationErrors: true,
+  handleHttpResponseErrors: true,
+  handleUnknownErrors: true,
 });
 ```
 
-When `TProvides` has keys, `next()` **requires** the state object as its argument — you can't forget
-to provide it.
+| Option                           | Default | Purpose                                                  |
+| -------------------------------- | ------- | -------------------------------------------------------- |
+| `validateRequests`               | `true`  | validate and parse incoming request parts                |
+| `validateResponses`              | `true`  | validate and parse handler responses                     |
+| `handleRequestValidationErrors`  | `true`  | return the default 400 or use a custom mapper            |
+| `handleResponseValidationErrors` | `true`  | return the default 500 or use a custom mapper            |
+| `handleHttpResponseErrors`       | `true`  | return thrown typed HTTP responses as declared responses |
+| `handleUnknownErrors`            | `true`  | return a sanitized 500 or use a custom mapper            |
 
-**Requiring upstream state** — declare dependencies:
-
-```ts
-const permissions = defineMiddleware<{ permissions: string[] }, { userId: string }>(
-  async (ctx, next) => {
-    const userId = ctx.state.get("userId"); // string — no cast, no undefined
-    return next({ permissions: await loadPermissions(userId) });
-  }
-);
-```
-
-Registering `permissions` before `auth` produces a **compile-time error** because `userId` is not
-yet available in the accumulated state.
-
-**Pass-through middleware** — `next()` takes no arguments:
+Setting an error handler option to a function lets the application map the framework error into its
+own declared response shape.
 
 ```ts
-const logger = defineMiddleware(async (ctx, next) => {
-  const start = Date.now();
-  const response = await next();
-  console.log(
-    `${ctx.request.method} ${ctx.request.path} -> ${response.statusCode} (${Date.now() - start}ms)`
-  );
-  return response;
-});
-```
-
-**Short-circuit** — return a response without calling `next()`:
-
-```ts
-const guard = defineMiddleware(async (ctx, next) => {
-  if (!ctx.request.header?.["authorization"]) {
-    return { statusCode: 401, body: { message: "Unauthorized" } };
-  }
-  return next();
-});
-```
-
-**Path-scoped guard** — use `pathMatcher` to limit middleware to specific routes:
-
-```ts
-import { defineMiddleware, pathMatcher } from "./generated/lib/server";
-
-const isUsersPath = pathMatcher("/users/*");
-
-const usersGuard = defineMiddleware(async (ctx, next) => {
-  if (!isUsersPath(ctx.request.path)) return next();
-  if (!ctx.request.header?.["authorization"]) {
-    return { statusCode: 401, body: { message: "Unauthorized" } };
-  }
-  return next();
-});
-```
-
-`pathMatcher` supports exact matches (`"/health"`) and prefix matches (`"/users/*"`).
-
-**Chaining** — state accumulates through `.use()`:
-
-```ts
-const app = new TypeweaverApp()
-  .use(auth) // provides { userId: string }
-  .use(permissions) // requires { userId }, provides { permissions: string[] }
-  .route(new TodoRouter({ requestHandlers: todoHandlers }));
-```
-
-**`InferState`** — extract the accumulated state type for handlers:
-
-```ts
-import type { InferState } from "./generated/lib/server";
-
-type AppState = InferState<typeof app>;
-// { userId: string } & { permissions: string[] }
-```
-
-Middleware runs for **all** requests, including 404s and 405s, so global concerns like logging and
-CORS always execute.
-
-### 📦 Built-in Middleware
-
-Ready-to-use middleware included with the server plugin.
-
-| Middleware                                                                                                          | Description                          | State           |
-| ------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | --------------- |
-| [`cors`](https://github.com/rexeus/typeweaver/blob/main/packages/server/docs/middleware/cors.md)                    | CORS headers & preflight handling    | —               |
-| [`basicAuth`](https://github.com/rexeus/typeweaver/blob/main/packages/server/docs/middleware/basic-auth.md)         | HTTP Basic Authentication            | `{ username }`  |
-| [`bearerAuth`](https://github.com/rexeus/typeweaver/blob/main/packages/server/docs/middleware/bearer-auth.md)       | HTTP Bearer Token Authentication     | `{ token }`     |
-| [`logger`](https://github.com/rexeus/typeweaver/blob/main/packages/server/docs/middleware/logger.md)                | Request/response logging with timing | —               |
-| [`secureHeaders`](https://github.com/rexeus/typeweaver/blob/main/packages/server/docs/middleware/secure-headers.md) | OWASP security headers               | —               |
-| [`requestId`](https://github.com/rexeus/typeweaver/blob/main/packages/server/docs/middleware/request-id.md)         | Request ID generation & propagation  | `{ requestId }` |
-| [`poweredBy`](https://github.com/rexeus/typeweaver/blob/main/packages/server/docs/middleware/powered-by.md)         | `X-Powered-By` header                | —               |
-| [`scoped` / `except`](https://github.com/rexeus/typeweaver/blob/main/packages/server/docs/middleware/scoped.md)     | Path-based middleware filtering      | —               |
-
-```ts
-import { cors, logger, secureHeaders, bearerAuth, requestId } from "@rexeus/typeweaver-server";
-
-const app = new TypeweaverApp()
-  .use(cors())
-  .use(secureHeaders())
-  .use(logger())
-  .use(requestId())
-  .use(bearerAuth({ verifyToken: verify }))
-  .route(new UserRouter({ requestHandlers }));
-```
-
-Each middleware is documented in detail — click the links above.
-
-### 🛠️ App Options
-
-`TypeweaverApp` accepts an optional options object:
-
-| Option        | Type                       | Default            | Description                                                                                                           |
-| ------------- | -------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| `maxBodySize` | `number`                   | `1_048_576` (1 MB) | Max request body size in bytes. Exceeding returns `413`.                                                              |
-| `onError`     | `(error: unknown) => void` | `console.error`    | Reports errors from the default unknown handler and top-level safety net. Falls back to `console.error` if it throws. |
-
-```ts
-const app = new TypeweaverApp({
-  maxBodySize: 5 * 1024 * 1024, // 5 MB
-  onError: error => logger.error("Unhandled error", error),
-});
-```
-
-### ⚙️ Router Configuration
-
-Each router accepts `TypeweaverRouterOptions`:
-
-| Option                           | Type                         | Default    | Description                        |
-| -------------------------------- | ---------------------------- | ---------- | ---------------------------------- |
-| `requestHandlers`                | `Server<Resource>ApiHandler` | _required_ | Handler methods for each operation |
-| `validateRequests`               | `boolean`                    | `true`     | Enable/disable request validation  |
-| `validateResponses`              | `boolean`                    | `true`     | Enable/disable response validation |
-| `handleRequestValidationErrors`  | `boolean \| function`        | `true`     | Handle request validation errors   |
-| `handleResponseValidationErrors` | `boolean \| function`        | `true`     | Handle response validation errors  |
-| `handleHttpResponseErrors`       | `boolean \| function`        | `true`     | Handle thrown typed HTTP responses |
-| `handleUnknownErrors`            | `boolean \| function`        | `true`     | Handle unexpected errors           |
-
-When set to `true`, error handlers use sensible defaults (400/500 responses). When set to `false`,
-errors fall through to the next handler in the chain (except `handleResponseValidationErrors`, where
-`false` means the invalid response is returned as-is — validation still runs for field stripping,
-but invalid responses pass through unchanged). When set to a function, it receives the error and
-`ServerContext` and must return an `IHttpResponse`. The context exposes the incoming Fetch
-`AbortSignal` as `ctx.signal` for cancellation-aware work. If a custom error handler throws, the
-framework reports that handler failure through `onError` and falls through gracefully to the next
-handler.
-
-### 🚨 Error Handling
-
-#### Throwing errors in handlers
-
-Throw any object matching `ITypedHttpResponse` (i.e. `{ type: string, statusCode: number, ... }`)
-from your handlers — the framework catches it automatically and returns it as the response:
-
-```ts
-import { HttpStatusCode } from "@rexeus/typeweaver-core";
-
-async handleGetUserRequest(request) {
-  const user = await db.findUser(request.param.userId);
-  if (!user) {
-    // Plain objects work — anything with `type` and `statusCode` is recognized
-    throw {
-      type: "NotFoundError",
-      statusCode: HttpStatusCode.NOT_FOUND,
-      header: { "Content-Type": "application/json" },
-      body: { message: "Resource not found", code: "NOT_FOUND_ERROR" },
-    };
-  }
-  return {
-    type: "GetUserSuccess",
-    statusCode: HttpStatusCode.OK,
-    header: { "Content-Type": "application/json" },
-    body: user,
-  };
-}
-```
-
-Generated factory functions (e.g. `createNotFoundErrorResponse`) are a convenient shorthand — they
-set `type` and `statusCode` for you so you only pass `header` and `body`:
-
-```ts
-import { createNotFoundErrorResponse } from "./generated";
-
-throw createNotFoundErrorResponse({
-  header: { "Content-Type": "application/json" },
-  body: { message: "Resource not found", code: "NOT_FOUND_ERROR" },
-});
-```
-
-When `handleHttpResponseErrors` is `true` (the default), thrown typed HTTP responses
-(`ITypedHttpResponse`) are returned as-is. No extra configuration needed.
-
-#### Custom error mapping
-
-Use custom handler functions to transform errors into your own response shape.
-
-**Validation errors** — map framework validation errors to your spec-defined format:
-
-```ts
-new UserRouter({
-  requestHandlers: userHandlers,
-  handleRequestValidationErrors: (error, ctx) => ({
+const router = new TodoRouter({
+  requestHandlers: todoHandlers,
+  handleRequestValidationErrors: error => ({
     type: "ValidationError",
-    statusCode: HttpStatusCode.BAD_REQUEST,
-    header: { "Content-Type": "application/json" },
+    statusCode: 400,
     body: {
       code: "VALIDATION_ERROR",
-      message: "Request is invalid",
       issues: {
         body: error.bodyIssues,
         query: error.queryIssues,
@@ -406,58 +168,114 @@ new UserRouter({
 });
 ```
 
-**HTTP response errors** — log thrown errors and pass them through:
+A `false` value delegates/falls through according to the specific boundary. For response-validation
+errors, `false` returns the original invalid response rather than converting it to the default 500;
+validation still runs.
+
+## Application-level error reporting
+
+Configure the top-level app boundary:
 
 ```ts
-new UserRouter({
-  requestHandlers: userHandlers,
-  handleHttpResponseErrors: (error, ctx) => {
-    logger.warn("HTTP error", {
-      status: error.statusCode,
-      path: ctx.request.path,
-    });
-    return error;
-  },
+const app = new TypeweaverApp({
+  maxBodySize: 5 * 1024 * 1024,
+  onError: error => logger.error({ error }, "Unhandled request failure"),
 });
 ```
 
-**Unknown errors** — catch unexpected failures and return a safe response:
+| App option    | Default           | Meaning                                                                       |
+| ------------- | ----------------- | ----------------------------------------------------------------------------- |
+| `maxBodySize` | `1_048_576` bytes | maximum request body size before a 413 response                               |
+| `onError`     | `console.error`   | reports failures handled by the default unknown-error boundary and safety net |
+
+Custom unknown-error handlers replace the default reporting strategy. Report the error inside your
+custom handler when you need metrics or logs.
+
+## Typed middleware
+
+Middleware uses a return-based onion model and can declare state it provides and requires.
 
 ```ts
-new UserRouter({
-  requestHandlers: userHandlers,
-  handleUnknownErrors: (error, ctx) => {
-    logger.error("Unhandled error", { error, path: ctx.request.path });
-    return {
-      type: "InternalServerError",
-      statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
-      header: { "Content-Type": "application/json" },
-      body: { code: "INTERNAL_SERVER_ERROR", message: "Something went wrong" },
-    };
-  },
+import { defineMiddleware, type InferState } from "./api/generated/lib/server/index.js";
+
+const authentication = defineMiddleware<{ userId: string }>(async (context, next) => {
+  const userId = await authenticate(context.request);
+  return next({ userId });
 });
+
+const permissions = defineMiddleware<{ permissions: string[] }, { userId: string }>(
+  async (context, next) => {
+    const userId = context.state.get("userId");
+    return next({ permissions: await loadPermissions(userId) });
+  }
+);
+
+const app = new TypeweaverApp()
+  .use(authentication)
+  .use(permissions)
+  .route(new TodoRouter({ requestHandlers: todoHandlers }));
+
+type AppState = InferState<typeof app>;
 ```
 
-The default unknown-error handler calls `onError` before returning a sanitized 500 response. A
-custom `handleUnknownErrors` function replaces that default reporting strategy; if you need logging
-or metrics with a custom unknown handler, perform that reporting inside the custom handler. If the
-custom unknown handler throws, Typeweaver reports the handler failure through `onError` and then
-falls through to the top-level safety net.
+Registering middleware before its required state exists is a compile-time error. Middleware may also
+short-circuit by returning a response without calling `next()`.
 
-### 📋 Error Responses
+Built-in middleware is copied into the generated runtime:
 
-| Status | Code                    | When                                                                 |
-| ------ | ----------------------- | -------------------------------------------------------------------- |
-| `400`  | `BAD_REQUEST`           | Malformed request body                                               |
-| `400`  | Validation issues       | `handleRequestValidationErrors: true` and request fails validation   |
-| `404`  | `NOT_FOUND`             | No matching route                                                    |
-| `405`  | `METHOD_NOT_ALLOWED`    | Route exists but method not allowed (includes `Allow` header)        |
-| `413`  | `PAYLOAD_TOO_LARGE`     | Request body exceeds `maxBodySize`                                   |
-| `500`  | `INTERNAL_SERVER_ERROR` | `handleResponseValidationErrors: true` and response fails validation |
-| `500`  | `INTERNAL_SERVER_ERROR` | Unhandled error in handler                                           |
+- [`cors`](./docs/middleware/cors.md)
+- [`basicAuth`](./docs/middleware/basic-auth.md)
+- [`bearerAuth`](./docs/middleware/bearer-auth.md)
+- [`logger`](./docs/middleware/logger.md)
+- [`secureHeaders`](./docs/middleware/secure-headers.md)
+- [`requestId`](./docs/middleware/request-id.md)
+- [`poweredBy`](./docs/middleware/powered-by.md)
+- [`scoped` and `except`](./docs/middleware/scoped.md)
 
-All error responses follow the shape: `{ code: string, message: string }`.
+```ts
+import { cors, logger, requestId, secureHeaders } from "./api/generated/lib/server/index.js";
 
-## 📄 License
+const app = new TypeweaverApp()
+  .use(requestId())
+  .use(logger())
+  .use(secureHeaders())
+  .use(cors())
+  .route(new TodoRouter({ requestHandlers: todoHandlers }));
+```
+
+## Routing behavior
+
+The generated runtime includes:
+
+- automatic HEAD fallback to a matching GET handler when no explicit HEAD operation exists;
+- 404 responses for unknown routes;
+- 405 responses with an `Allow` header when the route exists for another method;
+- path parameter extraction;
+- body parsing and size limits;
+- response serialization over Fetch primitives.
+
+These are runtime behaviors, not a promise that application authentication or business rules are
+generated.
+
+## Boundaries
+
+This projection does not:
+
+- implement business logic;
+- enforce contract security declarations automatically;
+- choose a deployment platform;
+- generate an ORM or persistence layer;
+- claim performance characteristics without a reproducible benchmark.
+
+## Related documentation
+
+- [Migration guide](../../MIGRATION.md)
+- [Getting started](../../docs/getting-started.md)
+- [Hono integration](../hono/README.md)
+- [Effect handlers](../effect/README.md)
+- [Generated types and validators](../types/README.md)
+- [Contract authoring](../core/README.md)
+
+## License
 
 Apache 2.0 © Dennis Wentzien 2026

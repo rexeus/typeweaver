@@ -1,83 +1,130 @@
-# 🔄✨ @rexeus/typeweaver-zod-to-ts
+# `@rexeus/typeweaver-zod-to-ts`
+
+> Convert Zod 4 schemas into TypeScript AST nodes and printable type expressions, with explicit
+> errors for schema families that TypeWeaver knows it cannot represent safely.
 
 [![npm version](https://img.shields.io/npm/v/@rexeus/typeweaver-zod-to-ts.svg)](https://www.npmjs.com/package/@rexeus/typeweaver-zod-to-ts)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](../../LICENSE)
 
-This utility library provides logic for converting Zod v4 schemas into TypeScript type
-representations. It is used internally by typeweaver to generate TypeScript types from Zod schemas.
+## Choose this package when
 
----
+Use this standalone converter when code generation needs a TypeScript type representation of a Zod
+schema.
 
-## 📥 Installation
+TypeWeaver's generated request and response types use this conversion layer internally, but the
+package can be used without a TypeWeaver API spec.
+
+## Install
 
 ```bash
-npm install @rexeus/typeweaver-zod-to-ts
+pnpm add @rexeus/typeweaver-zod-to-ts zod
 ```
 
-## 💡 How to use
+The supported Zod peer range is `>=4.3.0 <5`.
 
-<!-- docs-example: zod-to-ts -->
+## Convert and print
 
-```typescript
+```ts
 import { fromZod, print } from "@rexeus/typeweaver-zod-to-ts";
 import { z } from "zod";
 
-// Define a Zod schema
-const userSchema = z.object({
-  id: z.string(),
+const UserSchema = z.object({
+  id: z.uuid(),
   name: z.string(),
-  email: z.string().email(),
-  age: z.number().optional(),
+  email: z.email(),
+  age: z.number().int().optional(),
 });
 
-// Convert to TypeScript AST node
-const typeNode = fromZod(userSchema);
+const typeNode = fromZod(UserSchema);
+const source = print(typeNode);
 
-// Print as TypeScript type string
-const typeString = print(typeNode);
-// Output: { id: string; name: string; email: string; age?: number | undefined; }
+console.log(source);
+// { id: string; name: string; email: string; age?: number | undefined; }
 ```
 
-## ✏️ Zod Type Support
+<!-- docs-example: zod-to-ts -->
 
-### ✅ Supported Types
+The converter, printer, and explicit unsupported-schema error are typechecked in the
+[Zod-to-TypeScript fixture](../cli/examples/documentation/zod-to-ts.ts).
 
-The library provides complete TypeScript type generation for the following Zod schema types:
+`fromZod()` returns a TypeScript AST node. Keep the node when composing a larger generated
+declaration; call `print()` when you need source text.
 
-- **Primitives**: `z.string()`, `z.number()`, `z.boolean()`, `z.date()`, `z.bigint()`, `z.symbol()`
-- **Literals**: `z.literal()`, `z.enum()`
-- **Collections**: `z.array()`, `z.record()`, `z.map()`, `z.set()`, `z.tuple()`
-- **Objects**: `z.object()` with nested properties and optional fields
-- **Unions**: `z.union()`
-- **Intersections**: `z.intersection()`
-- **Modifiers**: `z.optional()`, `z.nullable()`, `z.default()`, `z.nonoptional()`, `z.readonly()`,
-  `z.catch()`
-- **Special types**: `z.unknown()`, `z.any()`, `z.void()`, `z.never()`, `z.null()`, `z.undefined()`,
-  `z.nan()`, `z.file()`, `z.success()`
-- **Async types**: `z.promise()`
-- **Pipes**: `z.pipe()` outputs the pipe output schema type when that output schema is supported
+## Supported schema families
 
-### ⚠️ Unsupported Types
+The converter supports the TypeScript type shape of:
 
-The following Zod types are not yet represented by the TypeScript generator:
+- primitives, literals, enums, null, undefined, unknown, any, void, never, and NaN;
+- objects, optional properties, records, arrays, tuples, maps, and sets;
+- unions and intersections;
+- optional, nullable, default, non-optional, readonly, and catch wrappers;
+- promises;
+- supported pipe output schemas;
+- special Zod 4 schemas such as file and success values where a TypeScript representation exists.
 
-- **Advanced types**: `z.lazy()`, `z.templateLiteral()`, `z.custom()`, `z.transform()`
+Validation checks such as string length or numeric ranges do not change the TypeScript type and are
+therefore not represented in the emitted node. Runtime validation remains the responsibility of Zod.
 
-Passing one of these schemas, including as the output of a pipe, throws an exported
-`UnsupportedZodTypeError`. The error exposes the stable code `UNSUPPORTED_ZOD_TYPE`, the
-`schemaKind`, and an actionable `reason`. Restructure the schema to a supported shape before
-generating TypeScript. Intentional `z.unknown()` schemas remain supported and generate TypeScript's
-`unknown` type.
+## Known unsupported schemas fail explicitly
 
-## 🧵✨ About typeweaver
+The converter never broadens an unrecognized schema to `any`. These known schema families currently
+throw `UnsupportedZodTypeError`:
 
-Typeweaver is a type-safe HTTP API framework built for API-first development with a focus on
-developer experience. Use typeweaver to specify your HTTP APIs in TypeScript and Zod, and generate
-clients, validators, routers, and more ✨
+- `z.lazy()`;
+- `z.templateLiteral()`;
+- `z.custom()`;
+- `z.transform()`.
 
-See more of [typeweaver](https://github.com/rexeus/typeweaver/tree/main/packages/cli/README.md)
+```ts
+import { fromZod, UnsupportedZodTypeError } from "@rexeus/typeweaver-zod-to-ts";
+import { z } from "zod";
 
-## 📄 License
+try {
+  fromZod(z.string().transform(value => value.length));
+} catch (error) {
+  if (error instanceof UnsupportedZodTypeError) {
+    console.error(error.code); // "UNSUPPORTED_ZOD_TYPE"
+    console.error(error.schemaKind); // "transform"
+    console.error(error.reason);
+  }
+}
+```
+
+The stable error code is `UNSUPPORTED_ZOD_TYPE`. The `schemaKind` identifies the unsupported family
+and `reason` explains how to restructure the source.
+
+A pipe is supported only when its output schema is supported. Intentional `z.unknown()` remains
+valid and emits TypeScript's `unknown` type. A future or otherwise unrecognized Zod schema kind
+currently falls back to TypeScript `unknown`, which keeps the generated type safe without pretending
+that the converter preserved more information than it understood.
+
+## Compose larger type expressions
+
+`fromZod()` returns a TypeScript `TypeNode`, so generator code can combine it with other type nodes
+before calling `print()`. The package intentionally exposes the type expression rather than choosing
+a surrounding alias, interface, export modifier, or file layout for you.
+
+## Boundaries
+
+This converter does not:
+
+- emit runtime validators;
+- preserve validation checks that do not affect a TypeScript type;
+- evaluate transforms;
+- infer recursive types from `z.lazy()`;
+- turn known unsupported schema families into a broader type silently;
+- generate a complete TypeWeaver operation or file layout.
+
+For generated operation types and validators, use TypeWeaver's automatic
+[`types`](../types/README.md) projection.
+
+## Related documentation
+
+- [Migration guide](../../MIGRATION.md)
+- [Generated types and validators](../types/README.md)
+- [Zod to JSON Schema](../zod-to-json-schema/README.md)
+- [Plugin SDK](../gen/README.md)
+
+## License
 
 Apache 2.0 © Dennis Wentzien 2026
