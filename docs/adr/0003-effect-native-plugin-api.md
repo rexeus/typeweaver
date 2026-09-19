@@ -34,9 +34,8 @@ This design had three structural problems:
    services from the runtime; an ad-hoc adapter (`legacyAdapter`) bridged the gap and silently hid
    the seams behind imperative `async`/`await` plumbing.
 
-The Effect migration (Tasks #1–#9) replaced the imperative interior of the generator with
-`Effect.Service` classes and structured concurrency. The plugin contract was the last imperative
-layer left.
+The Effect migration replaced the imperative interior of the generator with `Effect.Service` classes
+and structured concurrency. The plugin contract was the last imperative layer left.
 
 ## Decision
 

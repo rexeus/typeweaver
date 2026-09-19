@@ -4,9 +4,9 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import {
-  PHASE_A_DOCUMENT_TOKENS,
+  EFFECT_4_DOCUMENT_TOKENS,
   validateEffectPackageVersions,
-  validateEffectPhaseAContract,
+  validateEffect4WorkspaceContract,
 } from "./lib/effect-version-contract.mjs";
 
 const workspaceRoot = path.resolve(
@@ -187,7 +187,7 @@ const readOptional = relativePath => {
   }
 };
 failures.push(
-  ...validateEffectPhaseAContract({
+  ...validateEffect4WorkspaceContract({
     contract,
     manifests: {
       cli: JSON.parse(read("packages/cli/package.json")),
@@ -197,7 +197,7 @@ failures.push(
       core: JSON.parse(read("packages/core/package.json")),
     },
     documents: Object.fromEntries(
-      Object.keys(PHASE_A_DOCUMENT_TOKENS).map(document => [
+      Object.keys(EFFECT_4_DOCUMENT_TOKENS).map(document => [
         document,
         readOptional(document),
       ])

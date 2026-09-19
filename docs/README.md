@@ -69,17 +69,15 @@ declarations remain the exact signature reference for every export.
 Runtime support is projection-specific. Check the selected package guide before deployment; a
 runtime used by one generated surface is not automatically supported by every other surface.
 
-Phase A evidence covers exactly `effect@4.0.0-rc.115`: an Effect 4 application can run the binary
-CLI as an isolated child process only with Effect-neutral config and spec modules, and only the
-built-in plain projections were exercised (pnpm, strict peers). Every other Effect 4 version is
-UNVERIFIED. The CLI programmatic API, `@rexeus/typeweaver-gen` plugin authoring, first-party plugin
-imports, and `@rexeus/typeweaver-effect` remain on Effect `>=3.22.0 <4`. See
+An Effect 4 application can run the binary CLI as an isolated child process only with Effect-neutral
+config and spec modules. TypeWeaver has tested this only with `effect@4.0.0-rc.115` and the built-in
+plain projections (pnpm, strict peers). Every other Effect 4 version is UNVERIFIED. The CLI
+programmatic API, `@rexeus/typeweaver-gen` plugin authoring, first-party plugin imports, and
+`@rexeus/typeweaver-effect` remain on Effect `>=3.22.0 <4`. See
 [ADR 0010](./adr/0010-effect-4-workspace-compatibility.md).
 
 ## Maintainer references
 
 - [Architecture decisions](./adr/) — accepted design decisions and version baselines.
-- [Product-maturity evidence](./reviews/product-maturity-evidence.md) — verification evidence for
-  the current pre-1.0 milestone.
 - [Maintainability inventory](./maintainability-inventory.md) — repository-wide maintainability
   constraints and exceptions.

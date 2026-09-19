@@ -1,4 +1,4 @@
-# ADR 0010: Effect 4 Workspace Compatibility (Phase A)
+# ADR 0010: Effect 4 Workspace Compatibility
 
 ## Status
 
@@ -7,10 +7,10 @@ ADR 0008 remains the version authority; this ADR records what an Effect 4 worksp
 
 ## Context
 
-Issue #217 asks which TypeWeaver surfaces an Effect 4 application can use. Research against the
-pinned Effect 3.22.0 baseline and `effect@4.0.0-rc.115` showed that Effect 3 and Effect 4 values are
-not mutually executable: each runtime rejects the other major's values, and lifecycle types are not
-mutually assignable.
+Which TypeWeaver surfaces can an Effect 4 application use? Research against the pinned Effect 3.22.0
+baseline and `effect@4.0.0-rc.115` showed that Effect 3 and Effect 4 values are not mutually
+executable: each runtime rejects the other major's values, and lifecycle types are not mutually
+assignable.
 
 Three facts shape the decision:
 
@@ -27,9 +27,9 @@ aligned platform family, or stable Effect CLI exists yet.
 
 ## Decision
 
-Phase A documents and proves exactly one Effect 4 capability: an Effect 4 workspace can run the
-**binary CLI** as a process-isolated child process with Effect-neutral inputs and built-in plain
-projections. Every Effect-native surface stays on Effect 3 until Phase B.
+An Effect 4 workspace can run the **binary CLI** as a process-isolated child process with
+Effect-neutral inputs and built-in plain generated projections. Every Effect-native surface stays on
+Effect 3 until a later, separately approved native Effect 4 line.
 
 ### Compatibility matrix
 
@@ -46,7 +46,7 @@ projections. Every Effect-native surface stays on Effect 3 until Phase B.
 The supported plain generated outputs import only the generated packages and their runtime
 dependencies; they do not import Effect, `@rexeus/typeweaver-gen`, or the Effect adapter.
 
-### Requirements for Phase A
+### Requirements
 
 1. **Effect-neutral inputs, verified by the consumer.** The config module and spec entrypoint
    consumed by the isolated binary CLI must be Effect-neutral: they may import
@@ -60,10 +60,10 @@ dependencies; they do not import Effect, `@rexeus/typeweaver-gen`, or the Effect
    does not claim generic Effect 4 support, does not promise a range, and does not widen the
    published peer range.
 4. **pnpm specific.** The packed evidence uses pnpm with strict peer dependencies and isolated
-   `node_modules`. Other package managers are not proven by Phase A.
-5. **Phase B is blocked.** Migrating gen, first-party plugins, the CLI programmatic API, and the
-   adapter to Effect 4 waits for stable aligned upstream releases and a separately approved
-   superseding ADR.
+   `node_modules`. Other package managers are not proven for this isolated CLI path.
+5. **A native Effect 4 line is blocked.** Migrating gen, first-party plugins, the CLI programmatic
+   API, and the adapter to Effect 4 waits for stable aligned upstream releases and a separately
+   approved superseding ADR.
 
 ## Consequences
 
@@ -79,9 +79,8 @@ dependencies; they do not import Effect, `@rexeus/typeweaver-gen`, or the Effect
   The exact `4.0.0-rc.115` pin gets a conditional warning, every other Effect 4 version is marked
   UNVERIFIED, and Effect-native surfaces pass only with a declared, supported stable Effect 3
   runtime. It never claims the generated output proves the whole workspace is Effect-free.
-- When stable Effect 4 arrives, Phase B revisits the matrix, peer ranges, doctor outcomes, and this
-  ADR together, coordinated with the migration plan in
-  [`plans/009`](../../plans/009-effect-4-compatibility-217.md).
+- When a stable Effect 4 release arrives, revisit the matrix, peer ranges, doctor outcomes, and this
+  ADR together.
 
 ## Reference files
 

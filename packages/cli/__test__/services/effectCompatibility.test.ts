@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, test } from "vitest";
 import {
-  PHASE_A_EFFECT_VERSION,
+  TESTED_EFFECT_4_VERSION,
   classifyConfiguredPlugins,
   classifyWorkspaceEffectCompatibility,
   resolveWorkspaceEffect,
@@ -84,8 +84,8 @@ describe("workspace Effect compatibility classifier", () => {
     }
   });
 
-  test("warns conditionally for the exact Phase A Effect 4 RC", () => {
-    const check = classify(resolved(PHASE_A_EFFECT_VERSION), [
+  test("warns conditionally for the tested Effect 4 RC", () => {
+    const check = classify(resolved(TESTED_EFFECT_4_VERSION), [
       "types",
       "clients",
       "server",
@@ -95,7 +95,7 @@ describe("workspace Effect compatibility classifier", () => {
       code: "TW-DOCTOR-011",
       outcome: "warn",
     });
-    expect(check.message).toContain(PHASE_A_EFFECT_VERSION);
+    expect(check.message).toContain(TESTED_EFFECT_4_VERSION);
     expect(check.message).toContain("isolated");
     expect(check.message).toContain("Effect-independent");
     expect(check.message).toContain("cannot verify");
@@ -110,7 +110,7 @@ describe("workspace Effect compatibility classifier", () => {
       expect(check.outcome, version).toBe("warn");
       expect(check.message, version).toContain(version);
       expect(check.message, version).toContain("UNVERIFIED");
-      expect(check.message, version).toContain(PHASE_A_EFFECT_VERSION);
+      expect(check.message, version).toContain(TESTED_EFFECT_4_VERSION);
       expect(check.message, version).toContain("does not claim");
       expect(check.message, version).not.toContain("can still run");
     }
@@ -156,7 +156,7 @@ describe("undeclared Effect with native surfaces", () => {
 
 describe("workspace Effect compatibility failures", () => {
   test("fails an Effect 4 workspace that configures the Effect projection", () => {
-    for (const version of [PHASE_A_EFFECT_VERSION, "4.0.0"]) {
+    for (const version of [TESTED_EFFECT_4_VERSION, "4.0.0"]) {
       const check = classify(resolved(version), ["server", "effect"]);
       expect(check).toMatchObject({
         outcome: "fail",
@@ -176,7 +176,7 @@ describe("workspace Effect compatibility failures", () => {
       "@acme/typeweaver-plugin",
       "@rexeus/typeweaver-custom",
     ]) {
-      const check = classify(resolved(PHASE_A_EFFECT_VERSION), [
+      const check = classify(resolved(TESTED_EFFECT_4_VERSION), [
         "clients",
         external,
       ]);
@@ -211,7 +211,7 @@ describe("workspace Effect compatibility wording", () => {
         configuredPlugins: [],
       }),
       messageOf({
-        workspaceEffect: resolved(PHASE_A_EFFECT_VERSION),
+        workspaceEffect: resolved(TESTED_EFFECT_4_VERSION),
         configuredPlugins: ["clients", "server"],
       }),
       messageOf({
@@ -219,7 +219,7 @@ describe("workspace Effect compatibility wording", () => {
         configuredPlugins: ["clients", "server"],
       }),
       messageOf({
-        workspaceEffect: resolved(PHASE_A_EFFECT_VERSION),
+        workspaceEffect: resolved(TESTED_EFFECT_4_VERSION),
         configuredPlugins: ["effect"],
       }),
     ];
@@ -235,7 +235,7 @@ describe("workspace Effect compatibility wording", () => {
       { _tag: "NotDeclared" },
       { _tag: "Unresolved", detail: "x" },
       resolved("3.22.0"),
-      resolved(PHASE_A_EFFECT_VERSION),
+      resolved(TESTED_EFFECT_4_VERSION),
     ] satisfies WorkspaceEffectDeclaration[]) {
       expect(classify(declaration).code).toMatch(/^TW-DOCTOR-\d{3}$/u);
     }
@@ -329,11 +329,11 @@ describe("project-owned Effect resolution", () => {
     const projectRoot = writeProject(
       `declared-${section}`,
       { [section]: { effect: "4.0.0-rc.115" } },
-      PHASE_A_EFFECT_VERSION
+      TESTED_EFFECT_4_VERSION
     );
     expect(resolveWorkspaceEffect(projectRoot)).toEqual({
       _tag: "Resolved",
-      version: PHASE_A_EFFECT_VERSION,
+      version: TESTED_EFFECT_4_VERSION,
       declaredSpecifier: "4.0.0-rc.115",
     });
   });
@@ -354,7 +354,7 @@ describe("project-owned Effect resolution", () => {
   test("fails when the resolved version does not satisfy the declaration", () => {
     const projectRoot = writeProject(
       "mismatched-declaration",
-      { dependencies: { effect: PHASE_A_EFFECT_VERSION } },
+      { dependencies: { effect: TESTED_EFFECT_4_VERSION } },
       "3.22.0"
     );
     expect(resolveWorkspaceEffect(projectRoot)).toMatchObject({

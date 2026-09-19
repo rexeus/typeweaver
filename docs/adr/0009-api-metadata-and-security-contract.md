@@ -11,10 +11,10 @@ was supplied separately to the OpenAPI plugin, and security schemes were intenti
 That made the OpenAPI projection the accidental owner of information that clients, servers, command
 surfaces, and documentation generators also need.
 
-Issue #169 requires one generator-neutral source of truth. The contract must describe security
-without enforcing authentication, preserve OpenAPI-compatible AND/OR semantics without using OpenAPI
-as the core vocabulary, and distinguish inheritance from an explicitly public operation. It must
-also remain deterministic and statically useful to TypeScript consumers.
+The contract must be one generator-neutral source of truth. It must describe security without
+enforcing authentication, preserve OpenAPI-compatible AND/OR semantics without using OpenAPI as the
+core vocabulary, and distinguish inheritance from an explicitly public operation. It must also
+remain deterministic and statically useful to TypeScript consumers.
 
 ## Decision
 
@@ -244,4 +244,4 @@ pre-1.0 migration and Changesets ship with the implementation.
   `packages/core/src/defineSpec.ts`, and `packages/core/src/defineOperation.ts`
 - Normalized contract: `packages/gen/src/NormalizedSpec.ts` and `packages/gen/src/normalizeSpec.ts`
 - OpenAPI projection: `packages/openapi/src/`
-- Product contract: `GOAL.md` and `plans/002-contract-and-openapi-maturity.md`
+- Product contract: `VISION.md`

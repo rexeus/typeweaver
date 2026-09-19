@@ -21,12 +21,12 @@ The Effect migration moved `Generator` into a `ManagedRuntime` as an `Effect.Ser
 is constructed once, at process start, and lives for the lifetime of the CLI. Without care, two
 consequences would have followed:
 
-1. The plugin registry would accumulate registrations across calls — Task #1's first attempt at the
+1. The plugin registry would accumulate registrations across calls — the first attempt at the
    migration shipped exactly this regression.
 2. The generated-files tracker would leak file paths from one generation into the next, breaking the
    `getGeneratedFiles()` contract that `IndexFileGenerator` depends on.
 
-Task #8.5 surfaced both problems as a Singleton-Builder race: the singleton `GeneratedFiles` service
+Both problems surfaced as a Singleton-Builder race: the singleton `GeneratedFiles` service
 (Ref-backed) was being read and written by concurrent `generate(...)` calls, producing interleaved
 output. The fix needed to preserve the long-lived runtime (for performance and composition) while
 restoring per-call isolation.

@@ -15,11 +15,11 @@ import type { DoctorCheck } from "../reports/DoctorReport.js";
 export const SUPPORTED_EFFECT_PEER_RANGE = ">=3.22.0 <4";
 
 /**
- * The single Effect 4 release candidate exercised by Phase A packed evidence.
- * It is an exact evidence pin, not a support range: every other Effect 4
- * version is unverified.
+ * The only Effect 4 release candidate TypeWeaver has actually tested with the
+ * process-isolated binary CLI. It is an exact pin, not a support range: every
+ * other Effect 4 version is unverified.
  */
-export const PHASE_A_EFFECT_VERSION = "4.0.0-rc.115";
+export const TESTED_EFFECT_4_VERSION = "4.0.0-rc.115";
 
 const BUILT_IN_PLAIN_PLUGINS = new Set([
   "aws-cdk",
@@ -187,7 +187,7 @@ const warnTestedEffect4Check = (
     code: "TW-DOCTOR-011",
     name: "workspace Effect compatibility",
     outcome: "warn",
-    message: `The project resolves Effect ${version}, the exact release candidate exercised by Phase A packed evidence (pnpm, strict peers). The binary CLI can run as an isolated child process and generate Effect-independent output from built-in plain projections (${plainSummary(classification)}) only when the config module and spec entrypoint are Effect-neutral; doctor cannot verify that. Other Effect 4 versions are unverified, and direct imports of @rexeus/typeweaver-gen, @rexeus/typeweaver-effect, first-party Effect plugins, and the CLI programmatic API remain Effect ${SUPPORTED_EFFECT_PEER_RANGE} only.`,
+    message: `The project resolves Effect ${version}, the only Effect 4 version TypeWeaver has tested with the process-isolated CLI (pnpm, strict peers). The binary CLI can run as an isolated child process and generate Effect-independent output from built-in plain projections (${plainSummary(classification)}) only when the config module and spec entrypoint are Effect-neutral; doctor cannot verify that. Other Effect 4 versions are unverified, and direct imports of @rexeus/typeweaver-gen, @rexeus/typeweaver-effect, first-party Effect plugins, and the CLI programmatic API remain Effect ${SUPPORTED_EFFECT_PEER_RANGE} only.`,
     hint: "Keep Effect-native authoring and adapter use in a workspace that resolves Effect 3, and keep the config and spec Effect-neutral.",
   });
 
@@ -196,8 +196,8 @@ const warnUnverifiedEffect4Check = (version: string): DoctorCheck =>
     code: "TW-DOCTOR-011",
     name: "workspace Effect compatibility",
     outcome: "warn",
-    message: `The project resolves Effect ${version}, which is UNVERIFIED: Phase A evidence covers only ${PHASE_A_EFFECT_VERSION}. TypeWeaver does not claim that the binary CLI can generate output or run in isolation for this version, and Effect-native surfaces remain Effect ${SUPPORTED_EFFECT_PEER_RANGE} only.`,
-    hint: `Use Effect ${PHASE_A_EFFECT_VERSION} only for the exact Phase A evidence, or migrate to ${SUPPORTED_EFFECT_PEER_RANGE} for Effect-native surfaces.`,
+    message: `The project resolves Effect ${version}, which is UNVERIFIED: TypeWeaver has tested isolated CLI generation only with ${TESTED_EFFECT_4_VERSION}. TypeWeaver does not claim that the binary CLI can generate output or run in isolation for this version, and Effect-native surfaces remain Effect ${SUPPORTED_EFFECT_PEER_RANGE} only.`,
+    hint: `Use Effect ${TESTED_EFFECT_4_VERSION} only if you accept that single tested pin, or migrate to ${SUPPORTED_EFFECT_PEER_RANGE} for Effect-native surfaces.`,
   });
 
 const failEffect4Check = (
@@ -281,7 +281,7 @@ const classifyResolvedEffect = (
   if (parsed.major !== 4) {
     return warnUnsupportedCheck(version);
   }
-  return version === PHASE_A_EFFECT_VERSION
+  return version === TESTED_EFFECT_4_VERSION
     ? warnTestedEffect4Check(version, classification)
     : warnUnverifiedEffect4Check(version);
 };
