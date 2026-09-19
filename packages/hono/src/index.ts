@@ -23,7 +23,15 @@ const requireSupportedHonoPaths = (
     new PluginExecutionError({
       pluginName: PLUGIN_NAME,
       phase: "generate",
-      cause: new Error(`[${issue.code}] ${issue.message}`),
+      cause: new Error(
+        [
+          `[${issue.code}] ${issue.message}`,
+          issue.path === undefined ? undefined : `at ${issue.path}`,
+          issue.hint,
+        ]
+          .filter(part => part !== undefined && part !== "")
+          .join(" — ")
+      ),
     })
   );
 };

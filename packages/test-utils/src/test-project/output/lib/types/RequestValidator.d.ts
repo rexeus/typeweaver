@@ -1,5 +1,4 @@
 import type {
-  IHttpRequest,
   IRawHttpRequest,
   IRequestValidator,
   IValidatedHttpRequest,
@@ -8,7 +7,7 @@ import type {
 import { Validator } from "./Validator.js";
 
 export declare abstract class RequestValidator<
-  TValidatedRequest extends IValidatedHttpRequest = IHttpRequest,
+  TValidatedRequest extends IValidatedHttpRequest = IValidatedHttpRequest,
 >
   extends Validator
   implements IRequestValidator<TValidatedRequest>

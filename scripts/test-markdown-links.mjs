@@ -74,6 +74,7 @@ const assertCheckerRejectsRepository = ({
   label,
   expectedDiagnostics,
   expectedMessages = [],
+  forbiddenDiagnostics = [],
   repositoryRoot,
 }) => {
   const result = spawnChecker(["--repository-root", repositoryRoot]);
@@ -82,12 +83,22 @@ const assertCheckerRejectsRepository = ({
     ...expectedDiagnostics,
     ...expectedMessages,
   ].filter(diagnostic => !diagnostics.includes(diagnostic));
-  if (result.status !== 1 || missingDiagnostics.length > 0) {
+  const leakedDiagnostics = forbiddenDiagnostics.filter(diagnostic =>
+    diagnostics.includes(diagnostic)
+  );
+  if (
+    result.status !== 1 ||
+    missingDiagnostics.length > 0 ||
+    leakedDiagnostics.length > 0
+  ) {
     throw new Error(
       [
         `${label} did not reject every fixture (status ${String(result.status)})`,
         ...missingDiagnostics.map(
           diagnostic => `Missing diagnostic: ${diagnostic}`
+        ),
+        ...leakedDiagnostics.map(
+          diagnostic => `Unexpected diagnostic: ${diagnostic}`
         ),
         result.error?.message,
         result.stdout,
@@ -147,6 +158,16 @@ try {
     "[drive](D:/outside.md)\n",
     "utf8"
   );
+  writeFileSync(
+    path.join(fixtureRoot, "nested", "present.md"),
+    "# Present\n",
+    "utf8"
+  );
+  writeFileSync(
+    path.join(fixtureRoot, "rooted-valid.md"),
+    "[present](/nested/present.md)\n",
+    "utf8"
+  );
 
   const expectedDiagnostics = [
     "root.md",
@@ -157,10 +178,12 @@ try {
     "escaping-drive-forward.md",
   ];
   const expectedMessages = ["outside the repository root"];
+  const forbiddenDiagnostics = ["rooted-valid.md"];
   assertCheckerRejectsRepository({
     label: "Untracked discovery",
     expectedDiagnostics,
     expectedMessages,
+    forbiddenDiagnostics,
     repositoryRoot: fixtureRoot,
   });
   runGit(["add", "--all"]);
@@ -168,6 +191,7 @@ try {
     label: "Tracked discovery",
     expectedDiagnostics,
     expectedMessages,
+    forbiddenDiagnostics,
     repositoryRoot: fixtureRoot,
   });
   assertCheckerRejectsArguments(["--repository-root", "relative/path"]);
