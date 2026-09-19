@@ -12,22 +12,25 @@ compatibility path.
 The product-maturity goal in [`GOAL.md`](../GOAL.md) is complete on `main` at `af7e0ddf`, the human
 merge of Stage 3 PR #212, so PRs #209, #211, and #212 are all human-merged. PR #211's metadata,
 security, plugin-validation, and OpenAPI contracts are stable dependencies. PRs #213 and #214 are
-open; issues #215, #216, and #217 have no implementation PRs.
+open; PR #218 implements Issue #215, stacked on PR #214, while issues #216 and #217 still have no
+implementation PRs.
 
 Independent review found that neither open PR should merge unchanged. PR #214 has bounded
 documentation-verification defects (stale doctor guidance in two onboarding paths), an implicit
 rather than reproduced link-discovery gap, and published `@effect/*` caret ranges that drifted off
 the Effect 3.22.0 baseline in fresh packed consumers. PR #213 has public type/runtime contract
 defects around dynamic validation, raw transport shapes, and record-array normalization. Issue #215
-is implementation-ready; #216 needs a short contract-design step; #217 must be split between
-present-day workspace compatibility and a future coordinated Effect 4 migration.
+is implemented by open, review-ready PR #218 at `d8440f9f`, stacked on PR #214, and awaits human
+review and merge; #216 needs a short contract-design step; #217 must be split between present-day
+workspace compatibility and a future coordinated Effect 4 migration.
 
 ## Related plans
 
 - **Milestones:** [005](005-docs-baseline-pr-214.md), [006](006-strict-object-warning-215.md),
   [007](007-typed-http-boundaries-pr-213.md), [008](008-generate-check-216.md), and
   [009](009-effect-4-compatibility-217.md)
-- **Dependencies:** execute milestones in numeric order; Effect 4 phase B remains conditional on a
+- **Dependencies:** execute milestones in numeric order, stacking each milestone on the previous
+  milestone's branch when it is not yet human-merged; Effect 4 phase B remains conditional on a
   stable upstream release.
 
 ## Scope
@@ -55,7 +58,10 @@ present-day workspace compatibility and a future coordinated Effect 4 migration.
 - **Correctness before new CLI capability** — PR #213 stabilizes the public HTTP boundary and a
   large generated fixture tree before #216 compares committed output against fresh generation.
 - **One delivery per independently reviewable milestone** — update the existing PR for #214 and
-  #213; create separate PRs for #215, #216, and #217 phase A.
+  #213; create a separate PR implementing each of issues #215, #216, and #217 phase A. Milestones
+  may stack: the PR implementing Issue #215 (`fix/strict-object-never-warning`) targets
+  `docs/documentation-standard`, and later milestones may target the previous milestone's branch
+  until a human merges it.
 - **Two-stage Effect 4 strategy** — document and prove isolated CLI use in Effect 4 workspaces now;
   migrate the Effect-native plugin and adapter surfaces only after Effect 4 and its CLI/platform
   dependencies are stable.
@@ -65,10 +71,15 @@ present-day workspace compatibility and a future coordinated Effect 4 migration.
 - [ ] 1. **Establish the documentation baseline**
   - **Outcome:** PR #214 contains the review corrections and has fresh required checks.
   - **Evidence:** [Plan 005](005-docs-baseline-pr-214.md) is complete and PR #214 is review-ready.
-- [ ] 2. **Remove strict-object false warnings**
+- [x] 2. **Remove strict-object false warnings**
   - **Outcome:** strict-object `never` catchalls no longer emit `unsupported-schema`, while genuine
     unsupported schemas still do.
-  - **Evidence:** [Plan 006](006-strict-object-warning-215.md) is complete in a dedicated PR.
+  - **Evidence:** [Plan 006](006-strict-object-warning-215.md) is DONE (review-ready) in
+    [PR #218](https://github.com/rexeus/typeweaver/pull/218), which targets
+    `docs/documentation-standard` (PR #214). At exact head `d8440f9f`, `quality-check`,
+    `windows-security`, `Socket Security: Project Report`, and
+    `Socket Security: Pull Request Alerts` all pass. The PR remains open and unmerged; milestone 1
+    remains in progress and milestones 3–5 remain pending.
 - [ ] 3. **Make typed HTTP boundaries truthful**
   - **Outcome:** PR #213's raw, validated, dynamic-mode, and record contracts agree at type and
     runtime boundaries.
@@ -93,8 +104,10 @@ present-day workspace compatibility and a future coordinated Effect 4 migration.
 
 ## Risks and open questions
 
-- **Human merge ordering** — later branches must start from the remote `main` that includes the
-  prior human-merged milestone; no stacked branch should silently substitute for that approval.
+- **Human merge ordering** — the owner approved stacked delivery: the PR implementing Issue #215
+  (`fix/strict-object-never-warning`) targets `docs/documentation-standard`, and later milestones
+  may target the previous milestone's branch. A stacked branch still does not substitute for human
+  approval; no plan authorizes merging.
 - **Effect 4 timing** — phase B must be replanned if stable Effect 4 materially differs from rc.115
   or its CLI remains unstable.
 - **Release PR #205** — package-version publication is outside this roadmap and must not be mixed
