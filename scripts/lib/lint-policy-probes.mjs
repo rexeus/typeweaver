@@ -8,6 +8,7 @@ import {
   workspaceRoot,
 } from "./lint-policy-contract.mjs";
 import { spawnPnpmSync } from "./pnpm-command.mjs";
+import { assertStricterMaintainabilityProbes } from "./stricter-maintainability-probes.mjs";
 
 /** @typedef {import("./lint-policy-contract.mjs").LintConfig} LintConfig */
 /** @typedef {import("./lint-policy-contract.mjs").LintOverride} LintOverride */
@@ -194,6 +195,7 @@ export const assertLintPolicyProbes = (diagnostics, fixtureRoot) => {
   assertTestScopeCase(diagnostics, fixtureRoot);
   assertUnusedDisableCase(diagnostics, fixtureRoot);
   assertDenyWarnings(fixtureRoot);
+  assertStricterMaintainabilityProbes(fixtureRoot);
 };
 
 /**
