@@ -18,6 +18,7 @@
     "build": "echo 'No build needed for test-utils'",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "format": "oxfmt",
+    "test": "vitest --run",
     "test-project:gen": "pnpm exec typeweaver generate --output src/test-project/output --input src/test-project/spec/index.ts --plugins clients,command,aws-cdk,hono,server,effect,openapi",
     "test:gen": "pnpm run test-project:gen"
   },
@@ -42,6 +43,7 @@
     "effect": "4.0.0-rc.116",
     "get-port": "^7.2.0",
     "hono": "^4.12.32",
+    "vitest": "^3.2.7",
     "zod": "^4.4.3"
   }
 }

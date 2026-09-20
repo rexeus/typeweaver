@@ -1,8 +1,10 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "rootDir": "."
   },
+  "include": ["src/**/*.ts", "__test__/**/*.ts"],
   "exclude": [
     // These launchers are compiled and executed by the native Deno/Bun process suite;
     // their runtime globals intentionally do not enter the Node TypeScript program.
