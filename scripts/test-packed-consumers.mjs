@@ -52,7 +52,6 @@ const main = () => {
     });
     verifyNativeEffectStrictPeerNegative({
       archives,
-      effectVersion: nativeEffectVersion,
       matrixRoot,
       packages,
     });

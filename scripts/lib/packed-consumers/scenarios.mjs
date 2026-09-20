@@ -376,7 +376,7 @@ export const verifyAllPlainProjectionsConsumer = ({
 };
 
 /**
- * @param {ConsumerMatrix & { matrixRoot: string }} options
+ * @param {Omit<ConsumerMatrix, "effectVersion"> & { matrixRoot: string }} options
  * @returns {void}
  */
 export const verifyNativeEffectStrictPeerNegative = ({
@@ -384,6 +384,12 @@ export const verifyNativeEffectStrictPeerNegative = ({
   matrixRoot,
   packages,
 }) => {
+  const incompatibleEffectVersion = "4.0.0-rc.115";
+  assert.notEqual(
+    incompatibleEffectVersion,
+    contract.runtimeVersion,
+    "strict-peer negative Effect version must differ from the runtime contract"
+  );
   const fixtureRoot = path.join(
     matrixRoot,
     "native-effect-strict-peer-negative"
@@ -401,7 +407,7 @@ export const verifyNativeEffectStrictPeerNegative = ({
       "@rexeus/typeweaver-gen": packedDependencies["@rexeus/typeweaver-gen"],
       "@rexeus/typeweaver-server":
         packedDependencies["@rexeus/typeweaver-server"],
-      effect: "4.0.0-rc.115",
+      effect: incompatibleEffectVersion,
       zod: ZOD_VERSION,
     },
   });
