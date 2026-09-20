@@ -32,12 +32,13 @@ const applyRequestOverrides = <TBody, THeader, TParam, TQuery>(
   input: RequestInput<TBody, THeader, TParam, TQuery>
 ): void => {
   if (input.path !== undefined) target["path"] = input.path;
-  if (input.body && creators.body) target["body"] = creators.body(input.body);
-  if (input.header && creators.header)
+  if (input.body !== undefined && creators.body)
+    target["body"] = creators.body(input.body);
+  if (input.header !== undefined && creators.header)
     target["header"] = creators.header(input.header);
-  if (input.param && creators.param)
+  if (input.param !== undefined && creators.param)
     target["param"] = creators.param(input.param);
-  if (input.query && creators.query)
+  if (input.query !== undefined && creators.query)
     target["query"] = creators.query(input.query);
 };
 

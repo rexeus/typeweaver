@@ -38,9 +38,9 @@ export function createResponse<TResponse extends IHttpResponse, TBody, THeader>(
   const overrides: Record<string, unknown> = {};
   if (input.statusCode !== undefined)
     overrides["statusCode"] = input.statusCode;
-  if (input.body && creators.body)
+  if (input.body !== undefined && creators.body)
     overrides["body"] = creators.body(input.body);
-  if (input.header && creators.header)
+  if (input.header !== undefined && creators.header)
     overrides["header"] = creators.header(input.header);
 
   return createData(
