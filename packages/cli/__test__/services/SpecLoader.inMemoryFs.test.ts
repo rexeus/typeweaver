@@ -187,10 +187,6 @@ describe("SpecLoader declaration write failures", () => {
 
     expect(Result.isFailure(either)).toBe(true);
     if (!Result.isFailure(either)) return;
-    // `SpecLoader.load` is span-wrapped (Effect.fn), and failures crossing
-    // a traced boundary are re-wrapped for trace attribution — reference
-    // identity on `cause` does not survive. Unwrap the captured instance
-    // and assert the underlying SystemError structurally instead.
     const original = either.failure;
     expect(original).toBeInstanceOf(SpecOutputWriteError);
     if (!(original instanceof SpecOutputWriteError)) return;
