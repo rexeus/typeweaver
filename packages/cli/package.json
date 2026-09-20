@@ -88,7 +88,7 @@
     "@effect/rpc": "0.76.0",
     "@effect/sql": "0.52.0",
     "@effect/typeclass": "0.41.0",
-    "@effect/workflow": "0.19.0",
+    "@effect/workflow": "0.19.1",
     "@rexeus/typeweaver-aws-cdk": "workspace:^",
     "@rexeus/typeweaver-clients": "workspace:^",
     "@rexeus/typeweaver-command": "workspace:^",
