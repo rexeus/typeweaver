@@ -78,7 +78,7 @@ const loadConfigAsync = async (
 
   const resolvedPath = path.resolve(configPath);
   const configUrl = pathToFileURL(resolvedPath).toString();
-  const configModule = await import(configUrl);
+  const configModule = (await import(configUrl)) as Record<string, unknown>;
   const loadedConfig = getConfigExport(configModule, configPath);
 
   if (!isConfigObject(loadedConfig)) {
@@ -106,18 +106,18 @@ const getConfigExport = (
   }
 
   if (hasDefaultExport) {
-    if (isNamespaceLikeConfigExport(configModule.default)) {
+    if (isNamespaceLikeConfigExport(configModule["default"])) {
       throw new InvalidConfigExportError({
         configPath,
         reason: "default-namespace-wrapper",
       });
     }
 
-    return configModule.default;
+    return configModule["default"];
   }
 
   if (hasNamedConfigExport) {
-    return configModule.config;
+    return configModule["config"];
   }
 
   throw new InvalidConfigExportError({

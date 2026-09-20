@@ -1,4 +1,5 @@
 import { createData } from "./createData.js";
+import type { DataOverrides } from "./createData.js";
 
 /**
  * Creates a reusable factory function that produces data objects with defaults.
@@ -23,6 +24,6 @@ import { createData } from "./createData.js";
  */
 export function createDataFactory<T>(
   getDefaults: () => T
-): (input?: Partial<T>) => T {
-  return (input: Partial<T> = {}) => createData(getDefaults(), input);
+): (input?: DataOverrides<T>) => T {
+  return (input: DataOverrides<T> = {}) => createData(getDefaults(), input);
 }

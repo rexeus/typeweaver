@@ -106,40 +106,64 @@ describe("built CLI plugin scaffold", () => {
     PROCESS_TEST_TIMEOUT_MS
   );
 
-  test("rejects an existing target without changing its contents", async () => {
-    const workspace = createWorkspace();
-    const target = path.join(workspace, "existing-plugin");
-    fs.mkdirSync(target);
-    fs.writeFileSync(path.join(target, "sentinel.txt"), "keep\n");
+  test(
+    "rejects an existing target without changing its contents",
+    async () => {
+      const workspace = createWorkspace();
+      const target = path.join(workspace, "existing-plugin");
+      fs.mkdirSync(target);
+      fs.writeFileSync(path.join(target, "sentinel.txt"), "keep\n");
 
-    await expect(
-      execFileAsync(
-        process.execPath,
-        [cliEntry, "add", "plugin", "--name", "audit-log", "--target", target],
-        { cwd: workspace }
-      )
-    ).rejects.toMatchObject({
-      code: 1,
-      stderr: `Plugin scaffold target '${target}' already exists; choose a new directory.\n`,
-    });
-    expect(collectFileTree(target)).toBe("--- sentinel.txt\nkeep\n");
-  });
+      await expect(
+        execFileAsync(
+          process.execPath,
+          [
+            cliEntry,
+            "add",
+            "plugin",
+            "--name",
+            "audit-log",
+            "--target",
+            target,
+          ],
+          { cwd: workspace }
+        )
+      ).rejects.toMatchObject({
+        code: 1,
+        stderr: `Plugin scaffold target '${target}' already exists; choose a new directory.\n`,
+      });
+      expect(collectFileTree(target)).toBe("--- sentinel.txt\nkeep\n");
+    },
+    PROCESS_TEST_TIMEOUT_MS
+  );
 
-  test("rejects invalid plugin names without creating a target", async () => {
-    const workspace = createWorkspace();
-    const target = path.join(workspace, "invalid-plugin");
+  test(
+    "rejects invalid plugin names without creating a target",
+    async () => {
+      const workspace = createWorkspace();
+      const target = path.join(workspace, "invalid-plugin");
 
-    await expect(
-      execFileAsync(
-        process.execPath,
-        [cliEntry, "add", "plugin", "--name", "Audit_Log", "--target", target],
-        { cwd: workspace }
-      )
-    ).rejects.toMatchObject({
-      code: 1,
-      stderr:
-        "Invalid plugin name 'Audit_Log'. Use lowercase kebab-case, for example 'audit-log'.\n",
-    });
-    expect(fs.existsSync(target)).toBe(false);
-  });
+      await expect(
+        execFileAsync(
+          process.execPath,
+          [
+            cliEntry,
+            "add",
+            "plugin",
+            "--name",
+            "Audit_Log",
+            "--target",
+            target,
+          ],
+          { cwd: workspace }
+        )
+      ).rejects.toMatchObject({
+        code: 1,
+        stderr:
+          "Invalid plugin name 'Audit_Log'. Use lowercase kebab-case, for example 'audit-log'.\n",
+      });
+      expect(fs.existsSync(target)).toBe(false);
+    },
+    PROCESS_TEST_TIMEOUT_MS
+  );
 });

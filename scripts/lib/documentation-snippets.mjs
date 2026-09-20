@@ -10,6 +10,9 @@ const fixturePrefix = "typeweaver-doc-snippets-";
  * them in-tree, so link the CLI workspace's installed modules under the fixture.
  * `junction` is a Windows directory link that needs no elevation and is ignored
  * on POSIX, where an ordinary directory symlink is created instead.
+ *
+ * @param {{ workspaceRoot: string, fixtureRoot: string }} options
+ * @returns {void}
  */
 const linkWorkspaceModules = ({ workspaceRoot, fixtureRoot }) => {
   const workspaceModules = path.join(
@@ -25,6 +28,10 @@ const linkWorkspaceModules = ({ workspaceRoot, fixtureRoot }) => {
   );
 };
 
+/**
+ * @param {{ workspaceRoot: string, tempRoot?: string | undefined }} options
+ * @returns {string}
+ */
 export const createDocumentationSnippetFixture = ({
   workspaceRoot,
   tempRoot = tmpdir(),
@@ -37,6 +44,9 @@ export const createDocumentationSnippetFixture = ({
 /**
  * Removes a snippet fixture and is safe to call more than once. `rmSync` deletes
  * the `node_modules` link itself rather than following it.
+ *
+ * @param {string} fixtureRoot
+ * @returns {void}
  */
 export const removeDocumentationSnippetFixture = fixtureRoot => {
   rmSync(fixtureRoot, { recursive: true, force: true });
@@ -47,6 +57,13 @@ export const removeDocumentationSnippetFixture = fixtureRoot => {
  * normal completion and on thrown failures. An abrupt termination such as
  * SIGKILL cannot be observed, so it may leave an OS-temp directory behind; that
  * residue sits outside the repository and does not dirty it.
+ *
+ * @param {{
+ *   workspaceRoot: string,
+ *   tempRoot?: string,
+ *   body: (fixtureRoot: string) => unknown,
+ * }} options
+ * @returns {unknown}
  */
 export const withDocumentationSnippetFixture = ({
   workspaceRoot,

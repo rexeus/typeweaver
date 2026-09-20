@@ -1,5 +1,5 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "@rexeus/typeweaver-tsconfig/node.json",
   "compilerOptions": {
     "noEmit": true,
     "rootDir": "."

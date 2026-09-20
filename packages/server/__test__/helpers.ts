@@ -14,21 +14,24 @@ import type { ServerContext } from "../src/lib/ServerContext.js";
 export const BASE_URL = "http://localhost";
 
 export const noopValidator: IRequestValidator = {
-  validate: (req: any) => req,
-  safeValidate: (req: any) => ({ isValid: true, data: req }),
+  validate: request => request as IValidatedHttpRequest,
+  safeValidate: request => ({
+    isValid: true,
+    data: request as IValidatedHttpRequest,
+  }),
 };
 
 export const noopResponseValidator: IResponseValidator = {
-  validate: (res: any) => res,
-  safeValidate: (res: any) => ({ isValid: true, data: res }),
+  validate: response => response,
+  safeValidate: response => ({ isValid: true, data: response }),
 };
 
 export function createServerContext(
   overrides: Partial<{
     method: HttpMethod;
     path: string;
-    header: Record<string, string | string[]>;
-    query: Record<string, string | string[]>;
+    header: Record<string, string | string[] | undefined>;
+    query: Record<string, string | string[] | undefined>;
   }> = {}
 ): ServerContext {
   return {
@@ -52,7 +55,7 @@ export function post(path: string, body?: unknown): Request {
   return new Request(BASE_URL + path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 }
 
@@ -60,7 +63,7 @@ export function put(path: string, body?: unknown): Request {
   return new Request(BASE_URL + path, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 }
 
@@ -68,7 +71,7 @@ export function patch(path: string, body?: unknown): Request {
   return new Request(BASE_URL + path, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 }
 
@@ -129,13 +132,23 @@ export function buildFetchRequest(
   return new Request(url, {
     method: requestData.method,
     headers,
-    body,
+    ...(body === undefined ? {} : { body }),
   });
 }
 
-export async function expectJson(res: Response, status: number): Promise<any> {
+// The calling test asserts the parsed JSON shape field by field. Returning the
+// validated JSON object keeps the test boundary type-safe: callers read
+// `unknown` properties instead of an `any` result.
+export async function expectJson(
+  res: Response,
+  status: number
+): Promise<Record<string, unknown>> {
   expect(res.status).toBe(status);
-  return res.json();
+  const body: unknown = await res.json();
+  if (typeof body !== "object" || body === null) {
+    throw new Error("Expected a JSON object response body");
+  }
+  return body as Record<string, unknown>;
 }
 
 /**
@@ -158,11 +171,11 @@ export async function expectErrorResponse(
   res: Response,
   status: number,
   code: string
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   const data = await expectJson(res, status);
-  expect(data.code).toBe(code);
+  expect(data["code"]).toBe(code);
   if (code === "INTERNAL_SERVER_ERROR") {
-    expect(data.message).toBe(internalServerErrorDefaultError.message);
+    expect(data["message"]).toBe(internalServerErrorDefaultError.message);
   }
   return data;
 }

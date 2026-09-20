@@ -5,9 +5,31 @@ import process from "node:process";
 const nodeScriptExtensions = new Set([".cjs", ".js", ".mjs"]);
 const windowsShellExtensions = new Set([".bat", ".cmd"]);
 
+/**
+ * @typedef {object} ResolvePnpmInvocationOptions
+ * @property {readonly string[]} args
+ * @property {string | undefined} [npmExecPath]
+ * @property {string} [nodeExecPath]
+ * @property {NodeJS.Platform} [platform]
+ */
+
+/**
+ * @typedef {object} SpawnPnpmOptions
+ * @property {readonly string[]} args
+ * @property {string} [cwd]
+ * @property {NodeJS.ProcessEnv} [env]
+ * @property {BufferEncoding} [encoding]
+ * @property {number} [maxBuffer]
+ * @property {import("node:child_process").StdioOptions} [stdio]
+ */
+
+/**
+ * @param {ResolvePnpmInvocationOptions} options
+ * @returns {{ args: readonly string[], command: string, shell: boolean }}
+ */
 export const resolvePnpmInvocation = ({
   args,
-  npmExecPath = process.env.npm_execpath,
+  npmExecPath = process.env["npm_execpath"],
   nodeExecPath = process.execPath,
   platform = process.platform,
 }) => {
@@ -31,13 +53,18 @@ export const resolvePnpmInvocation = ({
   };
 };
 
+/**
+ * @param {SpawnPnpmOptions} options
+ * @returns {import("node:child_process").SpawnSyncReturns<string>}
+ */
 export const spawnPnpmSync = ({ args, ...options }) => {
   const invocation = resolvePnpmInvocation({
     args,
-    npmExecPath: options.env?.npm_execpath ?? process.env.npm_execpath,
+    npmExecPath: options.env?.["npm_execpath"] ?? process.env["npm_execpath"],
   });
   return spawnSync(invocation.command, invocation.args, {
     ...options,
+    encoding: options.encoding ?? "utf8",
     shell: invocation.shell,
   });
 };

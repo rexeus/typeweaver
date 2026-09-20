@@ -23,26 +23,26 @@ export const decodeOutputLockInfo = (
 
   const candidate = parsed;
   if (
-    typeof candidate.pid !== "number" ||
-    typeof candidate.startedAt !== "string"
+    typeof candidate["pid"] !== "number" ||
+    typeof candidate["startedAt"] !== "string"
   ) {
     return undefined;
   }
   if (
-    candidate.ownerToken !== undefined &&
-    typeof candidate.ownerToken !== "string"
+    candidate["ownerToken"] !== undefined &&
+    typeof candidate["ownerToken"] !== "string"
   ) {
     return undefined;
   }
 
   return {
-    pid: candidate.pid,
-    startedAt: candidate.startedAt,
+    pid: candidate["pid"],
+    startedAt: candidate["startedAt"],
     inputFile:
-      typeof candidate.inputFile === "string" ? candidate.inputFile : "",
-    ...(candidate.ownerToken === undefined
+      typeof candidate["inputFile"] === "string" ? candidate["inputFile"] : "",
+    ...(candidate["ownerToken"] === undefined
       ? {}
-      : { ownerToken: candidate.ownerToken }),
+      : { ownerToken: candidate["ownerToken"] }),
   };
 };
 

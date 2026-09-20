@@ -160,7 +160,9 @@ function createPrevalidatedRequestWithUnreadableText(
     "/todos",
     {
       method: "POST",
-      headers: contentType ? { "Content-Type": contentType } : undefined,
+      ...(contentType === undefined
+        ? {}
+        : { headers: { "Content-Type": contentType } }),
       body: new TextEncoder().encode("unreadable"),
     },
     64
@@ -523,8 +525,8 @@ describe("Fetch multipart request bodies", () => {
     const result = await adapter.toRequest(request);
     const body = requireUnknownRecord(result.body);
 
-    expect(body.title).toBe("Test Todo");
-    expect(body.tags).toEqual(["tag1", "tag2"]);
+    expect(body["title"]).toBe("Test Todo");
+    expect(body["tags"]).toEqual(["tag1", "tag2"]);
   });
 
   test("preserves multipart File values", async () => {
@@ -768,12 +770,12 @@ describe("Fetch query and form prototype pollution protection", () => {
   test("stores __proto__ as a regular property in query params", async () => {
     const adapter = new FetchApiAdapter();
     const request = new Request(`${BASE_URL}/todos?__proto__=polluted`);
-    const before = ({} as any).__proto__;
+    const before: unknown = Object.getPrototypeOf({});
 
     const result = await adapter.toRequest(request);
 
     expect(result.query?.["__proto__"]).toBe("polluted");
-    expect(({} as any).__proto__).toBe(before);
+    expect(Object.getPrototypeOf({})).toBe(before);
     expect(Object.prototype).not.toHaveProperty("polluted");
   });
 
@@ -801,14 +803,14 @@ describe("Fetch query and form prototype pollution protection", () => {
       method: "POST",
       body: formData,
     });
-    const before = ({} as any).__proto__;
+    const before: unknown = Object.getPrototypeOf({});
 
     const result = await adapter.toRequest(request);
     const body = requireUnknownRecord(result.body);
 
     expect(body["__proto__"]).toBe("polluted");
     expect(body["constructor"]).toBe("evil");
-    expect(({} as any).__proto__).toBe(before);
+    expect(Object.getPrototypeOf({})).toBe(before);
   });
 
   test("stores __proto__ as a regular property in form-urlencoded bodies", async () => {
@@ -820,14 +822,14 @@ describe("Fetch query and form prototype pollution protection", () => {
       },
       body: "__proto__=polluted&constructor=evil",
     });
-    const before = ({} as any).__proto__;
+    const before: unknown = Object.getPrototypeOf({});
 
     const result = await adapter.toRequest(request);
     const body = requireUnknownRecord(result.body);
 
     expect(body["__proto__"]).toBe("polluted");
     expect(body["constructor"]).toBe("evil");
-    expect(({} as any).__proto__).toBe(before);
+    expect(Object.getPrototypeOf({})).toBe(before);
   });
 
   test("stores repeated __proto__ form keys without polluting safe values", async () => {
@@ -858,15 +860,15 @@ describe("Fetch JSON prototype pollution protection", () => {
       headers: { "Content-Type": "application/json" },
       body: '{"title":"legit","__proto__":{"isAdmin":true}}',
     });
-    const before = ({} as any).__proto__;
+    const before: unknown = Object.getPrototypeOf({});
 
     const result = await adapter.toRequest(request);
     const body = requireUnknownRecord(result.body);
 
-    expect(body.title).toBe("legit");
+    expect(body["title"]).toBe("legit");
     expect(Object.hasOwn(body, "__proto__")).toBe(false);
-    expect(({} as any).__proto__).toBe(before);
-    expect(({} as any).isAdmin).toBeUndefined();
+    expect(Object.getPrototypeOf({})).toBe(before);
+    expect(Reflect.get({}, "isAdmin")).toBeUndefined();
   });
 
   test("strips nested __proto__ from JSON request bodies", async () => {
@@ -880,11 +882,11 @@ describe("Fetch JSON prototype pollution protection", () => {
 
     const result = await adapter.toRequest(request);
     const responseBody = requireUnknownRecord(result.body);
-    const user = requireUnknownRecord(responseBody.user);
+    const user = requireUnknownRecord(responseBody["user"]);
 
-    expect(user.name).toBe("test");
+    expect(user["name"]).toBe("test");
     expect(Object.hasOwn(user, "__proto__")).toBe(false);
-    expect(({} as any).isAdmin).toBeUndefined();
+    expect(Reflect.get({}, "isAdmin")).toBeUndefined();
   });
 
   test("strips __proto__ recursively from objects inside JSON arrays", async () => {
@@ -903,7 +905,7 @@ describe("Fetch JSON prototype pollution protection", () => {
     }
     const firstItem = requireUnknownRecord(result.body[0]);
     expect(Object.hasOwn(firstItem, "__proto__")).toBe(false);
-    expect(({} as any).isAdmin).toBeUndefined();
+    expect(Reflect.get({}, "isAdmin")).toBeUndefined();
   });
 
   test("allows constructor and prototype as regular JSON keys", async () => {
@@ -918,7 +920,7 @@ describe("Fetch JSON prototype pollution protection", () => {
     const body = requireUnknownRecord(result.body);
 
     expect(body.constructor).toBe("value");
-    expect(body.prototype).toBe("value");
+    expect(body["prototype"]).toBe("value");
   });
 });
 
@@ -1457,7 +1459,7 @@ describe("Fetch response headers and serialization errors", () => {
   test("throws ResponseSerializationError for circular response bodies", () => {
     const adapter = new FetchApiAdapter();
     const circular: Record<string, unknown> = {};
-    circular.self = circular;
+    circular["self"] = circular;
 
     expect(() =>
       adapter.toResponse({ statusCode: 200, body: circular })

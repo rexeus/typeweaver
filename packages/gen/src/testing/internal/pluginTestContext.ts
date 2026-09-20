@@ -70,6 +70,58 @@ const effectFromSync = <A>(
     }
   });
 
+type ContextAccessors = Pick<
+  GeneratorContext,
+  | "outputDir"
+  | "inputDir"
+  | "config"
+  | "normalizedSpec"
+  | "coreDir"
+  | "responsesOutputDir"
+  | "specOutputDir"
+  | "getCanonicalResponse"
+  | "getCanonicalResponseOutputFile"
+  | "getCanonicalResponseImportPath"
+  | "getSpecImportPath"
+  | "getOperationDefinitionAccessor"
+  | "getOperationOutputPaths"
+  | "getResourceOutputDir"
+>;
+
+const buildContextAccessors = (
+  options: PluginTestContextOptions,
+  normalizedSpec: NormalizedSpec
+): ContextAccessors => ({
+  outputDir: options.outputDir,
+  inputDir: options.inputDir,
+  config: options.config,
+  normalizedSpec,
+  coreDir: options.coreDir,
+  responsesOutputDir: options.responsesOutputDir,
+  specOutputDir: options.specOutputDir,
+  getCanonicalResponse: responseName =>
+    findCanonicalResponse(normalizedSpec, responseName),
+  getCanonicalResponseOutputFile: responseName =>
+    canonicalResponseFile(options.responsesOutputDir, responseName),
+  getCanonicalResponseImportPath: config =>
+    canonicalResponseImportPath({
+      ...config,
+      responsesOutputDir: options.responsesOutputDir,
+    }),
+  getSpecImportPath: config =>
+    specImportPath(config.importerDir, options.specOutputDir),
+  getOperationDefinitionAccessor: config =>
+    `getOperationDefinition(spec, ${JSON.stringify(config.resourceName)}, ${JSON.stringify(config.operationId)})`,
+  getOperationOutputPaths: config =>
+    makeOperationOutputPaths(
+      options.outputDir,
+      config.resourceName,
+      config.operationId
+    ),
+  getResourceOutputDir: resourceName =>
+    path.join(options.outputDir, resourceName),
+});
+
 export const makePluginTestGeneratorContext = (params: {
   readonly options: PluginTestContextOptions;
   readonly normalizedSpec: NormalizedSpec;
@@ -92,34 +144,7 @@ export const makePluginTestGeneratorContext = (params: {
     );
 
   return {
-    outputDir: options.outputDir,
-    inputDir: options.inputDir,
-    config: options.config,
-    normalizedSpec,
-    coreDir: options.coreDir,
-    responsesOutputDir: options.responsesOutputDir,
-    specOutputDir: options.specOutputDir,
-    getCanonicalResponse: responseName =>
-      findCanonicalResponse(normalizedSpec, responseName),
-    getCanonicalResponseOutputFile: responseName =>
-      canonicalResponseFile(options.responsesOutputDir, responseName),
-    getCanonicalResponseImportPath: config =>
-      canonicalResponseImportPath({
-        ...config,
-        responsesOutputDir: options.responsesOutputDir,
-      }),
-    getSpecImportPath: config =>
-      specImportPath(config.importerDir, options.specOutputDir),
-    getOperationDefinitionAccessor: config =>
-      `getOperationDefinition(spec, ${JSON.stringify(config.resourceName)}, ${JSON.stringify(config.operationId)})`,
-    getOperationOutputPaths: config =>
-      makeOperationOutputPaths(
-        options.outputDir,
-        config.resourceName,
-        config.operationId
-      ),
-    getResourceOutputDir: resourceName =>
-      path.join(options.outputDir, resourceName),
+    ...buildContextAccessors(options, normalizedSpec),
     writeFile,
     renderTemplate: render,
     addGeneratedFile,

@@ -18,7 +18,7 @@ export function buildHeaderObjects(
   schema: z.core.$ZodType | undefined,
   context: OperationContext,
   responseContext: {
-    readonly responseName?: string;
+    readonly responseName?: string | undefined;
     readonly statusCode: string;
     readonly part: string;
     readonly headersPointer: string;
@@ -65,9 +65,9 @@ export function buildHeaderObjects(
 }
 
 function headerDescription(schema: JsonSchema): string | undefined {
-  return typeof schema.description === "string" &&
-    schema.description.trim() !== ""
-    ? schema.description
+  return typeof schema["description"] === "string" &&
+    schema["description"].trim() !== ""
+    ? schema["description"]
     : undefined;
 }
 

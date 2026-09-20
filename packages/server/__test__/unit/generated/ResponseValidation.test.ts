@@ -81,8 +81,8 @@ describe("Response Validation field stripping", () => {
     const data = await expectJson(response, 201);
     expect(data).not.toHaveProperty("extraField");
     expect(data).not.toHaveProperty("anotherExtra");
-    expect(data.id).toBeDefined();
-    expect(data.title).toBeDefined();
+    expect(data["id"]).toBeDefined();
+    expect(data["title"]).toBeDefined();
   });
 
   test("should preserve all schema-defined fields after stripping", async () => {
@@ -102,14 +102,14 @@ describe("Response Validation field stripping", () => {
     );
 
     const data = await expectJson(response, 201);
-    expect(data.id).toBe(body.id);
-    expect(data.accountId).toBe(body.accountId);
-    expect(data.title).toBe(body.title);
-    expect(data.status).toBe(body.status);
-    expect(data.createdAt).toBe(body.createdAt);
-    expect(data.modifiedAt).toBe(body.modifiedAt);
-    expect(data.createdBy).toBe(body.createdBy);
-    expect(data.modifiedBy).toBe(body.modifiedBy);
+    expect(data["id"]).toBe(body.id);
+    expect(data["accountId"]).toBe(body.accountId);
+    expect(data["title"]).toBe(body.title);
+    expect(data["status"]).toBe(body.status);
+    expect(data["createdAt"]).toBe(body.createdAt);
+    expect(data["modifiedAt"]).toBe(body.modifiedAt);
+    expect(data["createdBy"]).toBe(body.createdBy);
+    expect(data["modifiedBy"]).toBe(body.modifiedBy);
   });
 });
 
@@ -139,7 +139,7 @@ describe("Response Validation invalid responses", () => {
       internalServerErrorDefaultError.statusCode,
       internalServerErrorDefaultError.code
     );
-    expect(data.message).toBe(internalServerErrorDefaultError.message);
+    expect(data["message"]).toBe(internalServerErrorDefaultError.message);
   });
 
   test("should return 500 when response has unrecognized status code", async () => {
@@ -189,10 +189,11 @@ describe("Response Validation custom handler", () => {
     );
 
     const data = await expectJson(response, 502);
-    expect(data.code).toBe("CUSTOM_VALIDATION_FAILURE");
+    expect(data["code"]).toBe("CUSTOM_VALIDATION_FAILURE");
 
     expect(handler).toHaveBeenCalledOnce();
-    const args = handler.mock.calls[0]!;
+    const args = handler.mock.calls[0];
+    assert(args !== undefined);
     assert(args[0] instanceof ResponseValidationError);
     expect(args[2]).toBeDefined();
     expect(args[2].request).toBeDefined();
@@ -224,7 +225,9 @@ describe("Response Validation custom handler", () => {
 
     await app.fetch(buildFetchRequest(`${BASE_URL}/todos`, requestData));
 
-    const response = handler.mock.calls[0]![1];
+    const call = handler.mock.calls[0];
+    assert(call !== undefined);
+    const response = call[1];
     expect(response).not.toHaveProperty("type");
     expect(response.header).toEqual({
       "Content-Type": "application/json",
@@ -255,7 +258,7 @@ describe("Response Validation custom handler", () => {
     );
 
     const data = await expectJson(response, 503);
-    expect(data.reason).toBe("schema mismatch");
+    expect(data["reason"]).toBe("schema mismatch");
     expect(response.headers.get("X-Custom")).toBe("response-validation");
   });
 });
@@ -277,8 +280,8 @@ describe("Response Validation disabled", () => {
     );
 
     const data = await expectJson(response, 201);
-    expect(data.extraField).toBe("should-remain");
-    expect(data.secretData).toEqual({ nested: true });
+    expect(data["extraField"]).toBe("should-remain");
+    expect(data["secretData"]).toEqual({ nested: true });
   });
 
   test("should pass through invalid response types when validation is disabled", async () => {
@@ -299,8 +302,8 @@ describe("Response Validation disabled", () => {
     );
 
     const data = await expectJson(response, 201);
-    expect(data.id).toBe(12345);
-    expect(data.title).toBe(true);
+    expect(data["id"]).toBe(12345);
+    expect(data["title"]).toBe(true);
   });
 
   test("should omit undefined header values from thrown typed responses when validation is disabled", async () => {
@@ -364,7 +367,7 @@ describe("Response Validation thrown typed responses", () => {
 
     const data = await expectJson(response, 201);
     expect(data).not.toHaveProperty("extraField");
-    expect(data.id).toBeDefined();
+    expect(data["id"]).toBeDefined();
   });
 
   test("should omit undefined header values from thrown typed responses", async () => {
@@ -450,8 +453,8 @@ describe("Response Validation pass-through mode", () => {
 
     const data = await expectJson(response, 201);
     expect(data).not.toHaveProperty("extraField");
-    expect(data.id).toBeDefined();
-    expect(data.title).toBeDefined();
+    expect(data["id"]).toBeDefined();
+    expect(data["title"]).toBeDefined();
   });
 });
 

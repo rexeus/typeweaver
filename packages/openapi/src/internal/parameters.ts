@@ -13,6 +13,7 @@ import type {
   OpenApiParameterObject,
 } from "../types.js";
 import type { OperationContext } from "./operationContext.js";
+import type { ParameterContainerResult } from "./parameterContainer.js";
 import type { z } from "zod";
 
 export type RequestParameterResult = {
@@ -63,6 +64,68 @@ export function buildRequestParameters(
   };
 }
 
+const buildUnusedPathParameterWarnings = (
+  context: OperationContext,
+  parametersPointer: string,
+  containerProperties: ParameterContainerResult["properties"],
+  pathNameSet: ReadonlySet<string>
+): OpenApiDiagnosticWarning[] =>
+  Object.keys(containerProperties)
+    .filter(name => !pathNameSet.has(name))
+    .map(name =>
+      createParameterWarning({
+        code: "unused-path-parameter-schema",
+        message: `Path parameter schema '${name}' is not used by '${context.operation.path}'.`,
+        documentPath: parametersPointer,
+        context,
+        part: "request.path",
+        parameterName: name,
+      })
+    );
+
+const buildPathParameterObject = (options: {
+  readonly context: OperationContext;
+  readonly parametersPointer: string;
+  readonly name: string;
+  readonly index: number;
+  readonly schema: ParameterContainerResult["properties"][string] | undefined;
+  readonly missingWarnings: OpenApiDiagnosticWarning[];
+}): OpenApiParameterObject => {
+  const parameterPointer = jsonPointer([
+    "paths",
+    options.context.openApiPath,
+    options.context.method,
+    "parameters",
+    String(options.index),
+  ]);
+
+  if (options.schema === undefined) {
+    options.missingWarnings.push(
+      createParameterWarning({
+        code: "missing-path-parameter-schema",
+        message: `Path parameter '${options.name}' is missing a schema.`,
+        documentPath: `${parameterPointer}/schema`,
+        context: options.context,
+        part: "request.path",
+        parameterName: options.name,
+      })
+    );
+  }
+
+  return {
+    name: options.name,
+    in: "path" as const,
+    required: true,
+    schema:
+      options.schema === undefined
+        ? {}
+        : rebaseLocalJsonSchemaRefs(
+            options.schema,
+            `${parameterPointer}/schema`
+          ),
+  };
+};
+
 function buildPathParameters(
   context: OperationContext,
   parametersPointer: string
@@ -76,51 +139,22 @@ function buildPathParameters(
   });
   const pathNameSet = new Set(pathNames);
   const missingWarnings: OpenApiDiagnosticWarning[] = [];
-  const unusedWarnings = Object.keys(container.properties)
-    .filter(name => !pathNameSet.has(name))
-    .map(name =>
-      createParameterWarning({
-        code: "unused-path-parameter-schema",
-        message: `Path parameter schema '${name}' is not used by '${context.operation.path}'.`,
-        documentPath: parametersPointer,
-        context,
-        part: "request.path",
-        parameterName: name,
-      })
-    );
-  const parameters = pathNames.map((name, index) => {
-    const schema = container.properties[name];
-    const parameterPointer = jsonPointer([
-      "paths",
-      context.openApiPath,
-      context.method,
-      "parameters",
-      String(index),
-    ]);
-
-    if (schema === undefined) {
-      missingWarnings.push(
-        createParameterWarning({
-          code: "missing-path-parameter-schema",
-          message: `Path parameter '${name}' is missing a schema.`,
-          documentPath: `${parameterPointer}/schema`,
-          context,
-          part: "request.path",
-          parameterName: name,
-        })
-      );
-    }
-
-    return {
+  const unusedWarnings = buildUnusedPathParameterWarnings(
+    context,
+    parametersPointer,
+    container.properties,
+    pathNameSet
+  );
+  const parameters = pathNames.map((name, index) =>
+    buildPathParameterObject({
+      context,
+      parametersPointer,
       name,
-      in: "path" as const,
-      required: true,
-      schema:
-        schema === undefined
-          ? {}
-          : rebaseLocalJsonSchemaRefs(schema, `${parameterPointer}/schema`),
-    };
-  });
+      index,
+      schema: container.properties[name],
+      missingWarnings,
+    })
+  );
 
   return {
     parameters,

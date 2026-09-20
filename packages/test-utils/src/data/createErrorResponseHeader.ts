@@ -1,4 +1,5 @@
 import { createDataFactory } from "./createDataFactory.js";
+import type { DataOverrides } from "./createData.js";
 
 /**
  * Creates a factory for error response headers with `Content-Type: application/json` as default.
@@ -11,7 +12,7 @@ import { createDataFactory } from "./createDataFactory.js";
  */
 export function createErrorResponseHeader<
   T extends { "Content-Type": "application/json" },
->(): (input?: Partial<T>) => T {
+>(): (input?: DataOverrides<T>) => T {
   return createDataFactory<T>(
     () =>
       ({

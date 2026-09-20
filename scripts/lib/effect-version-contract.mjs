@@ -2,22 +2,51 @@ import { readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 
-const dependencySections = [
+/** @typedef {import("./tooling-types.mjs").EffectBaselineContract} EffectBaselineContract */
+/** @typedef {import("./tooling-types.mjs").Effect4EvidenceContract} Effect4EvidenceContract */
+/** @typedef {import("./tooling-types.mjs").PackageManifest} PackageManifest */
+/** @typedef {Record<string, PackageManifest | undefined>} PackageManifestMap */
+
+const dependencySections = /** @type {const} */ ([
   "dependencies",
   "devDependencies",
   "peerDependencies",
-];
+]);
 
+/** @typedef {typeof dependencySections[number]} EffectDependencySection */
+
+/**
+ * @param {string} filePath
+ * @returns {PackageManifest}
+ */
 const readJson = filePath => JSON.parse(readFileSync(filePath, "utf8"));
 
+/**
+ * @param {PackageManifest} packageJson
+ * @returns {EffectDependencySection[]}
+ */
 const findEffectSections = packageJson =>
   dependencySections.filter(
-    section => packageJson[section]?.effect !== undefined
+    section => packageJson[section]?.["effect"] !== undefined
   );
 
+/**
+ * @param {string} workspaceRoot
+ * @param {string} packagePath
+ * @returns {string}
+ */
 const formatPackagePath = (workspaceRoot, packagePath) =>
   path.relative(workspaceRoot, packagePath).split(path.sep).join("/");
 
+/**
+ * @param {{
+ *   packageJson: PackageManifest,
+ *   packagePath: string,
+ *   effectSections: readonly EffectDependencySection[],
+ *   runtimeRange: string,
+ * }} options
+ * @returns {string[]}
+ */
 const validateDeclaredVersions = ({
   packageJson,
   packagePath,
@@ -26,18 +55,26 @@ const validateDeclaredVersions = ({
 }) => {
   const failures = [];
   for (const section of effectSections) {
-    const actual = packageJson[section].effect;
+    const actual = packageJson[section]?.["effect"];
     const expected =
       section === "peerDependencies" ? "catalog:peers" : runtimeRange;
     if (actual !== expected) {
       failures.push(
-        `${packagePath} ${section}.effect must be ${expected}; found ${actual}`
+        `${packagePath} ${section}.effect must be ${expected}; found ${String(actual)}`
       );
     }
   }
   return failures;
 };
 
+/**
+ * @param {{
+ *   packageJson: PackageManifest,
+ *   packagePath: string,
+ *   acceptedEffectDependencies: Record<string, string>,
+ * }} options
+ * @returns {string[]}
+ */
 const validatePublishedEffectDependencies = ({
   packageJson,
   packagePath,
@@ -66,6 +103,10 @@ const validatePublishedEffectDependencies = ({
   return failures;
 };
 
+/**
+ * @param {{ manifestPath: string, packagePath: string, runtimeVersion: string }} options
+ * @returns {string[]}
+ */
 const validateResolvedVersion = ({
   manifestPath,
   packagePath,
@@ -78,7 +119,7 @@ const validateResolvedVersion = ({
     return resolvedVersion === runtimeVersion
       ? []
       : [
-          `${packagePath} resolves Effect ${resolvedVersion}; expected ${runtimeVersion}`,
+          `${packagePath} resolves Effect ${String(resolvedVersion)}; expected ${runtimeVersion}`,
         ];
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -88,6 +129,16 @@ const validateResolvedVersion = ({
   }
 };
 
+/**
+ * @param {{
+ *   workspaceRoot: string,
+ *   manifestPath: string,
+ *   runtimeVersion: string,
+ *   runtimeRange: string,
+ *   acceptedEffectDependencies: Record<string, string>,
+ * }} options
+ * @returns {string[]}
+ */
 const validatePackage = ({
   workspaceRoot,
   manifestPath,
@@ -129,6 +180,14 @@ const validatePackage = ({
   ];
 };
 
+/**
+ * @param {{
+ *   workspaceRoot: string,
+ *   runtimeVersion: string,
+ *   acceptedEffectDependencies?: Record<string, string>,
+ * }} options
+ * @returns {string[]}
+ */
 export const validateEffectPackageVersions = ({
   workspaceRoot,
   runtimeVersion,
@@ -206,6 +265,10 @@ const OPTIONAL_SENSITIVE_PEERS = [
   "@rexeus/typeweaver-core",
 ];
 
+/**
+ * @param {EffectBaselineContract} contract
+ * @returns {string[]}
+ */
 const validateEffect4EvidenceVersions = contract => {
   const failures = [];
   if (contract.runtimeVersion !== "3.22.0") {
@@ -218,38 +281,44 @@ const validateEffect4EvidenceVersions = contract => {
       `config/effect-baseline.json peerRange must remain >=3.22.0 <4; found ${contract.peerRange}`
     );
   }
+  /** @type {Partial<Effect4EvidenceContract>} */
   const effect4Evidence = contract.effect4Evidence ?? {};
   if (effect4Evidence.effectVersion !== "4.0.0-rc.115") {
     failures.push(
-      `config/effect-baseline.json effect4Evidence.effectVersion must be the exact evidence pin 4.0.0-rc.115; found ${effect4Evidence.effectVersion}`
+      `config/effect-baseline.json effect4Evidence.effectVersion must be the exact evidence pin 4.0.0-rc.115; found ${String(effect4Evidence.effectVersion)}`
     );
   }
   if (effect4Evidence.scope !== "process-isolated-cli-only") {
     failures.push(
-      `config/effect-baseline.json effect4Evidence.scope must be process-isolated-cli-only; found ${effect4Evidence.scope}`
+      `config/effect-baseline.json effect4Evidence.scope must be process-isolated-cli-only; found ${String(effect4Evidence.scope)}`
     );
   }
   if (effect4Evidence.stability !== "release-candidate") {
     failures.push(
-      `config/effect-baseline.json effect4Evidence.stability must be release-candidate; found ${effect4Evidence.stability}`
+      `config/effect-baseline.json effect4Evidence.stability must be release-candidate; found ${String(effect4Evidence.stability)}`
     );
   }
   if (effect4Evidence.nativeSurfaces !== "effect-3-only") {
     failures.push(
-      `config/effect-baseline.json effect4Evidence.nativeSurfaces must be effect-3-only; found ${effect4Evidence.nativeSurfaces}`
+      `config/effect-baseline.json effect4Evidence.nativeSurfaces must be effect-3-only; found ${String(effect4Evidence.nativeSurfaces)}`
     );
   }
   return failures;
 };
 
+/**
+ * @param {string} packageName
+ * @param {PackageManifest | undefined} manifest
+ * @returns {string[]}
+ */
 const validateEffectPeerManifest = (packageName, manifest) => {
   const failures = [];
-  if (manifest?.peerDependencies?.effect !== "catalog:peers") {
+  if (manifest?.peerDependencies?.["effect"] !== "catalog:peers") {
     failures.push(
-      `packages/${packageName}/package.json peerDependencies.effect must remain catalog:peers for @rexeus/typeweaver-${packageName}; found ${manifest?.peerDependencies?.effect}`
+      `packages/${packageName}/package.json peerDependencies.effect must remain catalog:peers for @rexeus/typeweaver-${packageName}; found ${String(manifest?.peerDependencies?.["effect"])}`
     );
   }
-  if (manifest?.dependencies?.effect !== undefined) {
+  if (manifest?.dependencies?.["effect"] !== undefined) {
     failures.push(
       `packages/${packageName}/package.json must keep effect as a peer, not a dependency`
     );
@@ -257,15 +326,19 @@ const validateEffectPeerManifest = (packageName, manifest) => {
   return failures;
 };
 
+/**
+ * @param {PackageManifestMap} manifests
+ * @returns {string[]}
+ */
 const validateHonoOptionalPeer = manifests => {
   const failures = [];
-  const hono = manifests.hono;
-  if (hono?.peerDependencies?.hono !== "catalog:peers") {
+  const hono = manifests["hono"];
+  if (hono?.peerDependencies?.["hono"] !== "catalog:peers") {
     failures.push(
-      `packages/hono/package.json peerDependencies.hono must remain catalog:peers; found ${hono?.peerDependencies?.hono}`
+      `packages/hono/package.json peerDependencies.hono must remain catalog:peers; found ${String(hono?.peerDependencies?.["hono"])}`
     );
   }
-  if (hono?.peerDependenciesMeta?.hono?.optional !== true) {
+  if (hono?.peerDependenciesMeta?.["hono"]?.optional !== true) {
     failures.push(
       "packages/hono/package.json must mark its hono peer optional via peerDependenciesMeta.hono.optional; the generator does not require Hono to execute"
     );
@@ -273,6 +346,10 @@ const validateHonoOptionalPeer = manifests => {
   return failures;
 };
 
+/**
+ * @param {PackageManifestMap} manifests
+ * @returns {string[]}
+ */
 const validateSensitivePeersStayRequired = manifests => {
   const failures = [];
   for (const [packageName, manifest] of Object.entries(manifests)) {
@@ -291,14 +368,18 @@ const validateSensitivePeersStayRequired = manifests => {
   return failures;
 };
 
+/**
+ * @param {PackageManifestMap} manifests
+ * @returns {string[]}
+ */
 const validateEffect4EvidenceManifests = manifests => {
   const failures = [];
-  if (manifests.cli?.dependencies?.effect !== "^3.22.0") {
+  if (manifests["cli"]?.dependencies?.["effect"] !== "^3.22.0") {
     failures.push(
-      `packages/cli/package.json dependencies.effect must remain ^3.22.0; found ${manifests.cli?.dependencies?.effect}`
+      `packages/cli/package.json dependencies.effect must remain ^3.22.0; found ${String(manifests["cli"]?.dependencies?.["effect"])}`
     );
   }
-  if (manifests.cli?.peerDependencies?.effect !== undefined) {
+  if (manifests["cli"]?.peerDependencies?.["effect"] !== undefined) {
     failures.push(
       "packages/cli/package.json must not declare an Effect peer; the CLI owns its Effect runtime as a dependency"
     );
@@ -313,6 +394,10 @@ const validateEffect4EvidenceManifests = manifests => {
   ];
 };
 
+/**
+ * @param {Record<string, string | undefined>} documents
+ * @returns {string[]}
+ */
 const validateEffect4EvidenceDocuments = documents => {
   const failures = [];
   for (const [document, tokens] of Object.entries(EFFECT_4_DOCUMENT_TOKENS)) {
@@ -349,6 +434,13 @@ const validateEffect4EvidenceDocuments = documents => {
  * Effect/gen/core peers stay required, the Hono peer is optional because the
  * generator runs without it, and every public document keeps the exact-pin
  * binary-only wording without a generic Effect 4 promise.
+ *
+ * @param {{
+ *   contract: EffectBaselineContract,
+ *   manifests: PackageManifestMap,
+ *   documents: Record<string, string | undefined>,
+ * }} options
+ * @returns {string[]}
  */
 export const validateEffect4WorkspaceContract = ({
   contract,

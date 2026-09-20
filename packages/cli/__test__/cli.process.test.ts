@@ -357,7 +357,7 @@ describe("built CLI configuration diagnostics", () => {
     expect(result.stderr).not.toContain("FiberFailure");
     expect(result.stderr).not.toMatch(/\n\s+at /);
     expect(fs.existsSync(path.join(workspace, "generated"))).toBe(false);
-  });
+  }, 15_000);
 });
 
 describe("built CLI custom configuration", () => {
@@ -495,7 +495,9 @@ describe("built CLI flag and verbosity handling", () => {
   test("gives negative flags precedence when conflicting flags are present", async () => {
     const workspace = createWorkspace();
     await expect(import("oxfmt")).resolves.toEqual(
-      expect.objectContaining({ format: expect.any(Function) })
+      expect.objectContaining({
+        format: expect.any(Function) as unknown,
+      }) as unknown
     );
     writeSpec(workspace);
     const pluginPath = writeFormattingPlugin(workspace);

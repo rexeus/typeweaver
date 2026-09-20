@@ -22,7 +22,8 @@ export class PluginModuleLoader extends Effect.Service<PluginModuleLoader>()(
           PluginModuleNotFoundError | PluginConfigError
         > =>
           Effect.tryPromise({
-            try: () => import(specifier),
+            try: async () =>
+              (await import(specifier)) as Record<string, unknown>,
             catch: cause =>
               isPluginConfigError(cause)
                 ? cause

@@ -348,7 +348,7 @@ describe("normalizeJsonSchema containers", () => {
     const result = normalizeJsonSchema(input);
 
     expect(result).not.toBe(input);
-    expect(result.properties).not.toBe(input.properties);
+    expect(result["properties"]).not.toBe(input["properties"]);
     expect(input).toEqual({
       type: "object",
       properties: {

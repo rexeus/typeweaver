@@ -219,8 +219,8 @@ describe("Generator failed output-lock release recovery", () => {
     ).toEqual(
       expect.objectContaining({
         pid: process.pid,
-        ownerToken: expect.any(String),
-      })
+        ownerToken: expect.any(String) as unknown,
+      }) as unknown
     );
 
     // The same ManagedRuntime remains alive. Once the transient filesystem
@@ -325,7 +325,7 @@ describe("Generator output-lock ownership", () => {
           pid: process.pid,
           startedAt: heldStartedAt,
         },
-      })
+      }) as unknown
     );
   });
 
@@ -403,8 +403,8 @@ describe("Generator output-lock metadata", () => {
           value: expect.objectContaining({
             _tag: "ConcurrentGenerationError",
             holder: { _tag: "Unknown" },
-          }),
-        })
+          }) as unknown,
+        }) as unknown
       );
     }
     expect(fs.existsSync(lockDir)).toBe(true);
@@ -494,7 +494,7 @@ describe("Generator output-lock acquisition rollback", () => {
     ).toEqual(
       expect.objectContaining({
         ownerToken: "replacement-during-acquisition",
-      })
+      }) as unknown
     );
   });
 });
@@ -582,7 +582,9 @@ describe("Generator failed-release ownership isolation", () => {
     expect(extractFailure(contender)).toBeInstanceOf(ConcurrentGenerationError);
     expect(
       JSON.parse(fs.readFileSync(path.join(original.path, "info.json"), "utf8"))
-    ).toEqual(expect.objectContaining({ ownerToken: replacementToken }));
+    ).toEqual(
+      expect.objectContaining({ ownerToken: replacementToken }) as unknown
+    );
 
     // Clear the abandoned-token marker through the ownership-changed release
     // path without removing the replacement owner's lock.
@@ -631,9 +633,9 @@ describe("Generator output-lock replacement races", () => {
     expect(fs.existsSync(replacement.path)).toBe(true);
     const replacementInfo = JSON.parse(
       fs.readFileSync(path.join(replacement.path, "info.json"), "utf8")
-    );
+    ) as Record<string, unknown>;
     expect(replacementInfo).toEqual(
-      expect.objectContaining({ ownerToken: replacement.ownerToken })
+      expect.objectContaining({ ownerToken: replacement.ownerToken }) as unknown
     );
     await Effect.runPromise(releaseOutputLock(replacement));
   });
@@ -664,7 +666,9 @@ describe("Generator output-lock replacement races", () => {
     expect(fs.existsSync(original.path)).toBe(true);
     expect(
       JSON.parse(fs.readFileSync(path.join(original.path, "info.json"), "utf8"))
-    ).toEqual(expect.objectContaining({ ownerToken: "replacement-owner" }));
+    ).toEqual(
+      expect.objectContaining({ ownerToken: "replacement-owner" }) as unknown
+    );
   });
 });
 

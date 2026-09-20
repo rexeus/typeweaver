@@ -3,6 +3,23 @@ import fs from "node:fs";
 import path from "node:path";
 import { promisify } from "node:util";
 
+/**
+ * @typedef {object} PostBuildContext
+ * @property {string} packageDir
+ * @property {string} distDir
+ *
+ * @typedef {(context: PostBuildContext) => unknown | Promise<unknown>} PostBuildStep
+ *
+ * @typedef {object} PackageBuildOptions
+ * @property {string} packageDir
+ * @property {string | false} [libSourceDir]
+ * @property {string | false} [templateSourceDir]
+ * @property {boolean} [includeLicenseArtifacts]
+ * @property {readonly PostBuildStep[]} [postBuildSteps]
+ * @property {boolean} [runSharedPostBuild]
+ * @property {unknown} [onSuccess]
+ */
+
 const REPOSITORY_ARTIFACTS = ["LICENSE", "NOTICE"];
 const execAsync = promisify(exec);
 
@@ -17,56 +34,12 @@ function createDefaultBuildOptions() {
   };
 }
 
-export function createPackageBuildConfig(options) {
-  const {
-    packageDir,
-    libSourceDir = "src/lib",
-    templateSourceDir = "src/templates",
-    includeLicenseArtifacts = true,
-    postBuildSteps = [],
-    runSharedPostBuild = true,
-    ...config
-  } = options;
-  const callerOnSuccess = config.onSuccess;
-
-  if (!runSharedPostBuild) {
-    return {
-      ...createDefaultBuildOptions(),
-      ...config,
-    };
-  }
-
-  return {
-    ...createDefaultBuildOptions(),
-    ...config,
-    onSuccess: async (resolvedConfig, signal) => {
-      const distDir = path.join(packageDir, "dist");
-      fs.mkdirSync(distDir, { recursive: true });
-
-      copyDirectoryIfPresent({
-        packageDir,
-        sourceDir: libSourceDir,
-        destinationDir: "dist/lib",
-      });
-      copyDirectoryIfPresent({
-        packageDir,
-        sourceDir: templateSourceDir,
-        destinationDir: "dist/templates",
-      });
-
-      if (includeLicenseArtifacts) {
-        copyRepositoryArtifacts(packageDir, distDir);
-      }
-
-      for (const postBuildStep of postBuildSteps) {
-        await postBuildStep({ packageDir, distDir });
-      }
-
-      await runCallerOnSuccess(callerOnSuccess, resolvedConfig, signal);
-    },
-  };
-}
-
+/**
+ * @param {unknown} callerOnSuccess
+ * @param {{ cwd?: string } | undefined} resolvedConfig
+ * @param {AbortSignal | undefined} signal
+ * @returns {Promise<void>}
+ */
 async function runCallerOnSuccess(callerOnSuccess, resolvedConfig, signal) {
   if (typeof callerOnSuccess === "function") {
     await callerOnSuccess(resolvedConfig, signal);
@@ -81,6 +54,10 @@ async function runCallerOnSuccess(callerOnSuccess, resolvedConfig, signal) {
   }
 }
 
+/**
+ * @param {{ packageDir: string, sourceDir: string | false, destinationDir: string }} options
+ * @returns {void}
+ */
 function copyDirectoryIfPresent({ packageDir, sourceDir, destinationDir }) {
   if (sourceDir === false) {
     return;
@@ -95,6 +72,11 @@ function copyDirectoryIfPresent({ packageDir, sourceDir, destinationDir }) {
   fs.cpSync(absoluteSourceDir, absoluteDestinationDir, { recursive: true });
 }
 
+/**
+ * @param {string} packageDir
+ * @param {string} distDir
+ * @returns {void}
+ */
 function copyRepositoryArtifacts(packageDir, distDir) {
   // Shared build configs are only used by packages at <repoRoot>/packages/<name>.
   const repositoryRoot = path.resolve(packageDir, "../..");
@@ -105,4 +87,65 @@ function copyRepositoryArtifacts(packageDir, distDir) {
       path.join(distDir, artifactName)
     );
   }
+}
+
+/**
+ * @param {PackageBuildOptions & Record<string, unknown>} options
+ * @returns {Record<string, unknown>}
+ */
+export function createPackageBuildConfig(options) {
+  const {
+    packageDir,
+    libSourceDir = "src/lib",
+    templateSourceDir = "src/templates",
+    includeLicenseArtifacts = true,
+    postBuildSteps = [],
+    runSharedPostBuild = true,
+    ...config
+  } = options;
+  const callerOnSuccess = config["onSuccess"];
+
+  if (!runSharedPostBuild) {
+    return {
+      ...createDefaultBuildOptions(),
+      ...config,
+    };
+  }
+
+  /**
+   * @param {{ cwd?: string } | undefined} resolvedConfig
+   * @param {AbortSignal | undefined} signal
+   * @returns {Promise<void>}
+   */
+  const onSharedSuccess = async (resolvedConfig, signal) => {
+    const distDir = path.join(packageDir, "dist");
+    fs.mkdirSync(distDir, { recursive: true });
+
+    copyDirectoryIfPresent({
+      packageDir,
+      sourceDir: libSourceDir,
+      destinationDir: "dist/lib",
+    });
+    copyDirectoryIfPresent({
+      packageDir,
+      sourceDir: templateSourceDir,
+      destinationDir: "dist/templates",
+    });
+
+    if (includeLicenseArtifacts) {
+      copyRepositoryArtifacts(packageDir, distDir);
+    }
+
+    for (const postBuildStep of postBuildSteps) {
+      await postBuildStep({ packageDir, distDir });
+    }
+
+    await runCallerOnSuccess(callerOnSuccess, resolvedConfig, signal);
+  };
+
+  return {
+    ...createDefaultBuildOptions(),
+    ...config,
+    onSuccess: onSharedSuccess,
+  };
 }

@@ -1,4 +1,3 @@
-/* oxlint-disable import/max-dependencies */
 export * from "./createData.js";
 export * from "./createDataFactory.js";
 export * from "./createRequest.js";

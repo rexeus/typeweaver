@@ -16,7 +16,7 @@ type RequestBuilder = Omit<
   NonNullable<NormalizedOperation["request"]>,
   "body"
 > & {
-  readonly body?: z.ZodType | NormalizedHttpBody;
+  readonly body?: z.ZodType | NormalizedHttpBody | undefined;
 };
 
 type OperationBuilderOverrides = Omit<
@@ -27,7 +27,7 @@ type OperationBuilderOverrides = Omit<
 };
 
 type ResponseBuilderOverrides = Omit<Partial<NormalizedResponse>, "body"> & {
-  readonly body?: z.ZodType | NormalizedHttpBody;
+  readonly body?: z.ZodType | NormalizedHttpBody | undefined;
 };
 
 export function aJsonNormalizedBody(schema: z.ZodType): NormalizedHttpBody {

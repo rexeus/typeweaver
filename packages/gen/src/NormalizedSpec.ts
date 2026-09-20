@@ -71,7 +71,7 @@ export type NormalizedSpecWarning = {
 
 export type NormalizedResource = {
   readonly name: string;
-  readonly description?: string;
+  readonly description?: string | undefined;
   readonly tags: readonly string[];
   readonly security: NormalizedSecurity;
   readonly operations: readonly NormalizedOperation[];
@@ -82,19 +82,19 @@ export type NormalizedOperation = {
   readonly method: HttpMethod;
   readonly path: string;
   readonly summary: string;
-  readonly description?: string;
+  readonly description?: string | undefined;
   readonly deprecated: boolean;
   readonly tags: readonly string[];
   readonly security: NormalizedSecurity;
-  readonly request?: NormalizedRequest;
+  readonly request?: NormalizedRequest | undefined;
   readonly responses: readonly NormalizedResponseUsage[];
 };
 
 export type NormalizedRequest = {
-  readonly header?: HttpRequestHeaderSchema;
-  readonly param?: HttpParamSchema;
-  readonly query?: HttpQuerySchema;
-  readonly body?: NormalizedHttpBody;
+  readonly header?: HttpRequestHeaderSchema | undefined;
+  readonly param?: HttpParamSchema | undefined;
+  readonly query?: HttpQuerySchema | undefined;
+  readonly body?: NormalizedHttpBody | undefined;
 };
 
 export type NormalizedResponse = {
@@ -102,12 +102,12 @@ export type NormalizedResponse = {
   readonly statusCode: HttpStatusCode;
   readonly statusCodeName: string;
   readonly description: string;
-  readonly header?: HttpHeaderSchema;
-  readonly body?: NormalizedHttpBody;
+  readonly header?: HttpHeaderSchema | undefined;
+  readonly body?: NormalizedHttpBody | undefined;
   readonly kind: "response" | "derived-response";
-  readonly derivedFrom?: string;
-  readonly lineage?: readonly string[];
-  readonly depth?: number;
+  readonly derivedFrom?: string | undefined;
+  readonly lineage?: readonly string[] | undefined;
+  readonly depth?: number | undefined;
 };
 
 export type NormalizedCanonicalResponseUsage = {

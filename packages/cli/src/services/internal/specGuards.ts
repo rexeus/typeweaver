@@ -27,12 +27,12 @@ const isResponseDefinition = (value: unknown): boolean => {
   return (
     hasNonEmptyString(value, "name") &&
     hasNonEmptyString(value, "description") &&
-    validHttpStatusCodes.has(value.statusCode as HttpStatusCode)
+    validHttpStatusCodes.has(value["statusCode"] as HttpStatusCode)
   );
 };
 
 const isOperationDefinition = (value: unknown): boolean => {
-  if (!isRecord(value) || !Array.isArray(value.responses)) {
+  if (!isRecord(value) || !Array.isArray(value["responses"])) {
     return false;
   }
 
@@ -40,18 +40,18 @@ const isOperationDefinition = (value: unknown): boolean => {
     ["operationId", "path", "summary"].every(key =>
       hasNonEmptyString(value, key)
     ) &&
-    Object.values(HttpMethod).includes(value.method as HttpMethod) &&
-    isRecord(value.request) &&
-    value.responses.length > 0 &&
-    value.responses.every(response => isResponseDefinition(response))
+    Object.values(HttpMethod).includes(value["method"] as HttpMethod) &&
+    isRecord(value["request"]) &&
+    value["responses"].length > 0 &&
+    value["responses"].every(response => isResponseDefinition(response))
   );
 };
 
 const isResourceDefinition = (value: unknown): boolean => {
   return (
     isRecord(value) &&
-    Array.isArray(value.operations) &&
-    value.operations.every(isOperationDefinition)
+    Array.isArray(value["operations"]) &&
+    value["operations"].every(isOperationDefinition)
   );
 };
 
@@ -63,11 +63,11 @@ const isMetadataDefinition = (value: unknown): boolean =>
 export const isSpecDefinition = (value: unknown): value is SpecDefinition => {
   if (
     !isRecord(value) ||
-    !isMetadataDefinition(value.metadata) ||
-    !isRecord(value.resources)
+    !isMetadataDefinition(value["metadata"]) ||
+    !isRecord(value["resources"])
   ) {
     return false;
   }
 
-  return Object.values(value.resources).every(isResourceDefinition);
+  return Object.values(value["resources"]).every(isResourceDefinition);
 };

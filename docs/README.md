@@ -79,5 +79,7 @@ programmatic API, `@rexeus/typeweaver-gen` plugin authoring, first-party plugin 
 ## Maintainer references
 
 - [Architecture decisions](./adr/) — accepted design decisions and version baselines.
-- [Maintainability inventory](./maintainability-inventory.md) — repository-wide maintainability
-  constraints and exceptions.
+- [TypeScript compiler profiles](../packages/tsconfig/README.md) — private shared profiles, adopted
+  strict flags, intended consumers, and the checked-JavaScript scope.
+- [Maintainability inventory](./maintainability-inventory.md) — exact lint thresholds, type-aware
+  semantic rules, suppression governance, generated-code policy, and executable contracts.

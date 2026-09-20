@@ -27,7 +27,7 @@ const finalHandlerShouldNotRun = async () => ({
 });
 
 type RunBasicAuthOptions = {
-  readonly header?: Record<string, string | string[]>;
+  readonly header?: Record<string, string | string[]> | undefined;
   readonly verifyCredentials?: BasicAuthOptions["verifyCredentials"];
   readonly realm?: string;
   readonly onUnauthorized?: BasicAuthOptions["onUnauthorized"];
@@ -76,7 +76,7 @@ function expectDefaultUnauthorized(response: IHttpResponse): void {
 describe("basicAuth malformed credentials", () => {
   test.each<{
     readonly case: string;
-    readonly header?: Record<string, string | string[]>;
+    readonly header?: Record<string, string | string[]> | undefined;
   }>([
     { case: "missing authorization", header: undefined },
     { case: "non-Basic scheme", header: { authorization: "Bearer token" } },
@@ -127,7 +127,7 @@ describe("basicAuth malformed credentials", () => {
 
   test.each<{
     readonly case: string;
-    readonly header?: Record<string, string | string[]>;
+    readonly header?: Record<string, string | string[]> | undefined;
   }>([
     { case: "missing authorization", header: undefined },
     {

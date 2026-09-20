@@ -66,6 +66,14 @@ type UnvalidatedTodoHonoOptions = Omit<
   "requestHandlers" | "validateRequests" | "validateResponses"
 >;
 
+const readContextString = (
+  context: { get: (key: string) => unknown },
+  key: string
+): string | undefined => {
+  const value = context.get(key);
+  return typeof value === "string" ? value : undefined;
+};
+
 async function requestTestHono(
   url: string,
   requestData: IValidatedHttpRequest,
@@ -184,8 +192,8 @@ describe("Generated Hono route dispatch", () => {
 
     expect(response.status).toBe(200);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.results).toHaveLength(2);
-    expect(data.nextToken).toEqual(expect.any(String));
+    expect(data["results"]).toHaveLength(2);
+    expect(data["nextToken"]).toEqual(expect.any(String));
   });
 
   test("dispatches POST /todos with the validated request body", async () => {
@@ -203,9 +211,9 @@ describe("Generated Hono route dispatch", () => {
 
     expect(response.status).toBe(201);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.title).toBe("ship hono hardening");
-    expect(data.priority).toBe("HIGH");
-    expect(data.status).toBe("TODO");
+    expect(data["title"]).toBe("ship hono hardening");
+    expect(data["priority"]).toBe("HIGH");
+    expect(data["status"]).toBe("TODO");
   });
 
   test("dispatches PUT /todos/:todoId with path params and body fields", async () => {
@@ -224,10 +232,10 @@ describe("Generated Hono route dispatch", () => {
 
     expect(response.status).toBe(200);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.id).toBe(requestData.param.todoId);
-    expect(data.title).toBe("replace todo");
-    expect(data.priority).toBe("LOW");
-    expect(data.status).toBe("IN_PROGRESS");
+    expect(data["id"]).toBe(requestData.param.todoId);
+    expect(data["title"]).toBe("replace todo");
+    expect(data["priority"]).toBe("LOW");
+    expect(data["status"]).toBe("IN_PROGRESS");
   });
 
   test("dispatches PATCH /todos/:todoId with path params and body fields", async () => {
@@ -245,9 +253,9 @@ describe("Generated Hono route dispatch", () => {
 
     expect(response.status).toBe(200);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.id).toBe(requestData.param.todoId);
-    expect(data.title).toBe("patch todo");
-    expect(data.priority).toBe("MEDIUM");
+    expect(data["id"]).toBe(requestData.param.todoId);
+    expect(data["title"]).toBe("patch todo");
+    expect(data["priority"]).toBe("MEDIUM");
   });
 });
 
@@ -365,8 +373,8 @@ describe("Generated Hono todo route precedence", () => {
 
     expect(response.status).toBe(200);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.id).toBe(requestData.param.todoId);
-    expect(data.status).toBe("DONE");
+    expect(data["id"]).toBe(requestData.param.todoId);
+    expect(data["status"]).toBe("DONE");
   });
 
   test("dispatches DELETE /todos/:todoId as a 204 empty response", async () => {
@@ -412,7 +420,7 @@ describe("Generated Hono todo route precedence", () => {
     const requestData = createQueryTodoRequest();
     const app = createUnvalidatedTodoHonoWithHandlers({
       handleQueryTodoRequest: async (_request, context) => {
-        capturedOperationId = context.get("operationId");
+        capturedOperationId = readContextString(context, "operationId");
         return createQueryTodoSuccessResponse({ body: { results: [] } });
       },
     });
@@ -441,9 +449,9 @@ describe("Generated Hono todo route precedence", () => {
 
     expect(response.status).toBe(201);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.parentId).toBe(requestData.param.todoId);
-    expect(data.title).toBe("create nested item");
-    expect(data.priority).toBe("HIGH");
+    expect(data["parentId"]).toBe(requestData.param.todoId);
+    expect(data["title"]).toBe("create nested item");
+    expect(data["priority"]).toBe("HIGH");
   });
 });
 
@@ -466,7 +474,7 @@ describe("Generated Hono nested route dispatch", () => {
     expect(response.status).toBe(200);
     expect(capturedTodoId).toBe(requestData.param.todoId);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.results).toEqual([]);
+    expect(data["results"]).toEqual([]);
   });
 
   test("nested subtodo update routes propagate parent and subtodo ids", async () => {
@@ -484,10 +492,10 @@ describe("Generated Hono nested route dispatch", () => {
 
     expect(response.status).toBe(200);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.parentId).toBe(requestData.param.todoId);
-    expect(data.id).toBe(requestData.param.subtodoId);
-    expect(data.title).toBe("update nested item");
-    expect(data.priority).toBe("LOW");
+    expect(data["parentId"]).toBe(requestData.param.todoId);
+    expect(data["id"]).toBe(requestData.param.subtodoId);
+    expect(data["title"]).toBe("update nested item");
+    expect(data["priority"]).toBe("LOW");
   });
 
   test("nested static subtodo query route hits the query operation", async () => {
@@ -496,7 +504,7 @@ describe("Generated Hono nested route dispatch", () => {
     const requestData = createQuerySubTodoRequest();
     const app = createUnvalidatedTodoHonoWithHandlers({
       handleQuerySubTodoRequest: async (request, context) => {
-        capturedOperationId = context.get("operationId");
+        capturedOperationId = readContextString(context, "operationId");
         capturedTodoId = request.param.todoId;
         return createQuerySubTodoSuccessResponse({ body: { results: [] } });
       },
@@ -535,7 +543,7 @@ describe("Generated Hono route fallthrough", () => {
 
     expect(response.status).toBe(200);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.message).toBe("deleted subtodo");
+    expect(data["message"]).toBe("deleted subtodo");
     expect(capturedTodoId).toBe(requestData.param.todoId);
     expect(capturedSubtodoId).toBe(requestData.param.subtodoId);
   });
@@ -564,7 +572,7 @@ describe("Generated Hono request validation", () => {
   test("rejects invalid request body", async () => {
     const requestData = createCreateTodoRequest({
       body: {
-        priority: "INVALID_PRIORITY" as any,
+        priority: "INVALID_PRIORITY" as never,
       },
     });
 
@@ -583,7 +591,7 @@ describe("Generated Hono request validation", () => {
   test("rejects invalid request headers", async () => {
     const requestData = createCreateTodoRequest({
       header: {
-        "Content-Type": "text/plain" as any,
+        "Content-Type": "text/plain" as never,
       },
     });
 
@@ -646,7 +654,7 @@ describe("Generated Hono request validation handlers", () => {
     const app = createTestHono({
       handleRequestValidationErrors: (error, context) => {
         capturedError = error;
-        capturedOperationId = context.get("operationId");
+        capturedOperationId = readContextString(context, "operationId");
         return {
           statusCode: 422,
           header: {
@@ -661,7 +669,7 @@ describe("Generated Hono request validation handlers", () => {
     });
     const requestData = createCreateTodoRequest({
       body: {
-        priority: "INVALID_PRIORITY" as any,
+        priority: "INVALID_PRIORITY" as never,
       },
     });
 
@@ -672,8 +680,8 @@ describe("Generated Hono request validation handlers", () => {
 
     expect(response.status).toBe(422);
     const errorData = (await response.json()) as Record<string, unknown>;
-    expect(errorData.code).toBe("CUSTOM_REQUEST_VALIDATION");
-    expect(errorData.bodyIssueCount).toBe(1);
+    expect(errorData["code"]).toBe("CUSTOM_REQUEST_VALIDATION");
+    expect(errorData["bodyIssueCount"]).toBe(1);
     expect(capturedError).toBeInstanceOf(RequestValidationError);
     expect((capturedError as RequestValidationError).bodyIssues).toHaveLength(
       1
@@ -691,7 +699,7 @@ describe("Generated Hono request validation handlers", () => {
     });
     const requestData = createCreateTodoRequest({
       body: {
-        priority: "INVALID_PRIORITY" as any,
+        priority: "INVALID_PRIORITY" as never,
       },
     });
 
@@ -716,7 +724,7 @@ describe("Generated Hono body parsing", () => {
       badRequestDefaultError.statusCode,
       badRequestDefaultError.code
     );
-    expect(data.message).toBe(badRequestDefaultError.message);
+    expect(data["message"]).toBe(badRequestDefaultError.message);
   });
 
   test("explicit body parse handling preserves the default sanitized response before unknown handlers", async () => {
@@ -739,7 +747,7 @@ describe("Generated Hono body parsing", () => {
       badRequestDefaultError.statusCode,
       badRequestDefaultError.code
     );
-    expect(data.message).toBe(badRequestDefaultError.message);
+    expect(data["message"]).toBe(badRequestDefaultError.message);
     expect(unknownHandlerInvoked).toBe(false);
   });
 
@@ -749,7 +757,7 @@ describe("Generated Hono body parsing", () => {
     const app = createTestHono({
       handleBodyParseErrors: (error, context) => {
         capturedError = error;
-        capturedOperationId = context.get("operationId");
+        capturedOperationId = readContextString(context, "operationId");
         return {
           statusCode: 422,
           header: {
@@ -783,7 +791,7 @@ describe("Generated Hono body parsing", () => {
     const app = createTestHono({
       handleBodyParseErrors: (error, context) => {
         capturedError = error;
-        capturedOperationId = context.get("operationId");
+        capturedOperationId = readContextString(context, "operationId");
         return {
           statusCode: 422,
           header: { "Content-Type": "application/json" },
@@ -798,7 +806,7 @@ describe("Generated Hono body parsing", () => {
 
     expect(response.status).toBe(422);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.code).toBe("CUSTOM_VENDOR_JSON_PARSE");
+    expect(data["code"]).toBe("CUSTOM_VENDOR_JSON_PARSE");
     expect(capturedError).toBeInstanceOf(HonoBodyParseError);
     expect(capturedOperationId).toBe("CreateTodo");
   });
@@ -827,7 +835,7 @@ describe("Generated Hono body parse handlers", () => {
 
     expect(response.status).toBe(422);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.code).toBe("CUSTOM_BODY_PARSE_WITHOUT_VALIDATION");
+    expect(data["code"]).toBe("CUSTOM_BODY_PARSE_WITHOUT_VALIDATION");
     expect(routeHandlerInvoked).toBe(false);
   });
 
@@ -868,7 +876,7 @@ describe("Generated Hono body parse handlers", () => {
       badRequestDefaultError.statusCode,
       badRequestDefaultError.code
     );
-    expect(data.message).toBe(badRequestDefaultError.message);
+    expect(data["message"]).toBe(badRequestDefaultError.message);
   });
 });
 
@@ -880,7 +888,7 @@ describe("Generated Hono body parse fallthrough", () => {
       handleBodyParseErrors: false,
       handleUnknownErrors: (error, context) => {
         capturedError = error;
-        capturedOperationId = context.get("operationId");
+        capturedOperationId = readContextString(context, "operationId");
         return {
           statusCode: 418,
           header: { "Content-Type": "application/json" },
@@ -893,7 +901,7 @@ describe("Generated Hono body parse fallthrough", () => {
 
     expect(response.status).toBe(418);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.code).toBe("CUSTOM_UNKNOWN_BODY_PARSE");
+    expect(data["code"]).toBe("CUSTOM_UNKNOWN_BODY_PARSE");
     expect(capturedError).toBeInstanceOf(HonoBodyParseError);
     expect(capturedOperationId).toBe("CreateTodo");
   });
@@ -907,7 +915,7 @@ describe("Generated Hono body parse fallthrough", () => {
     });
     app.onError((error, context) => {
       capturedError = error;
-      const operationId = (context as Context).get("operationId");
+      const operationId = readContextString(context, "operationId");
       capturedOperationId =
         typeof operationId === "string" ? operationId : undefined;
       return context.json({ code: "HONO_ERROR" }, 502);
@@ -917,27 +925,27 @@ describe("Generated Hono body parse fallthrough", () => {
 
     expect(response.status).toBe(502);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.code).toBe("HONO_ERROR");
+    expect(data["code"]).toBe("HONO_ERROR");
     expect(capturedError).toBeInstanceOf(HonoBodyParseError);
     expect(capturedOperationId).toBe("CreateTodo");
   });
 
   test("passes JSON request bodies to handlers as null-prototype records when request validation is disabled", async () => {
-    let bodyPrototype: object | null | undefined;
-    let nestedPrototype: object | null | undefined;
-    let arrayItemPrototype: object | null | undefined;
+    let bodyPrototype: unknown;
+    let nestedPrototype: unknown;
+    let arrayItemPrototype: unknown;
     let handlerSawArray = false;
     const app = createUnvalidatedTodoHonoWithHandlers({
       handleCreateTodoRequest: async request => {
         const body = request.body as Record<string, unknown>;
-        const meta = body.meta as Record<string, unknown>;
-        const items = body.items as Record<string, unknown>[];
+        const meta = body["meta"] as Record<string, unknown>;
+        const items = body["items"] as Record<string, unknown>[];
         bodyPrototype = Object.getPrototypeOf(body);
         nestedPrototype = Object.getPrototypeOf(meta);
         handlerSawArray = Array.isArray(items);
         arrayItemPrototype = Object.getPrototypeOf(items[0]);
         return createCreateTodoSuccessResponse({
-          body: { title: String(body.title) },
+          body: { title: String(body["title"]) },
         });
       },
     });
@@ -950,7 +958,7 @@ describe("Generated Hono body parse fallthrough", () => {
 
     expect(response.status).toBe(201);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.title).toBe("safe title");
+    expect(data["title"]).toBe("safe title");
     expect(bodyPrototype).toBeNull();
     expect(nestedPrototype).toBeNull();
     expect(handlerSawArray).toBe(true);
@@ -967,8 +975,8 @@ describe("Generated Hono JSON sanitization", () => {
     const app = createUnvalidatedTodoHonoWithHandlers({
       handleCreateTodoRequest: async request => {
         const body = request.body as Record<string, unknown>;
-        const meta = body.meta as Record<string, unknown>;
-        const items = body.items as Record<string, unknown>[];
+        const meta = body["meta"] as Record<string, unknown>;
+        const items = body["items"] as Record<string, unknown>[];
         handlerSawUnsafeKey = Object.prototype.hasOwnProperty.call(
           body,
           "__proto__"
@@ -981,9 +989,9 @@ describe("Generated Hono JSON sanitization", () => {
           items[0],
           "__proto__"
         );
-        handlerSawPollution = ({} as Record<string, unknown>).polluted;
+        handlerSawPollution = ({} as Record<string, unknown>)["polluted"];
         return createCreateTodoSuccessResponse({
-          body: { title: String(body.title) },
+          body: { title: String(body["title"]) },
         });
       },
     });
@@ -999,7 +1007,7 @@ describe("Generated Hono JSON sanitization", () => {
     expect(handlerSawNestedUnsafeKey).toBe(false);
     expect(handlerSawArrayUnsafeKey).toBe(false);
     expect(handlerSawPollution).toBeUndefined();
-    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
   });
 
   test("preserves top-level JSON array request bodies when validation is disabled", async () => {
@@ -1036,7 +1044,7 @@ describe("Generated Hono JSON arrays and vendor media types", () => {
           first,
           "__proto__"
         );
-        elementPollution = ({} as Record<string, unknown>).polluted;
+        elementPollution = ({} as Record<string, unknown>)["polluted"];
         return createCreateTodoSuccessResponse();
       },
     });
@@ -1050,7 +1058,7 @@ describe("Generated Hono JSON arrays and vendor media types", () => {
     expect(response.status).toBe(201);
     expect(elementUnsafeKey).toBe(false);
     expect(elementPollution).toBeUndefined();
-    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
   });
 
   test("parses vendor JSON media types when request validation is disabled", async () => {
@@ -1059,7 +1067,7 @@ describe("Generated Hono JSON arrays and vendor media types", () => {
       handleCreateTodoRequest: async request => {
         handlerBody = request.body as Record<string, unknown>;
         return createCreateTodoSuccessResponse({
-          body: { title: String(handlerBody.title) },
+          body: { title: String(handlerBody["title"]) },
         });
       },
     });
@@ -1071,8 +1079,10 @@ describe("Generated Hono JSON arrays and vendor media types", () => {
     });
 
     expect(response.status).toBe(201);
-    expect(handlerBody?.title).toBe("vendor json title");
-    expect(Object.getPrototypeOf(handlerBody!)).toBeNull();
+    expect(handlerBody?.["title"]).toBe("vendor json title");
+    expect(
+      Object.getPrototypeOf(handlerBody as Record<string, unknown>)
+    ).toBeNull();
   });
 
   test("returns sanitized BAD_REQUEST for malformed vendor JSON request bodies", async () => {
@@ -1173,7 +1183,7 @@ describe("Generated Hono malformed JSON handling", () => {
     expect(response.status).toBe(201);
     const data = (await response.json()) as Record<string, unknown>;
     expect(handlerBody).toBe("raw bytes as text");
-    expect(data.title).toBe("raw bytes as text");
+    expect(data["title"]).toBe("raw bytes as text");
   });
 });
 
@@ -1185,8 +1195,8 @@ describe("Generated Hono form and query parsing", () => {
         handlerBody = request.body as Record<string, unknown>;
         return createCreateTodoSuccessResponse({
           body: {
-            title: handlerBody.title as string,
-            priority: handlerBody.priority as "HIGH",
+            title: handlerBody["title"] as string,
+            priority: handlerBody["priority"] as "HIGH",
           },
         });
       },
@@ -1200,9 +1210,11 @@ describe("Generated Hono form and query parsing", () => {
 
     expect(response.status).toBe(201);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.title).toEqual(["first", "second"]);
-    expect(data.priority).toBe("HIGH");
-    expect(Object.getPrototypeOf(handlerBody!)).toBeNull();
+    expect(data["title"]).toEqual(["first", "second"]);
+    expect(data["priority"]).toBe("HIGH");
+    expect(
+      Object.getPrototypeOf(handlerBody as Record<string, unknown>)
+    ).toBeNull();
   });
 
   test("preserves repeated empty query parameter values when validation is disabled", async () => {
@@ -1213,7 +1225,7 @@ describe("Generated Hono form and query parsing", () => {
         return createQueryTodoSuccessResponse({
           body: {
             results: [],
-            nextToken: handlerQuery.nextToken as string,
+            nextToken: handlerQuery["nextToken"] as string,
           },
         });
       },
@@ -1226,8 +1238,8 @@ describe("Generated Hono form and query parsing", () => {
 
     expect(response.status).toBe(200);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.nextToken).toEqual(["", "second"]);
-    expect(handlerQuery?.nextToken).toEqual(["", "second"]);
+    expect(data["nextToken"]).toEqual(["", "second"]);
+    expect(handlerQuery?.["nextToken"]).toEqual(["", "second"]);
   });
 
   test("does not pollute Object.prototype from form-url-encoded __proto__ fields", async () => {
@@ -1236,7 +1248,7 @@ describe("Generated Hono form and query parsing", () => {
       handleCreateTodoRequest: async request => {
         handlerBody = request.body as Record<string, unknown>;
         return createCreateTodoSuccessResponse({
-          body: { title: String(handlerBody.title) },
+          body: { title: String(handlerBody["title"]) },
         });
       },
     });
@@ -1248,9 +1260,11 @@ describe("Generated Hono form and query parsing", () => {
     });
 
     expect(response.status).toBe(201);
-    expect(handlerBody?.title).toBe("safe");
-    expect(Object.getPrototypeOf(handlerBody!)).toBeNull();
-    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(handlerBody?.["title"]).toBe("safe");
+    expect(
+      Object.getPrototypeOf(handlerBody as Record<string, unknown>)
+    ).toBeNull();
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
   });
 
   test("does not pollute Object.prototype from query string __proto__ values", async () => {
@@ -1259,7 +1273,7 @@ describe("Generated Hono form and query parsing", () => {
       handleQueryTodoRequest: async request => {
         handlerQuery = request.query as Record<string, unknown>;
         return createQueryTodoSuccessResponse({
-          body: { results: [], nextToken: String(handlerQuery.nextToken) },
+          body: { results: [], nextToken: String(handlerQuery["nextToken"]) },
         });
       },
     });
@@ -1270,9 +1284,11 @@ describe("Generated Hono form and query parsing", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(handlerQuery?.nextToken).toBe("safe");
-    expect(Object.getPrototypeOf(handlerQuery!)).toBeNull();
-    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(handlerQuery?.["nextToken"]).toBe("safe");
+    expect(
+      Object.getPrototypeOf(handlerQuery as Record<string, unknown>)
+    ).toBeNull();
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
   });
 });
 
@@ -1332,9 +1348,9 @@ describe("Generated Hono response serialization", () => {
     expect(response.status).toBe(201);
     expect(response.headers.get("Content-Type")).toBe("application/json");
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.title).toBe("serialize typed response");
-    expect(data.priority).toBe("HIGH");
-    expect(data.status).toBe("TODO");
+    expect(data["title"]).toBe("serialize typed response");
+    expect(data["priority"]).toBe("HIGH");
+    expect(data["status"]).toBe("TODO");
   });
 
   test("returns string response bodies unchanged", async () => {
@@ -1551,7 +1567,7 @@ describe("Generated Hono operation metadata", () => {
       let capturedOperationId: string | undefined;
       const app = createUnvalidatedTodoHonoWithHandlers({
         [handlerName]: async (_request: IRawHttpRequest, context: Context) => {
-          capturedOperationId = context.get("operationId");
+          capturedOperationId = readContextString(context, "operationId");
           return responseFactory();
         },
       } as Partial<HonoTodoApiHandler<false>>);
@@ -1567,7 +1583,7 @@ describe("Generated Hono operation metadata", () => {
 describe("Generated Hono middleware composition", () => {
   test("app middleware can short-circuit before generated validation", async () => {
     const requestData = createCreateTodoRequest({
-      body: { priority: "INVALID_PRIORITY" as any },
+      body: { priority: "INVALID_PRIORITY" as never },
     });
     const app = createTestHono({
       customResponses: {
@@ -1596,7 +1612,7 @@ describe("Generated Hono middleware composition", () => {
       "/",
       createUnvalidatedTodoHonoWithHandlers({
         handleListTodosRequest: async (_request, context) => {
-          capturedTraceId = context.get("traceId");
+          capturedTraceId = readContextString(context, "traceId");
           return createListTodosSuccessResponse();
         },
       })
@@ -1634,7 +1650,7 @@ describe("Generated Hono typed error handling", () => {
 
     expect(response.status).toBe(404);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.errorCode).toBe("TODO_NOT_FOUND");
+    expect(data["errorCode"]).toBe("TODO_NOT_FOUND");
   });
 
   test("passes typed HTTP response errors and Hono context to custom handlers", async () => {
@@ -1653,7 +1669,7 @@ describe("Generated Hono typed error handling", () => {
       throwTodoError: errorResponse,
       handleHttpResponseErrors: (error, context) => {
         capturedError = error;
-        capturedOperationId = context.get("operationId");
+        capturedOperationId = readContextString(context, "operationId");
         return {
           statusCode: 409,
           header: { "Content-Type": "application/json" },
@@ -1672,7 +1688,7 @@ describe("Generated Hono typed error handling", () => {
 
     expect(response.status).toBe(409);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.code).toBe("CUSTOM_HTTP_RESPONSE_ERROR");
+    expect(data["code"]).toBe("CUSTOM_HTTP_RESPONSE_ERROR");
     expect(capturedError).toBe(errorResponse);
     expect(capturedOperationId).toBe("CreateTodo");
   });
@@ -1717,7 +1733,7 @@ describe("Generated Hono unknown error handling", () => {
       throwTodoError: unknownError,
       handleUnknownErrors: (error, context) => {
         capturedError = error;
-        capturedOperationId = context.get("operationId");
+        capturedOperationId = readContextString(context, "operationId");
         return {
           statusCode: 500,
           header: { "Content-Type": "application/json" },
@@ -1736,7 +1752,7 @@ describe("Generated Hono unknown error handling", () => {
 
     expect(response.status).toBe(500);
     const data = (await response.json()) as Record<string, unknown>;
-    expect(data.code).toBe("CUSTOM_UNKNOWN_ERROR");
+    expect(data["code"]).toBe("CUSTOM_UNKNOWN_ERROR");
     expect(capturedError).toBe(unknownError);
     expect(capturedOperationId).toBe("CreateTodo");
   });
@@ -1767,7 +1783,7 @@ describe("Generated Hono unknown error handling", () => {
     });
     const requestData = createCreateTodoRequest({
       body: {
-        priority: "INVALID_PRIORITY" as any,
+        priority: "INVALID_PRIORITY" as never,
       },
     });
 
@@ -1787,7 +1803,7 @@ describe("Generated Hono unknown error handling", () => {
     });
     const requestData = createCreateTodoRequest({
       body: {
-        priority: "INVALID_PRIORITY" as any,
+        priority: "INVALID_PRIORITY" as never,
       },
     });
 
@@ -1807,7 +1823,7 @@ describe("Generated Hono error handler fallthrough", () => {
     });
     const requestData = createCreateTodoRequest({
       body: {
-        priority: "INVALID_PRIORITY" as any,
+        priority: "INVALID_PRIORITY" as never,
       },
     });
 

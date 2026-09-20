@@ -1,5 +1,15 @@
 const metadataFieldPattern = /^[A-Za-z][A-Za-z0-9-]*$/;
 
+/**
+ * @param {string | undefined} value
+ * @returns {value is string}
+ */
+const isDefined = value => value !== undefined;
+
+/**
+ * @param {string} apiMetadataSource
+ * @returns {string[]}
+ */
 export const deriveMetadataFields = apiMetadataSource => {
   const block =
     /export type ApiMetadataDefinition = \{([\s\S]*?)\n\};/.exec(
@@ -7,11 +17,18 @@ export const deriveMetadataFields = apiMetadataSource => {
     )?.[1] ?? "";
   return [
     ...new Set(
-      Array.from(block.matchAll(/readonly (\w+)\??:/g), match => match[1])
+      Array.from(
+        block.matchAll(/readonly (\w+)\??:/g),
+        match => match[1]
+      ).filter(isDefined)
     ),
   ];
 };
 
+/**
+ * @param {string} documentSource
+ * @returns {string[]}
+ */
 export const extractMetadataProjectionFields = documentSource => {
   const paragraph = documentSource
     .split(/\n{2,}/)
@@ -29,13 +46,17 @@ export const extractMetadataProjectionFields = documentSource => {
   }
   return [
     ...new Set(
-      Array.from(sentence.matchAll(/`([^`]+)`/g), match => match[1]).filter(
-        token => metadataFieldPattern.test(token)
-      )
+      Array.from(sentence.matchAll(/`([^`]+)`/g), match => match[1])
+        .filter(isDefined)
+        .filter(token => metadataFieldPattern.test(token))
     ),
   ];
 };
 
+/**
+ * @param {{ apiMetadataSource: string, documentSource: string }} options
+ * @returns {boolean}
+ */
 export const metadataProjectionMatches = ({
   apiMetadataSource,
   documentSource,

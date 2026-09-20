@@ -62,8 +62,8 @@ function isAmbiguousRawSchema(schema: z.core.$ZodType): boolean {
 }
 
 type UnwrapSchemaStep =
-  | { readonly _tag: "Continue"; readonly schema?: z.core.$ZodType }
-  | { readonly _tag: "Done"; readonly schema?: z.core.$ZodType };
+  | { readonly _tag: "Continue"; readonly schema?: z.core.$ZodType | undefined }
+  | { readonly _tag: "Done"; readonly schema?: z.core.$ZodType | undefined };
 
 const isOpaquePipeOutput = (outputType: string | undefined): boolean =>
   outputType === undefined || outputType === "transform";

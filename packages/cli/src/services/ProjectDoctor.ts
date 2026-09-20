@@ -25,10 +25,10 @@ import type { DoctorCheck, DoctorOutcome } from "../reports/DoctorReport.js";
 
 export type DiagnoseProjectParams = {
   readonly currentWorkingDirectory: string;
-  readonly input?: string;
-  readonly output?: string;
-  readonly configPath?: string;
-  readonly plugins?: string;
+  readonly input?: string | undefined;
+  readonly output?: string | undefined;
+  readonly configPath?: string | undefined;
+  readonly plugins?: string | undefined;
   readonly deep: boolean;
 };
 
@@ -124,6 +124,23 @@ const loadConfig = (
   });
 };
 
+/**
+ * Drops keys whose value is `undefined` so a merged configuration can be
+ * assigned under `exactOptionalPropertyTypes`, where an explicit `undefined`
+ * is not assignable to an optional property.
+ */
+const withoutUndefinedValues = (
+  config: Record<string, unknown>
+): Partial<TypeweaverConfig> => {
+  const result: Partial<TypeweaverConfig> = {};
+  for (const [key, value] of Object.entries(config)) {
+    if (value !== undefined) {
+      Object.assign(result, { [key]: value });
+    }
+  }
+  return result;
+};
+
 const loadInputs = (
   configLoader: ConfigLoader,
   params: DiagnoseProjectParams
@@ -132,7 +149,7 @@ const loadInputs = (
     const loaded = yield* loadConfig(configLoader, params);
     const input = params.input ?? loaded.config.input;
     const output = params.output ?? loaded.config.output;
-    const config: Partial<TypeweaverConfig> = {
+    const config = withoutUndefinedValues({
       ...loaded.config,
       ...(input === undefined
         ? {}
@@ -147,7 +164,7 @@ const loadInputs = (
       ...(params.plugins === undefined
         ? {}
         : { plugins: parsePluginList(params.plugins) }),
-    };
+    });
     return {
       inputs: {
         config,

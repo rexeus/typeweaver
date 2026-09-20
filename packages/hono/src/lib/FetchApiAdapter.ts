@@ -94,7 +94,9 @@ export class FetchApiAdapter extends HttpAdapter<
   }
 
   private extractHeaders(headers: Headers): IRawHttpHeader {
-    const result: Record<string, string | string[]> = Object.create(null);
+    const result: Record<string, string | string[]> = Object.create(
+      null
+    ) as Record<string, string | string[]>;
     headers.forEach((value, key) => {
       this.addMultiValue(result, key, value);
     });
@@ -102,7 +104,9 @@ export class FetchApiAdapter extends HttpAdapter<
   }
 
   private extractQueryParams(url: URL): IRawHttpQuery {
-    const result: Record<string, string | string[]> = Object.create(null);
+    const result: Record<string, string | string[]> = Object.create(
+      null
+    ) as Record<string, string | string[]>;
     url.searchParams.forEach((value, key) => {
       this.addMultiValue(result, key, value);
     });
@@ -125,7 +129,9 @@ export class FetchApiAdapter extends HttpAdapter<
     if (contentType?.includes("application/x-www-form-urlencoded")) {
       const text = await request.text();
       const formData = new URLSearchParams(text);
-      const formObject: Record<string, string | string[]> = Object.create(null);
+      const formObject: Record<string, string | string[]> = Object.create(
+        null
+      ) as Record<string, string | string[]>;
       formData.forEach((value, key) => {
         this.addMultiValue(formObject, key, value);
       });
@@ -160,7 +166,10 @@ export class FetchApiAdapter extends HttpAdapter<
     }
 
     if (value !== null && typeof value === "object") {
-      const result: Record<string, unknown> = Object.create(null);
+      const result: Record<string, unknown> = Object.create(null) as Record<
+        string,
+        unknown
+      >;
       Object.entries(value).forEach(([key, nestedValue]) => {
         if (key !== "__proto__") {
           result[key] = this.toSafeJsonValue(nestedValue);

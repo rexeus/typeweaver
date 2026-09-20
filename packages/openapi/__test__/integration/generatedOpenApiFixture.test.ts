@@ -60,7 +60,7 @@ describe("generated OpenAPI fixture", () => {
       "UpdateTodoStatus request body should reference a component schema"
     ).toEqual({ $ref: "#/components/schemas/UpdateTodoStatusRequestBody" });
     expect(
-      schemas.UpdateTodoStatusRequestBody,
+      schemas["UpdateTodoStatusRequestBody"],
       "UpdateTodoStatusRequestBody component should exist for the request body ref"
     ).toEqual({
       type: "object",
@@ -87,7 +87,7 @@ describe("generated OpenAPI fixture", () => {
       ],
     });
     expect(
-      schemas.TodoStatusTransitionInvalidErrorBody,
+      schemas["TodoStatusTransitionInvalidErrorBody"],
       "TodoStatusTransitionInvalidErrorBody component should exist for the 409 anyOf ref"
     ).toMatchObject({
       type: "object",
@@ -103,7 +103,7 @@ describe("generated OpenAPI fixture", () => {
       },
     });
     expect(
-      schemas.TodoNotChangeableErrorBody,
+      schemas["TodoNotChangeableErrorBody"],
       "TodoNotChangeableErrorBody component should exist for the 409 anyOf ref"
     ).toMatchObject({
       type: "object",
@@ -270,11 +270,11 @@ function parametersAt(
   }
 
   const operation = pathItem[method];
-  if (!isRecord(operation) || !Array.isArray(operation.parameters)) {
+  if (!isRecord(operation) || !Array.isArray(operation["parameters"])) {
     return undefined;
   }
 
-  return operation.parameters;
+  return operation["parameters"] as readonly unknown[];
 }
 
 function componentsSchemas(fixture: OpenApiFixture): Record<string, unknown> {
@@ -282,7 +282,7 @@ function componentsSchemas(fixture: OpenApiFixture): Record<string, unknown> {
     throw new Error("Fixture is missing components.");
   }
 
-  const schemas = fixture.components.schemas;
+  const schemas = fixture.components["schemas"];
 
   if (!isRecord(schemas) || Object.keys(schemas).length === 0) {
     throw new Error("Fixture is missing non-empty components.schemas.");
@@ -306,18 +306,18 @@ function requestBodySchemaAt(
   }
 
   const operation = pathItem[method];
-  if (!isRecord(operation) || !isRecord(operation.requestBody)) {
+  if (!isRecord(operation) || !isRecord(operation["requestBody"])) {
     return undefined;
   }
 
-  const requestBody = operation.requestBody;
-  if (!isRecord(requestBody.content)) {
+  const requestBody = operation["requestBody"];
+  if (!isRecord(requestBody["content"])) {
     return undefined;
   }
 
-  const mediaType = requestBody.content["application/json"];
+  const mediaType = requestBody["content"]["application/json"];
 
-  return isRecord(mediaType) ? mediaType.schema : undefined;
+  return isRecord(mediaType) ? mediaType["schema"] : undefined;
 }
 
 function responseSchemaAt(
@@ -339,19 +339,19 @@ function responseSchemaAt(
   }
 
   const operation = pathItem[location.method];
-  if (!isRecord(operation) || !isRecord(operation.responses)) {
+  if (!isRecord(operation) || !isRecord(operation["responses"])) {
     return undefined;
   }
 
-  const response = operation.responses[location.statusCode];
-  if (!isRecord(response) || !isRecord(response.content)) {
+  const response = operation["responses"][location.statusCode];
+  if (!isRecord(response) || !isRecord(response["content"])) {
     return undefined;
   }
 
   const mediaType =
-    response.content[location.mediaTypeName ?? "application/json"];
+    response["content"][location.mediaTypeName ?? "application/json"];
 
-  return isRecord(mediaType) ? mediaType.schema : undefined;
+  return isRecord(mediaType) ? mediaType["schema"] : undefined;
 }
 
 function componentResponseSchemaAt(
@@ -363,19 +363,19 @@ function componentResponseSchemaAt(
     return undefined;
   }
 
-  const responses = fixture.components.responses;
+  const responses = fixture.components["responses"];
   if (!isRecord(responses)) {
     return undefined;
   }
 
   const response = responses[responseName];
-  if (!isRecord(response) || !isRecord(response.content)) {
+  if (!isRecord(response) || !isRecord(response["content"])) {
     return undefined;
   }
 
-  const mediaType = response.content[mediaTypeName];
+  const mediaType = response["content"][mediaTypeName];
 
-  return isRecord(mediaType) ? mediaType.schema : undefined;
+  return isRecord(mediaType) ? mediaType["schema"] : undefined;
 }
 
 async function validateOpenApiFixture(fixturePath: string): Promise<void> {
@@ -507,23 +507,23 @@ function validatorFindings(output: unknown): readonly ValidatorFinding[] {
     return [];
   }
 
-  const results = output.results;
+  const results = output["results"];
 
   if (Array.isArray(results)) {
     return results.filter(isValidatorFinding);
   }
 
-  const errors = output.errors;
+  const errors = output["errors"];
 
   return Array.isArray(errors) ? errors.filter(isValidatorFinding) : [];
 }
 
 function validatorSummaryErrorCount(output: unknown): number | undefined {
-  if (!isRecord(output) || !isRecord(output.summary)) {
+  if (!isRecord(output) || !isRecord(output["summary"])) {
     return undefined;
   }
 
-  const summary = output.summary as ValidatorSummary;
+  const summary = output["summary"] as ValidatorSummary;
   const errorCount = numericSummaryValue(summary.errors ?? summary.error);
 
   return errorCount ?? numericSummaryValue(summary.total);
@@ -571,7 +571,7 @@ function spectralBinPath(packageJson: PackageJsonWithBin): string | undefined {
     return packageJson.bin;
   }
 
-  return packageJson.bin?.spectral;
+  return packageJson.bin?.["spectral"];
 }
 
 function commandOutput(error: unknown): {

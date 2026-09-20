@@ -242,8 +242,8 @@ const hasUnpinnedDynamicImport = (value: unknown): boolean => {
     return false;
   }
   if (Reflect.get(value, "type") === "ImportExpression") {
-    const source = Reflect.get(value, "source");
-    const literalValue =
+    const source: unknown = Reflect.get(value, "source");
+    const literalValue: unknown =
       typeof source === "object" &&
       source !== null &&
       Reflect.get(source, "type") === "Literal"

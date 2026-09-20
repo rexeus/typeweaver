@@ -32,7 +32,7 @@ import { StateMap } from "./StateMap.js";
 import { initializeTypeweaverAppRuntime } from "./TypeweaverAppRuntime.js";
 import type { FetchApiAdapter } from "./FetchApiAdapter.js";
 import type { Middleware } from "./Middleware.js";
-import type { RequestHandler } from "./RequestHandler.js";
+import type { ErasedRequestHandler } from "./RequestHandler.js";
 import type {
   HttpResponseErrorHandler,
   RequestValidationErrorHandler,
@@ -78,6 +78,14 @@ export type TypeweaverAppOptions = {
   readonly maxBodySize?: number;
   readonly onError?: (error: unknown) => void;
 };
+
+function trimTrailingSlashes(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) end -= 1;
+  return end === value.length ? value : value.slice(0, end);
+}
 
 export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
   private static readonly INTERNAL_SERVER_ERROR_BODY = createDefaultErrorBody(
@@ -144,17 +152,17 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
    * ```
    */
   public route(
-    router: TypeweaverRouter<Record<string, RequestHandler<any, any, any>>>
+    router: TypeweaverRouter<Record<string, ErasedRequestHandler>>
   ): this;
   public route(
     prefix: string,
-    router: TypeweaverRouter<Record<string, RequestHandler<any, any, any>>>
+    router: TypeweaverRouter<Record<string, ErasedRequestHandler>>
   ): this;
   public route(
     prefixOrRouter:
       | string
-      | TypeweaverRouter<Record<string, RequestHandler<any, any, any>>>,
-    router?: TypeweaverRouter<Record<string, RequestHandler<any, any, any>>>
+      | TypeweaverRouter<Record<string, ErasedRequestHandler>>,
+    router?: TypeweaverRouter<Record<string, ErasedRequestHandler>>
   ): this {
     if (typeof prefixOrRouter === "string") {
       if (!router) {
@@ -420,7 +428,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
   /**
    * Resolve an error handler option to a concrete handler function.
    */
-  private resolveErrorHandler<T extends (...args: any[]) => any>(
+  private resolveErrorHandler<T extends (...args: never[]) => unknown>(
     option: T | boolean | undefined,
     defaultHandler: T
   ): T | undefined {
@@ -430,10 +438,10 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
   }
 
   private mountRouter(
-    router: TypeweaverRouter<Record<string, RequestHandler<any, any, any>>>,
+    router: TypeweaverRouter<Record<string, ErasedRequestHandler>>,
     prefix?: string
   ): this {
-    const normalizedPrefix = prefix?.replace(/\/+$/, "");
+    const normalizedPrefix = trimTrailingSlashes(prefix);
     for (const route of router.getRoutes()) {
       this.router.add({
         ...route,
@@ -455,17 +463,20 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
 
   private static defaultRequestValidationHandler: RequestValidationErrorHandler =
     (err): IHttpResponse => {
-      const issues: Record<string, unknown> = Object.create(null);
+      const issues: Record<string, unknown> = Object.create(null) as Record<
+        string,
+        unknown
+      >;
 
       const header = TypeweaverApp.sanitizeIssues(err.headerIssues);
       const body = TypeweaverApp.sanitizeIssues(err.bodyIssues);
       const query = TypeweaverApp.sanitizeIssues(err.queryIssues);
       const param = TypeweaverApp.sanitizeIssues(err.pathParamIssues);
 
-      if (header) issues.header = header;
-      if (body) issues.body = body;
-      if (query) issues.query = query;
-      if (param) issues.param = param;
+      if (header) issues["header"] = header;
+      if (body) issues["body"] = body;
+      if (query) issues["query"] = query;
+      if (param) issues["param"] = param;
 
       return {
         statusCode: validationDefaultError.statusCode,

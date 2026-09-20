@@ -40,5 +40,7 @@ describe("PluginValidationContext negative contract", () => {
     expect(diagnostics).toContain(
       "Property 'writeFile' does not exist on type 'PluginValidationContext'"
     );
-  }, 15_000);
+    // Spawns the TypeScript compiler as a child process; full-workspace
+    // parallelism can push this compile past the 15s process-test budget.
+  }, 30_000);
 });

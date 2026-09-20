@@ -38,14 +38,14 @@ export type ResponseGenerationContext = Pick<
 type OwnResponseTemplateData = {
   readonly identifierName: string;
   readonly typeValue: string;
-  readonly header?: string;
-  readonly body?: string;
+  readonly header?: string | undefined;
+  readonly body?: string | undefined;
   readonly statusCode: HttpStatusCode;
   readonly statusCodeKey: string;
   readonly hasHeader: boolean;
   readonly hasBody: boolean;
   readonly factory: string;
-  readonly jsDoc?: string;
+  readonly jsDoc?: string | undefined;
 };
 
 type ResponseFactoryTemplateData = {
@@ -54,7 +54,7 @@ type ResponseFactoryTemplateData = {
   readonly statusCodeKey: string;
   readonly hasHeader: boolean;
   readonly hasBody: boolean;
-  readonly jsDoc?: string;
+  readonly jsDoc?: string | undefined;
 };
 
 type RenderResponseFactoryTemplateData = ResponseFactoryTemplateData & {

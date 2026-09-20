@@ -21,6 +21,7 @@ import {
 const OK_STATUS = 200 as NormalizedResponse["statusCode"];
 const NOT_FOUND_STATUS = 404 as NormalizedResponse["statusCode"];
 type ResponseBuilderOverrides = Parameters<typeof aResponseWith>[0];
+type OperationBuilderOverrides = Parameters<typeof anOperationWith>[0];
 
 describe("buildOpenApiDocument canonical response references", () => {
   test("maps canonical response references", () => {
@@ -1701,7 +1702,7 @@ function aCanonicalOkResponse(
 
 function anOperationWithDuplicateOkResponses(
   responses: readonly NormalizedResponseUsage[],
-  overrides: Partial<NormalizedOperation> = {}
+  overrides: OperationBuilderOverrides = {}
 ): NormalizedOperation {
   return anOperationWith({ ...overrides, responses });
 }

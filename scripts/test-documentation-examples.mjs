@@ -9,6 +9,11 @@ const fixtureRoot = mkdtempSync(
 );
 const manifestPath = "documentation-examples.json";
 const groupId = "negative-fixture";
+/**
+ * @param {string} relativePath
+ * @param {unknown} value
+ * @returns {void}
+ */
 const writeJson = (relativePath, value) =>
   writeFileSync(
     path.join(fixtureRoot, relativePath),

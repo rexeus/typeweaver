@@ -22,7 +22,7 @@ const finalHandlerShouldNotRun = async () => ({
 });
 
 type RunBearerAuthOptions = {
-  readonly header?: Record<string, string | string[]>;
+  readonly header?: Record<string, string | string[]> | undefined;
   readonly verifyToken?: BearerAuthOptions["verifyToken"];
   readonly realm?: string;
   readonly onUnauthorized?: BearerAuthOptions["onUnauthorized"];
@@ -71,7 +71,7 @@ function expectDefaultUnauthorized(response: IHttpResponse): void {
 describe("bearerAuth malformed tokens", () => {
   test.each<{
     readonly case: string;
-    readonly header?: Record<string, string | string[]>;
+    readonly header?: Record<string, string | string[]> | undefined;
   }>([
     { case: "missing authorization", header: undefined },
     {
@@ -105,7 +105,7 @@ describe("bearerAuth malformed tokens", () => {
 
   test.each<{
     readonly case: string;
-    readonly header?: Record<string, string | string[]>;
+    readonly header?: Record<string, string | string[]> | undefined;
   }>([
     { case: "empty token", header: { authorization: "Bearer " } },
     { case: "malformed token", header: { authorization: "Bearer" } },

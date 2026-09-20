@@ -1,4 +1,3 @@
-/* oxlint-disable import/max-dependencies */
 export { ConflictErrorDefinition } from "./ConflictErrorDefinition.js";
 export { ForbiddenErrorDefinition } from "./ForbiddenErrorDefinition.js";
 export { InternalServerErrorDefinition } from "./InternalServerErrorDefinition.js";

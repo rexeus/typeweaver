@@ -123,7 +123,7 @@ describe("StateMap merge", () => {
   test("ignores inherited enumerable properties from a merge payload", () => {
     const state = new StateMap();
     const payload = Object.create({ role: "admin" }) as Record<string, unknown>;
-    payload.userId = "u_1";
+    payload["userId"] = "u_1";
 
     state.merge(payload);
 

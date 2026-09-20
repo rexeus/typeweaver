@@ -9,12 +9,22 @@ import {
   validateEffect4WorkspaceContract,
 } from "./lib/effect-version-contract.mjs";
 
+/** @typedef {import("./lib/tooling-types.mjs").EffectBaselineContract} EffectBaselineContract */
+/** @typedef {import("./lib/tooling-types.mjs").PackageManifest} PackageManifest */
+/** @typedef {Record<string, PackageManifest | undefined>} PackageManifestMap */
+/** @typedef {{ skills: Record<string, { computedHash?: string } | undefined> }} SkillLock */
+
 const workspaceRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   ".."
 );
+/**
+ * @param {string} relativePath
+ * @returns {string}
+ */
 const read = relativePath =>
   readFileSync(path.join(workspaceRoot, relativePath), "utf8");
+/** @type {EffectBaselineContract} */
 const contract = JSON.parse(read("config/effect-baseline.json"));
 const requiredDocuments = [
   "MIGRATION.md",
@@ -26,6 +36,10 @@ const requiredDocuments = [
 const failures = [];
 const skillRoot = path.join(workspaceRoot, ".agents", "skills", "effect-ts");
 
+/**
+ * @param {string} directory
+ * @returns {string[]}
+ */
 const collectSkillFiles = directory =>
   readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
     if (entry.name === ".git" || entry.name === "node_modules") {
@@ -60,9 +74,10 @@ if (!workspaceConfig.includes(`effect: "${contract.peerRange}"`)) {
   failures.push("pnpm-workspace.yaml does not match the Effect peer contract");
 }
 
+/** @type {PackageManifest} */
 const rootPackage = JSON.parse(read("package.json"));
 if (
-  rootPackage.devDependencies["@effect/language-service"] !==
+  rootPackage.devDependencies?.["@effect/language-service"] !==
   contract.languageServiceVersion
 ) {
   failures.push(
@@ -166,6 +181,7 @@ for (const file of collectSkillFiles(skillRoot).sort((left, right) =>
   skillHash.update(path.relative(skillRoot, file).split(path.sep).join("/"));
   skillHash.update(readFileSync(file));
 }
+/** @type {SkillLock} */
 const skillLock = JSON.parse(read("skills-lock.json"));
 if (skillLock.skills["effect-ts"]?.computedHash !== skillHash.digest("hex")) {
   failures.push("skills-lock.json does not match the repo-local Effect skill");
@@ -179,6 +195,10 @@ failures.push(
   })
 );
 
+/**
+ * @param {string} relativePath
+ * @returns {string | undefined}
+ */
 const readOptional = relativePath => {
   try {
     return read(relativePath);
@@ -186,22 +206,26 @@ const readOptional = relativePath => {
     return undefined;
   }
 };
+/** @type {PackageManifestMap} */
+const manifests = {
+  cli: JSON.parse(read("packages/cli/package.json")),
+  gen: JSON.parse(read("packages/gen/package.json")),
+  effect: JSON.parse(read("packages/effect/package.json")),
+  hono: JSON.parse(read("packages/hono/package.json")),
+  core: JSON.parse(read("packages/core/package.json")),
+};
+/** @type {Record<string, string | undefined>} */
+const documents = Object.fromEntries(
+  Object.keys(EFFECT_4_DOCUMENT_TOKENS).map(document => [
+    document,
+    readOptional(document),
+  ])
+);
 failures.push(
   ...validateEffect4WorkspaceContract({
     contract,
-    manifests: {
-      cli: JSON.parse(read("packages/cli/package.json")),
-      gen: JSON.parse(read("packages/gen/package.json")),
-      effect: JSON.parse(read("packages/effect/package.json")),
-      hono: JSON.parse(read("packages/hono/package.json")),
-      core: JSON.parse(read("packages/core/package.json")),
-    },
-    documents: Object.fromEntries(
-      Object.keys(EFFECT_4_DOCUMENT_TOKENS).map(document => [
-        document,
-        readOptional(document),
-      ])
-    ),
+    manifests,
+    documents,
   })
 );
 

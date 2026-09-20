@@ -43,7 +43,8 @@ export function createUploadFileRequest(
       path: "/files",
     },
     {
-      body: () => input.body ?? createUploadFileRequestBody(),
+      body: (): IUploadFileRequestBody =>
+        input.body ?? createUploadFileRequestBody(),
       header: createUploadFileRequestHeader,
     },
     input

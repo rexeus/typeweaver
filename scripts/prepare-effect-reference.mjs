@@ -5,9 +5,16 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { verifyEffectReference } from "./verify-effect-reference.mjs";
 
+/** @typedef {import("./lib/tooling-types.mjs").EffectBaselineContract} EffectBaselineContract */
+
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.resolve(scriptDir, "..");
 
+/**
+ * @param {string} name
+ * @param {string} fallback
+ * @returns {string}
+ */
 const option = (name, fallback) => {
   const index = process.argv.indexOf(name);
   return index === -1 ? fallback : path.resolve(process.argv[index + 1] ?? "");
@@ -19,11 +26,18 @@ const contractPath = option(
 );
 const repoDir = option(
   "--repo-dir",
-  process.env.EFFECT_REFERENCE_DIR ??
+  process.env["EFFECT_REFERENCE_DIR"] ??
     path.join(workspaceRoot, ".repos", "effect")
 );
+/** @type {EffectBaselineContract} */
 const contract = JSON.parse(readFileSync(contractPath, "utf8"));
 
+/**
+ * @param {string} directory
+ * @param {readonly string[]} args
+ * @param {{ quiet?: boolean }} [options]
+ * @returns {string}
+ */
 const git = (directory, args, options = {}) =>
   execFileSync("git", ["-C", directory, ...args], {
     encoding: "utf8",
@@ -32,6 +46,10 @@ const git = (directory, args, options = {}) =>
       : ["ignore", "inherit", "inherit"],
   })?.trim();
 
+/**
+ * @param {string} directory
+ * @returns {boolean}
+ */
 const isGitWorktree = directory => {
   try {
     git(directory, ["rev-parse", "--git-dir"], { quiet: true });

@@ -40,19 +40,19 @@ function writeHttpApiRoutes(
   for (const operation of resource.operations) {
     const routePath = createRoutePath(operation.path);
 
-    if (!routes[routePath]) {
-      routes[routePath] = {
-        methods: [],
-        methodSummaries: [],
-      };
-    }
+    const route: (typeof routes)[string] = routes[routePath] ?? {
+      methods: [],
+      methodSummaries: [],
+    };
 
-    routes[routePath]!.methods.push(operation.method);
-    routes[routePath]!.methodSummaries.push(
+    route.methods.push(operation.method);
+    route.methodSummaries.push(
       operation.summary
         ? `${operation.method}: ${operation.summary}`
         : operation.method
     );
+
+    routes[routePath] = route;
   }
 
   const routesWithDocs = Object.fromEntries(

@@ -293,10 +293,10 @@ export const undeclaredTransportRequest: ExampleRawRequest = {
 
 expectTypeOf<ExampleRawRequest["method"]>().toEqualTypeOf<HttpMethod>();
 expectTypeOf<NonNullable<ExampleRawRequest["query"]>>().toEqualTypeOf<
-  Readonly<Record<string, string | readonly string[]>>
+  Readonly<Record<string, string | readonly string[] | undefined>>
 >();
 expectTypeOf<NonNullable<ExampleRawRequest["header"]>>().toEqualTypeOf<
-  Readonly<Record<string, string | readonly string[]>>
+  Readonly<Record<string, string | readonly string[] | undefined>>
 >();
 expectTypeOf<ExampleRawRequest["param"]>().toEqualTypeOf<
   Readonly<{ metricId: string }>
@@ -319,10 +319,10 @@ type RecordValidatedRequest = IHttpRequest<
 type RecordRawRequest = IRawHttpRequestFor<RecordValidatedRequest>;
 
 expectTypeOf<NonNullable<RecordRawRequest["header"]>>().toEqualTypeOf<
-  Readonly<Record<string, string | readonly string[]>>
+  Readonly<Record<string, string | readonly string[] | undefined>>
 >();
 expectTypeOf<NonNullable<RecordRawRequest["query"]>>().toEqualTypeOf<
-  Readonly<Record<string, string | readonly string[]>>
+  Readonly<Record<string, string | readonly string[] | undefined>>
 >();
 expectTypeOf<NonNullable<RecordRawRequest["param"]>>().toEqualTypeOf<
   Readonly<Record<string, string>>
@@ -358,7 +358,7 @@ export const paramlessRawRequest: ParamlessRawRequest = {
 expectTypeOf<ParamlessRawRequest["param"]>().toEqualTypeOf<undefined>();
 expectTypeOf<ParamlessRawRequest["method"]>().toEqualTypeOf<HttpMethod>();
 expectTypeOf<NonNullable<ParamlessRawRequest["query"]>>().toEqualTypeOf<
-  Readonly<Record<string, string | readonly string[]>>
+  Readonly<Record<string, string | readonly string[] | undefined>>
 >();
 
 const operationWithQuery = <TQuery extends RequestDefinition["query"]>(

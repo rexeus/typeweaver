@@ -15,6 +15,15 @@ import type {
 import type { OperationContext } from "./operationContext.js";
 import type { z } from "zod";
 
+export type ExtractParameterContainerOptions = {
+  readonly schema: z.core.$ZodType | undefined;
+  readonly context: OperationContext;
+  readonly part: string;
+  readonly containerPointer: string;
+  readonly responseName?: string | undefined;
+  readonly statusCode?: string | undefined;
+};
+
 export type ParameterContainerResult = {
   readonly properties: Record<string, JsonSchema>;
   readonly requiredNames: ReadonlySet<string>;
@@ -22,14 +31,80 @@ export type ParameterContainerResult = {
   readonly isRootOptional: boolean;
 };
 
-export function extractParameterContainer(options: {
-  readonly schema: z.core.$ZodType | undefined;
+function createContainerWarning(options: {
+  readonly code: OpenApiDiagnosticWarning["code"];
+  readonly message: string;
+  readonly documentPath: string;
   readonly context: OperationContext;
   readonly part: string;
-  readonly containerPointer: string;
-  readonly responseName?: string;
-  readonly statusCode?: string;
-}): ParameterContainerResult {
+  readonly responseName?: string | undefined;
+  readonly statusCode?: string | undefined;
+}): OpenApiDiagnosticWarning {
+  return {
+    origin: "openapi-builder",
+    code: options.code,
+    message: options.message,
+    documentPath: options.documentPath,
+    location: createOperationLocation(options),
+  };
+}
+
+const createContainerWarningFor = (
+  options: ExtractParameterContainerOptions,
+  warning: {
+    readonly code: OpenApiDiagnosticWarning["code"];
+    readonly message: string;
+  }
+): OpenApiDiagnosticWarning =>
+  createContainerWarning({
+    ...warning,
+    documentPath: options.containerPointer,
+    context: options.context,
+    part: options.part,
+    responseName: options.responseName,
+    statusCode: options.statusCode,
+  });
+
+const buildContainerWarnings = (
+  options: ExtractParameterContainerOptions,
+  schema: JsonSchema,
+  properties: Record<string, JsonSchema>
+): OpenApiBuildWarning[] => {
+  const warnings: OpenApiBuildWarning[] = [];
+  const hasFiniteProperties = Object.keys(properties).length > 0;
+
+  if (schema["type"] !== "object") {
+    warnings.push(
+      createContainerWarningFor(options, {
+        code: "unrepresentable-parameter-container",
+        message: `${options.part} must be a finite object schema to become OpenAPI parameters.`,
+      })
+    );
+  } else if (
+    !hasFiniteProperties &&
+    hasUnrepresentableAdditionalProperties(schema)
+  ) {
+    warnings.push(
+      createContainerWarningFor(options, {
+        code: "unrepresentable-parameter-container",
+        message: `${options.part} record entries cannot be represented as finite OpenAPI parameters.`,
+      })
+    );
+  } else if (hasUnrepresentableAdditionalProperties(schema)) {
+    warnings.push(
+      createContainerWarningFor(options, {
+        code: "unrepresentable-parameter-additional-properties",
+        message: `${options.part} additional properties cannot be represented as OpenAPI parameters.`,
+      })
+    );
+  }
+
+  return warnings;
+};
+
+export function extractParameterContainer(
+  options: ExtractParameterContainerOptions
+): ParameterContainerResult {
   if (options.schema === undefined) {
     return {
       properties: {},
@@ -59,72 +134,14 @@ export function extractParameterContainer(options: {
       ]
     )
   );
-  const warnings: OpenApiBuildWarning[] = [...converted.warnings];
-  const hasFiniteProperties = Object.keys(properties).length > 0;
-
-  if (converted.schema.type !== "object") {
-    warnings.push(
-      createContainerWarning({
-        code: "unrepresentable-parameter-container",
-        message: `${options.part} must be a finite object schema to become OpenAPI parameters.`,
-        documentPath: options.containerPointer,
-        context: options.context,
-        part: options.part,
-        responseName: options.responseName,
-        statusCode: options.statusCode,
-      })
-    );
-  } else if (
-    !hasFiniteProperties &&
-    hasUnrepresentableAdditionalProperties(converted.schema)
-  ) {
-    warnings.push(
-      createContainerWarning({
-        code: "unrepresentable-parameter-container",
-        message: `${options.part} record entries cannot be represented as finite OpenAPI parameters.`,
-        documentPath: options.containerPointer,
-        context: options.context,
-        part: options.part,
-        responseName: options.responseName,
-        statusCode: options.statusCode,
-      })
-    );
-  } else if (hasUnrepresentableAdditionalProperties(converted.schema)) {
-    warnings.push(
-      createContainerWarning({
-        code: "unrepresentable-parameter-additional-properties",
-        message: `${options.part} additional properties cannot be represented as OpenAPI parameters.`,
-        documentPath: options.containerPointer,
-        context: options.context,
-        part: options.part,
-        responseName: options.responseName,
-        statusCode: options.statusCode,
-      })
-    );
-  }
 
   return {
     properties,
     requiredNames: getRequiredNames(converted.schema),
-    warnings,
+    warnings: [
+      ...converted.warnings,
+      ...buildContainerWarnings(options, converted.schema, properties),
+    ],
     isRootOptional: optionalSchema.isOptional,
-  };
-}
-
-function createContainerWarning(options: {
-  readonly code: OpenApiDiagnosticWarning["code"];
-  readonly message: string;
-  readonly documentPath: string;
-  readonly context: OperationContext;
-  readonly part: string;
-  readonly responseName?: string;
-  readonly statusCode?: string;
-}): OpenApiDiagnosticWarning {
-  return {
-    origin: "openapi-builder",
-    code: options.code,
-    message: options.message,
-    documentPath: options.documentPath,
-    location: createOperationLocation(options),
   };
 }

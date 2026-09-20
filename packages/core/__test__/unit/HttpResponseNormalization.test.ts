@@ -19,7 +19,8 @@ const aTypedResponseWith = (
 
 const aNullPrototypeRecordWith = (
   properties: Record<string, unknown>
-): Record<string, unknown> => Object.assign(Object.create(null), properties);
+): Record<string, unknown> =>
+  Object.assign(Object.create(null) as Record<string, unknown>, properties);
 
 describe("HTTP response normalization: typed response detection", () => {
   test.each([

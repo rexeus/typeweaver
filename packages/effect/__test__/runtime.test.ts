@@ -153,7 +153,7 @@ describe("Effect handler runtime failure boundaries", () => {
 
     const failure = await runtime
       .run(handler, request, context(), impossibleMapper)
-      .catch(error => error);
+      .catch((error: unknown) => error);
 
     expect(failure).toBeInstanceOf(EffectHandlerDefectError);
     expect(failure).toMatchObject({

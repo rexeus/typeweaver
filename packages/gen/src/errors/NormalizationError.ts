@@ -20,7 +20,7 @@ import {
   PathParameterMismatchError,
   UnknownSecuritySchemeError,
   UnknownTagError,
-} from "./index.js";
+} from "./errorClasses.js";
 
 /**
  * Tagged union of every error the spec normalizer may raise. Every variant

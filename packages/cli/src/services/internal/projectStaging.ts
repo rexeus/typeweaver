@@ -41,6 +41,8 @@ const systemErrorReason = (cause: unknown): SystemErrorReason => {
       return "BadResource";
     case "EBUSY":
       return "Busy";
+    case undefined:
+      return "Unknown";
     default:
       return "Unknown";
   }

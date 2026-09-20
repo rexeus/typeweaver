@@ -607,8 +607,8 @@ describe("Generated ResponseValidator object body contracts", () => {
   test("reports missing required body fields by path", () => {
     const validator = new CreateTodoResponseValidator();
     const body: Record<string, unknown> = { ...validCreateTodoBody() };
-    delete body.id;
-    delete body.title;
+    delete body["id"];
+    delete body["title"];
     const response = responseWithRuntimePart(
       validCreateTodoResponse(),
       "body",

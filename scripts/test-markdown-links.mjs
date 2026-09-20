@@ -5,6 +5,15 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+/**
+ * @typedef {object} RepositoryRejection
+ * @property {string} label
+ * @property {readonly string[]} expectedDiagnostics
+ * @property {readonly string[]} [expectedMessages]
+ * @property {readonly string[]} [forbiddenDiagnostics]
+ * @property {string} repositoryRoot
+ */
+
 const workspaceRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   ".."
@@ -22,6 +31,9 @@ const gitConfigRoot = path.join(tempRoot, "git-config");
 // A hermetic Git environment keeps an inherited GIT_DIR, work tree, index, or
 // user/system configuration from leaking into the fixture repository or into
 // the checker's own `git ls-files` call.
+/**
+ * @returns {NodeJS.ProcessEnv}
+ */
 const gitEnvironment = () => {
   const environment = { ...process.env };
   for (const name of [
@@ -34,15 +46,25 @@ const gitEnvironment = () => {
   ]) {
     delete environment[name];
   }
-  environment.HOME = gitConfigRoot;
-  environment.USERPROFILE = gitConfigRoot;
-  environment.XDG_CONFIG_HOME = gitConfigRoot;
-  environment.GIT_CONFIG_NOSYSTEM = "1";
-  environment.GIT_CONFIG_GLOBAL = path.join(gitConfigRoot, "global.gitconfig");
-  environment.GIT_CONFIG_SYSTEM = path.join(gitConfigRoot, "system.gitconfig");
+  environment["HOME"] = gitConfigRoot;
+  environment["USERPROFILE"] = gitConfigRoot;
+  environment["XDG_CONFIG_HOME"] = gitConfigRoot;
+  environment["GIT_CONFIG_NOSYSTEM"] = "1";
+  environment["GIT_CONFIG_GLOBAL"] = path.join(
+    gitConfigRoot,
+    "global.gitconfig"
+  );
+  environment["GIT_CONFIG_SYSTEM"] = path.join(
+    gitConfigRoot,
+    "system.gitconfig"
+  );
   return environment;
 };
 
+/**
+ * @param {readonly string[]} args
+ * @returns {void}
+ */
 const runGit = args => {
   const result = spawnSync("git", args, {
     cwd: fixtureRoot,
@@ -63,6 +85,10 @@ const runGit = args => {
   }
 };
 
+/**
+ * @param {readonly string[]} arguments_
+ * @returns {import("node:child_process").SpawnSyncReturns<string>}
+ */
 const spawnChecker = arguments_ =>
   spawnSync(process.execPath, [checkerPath, ...arguments_], {
     cwd: workspaceRoot,
@@ -70,6 +96,10 @@ const spawnChecker = arguments_ =>
     env: gitEnvironment(),
   });
 
+/**
+ * @param {RepositoryRejection} options
+ * @returns {void}
+ */
 const assertCheckerRejectsRepository = ({
   label,
   expectedDiagnostics,
@@ -110,6 +140,10 @@ const assertCheckerRejectsRepository = ({
   }
 };
 
+/**
+ * @param {readonly string[]} arguments_
+ * @returns {void}
+ */
 const assertCheckerRejectsArguments = arguments_ => {
   const result = spawnChecker(arguments_);
   if (result.status === 0) {

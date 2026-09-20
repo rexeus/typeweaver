@@ -1,5 +1,6 @@
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { createData } from "./createData.js";
+import type { DataOverrides } from "./createData.js";
 
 /**
  * Creates a fully populated test response by composing body and header creators.
@@ -18,31 +19,32 @@ import { createData } from "./createData.js";
 export function createResponse<TResponse extends IHttpResponse, TBody, THeader>(
   defaultResponse: Omit<TResponse, "type" | "body" | "header">,
   creators: {
-    body?: (input?: Partial<TBody>) => TBody;
-    header?: (input?: Partial<THeader>) => THeader;
+    body?: (input?: DataOverrides<TBody>) => TBody;
+    header?: (input?: DataOverrides<THeader>) => THeader;
   },
   input: {
     statusCode?: number;
-    body?: Partial<TBody>;
-    header?: Partial<THeader>;
+    body?: DataOverrides<TBody>;
+    header?: DataOverrides<THeader>;
   } = {}
 ): Omit<TResponse, "type"> {
   const defaults: Partial<TResponse> = {
     ...defaultResponse,
   } as Partial<TResponse>;
-  if (creators.body) (defaults as any).body = creators.body();
-  if (creators.header) (defaults as any).header = creators.header();
+  const mutableDefaults = defaults as Record<string, unknown>;
+  if (creators.body) mutableDefaults["body"] = creators.body();
+  if (creators.header) mutableDefaults["header"] = creators.header();
 
-  const overrides: Partial<TResponse> = {};
+  const overrides: Record<string, unknown> = {};
   if (input.statusCode !== undefined)
-    (overrides as any).statusCode = input.statusCode;
-  if (input.body && creators.body)
-    (overrides as any).body = creators.body(input.body);
-  if (input.header && creators.header)
-    (overrides as any).header = creators.header(input.header);
+    overrides["statusCode"] = input.statusCode;
+  if (input.body !== undefined && creators.body)
+    overrides["body"] = creators.body(input.body);
+  if (input.header !== undefined && creators.header)
+    overrides["header"] = creators.header(input.header);
 
-  return createData(defaults as TResponse, overrides) as Omit<
-    TResponse,
-    "type"
-  >;
+  return createData(
+    defaults as TResponse,
+    overrides as DataOverrides<TResponse>
+  ) as Omit<TResponse, "type">;
 }

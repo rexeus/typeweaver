@@ -12,8 +12,15 @@ const workspaceRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   ".."
 );
+/** @typedef {import("./lib/tooling-types.mjs").PackageManifest} PackageManifest */
+
+/**
+ * @param {string} relativePath
+ * @returns {string}
+ */
 const read = relativePath =>
   readFileSync(path.join(workspaceRoot, relativePath), "utf8");
+/** @type {PackageManifest} */
 const packageManifest = JSON.parse(read("package.json"));
 const agentGuidance = read("AGENTS.md");
 const cliReadme = read("packages/cli/README.md");
@@ -26,16 +33,34 @@ const toolContracts = [
   { packageName: "oxfmt", guidanceName: "Oxfmt" },
 ];
 const expectedStatements = [
-  `Node.js ${packageManifest.engines.node}`,
-  packageManifest.packageManager,
+  `Node.js ${String(packageManifest.engines?.node)}`,
+  String(packageManifest.packageManager),
 ];
 
 for (const { packageName, guidanceName } of toolContracts) {
-  if (packageManifest.devDependencies[packageName] === undefined) {
+  if (packageManifest.devDependencies?.[packageName] === undefined) {
     failures.push(`package.json does not declare ${packageName}`);
     continue;
   }
   expectedStatements.push(guidanceName);
+}
+
+// The private workspace compiler-profile package and the exact optional-property
+// flag it introduces are durable toolchain facts that contributor guidance must
+// state. The package must also stay unpublished.
+const compilerProfilePackage = "@rexeus/typeweaver-tsconfig";
+if (packageManifest.devDependencies?.[compilerProfilePackage] === undefined) {
+  failures.push(`package.json does not declare ${compilerProfilePackage}`);
+} else {
+  expectedStatements.push(compilerProfilePackage, "exactOptionalPropertyTypes");
+}
+const compilerProfileManifest = JSON.parse(
+  read("packages/tsconfig/package.json")
+);
+if (compilerProfileManifest.private !== true) {
+  failures.push(
+    "packages/tsconfig/package.json must remain private and unpublished"
+  );
 }
 
 for (const statement of expectedStatements) {
@@ -102,5 +127,5 @@ if (failures.length > 0) {
 }
 
 process.stdout.write(
-  `Repository guidance verified: Node.js ${packageManifest.engines.node}, ${packageManifest.packageManager}, tsdown, Oxlint, Oxfmt\n`
+  `Repository guidance verified: Node.js ${String(packageManifest.engines?.node)}, ${String(packageManifest.packageManager)}, tsdown, Oxlint, Oxfmt\n`
 );

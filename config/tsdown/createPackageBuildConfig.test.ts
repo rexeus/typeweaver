@@ -147,7 +147,9 @@ describe("createPackageBuildConfig", () => {
     expect(readPackageFile(packageDir, "dist/LICENSE")).toBe("license");
     expect(readPackageFile(packageDir, "dist/NOTICE")).toBe("notice");
   });
+});
 
+describe("createPackageBuildConfig shared post-build disabling", () => {
   test("omits shared post-build work when disabled", () => {
     const { packageDir } = createPackageFixture("example-disabled");
 
@@ -234,7 +236,9 @@ describe("createPackageBuildConfig callback composition", () => {
     expect(packageFileExists(packageDir, "dist/lib")).toBe(false);
     expect(packageFileExists(packageDir, "dist/templates")).toBe(false);
   });
+});
 
+describe("createPackageBuildConfig license artifact composition", () => {
   test("omits repository artifacts when license copy is disabled", async () => {
     const { packageDir } = createPackageFixture("no-license-copy", {
       createRepositoryArtifacts: false,
@@ -302,7 +306,9 @@ describe("createPackageBuildConfig execution order", () => {
       "steps-before-caller",
     ]);
   });
+});
 
+describe("createPackageBuildConfig onSuccess forwarding", () => {
   test("forwards tsdown onSuccess config and signal to caller onSuccess", async () => {
     const { packageDir } = createPackageFixture("forwarded-args");
     const resolvedConfig = { name: "resolved" };

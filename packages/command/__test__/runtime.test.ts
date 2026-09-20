@@ -154,7 +154,7 @@ describe("generated command security", () => {
     ]);
     const basicCommand = {
       ...command(async context => {
-        observedAuthorization = context.defaultHeaders.Authorization;
+        observedAuthorization = context.defaultHeaders["Authorization"];
         return {
           type: "PingSuccess",
           statusCode: 200,

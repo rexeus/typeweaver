@@ -294,10 +294,21 @@ export abstract class TypeweaverHono<
       handleBodyParseErrors,
       handleResponseValidationErrors,
       handleUnknownErrors,
-      ...honoOptions
+      strict,
+      router,
+      getPath,
     } = options;
 
-    super(honoOptions);
+    // Forward only Hono's own option keys: its constructor `Object.assign`s the
+    // received options onto the instance, so TypeWeaver-specific handlers must
+    // never leak there. The rest-destructure that would do this automatically
+    // cannot be typed under `exactOptionalPropertyTypes` because the options
+    // type intersects a conditional type.
+    super({
+      ...(strict === undefined ? {} : { strict }),
+      ...(router === undefined ? {} : { router }),
+      ...(getPath === undefined ? {} : { getPath }),
+    });
 
     this.requestHandlers = requestHandlers;
 
@@ -338,7 +349,7 @@ export abstract class TypeweaverHono<
    * @param defaultHandler - Default handler to use when option is true
    * @returns Resolved handler function or undefined if disabled
    */
-  private resolveErrorHandler<T extends (...args: any[]) => any>(
+  private resolveErrorHandler<T extends (...args: never[]) => unknown>(
     option: T | boolean | undefined,
     defaultHandler: T,
   ): T | undefined {
@@ -378,26 +389,27 @@ export abstract class TypeweaverHono<
 
   protected async handleError(error: unknown, context: Context): Promise<IHttpResponse> {
     // Handle validation errors
-    if (error instanceof RequestValidationError && this.config.errorHandlers.requestValidation) {
+    const requestValidation = this.config.errorHandlers.requestValidation;
+    if (error instanceof RequestValidationError && requestValidation) {
       const response = await this.safelyExecuteErrorHandler(() =>
-        this.config.errorHandlers.requestValidation!(error, context),
+        requestValidation(error, context),
       );
       if (response) return response;
     }
 
     // Handle HTTP response errors
-    if (isTypedHttpResponse(error) && this.config.errorHandlers.httpResponse) {
+    const httpResponseHandler = this.config.errorHandlers.httpResponse;
+    if (isTypedHttpResponse(error) && httpResponseHandler) {
       const response = await this.safelyExecuteErrorHandler(() =>
-        this.config.errorHandlers.httpResponse!(error, context),
+        httpResponseHandler(error, context),
       );
       if (response) return response;
     }
 
     // Handle unknown errors
-    if (this.config.errorHandlers.unknown) {
-      const response = await this.safelyExecuteErrorHandler(() =>
-        this.config.errorHandlers.unknown!(error, context),
-      );
+    const unknownHandler = this.config.errorHandlers.unknown;
+    if (unknownHandler) {
+      const response = await this.safelyExecuteErrorHandler(() => unknownHandler(error, context));
       if (response) return response;
     }
 
@@ -440,9 +452,10 @@ export abstract class TypeweaverHono<
       );
     } catch (error) {
       if (error instanceof HonoBodyParseError) {
-        if (this.config.errorHandlers.bodyParse) {
+        const bodyParseHandler = this.config.errorHandlers.bodyParse;
+        if (bodyParseHandler) {
           const response = await this.safelyExecuteErrorHandler(() =>
-            this.config.errorHandlers.bodyParse!(error, context),
+            bodyParseHandler(error, context),
           );
           return this.adapter.toResponse(response ?? this.defaultHandlers.bodyParse(error));
         }
@@ -487,9 +500,10 @@ export abstract class TypeweaverHono<
       return normalizeHttpResponse(result.data);
     }
 
-    if (this.config.errorHandlers.responseValidation) {
+    const responseValidationHandler = this.config.errorHandlers.responseValidation;
+    if (responseValidationHandler) {
       const handlerResponse = await this.safelyExecuteErrorHandler(() =>
-        this.config.errorHandlers.responseValidation!(result.error, response, context),
+        responseValidationHandler(result.error, response, context),
       );
 
       if (handlerResponse) return handlerResponse;

@@ -29,7 +29,11 @@ export function prepareRequestData(
       headers.set(key, String(value));
     }
   }
-  return { method: requestData.method, headers, body };
+  return {
+    method: requestData.method,
+    headers,
+    ...(body === undefined ? {} : { body }),
+  };
 }
 
 /**
@@ -69,10 +73,10 @@ export async function expectErrorResponse(
   expect(response.status).toBe(status);
 
   const data = (await response.json()) as Record<string, unknown>;
-  expect(data.code).toBe(code);
+  expect(data["code"]).toBe(code);
 
   if (code === "INTERNAL_SERVER_ERROR") {
-    expect(data.message).toBe(internalServerErrorDefaultError.message);
+    expect(data["message"]).toBe(internalServerErrorDefaultError.message);
   }
 
   return data;

@@ -11,46 +11,24 @@ import {
   internalServerErrorDefaultError,
   payloadTooLargeDefaultError,
 } from "@rexeus/typeweaver-core";
+import { createNodeBodyLimitPolicy, markRequestBodyPrevalidated } from "./BodyLimitPolicy.js";
 import {
-  createNodeBodyLimitPolicy,
-  isBodySizeOverLimit,
-  markRequestBodyPrevalidated,
-  parseContentLength,
-} from "./BodyLimitPolicy.js";
-import {
-  PayloadTooLargeError,
-  RequestBodyClosedBeforeEndError,
-  RequestBodyDrainTimeoutError,
-  RequestBodyReadAbortedError,
-} from "./errors/index.js";
+  createRejectedRequestBodyCleanup,
+  drainRequest,
+  drainUnvalidatedRequestBody,
+  enforceContentLengthLimit,
+  hasReadableRequestBody,
+  isRequestBodyLimitError,
+  readRequestBody,
+  shouldValidateRequestBody,
+} from "./requestBody.js";
+import { createRequestUrl } from "./requestTarget.js";
 import {
   getTypeweaverAppErrorReporter,
   getTypeweaverAppRuntimeContext,
 } from "./TypeweaverInternals.js";
 import type { TypeweaverApp } from "./TypeweaverApp.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
-
-type DrainRequestResult = {
-  readonly exceededLimit: boolean;
-  readonly timedOut: boolean;
-  readonly totalBytes: number;
-};
-
-type DrainRequestOptions = {
-  readonly destroyOnLimitExceeded?: boolean;
-  readonly timeoutMs?: number;
-};
-
-const REQUEST_DRAIN_TIMEOUT_MS = 5_000;
-const ORIGIN_FORM_BASE_URL_PROTOCOL = "http:";
-const AUTHORITY_LIKE_REQUEST_TARGET_PREFIX = /^[\\/]{2}/;
-const ASTERISK_FORM_REQUEST_TARGET = "*";
-
-type ParsedAuthority = {
-  readonly host: string;
-  readonly hostname: string;
-  readonly port: string;
-};
 
 /**
  * Adapts a `TypeweaverApp` to Node.js `http.createServer`.
@@ -72,7 +50,7 @@ export type NodeAdapterOptions = {
 };
 
 export function nodeAdapter(
-  app: TypeweaverApp<any>,
+  app: TypeweaverApp<Record<string, unknown>>,
   options?: NodeAdapterOptions,
 ): (req: IncomingMessage, res: ServerResponse) => void {
   const appRuntimeContext = getTypeweaverAppRuntimeContext(app);
@@ -92,22 +70,64 @@ export function nodeAdapter(
 }
 
 type HandleRequestOptions = {
-  readonly app: TypeweaverApp<any>;
+  readonly app: TypeweaverApp<Record<string, unknown>>;
   readonly req: IncomingMessage;
   readonly res: ServerResponse;
   readonly bodyLimitPolicy: ReturnType<typeof createNodeBodyLimitPolicy>;
   readonly reportError: (error: unknown) => void;
 };
 
-async function readRequestBody(
+function createFetchRequest(
   req: IncomingMessage,
-  shouldValidateBody: boolean,
-  maxBodySize: number,
-): Promise<ArrayBuffer | undefined> {
-  if (!shouldValidateBody) {
-    return undefined;
+  url: URL,
+  body: ArrayBuffer | undefined,
+): Request {
+  return new Request(url, {
+    ...(req.method === undefined ? {} : { method: req.method }),
+    headers: createRequestHeaders(req.headers),
+    ...(body === undefined ? {} : { body }),
+  });
+}
+
+type BodyLimitPolicy = HandleRequestOptions["bodyLimitPolicy"];
+
+function writeResponseHeaders(res: ServerResponse, response: Response): void {
+  response.headers.forEach((value, key) => {
+    if (key.toLowerCase() !== "set-cookie") {
+      res.setHeader(key, value);
+    }
+  });
+  const cookies = response.headers.getSetCookie();
+  if (cookies.length > 0) {
+    res.setHeader("set-cookie", cookies);
   }
-  return collectBody(req, maxBodySize);
+}
+
+function handleRequestError(options: {
+  readonly error: unknown;
+  readonly req: IncomingMessage;
+  readonly res: ServerResponse;
+  readonly bodyLimitPolicy: BodyLimitPolicy;
+  readonly reportError: HandleRequestOptions["reportError"];
+}): void {
+  const { error, req, res, bodyLimitPolicy, reportError } = options;
+  reportError(error);
+
+  if (isRequestBodyLimitError(error)) {
+    writeDefaultErrorResponse(res, payloadTooLargeDefaultError, {
+      method: req.method,
+      onFinished: () => {
+        void drainRequest(req, bodyLimitPolicy.maxBodySize, {
+          destroyOnLimitExceeded: true,
+        });
+      },
+    });
+    return;
+  }
+
+  writeDefaultErrorResponse(res, internalServerErrorDefaultError, {
+    method: req.method,
+  });
 }
 
 async function handleRequest(options: HandleRequestOptions): Promise<void> {
@@ -121,29 +141,15 @@ async function handleRequest(options: HandleRequestOptions): Promise<void> {
     const shouldValidateBody = shouldValidateRequestBody(req.method);
 
     enforceContentLengthLimit(req, bodyLimitPolicy.maxBodySize);
-
+    // Guard synchronously so readable-body listeners attach in the same tick as
+    // dispatch; an unconditional await would let an early "error"/"close" event
+    // fire before the body reader is listening.
     if (!shouldValidateBody && hasReadableRequestBody(req)) {
-      const drainResult = await drainRequest(req, bodyLimitPolicy.maxBodySize, {
-        destroyOnLimitExceeded: false,
-      });
-      if (drainResult.exceededLimit) {
-        throw new PayloadTooLargeError(drainResult.totalBytes, bodyLimitPolicy.maxBodySize);
-      }
-      if (drainResult.timedOut) {
-        throw new RequestBodyDrainTimeoutError(
-          bodyLimitPolicy.maxBodySize,
-          REQUEST_DRAIN_TIMEOUT_MS,
-        );
-      }
+      await drainUnvalidatedRequestBody(req, bodyLimitPolicy);
     }
 
     const body = await readRequestBody(req, shouldValidateBody, bodyLimitPolicy.maxBodySize);
-
-    const request = new Request(url, {
-      method: req.method,
-      headers: createRequestHeaders(req.headers),
-      body,
-    });
+    const request = createFetchRequest(req, url, body);
     if (shouldValidateBody) {
       markRequestBodyPrevalidated(request, bodyLimitPolicy);
     }
@@ -151,206 +157,12 @@ async function handleRequest(options: HandleRequestOptions): Promise<void> {
     const response = await app.fetch(request);
     const responseBody = await readWritableResponseBody(req.method, response, reportError);
 
-    response.headers.forEach((value, key) => {
-      if (key.toLowerCase() !== "set-cookie") {
-        res.setHeader(key, value);
-      }
-    });
-    const cookies = response.headers.getSetCookie();
-    if (cookies.length > 0) {
-      res.setHeader("set-cookie", cookies);
-    }
+    writeResponseHeaders(res, response);
     res.writeHead(response.status);
     res.end(responseBody);
   } catch (error) {
-    reportError(error);
-
-    if (isRequestBodyLimitError(error)) {
-      writeDefaultErrorResponse(res, payloadTooLargeDefaultError, {
-        method: req.method,
-        onFinished: () => {
-          void drainRequest(req, bodyLimitPolicy.maxBodySize, {
-            destroyOnLimitExceeded: true,
-          });
-        },
-      });
-      return;
-    }
-
-    writeDefaultErrorResponse(res, internalServerErrorDefaultError, {
-      method: req.method,
-    });
+    handleRequestError({ error, req, res, bodyLimitPolicy, reportError });
   }
-}
-
-function createRequestUrl(req: IncomingMessage): URL | undefined {
-  const rawUrl = req.url ?? "/";
-
-  if (rawUrl === ASTERISK_FORM_REQUEST_TARGET) {
-    return createAsteriskFormRequestUrl(req);
-  }
-
-  if (hasAuthorityLikeRequestTargetPrefix(rawUrl)) {
-    return undefined;
-  }
-
-  try {
-    const url = new URL(rawUrl);
-    return isAbsoluteRequestHostAllowed(url, req) ? url : undefined;
-  } catch (error) {
-    if (!(error instanceof TypeError) || !rawUrl.startsWith("/")) {
-      throw error;
-    }
-  }
-
-  const host = parseRequestHostHeader(req, ORIGIN_FORM_BASE_URL_PROTOCOL);
-  if (host === undefined) {
-    return undefined;
-  }
-
-  return new URL(rawUrl, `${ORIGIN_FORM_BASE_URL_PROTOCOL}//${host.host}`);
-}
-
-function createAsteriskFormRequestUrl(req: IncomingMessage): URL | undefined {
-  if (req.method !== "OPTIONS") {
-    return undefined;
-  }
-
-  const host = parseRequestHostHeader(req, ORIGIN_FORM_BASE_URL_PROTOCOL);
-  if (host === undefined) {
-    return undefined;
-  }
-
-  return new URL(ASTERISK_FORM_REQUEST_TARGET, `${ORIGIN_FORM_BASE_URL_PROTOCOL}//${host.host}/`);
-}
-
-function hasAuthorityLikeRequestTargetPrefix(rawUrl: string): boolean {
-  return AUTHORITY_LIKE_REQUEST_TARGET_PREFIX.test(rawUrl);
-}
-
-function isAbsoluteRequestHostAllowed(url: URL, req: IncomingMessage): boolean {
-  const host = parseRequestHostHeader(req, url.protocol);
-  if (host === undefined) {
-    return false;
-  }
-
-  const urlAuthority = getUrlAuthority(url);
-  return (
-    host.hostname.toLowerCase() === urlAuthority.hostname.toLowerCase() &&
-    host.port === urlAuthority.port
-  );
-}
-
-function parseRequestHostHeader(
-  req: IncomingMessage,
-  protocol: string,
-): ParsedAuthority | undefined {
-  if (!hasExactlyOneHostHeaderLine(req)) {
-    return undefined;
-  }
-
-  return parseHostHeader(req.headers.host, protocol);
-}
-
-function hasExactlyOneHostHeaderLine(req: IncomingMessage): boolean {
-  const headersDistinctHostCount = getHeadersDistinctHostCount(req);
-  if (headersDistinctHostCount !== undefined && headersDistinctHostCount !== 1) {
-    return false;
-  }
-
-  const rawHostHeaderCount = countRawHostHeaderLines(req.rawHeaders);
-  if (rawHostHeaderCount > 0) {
-    return rawHostHeaderCount === 1;
-  }
-
-  return headersDistinctHostCount === 1;
-}
-
-function getHeadersDistinctHostCount(req: IncomingMessage): number | undefined {
-  const hostHeader = req.headersDistinct?.host;
-  if (hostHeader === undefined) {
-    return undefined;
-  }
-
-  return Array.isArray(hostHeader) ? hostHeader.length : 1;
-}
-
-function countRawHostHeaderLines(rawHeaders: readonly string[]): number {
-  let count = 0;
-
-  for (let index = 0; index < rawHeaders.length; index += 2) {
-    if (rawHeaders[index]?.toLowerCase() === "host") {
-      count += 1;
-    }
-  }
-
-  return count;
-}
-
-function parseHostHeader(
-  hostHeader: IncomingMessage["headers"]["host"],
-  protocol: string,
-): ParsedAuthority | undefined {
-  if (hostHeader === undefined || Array.isArray(hostHeader)) {
-    return undefined;
-  }
-
-  const host = hostHeader.trim();
-  if (host === "" || host !== hostHeader) {
-    return undefined;
-  }
-
-  try {
-    const parsed = new URL(`${protocol}//${host}`);
-    if (!isPlainAuthorityUrl(parsed)) {
-      return undefined;
-    }
-
-    return getUrlAuthority(parsed);
-  } catch {
-    return undefined;
-  }
-}
-
-function isPlainAuthorityUrl(url: URL): boolean {
-  return (
-    url.username === "" &&
-    url.password === "" &&
-    url.pathname === "/" &&
-    url.search === "" &&
-    url.hash === ""
-  );
-}
-
-function getUrlAuthority(url: URL): ParsedAuthority {
-  return {
-    host: url.host,
-    hostname: url.hostname,
-    port: getEffectivePort(url),
-  };
-}
-
-function getEffectivePort(url: URL): string {
-  return url.port === "" ? getDefaultPort(url.protocol) : url.port;
-}
-
-function getDefaultPort(protocol: string): string {
-  switch (protocol) {
-    case "http:":
-    case "ws:":
-      return "80";
-    case "https:":
-    case "wss:":
-      return "443";
-    case "ftp:":
-      return "21";
-    default:
-      return "";
-  }
-}
-
-function shouldValidateRequestBody(method?: string): boolean {
-  return method !== "GET" && method !== "HEAD";
 }
 
 function shouldWriteResponseBody(method: string | undefined, status: number): boolean {
@@ -397,12 +209,6 @@ function reportSuppressedResponseBodyCancelError(
   }
 }
 
-function hasReadableRequestBody(req: IncomingMessage): boolean {
-  return (
-    req.headers["content-length"] !== undefined || req.headers["transfer-encoding"] !== undefined
-  );
-}
-
 function createRequestHeaders(headers: IncomingMessage["headers"]): Headers {
   const requestHeaders = new Headers();
 
@@ -429,23 +235,6 @@ function createRequestHeaders(headers: IncomingMessage["headers"]): Headers {
   return requestHeaders;
 }
 
-function isRequestBodyLimitError(
-  error: unknown,
-): error is PayloadTooLargeError | RequestBodyDrainTimeoutError {
-  return error instanceof PayloadTooLargeError || error instanceof RequestBodyDrainTimeoutError;
-}
-
-function enforceContentLengthLimit(req: IncomingMessage, maxBodySize: number): void {
-  const contentLength = parseContentLength(req.headers["content-length"]);
-  if (contentLength === undefined) {
-    return;
-  }
-
-  if (isBodySizeOverLimit(contentLength, maxBodySize)) {
-    throw new PayloadTooLargeError(contentLength, maxBodySize);
-  }
-}
-
 function writeDefaultErrorResponse(
   res: ServerResponse,
   error:
@@ -453,8 +242,8 @@ function writeDefaultErrorResponse(
     | typeof payloadTooLargeDefaultError
     | typeof internalServerErrorDefaultError,
   options: {
-    readonly method?: string;
-    readonly onFinished?: () => void;
+    readonly method?: string | undefined;
+    readonly onFinished?: (() => void) | undefined;
   } = {},
 ): void {
   if (!res.headersSent) {
@@ -481,177 +270,5 @@ function writeBadRequestResponse(
   writeDefaultErrorResponse(res, badRequestDefaultError, {
     method: req.method,
     onFinished: createRejectedRequestBodyCleanup(req, maxBodySize),
-  });
-}
-
-function createRejectedRequestBodyCleanup(
-  req: IncomingMessage,
-  maxBodySize: number,
-): (() => void) | undefined {
-  if (!hasReadableRequestBody(req)) {
-    return undefined;
-  }
-
-  return () => {
-    const contentLength = parseContentLength(req.headers["content-length"]);
-    if (contentLength !== undefined && isBodySizeOverLimit(contentLength, maxBodySize)) {
-      req.destroy();
-      return;
-    }
-
-    void drainRequest(req, maxBodySize, { destroyOnLimitExceeded: true });
-  };
-}
-
-async function drainRequest(
-  req: IncomingMessage,
-  maxBodySize: number,
-  options: DrainRequestOptions = {},
-): Promise<DrainRequestResult> {
-  if (req.readableEnded || req.destroyed) {
-    return { exceededLimit: false, timedOut: false, totalBytes: 0 };
-  }
-
-  return await new Promise<DrainRequestResult>((resolve) => {
-    const destroyOnLimitExceeded = options.destroyOnLimitExceeded ?? true;
-    const timeoutMs = options.timeoutMs ?? REQUEST_DRAIN_TIMEOUT_MS;
-    let drainedBytes = 0;
-    let isSettled = false;
-
-    const settle = (result: Omit<DrainRequestResult, "totalBytes">): void => {
-      if (isSettled) return;
-      isSettled = true;
-      cleanup();
-      resolve({ ...result, totalBytes: drainedBytes });
-    };
-
-    const stopReading = (result: Omit<DrainRequestResult, "totalBytes">): void => {
-      if (isSettled) return;
-      isSettled = true;
-      cleanup();
-      if (destroyOnLimitExceeded) {
-        req.destroy();
-      }
-      resolve({ ...result, totalBytes: drainedBytes });
-    };
-
-    const drainTimeout = setTimeout(() => {
-      stopReading({ exceededLimit: false, timedOut: true });
-    }, timeoutMs);
-    drainTimeout.unref();
-
-    const handleData = (chunk: Buffer | string): void => {
-      drainedBytes += typeof chunk === "string" ? Buffer.byteLength(chunk) : chunk.byteLength;
-
-      if (isBodySizeOverLimit(drainedBytes, maxBodySize)) {
-        stopReading({ exceededLimit: true, timedOut: false });
-      }
-    };
-
-    const handleEnd = (): void => {
-      settle({ exceededLimit: false, timedOut: false });
-    };
-
-    const handleClose = (): void => {
-      settle({ exceededLimit: false, timedOut: false });
-    };
-
-    const handleAborted = (): void => {
-      settle({ exceededLimit: false, timedOut: false });
-    };
-
-    const handleError = (): void => {
-      settle({ exceededLimit: false, timedOut: false });
-    };
-
-    const cleanup = (): void => {
-      clearTimeout(drainTimeout);
-      req.off("data", handleData);
-      req.off("end", handleEnd);
-      req.off("error", handleError);
-      req.off("aborted", handleAborted);
-      req.off("close", handleClose);
-    };
-
-    req.on("data", handleData);
-    req.on("end", handleEnd);
-    req.on("error", handleError);
-    req.on("aborted", handleAborted);
-    req.on("close", handleClose);
-    req.resume();
-  });
-}
-
-function collectBody(req: IncomingMessage, maxBodySize: number): Promise<ArrayBuffer> {
-  return new Promise<ArrayBuffer>((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    let totalBytes = 0;
-    let isSettled = false;
-
-    const cleanup = (): void => {
-      req.off("data", handleData);
-      req.off("end", handleEnd);
-      req.off("error", handleError);
-      req.off("aborted", handleAborted);
-      req.off("close", handleClose);
-    };
-
-    const rejectOnce = (error: unknown): void => {
-      if (isSettled) return;
-      isSettled = true;
-      cleanup();
-      reject(error);
-    };
-
-    const resolveOnce = (body: ArrayBuffer): void => {
-      if (isSettled) return;
-      isSettled = true;
-      cleanup();
-      resolve(body);
-    };
-
-    const handleData = (chunk: Buffer): void => {
-      if (isSettled) return;
-
-      totalBytes += chunk.byteLength;
-      if (isBodySizeOverLimit(totalBytes, maxBodySize)) {
-        req.pause();
-        cleanup();
-        req.resume();
-        rejectOnce(new PayloadTooLargeError(totalBytes, maxBodySize));
-        return;
-      }
-      chunks.push(chunk);
-    };
-
-    const handleEnd = (): void => {
-      const combined = Buffer.concat(chunks, totalBytes);
-      resolveOnce(
-        combined.buffer.slice(
-          combined.byteOffset,
-          combined.byteOffset + combined.byteLength,
-        ) as ArrayBuffer,
-      );
-    };
-
-    const handleError = (error: Error): void => {
-      rejectOnce(error);
-    };
-
-    const handleAborted = (): void => {
-      rejectOnce(new RequestBodyReadAbortedError(totalBytes, maxBodySize));
-    };
-
-    const handleClose = (): void => {
-      if (!req.readableEnded) {
-        rejectOnce(new RequestBodyClosedBeforeEndError(totalBytes, maxBodySize));
-      }
-    };
-
-    req.on("data", handleData);
-    req.on("end", handleEnd);
-    req.on("error", handleError);
-    req.on("aborted", handleAborted);
-    req.on("close", handleClose);
   });
 }

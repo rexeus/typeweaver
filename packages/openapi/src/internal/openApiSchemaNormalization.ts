@@ -34,7 +34,7 @@ export function normalizeOpenApiSchema(schema: JsonSchema): JsonSchema {
   const normalizedEntries = Object.entries(schema)
     .filter(([key]) => key !== "const")
     .map(([key, value]) => [key, normalizeSchemaKeyword(key, value)]);
-  const constValue = schema.const;
+  const constValue = schema["const"];
 
   if (hasConst && constValue !== undefined) {
     normalizedEntries.push(["enum", [constValue]]);
@@ -63,7 +63,7 @@ function normalizeSchemaKeyword(
   }
 
   if (SCHEMA_CHILD_ARRAY_KEYS.has(key) && Array.isArray(value)) {
-    return value.map(entry =>
+    return (value as readonly JsonSchemaValue[]).map(entry =>
       isJsonSchema(entry) ? normalizeOpenApiSchema(entry) : entry
     );
   }

@@ -9,10 +9,18 @@ import type {
   ZodStringFormat,
 } from "zod";
 
-/** Transport-safe HTTP response headers. */
-export type IHttpHeader = Record<string, string | string[]> | undefined;
+/**
+ * Transport-safe HTTP response headers.
+ *
+ * A header key may be present with an explicit `undefined` value at the
+ * boundary: schema-derived request and response contracts model optional
+ * headers that way under `exactOptionalPropertyTypes`.
+ */
+export type IHttpHeader =
+  | Record<string, string | string[] | undefined>
+  | undefined;
 
-export type RawHttpHeaderValue = string | readonly string[];
+export type RawHttpHeaderValue = string | readonly string[] | undefined;
 
 export type IRawHttpHeader =
   | Readonly<Record<string, RawHttpHeaderValue>>

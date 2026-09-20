@@ -13,7 +13,7 @@ import { ServerAccountHandlers } from "./handlers/ServerAccountHandlers.js";
 import { ServerAuthHandlers } from "./handlers/ServerAuthHandlers.js";
 import { ServerTodoHandlers } from "./handlers/ServerTodoHandlers.js";
 import type {
-  RequestHandler,
+  ErasedRequestHandler,
   TypeweaverRouterOptions,
 } from "../test-project/output/lib/server/index.js";
 
@@ -44,10 +44,7 @@ export type TestAppOptions = {
    */
   readonly validateRequests?: boolean;
 } & Omit<
-  TypeweaverRouterOptions<
-    Record<string, RequestHandler<any, any, any>>,
-    boolean
-  >,
+  TypeweaverRouterOptions<Record<string, ErasedRequestHandler>, boolean>,
   "requestHandlers" | "validateRequests"
 >;
 
@@ -61,24 +58,31 @@ export const DEFAULT_RUNTIME_TEST_APP_OPTIONS = {
 >;
 
 type SharedRouterOptions = Omit<
-  TypeweaverRouterOptions<
-    Record<string, RequestHandler<any, any, any>>,
-    boolean
-  >,
+  TypeweaverRouterOptions<Record<string, ErasedRequestHandler>, boolean>,
   "requestHandlers"
 >;
 
 function createSharedRouterOptions(
   options?: TestAppOptions
 ): SharedRouterOptions {
-  return {
+  const shared: SharedRouterOptions = {
     validateRequests: options?.validateRequests ?? true,
-    validateResponses: options?.validateResponses,
-    handleHttpResponseErrors: options?.handleHttpResponseErrors,
-    handleRequestValidationErrors: options?.handleRequestValidationErrors,
-    handleResponseValidationErrors: options?.handleResponseValidationErrors,
-    handleUnknownErrors: options?.handleUnknownErrors,
   };
+  const optionalEntries = [
+    ["validateResponses", options?.validateResponses],
+    ["handleHttpResponseErrors", options?.handleHttpResponseErrors],
+    ["handleRequestValidationErrors", options?.handleRequestValidationErrors],
+    ["handleResponseValidationErrors", options?.handleResponseValidationErrors],
+    ["handleUnknownErrors", options?.handleUnknownErrors],
+  ] as const;
+
+  for (const [key, value] of optionalEntries) {
+    if (value !== undefined) {
+      Object.assign(shared, { [key]: value });
+    }
+  }
+
+  return shared;
 }
 
 /**
@@ -92,7 +96,11 @@ function createSharedRouterOptions(
  * @returns A configured TypeweaverApp instance
  */
 export function createTestApp(options?: TestAppOptions): TypeweaverApp {
-  const app = new TypeweaverApp({ maxBodySize: options?.maxBodySize });
+  const app = new TypeweaverApp(
+    options?.maxBodySize === undefined
+      ? {}
+      : { maxBodySize: options.maxBodySize }
+  );
   const customResponse = options?.customResponses;
   const sharedRouterOptions = createSharedRouterOptions(options);
 

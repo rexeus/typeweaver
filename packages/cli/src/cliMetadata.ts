@@ -14,7 +14,7 @@ const readPackageString = (
   if (typeof source !== "object" || source === null) {
     throw new TypeError("CLI package manifest must contain an object.");
   }
-  const value = Reflect.get(source, key);
+  const value: unknown = Reflect.get(source, key);
   if (typeof value !== "string") {
     throw new TypeError(`CLI package manifest must declare '${key}'.`);
   }

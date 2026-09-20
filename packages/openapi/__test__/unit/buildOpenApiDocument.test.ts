@@ -171,8 +171,8 @@ describe("buildOpenApiDocument coercing request parameters", () => {
           operationId: "getMetric",
           part: "request.query",
           parameterName: "enabled",
-        }),
-      }),
+        }) as unknown,
+      }) as unknown,
       expect.objectContaining({
         origin: "schema-conversion",
         code: "unsupported-schema",
@@ -182,8 +182,8 @@ describe("buildOpenApiDocument coercing request parameters", () => {
           operationId: "getMetric",
           part: "request.query",
           parameterName: "capturedAt",
-        }),
-      }),
+        }) as unknown,
+      }) as unknown,
       expect.objectContaining({
         origin: "schema-conversion",
         code: "unsupported-schema",
@@ -193,8 +193,8 @@ describe("buildOpenApiDocument coercing request parameters", () => {
           operationId: "getMetric",
           part: "request.header",
           parameterName: "X-Enabled",
-        }),
-      }),
+        }) as unknown,
+      }) as unknown,
     ]);
   });
 });
@@ -344,7 +344,9 @@ describe("buildOpenApiDocument optional request bodies", () => {
 
     const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
-    expect(result.document.components?.schemas?.UploadJsonRequestBody).toEqual({
+    expect(
+      result.document.components?.schemas?.["UploadJsonRequestBody"]
+    ).toEqual({
       type: "string",
       enum: ["application/json"],
     });

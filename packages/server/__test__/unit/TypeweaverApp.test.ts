@@ -12,6 +12,7 @@ import {
 } from "@rexeus/typeweaver-core";
 import type {
   IHttpResponse,
+  IRawHttpRequest,
   IRequestValidator,
   IResponseValidator,
   ITypedHttpResponse,
@@ -159,7 +160,7 @@ class TestRouter extends TypeweaverRouter<TestHandlers, boolean> {
       requestValidator:
         options.validateRequests === false ? noopValidator : failingValidator,
       responseValidator: noopResponseValidator,
-      handler: async (req, ctx) =>
+      handler: async (req: IRawHttpRequest, ctx) =>
         this.requestHandlers.handleGetTodos(req, ctx),
     });
 
@@ -170,7 +171,7 @@ class TestRouter extends TypeweaverRouter<TestHandlers, boolean> {
       requestValidator:
         options.validateRequests === false ? noopValidator : failingValidator,
       responseValidator: noopResponseValidator,
-      handler: async (req, ctx) =>
+      handler: async (req: IRawHttpRequest, ctx) =>
         this.requestHandlers.handleCreateTodo(req, ctx),
     });
 
@@ -181,7 +182,8 @@ class TestRouter extends TypeweaverRouter<TestHandlers, boolean> {
       requestValidator:
         options.validateRequests === false ? noopValidator : failingValidator,
       responseValidator: noopResponseValidator,
-      handler: async (req, ctx) => this.requestHandlers.handleGetTodo(req, ctx),
+      handler: async (req: IRawHttpRequest, ctx) =>
+        this.requestHandlers.handleGetTodo(req, ctx),
     });
   }
 }
@@ -196,7 +198,7 @@ class ValidatingTestRouter extends TypeweaverRouter<TestHandlers, boolean> {
       path: "/todos",
       requestValidator: failingValidator,
       responseValidator: noopResponseValidator,
-      handler: async (req, ctx) =>
+      handler: async (req: IRawHttpRequest, ctx) =>
         this.requestHandlers.handleCreateTodo(req, ctx),
     });
   }
@@ -212,7 +214,7 @@ class BodyOnlyValidatingRouter extends TypeweaverRouter<TestHandlers> {
       path: "/todos",
       requestValidator: bodyOnlyFailingValidator,
       responseValidator: noopResponseValidator,
-      handler: async (req, ctx) =>
+      handler: async (req: IRawHttpRequest, ctx) =>
         this.requestHandlers.handleCreateTodo(req, ctx),
     });
   }
@@ -228,7 +230,7 @@ class ResponseValidatingRouter extends TypeweaverRouter<TestHandlers, boolean> {
       path: "/todos",
       requestValidator: noopValidator,
       responseValidator: invalidResponseValidator,
-      handler: async (req, ctx) =>
+      handler: async (req: IRawHttpRequest, ctx) =>
         this.requestHandlers.handleGetTodos(req, ctx),
     });
 
@@ -238,7 +240,7 @@ class ResponseValidatingRouter extends TypeweaverRouter<TestHandlers, boolean> {
       path: "/todos",
       requestValidator: noopValidator,
       responseValidator: invalidResponseValidator,
-      handler: async (req, ctx) =>
+      handler: async (req: IRawHttpRequest, ctx) =>
         this.requestHandlers.handleCreateTodo(req, ctx),
     });
   }
@@ -261,7 +263,7 @@ class CustomResponseValidatingRouter extends TypeweaverRouter<
       path: "/todos",
       requestValidator: noopValidator,
       responseValidator: options.responseValidator,
-      handler: async (req, ctx) =>
+      handler: async (req: IRawHttpRequest, ctx) =>
         this.requestHandlers.handleGetTodos(req, ctx),
     });
   }
@@ -282,7 +284,7 @@ class HeadAwareRouter extends TypeweaverRouter<HeadAwareHandlers> {
       path: "/todos",
       requestValidator: noopValidator,
       responseValidator: noopResponseValidator,
-      handler: async (req, ctx) =>
+      handler: async (req: IRawHttpRequest, ctx) =>
         this.requestHandlers.handleGetTodos(req, ctx),
     });
 
@@ -292,7 +294,7 @@ class HeadAwareRouter extends TypeweaverRouter<HeadAwareHandlers> {
       path: "/todos",
       requestValidator: noopValidator,
       responseValidator: noopResponseValidator,
-      handler: async (req, ctx) =>
+      handler: async (req: IRawHttpRequest, ctx) =>
         this.requestHandlers.handleHeadTodos(req, ctx),
     });
   }
@@ -312,7 +314,7 @@ class PostOnlyRouter extends TypeweaverRouter<PostOnlyHandlers, boolean> {
       path: "/todos",
       requestValidator: noopValidator,
       responseValidator: noopResponseValidator,
-      handler: async (req, ctx) =>
+      handler: async (req: IRawHttpRequest, ctx) =>
         this.requestHandlers.handleCreateTodo(req, ctx),
     });
   }
@@ -329,8 +331,8 @@ function defaultHandlers(overrides: Partial<TestHandlers> = {}): TestHandlers {
     }),
     handleCreateTodo: async req => {
       const title =
-        isUnknownRecord(req.body) && typeof req.body.title === "string"
-          ? req.body.title
+        isUnknownRecord(req.body) && typeof req.body["title"] === "string"
+          ? req.body["title"]
           : "Untitled";
       return {
         statusCode: 201,
@@ -340,7 +342,7 @@ function defaultHandlers(overrides: Partial<TestHandlers> = {}): TestHandlers {
     },
     handleGetTodo: async (req, _ctx) => ({
       statusCode: 200,
-      body: { id: req.param?.todoId ?? "unknown", title: "A Todo" },
+      body: { id: req.param?.["todoId"] ?? "unknown", title: "A Todo" },
     }),
     ...overrides,
   };
@@ -439,22 +441,42 @@ async function expectNoBody(res: Response): Promise<void> {
 
 function expectAllow(res: Response, methods: readonly string[]): void {
   const allow = res.headers.get("allow");
-  expect(allow).not.toBeNull();
+  if (allow === null) {
+    throw new TestAssertionError("expected an Allow response header");
+  }
   expect(
-    allow!
+    allow
       .split(",")
       .map(method => method.trim())
       .sort()
   ).toEqual([...methods].sort());
 }
 
-async function expectInternalError(res: Response): Promise<any> {
+async function expectInternalError(
+  res: Response
+): Promise<Record<string, unknown>> {
   return expectErrorResponse(
     res,
     internalServerErrorDefaultError.statusCode,
     internalServerErrorDefaultError.code
   );
 }
+
+type ValidationIssue = {
+  readonly message?: unknown;
+  readonly path?: readonly unknown[];
+};
+
+type ValidationIssues = {
+  readonly header?: readonly ValidationIssue[];
+  readonly body?: readonly ValidationIssue[];
+  readonly query?: readonly ValidationIssue[];
+  readonly param?: readonly ValidationIssue[];
+};
+
+const readValidationIssues = (
+  data: Record<string, unknown>
+): ValidationIssues => data["issues"] as ValidationIssues;
 
 async function withConsoleErrorSpy<T>(
   fn: (spy: ConsoleErrorSpy) => Promise<T> | T
@@ -501,7 +523,7 @@ describe("TypeweaverApp route matching", () => {
     const res = await app.fetch(post("/todos", { title: "New Todo" }));
 
     const data = await expectJson(res, 201);
-    expect(data.title).toBe("New Todo");
+    expect(data["title"]).toBe("New Todo");
   });
 
   test("should extract path parameters", async () => {
@@ -510,7 +532,7 @@ describe("TypeweaverApp route matching", () => {
     const res = await app.fetch(get("/todos/todo-42"));
 
     const data = await expectJson(res, 200);
-    expect(data.id).toBe("todo-42");
+    expect(data["id"]).toBe("todo-42");
   });
 
   test("should return 404 for unregistered paths", async () => {
@@ -523,7 +545,7 @@ describe("TypeweaverApp route matching", () => {
       notFoundDefaultError.statusCode,
       notFoundDefaultError.code
     );
-    expect(data.message).toBe(notFoundDefaultError.message);
+    expect(data["message"]).toBe(notFoundDefaultError["message"]);
   });
 
   test("returns 405 with allowed methods for an unsupported method on a registered path", async () => {
@@ -536,7 +558,7 @@ describe("TypeweaverApp route matching", () => {
       methodNotAllowedDefaultError.statusCode,
       methodNotAllowedDefaultError.code
     );
-    expect(data.message).toBe(methodNotAllowedDefaultError.message);
+    expect(data["message"]).toBe(methodNotAllowedDefaultError["message"]);
     expectAllow(res, ["GET", "HEAD", "POST"]);
   });
 
@@ -709,7 +731,7 @@ describe("Middleware", () => {
     const res = await app.fetch(get("/todos"));
 
     const data = await expectJson(res, 200);
-    expect(data.userId).toBe("user-99");
+    expect(data["userId"]).toBe("user-99");
   });
 });
 
@@ -828,7 +850,7 @@ describe("TypeweaverApp middleware state and fallback routes", () => {
     const res = await app.fetch(get("/nonexistent"));
 
     const data = await expectJson(res, 404);
-    expect(data.custom).toBe(true);
+    expect(data["custom"]).toBe(true);
   });
 });
 
@@ -856,13 +878,22 @@ describe("Router Prefix", () => {
     const res = await app.fetch(get("/api/todos/my-todo"));
 
     const data = await expectJson(res, 200);
-    expect(data.id).toBe("my-todo");
+    expect(data["id"]).toBe("my-todo");
   });
 
   test("should normalize trailing slashes on prefix", async () => {
-    const app = createAppMountedAt("/api/v1/");
+    const app = createAppMountedAt("/api/v1////");
 
     const res = await app.fetch(get("/api/v1/todos"));
+
+    expect(res.status).toBe(200);
+  });
+
+  test("preserves an untrusted prefix with a long slash sequence", async () => {
+    const adversarialPrefix = `${"/".repeat(40_000)}x`;
+    const app = createAppMountedAt(adversarialPrefix);
+
+    const res = await app.fetch(get(`${adversarialPrefix}/todos`));
 
     expect(res.status).toBe(200);
   });
@@ -915,7 +946,7 @@ describe("Multiple Routers", () => {
           path: "/users",
           requestValidator: noopValidator,
           responseValidator: noopResponseValidator,
-          handler: async (req, ctx) =>
+          handler: async (req: IRawHttpRequest, ctx) =>
             this.requestHandlers.handleGetUsers(req, ctx),
         });
       }
@@ -946,7 +977,7 @@ describe("Multiple Routers", () => {
 
     const usersRes = await app.fetch(get("/users"));
     const users = await expectJson(usersRes, 200);
-    expect(users[0].name).toBe("Alice");
+    expect(users[0]).toMatchObject({ name: "Alice" });
   });
 });
 
@@ -962,14 +993,15 @@ describe("Error Handling", () => {
       validationDefaultError.statusCode,
       validationDefaultError.code
     );
-    expect(data.issues).toBeDefined();
-    expect(data.issues.header[0]).toEqual({
+    const issues = readValidationIssues(data);
+    expect(data["issues"]).toBeDefined();
+    expect(issues.header?.[0]).toEqual({
       message: "bad header",
       path: [],
     });
-    expect(data.issues.header[0]).not.toHaveProperty("code");
-    expect(data.issues.body[0]).toEqual({ message: "bad body", path: [] });
-    expect(data.issues.body[0]).not.toHaveProperty("code");
+    expect(issues.header?.[0]).not.toHaveProperty("code");
+    expect(issues.body?.[0]).toEqual({ message: "bad body", path: [] });
+    expect(issues.body?.[0]).not.toHaveProperty("code");
     expect(onError).not.toHaveBeenCalled();
   });
 
@@ -987,31 +1019,32 @@ describe("Error Handling", () => {
       validationDefaultError.statusCode,
       validationDefaultError.code
     );
-    expect(data.issues.body).toHaveLength(1);
-    expect(data.issues.body[0]).toEqual({
+    const issues = readValidationIssues(data);
+    expect(issues.body).toHaveLength(1);
+    expect(issues.body?.[0]).toEqual({
       message: "Expected string",
       path: ["title"],
     });
-    expect(data.issues.body[0]).not.toHaveProperty("code");
-    expect(data.issues.body[0]).not.toHaveProperty("expected");
-    expect(data.issues.body[0]).not.toHaveProperty("input");
-    expect(data.issues.header).toBeUndefined();
-    expect(data.issues.query).toBeUndefined();
-    expect(data.issues.param).toBeUndefined();
+    expect(issues.body?.[0]).not.toHaveProperty("code");
+    expect(issues.body?.[0]).not.toHaveProperty("expected");
+    expect(issues.body?.[0]).not.toHaveProperty("input");
+    expect(issues.header).toBeUndefined();
+    expect(issues.query).toBeUndefined();
+    expect(issues.param).toBeUndefined();
   });
 
   test("should handle validation errors with custom handler", async () => {
     const app = createValidatingApp({
       handleRequestValidationErrors: async err => ({
         statusCode: 422,
-        body: { custom: true, message: err.message },
+        body: { custom: true, message: err["message"] },
       }),
     });
 
     const res = await app.fetch(post("/todos", {}));
 
     const data = await expectJson(res, 422);
-    expect(data.custom).toBe(true);
+    expect(data["custom"]).toBe(true);
   });
 });
 
@@ -1063,7 +1096,7 @@ describe("TypeweaverApp typed response error handling", () => {
     const res = await app.fetch(post("/todos", {}));
 
     const data = await expectJson(res, 409);
-    expect(data.wrapped).toBe(true);
+    expect(data["wrapped"]).toBe(true);
   });
 
   test("should handle unknown errors with default handler and call onError", async () => {
@@ -1117,7 +1150,7 @@ describe("TypeweaverApp unknown error handling", () => {
           statusCode: 500,
           body: {
             custom: true,
-            message: err instanceof Error ? err.message : "Unknown",
+            message: err instanceof Error ? err["message"] : "Unknown",
           },
         }),
       },
@@ -1131,8 +1164,8 @@ describe("TypeweaverApp unknown error handling", () => {
     const res = await app.fetch(get("/todos"));
 
     const data = await expectJson(res, 500);
-    expect(data.custom).toBe(true);
-    expect(data.message).toBe("Boom");
+    expect(data["custom"]).toBe(true);
+    expect(data["message"]).toBe("Boom");
   });
 
   test("reports unknown route errors once when a custom unknown error handler returns a response", async () => {
@@ -1146,7 +1179,7 @@ describe("TypeweaverApp unknown error handling", () => {
           statusCode: 500,
           body: {
             code: "CUSTOM_UNKNOWN",
-            message: error instanceof Error ? error.message : "Unknown",
+            message: error instanceof Error ? error["message"] : "Unknown",
           },
         }),
       },
@@ -1220,7 +1253,7 @@ describe("TypeweaverApp error-handler safety net", () => {
 
     await expectErrorResponse(res, 500, "INTERNAL_SERVER_ERROR");
     expect(onError).toHaveBeenCalledWith(
-      expect.objectContaining({ message: routeFailure.message })
+      expect.objectContaining({ message: routeFailure["message"] })
     );
   });
 
@@ -1404,7 +1437,7 @@ describe("TypeweaverApp malformed request errors", () => {
       badRequestDefaultError.statusCode,
       badRequestDefaultError.code
     );
-    expect(data.message).toBe(badRequestDefaultError.message);
+    expect(data["message"]).toBe(badRequestDefaultError["message"]);
   });
 
   test("should NOT call onError for handled BodyParseError", async () => {
@@ -1455,7 +1488,7 @@ describe("TypeweaverApp response serialization errors", () => {
     const circularBody: Record<string, unknown> = {
       secret: "circular serialization details",
     };
-    circularBody.self = circularBody;
+    circularBody["self"] = circularBody;
     const app = createApp(
       undefined,
       {
@@ -1478,7 +1511,7 @@ describe("TypeweaverApp response serialization errors", () => {
   test("reports onError when response serialization fails", async () => {
     const onError = vi.fn();
     const circularBody: Record<string, unknown> = {};
-    circularBody.self = circularBody;
+    circularBody["self"] = circularBody;
     const app = createApp(
       undefined,
       {
@@ -1594,7 +1627,7 @@ describe("Body Size Limit", () => {
       payloadTooLargeDefaultError.statusCode,
       payloadTooLargeDefaultError.code
     );
-    expect(data.message).toBe(payloadTooLargeDefaultError.message);
+    expect(data["message"]).toBe(payloadTooLargeDefaultError["message"]);
   });
 
   test("passes a body within the configured limit to the handler", async () => {
@@ -1606,7 +1639,7 @@ describe("Body Size Limit", () => {
     const res = await app.fetch(post("/todos", { title: "New Todo" }));
 
     const data = await expectJson(res, 201);
-    expect(data.title).toBe("New Todo");
+    expect(data["title"]).toBe("New Todo");
   });
 
   test("accepts a body exactly at the configured limit", async () => {
@@ -1624,7 +1657,7 @@ describe("Body Size Limit", () => {
     const res = await app.fetch(postRaw("/todos", "x".repeat(8), "text/plain"));
 
     const data = await expectJson(res, 201);
-    expect(data.size).toBe(8);
+    expect(data["size"]).toBe(8);
   });
 
   test("returns 413 when the body exceeds the 1 MB default limit", async () => {
@@ -1640,7 +1673,7 @@ describe("Body Size Limit", () => {
       payloadTooLargeDefaultError.statusCode,
       payloadTooLargeDefaultError.code
     );
-    expect(data.message).toBe(payloadTooLargeDefaultError.message);
+    expect(data["message"]).toBe(payloadTooLargeDefaultError["message"]);
   });
 
   test("accepts a body exactly at the 1 MB default limit", async () => {
@@ -1657,7 +1690,7 @@ describe("Body Size Limit", () => {
     );
 
     const data = await expectJson(res, 201);
-    expect(data.size).toBe(1_048_576);
+    expect(data["size"]).toBe(1_048_576);
   });
 
   test("should return 413 for oversized body without Content-Length header", async () => {
@@ -1679,7 +1712,7 @@ describe("Body Size Limit", () => {
       payloadTooLargeDefaultError.statusCode,
       payloadTooLargeDefaultError.code
     );
-    expect(data.message).toBe(payloadTooLargeDefaultError.message);
+    expect(data["message"]).toBe(payloadTooLargeDefaultError["message"]);
   });
 });
 
@@ -1697,7 +1730,7 @@ describe("Default error descriptors", () => {
       notFoundDefaultError.statusCode,
       notFoundDefaultError.code
     );
-    expect(notFoundData.message).toBe(notFoundDefaultError.message);
+    expect(notFoundData["message"]).toBe(notFoundDefaultError["message"]);
 
     const methodNotAllowedResponse = await app.fetch(del("/todos"));
     const methodNotAllowedData = await expectErrorResponse(
@@ -1705,8 +1738,8 @@ describe("Default error descriptors", () => {
       methodNotAllowedDefaultError.statusCode,
       methodNotAllowedDefaultError.code
     );
-    expect(methodNotAllowedData.message).toBe(
-      methodNotAllowedDefaultError.message
+    expect(methodNotAllowedData["message"]).toBe(
+      methodNotAllowedDefaultError["message"]
     );
 
     const internalServerErrorResponse = await app.fetch(get("/todos"));
@@ -1715,8 +1748,8 @@ describe("Default error descriptors", () => {
       internalServerErrorDefaultError.statusCode,
       internalServerErrorDefaultError.code
     );
-    expect(internalServerErrorData.message).toBe(
-      internalServerErrorDefaultError.message
+    expect(internalServerErrorData["message"]).toBe(
+      internalServerErrorDefaultError["message"]
     );
   });
 });
@@ -1866,7 +1899,7 @@ describe("TypeweaverApp invalid response handling", () => {
     const res = await app.fetch(get("/todos"));
 
     const data = await expectInternalError(res);
-    expect(data.message).toBe(internalServerErrorDefaultError.message);
+    expect(data["message"]).toBe(internalServerErrorDefaultError["message"]);
     expect(JSON.stringify(data)).not.toContain("response validation internals");
   });
 
@@ -2281,7 +2314,7 @@ describe("Concurrent Request Isolation", () => {
       requestHandlers: {
         ...defaultHandlers(),
         handleGetTodo: async (_req, ctx) => {
-          const id = _req.param?.todoId ?? "unknown";
+          const id = _req.param?.["todoId"] ?? "unknown";
           ctx.state.set("id", id);
           await allRequestsHaveSetState.wait();
           return {
@@ -2302,8 +2335,8 @@ describe("Concurrent Request Isolation", () => {
     );
 
     for (let i = 0; i < requestCount; i++) {
-      expect(results[i]!.id).toBe(`todo-${i}`);
-      expect(results[i]!.stateId).toBe(`todo-${i}`);
+      expect(results[i]?.id).toBe(`todo-${i}`);
+      expect(results[i]?.stateId).toBe(`todo-${i}`);
     }
   });
 });
@@ -2357,7 +2390,7 @@ describe("Route Metadata (operationId)", () => {
     const res = await app.fetch(get("/todos"));
 
     const data = await expectJson(res, 200);
-    expect(data.route).toEqual({
+    expect(data["route"]).toEqual({
       operationId: "listTodos",
       method: "GET",
       path: "/todos",
@@ -2375,7 +2408,7 @@ describe("Route Metadata (operationId)", () => {
     const res = await app.fetch(get("/todos/todo-42"));
 
     const data = await expectJson(res, 200);
-    expect(data.operationId).toBe("getTodo");
+    expect(data["operationId"]).toBe("getTodo");
   });
 
   test("should set ctx.route to undefined for 404 requests", async () => {
@@ -2434,6 +2467,6 @@ describe("Form URL-Encoded Edge Cases", () => {
 
     const res = await app.fetch(request);
     const data = await expectJson(res, 200);
-    expect(data.tags).toEqual(["a", "b", "c"]);
+    expect(data["tags"]).toEqual(["a", "b", "c"]);
   });
 });

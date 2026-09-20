@@ -4,12 +4,12 @@ import type {
 } from "@rexeus/typeweaver-core";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import { AccountHono, AuthHono, TodoHono } from "../index.js";
 import { HonoAdapter } from "../test-project/output/lib/hono/index.js";
 import { TestServerSetupError } from "./errors/TestServerSetupError.js";
 import { AccountHandlers } from "./handlers/AccountApiHandler.js";
 import { AuthHandlers } from "./handlers/AuthHandlers.js";
 import { TodoHandlers } from "./handlers/TodoHandlers.js";
+import { AccountHono, AuthHono, TodoHono } from "./honoRouters.js";
 import type { ServerType } from "@hono/node-server";
 import type { AddressInfo } from "node:net";
 
