@@ -285,8 +285,7 @@ const cliOutputFormatter: CliOutput.Formatter = {
 // `effect/unstable/cli` reads process streams through the `Stdio` service and
 // parses argv through `Command.runWith`; these Node layers close the CLI
 // `Environment` requirement alongside the service runtime's FileSystem. The
-// spawner layer needs FileSystem and Path, so the base layers are provided
-// into it instead of staying as open inputs.
+// spawner layer reuses that FileSystem and receives its Path internally.
 const cliEnvironment = Layer.mergeAll(
   nodePlatformLayer,
   CliOutput.layer(cliOutputFormatter)
@@ -317,7 +316,7 @@ const program = (
         Effect.provideService(References.MinimumLogLevel, "None")
       )
     : programWithErrorBoundary
-).pipe(Effect.provide(Layer.merge(runtimeLayer, cliEnvironment)));
+).pipe(Effect.provide(Layer.provideMerge(cliEnvironment, runtimeLayer)));
 
 runNodeMain(program, {
   disableErrorReporting: true,
