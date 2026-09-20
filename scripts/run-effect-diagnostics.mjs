@@ -1,3 +1,4 @@
+import path from "node:path";
 import process from "node:process";
 import {
   collectEffectDiagnostics,
@@ -9,7 +10,7 @@ import {
 const results = collectEffectDiagnostics();
 const diagnostics = effectDiagnostics(results);
 for (const result of results) {
-  const relativeProject = result.project.replace(`${workspaceRoot}/`, "");
+  const relativeProject = path.relative(workspaceRoot, result.project);
   process.stdout.write(
     `Effect tsgo diagnostics: ${relativeProject} (${result.output.summary.filesChecked} files)\n`
   );
