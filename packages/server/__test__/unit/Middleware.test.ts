@@ -257,6 +257,28 @@ describe("middleware pipeline state composition", () => {
 });
 
 describe("middleware pipeline failures", () => {
+  test("fails closed when the middleware array contains an empty slot", async () => {
+    const ctx = createServerContext();
+    const middlewares = Array<Middleware>(2);
+    let laterMiddlewareCalled = false;
+    let handlerCalled = false;
+    middlewares[1] = async (_ctx, next) => {
+      laterMiddlewareCalled = true;
+      return next();
+    };
+
+    await expect(
+      executeMiddlewarePipeline(middlewares, ctx, async () => {
+        handlerCalled = true;
+        return okResponse();
+      })
+    ).rejects.toThrow(
+      "Middleware pipeline invariant violated: missing middleware at index 0."
+    );
+    expect(laterMiddlewareCalled).toBe(false);
+    expect(handlerCalled).toBe(false);
+  });
+
   test("propagates errors thrown by middleware", async () => {
     const ctx = createServerContext();
 

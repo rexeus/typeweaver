@@ -51,7 +51,9 @@ export async function executeMiddlewarePipeline(
       const currentIndex = index++;
       const middleware = middlewares[currentIndex];
       if (middleware === undefined) {
-        return finalHandler();
+        throw new Error(
+          `Middleware pipeline invariant violated: missing middleware at index ${currentIndex}.`,
+        );
       }
       let called = false;
 
