@@ -65,7 +65,7 @@
     "effect": "^3.22.0",
     "get-port": "^7.2.0",
     "test-utils": "file:../test-utils",
-    "tsx": "^4.23.1"
+    "tsx": "^4.23.13"
   },
   "dependencies": {
     "polycase": "^1.1.0"
