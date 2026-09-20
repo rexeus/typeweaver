@@ -2,6 +2,7 @@ import { Effect, Layer } from "effect";
 import { PluginModuleNotFoundError } from "../../src/services/errors/PluginModuleNotFoundError.js";
 import { isPluginConfigError } from "../../src/services/isPluginConfigError.js";
 import { PluginModuleLoader } from "../../src/services/PluginModuleLoader.js";
+import type { PluginModuleLoaderShape } from "../../src/services/PluginModuleLoader.js";
 
 const MODULE_IMPORT_FAILURE_FIXTURE: unique symbol = Symbol(
   "ModuleImportFailureFixture"
@@ -46,7 +47,7 @@ const isFailedImportFixture = (
 export const inMemoryPluginModuleLoader = (
   modules: ReadonlyMap<string, ModuleFixture>
 ): Layer.Layer<PluginModuleLoader> => {
-  const service = PluginModuleLoader.make({
+  const service: PluginModuleLoaderShape = {
     load: (specifier: string) => {
       const moduleRecord = modules.get(specifier);
       if (moduleRecord === undefined) {
@@ -72,7 +73,7 @@ export const inMemoryPluginModuleLoader = (
       }
       return Effect.succeed(moduleRecord);
     },
-  });
+  };
 
   return Layer.succeed(PluginModuleLoader, service);
 };

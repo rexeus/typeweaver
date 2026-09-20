@@ -6,6 +6,9 @@ import { effectRuntime } from "../src/effectRuntime.js";
 import { Generator } from "../src/services/Generator.js";
 import { withCapturedLogs } from "./helpers/index.js";
 
+const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
+
 const tempDirs: string[] = [];
 
 const createTempWorkspace = (label: string): string => {
@@ -203,7 +206,7 @@ const writeInterruptibleGeneratePlugin = (
       "    Effect.sync(() => {",
       '      fs.appendFileSync(eventsFile, "generate:omega-interrupt\\n");',
       "      process.emit(enteredEvent);",
-      "    }).pipe(Effect.zipRight(Effect.never)),",
+      "    }).pipe(Effect.andThen(Effect.never)),",
       '  finalize: _ctx => record("finalize"),',
       "};",
       "",
@@ -238,7 +241,7 @@ const writeDefectingFinalizePlugin = (workspace: string): string => {
       '  initialize: _ctx => record("initialize"),',
       "  finalize: _ctx =>",
       '    record("finalize").pipe(',
-      '      Effect.zipRight(Effect.die(new Error("intentional finalize defect")))',
+      '      Effect.andThen(Effect.die(new Error("intentional finalize defect")))',
       "    ),",
       "};",
       "",
@@ -484,7 +487,7 @@ describe("Generator plugin lifecycle recovery", () => {
 
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) {
-      const failure = Cause.failureOption(exit.cause);
+      const failure = Cause.findErrorOption(exit.cause);
       expect(failure._tag).toBe("Some");
     }
 
@@ -499,7 +502,6 @@ describe("Generator plugin lifecycle recovery", () => {
     expect(initIdx).toBeLessThan(genIdx);
     expect(genIdx).toBeLessThan(finIdx);
   });
-
   test("runs finalize for already-initialized plugins when a later plugin's initialize fails", async () => {
     const workspace = createTempWorkspace("init-failure");
     writeTinySpec(workspace);
@@ -522,7 +524,7 @@ describe("Generator plugin lifecycle recovery", () => {
 
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) {
-      const failure = Cause.failureOption(exit.cause);
+      const failure = Cause.findErrorOption(exit.cause);
       expect(failure._tag).toBe("Some");
       if (failure._tag === "Some") {
         expect(failure.value).toMatchObject({
@@ -586,7 +588,7 @@ describe("Generator plugin lifecycle failure reporting", () => {
     expect(Exit.isFailure(innerExit)).toBe(true);
     if (!Exit.isFailure(innerExit)) return;
 
-    const failure = Cause.failureOption(innerExit.cause);
+    const failure = Cause.findErrorOption(innerExit.cause);
     expect(failure._tag).toBe("Some");
     if (failure._tag !== "Some") return;
     const error = failure.value as {
@@ -607,7 +609,7 @@ describe("Generator plugin lifecycle failure reporting", () => {
 
     const finalizeWarn = logs.find(
       log =>
-        log.level === "WARN" &&
+        log.level === "Warn" &&
         log.message.includes("betaFinalize") &&
         log.message.includes("failed during finalize")
     );
@@ -638,13 +640,12 @@ describe("Generator plugin lifecycle finalization", () => {
 
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) {
-      expect(Cause.defects(exit.cause)).toHaveLength(1);
+      expect(causeDefects(exit.cause)).toHaveLength(1);
     }
     expect(
       readEvents(workspace).filter(event => event.startsWith("finalize:"))
     ).toEqual(["finalize:omega-defect", "finalize:beta", "finalize:alpha"]);
   });
-
   test("finalizes every initialized plugin in reverse dependency order after interruption", async () => {
     const workspace = createTempWorkspace("finalize-on-interrupt");
     writeTinySpec(workspace);
@@ -672,17 +673,17 @@ describe("Generator plugin lifecycle finalization", () => {
       })
     );
     await enteredGenerate;
-    const interrupted = await Effect.runPromise(Fiber.interrupt(fiber));
+    await Effect.runPromise(Fiber.interrupt(fiber));
+    const interrupted = await Effect.runPromise(Fiber.await(fiber));
 
     expect(Exit.isFailure(interrupted)).toBe(true);
     if (Exit.isFailure(interrupted)) {
-      expect(Cause.isInterruptedOnly(interrupted.cause)).toBe(true);
+      expect(Cause.hasInterruptsOnly(interrupted.cause)).toBe(true);
     }
     expect(
       readEvents(workspace).filter(event => event.startsWith("finalize:"))
     ).toEqual(["finalize:omega-interrupt", "finalize:beta", "finalize:alpha"]);
   });
-
   test("attempts every finalizer before surfacing a finalizer defect", async () => {
     const workspace = createTempWorkspace("finalizer-defect");
     writeTinySpec(workspace);
@@ -705,7 +706,7 @@ describe("Generator plugin lifecycle finalization", () => {
 
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) {
-      expect(Cause.defects(exit.cause)).toHaveLength(1);
+      expect(causeDefects(exit.cause)).toHaveLength(1);
     }
     expect(
       readEvents(workspace).filter(event => event.startsWith("finalize:"))

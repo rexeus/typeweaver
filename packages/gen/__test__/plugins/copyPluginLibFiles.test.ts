@@ -91,7 +91,7 @@ describe("definePluginWithLibCopy path-safety guard", () => {
     // The outer Effect.try wraps the throw as PluginExecutionError; the
     // tagged-error class carries the originating cause so operators see the
     // path-safety reason rather than a bare PluginExecutionError.
-    const failure = Cause.failureOption(exit.cause);
+    const failure = Cause.findErrorOption(exit.cause);
     expect(Option.isSome(failure)).toBe(true);
     if (!Option.isSome(failure)) return;
     const pluginError = failure.value;

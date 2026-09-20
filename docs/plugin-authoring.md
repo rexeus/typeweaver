@@ -5,12 +5,15 @@ background, see [ADR 0003: Effect-native plugin API](./adr/0003-effect-native-pl
 [ADR 0004: FileSystem service adoption](./adr/0004-filesystem-service-adoption.md), and
 [ADR 0007: Generator per-call isolation](./adr/0007-generator-per-call-isolation.md).
 
-Plugin authoring is Effect 3-only. The V2 lifecycle ABI returns Effect 3 values, so a plugin cannot
-run inside an Effect 4 application's runtime, and the binary CLI's process isolation does not change
-that. An Effect 4 workspace should use the CLI's built-in plain projections instead of a custom
-plugin. The only tested Effect 4 version is `4.0.0-rc.115`, and even then compatibility is
-conditional on Effect-neutral config and spec modules; every other Effect 4 version is UNVERIFIED.
-See [ADR 0010: Effect 4 workspace compatibility](./adr/0010-effect-4-workspace-compatibility.md).
+Plugin authoring requires the exact native Effect peer `4.0.0-rc.116`. The V2 lifecycle ABI returns
+native RC.116 values, so the plugin and generator must resolve one Effect identity. Core authoring
+and generated plain outputs remain Effect-optional; generator packages such as Hono, command, and
+OpenAPI are Effect-native even when the artifacts they emit do not import Effect. See
+[ADR 0008: native Effect baseline](./adr/0008-effect-4-baseline.md).
+
+Native plugin code uses `Context.Service` and explicit `Layer` provisioning, `Result` rather than
+`Either`, and the RC.116 `Cause` and Schema APIs. Confirm signatures against the pinned source and
+run `pnpm verify:effect-reference` plus `pnpm effect:diagnostics` before publishing a plugin.
 
 If you are migrating a V1 plugin (built against `extends BasePlugin`), see the breaking-change
 section in [`MIGRATION.md`](../MIGRATION.md).
@@ -33,8 +36,7 @@ pnpm check
 The target must be a new directory and the name must use lowercase kebab-case. The generated
 `pnpm check` command typechecks the public API contract, runs in-memory lifecycle tests, builds the
 package, and invokes the built plugin through TypeWeaver against an included integration spec. Its
-README documents validation diagnostics, the lifecycle, and the Effect 3.22.0 development baseline
-with peer range `>=3.22.0 <4`.
+README documents validation diagnostics, the lifecycle, and the exact Effect 4.0.0-rc.116 peer.
 
 A minimal plugin is a record returned by `definePlugin(...)`:
 
@@ -347,9 +349,9 @@ way — the context also exposes Effect-returning counterparts of the I/O helper
 
 These provide the **same guarantees** as the sync helpers — path-traversal guard, atomic temp-file +
 rename replace, file-mode preservation, tracker registration, queued `Generated:` log line — but the
-I/O routes through `@effect/platform`'s `FileSystem` service. The service is captured when the
-context is built, so your lifecycle stages keep `R = never`. Map the typed failures into
-`PluginExecutionError` before returning:
+I/O routes through Effect 4's `FileSystem` service. The service is captured when the context is
+built, so your lifecycle stages keep `R = never`. Map the typed failures into `PluginExecutionError`
+before returning:
 
 ```ts
 export const myPlugin = definePlugin({
@@ -393,8 +395,12 @@ pool, cache, or watcher:
 import { Context, Effect, Layer } from "effect";
 import { defineScopedPlugin } from "@rexeus/typeweaver-gen";
 
-type Session = { readonly write: (value: string) => Effect.Effect<void> };
-const Session = Context.GenericTag<Session>("my-plugin/Session");
+class Session extends Context.Service<
+  Session,
+  {
+    readonly write: (value: string) => Effect.Effect<void>;
+  }
+>()("my-plugin/Session") {}
 const sessionLayer: Layer.Layer<Session> = Layer.succeed(Session, {
   write: value => Effect.logInfo(value),
 });
@@ -406,7 +412,7 @@ export const sessionPlugin = defineScopedPlugin({
     Effect.flatMap(Session, session =>
       session
         .write("generating")
-        .pipe(Effect.zipRight(context.writeFileEffect("session.txt", "ready\n")))
+        .pipe(Effect.andThen(context.writeFileEffect("session.txt", "ready\n")))
     ),
 });
 ```
@@ -445,14 +451,13 @@ plugins:
   "types": "dist/index.d.ts",
   "peerDependencies": {
     "@rexeus/typeweaver-gen": "^0.13.0",
-    "effect": ">=3.22.0 <4"
+    "effect": "4.0.0-rc.116"
   }
 }
 ```
 
-TypeWeaver develops and tests against Effect 3.22.0. The peer range accepts later compatible Effect
-3 releases without admitting Effect 4. Its 3.22 lower bound is required by the current `@effect/*`
-package family and keeps the plugin and generator on one Effect identity.
+TypeWeaver develops and tests against the exact Effect 4.0.0-rc.116 pin. The exact peer prevents
+incompatible runtime identities; use the source commit and diagnostics gate documented in ADR 0008.
 
 Export your plugin in one of these forms:
 
@@ -504,8 +509,8 @@ typechecks a scoped plugin, a test Layer, and the public lifecycle harness toget
   V1 looked like
 - [ADR 0004: FileSystem service adoption](./adr/0004-filesystem-service-adoption.md) — why
   `context.writeFile` is sync
-- [ADR 0005: Effect.Service patterns](./adr/0005-effect-service-patterns.md) — choosing `succeed:`
-  or `effect:` for application services
+- [ADR 0005: Effect 4 service compatibility](./adr/0005-effect-service-patterns.md) — explicit
+  `Context.Service` constructors and layers or `effect:` for application services
 - [ADR 0007: Generator per-call isolation](./adr/0007-generator-per-call-isolation.md) — why
   concurrent generation works
 - `packages/gen/src/plugins/Plugin.ts` — the `Plugin` type

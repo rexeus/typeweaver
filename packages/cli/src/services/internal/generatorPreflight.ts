@@ -123,8 +123,8 @@ export const withGenerationLock = <A, E, R>(
         plan.cwd,
         plan.params.config?.clean !== false ? plan.inputFile : undefined
       ).pipe(
-        Effect.zipRight(prepareLockedOutput(lockedPlan)),
-        Effect.zipRight(workflow(lockedPlan))
+        Effect.andThen(prepareLockedOutput(lockedPlan)),
+        Effect.andThen(workflow(lockedPlan))
       );
     },
     outputLock =>

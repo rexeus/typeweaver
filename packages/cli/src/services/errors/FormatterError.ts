@@ -1,5 +1,5 @@
 import { Data } from "effect";
-import type { PlatformError } from "@effect/platform/Error";
+import type { PlatformError } from "effect/PlatformError";
 
 const formatCause = (cause: unknown): string =>
   cause instanceof Error ? cause.message : String(cause);

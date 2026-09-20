@@ -8,12 +8,12 @@ import type {
   EffectAccountErrorMappers,
 } from "test-utils/src/test-project/output/account/EffectAccountApiHandler.js";
 
-class AccountStore extends Context.Tag("TypeWeaverContract/AccountStore")<
+class AccountStore extends Context.Service<
   AccountStore,
   {
     readonly available: boolean;
   }
->() {}
+>()("TypeWeaverContract/AccountStore") {}
 
 class AccountFailure extends Data.TaggedError("AccountFailure")<{
   readonly reason: string;

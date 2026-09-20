@@ -87,13 +87,14 @@ projections with their own peer dependencies.
 
 ## Effect is optional
 
-Effect 3 improves TypeWeaver's internal orchestration and the plugin lifecycle through typed errors,
-resource safety, and composable services. Plugin authors who use `@rexeus/typeweaver-gen`
-participate in that lifecycle.
+Effect 4.0.0-rc.116 improves TypeWeaver's internal orchestration and the plugin lifecycle through
+typed errors, resource safety, and composable services. Plugin authors who use
+`@rexeus/typeweaver-gen` participate in that lifecycle and must use the exact peer pin.
 
 Effect is not required to author a core contract, use a generated client, or implement a generated
 Hono or Fetch-native handler. Effect-oriented handler APIs are additive developer surfaces, not a
-replacement for the plain promise-based path.
+replacement for the plain promise-based path. The CLI programmatic API, generator lifecycle,
+first-party plugins, and adapter require `effect@4.0.0-rc.116`.
 
 ## Measurable success signals
 

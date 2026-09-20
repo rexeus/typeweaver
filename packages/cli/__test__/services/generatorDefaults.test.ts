@@ -1,7 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { FileSystem } from "@effect/platform";
-import { Effect } from "effect";
+import { Effect, FileSystem } from "effect";
 import { makeInMemoryFileSystem } from "test-utils/src/effect/index.js";
 import { describe, expect, test } from "vitest";
 import { resolveTemplateDir } from "../../src/services/generatorDefaults.js";
@@ -46,7 +45,6 @@ describe("resolveTemplateDir", () => {
 
     expect(result).toBe(targetCandidate);
   });
-
   test("returns the bundled templates candidate when only its Index.ejs exists", async () => {
     const { layer } = makeInMemoryFileSystem();
     const targetCandidate = TEMPLATE_DIR_CANDIDATES[0];
@@ -65,7 +63,6 @@ describe("resolveTemplateDir", () => {
 
     expect(result).toBe(targetCandidate);
   });
-
   test("falls back to the first candidate when no Index.ejs is present", async () => {
     const { layer } = makeInMemoryFileSystem();
 

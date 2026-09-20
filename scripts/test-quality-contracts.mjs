@@ -34,6 +34,82 @@ const createPackageBuildConfigTestPath = path.join(
   "createPackageBuildConfig.test.ts"
 );
 
+/** @param {{ version: number, total: number, exceptions: { rules: Record<string, number> }[] }} allowlist */
+const assertEffectAllowlistTotal = allowlist => {
+  assert.equal(allowlist.version, 2);
+  assert.equal(
+    allowlist.total,
+    allowlist.exceptions.reduce(
+      (total, entry) =>
+        total +
+        Object.values(entry.rules).reduce((sum, count) => sum + count, 0),
+      0
+    )
+  );
+};
+
+/**
+ * @returns {void}
+ */
+const assertEffectDiagnosticsContract = () => {
+  const rootPackage = JSON.parse(
+    readFileSync(path.join(workspaceRoot, "package.json"), "utf8")
+  );
+  const baseline = JSON.parse(
+    readFileSync(
+      path.join(workspaceRoot, "config/effect-baseline.json"),
+      "utf8"
+    )
+  );
+  const allowlist = JSON.parse(
+    readFileSync(
+      path.join(workspaceRoot, "config/effect-diagnostics-allowlist.json"),
+      "utf8"
+    )
+  );
+  const diagnosticsScript = readFileSync(
+    path.join(scriptsRoot, "run-effect-diagnostics.mjs"),
+    "utf8"
+  );
+  const diagnosticsLibrary = readFileSync(
+    path.join(scriptsRoot, "lib/effect-diagnostics.mjs"),
+    "utf8"
+  );
+  const diagnosticsProjectsLibrary = readFileSync(
+    path.join(scriptsRoot, "lib/effect-diagnostics-projects.mjs"),
+    "utf8"
+  );
+  const diagnosticsSources = `${diagnosticsLibrary}${diagnosticsProjectsLibrary}`;
+  const oxlintConfig = readFileSync(
+    path.join(workspaceRoot, ".oxlintrc.json"),
+    "utf8"
+  );
+  const architectureScript = readFileSync(
+    path.join(scriptsRoot, "verify-architecture-contracts.mjs"),
+    "utf8"
+  );
+  assert.equal(
+    rootPackage.devDependencies?.["@effect/tsgo"],
+    baseline.tsgoVersion
+  );
+  assert.match(diagnosticsScript, /Effect tsgo/gu);
+  assert.match(diagnosticsSources, /recommended\.json/gu);
+  assert.match(diagnosticsSources, /--strict/gu);
+  assert.match(diagnosticsSources, /shell: false/gu);
+  assert.match(diagnosticsSources, /JSON\.stringify/gu);
+  assert.match(diagnosticsSources, /discoverEffectProjects/gu);
+  assert.match(diagnosticsSources, /assertEffectProjectScope/gu);
+  assert.match(diagnosticsSources, /assertEffectDirectiveAllowlist/gu);
+  assert.match(diagnosticsSources, /isExcludedEffectPath/gu);
+  assertEffectAllowlistTotal(allowlist);
+  assert.doesNotMatch(oxlintConfig, /effecttsgo|tsgolint.*preset/giu);
+  assert.doesNotMatch(
+    `${JSON.stringify(rootPackage)}${diagnosticsScript}${diagnosticsSources}`,
+    new RegExp(`@effect/${"language"}-${"service"}`, "u")
+  );
+  assert.match(architectureScript, /effect:diagnostics/gu);
+};
+
 /**
  * @param {readonly string[]} args
  * @returns {import("node:child_process").SpawnSyncReturns<string>}
@@ -147,6 +223,7 @@ const assertToolingTestContract = () => {
   }
 };
 
+assertEffectDiagnosticsContract();
 assertScriptsTypecheckContract();
 assertToolingTestContract();
 

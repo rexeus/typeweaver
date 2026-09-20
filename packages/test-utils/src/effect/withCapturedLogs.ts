@@ -18,11 +18,10 @@ const renderMessage = (message: unknown): string => {
  * Runs an Effect with a captured logger and returns the result alongside
  * the array of log lines emitted during execution.
  *
- * `Logger.replace` overrides the default logger for the scope of the
- * provided effect — production loggers (e.g. `CliLoggerLayer`) are
- * bypassed. Tests assert against the returned array instead of spying on
- * `console.*`, which keeps the assertion at Effect's logging surface and
- * sheds the global-mock boilerplate.
+ * The scoped logger set contains only the capturing logger, so production
+ * loggers (e.g. `CliLoggerLayer`) are bypassed. Tests assert against the
+ * returned array instead of spying on `console.*`, which keeps the assertion
+ * at Effect's logging surface and avoids global mocks.
  *
  *   const { result, logs } = await Effect.runPromise(
  *     withCapturedLogs(myProgram)
@@ -44,14 +43,14 @@ export const withCapturedLogs = <A, E, R>(
     const capturingLogger = Logger.make<unknown, void>(
       ({ message, logLevel }) => {
         logs.push({
-          level: logLevel.label,
+          level: logLevel,
           message: renderMessage(message),
         });
       }
     );
 
     const result = yield* effect.pipe(
-      Effect.provide(Logger.replace(Logger.defaultLogger, capturingLogger))
+      Effect.provide(Logger.layer([capturingLogger]))
     );
 
     return { result, logs };

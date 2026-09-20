@@ -4,8 +4,7 @@ import {
   matchesCoordinationArtifactMarker,
   TYPEWEAVER_COORDINATION_MARKER_FILE,
 } from "@rexeus/typeweaver-gen";
-import { FileSystem } from "@effect/platform";
-import { Cause, Data, Effect, Either, Layer } from "effect";
+import { Context, Data, Effect, FileSystem, Layer, Result } from "effect";
 import {
   FormatterExecutionError,
   FormatterFileSystemError,
@@ -16,7 +15,7 @@ import type {
   FormatterError,
   FormatterFileSystemOperation,
 } from "./errors/FormatterError.js";
-import type { PlatformError } from "@effect/platform/Error";
+import type { PlatformError } from "effect/PlatformError";
 
 type FormatFn = (filename: string, source: string) => Promise<unknown>;
 
@@ -60,27 +59,27 @@ const loadFormatter = (
           moduleName: "oxfmt",
           cause,
         }),
-    }).pipe(Effect.either);
+    }).pipe(Effect.result);
 
-    if (Either.isLeft(loaded)) {
-      if (isMissingOptionalFormatter(loaded.left.cause)) {
+    if (Result.isFailure(loaded)) {
+      if (isMissingOptionalFormatter(loaded.failure.cause)) {
         yield* Effect.logWarning(
           "oxfmt not installed - skipping formatting. Install with: npm install -D oxfmt"
         );
         return undefined;
       }
 
-      return yield* loaded.left;
+      return yield* loaded.failure;
     }
 
-    if (typeof loaded.right !== "object" || loaded.right === null) {
+    if (typeof loaded.success !== "object" || loaded.success === null) {
       return yield* new FormatterLoadError({
         moduleName: "oxfmt",
         cause: new TypeError("Module did not export an object"),
       });
     }
 
-    const format: unknown = Reflect.get(loaded.right, "format");
+    const format: unknown = Reflect.get(loaded.success, "format");
     if (!isFormatFn(format)) {
       return yield* new FormatterLoadError({
         moduleName: "oxfmt",
@@ -120,19 +119,19 @@ const hasCoordinationArtifactMarker = (
       .realPath(markerPath)
       .pipe(
         Effect.mapError(mapFileSystemError("realPath", markerPath)),
-        Effect.either
+        Effect.result
       );
-    if (Either.isLeft(markerRealPath)) {
+    if (Result.isFailure(markerRealPath)) {
       if (
-        markerRealPath.left.cause._tag === "SystemError" &&
-        markerRealPath.left.cause.reason === "NotFound"
+        markerRealPath.failure.cause._tag === "PlatformError" &&
+        markerRealPath.failure.cause.reason._tag === "NotFound"
       ) {
         return false;
       }
-      return yield* markerRealPath.left;
+      return yield* markerRealPath.failure;
     }
     if (
-      markerRealPath.right !==
+      markerRealPath.success !==
       path.join(canonicalDirectoryPath, TYPEWEAVER_COORDINATION_MARKER_FILE)
     ) {
       return false;
@@ -261,7 +260,7 @@ const formatOutputDir = (
     yield* formatDirectory(fileSystem, targetDir, canonicalTargetDir, format);
   });
 
-type FormatterShape = {
+export type FormatterShape = {
   readonly format: (
     outputDir: string,
     startDir?: string
@@ -275,24 +274,24 @@ class FormatterOperationFailure extends Data.TaggedError(
 }> {}
 
 const restoreFormatterError = (error: FormatterError): FormatterError => {
-  const original = Cause.originalError(error);
+  const original = error;
 
   switch (original._tag) {
     case "FormatterExecutionError":
       return new FormatterExecutionError({
         filePath: original.filePath,
-        cause: Cause.originalError(original.cause),
+        cause: original.cause,
       });
     case "FormatterFileSystemError":
       return new FormatterFileSystemError({
         operation: original.operation,
         path: original.path,
-        cause: Cause.originalError(original.cause),
+        cause: original.cause,
       });
     case "FormatterLoadError":
       return new FormatterLoadError({
         moduleName: original.moduleName,
-        cause: Cause.originalError(original.cause),
+        cause: original.cause,
       });
   }
 };
@@ -301,19 +300,18 @@ const makeFormatter = (
   fileSystem: FileSystem.FileSystem,
   loadModule: FormatterModuleLoader
 ): FormatterShape => {
-  const formatOperation = Effect.fn("typeweaver.Formatter.format", {
-    captureStackTrace: false,
-  })((outputDir: string, startDir?: string) =>
-    formatOutputDir(fileSystem, loadModule, outputDir, startDir).pipe(
-      Effect.mapError(error => new FormatterOperationFailure({ error }))
-    )
+  const formatOperation = Effect.fn("typeweaver.Formatter.format")(
+    (outputDir: string, startDir?: string) =>
+      formatOutputDir(fileSystem, loadModule, outputDir, startDir).pipe(
+        Effect.mapError(error => new FormatterOperationFailure({ error }))
+      )
   );
 
   return {
     format: (outputDir, startDir) =>
       formatOperation(outputDir, startDir).pipe(
         Effect.catchTag("FormatterOperationFailure", failure => {
-          const originalFailure = Cause.originalError(failure);
+          const originalFailure = failure;
           return Effect.fail(restoreFormatterError(originalFailure.error));
         })
       ),
@@ -330,16 +328,25 @@ const makeFormatter = (
  * Package-load failures, formatter rejections, and filesystem failures remain
  * in the typed `FormatterError` channel.
  */
-export class Formatter extends Effect.Service<Formatter>()(
-  "typeweaver/Formatter",
-  {
-    effect: Effect.gen(function* () {
-      const fileSystem = yield* FileSystem.FileSystem;
-      return makeFormatter(fileSystem, loadOxfmtModule);
-    }),
-    accessors: true,
-  }
-) {}
+export class Formatter extends Context.Service<Formatter, FormatterShape>()(
+  "typeweaver/Formatter"
+) {
+  static readonly make = (service: FormatterShape) => service;
+
+  static readonly Default: Layer.Layer<
+    Formatter,
+    never,
+    FileSystem.FileSystem
+  > = Layer.effect(
+    Formatter,
+    Effect.map(FileSystem.FileSystem, fileSystem =>
+      makeFormatter(fileSystem, loadOxfmtModule)
+    )
+  );
+
+  static readonly format = (outputDir: string, startDir?: string) =>
+    Formatter.use(service => service.format(outputDir, startDir));
+}
 
 /**
  * Test seam for deterministic module-load and formatter-failure scenarios.
@@ -351,6 +358,6 @@ export const formatterLayerWith = (
   Layer.effect(
     Formatter,
     Effect.map(FileSystem.FileSystem, fileSystem =>
-      Formatter.make(makeFormatter(fileSystem, loadModule))
+      makeFormatter(fileSystem, loadModule)
     )
   );

@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { FileSystem } from "@effect/platform";
-import { Effect } from "effect";
+import { Effect, FileSystem } from "effect";
 import {
   CleanTargetInspectionError,
   OutputCleanError,
@@ -293,7 +292,7 @@ export const releaseOutputLock = (lock: OutputLock): Effect.Effect<void> =>
       Effect.sync(() => {
         rememberFailedOutputLockRelease(lock);
       }).pipe(
-        Effect.zipRight(
+        Effect.andThen(
           Effect.logWarning(
             `Failed to release output lock at '${lock.path}': ${failure.message}`
           )
@@ -327,7 +326,7 @@ export const sweepOrphanTempdirs = (outputDir: string): Effect.Effect<void> =>
     }
     sweepOrphanTempdirsAt(outputDir);
   }).pipe(
-    Effect.catchAll(failure =>
+    Effect.catch(failure =>
       Effect.logWarning(
         `Failed to sweep orphan tempdirs under '${outputDir}': ${failure.message}`
       )

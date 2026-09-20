@@ -9,7 +9,7 @@ type GreetingService = {
   readonly greeting: string;
 };
 
-const GreetingService = Context.GenericTag<GreetingService>(
+const GreetingService = Context.Service<GreetingService>(
   "example/GreetingService"
 );
 

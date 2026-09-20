@@ -1,5 +1,5 @@
 import type {
-  ContextBuilder,
+  ContextBuilderShape,
   GeneratorContext,
   NormalizedSpec,
   PluginContext,
@@ -7,12 +7,12 @@ import type {
 } from "@rexeus/typeweaver-gen";
 import { Cause, Effect, Exit } from "effect";
 import { CORE_DIR } from "../generatorDefaults.js";
-import type { IndexFileGenerator } from "../IndexFileGenerator.js";
+import type { IndexFileGeneratorShape } from "../IndexFileGenerator.js";
 import type { GenerationPlan } from "./generatorPreflight.js";
 
 type PluginLifecycleDeps = {
-  readonly contextBuilder: ContextBuilder;
-  readonly indexFileGenerator: IndexFileGenerator;
+  readonly contextBuilder: ContextBuilderShape;
+  readonly indexFileGenerator: IndexFileGeneratorShape;
 };
 
 type PluginLifecycleParams = {
@@ -115,7 +115,7 @@ const collectResources = Effect.fn(function* (
   yield* Effect.logInfo("Collecting resources...");
   return yield* Effect.reduce(
     registrations,
-    initialSpec,
+    () => initialSpec,
     (normalizedSpec, registration) =>
       collectPluginResources({ registration, normalizedSpec })
   );
@@ -176,7 +176,7 @@ const finalizePlugin = Effect.fn(function* (params: {
     Effect.withSpan("typeweaver.plugin.finalize", {
       attributes: { plugin: params.registration.plugin.name },
     }),
-    Effect.catchAll(cause =>
+    Effect.catch(cause =>
       Effect.logWarning(cause.message).pipe(
         Effect.annotateLogs({
           plugin: params.registration.plugin.name,
@@ -203,7 +203,7 @@ const finalizePlugins = Effect.fn("typeweaver.Generator.finalizePlugins")(
         finalizerDefects =
           finalizerDefects === undefined
             ? finalizerExit.cause
-            : Cause.sequential(finalizerDefects, finalizerExit.cause);
+            : Cause.combine(finalizerDefects, finalizerExit.cause);
       }
     }
 

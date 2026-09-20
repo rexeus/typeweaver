@@ -1,12 +1,10 @@
-import { FileSystem } from "@effect/platform";
-import { Effect } from "effect";
+import { Effect, FileSystem } from "effect";
 import { makeInMemoryFileSystem } from "test-utils/src/effect/index.js";
 import { describe, expect, test } from "vitest";
 import {
   ensureOutputDirectories,
   removeOutputDir,
 } from "../../src/services/generatorIO.js";
-
 const runAgainstInMemoryFs = async <A, E>(
   effect: Effect.Effect<A, E, FileSystem.FileSystem>
 ): Promise<{
@@ -36,7 +34,6 @@ describe("generatorIO against InMemoryFileSystem", () => {
       ])
     );
   });
-
   test("removeOutputDir is a no-op when the directory does not exist", async () => {
     const { state } = await runAgainstInMemoryFs(
       removeOutputDir("/project/missing")
@@ -45,7 +42,6 @@ describe("generatorIO against InMemoryFileSystem", () => {
     expect(state.hasFile("/project/missing")).toBe(false);
     expect(state.listDirectories()).not.toContain("/project/missing");
   });
-
   test("removeOutputDir recursively deletes a previously created tree", async () => {
     const program = Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
@@ -65,7 +61,6 @@ describe("generatorIO against InMemoryFileSystem", () => {
     expect(state.hasFile("/project/generated/spec/spec.d.ts")).toBe(false);
     expect(state.listDirectories()).not.toContain("/project/generated");
   });
-
   test("writeFileString followed by readFileString returns the original content", async () => {
     const program = Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;

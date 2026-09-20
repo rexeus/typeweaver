@@ -65,15 +65,14 @@ const renderMessage = (message: unknown): string =>
 // generator runs through the shared `effectRuntime`. The default
 // CliLoggerLayer is replaced for the duration of the run.
 const capturingLogger = (sink: CapturedLog[]) =>
-  Logger.replace(
-    Logger.defaultLogger,
+  Logger.layer([
     Logger.make<unknown, void>(({ message, logLevel }) => {
       sink.push({
-        level: logLevel.label,
+        level: logLevel,
         message: renderMessage(message),
       });
-    })
-  );
+    }),
+  ]);
 
 describe("Generator.generate (fresh-registry-per-call invariant)", () => {
   afterEach(() => {
@@ -82,7 +81,6 @@ describe("Generator.generate (fresh-registry-per-call invariant)", () => {
     }
     tempDirs.length = 0;
   });
-
   test("does not log duplicate-registration warnings across sequential invocations", async () => {
     const workspace = createTempWorkspace("seq");
     writeTinySpec(workspace);
@@ -108,7 +106,7 @@ describe("Generator.generate (fresh-registry-per-call invariant)", () => {
     await run(logsSecond);
 
     const isDuplicateRegistrationWarning = (entry: CapturedLog): boolean =>
-      entry.level === "WARN" && entry.message.includes("is already registered");
+      entry.level === "Warn" && entry.message.includes("is already registered");
 
     expect(logsFirst.some(isDuplicateRegistrationWarning)).toBe(false);
     expect(logsSecond.some(isDuplicateRegistrationWarning)).toBe(false);
@@ -120,7 +118,7 @@ describe("Generator.generate (fresh-registry-per-call invariant)", () => {
     const registeredCount = (sink: CapturedLog[]): number =>
       sink.filter(
         entry =>
-          entry.level === "INFO" &&
+          entry.level === "Info" &&
           entry.message.startsWith("Registered plugin:")
       ).length;
 

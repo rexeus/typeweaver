@@ -1,5 +1,6 @@
-import { ContextBuilder, PluginExecutionError } from "@rexeus/typeweaver-gen";
+import { PluginExecutionError } from "@rexeus/typeweaver-gen";
 import type {
+  ContextBuilderShape,
   GeneratorContext,
   NormalizedSpec,
   Plugin,
@@ -9,9 +10,9 @@ import type {
 import { it } from "@effect/vitest";
 import { Cause, Deferred, Effect, Exit, Fiber, Option } from "effect";
 import { describe, expect } from "vitest";
-import { IndexFileGenerator } from "../../../src/services/IndexFileGenerator.js";
 import { runPluginLifecycle } from "../../../src/services/internal/pluginLifecycle.js";
 import { emptyNormalizedSpec } from "../../helpers/generatorFixtures.js";
+import type { IndexFileGeneratorShape } from "../../../src/services/IndexFileGenerator.js";
 import type { GenerationPlan } from "../../../src/services/internal/generatorPreflight.js";
 
 const plan: GenerationPlan = {
@@ -149,7 +150,7 @@ const createLifecycleFailureFixture = Effect.fn(function* (
       Effect.sync(() => {
         events.push(`initialize:${name}`);
       }).pipe(
-        Effect.zipRight(
+        Effect.andThen(
           name === "beta" && scenario === "initialize-failure"
             ? Effect.fail(failure)
             : Effect.void
@@ -159,13 +160,13 @@ const createLifecycleFailureFixture = Effect.fn(function* (
       Effect.sync(() => {
         events.push(`generate:${name}`);
       }).pipe(
-        Effect.zipRight(
+        Effect.andThen(
           name !== "beta"
             ? Effect.void
             : scenario === "generate-failure"
               ? Effect.fail(failure)
               : Deferred.succeed(interruptEntered, undefined).pipe(
-                  Effect.zipRight(Deferred.await(neverRelease))
+                  Effect.andThen(Deferred.await(neverRelease))
                 )
         )
       ),
@@ -179,18 +180,18 @@ const createLifecycleFailureFixture = Effect.fn(function* (
     makePlugin("beta"),
     makePlugin("omega"),
   ];
-  const contextBuilder = ContextBuilder.make({
+  const contextBuilder: ContextBuilderShape = {
     buildPluginContext: () => Effect.succeed(pluginContext),
     buildGeneratorContext: params =>
       Effect.succeed(makeBuiltContext(params.normalizedSpec)),
-  });
+  };
   let indexRuns = 0;
-  const indexFileGenerator = IndexFileGenerator.make({
+  const indexFileGenerator: IndexFileGeneratorShape = {
     generate: () =>
       Effect.sync(() => {
         indexRuns += 1;
       }),
-  });
+  };
   const lifecycle = runPluginLifecycle(
     {
       plan,
@@ -217,9 +218,10 @@ const runFailureScenario = Effect.fn(function* (
   if (scenario !== "generate-interruption") {
     return yield* Effect.exit(fixture.lifecycle);
   }
-  const fiber = yield* Effect.fork(fixture.lifecycle);
+  const fiber = yield* Effect.forkChild(fixture.lifecycle);
   yield* Deferred.await(fixture.interruptEntered);
-  return yield* Fiber.interrupt(fiber);
+  yield* Fiber.interrupt(fiber);
+  return yield* Fiber.await(fiber);
 });
 
 const assertFailureExit = (
@@ -230,19 +232,17 @@ const assertFailureExit = (
   expect(Exit.isFailure(exit)).toBe(true);
   if (!Exit.isFailure(exit)) return;
   if (scenario === "generate-interruption") {
-    expect(Cause.isInterruptedOnly(exit.cause)).toBe(true);
+    expect(Cause.hasInterruptsOnly(exit.cause)).toBe(true);
     return;
   }
-  const observedFailure = Cause.failureOption(exit.cause);
+  const observedFailure = Cause.findErrorOption(exit.cause);
   expect(Option.isSome(observedFailure)).toBe(true);
   if (!Option.isSome(observedFailure)) return;
   expect(observedFailure.value).toBeInstanceOf(PluginExecutionError);
   if (!(observedFailure.value instanceof PluginExecutionError)) return;
   expect(observedFailure.value.pluginName).toBe("beta");
   expect(observedFailure.value.phase).toBe(fixture.failure.phase);
-  expect(Cause.originalError(observedFailure.value.cause)).toBe(
-    fixture.failureCause
-  );
+  expect(observedFailure.value.cause).toBe(fixture.failureCause);
 };
 
 const lifecycleFailureScenario = Effect.fn(function* (
@@ -312,7 +312,7 @@ describe("runPluginLifecycle", () => {
             }),
         } satisfies Plugin;
 
-        const contextBuilder = ContextBuilder.make({
+        const contextBuilder: ContextBuilderShape = {
           buildPluginContext: () => Effect.succeed(pluginContext),
           buildGeneratorContext: params =>
             Effect.sync(() => {
@@ -320,14 +320,14 @@ describe("runPluginLifecycle", () => {
               events.push("build-context");
               return makeBuiltContext(params.normalizedSpec);
             }),
-        });
-        const indexFileGenerator = IndexFileGenerator.make({
+        };
+        const indexFileGenerator: IndexFileGeneratorShape = {
           generate: params =>
             Effect.sync(() => {
               events.push(`index:${params.generatedFiles.join(",")}`);
               params.writeFile("index.ts", "index");
             }),
-        });
+        };
 
         const result = yield* runPluginLifecycle(
           {

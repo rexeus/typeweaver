@@ -148,7 +148,7 @@ describe("createPluginTestKit path safety", () => {
 
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) {
-      expect(Cause.failureOption(exit.cause)).toMatchObject({
+      expect(Cause.findErrorOption(exit.cause)).toMatchObject({
         _tag: "Some",
         value: {
           _tag: "PluginExecutionError",
@@ -190,7 +190,7 @@ describe("createPluginTestKit finalization", () => {
       finalize: () =>
         Effect.sync(() => {
           events.push("finalize");
-        }).pipe(Effect.zipRight(Effect.fail(finalizerFailure))),
+        }).pipe(Effect.andThen(Effect.fail(finalizerFailure))),
     });
 
     const exit = Effect.runSyncExit(kit.run(plugin));
@@ -198,7 +198,7 @@ describe("createPluginTestKit finalization", () => {
     expect(events).toEqual(["initialize", "finalize"]);
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) {
-      const failure = Cause.failureOption(exit.cause);
+      const failure = Cause.findErrorOption(exit.cause);
       expect(failure._tag).toBe("Some");
       if (failure._tag === "Some") {
         expect(failure.value).toBe(generationFailure);

@@ -23,7 +23,7 @@ import {
 } from "./fixtures.mjs";
 import {
   assertGeneratorEffectPeerContract,
-  assertIsolatedEffectIdentities,
+  assertNativeEffectIdentities,
   assertPackedPackages,
   assertPlatformNodeSharedIdentity,
   assertSingleEffectIdentity,
@@ -321,7 +321,7 @@ export const verifyMinimalStrictInstall = ({
     !existsSync(path.join(fixtureRoot, "node_modules", "hono")),
     "the minimal strict fixture unexpectedly installed hono"
   );
-  assertIsolatedEffectIdentities({ effectVersion, fixtureRoot, packages });
+  assertNativeEffectIdentities({ effectVersion, fixtureRoot, packages });
 };
 
 // Direct deps add hono because all advertised plain projections are exercised
@@ -353,7 +353,7 @@ export const verifyAllPlainProjectionsConsumer = ({
   installFixture(fixtureRoot);
   assertPackedPackages({ fixtureRoot, packages });
   assertGeneratorEffectPeerContract(fixtureRoot);
-  assertIsolatedEffectIdentities({ effectVersion, fixtureRoot, packages });
+  assertNativeEffectIdentities({ effectVersion, fixtureRoot, packages });
   assertPhantomImportsUnavailable(fixtureRoot);
   const { configPath, outputRoot } = writePlainProjectionsConfig(fixtureRoot);
   const generated = run({
@@ -376,21 +376,29 @@ export const verifyAllPlainProjectionsConsumer = ({
 };
 
 /**
- * @param {ConsumerMatrix & { matrixRoot: string }} options
+ * @param {Omit<ConsumerMatrix, "effectVersion"> & { matrixRoot: string }} options
  * @returns {void}
  */
-export const verifyEffect4StrictPeerNegative = ({
+export const verifyNativeEffectStrictPeerNegative = ({
   archives,
-  effectVersion,
   matrixRoot,
   packages,
 }) => {
-  const fixtureRoot = path.join(matrixRoot, "effect-4-strict-peer-negative");
+  const incompatibleEffectVersion = "4.0.0-rc.115";
+  assert.notEqual(
+    incompatibleEffectVersion,
+    contract.runtimeVersion,
+    "strict-peer negative Effect version must differ from the runtime contract"
+  );
+  const fixtureRoot = path.join(
+    matrixRoot,
+    "native-effect-strict-peer-negative"
+  );
   mkdirSync(fixtureRoot, { recursive: true });
   const packedDependencies = packedDependenciesFor({ archives, packages });
   writeFixtureManifest({
     fixtureRoot,
-    name: "typeweaver-effect-4-strict-peer-negative",
+    name: "typeweaver-native-effect-strict-peer-negative",
     overrides: packedDependencies,
     dependencies: {
       "@rexeus/typeweaver-core": packedDependencies["@rexeus/typeweaver-core"],
@@ -399,7 +407,7 @@ export const verifyEffect4StrictPeerNegative = ({
       "@rexeus/typeweaver-gen": packedDependencies["@rexeus/typeweaver-gen"],
       "@rexeus/typeweaver-server":
         packedDependencies["@rexeus/typeweaver-server"],
-      effect: effectVersion,
+      effect: incompatibleEffectVersion,
       zod: ZOD_VERSION,
     },
   });
@@ -408,10 +416,9 @@ export const verifyEffect4StrictPeerNegative = ({
     args: ["install", "--ignore-scripts"],
     cwd: fixtureRoot,
   });
-  assert.match(
-    output,
-    />=3\.22\.0 <4/u,
-    `strict-peer install did not fail on the Effect 3 peer range:\n${output}`
+  assert(
+    output.includes(`effect@${contract.runtimeVersion}`),
+    `strict-peer install did not fail on the exact native Effect peer:\n${output}`
   );
   assert.match(
     output,
@@ -424,13 +431,10 @@ export const verifyEffect4StrictPeerNegative = ({
  * @param {string} peerRange
  * @returns {string}
  */
-export const peerLowerBound = peerRange => {
-  const match = /^>=([^\s]+)\s+</.exec(peerRange);
-  assert(match, `unsupported Effect peer range format: ${peerRange}`);
-  const [, lowerBound] = match;
+export const peerVersion = peerRange => {
   assert(
-    lowerBound !== undefined,
-    `unsupported Effect peer range: ${peerRange}`
+    peerRange === contract.runtimeVersion,
+    `unsupported Effect peer contract: ${peerRange}`
   );
-  return lowerBound;
+  return peerRange;
 };

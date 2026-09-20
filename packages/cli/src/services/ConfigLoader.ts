@@ -1,7 +1,7 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
-import { Effect, Schema } from "effect";
+import { Context, Effect, Layer, Schema } from "effect";
 import { ConfigModuleEvaluationError } from "../errors/ConfigModuleEvaluationError.js";
 import { isStructuralConfigError } from "../errors/index.js";
 import { InvalidConfigExportError } from "../errors/InvalidConfigExportError.js";
@@ -20,28 +20,28 @@ const UNSUPPORTED_TYPESCRIPT_CONFIG_EXTENSIONS = new Set([
   ".cts",
 ]);
 
-const PluginConfigSchema = Schema.mutable(
-  Schema.Record({
-    key: Schema.String,
-    value: Schema.Unknown,
-  })
-);
+const PluginConfigSchema = Schema.Record(Schema.String, Schema.Unknown);
 
 const PluginTupleSchema = Schema.mutable(
-  Schema.Tuple(Schema.NonEmptyString, PluginConfigSchema)
+  Schema.Tuple([Schema.NonEmptyString, PluginConfigSchema])
 );
 
 const PluginsSchema = Schema.mutable(
-  Schema.Array(Schema.Union(Schema.NonEmptyString, PluginTupleSchema))
+  Schema.Array(Schema.Union([Schema.NonEmptyString, PluginTupleSchema]))
 );
 
-const TypeweaverConfigSchema = Schema.Struct({
-  input: Schema.NonEmptyString,
-  output: Schema.NonEmptyString,
-  plugins: PluginsSchema,
-  format: Schema.Boolean,
-  clean: Schema.Boolean,
-}).pipe(Schema.partialWith({ exact: true }), Schema.mutable);
+// The rest record keeps custom top-level keys (v3 `onExcessProperty: "preserve"`
+// semantics): known fields are validated, unknown keys pass through untouched.
+const TypeweaverConfigSchema = Schema.StructWithRest(
+  Schema.Struct({
+    input: Schema.optionalKey(Schema.NonEmptyString),
+    output: Schema.optionalKey(Schema.NonEmptyString),
+    plugins: Schema.optionalKey(PluginsSchema),
+    format: Schema.optionalKey(Schema.Boolean),
+    clean: Schema.optionalKey(Schema.Boolean),
+  }),
+  [Schema.Record(Schema.String, Schema.Unknown)]
+);
 
 /**
  * Resolve a possibly-relative config path against the current working
@@ -70,7 +70,6 @@ const assertSupportedConfigPathSync = (configPath: string): void => {
     });
   }
 };
-
 const loadConfigAsync = async (
   configPath: string
 ): Promise<Record<string, unknown>> => {
@@ -138,9 +137,8 @@ const isNamespaceLikeConfigExport = (value: unknown): boolean => {
 
 const decodeConfig = Effect.fn("typeweaver.ConfigLoader.decode")(
   (configPath: string, loadedConfig: Record<string, unknown>) =>
-    Schema.decodeUnknown(TypeweaverConfigSchema, {
+    Schema.decodeUnknownEffect(TypeweaverConfigSchema, {
       errors: "all",
-      onExcessProperty: "preserve",
     })(loadedConfig).pipe(
       Effect.mapError(
         cause => new InvalidConfigValueError({ configPath, cause })
@@ -158,47 +156,64 @@ const decodeConfig = Effect.fn("typeweaver.ConfigLoader.decode")(
  * `cause`. The failure channel is the closed `ConfigError` union, so every
  * variant is addressable via `Effect.catchTag`.
  */
-export class ConfigLoader extends Effect.Service<ConfigLoader>()(
-  "typeweaver/ConfigLoader",
-  {
-    succeed: {
-      assertSupportedPath: Effect.fn(
-        "typeweaver.ConfigLoader.assertSupportedPath"
-      )(
-        (configPath: string): Effect.Effect<void, ConfigError> =>
-          Effect.try({
-            try: () => assertSupportedConfigPathSync(configPath),
-            catch: error => {
-              if (isStructuralConfigError(error)) {
-                return error;
-              }
-              throw error;
-            },
-          })
-      ),
+export type ConfigLoaderShape = {
+  readonly assertSupportedPath: (
+    configPath: string
+  ) => Effect.Effect<void, ConfigError>;
+  readonly load: (
+    configPath: string
+  ) => Effect.Effect<Partial<TypeweaverConfig>, ConfigError>;
+};
 
-      load: Effect.fn("typeweaver.ConfigLoader.load")(
-        (
-          configPath: string
-        ): Effect.Effect<Partial<TypeweaverConfig>, ConfigError> =>
-          Effect.tryPromise({
-            try: () => loadConfigAsync(configPath),
-            catch: error => {
-              if (isStructuralConfigError(error)) {
-                return error;
-              }
-              return new ConfigModuleEvaluationError({
-                configPath,
-                cause: error,
-              });
-            },
-          }).pipe(
-            Effect.flatMap(loadedConfig =>
-              decodeConfig(configPath, loadedConfig)
-            )
-          )
-      ),
-    },
-    accessors: true,
-  }
-) {}
+const configLoaderShape: ConfigLoaderShape = {
+  assertSupportedPath: Effect.fn("typeweaver.ConfigLoader.assertSupportedPath")(
+    (configPath: string): Effect.Effect<void, ConfigError> =>
+      Effect.try({
+        try: () => assertSupportedConfigPathSync(configPath),
+        catch: error => {
+          if (isStructuralConfigError(error)) {
+            return error;
+          }
+          throw error;
+        },
+      })
+  ),
+
+  load: Effect.fn("typeweaver.ConfigLoader.load")(
+    (
+      configPath: string
+    ): Effect.Effect<Partial<TypeweaverConfig>, ConfigError> =>
+      Effect.tryPromise({
+        try: () => loadConfigAsync(configPath),
+        catch: error => {
+          if (isStructuralConfigError(error)) {
+            return error;
+          }
+          return new ConfigModuleEvaluationError({
+            configPath,
+            cause: error,
+          });
+        },
+      }).pipe(
+        Effect.flatMap(loadedConfig => decodeConfig(configPath, loadedConfig))
+      )
+  ),
+};
+
+export class ConfigLoader extends Context.Service<
+  ConfigLoader,
+  ConfigLoaderShape
+>()("typeweaver/ConfigLoader") {
+  static readonly make = (service: ConfigLoaderShape) => service;
+
+  static readonly Default: Layer.Layer<ConfigLoader> = Layer.succeed(
+    ConfigLoader,
+    configLoaderShape
+  );
+
+  static readonly assertSupportedPath = (configPath: string) =>
+    ConfigLoader.use(service => service.assertSupportedPath(configPath));
+
+  static readonly load = (configPath: string) =>
+    ConfigLoader.use(service => service.load(configPath));
+}

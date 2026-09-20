@@ -71,15 +71,17 @@ install again to recreate CLI binary symlinks before generation or bundle tests.
 
 ## Effect work
 
-The active baseline is Effect 3.22.0 with public peer range `>=3.22.0 <4`. Before changing Effect
-code, read `.agents/skills/effect-ts/SKILL.md` and its pinned Effect 3 reference, then run:
+The active baseline is the exact native Effect `4.0.0-rc.116` with source commit
+`d62dd0d65252e5d3635538f0e41adc7c08aa9beb`. Before changing Effect code, read
+`.agents/skills/effect-ts/SKILL.md` and its pinned Effect 4 reference, then run:
 
 ```sh
 pnpm verify:effect-reference
 ```
 
-Do not use Effect 4 APIs or edit `.repos/effect`. Effect must remain optional for core, client,
-Hono, and Fetch-native server consumers.
+Do not reintroduce Effect 3 APIs or edit `.repos/effect`. Effect-bearing CLI, generator, plugin, and
+adapter boundaries require the exact RC.116 peer. Effect remains optional for core authoring and
+plain generated client, Hono, and Fetch-native server consumption.
 
 ## Verification
 

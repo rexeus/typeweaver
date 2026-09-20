@@ -1,8 +1,16 @@
 import path from "node:path";
-import { FileSystem } from "@effect/platform";
-import { SystemError } from "@effect/platform/Error";
 import { it } from "@effect/vitest";
-import { Cause, Deferred, Effect, Exit, Fiber, Option, Ref } from "effect";
+import {
+  Cause,
+  Deferred,
+  Effect,
+  Exit,
+  FileSystem,
+  Fiber,
+  Option,
+  Ref,
+} from "effect";
+import { systemError } from "effect/PlatformError";
 import { describe, expect } from "vitest";
 import { GeneratedPathProbeError } from "../../../src/errors/GeneratedPathProbeError.js";
 import { UnsafeGeneratedPathError } from "../../../src/errors/UnsafeGeneratedPathError.js";
@@ -13,6 +21,9 @@ import {
 import { makeEffectContextIO } from "../../../src/services/internal/pluginContextEffectIO.js";
 import type { PathSafetyShape } from "../../../src/services/internal/pluginContextEffectIO.js";
 
+const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
+
 const outputDir = path.resolve("project", "generated");
 const generatedPath = "todo/GetTodoClient.ts";
 const destinationPath = path.join(outputDir, generatedPath);
@@ -21,8 +32,8 @@ const tempFile = path.join(tempDir, "generated.tmp");
 const markerFile = path.join(tempDir, TYPEWEAVER_COORDINATION_MARKER_FILE);
 const markerSource = coordinationArtifactMarkerSource("atomic-write-temp");
 
-const missingTarget = new SystemError({
-  reason: "NotFound",
+const missingTarget = systemError({
+  _tag: "NotFound",
   module: "FileSystem",
   method: "stat",
   pathOrDescriptor: destinationPath,
@@ -65,12 +76,12 @@ const makeAtomicContextIO = (config: {
           Effect.sync(() => {
             markerWrittenForCurrentTemp = false;
           }).pipe(
-            Effect.zipRight(Ref.set(config.tempExists, true)),
+            Effect.andThen(Ref.set(config.tempExists, true)),
             Effect.as(tempDir)
           ),
           () =>
             Ref.set(config.tempExists, false).pipe(
-              Effect.zipRight(
+              Effect.andThen(
                 Ref.update(config.cleanupCount, count => count + 1)
               )
             )
@@ -147,8 +158,10 @@ describe("makeEffectContextIO failure channels", () => {
 
       expect(Exit.isFailure(exit)).toBe(true);
       if (!Exit.isFailure(exit)) return;
-      expect(Array.from(Cause.defects(exit.cause))).toEqual([]);
-      expect(Cause.failureOption(exit.cause)).toEqual(Option.some(unsafePath));
+      expect(Array.from(causeDefects(exit.cause))).toEqual([]);
+      expect(Cause.findErrorOption(exit.cause)).toEqual(
+        Option.some(unsafePath)
+      );
       expect(validationCount).toBe(3);
       expect(yield* Ref.get(renameCount)).toBe(0);
       expect(trackedWrites).toEqual([]);
@@ -180,9 +193,9 @@ describe("makeEffectContextIO failure channels", () => {
         expect(Exit.isFailure(exit)).toBe(true);
         if (!Exit.isFailure(exit)) return;
 
-        expect(Array.from(Cause.defects(exit.cause))).toEqual([]);
+        expect(Array.from(causeDefects(exit.cause))).toEqual([]);
 
-        const failure = Cause.failureOption(exit.cause);
+        const failure = Cause.findErrorOption(exit.cause);
         expect(Option.isSome(failure)).toBe(true);
         if (!Option.isSome(failure)) return;
 
@@ -205,8 +218,8 @@ describe("makeEffectContextIO failure channels", () => {
       expect(Exit.isFailure(exit)).toBe(true);
       if (!Exit.isFailure(exit)) return;
 
-      expect(Option.isNone(Cause.failureOption(exit.cause))).toBe(true);
-      expect(Array.from(Cause.defects(exit.cause))).toEqual([bug]);
+      expect(Option.isNone(Cause.findErrorOption(exit.cause))).toBe(true);
+      expect(Array.from(causeDefects(exit.cause))).toEqual([bug]);
     });
   });
 });
@@ -232,26 +245,28 @@ describe("makeEffectContextIO interrupt safety", () => {
               Effect.flatMap(attempt =>
                 attempt === 0
                   ? Deferred.succeed(renameEntered, undefined).pipe(
-                      Effect.zipRight(Deferred.await(allowRename)),
-                      Effect.zipRight(Ref.set(destination, newPath))
+                      Effect.andThen(Deferred.await(allowRename)),
+                      Effect.andThen(Ref.set(destination, newPath))
                     )
                   : Ref.set(destination, newPath)
               )
             ),
         });
 
-        const writer = yield* Effect.fork(
+        const writer = yield* Effect.forkChild(
           contextIO.writeFileEffect(generatedPath, "generated")
         );
         yield* Deferred.await(renameEntered);
-        yield* Fiber.interruptFork(writer);
-        yield* Effect.yieldNow();
+        // Effect 4 has no `Fiber.interruptFork`; forking the interrupt gives
+        // the same signal-without-joining semantics the test relies on.
+        yield* Effect.forkChild(Fiber.interrupt(writer));
+        yield* Effect.yieldNow;
         yield* Deferred.succeed(allowRename, undefined);
         const exit = yield* Fiber.await(writer);
 
         expect(Exit.isFailure(exit)).toBe(true);
         if (!Exit.isFailure(exit)) return;
-        expect(Cause.isInterruptedOnly(exit.cause)).toBe(true);
+        expect(Cause.hasInterruptsOnly(exit.cause)).toBe(true);
         expect(yield* Ref.get(destination)).toBe(destinationPath);
         expect(trackedWrites).toEqual([generatedPath]);
         expect(yield* Ref.get(tempExists)).toBe(false);
@@ -298,7 +313,7 @@ describe("makeEffectContextIO retry safety", () => {
 
         expect(Exit.isFailure(firstExit)).toBe(true);
         if (!Exit.isFailure(firstExit)) return;
-        expect(Array.from(Cause.defects(firstExit.cause))).toEqual([
+        expect(Array.from(causeDefects(firstExit.cause))).toEqual([
           renameDefect,
         ]);
         expect(yield* Ref.get(destination)).toBeUndefined();

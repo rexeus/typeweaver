@@ -139,7 +139,8 @@ const writeWorkspaceManifest = (
 
 const writeWorkspaceManifestWithSpecifier = (
   workspace: string,
-  specifier: string
+  specifier: string,
+  resolvedVersion?: string
 ): void => {
   fs.writeFileSync(
     path.join(workspace, "package.json"),
@@ -153,6 +154,15 @@ const writeWorkspaceManifestWithSpecifier = (
       null,
       2
     )}\n`
+  );
+  if (resolvedVersion === undefined) {
+    return;
+  }
+  const effectDirectory = path.join(workspace, "node_modules", "effect");
+  fs.mkdirSync(effectDirectory, { recursive: true });
+  fs.writeFileSync(
+    path.join(effectDirectory, "package.json"),
+    `${JSON.stringify({ name: "effect", version: resolvedVersion }, null, 2)}\n`
   );
 };
 
@@ -190,13 +200,14 @@ const writeValidatingPlugin = (
     pluginPath,
     [
       'import { writeFileSync } from "node:fs";',
+      'import { Effect } from "effect";',
       "",
       "export default {",
       '  name: "validating-custom",',
-      "  validate: () => {",
+      "  validate: () => Effect.sync(() => {",
       '    writeFileSync(new URL("./validated.marker", import.meta.url), "ran\\n");',
       "    return [];",
-      "  },",
+      "  }),",
       "};",
       "",
     ].join("\n")
@@ -271,7 +282,6 @@ describe("built CLI doctor workflow", () => {
     });
     expect(collectWorkspace(workspace)).toBe(before);
   }, 15_000);
-
   test("fails input resolution and skips dependent deep validation", async () => {
     const workspace = createWorkspace();
     const before = collectWorkspace(workspace);
@@ -293,7 +303,6 @@ describe("built CLI doctor workflow", () => {
     expect(checks.get("TW-DOCTOR-010")?.outcome).toBe("skip");
     expect(collectWorkspace(workspace)).toBe(before);
   }, 15_000);
-
   test("reports an unavailable configured plugin", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
@@ -343,7 +352,6 @@ describe("built CLI doctor report and output safety", () => {
     );
     expect(result.stdout).toContain("Doctor passed:");
   });
-
   test("rejects an output target that is an existing file", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
@@ -368,7 +376,6 @@ describe("built CLI doctor report and output safety", () => {
     });
   });
 });
-
 const expectCheck = async (
   result: ProcessResult,
   code: string
@@ -383,7 +390,7 @@ const expectCheck = async (
 };
 
 describe("built CLI project-owned Effect resolution", () => {
-  test("skips when the project does not declare Effect even if a parent tree has Effect 3", async () => {
+  test("skips when the project does not declare Effect", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
     writeWorkspaceManifest(workspace);
@@ -401,11 +408,10 @@ describe("built CLI project-owned Effect resolution", () => {
     const check = await expectCheck(result, "TW-DOCTOR-011");
     expect(check.outcome).toBe("skip");
   });
-
-  test("warns conditionally for the exact Effect 4 RC with plain projections", async () => {
+  test("passes the exact native Effect RC with plain projections", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
-    writeWorkspaceManifest(workspace, "4.0.0-rc.115");
+    writeWorkspaceManifest(workspace, "4.0.0-rc.116");
 
     const result = await runCli(workspace, [
       "doctor",
@@ -426,16 +432,12 @@ describe("built CLI project-owned Effect resolution", () => {
     const check = checksByCode(report).get("TW-DOCTOR-011");
     expect(check).toMatchObject({
       name: "workspace Effect compatibility",
-      outcome: "warn",
+      outcome: "pass",
     });
-    expect(check?.message).toContain("4.0.0-rc.115");
-    expect(check?.message).toContain("isolated child process");
-    expect(check?.message).toContain("Effect-independent");
-    expect(check?.message).toContain("cannot verify");
-    expect(check?.message).toContain("Effect-neutral");
+    expect(check?.message).toContain("4.0.0-rc.116");
+    expect(check?.message).toContain("exact native Effect");
   });
-
-  test("warns UNVERIFIED for any other Effect 4 version", async () => {
+  test("warns for any other Effect version", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
     writeWorkspaceManifest(workspace, "4.0.0-rc.90");
@@ -452,9 +454,8 @@ describe("built CLI project-owned Effect resolution", () => {
     expect(result.code).toBe(0);
     const check = await expectCheck(result, "TW-DOCTOR-011");
     expect(check.outcome).toBe("warn");
-    expect(check.message).toContain("UNVERIFIED");
-    expect(check.message).toContain("4.0.0-rc.115");
-    expect(check.message).toContain("does not claim");
+    expect(check.message).toContain("4.0.0-rc.116");
+    expect(check.message).toContain("not the exact native");
   });
 });
 
@@ -481,7 +482,6 @@ describe("built CLI undeclared native surfaces", () => {
     expect(check.message).toContain("does not declare Effect");
     expect(check.message).toContain("project-owned Effect");
   });
-
   test("fails for an undeclared project that configures a custom plugin", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
@@ -503,6 +503,33 @@ describe("built CLI undeclared native surfaces", () => {
     const check = await expectCheck(result, "TW-DOCTOR-011");
     expect(check.outcome).toBe("fail");
     expect(check.message).toContain(pluginPath);
+  });
+
+  test.each([
+    "command",
+    "@rexeus/typeweaver-command",
+    "openapi",
+    "@rexeus/typeweaver-openapi",
+  ])("fails for an undeclared project that configures %s", async plugin => {
+    const workspace = createWorkspace();
+    writeSpec(workspace);
+    writeWorkspaceManifest(workspace);
+
+    const result = await runCli(workspace, [
+      "doctor",
+      "--input",
+      "spec/index.ts",
+      "--output",
+      "generated",
+      "--plugins",
+      plugin,
+      "--json",
+    ]);
+
+    expect(result.code).toBe(1);
+    const check = await expectCheck(result, "TW-DOCTOR-011");
+    expect(check.outcome).toBe("fail");
+    expect(check.message).toContain(plugin);
   });
 });
 
@@ -531,11 +558,10 @@ describe("built CLI deep validation gating", () => {
     expect(checks.get("TW-DOCTOR-010")).toMatchObject({ outcome: "skip" });
     expect(fs.existsSync(markerPath)).toBe(false);
   });
-
-  test("does not execute a custom plugin validate hook in an Effect 4 workspace", async () => {
+  test("does not execute a custom plugin validate hook in an exact native workspace", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
-    writeWorkspaceManifest(workspace, "4.0.0-rc.115");
+    writeWorkspaceManifest(workspace, "4.0.0-rc.116");
     const { pluginPath, markerPath } = writeValidatingPlugin(workspace);
 
     const result = await runCli(workspace, [
@@ -552,7 +578,7 @@ describe("built CLI deep validation gating", () => {
 
     expect(result.code).toBe(1);
     const checks = checksByCode(parseReport(result.stdout));
-    expect(checks.get("TW-DOCTOR-011")).toMatchObject({ outcome: "fail" });
+    expect(checks.get("TW-DOCTOR-011")).toMatchObject({ outcome: "pass" });
     expect(checks.get("TW-DOCTOR-010")).toMatchObject({ outcome: "skip" });
     expect(fs.existsSync(markerPath)).toBe(false);
   });
@@ -562,7 +588,7 @@ describe("built CLI deep validation for plain projections", () => {
   test("still runs deep validation for plain projections at the exact RC", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
-    writeWorkspaceManifest(workspace, "4.0.0-rc.115");
+    writeWorkspaceManifest(workspace, "4.0.0-rc.116");
     linkWorkspaceContractRuntime(workspace);
 
     const result = await runCli(workspace, [
@@ -577,14 +603,17 @@ describe("built CLI deep validation for plain projections", () => {
 
     expect(result.code).toBe(0);
     const checks = checksByCode(parseReport(result.stdout));
-    expect(checks.get("TW-DOCTOR-011")).toMatchObject({ outcome: "warn" });
+    expect(checks.get("TW-DOCTOR-011")).toMatchObject({ outcome: "pass" });
     expect(checks.get("TW-DOCTOR-010")).toMatchObject({ outcome: "pass" });
   });
-
-  test("still runs deep validation for a supported Effect 3 workspace", async () => {
+  test("still runs deep validation for the exact native workspace", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
-    writeWorkspaceManifestWithSpecifier(workspace, "^3.22.0");
+    writeWorkspaceManifestWithSpecifier(
+      workspace,
+      "4.0.0-rc.116",
+      "4.0.0-rc.116"
+    );
 
     const result = await runCli(workspace, [
       "doctor",
@@ -607,7 +636,7 @@ describe("built CLI declaration verification", () => {
   test("fails when the project declares the RC but only a parent Effect 3 resolves", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
-    writeWorkspaceManifestWithSpecifier(workspace, "4.0.0-rc.115");
+    writeWorkspaceManifestWithSpecifier(workspace, "4.0.0-rc.116", "3.22.5");
 
     const result = await runCli(workspace, [
       "doctor",
@@ -626,10 +655,10 @@ describe("built CLI declaration verification", () => {
 });
 
 describe("built CLI Effect-native incompatibility", () => {
-  test("fails for an Effect 4 workspace that configures the Effect projection", async () => {
+  test("passes for an exact native workspace that configures the Effect projection", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
-    writeWorkspaceManifest(workspace, "4.0.0-rc.115");
+    writeWorkspaceManifest(workspace, "4.0.0-rc.116");
 
     const result = await runCli(workspace, [
       "doctor",
@@ -642,16 +671,15 @@ describe("built CLI Effect-native incompatibility", () => {
       "--json",
     ]);
 
-    expect(result.code).toBe(1);
+    expect(result.code).toBe(0);
     const check = await expectCheck(result, "TW-DOCTOR-011");
-    expect(check.outcome).toBe("fail");
-    expect(check.message).toContain("Effect-native");
+    expect(check.outcome).toBe("pass");
+    expect(check.message).toContain("exact native Effect");
   });
-
-  test("fails for an Effect 4 workspace with a custom plugin", async () => {
+  test("passes for an exact native workspace with a custom plugin", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
-    writeWorkspaceManifest(workspace, "4.0.0-rc.115");
+    writeWorkspaceManifest(workspace, "4.0.0-rc.116");
     const pluginPath = writeExternalPlugin(workspace);
 
     const result = await runCli(workspace, [
@@ -665,16 +693,47 @@ describe("built CLI Effect-native incompatibility", () => {
       "--json",
     ]);
 
-    expect(result.code).toBe(1);
+    expect(result.code).toBe(0);
     const check = await expectCheck(result, "TW-DOCTOR-011");
-    expect(check.outcome).toBe("fail");
-    expect(check.message).toContain(pluginPath);
+    expect(check.outcome).toBe("pass");
+    expect(check.message).toContain("exact native Effect");
   });
 
-  test("renders the workspace compatibility warning in human output", async () => {
+  test.each([
+    "command",
+    "@rexeus/typeweaver-command",
+    "openapi",
+    "@rexeus/typeweaver-openapi",
+  ])(
+    "fails for %s when the workspace resolves the wrong Effect version",
+    async plugin => {
+      const workspace = createWorkspace();
+      writeSpec(workspace);
+      writeWorkspaceManifest(workspace, "4.0.0-rc.115");
+
+      const result = await runCli(workspace, [
+        "doctor",
+        "--input",
+        "spec/index.ts",
+        "--output",
+        "generated",
+        "--plugins",
+        plugin,
+        "--json",
+      ]);
+
+      expect(result.code).toBe(1);
+      const check = await expectCheck(result, "TW-DOCTOR-011");
+      expect(check.outcome).toBe("fail");
+      expect(check.message).toContain(plugin);
+      expect(check.message).toContain("4.0.0-rc.116");
+    }
+  );
+
+  test("renders the workspace compatibility pass in human output", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
-    writeWorkspaceManifest(workspace, "4.0.0-rc.115");
+    writeWorkspaceManifest(workspace, "4.0.0-rc.116");
 
     const result = await runCli(workspace, [
       "doctor",
@@ -686,7 +745,7 @@ describe("built CLI Effect-native incompatibility", () => {
 
     expect(result.code).toBe(0);
     expect(result.stdout).toContain(
-      "[WARN] TW-DOCTOR-011 workspace Effect compatibility:"
+      "[PASS] TW-DOCTOR-011 workspace Effect compatibility:"
     );
   });
 });

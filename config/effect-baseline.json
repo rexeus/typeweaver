@@ -1,28 +1,13 @@
 {
-  "runtimeVersion": "3.22.0",
-  "peerRange": ">=3.22.0 <4",
-  "effect4Evidence": {
-    "effectVersion": "4.0.0-rc.115",
-    "scope": "process-isolated-cli-only",
-    "stability": "release-candidate",
-    "nativeSurfaces": "effect-3-only"
-  },
+  "runtimeVersion": "4.0.0-rc.116",
+  "peerRange": "4.0.0-rc.116",
   "acceptedEffectDependencies": {
-    "@effect/cli": "0.76.0",
-    "@effect/cluster": "0.60.0",
-    "@effect/experimental": "0.61.0",
-    "@effect/platform": "0.97.0",
-    "@effect/platform-node": "0.108.0",
-    "@effect/platform-node-shared": "0.61.0",
-    "@effect/printer": "0.50.0",
-    "@effect/printer-ansi": "0.50.0",
-    "@effect/rpc": "0.76.0",
-    "@effect/sql": "0.52.0",
-    "@effect/typeclass": "0.41.0",
-    "@effect/workflow": "0.19.0"
+    "@effect/platform-node": "4.0.0-rc.116",
+    "@effect/platform-node-shared": "4.0.0-rc.116",
+    "@effect/vitest": "4.0.0-rc.116"
   },
+  "tsgoVersion": "0.45.0",
   "referenceRepository": "https://github.com/Effect-TS/effect.git",
-  "referenceTag": "effect@3.22.0",
-  "referenceCommit": "e670e0f6befb959b84208d5f77631276521020ae",
-  "languageServiceVersion": "0.87.1"
+  "referenceTag": "effect@4.0.0-rc.116",
+  "referenceCommit": "d62dd0d65252e5d3635538f0e41adc7c08aa9beb"
 }

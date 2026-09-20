@@ -1,13 +1,12 @@
 import path from "node:path";
-import { FileSystem } from "@effect/platform";
-import { Effect, Exit } from "effect";
+import { Context, Effect, Exit, FileSystem, Layer } from "effect";
 import {
   InvalidPluginScaffoldNameError,
   PluginScaffoldFileSystemError,
   PluginScaffoldTargetExistsError,
 } from "../errors/PluginScaffoldError.js";
 import type { PluginScaffoldFileSystemOperation } from "../errors/PluginScaffoldError.js";
-import type { PlatformError } from "@effect/platform/Error";
+import type { PlatformError } from "effect/PlatformError";
 
 const PLUGIN_NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
 
@@ -117,7 +116,9 @@ const mapTargetCreationError = (
   targetDir: string,
   cause: PlatformError
 ): PluginScaffoldFileSystemError | PluginScaffoldTargetExistsError =>
-  cause._tag === "SystemError" && cause.reason === "AlreadyExists"
+  // In rc.116 a `PlatformError` wraps its reason; `SystemError` carries the
+  // system tag directly on `_tag`, so "AlreadyExists" cannot be a `BadArgument`.
+  cause._tag === "PlatformError" && cause.reason._tag === "AlreadyExists"
     ? new PluginScaffoldTargetExistsError({ targetDir })
     : fileSystemError("makeDirectory", targetDir)(cause);
 
@@ -132,7 +133,7 @@ const writeScaffoldFile = (
     .makeDirectory(directory, { recursive: true })
     .pipe(
       Effect.mapError(fileSystemError("makeDirectory", directory)),
-      Effect.zipRight(
+      Effect.andThen(
         fileSystem
           .writeFileString(filePath, file.content, { flag: "wx" })
           .pipe(Effect.mapError(fileSystemError("writeFile", filePath)))
@@ -185,46 +186,63 @@ const publishScaffold = (
   );
 };
 
-export class PluginScaffolder extends Effect.Service<PluginScaffolder>()(
-  "typeweaver/PluginScaffolder",
-  {
-    effect: Effect.gen(function* () {
-      const fileSystem = yield* FileSystem.FileSystem;
+export type PluginScaffolderShape = {
+  readonly scaffold: (
+    params: PluginScaffoldParams
+  ) => Effect.Effect<PluginScaffoldResult, PluginScaffoldFailure>;
+};
 
-      const scaffold: (
-        params: PluginScaffoldParams
-      ) => Effect.Effect<PluginScaffoldResult, PluginScaffoldFailure> =
-        Effect.fn("typeweaver.PluginScaffolder.scaffold")(function* (
-          params: PluginScaffoldParams
-        ) {
-          if (!PLUGIN_NAME_PATTERN.test(params.pluginName)) {
-            return yield* new InvalidPluginScaffoldNameError({
-              pluginName: params.pluginName,
-            });
-          }
+const makePluginScaffolder: Effect.Effect<
+  PluginScaffolderShape,
+  never,
+  FileSystem.FileSystem
+> = Effect.gen(function* () {
+  const fileSystem = yield* FileSystem.FileSystem;
 
-          const targetDir = path.resolve(
-            params.currentWorkingDirectory,
-            params.targetDir
-          );
-          const targetExists = yield* fileSystem
-            .exists(targetDir)
-            .pipe(Effect.mapError(fileSystemError("exists", targetDir)));
-          if (targetExists) {
-            return yield* new PluginScaffoldTargetExistsError({ targetDir });
-          }
+  const scaffold: PluginScaffolderShape["scaffold"] = Effect.fn(
+    "typeweaver.PluginScaffolder.scaffold"
+  )(function* (params: PluginScaffoldParams) {
+    if (!PLUGIN_NAME_PATTERN.test(params.pluginName)) {
+      return yield* new InvalidPluginScaffoldNameError({
+        pluginName: params.pluginName,
+      });
+    }
 
-          const plan = yield* planScaffold(fileSystem, params);
-          yield* publishScaffold(fileSystem, targetDir, plan);
+    const targetDir = path.resolve(
+      params.currentWorkingDirectory,
+      params.targetDir
+    );
+    const targetExists = yield* fileSystem
+      .exists(targetDir)
+      .pipe(Effect.mapError(fileSystemError("exists", targetDir)));
+    if (targetExists) {
+      return yield* new PluginScaffoldTargetExistsError({ targetDir });
+    }
 
-          return {
-            targetDir,
-            files: plan.map(file => file.path),
-          };
-        });
+    const plan = yield* planScaffold(fileSystem, params);
+    yield* publishScaffold(fileSystem, targetDir, plan);
 
-      return { scaffold } as const;
-    }),
-    accessors: true,
-  }
-) {}
+    return {
+      targetDir,
+      files: plan.map(file => file.path),
+    };
+  });
+
+  return { scaffold } as const;
+});
+
+export class PluginScaffolder extends Context.Service<
+  PluginScaffolder,
+  PluginScaffolderShape
+>()("typeweaver/PluginScaffolder") {
+  static readonly make = (service: PluginScaffolderShape) => service;
+
+  static readonly Default: Layer.Layer<
+    PluginScaffolder,
+    never,
+    FileSystem.FileSystem
+  > = Layer.effect(PluginScaffolder, makePluginScaffolder);
+
+  static readonly scaffold = (params: PluginScaffoldParams) =>
+    PluginScaffolder.use(service => service.scaffold(params));
+}

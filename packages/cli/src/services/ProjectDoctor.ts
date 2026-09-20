@@ -1,7 +1,11 @@
 import path from "node:path";
+import type {
+  Issue,
+  PluginRegistryShape,
+  TypeweaverConfig,
+} from "@rexeus/typeweaver-gen";
 import { PluginRegistry } from "@rexeus/typeweaver-gen";
-import type { Issue, TypeweaverConfig } from "@rexeus/typeweaver-gen";
-import { Effect, Either } from "effect";
+import { Context, Effect, FileSystem, Layer, Result } from "effect";
 import { createDoctorCheck } from "../reports/DoctorReport.js";
 import { parsePluginList } from "../resolveGenerateOptions.js";
 import { ConfigLoader, getResolvedConfigPath } from "./ConfigLoader.js";
@@ -19,9 +23,12 @@ import {
   DEFAULT_PLUGIN_RESOLUTION_STRATEGIES,
   defaultRequiredPlugins,
 } from "./generatorDefaults.js";
-import { PluginLoader } from "./PluginLoader.js";
+import { PluginLoader } from "./PluginLoaderService.js";
 import { ProjectValidator } from "./ProjectValidator.js";
 import type { DoctorCheck, DoctorOutcome } from "../reports/DoctorReport.js";
+import type { ConfigLoaderShape } from "./ConfigLoader.js";
+import type { PluginLoaderShape } from "./PluginLoaderService.js";
+import type { ProjectValidatorShape } from "./ProjectValidator.js";
 
 export type DiagnoseProjectParams = {
   readonly currentWorkingDirectory: string;
@@ -71,7 +78,7 @@ const issueOutcome = (issues: readonly Issue[]): DoctorOutcome => {
 };
 
 const loadConfig = (
-  configLoader: ConfigLoader,
+  configLoader: ConfigLoaderShape,
   params: DiagnoseProjectParams
 ): Effect.Effect<{
   readonly config: Partial<TypeweaverConfig>;
@@ -98,10 +105,10 @@ const loadConfig = (
   return Effect.gen(function* () {
     const loaded = yield* configLoader
       .load(resolvedConfigPath)
-      .pipe(Effect.either);
-    return Either.isRight(loaded)
+      .pipe(Effect.result);
+    return Result.isSuccess(loaded)
       ? {
-          config: loaded.right,
+          config: loaded.success,
           healthy: true,
           check: createDoctorCheck({
             code: "TW-DOCTOR-004",
@@ -117,7 +124,7 @@ const loadConfig = (
             code: "TW-DOCTOR-004",
             name: "configuration",
             outcome: "fail",
-            message: failureMessage(loaded.left),
+            message: failureMessage(loaded.failure),
             hint: "Provide a readable .js, .mjs, or .cjs TypeWeaver configuration.",
           }),
         };
@@ -142,7 +149,7 @@ const withoutUndefinedValues = (
 };
 
 const loadInputs = (
-  configLoader: ConfigLoader,
+  configLoader: ConfigLoaderShape,
   params: DiagnoseProjectParams
 ): Effect.Effect<ResolvedDoctorInputs> =>
   Effect.gen(function* () {
@@ -177,8 +184,8 @@ const loadInputs = (
   });
 
 const checkPlugins = (
-  pluginLoader: PluginLoader,
-  pluginRegistry: PluginRegistry,
+  pluginLoader: PluginLoaderShape,
+  pluginRegistry: PluginRegistryShape,
   inputs: DoctorInputs
 ): Effect.Effect<DoctorCheck> => {
   if (!inputs.configHealthy) {
@@ -201,13 +208,13 @@ const checkPlugins = (
         strategies: DEFAULT_PLUGIN_RESOLUTION_STRATEGIES,
         config: inputs.config,
       })
-      .pipe(Effect.either);
-    if (Either.isLeft(loaded)) {
+      .pipe(Effect.result);
+    if (Result.isFailure(loaded)) {
       return createDoctorCheck({
         code: "TW-DOCTOR-006",
         name: "plugin availability",
         outcome: "fail",
-        message: failureMessage(loaded.left),
+        message: failureMessage(loaded.failure),
         hint: "Verify each plugin specifier and its configuration.",
       });
     }
@@ -236,7 +243,7 @@ const skippedDeepCheck = (message: string): DoctorCheck =>
 // validation Effect; the compatibility check fails first and this skip keeps the
 // two checks consistent.
 const checkDeepValidation = (
-  projectValidator: ProjectValidator,
+  projectValidator: ProjectValidatorShape,
   params: DeepValidationParams
 ): Effect.Effect<DoctorCheck> => {
   if (!params.deep) {
@@ -271,23 +278,23 @@ const checkDeepValidation = (
         config,
         currentWorkingDirectory: params.currentWorkingDirectory,
       })
-      .pipe(Effect.either);
-    if (Either.isLeft(result)) {
+      .pipe(Effect.result);
+    if (Result.isFailure(result)) {
       return createDoctorCheck({
         code: "TW-DOCTOR-010",
         name: "deep spec validation",
         outcome: "fail",
-        message: failureMessage(result.left),
+        message: failureMessage(result.failure),
         hint: "Fix the spec bundle, normalized contract, or plugin validation failure.",
       });
     }
 
-    const outcome = issueOutcome(result.right.issues);
+    const outcome = issueOutcome(result.success.issues);
     return createDoctorCheck({
       code: "TW-DOCTOR-010",
       name: "deep spec validation",
       outcome,
-      message: `Deep validation completed with ${result.right.issues.length} issue(s).`,
+      message: `Deep validation completed with ${result.success.issues.length} issue(s).`,
       ...(outcome === "pass"
         ? {}
         : {
@@ -299,10 +306,10 @@ const checkDeepValidation = (
 
 const diagnoseProject = (
   services: {
-    readonly configLoader: ConfigLoader;
-    readonly pluginLoader: PluginLoader;
-    readonly pluginRegistry: PluginRegistry;
-    readonly projectValidator: ProjectValidator;
+    readonly configLoader: ConfigLoaderShape;
+    readonly pluginLoader: PluginLoaderShape;
+    readonly pluginRegistry: PluginRegistryShape;
+    readonly projectValidator: ProjectValidatorShape;
   },
   params: DiagnoseProjectParams
 ): Effect.Effect<readonly DoctorCheck[]> =>
@@ -351,32 +358,43 @@ const diagnoseProject = (
     ];
   });
 
-export class ProjectDoctor extends Effect.Service<ProjectDoctor>()(
-  "typeweaver/ProjectDoctor",
-  {
-    effect: Effect.gen(function* () {
-      const configLoader = yield* ConfigLoader;
-      const pluginLoader = yield* PluginLoader;
-      const pluginRegistry = yield* PluginRegistry;
-      const projectValidator = yield* ProjectValidator;
-      const services = {
-        configLoader,
-        pluginLoader,
-        pluginRegistry,
-        projectValidator,
-      };
-      return {
-        diagnose: Effect.fn("typeweaver.ProjectDoctor.diagnose")(
-          (params: DiagnoseProjectParams) => diagnoseProject(services, params)
-        ),
-      } as const;
-    }),
-    dependencies: [
-      ConfigLoader.Default,
-      PluginLoader.Default,
-      PluginRegistry.Default,
-      ProjectValidator.Default,
-    ],
-    accessors: true,
-  }
-) {}
+const makeProjectDoctor = Effect.gen(function* () {
+  const configLoader = yield* ConfigLoader;
+  const pluginLoader = yield* PluginLoader;
+  const pluginRegistry = yield* PluginRegistry;
+  const projectValidator = yield* ProjectValidator;
+  const services = {
+    configLoader,
+    pluginLoader,
+    pluginRegistry,
+    projectValidator,
+  };
+  return {
+    diagnose: Effect.fn("typeweaver.ProjectDoctor.diagnose")(
+      (params: DiagnoseProjectParams) => diagnoseProject(services, params)
+    ),
+  } as const;
+});
+
+export type ProjectDoctorShape = Effect.Success<typeof makeProjectDoctor>;
+
+export class ProjectDoctor extends Context.Service<
+  ProjectDoctor,
+  ProjectDoctorShape
+>()("typeweaver/ProjectDoctor") {
+  static readonly make = (service: ProjectDoctorShape) => service;
+
+  static readonly Default: Layer.Layer<
+    ProjectDoctor,
+    never,
+    FileSystem.FileSystem
+  > = Layer.effect(ProjectDoctor, makeProjectDoctor).pipe(
+    Layer.provide(ConfigLoader.Default),
+    Layer.provide(PluginLoader.Default),
+    Layer.provide(PluginRegistry.Default),
+    Layer.provide(ProjectValidator.Default)
+  );
+
+  static readonly diagnose = (params: DiagnoseProjectParams) =>
+    ProjectDoctor.use(service => service.diagnose(params));
+}

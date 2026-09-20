@@ -20,8 +20,8 @@ the executable API contract. The release breaks eight surfaces:
 
 1. The **plugin API** (V1 class-based → V2 Effect-native records). Affects anyone who built a custom
    plugin.
-2. The **CLI surface** (now built on `@effect/cli`). Affects scripts that parsed CLI output or
-   relied on the previous error format.
+2. The **CLI surface** (now built on Effect 4's `effect/unstable/cli`). Affects scripts that parsed
+   CLI output or relied on the previous error format.
 3. A small set of **programmatic extension APIs** now use options objects. This affects direct
    `NetworkError` construction and custom subclasses of the generated server and Hono router bases.
 4. The **Zod-to-TypeScript converter** rejects unsupported schema shapes instead of silently
@@ -92,14 +92,14 @@ export const typesPlugin: Plugin = definePluginWithLibCopy({
 export default typesPlugin;
 ```
 
-Plugin packages must declare the supported Effect 3 range `>=3.22.0 <4` as a `peerDependency`.
-TypeWeaver itself develops and tests against Effect 3.22.0:
+Plugin packages must declare the exact native Effect `4.0.0-rc.116` as a `peerDependency`.
+TypeWeaver itself develops and tests against that exact pin:
 
 ```json
 {
   "peerDependencies": {
     "@rexeus/typeweaver-gen": "^0.13.0",
-    "effect": ">=3.22.0 <4"
+    "effect": "4.0.0-rc.116"
   }
 }
 ```
@@ -108,8 +108,8 @@ TypeWeaver itself develops and tests against Effect 3.22.0:
 authors wrap their sync work in `Effect.try` and map thrown causes to `PluginExecutionError` — the
 orchestrator does **not** catch raw throws. Plugins written in Effect style can use the additive
 Effect-native counterparts (`writeFileEffect`, `renderTemplateEffect`, `addGeneratedFileEffect`)
-instead — same guarantees, typed error channels, I/O through `@effect/platform`'s `FileSystem`
-service. See [`docs/plugin-authoring.md`](./docs/plugin-authoring.md) for the full V2 contract and
+instead — same guarantees, typed error channels, I/O through Effect 4's `FileSystem` service. See
+[`docs/plugin-authoring.md`](./docs/plugin-authoring.md) for the full V2 contract and
 [ADR 0003](./docs/adr/0003-effect-native-plugin-api.md) for the design rationale.
 
 Plugin authors no longer need to copy the CLI's private fake contexts or manually retain
@@ -124,9 +124,9 @@ non-interactive command creates a strict TypeScript package with public lifecycl
 configurable factory example, and an integration generation fixture. It refuses an existing target;
 there is no migration required for existing plugin packages.
 
-### 2. CLI on `@effect/cli` (BREAKING for invocation in scripts)
+### 2. CLI on `effect/unstable/cli` (BREAKING for invocation in scripts)
 
-The CLI is now built on `@effect/cli`. Three observable changes:
+The CLI is now built on Effect 4's native `effect/unstable/cli` module. Three observable changes:
 
 - **Help output** differs from the previous commander-based format. Flag names and exit codes are
   preserved; the visual layout is new.
@@ -191,57 +191,56 @@ generated NodeNext sources and run the emitted `command/cli.mjs`. See the
 exit codes, and representability limits. An operation named `version` remains valid because the
 generated runtime has no version subcommand; only `help` is reserved.
 
-#### Effect 4 workspaces and the binary CLI
+#### Native Effect 4.0.0-rc.116 migration
 
-TypeWeaver 0.13 remains an Effect 3 line: the development baseline is Effect 3.22.0, the public peer
-range is `>=3.22.0 <4`, and Effect-native surfaces do not accept Effect 4 values. TypeWeaver has
-tested isolated CLI generation only with `effect@4.0.0-rc.115`. In such a workspace the binary CLI
-can run as a `process-isolated` child process with an Effect-neutral config and spec module, and the
-tested built-in plain projections (`types`, `clients`, `server`, `command`, `hono`, `openapi`,
-`aws-cdk`) then generate Effect-independent output. This evidence is pnpm-specific with strict
-peers, and it does not promise any other Effect 4 release candidate or stable version: every other
-Effect 4 version is UNVERIFIED.
+TypeWeaver's Effect-bearing surfaces now use one exact `effect@4.0.0-rc.116` identity: the CLI
+programmatic API (`Generator`, `effectRuntime`), `@rexeus/typeweaver-gen` lifecycle, first-party
+generator packages (including command, Hono, and OpenAPI), and `@rexeus/typeweaver-effect`. Core
+authoring and generated plain outputs remain Effect-optional; the generator packages themselves
+require the exact Effect peer even when their emitted command runtime or OpenAPI JSON does not
+import Effect.
 
-The CLI programmatic API (`Generator`, `effectRuntime`), `@rexeus/typeweaver-gen` plugin authoring,
-direct first-party plugin imports, and `@rexeus/typeweaver-effect` remain Effect 3-only and are not
-supported in an Effect 4 workspace. No migration step is required for existing Effect 3 users. See
-[ADR 0010](./docs/adr/0010-effect-4-workspace-compatibility.md) for the full matrix. A later native
-Effect 4 line waits for a stable Effect 4 release.
+Install the exact peer, remove Effect 3 packages and ranges, then update visible APIs: replace
+Effect 3 service builders with `Context.Service` plus explicit layers, `Either` with `Result`, old
+Cause helpers with RC.116 reason accessors, `Schema.decodeUnknown` with
+`Schema.decodeUnknownEffect`, and legacy CLI imports with `effect/unstable/cli`. Re-run the
+standalone `@effect/tsgo` diagnostics gate and `pnpm verify:effect-reference` against commit
+`d62dd0d65252e5d3635538f0e41adc7c08aa9beb`. See [ADR 0008](./docs/adr/0008-effect-4-baseline.md).
 
 ### 3. Internal API changes (informational; only programmatic consumers)
 
 If you imported the generator programmatically rather than through the CLI:
 
-- The imperative `Generator` class is replaced by an `Effect.Service` that lives inside a
-  `ManagedRuntime`. Import the public runtime and service from `@rexeus/typeweaver`, then dispose
-  the runtime when the embedding process no longer needs it:
+- The imperative `Generator` class is now a `Context.Service` with an explicit `make` identity
+  constructor and layers inside a `ManagedRuntime`. Import the public runtime and service from
+  `@rexeus/typeweaver`, then dispose the runtime when the embedding process no longer needs it:
 
-  ```ts
-  import { effectRuntime, Generator } from "@rexeus/typeweaver";
+```ts
+import { effectRuntime, Generator } from "@rexeus/typeweaver";
 
-  try {
-    await effectRuntime.runPromise(
-      Generator.generate({
-        inputFile: "./api/spec/index.ts",
-        outputDir: "./api/generated",
-      })
-    );
-  } finally {
-    await effectRuntime.dispose();
-  }
-  ```
+try {
+  await effectRuntime.runPromise(
+    Generator.generate({
+      inputFile: "./api/spec/index.ts",
+      outputDir: "./api/generated",
+    })
+  );
+} finally {
+  await effectRuntime.dispose();
+}
+```
 
-  The package-root import is side-effect-free: only the `typeweaver` binary parses argv or starts
-  the CLI. See `packages/cli/src/effectRuntime.ts` and
-  [ADR 0007](./docs/adr/0007-generator-per-call-isolation.md).
+The package-root import is side-effect-free: only the `typeweaver` binary parses argv or starts the
+CLI. See `packages/cli/src/effectRuntime.ts` and
+[ADR 0007](./docs/adr/0007-generator-per-call-isolation.md).
 
 - `createPluginRegistry` is deleted; the runtime composes the equivalent service.
   `createPluginContextBuilder` is no longer exported — it lives under `services/internal/` as
   implementation detail of the `ContextBuilder` service.
-- `MainLayer` (from `@rexeus/typeweaver-gen`) now requires the platform-agnostic `FileSystem` tag
-  from `@effect/platform` — `ContextBuilder` captures it for the Effect-native plugin context
-  surface. Provide `NodeContext.layer` (production) or an in-memory/no-op `FileSystem` layer (tests)
-  beneath it.
+  - `MainLayer` (from `@rexeus/typeweaver-gen`) now requires Effect 4's platform-agnostic
+    `FileSystem` service from `effect` — `ContextBuilder` captures it for the Effect-native plugin
+    context surface. At a Node.js programmatic edge, provide `NodeFileSystem.layer` from
+    `@effect/platform-node`; tests can provide an in-memory or no-op `FileSystem` layer beneath it.
 - Errors are now `Data.TaggedError` instances throughout. Inspect the `_tag` field for typed
   branching (`UnsafeGeneratedPathError`, `PluginExecutionError`, `SpecBundleError`, etc.).
 - Fiber interruption waits for a running Rolldown bundle to settle before the generator releases its
@@ -563,7 +562,7 @@ For **plugin authors**:
 - [ ] Replace `extends BasePlugin` with `definePlugin(...)` or `definePluginWithLibCopy(...)`.
 - [ ] Wrap sync emitter bodies in `Effect.try` with `PluginExecutionError` mapping (or use
       `definePluginWithLibCopy`, which does it for you).
-- [ ] Declare `effect >=3.22.0 <4` as a `peerDependency`.
+- [ ] Declare exact `effect 4.0.0-rc.116` as a `peerDependency`.
 - [ ] Replace hand-built full `GeneratorContext` fakes with `createPluginTestKit`; inspect its
       issues, generated files, contents, and finalizer failures.
 - [ ] Verify your plugin is discoverable: a named export matching the plugin name, a default export
@@ -580,7 +579,7 @@ For **plugin authors**:
 
 - [ADR 0003: Effect-native plugin API (V2)](./docs/adr/0003-effect-native-plugin-api.md)
 - [ADR 0004: FileSystem service adoption strategy](./docs/adr/0004-filesystem-service-adoption.md)
-- [ADR 0005: Effect.Service patterns (succeed vs effect)](./docs/adr/0005-effect-service-patterns.md)
+- [ADR 0005: Effect 4 service compatibility](./docs/adr/0005-effect-service-patterns.md)
 - [ADR 0006: CLI error and log formatting](./docs/adr/0006-cli-error-and-log-formatting.md)
 - [ADR 0007: Generator per-call isolation](./docs/adr/0007-generator-per-call-isolation.md)
 - [ADR 0009: API metadata and security contract](./docs/adr/0009-api-metadata-and-security-contract.md)

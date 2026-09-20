@@ -11,7 +11,7 @@ import type {
   ResponseDefinition,
   SpecDefinition,
 } from "@rexeus/typeweaver-core";
-import { Cause, Effect, Either } from "effect";
+import { Cause, Effect, Result } from "effect";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import {
@@ -34,24 +34,24 @@ import { TestAssertionError } from "./errors/index.js";
 import type { NormalizedSpec } from "../src/index.js";
 
 // Test shim that bridges the legacy sync call surface onto the new Effect
-// API. `Effect.either` flattens typed failures into the success channel
+// API. `Effect.result` flattens typed failures into the success channel
 // so the existing `toThrowError` / `instanceof` assertions keep working
 // against the underlying error rather than Effect's `FiberFailure` wrapper.
 const normalizeSpec = (spec: SpecDefinition): NormalizedSpec => {
-  const result = Effect.runSync(Effect.either(normalizeSpecEffect(spec)));
-  if (Either.isLeft(result)) throw result.left;
-  return result.right;
+  const result = Effect.runSync(Effect.result(normalizeSpecEffect(spec)));
+  if (Result.isFailure(result)) throw result.failure;
+  return result.success;
 };
 
 // Capture the typed failure from `normalizeSpecEffect` without rethrowing
 // so tests can assert on discriminating fields (resourceName, operationId,
 // etc.) — not just the error class.
 const captureNormalizeError = (spec: SpecDefinition): unknown => {
-  const result = Effect.runSync(Effect.either(normalizeSpecEffect(spec)));
-  if (Either.isRight(result)) {
+  const result = Effect.runSync(Effect.result(normalizeSpecEffect(spec)));
+  if (Result.isSuccess(result)) {
     throw new Error("Expected normalization to fail but it succeeded");
   }
-  return result.left;
+  return result.failure;
 };
 
 type ResponseBaseOverrides = {
@@ -1640,7 +1640,6 @@ describe("normalizeSpec effect-native error channel", () => {
         ],
       },
     });
-
     const exit = await Effect.runPromise(
       Effect.exit(normalizeSpecEffect(spec))
     );
@@ -1649,7 +1648,7 @@ describe("normalizeSpec effect-native error channel", () => {
       throw new TestAssertionError("expected normalize to fail");
     }
 
-    const failureOption = Cause.failureOption(exit.cause);
+    const failureOption = Cause.findErrorOption(exit.cause);
     if (failureOption._tag !== "Some") {
       throw new TestAssertionError("expected a Cause.Fail");
     }
@@ -1663,7 +1662,6 @@ describe("normalizeSpec effect-native error channel", () => {
     }
     expect(failure.operationId).toBe("duplicate");
   });
-
   test("Effect.catchTag recovers from a specific normalization error", async () => {
     const spec = aSpec({});
 

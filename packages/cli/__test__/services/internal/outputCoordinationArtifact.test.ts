@@ -254,7 +254,7 @@ describe("legacy lock acquisition behavior", () => {
     );
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) {
-      const failure = Cause.failureOption(exit.cause);
+      const failure = Cause.findErrorOption(exit.cause);
       expect(failure._tag).toBe("Some");
       if (failure._tag === "Some") {
         expect(failure.value).toBeInstanceOf(LegacyOutputLockError);
@@ -262,7 +262,6 @@ describe("legacy lock acquisition behavior", () => {
     }
     expect(fs.existsSync(lockDir)).toBe(true);
   });
-
   test("treats a dead legacy lock as stale and acquires the out-of-band lock", async () => {
     const workspace = createTempDir("acquire-dead");
     const deadPid = 99_999_999;
@@ -305,7 +304,6 @@ describe("flat lock release and private modes", () => {
       .filter(entry => entry.startsWith(`${path.basename(lockPath)}.fence-`));
     expect(leftoverFences).toEqual([]);
   });
-
   test("creates a 0700 lock directory and 0600 metadata under a permissive umask", async () => {
     if (process.platform === "win32") {
       return;

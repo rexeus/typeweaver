@@ -127,7 +127,7 @@ const extractFailure = <A>(exit: Exit.Exit<A, unknown>): unknown => {
   if (Exit.isSuccess(exit)) {
     throw new Error("Expected generation to fail with the held lock");
   }
-  const failure = Cause.failureOption(exit.cause);
+  const failure = Cause.findErrorOption(exit.cause);
   if (failure._tag === "None") {
     throw new Error(`Expected typed failure; got: ${Cause.pretty(exit.cause)}`);
   }
@@ -180,7 +180,6 @@ describe("Generator failed output-lock release recovery", () => {
     expect(replacement.ownerToken).not.toBe(lock.ownerToken);
     await Effect.runPromise(releaseOutputLock(replacement));
   });
-
   test("reclaims its abandoned live-PID lock after a transient detach failure", async () => {
     const workspace = createTempWorkspace("release-retry");
     writeTinySpec(workspace);
@@ -304,7 +303,6 @@ describe("Generator output-lock ownership", () => {
     await expect(runGenerate(workspace)).resolves.toBeUndefined();
     expect(fs.existsSync(lockDir)).toBe(false);
   });
-
   test("rejects a second run with ConcurrentGenerationError when a live PID holds the lock", async () => {
     const workspace = createTempWorkspace("collision");
     writeTinySpec(workspace);
@@ -328,7 +326,6 @@ describe("Generator output-lock ownership", () => {
       }) as unknown
     );
   });
-
   test("reclaims a stale lock left behind by a crashed run with a dead PID", async () => {
     const workspace = createTempWorkspace("stale");
     writeTinySpec(workspace);
@@ -359,7 +356,6 @@ describe("Generator output-lock ownership", () => {
       )
     ).toBe(true);
   });
-
   test("does not reclaim a lock when process liveness fails with an unknown platform error", async () => {
     const workspace = createTempWorkspace("liveness-error");
     writeTinySpec(workspace);
@@ -397,7 +393,7 @@ describe("Generator output-lock metadata", () => {
 
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) {
-      const failure = Cause.failureOption(exit.cause);
+      const failure = Cause.findErrorOption(exit.cause);
       expect(failure).toEqual(
         expect.objectContaining({
           value: expect.objectContaining({
@@ -410,7 +406,6 @@ describe("Generator output-lock metadata", () => {
     expect(fs.existsSync(lockDir)).toBe(true);
     expect(fs.existsSync(path.join(lockDir, "info.json"))).toBe(false);
   });
-
   test("does not reclaim a lock with partially written ownership metadata", async () => {
     const workspace = createTempWorkspace("partial-metadata");
     const outputDir = path.join(workspace, "generated", "output");
@@ -456,7 +451,6 @@ describe("Generator output-lock acquisition rollback", () => {
     expect(Exit.isFailure(exit)).toBe(true);
     expect(fs.existsSync(lockDir)).toBe(false);
   });
-
   test("does not roll back a replacement owner's lock after acquisition fails", async () => {
     const workspace = createTempWorkspace("rollback-replacement");
     const outputDir = path.join(workspace, "generated", "output");
@@ -639,7 +633,6 @@ describe("Generator output-lock replacement races", () => {
     );
     await Effect.runPromise(releaseOutputLock(replacement));
   });
-
   test("does not release a lock now owned by a replacement process", async () => {
     const workspace = createTempWorkspace("replacement-owner");
     const outputDir = path.join(workspace, "generated", "output");

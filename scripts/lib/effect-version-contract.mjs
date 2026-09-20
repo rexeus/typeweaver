@@ -3,7 +3,6 @@ import { createRequire } from "node:module";
 import path from "node:path";
 
 /** @typedef {import("./tooling-types.mjs").EffectBaselineContract} EffectBaselineContract */
-/** @typedef {import("./tooling-types.mjs").Effect4EvidenceContract} Effect4EvidenceContract */
 /** @typedef {import("./tooling-types.mjs").PackageManifest} PackageManifest */
 /** @typedef {Record<string, PackageManifest | undefined>} PackageManifestMap */
 
@@ -12,52 +11,41 @@ const dependencySections = /** @type {const} */ ([
   "devDependencies",
   "peerDependencies",
 ]);
+const publishedDependencySections = /** @type {const} */ ([
+  "dependencies",
+  "devDependencies",
+]);
 
 /** @typedef {typeof dependencySections[number]} EffectDependencySection */
 
-/**
- * @param {string} filePath
- * @returns {PackageManifest}
- */
+/** @param {string} filePath @returns {PackageManifest} */
 const readJson = filePath => JSON.parse(readFileSync(filePath, "utf8"));
 
-/**
- * @param {PackageManifest} packageJson
- * @returns {EffectDependencySection[]}
- */
+/** @param {PackageManifest} packageJson @returns {EffectDependencySection[]} */
 const findEffectSections = packageJson =>
   dependencySections.filter(
     section => packageJson[section]?.["effect"] !== undefined
   );
 
-/**
- * @param {string} workspaceRoot
- * @param {string} packagePath
- * @returns {string}
- */
+/** @param {string} workspaceRoot @param {string} packagePath @returns {string} */
 const formatPackagePath = (workspaceRoot, packagePath) =>
   path.relative(workspaceRoot, packagePath).split(path.sep).join("/");
 
 /**
- * @param {{
- *   packageJson: PackageManifest,
- *   packagePath: string,
- *   effectSections: readonly EffectDependencySection[],
- *   runtimeRange: string,
- * }} options
+ * @param {{ packageJson: PackageManifest, packagePath: string, effectSections: readonly EffectDependencySection[], runtimeVersion: string }} options
  * @returns {string[]}
  */
 const validateDeclaredVersions = ({
   packageJson,
   packagePath,
   effectSections,
-  runtimeRange,
+  runtimeVersion,
 }) => {
   const failures = [];
   for (const section of effectSections) {
     const actual = packageJson[section]?.["effect"];
     const expected =
-      section === "peerDependencies" ? "catalog:peers" : runtimeRange;
+      section === "peerDependencies" ? "catalog:peers" : runtimeVersion;
     if (actual !== expected) {
       failures.push(
         `${packagePath} ${section}.effect must be ${expected}; found ${String(actual)}`
@@ -68,11 +56,7 @@ const validateDeclaredVersions = ({
 };
 
 /**
- * @param {{
- *   packageJson: PackageManifest,
- *   packagePath: string,
- *   acceptedEffectDependencies: Record<string, string>,
- * }} options
+ * @param {{ packageJson: PackageManifest, packagePath: string, acceptedEffectDependencies: Record<string, string> }} options
  * @returns {string[]}
  */
 const validatePublishedEffectDependencies = ({
@@ -81,23 +65,23 @@ const validatePublishedEffectDependencies = ({
   acceptedEffectDependencies,
 }) => {
   const failures = [];
-  for (const [name, specifier] of Object.entries(
-    packageJson.dependencies ?? {}
-  )) {
-    if (!name.startsWith("@effect/")) {
-      continue;
-    }
-    const accepted = acceptedEffectDependencies[name];
-    if (accepted === undefined) {
-      failures.push(
-        `${packagePath} declares unaccepted Effect dependency ${name}@${specifier}`
-      );
-      continue;
-    }
-    if (specifier !== accepted) {
-      failures.push(
-        `${packagePath} ${name} must be pinned to ${accepted}; found ${specifier}`
-      );
+  for (const section of publishedDependencySections) {
+    for (const [name, specifier] of Object.entries(
+      packageJson[section] ?? {}
+    )) {
+      if (!name.startsWith("@effect/")) {
+        continue;
+      }
+      const accepted = acceptedEffectDependencies[name];
+      if (accepted === undefined) {
+        failures.push(
+          `${packagePath} declares unaccepted Effect dependency ${name}@${specifier}`
+        );
+      } else if (specifier !== accepted) {
+        failures.push(
+          `${packagePath} ${name} must be pinned to ${accepted}; found ${specifier}`
+        );
+      }
     }
   }
   return failures;
@@ -130,20 +114,13 @@ const validateResolvedVersion = ({
 };
 
 /**
- * @param {{
- *   workspaceRoot: string,
- *   manifestPath: string,
- *   runtimeVersion: string,
- *   runtimeRange: string,
- *   acceptedEffectDependencies: Record<string, string>,
- * }} options
+ * @param {{ workspaceRoot: string, manifestPath: string, runtimeVersion: string, acceptedEffectDependencies: Record<string, string> }} options
  * @returns {string[]}
  */
 const validatePackage = ({
   workspaceRoot,
   manifestPath,
   runtimeVersion,
-  runtimeRange,
   acceptedEffectDependencies,
 }) => {
   let packageJson;
@@ -163,14 +140,13 @@ const validatePackage = ({
   if (effectSections.length === 0) {
     return failures;
   }
-
   return [
     ...failures,
     ...validateDeclaredVersions({
       packageJson,
       packagePath,
       effectSections,
-      runtimeRange,
+      runtimeVersion,
     }),
     ...validateResolvedVersion({
       manifestPath,
@@ -181,11 +157,11 @@ const validatePackage = ({
 };
 
 /**
- * @param {{
- *   workspaceRoot: string,
- *   runtimeVersion: string,
- *   acceptedEffectDependencies?: Record<string, string>,
- * }} options
+ * Validates every workspace package that declares Effect. A declaration is an
+ * exact runtime pin in development and an exact catalog peer when published;
+ * packages without an Effect declaration remain Effect-optional.
+ *
+ * @param {{ workspaceRoot: string, runtimeVersion: string, acceptedEffectDependencies?: Record<string, string> }} options
  * @returns {string[]}
  */
 export const validateEffectPackageVersions = ({
@@ -195,170 +171,133 @@ export const validateEffectPackageVersions = ({
 }) => {
   const failures = [];
   const packagesRoot = path.join(workspaceRoot, "packages");
-  const runtimeRange = `^${runtimeVersion}`;
-
   for (const entry of readdirSync(packagesRoot, { withFileTypes: true })) {
     if (!entry.isDirectory()) {
       continue;
     }
-
-    const manifestPath = path.join(packagesRoot, entry.name, "package.json");
     failures.push(
       ...validatePackage({
         workspaceRoot,
-        manifestPath,
+        manifestPath: path.join(packagesRoot, entry.name, "package.json"),
         runtimeVersion,
-        runtimeRange,
         acceptedEffectDependencies,
       })
     );
   }
-
   return failures;
 };
 
 /**
- * Stable statements each public document must keep for the Effect 4 workspace
- * contract. Exact sentences stay flexible; the load-bearing exact pin,
- * binary/process boundary, and surface names are asserted so no document
- * drifts into a generic "supports Effect 4" claim.
+ * Public documents must describe the native RC.116 contract. The generated
+ * projections remain usable without importing Effect; the authoring, plugin,
+ * CLI programmatic, and adapter boundaries require the exact peer.
  */
-export const EFFECT_4_DOCUMENT_TOKENS = {
-  "docs/adr/0010-effect-4-workspace-compatibility.md": [
-    "0008",
-    "4.0.0-rc.115",
-    "process-isolated",
-    ">=3.22.0 <4",
-    "Core authoring",
-    "Binary CLI",
-    "CLI programmatic API",
-    "plugin authoring",
-    "plain generated",
-    "first-party",
-    "Effect adapter",
-    "UNVERIFIED",
+export const NATIVE_EFFECT_DOCUMENT_TOKENS = {
+  "docs/adr/0008-effect-4-baseline.md": [
+    "4.0.0-rc.116",
+    "d62dd0d65252e5d3635538f0e41adc7c08aa9beb",
+    "Context.Service",
+    "Result",
+    "Cause",
+    "Schema",
+    "pnpm effect:diagnostics",
+    "optional",
   ],
-  "docs/adr/0008-effect-v3-baseline.md": ["0010"],
-  "README.md": ["4.0.0-rc.115", "binary CLI", ">=3.22.0 <4"],
-  "docs/README.md": ["0010", "4.0.0-rc.115", "binary CLI"],
-  "docs/getting-started.md": ["4.0.0-rc.115", "isolated"],
-  "packages/cli/README.md": ["4.0.0-rc.115", "binary CLI", ">=3.22.0 <4"],
-  "packages/gen/README.md": ["4.0.0-rc.115", "binary CLI", ">=3.22.0 <4"],
-  "packages/effect/README.md": ["4.0.0-rc.115", "binary CLI", ">=3.22.0 <4"],
-  "docs/plugin-authoring.md": ["4.0.0-rc.115", "Effect 4"],
-  "MIGRATION.md": ["4.0.0-rc.115", "process-isolated", "binary CLI"],
+  "docs/adr/0010-effect-4-workspace-compatibility.md": [
+    "0008-effect-4-baseline",
+    "Superseded",
+    "4.0.0-rc.116",
+    "native",
+  ],
+  "README.md": ["4.0.0-rc.116", "native", "optional"],
+  "docs/README.md": ["0008-effect-4-baseline", "4.0.0-rc.116", "optional"],
+  "docs/getting-started.md": ["4.0.0-rc.116", "native", "optional"],
+  "packages/cli/README.md": ["4.0.0-rc.116", "programmatic", "optional"],
+  "packages/gen/README.md": ["4.0.0-rc.116", "Context.Service", "Result"],
+  "packages/effect/README.md": ["4.0.0-rc.116", "Context.Service", "Cause"],
+  "docs/plugin-authoring.md": ["4.0.0-rc.116", "Context.Service", "Result"],
+  "MIGRATION.md": ["4.0.0-rc.116", "Context.Service", "Result", "Cause"],
 };
 
-/**
- * Phrasings that overstate isolated CLI evidence. They must not appear in any
- * public document that states the compatibility contract.
- */
-export const EFFECT_4_FORBIDDEN_PHRASES = [
-  "supports Effect 4",
-  "Effect 4 is supported",
-  ">=3.22.0 <5",
+export const NATIVE_EFFECT_FORBIDDEN_PHRASES = [
+  "Effect 3-only",
+  "Effect 3 only",
+  ">=3.22.0 <4",
+  "process-isolated Effect 4",
+  "binary CLI evidence only",
 ];
 
-const OPTIONAL_SENSITIVE_PEERS = [
-  "effect",
-  "@rexeus/typeweaver-gen",
-  "@rexeus/typeweaver-core",
-];
+const OPTIONAL_SENSITIVE_PEERS = ["effect", "@rexeus/typeweaver-gen"];
 
-/**
- * @param {EffectBaselineContract} contract
- * @returns {string[]}
- */
-const validateEffect4EvidenceVersions = contract => {
-  const failures = [];
-  if (contract.runtimeVersion !== "3.22.0") {
-    failures.push(
-      `config/effect-baseline.json runtimeVersion must remain 3.22.0; found ${contract.runtimeVersion}`
-    );
-  }
-  if (contract.peerRange !== ">=3.22.0 <4") {
-    failures.push(
-      `config/effect-baseline.json peerRange must remain >=3.22.0 <4; found ${contract.peerRange}`
-    );
-  }
-  /** @type {Partial<Effect4EvidenceContract>} */
-  const effect4Evidence = contract.effect4Evidence ?? {};
-  if (effect4Evidence.effectVersion !== "4.0.0-rc.115") {
-    failures.push(
-      `config/effect-baseline.json effect4Evidence.effectVersion must be the exact evidence pin 4.0.0-rc.115; found ${String(effect4Evidence.effectVersion)}`
-    );
-  }
-  if (effect4Evidence.scope !== "process-isolated-cli-only") {
-    failures.push(
-      `config/effect-baseline.json effect4Evidence.scope must be process-isolated-cli-only; found ${String(effect4Evidence.scope)}`
-    );
-  }
-  if (effect4Evidence.stability !== "release-candidate") {
-    failures.push(
-      `config/effect-baseline.json effect4Evidence.stability must be release-candidate; found ${String(effect4Evidence.stability)}`
-    );
-  }
-  if (effect4Evidence.nativeSurfaces !== "effect-3-only") {
-    failures.push(
-      `config/effect-baseline.json effect4Evidence.nativeSurfaces must be effect-3-only; found ${String(effect4Evidence.nativeSurfaces)}`
-    );
-  }
-  return failures;
-};
-
-/**
- * @param {string} packageName
- * @param {PackageManifest | undefined} manifest
- * @returns {string[]}
- */
-const validateEffectPeerManifest = (packageName, manifest) => {
+/** @param {PackageManifest | undefined} manifest @param {string} packageName @param {string} runtimeVersion @returns {string[]} */
+const validateNativePeer = (manifest, packageName, runtimeVersion) => {
   const failures = [];
   if (manifest?.peerDependencies?.["effect"] !== "catalog:peers") {
     failures.push(
-      `packages/${packageName}/package.json peerDependencies.effect must remain catalog:peers for @rexeus/typeweaver-${packageName}; found ${String(manifest?.peerDependencies?.["effect"])}`
+      `packages/${packageName}/package.json peerDependencies.effect must be catalog:peers; found ${String(manifest?.peerDependencies?.["effect"])} `
     );
   }
   if (manifest?.dependencies?.["effect"] !== undefined) {
     failures.push(
-      `packages/${packageName}/package.json must keep effect as a peer, not a dependency`
+      `packages/${packageName}/package.json must keep effect as a peer, not a dependency (native peer ${runtimeVersion})`
     );
   }
   return failures;
 };
 
-/**
- * @param {PackageManifestMap} manifests
- * @returns {string[]}
- */
-const validateHonoOptionalPeer = manifests => {
+/** @param {PackageManifest | undefined} manifest @returns {string[]} */
+const validateNativeCliManifest = manifest => {
   const failures = [];
-  const hono = manifests["hono"];
-  if (hono?.peerDependencies?.["hono"] !== "catalog:peers") {
+  if (manifest?.dependencies?.["effect"] !== "4.0.0-rc.116") {
     failures.push(
-      `packages/hono/package.json peerDependencies.hono must remain catalog:peers; found ${String(hono?.peerDependencies?.["hono"])}`
+      "packages/cli/package.json dependencies.effect must be 4.0.0-rc.116; found " +
+        String(manifest?.dependencies?.["effect"])
     );
   }
-  if (hono?.peerDependenciesMeta?.["hono"]?.optional !== true) {
+  if (manifest?.peerDependencies?.["effect"] !== undefined) {
     failures.push(
-      "packages/hono/package.json must mark its hono peer optional via peerDependenciesMeta.hono.optional; the generator does not require Hono to execute"
+      "packages/cli/package.json must not declare an Effect peer; the CLI owns its exact runtime dependency"
     );
   }
   return failures;
 };
 
-/**
- * @param {PackageManifestMap} manifests
- * @returns {string[]}
- */
-const validateSensitivePeersStayRequired = manifests => {
+/** @param {PackageManifestMap} manifests @returns {string[]} */
+const validateNativeRequiredPeers = manifests => {
+  const failures = [];
+  for (const packageName of ["gen", "effect", "command", "openapi", "hono"]) {
+    failures.push(
+      ...validateNativePeer(manifests[packageName], packageName, "4.0.0-rc.116")
+    );
+  }
+  return failures;
+};
+
+/** @param {PackageManifestMap} manifests @returns {string[]} */
+const validateNativeOptionalPeers = manifests => {
+  const failures = [];
+  const core = manifests["core"];
+  if (core?.peerDependencies?.["effect"] !== undefined) {
+    failures.push(
+      "packages/core/package.json must remain Effect-optional; core has no Effect peer"
+    );
+  }
+  for (const packageName of ["clients", "types", "server", "aws-cdk"]) {
+    if (manifests[packageName]?.peerDependencies?.["effect"] !== undefined) {
+      failures.push(
+        `packages/${packageName}/package.json must keep Effect optional; it has no runtime Effect peer`
+      );
+    }
+  }
+  return failures;
+};
+
+/** @param {PackageManifestMap} manifests @returns {string[]} */
+const validateOptionalSensitivePeers = manifests => {
   const failures = [];
   for (const [packageName, manifest] of Object.entries(manifests)) {
-    const meta = manifest?.peerDependenciesMeta;
-    if (meta === undefined) {
-      continue;
-    }
     for (const peer of OPTIONAL_SENSITIVE_PEERS) {
-      if (meta[peer]?.optional === true) {
+      if (manifest?.peerDependenciesMeta?.[peer]?.optional === true) {
         failures.push(
           `packages/${packageName}/package.json must not mark ${peer} optional`
         );
@@ -368,58 +307,68 @@ const validateSensitivePeersStayRequired = manifests => {
   return failures;
 };
 
-/**
- * @param {PackageManifestMap} manifests
- * @returns {string[]}
- */
-const validateEffect4EvidenceManifests = manifests => {
-  const failures = [];
-  if (manifests["cli"]?.dependencies?.["effect"] !== "^3.22.0") {
+/** @param {PackageManifestMap} manifests @returns {string[]} */
+const validateNativePeerMetadata = manifests => {
+  const failures = validateOptionalSensitivePeers(manifests);
+  if (manifests["hono"]?.peerDependenciesMeta?.["hono"]?.optional !== true) {
     failures.push(
-      `packages/cli/package.json dependencies.effect must remain ^3.22.0; found ${String(manifests["cli"]?.dependencies?.["effect"])}`
+      "packages/hono/package.json must mark its Hono peer optional"
     );
   }
-  if (manifests["cli"]?.peerDependencies?.["effect"] !== undefined) {
-    failures.push(
-      "packages/cli/package.json must not declare an Effect peer; the CLI owns its Effect runtime as a dependency"
-    );
-  }
-  return [
-    ...failures,
-    ...["gen", "effect", "hono"].flatMap(packageName =>
-      validateEffectPeerManifest(packageName, manifests[packageName])
-    ),
-    ...validateHonoOptionalPeer(manifests),
-    ...validateSensitivePeersStayRequired(manifests),
-  ];
+  return failures;
 };
 
-/**
- * @param {Record<string, string | undefined>} documents
- * @returns {string[]}
- */
-const validateEffect4EvidenceDocuments = documents => {
+/** @param {PackageManifestMap} manifests @returns {string[]} */
+const validateNativeManifests = manifests => [
+  ...validateNativeCliManifest(manifests["cli"]),
+  ...validateNativeRequiredPeers(manifests),
+  ...validateNativeOptionalPeers(manifests),
+  ...validateNativePeerMetadata(manifests),
+];
+
+/** @param {EffectBaselineContract} contract @returns {string[]} */
+const validateNativeVersions = contract => {
   const failures = [];
-  for (const [document, tokens] of Object.entries(EFFECT_4_DOCUMENT_TOKENS)) {
+  if (contract.runtimeVersion !== "4.0.0-rc.116") {
+    failures.push(
+      `config/effect-baseline.json runtimeVersion must be 4.0.0-rc.116; found ${contract.runtimeVersion}`
+    );
+  }
+  if (contract.peerRange !== "4.0.0-rc.116") {
+    failures.push(
+      `config/effect-baseline.json peerRange must be the exact native pin 4.0.0-rc.116; found ${contract.peerRange}`
+    );
+  }
+  if ("effect4Evidence" in contract) {
+    failures.push(
+      "config/effect-baseline.json must not contain the obsolete effect4Evidence contract"
+    );
+  }
+  return failures;
+};
+
+/** @param {Record<string, string | undefined>} documents @returns {string[]} */
+const validateNativeDocuments = documents => {
+  const failures = [];
+  for (const [document, tokens] of Object.entries(
+    NATIVE_EFFECT_DOCUMENT_TOKENS
+  )) {
     const content = documents[document];
     if (typeof content !== "string") {
-      failures.push(
-        `${document} is required by the Effect 4 workspace compatibility contract`
-      );
+      failures.push(`${document} is required by the native Effect contract`);
       continue;
     }
     for (const token of tokens) {
       if (!content.includes(token)) {
         failures.push(
-          `${document} is missing Effect 4 workspace statement: ${token}`
+          `${document} is missing native Effect statement: ${token}`
         );
       }
     }
-    const lowered = content.toLowerCase();
-    for (const phrase of EFFECT_4_FORBIDDEN_PHRASES) {
-      if (lowered.includes(phrase.toLowerCase())) {
+    for (const phrase of NATIVE_EFFECT_FORBIDDEN_PHRASES) {
+      if (content.toLowerCase().includes(phrase.toLowerCase())) {
         failures.push(
-          `${document} contains a generic Effect 4 promise: "${phrase}"`
+          `${document} contains obsolete Effect guidance: "${phrase}"`
         );
       }
     }
@@ -428,26 +377,15 @@ const validateEffect4EvidenceDocuments = documents => {
 };
 
 /**
- * Enforces the Effect 4 workspace contract: the runtime and peer range stay on
- * Effect 3, the evidence pin stays exact/process-scoped/Effect-3-native, the
- * CLI keeps Effect as its own dependency rather than a peer, the required
- * Effect/gen/core peers stay required, the Hono peer is optional because the
- * generator runs without it, and every public document keeps the exact-pin
- * binary-only wording without a generic Effect 4 promise.
- *
- * @param {{
- *   contract: EffectBaselineContract,
- *   manifests: PackageManifestMap,
- *   documents: Record<string, string | undefined>,
- * }} options
+ * @param {{ contract: EffectBaselineContract, manifests: PackageManifestMap, documents: Record<string, string | undefined> }} options
  * @returns {string[]}
  */
-export const validateEffect4WorkspaceContract = ({
+export const validateNativeEffectWorkspaceContract = ({
   contract,
   manifests,
   documents,
 }) => [
-  ...validateEffect4EvidenceVersions(contract),
-  ...validateEffect4EvidenceManifests(manifests),
-  ...validateEffect4EvidenceDocuments(documents),
+  ...validateNativeVersions(contract),
+  ...validateNativeManifests(manifests),
+  ...validateNativeDocuments(documents),
 ];

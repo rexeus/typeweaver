@@ -47,17 +47,16 @@ describe("{{pluginName}} plugin", () => {
   });
 });
 
-type TestProbe = {
-  readonly value: string;
-};
-
-const TestProbe = Context.GenericTag<TestProbe>(
+class TestProbe extends Context.Service<
+  TestProbe,
+  { readonly value: string }
+>()(
   "{{packageName}}/test/TestProbe"
-);
+) {}
 
 test("provides test Layers without CLI internals", () => {
   const events: string[] = [];
-  const layer = Layer.scoped(
+  const layer = Layer.effect(
     TestProbe,
     Effect.acquireRelease(
       Effect.sync(() => {

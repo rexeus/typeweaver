@@ -1,5 +1,4 @@
-import { FileSystem } from "@effect/platform";
-import { Effect } from "effect";
+import { Context, Effect, FileSystem, Layer } from "effect";
 import {
   createPluginContextBuilder,
   livePathSafetyShape,
@@ -58,21 +57,29 @@ export type BuiltGeneratorContext = {
  * platform `FileSystem` service captured here, so plugin lifecycle stages
  * keep `R = never` (ADR 0003) while their I/O routes through the service.
  *
- * The `FileSystem` requirement is the platform-agnostic tag from
- * `@effect/platform` — consumers provide `NodeContext.layer` in production
- * and `InMemoryFileSystem` in tests.
+ * The `FileSystem` requirement is the platform-agnostic service from
+ * `effect` — a Node.js programmatic edge provides `NodeFileSystem.layer` from
+ * `@effect/platform-node` in production and `InMemoryFileSystem` in tests.
  */
-export class ContextBuilder extends Effect.Service<ContextBuilder>()(
-  "typeweaver/ContextBuilder",
-  {
-    effect: Effect.gen(function* () {
-      const fileSystem = yield* FileSystem.FileSystem;
+export type ContextBuilderShape = {
+  readonly buildPluginContext: (
+    params: PluginContextParams
+  ) => Effect.Effect<PluginContext>;
+  readonly buildGeneratorContext: (
+    params: GeneratorContextParams
+  ) => Effect.Effect<BuiltGeneratorContext>;
+};
 
-      const buildPluginContext: (
-        params: PluginContextParams
-      ) => Effect.Effect<PluginContext> = Effect.fn(
-        "typeweaver.ContextBuilder.buildPluginContext"
-      )((params: PluginContextParams) =>
+const makeContextBuilder: Effect.Effect<
+  ContextBuilderShape,
+  never,
+  FileSystem.FileSystem
+> = Effect.gen(function* () {
+  const fileSystem = yield* FileSystem.FileSystem;
+
+  const buildPluginContext: ContextBuilderShape["buildPluginContext"] =
+    Effect.fn("typeweaver.ContextBuilder.buildPluginContext")(
+      (params: PluginContextParams) =>
         // Pure builder/closure allocation over already-captured services; no
         // filesystem operation or user callback runs inside this sync region.
         Effect.sync(() =>
@@ -82,13 +89,11 @@ export class ContextBuilder extends Effect.Service<ContextBuilder>()(
             fileSystem,
           }).createPluginContext(params)
         )
-      );
+    );
 
-      const buildGeneratorContext: (
-        params: GeneratorContextParams
-      ) => Effect.Effect<BuiltGeneratorContext> = Effect.fn(
-        "typeweaver.ContextBuilder.buildGeneratorContext"
-      )((params: GeneratorContextParams) =>
+  const buildGeneratorContext: ContextBuilderShape["buildGeneratorContext"] =
+    Effect.fn("typeweaver.ContextBuilder.buildGeneratorContext")(
+      (params: GeneratorContextParams) =>
         // Pure per-generation tracker and closure allocation. Expected I/O
         // begins only when the returned context operations are executed.
         Effect.sync(() => {
@@ -104,10 +109,26 @@ export class ContextBuilder extends Effect.Service<ContextBuilder>()(
             drainPendingWriteLogs: builder.drainPendingWriteLogs,
           };
         })
-      );
+    );
 
-      return { buildPluginContext, buildGeneratorContext } as const;
-    }),
-    accessors: true,
-  }
-) {}
+  return { buildPluginContext, buildGeneratorContext } as const;
+});
+
+export class ContextBuilder extends Context.Service<
+  ContextBuilder,
+  ContextBuilderShape
+>()("typeweaver/ContextBuilder") {
+  static readonly make = (service: ContextBuilderShape) => service;
+
+  static readonly Default: Layer.Layer<
+    ContextBuilder,
+    never,
+    FileSystem.FileSystem
+  > = Layer.effect(ContextBuilder, makeContextBuilder);
+
+  static readonly buildPluginContext = (params: PluginContextParams) =>
+    ContextBuilder.use(service => service.buildPluginContext(params));
+
+  static readonly buildGeneratorContext = (params: GeneratorContextParams) =>
+    ContextBuilder.use(service => service.buildGeneratorContext(params));
+}

@@ -8,30 +8,34 @@ import { createDoctorCheck } from "../reports/DoctorReport.js";
 import type { DoctorCheck } from "../reports/DoctorReport.js";
 
 /**
- * The Effect peer contract every Effect-native TypeWeaver surface publishes.
- * Effect 4 workspaces are handled only by running the binary CLI in isolation,
- * never by widening this range.
+ * The exact Effect runtime shared by the CLI programmatic API, generator,
+ * first-party plugins, and adapter.
  */
-export const SUPPORTED_EFFECT_PEER_RANGE = ">=3.22.0 <4";
+export const SUPPORTED_EFFECT_PEER_RANGE = "4.0.0-rc.116";
 
 /**
- * The only Effect 4 release candidate TypeWeaver has actually tested with the
- * process-isolated binary CLI. It is an exact pin, not a support range: every
- * other Effect 4 version is unverified.
+ * Alias retained for the doctor's public diagnostic wording. This is a
+ * required native version, not isolated-CLI evidence.
  */
-export const TESTED_EFFECT_4_VERSION = "4.0.0-rc.115";
+export const REQUIRED_EFFECT_VERSION = "4.0.0-rc.116";
 
 const BUILT_IN_PLAIN_PLUGINS = new Set([
   "aws-cdk",
   "clients",
-  "command",
-  "hono",
-  "openapi",
   "server",
   "types",
 ]);
 
-const EFFECT_NATIVE_PLUGINS = new Set(["effect", "@rexeus/typeweaver-effect"]);
+const EFFECT_NATIVE_PLUGINS = new Set([
+  "effect",
+  "@rexeus/typeweaver-effect",
+  "command",
+  "@rexeus/typeweaver-command",
+  "hono",
+  "@rexeus/typeweaver-hono",
+  "openapi",
+  "@rexeus/typeweaver-openapi",
+]);
 
 const DECLARATION_SECTIONS = [
   "dependencies",
@@ -68,10 +72,6 @@ export type WorkspaceEffectDeclaration =
 export type WorkspaceEffectCompatibilityFacts = {
   readonly workspaceEffect: WorkspaceEffectDeclaration;
   readonly configuredPlugins: readonly PluginEntry[];
-};
-
-type ParsedVersion = {
-  readonly major: number;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -114,35 +114,9 @@ export const classifyConfiguredPlugins = (
   return classification;
 };
 
-const parseVersion = (version: string): ParsedVersion | undefined => {
-  const parsed = parse(version);
-  return parsed === null ? undefined : { major: parsed.major };
-};
-
-/**
- * Standard semver semantics: only a stable release inside `>=3.22.0 <4`
- * passes. Prereleases such as `3.22.0-rc.1` never satisfy a range that does
- * not itself name a prerelease.
- */
-export const isSupportedStableEffect3 = (version: string): boolean => {
-  const parsed = parse(version);
-  return (
-    parsed !== null &&
-    parsed.prerelease.length === 0 &&
-    satisfies(parsed, SUPPORTED_EFFECT_PEER_RANGE)
-  );
-};
-
 const nativeSurfaces = (
   classification: ConfiguredPluginClassification
 ): readonly string[] => [...classification.effect, ...classification.external];
-
-const plainSummary = (
-  classification: ConfiguredPluginClassification
-): string =>
-  classification.plain.length > 0
-    ? classification.plain.join(", ")
-    : "types, clients, server, hono, command, openapi, aws-cdk";
 
 const skipCheck = (): DoctorCheck =>
   createDoctorCheck({
@@ -158,7 +132,7 @@ const passCheck = (version: string): DoctorCheck =>
     code: "TW-DOCTOR-011",
     name: "workspace Effect compatibility",
     outcome: "pass",
-    message: `The project declares and resolves the stable Effect ${version}, which satisfies the supported ${SUPPORTED_EFFECT_PEER_RANGE} range for Effect-native plugins, the programmatic API, and the adapter.`,
+    message: `The project declares and resolves the exact native Effect ${version} required by the CLI programmatic API, generator plugins, first-party plugins, and adapter.`,
   });
 
 const failUnresolvedCheck = (detail: string): DoctorCheck =>
@@ -179,25 +153,13 @@ const failNotDeclaredNativeCheck = (surfaces: readonly string[]): DoctorCheck =>
     hint: `Declare effect ${SUPPORTED_EFFECT_PEER_RANGE} in the project, or select only built-in plain projections.`,
   });
 
-const warnTestedEffect4Check = (
-  version: string,
-  classification: ConfiguredPluginClassification
-): DoctorCheck =>
+const warnUnsupportedCheck = (version: string): DoctorCheck =>
   createDoctorCheck({
     code: "TW-DOCTOR-011",
     name: "workspace Effect compatibility",
     outcome: "warn",
-    message: `The project resolves Effect ${version}, the only Effect 4 version TypeWeaver has tested with the process-isolated CLI (pnpm, strict peers). The binary CLI can run as an isolated child process and generate Effect-independent output from built-in plain projections (${plainSummary(classification)}) only when the config module and spec entrypoint are Effect-neutral; doctor cannot verify that. Other Effect 4 versions are unverified, and direct imports of @rexeus/typeweaver-gen, @rexeus/typeweaver-effect, first-party Effect plugins, and the CLI programmatic API remain Effect ${SUPPORTED_EFFECT_PEER_RANGE} only.`,
-    hint: "Keep Effect-native authoring and adapter use in a workspace that resolves Effect 3, and keep the config and spec Effect-neutral.",
-  });
-
-const warnUnverifiedEffect4Check = (version: string): DoctorCheck =>
-  createDoctorCheck({
-    code: "TW-DOCTOR-011",
-    name: "workspace Effect compatibility",
-    outcome: "warn",
-    message: `The project resolves Effect ${version}, which is UNVERIFIED: TypeWeaver has tested isolated CLI generation only with ${TESTED_EFFECT_4_VERSION}. TypeWeaver does not claim that the binary CLI can generate output or run in isolation for this version, and Effect-native surfaces remain Effect ${SUPPORTED_EFFECT_PEER_RANGE} only.`,
-    hint: `Use Effect ${TESTED_EFFECT_4_VERSION} only if you accept that single tested pin, or migrate to ${SUPPORTED_EFFECT_PEER_RANGE} for Effect-native surfaces.`,
+    message: `The project resolves Effect ${version}, not the exact native TypeWeaver requirement ${REQUIRED_EFFECT_VERSION}. The binary CLI's own runtime is independent, but the programmatic API, generator plugins, first-party plugins, and adapter are not verified with this project runtime.`,
+    hint: `Install effect ${REQUIRED_EFFECT_VERSION} before using an Effect-native TypeWeaver surface.`,
   });
 
 const failEffect4Check = (
@@ -208,41 +170,8 @@ const failEffect4Check = (
     code: "TW-DOCTOR-011",
     name: "workspace Effect compatibility",
     outcome: "fail",
-    message: `The project resolves Effect ${version}, but these configured surfaces are Effect-native and supported only on ${SUPPORTED_EFFECT_PEER_RANGE}: ${surfaces.join(", ")}. The isolated CLI child process cannot bridge Effect values into the plugin or adapter ABI.`,
-    hint: `Run this project on ${SUPPORTED_EFFECT_PEER_RANGE}, or use built-in plain projections without a custom plugin.`,
-  });
-
-const warnUnsupportedCheck = (version: string): DoctorCheck =>
-  createDoctorCheck({
-    code: "TW-DOCTOR-011",
-    name: "workspace Effect compatibility",
-    outcome: "warn",
-    message: `The project resolves Effect ${version}, outside the supported ${SUPPORTED_EFFECT_PEER_RANGE} range. TypeWeaver does not verify CLI generation or Effect-native surfaces for this version, so it makes no claim that either works here.`,
-    hint: `Migrate the project to Effect ${SUPPORTED_EFFECT_PEER_RANGE} before relying on any TypeWeaver surface.`,
-  });
-
-const failUnsupportedCheck = (
-  version: string,
-  surfaces: readonly string[]
-): DoctorCheck =>
-  createDoctorCheck({
-    code: "TW-DOCTOR-011",
-    name: "workspace Effect compatibility",
-    outcome: "fail",
-    message: `The project resolves Effect ${version}, outside the supported ${SUPPORTED_EFFECT_PEER_RANGE} range, and these configured surfaces are Effect-native: ${surfaces.join(", ")}.`,
-    hint: `Migrate the project to Effect ${SUPPORTED_EFFECT_PEER_RANGE} before using Effect-native plugins or the adapter.`,
-  });
-
-const failNewerMajorCheck = (
-  version: string,
-  surfaces: readonly string[]
-): DoctorCheck =>
-  createDoctorCheck({
-    code: "TW-DOCTOR-011",
-    name: "workspace Effect compatibility",
-    outcome: "fail",
-    message: `The project resolves Effect ${version}, a newer major than the supported ${SUPPORTED_EFFECT_PEER_RANGE} range, so no TypeWeaver surface is supported.${surfaces.length > 0 ? ` Configured Effect-native surfaces: ${surfaces.join(", ")}.` : ""}`,
-    hint: `Use a workspace that resolves Effect ${SUPPORTED_EFFECT_PEER_RANGE}.`,
+    message: `The project resolves Effect ${version}, but these configured surfaces require the exact native TypeWeaver runtime ${REQUIRED_EFFECT_VERSION}: ${surfaces.join(", ")}.`,
+    hint: `Run this project on ${REQUIRED_EFFECT_VERSION}, or use built-in plain projections.`,
   });
 
 const failUnrecognizedCheck = (version: string): DoctorCheck =>
@@ -260,30 +189,18 @@ const failUnrecognizedCheck = (version: string): DoctorCheck =>
  */
 const classifyResolvedEffect = (
   version: string,
-  classification: ConfiguredPluginClassification,
   surfaces: readonly string[]
 ): DoctorCheck => {
-  const parsed = parseVersion(version);
-  if (parsed === undefined) {
+  if (parse(version) === null) {
     return failUnrecognizedCheck(version);
   }
-  if (isSupportedStableEffect3(version)) {
+  if (version === REQUIRED_EFFECT_VERSION) {
     return passCheck(version);
   }
-  if (parsed.major > 4) {
-    return failNewerMajorCheck(version, surfaces);
-  }
   if (surfaces.length > 0) {
-    return parsed.major === 4
-      ? failEffect4Check(version, surfaces)
-      : failUnsupportedCheck(version, surfaces);
+    return failEffect4Check(version, surfaces);
   }
-  if (parsed.major !== 4) {
-    return warnUnsupportedCheck(version);
-  }
-  return version === TESTED_EFFECT_4_VERSION
-    ? warnTestedEffect4Check(version, classification)
-    : warnUnverifiedEffect4Check(version);
+  return warnUnsupportedCheck(version);
 };
 
 /**
@@ -306,11 +223,7 @@ export const classifyWorkspaceEffectCompatibility = (
   if (workspaceEffect._tag === "Unresolved") {
     return failUnresolvedCheck(workspaceEffect.detail);
   }
-  return classifyResolvedEffect(
-    workspaceEffect.version,
-    classification,
-    surfaces
-  );
+  return classifyResolvedEffect(workspaceEffect.version, surfaces);
 };
 
 const readEffectVersion = (packageJsonPath: string): string | undefined => {

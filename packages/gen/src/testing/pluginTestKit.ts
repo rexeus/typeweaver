@@ -95,14 +95,16 @@ const collectFinalizerExit = (
   if (Exit.isSuccess(exit)) {
     return Effect.void;
   }
-  const defectCause = Cause.keepDefects(exit.cause);
-  if (Option.isSome(defectCause)) {
-    return Effect.failCause(defectCause.value);
+  const cause = exit.cause;
+  if (Cause.hasDies(cause)) {
+    return Effect.failCause(
+      Cause.fromReasons(cause.reasons.filter(Cause.isDieReason))
+    );
   }
-  if (Cause.isInterrupted(exit.cause)) {
+  if (Cause.hasInterrupts(cause)) {
     return Effect.interrupt;
   }
-  const failure = Cause.failureOption(exit.cause);
+  const failure = Cause.findErrorOption(cause);
   if (Option.isSome(failure)) {
     return Effect.sync(() => {
       finalizeErrors.push(failure.value);

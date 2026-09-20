@@ -7,10 +7,11 @@ import type {
   PluginRegistryInstance,
   TypeweaverConfig,
 } from "@rexeus/typeweaver-gen";
-import { Effect, Either } from "effect";
+import { Effect, Result } from "effect";
 import { PluginLoadError } from "../errors/PluginLoadError.js";
 import { isPluginConfigError } from "./isPluginConfigError.js";
 import { PluginModuleLoader } from "./PluginModuleLoader.js";
+import type { PluginModuleLoaderShape } from "./PluginModuleLoader.js";
 
 export type PluginResolutionStrategy = "npm" | "local" | "scoped";
 
@@ -99,8 +100,8 @@ const invalidField = (
   expected: string,
   actual: unknown,
   detail?: string
-): Either.Either<never, PluginShapeIssue> =>
-  Either.left({
+): Result.Result<never, PluginShapeIssue> =>
+  Result.fail({
     _tag: "InvalidField",
     field,
     expected,
@@ -110,18 +111,18 @@ const invalidField = (
 
 const decodePluginName = (
   value: Record<string, unknown>
-): Either.Either<string, PluginShapeIssue> => {
+): Result.Result<string, PluginShapeIssue> => {
   const name = value["name"];
   return typeof name === "string" && name.trim().length > 0
-    ? Either.right(name)
+    ? Result.succeed(name)
     : invalidField("name", "a non-empty string", name);
 };
 
 const decodeDependencies = (
   value: Record<string, unknown>
-): Either.Either<readonly string[] | undefined, PluginShapeIssue> => {
+): Result.Result<readonly string[] | undefined, PluginShapeIssue> => {
   if (!("depends" in value)) {
-    return Either.right(undefined);
+    return Result.succeed(undefined);
   }
   if (!Array.isArray(value["depends"])) {
     return invalidField("depends", "an array of strings", value["depends"]);
@@ -139,35 +140,35 @@ const decodeDependencies = (
     }
     dependencies.push(dependency);
   }
-  return Either.right(dependencies);
+  return Result.succeed(dependencies);
 };
 
 const decodeOptionalHook = <THook>(
   value: Record<string, unknown>,
   field: keyof Plugin,
   isHook: (candidate: unknown) => candidate is THook
-): Either.Either<THook | undefined, PluginShapeIssue> => {
+): Result.Result<THook | undefined, PluginShapeIssue> => {
   if (!(field in value)) {
-    return Either.right(undefined);
+    return Result.succeed(undefined);
   }
 
   const candidate = value[field];
   return isHook(candidate)
-    ? Either.right(candidate)
+    ? Result.succeed(candidate)
     : invalidField(field, "a function", candidate);
 };
 
 const decodePlugin = (
   value: unknown
-): Either.Either<Plugin, PluginShapeIssue> => {
+): Result.Result<Plugin, PluginShapeIssue> => {
   if (!isRecord(value)) {
-    return Either.left({
+    return Result.fail({
       _tag: "NotRecord",
       actual: describeValue(value),
     });
   }
 
-  return Either.gen(function* () {
+  return Result.gen(function* () {
     const name = yield* decodePluginName(value);
     const depends = yield* decodeDependencies(value);
     const initialize = yield* decodeOptionalHook(
@@ -282,23 +283,23 @@ type CandidateFailure = string | PluginConfigError;
 const resolveCandidateToPlugin = (
   candidate: PluginCandidate,
   config: PluginConfig | undefined
-): Either.Either<Plugin, CandidateFailure> => {
+): Result.Result<Plugin, CandidateFailure> => {
   if (isPluginFactory(candidate.value)) {
     try {
-      return Either.mapLeft(decodePlugin(candidate.value(config)), issue =>
+      return Result.mapError(decodePlugin(candidate.value(config)), issue =>
         formatPluginShapeIssue(candidate.exportName, issue)
       );
     } catch (error) {
       if (isPluginConfigError(error)) {
-        return Either.left(error);
+        return Result.fail(error);
       }
-      return Either.left(
+      return Result.fail(
         `Export '${candidate.exportName}' could not be instantiated: ${formatError(error)}`
       );
     }
   }
 
-  return Either.mapLeft(decodePlugin(candidate.value), issue =>
+  return Result.mapError(decodePlugin(candidate.value), issue =>
     formatPluginShapeIssue(candidate.exportName, issue)
   );
 };
@@ -306,25 +307,25 @@ const resolveCandidateToPlugin = (
 const resolveModuleToPlugin = (
   pluginModule: Record<string, unknown>,
   pluginConfig: PluginConfig | undefined
-): Either.Either<Plugin, CandidateFailure> => {
+): Result.Result<Plugin, CandidateFailure> => {
   const candidates = findPluginCandidates(pluginModule);
   if (candidates.length === 0) {
-    return Either.left("No plugin export found");
+    return Result.fail("No plugin export found");
   }
 
   const errors: string[] = [];
   for (const candidate of candidates) {
     const resolved = resolveCandidateToPlugin(candidate, pluginConfig);
-    if (Either.isRight(resolved)) {
+    if (Result.isSuccess(resolved)) {
       return resolved;
     }
-    if (isPluginConfigError(resolved.left)) {
+    if (isPluginConfigError(resolved.failure)) {
       return resolved;
     }
-    errors.push(resolved.left);
+    errors.push(resolved.failure);
   }
 
-  return Either.left(errors.join("; "));
+  return Result.fail(errors.join("; "));
 };
 
 const reportSuccessfulLoads = (
@@ -344,7 +345,7 @@ const reportSuccessfulLoads = (
     }
   });
 
-type LoadParams = {
+export type LoadParams = {
   readonly registry: PluginRegistryInstance;
   readonly requiredPlugins: readonly Plugin[];
   readonly strategies: readonly PluginResolutionStrategy[];
@@ -352,7 +353,7 @@ type LoadParams = {
 };
 
 const loadConfiguredPlugin = (
-  moduleLoader: PluginModuleLoader,
+  moduleLoader: PluginModuleLoaderShape,
   pluginName: string,
   strategies: readonly PluginResolutionStrategy[],
   pluginConfig?: PluginConfig
@@ -367,13 +368,13 @@ const loadConfiguredPlugin = (
       );
       const importResult = yield* moduleLoader
         .load(possiblePath)
-        .pipe(Effect.either);
+        .pipe(Effect.result);
 
-      if (Either.isLeft(importResult)) {
-        if (isPluginConfigError(importResult.left)) {
-          return yield* importResult.left;
+      if (Result.isFailure(importResult)) {
+        if (isPluginConfigError(importResult.failure)) {
+          return yield* importResult.failure;
         }
-        const errorMessage = formatError(importResult.left.cause);
+        const errorMessage = formatError(importResult.failure.cause);
         yield* Effect.logDebug(
           `Plugin '${pluginName}': '${possiblePath}' failed: ${errorMessage}`
         );
@@ -384,24 +385,33 @@ const loadConfiguredPlugin = (
         continue;
       }
 
-      const resolved = resolveModuleToPlugin(importResult.right, pluginConfig);
-      if (Either.isRight(resolved)) {
+      const resolved = resolveModuleToPlugin(
+        importResult.success,
+        pluginConfig
+      );
+      if (Result.isSuccess(resolved)) {
         return {
-          plugin: resolved.right,
+          plugin: resolved.success,
           source: possiblePath,
           config: pluginConfig,
         };
       }
 
-      if (isPluginConfigError(resolved.left)) {
-        return yield* resolved.left;
+      if (isPluginConfigError(resolved.failure)) {
+        return yield* resolved.failure;
       }
 
-      attempts.push({ path: possiblePath, error: resolved.left });
+      attempts.push({ path: possiblePath, error: resolved.failure });
     }
 
     return yield* new PluginLoadError({ pluginName, attempts });
   });
+
+export type PluginLoaderShape = {
+  readonly loadAll: (
+    params: LoadParams
+  ) => Effect.Effect<void, PluginLoadError | PluginConfigError>;
+};
 
 /**
  * Effect-native plugin loader. Registers each required plugin first, then
@@ -413,50 +423,45 @@ const loadConfiguredPlugin = (
  * registrations. Plugins are V2 records (`Plugin`) or factory functions
  * returning records; the runtime treats both uniformly.
  */
-export class PluginLoader extends Effect.Service<PluginLoader>()(
-  "typeweaver/PluginLoader",
-  {
-    effect: Effect.gen(function* () {
-      const moduleLoader = yield* PluginModuleLoader;
+export const makePluginLoader: Effect.Effect<
+  PluginLoaderShape,
+  never,
+  PluginModuleLoader
+> = Effect.gen(function* () {
+  const moduleLoader = yield* PluginModuleLoader;
 
-      const loadAll: (
-        params: LoadParams
-      ) => Effect.Effect<void, PluginLoadError | PluginConfigError> = Effect.fn(
-        "typeweaver.PluginLoader.loadAll"
-      )(function* (params: LoadParams) {
-        for (const requiredPlugin of params.requiredPlugins) {
-          yield* params.registry.register(requiredPlugin);
-        }
+  const loadAll: PluginLoaderShape["loadAll"] = Effect.fn(
+    "typeweaver.PluginLoader.loadAll"
+  )(function* (params: LoadParams) {
+    for (const requiredPlugin of params.requiredPlugins) {
+      yield* params.registry.register(requiredPlugin);
+    }
 
-        if (params.config?.plugins === undefined) {
-          return;
-        }
+    if (params.config?.plugins === undefined) {
+      return;
+    }
 
-        const successful: PluginLoadResult[] = [];
+    const successful: PluginLoadResult[] = [];
 
-        for (const pluginEntry of params.config.plugins) {
-          const pluginName =
-            typeof pluginEntry === "string" ? pluginEntry : pluginEntry[0];
-          const pluginConfig =
-            typeof pluginEntry === "string" ? undefined : pluginEntry[1];
+    for (const pluginEntry of params.config.plugins) {
+      const pluginName =
+        typeof pluginEntry === "string" ? pluginEntry : pluginEntry[0];
+      const pluginConfig =
+        typeof pluginEntry === "string" ? undefined : pluginEntry[1];
 
-          const result = yield* loadConfiguredPlugin(
-            moduleLoader,
-            pluginName,
-            params.strategies,
-            pluginConfig
-          );
+      const result = yield* loadConfiguredPlugin(
+        moduleLoader,
+        pluginName,
+        params.strategies,
+        pluginConfig
+      );
 
-          successful.push(result);
-          yield* params.registry.register(result.plugin, result.config);
-        }
+      successful.push(result);
+      yield* params.registry.register(result.plugin, result.config);
+    }
 
-        yield* reportSuccessfulLoads(successful);
-      });
+    yield* reportSuccessfulLoads(successful);
+  });
 
-      return { loadAll } as const;
-    }),
-    dependencies: [PluginModuleLoader.Default],
-    accessors: true,
-  }
-) {}
+  return { loadAll } as const;
+});

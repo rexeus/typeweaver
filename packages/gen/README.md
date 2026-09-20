@@ -29,14 +29,10 @@ pnpm add -D \
   zod
 ```
 
-The supported Effect peer range is `>=3.22.0 <4`. Keep one compatible Effect identity in the
-dependency graph.
-
-`@rexeus/typeweaver-gen` is Effect 3-only: the plugin lifecycle ABI returns Effect 3 values, so an
-Effect 4 application cannot import this package or author a plugin against its own runtime. Effect 4
-workspaces use the process-isolated binary CLI with built-in plain projections instead, and the only
-tested Effect 4 version is `4.0.0-rc.115`; every other Effect 4 version is UNVERIFIED. See
-[ADR 0010](../../docs/adr/0010-effect-4-workspace-compatibility.md).
+The exact supported Effect peer is `4.0.0-rc.116`. Keep one native Effect identity in the dependency
+graph. The lifecycle uses RC.116 APIs including `Context.Service`, `Result`, `Cause`, and
+`Schema.decodeUnknownEffect`; confirm uncertain signatures against the pinned source commit in
+[ADR 0008](../../docs/adr/0008-effect-4-baseline.md).
 
 ## The normalized model is the extension boundary
 

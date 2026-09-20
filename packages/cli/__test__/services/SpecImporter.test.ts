@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { NodeFileSystem } from "@effect/platform-node";
+import { layer as nodeFileSystemLayer } from "@effect/platform-node/NodeFileSystem";
 import { Effect, Layer } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { SpecImporter } from "../../src/services/SpecImporter.js";
@@ -64,12 +64,11 @@ describe("SpecImporter", () => {
     }
     tempDirs.length = 0;
   });
-
   test("Default layer imports a bundled spec module and returns its SpecDefinition", async () => {
     const dir = createTempDir();
     const bundledSpecFile = writeMinimalSpecModule(dir);
 
-    const layer = Layer.provide(SpecImporter.Default, NodeFileSystem.layer);
+    const layer = Layer.provide(SpecImporter.Default, nodeFileSystemLayer);
 
     const definition = await Effect.runPromise(
       Effect.gen(function* () {

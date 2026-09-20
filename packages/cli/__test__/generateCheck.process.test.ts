@@ -281,7 +281,6 @@ describe("built CLI generate --check matches", () => {
       fs.existsSync(path.join(workspace, "generated", ".typeweaver-lock"))
     ).toBe(false);
   }, 30_000);
-
   test("matches committed output through the config workflow", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
@@ -334,7 +333,6 @@ describe("built CLI generate --check drift", () => {
     expect(result.stderr).toContain("item/GetItemRequest.ts");
     expect(snapshotTree(outputDir)).toEqual(before);
   }, 15_000);
-
   test("reports a missing configured output as added drift without creating it", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
@@ -474,7 +472,6 @@ describe("built CLI output lock concurrency", () => {
 
     expect(holderResult).toMatchObject({ code: 0, signal: null });
   }, 60_000);
-
   test("check holding a missing mixed-case output blocks case-variant generation and creates neither", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);

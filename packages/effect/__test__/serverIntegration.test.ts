@@ -81,7 +81,6 @@ describe("Effect adapter and Fetch-native server integration", () => {
     expect(observedError).toBeInstanceOf(EffectHandlerDefectError);
     await runtime.dispose();
   });
-
   test("interrupts the handler from the incoming Fetch request signal", async () => {
     const controller = new AbortController();
     const started = Promise.withResolvers<void>();
@@ -91,7 +90,7 @@ describe("Effect adapter and Fetch-native server integration", () => {
     const handlers: EffectAccountApiHandler<AccountFailure, never> = {
       handleRegisterAccountRequest: () =>
         Effect.sync(started.resolve).pipe(
-          Effect.zipRight(Effect.never),
+          Effect.andThen(Effect.never),
           Effect.onInterrupt(() =>
             Effect.sync(() => {
               interrupted = true;

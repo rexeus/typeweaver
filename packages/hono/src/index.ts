@@ -42,7 +42,7 @@ export const honoPlugin: Plugin = definePlugin({
   validate: normalizedSpec => Effect.succeed(validateHonoSpec(normalizedSpec)),
   generate: context =>
     requireSupportedHonoPaths(context.normalizedSpec).pipe(
-      Effect.zipRight(
+      Effect.andThen(
         Effect.try({
           try: () =>
             copyPluginLibFiles({
@@ -58,7 +58,7 @@ export const honoPlugin: Plugin = definePlugin({
             }),
         })
       ),
-      Effect.zipRight(generateHonoRouters(context))
+      Effect.andThen(generateHonoRouters(context))
     ),
 });
 

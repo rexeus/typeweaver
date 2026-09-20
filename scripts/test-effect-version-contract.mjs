@@ -3,155 +3,84 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
-  EFFECT_4_DOCUMENT_TOKENS,
+  NATIVE_EFFECT_DOCUMENT_TOKENS,
   validateEffectPackageVersions,
-  validateEffect4WorkspaceContract,
+  validateNativeEffectWorkspaceContract,
 } from "./lib/effect-version-contract.mjs";
 
-/** @typedef {import("./lib/tooling-types.mjs").EffectBaselineContract} EffectBaselineContract */
-/** @typedef {import("./lib/tooling-types.mjs").Effect4EvidenceContract} Effect4EvidenceContract */
-/** @typedef {import("./lib/tooling-types.mjs").DependencyMap} DependencyMap */
-/** @typedef {EffectBaselineContract & { effect4Evidence: Effect4EvidenceContract }} Effect4EvidenceContractInput */
-
-/**
- * @typedef {object} TestManifest
- * @property {DependencyMap} dependencies
- * @property {DependencyMap} peerDependencies
- * @property {Record<string, { optional?: boolean }>} peerDependenciesMeta
- */
-
-/** @typedef {{ cli: TestManifest, gen: TestManifest, effect: TestManifest, hono: TestManifest, core: TestManifest }} TestManifests */
-/** @typedef {{ contract: Effect4EvidenceContractInput, manifests: TestManifests, documents: Record<string, string> }} ContractInput */
-/** @typedef {[mutate: (input: ContractInput) => void, expected: string, message: string]} ContractMutation */
-
+const runtimeVersion = "4.0.0-rc.116";
 const fixtureRoot = mkdtempSync(
   path.join(tmpdir(), "typeweaver-effect-contract-")
 );
 const packageRoot = path.join(fixtureRoot, "packages", "runtime");
-const publishedRoot = path.join(fixtureRoot, "packages", "published");
 const installedEffectRoot = path.join(packageRoot, "node_modules", "effect");
-/**
- * @param {string} filePath
- * @param {unknown} value
- * @returns {void}
- */
+
+/** @param {string} filePath @param {unknown} value @returns {void} */
 const writeJson = (filePath, value) => {
+  mkdirSync(path.dirname(filePath), { recursive: true });
   writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 };
 
 try {
   mkdirSync(installedEffectRoot, { recursive: true });
-  mkdirSync(publishedRoot, { recursive: true });
   writeJson(path.join(packageRoot, "package.json"), {
     name: "runtime-fixture",
-    dependencies: {
-      effect: "^4.0.0",
-    },
+    dependencies: { effect: runtimeVersion },
   });
   writeJson(path.join(installedEffectRoot, "package.json"), {
     name: "effect",
-    version: "4.0.0",
+    version: runtimeVersion,
   });
-
-  const mutatedFailures = validateEffectPackageVersions({
-    workspaceRoot: fixtureRoot,
-    runtimeVersion: "3.22.0",
-  });
-  assert(
-    mutatedFailures.some(failure =>
-      failure.includes("dependencies.effect must be ^3.22.0; found ^4.0.0")
-    ),
-    `missing manifest failure:\n${mutatedFailures.join("\n")}`
-  );
-  assert(
-    mutatedFailures.some(failure =>
-      failure.includes("resolves Effect 4.0.0; expected 3.22.0")
-    ),
-    `missing resolved-version failure:\n${mutatedFailures.join("\n")}`
-  );
-
-  writeJson(path.join(packageRoot, "package.json"), {
-    name: "runtime-fixture",
-    dependencies: {
-      effect: "^3.22.0",
-    },
-  });
-  writeJson(path.join(installedEffectRoot, "package.json"), {
-    name: "effect",
-    version: "3.22.0",
-  });
-
   assert.deepEqual(
     validateEffectPackageVersions({
       workspaceRoot: fixtureRoot,
-      runtimeVersion: "3.22.0",
+      runtimeVersion,
     }),
     []
   );
 
-  writeJson(path.join(publishedRoot, "package.json"), {
-    name: "published-fixture",
-    dependencies: {
-      "@effect/platform": "^0.97.0",
-    },
+  writeJson(path.join(packageRoot, "package.json"), {
+    name: "runtime-fixture",
+    dependencies: { effect: "^4.0.0-rc.116" },
   });
-  const caretFailures = validateEffectPackageVersions({
+  const driftFailures = validateEffectPackageVersions({
     workspaceRoot: fixtureRoot,
-    runtimeVersion: "3.22.0",
-    acceptedEffectDependencies: { "@effect/platform": "0.97.0" },
+    runtimeVersion,
   });
   assert(
-    caretFailures.some(failure =>
+    driftFailures.some(failure =>
       failure.includes(
-        "@effect/platform must be pinned to 0.97.0; found ^0.97.0"
+        "dependencies.effect must be 4.0.0-rc.116; found ^4.0.0-rc.116"
       )
     ),
-    `missing caret-drift failure:\n${caretFailures.join("\n")}`
+    `missing exact-pin failure:\n${driftFailures.join("\n")}`
   );
 
-  writeJson(path.join(publishedRoot, "package.json"), {
-    name: "published-fixture",
-    dependencies: {
-      "@effect/platform": "0.97.0",
-      "@effect/sql": "0.52.0",
-    },
+  writeJson(path.join(packageRoot, "package.json"), {
+    name: "runtime-fixture",
+    dependencies: { effect: runtimeVersion },
   });
-  const unacceptedFailures = validateEffectPackageVersions({
+  writeJson(path.join(installedEffectRoot, "package.json"), {
+    name: "effect",
+    version: "4.0.0-rc.115",
+  });
+  const resolutionFailures = validateEffectPackageVersions({
     workspaceRoot: fixtureRoot,
-    runtimeVersion: "3.22.0",
-    acceptedEffectDependencies: { "@effect/platform": "0.97.0" },
+    runtimeVersion,
   });
   assert(
-    unacceptedFailures.some(failure =>
-      failure.includes("unaccepted Effect dependency @effect/sql@0.52.0")
+    resolutionFailures.some(failure =>
+      failure.includes("resolves Effect 4.0.0-rc.115; expected 4.0.0-rc.116")
     ),
-    `missing unaccepted-dependency failure:\n${unacceptedFailures.join("\n")}`
+    `missing resolved-version failure:\n${resolutionFailures.join("\n")}`
   );
 } finally {
-  rmSync(fixtureRoot, { recursive: true });
+  rmSync(fixtureRoot, { recursive: true, force: true });
 }
 
-/** @returns {Effect4EvidenceContractInput} */
-const validEffect4WorkspaceContract = () => ({
-  runtimeVersion: "3.22.0",
-  peerRange: ">=3.22.0 <4",
-  effect4Evidence: {
-    effectVersion: "4.0.0-rc.115",
-    scope: "process-isolated-cli-only",
-    stability: "release-candidate",
-    nativeSurfaces: "effect-3-only",
-  },
-  acceptedEffectDependencies: {},
-  languageServiceVersion: "0.87.1",
-  referenceRepository: "https://example.test/effect.git",
-  referenceTag: "effect@3.22.0",
-  referenceCommit: "0000000000000000000000000000000000000000",
-});
-
-/** @returns {TestManifests} */
-const validEffect4WorkspaceManifests = () => ({
+const manifests = {
   cli: {
-    dependencies: { effect: "^3.22.0" },
+    dependencies: { effect: runtimeVersion },
     peerDependencies: {},
     peerDependenciesMeta: {},
   },
@@ -165,150 +94,123 @@ const validEffect4WorkspaceManifests = () => ({
     peerDependencies: { effect: "catalog:peers" },
     peerDependenciesMeta: {},
   },
+  clients: {
+    dependencies: {},
+    peerDependencies: {},
+    peerDependenciesMeta: {},
+  },
+  command: {
+    dependencies: {},
+    peerDependencies: { effect: "catalog:peers" },
+    peerDependenciesMeta: {},
+  },
+  types: {
+    dependencies: {},
+    peerDependencies: {},
+    peerDependenciesMeta: {},
+  },
+  server: {
+    dependencies: {},
+    peerDependencies: {},
+    peerDependenciesMeta: {},
+  },
   hono: {
     dependencies: {},
     peerDependencies: { effect: "catalog:peers", hono: "catalog:peers" },
     peerDependenciesMeta: { hono: { optional: true } },
+  },
+  openapi: {
+    dependencies: {},
+    peerDependencies: { effect: "catalog:peers" },
+    peerDependenciesMeta: {},
+  },
+  "aws-cdk": {
+    dependencies: {},
+    peerDependencies: {},
+    peerDependenciesMeta: {},
   },
   core: {
     dependencies: {},
     peerDependencies: { zod: "catalog:peers" },
     peerDependenciesMeta: {},
   },
-});
-
-/** @returns {Record<string, string>} */
-const validEffect4WorkspaceDocuments = () => {
-  /** @type {Record<string, string>} */
-  const documents = {};
-  for (const [document, tokens] of Object.entries(EFFECT_4_DOCUMENT_TOKENS)) {
-    documents[document] = tokens.join("\n");
-  }
-  return documents;
 };
 
-/** @type {ContractMutation[]} */
-const effect4EvidenceMutations = [
+const documents = Object.fromEntries(
+  Object.entries(NATIVE_EFFECT_DOCUMENT_TOKENS).map(([document, tokens]) => [
+    document,
+    tokens.join("\n"),
+  ])
+);
+
+const validContract = {
+  runtimeVersion,
+  peerRange: runtimeVersion,
+  tsgoVersion: "0.45.0",
+  referenceRepository: "https://github.com/Effect-TS/effect.git",
+  referenceTag: `effect@${runtimeVersion}`,
+  referenceCommit: "d62dd0d65252e5d3635538f0e41adc7c08aa9beb",
+  acceptedEffectDependencies: {},
+};
+
+assert.deepEqual(
+  validateNativeEffectWorkspaceContract({
+    contract: validContract,
+    manifests,
+    documents,
+  }),
+  []
+);
+
+/** @type {Array<[() => void, string]>} */
+const mutations = [
   [
-    input => {
-      input.contract.effect4Evidence.scope = "promised-range";
+    () => {
+      manifests.gen.peerDependencies.effect = runtimeVersion;
     },
-    "process-isolated-cli-only",
-    "missing Effect 4 evidence scope failure",
+    "must be catalog:peers",
   ],
   [
-    input => {
-      input.contract.effect4Evidence.effectVersion = "4.0.0";
+    () => {
+      documents["README.md"] = `${documents["README.md"]}\nEffect 3 only\n`;
     },
-    "4.0.0-rc.115",
-    "missing exact Effect 4 evidence pin failure",
+    "obsolete Effect guidance",
   ],
   [
-    input => {
-      input.contract.effect4Evidence.nativeSurfaces = "effect-4-capable";
+    () => {
+      Object.assign(manifests.core.peerDependencies, {
+        effect: "catalog:peers",
+      });
     },
-    "effect-3-only",
-    "missing native-surfaces failure",
-  ],
-  [
-    input => {
-      input.contract.peerRange = ">=3.22.0 <5";
-    },
-    "<4",
-    "missing peer widening failure",
-  ],
-  [
-    input => {
-      input.manifests.cli.peerDependencies["effect"] = "catalog:peers";
-    },
-    "CLI",
-    "missing CLI Effect peer failure",
-  ],
-  [
-    input => {
-      input.manifests.gen.peerDependencies["effect"] = "^4.0.0";
-    },
-    "@rexeus/typeweaver-gen",
-    "missing gen peer failure",
-  ],
-  [
-    input => {
-      delete input.documents[
-        "docs/adr/0010-effect-4-workspace-compatibility.md"
-      ];
-    },
-    "0010",
-    "missing ADR 0010 failure",
-  ],
-  [
-    input => {
-      input.documents["README.md"] =
-        `${input.documents["README.md"] ?? ""}\nTypeWeaver supports Effect 4.\n`;
-    },
-    "generic Effect 4 promise",
-    "missing generic Effect 4 promise failure",
-  ],
-  [
-    input => {
-      input.documents["packages/cli/README.md"] = (
-        input.documents["packages/cli/README.md"] ?? ""
-      ).replaceAll("4.0.0-rc.115", "Effect 4");
-    },
-    "4.0.0-rc.115",
-    "missing exact-pin document failure",
-  ],
-  [
-    input => {
-      const honoMeta = input.manifests.hono.peerDependenciesMeta["hono"];
-      if (honoMeta !== undefined) {
-        delete honoMeta.optional;
-      }
-    },
-    "hono",
-    "missing optional Hono peer failure",
-  ],
-  [
-    input => {
-      input.manifests.effect.peerDependenciesMeta = {
-        effect: { optional: true },
-      };
-    },
-    "must not mark effect optional",
-    "missing required-Effect-peer failure",
+    "Effect-optional",
   ],
 ];
-
-const verifyEffect4WorkspaceContractGuard = () => {
-  /**
-   * @param {(input: ContractInput) => void} [mutate]
-   * @returns {string[]}
-   */
-  const validate = (mutate = () => {}) => {
-    const input = {
-      contract: validEffect4WorkspaceContract(),
-      manifests: validEffect4WorkspaceManifests(),
-      documents: validEffect4WorkspaceDocuments(),
-    };
-    mutate(input);
-    return validateEffect4WorkspaceContract(input);
-  };
-
-  assert.deepEqual(
-    validate(),
-    [],
-    `valid Effect 4 workspace contract rejected:\n${validate().join("\n")}`
+for (const [mutate, expected] of mutations) {
+  const original = JSON.parse(JSON.stringify(manifests));
+  const documentCopy = { ...documents };
+  mutate();
+  const failures = validateNativeEffectWorkspaceContract({
+    contract: validContract,
+    manifests,
+    documents,
+  });
+  assert(
+    failures.some(failure => failure.includes(expected)),
+    `missing native contract failure containing ${expected}:\n${failures.join("\n")}`
   );
+  Object.assign(manifests, JSON.parse(JSON.stringify(original)));
+  Object.assign(documents, documentCopy);
+}
 
-  for (const [mutate, expected, message] of effect4EvidenceMutations) {
-    assert(
-      validate(mutate).some(failure => failure.includes(expected)),
-      message
-    );
-  }
-};
-
-verifyEffect4WorkspaceContractGuard();
+const obsoleteContract = { ...validContract, effect4Evidence: {} };
+assert(
+  validateNativeEffectWorkspaceContract({
+    contract: obsoleteContract,
+    manifests,
+    documents,
+  }).some(failure => failure.includes("obsolete effect4Evidence"))
+);
 
 process.stdout.write(
-  "Effect package contract guard rejected the Effect 4, caret-drift, and unaccepted-dependency fixtures\n"
+  "Native Effect RC.116 package and workspace contract guard passed\n"
 );

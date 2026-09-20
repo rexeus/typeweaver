@@ -46,9 +46,9 @@ describe("formatErrorForCli", () => {
       configKey: "output",
     });
 
-    expect(
-      formatErrorForCli(Cause.parallel(Cause.fail(a), Cause.fail(b)))
-    ).toBe(`${a.message}\n${b.message}`);
+    expect(formatErrorForCli(Cause.combine(Cause.fail(a), Cause.fail(b)))).toBe(
+      `${a.message}\n${b.message}`
+    );
   });
 
   test("renders failures and defects from a mixed Cause", () => {
@@ -60,9 +60,7 @@ describe("formatErrorForCli", () => {
     const defect = new Error("finalizer defect");
 
     expect(
-      formatErrorForCli(
-        Cause.sequential(Cause.fail(failure), Cause.die(defect))
-      )
+      formatErrorForCli(Cause.combine(Cause.fail(failure), Cause.die(defect)))
     ).toBe(`${failure.message}\n${defect.message}`);
   });
 

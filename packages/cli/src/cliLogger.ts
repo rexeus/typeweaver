@@ -21,18 +21,19 @@ const renderMessage = (message: unknown): string => {
 export const cliLogger = Logger.make<unknown, void>(({ message, logLevel }) => {
   const text = renderMessage(message);
 
-  switch (logLevel._tag) {
-    case "Warning":
+  // Effect 4 log levels are plain severity strings.
+  switch (logLevel) {
+    case "Warn":
       console.warn(`[WARN] ${text}`);
       return;
     case "Error":
     case "Fatal":
       console.error(`[ERROR] ${text}`);
       return;
-    case "All":
     case "Info":
     case "Debug":
     case "Trace":
+    case "All":
     case "None":
       console.info(text);
       return;
@@ -42,16 +43,16 @@ export const cliLogger = Logger.make<unknown, void>(({ message, logLevel }) => {
 /**
  * Verbose flavor of `cliLogger`: same shape, but tags Debug records with
  * a `[DEBUG]` prefix so they are visually distinct from the bare-line
- * Info output. Paired with `Logger.minimumLogLevel(LogLevel.Debug)` in
- * `VerboseLayer` so `Effect.logDebug(...)` calls actually reach the
- * console.
+ * Info output. Paired with the `References.MinimumLogLevel` "Debug"
+ * threshold in `VerboseLayer` so `Effect.logDebug(...)` calls actually
+ * reach the console.
  */
 export const verboseCliLogger = Logger.make<unknown, void>(
   ({ message, logLevel }) => {
     const text = renderMessage(message);
 
-    switch (logLevel._tag) {
-      case "Warning":
+    switch (logLevel) {
+      case "Warn":
         console.warn(`[WARN] ${text}`);
         return;
       case "Error":
@@ -60,11 +61,11 @@ export const verboseCliLogger = Logger.make<unknown, void>(
         return;
       case "Debug":
       case "Trace":
+      case "All":
+      case "None":
         console.info(`[DEBUG] ${text}`);
         return;
-      case "All":
       case "Info":
-      case "None":
         console.info(text);
         return;
     }
@@ -76,7 +77,7 @@ export const verboseCliLogger = Logger.make<unknown, void>(
  * `Layer.provide` (or merge into the production layer) anywhere the
  * friendly CLI logging is desired.
  */
-export const CliLoggerLayer = Logger.replace(Logger.defaultLogger, cliLogger);
+export const CliLoggerLayer = Logger.layer([cliLogger]);
 
 /**
  * Verbose variant of `CliLoggerLayer`. Used by `VerboseLayer` so the
@@ -84,7 +85,4 @@ export const CliLoggerLayer = Logger.replace(Logger.defaultLogger, cliLogger);
  * instead of being dropped or rendered with the platform's pretty
  * formatter.
  */
-export const VerboseCliLoggerLayer = Logger.replace(
-  Logger.defaultLogger,
-  verboseCliLogger
-);
+export const VerboseCliLoggerLayer = Logger.layer([verboseCliLogger]);

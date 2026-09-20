@@ -178,7 +178,7 @@ const extractFailure = (exit: Exit.Exit<unknown, unknown>): unknown => {
   if (Exit.isSuccess(exit)) {
     throw new Error("Expected a typed failure");
   }
-  const failure = Cause.failureOption(exit.cause);
+  const failure = Cause.findErrorOption(exit.cause);
   if (failure._tag === "None") {
     throw new Error(`Expected typed failure: ${Cause.pretty(exit.cause)}`);
   }
@@ -246,7 +246,6 @@ describe("GeneratedOutputChecker drift categories", () => {
       })
     );
   });
-
   test("reports removed files only", async () => {
     const workspace = createTempWorkspace("removed");
     writeTinySpec(workspace);
@@ -269,7 +268,6 @@ describe("GeneratedOutputChecker drift categories", () => {
       })
     );
   });
-
   test("reports changed files with the Changed label", async () => {
     const workspace = createTempWorkspace("changed");
     writeTinySpec(workspace);
@@ -356,7 +354,6 @@ describe("GeneratedOutputChecker clean:false semantics", () => {
       "preserved\n"
     );
   });
-
   test("reports exact drift when a generated file differs under clean:false", async () => {
     const workspace = createTempWorkspace("no-clean-drift");
     writeTinySpec(workspace);
@@ -682,7 +679,6 @@ describe("GeneratedOutputChecker coordination cleanup", () => {
       .filter(entry => entry.startsWith(`${path.basename(lockPath)}.fence-`));
     expect(leftoverFences).toEqual([]);
   });
-
   test("rejects a reserved configured output without writing", async () => {
     const reservedOutput = path.join(
       canonicalHostTempDirectory(),
@@ -706,7 +702,6 @@ describe("GeneratedOutputChecker coordination cleanup", () => {
     );
     expect(fs.existsSync(reservedOutput)).toBe(false);
   });
-
   test("normal generation rejects a reserved configured output", async () => {
     const reservedOutput = path.join(
       canonicalHostTempDirectory(),
@@ -749,7 +744,6 @@ describe("GeneratedOutputChecker failure isolation", () => {
 
     expect(snapshotTree(outputDir)).toEqual(before);
   });
-
   test("fails with ConcurrentGenerationError while the configured output lock is held", async () => {
     const workspace = createTempWorkspace("locked");
     writeTinySpec(workspace);

@@ -7,7 +7,6 @@ import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { afterEach, describe, expect, test } from "vitest";
 import { effectRuntime } from "../src/effectRuntime.js";
 import { Generator } from "../src/services/Generator.js";
-
 const runGenerator = async (params: {
   readonly inputFile: string;
   readonly outputDir: string;
@@ -304,7 +303,6 @@ const writePhaseOrderingLocalPlugin = (workspace: string): string => {
 
   return pluginFile;
 };
-
 const generateTypesInWorkspace = async (
   workspace: string,
   config: { readonly clean?: boolean } = {}
@@ -390,7 +388,6 @@ const writeSchemaLessCommandConsumer = (workspace: string): void => {
     ].join("\n")
   );
 };
-
 const runGeneratedTypecheck = async (
   workspace: string,
   tsconfigFile: string
@@ -474,7 +471,6 @@ describe("Generator validator and OpenAPI output", () => {
       'getOperationDefinition(spec, "item", "getItem")'
     );
   });
-
   test("generates OpenAPI JSON without adding it to TypeScript barrels", async () => {
     const workspace = createTempWorkspace();
     writeTinySpec(workspace);
@@ -531,7 +527,6 @@ describe("Generator generated TypeScript compatibility", () => {
 
     await runGeneratedTypecheck(workspace, tsconfigFile);
   }, 30_000);
-
   test("omits operation-definition imports and lookups from request validators without schemas", async () => {
     const workspace = createTempWorkspace();
     writeSchemaLessSpec(workspace);
@@ -582,7 +577,6 @@ describe("Generator output cleanup", () => {
     expect(fs.existsSync(staleFile)).toBe(false);
     expectFileExists(path.join(outputDir, "item", "GetItemRequest.ts"));
   });
-
   test("preserves existing output when clean is disabled", async () => {
     const workspace = createTempWorkspace();
     const staleFile = path.join(workspace, "generated", "output", "stale.txt");
@@ -597,7 +591,6 @@ describe("Generator output cleanup", () => {
     expectFileExists(staleFile);
     expectFileExists(path.join(outputDir, "item", "GetItemRequest.ts"));
   });
-
   test("uses default config values when no config object is provided", async () => {
     const workspace = createTempWorkspace();
     const staleFile = path.join(workspace, "generated", "output", "stale.txt");
@@ -615,7 +608,6 @@ describe("Generator output cleanup", () => {
     expect(fs.existsSync(staleFile)).toBe(false);
     expectFileExists(path.join(outputDir, "item", "GetItemRequest.ts"));
   });
-
   test("rejects cleaning the workspace root before deleting existing files", async () => {
     const workspace = createTempWorkspace();
     const packageDirectory = path.join(workspace, "packages", "cli");
@@ -687,7 +679,6 @@ describe("Generator local plugin output", () => {
       `"outputDir": ${JSON.stringify(outputDir)}`
     );
   });
-
   test("formats files emitted by local plugins by default", async () => {
     const workspace = createTempWorkspace();
     const pluginFile = writeFormattingLocalPlugin(workspace);
@@ -709,7 +700,6 @@ describe("Generator local plugin output", () => {
       readFile(path.join(outputDir, "plugin", ".typeweaver-output.ts"))
     ).toBe(formattedPluginOutput);
   });
-
   test("leaves files emitted by local plugins unformatted when formatting is disabled", async () => {
     const workspace = createTempWorkspace();
     const pluginFile = writeFormattingLocalPlugin(workspace);
@@ -760,7 +750,6 @@ describe("Generator local plugin lifecycle", () => {
       "finalize",
     ]);
   });
-
   test("generates output from resources collected by local plugins", async () => {
     const workspace = createTempWorkspace();
     const pluginFile = writeResourceCollectingLocalPlugin(workspace);

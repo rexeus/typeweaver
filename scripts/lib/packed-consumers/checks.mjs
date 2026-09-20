@@ -36,9 +36,8 @@ export const assertDoctorInFixture = fixtureRoot => {
     workspaceCheck !== undefined,
     "the CLI doctor report omitted TW-DOCTOR-011"
   );
-  assert.equal(workspaceCheck.outcome, "warn");
-  assert.match(workspaceCheck.message, /4\.0\.0-rc\.115/u);
-  assert.match(workspaceCheck.message, /cannot verify|Effect-neutral/u);
+  assert.equal(workspaceCheck.outcome, "pass");
+  assert.match(workspaceCheck.message, /exact native Effect 4\.0\.0-rc\.116/u);
 };
 
 /**

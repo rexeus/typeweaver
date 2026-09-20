@@ -1,4 +1,9 @@
-import { Cause, Chunk } from "effect";
+import { Cause } from "effect";
+
+const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
+const causeFailures = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isFailReason).map(reason => reason.error);
 
 /**
  * Render any failure produced by the typeweaver runtime as a stable,
@@ -29,8 +34,8 @@ const isTaggedError = (
   typeof (value as { message?: unknown }).message === "string";
 
 const formatCause = (cause: Cause.Cause<unknown>): string => {
-  const failures = Chunk.toReadonlyArray(Cause.failures(cause));
-  const defects = Chunk.toReadonlyArray(Cause.defects(cause));
+  const failures = causeFailures(cause);
+  const defects = causeDefects(cause);
   const renderedErrors = [
     ...failures.map(failure => formatErrorForCli(failure)),
     ...defects.map(defect => formatErrorForCli(defect)),

@@ -26,8 +26,8 @@ records. Expected lifecycle failures use `PluginExecutionError`; invalid factory
 
 ## Effect contract
 
-This scaffold develops against Effect 3.22.0 and declares the supported peer range
-`>=3.22.0 <4`. Do not create a runtime inside plugin hooks. Use `defineScopedPlugin` when the plugin
+This scaffold develops against the exact native Effect 4.0.0-rc.116 pin and declares that exact peer.
+Do not create a runtime inside plugin hooks. Use `defineScopedPlugin` when the plugin
 owns an exit-independent Layer that must be acquired once and released after success, typed failure,
 defect, or interruption.
 

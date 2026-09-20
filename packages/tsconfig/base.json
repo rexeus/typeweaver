@@ -43,19 +43,8 @@
     "noUnusedParameters": true,
     "allowUnreachableCode": false,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
+    "skipLibCheck": true
 
-    /* Effect language service diagnostics */
-    "plugins": [
-      {
-        "name": "@effect/language-service",
-        "diagnostics": true,
-        "diagnosticsName": true,
-        "diagnosticSeverity": {
-          "duplicatePackage": "error"
-        },
-        "effectFn": ["span"]
-      }
-    ]
+    /* Effect diagnostics run through the standalone @effect/tsgo gate. */
   }
 }

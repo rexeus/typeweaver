@@ -177,11 +177,12 @@ The `types` projection is always included. Add only the capabilities that belong
 The generated command invocation boundary is typechecked in the
 [command fixture](./packages/cli/examples/documentation/generated-command.ts).
 
-An Effect 4 application can run the `binary CLI` as an isolated child process only with
-Effect-neutral config and spec modules. TypeWeaver has tested this only with `effect@4.0.0-rc.115`
-and the built-in plain projections (pnpm, strict peers). Every other Effect 4 version is UNVERIFIED.
-The CLI programmatic API, plugin authoring, and the `effect` projection remain on Effect
-`>=3.22.0 <4`; see [ADR 0010](./docs/adr/0010-effect-4-workspace-compatibility.md).
+The CLI programmatic API, plugin authoring, first-party generator packages (including `command`,
+`hono`, and `openapi`), and the `effect` projection require the exact native `effect@4.0.0-rc.116`
+peer. This does not make generated artifacts depend on Effect: plain generated client, Fetch-native
+server, Hono, command runtime output, and OpenAPI JSON remain Effect-optional and do not import it.
+See [ADR 0008](./docs/adr/0008-effect-4-baseline.md) for the source pin, migration mapping, and
+diagnostics gate.
 
 ## Built for contract evolution
 

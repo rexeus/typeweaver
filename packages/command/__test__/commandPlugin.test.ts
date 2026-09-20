@@ -90,6 +90,12 @@ describe("command plugin contract", () => {
     expect(kit.files.read("command/operations/GetHealthCommand.ts")).toContain(
       '"get-health"'
     );
+    expect(
+      result.files.every(
+        file =>
+          !/\b(?:from|import)\s+["'](?:effect|@effect\/)/u.test(file.content)
+      )
+    ).toBe(true);
   });
 
   test("reports reserved command names with a stable issue", () => {

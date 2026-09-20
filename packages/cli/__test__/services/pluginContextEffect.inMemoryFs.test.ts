@@ -4,8 +4,7 @@ import {
   UnsafeGeneratedPathError,
 } from "@rexeus/typeweaver-gen";
 import type { NormalizedSpec } from "@rexeus/typeweaver-gen";
-import { FileSystem } from "@effect/platform";
-import { Effect, Either, Layer } from "effect";
+import { Effect, FileSystem, Layer, Result } from "effect";
 import { makeInMemoryFileSystem } from "test-utils/src/effect/index.js";
 import { describe, expect, test } from "vitest";
 
@@ -67,7 +66,6 @@ describe("Effect-native plugin context surface against InMemoryFileSystem", () =
       state.listDirectories().filter(dir => dir.includes(".typeweaver-"))
     ).toEqual([]);
   });
-
   test("writeFileEffect preserves the existing file mode on replace", async () => {
     const { built, layer, state } = await buildContext();
 
@@ -102,18 +100,17 @@ describe("Effect-native plugin context surface against InMemoryFileSystem", () =
       0o755
     );
   });
-
   test("writeFileEffect rejects parent traversal on the typed error channel", async () => {
     const { built, state } = await buildContext();
 
     const either = await Effect.runPromise(
-      Effect.either(built.context.writeFileEffect("../escape.ts", "nope"))
+      Effect.result(built.context.writeFileEffect("../escape.ts", "nope"))
     );
 
-    expect(Either.isLeft(either)).toBe(true);
-    if (!Either.isLeft(either)) return;
-    expect(either.left).toBeInstanceOf(UnsafeGeneratedPathError);
-    expect(either.left).toMatchObject({ reason: "parent-traversal" });
+    expect(Result.isFailure(either)).toBe(true);
+    if (!Result.isFailure(either)) return;
+    expect(either.failure).toBeInstanceOf(UnsafeGeneratedPathError);
+    expect(either.failure).toMatchObject({ reason: "parent-traversal" });
     expect(state.listFiles()).toEqual([]);
   });
 });
@@ -141,19 +138,20 @@ describe("Effect-native template context against InMemoryFileSystem", () => {
 
     expect(rendered).toBe("Hello Bob!");
   });
-
   test("renderTemplateEffect surfaces a missing template as a typed platform error", async () => {
     const { built } = await buildContext();
 
     const either = await Effect.runPromise(
-      Effect.either(built.context.renderTemplateEffect("Missing.ejs", {}))
+      Effect.result(built.context.renderTemplateEffect("Missing.ejs", {}))
     );
 
-    expect(Either.isLeft(either)).toBe(true);
-    if (!Either.isLeft(either)) return;
-    expect(either.left).toMatchObject({ _tag: "SystemError" });
+    expect(Result.isFailure(either)).toBe(true);
+    if (!Result.isFailure(either)) return;
+    expect(either.failure).toMatchObject({
+      _tag: "PlatformError",
+      reason: { _tag: "NotFound" },
+    });
   });
-
   test("renderTemplateEffect surfaces a broken template as TemplateRenderError", async () => {
     const { built, layer } = await buildContext();
 
@@ -171,12 +169,12 @@ describe("Effect-native template context against InMemoryFileSystem", () => {
     );
 
     const either = await Effect.runPromise(
-      Effect.either(built.context.renderTemplateEffect("Broken.ejs", {}))
+      Effect.result(built.context.renderTemplateEffect("Broken.ejs", {}))
     );
 
-    expect(Either.isLeft(either)).toBe(true);
-    if (!Either.isLeft(either)) return;
-    expect(either.left).toBeInstanceOf(TemplateRenderError);
+    expect(Result.isFailure(either)).toBe(true);
+    if (!Result.isFailure(either)) return;
+    expect(either.failure).toBeInstanceOf(TemplateRenderError);
   });
 });
 
@@ -191,10 +189,10 @@ describe("Effect-native generated-file tracking against InMemoryFileSystem", () 
     expect(state.listFiles()).toEqual([]);
 
     const either = await Effect.runPromise(
-      Effect.either(built.context.addGeneratedFileEffect("/absolute.ts"))
+      Effect.result(built.context.addGeneratedFileEffect("/absolute.ts"))
     );
-    expect(Either.isLeft(either)).toBe(true);
-    if (!Either.isLeft(either)) return;
-    expect(either.left).toBeInstanceOf(UnsafeGeneratedPathError);
+    expect(Result.isFailure(either)).toBe(true);
+    if (!Result.isFailure(either)) return;
+    expect(either.failure).toBeInstanceOf(UnsafeGeneratedPathError);
   });
 });

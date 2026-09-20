@@ -11,7 +11,7 @@ import type {
   SecuritySchemeDefinition,
   SpecDefinition,
 } from "@rexeus/typeweaver-core";
-import { Effect, Either } from "effect";
+import { Effect, Result } from "effect";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import {
@@ -59,17 +59,17 @@ const anOperation = (
   });
 
 const normalize = (spec: SpecDefinition): NormalizedSpec => {
-  const result = Effect.runSync(Effect.either(normalizeSpec(spec)));
-  if (Either.isRight(result)) {
-    return result.right;
+  const result = Effect.runSync(Effect.result(normalizeSpec(spec)));
+  if (Result.isSuccess(result)) {
+    return result.success;
   }
-  throw result.left;
+  throw result.failure;
 };
 
 const failureFrom = (spec: SpecDefinition): unknown => {
-  const result = Effect.runSync(Effect.either(normalizeSpec(spec)));
-  if (Either.isLeft(result)) {
-    return result.left;
+  const result = Effect.runSync(Effect.result(normalizeSpec(spec)));
+  if (Result.isFailure(result)) {
+    return result.failure;
   }
   throw new TestAssertionError("Expected spec normalization to fail.");
 };

@@ -1,6 +1,5 @@
 import path from "node:path";
-import { FileSystem } from "@effect/platform";
-import { Effect } from "effect";
+import { Context, Effect, FileSystem, Layer } from "effect";
 import {
   InitTargetNotDirectoryError,
   InitTargetNotEmptyError,
@@ -300,16 +299,36 @@ const createInitialize = ({ fileSystem }: ProjectInitializerDependencies) =>
       })
   );
 
-export class ProjectInitializer extends Effect.Service<ProjectInitializer>()(
-  "typeweaver/ProjectInitializer",
-  {
-    effect: Effect.gen(function* () {
-      const fileSystem = yield* FileSystem.FileSystem;
+export type ProjectInitializerShape = {
+  readonly initialize: (
+    params: InitializeProjectParams
+  ) => Effect.Effect<InitializeProjectResult, ProjectInitFailure>;
+};
 
-      const initialize = createInitialize({ fileSystem });
+const makeProjectInitializer: Effect.Effect<
+  ProjectInitializerShape,
+  never,
+  FileSystem.FileSystem
+> = Effect.gen(function* () {
+  const fileSystem = yield* FileSystem.FileSystem;
 
-      return { initialize };
-    }),
-    accessors: true,
-  }
-) {}
+  const initialize = createInitialize({ fileSystem });
+
+  return { initialize };
+});
+
+export class ProjectInitializer extends Context.Service<
+  ProjectInitializer,
+  ProjectInitializerShape
+>()("typeweaver/ProjectInitializer") {
+  static readonly make = (service: ProjectInitializerShape) => service;
+
+  static readonly Default: Layer.Layer<
+    ProjectInitializer,
+    never,
+    FileSystem.FileSystem
+  > = Layer.effect(ProjectInitializer, makeProjectInitializer);
+
+  static readonly initialize = (params: InitializeProjectParams) =>
+    ProjectInitializer.use(service => service.initialize(params));
+}

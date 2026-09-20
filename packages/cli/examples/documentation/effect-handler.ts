@@ -7,19 +7,20 @@ import type {
   EffectAccountApiHandler,
   EffectAccountErrorMappers,
 } from "../../../test-utils/src/test-project/output/account/EffectAccountApiHandler.js";
+import type { RegisterAccountResponse } from "../../../test-utils/src/test-project/output/account/RegisterAccountResponse.js";
 
 class RegistrationError extends Data.TaggedError("RegistrationError")<{
   readonly reason: string;
 }> {}
 
-class AccountStore extends Context.Tag("Example/AccountStore")<
+class AccountStore extends Context.Service<
   AccountStore,
   {
     readonly register: (
       email: string
     ) => Effect.Effect<string, RegistrationError>;
   }
->() {}
+>()("Example/AccountStore") {}
 
 const accountStoreLayer = Layer.succeed(AccountStore, {
   register: email =>
@@ -31,7 +32,9 @@ const accountStoreLayer = Layer.succeed(AccountStore, {
 });
 
 const handlers = {
-  handleRegisterAccountRequest: request =>
+  handleRegisterAccountRequest: (
+    request
+  ): Effect.Effect<RegisterAccountResponse, RegistrationError, AccountStore> =>
     Effect.gen(function* () {
       const store = yield* AccountStore;
       const accountId = yield* store.register(request.body.email);
@@ -46,7 +49,7 @@ const handlers = {
           modifiedBy: "effect-example",
         },
       });
-    }),
+    }).pipe(Effect.provide(accountStoreLayer)),
 } satisfies EffectAccountApiHandler<RegistrationError, AccountStore>;
 
 const errorMappers = {

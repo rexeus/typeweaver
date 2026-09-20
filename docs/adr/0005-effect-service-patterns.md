@@ -1,103 +1,42 @@
-# ADR 0005: Effect.Service Patterns (succeed vs effect)
+# ADR 0005: Effect 4 service compatibility
 
 ## Status
 
-Accepted
+Accepted; supersedes the pre-RC service-builder guidance formerly recorded here.
 
 ## Context
 
-The Effect migration introduced thirteen `Effect.Service` classes split across
-`@rexeus/typeweaver-gen` (four: `TemplateRenderer`, `PathSafety`, `ContextBuilder`,
-`PluginRegistry`) and `@rexeus/typeweaver` (nine: `SpecImporter`, `SpecBundler`, `ConfigLoader`,
-`PluginModuleLoader`, `IndexFileGenerator`, `Generator`, `SpecLoader`, `PluginLoader`, `Formatter`).
-Each service is constructed by one of two shapes that the `Effect.Service` builder exposes:
-
-- `succeed: { ... }` — a plain record of methods, no dependencies, no closure state
-- `effect: Effect.gen(function* () { ... })` — a generator that may yield other services or hold
-  `Ref`-backed state, returning a record of methods
-
-Without an explicit rule, contributors picked between the two shapes by feel. Two services with
-identical dependency profiles ended up on different sides of the split, and the inconsistency made
-it hard to scan a service definition and know whether it had internal state or hidden dependencies.
+Effect 4.0.0-rc.116 uses `Context.Service` for service identifiers. The RC no longer synthesizes the
+default layer, accessors, or a public construction helper from a service declaration. TypeWeaver
+also has a compatibility requirement: consumers must be able to construct service-shaped test
+doubles without depending on private layer wiring.
 
 ## Decision
 
-A service uses `succeed:` when **both** of the following hold:
+Public services use the class form `Context.Service<Self, Shape>()("id")` and explicitly define the
+parts of their public contract that callers use:
 
-1. The service body does not `yield* OtherService` — it depends on nothing from the runtime.
-2. The service holds no closure state (no `Ref`, no `Map`, no captured mutable binding).
+- `static readonly make = (service: Shape) => service` preserves the identity constructor that
+  previous `Effect.Service` declarations exposed;
+- `Default` and, where needed, `DefaultWithoutDependencies` are explicit layers;
+- static accessors delegate through `Service.use` and remain available where they were public.
 
-Otherwise the service uses `effect:`. Dependencies appear in the `dependencies:` field alongside the
-service body.
+The service's `make` effect is defined separately when construction needs dependencies. Layers
+provide those dependencies at the composition boundary rather than hiding a runtime inside a public
+accessor. `Layer.effect`, `Layer.succeed`, `Layer.provide`, and `Layer.merge` are the RC.116 forms.
 
-### Current allocation
-
-`succeed:` — stateless, dependency-free:
-
-- `ConfigLoader` (`packages/cli/src/services/ConfigLoader.ts`)
-- `PluginModuleLoader` (`packages/cli/src/services/PluginModuleLoader.ts`)
-- `PathSafety` (`packages/gen/src/services/PathSafety.ts`)
-- `TemplateRenderer` (`packages/gen/src/services/TemplateRenderer.ts`)
-- `PluginRegistry` (`packages/gen/src/services/PluginRegistry.ts`) — stateless factory; returns a
-  fresh `PluginRegistryInstance` per call, each instance owning its own
-  `Ref<Map<string, PluginRegistration>>` for per-call isolation
-
-`effect:` — yields other services or holds state:
-
-- `Generator` (`packages/cli/src/services/Generator.ts`) — composes six dependencies
-- `Formatter` (`packages/cli/src/services/Formatter.ts`) — yields `FileSystem` so formatting can
-  read and atomically replace generated files through the platform service
-- `ContextBuilder` (`packages/gen/src/services/ContextBuilder.ts`) — yields the platform-agnostic
-  `FileSystem` tag, captured for the Effect-native context surface
-  (`writeFileEffect`/`renderTemplateEffect`); each `buildGeneratorContext` call constructs a fresh
-  builder over the sync cores (`livePathSafetyShape`, `liveTemplateRendererShape`) shared with the
-  `PathSafety` and `TemplateRenderer` services. `PluginRegistry` is invoked per-call from
-  `Generator` and is not consumed by `ContextBuilder`; the asymmetry keeps the per-call registry
-  instance owned by the orchestrator rather than the context factory.
-- `SpecLoader` (`packages/cli/src/services/SpecLoader.ts`) — yields `SpecBundler`, `SpecImporter`
-- `SpecBundler`, `SpecImporter` — yield `FileSystem`
-- `PluginLoader` (`packages/cli/src/services/PluginLoader.ts`) — yields `PluginModuleLoader`;
-  receives the per-call `PluginRegistryInstance` via `LoadParams`
-- `IndexFileGenerator` (`packages/cli/src/services/IndexFileGenerator.ts`) — yields
-  `TemplateRenderer`
+The public compatibility surface is covered by package-root runtime and type tests. Generated plain
+client, server, and Hono output do not inherit this Effect requirement; only the authoring and
+native plugin packages expose these services.
 
 ## Consequences
 
-### Positive
+The declaration is slightly more verbose than the retired builder, but the identity constructor and
+layer graph are visible in source and stable for third-party test doubles. A new public service must
+add its `make`, default layer, accessors, and package-root contract test together.
 
-- A contributor reading a `succeed:` service knows at a glance: no internal dependencies, no state.
-  The body is the contract.
-- A contributor reading an `effect:` service knows to inspect the `dependencies:` list and the
-  `Effect.gen` body for service yields and `Ref` allocations.
-- `Layer.mergeAll` composition stays clean. Services declare their dependencies in one place; the
-  runtime resolves them.
+## References
 
-### Negative
-
-- Promoting a service from `succeed:` to `effect:` (because it gained a dependency) is a real
-  refactor — the body changes shape from a record literal to a generator. The benefit is the
-  discipline it imposes: a contributor cannot quietly add a `yield*` to a `succeed:` service.
-
-### Trade-off
-
-The rule says nothing about which services _should_ hold state or have dependencies. It just
-guarantees the construction shape reflects the answer. Architectural decisions about state ownership
-and dependency graphs live in the other ADRs (e.g., ADR 0007 on per-call isolation in `Generator`).
-
-### Alternatives Considered
-
-`Effect.Service` with an inline `dependencies: [...]` array was chosen over explicit `Layer.provide`
-/ `Layer.mergeAll` composition for each service. With `Effect.Service`, a service declares its
-dependencies once, in the same record where the service body lives, and the runtime resolves them at
-composition time. Explicit Layer chains require the dependency list to be repeated in a wiring file
-far from the service definition and introduce ordering hazards (the order of `Layer.mergeAll`
-arguments leaks into the resolution graph). One concrete benefit: `Generator` composes six
-dependencies (`ContextBuilder`, `Formatter`, `IndexFileGenerator`, `PluginLoader`, `PluginRegistry`,
-`SpecLoader`) in a single `dependencies:` array; the equivalent layer chain would fragment that
-declaration across `effectRuntime.ts` and lose locality with the service body.
-
-## Reference Files
-
-- CLI services: `packages/cli/src/services/*.ts`
-- Gen services: `packages/gen/src/services/*.ts`
-- Runtime composition: `packages/cli/src/effectRuntime.ts`, `packages/gen/src/services/index.ts`
+- [Effect 4 baseline](./0008-effect-4-baseline.md)
+- `packages/gen/src/services/`
+- `packages/cli/src/services/`

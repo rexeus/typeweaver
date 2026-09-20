@@ -1,12 +1,21 @@
 import path from "node:path";
 import type { SpecDefinition } from "@rexeus/typeweaver-core";
-import type { NormalizedSpec } from "@rexeus/typeweaver-gen";
+import type {
+  NormalizationError,
+  NormalizedSpec,
+} from "@rexeus/typeweaver-gen";
 import { normalizeSpec } from "@rexeus/typeweaver-gen";
-import { FileSystem } from "@effect/platform";
-import { Effect } from "effect";
-import { SpecOutputWriteError } from "./errors/specErrors.js";
+import { Context, Effect, FileSystem, Layer } from "effect";
+import {
+  InvalidSpecEntrypointError,
+  SpecBundleError,
+  SpecBundleOutputMissingError,
+  SpecOutputWriteError,
+} from "./errors/specErrors.js";
 import { SpecBundler } from "./SpecBundler.js";
 import { SpecImporter } from "./SpecImporter.js";
+import type { SpecBundlerShape } from "./SpecBundler.js";
+import type { SpecImporterShape } from "./SpecImporter.js";
 
 export type SpecLoaderConfig = {
   readonly inputFile: string;
@@ -20,6 +29,19 @@ export type LoadedSpec = {
   readonly normalizedSpec: NormalizedSpec;
 };
 
+export type SpecLoaderShape = {
+  readonly load: (
+    config: SpecLoaderConfig
+  ) => Effect.Effect<
+    LoadedSpec,
+    | SpecBundleError
+    | SpecBundleOutputMissingError
+    | SpecOutputWriteError
+    | InvalidSpecEntrypointError
+    | NormalizationError
+  >;
+};
+
 const SPEC_DECLARATION_CONTENT = [
   'import type { SpecDefinition } from "@rexeus/typeweaver-core";',
   "export declare const spec: SpecDefinition;",
@@ -27,8 +49,8 @@ const SPEC_DECLARATION_CONTENT = [
 ].join("\n");
 
 type SpecLoaderDependencies = {
-  readonly bundler: SpecBundler;
-  readonly importer: SpecImporter;
+  readonly bundler: SpecBundlerShape;
+  readonly importer: SpecImporterShape;
   readonly fileSystem: FileSystem.FileSystem;
 };
 
@@ -110,19 +132,40 @@ const createLoad = ({
  *
  * Composes `SpecBundler`, `SpecImporter`, and the gen-side `normalizeSpec`.
  */
-export class SpecLoader extends Effect.Service<SpecLoader>()(
-  "typeweaver/SpecLoader",
-  {
-    effect: Effect.gen(function* () {
-      const bundler = yield* SpecBundler;
-      const importer = yield* SpecImporter;
-      const fileSystem = yield* FileSystem.FileSystem;
+const makeSpecLoader: Effect.Effect<
+  SpecLoaderShape,
+  never,
+  SpecBundler | SpecImporter | FileSystem.FileSystem
+> = Effect.gen(function* () {
+  const bundler = yield* SpecBundler;
+  const importer = yield* SpecImporter;
+  const fileSystem = yield* FileSystem.FileSystem;
 
-      const load = createLoad({ bundler, importer, fileSystem });
+  const load = createLoad({ bundler, importer, fileSystem });
 
-      return { load } as const;
-    }),
-    dependencies: [SpecBundler.Default, SpecImporter.Default],
-    accessors: true,
-  }
-) {}
+  return { load } as const;
+});
+
+export class SpecLoader extends Context.Service<SpecLoader, SpecLoaderShape>()(
+  "typeweaver/SpecLoader"
+) {
+  static readonly make = (service: SpecLoaderShape) => service;
+
+  static readonly DefaultWithoutDependencies: Layer.Layer<
+    SpecLoader,
+    never,
+    SpecBundler | SpecImporter | FileSystem.FileSystem
+  > = Layer.effect(SpecLoader, makeSpecLoader);
+
+  static readonly Default: Layer.Layer<
+    SpecLoader,
+    never,
+    FileSystem.FileSystem
+  > = SpecLoader.DefaultWithoutDependencies.pipe(
+    Layer.provide(SpecBundler.Default),
+    Layer.provide(SpecImporter.Default)
+  );
+
+  static readonly load = (config: SpecLoaderConfig) =>
+    SpecLoader.use(service => service.load(config));
+}

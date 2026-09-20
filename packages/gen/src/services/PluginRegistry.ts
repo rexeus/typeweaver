@@ -1,4 +1,4 @@
-import { Effect, Either, Ref } from "effect";
+import { Context, Effect, Layer, Ref, Result } from "effect";
 import {
   PluginDependencyError,
   PluginExecutionError,
@@ -45,14 +45,14 @@ export type PluginRegistryInstance = {
 };
 
 /**
- * Pure toposort over the registration set. Returns `Either` instead of
- * throwing: the failure is part of the function's contract, and `Either`
+ * Pure toposort over the registration set. Returns `Result` instead of
+ * throwing: the failure is part of the function's contract, and `Result`
  * is yieldable so `getAll` lifts it straight into the Effect error channel
  * without a throw/catch round-trip.
  */
 const sortPluginRegistrations = (
   registrations: readonly PluginRegistration[]
-): Either.Either<PluginRegistration[], PluginDependencyError> => {
+): Result.Result<PluginRegistration[], PluginDependencyError> => {
   const registrationsByName = new Map(
     registrations.map(registration => [registration.name, registration])
   );
@@ -74,11 +74,11 @@ const sortPluginRegistrations = (
       dependencyPath: [],
     });
     if (failure !== undefined) {
-      return Either.left(failure);
+      return Result.fail(failure);
     }
   }
 
-  return Either.right(sorted);
+  return Result.succeed(sorted);
 };
 
 const visitPlugin = (params: {
@@ -193,7 +193,9 @@ const createInstance: () => Effect.Effect<PluginRegistryInstance> = Effect.fn(
     PluginDependencyError
   > = Effect.gen(function* () {
     const plugins = yield* Ref.get(ref);
-    return yield* sortPluginRegistrations(Array.from(plugins.values()));
+    return yield* Effect.fromResult(
+      sortPluginRegistrations(Array.from(plugins.values()))
+    );
   }).pipe(Effect.withSpan("typeweaver.PluginRegistry.getAll"));
 
   const validate = Effect.fn("typeweaver.PluginRegistry.validate")(function* (
@@ -221,6 +223,10 @@ const createInstance: () => Effect.Effect<PluginRegistryInstance> = Effect.fn(
   return { register, getAll, validate } as const;
 });
 
+export type PluginRegistryShape = {
+  readonly createInstance: () => Effect.Effect<PluginRegistryInstance>;
+};
+
 /**
  * Effect-native factory of V2 plugin registries. The service exposes a
  * single `createInstance` effect that constructs a fresh
@@ -232,10 +238,17 @@ const createInstance: () => Effect.Effect<PluginRegistryInstance> = Effect.fn(
  * stable: generated output depends on the order in which plugins execute,
  * so any change to ordering would shift byte-identical output.
  */
-export class PluginRegistry extends Effect.Service<PluginRegistry>()(
-  "typeweaver/PluginRegistry",
-  {
-    succeed: { createInstance },
-    accessors: true,
-  }
-) {}
+export class PluginRegistry extends Context.Service<
+  PluginRegistry,
+  PluginRegistryShape
+>()("typeweaver/PluginRegistry") {
+  static readonly make = (service: PluginRegistryShape) => service;
+
+  static readonly Default: Layer.Layer<PluginRegistry> = Layer.succeed(
+    PluginRegistry,
+    { createInstance }
+  );
+
+  static readonly createInstance = () =>
+    PluginRegistry.use(service => service.createInstance());
+}

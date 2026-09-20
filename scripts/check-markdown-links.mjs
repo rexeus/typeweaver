@@ -88,7 +88,10 @@ const markdownFiles = execFileSync(
 )
   .toString("utf8")
   .split("\0")
-  .filter(Boolean);
+  .filter(
+    filePath =>
+      filePath !== "" && existsSync(path.join(repositoryRoot, filePath))
+  );
 // Containment is lexical (`path.resolve` semantics), so it is deterministic and
 // cross-platform. On Windows, `path.relative` returns an absolute path when the
 // two paths are on different drives, which the `path.isAbsolute` guard treats as

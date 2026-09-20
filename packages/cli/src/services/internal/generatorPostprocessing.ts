@@ -1,12 +1,12 @@
 import { Effect } from "effect";
-import type { Formatter } from "../Formatter.js";
+import type { FormatterShape } from "../Formatter.js";
 import type { GenerationPlan } from "./generatorPreflight.js";
 import type { GenerationResult } from "./pluginLifecycle.js";
 
 export const runGeneratorPostprocessing = (
   plan: GenerationPlan,
   result: GenerationResult,
-  formatter: Formatter
+  formatter: FormatterShape
 ) =>
   Effect.gen(function* () {
     if (plan.params.config?.format !== false) {

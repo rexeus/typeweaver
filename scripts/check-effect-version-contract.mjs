@@ -4,9 +4,9 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import {
-  EFFECT_4_DOCUMENT_TOKENS,
+  NATIVE_EFFECT_DOCUMENT_TOKENS,
   validateEffectPackageVersions,
-  validateEffect4WorkspaceContract,
+  validateNativeEffectWorkspaceContract,
 } from "./lib/effect-version-contract.mjs";
 
 /** @typedef {import("./lib/tooling-types.mjs").EffectBaselineContract} EffectBaselineContract */
@@ -29,7 +29,7 @@ const contract = JSON.parse(read("config/effect-baseline.json"));
 const requiredDocuments = [
   "MIGRATION.md",
   "docs/adr/0003-effect-native-plugin-api.md",
-  "docs/adr/0008-effect-v3-baseline.md",
+  "docs/adr/0008-effect-4-baseline.md",
   "docs/plugin-authoring.md",
   "packages/gen/README.md",
 ];
@@ -76,12 +76,9 @@ if (!workspaceConfig.includes(`effect: "${contract.peerRange}"`)) {
 
 /** @type {PackageManifest} */
 const rootPackage = JSON.parse(read("package.json"));
-if (
-  rootPackage.devDependencies?.["@effect/language-service"] !==
-  contract.languageServiceVersion
-) {
+if (rootPackage.devDependencies?.["@effect/tsgo"] !== contract.tsgoVersion) {
   failures.push(
-    "package.json does not exactly pin the contracted Effect language service"
+    "package.json does not exactly pin the contracted @effect/tsgo version"
   );
 }
 
@@ -97,13 +94,9 @@ if (
     `pnpm-lock.yaml resolves unexpected Effect versions: ${Array.from(resolvedEffectVersions).join(", ")}`
   );
 }
-if (
-  !lockfile.includes(
-    `  '@effect/language-service@${contract.languageServiceVersion}':`
-  )
-) {
+if (!lockfile.includes(`  '@effect/tsgo@${contract.tsgoVersion}':`)) {
   failures.push(
-    "pnpm-lock.yaml does not resolve the contracted language service"
+    "pnpm-lock.yaml does not resolve the contracted @effect/tsgo version"
   );
 }
 
@@ -131,25 +124,31 @@ if (
 
 for (const expected of [
   "Mandatory Version Contract",
-  "./references/typeweaver-effect-3.md",
+  "./references/typeweaver-effect-4.md",
   "archived conceptual material",
-  "pinned Effect 3.22 source",
+  "pinned Effect 4.0.0-rc.116 source",
 ]) {
   if (!skill.includes(expected)) {
-    failures.push(`Effect skill is missing mandatory v3 routing: ${expected}`);
+    failures.push(
+      `Effect skill is missing mandatory native routing: ${expected}`
+    );
   }
 }
 
-const activeV3Guide = read(
-  ".agents/skills/effect-ts/references/typeweaver-effect-3.md"
+const activeV4Guide = read(
+  ".agents/skills/effect-ts/references/typeweaver-effect-4.md"
 );
 for (const expected of [
-  "Do not use Effect 4's `Schema.TaggedErrorClass`.",
-  "Do not use Effect 4's `Context.Service` or `Effect.service`.",
-  "Do not use Effect 4's `Cause.hasDies` or `cause.reasons`.",
+  "Context.Service",
+  "Result",
+  "Cause",
+  "Schema",
+  "4.0.0-rc.116",
 ]) {
-  if (!activeV3Guide.includes(expected)) {
-    failures.push(`Active Effect 3 guide is missing its v4 guard: ${expected}`);
+  if (!activeV4Guide.includes(expected)) {
+    failures.push(
+      `Active Effect 4 guide is missing rc.116 guidance: ${expected}`
+    );
   }
 }
 
@@ -212,17 +211,23 @@ const manifests = {
   gen: JSON.parse(read("packages/gen/package.json")),
   effect: JSON.parse(read("packages/effect/package.json")),
   hono: JSON.parse(read("packages/hono/package.json")),
+  clients: JSON.parse(read("packages/clients/package.json")),
+  command: JSON.parse(read("packages/command/package.json")),
+  types: JSON.parse(read("packages/types/package.json")),
+  server: JSON.parse(read("packages/server/package.json")),
+  openapi: JSON.parse(read("packages/openapi/package.json")),
+  "aws-cdk": JSON.parse(read("packages/aws-cdk/package.json")),
   core: JSON.parse(read("packages/core/package.json")),
 };
 /** @type {Record<string, string | undefined>} */
 const documents = Object.fromEntries(
-  Object.keys(EFFECT_4_DOCUMENT_TOKENS).map(document => [
+  Object.keys(NATIVE_EFFECT_DOCUMENT_TOKENS).map(document => [
     document,
     readOptional(document),
   ])
 );
 failures.push(
-  ...validateEffect4WorkspaceContract({
+  ...validateNativeEffectWorkspaceContract({
     contract,
     manifests,
     documents,

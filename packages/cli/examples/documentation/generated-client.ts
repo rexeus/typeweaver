@@ -11,7 +11,6 @@ export const createTodoCommand = new CreateTodoRequestCommand({
   header: { Authorization: "Bearer token" },
   body: { title: "Executable documentation" },
 });
-
 export const createTodo = async (): Promise<string> => {
   const response = await todoClient.send(createTodoCommand);
 

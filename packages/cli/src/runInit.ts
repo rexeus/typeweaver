@@ -1,5 +1,5 @@
 import path from "node:path";
-import { Effect, Either, Option } from "effect";
+import { Effect, Result, Option } from "effect";
 import { createInitReport, renderInitReport } from "./reports/InitReport.js";
 import { ProjectInitializer } from "./services/ProjectInitializer.js";
 import type { InitDiagnostic, InitReport } from "./reports/InitReport.js";
@@ -115,22 +115,22 @@ export const runInit = (args: InitHandlerInput, config: InitHandlerConfig) =>
       configFormat: Option.getOrUndefined(args["config-format"]),
       force: Option.getOrElse(args.force, () => false),
       dryRun: Option.getOrElse(args["dry-run"], () => false),
-    }).pipe(Effect.either);
-    const report = Either.isRight(outcome)
+    }).pipe(Effect.result);
+    const report = Result.isSuccess(outcome)
       ? createInitReport({
           version: 1,
           command: "init",
           success: true,
-          status: outcome.right.dryRun ? "planned" : "created",
-          dryRun: outcome.right.dryRun,
-          targetDir: outcome.right.targetDir,
-          configFile: outcome.right.configFile,
-          files: [...outcome.right.files],
-          overwrittenFiles: [...outcome.right.overwrittenFiles],
-          preservedFiles: [...outcome.right.preservedFiles],
-          nextSteps: [...outcome.right.nextSteps],
+          status: outcome.success.dryRun ? "planned" : "created",
+          dryRun: outcome.success.dryRun,
+          targetDir: outcome.success.targetDir,
+          configFile: outcome.success.configFile,
+          files: [...outcome.success.files],
+          overwrittenFiles: [...outcome.success.overwrittenFiles],
+          preservedFiles: [...outcome.success.preservedFiles],
+          nextSteps: [...outcome.success.nextSteps],
           diagnostics: [],
         })
-      : failedReport(args, config, outcome.left);
+      : failedReport(args, config, outcome.failure);
     yield* writeReport(report, Option.isSome(args.json) && args.json.value);
   });

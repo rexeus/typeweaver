@@ -1,6 +1,5 @@
-import { FileSystem } from "@effect/platform";
 import { it } from "@effect/vitest";
-import { Effect, Layer } from "effect";
+import { Effect, FileSystem, Layer } from "effect";
 import { describe, expect } from "vitest";
 import { MainLayer } from "../src/runtime/MainLayer.js";
 import { ContextBuilder } from "../src/services/ContextBuilder.js";

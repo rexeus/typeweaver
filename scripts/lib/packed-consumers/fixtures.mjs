@@ -204,7 +204,7 @@ export const writeConsumerSources = fixtureRoot => {
     [
       'import { Generator, effectRuntime } from "@rexeus/typeweaver";',
       'import type { GenerateFailure, GenerateParams } from "@rexeus/typeweaver";',
-      'import type { Effect } from "effect";',
+      'import type { Error as EffectError } from "effect/Effect";',
       "",
       "const params = {",
       '  inputFile: "./spec/index.ts",',
@@ -212,7 +212,7 @@ export const writeConsumerSources = fixtureRoot => {
       "} satisfies GenerateParams;",
       "",
       "const program = Generator.generate(params);",
-      "type ProgramFailure = Effect.Effect.Error<typeof program>;",
+      "type ProgramFailure = EffectError<typeof program>;",
       "type ExactFailure =",
       "  [ProgramFailure] extends [GenerateFailure]",
       "    ? [GenerateFailure] extends [ProgramFailure]",

@@ -61,14 +61,13 @@
     "zod": "catalog:peers"
   },
   "devDependencies": {
-    "@effect/vitest": "^0.30.0",
+    "@effect/vitest": "4.0.0-rc.116",
     "@rexeus/typeweaver-core": "workspace:^",
-    "effect": "^3.22.0",
+    "effect": "4.0.0-rc.116",
     "fast-check": "^4.9.0",
     "zod": "^4.4.3"
   },
   "dependencies": {
-    "@effect/platform": "0.97.0",
     "polycase": "^1.1.0"
   }
 }

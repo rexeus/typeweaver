@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
-import { Cause, Effect, Either, Exit, Option } from "effect";
+import { Cause, Effect, Result, Exit, Option } from "effect";
 import {
   array,
   assert,
@@ -29,29 +29,31 @@ import {
 } from "../src/services/ConfigLoader.js";
 import type { ConfigError } from "../src/errors/index.js";
 
+const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
+
 // Test shims that bridge the legacy sync/async API onto ConfigLoader.
-// `Effect.either` flattens typed failures into the success channel so
+// `Effect.result` flattens typed failures into the success channel so
 // tests can `.rejects.toBeInstanceOf` against the underlying error rather
 // than against Effect's `FiberFailure` wrapper.
 const assertSupportedConfigPath = (configPath: string): void => {
   const result = Effect.runSync(
-    Effect.either(ConfigLoader.assertSupportedPath(configPath)).pipe(
+    Effect.result(ConfigLoader.assertSupportedPath(configPath)).pipe(
       Effect.provide(ConfigLoader.Default)
     )
   );
-  if (Either.isLeft(result)) throw result.left;
+  if (Result.isFailure(result)) throw result.failure;
 };
-
 const loadConfig = async (
   configPath: string
 ): Promise<Partial<TypeweaverConfig>> => {
   const result = await Effect.runPromise(
-    Effect.either(ConfigLoader.load(configPath)).pipe(
+    Effect.result(ConfigLoader.load(configPath)).pipe(
       Effect.provide(ConfigLoader.Default)
     )
   );
-  if (Either.isLeft(result)) throw result.left;
-  return result.right;
+  if (Result.isFailure(result)) throw result.failure;
+  return result.success;
 };
 
 const loadConfigExit = (
@@ -70,7 +72,7 @@ const expectInvalidConfigExit = (
     return;
   }
 
-  const failure = Cause.failureOption(exit.cause);
+  const failure = Cause.findErrorOption(exit.cause);
   expect(Option.isSome(failure)).toBe(true);
   if (Option.isSome(failure)) {
     expect(failure.value).toBeInstanceOf(InvalidConfigValueError);
@@ -79,7 +81,7 @@ const expectInvalidConfigExit = (
       configPath,
     });
   }
-  expect(Cause.defects(exit.cause)).toHaveLength(0);
+  expect(causeDefects(exit.cause)).toHaveLength(0);
 };
 
 const tempDirs: string[] = [];
@@ -251,7 +253,6 @@ describe("configLoader ESM exports", () => {
       plugins: ["clients"],
     });
   });
-
   test("loads ESM default config exports", async () => {
     const configPath = writeConfigModule(
       ".mjs",
@@ -346,7 +347,6 @@ describe("configLoader value validation", () => {
       { numRuns: 40 }
     );
   });
-
   test("preserves valid plugin tuples and custom top-level configuration", async () => {
     const configPath = writeConfigModule(
       ".mjs",
@@ -382,7 +382,6 @@ describe("configLoader module formats", () => {
 
     expect(loadedConfig).toStrictEqual({ output: "./generated-js" });
   });
-
   test("loads CommonJS module exports as default config exports", async () => {
     const configPath = writeConfigModule(
       ".cjs",
@@ -465,7 +464,6 @@ describe("configLoader invalid exports", () => {
       UnsupportedConfigExtensionError
     );
   });
-
   test("rejects config modules without a supported export", async () => {
     const configPath = writeConfigModule(
       ".mjs",
@@ -528,7 +526,6 @@ describe("configLoader evaluation failures", () => {
     });
     await expect(configLoad).rejects.toThrow(/config evaluation failed/);
   });
-
   test("wraps missing dependency failures from config modules", async () => {
     const missingDependency = "definitely-missing-typeweaver-config-dependency";
     const configPath = writeConfigModule(
@@ -546,7 +543,6 @@ describe("configLoader evaluation failures", () => {
     );
     await expect(configLoad).rejects.toThrow(missingDependency);
   });
-
   test("wraps syntax errors from config modules", async () => {
     const configPath = writeConfigModule(
       ".mjs",

@@ -158,6 +158,10 @@ remains valid because the generated runtime does not create a conflicting versio
 The generated executable targets Node.js. Other TypeWeaver projections retain their own documented
 runtime support.
 
+The `@rexeus/typeweaver-command` generator is Effect-native and requires the exact
+`effect@4.0.0-rc.116` peer. Its generated command and copied runtime files do not import Effect, so
+consumers of generated output do not need that runtime solely for this projection.
+
 ## Boundaries
 
 This plugin does not:

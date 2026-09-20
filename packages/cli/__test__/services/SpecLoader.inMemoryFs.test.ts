@@ -7,9 +7,8 @@ import {
 } from "@rexeus/typeweaver-core";
 import type { SpecDefinition } from "@rexeus/typeweaver-core";
 import { MainLayer } from "@rexeus/typeweaver-gen";
-import { FileSystem } from "@effect/platform";
-import { SystemError } from "@effect/platform/Error";
-import { Cause, Effect, Either, Layer } from "effect";
+import { Effect, FileSystem, Layer, Result } from "effect";
+import { PlatformError, systemError } from "effect/PlatformError";
 import { makeInMemoryFileSystem } from "test-utils/src/effect/index.js";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
@@ -110,7 +109,6 @@ describe("SpecLoader against InMemoryFileSystem", () => {
       SPEC_DECLARATION_CONTENT
     );
   });
-
   test("ensures specOutputDir exists before writing the declaration", async () => {
     const { layer: fileSystemLayer, state } = makeInMemoryFileSystem();
     const layer = Layer.provide(
@@ -145,8 +143,8 @@ describe("SpecLoader against InMemoryFileSystem", () => {
 describe("SpecLoader declaration write failures", () => {
   test("wraps a write failure of spec.d.ts in SpecOutputWriteError", async () => {
     const { layer: baseFileSystemLayer } = makeInMemoryFileSystem();
-    const writeFailure = new SystemError({
-      reason: "PermissionDenied",
+    const writeFailure = systemError({
+      _tag: "PermissionDenied",
       module: "FileSystem",
       method: "writeFileString",
       pathOrDescriptor: "/out/spec/spec.d.ts",
@@ -176,7 +174,7 @@ describe("SpecLoader declaration write failures", () => {
     );
 
     const either = await Effect.runPromise(
-      Effect.either(
+      Effect.result(
         Effect.gen(function* () {
           const specLoader = yield* SpecLoader;
           yield* specLoader.load({
@@ -187,19 +185,19 @@ describe("SpecLoader declaration write failures", () => {
       )
     );
 
-    expect(Either.isLeft(either)).toBe(true);
-    if (!Either.isLeft(either)) return;
-    // `SpecLoader.load` is span-wrapped (Effect.fn), and failures crossing
-    // a traced boundary are re-wrapped for trace attribution — reference
-    // identity on `cause` does not survive. Unwrap the captured instance
-    // and assert the underlying SystemError structurally instead.
-    const original = Cause.originalError(either.left);
+    expect(Result.isFailure(either)).toBe(true);
+    if (!Result.isFailure(either)) return;
+    const original = either.failure;
     expect(original).toBeInstanceOf(SpecOutputWriteError);
-    const error = original as SpecOutputWriteError;
+    if (!(original instanceof SpecOutputWriteError)) return;
+    const error = original;
     expect(error.path).toBe("/out/spec/spec.d.ts");
-    const cause = error.cause as Partial<typeof writeFailure>;
-    expect(cause?.reason).toBe("PermissionDenied");
-    expect(cause?.method).toBe("writeFileString");
-    expect(cause?.pathOrDescriptor).toBe("/out/spec/spec.d.ts");
+    expect(error.cause).toBeInstanceOf(PlatformError);
+    if (!(error.cause instanceof PlatformError)) return;
+    expect(error.cause.reason._tag).toBe(writeFailure.reason._tag);
+    if (!("method" in error.cause.reason)) return;
+    expect(error.cause.reason.method).toBe("writeFileString");
+    if (!("pathOrDescriptor" in error.cause.reason)) return;
+    expect(error.cause.reason.pathOrDescriptor).toBe("/out/spec/spec.d.ts");
   });
 });

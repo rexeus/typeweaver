@@ -32,6 +32,9 @@ import {
 import type { TaggedPluginConfigError } from "../src/services/isPluginConfigError.js";
 import type { ModuleFixture } from "./helpers/index.js";
 
+const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
+
 type CapturedLog = {
   readonly level: string;
   readonly message: string;
@@ -142,7 +145,6 @@ type RunParams = {
 type RunResult = {
   readonly logs: readonly CapturedLog[];
 };
-
 const runLoadPluginsExit = async (params: RunParams) => {
   const moduleLoaderLayer = params.useRealModuleLoader
     ? PluginModuleLoader.Default
@@ -172,12 +174,11 @@ const runLoadPluginsExit = async (params: RunParams) => {
     await runtime.dispose();
   }
 };
-
 const runLoadPlugins = async (params: RunParams): Promise<RunResult> => {
   const exit = await runLoadPluginsExit(params);
 
   if (Exit.isFailure(exit)) {
-    const failureOption = Cause.failureOption(exit.cause);
+    const failureOption = Cause.findErrorOption(exit.cause);
     if (Option.isSome(failureOption)) {
       throw failureOption.value;
     }
@@ -208,7 +209,6 @@ const createThrowingModuleSource = (options: {
     `${indent}throw new ${options.errorName}(${JSON.stringify(options.message)});`,
   ];
 };
-
 const capturePluginLoadError = async (
   load: Promise<RunResult>
 ): Promise<PluginLoadError> => {
@@ -225,7 +225,6 @@ const capturePluginLoadError = async (
 
   return failure;
 };
-
 const captureTaggedPluginConfigError = async (
   load: Promise<RunResult>
 ): Promise<CapturedPluginConfigError> => {
@@ -300,7 +299,6 @@ describe("pluginLoader required plugin registration", () => {
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual(["types"]);
     expectNoSuccessfulLoadSummary(logs);
   });
-
   test("registers required plugins when plugins are omitted", async () => {
     const registeredPlugins: RegisteredPlugin[] = [];
 
@@ -314,7 +312,6 @@ describe("pluginLoader required plugin registration", () => {
     expect(registeredPlugins.map(plugin => plugin.name)).toEqual(["types"]);
     expectNoSuccessfulLoadSummary(logs);
   });
-
   test("registers required plugins before configured plugins", async () => {
     const registeredPlugins: RegisteredPlugin[] = [];
 
@@ -354,7 +351,6 @@ describe("pluginLoader configured plugin reporting", () => {
       "named-plugin",
     ]);
   });
-
   test("reports configured plugin count, name, and source", async () => {
     const { logs } = await runLoadPlugins({
       registeredPlugins: [],
@@ -372,7 +368,6 @@ describe("pluginLoader configured plugin reporting", () => {
       source: "reported-plugin",
     });
   });
-
   test("reports multiple configured plugins in config order", async () => {
     const registeredPlugins: RegisteredPlugin[] = [];
 
@@ -438,7 +433,6 @@ describe("pluginLoader module resolution", () => {
       process.chdir(originalWorkingDirectory);
     }
   });
-
   test("loads a named plugin class exported from a file URL", async () => {
     // Real-fs scenario: this test exercises the absolute-path -> file URL
     // conversion in `toLocalImportSpecifier`, which is module-resolution
@@ -468,7 +462,6 @@ describe("pluginLoader module resolution", () => {
       source: pluginUrl,
     });
   });
-
   test("falls through failed npm attempts to load a local plugin", async () => {
     const registeredPlugins: RegisteredPlugin[] = [];
 
@@ -492,7 +485,6 @@ describe("pluginLoader module resolution", () => {
       source: "local-fallback-plugin",
     });
   });
-
   test("falls back to a default plugin record export", async () => {
     const registeredPlugins: RegisteredPlugin[] = [];
 
@@ -536,7 +528,6 @@ describe("pluginLoader factory options and export fallback", () => {
 
     expect(registeredPlugins[1]?.plugin).toMatchObject({ config: options });
   });
-
   test("passes tuple plugin options to the registry registration", async () => {
     const options = { marker: "from tuple" };
     const registeredPlugins: RegisteredPlugin[] = [];
@@ -559,7 +550,6 @@ describe("pluginLoader factory options and export fallback", () => {
 
     expect(registeredPlugins[1]?.config).toEqual(options);
   });
-
   test("prefers a valid default export over other valid named exports", async () => {
     const registeredPlugins: RegisteredPlugin[] = [];
 
@@ -584,7 +574,6 @@ describe("pluginLoader factory options and export fallback", () => {
       "expected-default-plugin",
     ]);
   });
-
   test("skips non-plugin exports and registers the first valid plugin shape", async () => {
     const registeredPlugins: RegisteredPlugin[] = [];
 
@@ -630,7 +619,6 @@ describe("pluginLoader resolution failures", () => {
       },
     ]);
   });
-
   test("wraps PluginModuleNotFoundError into the attempts[].error message", async () => {
     const failure = await capturePluginLoadError(
       runLoadPlugins({
@@ -649,7 +637,6 @@ describe("pluginLoader resolution failures", () => {
       error: "Cannot find module 'missing' imported from in-memory map",
     });
   });
-
   test("reports npm package attempts when a package plugin is missing", async () => {
     // Real-fs scenario: exercises the npm-strategy path resolution
     // (`@rexeus/typeweaver-X` + `@rexeus/X`) against Node's actual import
@@ -676,7 +663,6 @@ describe("pluginLoader resolution failures", () => {
       },
     ]);
   });
-
   test("captures module evaluation failures in plugin loading attempts", async () => {
     // Real-fs scenario: a thrown error during module evaluation is what
     // Node's import() raises — testing that the loader carries it through
@@ -727,7 +713,6 @@ describe("pluginLoader factory failures", () => {
       },
     ]);
   });
-
   test("captures factory failures in plugin loading attempts", async () => {
     const failure = await capturePluginLoadError(
       runLoadPlugins({
@@ -788,7 +773,6 @@ describe("pluginLoader configuration failures", () => {
       "Plugin 'misconfigured-plugin' is misconfigured: outputPath must end with .json"
     );
   });
-
   test("stops inspecting fallback exports after a plugin factory rejects its configuration", async () => {
     let fallbackExportInvoked = false;
 
@@ -856,7 +840,6 @@ describe("pluginLoader cross-realm configuration failures", () => {
     ]);
     expect(fallbackExportInvoked).toBe(true);
   });
-
   test("preserves configuration failures thrown from another package realm", async () => {
     /*
      * Simulates a plugin loaded against a *different copy* of
@@ -935,7 +918,6 @@ describe("pluginLoader resolution strategy short-circuiting", () => {
     expect(failure.pluginName).toBe("misconfigured-plugin");
     expect(fallbackAttempted).toBe(false);
   });
-
   test("stops trying later resolution strategies when module evaluation rejects plugin configuration", async () => {
     let fallbackAttempted = false;
     const foreignPluginConfigError = aForeignPluginConfigError({
@@ -1008,7 +990,6 @@ describe("pluginLoader invalid plugin exports", () => {
     ]);
     expect(fallbackAttempted).toBe(true);
   });
-
   test("rejects exports without a plugin name", async () => {
     const registeredPlugins: RegisteredPlugin[] = [];
 
@@ -1103,8 +1084,8 @@ describe("pluginLoader plugin shape validation", () => {
 
       expect(Exit.isFailure(exit)).toBe(true);
       if (Exit.isFailure(exit)) {
-        expect(Cause.defects(exit.cause)).toHaveLength(0);
-        const failure = Cause.failureOption(exit.cause);
+        expect(causeDefects(exit.cause)).toHaveLength(0);
+        const failure = Cause.findErrorOption(exit.cause);
         expect(Option.isSome(failure)).toBe(true);
         if (Option.isSome(failure)) {
           expect(failure.value).toBeInstanceOf(PluginLoadError);
@@ -1145,8 +1126,8 @@ describe("pluginLoader real-module validation", () => {
 
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) {
-      expect(Cause.defects(exit.cause)).toHaveLength(0);
-      const failure = Cause.failureOption(exit.cause);
+      expect(causeDefects(exit.cause)).toHaveLength(0);
+      const failure = Cause.findErrorOption(exit.cause);
       expect(Option.isSome(failure)).toBe(true);
       if (Option.isSome(failure)) {
         expect(failure.value).toBeInstanceOf(PluginLoadError);
@@ -1162,7 +1143,6 @@ describe("pluginLoader real-module validation", () => {
     }
     expect(registeredPlugins).toEqual([]);
   });
-
   test("reports a scoped package attempt when the scoped strategy cannot load it", async () => {
     const failure = await capturePluginLoadError(
       runLoadPlugins({

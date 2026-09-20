@@ -13,20 +13,16 @@ type CapturedLog = {
 };
 
 const capturingLoggerLayer = (sink: CapturedLog[]): Layer.Layer<never> =>
-  Logger.replace(
-    Logger.defaultLogger,
+  Logger.layer([
     Logger.make<unknown, void>(({ message, logLevel }) => {
       const text = Array.isArray(message)
         ? message.map(String).join(" ")
         : String(message);
-      sink.push({ level: logLevel.label, message: text });
-    })
-  );
+      sink.push({ level: logLevel, message: text });
+    }),
+  ]);
 
-const silentLoggerLayer = Logger.replace(
-  Logger.defaultLogger,
-  Logger.make<unknown, void>(() => {})
-);
+const silentLoggerLayer = Logger.layer([Logger.make<unknown, void>(() => {})]);
 
 const registryTestLayer = Layer.merge(
   PluginRegistry.Default,
@@ -59,7 +55,7 @@ const runRegistryExpectingFailure = <E>(
     );
   }
 
-  const failure = Cause.failureOption(exit.cause);
+  const failure = Cause.findErrorOption(exit.cause);
   if (failure._tag !== "Some") {
     throw new Error(
       `Expected typed failure but got: ${Cause.pretty(exit.cause)}`
@@ -319,7 +315,7 @@ describe("PluginRegistry duplicate plugin names", () => {
       )
     );
 
-    const warnings = logs.filter(entry => entry.level === "WARN");
+    const warnings = logs.filter(entry => entry.level === "Warn");
     expect(warnings).toHaveLength(1);
     expect(warnings[0]?.message).toContain(
       "Plugin 'types' is already registered; keeping the first registration"

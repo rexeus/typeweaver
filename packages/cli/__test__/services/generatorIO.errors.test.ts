@@ -12,6 +12,11 @@ import { outputLockDirectory } from "../../src/services/internal/outputCoordinat
 import type { CleanTargetFs } from "../../src/services/cleanTargetGuard.js";
 import type { OutputLock } from "../../src/services/generatorIO.js";
 
+const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
+const causeFailures = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isFailReason).map(reason => reason.error);
+
 const tempDirs: string[] = [];
 
 const createTempDir = (): string => {
@@ -37,8 +42,8 @@ const expectTypedFailureWithoutDefects = <E extends { readonly _tag: string }>(
   if (Exit.isSuccess(exit)) {
     throw new Error("Expected effect to fail");
   }
-  expect(Array.from(Cause.defects(exit.cause))).toEqual([]);
-  const failure = Cause.failureOption(exit.cause);
+  expect(Array.from(causeDefects(exit.cause))).toEqual([]);
+  const failure = Cause.findErrorOption(exit.cause);
   expect(failure._tag).toBe("Some");
   if (failure._tag === "None") {
     throw new Error(`Expected typed failure: ${Cause.pretty(exit.cause)}`);
@@ -106,8 +111,8 @@ describe("generator filesystem errors", () => {
 
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) {
-      expect(Array.from(Cause.failures(exit.cause))).toEqual([]);
-      expect(Array.from(Cause.defects(exit.cause))).toEqual([programmingError]);
+      expect(Array.from(causeFailures(exit.cause))).toEqual([]);
+      expect(Array.from(causeDefects(exit.cause))).toEqual([programmingError]);
     }
   });
 
@@ -139,8 +144,8 @@ describe("generator filesystem errors", () => {
 
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) {
-      expect(Array.from(Cause.failures(exit.cause))).toEqual([]);
-      expect(Array.from(Cause.defects(exit.cause))).toEqual([programmingError]);
+      expect(Array.from(causeFailures(exit.cause))).toEqual([]);
+      expect(Array.from(causeDefects(exit.cause))).toEqual([programmingError]);
     }
   });
 });
