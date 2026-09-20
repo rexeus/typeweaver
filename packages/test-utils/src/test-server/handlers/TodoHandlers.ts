@@ -118,12 +118,15 @@ export class TodoHandlers implements HonoTodoApiHandler<boolean> {
     }
 
     const { todoId } = request.param;
-    const body = UpdateTodoDefinition.request.body.parse(request.body);
+    const { title, ...optionalBody } = UpdateTodoDefinition.request.body.parse(
+      request.body
+    );
 
     return createUpdateTodoSuccessResponse({
       body: {
-        ...body,
+        ...optionalBody,
         id: todoId,
+        ...(title === undefined ? {} : { title }),
       },
     });
   }
@@ -209,13 +212,16 @@ export class TodoHandlers implements HonoTodoApiHandler<boolean> {
     }
 
     const { todoId, subtodoId } = request.param;
-    const body = UpdateSubTodoDefinition.request.body.parse(request.body);
+    const { status, title, ...optionalBody } =
+      UpdateSubTodoDefinition.request.body.parse(request.body);
 
     return createUpdateSubTodoSuccessResponse({
       body: {
-        ...body,
+        ...optionalBody,
         id: subtodoId,
         parentId: todoId,
+        ...(status === undefined ? {} : { status }),
+        ...(title === undefined ? {} : { title }),
       },
     });
   }

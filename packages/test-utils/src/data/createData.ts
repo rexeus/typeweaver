@@ -1,14 +1,14 @@
 import deepmerge from "deepmerge";
 
 /**
- * Partial overrides that may explicitly set a property to `undefined`.
+ * Partial overrides that preserve each property's `undefined` contract.
  *
- * Under `exactOptionalPropertyTypes`, `Partial<T>` does not accept an explicit
- * `undefined` for a required property of `T`. Test overrides frequently forward
- * optional values, so the override shape admits `undefined` deliberately.
+ * Under `exactOptionalPropertyTypes`, optional or explicitly undefined-valued
+ * properties may still receive `undefined`, while required values cannot erase
+ * their defaults with `undefined`.
  */
 export type DataOverrides<T> = {
-  [Key in keyof T]?: T[Key] | undefined;
+  [Key in keyof T]?: undefined extends T[Key] ? T[Key] | undefined : T[Key];
 };
 
 /**
