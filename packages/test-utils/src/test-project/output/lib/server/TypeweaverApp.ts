@@ -8,17 +8,8 @@
 // oxlint-disable import/max-dependencies
 import {
   badRequestDefaultError,
-  createDefaultErrorBody,
   createDefaultErrorResponse,
-  internalServerErrorDefaultError,
-  isTypedHttpResponse,
-  methodNotAllowedDefaultError,
-  normalizeHttpResponse,
-  notFoundDefaultError,
   payloadTooLargeDefaultError,
-  RequestValidationError,
-  toHttpResponse,
-  validationDefaultError,
 } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import {
@@ -26,21 +17,20 @@ import {
   MissingRouterForPrefixedMountError,
   PayloadTooLargeError,
 } from "./errors/index.js";
-import { executeMiddlewarePipeline } from "./Middleware.js";
 import { Router } from "./Router.js";
-import { StateMap } from "./StateMap.js";
+import {
+  createInternalServerErrorResponse,
+  handleAppError,
+  reportAppError,
+  validateAppResponse,
+} from "./TypeweaverAppErrorHandling.js";
+import { processAppRequest, resolveAppRequest } from "./TypeweaverAppRequestPipeline.js";
+import { mountAppRouter } from "./TypeweaverAppRouting.js";
 import { initializeTypeweaverAppRuntime } from "./TypeweaverAppRuntime.js";
 import type { FetchApiAdapter } from "./FetchApiAdapter.js";
 import type { Middleware } from "./Middleware.js";
 import type { ErasedRequestHandler } from "./RequestHandler.js";
-import type {
-  HttpResponseErrorHandler,
-  RequestValidationErrorHandler,
-  ResponseValidationErrorHandler,
-  RouteDefinition,
-  RouteMatch,
-  UnknownErrorHandler,
-} from "./Router.js";
+import type { RouteDefinition, RouteMatch } from "./Router.js";
 import type { ServerContext } from "./ServerContext.js";
 import type { StateRequirementError, TypedMiddleware } from "./TypedMiddleware.js";
 import type { TypeweaverRouter } from "./TypeweaverRouter.js";
@@ -76,19 +66,7 @@ export type TypeweaverAppOptions = {
   readonly onError?: (error: unknown) => void;
 };
 
-function trimTrailingSlashes(value: string | undefined): string | undefined {
-  if (value === undefined) return undefined;
-
-  let end = value.length;
-  while (end > 0 && value.charCodeAt(end - 1) === 47) end -= 1;
-  return end === value.length ? value : value.slice(0, end);
-}
-
 export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
-  private static readonly INTERNAL_SERVER_ERROR_BODY = createDefaultErrorBody(
-    internalServerErrorDefaultError,
-  );
-
   private readonly router = new Router();
   private readonly middlewares: Middleware[] = [];
   private readonly adapter: FetchApiAdapter;
@@ -99,19 +77,8 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
     this.adapter = initializeTypeweaverAppRuntime({
       app: this,
       options,
-      reportError: (error) => this.safeOnError(error),
+      reportError: (error) => reportAppError(this.onError, error),
     });
-  }
-
-  private safeOnError(error: unknown): void {
-    try {
-      this.onError(error);
-    } catch (onErrorFailure) {
-      console.error("TypeweaverApp: onError callback threw while handling error", {
-        onErrorFailure,
-        originalError: error,
-      });
-    }
   }
 
   /**
@@ -158,9 +125,11 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
       if (!router) {
         throw new MissingRouterForPrefixedMountError(prefixOrRouter);
       }
-      return this.mountRouter(router, prefixOrRouter);
+      mountAppRouter(this.router, router, prefixOrRouter);
+      return this;
     }
-    return this.mountRouter(prefixOrRouter);
+    mountAppRouter(this.router, prefixOrRouter);
+    return this;
   }
 
   /**
@@ -187,75 +156,46 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
       return this.adapter.toResponse(response);
     } catch (error) {
       if (error instanceof PayloadTooLargeError) {
-        this.safeOnError(error);
+        reportAppError(this.onError, error);
         return this.adapter.toResponse(createDefaultErrorResponse(payloadTooLargeDefaultError));
       }
       if (error instanceof BodyParseError) {
         return this.adapter.toResponse(createDefaultErrorResponse(badRequestDefaultError));
       }
-      this.safeOnError(error);
-      return TypeweaverApp.createErrorResponse();
+      reportAppError(this.onError, error);
+      return createInternalServerErrorResponse();
     }
   };
 
-  private async processRequest(request: Request): Promise<IHttpResponse> {
-    const url = new URL(request.url);
-    const httpRequest = await this.adapter.toRequest(request, url);
-
-    const match = this.router.match(request.method, url.pathname);
-
-    const ctx: ServerContext = {
-      request: httpRequest,
-      signal: request.signal,
-      state: new StateMap(),
-      route: match
-        ? {
-            operationId: match.route.operationId,
-            method: match.route.method,
-            path: match.route.path,
-          }
-        : undefined,
-    };
-
-    const response = await executeMiddlewarePipeline(this.middlewares, ctx, () =>
-      this.resolveAndExecute(match, url.pathname, ctx),
-    );
-
-    return request.method.toUpperCase() === "HEAD" ? { ...response, body: undefined } : response;
+  private processRequest(request: Request): Promise<IHttpResponse> {
+    return processAppRequest({
+      request,
+      adapter: this.adapter,
+      router: this.router,
+      middlewares: this.middlewares,
+      resolveAndExecute: (match, pathname, ctx) => this.resolveAndExecute(match, pathname, ctx),
+    });
   }
 
   /**
    * Execute the matched route handler, or produce 404/405 responses.
    * Called as the final handler in the middleware pipeline.
    */
-  private async resolveAndExecute(
+  private resolveAndExecute(
     match: RouteMatch | undefined,
     pathname: string,
     ctx: ServerContext,
   ): Promise<IHttpResponse> {
-    if (match) {
-      const routeCtx = this.withPathParams(ctx, match.params);
-      try {
-        const response = await this.executeHandler(routeCtx, match.route);
-        return await this.validateResponse(match.route, normalizeHttpResponse(response), routeCtx);
-      } catch (error) {
-        return this.handleError(error, routeCtx, match.route);
-      }
-    }
-
-    const pathMatch = this.router.matchPath(pathname);
-    if (pathMatch) {
-      return createDefaultErrorResponse(methodNotAllowedDefaultError, {
-        header: { Allow: pathMatch.allowedMethods.join(", ") },
-      });
-    }
-
-    return createDefaultErrorResponse(notFoundDefaultError);
-  }
-
-  private withPathParams(ctx: ServerContext, params: Record<string, string>): ServerContext {
-    if (Object.keys(params).length === 0) return ctx;
-    return { ...ctx, request: { ...ctx.request, param: params } };
+    return resolveAppRequest({
+      match,
+      pathname,
+      ctx,
+      router: this.router,
+      executeHandler: (handlerContext, route) => this.executeHandler(handlerContext, route),
+      validateResponse: (route, response, responseContext) =>
+        this.validateResponse(route, response, responseContext),
+      handleError: (error, errorContext, route) => this.handleError(error, errorContext, route),
+    });
   }
 
   private async executeHandler(ctx: ServerContext, route: RouteDefinition): Promise<IHttpResponse> {
@@ -266,200 +206,31 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
     return route.handler(validatedRequest, ctx);
   }
 
-  /**
-   * Validates a response against the operation's response validator.
-   *
-   * Behavior depends on configuration:
-   * - `validateResponses: false` → returns the original response unchanged.
-   * - `validateResponses: true` (default) → runs validation:
-   *   - Valid response → returns the stripped response (extra fields removed).
-   *   - Invalid response + handler configured → calls the handler safely.
-   *     If the handler throws, fails closed with a sanitized 500 response.
-   *   - Invalid response + `handleResponseValidationErrors: false` → returns
-   *     the original (invalid) response as-is.
-   *
-   * @param route - The route definition containing the response validator and config
-   * @param response - The response to validate
-   * @param ctx - The server context for the current request
-   * @returns The validated (and stripped) response, the handler's response, or the original
-   */
   private async validateResponse(
     route: RouteDefinition,
     response: IHttpResponse,
     ctx: ServerContext,
   ): Promise<IHttpResponse> {
-    if (!route.routerConfig.validateResponses) return response;
-
-    const result = route.responseValidator.safeValidate(response);
-
-    if (result.isValid) {
-      return normalizeHttpResponse(result.data);
-    }
-
-    const handler = this.resolveErrorHandler<ResponseValidationErrorHandler>(
-      route.routerConfig.handleResponseValidationErrors,
-      TypeweaverApp.defaultResponseValidationHandler,
-    );
-
-    if (handler) {
-      const handlerResponse = await this.safelyExecuteErrorHandler(() =>
-        handler(result.error, response, ctx),
-      );
-      if (handlerResponse) return handlerResponse;
-      return TypeweaverApp.defaultResponseValidationHandler(result.error, response, ctx);
-    }
-
-    return response;
+    return validateAppResponse({
+      route,
+      response,
+      ctx,
+      safeOnError: (error) => reportAppError(this.onError, error),
+    });
   }
 
-  /**
-   * Safely executes an error handler and returns null if it fails.
-   * This allows for graceful fallback to the next handler in the chain
-   * without crashing the request pipeline.
-   *
-   * If the handler throws, the error is reported via `safeOnError`
-   * and null is returned so the caller can fall through to the next handler.
-   *
-   * @param handlerFn - Function that executes the error handler
-   * @returns The handler's response if successful, null if the handler throws
-   */
-  private async safelyExecuteErrorHandler(
-    handlerFn: () => Promise<IHttpResponse> | IHttpResponse,
-  ): Promise<IHttpResponse | null> {
-    try {
-      return await handlerFn();
-    } catch (error) {
-      this.safeOnError(error);
-      return null;
-    }
-  }
-
-  /**
-   * Handle errors using the route's configured error handlers.
-   */
   private async handleError(
     error: unknown,
     ctx: ServerContext,
     route: RouteDefinition,
   ): Promise<IHttpResponse> {
-    const config = route.routerConfig;
-
-    if (error instanceof RequestValidationError) {
-      const handler = this.resolveErrorHandler<RequestValidationErrorHandler>(
-        config.handleRequestValidationErrors,
-        TypeweaverApp.defaultRequestValidationHandler,
-      );
-      if (handler) {
-        const response = await this.safelyExecuteErrorHandler(() => handler(error, ctx));
-        if (response) return response;
-      }
-    }
-
-    if (isTypedHttpResponse(error)) {
-      const handler = this.resolveErrorHandler<HttpResponseErrorHandler>(
-        config.handleHttpResponseErrors,
-        TypeweaverApp.defaultHttpResponseHandler,
-      );
-      if (handler) {
-        const response = await this.safelyExecuteErrorHandler(() => handler(error, ctx));
-        if (response) {
-          return await this.validateResponse(route, normalizeHttpResponse(response), ctx);
-        }
-      }
-    }
-
-    const handler = this.resolveErrorHandler<UnknownErrorHandler>(
-      config.handleUnknownErrors,
-      this.defaultUnknownHandler,
-    );
-    if (handler) {
-      const response = await this.safelyExecuteErrorHandler(() => handler(error, ctx));
-      if (response) {
-        this.safeOnError(error);
-        return response;
-      }
-    }
-
-    throw error;
-  }
-
-  /**
-   * Resolve an error handler option to a concrete handler function.
-   */
-  private resolveErrorHandler<T extends (...args: never[]) => unknown>(
-    option: T | boolean | undefined,
-    defaultHandler: T,
-  ): T | undefined {
-    if (option === false) return undefined;
-    if (option === true || option === undefined) return defaultHandler;
-    return option;
-  }
-
-  private mountRouter(
-    router: TypeweaverRouter<Record<string, ErasedRequestHandler>>,
-    prefix?: string,
-  ): this {
-    const normalizedPrefix = trimTrailingSlashes(prefix);
-    for (const route of router.getRoutes()) {
-      this.router.add({
-        ...route,
-        path: normalizedPrefix ? normalizedPrefix + route.path : route.path,
-      });
-    }
-    return this;
-  }
-
-  private static sanitizeIssues(
-    issues: readonly {
-      readonly message: string;
-      readonly path: PropertyKey[];
-    }[],
-  ): readonly { message: string; path: PropertyKey[] }[] | undefined {
-    if (issues.length === 0) return undefined;
-    return issues.map(({ message, path }) => ({ message, path }));
-  }
-
-  private static defaultRequestValidationHandler: RequestValidationErrorHandler = (
-    err,
-  ): IHttpResponse => {
-    const issues: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
-
-    const header = TypeweaverApp.sanitizeIssues(err.headerIssues);
-    const body = TypeweaverApp.sanitizeIssues(err.bodyIssues);
-    const query = TypeweaverApp.sanitizeIssues(err.queryIssues);
-    const param = TypeweaverApp.sanitizeIssues(err.pathParamIssues);
-
-    if (header) issues["header"] = header;
-    if (body) issues["body"] = body;
-    if (query) issues["query"] = query;
-    if (param) issues["param"] = param;
-
-    return {
-      statusCode: validationDefaultError.statusCode,
-      body: {
-        ...createDefaultErrorBody(validationDefaultError),
-        issues,
-      },
-    };
-  };
-
-  private static defaultResponseValidationHandler: ResponseValidationErrorHandler =
-    (): IHttpResponse => createDefaultErrorResponse(internalServerErrorDefaultError);
-
-  private static defaultHttpResponseHandler: HttpResponseErrorHandler = (err): IHttpResponse =>
-    toHttpResponse(err);
-
-  private readonly defaultUnknownHandler: UnknownErrorHandler = (_error): IHttpResponse => {
-    return {
-      statusCode: internalServerErrorDefaultError.statusCode,
-      body: TypeweaverApp.INTERNAL_SERVER_ERROR_BODY,
-    };
-  };
-
-  private static createErrorResponse(): Response {
-    return new Response(JSON.stringify(TypeweaverApp.INTERNAL_SERVER_ERROR_BODY), {
-      status: internalServerErrorDefaultError.statusCode,
-      headers: { "content-type": "application/json" },
+    return handleAppError({
+      error,
+      ctx,
+      route,
+      safeOnError: (errorValue) => reportAppError(this.onError, errorValue),
+      validateResponse: (responseRoute, response, responseContext) =>
+        this.validateResponse(responseRoute, response, responseContext),
     });
   }
 }
