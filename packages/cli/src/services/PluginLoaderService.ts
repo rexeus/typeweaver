@@ -1,7 +1,12 @@
 import { Context, Layer } from "effect";
 import { makePluginLoader } from "./PluginLoader.js";
 import { PluginModuleLoader } from "./PluginModuleLoader.js";
-import type { LoadParams, PluginLoaderShape } from "./PluginLoader.js";
+import type {
+  LoadParams,
+  PluginLoaderShape as LoadedPluginLoaderShape,
+} from "./PluginLoader.js";
+
+export type PluginLoaderShape = LoadedPluginLoaderShape;
 
 export class PluginLoader extends Context.Service<
   PluginLoader,
@@ -23,5 +28,3 @@ export class PluginLoader extends Context.Service<
   static readonly loadAll = (params: LoadParams) =>
     PluginLoader.use(service => service.loadAll(params));
 }
-
-export type { PluginLoaderShape } from "./PluginLoader.js";

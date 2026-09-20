@@ -8,8 +8,8 @@ import {
   acquireOutputLock,
   releaseOutputLock,
 } from "../../../src/services/generatorIO.js";
+import { canonicalHostTempDirectory } from "../../../src/services/internal/hostTemp.js";
 import {
-  canonicalHostTempDirectory,
   inspectLegacyOutputLock,
   isCompleteLegacyOutputLock,
   isLiveLegacyOutputLock,

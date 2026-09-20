@@ -11,11 +11,9 @@ import {
   assertSafeCleanTargetEffect,
   releaseOutputLock,
 } from "./generatorIO.js";
+import { assertPathNotReservedForCoordination } from "./internal/hostTemp.js";
 import { withMirroredOutputStage } from "./internal/projectStaging.js";
-import {
-  assertPathNotReservedForCoordination,
-  createStagingAuthority,
-} from "./internal/stagingAuthority.js";
+import { createStagingAuthority } from "./internal/stagingAuthority.js";
 import {
   compareOutputTrees,
   isMatchingOutput,

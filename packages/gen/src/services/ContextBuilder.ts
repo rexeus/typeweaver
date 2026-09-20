@@ -1,9 +1,9 @@
 import { Context, Effect, FileSystem, Layer } from "effect";
+import { createPluginContextBuilder } from "./internal/pluginContextBuilder.js";
 import {
-  createPluginContextBuilder,
   livePathSafetyShape,
   liveTemplateRendererShape,
-} from "./internal/pluginContextBuilder.js";
+} from "./internal/pluginContextEffectIO.js";
 import type { NormalizedSpec } from "../NormalizedSpec.js";
 import type {
   GeneratorContext,

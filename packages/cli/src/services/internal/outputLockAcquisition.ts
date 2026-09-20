@@ -8,19 +8,20 @@ import {
   OutputLockError,
   UnsafeSharedTempDirectoryError,
 } from "../../errors/index.js";
-import { errnoCode, isExpectedNodeSystemError } from "./nodeFsErrors.js";
 import {
   canonicalHostTempDirectory,
-  canonicalOutputPath,
   ensureTrustedHostTempDirectory,
+} from "./hostTemp.js";
+import { errnoCode, isExpectedNodeSystemError } from "./nodeFsErrors.js";
+import {
+  canonicalOutputPath,
   inspectLegacyOutputLock,
-  isProcessAlive,
   LEGACY_OUTPUT_LOCK_DIRECTORY,
-  OUTPUT_LOCK_INFO_FILE,
   outputLockDirectory,
-  readOutputLockInfo,
 } from "./outputCoordinationArtifact.js";
-import type { OutputLockInfo } from "./outputCoordinationArtifact.js";
+import { OUTPUT_LOCK_INFO_FILE, readOutputLockInfo } from "./outputLockInfo.js";
+import { isProcessAlive } from "./processLiveness.js";
+import type { OutputLockInfo } from "./outputLockInfo.js";
 
 export type OutputLock = {
   readonly path: string;

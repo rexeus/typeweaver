@@ -6,8 +6,6 @@ import { normalizeOpenApiPluginOptions } from "./internal/normalizeOptions.js";
 import { openApiWarningToIssue } from "./warningIssues.js";
 import type { OpenApiPluginOptions } from "./internal/normalizeOptions.js";
 
-export type { OpenApiPluginOptions } from "./internal/normalizeOptions.js";
-
 const PLUGIN_NAME = "openapi";
 
 /**

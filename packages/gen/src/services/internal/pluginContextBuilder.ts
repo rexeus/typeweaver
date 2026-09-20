@@ -21,16 +21,7 @@ import type {
   TypeweaverUserConfig,
 } from "../../plugins/contextTypes.js";
 import type {
-  FileSystem,
-  PathSafetyShape,
-  TemplateRendererShape,
-} from "./pluginContextEffectIO.js";
-
-export {
-  livePathSafetyShape,
-  liveTemplateRendererShape,
-} from "./pluginContextEffectIO.js";
-export type {
+  FileSystemService,
   PathSafetyShape,
   TemplateRendererShape,
 } from "./pluginContextEffectIO.js";
@@ -81,7 +72,7 @@ type PluginContextBuilderDeps = {
    * lifecycle stages keep `R = never` (ADR 0003) while their writes route
    * through the platform `FileSystem` service.
    */
-  readonly fileSystem: FileSystem.FileSystem;
+  readonly fileSystem: FileSystemService;
 };
 
 /**
@@ -225,7 +216,7 @@ type GeneratorContextDeps = {
   readonly pathSafety: PathSafetyShape;
   readonly templateRenderer: TemplateRendererShape;
   readonly syncAtomicFileSystem: SyncAtomicFileSystem;
-  readonly fileSystem: FileSystem.FileSystem;
+  readonly fileSystem: FileSystemService;
 };
 
 const createPluginContext = (params: PluginContextParams): PluginContext => ({

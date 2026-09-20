@@ -18,7 +18,6 @@ import {
 import {
   hasCoordinationArtifactMarker,
   isLiveLegacyOutputLock,
-  readOutputLockInfo,
 } from "./internal/outputCoordinationArtifact.js";
 import {
   acquireOutputLock,
@@ -28,6 +27,7 @@ import {
   rememberFailedOutputLockRelease,
   sameLockInfo,
 } from "./internal/outputLockAcquisition.js";
+import { readOutputLockInfo } from "./internal/outputLockInfo.js";
 import type { CleanTargetFs } from "./cleanTargetGuard.js";
 import type { OutputLock } from "./internal/outputLockAcquisition.js";
 

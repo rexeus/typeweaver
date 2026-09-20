@@ -9,10 +9,8 @@ import {
   releaseOutputLock,
   sweepOrphanTempdirs,
 } from "../generatorIO.js";
-import {
-  assertGenerationOutputAllowed,
-  assertPathNotReservedForCoordination,
-} from "./stagingAuthority.js";
+import { assertPathNotReservedForCoordination } from "./hostTemp.js";
+import { assertGenerationOutputAllowed } from "./stagingAuthority.js";
 import type { GenerateParams } from "../generatorTypes.js";
 
 export type GenerationPaths = {

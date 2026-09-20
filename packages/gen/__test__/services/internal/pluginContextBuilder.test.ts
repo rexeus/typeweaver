@@ -8,14 +8,12 @@ import { UnsafeGeneratedPathError } from "../../../src/errors/UnsafeGeneratedPat
 import { MissingCanonicalResponseError } from "../../../src/plugins/errors/MissingCanonicalResponseError.js";
 import {
   createPluginContextBuilder,
-  livePathSafetyShape,
   liveSyncAtomicFileSystem,
-  liveTemplateRendererShape,
 } from "../../../src/services/internal/pluginContextBuilder.js";
-import type {
-  NormalizedResponse,
-  NormalizedSpec,
-} from "../../../src/NormalizedSpec.js";
+import {
+  livePathSafetyShape,
+  liveTemplateRendererShape,
+} from "../../../src/services/internal/pluginContextEffectIO.js";
 import type { SyncAtomicFileSystem } from "../../../src/services/internal/pluginContextBuilder.js";
 
 const coordinationMarkerFile = ".typeweaver-coordination";
@@ -45,6 +43,13 @@ const aBuilder = (
     ...realPluginContextBuilderDeps,
     syncAtomicFileSystem,
   });
+
+type GeneratorContextParams = Parameters<
+  ReturnType<typeof createPluginContextBuilder>["createGeneratorContext"]
+>[0];
+
+type NormalizedSpec = GeneratorContextParams["normalizedSpec"];
+type NormalizedResponse = NormalizedSpec["responses"][number];
 
 const validationErrorResponse: NormalizedResponse = {
   name: "validationError",
@@ -85,10 +90,6 @@ const todoSpec: NormalizedSpec = {
   responses: [validationErrorResponse],
   warnings: [],
 };
-
-type GeneratorContextParams = Parameters<
-  ReturnType<typeof createPluginContextBuilder>["createGeneratorContext"]
->[0];
 
 const generatedProjectParams: GeneratorContextParams = {
   outputDir: path.join("project", "generated"),

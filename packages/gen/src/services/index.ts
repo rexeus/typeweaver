@@ -5,7 +5,8 @@ export type {
   PluginContextParams,
 } from "./ContextBuilder.js";
 export { PathSafety } from "./PathSafety.js";
-export type { PathSafetyShape, SafeGeneratedFilePath } from "./PathSafety.js";
+export type { PathSafetyShape } from "./PathSafety.js";
+export type { SafeGeneratedFilePath } from "../helpers/pathSafety.js";
 export { PluginRegistry } from "./PluginRegistry.js";
 export type {
   PluginRegistration,

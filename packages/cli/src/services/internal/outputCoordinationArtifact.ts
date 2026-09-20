@@ -13,15 +13,6 @@ import { OUTPUT_LOCK_INFO_FILE, readOutputLockInfo } from "./outputLockInfo.js";
 import { isProcessAlive } from "./processLiveness.js";
 import type { OutputLockInfo } from "./outputLockInfo.js";
 
-export {
-  assertPathNotReservedForCoordination,
-  canonicalHostTempDirectory,
-  ensureTrustedHostTempDirectory,
-} from "./hostTemp.js";
-export { isProcessAlive } from "./processLiveness.js";
-export { OUTPUT_LOCK_INFO_FILE, readOutputLockInfo } from "./outputLockInfo.js";
-export type { OutputLockInfo } from "./outputLockInfo.js";
-
 export const LEGACY_OUTPUT_LOCK_DIRECTORY = ".typeweaver-lock";
 const OUTPUT_LOCK_NAME_PREFIX = ".typeweaver-output-lock-";
 

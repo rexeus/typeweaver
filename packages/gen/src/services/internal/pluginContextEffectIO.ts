@@ -17,7 +17,7 @@ import type { TemplateData } from "../../plugins/contextTypes.js";
 import type { FileSystem } from "effect";
 import type { PlatformError } from "effect/PlatformError";
 
-export type { FileSystem } from "effect";
+export type FileSystemService = FileSystem.FileSystem;
 
 /**
  * Narrowed PathSafety surface: a sync function that validates a requested
@@ -93,7 +93,7 @@ const validateGeneratedPathEffect = (
  * to `undefined` (no mode to preserve), everything else propagates.
  */
 const getExistingFileModeEffect = (
-  fileSystem: FileSystem.FileSystem,
+  fileSystem: FileSystemService,
   absolutePath: string
 ): Effect.Effect<number | undefined, PlatformError> =>
   fileSystem.stat(absolutePath).pipe(
@@ -113,7 +113,7 @@ const getExistingFileModeEffect = (
  * the fiber is interrupted.
  */
 const writeFileViaTempReplaceEffect = (
-  fileSystem: FileSystem.FileSystem,
+  fileSystem: FileSystemService,
   config: {
     readonly safePath: SafeGeneratedFilePath;
     readonly content: string;
@@ -204,7 +204,7 @@ export type EffectContextIO = {
  * surfaces in one plugin is safe.
  */
 export const makeEffectContextIO = (config: {
-  readonly fileSystem: FileSystem.FileSystem;
+  readonly fileSystem: FileSystemService;
   readonly pathSafety: PathSafetyShape;
   readonly templateRenderer: TemplateRendererShape;
   readonly outputDir: string;
