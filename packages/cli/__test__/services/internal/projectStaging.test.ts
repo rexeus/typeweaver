@@ -1,9 +1,8 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { FileSystem } from "@effect/platform";
-import { NodeContext } from "@effect/platform-node";
-import { Cause, Deferred, Effect, Exit, Fiber } from "effect";
+import { layer as nodeFileSystemLayer } from "@effect/platform-node/NodeFileSystem";
+import { Cause, Deferred, Effect, Exit, FileSystem, Fiber } from "effect";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   ReservedCoordinationPathError,
@@ -35,7 +34,7 @@ const stagedProject = <A>(
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
     return yield* withStagedProject(fileSystem, params, use);
-  }).pipe(Effect.provide(NodeContext.layer));
+  }).pipe(Effect.provide(nodeFileSystemLayer));
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -57,7 +56,7 @@ describe("directory staging links", () => {
           "C:\\stage\\node_modules",
           "win32"
         );
-      }).pipe(Effect.provide(NodeContext.layer))
+      }).pipe(Effect.provide(nodeFileSystemLayer))
     );
 
     expect(symlink).toHaveBeenCalledWith(
@@ -66,7 +65,6 @@ describe("directory staging links", () => {
       "junction"
     );
   });
-
   test("maps Windows junction failures into the typed filesystem channel", async () => {
     const cause = Object.assign(new Error("junction denied"), {
       code: "EPERM",
@@ -84,25 +82,26 @@ describe("directory staging links", () => {
           "C:\\stage\\node_modules",
           "win32"
         );
-      }).pipe(Effect.provide(NodeContext.layer))
+      }).pipe(Effect.provide(nodeFileSystemLayer))
     );
 
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) {
-      const failure = Cause.failureOption(exit.cause);
+      const failure = Cause.findErrorOption(exit.cause);
       expect(failure._tag).toBe("Some");
       if (failure._tag === "Some") {
         expect(failure.value).toMatchObject({
-          _tag: "SystemError",
-          reason: "PermissionDenied",
-          module: "FileSystem",
-          method: "symlink",
-          pathOrDescriptor: "C:\\stage\\node_modules",
+          _tag: "PlatformError",
+          reason: {
+            _tag: "PermissionDenied",
+            module: "FileSystem",
+            method: "symlink",
+            pathOrDescriptor: "C:\\stage\\node_modules",
+          },
         });
       }
     }
   });
-
   test("removes a staged directory link without deleting its external target", async () => {
     const workspace = createTempDir("external-link-cleanup");
     const externalNodeModules = path.join(workspace, "external-node-modules");
@@ -124,7 +123,7 @@ describe("directory staging links", () => {
             path.join(stagePath, "node_modules")
           );
         })
-      ).pipe(Effect.provide(NodeContext.layer))
+      ).pipe(Effect.provide(nodeFileSystemLayer))
     );
 
     expect(stagePath).toBeDefined();
@@ -153,7 +152,6 @@ describe("withStagedProject lifecycle", () => {
     expect(path.dirname(successStage ?? "")).toBe(canonicalHostTempDirectory());
     expect(fs.existsSync(successStage ?? "")).toBe(false);
   });
-
   test("removes the stage after a defect", async () => {
     const workspace = createTempDir("cleanup-defect");
     let failureStage: string | undefined;
@@ -166,21 +164,20 @@ describe("withStagedProject lifecycle", () => {
         stagePath =>
           Effect.sync(() => {
             failureStage = stagePath;
-          }).pipe(Effect.zipRight(Effect.die(new Error("stage failure"))))
+          }).pipe(Effect.andThen(Effect.die(new Error("stage failure"))))
       )
     );
     expect(Exit.isFailure(exit)).toBe(true);
     expect(failureStage).toBeDefined();
     expect(fs.existsSync(failureStage ?? "")).toBe(false);
   });
-
   test("removes the stage on interruption", async () => {
     const workspace = createTempDir("interrupt");
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const entered = yield* Deferred.make<string>();
         const blocked = yield* Deferred.make<void>();
-        const fiber = yield* Effect.fork(
+        const fiber = yield* Effect.forkChild(
           stagedProject(
             {
               prefix: "typeweaver-check-",
@@ -188,7 +185,7 @@ describe("withStagedProject lifecycle", () => {
             },
             stagePath =>
               Deferred.succeed(entered, stagePath).pipe(
-                Effect.zipRight(Deferred.await(blocked))
+                Effect.andThen(Deferred.await(blocked))
               )
           )
         );
@@ -200,7 +197,6 @@ describe("withStagedProject lifecycle", () => {
 
     expect(fs.existsSync(result)).toBe(false);
   });
-
   test("links node_modules from the dependency directory", async () => {
     const workspace = createTempDir("dependency");
     const project = path.join(workspace, "packages", "api");
@@ -212,7 +208,7 @@ describe("withStagedProject lifecycle", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         yield* linkNearestNodeModules(fileSystem, project, stagePath);
-      }).pipe(Effect.provide(NodeContext.layer))
+      }).pipe(Effect.provide(nodeFileSystemLayer))
     );
 
     expect(fs.realpathSync(path.join(stagePath, "node_modules"))).toBe(
@@ -239,7 +235,7 @@ describe("staging parent safety", () => {
 
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) {
-      const failure = Cause.failureOption(exit.cause);
+      const failure = Cause.findErrorOption(exit.cause);
       expect(failure._tag).toBe("Some");
       if (failure._tag === "Some") {
         expect(failure.value).toBeInstanceOf(UnsafeStagingRootError);
@@ -261,7 +257,6 @@ describe("staging parent safety", () => {
       UnsafeStagingRootError
     );
   });
-
   test("rejects a forbidden root in the reserved coordination namespace", async () => {
     const reservedSource = path.join(
       canonicalHostTempDirectory(),
@@ -280,7 +275,7 @@ describe("staging parent safety", () => {
 
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) {
-      const failure = Cause.failureOption(exit.cause);
+      const failure = Cause.findErrorOption(exit.cause);
       expect(failure._tag).toBe("Some");
       if (failure._tag === "Some") {
         expect(failure.value).toBeInstanceOf(ReservedCoordinationPathError);

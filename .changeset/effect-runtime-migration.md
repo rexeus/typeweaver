@@ -18,11 +18,11 @@ The plugin API moves from class-based `BasePlugin` extension to V2 records retur
 `Effect<void, PluginExecutionError>` instead of `Promise<void> | void`. Error surfaces in the
 Effect-enabled packages use `Data.TaggedError`, including lifecycle failures
 (`PluginExecutionError`) and construction-time misconfiguration (`PluginConfigError`). The CLI is
-built on `@effect/cli`, with concise error formatting that preserves every failure and defect in
+built on Effect 4's `effect/unstable/cli`, with concise error formatting that preserves every failure and defect in
 composite causes, plus structured log lines. The
 `GeneratorContext` additionally exposes an Effect-native surface (`writeFileEffect`,
 `renderTemplateEffect`, `addGeneratedFileEffect`) with the same path-safety and atomic-write
-guarantees, routed through `@effect/platform`'s `FileSystem` service.
+guarantees, routed through Effect 4's `FileSystem` service.
 
 Generator recovery now keeps publication and cleanup boundaries consistent under defects and Fiber
 interruption. Spec bundles are written to a scoped staging directory and renamed into place only
@@ -55,10 +55,8 @@ custom `TypeweaverHono` subclasses pass one exported `TypeweaverHonoRequestOptio
 The spec authoring API (`defineSpec`, `defineOperation`, `defineResponse`) is unchanged. Existing
 specs that use supported Zod schemas keep working byte-for-byte.
 
-- Effect-native plugin packages and `@rexeus/typeweaver-gen` now expose
-  `peerDependencies.effect: ">=3.22.0 <4"`. The 3.22 lower bound matches the current `@effect/*`
-  runtime family; 3.21.2 would install a second nominally incompatible Effect identity. Plugin
-  authors must install one Effect 3 version satisfying that range.
+- Effect-native plugin packages and `@rexeus/typeweaver-gen` now expose the exact native
+  `peerDependencies.effect: "4.0.0-rc.116"`. Plugin authors must install that one Effect identity.
 
 - `@rexeus/typeweaver-core`'s `DuplicateResponseNameError` stays a plain `Error` (the authoring
   package carries no effect dependency) and now exposes the offending `responseName`.
@@ -71,6 +69,6 @@ Background on the design decisions:
 
 - ADR 0003 — Effect-native plugin API (V2)
 - ADR 0004 — FileSystem service adoption
-- ADR 0005 — Effect.Service patterns
+- ADR 0005 — Effect 4 service compatibility
 - ADR 0006 — CLI error and log formatting
 - ADR 0007 — Generator per-call isolation

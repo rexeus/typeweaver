@@ -1,4 +1,3 @@
-import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -10,10 +9,9 @@ import {
 } from "./lib/packed-consumers/runtime.mjs";
 import { verifyGeneratedImportScanner } from "./lib/packed-consumers/scanner.mjs";
 import {
-  peerLowerBound,
   verifyAllPlainProjectionsConsumer,
   verifyDuplicateGuard,
-  verifyEffect4StrictPeerNegative,
+  verifyNativeEffectStrictPeerNegative,
   verifyMinimalStrictInstall,
   verifySupportedConsumer,
 } from "./lib/packed-consumers/scenarios.mjs";
@@ -28,10 +26,7 @@ const main = () => {
     verifyGeneratedImportScanner();
     const packages = collectPublishablePackages();
     const archives = packWorkspace({ archiveRoot, packages });
-    const supportedVersions = new Set([
-      contract.runtimeVersion,
-      peerLowerBound(contract.peerRange),
-    ]);
+    const supportedVersions = new Set([contract.runtimeVersion]);
 
     for (const effectVersion of supportedVersions) {
       verifySupportedConsumer({
@@ -42,31 +37,27 @@ const main = () => {
       });
     }
     verifyDuplicateGuard({ archives, matrixRoot, packages });
-    const effect4EvidenceVersion = contract.effect4Evidence?.effectVersion;
-    assert(
-      typeof effect4EvidenceVersion === "string",
-      "config/effect-baseline.json must pin effect4Evidence.effectVersion"
-    );
+    const nativeEffectVersion = contract.runtimeVersion;
     verifyMinimalStrictInstall({
       archives,
-      effectVersion: effect4EvidenceVersion,
+      effectVersion: nativeEffectVersion,
       matrixRoot,
       packages,
     });
     verifyAllPlainProjectionsConsumer({
       archives,
-      effectVersion: effect4EvidenceVersion,
+      effectVersion: nativeEffectVersion,
       matrixRoot,
       packages,
     });
-    verifyEffect4StrictPeerNegative({
+    verifyNativeEffectStrictPeerNegative({
       archives,
-      effectVersion: effect4EvidenceVersion,
+      effectVersion: nativeEffectVersion,
       matrixRoot,
       packages,
     });
     process.stdout.write(
-      `Packed consumer and plugin scaffold matrix verified for Effect ${Array.from(supportedVersions).join(", ")}; duplicate identity rejected; Effect ${effect4EvidenceVersion} minimal strict install, all plain projections, and strict-peer negative verified\n`
+      `Packed consumer and plugin scaffold matrix verified for native Effect ${Array.from(supportedVersions).join(", ")}; duplicate identity rejected; strict-peer negative verified\n`
     );
   } finally {
     rmSync(matrixRoot, { recursive: true });

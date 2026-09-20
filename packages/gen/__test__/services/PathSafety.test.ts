@@ -8,13 +8,16 @@ import { resolveSafeGeneratedFilePath } from "../../src/helpers/pathSafety.js";
 import { makePathSafety, PathSafety } from "../../src/services/PathSafety.js";
 import type { PathSafetyFs } from "../../src/helpers/pathSafety.js";
 
+const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
+
 const expectFailureWithReason = (
   exit: Exit.Exit<unknown, GeneratedPathProbeError | UnsafeGeneratedPathError>,
   reason: UnsafeGeneratedPathError["reason"]
 ): void => {
   expect(Exit.isFailure(exit)).toBe(true);
   if (!Exit.isFailure(exit)) return;
-  const failure = Cause.failureOption(exit.cause);
+  const failure = Cause.findErrorOption(exit.cause);
   expect(Option.isSome(failure)).toBe(true);
   if (!Option.isSome(failure)) return;
   expect(failure.value).toBeInstanceOf(UnsafeGeneratedPathError);
@@ -188,9 +191,9 @@ describe("PathSafety probe failures", () => {
         expect(Exit.isFailure(exit)).toBe(true);
         if (!Exit.isFailure(exit)) return;
 
-        expect(Array.from(Cause.defects(exit.cause))).toEqual([]);
+        expect(Array.from(causeDefects(exit.cause))).toEqual([]);
 
-        const failure = Cause.failureOption(exit.cause);
+        const failure = Cause.findErrorOption(exit.cause);
         expect(Option.isSome(failure)).toBe(true);
         if (!Option.isSome(failure)) return;
 
@@ -228,8 +231,8 @@ describe("PathSafety probe failures", () => {
       expect(Exit.isFailure(exit)).toBe(true);
       if (!Exit.isFailure(exit)) return;
 
-      expect(Option.isNone(Cause.failureOption(exit.cause))).toBe(true);
-      expect(Array.from(Cause.defects(exit.cause))).toEqual([bug]);
+      expect(Option.isNone(Cause.findErrorOption(exit.cause))).toBe(true);
+      expect(Array.from(causeDefects(exit.cause))).toEqual([bug]);
     });
   });
 
@@ -254,8 +257,8 @@ describe("PathSafety probe failures", () => {
       expect(Exit.isFailure(exit)).toBe(true);
       if (!Exit.isFailure(exit)) return;
 
-      expect(Option.isNone(Cause.failureOption(exit.cause))).toBe(true);
-      expect(Array.from(Cause.defects(exit.cause))).toEqual([bug]);
+      expect(Option.isNone(Cause.findErrorOption(exit.cause))).toBe(true);
+      expect(Array.from(causeDefects(exit.cause))).toEqual([bug]);
     });
   });
 });

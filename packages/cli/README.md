@@ -316,18 +316,19 @@ Importing `@rexeus/typeweaver` is side-effect free: it does not parse arguments 
 `process.exitCode`. The package exports the production generator service/runtime plus versioned
 report schemas and types.
 
-## Effect 4 workspaces
+## Effect 4 native runtime
 
-In an Effect 4 workspace, run the binary CLI (`typeweaver generate`) as an isolated child process
-with an Effect-neutral config and spec module and the built-in plain projections (`types`,
-`clients`, `server`, `hono`, `command`, `openapi`, `aws-cdk`). TypeWeaver has tested this only with
-`effect@4.0.0-rc.115`. The CLI bundles its own Effect 3 runtime, so the generated output does not
-import Effect. Every other Effect 4 version is UNVERIFIED.
+The CLI programmatic API (`Generator`, `effectRuntime`), generator lifecycle, first-party generator
+packages (including `command`, `hono`, and `openapi`), and the Effect adapter share the exact
+`effect@4.0.0-rc.116` runtime identity. `typeweaver doctor` checks the project declaration as
+`TW-DOCTOR-011` and the CLI's own runtime as `TW-DOCTOR-008`.
 
-The CLI programmatic API (`Generator`, `effectRuntime`) and the Effect-native `effect` projection
-require Effect `>=3.22.0 <4`. `typeweaver doctor` reports the declared workspace Effect as
-`TW-DOCTOR-011` and the CLI's own bundled runtime as `TW-DOCTOR-008`; see
-[ADR 0010](../../docs/adr/0010-effect-4-workspace-compatibility.md).
+Core authoring and generated plain outputs remain Effect-optional because generated modules do not
+import Effect. This output claim does not make the generator packages optional: the command and
+OpenAPI packages import Effect directly. The migration changes visible Effect APIs including
+`Context.Service`, `Result`, `Cause`, Schema decoding, and the native CLI; see
+[ADR 0008](../../docs/adr/0008-effect-4-baseline.md), the [migration guide](../../MIGRATION.md), and
+the [plugin authoring guide](../../docs/plugin-authoring.md).
 
 ## Related documentation
 

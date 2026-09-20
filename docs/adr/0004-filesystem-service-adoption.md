@@ -82,6 +82,11 @@ Each sync leaf accepts an injectable filesystem shape: `PathSafetyFs`, `CleanTar
 `PathSafetyShape`, `TemplateRendererShape`. Production code passes the real `node:fs`-backed
 implementation; tests pass an in-memory double.
 
+The service tag is imported from `effect`. A Node.js programmatic composition edge supplies the real
+implementation with `NodeFileSystem.layer` from `@effect/platform-node`; tests supply an in-memory
+implementation or `FileSystem.layerNoop` as appropriate. `MainLayer` stays platform-agnostic and
+does not provide a Node layer itself.
+
 ## Consequences
 
 ### Positive

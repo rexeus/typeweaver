@@ -2,15 +2,7 @@ import type {
   IHttpResponse,
   IValidatedHttpRequest,
 } from "@rexeus/typeweaver-core";
-import {
-  Cause,
-  Chunk,
-  Effect,
-  Exit,
-  Layer,
-  ManagedRuntime,
-  Option,
-} from "effect";
+import { Cause, Effect, Exit, Layer, ManagedRuntime, Option } from "effect";
 
 export type EffectHandlerRoute = {
   readonly operationId: string;
@@ -53,7 +45,6 @@ const routeMetadata = (
   method: context.route?.method ?? "UNKNOWN",
   path: context.route?.path ?? "unknown-route",
 });
-
 export class EffectHandlerDefectError extends Error {
   public readonly _tag = "EffectHandlerDefectError";
   public readonly operationId: string;
@@ -64,7 +55,6 @@ export class EffectHandlerDefectError extends Error {
     this.operationId = operationId;
   }
 }
-
 export class EffectHandlerInterruptedError extends Error {
   public readonly _tag = "EffectHandlerInterruptedError";
   public readonly operationId: string;
@@ -129,17 +119,17 @@ export const createEffectHandlerRuntime = <TRequirements>(
         return exit.value;
       }
 
-      if (Chunk.isNonEmpty(Cause.defects(exit.cause))) {
+      if (exit.cause.reasons.some(Cause.isDieReason)) {
         throw new EffectHandlerDefectError(metadata.operationId, exit.cause);
       }
-      if (Cause.isInterrupted(exit.cause)) {
+      if (Cause.hasInterrupts(exit.cause)) {
         throw new EffectHandlerInterruptedError(
           metadata.operationId,
           exit.cause
         );
       }
 
-      const failure = Cause.failureOption(exit.cause);
+      const failure = Cause.findErrorOption(exit.cause);
       if (Option.isSome(failure)) {
         return mapError(failure.value, context);
       }

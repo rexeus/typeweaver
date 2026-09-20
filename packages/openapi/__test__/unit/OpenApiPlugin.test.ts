@@ -106,6 +106,9 @@ describe("openApiPlugin output", () => {
       version: "1.0.0",
     });
     expect(document["paths"]).toHaveProperty("/items/{itemId}");
+    expect(context.writtenFiles[0]?.content).not.toMatch(
+      /\b(?:from|import)\s+["'](?:effect|@effect\/)/u
+    );
   });
 
   test("projects spec metadata and the configured target and output path", () => {
@@ -216,7 +219,7 @@ describe("openApiPlugin diagnostics", () => {
     const document = JSON.parse(
       context.writtenFiles[0]?.content ?? "{}"
     ) as Record<string, unknown>;
-    const warningLogs = logs.filter(entry => entry.level === "WARN");
+    const warningLogs = logs.filter(entry => entry.level === "Warn");
     expect(warningLogs).toEqual([]);
     expect(document).not.toHaveProperty("warnings");
   });

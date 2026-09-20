@@ -1,12 +1,14 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { FileSystem } from "@effect/platform";
-import { NodeFileSystem } from "@effect/platform-node";
+import { layer as nodeFileSystemLayer } from "@effect/platform-node/NodeFileSystem";
 import { assert, describe, it } from "@effect/vitest";
-import { Cause, Effect, Exit, Layer, Option } from "effect";
+import { Cause, Effect, Exit, FileSystem, Layer, Option } from "effect";
 import { makeInMemoryFileSystem } from "test-utils/src/effect/index.js";
-import type { PlatformError } from "@effect/platform/Error";
+import type { PlatformError } from "effect/PlatformError";
+
+const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
 
 type FileSystemHarness = {
   readonly layer: Layer.Layer<FileSystem.FileSystem>;
@@ -40,7 +42,7 @@ const variants: readonly FileSystemVariant[] = [
         path.join(os.tmpdir(), "typeweaver-fs-contract-")
       );
       return {
-        layer: NodeFileSystem.layer,
+        layer: nodeFileSystemLayer,
         root,
         join: path.join,
         cleanup: () => fs.rmSync(root, { recursive: true, force: true }),
@@ -69,17 +71,19 @@ const assertNotFoundWithoutDefects = (
     return;
   }
 
-  assert.deepStrictEqual(Array.from(Cause.defects(exit.cause)), []);
-  const failure = Cause.failureOption(exit.cause);
+  assert.deepStrictEqual(Array.from(causeDefects(exit.cause)), []);
+  const failure = Cause.findErrorOption(exit.cause);
   assert.isTrue(Option.isSome(failure));
   if (Option.isNone(failure)) {
     return;
   }
 
-  assert.strictEqual(failure.value._tag, "SystemError");
-  if (failure.value._tag === "SystemError") {
-    assert.strictEqual(failure.value.module, "FileSystem");
-    assert.strictEqual(failure.value.reason, "NotFound");
+  assert.strictEqual(failure.value._tag, "PlatformError");
+  if (
+    failure.value._tag === "PlatformError" &&
+    failure.value.reason._tag === "NotFound"
+  ) {
+    assert.strictEqual(failure.value.reason.module, "FileSystem");
   }
 };
 

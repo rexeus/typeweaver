@@ -9,7 +9,7 @@ import {
   defineScopedPlugin,
 } from "@rexeus/typeweaver-gen";
 import type { Plugin } from "@rexeus/typeweaver-gen";
-import { NodeContext } from "@effect/platform-node";
+import { layer as nodeFileSystemLayer } from "@effect/platform-node/NodeFileSystem";
 import { assert, describe, it } from "@effect/vitest";
 import {
   Cause,
@@ -29,6 +29,9 @@ import {
   SpecLoader,
 } from "../src/services/index.js";
 import { emptyNormalizedSpec } from "./helpers/generatorFixtures.js";
+
+const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
 
 type AdverseScenario =
   | "layer-build-failure"
@@ -51,7 +54,7 @@ class ProbeLayerBuildError extends Data.TaggedError("ProbeLayerBuildError")<{
   readonly detail: string;
 }> {}
 
-const ProbeResource = Context.GenericTag<ResourceProbe>(
+const ProbeResource = Context.Service<ResourceProbe>(
   "typeweaver/tests/ProbeResource"
 );
 
@@ -141,7 +144,7 @@ const makeResourceLayer = (config: {
     resource: ResourceProbe
   ) => Effect.Effect<void, ProbeLayerBuildError>;
 }) =>
-  Layer.scoped(
+  Layer.effect(
     ProbeResource,
     Effect.acquireRelease(Effect.sync(config.state.acquire), resource =>
       Effect.sync(() => config.state.release(resource))
@@ -166,30 +169,22 @@ const makeScopedProbePlugin = (config: {
 };
 
 const makeGeneratorLayer = (pluginFactory: () => Plugin) => {
-  const pluginLoaderLayer = Layer.succeed(
-    PluginLoader,
-    PluginLoader.make({
-      loadAll: params => params.registry.register(pluginFactory()),
-    })
-  );
-  const specLoaderLayer = Layer.succeed(
-    SpecLoader,
-    SpecLoader.make({
-      load: () =>
-        Effect.succeed({
-          definition: emptyDefinition,
-          normalizedSpec: emptyNormalizedSpec(),
-        }),
-    })
-  );
-  const formatterLayer = Layer.succeed(
-    Formatter,
-    Formatter.make({ format: () => Effect.void })
-  );
-  const indexFileGeneratorLayer = Layer.succeed(
-    IndexFileGenerator,
-    IndexFileGenerator.make({ generate: () => Effect.void })
-  );
+  const pluginLoaderLayer = Layer.succeed(PluginLoader, {
+    loadAll: params => params.registry.register(pluginFactory()),
+  });
+  const specLoaderLayer = Layer.succeed(SpecLoader, {
+    load: () =>
+      Effect.succeed({
+        definition: emptyDefinition,
+        normalizedSpec: emptyNormalizedSpec(),
+      }),
+  });
+  const formatterLayer = Layer.succeed(Formatter, {
+    format: () => Effect.void,
+  });
+  const indexFileGeneratorLayer = Layer.succeed(IndexFileGenerator, {
+    generate: () => Effect.void,
+  });
   const dependencies = Layer.mergeAll(
     ContextBuilder.Default,
     formatterLayer,
@@ -201,7 +196,7 @@ const makeGeneratorLayer = (pluginFactory: () => Plugin) => {
 
   return Layer.provideMerge(
     Generator.DefaultWithoutDependencies,
-    Layer.provideMerge(dependencies, NodeContext.layer)
+    Layer.provideMerge(dependencies, nodeFileSystemLayer)
   );
 };
 
@@ -218,16 +213,16 @@ const assertExpectedFailure = (
     scenario === "initialize-interruption" ||
     scenario === "downstream-interruption"
   ) {
-    assert.isTrue(Cause.isInterruptedOnly(exit.cause));
+    assert.isTrue(Cause.hasInterruptsOnly(exit.cause));
     return;
   }
 
   if (scenario === "downstream-defect" || scenario === "finalizer-defect") {
-    assert.lengthOf(Cause.defects(exit.cause), 1);
+    assert.lengthOf(causeDefects(exit.cause), 1);
     return;
   }
 
-  assert.strictEqual(Cause.failureOption(exit.cause)._tag, "Some");
+  assert.strictEqual(Cause.findErrorOption(exit.cause)._tag, "Some");
 };
 
 const runAdverseScenario = (scenario: AdverseScenario) =>
@@ -261,7 +256,7 @@ const runAdverseScenario = (scenario: AdverseScenario) =>
               }
               if (claim("initialize-interruption")) {
                 return Deferred.succeed(entered, undefined).pipe(
-                  Effect.zipRight(Deferred.await(blocked))
+                  Effect.andThen(Deferred.await(blocked))
                 );
               }
               return Effect.void;
@@ -272,7 +267,7 @@ const runAdverseScenario = (scenario: AdverseScenario) =>
             resourceLayer,
             onGenerate: resource =>
               Effect.sync(() => state.record("generate", resource)).pipe(
-                Effect.zipRight(
+                Effect.andThen(
                   Effect.suspend(() => {
                     if (claim("downstream-failure")) {
                       return Effect.fail(
@@ -290,7 +285,7 @@ const runAdverseScenario = (scenario: AdverseScenario) =>
                     }
                     if (claim("downstream-interruption")) {
                       return Deferred.succeed(entered, undefined).pipe(
-                        Effect.zipRight(Deferred.await(blocked))
+                        Effect.andThen(Deferred.await(blocked))
                       );
                     }
                     return Effect.void;
@@ -299,7 +294,7 @@ const runAdverseScenario = (scenario: AdverseScenario) =>
               ),
             onFinalize: resource =>
               Effect.sync(() => state.record("finalize", resource)).pipe(
-                Effect.zipRight(
+                Effect.andThen(
                   Effect.suspend(() =>
                     claim("finalizer-defect")
                       ? Effect.die(new Error("intentional finalizer defect"))
@@ -312,12 +307,13 @@ const runAdverseScenario = (scenario: AdverseScenario) =>
         const generate = generation(workspace);
 
         yield* Effect.gen(function* () {
-          const firstFiber = yield* Effect.fork(generate);
+          const firstFiber = yield* Effect.forkChild(generate);
           const firstExit =
             scenario === "initialize-interruption" ||
             scenario === "downstream-interruption"
               ? yield* Deferred.await(entered).pipe(
-                  Effect.zipRight(Fiber.interrupt(firstFiber))
+                  Effect.andThen(Fiber.interrupt(firstFiber)),
+                  Effect.andThen(Fiber.await(firstFiber))
                 )
               : yield* Fiber.await(firstFiber);
 
@@ -380,7 +376,7 @@ it.effect(
                       ? Deferred.succeed(bothGenerating, undefined)
                       : Effect.void
                   ),
-                  Effect.zipRight(Deferred.await(releaseGeneration))
+                  Effect.andThen(Deferred.await(releaseGeneration))
                 ),
               onFinalize: resource =>
                 Effect.sync(() => state.record("finalize", resource)),
@@ -388,8 +384,8 @@ it.effect(
           const layer = makeGeneratorLayer(pluginFactory);
 
           yield* Effect.gen(function* () {
-            const first = yield* Effect.fork(generation(workspaces[0]));
-            const second = yield* Effect.fork(generation(workspaces[1]));
+            const first = yield* Effect.forkChild(generation(workspaces[0]));
+            const second = yield* Effect.forkChild(generation(workspaces[1]));
 
             yield* Deferred.await(bothGenerating);
             assert.deepStrictEqual(state.eventsByKind("acquire"), [1, 2]);

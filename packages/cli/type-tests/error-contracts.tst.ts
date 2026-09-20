@@ -1,17 +1,15 @@
 import { PluginDependencyError } from "@rexeus/typeweaver-gen";
-import { Effect } from "effect";
 import { OutputCleanError } from "../src/errors/OutputCleanError.js";
 import { UnsafeCleanTargetError } from "../src/errors/UnsafeCleanTargetError.js";
 import { Generator } from "../src/services/Generator.js";
 // @ts-expect-error GenerationError was an incomplete duplicate; GenerateFailure is canonical.
 import type { GenerationError } from "../src/errors/index.js";
 import type { GenerateFailure } from "../src/services/generatorTypes.js";
+import type { Error as EffectError } from "effect/Effect";
 
 type Extends<Actual, Expected> = [Actual] extends [Expected] ? true : false;
 type Assert<Condition extends true> = Condition;
-type ActualGenerateFailure = Effect.Effect.Error<
-  ReturnType<typeof Generator.generate>
->;
+type ActualGenerateFailure = EffectError<ReturnType<typeof Generator.generate>>;
 
 export type ActualFailureIsDeclared = Assert<
   Extends<ActualGenerateFailure, GenerateFailure>

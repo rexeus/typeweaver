@@ -8,7 +8,7 @@ import {
   PluginRegistry,
 } from "@rexeus/typeweaver-gen";
 import type { GeneratorContext, Plugin } from "@rexeus/typeweaver-gen";
-import { NodeContext } from "@effect/platform-node";
+import { layer as nodeFileSystemLayer } from "@effect/platform-node/NodeFileSystem";
 import { assert, describe, it } from "@effect/vitest";
 import { Cause, Deferred, Effect, Exit, Fiber, Layer, Ref } from "effect";
 import {
@@ -120,7 +120,9 @@ const expectedFirstRunFinalizers = (
   recoveryCase.phase === "bundling"
     ? []
     : recoveryCase.phase === "initialize"
-      ? ["finalize:alpha"]
+      ? recoveryCase.mode === "pending-interrupt"
+        ? ["finalize:omega", "finalize:alpha"]
+        : ["finalize:alpha"]
       : ["finalize:omega", "finalize:alpha"];
 
 type RecoveryLayerParams = {
@@ -166,7 +168,7 @@ const makeRecoveryPlugins = (
       record("collectResources:alpha").pipe(Effect.as(normalizedSpec)),
     generate: context =>
       record("generate:alpha").pipe(
-        Effect.zipRight(writeGeneratedFile("alpha", context))
+        Effect.andThen(writeGeneratedFile("alpha", context))
       ),
     finalize: () => record("finalize:alpha"),
   } satisfies Plugin;
@@ -176,12 +178,11 @@ const makeRecoveryPlugins = (
     depends: ["alpha"],
     initialize: () => {
       const initialize = record("initialize:omega").pipe(
-        Effect.zipRight(failFirstRunAt("initialize"))
+        Effect.andThen(failFirstRunAt("initialize"))
       );
-      // A pending interrupt becomes observable as this inner mask ends, so
-      // Generator never receives a successful initialize result for omega.
-      // Any partial resource acquired behind a plugin-owned mask must be
-      // scoped by the plugin itself; only alpha belongs to Generator here.
+      // A pending interrupt becomes observable as this inner mask ends. Effect
+      // still runs omega's finalizer after its uninterruptible initialize
+      // section completes, even though Generator receives the interrupt.
       return params.recoveryCase.phase === "initialize" &&
         params.recoveryCase.mode === "pending-interrupt"
         ? Effect.uninterruptible(initialize)
@@ -189,13 +190,13 @@ const makeRecoveryPlugins = (
     },
     collectResources: normalizedSpec =>
       record("collectResources:omega").pipe(
-        Effect.zipRight(failFirstRunAt("collectResources")),
+        Effect.andThen(failFirstRunAt("collectResources")),
         Effect.as(normalizedSpec)
       ),
     generate: context =>
       record("generate:omega").pipe(
-        Effect.zipRight(failFirstRunAt("generate")),
-        Effect.zipRight(writeGeneratedFile("omega", context))
+        Effect.andThen(failFirstRunAt("generate")),
+        Effect.andThen(writeGeneratedFile("omega", context))
       ),
     finalize: () => record("finalize:omega"),
   } satisfies Plugin;
@@ -208,48 +209,32 @@ const makeRecoveryLayer = (params: RecoveryLayerParams) => {
     Ref.update(params.events, current => [...current, event]);
   const failFirstRunAt = makeFailureTrigger(params);
   const plugins = makeRecoveryPlugins(params, record, failFirstRunAt);
-  const pluginLoaderLayer = Layer.succeed(
-    PluginLoader,
-    PluginLoader.make({
-      loadAll: loadParams =>
-        Effect.forEach(
-          plugins,
-          plugin => loadParams.registry.register(plugin),
-          {
-            discard: true,
-          }
-        ),
-    })
-  );
+  const pluginLoaderLayer = Layer.succeed(PluginLoader, {
+    loadAll: loadParams =>
+      Effect.forEach(plugins, plugin => loadParams.registry.register(plugin), {
+        discard: true,
+      }),
+  });
 
-  const specLoaderLayer = Layer.succeed(
-    SpecLoader,
-    SpecLoader.make({
-      load: () =>
-        record("bundling").pipe(
-          Effect.zipRight(failFirstRunAt("bundling")),
-          Effect.as({
-            definition: emptyDefinition,
-            normalizedSpec: emptyNormalizedSpec(),
-          })
-        ),
-    })
-  );
+  const specLoaderLayer = Layer.succeed(SpecLoader, {
+    load: () =>
+      record("bundling").pipe(
+        Effect.andThen(failFirstRunAt("bundling")),
+        Effect.as({
+          definition: emptyDefinition,
+          normalizedSpec: emptyNormalizedSpec(),
+        })
+      ),
+  });
 
-  const formatterLayer = Layer.succeed(
-    Formatter,
-    Formatter.make({
-      format: () =>
-        record("format").pipe(Effect.zipRight(failFirstRunAt("format"))),
-    })
-  );
+  const formatterLayer = Layer.succeed(Formatter, {
+    format: () =>
+      record("format").pipe(Effect.andThen(failFirstRunAt("format"))),
+  });
 
-  const indexFileGeneratorLayer = Layer.succeed(
-    IndexFileGenerator,
-    IndexFileGenerator.make({
-      generate: () => Effect.void,
-    })
-  );
+  const indexFileGeneratorLayer = Layer.succeed(IndexFileGenerator, {
+    generate: () => Effect.void,
+  });
 
   const dependencies = Layer.mergeAll(
     ContextBuilder.Default,
@@ -261,7 +246,7 @@ const makeRecoveryLayer = (params: RecoveryLayerParams) => {
   );
   const dependenciesWithNode = Layer.provideMerge(
     dependencies,
-    NodeContext.layer
+    nodeFileSystemLayer
   );
 
   return Layer.provideMerge(
@@ -303,20 +288,24 @@ const runRecoveryScenario = (recoveryCase: RecoveryCase) =>
         });
 
         yield* Effect.gen(function* () {
-          const firstFiber = yield* Effect.fork(generate);
+          const firstFiber = yield* Effect.forkChild(generate);
           yield* Deferred.await(entered);
 
-          const firstExit =
-            recoveryCase.mode === "interrupt"
-              ? yield* Fiber.interrupt(firstFiber)
-              : recoveryCase.mode === "pending-interrupt"
-                ? yield* Fiber.interruptFork(firstFiber).pipe(
-                    Effect.zipRight(Deferred.succeed(release, undefined)),
-                    Effect.zipRight(Fiber.await(firstFiber))
-                  )
-                : yield* Deferred.succeed(release, undefined).pipe(
-                    Effect.zipRight(Fiber.await(firstFiber))
-                  );
+          let firstExit: Exit.Exit<void, unknown>;
+          if (recoveryCase.mode === "interrupt") {
+            yield* Fiber.interrupt(firstFiber);
+            firstExit = yield* Fiber.await(firstFiber);
+          } else if (recoveryCase.mode === "pending-interrupt") {
+            yield* Effect.forkChild(Fiber.interrupt(firstFiber)).pipe(
+              Effect.andThen(Deferred.succeed(release, undefined)),
+              Effect.andThen(Fiber.await(firstFiber))
+            );
+            firstExit = yield* Fiber.await(firstFiber);
+          } else {
+            firstExit = yield* Deferred.succeed(release, undefined).pipe(
+              Effect.andThen(Fiber.await(firstFiber))
+            );
+          }
 
           assert.isTrue(Exit.isFailure(firstExit));
           if (Exit.isSuccess(firstExit)) {
@@ -327,16 +316,14 @@ const runRecoveryScenario = (recoveryCase: RecoveryCase) =>
             recoveryCase.mode === "interrupt" ||
             recoveryCase.mode === "pending-interrupt"
           ) {
-            assert.isTrue(Cause.isInterruptedOnly(firstExit.cause));
+            assert.isTrue(Cause.hasInterruptsOnly(firstExit.cause));
           } else {
-            assert.isTrue(Cause.isDieType(firstExit.cause));
-            if (!Cause.isDieType(firstExit.cause)) {
+            assert.isTrue(Cause.hasDies(firstExit.cause));
+            if (!Cause.hasDies(firstExit.cause)) {
               return;
             }
-            assert.strictEqual(
-              Cause.originalError(firstExit.cause.defect),
-              defect
-            );
+            const dieReason = firstExit.cause.reasons.find(Cause.isDieReason);
+            assert.strictEqual(dieReason?.defect, defect);
           }
 
           assertNoOwnedArtifacts(workspace);

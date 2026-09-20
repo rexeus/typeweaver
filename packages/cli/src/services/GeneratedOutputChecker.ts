@@ -1,6 +1,5 @@
 import path from "node:path";
-import { FileSystem } from "@effect/platform";
-import { Effect, Logger, LogLevel } from "effect";
+import { Context, Effect, FileSystem, Layer, References } from "effect";
 import {
   GeneratedOutputDriftError,
   ReservedCoordinationPathError,
@@ -22,6 +21,7 @@ import {
   isMatchingOutput,
   snapshotOutputTree,
 } from "./outputComparison.js";
+import type { GeneratorShape } from "./Generator.js";
 import type { GenerateParams } from "./generatorTypes.js";
 import type { StagingAuthority } from "./internal/stagingAuthority.js";
 
@@ -35,7 +35,7 @@ export type CheckGenerateParams = GenerateParams & {
 };
 
 type CheckOperationDeps = {
-  readonly generator: Generator;
+  readonly generator: GeneratorShape;
   readonly configuredOutputDir: string;
   readonly inputFile: string;
   readonly stagedOutputDir: string;
@@ -77,7 +77,9 @@ const runCheckOperation = (deps: CheckOperationDeps) =>
     });
     yield* deps.verbose
       ? generation
-      : generation.pipe(Logger.withMinimumLogLevel(LogLevel.Warning));
+      : generation.pipe(
+          Effect.provideService(References.MinimumLogLevel, "Warn")
+        );
 
     yield* assertSafeCleanTargetEffect(
       deps.configuredOutputDir,
@@ -143,7 +145,7 @@ const withConfiguredOutputLock = <A, E, R>(params: {
  */
 type GeneratedOutputCheckerDependencies = {
   readonly fileSystem: FileSystem.FileSystem;
-  readonly generator: Generator;
+  readonly generator: GeneratorShape;
 };
 
 const createCheck = ({
@@ -205,18 +207,33 @@ const createCheck = ({
     });
   });
 
-export class GeneratedOutputChecker extends Effect.Service<GeneratedOutputChecker>()(
-  "typeweaver/GeneratedOutputChecker",
-  {
-    effect: Effect.gen(function* () {
-      const fileSystem = yield* FileSystem.FileSystem;
-      const generator = yield* Generator;
+const makeGeneratedOutputChecker = Effect.gen(function* () {
+  const fileSystem = yield* FileSystem.FileSystem;
+  const generator = yield* Generator;
 
-      const check = createCheck({ fileSystem, generator });
+  const check = createCheck({ fileSystem, generator });
 
-      return { check } as const;
-    }),
-    dependencies: [Generator.Default],
-    accessors: true,
-  }
-) {}
+  return { check } as const;
+});
+
+export type GeneratedOutputCheckerShape = Effect.Success<
+  typeof makeGeneratedOutputChecker
+>;
+
+export class GeneratedOutputChecker extends Context.Service<
+  GeneratedOutputChecker,
+  GeneratedOutputCheckerShape
+>()("typeweaver/GeneratedOutputChecker") {
+  static readonly make = (service: GeneratedOutputCheckerShape) => service;
+
+  static readonly Default: Layer.Layer<
+    GeneratedOutputChecker,
+    never,
+    FileSystem.FileSystem
+  > = Layer.effect(GeneratedOutputChecker, makeGeneratedOutputChecker).pipe(
+    Layer.provide(Generator.Default)
+  );
+
+  static readonly check = (params: CheckGenerateParams) =>
+    GeneratedOutputChecker.use(service => service.check(params));
+}

@@ -21,10 +21,7 @@ import type {
 } from "../../src/index.js";
 import type { PluginRegistryInstance } from "../../src/services/PluginRegistry.js";
 
-const silentLoggerLayer = Logger.replace(
-  Logger.defaultLogger,
-  Logger.make<unknown, void>(() => {})
-);
+const silentLoggerLayer = Logger.layer([Logger.make<unknown, void>(() => {})]);
 
 const registryTestLayer = Layer.merge(
   PluginRegistry.Default,
@@ -96,23 +93,22 @@ type CapturedSpan = {
 
 const makeCapturingTracer = (recorded: CapturedSpan[]): Tracer.Tracer => {
   let nextSpanId = 0;
-  return Tracer.make({
-    span: (...args: Parameters<Tracer.Tracer["span"]>) => {
-      const [name, parent, context, links, startTime, kind] = args;
+  return {
+    span: options => {
       nextSpanId += 1;
       const attributes = new Map<string, unknown>();
       const span: Tracer.Span = {
         _tag: "Span",
-        name,
+        name: options.name,
         spanId: String(nextSpanId),
         traceId: "validation-trace",
-        parent,
-        context,
-        status: { _tag: "Started", startTime },
+        parent: options.parent,
+        annotations: options.annotations,
+        status: { _tag: "Started", startTime: options.startTime },
         attributes,
-        links,
-        sampled: true,
-        kind,
+        links: options.links,
+        sampled: options.sampled,
+        kind: options.kind,
         end: () => undefined,
         attribute: (key, value) => {
           attributes.set(key, value);
@@ -120,11 +116,10 @@ const makeCapturingTracer = (recorded: CapturedSpan[]): Tracer.Tracer => {
         event: () => undefined,
         addLinks: () => undefined,
       };
-      recorded.push({ name, attributes });
+      recorded.push({ name: options.name, attributes });
       return span;
     },
-    context: (evaluate, _fiber) => evaluate(),
-  });
+  };
 };
 
 const runRegistry = <A, E>(
@@ -151,7 +146,7 @@ const runRegistryExpectingFailure = <E>(
     throw new Error("Expected plugin validation to fail.");
   }
 
-  const failure = Cause.failureOption(exit.cause);
+  const failure = Cause.findErrorOption(exit.cause);
   if (failure._tag !== "Some") {
     throw new Error(`Expected typed failure: ${Cause.pretty(exit.cause)}`);
   }

@@ -44,14 +44,14 @@ export const withCapturedLogs = <A, E, R>(
     const capturingLogger = Logger.make<unknown, void>(
       ({ message, logLevel }) => {
         logs.push({
-          level: logLevel.label,
+          level: logLevel,
           message: renderMessage(message),
         });
       }
     );
 
     const result = yield* effect.pipe(
-      Effect.provide(Logger.replace(Logger.defaultLogger, capturingLogger))
+      Effect.provide(Logger.layer([capturingLogger]))
     );
 
     return { result, logs };

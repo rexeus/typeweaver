@@ -2,8 +2,8 @@ import { it } from "@effect/vitest";
 import { Effect } from "effect";
 import { withCapturedLogs } from "test-utils/src/effect/index.js";
 import { describe, expect } from "vitest";
-import { Formatter } from "../../../src/services/Formatter.js";
 import { runGeneratorPostprocessing } from "../../../src/services/internal/generatorPostprocessing.js";
+import type { FormatterShape } from "../../../src/services/Formatter.js";
 import type { GenerationPlan } from "../../../src/services/internal/generatorPreflight.js";
 import type { GenerationResult } from "../../../src/services/internal/pluginLifecycle.js";
 
@@ -36,12 +36,12 @@ describe("runGeneratorPostprocessing", () => {
   it.effect("skips formatting when formatting is disabled", () =>
     Effect.gen(function* () {
       const formattedPaths: string[] = [];
-      const formatter = Formatter.make({
+      const formatter: FormatterShape = {
         format: outputDir =>
           Effect.sync(() => {
             formattedPaths.push(outputDir);
           }),
-      });
+      };
       const result: GenerationResult = {
         generatedFiles: ["item/GetItem.ts", "index.ts"],
       };
@@ -63,12 +63,12 @@ describe("runGeneratorPostprocessing", () => {
     () =>
       Effect.gen(function* () {
         const formattedPaths: string[] = [];
-        const formatter = Formatter.make({
+        const formatter: FormatterShape = {
           format: outputDir =>
             Effect.sync(() => {
               formattedPaths.push(outputDir);
-            }).pipe(Effect.zipRight(Effect.logInfo("Formatting finished"))),
-        });
+            }).pipe(Effect.andThen(Effect.logInfo("Formatting finished"))),
+        };
         const result: GenerationResult = {
           generatedFiles: ["item/GetItem.ts", "responses/Item.ts", "index.ts"],
         };

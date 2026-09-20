@@ -1,6 +1,6 @@
 import { MainLayer } from "@rexeus/typeweaver-gen";
-import { NodeContext } from "@effect/platform-node";
-import { Layer, Logger, LogLevel, ManagedRuntime } from "effect";
+import { layer as nodeFileSystemLayer } from "@effect/platform-node/NodeFileSystem";
+import { Layer, ManagedRuntime, References } from "effect";
 import { CliLoggerLayer, VerboseCliLoggerLayer } from "./cliLogger.js";
 import {
   ConfigLoader,
@@ -20,20 +20,20 @@ import {
 /**
  * Production runtime for the typeweaver CLI.
  *
- * Layers compose top-down: NodeContext supplies the Node-backed FileSystem,
- * Path, and Terminal implementations; MainLayer supplies the gen-side
+ * Layers compose top-down: NodeFileSystem.layer supplies the Node-backed
+ * FileSystem implementation; MainLayer supplies the gen-side
  * services (TemplateRenderer, PathSafety, PluginRegistry, ContextBuilder);
  * the CLI then layers on its own services (ConfigLoader, SpecLoader,
  * Formatter, PluginModuleLoader, PluginLoader, Generator) plus the
  * friendly `cliLogger` that drops timestamps and tags warnings/errors.
  *
  * SpecLoader transitively brings in SpecBundler and SpecImporter via its
- * declared `dependencies`. PluginLoader and Generator likewise pull in the
+ * composed Default layer. PluginLoader and Generator likewise pull in the
  * gen-side PluginRegistry and ContextBuilder, plus PluginModuleLoader for
  * dynamic plugin module resolution.
  *
  * Tests build their own runtime against an InMemoryFileSystem layer instead
- * of NodeContext.layer — see `packages/test-utils`.
+ * of the NodeFileSystem layer — see `packages/test-utils`.
  */
 const CliServices = Layer.mergeAll(
   MainLayer,
@@ -54,7 +54,7 @@ const CliServices = Layer.mergeAll(
 
 export const ProductionLayer = Layer.provideMerge(
   CliServices,
-  NodeContext.layer
+  nodeFileSystemLayer
 );
 
 /**
@@ -81,12 +81,12 @@ const VerboseCliServices = Layer.mergeAll(
   Generator.Default,
   GeneratedOutputChecker.Default,
   VerboseCliLoggerLayer,
-  Logger.minimumLogLevel(LogLevel.Debug)
+  Layer.succeed(References.MinimumLogLevel, "Debug")
 );
 
 export const VerboseLayer = Layer.provideMerge(
   VerboseCliServices,
-  NodeContext.layer
+  nodeFileSystemLayer
 );
 
 /**

@@ -289,7 +289,6 @@ describe("built CLI validate workflow", () => {
     });
     expect(collectWorkspace(workspace)).toBe(before);
   }, 15_000);
-
   test("does not expose validation staging directories to project plugins", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
@@ -343,7 +342,6 @@ describe("built CLI validate temp isolation", () => {
     });
     expect(fs.readdirSync(userTempDirectory)).toEqual([]);
   });
-
   test("does not resolve spec dependencies from the user temp parent", async () => {
     const workspace = createWorkspace();
     const userTempDirectory = createWorkspace();
@@ -473,7 +471,6 @@ describe("built CLI validate issue routing", () => {
     });
     expect(collectWorkspace(workspace)).toBe(before);
   }, 15_000);
-
   test("routes a failed human report to stderr", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace, { duplicateOperationId: true });

@@ -56,24 +56,24 @@ declarations remain the exact signature reference for every export.
 
 ## Runtime and peer support
 
-| Surface                  | Documented baseline or peer contract                                                          |
-| ------------------------ | --------------------------------------------------------------------------------------------- |
-| Repository and CLI       | Node.js 24                                                                                    |
-| Fetch-native server      | Standard `Request`/`Response` hosts                                                           |
-| Generated command client | Node.js                                                                                       |
-| Hono integration         | Hono `>=4.11.0 <5`                                                                            |
-| Effect adapter           | Effect `>=3.22.0 <4`                                                                          |
-| Effect 4 workspace       | Exact `effect@4.0.0-rc.115` binary CLI evidence only; Effect-native surfaces stay on Effect 3 |
-| Zod authoring/converters | Zod `>=4.3.0 <5`                                                                              |
+| Surface                  | Documented baseline or peer contract                                              |
+| ------------------------ | --------------------------------------------------------------------------------- |
+| Repository and CLI       | Node.js 24                                                                        |
+| Fetch-native server      | Standard `Request`/`Response` hosts                                               |
+| Generated command client | Node.js                                                                           |
+| Hono integration         | Hono `>=4.11.0 <5`                                                                |
+| Effect adapter           | Exact `effect@4.0.0-rc.116` peer                                                  |
+| Native Effect surfaces   | Exact `effect@4.0.0-rc.116`; core and plain generated consumption remain optional |
+| Zod authoring/converters | Zod `>=4.3.0 <5`                                                                  |
 
 Runtime support is projection-specific. Check the selected package guide before deployment; a
 runtime used by one generated surface is not automatically supported by every other surface.
 
-An Effect 4 application can run the binary CLI as an isolated child process only with Effect-neutral
-config and spec modules. TypeWeaver has tested this only with `effect@4.0.0-rc.115` and the built-in
-plain projections (pnpm, strict peers). Every other Effect 4 version is UNVERIFIED. The CLI
-programmatic API, `@rexeus/typeweaver-gen` plugin authoring, first-party plugin imports, and
-`@rexeus/typeweaver-effect` remain on Effect `>=3.22.0 <4`. See
+The CLI programmatic API, `@rexeus/typeweaver-gen` plugin authoring, first-party generator packages
+(including `command`, `hono`, and `openapi`), and `@rexeus/typeweaver-effect` require the exact
+native `effect@4.0.0-rc.116` identity. The generated client, Fetch-native server, Hono and command
+runtime outputs, and OpenAPI JSON remain Effect-optional because they do not import Effect. See
+[ADR 0008](./adr/0008-effect-4-baseline.md) and its superseded historical record
 [ADR 0010](./adr/0010-effect-4-workspace-compatibility.md).
 
 ## Maintainer references

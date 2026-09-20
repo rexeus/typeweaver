@@ -1,6 +1,5 @@
 import path from "node:path";
-import { FileSystem } from "@effect/platform";
-import { Effect, Either } from "effect";
+import { Effect, FileSystem, Result } from "effect";
 import {
   InitFileConflictError,
   ProjectInitFileSystemError,
@@ -10,7 +9,7 @@ import type {
   ProjectInitFailure,
   ProjectInitFileSystemOperation,
 } from "../../errors/ProjectInitError.js";
-import type { PlatformError } from "@effect/platform/Error";
+import type { PlatformError } from "effect/PlatformError";
 
 /**
  * File publication, staging-tree writing, and rollback helpers for project
@@ -74,7 +73,7 @@ const writeStagingTree = (
         .makeDirectory(stagedDirectory, { recursive: true })
         .pipe(
           Effect.mapError(fileSystemError("makeDirectory", stagedDirectory)),
-          Effect.zipRight(
+          Effect.andThen(
             fileSystem
               .writeFileString(stagedPath, file.content, { flag: "wx" })
               .pipe(Effect.mapError(fileSystemError("writeFile", stagedPath)))
@@ -193,23 +192,23 @@ const overwriteExistingFile = (
       .rename(stagedPath, targetPath)
       .pipe(
         Effect.mapError(fileSystemError("rename", targetPath)),
-        Effect.either
+        Effect.result
       );
-    if (Either.isLeft(published)) {
+    if (Result.isFailure(published)) {
       const restored = yield* restoreCurrentFile(
         fileSystem,
         targetPath,
         backupPath
-      ).pipe(Effect.either);
-      if (Either.isLeft(restored)) {
+      ).pipe(Effect.result);
+      if (Result.isFailure(restored)) {
         return yield* new ProjectInitRollbackError({
           targetDir: params.targetDir,
-          originalCause: published.left,
-          rollbackCause: restored.left,
+          originalCause: published.failure,
+          rollbackCause: restored.failure,
           recoveryPath: backupPath,
         });
       }
-      return yield* published.left;
+      return yield* published.failure;
     }
     return { targetPath, backupPath };
   });
@@ -279,23 +278,23 @@ const publishProject = (
           )
         ),
       { concurrency: 1, discard: true }
-    ).pipe(Effect.either);
-    if (Either.isRight(committed)) return;
+    ).pipe(Effect.result);
+    if (Result.isSuccess(committed)) return;
 
     const rolledBack = yield* rollbackFiles(
       fileSystem,
       committedFiles,
       missingDirectories
-    ).pipe(Effect.either);
-    if (Either.isLeft(rolledBack)) {
+    ).pipe(Effect.result);
+    if (Result.isFailure(rolledBack)) {
       return yield* new ProjectInitRollbackError({
         targetDir: params.targetDir,
-        originalCause: committed.left,
-        rollbackCause: rolledBack.left,
+        originalCause: committed.failure,
+        rollbackCause: rolledBack.failure,
         recoveryPath: path.join(params.stagingDir, "backup"),
       });
     }
-    return yield* committed.left;
+    return yield* committed.failure;
   }).pipe(Effect.uninterruptible);
 
 export const executePlan = (
@@ -324,7 +323,7 @@ export const executePlan = (
         ),
       stagingDir =>
         writeStagingTree(fileSystem, stagingDir, plan).pipe(
-          Effect.zipRight(
+          Effect.andThen(
             publishProject(fileSystem, {
               targetDir,
               stagingDir,

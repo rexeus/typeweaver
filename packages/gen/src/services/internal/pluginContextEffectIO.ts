@@ -14,10 +14,10 @@ import { resolveSafeGeneratedFilePath } from "../../helpers/pathSafety.js";
 import { renderTemplate } from "../../helpers/templateEngine.js";
 import type { SafeGeneratedFilePath } from "../../helpers/pathSafety.js";
 import type { TemplateData } from "../../plugins/contextTypes.js";
-import type { FileSystem } from "@effect/platform";
-import type { PlatformError } from "@effect/platform/Error";
+import type { FileSystem } from "effect";
+import type { PlatformError } from "effect/PlatformError";
 
-export type { FileSystem } from "@effect/platform";
+export type { FileSystem } from "effect";
 
 /**
  * Narrowed PathSafety surface: a sync function that validates a requested
@@ -98,8 +98,8 @@ const getExistingFileModeEffect = (
 ): Effect.Effect<number | undefined, PlatformError> =>
   fileSystem.stat(absolutePath).pipe(
     Effect.map(info => (info.type === "File" ? info.mode & 0o777 : undefined)),
-    Effect.catchTag("SystemError", error =>
-      error.reason === "NotFound"
+    Effect.catchTag("PlatformError", error =>
+      error.reason._tag === "NotFound"
         ? Effect.as(Effect.void, undefined)
         : Effect.fail(error)
     )

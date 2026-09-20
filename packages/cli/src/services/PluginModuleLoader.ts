@@ -1,7 +1,34 @@
 import type { PluginConfigError } from "@rexeus/typeweaver-gen";
-import { Effect } from "effect";
+import { Context, Effect, Layer } from "effect";
 import { PluginModuleNotFoundError } from "./errors/PluginModuleNotFoundError.js";
 import { isPluginConfigError } from "./isPluginConfigError.js";
+
+export type PluginModuleLoaderShape = {
+  readonly load: (
+    specifier: string
+  ) => Effect.Effect<
+    Record<string, unknown>,
+    PluginModuleNotFoundError | PluginConfigError
+  >;
+};
+
+const pluginModuleLoaderShape: PluginModuleLoaderShape = {
+  load: Effect.fn("typeweaver.PluginModuleLoader.load")(
+    (
+      specifier: string
+    ): Effect.Effect<
+      Record<string, unknown>,
+      PluginModuleNotFoundError | PluginConfigError
+    > =>
+      Effect.tryPromise({
+        try: async () => (await import(specifier)) as Record<string, unknown>,
+        catch: cause =>
+          isPluginConfigError(cause)
+            ? cause
+            : new PluginModuleNotFoundError({ specifier, cause }),
+      })
+  ),
+};
 
 /**
  * Resolves and dynamically imports plugin modules.
@@ -10,27 +37,17 @@ import { isPluginConfigError } from "./isPluginConfigError.js";
  * substitute a layer that resolves specifiers to in-memory module records,
  * eliminating the need to materialize plugin source on disk.
  */
-export class PluginModuleLoader extends Effect.Service<PluginModuleLoader>()(
-  "typeweaver/PluginModuleLoader",
-  {
-    succeed: {
-      load: Effect.fn("typeweaver.PluginModuleLoader.load")(
-        (
-          specifier: string
-        ): Effect.Effect<
-          Record<string, unknown>,
-          PluginModuleNotFoundError | PluginConfigError
-        > =>
-          Effect.tryPromise({
-            try: async () =>
-              (await import(specifier)) as Record<string, unknown>,
-            catch: cause =>
-              isPluginConfigError(cause)
-                ? cause
-                : new PluginModuleNotFoundError({ specifier, cause }),
-          })
-      ),
-    },
-    accessors: true,
-  }
-) {}
+export class PluginModuleLoader extends Context.Service<
+  PluginModuleLoader,
+  PluginModuleLoaderShape
+>()("typeweaver/PluginModuleLoader") {
+  static readonly make = (service: PluginModuleLoaderShape) => service;
+
+  static readonly Default: Layer.Layer<PluginModuleLoader> = Layer.succeed(
+    PluginModuleLoader,
+    pluginModuleLoaderShape
+  );
+
+  static readonly load = (specifier: string) =>
+    PluginModuleLoader.use(service => service.load(specifier));
+}

@@ -113,7 +113,7 @@ const commands = [
     args: ["run", "test:quality-contracts"],
   },
   {
-    label: "Effect language-service diagnostics",
+    label: "Standalone Effect tsgo diagnostics",
     args: ["run", "effect:diagnostics"],
   },
   {

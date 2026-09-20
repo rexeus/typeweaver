@@ -17,9 +17,9 @@ await generator.generate({ inputFile, outputDir });
 Each `new Generator()` brought fresh internal state: an empty plugin registry, an empty
 generated-files tracker, a clean template cache. Concurrent calls were isolated by construction.
 
-The Effect migration moved `Generator` into a `ManagedRuntime` as an `Effect.Service`. The runtime
-is constructed once, at process start, and lives for the lifetime of the CLI. Without care, two
-consequences would have followed:
+The Effect migration moved `Generator` into a `ManagedRuntime` as a `Context.Service` with explicit
+layers. The runtime is constructed once, at process start, and lives for the lifetime of the CLI.
+Without care, two consequences would have followed:
 
 1. The plugin registry would accumulate registrations across calls — the first attempt at the
    migration shipped exactly this regression.

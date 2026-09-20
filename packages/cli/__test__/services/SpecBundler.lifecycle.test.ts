@@ -2,16 +2,14 @@ import {
   coordinationArtifactMarkerSource,
   TYPEWEAVER_COORDINATION_MARKER_FILE,
 } from "@rexeus/typeweaver-gen";
-import { FileSystem } from "@effect/platform";
 import {
   Cause,
   Deferred,
   Effect,
   Exit,
+  FileSystem,
   Fiber,
   Layer,
-  Option,
-  Runtime,
 } from "effect";
 import { makeInMemoryFileSystem } from "test-utils/src/effect/index.js";
 import { describe, expect, test } from "vitest";
@@ -51,7 +49,6 @@ const makeRejectedBuild =
     );
     throw new Error("rolldown crashed");
   };
-
 const runWithBundler = async <A, E>(
   build: (
     state: StateHandle
@@ -133,16 +130,15 @@ describe("SpecBundler interruption lifecycle", () => {
         const entered = yield* Deferred.make<void>();
         const release = yield* Deferred.make<void>();
         const settled = yield* Deferred.make<void>();
-        const runtime = yield* Effect.runtime<FileSystem.FileSystem>();
-        const runPromise = Runtime.runPromise(runtime);
+        const context = yield* Effect.context<FileSystem.FileSystem>();
         let tempDirAtBuildTime: string | undefined;
 
         const controlledBuild = (config: BuildOptions): Promise<unknown> => {
           tempDirAtBuildTime = config.cwd;
-          return runPromise(
+          return Effect.runPromiseWith(context)(
             Deferred.succeed(entered, undefined).pipe(
-              Effect.zipRight(Deferred.await(release)),
-              Effect.zipRight(
+              Effect.andThen(Deferred.await(release)),
+              Effect.andThen(
                 fileSystem.writeFileString(
                   getBuildOutputFile(config),
                   "export const interrupted = true;\n"
@@ -153,7 +149,7 @@ describe("SpecBundler interruption lifecycle", () => {
           );
         };
 
-        const bundling = yield* Effect.fork(
+        const bundling = yield* Effect.forkChild(
           bundler.bundle(
             {
               inputFile: "/in/spec/index.ts",
@@ -165,9 +161,11 @@ describe("SpecBundler interruption lifecycle", () => {
           )
         );
         yield* Deferred.await(entered);
-        yield* Fiber.interruptFork(bundling);
-        yield* Effect.yieldNow();
-        const exitBeforeBuildSettlement = yield* Fiber.poll(bundling);
+        yield* Effect.forkChild(Fiber.interrupt(bundling));
+        yield* Effect.yieldNow;
+        const exitBeforeBuildSettlement = yield* Effect.sync(() =>
+          bundling.pollUnsafe()
+        );
         const stagingExistsBeforeBuildSettlement =
           tempDirAtBuildTime !== undefined &&
           (yield* fileSystem.exists(tempDirAtBuildTime));
@@ -207,11 +205,11 @@ describe("SpecBundler interruption lifecycle", () => {
     if (!Exit.isSuccess(exit)) return;
     expect(Exit.isFailure(exit.value.interruptedExit)).toBe(true);
     if (Exit.isFailure(exit.value.interruptedExit)) {
-      expect(Cause.isInterruptedOnly(exit.value.interruptedExit.cause)).toBe(
+      expect(Cause.hasInterruptsOnly(exit.value.interruptedExit.cause)).toBe(
         true
       );
     }
-    expect(Option.isNone(exit.value.exitBeforeBuildSettlement)).toBe(true);
+    expect(exit.value.exitBeforeBuildSettlement).toBeUndefined();
     expect(exit.value.stagingExistsBeforeBuildSettlement).toBe(true);
     expect(exit.value.outputAfterInterruption).toBe(false);
     expect(exit.value.retryResult).toBe("/out/spec/spec.js");
@@ -348,12 +346,11 @@ describe("SpecBundler post-build defect lifecycle", () => {
     if (!Exit.isSuccess(exit)) return;
     expect(Exit.isFailure(exit.value.defectExit)).toBe(true);
     if (Exit.isFailure(exit.value.defectExit)) {
-      expect(Cause.isDieType(exit.value.defectExit.cause)).toBe(true);
-      if (Cause.isDieType(exit.value.defectExit.cause)) {
-        expect(Cause.originalError(exit.value.defectExit.cause.defect)).toBe(
-          probeDefect
-        );
-      }
+      const defects = exit.value.defectExit.cause.reasons.filter(
+        Cause.isDieReason
+      );
+      expect(defects).toHaveLength(1);
+      expect(defects[0]?.defect).toBe(probeDefect);
     }
     expect(exit.value.outputAfterDefect).toBe(
       "export const previous = true;\n"

@@ -130,7 +130,7 @@ const expectUnsafeCleanTargetFailure = (
   if (!Exit.isFailure(exit)) {
     throw new Error("Expected generation to fail");
   }
-  const failure = Option.getOrUndefined(Cause.failureOption(exit.cause));
+  const failure = Option.getOrUndefined(Cause.findErrorOption(exit.cause));
   expect(failure).toBeInstanceOf(UnsafeCleanTargetError);
   if (!(failure instanceof UnsafeCleanTargetError)) {
     throw new Error("Expected an UnsafeCleanTargetError");
@@ -156,7 +156,6 @@ describe("Generator output-target guard ordering", () => {
     expect(fs.existsSync(orphanDir)).toBe(true);
     expect(fs.existsSync(path.join(workspace, "responses"))).toBe(false);
   });
-
   test("rejects an output target carrying a workspace marker with --no-clean", async () => {
     const workspace = createTempWorkspace("marker");
     writeTinySpec(workspace);
@@ -170,7 +169,6 @@ describe("Generator output-target guard ordering", () => {
     expectUnsafeCleanTargetFailure(exit, "target-carries-workspace-marker");
     expect(fs.existsSync(path.join(target, "responses"))).toBe(false);
   });
-
   test("allows the spec input inside the output target when cleaning is disabled", async () => {
     const workspace = createTempWorkspace("input-inside");
     writeTinySpec(workspace);
@@ -183,7 +181,6 @@ describe("Generator output-target guard ordering", () => {
     expect(Exit.isSuccess(exit)).toBe(true);
     expect(fs.existsSync(path.join(workspace, "spec", "index.ts"))).toBe(true);
   });
-
   test("rejects the spec input inside the output target when cleaning is enabled", async () => {
     const workspace = createTempWorkspace("input-clean");
     writeTinySpec(workspace);

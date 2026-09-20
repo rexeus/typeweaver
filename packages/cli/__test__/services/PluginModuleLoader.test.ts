@@ -1,7 +1,7 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { Effect, Either, Layer, ManagedRuntime } from "effect";
+import { Effect, Result, Layer, ManagedRuntime } from "effect";
 import { describe, expect, test } from "vitest";
 import { PluginModuleNotFoundError } from "../../src/services/errors/PluginModuleNotFoundError.js";
 import { isPluginConfigError } from "../../src/services/isPluginConfigError.js";
@@ -34,7 +34,6 @@ const inMemoryPluginModuleLoader = (
 
   return Layer.succeed(PluginModuleLoader, service);
 };
-
 const runWithModules = async <A, E>(
   modules: ReadonlyMap<string, Record<string, unknown>>,
   effect: Effect.Effect<A, E, PluginModuleLoader>
@@ -59,21 +58,20 @@ describe("PluginModuleLoader", () => {
 
     expect(result).toBe(namedPlugin);
   });
-
   test("fails with PluginModuleNotFoundError when the specifier is unknown", async () => {
     const result = await runWithModules(
       new Map(),
-      Effect.either(PluginModuleLoader.load("missing"))
+      Effect.result(PluginModuleLoader.load("missing"))
     );
 
-    if (!Either.isLeft(result)) {
+    if (!Result.isFailure(result)) {
       throw new Error("Expected loader to fail for an unknown specifier");
     }
 
-    if (!(result.left instanceof PluginModuleNotFoundError)) {
+    if (!(result.failure instanceof PluginModuleNotFoundError)) {
       throw new Error("Expected PluginModuleNotFoundError");
     }
-    expect(result.left.specifier).toBe("missing");
+    expect(result.failure.specifier).toBe("missing");
   });
 
   test("PluginModuleNotFoundError carries the original cause in its message", () => {
@@ -111,27 +109,26 @@ describe("PluginModuleLoader default layer", () => {
     const runtime = ManagedRuntime.make(PluginModuleLoader.Default);
     try {
       const result = await runtime.runPromise(
-        Effect.either(PluginModuleLoader.load(unresolvableSpecifier))
+        Effect.result(PluginModuleLoader.load(unresolvableSpecifier))
       );
 
-      if (!Either.isLeft(result)) {
+      if (!Result.isFailure(result)) {
         throw new Error(
           "Expected the real loader to fail for an unresolvable specifier"
         );
       }
 
-      if (!(result.left instanceof PluginModuleNotFoundError)) {
+      if (!(result.failure instanceof PluginModuleNotFoundError)) {
         throw new Error("Expected PluginModuleNotFoundError");
       }
-      expect(result.left.specifier).toBe(unresolvableSpecifier);
+      expect(result.failure.specifier).toBe(unresolvableSpecifier);
       // The underlying Node module-not-found error must be preserved on the
       // `cause` field so operators can inspect what Node actually reported.
-      expect(result.left.cause).toBeDefined();
+      expect(result.failure.cause).toBeDefined();
     } finally {
       await runtime.dispose();
     }
   });
-
   test("Default layer preserves PluginConfigError thrown during module evaluation", async () => {
     const tempDir = await mkdtemp(
       path.join(process.cwd(), "plugin-module-loader-")
@@ -151,23 +148,23 @@ describe("PluginModuleLoader default layer", () => {
     const runtime = ManagedRuntime.make(PluginModuleLoader.Default);
     try {
       const result = await runtime.runPromise(
-        Effect.either(PluginModuleLoader.load(pathToFileURL(pluginPath).href))
+        Effect.result(PluginModuleLoader.load(pathToFileURL(pluginPath).href))
       );
 
-      if (!Either.isLeft(result)) {
+      if (!Result.isFailure(result)) {
         throw new Error(
           "Expected the real loader to fail for a misconfigured plugin module"
         );
       }
 
-      expect(result.left).not.toBeInstanceOf(PluginModuleNotFoundError);
-      expect(isPluginConfigError(result.left)).toBe(true);
-      if (!isPluginConfigError(result.left)) {
+      expect(result.failure).not.toBeInstanceOf(PluginModuleNotFoundError);
+      expect(isPluginConfigError(result.failure)).toBe(true);
+      if (!isPluginConfigError(result.failure)) {
         throw new Error("Expected a tagged PluginConfigError");
       }
-      expect(result.left._tag).toBe("PluginConfigError");
-      expect(result.left.pluginName).toBe("misconfigured-plugin");
-      expect(result.left.reason).toBe("outputPath must end with .json");
+      expect(result.failure._tag).toBe("PluginConfigError");
+      expect(result.failure.pluginName).toBe("misconfigured-plugin");
+      expect(result.failure.reason).toBe("outputPath must end with .json");
     } finally {
       await runtime.dispose();
       await rm(tempDir, { recursive: true, force: true });

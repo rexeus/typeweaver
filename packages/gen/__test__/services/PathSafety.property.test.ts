@@ -44,7 +44,7 @@ const expectUnsafeFailure = (
   expect(Exit.isFailure(exit)).toBe(true);
   if (!Exit.isFailure(exit)) return;
 
-  const failure = Cause.failureOption(exit.cause);
+  const failure = Cause.findErrorOption(exit.cause);
   expect(Option.isSome(failure)).toBe(true);
   if (!Option.isSome(failure)) return;
 

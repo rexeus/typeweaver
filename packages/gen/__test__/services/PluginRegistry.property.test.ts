@@ -15,10 +15,7 @@ import type { Plugin } from "../../src/plugins/Plugin.js";
 import type { PluginRegistryInstance } from "../../src/services/PluginRegistry.js";
 import type { Arbitrary } from "fast-check";
 
-const silentLoggerLayer = Logger.replace(
-  Logger.defaultLogger,
-  Logger.make<unknown, void>(() => {})
-);
+const silentLoggerLayer = Logger.layer([Logger.make<unknown, void>(() => {})]);
 
 const registryTestLayer = Layer.merge(
   PluginRegistry.Default,
@@ -133,7 +130,7 @@ const expectPluginDependencyFailure = (plugins: readonly Plugin[]): void => {
     );
   }
 
-  const failure = Cause.failureOption(exit.cause);
+  const failure = Cause.findErrorOption(exit.cause);
   expect(failure._tag).toBe("Some");
   if (failure._tag === "Some") {
     expect(failure.value).toBeInstanceOf(PluginDependencyError);

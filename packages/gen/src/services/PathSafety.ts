@@ -1,4 +1,4 @@
-import { Data, Effect } from "effect";
+import { Context, Data, Effect, Layer } from "effect";
 import { GeneratedPathProbeError } from "../errors/GeneratedPathProbeError.js";
 import { UnsafeGeneratedPathError } from "../errors/UnsafeGeneratedPathError.js";
 import { resolveSafeGeneratedFilePath } from "../helpers/pathSafety.js";
@@ -15,6 +15,16 @@ class UnexpectedPathSafetyDefect extends Data.TaggedError(
   readonly defect: unknown;
 }> {}
 
+export type PathSafetyShape = {
+  readonly validateGeneratedPath: (params: {
+    readonly outputDir: string;
+    readonly requestedPath: string;
+  }) => Effect.Effect<
+    SafeGeneratedFilePath,
+    GeneratedPathProbeError | UnsafeGeneratedPathError
+  >;
+};
+
 /**
  * Effect-native facade over the sync `resolveSafeGeneratedFilePath` guard.
  *
@@ -25,17 +35,7 @@ class UnexpectedPathSafetyDefect extends Data.TaggedError(
  * Recognized Node filesystem failures (e.g. `EACCES`) are exposed as
  * `GeneratedPathProbeError`; unexpected throws remain defects.
  */
-export const makePathSafety = (
-  fileSystem?: PathSafetyFs
-): {
-  readonly validateGeneratedPath: (params: {
-    readonly outputDir: string;
-    readonly requestedPath: string;
-  }) => Effect.Effect<
-    SafeGeneratedFilePath,
-    GeneratedPathProbeError | UnsafeGeneratedPathError
-  >;
-} => {
+export const makePathSafety = (fileSystem?: PathSafetyFs): PathSafetyShape => {
   const validateGeneratedPathTraced: (params: {
     readonly outputDir: string;
     readonly requestedPath: string;
@@ -60,26 +60,29 @@ export const makePathSafety = (
     })
   );
 
-  const validateGeneratedPath: (params: {
-    readonly outputDir: string;
-    readonly requestedPath: string;
-  }) => Effect.Effect<
-    SafeGeneratedFilePath,
-    GeneratedPathProbeError | UnsafeGeneratedPathError
-  > = params =>
-    validateGeneratedPathTraced(params).pipe(
-      Effect.catchTag("UnexpectedPathSafetyDefect", error =>
-        Effect.die(error.defect)
-      )
-    );
+  const validateGeneratedPath: PathSafetyShape["validateGeneratedPath"] =
+    params =>
+      validateGeneratedPathTraced(params).pipe(
+        Effect.catchTag("UnexpectedPathSafetyDefect", error =>
+          Effect.die(error.defect)
+        )
+      );
 
   return { validateGeneratedPath };
 };
 
-export class PathSafety extends Effect.Service<PathSafety>()(
-  "typeweaver/PathSafety",
-  {
-    succeed: makePathSafety(),
-    accessors: true,
-  }
-) {}
+export class PathSafety extends Context.Service<PathSafety, PathSafetyShape>()(
+  "typeweaver/PathSafety"
+) {
+  static readonly make = (service: PathSafetyShape) => service;
+
+  static readonly Default: Layer.Layer<PathSafety> = Layer.succeed(
+    PathSafety,
+    makePathSafety()
+  );
+
+  static readonly validateGeneratedPath = (params: {
+    readonly outputDir: string;
+    readonly requestedPath: string;
+  }) => PathSafety.use(service => service.validateGeneratedPath(params));
+}

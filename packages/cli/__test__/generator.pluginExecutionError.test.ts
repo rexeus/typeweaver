@@ -93,7 +93,6 @@ const expectedCauseFor = (phase: PluginExecutionPhase) => ({
   phase,
   pluginName: "phase-failing-plugin",
 });
-
 const runPhaseFailingGeneration = async (
   phase: PluginExecutionPhase
 ): Promise<Exit.Exit<unknown, unknown>> => {
@@ -144,7 +143,7 @@ describe("Generator.generate surfaces PluginExecutionError for hard-fail phases"
       expect(Exit.isFailure(exit)).toBe(true);
       if (!Exit.isFailure(exit)) return;
 
-      const failure = Cause.failureOption(exit.cause);
+      const failure = Cause.findErrorOption(exit.cause);
       expect(Option.isSome(failure)).toBe(true);
       if (!Option.isSome(failure)) return;
 
@@ -156,7 +155,6 @@ describe("Generator.generate surfaces PluginExecutionError for hard-fail phases"
 
 describe("Generator.generate treats finalize as best-effort cleanup", () => {
   afterEach(cleanupTempDirs);
-
   test("does not fail the run when only finalize fails; the failure surfaces via the WARN log", async () => {
     const workspace = createTempWorkspace();
     const pluginFile = writePhaseFailingPlugin(workspace, "finalize");
@@ -187,7 +185,7 @@ describe("Generator.generate treats finalize as best-effort cleanup", () => {
     // operator can investigate.
     const finalizeWarnings = logs.filter(
       log =>
-        log.level === "WARN" &&
+        log.level === "Warn" &&
         log.message.includes("phase-failing-plugin") &&
         log.message.includes("boom")
     );

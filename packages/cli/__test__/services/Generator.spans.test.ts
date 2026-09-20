@@ -18,9 +18,9 @@ type CapturedSpan = {
  */
 const makeCapturingTracer = (recorded: CapturedSpan[]): Tracer.Tracer => {
   const spans = new Map<string, Tracer.Span>();
-  return Tracer.make({
-    span: (...args: Parameters<Tracer.Tracer["span"]>) => {
-      const [name, parent, context, links, startTime, kind] = args;
+  return {
+    span: options => {
+      const { name, parent, annotations, links, startTime, kind } = options;
       const spanId = String(spans.size + 1);
       const attributes = new Map<string, unknown>();
       const parentName =
@@ -33,11 +33,11 @@ const makeCapturingTracer = (recorded: CapturedSpan[]): Tracer.Tracer => {
         spanId,
         traceId: "trace-1",
         parent,
-        context,
+        annotations,
         status: { _tag: "Started", startTime },
         attributes,
         links,
-        sampled: true,
+        sampled: options.sampled,
         kind,
         end: () => undefined,
         attribute: (key, value) => {
@@ -50,8 +50,7 @@ const makeCapturingTracer = (recorded: CapturedSpan[]): Tracer.Tracer => {
       recorded.push({ name, parentName, attributes });
       return span;
     },
-    context: (f, _fiber) => f(),
-  });
+  };
 };
 
 const writeTinySpec = (workspace: string): string => {

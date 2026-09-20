@@ -1,4 +1,4 @@
-import { Context, Effect, Exit, FiberRef, Layer, Scope } from "effect";
+import { Context, Effect, Exit, Layer, Scope } from "effect";
 import { PluginExecutionError } from "./errors/PluginExecutionError.js";
 import { definePlugin } from "./Plugin.js";
 import type { Issue } from "../issues/Issue.js";
@@ -12,13 +12,37 @@ import type { PluginExecutionPhase } from "./errors/PluginExecutionError.js";
 import type { Plugin } from "./Plugin.js";
 
 type ScopedPluginRuntime<Services> = {
-  readonly scope: Scope.CloseableScope;
+  readonly scope: Scope.Closeable;
   readonly services: Context.Context<Services>;
 };
 
-type ScopedPluginRuntimeRef<Services> = FiberRef.FiberRef<
-  ScopedPluginRuntime<Services> | undefined
->;
+/**
+ * Per-fiber runtime cell. Effect 4 removed `FiberRef`; the current fiber object
+ * is a stable, unique key for the duration of one generation run, so a
+ * `WeakMap` keyed by it preserves the per-fiber isolation the previous
+ * `FiberRef` provided without leaking across runs.
+ */
+type ScopedPluginRuntimeCell<Services> = {
+  readonly get: Effect.Effect<ScopedPluginRuntime<Services> | undefined>;
+  readonly set: (
+    runtime: ScopedPluginRuntime<Services> | undefined
+  ) => Effect.Effect<void>;
+};
+
+const makeRuntimeCell = <Services>(): ScopedPluginRuntimeCell<Services> => {
+  const runtimes = new WeakMap<object, ScopedPluginRuntime<Services>>();
+  return {
+    get: Effect.withFiberSucceed(fiber => runtimes.get(fiber)),
+    set: runtime =>
+      Effect.withFiberSucceed(fiber => {
+        if (runtime === undefined) {
+          runtimes.delete(fiber);
+          return;
+        }
+        runtimes.set(fiber, runtime);
+      }),
+  };
+};
 
 /**
  * Public definition for a plugin that owns one scoped Effect Layer for the
@@ -58,17 +82,19 @@ const executionError = (
 const makeRuntimeProvider =
   <Services>(
     definition: ScopedPluginDefinition<Services>,
-    runtimeRef: ScopedPluginRuntimeRef<Services>
+    runtimeCell: ScopedPluginRuntimeCell<Services>
   ) =>
   <A>(
     phase: Exclude<PluginExecutionPhase, "validate" | "initialize">,
     effect: () => Effect.Effect<A, unknown, Services>
   ): Effect.Effect<A, PluginExecutionError> =>
     Effect.gen(function* () {
-      const current = yield* FiberRef.get(runtimeRef);
+      const current = yield* runtimeCell.get;
       if (current === undefined) {
-        return yield* Effect.dieMessage(
-          `Scoped plugin '${definition.name}' used before successful initialization`
+        return yield* Effect.die(
+          new Error(
+            `Scoped plugin '${definition.name}' used before successful initialization`
+          )
         );
       }
 
@@ -80,15 +106,17 @@ const makeRuntimeProvider =
 
 const makeInitialize = <Services>(
   definition: ScopedPluginDefinition<Services>,
-  runtimeRef: ScopedPluginRuntimeRef<Services>
+  runtimeCell: ScopedPluginRuntimeCell<Services>
 ) => {
   const initializeHook = definition.initialize;
   return (context: PluginContext): Effect.Effect<void, PluginExecutionError> =>
     Effect.gen(function* () {
-      const current = yield* FiberRef.get(runtimeRef);
+      const current = yield* runtimeCell.get;
       if (current !== undefined) {
-        return yield* Effect.dieMessage(
-          `Scoped plugin '${definition.name}' initialized more than once without finalization`
+        return yield* Effect.die(
+          new Error(
+            `Scoped plugin '${definition.name}' initialized more than once without finalization`
+          )
         );
       }
 
@@ -96,9 +124,7 @@ const makeInitialize = <Services>(
         Scope.make(),
         scope =>
           Layer.buildWithScope(definition.layer, scope).pipe(
-            Effect.tap(services =>
-              FiberRef.set(runtimeRef, { scope, services })
-            ),
+            Effect.tap(services => runtimeCell.set({ scope, services })),
             Effect.flatMap(services =>
               initializeHook === undefined
                 ? Effect.void
@@ -108,7 +134,7 @@ const makeInitialize = <Services>(
         (scope, exit) =>
           Exit.isFailure(exit)
             ? Scope.close(scope, exit).pipe(
-                Effect.ensuring(FiberRef.set(runtimeRef, undefined))
+                Effect.ensuring(runtimeCell.set(undefined))
               )
             : Effect.void
       );
@@ -122,13 +148,13 @@ const makeInitialize = <Services>(
 
 const makeFinalize = <Services>(
   definition: ScopedPluginDefinition<Services>,
-  runtimeRef: ScopedPluginRuntimeRef<Services>
+  runtimeCell: ScopedPluginRuntimeCell<Services>
 ) => {
   const finalizeHook = definition.finalize;
   return (context: PluginContext): Effect.Effect<void, PluginExecutionError> =>
     Effect.gen(function* () {
-      const current = yield* FiberRef.get(runtimeRef);
-      yield* FiberRef.set(runtimeRef, undefined);
+      const current = yield* runtimeCell.get;
+      yield* runtimeCell.set(undefined);
       if (current === undefined) {
         return;
       }
@@ -153,8 +179,8 @@ const makeFinalize = <Services>(
  * Defines a service-dependent plugin while keeping every public lifecycle hook
  * at `R = never`.
  *
- * The Layer is built exactly once by `initialize`, retained in a plugin-local
- * FiberRef for the current generation fiber, and closed by `finalize`. Failed,
+ * The Layer is built exactly once by `initialize`, retained in a per-fiber
+ * runtime cell for the current generation, and closed by `finalize`. Failed,
  * defective, or interrupted initialization closes its provisional Scope before
  * the failure escapes. Once initialization succeeds, the generator's
  * unconditional finalization boundary guarantees release after success, typed
@@ -163,16 +189,11 @@ const makeFinalize = <Services>(
 export const defineScopedPlugin = <Services>(
   definition: ScopedPluginDefinition<Services>
 ): Plugin => {
-  const runtimeRef = FiberRef.unsafeMake<
-    ScopedPluginRuntime<Services> | undefined
-  >(undefined, {
-    fork: current => current,
-    join: parent => parent,
-  });
+  const runtimeCell = makeRuntimeCell<Services>();
   const validateHook = definition.validate;
   const collectResourcesHook = definition.collectResources;
   const generateHook = definition.generate;
-  const withRuntime = makeRuntimeProvider(definition, runtimeRef);
+  const withRuntime = makeRuntimeProvider(definition, runtimeCell);
 
   return definePlugin({
     name: definition.name,
@@ -192,7 +213,7 @@ export const defineScopedPlugin = <Services>(
               )
             ),
         }),
-    initialize: makeInitialize(definition, runtimeRef),
+    initialize: makeInitialize(definition, runtimeCell),
     ...(collectResourcesHook === undefined
       ? {}
       : {
@@ -207,6 +228,6 @@ export const defineScopedPlugin = <Services>(
           generate: (context: GeneratorContext) =>
             withRuntime("generate", () => generateHook(context)),
         }),
-    finalize: makeFinalize(definition, runtimeRef),
+    finalize: makeFinalize(definition, runtimeCell),
   });
 };

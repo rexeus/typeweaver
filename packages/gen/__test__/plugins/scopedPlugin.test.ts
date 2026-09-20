@@ -1,5 +1,14 @@
 import { assert, it } from "@effect/vitest";
-import { Context, Data, Deferred, Effect, Fiber, Layer, Ref } from "effect";
+import {
+  Context,
+  Data,
+  Deferred,
+  Effect,
+  Exit,
+  Fiber,
+  Layer,
+  Ref,
+} from "effect";
 import { describe, expect, test } from "vitest";
 import { createPluginTestKit, defineScopedPlugin } from "../../src/index.js";
 import type { NormalizedSpec } from "../../src/index.js";
@@ -8,7 +17,7 @@ type ResourceProbe = {
   readonly id: number;
 };
 
-const ResourceProbe = Context.GenericTag<ResourceProbe>(
+const ResourceProbe = Context.Service<ResourceProbe>(
   "typeweaver/plugin-tests/ResourceProbe"
 );
 
@@ -26,7 +35,7 @@ const emptySpec: NormalizedSpec = {
 };
 
 const makeResourceLayer = (events: string[]) =>
-  Layer.scoped(
+  Layer.effect(
     ResourceProbe,
     Effect.acquireRelease(
       Effect.sync(() => {
@@ -51,7 +60,7 @@ const concurrentScopedRuns = () =>
     const bothEntered = yield* Deferred.make<void>();
     const plugin = defineScopedPlugin({
       name: "scoped-concurrent",
-      layer: Layer.scoped(
+      layer: Layer.effect(
         ResourceProbe,
         Effect.acquireRelease(
           Effect.sync(() => {
@@ -188,16 +197,19 @@ const interruptedGeneration = () =>
       layer: makeResourceLayer(events),
       generate: () =>
         Deferred.succeed(enteredGenerate, undefined).pipe(
-          Effect.zipRight(Deferred.await(neverResume))
+          Effect.andThen(Deferred.await(neverResume))
         ),
     });
     const kit = createPluginTestKit({ normalizedSpec: emptySpec });
-    const fiber = yield* Effect.fork(kit.run(plugin));
+    const fiber = yield* Effect.forkChild(kit.run(plugin));
 
     yield* Deferred.await(enteredGenerate);
-    const exit = yield* Fiber.interrupt(fiber);
+    // Effect 4's `Fiber.interrupt` returns void; observe the final Exit via
+    // `Fiber.await`, which completes immediately after the interrupt resolves.
+    yield* Fiber.interrupt(fiber);
+    const exit = yield* Fiber.await(fiber);
 
-    assert.isTrue(exit._tag === "Failure");
+    assert.isTrue(Exit.isFailure(exit));
     assert.deepStrictEqual(events, ["acquire:1", "release:1"]);
   });
 

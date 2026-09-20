@@ -32,14 +32,14 @@ test/fixture/generated/
   },
   "peerDependencies": {
     "@rexeus/typeweaver-gen": "^<TYPEWEAVER_VERSION>",
-    "effect": ">=3.22.0 <4"
+    "effect": "4.0.0-rc.116"
   },
   "devDependencies": {
     "@rexeus/typeweaver": "^<TYPEWEAVER_VERSION>",
     "@rexeus/typeweaver-core": "^<TYPEWEAVER_VERSION>",
     "@rexeus/typeweaver-gen": "^<TYPEWEAVER_VERSION>",
     "@types/node": "^26.1.0",
-    "effect": "3.22.0",
+    "effect": "4.0.0-rc.116",
     "hono": "^4.12.32",
     "typescript": "^6.0.2",
     "vitest": "^3.2.7",
@@ -76,8 +76,8 @@ records. Expected lifecycle failures use \`PluginExecutionError\`; invalid facto
 
 ## Effect contract
 
-This scaffold develops against Effect 3.22.0 and declares the supported peer range
-\`>=3.22.0 <4\`. Do not create a runtime inside plugin hooks. Use \`defineScopedPlugin\` when the plugin
+This scaffold develops against the exact native Effect 4.0.0-rc.116 pin and declares that exact peer.
+Do not create a runtime inside plugin hooks. Use \`defineScopedPlugin\` when the plugin
 owns an exit-independent Layer that must be acquired once and released after success, typed failure,
 defect, or interruption.
 
@@ -263,17 +263,16 @@ describe("audit-log plugin", () => {
   });
 });
 
-type TestProbe = {
-  readonly value: string;
-};
-
-const TestProbe = Context.GenericTag<TestProbe>(
+class TestProbe extends Context.Service<
+  TestProbe,
+  { readonly value: string }
+>()(
   "typeweaver-plugin-audit-log/test/TestProbe"
-);
+) {}
 
 test("provides test Layers without CLI internals", () => {
   const events: string[] = [];
-  const layer = Layer.scoped(
+  const layer = Layer.effect(
     TestProbe,
     Effect.acquireRelease(
       Effect.sync(() => {
@@ -324,6 +323,7 @@ test("provides test Layers without CLI internals", () => {
     "declarationMap": true,
     "esModuleInterop": true,
     "isolatedModules": true,
+    "lib": ["DOM", "ESNext"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "noEmit": true,

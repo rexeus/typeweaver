@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import { FileSystem } from "@effect/platform";
+import { FileSystem } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { UnsafeGeneratedPathError } from "../../../src/errors/UnsafeGeneratedPathError.js";
 import { MissingCanonicalResponseError } from "../../../src/plugins/errors/MissingCanonicalResponseError.js";

@@ -1,8 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { FileSystem } from "@effect/platform";
-import { BadArgument, SystemError } from "@effect/platform/Error";
-import { Effect } from "effect";
+import { Effect, FileSystem } from "effect";
+import { badArgument, systemError } from "effect/PlatformError";
 import {
   ReservedCoordinationPathError,
   UnsafeSharedTempDirectoryError,
@@ -19,14 +18,14 @@ import {
   ensureTrustedHostTempDirectory,
 } from "./hostTemp.js";
 import { errnoCode, isExpectedNodeSystemError } from "./nodeFsErrors.js";
-import type { PlatformError, SystemErrorReason } from "@effect/platform/Error";
+import type { PlatformError, SystemErrorTag } from "effect/PlatformError";
 
 const hostPathFs = {
   exists: (probePath: string): boolean => fs.existsSync(probePath),
   realPath: (probePath: string): string => fs.realpathSync.native(probePath),
 };
 
-const systemErrorReason = (cause: unknown): SystemErrorReason => {
+const systemErrorReason = (cause: unknown): SystemErrorTag => {
   switch (errnoCode(cause)) {
     case "ENOENT":
       return "NotFound";
@@ -53,7 +52,7 @@ const mapNodeSymlinkError = (
   linkPath: string
 ): PlatformError => {
   if (!isExpectedNodeSystemError(cause)) {
-    return new BadArgument({
+    return badArgument({
       module: "FileSystem",
       method: "symlink",
       cause,
@@ -64,8 +63,8 @@ const mapNodeSymlinkError = (
     "syscall" in cause && typeof cause.syscall === "string"
       ? cause.syscall
       : undefined;
-  return new SystemError({
-    reason: systemErrorReason(cause),
+  return systemError({
+    _tag: systemErrorReason(cause),
     module: "FileSystem",
     method: "symlink",
     pathOrDescriptor: linkPath,

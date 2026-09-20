@@ -8,6 +8,9 @@ import {
 } from "@rexeus/typeweaver-gen";
 import { Cause, Effect, Exit } from "effect";
 import { afterEach, describe, expect, test, vi } from "vitest";
+
+const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
 import {
   compareOutputTrees,
   snapshotOutputTree,
@@ -40,7 +43,7 @@ const extractTypedFailure = <E extends { readonly _tag: string }>(
   if (Exit.isSuccess(exit)) {
     throw new Error("Expected effect to fail");
   }
-  const failure = Cause.failureOption(exit.cause);
+  const failure = Cause.findErrorOption(exit.cause);
   if (failure._tag === "None") {
     throw new Error(`Expected typed failure: ${Cause.pretty(exit.cause)}`);
   }
@@ -77,7 +80,6 @@ describe("output tree comparison", () => {
       generatedFileCount: 2,
     });
   });
-
   test("reports added, removed, and changed groups with sorted POSIX paths", async () => {
     const committed = makeRoot("drift-committed");
     const generated = makeRoot("drift-generated");
@@ -104,7 +106,6 @@ describe("output tree comparison", () => {
       generatedFileCount: 4,
     });
   });
-
   test("compares binary files by bytes and never by text decoding", async () => {
     const committed = makeRoot("binary-committed");
     const generated = makeRoot("binary-generated");
@@ -126,7 +127,6 @@ describe("output tree comparison", () => {
 
     expect(comparison.changed).toEqual(["asset.bin"]);
   });
-
   test("treats a missing committed output as fully added drift", async () => {
     const committed = makeRoot("missing-committed");
     const generated = makeRoot("missing-generated");
@@ -207,7 +207,7 @@ describe("output tree comparison safety", () => {
 
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) {
-      expect(Array.from(Cause.defects(exit.cause))).toEqual([]);
+      expect(Array.from(causeDefects(exit.cause))).toEqual([]);
     }
     const failure = extractTypedFailure(exit);
     expect(failure).toEqual(
@@ -218,7 +218,6 @@ describe("output tree comparison safety", () => {
       })
     );
   });
-
   test("excludes confirmed coordination artifacts but not user-owned lookalikes", async () => {
     const committed = makeRoot("artifact-committed");
     const generated = makeRoot("artifact-generated");
@@ -274,7 +273,6 @@ describe("output tree snapshot", () => {
       Buffer.from([0x00, 0x01, 0x02])
     );
   });
-
   test("is a no-op when the source output does not exist", async () => {
     const source = makeRoot("snapshot-missing-source");
     const destination = makeRoot("snapshot-missing-destination");
@@ -393,7 +391,7 @@ describe("output tree root inspection", () => {
 
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) {
-      expect(Array.from(Cause.defects(exit.cause))).toEqual([]);
+      expect(Array.from(causeDefects(exit.cause))).toEqual([]);
     }
     expect(extractTypedFailure(exit)).toEqual(
       expect.objectContaining({ _tag: "OutputComparisonReadError", cause })
@@ -413,7 +411,6 @@ describe("output tree coordination exclusion is evidence-based", () => {
 
     expect(comparison.removed).toEqual([".typeweaver-lock"]);
   });
-
   test("compares a fence-shaped regular file", async () => {
     const committed = makeRoot("lookalike-fence-file");
     const generated = makeRoot("lookalike-fence-file-generated");
@@ -426,7 +423,6 @@ describe("output tree coordination exclusion is evidence-based", () => {
 
     expect(comparison.removed).toEqual([fenceName]);
   });
-
   test("compares a bare coordination marker file outside a marked directory", async () => {
     const committed = makeRoot("lookalike-marker-file");
     const generated = makeRoot("lookalike-marker-file-generated");
@@ -441,7 +437,6 @@ describe("output tree coordination exclusion is evidence-based", () => {
 
     expect(comparison.removed).toEqual([TYPEWEAVER_COORDINATION_MARKER_FILE]);
   });
-
   test("compares a legacy-lock-named directory with malformed metadata", async () => {
     const committed = makeRoot("lookalike-malformed-lock");
     const generated = makeRoot("lookalike-malformed-lock-generated");
@@ -455,7 +450,6 @@ describe("output tree coordination exclusion is evidence-based", () => {
 
     expect(comparison.removed).toEqual([".typeweaver-lock/info.json"]);
   });
-
   test("excludes a directory whose complete metadata proves it is a legacy lock", async () => {
     const committed = makeRoot("complete-legacy-lock");
     const generated = makeRoot("complete-legacy-lock-generated");
@@ -482,7 +476,6 @@ describe("output tree coordination exclusion is evidence-based", () => {
       generatedFileCount: 0,
     });
   });
-
   test("compares ordinary directories that merely contain lock-shaped metadata", async () => {
     const committed = makeRoot("lookalike-metadata-dir");
     const generated = makeRoot("lookalike-metadata-dir-generated");

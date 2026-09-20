@@ -5,18 +5,32 @@ import {
 } from "@rexeus/typeweaver-gen";
 import type {
   Issue,
+  NormalizationError,
+  PluginConfigError,
+  PluginDependencyError,
+  PluginExecutionError,
+  PluginRegistryShape,
   PluginValidationContext,
   TypeweaverConfig,
 } from "@rexeus/typeweaver-gen";
-import { FileSystem } from "@effect/platform";
-import { Effect } from "effect";
+import { Context, Effect, FileSystem, Layer } from "effect";
+import { PluginLoadError } from "../errors/PluginLoadError.js";
+import {
+  InvalidSpecEntrypointError,
+  SpecBundleError,
+  SpecBundleOutputMissingError,
+  SpecOutputWriteError,
+} from "./errors/specErrors.js";
 import {
   DEFAULT_PLUGIN_RESOLUTION_STRATEGIES,
   defaultRequiredPlugins,
 } from "./generatorDefaults.js";
 import { linkNearestNodeModules } from "./internal/projectStaging.js";
-import { PluginLoader } from "./PluginLoader.js";
+import { PluginLoader } from "./PluginLoaderService.js";
 import { SpecLoader } from "./SpecLoader.js";
+import type { PluginLoaderShape } from "./PluginLoaderService.js";
+import type { SpecLoaderShape } from "./SpecLoader.js";
+import type { PlatformError } from "effect/PlatformError";
 
 export type ValidateProjectParams = {
   readonly inputFile: string;
@@ -29,9 +43,9 @@ export type ValidateProjectResult = {
 };
 
 type StagedValidationDeps = {
-  readonly pluginLoader: PluginLoader;
-  readonly pluginRegistry: PluginRegistry;
-  readonly specLoader: SpecLoader;
+  readonly pluginLoader: PluginLoaderShape;
+  readonly pluginRegistry: PluginRegistryShape;
+  readonly specLoader: SpecLoaderShape;
   readonly inputFile: string;
   readonly temporaryDirectory: string;
   readonly currentWorkingDirectory: string;
@@ -73,53 +87,83 @@ const runStagedValidation = (deps: StagedValidationDeps) =>
     };
   });
 
-export class ProjectValidator extends Effect.Service<ProjectValidator>()(
-  "typeweaver/ProjectValidator",
-  {
-    effect: Effect.gen(function* () {
-      const fileSystem = yield* FileSystem.FileSystem;
-      const pluginLoader = yield* PluginLoader;
-      const pluginRegistry = yield* PluginRegistry;
-      const specLoader = yield* SpecLoader;
+export type ProjectValidatorError =
+  | PluginLoadError
+  | PluginConfigError
+  | PluginDependencyError
+  | PluginExecutionError
+  | SpecBundleError
+  | SpecBundleOutputMissingError
+  | SpecOutputWriteError
+  | InvalidSpecEntrypointError
+  | NormalizationError
+  | PlatformError;
 
-      const validate = Effect.fn("typeweaver.ProjectValidator.validate")((
-        params: ValidateProjectParams
-      ) => {
-        const inputFile = path.resolve(
+export type ProjectValidatorShape = {
+  readonly validate: (
+    params: ValidateProjectParams
+  ) => Effect.Effect<ValidateProjectResult, ProjectValidatorError>;
+};
+
+const makeProjectValidator: Effect.Effect<
+  ProjectValidatorShape,
+  never,
+  FileSystem.FileSystem | PluginLoader | PluginRegistry | SpecLoader
+> = Effect.gen(function* () {
+  const fileSystem = yield* FileSystem.FileSystem;
+  const pluginLoader = yield* PluginLoader;
+  const pluginRegistry = yield* PluginRegistry;
+  const specLoader = yield* SpecLoader;
+
+  const validate: ProjectValidatorShape["validate"] = Effect.fn(
+    "typeweaver.ProjectValidator.validate"
+  )((params: ValidateProjectParams) => {
+    const inputFile = path.resolve(
+      params.currentWorkingDirectory,
+      params.inputFile
+    );
+    return Effect.scoped(
+      Effect.gen(function* () {
+        const temporaryDirectory = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "typeweaver-validate-",
+        });
+        yield* linkNearestNodeModules(
+          fileSystem,
           params.currentWorkingDirectory,
-          params.inputFile
+          temporaryDirectory
         );
-        return Effect.scoped(
-          Effect.gen(function* () {
-            const temporaryDirectory =
-              yield* fileSystem.makeTempDirectoryScoped({
-                prefix: "typeweaver-validate-",
-              });
-            yield* linkNearestNodeModules(
-              fileSystem,
-              params.currentWorkingDirectory,
-              temporaryDirectory
-            );
-            return yield* runStagedValidation({
-              pluginLoader,
-              pluginRegistry,
-              specLoader,
-              inputFile,
-              temporaryDirectory,
-              currentWorkingDirectory: params.currentWorkingDirectory,
-              config: params.config,
-            });
-          })
-        );
-      });
+        return yield* runStagedValidation({
+          pluginLoader,
+          pluginRegistry,
+          specLoader,
+          inputFile,
+          temporaryDirectory,
+          currentWorkingDirectory: params.currentWorkingDirectory,
+          config: params.config,
+        });
+      })
+    );
+  });
 
-      return { validate } as const;
-    }),
-    dependencies: [
-      PluginLoader.Default,
-      PluginRegistry.Default,
-      SpecLoader.Default,
-    ],
-    accessors: true,
-  }
-) {}
+  return { validate } as const;
+});
+
+export class ProjectValidator extends Context.Service<
+  ProjectValidator,
+  ProjectValidatorShape
+>()("typeweaver/ProjectValidator") {
+  static readonly make = (service: ProjectValidatorShape) => service;
+
+  static readonly Default: Layer.Layer<
+    ProjectValidator,
+    never,
+    FileSystem.FileSystem
+  > = Layer.effect(ProjectValidator, makeProjectValidator).pipe(
+    Layer.provide(PluginLoader.Default),
+    Layer.provide(PluginRegistry.Default),
+    Layer.provide(SpecLoader.Default)
+  );
+
+  static readonly validate = (params: ValidateProjectParams) =>
+    ProjectValidator.use(service => service.validate(params));
+}

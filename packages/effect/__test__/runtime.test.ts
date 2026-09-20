@@ -1,6 +1,6 @@
 import { HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
 import type { IHttpRequest, IHttpResponse } from "@rexeus/typeweaver-core";
-import { Context, Data, Effect, HashMap, Layer, Option } from "effect";
+import { Context, Data, Effect, Layer, References } from "effect";
 import { describe, expect, test } from "vitest";
 import {
   createEffectHandlerRuntime,
@@ -46,12 +46,12 @@ const impossibleMapper: EffectHandlerErrorMapper<
   TestContext
 > = () => response;
 
-class Greeting extends Context.Tag("TypeWeaverTest/Greeting")<
+class Greeting extends Context.Service<
   Greeting,
   {
     readonly render: (name: string) => string;
   }
->() {}
+>()("TypeWeaverTest/Greeting") {}
 
 class MissingTodo extends Data.TaggedError("MissingTodo")<{
   readonly id: string;
@@ -61,7 +61,7 @@ describe("Effect handler runtime", () => {
   test("owns one scoped Layer and releases it exactly once", async () => {
     let acquisitions = 0;
     let releases = 0;
-    const layer = Layer.scoped(
+    const layer = Layer.effect(
       Greeting,
       Effect.acquireRelease(
         Effect.sync(() => {
@@ -111,7 +111,6 @@ describe("Effect handler runtime", () => {
     await Promise.all([runtime.dispose(), runtime.dispose()]);
     expect(releases).toBe(1);
   });
-
   test("maps typed failures through the operation response mapper", async () => {
     const runtime = createEffectHandlerRuntime(Layer.empty);
     const handler: EffectRequestHandler<
@@ -164,7 +163,6 @@ describe("Effect handler runtime failure boundaries", () => {
     expect(String(failure)).not.toContain("database-password=secret");
     await runtime.dispose();
   });
-
   test("interrupts the running Effect when the Fetch signal aborts", async () => {
     const controller = new AbortController();
     const started = Promise.withResolvers<void>();
@@ -178,7 +176,7 @@ describe("Effect handler runtime failure boundaries", () => {
       TestContext
     > = () =>
       Effect.sync(started.resolve).pipe(
-        Effect.zipRight(Effect.never),
+        Effect.andThen(Effect.never),
         Effect.onInterrupt(() =>
           Effect.sync(() => {
             interrupted = true;
@@ -218,18 +216,12 @@ describe("Effect handler runtime observability", () => {
     > = () =>
       Effect.gen(function* () {
         const span = yield* Effect.orDie(Effect.currentSpan);
-        const annotations = yield* Effect.logAnnotations;
+        const annotations = yield* References.CurrentLogAnnotations;
         spanName = span.name;
         spanOperation = span.attributes.get("typeweaver.operationId");
-        logOperation = Option.getOrUndefined(
-          HashMap.get(annotations, "typeweaver.operationId")
-        );
-        logMethod = Option.getOrUndefined(
-          HashMap.get(annotations, "http.request.method")
-        );
-        logRoute = Option.getOrUndefined(
-          HashMap.get(annotations, "http.route")
-        );
+        logOperation = annotations["typeweaver.operationId"];
+        logMethod = annotations["http.request.method"];
+        logRoute = annotations["http.route"];
         return response;
       });
 

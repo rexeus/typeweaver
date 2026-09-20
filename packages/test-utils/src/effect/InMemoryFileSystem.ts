@@ -1,7 +1,7 @@
 import path from "node:path";
-import { FileSystem } from "@effect/platform";
-import { SystemError } from "@effect/platform/Error";
-import { Effect, Layer, Option } from "effect";
+import { ByteSize, Effect, FileSystem, Layer, Option } from "effect";
+import { systemError } from "effect/PlatformError";
+import type { PlatformError } from "effect/PlatformError";
 
 /**
  * Handle for inspecting an `InMemoryFileSystem`'s internal state from tests.
@@ -37,23 +37,18 @@ const parents = (filePath: string): readonly string[] => {
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
 
-const notFound = (
-  method: string,
-  filePath: string
-): InstanceType<typeof SystemError> =>
-  new SystemError({
-    reason: "NotFound",
+const notFound = (method: string, filePath: string): PlatformError =>
+  systemError({
+    _tag: "NotFound",
     module: "FileSystem",
     method,
     pathOrDescriptor: filePath,
     description: `In-memory filesystem: path '${filePath}' does not exist`,
   });
 
-const directoryNotEmpty = (
-  filePath: string
-): InstanceType<typeof SystemError> =>
-  new SystemError({
-    reason: "AlreadyExists",
+const directoryNotEmpty = (filePath: string): PlatformError =>
+  systemError({
+    _tag: "AlreadyExists",
     module: "FileSystem",
     method: "remove",
     pathOrDescriptor: filePath,
@@ -366,7 +361,7 @@ const makeStatOverride =
         uid: Option.none(),
         gid: Option.none(),
         rdev: Option.none(),
-        size: FileSystem.Size(size),
+        size: ByteSize.bytes(size),
         blksize: Option.none(),
         blocks: Option.none(),
       });

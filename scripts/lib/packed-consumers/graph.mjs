@@ -22,6 +22,30 @@ const EFFECT_ANCHOR_SECTIONS = /** @type {const} */ ([
 ]);
 
 /**
+ * @param {string} directory
+ * @returns {string[]}
+ */
+const sourceFiles = directory =>
+  readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+    const target = path.join(directory, entry.name);
+    if (entry.isDirectory() && entry.name !== "node_modules") {
+      return sourceFiles(target);
+    }
+    return entry.isFile() && /\.(?:ts|tsx)$/u.test(entry.name) ? [target] : [];
+  });
+
+/**
+ * @param {string} directory
+ * @returns {boolean}
+ */
+const hasDirectEffectImport = directory =>
+  sourceFiles(path.join(directory, "src")).some(filePath =>
+    /^\s*(?:import|export)\b[^;]*?(?:from\s*)?["'](?:effect|@effect\/)/mu.test(
+      readFileSync(filePath, "utf8")
+    )
+  );
+
+/**
  * @param {string} fixtureRoot
  * @param {string} packageName
  * @returns {string}
@@ -138,6 +162,27 @@ export const assertPackedPackages = ({ fixtureRoot, packages }) => {
       lockfile.includes(archiveName(packageRecord)),
       `${packageRecord.name} is not locked to its packed tarball`
     );
+    if (!hasDirectEffectImport(packageRecord.directory)) {
+      continue;
+    }
+    if (packageRecord.name === "@rexeus/typeweaver") {
+      assert.equal(
+        installedManifest.dependencies?.["effect"],
+        contract.runtimeVersion,
+        "the CLI must own its exact Effect runtime dependency"
+      );
+      continue;
+    }
+    assert.equal(
+      installedManifest.peerDependencies?.["effect"],
+      contract.peerRange,
+      `${packageRecord.name} directly imports Effect without its exact peer`
+    );
+    assert.equal(
+      installedManifest.dependencies?.["effect"],
+      undefined,
+      `${packageRecord.name} must not hide its Effect peer as a dependency`
+    );
   }
 };
 
@@ -173,10 +218,10 @@ export const assertPlatformNodeSharedIdentity = ({ fixtureRoot }) => {
     typeof expectedVersion === "string",
     "packed CLI must declare @effect/platform-node-shared"
   );
-  assert.match(
+  assert.equal(
     expectedVersion,
-    /^\d+\.\d+\.\d+$/,
-    "packed CLI must pin @effect/platform-node-shared to an exact version"
+    contract.runtimeVersion,
+    "packed CLI must pin @effect/platform-node-shared to the native Effect runtime"
   );
   const installedSharedPath = installedPackageJsonPath(
     fixtureRoot,
@@ -267,20 +312,8 @@ const declaresEffectDependency = manifest =>
  * @param {string} version
  * @returns {void}
  */
-const assertSupportedEffect3 = version => {
-  const [major = Number.NaN, minor = Number.NaN] = version
-    .split(".")
-    .map(part => Number.parseInt(part, 10));
-  assert(
-    !version.includes("-") && major === 3 && minor >= 22,
-    `CLI subtree resolved unsupported Effect ${version}`
-  );
-};
-
-// The application resolves the exact RC. Every installed TypeWeaver package in
-// the CLI subtree that declares an Effect dependency or peer must resolve the
-// same single Effect 3 realpath, and the graph must still contain exactly two
-// physical Effect identities (the RC and that Effect 3).
+// The application and every installed TypeWeaver package that declares an
+// Effect dependency or peer must resolve the same single native Effect realpath.
 /**
  * @param {{
  *   effectVersion: string,
@@ -289,7 +322,7 @@ const assertSupportedEffect3 = version => {
  * }} options
  * @returns {void}
  */
-export const assertIsolatedEffectIdentities = ({
+export const assertNativeEffectIdentities = ({
   effectVersion,
   fixtureRoot,
   packages,
@@ -301,11 +334,10 @@ export const assertIsolatedEffectIdentities = ({
   const cliIdentity = effectIdentityFrom(
     installedPackageJsonPath(fixtureRoot, "@rexeus/typeweaver")
   );
-  assertSupportedEffect3(cliIdentity.version);
-  assert.notEqual(
+  assert.equal(
     cliIdentity.packageJsonPath,
     appIdentity.packageJsonPath,
-    "the CLI resolved the application's Effect identity"
+    "the CLI must resolve the application's native Effect identity"
   );
   const checkedAnchors = [];
   for (const packageRecord of packages) {
@@ -333,13 +365,13 @@ export const assertIsolatedEffectIdentities = ({
   const physical = physicalEffectIdentities(fixtureRoot);
   assert.equal(
     physical.length,
-    2,
-    `expected exactly two Effect physical identities; found:\n${physical
+    1,
+    `expected exactly one native Effect physical identity; found:\n${physical
       .map(identity => `${identity.version} ${identity.packageJsonPath}`)
       .join("\n")}`
   );
   assert.deepEqual(
     new Set(physical.map(identity => identity.version)),
-    new Set([effectVersion, cliIdentity.version])
+    new Set([effectVersion])
   );
 };

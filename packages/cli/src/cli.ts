@@ -1,6 +1,5 @@
-import { Command, Options } from "@effect/cli";
-import { NodeRuntime } from "@effect/platform-node";
-import { Effect, Logger, LogLevel } from "effect";
+import { Effect, Layer, References } from "effect";
+import { CliOutput, Command, Flag } from "effect/unstable/cli";
 import {
   cliPackageVersion,
   cliZodVersion,
@@ -16,136 +15,136 @@ import {
 } from "./commands.js";
 import { ProductionLayer, VerboseLayer } from "./effectRuntime.js";
 import { formatErrorForCli } from "./formatErrorForCli.js";
+import { nodePlatformLayer, runNodeMain } from "./nodePlatform.js";
 import { isOnlyValidationErrorCause } from "./validationErrorFilter.js";
 
-const inputOption = Options.text("input").pipe(
-  Options.withAlias("i"),
-  Options.withDescription("path to spec entrypoint file"),
-  Options.optional
+const inputOption = Flag.String("input").pipe(
+  Flag.withAlias("i"),
+  Flag.withDescription("path to spec entrypoint file"),
+  Flag.optional
 );
 
-const outputOption = Options.text("output").pipe(
-  Options.withAlias("o"),
-  Options.withDescription("output directory for generated files"),
-  Options.optional
+const outputOption = Flag.String("output").pipe(
+  Flag.withAlias("o"),
+  Flag.withDescription("output directory for generated files"),
+  Flag.optional
 );
 
-const configOption = Options.text("config").pipe(
-  Options.withAlias("c"),
-  Options.withDescription("path to a .js, .mjs, or .cjs configuration file"),
-  Options.optional
+const configOption = Flag.String("config").pipe(
+  Flag.withAlias("c"),
+  Flag.withDescription("path to a .js, .mjs, or .cjs configuration file"),
+  Flag.optional
 );
 
-const pluginsOption = Options.text("plugins").pipe(
-  Options.withAlias("p"),
-  Options.withDescription("comma-separated list of plugins to use"),
-  Options.optional
+const pluginsOption = Flag.String("plugins").pipe(
+  Flag.withAlias("p"),
+  Flag.withDescription("comma-separated list of plugins to use"),
+  Flag.optional
 );
 
-// `Options.boolean(name, { negationNames })` has a known bug in
-// @effect/cli@0.75.x where the inner `withDefault(!ifPresent)` short-circuits
-// the outer `withDefault`. Model `--format` / `--no-format` as two flags and
-// compute the effective value in the handler instead.
-const formatOption = Options.boolean("format", { ifPresent: true }).pipe(
-  Options.withDescription("format generated code with oxfmt (default: true)"),
-  Options.optional
+// `--format` / `--no-format` are modeled as separate flags and the effective
+// value is computed in the handler: whichever is explicitly present takes
+// precedence, and the default stays `true` when neither is passed.
+const formatOption = Flag.Boolean("format").pipe(
+  Flag.withDescription("format generated code with oxfmt (default: true)"),
+  Flag.optional
 );
 
-const noFormatOption = Options.boolean("no-format", { ifPresent: true }).pipe(
-  Options.withDescription(
+const noFormatOption = Flag.Boolean("no-format").pipe(
+  Flag.withDescription(
     "disable code formatting (takes precedence if both --format and --no-format are passed)"
   ),
-  Options.optional
+  Flag.optional
 );
 
-const cleanOption = Options.boolean("clean", { ifPresent: true }).pipe(
-  Options.withDescription(
+const cleanOption = Flag.Boolean("clean").pipe(
+  Flag.withDescription(
     "clean output directory before generation (default: true)"
   ),
-  Options.optional
+  Flag.optional
 );
 
-const noCleanOption = Options.boolean("no-clean", { ifPresent: true }).pipe(
-  Options.withDescription(
+const noCleanOption = Flag.Boolean("no-clean").pipe(
+  Flag.withDescription(
     "disable cleaning output directory (takes precedence if both --clean and --no-clean are passed)"
   ),
-  Options.optional
+  Flag.optional
 );
 
-const checkOption = Options.boolean("check", { ifPresent: true }).pipe(
-  Options.withDescription(
+const checkOption = Flag.Boolean("check").pipe(
+  Flag.withDescription(
     "generate into isolation and report drift against committed output without writing it"
   ),
-  Options.optional
+  Flag.optional
 );
 
-const verboseOption = Options.boolean("verbose", { ifPresent: true }).pipe(
-  Options.withDescription(
+const verboseOption = Flag.Boolean("verbose").pipe(
+  Flag.withDescription(
     "enable debug-level logging (effect spans, plugin attempts, lock acquire/release)"
   ),
-  Options.optional
+  Flag.optional
 );
 
-const pluginNameOption = Options.text("name").pipe(
-  Options.withAlias("n"),
-  Options.withDescription("lowercase kebab-case plugin name")
+const pluginNameOption = Flag.String("name").pipe(
+  Flag.withAlias("n"),
+  Flag.withDescription("lowercase kebab-case plugin name")
 );
 
-const pluginTargetOption = Options.text("target").pipe(
-  Options.withAlias("t"),
-  Options.withDescription("new directory that will receive the plugin scaffold")
+const pluginTargetOption = Flag.String("target").pipe(
+  Flag.withAlias("t"),
+  Flag.withDescription("new directory that will receive the plugin scaffold")
 );
 
-const initTargetOption = Options.text("target").pipe(
-  Options.withAlias("t"),
-  Options.withDescription("project directory to create or update explicitly")
+const initTargetOption = Flag.String("target").pipe(
+  Flag.withAlias("t"),
+  Flag.withDescription("project directory to create or update explicitly")
 );
 
-const forceOption = Options.boolean("force", { ifPresent: true }).pipe(
-  Options.withDescription(
+const forceOption = Flag.Boolean("force").pipe(
+  Flag.withDescription(
     "overwrite conflicting starter files in a non-empty target"
   ),
-  Options.optional
+  Flag.optional
 );
 
-const dryRunOption = Options.boolean("dry-run", { ifPresent: true }).pipe(
-  Options.withDescription("plan the project without writing files"),
-  Options.optional
+const dryRunOption = Flag.Boolean("dry-run").pipe(
+  Flag.withDescription("plan the project without writing files"),
+  Flag.optional
 );
 
-const configFormatOption = Options.choice("config-format", [
+const configFormatOption = Flag.Literals("config-format", [
   "mjs",
   "cjs",
   "js",
 ]).pipe(
-  Options.withDescription("module format for the generated configuration"),
-  Options.optional
+  Flag.withDescription("module format for the generated configuration"),
+  Flag.optional
 );
 
-const jsonOption = Options.boolean("json", { ifPresent: true }).pipe(
-  Options.withDescription("emit a stable machine-readable JSON report"),
-  Options.optional
+const jsonOption = Flag.Boolean("json").pipe(
+  Flag.withDescription("emit a stable machine-readable JSON report"),
+  Flag.optional
 );
 
-const strictOption = Options.boolean("strict", { ifPresent: true }).pipe(
-  Options.withDescription("fail validation when warnings are present"),
-  Options.optional
+const strictOption = Flag.Boolean("strict").pipe(
+  Flag.withDescription("fail validation when warnings are present"),
+  Flag.optional
 );
 
-const failOnOption = Options.choice("fail-on", [
+const failOnOption = Flag.Literals("fail-on", [
   "error",
   "warning",
   "info",
 ]).pipe(
-  Options.withDescription("lowest issue severity that exits non-zero"),
-  Options.optional
+  Flag.withDescription("lowest issue severity that exits non-zero"),
+  Flag.optional
 );
 
-const deepOption = Options.boolean("deep", { ifPresent: true }).pipe(
-  Options.withDescription(
+const deepOption = Flag.Boolean("deep").pipe(
+  Flag.withDescription(
     "bundle, normalize, and validate the spec without writing project output"
   ),
-  Options.optional
+  Flag.optional
 );
 
 const generateCommand = Command.make(
@@ -261,35 +260,46 @@ const cli = Command.make("typeweaver").pipe(
   ])
 );
 
-const run = Command.run(cli, {
-  name: "typeweaver",
-  version: cliPackageVersion,
-});
-
-// `@effect/cli` scopes options to commands, but the chosen Layer is fixed
-// at program-construction time — there is no per-command Layer swap. We
-// detect `--verbose` here so the right runtime is provided before
-// the command parser ever runs. The option is also declared on `generate`
-// so it shows up in `--help` and gets parsed cleanly (the flag is benign
-// to the handler).
-// @effect/cli exposes `--version` but not Commander's historical `-V` alias,
-// so normalize that public compatibility flag before parsing.
-const cliArgs = process.argv.map(arg => (arg === "-V" ? "--version" : arg));
+// The chosen Layer is fixed at program-construction time — there is no
+// per-command Layer swap. We detect `--verbose` here so the right runtime is
+// provided before the command parser ever runs. The option is also declared on
+// `generate` so it shows up in `--help` and gets parsed cleanly (the flag is
+// benign to the handler).
+// Commander's historical `-V` alias is not a built-in global flag, so
+// normalize that public compatibility flag before parsing.
+const cliArgs = process.argv
+  .slice(2)
+  .filter(arg => arg !== "--")
+  .map(arg => (arg === "-V" ? "--version" : arg));
 const isVerbose = cliArgs.some(arg => arg === "--verbose");
 const isJson = cliArgs.some(arg => arg === "--json");
 const isReadOnlyDiagnostic = cliArgs.some(
   arg => arg === "validate" || arg === "doctor"
 );
 const runtimeLayer = isVerbose ? VerboseLayer : ProductionLayer;
+const cliOutputFormatter: CliOutput.Formatter = {
+  ...CliOutput.defaultFormatter({ colors: false }),
+  formatVersion: (_name, version) => `${version}\n`,
+};
 
-const programWithErrorBoundary = run(cliArgs).pipe(
-  // @effect/cli surfaces help requests and validation issues as
-  // `ValidationError`. The framework already prints a friendly message and
-  // sets the exit code for those — skip the custom formatter so we do not
-  // double-print. All other failures (tagged domain errors, plain Error,
-  // defects) are rendered via `formatErrorForCli` before bubbling up to
-  // `NodeRuntime.runMain`, which exits non-zero on failure.
-  Effect.tapErrorCause(cause => {
+// `effect/unstable/cli` reads process streams through the `Stdio` service and
+// parses argv through `Command.runWith`; these Node layers close the CLI
+// `Environment` requirement alongside the service runtime's FileSystem. The
+// spawner layer needs FileSystem and Path, so the base layers are provided
+// into it instead of staying as open inputs.
+const cliEnvironment = Layer.mergeAll(
+  nodePlatformLayer,
+  CliOutput.layer(cliOutputFormatter)
+);
+
+const commandProgram = Command.runWith(cli, {
+  version: cliPackageVersion,
+  // Native parser diagnostics render parse failures and help exactly once.
+  // Domain failures continue through the boundary below.
+  renderErrors: true,
+})(cliArgs);
+const programWithErrorBoundary = commandProgram.pipe(
+  Effect.tapCause(cause => {
     if (isOnlyValidationErrorCause(cause)) {
       return Effect.void;
     }
@@ -303,11 +313,12 @@ const programWithErrorBoundary = run(cliArgs).pipe(
 );
 const program = (
   isJson || isReadOnlyDiagnostic
-    ? programWithErrorBoundary.pipe(Logger.withMinimumLogLevel(LogLevel.None))
+    ? programWithErrorBoundary.pipe(
+        Effect.provideService(References.MinimumLogLevel, "None")
+      )
     : programWithErrorBoundary
-).pipe(Effect.provide(runtimeLayer));
+).pipe(Effect.provide(Layer.merge(runtimeLayer, cliEnvironment)));
 
-NodeRuntime.runMain(program, {
+runNodeMain(program, {
   disableErrorReporting: true,
-  disablePrettyLogger: true,
 });

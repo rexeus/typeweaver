@@ -1,10 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { FileSystem } from "@effect/platform";
-import { NodeContext } from "@effect/platform-node";
-import { SystemError } from "@effect/platform/Error";
-import { Cause, Effect, Exit, Layer, Tracer } from "effect";
+import { layer as nodeFileSystemLayer } from "@effect/platform-node/NodeFileSystem";
+import { Cause, Effect, Exit, FileSystem, Layer, Tracer } from "effect";
+import { systemError } from "effect/PlatformError";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import {
   FormatterExecutionError,
@@ -12,6 +11,11 @@ import {
   FormatterLoadError,
 } from "../../src/services/errors/FormatterError.js";
 import { Formatter, formatterLayerWith } from "../../src/services/Formatter.js";
+
+const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
+const causeFailures = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isFailReason).map(reason => reason.error);
 
 const coordinationMarkerFile = ".typeweaver-coordination";
 const atomicWriteMarkerSource =
@@ -42,20 +46,20 @@ type EndedSpan = {
 const makeEndingTracer = (ended: EndedSpan[]): Tracer.Tracer => {
   let nextSpanId = 0;
 
-  return Tracer.make({
-    span: (...args: Parameters<Tracer.Tracer["span"]>) => {
-      const [name, parent, context, links, startTime, kind] = args;
+  return {
+    span: options => {
+      const { name, parent, annotations, links, startTime, kind } = options;
       return {
         _tag: "Span",
         name,
         spanId: String(++nextSpanId),
         traceId: "formatter-test-trace",
         parent,
-        context,
+        annotations,
         status: { _tag: "Started", startTime },
         attributes: new Map(),
         links,
-        sampled: true,
+        sampled: options.sampled,
         kind,
         end: (_endTime, exit) => {
           ended.push({ name, exit: exit._tag });
@@ -65,10 +69,8 @@ const makeEndingTracer = (ended: EndedSpan[]): Tracer.Tracer => {
         addLinks: () => undefined,
       };
     },
-    context: (f, _fiber) => f(),
-  });
+  };
 };
-
 const expectTypedFailure = async <E>(
   effect: Effect.Effect<void, E>,
   expected: new (...args: never[]) => E
@@ -79,14 +81,13 @@ const expectTypedFailure = async <E>(
     throw new Error("Expected Formatter effect to fail");
   }
 
-  expect(Array.from(Cause.defects(exit.cause))).toHaveLength(0);
-  const failures = Array.from(Cause.failures(exit.cause));
+  expect(Array.from(causeDefects(exit.cause))).toHaveLength(0);
+  const failures = Array.from(causeFailures(exit.cause));
   expect(failures).toHaveLength(1);
   const failure = failures[0];
-  if (failure === undefined) {
-    throw new Error("Expected one typed Formatter failure");
+  if (!(failure instanceof expected)) {
+    throw new Error(`Expected one typed ${expected.name} failure`);
   }
-  expect(failure).toBeInstanceOf(expected);
   return failure;
 };
 
@@ -104,13 +105,12 @@ describe("Formatter loading and tracing", () => {
   test("formats files through the platform FileSystem service", async () => {
     const filePath = path.join(tempDir, "sample.ts");
     fs.writeFileSync(filePath, "unformatted\n");
-    const layer = formatterLayerAgainst(NodeContext.layer);
+    const layer = formatterLayerAgainst(nodeFileSystemLayer);
 
     await Effect.runPromise(provideFormatter(Formatter.format(tempDir), layer));
 
     expect(fs.readFileSync(filePath, "utf8")).toBe("formatted\n");
   });
-
   test("treats only an exact missing-oxfmt module error as a no-op", async () => {
     const missingModule = new Error(
       "Cannot find package 'oxfmt' imported from /typeweaver/Formatter.mjs"
@@ -118,7 +118,7 @@ describe("Formatter loading and tracing", () => {
     Object.defineProperty(missingModule, "code", {
       value: "ERR_MODULE_NOT_FOUND",
     });
-    const layer = formatterLayerAgainst(NodeContext.layer, () =>
+    const layer = formatterLayerAgainst(nodeFileSystemLayer, () =>
       Promise.reject(missingModule)
     );
 
@@ -128,13 +128,12 @@ describe("Formatter loading and tracing", () => {
 
     expect(Exit.isSuccess(exit)).toBe(true);
   });
-
   test("surfaces a non-missing module-load failure precisely without defects", async () => {
     const bindingFailure = new Error("native oxfmt binding is incompatible");
     Object.defineProperty(bindingFailure, "code", {
       value: "ERR_DLOPEN_FAILED",
     });
-    const layer = formatterLayerAgainst(NodeContext.layer, () =>
+    const layer = formatterLayerAgainst(nodeFileSystemLayer, () =>
       Promise.reject(bindingFailure)
     );
 
@@ -149,14 +148,12 @@ describe("Formatter loading and tracing", () => {
       cause: bindingFailure,
     });
   });
-
   test("ends the formatter span as failed when formatting fails publicly", async () => {
     const loadFailure = new Error("formatter module failed to load");
     const endedSpans: EndedSpan[] = [];
-    const layer = formatterLayerAgainst(NodeContext.layer, () =>
+    const layer = formatterLayerAgainst(nodeFileSystemLayer, () =>
       Promise.reject(loadFailure)
     );
-
     const exit = await Effect.runPromise(
       provideFormatter(Formatter.format(tempDir), layer).pipe(
         Effect.withTracer(makeEndingTracer(endedSpans)),
@@ -169,7 +166,7 @@ describe("Formatter loading and tracing", () => {
       throw new Error("Expected Formatter effect to fail");
     }
 
-    const failures = Array.from(Cause.failures(exit.cause));
+    const failures = Array.from(causeFailures(exit.cause));
     expect(failures).toHaveLength(1);
     const failure = failures[0];
     expect(failure).toBeInstanceOf(FormatterLoadError);
@@ -189,25 +186,23 @@ describe("Formatter coordination-artifact ownership", () => {
   test("formats a user file whose name starts with `.typeweaver-`", async () => {
     const filePath = path.join(tempDir, ".typeweaver-output.ts");
     fs.writeFileSync(filePath, "unformatted\n");
-    const layer = formatterLayerAgainst(NodeContext.layer);
+    const layer = formatterLayerAgainst(nodeFileSystemLayer);
 
     await Effect.runPromise(provideFormatter(Formatter.format(tempDir), layer));
 
     expect(fs.readFileSync(filePath, "utf8")).toBe("formatted\n");
   });
-
   test("formats an exact-shaped user directory without an ownership marker", async () => {
     const userDirectory = path.join(tempDir, ".typeweaver-Ab12Z9");
     const filePath = path.join(userDirectory, ".typeweaver-output.ts");
     fs.mkdirSync(userDirectory);
     fs.writeFileSync(filePath, "unformatted\n");
-    const layer = formatterLayerAgainst(NodeContext.layer);
+    const layer = formatterLayerAgainst(nodeFileSystemLayer);
 
     await Effect.runPromise(provideFormatter(Formatter.format(tempDir), layer));
 
     expect(fs.readFileSync(filePath, "utf8")).toBe("formatted\n");
   });
-
   test("does not format a marker-owned in-flight atomic-write directory", async () => {
     const coordinationDirectory = path.join(tempDir, ".typeweaver-a1B2c3");
     const filePath = path.join(coordinationDirectory, ".typeweaver-output.ts");
@@ -217,13 +212,12 @@ describe("Formatter coordination-artifact ownership", () => {
       atomicWriteMarkerSource
     );
     fs.writeFileSync(filePath, "unformatted\n");
-    const layer = formatterLayerAgainst(NodeContext.layer);
+    const layer = formatterLayerAgainst(nodeFileSystemLayer);
 
     await Effect.runPromise(provideFormatter(Formatter.format(tempDir), layer));
 
     expect(fs.readFileSync(filePath, "utf8")).toBe("unformatted\n");
   });
-
   test("formats an exact-shaped user directory whose marker name is a symlink", async () => {
     const coordinationDirectory = path.join(tempDir, ".typeweaver-Z9Y8X7");
     const filePath = path.join(coordinationDirectory, ".typeweaver-output.ts");
@@ -235,7 +229,7 @@ describe("Formatter coordination-artifact ownership", () => {
       path.join(coordinationDirectory, coordinationMarkerFile)
     );
     fs.writeFileSync(filePath, "unformatted\n");
-    const layer = formatterLayerAgainst(NodeContext.layer);
+    const layer = formatterLayerAgainst(nodeFileSystemLayer);
 
     await Effect.runPromise(provideFormatter(Formatter.format(tempDir), layer));
 
@@ -245,7 +239,7 @@ describe("Formatter coordination-artifact ownership", () => {
 
 describe("Formatter filesystem failures", () => {
   test("rejects an incompatible formatter module shape without defects", async () => {
-    const layer = formatterLayerAgainst(NodeContext.layer, () =>
+    const layer = formatterLayerAgainst(nodeFileSystemLayer, () =>
       Promise.resolve({ format: "not-a-function" })
     );
 
@@ -262,10 +256,9 @@ describe("Formatter filesystem failures", () => {
       }) as unknown,
     });
   });
-
   test("surfaces a missing target directory as typed filesystem failure without defects", async () => {
     const missingPath = path.join(tempDir, "missing");
-    const layer = formatterLayerAgainst(NodeContext.layer);
+    const layer = formatterLayerAgainst(nodeFileSystemLayer);
 
     const failure = await expectTypedFailure(
       provideFormatter(Formatter.format(missingPath), layer),
@@ -277,15 +270,16 @@ describe("Formatter filesystem failures", () => {
       operation: "realPath",
       path: missingPath,
       cause: {
-        _tag: "SystemError",
-        reason: "NotFound",
+        _tag: "PlatformError",
+        reason: {
+          _tag: "NotFound",
+        },
       },
     });
   });
-
   test("surfaces an injected permission error without defects", async () => {
-    const permissionFailure = new SystemError({
-      reason: "PermissionDenied",
+    const permissionFailure = systemError({
+      _tag: "PermissionDenied",
       module: "FileSystem",
       method: "readDirectory",
       pathOrDescriptor: tempDir,
@@ -319,7 +313,7 @@ describe("Formatter execution failures", () => {
     const filePath = path.join(tempDir, "broken.ts");
     fs.writeFileSync(filePath, "unformatted\n");
     const formatterFailure = new Error("formatter rejected source");
-    const layer = formatterLayerAgainst(NodeContext.layer, () =>
+    const layer = formatterLayerAgainst(nodeFileSystemLayer, () =>
       Promise.resolve({
         format: () => Promise.reject(formatterFailure),
       })
@@ -336,11 +330,10 @@ describe("Formatter execution failures", () => {
       cause: formatterFailure,
     });
   });
-
   test("rejects an incompatible formatter result without defects", async () => {
     const filePath = path.join(tempDir, "invalid-result.ts");
     fs.writeFileSync(filePath, "unformatted\n");
-    const layer = formatterLayerAgainst(NodeContext.layer, () =>
+    const layer = formatterLayerAgainst(nodeFileSystemLayer, () =>
       Promise.resolve({
         format: () => Promise.resolve({ code: 42 }),
       })

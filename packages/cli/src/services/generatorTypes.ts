@@ -1,8 +1,7 @@
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import type { Generator } from "./Generator.js";
 import type { StagingAuthority } from "./internal/stagingAuthority.js";
-import type { Effect } from "effect";
-
+import type { Error as EffectError } from "effect/Effect";
 export type GenerateParams = {
   readonly inputFile: string;
   readonly outputDir: string;
@@ -19,6 +18,6 @@ export type GenerateParams = {
   readonly externalImportBase?: string;
 };
 
-export type GenerateFailure = Effect.Effect.Error<
+export type GenerateFailure = EffectError<
   ReturnType<typeof Generator.generate>
 >;

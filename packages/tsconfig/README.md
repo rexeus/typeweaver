@@ -6,11 +6,11 @@ carries no public compatibility promise; consuming projects extend the JSON file
 
 ## Profiles
 
-| Profile        | Extends     | Purpose                                                                                 |
-| -------------- | ----------- | --------------------------------------------------------------------------------------- |
-| `base.json`    | —           | Strict, environment-neutral compiler baseline with the Effect language-service plugin   |
-| `node.json`    | `base.json` | Node.js runtime profile; adds the `node` type library                                   |
-| `checkjs.json` | `node.json` | Checked-JavaScript project for repository tooling (`.mjs`); enables `allowJs`/`checkJs` |
+| Profile        | Extends     | Purpose                                                                                      |
+| -------------- | ----------- | -------------------------------------------------------------------------------------------- |
+| `base.json`    | —           | Strict, environment-neutral compiler baseline; Effect diagnostics run in the standalone gate |
+| `node.json`    | `base.json` | Node.js runtime profile; adds the `node` type library                                        |
+| `checkjs.json` | `node.json` | Checked-JavaScript project for repository tooling (`.mjs`); enables `allowJs`/`checkJs`      |
 
 ## Intended consumers
 

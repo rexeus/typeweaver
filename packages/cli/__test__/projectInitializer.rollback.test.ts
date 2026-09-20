@@ -1,10 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { FileSystem } from "@effect/platform";
-import { NodeFileSystem } from "@effect/platform-node";
-import { SystemError } from "@effect/platform/Error";
-import { Cause, Effect, Either, Layer } from "effect";
+import { layer as nodeFileSystemLayer } from "@effect/platform-node/NodeFileSystem";
+import { Effect, FileSystem, Layer, Result } from "effect";
+import { systemError } from "effect/PlatformError";
 import { afterEach, describe, expect, test } from "vitest";
 import { ProjectInitializer } from "../src/services/ProjectInitializer.js";
 
@@ -41,8 +40,8 @@ const failingPublishLayer = (
           }
           if (publishesStagedFile && publishCount === 3) {
             return Effect.fail(
-              new SystemError({
-                reason: "PermissionDenied",
+              systemError({
+                _tag: "PermissionDenied",
                 module: "FileSystem",
                 method: "rename",
                 pathOrDescriptor: destination,
@@ -54,7 +53,7 @@ const failingPublishLayer = (
         },
       });
     })
-  ).pipe(Layer.provide(NodeFileSystem.layer));
+  ).pipe(Layer.provide(nodeFileSystemLayer));
 };
 
 const failingPublishAndRestoreLayer = (
@@ -76,8 +75,8 @@ const failingPublishAndRestoreLayer = (
             destination === readmePath;
           if (publishingReadme || restoringReadme) {
             return Effect.fail(
-              new SystemError({
-                reason: "PermissionDenied",
+              systemError({
+                _tag: "PermissionDenied",
                 module: "FileSystem",
                 method: "rename",
                 pathOrDescriptor: destination,
@@ -91,7 +90,7 @@ const failingPublishAndRestoreLayer = (
         },
       });
     })
-  ).pipe(Layer.provide(NodeFileSystem.layer));
+  ).pipe(Layer.provide(nodeFileSystemLayer));
 
 afterEach(() => {
   for (const workspace of workspaces) {
@@ -121,12 +120,12 @@ describe("ProjectInitializer rollback", () => {
         zodVersion: "^4.4.3",
         force: true,
         dryRun: false,
-      }).pipe(Effect.either, Effect.provide(initializerLayer))
+      }).pipe(Effect.result, Effect.provide(initializerLayer))
     );
 
-    expect(Either.isLeft(result)).toBe(true);
-    if (Either.isLeft(result)) {
-      expect(Cause.originalError(result.left)).toMatchObject({
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure).toMatchObject({
         _tag: "ProjectInitFileSystemError",
         operation: "rename",
       });
@@ -147,7 +146,6 @@ describe("ProjectInitializer rollback", () => {
         .some(entry => entry.startsWith(".typeweaver-init-"))
     ).toBe(false);
   });
-
   test("preserves an unrestored original at the reported recovery path", async () => {
     const workspace = createWorkspace();
     const targetDir = path.join(workspace, "existing");
@@ -167,12 +165,12 @@ describe("ProjectInitializer rollback", () => {
         zodVersion: "^4.4.3",
         force: true,
         dryRun: false,
-      }).pipe(Effect.either, Effect.provide(initializerLayer))
+      }).pipe(Effect.result, Effect.provide(initializerLayer))
     );
 
-    expect(Either.isLeft(result)).toBe(true);
-    if (Either.isLeft(result)) {
-      const error = Cause.originalError(result.left);
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      const error = result.failure;
       expect(error).toMatchObject({
         _tag: "ProjectInitRollbackError",
         targetDir,

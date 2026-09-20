@@ -1,11 +1,16 @@
-import { ValidationError } from "@effect/cli";
-import { Cause, Chunk } from "effect";
+import { Cause } from "effect";
+import { CliError } from "effect/unstable/cli";
+
+const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
+const causeFailures = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isFailReason).map(reason => reason.error);
 
 /**
  * Returns `true` when every failure and every defect carried by `cause`
- * is a `@effect/cli` `ValidationError`. Such causes are already pretty-
+ * is an `effect/unstable/cli` `CliError`. Such causes are already pretty-
  * printed by the framework (help requests, missing flags, etc.); the CLI's
- * `tapErrorCause` uses this predicate to suppress the custom formatter and
+ * `tapCause` uses this predicate to suppress the custom formatter and
  * avoid double-printing.
  *
  * Empty causes (no failures and no defects) return `false` — there is
@@ -15,19 +20,19 @@ import { Cause, Chunk } from "effect";
 export const isOnlyValidationErrorCause = (
   cause: Cause.Cause<unknown>
 ): boolean => {
-  const failures = Chunk.toReadonlyArray(Cause.failures(cause));
-  const defects = Chunk.toReadonlyArray(Cause.defects(cause));
+  const failures = causeFailures(cause);
+  const defects = causeDefects(cause);
 
   if (failures.length + defects.length === 0) {
     return false;
   }
 
-  if (Cause.isInterrupted(cause)) {
+  if (Cause.hasInterrupts(cause)) {
     return false;
   }
 
   return (
-    failures.every(failure => ValidationError.isValidationError(failure)) &&
-    defects.every(defect => ValidationError.isValidationError(defect))
+    failures.every(failure => CliError.isCliError(failure)) &&
+    defects.every(defect => CliError.isCliError(defect))
   );
 };

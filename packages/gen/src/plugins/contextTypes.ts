@@ -2,8 +2,8 @@ import type { GeneratedPathProbeError } from "../errors/GeneratedPathProbeError.
 import type { TemplateRenderError } from "../errors/TemplateRenderError.js";
 import type { UnsafeGeneratedPathError } from "../errors/UnsafeGeneratedPathError.js";
 import type { NormalizedResponse, NormalizedSpec } from "../NormalizedSpec.js";
-import type { PlatformError } from "@effect/platform/Error";
 import type { Effect } from "effect";
+import type { PlatformError } from "effect/PlatformError";
 
 /**
  * Per-plugin configuration passed in the tuple form

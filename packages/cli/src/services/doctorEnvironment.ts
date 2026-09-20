@@ -6,8 +6,8 @@ import { createDoctorCheck } from "../reports/DoctorReport.js";
 import { detectRuntime, getRuntimeDisplayName } from "../runtime.js";
 import { assertSafeCleanTarget } from "./cleanTargetGuard.js";
 import {
+  REQUIRED_EFFECT_VERSION,
   checkWorkspaceEffectCompatibility,
-  isSupportedStableEffect3,
 } from "./effectCompatibility.js";
 import type { DoctorCheck } from "../reports/DoctorReport.js";
 
@@ -124,8 +124,7 @@ export const checkInput = (
             message: `The spec input is not readable: ${failureMessage(cause)}`,
             hint: "Pass a readable spec entrypoint with --input.",
           }),
-      }).pipe(Effect.merge);
-
+      }).pipe(Effect.catch(check => Effect.succeed(check)));
 const nearestExistingDirectory = async (
   targetPath: string
 ): Promise<string> => {
@@ -189,9 +188,8 @@ export const checkOutput = (
         message: failureMessage(cause),
         hint: "Choose a safe output below a writable project directory.",
       }),
-  }).pipe(Effect.merge);
+  }).pipe(Effect.catch(check => Effect.succeed(check)));
 };
-
 const readPackageVersion = async (specifier: string): Promise<string> => {
   const require = createRequire(import.meta.url);
   const packagePath = require.resolve(specifier);
@@ -213,20 +211,20 @@ export const checkEffectReference = (): Effect.Effect<DoctorCheck> =>
   Effect.tryPromise({
     try: async () => {
       const version = await readPackageVersion("effect/package.json");
-      if (!isSupportedStableEffect3(version)) {
+      if (version !== REQUIRED_EFFECT_VERSION) {
         return createDoctorCheck({
           code: "TW-DOCTOR-008",
           name: "CLI Effect runtime",
           outcome: "fail",
-          message: `The TypeWeaver CLI resolves its own Effect ${version}, outside the supported >=3.22.0 <4 range.`,
-          hint: "Reinstall the CLI so its bundled Effect 3 dependency resolves in range.",
+          message: `The TypeWeaver CLI resolves its own Effect ${version}, outside the exact ${REQUIRED_EFFECT_VERSION} pin.`,
+          hint: `Reinstall the CLI so its bundled Effect ${REQUIRED_EFFECT_VERSION} dependency resolves.`,
         });
       }
       return createDoctorCheck({
         code: "TW-DOCTOR-008",
         name: "CLI Effect runtime",
         outcome: "pass",
-        message: `The TypeWeaver CLI resolves its own Effect ${version}, satisfying the >=3.22.0 <4 contract.`,
+        message: `The TypeWeaver CLI resolves its own Effect ${version}, matching the exact ${REQUIRED_EFFECT_VERSION} contract.`,
       });
     },
     catch: cause =>
@@ -235,9 +233,9 @@ export const checkEffectReference = (): Effect.Effect<DoctorCheck> =>
         name: "CLI Effect runtime",
         outcome: "fail",
         message: `The TypeWeaver CLI could not resolve its own Effect runtime: ${failureMessage(cause)}`,
-        hint: "Reinstall the CLI so its bundled Effect 3 dependency resolves.",
+        hint: "Reinstall the CLI so its bundled Effect dependency resolves.",
       }),
-  }).pipe(Effect.merge);
+  }).pipe(Effect.catch(check => Effect.succeed(check)));
 
 export const checkFormatter = (
   format: boolean | undefined
@@ -278,5 +276,5 @@ export const checkFormatter = (
         message: `The optional formatter is unavailable: ${failureMessage(cause)}`,
         hint: "Install oxfmt or set format to false.",
       }),
-  }).pipe(Effect.merge);
+  }).pipe(Effect.catch(check => Effect.succeed(check)));
 };

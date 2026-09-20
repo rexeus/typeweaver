@@ -1,7 +1,7 @@
 import path from "node:path";
 import { normalizationErrorToIssue } from "@rexeus/typeweaver-gen";
 import type { Issue, Severity, TypeweaverConfig } from "@rexeus/typeweaver-gen";
-import { Effect, Either, Option } from "effect";
+import { Effect, Result, Option } from "effect";
 import { MissingGenerateOptionError } from "./errors/MissingGenerateOptionError.js";
 import {
   createValidationReport,
@@ -132,12 +132,12 @@ const writeReport = (
 
 export const runValidate = (args: ValidateHandlerInput) =>
   Effect.gen(function* () {
-    const outcome = yield* Effect.either(
+    const outcome = yield* Effect.result(
       resolveValidation(args, process.cwd())
     );
-    const issues: readonly Issue[] = Either.isRight(outcome)
-      ? outcome.right.issues
-      : [failureToIssue(outcome.left)];
+    const issues: readonly Issue[] = Result.isSuccess(outcome)
+      ? outcome.success.issues
+      : [failureToIssue(outcome.failure)];
     const report = createValidationReport(issues, thresholdFrom(args));
     yield* writeReport(report, Option.isSome(args.json) && args.json.value);
   });

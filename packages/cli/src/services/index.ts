@@ -14,7 +14,7 @@ export { Generator } from "./Generator.js";
 export { GeneratedOutputChecker } from "./GeneratedOutputChecker.js";
 export type { GenerateFailure, GenerateParams } from "./generatorTypes.js";
 export { IndexFileGenerator } from "./IndexFileGenerator.js";
-export { PluginLoader } from "./PluginLoader.js";
+export { PluginLoader } from "./PluginLoaderService.js";
 export type { PluginResolutionStrategy } from "./PluginLoader.js";
 export { PluginModuleLoader } from "./PluginModuleLoader.js";
 export { PluginModuleNotFoundError } from "./errors/PluginModuleNotFoundError.js";

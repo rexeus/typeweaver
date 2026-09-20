@@ -43,23 +43,11 @@
  * @typedef {object} EffectBaselineContract
  * @property {string} runtimeVersion
  * @property {string} peerRange
- * @property {string} languageServiceVersion
+ * @property {string} tsgoVersion
  * @property {string} referenceRepository
  * @property {string} referenceTag
  * @property {string} referenceCommit
  * @property {Record<string, string>} acceptedEffectDependencies
- * @property {Effect4EvidenceContract} [effect4Evidence]
- */
-
-/**
- * The Effect 4 workspace evidence pins the exact, process-isolated release
- * candidate TypeWeaver has tested while the native surfaces stay on Effect 3.
- *
- * @typedef {object} Effect4EvidenceContract
- * @property {string} effectVersion
- * @property {string} scope
- * @property {string} stability
- * @property {string} nativeSurfaces
  */
 
 export {};

@@ -324,7 +324,6 @@ describe("built CLI configuration diagnostics", () => {
     },
     15_000
   );
-
   test("reports invalid imported configuration without a runtime stack", async () => {
     const workspace = createWorkspace();
     const inputPath = writeSpec(workspace);
@@ -466,7 +465,6 @@ describe("built CLI plugin failure rendering", () => {
     expect(result.stderr).not.toContain("FiberFailure");
     expect(result.stderr).not.toMatch(/\n\s+at /);
   });
-
   test("renders a plugin defect once on stderr with exit code 1", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
@@ -526,7 +524,6 @@ describe("built CLI flag and verbosity handling", () => {
       fs.readFileSync(path.join(outputPath, "plugin", "Formatted.ts"), "utf8")
     ).toBe('export const formatted={name:"plugin",enabled:true};\\n');
   });
-
   test("enables debug records only for the verbose runtime", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
@@ -546,7 +543,6 @@ describe("built CLI flag and verbosity handling", () => {
     expect(result.stdout).toContain("[DEBUG] Acquired output lock");
     expect(result.stdout).toContain("[DEBUG] Released output lock");
   });
-
   test("reports the package version through Commander's historical -V alias", async () => {
     const workspace = createWorkspace();
     const result = await runCli(workspace, ["-V"]);
@@ -558,14 +554,47 @@ describe("built CLI flag and verbosity handling", () => {
 });
 
 describe("built CLI parser diagnostics", () => {
-  test("keeps parser validation diagnostics out of the custom error formatter", async () => {
+  test("renders one native unknown-option diagnostic with command help", async () => {
     const workspace = createWorkspace();
 
     const result = await runCli(workspace, ["generate", "--unknown"]);
 
     expect(result).toMatchObject({ code: 1, signal: null });
-    expect(result.stdout).toBe("Running on Node.js\n");
-    expect(result.stderr).toBe("Received unknown argument: '--unknown'\n\n");
+    expect(result.stdout).toContain("USAGE\n  typeweaver generate [flags]");
+    expect(result.stderr).toBe(
+      "\nERROR\n  Unrecognized flag: --unknown in command typeweaver generate\n"
+    );
     expect(result.stderr).not.toContain("FiberFailure");
+    expect(result.stderr).not.toContain("Received unknown argument");
+  });
+
+  test.each([
+    ["init", ["init"]],
+    ["add plugin target", ["add", "plugin", "--name", "example"]],
+    ["add plugin name", ["add", "plugin", "--target", "example"]],
+  ])("renders native help for missing %s", async (_scenario, args) => {
+    const workspace = createWorkspace();
+    const result = await runCli(workspace, args);
+
+    expect(result.code).toBe(1);
+    expect(result.stdout).toContain("USAGE");
+    expect(result.stderr).toMatch(
+      /\nERROR\n  Missing required flag: --(?:target|name)\n/u
+    );
+    expect(result.stderr.match(/\nERROR\n/g)).toHaveLength(1);
+    expect(result.stderr).not.toContain("FiberFailure");
+  });
+  test("accepts a string option value beginning with a dash", async () => {
+    const workspace = createWorkspace();
+    const result = await runCli(workspace, [
+      "init",
+      "--target=-leading-target",
+      "--dry-run",
+      "--json",
+    ]);
+
+    expect(result).toMatchObject({ code: 0, signal: null, stderr: "" });
+    expect(result.stdout).toContain('"targetDir":');
+    expect(result.stdout).toContain("-leading-target");
   });
 });

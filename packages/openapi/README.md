@@ -177,6 +177,10 @@ for (const warning of result.warnings) {
 The builder does not write files. Representability problems are returned in `warnings`; the
 generator plugin maps them to TypeWeaver issues during its write-free validation phase.
 
+The `@rexeus/typeweaver-openapi` generator is Effect-native and requires the exact
+`effect@4.0.0-rc.116` peer. The emitted OpenAPI document is data, not an Effect runtime artifact, so
+consumers of the JSON document do not need Effect solely for this projection.
+
 ## Related documentation
 
 - [Migration guide](../../MIGRATION.md)

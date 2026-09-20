@@ -31,8 +31,10 @@ The package supports Hono `>=4.11.0 <5`. The `types` projection is included auto
 `hono` is an optional peer dependency. The generator plugin itself does not require Hono to execute;
 only the generated Hono output imports it. A consumer that selects the `hono` projection must
 install `hono`, while a CLI-only consumer that never generates Hono does not need it to satisfy
-strict peer checks. The `effect`, `@rexeus/typeweaver-gen`, and `@rexeus/typeweaver-core` peers
-remain required.
+strict peer checks. The generator package is Effect-native and requires the exact
+`effect@4.0.0-rc.116` peer. The generated Hono runtime remains Effect-optional; only the package
+that runs the generator needs Effect. The `@rexeus/typeweaver-gen` and `@rexeus/typeweaver-core`
+peers remain required.
 
 ## Generated surface
 

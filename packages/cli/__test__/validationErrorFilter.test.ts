@@ -1,11 +1,16 @@
-import { HelpDoc, ValidationError } from "@effect/cli";
-import { Cause, FiberId } from "effect";
+import { Cause } from "effect";
+import { CliError } from "effect/unstable/cli";
 import { describe, expect, test } from "vitest";
 import { MissingGenerateOptionError } from "../src/errors/MissingGenerateOptionError.js";
 import { isOnlyValidationErrorCause } from "../src/validationErrorFilter.js";
 
-const aValidationError = (): ValidationError.ValidationError =>
-  ValidationError.invalidValue(HelpDoc.p("expected a value"));
+const aValidationError = (): CliError.CliError =>
+  new CliError.InvalidValue({
+    option: "value",
+    value: "",
+    expected: "a value",
+    kind: "flag",
+  });
 
 const aDomainError = (): MissingGenerateOptionError =>
   new MissingGenerateOptionError({
@@ -31,7 +36,7 @@ describe("isOnlyValidationErrorCause", () => {
   });
 
   test("returns false when the cause carries both a ValidationError and a domain error", () => {
-    const cause = Cause.parallel(
+    const cause = Cause.combine(
       Cause.fail(aValidationError()),
       Cause.fail(aDomainError())
     );
@@ -39,9 +44,9 @@ describe("isOnlyValidationErrorCause", () => {
   });
 
   test("returns false when validation is combined with interruption", () => {
-    const cause = Cause.parallel(
+    const cause = Cause.combine(
       Cause.fail(aValidationError()),
-      Cause.interrupt(FiberId.runtime(1, 0))
+      Cause.interrupt()
     );
     expect(isOnlyValidationErrorCause(cause)).toBe(false);
   });

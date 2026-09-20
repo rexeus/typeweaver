@@ -1,11 +1,14 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { NodeContext } from "@effect/platform-node";
+import { layer as nodeFileSystemLayer } from "@effect/platform-node/NodeFileSystem";
 import { it } from "@effect/vitest";
 import { Cause, Deferred, Effect, Exit, Fiber } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { ReservedCoordinationPathError } from "../../../src/errors/index.js";
+
+const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
 import {
   prepareGeneration,
   resolveGenerationPaths,
@@ -38,7 +41,7 @@ const makePlan = (workspace: string) =>
       },
       currentWorkingDirectory: workspace,
     })
-  ).pipe(Effect.provide(NodeContext.layer));
+  ).pipe(Effect.provide(nodeFileSystemLayer));
 
 const expectLockHeld = (lockPath: string) =>
   Effect.sync(() => {
@@ -71,7 +74,7 @@ describe("generator preflight and lock workflow", () => {
         expect(Exit.isFailure(result)).toBe(true);
         expect(fs.existsSync(path.join(workspace, "responses"))).toBe(false);
         expect(fs.existsSync(path.join(workspace, "spec"))).toBe(false);
-      }).pipe(Effect.provide(NodeContext.layer));
+      }).pipe(Effect.provide(nodeFileSystemLayer));
     }
   );
 
@@ -88,14 +91,14 @@ describe("generator preflight and lock workflow", () => {
         const firstExit = yield* Effect.exit(
           withGenerationLock(plan, () =>
             expectLockHeld(lockPath).pipe(
-              Effect.zipRight(Effect.die(workflowFailure))
+              Effect.andThen(Effect.die(workflowFailure))
             )
           )
         );
 
         expect(Exit.isFailure(firstExit)).toBe(true);
         if (Exit.isFailure(firstExit)) {
-          expect(Array.from(Cause.defects(firstExit.cause))).toEqual([
+          expect(Array.from(causeDefects(firstExit.cause))).toEqual([
             workflowFailure,
           ]);
         }
@@ -103,7 +106,7 @@ describe("generator preflight and lock workflow", () => {
 
         yield* withGenerationLock(plan, () => expectLockHeld(lockPath));
         expect(fs.existsSync(lockPath)).toBe(false);
-      }).pipe(Effect.provide(NodeContext.layer));
+      }).pipe(Effect.provide(nodeFileSystemLayer));
     }
   );
 
@@ -115,24 +118,25 @@ describe("generator preflight and lock workflow", () => {
       const lockPath = outputLockDirectory(plan.outputDir);
       const entered = yield* Deferred.make<void>();
       const blocked = yield* Deferred.make<void>();
-      const fiber = yield* Effect.fork(
+      const fiber = yield* Effect.forkChild(
         withGenerationLock(plan, () =>
           Deferred.succeed(entered, undefined).pipe(
-            Effect.zipRight(Deferred.await(blocked))
+            Effect.andThen(Deferred.await(blocked))
           )
         )
       );
 
       yield* Deferred.await(entered);
       expect(fs.existsSync(lockPath)).toBe(true);
-      const exit = yield* Fiber.interrupt(fiber);
+      yield* Fiber.interrupt(fiber);
+      const exit = yield* Fiber.await(fiber);
 
       expect(Exit.isFailure(exit)).toBe(true);
       if (Exit.isFailure(exit)) {
-        expect(Cause.isInterruptedOnly(exit.cause)).toBe(true);
+        expect(Cause.hasInterruptsOnly(exit.cause)).toBe(true);
       }
       expect(fs.existsSync(lockPath)).toBe(false);
-    }).pipe(Effect.provide(NodeContext.layer));
+    }).pipe(Effect.provide(nodeFileSystemLayer));
   });
 });
 
@@ -161,7 +165,7 @@ describe("generator canonical lock binding", () => {
           },
           currentWorkingDirectory: workspace,
         })
-      ).pipe(Effect.provide(NodeContext.layer))
+      ).pipe(Effect.provide(nodeFileSystemLayer))
     );
 
     await Effect.runPromise(
@@ -178,7 +182,7 @@ describe("generator canonical lock binding", () => {
             "locked\n"
           );
         })
-      ).pipe(Effect.provide(NodeContext.layer))
+      ).pipe(Effect.provide(nodeFileSystemLayer))
     );
 
     expect(

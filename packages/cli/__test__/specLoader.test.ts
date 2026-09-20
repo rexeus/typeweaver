@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { NodeFileSystem } from "@effect/platform-node";
-import { Cause, Effect, Either, Exit, Layer } from "effect";
+import { layer as nodeFileSystemLayer } from "@effect/platform-node/NodeFileSystem";
+import { Cause, Effect, Result, Exit, Layer } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import {
   InvalidSpecEntrypointError,
@@ -24,36 +24,39 @@ import type {
   SpecLoaderConfig,
 } from "../src/services/SpecLoader.js";
 
+const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
+const causeFailures = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
+  cause.reasons.filter(Cause.isFailReason).map(reason => reason.error);
+
 // Test shims that bridge the legacy sync/async API onto the new services.
-// `Effect.either` flattens typed failures into the success channel so
+// `Effect.result` flattens typed failures into the success channel so
 // tests can `.rejects.toBeInstanceOf` against the underlying error rather
 // than against Effect's `FiberFailure` wrapper.
 const SpecBundlerLayer = SpecBundler.Default.pipe(
-  Layer.provide(NodeFileSystem.layer)
+  Layer.provide(nodeFileSystemLayer)
 );
 const SpecLoaderLayer = SpecLoader.Default.pipe(
-  Layer.provide(NodeFileSystem.layer)
+  Layer.provide(nodeFileSystemLayer)
 );
-
 const bundle = async (
   config: SpecBundlerConfig,
   deps?: SpecBundlerDeps
 ): Promise<string> => {
   const result = await Effect.runPromise(
-    Effect.either(SpecBundler.bundle(config, deps)).pipe(
+    Effect.result(SpecBundler.bundle(config, deps)).pipe(
       Effect.provide(SpecBundlerLayer)
     )
   );
-  if (Either.isLeft(result)) throw result.left;
-  return result.right;
+  if (Result.isFailure(result)) throw result.failure;
+  return result.success;
 };
-
 const loadSpec = async (config: SpecLoaderConfig): Promise<LoadedSpec> => {
   const result = await Effect.runPromise(
-    Effect.either(SpecLoader.load(config)).pipe(Effect.provide(SpecLoaderLayer))
+    Effect.result(SpecLoader.load(config)).pipe(Effect.provide(SpecLoaderLayer))
   );
-  if (Either.isLeft(result)) throw result.left;
-  return result.right;
+  if (Result.isFailure(result)) throw result.failure;
+  return result.success;
 };
 
 const SPEC_DECLARATION = [
@@ -114,7 +117,6 @@ const writeSpecEntrypoint = (
 ): string => {
   return writeProjectFile(project, relativePath, contents);
 };
-
 const loadProjectSpec = async (
   project: TempProject,
   inputFile: string
@@ -558,8 +560,8 @@ describe("SpecLoader bundler output contract", () => {
       expect(buildStarted).toBe(false);
       expect(Exit.isFailure(exit)).toBe(true);
       if (!Exit.isFailure(exit)) return;
-      expect(Array.from(Cause.defects(exit.cause))).toEqual([]);
-      expect(Array.from(Cause.failures(exit.cause))).toEqual([
+      expect(Array.from(causeDefects(exit.cause))).toEqual([]);
+      expect(Array.from(causeFailures(exit.cause))).toEqual([
         expect.objectContaining({
           inputFile,
           cause: probeFailure,
@@ -569,7 +571,6 @@ describe("SpecLoader bundler output contract", () => {
       expect(fs.readdirSync(project.outputDir)).toEqual([]);
     }
   );
-
   test("rejects successful spec builds that do not create the bundled output", async () => {
     const project = createTempProject();
     const inputFile = path.join(project.projectDir, "spec.ts");
@@ -634,7 +635,6 @@ describe("SpecLoader supported spec modules", () => {
     ]);
     expectBundledArtifacts(project.outputDir);
   });
-
   test("loads JavaScript specs exported as default", async () => {
     const project = createTempProject();
 
@@ -657,7 +657,6 @@ describe("SpecLoader supported spec modules", () => {
     ]);
     expectBundledArtifacts(project.outputDir);
   });
-
   test("loads module namespace specs exported as resources", async () => {
     const project = createTempProject();
     const specFile = writeTodoResourcesEntrypoint(project, {
@@ -681,7 +680,6 @@ describe("SpecLoader supported spec modules", () => {
     ]);
     expectBundledArtifacts(project.outputDir);
   });
-
   test("loads rewritten specs from the same output file", async () => {
     const project = createTempProject();
     const specFile = writeTodoSpecWithOperation(project, {
@@ -755,7 +753,6 @@ describe("SpecLoader bundling and import failures", () => {
     )) as { readonly inputFile: string };
     expect(error.inputFile).toMatch(/spec\.ts$/);
   });
-
   test("propagates errors thrown while importing bundled specs", async () => {
     const project = createTempProject();
     const specFile = writeSpecEntrypoint(
@@ -790,7 +787,6 @@ describe("SpecLoader invalid entrypoints", () => {
     await expect(loadingSpec).rejects.toThrow(InvalidSpecEntrypointError);
     await expect(loadingSpec).rejects.toThrow(/must export a SpecDefinition/);
   });
-
   test("rejects entrypoints whose operation omits a request definition", async () => {
     const project = createTempProject();
     const specFile = writeSpecEntrypoint(

@@ -66,7 +66,6 @@ describe("clean remediates unproven legacy artifacts", () => {
     expect(fs.existsSync(path.join(outputDir, "lookalike"))).toBe(false);
     expect(fs.existsSync(path.join(outputDir, "generated.ts"))).toBe(false);
   });
-
   test("removes a regular file that merely uses the legacy lock name", async () => {
     const outputDir = createTempDir("file");
     const lockFile = path.join(outputDir, ".typeweaver-lock");
@@ -76,7 +75,6 @@ describe("clean remediates unproven legacy artifacts", () => {
 
     expect(fs.existsSync(lockFile)).toBe(false);
   });
-
   test("removes ordinary directories that merely contain lock-shaped metadata", async () => {
     const outputDir = createTempDir("lookalike");
     const lookalike = writeLockDir(outputDir, "backup", process.pid);

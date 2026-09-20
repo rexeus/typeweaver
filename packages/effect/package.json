@@ -65,7 +65,7 @@
     "@rexeus/typeweaver-core": "workspace:^",
     "@rexeus/typeweaver-gen": "workspace:^",
     "@rexeus/typeweaver-server": "workspace:^",
-    "effect": "^3.22.0",
+    "effect": "4.0.0-rc.116",
     "test-utils": "file:../test-utils"
   },
   "dependencies": {

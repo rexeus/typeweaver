@@ -68,7 +68,9 @@ try {
   );
   if (
     v4Result.status === 0 ||
-    !v4Result.stderr.includes("expected Effect 3.22.0, found 4.0.0-beta.98")
+    !v4Result.stderr.includes(
+      `expected Effect ${baseline.runtimeVersion}, found 4.0.0-beta.98`
+    )
   ) {
     throw new Error("Effect 4 reference mutation was not rejected");
   }

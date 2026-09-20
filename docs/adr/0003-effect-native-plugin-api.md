@@ -34,8 +34,9 @@ This design had three structural problems:
    services from the runtime; an ad-hoc adapter (`legacyAdapter`) bridged the gap and silently hid
    the seams behind imperative `async`/`await` plumbing.
 
-The Effect migration replaced the imperative interior of the generator with `Effect.Service` classes
-and structured concurrency. The plugin contract was the last imperative layer left.
+The Effect migration replaced the imperative interior of the generator with explicit
+`Context.Service` classes and structured concurrency. The plugin contract was the last imperative
+layer left.
 
 ## Decision
 
@@ -129,8 +130,8 @@ plugin constructor and throw `PluginConfigError` on rejection. The lifecycle sta
   surface — `BasePlugin`, `TypeweaverPlugin`, `createPluginRegistry`, and `legacyAdapter` — is gone.
   `createPluginContextBuilder` was preserved as a `services/internal/` implementation detail backing
   `ContextBuilder`; it is no longer exported from the package's public API.
-- Plugin packages must now declare `effect >=3.22.0 <4` as a `peerDependency` (mirrored across all
-  six first-party plugins).
+- Plugin packages must declare the exact native `effect 4.0.0-rc.116` peer (mirrored across all
+  first-party plugins).
 - Authors who previously relied on `Promise`-based lifecycle methods have to learn enough Effect to
   wrap their work in `Effect.try`. The migration guide (`docs/plugin-authoring.md`) documents the
   minimum surface.
@@ -144,10 +145,10 @@ for a pre-1.0 project.
 
 ### Version contract
 
-Development and tests run on Effect 3.22.0. Every first-party plugin publishes the intentional
-compatibility range `peerDependencies.effect: ">=3.22.0 <4"` so supported Effect 3 consumers are not
-forced onto the development minor. `config/effect-baseline.json` records both values; ADR 0008
-documents the pinned source reference and language-service gate.
+Development and tests run on the exact native Effect `4.0.0-rc.116` pin. Every first-party plugin
+publishes `peerDependencies.effect: "4.0.0-rc.116"` through the workspace catalog so all lifecycle
+values share one runtime identity. `config/effect-baseline.json` records the pin; ADR 0008 documents
+the source reference and standalone tsgo diagnostics gate.
 
 ## Reference Files
 

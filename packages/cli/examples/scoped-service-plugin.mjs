@@ -18,8 +18,8 @@ class EventLogError extends Data.TaggedError("EventLogError") {
   }
 }
 
-/** @type {Context.Tag<ScopedResourceService, ScopedResourceService>} */
-const ScopedResource = Context.GenericTag("typeweaver/examples/ScopedResource");
+/** @type {Context.Service<ScopedResourceService, ScopedResourceService>} */
+const ScopedResource = Context.Service("typeweaver/examples/ScopedResource");
 
 /**
  * @param {string | undefined} eventsPath
@@ -46,7 +46,7 @@ const scopedResourceLayer = eventsPath => {
     record: event => appendEvent(eventsPath, event),
   };
 
-  return Layer.scoped(
+  return Layer.effect(
     ScopedResource,
     Effect.acquireRelease(
       service.record("acquire").pipe(Effect.as(service)),
@@ -54,7 +54,7 @@ const scopedResourceLayer = eventsPath => {
         resource
           .record("release")
           .pipe(
-            Effect.catchAll(error =>
+            Effect.catch(error =>
               Effect.logWarning(
                 `Scoped-service release event could not be recorded: ${String(error.cause)}`
               )
