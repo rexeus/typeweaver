@@ -77,7 +77,7 @@
   },
   "homepage": "https://github.com/rexeus/typeweaver#readme",
   "dependencies": {
-    "@effect/cli": "0.76.0",
+    "@effect/cli": "0.77.1",
     "@effect/cluster": "0.60.0",
     "@effect/experimental": "0.61.0",
     "@effect/platform": "0.97.0",
