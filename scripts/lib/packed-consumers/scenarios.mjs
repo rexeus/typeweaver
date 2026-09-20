@@ -416,9 +416,8 @@ export const verifyNativeEffectStrictPeerNegative = ({
     args: ["install", "--ignore-scripts"],
     cwd: fixtureRoot,
   });
-  assert.match(
-    output,
-    new RegExp(`effect@${contract.runtimeVersion}`),
+  assert(
+    output.includes(`effect@${contract.runtimeVersion}`),
     `strict-peer install did not fail on the exact native Effect peer:\n${output}`
   );
   assert.match(
