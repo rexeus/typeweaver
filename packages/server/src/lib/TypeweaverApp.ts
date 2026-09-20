@@ -79,6 +79,14 @@ export type TypeweaverAppOptions = {
   readonly onError?: (error: unknown) => void;
 };
 
+function trimTrailingSlashes(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) end -= 1;
+  return end === value.length ? value : value.slice(0, end);
+}
+
 export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
   private static readonly INTERNAL_SERVER_ERROR_BODY = createDefaultErrorBody(
     internalServerErrorDefaultError
@@ -433,7 +441,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
     router: TypeweaverRouter<Record<string, ErasedRequestHandler>>,
     prefix?: string
   ): this {
-    const normalizedPrefix = prefix?.replace(/\/+$/, "");
+    const normalizedPrefix = trimTrailingSlashes(prefix);
     for (const route of router.getRoutes()) {
       this.router.add({
         ...route,

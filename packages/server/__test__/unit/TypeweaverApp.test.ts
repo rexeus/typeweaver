@@ -882,9 +882,18 @@ describe("Router Prefix", () => {
   });
 
   test("should normalize trailing slashes on prefix", async () => {
-    const app = createAppMountedAt("/api/v1/");
+    const app = createAppMountedAt("/api/v1////");
 
     const res = await app.fetch(get("/api/v1/todos"));
+
+    expect(res.status).toBe(200);
+  });
+
+  test("preserves an untrusted prefix with a long slash sequence", async () => {
+    const adversarialPrefix = `${"/".repeat(40_000)}x`;
+    const app = createAppMountedAt(adversarialPrefix);
+
+    const res = await app.fetch(get(`${adversarialPrefix}/todos`));
 
     expect(res.status).toBe(200);
   });
