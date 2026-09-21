@@ -141,7 +141,7 @@ stale entry can never remain silent.
 | `pnpm test:typescript-toolchain` | 20 compiler options and 18 diagnostics across the four compiler profiles.                                                                                  |
 | `pnpm test:quality-contracts`    | `typecheck:scripts` rejects an implicit-any tooling module and `test:tooling` rejects a broken build-config contract, using throwaway copies.              |
 | `pnpm typecheck:scripts`         | Checked JavaScript over every `scripts/**`, `config/tsdown/**`, and `config/oxlint/**` `.mjs` tooling file.                                                |
-| `pnpm test:tooling`              | The root tsdown build-config tests.                                                                                                                        |
+| `pnpm test:tooling`              | The root tsdown build-config tests and local config/oxlint plugin tests.                                                                                   |
 | `pnpm lint`                      | The full warning-free, type-aware policy over the repository.                                                                                              |
 
 `pnpm verify:architecture-contracts` runs the compiler-profile, lint-policy, maintainability,
