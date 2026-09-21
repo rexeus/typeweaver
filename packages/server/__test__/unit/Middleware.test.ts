@@ -218,7 +218,9 @@ describe("middleware pipeline state composition", () => {
     const setUser: Middleware = async (_ctx, next) => next({ userId: "u_1" });
     const deriveGreeting: Middleware = async (ctx, next) => {
       const userId = ctx.state.get("userId");
-      return next({ greeting: `hello ${userId}` });
+      const greeting =
+        typeof userId === "string" ? `hello ${userId}` : "hello unknown";
+      return next({ greeting });
     };
 
     const response = await executeMiddlewarePipeline(

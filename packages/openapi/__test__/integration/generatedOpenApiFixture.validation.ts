@@ -141,7 +141,7 @@ export function assertValidatorOutputHasNoErrors(
 export function parseValidatorOutput(
   fixturePath: string,
   stdout: string
-): unknown | undefined {
+): unknown {
   const trimmedStdout = stdout.trim();
 
   if (trimmedStdout === "") {
@@ -272,14 +272,38 @@ export function stringifyExecFileOutput(output: {
   };
 }
 
-export function stringifyCommandOutput(value: unknown): string {
+function stringifyPrimitive(value: unknown): string {
   if (typeof value === "string") {
     return value;
   }
 
+  if (
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    return value.toString();
+  }
+
+  return typeof value === "symbol" ? (value.description ?? "") : "";
+}
+
+export function stringifyCommandOutput(value: unknown): string {
   if (Buffer.isBuffer(value)) {
     return value.toString("utf8");
   }
 
-  return value === undefined ? "" : String(value);
+  if (value === undefined) {
+    return "";
+  }
+
+  if (value === null) {
+    return "null";
+  }
+
+  if (typeof value === "object") {
+    return Object.prototype.toString.call(value);
+  }
+
+  return stringifyPrimitive(value);
 }

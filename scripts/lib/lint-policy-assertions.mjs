@@ -3,6 +3,7 @@ import {
   expectedRootRules,
   expectedTestFiles,
   expectedTestStructuralRelaxations,
+  expectedTypedTestFiles,
   expectedTypeScriptExcludeFiles,
   expectedTypeScriptFiles,
   expectedTypeScriptRules,
@@ -35,8 +36,8 @@ const assertRootConfiguration = config => {
   );
   assertEqual(
     config.jsPlugins,
-    ["eslint-plugin-sonarjs"],
-    "SonarJS JS plugin list"
+    ["eslint-plugin-sonarjs", "./config/oxlint/pureBarrelRule.mjs"],
+    "JavaScript plugin list"
   );
   assertEqual(config.categories, { correctness: "error" }, "Root categories");
   assertEqual(
@@ -59,9 +60,31 @@ const assertTestOverride = overrides => {
   if (testOverride === undefined)
     throw new Error("The audited test override is missing");
   assertEqual(
+    testOverride.plugins,
+    ["eslint", "unicorn", "oxc", "import"],
+    "Test override plugin list"
+  );
+  assertEqual(
     { ...testOverride.rules },
-    { ...expectedTypeScriptRules, ...expectedTestStructuralRelaxations },
+    expectedTestStructuralRelaxations,
     "Test override rules"
+  );
+};
+
+/** @param {readonly LintOverride[]} overrides @returns {void} */
+const assertTypedTestOverride = overrides => {
+  const typedTestOverride = findOverride(overrides, expectedTypedTestFiles);
+  if (typedTestOverride === undefined)
+    throw new Error("The audited typed test override is missing");
+  assertEqual(
+    typedTestOverride.plugins,
+    ["eslint", "typescript", "unicorn", "oxc", "import"],
+    "Typed test override plugin list"
+  );
+  assertEqual(
+    typedTestOverride.rules,
+    expectedTypeScriptRules,
+    "Typed test override rules"
   );
 };
 
@@ -70,6 +93,11 @@ const assertTypescriptOverride = overrides => {
   const typescriptOverride = findOverride(overrides, expectedTypeScriptFiles);
   if (typescriptOverride === undefined)
     throw new Error("The audited TypeScript override is missing");
+  assertEqual(
+    typescriptOverride.plugins,
+    ["eslint", "typescript", "unicorn", "oxc", "import"],
+    "TypeScript override plugin list"
+  );
   assertEqual(
     typescriptOverride.excludeFiles,
     expectedTypeScriptExcludeFiles,
@@ -109,12 +137,13 @@ const assertNoWeakening = overrides => {
 export const assertLintPolicyConfiguration = config => {
   assertRootConfiguration(config);
   const overrides = config.overrides ?? [];
-  if (overrides.length !== 2) {
+  if (overrides.length !== 3) {
     throw new Error(
-      `Expected exactly two lint overrides (tests and TypeScript), found ${String(overrides.length)}`
+      `Expected exactly three lint overrides (tests, typed tests, and TypeScript), found ${String(overrides.length)}`
     );
   }
   assertTestOverride(overrides);
+  assertTypedTestOverride(overrides);
   assertTypescriptOverride(overrides);
   assertNoWeakening(overrides);
 };

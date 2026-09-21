@@ -4,7 +4,7 @@ export const expectedRootRules = {
   "eslint/max-depth": ["error", { max: 3 }],
   "eslint/max-lines": [
     "error",
-    { max: 400, skipBlankLines: true, skipComments: true },
+    { max: 250, skipBlankLines: true, skipComments: false },
   ],
   "eslint/max-lines-per-function": [
     "error",
@@ -26,9 +26,10 @@ export const expectedRootRules = {
   "import/no-namespace": "error",
   "import/no-self-import": "error",
   "import/no-unassigned-import": "error",
-  "sonarjs/cognitive-complexity": ["error", 15],
+  "sonarjs/cognitive-complexity": ["error", 12],
   "sonarjs/expression-complexity": ["error", { max: 6 }],
   "sonarjs/no-nested-switch": "error",
+  "typeweaver/pure-barrel": "error",
 };
 
 /** @type {Record<string, unknown>} */
@@ -61,13 +62,36 @@ export const expectedTestFiles = [
   "packages/**/*.test.tsx",
   "packages/**/*.spec.ts",
   "packages/**/*.spec.tsx",
+  "packages/**/*.tst.ts",
+  "packages/**/*.tst.tsx",
+  "config/**/*.test.ts",
+  "config/**/*.test.tsx",
+  "config/**/*.spec.ts",
+  "config/**/*.spec.tsx",
+  "config/**/*.tst.ts",
+  "config/**/*.tst.tsx",
+  "scripts/test-*.mjs",
 ];
 
 export const expectedTestStructuralRelaxations = {
-  "eslint/max-lines": "off",
+  "eslint/max-lines": [
+    "error",
+    { max: 350, skipBlankLines: true, skipComments: false },
+  ],
   "eslint/max-lines-per-function": "off",
   "eslint/max-nested-callbacks": "off",
 };
+
+export const expectedTypedTestFiles = [
+  "packages/**/__test__/**/*.ts",
+  "packages/**/__test__/**/*.tsx",
+  "packages/**/*.test.ts",
+  "packages/**/*.test.tsx",
+  "packages/**/*.spec.ts",
+  "packages/**/*.spec.tsx",
+  "packages/**/*.tst.ts",
+  "packages/**/*.tst.tsx",
+];
 
 export const expectedTypeScriptFiles = [
   "packages/**/*.ts",
@@ -79,6 +103,8 @@ export const expectedTypeScriptExcludeFiles = [
   "packages/**/*.test.tsx",
   "packages/**/*.spec.ts",
   "packages/**/*.spec.tsx",
+  "packages/**/*.tst.ts",
+  "packages/**/*.tst.tsx",
   "packages/**/tsdown.config.ts",
   "packages/**/examples/**",
   "packages/**/fixtures/**",

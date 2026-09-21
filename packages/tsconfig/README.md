@@ -20,8 +20,8 @@ carries no public compatibility promise; consuming projects extend the JSON file
 - **`node.json`** — the root `tsconfig.json`, every published `packages/*/tsconfig.json`, and the
   test, example, and Effect-diagnostic projects that run on Node.js.
 - **`checkjs.json`** — the checked-JavaScript project for repository tooling.
-  `scripts/tsconfig.json` extends this profile and covers every `.mjs` file under `scripts/**` and
-  `config/tsdown/**`; `pnpm typecheck:scripts` runs it with `--noEmit`.
+  `scripts/tsconfig.json` extends this profile and covers every `.mjs` file under `scripts/**`,
+  `config/tsdown/**`, and `config/oxlint/**`; `pnpm typecheck:scripts` runs it with `--noEmit`.
 
 Each consuming project may widen `rootDir`/`include` or override `noEmit`, but must not disable a
 strictness option.
