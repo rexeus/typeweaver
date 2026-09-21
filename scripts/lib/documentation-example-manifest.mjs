@@ -1,4 +1,10 @@
 import { existsSync, readFileSync } from "node:fs";
+import { validateGroups } from "./documentation-example-manifest-groups.mjs";
+import {
+  isArray,
+  isNonEmptyString,
+  isRecord,
+} from "./documentation-example-manifest-values.mjs";
 
 /**
  * @typedef {object} DocumentationSnippet
@@ -23,41 +29,7 @@ import { existsSync, readFileSync } from "node:fs";
  * @property {string | undefined} tsconfig
  */
 
-/** @type {(value: unknown) => value is unknown[]} */
-const isArray = Array.isArray;
-
-/**
- * @param {unknown} value
- * @returns {value is string}
- */
-export const isNonEmptyString = value =>
-  typeof value === "string" && value.length > 0;
-
-/**
- * @param {unknown} value
- * @returns {value is Record<string, unknown>}
- */
-export const isRecord = value =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-/**
- * @param {readonly string[]} values
- * @returns {Set<string>}
- */
-const duplicateValues = values =>
-  new Set(values.filter((value, index) => values.indexOf(value) !== index));
-
-/**
- * @param {string} fallbackId
- * @returns {DocumentationGroup}
- */
-const emptyGroup = fallbackId => ({
-  id: fallbackId,
-  documents: [],
-  fixtures: [],
-  runtimeFixtures: [],
-  snippets: [],
-});
+export { isNonEmptyString, isRecord };
 
 /**
  * @param {string} absoluteManifestPath
@@ -93,142 +65,6 @@ export const readManifest = (absoluteManifestPath, manifestPath) => {
 };
 
 /**
- * @param {{ groupId: string, field: string, value: unknown }} options
- * @returns {{ failures: string[], values: string[] }}
- */
-const validateStringArray = ({ groupId, field, value }) => {
-  if (!isArray(value)) {
-    return {
-      failures: [`${groupId}: ${field} must be an array`],
-      values: [],
-    };
-  }
-
-  return {
-    failures: value.flatMap((entry, index) =>
-      isNonEmptyString(entry)
-        ? []
-        : [`${groupId}: ${field}[${String(index)}] must be a non-empty string`]
-    ),
-    values: value.filter(isNonEmptyString),
-  };
-};
-
-/**
- * @param {{ groupId: string, value: unknown }} options
- * @returns {{ failures: string[], values: DocumentationSnippet[] }}
- */
-const validateSnippets = ({ groupId, value }) => {
-  if (value === undefined) {
-    return { failures: [], values: [] };
-  }
-  if (!isArray(value)) {
-    return {
-      failures: [`${groupId}: snippets must be an array`],
-      values: [],
-    };
-  }
-
-  const results = value.map((snippet, index) => {
-    const prefix = `${groupId}: snippets[${String(index)}]`;
-    if (!isRecord(snippet)) {
-      return { failures: [`${prefix} must be an object`], value: undefined };
-    }
-
-    const id = snippet["id"];
-    const document = snippet["document"];
-    const fixture = snippet["fixture"];
-    const idValid = isNonEmptyString(id);
-    const documentValid = isNonEmptyString(document);
-    const fixtureValid = isNonEmptyString(fixture);
-    const failures = [
-      ...(idValid ? [] : [`${prefix}.id must be a non-empty string`]),
-      ...(documentValid
-        ? []
-        : [`${prefix}.document must be a non-empty string`]),
-      ...(fixtureValid ? [] : [`${prefix}.fixture must be a non-empty string`]),
-    ];
-    return {
-      failures,
-      value:
-        idValid && documentValid && fixtureValid
-          ? { id, document, fixture }
-          : undefined,
-    };
-  });
-
-  return {
-    failures: results.flatMap(result => result.failures),
-    values: results.flatMap(result =>
-      result.value === undefined ? [] : [result.value]
-    ),
-  };
-};
-
-/**
- * @param {unknown} group
- * @param {number} index
- * @returns {{ failures: string[], group: DocumentationGroup }}
- */
-const validateGroup = (group, index) => {
-  const fallbackId = `<group ${String(index)}>`;
-  if (!isRecord(group)) {
-    return {
-      failures: [`${fallbackId} must be an object`],
-      group: emptyGroup(fallbackId),
-    };
-  }
-
-  const rawId = group["id"];
-  const id = isNonEmptyString(rawId) ? rawId : fallbackId;
-  const documents = validateStringArray({
-    groupId: id,
-    field: "documents",
-    value: group["documents"],
-  });
-  const fixtures = validateStringArray({
-    groupId: id,
-    field: "fixtures",
-    value: group["fixtures"],
-  });
-  const runtimeFixtures =
-    group["runtimeFixtures"] === undefined
-      ? { failures: [], values: [] }
-      : validateStringArray({
-          groupId: id,
-          field: "runtimeFixtures",
-          value: group["runtimeFixtures"],
-        });
-  const snippets = validateSnippets({ groupId: id, value: group["snippets"] });
-  const duplicateSnippetIds = duplicateValues(
-    snippets.values.map(snippet => snippet.id)
-  );
-
-  return {
-    failures: [
-      ...(id === fallbackId
-        ? [`${fallbackId}: id must be a non-empty string`]
-        : []),
-      ...documents.failures,
-      ...fixtures.failures,
-      ...runtimeFixtures.failures,
-      ...snippets.failures,
-      ...Array.from(
-        duplicateSnippetIds,
-        snippetId => `${id}: duplicate snippet id ${snippetId}`
-      ),
-    ],
-    group: {
-      id,
-      documents: documents.values,
-      fixtures: fixtures.values,
-      runtimeFixtures: runtimeFixtures.values,
-      snippets: snippets.values,
-    },
-  };
-};
-
-/**
  * @param {unknown} manifest
  * @param {string} manifestPath
  * @param {readonly string[]} requiredGroupIds
@@ -256,21 +92,13 @@ export const validateManifest = (manifest, manifestPath, requiredGroupIds) => {
     failures.push(`${manifestPath}: tsconfig must be a non-empty string`);
   }
   const validatedGroups = isArray(manifest["groups"])
-    ? manifest["groups"].map(validateGroup)
-    : [];
-  const groups = validatedGroups.map(result => result.group);
+    ? validateGroups(manifest["groups"])
+    : { failures: [], groups: [] };
+  const groups = validatedGroups.groups;
   if (!isArray(manifest["groups"])) {
     failures.push(`${manifestPath}: groups must be an array`);
   }
-  failures.push(...validatedGroups.flatMap(result => result.failures));
-
-  const duplicateGroupIds = duplicateValues(groups.map(group => group.id));
-  failures.push(
-    ...Array.from(
-      duplicateGroupIds,
-      groupId => `Duplicate documentation example group: ${groupId}`
-    )
-  );
+  failures.push(...validatedGroups.failures);
   const groupIds = groups.map(group => group.id);
   failures.push(
     ...requiredGroupIds

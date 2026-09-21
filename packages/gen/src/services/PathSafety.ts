@@ -7,8 +7,6 @@ import type {
   SafeGeneratedFilePath,
 } from "../helpers/pathSafety.js";
 
-export type { SafeGeneratedFilePath } from "../helpers/pathSafety.js";
-
 class UnexpectedPathSafetyDefect extends Data.TaggedError(
   "UnexpectedPathSafetyDefect"
 )<{

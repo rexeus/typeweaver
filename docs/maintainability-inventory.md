@@ -27,16 +27,16 @@ tooling. This inventory records the starting point only. It is not a suppression
 enforced target is zero violations with no size allowlist or per-file override, and `pnpm lint`
 fails on any remaining finding.
 
-Oxlint provides the compatibility-namespaced rules natively. The `sonarjs/*` rules are loaded
-through Oxlint's JavaScript plugin support. Automatic pnpm peer installation is disabled so that the
-SonarJS plugin cannot pull in its optional legacy linter peer; that separate linter is neither
-declared nor installed.
+Oxlint provides the compatibility-namespaced rules natively. The `sonarjs/*` rules and the local
+`typeweaver/pure-barrel` rule are loaded through Oxlint's JavaScript plugin support. Automatic pnpm
+peer installation is disabled so that the SonarJS plugin cannot pull in its optional legacy linter
+peer; that separate linter is neither declared nor installed.
 
 ## Type-aware semantic rules
 
 `pnpm lint` runs `oxlint . --deny-warnings` with `options.typeAware: true`, so projects under
-`packages/**` are analyzed with type information. The same semantic rules are enforced for authored
-package source and for test containers:
+`packages/**` are analyzed with type information. The semantic rules are enforced for authored
+package source and the package test overlay:
 
 | Rule                                     | Purpose                                            |
 | ---------------------------------------- | -------------------------------------------------- |
@@ -53,8 +53,8 @@ package source and for test containers:
 | `typescript/switch-exhaustiveness-check` | Require exhaustive switches over unions and enums. |
 
 The root profile also enforces `eslint/no-eval`, `eslint/no-implied-eval`, `eslint/no-new-func`,
-`unicorn/prefer-node-protocol`, and the import hygiene rules
-`import/consistent-type-specifier-style`, `import/max-dependencies` (10), `import/no-cycle`,
+`unicorn/prefer-node-protocol`, the local `typeweaver/pure-barrel` rule, and the import hygiene
+rules `import/consistent-type-specifier-style`, `import/max-dependencies` (10), `import/no-cycle`,
 `import/no-duplicates`, `import/no-named-default`, `import/no-namespace`, `import/no-self-import`,
 and `import/no-unassigned-import`.
 
@@ -62,24 +62,36 @@ and `import/no-unassigned-import`.
 
 These are the enforced values in `.oxlintrc.json`. No override may loosen them:
 
-| Rule                            | Configuration                                            |
-| ------------------------------- | -------------------------------------------------------- |
-| `eslint/complexity`             | `max: 10`, `variant: "classic"`                          |
-| `eslint/max-depth`              | `max: 3`                                                 |
-| `eslint/max-lines`              | `max: 400`, `skipBlankLines: true`, `skipComments: true` |
-| `eslint/max-lines-per-function` | `max: 60`, `skipBlankLines: true`, `skipComments: true`  |
-| `eslint/max-nested-callbacks`   | `max: 3`                                                 |
-| `eslint/max-params`             | `max: 4`, `countThis: "except-void"`                     |
-| `eslint/max-statements`         | `max: 30`                                                |
-| `sonarjs/cognitive-complexity`  | `15`                                                     |
-| `sonarjs/expression-complexity` | `max: 6`                                                 |
-| `sonarjs/no-nested-switch`      | `error`                                                  |
+| Rule                            | Configuration                                             |
+| ------------------------------- | --------------------------------------------------------- |
+| `eslint/complexity`             | `max: 10`, `variant: "classic"`                           |
+| `eslint/max-depth`              | `max: 3`                                                  |
+| `eslint/max-lines`              | `max: 250`, `skipBlankLines: true`, `skipComments: false` |
+| `eslint/max-lines-per-function` | `max: 60`, `skipBlankLines: true`, `skipComments: true`   |
+| `eslint/max-nested-callbacks`   | `max: 3`                                                  |
+| `eslint/max-params`             | `max: 4`, `countThis: "except-void"`                      |
+| `eslint/max-statements`         | `max: 30`                                                 |
+| `sonarjs/cognitive-complexity`  | `12`                                                      |
+| `sonarjs/expression-complexity` | `max: 6`                                                  |
+| `sonarjs/no-nested-switch`      | `error`                                                   |
 
-Test containers are declaration scaffolding rather than behavior, so the single documented test
-override relaxes only the three container budgets `eslint/max-lines`,
-`eslint/max-lines-per-function`, and `eslint/max-nested-callbacks`. Cognitive, expression, and
+Authored tests use a dedicated `max: 350`, `skipBlankLines: true`, `skipComments: false`
+`eslint/max-lines` override. The test container profile relaxes only `eslint/max-lines-per-function`
+and `eslint/max-nested-callbacks`; it does not disable the file-size rule. Package test files
+receive a second, type-aware overlay with every TypeScript safety rule. Cognitive, expression, and
 cyclomatic complexity, statement, parameter, depth, import, and every type-aware safety rule still
-apply to tests.
+apply to package tests.
+
+The file-size test classification is exact:
+
+- `packages/**/__test__/**/*.ts` and `.tsx`;
+- `packages/**/*.test.ts`, `.test.tsx`, `.spec.ts`, `.spec.tsx`, `.tst.ts`, and `.tst.tsx`;
+- `config/**/*.test.ts`, `.test.tsx`, `.spec.ts`, `.spec.tsx`, `.tst.ts`, and `.tst.tsx`; and
+- `scripts/test-*.mjs`.
+
+The local `typeweaver/pure-barrel` rule is enabled at error level for every linted filename. A file
+containing a direct re-export may contain only imports, type declarations, and export wiring; a
+runtime implementation mixed into that barrel fails lint.
 
 ## Warning and unused-disable policy
 
@@ -102,32 +114,35 @@ packages and packed consumers, and `pnpm test:quality-contracts` proves the scri
 root-tooling tasks reject broken fixtures. A lint exclusion is never used to hide unsafe generated
 output.
 
+The checked-JavaScript scope is `scripts/**`, `config/tsdown/**`, and `config/oxlint/**`, all
+covered by `scripts/tsconfig.json` and its `checkjs.json` profile. This tooling scope is separate
+from the package TypeScript semantic overlays and has no generated-output exception.
+
 ## Suppression governance
 
 Authored `oxlint-disable`/`eslint-disable` directives are an exact allowlist. Any addition, removal,
 or move requires a reviewed contract change in `scripts/test-maintainability-lint.mjs`, and any
 directive not on the list fails the gate:
 
-| File                                                | Directive                                      | Reason                                                              |
-| --------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------- |
-| `packages/gen/src/helpers/templateEngine.ts`        | `// oxlint-disable-next-line no-new-func`      | Template compilation evaluates generated template source by design. |
-| `packages/server/__test__/unit/NodeAdapter.test.ts` | `/* oxlint-disable import/max-dependencies */` | The adapter contract test intentionally imports many collaborators. |
-| `packages/server/src/lib/TypeweaverApp.ts`          | `// oxlint-disable import/max-dependencies`    | The app composition root intentionally wires many collaborators.    |
+| File                                         | Directive                                   | Reason                                                              |
+| -------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------- |
+| `packages/gen/src/helpers/templateEngine.ts` | `// oxlint-disable-next-line no-new-func`   | Template compilation evaluates generated template source by design. |
+| `packages/server/src/lib/TypeweaverApp.ts`   | `// oxlint-disable import/max-dependencies` | The app composition root intentionally wires many collaborators.    |
 
 The scanner distinguishes real directives from string literals, and unused-disable reporting means a
 stale entry can never remain silent.
 
 ## Executable contracts
 
-| Command                          | Contract it proves                                                                                                                            |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm test:maintainability-lint` | Exact valid/invalid boundaries for the 10 maintainability rules, the allowlist scanner, and the no-ESLint runtime guard.                      |
-| `pnpm test:lint-policy`          | 22 lint rules, test-scope enforcement, unused-disable reporting, `--deny-warnings`, and 9 configuration-weakening rejections.                 |
-| `pnpm test:typescript-toolchain` | 20 compiler options and 18 diagnostics across the four compiler profiles.                                                                     |
-| `pnpm test:quality-contracts`    | `typecheck:scripts` rejects an implicit-any tooling module and `test:tooling` rejects a broken build-config contract, using throwaway copies. |
-| `pnpm typecheck:scripts`         | Checked JavaScript over every `scripts/**` and `config/tsdown/**` `.mjs` tooling file.                                                        |
-| `pnpm test:tooling`              | The root tsdown build-config tests.                                                                                                           |
-| `pnpm lint`                      | The full warning-free, type-aware policy over the repository.                                                                                 |
+| Command                          | Contract it proves                                                                                                                                         |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm test:maintainability-lint` | Exact valid/invalid boundaries for the 10 maintainability rules, the allowlist scanner, and the no-ESLint runtime guard.                                   |
+| `pnpm test:lint-policy`          | 22 lint rules, 250/350 file-size, cognitive, dependency, barrel, test-scope, unused-disable, `--deny-warnings`, and 20 configuration-weakening rejections. |
+| `pnpm test:typescript-toolchain` | 20 compiler options and 18 diagnostics across the four compiler profiles.                                                                                  |
+| `pnpm test:quality-contracts`    | `typecheck:scripts` rejects an implicit-any tooling module and `test:tooling` rejects a broken build-config contract, using throwaway copies.              |
+| `pnpm typecheck:scripts`         | Checked JavaScript over every `scripts/**`, `config/tsdown/**`, and `config/oxlint/**` `.mjs` tooling file.                                                |
+| `pnpm test:tooling`              | The root tsdown build-config tests and local config/oxlint plugin tests.                                                                                   |
+| `pnpm lint`                      | The full warning-free, type-aware policy over the repository.                                                                                              |
 
 `pnpm verify:architecture-contracts` runs the compiler-profile, lint-policy, maintainability,
 scripts-typecheck, root-tooling, and quality-task guards in a deterministic order alongside the

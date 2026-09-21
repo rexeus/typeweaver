@@ -3,6 +3,15 @@ import type {
   HttpHeaderSchemaLike,
 } from "@rexeus/typeweaver-core";
 import { z } from "zod";
+import {
+  extractStringLiteralValues,
+  getSchemaType,
+  isZodObject,
+  enumSchemaValues,
+  literalSchemaValues,
+  unwrapMediaInferenceSchema,
+  unwrapOptional,
+} from "./bodySchemaUtils.js";
 import type {
   NormalizedBodyMediaTypeSource,
   NormalizedBodyTransport,
@@ -22,22 +31,10 @@ export type NormalizeBodyResult = {
   readonly warnings: readonly NormalizedSpecWarning[];
 };
 
-type ZodObjectWithShape = z.ZodObject<Record<string, z.ZodType>> & {
-  readonly shape: Record<string, z.ZodType>;
-};
-
 type ContentTypeHeaderResult =
   | { readonly kind: "absent" }
   | { readonly kind: "ambiguous" }
   | { readonly kind: "literal"; readonly value: string };
-
-type ZodTypeDefinition = {
-  readonly type?: string;
-  readonly innerType?: z.ZodType;
-  readonly schema?: z.ZodType;
-  readonly in?: z.ZodType;
-  readonly out?: z.ZodType;
-};
 
 const JSON_BODY_SCHEMA_TYPES = new Set([
   "array",
@@ -237,164 +234,4 @@ export const resolveTransport = (
   }
 
   return "raw";
-};
-
-const unwrapMediaInferenceSchema = (
-  schema: z.ZodType | undefined
-): z.ZodType | undefined => {
-  const visitedSchemas = new Set<z.ZodType>();
-  let current = schema;
-
-  while (current !== undefined && !visitedSchemas.has(current)) {
-    visitedSchemas.add(current);
-
-    const step = unwrapMediaInferenceStep(current);
-    if (step._tag === "Done") {
-      return step.schema;
-    }
-    current = step.schema;
-  }
-
-  return current;
-};
-
-type MediaInferenceStep =
-  | { readonly _tag: "Continue"; readonly schema?: z.ZodType | undefined }
-  | { readonly _tag: "Done"; readonly schema?: z.ZodType | undefined };
-
-const MEDIA_INFERENCE_WRAPPER_TYPES = new Set([
-  "optional",
-  "nullable",
-  "default",
-  "catch",
-  "prefault",
-  "readonly",
-]);
-
-const isOpaqueMediaInferenceOutput = (
-  outputType: string | undefined
-): boolean => outputType === undefined || outputType === "transform";
-
-const isMediaInferenceWrapper = (schemaType: string | undefined): boolean =>
-  schemaType !== undefined && MEDIA_INFERENCE_WRAPPER_TYPES.has(schemaType);
-
-const unwrapMediaInferencePipe = (
-  definition: ZodTypeDefinition | undefined
-): MediaInferenceStep =>
-  isOpaqueMediaInferenceOutput(getSchemaType(definition?.out))
-    ? { _tag: "Done" }
-    : { _tag: "Continue", schema: definition?.out };
-
-const unwrapMediaInferenceStep = (schema: z.ZodType): MediaInferenceStep => {
-  const definition = getSchemaDefinition(schema);
-  const schemaType = definition?.type;
-
-  if (isMediaInferenceWrapper(schemaType)) {
-    return { _tag: "Continue", schema: definition?.innerType };
-  }
-
-  if (schemaType === "pipe") {
-    return unwrapMediaInferencePipe(definition);
-  }
-
-  return schemaType === "effects"
-    ? { _tag: "Continue", schema: definition?.schema }
-    : { _tag: "Done", schema };
-};
-
-const unwrapOptional = (
-  schema: z.core.$ZodType | undefined
-): z.core.$ZodType | undefined => {
-  return schema instanceof z.ZodOptional ? schema.unwrap() : schema;
-};
-
-const isZodObject = (schema: z.core.$ZodType): schema is ZodObjectWithShape => {
-  return getSchemaType(schema) === "object" && "shape" in schema;
-};
-
-const extractStringLiteralValues = (
-  schema: z.core.$ZodType
-): readonly string[] => {
-  const unwrappedSchema = unwrapOptional(schema);
-
-  if (unwrappedSchema === undefined) {
-    return [];
-  }
-
-  if (getSchemaType(unwrappedSchema) === "literal") {
-    return literalSchemaValues(unwrappedSchema).filter(
-      (value): value is string => typeof value === "string"
-    );
-  }
-
-  if (getSchemaType(unwrappedSchema) === "enum") {
-    return enumSchemaValues(unwrappedSchema).filter(
-      (value): value is string => typeof value === "string"
-    );
-  }
-
-  return [];
-};
-
-const literalSchemaValues = (
-  schema: z.core.$ZodType | undefined
-): readonly unknown[] => {
-  const literalSchema = schema as
-    | {
-        readonly values?: ReadonlySet<unknown>;
-      }
-    | undefined;
-
-  return Array.from(literalSchema?.values ?? []);
-};
-
-const enumSchemaValues = (
-  schema: z.core.$ZodType | undefined
-): readonly unknown[] => {
-  const enumSchema = schema as
-    | {
-        readonly options?: readonly unknown[];
-        readonly enum?: Record<string, unknown>;
-        readonly def?: {
-          readonly entries?: Record<string, unknown>;
-          readonly values?: readonly unknown[];
-        };
-      }
-    | undefined;
-
-  if (enumSchema === undefined) {
-    return [];
-  }
-  if (enumSchema.options !== undefined) {
-    return enumSchema.options;
-  }
-  if (enumSchema.def?.values !== undefined) {
-    return enumSchema.def.values;
-  }
-  if (enumSchema.def?.entries !== undefined) {
-    return Object.values(enumSchema.def.entries);
-  }
-  if (enumSchema.enum !== undefined) {
-    return Object.values(enumSchema.enum);
-  }
-  return [];
-};
-
-const getSchemaType = (
-  schema: z.core.$ZodType | undefined
-): string | undefined => {
-  return getSchemaDefinition(schema)?.type;
-};
-
-const getSchemaDefinition = (
-  schema: z.core.$ZodType | undefined
-): ZodTypeDefinition | undefined => {
-  const schemaWithDefinition = schema as
-    | {
-        readonly def?: ZodTypeDefinition;
-        readonly _def?: ZodTypeDefinition;
-      }
-    | undefined;
-
-  return schemaWithDefinition?.def ?? schemaWithDefinition?._def;
 };

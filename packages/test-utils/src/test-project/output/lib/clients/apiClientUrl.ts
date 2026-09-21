@@ -1,8 +1,8 @@
 import type { ClientHttpParam, ClientHttpQuery } from "@rexeus/typeweaver-core";
+import { buildQueryString } from "./apiClientQuery.js";
 import { serializeHttpScalar } from "./apiClientSerialization.js";
 import { ApiClientConfigurationError } from "./errors/ApiClientConfigurationError.js";
 import { PathParameterError } from "./PathParameterError.js";
-import { RequestSerializationError } from "./RequestSerializationError.js";
 
 const PATH_PARAMETER_PATTERN = /:([A-Za-z0-9_]+)/g;
 const LEADING_URI_SCHEME_PATTERN = /^[A-Za-z][A-Za-z0-9+.-]*:/;
@@ -58,40 +58,6 @@ export function assertValidBaseUrl(baseUrl: string): void {
       ...(validationError.scheme === undefined ? {} : { scheme: validationError.scheme }),
     });
   }
-}
-
-function buildQueryString(
-  query: ClientHttpQuery | undefined,
-  defaultQuery: Readonly<Record<string, string>>,
-): string {
-  const hasDefaults = Object.keys(defaultQuery).length > 0;
-  if (!query && !hasDefaults) {
-    return "";
-  }
-
-  const params = new URLSearchParams();
-  const mergedQuery: ClientHttpQuery = {
-    ...defaultQuery,
-    ...query,
-  };
-  for (const [key, value] of Object.entries(mergedQuery)) {
-    if (value === undefined) {
-      continue;
-    }
-    if (!Array.isArray(value)) {
-      params.append(key, serializeHttpScalar(value, "query", key));
-      continue;
-    }
-    if (value.length === 0) {
-      throw new RequestSerializationError("query", key, value, "empty-array");
-    }
-    for (const item of value) {
-      if (item !== undefined) {
-        params.append(key, serializeHttpScalar(item, "query", key));
-      }
-    }
-  }
-  return params.toString();
 }
 
 function getBaseUrlValidationError(baseUrl: string):

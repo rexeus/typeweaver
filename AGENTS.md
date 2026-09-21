@@ -17,13 +17,17 @@ notes, but it is gitignored and never part of the published repository.
   TypeScript compiler profiles: `base.json`, `node.json`, and `checkjs.json`. See
   [`packages/tsconfig/README.md`](./packages/tsconfig/README.md).
 - Oxlint enforces lint, type-aware semantic safety, and maintainability rules. `pnpm lint` is
-  warning-free and requires `exactOptionalPropertyTypes`-clean code.
+  warning-free and requires `exactOptionalPropertyTypes`-clean code. Authored source has a 250-line
+  file budget; classified tests have a 350-line file budget. Both count comments and skip blank
+  lines.
 - Oxfmt formats source and documentation.
 - Vitest runs unit, integration, and generation tests.
 
-Repository `.mjs` tooling under `scripts/**` and `config/tsdown/**` is a checked-JavaScript project
-(`scripts/tsconfig.json` extends the `checkjs.json` profile) rather than a globally permissive
-`allowJs` setting.
+Repository `.mjs` tooling under `scripts/**`, `config/tsdown/**`, and `config/oxlint/**` is a
+checked-JavaScript project (`scripts/tsconfig.json` extends the `checkjs.json` profile) rather than
+a globally permissive `allowJs` setting. The lint test classification covers package `__test__`
+directories, `.test`, `.spec`, and `.tst` files, matching test files under `config/**`, and
+`scripts/test-*.mjs`.
 
 Do not substitute other build, lint, or formatting tools without an explicit repository-wide
 decision. Install with `pnpm install --frozen-lockfile`.
@@ -55,10 +59,13 @@ decision. Install with `pnpm install --frozen-lockfile`.
   check after each logical change, then the required repository gate.
 - Prefer `unknown` plus explicit validation at external boundaries. Do not introduce `any`, unsafe
   assertions, ignored type errors, skipped tests, or muted lint rules to pass a gate.
-- Keep code inside the enforced cognitive and structural limits and resolve findings by cohesive
-  decomposition. Do not add a size allowlist, per-file override, or unlisted `oxlint-disable`
-  directive; the authored suppression allowlist is exact and tested by
+- Keep code inside the enforced cognitive and structural limits: cognitive complexity is 12, classic
+  cyclomatic complexity is 10, and imports are limited to 10 including type-only imports. Resolve
+  findings by cohesive decomposition. Do not add a size allowlist, per-file override, or unlisted
+  `oxlint-disable` directive; the authored suppression allowlist is exact and tested by
   `pnpm test:maintainability-lint`.
+- Direct re-export files are pure barrels: they may contain imports, type declarations, and export
+  wiring only; runtime implementation mixed into a direct re-export file is rejected.
 - Preserve deterministic generation, path safety, transactional publication, and per-call isolation.
 - Public contract changes require runtime and type tests, a Changeset, and migration documentation.
 - Public examples must be executable or mapped to typechecked fixtures.

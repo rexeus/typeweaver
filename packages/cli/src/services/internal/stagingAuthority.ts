@@ -10,8 +10,6 @@ import {
   canonicalHostTempDirectory,
 } from "./hostTemp.js";
 
-export { assertPathNotReservedForCoordination } from "./hostTemp.js";
-
 /**
  * Module-private token that makes a staging authority unforgeable. The symbol
  * is never exported, so only the CLI check pipeline can construct a value that

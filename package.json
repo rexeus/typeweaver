@@ -18,7 +18,7 @@
     "test:maintainability-lint": "node scripts/test-maintainability-lint.mjs",
     "test:lint-policy": "node scripts/test-lint-policy.mjs",
     "test:typescript-toolchain": "node scripts/test-typescript-toolchain.mjs",
-    "test:tooling": "vitest --run config/tsdown",
+    "test:tooling": "vitest --run config/tsdown config/oxlint",
     "test:quality-contracts": "node scripts/test-quality-contracts.mjs",
     "verify:generated": "node scripts/verify-generated.mjs",
     "verify:effect-reference": "node scripts/verify-effect-reference.mjs && node scripts/test-effect-reference-guard.mjs",

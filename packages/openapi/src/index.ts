@@ -6,7 +6,7 @@ export {
   OPENAPI_WARNING_ISSUE_REGISTRY,
   openApiWarningToIssue,
 } from "./warningIssues.js";
-export type { OpenApiPluginOptions } from "./openApiPlugin.js";
+export type { OpenApiPluginOptions } from "./internal/normalizeOptions.js";
 export type {
   OpenApiWarningCode,
   OpenApiWarningIssueEntry,

@@ -98,14 +98,14 @@ export const statements = count =>
 
 /**
  * @param {number} start
+ * @param {boolean} withElse
  * @returns {string[]}
  */
-const nestedChain = start => [
+const nestedChain = (start, withElse) => [
   `  if (values[${start}]) {`,
   `    if (values[${start + 1}]) {`,
-  `      if (values[${start + 2}]) {`,
-  "        consume();",
-  "      }",
+  "      consume();",
+  ...(withElse ? ["    } else {", "      consume();"] : []),
   "    }",
   "  }",
 ];
@@ -115,16 +115,14 @@ const nestedChain = start => [
  * @returns {string}
  */
 export const cognitiveComplexity = withElse => {
-  const lastFlat = withElse
-    ? "  if (values[8]) { consume(); } else { consume(); }"
-    : "  if (values[8]) { consume(); }";
   return [
     "function cognitive(values: boolean[], consume: () => void) {",
-    ...nestedChain(0),
-    ...nestedChain(3),
-    "  if (values[6]) { consume(); }",
-    "  if (values[7]) { consume(); }",
-    lastFlat,
+    ...nestedChain(0, true),
+    ...nestedChain(2, withElse),
+    ...Array.from(
+      { length: 5 },
+      (_, index) => `  if (values[${index + 4}]) { consume(); }`
+    ),
     "}",
   ].join("\n");
 };
@@ -175,9 +173,9 @@ export const ruleCases = [
     name: "max-lines",
     rule: "eslint/max-lines",
     diagnostic: "eslint(max-lines)",
-    options: ["error", { max: 400, skipBlankLines: true, skipComments: true }],
-    valid: fileLines(400),
-    invalid: fileLines(401),
+    options: ["error", { max: 250, skipBlankLines: true, skipComments: false }],
+    valid: fileLines(250),
+    invalid: fileLines(251),
   },
   {
     name: "max-lines-per-function",
@@ -217,7 +215,7 @@ export const ruleCases = [
     name: "cognitive-complexity",
     rule: "sonarjs/cognitive-complexity",
     diagnostic: "sonarjs(cognitive-complexity)",
-    options: ["error", 15],
+    options: ["error", 12],
     valid: cognitiveComplexity(false),
     invalid: cognitiveComplexity(true),
   },

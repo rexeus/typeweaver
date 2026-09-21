@@ -1,4 +1,4 @@
 {
   "extends": "@rexeus/typeweaver-tsconfig/checkjs.json",
-  "include": ["*.mjs", "lib/**/*.mjs", "../config/tsdown/*.mjs"]
+  "include": ["*.mjs", "lib/**/*.mjs", "../config/tsdown/*.mjs", "../config/oxlint/*.mjs"]
 }

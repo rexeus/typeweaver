@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["eslint", "unicorn", "oxc", "import"],
-  "jsPlugins": ["eslint-plugin-sonarjs"],
+  "jsPlugins": ["eslint-plugin-sonarjs", "./config/oxlint/pureBarrelRule.mjs"],
   "categories": {
     "correctness": "error"
   },
@@ -30,9 +30,9 @@
     "eslint/max-lines": [
       "error",
       {
-        "max": 400,
+        "max": 250,
         "skipBlankLines": true,
-        "skipComments": true
+        "skipComments": false
       }
     ],
     "eslint/max-lines-per-function": [
@@ -75,14 +75,15 @@
     "import/no-namespace": "error",
     "import/no-self-import": "error",
     "import/no-unassigned-import": "error",
-    "sonarjs/cognitive-complexity": ["error", 15],
+    "sonarjs/cognitive-complexity": ["error", 12],
     "sonarjs/expression-complexity": [
       "error",
       {
         "max": 6
       }
     ],
-    "sonarjs/no-nested-switch": "error"
+    "sonarjs/no-nested-switch": "error",
+    "typeweaver/pure-barrel": "error"
   },
   "ignorePatterns": ["**/dist/**", "**/node_modules/**", ".vscode/**", "**/output/**", "**/outputs/**"],
   "overrides": [
@@ -93,7 +94,41 @@
         "packages/**/*.test.ts",
         "packages/**/*.test.tsx",
         "packages/**/*.spec.ts",
-        "packages/**/*.spec.tsx"
+        "packages/**/*.spec.tsx",
+        "packages/**/*.tst.ts",
+        "packages/**/*.tst.tsx",
+        "config/**/*.test.ts",
+        "config/**/*.test.tsx",
+        "config/**/*.spec.ts",
+        "config/**/*.spec.tsx",
+        "config/**/*.tst.ts",
+        "config/**/*.tst.tsx",
+        "scripts/test-*.mjs"
+      ],
+      "plugins": ["eslint", "unicorn", "oxc", "import"],
+      "rules": {
+        "eslint/max-lines": [
+          "error",
+          {
+            "max": 350,
+            "skipBlankLines": true,
+            "skipComments": false
+          }
+        ],
+        "eslint/max-lines-per-function": "off",
+        "eslint/max-nested-callbacks": "off"
+      }
+    },
+    {
+      "files": [
+        "packages/**/__test__/**/*.ts",
+        "packages/**/__test__/**/*.tsx",
+        "packages/**/*.test.ts",
+        "packages/**/*.test.tsx",
+        "packages/**/*.spec.ts",
+        "packages/**/*.spec.tsx",
+        "packages/**/*.tst.ts",
+        "packages/**/*.tst.tsx"
       ],
       "plugins": ["eslint", "typescript", "unicorn", "oxc", "import"],
       "rules": {
@@ -107,10 +142,7 @@
         "typescript/no-unsafe-call": "error",
         "typescript/no-unsafe-member-access": "error",
         "typescript/no-unsafe-return": "error",
-        "typescript/switch-exhaustiveness-check": "error",
-        "eslint/max-lines": "off",
-        "eslint/max-lines-per-function": "off",
-        "eslint/max-nested-callbacks": "off"
+        "typescript/switch-exhaustiveness-check": "error"
       }
     },
     {
@@ -121,6 +153,8 @@
         "packages/**/*.test.tsx",
         "packages/**/*.spec.ts",
         "packages/**/*.spec.tsx",
+        "packages/**/*.tst.ts",
+        "packages/**/*.tst.tsx",
         "packages/**/tsdown.config.ts",
         "packages/**/examples/**",
         "packages/**/fixtures/**",

@@ -1,11 +1,13 @@
 import { fromZod } from "@rexeus/typeweaver-zod-to-json-schema";
-import type {
-  JsonSchema,
-  JsonSchemaValue,
-} from "@rexeus/typeweaver-zod-to-json-schema";
+import type { JsonSchema } from "@rexeus/typeweaver-zod-to-json-schema";
 import { z } from "zod";
-import { appendJsonPointer, escapeJsonPointerSegment } from "./jsonPointer.js";
+import { appendJsonPointer } from "./jsonPointer.js";
 import { normalizeOpenApiSchema } from "./openApiSchemaNormalization.js";
+import {
+  isJsonSchema,
+  preserveReferencedRootDefinitionKeyword,
+  rebaseJsonSchemaValue,
+} from "./schemaDefinitionRefs.js";
 import { getSchemaDefinition } from "./zodIntrospection.js";
 import type {
   OpenApiSchemaConversionWarning,
@@ -16,16 +18,11 @@ export type SchemaConversionResult = {
   readonly schema: JsonSchema;
   readonly warnings: readonly OpenApiSchemaConversionWarning[];
 };
-
 export type OptionalSchemaResult = {
   readonly schema: z.core.$ZodType;
   readonly isOptional: boolean;
 };
-
-export type ConvertSchemaOptions = {
-  readonly rebaseLocalRefs?: boolean;
-};
-
+export type ConvertSchemaOptions = { readonly rebaseLocalRefs?: boolean };
 const ROOT_TRANSPARENT_WRAPPER_TYPES = new Set([
   "optional",
   "default",
@@ -34,7 +31,6 @@ const ROOT_TRANSPARENT_WRAPPER_TYPES = new Set([
   "readonly",
   "nonoptional",
 ]);
-
 export function convertSchema(
   schema: z.core.$ZodType,
   documentPath: string,
@@ -42,13 +38,12 @@ export function convertSchema(
   options: ConvertSchemaOptions = {}
 ): SchemaConversionResult {
   const result = fromZod(schema);
-  const shouldRebaseLocalRefs = options.rebaseLocalRefs ?? true;
   const openApiSchema = normalizeOpenApiSchema(result.schema);
-
   return {
-    schema: shouldRebaseLocalRefs
-      ? rebaseLocalJsonSchemaRefs(openApiSchema, documentPath)
-      : openApiSchema,
+    schema:
+      (options.rebaseLocalRefs ?? true)
+        ? rebaseLocalJsonSchemaRefs(openApiSchema, documentPath)
+        : openApiSchema,
     warnings: result.warnings.map(warning => ({
       origin: "schema-conversion",
       code: warning.code,
@@ -60,14 +55,12 @@ export function convertSchema(
     })),
   };
 }
-
 export function rebaseLocalJsonSchemaRefs(
   schema: JsonSchema,
   documentPath: string
 ): JsonSchema {
   return rebaseJsonSchemaValue(schema, documentPath) as JsonSchema;
 }
-
 export function unwrapRootOptional(
   schema: z.core.$ZodType
 ): OptionalSchemaResult {
@@ -76,357 +69,123 @@ export function unwrapRootOptional(
     isOptional: omittedInputResult(schema) !== "rejects",
   };
 }
-
 function unwrapRootSchema(schema: z.core.$ZodType): z.core.$ZodType {
-  const visitedSchemas = new Set<z.core.$ZodType>();
+  const visited = new Set<z.core.$ZodType>();
   let current = schema;
-
-  while (!visitedSchemas.has(current)) {
-    visitedSchemas.add(current);
-
+  while (!visited.has(current)) {
+    visited.add(current);
     const definition = getSchemaDefinition(current);
     const schemaType = definition?.type;
-
-    if (schemaType === "nullable") {
-      return current;
-    }
-
+    if (schemaType === "nullable") return current;
     if (
       schemaType !== undefined &&
       ROOT_TRANSPARENT_WRAPPER_TYPES.has(schemaType)
     ) {
-      const innerType = definition?.innerType;
-
-      if (innerType === undefined) {
-        return current;
-      }
-
-      current = innerType;
+      if (definition?.innerType === undefined) return current;
+      current = definition.innerType;
       continue;
     }
-
     return current;
   }
-
   return current;
 }
-
 type OmittedInputResult = "rejects" | "accepts-defined" | "accepts-undefined";
-
-function catchOmittedInputResult(
-  innerType: z.core.$ZodType | undefined
-): OmittedInputResult {
-  if (innerType === undefined) {
-    return "accepts-defined";
-  }
-
-  const innerResult = omittedInputResult(innerType);
-  return innerResult === "rejects" ? "accepts-defined" : innerResult;
-}
-
-function nonOptionalOmittedInputResult(
-  innerType: z.core.$ZodType | undefined
-): OmittedInputResult {
-  if (innerType === undefined) {
-    return "rejects";
-  }
-
-  return omittedInputResult(innerType) === "accepts-defined"
-    ? "accepts-defined"
-    : "rejects";
-}
-
 type OmittedInputStep =
   | { readonly _tag: "Done"; readonly result: OmittedInputResult }
   | { readonly _tag: "Continue"; readonly schema: z.core.$ZodType };
-
 type OmittedInputHandler = (
   innerType: z.core.$ZodType | undefined
 ) => OmittedInputStep;
-
-const done = (result: OmittedInputResult): OmittedInputStep => ({
-  _tag: "Done",
-  result,
-});
-
 const continueWithInner = (
   innerType: z.core.$ZodType | undefined
 ): OmittedInputStep =>
   innerType === undefined
-    ? done("rejects")
+    ? { _tag: "Done", result: "rejects" }
     : { _tag: "Continue", schema: innerType };
-
 const omittedInputHandlers: Readonly<
   Partial<Record<string, OmittedInputHandler>>
 > = {
-  optional: () => done("accepts-undefined"),
-  default: () => done("accepts-defined"),
-  prefault: () => done("accepts-defined"),
-  catch: innerType => done(catchOmittedInputResult(innerType)),
-  nonoptional: innerType => done(nonOptionalOmittedInputResult(innerType)),
+  optional: () => ({ _tag: "Done", result: "accepts-undefined" }),
+  default: () => ({ _tag: "Done", result: "accepts-defined" }),
+  prefault: () => ({ _tag: "Done", result: "accepts-defined" }),
+  catch: inner => ({
+    _tag: "Done",
+    result: catchInputResult(inner),
+  }),
+  nonoptional: inner => ({
+    _tag: "Done",
+    result:
+      inner === undefined || omittedInputResult(inner) !== "accepts-defined"
+        ? "rejects"
+        : "accepts-defined",
+  }),
   nullable: continueWithInner,
   readonly: continueWithInner,
 };
-
+function catchInputResult(
+  innerType: z.core.$ZodType | undefined
+): OmittedInputResult {
+  if (innerType === undefined) return "accepts-defined";
+  const innerResult = omittedInputResult(innerType);
+  return innerResult === "rejects" ? "accepts-defined" : innerResult;
+}
 function omittedInputResult(schema: z.core.$ZodType): OmittedInputResult {
-  const visitedSchemas = new Set<z.core.$ZodType>();
+  const visited = new Set<z.core.$ZodType>();
   let current = schema;
-
-  while (!visitedSchemas.has(current)) {
-    visitedSchemas.add(current);
-
+  while (!visited.has(current)) {
+    visited.add(current);
     const definition = getSchemaDefinition(current);
-    const schemaType = definition?.type;
-    const handler =
-      schemaType === undefined ? undefined : omittedInputHandlers[schemaType];
-    if (handler === undefined) {
-      return "rejects";
-    }
-
-    const step = handler(definition?.innerType);
-    if (step._tag === "Done") {
-      return step.result;
-    }
+    if (definition?.type === undefined) return "rejects";
+    const handler = omittedInputHandlers[definition.type];
+    if (handler === undefined) return "rejects";
+    const step = handler(definition.innerType);
+    if (step._tag === "Done") return step.result;
     current = step.schema;
   }
-
   return "rejects";
 }
-
 export function getObjectProperties(
   schema: JsonSchema
 ): Record<string, JsonSchema> {
   const properties = schema["properties"];
-
-  if (!isJsonSchema(properties)) {
-    return {};
-  }
-
-  return Object.fromEntries(
-    Object.entries(properties).filter((entry): entry is [string, JsonSchema] =>
-      isJsonSchema(entry[1])
-    )
-  );
+  return !isJsonSchema(properties)
+    ? {}
+    : Object.fromEntries(
+        Object.entries(properties).filter(
+          (entry): entry is [string, JsonSchema] => isJsonSchema(entry[1])
+        )
+      );
 }
-
 export function preserveReferencedRootDefinitions(
   schema: JsonSchema,
   rootSchema: JsonSchema
 ): JsonSchema {
   return ["$defs", "definitions"].reduce(
-    (selfContainedSchema, definitionKey) =>
+    (current, definitionKey) =>
       preserveReferencedRootDefinitionKeyword({
-        schema: selfContainedSchema,
-        sourceSchema: selfContainedSchema,
+        schema: current,
+        sourceSchema: current,
         rootSchema,
         definitionKey,
       }),
     schema
   );
 }
-
 export function getRequiredNames(schema: JsonSchema): ReadonlySet<string> {
-  if (!Array.isArray(schema["required"])) {
-    return new Set();
-  }
-
-  return new Set(
-    schema["required"].filter(
-      (entry): entry is string => typeof entry === "string"
-    )
-  );
+  return !Array.isArray(schema["required"])
+    ? new Set()
+    : new Set(
+        schema["required"].filter(
+          (entry): entry is string => typeof entry === "string"
+        )
+      );
 }
-
 export function hasUnrepresentableAdditionalProperties(
   schema: JsonSchema
 ): boolean {
   return (
-    Object.prototype.hasOwnProperty.call(schema, "additionalProperties") &&
+    Object.hasOwn(schema, "additionalProperties") &&
     schema["additionalProperties"] !== false
   );
 }
-
-export function isJsonSchema(value: unknown): value is JsonSchema {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function rebaseJsonSchemaValue(
-  value: JsonSchemaValue,
-  documentPath: string
-): JsonSchemaValue {
-  if (Array.isArray(value)) {
-    return (value as readonly JsonSchemaValue[]).map(item =>
-      rebaseJsonSchemaValue(item, documentPath)
-    );
-  }
-
-  if (!isJsonSchema(value)) {
-    return value;
-  }
-
-  return Object.fromEntries(
-    Object.entries(value).map(([key, child]) => [
-      key,
-      key === "$ref" && typeof child === "string"
-        ? rebaseLocalJsonSchemaRef(child, documentPath)
-        : rebaseJsonSchemaValue(child, documentPath),
-    ])
-  ) as JsonSchema;
-}
-
-function rebaseLocalJsonSchemaRef(ref: string, documentPath: string): string {
-  if (ref === "#") {
-    return `#${documentPath}`;
-  }
-
-  if (ref.startsWith("#/")) {
-    return `#${appendJsonPointer(documentPath, ref.slice(1))}`;
-  }
-
-  return ref;
-}
-
-function preserveReferencedRootDefinitionKeyword(options: {
-  readonly schema: JsonSchema;
-  readonly sourceSchema: JsonSchema;
-  readonly rootSchema: JsonSchema;
-  readonly definitionKey: string;
-}): JsonSchema {
-  const rootDefinitions = options.rootSchema[options.definitionKey];
-
-  if (!isJsonSchema(rootDefinitions)) {
-    return options.schema;
-  }
-
-  const referencedDefinitions = collectReferencedRootDefinitions({
-    schema: options.sourceSchema,
-    rootDefinitions,
-    definitionKey: options.definitionKey,
-  });
-
-  if (Object.keys(referencedDefinitions).length === 0) {
-    return options.schema;
-  }
-
-  const existingDefinitions = options.schema[options.definitionKey];
-
-  return {
-    ...options.schema,
-    [options.definitionKey]: {
-      ...(isJsonSchema(existingDefinitions) ? existingDefinitions : {}),
-      ...referencedDefinitions,
-    },
-  };
-}
-
-function collectReferencedRootDefinitions(options: {
-  readonly schema: JsonSchema;
-  readonly rootDefinitions: JsonSchema;
-  readonly definitionKey: string;
-}): JsonSchema {
-  const referencedNames = collectReferencedDefinitionNames(
-    options.schema,
-    options.definitionKey
-  );
-  const pendingNames = [...referencedNames];
-  const copiedDefinitions: Record<string, JsonSchemaValue> = {};
-
-  for (const name of pendingNames) {
-    if (Object.prototype.hasOwnProperty.call(copiedDefinitions, name)) {
-      continue;
-    }
-
-    const definition = options.rootDefinitions[name];
-
-    if (definition === undefined) {
-      continue;
-    }
-
-    copiedDefinitions[name] = definition;
-
-    if (!isJsonSchema(definition)) {
-      continue;
-    }
-
-    for (const transitiveName of collectReferencedDefinitionNames(
-      definition,
-      options.definitionKey
-    )) {
-      if (
-        !Object.prototype.hasOwnProperty.call(copiedDefinitions, transitiveName)
-      ) {
-        pendingNames.push(transitiveName);
-      }
-    }
-  }
-
-  return copiedDefinitions;
-}
-
-function collectReferencedDefinitionNames(
-  value: JsonSchemaValue,
-  definitionKey: string
-): ReadonlySet<string> {
-  const names = new Set<string>();
-
-  collectReferencedDefinitionNamesFromValue(value, definitionKey, names);
-
-  return names;
-}
-
-function collectReferencedDefinitionNamesFromValue(
-  value: JsonSchemaValue,
-  definitionKey: string,
-  names: Set<string>
-): void {
-  if (Array.isArray(value)) {
-    (value as readonly JsonSchemaValue[]).forEach(item =>
-      collectReferencedDefinitionNamesFromValue(item, definitionKey, names)
-    );
-    return;
-  }
-
-  if (!isJsonSchema(value)) {
-    return;
-  }
-
-  Object.entries(value).forEach(([key, child]) => {
-    if (key === "$ref" && typeof child === "string") {
-      const definitionName = getReferencedRootDefinitionName(
-        child,
-        definitionKey
-      );
-
-      if (definitionName !== undefined) {
-        names.add(definitionName);
-      }
-
-      return;
-    }
-
-    collectReferencedDefinitionNamesFromValue(child, definitionKey, names);
-  });
-}
-
-function getReferencedRootDefinitionName(
-  ref: string,
-  definitionKey: string
-): string | undefined {
-  const prefix = `#/${escapeJsonPointerSegment(definitionKey)}/`;
-
-  if (!ref.startsWith(prefix)) {
-    return undefined;
-  }
-
-  const [encodedName] = ref.slice(prefix.length).split("/");
-
-  if (encodedName === undefined || encodedName === "") {
-    return undefined;
-  }
-
-  return unescapeJsonPointerSegment(encodedName);
-}
-
-function unescapeJsonPointerSegment(segment: string): string {
-  return segment.replaceAll("~1", "/").replaceAll("~0", "~");
-}
+export { isJsonSchema };

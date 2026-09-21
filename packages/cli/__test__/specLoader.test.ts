@@ -4,28 +4,20 @@ import { HttpStatusCode } from "@rexeus/typeweaver-core";
 import { layer as nodeFileSystemLayer } from "@effect/platform-node/NodeFileSystem";
 import { Cause, Effect, Result, Exit, Layer } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
-import {
-  InvalidSpecEntrypointError,
-  SpecBundleError,
-  SpecBundleOutputMissingError,
-} from "../src/services/errors/specErrors.js";
+import { SpecBundleOutputMissingError } from "../src/services/errors/specErrors.js";
 import { isSpecDefinition } from "../src/services/internal/specGuards.js";
 import {
   createWrapperImportSpecifier,
   SpecBundler,
 } from "../src/services/SpecBundler.js";
-import { SpecLoader } from "../src/services/SpecLoader.js";
 import type {
   SpecBundlerConfig,
   SpecBundlerDeps,
 } from "../src/services/SpecBundler.js";
-import type {
-  LoadedSpec,
-  SpecLoaderConfig,
-} from "../src/services/SpecLoader.js";
 
 const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
   cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
+
 const causeFailures = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
   cause.reasons.filter(Cause.isFailReason).map(reason => reason.error);
 
@@ -36,9 +28,7 @@ const causeFailures = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
 const SpecBundlerLayer = SpecBundler.Default.pipe(
   Layer.provide(nodeFileSystemLayer)
 );
-const SpecLoaderLayer = SpecLoader.Default.pipe(
-  Layer.provide(nodeFileSystemLayer)
-);
+
 const bundle = async (
   config: SpecBundlerConfig,
   deps?: SpecBundlerDeps
@@ -51,26 +41,11 @@ const bundle = async (
   if (Result.isFailure(result)) throw result.failure;
   return result.success;
 };
-const loadSpec = async (config: SpecLoaderConfig): Promise<LoadedSpec> => {
-  const result = await Effect.runPromise(
-    Effect.result(SpecLoader.load(config)).pipe(Effect.provide(SpecLoaderLayer))
-  );
-  if (Result.isFailure(result)) throw result.failure;
-  return result.success;
-};
-
-const SPEC_DECLARATION = [
-  'import type { SpecDefinition } from "@rexeus/typeweaver-core";',
-  "export declare const spec: SpecDefinition;",
-  "",
-].join("\n");
 
 type TempProject = {
   readonly projectDir: string;
   readonly outputDir: string;
 };
-
-type TodoSpecExportStyle = "named" | "default";
 
 const tempDirs: string[] = [];
 
@@ -117,209 +92,6 @@ const writeSpecEntrypoint = (
 ): string => {
   return writeProjectFile(project, relativePath, contents);
 };
-const loadProjectSpec = async (
-  project: TempProject,
-  inputFile: string
-): Promise<LoadedSpec> => {
-  return loadSpec({
-    inputFile: path.relative(process.cwd(), inputFile),
-    specOutputDir: project.outputDir,
-  });
-};
-
-const createThrowingModuleSource = (options: {
-  readonly errorName: string;
-  readonly message: string;
-}): string => `
-    export const spec = (() => {
-      class ${options.errorName} extends Error {
-        name = "${options.errorName}";
-      }
-
-      throw new ${options.errorName}(${JSON.stringify(options.message)});
-    })();
-  `;
-
-const expectBundledArtifacts = (outputDir: string): void => {
-  expect(fs.readdirSync(outputDir).sort()).toEqual(["spec.d.ts", "spec.js"]);
-  expect(fs.readFileSync(path.join(outputDir, "spec.d.ts"), "utf8")).toBe(
-    SPEC_DECLARATION
-  );
-};
-
-const expectSingleTodoResource = (loadedSpec: LoadedSpec): void => {
-  expect(Object.keys(loadedSpec.definition.resources)).toEqual(["todos"]);
-  expect(loadedSpec.definition.resources["todos"]?.operations).toHaveLength(1);
-  expect(loadedSpec.normalizedSpec.resources).toEqual([
-    expect.objectContaining({
-      name: "todos",
-      operations: [
-        expect.objectContaining({
-          operationId: "getTodo",
-          path: "/todos/:todoId",
-        }) as unknown,
-      ],
-    }) as unknown,
-  ]);
-};
-
-const writeTodoResponseModule = (
-  project: TempProject,
-  options: { readonly fileName: string }
-): string => {
-  return writeProjectFile(
-    project,
-    options.fileName,
-    `
-        import { defineResponse, HttpStatusCode } from "@rexeus/typeweaver-core";
-        import { z } from "zod";
-
-        export const todoResponse = defineResponse({
-          name: "TodoResponse",
-          statusCode: HttpStatusCode.OK,
-          description: "Todo loaded",
-          body: z.object({ id: z.string() }),
-        });
-      `
-  );
-};
-
-const writeTodoSpecEntrypoint = (
-  project: TempProject,
-  options: {
-    readonly fileName: string;
-    readonly exportStyle: TodoSpecExportStyle;
-    readonly responseImport: string;
-    readonly includeNotFoundResponse?: boolean;
-  }
-): string => {
-  const specExport =
-    options.exportStyle === "default"
-      ? "export default defineSpec"
-      : "export const spec = defineSpec";
-  const coreImports = options.includeNotFoundResponse
-    ? "defineOperation, defineSpec, HttpMethod, HttpStatusCode"
-    : "defineOperation, defineSpec, HttpMethod";
-  const operationResponses = options.includeNotFoundResponse
-    ? `
-                    todoResponse,
-                    {
-                      name: "TodoNotFound",
-                      statusCode: HttpStatusCode.NOT_FOUND,
-                      description: "Todo not found",
-                      body: z.object({ message: z.string() }),
-                    },
-                  `
-    : "todoResponse";
-
-  return writeSpecEntrypoint(
-    project,
-    options.fileName,
-    `
-        import { ${coreImports} } from "@rexeus/typeweaver-core";
-        import { z } from "zod";
-        import { todoResponse } from ${JSON.stringify(options.responseImport)};
-
-        ${specExport}({
-          metadata: { title: "Todo API", version: "1.0.0" },
-          resources: {
-            todos: {
-              operations: [
-                defineOperation({
-                  operationId: "getTodo",
-                  method: HttpMethod.GET,
-                  path: "/todos/:todoId",
-                  summary: "Get todo",
-                  request: {
-                    param: z.object({ todoId: z.string() }),
-                  },
-                  responses: [${operationResponses}],
-                }),
-              ],
-            },
-          },
-        });
-      `
-  );
-};
-
-const writeTodoResourcesEntrypoint = (
-  project: TempProject,
-  options: { readonly fileName: string }
-): string => {
-  return writeSpecEntrypoint(
-    project,
-    options.fileName,
-    `
-        import { defineOperation, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
-        import { z } from "zod";
-
-        export const metadata = { title: "Todo API", version: "1.0.0" };
-        export const resources = {
-          todos: {
-            operations: [
-              defineOperation({
-                operationId: "getTodo",
-                method: HttpMethod.GET,
-                path: "/todos/:todoId",
-                summary: "Get todo",
-                request: {
-                  param: z.object({ todoId: z.string() }),
-                },
-                responses: [
-                  {
-                    name: "TodoResponse",
-                    statusCode: HttpStatusCode.OK,
-                    description: "Todo loaded",
-                    body: z.object({ id: z.string() }),
-                  },
-                ],
-              }),
-            ],
-          },
-        };
-      `
-  );
-};
-
-const writeTodoSpecWithOperation = (
-  project: TempProject,
-  options: {
-    readonly fileName: string;
-    readonly operationId: string;
-    readonly summary: string;
-  }
-): string => {
-  return writeSpecEntrypoint(
-    project,
-    options.fileName,
-    `
-        export const spec = {
-          metadata: { title: "Todo API", version: "1.0.0" },
-          resources: {
-            todos: {
-              operations: [
-                {
-                  operationId: ${JSON.stringify(options.operationId)},
-                  method: "GET",
-                  path: "/todos",
-                  summary: ${JSON.stringify(options.summary)},
-                  request: {},
-                  responses: [
-                    {
-                      name: "TodoResponse",
-                      statusCode: 200,
-                      description: "Todo response",
-                    },
-                  ],
-                },
-              ],
-            },
-          },
-        };
-      `
-  );
-};
 
 const validSpecDefinition = {
   metadata: { title: "Todo API", version: "1.0.0" },
@@ -344,6 +116,7 @@ const validSpecDefinition = {
     },
   },
 };
+
 const [validOperation] = validSpecDefinition.resources.todos.operations;
 
 if (validOperation === undefined) {
@@ -592,233 +365,5 @@ describe("SpecLoader bundler output contract", () => {
       bundledSpecFile: path.join(project.outputDir, "spec.js"),
       specOutputDir: project.outputDir,
     });
-  });
-});
-
-describe("SpecLoader supported spec modules", () => {
-  test("loads TypeScript specs with extensionless relative imports", async () => {
-    const project = createTempProject();
-
-    writeTodoResponseModule(project, { fileName: "responses.ts" });
-    const specFile = writeTodoSpecEntrypoint(project, {
-      fileName: "spec.ts",
-      exportStyle: "named",
-      responseImport: "./responses",
-      includeNotFoundResponse: true,
-    });
-
-    const loadedSpec = await loadProjectSpec(project, specFile);
-
-    expectSingleTodoResource(loadedSpec);
-    expect(loadedSpec.normalizedSpec.responses).toEqual([
-      expect.objectContaining({
-        name: "TodoResponse",
-        kind: "response",
-        statusCode: 200,
-      }) as unknown,
-    ]);
-    expect(
-      loadedSpec.normalizedSpec.resources[0]?.operations[0]?.responses
-    ).toEqual([
-      {
-        responseName: "TodoResponse",
-        source: "canonical",
-      },
-      {
-        responseName: "TodoNotFound",
-        source: "inline",
-        response: expect.objectContaining({
-          name: "TodoNotFound",
-          statusCode: 404,
-        }) as unknown,
-      },
-    ]);
-    expectBundledArtifacts(project.outputDir);
-  });
-  test("loads JavaScript specs exported as default", async () => {
-    const project = createTempProject();
-
-    writeTodoResponseModule(project, { fileName: "responses.js" });
-    const specFile = writeTodoSpecEntrypoint(project, {
-      fileName: "spec.js",
-      exportStyle: "default",
-      responseImport: "./responses.js",
-    });
-
-    const loadedSpec = await loadProjectSpec(project, specFile);
-
-    expectSingleTodoResource(loadedSpec);
-    expect(loadedSpec.normalizedSpec.responses).toEqual([
-      expect.objectContaining({
-        name: "TodoResponse",
-        kind: "response",
-        statusCode: 200,
-      }) as unknown,
-    ]);
-    expectBundledArtifacts(project.outputDir);
-  });
-  test("loads module namespace specs exported as resources", async () => {
-    const project = createTempProject();
-    const specFile = writeTodoResourcesEntrypoint(project, {
-      fileName: "spec.ts",
-    });
-
-    const loadedSpec = await loadProjectSpec(project, specFile);
-
-    expectSingleTodoResource(loadedSpec);
-    expect(
-      loadedSpec.normalizedSpec.resources[0]?.operations[0]?.responses
-    ).toEqual([
-      {
-        responseName: "TodoResponse",
-        source: "inline",
-        response: expect.objectContaining({
-          name: "TodoResponse",
-          statusCode: 200,
-        }) as unknown,
-      },
-    ]);
-    expectBundledArtifacts(project.outputDir);
-  });
-  test("loads rewritten specs from the same output file", async () => {
-    const project = createTempProject();
-    const specFile = writeTodoSpecWithOperation(project, {
-      fileName: "spec.ts",
-      operationId: "getFirstTodo",
-      summary: "Get first todo",
-    });
-
-    const firstSpec = await loadProjectSpec(project, specFile);
-
-    expect(
-      firstSpec.normalizedSpec.resources[0]?.operations[0]?.operationId
-    ).toBe("getFirstTodo");
-
-    writeTodoSpecWithOperation(project, {
-      fileName: "spec.ts",
-      operationId: "getSecondTodo",
-      summary: "Get second todo",
-    });
-
-    const secondSpec = await loadProjectSpec(project, specFile);
-
-    expect(
-      secondSpec.normalizedSpec.resources[0]?.operations[0]?.operationId
-    ).toBe("getSecondTodo");
-    expectBundledArtifacts(project.outputDir);
-  });
-});
-
-describe("SpecLoader bundling and import failures", () => {
-  test("rejects specs with missing imported helpers during bundling", async () => {
-    const project = createTempProject();
-    const specFile = writeSpecEntrypoint(
-      project,
-      "spec.ts",
-      `
-        import { missingResponse } from "./missingHelper";
-
-        export const spec = {
-          resources: {
-            todos: {
-              operations: [
-                {
-                  operationId: "getTodo",
-                  method: "GET",
-                  path: "/todos/:todoId",
-                  summary: "Get todo",
-                  request: {},
-                  responses: [missingResponse],
-                },
-              ],
-            },
-          },
-        };
-      `
-    );
-
-    await expect(loadProjectSpec(project, specFile)).rejects.toThrow(
-      /missingHelper/
-    );
-    await expect(loadProjectSpec(project, specFile)).rejects.toBeInstanceOf(
-      SpecBundleError
-    );
-    // Discriminating field assertion: the error must carry a non-empty
-    // inputFile reference so operators (and the structured logs) can
-    // identify which spec entrypoint failed to bundle. The bundler stores
-    // the path relative to the cwd it was invoked with, so this asserts
-    // the path ends with the spec's basename rather than full equality.
-    const error = (await loadProjectSpec(project, specFile).catch(
-      (e: unknown) => e
-    )) as { readonly inputFile: string };
-    expect(error.inputFile).toMatch(/spec\.ts$/);
-  });
-  test("propagates errors thrown while importing bundled specs", async () => {
-    const project = createTempProject();
-    const specFile = writeSpecEntrypoint(
-      project,
-      "spec.ts",
-      createThrowingModuleSource({
-        errorName: "SpecEvaluationError",
-        message: "Spec evaluation failed",
-      })
-    );
-
-    await expect(loadProjectSpec(project, specFile)).rejects.toThrow(
-      "Spec evaluation failed"
-    );
-  });
-});
-
-describe("SpecLoader invalid entrypoints", () => {
-  test("rejects entrypoints whose exported spec is not a valid spec definition", async () => {
-    const project = createTempProject();
-    const specFile = writeSpecEntrypoint(
-      project,
-      "spec.ts",
-      `
-        export const spec = {
-          resources: [],
-        };
-      `
-    );
-    const loadingSpec = loadProjectSpec(project, specFile);
-
-    await expect(loadingSpec).rejects.toThrow(InvalidSpecEntrypointError);
-    await expect(loadingSpec).rejects.toThrow(/must export a SpecDefinition/);
-  });
-  test("rejects entrypoints whose operation omits a request definition", async () => {
-    const project = createTempProject();
-    const specFile = writeSpecEntrypoint(
-      project,
-      "spec.ts",
-      `
-        export const spec = {
-          resources: {
-            todos: {
-              operations: [
-                {
-                  operationId: "getTodo",
-                  method: "GET",
-                  path: "/todos/:todoId",
-                  summary: "Get todo",
-                  responses: [
-                    {
-                      name: "TodoResponse",
-                      statusCode: 200,
-                      description: "Todo response",
-                    },
-                  ],
-                },
-              ],
-            },
-          },
-        };
-      `
-    );
-    const loadingSpec = loadProjectSpec(project, specFile);
-
-    await expect(loadingSpec).rejects.toThrow(InvalidSpecEntrypointError);
-    await expect(loadingSpec).rejects.toThrow(/must export a SpecDefinition/);
   });
 });

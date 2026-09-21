@@ -7,24 +7,18 @@
 
 import type {
   HttpMethod,
-  IHttpBody,
-  IHttpHeader,
   IHttpResponse,
   IRawHttpHeader,
   IRawHttpQuery,
   IRawHttpRequest,
 } from "@rexeus/typeweaver-core";
+import { createFetchBodyLimitPolicy } from "./BodyLimitPolicy.js";
+import { parseFetchRequestBody } from "./fetchRequestBody.js";
 import {
-  createFetchBodyLimitPolicy,
-  hasSatisfiedBodyLimitPolicy,
-  isBodySizeOverLimit,
-  parseContentLength,
-} from "./BodyLimitPolicy.js";
-import {
-  BodyParseError,
-  PayloadTooLargeError,
-  ResponseSerializationError,
-} from "./Errors.js";
+  buildFetchResponseHeaders,
+  serializeFetchResponseBody,
+} from "./fetchResponse.js";
+import { appendRequestRecordValue } from "./requestRecord.js";
 import type { BodyLimitPolicy } from "./BodyLimitPolicy.js";
 
 export type FetchApiAdapterOptions = {
@@ -39,9 +33,6 @@ export type FetchApiAdapterOptions = {
  * This is the **only** place where framework-specific types exist.
  * Everything inside the middleware pipeline and handlers works
  * exclusively with typeweaver's native types.
- *
- * Works with all runtimes that support the Fetch API:
- * Bun, Deno, Node.js (>=18), Cloudflare Workers.
  */
 export class FetchApiAdapter {
   private readonly bodyLimitPolicy: BodyLimitPolicy;
@@ -52,87 +43,34 @@ export class FetchApiAdapter {
       createFetchBodyLimitPolicy(options?.maxBodySize);
   }
 
-  /**
-   * Converts a Fetch API Request to an IRawHttpRequest.
-   *
-   * Accepts an optional pre-parsed URL to avoid redundant parsing.
-   *
-   * @param request - The Fetch API Request object
-   * @param url - Optional pre-parsed URL object to avoid double parsing
-   * @returns Promise resolving to an IRawHttpRequest
-   * @throws BodyParseError when the request body is malformed
-   */
   public async toRequest(
     request: Request,
     url?: URL
   ): Promise<IRawHttpRequest> {
     const parsedUrl = url ?? new URL(request.url);
-
     return {
       method: request.method.toUpperCase() as HttpMethod,
       path: parsedUrl.pathname,
       header: FetchApiAdapter.extractHeaders(request.headers),
       query: FetchApiAdapter.extractQueryParams(parsedUrl),
-      body: await this.parseRequestBody(request),
+      body: await parseFetchRequestBody(request, this.bodyLimitPolicy),
     };
   }
 
-  /**
-   * Converts an IHttpResponse to a Fetch API Response.
-   *
-   * @param response - The IHttpResponse to convert
-   * @returns A Fetch API Response object
-   */
   public toResponse(response: IHttpResponse): Response {
-    const { statusCode, body, header } = response;
-
-    return new Response(FetchApiAdapter.serializeResponseBody(body), {
-      status: statusCode,
-      headers: FetchApiAdapter.buildResponseHeaders(header, body),
+    return new Response(serializeFetchResponseBody(response.body), {
+      status: response.statusCode,
+      headers: buildFetchResponseHeaders(response.header, response.body),
     });
-  }
-
-  private static extractMediaType(contentType: string | null): string | null {
-    if (!contentType) return null;
-    return (contentType.split(";")[0] ?? "").trim().toLowerCase();
-  }
-
-  private static isJsonContentType(contentType: string | null): boolean {
-    const mediaType = FetchApiAdapter.extractMediaType(contentType);
-    if (!mediaType) return false;
-    return mediaType === "application/json" || mediaType.endsWith("+json");
-  }
-
-  private static isTextContentType(contentType: string | null): boolean {
-    const mediaType = FetchApiAdapter.extractMediaType(contentType);
-    if (!mediaType) return false;
-    return mediaType.startsWith("text/");
-  }
-
-  private static isFormUrlencodedContentType(
-    contentType: string | null
-  ): boolean {
-    return (
-      FetchApiAdapter.extractMediaType(contentType) ===
-      "application/x-www-form-urlencoded"
-    );
-  }
-
-  private static isMultipartFormDataContentType(
-    contentType: string | null
-  ): boolean {
-    return (
-      FetchApiAdapter.extractMediaType(contentType) === "multipart/form-data"
-    );
   }
 
   private static extractHeaders(headers: Headers): IRawHttpHeader {
     const result: Record<string, string | string[]> = Object.create(
       null
     ) as Record<string, string | string[]>;
-    headers.forEach((value, key) => {
-      FetchApiAdapter.addMultiValue(result, key, value);
-    });
+    headers.forEach((value, key) =>
+      appendRequestRecordValue(result, key, value)
+    );
     return Object.keys(result).length > 0 ? result : undefined;
   }
 
@@ -140,274 +78,9 @@ export class FetchApiAdapter {
     const result: Record<string, string | string[]> = Object.create(
       null
     ) as Record<string, string | string[]>;
-    url.searchParams.forEach((value, key) => {
-      FetchApiAdapter.addMultiValue(result, key, value);
-    });
+    url.searchParams.forEach((value, key) =>
+      appendRequestRecordValue(result, key, value)
+    );
     return Object.keys(result).length > 0 ? result : undefined;
-  }
-
-  private async parseRequestBody(request: Request): Promise<IHttpBody> {
-    if (!request.body) return undefined;
-
-    const checkedRequest = await this.enforceBodySizeLimit(request);
-    const contentType = checkedRequest.headers.get("content-type");
-
-    if (FetchApiAdapter.isJsonContentType(contentType)) {
-      return FetchApiAdapter.parseJsonBody(checkedRequest);
-    }
-    if (FetchApiAdapter.isTextContentType(contentType)) {
-      return FetchApiAdapter.parseTextBody(checkedRequest);
-    }
-    if (FetchApiAdapter.isFormUrlencodedContentType(contentType)) {
-      return FetchApiAdapter.parseFormUrlencodedBody(checkedRequest);
-    }
-    if (FetchApiAdapter.isMultipartFormDataContentType(contentType)) {
-      return FetchApiAdapter.parseMultipartBody(checkedRequest);
-    }
-    return FetchApiAdapter.parseRawBody(checkedRequest);
-  }
-
-  private static async parseJsonBody(request: Request): Promise<IHttpBody> {
-    try {
-      const text = await request.text();
-      return JSON.parse(text, (key: string, value: unknown) => {
-        if (key === "__proto__") return undefined;
-        return value;
-      }) as unknown;
-    } catch (error) {
-      throw new BodyParseError("Invalid JSON in request body", {
-        cause: error,
-      });
-    }
-  }
-
-  private static async parseTextBody(request: Request): Promise<IHttpBody> {
-    try {
-      return await request.text();
-    } catch (error) {
-      throw new BodyParseError("Failed to read text request body", {
-        cause: error,
-      });
-    }
-  }
-
-  private static async parseFormUrlencodedBody(
-    request: Request
-  ): Promise<IHttpBody> {
-    let text: string;
-    try {
-      text = await request.text();
-    } catch (error) {
-      throw new BodyParseError("Failed to read form-urlencoded request body", {
-        cause: error,
-      });
-    }
-
-    const result: Record<string, string | string[]> = Object.create(
-      null
-    ) as Record<string, string | string[]>;
-    new URLSearchParams(text).forEach((value, key) => {
-      FetchApiAdapter.addMultiValue(result, key, value);
-    });
-    return result;
-  }
-
-  private static async parseMultipartBody(
-    request: Request
-  ): Promise<IHttpBody> {
-    let formData: FormData;
-    try {
-      formData = await request.formData();
-    } catch (error) {
-      throw new BodyParseError("Invalid multipart/form-data in request body", {
-        cause: error,
-      });
-    }
-
-    const result: Record<string, string | File | (string | File)[]> =
-      Object.create(null) as Record<string, string | File | (string | File)[]>;
-    formData.forEach((value, key) => {
-      const existing = result[key];
-      if (existing === undefined) {
-        result[key] = value;
-      } else if (Array.isArray(existing)) {
-        existing.push(value);
-      } else {
-        result[key] = [existing, value];
-      }
-    });
-    return result;
-  }
-
-  private static async parseRawBody(request: Request): Promise<IHttpBody> {
-    try {
-      const text = await request.text();
-      return text || undefined;
-    } catch (error) {
-      throw new BodyParseError("Failed to read request body", {
-        cause: error,
-      });
-    }
-  }
-
-  private async enforceBodySizeLimit(request: Request): Promise<Request> {
-    if (hasSatisfiedBodyLimitPolicy(request, this.bodyLimitPolicy)) {
-      return request;
-    }
-
-    const contentLength = parseContentLength(
-      request.headers.get("content-length")
-    );
-    if (
-      contentLength !== undefined &&
-      isBodySizeOverLimit(contentLength, this.bodyLimitPolicy.maxBodySize)
-    ) {
-      throw new PayloadTooLargeError(
-        contentLength,
-        this.bodyLimitPolicy.maxBodySize
-      );
-    }
-
-    return this.readBodyWithLimit(request);
-  }
-
-  private async readBodyWithLimit(request: Request): Promise<Request> {
-    if (!request.body) return request;
-
-    const reader: ReadableStreamDefaultReader<Uint8Array> =
-      request.body.getReader();
-    const chunks: Uint8Array[] = [];
-    let totalBytes = 0;
-
-    try {
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        totalBytes += value.byteLength;
-        if (isBodySizeOverLimit(totalBytes, this.bodyLimitPolicy.maxBodySize)) {
-          throw new PayloadTooLargeError(
-            totalBytes,
-            this.bodyLimitPolicy.maxBodySize
-          );
-        }
-        chunks.push(value);
-      }
-    } catch (error) {
-      try {
-        await reader.cancel();
-      } catch {
-        // Preserve the original read failure if stream cleanup also fails.
-      }
-      throw error;
-    } finally {
-      try {
-        reader.releaseLock();
-      } catch {
-        // Some runtimes may report release errors after stream termination.
-      }
-    }
-
-    return new Request(request.url, {
-      method: request.method,
-      headers: request.headers,
-      body: FetchApiAdapter.concatChunks(chunks, totalBytes),
-    });
-  }
-
-  private static concatChunks(
-    chunks: Uint8Array[],
-    totalBytes: number
-  ): ArrayBuffer {
-    const buffer = new Uint8Array(totalBytes);
-    let offset = 0;
-    for (const chunk of chunks) {
-      buffer.set(chunk, offset);
-      offset += chunk.byteLength;
-    }
-    return buffer.buffer as ArrayBuffer;
-  }
-
-  private static serializeResponseBody(
-    body: unknown
-  ): string | ArrayBuffer | Blob | null {
-    if (body === undefined || body === null) return null;
-    if (typeof body === "string") return body;
-    if (body instanceof ArrayBuffer) return body;
-    if (body instanceof Blob) return body;
-
-    try {
-      const serializedBody = JSON.stringify(body);
-      if (serializedBody === undefined) {
-        throw new TypeError("Response body cannot be serialized to JSON");
-      }
-      return serializedBody;
-    } catch (error) {
-      throw new ResponseSerializationError(
-        "Failed to serialize response body to JSON",
-        { cause: error }
-      );
-    }
-  }
-
-  private static buildResponseHeaders(
-    header?: IHttpHeader,
-    body?: unknown
-  ): Headers {
-    const headers = new Headers();
-
-    if (header) {
-      for (const [key, value] of Object.entries(header)) {
-        FetchApiAdapter.appendResponseHeader(headers, key, value);
-      }
-    }
-
-    if (!headers.has("content-type") && FetchApiAdapter.isJsonBody(body)) {
-      headers.set("content-type", "application/json");
-    }
-
-    if (!headers.has("content-type") && body instanceof Blob && body.type) {
-      headers.set("content-type", body.type);
-    }
-
-    return headers;
-  }
-
-  private static appendResponseHeader(
-    headers: Headers,
-    key: string,
-    value: string | string[] | undefined
-  ): void {
-    if (value === undefined) return;
-    if (Array.isArray(value)) {
-      for (const item of value) headers.append(key, item);
-      return;
-    }
-    headers.set(key, String(value));
-  }
-
-  private static isJsonBody(body: unknown): boolean {
-    return (
-      body !== undefined &&
-      body !== null &&
-      typeof body !== "string" &&
-      !(body instanceof Blob) &&
-      !(body instanceof ArrayBuffer)
-    );
-  }
-
-  private static addMultiValue(
-    record: Record<string, string | string[]>,
-    key: string,
-    value: string
-  ): void {
-    const existing = record[key];
-    if (existing === undefined) {
-      record[key] = value;
-    } else if (Array.isArray(existing)) {
-      existing.push(value);
-    } else {
-      record[key] = [existing, value];
-    }
   }
 }

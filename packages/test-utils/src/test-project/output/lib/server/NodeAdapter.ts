@@ -6,14 +6,17 @@
  */
 
 import {
-  badRequestDefaultError,
-  createDefaultErrorBody,
   internalServerErrorDefaultError,
   payloadTooLargeDefaultError,
 } from "@rexeus/typeweaver-core";
 import { createNodeBodyLimitPolicy, markRequestBodyPrevalidated } from "./BodyLimitPolicy.js";
 import {
-  createRejectedRequestBodyCleanup,
+  readWritableResponseBody,
+  writeBadRequestResponse,
+  writeDefaultErrorResponse,
+  writeResponseHeaders,
+} from "./nodeResponse.js";
+import {
   drainRequest,
   drainUnvalidatedRequestBody,
   enforceContentLengthLimit,
@@ -30,21 +33,6 @@ import {
 import type { TypeweaverApp } from "./TypeweaverApp.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-/**
- * Adapts a `TypeweaverApp` to Node.js `http.createServer`.
- *
- * Converts `IncomingMessage` to a Fetch API `Request`, calls `app.fetch()`,
- * and writes the `Response` back to `ServerResponse`.
- *
- * @example
- * ```typescript
- * import { createServer } from "node:http";
- * import { nodeAdapter } from "./generated/lib/server";
- * import app from "./server";
- *
- * createServer(nodeAdapter(app)).listen(3000);
- * ```
- */
 export type NodeAdapterOptions = {
   readonly maxBodySize?: number;
 };
@@ -91,18 +79,6 @@ function createFetchRequest(
 
 type BodyLimitPolicy = HandleRequestOptions["bodyLimitPolicy"];
 
-function writeResponseHeaders(res: ServerResponse, response: Response): void {
-  response.headers.forEach((value, key) => {
-    if (key.toLowerCase() !== "set-cookie") {
-      res.setHeader(key, value);
-    }
-  });
-  const cookies = response.headers.getSetCookie();
-  if (cookies.length > 0) {
-    res.setHeader("set-cookie", cookies);
-  }
-}
-
 function handleRequestError(options: {
   readonly error: unknown;
   readonly req: IncomingMessage;
@@ -141,18 +117,13 @@ async function handleRequest(options: HandleRequestOptions): Promise<void> {
     const shouldValidateBody = shouldValidateRequestBody(req.method);
 
     enforceContentLengthLimit(req, bodyLimitPolicy.maxBodySize);
-    // Guard synchronously so readable-body listeners attach in the same tick as
-    // dispatch; an unconditional await would let an early "error"/"close" event
-    // fire before the body reader is listening.
     if (!shouldValidateBody && hasReadableRequestBody(req)) {
       await drainUnvalidatedRequestBody(req, bodyLimitPolicy);
     }
 
     const body = await readRequestBody(req, shouldValidateBody, bodyLimitPolicy.maxBodySize);
     const request = createFetchRequest(req, url, body);
-    if (shouldValidateBody) {
-      markRequestBodyPrevalidated(request, bodyLimitPolicy);
-    }
+    if (shouldValidateBody) markRequestBodyPrevalidated(request, bodyLimitPolicy);
 
     const response = await app.fetch(request);
     const responseBody = await readWritableResponseBody(req.method, response, reportError);
@@ -165,110 +136,21 @@ async function handleRequest(options: HandleRequestOptions): Promise<void> {
   }
 }
 
-function shouldWriteResponseBody(method: string | undefined, status: number): boolean {
-  return method !== "HEAD" && status !== 204 && status !== 304;
-}
-
-async function readWritableResponseBody(
-  method: string | undefined,
-  response: Response,
-  reportError: (error: unknown) => void,
-): Promise<Buffer | undefined> {
-  if (shouldWriteResponseBody(method, response.status)) {
-    return Buffer.from(await response.arrayBuffer());
-  }
-
-  cancelSuppressedResponseBody(response, reportError);
-  return undefined;
-}
-
-function cancelSuppressedResponseBody(
-  response: Response,
-  reportError: (error: unknown) => void,
-): void {
-  try {
-    void response.body?.cancel().catch((error) => {
-      reportSuppressedResponseBodyCancelError(error, reportError);
-    });
-  } catch (error) {
-    reportSuppressedResponseBodyCancelError(error, reportError);
-  }
-}
-
-function reportSuppressedResponseBodyCancelError(
-  error: unknown,
-  reportError: (error: unknown) => void,
-): void {
-  try {
-    reportError(error);
-  } catch (onErrorFailure) {
-    console.error("TypeweaverApp: onError callback threw while handling error", {
-      onErrorFailure,
-      originalError: error,
-    });
-  }
-}
-
 function createRequestHeaders(headers: IncomingMessage["headers"]): Headers {
   const requestHeaders = new Headers();
 
   for (const [name, value] of Object.entries(headers)) {
-    if (value === undefined) {
-      continue;
-    }
-
+    if (value === undefined) continue;
     if (Array.isArray(value)) {
       if (name.toLowerCase() === "cookie") {
         requestHeaders.set(name, value.join("; "));
         continue;
       }
-
-      for (const item of value) {
-        requestHeaders.append(name, item);
-      }
+      for (const item of value) requestHeaders.append(name, item);
       continue;
     }
-
     requestHeaders.set(name, value);
   }
 
   return requestHeaders;
-}
-
-function writeDefaultErrorResponse(
-  res: ServerResponse,
-  error:
-    | typeof badRequestDefaultError
-    | typeof payloadTooLargeDefaultError
-    | typeof internalServerErrorDefaultError,
-  options: {
-    readonly method?: string | undefined;
-    readonly onFinished?: (() => void) | undefined;
-  } = {},
-): void {
-  if (!res.headersSent) {
-    res.writeHead(error.statusCode, {
-      "content-type": "application/json",
-    });
-  }
-
-  if (options.onFinished !== undefined) {
-    res.once("finish", options.onFinished);
-  }
-
-  const body = shouldWriteResponseBody(options.method, error.statusCode)
-    ? JSON.stringify(createDefaultErrorBody(error))
-    : undefined;
-  res.end(body);
-}
-
-function writeBadRequestResponse(
-  req: IncomingMessage,
-  res: ServerResponse,
-  maxBodySize: number,
-): void {
-  writeDefaultErrorResponse(res, badRequestDefaultError, {
-    method: req.method,
-    onFinished: createRejectedRequestBodyCleanup(req, maxBodySize),
-  });
 }

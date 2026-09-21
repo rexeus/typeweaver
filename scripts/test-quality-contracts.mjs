@@ -31,7 +31,15 @@ const createPackageBuildConfigPath = path.join(
 );
 const createPackageBuildConfigTestPath = path.join(
   tsdownRoot,
-  "createPackageBuildConfig.test.ts"
+  "createPackageBuildConfig.basic.test.ts"
+);
+const createPackageBuildConfigLifecycleTestPath = path.join(
+  tsdownRoot,
+  "createPackageBuildConfig.lifecycle.test.ts"
+);
+const createPackageBuildConfigSupportPath = path.join(
+  tsdownRoot,
+  "createPackageBuildConfig.test-support.ts"
 );
 
 /** @param {{ version: number, total: number, exceptions: { rules: Record<string, number> }[] }} allowlist */
@@ -188,9 +196,21 @@ const assertToolingTestContract = () => {
   );
   try {
     const sourcePath = path.join(fixtureRoot, "createPackageBuildConfig.mjs");
-    const testPath = path.join(fixtureRoot, "createPackageBuildConfig.test.ts");
+    const basicTestPath = path.join(
+      fixtureRoot,
+      "createPackageBuildConfig.basic.test.ts"
+    );
+    const lifecycleTestPath = path.join(
+      fixtureRoot,
+      "createPackageBuildConfig.lifecycle.test.ts"
+    );
     cpSync(createPackageBuildConfigPath, sourcePath);
-    cpSync(createPackageBuildConfigTestPath, testPath);
+    cpSync(createPackageBuildConfigTestPath, basicTestPath);
+    cpSync(createPackageBuildConfigLifecycleTestPath, lifecycleTestPath);
+    cpSync(
+      createPackageBuildConfigSupportPath,
+      path.join(fixtureRoot, "createPackageBuildConfig.test-support.ts")
+    );
     const relativeFixtureRoot = path.relative(workspaceRoot, fixtureRoot);
 
     const accepted = runPnpm(["exec", "vitest", "--run", relativeFixtureRoot]);

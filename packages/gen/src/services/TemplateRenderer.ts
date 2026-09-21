@@ -1,6 +1,6 @@
 import { Context, Effect, Layer } from "effect";
 import { TemplateRenderError } from "../errors/TemplateRenderError.js";
-import { liveTemplateRendererShape } from "./internal/pluginContextBuilder.js";
+import { liveTemplateRendererShape } from "./internal/pluginContextEffectIO.js";
 import type { TemplateData } from "../plugins/contextTypes.js";
 
 export type TemplateRendererShape = {

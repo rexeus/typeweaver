@@ -55,6 +55,21 @@ export function createMockIncomingMessage(
   return req;
 }
 
+export function createControlledIncomingMessage(
+  method: string,
+  url: string | undefined,
+  headers: NodeRequestHeaders = {},
+  wireMetadata?: NodeRequestWireMetadata
+): IncomingMessage {
+  const socket = new Socket();
+  const req = new IncomingMessage(socket);
+  req.method = method;
+  req.url = url;
+  req.headers = { host: "localhost:3000", ...headers };
+  applyNodeRequestWireMetadata(req, req.headers, wireMetadata);
+  return req;
+}
+
 export function applyNodeRequestWireMetadata(
   req: IncomingMessage,
   headers: NodeRequestHeaders,

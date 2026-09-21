@@ -19,6 +19,7 @@ import {
   HonoResponseSerializationError,
 } from "./Errors.js";
 import { HttpAdapter } from "./HttpAdapter.js";
+import { appendRequestRecordValue } from "./requestRecord.js";
 
 /**
  * Adapter for converting between Fetch API Request/Response objects
@@ -76,29 +77,12 @@ export class FetchApiAdapter extends HttpAdapter<
     });
   }
 
-  private addMultiValue(
-    record: Record<string, string | string[]>,
-    key: string,
-    value: string
-  ): void {
-    const existing = record[key];
-    if (existing !== undefined) {
-      if (Array.isArray(existing)) {
-        existing.push(value);
-      } else {
-        record[key] = [existing, value];
-      }
-    } else {
-      record[key] = value;
-    }
-  }
-
   private extractHeaders(headers: Headers): IRawHttpHeader {
     const result: Record<string, string | string[]> = Object.create(
       null
     ) as Record<string, string | string[]>;
     headers.forEach((value, key) => {
-      this.addMultiValue(result, key, value);
+      appendRequestRecordValue(result, key, value);
     });
     return Object.keys(result).length > 0 ? result : undefined;
   }
@@ -108,7 +92,7 @@ export class FetchApiAdapter extends HttpAdapter<
       null
     ) as Record<string, string | string[]>;
     url.searchParams.forEach((value, key) => {
-      this.addMultiValue(result, key, value);
+      appendRequestRecordValue(result, key, value);
     });
     return Object.keys(result).length > 0 ? result : undefined;
   }
@@ -133,7 +117,7 @@ export class FetchApiAdapter extends HttpAdapter<
         null
       ) as Record<string, string | string[]>;
       formData.forEach((value, key) => {
-        this.addMultiValue(formObject, key, value);
+        appendRequestRecordValue(formObject, key, value);
       });
       return formObject;
     }

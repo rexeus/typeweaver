@@ -2,17 +2,16 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
   assertLintPolicyConfiguration,
-  expectedTestFiles,
-  expectedTypeScriptFiles,
   readLintConfig,
   workspaceRoot,
 } from "./lint-policy-contract.mjs";
+import { mutationCases } from "./lint-policy-mutations.mjs";
 import { spawnPnpmSync } from "./pnpm-command.mjs";
+import { assertStricterMaintainabilityProbes } from "./stricter-maintainability-probes.mjs";
 
 /** @typedef {import("./lint-policy-contract.mjs").LintConfig} LintConfig */
 /** @typedef {import("./lint-policy-contract.mjs").LintOverride} LintOverride */
 /** @typedef {{ code: string, filename: string, message: string, severity: string }} LintDiagnostic */
-/** @typedef {{ label: string, mutate: (config: LintConfig) => void }} MutationCase */
 
 /**
  * Test containers receive every type-aware safety rule; only the structural
@@ -194,6 +193,7 @@ export const assertLintPolicyProbes = (diagnostics, fixtureRoot) => {
   assertTestScopeCase(diagnostics, fixtureRoot);
   assertUnusedDisableCase(diagnostics, fixtureRoot);
   assertDenyWarnings(fixtureRoot);
+  assertStricterMaintainabilityProbes(fixtureRoot);
 };
 
 /**
@@ -201,16 +201,6 @@ export const assertLintPolicyProbes = (diagnostics, fixtureRoot) => {
  * @param {readonly string[]} files
  * @returns {LintOverride}
  */
-const overrideFor = (config, files) => {
-  const override = config.overrides.find(
-    candidate => JSON.stringify(candidate.files) === JSON.stringify(files)
-  );
-  if (override === undefined) {
-    throw new Error(`missing lint override for ${JSON.stringify(files)}`);
-  }
-  return override;
-};
-
 /**
  * @param {string} label
  * @param {(config: LintConfig) => void} mutate
@@ -226,79 +216,6 @@ const assertConfigurationRejects = (label, mutate) => {
   }
   throw new Error(`Lint policy accepted a weakened configuration: ${label}`);
 };
-
-/** @type {MutationCase[]} */
-const mutationCases = [
-  {
-    label: "type-aware analysis disabled",
-    mutate: config => {
-      config.options["typeAware"] = false;
-    },
-  },
-  {
-    label: "unused disable reporting relaxed",
-    mutate: config => {
-      config.options["reportUnusedDisableDirectives"] = "off";
-    },
-  },
-  {
-    label: "root evaluation rule downgraded",
-    mutate: config => {
-      config.rules["eslint/no-eval"] = "warn";
-    },
-  },
-  {
-    label: "root structural threshold loosened",
-    mutate: config => {
-      config.rules["eslint/max-lines"] = [
-        "error",
-        { max: 500, skipBlankLines: true, skipComments: true },
-      ];
-    },
-  },
-  {
-    label: "generated output no longer excluded",
-    mutate: config => {
-      config.ignorePatterns = config.ignorePatterns.filter(
-        pattern => pattern !== "**/output/**"
-      );
-    },
-  },
-  {
-    label: "test override disables an unsafe rule",
-    mutate: config => {
-      overrideFor(config, expectedTestFiles).rules[
-        "typescript/no-unsafe-assignment"
-      ] = "off";
-    },
-  },
-  {
-    label: "test override downgrades explicit any",
-    mutate: config => {
-      overrideFor(config, expectedTestFiles).rules[
-        "typescript/no-explicit-any"
-      ] = "warn";
-    },
-  },
-  {
-    label: "TypeScript override drops an unsafe rule",
-    mutate: config => {
-      delete overrideFor(config, expectedTypeScriptFiles).rules[
-        "typescript/no-unsafe-return"
-      ];
-    },
-  },
-  {
-    label: "extra override smuggled in",
-    mutate: config => {
-      config.overrides.push({
-        files: ["packages/**/*.tsx"],
-        plugins: ["typescript"],
-        rules: {},
-      });
-    },
-  },
-];
 
 /**
  * Proves the configuration contract rejects every documented weakening by
