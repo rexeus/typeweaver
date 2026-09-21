@@ -2,12 +2,16 @@ import type {
   NormalizedResponse,
   NormalizedResponseUsage,
 } from "@rexeus/typeweaver-gen";
-import type {
-  JsonSchema,
-  JsonSchemaValue,
-} from "@rexeus/typeweaver-zod-to-json-schema";
+import type { JsonSchema } from "@rexeus/typeweaver-zod-to-json-schema";
 import { buildHeaderObjects } from "./headerObjects.js";
-import { escapeJsonPointerSegment } from "./jsonPointer.js";
+import {
+  headerSchemaPointer,
+  mergedHeaderDescription,
+  mergedHeaderSchemaWarnings,
+  headerNamesFrom,
+  stableStringifyJsonSchema,
+  warningsOutsideMergedHeaderSchemas,
+} from "./responseHeaderMergeHelpers.js";
 import {
   isWarningDocumentPathAtOrBelow,
   rebaseSchemaDocumentRefs,
@@ -15,24 +19,15 @@ import {
 } from "./schemaRebasing.js";
 import type { OpenApiBuildWarning, OpenApiHeaderObject } from "../types.js";
 import type { OperationContext } from "./operationContext.js";
+import type {
+  HeaderAppearance,
+  VariantHeaders,
+} from "./responseHeaderMergeHelpers.js";
+export { stableStringifyJsonSchema };
 
 export type ResponseHeaderMergeVariant = {
   readonly response: Pick<NormalizedResponse, "header">;
   readonly usage: Pick<NormalizedResponseUsage, "responseName">;
-};
-
-type VariantHeaders = {
-  readonly responseName: string;
-  readonly headers: Record<string, OpenApiHeaderObject>;
-  readonly warnings: readonly OpenApiBuildWarning[];
-};
-
-type HeaderAppearance = {
-  readonly variantIndex: number;
-  readonly responseName: string;
-  readonly header: OpenApiHeaderObject;
-  readonly warnings: readonly OpenApiBuildWarning[];
-  readonly schemaKey: string;
 };
 
 type MergedHeader = {
@@ -93,42 +88,6 @@ function buildVariantHeaders(
     headers: built.headers,
     warnings: built.warnings,
   };
-}
-
-function warningsOutsideMergedHeaderSchemas(
-  variants: readonly VariantHeaders[],
-  responsePointer: string
-): readonly OpenApiBuildWarning[] {
-  return variants.flatMap(variant => {
-    const headerSchemaPointers = Object.keys(variant.headers).map(name =>
-      headerSchemaPointer(responsePointer, name)
-    );
-
-    return variant.warnings.filter(
-      warning =>
-        !headerSchemaPointers.some(pointer =>
-          isWarningDocumentPathAtOrBelow(warning, pointer)
-        )
-    );
-  });
-}
-
-function headerNamesFrom(
-  variants: readonly VariantHeaders[]
-): readonly string[] {
-  const namesByLowercase = new Map<string, string>();
-
-  for (const variant of variants) {
-    for (const name of Object.keys(variant.headers)) {
-      const lowercaseName = name.toLowerCase();
-
-      if (!namesByLowercase.has(lowercaseName)) {
-        namesByLowercase.set(lowercaseName, name);
-      }
-    }
-  }
-
-  return [...namesByLowercase.values()];
 }
 
 function mergeHeader(
@@ -278,93 +237,4 @@ function mergedHeaderSchema(
       )
     ),
   } as JsonSchema;
-}
-
-function mergedHeaderSchemaWarnings(options: {
-  readonly appearances: readonly HeaderAppearance[];
-  readonly distinctSchemaAppearances: readonly HeaderAppearance[];
-  readonly schemaPointer: string;
-}): readonly OpenApiBuildWarning[] {
-  if (options.distinctSchemaAppearances.length <= 1) {
-    return options.appearances.flatMap(appearance => appearance.warnings);
-  }
-
-  return options.appearances.flatMap(appearance => {
-    const schemaIndex = options.distinctSchemaAppearances.findIndex(
-      distinctAppearance =>
-        distinctAppearance.schemaKey === appearance.schemaKey
-    );
-    const branchPointer = `${options.schemaPointer}/anyOf/${schemaIndex}`;
-
-    return appearance.warnings.map(warning =>
-      rebaseWarningDocumentPath(warning, options.schemaPointer, branchPointer)
-    );
-  });
-}
-
-function headerSchemaPointer(responsePointer: string, name: string): string {
-  return `${responsePointer}/headers/${escapeJsonPointerSegment(name)}/schema`;
-}
-
-function mergedHeaderDescription(
-  appearances: readonly HeaderAppearance[]
-): string | undefined {
-  const describedAppearances = appearances.filter(
-    appearance => appearance.header.description !== undefined
-  );
-  const distinctDescriptions = new Set(
-    describedAppearances.map(appearance => appearance.header.description)
-  );
-
-  if (distinctDescriptions.size === 0) {
-    return undefined;
-  }
-
-  if (distinctDescriptions.size === 1) {
-    return describedAppearances[0]?.header.description;
-  }
-
-  return [
-    "Header description merged from response variants:",
-    ...describedAppearances.map(
-      appearance =>
-        `- ${appearance.responseName}: ${appearance.header.description ?? ""}`
-    ),
-  ].join("\n");
-}
-
-/**
- * Canonical, deterministic JSON serialization for header schemas. Used to
- * deduplicate equivalent JSON schemas across response variants and (through
- * the lexicographic key sort) to produce byte-identical output across hosts
- * with different default locales — a Turkish locale, for example, sorts
- * dotted-`i` and dotless-`ı` differently from the ASCII byte order that the
- * golden-gate diff relies on.
- *
- * @internal Exposed for direct unit testing; not part of the public surface.
- */
-export function stableStringifyJsonSchema(schema: JsonSchema): string {
-  return JSON.stringify(canonicalizeJsonSchemaValue(schema));
-}
-
-function canonicalizeJsonSchemaValue(value: JsonSchemaValue): JsonSchemaValue {
-  if (Array.isArray(value)) {
-    return value.map(canonicalizeJsonSchemaValue);
-  }
-
-  if (!isJsonSchemaObject(value)) {
-    return value;
-  }
-
-  return Object.fromEntries(
-    Object.entries(value)
-      .sort(([leftKey], [rightKey]) =>
-        leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0
-      )
-      .map(([key, child]) => [key, canonicalizeJsonSchemaValue(child)])
-  ) as JsonSchema;
-}
-
-function isJsonSchemaObject(value: JsonSchemaValue): value is JsonSchema {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

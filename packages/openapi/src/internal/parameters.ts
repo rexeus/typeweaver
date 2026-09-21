@@ -1,11 +1,8 @@
-import {
-  escapeJsonPointerSegment,
-  isJsonPointerAtOrBelow,
-  jsonPointer,
-} from "./jsonPointer.js";
+import { jsonPointer } from "./jsonPointer.js";
 import { getPathParameterNames } from "./openApiPath.js";
 import { createOperationLocation } from "./operationContext.js";
 import { extractParameterContainer } from "./parameterContainer.js";
+import { rebaseParameterSchemaWarnings } from "./parameterWarnings.js";
 import { rebaseLocalJsonSchemaRefs } from "./schemaConversion.js";
 import type {
   OpenApiBuildWarning,
@@ -204,56 +201,6 @@ function buildParametersFromContainer(options: {
   });
 
   return { parameters, warnings: rebasedWarnings };
-}
-
-function rebaseParameterSchemaWarnings(options: {
-  readonly warnings: readonly OpenApiBuildWarning[];
-  readonly context: OperationContext;
-  readonly parameterNames: readonly string[];
-  readonly startIndex: number;
-}): readonly OpenApiBuildWarning[] {
-  return options.warnings.map(warning => {
-    if (warning.origin !== "schema-conversion") {
-      return warning;
-    }
-
-    const parameterIndex = options.parameterNames.findIndex(name =>
-      isJsonPointerAtOrBelow(
-        warning.schemaPath,
-        `/properties/${escapeJsonPointerSegment(name)}`
-      )
-    );
-
-    if (parameterIndex === -1) {
-      return warning;
-    }
-
-    const parameterName = options.parameterNames[parameterIndex];
-
-    if (parameterName === undefined) {
-      return warning;
-    }
-
-    const schemaPath = `/properties/${escapeJsonPointerSegment(parameterName)}`;
-    const suffix = warning.schemaPath.slice(schemaPath.length);
-    const documentPath = `${jsonPointer([
-      "paths",
-      options.context.openApiPath,
-      options.context.method,
-      "parameters",
-      String(options.startIndex + parameterIndex),
-      "schema",
-    ])}${suffix}`;
-
-    return {
-      ...warning,
-      documentPath,
-      location: {
-        ...warning.location,
-        parameterName,
-      },
-    };
-  });
 }
 
 function createParameterWarning(options: {
