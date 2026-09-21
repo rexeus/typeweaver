@@ -66,6 +66,10 @@ const isEffectSource = filePath => {
   );
 };
 
+/** @returns {string[]} */
+export const authoredEffectSourceFiles = () =>
+  collectFiles(path.join(workspaceRoot, "packages")).filter(isEffectSource);
+
 /** @param {string} directory @returns {PackageManifest} */
 const readManifest = directory =>
   JSON.parse(read(path.join(directory, "package.json")));

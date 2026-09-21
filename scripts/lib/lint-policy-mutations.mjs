@@ -1,0 +1,90 @@
+import {
+  expectedTestFiles,
+  expectedTypeScriptFiles,
+} from "./lint-policy-contract.mjs";
+
+/** @typedef {import("./lint-policy-contract.mjs").LintConfig} LintConfig */
+
+/** @param {LintConfig} config @param {readonly string[]} files @returns {import("./lint-policy-contract.mjs").LintOverride} */
+const overrideFor = (config, files) => {
+  const override = config.overrides.find(
+    candidate => JSON.stringify(candidate.files) === JSON.stringify(files)
+  );
+  if (override === undefined) {
+    throw new Error(`missing lint override for ${JSON.stringify(files)}`);
+  }
+  return override;
+};
+
+/** @type {Array<{ label: string, mutate: (config: LintConfig) => void }>} */
+export const mutationCases = [
+  {
+    label: "type-aware analysis disabled",
+    mutate: config => {
+      config.options["typeAware"] = false;
+    },
+  },
+  {
+    label: "unused disable reporting relaxed",
+    mutate: config => {
+      config.options["reportUnusedDisableDirectives"] = "off";
+    },
+  },
+  {
+    label: "root evaluation rule downgraded",
+    mutate: config => {
+      config.rules["eslint/no-eval"] = "warn";
+    },
+  },
+  {
+    label: "root structural threshold loosened",
+    mutate: config => {
+      config.rules["eslint/max-lines"] = [
+        "error",
+        { max: 500, skipBlankLines: true, skipComments: true },
+      ];
+    },
+  },
+  {
+    label: "generated output no longer excluded",
+    mutate: config => {
+      config.ignorePatterns = config.ignorePatterns.filter(
+        pattern => pattern !== "**/output/**"
+      );
+    },
+  },
+  {
+    label: "test override disables an unsafe rule",
+    mutate: config => {
+      overrideFor(config, expectedTestFiles).rules[
+        "typescript/no-unsafe-assignment"
+      ] = "off";
+    },
+  },
+  {
+    label: "test override downgrades explicit any",
+    mutate: config => {
+      overrideFor(config, expectedTestFiles).rules[
+        "typescript/no-explicit-any"
+      ] = "warn";
+    },
+  },
+  {
+    label: "TypeScript override drops an unsafe rule",
+    mutate: config => {
+      delete overrideFor(config, expectedTypeScriptFiles).rules[
+        "typescript/no-unsafe-return"
+      ];
+    },
+  },
+  {
+    label: "extra override smuggled in",
+    mutate: config => {
+      config.overrides.push({
+        files: ["packages/**/*.tsx"],
+        plugins: ["typescript"],
+        rules: {},
+      });
+    },
+  },
+];
