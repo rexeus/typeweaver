@@ -17,10 +17,6 @@ const allowedDisableDirectives = new Map([
     ["// oxlint-disable-next-line no-new-func"],
   ],
   [
-    "packages/server/__test__/unit/NodeAdapter.test.ts",
-    ["/* oxlint-disable import/max-dependencies */"],
-  ],
-  [
     "packages/server/src/lib/TypeweaverApp.ts",
     ["// oxlint-disable import/max-dependencies"],
   ],

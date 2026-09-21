@@ -108,11 +108,10 @@ Authored `oxlint-disable`/`eslint-disable` directives are an exact allowlist. An
 or move requires a reviewed contract change in `scripts/test-maintainability-lint.mjs`, and any
 directive not on the list fails the gate:
 
-| File                                                | Directive                                      | Reason                                                              |
-| --------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------- |
-| `packages/gen/src/helpers/templateEngine.ts`        | `// oxlint-disable-next-line no-new-func`      | Template compilation evaluates generated template source by design. |
-| `packages/server/__test__/unit/NodeAdapter.test.ts` | `/* oxlint-disable import/max-dependencies */` | The adapter contract test intentionally imports many collaborators. |
-| `packages/server/src/lib/TypeweaverApp.ts`          | `// oxlint-disable import/max-dependencies`    | The app composition root intentionally wires many collaborators.    |
+| File                                         | Directive                                   | Reason                                                              |
+| -------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------- |
+| `packages/gen/src/helpers/templateEngine.ts` | `// oxlint-disable-next-line no-new-func`   | Template compilation evaluates generated template source by design. |
+| `packages/server/src/lib/TypeweaverApp.ts`   | `// oxlint-disable import/max-dependencies` | The app composition root intentionally wires many collaborators.    |
 
 The scanner distinguishes real directives from string literals, and unused-disable reporting means a
 stale entry can never remain silent.
