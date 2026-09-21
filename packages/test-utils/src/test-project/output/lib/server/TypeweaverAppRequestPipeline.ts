@@ -67,7 +67,7 @@ export async function resolveAppRequest(options: {
     const routeCtx = withPathParams(ctx, match.params);
     try {
       const response = await executeHandler(routeCtx, match.route);
-      return validateResponse(match.route, normalizeHttpResponse(response), routeCtx);
+      return await validateResponse(match.route, normalizeHttpResponse(response), routeCtx);
     } catch (error) {
       return handleError(error, routeCtx, match.route);
     }

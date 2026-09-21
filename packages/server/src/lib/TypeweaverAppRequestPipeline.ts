@@ -80,7 +80,7 @@ export async function resolveAppRequest(options: {
     const routeCtx = withPathParams(ctx, match.params);
     try {
       const response = await executeHandler(routeCtx, match.route);
-      return validateResponse(
+      return await validateResponse(
         match.route,
         normalizeHttpResponse(response),
         routeCtx

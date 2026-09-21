@@ -101,10 +101,8 @@ export async function validateAppResponse(options: {
     () => handler(result.error, response, ctx),
     safeOnError
   );
-  return (
-    handlerResponse ??
-    defaultResponseValidationHandler(result.error, response, ctx)
-  );
+  if (handlerResponse) return handlerResponse;
+  return defaultResponseValidationHandler(result.error, response, ctx);
 }
 
 export async function handleAppError(options: {

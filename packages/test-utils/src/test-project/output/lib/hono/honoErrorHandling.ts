@@ -111,7 +111,8 @@ export async function validateHonoResponse(options: {
   const handlerResponse = await safelyExecuteErrorHandler(() =>
     responseValidationHandler(result.error, response, context),
   );
-  return handlerResponse ?? defaultResponseValidationHandler(result.error, response, context);
+  if (handlerResponse) return handlerResponse;
+  return defaultResponseValidationHandler(result.error, response, context);
 }
 
 export function resolveHonoErrorHandler<T extends (...args: never[]) => unknown>(

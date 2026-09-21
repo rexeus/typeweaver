@@ -43,7 +43,11 @@ type TestHandlers = {
 };
 
 class ResponseValidatingRouter extends TypeweaverRouter<TestHandlers, boolean> {
-  constructor(options: TypeweaverRouterOptions<TestHandlers, boolean>) {
+  constructor(
+    options: TypeweaverRouterOptions<TestHandlers, boolean> & {
+      readonly responseValidator?: IResponseValidator;
+    }
+  ) {
     super(options);
 
     this.route({
@@ -51,7 +55,7 @@ class ResponseValidatingRouter extends TypeweaverRouter<TestHandlers, boolean> {
       method: HttpMethod.GET,
       path: "/todos",
       requestValidator: noopValidator,
-      responseValidator: invalidResponseValidator,
+      responseValidator: options.responseValidator ?? invalidResponseValidator,
       handler: async (req: IRawHttpRequest, ctx) =>
         this.requestHandlers.handleGetTodos(req, ctx),
     });
@@ -190,5 +194,44 @@ describe("TypeweaverApp response validation failures", () => {
     await app.fetch(get("/todos"));
 
     expect(onError).toHaveBeenCalledWith(handlerFailure);
+  });
+
+  test("routes a thrown response validator failure through the route unknown handler", async () => {
+    const responseValidationFailure = new TestApplicationError(
+      "response validation failed"
+    );
+    const unknownHandler = vi.fn(() => ({
+      statusCode: 500,
+      body: { code: "CUSTOM_UNKNOWN" },
+    }));
+    const app = new TypeweaverApp();
+    const router = new ResponseValidatingRouter({
+      validateRequests: false,
+      requestHandlers: defaultHandlers(),
+      responseValidator: {
+        validate: () => {
+          throw responseValidationFailure;
+        },
+        safeValidate: () => {
+          throw responseValidationFailure;
+        },
+      },
+      handleUnknownErrors: unknownHandler,
+    });
+    app.route(router);
+
+    const res = await app.fetch(get("/todos"));
+
+    await expectErrorResponse(res, 500, "CUSTOM_UNKNOWN");
+    expect(unknownHandler).toHaveBeenCalledWith(
+      responseValidationFailure,
+      expect.objectContaining({
+        route: {
+          operationId: "listTodos",
+          method: "GET",
+          path: "/todos",
+        },
+      })
+    );
   });
 });
