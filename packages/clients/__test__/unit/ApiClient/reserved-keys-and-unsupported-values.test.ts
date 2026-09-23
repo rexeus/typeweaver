@@ -1,10 +1,6 @@
-import type {
-  ClientHttpHeader,
-  ClientHttpParam,
-  ClientHttpQuery,
-} from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
 import {
+  anUncheckedCommand,
   expectRequestSerializationFailure,
   getFetchCall,
   sendRaw,
@@ -115,9 +111,7 @@ describe("ApiClient unsupported value serialization", () => {
   test.each([
     {
       case: "null query value",
-      command: {
-        query: { filter: null } as unknown as ClientHttpQuery,
-      },
+      command: anUncheckedCommand({ query: { filter: null } }),
       expected: {
         location: "query",
         key: "filter",
@@ -127,9 +121,7 @@ describe("ApiClient unsupported value serialization", () => {
     },
     {
       case: "nested query array",
-      command: {
-        query: { filters: [["nested"]] } as unknown as ClientHttpQuery,
-      },
+      command: anUncheckedCommand({ query: { filters: [["nested"]] } }),
       expected: {
         location: "query",
         key: "filters",
@@ -139,9 +131,7 @@ describe("ApiClient unsupported value serialization", () => {
     },
     {
       case: "object query value",
-      command: {
-        query: { filter: { status: "open" } } as unknown as ClientHttpQuery,
-      },
+      command: anUncheckedCommand({ query: { filter: { status: "open" } } }),
       expected: {
         location: "query",
         key: "filter",
@@ -151,9 +141,7 @@ describe("ApiClient unsupported value serialization", () => {
     },
     {
       case: "function header value",
-      command: {
-        header: { "X-Value": () => "value" } as unknown as ClientHttpHeader,
-      },
+      command: anUncheckedCommand({ header: { "X-Value": () => "value" } }),
       expected: {
         location: "header",
         key: "X-Value",
@@ -163,12 +151,10 @@ describe("ApiClient unsupported value serialization", () => {
     },
     {
       case: "symbol path value",
-      command: {
+      command: anUncheckedCommand({
         path: "/metrics/:metricId",
-        param: {
-          metricId: Symbol("metric"),
-        } as unknown as ClientHttpParam,
-      },
+        param: { metricId: Symbol("metric") },
+      }),
       expected: {
         location: "path",
         key: "metricId",

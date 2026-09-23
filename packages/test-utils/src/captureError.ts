@@ -16,11 +16,14 @@
  * expect(error?.issues).toHaveLength(2);
  * ```
  */
-export const captureError = <T = Error>(fn: () => void): T | undefined => {
+export function captureError<T = Error>(fn: () => void): T | undefined;
+// The caller names the error type it expects; assertions on the captured value
+// are what verify it, so the implementation keeps the thrown value `unknown`.
+export function captureError(fn: () => void): unknown {
   try {
     fn();
   } catch (error) {
-    return error as T;
+    return error;
   }
   return undefined;
-};
+}

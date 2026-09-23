@@ -1,5 +1,4 @@
 import { defineDerivedResponse } from "@rexeus/typeweaver-core";
-import type { RequestDefinition } from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import {
@@ -15,6 +14,7 @@ import {
   aSpec,
   normalizeSpec,
   theOnlyOperationIn,
+  withRawRequest,
 } from "./fixtures.js";
 
 describe("normalizeSpec route edge validation", () => {
@@ -155,9 +155,8 @@ describe("normalizeSpec request and path parameter validation", () => {
     const spec = aMalformedSpec({
       todos: {
         operations: [
-          anOperation({
-            path: "/todos/:todoId",
-            request: { param: z.string() } as unknown as RequestDefinition,
+          withRawRequest(anOperation({ path: "/todos/:todoId" }), {
+            param: z.string(),
           }),
         ],
       },
@@ -175,9 +174,7 @@ describe("normalizeSpec request and path parameter validation", () => {
     ({ request }) => {
       const spec = aMalformedSpec({
         todos: {
-          operations: [
-            anOperation({ request: request as unknown as RequestDefinition }),
-          ],
+          operations: [withRawRequest(anOperation(), request)],
         },
       });
 

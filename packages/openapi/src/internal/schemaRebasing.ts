@@ -3,6 +3,7 @@ import type {
   JsonSchemaValue,
 } from "@rexeus/typeweaver-zod-to-json-schema";
 import { isJsonPointerAtOrBelow } from "./jsonPointer.js";
+import { isJsonSchema } from "./schemaDefinitionRefs.js";
 import type { OpenApiBuildWarning } from "../types.js";
 
 export function rebaseSchemaDocumentRefs(
@@ -10,11 +11,14 @@ export function rebaseSchemaDocumentRefs(
   fromPointer: string,
   toPointer: string
 ): JsonSchema {
-  return rebaseSchemaValueDocumentRefs(
-    schema,
-    fromPointer,
-    toPointer
-  ) as JsonSchema;
+  return Object.fromEntries(
+    Object.entries(schema).map(([key, child]): [string, JsonSchemaValue] => [
+      key,
+      key === "$ref" && typeof child === "string"
+        ? rebaseDocumentRef(child, fromPointer, toPointer)
+        : rebaseSchemaValueDocumentRefs(child, fromPointer, toPointer),
+    ])
+  );
 }
 
 export function rebaseWarningDocumentPath(
@@ -55,18 +59,11 @@ function rebaseSchemaValueDocumentRefs(
     );
   }
 
-  if (typeof value !== "object" || value === null) {
+  if (!isJsonSchema(value)) {
     return value;
   }
 
-  return Object.fromEntries(
-    Object.entries(value).map(([key, child]) => [
-      key,
-      key === "$ref" && typeof child === "string"
-        ? rebaseDocumentRef(child, fromPointer, toPointer)
-        : rebaseSchemaValueDocumentRefs(child, fromPointer, toPointer),
-    ])
-  ) as JsonSchema;
+  return rebaseSchemaDocumentRefs(value, fromPointer, toPointer);
 }
 
 function rebaseDocumentRef(

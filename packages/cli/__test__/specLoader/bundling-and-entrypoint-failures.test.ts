@@ -64,9 +64,14 @@ describe("SpecLoader bundling and import failures", () => {
     // identify which spec entrypoint failed to bundle. The bundler stores
     // the path relative to the cwd it was invoked with, so this asserts
     // the path ends with the spec's basename rather than full equality.
-    const error = (await loadProjectSpec(project, specFile).catch(
+    const error: unknown = await loadProjectSpec(project, specFile).catch(
       (e: unknown) => e
-    )) as { readonly inputFile: string };
+    );
+    if (!(error instanceof SpecBundleError)) {
+      throw new TypeError(
+        "Expected loading the spec to fail with SpecBundleError"
+      );
+    }
     expect(error.inputFile).toMatch(/spec\.ts$/);
   });
   test("propagates errors thrown while importing bundled specs", async () => {

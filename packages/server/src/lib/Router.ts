@@ -6,6 +6,7 @@
  */
 
 import { DuplicateRouteRegistrationError } from "./errors/index.js";
+import { createNullPrototypeRecord } from "./requestRecord.js";
 import {
   assertPathHasNoReservedParameter,
   createNode,
@@ -73,10 +74,7 @@ export class Router {
    */
   public match(method: string, path: string): RouteMatch | undefined {
     const upperMethod = method.toUpperCase();
-    const params: Record<string, string> = Object.create(null) as Record<
-      string,
-      string
-    >;
+    const params = createNullPrototypeRecord<string>();
     const node = traverse(this.root, toSegments(path), 0, params);
     if (!node) return undefined;
 
@@ -95,10 +93,7 @@ export class Router {
    * @returns The allowed methods for this path, or `undefined` if the path doesn't exist.
    */
   public matchPath(path: string): { allowedMethods: string[] } | undefined {
-    const params: Record<string, string> = Object.create(null) as Record<
-      string,
-      string
-    >;
+    const params = createNullPrototypeRecord<string>();
     const node = traverse(this.root, toSegments(path), 0, params);
     if (!node || node.methods.size === 0) return undefined;
 

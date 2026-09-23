@@ -156,7 +156,7 @@ their named response union.
 Tooling that already owns a `NormalizedSpec` can use the side-effect-free builder directly:
 
 ```bash
-pnpm add @rexeus/typeweaver-openapi @rexeus/typeweaver-gen effect zod
+pnpm add @rexeus/typeweaver-openapi @rexeus/typeweaver-gen effect@4.0.0-rc.116 zod
 ```
 
 ```ts

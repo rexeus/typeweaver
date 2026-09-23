@@ -17,10 +17,10 @@ import {
   createTodoHonoWithHandlers,
   expectJson,
   expectSanitizedInternalServerError,
+  createTodoRouteReturning,
   requestCreateTodo,
 } from "./fixtures.js";
 import type { TodoHonoTestOptions } from "./fixtures.js";
-import type { DeleteTodoResponse, OptionsTodoResponse } from "test-utils";
 
 function createCreateTodoRouteThrowing(
   response: ITypedHttpResponse,
@@ -40,24 +40,14 @@ function createDeleteTodoRouteReturning(
   response: ITypedHttpResponse,
   options?: TodoHonoTestOptions
 ): TodoHono<false> {
-  return createTodoHonoWithHandlers(
-    {
-      handleDeleteTodoRequest: async () => response as DeleteTodoResponse,
-    },
-    options
-  );
+  return createTodoRouteReturning("DeleteTodo", response, options);
 }
 
 function createOptionsTodoRouteReturning(
   response: ITypedHttpResponse,
   options?: TodoHonoTestOptions
 ): TodoHono<false> {
-  return createTodoHonoWithHandlers(
-    {
-      handleOptionsTodoRequest: async () => response as OptionsTodoResponse,
-    },
-    options
-  );
+  return createTodoRouteReturning("optionsTodo", response, options);
 }
 
 async function requestDeleteTodo(app: TodoHono<false>): Promise<Response> {

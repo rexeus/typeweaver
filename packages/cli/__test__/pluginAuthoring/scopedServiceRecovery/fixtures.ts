@@ -116,6 +116,8 @@ export const makeProbeState = () => {
       events
         .filter(event => event.kind === kind)
         .map(event => event.resourceId),
+    timeline: (): readonly string[] =>
+      events.map(event => `${event.kind}:${event.resourceId}`),
     liveResourceIds: (): readonly number[] =>
       Array.from(liveResourceIds).sort((left, right) => left - right),
   };
@@ -137,6 +139,7 @@ export const makeResourceLayer = (config: {
   );
 
 export const makeScopedProbePlugin = (config: {
+  readonly name?: string;
   readonly resourceLayer: Layer.Layer<ResourceProbe, ProbeLayerBuildError>;
   readonly onGenerate: (
     resource: ResourceProbe
@@ -146,7 +149,7 @@ export const makeScopedProbePlugin = (config: {
   ) => Effect.Effect<void, PluginExecutionError>;
 }): Plugin => {
   return defineScopedPlugin({
-    name: "scoped-probe",
+    name: config.name ?? "scoped-probe",
     layer: config.resourceLayer,
     generate: () => Effect.flatMap(ProbeResource, config.onGenerate),
     finalize: () => Effect.flatMap(ProbeResource, config.onFinalize),
@@ -154,12 +157,20 @@ export const makeScopedProbePlugin = (config: {
 };
 
 /**
- * Builds a Generator layer that loads only `pluginFactory()` against an empty
- * spec, with formatting and index generation stubbed out.
+ * Builds a Generator layer that loads only the plugins that
+ * `pluginFactories` return against an empty spec, with formatting and index
+ * generation stubbed out.
  */
-export const makeGeneratorLayer = (pluginFactory: () => Plugin) => {
+export const makeGeneratorLayer = (
+  ...pluginFactories: ReadonlyArray<() => Plugin>
+) => {
   const pluginLoaderLayer = Layer.succeed(PluginLoader, {
-    loadAll: params => params.registry.register(pluginFactory()),
+    loadAll: params =>
+      Effect.forEach(
+        pluginFactories,
+        pluginFactory => params.registry.register(pluginFactory()),
+        { discard: true }
+      ),
   });
   const specLoaderLayer = Layer.succeed(SpecLoader, {
     load: () =>

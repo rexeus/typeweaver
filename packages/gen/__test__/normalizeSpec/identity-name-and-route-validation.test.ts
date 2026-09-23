@@ -14,7 +14,7 @@ import {
   anInlineResponse,
   anOperation,
   aSpec,
-  captureNormalizeError,
+  captureNormalizeErrorOf,
   normalizeSpec,
 } from "./fixtures.js";
 
@@ -50,9 +50,9 @@ describe("normalizeSpec identity and name validation", () => {
       todos: { operations: [anOperation({ operationId })] },
     });
 
-    const error = captureNormalizeError(spec);
+    const error = captureNormalizeErrorOf(spec, InvalidOperationIdError);
     expect(error).toBeInstanceOf(InvalidOperationIdError);
-    expect((error as InvalidOperationIdError).operationId).toBe(operationId);
+    expect(error.operationId).toBe(operationId);
   });
 
   test.each([
@@ -64,9 +64,9 @@ describe("normalizeSpec identity and name validation", () => {
       [resourceName]: { operations: [anOperation()] },
     });
 
-    const error = captureNormalizeError(spec);
+    const error = captureNormalizeErrorOf(spec, InvalidResourceNameError);
     expect(error).toBeInstanceOf(InvalidResourceNameError);
-    expect((error as InvalidResourceNameError).resourceName).toBe(resourceName);
+    expect(error.resourceName).toBe(resourceName);
   });
 });
 

@@ -32,8 +32,10 @@ export const normalizeRoutePath = (path: string): string => {
 };
 
 export const getPathParameterNames = (path: string): string[] => {
-  return Array.from(
-    path.matchAll(PATH_PARAMETER_PATTERN),
-    match => match[1] as string
-  );
+  const names: string[] = [];
+  for (const match of path.matchAll(PATH_PARAMETER_PATTERN)) {
+    const name = match[1];
+    if (name !== undefined) names.push(name);
+  }
+  return names;
 };

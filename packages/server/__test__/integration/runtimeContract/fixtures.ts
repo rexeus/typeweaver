@@ -1,5 +1,6 @@
 import { TestAssertionError } from "test-utils";
 import { expect } from "vitest";
+import { readJsonRecord } from "../../helpers.js";
 import type { RuntimeServer } from "../helpers.js";
 
 export const JSON_CONTENT_TYPE = "application/json";
@@ -7,33 +8,13 @@ export const RUNTIME_MAX_BODY_SIZE_BYTES = 64;
 export const ONE_BYTE_OVER_RUNTIME_MAX_BODY_SIZE_BYTES =
   RUNTIME_MAX_BODY_SIZE_BYTES + 1;
 
-export type JsonResponse<TBody> = {
+export type JsonResponse = {
   readonly response: Response;
-  readonly body: TBody;
+  readonly body: Record<string, unknown>;
 };
 
 export type RuntimeEnvironment = {
   readonly server?: RuntimeServer;
-};
-
-export type TodoListBody = {
-  readonly results: readonly unknown[];
-};
-
-export type TodoBody = {
-  readonly id: string;
-  readonly title?: string;
-  readonly status?: string;
-};
-
-export type QueryTodoBody = {
-  readonly results: readonly unknown[];
-  readonly nextToken?: string;
-};
-
-export type ErrorBody = {
-  readonly code: string;
-  readonly message: string;
 };
 
 export type JsonRequestMethod = "PATCH" | "POST" | "PUT";
@@ -108,10 +89,10 @@ function sendJsonRequest(
   });
 }
 
-export async function expectJsonResponse<TBody>(
+export async function expectJsonResponse(
   responsePromise: Promise<Response>,
   expectedStatus: number
-): Promise<JsonResponse<TBody>> {
+): Promise<JsonResponse> {
   const response = await responsePromise;
 
   expect(response.status).toBe(expectedStatus);
@@ -119,7 +100,7 @@ export async function expectJsonResponse<TBody>(
 
   return {
     response,
-    body: (await response.json()) as TBody,
+    body: await readJsonRecord(response),
   };
 }
 

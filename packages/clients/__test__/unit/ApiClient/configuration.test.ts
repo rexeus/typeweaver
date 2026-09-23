@@ -3,13 +3,13 @@ import { captureError, TestAssertionError } from "test-utils";
 import { describe, expect, test } from "vitest";
 import { ApiClientConfigurationError } from "../../../src/lib/errors/ApiClientConfigurationError.js";
 import {
+  aClientWithUncheckedProps,
   createClient,
   getFetchCall,
   resolvedFetch,
   TestApiClient,
   TestRequestCommand,
 } from "./fixtures.js";
-import type { ApiClientProps } from "../../../src/lib/ApiClient.js";
 
 function captureApiClientConfigurationError(
   action: () => void
@@ -149,10 +149,10 @@ describe("ApiClient base URL validation", () => {
 
 describe("ApiClient option validation", () => {
   test("rejects a missing baseUrl with the validation error", () => {
-    const props = { fetchFn: resolvedFetch() } as unknown as ApiClientProps;
+    const props = { fetchFn: resolvedFetch() };
 
-    const error = captureApiClientConfigurationError(
-      () => new TestApiClient(props)
+    const error = captureApiClientConfigurationError(() =>
+      aClientWithUncheckedProps(props)
     );
 
     expect(error).toEqual(
@@ -164,13 +164,10 @@ describe("ApiClient option validation", () => {
   });
 
   test("rejects a non-string baseUrl with the validation error", () => {
-    const props = {
-      baseUrl: 123 as unknown as string,
-      fetchFn: resolvedFetch(),
-    } satisfies ApiClientProps;
+    const props = { baseUrl: 123, fetchFn: resolvedFetch() };
 
-    const error = captureApiClientConfigurationError(
-      () => new TestApiClient(props)
+    const error = captureApiClientConfigurationError(() =>
+      aClientWithUncheckedProps(props)
     );
 
     expect(error).toEqual(

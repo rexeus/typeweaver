@@ -5,7 +5,7 @@ import {
   parseContentLength,
 } from "./BodyLimitPolicy.js";
 import { BodyParseError, PayloadTooLargeError } from "./Errors.js";
-import { appendRequestRecordValue } from "./requestRecord.js";
+import { appendRequestRecordValue, createNullPrototypeRecord } from "./requestRecord.js";
 import type { BodyLimitPolicy } from "./BodyLimitPolicy.js";
 
 export async function parseFetchRequestBody(
@@ -82,10 +82,7 @@ async function parseFormUrlencodedBody(request: Request): Promise<IHttpBody> {
     });
   }
 
-  const result: Record<string, string | string[]> = Object.create(null) as Record<
-    string,
-    string | string[]
-  >;
+  const result = createNullPrototypeRecord<string | string[]>();
   new URLSearchParams(text).forEach((value, key) => {
     appendRequestRecordValue(result, key, value);
   });
@@ -102,10 +99,7 @@ async function parseMultipartBody(request: Request): Promise<IHttpBody> {
     });
   }
 
-  const result: Record<string, string | File | (string | File)[]> = Object.create(null) as Record<
-    string,
-    string | File | (string | File)[]
-  >;
+  const result = createNullPrototypeRecord<string | File | (string | File)[]>();
   formData.forEach((value, key) => {
     const existing = result[key];
     if (existing === undefined) result[key] = value;

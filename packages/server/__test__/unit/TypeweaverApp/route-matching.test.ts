@@ -12,6 +12,7 @@ import {
   del,
   expectErrorResponse,
   expectJson,
+  expectJsonArray,
   get,
   head,
   noopResponseValidator,
@@ -93,7 +94,7 @@ describe("TypeweaverApp route matching", () => {
 
     const res = await app.fetch(get("/todos"));
 
-    const data = await expectJson(res, 200);
+    const data = await expectJsonArray(res, 200);
     expect(data).toHaveLength(2);
   });
 

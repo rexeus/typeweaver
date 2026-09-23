@@ -7,7 +7,7 @@ import {
   GetMetricSamplesRequestValidator,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import { issuePaths } from "./fixtures.js";
+import { issuePaths, parseRawStringRecord } from "./fixtures.js";
 import type { IGetMetricLabelsRequest } from "test-utils";
 
 describe("Generated RequestValidator record HTTP boundaries", () => {
@@ -114,7 +114,7 @@ describe("Generated RequestValidator reserved record keys", () => {
   });
 
   test("rejects a JSON.parse __proto__ record query key", () => {
-    const query = JSON.parse('{"__proto__":"1"}') as IRawHttpRequest["query"];
+    const query = parseRawStringRecord('{"__proto__":"1"}');
 
     const result = new GetMetricLabelsRequestValidator().safeValidate(
       rawLabelsRequest({ query })
@@ -144,12 +144,10 @@ describe("Generated RequestValidator reserved record keys", () => {
   });
 
   test("preserves constructor and toString record keys end to end", () => {
-    const query = JSON.parse(
-      '{"constructor":"1","toString":"2"}'
-    ) as IRawHttpRequest["query"];
-    const header = JSON.parse(
+    const query = parseRawStringRecord('{"constructor":"1","toString":"2"}');
+    const header = parseRawStringRecord(
       '{"constructor":"true","toString":"false"}'
-    ) as IRawHttpRequest["header"];
+    );
 
     const result = new GetMetricLabelsRequestValidator().safeValidate(
       rawLabelsRequest({ query, header })
@@ -177,7 +175,7 @@ describe("Generated RequestValidator record key identity", () => {
   });
 
   test("rejects a trimmed query key", () => {
-    const query = JSON.parse('{" p50 ":"1"}') as IRawHttpRequest["query"];
+    const query = parseRawStringRecord('{" p50 ":"1"}');
 
     const result = new GetMetricKeyedLabelsRequestValidator().safeValidate(
       rawKeyedRequest({ query })
@@ -189,9 +187,7 @@ describe("Generated RequestValidator record key identity", () => {
   });
 
   test("rejects a lowercased header key and a transformed __proto__ output", () => {
-    const header = JSON.parse(
-      '{"ABC":"true","__PROTO__":"false"}'
-    ) as IRawHttpRequest["header"];
+    const header = parseRawStringRecord('{"ABC":"true","__PROTO__":"false"}');
 
     const result = new GetMetricKeyedLabelsRequestValidator().safeValidate(
       rawKeyedRequest({ header })
@@ -206,9 +202,7 @@ describe("Generated RequestValidator record key identity", () => {
   });
 
   test("rejects a key that would collide with a preserved key", () => {
-    const header = JSON.parse(
-      '{"ABC":"true","abc":"false"}'
-    ) as IRawHttpRequest["header"];
+    const header = parseRawStringRecord('{"ABC":"true","abc":"false"}');
 
     const result = new GetMetricKeyedLabelsRequestValidator().safeValidate(
       rawKeyedRequest({ header })
@@ -220,12 +214,10 @@ describe("Generated RequestValidator record key identity", () => {
   });
 
   test("accepts preserved keys, including constructor", () => {
-    const query = JSON.parse(
-      '{"p50":"1","constructor":"2"}'
-    ) as IRawHttpRequest["query"];
-    const header = JSON.parse(
+    const query = parseRawStringRecord('{"p50":"1","constructor":"2"}');
+    const header = parseRawStringRecord(
       '{"tostring":"true","constructor":"false"}'
-    ) as IRawHttpRequest["header"];
+    );
 
     const result = new GetMetricKeyedLabelsRequestValidator().safeValidate(
       rawKeyedRequest({ query, header })

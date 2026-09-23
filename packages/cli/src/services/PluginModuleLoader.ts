@@ -12,6 +12,9 @@ export type PluginModuleLoaderShape = {
   >;
 };
 
+const isModuleNamespace = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
 const pluginModuleLoaderShape: PluginModuleLoaderShape = {
   load: Effect.fn("typeweaver.PluginModuleLoader.load")(
     (
@@ -21,7 +24,15 @@ const pluginModuleLoaderShape: PluginModuleLoaderShape = {
       PluginModuleNotFoundError | PluginConfigError
     > =>
       Effect.tryPromise({
-        try: async () => (await import(specifier)) as Record<string, unknown>,
+        try: async () => {
+          const pluginModule: unknown = await import(specifier);
+          if (!isModuleNamespace(pluginModule)) {
+            throw new TypeError(
+              `Plugin module '${specifier}' did not resolve to a module namespace`
+            );
+          }
+          return pluginModule;
+        },
         catch: cause =>
           isPluginConfigError(cause)
             ? cause

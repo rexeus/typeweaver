@@ -11,8 +11,9 @@ import { analyzeSchema, finiteStringOutputs, isArraySchema } from "./validatorSc
 export function coerceRecordToSchema(data, keyType, valueType, splitCommaDelimited) {
   if (typeof data !== "object" || data === null || Array.isArray(data)) return data;
   const expectsArray = isArraySchema(valueType);
-  const coerced = Object.create(null);
-  for (const [key, value] of Object.entries(data)) {
+  const coerced = createNullPrototypeRecord();
+  const entries = Object.entries(data);
+  for (const [key, value] of entries) {
     const outputKey = splitCommaDelimited ? canonicalHeaderRecordKey(key, keyType) : key;
     const normalized =
       splitCommaDelimited && expectsArray && typeof value === "string"
@@ -40,7 +41,7 @@ function canonicalHeaderRecordKey(rawKey, keyType) {
  */
 export function splitCommaDelimitedValues(header, shape) {
   const schemaMap = analyzeSchema(shape, false);
-  const result = Object.create(null);
+  const result = createNullPrototypeRecord();
   for (const [key, value] of Object.entries(header)) {
     if (schemaMap.get(key.toLowerCase())?.isArray && typeof value === "string") {
       setOwnValue(
@@ -77,6 +78,15 @@ export function addValueToCoerced(coerced, key, value, expectsArray) {
   setOwnValue(coerced, key, expectsArray || merged.length > 1 ? merged : merged[0]);
 }
 /**
+ * Creates an empty record without a prototype, so dynamic keys never resolve
+ * inherited members such as `constructor` or `__proto__`.
+ */
+export function createNullPrototypeRecord() {
+  const record = {};
+  Object.setPrototypeOf(record, null);
+  return record;
+}
+/**
  * Reads an own property only. Dynamic record/header keys such as
  * `constructor` or `toString` must not collide with inherited values.
  */
@@ -111,7 +121,7 @@ function coerceValueStructure(value, expectsArray) {
  * preserve schema-defined casing.
  */
 export function mapToOriginalKeys(coerced, schemaMap) {
-  const withOriginalKeys = Object.create(null);
+  const withOriginalKeys = createNullPrototypeRecord();
   for (const [key, value] of Object.entries(coerced)) {
     setOwnValue(withOriginalKeys, schemaMap.get(key)?.originalKey ?? key, value);
   }

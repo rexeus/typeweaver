@@ -51,17 +51,15 @@ describe("native workspace Effect compatibility", () => {
   });
 
   test("skips only an undeclared project with plain projections", () => {
-    expect(
-      classify({ _tag: "NotDeclared" }, ["types", "clients"])
-    ).toMatchObject({
-      outcome: "skip",
-    });
+    const check = classify({ _tag: "NotDeclared" }, ["types", "clients"]);
+    expect(check).toMatchObject({ outcome: "skip" });
+    expect(check.message).not.toContain("CLI-hosted");
     expect(classify({ _tag: "NotDeclared" }, ["effect"])).toMatchObject({
       outcome: "fail",
     });
   });
 
-  test("separates plain, native, and custom plugins", () => {
+  test("separates plain, CLI-hosted, Effect projection, and custom plugins", () => {
     expect(
       classifyConfiguredPlugins([
         "types",
@@ -69,39 +67,71 @@ describe("native workspace Effect compatibility", () => {
         "command",
         "@rexeus/typeweaver-command",
         "openapi",
-        "@rexeus/typeweaver-openapi",
+        ["@rexeus/typeweaver-openapi", { target: "3.2.0" }],
         "hono",
+        "@rexeus/typeweaver-hono",
         "effect",
         "@rexeus/typeweaver-effect",
         "@acme/plugin",
+        "./plugins/custom.mjs",
       ])
     ).toEqual({
       plain: ["types", "@rexeus/typeweaver-server"],
-      effect: [
+      cliHosted: [
         "command",
         "@rexeus/typeweaver-command",
         "openapi",
         "@rexeus/typeweaver-openapi",
         "hono",
-        "effect",
-        "@rexeus/typeweaver-effect",
+        "@rexeus/typeweaver-hono",
       ],
-      external: ["@acme/plugin"],
+      effectProjection: ["effect", "@rexeus/typeweaver-effect"],
+      external: ["@acme/plugin", "./plugins/custom.mjs"],
     });
   });
 
   test.each([
+    "hono",
+    "@rexeus/typeweaver-hono",
     "command",
     "@rexeus/typeweaver-command",
     "openapi",
     "@rexeus/typeweaver-openapi",
-  ])("requires Effect for the native %s plugin spelling", plugin => {
-    expect(classify({ _tag: "NotDeclared" }, [plugin])).toMatchObject({
-      outcome: "fail",
-    });
-    expect(classify(resolved("4.0.0-rc.115"), [plugin])).toMatchObject({
-      outcome: "fail",
-    });
+  ])("runs the CLI-hosted %s plugin on the CLI's own Effect", plugin => {
+    const skipped = classify({ _tag: "NotDeclared" }, ["types", plugin]);
+    expect(skipped).toMatchObject({ outcome: "skip" });
+    expect(skipped.message).toContain(`CLI-hosted generators (${plugin})`);
+    expect(skipped.message).not.toContain("no Effect-native");
+
+    const warned = classify(resolved("4.0.0-rc.115"), [plugin]);
+    expect(warned).toMatchObject({ outcome: "warn" });
+    expect(warned.message).toContain(plugin);
+    expect(warned.message).toContain("CLI's own Effect");
+
+    expect(classify(resolved(REQUIRED_EFFECT_VERSION), [plugin])).toMatchObject(
+      { outcome: "pass" }
+    );
+  });
+
+  test.each([
+    "effect",
+    "@rexeus/typeweaver-effect",
+    "@acme/plugin",
+    "./plugins/custom.mjs",
+  ])("requires a project-owned exact Effect for %s", plugin => {
+    const undeclared = classify({ _tag: "NotDeclared" }, ["hono", plugin]);
+    expect(undeclared).toMatchObject({ outcome: "fail" });
+    expect(undeclared.message).toContain(`runtime: ${plugin}.`);
+
+    const mismatched = classify(resolved("4.0.0-rc.115"), ["hono", plugin]);
+    expect(mismatched).toMatchObject({ outcome: "fail" });
+    expect(mismatched.message).toContain(
+      `${REQUIRED_EFFECT_VERSION}: ${plugin}.`
+    );
+
+    expect(
+      classify(resolved(REQUIRED_EFFECT_VERSION), ["hono", plugin])
+    ).toMatchObject({ outcome: "pass" });
   });
 });
 

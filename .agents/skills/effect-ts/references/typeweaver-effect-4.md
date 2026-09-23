@@ -96,9 +96,18 @@ the caller must own new instances for its own Scope, build with a private memo m
 `Effect.provide(layer, { local: true })`. `Layer.fresh` isolates only the Layer graph itself; a Layer
 built inside one of its constructors still forks the ambient memo map.
 
+When a resource must outlive one effect but not the workflow, let the workflow's owner hold the
+Scope and model the resource user as a scoped constructor: an `Effect<A, E, Scope.Scope>` that
+acquires into the ambient Scope and returns values closed over what it acquired. Scoped plugins
+follow this shape: `Plugin.acquire` returns the lifecycle hooks, and each host wraps one generation
+in `Effect.scoped`. Do not keep per-run state in a `WeakMap` keyed by the current fiber
+(`Effect.withFiberSucceed`): RC.116 fibers do not inherit such entries, so a caller that runs a step
+under `Effect.timeout` or `Effect.race` loses it.
+
 Representative code:
 
 - `packages/gen/src/plugins/defineScopedPlugin.ts`
+- `packages/cli/src/services/internal/pluginLifecycle.ts`
 - `packages/gen/src/runtime/MainLayer.ts`
 - `packages/cli/src/services/SpecBundler.ts`
 - `docs/adr/0007-generator-per-call-isolation.md`

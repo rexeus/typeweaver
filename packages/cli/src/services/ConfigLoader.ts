@@ -77,7 +77,9 @@ const loadConfigAsync = async (
 
   const resolvedPath = path.resolve(configPath);
   const configUrl = pathToFileURL(resolvedPath).toString();
-  const configModule = (await import(configUrl)) as Record<string, unknown>;
+  const moduleNamespace: unknown = await import(configUrl);
+  // `import()` resolves to a module namespace object; anything else exports nothing.
+  const configModule = isConfigObject(moduleNamespace) ? moduleNamespace : {};
   const loadedConfig = getConfigExport(configModule, configPath);
 
   if (!isConfigObject(loadedConfig)) {

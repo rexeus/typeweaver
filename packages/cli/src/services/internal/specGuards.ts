@@ -1,11 +1,13 @@
 import { HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";
 import type { SpecDefinition } from "@rexeus/typeweaver-core";
 
-const validHttpStatusCodes = new Set<HttpStatusCode>(
+const validHttpStatusCodes: ReadonlySet<unknown> = new Set<HttpStatusCode>(
   Object.values(HttpStatusCode).filter(
     (statusCode): statusCode is HttpStatusCode => typeof statusCode === "number"
   )
 );
+
+const validHttpMethods: readonly unknown[] = Object.values(HttpMethod);
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -27,7 +29,7 @@ const isResponseDefinition = (value: unknown): boolean => {
   return (
     hasNonEmptyString(value, "name") &&
     hasNonEmptyString(value, "description") &&
-    validHttpStatusCodes.has(value["statusCode"] as HttpStatusCode)
+    validHttpStatusCodes.has(value["statusCode"])
   );
 };
 
@@ -40,7 +42,7 @@ const isOperationDefinition = (value: unknown): boolean => {
     ["operationId", "path", "summary"].every(key =>
       hasNonEmptyString(value, key)
     ) &&
-    Object.values(HttpMethod).includes(value["method"] as HttpMethod) &&
+    validHttpMethods.includes(value["method"]) &&
     isRecord(value["request"]) &&
     value["responses"].length > 0 &&
     value["responses"].every(response => isResponseDefinition(response))

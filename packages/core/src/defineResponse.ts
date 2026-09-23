@@ -101,31 +101,58 @@ export const defineDerivedResponse = <
   MergeHeaderSchemas<TBase["header"], THeader>,
   MergeBodySchemas<TBase["body"], TBody>,
   DerivedResponseMetadata<TBase["name"], ResponseLineage<TBase, TName>>
-> => {
+> => deriveResponse(base, overrides);
+
+// The merged schema and lineage types mirror the runtime merge rules, which the
+// compiler cannot follow through `??`, spreads, and conditional types; the
+// implementation is therefore checked against the widest response shape.
+function deriveResponse<
+  TBase extends ResponseDefinition,
+  TName extends string,
+  TStatusCode extends HttpStatusCode,
+  TDescription extends string,
+  THeader extends HttpHeaderSchema | undefined,
+  TBody extends HttpBodySchema | undefined,
+>(
+  base: TBase,
+  overrides: DerivedResponseOverrides<
+    TName,
+    TStatusCode,
+    TDescription,
+    THeader,
+    TBody
+  >
+): ResponseDefinition<
+  TName,
+  TStatusCode,
+  TDescription,
+  MergeHeaderSchemas<TBase["header"], THeader>,
+  MergeBodySchemas<TBase["body"], TBody>,
+  DerivedResponseMetadata<TBase["name"], ResponseLineage<TBase, TName>>
+>;
+function deriveResponse(
+  base: ResponseDefinition,
+  overrides: DerivedResponseOverrides<
+    string,
+    HttpStatusCode,
+    string,
+    HttpHeaderSchema | undefined,
+    HttpBodySchema | undefined
+  >
+): ResponseDefinition {
   return attachResponseDefinitionMetadata(
     {
       name: overrides.name,
-      statusCode: (overrides.statusCode ?? base.statusCode) as TStatusCode,
-      description: (overrides.description ?? base.description) as TDescription,
-      header: mergeHeaderSchemas(
-        base.header,
-        overrides.header,
-        overrides.name
-      ) as MergeHeaderSchemas<TBase["header"], THeader>,
-      body: mergeBodySchemas(
-        base.body,
-        overrides.body,
-        overrides.name
-      ) as MergeBodySchemas<TBase["body"], TBody>,
+      statusCode: overrides.statusCode ?? base.statusCode,
+      description: overrides.description ?? base.description,
+      header: mergeHeaderSchemas(base.header, overrides.header, overrides.name),
+      body: mergeBodySchemas(base.body, overrides.body, overrides.name),
       derived: {
         parentName: base.name,
-        lineage: [
-          ...(base.derived?.lineage ?? []),
-          overrides.name,
-        ] as unknown as ResponseLineage<TBase, TName>,
+        lineage: [...(base.derived?.lineage ?? []), overrides.name],
         depth: (base.derived?.depth ?? 0) + 1,
       },
     },
     { source: "define-derived-response" }
   );
-};
+}

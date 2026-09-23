@@ -12,7 +12,7 @@ export class ResponseDefinitionMergeError extends Error {
 }
 
 const defineResponseDefinitionMetadata = (
-  response: ResponseDefinition,
+  response: object,
   metadata: ResponseDefinitionMetadata
 ): void => {
   Object.defineProperty(response, responseDefinitionMetadataSymbol, {
@@ -23,29 +23,31 @@ const defineResponseDefinitionMetadata = (
   });
 };
 
-const cloneResponseDefinitionWithoutMetadata = <
-  TResponse extends ResponseDefinition,
->(
-  response: TResponse
-): TResponse => {
+const cloneResponseDefinitionWithoutMetadata = (
+  response: ResponseDefinition
+): object => {
   const descriptors: PropertyDescriptorMap = {};
   for (const key of Reflect.ownKeys(response)) {
     if (key === responseDefinitionMetadataSymbol) continue;
     const descriptor = Object.getOwnPropertyDescriptor(response, key);
     if (descriptor !== undefined) descriptors[key] = descriptor;
   }
-  return Object.create(
-    Reflect.getPrototypeOf(response),
-    descriptors
-  ) as TResponse;
+  const clonedResponse = {};
+  Object.setPrototypeOf(clonedResponse, Reflect.getPrototypeOf(response));
+  return Object.defineProperties(clonedResponse, descriptors);
 };
 
-export const attachResponseDefinitionMetadata = <
+/**
+ * Returns the response itself, or a same-prototype copy of all its own
+ * properties when it cannot be extended, so the result is always a `TResponse`.
+ */
+export function attachResponseDefinitionMetadata<
   TResponse extends ResponseDefinition,
->(
-  response: TResponse,
+>(response: TResponse, metadata: ResponseDefinitionMetadata): TResponse;
+export function attachResponseDefinitionMetadata(
+  response: ResponseDefinition,
   metadata: ResponseDefinitionMetadata
-): TResponse => {
+): object {
   try {
     defineResponseDefinitionMetadata(response, metadata);
     return response;
@@ -55,7 +57,7 @@ export const attachResponseDefinitionMetadata = <
   const clonedResponse = cloneResponseDefinitionWithoutMetadata(response);
   defineResponseDefinitionMetadata(clonedResponse, metadata);
   return clonedResponse;
-};
+}
 
 export const getResponseDefinitionMetadata = (
   response: ResponseDefinition

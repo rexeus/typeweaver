@@ -15,7 +15,6 @@ import type {
 } from "@rexeus/typeweaver-core";
 import { ResponseValidationError } from "@rexeus/typeweaver-core";
 import { Validator } from "./Validator.js";
-import type { ZodSafeParseResult } from "zod";
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
@@ -124,7 +123,15 @@ export abstract class ResponseValidator<
   ): (
     response: IHttpResponse,
     error: ResponseValidationError
-  ) => SafeResponseValidationResult<Response> {
+  ) => SafeResponseValidationResult<Response>;
+  protected validateResponseType(
+    responseName: string,
+    headerSchema: HttpHeaderSchema | undefined,
+    bodySchema: HttpBodySchema | undefined
+  ): (
+    response: IHttpResponse,
+    error: ResponseValidationError
+  ) => SafeResponseValidationResult<ITypedHttpResponse> {
     return (response, error) => {
       let isValid = true;
       const validatedResponse: Mutable<ITypedHttpResponse> = {
@@ -135,9 +142,7 @@ export abstract class ResponseValidator<
       };
 
       if (bodySchema) {
-        const validateBodyResult = bodySchema.safeParse(
-          response.body
-        ) as ZodSafeParseResult<Response["body"]>;
+        const validateBodyResult = bodySchema.safeParse(response.body);
 
         if (!validateBodyResult.success) {
           error.addBodyIssues(responseName, validateBodyResult.error.issues);
@@ -152,9 +157,7 @@ export abstract class ResponseValidator<
           response.header,
           headerSchema
         );
-        const validateHeaderResult = headerSchema.safeParse(
-          coercedHeader
-        ) as ZodSafeParseResult<Response["header"]>;
+        const validateHeaderResult = headerSchema.safeParse(coercedHeader);
 
         if (!validateHeaderResult.success) {
           error.addHeaderIssues(
@@ -171,7 +174,7 @@ export abstract class ResponseValidator<
         return { isValid: false, error };
       }
 
-      return { isValid: true, data: validatedResponse as Response };
+      return { isValid: true, data: validatedResponse };
     };
   }
 }

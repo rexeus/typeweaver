@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { StateMap } from "../../src/lib/StateMap.js";
+import { parseJsonRecord } from "../helpers.js";
 
 describe("StateMap typed storage", () => {
   test("returns the value stored for a typed key", () => {
@@ -122,7 +123,8 @@ describe("StateMap merge", () => {
 
   test("ignores inherited enumerable properties from a merge payload", () => {
     const state = new StateMap();
-    const payload = Object.create({ role: "admin" }) as Record<string, unknown>;
+    const payload: Record<string, unknown> = {};
+    Reflect.setPrototypeOf(payload, { role: "admin" });
     payload["userId"] = "u_1";
 
     state.merge(payload);
@@ -133,9 +135,9 @@ describe("StateMap merge", () => {
 
   test("ignores reserved keys that could mutate object prototypes", () => {
     const state = new StateMap();
-    const payload = JSON.parse(
+    const payload = parseJsonRecord(
       '{"__proto__":{"polluted":true},"constructor":"bad","prototype":"bad","userId":"u_1"}'
-    ) as Record<string, unknown>;
+    );
 
     state.merge(payload);
 

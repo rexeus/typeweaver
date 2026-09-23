@@ -184,22 +184,30 @@ export abstract class TypeweaverHono<
    * @param options - Hono context, operation metadata, validators, and handler
    * @returns Hono-compatible Response object
    */
-  protected async handleRequest<
+  protected handleRequest<
     TRequest extends IRawHttpRequest | IValidatedHttpRequest,
     TResponse extends IHttpResponse,
-  >({
+  >(
+    options: TypeweaverHonoRequestOptions<TRequest, TResponse>
+  ): Promise<Response>;
+  // Generated routers pair each handler with the validator of its operation, so
+  // the implementation works with the erased request and response types.
+  protected async handleRequest({
     context,
     operationId,
     requestValidator,
     responseValidator,
     handler,
-  }: TypeweaverHonoRequestOptions<TRequest, TResponse>): Promise<Response> {
+  }: TypeweaverHonoRequestOptions<
+    IRawHttpRequest | IValidatedHttpRequest,
+    IHttpResponse
+  >): Promise<Response> {
     try {
       context.set("operationId", operationId);
       const httpRequest = await this.adapter.toRequest(context);
       const validatedRequest = this.config.validateRequests
-        ? (requestValidator.validate(httpRequest) as TRequest)
-        : (httpRequest as TRequest);
+        ? requestValidator.validate(httpRequest)
+        : httpRequest;
       const httpResponse = await handler(validatedRequest, context);
       const normalizedResponse = await this.validateResponse(
         responseValidator,

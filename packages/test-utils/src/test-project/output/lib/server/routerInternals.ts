@@ -1,5 +1,8 @@
-import { findReservedPathParameter, ReservedPathParameterError } from "@rexeus/typeweaver-core";
-import type { HttpMethod } from "@rexeus/typeweaver-core";
+import {
+  findReservedPathParameter,
+  isHttpMethod,
+  ReservedPathParameterError,
+} from "@rexeus/typeweaver-core";
 import { AmbiguousPathSegmentError, ConflictingPathParameterNameError } from "./errors/index.js";
 import type { RouteDefinition } from "./routerTypes.js";
 
@@ -53,10 +56,14 @@ export function assertPathHasNoReservedParameter(path: string): void {
   }
 }
 
+/**
+ * Stores the route under its upper-cased method. A method outside `HttpMethod`
+ * cannot be represented on the definition, so that definition is kept as is.
+ */
 export function normalizeDefinition(definition: RouteDefinition, method: string): RouteDefinition {
-  return definition.method === method
+  return definition.method === method || !isHttpMethod(method)
     ? definition
-    : { ...definition, method: method as HttpMethod };
+    : { ...definition, method };
 }
 
 export function descend(node: RadixNode, path: string, pattern: SegmentPattern): RadixNode {

@@ -3,19 +3,21 @@ import {
   createQueryTodoSuccessResponse,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import { createUnvalidatedTodoHonoWithHandlers } from "./fixtures.js";
+import { readField, readJsonRecord, withBodyFields } from "../../../helpers.js";
+import {
+  createUnvalidatedTodoHonoWithHandlers,
+  createUnvalidatedTodoHonoWithUncheckedHandlers,
+} from "./fixtures.js";
 
 describe("Generated Hono form and query parsing", () => {
   test("parses repeated form-url-encoded fields into safe records when validation is disabled", async () => {
-    let handlerBody: Record<string, unknown> | undefined;
-    const app = createUnvalidatedTodoHonoWithHandlers({
-      handleCreateTodoRequest: async request => {
-        handlerBody = request.body as Record<string, unknown>;
-        return createCreateTodoSuccessResponse({
-          body: {
-            title: handlerBody["title"] as string,
-            priority: handlerBody["priority"] as "HIGH",
-          },
+    let handlerBody: unknown;
+    const app = createUnvalidatedTodoHonoWithUncheckedHandlers({
+      CreateTodo: async request => {
+        handlerBody = request.body;
+        return withBodyFields(createCreateTodoSuccessResponse(), {
+          title: readField(request.body, "title"),
+          priority: readField(request.body, "priority"),
         });
       },
     });
@@ -27,24 +29,20 @@ describe("Generated Hono form and query parsing", () => {
     });
 
     expect(response.status).toBe(201);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["title"]).toEqual(["first", "second"]);
     expect(data["priority"]).toBe("HIGH");
-    expect(
-      Object.getPrototypeOf(handlerBody as Record<string, unknown>)
-    ).toBeNull();
+    expect(Object.getPrototypeOf(handlerBody)).toBeNull();
   });
 
   test("preserves repeated empty query parameter values when validation is disabled", async () => {
-    let handlerQuery: Record<string, unknown> | undefined;
-    const app = createUnvalidatedTodoHonoWithHandlers({
-      handleQueryTodoRequest: async request => {
-        handlerQuery = request.query as Record<string, unknown>;
-        return createQueryTodoSuccessResponse({
-          body: {
-            results: [],
-            nextToken: handlerQuery["nextToken"] as string,
-          },
+    let handlerQuery: unknown;
+    const app = createUnvalidatedTodoHonoWithUncheckedHandlers({
+      QueryTodo: async request => {
+        handlerQuery = request.query;
+        return withBodyFields(createQueryTodoSuccessResponse(), {
+          results: [],
+          nextToken: readField(request.query, "nextToken"),
         });
       },
     });
@@ -55,18 +53,18 @@ describe("Generated Hono form and query parsing", () => {
     );
 
     expect(response.status).toBe(200);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["nextToken"]).toEqual(["", "second"]);
-    expect(handlerQuery?.["nextToken"]).toEqual(["", "second"]);
+    expect(readField(handlerQuery, "nextToken")).toEqual(["", "second"]);
   });
 
   test("does not pollute Object.prototype from form-url-encoded __proto__ fields", async () => {
-    let handlerBody: Record<string, unknown> | undefined;
+    let handlerBody: unknown;
     const app = createUnvalidatedTodoHonoWithHandlers({
       handleCreateTodoRequest: async request => {
-        handlerBody = request.body as Record<string, unknown>;
+        handlerBody = request.body;
         return createCreateTodoSuccessResponse({
-          body: { title: String(handlerBody["title"]) },
+          body: { title: String(readField(request.body, "title")) },
         });
       },
     });
@@ -78,20 +76,21 @@ describe("Generated Hono form and query parsing", () => {
     });
 
     expect(response.status).toBe(201);
-    expect(handlerBody?.["title"]).toBe("safe");
-    expect(
-      Object.getPrototypeOf(handlerBody as Record<string, unknown>)
-    ).toBeNull();
+    expect(readField(handlerBody, "title")).toBe("safe");
+    expect(Object.getPrototypeOf(handlerBody)).toBeNull();
     expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
   });
 
   test("does not pollute Object.prototype from query string __proto__ values", async () => {
-    let handlerQuery: Record<string, unknown> | undefined;
+    let handlerQuery: unknown;
     const app = createUnvalidatedTodoHonoWithHandlers({
       handleQueryTodoRequest: async request => {
-        handlerQuery = request.query as Record<string, unknown>;
+        handlerQuery = request.query;
         return createQueryTodoSuccessResponse({
-          body: { results: [], nextToken: String(handlerQuery["nextToken"]) },
+          body: {
+            results: [],
+            nextToken: String(readField(request.query, "nextToken")),
+          },
         });
       },
     });
@@ -102,10 +101,8 @@ describe("Generated Hono form and query parsing", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(handlerQuery?.["nextToken"]).toBe("safe");
-    expect(
-      Object.getPrototypeOf(handlerQuery as Record<string, unknown>)
-    ).toBeNull();
+    expect(readField(handlerQuery, "nextToken")).toBe("safe");
+    expect(Object.getPrototypeOf(handlerQuery)).toBeNull();
     expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
   });
 });

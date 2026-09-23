@@ -10,10 +10,11 @@ import {
 } from "test-utils";
 import { describe, expect, test } from "vitest";
 import {
-  asHttpResponse,
   expectNoPartialData,
   responseWithRuntimePart,
+  safeValidateRaw,
   statusCodeIssueFor,
+  validateRaw,
   validCreateTodoResponse,
   validForbiddenErrorResponse,
   validInternalServerErrorResponse,
@@ -73,7 +74,7 @@ describe("Generated ResponseValidator accepted status codes", () => {
     ({ response, expectedType, expectedStatusCode }) => {
       const validator = new CreateTodoResponseValidator();
 
-      const result = validator.safeValidate(asHttpResponse(response));
+      const result = safeValidateRaw(validator, response);
 
       expect(result.isValid).toBe(true);
       assert(result.isValid);
@@ -92,7 +93,7 @@ describe("Generated ResponseValidator unknown status codes", () => {
       418
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expectNoPartialData(result);
     assert(!result.isValid);
@@ -114,7 +115,7 @@ describe("Generated ResponseValidator unknown status codes", () => {
       invalidStatusCode
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expectNoPartialData(result);
     assert(!result.isValid);
@@ -182,7 +183,7 @@ describe("Generated ResponseValidator malformed status codes", () => {
     ({ response, invalidStatusCode }) => {
       const validator = new CreateTodoResponseValidator();
 
-      const result = validator.safeValidate(asHttpResponse(response));
+      const result = safeValidateRaw(validator, response);
 
       expectNoPartialData(result);
       assert(!result.isValid);
@@ -201,9 +202,9 @@ describe("Generated ResponseValidator throwing status-code behavior", () => {
     const validator = new CreateTodoResponseValidator();
     const response = "not a response";
 
-    const safeResult = validator.safeValidate(asHttpResponse(response));
+    const safeResult = safeValidateRaw(validator, response);
     const thrownError = captureError<ResponseValidationError>(() =>
-      validator.validate(asHttpResponse(response))
+      validateRaw(validator, response)
     );
 
     expectNoPartialData(safeResult);
@@ -221,7 +222,7 @@ describe("Generated ResponseValidator throwing status-code behavior", () => {
       },
     });
 
-    expect(() => validator.safeValidate(asHttpResponse(response))).toThrow(
+    expect(() => safeValidateRaw(validator, response)).toThrow(
       "statusCode getter"
     );
   });

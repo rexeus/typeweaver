@@ -4,7 +4,12 @@ import {
   defineMiddleware,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import { BASE_URL, buildFetchRequest, expectJson } from "../../../helpers.js";
+import {
+  BASE_URL,
+  buildFetchRequest,
+  expectJson,
+  withBodyFields,
+} from "../../../helpers.js";
 
 describe("Generated Server middleware", () => {
   test("passes middleware state in registration order", async () => {
@@ -75,8 +80,8 @@ describe("Generated Server middleware", () => {
         body: { message: "I'm still a teapot" },
       }))
     );
-    const requestData = createCreateTodoRequest({
-      body: { priority: "INVALID_PRIORITY" as never },
+    const requestData = withBodyFields(createCreateTodoRequest(), {
+      priority: "INVALID_PRIORITY",
     });
 
     const response = await app.fetch(

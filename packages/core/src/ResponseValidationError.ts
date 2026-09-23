@@ -22,6 +22,15 @@ export type ResponseValidationErrorInput = {
 
 const RESPONSE_VALIDATION_ERROR_MESSAGE = "Response validation failed";
 
+const findResponseIssue = (
+  issues: readonly ValidationIssue[],
+  responseName: string
+): InvalidResponseIssue | undefined =>
+  issues.find(
+    (issue): issue is InvalidResponseIssue =>
+      issue.type === "INVALID_RESPONSE" && issue.responseName === responseName
+  );
+
 export class ResponseValidationError extends Error {
   public override readonly message: string;
   public readonly issues: ValidationIssue[];
@@ -54,9 +63,7 @@ export class ResponseValidationError extends Error {
       return;
     }
 
-    const issue = this.issues.find(
-      i => i.type === "INVALID_RESPONSE" && i.responseName === responseName
-    ) as InvalidResponseIssue;
+    const issue = findResponseIssue(this.issues, responseName);
     if (!issue) {
       this.issues.push({
         type: "INVALID_RESPONSE",
@@ -92,16 +99,12 @@ export class ResponseValidationError extends Error {
   }
 
   public getResponseHeaderIssues(responseName: string): $ZodIssue[] {
-    const issue = this.issues.find(
-      i => i.type === "INVALID_RESPONSE" && i.responseName === responseName
-    ) as InvalidResponseIssue;
+    const issue = findResponseIssue(this.issues, responseName);
     return issue ? issue.headerIssues : [];
   }
 
   public getResponseBodyIssues(responseName: string): $ZodIssue[] {
-    const issue = this.issues.find(
-      i => i.type === "INVALID_RESPONSE" && i.responseName === responseName
-    ) as InvalidResponseIssue;
+    const issue = findResponseIssue(this.issues, responseName);
     return issue ? issue.bodyIssues : [];
   }
 

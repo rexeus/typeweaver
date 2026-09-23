@@ -5,7 +5,12 @@ import {
   TestApplicationError,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import { expectErrorResponse, prepareRequestData } from "../../../helpers.js";
+import {
+  expectErrorResponse,
+  prepareRequestData,
+  readJsonRecord,
+  withBodyFields,
+} from "../../../helpers.js";
 import { readContextString } from "./fixtures.js";
 
 describe("Generated Hono typed error handling", () => {
@@ -30,7 +35,7 @@ describe("Generated Hono typed error handling", () => {
     );
 
     expect(response.status).toBe(404);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["errorCode"]).toBe("TODO_NOT_FOUND");
   });
 
@@ -68,7 +73,7 @@ describe("Generated Hono typed error handling", () => {
     );
 
     expect(response.status).toBe(409);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["code"]).toBe("CUSTOM_HTTP_RESPONSE_ERROR");
     expect(capturedError).toBe(errorResponse);
     expect(capturedOperationId).toBe("CreateTodo");
@@ -132,7 +137,7 @@ describe("Generated Hono unknown error handling", () => {
     );
 
     expect(response.status).toBe(500);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["code"]).toBe("CUSTOM_UNKNOWN_ERROR");
     expect(capturedError).toBe(unknownError);
     expect(capturedOperationId).toBe("CreateTodo");
@@ -162,10 +167,8 @@ describe("Generated Hono unknown error handling", () => {
         throw new TestApplicationError("Validation handler failed");
       },
     });
-    const requestData = createCreateTodoRequest({
-      body: {
-        priority: "INVALID_PRIORITY" as never,
-      },
+    const requestData = withBodyFields(createCreateTodoRequest(), {
+      priority: "INVALID_PRIORITY",
     });
 
     const response = await app.request(
@@ -182,10 +185,8 @@ describe("Generated Hono unknown error handling", () => {
         throw new TestApplicationError("Validation handler rejected");
       },
     });
-    const requestData = createCreateTodoRequest({
-      body: {
-        priority: "INVALID_PRIORITY" as never,
-      },
+    const requestData = withBodyFields(createCreateTodoRequest(), {
+      priority: "INVALID_PRIORITY",
     });
 
     const response = await app.request(
@@ -202,10 +203,8 @@ describe("Generated Hono error handler fallthrough", () => {
     const app = createTestHono({
       handleRequestValidationErrors: false,
     });
-    const requestData = createCreateTodoRequest({
-      body: {
-        priority: "INVALID_PRIORITY" as never,
-      },
+    const requestData = withBodyFields(createCreateTodoRequest(), {
+      priority: "INVALID_PRIORITY",
     });
 
     const response = await app.request(

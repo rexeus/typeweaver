@@ -1,8 +1,8 @@
-import type { NormalizedOperation } from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import { buildOpenApiDocument } from "../../../src/index.js";
 import {
+  anHttpMethod,
   anInlineResponseUsage,
   anOperationWith,
   aResponseWith,
@@ -17,7 +17,7 @@ describe("buildOpenApiDocument required request bodies", () => {
       operations: [
         anOperationWith({
           operationId: "createTodo",
-          method: "POST" as NormalizedOperation["method"],
+          method: anHttpMethod("POST"),
           request: { body: z.object({ title: z.string() }) },
           responses: [anInlineResponseUsage(aResponseWith())],
         }),
@@ -51,7 +51,7 @@ describe("buildOpenApiDocument required request bodies", () => {
       operations: [
         anOperationWith({
           operationId: "uploadCsv",
-          method: "POST" as NormalizedOperation["method"],
+          method: anHttpMethod("POST"),
           request: { body: aTextBody(body, "text/csv") },
           responses: [anInlineResponseUsage(aResponseWith())],
         }),
@@ -77,7 +77,7 @@ describe("buildOpenApiDocument optional request bodies", () => {
       operations: [
         anOperationWith({
           operationId: "createTodo",
-          method: "POST" as NormalizedOperation["method"],
+          method: anHttpMethod("POST"),
           request: { body: z.object({ title: z.string() }).optional() },
           responses: [anInlineResponseUsage(aResponseWith())],
         }),
@@ -110,7 +110,7 @@ describe("buildOpenApiDocument optional request bodies", () => {
       operations: [
         anOperationWith({
           operationId: "uploadJson",
-          method: "POST" as NormalizedOperation["method"],
+          method: anHttpMethod("POST"),
           request: { body: z.literal("application/json") },
           responses: [anInlineResponseUsage(aResponseWith())],
         }),
@@ -155,7 +155,7 @@ describe("buildOpenApiDocument request body wrappers", () => {
         operations: [
           anOperationWith({
             operationId: "createTodo",
-            method: "POST" as NormalizedOperation["method"],
+            method: anHttpMethod("POST"),
             request: { body },
             responses: [anInlineResponseUsage(aResponseWith())],
           }),
@@ -186,7 +186,7 @@ describe("buildOpenApiDocument default request bodies", () => {
       operations: [
         anOperationWith({
           operationId: "createTodo",
-          method: "POST" as NormalizedOperation["method"],
+          method: anHttpMethod("POST"),
           request: { body: z.string().default("fallback").readonly() },
           responses: [anInlineResponseUsage(aResponseWith())],
         }),
@@ -214,7 +214,7 @@ describe("buildOpenApiDocument default request bodies", () => {
       operations: [
         anOperationWith({
           operationId: "createTodo",
-          method: "POST" as NormalizedOperation["method"],
+          method: anHttpMethod("POST"),
           request: { body: z.string().default("fallback").nonoptional() },
           responses: [anInlineResponseUsage(aResponseWith())],
         }),
@@ -242,7 +242,7 @@ describe("buildOpenApiDocument default request bodies", () => {
       operations: [
         anOperationWith({
           operationId: "createTodo",
-          method: "POST" as NormalizedOperation["method"],
+          method: anHttpMethod("POST"),
           request: { body: z.string().optional().nullable() },
           responses: [anInlineResponseUsage(aResponseWith())],
         }),
@@ -274,7 +274,7 @@ describe("buildOpenApiDocument required body semantics", () => {
       operations: [
         anOperationWith({
           operationId: "createTodo",
-          method: "POST" as NormalizedOperation["method"],
+          method: anHttpMethod("POST"),
           request: { body: z.string().nullable() },
           responses: [anInlineResponseUsage(aResponseWith())],
         }),
@@ -304,7 +304,7 @@ describe("buildOpenApiDocument required body semantics", () => {
       operations: [
         anOperationWith({
           operationId: "createTodo",
-          method: "POST" as NormalizedOperation["method"],
+          method: anHttpMethod("POST"),
           request: { body: z.string().nonoptional() },
           responses: [anInlineResponseUsage(aResponseWith())],
         }),

@@ -6,7 +6,12 @@ import {
 } from "test-utils";
 import { HonoBodyParseError } from "test-utils/src/test-project/output/lib/hono/index.js";
 import { describe, expect, test } from "vitest";
-import { expectErrorResponse } from "../../../helpers.js";
+import {
+  expectErrorResponse,
+  readField,
+  readItem,
+  readJsonRecord,
+} from "../../../helpers.js";
 import {
   aNestedJsonPrototypePollutionPayload,
   createUnvalidatedTodoHonoWithHandlers,
@@ -75,7 +80,7 @@ describe("Generated Hono body parsing", () => {
 
     expect(response.status).toBe(422);
     expect(response.headers.get("X-Body-Parse-Handled")).toBe("yes");
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data).toEqual({
       code: "CUSTOM_BODY_PARSE",
       message: "Invalid JSON in request body",
@@ -104,7 +109,7 @@ describe("Generated Hono body parsing", () => {
     });
 
     expect(response.status).toBe(422);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["code"]).toBe("CUSTOM_VENDOR_JSON_PARSE");
     expect(capturedError).toBeInstanceOf(HonoBodyParseError);
     expect(capturedOperationId).toBe("CreateTodo");
@@ -133,7 +138,7 @@ describe("Generated Hono body parse handlers", () => {
     const response = await requestCreateTodoWithMalformedJson(app);
 
     expect(response.status).toBe(422);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["code"]).toBe("CUSTOM_BODY_PARSE_WITHOUT_VALIDATION");
     expect(routeHandlerInvoked).toBe(false);
   });
@@ -154,7 +159,7 @@ describe("Generated Hono body parse handlers", () => {
 
     expect(response.status).toBe(409);
     expect(response.headers.get("X-Async-Body-Parse-Handled")).toBe("yes");
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data).toEqual({
       code: "ASYNC_BODY_PARSE",
       retryable: false,
@@ -199,7 +204,7 @@ describe("Generated Hono body parse fallthrough", () => {
     const response = await requestCreateTodoWithMalformedJson(app);
 
     expect(response.status).toBe(418);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["code"]).toBe("CUSTOM_UNKNOWN_BODY_PARSE");
     expect(capturedError).toBeInstanceOf(HonoBodyParseError);
     expect(capturedOperationId).toBe("CreateTodo");
@@ -223,7 +228,7 @@ describe("Generated Hono body parse fallthrough", () => {
     const response = await requestCreateTodoWithMalformedJson(app);
 
     expect(response.status).toBe(502);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["code"]).toBe("HONO_ERROR");
     expect(capturedError).toBeInstanceOf(HonoBodyParseError);
     expect(capturedOperationId).toBe("CreateTodo");
@@ -236,15 +241,14 @@ describe("Generated Hono body parse fallthrough", () => {
     let handlerSawArray = false;
     const app = createUnvalidatedTodoHonoWithHandlers({
       handleCreateTodoRequest: async request => {
-        const body = request.body as Record<string, unknown>;
-        const meta = body["meta"] as Record<string, unknown>;
-        const items = body["items"] as Record<string, unknown>[];
+        const body = request.body;
+        const items = readField(body, "items");
         bodyPrototype = Object.getPrototypeOf(body);
-        nestedPrototype = Object.getPrototypeOf(meta);
+        nestedPrototype = Object.getPrototypeOf(readField(body, "meta"));
         handlerSawArray = Array.isArray(items);
-        arrayItemPrototype = Object.getPrototypeOf(items[0]);
+        arrayItemPrototype = Object.getPrototypeOf(readItem(items, 0));
         return createCreateTodoSuccessResponse({
-          body: { title: String(body["title"]) },
+          body: { title: String(readField(body, "title")) },
         });
       },
     });
@@ -256,7 +260,7 @@ describe("Generated Hono body parse fallthrough", () => {
     });
 
     expect(response.status).toBe(201);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["title"]).toBe("safe title");
     expect(bodyPrototype).toBeNull();
     expect(nestedPrototype).toBeNull();

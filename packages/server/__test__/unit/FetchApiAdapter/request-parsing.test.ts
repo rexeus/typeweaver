@@ -17,14 +17,22 @@ describe("Fetch request metadata", () => {
     expect(result.path).toBe("/todos");
   });
 
-  test("normalizes lowercase custom request methods to uppercase", async () => {
+  test("normalizes lowercase request methods to uppercase", async () => {
+    const request = createAdapterRequest("/todos", { method: "patch" });
+
+    const result = await parseRequest(request);
+
+    expect(result.method).toBe("PATCH");
+  });
+
+  test("rejects a method outside HttpMethod", async () => {
     const request = createAdapterRequest("/todos", {
       method: "custommethod",
     });
 
-    const result = await parseRequest(request);
-
-    expect(result.method).toBe("CUSTOMMETHOD");
+    await expect(parseRequest(request)).rejects.toThrow(
+      new TypeError("Unsupported HTTP method: custommethod")
+    );
   });
 
   test("extracts query parameters", async () => {

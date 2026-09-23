@@ -4,7 +4,9 @@ import path from "node:path";
 import { isUnsupportedFilesystemOperationError } from "./fixtures.js";
 import type { FileSystemError } from "./fixtures.js";
 
-const isSymlinkUnsupportedError = (error: unknown): boolean => {
+const isSymlinkUnsupportedError = (
+  error: unknown
+): error is FileSystemError => {
   return isUnsupportedFilesystemOperationError(error);
 };
 
@@ -25,7 +27,7 @@ const detectSymlinkCapability = (): SymlinkCapability => {
     return { supported: true };
   } catch (error) {
     if (isSymlinkUnsupportedError(error)) {
-      const errorCode = (error as FileSystemError).code;
+      const errorCode = error.code;
 
       return {
         supported: false,

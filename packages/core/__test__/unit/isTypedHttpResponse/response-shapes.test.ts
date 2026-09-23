@@ -5,6 +5,7 @@ import {
   toHttpResponse,
 } from "../../../src/index.js";
 import { TestApplicationError } from "../../errors/index.js";
+import { aNullPrototypeRecordWith } from "../../helpers/nullPrototypeRecord.js";
 import type { ITypedHttpResponse } from "../../../src/index.js";
 
 const valuesThatAreNotTypedResponses: readonly {
@@ -139,7 +140,7 @@ const withObjectPrototypeProperties = <T>(
       if (previousDescriptor) {
         Object.defineProperty(Object.prototype, property, previousDescriptor);
       } else {
-        delete (Object.prototype as Partial<Record<string, unknown>>)[property];
+        Reflect.deleteProperty(Object.prototype, property);
       }
     }
   }
@@ -221,13 +222,10 @@ describe("isTypedHttpResponse basic shapes", () => {
 
 describe("isTypedHttpResponse header shapes", () => {
   test("accepts a null-prototype typed HTTP response", () => {
-    const response = Object.assign(
-      Object.create(null) as Record<string, unknown>,
-      {
-        type: "NullPrototypeResponse",
-        statusCode: HttpStatusCode.OK,
-      }
-    );
+    const response = aNullPrototypeRecordWith({
+      type: "NullPrototypeResponse",
+      statusCode: HttpStatusCode.OK,
+    });
 
     expect(isTypedHttpResponse(response)).toBe(true);
   });
@@ -263,12 +261,9 @@ describe("isTypedHttpResponse header shapes", () => {
   });
 
   test("accepts a null-prototype header record with string values", () => {
-    const header = Object.assign(
-      Object.create(null) as Record<string, unknown>,
-      {
-        "X-Request-Id": "request-1",
-      }
-    );
+    const header = aNullPrototypeRecordWith({
+      "X-Request-Id": "request-1",
+    });
     const response = {
       type: "NullPrototypeHeaderResponse",
       statusCode: HttpStatusCode.OK,

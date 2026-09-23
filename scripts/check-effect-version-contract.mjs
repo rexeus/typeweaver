@@ -1,8 +1,10 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { findUnpinnedEffectInstalls } from "./lib/effect-install-snippets.mjs";
 import {
   NATIVE_EFFECT_DOCUMENT_TOKENS,
   validateNativeEffectWorkspaceContract,
@@ -231,6 +233,33 @@ failures.push(
     contract,
     manifests,
     documents,
+  })
+);
+
+// Every tracked or new, non-ignored Markdown file is public install guidance
+// that a reader may copy, so each `effect` install must carry the exact pin.
+const markdownDocuments = execFileSync(
+  "git",
+  [
+    "ls-files",
+    "-z",
+    "--cached",
+    "--others",
+    "--exclude-standard",
+    "--",
+    ":(top,glob)**/*.md",
+  ],
+  { cwd: workspaceRoot }
+)
+  .toString("utf8")
+  .split("\0")
+  .filter(document => document !== "" && readOptional(document) !== undefined);
+failures.push(
+  ...findUnpinnedEffectInstalls({
+    runtimeVersion: contract.runtimeVersion,
+    documents: Object.fromEntries(
+      markdownDocuments.map(document => [document, read(document)])
+    ),
   })
 );
 

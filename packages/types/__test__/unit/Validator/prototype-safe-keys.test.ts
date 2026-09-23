@@ -28,10 +28,7 @@ describe("Validator prototype-safe dynamic keys", () => {
 
   test("keeps constructor and toString as own record query keys", () => {
     const schema = z.record(z.string(), z.string());
-    const input = JSON.parse('{"constructor":"c","toString":"t"}') as Record<
-      string,
-      unknown
-    >;
+    const input: unknown = JSON.parse('{"constructor":"c","toString":"t"}');
 
     const coerced = validator.coerceQuery(input, schema);
 
@@ -46,10 +43,7 @@ describe("Validator prototype-safe dynamic keys", () => {
 
   test("keeps constructor and toString as own record header keys", () => {
     const schema = z.record(z.string(), z.string());
-    const input = JSON.parse('{"constructor":"c","toString":"t"}') as Record<
-      string,
-      unknown
-    >;
+    const input: unknown = JSON.parse('{"constructor":"c","toString":"t"}');
 
     const coerced = validator.coerceHeader(input, schema);
 
@@ -60,10 +54,7 @@ describe("Validator prototype-safe dynamic keys", () => {
 
   test("handles prototype-named record keys with scalar and array values", () => {
     const schema = z.record(z.string(), z.array(z.string()));
-    const input = JSON.parse('{"constructor":["c"],"toString":"t"}') as Record<
-      string,
-      unknown
-    >;
+    const input: unknown = JSON.parse('{"constructor":["c"],"toString":"t"}');
 
     const coerced = validator.coerceQuery(input, schema);
 
@@ -77,10 +68,7 @@ describe("Validator prototype-safe dynamic keys", () => {
 
   test("stores a JSON.parse __proto__ key as an own data property", () => {
     const schema = z.record(z.string(), z.string());
-    const input = JSON.parse('{"__proto__":"p","constructor":"c"}') as Record<
-      string,
-      unknown
-    >;
+    const input: unknown = JSON.parse('{"__proto__":"p","constructor":"c"}');
 
     const coerced = validator.coerceQuery(input, schema);
 

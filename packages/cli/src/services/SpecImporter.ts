@@ -17,6 +17,13 @@ export type SpecImporterShape = {
   >;
 };
 
+const readModuleExport = (moduleNamespace: unknown, name: string): unknown =>
+  typeof moduleNamespace === "object" &&
+  moduleNamespace !== null &&
+  name in moduleNamespace
+    ? Reflect.get(moduleNamespace, name)
+    : undefined;
+
 const makeSpecImporter: Effect.Effect<
   SpecImporterShape,
   never,
@@ -48,11 +55,11 @@ const makeSpecImporter: Effect.Effect<
 
     return yield* Effect.tryPromise({
       try: async () => {
-        const specModule = (await import(moduleUrl.toString())) as {
-          readonly spec?: unknown;
-          readonly default?: unknown;
-        };
-        const definition = specModule.spec ?? specModule.default ?? specModule;
+        const specModule: unknown = await import(moduleUrl.toString());
+        const definition =
+          readModuleExport(specModule, "spec") ??
+          readModuleExport(specModule, "default") ??
+          specModule;
 
         if (!isSpecDefinition(definition)) {
           throw new InvalidSpecEntrypointError({

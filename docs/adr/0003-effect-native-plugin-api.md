@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Accepted; amended so that hosts own the per-generation lifetime of scoped plugins (see
+[Scoped plugin lifetimes](#scoped-plugin-lifetimes)).
 
 ## Context
 
@@ -45,9 +46,7 @@ V2 plugins are **records** returned by the `definePlugin(...)` helper. Lifecycle
 
 ```ts
 // packages/gen/src/plugins/Plugin.ts
-export type Plugin = {
-  readonly name: string;
-  readonly depends?: readonly string[];
+export type PluginLifecycleHooks = {
   readonly initialize?: (ctx: PluginContext) => Effect.Effect<void, PluginExecutionError>;
   readonly collectResources?: (
     spec: NormalizedSpec
@@ -56,19 +55,67 @@ export type Plugin = {
   readonly finalize?: (ctx: PluginContext) => Effect.Effect<void, PluginExecutionError>;
 };
 
+export type PluginAcquisition = Effect.Effect<
+  PluginLifecycleHooks,
+  PluginExecutionError,
+  Scope.Scope
+>;
+
+export type Plugin = {
+  readonly name: string;
+  readonly depends?: readonly string[];
+  readonly validate?: (
+    spec: NormalizedSpec,
+    ctx: PluginValidationContext
+  ) => Effect.Effect<readonly Issue[], PluginExecutionError>;
+} & (PluginLifecycleHooks | { readonly acquire: PluginAcquisition });
+
 export const definePlugin = (plugin: Plugin): Plugin => plugin;
 ```
 
 `Plugin.generate` keeps `R = never` on every lifecycle stage. Plugin authors write platform-agnostic
 code: they wrap their sync work in `Effect.try` and map the thrown cause to a tagged
 `PluginExecutionError`. The standard loader accepts a `Plugin` record or a pure, synchronous
-`PluginFactory`; it never executes an Effect-returning factory. A service-dependent factory creates
-per-generation closure state, builds its private Layer against a Scope in `initialize`, provides the
-retained service context to later hooks, and closes the Scope from `finalize`. The returned plugin's
-effects therefore still satisfy `R = never`, while resource acquisition and release stay inside the
-generator lifecycle. Because `finalize` does not receive the generator's original `Exit`, this
-internal-Scope pattern is limited to exit-independent resources and closes the Scope with a neutral
-`Exit.void`; transactional finalizers require a future lifecycle contract.
+`PluginFactory`; it never executes an Effect-returning factory. A service-dependent plugin declares
+`acquire` instead of top-level lifecycle hooks, as described in
+[Scoped plugin lifetimes](#scoped-plugin-lifetimes). Its hooks therefore still satisfy `R = never`,
+while resource acquisition and release stay inside the generator lifecycle.
+
+### Scoped plugin lifetimes
+
+A plugin that owns resources is a scoped constructor, the same shape as `Layer.effect` over
+`Effect.acquireRelease`: `acquire` runs in a Scope and returns the lifecycle hooks closed over the
+services it acquired. The **host owns that Scope** for exactly one generation:
+
+1. The host wraps each generation in a Scope (`Effect.scoped` around the plugin lifecycle in
+   `packages/cli/src/services/internal/pluginLifecycle.ts`, and around each `run` of the public test
+   kit).
+2. At the `initialize` stage, in registration order, the host runs each plugin's acquisition
+   (`acquirePluginLifecycle` returns a plain plugin's own hooks unchanged) and then its `initialize`
+   hook. Acquisition failures are `PluginExecutionError`s in the `initialize` phase. Acquisition
+   plus `initialize` and the registration on the finalizer stack form one masked transition.
+3. The host runs `collectResources` and `generate` with the acquired hooks and `finalize` in reverse
+   order for every initialized plugin. Closing the Scope then releases the resources of every scoped
+   plugin in reverse order, on success, typed failure, defect, and interruption.
+
+`validate` stays outside `acquire`, so validation-only runs never acquire resources.
+`defineScopedPlugin` builds this shape from a Layer and hooks whose requirement channel is the
+Layer's output. It builds the Layer with a private memo map, the documented equivalent of
+`Effect.provide(layer, { local: true })`, so a generation never reuses an instance that an enclosing
+runtime already built.
+
+The first implementation built the Layer inside `initialize`, kept the Scope and services in a
+`WeakMap` keyed by the current fiber, and closed the Scope from `finalize`. That required every host
+to run all hooks of a generation on one fiber: a hook that a host ran under `Effect.timeout` or
+`Effect.race` found no services and died. It also needed guards against double initialization.
+Host-owned Scopes remove the per-fiber state and those guards: the hooks close over their services
+and run on any fiber, and concurrent generations that share a module-cached plugin instance are
+isolated because each acquisition returns its own hooks.
+
+Because `finalize` does not receive the generator's original `Exit`, this pattern remains limited to
+exit-independent resources. The Scope closes with the lifecycle's exit, which precedes formatting
+and publication, so it is not a commit signal; transactional finalizers require a future lifecycle
+contract.
 
 The orchestrator (`packages/cli/src/services/Generator.ts`) drives the lifecycle through
 `yield* registration.plugin.generate(context)`. Failures propagate as typed `PluginExecutionError`s
@@ -106,10 +153,10 @@ plugin constructor and throw `PluginConfigError` on rejection. The lifecycle sta
   (`packages/gen/src/plugins/definePluginWithLibCopy.ts`) deduplicate the byte-equivalent
   boilerplate across the five first-party plugins (`types`, `clients`, `server`, `hono`, `aws-cdk` —
   `openapi` uses `definePlugin` directly).
-- Service-dependent factories have one resource lifetime per generation. The factory itself remains
-  pure and synchronous; `initialize` acquires its private Layer/Scope and `finalize` releases it.
-  This path intentionally supports unconditional cleanup, not finalizers whose behavior depends on
-  the generator's `Exit`.
+- Service-dependent plugins have one resource lifetime per generation. The factory itself remains
+  pure and synchronous; `acquire` builds the private Layer into the host's generation Scope, and the
+  host releases it after `finalize`. This path intentionally supports unconditional cleanup, not
+  finalizers whose behavior depends on the generator's `Exit`.
 - The `GeneratorContext` sync helpers (`writeFile`, `renderTemplate`, `addGeneratedFile`) remain
   sync; plugin authors continue to call them inside the `try` block of their `Effect.try` boundary.
 - An **additive Effect-native context surface** exists alongside the sync helpers:
@@ -154,6 +201,8 @@ the source reference and standalone tsgo diagnostics gate.
 
 - `packages/gen/src/plugins/Plugin.ts` — the V2 contract
 - `packages/gen/src/plugins/definePluginWithLibCopy.ts` — first-party HOC
+- `packages/gen/src/plugins/defineScopedPlugin.ts` — scoped plugin helper over a Layer
+- `packages/cli/src/services/internal/pluginLifecycle.ts` — host-owned generation Scope
 - `packages/gen/src/plugins/errors/PluginExecutionError.ts` — lifecycle-phase typed error
 - `packages/gen/src/plugins/errors/PluginConfigError.ts` — construction-time typed error
 - `packages/cli/src/services/PluginLoader.ts` — recognises `PluginConfigError` and short-circuits

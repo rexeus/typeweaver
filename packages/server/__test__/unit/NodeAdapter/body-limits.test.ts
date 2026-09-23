@@ -4,13 +4,18 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { PayloadTooLargeError } from "../../../src/lib/errors/index.js";
 import { nodeAdapter } from "../../../src/lib/NodeAdapter.js";
 import { TypeweaverApp } from "../../../src/lib/TypeweaverApp.js";
+import { parseJsonRecord } from "../../helpers.js";
 import {
   awaitResponse,
   createControlledIncomingMessage,
   createMockIncomingMessage,
   createMockServerResponse,
 } from "../../node-helpers.js";
-import { fakeAppReturning, fakeAppWithErrorReporter } from "./fixtures.js";
+import {
+  expectRequest,
+  fakeAppReturning,
+  fakeAppWithErrorReporter,
+} from "./fixtures.js";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -37,7 +42,7 @@ describe("body size enforcement", () => {
     await awaitResponse(res);
 
     expect(res.writtenStatus).toBe(413);
-    const parsed = JSON.parse(res.writtenBody) as Record<string, unknown>;
+    const parsed = parseJsonRecord(res.writtenBody);
     expect(parsed).toEqual({
       code: payloadTooLargeDefaultError.code,
       message: payloadTooLargeDefaultError.message,
@@ -146,7 +151,7 @@ describe("Node streamed body limits", () => {
     handler(req, res);
     await awaitResponse(res);
 
-    const request = app.receivedRequests[0] as Request;
+    const request = expectRequest(app.receivedRequests[0]);
     expect(res.writtenStatus).toBe(200);
     expect(await request.text()).toBe("");
   });
@@ -198,7 +203,7 @@ describe("Node body limit header edge cases", () => {
     handler(req, res);
     await awaitResponse(res);
 
-    const request = app.receivedRequests[0] as Request;
+    const request = expectRequest(app.receivedRequests[0]);
     expect(res.writtenStatus).toBe(200);
     expect(await request.text()).toBe("data");
   });
@@ -339,7 +344,7 @@ describe("Node post-limit cleanup", () => {
     await awaitResponse(res);
 
     expect(res.writtenStatus).toBe(200);
-    const request = app.receivedRequests[0] as Request;
+    const request = expectRequest(app.receivedRequests[0]);
     expect(await request.text()).toBe(body);
   });
 });

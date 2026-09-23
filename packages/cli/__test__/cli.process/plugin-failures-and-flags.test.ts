@@ -2,13 +2,17 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { packageDirectory, runCli } from "../helpers/builtCli.js";
+import { readJsonObject } from "../helpers/jsonFiles.js";
 import { createWorkspace, removeWorkspaces, writeSpec } from "./fixtures.js";
 
-const packageManifest = JSON.parse(
-  fs.readFileSync(path.join(packageDirectory, "package.json"), "utf8")
-) as { readonly version: string };
+const packageManifest = readJsonObject(
+  path.join(packageDirectory, "package.json")
+);
 
-const packageVersion = packageManifest.version;
+const packageVersion = packageManifest["version"];
+if (typeof packageVersion !== "string") {
+  throw new TypeError("Expected the CLI package.json to declare a version");
+}
 
 const writeFormattingPlugin = (workspace: string): string => {
   const pluginPath = path.join(workspace, "plugins", "formatting-plugin.mjs");

@@ -129,12 +129,7 @@ describe("built CLI undeclared native surfaces", () => {
     expect(check.message).toContain(pluginPath);
   });
 
-  test.each([
-    "command",
-    "@rexeus/typeweaver-command",
-    "openapi",
-    "@rexeus/typeweaver-openapi",
-  ])("fails for an undeclared project that configures %s", async plugin => {
+  test("fails for an undeclared project that configures the scoped Effect projection", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
     writeWorkspaceManifest(workspace);
@@ -146,13 +141,45 @@ describe("built CLI undeclared native surfaces", () => {
       "--output",
       "generated",
       "--plugins",
-      plugin,
+      "hono,@rexeus/typeweaver-effect",
       "--json",
     ]);
 
     expect(result.code).toBe(1);
     const check = await expectCheck(result, "TW-DOCTOR-011");
     expect(check.outcome).toBe("fail");
-    expect(check.message).toContain(plugin);
+    expect(check.message).toContain("runtime: @rexeus/typeweaver-effect.");
+  });
+});
+
+describe("built CLI undeclared CLI-hosted generators", () => {
+  test.each([
+    "hono",
+    "@rexeus/typeweaver-hono",
+    "command",
+    "@rexeus/typeweaver-command",
+    "openapi",
+    "@rexeus/typeweaver-openapi",
+  ])("skips an undeclared project that configures %s", async plugin => {
+    const workspace = createWorkspace();
+    writeSpec(workspace);
+    writeWorkspaceManifest(workspace);
+
+    const result = await runCli(workspace, [
+      "doctor",
+      "--input",
+      "spec/index.ts",
+      "--output",
+      "generated",
+      "--plugins",
+      `types,${plugin}`,
+      "--json",
+    ]);
+
+    expect(result.code).toBe(0);
+    const check = await expectCheck(result, "TW-DOCTOR-011");
+    expect(check.outcome).toBe("skip");
+    expect(check.message).toContain(`CLI-hosted generators (${plugin})`);
+    expect(check.message).not.toContain("no Effect-native");
   });
 });

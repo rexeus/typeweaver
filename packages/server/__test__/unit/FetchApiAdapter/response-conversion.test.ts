@@ -2,15 +2,21 @@ import { TestAssertionError } from "test-utils";
 import { describe, expect, test } from "vitest";
 import { ResponseSerializationError } from "../../../src/lib/Errors.js";
 import { FetchApiAdapter } from "../../../src/lib/FetchApiAdapter.js";
+import { callUntyped } from "../../helpers.js";
 
-function anUntypedResponseWithHeaders(
+function toResponseWithUntypedHeaders(
+  adapter: FetchApiAdapter,
   header: Record<string, unknown>
-): Parameters<FetchApiAdapter["toResponse"]>[0] {
-  return {
+): Response {
+  const response = callUntyped(adapter.toResponse.bind(adapter), {
     statusCode: 200,
     header,
     body: "ok",
-  } as Parameters<FetchApiAdapter["toResponse"]>[0];
+  });
+  if (!(response instanceof Response)) {
+    throw new TestAssertionError("Expected toResponse to return a Response");
+  }
+  return response;
 }
 
 function captureResponseSerializationError(
@@ -222,12 +228,10 @@ describe("Fetch response headers and serialization errors", () => {
   test("ignores undefined response headers from untyped callers", () => {
     const adapter = new FetchApiAdapter();
 
-    const response = adapter.toResponse(
-      anUntypedResponseWithHeaders({
-        "X-Skipped": undefined,
-        "X-Kept": "kept",
-      })
-    );
+    const response = toResponseWithUntypedHeaders(adapter, {
+      "X-Skipped": undefined,
+      "X-Kept": "kept",
+    });
 
     expect(response.headers.has("x-skipped")).toBe(false);
     expect(response.headers.get("x-kept")).toBe("kept");
@@ -236,11 +240,9 @@ describe("Fetch response headers and serialization errors", () => {
   test("coerces numeric response headers from untyped callers", () => {
     const adapter = new FetchApiAdapter();
 
-    const response = adapter.toResponse(
-      anUntypedResponseWithHeaders({
-        "X-Count": 42,
-      })
-    );
+    const response = toResponseWithUntypedHeaders(adapter, {
+      "X-Count": 42,
+    });
 
     expect(response.headers.get("x-count")).toBe("42");
   });

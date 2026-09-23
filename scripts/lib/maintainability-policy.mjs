@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
+import { readWorktreeStatus } from "./git-worktree-status.mjs";
 import {
   assertLintPolicyConfiguration,
   readLintConfig,
@@ -75,23 +76,16 @@ const trackedFiles = () => {
     );
   return result.stdout.split("\0").filter(Boolean);
 };
-/** @returns {{ deleted: ReadonlySet<string>, changed: readonly string[] }} */
+/**
+ * A rename's original path has already left the index, and a copy's original
+ * stays tracked, so only the destination path is a candidate source file.
+ *
+ * @returns {{ deleted: ReadonlySet<string>, changed: readonly string[] }}
+ */
 const worktreeStatus = () => {
-  const result = spawnSync(
-    "git",
-    ["status", "--porcelain=v1", "-z", "--untracked-files=all"],
-    { cwd: workspaceRoot, encoding: "utf8" }
-  );
-  if (result.error !== undefined) throw result.error;
-  if (result.status !== 0)
-    throw new Error(
-      `git status failed with exit code ${String(result.status)}`
-    );
   const deleted = new Set();
   const changed = [];
-  for (const entry of result.stdout.split("\0").filter(Boolean)) {
-    const status = entry.slice(0, 2);
-    const file = entry.slice(3);
+  for (const { status, path: file } of readWorktreeStatus(workspaceRoot)) {
     if (status.includes("D")) deleted.add(file);
     else changed.push(file);
   }

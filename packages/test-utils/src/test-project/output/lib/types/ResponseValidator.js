@@ -63,14 +63,6 @@ export class ResponseValidator extends Validator {
     if (!result.isValid) throw result.error;
     return result.data;
   }
-  /**
-   * Validates a single response variant against its header and body schemas.
-   *
-   * @param responseName - Name of the response type for error reporting
-   * @param headerSchema - Zod schema for header validation (optional)
-   * @param bodySchema - Zod schema for body validation (optional)
-   * @returns Function that validates response and returns result
-   */
   validateResponseType(responseName, headerSchema, bodySchema) {
     return (response, error) => {
       let isValid = true;

@@ -1,8 +1,5 @@
 import assert from "node:assert";
-import {
-  HttpStatusCode,
-  ResponseValidationError,
-} from "@rexeus/typeweaver-core";
+import { ResponseValidationError } from "@rexeus/typeweaver-core";
 import type { ITypedHttpResponse } from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
 import {
@@ -16,6 +13,10 @@ import {
   expectSanitizedInternalServerError,
   requestCreateTodo,
 } from "./fixtures.js";
+
+// 299 is no HttpStatusCode member; TypeScript admits a `number` wherever the
+// numeric enum is expected, so the out-of-contract status needs no assertion.
+const UNRECOGNIZED_STATUS_CODE: number = 299;
 
 describe("returned response body validation", () => {
   test("strips extra body fields from a valid returned response", async () => {
@@ -123,7 +124,7 @@ describe("response status validation", () => {
   test("returns a sanitized 500 when a returned response has an unrecognized status code", async () => {
     const unknownStatusResponse: ITypedHttpResponse = {
       type: "CreateTodoSuccess" as const,
-      statusCode: 299 as HttpStatusCode,
+      statusCode: UNRECOGNIZED_STATUS_CODE,
       header: { "Content-Type": "application/json" },
       body: { message: "unexpected" },
     };
@@ -138,7 +139,7 @@ describe("response status validation", () => {
     const { handler, getCapturedCall } = captureResponseValidationHandlerCall();
     const unknownStatusResponse: ITypedHttpResponse = {
       type: "CreateTodoSuccess" as const,
-      statusCode: 299 as HttpStatusCode,
+      statusCode: UNRECOGNIZED_STATUS_CODE,
       header: { "Content-Type": "application/json" },
       body: { message: "unexpected" },
     };

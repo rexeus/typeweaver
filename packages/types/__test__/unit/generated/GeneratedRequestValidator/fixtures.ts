@@ -99,6 +99,25 @@ export const requestWithRuntimePart = (
   [part]: value,
 });
 
+const isStringRecord = (value: unknown): value is Record<string, string> =>
+  typeof value === "object" &&
+  value !== null &&
+  !Array.isArray(value) &&
+  Object.values(value).every(entry => typeof entry === "string");
+
+/**
+ * Parses a raw query or header record from JSON, which keeps keys such as
+ * `__proto__` as own data properties, and fails unless every value is a string.
+ */
+export const parseRawStringRecord = (json: string): Record<string, string> => {
+  const parsed: unknown = JSON.parse(json);
+  if (!isStringRecord(parsed)) {
+    throw new TypeError(`Expected a JSON record of strings: ${json}`);
+  }
+
+  return parsed;
+};
+
 export const issuePaths = (issues: RequestValidationError["bodyIssues"]) =>
   issues.map(issue => issue.path);
 

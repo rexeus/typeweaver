@@ -33,14 +33,17 @@ export function normalizeOpenApiSchema(schema: JsonSchema): JsonSchema {
   const hasConst = hasOwnSchemaKeyword(schema, "const");
   const normalizedEntries = Object.entries(schema)
     .filter(([key]) => key !== "const")
-    .map(([key, value]) => [key, normalizeSchemaKeyword(key, value)]);
+    .map(([key, value]): [string, JsonSchemaValue] => [
+      key,
+      normalizeSchemaKeyword(key, value),
+    ]);
   const constValue = schema["const"];
 
   if (hasConst && constValue !== undefined) {
     normalizedEntries.push(["enum", [constValue]]);
   }
 
-  return Object.fromEntries(normalizedEntries) as JsonSchema;
+  return Object.fromEntries(normalizedEntries);
 }
 
 function normalizeSchemaKeyword(

@@ -9,30 +9,30 @@ import {
   titleForJsonTodoBodyWithByteLength,
   JSON_CONTENT_TYPE,
 } from "./fixtures.js";
-import type { ErrorBody, RuntimeEnvironment } from "./fixtures.js";
+import type { RuntimeEnvironment } from "./fixtures.js";
 
 export function registerRuntimeErrorTests(
   environment: RuntimeEnvironment
 ): void {
   test("returns NOT_FOUND for unknown runtime paths", async () => {
     const baseUrl = runtimeBaseUrl(environment);
-    const { body } = await expectJsonResponse<ErrorBody>(
+    const { body } = await expectJsonResponse(
       fetch(`${baseUrl}/nonexistent`),
       404
     );
 
-    expect(body.code).toBe("NOT_FOUND");
+    expect(body["code"]).toBe("NOT_FOUND");
   });
 
   test("returns METHOD_NOT_ALLOWED with allowed runtime methods", async () => {
     const baseUrl = runtimeBaseUrl(environment);
-    const { response, body } = await expectJsonResponse<ErrorBody>(
+    const { response, body } = await expectJsonResponse(
       fetch(`${baseUrl}/todos`, { method: "DELETE" }),
       405
     );
 
     expectAllow(response, ["GET", "HEAD", "POST"]);
-    expect(body.code).toBe("METHOD_NOT_ALLOWED");
+    expect(body["code"]).toBe("METHOD_NOT_ALLOWED");
   });
 
   test("returns the todo OPTIONS allow list in production order", async () => {
@@ -55,7 +55,7 @@ export function registerRuntimeErrorTests(
 
   test("returns BAD_REQUEST for malformed runtime JSON bodies", async () => {
     const baseUrl = runtimeBaseUrl(environment);
-    const { body } = await expectJsonResponse<ErrorBody>(
+    const { body } = await expectJsonResponse(
       fetch(`${baseUrl}/todos`, {
         method: "POST",
         headers: { "Content-Type": JSON_CONTENT_TYPE },
@@ -64,7 +64,7 @@ export function registerRuntimeErrorTests(
       400
     );
 
-    expect(body.code).toBe("BAD_REQUEST");
+    expect(body["code"]).toBe("BAD_REQUEST");
   });
 
   test("rejects runtime JSON bodies one byte over the size limit", async () => {
@@ -73,7 +73,7 @@ export function registerRuntimeErrorTests(
       ONE_BYTE_OVER_RUNTIME_MAX_BODY_SIZE_BYTES
     );
 
-    const { body } = await expectJsonResponse<ErrorBody>(
+    const { body } = await expectJsonResponse(
       fetch(`${baseUrl}/todos`, {
         method: "POST",
         headers: { "Content-Type": JSON_CONTENT_TYPE },
@@ -85,7 +85,7 @@ export function registerRuntimeErrorTests(
       413
     );
 
-    expect(body.code).toBe("PAYLOAD_TOO_LARGE");
-    expect(body.message).toBe(payloadTooLargeDefaultError.message);
+    expect(body["code"]).toBe("PAYLOAD_TOO_LARGE");
+    expect(body["message"]).toBe(payloadTooLargeDefaultError.message);
   });
 }

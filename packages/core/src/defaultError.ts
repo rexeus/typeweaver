@@ -124,6 +124,48 @@ export const defaultErrorDescriptors = {
   internalServerError: internalServerErrorDefaultError,
 } as const;
 
+// The public signatures let callers pin `AdditionalBody` and `Header` independently
+// of the optional arguments, so the generic result is declared by an overload whose
+// implementation is checked against the widest descriptor and body types.
+function buildDefaultErrorBody<
+  Descriptor extends DefaultErrorDescriptor,
+  AdditionalBody extends Record<string, unknown>,
+>(
+  descriptor: Descriptor,
+  additionalBody: AdditionalBody | undefined
+): DefaultErrorBody<Descriptor, AdditionalBody>;
+function buildDefaultErrorBody(
+  descriptor: DefaultErrorDescriptor,
+  additionalBody: Record<string, unknown> | undefined
+): DefaultErrorBody<DefaultErrorDescriptor, Record<string, unknown>> {
+  return {
+    ...additionalBody,
+    code: descriptor.code,
+    message: descriptor.message,
+  };
+}
+
+function buildDefaultErrorResponse<
+  Descriptor extends DefaultErrorDescriptor,
+  Header extends IHttpHeader | undefined,
+  AdditionalBody extends Record<string, unknown>,
+>(
+  descriptor: Descriptor,
+  header: Header | undefined,
+  body: DefaultErrorBody<Descriptor, AdditionalBody>
+): DefaultErrorResponse<Descriptor, Header, AdditionalBody>;
+function buildDefaultErrorResponse(
+  descriptor: DefaultErrorDescriptor,
+  header: IHttpHeader | undefined,
+  body: DefaultErrorBody<DefaultErrorDescriptor, Record<string, unknown>>
+): DefaultErrorResponse<
+  DefaultErrorDescriptor,
+  IHttpHeader | undefined,
+  Record<string, unknown>
+> {
+  return { statusCode: descriptor.statusCode, header, body };
+}
+
 export const createDefaultErrorBody = <
   Descriptor extends DefaultErrorDescriptor,
   AdditionalBody extends Record<string, unknown> = {},
@@ -131,11 +173,7 @@ export const createDefaultErrorBody = <
   descriptor: Descriptor,
   additionalBody?: AdditionalBody
 ): DefaultErrorBody<Descriptor, AdditionalBody> =>
-  ({
-    ...additionalBody,
-    code: descriptor.code,
-    message: descriptor.message,
-  }) as DefaultErrorBody<Descriptor, AdditionalBody>;
+  buildDefaultErrorBody(descriptor, additionalBody);
 
 export const createDefaultErrorResponse = <
   Descriptor extends DefaultErrorDescriptor,
@@ -148,8 +186,8 @@ export const createDefaultErrorResponse = <
     readonly body?: AdditionalBody;
   }
 ): DefaultErrorResponse<Descriptor, Header, AdditionalBody> =>
-  ({
-    statusCode: descriptor.statusCode,
-    header: input?.header,
-    body: createDefaultErrorBody(descriptor, input?.body),
-  }) as DefaultErrorResponse<Descriptor, Header, AdditionalBody>;
+  buildDefaultErrorResponse(
+    descriptor,
+    input?.header,
+    createDefaultErrorBody(descriptor, input?.body)
+  );

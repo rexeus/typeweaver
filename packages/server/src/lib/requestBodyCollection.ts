@@ -108,7 +108,4 @@ const handleCollectedClose = (state: BodyCollectionState): void => {
 };
 
 const toArrayBuffer = (buffer: Buffer): ArrayBuffer =>
-  buffer.buffer.slice(
-    buffer.byteOffset,
-    buffer.byteOffset + buffer.byteLength
-  ) as ArrayBuffer;
+  new Uint8Array(buffer).buffer;

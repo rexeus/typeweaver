@@ -1,7 +1,12 @@
-import type { HttpMethod } from "@rexeus/typeweaver-core";
+import { HttpMethod } from "@rexeus/typeweaver-core";
+import { TestAssertionError } from "test-utils";
 import { assert, expect } from "vitest";
 import { Router } from "../../../src/lib/Router.js";
-import { noopResponseValidator, noopValidator } from "../../helpers.js";
+import {
+  callUntyped,
+  noopResponseValidator,
+  noopValidator,
+} from "../../helpers.js";
 import type {
   RouteDefinition,
   RouterErrorConfig,
@@ -23,13 +28,23 @@ export type RouteExpectation = {
   readonly params?: Record<string, string>;
 };
 
+const toHttpMethod = (method: string): HttpMethod => {
+  const httpMethod = Object.values(HttpMethod).find(
+    candidate => String(candidate) === method.toUpperCase()
+  );
+  if (httpMethod === undefined) {
+    throw new TestAssertionError(`Expected ${method} to name an HTTP method`);
+  }
+  return httpMethod;
+};
+
 export const route = (
   method: string,
   path: string,
   operationId = `${method.toLowerCase()}${path.replace(/[/:]/g, "_")}`
 ): RouteDefinition => ({
   operationId,
-  method: method.toUpperCase() as HttpMethod,
+  method: toHttpMethod(method),
   path,
   requestValidator: noopValidator,
   responseValidator: noopResponseValidator,
@@ -40,14 +55,21 @@ export const route = (
   routerConfig: defaultConfig,
 });
 
-export const routeWithRegisteredMethod = (
+/**
+ * Registers a route whose method keeps the given casing, which `HttpMethod`
+ * cannot express, the way an untyped JavaScript caller registers it.
+ */
+export const addRouteWithRegisteredMethod = (
+  router: Router,
   method: string,
   path: string,
   operationId?: string
-): RouteDefinition => ({
-  ...route(method, path, operationId),
-  method: method as HttpMethod,
-});
+): void => {
+  callUntyped(router.add.bind(router), {
+    ...route(method, path, operationId),
+    method,
+  });
+};
 
 export const expectMatch = (
   router: Router,

@@ -15,15 +15,20 @@ export const rebaseJsonSchemaValue = (
       rebaseJsonSchemaValue(item, documentPath)
     );
   if (!isJsonSchema(value)) return value;
-  return Object.fromEntries(
-    Object.entries(value).map(([key, child]) => [
+  return rebaseJsonSchemaObject(value, documentPath);
+};
+export const rebaseJsonSchemaObject = (
+  schema: JsonSchema,
+  documentPath: string
+): JsonSchema =>
+  Object.fromEntries(
+    Object.entries(schema).map(([key, child]): [string, JsonSchemaValue] => [
       key,
       key === "$ref" && typeof child === "string"
         ? rebaseLocalJsonSchemaRef(child, documentPath)
         : rebaseJsonSchemaValue(child, documentPath),
     ])
-  ) as JsonSchema;
-};
+  );
 const rebaseLocalJsonSchemaRef = (
   ref: string,
   documentPath: string

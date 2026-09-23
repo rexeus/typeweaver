@@ -1,7 +1,12 @@
 import { badRequestDefaultError } from "@rexeus/typeweaver-core";
 import { createCreateTodoSuccessResponse, createTestHono } from "test-utils";
 import { describe, expect, test } from "vitest";
-import { expectErrorResponse } from "../../../helpers.js";
+import {
+  expectErrorResponse,
+  readField,
+  readItem,
+  readJsonRecord,
+} from "../../../helpers.js";
 import {
   aNestedJsonPrototypePollutionPayload,
   createUnvalidatedTodoHonoWithHandlers,
@@ -16,9 +21,9 @@ describe("Generated Hono JSON sanitization", () => {
     let handlerSawPollution: unknown = true;
     const app = createUnvalidatedTodoHonoWithHandlers({
       handleCreateTodoRequest: async request => {
-        const body = request.body as Record<string, unknown>;
-        const meta = body["meta"] as Record<string, unknown>;
-        const items = body["items"] as Record<string, unknown>[];
+        const body = request.body;
+        const meta = readField(body, "meta");
+        const items = readField(body, "items");
         handlerSawUnsafeKey = Object.prototype.hasOwnProperty.call(
           body,
           "__proto__"
@@ -28,12 +33,12 @@ describe("Generated Hono JSON sanitization", () => {
           "__proto__"
         );
         handlerSawArrayUnsafeKey = Object.prototype.hasOwnProperty.call(
-          items[0],
+          readItem(items, 0),
           "__proto__"
         );
         handlerSawPollution = ({} as Record<string, unknown>)["polluted"];
         return createCreateTodoSuccessResponse({
-          body: { title: String(body["title"]) },
+          body: { title: String(readField(body, "title")) },
         });
       },
     });
@@ -81,7 +86,7 @@ describe("Generated Hono JSON arrays and vendor media types", () => {
     let elementPollution: unknown = true;
     const app = createUnvalidatedTodoHonoWithHandlers({
       handleCreateTodoRequest: async request => {
-        const [first] = request.body as unknown as Record<string, unknown>[];
+        const first = readItem(request.body, 0);
         elementUnsafeKey = Object.prototype.hasOwnProperty.call(
           first,
           "__proto__"
@@ -104,12 +109,12 @@ describe("Generated Hono JSON arrays and vendor media types", () => {
   });
 
   test("parses vendor JSON media types when request validation is disabled", async () => {
-    let handlerBody: Record<string, unknown> | undefined;
+    let handlerBody: unknown;
     const app = createUnvalidatedTodoHonoWithHandlers({
       handleCreateTodoRequest: async request => {
-        handlerBody = request.body as Record<string, unknown>;
+        handlerBody = request.body;
         return createCreateTodoSuccessResponse({
-          body: { title: String(handlerBody["title"]) },
+          body: { title: String(readField(request.body, "title")) },
         });
       },
     });
@@ -121,10 +126,8 @@ describe("Generated Hono JSON arrays and vendor media types", () => {
     });
 
     expect(response.status).toBe(201);
-    expect(handlerBody?.["title"]).toBe("vendor json title");
-    expect(
-      Object.getPrototypeOf(handlerBody as Record<string, unknown>)
-    ).toBeNull();
+    expect(readField(handlerBody, "title")).toBe("vendor json title");
+    expect(Object.getPrototypeOf(handlerBody)).toBeNull();
   });
 
   test("returns sanitized BAD_REQUEST for malformed vendor JSON request bodies", async () => {
@@ -223,7 +226,7 @@ describe("Generated Hono malformed JSON handling", () => {
     });
 
     expect(response.status).toBe(201);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(handlerBody).toBe("raw bytes as text");
     expect(data["title"]).toBe("raw bytes as text");
   });

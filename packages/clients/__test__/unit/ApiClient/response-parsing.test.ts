@@ -1,6 +1,7 @@
 import { TestIoError } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
 import { ResponseParseError } from "../../../src/lib/ResponseParseError.js";
+import { requireArrayBuffer } from "../../helpers.js";
 import { createClient, resolvedFetch, TestRequestCommand } from "./fixtures.js";
 
 describe("ApiClient response parsing", () => {
@@ -147,9 +148,9 @@ describe("ApiClient text and binary response parsing", () => {
     const result = await client.send(new TestRequestCommand());
 
     expect(result.body).toBeInstanceOf(ArrayBuffer);
-    expect(Array.from(new Uint8Array(result.body as ArrayBuffer))).toEqual([
-      1, 2, 3,
-    ]);
+    expect(Array.from(new Uint8Array(requireArrayBuffer(result.body)))).toEqual(
+      [1, 2, 3]
+    );
   });
 
   test("returns empty application/octet-stream responses as zero-length ArrayBuffer", async () => {
@@ -164,7 +165,7 @@ describe("ApiClient text and binary response parsing", () => {
     const result = await client.send(new TestRequestCommand());
 
     expect(result.body).toBeInstanceOf(ArrayBuffer);
-    expect((result.body as ArrayBuffer).byteLength).toBe(0);
+    expect(requireArrayBuffer(result.body).byteLength).toBe(0);
   });
 });
 

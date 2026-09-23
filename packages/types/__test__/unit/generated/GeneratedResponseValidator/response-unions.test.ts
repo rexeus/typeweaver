@@ -8,9 +8,9 @@ import {
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import {
-  asHttpResponse,
   expectNoPartialData,
   responseIssueFor,
+  safeValidateRaw,
   validCreateTodoHeader,
   validCreateTodoResponse,
   validDeleteTodoHeader,
@@ -78,7 +78,7 @@ describe("Generated ResponseValidator operation and shared unions", () => {
   ])("accepts CreateTodo $scenario responses", ({ response, expectedType }) => {
     const validator = new CreateTodoResponseValidator();
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -104,7 +104,7 @@ describe("Generated ResponseValidator operation and shared unions", () => {
   ])("accepts DeleteTodo $scenario responses", ({ response, expectedType }) => {
     const validator = new DeleteTodoResponseValidator();
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -143,7 +143,7 @@ describe("Generated ResponseValidator duplicate status-code fallthrough", () => 
     const validator = new DeleteTodoResponseValidator();
     const response = validDeleteTodoSuccessResponse();
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -155,7 +155,7 @@ describe("Generated ResponseValidator duplicate status-code fallthrough", () => 
     const validator = new DeleteTodoResponseValidator();
     const response = validDeleteTodoNoContentResponse();
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -169,7 +169,7 @@ describe("Generated ResponseValidator duplicate status-code fallthrough", () => 
       body: { variant: "unknown" },
     };
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expectNoPartialData(result);
     assert(!result.isValid);
@@ -192,7 +192,7 @@ describe("Generated ResponseValidator response type discriminants", () => {
     const validator = new CreateTodoResponseValidator();
     const response = validCreateTodoResponse();
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -206,7 +206,7 @@ describe("Generated ResponseValidator response type discriminants", () => {
       type: "UnauthorizedError",
     };
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -220,7 +220,7 @@ describe("Generated ResponseValidator response type discriminants", () => {
       type: "DeleteTodoSuccess",
     };
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);

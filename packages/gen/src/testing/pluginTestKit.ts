@@ -1,6 +1,7 @@
 import path from "node:path";
 import { Cause, Effect, Exit, Option } from "effect";
 import { PluginExecutionError } from "../plugins/errors/PluginExecutionError.js";
+import { acquirePluginLifecycle } from "../plugins/Plugin.js";
 import { makePluginTestGeneratorContext } from "./internal/pluginTestContext.js";
 import type { NormalizedSpec } from "../NormalizedSpec.js";
 import type {
@@ -9,7 +10,7 @@ import type {
   PluginValidationContext,
   TypeweaverUserConfig,
 } from "../plugins/contextTypes.js";
-import type { Plugin } from "../plugins/Plugin.js";
+import type { Plugin, PluginLifecycleHooks } from "../plugins/Plugin.js";
 import type { PluginTestContextOptions } from "./internal/pluginTestContext.js";
 
 const DEFAULT_INPUT_DIR = "/typeweaver/plugin-test/input";
@@ -114,13 +115,13 @@ const collectFinalizerExit = (
 };
 
 const finalizePlugin = (
-  plugin: Plugin,
+  hooks: PluginLifecycleHooks,
   context: PluginContext,
   state: PluginTestState
 ): Effect.Effect<void> =>
-  plugin.finalize === undefined
+  hooks.finalize === undefined
     ? Effect.void
-    : Effect.exit(plugin.finalize(context)).pipe(
+    : Effect.exit(hooks.finalize(context)).pipe(
         Effect.flatMap(exit => collectFinalizerExit(exit, state.finalizeErrors))
       );
 
@@ -162,7 +163,7 @@ type PluginStageRunner = {
 const runPluginStages = (
   runner: PluginStageRunner
 ): Effect.Effect<PluginTestResult, PluginExecutionError> => {
-  let initialized = false;
+  let initialized: PluginLifecycleHooks | undefined;
 
   return Effect.gen(function* () {
     const issues =
@@ -172,14 +173,15 @@ const runPluginStages = (
             runner.normalizedSpec,
             runner.validationContext
           );
-    yield* runner.plugin.initialize?.(runner.pluginContext) ?? Effect.void;
-    initialized = true;
+    const hooks = yield* acquirePluginLifecycle(runner.plugin);
+    yield* hooks.initialize?.(runner.pluginContext) ?? Effect.void;
+    initialized = hooks;
     const normalizedSpec =
-      runner.plugin.collectResources === undefined
+      hooks.collectResources === undefined
         ? runner.normalizedSpec
-        : yield* runner.plugin.collectResources(runner.normalizedSpec);
+        : yield* hooks.collectResources(runner.normalizedSpec);
     const generatorContext = runner.buildGeneratorContext(normalizedSpec);
-    yield* runner.plugin.generate?.(generatorContext) ?? Effect.void;
+    yield* hooks.generate?.(generatorContext) ?? Effect.void;
 
     return {
       issues,
@@ -190,10 +192,11 @@ const runPluginStages = (
     };
   }).pipe(
     Effect.onExit(() =>
-      initialized
-        ? finalizePlugin(runner.plugin, runner.pluginContext, runner.state)
-        : Effect.void
+      initialized === undefined
+        ? Effect.void
+        : finalizePlugin(initialized, runner.pluginContext, runner.state)
     ),
+    Effect.scoped,
     Effect.map(result => ({
       ...result,
       finalizeErrors: [...runner.state.finalizeErrors],
@@ -207,7 +210,9 @@ const runPluginStages = (
  * The harness exposes complete public contexts, applies the same lexical
  * generated-path guard as production, records generated content without disk
  * I/O, runs validation plus every lifecycle stage, and mirrors production's
- * best-effort handling of typed finalizer failures.
+ * best-effort handling of typed finalizer failures. Like the generator, each
+ * `run` owns one Scope: it acquires a scoped plugin after validation and
+ * closes the Scope after `finalize`, releasing the acquired resources.
  */
 export const createPluginTestKit = (
   options: PluginTestKitOptions

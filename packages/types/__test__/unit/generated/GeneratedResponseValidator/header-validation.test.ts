@@ -5,11 +5,11 @@ import {
 } from "test-utils";
 import { describe, expect, test } from "vitest";
 import {
-  asHttpResponse,
   expectNoPartialData,
   issuePaths,
   responseIssueFor,
   responseWithRuntimePart,
+  safeValidateRaw,
   validCreateTodoHeader,
   validCreateTodoResponse,
   validOptionsTodoHeader,
@@ -30,7 +30,7 @@ describe("Generated ResponseValidator header casing", () => {
       }
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -50,7 +50,7 @@ describe("Generated ResponseValidator header casing", () => {
       }
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -72,7 +72,7 @@ describe("Generated ResponseValidator header casing", () => {
       }
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -97,7 +97,7 @@ describe("Generated ResponseValidator header cardinality", () => {
       }
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -123,7 +123,7 @@ describe("Generated ResponseValidator header cardinality", () => {
       }
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -143,7 +143,7 @@ describe("Generated ResponseValidator header cardinality", () => {
       }
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -165,7 +165,7 @@ describe("Generated ResponseValidator header string normalization", () => {
       }
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expectNoPartialData(result);
     assert(!result.isValid);
@@ -185,7 +185,7 @@ describe("Generated ResponseValidator header string normalization", () => {
       }
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -206,7 +206,7 @@ describe("Generated ResponseValidator header string normalization", () => {
       }
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -230,7 +230,7 @@ describe("Generated ResponseValidator malformed and duplicate headers", () => {
       }
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -253,7 +253,7 @@ describe("Generated ResponseValidator malformed and duplicate headers", () => {
         header
       );
 
-      const result = validator.safeValidate(asHttpResponse(response));
+      const result = safeValidateRaw(validator, response);
 
       expectNoPartialData(result);
       assert(!result.isValid);
@@ -267,7 +267,7 @@ describe("Generated ResponseValidator malformed and duplicate headers", () => {
     const validator = new CreateTodoResponseValidator();
     const response = withoutRuntimePart(validCreateTodoResponse(), "header");
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expectNoPartialData(result);
     assert(!result.isValid);
@@ -291,7 +291,7 @@ describe("Generated ResponseValidator malformed and duplicate headers", () => {
       }
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expectNoPartialData(result);
     assert(!result.isValid);

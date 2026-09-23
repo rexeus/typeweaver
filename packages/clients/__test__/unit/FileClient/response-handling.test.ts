@@ -19,8 +19,18 @@ import {
   UploadFileRequestCommand,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import { createRawMockFetch } from "../../helpers.js";
+import { createRawMockFetch, requireArrayBuffer } from "../../helpers.js";
 import { createFileClient, createJsonMockFetch } from "./fixtures.js";
+
+function hasResponseType<
+  TResponse extends { readonly type: string },
+  TType extends TResponse["type"],
+>(
+  result: TResponse,
+  expectedType: TType
+): result is Extract<TResponse, { readonly type: TType }> {
+  return result.type === expectedType;
+}
 
 function expectResponseType<
   TResponse extends { readonly type: string },
@@ -30,10 +40,10 @@ function expectResponseType<
   expectedType: TType
 ): Extract<TResponse, { readonly type: TType }> {
   expect(result.type).toBe(expectedType);
-  if (result.type !== expectedType) {
+  if (!hasResponseType(result, expectedType)) {
     throw new TestAssertionError(`Expected response type ${expectedType}`);
   }
-  return result as Extract<TResponse, { readonly type: TType }>;
+  return result;
 }
 
 function expectUnknownResponse(error: unknown, statusCode: number): boolean {
@@ -176,9 +186,9 @@ describe("FileClient success responses", () => {
       "Content-Type": "application/octet-stream",
     });
     expect(download.body).toBeInstanceOf(ArrayBuffer);
-    expect(Array.from(new Uint8Array(download.body as ArrayBuffer))).toEqual([
-      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a,
-    ]);
+    expect(
+      Array.from(new Uint8Array(requireArrayBuffer(download.body)))
+    ).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]);
   });
 
   test("returns typed file metadata after a successful metadata lookup", async () => {

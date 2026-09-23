@@ -136,12 +136,9 @@ describe("Generator plugin lifecycle failure reporting", () => {
     const failure = Cause.findErrorOption(innerExit.cause);
     expect(failure._tag).toBe("Some");
     if (failure._tag !== "Some") return;
-    const error = failure.value as {
-      readonly _tag: string;
-      readonly pluginName: string;
-      readonly phase: string;
-    };
+    const error = failure.value;
     expect(error._tag).toBe("PluginExecutionError");
+    if (error._tag !== "PluginExecutionError") return;
     expect(error.pluginName).toBe("alphaFails");
     expect(error.phase).toBe("generate");
 

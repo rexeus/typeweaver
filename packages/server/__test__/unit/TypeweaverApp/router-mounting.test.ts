@@ -8,6 +8,7 @@ import { TypeweaverApp } from "../../../src/lib/TypeweaverApp.js";
 import { TypeweaverRouter } from "../../../src/lib/TypeweaverRouter.js";
 import {
   expectJson,
+  expectJsonArray,
   get,
   noopResponseValidator,
   noopValidator,
@@ -32,7 +33,7 @@ describe("Router Prefix", () => {
 
     const res = await app.fetch(get("/api/v1/todos"));
 
-    const data = await expectJson(res, 200);
+    const data = await expectJsonArray(res, 200);
     expect(data).toHaveLength(2);
   });
 
@@ -149,7 +150,7 @@ describe("Multiple Routers", () => {
     expect(todosRes.status).toBe(200);
 
     const usersRes = await app.fetch(get("/users"));
-    const users = await expectJson(usersRes, 200);
+    const users = await expectJsonArray(usersRes, 200);
     expect(users[0]).toMatchObject({ name: "Alice" });
   });
 });

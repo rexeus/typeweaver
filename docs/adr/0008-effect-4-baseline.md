@@ -82,6 +82,12 @@ plain generated client and Fetch-native server output, generated Hono output, ge
 runtime output, and OpenAPI JSON remain Effect-optional because they do not import Effect. The
 generator packages themselves are Effect-native and require the exact peer.
 
+The CLI satisfies that peer for the generators it hosts: it imports first-party plugins from its own
+dependency tree, so `command`, `hono`, and `openapi` run on the CLI's exact Effect. The doctor check
+`TW-DOCTOR-011` therefore requires a project-owned `effect@4.0.0-rc.116` only for the `effect`
+projection, whose generated handlers import Effect, and for custom plugins, which resolve Effect
+from the project. Otherwise an undeclared project is skipped and another version warns.
+
 ## Consequences
 
 - Agents and contributors get source and diagnostics that match the native public runtime.

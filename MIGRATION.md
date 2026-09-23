@@ -116,9 +116,13 @@ instead — same guarantees, typed error channels, I/O through Effect 4's `FileS
 
 Plugin authors no longer need to copy the CLI's private fake contexts or manually retain
 `Layer.buildWithScope` state. Use `createPluginTestKit` for path-safe in-memory lifecycle tests and
-`defineScopedPlugin` for one plugin-owned Layer per generation call. The helper releases the Layer
-after success, typed failure, defect, and interruption, isolates concurrent calls that share a
-module-cached plugin instance, and keeps ordinary plugin hooks at `R = never`.
+`defineScopedPlugin` for one plugin-owned Layer per generation call. The helper returns a plugin
+with an `acquire` scoped constructor instead of top-level lifecycle hooks; the host builds the Layer
+into a Scope it owns for that generation and releases it after `finalize`, on success, typed
+failure, defect, and interruption. Concurrent calls that share a module-cached plugin instance stay
+isolated, and every hook keeps `R = never`. A `Plugin` declares either its lifecycle hooks or
+`acquire`, never both. Code that invokes plugin hooks itself, such as a wrapper plugin, calls
+`acquirePluginLifecycle(plugin)` inside a Scope and runs the hooks it returns.
 
 For a new V2 package, run
 `typeweaver add plugin --name <lowercase-kebab-name> --target <new-directory>`. This additive,
@@ -218,8 +222,10 @@ that Effect 3 exposed as the `SystemError` `reason` string. The TypeWeaver tags
 
 To check your own project after upgrading, confirm that it resolves exactly one
 `effect@4.0.0-rc.116` copy (for example with `pnpm why effect`) and run `typeweaver doctor`, which
-reports the project's Effect declaration as `TW-DOCTOR-011`. For Effect language-service diagnostics
-in your plugin or application, install `@effect/tsgo` and run
+reports the project's Effect declaration as `TW-DOCTOR-011`. That check requires the project's own
+exact Effect only for the `effect` projection and custom plugins; the CLI-hosted `hono`, `openapi`,
+and `command` generators run on the CLI's own Effect. For Effect language-service diagnostics in
+your plugin or application, install `@effect/tsgo` and run
 `effect-tsgo diagnostics --project tsconfig.json`. Confirm uncertain signatures against the
 `effect@4.0.0-rc.116` source tag (commit `d62dd0d65252e5d3635538f0e41adc7c08aa9beb`). Contributors
 to this repository additionally run `pnpm verify:effect-reference` and `pnpm effect:diagnostics`.

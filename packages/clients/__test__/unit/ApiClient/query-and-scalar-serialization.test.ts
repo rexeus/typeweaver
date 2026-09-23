@@ -1,6 +1,6 @@
-import type { ClientHttpQuery } from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
 import {
+  anUncheckedCommand,
   expectRequestSerializationFailure,
   getFetchCall,
   sendRaw,
@@ -34,9 +34,11 @@ describe("ApiClient query string construction", () => {
       status: "TODO",
       priority: undefined,
       tag: ["api", undefined, "client"],
-    } as unknown as ClientHttpQuery;
+    };
 
-    const { mockFetch } = await sendRaw({ path: "/todos", query });
+    const { mockFetch } = await sendRaw(
+      anUncheckedCommand({ path: "/todos", query })
+    );
 
     expect(getFetchCall(mockFetch).url).toBe(
       "http://localhost:3000/todos?status=TODO&tag=api&tag=client"
@@ -64,7 +66,7 @@ describe("ApiClient query string construction", () => {
     await expectRequestSerializationFailure(
       {
         path: "/todos",
-        query: { emptyTags: [] } as unknown as ClientHttpQuery,
+        query: { emptyTags: [] },
       },
       {
         location: "query",
@@ -79,9 +81,11 @@ describe("ApiClient query string construction", () => {
     const query = {
       priority: undefined,
       skippedTags: [undefined, undefined],
-    } as unknown as ClientHttpQuery;
+    };
 
-    const { mockFetch } = await sendRaw({ path: "/todos", query });
+    const { mockFetch } = await sendRaw(
+      anUncheckedCommand({ path: "/todos", query })
+    );
 
     expect(getFetchCall(mockFetch).url).toBe("http://localhost:3000/todos");
   });

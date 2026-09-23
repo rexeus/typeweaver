@@ -211,4 +211,13 @@ describe("renderTemplate whitespace and failures", () => {
 
     expect(renderInvalidExpression).toThrow(TypeError);
   });
+
+  test("rejects scriptlets that return a non-string value", () => {
+    const renderEarlyReturn = () =>
+      renderTemplate("before <% return count; %> after", { count: 1 });
+
+    expect(renderEarlyReturn).toThrow(
+      new TypeError("Template rendering must produce a string, received number")
+    );
+  });
 });

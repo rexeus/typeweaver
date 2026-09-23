@@ -181,7 +181,9 @@ The CLI programmatic API, plugin authoring, first-party generator packages (incl
 `hono`, and `openapi`), and the `effect` projection require the exact native `effect@4.0.0-rc.116`
 peer. This does not make generated artifacts depend on Effect: plain generated client, Fetch-native
 server, Hono, command runtime output, and OpenAPI JSON remain Effect-optional and do not import it.
-See [ADR 0008](./docs/adr/0008-effect-4-baseline.md) for the source pin, migration mapping, and
+The CLI runs the `command`, `hono`, and `openapi` generators on its own Effect, so a project needs
+its own `effect@4.0.0-rc.116` only for the `effect` projection or custom plugins. See
+[ADR 0008](./docs/adr/0008-effect-4-baseline.md) for the source pin, migration mapping, and
 diagnostics gate.
 
 ## Built for contract evolution

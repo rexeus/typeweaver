@@ -54,6 +54,7 @@ export const expectedTypeScriptRules = {
   "typescript/no-unsafe-call": "error",
   "typescript/no-unsafe-member-access": "error",
   "typescript/no-unsafe-return": "error",
+  "typescript/no-unsafe-type-assertion": "error",
   "typescript/switch-exhaustiveness-check": "error",
 };
 

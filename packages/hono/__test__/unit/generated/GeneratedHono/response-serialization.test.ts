@@ -3,7 +3,7 @@ import {
   createCreateTodoSuccessResponse,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import { prepareRequestData } from "../../../helpers.js";
+import { prepareRequestData, readJsonRecord } from "../../../helpers.js";
 import {
   createCreateTodoRouteReturning,
   createTodoHonoWithHandlers,
@@ -54,7 +54,7 @@ describe("Generated Hono response serialization", () => {
 
     expect(response.status).toBe(201);
     expect(response.headers.get("Content-Type")).toBe("application/json");
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["title"]).toBe("serialize typed response");
     expect(data["priority"]).toBe("HIGH");
     expect(data["status"]).toBe("TODO");

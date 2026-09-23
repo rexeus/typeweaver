@@ -72,6 +72,12 @@ export const cases = [
     "declare const source: any; export const getValue = (): string => source;\n",
   ],
   [
+    "no-unsafe-type-assertion",
+    "typescript(no-unsafe-type-assertion)",
+    'declare const source: unknown; export const read = (): string => (typeof source === "string" ? source : "");\n',
+    "declare const source: unknown; export const read = (): string => source as string;\n",
+  ],
+  [
     "switch-exhaustiveness-check",
     "typescript(switch-exhaustiveness-check)",
     'type Kind = "a" | "b"; export const describe = (kind: Kind): number => { switch (kind) { case "a": return 1; case "b": return 2; } };\n',

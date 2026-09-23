@@ -105,11 +105,14 @@ export function defineMiddleware<
   TRequires extends Record<string, unknown> = {},
 >(
   handler: (ctx: ServerContext<TRequires>, next: NextFn<TProvides>) => Promise<IHttpResponse>,
-): TypedMiddleware<TProvides, TRequires> {
-  return {
-    handler: handler as Middleware,
-    _brand: {} as TypedMiddleware<TProvides, TRequires>["_brand"],
-  };
+): TypedMiddleware<TProvides, TRequires>;
+// The provided and required state exist only at the type level: the pipeline
+// runs every handler as an erased `Middleware`, and the brand stays empty.
+export function defineMiddleware(handler: Middleware): {
+  readonly handler: Middleware;
+  readonly _brand: {};
+} {
+  return { handler, _brand: {} };
 }
 
 /**

@@ -9,6 +9,7 @@ import {
   releaseOutputLock,
 } from "../../../src/services/generatorIO.js";
 import { outputLockDirectory } from "../../../src/services/internal/outputCoordinationArtifact.js";
+import { readJsonObject } from "../../helpers/jsonFiles.js";
 import {
   createTempWorkspace,
   extractFailure,
@@ -268,9 +269,9 @@ describe("Generator output-lock replacement races", () => {
       throw new Error("Expected the interleaved contender to acquire the lock");
     }
     expect(fs.existsSync(replacement.path)).toBe(true);
-    const replacementInfo = JSON.parse(
-      fs.readFileSync(path.join(replacement.path, "info.json"), "utf8")
-    ) as Record<string, unknown>;
+    const replacementInfo = readJsonObject(
+      path.join(replacement.path, "info.json")
+    );
     expect(replacementInfo).toEqual(
       expect.objectContaining({ ownerToken: replacement.ownerToken }) as unknown
     );

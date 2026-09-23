@@ -20,7 +20,7 @@ import {
   createUpdateTodoStatusRequest,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import { prepareRequestData } from "../../../helpers.js";
+import { prepareRequestData, readJsonRecord } from "../../../helpers.js";
 import {
   createUnvalidatedTodoHonoWithHandlers,
   readContextString,
@@ -37,7 +37,7 @@ describe("Generated Hono route dispatch", () => {
     );
 
     expect(response.status).toBe(200);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["results"]).toHaveLength(2);
     expect(data["nextToken"]).toEqual(expect.any(String));
   });
@@ -56,7 +56,7 @@ describe("Generated Hono route dispatch", () => {
     );
 
     expect(response.status).toBe(201);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["title"]).toBe("ship hono hardening");
     expect(data["priority"]).toBe("HIGH");
     expect(data["status"]).toBe("TODO");
@@ -77,7 +77,7 @@ describe("Generated Hono route dispatch", () => {
     );
 
     expect(response.status).toBe(200);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["id"]).toBe(requestData.param.todoId);
     expect(data["title"]).toBe("replace todo");
     expect(data["priority"]).toBe("LOW");
@@ -98,7 +98,7 @@ describe("Generated Hono route dispatch", () => {
     );
 
     expect(response.status).toBe(200);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["id"]).toBe(requestData.param.todoId);
     expect(data["title"]).toBe("patch todo");
     expect(data["priority"]).toBe("MEDIUM");
@@ -117,7 +117,7 @@ describe("Generated Hono todo route precedence", () => {
     );
 
     expect(response.status).toBe(200);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["id"]).toBe(requestData.param.todoId);
     expect(data["status"]).toBe("DONE");
   });
@@ -193,7 +193,7 @@ describe("Generated Hono todo route precedence", () => {
     );
 
     expect(response.status).toBe(201);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["parentId"]).toBe(requestData.param.todoId);
     expect(data["title"]).toBe("create nested item");
     expect(data["priority"]).toBe("HIGH");
@@ -218,7 +218,7 @@ describe("Generated Hono nested route dispatch", () => {
 
     expect(response.status).toBe(200);
     expect(capturedTodoId).toBe(requestData.param.todoId);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["results"]).toEqual([]);
   });
 
@@ -236,7 +236,7 @@ describe("Generated Hono nested route dispatch", () => {
     );
 
     expect(response.status).toBe(200);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["parentId"]).toBe(requestData.param.todoId);
     expect(data["id"]).toBe(requestData.param.subtodoId);
     expect(data["title"]).toBe("update nested item");
@@ -287,7 +287,7 @@ describe("Generated Hono route fallthrough", () => {
     );
 
     expect(response.status).toBe(200);
-    const data = (await response.json()) as Record<string, unknown>;
+    const data = await readJsonRecord(response);
     expect(data["message"]).toBe("deleted subtodo");
     expect(capturedTodoId).toBe(requestData.param.todoId);
     expect(capturedSubtodoId).toBe(requestData.param.subtodoId);

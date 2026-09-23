@@ -10,7 +10,10 @@ import {
   UploadFileRequestCommand,
 } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
-import { createRawMockFetch } from "../../helpers.js";
+import {
+  constructWithUncheckedInput,
+  createRawMockFetch,
+} from "../../helpers.js";
 import { createFileClient, createJsonMockFetch } from "./fixtures.js";
 
 type FetchCallDetails = {
@@ -38,16 +41,12 @@ function anUploadCommandWithCallerContentType(props: {
   readonly fileName: string;
   readonly body: Blob;
 }): UploadFileRequestCommand {
-  type UploadFileRequestHeader = ConstructorParameters<
-    typeof UploadFileRequestCommand
-  >[0]["header"];
-
-  return new UploadFileRequestCommand({
+  return constructWithUncheckedInput(UploadFileRequestCommand, {
     header: {
       Authorization: props.authorization,
       "Content-Type": props.contentType,
       "X-File-Name": props.fileName,
-    } as unknown as UploadFileRequestHeader,
+    },
     body: props.body,
   });
 }
@@ -305,7 +304,7 @@ describe("FileClient metadata transport contract", () => {
     await client.send(command);
 
     const { init } = getFetchCall(mockFetch);
-    const headers = init.headers as Record<string, unknown>;
+    const headers = init.headers;
     expect(headers).not.toHaveProperty("X-Multi-Value");
     expect(headers).toStrictEqual({
       Accept: "application/json",

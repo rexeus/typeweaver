@@ -2,19 +2,21 @@ import {
   internalServerErrorDefaultError,
   ResponseValidationError,
 } from "@rexeus/typeweaver-core";
-import type {
-  IHttpResponse,
-  ITypedHttpResponse,
-} from "@rexeus/typeweaver-core";
+import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import {
   createCreateTodoRequest,
   TestAssertionError,
   TodoHono,
 } from "test-utils";
 import { expect } from "vitest";
-import { expectErrorResponse, prepareRequestData } from "../../../helpers.js";
+import {
+  createTodoApiHandlers,
+  expectErrorResponse,
+  prepareRequestData,
+  readJsonRecord,
+  UncheckedResponseTodoHono,
+} from "../../../helpers.js";
 import type {
-  CreateTodoResponse,
   HonoResponseValidationErrorHandler,
   HonoTodoApiHandler,
 } from "test-utils";
@@ -26,46 +28,47 @@ export type TodoHonoTestOptions = Omit<
 
 export type CapturedResponseValidationCall = {
   readonly error: ResponseValidationError;
-  readonly response: ITypedHttpResponse;
+  readonly response: IHttpResponse;
   readonly operationId: unknown;
-};
-
-export const unhandledHonoTodoRequest = async (
-  handlerName: string
-): Promise<never> => {
-  throw new TestAssertionError(`Missing Hono test handler: ${handlerName}`);
 };
 
 export function createTodoHonoWithHandlers(
   handlers: Partial<HonoTodoApiHandler<false>>,
   options?: TodoHonoTestOptions
 ): TodoHono<false> {
-  const requestHandlers = new Proxy(handlers as HonoTodoApiHandler<false>, {
-    get: (target, prop) => {
-      if (prop in target)
-        return target[prop as keyof HonoTodoApiHandler<false>];
-      return async () => unhandledHonoTodoRequest(String(prop));
-    },
-  });
-
   return new TodoHono<false>({
     validateRequests: false,
     validateResponses: true,
     ...options,
-    requestHandlers,
+    requestHandlers: createTodoApiHandlers<false>(handlers),
   });
 }
 
-export function createCreateTodoRouteReturning(
-  response: ITypedHttpResponse,
+/**
+ * Builds the generated router with one operation returning `response`, which
+ * may lie outside that operation's response contract.
+ */
+export function createTodoRouteReturning(
+  operationId: string,
+  response: IHttpResponse,
   options?: TodoHonoTestOptions
 ): TodoHono<false> {
-  return createTodoHonoWithHandlers(
+  return new UncheckedResponseTodoHono<false>(
     {
-      handleCreateTodoRequest: async () => response as CreateTodoResponse,
+      validateRequests: false,
+      validateResponses: true,
+      ...options,
+      requestHandlers: createTodoApiHandlers<false>({}),
     },
-    options
+    { [operationId]: async () => response }
   );
+}
+
+export function createCreateTodoRouteReturning(
+  response: IHttpResponse,
+  options?: TodoHonoTestOptions
+): TodoHono<false> {
+  return createTodoRouteReturning("CreateTodo", response, options);
 }
 
 export async function requestCreateTodo(
@@ -82,7 +85,7 @@ export async function expectJson(
   status: number
 ): Promise<Record<string, unknown>> {
   expect(response.status).toBe(status);
-  return (await response.json()) as Record<string, unknown>;
+  return await readJsonRecord(response);
 }
 
 export async function expectSanitizedInternalServerError(
@@ -116,7 +119,7 @@ export function captureResponseValidationHandlerCall(
     handler: (error, response, context) => {
       capturedCall = {
         error,
-        response: response as ITypedHttpResponse,
+        response,
         operationId: context.get("operationId"),
       };
 

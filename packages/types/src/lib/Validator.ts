@@ -68,8 +68,12 @@ export abstract class Validator {
   protected safeParseAs<TOutput>(
     schema: z.ZodType,
     input: unknown
-  ): z.ZodSafeParseResult<TOutput> {
-    return schema.safeParse(input) as z.ZodSafeParseResult<TOutput>;
+  ): z.ZodSafeParseResult<TOutput>;
+  protected safeParseAs(
+    schema: z.ZodType,
+    input: unknown
+  ): z.ZodSafeParseResult<unknown> {
+    return schema.safeParse(input);
   }
 
   protected requireRequestSchema<TSchema extends z.ZodType>(

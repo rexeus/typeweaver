@@ -5,12 +5,12 @@ import { z } from "zod";
 import { InitReportSchema } from "../src/index.js";
 import {
   packageDirectory,
+  PROCESS_TEST_TIMEOUT_MS,
   processWorkspaces,
   runCli,
 } from "./helpers/builtCli.js";
 import type { InitReport } from "../src/index.js";
 
-const PROCESS_TEST_TIMEOUT_MS = 15_000;
 const { createWorkspace, removeWorkspaces } = processWorkspaces("init-process");
 const StarterPackageSchema = z.object({
   dependencies: z.object({

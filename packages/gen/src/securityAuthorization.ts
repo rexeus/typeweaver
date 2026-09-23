@@ -8,12 +8,13 @@ import type { NormalizedSecurity } from "./NormalizedSpec.js";
 
 const authorizationSchema = (
   request: OperationDefinition["request"]
-): z.ZodType | undefined => {
+): z.core.$ZodType | undefined => {
   const header = request?.header;
   if (header === undefined) return undefined;
   const unwrapped = header instanceof z.ZodOptional ? header.unwrap() : header;
   if (!(unwrapped instanceof z.ZodObject)) return undefined;
-  return (Object.entries(unwrapped.shape) as [string, z.ZodType][]).find(
+  const shape: z.core.$ZodShape = unwrapped.shape;
+  return Object.entries(shape).find(
     ([name]) => name.toLowerCase() === "authorization"
   )?.[1];
 };
@@ -34,14 +35,14 @@ const referencedHttpSchemes = (
 };
 const validateAuthorizationScheme = (
   operationId: string,
-  schema: z.ZodType,
+  schema: z.core.$ZodType,
   scheme: Extract<SecuritySchemeDefinition, { readonly kind: "http" }>
 ): void => {
   const representative =
     scheme.scheme === "bearer"
       ? "Bearer typeweaver-token"
       : "Basic dHlwZXdlYXZlcjp0ZXN0";
-  if (!schema.safeParse(representative).success)
+  if (!z.safeParse(schema, representative).success)
     throw new ContradictorySecurityHeaderError({
       operationId,
       schemeName: scheme.name,

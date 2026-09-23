@@ -17,8 +17,10 @@ import { TypeweaverApp } from "../../../src/lib/TypeweaverApp.js";
 import { TypeweaverRouter } from "../../../src/lib/TypeweaverRouter.js";
 import {
   del,
+  expectArray,
   expectErrorResponse,
   expectJson,
+  expectRecord,
   get,
   noopResponseValidator,
   post,
@@ -63,21 +65,37 @@ class BodyOnlyValidatingRouter extends TypeweaverRouter<TestHandlers> {
   }
 }
 
-type ValidationIssue = {
-  readonly message?: unknown;
-  readonly path?: readonly unknown[];
-};
+type ValidationIssueList = readonly unknown[] | undefined;
 
 type ValidationIssues = {
-  readonly header?: readonly ValidationIssue[];
-  readonly body?: readonly ValidationIssue[];
-  readonly query?: readonly ValidationIssue[];
-  readonly param?: readonly ValidationIssue[];
+  readonly header: ValidationIssueList;
+  readonly body: ValidationIssueList;
+  readonly query: ValidationIssueList;
+  readonly param: ValidationIssueList;
+};
+
+const readIssueList = (
+  issues: Record<string, unknown>,
+  key: string
+): ValidationIssueList => {
+  const list = issues[key];
+  if (list === undefined) return undefined;
+  expectArray(list, `the ${key} validation issues`);
+  return list;
 };
 
 const readValidationIssues = (
   data: Record<string, unknown>
-): ValidationIssues => data["issues"] as ValidationIssues;
+): ValidationIssues => {
+  const issues = data["issues"];
+  expectRecord(issues, "the validation issues");
+  return {
+    header: readIssueList(issues, "header"),
+    body: readIssueList(issues, "body"),
+    query: readIssueList(issues, "query"),
+    param: readIssueList(issues, "param"),
+  };
+};
 
 describe("Error Handling", () => {
   test("should handle validation errors with default handler and not call onError", async () => {

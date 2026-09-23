@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import {
   defineOperation,
   HttpMethod,
@@ -14,24 +15,34 @@ import {
   MetricHono,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import { expectErrorResponse, prepareRequestData } from "../../../helpers.js";
+import {
+  expectErrorResponse,
+  expectRecord,
+  prepareRequestData,
+  readJsonRecord,
+  withBodyFields,
+  withHeaderFields,
+} from "../../../helpers.js";
 import {
   createMetricBoundaryHandlers,
   createTodoHonoWithHandlers,
   readContextString,
   requestTestHono,
 } from "./fixtures.js";
-import type {
-  IGetMetricRequest,
-  IValidationErrorResponseBody,
-} from "test-utils";
+import type { IGetMetricRequest } from "test-utils";
+
+function validationIssuesOf(
+  data: Record<string, unknown>
+): Record<string, unknown> {
+  const issues = data["issues"];
+  expectRecord(issues, "the validation error issues");
+  return issues;
+}
 
 describe("Generated Hono request validation", () => {
   test("rejects invalid request body", async () => {
-    const requestData = createCreateTodoRequest({
-      body: {
-        priority: "INVALID_PRIORITY" as never,
-      },
+    const requestData = withBodyFields(createCreateTodoRequest(), {
+      priority: "INVALID_PRIORITY",
     });
 
     const response = await requestTestHono(
@@ -40,17 +51,15 @@ describe("Generated Hono request validation", () => {
     );
 
     expect(response.status).toBe(400);
-    const data = (await response.json()) as IValidationErrorResponseBody;
-    expect(data.code).toBe(validationDefaultError.code);
-    expect(data.message).toBe(validationDefaultError.message);
-    expect(data.issues.body).toHaveLength(1);
+    const data = await readJsonRecord(response);
+    expect(data["code"]).toBe(validationDefaultError.code);
+    expect(data["message"]).toBe(validationDefaultError.message);
+    expect(validationIssuesOf(data)["body"]).toHaveLength(1);
   });
 
   test("rejects invalid request headers", async () => {
-    const requestData = createCreateTodoRequest({
-      header: {
-        "Content-Type": "text/plain" as never,
-      },
+    const requestData = withHeaderFields(createCreateTodoRequest(), {
+      "Content-Type": "text/plain",
     });
 
     const response = await requestTestHono(
@@ -59,8 +68,8 @@ describe("Generated Hono request validation", () => {
     );
 
     expect(response.status).toBe(400);
-    const data = (await response.json()) as IValidationErrorResponseBody;
-    expect(data.issues.header).toHaveLength(1);
+    const data = await readJsonRecord(response);
+    expect(validationIssuesOf(data)["header"]).toHaveLength(1);
   });
 
   test("rejects invalid path parameters", async () => {
@@ -72,8 +81,8 @@ describe("Generated Hono request validation", () => {
     );
 
     expect(response.status).toBe(400);
-    const data = (await response.json()) as IValidationErrorResponseBody;
-    expect(data.issues.param).toHaveLength(1);
+    const data = await readJsonRecord(response);
+    expect(validationIssuesOf(data)["param"]).toHaveLength(1);
   });
 
   test("rejects invalid query parameters", async () => {
@@ -85,8 +94,8 @@ describe("Generated Hono request validation", () => {
     );
 
     expect(response.status).toBe(400);
-    const data = (await response.json()) as IValidationErrorResponseBody;
-    expect(data.issues.query).toHaveLength(1);
+    const data = await readJsonRecord(response);
+    expect(validationIssuesOf(data)["query"]).toHaveLength(1);
   });
 
   test("bypasses validation when validateRequests is disabled", async () => {
@@ -125,10 +134,8 @@ describe("Generated Hono request validation handlers", () => {
         };
       },
     });
-    const requestData = createCreateTodoRequest({
-      body: {
-        priority: "INVALID_PRIORITY" as never,
-      },
+    const requestData = withBodyFields(createCreateTodoRequest(), {
+      priority: "INVALID_PRIORITY",
     });
 
     const response = await app.request(
@@ -137,13 +144,12 @@ describe("Generated Hono request validation handlers", () => {
     );
 
     expect(response.status).toBe(422);
-    const errorData = (await response.json()) as Record<string, unknown>;
+    const errorData = await readJsonRecord(response);
     expect(errorData["code"]).toBe("CUSTOM_REQUEST_VALIDATION");
     expect(errorData["bodyIssueCount"]).toBe(1);
     expect(capturedError).toBeInstanceOf(RequestValidationError);
-    expect((capturedError as RequestValidationError).bodyIssues).toHaveLength(
-      1
-    );
+    assert(capturedError instanceof RequestValidationError);
+    expect(capturedError.bodyIssues).toHaveLength(1);
     expect(capturedOperationId).toBe("CreateTodo");
   });
 
@@ -155,10 +161,8 @@ describe("Generated Hono request validation handlers", () => {
         return createCreateTodoSuccessResponse();
       },
     });
-    const requestData = createCreateTodoRequest({
-      body: {
-        priority: "INVALID_PRIORITY" as never,
-      },
+    const requestData = withBodyFields(createCreateTodoRequest(), {
+      priority: "INVALID_PRIORITY",
     });
 
     const response = await app.request(
@@ -167,8 +171,8 @@ describe("Generated Hono request validation handlers", () => {
     );
 
     expect(response.status).toBe(400);
-    const data = (await response.json()) as IValidationErrorResponseBody;
-    expect(data.issues.body).toHaveLength(1);
+    const data = await readJsonRecord(response);
+    expect(validationIssuesOf(data)["body"]).toHaveLength(1);
     expect(handlerInvoked).toBe(false);
   });
 });
@@ -223,12 +227,8 @@ describe("Generated Hono typed HTTP boundary coercion", () => {
       }
     );
 
-    const data = (await expectErrorResponse(
-      response,
-      400,
-      "VALIDATION_ERROR"
-    )) as IValidationErrorResponseBody;
-    expect(data.issues.param).toHaveLength(1);
+    const data = await expectErrorResponse(response, 400, "VALIDATION_ERROR");
+    expect(validationIssuesOf(data)["param"]).toHaveLength(1);
   });
 });
 
@@ -242,12 +242,8 @@ describe("Generated Hono reserved record keys", () => {
       "http://localhost/metrics/42/labels?__proto__=1"
     );
 
-    const data = (await expectErrorResponse(
-      response,
-      400,
-      "VALIDATION_ERROR"
-    )) as IValidationErrorResponseBody;
-    expect(data.issues.query).toHaveLength(1);
+    const data = await expectErrorResponse(response, 400, "VALIDATION_ERROR");
+    expect(validationIssuesOf(data)["query"]).toHaveLength(1);
   });
 });
 

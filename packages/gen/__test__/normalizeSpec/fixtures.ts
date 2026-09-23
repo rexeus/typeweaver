@@ -36,6 +36,21 @@ export const captureNormalizeError = (spec: SpecDefinition): unknown => {
   return result.failure;
 };
 
+// Narrow a captured failure to the expected error class so a test can read
+// its discriminating fields; a different failure fails the test.
+export const captureNormalizeErrorOf = <TError>(
+  spec: SpecDefinition,
+  errorClass: abstract new (...args: never[]) => TError
+): TError => {
+  const error = captureNormalizeError(spec);
+  if (!(error instanceof errorClass)) {
+    throw new TestAssertionError(
+      `Expected normalization to fail with ${errorClass.name}`
+    );
+  }
+  return error;
+};
+
 export type ResponseBaseOverrides = {
   readonly statusCode?: HttpStatusCode;
   readonly description?: string;
@@ -147,4 +162,20 @@ export const withDerivedMetadata = <TResponse extends ResponseDefinition>(
   });
 
   return response;
+};
+
+// Replace an operation's request with a raw value the authoring types reject,
+// as a JavaScript spec can, so normalization's runtime schema checks run.
+export const withRawRequest = <TOperation extends object>(
+  operation: TOperation,
+  request: unknown
+): TOperation => {
+  Object.defineProperty(operation, "request", {
+    value: request,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  });
+
+  return operation;
 };

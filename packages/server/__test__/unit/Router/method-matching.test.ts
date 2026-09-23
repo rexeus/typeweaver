@@ -4,7 +4,7 @@ import {
   expectMatch,
   expectNoMatch,
   route,
-  routeWithRegisteredMethod,
+  addRouteWithRegisteredMethod,
 } from "./fixtures.js";
 
 const expectAllowedMethods = (
@@ -42,7 +42,7 @@ describe("Router HTTP methods", () => {
 
   test("matches lowercase method definitions case-insensitively", () => {
     const router = new Router();
-    router.add(routeWithRegisteredMethod("get", "/todos", "list-todos"));
+    addRouteWithRegisteredMethod(router, "get", "/todos", "list-todos");
 
     expectMatch(router, "GET", "/todos", {
       operationId: "list-todos",
@@ -117,7 +117,7 @@ describe("Router HEAD fallback", () => {
   test("selects an explicit lowercase HEAD route over the GET fallback", () => {
     const router = new Router();
     router.add(route("GET", "/todos", "get-todos"));
-    router.add(routeWithRegisteredMethod("head", "/todos", "head-todos"));
+    addRouteWithRegisteredMethod(router, "head", "/todos", "head-todos");
 
     expectMatch(router, "HEAD", "/todos", {
       operationId: "head-todos",
@@ -189,8 +189,8 @@ describe("Router matchPath", () => {
 
   test("returns normalized uppercase methods for mixed-case registrations", () => {
     const router = new Router();
-    router.add(routeWithRegisteredMethod("get", "/todos", "list-todos"));
-    router.add(routeWithRegisteredMethod("pOsT", "/todos", "create-todo"));
+    addRouteWithRegisteredMethod(router, "get", "/todos", "list-todos");
+    addRouteWithRegisteredMethod(router, "pOsT", "/todos", "create-todo");
 
     expectAllowedMethods(router, "/todos", ["GET", "HEAD", "POST"]);
   });

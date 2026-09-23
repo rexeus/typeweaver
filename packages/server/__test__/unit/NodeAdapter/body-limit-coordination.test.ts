@@ -6,12 +6,14 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { PayloadTooLargeError } from "../../../src/lib/errors/index.js";
 import { nodeAdapter } from "../../../src/lib/NodeAdapter.js";
 import { TypeweaverApp } from "../../../src/lib/TypeweaverApp.js";
+import { parseJsonRecord } from "../../helpers.js";
 import {
   awaitResponse,
   createMockIncomingMessage,
   createMockServerResponse,
 } from "../../node-helpers.js";
 import {
+  expectRequest,
   fakeAppReturning,
   fakeAppWithErrorReporter,
   invokeNodeAdapter,
@@ -39,7 +41,7 @@ describe("Node default body limits", () => {
     await awaitResponse(res);
 
     expect(res.writtenStatus).toBe(200);
-    const request = app.receivedRequests[0] as Request;
+    const request = expectRequest(app.receivedRequests[0]);
     expect(await request.text()).toBe(body);
   });
 
@@ -84,7 +86,7 @@ describe("Node default body limits", () => {
     await awaitResponse(res);
 
     expect(res.writtenStatus).toBe(413);
-    const parsed = JSON.parse(res.writtenBody) as Record<string, unknown>;
+    const parsed = parseJsonRecord(res.writtenBody);
     expect(parsed).toEqual({
       code: payloadTooLargeDefaultError.code,
       message: payloadTooLargeDefaultError.message,

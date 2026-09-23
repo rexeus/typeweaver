@@ -11,6 +11,7 @@ import {
   buildFetchRequest,
   expectErrorResponse,
   expectJson,
+  withBodyFields,
 } from "../../../helpers.js";
 import { expectNoBody } from "./fixtures.js";
 
@@ -174,8 +175,8 @@ describe("Generated Server unknown and handler errors", () => {
         throw new TestApplicationError("Validation handler failed");
       },
     });
-    const requestData = createCreateTodoRequest({
-      body: { priority: "INVALID_PRIORITY" as never },
+    const requestData = withBodyFields(createCreateTodoRequest(), {
+      priority: "INVALID_PRIORITY",
     });
 
     const response = await app.fetch(

@@ -109,6 +109,7 @@ describe("pluginLoader plugin shape validation", () => {
       { field: "collectResources", invalidValue: 42, omitField: false },
       { field: "generate", invalidValue: 42, omitField: false },
       { field: "finalize", invalidValue: 42, omitField: false },
+      { field: "acquire", invalidValue: 42, omitField: false },
     ].flatMap(invalidField => [
       { ...invalidField, exportKind: "record" },
       { ...invalidField, exportKind: "factory result" },
@@ -117,6 +118,50 @@ describe("pluginLoader plugin shape validation", () => {
     "rejects invalid $field on a plugin $exportKind before registration",
     testInvalidPluginShape
   );
+
+  test("registers a scoped plugin whose lifecycle hooks come from acquire", async () => {
+    const registeredPlugins: RegisteredPlugin[] = [];
+    const acquire = Effect.die("scoped acquisition must not run on load");
+
+    await runLoadPlugins({
+      registeredPlugins,
+      requiredPlugins: [],
+      strategies: ["local"],
+      modules: new Map([
+        ["scoped-plugin", { default: { name: "scoped-plugin", acquire } }],
+      ]),
+      config: configWithPlugin("scoped-plugin"),
+    });
+
+    expect(registeredPlugins.map(({ plugin }) => plugin)).toEqual([
+      { name: "scoped-plugin", acquire },
+    ]);
+  });
+
+  test("rejects a top-level lifecycle hook beside acquire", async () => {
+    const registeredPlugins: RegisteredPlugin[] = [];
+    const exit = await runLoadPluginsExit({
+      registeredPlugins,
+      requiredPlugins: [],
+      strategies: ["local"],
+      modules: new Map([
+        [
+          "invalid-plugin",
+          {
+            default: {
+              name: "invalid-plugin",
+              acquire: Effect.die("scoped acquisition must not run on load"),
+              generate: () => Effect.die("generate must not run on load"),
+            },
+          },
+        ],
+      ]),
+      config: configWithPlugin("invalid-plugin"),
+    });
+
+    assertInvalidPluginLoadFailure(exit, "generate");
+    expect(registeredPlugins).toEqual([]);
+  });
 });
 
 type InvalidPluginShapeCase = {

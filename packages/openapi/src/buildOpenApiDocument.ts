@@ -5,7 +5,7 @@ import type {
 import { resolveOpenApiBodySchema } from "./internal/bodyContent.js";
 import { assembleOpenApiDocument } from "./internal/document.js";
 import { jsonPointer } from "./internal/jsonPointer.js";
-import { toOpenApiPath } from "./internal/openApiPath.js";
+import { toOpenApiMethod, toOpenApiPath } from "./internal/openApiPath.js";
 import { buildRequestParameters } from "./internal/parameters.js";
 import {
   buildComponentsResponses,
@@ -50,7 +50,7 @@ export function buildOpenApiDocument(
 
   for (const resource of normalizedSpec.resources) {
     for (const operation of resource.operations) {
-      const method = operation.method.toLowerCase() as OpenApiHttpMethod;
+      const method = toOpenApiMethod(operation.method);
       const openApiPath = toOpenApiPath(operation.path);
       const operationObject = buildOperationObject({
         resourceName: resource.name,

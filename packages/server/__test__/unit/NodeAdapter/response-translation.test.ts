@@ -1,4 +1,8 @@
-import { TestApplicationError, TestIoError } from "test-utils";
+import {
+  TestApplicationError,
+  TestAssertionError,
+  TestIoError,
+} from "test-utils";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { nodeAdapter } from "../../../src/lib/NodeAdapter.js";
 import { TypeweaverApp } from "../../../src/lib/TypeweaverApp.js";
@@ -19,11 +23,19 @@ function typeweaverAppReturning(
   return app;
 }
 
+function expectBodyStream(response: Response): ReadableStream<Uint8Array> {
+  const { body } = response;
+  if (body === null) {
+    throw new TestAssertionError("Expected the response to have a body stream");
+  }
+  return body;
+}
+
 function responseWithCancelableBody(status: number) {
   const response = new Response(new ReadableStream());
   Object.defineProperty(response, "status", { value: status });
   const cancelSpy = vi
-    .spyOn(response.body as ReadableStream, "cancel")
+    .spyOn(expectBodyStream(response), "cancel")
     .mockResolvedValue();
 
   return { cancelSpy, response };
@@ -38,7 +50,7 @@ function responseWithRejectingCancelableBody(
   });
   Object.defineProperty(response, "status", { value: status });
   const cancelSpy = vi
-    .spyOn(response.body as ReadableStream, "cancel")
+    .spyOn(expectBodyStream(response), "cancel")
     .mockRejectedValue(cancelError);
 
   return { cancelSpy, response };
@@ -53,7 +65,7 @@ function responseWithThrowingCancelableBody(
   });
   Object.defineProperty(response, "status", { value: status });
   const cancelSpy = vi
-    .spyOn(response.body as ReadableStream, "cancel")
+    .spyOn(expectBodyStream(response), "cancel")
     .mockImplementation(() => {
       throw cancelError;
     });

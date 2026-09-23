@@ -1,5 +1,6 @@
 import { UnknownResponseError } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
+import { TestAssertionError } from "test-utils";
 import { vi } from "vitest";
 
 type ResponseBody = ConstructorParameters<typeof Response>[0];
@@ -16,6 +17,36 @@ export function createRawMockFetch(
   return vi
     .fn<typeof globalThis.fetch>()
     .mockResolvedValue(new Response(body, { status, headers }));
+}
+
+/**
+ * Generated clients and commands receive whatever a JavaScript caller passes
+ * at runtime. The guard widens only the constructor parameter, so boundary
+ * tests hand the constructor raw input without restating its type.
+ */
+function acceptsUncheckedInput<TInstance>(
+  constructor: new (input: never) => TInstance
+): constructor is new (input: unknown) => TInstance {
+  return typeof constructor === "function";
+}
+
+export function constructWithUncheckedInput<TInstance>(
+  constructor: new (input: never) => TInstance,
+  input: unknown
+): TInstance {
+  if (!acceptsUncheckedInput(constructor)) {
+    throw new TestAssertionError("Expected a constructor");
+  }
+
+  return new constructor(input);
+}
+
+export function requireArrayBuffer(value: unknown): ArrayBuffer {
+  if (!(value instanceof ArrayBuffer)) {
+    throw new TestAssertionError("Expected an ArrayBuffer body");
+  }
+
+  return value;
 }
 
 /**

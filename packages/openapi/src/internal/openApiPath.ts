@@ -1,3 +1,24 @@
+import type { NormalizedOperation } from "@rexeus/typeweaver-gen";
+import type { OpenApiHttpMethod } from "../types.js";
+
+const OPENAPI_HTTP_METHODS: Readonly<
+  Record<NormalizedOperation["method"], OpenApiHttpMethod>
+> = {
+  GET: "get",
+  PUT: "put",
+  POST: "post",
+  DELETE: "delete",
+  OPTIONS: "options",
+  HEAD: "head",
+  PATCH: "patch",
+};
+
+export function toOpenApiMethod(
+  method: NormalizedOperation["method"]
+): OpenApiHttpMethod {
+  return OPENAPI_HTTP_METHODS[method];
+}
+
 export function toOpenApiPath(path: string): string {
   const segments = normalizePathSegments(path).map(segment =>
     segment.replaceAll(pathParameterPattern, "{$1}")

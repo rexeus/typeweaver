@@ -6,7 +6,7 @@ import { normalizeOpenApiSchema } from "./openApiSchemaNormalization.js";
 import {
   isJsonSchema,
   preserveReferencedRootDefinitionKeyword,
-  rebaseJsonSchemaValue,
+  rebaseJsonSchemaObject,
 } from "./schemaDefinitionRefs.js";
 import { getSchemaDefinition } from "./zodIntrospection.js";
 import type {
@@ -59,7 +59,7 @@ export function rebaseLocalJsonSchemaRefs(
   schema: JsonSchema,
   documentPath: string
 ): JsonSchema {
-  return rebaseJsonSchemaValue(schema, documentPath) as JsonSchema;
+  return rebaseJsonSchemaObject(schema, documentPath);
 }
 export function unwrapRootOptional(
   schema: z.core.$ZodType

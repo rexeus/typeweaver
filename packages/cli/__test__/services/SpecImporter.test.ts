@@ -84,7 +84,7 @@ describe("SpecImporter", () => {
       },
       resources: {
         item: {
-          operations: expect.any(Array) as unknown[],
+          operations: expect.any(Array) as unknown,
         },
       },
     });

@@ -45,7 +45,7 @@ describe("Node skipped request body cleanup", () => {
     handler(req, res);
     await awaitResponse(res);
 
-    const request = app.receivedRequests[0] as Request;
+    const request = expectRequest(app.receivedRequests[0]);
     expect(res.writtenStatus).toBe(200);
     expect(request.body).toBeNull();
   });
@@ -67,7 +67,7 @@ describe("Node skipped request body cleanup", () => {
       handler(req, res);
       await awaitResponse(res);
 
-      const request = app.receivedRequests[0] as Request;
+      const request = expectRequest(app.receivedRequests[0]);
       expect(res.writtenStatus).toBe(200);
       expect(request.body).toBeNull();
     }
@@ -233,7 +233,7 @@ describe("Node skipped body destructive cleanup", () => {
     handler(req, res);
     await awaitResponse(res);
 
-    const request = app.receivedRequests[0] as Request;
+    const request = expectRequest(app.receivedRequests[0]);
     expect(expectRequest(request).body).toBeNull();
   });
 });
