@@ -128,7 +128,7 @@ describe("Node request body translation", () => {
     handler(req, res);
     await awaitResponse(res);
 
-    const request = app.receivedRequests[0] as Request;
+    const request = expectRequest(app.receivedRequests[0]);
     expect(await request.text()).toBe(body);
   });
 
@@ -150,7 +150,7 @@ describe("Node request body translation", () => {
     handler(req, res);
     await awaitResponse(res);
 
-    const request = app.receivedRequests[0] as Request;
+    const request = expectRequest(app.receivedRequests[0]);
     const receivedBytes = Buffer.from(await request.arrayBuffer());
     expect(receivedBytes).toEqual(binaryBody);
   });
@@ -170,7 +170,7 @@ describe("Node request body translation", () => {
     handler(req, res);
     await awaitResponse(res);
 
-    const request = app.receivedRequests[0] as Request;
+    const request = expectRequest(app.receivedRequests[0]);
     expect(expectRequest(request).body).toBeNull();
   });
 

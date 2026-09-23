@@ -9,30 +9,27 @@ import {
   RUNTIME_MAX_BODY_SIZE_BYTES,
   titleForJsonTodoBodyWithByteLength,
 } from "./fixtures.js";
-import type { RuntimeEnvironment, TodoBody, TodoListBody } from "./fixtures.js";
+import type { RuntimeEnvironment } from "./fixtures.js";
 
 export function registerGeneratedRequestTests(
   environment: RuntimeEnvironment
 ): void {
   test("serves the todo list as JSON", async () => {
     const baseUrl = runtimeBaseUrl(environment);
-    const { body } = await expectJsonResponse<TodoListBody>(
-      fetch(`${baseUrl}/todos`),
-      200
-    );
+    const { body } = await expectJsonResponse(fetch(`${baseUrl}/todos`), 200);
 
-    expect(body.results).toEqual(expect.any(Array));
+    expect(body["results"]).toEqual(expect.any(Array));
   });
 
   test("passes JSON request bodies through generated handlers", async () => {
     const baseUrl = runtimeBaseUrl(environment);
-    const { body } = await expectJsonResponse<TodoBody>(
+    const { body } = await expectJsonResponse(
       postJson(`${baseUrl}/todos`, { title: "integration-test" }),
       201
     );
 
-    expect(body.title).toBe("integration-test");
-    expect(body.status).toBe("TODO");
+    expect(body["title"]).toBe("integration-test");
+    expect(body["status"]).toBe("TODO");
   });
 
   test("accepts runtime JSON bodies exactly at the size limit", async () => {
@@ -41,7 +38,7 @@ export function registerGeneratedRequestTests(
       RUNTIME_MAX_BODY_SIZE_BYTES
     );
 
-    const { body } = await expectJsonResponse<TodoBody>(
+    const { body } = await expectJsonResponse(
       fetch(`${baseUrl}/todos`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -50,23 +47,23 @@ export function registerGeneratedRequestTests(
       201
     );
 
-    expect(body.title).toBe(title);
-    expect(body.status).toBe("TODO");
+    expect(body["title"]).toBe(title);
+    expect(body["status"]).toBe("TODO");
   });
 
   test("passes path parameters through generated handlers", async () => {
     const baseUrl = runtimeBaseUrl(environment);
-    const { body } = await expectJsonResponse<TodoBody>(
+    const { body } = await expectJsonResponse(
       fetch(`${baseUrl}/todos/abc-123`),
       200
     );
 
-    expect(body.id).toBe("abc-123");
+    expect(body["id"]).toBe("abc-123");
   });
 
   test("passes path parameters and JSON bodies through generated handlers", async () => {
     const baseUrl = runtimeBaseUrl(environment);
-    const { body } = await expectJsonResponse<TodoBody>(
+    const { body } = await expectJsonResponse(
       putJson(`${baseUrl}/todos/abc-123/status`, { value: "DONE" }),
       200
     );
@@ -76,7 +73,7 @@ export function registerGeneratedRequestTests(
 
   test("passes PATCH JSON bodies and path parameters through generated handlers", async () => {
     const baseUrl = runtimeBaseUrl(environment);
-    const { body } = await expectJsonResponse<TodoBody>(
+    const { body } = await expectJsonResponse(
       patchJson(`${baseUrl}/todos/abc-123`, {
         title: "patched-runtime-title",
       }),

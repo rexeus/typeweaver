@@ -5,7 +5,7 @@ import {
   createGetMetricSuccessResponse,
 } from "test-utils";
 import { expect } from "vitest";
-import { expectErrorResponse } from "../../../helpers.js";
+import { expectErrorResponse, expectRecord } from "../../../helpers.js";
 import type {
   IGetMetricRequest,
   IValidationErrorResponseBody,
@@ -16,12 +16,10 @@ export async function expectValidationIssue(
   response: Response,
   issueKey: keyof IValidationErrorResponseBody["issues"]
 ): Promise<void> {
-  const data = (await expectErrorResponse(
-    response,
-    400,
-    "VALIDATION_ERROR"
-  )) as IValidationErrorResponseBody;
-  expect(data["issues"][issueKey]).toHaveLength(1);
+  const data = await expectErrorResponse(response, 400, "VALIDATION_ERROR");
+  const issues = data["issues"];
+  expectRecord(issues, "the validation error issues");
+  expect(issues[issueKey]).toHaveLength(1);
 }
 
 export function createMetricBoundaryHandlers(

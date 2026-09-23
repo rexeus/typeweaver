@@ -7,6 +7,7 @@ import type {
 } from "@rexeus/typeweaver-gen";
 import { assert, describe, expect, test } from "vitest";
 import { generate } from "../../src/routerGenerator.js";
+import { expectArray, expectRecord } from "../helpers.js";
 import type { RouterGenerationContext } from "../../src/routerGenerator.js";
 
 type RouterOperationData = {
@@ -24,6 +25,39 @@ type RouterTemplateData = {
   readonly pascalCaseEntityName: string;
   readonly operations: readonly RouterOperationData[];
 };
+
+function readString(record: Record<string, unknown>, key: string): string {
+  const value = record[key];
+  assert(typeof value === "string", `Expected template ${key} to be a string`);
+  return value;
+}
+
+function parseRouterOperationData(value: unknown): RouterOperationData {
+  expectRecord(value, "a router operation");
+  const { jsDoc } = value;
+
+  return {
+    operationId: readString(value, "operationId"),
+    method: readString(value, "method"),
+    path: readString(value, "path"),
+    handlerName: readString(value, "handlerName"),
+    className: readString(value, "className"),
+    ...(jsDoc === undefined ? {} : { jsDoc: readString(value, "jsDoc") }),
+  };
+}
+
+function parseRouterTemplateData(data: unknown): RouterTemplateData {
+  expectRecord(data, "the router template data");
+  const { operations } = data;
+  expectArray(operations, "the router operations");
+
+  return {
+    coreDir: readString(data, "coreDir"),
+    entityName: readString(data, "entityName"),
+    pascalCaseEntityName: readString(data, "pascalCaseEntityName"),
+    operations: operations.map(parseRouterOperationData),
+  };
+}
 
 function anOperation(
   operationId: string,
@@ -80,10 +114,10 @@ function aCapturingGeneratorContext(resources: readonly NormalizedResource[]): {
       writtenFiles.set(relativePath, content);
     },
     renderTemplate: (_templatePath: string, data: unknown) => {
-      const routerData = data as RouterTemplateData;
+      const routerData = parseRouterTemplateData(data);
       renderedRouters.set(routerData.entityName, routerData);
 
-      return JSON.stringify(routerData);
+      return JSON.stringify(data);
     },
   } satisfies RouterGenerationContext;
 

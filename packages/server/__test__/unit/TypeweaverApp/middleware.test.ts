@@ -2,7 +2,14 @@ import { TestApplicationError } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
 import { defineMiddleware } from "../../../src/lib/TypedMiddleware.js";
 import { TypeweaverApp } from "../../../src/lib/TypeweaverApp.js";
-import { del, expectErrorResponse, expectJson, get } from "../../helpers.js";
+import {
+  del,
+  expectErrorResponse,
+  expectJson,
+  get,
+  parseJsonRecord,
+  readJsonRecord,
+} from "../../helpers.js";
 import { createApp, defaultHandlers, TestRouter } from "./fixtures.js";
 
 function createRequestBarrier(participantCount: number): {
@@ -102,9 +109,9 @@ describe("Middleware", () => {
 
 describe("TypeweaverApp middleware state and fallback routes", () => {
   test("ignores middleware state keys that could pollute object prototypes", async () => {
-    const suspiciousState = JSON.parse(
+    const suspiciousState = parseJsonRecord(
       '{"__proto__":{"polluted":true},"constructor":"bad","prototype":"bad","safe":"ok"}'
-    ) as Record<string, unknown>;
+    );
     const suspiciousMiddleware = defineMiddleware<Record<string, unknown>>(
       async (_ctx, next) => next(suspiciousState)
     );
@@ -261,15 +268,13 @@ describe("Concurrent Request Isolation", () => {
 
     const results = await Promise.all(
       Array.from({ length: requestCount }, (_, i) =>
-        app
-          .fetch(get(`/todos/todo-${i}`))
-          .then(r => r.json() as Promise<{ id: string; stateId: string }>)
+        app.fetch(get(`/todos/todo-${i}`)).then(readJsonRecord)
       )
     );
 
     for (let i = 0; i < requestCount; i++) {
-      expect(results[i]?.id).toBe(`todo-${i}`);
-      expect(results[i]?.stateId).toBe(`todo-${i}`);
+      expect(results[i]?.["id"]).toBe(`todo-${i}`);
+      expect(results[i]?.["stateId"]).toBe(`todo-${i}`);
     }
   });
 });

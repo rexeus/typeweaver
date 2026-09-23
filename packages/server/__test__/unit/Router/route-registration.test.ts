@@ -6,7 +6,11 @@ import {
   DuplicateRouteRegistrationError,
 } from "../../../src/lib/errors/index.js";
 import { Router } from "../../../src/lib/Router.js";
-import { expectMatch, route, routeWithRegisteredMethod } from "./fixtures.js";
+import {
+  expectMatch,
+  route,
+  addRouteWithRegisteredMethod,
+} from "./fixtures.js";
 
 const captureDuplicateRouteRegistrationError = (
   action: () => void
@@ -58,7 +62,7 @@ describe("Router route conflicts", () => {
     router.add(route("GET", "/todos"));
 
     const error = captureDuplicateRouteRegistrationError(() =>
-      router.add(routeWithRegisteredMethod("get", "/todos"))
+      addRouteWithRegisteredMethod(router, "get", "/todos")
     );
 
     expect(error).toEqual(

@@ -42,7 +42,7 @@ export function spawnRuntimeServer(
 ): Promise<RuntimeServer> {
   return new Promise((resolve, reject) => {
     const args = config.args(config.script, port);
-    const child: ChildProcess = spawn(config.command, args as string[], {
+    const child: ChildProcess = spawn(config.command, [...args], {
       cwd: TEST_UTILS_ROOT,
       stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, NODE_NO_WARNINGS: "1" },

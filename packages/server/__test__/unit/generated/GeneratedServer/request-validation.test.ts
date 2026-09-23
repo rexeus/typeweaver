@@ -19,6 +19,8 @@ import {
   expectErrorResponse,
   expectJson,
   postRaw,
+  withBodyFields,
+  withHeaderFields,
 } from "../../../helpers.js";
 import { expectValidationIssue } from "./fixtures.js";
 import type { ServerMetricApiHandler } from "test-utils";
@@ -34,10 +36,13 @@ function buildRawBodyFetchRequest(
 function aCreateTodoJsonBodyWithPrototypePollutionPayload(
   validBody: object
 ): string {
-  const payload = Object.assign(Object.create(null), validBody, {
+  // JSON.stringify serializes own enumerable keys only, so a plain object
+  // yields the same payload text as a null-prototype one.
+  const payload: Record<string, unknown> = {
+    ...validBody,
     constructor: { prototype: { polluted: "yes" } },
     prototype: { polluted: "yes" },
-  }) as Record<string, unknown>;
+  };
 
   Object.defineProperty(payload, "__proto__", {
     value: { polluted: "yes" },
@@ -148,8 +153,8 @@ describe("Generated Server request validation bypass", () => {
     {
       name: "body",
       createRequest: () =>
-        createCreateTodoRequest({
-          body: { priority: "INVALID_PRIORITY" as never },
+        withBodyFields(createCreateTodoRequest(), {
+          priority: "INVALID_PRIORITY",
         }),
       url: `${BASE_URL}/todos`,
       issueKey: "body" as const,
@@ -157,8 +162,8 @@ describe("Generated Server request validation bypass", () => {
     {
       name: "headers",
       createRequest: () =>
-        createCreateTodoRequest({
-          header: { "Content-Type": "text/plain" as never },
+        withHeaderFields(createCreateTodoRequest(), {
+          "Content-Type": "text/plain",
         }),
       url: `${BASE_URL}/todos`,
       issueKey: "header" as const,
@@ -247,8 +252,8 @@ describe("Generated Server request validation errors", () => {
         body: { message: "Custom validation error" },
       }),
     });
-    const requestData = createCreateTodoRequest({
-      body: { priority: "INVALID_PRIORITY" as never },
+    const requestData = withBodyFields(createCreateTodoRequest(), {
+      priority: "INVALID_PRIORITY",
     });
 
     const response = await app.fetch(

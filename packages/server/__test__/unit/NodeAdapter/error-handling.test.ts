@@ -7,6 +7,7 @@ import {
 } from "../../../src/lib/errors/index.js";
 import { nodeAdapter } from "../../../src/lib/NodeAdapter.js";
 import { TypeweaverApp } from "../../../src/lib/TypeweaverApp.js";
+import { parseJsonRecord } from "../../helpers.js";
 import {
   awaitResponse,
   createControlledIncomingMessage,
@@ -36,7 +37,7 @@ describe("error handling", () => {
     await awaitResponse(res);
 
     expect(res.writtenStatus).toBe(500);
-    const parsed = JSON.parse(res.writtenBody) as Record<string, unknown>;
+    const parsed = parseJsonRecord(res.writtenBody);
     expect(parsed).toEqual({
       code: internalServerErrorDefaultError.code,
       message: internalServerErrorDefaultError.message,

@@ -19,15 +19,27 @@ export type FakeApp = TypeweaverApp<Record<string, unknown>> & {
   readonly receivedRequests: readonly Request[];
 };
 
-export function fakeAppReturning(response: Response): FakeApp {
+const fakeAppRequests = new WeakMap<
+  TypeweaverApp<Record<string, unknown>>,
+  readonly Request[]
+>();
+
+function createFakeApp(respond: () => Promise<Response>): FakeApp {
   const receivedRequests: Request[] = [];
-  return {
-    receivedRequests,
-    fetch: async (request: Request) => {
-      receivedRequests.push(request);
-      return response;
-    },
-  } as unknown as FakeApp;
+  const app = new TypeweaverApp();
+  app.fetch = async (request: Request) => {
+    receivedRequests.push(request);
+    return await respond();
+  };
+  // The Proxy has an identity of its own, so the fake carries no runtime
+  // context and the adapter uses its fallbacks unless a test registers one.
+  const fake: FakeApp = new Proxy(Object.assign(app, { receivedRequests }), {});
+  fakeAppRequests.set(fake, receivedRequests);
+  return fake;
+}
+
+export function fakeAppReturning(response: Response): FakeApp {
+  return createFakeApp(async () => response);
 }
 
 export function waitForRequestStreamToResume(
@@ -86,8 +98,7 @@ export async function invokeNodeAdapter(options: InvokeNodeAdapterOptions) {
   handler(req, res);
   await awaitResponse(res);
 
-  const receivedRequests = (app as unknown as Partial<FakeApp>)
-    .receivedRequests;
+  const receivedRequests = fakeAppRequests.get(app);
   const request = receivedRequests?.[0];
   return { app, request, receivedRequests, res };
 }
@@ -101,14 +112,9 @@ export function expectRequest(request: Request | undefined): Request {
 }
 
 export function fakeAppRejecting(error: unknown): FakeApp {
-  const receivedRequests: Request[] = [];
-  return {
-    receivedRequests,
-    fetch: async (request: Request) => {
-      receivedRequests.push(request);
-      throw error;
-    },
-  } as unknown as FakeApp;
+  return createFakeApp(async () => {
+    throw error;
+  });
 }
 
 export function fakeAppWithErrorReporter(

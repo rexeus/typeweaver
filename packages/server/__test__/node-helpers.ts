@@ -1,6 +1,6 @@
 import { IncomingMessage, ServerResponse } from "node:http";
 import { Socket } from "node:net";
-import { PassThrough } from "node:stream";
+import type { OutgoingHttpHeader, OutgoingHttpHeaders } from "node:http";
 
 export type NodeRequestHeaders = Record<string, string | string[] | undefined>;
 
@@ -123,66 +123,114 @@ function createHeadersDistinct(
   return distinct;
 }
 
+/**
+ * A socket that accepts and discards every write, so a response can finish
+ * without a peer.
+ */
+class DiscardingSocket extends Socket {
+  public override _write(
+    _chunk: unknown,
+    _encoding: BufferEncoding,
+    callback: (error?: Error | null) => void
+  ): void {
+    callback();
+  }
+
+  public override _writev(
+    _chunks: readonly { chunk: unknown; encoding: BufferEncoding }[],
+    callback: (error?: Error | null) => void
+  ): void {
+    callback();
+  }
+}
+
+/**
+ * A Node response that records the status, headers, and final body the adapter
+ * writes while still running Node's own response implementation.
+ */
+class RecordingServerResponse
+  extends ServerResponse
+  implements MockServerResponse
+{
+  private recordedStatus: number | undefined;
+  private readonly recordedHeaders: Record<string, string> = {};
+  private readonly recordedRawHeaders: Record<string, string | string[]> = {};
+  private recordedBody = "";
+  private recordedBodyBuffer: Buffer = Buffer.alloc(0);
+
+  public get writtenStatus(): number | undefined {
+    return this.recordedStatus;
+  }
+
+  public get writtenHeaders(): Record<string, string> {
+    return { ...this.recordedHeaders };
+  }
+
+  public get writtenRawHeaders(): Record<string, string | string[]> {
+    return { ...this.recordedRawHeaders };
+  }
+
+  public get writtenBody(): string {
+    return this.recordedBody;
+  }
+
+  public get writtenBodyBuffer(): Buffer {
+    return this.recordedBodyBuffer;
+  }
+
+  public override setHeader(
+    name: string,
+    value: number | string | readonly string[]
+  ): this {
+    const isList = typeof value === "object";
+    this.recordedHeaders[name] = isList ? value.join(", ") : String(value);
+    this.recordedRawHeaders[name] = isList ? [...value] : String(value);
+    return super.setHeader(name, value);
+  }
+
+  public override writeHead(
+    statusCode: number,
+    statusMessageOrHeaders?:
+      | string
+      | OutgoingHttpHeaders
+      | OutgoingHttpHeader[],
+    headers?: OutgoingHttpHeaders | OutgoingHttpHeader[]
+  ): this {
+    this.recordedStatus = statusCode;
+    if (typeof statusMessageOrHeaders !== "object") {
+      return super.writeHead(statusCode, statusMessageOrHeaders, headers);
+    }
+
+    for (const [key, value] of Object.entries(statusMessageOrHeaders)) {
+      this.recordedHeaders[key] = String(value);
+    }
+    return super.writeHead(statusCode, statusMessageOrHeaders);
+  }
+
+  public override end(chunk?: unknown): this {
+    this.recordBody(chunk);
+    return super.end(chunk);
+  }
+
+  private recordBody(chunk: unknown): void {
+    if (typeof chunk === "string" && chunk !== "") {
+      this.recordedBody = chunk;
+      this.recordedBodyBuffer = Buffer.from(chunk);
+    } else if (chunk instanceof Uint8Array) {
+      this.recordedBody = String(chunk);
+      this.recordedBodyBuffer = Buffer.isBuffer(chunk)
+        ? chunk
+        : Buffer.from(chunk);
+    }
+  }
+}
+
 export function createMockServerResponse(
   req: IncomingMessage
 ): MockServerResponse {
-  const res = new ServerResponse(req);
-  res.assignSocket(new PassThrough() as unknown as Socket);
-
-  let writtenStatus: number | undefined;
-  const writtenHeaders: Record<string, string> = {};
-  const writtenRawHeaders: Record<string, string | string[]> = {};
-  let writtenBody = "";
-  let writtenBodyBuffer: Buffer = Buffer.alloc(0);
-
-  const originalSetHeader = res.setHeader.bind(res);
-  res.setHeader = ((
-    name: string,
-    value: number | string | readonly string[]
-  ) => {
-    writtenHeaders[name] = Array.isArray(value)
-      ? value.join(", ")
-      : String(value);
-    writtenRawHeaders[name] = Array.isArray(value)
-      ? [...(value as readonly string[])]
-      : String(value);
-    return originalSetHeader(name, value);
-  }) as unknown as typeof res.setHeader;
-
-  const originalWriteHead = res.writeHead.bind(res);
-  const writeHead = originalWriteHead as (
-    statusCode: number,
-    ...args: unknown[]
-  ) => ServerResponse;
-  res.writeHead = ((statusCode: number, ...args: unknown[]) => {
-    writtenStatus = statusCode;
-    const headers =
-      typeof args[0] === "object" && args[0] !== null ? args[0] : undefined;
-    if (headers) {
-      for (const [key, value] of Object.entries(headers)) {
-        writtenHeaders[key] = String(value);
-      }
-    }
-    return writeHead(statusCode, ...args);
-  }) as unknown as typeof res.writeHead;
-
-  const originalEnd = res.end.bind(res);
-  const end = originalEnd as (chunk?: unknown) => ServerResponse;
-  res.end = ((chunk?: string | Buffer | Uint8Array) => {
-    if (chunk) {
-      writtenBody = String(chunk);
-      writtenBodyBuffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-    }
-    return end(chunk);
-  }) as unknown as typeof res.end;
-
-  return Object.defineProperties(res, {
-    writtenStatus: { get: () => writtenStatus },
-    writtenHeaders: { get: () => ({ ...writtenHeaders }) },
-    writtenRawHeaders: { get: () => ({ ...writtenRawHeaders }) },
-    writtenBody: { get: () => writtenBody },
-    writtenBodyBuffer: { get: () => writtenBodyBuffer },
-  }) as unknown as MockServerResponse;
+  const res = new RecordingServerResponse(req);
+  res.assignSocket(new DiscardingSocket());
+  return res;
 }
 
 export function awaitResponse(res: ServerResponse): Promise<void> {

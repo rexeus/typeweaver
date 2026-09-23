@@ -9,6 +9,7 @@ import {
   createServerContext,
   noopResponseValidator,
   noopValidator,
+  readJsonRecord,
 } from "../helpers.js";
 import type { RequestHandler } from "../../src/lib/RequestHandler.js";
 import type { InferState } from "../../src/lib/TypedMiddleware.js";
@@ -16,10 +17,6 @@ import type { TypeweaverRouterOptions } from "../../src/lib/TypeweaverRouter.js"
 
 type AuthState = { readonly userId: string };
 type PermissionsState = { readonly permissions: readonly string[] };
-type AuthResponseBody = {
-  readonly userId: string;
-  readonly permissions?: readonly string[];
-};
 type StateEchoHandlers<TState extends AuthState> = {
   readonly handleGet: RequestHandler<IHttpRequest, IHttpResponse, TState>;
 };
@@ -75,8 +72,8 @@ const echoAuthAndPermissionsState: StateEchoHandlers<
 
 async function readAuthResponseBody(
   response: Response
-): Promise<AuthResponseBody> {
-  return (await response.json()) as AuthResponseBody;
+): Promise<Record<string, unknown>> {
+  return await readJsonRecord(response);
 }
 
 describe("typed middleware defineMiddleware", () => {

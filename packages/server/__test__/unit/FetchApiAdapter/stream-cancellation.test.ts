@@ -18,11 +18,11 @@ function createFailingBodyReadStream(
   cancel: () => Promise<void>
 ): ReadableStream<Uint8Array> {
   let hasEnqueuedFailure = false;
-  const failingChunk = Object.defineProperty({}, "byteLength", {
+  const failingChunk = Object.defineProperty(new Uint8Array(), "byteLength", {
     get() {
       throw readFailure;
     },
-  }) as Uint8Array;
+  });
 
   return new ReadableStream<Uint8Array>({
     pull(controller) {
