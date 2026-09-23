@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
+import { readJsonObject } from "../../helpers/jsonFiles.js";
 import {
   createTempWorkspace,
   expectFileContains,
@@ -102,10 +103,7 @@ describe("Generator validator and OpenAPI output", () => {
     });
 
     const openApiFile = path.join(outputDir, "openapi", "openapi.json");
-    const document = JSON.parse(readFile(openApiFile)) as Record<
-      string,
-      unknown
-    >;
+    const document = readJsonObject(openApiFile);
     const rootIndex = readFile(path.join(outputDir, "index.ts"));
 
     expectFileExists(openApiFile);

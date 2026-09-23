@@ -282,9 +282,14 @@ describe("IndexFileGenerator service", () => {
     if (!Option.isSome(failure)) return;
 
     expect(failure.value).toBeInstanceOf(IndexFileGenerationError);
-    const error = failure.value as IndexFileGenerationError;
+    const error = failure.value;
+    if (!(error instanceof IndexFileGenerationError)) return;
     expect(error.outputDir).toBe(outputDir);
-    const cause = error.cause as { readonly code?: string } | undefined;
-    expect(cause?.code).toBe("ENOENT");
+    const cause = error.cause;
+    const causeCode =
+      typeof cause === "object" && cause !== null && "code" in cause
+        ? cause.code
+        : undefined;
+    expect(causeCode).toBe("ENOENT");
   });
 });

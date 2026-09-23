@@ -85,7 +85,7 @@ const createRecordingPluginRegistry = (
 
     return {
       register,
-      getAll: Effect.succeed([] as never),
+      getAll: Effect.succeed([]),
       validate: () => Effect.succeed([]),
     } satisfies PluginRegistryInstance;
   });
