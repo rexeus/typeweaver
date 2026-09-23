@@ -39,7 +39,7 @@ describe("built CLI doctor workflow", () => {
       outcome: "pass",
     });
     expect(collectWorkspace(workspace)).toBe(before);
-  }, 15_000);
+  });
   test("fails input resolution and skips dependent deep validation", async () => {
     const workspace = createWorkspace();
     const before = collectWorkspace(workspace);
@@ -60,7 +60,7 @@ describe("built CLI doctor workflow", () => {
     expect(checks.get("TW-DOCTOR-005")?.outcome).toBe("fail");
     expect(checks.get("TW-DOCTOR-010")?.outcome).toBe("skip");
     expect(collectWorkspace(workspace)).toBe(before);
-  }, 15_000);
+  });
   test("reports an unavailable configured plugin", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);

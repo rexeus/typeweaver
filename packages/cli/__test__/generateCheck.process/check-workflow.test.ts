@@ -42,7 +42,7 @@ describe("built CLI generate --check matches", () => {
     expect(
       fs.existsSync(path.join(workspace, "generated", ".typeweaver-lock"))
     ).toBe(false);
-  }, 30_000);
+  });
   test("matches committed output through the config workflow", async () => {
     const workspace = createWorkspace();
     writeTinySpec(workspace);
@@ -59,7 +59,7 @@ describe("built CLI generate --check matches", () => {
 
     expect(result).toMatchObject({ code: 0, signal: null, stderr: "" });
     expect(result.stdout).toContain("is current");
-  }, 15_000);
+  });
 });
 
 describe("built CLI generate --check drift", () => {
@@ -94,7 +94,7 @@ describe("built CLI generate --check drift", () => {
     expect(result.stderr).toContain("Changed");
     expect(result.stderr).toContain("item/GetItemRequest.ts");
     expect(snapshotTree(outputDir)).toEqual(before);
-  }, 15_000);
+  });
   test("reports a missing configured output as added drift without creating it", async () => {
     const workspace = createWorkspace();
     writeTinySpec(workspace);
@@ -109,7 +109,7 @@ describe("built CLI generate --check drift", () => {
     expect(result).toMatchObject({ code: 1, signal: null });
     expect(result.stderr).toContain("Added");
     expect(fs.existsSync(path.join(workspace, "generated"))).toBe(false);
-  }, 15_000);
+  });
 });
 
 describe("built CLI generate --check clean:false", () => {
@@ -133,7 +133,7 @@ describe("built CLI generate --check clean:false", () => {
     expect(fs.readFileSync(sentinelPath, "utf8")).toBe(
       "preserved by no-clean\n"
     );
-  }, 15_000);
+  });
 });
 
 describe("built CLI generate --check generation failure", () => {
@@ -156,7 +156,7 @@ describe("built CLI generate --check generation failure", () => {
     expect(result).toMatchObject({ code: 1, signal: null });
     expect(result.stderr).toContain("at least one resource");
     expect(snapshotTree(path.join(workspace, "generated"))).toEqual(before);
-  }, 15_000);
+  });
 });
 
 describe("built CLI generate --check verbose", () => {
@@ -179,5 +179,5 @@ describe("built CLI generate --check verbose", () => {
     expect(result.stdout).toContain("[DEBUG] Acquired output lock");
     expect(result.stdout).toContain("[DEBUG] Released output lock");
     expect(result.stdout).toContain("is current");
-  }, 15_000);
+  });
 });

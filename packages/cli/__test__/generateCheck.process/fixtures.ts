@@ -1,6 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import { processWorkspaces, runCli } from "../helpers/builtCli.js";
+import {
+  CLI_PROCESS_TIMEOUT_MS,
+  processWorkspaces,
+  runCli,
+} from "../helpers/builtCli.js";
 
 export const { createWorkspace, removeWorkspaces } =
   processWorkspaces("generate-check");
@@ -28,5 +32,5 @@ export const writeConfig = (
 export const generate = (
   workspace: string,
   args: readonly string[],
-  timeoutMs = 15_000
+  timeoutMs = CLI_PROCESS_TIMEOUT_MS
 ) => runCli(workspace, ["generate", ...args], { timeoutMs });

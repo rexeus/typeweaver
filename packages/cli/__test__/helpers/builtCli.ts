@@ -16,6 +16,22 @@ export type RunCliOptions = {
   readonly timeoutMs?: number;
 };
 
+/**
+ * Kill deadline for one spawned CLI process. An unloaded spawn takes 2-5 s for
+ * Node startup, spec bundling, and generation. With the CPU oversubscribed
+ * threefold, whole tests of up to three spawns took as long as 28 s.
+ */
+export const CLI_PROCESS_TIMEOUT_MS = 30_000;
+
+/**
+ * Vitest timeout for a test that spawns processes; `vitest.config.ts` applies
+ * it to `*.process` suites. It exceeds the kill deadline so a hung CLI fails
+ * with the runner's error naming its arguments, not a generic test timeout,
+ * and leaves room for the healthy spawns before it. Unit tests keep the
+ * default timeout, so a hang there is still reported within seconds.
+ */
+export const PROCESS_TEST_TIMEOUT_MS = 90_000;
+
 export const packageDirectory = path.resolve(import.meta.dirname, "..", "..");
 
 export const cliEntry = path.join(packageDirectory, "bin", "typeweaver.mjs");
@@ -58,7 +74,7 @@ export const runCli = (
         `Built CLI process timed out: ${args.join(" ")}`
       );
       child.kill("SIGKILL");
-    }, options.timeoutMs ?? 15_000);
+    }, options.timeoutMs ?? CLI_PROCESS_TIMEOUT_MS);
     child.once("error", error => {
       clearTimeout(timeout);
       reject(error);

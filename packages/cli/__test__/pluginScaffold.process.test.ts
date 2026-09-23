@@ -5,11 +5,14 @@ import { promisify } from "node:util";
 import { afterEach, describe, expect, test } from "vitest";
 import { z } from "zod";
 import { cliPackageVersion } from "../src/cliMetadata.js";
+import {
+  CLI_PROCESS_TIMEOUT_MS,
+  PROCESS_TEST_TIMEOUT_MS,
+} from "./helpers/builtCli.js";
 
 const execFileAsync = promisify(execFile);
 const packageDirectory = path.resolve(import.meta.dirname, "..");
 const cliEntry = path.join(packageDirectory, "bin", "typeweaver.mjs");
-const PROCESS_TEST_TIMEOUT_MS = 15_000;
 const typeweaverVersionRange = `^${cliPackageVersion}`;
 const PluginPackageSchema = z.object({
   peerDependencies: z.object({
@@ -79,7 +82,7 @@ describe("built CLI plugin scaffold", () => {
       const result = await execFileAsync(
         process.execPath,
         [cliEntry, "add", "plugin", "--name", "audit-log", "--target", target],
-        { cwd: workspace }
+        { cwd: workspace, timeout: CLI_PROCESS_TIMEOUT_MS }
       );
 
       expect(result.stderr).toBe("");
@@ -126,7 +129,7 @@ describe("built CLI plugin scaffold", () => {
             "--target",
             target,
           ],
-          { cwd: workspace }
+          { cwd: workspace, timeout: CLI_PROCESS_TIMEOUT_MS }
         )
       ).rejects.toMatchObject({
         code: 1,
@@ -155,7 +158,7 @@ describe("built CLI plugin scaffold", () => {
             "--target",
             target,
           ],
-          { cwd: workspace }
+          { cwd: workspace, timeout: CLI_PROCESS_TIMEOUT_MS }
         )
       ).rejects.toMatchObject({
         code: 1,

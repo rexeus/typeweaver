@@ -9,6 +9,7 @@ import {
   createTestServer,
 } from "test-utils";
 import { afterEach, describe, expect, test } from "vitest";
+import { GENERATED_CLI_PROCESS_TIMEOUT_MS } from "./processBudget.js";
 
 const packageDir = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(packageDir, "../../..");
@@ -88,9 +89,18 @@ const startGeneratedCli = (args: readonly string[], input = "") => {
     stderr += chunk;
   });
   child.stdin.end(input);
-  const result = new Promise<ProcessResult>(resolve => {
+  let timeoutError: Error | undefined;
+  const timeout = setTimeout(() => {
+    timeoutError = new Error(
+      `Generated CLI process timed out: ${args.join(" ")}`
+    );
+    child.kill("SIGKILL");
+  }, GENERATED_CLI_PROCESS_TIMEOUT_MS);
+  const result = new Promise<ProcessResult>((resolve, reject) => {
     child.once("close", (code, signal) => {
-      resolve({ code, signal, stdout, stderr });
+      clearTimeout(timeout);
+      if (timeoutError === undefined) resolve({ code, signal, stdout, stderr });
+      else reject(timeoutError);
     });
   });
   return { child, result };
@@ -301,5 +311,5 @@ describe("generated command failure process", () => {
       ok: false,
       error: { kind: "cancelled", exitCode: 130 },
     });
-  }, 15_000);
+  });
 });

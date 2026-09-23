@@ -107,7 +107,7 @@ describe("built CLI validate workflow", () => {
       issues: [],
     });
     expect(collectWorkspace(workspace)).toBe(before);
-  }, 15_000);
+  });
   test("does not expose validation staging directories to project plugins", async () => {
     const workspace = createWorkspace();
     writeSpec(workspace);
@@ -127,7 +127,7 @@ describe("built CLI validate workflow", () => {
       valid: true,
       issues: [],
     });
-  }, 15_000);
+  });
 });
 
 describe("built CLI validate temp isolation", () => {

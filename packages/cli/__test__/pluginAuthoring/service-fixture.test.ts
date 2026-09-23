@@ -4,11 +4,14 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, test } from "vitest";
-import { packageDirectory } from "../helpers/builtCli.js";
+import {
+  CLI_PROCESS_TIMEOUT_MS,
+  packageDirectory,
+  PROCESS_TEST_TIMEOUT_MS,
+} from "../helpers/builtCli.js";
 import { writeHealthSpec } from "../helpers/specFiles.js";
 
 const execFileAsync = promisify(execFile);
-const PROCESS_TEST_TIMEOUT_MS = 15_000;
 const repositoryDirectory = path.resolve(packageDirectory, "../..");
 const cliEntry = path.join(packageDirectory, "dist", "entry.mjs");
 const servicePluginExample = path.join(
@@ -65,6 +68,7 @@ describe("documented scoped-service plugin", () => {
           [typescriptCli, "--project", servicePluginTsconfig],
           {
             cwd: repositoryDirectory,
+            timeout: CLI_PROCESS_TIMEOUT_MS,
           }
         )
       ).resolves.toMatchObject({ stderr: "" });
@@ -104,6 +108,7 @@ describe("documented scoped-service plugin", () => {
         [cliEntry, "generate", "--config", configPath, "--no-format"],
         {
           cwd: workspace,
+          timeout: CLI_PROCESS_TIMEOUT_MS,
         }
       );
 
