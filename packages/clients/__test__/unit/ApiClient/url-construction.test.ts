@@ -1,6 +1,7 @@
 import type { ClientHttpParam } from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
 import {
+  anUncheckedCommand,
   createClient,
   expectPathParameterRejection,
   expectRequestSerializationFailure,
@@ -123,11 +124,8 @@ describe("ApiClient path parameter invariants", () => {
   test("rejects an own undefined path parameter before fetch", async () => {
     const mockFetch = resolvedFetch();
     const client = createClient(mockFetch);
-    const param = { todoId: undefined } as unknown as ClientHttpParam;
-    const command = new TestRequestCommand({
-      path: "/todos/:todoId",
-      param,
-    });
+    const param = { todoId: undefined };
+    const command = anUncheckedCommand({ path: "/todos/:todoId", param });
 
     await expectPathParameterRejection(client.send(command), {
       paramName: "todoId",
@@ -137,12 +135,10 @@ describe("ApiClient path parameter invariants", () => {
   });
 
   test("rejects an inherited path parameter before fetch", async () => {
-    const inheritedParam = Object.create({
-      todoId: "abc",
-    }) as ClientHttpParam;
+    const inheritedParam: unknown = Object.create({ todoId: "abc" });
     const mockFetch = resolvedFetch();
     const client = createClient(mockFetch);
-    const command = new TestRequestCommand({
+    const command = anUncheckedCommand({
       path: "/todos/:todoId",
       param: inheritedParam,
     });
@@ -193,10 +189,7 @@ describe("ApiClient path parameters", () => {
 
   test("rejects a null path parameter with a null-value serialization error", async () => {
     await expectRequestSerializationFailure(
-      {
-        path: "/todos/:todoId",
-        param: { todoId: null } as unknown as ClientHttpParam,
-      },
+      anUncheckedCommand({ path: "/todos/:todoId", param: { todoId: null } }),
       {
         location: "path",
         key: "todoId",

@@ -3,6 +3,7 @@ import type { ClientHttpHeader } from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
 import { NetworkError } from "../../../src/lib/NetworkError.js";
 import {
+  anUncheckedCommand,
   createClient,
   getFetchCall,
   resolvedFetch,
@@ -235,9 +236,9 @@ describe("ApiClient request header flattening", () => {
       "X-Scalar-Value": "present",
       "X-Multi-Value": ["first", "second"],
       "X-Undefined-Value": undefined,
-    } as unknown as ClientHttpHeader;
+    };
 
-    const { mockFetch } = await sendRaw({ header });
+    const { mockFetch } = await sendRaw(anUncheckedCommand({ header }));
 
     expect(getFetchCall(mockFetch).init.headers).toStrictEqual({
       "X-Empty-Array": "",

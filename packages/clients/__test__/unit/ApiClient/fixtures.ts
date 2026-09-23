@@ -12,6 +12,7 @@ import { ApiClient } from "../../../src/lib/ApiClient.js";
 import { PathParameterError } from "../../../src/lib/PathParameterError.js";
 import { RequestCommand } from "../../../src/lib/RequestCommand.js";
 import { RequestSerializationError } from "../../../src/lib/RequestSerializationError.js";
+import { constructWithUncheckedInput } from "../../helpers.js";
 import type { ApiClientProps } from "../../../src/lib/ApiClient.js";
 
 export type TestRequestCommandProps = {
@@ -84,10 +85,33 @@ export function getFetchCall(mockFetch: typeof globalThis.fetch): {
     throw new TestAssertionError("Expected fetch to have been called");
   }
 
-  return {
-    url: call[0] as string,
-    init: call[1] ?? {},
-  };
+  const [url, init] = call;
+  if (typeof url !== "string") {
+    throw new TestAssertionError("Expected fetch to receive a string URL");
+  }
+
+  return { url, init: init ?? {} };
+}
+
+/** Builds a client from props a JavaScript caller passed without type checks. */
+export function aClientWithUncheckedProps(props: unknown): TestApiClient {
+  return constructWithUncheckedInput(TestApiClient, props);
+}
+
+/**
+ * Builds a command carrying raw header, param, or query values outside the
+ * client HTTP types, as a JavaScript caller can hand them to ApiClient.
+ */
+export function anUncheckedCommand(props: unknown): TestRequestCommand {
+  return constructWithUncheckedInput(TestRequestCommand, props);
+}
+
+function toCommand(
+  command: TestRequestCommandProps | TestRequestCommand
+): TestRequestCommand {
+  return command instanceof TestRequestCommand
+    ? command
+    : new TestRequestCommand(command);
 }
 
 export async function expectPathParameterRejection(
@@ -104,7 +128,7 @@ export async function expectPathParameterRejection(
 }
 
 export async function sendRaw(
-  commandProps: TestRequestCommandProps,
+  command: TestRequestCommandProps | TestRequestCommand,
   clientProps: Partial<ApiClientProps> = {}
 ): Promise<{
   readonly result: IHttpResponse;
@@ -118,13 +142,13 @@ export async function sendRaw(
   );
   const client = createClient(mockFetch, clientProps);
 
-  const result = await client.send(new TestRequestCommand(commandProps));
+  const result = await client.send(toCommand(command));
 
   return { result, mockFetch };
 }
 
 export async function expectRequestSerializationFailure(
-  command: TestRequestCommandProps,
+  command: TestRequestCommandProps | TestRequestCommand,
   expected: {
     readonly key: string;
     readonly location: string;
@@ -135,7 +159,7 @@ export async function expectRequestSerializationFailure(
   const mockFetch = resolvedFetch();
   const client = createClient(mockFetch);
 
-  await expect(client.send(new TestRequestCommand(command))).rejects.toSatisfy(
+  await expect(client.send(toCommand(command))).rejects.toSatisfy(
     (error: unknown) => {
       return (
         error instanceof RequestSerializationError &&
