@@ -61,8 +61,9 @@ describe("Router Prefix", () => {
     expect(res.status).toBe(200);
   });
 
-  test("preserves an untrusted prefix with a long slash sequence", async () => {
-    const adversarialPrefix = `${"/".repeat(40_000)}x`;
+  test("mounts a prefix with a long slash sequence in linear time", async () => {
+    // A quadratic trailing-slash trim needs about 20 s for this input.
+    const adversarialPrefix = `${"/".repeat(200_000)}x`;
     const app = createAppMountedAt(adversarialPrefix);
 
     const res = await app.fetch(get(`${adversarialPrefix}/todos`));
