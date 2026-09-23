@@ -29,7 +29,7 @@ export type {
   ValidateProjectResult,
 } from "./ProjectValidator.js";
 export { ProjectDoctor } from "./ProjectDoctor.js";
-export type { DiagnoseProjectParams } from "./ProjectDoctor.js";
+export type { DiagnoseProjectParams } from "./projectDoctorTypes.js";
 export { ProjectInitializer } from "./ProjectInitializer.js";
 export type {
   InitConfigFormat,
