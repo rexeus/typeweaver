@@ -164,6 +164,11 @@ function collectObjectWarnings(
 ): void {
   for (const [key, value] of Object.entries(def.shape ?? {}))
     collectChild(value, collector, [...path, "properties", key]);
+  // A Zod strict object carries an internal `never` catchall that the
+  // converter represents exactly as `additionalProperties: false`. Traversing
+  // it as a child would emit a false `unsupported-schema` warning, so object
+  // traversal skips only this representable catchall. A standalone `never`
+  // schema stays unsupported.
   if (def.catchall !== undefined && getSchemaType(def.catchall) === "never")
     return;
   collectChild(def.catchall, collector, [...path, "additionalProperties"]);

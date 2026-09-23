@@ -2,6 +2,11 @@ import path from "node:path";
 import { systemError } from "effect/PlatformError";
 import type { PlatformError } from "effect/PlatformError";
 
+/**
+ * Handle for inspecting an `InMemoryFileSystem`'s internal state from tests.
+ * The shape is intentionally narrow — it exposes just enough to assert that
+ * a write happened or to reset state between tests.
+ */
 export type InMemoryFsState = {
   readonly readFile: (filePath: string) => string | undefined;
   readonly hasFile: (filePath: string) => boolean;
