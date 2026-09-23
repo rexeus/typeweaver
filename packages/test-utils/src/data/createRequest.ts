@@ -69,8 +69,15 @@ export function createRequest<
 >(
   defaultRequest: Omit<TRequest, "body" | "header" | "param" | "query">,
   creators: RequestCreators<TBody, THeader, TParam, TQuery>,
-  input: RequestInput<TBody, THeader, TParam, TQuery> = {}
-): TRequest {
+  input?: RequestInput<TBody, THeader, TParam, TQuery>
+): TRequest;
+// The creators produce each request part from the same type arguments as
+// `TRequest`, which the compiler cannot relate to the assembled record.
+export function createRequest(
+  defaultRequest: object,
+  creators: RequestCreators<unknown, unknown, unknown, unknown>,
+  input: RequestInput<unknown, unknown, unknown, unknown> = {}
+): Record<string, unknown> {
   const defaults: Record<string, unknown> = {
     ...defaultRequest,
   };
@@ -79,5 +86,5 @@ export function createRequest<
   const overrides: Record<string, unknown> = {};
   applyRequestOverrides(overrides, creators, input);
 
-  return createData(defaults as TRequest, overrides as Partial<TRequest>);
+  return createData(defaults, overrides);
 }

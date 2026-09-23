@@ -22,18 +22,31 @@ export function createResponse<TResponse extends IHttpResponse, TBody, THeader>(
     body?: (input?: DataOverrides<TBody>) => TBody;
     header?: (input?: DataOverrides<THeader>) => THeader;
   },
-  input: {
+  input?: {
     statusCode?: number;
     body?: DataOverrides<TBody>;
     header?: DataOverrides<THeader>;
+  }
+): Omit<TResponse, "type">;
+// The creators produce the body and header from the same type arguments as
+// `TResponse`, which the compiler cannot relate to the assembled record.
+export function createResponse(
+  defaultResponse: object,
+  creators: {
+    body?: (input?: DataOverrides<unknown>) => unknown;
+    header?: (input?: DataOverrides<unknown>) => unknown;
+  },
+  input: {
+    statusCode?: number;
+    body?: DataOverrides<unknown>;
+    header?: DataOverrides<unknown>;
   } = {}
-): Omit<TResponse, "type"> {
-  const defaults: Partial<TResponse> = {
+): Record<string, unknown> {
+  const defaults: Record<string, unknown> = {
     ...defaultResponse,
-  } as Partial<TResponse>;
-  const mutableDefaults = defaults as Record<string, unknown>;
-  if (creators.body) mutableDefaults["body"] = creators.body();
-  if (creators.header) mutableDefaults["header"] = creators.header();
+  };
+  if (creators.body) defaults["body"] = creators.body();
+  if (creators.header) defaults["header"] = creators.header();
 
   const overrides: Record<string, unknown> = {};
   if (input.statusCode !== undefined)
@@ -43,8 +56,5 @@ export function createResponse<TResponse extends IHttpResponse, TBody, THeader>(
   if (input.header !== undefined && creators.header)
     overrides["header"] = creators.header(input.header);
 
-  return createData(
-    defaults as TResponse,
-    overrides as DataOverrides<TResponse>
-  ) as Omit<TResponse, "type">;
+  return createData(defaults, overrides);
 }
