@@ -8,10 +8,14 @@ import {
   createGetMetricSamplesSuccessResponse,
   createGetMetricSuccessResponse,
   createTestHono,
-  TestAssertionError,
   TodoHono,
 } from "test-utils";
-import { prepareRequestData } from "../../../helpers.js";
+import {
+  createTodoApiHandlers,
+  prepareRequestData,
+  UncheckedResponseTodoHono,
+} from "../../../helpers.js";
+import type { UncheckedTodoHandlers } from "../../../helpers.js";
 import type {
   HonoMetricApiHandler,
   HonoTodoApiHandler,
@@ -49,29 +53,13 @@ export async function requestTestHono(
   );
 }
 
-export function createRequestHandlersProxy<TValidateRequests extends boolean>(
-  handlers: Partial<HonoTodoApiHandler<TValidateRequests>>
-): HonoTodoApiHandler<TValidateRequests> {
-  return new Proxy(handlers as HonoTodoApiHandler<TValidateRequests>, {
-    get: (target, prop) => {
-      if (prop in target)
-        return target[prop as keyof HonoTodoApiHandler<TValidateRequests>];
-      return async () => {
-        throw new TestAssertionError(
-          `Missing Hono test handler: ${String(prop)}`
-        );
-      };
-    },
-  });
-}
-
 export function createTodoHonoWithHandlers(
   handlers: Partial<HonoTodoApiHandler<true>>,
   options: CreateTodoHonoOptions = {}
 ): TodoHono<true> {
   return new TodoHono<true>({
     ...options,
-    requestHandlers: createRequestHandlersProxy<true>(handlers),
+    requestHandlers: createTodoApiHandlers<true>(handlers),
     validateResponses: options.validateResponses ?? false,
   });
 }
@@ -84,23 +72,34 @@ export function createUnvalidatedTodoHonoWithHandlers(
     ...options,
     validateRequests: false,
     validateResponses: false,
-    requestHandlers: createRequestHandlersProxy<false>(handlers),
+    requestHandlers: createTodoApiHandlers<false>(handlers),
   });
+}
+
+export function createUnvalidatedTodoHonoWithUncheckedHandlers(
+  uncheckedHandlers: UncheckedTodoHandlers
+): TodoHono<false> {
+  return new UncheckedResponseTodoHono<false>(
+    {
+      validateRequests: false,
+      validateResponses: false,
+      requestHandlers: createTodoApiHandlers<false>({}),
+    },
+    uncheckedHandlers
+  );
 }
 
 export function createCreateTodoRouteReturning(
   response: ITypedHttpResponse,
-  options?: CreateTodoHonoOptions
+  options: CreateTodoHonoOptions = {}
 ): TodoHono<true> {
-  type CreateTodoRouteResponse = Awaited<
-    ReturnType<HonoTodoApiHandler["handleCreateTodoRequest"]>
-  >;
-
-  return createTodoHonoWithHandlers(
+  return new UncheckedResponseTodoHono<true>(
     {
-      handleCreateTodoRequest: async () => response as CreateTodoRouteResponse,
+      ...options,
+      requestHandlers: createTodoApiHandlers<true>({}),
+      validateResponses: options.validateResponses ?? false,
     },
-    options ?? {}
+    { CreateTodo: async () => response }
   );
 }
 

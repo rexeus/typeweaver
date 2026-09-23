@@ -9,7 +9,7 @@ import {
   createTestHono,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import { prepareRequestData } from "../../../helpers.js";
+import { prepareRequestData, withBodyFields } from "../../../helpers.js";
 import {
   createUnvalidatedTodoHonoWithHandlers,
   readContextString,
@@ -83,8 +83,8 @@ describe("Generated Hono operation metadata", () => {
 
 describe("Generated Hono middleware composition", () => {
   test("app middleware can short-circuit before generated validation", async () => {
-    const requestData = createCreateTodoRequest({
-      body: { priority: "INVALID_PRIORITY" as never },
+    const requestData = withBodyFields(createCreateTodoRequest(), {
+      priority: "INVALID_PRIORITY",
     });
     const app = createTestHono({
       customResponses: {
