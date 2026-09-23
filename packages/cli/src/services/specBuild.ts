@@ -6,8 +6,15 @@ import { makeBundleError } from "./specBundlerTypes.js";
 import type { BundleOperation } from "./specBundlerTypes.js";
 import type { BuildOptions, Plugin } from "rolldown";
 
+/**
+ * Classifies a module specifier as external to the bundle. Bundled imports are
+ * relative (`./`, `../`), absolute host paths, and `file:` URLs (cross-drive
+ * entrypoints). `node:` builtins and bare package specifiers stay external.
+ */
 export const isExternalModule = (source: string): boolean => {
   if (source.startsWith("node:")) return true;
+  // A cross-drive/cross-root entrypoint is emitted as a file URL; it must be
+  // bundled, not left external, or Node would import the unbundled source.
   if (source.startsWith("file:")) return false;
   return !source.startsWith(".") && !path.isAbsolute(source);
 };
@@ -94,6 +101,9 @@ export const runRolldownBuild = Effect.fn(function* (params: {
   readonly inputFile: string;
   readonly options: BuildOptions;
 }) {
+  // Rolldown exposes no cancellation signal. Releasing the Scope before the
+  // build settles would let a detached build keep writing after the caller's
+  // output lock has been released, so the Promise is awaited uninterruptibly.
   yield* Effect.uninterruptible(
     Effect.tryPromise({
       try: () => params.build(params.options),

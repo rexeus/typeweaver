@@ -10,6 +10,15 @@ import type { PluginModuleLoaderShape } from "./PluginModuleLoader.js";
 import type { PluginCandidate, PluginLoadResult } from "./pluginShape.js";
 
 export type PluginResolutionStrategy = "npm" | "local" | "scoped";
+/**
+ * A candidate resolution either succeeds, fails with a plain message
+ * (export shape mismatch, module didn't expose a Plugin, etc.), or
+ * fails with a tagged `PluginConfigError` (the plugin constructor
+ * validated its options and rejected them). The tagged variant
+ * short-circuits the load: misconfiguration is the same across every
+ * resolution strategy, and the user deserves a typed error at the CLI
+ * boundary rather than a string folded into a `PluginLoadError`.
+ */
 type CandidateFailure = string | PluginConfigError;
 
 const formatError = (error: unknown): string =>

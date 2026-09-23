@@ -43,7 +43,13 @@ const reportSuccessfulLoads = (
 
 /**
  * Effect-native plugin loader. Registers each required plugin first, then
- * resolves configured plugins and registers them with their constructor options.
+ * resolves each configured plugin against the requested strategies and
+ * registers it with its constructor options.
+ *
+ * The registry is supplied by the caller (one fresh instance per
+ * `Generator.generate` call) so concurrent generations see fully isolated
+ * registrations. Plugins are V2 records (`Plugin`) or factory functions
+ * returning records; the runtime treats both uniformly.
  */
 export const makePluginLoader: Effect.Effect<
   PluginLoaderShape,

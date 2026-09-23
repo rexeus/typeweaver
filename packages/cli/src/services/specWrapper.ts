@@ -18,6 +18,15 @@ import type {
 const WINDOWS_ABSOLUTE_PATH_PATTERN = /^[A-Za-z]:[\\/]/;
 const WINDOWS_UNC_PATH_PATTERN = /^\\\\/;
 
+/**
+ * Computes the specifier used by the generated wrapper to import the user's
+ * spec entrypoint.
+ *
+ * Same-drive/root targets stay relative so normal generation is unchanged.
+ * When `path.relative` cannot express a relative path (different Windows
+ * drives or UNC roots), a bare absolute filesystem path is invalid to Node
+ * ESM, so the target is emitted as a `file://` URL instead.
+ */
 export const createWrapperImportSpecifierWith = (
   wrapperFile: string,
   inputFile: string,
@@ -38,6 +47,8 @@ export const createWrapperImportSpecifierWith = (
     : resolveRealFilePath(absoluteInputFile, realpathSync);
   const relativeInputFile = pathModule.relative(wrapperDir, resolvedInputFile);
   if (pathModule.isAbsolute(relativeInputFile)) {
+    // Cross-drive/cross-root: Node ESM requires a valid file URL, not a bare
+    // absolute filesystem path.
     return toFileUrl(resolvedInputFile).href;
   }
   const posixRelative = relativeInputFile.replaceAll(pathModule.sep, "/");
@@ -75,6 +86,14 @@ const usesWindowsPathSemantics = (...filePaths: string[]): boolean =>
       WINDOWS_UNC_PATH_PATTERN.test(filePath)
   );
 
+/**
+ * Resolves the real path of a file synchronously. Used inside
+ * `createWrapperImportSpecifier` which is shared with sync path utilities
+ * — the FileSystem service is async-Effect and cannot satisfy that call
+ * site without restructuring the entire bundler. The sync `fs.realpathSync`
+ * is acceptable here because it runs at bundle time on user-supplied input
+ * paths only.
+ */
 const resolveRealFilePath = (
   filePath: string,
   realpathSync: (filePath: string) => string

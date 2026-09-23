@@ -14,6 +14,12 @@ type AncestorNodeModulesLevel = {
   readonly nodeModulesDirectory: string;
 };
 
+/**
+ * Finds every `node_modules` directory at or above the configured output,
+ * excluding the output directory itself (level 0). Normal generation removes
+ * `node_modules` inside the output when cleaning, and a `clean: false`
+ * snapshot preserves that level verbatim, so it is never mirrored.
+ */
 const scanAncestorNodeModules = (
   configuredOutputDir: string
 ): readonly AncestorNodeModulesLevel[] => {
@@ -42,6 +48,14 @@ const ancestorAtLevel = (startPath: string, level: number): string => {
   return current;
 };
 
+/**
+ * Builds a nested staged output path and mirrors the original
+ * `<configuredOutput>/spec/spec.js` ancestor lookup topology: every
+ * `node_modules` directory Node would consult above the configured output is
+ * symlinked at the corresponding staged ancestor level. This preserves lookup
+ * order (including fallback past a partial nearer `node_modules`) instead of
+ * resolving only the nearest directory.
+ */
 export const prepareMirroredOutput = (
   fileSystem: FileSystem.FileSystem,
   stageRoot: string,
@@ -79,6 +93,10 @@ export type MirroredStage = {
   readonly stagedOutputDir: string;
 };
 
+/**
+ * Check-specific staging: a scoped stage plus a nested output whose ancestor
+ * `node_modules` topology mirrors the configured output.
+ */
 export const withMirroredOutputStage = <A, E, R>(
   fileSystem: FileSystem.FileSystem,
   params: {

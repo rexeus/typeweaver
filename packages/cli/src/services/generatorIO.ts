@@ -32,6 +32,21 @@ export {
   sweepOrphanTempdirs,
 };
 
+/**
+ * Effect-wrapped output-target check. Safety violations and expected Node
+ * filesystem probe errors are surfaced on the failure channel; unexpected
+ * throws remain defects. Pass `inputFile` only when the clean step will
+ * run — the containment rule guards against cleaning the spec source, and
+ * does not apply to no-clean runs.
+ *
+ * The guard's filesystem probes (`existsSync`, `lstatSync`, `readFileSync`,
+ * `realpathSync.native`) stay on `node:fs` rather than the Effect-native
+ * `FileSystem` service because the algorithm is sync top-to-bottom and the
+ * `FileSystem` surface is async-Effect — `Effect.runSync` over its `exists`
+ * fails with an `AsyncFiberError`. The probes are well-audited and isolated;
+ * the deps-injection seam on `assertSafeCleanTargetWith` keeps the door open
+ * for test substitution without paying the async tax in production.
+ */
 export const assertSafeCleanTargetEffect = (
   outputDir: string,
   currentWorkingDirectory: string,

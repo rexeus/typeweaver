@@ -92,7 +92,31 @@ const makeSpecBundler: Effect.Effect<
   return { bundle } as const;
 });
 
-/** Effect-native rolldown facade for isolated spec bundling. */
+/**
+ * Bundles a SpecDefinition entrypoint into a single ESM file via rolldown.
+ *
+ * The wrapper file allows authors to expose the spec as a default export,
+ * a named `spec` export, or the module namespace itself. Filesystem errors
+ * while resolving the wrapper paths and from rolldown surface as
+ * `SpecBundleError`; a missing post-bundle output surfaces as
+ * `SpecBundleOutputMissingError`.
+ *
+ * Rolldown writes into a scoped staging directory beside the final bundle.
+ * Its Promise is awaited uninterruptibly because Rolldown does not expose a
+ * cancellation signal: releasing the Scope earlier would allow a detached
+ * build to keep writing after the caller's output lock has been released.
+ * Only a settled, successful build is atomically renamed into place through
+ * the Effect `FileSystem`; the scoped wrapper/staging directory is removed on
+ * every Exit.
+ *
+ * The optional `deps` parameter is a deliberate test seam for the bindings
+ * that live outside the `FileSystem` service: rolldown's `build`,
+ * wrapper-path realpath resolution, the post-bundle existence probe, and the
+ * file-URL converter for cross-drive entrypoints. Wrapping these in dedicated
+ * service tags would add one-method services with single production
+ * implementations; the parameter keeps the seams local to the only call site
+ * that needs substitution.
+ */
 export class SpecBundler extends Context.Service<
   SpecBundler,
   SpecBundlerShape

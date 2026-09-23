@@ -177,6 +177,11 @@ const formatDirectory = (
       const info = yield* fileSystem
         .stat(filePath)
         .pipe(Effect.mapError(mapFileSystemError("stat", filePath)));
+      // Atomic-write and bundler staging directories are skipped only when
+      // both their Node-mkdtemp name shape and exact, versioned marker agree. A
+      // proven legacy `.typeweaver-lock` directory is skipped too so its
+      // metadata is not rewritten. A name alone is user content and must remain
+      // format-visible.
       if (info.type === "Directory") {
         if (
           !isCompleteLegacyOutputLock(filePath, content) &&
