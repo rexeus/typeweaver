@@ -133,8 +133,36 @@ export const responseWithRuntimePart = (
   [part]: value,
 });
 
-export const asHttpResponse = (response: unknown): IHttpResponse =>
-  response as IHttpResponse;
+/**
+ * Response validators check whatever a transport produced, so these tests hand
+ * them runtime values outside `IHttpResponse`. The guard widens only the
+ * parameter of the bound validator method; the value reaches it unchanged.
+ */
+const acceptsRawResponse = <TResult>(
+  check: (response: never) => TResult
+): check is (response: unknown) => TResult => typeof check === "function";
+
+const checkRawResponse = <TResult>(
+  check: (response: IHttpResponse) => TResult,
+  response: unknown
+): TResult => {
+  if (!acceptsRawResponse(check)) {
+    throw new TypeError("Expected a response validator method");
+  }
+
+  return check(response);
+};
+
+export const safeValidateRaw = <TResult>(
+  validator: { safeValidate(response: IHttpResponse): TResult },
+  response: unknown
+): TResult =>
+  checkRawResponse(validator.safeValidate.bind(validator), response);
+
+export const validateRaw = <TResult>(
+  validator: { validate(response: IHttpResponse): TResult },
+  response: unknown
+): TResult => checkRawResponse(validator.validate.bind(validator), response);
 
 export const responseIssueFor = (
   error: ResponseValidationError,

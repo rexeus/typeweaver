@@ -12,11 +12,12 @@ import {
 } from "test-utils";
 import { describe, expect, expectTypeOf, test } from "vitest";
 import {
-  asHttpResponse,
   expectNoPartialData,
   issuePaths,
   responseIssueFor,
   responseWithRuntimePart,
+  safeValidateRaw,
+  validateRaw,
   validCreateTodoBody,
   validCreateTodoHeader,
   validCreateTodoResponse,
@@ -32,7 +33,7 @@ describe("Generated ResponseValidator safe and throwing contracts", () => {
     const validator = new CreateTodoResponseValidator();
     const response = validCreateTodoResponse();
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -48,8 +49,8 @@ describe("Generated ResponseValidator safe and throwing contracts", () => {
     const validator = new CreateTodoResponseValidator();
     const response = validCreateTodoResponse();
 
-    const safeResult = validator.safeValidate(asHttpResponse(response));
-    const validated = validator.validate(asHttpResponse(response));
+    const safeResult = safeValidateRaw(validator, response);
+    const validated = validateRaw(validator, response);
 
     expect(safeResult.isValid).toBe(true);
     assert(safeResult.isValid);
@@ -67,7 +68,7 @@ describe("Generated ResponseValidator safe and throwing contracts", () => {
       }
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expectNoPartialData(result);
     assert(!result.isValid);
@@ -88,9 +89,9 @@ describe("Generated ResponseValidator safe and throwing contracts", () => {
       }
     );
 
-    const safeResult = validator.safeValidate(asHttpResponse(response));
+    const safeResult = safeValidateRaw(validator, response);
     const thrownError = captureError<ResponseValidationError>(() =>
-      validator.validate(asHttpResponse(response))
+      validateRaw(validator, response)
     );
 
     expect(safeResult.isValid).toBe(false);
@@ -124,12 +125,11 @@ describe("Generated ResponseValidator generic response contracts", () => {
     const createValidator: IResponseValidator<CreateTodoResponse> =
       new CreateTodoResponseValidator();
 
-    const safeResult = createValidator.safeValidate(
-      asHttpResponse(validCreateTodoResponse())
+    const safeResult = safeValidateRaw(
+      createValidator,
+      validCreateTodoResponse()
     );
-    const validated = createValidator.validate(
-      asHttpResponse(validCreateTodoResponse())
-    );
+    const validated = validateRaw(createValidator, validCreateTodoResponse());
 
     expect(safeResult.isValid).toBe(true);
     assert(safeResult.isValid);
@@ -154,7 +154,7 @@ describe("Generated ResponseValidator accumulated errors", () => {
       },
     };
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expectNoPartialData(result);
     assert(!result.isValid);
@@ -179,7 +179,7 @@ describe("Generated ResponseValidator accumulated errors", () => {
       418
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expectNoPartialData(result);
     assert(!result.isValid);

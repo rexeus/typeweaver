@@ -9,6 +9,7 @@ import type {
   NormalizedResponse,
   NormalizedResponseUsage,
   NormalizedSpec,
+  TemplateData,
 } from "@rexeus/typeweaver-gen";
 import { pascalCase } from "polycase";
 import { TestAssertionError } from "test-utils";
@@ -156,7 +157,7 @@ export type ResponseGeneratorTestContext = {
 
 export function createResponseGeneratorContext(
   normalizedSpec: NormalizedSpec,
-  renderResponseTemplate: (templatePath: string, data: unknown) => string
+  renderResponseTemplate: (templatePath: string, data: TemplateData) => string
 ): ResponseGeneratorTestContext {
   const writtenFiles = new Map<string, string>();
 
@@ -207,10 +208,7 @@ export function aTemplateRenderingResponseGeneratorContext(
   normalizedSpec: NormalizedSpec
 ): ResponseGeneratorTestContext {
   return createResponseGeneratorContext(normalizedSpec, (templatePath, data) =>
-    renderTemplate(
-      readFileSync(templatePath, "utf8"),
-      (data ?? {}) as Record<string, unknown>
-    )
+    renderTemplate(readFileSync(templatePath, "utf8"), data)
   );
 }
 

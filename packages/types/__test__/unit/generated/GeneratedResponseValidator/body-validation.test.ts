@@ -6,11 +6,11 @@ import {
 } from "test-utils";
 import { describe, expect, test } from "vitest";
 import {
-  asHttpResponse,
   expectNoPartialData,
   issuePaths,
   responseIssueFor,
   responseWithRuntimePart,
+  safeValidateRaw,
   validCreateTodoBody,
   validCreateTodoResponse,
   validDeleteTodoHeader,
@@ -35,7 +35,7 @@ describe("Generated ResponseValidator object body contracts", () => {
     const validator = new CreateTodoResponseValidator();
     const response = validCreateTodoResponse();
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -55,7 +55,7 @@ describe("Generated ResponseValidator object body contracts", () => {
       }
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -76,7 +76,7 @@ describe("Generated ResponseValidator object body contracts", () => {
       body
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expectNoPartialData(result);
     assert(!result.isValid);
@@ -89,7 +89,7 @@ describe("Generated ResponseValidator object body contracts", () => {
     const validator = new CreateTodoResponseValidator();
     const response = withoutRuntimePart(validCreateTodoResponse(), "body");
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expectNoPartialData(result);
     assert(!result.isValid);
@@ -115,7 +115,7 @@ describe("Generated ResponseValidator object body contracts", () => {
       }
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expectNoPartialData(result);
     assert(!result.isValid);
@@ -137,7 +137,7 @@ describe("Generated ResponseValidator body shape contracts", () => {
       }
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expectNoPartialData(result);
     assert(!result.isValid);
@@ -159,7 +159,7 @@ describe("Generated ResponseValidator body shape contracts", () => {
       body
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expectNoPartialData(result);
     assert(!result.isValid);
@@ -178,7 +178,7 @@ describe("Generated ResponseValidator bodyless and headerless contracts", () => 
       { ignored: true }
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -198,7 +198,7 @@ describe("Generated ResponseValidator bodyless and headerless contracts", () => 
       validDeleteTodoHeader()
     );
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);
@@ -218,7 +218,7 @@ describe("Generated ResponseValidator bodyless and headerless contracts", () => 
       body: { ignored: true },
     };
 
-    const result = validator.safeValidate(asHttpResponse(response));
+    const result = safeValidateRaw(validator, response);
 
     expect(result.isValid).toBe(true);
     assert(result.isValid);

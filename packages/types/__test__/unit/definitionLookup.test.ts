@@ -160,7 +160,7 @@ describe("definitionLookup getOperationDefinition", () => {
   });
 
   test("reports the requested resource and operation when the resource is missing", () => {
-    const spec = todoAndProjectSpec as unknown as SpecDefinition;
+    const spec: SpecDefinition = todoAndProjectSpec;
 
     const error = captureMissingOperationDefinitionError(() =>
       getOperationDefinition(spec, "archive", "create")
