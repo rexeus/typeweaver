@@ -61,19 +61,19 @@
       "id": "validate-workflow",
       "documents": ["packages/cli/README.md"],
       "fixtures": [],
-      "runtimeFixtures": ["packages/cli/__test__/validate.process/workflow-and-temp-isolation.test.ts"]
+      "runtimeFixtures": ["packages/cli/__test__/validate.process/"]
     },
     {
       "id": "doctor-workflow",
       "documents": ["packages/cli/README.md"],
       "fixtures": [],
-      "runtimeFixtures": ["packages/cli/__test__/doctor.process/workflow.test.ts"]
+      "runtimeFixtures": ["packages/cli/__test__/doctor.process/"]
     },
     {
       "id": "generate-check-workflow",
       "documents": ["packages/cli/README.md", "docs/getting-started.md"],
       "fixtures": [],
-      "runtimeFixtures": ["packages/cli/__test__/generateCheck.process/check-workflow.test.ts"]
+      "runtimeFixtures": ["packages/cli/__test__/generateCheck.process/"]
     },
     {
       "id": "generated-client",
