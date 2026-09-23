@@ -1,6 +1,11 @@
 import { PluginConfigError } from "@rexeus/typeweaver-gen";
-import type { Plugin, PluginConfig } from "@rexeus/typeweaver-gen";
-import { Result } from "effect";
+import type {
+  Plugin,
+  PluginAcquisition,
+  PluginConfig,
+  PluginLifecycleHooks,
+} from "@rexeus/typeweaver-gen";
+import { Effect, Result } from "effect";
 import { isPluginConfigError } from "./isPluginConfigError.js";
 
 export type PluginCandidate = {
@@ -48,6 +53,16 @@ const isGenerateHook = (
 const isFinalizeHook = (
   value: unknown
 ): value is NonNullable<Plugin["finalize"]> => typeof value === "function";
+
+const isPluginAcquisition = (value: unknown): value is PluginAcquisition =>
+  Effect.isEffect(value);
+
+const LIFECYCLE_HOOK_FIELDS = [
+  "initialize",
+  "collectResources",
+  "generate",
+  "finalize",
+] as const;
 
 const describeValue = (value: unknown): string => {
   if (value === null) return "null";
@@ -127,25 +142,14 @@ const decodeOptionalHook = <THook>(
     : invalidField(field, "a function", candidate);
 };
 
-export const decodePlugin = (
-  value: unknown
-): Result.Result<Plugin, PluginShapeIssue> => {
-  if (!isRecord(value)) {
-    return Result.fail({ _tag: "NotRecord", actual: describeValue(value) });
-  }
-
-  return Result.gen(function* () {
-    const name = yield* decodePluginName(value);
-    const depends = yield* decodeDependencies(value);
+const decodeLifecycleHooks = (
+  value: Record<string, unknown>
+): Result.Result<PluginLifecycleHooks, PluginShapeIssue> =>
+  Result.gen(function* () {
     const initialize = yield* decodeOptionalHook(
       value,
       "initialize",
       isInitializeHook
-    );
-    const validate = yield* decodeOptionalHook(
-      value,
-      "validate",
-      isValidateHook
     );
     const collectResources = yield* decodeOptionalHook(
       value,
@@ -164,14 +168,69 @@ export const decodePlugin = (
     );
 
     return {
-      ...value,
-      name,
-      ...(depends === undefined ? {} : { depends }),
       ...(initialize === undefined ? {} : { initialize }),
-      ...(validate === undefined ? {} : { validate }),
       ...(collectResources === undefined ? {} : { collectResources }),
       ...(generate === undefined ? {} : { generate }),
       ...(finalize === undefined ? {} : { finalize }),
+    };
+  });
+
+/**
+ * A scoped plugin's `acquire` returns its lifecycle hooks, so the record must
+ * not declare top-level hooks beside it.
+ */
+const decodeScopedLifecycle = (
+  value: Record<string, unknown>
+): Result.Result<{ readonly acquire: PluginAcquisition }, PluginShapeIssue> => {
+  const acquire = value["acquire"];
+  if (!isPluginAcquisition(acquire)) {
+    return invalidField("acquire", "an Effect", acquire);
+  }
+  const declaredHook = LIFECYCLE_HOOK_FIELDS.find(field => field in value);
+  if (declaredHook !== undefined) {
+    return invalidField(
+      declaredHook,
+      "no top-level hook",
+      value[declaredHook],
+      "beside 'acquire'"
+    );
+  }
+  return Result.succeed({ acquire });
+};
+
+const decodeLifecycle = (
+  value: Record<string, unknown>
+): Result.Result<
+  PluginLifecycleHooks | { readonly acquire: PluginAcquisition },
+  PluginShapeIssue
+> =>
+  "acquire" in value
+    ? decodeScopedLifecycle(value)
+    : decodeLifecycleHooks(value);
+
+export const decodePlugin = (
+  value: unknown
+): Result.Result<Plugin, PluginShapeIssue> => {
+  if (!isRecord(value)) {
+    return Result.fail({ _tag: "NotRecord", actual: describeValue(value) });
+  }
+
+  return Result.gen(function* () {
+    const name = yield* decodePluginName(value);
+    const depends = yield* decodeDependencies(value);
+    const validate = yield* decodeOptionalHook(
+      value,
+      "validate",
+      isValidateHook
+    );
+    const lifecycle = yield* decodeLifecycle(value);
+
+    return {
+      ...value,
+      name,
+      ...(depends === undefined ? {} : { depends }),
+      ...(validate === undefined ? {} : { validate }),
+      ...lifecycle,
     } satisfies Plugin;
   });
 };

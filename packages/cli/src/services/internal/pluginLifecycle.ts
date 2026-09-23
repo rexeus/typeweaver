@@ -7,8 +7,10 @@ import type {
 } from "@rexeus/typeweaver-gen";
 import { Cause, Effect, Exit } from "effect";
 import { CORE_DIR } from "../generatorDefaults.js";
+import { initializePlugins } from "./pluginInitialization.js";
 import type { IndexFileGeneratorShape } from "../IndexFileGenerator.js";
 import type { GenerationPlan } from "./generatorPreflight.js";
+import type { InitializedPlugin } from "./pluginInitialization.js";
 
 type PluginLifecycleDeps = {
   readonly contextBuilder: ContextBuilderShape;
@@ -22,19 +24,13 @@ type PluginLifecycleParams = {
   readonly pluginContext: PluginContext;
 };
 
-type InitializePluginsParams = {
-  readonly registrations: readonly PluginRegistration[];
-  readonly pluginContext: PluginContext;
-  readonly initialized: PluginRegistration[];
-};
-
 type FinalizePluginsParams = {
-  readonly registrations: readonly PluginRegistration[];
+  readonly plugins: readonly InitializedPlugin[];
   readonly pluginContext: PluginContext;
 };
 
 type GeneratePluginsParams = {
-  readonly registrations: readonly PluginRegistration[];
+  readonly plugins: readonly InitializedPlugin[];
   readonly context: GeneratorContext;
   readonly flushGeneratedFileLogs: Effect.Effect<void>;
 };
@@ -47,77 +43,31 @@ export type GenerationResult = {
   readonly generatedFiles: readonly string[];
 };
 
-const markPluginInitialized = (params: {
-  readonly registration: PluginRegistration;
-  readonly initialized: PluginRegistration[];
-}): Effect.Effect<void> =>
-  Effect.sync(() => {
-    params.initialized.push(params.registration);
-  });
-
-const initializePlugin = Effect.fn(function* (params: {
-  readonly registration: PluginRegistration;
-  readonly pluginContext: PluginContext;
-  readonly initialized: PluginRegistration[];
-}) {
-  const initialize =
-    params.registration.plugin.initialize === undefined
-      ? Effect.void
-      : params.registration.plugin.initialize(params.pluginContext).pipe(
-          Effect.withSpan("typeweaver.plugin.initialize", {
-            attributes: { plugin: params.registration.plugin.name },
-          })
-        );
-
-  yield* Effect.logDebug(
-    `Initializing plugin: ${params.registration.plugin.name}`
-  );
-  yield* Effect.uninterruptibleMask(restore =>
-    restore(initialize).pipe(Effect.tap(() => markPluginInitialized(params)))
-  );
-});
-
-const initializePlugins = Effect.fn(function* (
-  params: InitializePluginsParams
-) {
-  yield* Effect.logInfo("Initializing plugins...");
-  yield* Effect.forEach(
-    params.registrations,
-    registration =>
-      initializePlugin({
-        registration,
-        pluginContext: params.pluginContext,
-        initialized: params.initialized,
-      }),
-    { discard: true }
-  );
-});
-
 const collectPluginResources = Effect.fn(function* (params: {
-  readonly registration: PluginRegistration;
+  readonly plugin: InitializedPlugin;
   readonly normalizedSpec: NormalizedSpec;
 }) {
-  const collectResources = params.registration.plugin.collectResources;
+  const collectResources = params.plugin.hooks.collectResources;
   if (collectResources === undefined) {
     return params.normalizedSpec;
   }
   return yield* collectResources(params.normalizedSpec).pipe(
     Effect.withSpan("typeweaver.plugin.collectResources", {
-      attributes: { plugin: params.registration.plugin.name },
+      attributes: { plugin: params.plugin.registration.plugin.name },
     })
   );
 });
 
 const collectResources = Effect.fn(function* (
-  registrations: readonly PluginRegistration[],
+  plugins: readonly InitializedPlugin[],
   initialSpec: NormalizedSpec
 ) {
   yield* Effect.logInfo("Collecting resources...");
   return yield* Effect.reduce(
-    registrations,
+    plugins,
     () => initialSpec,
-    (normalizedSpec, registration) =>
-      collectPluginResources({ registration, normalizedSpec })
+    (normalizedSpec, plugin) =>
+      collectPluginResources({ plugin, normalizedSpec })
   );
 });
 
@@ -133,19 +83,20 @@ const makeFlushGeneratedFileLogs = (
   );
 
 const generatePlugin = Effect.fn(function* (params: {
-  readonly registration: PluginRegistration;
+  readonly plugin: InitializedPlugin;
   readonly context: GeneratorContext;
   readonly flushGeneratedFileLogs: Effect.Effect<void>;
 }) {
-  yield* Effect.logInfo(`Running plugin: ${params.registration.plugin.name}`);
-  const generate = params.registration.plugin.generate;
+  const pluginName = params.plugin.registration.plugin.name;
+  yield* Effect.logInfo(`Running plugin: ${pluginName}`);
+  const generate = params.plugin.hooks.generate;
   if (generate === undefined) {
     return;
   }
   yield* generate(params.context).pipe(
     Effect.onExit(() => params.flushGeneratedFileLogs),
     Effect.withSpan("typeweaver.plugin.generate", {
-      attributes: { plugin: params.registration.plugin.name },
+      attributes: { plugin: pluginName },
     })
   );
 });
@@ -153,10 +104,10 @@ const generatePlugin = Effect.fn(function* (params: {
 const generatePlugins = Effect.fn(function* (params: GeneratePluginsParams) {
   yield* Effect.logInfo("Generating code...");
   yield* Effect.forEach(
-    params.registrations,
-    registration =>
+    params.plugins,
+    plugin =>
       generatePlugin({
-        registration,
+        plugin,
         context: params.context,
         flushGeneratedFileLogs: params.flushGeneratedFileLogs,
       }),
@@ -165,23 +116,21 @@ const generatePlugins = Effect.fn(function* (params: GeneratePluginsParams) {
 });
 
 const finalizePlugin = Effect.fn(function* (params: {
-  readonly registration: PluginRegistration;
+  readonly plugin: InitializedPlugin;
   readonly pluginContext: PluginContext;
 }) {
-  const finalize = params.registration.plugin.finalize;
+  const pluginName = params.plugin.registration.plugin.name;
+  const finalize = params.plugin.hooks.finalize;
   if (finalize === undefined) {
     return;
   }
   yield* finalize(params.pluginContext).pipe(
     Effect.withSpan("typeweaver.plugin.finalize", {
-      attributes: { plugin: params.registration.plugin.name },
+      attributes: { plugin: pluginName },
     }),
     Effect.catch(cause =>
       Effect.logWarning(cause.message).pipe(
-        Effect.annotateLogs({
-          plugin: params.registration.plugin.name,
-          cause,
-        })
+        Effect.annotateLogs({ plugin: pluginName, cause })
       )
     )
   );
@@ -192,10 +141,10 @@ const finalizePlugins = Effect.fn("typeweaver.Generator.finalizePlugins")(
     yield* Effect.logInfo("Finalizing plugins...");
     let finalizerDefects: Cause.Cause<never> | undefined;
 
-    for (const registration of [...params.registrations].reverse()) {
+    for (const plugin of [...params.plugins].reverse()) {
       const finalizerExit = yield* Effect.exit(
         finalizePlugin({
-          registration,
+          plugin,
           pluginContext: params.pluginContext,
         })
       );
@@ -213,12 +162,19 @@ const finalizePlugins = Effect.fn("typeweaver.Generator.finalizePlugins")(
   }
 );
 
+/**
+ * Runs one generation's plugin lifecycle inside a Scope that it owns. Scoped
+ * plugins acquire into that Scope at the initialize stage, in registration
+ * order. `finalize` runs in reverse order for every initialized plugin, and
+ * closing the Scope afterwards releases the acquired resources in reverse
+ * order, on success, typed failure, defect, and interruption.
+ */
 export const runPluginLifecycle = (
   params: PluginLifecycleParams,
   deps: PluginLifecycleDeps
 ) =>
   Effect.gen(function* () {
-    const initialized: PluginRegistration[] = [];
+    const initialized: InitializedPlugin[] = [];
     let getGeneratedFiles: () => readonly string[] = () => [];
 
     yield* Effect.gen(function* () {
@@ -228,7 +184,7 @@ export const runPluginLifecycle = (
         initialized,
       });
       const normalizedSpec = yield* collectResources(
-        params.initial,
+        initialized,
         params.normalizedSpec
       );
 
@@ -246,7 +202,7 @@ export const runPluginLifecycle = (
 
       const flushGeneratedFileLogs = makeFlushGeneratedFileLogs(built);
       yield* generatePlugins({
-        registrations: params.initial,
+        plugins: initialized,
         context: built.context,
         flushGeneratedFileLogs,
       });
@@ -262,11 +218,11 @@ export const runPluginLifecycle = (
     }).pipe(
       Effect.onExit(() =>
         finalizePlugins({
-          registrations: initialized,
+          plugins: initialized,
           pluginContext: params.pluginContext,
         })
       )
     );
 
     return { generatedFiles: getGeneratedFiles() } satisfies GenerationResult;
-  });
+  }).pipe(Effect.scoped);
