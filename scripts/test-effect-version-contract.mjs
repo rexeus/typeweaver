@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { findUnpinnedEffectInstalls } from "./lib/effect-install-snippets.mjs";
 import {
   NATIVE_EFFECT_DOCUMENT_TOKENS,
   validateNativeEffectWorkspaceContract,
@@ -215,6 +216,47 @@ assert(
     manifests,
     documents,
   }).some(failure => failure.includes("obsolete effect4Evidence"))
+);
+
+assert.deepEqual(
+  findUnpinnedEffectInstalls({
+    runtimeVersion,
+    documents: {
+      "pinned.md": [
+        "```bash",
+        "pnpm add -D @rexeus/typeweaver",
+        "pnpm add \\",
+        "  @rexeus/typeweaver-core \\",
+        `  effect@${runtimeVersion} \\`,
+        "  zod",
+        "pnpm install --frozen-lockfile",
+        "pnpm typeweaver generate --plugins server,effect",
+        "```",
+        `Run \`npm install effect@${runtimeVersion}\` first.`,
+      ].join("\n"),
+    },
+  }),
+  []
+);
+assert.deepEqual(
+  findUnpinnedEffectInstalls({
+    runtimeVersion,
+    documents: {
+      "unpinned.md": [
+        "pnpm add \\",
+        "  @rexeus/typeweaver-effect \\",
+        "  effect \\",
+        "  zod",
+        "pnpm add @rexeus/typeweaver-gen effect zod && pnpm build",
+        "Install with `yarn add effect@^4.0.0-rc.116`.",
+      ].join("\n"),
+    },
+  }),
+  [
+    `unpinned.md:1 installs effect; pin effect@${runtimeVersion}`,
+    `unpinned.md:5 installs effect; pin effect@${runtimeVersion}`,
+    `unpinned.md:6 installs effect@^4.0.0-rc.116; pin effect@${runtimeVersion}`,
+  ]
 );
 
 process.stdout.write(
