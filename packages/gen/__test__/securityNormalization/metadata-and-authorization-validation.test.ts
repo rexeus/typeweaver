@@ -20,9 +20,9 @@ import {
   InvalidApiMetadataError,
   normalizeSpec,
   UnknownTagError,
-} from "../src/index.js";
-import { TestAssertionError } from "./errors/index.js";
-import type { NormalizedSpec } from "../src/index.js";
+} from "../../src/index.js";
+import { TestAssertionError } from "../errors/index.js";
+import type { NormalizedSpec } from "../../src/index.js";
 
 const successResponse = defineResponse({
   name: "SecuritySuccess",

@@ -6,8 +6,8 @@ import {
   normalizationErrorToIssue,
   normalizedSpecWarningToIssue,
   SPEC_ISSUE_REGISTRY,
-} from "../../src/index.js";
-import type { NormalizedSpec } from "../../src/index.js";
+} from "../../../src/index.js";
+import type { NormalizedSpec } from "../../../src/index.js";
 
 const normalizedSpec: NormalizedSpec = {
   metadata: { title: "Validation API", version: "1.0.0" },

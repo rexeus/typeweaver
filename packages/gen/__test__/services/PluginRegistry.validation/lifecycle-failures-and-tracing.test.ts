@@ -3,15 +3,15 @@ import { describe, expect, test } from "vitest";
 import {
   PluginDependencyError,
   PluginExecutionError,
-} from "../../src/plugins/errors/index.js";
-import { PluginRegistry } from "../../src/services/PluginRegistry.js";
+} from "../../../src/plugins/errors/index.js";
+import { PluginRegistry } from "../../../src/services/PluginRegistry.js";
 import type {
   Issue,
   NormalizedSpec,
   Plugin,
   PluginValidationContext,
-} from "../../src/index.js";
-import type { PluginRegistryInstance } from "../../src/services/PluginRegistry.js";
+} from "../../../src/index.js";
+import type { PluginRegistryInstance } from "../../../src/services/PluginRegistry.js";
 
 const silentLoggerLayer = Logger.layer([Logger.make<unknown, void>(() => {})]);
 

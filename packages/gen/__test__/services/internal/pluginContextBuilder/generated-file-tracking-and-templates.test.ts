@@ -7,12 +7,12 @@ import { afterEach, describe, expect, test } from "vitest";
 import {
   createPluginContextBuilder,
   liveSyncAtomicFileSystem,
-} from "../../../src/services/internal/pluginContextBuilder.js";
+} from "../../../../src/services/internal/pluginContextBuilder.js";
 import {
   livePathSafetyShape,
   liveTemplateRendererShape,
-} from "../../../src/services/internal/pluginContextEffectIO.js";
-import type { SyncAtomicFileSystem } from "../../../src/services/internal/pluginContextBuilder.js";
+} from "../../../../src/services/internal/pluginContextEffectIO.js";
+import type { SyncAtomicFileSystem } from "../../../../src/services/internal/pluginContextBuilder.js";
 
 /**
  * Real-deps factory for the sync plugin-context builder: the exact live

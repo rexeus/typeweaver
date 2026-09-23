@@ -17,8 +17,8 @@ import {
   DerivedResponseCycleError,
   InvalidDerivedResponseError,
   normalizeSpec as normalizeSpecEffect,
-} from "../src/index.js";
-import type { NormalizedSpec } from "../src/index.js";
+} from "../../src/index.js";
+import type { NormalizedSpec } from "../../src/index.js";
 
 // Test shim that bridges the legacy sync call surface onto the new Effect
 // API. `Effect.result` flattens typed failures into the success channel

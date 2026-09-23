@@ -13,9 +13,9 @@ import type {
 import { Effect, Result } from "effect";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { normalizeSpec as normalizeSpecEffect } from "../src/index.js";
-import { TestAssertionError } from "./errors/index.js";
-import type { NormalizedSpec } from "../src/index.js";
+import { normalizeSpec as normalizeSpecEffect } from "../../src/index.js";
+import { TestAssertionError } from "../errors/index.js";
+import type { NormalizedSpec } from "../../src/index.js";
 
 // Test shim that bridges the legacy sync call surface onto the new Effect
 // API. `Effect.result` flattens typed failures into the success channel
