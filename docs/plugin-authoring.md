@@ -421,8 +421,16 @@ export const sessionPlugin = defineScopedPlugin({
 `initialize`, `collectResources`, `generate`, and `finalize`, and closes the retained Scope after
 success, typed failure, defect, or interruption. Failed or interrupted Layer construction closes its
 provisional Scope before the failure escapes. Concurrent generation fibers that share the same
-module-cached plugin instance retain independent Layers. The returned ordinary `Plugin` still
-exposes `R = never` at every lifecycle boundary.
+module-cached plugin instance retain independent Layers. The helper builds the Layer with a private
+memo map, so neither the Layer nor a Layer built inside it or inside a hook reuses an instance that
+an enclosing runtime already built; every generation acquires and releases its own resources. The
+returned ordinary `Plugin` still exposes `R = never` at every lifecycle boundary.
+
+The generator invokes every lifecycle hook of one generation on the same fiber, and the helper
+relies on that. If your own code calls the returned plugin's hooks, for example from a wrapper
+plugin, call them on one fiber and do not wrap an individual hook in `Effect.timeout`,
+`Effect.race`, or a fork. Forks inside your hook bodies are fine: they inherit the provided
+services.
 
 The helper owns **exit-independent resources**. `Plugin.finalize` does not receive the generator's
 original `Exit`, so do not use it for a transaction whose finalizer must choose commit versus
