@@ -1,6 +1,7 @@
 import type { JsonSchema } from "@rexeus/typeweaver-zod-to-json-schema";
 import { describe, expect, test } from "vitest";
 import { stableStringifyJsonSchema } from "../../src/internal/responseHeaderMergeHelpers.js";
+import { parseJsonObject } from "../helpers.js";
 
 describe("stableStringifyJsonSchema (canonical key sort)", () => {
   test("sorts ASCII-cased keys by byte order, not Turkish locale order", () => {
@@ -18,7 +19,7 @@ describe("stableStringifyJsonSchema (canonical key sort)", () => {
 
     const serialized = stableStringifyJsonSchema(schema);
     const orderedKeys = Object.keys(
-      JSON.parse(serialized) as Record<string, number>
+      parseJsonObject(serialized, "the canonical JSON Schema")
     );
 
     expect(orderedKeys).toEqual(

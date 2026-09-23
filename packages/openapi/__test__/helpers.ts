@@ -1,11 +1,14 @@
 import type {
   NormalizedHttpBody,
   NormalizedOperation,
+  NormalizedRequest,
   NormalizedResponse,
   NormalizedResponseUsage,
   NormalizedSpec,
 } from "@rexeus/typeweaver-gen";
 import { z } from "zod";
+
+type HttpMethod = NormalizedOperation["method"];
 
 type TreeNode = {
   readonly name: string;
@@ -93,7 +96,7 @@ export function anOperationWith(
 
   return {
     operationId: "getTodo",
-    method: "GET" as NormalizedOperation["method"],
+    method: anHttpMethod("GET"),
     path: "/todos",
     summary: "",
     deprecated: overrides.deprecated ?? false,
@@ -141,18 +144,84 @@ export function aCanonicalResponseUsage(
   return { responseName, source: "canonical" };
 }
 
+/**
+ * Normalized specs reach `buildOpenApiDocument` as runtime data, so tests hand
+ * it Zod containers (defaults, catches, non-string header values) that the
+ * static normalized contract does not describe. The guard checks only that the
+ * value is a Zod schema; the container shape is deliberately left unverified.
+ */
+function isZodSchemaOutsideContract<TContainer extends z.core.$ZodType>(
+  schema: z.core.$ZodType
+): schema is TContainer {
+  return schema instanceof z.ZodType;
+}
+
+function admitZodSchemaOutsideContract<TContainer extends z.core.$ZodType>(
+  schema: z.core.$ZodType
+): TContainer {
+  if (!isZodSchemaOutsideContract<TContainer>(schema)) {
+    throw new TypeError("Expected a Zod schema for a normalized container");
+  }
+
+  return schema;
+}
+
 export function aQuerySchemaForBuilder(
   schema: z.core.$ZodType
-): NonNullable<NormalizedOperation["request"]>["query"] {
-  return schema as unknown as NonNullable<
-    NormalizedOperation["request"]
-  >["query"];
+): NonNullable<NormalizedRequest["query"]> {
+  return admitZodSchemaOutsideContract(schema);
+}
+
+export function aRequestHeaderSchemaForBuilder(
+  schema: z.core.$ZodType
+): NonNullable<NormalizedRequest["header"]> {
+  return admitZodSchemaOutsideContract(schema);
 }
 
 export function aHeaderSchemaForBuilder(
   schema: z.core.$ZodType
-): NormalizedResponse["header"] {
-  return schema as unknown as NormalizedResponse["header"];
+): NonNullable<NormalizedResponse["header"]> {
+  return admitZodSchemaOutsideContract(schema);
+}
+
+const HTTP_METHOD_NAMES: Readonly<Record<`${HttpMethod}`, true>> = {
+  GET: true,
+  POST: true,
+  PUT: true,
+  DELETE: true,
+  PATCH: true,
+  OPTIONS: true,
+  HEAD: true,
+};
+
+function isHttpMethod(name: string): name is HttpMethod {
+  return Object.hasOwn(HTTP_METHOD_NAMES, name);
+}
+
+/** Resolves a method name to the core `HttpMethod` enum member it names. */
+export function anHttpMethod(name: `${HttpMethod}`): HttpMethod {
+  if (!isHttpMethod(name)) {
+    throw new TypeError(`Unknown HTTP method: ${name}`);
+  }
+
+  return name;
+}
+
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Parses JSON text and fails the test unless it holds a JSON object. */
+export function parseJsonObject(
+  text: string,
+  subject: string
+): Record<string, unknown> {
+  const parsed: unknown = JSON.parse(text);
+  if (!isJsonObject(parsed)) {
+    throw new TypeError(`Expected ${subject} to be a JSON object`);
+  }
+
+  return parsed;
 }
 
 export function aRecursiveTreeNodeSchema(): z.ZodType<TreeNode> {
@@ -161,4 +230,26 @@ export function aRecursiveTreeNodeSchema(): z.ZodType<TreeNode> {
   );
 
   return treeNodeSchema;
+}
+
+/**
+ * The CLI plugin loader calls a plugin factory with the raw user config, which
+ * the factory must validate itself. The guard widens only the parameter, so
+ * configuration tests reach the factory with the same untyped value.
+ */
+function acceptsRawConfig<TPlugin>(
+  factory: (config: never) => TPlugin
+): factory is (config: unknown) => TPlugin {
+  return typeof factory === "function";
+}
+
+export function instantiateWithRawConfig<TPlugin>(
+  factory: (config: never) => TPlugin,
+  config: unknown
+): TPlugin {
+  if (!acceptsRawConfig(factory)) {
+    throw new TypeError("Expected a plugin factory function");
+  }
+
+  return factory(config);
 }

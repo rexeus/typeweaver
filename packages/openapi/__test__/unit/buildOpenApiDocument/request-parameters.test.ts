@@ -1,12 +1,13 @@
-import type { NormalizedOperation } from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import { buildOpenApiDocument } from "../../../src/index.js";
 import {
+  anHttpMethod,
   anInlineResponseUsage,
   anOperationWith,
   aNormalizedSpecWith,
   aQuerySchemaForBuilder,
+  aRequestHeaderSchemaForBuilder,
   aResponseWith,
   aTodoSpecWith,
   todoApiOptions,
@@ -40,14 +41,6 @@ function buildCoercingHttpBoundaryDocument() {
   return buildOpenApiDocument(normalizedSpec, todoApiOptions());
 }
 
-function aRequestHeaderSchemaForBuilder(
-  schema: z.core.$ZodType
-): NonNullable<NormalizedOperation["request"]>["header"] {
-  return schema as unknown as NonNullable<
-    NormalizedOperation["request"]
-  >["header"];
-}
-
 describe("buildOpenApiDocument shell and request parameters", () => {
   test("builds the default OpenAPI 3.1.2 document shell from spec metadata", () => {
     const normalizedSpec = aNormalizedSpecWith();
@@ -71,7 +64,7 @@ describe("buildOpenApiDocument shell and request parameters", () => {
       operations: [
         anOperationWith({
           operationId: "updateTodo",
-          method: "PATCH" as NormalizedOperation["method"],
+          method: anHttpMethod("PATCH"),
           path: "/todos/:id",
           request: {
             param: z.object({ id: z.string() }),

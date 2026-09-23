@@ -1,8 +1,8 @@
-import type { NormalizedOperation } from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import { buildOpenApiDocument } from "../../../src/index.js";
 import {
+  anHttpMethod,
   anInlineResponseUsage,
   anOperationWith,
   aResponseWith,
@@ -16,13 +16,13 @@ describe("buildOpenApiDocument operation and path ordering", () => {
       operations: [
         anOperationWith({
           operationId: "listTodos",
-          method: "GET" as NormalizedOperation["method"],
+          method: anHttpMethod("GET"),
           path: "/todos//",
           responses: [anInlineResponseUsage(aResponseWith())],
         }),
         anOperationWith({
           operationId: "createTodo",
-          method: "POST" as NormalizedOperation["method"],
+          method: anHttpMethod("POST"),
           path: "todos",
           responses: [anInlineResponseUsage(aResponseWith())],
         }),

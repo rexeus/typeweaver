@@ -12,10 +12,6 @@ const execFileAsync = promisify(execFile);
 const require = createRequire(import.meta.url);
 const RULESET_CONTENT = "extends: spectral:oas\n";
 
-export type PackageJsonWithBin = {
-  readonly bin?: string | Record<string, string>;
-};
-
 export type ValidatorCommandOutput = {
   readonly stdout: string;
   readonly stderr: string;
@@ -202,9 +198,9 @@ export function resolveSpectralCliPath(): string | undefined {
   try {
     const packageJsonPath =
       require.resolve("@stoplight/spectral-cli/package.json");
-    const packageJson = JSON.parse(
+    const packageJson: unknown = JSON.parse(
       readFileSync(packageJsonPath, "utf8")
-    ) as PackageJsonWithBin;
+    );
     const binPath = spectralBinPath(packageJson);
 
     return binPath === undefined
@@ -215,14 +211,18 @@ export function resolveSpectralCliPath(): string | undefined {
   }
 }
 
-export function spectralBinPath(
-  packageJson: PackageJsonWithBin
-): string | undefined {
-  if (typeof packageJson.bin === "string") {
-    return packageJson.bin;
+export function spectralBinPath(packageJson: unknown): string | undefined {
+  if (!isRecord(packageJson)) {
+    return undefined;
   }
 
-  return packageJson.bin?.["spectral"];
+  const bin = packageJson["bin"];
+  if (typeof bin === "string") {
+    return bin;
+  }
+
+  const spectralBin = isRecord(bin) ? bin["spectral"] : undefined;
+  return typeof spectralBin === "string" ? spectralBin : undefined;
 }
 
 export function commandOutput(error: unknown): {

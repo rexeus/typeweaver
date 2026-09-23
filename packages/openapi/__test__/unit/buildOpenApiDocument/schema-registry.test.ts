@@ -1,8 +1,8 @@
-import type { NormalizedOperation } from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import { buildOpenApiDocument } from "../../../src/index.js";
 import {
+  anHttpMethod,
   aCanonicalResponseUsage,
   anInlineResponseUsage,
   anOperationWith,
@@ -20,7 +20,7 @@ describe("buildOpenApiDocument schema registry reuse", () => {
       operations: [
         anOperationWith({
           operationId: "createTodo",
-          method: "POST" as NormalizedOperation["method"],
+          method: anHttpMethod("POST"),
           request: { body: todoBody },
           responses: [aCanonicalResponseUsage("TodoResponse")],
         }),
@@ -52,17 +52,17 @@ describe("buildOpenApiDocument schema registry collisions", () => {
       operations: [
         anOperationWith({
           operationId: "create todo",
-          method: "POST" as NormalizedOperation["method"],
+          method: anHttpMethod("POST"),
           request: { body: z.object({ title: z.string() }) },
         }),
         anOperationWith({
           operationId: "create_todo",
-          method: "PUT" as NormalizedOperation["method"],
+          method: anHttpMethod("PUT"),
           request: { body: z.object({ completed: z.boolean() }) },
         }),
         anOperationWith({
           operationId: "create/todo",
-          method: "PATCH" as NormalizedOperation["method"],
+          method: anHttpMethod("PATCH"),
           request: { body: z.object({ priority: z.number() }) },
         }),
       ],
@@ -125,7 +125,7 @@ describe("buildOpenApiDocument schema registry local refs", () => {
       operations: [
         anOperationWith({
           operationId: "createTree",
-          method: "POST" as NormalizedOperation["method"],
+          method: anHttpMethod("POST"),
           path: "/trees",
           request: { body: treeNodeSchema },
           responses: [anInlineResponseUsage(aResponseWith())],

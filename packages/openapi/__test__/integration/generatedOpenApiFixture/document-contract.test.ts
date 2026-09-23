@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import {
   componentResponseSchemaAt,
@@ -8,15 +7,16 @@ import {
   requestBodySchemaAt,
   responseSchemaAt,
 } from "./document-assertions.js";
-import { assertFixtureExists, FIXTURE_PATH } from "./fixtures.js";
-import type { OpenApiFixture } from "./fixtures.js";
+import {
+  assertFixtureExists,
+  FIXTURE_PATH,
+  readOpenApiFixture,
+} from "./fixtures.js";
 
 describe("generated OpenAPI document contract", () => {
   test("validates the committed test-utils fixture as an OpenAPI document", async () => {
     assertFixtureExists(FIXTURE_PATH);
-    const fixture = JSON.parse(
-      readFileSync(FIXTURE_PATH, "utf8")
-    ) as OpenApiFixture;
+    const fixture = readOpenApiFixture(FIXTURE_PATH);
 
     expect(fixture.openapi).toBe("3.1.2");
     expectContractProjection(fixture);

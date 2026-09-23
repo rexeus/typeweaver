@@ -14,11 +14,9 @@ import {
   anInlineResponseUsage,
   anOperationWith,
   aResponseWith,
+  instantiateWithRawConfig,
+  parseJsonObject,
 } from "../helpers.js";
-import type {
-  OpenApiPluginOptions,
-  OpenApiServerObject,
-} from "../../src/index.js";
 import type { CapturedLog } from "test-utils";
 
 type WrittenFile = {
@@ -41,7 +39,7 @@ const runGenerate = (
   options: unknown,
   context: OpenApiGeneratorContext
 ): void => {
-  const plugin = openApiPlugin(options as OpenApiPluginOptions);
+  const plugin = instantiateWithRawConfig(openApiPlugin, options);
   if (plugin.generate === undefined) {
     throw new Error("openApiPlugin must define a generate stage");
   }
@@ -52,7 +50,7 @@ const runGenerateCapturingLogs = (
   options: unknown,
   context: OpenApiGeneratorContext
 ): readonly CapturedLog[] => {
-  const plugin = openApiPlugin(options as OpenApiPluginOptions);
+  const plugin = instantiateWithRawConfig(openApiPlugin, options);
   if (plugin.generate === undefined) {
     throw new Error("openApiPlugin must define a generate stage");
   }
@@ -64,7 +62,7 @@ const captureOpenApiPluginConfigError = (
   options: unknown
 ): CapturedPluginConfigError => {
   try {
-    openApiPlugin(options as OpenApiPluginOptions);
+    instantiateWithRawConfig(openApiPlugin, options);
   } catch (error) {
     expect(error).toMatchObject({
       _tag: "PluginConfigError",
@@ -95,9 +93,10 @@ describe("openApiPlugin output", () => {
 
     runGenerate({}, context);
 
-    const document = JSON.parse(
-      context.writtenFiles[0]?.content ?? "{}"
-    ) as Record<string, unknown>;
+    const document = parseJsonObject(
+      context.writtenFiles[0]?.content ?? "{}",
+      "the written OpenAPI document"
+    );
     expect(context.writtenFiles).toHaveLength(1);
     expect(context.writtenFiles[0]?.path).toBe("openapi/openapi.json");
     expect(document["openapi"]).toBe("3.1.2");
@@ -133,9 +132,10 @@ describe("openApiPlugin output", () => {
       context
     );
 
-    const document = JSON.parse(
-      context.writtenFiles[0]?.content ?? "{}"
-    ) as Record<string, unknown>;
+    const document = parseJsonObject(
+      context.writtenFiles[0]?.content ?? "{}",
+      "the written OpenAPI document"
+    );
     expect(context.writtenFiles[0]?.path).toBe("docs/openapi.json");
     expect(document["openapi"]).toBe("3.2.0");
     expect(document["info"]).toEqual({
@@ -182,9 +182,10 @@ describe("openApiPlugin diagnostics", () => {
       context
     );
 
-    const document = JSON.parse(
-      context.writtenFiles[0]?.content ?? "{}"
-    ) as Record<string, unknown>;
+    const document = parseJsonObject(
+      context.writtenFiles[0]?.content ?? "{}",
+      "the written OpenAPI document"
+    );
     expect(document["servers"]).toEqual([
       {
         url: "https://{environment}.example.com/{basePath}",
@@ -216,9 +217,10 @@ describe("openApiPlugin diagnostics", () => {
 
     const logs = runGenerateCapturingLogs({}, context);
 
-    const document = JSON.parse(
-      context.writtenFiles[0]?.content ?? "{}"
-    ) as Record<string, unknown>;
+    const document = parseJsonObject(
+      context.writtenFiles[0]?.content ?? "{}",
+      "the written OpenAPI document"
+    );
     const warningLogs = logs.filter(entry => entry.level === "Warn");
     expect(warningLogs).toEqual([]);
     expect(document).not.toHaveProperty("warnings");
@@ -229,27 +231,25 @@ describe("openApiPlugin configuration errors", () => {
   test.each([
     {
       scenario: "null top-level config",
-      options: null as never,
+      options: null,
       reason: /options must be an object/,
     },
     {
       scenario: "unsupported target",
-      options: { target: "3.1.1" as never },
+      options: { target: "3.1.1" },
       reason: /target must be '3\.1\.2' or '3\.2\.0'/,
     },
     {
       scenario: "non-array servers",
       options: {
-        servers: {
-          url: "https://api.example.com",
-        } as unknown as readonly OpenApiServerObject[],
+        servers: { url: "https://api.example.com" },
       },
       reason: /servers must be an array/,
     },
     {
       scenario: "server without url",
       options: {
-        servers: [{ description: "Production" } as OpenApiServerObject],
+        servers: [{ description: "Production" }],
       },
       reason: /servers\[0\]\.url must be a string/,
     },
@@ -265,7 +265,7 @@ describe("openApiPlugin configuration errors", () => {
     },
     {
       scenario: "non-string output path",
-      options: { outputPath: 42 as never },
+      options: { outputPath: 42 },
       reason: /outputPath must be a non-empty relative \.json path/,
     },
     {

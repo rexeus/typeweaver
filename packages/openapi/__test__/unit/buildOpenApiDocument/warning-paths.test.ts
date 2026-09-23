@@ -1,8 +1,8 @@
-import type { NormalizedOperation } from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import { buildOpenApiDocument } from "../../../src/index.js";
 import {
+  anHttpMethod,
   anInlineResponseUsage,
   anOperationWith,
   aQuerySchemaForBuilder,
@@ -76,7 +76,7 @@ describe("buildOpenApiDocument nested warning paths", () => {
       operations: [
         anOperationWith({
           operationId: "createTodo",
-          method: "POST" as NormalizedOperation["method"],
+          method: anHttpMethod("POST"),
           request: { body: z.object({ value: z.custom<string>() }) },
           responses: [anInlineResponseUsage(aResponseWith())],
         }),
