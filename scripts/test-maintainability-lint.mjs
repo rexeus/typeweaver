@@ -1,3 +1,4 @@
+import { assertWorktreeStatusParsing } from "./lib/git-worktree-status-probes.mjs";
 import { workspaceRoot } from "./lib/lint-policy-contract.mjs";
 import { ruleCases } from "./lib/maintainability-fixtures.mjs";
 import {
@@ -6,6 +7,7 @@ import {
 } from "./lib/maintainability-policy.mjs";
 import { runMaintainabilityFixtures } from "./lib/maintainability-test-runner.mjs";
 
+assertWorktreeStatusParsing();
 assertRootConfiguration();
 assertNoEslintRuntime();
 runMaintainabilityFixtures(workspaceRoot);

@@ -4,6 +4,7 @@ import { lstatSync, readFileSync, readlinkSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { readWorktreeStatus } from "./lib/git-worktree-status.mjs";
 import { spawnPnpmSync } from "./lib/pnpm-command.mjs";
 
 /** @typedef {{ label: string, args: readonly string[] }} ContractCommand */
@@ -33,11 +34,9 @@ const gitOutput = args =>
  * @returns {string[]}
  */
 const untrackedPaths = () =>
-  gitOutput(["status", "--porcelain=v1", "-z", "--untracked-files=all"])
-    .toString("utf8")
-    .split("\0")
-    .filter(entry => entry.startsWith("?? "))
-    .map(entry => entry.slice(3));
+  readWorktreeStatus(workspaceRoot)
+    .filter(entry => entry.status === "??")
+    .map(entry => entry.path);
 
 /**
  * @param {string} relativePath
