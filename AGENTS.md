@@ -44,6 +44,8 @@ decision. Install with `pnpm install --frozen-lockfile`.
 | `@rexeus/typeweaver-server`             | Generated Fetch-native routers, handlers, app, and middleware                |
 | `@rexeus/typeweaver-hono`               | Generated Hono routers and handlers                                          |
 | `@rexeus/typeweaver-aws-cdk`            | Generated AWS CDK API Gateway helpers                                        |
+| `@rexeus/typeweaver-command`            | Generated command-line API client                                            |
+| `@rexeus/typeweaver-effect`             | Generated optional Effect-native adapters for Fetch server handlers          |
 | `@rexeus/typeweaver-openapi`            | OpenAPI document builder and generator plugin                                |
 | `@rexeus/typeweaver-zod-to-ts`          | Zod-to-TypeScript conversion                                                 |
 | `@rexeus/typeweaver-zod-to-json-schema` | Zod-to-JSON-Schema conversion                                                |
@@ -74,7 +76,11 @@ decision. Install with `pnpm install --frozen-lockfile`.
 - Use English Conventional Commits and keep commits focused at green boundaries.
 
 Tests normally live in `__test__/` and use `*.test.ts`; shared factories and the integration spec
-belong in `packages/test-utils`. Run the CLI locally with
+belong in `packages/test-utils`. When a suite outgrows the test file budget, split it into a
+directory named after its subject (for example `__test__/unit/ApiClient/`) with files named for the
+behavior they cover, and move setup that two or more of those files need into one shared module in
+that directory (for example `fixtures.ts`). Do not copy setup between test files. Gates that select
+tests by path select suite directories, so a later split stays covered. Run the CLI locally with
 `pnpm --filter @rexeus/typeweaver run cli -- <arguments>`. After a full build, run the frozen
 install again to recreate CLI binary symlinks before generation or bundle tests.
 
