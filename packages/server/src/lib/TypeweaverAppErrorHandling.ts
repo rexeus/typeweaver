@@ -9,6 +9,7 @@ import {
   validationDefaultError,
 } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
+import { createNullPrototypeRecord } from "./requestRecord.js";
 import type {
   HttpResponseErrorHandler,
   RequestValidationErrorHandler,
@@ -46,10 +47,7 @@ export function createInternalServerErrorResponse(): Response {
 export const defaultRequestValidationHandler: RequestValidationErrorHandler = (
   error
 ): IHttpResponse => {
-  const issues: Record<string, unknown> = Object.create(null) as Record<
-    string,
-    unknown
-  >;
+  const issues = createNullPrototypeRecord<unknown>();
   const header = sanitizeIssues(error.headerIssues);
   const body = sanitizeIssues(error.bodyIssues);
   const query = sanitizeIssues(error.queryIssues);

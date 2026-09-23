@@ -1,3 +1,4 @@
+import { createNullPrototypeRecord } from "./requestRecord.js";
 import type {
   DynamicSegmentChild,
   RadixNode,
@@ -73,10 +74,7 @@ function matchSegment(
   pattern: SegmentPattern,
   segment: string
 ): Record<string, string> | undefined {
-  const captured: Record<string, string> = Object.create(null) as Record<
-    string,
-    string
-  >;
+  const captured = createNullPrototypeRecord<string>();
   let cursor = 0;
   for (let index = 0; index < pattern.tokens.length; index += 1) {
     const token = pattern.tokens[index];

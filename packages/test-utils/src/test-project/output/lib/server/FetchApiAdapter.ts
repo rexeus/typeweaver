@@ -15,7 +15,7 @@ import type {
 import { createFetchBodyLimitPolicy } from "./BodyLimitPolicy.js";
 import { parseFetchRequestBody } from "./fetchRequestBody.js";
 import { buildFetchResponseHeaders, serializeFetchResponseBody } from "./fetchResponse.js";
-import { appendRequestRecordValue } from "./requestRecord.js";
+import { appendRequestRecordValue, createNullPrototypeRecord } from "./requestRecord.js";
 import type { BodyLimitPolicy } from "./BodyLimitPolicy.js";
 
 export type FetchApiAdapterOptions = {
@@ -78,19 +78,13 @@ export class FetchApiAdapter {
   }
 
   private static extractHeaders(headers: Headers): IRawHttpHeader {
-    const result: Record<string, string | string[]> = Object.create(null) as Record<
-      string,
-      string | string[]
-    >;
+    const result = createNullPrototypeRecord<string | string[]>();
     headers.forEach((value, key) => appendRequestRecordValue(result, key, value));
     return Object.keys(result).length > 0 ? result : undefined;
   }
 
   private static extractQueryParams(url: URL): IRawHttpQuery {
-    const result: Record<string, string | string[]> = Object.create(null) as Record<
-      string,
-      string | string[]
-    >;
+    const result = createNullPrototypeRecord<string | string[]>();
     url.searchParams.forEach((value, key) => appendRequestRecordValue(result, key, value));
     return Object.keys(result).length > 0 ? result : undefined;
   }

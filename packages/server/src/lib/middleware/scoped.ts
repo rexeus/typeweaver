@@ -1,5 +1,4 @@
 import { pathMatcher } from "../PathMatcher.js";
-import { defineMiddleware } from "../TypedMiddleware.js";
 import type { TypedMiddleware } from "../TypedMiddleware.js";
 
 /** Rejects middleware that would provide state from a conditional branch. */
@@ -44,12 +43,15 @@ export function scoped<
 ): TypedMiddleware<TProvides, TRequires> {
   const matchers = paths.map(pathMatcher);
 
-  return defineMiddleware<{}, TRequires>(async (ctx, next) => {
-    if (!matchers.some(match => match(ctx.request.path))) {
-      return next();
-    }
-    return middleware.handler(ctx, next);
-  }) as TypedMiddleware<TProvides, TRequires>;
+  return {
+    handler: async (ctx, next) => {
+      if (!matchers.some(match => match(ctx.request.path))) {
+        return next();
+      }
+      return middleware.handler(ctx, next);
+    },
+    _brand: middleware._brand,
+  };
 }
 
 /**
@@ -72,10 +74,13 @@ export function except<
 ): TypedMiddleware<TProvides, TRequires> {
   const matchers = paths.map(pathMatcher);
 
-  return defineMiddleware<{}, TRequires>(async (ctx, next) => {
-    if (matchers.some(match => match(ctx.request.path))) {
-      return next();
-    }
-    return middleware.handler(ctx, next);
-  }) as TypedMiddleware<TProvides, TRequires>;
+  return {
+    handler: async (ctx, next) => {
+      if (matchers.some(match => match(ctx.request.path))) {
+        return next();
+      }
+      return middleware.handler(ctx, next);
+    },
+    _brand: middleware._brand,
+  };
 }

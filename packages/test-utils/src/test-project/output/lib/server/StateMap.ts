@@ -36,8 +36,11 @@ export class StateMap<TState extends Record<string, unknown> = Record<string, un
     this.map.set(key, value);
   }
 
-  public get<K extends string & keyof TState>(key: K): TState[K] {
-    return this.map.get(key) as TState[K];
+  // The middleware pipeline, not the map, guarantees that a typed key has been
+  // set with its declared value before it is read.
+  public get<K extends string & keyof TState>(key: K): TState[K];
+  public get(key: string): unknown {
+    return this.map.get(key);
   }
 
   public has<K extends string & keyof TState>(key: K): boolean {
