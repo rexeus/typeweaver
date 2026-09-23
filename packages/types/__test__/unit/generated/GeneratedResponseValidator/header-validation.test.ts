@@ -1,160 +1,21 @@
 import assert from "node:assert";
 import {
-  HttpStatusCode,
-  ResponseValidationError,
-} from "@rexeus/typeweaver-core";
-import type {
-  IHttpResponse,
-  InvalidResponseIssue,
-} from "@rexeus/typeweaver-core";
-import {
   CreateTodoResponseValidator,
   OptionsTodoResponseValidator,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import type {
-  ICreateTodoSuccessResponseBody,
-  ICreateTodoSuccessResponseHeader,
-  IOptionsTodoSuccessResponseHeader,
-} from "test-utils";
-
-type RuntimeResponse = {
-  readonly type?: string;
-  readonly statusCode?: unknown;
-  readonly header?: unknown;
-  readonly body?: unknown;
-};
-
-type RuntimeResponsePart = "body" | "header" | "statusCode";
-
-const validCreateTodoBody = (): ICreateTodoSuccessResponseBody => ({
-  id: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
-  accountId: "01ARZ3NDEKTSV4RRFFQ69G5FAW",
-  title: "Write reference-quality response validator specs",
-  description: "Replace broad checks with public contract examples",
-  status: "TODO",
-  dueDate: "2026-05-08T00:00:00.000Z",
-  tags: ["contracts", "validators"],
-  priority: "HIGH",
-  createdAt: "2026-05-07T08:00:00.000Z",
-  modifiedAt: "2026-05-07T09:00:00.000Z",
-  createdBy: "ada",
-  modifiedBy: "grace",
-});
-
-const validCreateTodoHeader = (): ICreateTodoSuccessResponseHeader => ({
-  "Content-Type": "application/json",
-  "X-Single-Value": "request-1",
-  "X-Multi-Value": ["alpha", "0"],
-});
-
-const validCreateTodoResponse = (): RuntimeResponse => ({
-  statusCode: HttpStatusCode.CREATED,
-  header: validCreateTodoHeader(),
-  body: validCreateTodoBody(),
-});
-
-const validOptionsTodoHeader = (): IOptionsTodoSuccessResponseHeader => ({
-  Allow: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  "Access-Control-Allow-Headers": ["Content-Type", "Authorization"],
-  "Access-Control-Allow-Methods": [
-    "GET",
-    "HEAD",
-    "POST",
-    "PUT",
-    "PATCH",
-    "DELETE",
-    "OPTIONS",
-  ],
-  "Access-Control-Max-Age": "3600",
-  "Access-Control-Allow-Origin": "*",
-});
-
-const validOptionsTodoResponse = (): RuntimeResponse => ({
-  statusCode: HttpStatusCode.OK,
-  header: validOptionsTodoHeader(),
-});
-
-const responseWithRuntimePart = (
-  response: RuntimeResponse,
-  part: RuntimeResponsePart,
-  value: unknown
-): RuntimeResponse => ({
-  ...response,
-  [part]: value,
-});
-
-const asHttpResponse = (response: unknown): IHttpResponse =>
-  response as IHttpResponse;
-
-const responseIssueFor = (
-  error: ResponseValidationError,
-  responseName: string
-): InvalidResponseIssue => {
-  const issue = error.issues.find(
-    candidate =>
-      candidate.type === "INVALID_RESPONSE" &&
-      candidate.responseName === responseName
-  );
-  assert(issue?.type === "INVALID_RESPONSE");
-  return issue;
-};
-
-const issuePaths = (
-  issues: readonly { readonly path: readonly (string | number | symbol)[] }[]
-): string[] => issues.map(issue => issue.path.join("."));
-
-const expectNoPartialData = (result: {
-  readonly isValid: boolean;
-  readonly data?: unknown;
-}): void => {
-  expect(result.isValid).toBe(false);
-  expect("data" in result).toBe(false);
-};
-
-describe("Generated ResponseValidator body shape contracts", () => {
-  test("does not coerce body array fields from strings", () => {
-    const validator = new CreateTodoResponseValidator();
-    const response = responseWithRuntimePart(
-      validCreateTodoResponse(),
-      "body",
-      {
-        ...validCreateTodoBody(),
-        tags: "contracts,validators",
-      }
-    );
-
-    const result = validator.safeValidate(asHttpResponse(response));
-
-    expectNoPartialData(result);
-    assert(!result.isValid);
-    expect(
-      issuePaths(result.error.getResponseBodyIssues("CreateTodoSuccess"))
-    ).toEqual(["tags"]);
-  });
-
-  test.each([
-    { scenario: "null body", body: null },
-    { scenario: "string body", body: "not an object" },
-    { scenario: "number body", body: 123 },
-    { scenario: "array body", body: [validCreateTodoBody()] },
-  ])("rejects a malformed object body for $scenario", ({ body }) => {
-    const validator = new CreateTodoResponseValidator();
-    const response = responseWithRuntimePart(
-      validCreateTodoResponse(),
-      "body",
-      body
-    );
-
-    const result = validator.safeValidate(asHttpResponse(response));
-
-    expectNoPartialData(result);
-    assert(!result.isValid);
-    expect(
-      responseIssueFor(result.error, "CreateTodoSuccess").bodyIssues.length
-    ).toBeGreaterThan(0);
-  });
-});
+import {
+  asHttpResponse,
+  expectNoPartialData,
+  issuePaths,
+  responseIssueFor,
+  responseWithRuntimePart,
+  validCreateTodoHeader,
+  validCreateTodoResponse,
+  validOptionsTodoHeader,
+  validOptionsTodoResponse,
+  withoutRuntimePart,
+} from "./fixtures.js";
 
 describe("Generated ResponseValidator header casing", () => {
   test("returns schema-cased parsed headers for a valid response", () => {
@@ -354,5 +215,88 @@ describe("Generated ResponseValidator header string normalization", () => {
     expect(result.data.header["Access-Control-Allow-Origin"]).toBe(
       "https://one.example, https://two.example"
     );
+  });
+});
+
+describe("Generated ResponseValidator malformed and duplicate headers", () => {
+  test("does not re-split header values that are already arrays", () => {
+    const validator = new OptionsTodoResponseValidator();
+    const response = responseWithRuntimePart(
+      validOptionsTodoResponse(),
+      "header",
+      {
+        ...validOptionsTodoHeader(),
+        Allow: ["GET,POST", "OPTIONS"],
+      }
+    );
+
+    const result = validator.safeValidate(asHttpResponse(response));
+
+    expect(result.isValid).toBe(true);
+    assert(result.isValid);
+    expect(result.data.type).toBe("OptionsTodoSuccess");
+    assert(result.data.type === "OptionsTodoSuccess");
+    expect(result.data.header.Allow).toEqual(["GET,POST", "OPTIONS"]);
+  });
+
+  test.each([
+    { scenario: "null header", header: null },
+    { scenario: "primitive header", header: "not an object" },
+    { scenario: "array header", header: [validCreateTodoHeader()] },
+  ])(
+    "rejects a malformed required header shape for $scenario",
+    ({ header }) => {
+      const validator = new CreateTodoResponseValidator();
+      const response = responseWithRuntimePart(
+        validCreateTodoResponse(),
+        "header",
+        header
+      );
+
+      const result = validator.safeValidate(asHttpResponse(response));
+
+      expectNoPartialData(result);
+      assert(!result.isValid);
+      expect(
+        responseIssueFor(result.error, "CreateTodoSuccess").headerIssues.length
+      ).toBeGreaterThan(0);
+    }
+  );
+
+  test("reports a missing required header part without a status-code issue", () => {
+    const validator = new CreateTodoResponseValidator();
+    const response = withoutRuntimePart(validCreateTodoResponse(), "header");
+
+    const result = validator.safeValidate(asHttpResponse(response));
+
+    expectNoPartialData(result);
+    assert(!result.isValid);
+    expect(result.error.hasStatusCodeIssues()).toBe(false);
+    expect(
+      responseIssueFor(result.error, "CreateTodoSuccess").headerIssues.length
+    ).toBeGreaterThan(0);
+    expect(
+      responseIssueFor(result.error, "CreateTodoSuccess").bodyIssues
+    ).toHaveLength(0);
+  });
+
+  test("rejects duplicate casing collisions for singleton header schemas", () => {
+    const validator = new CreateTodoResponseValidator();
+    const response = responseWithRuntimePart(
+      validCreateTodoResponse(),
+      "header",
+      {
+        ...validCreateTodoHeader(),
+        "content-type": "application/json",
+      }
+    );
+
+    const result = validator.safeValidate(asHttpResponse(response));
+
+    expectNoPartialData(result);
+    assert(!result.isValid);
+    expect(
+      issuePaths(result.error.getResponseHeaderIssues("CreateTodoSuccess"))
+    ).toEqual(["Content-Type"]);
   });
 });

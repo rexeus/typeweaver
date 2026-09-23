@@ -12,16 +12,15 @@ import type {
 } from "@rexeus/typeweaver-gen";
 import { pascalCase } from "polycase";
 import { TestAssertionError } from "test-utils";
-import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { generate } from "../../src/responseGenerator.js";
-import type { ResponseGenerationContext } from "../../src/responseGenerator.js";
+import { generate } from "../../../src/responseGenerator.js";
+import type { ResponseGenerationContext } from "../../../src/responseGenerator.js";
 
-type ResponseOverrides = Omit<Partial<NormalizedResponse>, "body"> & {
+export type ResponseOverrides = Omit<Partial<NormalizedResponse>, "body"> & {
   readonly body?: z.ZodType | NormalizedHttpBody | undefined;
 };
 
-function aJsonNormalizedBody(schema: z.ZodType): NormalizedHttpBody {
+export function aJsonNormalizedBody(schema: z.ZodType): NormalizedHttpBody {
   return {
     schema,
     mediaType: "application/json",
@@ -30,7 +29,7 @@ function aJsonNormalizedBody(schema: z.ZodType): NormalizedHttpBody {
   };
 }
 
-function normalizeBodyForBuilder(
+export function normalizeBodyForBuilder(
   body: z.ZodType | NormalizedHttpBody | undefined
 ): NormalizedHttpBody | undefined {
   if (body === undefined) {
@@ -40,11 +39,11 @@ function normalizeBodyForBuilder(
   return "schema" in body ? body : aJsonNormalizedBody(body);
 }
 
-function hasBodyOverride(overrides: ResponseOverrides): boolean {
+export function hasBodyOverride(overrides: ResponseOverrides): boolean {
   return Object.prototype.hasOwnProperty.call(overrides, "body");
 }
 
-function aNormalizedSpecWith(
+export function aNormalizedSpecWith(
   overrides: Partial<NormalizedSpec> = {}
 ): NormalizedSpec {
   return {
@@ -58,7 +57,7 @@ function aNormalizedSpecWith(
   };
 }
 
-function aCanonicalResponse(
+export function aCanonicalResponse(
   overrides: ResponseOverrides = {}
 ): NormalizedResponse {
   const defaultBody = aJsonNormalizedBody(z.object({ message: z.string() }));
@@ -76,7 +75,25 @@ function aCanonicalResponse(
   };
 }
 
-function anOperationWithResponses(
+export function anInlineOperationResponse(
+  overrides: ResponseOverrides = {}
+): NormalizedResponse {
+  const defaultBody = aJsonNormalizedBody(z.object({ id: z.string() }));
+
+  return {
+    name: "CreateTodoSuccess",
+    kind: "response",
+    statusCode: HttpStatusCode.CREATED,
+    statusCodeName: "CREATED",
+    description: "Created",
+    ...overrides,
+    body: hasBodyOverride(overrides)
+      ? normalizeBodyForBuilder(overrides.body)
+      : defaultBody,
+  };
+}
+
+export function anOperationWithResponses(
   responses: NormalizedOperation["responses"],
   overrides: Partial<NormalizedOperation> = {}
 ): NormalizedOperation {
@@ -97,7 +114,7 @@ function anOperationWithResponses(
   };
 }
 
-function aCanonicalResponseUsage(
+export function aCanonicalResponseUsage(
   responseName: string
 ): NormalizedResponseUsage {
   return {
@@ -106,7 +123,17 @@ function aCanonicalResponseUsage(
   };
 }
 
-function aResourceWithOperationResponses(
+export function anInlineResponseUsage(
+  response: NormalizedResponse
+): NormalizedResponseUsage {
+  return {
+    responseName: response.name,
+    source: "inline",
+    response,
+  };
+}
+
+export function aResourceWithOperationResponses(
   responses: NormalizedOperation["responses"],
   overrides: Partial<NormalizedResource> = {}
 ): NormalizedResource {
@@ -122,12 +149,12 @@ function aResourceWithOperationResponses(
   };
 }
 
-type ResponseGeneratorTestContext = {
+export type ResponseGeneratorTestContext = {
   readonly context: ResponseGenerationContext;
   readonly writtenFiles: Map<string, string>;
 };
 
-function createResponseGeneratorContext(
+export function createResponseGeneratorContext(
   normalizedSpec: NormalizedSpec,
   renderResponseTemplate: (templatePath: string, data: unknown) => string
 ): ResponseGeneratorTestContext {
@@ -176,7 +203,7 @@ function createResponseGeneratorContext(
   return { context, writtenFiles };
 }
 
-function aTemplateRenderingResponseGeneratorContext(
+export function aTemplateRenderingResponseGeneratorContext(
   normalizedSpec: NormalizedSpec
 ): ResponseGeneratorTestContext {
   return createResponseGeneratorContext(normalizedSpec, (templatePath, data) =>
@@ -187,7 +214,7 @@ function aTemplateRenderingResponseGeneratorContext(
   );
 }
 
-function renderResponseSources(
+export function renderResponseSources(
   normalizedSpec: NormalizedSpec
 ): Map<string, string> {
   const { context, writtenFiles } =
@@ -198,7 +225,7 @@ function renderResponseSources(
   return writtenFiles;
 }
 
-function getGeneratedSource(
+export function getGeneratedSource(
   writtenFiles: Map<string, string>,
   relativePath: string
 ): string {
@@ -210,77 +237,51 @@ function getGeneratedSource(
   return content;
 }
 
-describe("ResponseGenerator shared response naming and unions", () => {
-  test("uses PascalCase exports and raw discriminants for non-identifier response names", () => {
-    const validationError = aCanonicalResponse({
-      name: "validation-error",
-      statusCode: HttpStatusCode.UNPROCESSABLE_ENTITY,
-      statusCodeName: "UNPROCESSABLE_ENTITY",
-      body: z.object({ code: z.literal("VALIDATION_ERROR") }),
-    });
+export function renderCanonicalResponseSource(
+  response: NormalizedResponse
+): string {
+  const writtenFiles = renderResponseSources(
+    aNormalizedSpecWith({
+      responses: [response],
+      resources: [],
+    })
+  );
+  const source = writtenFiles.get(
+    `responses/${pascalCase(response.name)}Response.ts`
+  );
 
-    const writtenFiles = renderResponseSources(
-      aNormalizedSpecWith({
-        responses: [validationError],
-        resources: [
-          aResourceWithOperationResponses([
-            aCanonicalResponseUsage(validationError.name),
-          ]),
-        ],
-      })
+  if (source === undefined) {
+    throw new TestAssertionError(
+      `Expected ${response.name} response source to be generated`
     );
-    const sharedResponse = getGeneratedSource(
-      writtenFiles,
-      "responses/ValidationErrorResponse.ts"
-    );
-    const operationResponse = getGeneratedSource(
-      writtenFiles,
-      "todos/CreateTodoResponse.ts"
-    );
+  }
 
-    expect(sharedResponse).toContain("export type IValidationErrorResponse");
-    expect(sharedResponse).toContain(
-      "export const createValidationErrorResponse"
-    );
-    expect(sharedResponse).toMatch(/ITypedHttpResponse<\s*"validation-error"/);
-    expect(sharedResponse).toContain('type: "validation-error"');
-    expect(operationResponse).toContain(
-      'import type { IValidationErrorResponse } from "../responses/ValidationErrorResponse";'
-    );
-  });
+  return source;
+}
 
-  test("renders a shared-only operation response union without inline factories", () => {
-    const badRequest = aCanonicalResponse({ name: "BadRequestError" });
-    const unauthorized = aCanonicalResponse({
-      name: "UnauthorizedError",
-      statusCode: HttpStatusCode.UNAUTHORIZED,
-      statusCodeName: "UNAUTHORIZED",
-    });
-    const normalizedSpec: NormalizedSpec = aNormalizedSpecWith({
-      responses: [badRequest, unauthorized],
+export function renderOperationResponseSource(
+  responses: NormalizedOperation["responses"]
+): string {
+  const writtenFiles = renderResponseSources(
+    aNormalizedSpecWith({
+      responses: [],
       resources: [
-        aResourceWithOperationResponses([
-          aCanonicalResponseUsage(badRequest.name),
-          aCanonicalResponseUsage(unauthorized.name),
-        ]),
+        {
+          name: "todos",
+          tags: [],
+          security: { requirements: [], source: "none" },
+          operations: [anOperationWithResponses(responses)],
+        },
       ],
-    });
+    })
+  );
+  const source = writtenFiles.get("todos/CreateTodoResponse.ts");
 
-    const writtenFiles = renderResponseSources(normalizedSpec);
-    const source = getGeneratedSource(
-      writtenFiles,
-      "todos/CreateTodoResponse.ts"
+  if (source === undefined) {
+    throw new TestAssertionError(
+      "Expected createTodo response source to be generated"
     );
+  }
 
-    expect(source).toContain(
-      'import type { IBadRequestErrorResponse } from "../responses/BadRequestErrorResponse";'
-    );
-    expect(source).toContain(
-      'import type { IUnauthorizedErrorResponse } from "../responses/UnauthorizedErrorResponse";'
-    );
-    expect(source).not.toContain("export const create");
-    expect(source).toMatch(
-      /export type CreateTodoResponse =\s*\| IBadRequestErrorResponse\s*\| IUnauthorizedErrorResponse\s*;/
-    );
-  });
-});
+  return source;
+}

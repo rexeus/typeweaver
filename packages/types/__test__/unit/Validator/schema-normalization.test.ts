@@ -4,7 +4,7 @@ import type {
 } from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { Validator } from "../../src/lib/Validator.js";
+import { Validator } from "../../../src/lib/Validator.js";
 
 class ProbeValidator extends Validator {
   public coerceQuery(query: unknown, schema: HttpQuerySchema): unknown {

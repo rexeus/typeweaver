@@ -1,23 +1,6 @@
-import type {
-  HttpQuerySchema,
-  HttpRequestHeaderSchema,
-} from "@rexeus/typeweaver-core";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { Validator } from "../../src/lib/Validator.js";
-
-class ProbeValidator extends Validator {
-  public coerceQuery(query: unknown, schema: HttpQuerySchema): unknown {
-    return this.coerceQueryToSchema(query, schema);
-  }
-
-  public coerceHeader(
-    header: unknown,
-    schema: HttpRequestHeaderSchema
-  ): unknown {
-    return this.coerceHeaderToSchema(header, schema);
-  }
-}
+import { ProbeValidator } from "./fixtures.js";
 
 function ownValue(target: unknown, key: string): unknown {
   return typeof target === "object" && target !== null
