@@ -205,9 +205,25 @@ import Effect.
 Install the exact peer, remove Effect 3 packages and ranges, then update visible APIs: replace
 Effect 3 service builders with `Context.Service` plus explicit layers, `Either` with `Result`, old
 Cause helpers with RC.116 reason accessors, `Schema.decodeUnknown` with
-`Schema.decodeUnknownEffect`, and legacy CLI imports with `effect/unstable/cli`. Re-run the
-standalone `@effect/tsgo` diagnostics gate and `pnpm verify:effect-reference` against commit
-`d62dd0d65252e5d3635538f0e41adc7c08aa9beb`. See [ADR 0008](./docs/adr/0008-effect-4-baseline.md).
+`Schema.decodeUnknownEffect`, and legacy CLI imports with `effect/unstable/cli`.
+
+Plugin file failures changed shape. `writeFileEffect` and `renderTemplateEffect` now fail with the
+single Effect 4 `PlatformError` from `effect/PlatformError` instead of the Effect 3
+`@effect/platform/Error` union of `SystemError` and `BadArgument`. Replace
+`Effect.catchTag("SystemError", ...)` and `Effect.catchTag("BadArgument", ...)` with
+`Effect.catchTag("PlatformError", ...)` and branch on `error.reason._tag`: `"BadArgument"` for a
+rejected argument, or a system tag such as `"NotFound"`, `"PermissionDenied"`, or `"AlreadyExists"`
+that Effect 3 exposed as the `SystemError` `reason` string. The TypeWeaver tags
+`UnsafeGeneratedPathError`, `GeneratedPathProbeError`, and `TemplateRenderError` are unchanged.
+
+To check your own project after upgrading, confirm that it resolves exactly one
+`effect@4.0.0-rc.116` copy (for example with `pnpm why effect`) and run `typeweaver doctor`, which
+reports the project's Effect declaration as `TW-DOCTOR-011`. For Effect language-service diagnostics
+in your plugin or application, install `@effect/tsgo` and run
+`effect-tsgo diagnostics --project tsconfig.json`. Confirm uncertain signatures against the
+`effect@4.0.0-rc.116` source tag (commit `d62dd0d65252e5d3635538f0e41adc7c08aa9beb`). Contributors
+to this repository additionally run `pnpm verify:effect-reference` and `pnpm effect:diagnostics`.
+See [ADR 0008](./docs/adr/0008-effect-4-baseline.md).
 
 ### 3. Internal API changes (informational; only programmatic consumers)
 

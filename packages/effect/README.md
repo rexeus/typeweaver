@@ -34,9 +34,11 @@ pnpm typeweaver generate \
 ```
 
 The package requires the exact native Effect peer `4.0.0-rc.116`. Generated handlers and the managed
-runtime must share the application's single RC.116 identity. The adapter uses native APIs including
-`Context.Service`, `Result`, `Cause`, and the Effect 4 Schema/CLI model; see
-[ADR 0008](../../docs/adr/0008-effect-4-baseline.md).
+runtime must share the application's single RC.116 identity. `createEffectHandlerRuntime` builds one
+`ManagedRuntime` from your Layer, runs each handler to an `Exit`, and classifies failures by their
+flattened `Cause` reasons: defects and interruptions throw, and the first typed failure goes to the
+operation's error mapper. Your application declares its services, for example with `Context.Service`
+as below; see [ADR 0008](../../docs/adr/0008-effect-4-baseline.md).
 
 The direct runtime dependency on `@rexeus/typeweaver-effect` is intentional: generated adapters
 reference its public types, and the application owns `createEffectHandlerRuntime`.
@@ -71,12 +73,12 @@ type Todo = {
   readonly title: string;
 };
 
-export class TodoRepository extends Context.Tag("Todo/Repository")<
+export class TodoRepository extends Context.Service<
   TodoRepository,
   {
     readonly find: (todoId: string) => Effect.Effect<Todo | undefined>;
   }
->() {}
+>()("Todo/Repository") {}
 
 const TodoRepositoryLive = Layer.succeed(TodoRepository, {
   find: todoId =>

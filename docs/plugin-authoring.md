@@ -12,8 +12,12 @@ OpenAPI are Effect-native even when the artifacts they emit do not import Effect
 [ADR 0008: native Effect baseline](./adr/0008-effect-4-baseline.md).
 
 Native plugin code uses `Context.Service` and explicit `Layer` provisioning, `Result` rather than
-`Either`, and the RC.116 `Cause` and Schema APIs. Confirm signatures against the pinned source and
-run `pnpm verify:effect-reference` plus `pnpm effect:diagnostics` before publishing a plugin.
+`Either`, and the RC.116 `Cause` and Schema APIs. Before publishing a plugin, confirm uncertain
+signatures against the `effect@4.0.0-rc.116` source tag, run your package's typecheck and lifecycle
+tests (the scaffold's `pnpm check`), and optionally run the Effect language-service diagnostics from
+`@effect/tsgo` with `effect-tsgo diagnostics --project tsconfig.json`. The
+`pnpm verify:effect-reference` and `pnpm effect:diagnostics` scripts belong to the TypeWeaver
+repository and are only for contributors.
 
 If you are migrating a V1 plugin (built against `extends BasePlugin`), see the breaking-change
 section in [`MIGRATION.md`](../MIGRATION.md).

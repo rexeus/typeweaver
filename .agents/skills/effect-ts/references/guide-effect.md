@@ -11,7 +11,7 @@ Key source areas:
 
 - `./.repos/effect/packages/effect/src/Effect.ts`
 - `./.repos/effect/packages/tools/`
-- `./.repos/effect/packages/platform-*`
+- `./.repos/effect/packages/platform/*`
 - `./.repos/effect/packages/opentelemetry/`
 - `./.repos/effect/packages/vitest/`
 
@@ -360,7 +360,7 @@ const program = Effect.scoped(
 
 Repo examples:
 
-- `./.repos/effect/packages/platform-node/`
+- `./.repos/effect/packages/platform/node/`
 - `./.repos/effect/packages/opentelemetry/src/NodeSdk.ts`
 
 ## SQL And Runtime Integrations
@@ -447,6 +447,6 @@ These are the most practically important `Effect` functions to know first:
 - `./.repos/effect/packages/tools/openapi-generator/src/OpenApiPatch.ts`
 - `./.repos/effect/packages/tools/openapi-generator/src/OpenApiGenerator.ts`
 - `./.repos/effect/packages/opentelemetry/src/NodeSdk.ts`
-- `./.repos/effect/packages/opentelemetry/src/Tracer.ts`
-- `./.repos/effect/packages/platform-node/`
+- `./.repos/effect/packages/opentelemetry/src/OtelTracer.ts`
+- `./.repos/effect/packages/platform/node/`
 - `./.repos/effect/packages/vitest/src/index.ts`

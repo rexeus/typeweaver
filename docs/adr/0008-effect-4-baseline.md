@@ -82,4 +82,5 @@ generator packages themselves are Effect-native and require the exact peer.
 - Diagnostics: `scripts/run-effect-diagnostics.mjs`, `scripts/lib/effect-diagnostics.mjs`,
   `config/effect-diagnostics-allowlist.json`
 - Skill: `.agents/skills/effect-ts/SKILL.md` and `.agents/skills/effect-ts/references/`
-- Native contract: `scripts/lib/effect-version-contract.mjs`
+- Native contract: `scripts/lib/effect-version-contract.mjs`,
+  `scripts/lib/effect-native-contract.mjs`

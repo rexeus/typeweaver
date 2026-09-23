@@ -40,7 +40,7 @@ the pinned rc.116 source.
 | `Cause.isInterrupted` / `isInterruptedOnly`    | `Cause.hasInterrupts` / `Cause.hasInterruptsOnly`                                             |
 | `Cause.hasDies` / `cause.reasons`              | `Cause.hasDies` / `cause.reasons` (native)                                                    |
 | `Cause.originalError`                          | identity: errors are carried directly on flattened reasons                                    |
-| `FiberRef`                                     | `Context.Reference` with `fiberCached`, or a per-fiber cell keyed by `Fiber.getCurrent`       |
+| `FiberRef`                                     | `Context.Reference`; a `WeakMap` cell keyed by `Fiber.getCurrent()` is not inherited by forks |
 | `Scope.CloseableScope`                         | `Scope.Closeable`                                                                             |
 | `Logger.replace(a, b)`                         | `Logger.layer([b])`                                                                           |
 | `Logger.minimumLogLevel(level)`                | `Layer.succeed(References.MinimumLogLevel, level)`                                            |
@@ -89,8 +89,16 @@ Use `Effect.acquireRelease`, `Effect.scoped`, and `Layer.effect` when an acquisi
 release action. Keep runtime ownership at a real process or subsystem boundary; do not create a
 runtime per generated artifact or individual service call.
 
+`Layer.build` and `Layer.buildWithScope` fork the ambient memo map. Inside a runtime that already
+built the same Layer value they return that shared instance and neither acquire nor release it. When
+the caller must own new instances for its own Scope, build with a private memo map:
+`Layer.buildWithMemoMap(layer, yield* Layer.makeMemoMap, scope)`, or
+`Effect.provide(layer, { local: true })`. `Layer.fresh` isolates only the Layer graph itself; a Layer
+built inside one of its constructors still forks the ambient memo map.
+
 Representative code:
 
+- `packages/gen/src/plugins/defineScopedPlugin.ts`
 - `packages/gen/src/runtime/MainLayer.ts`
 - `packages/cli/src/services/SpecBundler.ts`
 - `docs/adr/0007-generator-per-call-isolation.md`

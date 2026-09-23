@@ -14,7 +14,7 @@ Key source files:
 - `./.repos/effect/packages/effect/src/Logger.ts`
 - `./.repos/effect/packages/effect/src/Metric.ts`
 - `./.repos/effect/packages/opentelemetry/src/NodeSdk.ts`
-- `./.repos/effect/packages/opentelemetry/src/Tracer.ts`
+- `./.repos/effect/packages/opentelemetry/src/OtelTracer.ts`
 
 ## Mental Model
 
@@ -396,7 +396,7 @@ The vendored repo provides `@effect/opentelemetry` layers such as:
 Repo references:
 
 - `./.repos/effect/packages/opentelemetry/src/NodeSdk.ts`
-- `./.repos/effect/packages/opentelemetry/src/Tracer.ts`
+- `./.repos/effect/packages/opentelemetry/src/OtelTracer.ts`
 
 Preferred composition style:
 
@@ -426,9 +426,9 @@ This is the preferred integration path when the application needs to participate
 Relevant modules:
 
 - `./.repos/effect/packages/opentelemetry/src/NodeSdk.ts`
-- `./.repos/effect/packages/opentelemetry/src/Tracer.ts`
-- `./.repos/effect/packages/opentelemetry/src/Metrics.ts`
-- `./.repos/effect/packages/opentelemetry/src/Logger.ts`
+- `./.repos/effect/packages/opentelemetry/src/OtelTracer.ts`
+- `./.repos/effect/packages/opentelemetry/src/OtelMetrics.ts`
+- `./.repos/effect/packages/opentelemetry/src/OtelLogger.ts`
 - `./.repos/effect/packages/opentelemetry/src/Resource.ts`
 - `./.repos/effect/packages/opentelemetry/src/WebSdk.ts`
 
@@ -726,4 +726,4 @@ const handleRequest = (userId: string) =>
 - `./.repos/effect/packages/effect/src/Logger.ts`
 - `./.repos/effect/packages/effect/src/Metric.ts`
 - `./.repos/effect/packages/opentelemetry/src/NodeSdk.ts`
-- `./.repos/effect/packages/opentelemetry/src/Tracer.ts`
+- `./.repos/effect/packages/opentelemetry/src/OtelTracer.ts`

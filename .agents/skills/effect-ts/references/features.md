@@ -1,9 +1,13 @@
 # Features
 
 > **Archived Effect 4 material — inactive for TypeWeaver APIs.** This file may be used for
-> conceptual discovery only. Before using any module, package, path, API name, signature, or
-> example, follow `../SKILL.md`, read `typeweaver-effect-4.md`, and confirm it in the pinned Effect
-> 3.22 source. Any "use" or "preferred" wording below is superseded by that contract.
+> conceptual discovery only. It was written against an earlier Effect 4 beta: its paths are relative
+> to `./.repos/effect` and follow the pinned `effect@4.0.0-rc.116` layout (platform packages live
+> under `packages/platform/<runtime>/`), but the module list is not a complete rc.116 inventory.
+> Before using any module, package, path, API name, signature, or example, follow `../SKILL.md`,
+> read `typeweaver-effect-4.md`, and confirm it in the pinned Effect 4.0.0-rc.116 source under
+> `./.repos/effect`. TypeWeaver takes Node platform layers from `@effect/platform-node-shared`, not
+> `@effect/platform-node`. Any "use" or "preferred" wording below is superseded by that contract.
 
 Public package and module surface area to be aware of when researching or implementing a solution. Each module entry includes its vendored repo path so it can be located quickly.
 
@@ -113,7 +117,6 @@ Package path: `packages/effect`
 - `SchemaParser` - `packages/effect/src/SchemaParser.ts` - Schema parsing helpers. Use: build parsing workflows.
 - `SchemaRepresentation` - `packages/effect/src/SchemaRepresentation.ts` - Serializable schema IR. Use: round-trip schemas through JSON/codegen.
 - `SchemaTransformation` - `packages/effect/src/SchemaTransformation.ts` - Bidirectional schema transformations. Use: map encoded and decoded forms.
-- `SchemaUtils` - `packages/effect/src/SchemaUtils.ts` - Schema utility helpers. Use: support schema internals.
 - `Scope` - `packages/effect/src/Scope.ts` - Resource lifetime scope. Use: ensure cleanup of acquired resources.
 - `ScopedCache` - `packages/effect/src/ScopedCache.ts` - Scoped cache utilities. Use: cache scoped resources.
 - `ScopedRef` - `packages/effect/src/ScopedRef.ts` - Scoped mutable reference. Use: swap scoped resources safely.
@@ -149,7 +152,6 @@ Package path: `packages/effect`
 
 ### `effect/testing`
 
-- `FastCheck` - `packages/effect/src/testing/FastCheck.ts` - Re-export of fast-check for property testing. Use: generate random test cases.
 - `TestClock` - `packages/effect/src/testing/TestClock.ts` - Controllable clock for tests. Use: advance time deterministically.
 - `TestConsole` - `packages/effect/src/testing/TestConsole.ts` - Test console implementation. Use: assert console output.
 - `TestSchema` - `packages/effect/src/testing/TestSchema.ts` - Schema assertion helpers. Use: verify decode/encode behavior.
@@ -238,7 +240,6 @@ Package path: `packages/effect`
 
 ### `effect/unstable/encoding`
 
-- `Msgpack` - `packages/effect/src/unstable/encoding/Msgpack.ts` - MessagePack encoding helpers. Use: compact binary serialization.
 - `Ndjson` - `packages/effect/src/unstable/encoding/Ndjson.ts` - NDJSON encoding helpers. Use: stream JSON lines.
 - `Sse` - `packages/effect/src/unstable/encoding/Sse.ts` - Server-sent event encoding helpers. Use: emit SSE streams.
 
@@ -285,7 +286,6 @@ Package path: `packages/effect`
 - `HttpStaticServer` - `packages/effect/src/unstable/http/HttpStaticServer.ts` - Static file serving helpers. Use: serve assets.
 - `HttpTraceContext` - `packages/effect/src/unstable/http/HttpTraceContext.ts` - HTTP trace-context propagation. Use: carry tracing headers.
 - `Multipart` - `packages/effect/src/unstable/http/Multipart.ts` - Multipart form-data helpers. Use: file uploads.
-- `Multipasta` - `packages/effect/src/unstable/http/Multipasta.ts` - Multipasta integration. Use: parse multipart streams.
 - `Template` - `packages/effect/src/unstable/http/Template.ts` - HTTP templating helpers. Use: generate responses from templates.
 - `Url` - `packages/effect/src/unstable/http/Url.ts` - URL utilities. Use: parse and build URLs.
 - `UrlParams` - `packages/effect/src/unstable/http/UrlParams.ts` - URL parameter helpers. Use: encode query strings.
@@ -402,94 +402,105 @@ Package path: `packages/effect`
 
 Package path: `packages/opentelemetry`
 
-- `Logger` - `packages/opentelemetry/src/Logger.ts` - OpenTelemetry logging integration. Use: export structured logs.
-- `Metrics` - `packages/opentelemetry/src/Metrics.ts` - OpenTelemetry metrics integration. Use: publish application metrics.
+- `OtelLogger` - `packages/opentelemetry/src/OtelLogger.ts` - OpenTelemetry logging integration. Use: export structured logs.
+- `OtelMetrics` - `packages/opentelemetry/src/OtelMetrics.ts` - OpenTelemetry metrics integration. Use: publish application metrics.
 - `NodeSdk` - `packages/opentelemetry/src/NodeSdk.ts` - Node OpenTelemetry SDK wiring. Use: bootstrap telemetry in Node.
 - `Resource` - `packages/opentelemetry/src/Resource.ts` - OpenTelemetry resource helpers. Use: describe service metadata.
-- `Tracer` - `packages/opentelemetry/src/Tracer.ts` - OpenTelemetry tracing integration. Use: create and export spans.
+- `OtelTracer` - `packages/opentelemetry/src/OtelTracer.ts` - OpenTelemetry tracing integration. Use: create and export spans.
 - `WebSdk` - `packages/opentelemetry/src/WebSdk.ts` - Web OpenTelemetry SDK wiring. Use: bootstrap telemetry in browsers.
 
 ## `@effect/platform-browser` Package
 
-Package path: `packages/platform-browser`
+Package path: `packages/platform/browser`
 
-- `BrowserHttpClient` - `packages/platform-browser/src/BrowserHttpClient.ts` - Browser HTTP client implementation. Use: make fetch-based requests.
-- `BrowserKeyValueStore` - `packages/platform-browser/src/BrowserKeyValueStore.ts` - Browser key-value storage adapter. Use: persist small client values.
-- `BrowserPersistence` - `packages/platform-browser/src/BrowserPersistence.ts` - Browser persistence services. Use: store app state locally.
-- `BrowserRuntime` - `packages/platform-browser/src/BrowserRuntime.ts` - Browser runtime entrypoints. Use: run Effect apps in browsers.
-- `BrowserSocket` - `packages/platform-browser/src/BrowserSocket.ts` - Browser socket implementation. Use: open WebSocket-style connections.
-- `BrowserStream` - `packages/platform-browser/src/BrowserStream.ts` - Browser stream adapters. Use: bridge web streams.
-- `BrowserWorker` - `packages/platform-browser/src/BrowserWorker.ts` - Browser worker integration. Use: communicate with web workers.
-- `BrowserWorkerRunner` - `packages/platform-browser/src/BrowserWorkerRunner.ts` - Worker-side runtime helpers. Use: run Effect code inside workers.
-- `Clipboard` - `packages/platform-browser/src/Clipboard.ts` - Clipboard API wrappers. Use: read or write clipboard data.
-- `Geolocation` - `packages/platform-browser/src/Geolocation.ts` - Geolocation API wrappers. Use: access device location.
-- `IndexedDb` - `packages/platform-browser/src/IndexedDb.ts` - IndexedDB integration. Use: build browser databases.
-- `IndexedDbDatabase` - `packages/platform-browser/src/IndexedDbDatabase.ts` - IndexedDB database helpers. Use: define database handles.
-- `IndexedDbQueryBuilder` - `packages/platform-browser/src/IndexedDbQueryBuilder.ts` - IndexedDB query builder. Use: compose indexed queries.
-- `IndexedDbTable` - `packages/platform-browser/src/IndexedDbTable.ts` - IndexedDB table helpers. Use: work with object stores.
-- `IndexedDbVersion` - `packages/platform-browser/src/IndexedDbVersion.ts` - IndexedDB versioning helpers. Use: manage schema upgrades.
-- `Permissions` - `packages/platform-browser/src/Permissions.ts` - Permissions API wrappers. Use: query browser permissions.
+- `BrowserHttpClient` - `packages/platform/browser/src/BrowserHttpClient.ts` - Browser HTTP client implementation. Use: make fetch-based requests.
+- `BrowserKeyValueStore` - `packages/platform/browser/src/BrowserKeyValueStore.ts` - Browser key-value storage adapter. Use: persist small client values.
+- `BrowserPersistence` - `packages/platform/browser/src/BrowserPersistence.ts` - Browser persistence services. Use: store app state locally.
+- `BrowserRuntime` - `packages/platform/browser/src/BrowserRuntime.ts` - Browser runtime entrypoints. Use: run Effect apps in browsers.
+- `BrowserSocket` - `packages/platform/browser/src/BrowserSocket.ts` - Browser socket implementation. Use: open WebSocket-style connections.
+- `BrowserStream` - `packages/platform/browser/src/BrowserStream.ts` - Browser stream adapters. Use: bridge web streams.
+- `BrowserWorker` - `packages/platform/browser/src/BrowserWorker.ts` - Browser worker integration. Use: communicate with web workers.
+- `BrowserWorkerRunner` - `packages/platform/browser/src/BrowserWorkerRunner.ts` - Worker-side runtime helpers. Use: run Effect code inside workers.
+- `Clipboard` - `packages/platform/browser/src/Clipboard.ts` - Clipboard API wrappers. Use: read or write clipboard data.
+- `Geolocation` - `packages/platform/browser/src/Geolocation.ts` - Geolocation API wrappers. Use: access device location.
+- `IndexedDb` - `packages/platform/browser/src/IndexedDb.ts` - IndexedDB integration. Use: build browser databases.
+- `IndexedDbDatabase` - `packages/platform/browser/src/IndexedDbDatabase.ts` - IndexedDB database helpers. Use: define database handles.
+- `IndexedDbQueryBuilder` - `packages/platform/browser/src/IndexedDbQueryBuilder.ts` - IndexedDB query builder. Use: compose indexed queries.
+- `IndexedDbTable` - `packages/platform/browser/src/IndexedDbTable.ts` - IndexedDB table helpers. Use: work with object stores.
+- `IndexedDbVersion` - `packages/platform/browser/src/IndexedDbVersion.ts` - IndexedDB versioning helpers. Use: manage schema upgrades.
+- `Permissions` - `packages/platform/browser/src/Permissions.ts` - Permissions API wrappers. Use: query browser permissions.
 
 ## `@effect/platform-bun` Package
 
-Package path: `packages/platform-bun`
+Package path: `packages/platform/bun`
 
-- `BunChildProcessSpawner` - `packages/platform-bun/src/BunChildProcessSpawner.ts` - Bun child-process spawner. Use: launch subprocesses.
-- `BunClusterHttp` - `packages/platform-bun/src/BunClusterHttp.ts` - Bun clustered HTTP helpers. Use: scale HTTP servers.
-- `BunClusterSocket` - `packages/platform-bun/src/BunClusterSocket.ts` - Bun clustered socket helpers. Use: scale socket servers.
-- `BunFileSystem` - `packages/platform-bun/src/BunFileSystem.ts` - Bun file system implementation. Use: do Bun-based file I/O.
-- `BunHttpClient` - `packages/platform-bun/src/BunHttpClient.ts` - Bun HTTP client implementation. Use: make outbound HTTP requests.
-- `BunHttpPlatform` - `packages/platform-bun/src/BunHttpPlatform.ts` - Bun HTTP platform services. Use: provide HTTP runtime pieces.
-- `BunHttpServer` - `packages/platform-bun/src/BunHttpServer.ts` - Bun HTTP server implementation. Use: serve HTTP endpoints.
-- `BunHttpServerRequest` - `packages/platform-bun/src/BunHttpServerRequest.ts` - Bun request adapters. Use: read incoming HTTP requests.
-- `BunMultipart` - `packages/platform-bun/src/BunMultipart.ts` - Bun multipart parsing. Use: handle form uploads.
-- `BunPath` - `packages/platform-bun/src/BunPath.ts` - Bun path service. Use: resolve filesystem paths.
-- `BunRedis` - `packages/platform-bun/src/BunRedis.ts` - Bun Redis integration. Use: talk to Redis.
-- `BunRuntime` - `packages/platform-bun/src/BunRuntime.ts` - Bun runtime entrypoints. Use: run Effect apps on Bun.
-- `BunServices` - `packages/platform-bun/src/BunServices.ts` - Bun service bundle. Use: provide common Bun services.
-- `BunSink` - `packages/platform-bun/src/BunSink.ts` - Bun sink adapters. Use: write streamed output.
-- `BunSocket` - `packages/platform-bun/src/BunSocket.ts` - Bun socket implementation. Use: manage socket connections.
-- `BunSocketServer` - `packages/platform-bun/src/BunSocketServer.ts` - Bun socket server implementation. Use: accept socket clients.
-- `BunStdio` - `packages/platform-bun/src/BunStdio.ts` - Bun stdio integration. Use: access stdin/stdout/stderr.
-- `BunStream` - `packages/platform-bun/src/BunStream.ts` - Bun stream adapters. Use: bridge Bun streams.
-- `BunTerminal` - `packages/platform-bun/src/BunTerminal.ts` - Bun terminal integration. Use: build CLI terminal interactions.
-- `BunWorker` - `packages/platform-bun/src/BunWorker.ts` - Bun worker integration. Use: communicate with workers.
-- `BunWorkerRunner` - `packages/platform-bun/src/BunWorkerRunner.ts` - Bun worker runtime helpers. Use: run Effect code in workers.
+- `BunChildProcessSpawner` - `packages/platform/bun/src/BunChildProcessSpawner.ts` - Bun child-process spawner. Use: launch subprocesses.
+- `BunClusterHttp` - `packages/platform/bun/src/BunClusterHttp.ts` - Bun clustered HTTP helpers. Use: scale HTTP servers.
+- `BunClusterSocket` - `packages/platform/bun/src/BunClusterSocket.ts` - Bun clustered socket helpers. Use: scale socket servers.
+- `BunFileSystem` - `packages/platform/bun/src/BunFileSystem.ts` - Bun file system implementation. Use: do Bun-based file I/O.
+- `BunHttpClient` - `packages/platform/bun/src/BunHttpClient.ts` - Bun HTTP client implementation. Use: make outbound HTTP requests.
+- `BunHttpPlatform` - `packages/platform/bun/src/BunHttpPlatform.ts` - Bun HTTP platform services. Use: provide HTTP runtime pieces.
+- `BunHttpServer` - `packages/platform/bun/src/BunHttpServer.ts` - Bun HTTP server implementation. Use: serve HTTP endpoints.
+- `BunHttpServerRequest` - `packages/platform/bun/src/BunHttpServerRequest.ts` - Bun request adapters. Use: read incoming HTTP requests.
+- `BunMultipart` - `packages/platform/bun/src/BunMultipart.ts` - Bun multipart parsing. Use: handle form uploads.
+- `BunPath` - `packages/platform/bun/src/BunPath.ts` - Bun path service. Use: resolve filesystem paths.
+- `BunRedis` - `packages/platform/bun/src/BunRedis.ts` - Bun Redis integration. Use: talk to Redis.
+- `BunRuntime` - `packages/platform/bun/src/BunRuntime.ts` - Bun runtime entrypoints. Use: run Effect apps on Bun.
+- `BunServices` - `packages/platform/bun/src/BunServices.ts` - Bun service bundle. Use: provide common Bun services.
+- `BunSink` - `packages/platform/bun/src/BunSink.ts` - Bun sink adapters. Use: write streamed output.
+- `BunSocket` - `packages/platform/bun/src/BunSocket.ts` - Bun socket implementation. Use: manage socket connections.
+- `BunSocketServer` - `packages/platform/bun/src/BunSocketServer.ts` - Bun socket server implementation. Use: accept socket clients.
+- `BunStdio` - `packages/platform/bun/src/BunStdio.ts` - Bun stdio integration. Use: access stdin/stdout/stderr.
+- `BunStream` - `packages/platform/bun/src/BunStream.ts` - Bun stream adapters. Use: bridge Bun streams.
+- `BunTerminal` - `packages/platform/bun/src/BunTerminal.ts` - Bun terminal integration. Use: build CLI terminal interactions.
+- `BunWorker` - `packages/platform/bun/src/BunWorker.ts` - Bun worker integration. Use: communicate with workers.
+- `BunWorkerRunner` - `packages/platform/bun/src/BunWorkerRunner.ts` - Bun worker runtime helpers. Use: run Effect code in workers.
 
 ## `@effect/platform-node` Package
 
-Package path: `packages/platform-node`
+Package path: `packages/platform/node`
 
-- `Mime` - `packages/platform-node/src/Mime.ts` - MIME type helpers. Use: detect or assign content types.
-- `NodeChildProcessSpawner` - `packages/platform-node/src/NodeChildProcessSpawner.ts` - Node child-process spawner. Use: launch subprocesses.
-- `NodeClusterHttp` - `packages/platform-node/src/NodeClusterHttp.ts` - Node clustered HTTP helpers. Use: scale HTTP servers.
-- `NodeClusterSocket` - `packages/platform-node/src/NodeClusterSocket.ts` - Node clustered socket helpers. Use: scale socket servers.
-- `NodeFileSystem` - `packages/platform-node/src/NodeFileSystem.ts` - Node file system implementation. Use: do Node-based file I/O.
-- `NodeHttpClient` - `packages/platform-node/src/NodeHttpClient.ts` - Node HTTP client implementation. Use: make outbound HTTP requests.
-- `NodeHttpIncomingMessage` - `packages/platform-node/src/NodeHttpIncomingMessage.ts` - Node incoming message adapters. Use: read raw Node HTTP messages.
-- `NodeHttpPlatform` - `packages/platform-node/src/NodeHttpPlatform.ts` - Node HTTP platform services. Use: provide HTTP runtime pieces.
-- `NodeHttpServer` - `packages/platform-node/src/NodeHttpServer.ts` - Node HTTP server implementation. Use: serve HTTP endpoints.
-- `NodeHttpServerRequest` - `packages/platform-node/src/NodeHttpServerRequest.ts` - Node request adapters. Use: read incoming HTTP requests.
-- `NodeMultipart` - `packages/platform-node/src/NodeMultipart.ts` - Node multipart parsing. Use: handle form uploads.
-- `NodePath` - `packages/platform-node/src/NodePath.ts` - Node path service. Use: resolve filesystem paths.
-- `NodeRedis` - `packages/platform-node/src/NodeRedis.ts` - Node Redis integration. Use: talk to Redis.
-- `NodeRuntime` - `packages/platform-node/src/NodeRuntime.ts` - Node runtime entrypoints. Use: run Effect apps on Node.
-- `NodeServices` - `packages/platform-node/src/NodeServices.ts` - Node service bundle. Use: provide common Node services.
-- `NodeSink` - `packages/platform-node/src/NodeSink.ts` - Node sink adapters. Use: write streamed output.
-- `NodeSocket` - `packages/platform-node/src/NodeSocket.ts` - Node socket implementation. Use: manage socket connections.
-- `NodeSocketServer` - `packages/platform-node/src/NodeSocketServer.ts` - Node socket server implementation. Use: accept socket clients.
-- `NodeStdio` - `packages/platform-node/src/NodeStdio.ts` - Node stdio integration. Use: access stdin/stdout/stderr.
-- `NodeStream` - `packages/platform-node/src/NodeStream.ts` - Node stream adapters. Use: bridge Node streams.
-- `NodeTerminal` - `packages/platform-node/src/NodeTerminal.ts` - Node terminal integration. Use: build CLI terminal interactions.
-- `NodeWorker` - `packages/platform-node/src/NodeWorker.ts` - Node worker integration. Use: communicate with worker threads.
-- `NodeWorkerRunner` - `packages/platform-node/src/NodeWorkerRunner.ts` - Node worker runtime helpers. Use: run Effect code in workers.
-- `Undici` - `packages/platform-node/src/Undici.ts` - Undici integration helpers. Use: use Undici-based HTTP features.
+- `NodeChildProcessSpawner` - `packages/platform/node/src/NodeChildProcessSpawner.ts` - Node child-process spawner. Use: launch subprocesses.
+- `NodeClusterHttp` - `packages/platform/node/src/NodeClusterHttp.ts` - Node clustered HTTP helpers. Use: scale HTTP servers.
+- `NodeClusterSocket` - `packages/platform/node/src/NodeClusterSocket.ts` - Node clustered socket helpers. Use: scale socket servers.
+- `NodeFileSystem` - `packages/platform/node/src/NodeFileSystem.ts` - Node file system implementation. Use: do Node-based file I/O.
+- `NodeHttpClient` - `packages/platform/node/src/NodeHttpClient.ts` - Node HTTP client implementation. Use: make outbound HTTP requests.
+- `NodeHttpIncomingMessage` - `packages/platform/node/src/NodeHttpIncomingMessage.ts` - Node incoming message adapters. Use: read raw Node HTTP messages.
+- `NodeHttpPlatform` - `packages/platform/node/src/NodeHttpPlatform.ts` - Node HTTP platform services. Use: provide HTTP runtime pieces.
+- `NodeHttpServer` - `packages/platform/node/src/NodeHttpServer.ts` - Node HTTP server implementation. Use: serve HTTP endpoints.
+- `NodeHttpServerRequest` - `packages/platform/node/src/NodeHttpServerRequest.ts` - Node request adapters. Use: read incoming HTTP requests.
+- `NodeMultipart` - `packages/platform/node/src/NodeMultipart.ts` - Node multipart parsing. Use: handle form uploads.
+- `NodePath` - `packages/platform/node/src/NodePath.ts` - Node path service. Use: resolve filesystem paths.
+- `NodeRedis` - `packages/platform/node/src/NodeRedis.ts` - Node Redis integration. Use: talk to Redis.
+- `NodeRuntime` - `packages/platform/node/src/NodeRuntime.ts` - Node runtime entrypoints. Use: run Effect apps on Node.
+- `NodeServices` - `packages/platform/node/src/NodeServices.ts` - Node service bundle. Use: provide common Node services.
+- `NodeSink` - `packages/platform/node/src/NodeSink.ts` - Node sink adapters. Use: write streamed output.
+- `NodeSocket` - `packages/platform/node/src/NodeSocket.ts` - Node socket implementation. Use: manage socket connections.
+- `NodeSocketServer` - `packages/platform/node/src/NodeSocketServer.ts` - Node socket server implementation. Use: accept socket clients.
+- `NodeStdio` - `packages/platform/node/src/NodeStdio.ts` - Node stdio integration. Use: access stdin/stdout/stderr.
+- `NodeStream` - `packages/platform/node/src/NodeStream.ts` - Node stream adapters. Use: bridge Node streams.
+- `NodeTerminal` - `packages/platform/node/src/NodeTerminal.ts` - Node terminal integration. Use: build CLI terminal interactions.
+- `NodeWorker` - `packages/platform/node/src/NodeWorker.ts` - Node worker integration. Use: communicate with worker threads.
+- `NodeWorkerRunner` - `packages/platform/node/src/NodeWorkerRunner.ts` - Node worker runtime helpers. Use: run Effect code in workers.
+- `Undici` - `packages/platform/node/src/Undici.ts` - Undici integration helpers. Use: use Undici-based HTTP features.
 
 ## `@effect/platform-node-shared` Package
 
-Package path: `packages/platform-node-shared`
+Package path: `packages/platform/node-shared`
 
-- No public `src/index.ts` barrel is present in this vendored repo, so there are no barrel exports to inventory here.
+- `NodeChildProcessSpawner` - `packages/platform/node-shared/src/NodeChildProcessSpawner.ts` - Node child-process spawner. TypeWeaver CLI uses this module.
+- `NodeClusterSocket` - `packages/platform/node-shared/src/NodeClusterSocket.ts` - Node clustered socket helpers.
+- `NodeCrypto` - `packages/platform/node-shared/src/NodeCrypto.ts` - Node crypto service.
+- `NodeFileSystem` - `packages/platform/node-shared/src/NodeFileSystem.ts` - Node file system implementation. TypeWeaver CLI uses this module.
+- `NodeHttpCompression` - `packages/platform/node-shared/src/NodeHttpCompression.ts` - Node HTTP compression helpers.
+- `NodePath` - `packages/platform/node-shared/src/NodePath.ts` - Node path service. TypeWeaver CLI uses this module.
+- `NodeRuntime` - `packages/platform/node-shared/src/NodeRuntime.ts` - Node runtime entrypoint (`runMain`). TypeWeaver CLI uses this module.
+- `NodeSink` - `packages/platform/node-shared/src/NodeSink.ts` - Node sink adapters.
+- `NodeSocket` - `packages/platform/node-shared/src/NodeSocket.ts` - Node socket implementation.
+- `NodeSocketServer` - `packages/platform/node-shared/src/NodeSocketServer.ts` - Node socket server implementation.
+- `NodeStdio` - `packages/platform/node-shared/src/NodeStdio.ts` - Node stdio integration. TypeWeaver CLI uses this module.
+- `NodeStream` - `packages/platform/node-shared/src/NodeStream.ts` - Node stream adapters.
+- `NodeTerminal` - `packages/platform/node-shared/src/NodeTerminal.ts` - Node terminal integration. TypeWeaver CLI uses this module.
 
 ## `@effect/vitest` Package
 

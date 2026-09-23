@@ -184,6 +184,12 @@ const mutations = [
     },
     "Effect-optional",
   ],
+  [
+    () => {
+      documents["packages/effect/README.md"] = "4.0.0-rc.116\nCause\n";
+    },
+    "packages/effect/README.md is missing native Effect statement: ManagedRuntime",
+  ],
 ];
 for (const [mutate, expected] of mutations) {
   const original = JSON.parse(JSON.stringify(manifests));
