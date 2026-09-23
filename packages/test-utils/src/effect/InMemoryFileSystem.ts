@@ -22,8 +22,6 @@ import type {
   InMemoryStore,
 } from "./inMemoryFileSystemStore.js";
 
-export type { InMemoryFsState };
-
 export type InMemoryFileSystemHandle = {
   readonly layer: Layer.Layer<FileSystem.FileSystem>;
   readonly state: InMemoryFsState;
