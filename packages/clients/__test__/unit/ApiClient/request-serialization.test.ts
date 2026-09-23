@@ -1,113 +1,79 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import type {
-  ClientHttpHeader,
-  ClientHttpParam,
-  ClientHttpQuery,
-  IHttpBody,
-  IHttpResponse,
-} from "@rexeus/typeweaver-core";
-import { TestAssertionError } from "test-utils";
-import { describe, expect, test, vi } from "vitest";
-import { ApiClient } from "../../src/lib/ApiClient.js";
-import { NetworkError } from "../../src/lib/NetworkError.js";
-import { RequestCommand } from "../../src/lib/RequestCommand.js";
-import type { ApiClientProps } from "../../src/lib/ApiClient.js";
+import type { ClientHttpHeader } from "@rexeus/typeweaver-core";
+import { describe, expect, test } from "vitest";
+import { NetworkError } from "../../../src/lib/NetworkError.js";
+import {
+  createClient,
+  getFetchCall,
+  resolvedFetch,
+  sendRaw,
+  TestRequestCommand,
+} from "./fixtures.js";
 
-type TestRequestCommandProps = {
-  readonly method?: HttpMethod;
-  readonly path?: string;
-  readonly header?: ClientHttpHeader;
-  readonly param?: ClientHttpParam;
-  readonly query?: ClientHttpQuery;
-  readonly body?: IHttpBody;
-};
+describe("ApiClient request serialization", () => {
+  test("merges default headers while request headers take precedence", async () => {
+    const { mockFetch } = await sendRaw(
+      {
+        header: {
+          Authorization: "Bearer request",
+          "X-Request": "request",
+        },
+      },
+      {
+        defaultHeaders: {
+          Authorization: "Bearer default",
+          "X-Default": "default",
+        },
+      }
+    );
 
-class TestApiClient extends ApiClient {
-  public constructor(props: ApiClientProps) {
-    super(props);
-  }
-
-  public send(command: RequestCommand): Promise<IHttpResponse> {
-    return this.execute(command);
-  }
-}
-
-class TestRequestCommand extends RequestCommand {
-  public override readonly operationId = "TestRequest";
-  public override readonly method: HttpMethod;
-  public override readonly path: string;
-  public override readonly header: ClientHttpHeader;
-  public override readonly param: ClientHttpParam;
-  public override readonly query: ClientHttpQuery;
-  public override readonly body: IHttpBody;
-
-  public constructor(props: TestRequestCommandProps = {}) {
-    super();
-
-    this.method = props.method ?? HttpMethod.GET;
-    this.path = props.path ?? "/todos";
-    this.header = props.header;
-    this.param = props.param;
-    this.query = props.query;
-    this.body = props.body;
-  }
-
-  public override processResponse(response: IHttpResponse): IHttpResponse {
-    return response;
-  }
-}
-
-function resolvedFetch(
-  response: Response = new Response(null, { status: 204 })
-) {
-  return vi.fn<typeof globalThis.fetch>().mockResolvedValue(response);
-}
-
-function createClient(
-  mockFetch: typeof globalThis.fetch = resolvedFetch(),
-  props: Partial<ApiClientProps> = {}
-): TestApiClient {
-  return new TestApiClient({
-    baseUrl: "http://localhost:3000",
-    fetchFn: mockFetch,
-    ...props,
+    expect(getFetchCall(mockFetch).init.headers).toStrictEqual({
+      Authorization: "Bearer request",
+      "X-Default": "default",
+      "X-Request": "request",
+    });
   });
-}
 
-function getFetchCall(mockFetch: typeof globalThis.fetch): {
-  readonly url: string;
-  readonly init: RequestInit;
-} {
-  const call = vi.mocked(mockFetch).mock.calls[0];
-  if (!call) {
-    throw new TestAssertionError("Expected fetch to have been called");
-  }
+  test.each([
+    { case: "undefined", body: undefined },
+    { case: "null", body: null },
+  ])("omits $case request bodies", async ({ body }) => {
+    const { mockFetch } = await sendRaw({ method: HttpMethod.POST, body });
 
-  return {
-    url: call[0] as string,
-    init: call[1] ?? {},
-  };
-}
+    expect(getFetchCall(mockFetch).init.body).toBeUndefined();
+  });
 
-async function sendRaw(
-  commandProps: TestRequestCommandProps,
-  clientProps: Partial<ApiClientProps> = {}
-): Promise<{
-  readonly result: IHttpResponse;
-  readonly mockFetch: typeof globalThis.fetch;
-}> {
-  const mockFetch = resolvedFetch(
-    new Response("{}", {
-      status: 200,
-      headers: { "content-type": "application/json" },
-    })
+  test("sends string bodies as-is", async () => {
+    const { mockFetch } = await sendRaw({
+      method: HttpMethod.POST,
+      body: "hello",
+    });
+
+    expect(getFetchCall(mockFetch).init.body).toBe("hello");
+  });
+
+  test("JSON-stringifies plain object bodies", async () => {
+    const body = { title: "Write tests", completed: false };
+
+    const { mockFetch } = await sendRaw({ method: HttpMethod.POST, body });
+
+    expect(getFetchCall(mockFetch).init.body).toBe(JSON.stringify(body));
+  });
+
+  test.each([
+    { case: "plain object", body: { title: "Write tests" } },
+    { case: "array", body: [{ title: "Write tests" }] },
+  ])(
+    "adds application/json content-type for JSON-stringified $case bodies",
+    async ({ body }) => {
+      const { mockFetch } = await sendRaw({ method: HttpMethod.POST, body });
+
+      expect(getFetchCall(mockFetch).init.headers).toStrictEqual({
+        "Content-Type": "application/json",
+      });
+    }
   );
-  const client = createClient(mockFetch, clientProps);
-
-  const result = await client.send(new TestRequestCommand(commandProps));
-
-  return { result, mockFetch };
-}
+});
 
 describe("ApiClient request content types", () => {
   test("preserves unrelated headers when adding JSON content-type", async () => {
@@ -165,18 +131,6 @@ describe("ApiClient request content types", () => {
       expect(getFetchCall(mockFetch).init.headers).toStrictEqual(header);
     }
   );
-});
-
-describe("ApiClient cancellation", () => {
-  test("forwards an external AbortSignal to fetch", async () => {
-    const abortController = new AbortController();
-    const { mockFetch } = await sendRaw(
-      { method: HttpMethod.GET },
-      { signal: abortController.signal }
-    );
-
-    expect(getFetchCall(mockFetch).init.signal).toBe(abortController.signal);
-  });
 });
 
 describe("ApiClient request serialization failures", () => {
@@ -239,6 +193,31 @@ describe("ApiClient request serialization failures", () => {
     const { mockFetch } = await sendRaw({ method: HttpMethod.POST, body });
 
     expect(getFetchCall(mockFetch).init.headers).toBeUndefined();
+  });
+});
+
+describe("ApiClient default headers", () => {
+  test("treats header names case-insensitively when request headers override defaults", async () => {
+    const { mockFetch } = await sendRaw(
+      {
+        header: {
+          authorization: "Bearer request",
+        },
+      },
+      {
+        defaultHeaders: {
+          Authorization: "Bearer default",
+          "X-Default": "default",
+        },
+      }
+    );
+
+    expect([
+      ...new Headers(getFetchCall(mockFetch).init.headers).entries(),
+    ]).toStrictEqual([
+      ["authorization", "Bearer request"],
+      ["x-default", "default"],
+    ]);
   });
 });
 

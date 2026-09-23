@@ -1,78 +1,15 @@
 import { HttpMethod } from "@rexeus/typeweaver-core";
-import type {
-  ClientHttpHeader,
-  ClientHttpParam,
-  ClientHttpQuery,
-  IHttpBody,
-  IHttpResponse,
-} from "@rexeus/typeweaver-core";
 import { captureError, TestAssertionError } from "test-utils";
-import { describe, expect, test, vi } from "vitest";
-import { ApiClient } from "../../src/lib/ApiClient.js";
-import { ApiClientConfigurationError } from "../../src/lib/errors/ApiClientConfigurationError.js";
-import { RequestCommand } from "../../src/lib/RequestCommand.js";
-import type { ApiClientProps } from "../../src/lib/ApiClient.js";
-
-type TestRequestCommandProps = {
-  readonly method?: HttpMethod;
-  readonly path?: string;
-  readonly header?: ClientHttpHeader;
-  readonly param?: ClientHttpParam;
-  readonly query?: ClientHttpQuery;
-  readonly body?: IHttpBody;
-};
-
-class TestApiClient extends ApiClient {
-  public constructor(props: ApiClientProps) {
-    super(props);
-  }
-
-  public send(command: RequestCommand): Promise<IHttpResponse> {
-    return this.execute(command);
-  }
-}
-
-class TestRequestCommand extends RequestCommand {
-  public override readonly operationId = "TestRequest";
-  public override readonly method: HttpMethod;
-  public override readonly path: string;
-  public override readonly header: ClientHttpHeader;
-  public override readonly param: ClientHttpParam;
-  public override readonly query: ClientHttpQuery;
-  public override readonly body: IHttpBody;
-
-  public constructor(props: TestRequestCommandProps = {}) {
-    super();
-
-    this.method = props.method ?? HttpMethod.GET;
-    this.path = props.path ?? "/todos";
-    this.header = props.header;
-    this.param = props.param;
-    this.query = props.query;
-    this.body = props.body;
-  }
-
-  public override processResponse(response: IHttpResponse): IHttpResponse {
-    return response;
-  }
-}
-
-function resolvedFetch(
-  response: Response = new Response(null, { status: 204 })
-) {
-  return vi.fn<typeof globalThis.fetch>().mockResolvedValue(response);
-}
-
-function createClient(
-  mockFetch: typeof globalThis.fetch = resolvedFetch(),
-  props: Partial<ApiClientProps> = {}
-): TestApiClient {
-  return new TestApiClient({
-    baseUrl: "http://localhost:3000",
-    fetchFn: mockFetch,
-    ...props,
-  });
-}
+import { describe, expect, test } from "vitest";
+import { ApiClientConfigurationError } from "../../../src/lib/errors/ApiClientConfigurationError.js";
+import {
+  createClient,
+  getFetchCall,
+  resolvedFetch,
+  TestApiClient,
+  TestRequestCommand,
+} from "./fixtures.js";
+import type { ApiClientProps } from "../../../src/lib/ApiClient.js";
 
 function captureApiClientConfigurationError(
   action: () => void
@@ -86,41 +23,6 @@ function captureApiClientConfigurationError(
   }
 
   return error;
-}
-
-function getFetchCall(mockFetch: typeof globalThis.fetch): {
-  readonly url: string;
-  readonly init: RequestInit;
-} {
-  const call = vi.mocked(mockFetch).mock.calls[0];
-  if (!call) {
-    throw new TestAssertionError("Expected fetch to have been called");
-  }
-
-  return {
-    url: call[0] as string,
-    init: call[1] ?? {},
-  };
-}
-
-async function sendRaw(
-  commandProps: TestRequestCommandProps,
-  clientProps: Partial<ApiClientProps> = {}
-): Promise<{
-  readonly result: IHttpResponse;
-  readonly mockFetch: typeof globalThis.fetch;
-}> {
-  const mockFetch = resolvedFetch(
-    new Response("{}", {
-      status: 200,
-      headers: { "content-type": "application/json" },
-    })
-  );
-  const client = createClient(mockFetch, clientProps);
-
-  const result = await client.send(new TestRequestCommand(commandProps));
-
-  return { result, mockFetch };
 }
 
 describe("ApiClient constructor", () => {
@@ -319,44 +221,5 @@ describe("ApiClient option validation", () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
-  });
-});
-
-describe("ApiClient URL construction", () => {
-  test.each([
-    {
-      case: "origin-only base URL with leading slash path",
-      baseUrl: "http://localhost:3000",
-      path: "/todos",
-      expectedUrl: "http://localhost:3000/todos",
-    },
-    {
-      case: "base URL path without trailing slash",
-      baseUrl: "http://localhost:3000/api",
-      path: "/todos",
-      expectedUrl: "http://localhost:3000/api/todos",
-    },
-    {
-      case: "base URL path with trailing slash",
-      baseUrl: "http://localhost:3000/api/",
-      path: "/todos",
-      expectedUrl: "http://localhost:3000/api/todos",
-    },
-    {
-      case: "relative base path",
-      baseUrl: "/api",
-      path: "/todos",
-      expectedUrl: "/api/todos",
-    },
-    {
-      case: "command path without leading slash",
-      baseUrl: "http://localhost:3000/api",
-      path: "todos",
-      expectedUrl: "http://localhost:3000/api/todos",
-    },
-  ])("joins $case", async ({ baseUrl, path, expectedUrl }) => {
-    const { mockFetch } = await sendRaw({ path }, { baseUrl });
-
-    expect(getFetchCall(mockFetch).url).toBe(expectedUrl);
   });
 });

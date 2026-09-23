@@ -4,37 +4,19 @@ import {
   createGetFileMetadataSuccessResponseBody,
   createUploadFileSuccessResponseBody,
   DownloadFileContentRequestCommand,
-  FileClient,
   GetFileMetadataRequestCommand,
   PathParameterError,
   TestAssertionError,
   UploadFileRequestCommand,
 } from "test-utils";
 import { describe, expect, test, vi } from "vitest";
-import { createRawMockFetch } from "../helpers.js";
+import { createRawMockFetch } from "../../helpers.js";
+import { createFileClient, createJsonMockFetch } from "./fixtures.js";
 
 type FetchCallDetails = {
   readonly url: string;
   readonly init: RequestInit;
 };
-
-function createFileClient(
-  mockFetch: typeof globalThis.fetch,
-  baseUrl = "http://localhost:3000"
-) {
-  return new FileClient({
-    fetchFn: mockFetch,
-    baseUrl,
-  });
-}
-
-function createJsonMockFetch(
-  status: number,
-  body: unknown,
-  headers: Record<string, string> = { "content-type": "application/json" }
-): typeof globalThis.fetch {
-  return createRawMockFetch(status, JSON.stringify(body), headers);
-}
 
 function anUploadCommandWithoutDefaultContentType(props: {
   readonly authorization: string;

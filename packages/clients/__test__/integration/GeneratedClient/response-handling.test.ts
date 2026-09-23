@@ -2,13 +2,17 @@ import assert from "node:assert";
 import { UnknownResponseError } from "@rexeus/typeweaver-core";
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import {
+  createForbiddenErrorResponse,
   createGetTodoRequest,
-  GetMetricRequestCommand,
+  createInternalServerErrorResponse,
+  createTodoNotChangeableErrorResponse,
+  createTodoNotFoundErrorResponse,
+  createUpdateTodoRequest,
   GetTodoRequestCommand,
-  MetricClient,
   TestAssertionError,
+  UpdateTodoRequestCommand,
 } from "test-utils";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 import { runClientCleanup, setupClientTest } from "./clientSetup.js";
 
 async function captureUnknownResponseError(
@@ -27,6 +31,49 @@ async function captureUnknownResponseError(
 
 afterEach(async () => {
   await runClientCleanup();
+});
+
+describe("UpdateTodo Responses", () => {
+  test.each([
+    {
+      scenario: "404 TodoNotFoundError",
+      response: createTodoNotFoundErrorResponse({
+        body: { actualValues: { todoId: "01ARZ3NDEKTSV4RRFFQ69G5FAV" } },
+      }),
+    },
+    {
+      scenario: "409 TodoNotChangeableError",
+      response: createTodoNotChangeableErrorResponse({
+        body: {
+          context: {
+            todoId: "01BX5ZZKBKACTAV9WEVGEMMVRZ",
+            currentStatus: "DONE",
+          },
+        },
+      }),
+    },
+    {
+      scenario: "403 ForbiddenError",
+      response: createForbiddenErrorResponse(),
+    },
+    {
+      scenario: "500 InternalServerError",
+      response: createInternalServerErrorResponse(),
+    },
+  ])(
+    "returns generated response union variant for $scenario",
+    async ({ response }) => {
+      const { client } = await setupClientTest({
+        throwTodoError: response,
+      });
+      const requestData = createUpdateTodoRequest();
+      const command = new UpdateTodoRequestCommand(requestData);
+
+      const result = await client.send(command);
+
+      expect(result).toEqual(response);
+    }
+  );
 });
 
 describe("Unknown Response Handling", () => {
@@ -78,37 +125,5 @@ describe("Unknown Response Handling", () => {
       "x-single-value": "unknown-status",
     });
     expect(error.body).toEqual(unknownBody);
-  });
-});
-
-describe("Generated Client reserved path parameters", () => {
-  test("rejects an own __proto__ path parameter before fetch", async () => {
-    const fetchFn = vi.fn<typeof globalThis.fetch>();
-    const client = new MetricClient({
-      baseUrl: "https://api.example.test",
-      fetchFn,
-    });
-    const param: { metricId: number; [key: string]: number } = {
-      metricId: 42,
-    };
-    Object.defineProperty(param, "__proto__", {
-      value: 7,
-      writable: true,
-      enumerable: true,
-      configurable: true,
-    });
-    const command = new GetMetricRequestCommand({
-      param,
-      query: {},
-      header: { "X-Attempt": 3 },
-    });
-
-    await expect(client.send(command)).rejects.toMatchObject({
-      code: "REQUEST_SERIALIZATION_ERROR",
-      location: "path",
-      key: "__proto__",
-      reason: "reserved-key",
-    });
-    expect(fetchFn).not.toHaveBeenCalled();
   });
 });

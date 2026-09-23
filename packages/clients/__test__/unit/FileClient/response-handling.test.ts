@@ -19,25 +19,8 @@ import {
   UploadFileRequestCommand,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import { createRawMockFetch } from "../helpers.js";
-
-function createFileClient(
-  mockFetch: typeof globalThis.fetch,
-  baseUrl = "http://localhost:3000"
-) {
-  return new FileClient({
-    fetchFn: mockFetch,
-    baseUrl,
-  });
-}
-
-function createJsonMockFetch(
-  status: number,
-  body: unknown,
-  headers: Record<string, string> = { "content-type": "application/json" }
-): typeof globalThis.fetch {
-  return createRawMockFetch(status, JSON.stringify(body), headers);
-}
+import { createRawMockFetch } from "../../helpers.js";
+import { createFileClient, createJsonMockFetch } from "./fixtures.js";
 
 function expectResponseType<
   TResponse extends { readonly type: string },
