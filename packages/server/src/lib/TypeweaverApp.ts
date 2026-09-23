@@ -20,21 +20,14 @@ import {
 import { Router } from "./Router.js";
 import {
   createInternalServerErrorResponse,
-  handleAppError,
   reportAppError,
-  validateAppResponse,
 } from "./TypeweaverAppErrorHandling.js";
-import {
-  processAppRequest,
-  resolveAppRequest,
-} from "./TypeweaverAppRequestPipeline.js";
+import { processAppRequest } from "./TypeweaverAppRequestPipeline.js";
 import { mountAppRouter } from "./TypeweaverAppRouting.js";
 import { initializeTypeweaverAppRuntime } from "./TypeweaverAppRuntime.js";
 import type { FetchApiAdapter } from "./FetchApiAdapter.js";
 import type { Middleware } from "./Middleware.js";
 import type { ErasedRequestHandler } from "./RequestHandler.js";
-import type { RouteDefinition, RouteMatch } from "./Router.js";
-import type { ServerContext } from "./ServerContext.js";
 import type {
   StateRequirementError,
   TypedMiddleware,
@@ -190,70 +183,7 @@ export class TypeweaverApp<TState extends Record<string, unknown> = {}> {
       adapter: this.adapter,
       router: this.router,
       middlewares: this.middlewares,
-      resolveAndExecute: (match, pathname, ctx) =>
-        this.resolveAndExecute(match, pathname, ctx),
-    });
-  }
-
-  /**
-   * Execute the matched route handler, or produce 404/405 responses.
-   * Called as the final handler in the middleware pipeline.
-   */
-  private resolveAndExecute(
-    match: RouteMatch | undefined,
-    pathname: string,
-    ctx: ServerContext
-  ): Promise<IHttpResponse> {
-    return resolveAppRequest({
-      match,
-      pathname,
-      ctx,
-      router: this.router,
-      executeHandler: (handlerContext, route) =>
-        this.executeHandler(handlerContext, route),
-      validateResponse: (route, response, responseContext) =>
-        this.validateResponse(route, response, responseContext),
-      handleError: (error, errorContext, route) =>
-        this.handleError(error, errorContext, route),
-    });
-  }
-
-  private async executeHandler(
-    ctx: ServerContext,
-    route: RouteDefinition
-  ): Promise<IHttpResponse> {
-    const validatedRequest = route.routerConfig.validateRequests
-      ? route.requestValidator.validate(ctx.request)
-      : ctx.request;
-
-    return route.handler(validatedRequest, ctx);
-  }
-
-  private async validateResponse(
-    route: RouteDefinition,
-    response: IHttpResponse,
-    ctx: ServerContext
-  ): Promise<IHttpResponse> {
-    return validateAppResponse({
-      route,
-      response,
-      ctx,
       safeOnError: error => reportAppError(this.onError, error),
-    });
-  }
-
-  private async handleError(
-    error: unknown,
-    ctx: ServerContext,
-    route: RouteDefinition
-  ): Promise<IHttpResponse> {
-    return handleAppError({
-      error,
-      ctx,
-      route,
-      safeOnError: errorValue => reportAppError(this.onError, errorValue),
-      validateResponse: (responseRoute, response, responseContext) =>
-        this.validateResponse(responseRoute, response, responseContext),
     });
   }
 }

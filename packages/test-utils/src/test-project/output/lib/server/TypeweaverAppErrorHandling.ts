@@ -122,13 +122,8 @@ export async function handleAppError(options: {
   readonly ctx: ServerContext;
   readonly route: RouteDefinition;
   readonly safeOnError: (error: unknown) => void;
-  readonly validateResponse: (
-    route: RouteDefinition,
-    response: IHttpResponse,
-    ctx: ServerContext,
-  ) => Promise<IHttpResponse>;
 }): Promise<IHttpResponse> {
-  const { error, ctx, route, safeOnError, validateResponse } = options;
+  const { error, ctx, route, safeOnError } = options;
   const config = route.routerConfig;
 
   const validationResponse = await handleRequestValidationError(error, config, ctx, safeOnError);
@@ -139,7 +134,6 @@ export async function handleAppError(options: {
     config,
     ctx,
     route,
-    validateResponse,
     safeOnError,
   });
   if (httpResponse) return httpResponse;
@@ -169,19 +163,21 @@ async function handleHttpResponseError(options: {
   readonly config: RouteDefinition["routerConfig"];
   readonly ctx: ServerContext;
   readonly route: RouteDefinition;
-  readonly validateResponse: (
-    route: RouteDefinition,
-    response: IHttpResponse,
-    ctx: ServerContext,
-  ) => Promise<IHttpResponse>;
   readonly safeOnError: (error: unknown) => void;
 }): Promise<IHttpResponse | null> {
-  const { error, config, ctx, route, validateResponse, safeOnError } = options;
+  const { error, config, ctx, route, safeOnError } = options;
   if (!isTypedHttpResponse(error)) return null;
   const handler = resolveErrorHandler(config.handleHttpResponseErrors, defaultHttpResponseHandler);
   if (!handler) return null;
   const response = await safelyExecuteErrorHandler(() => handler(error, ctx), safeOnError);
-  return response ? validateResponse(route, normalizeHttpResponse(response), ctx) : null;
+  return response
+    ? validateAppResponse({
+        route,
+        response: normalizeHttpResponse(response),
+        ctx,
+        safeOnError,
+      })
+    : null;
 }
 
 async function handleUnknownError(
