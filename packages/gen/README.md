@@ -25,7 +25,7 @@ Use `@rexeus/typeweaver-gen` when you are:
 pnpm add -D \
   @rexeus/typeweaver-gen \
   @rexeus/typeweaver-core \
-  effect \
+  effect@4.0.0-rc.116 \
   zod
 ```
 

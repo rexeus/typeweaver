@@ -24,7 +24,7 @@ pnpm add -D @rexeus/typeweaver
 pnpm add \
   @rexeus/typeweaver-core \
   @rexeus/typeweaver-effect \
-  effect \
+  effect@4.0.0-rc.116 \
   zod
 
 pnpm typeweaver generate \
