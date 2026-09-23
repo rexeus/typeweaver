@@ -1,6 +1,6 @@
 import {
   findReservedPathParameter,
-  HttpMethod,
+  isHttpMethod,
   ReservedPathParameterError,
 } from "@rexeus/typeweaver-core";
 import {
@@ -58,11 +58,6 @@ export function assertPathHasNoReservedParameter(path: string): void {
     throw new ReservedPathParameterError(path, reservedPathParameter);
   }
 }
-
-const HTTP_METHODS: readonly HttpMethod[] = Object.values(HttpMethod);
-
-const isHttpMethod = (method: string): method is HttpMethod =>
-  HTTP_METHODS.some(httpMethod => httpMethod === method);
 
 /**
  * Stores the route under its upper-cased method. A method outside `HttpMethod`

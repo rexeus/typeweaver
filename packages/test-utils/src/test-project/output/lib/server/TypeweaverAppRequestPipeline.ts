@@ -1,5 +1,6 @@
 import {
   createDefaultErrorResponse,
+  isHttpMethod,
   methodNotAllowedDefaultError,
   normalizeHttpResponse,
   notFoundDefaultError,
@@ -31,6 +32,11 @@ export async function processAppRequest(options: {
 }): Promise<IHttpResponse> {
   const { request, adapter, router, middlewares, safeOnError } = options;
   const url = new URL(request.url);
+  // A method token outside `HttpMethod` cannot match a route, so it gets the
+  // router's 404/405 answer before any middleware sees an untyped method.
+  if (!isHttpMethod(request.method.toUpperCase())) {
+    return respondWithoutRoute(router, url.pathname);
+  }
   const httpRequest = await adapter.toRequest(request, url);
   const match = router.match(request.method, url.pathname);
   const ctx: ServerContext = {
