@@ -34,5 +34,5 @@ remains separate so typed generation failures stay concise and actionable.
 
 - `packages/cli/src/cli.ts`
 - `packages/cli/src/validationErrorFilter.ts`
-- `packages/cli/__test__/cli.process.test.ts`
+- `packages/cli/__test__/cli.process/`
 - [Effect 4 baseline](./0008-effect-4-baseline.md)

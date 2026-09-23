@@ -91,8 +91,8 @@ direct children of `typeweaver.Generator.generate`.
 - The long-lived `ManagedRuntime` is preserved. Service construction (template directory resolution,
   plugin module loader setup) happens once at process start, not on every call.
 - Concurrent `Generator.generate` calls produce independent outputs. The regression is locked in by
-  `packages/cli/__test__/generator.concurrent.test.ts`, which fires two `generate` calls with
-  different output directories at the same runtime instance and asserts no cross-contamination.
+  `packages/cli/__test__/generator/concurrent-isolation.test.ts`, which fires two `generate` calls
+  with different output directories at the same runtime instance and asserts no cross-contamination.
 - `IndexFileGenerator` receives a slice of the per-call tracker, not a reference to a shared list.
   Index files reflect exactly the files this call produced.
 - The pipeline is observable: `typeweaver.Generator.generate` spans show up in trace exports, with
@@ -113,9 +113,9 @@ direct children of `typeweaver.Generator.generate`.
 ### Negative
 
 - The `PluginRegistry.createInstance` call is load-bearing and easy to forget when extending the
-  pipeline. The disjoint-plugin-set test in `generator.concurrent.test.ts` and the comment above the
-  call in `Generator.ts` document the intent; a future contributor who reverts the factory pattern
-  to a shared `Ref` will see the concurrent test fail.
+  pipeline. The disjoint-plugin-set test in `generator/concurrent-isolation.test.ts` and the comment
+  above the call in `Generator.ts` document the intent; a future contributor who reverts the factory
+  pattern to a shared `Ref` will see the concurrent test fail.
 - Per-call state inside a long-lived service is a pattern that needs to be applied consistently. ADR
   0005 codifies the `succeed:` vs `effect:` rule; this ADR codifies the per-call-state rule.
   Services that hold per-call state must either build it inside the call (the `ContextBuilder`
@@ -138,9 +138,10 @@ export backend remains the open follow-up.
 - `packages/gen/src/services/ContextBuilder.ts` — per-call tracker construction
 - `packages/gen/src/services/internal/pluginContextBuilder.ts` — context factory invoked by
   `ContextBuilder`
-- `packages/cli/__test__/generator.concurrent.test.ts` — concurrent-isolation regression test
-- `packages/cli/__test__/generator.recovery.test.ts` — deterministic failure, interruption, cleanup,
-  and same-runtime retry matrix
+- `packages/cli/__test__/generator/concurrent-isolation.test.ts` — concurrent-isolation regression
+  test
+- `packages/cli/__test__/generator/recovery/failure-interruption-and-retry.test.ts` — deterministic
+  failure, interruption, cleanup, and same-runtime retry matrix
 - `packages/cli/__test__/services/internal/` — focused workflow contracts for preflight/locking,
   plugin lifecycle, and postprocessing
 - `packages/cli/__test__/services/SpecBundler.lifecycle.test.ts` — staged bundle publication and
