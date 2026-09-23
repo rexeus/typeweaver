@@ -4,10 +4,10 @@ import path from "node:path";
 import ts from "typescript";
 import {
   assertLintPolicyConfiguration,
-  expectedIgnorePatterns,
   readLintConfig,
   workspaceRoot,
 } from "./lint-policy-contract.mjs";
+import { expectedIgnorePatterns } from "./lint-policy-rules.mjs";
 import { ruleCases } from "./maintainability-fixtures.mjs";
 
 /** @typedef {import("./tooling-types.mjs").PackageManifest} PackageManifest */

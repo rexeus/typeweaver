@@ -5,9 +5,9 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import {
   NATIVE_EFFECT_DOCUMENT_TOKENS,
-  validateEffectPackageVersions,
   validateNativeEffectWorkspaceContract,
-} from "./lib/effect-version-contract.mjs";
+} from "./lib/effect-native-contract.mjs";
+import { validateEffectPackageVersions } from "./lib/effect-version-contract.mjs";
 
 /** @typedef {import("./lib/tooling-types.mjs").EffectBaselineContract} EffectBaselineContract */
 /** @typedef {import("./lib/tooling-types.mjs").PackageManifest} PackageManifest */

@@ -3,7 +3,7 @@ import path from "node:path";
 import {
   runEffectProject,
   workspaceRoot as repositoryRoot,
-} from "./effect-diagnostics.mjs";
+} from "./effect-diagnostics-projects.mjs";
 
 /** @typedef {Record<string, "error" | "warning">} SeverityMap */
 

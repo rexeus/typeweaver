@@ -1,13 +1,7 @@
 import path from "node:path";
+import { assertEffectDirectiveAllowlist } from "./effect-diagnostics-allowlist.mjs";
 import {
-  assertEffectDirectiveAllowlist,
-  validateEffectDirective,
-} from "./effect-diagnostics-allowlist.mjs";
-import {
-  EFFECT_DIAGNOSTIC_POLICY,
   effectDiagnosticExemption,
-  isArchitecturalNodeBuiltinPath,
-  isBoundaryEffectPath,
   isBlockingEffectDiagnostic,
 } from "./effect-diagnostics-policy.mjs";
 import {
@@ -17,28 +11,11 @@ import {
   recommendedSeverityMap,
   runEffectProject,
   toWorkspacePath,
-  workspaceRoot,
 } from "./effect-diagnostics-projects.mjs";
 
 /** @typedef {{ file: string, line: number, column: number, code: number, name: string, message: string, severity: string }} EffectDiagnostic */
 /** @typedef {EffectDiagnostic & { category: string }} ExemptedEffectDiagnostic */
 /** @typedef {import("./effect-diagnostics-projects.mjs").EffectProjectResult} EffectProjectResult */
-
-export {
-  EFFECT_DIAGNOSTIC_POLICY,
-  assertEffectDirectiveAllowlist,
-  discoverEffectProjects,
-  effectDiagnosticExemption,
-  isArchitecturalNodeBuiltinPath,
-  isBoundaryEffectPath,
-  isBlockingEffectDiagnostic,
-  isExcludedEffectPath,
-  recommendedSeverityMap,
-  runEffectProject,
-  toWorkspacePath,
-  validateEffectDirective,
-  workspaceRoot,
-};
 
 /** @param {readonly string[]} sourceFiles @param {ReadonlySet<string> | readonly string[]} checkedFiles */
 export const assertEffectSourceCoverage = (sourceFiles, checkedFiles) => {

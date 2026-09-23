@@ -1,5 +1,6 @@
 import path from "node:path";
 import process from "node:process";
+import { workspaceRoot } from "./lib/effect-diagnostics-projects.mjs";
 import {
   collectEffectDiagnostics,
   effectDiagnostics,
@@ -7,7 +8,6 @@ import {
   formatEffectDiagnostics,
   listExemptedEffectDiagnostics,
   summarizeExemptedEffectDiagnostics,
-  workspaceRoot,
 } from "./lib/effect-diagnostics.mjs";
 
 const listExempted = process.argv.slice(2).includes("--list-exempted");

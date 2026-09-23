@@ -1,5 +1,18 @@
 import assert from "node:assert/strict";
 import path from "node:path";
+import { validateEffectDirective } from "./lib/effect-diagnostics-allowlist.mjs";
+import {
+  effectDiagnosticExemption,
+  isArchitecturalNodeBuiltinPath,
+  isBlockingEffectDiagnostic,
+  isBoundaryEffectPath,
+} from "./lib/effect-diagnostics-policy.mjs";
+import {
+  discoverEffectProjects,
+  isExcludedEffectPath,
+  recommendedSeverityMap,
+  workspaceRoot,
+} from "./lib/effect-diagnostics-projects.mjs";
 import {
   acceptedSource,
   cleanSource,
@@ -10,19 +23,10 @@ import {
 } from "./lib/effect-diagnostics-test-probes.mjs";
 import {
   assertEffectSourceCoverage,
-  discoverEffectProjects,
-  effectDiagnosticExemption,
   effectDiagnostics,
   exemptedEffectDiagnostics,
-  isArchitecturalNodeBuiltinPath,
-  isBlockingEffectDiagnostic,
-  isBoundaryEffectPath,
-  isExcludedEffectPath,
   listExemptedEffectDiagnostics,
-  recommendedSeverityMap,
   summarizeExemptedEffectDiagnostics,
-  validateEffectDirective,
-  workspaceRoot,
 } from "./lib/effect-diagnostics.mjs";
 
 const severityMap = recommendedSeverityMap();

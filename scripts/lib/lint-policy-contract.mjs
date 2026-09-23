@@ -2,16 +2,6 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertLintPolicyConfiguration as assertConfig } from "./lint-policy-assertions.mjs";
-import {
-  expectedIgnorePatterns,
-  expectedRootRules,
-  expectedTestFiles,
-  expectedTestStructuralRelaxations,
-  expectedTypedTestFiles,
-  expectedTypeScriptExcludeFiles,
-  expectedTypeScriptFiles,
-  expectedTypeScriptRules,
-} from "./lint-policy-rules.mjs";
 
 /**
  * @typedef {object} LintOverride
@@ -45,13 +35,3 @@ export const assertLintPolicyConfiguration = (config = readLintConfig()) =>
   assertConfig(config);
 
 export { workspaceRoot };
-export {
-  expectedIgnorePatterns,
-  expectedRootRules,
-  expectedTestFiles,
-  expectedTestStructuralRelaxations,
-  expectedTypedTestFiles,
-  expectedTypeScriptExcludeFiles,
-  expectedTypeScriptFiles,
-  expectedTypeScriptRules,
-};

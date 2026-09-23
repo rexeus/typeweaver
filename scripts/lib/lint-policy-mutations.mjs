@@ -2,7 +2,7 @@ import {
   expectedTestFiles,
   expectedTypedTestFiles,
   expectedTypeScriptFiles,
-} from "./lint-policy-contract.mjs";
+} from "./lint-policy-rules.mjs";
 
 /** @typedef {import("./lint-policy-contract.mjs").LintConfig} LintConfig */
 

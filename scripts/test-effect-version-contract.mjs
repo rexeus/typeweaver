@@ -4,9 +4,9 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import {
   NATIVE_EFFECT_DOCUMENT_TOKENS,
-  validateEffectPackageVersions,
   validateNativeEffectWorkspaceContract,
-} from "./lib/effect-version-contract.mjs";
+} from "./lib/effect-native-contract.mjs";
+import { validateEffectPackageVersions } from "./lib/effect-version-contract.mjs";
 
 const runtimeVersion = "4.0.0-rc.116";
 const fixtureRoot = mkdtempSync(
