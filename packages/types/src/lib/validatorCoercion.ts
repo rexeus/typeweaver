@@ -6,6 +6,7 @@ import { z } from "zod";
 import {
   addValueToCoerced,
   coerceRecordToSchema,
+  createNullPrototypeRecord,
   mapToOriginalKeys,
   setOwnValue,
   splitCommaDelimitedValues,
@@ -63,9 +64,7 @@ export function coerceToSchema(
   }
 
   const schemaMap = analyzeSchema(shape, caseSensitive);
-  const coerced: Record<string, unknown | unknown[]> = Object.create(
-    null
-  ) as Record<string, unknown | unknown[]>;
+  const coerced = createNullPrototypeRecord<unknown | unknown[]>();
 
   for (const [key, value] of Object.entries(data)) {
     const normalizedKey = caseSensitive ? key : key.toLowerCase();

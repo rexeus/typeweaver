@@ -42,14 +42,6 @@ export class Validator {
   getSchema(headerSchema) {
     return getSchemaImpl(headerSchema);
   }
-  /**
-   * Parse with a runtime-loaded schema while preserving the generated
-   * operation output type.
-   *
-   * The bundled specification intentionally exposes `SpecDefinition` rather
-   * than its complete source-level literal type. Successful Zod parsing is the
-   * runtime proof for this single, localized type bridge.
-   */
   safeParseAs(schema, input) {
     return schema.safeParse(input);
   }

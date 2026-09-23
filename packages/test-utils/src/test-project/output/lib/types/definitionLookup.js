@@ -16,7 +16,8 @@ export const getOperationDefinition = (spec, resourceName, operationId) => {
   return operation;
 };
 export const getResponseDefinition = (responses, responseName) => {
-  const response = responses.find((candidate) => candidate.name === responseName);
+  const candidates = responses;
+  const response = candidates.find((candidate) => candidate.name === responseName);
   if (response === undefined) {
     throw new MissingResponseDefinitionError(String(responseName));
   }

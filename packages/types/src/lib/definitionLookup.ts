@@ -41,7 +41,13 @@ export const getOperationDefinition = <
   operationId: TOperationId
 ): MatchedOperationDefinition<TSpec, TResourceName, TOperationId> => {
   const operation = spec.resources[resourceName]?.operations.find(
-    candidate => candidate.operationId === operationId
+    (
+      candidate
+    ): candidate is MatchedOperationDefinition<
+      TSpec,
+      TResourceName,
+      TOperationId
+    > => candidate.operationId === operationId
   );
 
   if (operation === undefined) {
@@ -51,11 +57,7 @@ export const getOperationDefinition = <
     );
   }
 
-  return operation as MatchedOperationDefinition<
-    TSpec,
-    TResourceName,
-    TOperationId
-  >;
+  return operation;
 };
 
 export const getResponseDefinition = <
@@ -64,11 +66,15 @@ export const getResponseDefinition = <
   responses: TResponses,
   responseName: string
 ): MatchedResponseDefinition<TResponses> => {
-  const response = responses.find(candidate => candidate.name === responseName);
+  const candidates: readonly MatchedResponseDefinition<TResponses>[] =
+    responses;
+  const response = candidates.find(
+    candidate => candidate.name === responseName
+  );
 
   if (response === undefined) {
     throw new MissingResponseDefinitionError(String(responseName));
   }
 
-  return response as MatchedResponseDefinition<TResponses>;
+  return response;
 };

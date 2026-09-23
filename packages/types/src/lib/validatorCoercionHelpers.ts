@@ -23,10 +23,9 @@ export function coerceRecordToSchema(
   if (typeof data !== "object" || data === null || Array.isArray(data))
     return data;
   const expectsArray = isArraySchema(valueType);
-  const coerced: Record<string, unknown | unknown[]> = Object.create(
-    null
-  ) as Record<string, unknown | unknown[]>;
-  for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+  const coerced = createNullPrototypeRecord<unknown | unknown[]>();
+  const entries: [string, unknown][] = Object.entries(data);
+  for (const [key, value] of entries) {
     const outputKey = splitCommaDelimited
       ? canonicalHeaderRecordKey(key, keyType)
       : key;
@@ -66,10 +65,7 @@ export function splitCommaDelimitedValues(
   shape: $ZodShape
 ): Record<string, unknown> {
   const schemaMap = analyzeSchema(shape, false);
-  const result: Record<string, unknown> = Object.create(null) as Record<
-    string,
-    unknown
-  >;
+  const result = createNullPrototypeRecord<unknown>();
   for (const [key, value] of Object.entries(header)) {
     if (
       schemaMap.get(key.toLowerCase())?.isArray &&
@@ -122,6 +118,16 @@ export function addValueToCoerced(
 }
 
 /**
+ * Creates an empty record without a prototype, so dynamic keys never resolve
+ * inherited members such as `constructor` or `__proto__`.
+ */
+export function createNullPrototypeRecord<TValue>(): Record<string, TValue> {
+  const record: Record<string, TValue> = {};
+  Object.setPrototypeOf(record, null);
+  return record;
+}
+
+/**
  * Reads an own property only. Dynamic record/header keys such as
  * `constructor` or `toString` must not collide with inherited values.
  */
@@ -171,9 +177,7 @@ export function mapToOriginalKeys(
   coerced: Record<string, unknown | unknown[]>,
   schemaMap: Map<string, { readonly originalKey: string }>
 ): Record<string, unknown | unknown[]> {
-  const withOriginalKeys: Record<string, unknown | unknown[]> = Object.create(
-    null
-  ) as Record<string, unknown | unknown[]>;
+  const withOriginalKeys = createNullPrototypeRecord<unknown | unknown[]>();
   for (const [key, value] of Object.entries(coerced)) {
     setOwnValue(
       withOriginalKeys,
