@@ -152,11 +152,12 @@ stale entry can never remain silent.
 | `pnpm test:quality-contracts`    | `typecheck:scripts` rejects an implicit-any tooling module and `test:tooling` rejects a broken build-config contract, using throwaway copies.                                                           |
 | `pnpm typecheck:scripts`         | Checked JavaScript over every `scripts/**`, `config/tsdown/**`, and `config/oxlint/**` `.mjs` tooling file.                                                                                             |
 | `pnpm test:tooling`              | The root tsdown build-config tests and local config/oxlint plugin tests.                                                                                                                                |
+| `pnpm verify:test-gates`         | Vitest file filters in package scripts name whole suite directories or unsplit test files; stale, bare, and split-suite filters fail.                                                                   |
 | `pnpm lint`                      | The full warning-free, type-aware policy over the repository.                                                                                                                                           |
 
 `pnpm verify:architecture-contracts` runs the compiler-profile, lint-policy, maintainability,
-scripts-typecheck, root-tooling, and quality-task guards in a deterministic order alongside the
-public contract and packed-consumer checks. The CI quality job runs `pnpm lint`,
+scripts-typecheck, root-tooling, quality-task, and Vitest gate-filter guards in a deterministic
+order alongside the public contract and packed-consumer checks. The CI quality job runs `pnpm lint`,
 `pnpm verify:architecture-contracts`, `pnpm docs:check`, `pnpm format:check`, and
 `pnpm publish:dry`.
 
@@ -170,4 +171,5 @@ pnpm test:typescript-toolchain
 pnpm typecheck:scripts
 pnpm test:tooling
 pnpm test:quality-contracts
+pnpm verify:test-gates
 ```

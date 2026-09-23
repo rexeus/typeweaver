@@ -20,6 +20,7 @@
     "test:typescript-toolchain": "node scripts/test-typescript-toolchain.mjs",
     "test:tooling": "vitest --run config/tsdown/ config/oxlint/",
     "test:quality-contracts": "node scripts/test-quality-contracts.mjs",
+    "verify:test-gates": "node scripts/test-vitest-gate-filters.mjs && node scripts/check-vitest-gate-filters.mjs",
     "verify:generated": "node scripts/verify-generated.mjs",
     "verify:effect-reference": "node scripts/verify-effect-reference.mjs && node scripts/test-effect-reference-guard.mjs",
     "effect:diagnostics": "node scripts/test-effect-diagnostics.mjs && node scripts/run-effect-diagnostics.mjs",
