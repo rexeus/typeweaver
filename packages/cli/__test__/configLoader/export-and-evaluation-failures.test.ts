@@ -1,55 +1,19 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
-import { Effect, Result } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import {
   ConfigModuleEvaluationError,
   InvalidConfigExportError,
   UnsupportedConfigExtensionError,
 } from "../../src/errors/index.js";
-import { ConfigLoader } from "../../src/services/ConfigLoader.js";
+import {
+  createTempDir,
+  loadConfig,
+  removeTempDirs,
+  writeConfigModule,
+} from "./fixtures.js";
 
-const loadConfig = async (
-  configPath: string
-): Promise<Partial<TypeweaverConfig>> => {
-  const result = await Effect.runPromise(
-    Effect.result(ConfigLoader.load(configPath)).pipe(
-      Effect.provide(ConfigLoader.Default)
-    )
-  );
-  if (Result.isFailure(result)) throw result.failure;
-  return result.success;
-};
-
-const tempDirs: string[] = [];
-
-afterEach(() => {
-  for (const tempDir of tempDirs) {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
-
-  tempDirs.length = 0;
-});
-
-const createTempDir = (): string => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "typeweaver-config-"));
-  tempDirs.push(tempDir);
-
-  return tempDir;
-};
-
-const writeConfigModule = (extension: string, contents: string): string => {
-  const tempDir = createTempDir();
-  const configPath = path.join(tempDir, `typeweaver.config${extension}`);
-
-  fs.writeFileSync(path.join(tempDir, "package.json"), '{"type":"module"}\n');
-
-  fs.writeFileSync(configPath, `${contents.trim()}\n`);
-
-  return configPath;
-};
+afterEach(removeTempDirs);
 
 const writeUnsupportedConfigFile = (
   extension: string,

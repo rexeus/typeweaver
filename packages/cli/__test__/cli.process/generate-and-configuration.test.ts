@@ -1,139 +1,9 @@
-import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import type { ChildProcess } from "node:child_process";
-
-type ProcessResult = {
-  readonly code: number | null;
-  readonly signal: NodeJS.Signals | null;
-  readonly stdout: string;
-  readonly stderr: string;
-};
-
-const packageDirectory = path.resolve(import.meta.dirname, "..", "..");
-
-const cliEntry = path.join(packageDirectory, "bin", "typeweaver.mjs");
-
-const processOutputsDirectory = path.join(
-  packageDirectory,
-  "test",
-  "outputs",
-  "cli-process"
-);
-
-const workspaces: string[] = [];
-
-const runCli = (
-  workspace: string,
-  args: readonly string[]
-): Promise<ProcessResult> =>
-  new Promise((resolve, reject) => {
-    const child: ChildProcess = spawn(process.execPath, [cliEntry, ...args], {
-      cwd: workspace,
-      env: {
-        ...process.env,
-        FORCE_COLOR: "0",
-        NO_COLOR: "1",
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    let stdout = "";
-    let stderr = "";
-
-    child.stdout?.setEncoding("utf8");
-    child.stderr?.setEncoding("utf8");
-    child.stdout?.on("data", chunk => {
-      stdout += String(chunk);
-    });
-    child.stderr?.on("data", chunk => {
-      stderr += String(chunk);
-    });
-    const timeout = setTimeout(() => {
-      child.kill("SIGKILL");
-      reject(new Error(`Built CLI process timed out: ${args.join(" ")}`));
-    }, 15_000);
-    child.once("error", error => {
-      clearTimeout(timeout);
-      reject(error);
-    });
-    child.once("close", (code, signal) => {
-      clearTimeout(timeout);
-      resolve({
-        code,
-        signal,
-        stdout: stdout.replace(/\r\n/g, "\n"),
-        stderr: stderr.replace(/\r\n/g, "\n"),
-      });
-    });
-  });
-
-const createWorkspace = (): string => {
-  fs.mkdirSync(processOutputsDirectory, { recursive: true });
-  const workspace = fs.mkdtempSync(
-    path.join(processOutputsDirectory, "workspace-")
-  );
-  workspaces.push(workspace);
-  return workspace;
-};
-
-const writeSpec = (
-  workspace: string,
-  options: { readonly duplicateOperationId?: boolean } = {}
-): string => {
-  const specPath = path.join(workspace, "spec", "index.ts");
-  const duplicateResource = options.duplicateOperationId
-    ? [
-        "    duplicate: {",
-        "      operations: [",
-        "        defineOperation({",
-        '          operationId: "ping",',
-        '          path: "/duplicate",',
-        "          method: HttpMethod.GET,",
-        '          summary: "Duplicate ping",',
-        "          request: {},",
-        "          responses: [ok],",
-        "        }),",
-        "      ],",
-        "    },",
-      ]
-    : [];
-
-  fs.mkdirSync(path.dirname(specPath), { recursive: true });
-  fs.writeFileSync(
-    specPath,
-    [
-      'import { defineOperation, defineResponse, defineSpec, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";',
-      "",
-      "const ok = defineResponse({",
-      '  name: "Ok",',
-      "  statusCode: HttpStatusCode.OK,",
-      '  description: "OK",',
-      "});",
-      "",
-      "export const spec = defineSpec({",
-      '  metadata: { title: "Health API", version: "1.0.0" },',
-      "  resources: {",
-      "    health: {",
-      "      operations: [",
-      "        defineOperation({",
-      '          operationId: "ping",',
-      '          path: "/ping",',
-      "          method: HttpMethod.GET,",
-      '          summary: "Ping",',
-      "          request: {},",
-      "          responses: [ok],",
-      "        }),",
-      "      ],",
-      "    },",
-      ...duplicateResource,
-      "  },",
-      "});",
-      "",
-    ].join("\n")
-  );
-  return specPath;
-};
+import { runCli } from "../helpers/builtCli.js";
+import { writeEmptySpec } from "../helpers/specFiles.js";
+import { createWorkspace, removeWorkspaces, writeSpec } from "./fixtures.js";
 
 const writeConfigProbePlugin = (workspace: string): string => {
   const pluginPath = path.join(workspace, "plugins", "config-probe-plugin.mjs");
@@ -159,27 +29,7 @@ const writeConfigProbePlugin = (workspace: string): string => {
   return pluginPath;
 };
 
-const writeEmptySpec = (workspace: string): string => {
-  const specPath = path.join(workspace, "spec", "index.ts");
-  fs.mkdirSync(path.dirname(specPath), { recursive: true });
-  fs.writeFileSync(
-    specPath,
-    [
-      'import { defineSpec } from "@rexeus/typeweaver-core";',
-      "",
-      'export const spec = defineSpec({ metadata: { title: "Empty API", version: "1.0.0" }, resources: {} });',
-      "",
-    ].join("\n")
-  );
-  return specPath;
-};
-
-afterEach(() => {
-  for (const workspace of workspaces) {
-    fs.rmSync(workspace, { recursive: true, force: true });
-  }
-  workspaces.length = 0;
-});
+afterEach(removeWorkspaces);
 
 describe("built CLI generation process contract", () => {
   test("generates files and owns success output on stdout", async () => {

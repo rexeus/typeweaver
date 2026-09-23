@@ -14,8 +14,13 @@ import {
   Ref,
 } from "effect";
 import { withCapturedLogs } from "test-utils/src/effect/index.js";
+import { expect } from "vitest";
+import { PluginLoadError } from "../../src/errors/PluginLoadError.js";
 import { PluginLoader, PluginModuleLoader } from "../../src/services/index.js";
+import { isPluginConfigError } from "../../src/services/isPluginConfigError.js";
+import { TestAssertionError } from "../errors/index.js";
 import { inMemoryPluginModuleLoader } from "../helpers/inMemoryPluginModuleLoader.js";
+import type { TaggedPluginConfigError } from "../../src/services/isPluginConfigError.js";
 import type { ModuleFixture } from "../helpers/inMemoryPluginModuleLoader.js";
 
 export type CapturedLog = {
@@ -129,4 +134,90 @@ export const runLoadPlugins = async (
   }
 
   return { logs: exit.value.logs };
+};
+
+export type CapturedPluginConfigError = TaggedPluginConfigError & {
+  readonly message?: string;
+};
+
+export const capturePluginLoadError = async (
+  load: Promise<PluginLoaderRunResult>
+): Promise<PluginLoadError> => {
+  const failure: unknown = await load.then(
+    () => undefined,
+    (error: unknown) => error
+  );
+
+  if (!(failure instanceof PluginLoadError)) {
+    throw new TestAssertionError(
+      `Expected plugin loading to fail with PluginLoadError, received: ${failure instanceof Error ? failure.message : String(failure)}`
+    );
+  }
+
+  return failure;
+};
+
+export const captureTaggedPluginConfigError = async (
+  load: Promise<PluginLoaderRunResult>
+): Promise<CapturedPluginConfigError> => {
+  const failure: unknown = await load.then(
+    () => undefined,
+    (error: unknown) => error
+  );
+
+  if (!isPluginConfigError(failure)) {
+    throw new TestAssertionError(
+      `Expected plugin loading to fail with PluginConfigError, received: ${failure instanceof Error ? failure.message : String(failure)}`
+    );
+  }
+
+  return failure;
+};
+
+export const anIncompletePluginConfigTag = (
+  pluginName: string
+): { readonly _tag: "PluginConfigError"; readonly pluginName: string } => ({
+  _tag: "PluginConfigError",
+  pluginName,
+});
+
+export type SuccessfulLoadSummaryEntry = {
+  readonly pluginName: string;
+  readonly source: string;
+};
+
+export const messages = (logs: readonly CapturedLog[]): readonly string[] =>
+  logs.map(log => log.message);
+
+export const expectSuccessfulLoadSummaryEntries = (
+  logs: readonly CapturedLog[],
+  expected: {
+    readonly count: number;
+    readonly entries: readonly SuccessfulLoadSummaryEntry[];
+  }
+): void => {
+  const observed = messages(logs);
+
+  expect(observed).toContain(
+    `Successfully loaded ${expected.count} plugin(s):`
+  );
+  for (const entry of expected.entries) {
+    expect(observed).toContain(
+      `  - ${entry.pluginName} (from ${entry.source})`
+    );
+  }
+};
+
+export const expectSuccessfulLoadSummary = (
+  logs: readonly CapturedLog[],
+  expected: {
+    readonly count: number;
+    readonly pluginName: string;
+    readonly source: string;
+  }
+): void => {
+  expectSuccessfulLoadSummaryEntries(logs, {
+    count: expected.count,
+    entries: [{ pluginName: expected.pluginName, source: expected.source }],
+  });
 };

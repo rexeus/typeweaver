@@ -10,6 +10,11 @@ import {
   createWrapperImportSpecifier,
   SpecBundler,
 } from "../../src/services/SpecBundler.js";
+import {
+  cleanupSpecLoaderProjects,
+  createTempProject,
+  writeSpecEntrypoint,
+} from "./fixtures.js";
 import type {
   SpecBundlerConfig,
   SpecBundlerDeps,
@@ -42,56 +47,7 @@ const bundle = async (
   return result.success;
 };
 
-type TempProject = {
-  readonly projectDir: string;
-  readonly outputDir: string;
-};
-
-const tempDirs: string[] = [];
-
-afterEach(() => {
-  for (const tempDir of tempDirs) {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
-
-  tempDirs.length = 0;
-});
-
-const createTempProject = (): TempProject => {
-  const tempDir = fs.mkdtempSync(
-    path.join(process.cwd(), ".typeweaver-spec-loader-")
-  );
-  const projectDir = path.join(tempDir, "project with spaces");
-
-  fs.mkdirSync(projectDir, { recursive: true });
-  tempDirs.push(tempDir);
-
-  return {
-    projectDir,
-    outputDir: path.join(projectDir, "generated spec"),
-  };
-};
-
-const writeProjectFile = (
-  project: TempProject,
-  relativePath: string,
-  contents: string
-): string => {
-  const filePath = path.join(project.projectDir, relativePath);
-
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${contents.trim()}\n`);
-
-  return filePath;
-};
-
-const writeSpecEntrypoint = (
-  project: TempProject,
-  relativePath: string,
-  contents: string
-): string => {
-  return writeProjectFile(project, relativePath, contents);
-};
+afterEach(cleanupSpecLoaderProjects);
 
 const validSpecDefinition = {
   metadata: { title: "Todo API", version: "1.0.0" },

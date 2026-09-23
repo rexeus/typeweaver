@@ -2,17 +2,17 @@ import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { afterEach, describe, expect, test } from "vitest";
 import {
   aNamedPluginModule,
-  configWithPlugin,
   createPluginFixtureWorkspace,
+} from "../helpers/index.js";
+import {
+  configWithPlugin,
+  expectSuccessfulLoadSummary,
+  expectSuccessfulLoadSummaryEntries,
+  messages,
   requiredTypesPlugin,
   runLoadPlugins,
-} from "../helpers/index.js";
-import type { CapturedLog, RegisteredPlugin } from "../helpers/index.js";
-
-type SuccessfulLoadSummaryEntry = {
-  readonly pluginName: string;
-  readonly source: string;
-};
+} from "./support.js";
+import type { CapturedLog, RegisteredPlugin } from "./support.js";
 
 const configWithoutPlugins = (): TypeweaverConfig => ({
   input: "./spec.ts",
@@ -25,48 +25,12 @@ afterEach(() => {
   fixtures.cleanup();
 });
 
-const messages = (logs: readonly CapturedLog[]): readonly string[] =>
-  logs.map(log => log.message);
-
 const expectNoSuccessfulLoadSummary = (logs: readonly CapturedLog[]): void => {
   expect(messages(logs)).not.toEqual(
     expect.arrayContaining([
       expect.stringMatching(/Successfully loaded/) as unknown,
     ]) as unknown
   );
-};
-
-const expectSuccessfulLoadSummary = (
-  logs: readonly CapturedLog[],
-  expected: {
-    readonly count: number;
-    readonly pluginName: string;
-    readonly source: string;
-  }
-): void => {
-  expectSuccessfulLoadSummaryEntries(logs, {
-    count: expected.count,
-    entries: [{ pluginName: expected.pluginName, source: expected.source }],
-  });
-};
-
-const expectSuccessfulLoadSummaryEntries = (
-  logs: readonly CapturedLog[],
-  expected: {
-    readonly count: number;
-    readonly entries: readonly SuccessfulLoadSummaryEntry[];
-  }
-): void => {
-  const observed = messages(logs);
-
-  expect(observed).toContain(
-    `Successfully loaded ${expected.count} plugin(s):`
-  );
-  for (const entry of expected.entries) {
-    expect(observed).toContain(
-      `  - ${entry.pluginName} (from ${entry.source})`
-    );
-  }
 };
 
 describe("pluginLoader required plugin registration", () => {

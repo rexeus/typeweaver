@@ -1,148 +1,15 @@
-import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import type { ChildProcess } from "node:child_process";
-
-type ProcessResult = {
-  readonly code: number | null;
-  readonly signal: NodeJS.Signals | null;
-  readonly stdout: string;
-  readonly stderr: string;
-};
-
-const packageDirectory = path.resolve(import.meta.dirname, "..", "..");
-
-const cliEntry = path.join(packageDirectory, "bin", "typeweaver.mjs");
-
-const processOutputsDirectory = path.join(
-  packageDirectory,
-  "test",
-  "outputs",
-  "generate-check"
-);
-
-const workspaces: string[] = [];
-
-const runCli = (
-  workspace: string,
-  args: readonly string[],
-  timeoutMs = 15_000
-): Promise<ProcessResult> =>
-  new Promise((resolve, reject) => {
-    const child: ChildProcess = spawn(process.execPath, [cliEntry, ...args], {
-      cwd: workspace,
-      env: {
-        ...process.env,
-        FORCE_COLOR: "0",
-        NO_COLOR: "1",
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    let stdout = "";
-    let stderr = "";
-
-    child.stdout?.setEncoding("utf8");
-    child.stderr?.setEncoding("utf8");
-    child.stdout?.on("data", chunk => {
-      stdout += String(chunk);
-    });
-    child.stderr?.on("data", chunk => {
-      stderr += String(chunk);
-    });
-    let timeoutError: Error | undefined;
-    const timeout = setTimeout(() => {
-      timeoutError = new Error(
-        `Built CLI process timed out: ${args.join(" ")}`
-      );
-      child.kill("SIGKILL");
-    }, timeoutMs);
-    child.once("error", error => {
-      clearTimeout(timeout);
-      reject(error);
-    });
-    child.once("close", (code, signal) => {
-      clearTimeout(timeout);
-      if (timeoutError !== undefined) {
-        reject(timeoutError);
-        return;
-      }
-      resolve({
-        code,
-        signal,
-        stdout: stdout.replace(/\r\n/g, "\n"),
-        stderr: stderr.replace(/\r\n/g, "\n"),
-      });
-    });
-  });
-
-const createWorkspace = (): string => {
-  fs.mkdirSync(processOutputsDirectory, { recursive: true });
-  const workspace = fs.mkdtempSync(
-    path.join(processOutputsDirectory, "workspace-")
-  );
-  workspaces.push(workspace);
-  return workspace;
-};
-
-const writeSpec = (workspace: string): string => {
-  const specPath = path.join(workspace, "spec", "index.ts");
-  fs.mkdirSync(path.dirname(specPath), { recursive: true });
-  fs.writeFileSync(
-    specPath,
-    [
-      'import { defineOperation, defineResponse, defineSpec, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";',
-      'import { z } from "zod";',
-      "",
-      "const itemLoaded = defineResponse({",
-      '  name: "ItemLoaded",',
-      "  statusCode: HttpStatusCode.OK,",
-      '  description: "Item loaded",',
-      "  body: z.object({ id: z.string() }),",
-      "});",
-      "",
-      "export const spec = defineSpec({",
-      '  metadata: { title: "Items API", version: "1.0.0" },',
-      "  resources: {",
-      "    item: {",
-      "      operations: [",
-      "        defineOperation({",
-      '          operationId: "getItem",',
-      '          path: "/items/:itemId",',
-      "          method: HttpMethod.GET,",
-      '          summary: "Get item",',
-      "          request: { param: z.object({ itemId: z.string() }) },",
-      "          responses: [itemLoaded],",
-      "        }),",
-      "      ],",
-      "    },",
-      "  },",
-      "});",
-      "",
-    ].join("\n")
-  );
-  return specPath;
-};
-
-const writeConfig = (
-  workspace: string,
-  overrides: readonly string[] = []
-): string => {
-  const configPath = path.join(workspace, "typeweaver.config.mjs");
-  fs.writeFileSync(
-    configPath,
-    [
-      "export default {",
-      '  input: "./spec/index.ts",',
-      '  output: "./generated",',
-      "  format: false,",
-      ...overrides,
-      "};",
-      "",
-    ].join("\n")
-  );
-  return configPath;
-};
+import { runCli } from "../helpers/builtCli.js";
+import { writeTinySpec } from "../helpers/specFiles.js";
+import {
+  createWorkspace,
+  generate,
+  removeWorkspaces,
+  writeConfig,
+} from "./fixtures.js";
+import type { ProcessResult } from "../helpers/builtCli.js";
 
 const writeBlockingPlugin = (
   workspace: string,
@@ -199,22 +66,12 @@ const waitForFile = (filePath: string, timeoutMs: number): Promise<void> =>
     poll();
   });
 
-const generate = (
-  workspace: string,
-  args: readonly string[],
-  timeoutMs = 15_000
-) => runCli(workspace, ["generate", ...args], timeoutMs);
-
-afterEach(() => {
-  for (const workspace of workspaces.splice(0)) {
-    fs.rmSync(workspace, { recursive: true, force: true });
-  }
-});
+afterEach(removeWorkspaces);
 
 describe("built CLI output lock concurrency", () => {
   test("a second generate process fails closed while one holds the lock", async () => {
     const workspace = createWorkspace();
-    writeSpec(workspace);
+    writeTinySpec(workspace);
     const heldMarkerPath = path.join(workspace, "lock-held.marker");
     const releaseMarkerPath = path.join(workspace, "lock-release.marker");
     const pluginPath = writeBlockingPlugin(
@@ -235,7 +92,7 @@ describe("built CLI output lock concurrency", () => {
         pluginPath,
         "--no-format",
       ],
-      45_000
+      { timeoutMs: 45_000 }
     );
     let holderResult: ProcessResult | undefined;
     try {
@@ -265,7 +122,7 @@ describe("built CLI output lock concurrency", () => {
   }, 60_000);
   test("check holding a missing mixed-case output blocks case-variant generation and creates neither", async () => {
     const workspace = createWorkspace();
-    writeSpec(workspace);
+    writeTinySpec(workspace);
     const configPath = writeConfig(workspace, [
       '  output: "./Generated/Output",',
     ]);

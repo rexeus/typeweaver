@@ -1,61 +1,24 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import {
   coordinationArtifactMarkerSource,
   TYPEWEAVER_COORDINATION_MARKER_FILE,
 } from "@rexeus/typeweaver-gen";
-import { Cause, Effect, Exit } from "effect";
+import { Effect, Exit } from "effect";
 import { afterEach, describe, expect, test, vi } from "vitest";
-
-const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
-  cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
-
 import {
   compareOutputTrees,
   snapshotOutputTree,
 } from "../../../src/services/outputComparison.js";
+import {
+  causeDefects,
+  extractTypedFailure,
+  makeRoot,
+  restoreMocksAndRemoveRoots,
+  writeFile,
+} from "./fixtures.js";
 
-const tempDirs: string[] = [];
-
-const makeRoot = (suffix: string): string => {
-  const root = fs.mkdtempSync(
-    path.join(os.tmpdir(), `typeweaver-comparison-${suffix}-`)
-  );
-  tempDirs.push(root);
-  return root;
-};
-
-const writeFile = (
-  root: string,
-  relativePath: string,
-  content: string
-): void => {
-  const absolutePath = path.join(root, relativePath);
-  fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
-  fs.writeFileSync(absolutePath, content);
-};
-
-const extractTypedFailure = <E extends { readonly _tag: string }>(
-  exit: Exit.Exit<unknown, E>
-): E => {
-  expect(Exit.isFailure(exit)).toBe(true);
-  if (Exit.isSuccess(exit)) {
-    throw new Error("Expected effect to fail");
-  }
-  const failure = Cause.findErrorOption(exit.cause);
-  if (failure._tag === "None") {
-    throw new Error(`Expected typed failure: ${Cause.pretty(exit.cause)}`);
-  }
-  return failure.value;
-};
-
-afterEach(() => {
-  vi.restoreAllMocks();
-  for (const tempDir of tempDirs.splice(0)) {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
-});
+afterEach(restoreMocksAndRemoveRoots);
 
 describe("output tree comparison", () => {
   test("reports a match when every regular file is byte-identical", async () => {

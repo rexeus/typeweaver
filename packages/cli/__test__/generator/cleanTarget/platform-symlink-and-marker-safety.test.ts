@@ -1,99 +1,19 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import { UnsafeCleanTargetError } from "../../../src/errors/UnsafeCleanTargetError.js";
 import { assertSafeCleanTarget } from "../../../src/services/cleanTargetGuard.js";
+import {
+  canCreateDirectorySymlinks,
+  directorySymlinkType,
+} from "../../helpers/symlinks.js";
+import {
+  captureUnsafeCleanTargetError,
+  createTempDir,
+  createWorkspaceWithPackageDirectory,
+  removeTempDirs,
+} from "./fixtures.js";
 
-type WorkspaceMarker = ".git" | "pnpm-workspace.yaml";
-
-const directorySymlinkType = process.platform === "win32" ? "junction" : "dir";
-
-const isUnsupportedSymlinkError = (error: unknown): boolean => {
-  return (
-    error instanceof Error &&
-    "code" in error &&
-    ["EACCES", "EINVAL", "ENOTSUP", "EPERM"].includes(String(error.code))
-  );
-};
-
-const canCreateDirectorySymlinks = (): boolean => {
-  const tempDir = fs.mkdtempSync(
-    path.join(os.tmpdir(), "typeweaver-symlink-support-")
-  );
-  const targetDirectory = path.join(tempDir, "target");
-  const symlinkDirectory = path.join(tempDir, "link");
-
-  try {
-    fs.mkdirSync(targetDirectory);
-    fs.symlinkSync(targetDirectory, symlinkDirectory, directorySymlinkType);
-
-    return true;
-  } catch (error) {
-    if (isUnsupportedSymlinkError(error)) {
-      return false;
-    }
-
-    throw error;
-  } finally {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
-};
-
-const captureUnsafeCleanTargetError = (
-  action: () => void
-): UnsafeCleanTargetError => {
-  try {
-    action();
-  } catch (error) {
-    if (error instanceof UnsafeCleanTargetError) {
-      return error;
-    }
-  }
-
-  throw new Error("Expected UnsafeCleanTargetError to be thrown");
-};
-
-const tempDirs: string[] = [];
-
-afterEach(() => {
-  for (const tempDir of tempDirs) {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
-
-  tempDirs.length = 0;
-});
-
-const createTempDir = (): string => {
-  const tempDir = fs.mkdtempSync(
-    path.join(os.tmpdir(), "typeweaver-generator-")
-  );
-  tempDirs.push(tempDir);
-
-  return tempDir;
-};
-
-const createWorkspaceWithPackageDirectory = (
-  marker: WorkspaceMarker = ".git"
-): {
-  readonly workspaceRoot: string;
-  readonly packageDirectory: string;
-} => {
-  const workspaceRoot = createTempDir();
-  const packageDirectory = path.join(workspaceRoot, "packages", "cli");
-
-  if (marker === ".git") {
-    fs.mkdirSync(path.join(workspaceRoot, marker), { recursive: true });
-  } else {
-    fs.writeFileSync(
-      path.join(workspaceRoot, marker),
-      "packages:\n  - packages/*\n"
-    );
-  }
-  fs.mkdirSync(packageDirectory, { recursive: true });
-
-  return { workspaceRoot, packageDirectory };
-};
+afterEach(removeTempDirs);
 
 describe("Generator platform-specific ancestor clean safety", () => {
   test.skipIf(process.platform === "win32")(

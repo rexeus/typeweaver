@@ -1,53 +1,29 @@
 import { Cause, Effect, Exit, Option } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { PluginLoadError } from "../../src/errors/PluginLoadError.js";
-import { TestAssertionError } from "../errors/index.js";
 import {
   aModuleImportFailure,
-  configWithPlugin,
   createPluginFixtureWorkspace,
+} from "../helpers/index.js";
+import {
+  anIncompletePluginConfigTag,
+  capturePluginLoadError,
+  configWithPlugin,
   requiredTypesPlugin,
   runLoadPlugins,
   runLoadPluginsExit,
-} from "../helpers/index.js";
-import type {
-  ModuleFixture,
-  PluginLoaderRunResult,
-  RegisteredPlugin,
-} from "../helpers/index.js";
+} from "./support.js";
+import type { ModuleFixture } from "../helpers/index.js";
+import type { RegisteredPlugin } from "./support.js";
 
 const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
   cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
-
-const anIncompletePluginConfigTag = (
-  pluginName: string
-): { readonly _tag: "PluginConfigError"; readonly pluginName: string } => ({
-  _tag: "PluginConfigError",
-  pluginName,
-});
 
 const fixtures = createPluginFixtureWorkspace();
 
 afterEach(() => {
   fixtures.cleanup();
 });
-
-const capturePluginLoadError = async (
-  load: Promise<PluginLoaderRunResult>
-): Promise<PluginLoadError> => {
-  const failure: unknown = await load.then(
-    () => undefined,
-    (error: unknown) => error
-  );
-
-  if (!(failure instanceof PluginLoadError)) {
-    throw new TestAssertionError(
-      `Expected plugin loading to fail with PluginLoadError, received: ${failure instanceof Error ? failure.message : String(failure)}`
-    );
-  }
-
-  return failure;
-};
 
 describe("pluginLoader invalid plugin exports", () => {
   test("continues to npm fallback when module evaluation throws an incomplete configuration tag", async () => {

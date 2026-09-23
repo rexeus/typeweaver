@@ -1,60 +1,19 @@
 import { PluginConfigError } from "@rexeus/typeweaver-gen";
 import { afterEach, describe, expect, test } from "vitest";
-import { PluginLoadError } from "../../src/errors/PluginLoadError.js";
-import { isPluginConfigError } from "../../src/services/isPluginConfigError.js";
-import { TestAssertionError } from "../errors/index.js";
+import { createPluginFixtureWorkspace } from "../helpers/index.js";
 import {
+  capturePluginLoadError,
+  captureTaggedPluginConfigError,
   configWithPlugin,
-  createPluginFixtureWorkspace,
   requiredTypesPlugin,
   runLoadPlugins,
-} from "../helpers/index.js";
-import type { TaggedPluginConfigError } from "../../src/services/isPluginConfigError.js";
-import type { PluginLoaderRunResult } from "../helpers/index.js";
-
-type CapturedPluginConfigError = TaggedPluginConfigError & {
-  readonly message?: string;
-};
+} from "./support.js";
 
 const fixtures = createPluginFixtureWorkspace();
 
 afterEach(() => {
   fixtures.cleanup();
 });
-
-const capturePluginLoadError = async (
-  load: Promise<PluginLoaderRunResult>
-): Promise<PluginLoadError> => {
-  const failure: unknown = await load.then(
-    () => undefined,
-    (error: unknown) => error
-  );
-
-  if (!(failure instanceof PluginLoadError)) {
-    throw new TestAssertionError(
-      `Expected plugin loading to fail with PluginLoadError, received: ${failure instanceof Error ? failure.message : String(failure)}`
-    );
-  }
-
-  return failure;
-};
-
-const captureTaggedPluginConfigError = async (
-  load: Promise<PluginLoaderRunResult>
-): Promise<CapturedPluginConfigError> => {
-  const failure: unknown = await load.then(
-    () => undefined,
-    (error: unknown) => error
-  );
-
-  if (!isPluginConfigError(failure)) {
-    throw new TestAssertionError(
-      `Expected plugin loading to fail with PluginConfigError, received: ${failure instanceof Error ? failure.message : String(failure)}`
-    );
-  }
-
-  return failure;
-};
 
 describe("pluginLoader factory failures", () => {
   test("reports no plugin export found when a module has no exports", async () => {

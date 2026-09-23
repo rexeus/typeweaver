@@ -1,80 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { afterEach, describe, expect, test } from "vitest";
-import { effectRuntime } from "../../../src/effectRuntime.js";
-import { Generator } from "../../../src/services/Generator.js";
+import {
+  createTempWorkspace,
+  expectFileContains,
+  expectFileExists,
+  readFile,
+  removeTempDirs,
+  runGenerator,
+  writeTinySpec,
+} from "./fixtures.js";
 
-const runGenerator = async (params: {
-  readonly inputFile: string;
-  readonly outputDir: string;
-  readonly config?: TypeweaverConfig;
-  readonly currentWorkingDirectory: string;
-}): Promise<void> => {
-  await effectRuntime.runPromise(Generator.generate(params));
-};
-
-const tempDirs: string[] = [];
-
-afterEach(() => {
-  for (const tempDir of tempDirs) {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
-
-  tempDirs.length = 0;
-});
-
-const createTempWorkspace = (): string => {
-  const tempDir = fs.mkdtempSync(
-    path.join(process.cwd(), ".typeweaver-generate-test-")
-  );
-  tempDirs.push(tempDir);
-
-  return tempDir;
-};
-
-const writeTinySpec = (workspace: string): string => {
-  const specFile = path.join(workspace, "spec", "index.ts");
-
-  fs.mkdirSync(path.dirname(specFile), { recursive: true });
-  fs.writeFileSync(
-    specFile,
-    [
-      'import { defineOperation, defineResponse, defineSpec, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";',
-      'import { z } from "zod";',
-      "",
-      "const itemLoaded = defineResponse({",
-      '  name: "ItemLoaded",',
-      "  statusCode: HttpStatusCode.OK,",
-      '  description: "Item loaded",',
-      "  body: z.object({ id: z.string(), name: z.string() }),",
-      "});",
-      "",
-      "export const spec = defineSpec({",
-      '  metadata: { title: "Items API", version: "1.0.0" },',
-      "  resources: {",
-      "    item: {",
-      "      operations: [",
-      "        defineOperation({",
-      '          operationId: "getItem",',
-      '          path: "/items/:itemId",',
-      "          method: HttpMethod.GET,",
-      '          summary: "Get item",',
-      "          request: {",
-      "            param: z.object({ itemId: z.string() }),",
-      "          },",
-      "          responses: [itemLoaded],",
-      "        }),",
-      "      ],",
-      "    },",
-      "  },",
-      "});",
-      "",
-    ].join("\n")
-  );
-
-  return specFile;
-};
+afterEach(removeTempDirs);
 
 const writeResourceCollectingLocalPlugin = (workspace: string): string => {
   const pluginFile = path.join(workspace, "plugins", "resource-plugin.mjs");
@@ -167,18 +104,6 @@ const writePhaseOrderingLocalPlugin = (workspace: string): string => {
   );
 
   return pluginFile;
-};
-
-const expectFileExists = (filePath: string): void => {
-  expect(fs.existsSync(filePath), filePath).toBe(true);
-};
-
-const expectFileContains = (filePath: string, expected: string): void => {
-  expect(fs.readFileSync(filePath, "utf8")).toContain(expected);
-};
-
-const readFile = (filePath: string): string => {
-  return fs.readFileSync(filePath, "utf8");
 };
 
 describe("Generator local plugin lifecycle", () => {

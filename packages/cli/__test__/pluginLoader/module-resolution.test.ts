@@ -2,18 +2,16 @@ import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import {
   aNamedPluginModule,
-  configWithPlugin,
   createPluginFixtureWorkspace,
   importPathForFile,
+} from "../helpers/index.js";
+import {
+  configWithPlugin,
+  expectSuccessfulLoadSummary,
   requiredTypesPlugin,
   runLoadPlugins,
-} from "../helpers/index.js";
-import type { CapturedLog, RegisteredPlugin } from "../helpers/index.js";
-
-type SuccessfulLoadSummaryEntry = {
-  readonly pluginName: string;
-  readonly source: string;
-};
+} from "./support.js";
+import type { RegisteredPlugin } from "./support.js";
 
 const fixtures = createPluginFixtureWorkspace();
 
@@ -22,42 +20,6 @@ const writePluginModule = fixtures.writePluginModule;
 afterEach(() => {
   fixtures.cleanup();
 });
-
-const messages = (logs: readonly CapturedLog[]): readonly string[] =>
-  logs.map(log => log.message);
-
-const expectSuccessfulLoadSummary = (
-  logs: readonly CapturedLog[],
-  expected: {
-    readonly count: number;
-    readonly pluginName: string;
-    readonly source: string;
-  }
-): void => {
-  expectSuccessfulLoadSummaryEntries(logs, {
-    count: expected.count,
-    entries: [{ pluginName: expected.pluginName, source: expected.source }],
-  });
-};
-
-const expectSuccessfulLoadSummaryEntries = (
-  logs: readonly CapturedLog[],
-  expected: {
-    readonly count: number;
-    readonly entries: readonly SuccessfulLoadSummaryEntry[];
-  }
-): void => {
-  const observed = messages(logs);
-
-  expect(observed).toContain(
-    `Successfully loaded ${expected.count} plugin(s):`
-  );
-  for (const entry of expected.entries) {
-    expect(observed).toContain(
-      `  - ${entry.pluginName} (from ${entry.source})`
-    );
-  }
-};
 
 describe("pluginLoader module resolution", () => {
   test("resolves a relative plugin path from the current working directory", async () => {

@@ -1,90 +1,16 @@
-import fs from "node:fs";
-import path from "node:path";
-import { layer as nodeFileSystemLayer } from "@effect/platform-node-shared/NodeFileSystem";
-import { Effect, Result, Layer } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import {
   InvalidSpecEntrypointError,
   SpecBundleError,
 } from "../../src/services/errors/specErrors.js";
-import { SpecLoader } from "../../src/services/SpecLoader.js";
-import type {
-  LoadedSpec,
-  SpecLoaderConfig,
-} from "../../src/services/SpecLoader.js";
+import {
+  cleanupSpecLoaderProjects,
+  createTempProject,
+  loadProjectSpec,
+  writeSpecEntrypoint,
+} from "./fixtures.js";
 
-const SpecLoaderLayer = SpecLoader.Default.pipe(
-  Layer.provide(nodeFileSystemLayer)
-);
-
-const loadSpec = async (config: SpecLoaderConfig): Promise<LoadedSpec> => {
-  const result = await Effect.runPromise(
-    Effect.result(SpecLoader.load(config)).pipe(Effect.provide(SpecLoaderLayer))
-  );
-  if (Result.isFailure(result)) throw result.failure;
-  return result.success;
-};
-
-type TempProject = {
-  readonly projectDir: string;
-  readonly outputDir: string;
-};
-
-const tempDirs: string[] = [];
-
-afterEach(() => {
-  for (const tempDir of tempDirs) {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
-
-  tempDirs.length = 0;
-});
-
-const createTempProject = (): TempProject => {
-  const tempDir = fs.mkdtempSync(
-    path.join(process.cwd(), ".typeweaver-spec-loader-")
-  );
-  const projectDir = path.join(tempDir, "project with spaces");
-
-  fs.mkdirSync(projectDir, { recursive: true });
-  tempDirs.push(tempDir);
-
-  return {
-    projectDir,
-    outputDir: path.join(projectDir, "generated spec"),
-  };
-};
-
-const writeProjectFile = (
-  project: TempProject,
-  relativePath: string,
-  contents: string
-): string => {
-  const filePath = path.join(project.projectDir, relativePath);
-
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${contents.trim()}\n`);
-
-  return filePath;
-};
-
-const writeSpecEntrypoint = (
-  project: TempProject,
-  relativePath: string,
-  contents: string
-): string => {
-  return writeProjectFile(project, relativePath, contents);
-};
-
-const loadProjectSpec = async (
-  project: TempProject,
-  inputFile: string
-): Promise<LoadedSpec> => {
-  return loadSpec({
-    inputFile: path.relative(process.cwd(), inputFile),
-    specOutputDir: project.outputDir,
-  });
-};
+afterEach(cleanupSpecLoaderProjects);
 
 const createThrowingModuleSource = (options: {
   readonly errorName: string;

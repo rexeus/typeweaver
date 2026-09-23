@@ -1,25 +1,19 @@
 import { PluginConfigError } from "@rexeus/typeweaver-gen";
 import { Data } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
-import { isPluginConfigError } from "../../src/services/isPluginConfigError.js";
-import { TestAssertionError } from "../errors/index.js";
 import {
   aModuleImportFailure,
-  configWithPlugin,
   createPluginFixtureWorkspace,
+} from "../helpers/index.js";
+import {
+  anIncompletePluginConfigTag,
+  captureTaggedPluginConfigError,
+  configWithPlugin,
   requiredTypesPlugin,
   runLoadPlugins,
-} from "../helpers/index.js";
-import type { TaggedPluginConfigError } from "../../src/services/isPluginConfigError.js";
-import type {
-  ModuleFixture,
-  PluginLoaderRunResult,
-  RegisteredPlugin,
-} from "../helpers/index.js";
-
-type CapturedPluginConfigError = TaggedPluginConfigError & {
-  readonly message?: string;
-};
+} from "./support.js";
+import type { ModuleFixture } from "../helpers/index.js";
+import type { CapturedPluginConfigError, RegisteredPlugin } from "./support.js";
 
 const aForeignPluginConfigError = (options: {
   readonly pluginName: string;
@@ -37,35 +31,11 @@ const aForeignPluginConfigError = (options: {
   return new ForeignPluginConfigError(options);
 };
 
-const anIncompletePluginConfigTag = (
-  pluginName: string
-): { readonly _tag: "PluginConfigError"; readonly pluginName: string } => ({
-  _tag: "PluginConfigError",
-  pluginName,
-});
-
 const fixtures = createPluginFixtureWorkspace();
 
 afterEach(() => {
   fixtures.cleanup();
 });
-
-const captureTaggedPluginConfigError = async (
-  load: Promise<PluginLoaderRunResult>
-): Promise<CapturedPluginConfigError> => {
-  const failure: unknown = await load.then(
-    () => undefined,
-    (error: unknown) => error
-  );
-
-  if (!isPluginConfigError(failure)) {
-    throw new TestAssertionError(
-      `Expected plugin loading to fail with PluginConfigError, received: ${failure instanceof Error ? failure.message : String(failure)}`
-    );
-  }
-
-  return failure;
-};
 
 describe("pluginLoader cross-realm configuration failures", () => {
   test("continues to fallback exports when a factory throws an incomplete configuration tag", async () => {

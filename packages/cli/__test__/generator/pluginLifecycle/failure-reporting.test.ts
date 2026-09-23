@@ -5,54 +5,8 @@ import { afterEach, describe, expect, test } from "vitest";
 import { effectRuntime } from "../../../src/effectRuntime.js";
 import { Generator } from "../../../src/services/Generator.js";
 import { withCapturedLogs } from "../../helpers/index.js";
-
-const tempDirs: string[] = [];
-
-const createTempWorkspace = (label: string): string => {
-  const tempDir = fs.mkdtempSync(
-    path.join(process.cwd(), `.typeweaver-lifecycle-${label}-`)
-  );
-  tempDirs.push(tempDir);
-  return tempDir;
-};
-
-const writeTinySpec = (workspace: string): void => {
-  const specFile = path.join(workspace, "spec", "index.ts");
-  fs.mkdirSync(path.dirname(specFile), { recursive: true });
-  fs.writeFileSync(
-    specFile,
-    [
-      'import { defineOperation, defineResponse, defineSpec, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";',
-      'import { z } from "zod";',
-      "",
-      "const itemLoaded = defineResponse({",
-      '  name: "ItemLoaded",',
-      "  statusCode: HttpStatusCode.OK,",
-      '  description: "Item loaded",',
-      "  body: z.object({ id: z.string() }),",
-      "});",
-      "",
-      "export const spec = defineSpec({",
-      '  metadata: { title: "Items API", version: "1.0.0" },',
-      "  resources: {",
-      "    item: {",
-      "      operations: [",
-      "        defineOperation({",
-      '          operationId: "getItem",',
-      '          path: "/items/:itemId",',
-      "          method: HttpMethod.GET,",
-      '          summary: "Get item",',
-      "          request: { param: z.object({ itemId: z.string() }) },",
-      "          responses: [itemLoaded],",
-      "        }),",
-      "      ],",
-      "    },",
-      "  },",
-      "});",
-      "",
-    ].join("\n")
-  );
-};
+import { writeTinySpec } from "../../helpers/specFiles.js";
+import { createTempWorkspace, readEvents, removeTempDirs } from "./fixtures.js";
 
 const writeFailingGeneratePlugin = (
   workspace: string,
@@ -145,21 +99,7 @@ const writeFailingFinalizeOnlyPlugin = (
   return pluginFile;
 };
 
-const readEvents = (workspace: string): readonly string[] => {
-  const file = path.join(workspace, "lifecycle-events.log");
-  if (!fs.existsSync(file)) return [];
-  return fs
-    .readFileSync(file, "utf8")
-    .split("\n")
-    .filter(line => line.length > 0);
-};
-
-afterEach(() => {
-  for (const tempDir of tempDirs) {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
-  tempDirs.length = 0;
-});
+afterEach(removeTempDirs);
 
 describe("Generator plugin lifecycle failure reporting", () => {
   test("surfaces the original generate failure and logs a WARN when a sibling plugin's finalize also fails", async () => {

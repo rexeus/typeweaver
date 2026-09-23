@@ -1,46 +1,18 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import { UnsafeCleanTargetError } from "../../../src/errors/UnsafeCleanTargetError.js";
 import {
   assertSafeCleanTarget,
   assertSafeCleanTargetWith,
 } from "../../../src/services/cleanTargetGuard.js";
+import {
+  captureUnsafeCleanTargetError,
+  createTempDir,
+  removeTempDirs,
+} from "./fixtures.js";
 import type { CleanTargetFs } from "../../../src/services/cleanTargetGuard.js";
 
-const captureUnsafeCleanTargetError = (
-  action: () => void
-): UnsafeCleanTargetError => {
-  try {
-    action();
-  } catch (error) {
-    if (error instanceof UnsafeCleanTargetError) {
-      return error;
-    }
-  }
-
-  throw new Error("Expected UnsafeCleanTargetError to be thrown");
-};
-
-const tempDirs: string[] = [];
-
-afterEach(() => {
-  for (const tempDir of tempDirs) {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
-
-  tempDirs.length = 0;
-});
-
-const createTempDir = (): string => {
-  const tempDir = fs.mkdtempSync(
-    path.join(os.tmpdir(), "typeweaver-generator-")
-  );
-  tempDirs.push(tempDir);
-
-  return tempDir;
-};
+afterEach(removeTempDirs);
 
 describe("Generator clean-target package markers", () => {
   test("rejects clean targets that themselves contain a package.json declaring workspaces", () => {

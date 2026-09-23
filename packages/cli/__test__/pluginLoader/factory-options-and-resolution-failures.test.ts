@@ -1,17 +1,15 @@
 import { afterEach, describe, expect, test } from "vitest";
-import { PluginLoadError } from "../../src/errors/PluginLoadError.js";
-import { TestAssertionError } from "../errors/index.js";
 import {
-  configWithPlugin,
   createPluginFixtureWorkspace,
   importPathForFile,
+} from "../helpers/index.js";
+import {
+  capturePluginLoadError,
+  configWithPlugin,
   requiredTypesPlugin,
   runLoadPlugins,
-} from "../helpers/index.js";
-import type {
-  PluginLoaderRunResult,
-  RegisteredPlugin,
-} from "../helpers/index.js";
+} from "./support.js";
+import type { RegisteredPlugin } from "./support.js";
 
 const aConfigurablePluginModule = (
   exportName: string,
@@ -41,23 +39,6 @@ const createThrowingModuleSource = (options: {
     `${indent}}`,
     `${indent}throw new ${options.errorName}(${JSON.stringify(options.message)});`,
   ];
-};
-
-const capturePluginLoadError = async (
-  load: Promise<PluginLoaderRunResult>
-): Promise<PluginLoadError> => {
-  const failure: unknown = await load.then(
-    () => undefined,
-    (error: unknown) => error
-  );
-
-  if (!(failure instanceof PluginLoadError)) {
-    throw new TestAssertionError(
-      `Expected plugin loading to fail with PluginLoadError, received: ${failure instanceof Error ? failure.message : String(failure)}`
-    );
-  }
-
-  return failure;
 };
 
 describe("pluginLoader factory options and export fallback", () => {

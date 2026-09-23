@@ -4,10 +4,11 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, test } from "vitest";
+import { packageDirectory } from "../helpers/builtCli.js";
+import { writeHealthSpec } from "../helpers/specFiles.js";
 
 const execFileAsync = promisify(execFile);
 const PROCESS_TEST_TIMEOUT_MS = 15_000;
-const packageDirectory = path.resolve(import.meta.dirname, "..", "..");
 const repositoryDirectory = path.resolve(packageDirectory, "../..");
 const cliEntry = path.join(packageDirectory, "dist", "entry.mjs");
 const servicePluginExample = path.join(
@@ -35,43 +36,6 @@ const serviceFixtureOutputsDirectory = path.join(
   "outputs",
   "scoped-service-plugin"
 );
-
-const writeTinySpec = (workspace: string): string => {
-  const specPath = path.join(workspace, "spec", "index.ts");
-  fs.mkdirSync(path.dirname(specPath), { recursive: true });
-  fs.writeFileSync(
-    specPath,
-    [
-      'import { defineOperation, defineResponse, defineSpec, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";',
-      "",
-      "const ok = defineResponse({",
-      '  name: "Ok",',
-      "  statusCode: HttpStatusCode.OK,",
-      '  description: "OK",',
-      "});",
-      "",
-      "export const spec = defineSpec({",
-      '  metadata: { title: "Health API", version: "1.0.0" },',
-      "  resources: {",
-      "    health: {",
-      "      operations: [",
-      "        defineOperation({",
-      '          operationId: "ping",',
-      '          path: "/ping",',
-      "          method: HttpMethod.GET,",
-      '          summary: "Ping",',
-      "          request: {},",
-      "          responses: [ok],",
-      "        }),",
-      "      ],",
-      "    },",
-      "  },",
-      "});",
-      "",
-    ].join("\n")
-  );
-  return specPath;
-};
 
 describe("documented scoped-service plugin", () => {
   const workspaces: string[] = [];
@@ -117,7 +81,7 @@ describe("documented scoped-service plugin", () => {
       );
       workspaces.push(workspace);
 
-      const inputPath = writeTinySpec(workspace);
+      const inputPath = writeHealthSpec(workspace);
       const outputPath = path.join(workspace, "generated");
       const eventsPath = path.join(workspace, "resource-events.log");
       const configPath = path.join(workspace, "typeweaver.config.mjs");

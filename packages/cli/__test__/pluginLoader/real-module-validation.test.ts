@@ -1,19 +1,18 @@
 import { Cause, Exit, Option } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { PluginLoadError } from "../../src/errors/PluginLoadError.js";
-import { TestAssertionError } from "../errors/index.js";
 import {
-  configWithPlugin,
   createPluginFixtureWorkspace,
   importPathForFile,
+} from "../helpers/index.js";
+import {
+  capturePluginLoadError,
+  configWithPlugin,
   requiredTypesPlugin,
   runLoadPlugins,
   runLoadPluginsExit,
-} from "../helpers/index.js";
-import type {
-  PluginLoaderRunResult,
-  RegisteredPlugin,
-} from "../helpers/index.js";
+} from "./support.js";
+import type { RegisteredPlugin } from "./support.js";
 
 const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
   cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
@@ -25,23 +24,6 @@ const writePluginModule = fixtures.writePluginModule;
 afterEach(() => {
   fixtures.cleanup();
 });
-
-const capturePluginLoadError = async (
-  load: Promise<PluginLoaderRunResult>
-): Promise<PluginLoadError> => {
-  const failure: unknown = await load.then(
-    () => undefined,
-    (error: unknown) => error
-  );
-
-  if (!(failure instanceof PluginLoadError)) {
-    throw new TestAssertionError(
-      `Expected plugin loading to fail with PluginLoadError, received: ${failure instanceof Error ? failure.message : String(failure)}`
-    );
-  }
-
-  return failure;
-};
 
 describe("pluginLoader real-module validation", () => {
   test("rejects an invalid default export from a real module before registration", async () => {

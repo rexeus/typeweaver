@@ -4,6 +4,7 @@ import { Effect, Logger } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { effectRuntime } from "../../src/effectRuntime.js";
 import { Generator } from "../../src/services/Generator.js";
+import { writeTinySpec } from "../helpers/specFiles.js";
 
 type CapturedLog = {
   readonly level: string;
@@ -18,44 +19,6 @@ const createTempWorkspace = (label: string): string => {
   );
   tempDirs.push(tempDir);
   return tempDir;
-};
-
-const writeTinySpec = (workspace: string): void => {
-  const specFile = path.join(workspace, "spec", "index.ts");
-  fs.mkdirSync(path.dirname(specFile), { recursive: true });
-  fs.writeFileSync(
-    specFile,
-    [
-      'import { defineOperation, defineResponse, defineSpec, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";',
-      'import { z } from "zod";',
-      "",
-      "const itemLoaded = defineResponse({",
-      '  name: "ItemLoaded",',
-      "  statusCode: HttpStatusCode.OK,",
-      '  description: "Item loaded",',
-      "  body: z.object({ id: z.string() }),",
-      "});",
-      "",
-      "export const spec = defineSpec({",
-      '  metadata: { title: "Items API", version: "1.0.0" },',
-      "  resources: {",
-      "    item: {",
-      "      operations: [",
-      "        defineOperation({",
-      '          operationId: "getItem",',
-      '          path: "/items/:itemId",',
-      "          method: HttpMethod.GET,",
-      '          summary: "Get item",',
-      "          request: { param: z.object({ itemId: z.string() }) },",
-      "          responses: [itemLoaded],",
-      "        }),",
-      "      ],",
-      "    },",
-      "  },",
-      "});",
-      "",
-    ].join("\n")
-  );
 };
 
 const renderMessage = (message: unknown): string =>

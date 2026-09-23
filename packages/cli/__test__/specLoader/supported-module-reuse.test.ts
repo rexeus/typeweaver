@@ -1,11 +1,9 @@
 import { afterEach, describe, expect, test } from "vitest";
 import {
-  expectBundledArtifacts,
-  expectSingleTodoResource,
-} from "./assertions.js";
-import {
   cleanupSpecLoaderProjects,
   createTempProject,
+  expectBundledArtifacts,
+  expectSingleTodoResource,
   loadProjectSpec,
   writeTodoResourcesEntrypoint,
   writeTodoSpecWithOperation,

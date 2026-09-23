@@ -1,103 +1,20 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import { Cause, Exit } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { effectRuntime } from "../../src/effectRuntime.js";
 import { GeneratedOutputChecker, Generator } from "../../src/services/index.js";
 import { canonicalHostTempDirectory } from "../../src/services/internal/hostTemp.js";
 import { outputLockDirectory } from "../../src/services/internal/outputCoordinationArtifact.js";
+import { writeTinySpec } from "../helpers/specFiles.js";
+import {
+  checkParams,
+  createTempWorkspace,
+  extractFailure,
+  removeTempPaths,
+  runGenerate,
+} from "./fixtures.js";
 
-const tempDirs: string[] = [];
-
-const createTempWorkspace = (suffix: string): string => {
-  const tempDir = fs.mkdtempSync(
-    path.join(os.tmpdir(), `typeweaver-check-${suffix}-`)
-  );
-  fs.symlinkSync(
-    path.join(import.meta.dirname, "..", "..", "node_modules"),
-    path.join(tempDir, "node_modules"),
-    process.platform === "win32" ? "junction" : "dir"
-  );
-  tempDirs.push(tempDir);
-  return tempDir;
-};
-
-const writeTinySpec = (workspace: string): string => {
-  const specFile = path.join(workspace, "spec", "index.ts");
-  fs.mkdirSync(path.dirname(specFile), { recursive: true });
-  fs.writeFileSync(
-    specFile,
-    [
-      'import { defineOperation, defineResponse, defineSpec, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";',
-      'import { z } from "zod";',
-      "",
-      "const itemLoaded = defineResponse({",
-      '  name: "ItemLoaded",',
-      "  statusCode: HttpStatusCode.OK,",
-      '  description: "Item loaded",',
-      "  body: z.object({ id: z.string() }),",
-      "});",
-      "",
-      "export const spec = defineSpec({",
-      '  metadata: { title: "Items API", version: "1.0.0" },',
-      "  resources: {",
-      "    item: {",
-      "      operations: [",
-      "        defineOperation({",
-      '          operationId: "getItem",',
-      '          path: "/items/:itemId",',
-      "          method: HttpMethod.GET,",
-      '          summary: "Get item",',
-      "          request: { param: z.object({ itemId: z.string() }) },",
-      "          responses: [itemLoaded],",
-      "        }),",
-      "      ],",
-      "    },",
-      "  },",
-      "});",
-      "",
-    ].join("\n")
-  );
-  return specFile;
-};
-
-const checkParams = (workspace: string) =>
-  ({
-    inputFile: "spec/index.ts",
-    outputDir: "generated/output",
-    config: {
-      input: "spec/index.ts",
-      output: "generated/output",
-      format: false,
-    },
-    currentWorkingDirectory: workspace,
-  }) as const;
-
-const runGenerate = (workspace: string): Promise<void> =>
-  effectRuntime.runPromise(
-    Generator.generate({
-      ...checkParams(workspace),
-    })
-  );
-
-const extractFailure = (exit: Exit.Exit<unknown, unknown>): unknown => {
-  expect(Exit.isFailure(exit)).toBe(true);
-  if (Exit.isSuccess(exit)) {
-    throw new Error("Expected a typed failure");
-  }
-  const failure = Cause.findErrorOption(exit.cause);
-  if (failure._tag === "None") {
-    throw new Error(`Expected typed failure: ${Cause.pretty(exit.cause)}`);
-  }
-  return failure.value;
-};
-
-afterEach(() => {
-  for (const tempDir of tempDirs.splice(0)) {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
-});
+afterEach(removeTempPaths);
 
 describe("GeneratedOutputChecker coordination cleanup", () => {
   test("repeated checks leave no flat lock or fence behind", async () => {

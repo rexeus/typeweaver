@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
 import { Cause, Effect, Result, Exit, Option } from "effect";
@@ -25,6 +23,7 @@ import {
   ConfigLoader,
   getResolvedConfigPath,
 } from "../../src/services/ConfigLoader.js";
+import { loadConfig, removeTempDirs, writeConfigModule } from "./fixtures.js";
 import type { ConfigError } from "../../src/errors/index.js";
 
 const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
@@ -41,18 +40,6 @@ const assertSupportedConfigPath = (configPath: string): void => {
     )
   );
   if (Result.isFailure(result)) throw result.failure;
-};
-
-const loadConfig = async (
-  configPath: string
-): Promise<Partial<TypeweaverConfig>> => {
-  const result = await Effect.runPromise(
-    Effect.result(ConfigLoader.load(configPath)).pipe(
-      Effect.provide(ConfigLoader.Default)
-    )
-  );
-  if (Result.isFailure(result)) throw result.failure;
-  return result.success;
 };
 
 const loadConfigExit = (
@@ -83,33 +70,7 @@ const expectInvalidConfigExit = (
   expect(causeDefects(exit.cause)).toHaveLength(0);
 };
 
-const tempDirs: string[] = [];
-
-afterEach(() => {
-  for (const tempDir of tempDirs) {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
-
-  tempDirs.length = 0;
-});
-
-const createTempDir = (): string => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "typeweaver-config-"));
-  tempDirs.push(tempDir);
-
-  return tempDir;
-};
-
-const writeConfigModule = (extension: string, contents: string): string => {
-  const tempDir = createTempDir();
-  const configPath = path.join(tempDir, `typeweaver.config${extension}`);
-
-  fs.writeFileSync(path.join(tempDir, "package.json"), '{"type":"module"}\n');
-
-  fs.writeFileSync(configPath, `${contents.trim()}\n`);
-
-  return configPath;
-};
+afterEach(removeTempDirs);
 
 const captureConfigPathError = (action: () => void): unknown => {
   try {
