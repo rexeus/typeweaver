@@ -1,64 +1,14 @@
+import { HttpMethod } from "@rexeus/typeweaver-core";
 import {
-  defineOperation,
-  HttpMethod,
-  ReservedPathParameterError,
-} from "@rexeus/typeweaver-core";
-import {
-  createGetMetricSuccessResponse,
+  createGetMetricKeyedLabelsSuccessResponse,
   createGetMetricLabelsSuccessResponse,
   createGetMetricSamplesSuccessResponse,
-  createGetMetricKeyedLabelsSuccessResponse,
+  createGetMetricSuccessResponse,
   MetricHono,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import { expectErrorResponse } from "../../helpers.js";
-import type {
-  HonoMetricApiHandler,
-  IGetMetricRequest,
-  IValidationErrorResponseBody,
-} from "test-utils";
-
-function createMetricBoundaryHandlers(
-  onRequest?: (request: IGetMetricRequest) => void
-): HonoMetricApiHandler<true> {
-  return {
-    handleGetMetricRequest: async request => {
-      onRequest?.(request);
-      return createGetMetricSuccessResponse({
-        header: { "Content-Type": "application/json" },
-        body: {
-          metricId: request.param.metricId,
-          enabled: request.query.enabled ?? false,
-        },
-      });
-    },
-    handleGetMetricLabelsRequest: async request =>
-      createGetMetricLabelsSuccessResponse({
-        header: { "Content-Type": "application/json" },
-        body: {
-          metricId: request.param.metricId,
-          labels: request.query ?? {},
-          flags: request.header ?? {},
-        },
-      }),
-    handleGetMetricSamplesRequest: async request =>
-      createGetMetricSamplesSuccessResponse({
-        header: { "Content-Type": "application/json" },
-        body: {
-          metricId: request.param.metricId,
-          samples: request.query ?? {},
-        },
-      }),
-    handleGetMetricKeyedLabelsRequest: async request =>
-      createGetMetricKeyedLabelsSuccessResponse({
-        header: { "Content-Type": "application/json" },
-        body: {
-          metricId: request.param.metricId,
-          labels: request.query ?? {},
-        },
-      }),
-  };
-}
+import { createMetricBoundaryHandlers } from "./fixtures.js";
+import type { HonoMetricApiHandler, IGetMetricRequest } from "test-utils";
 
 describe("Generated Hono dynamic validation mode", () => {
   const createDynamicHandlers = (
@@ -183,41 +133,5 @@ describe("Generated Hono raw transport truthfulness", () => {
 
     expect(response.status).toBe(200);
     expect(captured?.method).toBe(HttpMethod.GET);
-  });
-});
-
-describe("Generated Hono reserved record keys", () => {
-  test("rejects an own __proto__ record query key", async () => {
-    const app = new MetricHono({
-      requestHandlers: createMetricBoundaryHandlers(),
-    });
-
-    const response = await app.request(
-      "http://localhost/metrics/42/labels?__proto__=1"
-    );
-
-    const data = (await expectErrorResponse(
-      response,
-      400,
-      "VALIDATION_ERROR"
-    )) as IValidationErrorResponseBody;
-    expect(data.issues.query).toHaveLength(1);
-  });
-});
-
-describe("Generated Hono reserved path parameters", () => {
-  test("receives the shared ':__proto__' definition rejection", () => {
-    const path: string = "/metrics/:__proto__";
-
-    expect(() =>
-      defineOperation({
-        operationId: "reservedPath",
-        method: HttpMethod.GET,
-        path,
-        summary: "Reserved path parameter",
-        request: {},
-        responses: [],
-      })
-    ).toThrow(ReservedPathParameterError);
   });
 });

@@ -5,15 +5,8 @@ import {
   TestApplicationError,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import { expectErrorResponse, prepareRequestData } from "../../helpers.js";
-
-const readContextString = (
-  context: { get: (key: string) => unknown },
-  key: string
-): string | undefined => {
-  const value = context.get(key);
-  return typeof value === "string" ? value : undefined;
-};
+import { expectErrorResponse, prepareRequestData } from "../../../helpers.js";
+import { readContextString } from "./fixtures.js";
 
 describe("Generated Hono typed error handling", () => {
   test("serializes thrown typed HTTP responses with the default HTTP response error handler", async () => {

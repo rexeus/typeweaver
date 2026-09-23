@@ -1,129 +1,31 @@
-import type { IValidatedHttpRequest } from "@rexeus/typeweaver-core";
 import {
   createCreateSubTodoRequest,
   createCreateTodoRequest,
+  createDeleteSubTodoRequest,
+  createDeleteSubTodoSuccessResponse,
   createDeleteTodoRequest,
-  createGetMetricSuccessResponse,
-  createGetMetricLabelsSuccessResponse,
-  createGetMetricSamplesSuccessResponse,
-  createGetMetricKeyedLabelsSuccessResponse,
   createHeadTodoRequest,
+  createListSubTodosRequest,
+  createListSubTodosSuccessResponse,
   createListTodosRequest,
   createOptionsTodoRequest,
   createPutTodoRequest,
+  createQuerySubTodoRequest,
+  createQuerySubTodoSuccessResponse,
   createQueryTodoRequest,
   createQueryTodoSuccessResponse,
   createTestHono,
+  createUpdateSubTodoRequest,
   createUpdateTodoRequest,
   createUpdateTodoStatusRequest,
-  MetricHono,
-  TestAssertionError,
-  TodoHono,
 } from "test-utils";
 import { describe, expect, test } from "vitest";
-import { expectErrorResponse, prepareRequestData } from "../../helpers.js";
-import type {
-  HonoMetricApiHandler,
-  HonoTodoApiHandler,
-  IGetMetricRequest,
-  IValidationErrorResponseBody,
-} from "test-utils";
-
-type CreateTestHonoOptions = Parameters<typeof createTestHono>[0];
-
-type UnvalidatedTodoHonoOptions = Omit<
-  ConstructorParameters<typeof TodoHono<false>>[0],
-  "requestHandlers" | "validateRequests" | "validateResponses"
->;
-
-const readContextString = (
-  context: { get: (key: string) => unknown },
-  key: string
-): string | undefined => {
-  const value = context.get(key);
-  return typeof value === "string" ? value : undefined;
-};
-
-async function requestTestHono(
-  url: string,
-  requestData: IValidatedHttpRequest,
-  options?: CreateTestHonoOptions
-): Promise<Response> {
-  return await createTestHono(options).request(
-    url,
-    prepareRequestData(requestData)
-  );
-}
-
-function createRequestHandlersProxy<TValidateRequests extends boolean>(
-  handlers: Partial<HonoTodoApiHandler<TValidateRequests>>
-): HonoTodoApiHandler<TValidateRequests> {
-  return new Proxy(handlers as HonoTodoApiHandler<TValidateRequests>, {
-    get: (target, prop) => {
-      if (prop in target)
-        return target[prop as keyof HonoTodoApiHandler<TValidateRequests>];
-      return async () => {
-        throw new TestAssertionError(
-          `Missing Hono test handler: ${String(prop)}`
-        );
-      };
-    },
-  });
-}
-
-function createUnvalidatedTodoHonoWithHandlers(
-  handlers: Partial<HonoTodoApiHandler<false>>,
-  options: UnvalidatedTodoHonoOptions = {}
-): TodoHono<false> {
-  return new TodoHono<false>({
-    ...options,
-    validateRequests: false,
-    validateResponses: false,
-    requestHandlers: createRequestHandlersProxy<false>(handlers),
-  });
-}
-
-function createMetricBoundaryHandlers(
-  onRequest?: (request: IGetMetricRequest) => void
-): HonoMetricApiHandler<true> {
-  return {
-    handleGetMetricRequest: async request => {
-      onRequest?.(request);
-      return createGetMetricSuccessResponse({
-        header: { "Content-Type": "application/json" },
-        body: {
-          metricId: request.param.metricId,
-          enabled: request.query.enabled ?? false,
-        },
-      });
-    },
-    handleGetMetricLabelsRequest: async request =>
-      createGetMetricLabelsSuccessResponse({
-        header: { "Content-Type": "application/json" },
-        body: {
-          metricId: request.param.metricId,
-          labels: request.query ?? {},
-          flags: request.header ?? {},
-        },
-      }),
-    handleGetMetricSamplesRequest: async request =>
-      createGetMetricSamplesSuccessResponse({
-        header: { "Content-Type": "application/json" },
-        body: {
-          metricId: request.param.metricId,
-          samples: request.query ?? {},
-        },
-      }),
-    handleGetMetricKeyedLabelsRequest: async request =>
-      createGetMetricKeyedLabelsSuccessResponse({
-        header: { "Content-Type": "application/json" },
-        body: {
-          metricId: request.param.metricId,
-          labels: request.query ?? {},
-        },
-      }),
-  };
-}
+import { prepareRequestData } from "../../../helpers.js";
+import {
+  createUnvalidatedTodoHonoWithHandlers,
+  readContextString,
+  requestTestHono,
+} from "./fixtures.js";
 
 describe("Generated Hono route dispatch", () => {
   test("dispatches GET /todos to the list operation", async () => {
@@ -200,65 +102,6 @@ describe("Generated Hono route dispatch", () => {
     expect(data["id"]).toBe(requestData.param.todoId);
     expect(data["title"]).toBe("patch todo");
     expect(data["priority"]).toBe("MEDIUM");
-  });
-});
-
-describe("Generated Hono typed HTTP boundary coercion", () => {
-  test("passes validated domain values to handlers by default", async () => {
-    let capturedRequest: IGetMetricRequest | undefined;
-    const app = new MetricHono({
-      requestHandlers: createMetricBoundaryHandlers(request => {
-        capturedRequest = request;
-      }),
-    });
-
-    const response = await app.request(
-      "http://localhost/metrics/42?enabled=false&truthy=false&samples=1.5&samples=2",
-      {
-        headers: {
-          "X-Attempt": "3",
-          "X-Enabled": "false",
-          "X-Observed-At": "2026-07-26T10:15:30.000Z",
-        },
-      }
-    );
-
-    expect(response.status).toBe(200);
-    expect(capturedRequest).toEqual({
-      method: "GET",
-      path: "/metrics/42",
-      param: { metricId: 42 },
-      query: {
-        enabled: false,
-        truthy: true,
-        samples: [1.5, 2],
-      },
-      header: {
-        "X-Attempt": 3,
-        "X-Enabled": false,
-        "X-Observed-At": new Date("2026-07-26T10:15:30.000Z"),
-      },
-    });
-  });
-
-  test("returns a validation error for an invalid coerced path value", async () => {
-    const app = new MetricHono({
-      requestHandlers: createMetricBoundaryHandlers(),
-    });
-
-    const response = await app.request(
-      "http://localhost/metrics/not-a-number",
-      {
-        headers: { "X-Attempt": "3" },
-      }
-    );
-
-    const data = (await expectErrorResponse(
-      response,
-      400,
-      "VALIDATION_ERROR"
-    )) as IValidationErrorResponseBody;
-    expect(data.issues.param).toHaveLength(1);
   });
 });
 
@@ -354,5 +197,118 @@ describe("Generated Hono todo route precedence", () => {
     expect(data["parentId"]).toBe(requestData.param.todoId);
     expect(data["title"]).toBe("create nested item");
     expect(data["priority"]).toBe("HIGH");
+  });
+});
+
+describe("Generated Hono nested route dispatch", () => {
+  test("dispatches GET /todos/:todoId/subtodos with the parent todo id", async () => {
+    let capturedTodoId: string | undefined;
+    const requestData = createListSubTodosRequest();
+    const app = createUnvalidatedTodoHonoWithHandlers({
+      handleListSubTodosRequest: async request => {
+        capturedTodoId = request.param.todoId;
+        return createListSubTodosSuccessResponse({ body: { results: [] } });
+      },
+    });
+
+    const response = await app.request(
+      `http://localhost/todos/${requestData.param.todoId}/subtodos`,
+      prepareRequestData(requestData)
+    );
+
+    expect(response.status).toBe(200);
+    expect(capturedTodoId).toBe(requestData.param.todoId);
+    const data = (await response.json()) as Record<string, unknown>;
+    expect(data["results"]).toEqual([]);
+  });
+
+  test("nested subtodo update routes propagate parent and subtodo ids", async () => {
+    const requestData = createUpdateSubTodoRequest({
+      body: {
+        title: "update nested item",
+        priority: "LOW",
+      },
+    });
+
+    const response = await requestTestHono(
+      `http://localhost/todos/${requestData.param.todoId}/subtodos/${requestData.param.subtodoId}`,
+      requestData
+    );
+
+    expect(response.status).toBe(200);
+    const data = (await response.json()) as Record<string, unknown>;
+    expect(data["parentId"]).toBe(requestData.param.todoId);
+    expect(data["id"]).toBe(requestData.param.subtodoId);
+    expect(data["title"]).toBe("update nested item");
+    expect(data["priority"]).toBe("LOW");
+  });
+
+  test("nested static subtodo query route hits the query operation", async () => {
+    let capturedOperationId: string | undefined;
+    let capturedTodoId: string | undefined;
+    const requestData = createQuerySubTodoRequest();
+    const app = createUnvalidatedTodoHonoWithHandlers({
+      handleQuerySubTodoRequest: async (request, context) => {
+        capturedOperationId = readContextString(context, "operationId");
+        capturedTodoId = request.param.todoId;
+        return createQuerySubTodoSuccessResponse({ body: { results: [] } });
+      },
+    });
+
+    const response = await app.request(
+      `http://localhost/todos/${requestData.param.todoId}/subtodos/query`,
+      prepareRequestData(requestData)
+    );
+
+    expect(response.status).toBe(200);
+    expect(capturedOperationId).toBe("QuerySubTodo");
+    expect(capturedTodoId).toBe(requestData.param.todoId);
+  });
+});
+
+describe("Generated Hono route fallthrough", () => {
+  test("dispatches DELETE /todos/:todoId/subtodos/:subtodoId with parent and subtodo ids", async () => {
+    let capturedTodoId: string | undefined;
+    let capturedSubtodoId: string | undefined;
+    const requestData = createDeleteSubTodoRequest();
+    const app = createUnvalidatedTodoHonoWithHandlers({
+      handleDeleteSubTodoRequest: async request => {
+        capturedTodoId = request.param.todoId;
+        capturedSubtodoId = request.param.subtodoId;
+        return createDeleteSubTodoSuccessResponse({
+          body: { message: "deleted subtodo" },
+        });
+      },
+    });
+
+    const response = await app.request(
+      `http://localhost/todos/${requestData.param.todoId}/subtodos/${requestData.param.subtodoId}`,
+      prepareRequestData(requestData)
+    );
+
+    expect(response.status).toBe(200);
+    const data = (await response.json()) as Record<string, unknown>;
+    expect(data["message"]).toBe("deleted subtodo");
+    expect(capturedTodoId).toBe(requestData.param.todoId);
+    expect(capturedSubtodoId).toBe(requestData.param.subtodoId);
+  });
+
+  test("unknown paths use Hono's public 404 behavior", async () => {
+    const response = await createTestHono().request(
+      "http://localhost/not-a-generated-route",
+      { method: "GET" }
+    );
+
+    expect(response.status).toBe(404);
+    expect(await response.text()).toBe("404 Not Found");
+  });
+
+  test("returns 404 without Allow for unsupported methods on known paths", async () => {
+    const response = await createTestHono().request("http://localhost/todos", {
+      method: "PUT",
+    });
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("Allow")).toBeNull();
   });
 });

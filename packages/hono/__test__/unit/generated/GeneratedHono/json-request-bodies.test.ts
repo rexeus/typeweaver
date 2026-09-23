@@ -1,71 +1,12 @@
 import { badRequestDefaultError } from "@rexeus/typeweaver-core";
-import {
-  createCreateTodoSuccessResponse,
-  createTestHono,
-  TestAssertionError,
-  TodoHono,
-} from "test-utils";
+import { createCreateTodoSuccessResponse, createTestHono } from "test-utils";
 import { describe, expect, test } from "vitest";
-import { expectErrorResponse } from "../../helpers.js";
-import type { HonoTodoApiHandler } from "test-utils";
-
-type UnvalidatedTodoHonoOptions = Omit<
-  ConstructorParameters<typeof TodoHono<false>>[0],
-  "requestHandlers" | "validateRequests" | "validateResponses"
->;
-
-function createRequestHandlersProxy<TValidateRequests extends boolean>(
-  handlers: Partial<HonoTodoApiHandler<TValidateRequests>>
-): HonoTodoApiHandler<TValidateRequests> {
-  return new Proxy(handlers as HonoTodoApiHandler<TValidateRequests>, {
-    get: (target, prop) => {
-      if (prop in target)
-        return target[prop as keyof HonoTodoApiHandler<TValidateRequests>];
-      return async () => {
-        throw new TestAssertionError(
-          `Missing Hono test handler: ${String(prop)}`
-        );
-      };
-    },
-  });
-}
-
-function createUnvalidatedTodoHonoWithHandlers(
-  handlers: Partial<HonoTodoApiHandler<false>>,
-  options: UnvalidatedTodoHonoOptions = {}
-): TodoHono<false> {
-  return new TodoHono<false>({
-    ...options,
-    validateRequests: false,
-    validateResponses: false,
-    requestHandlers: createRequestHandlersProxy<false>(handlers),
-  });
-}
-
-function aNestedJsonPrototypePollutionPayload(): string {
-  return (
-    '{"title":"safe title","meta":{"label":"nested","__proto__":{"polluted":true}},' +
-    '"items":[{"value":"array nested","__proto__":{"polluted":true}}],' +
-    '"__proto__":{"polluted":true}}'
-  );
-}
-
-async function requestCreateTodoWithMalformedJson(
-  app: Pick<ReturnType<typeof createTestHono>, "request">,
-  initOverrides?: RequestInit
-): Promise<Response> {
-  const headers = new Headers(initOverrides?.headers);
-  if (!headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
-  }
-
-  return await app.request("http://localhost/todos", {
-    ...initOverrides,
-    method: initOverrides?.method ?? "POST",
-    headers,
-    body: initOverrides?.body ?? "{",
-  });
-}
+import { expectErrorResponse } from "../../../helpers.js";
+import {
+  aNestedJsonPrototypePollutionPayload,
+  createUnvalidatedTodoHonoWithHandlers,
+  requestCreateTodoWithMalformedJson,
+} from "./fixtures.js";
 
 describe("Generated Hono JSON sanitization", () => {
   test("removes __proto__ keys from nested JSON request bodies without polluting Object.prototype", async () => {
