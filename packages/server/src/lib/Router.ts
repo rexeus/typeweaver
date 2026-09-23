@@ -15,27 +15,7 @@ import {
   toSegments,
 } from "./routerInternals.js";
 import { traverse } from "./routerMatching.js";
-import type {
-  HttpResponseErrorHandler,
-  RequestValidationErrorHandler,
-  ResponseValidationErrorHandler,
-  RouteDefinition,
-  RouteMatch,
-  RouteMetadata,
-  RouterErrorConfig,
-  UnknownErrorHandler,
-} from "./routerTypes.js";
-
-export type {
-  HttpResponseErrorHandler,
-  RequestValidationErrorHandler,
-  ResponseValidationErrorHandler,
-  RouteDefinition,
-  RouteMatch,
-  RouteMetadata,
-  RouterErrorConfig,
-  UnknownErrorHandler,
-};
+import type { RouteDefinition, RouteMatch } from "./routerTypes.js";
 
 /**
  * High-performance radix tree router with path parameter support.

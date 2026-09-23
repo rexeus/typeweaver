@@ -29,26 +29,11 @@ import {
 } from "./honoErrorHandling.js";
 import type { HonoErrorHandlers } from "./honoErrorHandling.js";
 import type {
-  HonoBodyParseErrorHandler,
-  HonoHttpResponseErrorHandler,
-  HonoRequestValidationErrorHandler,
-  HonoResponseValidationErrorHandler,
-  HonoUnknownErrorHandler,
   TypeweaverHonoOptions,
   TypeweaverHonoRequestOptions,
 } from "./honoTypes.js";
 import type { Context } from "hono";
 import type { BlankEnv, BlankSchema, Env, Schema } from "hono/types";
-
-export type {
-  HonoBodyParseErrorHandler,
-  HonoHttpResponseErrorHandler,
-  HonoRequestValidationErrorHandler,
-  HonoResponseValidationErrorHandler,
-  HonoUnknownErrorHandler,
-  TypeweaverHonoOptions,
-  TypeweaverHonoRequestOptions,
-};
 
 /**
  * Abstract base class for typeweaver-generated Hono routers.

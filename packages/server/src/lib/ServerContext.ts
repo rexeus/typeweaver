@@ -6,7 +6,7 @@
  */
 
 import type { IRawHttpRequest } from "@rexeus/typeweaver-core";
-import type { RouteMetadata } from "./Router.js";
+import type { RouteMetadata } from "./routerTypes.js";
 import type { StateMap } from "./StateMap.js";
 
 /**

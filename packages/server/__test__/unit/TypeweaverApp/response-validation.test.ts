@@ -15,7 +15,7 @@ import {
   defaultHandlers,
   expectInternalError,
 } from "./fixtures.js";
-import type { ResponseValidationErrorHandler } from "../../../src/lib/Router.js";
+import type { ResponseValidationErrorHandler } from "../../../src/lib/routerTypes.js";
 
 function anInvalidTodosResponse(): IHttpResponse {
   return {

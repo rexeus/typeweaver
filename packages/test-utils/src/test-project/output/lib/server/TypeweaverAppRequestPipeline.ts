@@ -10,7 +10,8 @@ import { StateMap } from "./StateMap.js";
 import { handleAppError, validateAppResponse } from "./TypeweaverAppErrorHandling.js";
 import type { FetchApiAdapter } from "./FetchApiAdapter.js";
 import type { Middleware } from "./Middleware.js";
-import type { Router, RouteDefinition, RouteMatch } from "./Router.js";
+import type { Router } from "./Router.js";
+import type { RouteDefinition, RouteMatch } from "./routerTypes.js";
 import type { ServerContext } from "./ServerContext.js";
 
 /**

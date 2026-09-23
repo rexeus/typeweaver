@@ -15,7 +15,7 @@ import type {
   ResponseValidationErrorHandler,
   RouteDefinition,
   UnknownErrorHandler,
-} from "./Router.js";
+} from "./routerTypes.js";
 import type { ServerContext } from "./ServerContext.js";
 
 const INTERNAL_SERVER_ERROR_BODY = createDefaultErrorBody(internalServerErrorDefaultError);
