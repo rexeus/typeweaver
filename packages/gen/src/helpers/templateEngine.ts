@@ -89,11 +89,19 @@ export function renderTemplate(template: string, data: TemplateData): string {
     // The tests pin the expected collision behavior: own properties on `data`
     // (including names like `name` or `toString`) must win over outer built-ins.
     `const __output = []; with (data) { ${outputChunks.join("\n")} } return __output.join("");`
-  ) as (
-    data: NonNullable<TemplateData>,
-    escape: typeof escapeHtml,
-    stringify: typeof stringifyTemplateValue
-  ) => string;
+  );
 
-  return render(templateData, escapeHtml, stringifyTemplateValue);
+  // A scriptlet can `return` early, so the rendered value is checked rather
+  // than trusted to be the joined output.
+  const rendered: unknown = Reflect.apply(render, undefined, [
+    templateData,
+    escapeHtml,
+    stringifyTemplateValue,
+  ]);
+  if (typeof rendered !== "string") {
+    throw new TypeError(
+      `Template rendering must produce a string, received ${typeof rendered}`
+    );
+  }
+  return rendered;
 }
