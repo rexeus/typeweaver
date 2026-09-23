@@ -5,6 +5,7 @@ import {
 } from "./effect-diagnostics-allowlist.mjs";
 import {
   EFFECT_DIAGNOSTIC_POLICY,
+  effectDiagnosticExemption,
   isArchitecturalNodeBuiltinPath,
   isBoundaryEffectPath,
   isBlockingEffectDiagnostic,
@@ -20,12 +21,14 @@ import {
 } from "./effect-diagnostics-projects.mjs";
 
 /** @typedef {{ file: string, line: number, column: number, code: number, name: string, message: string, severity: string }} EffectDiagnostic */
+/** @typedef {EffectDiagnostic & { category: string }} ExemptedEffectDiagnostic */
 /** @typedef {import("./effect-diagnostics-projects.mjs").EffectProjectResult} EffectProjectResult */
 
 export {
   EFFECT_DIAGNOSTIC_POLICY,
   assertEffectDirectiveAllowlist,
   discoverEffectProjects,
+  effectDiagnosticExemption,
   isArchitecturalNodeBuiltinPath,
   isBoundaryEffectPath,
   isBlockingEffectDiagnostic,
@@ -91,8 +94,22 @@ export const collectEffectDiagnostics = () => {
   return results;
 };
 
-/** @param {readonly EffectProjectResult[]} results */
-export const effectDiagnostics = results => {
+/** @param {EffectDiagnostic} diagnostic @returns {string} */
+const diagnosticKey = diagnostic =>
+  [
+    toWorkspacePath(path.resolve(diagnostic.file)),
+    diagnostic.line,
+    diagnostic.column,
+    diagnostic.code,
+    diagnostic.name,
+  ].join(":");
+
+/**
+ * Every diagnostic reported for an authored (non-generated) project file,
+ * deduplicated across projects that share a file.
+ * @param {readonly EffectProjectResult[]} results @returns {EffectDiagnostic[]}
+ */
+const authoredDiagnostics = results => {
   const projectFiles = new Set(
     results.flatMap(result =>
       result.output.files
@@ -100,14 +117,56 @@ export const effectDiagnostics = results => {
         .map(file => path.resolve(file.file))
     )
   );
-  return results.flatMap(result =>
-    result.output.diagnostics.filter(
-      diagnostic =>
-        projectFiles.has(path.resolve(diagnostic.file)) &&
-        isBlockingEffectDiagnostic(diagnostic)
-    )
-  );
+  /** @type {Map<string, EffectDiagnostic>} */
+  const unique = new Map();
+  for (const diagnostic of results.flatMap(
+    result => result.output.diagnostics
+  )) {
+    if (projectFiles.has(path.resolve(diagnostic.file))) {
+      unique.set(diagnosticKey(diagnostic), diagnostic);
+    }
+  }
+  return [...unique.values()];
 };
+
+/** @param {readonly EffectProjectResult[]} results @returns {EffectDiagnostic[]} */
+export const effectDiagnostics = results =>
+  authoredDiagnostics(results).filter(isBlockingEffectDiagnostic);
+
+/**
+ * The non-blocking warnings the central policy exempts, with their category.
+ * @param {readonly EffectProjectResult[]} results @returns {ExemptedEffectDiagnostic[]}
+ */
+export const exemptedEffectDiagnostics = results =>
+  authoredDiagnostics(results).flatMap(diagnostic => {
+    const category = effectDiagnosticExemption(diagnostic);
+    return category === undefined ? [] : [{ ...diagnostic, category }];
+  });
+
+/**
+ * One line per exemption category and rule, with the warning count, sorted.
+ * @param {readonly ExemptedEffectDiagnostic[]} exempted @returns {string[]}
+ */
+export const summarizeExemptedEffectDiagnostics = exempted => {
+  /** @type {Map<string, number>} */
+  const counts = new Map();
+  for (const diagnostic of exempted) {
+    const key = `${diagnostic.category} ${diagnostic.name}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, count]) => `${key}: ${count}`);
+};
+
+/** @param {readonly ExemptedEffectDiagnostic[]} exempted @returns {string[]} */
+export const listExemptedEffectDiagnostics = exempted =>
+  exempted
+    .map(
+      diagnostic =>
+        `${toWorkspacePath(path.resolve(diagnostic.file))}:${diagnostic.line}:${diagnostic.column} [${diagnostic.category}] ${diagnostic.name}: ${diagnostic.message}`
+    )
+    .sort((left, right) => left.localeCompare(right));
 
 /** @param {readonly EffectProjectResult[]} results */
 export const formatEffectDiagnostics = results =>

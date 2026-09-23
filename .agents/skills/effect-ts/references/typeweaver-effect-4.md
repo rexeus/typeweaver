@@ -148,6 +148,9 @@ pnpm test
 ```
 
 The diagnostics command runs `effect-tsgo diagnostics --strict` from `@effect/tsgo` and treats
-errors and unlisted warnings as failures. A small central policy permits only named boundary/style
-rules at their approved path categories; correctness rules and unknown future names remain blocking
-everywhere, including those boundaries.
+errors and unlisted warnings as failures. A central policy in
+`scripts/lib/effect-diagnostics-policy.mjs` exempts named boundary and style rules within path
+categories, most of them directory prefixes such as `packages/cli/src/services/`; correctness rules
+and unknown future names remain blocking everywhere, including those boundaries. Every run prints
+the exempted warnings per category and rule; `pnpm effect:diagnostics --list-exempted` lists each
+one with its location.
