@@ -71,6 +71,27 @@ Packages reference the workspace through a local development dependency:
 }
 ```
 
+The `file:` protocol is deliberate. This workspace depends on the CLI and every first-party
+generator to produce its checked-in output, so a `workspace:*` reference from those packages would
+form a cycle that Turborepo rejects. Turborepo therefore sees no edge to `test-utils`, yet a
+consumer's `typecheck` reads the generated output, which imports the built `dist` of those
+generators. Every consumer declares that edge in its own `turbo.json`:
+
+```json
+{
+  "extends": ["//"],
+  "tasks": {
+    "typecheck": {
+      "dependsOn": ["$TURBO_EXTENDS$", "test-utils#build"]
+    }
+  }
+}
+```
+
+`test-utils#build` builds nothing itself; it depends on `^build`, so waiting for it waits for every
+package this workspace imports. Without the edge, `typecheck` can read a `dist` that `tsdown` is
+cleaning and fail with `TS2307`.
+
 ```ts
 import {
   captureError,
