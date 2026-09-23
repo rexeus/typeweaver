@@ -1,37 +1,151 @@
-import type {
-  NormalizedResponse,
-  NormalizedResponseUsage,
-} from "@rexeus/typeweaver-gen";
+import type { NormalizedOperation } from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { buildOpenApiDocument } from "../../src/index.js";
+import { buildOpenApiDocument } from "../../../src/index.js";
 import {
-  aHeaderSchemaForBuilder,
   anInlineResponseUsage,
   anOperationWith,
-  aRecursiveTreeNodeSchema,
+  aQuerySchemaForBuilder,
   aResponseWith,
   aTodoSpecWith,
   todoApiOptions,
-} from "./buildOpenApiDocument.helpers.js";
+} from "../../helpers.js";
+import { aCanonicalOkResponse, anInlineOkResponse } from "./fixtures.js";
 
-const OK_STATUS = 200 as NormalizedResponse["statusCode"];
+describe("buildOpenApiDocument root warning paths", () => {
+  test("keeps root query container warnings at the parameter list boundary", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          request: {
+            query: aQuerySchemaForBuilder(z.custom<Record<string, string>>()),
+          },
+          responses: [anInlineResponseUsage(aResponseWith())],
+        }),
+      ],
+    });
 
-type ResponseBuilderOverrides = Parameters<typeof aResponseWith>[0];
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
-function anInlineOkResponse(
-  overrides: ResponseBuilderOverrides = {}
-): NormalizedResponseUsage {
-  return anInlineResponseUsage(
-    aResponseWith({ statusCode: OK_STATUS, ...overrides })
-  );
-}
+    expect(result.warnings).toEqual([
+      {
+        origin: "schema-conversion",
+        code: "unsupported-schema",
+        message:
+          "Zod custom falls back to a broader JSON Schema representation.",
+        schemaType: "custom",
+        schemaPath: "",
+        documentPath: "/paths/~1todos/get/parameters",
+        location: {
+          resourceName: "Todos",
+          operationId: "getTodo",
+          method: "GET",
+          path: "/todos",
+          openApiPath: "/todos",
+          part: "request.query",
+          parameterName: undefined,
+          responseName: undefined,
+          statusCode: undefined,
+        },
+      },
+      {
+        origin: "openapi-builder",
+        code: "unrepresentable-parameter-container",
+        message:
+          "request.query must be a finite object schema to become OpenAPI parameters.",
+        documentPath: "/paths/~1todos/get/parameters",
+        location: {
+          resourceName: "Todos",
+          operationId: "getTodo",
+          method: "GET",
+          path: "/todos",
+          openApiPath: "/todos",
+          part: "request.query",
+          parameterName: undefined,
+          responseName: undefined,
+          statusCode: undefined,
+        },
+      },
+    ]);
+  });
+});
 
-function aCanonicalOkResponse(
-  overrides: ResponseBuilderOverrides = {}
-): NormalizedResponse {
-  return aResponseWith({ statusCode: OK_STATUS, ...overrides });
-}
+describe("buildOpenApiDocument nested warning paths", () => {
+  test("rebases schema conversion warnings to the OpenAPI request body path", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          operationId: "createTodo",
+          method: "POST" as NormalizedOperation["method"],
+          request: { body: z.object({ value: z.custom<string>() }) },
+          responses: [anInlineResponseUsage(aResponseWith())],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
+
+    expect(result.warnings).toEqual([
+      {
+        origin: "schema-conversion",
+        code: "unsupported-schema",
+        message:
+          "Zod custom falls back to a broader JSON Schema representation.",
+        schemaType: "custom",
+        schemaPath: "/properties/value",
+        documentPath:
+          "/components/schemas/CreateTodoRequestBody/properties/value",
+        location: {
+          resourceName: "Todos",
+          operationId: "createTodo",
+          method: "POST",
+          path: "/todos",
+          openApiPath: "/todos",
+          part: "request.body",
+        },
+      },
+    ]);
+  });
+
+  test("uses JSON Pointer segment boundaries when rebasing query parameter warnings", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          request: {
+            query: z.object({
+              id: z.string(),
+              identifier: z.string().refine(value => value.startsWith("ok")),
+            }),
+          },
+          responses: [anInlineResponseUsage(aResponseWith())],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
+
+    expect(result.warnings).toEqual([
+      {
+        origin: "schema-conversion",
+        code: "unsupported-check",
+        message:
+          "Zod string check custom cannot be represented exactly in JSON Schema.",
+        schemaType: "string",
+        schemaPath: "/properties/identifier",
+        documentPath: "/paths/~1todos/get/parameters/1/schema",
+        location: {
+          resourceName: "Todos",
+          operationId: "getTodo",
+          method: "GET",
+          path: "/todos",
+          openApiPath: "/todos",
+          part: "request.query",
+          parameterName: "identifier",
+        },
+      },
+    ]);
+  });
+});
 
 describe("buildOpenApiDocument response warning paths", () => {
   test("rebases schema conversion warnings for canonical component response bodies", () => {
@@ -181,57 +295,5 @@ describe("buildOpenApiDocument inline response warning paths", () => {
         },
       },
     ]);
-  });
-});
-
-describe("buildOpenApiDocument header schema refs", () => {
-  test("preserves root definitions used by recursive response header schemas", () => {
-    const treeNodeSchema = aRecursiveTreeNodeSchema();
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWith({
-          operationId: "getTree",
-          path: "/trees",
-          responses: [
-            anInlineOkResponse({
-              header: aHeaderSchemaForBuilder(
-                z.object({ "x-tree": treeNodeSchema })
-              ),
-            }),
-          ],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
-
-    expect(result.document.paths["/trees"]?.get?.responses["200"]).toEqual({
-      description: "OK",
-      headers: {
-        "x-tree": {
-          required: true,
-          schema: {
-            $ref: "#/paths/~1trees/get/responses/200/headers/x-tree/schema/$defs/__schema0",
-            $defs: {
-              __schema0: {
-                type: "object",
-                properties: {
-                  name: { type: "string" },
-                  children: {
-                    type: "array",
-                    items: {
-                      $ref: "#/paths/~1trees/get/responses/200/headers/x-tree/schema/$defs/__schema0",
-                    },
-                  },
-                },
-                required: ["name", "children"],
-                additionalProperties: false,
-              },
-            },
-          },
-        },
-      },
-    });
-    expect(result.warnings).toEqual([]);
   });
 });

@@ -1,11 +1,12 @@
 import { execFile } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { expect } from "vitest";
+import { isRecord } from "./fixtures.js";
 
 const execFileAsync = promisify(execFile);
 const require = createRequire(import.meta.url);
@@ -13,12 +14,6 @@ const RULESET_CONTENT = "extends: spectral:oas\n";
 
 export type PackageJsonWithBin = {
   readonly bin?: string | Record<string, string>;
-};
-
-export type OpenApiFixture = {
-  readonly openapi?: unknown;
-  readonly components?: unknown;
-  readonly paths?: unknown;
 };
 
 export type ValidatorCommandOutput = {
@@ -52,15 +47,6 @@ export async function validateOpenApiFixture(
     assertValidatorOutputHasNoErrors(fixturePath, output.stdout);
   } finally {
     await rm(rulesetDirectory, { force: true, recursive: true });
-  }
-}
-
-export function assertFixtureExists(fixturePath: string): void {
-  if (!existsSync(fixturePath)) {
-    throw new Error(
-      `Missing generated OpenAPI fixture at ${fixturePath}. Run ` +
-        "`pnpm --filter test-utils test:gen` to regenerate it."
-    );
   }
 }
 
@@ -203,10 +189,6 @@ export function isErrorFinding(finding: ValidatorFinding): boolean {
 
 export function isValidatorFinding(value: unknown): value is ValidatorFinding {
   return isRecord(value);
-}
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 export function validatorFailureMessage(

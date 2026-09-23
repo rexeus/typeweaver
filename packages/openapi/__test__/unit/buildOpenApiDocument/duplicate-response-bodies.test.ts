@@ -1,56 +1,17 @@
-import type {
-  NormalizedHttpBody,
-  NormalizedOperation,
-  NormalizedResponse,
-  NormalizedResponseUsage,
-} from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { buildOpenApiDocument } from "../../src/index.js";
+import { buildOpenApiDocument } from "../../../src/index.js";
 import {
   aCanonicalResponseUsage,
-  anInlineResponseUsage,
-  anOperationWith,
-  aResponseWith,
   aTodoSpecWith,
   todoApiOptions,
-} from "./buildOpenApiDocument.helpers.js";
-
-const OK_STATUS = 200 as NormalizedResponse["statusCode"];
-
-type ResponseBuilderOverrides = Parameters<typeof aResponseWith>[0];
-
-type OperationBuilderOverrides = Parameters<typeof anOperationWith>[0];
-
-function anInlineOkResponse(
-  overrides: ResponseBuilderOverrides = {}
-): NormalizedResponseUsage {
-  return anInlineResponseUsage(
-    aResponseWith({ statusCode: OK_STATUS, ...overrides })
-  );
-}
-
-function aCanonicalOkResponse(
-  overrides: ResponseBuilderOverrides = {}
-): NormalizedResponse {
-  return aResponseWith({ statusCode: OK_STATUS, ...overrides });
-}
-
-function anOperationWithDuplicateOkResponses(
-  responses: readonly NormalizedResponseUsage[],
-  overrides: OperationBuilderOverrides = {}
-): NormalizedOperation {
-  return anOperationWith({ ...overrides, responses });
-}
-
-function aTextBody(schema: z.ZodType, mediaType: string): NormalizedHttpBody {
-  return {
-    schema,
-    mediaType,
-    mediaTypeSource: "content-type-header",
-    transport: "text",
-  };
-}
+} from "../../helpers.js";
+import {
+  aCanonicalOkResponse,
+  anInlineOkResponse,
+  anOperationWithDuplicateOkResponses,
+  aTextBody,
+} from "./fixtures.js";
 
 describe("buildOpenApiDocument duplicate inline and canonical bodies", () => {
   test("merges duplicate inline response bodies with anyOf", () => {

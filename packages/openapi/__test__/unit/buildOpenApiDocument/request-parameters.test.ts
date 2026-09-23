@@ -1,18 +1,16 @@
-import type {
-  NormalizedHttpBody,
-  NormalizedOperation,
-} from "@rexeus/typeweaver-gen";
+import type { NormalizedOperation } from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { buildOpenApiDocument } from "../../src/index.js";
+import { buildOpenApiDocument } from "../../../src/index.js";
 import {
-  aNormalizedSpecWith,
   anInlineResponseUsage,
   anOperationWith,
+  aNormalizedSpecWith,
+  aQuerySchemaForBuilder,
   aResponseWith,
   aTodoSpecWith,
   todoApiOptions,
-} from "./buildOpenApiDocument.helpers.js";
+} from "../../helpers.js";
 
 function buildCoercingHttpBoundaryDocument() {
   const normalizedSpec = aTodoSpecWith({
@@ -42,13 +40,12 @@ function buildCoercingHttpBoundaryDocument() {
   return buildOpenApiDocument(normalizedSpec, todoApiOptions());
 }
 
-function aTextBody(schema: z.ZodType, mediaType: string): NormalizedHttpBody {
-  return {
-    schema,
-    mediaType,
-    mediaTypeSource: "content-type-header",
-    transport: "text",
-  };
+function aRequestHeaderSchemaForBuilder(
+  schema: z.core.$ZodType
+): NonNullable<NormalizedOperation["request"]>["header"] {
+  return schema as unknown as NonNullable<
+    NormalizedOperation["request"]
+  >["header"];
 }
 
 describe("buildOpenApiDocument shell and request parameters", () => {
@@ -206,15 +203,15 @@ describe("buildOpenApiDocument coercing request parameters", () => {
   });
 });
 
-describe("buildOpenApiDocument embedded path parameters", () => {
-  test("maps embedded digit-prefixed path parameters in path order", () => {
+describe("buildOpenApiDocument optional parameter containers", () => {
+  test("marks query parameters from default containers as not required", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
         anOperationWith({
-          operationId: "downloadFile",
-          path: "/files/:123id.:format",
           request: {
-            param: z.object({ "123id": z.string(), format: z.string() }),
+            query: aQuerySchemaForBuilder(
+              z.object({ search: z.string() }).default({ search: "all" })
+            ),
           },
           responses: [anInlineResponseUsage(aResponseWith())],
         }),
@@ -223,34 +220,29 @@ describe("buildOpenApiDocument embedded path parameters", () => {
 
     const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
-    expect(
-      result.document.paths["/files/{123id}.{format}"]?.get?.parameters
-    ).toEqual([
+    expect(result.document.paths["/todos"]?.get?.parameters).toEqual([
       {
-        name: "123id",
-        in: "path",
-        required: true,
-        schema: { type: "string" },
-      },
-      {
-        name: "format",
-        in: "path",
-        required: true,
+        name: "search",
+        in: "query",
+        required: false,
         schema: { type: "string" },
       },
     ]);
     expect(result.warnings).toEqual([]);
   });
-});
 
-describe("buildOpenApiDocument required request bodies", () => {
-  test("maps required request body schemas", () => {
+  test("marks request headers from nonoptional prefault containers as not required", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
         anOperationWith({
-          operationId: "createTodo",
-          method: "POST" as NormalizedOperation["method"],
-          request: { body: z.object({ title: z.string() }) },
+          request: {
+            header: aRequestHeaderSchemaForBuilder(
+              z
+                .object({ "x-trace-id": z.string() })
+                .prefault({ "x-trace-id": "trace" })
+                .nonoptional()
+            ),
+          },
           responses: [anInlineResponseUsage(aResponseWith())],
         }),
       ],
@@ -258,110 +250,14 @@ describe("buildOpenApiDocument required request bodies", () => {
 
     const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
-    expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
-      required: true,
-      content: {
-        "application/json": {
-          schema: { $ref: "#/components/schemas/CreateTodoRequestBody" },
-        },
+    expect(result.document.paths["/todos"]?.get?.parameters).toEqual([
+      {
+        name: "x-trace-id",
+        in: "header",
+        required: false,
+        schema: { type: "string" },
       },
-    });
-    expect(result.document.components?.schemas).toEqual({
-      CreateTodoRequestBody: {
-        type: "object",
-        properties: { title: { type: "string" } },
-        required: ["title"],
-        additionalProperties: false,
-      },
-    });
-    expect(result.warnings).toEqual([]);
-  });
-
-  test("uses the normalized request body media type as the OpenAPI content key", () => {
-    const body = z.string();
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWith({
-          operationId: "uploadCsv",
-          method: "POST" as NormalizedOperation["method"],
-          request: { body: aTextBody(body, "text/csv") },
-          responses: [anInlineResponseUsage(aResponseWith())],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
-
-    expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
-      required: true,
-      content: {
-        "text/csv": {
-          schema: { $ref: "#/components/schemas/UploadCsvRequestBody" },
-        },
-      },
-    });
-  });
-});
-
-describe("buildOpenApiDocument optional request bodies", () => {
-  test("maps optional request bodies to non-required unwrapped schemas", () => {
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWith({
-          operationId: "createTodo",
-          method: "POST" as NormalizedOperation["method"],
-          request: { body: z.object({ title: z.string() }).optional() },
-          responses: [anInlineResponseUsage(aResponseWith())],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
-
-    expect(result.document.paths["/todos"]?.post?.requestBody).toEqual({
-      required: false,
-      content: {
-        "application/json": {
-          schema: { $ref: "#/components/schemas/CreateTodoRequestBody" },
-        },
-      },
-    });
-    expect(result.document.components?.schemas).toEqual({
-      CreateTodoRequestBody: {
-        type: "object",
-        properties: { title: { type: "string" } },
-        required: ["title"],
-        additionalProperties: false,
-      },
-    });
-    expect(result.warnings).toEqual([]);
-  });
-
-  test("emits literal request body schemas as single-value enums", () => {
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWith({
-          operationId: "uploadJson",
-          method: "POST" as NormalizedOperation["method"],
-          request: { body: z.literal("application/json") },
-          responses: [anInlineResponseUsage(aResponseWith())],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
-
-    expect(
-      result.document.components?.schemas?.["UploadJsonRequestBody"]
-    ).toEqual({
-      type: "string",
-      enum: ["application/json"],
-    });
-    expect(
-      result.document.paths["/todos"]?.post?.requestBody?.content[
-        "application/json"
-      ]?.schema
-    ).toEqual({ $ref: "#/components/schemas/UploadJsonRequestBody" });
+    ]);
     expect(result.warnings).toEqual([]);
   });
 });

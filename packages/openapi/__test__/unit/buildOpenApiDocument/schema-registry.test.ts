@@ -1,7 +1,7 @@
 import type { NormalizedOperation } from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { buildOpenApiDocument } from "../../src/index.js";
+import { buildOpenApiDocument } from "../../../src/index.js";
 import {
   aCanonicalResponseUsage,
   anInlineResponseUsage,
@@ -10,7 +10,7 @@ import {
   aResponseWith,
   aTodoSpecWith,
   todoApiOptions,
-} from "./buildOpenApiDocument.helpers.js";
+} from "../../helpers.js";
 
 describe("buildOpenApiDocument schema registry reuse", () => {
   test("reuses one schema component when the same Zod schema object appears in multiple bodies", () => {

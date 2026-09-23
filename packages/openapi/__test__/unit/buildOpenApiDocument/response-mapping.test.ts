@@ -1,11 +1,7 @@
-import type {
-  NormalizedHttpBody,
-  NormalizedResponse,
-  NormalizedResponseUsage,
-} from "@rexeus/typeweaver-gen";
+import type { NormalizedResponse } from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { buildOpenApiDocument } from "../../src/index.js";
+import { buildOpenApiDocument } from "../../../src/index.js";
 import {
   aCanonicalResponseUsage,
   anInlineResponseUsage,
@@ -13,43 +9,16 @@ import {
   aResponseWith,
   aTodoSpecWith,
   todoApiOptions,
-} from "./buildOpenApiDocument.helpers.js";
+} from "../../helpers.js";
+import {
+  aCanonicalOkResponse,
+  anInlineOkResponse,
+  anOperationWithDuplicateOkResponses,
+  aTextBody,
+  OK_STATUS,
+} from "./fixtures.js";
 
-const OK_STATUS = 200 as NormalizedResponse["statusCode"];
-
-type ResponseBuilderOverrides = Parameters<typeof aResponseWith>[0];
-
-function anInlineOkResponse(
-  overrides: ResponseBuilderOverrides = {}
-): NormalizedResponseUsage {
-  return anInlineResponseUsage(
-    aResponseWith({ statusCode: OK_STATUS, ...overrides })
-  );
-}
-
-function aCanonicalOkResponse(
-  overrides: ResponseBuilderOverrides = {}
-): NormalizedResponse {
-  return aResponseWith({ statusCode: OK_STATUS, ...overrides });
-}
-
-function aTextBody(schema: z.ZodType, mediaType: string): NormalizedHttpBody {
-  return {
-    schema,
-    mediaType,
-    mediaTypeSource: "content-type-header",
-    transport: "text",
-  };
-}
-
-function anOctetStreamBody(schema: z.ZodType): NormalizedHttpBody {
-  return {
-    schema,
-    mediaType: "application/octet-stream",
-    mediaTypeSource: "content-type-header",
-    transport: "raw",
-  };
-}
+const NOT_FOUND_STATUS = 404 as NormalizedResponse["statusCode"];
 
 describe("buildOpenApiDocument canonical response references", () => {
   test("maps canonical response references", () => {
@@ -189,123 +158,87 @@ describe("buildOpenApiDocument inline response bodies", () => {
   });
 });
 
-describe("buildOpenApiDocument raw response fallbacks", () => {
-  test("emits binary schema for octet-stream raw file responses", () => {
+describe("buildOpenApiDocument response status grouping", () => {
+  test("omits missing canonical response usages and emits a diagnostic", () => {
     const normalizedSpec = aTodoSpecWith({
       operations: [
         anOperationWith({
-          operationId: "downloadFile",
-          responses: [
-            anInlineOkResponse({
-              description: "File downloaded",
-              body: anOctetStreamBody(z.any()),
-            }),
-          ],
+          responses: [{ responseName: "MissingResponse", source: "canonical" }],
         }),
       ],
     });
 
     const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
-    expect(result.document.paths["/todos"]?.get?.responses).toEqual({
-      "200": {
-        description: "File downloaded",
-        content: {
-          "application/octet-stream": {
-            schema: { type: "string", format: "binary" },
-          },
-        },
-      },
-    });
-    expect(result.document.components).toBeUndefined();
-    expect(result.warnings).toEqual([]);
-  });
-
-  test("emits a binary octet-stream schema for raw pipes with broad outputs", () => {
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWith({
-          operationId: "downloadFile",
-          responses: [
-            anInlineOkResponse({
-              description: "File downloaded",
-              body: anOctetStreamBody(z.string().pipe(z.any())),
-            }),
-          ],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
-
-    expect(result.document.paths["/todos"]?.get?.responses).toEqual({
-      "200": {
-        description: "File downloaded",
-        content: {
-          "application/octet-stream": {
-            schema: { type: "string", format: "binary" },
-          },
-        },
-      },
-    });
-    expect(result.document.components).toBeUndefined();
-    expect(result.warnings).toEqual([]);
-  });
-});
-
-describe("buildOpenApiDocument concrete raw pipe responses", () => {
-  test("registers concrete raw pipe outputs for octet-stream responses", () => {
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWith({
-          operationId: "downloadFile",
-          responses: [
-            anInlineOkResponse({
-              description: "File downloaded",
-              body: anOctetStreamBody(z.any().pipe(z.string())),
-            }),
-          ],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
-
-    expect(result.document.paths["/todos"]?.get?.responses).toEqual({
-      "200": {
-        description: "File downloaded",
-        content: {
-          "application/octet-stream": {
-            schema: {
-              $ref: "#/components/schemas/DownloadFileOkResponseBody",
-            },
-          },
-        },
-      },
-    });
-    expect(result.document.components?.schemas).toEqual({
-      DownloadFileOkResponseBody: { type: "string" },
-    });
+    expect(result.document.paths["/todos"]?.get?.responses).toEqual({});
     expect(result.warnings).toEqual([
       {
-        origin: "schema-conversion",
-        code: "unsupported-schema",
-        message: "Zod pipe falls back to a broader JSON Schema representation.",
-        schemaType: "pipe",
-        schemaPath: "",
-        documentPath: "/components/schemas/DownloadFileOkResponseBody",
+        origin: "openapi-builder",
+        code: "missing-canonical-response",
+        message: "Canonical response 'MissingResponse' is not defined.",
+        documentPath: "/paths/~1todos/get/responses",
         location: {
           resourceName: "Todos",
-          operationId: "downloadFile",
+          operationId: "getTodo",
           method: "GET",
           path: "/todos",
           openApiPath: "/todos",
-          parameterName: undefined,
-          part: "response.body",
-          responseName: "OkResponse",
-          statusCode: "200",
+          part: "response",
+          responseName: "MissingResponse",
+          statusCode: undefined,
         },
       },
     ]);
+  });
+
+  test("merges duplicate inline response statuses without a diagnostic", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWithDuplicateOkResponses([
+          anInlineOkResponse({ description: "First" }),
+          anInlineOkResponse({ description: "Second" }),
+        ]),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
+
+    expect(result.document.paths["/todos"]?.get?.responses).toEqual({
+      "200": { description: "OkResponse: First\n\nOkResponse: Second" },
+    });
+    expect(result.warnings).toEqual([]);
+  });
+
+  test("keeps different response status codes separate", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          responses: [
+            anInlineResponseUsage(
+              aResponseWith({
+                name: "TodoFound",
+                statusCode: OK_STATUS,
+                description: "Todo found",
+              })
+            ),
+            anInlineResponseUsage(
+              aResponseWith({
+                name: "TodoMissing",
+                statusCode: NOT_FOUND_STATUS,
+                description: "Todo missing",
+              })
+            ),
+          ],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
+
+    expect(result.document.paths["/todos"]?.get?.responses).toEqual({
+      "200": { description: "Todo found" },
+      "404": { description: "Todo missing" },
+    });
+    expect(result.warnings).toEqual([]);
   });
 });

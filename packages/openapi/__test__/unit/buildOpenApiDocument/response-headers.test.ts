@@ -1,41 +1,104 @@
-import type {
-  NormalizedOperation,
-  NormalizedResponse,
-  NormalizedResponseUsage,
-} from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { buildOpenApiDocument } from "../../src/index.js";
+import { buildOpenApiDocument } from "../../../src/index.js";
 import {
   aHeaderSchemaForBuilder,
-  anInlineResponseUsage,
   anOperationWith,
-  aRecursiveTreeNodeSchema,
-  aResponseWith,
   aTodoSpecWith,
   todoApiOptions,
-} from "./buildOpenApiDocument.helpers.js";
+} from "../../helpers.js";
+import {
+  anInlineOkResponse,
+  anOperationWithDuplicateOkResponses,
+} from "./fixtures.js";
 
-const OK_STATUS = 200 as NormalizedResponse["statusCode"];
+describe("buildOpenApiDocument inline response headers", () => {
+  test("maps required and optional inline response headers", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          responses: [
+            anInlineOkResponse({
+              header: z.object({
+                etag: z.string(),
+                "x-cache": z.string().optional(),
+              }),
+            }),
+          ],
+        }),
+      ],
+    });
 
-type ResponseBuilderOverrides = Parameters<typeof aResponseWith>[0];
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
 
-type OperationBuilderOverrides = Parameters<typeof anOperationWith>[0];
+    expect(result.document.paths["/todos"]?.get?.responses).toEqual({
+      "200": {
+        description: "OK",
+        headers: {
+          etag: { required: true, schema: { type: "string" } },
+          "x-cache": { required: false, schema: { type: "string" } },
+        },
+      },
+    });
+    expect(result.warnings).toEqual([]);
+  });
 
-function anInlineOkResponse(
-  overrides: ResponseBuilderOverrides = {}
-): NormalizedResponseUsage {
-  return anInlineResponseUsage(
-    aResponseWith({ statusCode: OK_STATUS, ...overrides })
-  );
-}
+  test("maps strict response header containers without a false catchall warning", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          responses: [
+            anInlineOkResponse({
+              header: aHeaderSchemaForBuilder(
+                z.strictObject({ etag: z.string() })
+              ),
+            }),
+          ],
+        }),
+      ],
+    });
 
-function anOperationWithDuplicateOkResponses(
-  responses: readonly NormalizedResponseUsage[],
-  overrides: OperationBuilderOverrides = {}
-): NormalizedOperation {
-  return anOperationWith({ ...overrides, responses });
-}
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
+
+    expect(result.document.paths["/todos"]?.get?.responses).toEqual({
+      "200": {
+        description: "OK",
+        headers: {
+          etag: { required: true, schema: { type: "string" } },
+        },
+      },
+    });
+    expect(result.warnings).toEqual([]);
+  });
+
+  test("marks response headers from catch containers as not required", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          responses: [
+            anInlineOkResponse({
+              header: aHeaderSchemaForBuilder(
+                z.object({ "x-cache": z.string() }).catch({ "x-cache": "miss" })
+              ),
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
+
+    expect(result.document.paths["/todos"]?.get?.responses).toEqual({
+      "200": {
+        description: "OK",
+        headers: {
+          "x-cache": { required: false, schema: { type: "string" } },
+        },
+      },
+    });
+    expect(result.warnings).toEqual([]);
+  });
+});
 
 describe("buildOpenApiDocument merged response headers", () => {
   test("keeps a merged header description and direct schema when all variants match", () => {
@@ -186,119 +249,6 @@ describe("buildOpenApiDocument case-insensitive merged header schemas", () => {
             anyOf: [
               { type: "string" },
               { type: "array", items: { type: "string" } },
-            ],
-          },
-        },
-      },
-    });
-    expect(result.warnings).toEqual([]);
-  });
-});
-
-describe("buildOpenApiDocument differing merged header schemas", () => {
-  test("merges differing header schemas with anyOf without a diagnostic", () => {
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWithDuplicateOkResponses([
-          anInlineOkResponse({
-            name: "StringHeader",
-            header: z.object({ "x-retry-after": z.string() }),
-          }),
-          anInlineOkResponse({
-            name: "ArrayHeader",
-            header: z.object({ "x-retry-after": z.array(z.string()) }),
-          }),
-        ]),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
-
-    expect(result.document.paths["/todos"]?.get?.responses["200"]).toEqual({
-      description: "StringHeader: OK\n\nArrayHeader: OK",
-      headers: {
-        "x-retry-after": {
-          required: true,
-          schema: {
-            anyOf: [
-              { type: "string" },
-              { type: "array", items: { type: "string" } },
-            ],
-          },
-        },
-      },
-    });
-    expect(result.warnings).toEqual([]);
-  });
-});
-
-describe("buildOpenApiDocument recursive merged header refs", () => {
-  test("rebases recursive merged header refs to their emitted anyOf branch", () => {
-    const treeNodeSchema = aRecursiveTreeNodeSchema();
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWithDuplicateOkResponses(
-          [
-            anInlineOkResponse({
-              name: "TreeHeader",
-              header: aHeaderSchemaForBuilder(
-                z.object({ "x-tree": treeNodeSchema })
-              ),
-            }),
-            anInlineOkResponse({
-              name: "TreeSummaryHeader",
-              header: aHeaderSchemaForBuilder(
-                z.object({
-                  "x-tree": z.object({
-                    name: z.string(),
-                    depth: z.number(),
-                  }),
-                })
-              ),
-            }),
-          ],
-          { operationId: "getTree", path: "/trees" }
-        ),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
-
-    expect(result.document.paths["/trees"]?.get?.responses["200"]).toEqual({
-      description: "TreeHeader: OK\n\nTreeSummaryHeader: OK",
-      headers: {
-        "x-tree": {
-          required: true,
-          schema: {
-            anyOf: [
-              {
-                $ref: "#/paths/~1trees/get/responses/200/headers/x-tree/schema/anyOf/0/$defs/__schema0",
-                $defs: {
-                  __schema0: {
-                    type: "object",
-                    properties: {
-                      name: { type: "string" },
-                      children: {
-                        type: "array",
-                        items: {
-                          $ref: "#/paths/~1trees/get/responses/200/headers/x-tree/schema/anyOf/0/$defs/__schema0",
-                        },
-                      },
-                    },
-                    required: ["name", "children"],
-                    additionalProperties: false,
-                  },
-                },
-              },
-              {
-                type: "object",
-                properties: {
-                  name: { type: "string" },
-                  depth: { type: "number" },
-                },
-                required: ["name", "depth"],
-                additionalProperties: false,
-              },
             ],
           },
         },

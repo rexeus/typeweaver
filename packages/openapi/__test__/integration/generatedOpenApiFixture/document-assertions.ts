@@ -1,10 +1,6 @@
 import { expect } from "vitest";
-
-export type OpenApiFixture = {
-  readonly openapi?: unknown;
-  readonly components?: unknown;
-  readonly paths?: unknown;
-};
+import { isRecord } from "./fixtures.js";
+import type { OpenApiFixture } from "./fixtures.js";
 
 export function expectContractProjection(fixture: OpenApiFixture): void {
   expect(fixture).toMatchObject({
@@ -254,8 +250,4 @@ export function componentResponseSchemaAt(
   const mediaType = response["content"][mediaTypeName];
 
   return isRecord(mediaType) ? mediaType["schema"] : undefined;
-}
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }

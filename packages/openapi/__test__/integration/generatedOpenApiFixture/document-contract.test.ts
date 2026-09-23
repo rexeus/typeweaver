@@ -1,6 +1,4 @@
 import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 import {
   componentResponseSchemaAt,
@@ -9,14 +7,9 @@ import {
   expectMetricBoundaryProjection,
   requestBodySchemaAt,
   responseSchemaAt,
-} from "./generatedOpenApiFixture.document.js";
-import { assertFixtureExists } from "./generatedOpenApiFixture.validation.js";
-import type { OpenApiFixture } from "./generatedOpenApiFixture.document.js";
-
-const FIXTURE_PATH = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  "../../../test-utils/src/test-project/output/openapi/openapi.json"
-);
+} from "./document-assertions.js";
+import { assertFixtureExists, FIXTURE_PATH } from "./fixtures.js";
+import type { OpenApiFixture } from "./fixtures.js";
 
 describe("generated OpenAPI document contract", () => {
   test("validates the committed test-utils fixture as an OpenAPI document", async () => {

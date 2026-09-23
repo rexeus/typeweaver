@@ -1,7 +1,7 @@
 import { Validator } from "@seriousme/openapi-schema-validator";
 import { describe, expect, test } from "vitest";
 import { buildOpenApiDocument } from "../../src/index.js";
-import { aNormalizedSpecWith } from "../unit/buildOpenApiDocument.helpers.js";
+import { aNormalizedSpecWith } from "../helpers.js";
 import type { OpenApiTarget } from "../../src/index.js";
 
 const targets = ["3.1.2", "3.2.0"] satisfies readonly OpenApiTarget[];

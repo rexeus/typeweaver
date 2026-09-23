@@ -1,14 +1,14 @@
 import type { NormalizedOperation } from "@rexeus/typeweaver-gen";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { buildOpenApiDocument } from "../../src/index.js";
+import { buildOpenApiDocument } from "../../../src/index.js";
 import {
   anInlineResponseUsage,
   anOperationWith,
   aResponseWith,
   aTodoSpecWith,
   todoApiOptions,
-} from "./buildOpenApiDocument.helpers.js";
+} from "../../helpers.js";
 
 describe("buildOpenApiDocument operation and path ordering", () => {
   test("merges operations on the same normalized path without overwriting methods", () => {
@@ -102,6 +102,56 @@ describe("buildOpenApiDocument operation and path ordering", () => {
   });
 });
 
+describe("buildOpenApiDocument normalized paths and canonical responses", () => {
+  test("normalizes duplicate and trailing path slashes", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          path: "/todos//",
+          responses: [anInlineResponseUsage(aResponseWith())],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
+
+    expect(result.document.paths).toEqual({
+      "/todos": {
+        get: {
+          operationId: "getTodo",
+          tags: [],
+          responses: { "200": { description: "OK" } },
+        },
+      },
+    });
+  });
+
+  test("warns when two canonical responses share a name", () => {
+    const normalizedSpec = aTodoSpecWith({
+      responses: [
+        aResponseWith({ name: "TodoFound", description: "first" }),
+        aResponseWith({ name: "TodoFound", description: "second" }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
+
+    expect(result.warnings).toEqual([
+      {
+        origin: "openapi-builder",
+        code: "duplicate-canonical-response",
+        message:
+          "Canonical response 'TodoFound' is defined more than once; the entry at index 1 overrides the entry at index 0.",
+        documentPath: "/components/responses/TodoFound",
+        location: {
+          responseName: "TodoFound",
+          part: "components.responses",
+        },
+      },
+    ]);
+  });
+});
+
 describe("buildOpenApiDocument Typeweaver path syntax", () => {
   test("maps Typeweaver path parameters that start with digits", () => {
     const normalizedSpec = aTodoSpecWith({
@@ -152,6 +202,43 @@ describe("buildOpenApiDocument Typeweaver path syntax", () => {
       },
       {
         name: "ext",
+        in: "path",
+        required: true,
+        schema: { type: "string" },
+      },
+    ]);
+    expect(result.warnings).toEqual([]);
+  });
+});
+
+describe("buildOpenApiDocument embedded path parameters", () => {
+  test("maps embedded digit-prefixed path parameters in path order", () => {
+    const normalizedSpec = aTodoSpecWith({
+      operations: [
+        anOperationWith({
+          operationId: "downloadFile",
+          path: "/files/:123id.:format",
+          request: {
+            param: z.object({ "123id": z.string(), format: z.string() }),
+          },
+          responses: [anInlineResponseUsage(aResponseWith())],
+        }),
+      ],
+    });
+
+    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
+
+    expect(
+      result.document.paths["/files/{123id}.{format}"]?.get?.parameters
+    ).toEqual([
+      {
+        name: "123id",
+        in: "path",
+        required: true,
+        schema: { type: "string" },
+      },
+      {
+        name: "format",
         in: "path",
         required: true,
         schema: { type: "string" },
@@ -225,129 +312,6 @@ describe("buildOpenApiDocument missing path schemas", () => {
           openApiPath: "/todos",
           part: "request.path",
           parameterName: "id",
-          responseName: undefined,
-          statusCode: undefined,
-        },
-      },
-    ]);
-  });
-});
-
-describe("buildOpenApiDocument query catchalls", () => {
-  test("warns when record query parameters cannot be represented", () => {
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWith({
-          operationId: "searchTodos",
-          request: { query: z.record(z.string(), z.string()) },
-          responses: [anInlineResponseUsage(aResponseWith())],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
-
-    expect(result.document.paths["/todos"]?.get?.parameters).toBeUndefined();
-    expect(result.warnings).toEqual([
-      {
-        origin: "openapi-builder",
-        code: "unrepresentable-parameter-container",
-        message:
-          "request.query record entries cannot be represented as finite OpenAPI parameters.",
-        documentPath: "/paths/~1todos/get/parameters",
-        location: {
-          resourceName: "Todos",
-          operationId: "searchTodos",
-          method: "GET",
-          path: "/todos",
-          openApiPath: "/todos",
-          part: "request.query",
-          parameterName: undefined,
-          responseName: undefined,
-          statusCode: undefined,
-        },
-      },
-    ]);
-  });
-
-  test("emits finite query parameters when query catchall entries are not representable", () => {
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWith({
-          request: {
-            query: z.object({ id: z.string() }).catchall(z.string()),
-          },
-          responses: [anInlineResponseUsage(aResponseWith())],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
-
-    expect(result.document.paths["/todos"]?.get?.parameters).toEqual([
-      { name: "id", in: "query", required: true, schema: { type: "string" } },
-    ]);
-    expect(result.warnings).toEqual([
-      {
-        origin: "openapi-builder",
-        code: "unrepresentable-parameter-additional-properties",
-        message:
-          "request.query additional properties cannot be represented as OpenAPI parameters.",
-        documentPath: "/paths/~1todos/get/parameters",
-        location: {
-          resourceName: "Todos",
-          operationId: "getTodo",
-          method: "GET",
-          path: "/todos",
-          openApiPath: "/todos",
-          part: "request.query",
-          parameterName: undefined,
-          responseName: undefined,
-          statusCode: undefined,
-        },
-      },
-    ]);
-  });
-});
-
-describe("buildOpenApiDocument header catchalls", () => {
-  test("emits finite header parameters when header catchall entries are not representable", () => {
-    const normalizedSpec = aTodoSpecWith({
-      operations: [
-        anOperationWith({
-          request: {
-            header: z.object({ "x-id": z.string() }).catchall(z.string()),
-          },
-          responses: [anInlineResponseUsage(aResponseWith())],
-        }),
-      ],
-    });
-
-    const result = buildOpenApiDocument(normalizedSpec, todoApiOptions());
-
-    expect(result.document.paths["/todos"]?.get?.parameters).toEqual([
-      {
-        name: "x-id",
-        in: "header",
-        required: true,
-        schema: { type: "string" },
-      },
-    ]);
-    expect(result.warnings).toEqual([
-      {
-        origin: "openapi-builder",
-        code: "unrepresentable-parameter-additional-properties",
-        message:
-          "request.header additional properties cannot be represented as OpenAPI parameters.",
-        documentPath: "/paths/~1todos/get/parameters",
-        location: {
-          resourceName: "Todos",
-          operationId: "getTodo",
-          method: "GET",
-          path: "/todos",
-          openApiPath: "/todos",
-          part: "request.header",
-          parameterName: undefined,
           responseName: undefined,
           statusCode: undefined,
         },
