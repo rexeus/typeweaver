@@ -5,6 +5,7 @@ import { describe, expect, test, vi } from "vitest";
 import { executeMiddlewarePipeline } from "../../../src/lib/Middleware.js";
 import { basicAuth } from "../../../src/lib/middleware/basicAuth.js";
 import { createServerContext } from "../../helpers.js";
+import { finalHandlerShouldNotRun } from "./fixtures.js";
 import type { BasicAuthOptions } from "../../../src/lib/middleware/basicAuth.js";
 import type { ServerContext } from "../../../src/lib/ServerContext.js";
 
@@ -20,11 +21,6 @@ const unauthorizedBody = {
 
 const alwaysValid = () => true;
 const alwaysInvalid = () => false;
-
-const finalHandlerShouldNotRun = async () => ({
-  statusCode: 500,
-  body: { error: "final handler used" },
-});
 
 type RunBasicAuthOptions = {
   readonly header?: Record<string, string | string[]> | undefined;

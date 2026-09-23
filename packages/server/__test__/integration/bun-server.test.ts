@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { RUNTIMES_DIR } from "./helpers.js";
-import { describeRuntimeContractSuite } from "./runtimeContract.js";
+import { describeRuntimeContractSuite } from "./runtimeContract/suite.js";
 
 describeRuntimeContractSuite({
   title: "Bun runtime server",

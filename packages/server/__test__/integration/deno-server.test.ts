@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { RUNTIMES_DIR, TEST_UTILS_ROOT } from "./helpers.js";
-import { describeRuntimeContractSuite } from "./runtimeContract.js";
+import { describeRuntimeContractSuite } from "./runtimeContract/suite.js";
 
 describeRuntimeContractSuite({
   title: "Deno runtime server",

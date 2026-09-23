@@ -26,6 +26,12 @@ export const noopResponseValidator: IResponseValidator = {
   safeValidate: response => ({ isValid: true, data: response }),
 };
 
+export function isUnknownRecord(
+  value: unknown
+): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 export function createServerContext(
   overrides: Partial<{
     method: HttpMethod;
