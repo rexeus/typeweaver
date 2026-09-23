@@ -93,8 +93,9 @@ const parseOptions = options => {
 
 /**
  * The standard loader calls plugin factories synchronously.
- * `defineScopedPlugin` owns one Layer/Scope for this per-generation plugin
- * instance and provides `ScopedResource` to every service-dependent hook.
+ * `defineScopedPlugin` returns a scoped plugin: the generator builds its
+ * Layer into the Scope it owns for one generation, provides `ScopedResource`
+ * to every service-dependent hook, and releases the Layer after `finalize`.
  *
  * @type {PluginFactory}
  */

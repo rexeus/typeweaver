@@ -105,13 +105,7 @@ successful generation.
 ## Lifecycle
 
 ```ts
-type Plugin = {
-  readonly name: string;
-  readonly depends?: readonly string[];
-  readonly validate?: (
-    normalizedSpec: NormalizedSpec,
-    context: PluginValidationContext
-  ) => Effect.Effect<readonly Issue[], PluginExecutionError>;
+type PluginLifecycleHooks = {
   readonly initialize?: (context: PluginContext) => Effect.Effect<void, PluginExecutionError>;
   readonly collectResources?: (
     normalizedSpec: NormalizedSpec
@@ -119,7 +113,24 @@ type Plugin = {
   readonly generate?: (context: GeneratorContext) => Effect.Effect<void, PluginExecutionError>;
   readonly finalize?: (context: PluginContext) => Effect.Effect<void, PluginExecutionError>;
 };
+
+type Plugin = {
+  readonly name: string;
+  readonly depends?: readonly string[];
+  readonly validate?: (
+    normalizedSpec: NormalizedSpec,
+    context: PluginValidationContext
+  ) => Effect.Effect<readonly Issue[], PluginExecutionError>;
+} & (
+  | PluginLifecycleHooks
+  | {
+      readonly acquire: Effect.Effect<PluginLifecycleHooks, PluginExecutionError, Scope.Scope>;
+    }
+);
 ```
+
+A plugin declares its hooks directly or returns them from `acquire`, a scoped constructor that the
+host runs once per generation; see [Scoped Effect services](#scoped-effect-services).
 
 | Hook               | Purpose                                                  | Generator writer available? |
 | ------------------ | -------------------------------------------------------- | --------------------------- |
@@ -224,10 +235,12 @@ config and projection-owned config.
 
 ## Scoped Effect services
 
-Use `defineScopedPlugin` when a plugin needs an Effect `Layer` with acquisition and release.
-TypeWeaver acquires one scope per generation call, provides it to lifecycle hooks, isolates
-concurrent runs that share the same plugin value, and releases it after success, typed failure,
-defect, or interruption.
+Use `defineScopedPlugin` when a plugin needs an Effect `Layer` with acquisition and release. The
+helper returns a plugin with an `acquire` scoped constructor. The host owns one Scope per generation
+call: it builds the Layer into that Scope at the `initialize` stage, runs the hooks with the built
+services, and closes the Scope after `finalize`, releasing the resources after success, typed
+failure, defect, or interruption. Concurrent runs that share the same plugin value stay isolated,
+and `validate` never builds the Layer.
 
 This is the preferred model for resources such as temporary directories, caches, connections, or
 plugin-owned tracing services.
@@ -275,7 +288,8 @@ finalizer failures. Focused context builders are available for individual hook t
 The package exports:
 
 - plugin constructors: `definePlugin`, `defineScopedPlugin`, and `definePluginWithLibCopy`;
-- plugin and factory types;
+- plugin, lifecycle-hook, acquisition, and factory types, plus `acquirePluginLifecycle` for code
+  that hosts a plugin itself;
 - lifecycle contexts and normalized model types;
 - `Issue`, the `Severity` type, issue registries, and normalization-to-issue helpers;
 - tagged plugin, dependency, and path-safety errors;

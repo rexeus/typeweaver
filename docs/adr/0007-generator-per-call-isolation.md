@@ -103,9 +103,11 @@ direct children of `typeweaver.Generator.generate`.
   `Effect.fn`, including operations that complete synchronously and may be optimized out of a
   particular trace export. The span contract asserts the observable parent hierarchy and plugin
   attributes rather than assuming every named operation emits a runtime span.
-- Successful plugin initialization and registration on the finalizer stack form one masked
-  transition. Initialization remains interruptible; once success reaches the orchestrator boundary,
-  a pending interruption cannot skip that plugin's finalizer.
+- Successful plugin initialization, including a scoped plugin's acquisition into the per-call
+  generation Scope, and registration on the finalizer stack form one masked transition.
+  Initialization remains interruptible; once success reaches the orchestrator boundary, a pending
+  interruption cannot skip that plugin's finalizer. Closing the generation Scope after finalization
+  releases acquired plugin resources, so concurrent calls never share them.
 - Spec bundles and generated files publish atomically. Rolldown writes to a scoped staging directory
   and must settle before the scope and output lock are released; file replacement and generated-file
   tracking commit before fallible temp cleanup.

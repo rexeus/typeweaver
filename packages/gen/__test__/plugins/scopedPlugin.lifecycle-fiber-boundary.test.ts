@@ -1,7 +1,11 @@
 import { assert, it } from "@effect/vitest";
-import { Cause, Context, Effect, Exit, Layer } from "effect";
+import { Context, Effect, Layer } from "effect";
 import { describe } from "vitest";
-import { createPluginTestKit, defineScopedPlugin } from "../../src/index.js";
+import {
+  acquirePluginLifecycle,
+  createPluginTestKit,
+  defineScopedPlugin,
+} from "../../src/index.js";
 import type { NormalizedSpec } from "../../src/index.js";
 
 type Session = {
@@ -24,56 +28,87 @@ const emptySpec: NormalizedSpec = {
   warnings: [],
 };
 
-const makeForkingPlugin = (observed: string[]) =>
-  defineScopedPlugin({
-    name: "scoped-fiber-boundary",
-    layer: Layer.succeed(Session, { id: "session" }),
-    generate: () =>
-      Effect.flatMap(Session, session =>
+const makeSessionLayer = (events: string[]) =>
+  Layer.effect(
+    Session,
+    Effect.acquireRelease(
+      Effect.sync(() => {
+        events.push("acquire");
+        return { id: "session" };
+      }),
+      () =>
         Effect.sync(() => {
-          observed.push(session.id);
+          events.push("release");
         })
-      ).pipe(Effect.timeout("1 second")),
-  });
+    )
+  );
+
+const recordSession = (events: string[], phase: string) =>
+  Effect.flatMap(Session, session =>
+    Effect.sync(() => {
+      events.push(`${phase}:${session.id}`);
+    })
+  );
 
 const forkInsideHookBody = () =>
   Effect.gen(function* () {
-    const observed: string[] = [];
+    const events: string[] = [];
+    const plugin = defineScopedPlugin({
+      name: "scoped-fiber-boundary",
+      layer: makeSessionLayer(events),
+      generate: () =>
+        recordSession(events, "generate").pipe(Effect.timeout("1 second")),
+    });
 
-    yield* createPluginTestKit({ normalizedSpec: emptySpec }).run(
-      makeForkingPlugin(observed)
-    );
+    yield* createPluginTestKit({ normalizedSpec: emptySpec }).run(plugin);
 
-    assert.deepStrictEqual(observed, ["session"]);
+    assert.deepStrictEqual(events, ["acquire", "generate:session", "release"]);
   });
 
-const hostForksHook = () =>
+const withTimeout = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+  effect.pipe(Effect.timeout("1 second"));
+
+const hostRunsEveryHookUnderTimeout = () =>
   Effect.gen(function* () {
-    const observed: string[] = [];
-    const plugin = makeForkingPlugin(observed);
+    const events: string[] = [];
+    const plugin = defineScopedPlugin({
+      name: "scoped-fiber-boundary",
+      layer: makeSessionLayer(events),
+      initialize: () => recordSession(events, "initialize"),
+      generate: () => recordSession(events, "generate"),
+      finalize: () => recordSession(events, "finalize"),
+    });
     const kit = createPluginTestKit({ normalizedSpec: emptySpec });
     const pluginContext = kit.buildPluginContext();
 
-    yield* plugin.initialize?.(pluginContext) ?? Effect.void;
-    const exit = yield* Effect.exit(
-      (plugin.generate?.(kit.buildGeneratorContext()) ?? Effect.void).pipe(
-        Effect.timeout("1 second")
-      )
+    yield* Effect.scoped(
+      Effect.gen(function* () {
+        const hooks = yield* withTimeout(acquirePluginLifecycle(plugin));
+        yield* withTimeout(hooks.initialize?.(pluginContext) ?? Effect.void);
+        yield* withTimeout(
+          hooks.generate?.(kit.buildGeneratorContext()) ?? Effect.void
+        );
+        yield* withTimeout(hooks.finalize?.(pluginContext) ?? Effect.void);
+        assert.deepStrictEqual(events, [
+          "acquire",
+          "initialize:session",
+          "generate:session",
+          "finalize:session",
+        ]);
+      })
     );
-    yield* plugin.finalize?.(pluginContext) ?? Effect.void;
 
-    assert.isTrue(Exit.isFailure(exit) && Cause.hasDies(exit.cause));
-    assert.deepStrictEqual(observed, []);
+    assert.deepStrictEqual(events.at(-1), "release");
   });
 
 describe("defineScopedPlugin lifecycle fiber boundary", () => {
   it.effect(
-    "provides retained services to fibers forked inside a hook body",
+    "provides acquired services to fibers forked inside a hook body",
     forkInsideHookBody
   );
 
   it.effect(
-    "dies when the host runs a hook on a fiber other than the one that initialized it",
-    hostForksHook
+    "runs every hook when the host invokes acquisition and hooks under Effect.timeout",
+    hostRunsEveryHookUnderTimeout
   );
 });

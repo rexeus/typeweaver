@@ -87,13 +87,7 @@ Three things to notice:
 ## The `Plugin` shape
 
 ```ts
-type Plugin = {
-  readonly name: string;
-  readonly depends?: readonly string[];
-  readonly validate?: (
-    spec: NormalizedSpec,
-    ctx: PluginValidationContext
-  ) => Effect<readonly Issue[], PluginExecutionError>;
+type PluginLifecycleHooks = {
   readonly initialize?: (ctx: PluginContext) => Effect<void, PluginExecutionError>;
   readonly collectResources?: (
     spec: NormalizedSpec
@@ -101,7 +95,24 @@ type Plugin = {
   readonly generate?: (ctx: GeneratorContext) => Effect<void, PluginExecutionError>;
   readonly finalize?: (ctx: PluginContext) => Effect<void, PluginExecutionError>;
 };
+
+type Plugin = {
+  readonly name: string;
+  readonly depends?: readonly string[];
+  readonly validate?: (
+    spec: NormalizedSpec,
+    ctx: PluginValidationContext
+  ) => Effect<readonly Issue[], PluginExecutionError>;
+} & (
+  | PluginLifecycleHooks
+  | { readonly acquire: Effect<PluginLifecycleHooks, PluginExecutionError, Scope> }
+);
 ```
+
+A plugin declares its lifecycle hooks either directly or through `acquire`, never both. `acquire` is
+a scoped constructor: the host runs it at the `initialize` stage inside a Scope that the host owns
+for exactly one generation, and the hooks it returns close over the resources it acquired. Write it
+with [`defineScopedPlugin`](#exit-independent-scoped-services) rather than by hand.
 
 The contract exposes five lifecycle stages. Validation is run through the isolated per-call plugin
 registry before a caller enters write-capable generation:
@@ -421,20 +432,25 @@ export const sessionPlugin = defineScopedPlugin({
 });
 ```
 
-`defineScopedPlugin` builds the Layer exactly once in `initialize`, provides its services to
-`initialize`, `collectResources`, `generate`, and `finalize`, and closes the retained Scope after
-success, typed failure, defect, or interruption. Failed or interrupted Layer construction closes its
-provisional Scope before the failure escapes. Concurrent generation fibers that share the same
-module-cached plugin instance retain independent Layers. The helper builds the Layer with a private
-memo map, so neither the Layer nor a Layer built inside it or inside a hook reuses an instance that
-an enclosing runtime already built; every generation acquires and releases its own resources. The
-returned ordinary `Plugin` still exposes `R = never` at every lifecycle boundary.
+`defineScopedPlugin` returns a plugin whose `acquire` builds the Layer exactly once per generation
+and returns `initialize`, `collectResources`, `generate`, and `finalize` hooks that provide the
+built services. The host owns the lifetime: it wraps each generation in a Scope, runs every plugin's
+acquisition at the `initialize` stage in registration order, runs the hooks, and closes the Scope
+after `finalize`. Closing it releases the resources of every scoped plugin in reverse order, after
+success, typed failure, defect, or interruption. A Layer whose construction fails releases what it
+had acquired before the failure escapes, and the failure is a `PluginExecutionError` in the
+`initialize` phase. `validate` stays outside the acquisition, so validation-only runs such as
+`typeweaver validate` and `typeweaver doctor --deep` never build the Layer.
 
-The generator invokes every lifecycle hook of one generation on the same fiber, and the helper
-relies on that. If your own code calls the returned plugin's hooks, for example from a wrapper
-plugin, call them on one fiber and do not wrap an individual hook in `Effect.timeout`,
-`Effect.race`, or a fork. Forks inside your hook bodies are fine: they inherit the provided
-services.
+Every generation acquires its own services, so concurrent generations that share one module-cached
+plugin instance stay isolated. The helper builds the Layer with a private memo map, so neither the
+Layer nor a Layer built inside it or inside a hook reuses an instance that an enclosing runtime
+already built. Because the hooks close over their services, a host may run them on any fiber, for
+example under `Effect.timeout`. Every hook still has `R = never`.
+
+If your own code hosts a plugin, for example a wrapper plugin or a custom test, call
+`acquirePluginLifecycle(plugin)` inside a Scope that you close after `finalize`, and run the hooks
+it returns. It acquires a scoped plugin and returns a plain plugin's hooks unchanged.
 
 The helper owns **exit-independent resources**. `Plugin.finalize` does not receive the generator's
 original `Exit`, so do not use it for a transaction whose finalizer must choose commit versus
@@ -506,7 +522,9 @@ The kit exposes `buildPluginContext`, `buildValidationContext`, and `buildGenera
 focused hook tests. `files.read()` and `files.list()` inspect output without disk I/O.
 `finalizeErrors()` exposes typed best-effort finalizer failures while defects and interruption keep
 their normal Effect semantics. Service-dependent plugins pass a test `Layer` to
-`defineScopedPlugin`; no private `ContextBuilder`, CLI service, Scope, or runtime is required.
+`defineScopedPlugin`; like the generator, each `kit.run` owns the generation Scope, acquires the
+plugin after validation, and releases its resources after finalization. No private `ContextBuilder`,
+CLI service, Scope, or runtime is required.
 
 <!-- docs-example: plugin-test-kit -->
 
