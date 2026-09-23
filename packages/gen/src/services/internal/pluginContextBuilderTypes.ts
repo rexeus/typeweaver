@@ -11,6 +11,12 @@ export type PluginContextBuilderDeps = {
   readonly pathSafety: PathSafetyShape;
   readonly templateRenderer: TemplateRendererShape;
   readonly syncAtomicFileSystem?: SyncAtomicFileSystem;
+  /**
+   * Backs the Effect-native context surface (`writeFileEffect`,
+   * `renderTemplateEffect`). Captured at construction time so plugin
+   * lifecycle stages keep `R = never` (ADR 0003) while their writes route
+   * through the platform `FileSystem` service.
+   */
   readonly fileSystem: FileSystemService;
 };
 
