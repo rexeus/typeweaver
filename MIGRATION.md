@@ -16,7 +16,7 @@ lines.
 ## Migrating from 0.12.x to 0.13.x
 
 Version 0.13.0 completes the migration to **Effect** as TypeWeaver's runtime foundation and matures
-the executable API contract. The release breaks eight surfaces:
+the executable API contract. The release breaks nine surfaces:
 
 1. The **plugin API** (V1 class-based → V2 Effect-native records). Affects anyone who built a custom
    plugin.
@@ -34,6 +34,8 @@ the executable API contract. The release breaks eight surfaces:
    profiles, with API identity sourced from the spec.
 8. **Generation locking** moves to a system-temporary coordination namespace; mixed CLI versions
    must not generate concurrently.
+9. **Optional HTTP header/query values and normalized properties** admit explicit `undefined`, so
+   code that reads them must handle that case.
 
 ### 1. Plugin API V1 → V2 (BREAKING — third-party plugin authors)
 
@@ -510,7 +512,7 @@ What this means for upgrades:
   `SystemDrive`, and relies on the installed system temp directory's inherited ACLs. A missing,
   non-directory, or unwritable root fails closed with an actionable error.
 
-### 9. Optional HTTP values and normalized properties admit explicit `undefined`
+### 9. Optional HTTP values and normalized properties admit explicit `undefined` (BREAKING for code that reads them)
 
 TypeWeaver's compiler profiles now enable `exactOptionalPropertyTypes`, and the public types were
 aligned with how schemas actually model optional values. Optional HTTP header/query map values and
@@ -523,10 +525,24 @@ optional normalized model properties now include `undefined` in their value type
   `T | undefined` (for example `NormalizedOperation["description"]` and
   `NormalizedOperation["request"]`).
 
-The change is additive: existing valid assignments keep working. Consumers that enable
-`exactOptionalPropertyTypes` no longer need to widen or omit these properties themselves, and
-consumers that index header/query maps should handle the `undefined` value; the server middleware
-already skips undefined entries when reading or copying headers.
+Code that writes these values keeps compiling: every assignment that was valid before is still
+valid, and consumers that enable `exactOptionalPropertyTypes` no longer need to widen or omit these
+properties themselves. Code that reads them does not always keep compiling, with or without
+`exactOptionalPropertyTypes`: indexing a header or query map now yields
+`string | string[] | undefined` instead of `string | string[]`, so assigning
+`response.header["content-type"]` to a `string | string[]` variable is a type error until the
+`undefined` case is handled. The server middleware already skips undefined entries when reading or
+copying headers.
+
+The Fetch-native server erases handler types without `any`:
+
+- `TypeweaverRouter` and `RouteDefinition.handler` are constrained by the exported
+  `ErasedRequestHandler` instead of `RequestHandler<any, any, any>`.
+- `nodeAdapter` accepts `TypeweaverApp<Record<string, unknown>>` instead of `TypeweaverApp<any>`.
+
+Generated routers and apps are unaffected. A hand-written handler registered through a custom
+router's `route(...)` receives `IRawHttpRequest | IValidatedHttpRequest`; annotate its parameter
+with the request type it validates, or narrow it before reading typed fields.
 
 ### 10. Migration Checklist (0.12.x to 0.13.x)
 
@@ -556,6 +572,8 @@ For **end users** (you use the CLI but don't author plugins):
       support that profile; otherwise use the 3.1.2 default.
 - [ ] Handle present-but-`undefined` entries when indexing `IHttpHeader` or `IHttpQuery` values, and
       the widened optional fields on `NormalizedSpec` types.
+- [ ] Annotate or narrow the request parameter of hand-written handlers registered through a custom
+      router's `route(...)`.
 
 For **plugin authors**:
 
