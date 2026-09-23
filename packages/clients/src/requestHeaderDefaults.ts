@@ -27,10 +27,12 @@ function isZodObject(schema: ZodType): schema is ZodObjectWithShape {
 function getStringLiteralValue(schema: ZodType): string | undefined {
   if (getSchemaType(schema) !== "literal") return undefined;
 
-  const literalSchema = schema as { readonly values?: ReadonlySet<unknown> };
-  if (literalSchema.values?.size !== 1) return undefined;
+  if (!("values" in schema) || !(schema.values instanceof Set))
+    return undefined;
+  const values: ReadonlySet<unknown> = schema.values;
+  if (values.size !== 1) return undefined;
 
-  const [value] = literalSchema.values;
+  const [value] = values;
   return typeof value === "string" ? value : undefined;
 }
 

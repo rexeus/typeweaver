@@ -118,11 +118,7 @@ export function serializeBody(body: unknown): SerializedBody {
   if (typeof body === "string") {
     return { body, isJsonSerialized: false };
   }
-  if (isNativeBody(body))
-    return {
-      body: body as NonNullable<RequestInit["body"]>,
-      isJsonSerialized: false,
-    };
+  if (isNativeBody(body)) return { body, isJsonSerialized: false };
   return { body: JSON.stringify(body), isJsonSerialized: true };
 }
 
@@ -130,7 +126,7 @@ function hasContentTypeHeader(headers: Record<string, string>): boolean {
   return Object.keys(headers).some(key => key.toLowerCase() === "content-type");
 }
 
-function isNativeBody(body: unknown): boolean {
+function isNativeBody(body: unknown): body is NonNullable<RequestInit["body"]> {
   return (
     body instanceof Blob ||
     body instanceof ArrayBuffer ||
