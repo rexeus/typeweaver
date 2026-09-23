@@ -5,9 +5,9 @@ import {
   PluginExecutionError,
 } from "../../../src/plugins/errors/index.js";
 import { PluginRegistry } from "../../../src/services/PluginRegistry.js";
+import { normalizedSpec } from "./fixtures.js";
 import type {
   Issue,
-  NormalizedSpec,
   Plugin,
   PluginValidationContext,
 } from "../../../src/index.js";
@@ -19,15 +19,6 @@ const registryTestLayer = Layer.merge(
   PluginRegistry.Default,
   silentLoggerLayer
 );
-
-const normalizedSpec: NormalizedSpec = {
-  metadata: { title: "Validation API", version: "1.0.0" },
-  securitySchemes: [],
-  security: { requirements: [], source: "none" },
-  resources: [],
-  responses: [],
-  warnings: [],
-};
 
 const validationContext: PluginValidationContext = {
   inputDir: "/workspace/spec",

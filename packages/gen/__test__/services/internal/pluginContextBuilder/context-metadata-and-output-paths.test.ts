@@ -1,117 +1,15 @@
-import fs from "node:fs";
 import path from "node:path";
-import { HttpMethod } from "@rexeus/typeweaver-core";
-import { FileSystem } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { MissingCanonicalResponseError } from "../../../../src/plugins/errors/MissingCanonicalResponseError.js";
 import {
-  createPluginContextBuilder,
-  liveSyncAtomicFileSystem,
-} from "../../../../src/services/internal/pluginContextBuilder.js";
-import {
-  livePathSafetyShape,
-  liveTemplateRendererShape,
-} from "../../../../src/services/internal/pluginContextEffectIO.js";
-import type { SyncAtomicFileSystem } from "../../../../src/services/internal/pluginContextBuilder.js";
+  aBuilder,
+  aGeneratedProjectContext,
+  generatedProjectParams,
+  removeTempDirs,
+  validationErrorResponse,
+} from "./fixtures.js";
 
-/**
- * Real-deps factory for the sync plugin-context builder: the exact live
- * shapes the production `ContextBuilder` service wires in — the pure
- * path-safety guard and the project's hand-rolled template engine. The
- * Effect-native context surface is exercised separately against an
- * in-memory `FileSystem` (see the cli-side
- * `pluginContextEffect.inMemoryFs.test.ts`); the no-op implementation here
- * only satisfies the builder's dependency shape.
- */
-const realPluginContextBuilderDeps = {
-  pathSafety: livePathSafetyShape,
-  templateRenderer: liveTemplateRendererShape,
-  syncAtomicFileSystem: liveSyncAtomicFileSystem,
-  fileSystem: FileSystem.makeNoop({}),
-};
-
-const aBuilder = (
-  syncAtomicFileSystem: SyncAtomicFileSystem = liveSyncAtomicFileSystem
-) =>
-  createPluginContextBuilder({
-    ...realPluginContextBuilderDeps,
-    syncAtomicFileSystem,
-  });
-
-type GeneratorContextParams = Parameters<
-  ReturnType<typeof createPluginContextBuilder>["createGeneratorContext"]
->[0];
-
-type NormalizedSpec = GeneratorContextParams["normalizedSpec"];
-
-type NormalizedResponse = NormalizedSpec["responses"][number];
-
-const validationErrorResponse: NormalizedResponse = {
-  name: "validationError",
-  statusCode: 400,
-  statusCodeName: "BadRequest",
-  description: "The request failed validation.",
-  kind: "response",
-};
-
-const todoSpec: NormalizedSpec = {
-  metadata: { title: "Todo Test API", version: "1.0.0" },
-  securitySchemes: [],
-  security: { requirements: [], source: "none" },
-  resources: [
-    {
-      name: "todo",
-      tags: [],
-      security: { requirements: [], source: "none" },
-      operations: [
-        {
-          operationId: "getTodo",
-          method: HttpMethod.GET,
-          path: "/todos/{todoId}",
-          summary: "Get a todo item.",
-          deprecated: false,
-          tags: [],
-          security: { requirements: [], source: "none" },
-          responses: [
-            {
-              source: "canonical",
-              responseName: "validationError",
-            },
-          ],
-        },
-      ],
-    },
-  ],
-  responses: [validationErrorResponse],
-  warnings: [],
-};
-
-const generatedProjectParams: GeneratorContextParams = {
-  outputDir: path.join("project", "generated"),
-  inputDir: path.join("project", "definitions"),
-  config: { emitRuntimeTypes: true },
-  normalizedSpec: todoSpec,
-  templateDir: path.join("project", "templates"),
-  coreDir: "@rexeus/typeweaver-core",
-  responsesOutputDir: path.join("project", "generated", "responses"),
-  specOutputDir: path.join("project", "generated", "spec"),
-};
-
-const aGeneratedProjectContext = (
-  overrides: Partial<GeneratorContextParams> = {}
-) =>
-  aBuilder().createGeneratorContext({
-    ...generatedProjectParams,
-    ...overrides,
-  });
-
-const tempDirs: string[] = [];
-
-afterEach(() => {
-  for (const tempDir of tempDirs.splice(0)) {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
-});
+afterEach(removeTempDirs);
 
 describe("createPluginContextBuilder context metadata and imports", () => {
   test("creates plugin contexts with the configured directories and config", () => {

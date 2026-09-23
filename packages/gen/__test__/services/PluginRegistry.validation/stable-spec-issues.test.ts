@@ -7,16 +7,8 @@ import {
   normalizedSpecWarningToIssue,
   SPEC_ISSUE_REGISTRY,
 } from "../../../src/index.js";
+import { normalizedSpec } from "./fixtures.js";
 import type { NormalizedSpec } from "../../../src/index.js";
-
-const normalizedSpec: NormalizedSpec = {
-  metadata: { title: "Validation API", version: "1.0.0" },
-  securitySchemes: [],
-  security: { requirements: [], source: "none" },
-  resources: [],
-  responses: [],
-  warnings: [],
-};
 
 const normalizedWarningSpec: NormalizedSpec = {
   ...normalizedSpec,
